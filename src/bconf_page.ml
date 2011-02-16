@@ -29,8 +29,7 @@ let mk_target_filenames project filenames =
   let filenames = Miscellanea.Xlist.filter_map project.Project.in_source_path filenames in
   if Oe_config.is_win32 then begin
     List.map begin fun filename ->
-      let filename = Miscellanea.filename_split filename in
-      String.concat "/" filename
+      Miscellanea.filename_unix_implicit filename
     end filenames
   end else filenames
 

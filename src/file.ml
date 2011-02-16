@@ -204,12 +204,12 @@ class file path name =
     method backup ?move_to () =
       if Sys.file_exists self#path then begin
         let dir = match move_to with None -> self#path
-          | Some path ->
+          | Some path ->  
             if not (Sys.file_exists path) then begin
               let dirs = filename_split path in
               ignore (List.fold_left begin fun acc dir ->
                 let dir = Filename.concat acc dir in
-                if not (Sys.file_exists dir) then (Unix.mkdir dir 0o777);
+                if not (Sys.file_exists dir) then (printf "%s, %s\n%!" path dir; Unix.mkdir dir 0o777);
                 dir
               end "" dirs);
             end;

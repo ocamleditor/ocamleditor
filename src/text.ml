@@ -805,9 +805,9 @@ object (self)
     let metrics = pango#get_metrics() in
     let font_height = metrics#ascent + metrics#descent in
     let layout = pango#create_layout in
-    while !iter#compare bottom < 0 do
+    while !iter#compare bottom < 0 do 
 
-      while not !iter#ends_line do
+(*      while not !iter#ends_line do
         let char = !iter#char in
         if Glib.Unichar.isspace char then begin
           let text = if char = 32 then "\xC2\xB7" else if char = 9 then "\xC2\xBB" else "?" in
@@ -821,7 +821,7 @@ object (self)
           drawable#put_layout ~x ~y ~fore:Oe_config.indent_lines_dashed_color layout;
         end;
         iter := !iter#forward_char
-      done;
+      done;*)
 
 
       let it = if !iter#ends_line then !iter else !iter#forward_to_line_end in

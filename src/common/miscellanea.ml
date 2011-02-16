@@ -302,7 +302,20 @@ let mkdir_p =
     loop d
 
 (** filename_split *)
-let filename_split = Str.split (match Sys.os_type with "Win32" -> Str.regexp "[\\/]" | _ -> Str.regexp "/");;
+(*let filename_split = Str.split (match Sys.os_type with "Win32" -> Str.regexp "[\\/]" | _ -> Str.regexp "/");;*)
+let filename_split filename =
+  let rec loop filename =
+    let dirname = Filename.dirname filename in
+    if dirname = "." || filename = dirname then [filename] else
+      let basename = Filename.basename filename in
+      basename :: (loop dirname)
+  in List.rev (loop filename);;
+
+(*
+filename_split "a/b";;
+filename_split "/a/b";;
+filename_split "C:\\a\\b";;
+*)
 
 (** Restituisce la parte del percorso [path] relativa a [dirname].
   *  Per es. [filename_relative "/a/b" "/a/b/c/d" = "c/d"]
