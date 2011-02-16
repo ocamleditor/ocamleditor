@@ -1,0 +1,103 @@
+
+
+                                  OCamlEditor
+
+
+
+OCamlEditor is a source code editor and build tool for OCaml.
+
+
+COPYRIGHT:
+
+  This program is distributed under the GNU GENERAL PUBLIC LICENSE Version 3.
+  See the enclosed file COPYING for more details.
+
+  Files "lexical.ml", "gtkThread3.ml" and part of "file.ml" and "shell.ml"
+  are copyright 1999 Institut National de Recherche en Informatique et en
+  Automatique and Kyoto University.
+
+
+DEPENDENCIES:
+
+  * Objective Caml 3.11.2 with the compiler libraries available from the
+    OCaml source distribution;
+  * Lablgtk-2.14;
+  * Xml-light.
+
+
+HOW TO COMPILE:
+
+  Compile the OCaml source tree, then change to the OCamlEditor toplevel
+  directory and edit the value of "includes" and "ccopt" at the beginning
+  of "build.ml", following the comments in this file. Then, do:
+
+    ln -s /path/to/ocaml/compiled/sources src/ocaml-src
+    ocaml build.ml
+
+  The name of the command is "ocamleditor", you can find it in the "src"
+  directory.
+
+
+HOW TO COMPILE without having to build the entire OCaml source tree
+(for example under Windows if you're using the MSVC version of OCaml):
+
+  Edit the value of "includes" and "ccopt" at the beginning of "build.ml".
+
+    mkdir src\ocaml-src
+
+  Download from http://caml.inria.fr/ the source tarball corresponding to
+  your OCaml version installed and copy the directories "utils", "parsing"
+  and "typing" to the newly created "ocaml-src" directory; then from the
+  OCamlEditor toplevel directory compile with:
+
+    ocaml build.ml -with-compiler-libs
+
+  Under Windows the name of the command is "ocamleditor.bat", you can find
+  it in the "src" directory.
+
+
+INSTALLATION:
+
+  For Linux, become superuser and run:
+
+    ocaml build.ml -install [-prefix <path>]
+
+  By default, commands will be installed under "/usr/local/bin" and icons
+  under "/usr/local/share/pixmaps/ocamleditor". You can specify an
+  installation prefix other than "/usr/local" by giving an absolute file
+  name as argument.
+
+  Windows users may build an installer by compiling the included NSIS
+  script, "ocamleditor.nsi". The free NSIS install system can be found at
+  http://nsis.sourceforge.net
+
+
+NOTES:
+
+  * The most common application settings are accessible from the
+    Preferences	window however other options may be specified in file
+    "oe_config.ml".
+  * OCamlEditor creates a folder named ".ocamleditor" in your HOME
+    directory with informations like preferences, recently opened
+    projects, etc.
+
+
+AUTHOR:
+
+  You can report bugs or give feedbacks by e-mail to
+  Francesco Tovagliari <ftovagliari@gmail.com>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
