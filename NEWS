@@ -1,0 +1,153 @@
+- Disabilitare undo sul trim_lines.
+
+2011-03-01  Release 1.6.1
+-------------------------
+
+  * Ability to select for a project an OCaml compiler different from the
+    default one installed.
+  * "Toggle word-wrap" directly accessible from the menubar.
+  * Fixed bug in undo/redo.
+  * Fixed bug in dependencies detection.
+  * Fixed absolute paths in project file.
+  * Fixed wrong path separator under Windows when running executable in
+    subfolder.
+  * Fixed bugs with word-wrap.
+  * Various other improvements and changes.
+
+2011-02-09  Release 1.6.0
+-------------------------
+
+  * Code folding, delimiters are: begin...end, let...in, let...;;,
+    do...done, struct...end, sig...end, object...end, [...], {...} and
+    comments.
+  * Indentation guidelines.
+  * Code templates.
+  * Show line endings.
+  * File tab context menu.
+  * Find definition/references, based on ".annot" files. Shortcuts for
+    "find definition" are Ctrl+Click or Ctrl+Return; shortcut for "find
+    references" is Shift+Ctrl+Return. When you move to a definition,
+    navigation is stored in the location history.
+  * Automatic compilation of the currently open file. Delay and compiler
+    flags are configurable in project properties. Error/warning locations
+    are underlined in the source and marked in the "gutter" and in the
+    global gutter. Error messages are shown with a tooltip.
+  * Multiple runtime configurations.
+  * Added minimal support for tree-structured projects.
+  * Ability to specify the working directory for external tasks.
+  * Global shortcut for "Find All" (Shift+Ctrl+F) and in "Find Text"
+    dialog window (Ctrl+Return).
+  * Reduced CPU consumption with GtkThread as proposed in
+    http://yquem.inria.fr/pipermail/lablgtk/2009-December/000335.html
+  * Various other GUI improvements and changes.
+
+2010-10-06  Release 1.5.0
+-------------------------
+
+  * Main toolbar.
+  * New undo/redo.
+  * Ability to display the types inferred by the compiler.
+  * Edit location history and "Last edit location" button.
+  * Find/Replace: new option "Search backward" and toolbar in search
+    results pane.
+  * Double-click selects OCaml identifiers; click on a selected range
+    reduces the selection to part of the identifier. Similar behaviour for
+    "Select Word".
+  * Auto-recovery of modified files after system/application crash.
+    Auto-saved files are stored in ~/.ocamleditor/autosave; save interval
+    is 5 sec.
+  * Highlighting of current line.
+  * Line numbers.
+  * Visible right margin.
+  * Full-screen view (FR #723).
+  * Ocamldoc paragraph background color.
+  * Smart keys configuration (Home, End).
+  * Backward-tab: unindent current line (FR #721).
+  * Improved the behaviour of "Move to Matching Delimiter" and "Select to
+    Matching Delimiter" (Ctrl+D and Shift+Ctrl+D).
+  * Improvements in the user interface.
+  * Improved incremental compilation.
+  * Fix #695 - Editor does not ask to save when clicking "X" to close tab.
+  * Fix #696 - Clicking close does not allow for cancel.
+  * Fix #719 - Selection errors when double-clicking on identifiers and
+    numbers.
+  * Fix #728 - Editor does not save when building.
+
+2010-08-31  Release 1.4.2
+-------------------------
+
+  * Icon files relocated.
+  * "ocaml build.ml" terminates with code 2 when build fails.
+  * Installation script for Linux: "ocaml build.ml install".
+
+2010-08-07  Release 1.4.1
+-------------------------
+
+  * Tab close buttons.
+  * Fix #682.
+
+2010-06-28  Release 1.4
+-----------------------
+
+  * External Build Tasks.
+  * Each build configuration can be compiled with the bytecode compiler,
+    native compiler or both.
+  * Each build configuration can be cleaned independently.
+  * Added "Prior build task" to the runtime configuration.
+  * Rewritten Find/Replace Text in buffer.
+  * New option "Find/replace in selected text only".
+  * Change text to uppercase/lowercase.
+  * Automatic check for updates.
+  * Highlighting of innermost enclosing delimiters.
+  * Compilation without OCaml source installed (for MSVC version of
+    OCaml).
+  * Bug fixes.
+
+2010-04-21  Release 1.3.1
+-------------------------
+
+  * Bug fixes.
+  * Libraries can be installed in the Standard Library directory (requires
+    administrative permission).
+  * Ability to change the title in the OCaml Toplevel tab.
+  * Ability to build all configurations.
+  * Check for updates.
+
+2010-04-13  Release 1.3
+-----------------------
+
+  * Linux port.
+  * Character encoding support.
+  * Improvements to the "Build configurations" tool (dependencies and user
+    interface).
+  * Improvements to the user interface.
+
+2010-03-10  Release 1.2
+-----------------------
+
+  * New dependency Xml-light.
+  * XML format for project files with automatic conversion from old
+    version.
+  * Find-in-path facility.
+  * Highlighting of matching delimiters.
+  * New property "Default" added to build configurations for easily
+    activate build process from the menubar or shortcuts.
+  * Error messages, backtrace locations and assert failures can be clicked
+    to jump to the offending line.
+  * Switch between interface and implementation.
+  * Improvements to the user interface.
+  * Phrase at cursor can be evaluated in the toplevel.
+  * Bug fixes:
+    - Shortcuts do not activate callbacks until menu window is not mapped.
+    - Problem closing OCaml Toplevel.
+    - Problem at startup.
+
+2010-01-22  Release 1.1
+-----------------------
+
+  * Bug fixes.
+
+2010-01-19  Release 1.0
+-----------------------
+
+  * First public release

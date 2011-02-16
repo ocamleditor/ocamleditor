@@ -1,0 +1,102 @@
+(*
+
+  OCamlEditor
+  Copyright (C) 2010, 2011 Francesco Tovagliari
+
+  This file is part of OCamlEditor.
+
+  OCamlEditor is free software: you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation, either version 3 of the License, or
+  (at your option) any later version.
+
+  OCamlEditor is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License
+  along with this program. If not, see <http://www.gnu.org/licenses/>.
+
+*)
+
+open GUtil
+open Printf
+
+(** signals *)
+class hover () = object (self) inherit [(GText.iter * GText.iter) option ref * GText.iter] signal () as super end
+and activate () = object (self) inherit [GText.iter] signal () as super end
+and signals ~hover ~activate =
+object (self)
+  inherit ml_signals [hover#disconnect; activate#disconnect; ]
+  method hover = hover#connect ~after
+  method activate = activate#connect ~after
+end
+
+(** hyperlink *)
+and hyperlink ~(view : GText.view) () =
+  let buffer = view#buffer in
+  let hover = new hover () in
+  let activate = new activate () in
+  let tag = buffer#create_tag [`UNDERLINE `SINGLE] in
+object (self)
+  val mutable current_hover = None
+  method connect = new signals ~hover ~activate
+
+  method private apply_hover ~x ~y =
+    let x, y = view#window_to_buffer_coords ~tag:`TEXT ~x ~y in
+    let iter = view#get_iter_at_location ~x ~y in
+    let bounds = ref None in
+    hover#call (bounds, iter);
+    begin
+      match !bounds with
+        | None -> self#remove_hover ()
+        | Some (start, stop) ->
+          Gaux.may current_hover ~f:(fun (start, stop) -> buffer#remove_tag tag ~start ~stop);
+          current_hover <- Some (start, stop);
+          buffer#apply_tag tag ~start ~stop;
+          Gaux.may (view#get_window `TEXT) ~f:(fun w -> Gdk.Window.set_cursor w (!Gtk_util.cursor `HAND1));
+          true
+    end
+
+  method private remove_hover () =
+    Gaux.may (view#get_window `TEXT) ~f:(fun w -> Gdk.Window.set_cursor w (!Gtk_util.cursor `XTERM));
+    Gaux.may current_hover ~f:(fun (start, stop) -> buffer#remove_tag tag ~start ~stop);
+    current_hover <- None;
+    false
+
+  method enable () =
+    ignore(view#event#connect#motion_notify ~callback:begin fun ev ->
+      match GdkEvent.Motion.state ev with
+        | 4 ->
+          let x = int_of_float (GdkEvent.Motion.x ev) in
+          let y = int_of_float (GdkEvent.Motion.y ev) in
+          self#apply_hover ~x ~y
+        | _ -> (self#remove_hover ())
+    end);
+    ignore(view#event#connect#button_press ~callback:begin fun ev ->
+      match GdkEvent.Button.state ev with
+        | 4 ->
+          let x = int_of_float (GdkEvent.Button.x ev) in
+          let y = int_of_float (GdkEvent.Button.y ev) in
+          let x, y = view#window_to_buffer_coords ~tag:`TEXT ~x ~y in
+          let iter = view#get_iter_at_location ~x ~y in
+          activate#call iter;
+          true
+        | _ -> false
+    end);
+    ignore(view#event#connect#after#key_press ~callback:begin fun ev ->
+      let key = GdkEvent.Key.keyval ev in
+      if key = GdkKeysyms._Control_L || key = GdkKeysyms._Control_R then begin
+        Gaux.may (view#get_window `TEXT) ~f:begin fun window ->
+          let x, y = Gdk.Window.get_pointer_location window in
+          self#apply_hover ~x ~y;
+        end;
+        true
+      end else false
+    end);
+    ignore(view#event#connect#key_release ~callback:begin fun ev ->
+      let key = GdkEvent.Key.keyval ev in
+      if key = GdkKeysyms._Control_L || key = GdkKeysyms._Control_R then (self#remove_hover ()) else false
+    end);
+end

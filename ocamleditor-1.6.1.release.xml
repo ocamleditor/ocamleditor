@@ -1,0 +1,223 @@
+<!-- OCamlEditor XML Project -->
+<project>
+  <encoding>UTF-8</encoding>
+  <name>ocamleditor-1.6.1</name>
+  <author>Francesco Tovagliari</author>
+  <description></description>
+  <version>1.6.1</version>
+  <autocomp enabled="true" delay="1." cflags=""/>
+  <open_files>
+    <filename offset="0" active="false">../NEWS</filename>
+  </open_files>
+  <runtime>
+    <configuration>
+      <id>3</id>
+      <id_build>0</id_build>
+      <name>ocamleditor (GTK-2.22.0)</name>
+      <default>false</default>
+      <build_task>&lt;COMPILE&gt;</build_task>
+      <env replace="false">
+        <var>OCAMLEDITORDEBUG=1</var>
+        <var>PATH=C:\Objective Caml\bin;C:\GTK-2.22.0\bin;C:\WINDOWS;C:\WINDOWS\System32;.</var>
+      </env>
+      <args></args>
+    </configuration>
+    <configuration>
+      <id>2</id>
+      <id_build>3</id_build>
+      <name>oebuild</name>
+      <default>false</default>
+      <build_task>&lt;NONE&gt;</build_task>
+      <env replace="false"/>
+      <args>--help</args>
+    </configuration>
+    <configuration>
+      <id>1</id>
+      <id_build>2</id_build>
+      <name>oeproc</name>
+      <default>false</default>
+      <build_task>&lt;NONE&gt;</build_task>
+      <env replace="false"/>
+      <args>oebuild --help</args>
+    </configuration>
+    <configuration>
+      <id>0</id>
+      <id_build>0</id_build>
+      <name>ocamleditor (GTK default)</name>
+      <default>true</default>
+      <build_task>&lt;COMPILE&gt;</build_task>
+      <env replace="false">
+        <var>OCAMLEDITORDEBUG=1</var>
+        <var>DEBUG_UNDO=0</var>
+      </env>
+      <args></args>
+    </configuration>
+  </runtime>
+  <build>
+    <configuration>
+      <id>0</id>
+      <name>ocamleditor</name>
+      <default>true</default>
+      <byt>true</byt>
+      <opt>false</opt>
+      <libs>toplevellib unix str threads lablgtk gtkThread.o xml-light common oebuildlib</libs>
+      <other_objects></other_objects>
+      <files>ocamleditor.ml</files>
+      <includes>ocaml-src/parsing ocaml-src/typing ocaml-src/utils +lablgtk2 +xml-light common oebuild</includes>
+      <thread>true</thread>
+      <vmthread>false</vmthread>
+      <pp></pp>
+      <cflags>-w syxm -g</cflags>
+      <lflags>-linkall -g</lflags>
+      <is_library>false</is_library>
+      <outname>ocamleditor</outname>
+      <lib_install_path></lib_install_path>
+      <external_tasks>
+        <task>
+          <name>oebuild</name>
+          <always_run>false</always_run>
+          <env replace="false"/>
+          <dir>..</dir>
+          <cmd>ocaml</cmd>
+          <args>
+            <arg>build.ml</arg>
+            <arg>-oebuild</arg>
+          </args>
+          <phase>Before_compile</phase>
+        </task>
+        <task>
+          <name>oeproc</name>
+          <always_run>false</always_run>
+          <env replace="false"/>
+          <dir>..</dir>
+          <cmd>ocaml</cmd>
+          <args>
+            <arg>build.ml</arg>
+            <arg>-oeproc</arg>
+          </args>
+          <phase>Before_compile</phase>
+        </task>
+        <task>
+          <name>External Build</name>
+          <always_run>false</always_run>
+          <env replace="false"/>
+          <dir>..</dir>
+          <cmd>ocaml</cmd>
+          <args>
+            <arg>build.ml</arg>
+            <arg>-annot</arg>
+          </args>
+          <phase>Compile</phase>
+        </task>
+        <task>
+          <name>Compiler Libs</name>
+          <always_run>false</always_run>
+          <env replace="false"/>
+          <dir>..</dir>
+          <cmd>ocaml</cmd>
+          <args>
+            <arg>build.ml</arg>
+            <arg>-compiler-libs</arg>
+          </args>
+          <phase>Before_clean</phase>
+        </task>
+        <task>
+          <name>Icons</name>
+          <always_run>false</always_run>
+          <env replace="false"/>
+          <dir>..</dir>
+          <cmd>ocaml</cmd>
+          <args>
+            <arg>build.ml</arg>
+            <arg>-icons</arg>
+          </args>
+          <phase></phase>
+        </task>
+        <task>
+          <name>Release</name>
+          <always_run>false</always_run>
+          <env replace="false"/>
+          <dir>..</dir>
+          <cmd>ocaml</cmd>
+          <args>
+            <arg>build.ml</arg>
+            <arg>-wrelease</arg>
+          </args>
+          <phase></phase>
+        </task>
+        <task>
+          <name>Lex &amp; Yacc</name>
+          <always_run>false</always_run>
+          <env replace="false"/>
+          <dir>..</dir>
+          <cmd>ocaml</cmd>
+          <args>
+            <arg>build.ml</arg>
+            <arg>-lexyacc</arg>
+          </args>
+          <phase></phase>
+        </task>
+      </external_tasks>
+    </configuration>
+    <configuration>
+      <id>2</id>
+      <name>common</name>
+      <default>false</default>
+      <byt>true</byt>
+      <opt>true</opt>
+      <libs></libs>
+      <other_objects></other_objects>
+      <files>common/common.ml</files>
+      <includes>common</includes>
+      <thread>false</thread>
+      <vmthread>false</vmthread>
+      <pp></pp>
+      <cflags></cflags>
+      <lflags></lflags>
+      <is_library>true</is_library>
+      <outname>common/common</outname>
+      <lib_install_path></lib_install_path>
+      <external_tasks/>
+    </configuration>
+    <configuration>
+      <id>3</id>
+      <name>oebuild</name>
+      <default>false</default>
+      <byt>true</byt>
+      <opt>true</opt>
+      <libs>unix str threads common</libs>
+      <other_objects></other_objects>
+      <files>oebuild/oebuild_tool.ml</files>
+      <includes>common oebuild</includes>
+      <thread>true</thread>
+      <vmthread>false</vmthread>
+      <pp></pp>
+      <cflags>-w y</cflags>
+      <lflags>-ccopt &quot;-LC:\Programmi\MIC977~1\Lib -LC:\Programmi\MID05A~1\VC\lib&quot;</lflags>
+      <is_library>false</is_library>
+      <outname>oebuild/oebuild</outname>
+      <lib_install_path></lib_install_path>
+      <external_tasks/>
+    </configuration>
+    <configuration>
+      <id>4</id>
+      <name>oeproc</name>
+      <default>false</default>
+      <byt>true</byt>
+      <opt>true</opt>
+      <libs>str unix threads</libs>
+      <other_objects></other_objects>
+      <files>oeproc/oeproc.ml</files>
+      <includes>common oeproc</includes>
+      <thread>true</thread>
+      <vmthread>false</vmthread>
+      <pp></pp>
+      <cflags>-w s</cflags>
+      <lflags>-ccopt &quot;-LC:\Programmi\MIC977~1\Lib -LC:\Programmi\MID05A~1\VC\lib&quot;</lflags>
+      <is_library>false</is_library>
+      <outname>oeproc/oeproc</outname>
+      <lib_install_path></lib_install_path>
+      <external_tasks/>
+    </configuration>
+  </build>
+</project>

@@ -1,0 +1,3 @@
+SET FLEXDLL_RELOCATE=00401000
+ocamleditor.exe
+
