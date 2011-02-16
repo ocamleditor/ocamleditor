@@ -1,7 +1,3 @@
-- Disabilitare undo sul trim_lines.
-
-2011-03-01  Release 1.6.1
--------------------------
 
   * Ability to select for a project an OCaml compiler different from the
     default one installed.
