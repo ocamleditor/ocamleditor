@@ -58,14 +58,14 @@ object (self)
   val mutable last_active_page = None
   val code_folding_enabled = new GUtil.variable false
   val show_global_gutter = new GUtil.variable false
-  val mutable show_line_endings = !Preferences.preferences.Preferences.pref_show_line_endings
+  val mutable show_whitespace_chars = !Preferences.preferences.Preferences.pref_show_whitespace_chars
   val mutable word_wrap = !Preferences.preferences.Preferences.pref_editor_wrap
 
-  method show_line_endings = show_line_endings
-  method set_show_line_endings x =
-    show_line_endings <- x;
+  method show_whitespace_chars = show_whitespace_chars
+  method set_show_whitespace_chars x =
+    show_whitespace_chars <- x;
     List.iter begin fun page ->
-      page#view#set_show_line_endings x;
+      page#view#set_show_whitespace_chars x;
       GtkBase.Widget.queue_draw page#view#as_widget
     end (pages @ (snd (List.split pages_cache)))
 
@@ -368,7 +368,7 @@ object (self)
       if not page#load_complete then begin
         (** Load page *)
         ignore (page#load ~scroll ());
-        page#view#set_show_line_endings show_line_endings;
+        page#view#set_show_whitespace_chars show_whitespace_chars;
         page#view#set_word_wrap word_wrap;
         (** Insert_text *)
         ignore (page#buffer#connect#insert_text ~callback:(fun _ _ -> page#view#matching_delim_remove_tag()));

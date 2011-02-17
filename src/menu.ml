@@ -542,14 +542,14 @@ let create
     let unfold_all = GMenu.menu_item ~label:"Expand All Folds" ~packing:code_folding_menu#add () in
     ignore (unfold_all#connect#activate ~callback:(fun () ->
       may (fun x -> ignore (x#ocaml_view#code_folding#expand_all()))));
-    (** Show Line Endings *)
+    (** Show Whitespace Characters *)
     let _ = GMenu.separator_item ~packing:menu#add () in
-    let show_line_endings = GMenu.check_menu_item ~active:browser#editor#show_line_endings
-      ~label:"Show Line Endings" ~packing:menu#add () in
-    let signal_show_line_endings = show_line_endings#connect#toggled ~callback:begin fun () ->
-      let show = not (browser#editor#show_line_endings) in
-      browser#editor#set_show_line_endings show;
-      !Preferences.preferences.Preferences.pref_show_line_endings <- show;
+    let show_whitespace_chars = GMenu.check_menu_item ~active:browser#editor#show_whitespace_chars
+      ~label:"Show Whitespace Characters" ~packing:menu#add () in
+    let signal_show_whitespace_chars = show_whitespace_chars#connect#toggled ~callback:begin fun () ->
+      let show = not (browser#editor#show_whitespace_chars) in
+      browser#editor#set_show_whitespace_chars show;
+      !Preferences.preferences.Preferences.pref_show_whitespace_chars <- show;
       Preferences.save();
     end in
     (** Toggle Word-Wrap *)
@@ -565,9 +565,9 @@ let create
     let callback () =
       enable_code_folding#set_active !Preferences.preferences.Preferences.pref_code_folding_enabled;
       List.iter (fun x -> x#misc#set_sensitive enable_code_folding#active) [collapse_enclosing; unfold_all];
-      show_line_endings#misc#handler_block signal_show_line_endings;
-      show_line_endings#set_active (browser#editor#show_line_endings);
-      show_line_endings#misc#handler_unblock signal_show_line_endings;
+      show_whitespace_chars#misc#handler_block signal_show_whitespace_chars;
+      show_whitespace_chars#set_active (browser#editor#show_whitespace_chars);
+      show_whitespace_chars#misc#handler_unblock signal_show_whitespace_chars;
     in
     callback();
     view#connect#activate ~callback;

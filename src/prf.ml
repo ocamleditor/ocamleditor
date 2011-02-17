@@ -51,10 +51,11 @@ let prf_location_history_add         = create true  "prf_location_history_add"
 let prf_line_numbers                 = create true  "prf_line_numbers"
 let prf_other_markers                = create true  "prf_other_markers"
 let prf_none_other_markers           = create true  "prf_none_other_markers"
-let prf_draw_dot_leaders             = create true  "prf_draw_dot_leaders"*)
+let prf_draw_dot_leaders             = create true  "prf_draw_dot_leaders"
+let prf_draw_white_spces             = create true  "prf_draw_white_spces"*)
 
 let crono func f x =
-  if not func.enabled then (f x) else 
+  if not func.enabled then (f x) else
     let finally time =
       func.calls <- func.calls + 1;
       func.time <- func.time +. (Unix.gettimeofday() -. time);

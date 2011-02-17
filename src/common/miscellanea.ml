@@ -89,6 +89,12 @@ module Xlist =
       | [] -> cand
       | x :: l -> find (max x cand) l in
       match l with [] -> raise Not_found | x :: l -> find x l
+
+    let list_full x n =
+      let seq = ref [] in
+      for i = 1 to n do seq := x :: !seq done;
+      !seq;;
+
   end
 
 

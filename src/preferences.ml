@@ -76,7 +76,7 @@ type t = {
   mutable pref_err_underline : bool;
   mutable pref_err_tooltip : bool;
   mutable pref_err_gutter : bool;
-  mutable pref_show_line_endings : bool;
+  mutable pref_show_whitespace_chars : bool;
 }
 and text_properties = GDraw.color * Pango.Tags.weight * Pango.Tags.style * Pango.Tags.underline
 
@@ -198,7 +198,7 @@ let defaults = {
   pref_err_underline = false;
   pref_err_tooltip = false;
   pref_err_gutter = false;
-  pref_show_line_endings = false;
+  pref_show_whitespace_chars = false;
 }
 
 let create_defaults () = {
@@ -254,7 +254,7 @@ let create_defaults () = {
   pref_err_underline = defaults.pref_err_underline;
   pref_err_tooltip = defaults.pref_err_tooltip;
   pref_err_gutter = defaults.pref_err_gutter;
-  pref_show_line_endings = defaults.pref_show_line_endings;
+  pref_show_whitespace_chars = defaults.pref_show_whitespace_chars;
 }
 
 let preferences = ref (create_defaults ())
@@ -376,7 +376,7 @@ let to_xml pref =
       Xml.Element ("pref_err_underline", [], [Xml.PCData (string_of_bool pref.pref_err_underline)]);
       Xml.Element ("pref_err_tooltip", [], [Xml.PCData (string_of_bool pref.pref_err_tooltip)]);
       Xml.Element ("pref_err_gutter", [], [Xml.PCData (string_of_bool pref.pref_err_gutter)]);
-      Xml.Element ("pref_show_line_endings", [], [Xml.PCData (string_of_bool pref.pref_show_line_endings)]);
+      Xml.Element ("pref_show_whitespace_chars", [], [Xml.PCData (string_of_bool pref.pref_show_whitespace_chars)]);
 
     ])
   in
@@ -469,7 +469,7 @@ let from_file filename =
       | "pref_err_underline" -> pref.pref_err_underline <- bool_of_string (value node)
       | "pref_err_tooltip" -> pref.pref_err_tooltip <- bool_of_string (value node)
       | "pref_err_gutter" -> pref.pref_err_gutter <- bool_of_string (value node)
-      | "pref_show_line_endings" -> pref.pref_show_line_endings <- bool_of_string (value node)
+      | "pref_show_whitespace_chars" -> pref.pref_show_whitespace_chars <- bool_of_string (value node)
 
      | _ -> ()
   end xml;
@@ -544,7 +544,7 @@ let load_old () =
       pref_err_underline = defaults.pref_err_underline;
       pref_err_tooltip = defaults.pref_err_tooltip;
       pref_err_gutter = defaults.pref_err_gutter;
-      pref_show_line_endings = defaults.pref_show_line_endings;
+      pref_show_whitespace_chars = defaults.pref_show_whitespace_chars;
     };
     (try ignore (List.assoc "highlight" !preferences.pref_tags);
     with Not_found -> begin
