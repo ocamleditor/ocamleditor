@@ -112,12 +112,19 @@ let _ = Unix.putenv "TERM" ""
 let system_ocamllib = Sys.getenv "OCAMLLIB"
 
 let find_best ?(param="--help") prog =
+  let redirect_stderr = if Sys.os_type = "Win32" then " 2>NUL" else " 2>/dev/null" in
   try
     List.find begin fun comp ->
-      try
-        ignore (kprintf (expand ~first_line:true) "%s %s" (Filename.quote comp) param);
-        true
-      with _ -> false
+      let ok =
+        try
+          let cmd = sprintf "%s %s%s" (Filename.quote comp) param redirect_stderr in
+          if ocamleditor_debug then (printf "Checking for %s... %!" cmd);
+          ignore (expand ~first_line:true cmd);
+          true
+        with _ -> false
+      in
+      if ocamleditor_debug then (printf "%b\n%!" ok);
+      ok
     end prog
   with Not_found ->
     kprintf failwith "Cannot find: %s" (String.concat ", " prog)
@@ -173,7 +180,6 @@ let oeproc_command =
     ] in
     find_best ~param:"" commands
   else "unused"
-
 
 (*  *)
 let _ = Unix.putenv "OCAMLLIB" ""
