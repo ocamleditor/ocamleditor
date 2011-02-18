@@ -25,7 +25,7 @@ open Editor_types
 open Miscellanea
 
 type hover = Out | Mark of (int * int) | Region
-type tag_table = Hidden | Readonly 
+type tag_table = Hidden | Readonly
 
 let draw_focus_ribbon = false
 let fold_size = 11 (*10 *)
@@ -48,9 +48,9 @@ class manager ~(view : Text.view) =
   let explicit = false in
   let min_length = 3 in
   let buffer = view#buffer in
-  let font = Gaux.may_map Oe_config.code_folding_font ~f:Gdk.Font.load_fontset in 
+  let font = Gaux.may_map Oe_config.code_folding_font ~f:Gdk.Font.load_fontset in
   let code_folding_scope_color = Oe_config.code_folding_scope_color in
-  let code_folding_fold_line_color = `COLOR (Preferences.tag_color "lident") in 
+  let code_folding_fold_line_color = `COLOR (Preferences.tag_color "lident") in
   let set_highlight_background tag = Gtk_util.set_tag_paragraph_background tag in
 object (self)
   val mutable enabled = true;
@@ -70,12 +70,12 @@ object (self)
     if enabled then begin
       view#gutter.Gutter.fold_size <- fold_size;
       Gtk_util.idle_add view#paint_gutter;
-      self#scan_folding_points(); 
+      self#scan_folding_points();
     end else begin
       self#expand_all();
       view#gutter.Gutter.fold_size <- 0;
       folding_points <- [];
-      Gtk_util.idle_add view#paint_gutter;  
+      Gtk_util.idle_add view#paint_gutter;
     end;
 
   method scan_folding_points () =

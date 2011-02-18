@@ -43,6 +43,8 @@ let whitespace_crlf        = "\xC2\xA4\xC2\xB6"
 let whitespace_lf          = "\xC2\xB6"
 let create_middot_string = Miscellanea.Memo.fast
   ~f:(fun x -> String.concat "" (Miscellanea.Xlist.list_full whitespace_middot x))
+let whitespace_middot_2      = create_middot_string 2
+let whitespace_middot_4      = create_middot_string 4
 
 (** Buffer *)
 class buffer =
@@ -705,15 +707,22 @@ object (self)
   method private expose ev =
     match self#get_window `TEXT with
       | Some window ->
-        let vrect = self#visible_rect in
-        let h0 = Gdk.Rectangle.height vrect in
-        let w0 = Gdk.Rectangle.width vrect in
-        let y0 = Gdk.Rectangle.y vrect in
-        let start, _ = self#get_line_at_y y0 in
-        let stop, _ = self#get_line_at_y (y0 + h0) in
+        let vrect       = self#visible_rect in
+        let h0          = Gdk.Rectangle.height vrect in
+        let w0          = Gdk.Rectangle.width vrect in
+        let y0          = Gdk.Rectangle.y vrect in
+        let start, _    = self#get_line_at_y y0 in
+        let stop, _     = self#get_line_at_y (y0 + h0) in
         visible_height#set h0;
-        let adjust = Oe_config.current_line_border_adjust in
-        let drawable = new GDraw.drawable window in
+        (* Expose area *)
+        let expose_area = GdkEvent.Expose.area ev in
+        let expose_y    = y0 + Gdk.Rectangle.y expose_area in
+        let expose_top, _ = self#get_line_at_y expose_y in
+        let expose_bottom, _ = self#get_line_at_y (expose_y + (Gdk.Rectangle.height expose_area)) in
+        (*  *)
+        let adjust      = Oe_config.current_line_border_adjust in
+        let hadjust     = match hadjustment with Some adj -> int_of_float adj#value | _ -> 0 in
+        let drawable    = new GDraw.drawable window in
         (* Indentation guidelines *)
         if show_indent_lines && not self#show_whitespace_chars then (self#paint_indent_lines drawable) start stop y0 h0;
         (*  *)
@@ -739,7 +748,7 @@ object (self)
         begin
           match self#get_window `LEFT with
             | Some window ->
-              let drawable = new GDraw.drawable window in
+              let drawable    = new GDraw.drawable window in
               drawable#set_line_attributes ~style:`SOLID ();
               drawable#set_foreground gutter.Gutter.border_color;
               drawable#line ~x:(gutter.Gutter.size - 1) ~y:0 ~x:(gutter.Gutter.size - 1) ~y:h0;
@@ -751,8 +760,7 @@ object (self)
         begin
           match visible_right_margin with
             | Some (column, color) ->
-              let x = approx_char_width * column -
-                (match hadjustment with Some adj -> int_of_float adj#value | _ -> 0) in
+              let x = approx_char_width * column - hadjust in
               drawable#set_line_attributes ~style:`SOLID ();
               drawable#set_foreground color;
               drawable#line ~x ~y:0 ~x ~y:h0;
@@ -764,22 +772,32 @@ object (self)
             | (lstart, lstop) :: (rstart, rstop) :: [] ->
               drawable#set_foreground Oe_config.matching_delim_border_color;
               drawable#set_line_attributes ~width:1 ~style:`SOLID ();
-              let hadjust = match hadjustment with Some adj -> int_of_float adj#value | _ -> 0 in
               let draw start stop =
                 let start = Gtk_util.get_iter_mark buffer start in
                 let stop = Gtk_util.get_iter_mark buffer stop in
                 let yl1, hl1 = view#get_line_yrange start in
                 let yl1 = yl1 - y0 in
-                let x_chars, lines_displayed = self#count_displayed_line (stop#set_line_index 0) start in
-                let x = approx_char_width * x_chars - hadjust in
+                (* count_displayed_line *)
+                let iter = ref (stop#set_line_index 0) in
+                let x_chars = ref 0 in
+                let lines_displayed = ref 1 in
+                while not (!iter#equal start) do
+                  if !iter#char = 9 then begin
+                    x_chars := ((!x_chars / 8) * 8 + 8);
+                  end else (incr x_chars);
+                  iter := !iter#forward_char;
+                  if self#starts_display_line !iter then (x_chars := 0; incr lines_displayed)
+                done;
+                (*  *)
+                let x = approx_char_width * !x_chars - hadjust in
                 let width_chars = stop#line_index - start#line_index in
                 let width = approx_char_width * width_chars in
                 let pango = self#misc#pango_context in
                 let metrics = pango#get_metrics() in
                 let height = (metrics#ascent + metrics#descent) / Pango.scale -  1 in
                 let y =
-                  if lines_displayed > 0
-                  then yl1 + ((lines_displayed - 1) * (hl1 / lines_displayed))
+                  if !lines_displayed > 0
+                  then yl1 + ((!lines_displayed - 1) * (hl1 / !lines_displayed))
                   else yl1
                 in
                 drawable#rectangle ~x ~y ~width ~height ();
@@ -788,83 +806,58 @@ object (self)
               draw rstart rstop;
             | _ -> ()
         end;
-        (* Dot leaders *)
-        if Oe_config.dot_leaders_enabled && not self#show_whitespace_chars then ((self#draw_dot_leaders y0 drawable) ev);
         (* Whitespace characters *)
-        if self#show_whitespace_chars then ((*Prf.crono Prf.prf_draw_white_spces*) (self#draw_whitespace_chars y0 drawable) ev);
+        if self#show_whitespace_chars then begin
+          let iter        = ref expose_top in
+          let pango       = self#misc#pango_context in
+          let layout      = pango#create_layout in
+          let draw iter text =
+            let rect = self#get_iter_location iter in
+            let x = Gdk.Rectangle.x rect - hadjust in
+            let y = Gdk.Rectangle.y rect - y0 in
+            Pango.Layout.set_text layout text;
+            drawable#put_layout ~x ~y ~fore:self#base_color layout;
+            drawable#put_layout ~x ~y ~fore:Oe_config.indent_lines_dashed_color layout;
+          in
+          while !iter#compare expose_bottom < 0 do
+            let line_num = !iter#line in
+            while !iter#line = line_num do
+              let char = !iter#char in
+              begin
+                match char with
+                  | 32 ->
+                    let start = !iter in
+                    let pos = start#line_index in
+                    iter := !iter#forward_find_char not_blank;
+                    draw start (create_middot_string (!iter#line_index - pos));
+                  | 13 -> draw !iter whitespace_crlf
+                  | 9 -> draw !iter whitespace_tab
+                  | _ when !iter#ends_line -> draw !iter whitespace_lf
+                  | _ -> ()
+              end;
+              iter := !iter#forward_char
+            done;
+          done
+        end;
+        (* Dot leaders *)
+        if Oe_config.dot_leaders_enabled && not self#show_whitespace_chars then begin
+          Gdk.GC.set_fill drawable#gc `SOLID;
+          drawable#set_line_attributes ~style:Oe_config.dash_style ();
+          drawable#set_foreground (`COLOR (Preferences.tag_color "lident"));
+          Alignment.iter ~start:expose_top ~stop:expose_bottom begin fun _ start stop _ ->
+            if stop#line_index - start#line_index > 2 then begin
+              let start = start#forward_char in
+              let x1 = approx_char_width * start#line_index - hadjust in
+              let x2 = approx_char_width * stop#line_index - hadjust in
+              let y, h = self#get_line_yrange start in
+              let y = y - y0 + h - 3 (*(min 3 (h / 5))*) in
+              Gdk.GC.set_dashes drawable#gc ~offset:(x2 (*- x1*)) [1; approx_char_width - 1];  (*6*)
+              drawable#line ~x:x2 ~y ~x:x1 ~y;
+            end
+          end
+        end;
         false
       | _ -> false
-
-  method private count_displayed_line start stop =
-    let iter = ref start in
-    let x_chars = ref 0 in
-    let lines_displayed = ref 1 in
-    while not (!iter#equal stop) do
-      if !iter#char = 9 then begin
-        x_chars := ((!x_chars / 8) * 8 + 8);
-      end else (incr x_chars);
-      iter := !iter#forward_char;
-      if self#starts_display_line !iter then (x_chars := 0; incr lines_displayed)
-    done;
-    !x_chars, !lines_displayed
-
-  method private draw_whitespace_chars y0 drawable ev =
-    let expose_area = GdkEvent.Expose.area ev in
-    let ya          = y0 + Gdk.Rectangle.y expose_area in
-    let top, _      = self#get_line_at_y ya in
-    let bottom, _   = self#get_line_at_y (ya + (Gdk.Rectangle.height expose_area)) in
-    let iter        = ref top in
-    let pango       = self#misc#pango_context in
-    let layout      = pango#create_layout in
-    let x_adj       = match hadjustment with Some adj -> int_of_float adj#value | _ -> 0 in
-    let draw iter text =
-      let rect = self#get_iter_location iter in
-      let x = Gdk.Rectangle.x rect - x_adj in
-      let y = Gdk.Rectangle.y rect - y0 in
-      Pango.Layout.set_text layout text;
-      drawable#put_layout ~x ~y ~fore:self#base_color layout;
-      drawable#put_layout ~x ~y ~fore:Oe_config.indent_lines_dashed_color layout;
-    in
-    while !iter#compare bottom < 0 do
-      let line_num = !iter#line in
-      while !iter#line = line_num do
-        let char = !iter#char in
-        begin
-          match char with
-            | 32 ->
-              let start = !iter in
-              let pos = start#line_index in
-              iter := !iter#forward_find_char not_blank;
-              draw start (create_middot_string (!iter#line_index - pos));
-            | 13 -> draw !iter whitespace_crlf
-            | 9 -> draw !iter whitespace_tab
-            | _ when !iter#ends_line -> draw !iter whitespace_lf
-            | _ -> ()
-        end;
-        iter := !iter#forward_char
-      done;
-    done
-
-  method private draw_dot_leaders y0 drawable ev =
-    let expose_area = GdkEvent.Expose.area ev in
-    let ya = y0 + Gdk.Rectangle.y expose_area in
-    let top, _ = self#get_line_at_y ya in
-    let bottom, _ = self#get_line_at_y (ya + (Gdk.Rectangle.height expose_area)) in
-    Gdk.GC.set_fill drawable#gc `SOLID;
-    drawable#set_line_attributes ~style:Oe_config.dash_style ();
-    drawable#set_foreground (`COLOR (Preferences.tag_color "lident"));
-    Alignment.iter ~start:top ~stop:bottom begin fun _ start stop _ ->
-      if stop#line_index - start#line_index > 2 then begin
-        let start = start#forward_char in
-        let x_adj = match hadjustment with Some adj -> int_of_float adj#value | _ -> 0 in
-        let x1 = approx_char_width * start#line_index - x_adj in
-        let x2 = approx_char_width * stop#line_index - x_adj in
-        let y, h = self#get_line_yrange start in
-        let y = y - y0 + h - 3 (*(min 3 (h / 5))*) in
-        Gdk.GC.set_dashes drawable#gc ~offset:(x2 (*- x1*)) [1; approx_char_width - 1];  (*6*)
-        drawable#line ~x:x2 ~y ~x:x1 ~y;
-      end
-    end
 
   method private draw_paragraph_border drawable start stop y0 h0 w0 =
     let table = new GText.tag_table self#buffer#tag_table in
