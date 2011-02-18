@@ -43,8 +43,6 @@ let whitespace_crlf        = "\xC2\xA4\xC2\xB6"
 let whitespace_lf          = "\xC2\xB6"
 let create_middot_string = Miscellanea.Memo.fast
   ~f:(fun x -> String.concat "" (Miscellanea.Xlist.list_full whitespace_middot x))
-let whitespace_middot_2      = create_middot_string 2
-let whitespace_middot_4      = create_middot_string 4
 
 (** Buffer *)
 class buffer =
