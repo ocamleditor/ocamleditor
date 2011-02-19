@@ -110,15 +110,18 @@ object (self)
 
   method set_menu_item_nav_history_sensitive () =
     let back, forward, last = editor#location_history_is_empty () in
-
-(*    Location_history.print editor#location_history;
-    eprintf "%d, %d, %d\n%!" (List.length (Location_history.get_history_backward editor#location_history))
+    (*Location_history.print editor#location_history;
+    eprintf "%d, %d, %d, %b\n%!"
+      (List.length (Location_history.get_history_backward editor#location_history))
       (List.length (Location_history.get_history_forward editor#location_history))
-      (Location_history.current_index editor#location_history);*)
-
+      (Location_history.current_index editor#location_history)
+      last;*)
     (!get_menu_item_nav_history_backward())#misc#set_sensitive (not back);
     (!get_menu_item_nav_history_forward())#misc#set_sensitive (not forward);
     (!get_menu_item_nav_history_last())#misc#set_sensitive (not last);
+    toolbar#tool_back#misc#set_sensitive (not back);
+    toolbar#tool_forward#misc#set_sensitive (not forward);
+    toolbar#tool_last_edit_loc#misc#set_sensitive (not last);
 
   method shell () =
     messages#add_ocaml_shell ~project:self#current_project ();
@@ -666,12 +669,12 @@ object (self)
     in
     let callback _ =
       toolbar#update current_project;
-      self#set_menu_item_nav_history_sensitive();
       update_toolbar_save();
       update_toolbar_undo();
       Gaux.may (editor#get_page Editor_types.Current) ~f:begin fun current ->
         self#set_title editor;
-      end
+      end;
+      self#set_menu_item_nav_history_sensitive();
     in
     editor#connect#switch_page ~callback;
     editor#connect#remove_page ~callback;

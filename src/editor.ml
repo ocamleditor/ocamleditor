@@ -395,7 +395,6 @@ object (self)
             ignore (page#view#matching_delim ());
             ignore (page#ocaml_view#code_folding#scan_folding_points ());
           end;
-
           self#location_history_add ~iter:start ~kind:`EDIT ();
         end);
         (** Paste clipboard *)
