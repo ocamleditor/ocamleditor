@@ -75,9 +75,6 @@ let get_iter_at_mark_safe buffer mark =
     Printf.eprintf "File \"gtk_util.ml\": %s\n%s\n%!" (Printexc.to_string ex) (Printexc.get_backtrace());
     raise ex
 
-(** get_iter_mark *)
-let get_iter_mark buffer mark = new GText.iter (get_iter_at_mark_safe buffer#as_buffer mark)
-
 (** set_tag_paragraph_background *)
 let set_tag_paragraph_background (tag : GText.tag) =
   Gobject.Property.set tag#as_tag {Gobject.name="paragraph-background"; conv=Gobject.Data.string}

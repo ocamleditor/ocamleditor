@@ -175,6 +175,9 @@ object (self)
     let stop = self#get_iter `INSERT in
     self#select_range (stop#backward_chars (Glib.Utf8.length text)) stop
 
+  method get_iter_at_mark mark =
+    new GText.iter (Gtk_util.get_iter_at_mark_safe self#as_buffer (self#get_mark mark))
+
   method as_tbuffer = (self :> GText.buffer)
 end
 
@@ -439,22 +442,22 @@ object (self)
         match current_matching_tag_bounds with
           | [(rstart, rstop); (lstart, lstop)] ->
             let ins = self#buffer#get_iter `INSERT in
-            let right_start = Gtk_util.get_iter_mark self#buffer rstart in
-            let left_stop = Gtk_util.get_iter_mark self#buffer lstop in
+            let right_start = self#buffer#get_iter_at_mark (`MARK rstart) in
+            let left_stop = self#buffer#get_iter_at_mark (`MARK lstop) in
             if select then begin
               let start =
                 if strict then begin
                   let start = left_stop#forward_find_char not_blank in
                   let start = start#set_line_index 0 in
                   if start#compare left_stop <= 0 then left_stop else start
-                end else (Gtk_util.get_iter_mark self#buffer lstart)
+                end else (self#buffer#get_iter_at_mark (`MARK lstart))
               in
               let stop =
                 if strict then begin
                   let stop = right_start#backward_find_char not_blank in
                   let stop = stop#forward_line in
                   if stop#compare right_start <= 0 then stop else right_start
-                end else (Gtk_util.get_iter_mark self#buffer rstop)
+                end else (self#buffer#get_iter_at_mark (`MARK rstop))
               in
               self#buffer#select_range start stop;
             end else begin
@@ -589,7 +592,7 @@ object (self)
         (*Prf.prf_other_markers begin fun () ->*)
           let x = (gutter.Gutter.size - gutter.Gutter.fold_size - 3 - Gutter.icon_size) / 2 (*1*) in
           List.iter begin fun mark ->
-            let ym, h = self#get_line_yrange (Gtk_util.get_iter_mark buffer mark.Gutter.mark) in
+            let ym, h = self#get_line_yrange (buffer#get_iter_at_mark (`MARK mark.Gutter.mark)) in
             let y = ym - y0 in
             Line_num_labl.hide (y + self#pixels_above_lines) line_num_labl;
             let y = y + (h - Gutter.icon_size) / 2 in
@@ -771,8 +774,8 @@ object (self)
               drawable#set_foreground Oe_config.matching_delim_border_color;
               drawable#set_line_attributes ~width:1 ~style:`SOLID ();
               let draw start stop =
-                let start = Gtk_util.get_iter_mark buffer start in
-                let stop = Gtk_util.get_iter_mark buffer stop in
+                let start = buffer#get_iter_at_mark (`MARK start) in
+                let stop = buffer#get_iter_at_mark (`MARK stop) in
                 let yl1, hl1 = view#get_line_yrange start in
                 let yl1 = yl1 - y0 in
                 (* count_displayed_line *)

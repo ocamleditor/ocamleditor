@@ -90,9 +90,9 @@ let apply project (view : Ocaml_text.view) (templ : Templates.t) =
   begin
     match !mark_i, !mark_s with
       | None, None -> ()
-      | (Some mark), None -> buffer#place_cursor ~where:(Gtk_util.get_iter_mark buffer mark);
-      | None, (Some mark) -> buffer#place_cursor ~where:(Gtk_util.get_iter_mark buffer mark);
-      | (Some mi), (Some ms) -> buffer#select_range (Gtk_util.get_iter_mark buffer mi) (Gtk_util.get_iter_mark buffer ms);
+      | (Some mark), None -> buffer#place_cursor ~where:(buffer#get_iter_at_mark (`MARK mark));
+      | None, (Some mark) -> buffer#place_cursor ~where:(buffer#get_iter_at_mark (`MARK mark));
+      | (Some mi), (Some ms) -> buffer#select_range (buffer#get_iter_at_mark (`MARK mi)) (buffer#get_iter_at_mark (`MARK ms));
   end;
   Gaux.may !mark_i ~f:(fun mark -> buffer#delete_mark (`MARK mark));
   Gaux.may !mark_s ~f:(fun mark -> buffer#delete_mark (`MARK mark));
@@ -104,8 +104,8 @@ let apply project (view : Ocaml_text.view) (templ : Templates.t) =
   if buffer#lexical_enabled then begin
     Gtk_util.idle_add begin fun () ->
       Lexical.tag view#buffer
-        ~start:(Gtk_util.get_iter_mark buffer mark_begin)
-        ~stop:(Gtk_util.get_iter_mark buffer mark_end);
+        ~start:(buffer#get_iter_at_mark (`MARK mark_begin))
+        ~stop:(buffer#get_iter_at_mark (`MARK mark_end));
     end
   end else (remove_marks());
   view#tbuffer#undo#end_block()

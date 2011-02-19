@@ -98,8 +98,8 @@ class widget ~editor ?packing () =
                 start, stop
               | Some (start, stop) -> start, stop
             in
-            let start = Gtk_util.get_iter_mark page#buffer start in
-            let stop = Gtk_util.get_iter_mark page#buffer stop in
+            let start = page#buffer#get_iter_at_mark (`MARK start) in
+            let stop = page#buffer#get_iter_at_mark (`MARK stop) in
             page#view#scroll_lazy start;
             page#buffer#select_range start stop;
             if grab_focus || page#view#misc#get_flag `HAS_FOCUS then

@@ -151,8 +151,6 @@ object (self)
 
   method refresh () = Project.refresh self#current_project
 
-  (** Restituisce il progetto attualmente aperto nel browser. Se non c'è nessun progetto aperto
-    solleva l'eccezione [No_current_project].*)
   method current_project =
     match current_project with None -> raise No_current_project | Some p -> p
 

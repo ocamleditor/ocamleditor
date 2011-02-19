@@ -32,7 +32,7 @@ let forward_non_blank iter =
   f iter
 
 class error_indication (view : Ocaml_text.view) vscrollbar (global_gutter, global_gutter_ebox) =
-  let buffer = view#buffer in
+  let buffer = view#tbuffer in
   let create_tags () =
     let ts = Unix.gettimeofday() in
     let tag_error = buffer#create_tag ~name:(sprintf "tag_error-%f" ts) [`LEFT_MARGIN view#left_margin] in
@@ -108,9 +108,9 @@ object (self)
   method first_error_or_warning = match self#first_error with None -> self#first_warning | x -> x
 
   method private callback_gutter_marker mark =
-    let iter = Gtk_util.get_iter_mark view#buffer mark in
-    view#buffer#place_cursor iter;
-    Gtk_util.idle_add ~prio:300 (fun () -> self#tooltip ~sticky:true (`ITER iter)); 
+    let iter = buffer#get_iter_at_mark (`MARK mark) in
+    buffer#place_cursor iter;
+    Gtk_util.idle_add ~prio:300 (fun () -> self#tooltip ~sticky:true (`ITER iter));
     true;
 
   method private do_apply_tag messages icon =
@@ -137,7 +137,7 @@ object (self)
       end messages
     (*end ()*)
 
-  method apply_tag messages = 
+  method apply_tag messages =
     Gtk_util.idle_add begin fun () ->
       if enabled then begin
         let tview = (view :> Text.view) in
@@ -161,7 +161,7 @@ object (self)
       let stop = `MARK stop in
       let tag = self#tag_of_error error in
       buffer#remove_tag tag ~start:(buffer#get_iter start) ~stop:(buffer#get_iter stop)#forward_line;
-      buffer#delete_mark start; 
+      buffer#delete_mark start;
       buffer#delete_mark stop;
     end tags;
 
@@ -188,10 +188,10 @@ object (self)
 
   method private find_message iter tags =
     try
-      List.find (fun (start, stop, error) -> iter#equal (Gtk_util.get_iter_mark buffer start)) tags
+      List.find (fun (start, stop, error) -> iter#equal (buffer#get_iter_at_mark (`MARK start))) tags
     with Not_found -> begin
       List.find begin fun (start, stop, error) ->
-        iter#in_range ~start:(Gtk_util.get_iter_mark buffer start) ~stop:(Gtk_util.get_iter_mark buffer stop)
+        iter#in_range ~start:(buffer#get_iter_at_mark (`MARK start)) ~stop:(buffer#get_iter_at_mark (`MARK stop))
       end tags
     end
 
@@ -203,8 +203,8 @@ object (self)
           (** When the tooltip is already shown, do nothing *)
           ignore (List.find begin fun (start, stop, popup) ->
             try
-              let start = Gtk_util.get_iter_mark buffer start in
-              let stop = Gtk_util.get_iter_mark buffer stop in
+              let start = buffer#get_iter_at_mark (`MARK start) in
+              let stop = buffer#get_iter_at_mark (`MARK stop) in
               iter#in_range ~start ~stop
             with Gtk_util.Mark_deleted -> false
           end tag_popup);
@@ -286,18 +286,18 @@ object (self)
       end;
       (** Draw markers *)
       let height = height - 2 * alloc.Gtk.width in
-      let line_count = float view#buffer#line_count in
+      let line_count = float buffer#line_count in
       let height = float height in
       let width = width - 0 in
       (** Comments *)
       if Oe_config.global_gutter_comments_enabled then begin
-        match Comments.scan_utf8 (view#buffer#get_text ()) with
+        match Comments.scan_utf8 (buffer#get_text ()) with
           | Comments.Utf8 comments ->
             List.iter begin fun (start, stop, _, odoc) ->
               let filled = odoc in
               drawable#set_foreground Oe_config.global_gutter_comments_color;
-              let line_start = float (view#buffer#get_iter (`OFFSET start))#line in
-              let line_stop = float (view#buffer#get_iter (`OFFSET stop))#line in
+              let line_start = float (buffer#get_iter (`OFFSET start))#line in
+              let line_stop = float (buffer#get_iter (`OFFSET stop))#line in
               let y1 = int_of_float ((line_start /. line_count) *. height) in
               let y2 = int_of_float ((line_stop /. line_count) *. height) in
               let y1 = y1 + alloc.Gtk.width in
@@ -309,12 +309,12 @@ object (self)
       (** Draw a marker *)
       let draw_marker start color =
         drawable#set_foreground color;
-        let line_start = float (Gtk_util.get_iter_mark view#buffer start)#line in
+        let line_start = float (buffer#get_iter_at_mark (`MARK start))#line in
         let y = int_of_float ((line_start /. line_count) *. height) in
         table <- (y + 1, start) :: table;
         let y = y + alloc.Gtk.width in
         drawable#rectangle ~filled:true ~x:0 ~y ~width ~height:3 ();
-      in 
+      in
       (** Warnings *)
       List.iter begin fun (start, _, warning) ->
         draw_marker start (if is_warning_unused warning.Err_types.er_level
@@ -344,8 +344,8 @@ object (self)
           drawable#set_line_attributes ~width:1 ~style:`SOLID ();
           List.iter begin function
             | (start, stop, error) when (not (is_warning_unused error.Err_types.er_level)) ->
-              let start = ref (Gtk_util.get_iter_mark view#buffer start) in
-              let stop = Gtk_util.get_iter_mark view#buffer stop in
+              let start = ref (buffer#get_iter_at_mark (`MARK start)) in
+              let stop = buffer#get_iter_at_mark (`MARK stop) in
               let stop = if bottom#compare stop < 0 then bottom else stop in
               while !start#compare stop <= 0 do
                 begin
@@ -406,26 +406,26 @@ object (self)
         let tooltip, iter =
           try
             let _, mark = List.find (fun (yy, _) -> let yy = float yy in yy -. 4. <= y && y <= yy +. 4.) (List.rev table) in
-            true, (Gtk_util.get_iter_mark view#buffer mark)
+            true, (buffer#get_iter_at_mark (`MARK mark))
           with Not_found -> begin
-            let line_count = float view#buffer#line_count in
+            let line_count = float buffer#line_count in
             let line = int_of_float (y /. height *. line_count) in
-            false, view#buffer#get_iter (`LINE line);
+            false, buffer#get_iter (`LINE line);
           end
         in
         view#scroll_lazy iter;
-        view#buffer#place_cursor iter;
+        buffer#place_cursor iter;
         if tooltip then begin
           Gtk_util.idle_add ~prio:300 (fun () -> self#tooltip ~sticky:true (`ITER iter));
         end;
       end else begin
         let iter =
           match self#first_error_or_warning with
-            | None -> view#buffer#start_iter
-            | Some (start, _, _) -> Gtk_util.get_iter_mark view#buffer start
+            | None -> buffer#start_iter
+            | Some (start, _, _) -> buffer#get_iter_at_mark (`MARK start)
         in
         view#scroll_lazy iter;
-        view#buffer#place_cursor iter;
+        buffer#place_cursor iter;
       end;
       false
     end);
