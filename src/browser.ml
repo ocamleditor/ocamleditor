@@ -79,30 +79,34 @@ object (self)
 
   method exit (editor : Editor.editor) () =
     self#set_maximized_view `NONE ();
+    ignore (Thread.create begin fun () ->
+      (* Save geometry *)
+      let alloc = window#misc#allocation in
+      let chan = open_out (Filename.concat Oe_config.ocamleditor_user_home "geometry") in
+      fprintf chan "%d\n%d\n%d\n%d\n%b\n%b\n%b\n%!" (alloc.Gtk.width) (alloc.Gtk.height) (alloc.Gtk.x) (alloc.Gtk.y)
+        menubar_visible editor#show_tabs toolbar_visible;
+      close_out chan;
+    end ());
     let finalize () =
-      try
-        ignore(messages#remove_all_tabs());
-        (* Save the project *)
-        begin
-          try
-            let proj = self#current_project in
-            Project.save ~editor proj;
-          with No_current_project | Gpointer.Null -> ()
-        end;
-        (* Save project and file history *)
-        File_history.write editor#file_history;
-        File_history.write project_history;
-        (* Save geometry *)
-        let alloc = window#misc#allocation in
-        let chan = open_out (Filename.concat Oe_config.ocamleditor_user_home "geometry") in
-        fprintf chan "%d\n%d\n%d\n%d\n%b\n%b\n%b\n%!" (alloc.Gtk.width) (alloc.Gtk.height) (alloc.Gtk.x) (alloc.Gtk.y)
-          menubar_visible editor#show_tabs toolbar_visible;
-        close_out chan;
-        (*  *)
-        finalize();
-        GMain.Main.quit();
-        Pervasives.exit 0
-      with Messages.Cancel_process_termination -> (GtkSignal.stop_emit())
+      Gtk_util.idle_add begin fun () ->
+        try
+          ignore(messages#remove_all_tabs());
+          (* Save the project *)
+          begin
+            try
+              let proj = self#current_project in
+              Project.save ~editor proj;
+            with No_current_project | Gpointer.Null -> ()
+          end;
+          (* Save project and file history *)
+          File_history.write editor#file_history;
+          File_history.write project_history;
+          (*  *)
+          finalize();
+          GMain.Main.quit();
+          Pervasives.exit 0
+        with Messages.Cancel_process_termination -> (GtkSignal.stop_emit())
+      end
     in
     let pages = List.filter (fun p -> p#buffer#modified) editor#pages in
     let pages = List.map (fun x -> true, x) pages in
@@ -715,7 +719,7 @@ object (self)
     window#move ~x:((screen_width - !width) / 2) ~y;
     window#show();
     messages#set_position (!height * 7 / 10);
-    window#event#connect#delete ~callback:(fun _ -> self#exit editor (); true);
+    ignore (window#event#connect#after#delete ~callback:(fun _ -> self#exit editor (); true));
     (*  *)
     Ocaml_text.create_shell := self#shell;
     (* Check for updates at startup *)
