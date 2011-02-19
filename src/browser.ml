@@ -68,7 +68,7 @@ object (self)
   method window : GWindow.window = window
   method project_history = project_history
 
-  method private set_title ed =
+  method set_title ed =
     let filename = match ed#get_page Editor_types.Current with None -> "" | Some page -> page#get_filename in
     let text =
       (Printf.sprintf "%s • %s"
@@ -171,11 +171,11 @@ object (self)
     dialog#set_current_folder (Filename.dirname project_home);
     match dialog#run () with
       | `OK ->
-        List.iter (fun filename -> self#project_open' filename) dialog#get_filenames;
+        List.iter (fun filename -> self#project_open filename) dialog#get_filenames;
         dialog#destroy()
       | _ -> dialog#destroy()
 
-  method private project_open' filename =
+  method project_open filename =
     let proj = Project.load filename in
     File_history.add project_history filename;
     self#set_current_project proj;
@@ -212,7 +212,7 @@ object (self)
   method dialog_project_new () =
     ignore (Project_properties.create ~editor ~callback:begin fun proj ->
       Project.save ~editor proj;
-      self#project_open' (Project.filename proj);
+      self#project_open (Project.filename proj);
     end ());
 
   method dialog_file_new () =
@@ -489,7 +489,7 @@ object (self)
     Preferences.save();
     editor#with_current_page (fun page -> page#annot_type#remove_tag())
 
-  method private create_menu_history dir ~menu =
+  method create_menu_history dir ~menu =
     let history = match dir with
       | `BACK -> Location_history.get_history_backward editor#location_history
       | `FORWARD -> Location_history.get_history_forward editor#location_history
@@ -578,7 +578,7 @@ object (self)
     (** Load current project *)
     let rec load_current_proj history =
       match history with [] -> () | filename :: _ ->
-        if Sys.file_exists filename then (self#project_open' filename)
+        if Sys.file_exists filename then (self#project_open filename)
         else (load_current_proj (List.tl history))
     in
     File_history.read project_history;

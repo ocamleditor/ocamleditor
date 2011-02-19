@@ -155,13 +155,12 @@ object (self)
     end
 
   method location_history_add ~iter ~kind () =
-    (*Prf.crono Prf.prf_location_history_add begin fun () ->*)
-      self#with_current_page begin fun page ->
-        Location_history.add location_history ~kind ~view:(page#view :> GText.view)
-          ~filename:page#get_filename ~offset:iter#offset;
-        Liim.signal liim !set_menu_item_nav_history_sensitive
-      end
-    (*end ()*)
+    self#with_current_page begin fun page ->
+      Location_history.add location_history
+        ~kind ~view:(page#view :> GText.view)
+        ~filename:page#get_filename ~offset:iter#offset;
+      Liim.signal liim !set_menu_item_nav_history_sensitive
+    end
 
   method location_history_goto location =
     let filename = location.Location_history.filename in
@@ -241,9 +240,6 @@ object (self)
           let page = get_page() in
           let view = (page#view :> Text.view) in
           self#goto_view view;
-(*          let text = page#buffer#get_text () in
-          let start = Convert.offset_from_pos text ~pos:start in
-          let stop = Convert.offset_from_pos text ~pos:stop in*)
           let start = page#buffer#get_iter (`OFFSET start) in
           let stop = page#buffer#get_iter (`OFFSET stop) in
           page#buffer#select_range start stop;
@@ -373,19 +369,6 @@ object (self)
         (** Insert_text *)
         ignore (page#buffer#connect#insert_text ~callback:(fun _ _ -> page#view#matching_delim_remove_tag()));
         ignore (page#buffer#connect#after#insert_text ~callback:begin fun iter text ->
-
-(*          ignore (Gtk_util.idle_add ~prio:300 begin fun () ->
-            let iter = page#buffer#get_iter `INSERT in
-            if page#buffer#lexical_enabled then begin
-              Lexical.tag page#view#buffer
-                ~start:((iter#backward_chars (Glib.Utf8.length text))#set_line_index 0)
-                ~stop:iter#forward_line;
-            end;
-            page#view#paint_current_line_background iter;
-            ignore (page#view#matching_delim ());
-            ignore (page#ocaml_view#code_folding#scan_folding_points ());
-          end);*)
-
           Liim.signal liim2 begin fun () ->
             let iter = page#buffer#get_iter `INSERT in
             if page#buffer#lexical_enabled then begin
@@ -401,16 +384,6 @@ object (self)
         end);
         (** Delete range *)
         ignore (page#buffer#connect#delete_range ~callback:begin fun ~start ~stop ->
-
-(*          ignore (Gtk_util.idle_add ~prio:300 begin fun () ->
-            let iter = page#buffer#get_iter `INSERT in
-            if page#buffer#lexical_enabled then begin
-              Lexical.tag page#view#buffer
-                ~start:(iter#backward_line#set_line_index 0) ~stop:iter#forward_to_line_end;
-            end;
-            page#view#paint_current_line_background iter;
-          end);*)
-
           Liim.signal liim2 begin fun () ->
             let iter = page#buffer#get_iter `INSERT in
             if page#buffer#lexical_enabled then begin

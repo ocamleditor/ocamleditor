@@ -755,7 +755,7 @@ let create
               ~active:(filename = Project.filename browser#current_project)
               ~label ~packing:menu#add () in
             items_project := (item :> GMenu.menu_item) :: !items_project;
-            ignore (item#connect#toggled ~callback:(fun () -> browser#project_open' filename));
+            ignore (item#connect#toggled ~callback:(fun () -> browser#project_open filename));
           end
         end history;
       with Not_found -> ()
@@ -901,8 +901,11 @@ let create
       let about = About.window () in
       about#present()
     end);
-(*    let crono = GMenu.menu_item ~label:"Print debug info" ~packing:menu#add () in
-    crono#connect#activate ~callback:Prf.print;*)
+    if Oe_config.ocamleditor_debug then begin
+      let _ = GMenu.separator_item ~packing:menu#add () in
+      let crono = GMenu.menu_item ~label:"Print debug info" ~packing:menu#add () in
+      ignore (crono#connect#activate ~callback:Prf.print);
+    end;
     help
   end;
 ]
