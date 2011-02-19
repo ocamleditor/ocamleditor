@@ -38,7 +38,7 @@ let proximity = Oe_config.location_history_proximity (* in characters *)
 let limit_hint = Oe_config.location_history_max_length (* max length of history *)
 
 (** create *)
-let create () = { 
+let create () = {
   current = 0;
   history = [];
 }
@@ -156,7 +156,7 @@ let add nh ~kind ~(view : GText.view) ~filename ~offset =
 
 (** last_edit_location *)
 let last_edit_location nh =
-  try Some (List.hd nh.history) with Failure "hd" -> None
+  try Some (List.find (fun loc -> loc.kind = `EDIT) nh.history) with Not_found -> None
 
 (** goto_last_edit_location *)
 let goto_last_edit_location nh =
@@ -222,7 +222,7 @@ let print nh =
   printf "---\n%!";
   List.iter (fun x -> printf "%s\n%!" (string_of_location x)) b
 
-    
+
 
 
 
