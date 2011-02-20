@@ -3,3 +3,17 @@ tmp
 *.annot
 *.exe
 *.bak
+*.cm*
+*.obj
+*.o
+*.lib
+*.a
+ocaml-src
+.oebuild
+annot_lexer.ml
+annot_parser.ml
+annot_parser.mli
+err_lexer.ml
+err_parser.ml
+err_parser.mli
+ocamleditor-1.6.1.xml
