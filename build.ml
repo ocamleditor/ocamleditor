@@ -285,6 +285,13 @@ let uninstall () =
     end
   end
 
+(** with_compiler_libs *)
+let with_compiler_libs () =
+  annot := true;
+  compiler_libs ();
+  oeproc ();
+  ocamleditor()
+
 (** release *)
 let release () =
   cleanall();
@@ -303,14 +310,8 @@ let release () =
   kprintf run "mv -f %s/%s.tmp.xml %s/%s.xml" name name name name;
   kprintf Sys.chdir "%s/src" name;
   kprintf run "mkdir ocaml-src";
-  kprintf run "cp -ru ..\\..\\ocaml-src ."
-
-(** with_compiler_libs *)
-let with_compiler_libs () =
-  annot := true;
-  compiler_libs ();
-  oeproc ();
-  ocamleditor()
+  kprintf run "cp -ru ..\\..\\ocaml-src .";
+  with_compiler_libs()
 
 (** all *)
 let all () =
