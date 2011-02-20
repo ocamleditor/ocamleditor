@@ -89,8 +89,8 @@ let find_dep ?pp ?includes ?(with_errors=true) target =
   List.rev (List.map replace_extension !result)
 
 (** find *)
-let find ?pp ?includes ?(with_errors=true) targets =
-  let deps = List.map (find_dep ?pp ?includes) targets in
+let find ?pp ?includes ?with_errors targets =
+  let deps = List.map (find_dep ?pp ?includes ?with_errors) targets in
   let deps = List.flatten deps in
   List.rev (List.fold_left begin fun acc x ->
     if not (List.mem x acc) then x :: acc else acc

@@ -78,35 +78,35 @@ object (self)
     window#set_title text
 
   method exit (editor : Editor.editor) () =
-    self#set_maximized_view `NONE ();
-    ignore (Thread.create begin fun () ->
-      (* Save geometry *)
-      let alloc = window#misc#allocation in
-      let chan = open_out (Filename.concat Oe_config.ocamleditor_user_home "geometry") in
-      fprintf chan "%d\n%d\n%d\n%d\n%b\n%b\n%b\n%!" (alloc.Gtk.width) (alloc.Gtk.height) (alloc.Gtk.x) (alloc.Gtk.y)
-        menubar_visible editor#show_tabs toolbar_visible;
-      close_out chan;
-    end ());
+    Gtk_util.idle_add begin fun () ->
+      self#set_maximized_view `NONE ();
+      ignore (Thread.create begin fun () ->
+        (* Save geometry *)
+        let alloc = window#misc#allocation in
+        let chan = open_out (Filename.concat Oe_config.ocamleditor_user_home "geometry") in
+        fprintf chan "%d\n%d\n%d\n%d\n%b\n%b\n%b\n%!" (alloc.Gtk.width) (alloc.Gtk.height) (alloc.Gtk.x) (alloc.Gtk.y)
+          menubar_visible editor#show_tabs toolbar_visible;
+        close_out chan;
+      end ());
+    end;
     let finalize () =
-      Gtk_util.idle_add begin fun () ->
-        try
-          ignore(messages#remove_all_tabs());
-          (* Save the project *)
-          begin
-            try
-              let proj = self#current_project in
-              Project.save ~editor proj;
-            with No_current_project | Gpointer.Null -> ()
-          end;
-          (* Save project and file history *)
-          File_history.write editor#file_history;
-          File_history.write project_history;
-          (*  *)
-          finalize();
-          GMain.Main.quit();
-          Pervasives.exit 0
-        with Messages.Cancel_process_termination -> (GtkSignal.stop_emit())
-      end
+      try
+        ignore(messages#remove_all_tabs());
+        (* Save the project *)
+        begin
+          try
+            let proj = self#current_project in
+            Project.save ~editor proj;
+          with No_current_project | Gpointer.Null -> ()
+        end;
+        (* Save project and file history *)
+        File_history.write editor#file_history;
+        File_history.write project_history;
+        (*  *)
+        finalize();
+        GMain.Main.quit();
+        Pervasives.exit 0
+      with Messages.Cancel_process_termination -> (GtkSignal.stop_emit())
     in
     let pages = List.filter (fun p -> p#buffer#modified) editor#pages in
     let pages = List.map (fun x -> true, x) pages in

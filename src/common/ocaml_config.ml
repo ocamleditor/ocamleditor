@@ -23,9 +23,24 @@
 open Miscellanea
 open Printf
 
+let redirect_stderr = if Sys.os_type = "Win32" then " 2>NUL" else " 2>/dev/null"
+
+let rec putenv_ocamllib value =
+  match Sys.os_type with
+    | "Win32" ->
+      let value = match value with None -> "" | Some x -> x in
+      Unix.putenv "OCAMLLIB" value
+    | _ when value = None -> ignore (Sys.command "unset OCAMLLIB")
+    | _ ->
+      begin
+        match value with
+          | Some "" -> putenv_ocamllib None
+          | Some x -> Unix.putenv "OCAMLLIB" x
+          | None -> assert false
+      end
+
 let find_best_compiler compilers =
   try
-    let redirect_stderr = if Sys.os_type = "Win32" then " 2>NUL" else " 2>/dev/null" in
     List.find begin fun comp ->
       try ignore (kprintf expand "%s -version%s" comp redirect_stderr); true with _ -> false
     end compilers
@@ -41,7 +56,7 @@ let find_tool which path =
       | `OCAMLC -> ["ocamlc"]
       | `OCAML -> ["ocaml"]
   in
-  let quote    = if path <> "" && Sys.os_type = "Win32" then Filename.quote else (fun x -> x) in
+  let quote    = if path <> "" && Sys.os_type = "Win32" && String.contains path ' ' then Filename.quote else (fun x -> x) in
   let path     = if path <> "" then path // "bin" else "" in
   find_best_compiler (List.map quote (List.map ((//) path) commands))
 
@@ -62,19 +77,12 @@ let ocamllib () = Miscellanea.expand ~first_line:true ((ocamlc()) ^ " -where")
 (** OCaml Version *)
 
 let ocaml_version ?(compiler=ocamlc()) () =
-  let redirect_stderr = if Sys.os_type = "Win32" then " 2>NUL" else " 2>/dev/null" in
   Miscellanea.expand (compiler ^ " -v " ^ redirect_stderr)
 
 (** can_compile_native *)
-let can_compile_native () =
-  let ccopt =
-    match Sys.os_type with
-      | "Win32" -> ""
-        (*"-ccopt \"-LC:\\Programmi\\MIC977~1\\Lib -LC:\\Programmi\\MID05A~1\\VC\\lib\""*)
-      | _ -> ""
-  in
+let can_compile_native ~ocaml_home () =
   let result = ref false in
-  let filename = "test_native.ml" in
+  let filename = Filename.temp_file "test_native" ".ml" in
   let ochan = open_out filename in
   begin
     try
@@ -83,18 +91,21 @@ let can_compile_native () =
     with _ -> (close_out ochan)
   end;
   let outname = Filename.chop_extension filename in
-  let cmd = sprintf "ocamlopt -o %s %s %s" outname ccopt filename in
+  let compiler = find_tool `BEST_OCAMLOPT ocaml_home in
+  let cmd = sprintf "%s -o %s %s%s" compiler outname filename redirect_stderr in
   result := (Sys.command cmd) = 0;
-  Sys.remove filename;
-  if Sys.file_exists outname then (Sys.remove outname);
-  let cmi = outname ^ ".cmi" in
-  if Sys.file_exists cmi then (Sys.remove cmi);
-  let cmx = outname ^ ".cmx" in
-  if Sys.file_exists cmx then (Sys.remove cmx);
-  let obj = outname ^ ".o" in
-  if Sys.file_exists obj then (Sys.remove obj);
-  let obj = outname ^ ".obj" in
-  if Sys.file_exists obj then (Sys.remove obj);
+  ignore (Thread.create begin fun () ->
+    Sys.remove filename;
+    if Sys.file_exists outname then (Sys.remove outname);
+    let cmi = outname ^ ".cmi" in
+    if Sys.file_exists cmi then (Sys.remove cmi);
+    let cmx = outname ^ ".cmx" in
+    if Sys.file_exists cmx then (Sys.remove cmx);
+    let obj = outname ^ ".o" in
+    if Sys.file_exists obj then (Sys.remove obj);
+    let obj = outname ^ ".obj" in
+    if Sys.file_exists obj then (Sys.remove obj);
+  end ());
   !result
 
 

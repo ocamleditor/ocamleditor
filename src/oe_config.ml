@@ -109,7 +109,7 @@ let ocaml_codeset = "ISO-8859-1"
 
 let _ = Printexc.record_backtrace true
 let _ = Unix.putenv "TERM" ""
-let system_ocamllib = Sys.getenv "OCAMLLIB"
+let system_ocamllib = try Some (Sys.getenv "OCAMLLIB") with Not_found -> None
 
 let find_best ?(param="--help") prog =
   let redirect_stderr = if Sys.os_type = "Win32" then " 2>NUL" else " 2>/dev/null" in
@@ -182,7 +182,7 @@ let oeproc_command =
   else "unused"
 
 (*  *)
-let _ = Unix.putenv "OCAMLLIB" ""
+let _ = Ocaml_config.putenv_ocamllib None
 
 
 

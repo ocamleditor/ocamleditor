@@ -49,6 +49,7 @@ type t = {
   mutable autocomp_compiler : string;
   mutable in_source_path : string -> string option;
   mutable source_paths : string list;
+  mutable can_compile_native : bool;
 }
 
 let extension = ".xml"
@@ -65,16 +66,22 @@ let set_ocaml_home ~ocamllib ~ocaml_home project =
   project.ocaml_home <- ocaml_home;
   project.ocamllib <- ocamllib;
   Unix.putenv "OCAML_HOME" project.ocaml_home;
-  Unix.putenv "OCAMLLIB" project.ocamllib;
-  project.autocomp_compiler <- sprintf "%s -c -thread -annot" (Ocaml_config.ocamlc())
+  Ocaml_config.putenv_ocamllib (Some project.ocamllib);
+  project.autocomp_compiler <- sprintf "%s -c -thread -annot" (Ocaml_config.ocamlc());
+  ignore (Thread.create begin fun () ->
+    project.can_compile_native <- Ocaml_config.can_compile_native ~ocaml_home:project.ocaml_home ();
+  end ())
+
+(** can_compile_native *)
+let can_compile_native proj = Ocaml_config.can_compile_native ~ocaml_home:proj.ocaml_home ()
 
 (** create *)
 let create ~filename () =
   let root = Filename.dirname filename in
-  {
+  let proj = {
     root = root;
     ocaml_home = "";
-    ocamllib = Oe_config.system_ocamllib;
+    ocamllib = (match Oe_config.system_ocamllib with None -> "" | Some x -> x);
     encoding = Some "UTF-8";
     name = Filename.chop_extension (Filename.basename filename);
     modified = true;
@@ -90,8 +97,10 @@ let create ~filename () =
     autocomp_cflags = "";
     autocomp_compiler = "";
     in_source_path = Miscellanea.filename_relative (root // src);
-    source_paths = try File.readtree (root // src) with Sys_error _ -> [];
-  }
+    source_paths = (try File.readtree (root // src) with Sys_error _ -> []);
+    can_compile_native = true;
+  } in
+  proj
 
 (** set_runtime_build_task *)
 let set_runtime_build_task proj rconf rbt_string =
@@ -499,8 +508,4 @@ let refresh proj =
   proj.description <- np.description;
   proj.version <- np.version;
   proj.in_source_path <- Miscellanea.filename_relative (np.root // src);
-  proj.source_paths <- try File.readtree (np.root // src) with Sys_error _ -> []
-
-
-
-
+  proj.source_paths <- (try File.readtree (np.root // src) with Sys_error _ -> [])

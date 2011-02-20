@@ -436,6 +436,7 @@ let exec_sync ?run_cb ?(use_thread=true) ?(at_exit=ignore) ~project ~editor task
 
 (** exec *)
 let exec ~project ~editor ?use_thread task_kind bconf =
+  let can_compile_native = project.Project.can_compile_native in
   let filter_tasks = Bconf.filter_external_tasks bconf in
   let tasks_clean () =
     (* External build tasks *)
@@ -473,9 +474,9 @@ let exec ~project ~editor ?use_thread task_kind bconf =
   | `CLEAN -> exec_sync ~project ~editor (tasks_clean ());
   | `ANNOT -> exec_sync ~project ~editor (tasks_annot ());
   | `COMPILE ->
-    exec_sync ~project ~editor ~at_exit (tasks_compile ~name:build_name bconf);
+    exec_sync ~project ~editor ~at_exit (tasks_compile ~name:build_name ~can_compile_native bconf);
   | `COMPILE_ONLY ->
-    exec_sync ~project ~editor ~at_exit (tasks_compile ~flags:["-c"] ~name:compile_name bconf);
+    exec_sync ~project ~editor ~at_exit (tasks_compile ~flags:["-c"] ~name:compile_name ~can_compile_native bconf);
   | `RCONF rc ->
     let oebuild, args = Bconf.create_cmd_line bconf in
     let name = rc.Rconf.name in
@@ -483,8 +484,8 @@ let exec ~project ~editor ?use_thread task_kind bconf =
       match rc.Rconf.build_task with
         | `NONE -> []
         | `CLEAN -> tasks_clean ()
-        | `COMPILE -> tasks_compile ~name:build_name bconf
-        | `REBUILD -> tasks_clean () @ tasks_compile ~name:build_name bconf
+        | `COMPILE -> tasks_compile ~name:build_name ~can_compile_native bconf
+        | `REBUILD -> tasks_clean () @ tasks_compile ~name:build_name ~can_compile_native bconf
         | `ETASK name ->
           let etask = List.find ((=) name) bconf.Bconf.external_tasks in
           [`OTHER, etask]

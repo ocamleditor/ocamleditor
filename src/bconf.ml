@@ -106,7 +106,7 @@ let filter_external_tasks bconf phase =
   end bconf.external_tasks
 
 (** create_cmd_line *)
-let create_cmd_line ?(flags=[]) bconf =
+let create_cmd_line ?(flags=[]) ?(can_compile_native=true) bconf =
   let quote = Filename.quote in
   let files = Cmd_line_args.parse bconf.files in
   Oe_config.oebuild_command,
@@ -120,19 +120,19 @@ let create_cmd_line ?(flags=[]) bconf =
   @ (if bconf.other_objects <> "" then ["-m"; quote (bconf.other_objects)] else [])
   @ (if bconf.is_library then ["-a"] else [])
   @ (if bconf.byt then ["-byt"] else [])
-  @ (if bconf.opt then ["-opt"] else [])
+  @ (if bconf.opt && can_compile_native then ["-opt"] else [])
   @ (if bconf.thread then ["-thread"] else [])
   @ (if bconf.vmthread then ["-vmthread"] else [])
   @ (if bconf.outname <> "" then ["-o"; quote (bconf.outname)] else [])
   @ flags
 
 (** tasks_compile *)
-let tasks_compile ?(name="tasks_compile") ?(flags=[]) bconf =
+let tasks_compile ?(name="tasks_compile") ?(flags=[]) ?can_compile_native bconf =
   let filter_tasks = filter_external_tasks bconf in
   let et_before_compile = filter_tasks Task.Before_compile in
   let et_compile = filter_tasks Task.Compile in
   let et_compile = if et_compile = [] then [`COMPILE, begin
-    let cmd, args = create_cmd_line ~flags bconf in
+    let cmd, args = create_cmd_line ~flags ?can_compile_native bconf in
     Task.create ~name ~env:[] ~dir:"" ~cmd ~args ()
   end] else et_compile in
   let et_after_compile = filter_tasks Task.After_compile in

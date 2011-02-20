@@ -42,19 +42,31 @@ class widget ~project ?(spacing=3) ?border_width ~label_width ?packing ()=
   let box = GPack.hbox ~spacing ~packing:(table#attach ~top:!top ~left:1 ~expand:`X) () in
   let entry_ocamllib = GEdit.entry ~editable:true ~packing:box#add () in
   let button_ocamllib = GButton.button ~label:"  ...  " ~packing:box#pack () in
+
+  let _ = incr top in
+  let _ = GMisc.label ~xalign:0.0 ~width:label_width ~text:"Can compile native:" ~packing:(table#attach ~top:!top ~left:0) () in
+  let box = GPack.hbox ~spacing ~packing:(table#attach ~top:!top ~left:1 ~expand:`X) () in
+  let entry_native = GEdit.entry ~editable:false ~packing:box#add () in
+  let button_native = GButton.button ~label:"Test" ~packing:box#pack () in
+
   let location = new GUtil.variable (Sys.getcwd()) in
   let original_ocamllib = try Sys.getenv "OCAMLLIB" with Not_found -> "" in
 object (self)
   inherit GObj.widget vbox#as_widget
 
+  method private with_ocamllib : 'a.(unit -> 'a) -> 'a = fun f ->
+    Ocaml_config.putenv_ocamllib (Some entry_ocamllib#text);
+    let finally () = Ocaml_config.putenv_ocamllib (Some original_ocamllib) in
+    (try let result = f() in finally(); result with ex -> (finally(); raise ex))
+
   method get_ocaml_version ?preview path =
     try
-      Unix.putenv "OCAMLLIB" entry_ocamllib#text;
-      let compiler = Ocaml_config.find_tool `OCAMLC path in
-      let version = Miscellanea.replace_all ["\n", " - "] (Miscellanea.trim (Ocaml_config.ocaml_version ~compiler ())) in
-      Unix.putenv "OCAMLLIB" original_ocamllib;
-      Gaux.may preview ~f:(fun preview -> kprintf preview#set_label "<big><b>%s</b></big>" version);
-      version
+      self#with_ocamllib begin fun () ->
+        let compiler = Ocaml_config.find_tool `OCAMLC path in
+        let version = Miscellanea.replace_all ["\n", " - "] (Miscellanea.trim (Ocaml_config.ocaml_version ~compiler ())) in
+        Gaux.may preview ~f:(fun preview -> kprintf preview#set_label "<big><b>%s</b></big>" version);
+        version
+      end
     with _ -> (Gaux.may preview ~f:(fun preview -> preview#set_label "<big><b> </b></big>"); "<Not found>")
 
   method chooser ?(with_preview=false) path () =
@@ -87,12 +99,20 @@ object (self)
   method location = location#get
 
   initializer
+    ignore (button_native#connect#clicked ~callback:begin fun () ->
+      entry_native#set_text "Please wait...";
+      Gtk_util.idle_add begin fun () ->
+        let can_compile_native = self#with_ocamllib (Ocaml_config.can_compile_native ~ocaml_home:location#get) in
+        entry_native#set_text (if can_compile_native then "Yes" else "No")
+      end
+    end);
     ignore (check_default#connect#toggled ~callback:begin fun () ->
       button_version#misc#set_sensitive (not check_default#active);
       button_ocamllib#misc#set_sensitive (not check_default#active);
       entry_ocamllib#set_editable (not check_default#active);
+      entry_native#set_text "";
       if check_default#active then begin
-        entry_ocamllib#set_text Oe_config.system_ocamllib;
+        entry_ocamllib#set_text (match Oe_config.system_ocamllib with None -> "" | Some x -> x);
         location#set "";
       end else begin
         location#set project.Project.root;
@@ -111,15 +131,17 @@ object (self)
     ignore (entry_ocamllib#connect#changed ~callback:begin fun () ->
       entry_version#set_text (self#get_ocaml_version location#get);
       set_tooltips();
+      entry_native#set_text "";
     end);
     ignore (location#connect#changed ~callback:begin fun path ->
+      entry_native#set_text "";
       entry_version#set_text (self#get_ocaml_version path);
       set_tooltips();
     end);
-    location#set project.Project.ocaml_home;
     check_default#set_active (not (project.Project.ocaml_home = ""));
     check_default#set_active (project.Project.ocaml_home = "");
     entry_ocamllib#set_text project.Project.ocamllib;
+    location#set project.Project.ocaml_home;
 end
 
 
