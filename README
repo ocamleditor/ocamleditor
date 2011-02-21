@@ -72,6 +72,23 @@ INSTALLATION:
   http://nsis.sourceforge.net
 
 
+DEVELOPMENT:
+
+  The main page for development is hosted on the OCaml Forge, see the
+  project's page:
+
+    https://forge.ocamlcore.org/projects/ocamleditor
+
+  The public git repository is hosted on github. You can browse the source
+  code tree from:
+
+    http://github.com/ftovagliari/ocamleditor
+
+  or clone it by doing:
+
+    git clone git://github.com/ftovagliari/ocamleditor.git
+
+
 NOTES:
 
   * The most common application settings are accessible from the
