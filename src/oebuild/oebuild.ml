@@ -162,7 +162,7 @@ let install_output ~compilation ~is_library ~outname ~deps ~path =
     List.iter (fun x -> ignore (cp x (path // x))) mlis;
     if compilation = Native then begin
       let ext = win32 "lib" "a" in
-      let basename = (sprintf "%s.%s" (!$ outname) ext) in
+      let basename = sprintf "%s.%s" (Filename.chop_extension outname) ext in
       cp basename (path // basename);
     end;
   end else begin
