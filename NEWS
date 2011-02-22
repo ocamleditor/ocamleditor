@@ -1,6 +1,7 @@
 
-  * Ability to select for a project an OCaml compiler different from the
-    default one installed.
+  * Show whitespace characters.
+  * Ability for a project to select an OCaml compiler different from the
+    system default.
   * "Toggle word-wrap" directly accessible from the menubar.
   * Fixed bug in undo/redo.
   * Fixed bug in dependencies detection.
@@ -8,7 +9,7 @@
   * Fixed wrong path separator under Windows when running executable in
     subfolder.
   * Fixed bugs with word-wrap.
-  * Various other improvements and changes.
+  * Various other fixes.
 
 2011-02-09  Release 1.6.0
 -------------------------
