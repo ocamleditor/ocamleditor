@@ -399,7 +399,8 @@ let save ?editor proj =
       let active = active_filename = file#path in
       begin
         match proj.in_source_path file#path with
-          | None -> filename_unix_implicit file#path
+          | None ->
+            if Filename.is_implicit file#path then (filename_unix_implicit file#path) else file#path
           | Some rel -> filename_unix_implicit rel
       end, offset, active
     end proj.files;
