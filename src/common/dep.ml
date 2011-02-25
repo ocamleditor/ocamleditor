@@ -83,7 +83,9 @@ let find_dep ?pp ?includes ?(with_errors=true) target =
             List.iter find_chain deps;
             result := target :: !result;
       end
-    with Not_found -> (kprintf failwith "Dep: %s" target)
+    with Not_found ->
+      (* This exception can be caused by syntax errors in the source files. *)
+      (kprintf failwith "Dep: %s" target)
   in
   find_chain target;
   List.rev (List.map replace_extension !result)

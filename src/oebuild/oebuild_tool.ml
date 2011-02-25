@@ -57,7 +57,7 @@ let main () = begin
   let set_install x = install := Some x in
   let dep () =
     try
-      let deps = Dep.find ~pp:!pp (*~includes:!includes*) ~with_errors:false !target in
+      let deps = Dep.find ~pp:!pp (*~includes:!includes*) ~with_errors:true !target in
       printf "%s\n%!" (String.concat " " deps);
       exit 0;
     with Dep.Loop_found msg -> begin
@@ -115,7 +115,7 @@ let main () = begin
   end;
   (** Clean *)
   if !is_clean || !is_clean_all then begin
-    let deps = Dep.find ~pp:!pp (*~includes:!includes*) ~with_errors:false !target in
+    let deps = Dep.find ~pp:!pp (*~includes:!includes*) ~with_errors:true !target in
     List.iter begin fun compilation ->
       clean ~all:!is_clean_all ~compilation ~is_library:!is_library ~outname:!output_name ~targets:!target ~deps ();
     end compilation;
@@ -129,7 +129,7 @@ let main () = begin
       let outname = get_output_name ~compilation ~is_library:!is_library ~outname:!output_name ~targets:!target in
       match
         if !no_build then Built_successfully, [] else begin
-          let deps = Dep.find ~pp:!pp (* ~includes:!includes*) ~with_errors:false !target in
+          let deps = Dep.find ~pp:!pp (* ~includes:!includes*) ~with_errors:true !target in
           (build
             ~compilation
             ~includes:!includes
