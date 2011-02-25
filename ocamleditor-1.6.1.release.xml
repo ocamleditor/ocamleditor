@@ -141,7 +141,7 @@
           <cmd>ocaml</cmd>
           <args>
             <arg>build.ml</arg>
-            <arg>-wrelease</arg>
+            <arg>-release</arg>
           </args>
           <phase></phase>
         </task>
