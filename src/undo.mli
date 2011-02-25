@@ -64,7 +64,7 @@ class manager :
         undo stack is empty or the cursor is in a position where no undo
         action was recorded: in this case the undo stack is not
         popped - the buffer remains unchanged - and the cursor is placed
-        where the topmost action of the stack can be reverted.
+        at the position where the topmost action of the stack can be reverted.
       *)
     method undo : unit -> bool
 

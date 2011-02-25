@@ -74,11 +74,12 @@ type search_result = {pos : int; text : string}
 (* dialog *)
 class incremental () =
   let status = new status () in
+  let signal_found = new GUtil.signal () in
   object (self)
     val mutable view : Text.view option = None
     val mutable window = None
     val mutable replace_window = None
-      
+
     method private view = view
     method private set_view v = view <- v
 
@@ -100,8 +101,12 @@ class incremental () =
               else if status#incremental && start = ins then sel
               else start
             in
-            if status#use_regexp then self#find_regexp ~control v start
-            else self#find_string ~control v start;
+            let found =
+              if status#use_regexp then self#find_regexp ~control v start
+              else self#find_string ~control v start;
+            in
+            if found then (signal_found#call v);
+            found
           end else begin
             if not status#i_search then (assert false) (*(self#show ~view:v ())*);
             false;
@@ -131,7 +136,7 @@ class incremental () =
       let buffer = view#buffer in
       try
         let ins = if status#backward then start#backward_char else start in
-        let pos = ins#offset in 
+        let pos = ins#offset in
         let text = Glib.Convert.convert_with_fallback ~fallback:"?"
           ~from_codeset:"utf8" ~to_codeset:Oe_config.ocaml_codeset (buffer#get_text ()) in
         let pat = if status#case_sensitive then Str.regexp text_to_find
@@ -265,8 +270,13 @@ class incremental () =
         | STOP -> false
         | _ -> false
 
+    method connect = new signals ~found:signal_found
   end
 
+and signals ~found = object
+  inherit GUtil.ml_signals [found#disconnect]
+  method found ~callback = found#connect ~after ~callback
+end
 
 
 

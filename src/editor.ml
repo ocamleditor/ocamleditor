@@ -35,7 +35,7 @@ class editor () =
   let box = GPack.vbox () in
   let notebook = GPack.notebook ~tab_border:0 ~show_border:false
     ~packing:(box#pack ~fill:true ~expand:true) ~scrollable:true () in
-  let find_replace = new Incremental_search.incremental () in
+  let incremental_search = new Incremental_search.incremental () in
   let switch_page = new switch_page () in
   let remove_page = new remove_page () in
   let modified_changed = new modified_changed () in
@@ -663,12 +663,6 @@ object (self)
     end;
 
   method redisplay_views () =
-
-(*    let oebuild_times = Oebuild.read_cache () in
-    Hashtbl.remove oebuild_times basename;
-    Hashtbl.add oebuild_times basename (current_time(*, false*));
-    Oebuild.write_cache oebuild_times;*)
-
     self#with_current_page begin fun page ->
       Gtk_util.idle_add page#redisplay;
       Gtk_util.idle_add ~prio:400 (fun () -> page#compile_buffer ~commit:true ());
@@ -680,7 +674,7 @@ object (self)
 
   method i_search () =
     self#with_current_page begin fun page ->
-      find_replace#i_search ~view:(page#view :> Text.view) ~project:self#project
+      incremental_search#i_search ~view:(page#view :> Text.view) ~project:self#project
     end
 
   method location_history_is_empty () =
@@ -697,6 +691,12 @@ object (self)
     code_folding_enabled#connect#changed ~callback:begin fun enabled ->
       List.iter (fun p -> p#set_code_folding_enabled enabled) (pages @ (snd (List.split pages_cache)))
     end;
+    (** When i_search finds text inside a fold, then expand the fold to show what is found. *)
+    ignore (incremental_search#connect#found ~callback:begin fun view ->
+      match self#get_page (View view) with
+        | Some page -> page#ocaml_view#code_folding#expand_current ()
+        | _ -> ()
+    end);
     (**  *)
     show_global_gutter#connect#changed ~callback:begin fun enabled ->
       List.iter (fun p -> if enabled then p#global_gutter#misc#show()
