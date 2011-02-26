@@ -323,8 +323,8 @@ filename_split "/a/b";;
 filename_split "C:\\a\\b";;
 *)
 
-(** Restituisce la parte del percorso [path] relativa a [dirname].
-  *  Per es. [filename_relative "/a/b" "/a/b/c/d" = "c/d"]
+(** [filename_relative path dirname] returns the part of [path] relative to [dirname].
+  * E.g. [filename_relative "/a/b" "/a/b/c/d" = "c/d"]
   *)
 let filename_relative dirname =
   let dirname = filename_split dirname in

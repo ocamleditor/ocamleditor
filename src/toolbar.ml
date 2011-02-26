@@ -299,32 +299,13 @@ object (self)
     end
 
   method connect = new signals ~tool_messages_clicked
-end  
+end
 
 (** Signals *)
 and tool_messages_clicked () = object inherit [bool] signal () as super end
 
 and signals ~tool_messages_clicked =
-object 
+object
   inherit ml_signals [tool_messages_clicked#disconnect]
   method tool_messages_clicked = tool_messages_clicked#connect ~after
 end
-
-
-
-(*let signals = [];;
-let signals = List.map (fun x -> x ^ "_clicked") signals;;
-
-List.iter begin fun name -> Printf.printf "let %s = new %s () in\n"  name name end signals;;
-List.iter begin fun name -> Printf.printf "and %s () = object (self) inherit [unit] signal () as super end\n" name end signals;;
-List.iter begin fun name -> Printf.printf "%s#disconnect; " name end signals;;
-List.iter begin fun name -> Printf.printf "~%s " name end signals;;
-List.iter begin fun name -> Printf.printf "method %s = %s#connect ~after\n" name name end signals;;*)
-
-
-
-
-
-
-
-
