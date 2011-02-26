@@ -101,26 +101,32 @@ let find ?pp ?includes ?with_errors targets =
 (** find_dependants *)
 let find_dependants =
   let redirect_stderr = if Sys.os_type = "Win32" then " 2>NUL" else " 2>/dev/null" in
-  let re = Str.regexp "\\(.+\\.ml\\): ?\\(.*\\)" in
+  let re = Str.regexp "\\(.+\\.mli?\\): ?\\(.*\\)" in
   let re1 = Str.regexp "\r?\n" in
   let re2 = Str.regexp " " in
   fun ~modname ->
-    let ocamldep = kprintf Miscellanea.expand "%s -modules *.ml%s" (Ocaml_config.ocamldep()) redirect_stderr in
+    let ocamldep = kprintf Miscellanea.expand "%s -modules *.ml *.mli%s" (Ocaml_config.ocamldep()) redirect_stderr in
     let entries = Str.split re1 ocamldep in
-    let entries = List.map begin fun entry ->
-      if Str.string_match re entry 0 then begin
-        let filename = Str.matched_group 1 entry in
-        let modules = Str.matched_group 2 entry in
-        (filename, (Str.split re2 modules))
-      end else (assert false)
-    end entries in
+    let entries =
+      List.map begin fun entry ->
+        if Str.string_match re entry 0 then begin
+          let filename = Str.matched_group 1 entry in
+          let modules = Str.matched_group 2 entry in
+          (filename, (Str.split re2 modules))
+        end else (assert false)
+      end entries
+    in
     let dependants = ref [] in
     let rec loop modname =
       List.iter begin fun (filename, modules) ->
         if List.mem modname modules then begin
           if not (List.mem filename !dependants) then begin
             dependants := filename :: !dependants;
-            let mdep = String.capitalize (Filename.chop_extension filename) in
+            let prefix = Filename.chop_extension filename in
+            let mli = prefix ^ ".mli" in
+            if try ignore (List.assoc mli entries); true with Not_found -> false
+            then (dependants := mli :: !dependants;);
+            let mdep = String.capitalize prefix in
             ignore (loop mdep);
           end
         end
