@@ -404,8 +404,6 @@ object (self)
 
   method check_for_updates ?(verbose=true) () = Check_for_updates.dialog ~verbose ()
 
-  method generate_build_script = Build_script.create
-
   method goto_location dir =
     let move = function
       | `NEXT ->
