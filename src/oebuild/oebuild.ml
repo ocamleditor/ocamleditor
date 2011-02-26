@@ -278,7 +278,8 @@ let build ~compilation ~includes ~libs ~other_mods ~is_library ~compile_only
           in
           if List.length !recompile > 0 then begin
             List.iter begin fun filename ->
-              ignore (compile ~times ~opt ~compiler ~cflags:!cflags ~includes:!includes ~filename ())
+              compilation_exit := compile ~times ~opt ~compiler ~cflags:!cflags ~includes:!includes ~filename ();
+              if !compilation_exit <> 0 then (raise Exit)
             end !recompile;
             print_newline();
             Buffer.clear compiler_output;
