@@ -105,7 +105,8 @@ let find_dependants =
   let re2 = Str.regexp " " in
   fun ~target ~modname ->
     let dir = Filename.dirname target in
-    let cmd = sprintf "%s -modules -native %s/*.ml %s/*.mli%s"
+    let dir = if dir = Filename.current_dir_name then "" else (dir ^ "/") in
+    let cmd = sprintf "%s -modules -native %s*.ml %s*.mli%s"
       (Ocaml_config.ocamldep()) dir dir redirect_stderr in
     printf "%s (%s)\n%!" cmd modname;
     let ocamldep = Miscellanea.expand cmd in
