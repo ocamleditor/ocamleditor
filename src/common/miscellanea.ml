@@ -343,7 +343,7 @@ let filename_unix_implicit filename =
   let parts = if Filename.is_implicit filename then parts else (List.tl parts) in
   String.concat "/" parts;;
 
-
+let redirect_stderr = if Sys.os_type = "Win32" then " 2>NUL" else " 2>/dev/null"
 
 
 

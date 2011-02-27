@@ -23,8 +23,6 @@
 open Miscellanea
 open Printf
 
-let redirect_stderr = if Sys.os_type = "Win32" then " 2>NUL" else " 2>/dev/null"
-
 let rec putenv_ocamllib value =
   match Sys.os_type with
     | "Win32" ->

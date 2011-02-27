@@ -145,6 +145,7 @@ let main () = begin
             ~lflags:!lflags
             ~outname
             ~deps
+            ~targets:!target
             ~prof:!prof
             ~ms_paths ()), deps
         end

@@ -169,13 +169,14 @@ ocaml_config.ml cmd_line_args.ml dep.mli dep.ml common.ml";
 let oebuild () =
   common();
   pushd "oebuild";
-  kprintf run "ocamlc -a -o oebuildlib.cma -thread -w syumx -I ../common \
-str.cma unix.cma threads.cma common.cma oebuild_util.ml oebuild.ml";
+  kprintf run "ocamlc -a -o oebuildlib.cma -thread -w syumx -annot -I ../common \
+str.cma unix.cma threads.cma common.cma oebuild_util.ml oebuild_table.mli oebuild_table.ml oebuild.ml";
   kprintf run "ocamlc -o %s -thread -w syumx -I ../common \
 str.cma unix.cma threads.cma common.cma oebuildlib.cma oebuild_tool.ml"
     oebuild_name;
   if !can_compile_native then begin
-    kprintf run "ocamlopt -a -o oebuildlib.cmxa -thread -w syumx -I ../common oebuild_util.ml oebuild.ml";
+    kprintf run "ocamlopt -a -o oebuildlib.cmxa -thread -w syumx -I ../common \
+oebuild_util.ml oebuild_table.mli oebuild_table.ml oebuild.ml";
     kprintf run "ocamlopt -o oebuild.opt%s %s -thread -w syumx -I ../common \
 str.cmxa unix.cmxa threads.cmxa common.cmxa oebuildlib.cmxa oebuild_tool.ml"
       ext ccopt;

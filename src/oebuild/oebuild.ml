@@ -24,68 +24,24 @@ open Printf
 open Oebuild_util
 open Miscellanea
 
+module Table = Oebuild_table
+
 type compilation_type = Bytecode | Native | Unspecified
 type build_exit = Built_successfully | Build_failed of int
-type cache = (string, float(* * bool*)) Hashtbl.t
 type process_err_func = (stderr:in_channel -> unit)
 
 let ocamlc = Ocaml_config.ocamlc()
 let ocamlopt = Ocaml_config.ocamlopt()
 let ocamllib = Ocaml_config.ocamllib()
 
-let oebuild_times_filename = ".oebuild"
-
-(** Hash table: <filename, last-compiled> *)
-let read_cache () =
-  if not (Sys.file_exists oebuild_times_filename) then begin
-    let ochan = open_out_bin oebuild_times_filename in
-    Marshal.to_channel ochan (Hashtbl.create 7) [];
-    close_out ochan
-  end;
-  let ichan = open_in_bin oebuild_times_filename in
-  let times = Marshal.from_channel ichan in
-  close_in ichan;
-  (times : cache)
-
-(** write_cache *)
-let write_cache (times : cache) =
-  if Hashtbl.length times > 0 then begin
-    let ochan = open_out_bin oebuild_times_filename in
-    Marshal.to_channel ochan times [];
-    close_out ochan
-  end
-
-(** update_cache *)
-let update_cache =
-  let get_last_compiled_time ~opt cache filename =
-    try
-      let time(*, c_opt*) = Hashtbl.find cache filename in
-      (*if opt <> c_opt then (Hashtbl.remove cache filename; raise Not_found);*)
-      let ext = if opt then "cmx" else "cmo" in
-      let cm = sprintf "%s.%s" (Filename.chop_extension filename) ext in
-      if Sys.file_exists cm then time
-      else begin
-        Hashtbl.remove cache filename;
-        raise Not_found
-      end
-    with Not_found -> 0.0
-  in
-  fun ~deps ~opt (cache : cache) filename ->
-    let ctime = get_last_compiled_time ~opt cache filename in
-    (*let mtime = ((Unix.stat filename).Unix.st_mtime) in
-    if filename = "test.ml" then (eprintf "oebuild: %s %f %f\n%!" filename mtime ctime);*)
-    if ctime > 0.0 && (*mtime*) ((Unix.stat filename).Unix.st_mtime) >= ctime then begin
-      Hashtbl.remove cache filename;
-    end
-
 (** compile *)
-let compile ?(times : cache option) ~opt ~compiler ~cflags ~includes ~filename
+let compile ?(times : Table.t option) ~opt ~compiler ~cflags ~includes ~filename
     ?(process_err : process_err_func option) () =
   if Sys.file_exists filename then begin
     try
       begin
         match times with
-          | Some times -> ignore (Hashtbl.find times filename); 0 (* exit code *)
+          | Some times -> ignore (Table.find times filename opt); 0 (* exit code *)
           | _ -> raise Not_found
       end
     with Not_found -> begin
@@ -94,7 +50,7 @@ let compile ?(times : cache option) ~opt ~compiler ~cflags ~includes ~filename
         | None -> command cmd
         | Some process_err -> exec ~process_err cmd
       in
-      may times (fun times -> Hashtbl.add times filename ((Unix.gettimeofday())(*, opt*)));
+      may times (fun times -> Table.add times filename opt (Unix.gettimeofday()));
       exit_code
     end
   end else 0
@@ -196,7 +152,7 @@ let sort_dependencies ~deps subset =
   List.rev !result
 
 (** filter_inconsistent_assumptions_error *)
-let filter_inconsistent_assumptions_error ~compiler_output ~recompile ~deps ~(cache : cache) =
+let filter_inconsistent_assumptions_error ~compiler_output ~recompile ~targets ~deps ~(cache : Table.t) ~opt =
   let re_inconsistent_assumptions = Str.regexp
     ".*make[ \t\r\n]+inconsistent[ \t\r\n]+assumptions[ \t\r\n]+over[ \t\r\n]+\\(interface\\|implementation\\)[ \t\r\n]+\\([^ \t\r\n]+\\)[ \t\r\n]+"
   in
@@ -213,13 +169,13 @@ let filter_inconsistent_assumptions_error ~compiler_output ~recompile ~deps ~(ca
         try
           let _ = Str.search_backward re_inconsistent_assumptions last_error (String.length last_error) in
           let modname = Str.matched_group 2 last_error in
-          let dependants = Dep.find_dependants ~modname in
+          let dependants = Dep.find_dependants ~targets ~modname in
           let dependants = sort_dependencies ~deps dependants in
           let original_error = Buffer.contents compiler_output in
           eprintf "Warning (oebuild): the following files make inconsistent assumptions over interface/implementation %s: %s\n%!"
             modname (String.concat ", " dependants);
           List.iter begin fun filename ->
-            Hashtbl.remove cache filename;
+            Table.remove cache filename opt;
             let basename = Filename.chop_extension filename in
             let cmi = basename ^ ".cmi" in
             if Sys.file_exists cmi then (Sys.remove cmi);
@@ -227,6 +183,8 @@ let filter_inconsistent_assumptions_error ~compiler_output ~recompile ~deps ~(ca
             if Sys.file_exists cmo then (Sys.remove cmo);
             let cmx = basename ^ ".cmx" in
             if Sys.file_exists cmx then (Sys.remove cmx);
+            let obj = basename ^ (win32 ".obj" ".o") in
+            if Sys.file_exists obj then (Sys.remove obj);
           end dependants;
           recompile := dependants;
         with Not_found -> ()
@@ -235,7 +193,8 @@ let filter_inconsistent_assumptions_error ~compiler_output ~recompile ~deps ~(ca
 
 (** Building *)
 let build ~compilation ~includes ~libs ~other_mods ~is_library ~compile_only
-    ~thread ~vmthread ~annot ~pp ~cflags ~lflags ~outname ~deps ~ms_paths ?(prof=false) () =
+    ~thread ~vmthread ~annot ~pp ~cflags ~lflags ~outname ~deps ~ms_paths
+    ~targets ?(prof=false) () =
   (* includes *)
   let includes = ref includes in
   includes := Ocaml_config.expand_includes !includes;
@@ -258,9 +217,10 @@ let build ~compilation ~includes ~libs ~other_mods ~is_library ~compile_only
     lflags := !lflags ^
       " -ccopt \"-LC:\\Programmi\\MIC977~1\\Lib -LC:\\Programmi\\MID05A~1\\VC\\lib -LC:\\GTK\\lib\""
   end;
-  let times = read_cache () in
+  let times = Table.read () in
   let build_exit =
     let compilation_exit = ref 0 in
+    (** Compile *)
     begin
       try
         let opt = compilation = Native in
@@ -268,12 +228,12 @@ let build ~compilation ~includes ~libs ~other_mods ~is_library ~compile_only
         let rec try_compile filename =
           let recompile = ref [] in
           let compile_exit =
-            update_cache ~deps ~opt times filename;
+            Table.update ~deps ~opt times filename;
             let exit_code = compile
-              ~process_err:(filter_inconsistent_assumptions_error ~compiler_output ~recompile ~deps ~cache:times)
+              ~process_err:(filter_inconsistent_assumptions_error ~compiler_output ~recompile ~targets ~deps ~cache:times ~opt)
               ~times ~opt ~compiler ~cflags:!cflags ~includes:!includes ~filename ()
             in
-            if exit_code <> 0 then (Hashtbl.remove times filename);
+            if exit_code <> 0 then (Table.remove times filename opt);
             exit_code
           in
           if List.length !recompile > 0 then begin
@@ -295,6 +255,7 @@ let build ~compilation ~includes ~libs ~other_mods ~is_library ~compile_only
         end deps;
       with Exit -> ()
     end;
+    (** Link *)
     if !compilation_exit = 0 then begin
       let opt = compilation = Native in
       let obj_deps =
@@ -309,8 +270,8 @@ let build ~compilation ~includes ~libs ~other_mods ~is_library ~compile_only
           let recompile = ref [] in
           let link_exit =
             link ~compiler ~a:is_library ~lflags:!lflags
-            ~includes:!includes ~libs ~deps:obj_deps ~outname
-            ~process_err:(filter_inconsistent_assumptions_error ~compiler_output ~recompile ~deps ~cache:times) ()
+              ~includes:!includes ~libs ~deps:obj_deps ~outname
+              ~process_err:(filter_inconsistent_assumptions_error ~compiler_output ~recompile ~targets ~deps ~cache:times ~opt) ()
           in
           if List.length !recompile > 0 then begin
             List.iter begin fun filename ->
@@ -327,7 +288,7 @@ let build ~compilation ~includes ~libs ~other_mods ~is_library ~compile_only
       end
     end else !compilation_exit
   in
-  write_cache times;
+  Table.write times;
   if build_exit = 0 then Built_successfully else (Build_failed build_exit)
 
 (** clean *)
@@ -362,7 +323,7 @@ let clean_all () =
       let files = List.filter
         (suffixes [".cmi"; ".cmo"; ".cmx"; ".obj"; ".cma"; ".cmxa"; ".lib"; ".a"; ".o"; ".annot"]) files in
       List.iter (remove_file ~verbose:false) files;
-      let oebuild_times_filename = dir // oebuild_times_filename in
+      let oebuild_times_filename = dir // Table.oebuild_times_filename in
       remove_file ~verbose:false oebuild_times_filename;
       List.iter clean_dir directories;
     end
