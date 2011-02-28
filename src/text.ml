@@ -592,38 +592,40 @@ object (self)
         (*Prf.prf_other_markers begin fun () ->*)
           let x = (gutter.Gutter.size - gutter.Gutter.fold_size - 3 - Gutter.icon_size) / 2 (*1*) in
           List.iter begin fun mark ->
-            let ym, h = self#get_line_yrange (buffer#get_iter_at_mark (`MARK mark.Gutter.mark)) in
-            let y = ym - y0 in
-            Line_num_labl.hide (y + self#pixels_above_lines) line_num_labl;
-            let y = y + (h - Gutter.icon_size) / 2 in
-            let child = match mark.Gutter.icon_obj with
-              | None ->
-                let ebox = GBin.event_box () in
-                Gtk_util.set_ebox_invisible ebox;
-                let icon = GMisc.image ~pixbuf:mark.Gutter.icon_pixbuf () in
-                ebox#add icon#coerce;
-                Gaux.may mark.Gutter.callback ~f:begin fun callback ->
-                  ebox#event#connect#enter_notify ~callback:begin fun ev ->
-                    let window = GdkEvent.get_window ev in
-                    Gdk.Window.set_cursor window (!Gtk_util.cursor `HAND1);
-                    true
+            try
+              let ym, h = self#get_line_yrange (buffer#get_iter_at_mark (`MARK mark.Gutter.mark)) in
+              let y = ym - y0 in
+              Line_num_labl.hide (y + self#pixels_above_lines) line_num_labl;
+              let y = y + (h - Gutter.icon_size) / 2 in
+              let child = match mark.Gutter.icon_obj with
+                | None ->
+                  let ebox = GBin.event_box () in
+                  Gtk_util.set_ebox_invisible ebox;
+                  let icon = GMisc.image ~pixbuf:mark.Gutter.icon_pixbuf () in
+                  ebox#add icon#coerce;
+                  Gaux.may mark.Gutter.callback ~f:begin fun callback ->
+                    ebox#event#connect#enter_notify ~callback:begin fun ev ->
+                      let window = GdkEvent.get_window ev in
+                      Gdk.Window.set_cursor window (!Gtk_util.cursor `HAND1);
+                      true
+                    end;
+                    ebox#event#connect#leave_notify ~callback:begin fun ev ->
+                      let window = GdkEvent.get_window ev in
+                      Gdk.Window.set_cursor window (!Gtk_util.cursor `ARROW);
+                      true
+                    end;
+                    ebox#event#connect#button_press ~callback:(fun _ -> self#misc#grab_focus(); callback mark.Gutter.mark)
                   end;
-                  ebox#event#connect#leave_notify ~callback:begin fun ev ->
-                    let window = GdkEvent.get_window ev in
-                    Gdk.Window.set_cursor window (!Gtk_util.cursor `ARROW);
-                    true
-                  end;
-                  ebox#event#connect#button_press ~callback:(fun _ -> self#misc#grab_focus(); callback mark.Gutter.mark)
-                end;
-                let child = ebox#coerce in
-                child#misc#connect#destroy ~callback:(fun () -> gutter_icons <- List.remove_assoc ym gutter_icons);
-                self#add_child_in_window ~child ~which_window:`LEFT ~x ~y;
-                mark.Gutter.icon_obj <- Some child;
-                gutter_icons <- (ym, child) :: gutter_icons;
-                child
-              | Some child -> self#move_child ~child ~x ~y; child
-            in
-            self#gutter_icons_same_pos child x y ym;
+                  let child = ebox#coerce in
+                  child#misc#connect#destroy ~callback:(fun () -> gutter_icons <- List.remove_assoc ym gutter_icons);
+                  self#add_child_in_window ~child ~which_window:`LEFT ~x ~y;
+                  mark.Gutter.icon_obj <- Some child;
+                  gutter_icons <- (ym, child) :: gutter_icons;
+                  child
+                | Some child -> self#move_child ~child ~x ~y; child
+              in
+              self#gutter_icons_same_pos child x y ym;
+            with Gtk_util.Mark_deleted -> ()
           end gutter.Gutter.markers;
         (*end ()*)
       with ex -> eprintf "%s\n%s\n%!" (Printexc.to_string ex) (Printexc.get_backtrace())
