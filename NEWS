@@ -1,3 +1,5 @@
+2011-02-28  Release 1.6.1
+-------------------------
 
   * Show whitespace characters.
   * Ability for a project to select an OCaml compiler different from the
