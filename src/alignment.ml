@@ -22,7 +22,7 @@
 
 open Printf
 
-let re_let = Str.regexp_case_fold "^[\t ]*let[\t ]+\\([a-z_0-9']+\\)[\t ]*\\(=\\).*";;
+let re_let = Str.regexp_case_fold "^[\t ]*\\(\\(let\\)\\|\\(mutable\\)\\)?[\t ]*\\([a-z_0-9']+\\)[\t ]*\\([:=]+\\).*";;
 
 (** iter *)
 let iter ~(start : GText.iter) ~stop f =
@@ -30,8 +30,8 @@ let iter ~(start : GText.iter) ~stop f =
   while !iter#compare stop < 0 do
     let line = !iter#get_text ~stop:!iter#forward_to_line_end in
     if Str.string_match re_let line 0 then begin
-      let w1 = Str.matched_group 1 line in
-      let w2 = Str.matched_group 2 line in
+      let w1 = Str.matched_group 4 line in
+      let w2 = Str.matched_group 5 line in
       match !iter#forward_search w1 with
         | Some (a, b) ->
           begin
