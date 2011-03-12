@@ -23,6 +23,7 @@
 open Unix
 open Printf
 
+
 let _ = if true || Oe_config.ocamleditor_debug then begin
   let a, b, c = GMain.Main.version in
   let rpad s = Miscellanea.rpad (s ^ " ") '.' 40 in
