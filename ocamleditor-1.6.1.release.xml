@@ -1,49 +1,21 @@
 <!-- OCamlEditor XML Project -->
 <project>
+  <ocaml_home></ocaml_home>
+  <ocamllib></ocamllib>
   <encoding>UTF-8</encoding>
   <name>ocamleditor-1.6.1</name>
   <author>Francesco Tovagliari</author>
-  <description></description>
+  <description/>
   <version>1.6.1</version>
   <autocomp enabled="true" delay="1." cflags=""/>
   <open_files>
-    <filename offset="0" active="false">../NEWS</filename>
+    <filename offset="0" active="true">../NEWS</filename>
   </open_files>
   <runtime>
     <configuration>
-      <id>3</id>
-      <id_build>0</id_build>
-      <name>ocamleditor (GTK-2.22.0)</name>
-      <default>false</default>
-      <build_task>&lt;COMPILE&gt;</build_task>
-      <env replace="false">
-        <var>OCAMLEDITORDEBUG=1</var>
-        <var>PATH=C:\Objective Caml\bin;C:\GTK-2.22.0\bin;C:\WINDOWS;C:\WINDOWS\System32;.</var>
-      </env>
-      <args></args>
-    </configuration>
-    <configuration>
-      <id>2</id>
-      <id_build>3</id_build>
-      <name>oebuild</name>
-      <default>false</default>
-      <build_task>&lt;NONE&gt;</build_task>
-      <env replace="false"/>
-      <args>--help</args>
-    </configuration>
-    <configuration>
-      <id>1</id>
-      <id_build>2</id_build>
-      <name>oeproc</name>
-      <default>false</default>
-      <build_task>&lt;NONE&gt;</build_task>
-      <env replace="false"/>
-      <args>oebuild --help</args>
-    </configuration>
-    <configuration>
       <id>0</id>
       <id_build>0</id_build>
-      <name>ocamleditor (GTK default)</name>
+      <name>ocamleditor</name>
       <default>true</default>
       <build_task>&lt;COMPILE&gt;</build_task>
       <env replace="false">
@@ -60,10 +32,10 @@
       <default>true</default>
       <byt>true</byt>
       <opt>false</opt>
-      <libs>toplevellib unix str threads lablgtk gtkThread.o xml-light common oebuildlib</libs>
+      <libs>unix str threads odoc_info toplevellib lablgtk gtkThread.o xml-light common oebuildlib</libs>
       <other_objects></other_objects>
       <files>ocamleditor.ml</files>
-      <includes>ocaml-src/parsing ocaml-src/typing ocaml-src/utils +lablgtk2 +xml-light common oebuild</includes>
+      <includes>ocaml-src/parsing ocaml-src/typing ocaml-src/utils +lablgtk2 +xml-light +ocamldoc common oebuild </includes>
       <thread>true</thread>
       <vmthread>false</vmthread>
       <pp></pp>
@@ -131,7 +103,7 @@
             <arg>build.ml</arg>
             <arg>-icons</arg>
           </args>
-          <phase></phase>
+          <phase>Before_clean</phase>
         </task>
         <task>
           <name>Release</name>
@@ -143,7 +115,7 @@
             <arg>build.ml</arg>
             <arg>-release</arg>
           </args>
-          <phase></phase>
+          <phase>Before_clean</phase>
         </task>
         <task>
           <name>Lex &amp; Yacc</name>
@@ -155,17 +127,29 @@
             <arg>build.ml</arg>
             <arg>-lexyacc</arg>
           </args>
+          <phase>Before_clean</phase>
+        </task>
+        <task>
+          <name>External Build Task</name>
+          <always_run>false</always_run>
+          <env replace="false"/>
+          <dir>..</dir>
+          <cmd>ocaml</cmd>
+          <args>
+            <arg>build.ml</arg>
+            <arg>-prova</arg>
+          </args>
           <phase></phase>
         </task>
       </external_tasks>
     </configuration>
     <configuration>
-      <id>2</id>
+      <id>4</id>
       <name>common</name>
       <default>false</default>
       <byt>true</byt>
       <opt>true</opt>
-      <libs></libs>
+      <libs>threads</libs>
       <other_objects></other_objects>
       <files>common/common.ml</files>
       <includes>common</includes>
@@ -180,7 +164,7 @@
       <external_tasks/>
     </configuration>
     <configuration>
-      <id>3</id>
+      <id>5</id>
       <name>oebuild</name>
       <default>false</default>
       <byt>true</byt>
@@ -200,7 +184,7 @@
       <external_tasks/>
     </configuration>
     <configuration>
-      <id>4</id>
+      <id>6</id>
       <name>oeproc</name>
       <default>false</default>
       <byt>true</byt>
@@ -220,7 +204,7 @@
       <external_tasks/>
     </configuration>
     <configuration>
-      <id>5</id>
+      <id>7</id>
       <name>oebuildlib</name>
       <default>false</default>
       <byt>true</byt>
@@ -233,7 +217,7 @@
       <vmthread>false</vmthread>
       <pp></pp>
       <cflags>-w y</cflags>
-      <lflags></lflags>
+      <lflags>-ccopt &quot;-LC:\Programmi\MIC977~1\Lib -LC:\Programmi\MID05A~1\VC\lib&quot;</lflags>
       <is_library>true</is_library>
       <outname>oebuildlib</outname>
       <lib_install_path></lib_install_path>
