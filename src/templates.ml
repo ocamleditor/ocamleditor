@@ -179,6 +179,8 @@ let spec : (string * string * t) list =
       T0 "done;"; NL;
     ];
 
+    "TODO", "(* TODO: <selection> *)", [ T"(* TODO: "; I; SELECTION; S; T" *)" ];
+
     "q", "(* <selection> *)", [T "(*"; SELECTION; T "*)"];
     "qb", "(* <block> *)", [T0 "(*"; NL; SELECTION; T0 "*)"; NL];
     "qbi", "(* <block> *)", [T0 "(*"; NL; IN; SELECTION; OUT; T0 "*)"; NL];
