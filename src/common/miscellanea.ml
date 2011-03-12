@@ -27,6 +27,7 @@ let (//) = Filename.concat
 let (!!) = Filename.dirname
 let (!$) = Filename.quote
 let (^^) = Filename.check_suffix
+let (|-) f g x = g (f x)
 
 let finally = fun f1 f2 ->
   (** try ... finally ... *)
