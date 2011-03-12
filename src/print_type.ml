@@ -22,40 +22,42 @@
 
 open Printf
 
+let greeks = [
+  "&apos;a\\([0-9]*\\)", "&#945;<sub>\\1</sub>";
+  "&apos;b\\([0-9]*\\)", "&#946;<sub>\\1</sub>";
+  "&apos;c\\([0-9]*\\)", "&#947;<sub>\\1</sub>";
+  "&apos;d\\([0-9]*\\)", "&#948;<sub>\\1</sub>";
+  "&apos;e\\([0-9]*\\)", "&#949;<sub>\\1</sub>";
+  "&apos;f\\([0-9]*\\)", "&#950;<sub>\\1</sub>";
+  "&apos;g\\([0-9]*\\)", "&#951;<sub>\\1</sub>";
+  "&apos;h\\([0-9]*\\)", "&#952;<sub>\\1</sub>";
+  "&apos;i\\([0-9]*\\)", "&#953;<sub>\\1</sub>";
+  "&apos;j\\([0-9]*\\)", "&#954;<sub>\\1</sub>";
+  "&apos;k\\([0-9]*\\)", "&#955;<sub>\\1</sub>";
+  "&apos;l\\([0-9]*\\)", "&#956;<sub>\\1</sub>";
+  "&apos;m\\([0-9]*\\)", "&#957;<sub>\\1</sub>";
+  "&apos;n\\([0-9]*\\)", "&#958;<sub>\\1</sub>";
+  "&apos;o\\([0-9]*\\)", "&#959;<sub>\\1</sub>";
+  "&apos;p\\([0-9]*\\)", "&#960;<sub>\\1</sub>";
+  "&apos;q\\([0-9]*\\)", "&#961;<sub>\\1</sub>";
+  "&apos;r\\([0-9]*\\)", "&#962;<sub>\\1</sub>";
+  "&apos;s\\([0-9]*\\)", "&#963;<sub>\\1</sub>";
+  "&apos;t\\([0-9]*\\)", "&#964;<sub>\\1</sub>";
+  "&apos;u\\([0-9]*\\)", "&#965;<sub>\\1</sub>";
+  "&apos;v\\([0-9]*\\)", "&#966;<sub>\\1</sub>";
+  "&apos;w\\([0-9]*\\)", "&#967;<sub>\\1</sub>";
+  "&apos;x\\([0-9]*\\)", "&#968;<sub>\\1</sub>";
+  "&apos;y\\([0-9]*\\)", "&#969;<sub>\\1</sub>";
+  (*"&apos;z\\([0-9]*\\)", "&#970;<sub>\\1</sub>";*)
+];;
+
+let gt = [ "-&gt;", " &#8594; "; (*"-&gt;", " <big>&#8594;</big> ";*)" *", " &#215;"];;
 
 let replace_greek descr =
   if !Preferences.preferences.Preferences.pref_compl_greek then begin
-    Miscellanea.replace_all ~regexp:false [
-      "-&gt;", " &#8594; ";
-(*      "-&gt;", " <big>&#8594;</big> ";*)
-      " *", " &#215;";
-      "&apos;a", "&#945;";
-      "&apos;b", "&#946;";
-      "&apos;c", "&#947;";
-      "&apos;d", "&#948;";
-      "&apos;e", "&#949;";
-      "&apos;f", "&#950;";
-      "&apos;g", "&#951;";
-      "&apos;h", "&#952;";
-      "&apos;i", "&#953;";
-      "&apos;j", "&#954;";
-      "&apos;k", "&#955;";
-      "&apos;l", "&#956;";
-      "&apos;m", "&#957;";
-      "&apos;n", "&#958;";
-      "&apos;o", "&#959;";
-      "&apos;p", "&#960;";
-      "&apos;q", "&#961;";
-      "&apos;r", "&#962;";
-      "&apos;s", "&#963;";
-      "&apos;t", "&#964;";
-      "&apos;u", "&#965;";
-      "&apos;v", "&#966;";
-      "&apos;w", "&#967;";
-      "&apos;x", "&#968;";
-      "&apos;y", "&#969;";
-      (*"&apos;z", "&#970;";*)
-    ] descr
+    let descr = Miscellanea.replace_all ~regexp:false gt descr in
+    let descr = Miscellanea.replace_all ~regexp:true greeks descr in
+    descr
   end else descr
 
 let markup descr =
