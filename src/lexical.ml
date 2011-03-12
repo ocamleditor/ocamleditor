@@ -85,7 +85,7 @@ let tpos ~(start : GText.iter) ~lines pos =
 
 (* Tagging *)
 
-let tag = 
+let tag =
   let tag_lident = function
     | _, METHOD, _, _ | _, PRIVATE, _, _ -> "method_name_def"
     | _, IN, _, _ | _, INITIALIZER, _, _ | _, NEW, _, _ | _, OF, _, _ -> "lident"
@@ -97,27 +97,29 @@ let tag =
   (* Se start e stop sono all'interno di commenti allora prendo come start e stop
      l'inizio del primo commento e la fine del secondo. *)
   let text = tb#get_text () in
-  let text = Glib.Convert.convert_with_fallback ~fallback:"?" ~from_codeset:"utf8" ~to_codeset:Oe_config.ocaml_codeset text in 
+  let text = Glib.Convert.convert_with_fallback ~fallback:"?" ~from_codeset:"utf8" ~to_codeset:Oe_config.ocaml_codeset text in
   let global_comments =(* Comments.Utf8 []*) Comments.scan text in
   let start = match Comments.enclosing global_comments start#offset with
     | None -> start
-    | Some (x, y) -> 
+    | Some (x, y) ->
       tb#get_iter_at_char x in
   let stop = match Comments.enclosing global_comments stop#offset with
     | None -> stop
-    | Some (x, y) -> 
+    | Some (x, y) ->
       tb#get_iter_at_char y in
   (*  *)
   let u_text = tb#get_text ~start ~stop () in
   let lines = line_starts u_text in
   let tpos = tpos ~start ~lines in
   let i_text = (Glib.Convert.convert_with_fallback ~fallback:"?" ~from_codeset:"utf8" ~to_codeset:Oe_config.ocaml_codeset u_text) in
-  let buffer = Lexing.from_string i_text in 
+  let buffer = Lexing.from_string i_text in
   let extra_bytes = ref 0 in
   let comments = (*Comments.Utf8 []*) Comments.scan_utf8 u_text in
   let succ_comments = ref comments in
   let last = ref ("", EOF, 0, 0) in
   let last_but_one = ref ("", EOF, 0, 0) in
+  let in_record = ref false in
+  let in_record_label = ref false in
   tb#remove_all_tags ~start ~stop;
   try
     while true do
@@ -132,7 +134,7 @@ let tag =
         in
         let u_length = u_lstop - u_lstart in
         (*printf "(%d, %d) (%d, %d)\n%!" lstart lstop u_lstart u_lstop;*)
-        let lexeme = String.sub u_text u_lstart u_length in  
+        let lexeme = String.sub u_text u_lstart u_length in
         let start1 = lstart + !extra_bytes in
         let prev, succ, start = Comments.partition !succ_comments start1  in
         succ_comments := succ;
@@ -211,6 +213,12 @@ let tag =
           | LIDENT _ ->
               begin match !last with
                 | _, (QUESTION | TILDE), _, _ -> "label"
+                (* TODO:  *)
+                | _, LBRACE, _, _ when !in_record -> "record_label"
+                | _, MUTABLE, _, _ when !in_record -> "record_label"
+                | _, WITH, _, _ when !in_record -> "record_label"
+                | _, SEMI, _, _ when !in_record -> "record_label"
+                | _, DOT, _, _ when !in_record && !in_record_label -> "record_label"
                 | _, LPAREN, _, _ ->
                   (match !last_but_one with
                     | _, (QUESTION | TILDE), _, _ -> "label"
@@ -231,10 +239,13 @@ let tag =
               | _ -> ""
               end
           | INT _ | FLOAT _  | TRUE | FALSE -> "number"
+          | LBRACE -> in_record := true; in_record_label := true; "symbol"
+          | RBRACE -> in_record := false; in_record_label := false; "symbol"
+          | EQUAL when !in_record -> in_record_label := false; "symbol"
           | LPAREN | RPAREN | LBRACKET | BARRBRACKET| RBRACKET | LBRACKETLESS | GREATERRBRACKET
           | LBRACELESS | GREATERRBRACE | LBRACKETBAR | LESSMINUS
           | EQUAL | PLUS | MINUS | STAR | QUOTE | SEMI | SEMISEMI | MINUSGREATER
-          | COMMA | DOT | DOTDOT | COLONCOLON | COLONEQUAL | LBRACE | RBRACE | UNDERSCORE
+          | COMMA | DOT | DOTDOT | COLONCOLON | COLONEQUAL (*| LBRACE*) (*| RBRACE*) | UNDERSCORE
             -> "symbol"
           | ASSERT -> "custom"
           | EOF -> raise End_of_file

@@ -24,5 +24,5 @@
 type page_id = Current | Num of int | File of File.file | View of Text.view
 
 exception No_current_view
-exception No_current_buffer 
+exception No_current_buffer
 

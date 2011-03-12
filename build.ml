@@ -25,7 +25,7 @@
 
 (** Configuration Section --------------------------------------------------- *)
 
-let includes = "+lablgtk2 +xml-light"
+let includes = "+lablgtk2 +xml-light +ocamldoc"
 
 (* If you have Microsoft-based native Win32 port, set ccopt to your
    "Microsoft Platform SDK\Lib" and "Microsoft Visual Studio 8\VC\lib"
@@ -69,7 +69,7 @@ let parsing = ocaml_src ^ "/parsing"
 let typing = ocaml_src ^ "/typing"
 let utils = ocaml_src ^ "/utils"
 let includes = sprintf "%s %s %s %s common oebuild" parsing typing utils includes
-let libs = "toplevellib unix str threads lablgtk gtkThread.o xml-light common oebuildlib"
+let libs = "unix str threads odoc_info toplevellib lablgtk gtkThread.o xml-light common oebuildlib"
 
 let oebuild_name = sprintf "oebuild%s" ext
 let oebuild_command = "oebuild" // oebuild_name

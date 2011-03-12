@@ -61,7 +61,7 @@ class page ?file ~project ~offset ~editor () =
   let sbox = GPack.hbox ~spacing:1 ~border_width:0 ~packing:spaned#add1 () in
   let status_modified = GMisc.image ~icon_size:`MENU ~packing:sbox#pack () in
   let _ = GMisc.separator `VERTICAL ~packing:sbox#pack () in
-  let status_filename = GMisc.label ~xalign:0.0 ~xpad:5 ~width:240 ~packing:sbox#add () in
+  let status_filename = GMisc.label ~xalign:0.0 ~xpad:5 ~width:150 (* 240 *) ~packing:sbox#add () in
   (**  *)
   let _ = GMisc.separator `VERTICAL ~packing:sbox#pack () in
   let status_cursor_line = GMisc.label ~xalign:0.5 ~packing:sbox#pack ~width:70 () in
@@ -190,11 +190,15 @@ object (self)
   val mutable load_complete = false
   val annot_type = new Annot_type.annot_type ocaml_view
   val error_indication = new Error_indication.error_indication ocaml_view vscrollbar (global_gutter, global_gutter_ebox)
+  val mutable outline = None
 
   method annot_type = annot_type
   method error_indication = error_indication
 
   method global_gutter = global_gutter#coerce
+
+  method outline = outline
+  method set_outline x = outline <- x
 
   method load_complete = load_complete
 
@@ -370,10 +374,11 @@ object (self)
     && ((project.Project.in_source_path filename) <> None)
     && (filename ^^ ".ml" || filename ^^ ".mli") then begin
       buffer#set_changed_after_last_autocomp 0.0;
-      let text = (buffer :> GText.buffer)#get_text () in
-      let text = Glib.Convert.convert_with_fallback ~fallback:"?"
-        ~from_codeset:"utf8" ~to_codeset:Oe_config.ocaml_codeset text in
-      Autocomp.compile_buffer ~project ~filename ~text ~commit ~error_indication ()
+      Autocomp.compile_buffer ~project ~editor ~page:self ~commit ();
+    end else begin 
+      let empty = new Outline.widget ~project ~page:self ~tmp:"" in
+      editor#pack_outline empty#coerce;
+      self#set_outline (Some empty)
     end
 
   method tooltip ?(typ=false) ((x, y) as location) =
@@ -414,8 +419,11 @@ object (self)
     text_view#event#connect#scroll ~callback:(fun _ -> annot_type#remove_tag(); error_indication#hide_tooltip(); false);
     text_view#event#connect#leave_notify ~callback:(fun _ -> annot_type#remove_tag(); error_indication#hide_tooltip(); false);
     text_view#event#connect#focus_out ~callback:(fun _ -> annot_type#remove_tag(); error_indication#hide_tooltip(); false);
-    ignore (text_view#buffer#connect#mark_set ~callback:begin fun _ mark ->
+    ignore (text_view#buffer#connect#mark_set ~callback:begin fun iter mark ->
       match GtkText.Mark.get_name mark with
+        | Some name when name = "insert" ->
+           Gaux.may outline ~f:(fun ol ->
+             Gtk_util.idle_add ~prio:500 (fun () -> ol#select mark))
         | Some name when Str.string_before name 5 = "delim" -> ()
         | _ -> annot_type#remove_tag(); error_indication#hide_tooltip()
     end);

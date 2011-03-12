@@ -93,6 +93,7 @@ let location_history_max_length        = 30 (* hint *)
 let gtk_major, gtk_minor, _            = GMain.Main.version
 let current_line_border_adjust, dash_style, dash_style_offset =
   match gtk_major, gtk_minor with
+    | 2, 14 -> 2, `ON_OFF_DASH, None
     | 2, 16 -> 2, `DOUBLE_DASH, None
     | 2, 20 -> 1, `ON_OFF_DASH, (Some 2)
     | 2, 22 -> 2, `DOUBLE_DASH, None

@@ -101,6 +101,7 @@ let default_tags = [
     "ocamldoc";
     "highlight";
     "highlight_current_line";
+    "record_label";
   ]
 
 let tag_labels = List.combine default_tags [
@@ -121,7 +122,8 @@ let tag_labels = List.combine default_tags [
     "Comment";
     "ocamldoc";
     "Delimiter match highlight";
-    "Line highlight"
+    "Line highlight";
+    "Record label"
   ]
 
 let default_colors : text_properties list = [
@@ -143,6 +145,8 @@ let default_colors : text_properties list = [
     (`NAME "deeppink3"), `BOLD, `ITALIC, `NONE;
     (`NAME "#FFFF00"), `NORMAL, `NORMAL, `LOW;
     (`NAME "#F7F7D7"), `NORMAL, `NORMAL, `NONE; (* #EEEEDD #F7F7D7 #F4F2B2 #F9F7C9  #FCF899 #F4F0A4 *)
+    (`NAME "#474747"), `NORMAL, `ITALIC, `NONE;
+
   ]
 
 let defaults = {

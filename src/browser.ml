@@ -32,9 +32,11 @@ class browser window =
   let menubar_visibility_changed = new menubar_visibility_changed () in
   let toolbar_visibility_changed = new toolbar_visibility_changed () in
   let tabbar_visibility_changed = new tabbar_visibility_changed () in
+  let outline_visibility_changed = new outline_visibility_changed () in
   let messages_visibility_changed = new messages_visibility_changed () in
   let vbox = GPack.vbox ~packing:window#add () in
-  let menubar = GMenu.menu_bar ~packing:vbox#pack () in
+  let menubarbox = GPack.hbox ~spacing:13 ~packing:vbox#pack () in
+  let menubar = GMenu.menu_bar ~packing:menubarbox#add () in
   let messages = Messages.messages in
   let editor = new Editor.editor () in
   let toolbar = new Toolbar.toolbar ~messages ~editor () in
@@ -49,7 +51,7 @@ class browser window =
   let get_menu_item_nav_history_last = ref (fun () -> failwith "get_menu_item_nav_history_last") in
   let get_menu_item_undo = ref (fun () -> failwith "get_menu_item_undo") in
   let get_menu_item_redo = ref (fun () -> failwith "get_menu_item_redo") in
-
+  let window_title_menu_label = GMisc.label ~markup:"" ~packing:menubarbox#pack ~show:false () in
 object (self)
   val mutable finalize = fun _ -> ()
   val mutable projects = []
@@ -57,16 +59,26 @@ object (self)
   val mutable menubar_visible = true;
   val mutable toolbar_visible = true;
   val mutable tabbar_visible = true;
+  val mutable outline_visible = true;
+  val mutable maximized_view_action = `NONE
+  val mutable geometry = "";
   val mutable project_history =
     File_history.create
       ~filename:Oe_config.project_history_filename
       ~max_length:Oe_config.project_history_max_length
+
   method connect = new signals ~switch_project ~menubar_visibility_changed ~toolbar_visibility_changed
-    ~tabbar_visibility_changed ~messages_visibility_changed
+    ~tabbar_visibility_changed ~outline_visibility_changed ~messages_visibility_changed
   method editor = editor
   method messages = messages
   method window : GWindow.window = window
   method project_history = project_history
+
+  method private set_geometry () =
+    let alloc = window#misc#allocation in
+    geometry <- sprintf "%d\n%d\n%d\n%d\n%b\n%b\n%b\n%b\n"
+      (alloc.Gtk.width) (alloc.Gtk.height) (alloc.Gtk.x) (alloc.Gtk.y)
+      menubar_visible editor#show_tabs toolbar_visible outline_visible;
 
   method set_title ed =
     let filename = match ed#get_page Editor_types.Current with None -> "" | Some page -> page#get_filename in
@@ -75,20 +87,16 @@ object (self)
         (try self#current_project.name with No_current_project -> "")
         filename
       ) in
+    window_title_menu_label#set_label (sprintf "<b>%s</b>" text);
     window#set_title text
 
   method exit (editor : Editor.editor) () =
-    Gtk_util.idle_add begin fun () ->
-      self#set_maximized_view `NONE ();
-      ignore (Thread.create begin fun () ->
-        (* Save geometry *)
-        let alloc = window#misc#allocation in
-        let chan = open_out (Filename.concat Oe_config.ocamleditor_user_home "geometry") in
-        fprintf chan "%d\n%d\n%d\n%d\n%b\n%b\n%b\n%!" (alloc.Gtk.width) (alloc.Gtk.height) (alloc.Gtk.x) (alloc.Gtk.y)
-          menubar_visible editor#show_tabs toolbar_visible;
-        close_out chan;
-      end ());
-    end;
+    if maximized_view_action = `NONE then (self#set_geometry());
+    (* Save geometry *)
+    let chan = open_out (Filename.concat Oe_config.ocamleditor_user_home "geometry") in
+    fprintf chan "%s" geometry;
+    close_out_noerr chan;
+    (*  *)
     let finalize () =
       try
         ignore(messages#remove_all_tabs());
@@ -243,7 +251,7 @@ object (self)
 
   method menubar_visible = menubar_visible
   method set_menubar_visible x =
-    if not x then menubar#misc#hide() else (menubar#misc#show_all());
+    if not x then menubarbox#misc#hide() else (menubarbox#misc#show());
     menubar_visible <- x;
     menubar_visibility_changed#call x;
 
@@ -252,6 +260,12 @@ object (self)
     if not x then toolbar#misc#hide() else (toolbar#misc#show_all());
     toolbar_visible <- x;
     toolbar_visibility_changed#call toolbar_visible;
+
+  method outline_visible = outline_visible
+  method set_outline_visible x =
+    editor#set_show_outline x;
+    outline_visible <- x;
+    outline_visibility_changed#call x;
 
   method set_tabbar_visible x =
     editor#set_show_tabs x;
@@ -268,27 +282,26 @@ object (self)
   val mutable max_height_prev_y = -1
   val mutable is_max_height = false
   val mutable is_fullscreen = false
-  val mutable maximized_view_action = `NONE
   val mutable maximized_view_actions = [
     `NONE, (fun () -> {
-      mva_menubar = true; (* dummies *)
-      mva_toolbar = true;
-      mva_tabbar = true;
-      mva_messages = false;
+      mva_menubar    = true; (* dummies *)
+      mva_toolbar    = true;
+      mva_tabbar     = true;
+      mva_messages   = false;
       mva_fullscreen = false;
     });
     `FIRST, (fun () -> {
-      mva_menubar = !Preferences.preferences.Preferences.pref_max_view_1_menubar;
-      mva_toolbar = !Preferences.preferences.Preferences.pref_max_view_1_toolbar;
-      mva_tabbar = !Preferences.preferences.Preferences.pref_max_view_1_tabbar;
-      mva_messages = !Preferences.preferences.Preferences.pref_max_view_1_messages;
+      mva_menubar    = !Preferences.preferences.Preferences.pref_max_view_1_menubar;
+      mva_toolbar    = !Preferences.preferences.Preferences.pref_max_view_1_toolbar;
+      mva_tabbar     = !Preferences.preferences.Preferences.pref_max_view_1_tabbar;
+      mva_messages   = !Preferences.preferences.Preferences.pref_max_view_1_messages;
       mva_fullscreen = !Preferences.preferences.Preferences.pref_max_view_1_fullscreen;
     });
     `SECOND, (fun () -> {
-      mva_menubar = !Preferences.preferences.Preferences.pref_max_view_2_menubar;
-      mva_toolbar = !Preferences.preferences.Preferences.pref_max_view_2_toolbar;
-      mva_tabbar = !Preferences.preferences.Preferences.pref_max_view_2_tabbar;
-      mva_messages = !Preferences.preferences.Preferences.pref_max_view_2_messages;
+      mva_menubar    = !Preferences.preferences.Preferences.pref_max_view_2_menubar;
+      mva_toolbar    = !Preferences.preferences.Preferences.pref_max_view_2_toolbar;
+      mva_tabbar     = !Preferences.preferences.Preferences.pref_max_view_2_tabbar;
+      mva_messages   = !Preferences.preferences.Preferences.pref_max_view_2_messages;
       mva_fullscreen = !Preferences.preferences.Preferences.pref_max_view_2_fullscreen;
     })
   ];
@@ -300,11 +313,12 @@ object (self)
     let ms = messages#visible in
     let fs = is_fullscreen in
     let save_default () =
+      self#set_geometry();
       maximized_view_actions <- (`NONE, (fun () -> {
-        mva_menubar = mb;
-        mva_toolbar = tb;
-        mva_tabbar = tab;
-        mva_messages = ms;
+        mva_menubar    = mb;
+        mva_toolbar    = tb;
+        mva_tabbar     = tab;
+        mva_messages   = ms;
         mva_fullscreen = fs;
       })) :: (List.remove_assoc `NONE maximized_view_actions);
     in
@@ -358,17 +372,19 @@ object (self)
         if !Preferences.preferences.Preferences.pref_max_view_fullscreen then begin
           if Oe_config.is_win32 then (window#set_decorated false);
           window#fullscreen();
+          window_title_menu_label#misc#show();
         end else (window#maximize());
       end else if (not x) && is_fullscreen then begin
         if pref_max_view_fullscreen then begin
           window#unfullscreen();
           if Oe_config.is_win32 then (window#set_decorated true);
+          window_title_menu_label#misc#hide();
         end else (window#unmaximize());
       end;
       is_fullscreen <- x;
     end
 
-  method set_max_height x =
+(*  method set_max_height x =
     if x && (not is_max_height) then begin
       window#set_decorated false;
       let alloc = window#misc#allocation in
@@ -388,7 +404,7 @@ object (self)
         window#set_decorated true;
       end
     end;
-    is_max_height <- x;
+    is_max_height <- x;*)
 
   method dialog_external_tools ~menu = External_tools.create
     ~menu
@@ -591,6 +607,7 @@ object (self)
     let menu_item_view_menubar = ref [] in
     let menu_item_view_toolbar = ref [] in
     let menu_item_view_tabbar = ref [] in
+    let menu_item_view_outline = ref [] in
     let menu_item_view_messages = ref [] in
     let group = accel_group in
     let menu = Menu.create
@@ -603,6 +620,7 @@ object (self)
       menu_item_view_menubar
       menu_item_view_toolbar
       menu_item_view_tabbar
+      menu_item_view_outline
       menu_item_view_messages
       self
     in
@@ -636,6 +654,13 @@ object (self)
         mi#misc#handler_unblock sign;
       end !menu_item_view_tabbar
     end;
+    self#connect#outline_visibility_changed ~callback:begin fun visible ->
+      List.iter begin fun (mi, sign) ->
+        mi#misc#handler_block sign;
+        mi#set_active visible;
+        mi#misc#handler_unblock sign;
+      end !menu_item_view_outline
+    end;
     let update_view_messages_items visible =
       List.iter begin fun (mi, sign) ->
         toolbar#tool_messages_handler_block ();
@@ -650,7 +675,7 @@ object (self)
     self#connect#messages_visibility_changed ~callback:update_view_messages_items;
 
     (** Editor *)
-    paned#pack1 ~resize:true editor#coerce;
+    paned#pack1 ~resize:true ~shrink:true editor#coerce;
     let update_toolbar_save () =
       toolbar#tool_save_all#misc#set_sensitive (List.exists (fun p -> p#view#buffer#modified) editor#pages);
       Gaux.may (editor#get_page Editor_types.Current) ~f:begin fun page ->
@@ -681,7 +706,8 @@ object (self)
     editor#connect#add_page ~callback;
     editor#connect#after#changed ~callback:update_toolbar_undo;
     editor#connect#after#modified_changed ~callback:update_toolbar_save;
-    self#connect#switch_project ~callback:(fun () -> toolbar#update current_project; self#set_menu_item_nav_history_sensitive());
+    self#connect#switch_project ~callback:(fun () ->
+      toolbar#update current_project; self#set_menu_item_nav_history_sensitive());
     List.iter (fun c -> c#misc#set_sensitive (current_project <> None)) toolbar#children;
     callback();
     (* Geometry settings *)
@@ -693,6 +719,7 @@ object (self)
     let is_menubar_visible = ref true in
     let is_toolbar_visible = ref true in
     let is_tabbar_visible = ref true in
+    let is_outline_visible = ref true in
     begin
       try
         let chan = open_in (Filename.concat Oe_config.ocamleditor_user_home "geometry") in
@@ -703,12 +730,14 @@ object (self)
         (try is_menubar_visible := (bool_of_string (input_line chan)) with End_of_file -> ());
         (try is_tabbar_visible := (bool_of_string (input_line chan)) with End_of_file -> ());
         (try is_toolbar_visible := (bool_of_string (input_line chan)) with End_of_file -> ());
+        (try is_outline_visible := (bool_of_string (input_line chan)) with End_of_file -> ());
         close_in chan;
       with _ -> ()
     end;
     self#set_menubar_visible !is_menubar_visible;
     self#set_toolbar_visible !is_toolbar_visible;
     self#set_tabbar_visible !is_tabbar_visible;
+    self#set_outline_visible !is_outline_visible;
     window#resize ~width:!width ~height:!height;
     let screen_width = Gdk.Screen.width ~screen () in
     let screen_height = Gdk.Screen.height ~screen () in
@@ -728,15 +757,17 @@ object (self)
     Gaux.may (editor#get_page Editor_types.Current) ~f:begin fun page ->
       page#view#misc#grab_focus()
     end;
+    self#set_geometry();
 end
 
 and switch_project () = object (self) inherit [unit] signal () as super end
 and menubar_visibility_changed () = object (self) inherit [bool] signal () as super end
 and toolbar_visibility_changed () = object (self) inherit [bool] signal () as super end
 and tabbar_visibility_changed () = object (self) inherit [bool] signal () as super end
+and outline_visibility_changed () = object (self) inherit [bool] signal () as super end
 and messages_visibility_changed () = object (self) inherit [bool] signal () as super end
 and signals ~switch_project ~menubar_visibility_changed ~toolbar_visibility_changed
-  ~tabbar_visibility_changed ~messages_visibility_changed =
+  ~tabbar_visibility_changed ~outline_visibility_changed ~messages_visibility_changed =
 object (self)
   inherit ml_signals [switch_project#disconnect; menubar_visibility_changed#disconnect;
     toolbar_visibility_changed#disconnect; tabbar_visibility_changed#disconnect;
@@ -745,6 +776,7 @@ object (self)
   method menubar_visibility_changed = menubar_visibility_changed#connect ~after
   method toolbar_visibility_changed = toolbar_visibility_changed#connect ~after
   method tabbar_visibility_changed = tabbar_visibility_changed#connect ~after
+  method outline_visibility_changed = outline_visibility_changed#connect ~after
   method messages_visibility_changed = messages_visibility_changed#connect ~after
 end
 
@@ -757,6 +789,7 @@ let browser = begin
     ~icon:Icons.oe
     ~type_hint:`NORMAL
     ~kind:`TOPLEVEL
+    ~allow_shrink:true
     ~show:false
     ()
   in

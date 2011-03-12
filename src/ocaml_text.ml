@@ -452,14 +452,25 @@ object (self)
   initializer
     code_folding <- Some (new Code_folding.manager ~view:(self :> Text.view));
     self#create_highlight_current_line_tag(); (* recreate current line tag after code folding highlight to draw it above *)
+    (** Double-click selects OCaml identifiers; click on a selected range
+      reduces the selection to part of the identifier. *)
+    let two_button_press = ref false in
+    ignore (self#event#connect#button_release ~callback:begin fun ev ->
+      if smart_click then begin
+        match GdkEvent.get_type ev with
+          | `BUTTON_RELEASE when !two_button_press ->
+            two_button_press := false;
+            Gtk_util.idle_add (fun () -> ignore (self#obuffer#select_word ~pat:Ocaml_word_bound.regexp ()));
+            false
+          | _ -> false
+      end else false
+    end);
     ignore (self#event#connect#button_press ~callback:begin fun ev ->
       if smart_click then begin
-        (** Double-click selects OCaml identifiers; click on a selected range
-          reduces the selection to part of the identifier. *)
         match GdkEvent.get_type ev with
           | `TWO_BUTTON_PRESS ->
-              ignore (self#obuffer#select_word ~pat:Ocaml_word_bound.regexp ());
-              true (* true *)
+            two_button_press := true;
+            true (* true *)
           | `BUTTON_PRESS when buffer#has_selection ->
             let x = int_of_float (GdkEvent.Button.x ev) in
             let y = int_of_float (GdkEvent.Button.y ev) in

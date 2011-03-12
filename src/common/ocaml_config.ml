@@ -52,6 +52,7 @@ let find_tool which path =
       | `BEST_OCAMLOPT -> ["ocamlopt.opt"; "ocamlopt"]
       | `BEST_OCAMLDEP -> ["ocamldep.opt"; "ocamldep"]
       | `OCAMLC -> ["ocamlc"]
+      | `BEST_OCAMLDOC -> ["ocamldoc.opt"; "ocamldoc"]
       | `OCAML -> ["ocaml"]
   in
   let quote    = if path <> "" && Sys.os_type = "Win32" && String.contains path ' ' then Filename.quote else (fun x -> x) in
@@ -69,6 +70,7 @@ let expand_includes compact =
 let ocamlc () = find_tool `BEST_OCAMLC (get_home ())
 let ocamlopt () = find_tool `BEST_OCAMLOPT (get_home ())
 let ocamldep () = find_tool `BEST_OCAMLDEP (get_home ())
+let ocamldoc () = find_tool `BEST_OCAMLDOC (get_home ())
 let ocaml () = find_tool `OCAML (get_home ())
 let ocamllib () = Miscellanea.expand ~first_line:true ((ocamlc()) ^ " -where")
 

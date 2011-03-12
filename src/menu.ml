@@ -34,6 +34,7 @@ let create
     menu_item_view_menubar
     menu_item_view_toolbar
     menu_item_view_tabbar
+    menu_item_view_outline
     menu_item_view_messages
     browser =
   let flags = [`VISIBLE; `LOCKED] in [
@@ -499,6 +500,12 @@ let create
       item#add_accelerator ~group ~modi:[`CONTROL; `MOD1] GdkKeysyms._b ~flags;
       let sign = item#connect#activate ~callback:(fun () -> browser#set_tabbar_visible (not browser#editor#show_tabs)) in
       menu_item_view_tabbar := (item, sign) :: !menu_item_view_tabbar;
+    end;
+    begin
+      let item = GMenu.check_menu_item ~label:"Structure" ~active:browser#editor#show_outline ~packing:menu#add () in
+      item#add_accelerator ~group ~modi:[`CONTROL; `MOD1] GdkKeysyms._z ~flags;
+      let sign = item#connect#activate ~callback:(fun () -> browser#set_outline_visible (not browser#editor#show_outline)) in
+      menu_item_view_outline := (item, sign) :: !menu_item_view_outline;
     end;
     begin
       let item = GMenu.check_menu_item ~label:"Messages" ~active:browser#messages#visible ~packing:menu#add () in

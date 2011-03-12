@@ -43,6 +43,7 @@ type t = {
   mutable markers : marker list;
 }
 and marker = {
+  kind : [`None | `Bookmark of int | `Error of string | `Warning of string];
   mark : Gtk.text_mark;
   icon_pixbuf : GdkPixbuf.pixbuf;
   mutable icon_obj : GObj.widget option;
@@ -67,8 +68,8 @@ let create () = {
 }
 
 (** create_marker *)
-let create_marker ~mark ~pixbuf ?callback () =
-  {mark=mark; icon_pixbuf=pixbuf; callback=callback; icon_obj=None}
+let create_marker ?(kind=`None) ~mark ~pixbuf ?callback () =
+  {kind=kind; mark=mark; icon_pixbuf=pixbuf; callback=callback; icon_obj=None}
 
 (** destroy_markers *)
 let destroy_markers gutter markers =

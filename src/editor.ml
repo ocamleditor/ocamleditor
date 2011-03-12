@@ -32,9 +32,10 @@ let set_menu_item_nav_history_sensitive = ref (fun () -> failwith "set_menu_item
 
 (** Editor *)
 class editor () =
-  let box = GPack.vbox () in
+  let hpaned = GPack.paned `HORIZONTAL () in
   let notebook = GPack.notebook ~tab_border:0 ~show_border:false
-    ~packing:(box#pack ~fill:true ~expand:true) ~scrollable:true () in
+    ~packing:(hpaned#pack2 ~resize:true ~shrink:true) ~scrollable:true () in
+  let _ = hpaned#set_position 200 in
   let incremental_search = new Incremental_search.incremental () in
   let switch_page = new switch_page () in
   let remove_page = new remove_page () in
@@ -42,7 +43,7 @@ class editor () =
   let changed = new changed () in
   let add_page = new add_page () in
 object (self)
-  inherit GObj.widget box#as_widget
+  inherit GObj.widget hpaned#as_widget
   val mutable closing = false
   val mutable pages = []
   val mutable pages_cache = []
@@ -60,6 +61,28 @@ object (self)
   val show_global_gutter = new GUtil.variable false
   val mutable show_whitespace_chars = !Preferences.preferences.Preferences.pref_show_whitespace_chars
   val mutable word_wrap = !Preferences.preferences.Preferences.pref_editor_wrap
+  val mutable show_outline = true
+
+  method pack_outline widget =
+    if show_outline then begin
+      (try hpaned#remove hpaned#child1 with Gpointer.Null -> ());
+      hpaned#pack1 ~resize:false ~shrink:true widget;
+    end
+
+  method show_outline = show_outline
+  method set_show_outline show =
+    show_outline <- show;
+    try
+      if show then begin
+        self#with_current_page begin fun page ->
+          match page#outline with
+            | Some ol -> self#pack_outline ol#coerce
+            | _ ->
+              (try hpaned#remove hpaned#child1 with Gpointer.Null -> ());
+              page#compile_buffer ~commit:false ()
+        end;
+      end else (try hpaned#remove hpaned#child1 with Gpointer.Null -> ());
+    with Gpointer.Null -> ()
 
   method show_whitespace_chars = show_whitespace_chars
   method set_show_whitespace_chars x =
@@ -95,9 +118,7 @@ object (self)
   method show_tabs = notebook#show_tabs
   method set_show_tabs x =
     notebook#set_show_tabs x;
-    if x then begin
-      notebook#misc#grab_focus()
-    end
+    if x then (notebook#misc#grab_focus())
 
   method pages = List.rev pages
 
@@ -195,7 +216,7 @@ object (self)
         with Not_found -> None
       in
       Gaux.may old_marker ~f:(fun old -> Gutter.destroy_markers page#view#gutter [old]);
-      let marker = Gutter.create_marker ~mark ~pixbuf:(List.assoc num Bookmark.icons) () in
+      let marker = Gutter.create_marker ~kind:(`Bookmark num) ~mark ~pixbuf:(List.assoc num Bookmark.icons) () in
       Bookmark.create ~num ~filename ~mark ~marker ();
       page#view#gutter.Gutter.markers <- marker :: page#view#gutter.Gutter.markers;
       page#view#paint_gutter();
@@ -367,14 +388,18 @@ object (self)
         page#view#set_show_whitespace_chars show_whitespace_chars;
         page#view#set_word_wrap word_wrap;
         (** Insert_text *)
-        ignore (page#buffer#connect#insert_text ~callback:(fun _ _ -> page#view#matching_delim_remove_tag()));
+        (*ignore (page#buffer#connect#insert_text ~callback:(fun _ _ -> page#view#matching_delim_remove_tag()));*)
         ignore (page#buffer#connect#after#insert_text ~callback:begin fun iter text ->
           Liim.signal liim2 begin fun () ->
             let iter = page#buffer#get_iter `INSERT in
             if page#buffer#lexical_enabled then begin
-              Lexical.tag page#view#buffer
-                ~start:((iter#backward_chars (Glib.Utf8.length text))#set_line_index 0)
-                ~stop:iter#forward_line;
+              let start, stop =
+                match page#view#current_matching_tag_bounds with
+                  | [_,d; a,_] ->
+                    (page#buffer#get_iter_at_mark (`MARK a)), (page#buffer#get_iter_at_mark (`MARK d))
+                  | _ -> ((iter#backward_chars (Glib.Utf8.length text))#set_line_index 0), iter#forward_line
+              in
+              Lexical.tag page#view#buffer ~start ~stop;
             end;
             page#view#paint_current_line_background iter;
             ignore (page#view#matching_delim ());
@@ -387,9 +412,16 @@ object (self)
           Liim.signal liim2 begin fun () ->
             let iter = page#buffer#get_iter `INSERT in
             if page#buffer#lexical_enabled then begin
-              Lexical.tag page#view#buffer
+              let start, stop =
+                match page#view#current_matching_tag_bounds with
+                  | [_,d; a,_] ->
+                    (page#buffer#get_iter_at_mark (`MARK a)), (page#buffer#get_iter_at_mark (`MARK d))
+                  | _ -> (iter#backward_line#set_line_index 0), iter#forward_to_line_end
+              in
+              Lexical.tag page#view#buffer ~start ~stop;
+(*              Lexical.tag page#view#buffer
                 ~start:(iter#backward_line#set_line_index 0)
-                ~stop:iter#forward_to_line_end;
+                ~stop:iter#forward_to_line_end;*)
             end;
             page#view#paint_current_line_background iter;
             ignore (page#view#matching_delim ());
@@ -596,9 +628,7 @@ object (self)
   method save (page : Editor_page.page) =
 (*    try*)
       if !Preferences.preferences.Preferences.pref_editor_trim_lines
-      then begin
-        page#buffer#trim_lines();
-      end;
+      then (page#buffer#trim_lines());
       page#save();
 (*    with Not_found -> ()*)
 
@@ -704,7 +734,25 @@ object (self)
     end;
     show_global_gutter#set !Preferences.preferences.pref_show_global_gutter;
     (** Auto-compilation *)
-    ignore (Thread.create begin fun () ->
+    ignore (GMain.Timeout.add ~ms:500 ~callback:begin fun () ->
+      begin
+        try
+          if project.Project.autocomp_enabled then begin
+            self#with_current_page begin fun page ->
+              if page#buffer#changed_after_last_autocomp > 0.0 then begin
+                if Unix.gettimeofday() -. page#buffer#changed_after_last_autocomp > project.Project.autocomp_delay (*/. 2.*)
+                then (page#compile_buffer ~commit:false ())
+              end
+            end;
+          end;
+        with ex -> begin
+          eprintf "%s\n%s\n%!" (Printexc.to_string ex) (Printexc.get_backtrace ());
+        end;
+      end;
+      true
+    end);
+
+(*    ignore (Thread.create begin fun () ->
       while true do
         try
           if project.Project.autocomp_enabled then begin
@@ -720,7 +768,7 @@ object (self)
           eprintf "%s\n%s\n%!" (Printexc.to_string ex) (Printexc.get_backtrace ());
         end
       done
-    end ());
+    end ());*)
     (** Autosave *)
     if Oe_config.autosave_enabled then begin
       ignore (GMain.Timeout.add ~ms:Autosave.interval ~callback:begin fun () ->
@@ -741,15 +789,17 @@ object (self)
     (** Switch page: update the statusbar and remove annot tag *)
     ignore (notebook#connect#after#switch_page ~callback:begin fun num ->
       (* Clean up type annotation tag and error indications *)
-      List.iter begin fun page ->
-        page#annot_type#remove_tag ();
-      end pages;
+      List.iter (fun page -> page#annot_type#remove_tag ()) pages;
       (* Current page *)
       self#with_current_page begin fun page ->
         if not page#load_complete then (self#load_page page);
         page#update_statusbar();
         page#set_code_folding_enabled code_folding_enabled#get; (* calls scan_folding_points, if enabled *)
         page#view#paint_current_line_background (page#buffer#get_iter `INSERT);
+        match page#outline with
+          | Some outline when self#show_outline && outline#get_oid <> hpaned#child1#get_oid ->
+            self#pack_outline outline#coerce
+          | _ -> ()
       end;
       switch_page#call notebook#current_page;
     end);

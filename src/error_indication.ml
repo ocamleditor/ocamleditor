@@ -110,10 +110,10 @@ object (self)
   method private callback_gutter_marker mark =
     let iter = buffer#get_iter_at_mark (`MARK mark) in
     buffer#place_cursor iter;
-    Gtk_util.idle_add ~prio:300 (fun () -> self#tooltip ~sticky:true (`ITER iter));
+    Gtk_util.idle_add ~prio:300 (fun () -> self#tooltip ~sticky:true ~need_focus:false (`ITER iter));
     true;
 
-  method private do_apply_tag messages icon =
+  method private do_apply_tag messages kind =
     (*Prf.crono Prf.prf_error_indication_appy_tag begin fun () ->*)
       let tview = (view :> Text.view) in
       let messages = List.sort (fun e1 e2 -> Pervasives.compare e1.Err_types.er_line e2.Err_types.er_line) messages in
@@ -129,7 +129,15 @@ object (self)
         buffer#apply_tag tag ~start ~stop;
         let mark_start = buffer#create_mark start in
         if flag_gutter then begin
-          let marker = Gutter.create_marker ~mark:mark_start ~pixbuf:icon ~callback:self#callback_gutter_marker () in
+          let kind, pixbuf =
+            match kind with
+              | `Warning -> `Warning error.Err_types.er_message, Icons.warning_14
+              | `Error -> `Error error.Err_types.er_message, Icons.error_16
+              | _ -> assert false
+          in
+          let marker = Gutter.create_marker ~kind
+            ~mark:mark_start ~pixbuf ~callback:self#callback_gutter_marker ()
+          in
           tview#gutter.Gutter.markers <- marker :: tview#gutter.Gutter.markers;
           error_gutter_markers <- marker :: error_gutter_markers;
         end;
@@ -144,8 +152,8 @@ object (self)
         self#remove_tag();
         let errors = messages.Err_types.er_errors in
         let warnings = messages.Err_types.er_warnings in
-        tag_error_bounds <- self#do_apply_tag errors Icons.error_16;
-        tag_warning_bounds <- self#do_apply_tag warnings Icons.warning_14;
+        tag_error_bounds <- self#do_apply_tag errors `Error;
+        tag_warning_bounds <- self#do_apply_tag warnings `Warning;
         has_errors#set (tag_error_bounds <> []);
         has_warnings#set (tag_warning_bounds <> []);
         let has_messages = has_errors#get || has_warnings#get in
@@ -195,8 +203,8 @@ object (self)
       end tags
     end
 
-  method tooltip ?(sticky=false) (location : [`ITER of GText.iter | `XY of int * int]) =
-    if enabled && view#misc#get_flag `HAS_FOCUS then begin
+  method tooltip ?(sticky=false) ?(need_focus=true) (location : [`ITER of GText.iter | `XY of int * int]) =
+    if enabled && (not need_focus || view#misc#get_flag `HAS_FOCUS) then begin
       let iter = match location with `XY (x, y) -> view#get_iter_at_location ~x ~y | `ITER it -> it in
       if not iter#ends_line then begin
         try

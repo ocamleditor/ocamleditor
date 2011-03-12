@@ -25,7 +25,6 @@ open GdkKeysyms
 open Printf
 open Miscellanea
 
-
 let string_width s =
   let width = ref 0 in
   for i = 0 to String.length s - 1 do
@@ -70,6 +69,9 @@ object (self)
   method file : File.file option = file
 
   method select_all () = self#select_range self#start_iter self#end_iter
+
+  method get_iter_at_mark mark =
+    new GText.iter (Gtk_util.get_iter_at_mark_safe self#as_buffer (self#get_mark mark))
 
   method select_marks ~start ~stop =
     self#select_range (self#get_iter_at_mark stop) (self#get_iter_at_mark start);
@@ -174,9 +176,6 @@ object (self)
     self#insert text;
     let stop = self#get_iter `INSERT in
     self#select_range (stop#backward_chars (Glib.Utf8.length text)) stop
-
-  method get_iter_at_mark mark =
-    new GText.iter (Gtk_util.get_iter_at_mark_safe self#as_buffer (self#get_mark mark))
 
   method as_tbuffer = (self :> GText.buffer)
 end
@@ -430,6 +429,8 @@ object (self)
         else (self#matching_delim_apply_tag text start);
       | _ -> None
 
+  method current_matching_tag_bounds = current_matching_tag_bounds
+
   method matching_delim_goto ?(select=false) ?(strict=true) () =
     match self#buffer#selection_bounds with
       | b1, b2 when (not (b1#equal b2)) ->
@@ -519,7 +520,7 @@ object (self)
     Gaux.may prev_insert_line ~f:begin fun cur ->
       let cur = self#buffer#get_iter (`LINE cur) in
       self#buffer#remove_tag highlight_current_line_tag
-        ~start:(cur#set_line_offset 0) ~stop:cur#forward_to_line_end;
+        ~start:(cur#set_line_offset 0) ~stop:cur#forward_to_line_end#forward_char;
     end;
     (*if not self#buffer#has_selection then begin*)
       self#buffer#apply_tag highlight_current_line_tag
