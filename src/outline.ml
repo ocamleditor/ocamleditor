@@ -26,6 +26,7 @@ open Miscellanea
 open Odoc_info
 
 class widget ~project ~page ~tmp =
+  let buffer               = (page#buffer :> Ocaml_text.buffer) in
   let vbox                 = GPack.vbox () in
   let toolbar              = GButton.toolbar ~packing:vbox#pack ~style:`ICONS ~show:true () in
   let _                    = toolbar#set_icon_size `MENU in
@@ -70,10 +71,10 @@ object (self)
     let callback () =
       try
         let path = List.hd view#selection#get_selected_rows in
-        let _, (offset, callback) = List.find (fun (rr, _) -> rr#path = path) locations in
-        let where = page#buffer#get_iter (`OFFSET offset) in
+        let _, (mark, callback) = List.find (fun (rr, _) -> rr#path = path) locations in
+        let where = buffer#get_iter_at_mark (`MARK mark) in
         page#view#scroll_lazy where;
-        page#buffer#place_cursor ~where;
+        buffer#place_cursor ~where;
         ignore (callback());
       with Failure "hd" -> ()
       | ex (*Not_found | Gpointer.Null *) -> Printf.eprintf "File \"outline.ml\": %s\n%s\n%!" (Printexc.to_string ex) (Printexc.get_backtrace());
@@ -148,14 +149,15 @@ object (self)
           in
           match row with
             | Some row ->
-              let iter = page#buffer#get_iter (`MARK marker.Gutter.mark) in
+              let iter = buffer#get_iter_at_mark (`MARK marker.Gutter.mark) in
               let callback =
                 match marker.Gutter.callback with
                   | Some f -> (fun () -> f marker.Gutter.mark)
                   | None -> (fun () -> false)
               in
-              locations <-
-                ((model#get_row_reference (model#get_path row)), (iter#offset, callback)) :: locations
+              let rr = model#get_row_reference (model#get_path row) in
+              let mark = buffer#create_mark ?name:None ?left_gravity:None iter in
+              locations <- (rr, (mark, callback)) :: locations
             | _ -> ()
         end markers;
         if kind = `Error then begin
@@ -171,9 +173,10 @@ object (self)
       | _ ->
         begin
           try
-            let iter = page#buffer#get_iter_at_mark (`MARK mark) in
-            let rr, _ = List.find begin fun (_, (offset, _)) ->
-              offset <= iter#offset
+            let iter = buffer#get_iter_at_mark (`MARK mark) in
+            let rr, _ = List.find begin fun (_, (m, _)) ->
+              let it = buffer#get_iter_at_mark (`MARK m) in
+              it#compare iter <= 0
             end locations in
             Gaux.may signal_selection_changed ~f:view#selection#misc#handler_block;
             view#set_cursor rr#path vc;
@@ -195,6 +198,7 @@ object (self)
       Oebuild_util.exec ~echo:true ~join:false ~at_exit:begin fun () ->
         let module_list = Odoc_info.load_modules dump_filename in
         tooltips <- [];
+        List.iter (fun (_, (m, _)) -> buffer#delete_mark (`MARK m)) locations;
         locations <- [];
         let col_counter = ref 0 in
         GtkThread2.async begin fun () ->
@@ -208,7 +212,11 @@ object (self)
           current_model <- Some model;
           self#add_markers ~kind:`All ();
           view#set_model (Some (model :> GTree.model));
-          locations <- List.sort (fun (_, (o1, _)) (_, (o2, _)) -> Pervasives.compare o2 o1) locations;
+          locations <- List.sort begin fun (_, (m1, _)) (_, (m2, _)) ->
+            let i1 = buffer#get_iter_at_mark (`MARK m1) in
+            let i2 = buffer#get_iter_at_mark (`MARK m2) in
+            (-1) * (i1#compare i2)
+          end locations;
           (** Set cell data func *)
           vc#set_cell_data_func renderer begin fun model row ->
             self#cell_data_func_icons ~model ~row;
@@ -288,7 +296,9 @@ object (self)
     let loc_filename, loc_pos =
       match loc.Odoc_types.loc_impl with Some (a, b) -> a, b | _ -> "", 0
     in
-    locations <- ((model#get_row_reference (model#get_path row)), (loc_pos, (fun () -> false))) :: locations
+    let rr = model#get_row_reference (model#get_path row) in
+    let mark = buffer#create_mark ?name:None ?left_gravity:None (buffer#get_iter (`OFFSET loc_pos)) in
+    locations <- (rr, (mark, (fun () -> false))) :: locations
 
   method private set_tooltip ~(model : GTree.tree_store) ~row ~name ~typ =
     model#set ~row ~column:col_name name;
@@ -300,8 +310,10 @@ object (self)
       | (Some parent) as old ->
         for nth = 0 to (model#iter_n_children old - 1) do
           let child = model#iter_children ~nth old in
-          let rr = (model#get_path |- model#get_row_reference) child in
-          locations <- List.filter (fun (l, _) -> l#path <> rr#path) locations;
+          let rr = model#get_row_reference (model#get_path child) in
+          let delete, keep = List.partition (fun (l, _) -> l#path == rr#path) locations in
+          List.iter (fun (_, (m, _)) -> buffer#delete_mark (`MARK m)) delete;
+          locations <- keep;
         done;
         ignore (model#remove parent)
       | _ -> ()
