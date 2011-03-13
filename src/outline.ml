@@ -26,34 +26,37 @@ open Miscellanea
 open Odoc_info
 
 class widget ~project ~page ~tmp =
-  let vbox            = GPack.vbox () in
-  let toolbar         = GButton.toolbar ~packing:vbox#pack ~style:`ICONS ~show:false () in
-  let _               = toolbar#set_icon_size `MENU in
-  let button_sort     = GButton.toggle_tool_button ~homogeneous:true ~stock:`SORT_ASCENDING ~packing:toolbar#insert () in
-  let button_types    = GButton.toggle_tool_button ~homogeneous:false ~label:"Types" ~packing:toolbar#insert () in
+  let vbox                 = GPack.vbox () in
+  let toolbar              = GButton.toolbar ~packing:vbox#pack ~style:`ICONS ~show:true () in
+  let _                    = toolbar#set_icon_size `MENU in
+  let button_sort          = GButton.toggle_tool_button ~homogeneous:true ~stock:`SORT_ASCENDING ~packing:toolbar#insert () in
+  let button_show_types    = GButton.toggle_tool_button ~homogeneous:false ~active:true ~packing:toolbar#insert () in
+  let _                    = button_show_types#set_icon_widget (GMisc.image ~pixbuf:Icons.typ ())#coerce in
   (*  *)
-  let source_filename = page#get_filename in
-  let dump_filename   =
+  let source_filename      = page#get_filename in
+  let dump_filename        =
     match project.Project.in_source_path source_filename with
       | Some rel ->
-        let tmp             = Project.path_tmp project in
+        let tmp                  = Project.path_tmp project in
         tmp // ((Filename.chop_extension rel) ^ ".outline")
       | _ -> Filename.temp_file "outline" ""
   in
-  let includes        = Project.get_includes project in
-  let sw              = GBin.scrolled_window ~shadow_type:`IN ~hpolicy:`AUTOMATIC ~vpolicy:`AUTOMATIC ~packing:vbox#add () in
-  let cols            = new GTree.column_list in
-  let col_markup      = cols#add Gobject.Data.string in
-  let col_kind        = cols#add Gobject.Data.caml_option in
-  let view            = GTree.view ~headers_visible:false (*~width:200*) ~packing:sw#add () in
-  let renderer        = GTree.cell_renderer_text [`YPAD 0] in
-  let renderer_pixbuf = GTree.cell_renderer_pixbuf [`YPAD 0; `XPAD 0] in
-  let vc              = GTree.view_column ~title:"" () in
-  let _               = vc#pack ~expand:false renderer_pixbuf in
-  let _               = vc#pack ~expand:true renderer in
-  let _               = vc#add_attribute renderer "markup" col_markup in
-  let _               = view#append_column vc in
-  let _               = view#misc#set_property "enable-tree-lines" (`BOOL true) in
+  let includes             = Project.get_includes project in
+  let sw                   = GBin.scrolled_window ~shadow_type:`IN ~hpolicy:`AUTOMATIC ~vpolicy:`AUTOMATIC ~packing:vbox#add () in
+  let cols                 = new GTree.column_list in
+  let col_name             = cols#add Gobject.Data.string in
+  let col_type             = cols#add Gobject.Data.string in
+  let col_kind             = cols#add Gobject.Data.caml_option in
+  let col_order            = cols#add Gobject.Data.int in
+  let view                 = GTree.view ~headers_visible:false ~packing:sw#add () in
+  let renderer             = GTree.cell_renderer_text [`YPAD 0] in
+  let renderer_pixbuf      = GTree.cell_renderer_pixbuf [`YPAD 0; `XPAD 0] in
+  let vc                   = GTree.view_column ~title:"" () in
+  let _                    = vc#pack ~expand:false renderer_pixbuf in
+  let _                    = vc#pack ~expand:false renderer in
+  let _                    = vc#add_attribute renderer "text" col_name in
+  let _                    = view#append_column vc in
+  let _                    = view#misc#set_property "enable-tree-lines" (`BOOL true) in
 object (self)
   inherit GObj.widget vbox#as_widget
   val mutable locations = []
@@ -72,7 +75,8 @@ object (self)
         page#view#scroll_lazy where;
         page#buffer#place_cursor ~where;
         ignore (callback());
-      with Not_found | Gpointer.Null | Failure "hd" -> ()
+      with Failure "hd" -> ()
+      | ex (*Not_found | Gpointer.Null *) -> Printf.eprintf "File \"outline.ml\": %s\n%s\n%!" (Printexc.to_string ex) (Printexc.get_backtrace());
     in
     signal_selection_changed <- Some (view#selection#connect#after#changed ~callback);
     ignore (view#connect#after#row_activated ~callback:begin fun path _ ->
@@ -98,52 +102,46 @@ object (self)
         end
       with Not_found | Gpointer.Null -> false
     end);
-
-  method find (model : GTree.tree_store) kind =
-    let result = ref None in
-    model#foreach begin fun path row ->
-      match model#get ~row ~column:col_kind with
-        | Some k when k = kind ->
-          result := Some row;
-          true
-        | _ -> false
-    end;
-    !result
+    (** Toolbar buttons *)
+    ignore (button_show_types#connect#toggled ~callback:(fun () -> GtkBase.Widget.queue_draw view#as_widget));
+    ignore (button_sort#connect#toggled ~callback:begin fun () ->
+      Gaux.may current_model ~f:begin fun model ->
+        let id = if button_sort#get_active then col_name.GTree.index else col_order.GTree.index in
+        model#set_sort_column_id id `ASCENDING;
+        GtkBase.Widget.queue_draw view#as_widget;
+      end
+    end);
 
   method add_markers ~(kind : [`Warning | `Error | `All]) () =
     match current_model with
       | Some model ->
         (* Remove previous marks *)
-        let old_folder_errors = Gaux.may_map (self#find model `Folder_errors)
-          ~f:(model#get_path |- model#get_row_reference) in
-        let old_folder_warnings = Gaux.may_map (self#find model `Folder_warnings)
-          ~f:(model#get_path |- model#get_row_reference) in
-        Gaux.may old_folder_errors ~f:(fun rr -> model#remove rr#iter);
-        Gaux.may old_folder_warnings ~f:(fun rr -> model#remove rr#iter);
+        self#remove_node model `Folder_errors;
+        self#remove_node model `Folder_warnings;
         (*  *)
         let markers = List.rev page#view#gutter.Gutter.markers in
         List.iter begin fun marker ->
           let row =
             match marker.Gutter.kind with
               | `Warning msg when kind = `All || kind = `Warning ->
-                let parent = self#get_node_markers ~model ~kind:`Folder_warnings ~msg in
+                let parent = self#get_node_marker ~model ~kind:`Folder_warnings in
                 let message = Miscellanea.replace_first ["Warning \\([0-9]+\\):", "\\1:"] msg in
                 let row = model#append ?parent () in
-                model#set ~row ~column:col_markup message;
+                model#set ~row ~column:col_name message;
                 model#set ~row ~column:col_kind (Some `Warning);
                 tooltips <- ((model#get_row_reference (model#get_path row)), msg) :: tooltips;
                 Some row
               | `Error msg when kind = `All || kind = `Error ->
-                let parent = self#get_node_markers ~model ~kind:`Folder_errors ~msg in
+                let parent = self#get_node_marker ~model ~kind:`Folder_errors in
                 let message = Miscellanea.replace_first ["Error: ", ""] msg in
                 let row = model#append ?parent () in
-                model#set ~row ~column:col_markup message;
+                model#set ~row ~column:col_name message;
                 model#set ~row ~column:col_kind (Some `Errors);
                 tooltips <- ((model#get_row_reference (model#get_path row)), msg) :: tooltips;
                 Some row
               (*| `Bookmark num ->
                 let row = model#append () in
-                model#set ~row ~column:col_markup (string_of_int num);
+                model#set ~row ~column:col_name (string_of_int num);
                 model#set ~row ~column:col_kind None;
                 Some row*)
               | _ -> None
@@ -198,48 +196,37 @@ object (self)
         let module_list = Odoc_info.load_modules dump_filename in
         tooltips <- [];
         locations <- [];
+        let col_counter = ref 0 in
         GtkThread2.async begin fun () ->
           let model = GTree.tree_store cols in
+          ignore (model#connect#row_inserted ~callback:begin fun _ row ->
+            model#set ~row ~column:col_order !col_counter;
+            incr col_counter;
+          end);
           vc#unset_cell_data_func renderer;
           self#append ~model module_list;
           current_model <- Some model;
           self#add_markers ~kind:`All ();
           view#set_model (Some (model :> GTree.model));
           locations <- List.sort (fun (_, (o1, _)) (_, (o2, _)) -> Pervasives.compare o2 o1) locations;
-          (** Cell data func *)
+          (** Set cell data func *)
           vc#set_cell_data_func renderer begin fun model row ->
-            let kind = model#get ~row ~column:col_kind in
-            let pixbuf =
-              match kind with
-                | Some `Exception -> Icons.exc
-                | Some `Type -> Icons.typ
-                | Some `Module -> Icons.module_impl
-                | Some `Class -> Icons.classe
-                | Some `Class_virtual -> Icons.class_virtual
-                | Some `Class_type -> Icons.class_type
-                | Some `Class_inherit -> Icons.class_inherit
-                | Some `Function -> Icons.func
-                | Some `Simple -> Icons.simple
-                | Some `Attribute -> Icons.attribute
-                | Some `Attribute_mutable -> Icons.attribute_mutable
-                | Some `Attribute_mutable_virtual -> Icons.attribute_mutable_virtual
-                | Some `Attribute_virtual -> Icons.attribute_virtual
-                | Some `Method -> Icons.met
-                | Some `Method_private -> Icons.met_private
-                | Some `Method_virtual -> Icons.met_virtual
-                | Some `Method_private_virtual -> Icons.met_private_virtual
-                | Some `Type_abstract -> Icons.type_abstract
-                | Some `Type_variant -> Icons.type_variant
-                | Some `Type_record -> Icons.type_record
-                | Some `Errors -> Icons.error_14
-                | Some `Warning -> Icons.warning_14
-                | Some `Folder_warnings -> Icons.folder_warning
-                | Some `Folder_errors -> Icons.folder_error
-                | Some `Dependencies -> Icons.none_14
-                | None -> Icons.none_14
-            in
-            renderer_pixbuf#set_properties [ `VISIBLE (kind <> None); `PIXBUF pixbuf];
+            self#cell_data_func_icons ~model ~row;
+            self#cell_data_func_text ~model ~row
           end;
+          (** Sort functions *)
+          let sort column i1 i2 =
+            match model#get ~row:i1 ~column:col_kind with
+              | Some `Folder_warnings | Some `Folder_errors | Some `Class_inherit -> -1
+              | _ ->
+                begin
+                  match model#get ~row:i2 ~column:col_kind with
+                    | Some `Folder_warnings | Some `Folder_errors | Some `Class_inherit -> 1
+                    | _ -> Pervasives.compare (model#get ~row:i1 ~column) (model#get ~row:i2 ~column)
+                end;
+          in
+          model#set_sort_func col_name.GTree.index (fun model i1 i2 -> sort col_name i1 i2);
+          model#set_sort_func col_order.GTree.index (fun model i1 i2 -> sort col_order i1 i2);
           (** Expanded and collapsed nodes *)
           view#expand_all ();
           Gaux.may (self#find model `Dependencies) ~f:(fun iter -> view#collapse_row (model#get_path iter));
@@ -248,6 +235,55 @@ object (self)
       end cmd;
     end;
 
+  method private cell_data_func_text ~model ~row =
+    let name = model#get ~row ~column:col_name in
+    let typ = model#get ~row ~column:col_type in
+    let name =
+      match model#get ~row ~column:col_kind with
+        | Some `Class | Some `Module | Some `Class_type ->
+          sprintf "<b>%s</b>" (Glib.Markup.escape_text name)
+        | _ -> name
+    in
+    let markup = sprintf "%s <span color='#877033'>%s</span>"
+      name
+      (if not button_show_types#get_active || typ = "" then "" else (sprintf ": %s"
+        (Print_type.markup2 (Miscellanea.replace_all ~regexp:true ["\n", ""; " +", " "] typ))))
+    in
+    renderer#set_properties [`MARKUP markup];
+
+  method private cell_data_func_icons ~model ~row  =
+    let kind = model#get ~row ~column:col_kind in
+    let pixbuf =
+      match kind with
+        | Some `Exception -> Icons.exc
+        | Some `Type -> Icons.typ
+        | Some `Module -> Icons.module_impl
+        | Some `Class -> Icons.classe
+        | Some `Class_virtual -> Icons.class_virtual
+        | Some `Class_type -> Icons.class_type
+        | Some `Class_inherit -> Icons.class_inherit
+        | Some `Function -> Icons.func
+        | Some `Simple -> Icons.simple
+        | Some `Attribute -> Icons.attribute
+        | Some `Attribute_mutable -> Icons.attribute_mutable
+        | Some `Attribute_mutable_virtual -> Icons.attribute_mutable_virtual
+        | Some `Attribute_virtual -> Icons.attribute_virtual
+        | Some `Method -> Icons.met
+        | Some `Method_private -> Icons.met_private
+        | Some `Method_virtual -> Icons.met_virtual
+        | Some `Method_private_virtual -> Icons.met_private_virtual
+        | Some `Type_abstract -> Icons.type_abstract
+        | Some `Type_variant -> Icons.type_variant
+        | Some `Type_record -> Icons.type_record
+        | Some `Errors -> Icons.error_14
+        | Some `Warning -> Icons.warning_14
+        | Some `Folder_warnings -> Icons.folder_warning
+        | Some `Folder_errors -> Icons.folder_error
+        | Some `Dependencies -> Icons.none_14
+        | None -> Icons.none_14
+    in
+    renderer_pixbuf#set_properties [ `VISIBLE (kind <> None); `PIXBUF pixbuf];
+
   method private set_location ~model row loc =
     let loc_filename, loc_pos =
       match loc.Odoc_types.loc_impl with Some (a, b) -> a, b | _ -> "", 0
@@ -255,13 +291,22 @@ object (self)
     locations <- ((model#get_row_reference (model#get_path row)), (loc_pos, (fun () -> false))) :: locations
 
   method private set_tooltip ~(model : GTree.tree_store) ~row ~name ~typ =
-    model#set ~row ~column:col_markup (sprintf "%s <span color='#877033'>%s</span>"
-      (Glib.Markup.escape_text name)
-      (if typ = "" then "" else (sprintf ": %s"
-        (Print_type.markup2 (Miscellanea.replace_all ~regexp:true ["\n", ""; " +", " "] typ)))));
+    model#set ~row ~column:col_name name;
+    model#set ~row ~column:col_type typ;
     tooltips <- (model#get_row_reference (model#get_path row), (Print_type.markup3 typ)) :: tooltips;
 
-  method private get_node_markers ~model ~kind ~msg =
+  method private remove_node model kind =
+    match self#find model kind with
+      | (Some parent) as old ->
+        for nth = 0 to (model#iter_n_children old - 1) do
+          let child = model#iter_children ~nth old in
+          let rr = (model#get_path |- model#get_row_reference) child in
+          locations <- List.filter (fun (l, _) -> l#path <> rr#path) locations;
+        done;
+        ignore (model#remove parent)
+      | _ -> ()
+
+  method private get_node_marker ~model ~kind =
     let name =
       match kind with
         | `Folder_warnings -> "Warnings"
@@ -271,10 +316,21 @@ object (self)
     match self#find model kind with
       | None ->
         let row = model#prepend () in
-        model#set ~row ~column:col_markup name;
+        model#set ~row ~column:col_name name;
         model#set ~row ~column:col_kind (Some kind);
         Some row
       | x -> x
+
+  method private find (model : GTree.tree_store) kind =
+    let result = ref None in
+    model#foreach begin fun path row ->
+      match model#get ~row ~column:col_kind with
+        | Some k when k = kind ->
+          result := Some row;
+          true
+        | _ -> false
+    end;
+    !result
 
   method private append ~model ?parent module_list =
     List.iter begin fun modu ->
@@ -282,17 +338,17 @@ object (self)
       (*(** Dependencies *)
       if modu.Module.m_top_deps <> [] then begin
         let row_dep = model#append ?parent () in
-        model#set ~row:row_dep ~column:col_markup "Dependencies";
+        model#set ~row:row_dep ~column:col_name "Dependencies";
         model#set ~row:row_dep ~column:col_kind (Some `Dependencies);
         List.iter begin fun elem ->
           let row = model#append ~parent:row_dep () in
-          model#set ~row ~column:col_markup elem
+          model#set ~row ~column:col_name elem
         end modu.Module.m_top_deps;
       end;*)
       (** Types *)
       if Module.module_types modu <> [] then begin
         let row_types = model#append ?parent () in
-        model#set ~row:row_types ~column:col_markup "Types";
+        model#set ~row:row_types ~column:col_name "Types";
         model#set ~row:row_types ~column:col_kind (Some `Type);
         List.iter begin fun elem ->
           let row = model#append ~parent:row_types () in
@@ -325,19 +381,19 @@ object (self)
           | Module.Element_module elem ->
             self#set_location row ~model elem.Module.m_loc;
             let name = get_relative elem.Module.m_name in
-            model#set ~row ~column:col_markup (sprintf "<b>%s</b>" name);
+            model#set ~row ~column:col_name name;
             self#append ~model ~parent:row [elem];
             model#set ~row ~column:col_kind (Some `Module)
           | Module.Element_module_type elem ->
             self#set_location ~model row elem.Module.mt_loc;
             let name = get_relative elem.Module.mt_name in
-            model#set ~row ~column:col_markup name;
+            model#set ~row ~column:col_name name;
           | Module.Element_included_module elem ->
-            model#set ~row ~column:col_markup elem.Module.im_name
+            model#set ~row ~column:col_name elem.Module.im_name
           | Module.Element_class elem ->
             model#set ~row ~column:col_kind (Some (if elem.Class.cl_virtual then `Class_virtual else `Class));
             let name = get_relative elem.Class.cl_name in
-            model#set ~row ~column:col_markup (sprintf "<b>%s</b>" name);
+            model#set ~row ~column:col_name name;
             self#set_location ~model row elem.Class.cl_loc;
             (** Class_structure *)
             begin
@@ -346,7 +402,7 @@ object (self)
                   List.iter begin fun inher ->
                     let row = model#append ~parent:row () in
                     let name = get_relative inher.Class.ic_name in
-                    model#set ~row ~column:col_markup name;
+                    model#set ~row ~column:col_name name;
                     model#set ~row ~column:col_kind (Some `Class_inherit);
                   end inherited;
                   List.iter begin function
@@ -357,10 +413,9 @@ object (self)
                         let name = Name.get_relative elem.Class.cl_name attr_name in
                         self#set_location ~model row attr.Odoc_value.att_value.Odoc_value.val_loc;
                         let typ = string_of_type_expr attr.Odoc_value.att_value.Odoc_value.val_type in
-                        let name =
-                          if attr.Odoc_value.att_virtual then (sprintf "<i>%s</i>" name)
-                          else name
-                        in
+                        (*let name =
+                          if attr.Odoc_value.att_virtual then name else name
+                        in*)
                         self#set_tooltip ~model ~row ~name ~typ;
                         model#set ~row ~column:col_kind (Some
                           (if attr.Odoc_value.att_virtual && attr.Odoc_value.att_mutable then `Attribute_mutable_virtual
@@ -372,7 +427,7 @@ object (self)
                       let row = model#append ~parent:row () in
                       let name = Name.get_relative elem.Class.cl_name met.Odoc_value.met_value.Odoc_value.val_name in
                       let name =
-                        if met.Odoc_value.met_virtual then (sprintf "<i>%s</i>" name)
+                        if met.Odoc_value.met_virtual then name
                         else if met.Odoc_value.met_private then name
                         else name
                       in
@@ -391,7 +446,7 @@ object (self)
           | Module.Element_class_type elem ->
             self#set_location ~model row elem.Class.clt_loc;
             let name = get_relative elem.Class.clt_name in
-            model#set ~row ~column:col_markup (sprintf "<b>%s</b>" name);
+            model#set ~row ~column:col_name name;
             model#set ~row ~column:col_kind (Some `Class_type);
           | Module.Element_value elem ->
             let name = get_relative elem.Value.val_name in
@@ -402,7 +457,7 @@ object (self)
           | Module.Element_exception elem ->
             self#set_location ~model row elem.Exception.ex_loc;
             let name = get_relative elem.Exception.ex_name in
-            model#set ~row ~column:col_markup name;
+            model#set ~row ~column:col_name name;
             model#set ~row ~column:col_kind (Some `Exception)
           | Module.Element_type elem ->
             ignore (model#remove row);
@@ -411,7 +466,7 @@ object (self)
           | Module.Element_module_comment elem ->
             ignore (model#remove row);
             (*let first = first_sentence_of_text elem in
-            model#set ~row ~column:col_markup (string_of_text first)*)
+            model#set ~row ~column:col_name (string_of_text first)*)
       end (Module.module_elements modu);
     end module_list;
 
