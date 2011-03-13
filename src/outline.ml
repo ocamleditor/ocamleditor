@@ -25,39 +25,49 @@ open Printf
 open Miscellanea
 open Odoc_info
 
+let string_rev str = 
+  let len = String.length str in
+  let rts = String.make len ' ' in
+  for i = 0 to len - 1 do rts.[len - i - 1] <- str.[i] done;
+  rts;;
+
 class widget ~project ~page ~tmp =
-  let buffer               = (page#buffer :> Ocaml_text.buffer) in
-  let vbox                 = GPack.vbox () in
-  let toolbar              = GButton.toolbar ~packing:vbox#pack ~style:`ICONS ~show:true () in
-  let _                    = toolbar#set_icon_size `MENU in
-  let button_sort          = GButton.toggle_tool_button ~homogeneous:true ~stock:`SORT_ASCENDING ~packing:toolbar#insert () in
-  let button_show_types    = GButton.toggle_tool_button ~homogeneous:false ~active:true ~packing:toolbar#insert () in
-  let _                    = button_show_types#set_icon_widget (GMisc.image ~pixbuf:Icons.typ ())#coerce in
+  let buffer            = (page#buffer :> Ocaml_text.buffer) in
+  let vbox              = GPack.vbox () in
+  let toolbar           = GButton.toolbar ~packing:vbox#pack ~style:`ICONS ~show:true () in
+  let _                 = toolbar#set_icon_size `MENU in
+  let button_sort       = GButton.toggle_tool_button ~homogeneous:true ~stock:`SORT_ASCENDING ~packing:toolbar#insert () in
+  let button_sort_rev   = GButton.toggle_tool_button ~homogeneous:true ~stock:`SORT_DESCENDING ~packing:toolbar#insert () in
+  let button_show_types = GButton.toggle_tool_button ~homogeneous:true ~active:true ~packing:toolbar#insert () in
+  let _                 = button_show_types#set_icon_widget (GMisc.image ~pixbuf:Icons.typ ())#coerce in
+  let _                 = button_sort#misc#set_tooltip_text "Order by name" in
+  let _                 = button_sort_rev#misc#set_tooltip_text "Order by reverse name" in
+  let _                 = button_show_types#misc#set_tooltip_text "Show types" in
   (*  *)
-  let source_filename      = page#get_filename in
-  let dump_filename        =
+  let source_filename   = page#get_filename in
+  let dump_filename     =
     match project.Project.in_source_path source_filename with
       | Some rel ->
-        let tmp                  = Project.path_tmp project in
+        let tmp               = Project.path_tmp project in
         tmp // ((Filename.chop_extension rel) ^ ".outline")
       | _ -> Filename.temp_file "outline" ""
   in
-  let includes             = Project.get_includes project in
-  let sw                   = GBin.scrolled_window ~shadow_type:`IN ~hpolicy:`AUTOMATIC ~vpolicy:`AUTOMATIC ~packing:vbox#add () in
-  let cols                 = new GTree.column_list in
-  let col_name             = cols#add Gobject.Data.string in
-  let col_type             = cols#add Gobject.Data.string in
-  let col_kind             = cols#add Gobject.Data.caml_option in
-  let col_order            = cols#add Gobject.Data.int in
-  let view                 = GTree.view ~headers_visible:false ~packing:sw#add () in
-  let renderer             = GTree.cell_renderer_text [`YPAD 0] in
-  let renderer_pixbuf      = GTree.cell_renderer_pixbuf [`YPAD 0; `XPAD 0] in
-  let vc                   = GTree.view_column ~title:"" () in
-  let _                    = vc#pack ~expand:false renderer_pixbuf in
-  let _                    = vc#pack ~expand:false renderer in
-  let _                    = vc#add_attribute renderer "text" col_name in
-  let _                    = view#append_column vc in
-  let _                    = view#misc#set_property "enable-tree-lines" (`BOOL true) in
+  let includes          = Project.get_includes project in
+  let sw                = GBin.scrolled_window ~shadow_type:`IN ~hpolicy:`AUTOMATIC ~vpolicy:`AUTOMATIC ~packing:vbox#add () in
+  let cols              = new GTree.column_list in
+  let col_name          = cols#add Gobject.Data.string in
+  let col_type          = cols#add Gobject.Data.string in
+  let col_kind          = cols#add Gobject.Data.caml_option in
+  let col_order         = cols#add Gobject.Data.int in
+  let view              = GTree.view ~headers_visible:false ~packing:sw#add () in
+  let renderer          = GTree.cell_renderer_text [`YPAD 0] in
+  let renderer_pixbuf   = GTree.cell_renderer_pixbuf [`YPAD 0; `XPAD 0] in
+  let vc                = GTree.view_column ~title:"" () in
+  let _                 = vc#pack ~expand:false renderer_pixbuf in
+  let _                 = vc#pack ~expand:false renderer in
+  let _                 = vc#add_attribute renderer "text" col_name in
+  let _                 = view#append_column vc in
+  let _                 = view#misc#set_property "enable-tree-lines" (`BOOL true) in
 object (self)
   inherit GObj.widget vbox#as_widget
   val mutable locations = []
@@ -112,6 +122,16 @@ object (self)
         GtkBase.Widget.queue_draw view#as_widget;
       end
     end);
+    ignore (button_sort_rev#connect#toggled ~callback:begin fun () ->
+      Gaux.may current_model ~f:begin fun model ->
+        let id = if button_sort_rev#get_active then begin 
+          button_sort#set_active false;
+          col_name.GTree.index 
+        end else col_order.GTree.index in
+        model#set_sort_column_id id `ASCENDING;
+        GtkBase.Widget.queue_draw view#as_widget;
+      end
+    end);
 
   method add_markers ~(kind : [`Warning | `Error | `All]) () =
     match current_model with
@@ -136,7 +156,7 @@ object (self)
                 let parent = self#get_node_marker ~model ~kind:`Folder_errors in
                 let message = Miscellanea.replace_first ["Error: ", ""] msg in
                 let row = model#append ?parent () in
-                model#set ~row ~column:col_name message;
+                model#set ~row ~column:col_name message; 
                 model#set ~row ~column:col_kind (Some `Errors);
                 tooltips <- ((model#get_row_reference (model#get_path row)), msg) :: tooltips;
                 Some row
@@ -223,18 +243,8 @@ object (self)
             self#cell_data_func_text ~model ~row
           end;
           (** Sort functions *)
-          let sort column i1 i2 =
-            match model#get ~row:i1 ~column:col_kind with
-              | Some `Folder_warnings | Some `Folder_errors | Some `Class_inherit -> -1
-              | _ ->
-                begin
-                  match model#get ~row:i2 ~column:col_kind with
-                    | Some `Folder_warnings | Some `Folder_errors | Some `Class_inherit -> 1
-                    | _ -> Pervasives.compare (model#get ~row:i1 ~column) (model#get ~row:i2 ~column)
-                end;
-          in
-          model#set_sort_func col_name.GTree.index (fun model i1 i2 -> sort col_name i1 i2);
-          model#set_sort_func col_order.GTree.index (fun model i1 i2 -> sort col_order i1 i2);
+          model#set_sort_func col_name.GTree.index (fun model i1 i2 -> self#compare self#compare_name model i1 i2);
+          model#set_sort_func col_order.GTree.index (fun model i1 i2 -> self#compare self#compare_order model i1 i2);
           (** Expanded and collapsed nodes *)
           view#expand_all ();
           Gaux.may (self#find model `Dependencies) ~f:(fun iter -> view#collapse_row (model#get_path iter));
@@ -242,6 +252,30 @@ object (self)
         end ();
       end cmd;
     end;
+
+  method private compare f model i1 i2 =
+      match model#get ~row:i1 ~column:col_kind with
+        | Some `Folder_warnings | Some `Folder_errors | Some `Class_inherit -> -1
+        | _ ->
+          begin
+            match model#get ~row:i2 ~column:col_kind with
+              | Some `Folder_warnings | Some `Folder_errors | Some `Class_inherit -> 1
+              | _ -> f model i1 i2
+          end;
+
+  method private compare_name model i1 i2 =
+    let name1 = model#get ~row:i1 ~column:col_name in
+    let name2 = model#get ~row:i2 ~column:col_name in
+    if button_sort_rev#get_active then begin
+      let name1 = string_rev name1 in 
+      let name2 = string_rev name2 in 
+      Pervasives.compare name1 name2
+    end else (Pervasives.compare name1 name2)
+
+  method private compare_order model i1 i2 =
+    let o1 = model#get ~row:i1 ~column:col_order in
+    let o2 = model#get ~row:i2 ~column:col_order in
+    Pervasives.compare o1 o2
 
   method private cell_data_func_text ~model ~row =
     let name = model#get ~row ~column:col_name in
@@ -425,9 +459,6 @@ object (self)
                         let name = Name.get_relative elem.Class.cl_name attr_name in
                         self#set_location ~model row attr.Odoc_value.att_value.Odoc_value.val_loc;
                         let typ = string_of_type_expr attr.Odoc_value.att_value.Odoc_value.val_type in
-                        (*let name =
-                          if attr.Odoc_value.att_virtual then name else name
-                        in*)
                         self#set_tooltip ~model ~row ~name ~typ;
                         model#set ~row ~column:col_kind (Some
                           (if attr.Odoc_value.att_virtual && attr.Odoc_value.att_mutable then `Attribute_mutable_virtual

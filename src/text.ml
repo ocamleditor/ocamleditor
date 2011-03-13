@@ -851,6 +851,7 @@ object (self)
           Alignment.iter ~start:expose_top ~stop:expose_bottom begin fun _ start stop _ ->
             if stop#line_index - start#line_index > 2 then begin
               let start = start#forward_char in
+              (*let stop = stop#backward_char in*)
               let x1 = approx_char_width * start#line_index - hadjust in
               let x2 = approx_char_width * stop#line_index - hadjust in
               let y, h = self#get_line_yrange start in
