@@ -205,6 +205,7 @@ object (self)
           in
           view#buffer#place_cursor where;
           ignore (view#scroll_lazy where);
+          view#misc#grab_focus();
     end
 
   method bookmark_create ~num =
