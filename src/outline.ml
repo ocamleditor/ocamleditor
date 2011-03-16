@@ -25,7 +25,7 @@ open Printf
 open Miscellanea
 open Odoc_info
 
-let string_rev str = 
+let string_rev str =
   let len = String.length str in
   let rts = String.make len ' ' in
   for i = 0 to len - 1 do rts.[len - i - 1] <- str.[i] done;
@@ -124,9 +124,9 @@ object (self)
     end);
     ignore (button_sort_rev#connect#toggled ~callback:begin fun () ->
       Gaux.may current_model ~f:begin fun model ->
-        let id = if button_sort_rev#get_active then begin 
+        let id = if button_sort_rev#get_active then begin
           button_sort#set_active false;
-          col_name.GTree.index 
+          col_name.GTree.index
         end else col_order.GTree.index in
         model#set_sort_column_id id `ASCENDING;
         GtkBase.Widget.queue_draw view#as_widget;
@@ -156,7 +156,7 @@ object (self)
                 let parent = self#get_node_marker ~model ~kind:`Folder_errors in
                 let message = Miscellanea.replace_first ["Error: ", ""] msg in
                 let row = model#append ?parent () in
-                model#set ~row ~column:col_name message; 
+                model#set ~row ~column:col_name message;
                 model#set ~row ~column:col_kind (Some `Errors);
                 tooltips <- ((model#get_row_reference (model#get_path row)), msg) :: tooltips;
                 Some row
@@ -267,8 +267,8 @@ object (self)
     let name1 = model#get ~row:i1 ~column:col_name in
     let name2 = model#get ~row:i2 ~column:col_name in
     if button_sort_rev#get_active then begin
-      let name1 = string_rev name1 in 
-      let name2 = string_rev name2 in 
+      let name1 = string_rev name1 in
+      let name2 = string_rev name2 in
       Pervasives.compare name1 name2
     end else (Pervasives.compare name1 name2)
 
