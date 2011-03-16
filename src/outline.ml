@@ -39,7 +39,7 @@ class widget ~project ~page ~tmp =
   let button_sort_rev   = GButton.toggle_button ~relief:`NONE ~packing:toolbar#pack () in
   let button_show_types = GButton.toggle_button ~active:true ~relief:`NONE ~packing:toolbar#pack () in
   let _                 = button_sort#set_image (GMisc.image ~stock:`SORT_ASCENDING ~icon_size:`MENU ())#coerce in
-  let _                 = button_sort_rev#set_image (GMisc.image ~stock:`SORT_ASCENDING ~icon_size:`MENU ())#coerce in
+  let _                 = button_sort_rev#set_image (GMisc.image ~stock:`SORT_DESCENDING ~icon_size:`MENU ())#coerce in
   let _                 = button_show_types#set_image (GMisc.image ~pixbuf:Icons.typ ())#coerce in
   let _                 = button_sort#misc#set_tooltip_text "Order by name" in
   let _                 = button_sort_rev#misc#set_tooltip_text "Order by reverse name" in
@@ -193,6 +193,7 @@ object (self)
       | None -> ()
       | _ ->
         begin
+          let finally () = Gaux.may signal_selection_changed ~f:view#selection#misc#handler_unblock in
           try
             let iter = buffer#get_iter_at_mark (`MARK mark) in
             let rr, _ = List.find begin fun (_, (m, _)) ->
@@ -201,8 +202,8 @@ object (self)
             end locations in
             Gaux.may signal_selection_changed ~f:view#selection#misc#handler_block;
             view#set_cursor rr#path vc;
-            Gaux.may signal_selection_changed ~f:view#selection#misc#handler_unblock;
-          with Not_found -> ()
+            finally()
+          with Not_found | Gpointer.Null -> (finally())
         end;
 
   method parse () =
@@ -346,7 +347,7 @@ object (self)
         for nth = 0 to (model#iter_n_children old - 1) do
           let child = model#iter_children ~nth old in
           let rr = model#get_row_reference (model#get_path child) in
-          let delete, keep = List.partition (fun (l, _) -> l#path == rr#path) locations in
+          let delete, keep = List.partition (fun (l, _) -> try l#path == rr#path with Gpointer.Null -> false) locations in
           List.iter (fun (_, (m, _)) -> buffer#delete_mark (`MARK m)) delete;
           locations <- keep;
         done;
