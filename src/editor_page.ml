@@ -375,7 +375,7 @@ object (self)
     && (filename ^^ ".ml" || filename ^^ ".mli") then begin
       buffer#set_changed_after_last_autocomp 0.0;
       Autocomp.compile_buffer ~project ~editor ~page:self ~commit ();
-    end else begin 
+    end else begin
       let empty = new Outline.widget ~project ~page:self ~tmp:"" in
       editor#pack_outline empty#coerce;
       self#set_outline (Some empty)

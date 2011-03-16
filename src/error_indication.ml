@@ -64,7 +64,6 @@ object (self)
   val mutable tag_warning = tag_warning
   val mutable tag_warning_unused = tag_warning_unused
 
-
   method enabled = enabled
   method set_enabled x = enabled <- x
 

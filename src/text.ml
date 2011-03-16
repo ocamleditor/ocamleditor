@@ -186,7 +186,7 @@ and view ?buffer () =
   let buffer = match buffer with None -> new buffer () | Some b -> b in
   let view = GText.view ~buffer:buffer#as_tbuffer () in
   let create_highlight_current_line_tag () =
-    buffer#create_tag ~name:(sprintf "highlight_current_line_tag_%f" (Unix.gettimeofday())) []
+    buffer#create_tag ~name:(sprintf "highlight_current_line_tag_%f" (Unix.gettimeofday())) [];
   in
 object (self)
   inherit GText.view view#as_view as super

@@ -72,7 +72,9 @@ let signal lac func =
 let start_thread lac =
   GMain.Timeout.add ~ms:500 ~callback:begin fun () ->
     Gaux.may lac.buffer ~f:begin fun f ->
-      try f ()
+      try
+        f ();
+        lac.buffer <- None;
       with ex -> Printf.eprintf "File \"liim.ml\": %s\n%s\n%!" (Printexc.to_string ex) (Printexc.get_backtrace());
     end;
     true
