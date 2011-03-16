@@ -34,12 +34,13 @@ let string_rev str =
 class widget ~project ~page ~tmp =
   let buffer            = (page#buffer :> Ocaml_text.buffer) in
   let vbox              = GPack.vbox () in
-  let toolbar           = GButton.toolbar ~packing:vbox#pack ~style:`ICONS ~show:true () in
-  let _                 = toolbar#set_icon_size `MENU in
-  let button_sort       = GButton.toggle_tool_button ~homogeneous:true ~stock:`SORT_ASCENDING ~packing:toolbar#insert () in
-  let button_sort_rev   = GButton.toggle_tool_button ~homogeneous:true ~stock:`SORT_DESCENDING ~packing:toolbar#insert () in
-  let button_show_types = GButton.toggle_tool_button ~homogeneous:true ~active:true ~packing:toolbar#insert () in
-  let _                 = button_show_types#set_icon_widget (GMisc.image ~pixbuf:Icons.typ ())#coerce in
+  let toolbar           = GPack.hbox	 ~packing:vbox#pack ~show:true () in
+  let button_sort       = GButton.toggle_button ~relief:`NONE ~packing:toolbar#pack () in
+  let button_sort_rev   = GButton.toggle_button ~relief:`NONE ~packing:toolbar#pack () in
+  let button_show_types = GButton.toggle_button ~active:true ~relief:`NONE ~packing:toolbar#pack () in
+  let _                 = button_sort#set_image (GMisc.image ~stock:`SORT_ASCENDING ~icon_size:`MENU ())#coerce in
+  let _                 = button_sort_rev#set_image (GMisc.image ~stock:`SORT_ASCENDING ~icon_size:`MENU ())#coerce in
+  let _                 = button_show_types#set_image (GMisc.image ~pixbuf:Icons.typ ())#coerce in
   let _                 = button_sort#misc#set_tooltip_text "Order by name" in
   let _                 = button_sort_rev#misc#set_tooltip_text "Order by reverse name" in
   let _                 = button_show_types#misc#set_tooltip_text "Show types" in
@@ -115,16 +116,16 @@ object (self)
     end);
     (** Toolbar buttons *)
     ignore (button_show_types#connect#toggled ~callback:(fun () -> GtkBase.Widget.queue_draw view#as_widget));
-    ignore (button_sort#connect#toggled ~callback:begin fun () ->
+    ignore (button_sort#connect#clicked ~callback:begin fun () ->
       Gaux.may current_model ~f:begin fun model ->
-        let id = if button_sort#get_active then col_name.GTree.index else col_order.GTree.index in
+        let id = if button_sort#active then col_name.GTree.index else col_order.GTree.index in
         model#set_sort_column_id id `ASCENDING;
         GtkBase.Widget.queue_draw view#as_widget;
       end
     end);
     ignore (button_sort_rev#connect#toggled ~callback:begin fun () ->
       Gaux.may current_model ~f:begin fun model ->
-        let id = if button_sort_rev#get_active then begin
+        let id = if button_sort_rev#active then begin
           button_sort#set_active false;
           col_name.GTree.index
         end else col_order.GTree.index in
@@ -266,7 +267,7 @@ object (self)
   method private compare_name model i1 i2 =
     let name1 = model#get ~row:i1 ~column:col_name in
     let name2 = model#get ~row:i2 ~column:col_name in
-    if button_sort_rev#get_active then begin
+    if button_sort_rev#active then begin
       let name1 = string_rev name1 in
       let name2 = string_rev name2 in
       Pervasives.compare name1 name2
@@ -288,7 +289,7 @@ object (self)
     in
     let markup = sprintf "%s <span color='#877033'>%s</span>"
       name
-      (if not button_show_types#get_active || typ = "" then "" else (sprintf ": %s"
+      (if not button_show_types#active || typ = "" then "" else (sprintf ": %s"
         (Print_type.markup2 (Miscellanea.replace_all ~regexp:true ["\n", ""; " +", " "] typ))))
     in
     renderer#set_properties [`MARKUP markup];
