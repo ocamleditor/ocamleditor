@@ -388,7 +388,7 @@ object (self)
         page#view#set_show_whitespace_chars show_whitespace_chars;
         page#view#set_word_wrap word_wrap;
         (** Insert_text *)
-        (*ignore (page#buffer#connect#insert_text ~callback:(fun _ _ -> page#view#matching_delim_remove_tag()));*)
+        ignore (page#buffer#connect#insert_text ~callback:(fun _ _ -> page#view#matching_delim_remove_tag()));
         ignore (page#buffer#connect#after#insert_text ~callback:begin fun iter text ->
           Liim.signal liim2 begin fun () ->
             let iter = page#buffer#get_iter `INSERT in

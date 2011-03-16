@@ -39,13 +39,13 @@ let create ~delay ?(prio=300) () = {
 }
 
 let signal lac func =
-  Mutex.lock lac.mutex;
-  lac.buffer <- Some func;
+  (*Mutex.lock lac.mutex;*)
+  lac.buffer <- Some func(*;
   Condition.signal lac.cond;
-  Mutex.unlock lac.mutex
+  Mutex.unlock lac.mutex*)
 
-let start_thread lac =
-  Thread.create begin fun () -> 
+(*let start_thread lac =
+  Thread.create begin fun () ->
     while true do
       Mutex.lock lac.mutex;
       Condition.wait lac.cond lac.mutex;
@@ -67,4 +67,13 @@ let start_thread lac =
       end;
       Mutex.unlock lac.mutex;
     done
-  end ()
+  end ()*)
+
+let start_thread lac =
+  GMain.Timeout.add ~ms:500 ~callback:begin fun () ->
+    Gaux.may lac.buffer ~f:begin fun f ->
+      try f ()
+      with ex -> Printf.eprintf "File \"liim.ml\": %s\n%s\n%!" (Printexc.to_string ex) (Printexc.get_backtrace());
+    end;
+    true
+  end;;
