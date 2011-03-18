@@ -423,7 +423,7 @@ object (self)
       match GtkText.Mark.get_name mark with
         | Some name when name = "insert" ->
            Gaux.may outline ~f:(fun ol ->
-             Gtk_util.idle_add ~prio:500 (fun () -> ol#select mark))
+             Gtk_util.idle_add ~prio:500 (fun () -> ol#select ?align:None mark))
         | Some name when Str.string_before name 5 = "delim" -> ()
         | _ -> annot_type#remove_tag(); error_indication#hide_tooltip()
     end);

@@ -389,7 +389,6 @@ object (self)
         page#view#set_show_whitespace_chars show_whitespace_chars;
         page#view#set_word_wrap word_wrap;
         (** Insert_text *)
-        ignore (page#buffer#connect#insert_text ~callback:(fun _ _ -> page#view#matching_delim_remove_tag()));
         ignore (page#buffer#connect#after#insert_text ~callback:begin fun iter text ->
           Liim.signal liim2 begin fun () ->
             let iter = page#buffer#get_iter `INSERT in
@@ -403,8 +402,8 @@ object (self)
               Lexical.tag page#view#buffer ~start ~stop;
             end;
             page#view#paint_current_line_background iter;
-            ignore (page#view#matching_delim ());
-            ignore (page#ocaml_view#code_folding#scan_folding_points ());
+            Gtk_util.idle_add ~prio:500 (fun () -> ignore (page#view#matching_delim ()));
+            Gtk_util.idle_add ~prio:500 page#ocaml_view#code_folding#scan_folding_points;
           end;
           self#location_history_add ~iter ~kind:`EDIT ();
         end);
@@ -420,13 +419,10 @@ object (self)
                   | _ -> (iter#backward_line#set_line_index 0), iter#forward_to_line_end
               in
               Lexical.tag page#view#buffer ~start ~stop;
-(*              Lexical.tag page#view#buffer
-                ~start:(iter#backward_line#set_line_index 0)
-                ~stop:iter#forward_to_line_end;*)
             end;
             page#view#paint_current_line_background iter;
-            ignore (page#view#matching_delim ());
-            ignore (page#ocaml_view#code_folding#scan_folding_points ());
+            Gtk_util.idle_add ~prio:500 (fun () -> ignore (page#view#matching_delim ()));
+            Gtk_util.idle_add ~prio:500 page#ocaml_view#code_folding#scan_folding_points;
           end;
           self#location_history_add ~iter:start ~kind:`EDIT ();
         end);
@@ -785,8 +781,8 @@ object (self)
       end);
     end;
     (** Thread for LIIM calls *)
-    ignore (Liim.start_thread liim);
-    ignore (Liim.start_thread liim2);
+    ignore (Liim.start liim);
+    ignore (Liim.start liim2);
     (** Switch page: update the statusbar and remove annot tag *)
     ignore (notebook#connect#after#switch_page ~callback:begin fun num ->
       (* Clean up type annotation tag and error indications *)

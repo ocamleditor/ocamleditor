@@ -68,12 +68,12 @@ end)
 
 (** get_iter_at_mark_safe *)
 let get_iter_at_mark_safe buffer mark =
-  try
+  (*try*)
     if GtkText.Mark.get_deleted mark then (raise Mark_deleted)
     else (GtkText.Buffer.get_iter_at_mark buffer mark)
-  with ex ->
+  (*with ex ->
     Printf.eprintf "File \"gtk_util.ml\": %s\n%s\n%!" (Printexc.to_string ex) (Printexc.get_backtrace());
-    raise ex
+    raise ex*)
 
 (** set_tag_paragraph_background *)
 let set_tag_paragraph_background (tag : GText.tag) =
@@ -82,6 +82,12 @@ let set_tag_paragraph_background (tag : GText.tag) =
 (** set_ebox_invisible *)
 let set_ebox_invisible (ebox : GBin.event_box) =
   Gobject.Property.set ebox#as_widget {Gobject.name="visible-window"; conv=Gobject.Data.boolean} false
+
+(** treeview_is_path_onscreen *)
+let treeview_is_path_onscreen (view : GTree.view) path =
+  let rect = view#get_cell_area ~path () in
+  let y = float (Gdk.Rectangle.y rect) in
+  0. <= y && y <= view#vadjustment#page_size;;
 
 (** window *)
 let window widget ~view ~x ~y () =

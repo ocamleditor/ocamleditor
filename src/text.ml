@@ -199,6 +199,7 @@ object (self)
   val mutable highlight_current_line_tag = create_highlight_current_line_tag ()
   val mutable base_color : GDraw.color = `WHITE
   val mutable current_matching_tag_bounds = []
+  val mutable current_matching_tag_bounds_draw = []
   val mutable approx_char_width = 0
   val mutable smart_home = true;
   val mutable smart_end = true;
@@ -378,7 +379,7 @@ object (self)
         let stop = self#buffer#get_iter (`OFFSET lstop) in
         current_matching_tag_bounds <-
           ((self#buffer#create_mark ~name:"delim_left_start" start),
-          (self#buffer#create_mark ~name:"delim_left_stop" stop)) :: current_matching_tag_bounds;
+          (self#buffer#create_mark ~name:"delim_left_stop" stop)) :: [] (*current_matching_tag_bounds*);
         self#buffer#apply_tag_by_name "tag_matching_delim" ~start ~stop;
         let start = self#buffer#get_iter (`OFFSET rstart) in
         let stop = self#buffer#get_iter (`OFFSET rstop) in
@@ -386,6 +387,7 @@ object (self)
           ((self#buffer#create_mark ~name:"delim_right_start" start),
           (self#buffer#create_mark ~name:"delim_right_stop" stop)) :: current_matching_tag_bounds;
         self#buffer#apply_tag_by_name "tag_matching_delim" ~start ~stop;
+        current_matching_tag_bounds_draw <- current_matching_tag_bounds;
         delim
       | Some (_, lstop, rstart, _) (*as delim*) when lstop = rstart ->
         self#innermost_enclosing_delim text lstop;
@@ -394,13 +396,15 @@ object (self)
 
   method matching_delim_remove_tag () =
     List.iter begin function (start, stop) ->
-      let mstart = `MARK start in
-      let mstop = `MARK stop in
-      self#buffer#remove_tag_by_name "tag_matching_delim"
-        ~start:(self#buffer#get_iter_at_mark mstart) ~stop:(self#buffer#get_iter_at_mark mstop);
+      let mstart = (`MARK start) in
+      let mstop = (`MARK stop) in
+      let start = self#buffer#get_iter_at_mark mstart in
+      let stop = self#buffer#get_iter_at_mark mstop in
+      self#buffer#remove_tag_by_name "tag_matching_delim" ~start ~stop;
       self#buffer#delete_mark mstart;
       self#buffer#delete_mark mstop;
     end current_matching_tag_bounds;
+    current_matching_tag_bounds_draw <- [];
     current_matching_tag_bounds <- [];
 
   method matching_delim () =
@@ -416,7 +420,7 @@ object (self)
       self#matching_delim_apply_tag text pos#offset
     end else begin
       try
-        self#innermost_enclosing_delim text pos#offset;
+        ignore (self#innermost_enclosing_delim text pos#offset);
         None
       with ex -> eprintf "%s\n%!" (Printexc.to_string ex); None
     end
@@ -434,11 +438,13 @@ object (self)
   method matching_delim_goto ?(select=false) ?(strict=true) () =
     match self#buffer#selection_bounds with
       | b1, b2 when (not (b1#equal b2)) ->
-        let b1 = if List.mem b1#char blanks then
+        self#buffer#place_cursor ~where:b1;
+        self#matching_delim_goto ~select ~strict:false ()
+        (*let b1 = if List.mem b1#char blanks then
           b1#forward_find_char not_blank else b1 in
         let b2 = if List.mem b2#char blanks then
           (b2#backward_find_char not_blank)#forward_to_line_end else b2 in
-        self#buffer#select_range b1 b2
+        self#buffer#select_range b1 b2*)
       | _ -> begin
         match current_matching_tag_bounds with
           | [(rstart, rstop); (lstart, lstop)] ->
@@ -772,39 +778,41 @@ object (self)
         end;
         (* Border around matching delimiters *)
         begin
-          match current_matching_tag_bounds with
+          match current_matching_tag_bounds_draw with
             | (lstart, lstop) :: (rstart, rstop) :: [] ->
               drawable#set_foreground Oe_config.matching_delim_border_color;
               drawable#set_line_attributes ~width:1 ~style:`SOLID ();
               let draw start stop =
-                let start = buffer#get_iter_at_mark (`MARK start) in
-                let stop = buffer#get_iter_at_mark (`MARK stop) in
-                let yl1, hl1 = view#get_line_yrange start in
-                let yl1 = yl1 - y0 in
-                (* count_displayed_line *)
-                let iter = ref (stop#set_line_index 0) in
-                let x_chars = ref 0 in
-                let lines_displayed = ref 1 in
-                while not (!iter#equal start) do
-                  if !iter#char = 9 then begin
-                    x_chars := ((!x_chars / 8) * 8 + 8);
-                  end else (incr x_chars);
-                  iter := !iter#forward_char;
-                  if self#starts_display_line !iter then (x_chars := 0; incr lines_displayed)
-                done;
-                (*  *)
-                let x = approx_char_width * !x_chars - hadjust in
-                let width_chars = stop#line_index - start#line_index in
-                let width = approx_char_width * width_chars in
-                let pango = self#misc#pango_context in
-                let metrics = pango#get_metrics() in
-                let height = (metrics#ascent + metrics#descent) / Pango.scale -  1 in
-                let y =
-                  if !lines_displayed > 0
-                  then yl1 + ((!lines_displayed - 1) * (hl1 / !lines_displayed))
-                  else yl1
-                in
-                drawable#rectangle ~x ~y ~width ~height ();
+                try
+                  let start = buffer#get_iter_at_mark (`MARK start) in
+                  let stop = buffer#get_iter_at_mark (`MARK stop) in
+                  let yl1, hl1 = view#get_line_yrange start in
+                  let yl1 = yl1 - y0 in
+                  (* count_displayed_line *)
+                  let iter = ref (stop#set_line_index 0) in
+                  let x_chars = ref 0 in
+                  let lines_displayed = ref 1 in
+                  while not (!iter#equal start) do
+                    if !iter#char = 9 then begin
+                      x_chars := ((!x_chars / 8) * 8 + 8);
+                    end else (incr x_chars);
+                    iter := !iter#forward_char;
+                    if self#starts_display_line !iter then (x_chars := 0; incr lines_displayed)
+                  done;
+                  (*  *)
+                  let x = approx_char_width * !x_chars - hadjust in
+                  let width_chars = stop#line_index - start#line_index in
+                  let width = approx_char_width * width_chars in
+                  let pango = self#misc#pango_context in
+                  let metrics = pango#get_metrics() in
+                  let height = (metrics#ascent + metrics#descent) / Pango.scale -  1 in
+                  let y =
+                    if !lines_displayed > 0
+                    then yl1 + ((!lines_displayed - 1) * (hl1 / !lines_displayed))
+                    else yl1
+                  in
+                  drawable#rectangle ~x ~y ~width ~height ();
+                with Gtk_util.Mark_deleted -> ()
               in
               draw lstart lstop;
               draw rstart rstop;
@@ -897,6 +905,12 @@ object (self)
       | _ -> ()
 
   initializer
+    (* To avoid strange application crash, we avoid to draw the border of
+       matching delimiters when we are in the middle of an insert_text event.
+       This is done by setting current_matching_tag_bounds_draw to [], still
+       keeping marks in current_matching_tag_bounds to be used for syntax
+       coloring after the insert_text event. *)
+    ignore (buffer#connect#insert_text ~callback:(fun _ _ -> current_matching_tag_bounds_draw <- []));
     (** Realize *)
     ignore (self#misc#connect#after#realize ~callback:begin fun () ->
       (* Gutter colors must be set when the text view is realized *)
@@ -983,12 +997,9 @@ object (self)
         | _ -> ()
     end);
     ignore (self#buffer#connect#after#delete_range ~callback:begin fun ~start ~stop ->
-      (*self#paint_current_line_background ();*)
       Gtk_util.idle_add ~prio:300 self#paint_gutter;
     end);
     ignore (self#buffer#connect#after#insert_text ~callback:begin fun _ _ ->
-      (*self#paint_current_line_background ();
-      self#matching_delim_remove_tag();*)
       Gtk_util.idle_add ~prio:300 self#paint_gutter;
     end);
     (** Refresh gutter and right margin line when scrolling *)
@@ -1066,18 +1077,7 @@ object (self)
       else if state = [`CONTROL] && key = _Down then (self#scroll `DOWN; true)
       else false;
     end);
-(*    (** Paste clipboard *)
-    ignore (self#connect#paste_clipboard ~callback:begin fun () ->
-      match (GData.clipboard (Gdk.Atom.clipboard))#text with
-        | None -> ()
-        | Some s ->
-          if self#editable then begin
-            GtkSignal.stop_emit();
-            self#buffer#delete_interactive ~start:(self#buffer#get_iter `INSERT) ~stop:(self#buffer#get_iter `SEL_BOUND) ();
-            ignore (self#buffer#insert_interactive s);
-          end
-    end);
-*)end
+end
 
 
 

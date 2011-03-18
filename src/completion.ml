@@ -44,7 +44,7 @@ let string_of_kind = function
   | Pconstructor -> "constructor"
   | Pmodule -> "module"
   | Pmodtype -> "signature"
-  | Pclass -> "class &#8594;" 
+  | Pclass -> "class &#8594;"
   | Pcltype -> "class type"
 
 let env = ref (Env.open_pers_signature "Pervasives" Env.initial)
@@ -104,7 +104,7 @@ let parse_class_declaration modlid id cd =
 
 
 (** signature' *)
-let rec signature' (path, modlid) = 
+let rec signature' (path, modlid) =
   try
     let sign = Env.read_signature modlid path in
     let buf = Buffer.create 1024 in
@@ -141,7 +141,7 @@ let rec signature' (path, modlid) =
                 type_declaration) :: acc
             | Some te -> begin match te.desc with
               | Tobject (te, me) -> acc (* Niente definizione dei tipi oggetto *)
-              | _ -> (print Ptype id (Printtyp.type_declaration id formatter) 
+              | _ -> (print Ptype id (Printtyp.type_declaration id formatter)
                 type_declaration) :: acc
             end
           end in (* Costruttori dei tipi varianti *)
@@ -163,7 +163,7 @@ let rec signature' (path, modlid) =
                   let d = n^(if String.length d > 0 then " of "^d else "") in
                   let d = d ^ " : " ^ (Ident.name id) in
                   (n, m, d, k, cdecl) :: acc
-              end acc cc 
+              end acc cc
 
             | _ -> acc
           end
@@ -293,30 +293,30 @@ class popup ?modlid ~on_row_activated ~on_type ~on_search ~possibilities
   let _ = listview#misc#set_property "enable-grid-lines" (`INT 0) in
   let v_name = GTree.view_column
     ~renderer:(GTree.cell_renderer_text
-      [`XALIGN 0.; (*`YPAD 0; *)(*`BACKGROUND !Preferences.preferences.Preferences.pref_bg_color_popup*)],
+      [`XALIGN 0.; `CELL_BACKGROUND !Preferences.preferences.Preferences.pref_bg_color_popup],
       ["text", c_name]) () in
   let v_module = GTree.view_column
     ~renderer:(GTree.cell_renderer_text
-      [`XALIGN 0.; (*`YPAD 0;*) (*`BACKGROUND !Preferences.preferences.Preferences.pref_bg_color_popup*)],
+      [`XALIGN 0.; `CELL_BACKGROUND !Preferences.preferences.Preferences.pref_bg_color_popup],
       ["text", c_module]) () in
   let v_desc = GTree.view_column
     ~renderer:(GTree.cell_renderer_text
-      [`XALIGN 0.; (*`YPAD 0;*) (*`BACKGROUND !Preferences.preferences.Preferences.pref_bg_color_popup*)],
+      [`XALIGN 0.; `CELL_BACKGROUND !Preferences.preferences.Preferences.pref_bg_color_popup],
       ["markup", c_desc]) () in
   let v_kind = GTree.view_column
     ~renderer:(GTree.cell_renderer_text
-      [`XALIGN 1.; (*`YPAD 0;*) (*`BACKGROUND !Preferences.preferences.Preferences.pref_bg_color_popup*)],
+      [`XALIGN 1.; `CELL_BACKGROUND !Preferences.preferences.Preferences.pref_bg_color_popup],
       ["markup", c_kind]) () in
   let _ = ebox#misc#modify_bg [`NORMAL, `NAME !Preferences.preferences.Preferences.pref_bg_color_popup] in
   let _ = listview#misc#modify_base [`NORMAL, `NAME !Preferences.preferences.Preferences.pref_bg_color_popup] in
   let _ = listview#misc#modify_font_by_name !Preferences.preferences.Preferences.pref_compl_font in
   let _ = listview#misc#modify_text [`NORMAL, `NAME !Preferences.preferences.Preferences.pref_fg_color_popup ] in
   let color = Color.set_value 0.80 (`NAME !Preferences.preferences.Preferences.pref_bg_color_popup) in
-  let _ = w#misc#modify_bg [`NORMAL, color] in 
+  let _ = w#misc#modify_bg [`NORMAL, color] in
   object (self)
     inherit GObj.widget w#as_widget as super
     method private do_search txt =
-      try 
+      try
         let row = model#get_iter (Path.create [0]) in
         let found = ref false in
         let pat = Str.regexp_string_case_fold txt in

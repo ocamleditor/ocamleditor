@@ -82,11 +82,17 @@ object (self)
     let callback () =
       try
         let path = List.hd view#selection#get_selected_rows in
-        let _, (mark, callback) = List.find (fun (rr, _) -> rr#path = path) locations in
+        let rr, (mark, callback) = List.find (fun (rr, _) -> rr#path = path) locations in
         let where = buffer#get_iter_at_mark (`MARK mark) in
         page#view#scroll_lazy where;
         buffer#place_cursor ~where;
-        ignore (callback());
+        begin
+          match current_model with
+            | Some model ->
+              let kind = model#get ~row:rr#iter ~column:col_kind in
+              if not (List.mem kind [Some `Warning; Some `Error]) then ignore (ignore (callback()));
+            | _ -> ()
+        end;
       with Failure "hd" -> ()
       | ex (*Not_found | Gpointer.Null *) -> Printf.eprintf "File \"outline.ml\": %s\n%s\n%!" (Printexc.to_string ex) (Printexc.get_backtrace());
     in
@@ -116,91 +122,117 @@ object (self)
     end);
     (** Toolbar buttons *)
     ignore (button_show_types#connect#toggled ~callback:(fun () -> GtkBase.Widget.queue_draw view#as_widget));
-    ignore (button_sort#connect#clicked ~callback:begin fun () ->
+    let signal_button_sort : GtkSignal.id option ref = ref None in
+    let signal_button_sort_rev : GtkSignal.id option ref = ref None in
+    signal_button_sort := Some (button_sort#connect#clicked ~callback:begin fun () ->
       Gaux.may current_model ~f:begin fun model ->
-        let id = if button_sort#active then col_name.GTree.index else col_order.GTree.index in
-        model#set_sort_column_id id `ASCENDING;
-        GtkBase.Widget.queue_draw view#as_widget;
-      end
-    end);
-    ignore (button_sort_rev#connect#toggled ~callback:begin fun () ->
-      Gaux.may current_model ~f:begin fun model ->
-        let id = if button_sort_rev#active then begin
-          button_sort#set_active false;
+        let id = if button_sort#active then begin
+          Gaux.may !signal_button_sort_rev ~f:button_sort_rev#misc#handler_block;
+          button_sort_rev#set_active false;
+          model#set_sort_column_id col_order.GTree.index `ASCENDING;
+          Gaux.may !signal_button_sort_rev ~f:button_sort_rev#misc#handler_unblock;
           col_name.GTree.index
         end else col_order.GTree.index in
         model#set_sort_column_id id `ASCENDING;
         GtkBase.Widget.queue_draw view#as_widget;
       end
     end);
+    signal_button_sort_rev := Some (button_sort_rev#connect#toggled ~callback:begin fun () ->
+      Gaux.may current_model ~f:begin fun model ->
+        let id = if button_sort_rev#active then begin
+          Gaux.may !signal_button_sort ~f:button_sort#misc#handler_block;
+          button_sort#set_active false;
+          model#set_sort_column_id col_order.GTree.index `ASCENDING;
+          Gaux.may !signal_button_sort ~f:button_sort#misc#handler_unblock;
+          col_name.GTree.index
+        end else col_order.GTree.index in
+        model#set_sort_column_id id `ASCENDING;
+        GtkBase.Widget.queue_draw view#as_widget;
+      end
+    end)
 
   method add_markers ~(kind : [`Warning | `Error | `All]) () =
-    match current_model with
-      | Some model ->
-        (* Remove previous marks *)
-        self#remove_node model `Folder_errors;
-        self#remove_node model `Folder_warnings;
-        (*  *)
-        let markers = List.rev page#view#gutter.Gutter.markers in
-        List.iter begin fun marker ->
-          let row =
-            match marker.Gutter.kind with
-              | `Warning msg when kind = `All || kind = `Warning ->
-                let parent = self#get_node_marker ~model ~kind:`Folder_warnings in
-                let message = Miscellanea.replace_first ["Warning \\([0-9]+\\):", "\\1:"] msg in
-                let row = model#append ?parent () in
-                model#set ~row ~column:col_name message;
-                model#set ~row ~column:col_kind (Some `Warning);
-                tooltips <- ((model#get_row_reference (model#get_path row)), msg) :: tooltips;
-                Some row
-              | `Error msg when kind = `All || kind = `Error ->
-                let parent = self#get_node_marker ~model ~kind:`Folder_errors in
-                let message = Miscellanea.replace_first ["Error: ", ""] msg in
-                let row = model#append ?parent () in
-                model#set ~row ~column:col_name message;
-                model#set ~row ~column:col_kind (Some `Errors);
-                tooltips <- ((model#get_row_reference (model#get_path row)), msg) :: tooltips;
-                Some row
-              (*| `Bookmark num ->
-                let row = model#append () in
-                model#set ~row ~column:col_name (string_of_int num);
-                model#set ~row ~column:col_kind None;
-                Some row*)
-              | _ -> None
-          in
-          match row with
-            | Some row ->
-              let iter = buffer#get_iter_at_mark (`MARK marker.Gutter.mark) in
-              let callback =
-                match marker.Gutter.callback with
-                  | Some f -> (fun () -> f marker.Gutter.mark)
-                  | None -> (fun () -> false)
-              in
-              let rr = model#get_row_reference (model#get_path row) in
-              let mark = buffer#create_mark ?name:None ?left_gravity:None iter in
-              locations <- (rr, (mark, callback)) :: locations
-            | _ -> ()
-        end markers;
-        if kind = `Error then begin
-          match self#find model `Folder_errors with
-            | None -> ()
-            | Some row -> view#scroll_to_cell ~align:(0., 0.) (model#get_path row) vc
-        end
-      | None -> ()
+    if false then begin (* disabled *)
+      match current_model with
+        | Some model ->
+          (* Remove previous marks *)
+          self#remove_node model `Folder_errors;
+          self#remove_node model `Folder_warnings;
+          (*  *)
+          let markers = List.rev page#view#gutter.Gutter.markers in
+          List.iter begin fun marker ->
+            let row =
+              match marker.Gutter.kind with
+                | `Warning msg when kind = `All || kind = `Warning ->
+                  let parent = self#get_node_marker ~model ~kind:`Folder_warnings in
+                  let message = Miscellanea.replace_first ["Warning \\([0-9]+\\):", "\\1:"] msg in
+                  let row = model#append ?parent () in
+                  model#set ~row ~column:col_name message;
+                  model#set ~row ~column:col_kind (Some `Warning);
+                  tooltips <- ((model#get_row_reference (model#get_path row)), msg) :: tooltips;
+                  Some row
+                | `Error msg when kind = `All || kind = `Error ->
+                  let parent = self#get_node_marker ~model ~kind:`Folder_errors in
+                  let message = Miscellanea.replace_first ["Error: ", ""] msg in
+                  let row = model#append ?parent () in
+                  model#set ~row ~column:col_name message;
+                  model#set ~row ~column:col_kind (Some `Error);
+                  tooltips <- ((model#get_row_reference (model#get_path row)), msg) :: tooltips;
+                  Some row
+                (*| `Bookmark num ->
+                  let row = model#append () in
+                  model#set ~row ~column:col_name (string_of_int num);
+                  model#set ~row ~column:col_kind None;
+                  Some row*)
+                | _ -> None
+            in
+            match row with
+              | Some row ->
+                let iter = buffer#get_iter_at_mark (`MARK marker.Gutter.mark) in
+                let callback =
+                  match marker.Gutter.callback with
+                    | Some f -> (fun () -> f marker.Gutter.mark)
+                    | None -> (fun () -> false)
+                in
+                let rr = model#get_row_reference (model#get_path row) in
+                let mark = buffer#create_mark ?name:None ?left_gravity:None iter in
+                locations <- (rr, (mark, callback)) :: locations
+              | _ -> ()
+          end markers;
+          if kind = `Error then begin
+            match self#find model `Folder_errors with
+              | None -> ()
+              | Some row -> view#scroll_to_cell ~align:(0., 0.) (model#get_path row) vc
+          end
+        | None -> ()
+    end
 
-  method select (mark : Gtk.text_mark) =
+  method select ?align (mark : Gtk.text_mark) =
     match current_model with
       | None -> ()
-      | _ ->
+      | Some model ->
         begin
           let finally () = Gaux.may signal_selection_changed ~f:view#selection#misc#handler_unblock in
+          Gaux.may signal_selection_changed ~f:view#selection#misc#handler_block;
           try
             let iter = buffer#get_iter_at_mark (`MARK mark) in
-            let rr, _ = List.find begin fun (_, (m, _)) ->
-              let it = buffer#get_iter_at_mark (`MARK m) in
-              it#compare iter <= 0
+            let rr, _ = List.find begin fun (rr, (m, _)) ->
+              if rr#valid then begin
+                let it = buffer#get_iter_at_mark (`MARK m) in
+                let kind = model#get ~row:rr#iter ~column:col_kind in
+                not (List.mem kind [Some `Warning; Some `Error]) && it#compare iter <= 0
+              end else false
             end locations in
-            Gaux.may signal_selection_changed ~f:view#selection#misc#handler_block;
+            begin
+              match align with
+                | Some align ->
+                  view#vadjustment#set_value (align *. view#vadjustment#upper);
+                | None when page#view#misc#get_flag `HAS_FOCUS ->
+                  if not (Gtk_util.treeview_is_path_onscreen view rr#path) then begin
+                    view#scroll_to_cell ~align:(0.38, 0.) rr#path vc;
+                  end
+                | _ -> ()
+            end;
             view#set_cursor rr#path vc;
             finally()
           with Not_found | Gpointer.Null -> (finally())
@@ -223,34 +255,50 @@ object (self)
         List.iter (fun (_, (m, _)) -> buffer#delete_mark (`MARK m)) locations;
         locations <- [];
         let col_counter = ref 0 in
-        GtkThread2.async begin fun () ->
-          let model = GTree.tree_store cols in
+        let model = GTree.tree_store cols in
+        let align = view#vadjustment#value /. view#vadjustment#upper in
+        GtkThread2.sync begin fun () ->
           ignore (model#connect#row_inserted ~callback:begin fun _ row ->
             model#set ~row ~column:col_order !col_counter;
             incr col_counter;
           end);
+        (*end ();
+        GtkThread2.sync begin fun () ->*)
           vc#unset_cell_data_func renderer;
           self#append ~model module_list;
           current_model <- Some model;
           self#add_markers ~kind:`All ();
+        (*end ();
+        GtkThread2.sync begin fun () ->*)
           view#set_model (Some (model :> GTree.model));
+        (*end ();
+        GtkThread2.sync begin fun () ->*)
           locations <- List.sort begin fun (_, (m1, _)) (_, (m2, _)) ->
             let i1 = buffer#get_iter_at_mark (`MARK m1) in
             let i2 = buffer#get_iter_at_mark (`MARK m2) in
             (-1) * (i1#compare i2)
           end locations;
+        (*end ();
+        GtkThread2.sync begin fun () ->*)
           (** Set cell data func *)
           vc#set_cell_data_func renderer begin fun model row ->
             self#cell_data_func_icons ~model ~row;
             self#cell_data_func_text ~model ~row
           end;
+        (*end ();
+        GtkThread2.sync begin fun () ->*)
           (** Sort functions *)
           model#set_sort_func col_name.GTree.index (fun model i1 i2 -> self#compare self#compare_name model i1 i2);
           model#set_sort_func col_order.GTree.index (fun model i1 i2 -> self#compare self#compare_order model i1 i2);
+        (*end ();
+        GtkThread2.sync begin fun () ->*)
           (** Expanded and collapsed nodes *)
           view#expand_all ();
           Gaux.may (self#find model `Dependencies) ~f:(fun iter -> view#collapse_row (model#get_path iter));
           Gaux.may (self#find model `Folder_warnings) ~f:(fun iter -> view#collapse_row (model#get_path iter));
+        end ();
+        GtkThread2.sync begin fun () ->
+          self#select ~align (buffer#get_mark `INSERT)
         end ();
       end cmd;
     end;
@@ -319,7 +367,7 @@ object (self)
         | Some `Type_abstract -> Icons.type_abstract
         | Some `Type_variant -> Icons.type_variant
         | Some `Type_record -> Icons.type_record
-        | Some `Errors -> Icons.error_14
+        | Some `Error -> Icons.error_14
         | Some `Warning -> Icons.warning_14
         | Some `Folder_warnings -> Icons.folder_warning
         | Some `Folder_errors -> Icons.folder_error
