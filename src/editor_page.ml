@@ -294,7 +294,7 @@ object (self)
     Bookmark.write();
     let old_markers =
       try
-        let bms = List.filter (fun bm -> bm.Bookmark.filename = file#path) !Bookmark.bookmarks in
+        let bms = List.filter (fun bm -> bm.Bookmark.filename = file#path) Bookmark.bookmarks#get in
         List.iter Bookmark.mark_to_offset bms;
         Xlist.filter_map (fun bm -> bm.Bookmark.marker) bms
       with Not_found -> []
@@ -328,7 +328,7 @@ object (self)
                 let marker = Gutter.create_marker ~mark ~pixbuf:(List.assoc bm.Bookmark.num Bookmark.icons) () in
                 bm.Bookmark.marker <- Some marker;
                 view#gutter.Gutter.markers <- marker :: view#gutter.Gutter.markers
-            end !Bookmark.bookmarks;
+            end Bookmark.bookmarks#get;
             Bookmark.write();
             (*  *)
             if buffer#lexical_enabled then begin

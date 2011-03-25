@@ -152,7 +152,7 @@ object (self)
     end)
 
   method add_markers ~(kind : [`Warning | `Error | `All]) () =
-    if false then begin (* disabled *)
+    if true then begin (* disabled *)
       match current_model with
         | Some model ->
           (* Remove previous marks *)
@@ -163,7 +163,7 @@ object (self)
           List.iter begin fun marker ->
             let row =
               match marker.Gutter.kind with
-                | `Warning msg when kind = `All || kind = `Warning ->
+                (*| `Warning msg when kind = `All || kind = `Warning ->
                   let parent = self#get_node_marker ~model ~kind:`Folder_warnings in
                   let message = Miscellanea.replace_first ["Warning \\([0-9]+\\):", "\\1:"] msg in
                   let row = model#append ?parent () in
@@ -178,12 +178,12 @@ object (self)
                   model#set ~row ~column:col_name message;
                   model#set ~row ~column:col_kind (Some `Error);
                   tooltips <- ((model#get_row_reference (model#get_path row)), msg) :: tooltips;
-                  Some row
-                (*| `Bookmark num ->
-                  let row = model#append () in
-                  model#set ~row ~column:col_name (string_of_int num);
-                  model#set ~row ~column:col_kind None;
                   Some row*)
+                | `Bookmark num ->
+                  let row = model#prepend () in
+                  model#set ~row ~column:col_name (string_of_int num);
+                  model#set ~row ~column:col_kind (Some (`Bookmark (List.assoc num Bookmark.icons)));
+                  Some row
                 | _ -> None
             in
             match row with
@@ -196,7 +196,7 @@ object (self)
                 in
                 let rr = model#get_row_reference (model#get_path row) in
                 let mark = buffer#create_mark ?name:None ?left_gravity:None iter in
-                locations <- (rr, (mark, callback)) :: locations
+                locations <- (rr, (mark, callback)) :: locations;
               | _ -> ()
           end markers;
           if kind = `Error then begin
@@ -235,7 +235,7 @@ object (self)
             end;
             view#set_cursor rr#path vc;
             finally()
-          with Not_found | Gpointer.Null -> (finally())
+          with Not_found | Gpointer.Null | Invalid_argument("Gobject.Value.get") -> (finally())
         end;
 
   method parse () =
@@ -372,6 +372,7 @@ object (self)
         | Some `Folder_warnings -> Icons.folder_warning
         | Some `Folder_errors -> Icons.folder_error
         | Some `Dependencies -> Icons.none_14
+        | Some (`Bookmark pixbuf) -> pixbuf
         | None -> Icons.none_14
     in
     renderer_pixbuf#set_properties [ `VISIBLE (kind <> None); `PIXBUF pixbuf];
@@ -382,7 +383,8 @@ object (self)
     in
     let rr = model#get_row_reference (model#get_path row) in
     let mark = buffer#create_mark ?name:None ?left_gravity:None (buffer#get_iter (`OFFSET loc_pos)) in
-    locations <- (rr, (mark, (fun () -> false))) :: locations
+    locations <- (rr, (mark, (fun () -> false))) :: locations;
+
 
   method private set_tooltip ~(model : GTree.tree_store) ~row ~name ~typ =
     model#set ~row ~column:col_name name;

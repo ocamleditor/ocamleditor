@@ -62,6 +62,7 @@ object (self)
   val mutable show_whitespace_chars = !Preferences.preferences.Preferences.pref_show_whitespace_chars
   val mutable word_wrap = !Preferences.preferences.Preferences.pref_editor_wrap
   val mutable show_outline = true
+  val mutable bookmark_view = None
 
   method pack_outline widget =
     if show_outline then begin
@@ -213,7 +214,7 @@ object (self)
       let filename = page#get_filename in
       let mark = page#buffer#create_mark (page#buffer#get_iter `INSERT) in
       let old_marker =
-        try (List.find (fun bm -> bm.Bookmark.num = num) !Bookmark.bookmarks).Bookmark.marker
+        try (List.find (fun bm -> bm.Bookmark.num = num) Bookmark.bookmarks#get).Bookmark.marker
         with Not_found -> None
       in
       Gaux.may old_marker ~f:(fun old -> Gutter.destroy_markers page#view#gutter [old]);
@@ -225,7 +226,7 @@ object (self)
 
   method bookmark_goto ~num =
     try
-      let bm = List.find (fun bm -> bm.Bookmark.num = num) !Bookmark.bookmarks in
+      let bm = List.find (fun bm -> bm.Bookmark.num = num) Bookmark.bookmarks#get in
       match self#get_page (File (File.create bm.Bookmark.filename ())) with
         | None ->
           let _ = self#open_file ~active:true ~offset:0 bm.Bookmark.filename in
@@ -601,7 +602,16 @@ object (self)
         gmenu#popup ~button:3 ~time:(GdkEvent.get_time ev);
         true in
       ignore(page#view#event#connect#button_press ~callback:begin fun ev ->
-        if (GdkEvent.Button.button ev = 3 && GdkEvent.get_type ev = `BUTTON_PRESS) then (callback ev) else false
+        if (GdkEvent.Button.button ev = 3 && GdkEvent.get_type ev = `BUTTON_PRESS) then begin
+          let x = int_of_float (GdkEvent.Button.x ev) in
+          if x < page#view#gutter.Gutter.size - page#view#gutter.Gutter.fold_size then begin
+            Gaux.may bookmark_view ~f:begin fun bookmark_view ->
+              let x, y = Gdk.Window.get_pointer_location (Gdk.Window.root_parent ()) in
+              Gtk_util.window bookmark_view#coerce ~parent:self ~destroy_child:false ~x ~y ()
+            end
+          end else ignore ((callback ev));
+          true
+        end else false
       end);
       ignore (page#view#event#connect#key_press ~callback:begin fun ev ->
         if (GdkEvent.Key.keyval ev = GdkKeysyms._Menu) then (callback ev) else false
@@ -834,6 +844,7 @@ object (self)
         | _ -> ()
       end
     end);
+    bookmark_view <- Some (new Bookmark_view.widget ~editor:self ())
 end
 
 (** Signals *)

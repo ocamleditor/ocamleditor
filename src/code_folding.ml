@@ -62,7 +62,8 @@ object (self)
   val mutable table_tag_readonly = []
   val mutable signal_expose = None
   val mutable changed_after_last_draw_markers = false
-  val mutable tag_highlight = buffer#create_tag ~name:"tag_code_folding_focus" []
+  val mutable tag_highlight = buffer#create_tag
+    ~name:(sprintf "tag_code_folding_focus_%f" (Unix.gettimeofday())) []
 
   method enabled = enabled
   method set_enabled x =

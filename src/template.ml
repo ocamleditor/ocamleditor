@@ -151,7 +151,7 @@ end
 let popup project view =
   let x, y = view#get_location_at_cursor () in
   let widget = new widget ~project ~view () in
-  Gtk_util.window widget#coerce ~view ~x ~y ()
+  ignore (Gtk_util.window widget#coerce ~parent:view ~x ~y ())
 
 
 

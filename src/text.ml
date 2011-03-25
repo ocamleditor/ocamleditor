@@ -300,7 +300,8 @@ object (self)
   method highlight_current_line_tag = highlight_current_line_tag
 
   method scroll_lazy iter =
-    Gtk_util.idle_add ~prio:300 (fun () -> ignore (self#scroll_to_iter ~use_align:(self#scroll_to_iter iter) ~xalign:1.0 ~yalign:0.38 iter));
+    Gtk_util.idle_add ~prio:300 (fun () ->
+      ignore (self#scroll_to_iter ~use_align:(self#scroll_to_iter iter) ~xalign:1.0 ~yalign:0.38 iter));
 
   method scroll dir =
     let rect = self#visible_rect in

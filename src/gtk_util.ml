@@ -90,7 +90,7 @@ let treeview_is_path_onscreen (view : GTree.view) path =
   0. <= y && y <= view#vadjustment#page_size;;
 
 (** window *)
-let window widget ~view ~x ~y () =
+let window widget ~parent ?(destroy_child=true) ~x ~y () =
   let window = GWindow.window
     ~decorated:false
     ~border_width:1
@@ -103,7 +103,8 @@ let window widget ~view ~x ~y () =
   let color = Color.set_value 0.80 (`NAME !Preferences.preferences.Preferences.pref_bg_color_popup) in
   let _ = window#misc#modify_bg [`NORMAL, color] in
   let _ = ebox#misc#modify_bg [`NORMAL, `NAME !Preferences.preferences.Preferences.pref_bg_color_popup] in
-  ignore (window#event#connect#focus_out ~callback:begin fun _ ->
+  ignore (window#event#connect#after#focus_out ~callback:begin fun _ ->
+    if not destroy_child then (ebox#remove widget);
     window#destroy();
     true
   end);
@@ -113,7 +114,7 @@ let window widget ~view ~x ~y () =
   end);
   window#set_skip_pager_hint true;
   window#set_skip_taskbar_hint true;
-  Gaux.may (GWindow.toplevel view) ~f:(fun x -> window#set_transient_for x#as_window);
+  Gaux.may (GWindow.toplevel parent) ~f:(fun x -> window#set_transient_for x#as_window);
   window#set_accept_focus true;
   window#set_opacity 0.0;
   window#present();
@@ -124,7 +125,8 @@ let window widget ~view ~x ~y () =
     (if y + alloc.Gtk.height > (Gdk.Screen.height()) then (Gdk.Screen.height() - alloc.Gtk.height) else y);
   in
   window#move ~x ~y;
-  fade_window window
+  fade_window window;
+  window
 
 
 

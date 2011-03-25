@@ -33,7 +33,7 @@ type t = {
 
 let bookmarks_filename = Filename.concat Oe_config.ocamleditor_user_home "bookmarks-1.5.0"
 
-let bookmarks = ref []
+let bookmarks = new GUtil.variable []
 
 let icons = [
   0, Icons.b0;
@@ -65,7 +65,7 @@ let _ = begin
                 num = num;
                 marker = None;
               } in
-              bookmarks := bm :: !bookmarks;
+              bookmarks#set (bm :: bookmarks#get);
             | _ -> assert false
         done;
       with End_of_file -> ()
@@ -81,7 +81,7 @@ end
 (** remove *)
 let rec remove ~num =
   try
-    let bm = List.find (fun x -> x.num = num) !bookmarks in
+    let bm = List.find (fun x -> x.num = num) bookmarks#get in
     begin
       match bm.loc with
         | Mark mark ->
@@ -94,7 +94,7 @@ let rec remove ~num =
         | _ -> ()
     end;
     bm.loc <- (Offset 0);
-    bookmarks := List.filter (fun x -> x.num <> num) !bookmarks;
+    bookmarks#set (List.filter (fun x -> x.num <> num) bookmarks#get);
     write()
   with Not_found -> ()
 
@@ -126,7 +126,7 @@ and write () =
           | `OFFSET offset -> print offset
         end
       with Invalid_argument "bookmark" -> ()
-    end !bookmarks;
+    end bookmarks#get;
     close_out outchan
   with ex -> begin
     close_out outchan;
@@ -171,5 +171,5 @@ let create ~num ~filename ~mark ~marker () =
     num = num;
     marker = Some marker;
   } in
-  bookmarks := bm :: !bookmarks;
+  bookmarks#set (bm :: bookmarks#get);
   write()
