@@ -16,4 +16,3 @@ annot_parser.mli
 err_lexer.ml
 err_parser.ml
 err_parser.mli
-ocamleditor-1.6.1.xml
