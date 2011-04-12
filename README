@@ -12,9 +12,14 @@ COPYRIGHT:
   This program is distributed under the GNU GENERAL PUBLIC LICENSE Version 3.
   See the enclosed file COPYING for more details.
 
+  The OCamlEditor logo and the icons used are licensed under a
+  Creative Commons Attribution-NonCommercial-NoDerivs 3.0 Unported License
+  (http://creativecommons.org/licenses/by-nc-nd/3.0/).
+
   Files "lexical.ml", "gtkThread3.ml" and part of "file.ml" and "shell.ml"
   are copyright 1999 Institut National de Recherche en Informatique et en
   Automatique and Kyoto University.
+
 
 
 DEPENDENCIES:
