@@ -9,23 +9,19 @@
   <version>1.6.1</version>
   <autocomp enabled="true" delay="1." cflags=""/>
   <open_files>
-    <filename offset="8471" active="false">editor.ml</filename>
-    <filename offset="7565" active="true">outline.ml</filename>
+    <filename offset="7815" active="false">editor.ml</filename>
     <filename offset="15790" active="false">editor_page.ml</filename>
     <filename offset="4575" active="false">autocomp.ml</filename>
     <filename offset="19484" active="false">ocaml_text.ml</filename>
     <filename offset="10780" active="false">lexical.ml</filename>
     <filename offset="17863" active="false">completion.ml</filename>
-    <filename offset="3532" active="false">ocaml-src/utils/misc.mli</filename>
-    <filename offset="976" active="false">ocaml-src/parsing/longident.mli</filename>
-    <filename offset="0" active="false">ocaml-src/typing/ident.mli</filename>
-    <filename offset="2523" active="false">ocaml-src/typing/ident.ml</filename>
     <filename offset="0" active="false">ocaml-src/parsing/longident.ml</filename>
     <filename offset="3592" active="false">gtk_util.ml</filename>
     <filename offset="1251" active="false">gutter.ml</filename>
     <filename offset="2500" active="false">bookmark.ml</filename>
-    <filename offset="1980" active="false">bookmark_view.ml</filename>
-    <filename offset="6516" active="false">template.ml</filename>
+    <filename offset="3834" active="true">bookmark_view.ml</filename>
+    <filename offset="788" active="false">template.ml</filename>
+    <filename offset="2109" active="false">outline.ml</filename>
   </open_files>
   <runtime>
     <configuration>

@@ -250,56 +250,58 @@ object (self)
     in
     ignore begin
       Oebuild_util.exec ~echo:true ~join:false ~at_exit:begin fun () ->
-        let module_list = Odoc_info.load_modules dump_filename in
-        tooltips <- [];
-        List.iter (fun (_, (m, _)) -> buffer#delete_mark (`MARK m)) locations;
-        locations <- [];
-        let col_counter = ref 0 in
-        let model = GTree.tree_store cols in
-        let align = view#vadjustment#value /. view#vadjustment#upper in
-        GtkThread2.sync begin fun () ->
-          ignore (model#connect#row_inserted ~callback:begin fun _ row ->
-            model#set ~row ~column:col_order !col_counter;
-            incr col_counter;
-          end);
-        (*end ();
-        GtkThread2.sync begin fun () ->*)
-          vc#unset_cell_data_func renderer;
-          self#append ~model module_list;
-          current_model <- Some model;
-          self#add_markers ~kind:`All ();
-        (*end ();
-        GtkThread2.sync begin fun () ->*)
-          view#set_model (Some (model :> GTree.model));
-        (*end ();
-        GtkThread2.sync begin fun () ->*)
-          locations <- List.sort begin fun (_, (m1, _)) (_, (m2, _)) ->
-            let i1 = buffer#get_iter_at_mark (`MARK m1) in
-            let i2 = buffer#get_iter_at_mark (`MARK m2) in
-            (-1) * (i1#compare i2)
-          end locations;
-        (*end ();
-        GtkThread2.sync begin fun () ->*)
-          (** Set cell data func *)
-          vc#set_cell_data_func renderer begin fun model row ->
-            self#cell_data_func_icons ~model ~row;
-            self#cell_data_func_text ~model ~row
-          end;
-        (*end ();
-        GtkThread2.sync begin fun () ->*)
-          (** Sort functions *)
-          model#set_sort_func col_name.GTree.index (fun model i1 i2 -> self#compare self#compare_name model i1 i2);
-          model#set_sort_func col_order.GTree.index (fun model i1 i2 -> self#compare self#compare_order model i1 i2);
-        (*end ();
-        GtkThread2.sync begin fun () ->*)
-          (** Expanded and collapsed nodes *)
-          view#expand_all ();
-          Gaux.may (self#find model `Dependencies) ~f:(fun iter -> view#collapse_row (model#get_path iter));
-          Gaux.may (self#find model `Folder_warnings) ~f:(fun iter -> view#collapse_row (model#get_path iter));
-        end ();
-        GtkThread2.sync begin fun () ->
-          self#select ~align (buffer#get_mark `INSERT)
-        end ();
+        try
+          let module_list = Odoc_info.load_modules dump_filename in
+          tooltips <- [];
+          List.iter (fun (_, (m, _)) -> buffer#delete_mark (`MARK m)) locations;
+          locations <- [];
+          let col_counter = ref 0 in
+          let model = GTree.tree_store cols in
+          let align = view#vadjustment#value /. view#vadjustment#upper in
+          GtkThread2.sync begin fun () ->
+            ignore (model#connect#row_inserted ~callback:begin fun _ row ->
+              model#set ~row ~column:col_order !col_counter;
+              incr col_counter;
+            end);
+          (*end ();
+          GtkThread2.sync begin fun () ->*)
+            vc#unset_cell_data_func renderer;
+            self#append ~model module_list;
+            current_model <- Some model;
+            self#add_markers ~kind:`All ();
+          (*end ();
+          GtkThread2.sync begin fun () ->*)
+            view#set_model (Some (model :> GTree.model));
+          (*end ();
+          GtkThread2.sync begin fun () ->*)
+            locations <- List.sort begin fun (_, (m1, _)) (_, (m2, _)) ->
+              let i1 = buffer#get_iter_at_mark (`MARK m1) in
+              let i2 = buffer#get_iter_at_mark (`MARK m2) in
+              (-1) * (i1#compare i2)
+            end locations;
+          (*end ();
+          GtkThread2.sync begin fun () ->*)
+            (** Set cell data func *)
+            vc#set_cell_data_func renderer begin fun model row ->
+              self#cell_data_func_icons ~model ~row;
+              self#cell_data_func_text ~model ~row
+            end;
+          (*end ();
+          GtkThread2.sync begin fun () ->*)
+            (** Sort functions *)
+            model#set_sort_func col_name.GTree.index (fun model i1 i2 -> self#compare self#compare_name model i1 i2);
+            model#set_sort_func col_order.GTree.index (fun model i1 i2 -> self#compare self#compare_order model i1 i2);
+          (*end ();
+          GtkThread2.sync begin fun () ->*)
+            (** Expanded and collapsed nodes *)
+            view#expand_all ();
+            Gaux.may (self#find model `Dependencies) ~f:(fun iter -> view#collapse_row (model#get_path iter));
+            Gaux.may (self#find model `Folder_warnings) ~f:(fun iter -> view#collapse_row (model#get_path iter));
+          end ();
+          GtkThread2.sync begin fun () ->
+            self#select ~align (buffer#get_mark `INSERT)
+          end ();
+        with End_of_file -> ()
       end cmd;
     end;
 
