@@ -170,7 +170,7 @@ class incremental () =
 (*            | "Win32" -> GWindow.window ~allow_grow:false
                 ~kind:`POPUP ~type_hint:`MENU ~modal:true ~border_width:5 ()*)
             | _ -> GWindow.window ~allow_grow:true
-                ~decorated:false ~modal:false ~border_width:1 ()
+                ~decorated:false ~modal:true ~border_width:1 ()
         in
         let move () =
           (* Coordinate del puntatore relative al desktop *)
