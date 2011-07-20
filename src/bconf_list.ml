@@ -41,7 +41,7 @@ class view ~editor ~project ?packing () =
   let col_default = cols#add Gobject.Data.boolean in
   let model = GTree.tree_store cols in
   let renderer = GTree.cell_renderer_text [] in
-  let renderer_pixbuf = GTree.cell_renderer_pixbuf [] in
+  let renderer_pixbuf = GTree.cell_renderer_pixbuf [`XPAD 3] in
   let renderer_default = GTree.cell_renderer_toggle [`RADIO false; `ACTIVATABLE true; `WIDTH 50] in
   let vc = GTree.view_column ~title:"Name" () in
   let _ = vc#pack ~expand:false renderer_pixbuf in
@@ -58,7 +58,7 @@ class view ~editor ~project ?packing () =
   let _ = view#misc#set_property "enable-tree-lines" (`BOOL true) in
   let _ = view#append_column vc in
   let _ = view#append_column vc_default in
-  let _ = vc_default#set_visible true in 	
+  let _ = vc_default#set_visible true in
   let _ = view#selection#set_mode `SINGLE in
   let tooltips = GData.tooltips () in
   (* Buttons *)
@@ -293,6 +293,11 @@ object (self)
               let descr = (if bconf.is_library then "Library" else "Executable") ^ " &#8226; " ^ descr in
               renderer#set_properties [`MARKUP (sprintf
                 "<b>%s</b>\n<span weight='light' size='smaller' style='italic'>%s</span>" name descr)];
+              if bconf.is_library then begin
+                renderer_pixbuf#set_properties [`VISIBLE true; `PIXBUF Icons.library; `XALIGN 0.0]
+              end else begin
+                renderer_pixbuf#set_properties [`VISIBLE true; `PIXBUF Icons.start_16; `XALIGN 0.0]
+              end
             | ETASK _ ->
               renderer_pixbuf#set_properties [`VISIBLE true; `PIXBUF Icons.etask_16; `XALIGN 0.0]
           end

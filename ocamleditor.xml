@@ -1,27 +1,26 @@
 <!-- OCamlEditor XML Project -->
 <project>
   <ocaml_home></ocaml_home>
-  <ocamllib>C:\Objective Caml\lib</ocamllib>
+  <ocamllib></ocamllib>
   <encoding>UTF-8</encoding>
   <name>ocamleditor</name>
   <author>Francesco Tovagliari</author>
   <description/>
-  <version>1.6.1</version>
+  <version>1.6.2</version>
   <autocomp enabled="true" delay="1." cflags=""/>
   <open_files>
-    <filename offset="7815" active="false">editor.ml</filename>
-    <filename offset="15790" active="false">editor_page.ml</filename>
-    <filename offset="4575" active="false">autocomp.ml</filename>
-    <filename offset="19484" active="false">ocaml_text.ml</filename>
-    <filename offset="10780" active="false">lexical.ml</filename>
-    <filename offset="17863" active="false">completion.ml</filename>
-    <filename offset="0" active="false">ocaml-src/parsing/longident.ml</filename>
-    <filename offset="3592" active="false">gtk_util.ml</filename>
-    <filename offset="1251" active="false">gutter.ml</filename>
-    <filename offset="2500" active="false">bookmark.ml</filename>
-    <filename offset="3834" active="true">bookmark_view.ml</filename>
-    <filename offset="788" active="false">template.ml</filename>
-    <filename offset="2109" active="false">outline.ml</filename>
+    <filename offset="39375" active="false">editor.ml</filename>
+    <filename offset="20802" active="false">editor_page.ml</filename>
+    <filename offset="4865" active="false">autocomp.ml</filename>
+    <filename offset="2227" active="false">gutter.ml</filename>
+    <filename offset="3239" active="false">bookmark_view.ml</filename>
+    <filename offset="26663" active="false">outline.ml</filename>
+    <filename offset="1242" active="false">C:\Objective Caml\devel\ocamleditor\README</filename>
+    <filename offset="50663" active="false">menu.ml</filename>
+    <filename offset="4567" active="false">bookmark.ml</filename>
+    <filename offset="4097" active="false">gtk_util.ml</filename>
+    <filename offset="11207" active="true">bconf_list.ml</filename>
+    <filename offset="7036" active="false">icons.ml</filename>
   </open_files>
   <runtime>
     <configuration>

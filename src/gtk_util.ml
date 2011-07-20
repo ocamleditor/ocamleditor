@@ -100,7 +100,7 @@ let window widget ~parent ?(destroy_child=true) ~x ~y () =
   in
   let ebox = GBin.event_box ~packing:window#add () in
   ebox#add widget;
-  let color = Color.set_value 0.80 (`NAME !Preferences.preferences.Preferences.pref_bg_color_popup) in
+  let color = Color.set_value 0.62 (`NAME !Preferences.preferences.Preferences.pref_bg_color_popup) in
   let _ = window#misc#modify_bg [`NORMAL, color] in
   let _ = ebox#misc#modify_bg [`NORMAL, `NAME !Preferences.preferences.Preferences.pref_bg_color_popup] in
   ignore (window#event#connect#after#focus_out ~callback:begin fun _ ->

@@ -179,11 +179,11 @@ object (self)
                   model#set ~row ~column:col_kind (Some `Error);
                   tooltips <- ((model#get_row_reference (model#get_path row)), msg) :: tooltips;
                   Some row*)
-                | `Bookmark num ->
+                (*| `Bookmark num ->
                   let row = model#prepend () in
                   model#set ~row ~column:col_name (string_of_int num);
                   model#set ~row ~column:col_kind (Some (`Bookmark (List.assoc num Bookmark.icons)));
-                  Some row
+                  Some row*)
                 | _ -> None
             in
             match row with

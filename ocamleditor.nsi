@@ -17,7 +17,7 @@
 ;  along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 Name "OCamlEditor"
-OutFile "ocamleditor-1.6.1-setup.exe"
+OutFile "ocamleditor-1.6.2-setup.exe"
 InstallDir $PROGRAMFILES\OCamlEditor
 
 ; Registry key to check for directory (so if you install again, it will 

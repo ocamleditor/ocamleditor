@@ -45,6 +45,7 @@ object (self)
   method view = view
 
   method set_bookmarks bookmarks =
+    model#clear();
     List.iter begin fun bm ->
       let row = model#append () in
       model#set ~row ~column:col_bm bm;

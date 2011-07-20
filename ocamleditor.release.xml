@@ -6,7 +6,7 @@
   <name>ocamleditor</name>
   <author>Francesco Tovagliari</author>
   <description/>
-  <version>1.6.1</version>
+  <version>1.6.2</version>
   <autocomp enabled="true" delay="1." cflags=""/>
   <open_files>
     <filename offset="0" active="true">../NEWS</filename>

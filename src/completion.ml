@@ -311,7 +311,7 @@ class popup ?modlid ~on_row_activated ~on_type ~on_search ~possibilities
   let _ = listview#misc#modify_base [`NORMAL, `NAME !Preferences.preferences.Preferences.pref_bg_color_popup] in
   let _ = listview#misc#modify_font_by_name !Preferences.preferences.Preferences.pref_compl_font in
   let _ = listview#misc#modify_text [`NORMAL, `NAME !Preferences.preferences.Preferences.pref_fg_color_popup ] in
-  let color = Color.set_value 0.80 (`NAME !Preferences.preferences.Preferences.pref_bg_color_popup) in
+  let color = Color.set_value 0.62 (`NAME !Preferences.preferences.Preferences.pref_bg_color_popup) in
   let _ = w#misc#modify_bg [`NORMAL, color] in
   object (self)
     inherit GObj.widget w#as_widget as super

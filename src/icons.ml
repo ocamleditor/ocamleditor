@@ -76,6 +76,7 @@ let find_16 = GdkPixbuf.from_file (Oe_config.ocamleditor_pixmaps // "find_16.png
 let folder_error = GdkPixbuf.from_file (Oe_config.ocamleditor_pixmaps // "folder_error.png")
 let folder_warning = GdkPixbuf.from_file (Oe_config.ocamleditor_pixmaps // "folder_warning.png")
 let func = GdkPixbuf.from_file (Oe_config.ocamleditor_pixmaps // "func.png")
+let library = GdkPixbuf.from_file (Oe_config.ocamleditor_pixmaps // "library.png")
 let lines_in_14 = GdkPixbuf.from_file (Oe_config.ocamleditor_pixmaps // "lines_in_14.png")
 let lines_out_14 = GdkPixbuf.from_file (Oe_config.ocamleditor_pixmaps // "lines_out_14.png")
 let load_proj = GdkPixbuf.from_file (Oe_config.ocamleditor_pixmaps // "load_proj.png")
