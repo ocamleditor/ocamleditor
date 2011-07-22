@@ -70,36 +70,51 @@ object (self)
     end;
 
   method private connect_selection_changed () =
-    ignore (view#selection#connect#after#changed ~callback:begin fun () ->
-      try
-        (try swr#remove swr#child with Gpointer.Null -> ());
-        let path = List.hd view#selection#get_selected_rows in
-        let row = model#get_iter path in
-        let bookmark = model#get ~row ~column:col_bm in
-        begin
-          match model#get ~row ~column:col_view with
-            | Some text_view ->
-              self#bookmark_goto ~bookmark ~view:text_view;
+    ignore (view#selection#connect#after#changed ~callback:self#show);
+    ignore (view#connect#after#row_activated ~callback:begin fun _ _ ->
+      self#show()
+    end)
+
+  method private show () =
+    let remove_child () = try swr#remove swr#child with Gpointer.Null -> () in
+    try
+      let path = List.hd view#selection#get_selected_rows in
+      let row = model#get_iter path in
+      let bookmark = model#get ~row ~column:col_bm in
+      begin
+        match model#get ~row ~column:col_view with
+          | Some text_view ->
+            if swr#children = [] || swr#child#get_oid <> text_view#misc#get_oid then begin
+              remove_child();
               swr#add text_view#coerce
-            | _ ->
-              let filename = bookmark.Bookmark.filename in
-              begin
-                match editor#get_page (Editor_types.File (File.create filename ())) with
-                  | Some page ->
-                    let text_view = new Ocaml_text.view ~project:page#project ~buffer:page#buffer () in
-                    text_view#set_editable false;
-                    text_view#set_cursor_visible false;
-                    Preferences_apply.apply (text_view :> Text.view) !Preferences.preferences;
-
-                    self#bookmark_goto ~bookmark ~view:text_view;
-
-                    model#set ~row ~column:col_view (Some text_view);
-                    swr#add text_view#coerce;
-                  | _ -> ()
-              end;
-        end;
-      with Failure "hd" -> ()
-    end);
+            end;
+            self#bookmark_goto ~bookmark ~view:text_view;
+          | _ ->
+            let filename = bookmark.Bookmark.filename in
+            begin
+              remove_child();
+              let pagefile = Editor_types.File (File.create filename ()) in
+              match editor#get_page pagefile with
+                | Some page ->
+                  if not page#load_complete then (ignore (editor#load_page ?scroll:(Some false) page));
+                  let text_view = new Ocaml_text.view ~project:page#project ~buffer:page#buffer () in
+                  text_view#set_editable false;
+                  text_view#set_cursor_visible false;
+                  Preferences_apply.apply (text_view :> Text.view) !Preferences.preferences;
+                  self#bookmark_goto ~bookmark ~view:text_view;
+                  model#set ~row ~column:col_view (Some text_view);
+                  swr#add text_view#coerce;
+                | _ ->
+                  editor#open_file ~active:false ~offset:0 filename;
+                  self#show();
+                  begin
+                    match editor#get_page pagefile with
+                      | None -> assert false
+                      | Some page -> editor#close page
+                  end;
+            end;
+      end;
+    with Failure "hd" -> (remove_child());
 
   method private set_cell_data_func () =
     vc#set_cell_data_func renderer begin fun model row ->
