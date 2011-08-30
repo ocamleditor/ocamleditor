@@ -47,7 +47,7 @@ let apply (view : Text.view) pref =
   if pref.Preferences.pref_highlight_current_line then begin
     view#set_highlight_current_line
       (Some (match (List.assoc "highlight_current_line" pref.Preferences.pref_tags)
-        with ((`NAME c), _, _, _) -> c | _ -> assert false));
+        with ((`NAME c), _, _, _, _) -> c | _ -> assert false));
   end else (view#set_highlight_current_line None);
   view#tbuffer#set_tab_width pref.Preferences.pref_editor_tab_width;
   view#tbuffer#set_tab_spaces pref.Preferences.pref_editor_tab_spaces;

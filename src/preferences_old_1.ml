@@ -28,7 +28,7 @@ type t = {
   mutable pref_tags : (string * text_properties) list
 }
 
-and text_properties = GDraw.color * Pango.Tags.weight * Pango.Tags.style * Pango.Tags.underline
+and text_properties = GDraw.color * Pango.Tags.weight * Pango.Tags.style * Pango.Tags.underline * Pango.Tags.scale
 
 let pref_filename = Filename.concat Oe_config.ocamleditor_user_home "preferences"
 

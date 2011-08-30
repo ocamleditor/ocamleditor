@@ -102,7 +102,7 @@ let apply project (view : Ocaml_text.view) (templ : Templates.t) =
     buffer#delete_mark (`MARK mark_end);
   in
   if buffer#lexical_enabled then begin
-    Gtk_util.idle_add begin fun () ->
+    Gmisclib.Idle.add begin fun () ->
       Lexical.tag view#buffer
         ~start:(buffer#get_iter_at_mark (`MARK mark_begin))
         ~stop:(buffer#get_iter_at_mark (`MARK mark_end));

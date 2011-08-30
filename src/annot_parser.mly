@@ -22,7 +22,7 @@
 
 %{
 open Printf
-open Annot_types
+open Oe
 %}
 
 %token <int> NUM
@@ -34,20 +34,20 @@ open Annot_types
 %token SP LF CLOSE_PAREN TYPE CALL NOPOS EOF
 
 %start file
-%type <Annot_types.block list> file
+%type <Oe.annot_block list> file
 %%
 file:
   | /* empty */                           { [] }
   | block file                            { $1 :: $2 }
 ;
 block:
-  | position SP position LF annotation    { { start = $1; stop = $3; annotations = $5 } }
+  | position SP position LF annotation    { { annot_start = $1; annot_stop = $3; annot_annotations = $5 } }
 ;
 position:
-  | FILENAME NUM NUM NUM                  { { pos_fname = $1;
-                                              pos_lnum  = $2;
-                                              pos_bol   = $3;
-                                              pos_cnum  = $4 } }
+  | FILENAME NUM NUM NUM                  { { annot_fname = $1;
+                                              annot_lnum  = $2;
+                                              annot_bol   = $3;
+                                              annot_cnum  = $4 } }
 ;
 ident:
   | EXT_REF                               { Ext_ref $1 }

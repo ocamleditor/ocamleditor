@@ -90,7 +90,7 @@ let create ?(all=true) ~(editor : Editor.editor) ~path () =
       model#set ~row ~column:col_name (Filename.basename filename);
       model#set ~row ~column:col_path (Filename.dirname filename);
       let opened, changed =
-        match editor#get_page (Editor_types.File (File.create filename ())) with
+        match editor#get_page (Oe.Page_file (File.create filename ())) with
           | None -> false, false
           | Some page -> true, page#view#buffer#modified
       in
@@ -128,7 +128,7 @@ let create ?(all=true) ~(editor : Editor.editor) ~path () =
       let path = model#get ~row ~column:col_path in
       let name = model#get ~row ~column:col_name in
       editor#open_file ~active:true ~offset:0 (Filename.concat path name);
-      Gaux.may (editor#get_page Editor_types.Current) ~f:editor#dialog_confirm_close;
+      Gaux.may (editor#get_page Oe.Page_current) ~f:editor#dialog_confirm_close;
     end view#selection#get_selected_rows;
     find entry#text
   end;
@@ -167,10 +167,16 @@ let create ?(all=true) ~(editor : Editor.editor) ~path () =
       false
     end
   end;
-  entry#connect#changed ~callback:begin fun () ->
-    let filter = (Str.global_replace (!~ "*") "[-+ 'a-zA-Z!^%&$()@#;,_0-9]*" entry#text) in
-    find filter;
-  end;
+  let last = ref "" in
+  let id = GMain.Timeout.add ~ms:500 ~callback:begin fun () ->
+    if entry#text <> !last then begin
+      let filter = (Str.global_replace (!~ "*") "[-+ 'a-zA-Z!^%&$()@#;,_0-9]*" entry#text) in
+      find filter;
+      last := entry#text;
+    end;
+    true
+  end in
+  window#connect#destroy ~callback:(fun _ -> GMain.Timeout.remove id);
   (*find "";*)
   view#set_search_column 1;
   entry#misc#grab_focus();

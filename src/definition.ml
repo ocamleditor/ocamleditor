@@ -22,12 +22,12 @@
 
 open Printf
 open Annotation
-open Annot_types
 open Miscellanea
+open Oe
 
 type references = {
   ref_def : ref_pos;
-  ref_def_scope : (position * position option) option;
+  ref_def_scope : (annot_position * annot_position option) option;
   ref_int : ref_pos list;
   ref_ext : (string * ref_pos list) list; (* filename * ... *)
 }
@@ -37,16 +37,16 @@ and ref_pos = string * (int * int) * (int * int)
 (** find_def *)
 let find_def ~annot ~name =
   List.fold_left begin fun acc block ->
-    match Annotation.get_def block.annotations with
+    match Annotation.get_def block.annot_annotations with
       | Some ((n, _, _) as d) when n = name -> (block, d) :: acc
       | _ -> acc
-  end [] annot.blocks;;
+  end [] annot.annot_blocks;;
 
 (** find_ext_ref *)
-let find_ext_ref ~src_path from =
+let find_ext_ref ~(project : Project.t) ~src_path from =
   let comp = match from with
     | `MATCH (def_filename, def_name) ->
-      let mod_name = String.capitalize (Filename.chop_extension (Filename.basename def_filename)) in
+      let mod_name = modname_of_path def_filename in
       let re = Str.regexp_case_fold (sprintf "%s\\.\\([A-Z][A-Za-z_0-9']*\\.\\)*%s$" (Str.quote mod_name) (Str.quote def_name)) in
       fun name -> Str.string_match re name 0
     | `EXACT fullname -> (=) fullname
@@ -57,17 +57,17 @@ let find_ext_ref ~src_path from =
   List.iter begin fun filename ->
     let current_file_refs = ref [] in
     begin
-      match find ~filename with
+      match find ~project ~filename () with
         | None -> ()
         | Some annots ->
           List.iter begin fun block ->
-            match get_ext_ref block.annotations with
+            match get_ext_ref block.annot_annotations with
               | Some ext when (comp ext) ->
                 current_file_refs := (Filename.basename filename,
-                  (block.start.pos_lnum, block.start.pos_cnum - block.start.pos_bol),
-                  (block.stop.pos_lnum, block.stop.pos_cnum - block.stop.pos_bol)) :: !current_file_refs
+                  (block.annot_start.annot_lnum, block.annot_start.annot_cnum - block.annot_start.annot_bol),
+                  (block.annot_stop.annot_lnum, block.annot_stop.annot_cnum - block.annot_stop.annot_bol)) :: !current_file_refs
               | _ -> ()
-          end annots.blocks;
+          end annots.annot_blocks;
     end;
     if !current_file_refs <> [] then
       ext_references := (filename, (List.rev !current_file_refs)) :: !ext_references;
@@ -75,32 +75,32 @@ let find_ext_ref ~src_path from =
   List.sort (fun (x, _) (y, _) -> Pervasives.compare x y) !ext_references;;
 
 (** find_references *)
-let find_references ?src_path ~filename ~offset (* offset of a definition (def) or let...in *) () =
-  match find ~filename with
+let find_references ?src_path ~(project : Project.t) ~filename ~offset (* offset of a definition (def) or let...in *) () =
+  match find ~project ~filename () with
     | None -> None
     | Some annots ->
       begin
         match find_block_at_offset' annots offset with
           | None -> None
           | Some block_def ->
-            let start_def = block_def.start.pos_cnum in
+            let start_def = block_def.annot_start.annot_cnum in
             (* Internal references *)
             let irefs = Xlist.filter_map begin fun block ->
-              match get_int_ref block.annotations with
-                | Some (n, x, _) when x.pos_cnum = start_def ->
+              match get_int_ref block.annot_annotations with
+                | Some (n, x, _) when x.annot_cnum = start_def ->
                   Some (n,
-                    (block.start.pos_lnum, block.start.pos_cnum - block.start.pos_bol),
-                    (block.stop.pos_lnum, block.stop.pos_cnum - block.stop.pos_bol))
+                    (block.annot_start.annot_lnum, block.annot_start.annot_cnum - block.annot_start.annot_bol),
+                    (block.annot_stop.annot_lnum, block.annot_stop.annot_cnum - block.annot_stop.annot_bol))
                 | _ -> None
-            end annots.blocks in
+            end annots.annot_blocks in
             (* Informations about the definition *)
             let a, b, c, d =
-              block_def.start.pos_lnum,
-              block_def.start.pos_cnum - block_def.start.pos_bol,
-              block_def.stop.pos_lnum,
-              block_def.stop.pos_cnum - block_def.stop.pos_bol
+              block_def.annot_start.annot_lnum,
+              block_def.annot_start.annot_cnum - block_def.annot_start.annot_bol,
+              block_def.annot_stop.annot_lnum,
+              block_def.annot_stop.annot_cnum - block_def.annot_stop.annot_bol
             in
-            let def_name = match Annotation.get_def block_def.annotations with
+            let def_name = match Annotation.get_def block_def.annot_annotations with
               | None -> (* let...in definition without "def" in .annot file *)
                 (try let (name, _, _) = List.hd irefs in name with Failure "hd" -> "_unused_")
               | Some (x, _, _) -> x
@@ -110,27 +110,27 @@ let find_references ?src_path ~filename ~offset (* offset of a definition (def) 
             let ext_references = match src_path with
               | None -> []
               | Some src_path ->
-                find_ext_ref ~src_path (`MATCH (filename, def_name))
+                find_ext_ref ~project ~src_path (`MATCH (filename, def_name))
             in
             (*  *)
             Some {ref_def = def; ref_def_scope = None; ref_int = irefs; ref_ext = ext_references}
       end;;
 
 (** find_definition *)
-let find_definition ~project ~page  ~(iter : GText.iter) =
+let find_definition ~(project : Project.t) ~page  ~(iter : GText.iter) =
   match page#buffer#get_annot iter with
     | None -> None
-    | Some { Annot_types.annotations = annotations; start=block_start; stop=block_stop } ->
-      let block_start = block_start.Annot_types.pos_cnum in
-      let block_stop = block_stop.Annot_types.pos_cnum in
+    | Some { annot_annotations = annot_annotations; annot_start=block_start; annot_stop=block_stop } ->
+      let block_start = block_start.annot_cnum in
+      let block_stop = block_stop.annot_cnum in
       begin
-        match Annotation.get_ref annotations with
-        | Some (Annot_types.Int_ref (_ , start, stop)) ->
+        match Annotation.get_ref annot_annotations with
+        | Some (Int_ref (_ , start, stop)) ->
           (* The block is an internal reference *)
-          let start = start.Annot_types.pos_cnum in
-          let stop = stop.Annot_types.pos_cnum in
+          let start = start.annot_cnum in
+          let stop = stop.annot_cnum in
           Some (block_start, block_stop, page#get_filename, start, stop)
-        | Some (Annot_types.Ext_ref name) ->
+        | Some (Ext_ref name) ->
           (* The block is an external reference *)
           begin
             try
@@ -144,7 +144,7 @@ let find_definition ~project ~page  ~(iter : GText.iter) =
               let nested = List.length lident > 2 in
               let ident = List.hd (List.rev lident) in
               begin
-                match Annotation.find ~filename with
+                match Annotation.find ~project ~filename () with
                   | None -> None
                   | Some annot ->
                     let defs = find_def ~annot ~name:ident in
@@ -153,19 +153,19 @@ let find_definition ~project ~page  ~(iter : GText.iter) =
                     in
                     let block, _ = def in
                     Some (block_start, block_stop, fullname,
-                      block.Annot_types.start.Annot_types.pos_cnum, block.Annot_types.stop.Annot_types.pos_cnum)
+                      block.annot_start.annot_cnum, block.annot_stop.annot_cnum)
               end
             with Not_found | Failure "hd" -> None
           end
         | _ ->
           begin (* The block where iter is placed is a definition (def) or a let...in *)
-            match Annotation.get_def annotations with
+            match Annotation.get_def annot_annotations with
               | None -> (* let...in *)
                 let offset = Glib.Utf8.offset_to_pos
                   (page#view#buffer#get_text ?start:None ?stop:None ?slice:None ?visible:None ()) ~pos:0 ~off:iter#offset
                 in
                 begin
-                 match find_references ~filename:page#get_filename ~offset () with
+                 match find_references ~project ~filename:page#get_filename ~offset () with
                    | Some references when references.ref_int <> [] ->
                      Some (block_start, block_stop, page#get_filename, block_start, block_stop)
                    | _ -> None
@@ -174,7 +174,6 @@ let find_definition ~project ~page  ~(iter : GText.iter) =
                 Some (block_start, block_stop, page#get_filename, block_start, block_stop)
           end
       end;;
-
 
 
 

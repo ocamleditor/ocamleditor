@@ -71,8 +71,11 @@ class page ?file ~project ~offset ~editor () =
   let status_size = GMisc.label ~xalign:0.5 ~packing:sbox#pack ~width:80 () in
   let _ = GMisc.separator `VERTICAL ~packing:sbox#pack () in
   let status_mtime = GMisc.label ~xalign:0.5 ~packing:sbox#pack ~width:120 () in
+  let _ = GMisc.separator `VERTICAL ~packing:sbox#pack () in
+  let spinner = GMisc.image ~width:15 ~packing:sbox#pack () in
+  let _ = GMisc.separator `VERTICAL ~packing:sbox#pack () in
   (** Navigation buttons in the statusbar *)
-  let first_sep = GMisc.separator `VERTICAL ~packing:sobox#pack () in
+  (*let first_sep = GMisc.separator `VERTICAL ~packing:sobox#pack () in*)
   let location_goto where =
     match where editor#location_history with
       | None -> true
@@ -80,21 +83,21 @@ class page ?file ~project ~offset ~editor () =
   in
   let button_h_prev = GBin.event_box ~packing:sobox#pack (*~show:false*) () in
   let _ = button_h_prev#misc#set_tooltip_text "Back" in
-  let _ = Gtk_util.set_ebox_invisible button_h_prev in
+  let _ = Gmisclib.Util.set_ebox_invisible button_h_prev in
   let _ = GMisc.image ~pixbuf:Icons.arrow_prev_14 ~packing:button_h_prev#add () in
   let _ = button_h_prev#event#connect#button_press ~callback:begin fun _ ->
     location_goto Location_history.previous
   end in
   let button_h_next = GBin.event_box ~packing:sobox#pack (*~show:false*) () in
   let _ = button_h_next#misc#set_tooltip_text "Forward" in
-  let _ = Gtk_util.set_ebox_invisible button_h_next in
+  let _ = Gmisclib.Util.set_ebox_invisible button_h_next in
   let _ = GMisc.image ~pixbuf:Icons.arrow_next_14 ~packing:button_h_next#add () in
   let _ = button_h_next#event#connect#button_press ~callback:begin fun _ ->
     location_goto Location_history.next
   end in
   let button_h_last = GBin.event_box ~packing:sobox#pack (*~show:false*) () in
   let _ = button_h_last#misc#set_tooltip_text "Last Edit Location" in
-  let _ = Gtk_util.set_ebox_invisible button_h_last in
+  let _ = Gmisclib.Util.set_ebox_invisible button_h_last in
   let _ = GMisc.image ~pixbuf:Icons.arrow_last_14 ~packing:button_h_last#add () in
   let _ = button_h_last#event#connect#button_press ~callback:begin fun _ ->
     location_goto Location_history.goto_last_edit_location
@@ -102,16 +105,16 @@ class page ?file ~project ~offset ~editor () =
   let _ = GMisc.separator `VERTICAL ~packing:sobox#pack () in
   (** Icons for font size and row spacing adjustment *)
   let button_font_incr = GBin.event_box ~packing:sobox#pack () in
-  let _ = Gtk_util.set_ebox_invisible button_font_incr in
+  let _ = Gmisclib.Util.set_ebox_invisible button_font_incr in
   let _ = GMisc.image ~pixbuf:Icons.zoom_in_14 ~packing:button_font_incr#add () in
   let button_font_decr = GBin.event_box ~packing:sobox#pack () in
-  let _ = Gtk_util.set_ebox_invisible button_font_decr in
+  let _ = Gmisclib.Util.set_ebox_invisible button_font_decr in
   let _ = GMisc.image ~pixbuf:Icons.zoom_out_14 ~packing:button_font_decr#add () in
   let button_rowspacing_incr = GBin.event_box ~packing:sobox#pack () in
-  let _ = Gtk_util.set_ebox_invisible button_rowspacing_incr in
+  let _ = Gmisclib.Util.set_ebox_invisible button_rowspacing_incr in
   let _ = GMisc.image ~pixbuf:Icons.lines_in_14 ~packing:button_rowspacing_incr#add () in
   let button_rowspacing_decr = GBin.event_box ~packing:sobox#pack () in
-  let _ = Gtk_util.set_ebox_invisible button_rowspacing_decr in
+  let _ = Gmisclib.Util.set_ebox_invisible button_rowspacing_decr in
   let _ = GMisc.image ~pixbuf:Icons.lines_out_14 ~packing:button_rowspacing_decr#add () in
   (** Font size *)
   let _ = button_font_incr#event#connect#button_press ~callback:begin fun ev ->
@@ -120,7 +123,7 @@ class page ?file ~project ~offset ~editor () =
     Pango.Font.modify fd ~size ();
     text_view#misc#modify_font fd;
     Line_num_labl.iter (fun lab -> lab#misc#modify_font fd) text_view#line_num_labl;
-    Gtk_util.idle_add text_view#paint_gutter;
+    Gmisclib.Idle.add text_view#paint_gutter;
     true
   end in
   let _ = button_font_decr#event#connect#button_press ~callback:begin fun ev ->
@@ -131,7 +134,7 @@ class page ?file ~project ~offset ~editor () =
       Pango.Font.modify fd ~size ();
       text_view#misc#modify_font fd;
       Line_num_labl.iter (fun lab -> lab#misc#modify_font fd) text_view#line_num_labl;
-      Gtk_util.idle_add text_view#paint_gutter
+      Gmisclib.Idle.add text_view#paint_gutter
     end;
     true;
   end in
@@ -139,13 +142,13 @@ class page ?file ~project ~offset ~editor () =
   let _ = button_rowspacing_incr#event#connect#button_press ~callback:begin fun ev ->
     text_view#set_pixels_above_lines (min 2 (text_view#pixels_above_lines + 1));
     text_view#set_pixels_below_lines (min 2 (text_view#pixels_below_lines + 1));
-    Gtk_util.idle_add text_view#paint_gutter;
+    Gmisclib.Idle.add text_view#paint_gutter;
     true
   end in
   let _ = button_rowspacing_decr#event#connect#button_press ~callback:begin fun ev ->
     text_view#set_pixels_above_lines (max 0 (text_view#pixels_above_lines - 1));
     text_view#set_pixels_below_lines (max 0 (text_view#pixels_below_lines - 1));
-    Gtk_util.idle_add text_view#paint_gutter;
+    Gmisclib.Idle.add text_view#paint_gutter;
     true;
   end in
   (** Scrollbars *)
@@ -281,7 +284,7 @@ object (self)
       self#set_file (Some (File.create file#path ()));
       self#update_statusbar();
       (*  *)
-      Gtk_util.idle_add (fun () -> self#compile_buffer ~commit:true ());
+      Gmisclib.Idle.add (fun () -> self#compile_buffer ~commit:true ());
       (* Delete existing recovery copy *)
       self#set_changed_after_last_autosave false;
       Autosave.delete ~filename:file#path ();
@@ -305,8 +308,8 @@ object (self)
     buffer#delete ~start:buffer#start_iter ~stop:buffer#end_iter;
     ignore (self#load());
     self#set_file (Some (File.create file#path ()));
-    Gtk_util.idle_add ~prio:300 (fun () -> vscrollbar#adjustment#set_value vv);
-    Gtk_util.idle_add ~prio:400 begin fun () ->
+    Gmisclib.Idle.add ~prio:300 (fun () -> vscrollbar#adjustment#set_value vv);
+    Gmisclib.Idle.add ~prio:400 begin fun () ->
       let rect = view#visible_rect in
       let where, _ = view#get_line_at_y (Gdk.Rectangle.y rect + Gdk.Rectangle.height rect / 2) in
       buffer#place_cursor ~where
@@ -351,8 +354,8 @@ object (self)
             self#view#paint_current_line_background (self#buffer#get_iter `INSERT);
             (*  *)
             self#set_code_folding_enabled editor#code_folding_enabled#get; (* calls scan_folding_points, if enabled *)
-            ignore (self#view#matching_delim ());
-            Gtk_util.idle_add ~prio:300 (fun () -> self#compile_buffer ~commit:false ());
+            self#view#matching_delim ();
+            Gmisclib.Idle.add ~prio:300 (fun () -> self#compile_buffer ~commit:false ());
             true
           with Glib.Convert.Error (_, message) -> begin
             let message = if project.Project.encoding <> Some "UTF-8" then (kprintf Convert.to_utf8
@@ -376,9 +379,8 @@ object (self)
       buffer#set_changed_after_last_autocomp 0.0;
       Autocomp.compile_buffer ~project ~editor ~page:self ~commit ();
     end else begin
-      let empty = new Outline.widget ~project ~page:self ~tmp:"" in
-      editor#pack_outline empty#coerce;
-      self#set_outline (Some empty)
+      editor#pack_outline (Outline.create_empty());
+      self#set_outline None;
     end
 
   method tooltip ?(typ=false) ((x, y) as location) =
@@ -421,10 +423,7 @@ object (self)
     text_view#event#connect#focus_out ~callback:(fun _ -> annot_type#remove_tag(); error_indication#hide_tooltip(); false);
     ignore (text_view#buffer#connect#mark_set ~callback:begin fun iter mark ->
       match GtkText.Mark.get_name mark with
-        | Some name when name = "insert" ->
-           Gaux.may outline ~f:(fun ol ->
-             Gtk_util.idle_add ~prio:500 (fun () -> ol#select ?align:None mark))
-        | Some name when Str.string_before name 5 = "delim" -> ()
+        | Some name when (name = "insert" || Str.string_before name 5 = "delim") -> ()
         | _ -> annot_type#remove_tag(); error_indication#hide_tooltip()
     end);
     (** Horizontal scrollbar appears/disappears according to the window size *)
@@ -432,23 +431,38 @@ object (self)
       let alloc = sw#misc#allocation in
       if not resized then (spaned#set_position ((alloc.Gtk.width) * 6 / 10));
       if hscrollbar#adjustment#page_size = hscrollbar#adjustment#upper
-      then (hscrollbar#misc#hide(); first_sep#misc#show()) else (hscrollbar#misc#show(); first_sep#misc#hide());
+      then (hscrollbar#misc#hide(); (*first_sep#misc#show()*)) else (hscrollbar#misc#show(); (*first_sep#misc#hide()*));
       resized <- true;
     end);
     (** Hyperlinks *)
     ignore (self#view#hyperlink#connect#hover ~callback:begin fun (bounds, iter) ->
-      editor#with_current_page begin fun page ->
-        match Definition.find_definition ~project:editor#project ~page ~iter with
-          | None -> ()
-          | Some (start, stop, _, _, _) ->
-            let start = buffer#get_iter (`OFFSET start) in
-            let stop = buffer#get_iter (`OFFSET stop) in
-            bounds := Some (start, stop)
+      if iter#inside_word then begin
+        editor#with_current_page begin fun page ->
+          match Definition.find_definition ~project:editor#project ~page ~iter with
+            | None -> ()
+            | Some (start, stop, _, _, _) ->
+              let start = buffer#get_iter (`OFFSET start) in
+              let stop = buffer#get_iter (`OFFSET stop) in
+              bounds := Some (start, stop)
+        end
       end
     end);
     ignore (self#view#hyperlink#connect#activate ~callback:begin fun iter ->
       editor#scroll_to_definition iter;
     end);
+    (** Spinner *)
+    let activate_spinner (active : Activity.t list) =
+      match active with
+        | [] ->
+          spinner#set_pixbuf Icons.none_14;
+          spinner#misc#set_tooltip_text "";
+        | msgs ->
+          let msgs = snd (List.split msgs) in
+          spinner#set_file (Oe_config.ocamleditor_pixmaps // "spinner.gif");
+          spinner#misc#set_tooltip_text (String.concat "\n" (List.rev msgs));
+    in
+    ignore (Activity.table#connect#changed ~callback:activate_spinner);
+    activate_spinner Activity.table#get;
 end
 
 

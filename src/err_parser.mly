@@ -22,7 +22,9 @@
 
 %{
 open Printf
-open Err_types
+open Oe
+let re_inconsistent_assumptions = Str.regexp
+  ".*make[ \t\r\n]+inconsistent[ \t\r\n]+assumptions[ \t\r\n]+over[ \t\r\n]+\\(interface\\|implementation\\)[ \t\r\n]+\\([^ \t\r\n]+\\)[ \t\r\n]*"
 %}
 
 %token <string * string * int * int *int> LOCATION
@@ -31,7 +33,7 @@ open Err_types
 %token <int> WARNING
 
 %start compiler_output
-%type <Err_types.message list> compiler_output
+%type <Oe.error_message list> compiler_output
 %%
 compiler_output:
   | /* empty */                           { [] }
@@ -43,7 +45,7 @@ message:
     let inconsistent_assumptions =
       match $2 with
         | Error ->
-          let is_inconsistent_assumptions = Str.string_match Err_types.re_inconsistent_assumptions message_text 0 in
+          let is_inconsistent_assumptions = Str.string_match re_inconsistent_assumptions message_text 0 in
           if is_inconsistent_assumptions then begin
             let modname = Str.matched_group 2 message_text in
             Some modname

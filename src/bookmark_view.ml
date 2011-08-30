@@ -93,7 +93,7 @@ object (self)
             let filename = bookmark.Bookmark.filename in
             begin
               remove_child();
-              let pagefile = Editor_types.File (File.create filename ()) in
+              let pagefile = Oe.Page_file (File.create filename ()) in
               match editor#get_page pagefile with
                 | Some page ->
                   if not page#load_complete then (ignore (editor#load_page ?scroll:(Some false) page));

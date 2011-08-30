@@ -21,7 +21,6 @@
 *)
 
 open Printf
-open Editor_types
 open Miscellanea
 
 type hover = Out | Mark of (int * int) | Region
@@ -51,7 +50,7 @@ class manager ~(view : Text.view) =
   let font = Gaux.may_map Oe_config.code_folding_font ~f:Gdk.Font.load_fontset in
   let code_folding_scope_color = Oe_config.code_folding_scope_color in
   let code_folding_fold_line_color = `COLOR (Preferences.tag_color "lident") in
-  let set_highlight_background tag = Gtk_util.set_tag_paragraph_background tag in
+  let set_highlight_background tag = Gmisclib.Util.set_tag_paragraph_background tag in
 object (self)
   val mutable enabled = true;
   val mutable folding_points = []
@@ -70,29 +69,29 @@ object (self)
     enabled <- x;
     if enabled then begin
       view#gutter.Gutter.fold_size <- fold_size;
-      Gtk_util.idle_add view#paint_gutter;
+      Gmisclib.Idle.add view#paint_gutter;
       self#scan_folding_points();
     end else begin
       self#expand_all();
       view#gutter.Gutter.fold_size <- 0;
       folding_points <- [];
-      Gtk_util.idle_add view#paint_gutter;
+      Gmisclib.Idle.add view#paint_gutter;
     end;
 
   method scan_folding_points () =
     if enabled then begin
-      Gtk_util.idle_add ~prio:300 begin fun () ->
+      Gmisclib.Idle.add ~prio:300 begin fun () ->
         if not explicit then begin
-          (*Prf.crono Prf.prf_scan_folding_points begin fun () ->*)
+          Prf.crono Prf.prf_scan_folding_points begin fun () ->
             let text = buffer#get_text () in
             folding_points <- Delimiters.scan_folding_points text;
             let comments = match Comments.scan_utf8 text with Comments.Utf8 x -> x | _ -> assert false in
             let comments = List.map (fun (a, b, _, _) ->
-              (a, Convert.offset_from_pos text ~pos:b)) comments
+              (Convert.offset_from_pos text ~pos:a, Convert.offset_from_pos text ~pos:b)) comments
             in
             folding_points <- List.sort (fun (a, _) (b, _) -> Pervasives.compare a b) (folding_points @ comments);
             changed_after_last_draw_markers <- true;
-          (*end ()*)
+          end ()
         end;
       end
     end
@@ -291,7 +290,7 @@ object (self)
             buffer#apply_tag tag_hidden ~start ~stop;
             table_tag_hidden <- (m1, (m2, tag_hidden, stop#line - start#line - 1)) :: table_tag_hidden;
             table_tag_readonly <- (m1, (m2, tag_readonly, 1)) :: table_tag_readonly;
-            Gtk_util.idle_add view#paint_gutter;
+            Gmisclib.Idle.add view#paint_gutter;
             Gaux.may view#signal_expose ~f:(fun id -> view#misc#handler_unblock id);
           | Some (m1, (m2, tag, _)) ->
             self#range ~fold:true start stop;
@@ -300,7 +299,7 @@ object (self)
             let sections = List.rev (split_length n) in
             Gaux.may view#signal_expose ~f:(fun id -> view#misc#handler_block id);
             Gaux.may signal_expose ~f:(fun id -> view#misc#handler_block id);
-            ignore (Gtk_util.idle_add_gen begin let i = ref (List.length sections - 1) in fun () ->
+            ignore (Gmisclib.Idle.add_gen begin let i = ref (List.length sections - 1) in fun () ->
               try
                 if !i > 0 && !iter#compare stop < 0 then begin
                   let lines = max 3 (List.nth sections !i) in
@@ -316,7 +315,7 @@ object (self)
                         buffer#remove_tag tag_ro ~start:start_of_line_folding_point ~stop;
                       | _ -> assert false
                   end;
-                  Gtk_util.idle_add view#paint_gutter;
+                  Gmisclib.Idle.add view#paint_gutter;
                   Gaux.may view#signal_expose ~f:(fun id -> view#misc#handler_unblock id);
                   Gaux.may signal_expose ~f:(fun id -> view#misc#handler_unblock id);
                   false
@@ -364,7 +363,7 @@ object (self)
       self#range ~fold:true start stop;
       table_tag_hidden <- List.remove_assq m1 table_tag_hidden;
     end tags;
-    if List.length tags > 0 then (Gtk_util.idle_add view#paint_gutter);
+    if List.length tags > 0 then (Gmisclib.Idle.add view#paint_gutter);
 
   method expand_all () =
     List.iter begin fun (m1, (m2, tag, _)) ->
@@ -375,7 +374,7 @@ object (self)
       buffer#delete_mark m2;
     end table_tag_hidden;
     table_tag_hidden <- [];
-    Gtk_util.idle_add view#paint_gutter
+    Gmisclib.Idle.add view#paint_gutter
 
   method private highlight x y =
     match view#get_window `LEFT with
@@ -383,7 +382,7 @@ object (self)
         begin
           match self#is_hover x y with
             | Mark (o1, o2) ->
-              Gdk.Window.set_cursor window (!Gtk_util.cursor `HAND1);
+              Gdk.Window.set_cursor window (Gdk.Cursor.create `HAND1);
               if not tag_highlight_busy && not tag_highlight_applied then begin
                 set_highlight_background tag_highlight Oe_config.code_folding_highlight_color;
                 let start = buffer#get_iter (`OFFSET o1) in
@@ -392,7 +391,7 @@ object (self)
                 tag_highlight_applied <- true;
               end;
             | _ ->
-              Gdk.Window.set_cursor window (!Gtk_util.cursor `ARROW);
+              Gdk.Window.set_cursor window (Gdk.Cursor.create `ARROW);
               if tag_highlight_applied && not tag_highlight_busy then begin
                 tag_highlight_busy <- true;
                 let grad = Oe_config.code_folding_hightlight_gradient in

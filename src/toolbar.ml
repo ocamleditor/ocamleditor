@@ -24,6 +24,8 @@ open Printf
 open GUtil
 open Miscellanea
 
+module Menu_tool_button = Gmisclib.Toolbar.Menu_tool_button
+
 class ['a] toolbar ~(messages : Messages.messages) ~(editor : Editor.editor) () =
   let tool_messages_clicked    = new tool_messages_clicked () in
   let toolbar                  = GButton.toolbar ~style:`ICONS () in
@@ -135,7 +137,7 @@ object (self)
     ignore (tool_new_file#connect#clicked ~callback:browser#dialog_file_new);
     ignore (tool_open_file#connect#clicked ~callback:editor#dialog_file_open);
     ignore (tool_save#connect#clicked ~callback:begin fun () ->
-      Gaux.may ~f:editor#save (editor#get_page Editor_types.Current)
+      Gaux.may ~f:editor#save (editor#get_page Oe.Page_current)
     end);
     ignore (tool_save_all#connect#clicked ~callback:browser#save_all);
     ignore (tool_save_all#connect#popup ~callback:begin fun (label, menu) ->
@@ -169,7 +171,7 @@ object (self)
     (** Messages, eval, compile file *)
     ignore (self#connect#tool_messages_clicked ~callback:(fun _ -> ((browser#set_messages_visible (not messages#visible)) : unit)));
     ignore (tool_eval#connect#clicked ~callback:begin fun () ->
-      Gaux.may ~f:(fun p -> p#ocaml_view#obuffer#send_to_shell ()) (editor#get_page Editor_types.Current)
+      Gaux.may ~f:(fun p -> p#ocaml_view#obuffer#send_to_shell ()) (editor#get_page Oe.Page_current)
     end);
     ignore (tool_compile_file#connect#clicked ~callback:begin fun () ->
       editor#with_current_page (fun p -> p#compile_buffer ~commit:false ())
@@ -264,7 +266,7 @@ object (self)
   method update current_project =
     let dbf = match current_project with None -> None | Some x -> Project.default_build_config x in
     let editor_empty = List.length editor#pages = 0 in
-    let current_modified = match editor#get_page Editor_types.Current
+    let current_modified = match editor#get_page Oe.Page_current
       with Some p when p#buffer#modified -> true | _ -> false in
     tool_messages#misc#set_sensitive true;
     tool_new_file#misc#set_sensitive (current_project <> None);

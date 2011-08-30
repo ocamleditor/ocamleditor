@@ -75,6 +75,7 @@ object (self)
   val mutable tooltips = []
   val mutable current_model : GTree.tree_store option = None
   val mutable signal_selection_changed = None
+  val mutable current_dump_size = 0
 
   initializer
     self#parse ();
@@ -84,7 +85,9 @@ object (self)
         let path = List.hd view#selection#get_selected_rows in
         let rr, (mark, callback) = List.find (fun (rr, _) -> rr#path = path) locations in
         let where = buffer#get_iter_at_mark (`MARK mark) in
-        page#view#scroll_lazy where;
+        Gmisclib.Idle.add ~prio:300 (fun () ->
+          ignore ((page#view :> GText.view)#scroll_to_iter ~use_align:true ~xalign:1.0 ~yalign:0.38 where));
+        (*page#view#scroll_lazy where;*)
         buffer#place_cursor ~where;
         begin
           match current_model with
@@ -110,8 +113,11 @@ object (self)
               begin
                 match view#get_path_at_pos ~x ~y with
                   | Some (tpath, vc, _, _) ->
-                    let _, markup = List.find (fun (rr, _) -> rr#path = path) tooltips in
-                    GtkBase.Tooltip.set_markup tooltip markup;
+                    let _, typ = List.find (fun (rr, _) -> rr#path = path) tooltips in
+                    let markup = Print_type.markup2 typ in
+                    (*GtkBase.Tooltip.set_markup tooltip markup;*)
+                    let label = GMisc.label ~markup () in
+                    GtkBase.Tooltip.set_custom tooltip label#as_widget;
                     GtkTree.TreeView.Tooltip.set_row view#as_tree_view tooltip tpath;
                     true
                   | _ -> false
@@ -149,7 +155,7 @@ object (self)
         model#set_sort_column_id id `ASCENDING;
         GtkBase.Widget.queue_draw view#as_widget;
       end
-    end)
+    end);
 
   method add_markers ~(kind : [`Warning | `Error | `All]) () =
     if true then begin (* disabled *)
@@ -216,19 +222,21 @@ object (self)
           Gaux.may signal_selection_changed ~f:view#selection#misc#handler_block;
           try
             let iter = buffer#get_iter_at_mark (`MARK mark) in
-            let rr, _ = List.find begin fun (rr, (m, _)) ->
-              if rr#valid then begin
-                let it = buffer#get_iter_at_mark (`MARK m) in
-                let kind = model#get ~row:rr#iter ~column:col_kind in
-                not (List.mem kind [Some `Warning; Some `Error]) && it#compare iter <= 0
-              end else false
-            end locations in
+            let rr, _ =
+              List.find begin fun (rr, (m, _)) ->
+                if rr#valid then begin
+                  let it = buffer#get_iter_at_mark (`MARK m) in
+                  (*let kind = model#get ~row:rr#iter ~column:col_kind in
+                  not (List.mem kind [Some `Warning; Some `Error]) &&*) it#compare iter <= 0
+                end else false
+              end locations
+            in
             begin
               match align with
                 | Some align ->
                   view#vadjustment#set_value (align *. view#vadjustment#upper);
                 | None when page#view#misc#get_flag `HAS_FOCUS ->
-                  if not (Gtk_util.treeview_is_path_onscreen view rr#path) then begin
+                  if not (Gmisclib.Util.treeview_is_path_onscreen view rr#path) then begin
                     view#scroll_to_cell ~align:(0.38, 0.) rr#path vc;
                   end
                 | _ -> ()
@@ -239,71 +247,68 @@ object (self)
         end;
 
   method parse () =
-    let cmd             = sprintf "%s -dump %s %s%s %s%s"
-      (Ocaml_config.ocamldoc())
-      (Quote.arg dump_filename)
-      (" -I +threads")
-      (*(if project.Project.thread then " -thread" else if project.Project.vmthread then " -vmthread" else "")*)
-      (if includes = [] then "" else (" -I " ^ (String.concat " -I " (List.map Quote.arg includes))))
-      (Quote.arg tmp (*source_filename*))
-      (if Oe_config.ocamleditor_debug then "" else Miscellanea.redirect_stderr)
-    in
-    ignore begin
-      Oebuild_util.exec ~echo:true ~join:false ~at_exit:begin fun () ->
-        try
-          let module_list = Odoc_info.load_modules dump_filename in
-          tooltips <- [];
-          List.iter (fun (_, (m, _)) -> buffer#delete_mark (`MARK m)) locations;
-          locations <- [];
-          let col_counter = ref 0 in
-          let model = GTree.tree_store cols in
-          let align = view#vadjustment#value /. view#vadjustment#upper in
-          GtkThread2.sync begin fun () ->
+    if tmp <> "" then begin
+      let cmd             = sprintf "%s -dump %s %s%s %s%s"
+        (Ocaml_config.ocamldoc())
+        (Quote.arg dump_filename)
+        (" -I +threads")
+        (*(if project.Project.thread then " -thread" else if project.Project.vmthread then " -vmthread" else "")*)
+        (if includes = [] then "" else (" -I " ^ (String.concat " -I " (List.map Quote.arg includes))))
+        (Quote.arg tmp (*source_filename*))
+        (if Oe_config.ocamleditor_debug then "" else Miscellanea.redirect_stderr)
+      in
+      let model = GTree.tree_store cols in
+      ignore begin
+        let activity_name = cmd in
+        Activity.add Activity.Outline activity_name;
+        Oebuild_util.exec ~echo:true ~join:false ~at_exit:begin fun () ->
+          try
+            let size = (Unix.stat dump_filename).Unix.st_size in
+            if current_dump_size = size then (raise Exit);
+            let module_list = Odoc_info.load_modules dump_filename in
+            current_dump_size <- size;
+            tooltips <- [];
+            let locs = locations in
+            List.iter (fun (_, (m, _)) -> Gmisclib.Idle.add ~prio:600 (fun () ->
+              (buffer#delete_mark (`MARK m)))) locs;
+            locations <- [];
+            let col_counter = ref 0 in
+            let align = view#vadjustment#value /. view#vadjustment#upper in
             ignore (model#connect#row_inserted ~callback:begin fun _ row ->
               model#set ~row ~column:col_order !col_counter;
               incr col_counter;
             end);
-          (*end ();
-          GtkThread2.sync begin fun () ->*)
-            vc#unset_cell_data_func renderer;
-            self#append ~model module_list;
+            (*vc#unset_cell_data_func renderer;*)
+            self#append ~model module_list; (* 0.5 *)
             current_model <- Some model;
-            self#add_markers ~kind:`All ();
-          (*end ();
-          GtkThread2.sync begin fun () ->*)
+            (*self#add_markers ~kind:`All ();*)
             view#set_model (Some (model :> GTree.model));
-          (*end ();
-          GtkThread2.sync begin fun () ->*)
+            (** Set cell data func (0) *)
+            vc#set_cell_data_func renderer begin fun model row ->
+              self#cell_data_func_icons ~model ~row;
+              self#cell_data_func_text ~model ~row
+            end;
+            GtkThread2.async begin fun () ->
+              (** Sort functions (0) *)
+              model#set_sort_func col_name.GTree.index (fun model i1 i2 -> self#compare self#compare_name model i1 i2);
+              model#set_sort_func col_order.GTree.index (fun model i1 i2 -> self#compare self#compare_order model i1 i2);
+            end ();
+              (** Expanded and collapsed nodes *)
+            view#expand_all ();
+            (*Gaux.may (self#find model `Dependencies) ~f:(fun iter -> view#collapse_row (model#get_path iter));
+            Gaux.may (self#find model `Folder_warnings) ~f:(fun iter -> view#collapse_row (model#get_path iter));*)
             locations <- List.sort begin fun (_, (m1, _)) (_, (m2, _)) ->
               let i1 = buffer#get_iter_at_mark (`MARK m1) in
               let i2 = buffer#get_iter_at_mark (`MARK m2) in
               (-1) * (i1#compare i2)
             end locations;
-          (*end ();
-          GtkThread2.sync begin fun () ->*)
-            (** Set cell data func *)
-            vc#set_cell_data_func renderer begin fun model row ->
-              self#cell_data_func_icons ~model ~row;
-              self#cell_data_func_text ~model ~row
-            end;
-          (*end ();
-          GtkThread2.sync begin fun () ->*)
-            (** Sort functions *)
-            model#set_sort_func col_name.GTree.index (fun model i1 i2 -> self#compare self#compare_name model i1 i2);
-            model#set_sort_func col_order.GTree.index (fun model i1 i2 -> self#compare self#compare_order model i1 i2);
-          (*end ();
-          GtkThread2.sync begin fun () ->*)
-            (** Expanded and collapsed nodes *)
-            view#expand_all ();
-            Gaux.may (self#find model `Dependencies) ~f:(fun iter -> view#collapse_row (model#get_path iter));
-            Gaux.may (self#find model `Folder_warnings) ~f:(fun iter -> view#collapse_row (model#get_path iter));
-          end ();
-          GtkThread2.sync begin fun () ->
-            self#select ~align (buffer#get_mark `INSERT)
-          end ();
-        with End_of_file -> ()
-      end cmd;
-    end;
+            Gmisclib.Idle.add ~prio:600 (fun () -> self#select ~align (buffer#get_mark `INSERT)); (* 0.5 *)
+            Gmisclib.Idle.add ~prio:600 (fun () -> if Sys.file_exists dump_filename then (Sys.remove dump_filename));
+            Activity.remove activity_name;
+          with End_of_file | Exit | Unix.Unix_error _ -> (Activity.remove activity_name)
+        end cmd;
+      end;
+    end
 
   method private compare f model i1 i2 =
       match model#get ~row:i1 ~column:col_kind with
@@ -379,19 +384,19 @@ object (self)
     in
     renderer_pixbuf#set_properties [ `VISIBLE (kind <> None); `PIXBUF pixbuf];
 
-  method private set_location ~model row loc =
+  method private set_location ~model loc rr =
     let loc_filename, loc_pos =
       match loc.Odoc_types.loc_impl with Some (a, b) -> a, b | _ -> "", 0
     in
-    let rr = model#get_row_reference (model#get_path row) in
     let mark = buffer#create_mark ?name:None ?left_gravity:None (buffer#get_iter (`OFFSET loc_pos)) in
     locations <- (rr, (mark, (fun () -> false))) :: locations;
 
-
-  method private set_tooltip ~(model : GTree.tree_store) ~row ~name ~typ =
+  method private set_tooltip ~(model : GTree.tree_store) ~row ~name ~typ ~rr =
     model#set ~row ~column:col_name name;
-    model#set ~row ~column:col_type typ;
-    tooltips <- (model#get_row_reference (model#get_path row), (Print_type.markup3 typ)) :: tooltips;
+    Gmisclib.Idle.add ~prio:600 begin fun () ->
+      model#set ~row ~column:col_type typ;
+      tooltips <- (rr, typ) :: tooltips;
+    end;
 
   method private remove_node model kind =
     match self#find model kind with
@@ -447,125 +452,144 @@ object (self)
       end;*)
       (** Types *)
       if Module.module_types modu <> [] then begin
-        let row_types = model#append ?parent () in
-        model#set ~row:row_types ~column:col_name "Types";
-        model#set ~row:row_types ~column:col_kind (Some `Type);
-        List.iter begin fun elem ->
-          let row = model#append ~parent:row_types () in
-          let name = get_relative elem.Odoc_type.ty_name in
-          self#set_location ~model row elem.Type.ty_loc;
-          let typ =
-            match elem.Odoc_type.ty_kind with
-              | Type.Type_abstract ->
-                model#set ~row ~column:col_kind (Some `Type_abstract);
-                let manifest =
-                  match elem.Type.ty_manifest with
-                  | Some typ -> string_of_type_expr typ
-                  | _ -> ""
-                in manifest
-              | Type.Type_variant constr ->
-                model#set ~row ~column:col_kind (Some `Type_variant);
-                String.concat " | "
-                  (List.map (fun vc -> vc.Type.vc_name) constr)
-              | Type.Type_record _ ->
-                model#set ~row ~column:col_kind (Some `Type_record);
-                ""
-          in
-          self#set_tooltip ~model ~row ~name ~typ;
-        end (Module.module_types modu);
+        GtkThread2.sync begin fun () ->
+          let row_types = model#append ?parent () in
+          model#set ~row:row_types ~column:col_name "Types";
+          model#set ~row:row_types ~column:col_kind (Some `Type);
+          List.iter begin fun elem ->
+            let row = model#append ~parent:row_types () in
+            let rr = model#get_row_reference (model#get_path row) in
+            let name = get_relative elem.Odoc_type.ty_name in
+            self#set_location ~model elem.Type.ty_loc rr;
+            let typ =
+              match elem.Odoc_type.ty_kind with
+                | Type.Type_abstract ->
+                  model#set ~row ~column:col_kind (Some `Type_abstract);
+                  let manifest =
+                    match elem.Type.ty_manifest with
+                    | Some typ -> string_of_type_expr typ
+                    | _ -> ""
+                  in manifest
+                | Type.Type_variant constr ->
+                  model#set ~row ~column:col_kind (Some `Type_variant);
+                  String.concat " | "
+                    (List.map (fun vc -> vc.Type.vc_name) constr)
+                | Type.Type_record fields ->
+                  model#set ~row ~column:col_kind (Some `Type_record);
+                  "{\n" ^ (String.concat ";\n"
+                    (List.map (fun fi -> sprintf "  %s: %s" fi.Type.rf_name (string_of_type_expr fi.Type.rf_type)) fields)) ^
+                  "\n}"
+            in
+            self#set_tooltip ~model ~row ~name ~typ ~rr;
+          end (Module.module_types modu);
+        end ();
       end;
       (** Elements *)
       List.iter begin fun me ->
-        let row = model#append ?parent () in
-        match me with
-          | Module.Element_module elem ->
-            self#set_location row ~model elem.Module.m_loc;
-            let name = get_relative elem.Module.m_name in
-            model#set ~row ~column:col_name name;
-            self#append ~model ~parent:row [elem];
-            model#set ~row ~column:col_kind (Some `Module)
-          | Module.Element_module_type elem ->
-            self#set_location ~model row elem.Module.mt_loc;
-            let name = get_relative elem.Module.mt_name in
-            model#set ~row ~column:col_name name;
-          | Module.Element_included_module elem ->
-            model#set ~row ~column:col_name elem.Module.im_name
-          | Module.Element_class elem ->
-            model#set ~row ~column:col_kind (Some (if elem.Class.cl_virtual then `Class_virtual else `Class));
-            let name = get_relative elem.Class.cl_name in
-            model#set ~row ~column:col_name name;
-            self#set_location ~model row elem.Class.cl_loc;
-            (** Class_structure *)
-            begin
-              match elem.Class.cl_kind with
-                | Class.Class_structure (inherited, elems) ->
-                  List.iter begin fun inher ->
-                    let row = model#append ~parent:row () in
-                    let name = get_relative inher.Class.ic_name in
-                    model#set ~row ~column:col_name name;
-                    model#set ~row ~column:col_kind (Some `Class_inherit);
-                  end inherited;
-                  List.iter begin function
-                    | Class.Class_attribute attr ->
-                      let attr_name = attr.Odoc_value.att_value.Odoc_value.val_name in
-                      if Name.father attr_name = elem.Class.cl_name then begin
-                        let row = model#append ~parent:row () in
-                        let name = Name.get_relative elem.Class.cl_name attr_name in
-                        self#set_location ~model row attr.Odoc_value.att_value.Odoc_value.val_loc;
-                        let typ = string_of_type_expr attr.Odoc_value.att_value.Odoc_value.val_type in
-                        self#set_tooltip ~model ~row ~name ~typ;
-                        model#set ~row ~column:col_kind (Some
-                          (if attr.Odoc_value.att_virtual && attr.Odoc_value.att_mutable then `Attribute_mutable_virtual
-                          else if attr.Odoc_value.att_virtual then `Attribute_virtual
-                          else if attr.Odoc_value.att_mutable then `Attribute_mutable
-                          else `Attribute))
-                      end
-                    | Class.Class_method met ->
+        GtkThread2.sync begin fun () ->
+          let row = model#append ?parent () in
+          let rr = model#get_row_reference (model#get_path row) in
+          match me with
+            | Module.Element_module elem ->
+              self#set_location ~model elem.Module.m_loc rr;
+              let name = get_relative elem.Module.m_name in
+              model#set ~row ~column:col_name name;
+              self#append ~model ~parent:row [elem];
+              model#set ~row ~column:col_kind (Some `Module)
+            | Module.Element_module_type elem ->
+              self#set_location ~model elem.Module.mt_loc rr;
+              let name = get_relative elem.Module.mt_name in
+              model#set ~row ~column:col_name name;
+            | Module.Element_included_module elem ->
+              model#set ~row ~column:col_name elem.Module.im_name
+            | Module.Element_class elem ->
+              model#set ~row ~column:col_kind (Some (if elem.Class.cl_virtual then `Class_virtual else `Class));
+              let name = get_relative elem.Class.cl_name in
+              model#set ~row ~column:col_name name;
+              self#set_location ~model elem.Class.cl_loc rr;
+              (** Class_structure *)
+              begin
+                match elem.Class.cl_kind with
+                  | Class.Class_structure (inherited, elems) ->
+                    List.iter begin fun inher ->
                       let row = model#append ~parent:row () in
-                      let name = Name.get_relative elem.Class.cl_name met.Odoc_value.met_value.Odoc_value.val_name in
-                      let name =
-                        if met.Odoc_value.met_virtual then name
-                        else if met.Odoc_value.met_private then name
-                        else name
-                      in
-                      self#set_location row ~model met.Odoc_value.met_value.Odoc_value.val_loc;
-                      let typ = string_of_type_expr met.Odoc_value.met_value.Odoc_value.val_type in
-                      self#set_tooltip ~model ~row ~name ~typ;
-                      model#set ~row ~column:col_kind (Some
-                        (if met.Odoc_value.met_private && met.Odoc_value.met_virtual then `Method_private_virtual
-                        else if met.Odoc_value.met_virtual then `Method_virtual
-                        else if met.Odoc_value.met_private then `Method_private
-                        else `Method));
-                    | Class.Class_comment text -> ()
-                  end elems;
-                | _ -> ()
-            end;
-          | Module.Element_class_type elem ->
-            self#set_location ~model row elem.Class.clt_loc;
-            let name = get_relative elem.Class.clt_name in
-            model#set ~row ~column:col_name name;
-            model#set ~row ~column:col_kind (Some `Class_type);
-          | Module.Element_value elem ->
-            let name = get_relative elem.Value.val_name in
-            let typ = string_of_type_expr elem.Odoc_value.val_type in
-            self#set_tooltip ~model ~row ~name ~typ;
-            self#set_location ~model row elem.Value.val_loc;
-            model#set ~row ~column:col_kind (Some (if Value.is_function elem then `Function else `Simple));
-          | Module.Element_exception elem ->
-            self#set_location ~model row elem.Exception.ex_loc;
-            let name = get_relative elem.Exception.ex_name in
-            model#set ~row ~column:col_name name;
-            model#set ~row ~column:col_kind (Some `Exception)
-          | Module.Element_type elem ->
-            ignore (model#remove row);
-            (*self#set_location row elem.Type.ty_loc;
-            model#set ~row ~column elem.Type.ty_name*)
-          | Module.Element_module_comment elem ->
-            ignore (model#remove row);
-            (*let first = first_sentence_of_text elem in
-            model#set ~row ~column:col_name (string_of_text first)*)
+                      let name = get_relative inher.Class.ic_name in
+                      model#set ~row ~column:col_name name;
+                      model#set ~row ~column:col_kind (Some `Class_inherit);
+                    end inherited;
+                    List.iter begin function
+                      | Class.Class_attribute attr ->
+                        let attr_name = attr.Odoc_value.att_value.Odoc_value.val_name in
+                        if Name.father attr_name = elem.Class.cl_name then begin
+                          let row = model#append ~parent:row () in
+                          let rr = model#get_row_reference (model#get_path row) in
+                          let name = Name.get_relative elem.Class.cl_name attr_name in
+                          self#set_location ~model attr.Odoc_value.att_value.Odoc_value.val_loc rr;
+                          let typ = string_of_type_expr attr.Odoc_value.att_value.Odoc_value.val_type in
+                          self#set_tooltip ~model ~row ~name ~typ ~rr;
+                          model#set ~row ~column:col_kind (Some
+                            (if attr.Odoc_value.att_virtual && attr.Odoc_value.att_mutable then `Attribute_mutable_virtual
+                            else if attr.Odoc_value.att_virtual then `Attribute_virtual
+                            else if attr.Odoc_value.att_mutable then `Attribute_mutable
+                            else `Attribute))
+                        end
+                      | Class.Class_method met ->
+                        let row = model#append ~parent:row () in
+                        let rr = model#get_row_reference (model#get_path row) in
+                        let name = Name.get_relative elem.Class.cl_name met.Odoc_value.met_value.Odoc_value.val_name in
+                        let name =
+                          if met.Odoc_value.met_virtual then name
+                          else if met.Odoc_value.met_private then name
+                          else name
+                        in
+                        self#set_location ~model met.Odoc_value.met_value.Odoc_value.val_loc rr;
+                        let typ = string_of_type_expr met.Odoc_value.met_value.Odoc_value.val_type in
+                        self#set_tooltip ~model ~row ~name ~typ ~rr;
+                        model#set ~row ~column:col_kind (Some
+                          (if met.Odoc_value.met_private && met.Odoc_value.met_virtual then `Method_private_virtual
+                          else if met.Odoc_value.met_virtual then `Method_virtual
+                          else if met.Odoc_value.met_private then `Method_private
+                          else `Method));
+                      | Class.Class_comment text -> ()
+                    end elems;
+                  | _ -> ()
+              end;
+            | Module.Element_class_type elem ->
+              self#set_location ~model elem.Class.clt_loc rr;
+              let name = get_relative elem.Class.clt_name in
+              model#set ~row ~column:col_name name;
+              model#set ~row ~column:col_kind (Some `Class_type);
+            | Module.Element_value elem ->
+              let name = get_relative elem.Value.val_name in
+              let typ = string_of_type_expr elem.Odoc_value.val_type in
+              self#set_tooltip ~model ~row ~name ~typ ~rr;
+              self#set_location ~model elem.Value.val_loc rr;
+              model#set ~row ~column:col_kind (Some (if Value.is_function elem then `Function else `Simple));
+            | Module.Element_exception elem ->
+              self#set_location ~model elem.Exception.ex_loc rr;
+              let name = get_relative elem.Exception.ex_name in
+              model#set ~row ~column:col_name name;
+              model#set ~row ~column:col_kind (Some `Exception)
+            | Module.Element_type elem ->
+              ignore (model#remove row);
+              (*self#set_location row elem.Type.ty_loc;
+              model#set ~row ~column elem.Type.ty_name*)
+            | Module.Element_module_comment elem ->
+              ignore (model#remove row);
+              (*let first = first_sentence_of_text elem in
+              model#set ~row ~column:col_name (string_of_text first)*)
+        end ()
       end (Module.module_elements modu);
     end module_list;
 
 
 end
+
+(** create_empty *)
+let create_empty () =
+  let vp = GBin.viewport () in
+  let _ = GMisc.label ~xalign:0.5 ~yalign:0. ~xpad:3 ~ypad:3
+    ~text:"Automatic compilation disabled" ~packing:vp#add () in
+  vp#misc#modify_bg [`NORMAL, `NAME "#ffffff"];
+  vp#coerce
+

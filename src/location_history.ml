@@ -58,7 +58,7 @@ let string_of_location loc =
             (*assert false*)
             label name
           | Some buffer ->
-            let iter = Gtk_util.get_iter_at_mark_safe buffer mark in
+            let iter = Gmisclib.Util.get_iter_at_mark_safe buffer mark in
             kprintf label "%d : %d" (GtkText.Iter.get_line iter + 1) (GtkText.Iter.get_line_offset iter)
       end
 

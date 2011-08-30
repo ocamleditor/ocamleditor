@@ -161,6 +161,7 @@ object (self)
           ignore (view#scroll_to_mark `INSERT);
         end;
         self#set_working false;
+        Activity.remove task.Task.name;
       end ()
     in
     if task_kind = `COMPILE && Oe_config.save_all_before_compiling then (editor#save_all());
@@ -179,6 +180,7 @@ object (self)
       button_run#misc#set_sensitive false;
       button_stop#misc#set_sensitive true;
       self#set_working true;
+      Activity.add Activity.Task task.Task.name;
       Mutex.lock m_write;
       signal_enabled <- false;
       self#clear();
@@ -315,7 +317,7 @@ object (self)
           let parent = project.Project.root // Project.src in
           let filename = List.fold_left (fun acc x -> acc // x) parent (Miscellanea.filename_split basename) in
           editor#open_file ~active:true ~offset:0 filename;
-          match editor#get_page (Editor_types.File (File.create filename ())) with
+          match editor#get_page (Oe.Page_file (File.create filename ())) with
             | None -> false
             | Some page ->
               editor#goto_view page#view;
@@ -351,7 +353,7 @@ object (self)
           let start = iter#backward_to_tag_toggle (Some t) in
           let stop = iter#forward_to_tag_toggle (Some t) in
           t#set_properties [`UNDERLINE `LOW];
-          Gaux.may (view#get_window `TEXT) ~f:(fun w -> Gdk.Window.set_cursor w (!Gtk_util.cursor `HAND1));
+          Gaux.may (view#get_window `TEXT) ~f:(fun w -> Gdk.Window.set_cursor w (Gdk.Cursor.create `HAND1));
         with Not_found -> () (* The cursor is not inside a tag_location *)
       end iter#tags;
       false

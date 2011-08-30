@@ -43,7 +43,7 @@ class error_indication (view : Ocaml_text.view) vscrollbar (global_gutter, globa
   in
   let tag_error, tag_warning, tag_warning_unused = create_tags () in
   let is_warning_unused = function
-    | Err_types.Warning 20 | Err_types.Warning 26 | Err_types.Warning 27 -> true
+    | Oe.Warning 20 | Oe.Warning 26 | Oe.Warning 27 -> true
     | _ -> false
   in
 object (self)
@@ -87,9 +87,9 @@ object (self)
     tag_warning_unused <- tg_warning_unused
 
   method tag_of_error error =
-    match error.Err_types.er_level with
-      | Err_types.Error -> tag_error
-      | Err_types.Warning 20 | Err_types.Warning 26 | Err_types.Warning 27 -> tag_warning_unused
+    match error.Oe.er_level with
+      | Oe.Error -> tag_error
+      | Oe.Warning 20 | Oe.Warning 26 | Oe.Warning 27 -> tag_warning_unused
       | _ -> tag_warning
 
   method set_flag_tooltip x = flag_tooltip <- x
@@ -109,16 +109,16 @@ object (self)
   method private callback_gutter_marker mark =
     let iter = buffer#get_iter_at_mark (`MARK mark) in
     buffer#place_cursor iter;
-    Gtk_util.idle_add ~prio:300 (fun () -> self#tooltip ~sticky:true ~need_focus:false (`ITER iter));
+    Gmisclib.Idle.add ~prio:300 (fun () -> self#tooltip ~sticky:true ~need_focus:false (`ITER iter));
     true;
 
   method private do_apply_tag messages kind =
     (*Prf.crono Prf.prf_error_indication_appy_tag begin fun () ->*)
       let tview = (view :> Text.view) in
-      let messages = List.sort (fun e1 e2 -> Pervasives.compare e1.Err_types.er_line e2.Err_types.er_line) messages in
+      let messages = List.sort (fun e1 e2 -> Pervasives.compare e1.Oe.er_line e2.Oe.er_line) messages in
       List.map begin fun error ->
-        let line = error.Err_types.er_line - 1 in
-        let c1, c2 = error.Err_types.er_characters in
+        let line = error.Oe.er_line - 1 in
+        let c1, c2 = error.Oe.er_characters in
         let iter = buffer#get_iter (`LINE line) in
         let text = iter#get_text buffer#end_iter in
         let c1x = Convert.offset_to_pos text ~pos:0 ~off:c1 in
@@ -130,8 +130,8 @@ object (self)
         if flag_gutter then begin
           let kind, pixbuf =
             match kind with
-              | `Warning -> `Warning error.Err_types.er_message, Icons.warning_14
-              | `Error -> `Error error.Err_types.er_message, Icons.error_16
+              | `Warning -> `Warning error.Oe.er_message, Icons.warning_14
+              | `Error -> `Error error.Oe.er_message, Icons.error_16
               | _ -> assert false
           in
           let marker = Gutter.create_marker ~kind
@@ -145,12 +145,12 @@ object (self)
     (*end ()*)
 
   method apply_tag messages =
-    Gtk_util.idle_add begin fun () ->
+    Gmisclib.Idle.add begin fun () ->
       if enabled then begin
         let tview = (view :> Text.view) in
         self#remove_tag();
-        let errors = messages.Err_types.er_errors in
-        let warnings = messages.Err_types.er_warnings in
+        let errors = messages.Oe.er_errors in
+        let warnings = messages.Oe.er_warnings in
         tag_error_bounds <- self#do_apply_tag errors `Error;
         tag_warning_bounds <- self#do_apply_tag warnings `Warning;
         has_errors#set (tag_error_bounds <> []);
@@ -239,9 +239,9 @@ object (self)
               let ebox = GBin.event_box ~packing:popup#add () in
               ebox#misc#modify_bg [`NORMAL, bg_color];
               let error_message = Glib.Convert.convert_with_fallback ~fallback:"?"
-                ~from_codeset:Oe_config.ocaml_codeset ~to_codeset:"utf8" error.Err_types.er_message
+                ~from_codeset:Oe_config.ocaml_codeset ~to_codeset:"utf8" error.Oe.er_message
               in
-              let markup = (*(error.Err_types.er_location) ^*)
+              let markup = (*(error.Oe.er_location) ^*)
                 (Print_type.markup3 error_message) in
               let label = GMisc.label ~markup ~xpad:5 ~ypad:5 ~packing:ebox#add () in
               label#misc#modify_font_by_name !Preferences.preferences.Preferences.pref_compl_font;
@@ -260,7 +260,7 @@ object (self)
                     popup#move ~x ~y:(y - popup#misc#allocation.Gtk.height - 12);
               end;
               let incr = if !Preferences.preferences.Preferences.pref_annot_type_tooltips_delay = 0 then 0.106 else 0.479 in
-              Gtk_util.fade_window ~incr popup;
+              Gmisclib.Util.fade_window ~incr popup;
             (*end ()*)
           with Not_found -> (if not sticky_popup then (self#hide_tooltip()))
         end
@@ -324,7 +324,7 @@ object (self)
       in
       (** Warnings *)
       List.iter begin fun (start, _, warning) ->
-        draw_marker start (if is_warning_unused warning.Err_types.er_level
+        draw_marker start (if is_warning_unused warning.Oe.er_level
           then (`NAME Oe_config.warning_unused_color) else Oe_config.warning_popup_border_color);
       end tag_warning_bounds;
       (** Errors *)
@@ -350,7 +350,7 @@ object (self)
           drawable#set_foreground Oe_config.warning_underline_color;
           drawable#set_line_attributes ~width:1 ~style:`SOLID ();
           List.iter begin function
-            | (start, stop, error) when (not (is_warning_unused error.Err_types.er_level)) ->
+            | (start, stop, error) when (not (is_warning_unused error.Oe.er_level)) ->
               let start = ref (buffer#get_iter_at_mark (`MARK start)) in
               let stop = buffer#get_iter_at_mark (`MARK stop) in
               let stop = if bottom#compare stop < 0 then bottom else stop in
@@ -423,7 +423,7 @@ object (self)
         view#scroll_lazy iter;
         buffer#place_cursor iter;
         if tooltip then begin
-          Gtk_util.idle_add ~prio:300 (fun () -> self#tooltip ~sticky:true (`ITER iter));
+          Gmisclib.Idle.add ~prio:300 (fun () -> self#tooltip ~sticky:true (`ITER iter));
         end;
       end else begin
         let iter =

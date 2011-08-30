@@ -27,8 +27,6 @@ open Miscellanea
 open Printf
 
 
-let re_trailng_blanks = Miscellanea.regexp "\\([ \t]+\\)\r?$"
-
 let shells = ref []
 
 let create_shell = ref ((fun () -> failwith "Ocaml_text.create_shell") : unit -> unit)
@@ -68,7 +66,7 @@ object (self)
         let it = self#get_iter (`LINE i) in
         let line = self#get_line_at_iter it in
         try
-          let _ = Str.search_forward re_trailng_blanks line 0 in
+          let _ = Str.search_forward (Miscellanea.regexp "\\([ \t]+\\)\r?\n$") line 0 in
           let len = String.length (Str.matched_group 1 line) in
           let stop = it#forward_to_line_end in
           let start = stop#backward_chars len in
@@ -220,8 +218,8 @@ object (self)
               | Some project ->
                 begin
                   match project.Project.in_source_path file#path with
-                    | Some filename ->
-                      Annotation.find_block_at_offset ~filename ~offset:iter#offset
+                    | Some _ ->
+                      Annotation.find_block_at_offset ~project ~filename:file#path ~offset:iter#offset
                         (*~offset:(Glib.Utf8.offset_to_pos (self#get_text ()) ~pos:0 ~off:iter#offset)*)
                     | _ -> None
                 end;
@@ -385,12 +383,12 @@ object (self)
           del popup.
         *)
         let get_word () =
-          let start, stop = buffer#select_word ~pat:Ocaml_word_bound.regexp ~select:false  ~limit:['.'] () in
+          let start, stop = buffer#select_word ~pat:Ocaml_word_bound.regexp ~select:false (* ~limit:['.']*) () in
           buffer#get_text ~start ~stop:(self#buffer#get_iter `INSERT) () in
         let on_type txt = if self#editable then (self#buffer#insert ~iter:(self#buffer#get_iter `INSERT) txt) in
         let on_row_activated txt =
           if self#editable then begin
-            buffer#select_word ~pat:Ocaml_word_bound.regexp ~limit:['.'] ();
+            buffer#select_word ~pat:Ocaml_word_bound.regexp (*~limit:['.']*) ();
             buffer#delete_selection ();
             buffer#insert ~iter:(self#buffer#get_iter `INSERT) txt
           end
@@ -433,7 +431,7 @@ object (self)
           (if y + alloc.Gtk.height > (Gdk.Screen.height()) then (Gdk.Screen.height() - alloc.Gtk.height) else y);
         in
         p#move ~x ~y;
-        Gtk_util.fade_window p#window;
+        Gmisclib.Util.fade_window p#window;
       with Not_found -> ();
 
   method code_folding = match code_folding with Some m -> m | _ -> assert false
@@ -460,7 +458,7 @@ object (self)
         match GdkEvent.get_type ev with
           | `BUTTON_RELEASE when !two_button_press ->
             two_button_press := false;
-            Gtk_util.idle_add (fun () -> ignore (self#obuffer#select_word ~pat:Ocaml_word_bound.regexp ()));
+            Gmisclib.Idle.add (fun () -> ignore (self#obuffer#select_word ~pat:Ocaml_word_bound.regexp ()));
             false
           | _ -> false
       end else false

@@ -21,7 +21,7 @@ let init_tags ?(tags=(!tags)) ?(colors=(!colors))
     (tb : #GText.buffer) =
   let table = new GText.tag_table tb#tag_table in
   List.iter2 tags colors ~f:
-    begin fun tagname (col, weight, style, undline) ->
+    begin fun tagname (col, weight, style, undline, scale) ->
       if tagname <> "highlight_current_line" then begin
         begin
           match table#lookup tagname with
@@ -29,11 +29,11 @@ let init_tags ?(tags=(!tags)) ?(colors=(!colors))
             | Some t -> table#remove t
         end;
         let tag = tb#create_tag ~name:tagname
-          [`FOREGROUND_GDK (GDraw.color col); `WEIGHT weight; `STYLE style; `UNDERLINE undline] in
+          [`FOREGROUND_GDK (GDraw.color col); `WEIGHT weight; `STYLE style; `UNDERLINE undline; `SCALE scale] in
         if tagname = "ocamldoc" then begin
           if ocamldoc_paragraph_enabled then begin
             Gaux.may ocamldoc_paragraph_bgcolor_2 ~f:begin fun bg2 ->
-              Gtk_util.set_tag_paragraph_background tag bg2;
+              Gmisclib.Util.set_tag_paragraph_background tag bg2;
             end;
           end;
           Gaux.may (table#lookup "ocamldoc-paragraph") ~f:table#remove;
@@ -41,7 +41,7 @@ let init_tags ?(tags=(!tags)) ?(colors=(!colors))
             [`FOREGROUND_GDK (GDraw.color col); `WEIGHT weight; `STYLE style; `UNDERLINE undline; `PIXELS_BELOW_LINES 1; `PIXELS_ABOVE_LINES 1] in
           if ocamldoc_paragraph_enabled then begin
             Gaux.may ocamldoc_paragraph_bgcolor_1 ~f:begin fun bg1 ->
-              Gtk_util.set_tag_paragraph_background tag bg1;
+              Gmisclib.Util.set_tag_paragraph_background tag bg1;
             end
           end
         end
@@ -83,15 +83,15 @@ let tpos ~(start : GText.iter) ~lines pos =
   in
   result
 
+let tag_lident = function
+  | _, METHOD, _, _ | _, PRIVATE, _, _ -> "method_name_def"
+  | _, IN, _, _ | _, INITIALIZER, _, _ | _, NEW, _, _ | _, OF, _, _ -> "lident"
+  | "define", _, _, _  -> "name_def"
+  | _ -> "lident"
+
 (* Tagging *)
 
-let tag =
-  let tag_lident = function
-    | _, METHOD, _, _ | _, PRIVATE, _, _ -> "method_name_def"
-    | _, IN, _, _ | _, INITIALIZER, _, _ | _, NEW, _, _ | _, OF, _, _ -> "lident"
-    | "define", _, _, _  -> "name_def"
-    | _ -> "lident"
-  in fun ?start ?stop (tb : GText.buffer) ->
+let tag ?start ?stop (tb : GText.buffer) =
   let start = Gaux.default tb#start_iter ~opt:start
   and stop = Gaux.default tb#end_iter ~opt:stop in
   (* Se start e stop sono all'interno di commenti allora prendo come start e stop
@@ -120,7 +120,10 @@ let tag =
   let last_but_one = ref ("", EOF, 0, 0) in
   let in_record = ref false in
   let in_record_label = ref false in
-  tb#remove_all_tags ~start ~stop;
+  List.iter begin function
+    | tagname when tagname <> "highlight_current_line" -> tb#remove_tag_by_name tagname ~start ~stop
+    | _ -> ()
+  end !tags;
   try
     while true do
       try

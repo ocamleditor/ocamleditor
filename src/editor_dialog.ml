@@ -22,18 +22,17 @@
 
 open Printf
 open Miscellanea
-open Editor_types
 
 (** file_select *)
 let file_select ~editor () =
-  let window = GWindow.window ~title:"Switch" 
+  let window = GWindow.window ~title:"Switch"
     ~width:600 ~height:400 ~modal:true
     ~position:`CENTER ~border_width:5 ~show:false () in
   Gaux.may (GWindow.toplevel editor) ~f:(fun x -> window#set_transient_for x#as_window);
   let vbox = GPack.vbox ~spacing:0 ~packing:window#add () in
-  let cols = new GTree.column_list in 
+  let cols = new GTree.column_list in
   let col_icon  = cols#add Gobject.Data.string in
-  let col_name  = cols#add Gobject.Data.string in 
+  let col_name  = cols#add Gobject.Data.string in
   let col_path  = cols#add Gobject.Data.string in
   let model = GTree.list_store cols in
   let renderer = GTree.cell_renderer_text [] in
@@ -57,7 +56,7 @@ let file_select ~editor () =
     model#set ~row ~column:col_name label#text;
     model#set ~row ~column:col_path p#get_filename;
     let opened, changed =
-      match editor#get_page (File (File.create p#get_filename ())) with
+      match editor#get_page (Oe.Page_file (File.create p#get_filename ())) with
         | None -> false, false
         | Some page -> true, page#view#buffer#modified
     in
@@ -83,7 +82,7 @@ let file_select ~editor () =
       let row = model#get_iter path in
       let filename = model#get ~row ~column:col_path in
       let page = editor#open_file ~active:true ~offset:0 filename in
-      Gaux.may (editor#get_page Current) ~f:editor#dialog_confirm_close;
+      Gaux.may (editor#get_page Oe.Page_current) ~f:editor#dialog_confirm_close;
       closing := row :: !closing;
     end view#selection#get_selected_rows;
     ignore (List.map model#remove !closing)
@@ -192,7 +191,7 @@ let save_as_rename ~editor ~action (page : Editor_page.page) =
           let rename ~replace new_filename =
             try
               if replace then begin
-                Gaux.may ~f:editor#close (editor#get_page (File file));
+                Gaux.may ~f:editor#close (editor#get_page (Oe.Page_file file));
               end;
               Project.rename_file editor#project file new_filename;
               let _, _, label = page#tab_widget in

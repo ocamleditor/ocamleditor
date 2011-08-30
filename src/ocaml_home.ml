@@ -101,7 +101,7 @@ object (self)
   initializer
     ignore (button_native#connect#clicked ~callback:begin fun () ->
       entry_native#set_text "Please wait...";
-      Gtk_util.idle_add begin fun () ->
+      Gmisclib.Idle.add begin fun () ->
         let can_compile_native = self#with_ocamllib (Ocaml_config.can_compile_native ~ocaml_home:location#get) in
         entry_native#set_text (if can_compile_native then "Yes" else "No")
       end

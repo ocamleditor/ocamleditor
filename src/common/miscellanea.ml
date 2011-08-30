@@ -77,11 +77,11 @@ module Xlist =
       let rec find accu = function
       | [] -> List.rev accu
       | x :: l ->
-        begin
+        find begin
           match p x with
-            | None -> find accu l
-            | Some m -> find (m :: accu) l
-        end
+            | None -> accu
+            | Some m -> (m :: accu)
+        end l
       in
       find [];;
 
@@ -90,6 +90,13 @@ module Xlist =
       | [] -> cand
       | x :: l -> find (max x cand) l in
       match l with [] -> raise Not_found | x :: l -> find x l
+
+    let rev_tl ll =
+      let rec f acc = function
+        | [] -> invalid_arg "Empty List"
+        | h :: [] -> []
+        | h :: t -> h :: acc @ (f acc t)
+      in f [] ll;;
 
     let list_full x n =
       let seq = ref [] in
@@ -344,10 +351,12 @@ let filename_unix_implicit filename =
   let parts = if Filename.is_implicit filename then parts else (List.tl parts) in
   String.concat "/" parts;;
 
+(** redirect_stderr *)
 let redirect_stderr = if Sys.os_type = "Win32" then " 2>NUL" else " 2>/dev/null"
 
-
-
+(** modname_of_path *)
+let modname_of_path path =
+  String.capitalize (Filename.chop_extension (Filename.basename path))
 
 
 

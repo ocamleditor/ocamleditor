@@ -23,13 +23,13 @@
 open Printf
 open Miscellanea
 
-let empty = {Err_types.er_warnings = []; er_errors = []}
+let empty = {Oe.er_warnings = []; er_errors = []}
 
 let create messages =
-  let errors, warnings = List.partition (fun x -> x.Err_types.er_level = Err_types.Error) messages in
+  let errors, warnings = List.partition (fun x -> x.Oe.er_level = Oe.Error) messages in
   let errors = List.rev errors in
   let warnings = List.rev warnings in
-  {Err_types.er_warnings = warnings; er_errors = errors}
+  {Oe.er_warnings = warnings; er_errors = errors}
 
 let parse_string buf =
   let lexbuf = Lexing.from_string (trim buf) in

@@ -124,7 +124,7 @@ class incremental () =
               | STOP_AFTER bound when i1#offset >= bound ->
                 false
               | _ ->
-                Gtk_util.idle_add (fun () -> ignore (view#scroll_to_iter ~use_align:true ~xalign:1.0 ~yalign:0.5 i1));
+                Gmisclib.Idle.add (fun () -> ignore (view#scroll_to_iter ~use_align:true ~xalign:1.0 ~yalign:0.5 i1));
                 if status#backward then buffer#select_range i2 i1
                 else buffer#select_range i1 i2;
                 true
@@ -145,7 +145,7 @@ class incremental () =
           else Str.search_forward pat text pos in
         let start = buffer#get_iter_at_char pos in
         let stop = buffer#get_iter_at_char (Str.match_end()) in
-        Gtk_util.idle_add (fun () -> ignore (view#scroll_to_iter ~use_align:true ~xalign:1.0 ~yalign:0.5 start));
+        Gmisclib.Idle.add (fun () -> ignore (view#scroll_to_iter ~use_align:true ~xalign:1.0 ~yalign:0.5 start));
         if status#backward then buffer#select_range stop start
         else buffer#select_range start stop;
         true
@@ -170,7 +170,7 @@ class incremental () =
 (*            | "Win32" -> GWindow.window ~allow_grow:false
                 ~kind:`POPUP ~type_hint:`MENU ~modal:true ~border_width:5 ()*)
             | _ -> GWindow.window ~allow_grow:true
-                ~decorated:false ~modal:true ~border_width:1 ()
+                ~decorated:false ~modal:false ~border_width:1 ()
         in
         let move () =
           (* Coordinate del puntatore relative al desktop *)
@@ -245,7 +245,7 @@ class incremental () =
           Dialog.info view ~message:(s ^ " \"" ^ text ^ "\" not found.");
           false
         | SEARCH_TO_BOTTOM ->
-          Gtk_util.idle_add (fun () -> ignore (view#scroll_to_iter (view#buffer#get_iter (if status#backward then `START else `END))));
+          Gmisclib.Idle.add (fun () -> ignore (view#scroll_to_iter (view#buffer#get_iter (if status#backward then `START else `END))));
           let message = GWindow.message_dialog
             ~message:(if status#backward then "Top reached searching \""^text^"\" backward.\nSearch from the end?"
               else "Bottom reached searching \""^text^"\" forward.\nSearch from the beginning?")

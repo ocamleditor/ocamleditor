@@ -26,7 +26,6 @@ open Miscellanea
 open Project
 open Printf
 open Preferences
-open Editor_types
 
 let set_menu_item_nav_history_sensitive = ref (fun () -> failwith "set_menu_item_nav_history_sensitive")
 
@@ -35,7 +34,7 @@ class editor () =
   let hpaned = GPack.paned `HORIZONTAL () in
   let notebook = GPack.notebook ~tab_border:0 ~show_border:false
     ~packing:(hpaned#pack2 ~resize:true ~shrink:true) ~scrollable:true () in
-  let _ = hpaned#set_position 200 in
+  let _ = hpaned#set_position 250 in
   let incremental_search = new Incremental_search.incremental () in
   let switch_page = new switch_page () in
   let remove_page = new remove_page () in
@@ -49,8 +48,8 @@ object (self)
   val mutable pages_cache = []
   val mutable project = Project.create ~filename:"untitled.xyz" ()
   val mutable menu_items = []
-  val liim = Liim.create ~delay:1.0 ()
-  val liim2 = Liim.create ~delay:0.3 ~prio:100 ()
+  val liim_delim = Liim.create ~delay:1.0 ()
+  val liim_fast = Liim.create ~delay:0.3 ()
   val location_history = Location_history.create()
   val mutable file_history =
     File_history.create
@@ -101,7 +100,7 @@ object (self)
       GtkBase.Widget.queue_draw page#view#as_widget
     end (pages @ (snd (List.split pages_cache)))
 
-  method with_current_page f = match self#get_page Current with Some page -> f page | _ -> ()
+  method with_current_page f = match self#get_page Oe.Page_current with Some page -> f page | _ -> ()
 
   method code_folding_enabled = code_folding_enabled
   method show_global_gutter = show_global_gutter
@@ -124,24 +123,24 @@ object (self)
   method pages = List.rev pages
 
   method goto_view v =
-    match self#get_page (View v) with
+    match self#get_page (Oe.Page_view v) with
       | None -> ()
       | Some page ->
         if not page#load_complete then (self#load_page page);
         notebook#goto_page (notebook#page_num page#coerce);
 
-  method get_page : Editor_types.page_id -> Editor_page.page option = fun which ->
+  method get_page : Oe.editor_page_id -> Editor_page.page option = fun which ->
     try
       let page = match which with
-        | Current when closing -> raise Not_found
-        | Current -> List.find begin fun p ->
+        | Oe.Page_current when closing -> raise Not_found
+        | Oe.Page_current -> List.find begin fun p ->
             p#get_oid = (notebook#get_nth_page notebook#current_page)#get_oid
           end pages
-        | File file -> List.find begin fun p ->
+        | Oe.Page_file file -> List.find begin fun p ->
             match p#file with None -> false | Some f -> f#path = file#path
           end pages
-        | Num n -> List.find (fun p -> p#get_oid = (notebook#get_nth_page n)#get_oid) pages
-        | View v -> List.find (fun p -> p#view#get_oid = v#get_oid) pages
+        | Oe.Page_num n -> List.find (fun p -> p#get_oid = (notebook#get_nth_page n)#get_oid) pages
+        | Oe.Page_view v -> List.find (fun p -> p#view#get_oid = v#get_oid) pages
       in Some page
     with Not_found -> None
 
@@ -181,13 +180,13 @@ object (self)
       Location_history.add location_history
         ~kind ~view:(page#view :> GText.view)
         ~filename:page#get_filename ~offset:iter#offset;
-      Liim.signal liim !set_menu_item_nav_history_sensitive
+      Gmisclib.Idle.add ~prio:600 !set_menu_item_nav_history_sensitive
     end
 
   method location_history_goto location =
     let filename = location.Location_history.filename in
     if Sys.file_exists filename then begin
-      match self#get_page (File (File.create filename ())) with
+      match self#get_page (Oe.Page_file (File.create filename ())) with
         | None ->
           self#open_file ~active:true ~offset:0 filename;
           self#location_history_goto location
@@ -227,10 +226,10 @@ object (self)
   method bookmark_goto ~num =
     try
       let bm = List.find (fun bm -> bm.Bookmark.num = num) Bookmark.bookmarks#get in
-      match self#get_page (File (File.create bm.Bookmark.filename ())) with
+      match self#get_page (Oe.Page_file (File.create bm.Bookmark.filename ())) with
         | None ->
           let _ = self#open_file ~active:true ~offset:0 bm.Bookmark.filename in
-          Gtk_util.idle_add ~prio:300 (fun () -> self#bookmark_goto ~num)
+          Gmisclib.Idle.add ~prio:300 (fun () -> self#bookmark_goto ~num)
         | Some page ->
           if not page#view#realized then (self#goto_view page#view);
           Bookmark.apply bm begin function
@@ -243,8 +242,8 @@ object (self)
               page#buffer#place_cursor ~where;
               page#view#misc#grab_focus();
           end;
-          if page#view#realized then (Gtk_util.idle_add (*~prio:300*) (fun () -> self#goto_view page#view));
-          Gtk_util.idle_add ~prio:300 Bookmark.write;
+          if page#view#realized then (Gmisclib.Idle.add (*~prio:300*) (fun () -> self#goto_view page#view));
+          Gmisclib.Idle.add ~prio:300 Bookmark.write;
     with Not_found -> ()
 
   method scroll_to_definition iter =
@@ -254,7 +253,7 @@ object (self)
         | Some (_, _, filename, start, stop) ->
           self#location_history_add ~iter ~kind:`BROWSE ();
           let rec get_page () =
-            match self#get_page (File (File.create filename ())) with
+            match self#get_page (Oe.Page_file (File.create filename ())) with
               | Some page -> page
               | None ->
                 self#open_file ~active:true ~offset:0 filename;
@@ -273,7 +272,7 @@ object (self)
   method find_references (iter : GText.iter) =
     self#with_current_page begin fun page ->
       let rec get_page filename =
-        match self#get_page (File (File.create filename ())) with
+        match self#get_page (Oe.Page_file (File.create filename ())) with
           | Some page ->
             if not page#load_complete then (self#load_page page);
             page
@@ -287,15 +286,15 @@ object (self)
           begin
             match page#buffer#get_annot iter with
               | None -> ()
-              | Some { Annot_types.annotations = annotations } ->
-                Gaux.may (Annotation.get_ext_ref annotations) ~f:begin fun fullname ->
-                  let ext_refs = Definition.find_ext_ref ~src_path:(Project.path_src self#project) (`EXACT fullname) in
+              | Some { Oe.annot_annotations = annot_annotations } ->
+                Gaux.may (Annotation.get_ext_ref annot_annotations) ~f:begin fun fullname ->
+                  let ext_refs = Definition.find_ext_ref ~project ~src_path:(Project.path_src self#project) (`EXACT fullname) in
                   self#do_find_references (`EXT (fullname, ext_refs, get_page, goto_page));
                 end
           end;
         | Some (_, _, filename, start, stop) ->
           let def_source =
-            match self#get_page (File (File.create filename ())) with
+            match self#get_page (Oe.Page_file (File.create filename ())) with
               | None ->
                 `DEF_FILE_POS (filename, start, get_page, goto_page)
               | Some page ->
@@ -332,7 +331,7 @@ object (self)
       !finish true;
       Messages.messages#present res#coerce;
     end);
-    res#find ~project def_source;
+    res#find ~project:self#project def_source;
     find_references_results <- Some res;
 
   method dialog_file_select () = Editor_dialog.file_select ~editor:self ()
@@ -391,7 +390,8 @@ object (self)
         page#view#set_word_wrap word_wrap;
         (** Insert_text *)
         ignore (page#buffer#connect#after#insert_text ~callback:begin fun iter text ->
-          Liim.signal liim2 begin fun () ->
+          page#ocaml_view#code_folding#scan_folding_points();
+          Liim.set liim_fast begin fun () ->
             let iter = page#buffer#get_iter `INSERT in
             if page#buffer#lexical_enabled then begin
               let start, stop =
@@ -403,14 +403,17 @@ object (self)
               Lexical.tag page#view#buffer ~start ~stop;
             end;
             page#view#paint_current_line_background iter;
-            Gtk_util.idle_add ~prio:500 (fun () -> ignore (page#view#matching_delim ()));
-            Gtk_util.idle_add ~prio:500 page#ocaml_view#code_folding#scan_folding_points;
+            (*Gmisclib.Idle.add ~prio:500 page#ocaml_view#code_folding#scan_folding_points;*)
+            (*page#ocaml_view#code_folding#scan_folding_points ();*)
           end;
+          (*page#ocaml_view#code_folding#scan_folding_points ();*)
+          Liim.set liim_delim page#view#matching_delim;
           self#location_history_add ~iter ~kind:`EDIT ();
+          (*page#buffer#set_matching_delims None;*)
         end);
         (** Delete range *)
         ignore (page#buffer#connect#delete_range ~callback:begin fun ~start ~stop ->
-          Liim.signal liim2 begin fun () ->
+          Liim.set liim_fast begin fun () ->
             let iter = page#buffer#get_iter `INSERT in
             if page#buffer#lexical_enabled then begin
               let start, stop =
@@ -422,10 +425,12 @@ object (self)
               Lexical.tag page#view#buffer ~start ~stop;
             end;
             page#view#paint_current_line_background iter;
-            Gtk_util.idle_add ~prio:500 (fun () -> ignore (page#view#matching_delim ()));
-            Gtk_util.idle_add ~prio:500 page#ocaml_view#code_folding#scan_folding_points;
+            (*(*Gmisclib.Idle.add ~prio:500 *)page#ocaml_view#code_folding#scan_folding_points ();*)
           end;
+          page#ocaml_view#code_folding#scan_folding_points ();
+          Liim.set liim_delim page#view#matching_delim;
           self#location_history_add ~iter:start ~kind:`EDIT ();
+          (*page#buffer#set_matching_delims None;*)
         end);
         (** Paste clipboard *)
         ignore (page#view#connect#paste_clipboard ~callback:begin fun () ->
@@ -436,7 +441,7 @@ object (self)
                 GtkSignal.stop_emit();
                 page#buffer#delete_interactive ~start:(page#buffer#get_iter `INSERT) ~stop:(page#buffer#get_iter `SEL_BOUND) ();
                 page#buffer#insert text;
-                (*Liim.signal liim2 begin fun () ->*)
+                (*Liim.set liim_fast begin fun () ->*)
                   let iter = page#buffer#get_iter `INSERT in
                   if page#buffer#lexical_enabled then begin
                     Lexical.tag page#view#buffer
@@ -489,17 +494,6 @@ object (self)
                   image#set_pixbuf (if page#buffer#modified then Icons.button_close_b else Icons.button_close);
                   modified_changed#call();
                 end;
-                (** mark_set: matching_delim *)
-                ignore (page#buffer#connect#after#mark_set ~callback:begin fun _ mark ->
-                  match GtkText.Mark.get_name mark with
-                    | Some "insert" ->
-                      Liim.signal liim begin fun () ->
-                        if not page#buffer#has_selection then begin
-                          ignore (page#view#matching_delim ());
-                        end
-                      end;
-                    | _ -> ()
-                end);
                 (** Annot type tooltips *)
                 page#view#misc#set_has_tooltip true;
                 ignore (page#view#misc#connect#query_tooltip ~callback:begin fun ~x ~y ~kbd tooltip ->
@@ -509,7 +503,7 @@ object (self)
                       page#tooltip ~typ:!preferences.Preferences.pref_annot_type_tooltips_enabled location;
                     in
                     if (*true ||*) !preferences.Preferences.pref_annot_type_tooltips_delay = 1 then begin
-                      Liim.signal liim (GtkThread2.async f);
+                      Liim.set liim_delim (GtkThread2.async f);
                     end else (f());
                   end else (page#error_indication#hide_tooltip ~force:false ());
                   false;
@@ -521,11 +515,11 @@ object (self)
                 page#buffer#connect#after#changed ~callback:changed#call;
                 (** Tab menu *)
                 let ebox = GBin.event_box () in
-                Gtk_util.set_ebox_invisible ebox;
+                Gmisclib.Util.set_ebox_invisible ebox;
                 ignore (ebox#event#connect#button_press ~callback:begin fun ev ->
                   if GdkEvent.Button.button ev = 3 then begin
                     notebook#goto_page (notebook#page_num page#coerce);
-                    Gtk_util.idle_add begin fun () ->
+                    Gmisclib.Idle.add begin fun () ->
                       let menu = GMenu.menu () in
                       let basename = Filename.basename filename in
                       let item = GMenu.image_menu_item ~label:(sprintf "Close \xC2\xAB%s\xC2\xBB" basename) ~packing:menu#add () in
@@ -701,11 +695,11 @@ object (self)
 
   method redisplay_views () =
     self#with_current_page begin fun page ->
-      Gtk_util.idle_add page#redisplay;
-      Gtk_util.idle_add ~prio:400 (fun () -> page#compile_buffer ~commit:true ());
+      Gmisclib.Idle.add page#redisplay;
+      Gmisclib.Idle.add ~prio:400 (fun () -> page#compile_buffer ~commit:true ());
       List.iter (fun p -> if p != page then begin
-        Gtk_util.idle_add ~prio:300 p#redisplay;
-        Gtk_util.idle_add ~prio:400 (fun () -> p#compile_buffer ~commit:true ());
+        Gmisclib.Idle.add ~prio:300 p#redisplay;
+        Gmisclib.Idle.add ~prio:400 (fun () -> p#compile_buffer ~commit:true ());
       end) pages;
     end;
 
@@ -721,6 +715,63 @@ object (self)
 
   method connect = new signals ~add_page ~switch_page ~remove_page ~changed ~modified_changed
 
+  method private add_timeouts () =
+    (** Auto-compilation *)
+    ignore (GMain.Timeout.add ~ms:500 ~callback:begin fun () ->
+      if project.Project.autocomp_enabled then begin
+        try
+          self#with_current_page begin fun page ->
+            if page#buffer#changed_after_last_autocomp > 0.0 then begin
+              if Unix.gettimeofday() -. page#buffer#changed_after_last_autocomp > project.Project.autocomp_delay (*/. 2.*)
+              then (page#compile_buffer ~commit:false ())
+            end
+          end;
+        with ex -> begin
+          eprintf "%s\n%s\n%!" (Printexc.to_string ex) (Printexc.get_backtrace ());
+        end
+      end;
+      true
+    end);
+    (** Autosave *)
+    if Oe_config.autosave_enabled then begin
+      ignore (GMain.Timeout.add ~ms:Autosave.interval ~callback:begin fun () ->
+        Prf.crono Prf.prf_autosave (List.iter begin fun page ->
+          if page#changed_after_last_autosave then begin
+            let filename = page#get_filename in
+            let text = (page#buffer :> GText.buffer)#get_text () in
+            Autosave.backup ~filename ~text;
+            page#set_changed_after_last_autosave false;
+          end
+        end) pages;
+        true
+      end);
+    end;
+    (** Select current position in the outline and
+        highlight matching delimiters *)
+    let last_cursor_offset = ref 0 in
+    ignore (GMain.Timeout.add ~ms:1500 ~callback:begin fun () ->
+      self#with_current_page begin fun page ->
+        let offset = (page#buffer#get_iter `INSERT)#offset in
+        if not page#buffer#has_selection && offset <> !last_cursor_offset then begin
+          page#view#matching_delim ();
+          last_cursor_offset := (page#buffer#get_iter `INSERT)#offset
+        end;
+      end;
+      true
+    end);
+    (*GMain.Timeout.add ~ms:1000 ~callback:begin fun () ->
+      self#with_current_page begin fun page ->
+        match page#buffer#matching_delims with
+          | None ->
+            page#buffer#set_matching_delims (Some (Prf.crono Prf.prf_delimiters_scan Delimiters.scan (page#buffer#get_text())));
+            Printf.printf "Delimiters.scan\n%!" ;
+          | _ -> ()
+      end;
+      true
+    end;
+    (**  *)*)
+
+
   initializer
     File_history.read file_history;
     (**  *)
@@ -730,7 +781,7 @@ object (self)
     end;
     (** When i_search finds text inside a fold, then expand the fold to show what is found. *)
     ignore (incremental_search#connect#found ~callback:begin fun view ->
-      match self#get_page (View view) with
+      match self#get_page (Oe.Page_view view) with
         | Some page -> page#ocaml_view#code_folding#expand_current ()
         | _ -> ()
     end);
@@ -740,59 +791,10 @@ object (self)
         else p#global_gutter#misc#hide()) (pages @ (snd (List.split pages_cache)))
     end;
     show_global_gutter#set !Preferences.preferences.pref_show_global_gutter;
-    (** Auto-compilation *)
-    ignore (GMain.Timeout.add ~ms:500 ~callback:begin fun () ->
-      begin
-        try
-          if project.Project.autocomp_enabled then begin
-            self#with_current_page begin fun page ->
-              if page#buffer#changed_after_last_autocomp > 0.0 then begin
-                if Unix.gettimeofday() -. page#buffer#changed_after_last_autocomp > project.Project.autocomp_delay (*/. 2.*)
-                then (page#compile_buffer ~commit:false ())
-              end
-            end;
-          end;
-        with ex -> begin
-          eprintf "%s\n%s\n%!" (Printexc.to_string ex) (Printexc.get_backtrace ());
-        end;
-      end;
-      true
-    end);
-
-(*    ignore (Thread.create begin fun () ->
-      while true do
-        try
-          if project.Project.autocomp_enabled then begin
-            self#with_current_page begin fun page ->
-              if page#buffer#changed_after_last_autocomp > 0.0 then begin
-                if Unix.gettimeofday() -. page#buffer#changed_after_last_autocomp > project.Project.autocomp_delay (*/. 2.*)
-                then (page#compile_buffer ~commit:false ())
-              end
-            end;
-          end;
-          Thread.delay (if project.Project.autocomp_enabled then 0.5 (*project.Project.autocomp_delay*) else 2.0);
-        with ex -> begin
-          eprintf "%s\n%s\n%!" (Printexc.to_string ex) (Printexc.get_backtrace ());
-        end
-      done
-    end ());*)
-    (** Autosave *)
-    if Oe_config.autosave_enabled then begin
-      ignore (GMain.Timeout.add ~ms:Autosave.interval ~callback:begin fun () ->
-        List.iter begin fun page ->
-          if page#changed_after_last_autosave then begin
-            let filename = page#get_filename in
-            let text = (page#buffer :> GText.buffer)#get_text () in
-            Autosave.backup ~filename ~text;
-            page#set_changed_after_last_autosave false;
-          end
-        end pages;
-        true
-      end);
-    end;
-    (** Thread for LIIM calls *)
-    ignore (Liim.start liim);
-    ignore (Liim.start liim2);
+    (**  *)
+    self#add_timeouts();
+    ignore (Liim.start liim_delim);
+    ignore (Liim.start liim_fast);
     (** Switch page: update the statusbar and remove annot tag *)
     ignore (notebook#connect#after#switch_page ~callback:begin fun num ->
       (* Clean up type annotation tag and error indications *)
@@ -806,7 +808,7 @@ object (self)
         match page#outline with
           | Some outline when self#show_outline && outline#get_oid <> hpaned#child1#get_oid ->
             self#pack_outline outline#coerce
-          | _ -> ()
+          | _ -> page#compile_buffer ~commit:false ()
       end;
       switch_page#call notebook#current_page;
     end);
@@ -816,7 +818,7 @@ object (self)
     end);
     (** Remove Page: editor goes to the last active page *)
     ignore (self#connect#remove_page ~callback:begin fun removed ->
-      match self#get_page Current with
+      match self#get_page Oe.Page_current with
         | Some cur when cur#get_oid = removed#get_oid ->
           Gaux.may last_active_page ~f:begin fun last ->
             notebook#goto_page (notebook#page_num last)

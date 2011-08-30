@@ -23,7 +23,18 @@
 open Miscellanea
 open Printf
 
-let ocamleditor_debug = try Sys.getenv "OCAMLEDITORDEBUG" = "1" with Not_found -> false
+let ocamleditor_param =
+  try
+    List.fold_left begin fun acc x ->
+      match Str.split (Str.regexp "=") x with
+        | n :: v :: [] -> (n, v) :: acc
+        | n :: [] -> (n, "") :: acc
+        | _ -> acc
+    end [] (Str.split (Str.regexp ",") (Sys.getenv "OCAMLEDITORPARAM"))
+  with Not_found -> []
+
+let ocamleditor_debug = try (List.assoc "debug" ocamleditor_param) = "2" with Not_found -> false
+
 let is_win32 = Sys.os_type = "Win32"
 
 (** Directories *)
@@ -82,6 +93,8 @@ let code_folding_font                  = Some "-*-*-medium-r-*-sans-10-*-*-*-*-*
 let global_gutter_comments_enabled     = false
 let global_gutter_comments_color       = `NAME "green"
 let global_gutter_no_errors            = `NAME "#daedd0"
+let find_references_title_bgcolor      = "#000000"
+let find_references_title_fgcolor      = "#ffffff"
 let find_replace_history_max_length    = 100
 let file_history_filename              = ocamleditor_user_home // "file_history"
 let file_history_max_length            = 1000

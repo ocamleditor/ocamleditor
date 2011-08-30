@@ -21,5 +21,6 @@
 *)
 
 
-let regexp = Miscellanea.regexp "[][ \t\n\r.,:;!?\"#\-+/*=%&$<>|{}()^\~]"
-let part = Miscellanea.regexp "[][ \t\n\r.,:;!?\"#\-+/*=%&$<>|{}()^\~_]"
+let regexp = Miscellanea.regexp "[][ \t\n\r,:;!?\"\\-+/*=%&$<>|{}()^~.#]"
+let longid = Miscellanea.regexp "[][ \t\n\r,:;!?\"\\-+/*=%&$<>|{}()^~]"
+let part   = Miscellanea.regexp "[][ \t\n\r,:;!?\"\\-+/*=%&$<>|{}()^~.#_]"

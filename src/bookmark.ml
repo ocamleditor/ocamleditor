@@ -108,7 +108,7 @@ and apply bm f =
             remove ~num:bm.num;
             invalid_arg "bookmark"
           | Some buffer ->
-            let iter = Gtk_util.get_iter_at_mark_safe buffer mark in
+            let iter = Gmisclib.Util.get_iter_at_mark_safe buffer mark in
             f (`ITER iter)
       end
     | Offset offset -> f (`OFFSET offset)

@@ -22,10 +22,12 @@
 
 open Printf
 open Miscellanea
-open Err_types
 
-let re_tmp = Str.regexp "File \"..[\\/]tmp[\\/]"
+let re_tmp = Miscellanea.regexp "File \"..[\\/]tmp[\\/]"
 let (!!) = Filename.quote
+
+let liim = Liim.create ~delay:2.0 ()
+let _ = Liim.start liim
 
 (** replace_output_file *)
 let replace_output_file project tmp rel_filename ext =
@@ -42,6 +44,9 @@ let replace_output_file project tmp rel_filename ext =
 
 (** compile_buffer *)
 let rec compile_buffer ~project ~editor ~page ?(commit=false) () =
+  Prf.crono Prf.prf_compile_buffer (fun () ->
+  let activity_name = "Compiling " ^ page#get_filename ^ "..." in
+  Activity.add Activity.Compile_buffer activity_name;
   let filename = page#get_filename in
   let text = (page#buffer :> GText.buffer)#get_text () in
   let text =
@@ -49,7 +54,6 @@ let rec compile_buffer ~project ~editor ~page ?(commit=false) () =
       ~from_codeset:"utf8" ~to_codeset:Oe_config.ocaml_codeset text
   in
   try
-    (*Prf.crono Prf.prf_compile_buffer begin fun () ->*)
     let tmp = Project.path_tmp project in
     match project.Project.in_source_path filename with
       | None -> ()
@@ -93,9 +97,9 @@ let rec compile_buffer ~project ~editor ~page ?(commit=false) () =
           let errors = Error.parse_string (Buffer.contents compiler_output) in
           GtkThread2.async page#error_indication#apply_tag errors;
           (** Outline *)
-          let has_errors = errors.Err_types.er_errors <> [] in
+          let has_errors = errors.Oe.er_errors <> [] in
           if editor#show_outline then begin
-            Gtk_util.idle_add ~prio:500 begin fun () ->
+            Gmisclib.Idle.add ~prio:500 begin fun () ->
               match page#outline with
                 | None ->
                   let ol = new Outline.widget ~project ~page ~tmp:tmp_filename in
@@ -105,9 +109,10 @@ let rec compile_buffer ~project ~editor ~page ?(commit=false) () =
                     if current#get_oid = page#get_oid then (editor#pack_outline ol#coerce)
                   end;
                 | Some ol ->
-                  if not has_errors then (ol#parse ()) else (ol#add_markers ~kind:`Error ());
+                  if not has_errors then (Liim.set liim ol#parse) else (ol#add_markers ~kind:`Error ());
             end
-          end
+          end;
+          Activity.remove activity_name;
         in
         let exit_code = Oebuild_util.exec ~echo:true ~join:false ~at_exit ~process_err command in
         ()
@@ -115,7 +120,7 @@ let rec compile_buffer ~project ~editor ~page ?(commit=false) () =
   with ex -> begin
     eprintf "%s\n%s\n%!" (Printexc.to_string ex) (Printexc.get_backtrace ());
     ()
-  end
+  end) ()
 
 
 

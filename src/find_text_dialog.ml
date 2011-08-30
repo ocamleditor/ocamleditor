@@ -58,7 +58,7 @@ let create ~project ~(editor : Editor.editor) ?(buffer : GText.buffer option) ?w
   let check_case_sensitive = GButton.check_button ~label:"Case sensitive"
     ~active:status.case_sensitive
     ~packing:(table#attach ~top:1 ~left:0 ~expand:`X) () in
-  (** check_search_backward *) 
+  (** check_search_backward *)
   let check_search_backward = GButton.check_button ~label:"Search backward"
     ~show:(not search_in_path)
     ~active:(status.direction = Backward)
@@ -68,7 +68,7 @@ let create ~project ~(editor : Editor.editor) ?(buffer : GText.buffer option) ?w
     ~packing:(table#attach ~top:1 ~left:1 ~expand:`X)
     ~show:(not search_in_path && buffer_has_selection) () in
   (** Search path *)
-  let frame = GBin.frame ~label:" Search path " ~packing:(vbox#pack ~expand:false) ~show:search_in_path () in 
+  let frame = GBin.frame ~label:" Search path " ~packing:(vbox#pack ~expand:false) ~show:search_in_path () in
   let pbox = GPack.vbox ~spacing:5 ~border_width:5 ~packing:frame#add () in
   let box = GPack.hbox ~spacing:5 ~packing:pbox#add () in
   (** radio_specified_path *)
@@ -94,7 +94,7 @@ let create ~project ~(editor : Editor.editor) ?(buffer : GText.buffer option) ?w
   end;
   let group = radio_specified_path#group in
   (** radio_project_src *)
-  let radio_project_src = GButton.radio_button ~label:"Project source path" ~active:false ~group ~packing:pbox#add () in 
+  let radio_project_src = GButton.radio_button ~label:"Project source path" ~active:false ~group ~packing:pbox#add () in
   let callback_src () =
     let path = match status.h_path.model#get_iter_first with
       | None -> ""
@@ -163,14 +163,14 @@ let create ~project ~(editor : Editor.editor) ?(buffer : GText.buffer option) ?w
   (** Default values in entries *)
   let text =
     if search_word_at_cursor then begin
-      match editor#get_page (Editor_types.Current)
+      match editor#get_page (Oe.Page_current)
       with None -> "" | Some page ->
         let start, stop = page#buffer#select_word ~pat:Ocaml_word_bound.regexp ~select:false () in
         page#buffer#get_text ~start ~stop ()
     end else ""
   in
   let text =
-    match editor#get_page (Editor_types.Current)
+    match editor#get_page (Oe.Page_current)
     with Some page when page#buffer#has_selection -> page#buffer#selection_text () | _ -> text
   in
   let is_multiline = String.contains text '\n' in

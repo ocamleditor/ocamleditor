@@ -25,7 +25,7 @@ open GdkKeysyms
 open Printf
 open Miscellanea
 open GUtil
-open Browser_types
+open Oe
 
 class browser window =
   let switch_project = new switch_project () in
@@ -81,7 +81,7 @@ object (self)
       menubar_visible editor#show_tabs toolbar_visible outline_visible;
 
   method set_title ed =
-    let filename = match ed#get_page Editor_types.Current with None -> "" | Some page -> page#get_filename in
+    let filename = match ed#get_page Oe.Page_current with None -> "" | Some page -> page#get_filename in
     let text =
       (Printf.sprintf "%s • %s"
         (try self#current_project.name with No_current_project -> "")
@@ -96,6 +96,7 @@ object (self)
     let chan = open_out (Filename.concat Oe_config.ocamleditor_user_home "geometry") in
     fprintf chan "%s" geometry;
     close_out_noerr chan;
+    window#misc#hide();
     (*  *)
     let finalize () =
       try
@@ -192,6 +193,9 @@ object (self)
     let proj = Project.load filename in
     File_history.add project_history filename;
     self#set_current_project proj;
+    (*Code_insight.preload_signatures ~project:proj;*)
+    Symbol.reset_cache ~project:proj;
+    Annotation.preload ~project:proj;
     editor#close_all ();
     Autosave.recover();
     (* Load files *)
@@ -241,7 +245,7 @@ object (self)
       close_out chan;
       editor#open_file ~active:true ~offset:0 filename;
       begin
-        match editor#get_page (Editor_types.File (File.create filename ())) with
+        match editor#get_page (Oe.Page_file (File.create filename ())) with
           | None -> assert false
           | Some page ->
             editor#dialog_rename page;
@@ -450,7 +454,7 @@ object (self)
         | `LOCATION _ -> move dir
         | _ ->
           begin
-            match editor#get_page Editor_types.Current with
+            match editor#get_page Oe.Page_current with
               | None -> move dir
               | Some page ->
                 let iter = page#buffer#get_iter `INSERT in
@@ -577,7 +581,9 @@ object (self)
       end
     with Find_text.No_current_regexp -> self#find_and_replace()
 
-  initializer
+  initializer self#init()
+
+  method private init () =
     let _ = Editor.set_menu_item_nav_history_sensitive := self#set_menu_item_nav_history_sensitive in
     editor#connect#add_page ~callback:begin fun page ->
       match page#file with None -> () | Some file ->
@@ -678,12 +684,12 @@ object (self)
     paned#pack1 ~resize:true ~shrink:true editor#coerce;
     let update_toolbar_save () =
       toolbar#tool_save_all#misc#set_sensitive (List.exists (fun p -> p#view#buffer#modified) editor#pages);
-      Gaux.may (editor#get_page Editor_types.Current) ~f:begin fun page ->
+      Gaux.may (editor#get_page Oe.Page_current) ~f:begin fun page ->
         toolbar#tool_save#misc#set_sensitive page#buffer#modified;
       end;
     in
     let update_toolbar_undo () =
-      Gaux.may (editor#get_page Editor_types.Current) ~f:begin fun page ->
+      Gaux.may (editor#get_page Oe.Page_current) ~f:begin fun page ->
         let can_undo = (*page#buffer#modified &&*) page#buffer#undo#can_undo in
         let can_redo = (*page#buffer#modified &&*) page#buffer#undo#can_redo in
         toolbar#tool_undo#misc#set_sensitive can_undo;
@@ -696,7 +702,7 @@ object (self)
       toolbar#update current_project;
       update_toolbar_save();
       update_toolbar_undo();
-      Gaux.may (editor#get_page Editor_types.Current) ~f:begin fun current ->
+      Gaux.may (editor#get_page Oe.Page_current) ~f:begin fun current ->
         self#set_title editor;
       end;
       self#set_menu_item_nav_history_sensitive();
@@ -751,12 +757,10 @@ object (self)
     Ocaml_text.create_shell := self#shell;
     (* Check for updates at startup *)
     if !Preferences.preferences.Preferences.pref_check_updates then begin
-      Gtk_util.idle_add (fun () -> self#check_for_updates ~verbose:false ())
+      Gmisclib.Idle.add (fun () -> self#check_for_updates ~verbose:false ())
     end;
     (* Focus on active text view *)
-    Gaux.may (editor#get_page Editor_types.Current) ~f:begin fun page ->
-      page#view#misc#grab_focus()
-    end;
+    Gaux.may (editor#get_page Oe.Page_current) ~f:(fun page -> page#view#misc#grab_focus());
     self#set_geometry();
 end
 
@@ -793,7 +797,6 @@ let browser = begin
     ~show:false
     ()
   in
-  Gtk_util.init ();
   new browser window;
 end
 

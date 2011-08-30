@@ -52,7 +52,7 @@ object (self)
     let label_widget =
       let hbox = GPack.hbox () in
       let ebox = GBin.event_box ~packing:hbox#add () in
-      Gtk_util.set_ebox_invisible ebox;
+      Gmisclib.Util.set_ebox_invisible ebox;
       let label = GMisc.label ~text:sh#label ~packing:ebox#add ~show:true () in
       let entry = GEdit.entry ~packing:hbox#add ~show:false () in
       let is_label = ref true in

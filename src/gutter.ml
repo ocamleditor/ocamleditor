@@ -30,41 +30,41 @@
 open Printf
 
 type t = {
-  mutable size : int;
-  mutable chars : int;
+  mutable size            : int;
+  mutable chars           : int;
   mutable start_selection : GText.iter option;
-  spacing : int;
-  mutable fold_size : int;
-  mutable fold_x : int;
-  mutable bg_color : GDraw.color;
-  mutable fg_color : GDraw.color;
-  mutable border_color : GDraw.color;
-  mutable marker_color : GDraw.color;
-  mutable markers : marker list;
+  spacing                 : int;
+  mutable fold_size       : int;
+  mutable fold_x          : int;
+  mutable bg_color        : GDraw.color;
+  mutable fg_color        : GDraw.color;
+  mutable border_color    : GDraw.color;
+  mutable marker_color    : GDraw.color;
+  mutable markers         : marker list;
 }
 and marker = {
-  kind : [`None | `Bookmark of int | `Error of string | `Warning of string];
-  mark : Gtk.text_mark;
-  icon_pixbuf : GdkPixbuf.pixbuf;
-  mutable icon_obj : GObj.widget option;
-  callback : (Gtk.text_mark -> bool) option;
+  kind                    : [`None | `Bookmark of int | `Error of string | `Warning of string];
+  mark                    : Gtk.text_mark;
+  icon_pixbuf             : GdkPixbuf.pixbuf;
+  mutable icon_obj        : GObj.widget option;
+  callback                : (Gtk.text_mark -> bool) option;
 }
 
 let icon_size = 15
 
 (** create *)
 let create () = {
-  size = 0;
-  chars = 0;
+  size            = 0;
+  chars           = 0;
   start_selection = None;
-  spacing = 2;
-  fold_size = 0;
-  fold_x = (-1);
-  bg_color = `WHITE;
-  fg_color = `WHITE;
-  border_color = `WHITE;
-  marker_color = `WHITE;
-  markers = [];
+  spacing         = 2;
+  fold_size       = 0;
+  fold_x          = (-1);
+  bg_color        = `WHITE;
+  fg_color        = `WHITE;
+  border_color    = `WHITE;
+  marker_color    = `WHITE;
+  markers         = [];
 }
 
 (** create_marker *)

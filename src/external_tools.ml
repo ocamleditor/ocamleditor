@@ -63,7 +63,7 @@ let get_macros ~get_editor ~get_current_project () =
   let project : Project.t = get_current_project () in
   let editor : Editor.editor = get_editor () in
   let current_filename =
-    match editor#get_page Editor_types.Current with
+    match editor#get_page Oe.Page_current with
       | None -> ""
       | Some page -> (match page#file with None -> "" | Some file -> file#path)
   in

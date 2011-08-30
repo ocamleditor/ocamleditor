@@ -29,27 +29,28 @@ exception Project_already_exists of string
 exception Cannot_rename of string
 
 type t = {
-  mutable root : string; (* ROOT directory of the project (non-persistent) *)
-  mutable ocaml_home : string; (* Prefix of the ocamlc "bin" dir.;
+  mutable root               : string; (* ROOT directory of the project (non-persistent) *)
+  mutable ocaml_home         : string; (* Prefix of the ocamlc "bin" dir.;
     empty string means default ocaml compiler (the one reacheable from $PATH) *)
-  mutable ocamllib : string; (*  *)
-  mutable encoding : string option;
-  mutable name : string;
-  mutable modified : bool;
-  mutable author : string;
-  mutable description : string;
-  mutable version : string;
-  mutable files : (File.file * int) list; (* Currently open files in the editor (non-persistent) *)
-  mutable open_files : (string * int * bool) list; (* filename, current offset, active *)
-  mutable build : Bconf.t list; (* Build configurations *)
-  mutable runtime : Rconf.t list; (* Runtime configurations *)
-  mutable autocomp_enabled : bool;
-  mutable autocomp_delay : float;
-  mutable autocomp_cflags : string;
-  mutable autocomp_compiler : string;
-  mutable in_source_path : string -> string option;
-  mutable source_paths : string list;
+  mutable ocamllib           : string; (*  *)
+  mutable encoding           : string option;
+  mutable name               : string;
+  mutable modified           : bool;
+  mutable author             : string;
+  mutable description        : string;
+  mutable version            : string;
+  mutable files              : (File.file * int) list; (* Currently open files in the editor (non-persistent) *)
+  mutable open_files         : (string * int * bool) list; (* filename, current offset, active *)
+  mutable build              : Bconf.t list; (* Build configurations *)
+  mutable runtime            : Rconf.t list; (* Runtime configurations *)
+  mutable autocomp_enabled   : bool;
+  mutable autocomp_delay     : float;
+  mutable autocomp_cflags    : string;
+  mutable autocomp_compiler  : string;
+  mutable in_source_path     : string -> string option;
+  mutable source_paths       : string list;
   mutable can_compile_native : bool;
+  mutable symbols            : Oe.symbol_cache;
 }
 
 let extension = ".xml"
@@ -60,6 +61,12 @@ let tmp = "tmp"
 let path_src p = p.root // src
 let path_bak p = p.root // bak
 let path_tmp p = p.root // tmp
+
+(** abs_of_tmp *)
+let abs_of_tmp proj filename =
+  match Miscellanea.filename_relative (".." // tmp) filename with
+    | None -> filename
+    | Some relname -> (path_src proj) // relname
 
 (** set_ocaml_home *)
 let set_ocaml_home ~ocamllib ~ocaml_home project =
@@ -79,26 +86,27 @@ let can_compile_native proj = Ocaml_config.can_compile_native ~ocaml_home:proj.o
 let create ~filename () =
   let root = Filename.dirname filename in
   let proj = {
-    root = root;
-    ocaml_home = "";
-    ocamllib = (match Oe_config.system_ocamllib with None -> "" | Some x -> x);
-    encoding = Some "UTF-8";
-    name = Filename.chop_extension (Filename.basename filename);
-    modified = true;
-    author = "";
-    description = "";
-    version = "1.0.0";
-    files = [];
-    open_files = [];
-    build = [];
-    runtime = [];
-    autocomp_enabled = false;
-    autocomp_delay = 1.0;
-    autocomp_cflags = "";
-    autocomp_compiler = "";
-    in_source_path = Miscellanea.filename_relative (root // src);
-    source_paths = (try File.readtree (root // src) with Sys_error _ -> []);
+    root               = root;
+    ocaml_home         = "";
+    ocamllib           = (match Oe_config.system_ocamllib with None -> "" | Some x -> x);
+    encoding           = Some "UTF-8";
+    name               = Filename.chop_extension (Filename.basename filename);
+    modified           = true;
+    author             = "";
+    description        = "";
+    version            = "1.0.0";
+    files              = [];
+    open_files         = [];
+    build              = [];
+    runtime            = [];
+    autocomp_enabled   = true;
+    autocomp_delay     = 1.0;
+    autocomp_cflags    = "";
+    autocomp_compiler  = "";
+    in_source_path     = Miscellanea.filename_relative (root // src);
+    source_paths       = (try File.readtree (root // src) with Sys_error _ -> []);
     can_compile_native = true;
+    symbols            = {Oe.syt_table=[]; syt_ts=Hashtbl.create 7; syt_critical=Mutex.create()};
   } in
   proj
 
@@ -377,14 +385,14 @@ let save ?editor proj =
       | Some editor ->
         proj.files <- List.map begin fun (file, offset) ->
           file,
-          match editor#get_page (Editor_types.File file) with
+          match editor#get_page (Oe.Page_file file) with
             | None -> 0
             | Some page ->
               if page#load_complete then (page#buffer#get_iter `INSERT)#offset
               else page#initial_offset
         end proj.files;
         let active_filename =
-          match editor#get_page Editor_types.Current with None -> "" | Some page -> page#get_filename
+          match editor#get_page Oe.Page_current with None -> "" | Some page -> page#get_filename
         in active_filename
   in
   let filename = filename proj in

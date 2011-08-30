@@ -41,13 +41,13 @@ object (self)
     match annot with
       | None -> None
       | Some {
-          Annot_types.start = start;
-          stop = stop;
-          annotations = annotations;
+          Oe.annot_start = start;
+          annot_stop = stop;
+          annot_annotations = annot_annotations;
         } ->
-        let type_annot = match Annotation.get_type annotations with Some x -> x | None -> "" in
-        let start = start.Annot_types.pos_lnum, (start.Annot_types.pos_cnum - start.Annot_types.pos_bol) in
-        let stop = stop.Annot_types.pos_lnum, (stop.Annot_types.pos_cnum - stop.Annot_types.pos_bol) in
+        let type_annot = match Annotation.get_type annot_annotations with Some x -> x | None -> "" in
+        let start = start.Oe.annot_lnum, (start.Oe.annot_cnum - start.Oe.annot_bol) in
+        let stop = stop.Oe.annot_lnum, (stop.Oe.annot_cnum - stop.Oe.annot_bol) in
         Some (start, stop, type_annot)
 
   method apply_tag (where : source_point) =
@@ -160,6 +160,6 @@ object (self)
               popup#move ~x ~y;
         end;
         let incr = if !Preferences.preferences.Preferences.pref_annot_type_tooltips_delay = 0 then 0.106 else 0.479 in
-        Gtk_util.fade_window ~incr popup;
+        Gmisclib.Util.fade_window ~incr popup;
 
 end

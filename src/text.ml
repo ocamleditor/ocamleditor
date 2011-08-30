@@ -20,7 +20,6 @@
 
 *)
 
-open Str
 open GdkKeysyms
 open Printf
 open Miscellanea
@@ -54,9 +53,13 @@ fun ?buffer ?file () ->
 object (self)
   inherit GText.buffer buffer#as_buffer
 
-  val undo = new Undo.manager ~buffer
+  val undo = new Gmisclib.Text.Undo.manager ~buffer
   val mutable tab_width = 2
   val mutable tab_spaces = true
+
+  (*val mutable matching_delims : (int * int) list option = None
+  method matching_delims = matching_delims
+  method set_matching_delims x = matching_delims <- x*)
 
   method undo = undo
 
@@ -71,7 +74,7 @@ object (self)
   method select_all () = self#select_range self#start_iter self#end_iter
 
   method get_iter_at_mark mark =
-    new GText.iter (Gtk_util.get_iter_at_mark_safe self#as_buffer (self#get_mark mark))
+    new GText.iter (Gmisclib.Util.get_iter_at_mark_safe self#as_buffer (self#get_mark mark))
 
   method select_marks ~start ~stop =
     self#select_range (self#get_iter_at_mark stop) (self#get_iter_at_mark start);
@@ -81,8 +84,7 @@ object (self)
     self#get_text ~start ~stop ()
 
   method get_line_at_iter (it : GText.iter) =
-    self#get_text ~start:(it#set_line_index 0)
-      ~stop:(it#forward_line#backward_char) ()
+    self#get_text ~start:(it#set_line_index 0) ~stop:it#forward_line ()
 
   method indent ?(dir=(`FORWARD : [`FORWARD | `BACKWARD])) ?start ?stop () =
     let indentation_length = tab_width in
@@ -149,23 +151,36 @@ object (self)
         GtkSignal.stop_emit();
     end
 
-  method select_word ?(iter=(self#get_iter `INSERT)) ?(pat=word_bound) ?(select=true) ?(limit=[]) () =
-    let line = (self#get_line_at_iter iter)^"\n" in
+  method select_word ?(iter=(self#get_iter `INSERT)) ?(pat=word_bound) ?(select=true) () =
+    let line = self#get_line_at_iter iter in
+    let pos = iter#line_index in
+    let start = try Str.search_backward pat line pos with Not_found -> 0 in
+    if start = pos then (self#select_word ~iter:iter#backward_char ~pat ~select ())
+    else begin
+      let start = if start = 0 then start else start + 1 in
+      let stop = try Str.search_forward pat line pos with Not_found -> Glib.Utf8.length line in
+      let start = iter#set_line_index start in
+      let stop = iter#set_line_index stop in
+      if select then self#select_range start stop;
+      (start, stop)
+    end
+
+(*    let line = (self#get_line_at_iter iter)^"\n" in
     let pos = iter#line_index in
     let rec find_bounds pos =
-      let start = try search_backward pat line pos with Not_found -> 0 in
-      if start = 0 || pat = word_bound then start, search_forward pat line (start + 1)
+      let start = try Str.search_backward pat line pos with Not_found -> 0 in
+      if start = 0 || pat = word_bound then start, Str.search_forward pat line (start + 1)
       else if start = pos then begin
         if List.mem line.[pos] limit then pos + 1, pos + 1
         else find_bounds (pos - 1)
-      end else start + 1, search_forward pat line (start + 1)
+      end else start + 1, Str.search_forward pat line (start + 1)
     in try
       let start, stop = find_bounds pos in
       let start = iter#set_line_index start in
       let stop = iter#set_line_index stop in
       if select then self#select_range start stop;
       (start, stop)
-    with Not_found | Invalid_argument _ -> (iter#set_line_index pos, iter#set_line_index pos)
+    with Not_found | Invalid_argument _ -> (iter#set_line_index pos, iter#set_line_index pos)*)
 
   method toggle_case () =
     let start, stop = self#get_iter `SEL_BOUND, self#get_iter `INSERT in
@@ -214,7 +229,7 @@ object (self)
   val mutable signal_expose = None
   val gutter = Gutter.create()
   val mutable gutter_icons = []
-  val hyperlink = new Hyperlink.hyperlink ~view ()
+  val hyperlink = new Gmisclib.Text.Hyperlink.hyperlink ~view ()
   val mutable realized = false
   val mutable show_whitespace_chars = false
   val mutable word_wrap = false
@@ -256,7 +271,7 @@ object (self)
   method modify_font fontname =
     self#misc#modify_font_by_name fontname;
     approx_char_width <- GPango.to_pixels (self#misc#pango_context#get_metrics())#approx_char_width;
-    Gtk_util.idle_add self#paint_gutter
+    Gmisclib.Idle.add self#paint_gutter
 
   method visible_right_margin = visible_right_margin
   method set_visible_right_margin x = visible_right_margin <- x
@@ -268,7 +283,7 @@ object (self)
   method set_show_line_numbers x =
     show_line_numbers <- x;
     Line_num_labl.reset line_num_labl;
-    Gtk_util.idle_add self#paint_gutter
+    Gmisclib.Idle.add self#paint_gutter
 
   method show_line_numbers = show_line_numbers
 
@@ -293,14 +308,14 @@ object (self)
     prev_insert_line <- None;
     match x with None -> () | Some color ->
       current_line_border_color <- Color.set_value 0.82 (`NAME color);
-      Gtk_util.set_tag_paragraph_background highlight_current_line_tag color;
+      Gmisclib.Util.set_tag_paragraph_background highlight_current_line_tag color;
 
   method highlight_current_line = highlight_current_line
 
   method highlight_current_line_tag = highlight_current_line_tag
 
   method scroll_lazy iter =
-    Gtk_util.idle_add ~prio:300 (fun () ->
+    Gmisclib.Idle.add ~prio:300 (fun () ->
       ignore (self#scroll_to_iter ~use_align:(self#scroll_to_iter iter) ~xalign:1.0 ~yalign:0.38 iter));
 
   method scroll dir =
@@ -333,10 +348,10 @@ object (self)
       ~modal:true () in
       let vbox = GPack.vbox ~border_width:8 ~spacing:8 ~packing:w#add () in
       let eb = GPack.hbox ~spacing:3 ~packing:vbox#add () in
-      let _ = GMisc.label ~text:"Line: " ~xalign:0.0 ~width:70 ~packing:(eb#pack ~expand:false) () in
+      let _ = GMisc.label ~text:"Line Number: " ~xalign:0.0 ~width:120 ~packing:(eb#pack ~expand:false) () in
       let line = GEdit.entry ~packing:eb#add () in
       let eb = GPack.hbox ~spacing:3 ~packing:vbox#add () in
-      let _ = GMisc.label ~text:"Character: " ~xalign:0.0 ~width:70 ~packing:(eb#pack ~expand:false) () in
+      let _ = GMisc.label ~text:"Line(Buffer) Offset: " ~xalign:0.0 ~width:120 ~packing:(eb#pack ~expand:false) () in
       let char = GEdit.entry ~packing:eb#add () in
       let _ = GMisc.separator `HORIZONTAL ~packing:vbox#add () in
       let bbox = GPack.button_box `HORIZONTAL ~layout:`END ~spacing:8 ~packing:vbox#add () in
@@ -345,11 +360,18 @@ object (self)
       let callback () =
         try
           let buf = self#buffer in
-          let line = (int_of_string line#text) - 1 in
           let char = try int_of_string char#text with _ -> 0 in
-          let where = buf#get_iter (`LINE line) in
-          let char = max 0 (min (where#chars_in_line - 1) char) in
-          let where = buf#get_iter (`LINECHAR (line, char)) in
+          let where =
+            if Miscellanea.trim line#text = "" then begin
+              let offset = max 0 (min char buf#end_iter#offset) in
+              buf#get_iter (`OFFSET offset)
+            end else begin
+              let line = (int_of_string line#text) - 1 in
+              let where = buf#get_iter (`LINE line) in
+              let char = max 0 (min (where#chars_in_line - 1) char) in
+              buf#get_iter (`LINECHAR (line, char))
+            end;
+          in
           self#buffer#place_cursor ~where;
           self#scroll_lazy where;
           w#destroy();
@@ -380,7 +402,7 @@ object (self)
         let stop = self#buffer#get_iter (`OFFSET lstop) in
         current_matching_tag_bounds <-
           ((self#buffer#create_mark ~name:"delim_left_start" start),
-          (self#buffer#create_mark ~name:"delim_left_stop" stop)) :: [] (*current_matching_tag_bounds*);
+          (self#buffer#create_mark ~name:"delim_left_stop" stop)) :: [];
         self#buffer#apply_tag_by_name "tag_matching_delim" ~start ~stop;
         let start = self#buffer#get_iter (`OFFSET rstart) in
         let stop = self#buffer#get_iter (`OFFSET rstop) in
@@ -418,21 +440,21 @@ object (self)
     let text = Glib.Convert.convert_with_fallback ~fallback:"?"
       ~from_codeset:"utf8" ~to_codeset:Oe_config.ocaml_codeset (self#buffer#get_text ()) in
     if Delimiters.is_delimiter ~utf8:false text55 (pos#offset - start#offset) then begin
-      self#matching_delim_apply_tag text pos#offset
+      ignore (self#matching_delim_apply_tag text pos#offset)
     end else begin
       try
         ignore (self#innermost_enclosing_delim text pos#offset);
-        None
-      with ex -> eprintf "%s\n%!" (Printexc.to_string ex); None
+      with ex -> eprintf "%s\n%!" (Printexc.to_string ex);
     end
 
   method private innermost_enclosing_delim (text : string) (offset : int) = (*(None : (int * int * int * int) option)*)
+    Prf.crono Prf.innermost_enclosing_delim (fun () ->
     match Delimiters.find_innermost_enclosing_delim ~utf8:false text offset with
       | ((start, stop) :: _) (*as stack*)  ->
         if stop = offset
         then (self#innermost_enclosing_delim text start)
         else (self#matching_delim_apply_tag text start);
-      | _ -> None
+      | _ -> None) ()
 
   method current_matching_tag_bounds = current_matching_tag_bounds
 
@@ -523,17 +545,22 @@ object (self)
     (pX - px + self#misc#allocation.Gtk.width),
     (pY - py)
 
-  method paint_current_line_background ins =
-    Gaux.may prev_insert_line ~f:begin fun cur ->
-      let cur = self#buffer#get_iter (`LINE cur) in
-      self#buffer#remove_tag highlight_current_line_tag
-        ~start:(cur#set_line_offset 0) ~stop:cur#forward_to_line_end#forward_char;
-    end;
-    (*if not self#buffer#has_selection then begin*)
-      self#buffer#apply_tag highlight_current_line_tag
-        ~start:(ins#set_line_offset 0) ~stop:ins#forward_char;
-      prev_insert_line <- Some ins#line;
-    (*end*)
+  method paint_current_line_background (ins : GText.iter) =
+    let cur = ins#line in
+    match prev_insert_line with
+      | Some prev ->
+        if prev <> cur then begin
+          let prev = self#buffer#get_iter (`LINE prev) in
+          self#buffer#remove_tag highlight_current_line_tag
+            ~start:(prev#set_line_offset 0) ~stop:prev#forward_to_line_end#forward_char;
+          self#buffer#apply_tag highlight_current_line_tag
+            ~start:(ins#set_line_offset 0) ~stop:ins#forward_char;
+          prev_insert_line <- Some cur;
+        end
+      | _ ->
+        self#buffer#apply_tag highlight_current_line_tag
+          ~start:(ins#set_line_offset 0) ~stop:ins#forward_char;
+        prev_insert_line <- Some cur;
 
   method private set_gutter_size () =
     let gutter_fold_size = gutter.Gutter.fold_size + 4 in (* 4 = borders around fold_size *)
@@ -575,7 +602,7 @@ object (self)
         let stop, _ = self#get_line_at_y (y0 + h0) in
         (** Line Numbers *)
         if realized && show_line_numbers then begin
-          (*Prf.prf_line_numbers begin fun () ->*)
+          Prf.crono Prf.prf_line_numbers begin fun () ->
             Line_num_labl.reset line_num_labl;
             let iter = ref start#backward_line in
             let stop = stop#forward_line in
@@ -594,10 +621,10 @@ object (self)
             let y = !y  + !h in
             incr num;
             Line_num_labl.print ~view:self ~num:!num ~x ~y ~width_chars:gutter.Gutter.chars line_num_labl
-          (*end()*)
+          end()
         end;
         (** Markers *)
-        (*Prf.prf_other_markers begin fun () ->*)
+        Prf.crono Prf.prf_other_markers begin fun () ->
           let x = (gutter.Gutter.size - gutter.Gutter.fold_size - 3 - Gutter.icon_size) / 2 (*1*) in
           List.iter begin fun mark ->
             try
@@ -608,18 +635,18 @@ object (self)
               let child = match mark.Gutter.icon_obj with
                 | None ->
                   let ebox = GBin.event_box () in
-                  Gtk_util.set_ebox_invisible ebox;
+                  Gmisclib.Util.set_ebox_invisible ebox;
                   let icon = GMisc.image ~pixbuf:mark.Gutter.icon_pixbuf () in
                   ebox#add icon#coerce;
                   Gaux.may mark.Gutter.callback ~f:begin fun callback ->
                     ebox#event#connect#enter_notify ~callback:begin fun ev ->
                       let window = GdkEvent.get_window ev in
-                      Gdk.Window.set_cursor window (!Gtk_util.cursor `HAND1);
+                      Gdk.Window.set_cursor window (Gdk.Cursor.create `HAND1);
                       true
                     end;
                     ebox#event#connect#leave_notify ~callback:begin fun ev ->
                       let window = GdkEvent.get_window ev in
-                      Gdk.Window.set_cursor window (!Gtk_util.cursor `ARROW);
+                      Gdk.Window.set_cursor window (Gdk.Cursor.create `ARROW);
                       true
                     end;
                     ebox#event#connect#button_press ~callback:(fun _ -> self#misc#grab_focus(); callback mark.Gutter.mark)
@@ -635,7 +662,7 @@ object (self)
               self#gutter_icons_same_pos child x y ym;
             with Gtk_util.Mark_deleted -> ()
           end gutter.Gutter.markers;
-        (*end ()*)
+        end ()
       with ex -> eprintf "%s\n%s\n%!" (Printexc.to_string ex) (Printexc.get_backtrace())
     (*end ()*)
 
@@ -789,7 +816,7 @@ object (self)
                   let stop = buffer#get_iter_at_mark (`MARK stop) in
                   let yl1, hl1 = view#get_line_yrange start in
                   let yl1 = yl1 - y0 in
-                  (* count_displayed_line *)
+                  (* count_displayed_lines *)
                   let iter = ref (stop#set_line_index 0) in
                   let x_chars = ref 0 in
                   let lines_displayed = ref 1 in
@@ -998,10 +1025,10 @@ object (self)
         | _ -> ()
     end);
     ignore (self#buffer#connect#after#delete_range ~callback:begin fun ~start ~stop ->
-      Gtk_util.idle_add ~prio:300 self#paint_gutter;
+      Gmisclib.Idle.add ~prio:300 self#paint_gutter;
     end);
     ignore (self#buffer#connect#after#insert_text ~callback:begin fun _ _ ->
-      Gtk_util.idle_add ~prio:300 self#paint_gutter;
+      Gmisclib.Idle.add ~prio:300 self#paint_gutter;
     end);
     (** Refresh gutter and right margin line when scrolling *)
     self#connect#set_scroll_adjustments ~callback:begin fun h v ->
@@ -1014,7 +1041,7 @@ object (self)
             ~callback:(fun () -> GtkBase.Widget.queue_draw self#as_widget));
           (* Update gutter on vertical scroll changed *)
           ignore (v#connect#after#value_changed ~callback:begin fun () ->
-            Gtk_util.idle_add self#paint_gutter;
+            Gmisclib.Idle.add self#paint_gutter;
           end);
         | _ -> ()
     end;
