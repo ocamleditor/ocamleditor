@@ -1,0 +1,124 @@
+(*
+
+  OCamlEditor
+  Copyright (C) 2010, 2011 Francesco Tovagliari
+
+  This file is part of OCamlEditor.
+
+  OCamlEditor is free software: you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation, either version 3 of the License, or
+  (at your option) any later version.
+
+  OCamlEditor is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License
+  along with this program. If not, see <http://www.gnu.org/licenses/>.
+
+*)
+
+
+(** Symbol cache *)
+type symbol_cache_entry = {
+  sy_id                       : string list;
+  sy_kind                     : symbol_kind;
+  sy_type                     : string;
+  sy_filename                 : string;
+}
+
+and symbol_cache = {
+  mutable syt_table           : symbol_cache_entry list;
+  syt_ts                      : (string, float) Hashtbl.t; (* filename * last read *)
+  syt_critical                : Mutex.t;
+}
+
+and symbol_kind =
+    Pvalue
+  | Pfunc
+  | Pmethod | Pmethod_private | Pmethod_virtual | Pmethod_private_virtual
+  | Ptype
+  | Plabel
+  | Pconstructor
+  | Pexception
+  | Pmodule
+  | Pmodtype
+  | Pclass
+  | Pcltype
+
+
+(** Annot *)
+type annot = {
+  annot_blocks                : annot_block list;
+  annot_mtime                 : float;
+}
+
+and annot_block = {
+  annot_start                 : annot_position;
+  annot_stop                  : annot_position;
+  annot_annotations           : annotation list
+}
+
+and annot_position = {
+  annot_fname                 : string;
+  annot_lnum                  : int;
+  annot_bol                   : int;
+  annot_cnum                  : int;
+}
+
+and annotation =
+  | Type of string
+  | Def of (string * annot_position * annot_position option) (* scope *)
+  | Int_ref of (string * annot_position * annot_position) (* location of the definition *)
+  | Ext_ref of string
+  | Stack
+  | Tail
+
+
+(** Errors *)
+type error = {
+  er_warnings                 : error_message list;
+  er_errors                   : error_message list;
+}
+
+and error_level =
+  | Warning of int
+  | Error
+
+and error_message = {
+  er_filename                 : string;
+  er_level                    : error_level;
+  er_line                     : int;
+  er_characters               : int * int;
+  er_location                 : string;
+  er_message                  : string;
+  er_inconsistent_assumptions : string option;
+}
+
+
+(** Editor *)
+type editor_page_id =
+  | Page_current
+  | Page_num of int
+  | Page_file of File.file
+  | Page_view of Text.view
+
+
+(** Browser *)
+type browser_maximized_view_action = {
+  mva_menubar                 : bool;
+  mva_toolbar                 : bool;
+  mva_tabbar                  : bool;
+  mva_messages                : bool;
+  mva_fullscreen              : bool;
+}
+
+exception No_current_project
+
+
+
+
+
+
