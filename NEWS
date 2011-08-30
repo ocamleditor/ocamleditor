@@ -1,3 +1,13 @@
+2011-??-??  Release 1.7.0
+-------------------------
+
+  - Module browser: navigation around compiled modules; navigation hystory;
+    hyperlinks; symbol search; multiple views; documentation viewer. 
+  - Structure Pane.
+  - Improved completion.
+  * Ability to jump to a specific offset in the buffer.
+  * Various other improvements and changes.
+
 2011-02-28  Release 1.6.1
 -------------------------
 

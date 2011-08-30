@@ -25,7 +25,9 @@
 
 (** Configuration Section --------------------------------------------------- *)
 
-let includes = "+lablgtk2 +xml-light +ocamldoc"
+let lablgtk2 = "+lablgtk2"
+
+let includes = lablgtk2 ^ " +xml-light +ocamldoc"
 
 (* If you have Microsoft-based native Win32 port, set ccopt to your
    "Microsoft Platform SDK\Lib" and "Microsoft Visual Studio 8\VC\lib"
@@ -68,8 +70,8 @@ let ocaml_src = "ocaml-src"
 let parsing = ocaml_src ^ "/parsing"
 let typing = ocaml_src ^ "/typing"
 let utils = ocaml_src ^ "/utils"
-let includes = sprintf "%s %s %s %s common oebuild" parsing typing utils includes
-let libs = "unix str threads odoc_info toplevellib lablgtk gtkThread.o xml-light common oebuildlib"
+let includes = sprintf "%s %s %s %s gmisclib common oebuild" parsing typing utils includes
+let libs = "unix str threads odoc_info toplevellib lablgtk gtkThread.o xml-light gmisclib common oebuildlib"
 
 let oebuild_name = sprintf "oebuild%s" ext
 let oebuild_command = "oebuild" // oebuild_name
@@ -165,6 +167,13 @@ ocaml_config.ml cmd_line_args.ml dep.mli dep.ml common.ml";
   end;
   popd()
 
+(** gmisclib *)
+let gmisclib () =
+  pushd "gmisclib";
+  kprintf run "%s gmisclib.ml -a -cflags \"%s%s\" -I \"%s\" -l \"unix str lablgtk\""
+    (".." // oebuild_command) debug (if !annot then " -annot" else "") lablgtk2;
+  popd()
+
 (** oebuild *)
 let oebuild () =
   common();
@@ -207,6 +216,7 @@ let lexyacc () =
 (** ocamleditor *)
 let ocamleditor () =
   cp (if use_modified_gtkThread then "gtkThread3.ml" else "gtkThread4.ml") "gtkThread2.ml";
+  gmisclib();
   lexyacc();
   kprintf run
     "%s ocamleditor.ml%s -thread -lflags \"-linkall%s\" -cflags \"-w syumx%s%s\" -I \"%s\" -l \"%s\""
@@ -366,6 +376,7 @@ let _ = begin
       ("-clean",              Unit (target clean),              " Remove object files");
       ("-cleanall",           Unit (target cleanall),           " Remove all the build output");
       ("-oebuild",            Unit (target oebuild),            " (undocumented)");
+      ("-gmisclib",           Unit (target gmisclib),           " (undocumented)");
       ("-oeproc",             Unit (target oeproc),             " (undocumented)");
       ("-compiler-libs",      Unit (target compiler_libs),      " (undocumented)");
       ("-lexyacc",            Unit (target lexyacc),            " (undocumented)");

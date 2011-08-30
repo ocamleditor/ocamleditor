@@ -1,7 +1,7 @@
 <!-- OCamlEditor XML Project -->
 <project>
   <ocaml_home></ocaml_home>
-  <ocamllib></ocamllib>
+  <ocamllib>C:\Objective Caml\lib</ocamllib>
   <encoding>UTF-8</encoding>
   <name>ocamleditor</name>
   <author>Francesco Tovagliari</author>
@@ -9,18 +9,22 @@
   <version>1.6.2</version>
   <autocomp enabled="true" delay="1." cflags=""/>
   <open_files>
-    <filename offset="39375" active="false">editor.ml</filename>
-    <filename offset="20802" active="false">editor_page.ml</filename>
-    <filename offset="4865" active="false">autocomp.ml</filename>
-    <filename offset="2227" active="false">gutter.ml</filename>
-    <filename offset="3239" active="false">bookmark_view.ml</filename>
-    <filename offset="26663" active="false">outline.ml</filename>
-    <filename offset="1242" active="false">C:\Objective Caml\devel\ocamleditor\README</filename>
-    <filename offset="50663" active="false">menu.ml</filename>
-    <filename offset="4567" active="false">bookmark.ml</filename>
-    <filename offset="4097" active="false">gtk_util.ml</filename>
-    <filename offset="11207" active="true">bconf_list.ml</filename>
-    <filename offset="7036" active="false">icons.ml</filename>
+    <filename offset="1248" active="false">symbol.ml</filename>
+    <filename offset="852" active="false">project.ml</filename>
+    <filename offset="31947" active="false">module_browser_tool.ml</filename>
+    <filename offset="3004" active="false">oe.ml</filename>
+    <filename offset="2568" active="false">gtk_util.ml</filename>
+    <filename offset="986" active="false">liim.ml</filename>
+    <filename offset="13060" active="false">menu.ml</filename>
+    <filename offset="34397" active="true">editor.ml</filename>
+    <filename offset="14998" active="false">editor_page.ml</filename>
+    <filename offset="26539" active="false">text.ml</filename>
+    <filename offset="3829" active="false">annot_type.ml</filename>
+    <filename offset="28403" active="false">outline.ml</filename>
+    <filename offset="2496" active="false">bookmark.ml</filename>
+    <filename offset="3721" active="false">prf.ml</filename>
+    <filename offset="3349" active="false">code_folding.ml</filename>
+    <filename offset="2121" active="false">gutter.ml</filename>
   </open_files>
   <runtime>
     <configuration>
@@ -30,7 +34,7 @@
       <default>false</default>
       <build_task>&lt;COMPILE&gt;</build_task>
       <env replace="false">
-        <var>OCAMLEDITORDEBUG=1</var>
+        <var>OCAMLEDITORPARAM=debug=2</var>
         <var>PATH=C:\Objective Caml\bin;C:\GTK-2.22.0\bin;C:\WINDOWS;C:\WINDOWS\System32;.</var>
       </env>
       <args></args>
@@ -42,7 +46,7 @@
       <default>true</default>
       <build_task>&lt;COMPILE&gt;</build_task>
       <env replace="false">
-        <var>OCAMLEDITORDEBUG=1</var>
+        <var>OCAMLEDITORPARAM=debug=2</var>
         <var>DEBUG_UNDO=0</var>
       </env>
       <args></args>
@@ -55,10 +59,10 @@
       <default>true</default>
       <byt>true</byt>
       <opt>false</opt>
-      <libs>unix str threads odoc_info toplevellib lablgtk gtkThread.o xml-light common oebuildlib</libs>
+      <libs>unix str threads odoc_info toplevellib lablgtk gtkThread.o xml-light gmisclib common oebuildlib</libs>
       <other_objects></other_objects>
       <files>ocamleditor.ml</files>
-      <includes>ocaml-src/parsing ocaml-src/typing ocaml-src/utils +lablgtk2 +xml-light +ocamldoc common oebuild </includes>
+      <includes>ocaml-src/parsing ocaml-src/typing ocaml-src/utils +lablgtk2 +xml-light +ocamldoc gmisclib common oebuild </includes>
       <thread>true</thread>
       <vmthread>false</vmthread>
       <pp></pp>
@@ -162,7 +166,19 @@
             <arg>build.ml</arg>
             <arg>-prova</arg>
           </args>
-          <phase></phase>
+          <phase>Before_clean</phase>
+        </task>
+        <task>
+          <name>gmisclib</name>
+          <always_run>false</always_run>
+          <env replace="false"/>
+          <dir>..</dir>
+          <cmd>ocaml</cmd>
+          <args>
+            <arg>build.ml</arg>
+            <arg>-gmisclib</arg>
+          </args>
+          <phase>Before_clean</phase>
         </task>
       </external_tasks>
     </configuration>
@@ -243,6 +259,26 @@
       <lflags>-ccopt &quot;-LC:\Programmi\MIC977~1\Lib -LC:\Programmi\MID05A~1\VC\lib&quot;</lflags>
       <is_library>true</is_library>
       <outname>oebuildlib</outname>
+      <lib_install_path></lib_install_path>
+      <external_tasks/>
+    </configuration>
+    <configuration>
+      <id>8</id>
+      <name>gmisclib</name>
+      <default>false</default>
+      <byt>true</byt>
+      <opt>false</opt>
+      <libs>unix str lablgtk</libs>
+      <other_objects></other_objects>
+      <files>gmisclib/gmisclib.ml</files>
+      <includes>+lablgtk2 gmisclib</includes>
+      <thread>false</thread>
+      <vmthread>false</vmthread>
+      <pp></pp>
+      <cflags></cflags>
+      <lflags></lflags>
+      <is_library>true</is_library>
+      <outname>gmisclib</outname>
       <lib_install_path></lib_install_path>
       <external_tasks/>
     </configuration>
