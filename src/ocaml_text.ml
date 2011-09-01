@@ -41,6 +41,7 @@ object (self)
       | Some file when (file#name ^^ ".ml" || file#name ^^ ".mli" || file#name ^^ ".mll" || file#name ^^ ".mly") -> true
       | _ -> false
   end)
+  val mutable lexical_tags = []
   val mutable shell : Shell.shell option = None
   val mutable select_word_state = []
   val mutable select_word_state_init = None
@@ -227,10 +228,18 @@ object (self)
           end;
     end else None
 
+  method tag_table_lexical = lexical_tags
+
   initializer
     (** Lexical *)
     Lexical.init_tags (*?ocamldoc_paragraph_enabled*) (self :> GText.buffer);
-    (** Lexical coloring disabled for undo of indent *)
+    let tag_table = new GText.tag_table self#tag_table in
+    lexical_tags <- List.map (fun x -> Some x) (Miscellanea.Xlist.filter_map begin fun n ->
+match tag_table#lookup n with
+        | Some t -> Some (new GText.tag t)
+        | _ -> None
+    end !Lexical.tags);
+    (* Lexical coloring disabled for undo of indent *)
     let old_lexical = ref lexical_enabled in
     undo#connect#undo ~callback:begin fun ~name ->
       if name = "indent" then (old_lexical := self#lexical_enabled; self#set_lexical_enabled false;);

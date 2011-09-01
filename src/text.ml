@@ -333,10 +333,6 @@ object (self)
     ignore (self#scroll_to_iter it);
     self#place_cursor_onscreen();
 
-  method line_char =
-    let iter = self#buffer#get_iter `INSERT in
-    iter#line + 1, iter#line_offset, iter#line_index, iter#offset
-
   method goto () = try begin
     let w = GWindow.window
       ~title: "Go to..."
@@ -549,18 +545,18 @@ object (self)
     let cur = ins#line in
     match prev_insert_line with
       | Some prev ->
-        if prev <> cur then begin
+        (*if prev <> cur then begin *) (* it would be nice but it does't work *)
+          prev_insert_line <- Some cur;
           let prev = self#buffer#get_iter (`LINE prev) in
           self#buffer#remove_tag highlight_current_line_tag
-            ~start:(prev#set_line_offset 0) ~stop:prev#forward_to_line_end#forward_char;
+            ~start:(prev#set_line_offset 0) ~stop:prev#forward_to_line_end;
           self#buffer#apply_tag highlight_current_line_tag
             ~start:(ins#set_line_offset 0) ~stop:ins#forward_char;
-          prev_insert_line <- Some cur;
-        end
+        (*end*)
       | _ ->
+        prev_insert_line <- Some cur;
         self#buffer#apply_tag highlight_current_line_tag
           ~start:(ins#set_line_offset 0) ~stop:ins#forward_char;
-        prev_insert_line <- Some cur;
 
   method private set_gutter_size () =
     let gutter_fold_size = gutter.Gutter.fold_size + 4 in (* 4 = borders around fold_size *)
@@ -761,16 +757,11 @@ object (self)
         let adjust      = Oe_config.current_line_border_adjust in
         let hadjust     = match hadjustment with Some adj -> int_of_float adj#value | _ -> 0 in
         let drawable    = new GDraw.drawable window in
-        (* Indentation guidelines *)
-        if show_indent_lines && not self#show_whitespace_chars then (self#paint_indent_lines drawable) start stop y0 h0;
-        (*  *)
-        if Oe_config.ocamldoc_paragraph_bgcolor_enabled then
-          (self#draw_paragraph_border drawable start stop y0 h0 w0);
         (* Current line border *)
         begin
-          match highlight_current_line with
-            | Some color
-              when Oe_config.current_line_border_enabled && self#misc#get_flag `HAS_FOCUS (*&& not self#buffer#has_selection*) ->
+          if Oe_config.current_line_border_enabled && self#misc#get_flag `HAS_FOCUS then begin
+            match highlight_current_line with
+              | Some color ->
                 let iter = buffer#get_iter `INSERT in
                 let y, h = view#get_line_yrange iter in
                 let y = y - y0 in
@@ -780,8 +771,11 @@ object (self)
                 drawable#rectangle ~x:self#left_margin ~y
                   ~width:(w0 - adjust - self#left_margin)
                   ~height:(h - adjust) ~filled:false ();
-            | _ -> ()
+              | _ -> ()
+          end;
         end;
+        (* Indentation guidelines *)
+        if show_indent_lines && not self#show_whitespace_chars then (self#paint_indent_lines drawable) start stop y0 h0;
         (* Gutter border *)
         begin
           match self#get_window `LEFT with
@@ -846,6 +840,8 @@ object (self)
               draw rstart rstop;
             | _ -> ()
         end;
+        (* ocamldoc_paragraph_bgcolor_enabled *)
+        if Oe_config.ocamldoc_paragraph_bgcolor_enabled then (self#draw_paragraph_border drawable start stop y0 h0 w0);
         (* Whitespace characters *)
         if self#show_whitespace_chars then begin
           let iter        = ref expose_top in
@@ -1020,8 +1016,8 @@ object (self)
     ignore (self#buffer#connect#after#mark_set ~callback:begin fun iter mark ->
       match highlight_current_line with
         | Some _ ->
-          let ins = self#buffer#get_iter `INSERT in
-          if ins#equal iter then (self#paint_current_line_background ins);
+          let ins = buffer#get_iter `INSERT in
+          if ins#equal iter then (self#paint_current_line_background iter)
         | _ -> ()
     end);
     ignore (self#buffer#connect#after#delete_range ~callback:begin fun ~start ~stop ->

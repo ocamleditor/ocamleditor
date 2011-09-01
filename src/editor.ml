@@ -382,6 +382,31 @@ object (self)
       tbox#set_child_packing ~expand:false ~fill:false label#coerce;
     end pgs;
 
+    method private colorize_within_nearest_tag_bounds page iter =
+      let tag_table_lexical = page#buffer#tag_table_lexical in
+      let start =
+        let start = ref iter in
+        try
+          while true do
+            start := !start#backward_char;
+            List.iter (fun tag -> if !start#begins_tag tag then (raise Exit)) tag_table_lexical;
+            if !start#is_start then (raise Exit)
+          done;
+          assert false;
+        with Exit -> !start
+      in
+      let stop =
+        let stop = ref iter in
+        try
+          while true do
+            stop := !stop#forward_char;
+            List.iter (fun tag -> if !stop#ends_tag tag then (raise Exit)) tag_table_lexical;
+            if !stop#is_end then (raise Exit)
+          done;
+          assert false;
+        with Exit -> !stop
+      in Lexical.tag page#view#buffer ~start ~stop
+
     method load_page ?(scroll=true) (page : Editor_page.page) =
       if not page#load_complete then begin
         (** Load page *)
@@ -391,41 +416,39 @@ object (self)
         (** Insert_text *)
         ignore (page#buffer#connect#after#insert_text ~callback:begin fun iter text ->
           page#ocaml_view#code_folding#scan_folding_points();
-          Liim.set liim_fast begin fun () ->
+          Liim.set liim_fast ((*Miscellanea.crono*) begin fun () ->
             let iter = page#buffer#get_iter `INSERT in
             if page#buffer#lexical_enabled then begin
-              let start, stop =
-                match page#view#current_matching_tag_bounds with
+              (*let start, stop =
+                (*match page#view#current_matching_tag_bounds with
                   | [_,d; a,_] ->
                     (page#buffer#get_iter_at_mark (`MARK a)), (page#buffer#get_iter_at_mark (`MARK d))
-                  | _ -> ((iter#backward_chars (Glib.Utf8.length text))#set_line_index 0), iter#forward_line
+                  | _ -> ((iter#backward_chars (Glib.Utf8.length text))#set_line_index 0), iter#forward_line*)
               in
-              Lexical.tag page#view#buffer ~start ~stop;
+              Lexical.tag page#view#buffer ~start ~stop;*)
+              self#colorize_within_nearest_tag_bounds page iter;
             end;
             page#view#paint_current_line_background iter;
-            (*Gmisclib.Idle.add ~prio:500 page#ocaml_view#code_folding#scan_folding_points;*)
-            (*page#ocaml_view#code_folding#scan_folding_points ();*)
-          end;
+          end);
           (*page#ocaml_view#code_folding#scan_folding_points ();*)
           Liim.set liim_delim page#view#matching_delim;
           self#location_history_add ~iter ~kind:`EDIT ();
-          (*page#buffer#set_matching_delims None;*)
         end);
         (** Delete range *)
         ignore (page#buffer#connect#delete_range ~callback:begin fun ~start ~stop ->
           Liim.set liim_fast begin fun () ->
             let iter = page#buffer#get_iter `INSERT in
             if page#buffer#lexical_enabled then begin
-              let start, stop =
-                match page#view#current_matching_tag_bounds with
+              (*let start, stop =
+                (*match page#view#current_matching_tag_bounds with
                   | [_,d; a,_] ->
                     (page#buffer#get_iter_at_mark (`MARK a)), (page#buffer#get_iter_at_mark (`MARK d))
-                  | _ -> (iter#backward_line#set_line_index 0), iter#forward_to_line_end
+                  | _ -> (iter#backward_line#set_line_index 0), iter#forward_to_line_end*)
               in
-              Lexical.tag page#view#buffer ~start ~stop;
+              Lexical.tag page#view#buffer ~start ~stop;*)
+              self#colorize_within_nearest_tag_bounds page iter;
             end;
             page#view#paint_current_line_background iter;
-            (*(*Gmisclib.Idle.add ~prio:500 *)page#ocaml_view#code_folding#scan_folding_points ();*)
           end;
           page#ocaml_view#code_folding#scan_folding_points ();
           Liim.set liim_delim page#view#matching_delim;
@@ -491,7 +514,14 @@ object (self)
                   false
                 end;
                 page#buffer#connect#modified_changed ~callback:begin fun () ->
-                  image#set_pixbuf (if page#buffer#modified then Icons.button_close_b else Icons.button_close);
+                  if page#buffer#modified then begin
+                    page#status_modified_icon#set_pixbuf Icons.save_14;
+                    page#status_modified_icon#misc#set_tooltip_text "Modified";
+                    image#set_pixbuf Icons.button_close_b
+                  end else begin
+                    page#status_modified_icon#set_pixbuf Icons.none_14;
+                    image#set_pixbuf Icons.button_close
+                  end;
                   modified_changed#call();
                 end;
                 (** Annot type tooltips *)

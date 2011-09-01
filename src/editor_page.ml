@@ -65,6 +65,7 @@ class page ?file ~project ~offset ~editor () =
   (**  *)
   let _ = GMisc.separator `VERTICAL ~packing:sbox#pack () in
   let status_cursor_line = GMisc.label ~xalign:0.5 ~packing:sbox#pack ~width:70 () in
+  let _ = status_cursor_line#misc#modify_font_by_name "bold" in
   let _ = GMisc.separator `VERTICAL ~packing:sbox#pack () in
   let status_cursor_off = GMisc.label ~xalign:0.5 ~packing:sbox#pack ~width:45 () in
   let _ = GMisc.separator `VERTICAL ~packing:sbox#pack () in
@@ -389,20 +390,19 @@ object (self)
     if !Preferences.preferences.Preferences.pref_err_tooltip
     then (error_indication#tooltip location)
 
+  method status_modified_icon = status_modified
+
   initializer
     view#hyperlink#enable();
     buffer#set_modified false;
     self#set_tag_annot_background();
     (** Expose: Statusbar *)
-    self#view#event#connect#after#expose ~callback:begin fun _ ->
-      let line, line_offset, _, iter_offset = view#line_char in
-      kprintf status_cursor_line#set_label "<b>%4d : %-3d</b>" line line_offset;
-      kprintf status_cursor_off#set_label "%d" iter_offset;
-      if read_only then (status_modified#set_pixbuf Icons.lock_14; status_modified#misc#set_tooltip_text "Read-only")
-      else if buffer#modified then (status_modified#set_pixbuf Icons.save_14; status_modified#misc#set_tooltip_text "Modified")
-      else (status_modified#set_pixbuf Icons.none_14);
+    ignore (self#view#event#connect#after#expose ~callback:begin fun _ ->
+      let iter = self#buffer#get_iter `INSERT in
+      kprintf status_cursor_line#set_text "%4d : %-3d" (iter#line + 1) iter#line_offset;
+      status_cursor_off#set_text (string_of_int iter#offset);
       false
-    end;
+    end);
     (** After focus_in, check whether the file is changed on disk *)
     ignore (text_view#event#connect#after#focus_in ~callback:begin fun _ ->
       Gaux.may self#file ~f:begin fun f ->
@@ -414,6 +414,10 @@ object (self)
             Dialog.confirm ~message ~f:(yes, no) self;
           end else self#revert();
         self#set_read_only f#is_readonly;
+        if read_only then begin
+          status_modified#set_pixbuf Icons.lock_14;
+          status_modified#misc#set_tooltip_text "Read-only"
+        end;
       end;
       false
     end);

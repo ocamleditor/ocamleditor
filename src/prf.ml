@@ -61,6 +61,21 @@ let prf_delimiters_scan       = create true  "prf_delimiters_scan"
 let prf_autosave              = create true  "prf_autosave"
 let prf_compile_buffer        = create true  "prf_compile_buffer"
 
+(*
+                                                     Calls     Avg      Tot          calls/min
+-----------------------------------------------------------------------------------------
+prf_scan_folding_points .......................... :  1621   0.050    81.62   0.87%  2.88
+prf_other_markers ................................ :  3450   0.008    26.87   0.29%  6.14
+innermost_enclosing_delim ........................ :  1136   0.012    13.48   0.14%  2.02
+prf_compile_buffer ............................... :   264   0.029     7.77   0.08%  0.47
+prf_line_numbers ................................. :  2482   0.003     7.71   0.08%  4.42
+prf_autosave ..................................... :  1867   0.000     0.64   0.01%  3.32
+prf_outline_select ............................... :     0  -1.#IO     0.00   0.00%  0.00
+prf_delimiters_scan .............................. :     0  -1.#IO     0.00   0.00%  0.00
+-----------------------------------------------------------------------------------------
+
+*)
+
 let crono func f x =
   if not func.enabled then (f x) else
     let finally time =

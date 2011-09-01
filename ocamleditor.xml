@@ -9,22 +9,17 @@
   <version>1.6.2</version>
   <autocomp enabled="true" delay="1." cflags=""/>
   <open_files>
-    <filename offset="1248" active="false">symbol.ml</filename>
-    <filename offset="852" active="false">project.ml</filename>
-    <filename offset="31947" active="false">module_browser_tool.ml</filename>
-    <filename offset="3004" active="false">oe.ml</filename>
-    <filename offset="2568" active="false">gtk_util.ml</filename>
-    <filename offset="986" active="false">liim.ml</filename>
-    <filename offset="13060" active="false">menu.ml</filename>
-    <filename offset="34397" active="true">editor.ml</filename>
-    <filename offset="14998" active="false">editor_page.ml</filename>
-    <filename offset="26539" active="false">text.ml</filename>
-    <filename offset="3829" active="false">annot_type.ml</filename>
-    <filename offset="28403" active="false">outline.ml</filename>
-    <filename offset="2496" active="false">bookmark.ml</filename>
-    <filename offset="3721" active="false">prf.ml</filename>
-    <filename offset="3349" active="false">code_folding.ml</filename>
-    <filename offset="2121" active="false">gutter.ml</filename>
+    <filename offset="2694" active="false">browser.ml</filename>
+    <filename offset="17201" active="true">editor.ml</filename>
+    <filename offset="1521" active="false">lexical.ml</filename>
+    <filename offset="43051" active="false">menu.ml</filename>
+    <filename offset="13176" active="false">module_browser_tool.ml</filename>
+    <filename offset="15262" active="false">editor_page.ml</filename>
+    <filename offset="8563" active="false">ocaml_text.ml</filename>
+    <filename offset="40734" active="false">text.ml</filename>
+    <filename offset="23238" active="false">outline.ml</filename>
+    <filename offset="0" active="false">gtkThread2.ml</filename>
+    <filename offset="2848" active="false">prf.ml</filename>
   </open_files>
   <runtime>
     <configuration>

@@ -101,16 +101,18 @@ let file ~browser ~group ~flags  () =
         end;
         let count = ref 0 in
         begin
-          try
-            List.iter begin fun filename ->
-              incr count;
-              let label = filename in
-              let mi = GMenu.menu_item ~label ~packing:open_recent_menu#add () in
-              ignore (mi#connect#activate ~callback:(fun () ->
-                ignore (browser#editor#open_file ~active:true ~offset:0 filename)));
-              if !count > 30 then (raise Exit)
-            end (browser#editor#file_history.File_history.content);
-          with Exit -> ()
+          Gmisclib.Idle.add begin fun () ->
+            try
+              List.iter begin fun filename ->
+                incr count;
+                let label = filename in
+                let mi = GMenu.menu_item ~label ~packing:open_recent_menu#add () in
+                ignore (mi#connect#activate ~callback:(fun () ->
+                  ignore (browser#editor#open_file ~active:true ~offset:0 filename)));
+                if !count > 30 then (raise Exit)
+              end (browser#editor#file_history.File_history.content);
+            with Exit -> ()
+          end;
         end;
         if List.length browser#editor#file_history.File_history.content > 0 then begin
           let clear_file_history = GMenu.menu_item ~label:"Clear File History"
@@ -370,7 +372,6 @@ let search ~browser ~group ~flags () =
   i_search#set_image (GMisc.image ~stock:`FIND ~icon_size:`MENU ())#coerce;
   i_search#connect#activate ~callback:browser#editor#i_search;
   i_search#add_accelerator ~group ~modi:[`CONTROL] GdkKeysyms._e ~flags;
-
   (** Find/Replace in Path *)
   let find_in_path = GMenu.image_menu_item ~label:"Find/Replace in Path" ~packing:menu#add () in
   ignore (find_in_path#connect#activate ~callback:begin fun () ->
@@ -431,17 +432,19 @@ let search ~browser ~group ~flags () =
     ~label:"Bookmarks" ~packing:menu#add () in
   let bookmark_menu = GMenu.menu ~packing:bookmarks#set_submenu () in
   let _  = GMenu.tearoff_item ~packing:bookmark_menu#add () in
-  List.iter2 begin fun num key ->
-    let mi = GMenu.menu_item ~label:(sprintf "Goto Bookmark %d" num) ~packing:bookmark_menu#add () in
-    mi#connect#activate ~callback:(fun () -> browser#editor#bookmark_goto ~num);
-    mi#add_accelerator ~group ~modi:[`CONTROL] key ~flags;
-  end [1; 2; 3; 4; 5; 6; 7; 8; 9; 0] [_1; _2; _3; _4; _5; _6; _7; _8; _9; _0];
-  let _ = GMenu.separator_item ~packing:bookmark_menu#add () in
-  List.iter2 begin fun num key ->
-    let mi = GMenu.menu_item ~label:(sprintf "Bookmark %d" num) ~packing:bookmark_menu#add () in
-    mi#connect#activate ~callback:(fun () -> browser#editor#bookmark_create num);
-    mi#add_accelerator ~group ~modi:[`MOD1; `CONTROL] key ~flags;
-  end [1; 2; 3; 4; 5; 6; 7; 8; 9; 0] [_1; _2; _3; _4; _5; _6; _7; _8; _9; _0];
+  Gmisclib.Idle.add begin fun () ->
+    List.iter2 begin fun num key ->
+      let mi = GMenu.menu_item ~label:(sprintf "Goto Bookmark %d" num) ~packing:bookmark_menu#add () in
+      mi#connect#activate ~callback:(fun () -> browser#editor#bookmark_goto ~num);
+      mi#add_accelerator ~group ~modi:[`CONTROL] key ~flags;
+    end [1; 2; 3; 4; 5; 6; 7; 8; 9; 0] [_1; _2; _3; _4; _5; _6; _7; _8; _9; _0];
+    let _ = GMenu.separator_item ~packing:bookmark_menu#add () in
+    List.iter2 begin fun num key ->
+      let mi = GMenu.menu_item ~label:(sprintf "Bookmark %d" num) ~packing:bookmark_menu#add () in
+      mi#connect#activate ~callback:(fun () -> browser#editor#bookmark_create num);
+      mi#add_accelerator ~group ~modi:[`MOD1; `CONTROL] key ~flags;
+    end [1; 2; 3; 4; 5; 6; 7; 8; 9; 0] [_1; _2; _3; _4; _5; _6; _7; _8; _9; _0];
+  end;
   (*  *)
   let callback _ =
     try
@@ -452,11 +455,20 @@ let search ~browser ~group ~flags () =
       in
       List.iter (fun c -> c#misc#set_sensitive
         (has_current_page || force_sensitive c)) menu#children;
-      let def_ref_sensitive = match browser#editor#get_page Oe.Page_current with None -> false
-          | Some page -> Definition.find_definition ~project:browser#editor#project ~page ~iter:(page#buffer#get_iter `INSERT) <> None
-      in
-      find_definition#misc#set_sensitive def_ref_sensitive;
-      find_references#misc#set_sensitive def_ref_sensitive;
+      Gmisclib.Idle.add begin fun () ->
+        let def_ref_sensitive =
+          match browser#editor#get_page Oe.Page_current with None -> false
+            | Some page ->
+              let iter = page#buffer#get_iter `INSERT in
+              if not iter#ends_line && not (Glib.Unichar.isspace iter#char) then begin
+                Definition.find_definition
+                  ~project:browser#editor#project
+                  ~page ~iter <> None
+                end else false
+        in
+        find_definition#misc#set_sensitive def_ref_sensitive;
+        find_references#misc#set_sensitive def_ref_sensitive
+      end;
     with No_current_project -> begin
       List.iter (fun c -> c#misc#set_sensitive false) menu#children
     end
@@ -659,12 +671,14 @@ let project ~browser ~group ~flags () =
         let clean_conf_item = GMenu.image_menu_item ~label:"Clean..." ~packing:(menu#insert ~pos:4) () in
         items_build := (clean_conf_item :> GMenu.menu_item) :: !items_build;
         let clean_menu = GMenu.menu ~packing:clean_conf_item#set_submenu () in
-        List.iter begin fun tg ->
-          let item = GMenu.menu_item ~label:tg.Bconf.name ~packing:clean_menu#add () in
-          ignore (item#connect#activate ~callback:begin fun () ->
-            ignore (Bconf_console.exec ~project:browser#current_project ~editor:browser#editor `CLEAN tg)
-          end);
-        end bconfigs;
+        Gmisclib.Idle.add begin fun () ->
+          List.iter begin fun tg ->
+            let item = GMenu.menu_item ~label:tg.Bconf.name ~packing:clean_menu#add () in
+            ignore (item#connect#activate ~callback:begin fun () ->
+              ignore (Bconf_console.exec ~project:browser#current_project ~editor:browser#editor `CLEAN tg)
+            end);
+          end bconfigs;
+        end;
         (*  *)
         let compile_item = GMenu.image_menu_item ~label:"Build..." ~packing:(menu#insert ~pos:5) () in
         items_build := (compile_item :> GMenu.menu_item) :: !items_build;
@@ -673,26 +687,30 @@ let project ~browser ~group ~flags () =
         let _ = item_all#connect#activate ~callback:(fun () -> browser#build_all bconfigs) in
         item_all#add_accelerator ~group ~modi:[`CONTROL;`MOD1] GdkKeysyms._F10 ~flags;
         ignore (GMenu.separator_item ~packing:compile_menu#add ());
-        List.iter begin fun tg ->
-          let item = GMenu.menu_item ~label:tg.Bconf.name ~packing:compile_menu#add () in
-          ignore (item#connect#activate ~callback:begin fun () ->
-            ignore (Bconf_console.exec ~project:browser#current_project ~editor:browser#editor `COMPILE tg)
-          end);
-        end bconfigs;
+        Gmisclib.Idle.add begin fun () ->
+          List.iter begin fun tg ->
+            let item = GMenu.menu_item ~label:tg.Bconf.name ~packing:compile_menu#add () in
+            ignore (item#connect#activate ~callback:begin fun () ->
+              ignore (Bconf_console.exec ~project:browser#current_project ~editor:browser#editor `COMPILE tg)
+            end);
+          end bconfigs;
+        end;
         (*  *)
         let run_item = GMenu.image_menu_item ~label:"Run..." ~packing:(menu#insert ~pos:6) () in
         items_build := (run_item :> GMenu.menu_item) :: !items_build;
         let run_menu = GMenu.menu ~packing:run_item#set_submenu () in
-        List.iter begin fun rc ->
-          let item = GMenu.menu_item ~label:rc.Rconf.name ~packing:run_menu#add () in
-          ignore (item#connect#activate ~callback:begin fun () ->
-            try
-              let bc = List.find (fun b -> b.Bconf.id = rc.Rconf.id_build) bconfigs in
-              ignore (Bconf_console.exec
-                ~project:browser#current_project ~editor:browser#editor (`RCONF rc) bc)
-            with Not_found -> ()
-          end);
-        end browser#current_project.Project.runtime;
+        Gmisclib.Idle.add begin fun () ->
+          List.iter begin fun rc ->
+            let item = GMenu.menu_item ~label:rc.Rconf.name ~packing:run_menu#add () in
+            ignore (item#connect#activate ~callback:begin fun () ->
+              try
+                let bc = List.find (fun b -> b.Bconf.id = rc.Rconf.id_build) bconfigs in
+                ignore (Bconf_console.exec
+                  ~project:browser#current_project ~editor:browser#editor (`RCONF rc) bc)
+              with Not_found -> ()
+            end);
+          end browser#current_project.Project.runtime;
+        end;
 (*              items_build := (GMenu.separator_item ~packing:(menu#insert ~pos:5) ()) :: !items_build;*)
       end;
       List.iter (fun c -> c#misc#set_sensitive true) menu#children
@@ -732,12 +750,12 @@ let project ~browser ~group ~flags () =
   project_refresh#connect#activate ~callback:browser#refresh;
   (** Build Configurations... *)
   let project_targets = GMenu.image_menu_item ~label:"Build Configurations..." ~packing:menu#add () in
-  project_targets#connect#activate ~callback:(fun () -> browser#dialog_project_properties ?page:(Some 1) ());
+  project_targets#connect#activate ~callback:(fun () -> browser#dialog_project_properties ?page:(Some 1) ?show:(Some true) ());
   project_targets#add_accelerator ~group ~modi:[] GdkKeysyms._F12 ~flags;
   (** Project Properties *)
   let dialog_project_properties = GMenu.image_menu_item ~label:"Properties" ~packing:menu#add () in
   dialog_project_properties#set_image (GMisc.image ~stock:`PROPERTIES ~icon_size:`MENU ())#coerce;
-  dialog_project_properties#connect#activate ~callback:(fun () -> browser#dialog_project_properties ?page:(Some 0) ());
+  dialog_project_properties#connect#activate ~callback:(fun () -> browser#dialog_project_properties ?page:(Some 0) ?show:(Some true) ());
   dialog_project_properties#add_accelerator ~group ~modi:[`CONTROL; `SHIFT] GdkKeysyms._P ~flags;
 (*        let generate_build_script = GMenu.menu_item ~label:"Generate a Build Script" ~packing:menu#add () in
   generate_build_script#connect#activate ~callback:begin fun () ->
@@ -747,36 +765,47 @@ let project ~browser ~group ~flags () =
   end;*)
   (** Project history *)
   let items_project = ref [] in
+  let last_read = ref 0.0 in
   let callback _ =
     try
-      browser#editor#with_current_page begin fun p ->
-        let name = Filename.basename p#get_filename in
-        if name ^^ ".ml" || name ^^ ".mli" then begin
-          kprintf label_comp_file#set_text "Compile \xC2\xAB%s\xC2\xBB" name;
-          project_comp_file#misc#set_sensitive true
-        end else begin
-          label_comp_file#set_text "Compile";
-          project_comp_file#misc#set_sensitive false
-        end;
-      end;
-      List.iter menu#remove !items_project;
-      items_project := [];
-      let history = browser#project_history.File_history.content in
-      let history = List.map (fun n -> (Filename.chop_extension (Filename.basename n), n)) history in
-      let history = List.sort (fun (x1, _) (x2, _) ->
-        compare (String.lowercase x1) (String.lowercase x2)) history in
-      if List.length history > 0 then begin
-        items_project := (GMenu.separator_item ~packing:menu#add ()) :: !items_project;
-      end;
-      List.iter begin fun (label, filename) ->
-        if Sys.file_exists filename then begin
-          let item = GMenu.check_menu_item
-            ~active:(filename = Project.filename browser#current_project)
-            ~label ~packing:menu#add () in
-          items_project := (item :> GMenu.menu_item) :: !items_project;
-          ignore (item#connect#toggled ~callback:(fun () -> browser#project_open filename));
+      (* Update Compile file item *)
+      Gmisclib.Idle.add begin fun () ->
+        browser#editor#with_current_page begin fun p ->
+          let name = Filename.basename p#get_filename in
+          if name ^^ ".ml" || name ^^ ".mli" then begin
+            kprintf label_comp_file#set_text "Compile \xC2\xAB%s\xC2\xBB" name;
+            project_comp_file#misc#set_sensitive true
+          end else begin
+            label_comp_file#set_text "Compile";
+            project_comp_file#misc#set_sensitive false
+          end;
         end
-      end history;
+      end;
+      (* Project history items *)
+      let last_modified = (Unix.stat Oe_config.project_history_filename).Unix.st_mtime in
+      if !last_read < last_modified then begin
+        last_read := last_modified;
+        List.iter menu#remove !items_project;
+        items_project := [];
+        let history = browser#project_history.File_history.content in
+        let history = List.map (fun n -> (Filename.chop_extension (Filename.basename n), n)) history in
+        let history = List.sort (fun (x1, _) (x2, _) ->
+          compare (String.lowercase x1) (String.lowercase x2)) history in
+        if List.length history > 0 then begin
+          items_project := (GMenu.separator_item ~packing:menu#add ()) :: !items_project;
+        end;
+        List.iter begin fun (label, filename) ->
+          Gmisclib.Idle.add begin fun () ->
+            if Sys.file_exists filename then begin
+              let item = GMenu.check_menu_item
+                ~active:(filename = Project.filename browser#current_project)
+                ~label ~packing:menu#add () in
+              items_project := (item :> GMenu.menu_item) :: !items_project;
+              ignore (item#connect#toggled ~callback:(fun () -> browser#project_open filename));
+            end
+          end
+        end history;
+      end
     with Not_found -> ()
   in
   callback();

@@ -152,7 +152,7 @@ class widget ~project ?packing () =
   let button_forward = GButton.tool_button ~stock:`GO_FORWARD ~packing:toolbar#insert () in
   let button_up      = GButton.tool_button ~stock:`GO_UP ~packing:toolbar#insert () in
   let button_home    = GButton.tool_button ~stock:`HOME ~packing:toolbar#insert () in
-  let _              = GButton.separator_tool_item ~draw:false ~packing:toolbar#insert () in
+  let _              = GButton.separator_tool_item ~draw:true ~packing:toolbar#insert () in
   let item_find      = GButton.tool_item ~expand:false ~packing:toolbar#insert () in
   let entry_find     = GEdit.entry ~packing:item_find#add () in
   let button_find    = GButton.tool_button ~stock:`FIND ~packing:toolbar#insert () in
@@ -747,7 +747,7 @@ and show_current () = object (self) inherit [symbol_list] GUtil.signal () as sup
 (** create *)
 let create ~project =
   let title = "Module Browser" in
-  let window = GWindow.window ~title ~position:`CENTER ~icon:Icons.oe ~width:900 ~height:600 ~border_width:5 ~allow_shrink:true ~show:false () in
+  let window = GWindow.window ~title ~position:`CENTER ~icon:Icons.oe ~width:900 ~height:600 ~allow_shrink:true ~show:false () in
   let widget = new widget ~project ~packing:window#add () in
   window#show()
 ;;

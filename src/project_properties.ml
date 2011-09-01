@@ -25,7 +25,7 @@ open Miscellanea
 open Printf
 
 
-class window ~editor ?(callback=ignore) ?page project =
+class window ~editor ?(callback=ignore) ?page ?show project =
   let width = 105 in
   let window = GWindow.window ~modal:false ~title:("Project \""^project.name^"\"")
     ~icon:Icons.oe ~border_width:5 ~position:`CENTER () in
@@ -186,15 +186,15 @@ class window ~editor ?(callback=ignore) ?page project =
   (** Buttons *)
   let bb = GPack.button_box `HORIZONTAL ~layout:`END ~spacing:8 ~border_width:8
     ~packing:(box#pack ~expand:false) () in
-  let ok_butt = GButton.button ~stock:`OK ~packing:bb#add () in
-  let apply_butt = GButton.button ~stock:`APPLY ~packing:bb#add () in
-  let cancel_butt = GButton.button ~use_mnemonic:false ~stock:`CLOSE ~packing:bb#add () in
-  let help_butt = GButton.button ~use_mnemonic:false ~stock:`HELP ~packing:bb#add () in
-  let _ = bb#set_child_secondary help_butt#coerce true in
-  let _ = help_butt#misc#set_sensitive false in
-  let _ = bconf_list#misc#connect#map ~callback:(fun () -> help_butt#misc#set_sensitive true) in
-  let _ = bconf_list#misc#connect#unmap ~callback:(fun () -> help_butt#misc#set_sensitive false) in
-  let _ = help_butt#connect#clicked ~callback:begin fun () ->
+  let button_ok = GButton.button ~stock:`OK ~packing:bb#add () in
+  let button_apply = GButton.button ~stock:`APPLY ~packing:bb#add () in
+  let button_close = GButton.button ~use_mnemonic:false ~stock:`CLOSE ~packing:bb#add () in
+  let button_help = GButton.button ~use_mnemonic:false ~stock:`HELP ~packing:bb#add () in
+  let _ = bb#set_child_secondary button_help#coerce true in
+  let _ = button_help#misc#set_sensitive false in
+  let _ = bconf_list#misc#connect#map ~callback:(fun () -> button_help#misc#set_sensitive true) in
+  let _ = bconf_list#misc#connect#unmap ~callback:(fun () -> button_help#misc#set_sensitive false) in
+  let _ = button_help#connect#clicked ~callback:begin fun () ->
     let cmd = sprintf "\"%s\" --help" Oe_config.oebuild_command in
     let text = Miscellanea.expand cmd in
     let window = GWindow.message_dialog ~title:cmd ~position:`CENTER ~message_type:`INFO
@@ -273,9 +273,9 @@ object (self)
     set_paths();
     name_entry#misc#grab_focus();
     (* Buttons *)
-    apply_butt#connect#clicked ~callback:self#save;
-    ok_butt#connect#clicked ~callback:(fun () -> self#save(); cancel_butt#clicked());
-    cancel_butt#connect#clicked ~callback:window#destroy;
+    button_apply#connect#clicked ~callback:self#save;
+    button_ok#connect#clicked ~callback:(fun () -> self#save(); button_close#clicked());
+    button_close#connect#clicked ~callback:window#misc#hide;
     (* *)
     notebook#goto_page 0;
 (*    notebook#connect#switch_page ~callback:begin fun num ->
@@ -287,14 +287,14 @@ object (self)
     end;
     (* Window *)
     window#event#connect#key_release ~callback:begin fun ev ->
-      ignore(if GdkEvent.Key.keyval ev = GdkKeysyms._Escape then cancel_butt#clicked());
+      ignore(if GdkEvent.Key.keyval ev = GdkKeysyms._Escape then button_close#clicked());
       true
     end;
     Gaux.may page ~f:notebook#goto_page;
-    window#show()
+    if show = Some true then (window#show())
 end
 
-let create ~editor ?callback ?project ?page () =
+let create ~editor ?callback ?project ?page ?show () =
   let project = match project with
     | Some p -> p
     | None ->
@@ -308,7 +308,7 @@ let create ~editor ?callback ?project ?page () =
         [name; name^Project.extension] in
       Project.create ~filename ()
   in
-  new window ~editor ?callback ?page project
+  new window ~editor ?callback ?page ?show project
 
 
 

@@ -66,6 +66,7 @@ object (self)
     File_history.create
       ~filename:Oe_config.project_history_filename
       ~max_length:Oe_config.project_history_max_length
+  val mutable dialog_project_properties = None
 
   method connect = new signals ~switch_project ~menubar_visibility_changed ~toolbar_visibility_changed
     ~tabbar_visibility_changed ~outline_visibility_changed ~messages_visibility_changed
@@ -110,7 +111,7 @@ object (self)
         end;
         (* Save project and file history *)
         File_history.write editor#file_history;
-        File_history.write project_history;
+        self#project_write_history();
         (*  *)
         finalize();
         GMain.Main.quit();
@@ -144,24 +145,6 @@ object (self)
     editor#save_all();
     (try Project.save ~editor self#current_project with No_current_project -> ())
 
-  method private set_current_project proj =
-    (* Previous project *)
-    begin try
-      let previous = self#current_project in
-      Project.save ~editor previous;
-      File_history.write project_history;
-      Project.unload_path previous Config.load_path;
-      List.iter (fun p -> Autosave.delete ~filename:p#get_filename ()) editor#pages;
-    with No_current_project -> () end;
-    (* Load current project path *)
-    Project.load_path proj Config.load_path;
-    (* *)
-    current_project <- Some proj;
-    editor#set_project self#current_project;
-    Sys.chdir (proj.root // Project.src);
-    switch_project#call();
-    window#set_title (Convert.to_utf8 proj.name);
-
   method refresh () = Project.refresh self#current_project
 
   method current_project =
@@ -189,15 +172,38 @@ object (self)
         dialog#destroy()
       | _ -> dialog#destroy()
 
+  method private project_write_history () =
+    File_history.write project_history;
+
+  method project_close () =
+    begin (* Previous project *)
+      try
+        let previous = self#current_project in
+        Project.save ~editor previous;
+        self#project_write_history();
+        Project.unload_path previous Config.load_path;
+        List.iter (fun p -> Autosave.delete ~filename:p#get_filename ()) editor#pages;
+      with No_current_project -> ()
+    end;
+
   method project_open filename =
+    self#project_close();
     let proj = Project.load filename in
+    current_project <- Some proj;
+    Project.load_path proj Config.load_path;
+    editor#close_all ();
+    editor#pack_outline (Outline.create_empty());
+    editor#set_project self#current_project;
+    Sys.chdir (proj.root // Project.src);
+    window#set_title (Convert.to_utf8 proj.name);
     File_history.add project_history filename;
-    self#set_current_project proj;
-    (*Code_insight.preload_signatures ~project:proj;*)
     Symbol.reset_cache ~project:proj;
     Annotation.preload ~project:proj;
-    editor#close_all ();
     Autosave.recover();
+    Gaux.may dialog_project_properties ~f:(fun w -> w#destroy());
+    dialog_project_properties <- None;
+    Gmisclib.Idle.add ~prio:600 (fun () -> self#dialog_project_properties ~show:false ());
+    switch_project#call();
     (* Load files *)
     let active_exists = ref false in
     let i = ref 0 in
@@ -212,13 +218,12 @@ object (self)
     proj.open_files <- [];
     proj.modified <- false;
 
-  val mutable dialog_project_properties = None
-  method dialog_project_properties ?page () =
+  method dialog_project_properties ?page ?(show=true) () =
     try
       begin
         match dialog_project_properties with
           | None ->
-            let window = Project_properties.create ~editor ?page ~project:self#current_project () in
+            let window = Project_properties.create ~editor ?page ~project:self#current_project ~show () in
             window#connect#destroy ~callback:(fun _ -> dialog_project_properties <- None);
             window#misc#connect#hide ~callback:(fun () -> toolbar#update current_project);
             dialog_project_properties <- Some window
@@ -227,7 +232,8 @@ object (self)
     with No_current_project -> ()
 
   method dialog_project_new () =
-    ignore (Project_properties.create ~editor ~callback:begin fun proj ->
+    ignore (Project_properties.create ~show:true ~editor ~callback:begin fun proj ->
+      self#project_close();
       Project.save ~editor proj;
       self#project_open (Project.filename proj);
     end ());

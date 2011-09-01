@@ -269,8 +269,8 @@ object (self)
             current_dump_size <- size;
             tooltips <- [];
             let locs = locations in
-            List.iter (fun (_, (m, _)) -> Gmisclib.Idle.add ~prio:600 (fun () ->
-              (buffer#delete_mark (`MARK m)))) locs;
+            List.iter (fun (_, (m, _)) ->
+              Gmisclib.Idle.add ~prio:600 (fun () ->  (buffer#delete_mark (`MARK m)))) locs;
             locations <- [];
             let col_counter = ref 0 in
             let align = view#vadjustment#value /. view#vadjustment#upper in
@@ -452,73 +452,90 @@ object (self)
       end;*)
       (** Types *)
       if Module.module_types modu <> [] then begin
-        GtkThread2.sync begin fun () ->
-          let row_types = model#append ?parent () in
-          model#set ~row:row_types ~column:col_name "Types";
-          model#set ~row:row_types ~column:col_kind (Some `Type);
-          List.iter begin fun elem ->
+        let row_types = model#append ?parent () in
+        model#set ~row:row_types ~column:col_name "Types";
+        model#set ~row:row_types ~column:col_kind (Some `Type);
+        List.iter begin fun elem ->
+          let row, rr = GtkThread2.sync begin fun () ->
             let row = model#append ~parent:row_types () in
             let rr = model#get_row_reference (model#get_path row) in
-            let name = get_relative elem.Odoc_type.ty_name in
             self#set_location ~model elem.Type.ty_loc rr;
-            let typ =
-              match elem.Odoc_type.ty_kind with
-                | Type.Type_abstract ->
+            row, rr
+          end () in
+          let typ =
+            match elem.Odoc_type.ty_kind with
+              | Type.Type_abstract ->
+                GtkThread2.sync begin fun () ->
                   model#set ~row ~column:col_kind (Some `Type_abstract);
                   let manifest =
                     match elem.Type.ty_manifest with
                     | Some typ -> string_of_type_expr typ
                     | _ -> ""
                   in manifest
-                | Type.Type_variant constr ->
+                end ()
+              | Type.Type_variant constr ->
+                GtkThread2.sync begin fun () ->
                   model#set ~row ~column:col_kind (Some `Type_variant);
                   String.concat " | "
                     (List.map (fun vc -> vc.Type.vc_name) constr)
-                | Type.Type_record fields ->
+                end ()
+              | Type.Type_record fields ->
+                GtkThread2.sync begin fun () ->
                   model#set ~row ~column:col_kind (Some `Type_record);
                   "{\n" ^ (String.concat ";\n"
                     (List.map (fun fi -> sprintf "  %s: %s" fi.Type.rf_name (string_of_type_expr fi.Type.rf_type)) fields)) ^
                   "\n}"
-            in
-            self#set_tooltip ~model ~row ~name ~typ ~rr;
-          end (Module.module_types modu);
-        end ();
+                end ()
+          in
+          let name = get_relative elem.Odoc_type.ty_name in
+          self#set_tooltip ~model ~row ~name ~typ ~rr;
+        end (Module.module_types modu);
       end;
       (** Elements *)
       List.iter begin fun me ->
-        GtkThread2.sync begin fun () ->
-          let row = model#append ?parent () in
-          let rr = model#get_row_reference (model#get_path row) in
-          match me with
-            | Module.Element_module elem ->
+        let row = model#append ?parent () in
+        let rr = model#get_row_reference (model#get_path row) in
+        match me with
+          | Module.Element_module elem ->
+            GtkThread2.sync begin fun () ->
               self#set_location ~model elem.Module.m_loc rr;
               let name = get_relative elem.Module.m_name in
               model#set ~row ~column:col_name name;
               self#append ~model ~parent:row [elem];
               model#set ~row ~column:col_kind (Some `Module)
-            | Module.Element_module_type elem ->
+            end ()
+          | Module.Element_module_type elem ->
+            GtkThread2.sync begin fun () ->
               self#set_location ~model elem.Module.mt_loc rr;
               let name = get_relative elem.Module.mt_name in
               model#set ~row ~column:col_name name;
-            | Module.Element_included_module elem ->
+            end ()
+          | Module.Element_included_module elem ->
+            GtkThread2.sync begin fun () ->
               model#set ~row ~column:col_name elem.Module.im_name
-            | Module.Element_class elem ->
+            end ();
+          | Module.Element_class elem ->
+            GtkThread2.sync begin fun () ->
               model#set ~row ~column:col_kind (Some (if elem.Class.cl_virtual then `Class_virtual else `Class));
               let name = get_relative elem.Class.cl_name in
               model#set ~row ~column:col_name name;
               self#set_location ~model elem.Class.cl_loc rr;
-              (** Class_structure *)
-              begin
-                match elem.Class.cl_kind with
-                  | Class.Class_structure (inherited, elems) ->
-                    List.iter begin fun inher ->
+            end ();
+            (** Class_structure *)
+            begin
+              match elem.Class.cl_kind with
+                | Class.Class_structure (inherited, elems) ->
+                  List.iter begin fun inher ->
+                    GtkThread2.sync begin fun () ->
                       let row = model#append ~parent:row () in
                       let name = get_relative inher.Class.ic_name in
                       model#set ~row ~column:col_name name;
                       model#set ~row ~column:col_kind (Some `Class_inherit);
-                    end inherited;
-                    List.iter begin function
-                      | Class.Class_attribute attr ->
+                    end ()
+                  end inherited;
+                  List.iter begin function
+                    | Class.Class_attribute attr ->
+                      GtkThread2.sync begin fun () ->
                         let attr_name = attr.Odoc_value.att_value.Odoc_value.val_name in
                         if Name.father attr_name = elem.Class.cl_name then begin
                           let row = model#append ~parent:row () in
@@ -533,7 +550,9 @@ object (self)
                             else if attr.Odoc_value.att_mutable then `Attribute_mutable
                             else `Attribute))
                         end
-                      | Class.Class_method met ->
+                      end ()
+                    | Class.Class_method met ->
+                      GtkThread2.sync begin fun () ->
                         let row = model#append ~parent:row () in
                         let rr = model#get_row_reference (model#get_path row) in
                         let name = Name.get_relative elem.Class.cl_name met.Odoc_value.met_value.Odoc_value.val_name in
@@ -550,35 +569,45 @@ object (self)
                           else if met.Odoc_value.met_virtual then `Method_virtual
                           else if met.Odoc_value.met_private then `Method_private
                           else `Method));
-                      | Class.Class_comment text -> ()
-                    end elems;
-                  | _ -> ()
-              end;
-            | Module.Element_class_type elem ->
+                        end ()
+                    | Class.Class_comment text -> ()
+                  end elems;
+                | _ -> ()
+            end;
+          | Module.Element_class_type elem ->
+            GtkThread2.sync begin fun () ->
               self#set_location ~model elem.Class.clt_loc rr;
               let name = get_relative elem.Class.clt_name in
               model#set ~row ~column:col_name name;
               model#set ~row ~column:col_kind (Some `Class_type);
-            | Module.Element_value elem ->
+            end ()
+          | Module.Element_value elem ->
+            GtkThread2.sync begin fun () ->
               let name = get_relative elem.Value.val_name in
               let typ = string_of_type_expr elem.Odoc_value.val_type in
               self#set_tooltip ~model ~row ~name ~typ ~rr;
               self#set_location ~model elem.Value.val_loc rr;
               model#set ~row ~column:col_kind (Some (if Value.is_function elem then `Function else `Simple));
-            | Module.Element_exception elem ->
+            end ();
+          | Module.Element_exception elem ->
+            GtkThread2.sync begin fun () ->
               self#set_location ~model elem.Exception.ex_loc rr;
               let name = get_relative elem.Exception.ex_name in
               model#set ~row ~column:col_name name;
               model#set ~row ~column:col_kind (Some `Exception)
-            | Module.Element_type elem ->
+            end ()
+          | Module.Element_type elem ->
+            GtkThread2.sync begin fun () ->
               ignore (model#remove row);
               (*self#set_location row elem.Type.ty_loc;
               model#set ~row ~column elem.Type.ty_name*)
-            | Module.Element_module_comment elem ->
+            end ()
+          | Module.Element_module_comment elem ->
+            GtkThread2.sync begin fun () ->
               ignore (model#remove row);
               (*let first = first_sentence_of_text elem in
               model#set ~row ~column:col_name (string_of_text first)*)
-        end ()
+            end ()
       end (Module.module_elements modu);
     end module_list;
 
