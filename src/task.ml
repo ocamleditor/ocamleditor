@@ -1,7 +1,7 @@
 (*
 
   OCamlEditor
-  Copyright (C) 2010, 2011 Francesco Tovagliari
+  Copyright (C) 2010-2012 Francesco Tovagliari
 
   This file is part of OCamlEditor.
 
@@ -26,14 +26,14 @@ type kind = [ `CLEAN | `CLEANALL | `ANNOT | `COMPILE | `RUN | `OTHER]
 type phase = Before_clean | Clean | After_clean | Before_compile | Compile | After_compile
 
 type t = {
-  mutable name : string;
-  mutable env : string list;
+  mutable name        : string;
+  mutable env         : string list;
   mutable env_replace : bool; (* After system environment *)
-  mutable dir : string;       (* Working directory: relative to the project source directory (actually: Sys.getcwd()) *)
-  mutable cmd : string;
-  mutable args : string list;
-  mutable phase : phase option;
-  mutable always_run : bool;
+  mutable dir         : string;       (* Working directory: relative to the project source directory (actually: Sys.getcwd()) *)
+  mutable cmd         : string;
+  mutable args        : string list;
+  mutable phase       : phase option;
+  mutable always_run  : bool;
 }
 
 let string_of_phase = function
@@ -62,14 +62,14 @@ let phase_of_string = function
   | _ -> failwith "phase_of_string"
 
 let create ~name ~env ?(env_replace=false) ~dir ~cmd ~args ?phase () = {
-    name = name;
-    env = env;
+    name        = name;
+    env         = env;
     env_replace = env_replace;
-    dir = dir;
-    cmd = cmd;
-    args = args;
-    phase = phase;
-    always_run = false;
+    dir         = dir;
+    cmd         = cmd;
+    args        = args;
+    phase       = phase;
+    always_run  = false;
   }
 
 (** prepare *)

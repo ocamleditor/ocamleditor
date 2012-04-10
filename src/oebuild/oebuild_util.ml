@@ -1,7 +1,7 @@
 (*
 
   OCamlEditor
-  Copyright (C) 2010, 2011 Francesco Tovagliari
+  Copyright (C) 2010-2012 Francesco Tovagliari
 
   This file is part of OCamlEditor.
 
@@ -20,12 +20,15 @@
 
 *)
 
+
 open Printf
-open Miscellanea
 
 let (!$) = Filename.chop_extension
+let (//) = Filename.concat
+let (^^) = Filename.check_suffix
 let is_win32, win32 = (Sys.os_type = "Win32"), (fun a b -> match Sys.os_type with "Win32" -> a | _ -> b)
 let may opt f = match opt with Some x -> f x | _ -> ()
+let re_spaces = Str.regexp " +"
 
 (** crono *)
 let crono ?(label="Time") f x =
@@ -53,7 +56,7 @@ let remove_file ?(verbose=false) filename =
 
 (** command *)
 let command ?(echo=true) cmd =
-  let cmd = Str.global_replace (!~ " +") " " cmd in
+  let cmd = Str.global_replace re_spaces " " cmd in
   if echo then (printf "%s\n%!" cmd);
   let exit_code = Sys.command cmd in
   Pervasives.flush stderr;
@@ -65,7 +68,7 @@ let iter_chan chan f = try while true do f chan done with End_of_file -> ()
 
 (** exec *)
 let exec ?(echo=true) ?(join=true) ?at_exit ?(process_err=(fun ~stderr -> prerr_endline (input_line stderr))) cmd =
-  let cmd = Str.global_replace (!~ " +") " " cmd in
+  let cmd = Str.global_replace re_spaces " " cmd in
   if echo then (print_endline cmd);
   let (inchan, _, errchan) as channels = Unix.open_process_full cmd (Unix.environment()) in
   let close () =
@@ -115,6 +118,3 @@ let rec mkdir_p ?(echo=true) d =
     printf "mkdir -p %s\n%!" d;
     (Unix.mkdir d 0o755)
   end
-
-
-

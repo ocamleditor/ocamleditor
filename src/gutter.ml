@@ -1,7 +1,7 @@
 (*
 
   OCamlEditor
-  Copyright (C) 2010, 2011 Francesco Tovagliari
+  Copyright (C) 2010-2012 Francesco Tovagliari
 
   This file is part of OCamlEditor.
 
@@ -45,7 +45,7 @@ type t = {
 and marker = {
   kind                    : [`None | `Bookmark of int | `Error of string | `Warning of string];
   mark                    : Gtk.text_mark;
-  icon_pixbuf             : GdkPixbuf.pixbuf;
+  icon_pixbuf             : GdkPixbuf.pixbuf option;
   mutable icon_obj        : GObj.widget option;
   callback                : (Gtk.text_mark -> bool) option;
 }
@@ -68,7 +68,7 @@ let create () = {
 }
 
 (** create_marker *)
-let create_marker ?(kind=`None) ~mark ~pixbuf ?callback () =
+let create_marker ?(kind=`None) ~mark ?pixbuf ?callback () =
   {kind=kind; mark=mark; icon_pixbuf=pixbuf; callback=callback; icon_obj=None}
 
 (** destroy_markers *)

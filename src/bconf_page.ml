@@ -1,7 +1,7 @@
 (*
 
   OCamlEditor
-  Copyright (C) 2010, 2011 Francesco Tovagliari
+  Copyright (C) 2010-2012 Francesco Tovagliari
 
   This file is part of OCamlEditor.
 
@@ -44,13 +44,24 @@ class view ~project ?packing () =
   let vbox = GPack.vbox ~border_width:5 ~spacing:13 () in
   let _ = nb#append_page ~tab_label:(GMisc.label ~text:"Target" ())#coerce vbox#coerce in
   (** Library *)
+  (* Build a library with the specified toplevel modules *)
   let mbox = GPack.vbox ~spacing:0 ~packing:(vbox#pack ~expand:false) () in
-  let check_library = GButton.radio_button ~packing:mbox#add () in
-  let label_check_library = GMisc.label ~markup:"Build a library with the specified toplevel modules" () in
-  let _ = check_library#add label_check_library#coerce in
+  let radio_archive = GButton.radio_button ~packing:mbox#add () in
+  let label_radio_archive = GMisc.label ~markup:"Build an archive" () in
+  let _ = radio_archive#add label_radio_archive#coerce in
+
   let align_lib = GBin.alignment ~padding:(0,0,21,0) ~packing:mbox#add () in
   let lbox = GPack.vbox ~spacing:8 ~packing:align_lib#add () in
-  let hbox = GPack.hbox ~spacing:3 ~packing:lbox#pack () in
+
+  (** Output kind *)
+  let combo_kind, _ = GEdit.combo_box_text
+    ~strings:["Library (-a)"; "Plugin (-shared)"; "Pack (-pack)"]
+    (*~active:0*) ~packing:lbox#add () in
+  (** Toplevel modules list *)
+  let box = GPack.vbox ~packing:lbox#pack () in
+  let _ = GMisc.label ~markup:"Toplevel modules" ~xalign:0.0 ~packing:box#pack () in
+
+  let hbox = GPack.hbox ~spacing:3 ~packing:box#pack () in
   let entry_lib_modules = GEdit.entry ~editable:true ~packing:hbox#add () in
   let button_lib_modules = GButton.button ~label:"  ...  " ~packing:(hbox#pack ~expand:false) () in
   let _ = button_lib_modules#connect#clicked ~callback:begin fun () ->
@@ -60,6 +71,7 @@ class view ~project ?packing () =
     chooser#add_button_stock `CANCEL `CANCEL;
     chooser#set_select_multiple true;
     chooser#set_filter (GFile.filter ~patterns:["*.ml"] ());
+    chooser#add_filter (GFile.filter ~patterns:["*.ml"] ());
     match chooser#run () with
       | `OK ->
         let filenames = mk_target_filenames project chooser#get_filenames in
@@ -69,8 +81,8 @@ class view ~project ?packing () =
   end in
   (** Install path for library *)
   let box = GPack.vbox ~packing:lbox#pack () in
-  let ocamllib = Ocaml_config.ocamllib () in
-  let markup = sprintf "Install path, relative to the standard library directory (<small><tt>%s</tt></small>) " ocamllib in
+  let ocamllib = project.Project.ocamllib in
+  let markup = sprintf "Installation path, relative to the standard library directory (<small><tt>%s</tt></small>) " ocamllib in
   let _ = GMisc.label ~markup ~xalign:0.0 ~packing:box#pack () in
   let hbox = GPack.hbox ~spacing:3 ~packing:box#pack () in
   let entry_lib_install = GEdit.entry ~editable:true ~packing:hbox#add () in
@@ -91,9 +103,9 @@ class view ~project ?packing () =
   end in*)
   (** Executable *)
   let mbox = GPack.vbox ~spacing:0 ~packing:(vbox#pack ~expand:false) () in
-  let check_executable = GButton.radio_button ~group:check_library#group ~packing:mbox#add () in
-  let label_check_executable = GMisc.label ~markup:"Build an executable with the specified main module" () in
-  let _ = check_executable#add label_check_executable#coerce in
+  let radio_executable = GButton.radio_button ~group:radio_archive#group ~packing:mbox#add () in
+  let label_radio_executable = GMisc.label ~markup:"Build an executable with the specified main module" () in
+  let _ = radio_executable#add label_radio_executable#coerce in
   let align_exec = GBin.alignment ~padding:(0,0,21,0) ~packing:mbox#add () in
   let box = GPack.vbox ~spacing:8 ~packing:align_exec#add () in
   let hbox = GPack.hbox ~spacing:3 ~packing:(box#pack ~expand:false) () in
@@ -133,7 +145,7 @@ class view ~project ?packing () =
     ~active:0 ~packing:box#add () in
 
   let box = GPack.vbox ~packing:(vbox#pack ~expand:false) () in
-  let _ = GMisc.label ~markup:"Includes <small><tt>(-I)</tt></small>" ~xalign ~packing:box#add () in
+  let _ = GMisc.label ~markup:"Search path <small><tt>(-I)</tt></small>" ~xalign ~packing:box#add () in
   let entry_includes = GEdit.entry ~packing:box#add () in
 
   let box = GPack.vbox ~packing:(vbox#pack ~expand:false) () in
@@ -170,9 +182,15 @@ object (self)
 
   initializer
     ignore (entry_name#connect#changed
-      ~callback:(self#update (fun bconf -> bconf.name <- entry_name#text)));
+      ~callback:begin fun () ->
+        self#update (fun bconf -> bconf.name <- entry_name#text) ();
+        changed#call()
+      end);
     ignore (combo_comp#connect#changed
-      ~callback:(self#update (fun bconf -> bconf.byt <- (combo_comp#active = 0 || combo_comp#active = 2))));
+      ~callback:begin fun () ->
+        self#update (fun bconf -> bconf.byt <- (combo_comp#active = 0 || combo_comp#active = 2)) ();
+        changed#call()
+      end);
     ignore (combo_comp#connect#changed
       ~callback:(self#update (fun bconf -> bconf.opt <- (combo_comp#active = 1 || combo_comp#active = 2))));
     ignore (entry_libs#connect#changed
@@ -205,12 +223,23 @@ object (self)
       ~callback:(self#update (fun bconf -> bconf.cflags <- entry_cflags#text)));
     ignore (entry_lflags#connect#changed
       ~callback:(self#update (fun bconf -> bconf.lflags <- entry_lflags#text)));
-    ignore (check_library#connect#after#toggled
+    ignore (radio_archive#connect#after#toggled
       ~callback:(self#update begin fun bconf ->
-        bconf.is_library <- check_library#active;
-        entry_lib_modules#set_text "";
-        entry_main_module#set_text "";
+        if signals_enabled then begin
+          bconf.outkind <- begin
+            if radio_archive#active then
+              (match combo_kind#active with 0 -> Library | 1 -> Plugin | 2 -> Pack | _ -> assert false)
+            else Executable;
+          end;
+          entry_lib_modules#set_text "";
+          entry_main_module#set_text "";
+        end
       end));
+    ignore (combo_kind#connect#changed
+      ~callback:(self#update (fun bconf -> bconf.outkind <-
+        if radio_archive#active then
+          (match combo_kind#active with 0 -> Library | 1 -> Plugin | 2 -> Pack | _ -> assert false)
+        else Executable)));
     ignore (entry_outname#connect#changed
       ~callback:(self#update (fun bconf -> bconf.outname <- entry_outname#text)));
     ignore (entry_lib_install#connect#changed
@@ -229,10 +258,10 @@ object (self)
         check_thread#misc#set_sensitive (not check_vmthread#active);
       end
     end in
-    let _ = check_executable#connect#clicked ~callback:begin fun () ->
-      align_lib#misc#set_sensitive (not check_executable#active);
-      align_exec#misc#set_sensitive check_executable#active;
-      if check_executable#active then (entry_main_module#misc#grab_focus())
+    let _ = radio_executable#connect#clicked ~callback:begin fun () ->
+      align_lib#misc#set_sensitive (not radio_executable#active);
+      align_exec#misc#set_sensitive radio_executable#active;
+      if radio_executable#active then (entry_main_module#misc#grab_focus())
       else (button_lib_modules#misc#grab_focus());
     end in
     ignore (self#connect#changed ~callback:(fun () -> page_changed <- true))
@@ -246,7 +275,7 @@ object (self)
     Gaux.may bconf ~f:begin fun bc ->
       update_func bc;
       self#update_cmd_line bc;
-      changed#call()
+      (*changed#call()*)
     end;
 
   method set bc =
@@ -280,11 +309,15 @@ object (self)
     entry_pp#set_text bc.pp;
     entry_cflags#set_text bc.cflags;
     entry_lflags#set_text bc.lflags;
-    check_library#set_active bc.is_library;
-    check_executable#set_active (not bc.is_library);
+    begin
+      match bc.outkind with
+        | Executable -> radio_executable#set_active true
+        | _ -> radio_archive#set_active true
+    end;
+    combo_kind#set_active (match bc.outkind with Library -> 0 | Plugin -> 1 | Pack -> 2 | _ -> 0);
     entry_outname#set_text bc.outname;
     entry_lib_install#set_text bc.lib_install_path;
-    if bc.is_library then begin
+    if (List.mem bc.outkind [Library; Plugin; Pack]) then begin
       align_lib#misc#set_sensitive true;
       align_exec#misc#set_sensitive false;
       entry_lib_modules#set_text bc.files;

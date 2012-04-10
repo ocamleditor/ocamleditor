@@ -1,7 +1,7 @@
 (*
 
   OCamlEditor
-  Copyright (C) 2010, 2011 Francesco Tovagliari
+  Copyright (C) 2010-2012 Francesco Tovagliari
 
   This file is part of OCamlEditor.
 
@@ -21,7 +21,7 @@
 *)
 
 
-open Printf 
+open Printf
 open Miscellanea
 
 exception Buffer_changed of int * string * string
@@ -32,40 +32,41 @@ exception Canceled
 
 type direction = Backward | Forward
 
-type path = Project_source | Specified of string
+type path = Project_source | Specified of string | Only_open_files
 
 type history_model = {
-  model : GTree.list_store;
-  column : string GTree.column;
+  model                  : GTree.list_store;
+  column                 : string GTree.column;
 }
 
 type status = {
-  mutable text_find : string GUtil.variable;
-  mutable text_repl : string;
-  mutable use_regexp : bool;
+  mutable text_find      : string GUtil.variable;
+  mutable text_repl      : string;
+  mutable use_regexp     : bool;
   mutable case_sensitive : bool;
-  mutable direction : direction;
-  mutable path : path;
-  mutable recursive : bool;
-  mutable pattern : string option;
+  mutable direction      : direction;
+  mutable path           : path;
+  mutable recursive      : bool;
+  mutable pattern        : string option;
   mutable current_regexp : Str.regexp option;
-  h_find : history_model;
-  h_repl : history_model;
-  h_path : history_model;
-  h_pattern : history_model;
-  status_filename : string;
+  h_find                 : history_model;
+  h_repl                 : history_model;
+  h_path                 : history_model;
+  h_pattern              : history_model;
+  status_filename        : string;
 }
 
 type result_entry = {
-  filename : string;
-  mutable lines : result_line list
+  filename               : string;
+  mutable lines          : result_line list
 }
 
 and result_line = {
-  line : string;
-  linenum : int;
-  offsets : (int * int) list;
-  mutable marks : (string * string) list
+  line                   : string;
+  linenum                : int;
+  bol                    : int;
+  offsets                : (int * int) list;
+  mutable marks          : (string * string) list
 }
 
 (** status *)
@@ -77,35 +78,35 @@ let status =
     new_name
   in {
     status_filename = status_filename;
-    text_find = new GUtil.variable "";
-    text_repl = "";
-    use_regexp = false;
-    case_sensitive = false;
-    direction = Forward;
-    path = Project_source;
-    recursive = false;
-    pattern = Some "*.ml";
-    current_regexp = None;
-    h_find =
+    text_find       = new GUtil.variable "";
+    text_repl       = "";
+    use_regexp      = false;
+    case_sensitive  = false;
+    direction       = Forward;
+    path            = Project_source;
+    recursive       = false;
+    pattern         = Some "*.ml";
+    current_regexp  = None;
+    h_find          =
       (let cols = new GTree.column_list in
-      let column = cols#add Gobject.Data.string in
+      let column      = cols#add Gobject.Data.string in
       {model = GTree.list_store cols; column = column});
-    h_repl =
+    h_repl          =
       (let cols = new GTree.column_list in
-      let column = cols#add Gobject.Data.string in
+      let column      = cols#add Gobject.Data.string in
       {model = GTree.list_store cols; column = column});
-    h_path =
+    h_path          =
       (let cols = new GTree.column_list in
-      let column = cols#add Gobject.Data.string in
+      let column      = cols#add Gobject.Data.string in
       {model = GTree.list_store cols; column = column});
-    h_pattern =
+    h_pattern       =
       (let cols = new GTree.column_list in
-      let column = cols#add Gobject.Data.string in
+      let column      = cols#add Gobject.Data.string in
       {model = GTree.list_store cols; column = column});
   }
 
 (** write_status *)
-let write_status () = 
+let write_status () =
   let get_history prepend (model : GTree.list_store) column =
     let hist = ref [] in
     if prepend <> "" then (model#set ~row:(model#prepend ()) ~column prepend);
@@ -126,8 +127,9 @@ let write_status () =
       "check_case", (string_of_bool status.case_sensitive);
       "check_rec", (string_of_bool status.recursive);
       "check_pat", (string_of_bool (status.pattern <> None));
-      "radio_path", (string_of_bool (status.path <> Project_source));
+      "radio_path", (string_of_bool (match status.path with Specified _ -> true | _ -> false));
       "radio_src", (string_of_bool (status.path = Project_source));
+      "radio_only_open_files", (string_of_bool (status.path = Only_open_files));
     ], [
       Xml.Element ("history_find", [], List.map (fun x -> Xml.Element ("element", [], [Xml.PCData x]))
         (get_history status.text_find#get status.h_find.model status.h_find.column));
@@ -135,7 +137,7 @@ let write_status () =
         (get_history status.text_repl status.h_repl.model status.h_repl.column));
       Xml.Element ("history_path", [], List.map (fun x -> Xml.Element ("element", [], [Xml.PCData x]))
         (get_history
-          (match status.path with Project_source -> "" | Specified x -> x)
+          (match status.path with Project_source -> "" | Specified x -> x | Only_open_files -> "")
             status.h_path.model status.h_path.column));
       Xml.Element ("history_pattern", [], List.map (fun x -> Xml.Element ("element", [], [Xml.PCData x]))
         (get_history
@@ -148,7 +150,7 @@ let write_status () =
   /*finally*/ lazy (close_out ochan)
 
 (** read_status *)
-let read_status () = 
+let read_status () =
   try
     let xml = Xml.parse_file status.status_filename in
     let attribs = Xml.attribs xml in
@@ -156,8 +158,10 @@ let read_status () =
     status.case_sensitive <- (bool_of_string (List.assoc "check_case" attribs));
     status.recursive <- (bool_of_string (List.assoc "check_rec" attribs));
     status.pattern <- if bool_of_string (List.assoc "check_pat" attribs) then Some "" else None;
-    status.path <- if bool_of_string (List.assoc "radio_path" attribs) then (Specified "")
+    status.path <-
+      if bool_of_string (List.assoc "radio_path" attribs) then (Specified "")
       else if bool_of_string (List.assoc "radio_src" attribs) then Project_source
+      else if bool_of_string (List.assoc "radio_only_open_files" attribs) then Only_open_files
       else assert false;
     let value xml =
       match Xml.children xml with

@@ -1,7 +1,7 @@
 (*
 
   OCamlEditor
-  Copyright (C) 2010, 2011 Francesco Tovagliari
+  Copyright (C) 2010-2012 Francesco Tovagliari
 
   This file is part of OCamlEditor.
 
@@ -70,7 +70,7 @@ module Xlist =
           | a :: b -> if x = a then n else f b (n + 1)
       in f l 0
 
-    let remove_dupl l =
+    let remove_dupl l = (* slow *)
       List.rev (List.fold_left (fun acc y -> if List.mem y acc then acc else y :: acc) [] l)
 
     let filter_map p =
@@ -111,7 +111,7 @@ module Xlist =
 module Memo =
   struct
     let fast ~f =
-      let memo = Hashtbl.create 1 in
+      let memo = Hashtbl.create 7 in
       fun ?(force=fun _ -> false) key ->
         try
           let data = Hashtbl.find memo key in
@@ -158,14 +158,18 @@ module Memo =
 
 (** [Str.regexp] with memoization *)
 let (!~) = Memo.fast ~f:Str.regexp
+let (!~~) = Memo.fast ~f:Str.regexp_string
 let regexp = (!~)
+let regexp_case_fold = Memo.fast ~f:Str.regexp_case_fold
 
 (** Miscellaneus string functions *)
 
 let split re = Str.split (!~ re)
 let ltrim = replace_first (!~ "^[ \t\r\n]+") ""
 let rtrim = replace_first (!~ "[ \t\r\n]+$") ""
-let trim s = ltrim (rtrim s)
+let trim =
+   let replace = Str.global_replace (Str.regexp "\\(^[ \t\r\n]+\\)\\|\\([ \t\r\n]+$\\)") in
+   fun str -> replace "" str
 let trim_line = global_replace (!~ "[ \t]+\\($\\)") "\\1"
 
 let lpad txt c width =
@@ -271,37 +275,14 @@ let exec_lines command =
     raise e
   end
 
-(** expand *)
-let expand ?(first_line=false) ?filter command =
-  let ichan = Unix.open_process_in command in
-  let finally () = ignore (Unix.close_process_in ichan) in
-  let data = Buffer.create 100 in
-  begin
-    try
-      while true do
-        let line = trim (input_line ichan) in
-        if first_line && String.length line = 0 then begin
-        end else if first_line then begin
-          Buffer.add_string data line;
-          raise End_of_file
-        end else begin
-          match filter with
-            | None ->
-              Buffer.add_string data line;
-              Buffer.add_char data '\n'
-            | Some f when (f line) ->
-              Buffer.add_string data line;
-              Buffer.add_char data '\n'
-            | _ -> ()
-        end
-      done
-    with
-      | End_of_file -> ()
-      | ex -> (finally(); raise ex)
-  end;
-  finally();
-  if Buffer.length data = 0 then (kprintf failwith "Miscellanea.expand: %s" command);
-  Buffer.contents data;;
+(** pushd and popd *)
+let pushd, popd =
+  let stack = Stack.create () in
+  begin fun dir ->
+    let cwd = Sys.getcwd () in
+    Stack.push cwd stack;
+    Sys.chdir dir
+  end, (fun () -> Sys.chdir (Stack.pop stack))
 
 (** mkdir_p *)
 let mkdir_p =
@@ -357,6 +338,7 @@ let redirect_stderr = if Sys.os_type = "Win32" then " 2>NUL" else " 2>/dev/null"
 (** modname_of_path *)
 let modname_of_path path =
   String.capitalize (Filename.chop_extension (Filename.basename path))
+
 
 
 

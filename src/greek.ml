@@ -1,7 +1,7 @@
 (*
 
   OCamlEditor
-  Copyright (C) 2010, 2011 Francesco Tovagliari
+  Copyright (C) 2010-2012 Francesco Tovagliari
 
   This file is part of OCamlEditor.
 
@@ -59,7 +59,7 @@ let replace (buffer : GText.buffer) =
     while not !iter#is_end do
       match !iter#forward_search x with
         | Some (start, stop) ->
-          let mstart = buffer#create_mark start in
+          let mstart = buffer#create_mark(* ~name:(Gtk_util.create_mark_name "Greek.replace1")*) start in
           buffer#delete ~start ~stop;
           iter := buffer#get_iter_at_mark (`MARK mstart);
           buffer#insert ~iter:!iter y;
@@ -75,7 +75,7 @@ let replace (buffer : GText.buffer) =
   while not !iter#is_end do
     match !iter#forward_search "'" with
       | Some (start, stop) ->
-        let mstart = buffer#create_mark start in
+        let mstart = buffer#create_mark(* ~name:(Gtk_util.create_mark_name "Greek.replace2")*) start in
         let mstop = ref mstart in
         iter := !iter#forward_char;
         begin
@@ -87,9 +87,9 @@ let replace (buffer : GText.buffer) =
                 let text = buffer#get_text ~start:!iter ~stop () in
                 if String.length text > 0 then begin
                   match String.get text 0 with
-                    | '0'..'9' -> mstop := buffer#create_mark stop
-                    | _ -> mstop := buffer#create_mark !iter
-                end else mstop := buffer#create_mark stop
+                    | '0'..'9' -> mstop := buffer#create_mark(* ~name:(Gtk_util.create_mark_name "Greek.replace3")*) stop
+                    | _ -> mstop := buffer#create_mark(* ~name:(Gtk_util.create_mark_name "Greek.replace4")*) !iter
+                end else mstop := buffer#create_mark(* ~name:(Gtk_util.create_mark_name "Greek.replace5")*) stop
               end;
               let start = buffer#get_iter_at_mark (`MARK mstart) in
               let stop = buffer#get_iter_at_mark (`MARK !mstop) in

@@ -1,7 +1,7 @@
 (*
 
   OCamlEditor
-  Copyright (C) 2010, 2011 Francesco Tovagliari
+  Copyright (C) 2010-2012 Francesco Tovagliari
 
   This file is part of OCamlEditor.
 
@@ -23,48 +23,55 @@
 
 open Printf
 
-exception Mark_deleted
-
 let _ = Gmisclib.Util.fade_window_enabled := Oe_config.fade_window_enabled
 
+let create_mark_name =
+  let count = ref 0 in fun prefix ->
+    incr count;
+    prefix ^ (string_of_int !count);;
+
 (** window *)
-let window widget ?parent ?(destroy_child=true) ?(fade=false) ~x ~y () =
+let window widget ?parent ?(destroy_child=true) ?(fade=false) ?(focus=true) ?(escape=true) ?(show=true) ~x ~y () =
   let window = GWindow.window
     ~decorated:false
     ~border_width:1
     ~deletable:true
-    ~focus_on_map:true
+    ~focus_on_map:focus
     ~show:false ()
   in
   let ebox = GBin.event_box ~packing:window#add () in
   ebox#add widget;
-  let color = Color.set_value 0.62 (`NAME !Preferences.preferences.Preferences.pref_bg_color_popup) in
+  let color = Color.set_value 0.62 (`NAME Preferences.preferences#get.Preferences.pref_bg_color_popup) in
   let _ = window#misc#modify_bg [`NORMAL, color] in
-  let _ = ebox#misc#modify_bg [`NORMAL, `NAME !Preferences.preferences.Preferences.pref_bg_color_popup] in
+  let _ = ebox#misc#modify_bg [`NORMAL, `NAME Preferences.preferences#get.Preferences.pref_bg_color_popup] in
   ignore (window#event#connect#after#focus_out ~callback:begin fun _ ->
     if not destroy_child then (ebox#remove widget);
     window#destroy();
     true
   end);
-  ignore (window#event#connect#key_release ~callback:begin fun ev ->
-    let key = GdkEvent.Key.keyval ev in
-    if key = GdkKeysyms._Escape then (window#destroy(); true) else false
-  end);
+  if escape then begin
+    ignore (window#event#connect#key_release ~callback:begin fun ev ->
+      let key = GdkEvent.Key.keyval ev in
+      if key = GdkKeysyms._Escape then (window#destroy(); true) else false
+    end);
+  end;
   window#set_skip_pager_hint true;
   window#set_skip_taskbar_hint true;
   Gaux.may parent ~f:(fun parent -> Gaux.may (GWindow.toplevel parent) ~f:(fun x -> window#set_transient_for x#as_window));
-  window#set_accept_focus true;
-  if fade then (window#set_opacity 0.0);
-  if Sys.os_type = "Win32" then (window#present());
-  window#move ~x ~y;
-  let alloc = window#misc#allocation in
-  let x, y =
-    (if x + alloc.Gtk.width > (Gdk.Screen.width()) then (Gdk.Screen.width() - alloc.Gtk.width) else x),
-    (if y + alloc.Gtk.height > (Gdk.Screen.height()) then (Gdk.Screen.height() - alloc.Gtk.height) else y);
-  in
-  window#move ~x ~y;
-  if fade then (Gmisclib.Util.fade_window window);
-  if Sys.os_type <> "Win32" then (window#present());
+  window#set_accept_focus focus;
+  if show then begin
+    if fade then (window#set_opacity 0.0);
+    if Sys.os_type = "Win32" then (window#present());
+    window#move ~x ~y;
+    let alloc = window#misc#allocation in
+    let x, y =
+      (if x + alloc.Gtk.width > (Gdk.Screen.width()) then (Gdk.Screen.width() - alloc.Gtk.width) else x),
+      (if y + alloc.Gtk.height > (Gdk.Screen.height()) then (Gdk.Screen.height() - alloc.Gtk.height) else y);
+    in
+    window#move ~x ~y;
+    if fade then (Gmisclib.Util.fade_window window);
+    if Sys.os_type <> "Win32" then (window#present());
+  end;
   window
 
 (** window_tooltip *)
@@ -78,9 +85,9 @@ let window_tooltip widget ?parent ?(fade=false) ~x ~y () =
   in
   let ebox = GBin.event_box ~packing:window#add () in
   ebox#add widget;
-  let color = Color.set_value 0.62 (`NAME !Preferences.preferences.Preferences.pref_bg_color_popup) in
+  let color = Color.set_value 0.62 (`NAME Preferences.preferences#get.Preferences.pref_bg_color_popup) in
   let _ = window#misc#modify_bg [`NORMAL, color] in
-  let _ = ebox#misc#modify_bg [`NORMAL, `NAME !Preferences.preferences.Preferences.pref_bg_color_popup] in
+  let _ = ebox#misc#modify_bg [`NORMAL, `NAME Preferences.preferences#get.Preferences.pref_bg_color_popup] in
   window#set_skip_pager_hint true;
   window#set_skip_taskbar_hint true;
   window#set_accept_focus false;
@@ -98,6 +105,13 @@ let window_tooltip widget ?parent ?(fade=false) ~x ~y () =
   in
   window#move ~x ~y;
   window
+
+(** with_tag *)
+let with_tag ~(buffer : GText.buffer) tag f =
+  let m1 = buffer#create_mark(* ~name:(create_mark_name "Gtk_util.with_tag")*) (buffer#get_iter `INSERT) in
+  f ();
+  buffer#apply_tag tag ~start:(buffer#get_iter_at_mark (`MARK m1)) ~stop:(buffer#get_iter `INSERT);
+  buffer#delete_mark (`MARK m1);;
 
 
 

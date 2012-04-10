@@ -55,6 +55,9 @@ class manager :
         initially disabled. *)
     method enable : unit -> unit
 
+    (**  *)
+    method is_enabled : bool
+
     (** Ends a block of actions. *)
     method end_block : unit -> unit
 
@@ -65,7 +68,7 @@ class manager :
         @return [true] if the undo has been performed; [false] if either the
         undo stack is empty or the cursor is in a position where no undo
         action was recorded: in this case the undo stack is not
-        popped - the buffer remains unchanged - and the cursor is placed
+        popped - the buffer is left unchanged - and the cursor is placed
         at the position where the topmost action of the stack can be reverted.
       *)
     method undo : unit -> bool

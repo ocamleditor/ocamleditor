@@ -1,7 +1,7 @@
 (*
 
   OCamlEditor
-  Copyright (C) 2010, 2011 Francesco Tovagliari
+  Copyright (C) 2010-2012 Francesco Tovagliari
 
   This file is part of OCamlEditor.
 
@@ -23,15 +23,16 @@
 open Printf
 
 type location = {
-  kind : kind;
-  filename : string;
-  mutable mark : Gtk.text_mark option;
+  kind           : kind;
+  filename       : string;
+  mutable mark   : Gtk.text_mark option;
   mutable offset : int
 } and kind = [`EDIT | `BROWSE]
 
 type t = {
   mutable current : int;
   mutable history : location list;
+  edit_table      : (int, location Queue.t) Hashtbl.t;
 }
 
 let proximity = Oe_config.location_history_proximity (* in characters *)
@@ -41,6 +42,7 @@ let limit_hint = Oe_config.location_history_max_length (* max length of history 
 let create () = {
   current = 0;
   history = [];
+  edit_table = Hashtbl.create 7
 }
 
 (** string_of_location *)
@@ -63,7 +65,8 @@ let string_of_location loc =
       end
 
 (** iter *)
-let iter nh ~f = List.iter f nh.history
+let iter nh ~f =
+  List.iter f nh.history
 
 (** current_index *)
 let current_index nh = nh.current
@@ -137,26 +140,61 @@ let trim nh =
   end nh.history
 
 (** add *)
-let add nh ~kind ~(view : GText.view) ~filename ~offset =
+let add_location nh ~kind ~(view : GText.view) ~filename ~offset =
   let mark = create_mark ~buffer:view#buffer ~offset in
   let loc = {kind=kind; filename=filename; mark=(Some mark); offset=offset} in
   begin
-    try
-      let top = List.hd nh.history in
-      if in_proximity nh ~view ~filename ~offset top then begin
-        destroy top;
-        nh.history <- loc :: (List.tl nh.history)
-      end else begin
-        nh.history <- loc :: nh.history
-      end;
-    with Failure "hd" -> (nh.history <- [loc])
+    match nh.history with
+      | top :: tl ->
+        if false && in_proximity nh ~view ~filename ~offset top then begin
+          destroy top;
+          nh.history <- loc :: tl
+        end else (nh.history <- loc :: nh.history);
+      | [] -> nh.history <- [loc]
   end;
-  nh.current <- 0(*;
-  trim nh*)
+  nh.current <- 0;
+  loc
+
+let add nh ~kind ~(view : GText.view) ~filename ~offset =
+  (*Prf.crono Prf.prf_location_history_add begin fun () ->*)
+  let in_proximity =
+    match nh.history with
+      | top :: _ -> in_proximity nh ~view ~filename ~offset top
+      | _ -> false
+  in
+  match kind with
+    | `EDIT when not in_proximity ->
+      let queue =
+        try Hashtbl.find nh.edit_table view#misc#get_oid
+        with Not_found ->
+          let queue = Queue.create () in
+          Hashtbl.replace nh.edit_table view#misc#get_oid queue;
+          queue
+      in
+      let loc =
+        if Queue.length queue < Oe_config.location_history_max_edit
+        then (add_location nh ~kind ~view ~filename ~offset)
+        else begin
+          let loc = Queue.pop queue in
+          nh.history <- List.filter ((!=) loc) nh.history;
+          let mark = match loc.mark with
+            | Some m when not (GtkText.Mark.get_deleted m) ->
+              view#buffer#move_mark (`MARK m) ~where:(view#buffer#get_iter (`OFFSET offset));
+              m
+            | _ -> create_mark ~buffer:view#buffer ~offset
+          in
+          let loc = {kind=`EDIT; filename=filename; mark=(Some mark); offset=offset} in
+          nh.history <- loc :: nh.history;
+          loc
+        end
+      in
+      Queue.push loc queue
+    | `EDIT -> ()
+    | `BROWSE -> ignore (add_location nh ~kind ~view ~filename ~offset)
+  (*end ()*)
 
 (** last_edit_location *)
-let last_edit_location nh =
-  try Some (List.find (fun loc -> loc.kind = `EDIT) nh.history) with Not_found -> None
+let last_edit_location nh = List_opt.find (fun loc -> loc.kind = `EDIT) nh.history
 
 (** goto_last_edit_location *)
 let goto_last_edit_location nh =
@@ -177,7 +215,7 @@ let goto nh ~location =
 (** get_history_backward *)
 let get_history_backward nh =
   trim nh;
-  try List.tl (snd (divide nh)) with Failure "tl" -> []
+  match snd (divide nh) with _ :: tl ->tl | _ -> []
 
 (** get_history_forward *)
 let get_history_forward nh =

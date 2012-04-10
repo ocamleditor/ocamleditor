@@ -1,7 +1,7 @@
 (*
 
   OCamlEditor
-  Copyright (C) 2010, 2011 Francesco Tovagliari
+  Copyright (C) 2010-2012 Francesco Tovagliari
 
   This file is part of OCamlEditor.
 
@@ -24,6 +24,7 @@ open Miscellanea
 open Printf
 
 type t = {
+  mutable pref_timestamp                    : float;
   mutable pref_base_font                    : string;
   mutable pref_tab_pos                      : Gtk.Tags.position;
   mutable pref_check_updates                : bool;
@@ -38,6 +39,7 @@ type t = {
   mutable pref_editor_bak                   : bool;
   mutable pref_editor_wrap                  : bool;
   mutable pref_editor_trim_lines            : bool;
+  mutable pref_editor_custom_templ_filename : string;
   mutable pref_compl_font                   : string;
   mutable pref_compl_greek                  : bool;
   mutable pref_output_font                  : string;
@@ -77,6 +79,8 @@ type t = {
   mutable pref_err_tooltip                  : bool;
   mutable pref_err_gutter                   : bool;
   mutable pref_show_whitespace_chars        : bool;
+  mutable pref_outline_show_types           : bool;
+  mutable pref_odoc_font                    : string;
 }
 and text_properties = GDraw.color * Pango.Tags.weight * Pango.Tags.style * Pango.Tags.underline * Pango.Tags.scale
 
@@ -142,35 +146,14 @@ let default_colors : text_properties list = [
   (`NAME "black"), `NORMAL, `NORMAL, `NONE, `MEDIUM;
   (`NAME "black"), `NORMAL, `NORMAL, `NONE, `MEDIUM;
   (`NAME "deeppink3"), `NORMAL, `ITALIC, `NONE, `MEDIUM;
-  (`NAME "deeppink3"), `BOLD, `ITALIC, `NONE, `MEDIUM;
+  (`NAME "deeppink3"), `NORMAL, `ITALIC, `NONE, `MEDIUM;
   (`NAME "#FFFF00"), `NORMAL, `NORMAL, `LOW, `MEDIUM;
-  (`NAME "#F7F7D7"), `NORMAL, `NORMAL, `NONE, `MEDIUM; (* #EEEEDD #F7F7D7 #F4F2B2 #F9F7C9  #FCF899 #F4F0A4 *)
+  (`NAME "#F9F9CA"), `NORMAL, `NORMAL, `NONE, `MEDIUM;(* #E8F2FF *) (* #F7F7D7 *)
   (`NAME "#474747"), `NORMAL, `ITALIC, `NONE, `MEDIUM;
 ]
 
-(*let bw_style : text_properties list = [
-  (`NAME "#000000"), `NORMAL, `NORMAL, `NONE, `LARGE;
-  (`NAME "#000000"), `NORMAL, `NORMAL, `NONE, `LARGE;
-(*    (`NAME "forestgreen"), `BOLD, `NORMAL, `NONE, `LARGE;*)
-  (`NAME "#000000"), `NORMAL, `NORMAL, `NONE, `LARGE;
-  (`NAME "#000000"), `NORMAL, `NORMAL, `NONE, `LARGE;
-  (`NAME "#000000"), `NORMAL, `NORMAL, `NONE, `LARGE;
-  (`NAME "#000000"), `NORMAL, `ITALIC, `NONE, `MEDIUM;
-  (`NAME "#000000"), `BOLD, `NORMAL, `NONE, `LARGE;
-  (`NAME "#000000"), `NORMAL, `NORMAL, `NONE, `LARGE;
-  (`NAME "#000000"), `NORMAL, `NORMAL, `NONE, `LARGE;
-  (`NAME "#000000"), `NORMAL, `NORMAL, `NONE, `LARGE;
-  (`NAME "#000000"), `NORMAL, `NORMAL, `NONE, `LARGE;
-  (`NAME "#000000"), `NORMAL, `NORMAL, `NONE, `LARGE;
-  (`NAME "#000000"), `NORMAL, `NORMAL, `NONE, `LARGE;
-  (`NAME "#000000"), `NORMAL, `NORMAL, `NONE, `LARGE;
-  (`NAME "#000000"), `NORMAL, `NORMAL, `NONE, `LARGE;
-  (`NAME "#000000"), `NORMAL, `NORMAL, `NONE, `LARGE;
-  (`NAME "#000000"), `NORMAL, `NORMAL, `NONE, `LARGE; (* #EEEEDD #F7F7D7 #F4F2B2 #F9F7C9  #FCF899 #F4F0A4 *)
-  (`NAME "#000000"), `NORMAL, `ITALIC, `NONE, `LARGE;
-]*)
-
 let defaults = {
+  pref_timestamp                    = (Unix.gettimeofday());
   pref_base_font                    = "monospace 9";
   pref_tab_pos                      = `TOP;
   pref_check_updates                = false;
@@ -185,9 +168,10 @@ let defaults = {
   pref_editor_bak                   = true;
   pref_editor_wrap                  = false;
   pref_editor_trim_lines            = false;
+  pref_editor_custom_templ_filename = "";
   pref_compl_font                   = "Sans 9";
   pref_compl_greek                  = true;
-  pref_output_font                  = "Sans 9";
+  pref_output_font                  = "monospace 8";
   pref_output_bg                    = "#FFFFFF";
   pref_output_fg_stdin              = "#0000FF";
   pref_output_fg_stdout             = "#000000";
@@ -204,29 +188,32 @@ let defaults = {
   pref_indent_lines                 = true;
   pref_right_margin_visible         = false;
   pref_right_margin                 = 80;
-  pref_max_view_1_menubar           = false;
+  pref_max_view_1_menubar           = true;
   pref_max_view_1_toolbar           = false;
   pref_max_view_1_tabbar            = false;
   pref_max_view_1_messages          = false;
   pref_max_view_1_fullscreen        = false;
   pref_max_view_2                   = true;
-  pref_max_view_2_menubar           = false;
+  pref_max_view_2_menubar           = true;
   pref_max_view_2_toolbar           = true;
   pref_max_view_2_tabbar            = true;
   pref_max_view_2_messages          = true;
   pref_max_view_2_fullscreen        = true;
   pref_max_view_fullscreen          = false;
-  pref_ocamldoc_paragraph_bgcolor_1 = Some "#F5F0FF";
-  pref_ocamldoc_paragraph_bgcolor_2 = Some "#F8F5FF";
+  pref_ocamldoc_paragraph_bgcolor_1 = Some "#FAF7FA" (*"#F5F0FF"*);
+  pref_ocamldoc_paragraph_bgcolor_2 = Some "#FAF7FA" (*"#F8F5FF"*);
   pref_code_folding_enabled         = true;
   pref_show_global_gutter           = true;
   pref_err_underline                = true;
   pref_err_tooltip                  = true;
   pref_err_gutter                   = true;
   pref_show_whitespace_chars        = false;
+  pref_outline_show_types           = false;
+  pref_odoc_font                    = "Serif 9";
 }
 
 let create_defaults () = {
+  pref_timestamp                    = (Unix.gettimeofday());
   pref_base_font                    = defaults.pref_base_font;
   pref_tab_pos                      = defaults.pref_tab_pos;
   pref_check_updates                = defaults.pref_check_updates;
@@ -241,6 +228,7 @@ let create_defaults () = {
   pref_editor_bak                   = defaults.pref_editor_bak;
   pref_editor_wrap                  = defaults.pref_editor_wrap;
   pref_editor_trim_lines            = defaults.pref_editor_trim_lines;
+  pref_editor_custom_templ_filename = defaults.pref_editor_custom_templ_filename;
   pref_compl_font                   = defaults.pref_compl_font;
   pref_compl_greek                  = defaults.pref_compl_greek;
   pref_output_font                  = defaults.pref_output_font;
@@ -280,21 +268,11 @@ let create_defaults () = {
   pref_err_tooltip                  = defaults.pref_err_tooltip;
   pref_err_gutter                   = defaults.pref_err_gutter;
   pref_show_whitespace_chars        = defaults.pref_show_whitespace_chars;
+  pref_outline_show_types           = defaults.pref_outline_show_types;
+  pref_odoc_font                    = defaults.pref_odoc_font;
 }
 
-let preferences = ref (create_defaults ())
-
-(*let preferences_bw () =
-  let pref = !preferences in
-  pref.pref_base_font <- "DejaVu Sans Mono";
-  pref.pref_bg_color <- ("#FFFFFF", false);
-  pref.pref_tags <- List.combine default_tags bw_style;
-  pref.pref_code_folding_enabled <- false;
-  pref.pref_indent_lines <- false;
-  pref.pref_highlight_current_line <- false;
-  pref.pref_show_line_numbers <- false;
-  pref
-;;*)
+let preferences = new GUtil.variable (create_defaults ())
 
 let string_of_pos = function
   | `TOP -> "TOP"
@@ -383,6 +361,7 @@ let to_xml pref =
       Xml.Element ("pref_editor_wrap", [], [Xml.PCData (string_of_bool pref.pref_editor_wrap)]);
       Xml.Element ("pref_editor_trim_lines", [], [Xml.PCData (string_of_bool pref.pref_editor_trim_lines)]);
       Xml.Element ("pref_editor_bak", [], [Xml.PCData (string_of_bool pref.pref_editor_bak)]);
+      Xml.Element ("pref_editor_custom_templ_filename", [], [Xml.PCData (pref.pref_editor_custom_templ_filename)]);
       Xml.Element ("pref_compl_font", [], [Xml.PCData pref.pref_compl_font]);
       Xml.Element ("pref_compl_greek", [], [Xml.PCData (string_of_bool pref.pref_compl_greek)]);
       Xml.Element ("pref_output_font", [], [Xml.PCData pref.pref_output_font]);
@@ -422,6 +401,8 @@ let to_xml pref =
       Xml.Element ("pref_err_tooltip", [], [Xml.PCData (string_of_bool pref.pref_err_tooltip)]);
       Xml.Element ("pref_err_gutter", [], [Xml.PCData (string_of_bool pref.pref_err_gutter)]);
       Xml.Element ("pref_show_whitespace_chars", [], [Xml.PCData (string_of_bool pref.pref_show_whitespace_chars)]);
+      Xml.Element ("pref_outline_show_types", [], [Xml.PCData (string_of_bool pref.pref_outline_show_types)]);
+      Xml.Element ("pref_odoc_font", [], [Xml.PCData (pref.pref_odoc_font)]);
 
     ])
   in
@@ -476,6 +457,7 @@ let from_file filename =
         | "pref_editor_wrap" -> pref.pref_editor_wrap <- bool_of_string (value node)
         | "pref_editor_trim_lines" -> pref.pref_editor_trim_lines <- bool_of_string (value node)
         | "pref_editor_bak" -> pref.pref_editor_bak <- bool_of_string (value node)
+        | "pref_editor_custom_templ_filename" -> pref.pref_editor_custom_templ_filename <- value node
         | "pref_compl_font" -> pref.pref_compl_font <- value node
         | "pref_compl_greek" -> pref.pref_compl_greek <- bool_of_string (value node)
         | "pref_output_font" -> pref.pref_output_font <- value node
@@ -518,6 +500,8 @@ let from_file filename =
         | "pref_err_tooltip" -> pref.pref_err_tooltip <- bool_of_string (value node)
         | "pref_err_gutter" -> pref.pref_err_gutter <- bool_of_string (value node)
         | "pref_show_whitespace_chars" -> pref.pref_show_whitespace_chars <- bool_of_string (value node)
+        | "pref_outline_show_types" -> pref.pref_outline_show_types <- bool_of_string (value node)
+        | "pref_odoc_font" -> pref.pref_odoc_font <- value node
 
        | _ -> ()
     end xml;
@@ -528,11 +512,10 @@ let from_file filename =
 
 (** save *)
 let save () =
-  let xml = to_xml !preferences in
+  let xml = to_xml preferences#get in
   let chan = open_out_bin pref_filename in
-  lazy begin
-    output_string chan xml
-  end @$ lazy (close_out chan)
+  lazy (output_string chan xml) @$ lazy (close_out chan);
+  preferences#set {preferences#get with pref_timestamp = Unix.gettimeofday()}
 
 (** load_old *)
 let load_old () =
@@ -540,7 +523,8 @@ let load_old () =
     let chan = open_in_bin Preferences_old_1.pref_filename in
     let old = lazy ((Marshal.from_channel chan) : Preferences_old_1.t) @$ lazy (close_in chan) in
     Sys.remove Preferences_old_1.pref_filename;
-    preferences := {
+    preferences#set {
+      pref_timestamp                    = (Unix.gettimeofday());
       pref_check_updates                = true;
       pref_base_font                    = old.Preferences_old_1.pref_base_font;
       pref_tab_pos                      = old.Preferences_old_1.pref_tab_pos;
@@ -555,6 +539,7 @@ let load_old () =
       pref_editor_wrap                  = defaults.pref_editor_wrap;
       pref_editor_trim_lines            = defaults.pref_editor_trim_lines;
       pref_editor_bak                   = defaults.pref_editor_bak;
+      pref_editor_custom_templ_filename = defaults.pref_editor_custom_templ_filename;
       pref_compl_font                   = defaults.pref_compl_font;
       pref_compl_greek                  = defaults.pref_compl_greek;
       pref_output_font                  = defaults.pref_output_font;
@@ -594,11 +579,13 @@ let load_old () =
       pref_err_tooltip                  = defaults.pref_err_tooltip;
       pref_err_gutter                   = defaults.pref_err_gutter;
       pref_show_whitespace_chars        = defaults.pref_show_whitespace_chars;
+      pref_outline_show_types           = defaults.pref_outline_show_types;
+      pref_odoc_font                    = defaults.pref_odoc_font;
     };
-    (try ignore (List.assoc "highlight" !preferences.pref_tags);
+    (try ignore (List.assoc "highlight" preferences#get.pref_tags);
     with Not_found -> begin
-      !preferences.pref_tags <- (List.find (fun (x, _) -> x = "highlight")
-        (List.combine default_tags default_colors)) :: !preferences.pref_tags
+      preferences#get.pref_tags <- (List.find (fun (x, _) -> x = "highlight")
+        (List.combine default_tags default_colors)) :: preferences#get.pref_tags
     end);
     save();
   end
@@ -611,22 +598,22 @@ let load () =
     Printf.eprintf "File \"preferences.ml\": %s\n%s\n%!" (Printexc.to_string ex) (Printexc.get_backtrace());
     create_defaults ()
   end in
-  preferences := pref
+  preferences#set pref
 
 (** tag_color *)
 let tag_color tagname =
-  match List.assoc tagname !preferences.pref_tags with
+  match List.assoc tagname preferences#get.pref_tags with
     | color, _, _, _, _ -> GDraw.color color
 
 (** tag_underline *)
 let tag_underline tagname =
-  match List.assoc tagname !preferences.pref_tags with
+  match List.assoc tagname preferences#get.pref_tags with
     | _, _, _, underline, _ -> underline
 
 (** reset_defaults *)
 let reset_defaults () =
   if Sys.file_exists pref_filename then Sys.remove pref_filename;
-  preferences := create_defaults();
+  preferences#set (create_defaults());
   save()
 
 let _ = begin

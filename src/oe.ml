@@ -1,7 +1,7 @@
 (*
 
   OCamlEditor
-  Copyright (C) 2010, 2011 Francesco Tovagliari
+  Copyright (C) 2010-2012 Francesco Tovagliari
 
   This file is part of OCamlEditor.
 
@@ -21,23 +21,36 @@
 *)
 
 
+let magic = "1";;
+
+type 'a dump = Dump of string * 'a
+
+exception Bad_magic_number
+
+let open_dump = function Dump (m, a) ->
+  if m = magic then a
+  else raise Bad_magic_number;;
+
 (** Symbol cache *)
-type symbol_cache_entry = {
-  sy_id                       : string list;
+type symbol = {
+  sy_id                       : string list; (* Value path, head is root *)
   sy_kind                     : symbol_kind;
   sy_type                     : string;
   sy_filename                 : string;
+  sy_local                    : bool;
 }
 
 and symbol_cache = {
-  mutable syt_table           : symbol_cache_entry list;
-  syt_ts                      : (string, float) Hashtbl.t; (* filename * last read *)
+  mutable syt_table           : symbol list;
+  mutable syt_ts              : (string, float) Hashtbl.t; (* filename * last read *)
+  mutable syt_odoc            : (Odoc_info.Name.t * symbol_kind option, Odoc_info.Search.result_element) Hashtbl.t; (* value_path * markup *)
   syt_critical                : Mutex.t;
 }
 
 and symbol_kind =
     Pvalue
   | Pfunc
+  | Pattribute
   | Pmethod | Pmethod_private | Pmethod_virtual | Pmethod_private_virtual
   | Ptype
   | Plabel
@@ -47,6 +60,9 @@ and symbol_kind =
   | Pmodtype
   | Pclass
   | Pcltype
+  | Ptype_abstract | Ptype_variant | Ptype_record
+  | Std_lib
+  | Lib
 
 
 (** Annot *)
@@ -98,14 +114,6 @@ and error_message = {
 }
 
 
-(** Editor *)
-type editor_page_id =
-  | Page_current
-  | Page_num of int
-  | Page_file of File.file
-  | Page_view of Text.view
-
-
 (** Browser *)
 type browser_maximized_view_action = {
   mva_menubar                 : bool;
@@ -114,9 +122,6 @@ type browser_maximized_view_action = {
   mva_messages                : bool;
   mva_fullscreen              : bool;
 }
-
-exception No_current_project
-
 
 
 

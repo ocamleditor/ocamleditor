@@ -1,7 +1,7 @@
 (*
 
   OCamlEditor
-  Copyright (C) 2010, 2011 Francesco Tovagliari
+  Copyright (C) 2010-2012 Francesco Tovagliari
 
   This file is part of OCamlEditor.
 
@@ -57,9 +57,9 @@ object (self)
   val mutable sticky_popup = false
   val mutable table = []
   val mutable error_gutter_markers = []
-  val mutable flag_underline = !Preferences.preferences.Preferences.pref_err_underline
-  val mutable flag_tooltip = !Preferences.preferences.Preferences.pref_err_tooltip
-  val mutable flag_gutter = !Preferences.preferences.Preferences.pref_err_gutter
+  val mutable flag_underline = Preferences.preferences#get.Preferences.pref_err_underline
+  val mutable flag_tooltip = Preferences.preferences#get.Preferences.pref_err_tooltip
+  val mutable flag_gutter = Preferences.preferences#get.Preferences.pref_err_gutter
   val mutable tag_error = tag_error
   val mutable tag_warning = tag_warning
   val mutable tag_warning_unused = tag_warning_unused
@@ -98,17 +98,21 @@ object (self)
     self#remove_tag();
 
   method has_errors = has_errors
-  method first_error = try Some (List.hd tag_error_bounds) with Failure "hd" -> None
+  method first_error = match tag_error_bounds with x :: _-> Some x | _ -> None
 
   method has_warnings = has_warnings
-  method first_warning = try Some (List.hd tag_warning_bounds) with Failure "hd" -> None
+  method first_warning = match tag_warning_bounds with x :: _ -> Some x | _ -> None
 
   method has_errors_or_warnings = has_errors_or_warnings
   method first_error_or_warning = match self#first_error with None -> self#first_warning | x -> x
 
   method private callback_gutter_marker mark =
     let iter = buffer#get_iter_at_mark (`MARK mark) in
+    buffer#block_signal_handlers ();
+    (* Protect the tooltip from the mark_set signal emission of place_cursor which otherwise destroys it *)
     buffer#place_cursor iter;
+    view#draw_current_line_background ~force:true iter;
+    buffer#unblock_signal_handlers ();
     Gmisclib.Idle.add ~prio:300 (fun () -> self#tooltip ~sticky:true ~need_focus:false (`ITER iter));
     true;
 
@@ -126,7 +130,7 @@ object (self)
         let stop = iter#forward_chars c2 in
         let tag = self#tag_of_error error in
         buffer#apply_tag tag ~start ~stop;
-        let mark_start = buffer#create_mark start in
+        let mark_start = buffer#create_mark(* ~name:(Gtk_util.create_mark_name "Error_indication.do_apply_tag1")*) start in
         if flag_gutter then begin
           let kind, pixbuf =
             match kind with
@@ -140,7 +144,7 @@ object (self)
           tview#gutter.Gutter.markers <- marker :: tview#gutter.Gutter.markers;
           error_gutter_markers <- marker :: error_gutter_markers;
         end;
-        mark_start, (buffer#create_mark stop), error
+        mark_start, (buffer#create_mark(* ~name:(Gtk_util.create_mark_name "Error_indication.do_apply_tag2")*) stop), error
       end messages
     (*end ()*)
 
@@ -157,7 +161,7 @@ object (self)
         has_warnings#set (tag_warning_bounds <> []);
         let has_messages = has_errors#get || has_warnings#get in
         has_errors_or_warnings#set has_messages;
-        if has_messages then (tview#paint_gutter());
+        if has_messages then (tview#draw_gutter());
         self#paint_global_gutter ();
       end;
     end;
@@ -173,18 +177,20 @@ object (self)
     end tags;
 
   method remove_tag () =
-    let had_messages = has_errors_or_warnings#get in
-    self#do_remove_tag tag_error_bounds;
-    self#do_remove_tag tag_warning_bounds;
-    tag_error_bounds <- [];
-    tag_warning_bounds <- [];
-    has_errors#set false;
-    has_warnings#set false;
-    has_errors_or_warnings#set false;
-    let tview = (view :> Text.view) in
-    Gutter.destroy_markers tview#gutter error_gutter_markers;
-    error_gutter_markers <- [];
-    if had_messages then (tview#paint_gutter());
+    if has_errors_or_warnings#get then begin
+      let had_messages = has_errors_or_warnings#get in
+      self#do_remove_tag tag_error_bounds;
+      self#do_remove_tag tag_warning_bounds;
+      tag_error_bounds <- [];
+      tag_warning_bounds <- [];
+      has_errors#set false;
+      has_warnings#set false;
+      has_errors_or_warnings#set false;
+      let tview = (view :> Text.view) in
+      Gutter.destroy_markers tview#gutter error_gutter_markers;
+      error_gutter_markers <- [];
+      if had_messages then (tview#draw_gutter());
+    end
 
   method hide_tooltip ?(force=true) () =
     if force || not sticky_popup then begin
@@ -213,7 +219,7 @@ object (self)
               let start = buffer#get_iter_at_mark (`MARK start) in
               let stop = buffer#get_iter_at_mark (`MARK stop) in
               iter#in_range ~start ~stop
-            with Gtk_util.Mark_deleted -> false
+            with Gmisclib.Util.Mark_deleted -> false
           end tag_popup);
           sticky_popup <- sticky;
         with Not_found -> begin
@@ -244,7 +250,7 @@ object (self)
               let markup = (*(error.Oe.er_location) ^*)
                 (Print_type.markup3 error_message) in
               let label = GMisc.label ~markup ~xpad:5 ~ypad:5 ~packing:ebox#add () in
-              label#misc#modify_font_by_name !Preferences.preferences.Preferences.pref_compl_font;
+              label#misc#modify_font_by_name Preferences.preferences#get.Preferences.pref_compl_font;
               (** Positioning *)
               begin
                 popup#move ~x:(-1000) ~y:(-1000);
@@ -259,7 +265,7 @@ object (self)
                     popup#show();
                     popup#move ~x ~y:(y - popup#misc#allocation.Gtk.height - 12);
               end;
-              let incr = if !Preferences.preferences.Preferences.pref_annot_type_tooltips_delay = 0 then 0.106 else 0.479 in
+              let incr = if Preferences.preferences#get.Preferences.pref_annot_type_tooltips_delay = 0 then 0.106 else 0.479 in
               Gmisclib.Util.fade_window ~incr popup;
             (*end ()*)
           with Not_found -> (if not sticky_popup then (self#hide_tooltip()))
@@ -267,12 +273,12 @@ object (self)
       end else (if not sticky_popup then (self#hide_tooltip()));
     end
 
-  method private paint_global_gutter () =
+  method paint_global_gutter () =
     try
       let window = global_gutter#misc#window in
       table <- [];
       let drawable = new GDraw.drawable window in
-      drawable#set_line_attributes ~width:1 ~style:`SOLID ();
+      drawable#set_line_attributes ~width:1 ~style:`SOLID ~join:`ROUND ();
       let width, height = drawable#size in
       let alloc = vscrollbar#misc#allocation in
       (** Clean up *)
@@ -295,21 +301,31 @@ object (self)
       let height = height - 2 * alloc.Gtk.width in
       let line_count = float buffer#line_count in
       let height = float height in
-      let width = width - 0 in
+      (*let width = width - 1 in*)
       (** Comments *)
       if Oe_config.global_gutter_comments_enabled then begin
         match Comments.scan_utf8 (buffer#get_text ()) with
           | Comments.Utf8 comments ->
+            Gdk.GC.set_dashes drawable#gc ~offset:0 [1; 1];
             List.iter begin fun (start, stop, _, odoc) ->
-              let filled = odoc in
-              drawable#set_foreground Oe_config.global_gutter_comments_color;
-              let line_start = float (buffer#get_iter (`OFFSET start))#line in
+              let iter = buffer#get_iter (`OFFSET start) in
+              let is_fold = view#code_folding#is_folded iter#forward_to_line_end <> None in
+              let line_start = float iter#line in
               let line_stop = float (buffer#get_iter (`OFFSET stop))#line in
               let y1 = int_of_float ((line_start /. line_count) *. height) in
               let y2 = int_of_float ((line_stop /. line_count) *. height) in
               let y1 = y1 + alloc.Gtk.width in
               let y2 = y2 + alloc.Gtk.width in
-              drawable#rectangle ~filled ~x:0 ~y:y1 ~width:(width - (if filled then 1 else 1)) ~height:(y2 - y1) ();
+              let filled = odoc in
+              let offset = if y1 = y2 then 0 else 1 in
+              let style = if is_fold then `ON_OFF_DASH else `SOLID in
+              drawable#set_line_attributes ~width:1 ~style ();
+              if filled then begin
+                drawable#set_foreground Oe_config.global_gutter_comments_bgcolor;
+                drawable#rectangle ~filled ~x:0 ~y:y1 ~width:(width - offset) ~height:(y2 - y1) ();
+              end;
+              drawable#set_foreground Oe_config.global_gutter_comments_color;
+              drawable#rectangle (*~filled*) ~x:0 ~y:y1 ~width:(width - offset) ~height:(y2 - y1) ();
             end comments
           | _ -> assert false
       end;

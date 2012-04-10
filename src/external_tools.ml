@@ -1,7 +1,7 @@
 (*
 
   OCamlEditor
-  Copyright (C) 2010, 2011 Francesco Tovagliari
+  Copyright (C) 2010-2012 Francesco Tovagliari
 
   This file is part of OCamlEditor.
 
@@ -60,24 +60,24 @@ let inject tools menu translate_macro =
   end tools
 
 let get_macros ~get_editor ~get_current_project () =
-  let project : Project.t = get_current_project () in
-  let editor : Editor.editor = get_editor () in
-  let current_filename =
-    match editor#get_page Oe.Page_current with
-      | None -> ""
-      | Some page -> (match page#file with None -> "" | Some file -> file#path)
-  in
-  let macros = [
-    "$(project_home)", project.root;
-    "$(project_source)", (project.root // Project.src);
-    "$(project_name)", project.name;
-    "$(current_filename)", current_filename;
-  ]in
-  let translate_macro = replace_all ~regexp:false macros in
-  let macros_help () = "Macros: " ^ (String.concat ", " (List.map fst macros)) in
-  macros, macros_help, translate_macro
+  let project = get_current_project() in
+    let editor : Editor.editor = get_editor () in
+    let current_filename =
+      match editor#get_page `ACTIVE with
+        | None -> ""
+        | Some page -> (match page#file with None -> "" | Some file -> file#path)
+    in
+    let macros = [
+      "$(project_home)", project.root;
+      "$(project_source)", (project.root // Project.src);
+      "$(project_name)", project.name;
+      "$(current_filename)", current_filename;
+    ]in
+    let translate_macro = replace_all ~regexp:false macros in
+    let macros_help () = "Macros: " ^ (String.concat ", " (List.map fst macros)) in
+    macros, macros_help, translate_macro
 
-let create ~menu ~get_editor ~get_current_project () =
+let create ~get_editor ~get_current_project () =
     let macros, macros_help, translate_macro = get_macros ~get_editor ~get_current_project () in
     (* Tools *)
     let tools = ref (read ()) in

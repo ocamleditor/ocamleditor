@@ -1,7 +1,7 @@
 (*
 
   OCamlEditor
-  Copyright (C) 2010, 2011 Francesco Tovagliari
+  Copyright (C) 2010-2012 Francesco Tovagliari
 
   This file is part of OCamlEditor.
 
@@ -44,11 +44,12 @@ module Toolbar =
 
 module Util =
   struct
+    exception Mark_deleted
     let fade_window_enabled          = Util.fade_window_enabled
     let fade_window                  = Util.fade_window
-    let set_ebox_invisible           = Util.set_ebox_invisible
     let set_tag_paragraph_background = Util.set_tag_paragraph_background
     let get_iter_at_mark_safe        = Util.get_iter_at_mark_safe
+    let get_iter_at_mark_opt         = Util.get_iter_at_mark_opt
     let treeview_is_path_onscreen    = Util.treeview_is_path_onscreen
   end
 

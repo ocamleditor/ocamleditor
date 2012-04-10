@@ -1,7 +1,7 @@
 (*
 
   OCamlEditor
-  Copyright (C) 2010, 2011 Francesco Tovagliari
+  Copyright (C) 2010-2012 Francesco Tovagliari
 
   This file is part of OCamlEditor.
 
@@ -39,12 +39,12 @@ let create ~project ~(editor : Editor.editor) ?(buffer : GText.buffer option) ?w
   let vbox = GPack.vbox ~spacing:13 ~packing:hbox#add () in
   let table = GPack.table ~row_spacings:5 ~col_spacings:5 ~packing:(vbox#pack ~expand:false) () in
   let label = GMisc.label ~text:"Text to find: " ~xalign:0.0 ~packing:(table#attach ~top:0 ~left:0) () in
-  let entry_find = GEdit.combo_box_entry
+  let entry_find = GEdit.combo_box_entry ~wrap_width:3
     ~model:status.h_find.model ~text_column:status.h_find.column
     ~focus_on_click:false ~packing:(table#attach ~top:0 ~left:1 ~expand:`X) () in
   entry_find#entry#misc#modify_font_by_name "monospace";
   let label_repl = GMisc.label ~text:"Replace with: " ~xalign:0.0 ~packing:(table#attach ~top:1 ~left:0) () in
-  let entry_repl = GEdit.combo_box_entry ~focus_on_click:false
+  let entry_repl = GEdit.combo_box_entry ~focus_on_click:false ~wrap_width:3
     ~model:status.h_repl.model ~text_column:status.h_repl.column
     ~packing:(table#attach ~top:1 ~left:1 ~expand:`X) () in
   entry_repl#entry#misc#modify_font_by_name "monospace";
@@ -72,7 +72,7 @@ let create ~project ~(editor : Editor.editor) ?(buffer : GText.buffer option) ?w
   let pbox = GPack.vbox ~spacing:5 ~border_width:5 ~packing:frame#add () in
   let box = GPack.hbox ~spacing:5 ~packing:pbox#add () in
   (** radio_specified_path *)
-  let radio_specified_path = GButton.radio_button ~label:"Specified directory: " ~active:false
+  let radio_specified_path = GButton.radio_button ~label:"Specified directory:" ~active:false
     ~packing:(box#pack ~expand:false) () in
   let entry_specified_path = GEdit.combo_box_entry
     ~focus_on_click:false
@@ -82,7 +82,7 @@ let create ~project ~(editor : Editor.editor) ?(buffer : GText.buffer option) ?w
   let label = GMisc.label ~markup:(sprintf "<big>%s</big>" (Convert.to_utf8 "  ...  ")) () in
   let button_path = GButton.button ~packing:(box#pack ~expand:false) () in
   button_path#add label#coerce;
-  button_path#connect#clicked ~callback:begin fun () ->
+  ignore (button_path#connect#clicked ~callback:begin fun () ->
     let dialog = GWindow.file_chooser_dialog ~action:`SELECT_FOLDER ~position:`CENTER ~title:"Select folder..." () in
     dialog#add_button_stock `OK `OK;
     dialog#add_button_stock `CANCEL `CANCEL;
@@ -91,44 +91,24 @@ let create ~project ~(editor : Editor.editor) ?(buffer : GText.buffer option) ?w
         Gaux.may dialog#filename ~f:(fun name -> entry_specified_path#entry#set_text name);
         dialog#destroy()
       | _ -> dialog#destroy()
-  end;
+  end);
   let group = radio_specified_path#group in
   (** radio_project_src *)
   let radio_project_src = GButton.radio_button ~label:"Project source path" ~active:false ~group ~packing:pbox#add () in
-  let callback_src () =
-    let path = match status.h_path.model#get_iter_first with
-      | None -> ""
-      | Some row -> status.h_path.model#get ~row ~column:status.h_path.column
-    in
-    entry_specified_path#entry#set_text path;
-    entry_specified_path#misc#set_sensitive false;
-    button_path#misc#set_sensitive false;
-  in
-  let callback_path () =
-    let path = match status.h_path.model#get_iter_first with
-      | None -> ""
-      | Some row -> status.h_path.model#get ~row ~column:status.h_path.column
-    in
-    entry_specified_path#entry#set_text path;
-    entry_specified_path#misc#set_sensitive true;
-    button_path#misc#set_sensitive true;
-  in
-  radio_project_src#connect#pressed ~callback:callback_src;
-  radio_specified_path#connect#pressed ~callback:callback_path;
-  if status.path = Project_source then (radio_project_src#set_active true; callback_src())
-  else (radio_specified_path#set_active true; callback_path());
+  (** radio_only_open_files *)
+  let radio_only_open_files = GButton.radio_button ~label:"Only open files" ~active:false ~group ~packing:pbox#add () in
+  (** Filename Pattern *)
+  let box = GPack.hbox ~packing:vbox#pack ~spacing:21 ~show:search_in_path () in
   (** check_recursive *)
   let check_recursive = GButton.check_button
     ~label:"Include subdirectories"
     ~active:status.recursive
-    ~packing:pbox#add () in
-  (** Filename Pattern *)
-  let box = GPack.hbox ~packing:(vbox#pack ~expand:false) ~show:search_in_path () in
+    ~packing:box#pack () in
   let pbox = GPack.hbox ~packing:box#add () in
   let check_pattern = GButton.check_button
-    ~label:"File name patterns: "
+    ~label:"Restrict to: "
     ~active:(status.pattern <> None)
-    ~packing:(pbox#pack ~expand:false) () in
+    ~packing:pbox#pack () in
   let entry_pattern = GEdit.combo_box_entry
     ~focus_on_click:false
     ~model:status.h_pattern.model ~text_column:status.h_pattern.column
@@ -138,12 +118,40 @@ let create ~project ~(editor : Editor.editor) ?(buffer : GText.buffer option) ?w
       | None -> ""
       | Some row -> status.h_pattern.model#get ~row ~column:status.h_pattern.column
   end;
-  check_pattern#connect#pressed ~callback:begin fun () ->
-    entry_pattern#misc#set_sensitive true;
-    entry_pattern#entry#misc#grab_focus()
-  end;
-  check_pattern#connect#released ~callback:begin fun () ->
-    entry_pattern#misc#set_sensitive false;
+  let enable_entry_pattern () =
+    if check_pattern#active && check_pattern#misc#get_flag `SENSITIVE then begin
+      entry_pattern#misc#set_sensitive true;
+      entry_pattern#entry#misc#grab_focus()
+    end else begin
+      entry_pattern#misc#set_sensitive false;
+    end
+  in
+  ignore (check_pattern#connect#toggled ~callback:enable_entry_pattern);
+  (**  *)
+  ignore (radio_specified_path#connect#toggled ~callback:begin fun () ->
+    entry_specified_path#misc#set_sensitive radio_specified_path#active;
+    button_path#misc#set_sensitive radio_specified_path#active;
+  end);
+  ignore (radio_only_open_files#connect#toggled ~callback:begin fun () ->
+    check_recursive#misc#set_sensitive (not radio_only_open_files#active);
+    check_pattern#misc#set_sensitive (not radio_only_open_files#active);
+    enable_entry_pattern();
+  end);
+  let callback () =
+    let path = match status.h_path.model#get_iter_first with
+      | None -> ""
+      | Some row -> status.h_path.model#get ~row ~column:status.h_path.column
+    in
+    entry_specified_path#entry#set_text path;
+  in
+  ignore (radio_project_src#connect#pressed ~callback);
+  ignore (radio_specified_path#connect#pressed ~callback);
+  ignore (radio_only_open_files#connect#pressed ~callback);
+  begin
+    match status.path with
+      | Project_source -> radio_project_src#set_active true; callback()
+      | Only_open_files -> radio_only_open_files#set_active true; callback();
+      | Specified path -> radio_specified_path#set_active true; callback()
   end;
   (** Button box *)
   let bbox = GPack.button_box ~spacing:5 `VERTICAL ~layout:`START ~packing:(hbox#pack ~expand:false) () in
@@ -163,14 +171,14 @@ let create ~project ~(editor : Editor.editor) ?(buffer : GText.buffer option) ?w
   (** Default values in entries *)
   let text =
     if search_word_at_cursor then begin
-      match editor#get_page (Oe.Page_current)
+      match editor#get_page (`ACTIVE)
       with None -> "" | Some page ->
         let start, stop = page#buffer#select_word ~pat:Ocaml_word_bound.regexp ~select:false () in
         page#buffer#get_text ~start ~stop ()
     end else ""
   in
   let text =
-    match editor#get_page (Oe.Page_current)
+    match editor#get_page (`ACTIVE)
     with Some page when page#buffer#has_selection -> page#buffer#selection_text () | _ -> text
   in
   let is_multiline = String.contains text '\n' in
@@ -188,7 +196,7 @@ let create ~project ~(editor : Editor.editor) ?(buffer : GText.buffer option) ?w
     entry_find#entry#set_text text;
   end;
   entry_find#entry#misc#grab_focus();
-  if entry_pattern#entry#text = "" then (entry_pattern#entry#set_text "{*.ml,*.mll,*.mly}");
+  if entry_pattern#entry#text = "" then (entry_pattern#entry#set_text "*.ml?");
   let callback () =
     let not_empty = String.length entry_find#entry#text > 0 in
     button_find#misc#set_sensitive not_empty;
@@ -214,7 +222,12 @@ let create ~project ~(editor : Editor.editor) ?(buffer : GText.buffer option) ?w
       ~use_regexp:check_use_regexp#active
       ~case_sensitive:check_case_sensitive#active
       ~direction:(if check_search_backward#active then Backward else Forward)
-      ~path:(if radio_specified_path#active then (Specified entry_specified_path#entry#text) else Project_source)
+      ~path:begin
+        if radio_specified_path#active then Specified entry_specified_path#entry#text
+        else if radio_project_src#active then Project_source
+        else if radio_only_open_files#active then Only_open_files
+        else assert false
+      end
       ~recursive:check_recursive#active
       ~pattern:(if check_pattern#active then (Some entry_pattern#entry#text) else None) ();
     let new_text_find = new GUtil.variable status.text_find#get in

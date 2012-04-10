@@ -1,7 +1,7 @@
 (*
 
   OCamlEditor
-  Copyright (C) 2010, 2011 Francesco Tovagliari
+  Copyright (C) 2010-2012 Francesco Tovagliari
 
   This file is part of OCamlEditor.
 
@@ -30,7 +30,7 @@ type t =
     Utf8 of (int * int * int * bool) list (* begin * end * extra bytes * ocamldoc *)
   | Locale of (int * int * bool) list  (*  begin * end * ocamldoc *)
 
-let scan txt =
+let scan_locale txt =
   (* Non vengono considerate le stringhe *)
   let rec f acc pos start =
     begin
@@ -38,10 +38,10 @@ let scan txt =
         let p = search_f_pat txt pos in
         begin
           try
-            matched_group 1 txt;
+            ignore (matched_group 1 txt);
             f acc (p + 2) (p :: start);
           with Not_found -> begin
-            matched_group 2 txt;
+            ignore (matched_group 2 txt);
             (match start with
               | [] -> f acc (p + 2) []
               | [start] -> f ((start, (p + 2), (txt.[start + 2] = '*')) :: acc) (p + 2) []
@@ -51,7 +51,9 @@ let scan txt =
       with Not_found -> acc
     end
   in
-  Locale (List.rev (f [] 0 []))
+ List.rev (f [] 0 [])
+
+let scan txt = Locale (scan_locale txt)
 
 let scan_utf8 txt =
   match scan txt with

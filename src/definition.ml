@@ -1,7 +1,7 @@
 (*
 
   OCamlEditor
-  Copyright (C) 2010, 2011 Francesco Tovagliari
+  Copyright (C) 2010-2012 Francesco Tovagliari
 
   This file is part of OCamlEditor.
 
@@ -52,8 +52,8 @@ let find_ext_ref ~(project : Project.t) ~src_path from =
     | `EXACT fullname -> (=) fullname
   in
   let ext_references : (string * ref_pos list) list ref = ref [] in
-  let file_annots = File.readdirs ~links:false src_path in
-  let file_annots = List.filter (fun x -> x ^^ ".ml") file_annots in
+  let file_annots = File.readdirs (*~links:false*) (Some (fun x -> x ^^ ".ml")) src_path in
+  (*let file_annots = List.filter (fun x -> x ^^ ".ml") file_annots in*)
   List.iter begin fun filename ->
     let current_file_refs = ref [] in
     begin
@@ -76,17 +76,17 @@ let find_ext_ref ~(project : Project.t) ~src_path from =
 
 (** find_references *)
 let find_references ?src_path ~(project : Project.t) ~filename ~offset (* offset of a definition (def) or let...in *) () =
-  match find ~project ~filename () with
+  match Annotation.find ~project ~filename () with
     | None -> None
     | Some annots ->
       begin
-        match find_block_at_offset' annots offset with
+        match Annotation.find_block_at_offset' annots offset with
           | None -> None
           | Some block_def ->
             let start_def = block_def.annot_start.annot_cnum in
             (* Internal references *)
             let irefs = Xlist.filter_map begin fun block ->
-              match get_int_ref block.annot_annotations with
+              match Annotation.get_int_ref block.annot_annotations with
                 | Some (n, x, _) when x.annot_cnum = start_def ->
                   Some (n,
                     (block.annot_start.annot_lnum, block.annot_start.annot_cnum - block.annot_start.annot_bol),
@@ -136,7 +136,25 @@ let find_definition ~(project : Project.t) ~page  ~(iter : GText.iter) =
             try
               let lident = (Longident.flatten (Longident.parse name)) in
               let filename = (List.hd lident) ^ ".ml" in
-              let fullname = Misc.find_in_path_uncap project.Project.source_paths filename in
+              let lident, filename, fullname =
+                try lident, filename, Misc.find_in_path project.Project.source_paths filename
+                with Not_found ->
+                  (* Check if the module is an internal module *)
+                  let current_mod = page#get_filename in
+                  let current_mod = Filename.basename current_mod in
+                  let lident = (String.capitalize (Filename.chop_extension current_mod)) :: lident in
+                  lident, current_mod, Misc.find_in_path project.Project.source_paths current_mod
+              in
+              (* get the exact (case senstive) file name *)
+              let file_exists =
+                let files = Array.to_list (Sys.readdir (Filename.dirname fullname)) in
+                List.mem filename files
+              in
+              let fullname =
+                if not file_exists then (Misc.find_in_path project.Project.source_paths (String.uncapitalize filename))
+                else fullname
+              in
+              (*  *)
               let filename =
                 match project.Project.in_source_path fullname with
                   | Some x -> x | _ -> assert false
@@ -175,6 +193,23 @@ let find_definition ~(project : Project.t) ~page  ~(iter : GText.iter) =
           end
       end;;
 
+
+(** has_definition_references *)
+let has_definition_references ~page ~iter =
+  let project = page#project in
+  let defs = find_definition ~project ~page ~iter in
+  let ext_refs =
+    match page#buffer#get_annot iter with
+      | None -> []
+      | Some { Oe.annot_annotations = annot_annotations } ->
+        begin
+          match Annotation.get_ext_ref annot_annotations with
+            | Some fullname ->
+              find_ext_ref ~project ~src_path:(Project.path_src project) (`EXACT fullname)
+            | _ -> []
+        end
+  in
+  defs <> None, defs <> None || ext_refs <> []
 
 
 

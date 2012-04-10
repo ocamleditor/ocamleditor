@@ -8,7 +8,7 @@ open Printf
 
 let multi_space = regexp "\\( \\( +\\)\\)\\|(\\*\\*\\(\\*+\\)\\|(\\*\\* \\|(\\* \\|(\\*\\|\\*)"
 
-let tags, colors = List.split !Preferences.preferences.Preferences.pref_tags
+let tags, colors = List.split Preferences.preferences#get.Preferences.pref_tags
 
 let tags = ref tags
 let colors = ref colors
@@ -16,8 +16,8 @@ let colors = ref colors
 (* Initialization *)
 let init_tags ?(tags=(!tags)) ?(colors=(!colors))
     ?(ocamldoc_paragraph_enabled=Oe_config.ocamldoc_paragraph_bgcolor_enabled)
-    ?(ocamldoc_paragraph_bgcolor_1=(!Preferences.preferences.Preferences.pref_ocamldoc_paragraph_bgcolor_1))
-    ?(ocamldoc_paragraph_bgcolor_2=(!Preferences.preferences.Preferences.pref_ocamldoc_paragraph_bgcolor_2))
+    ?(ocamldoc_paragraph_bgcolor_1=(Preferences.preferences#get.Preferences.pref_ocamldoc_paragraph_bgcolor_1))
+    ?(ocamldoc_paragraph_bgcolor_2=(Preferences.preferences#get.Preferences.pref_ocamldoc_paragraph_bgcolor_2))
     (tb : #GText.buffer) =
   let table = new GText.tag_table tb#tag_table in
   List.iter2 tags colors ~f:
@@ -98,7 +98,7 @@ let tag ?start ?stop (tb : GText.buffer) =
      l'inizio del primo commento e la fine del secondo. *)
   let text = tb#get_text () in
   let text = Glib.Convert.convert_with_fallback ~fallback:"?" ~from_codeset:"utf8" ~to_codeset:Oe_config.ocaml_codeset text in
-  let global_comments =(* Comments.Utf8 []*) Comments.scan text in
+  let global_comments = Comments.scan text in
   let start = match Comments.enclosing global_comments start#offset with
     | None -> start
     | Some (x, y) ->
@@ -114,7 +114,7 @@ let tag ?start ?stop (tb : GText.buffer) =
   let i_text = (Glib.Convert.convert_with_fallback ~fallback:"?" ~from_codeset:"utf8" ~to_codeset:Oe_config.ocaml_codeset u_text) in
   let buffer = Lexing.from_string i_text in
   let extra_bytes = ref 0 in
-  let comments = (*Comments.Utf8 []*) Comments.scan_utf8 u_text in
+  let comments = Comments.scan_utf8 u_text in
   let succ_comments = ref comments in
   let last = ref ("", EOF, 0, 0) in
   let last_but_one = ref ("", EOF, 0, 0) in
@@ -198,7 +198,7 @@ let tag ?start ?stop (tb : GText.buffer) =
           | CHAR _
           | STRING _
               -> "char"
-          | BACKQUOTE
+          (*| BACKQUOTE*)
           | INFIXOP0 _
           | INFIXOP1 _
           | INFIXOP2 _
@@ -212,10 +212,11 @@ let tag ?start ?stop (tb : GText.buffer) =
           | QUESTION
           | TILDE
               -> "label"
-          | UIDENT _ -> "uident"
+          | UIDENT _ | BACKQUOTE -> "uident"
           | LIDENT _ ->
               begin match !last with
                 | _, (QUESTION | TILDE), _, _ -> "label"
+                | _, BACKQUOTE, _, _ -> "number"
                 (* TODO:  *)
                 | _, LBRACE, _, _ when !in_record -> "record_label"
                 | _, MUTABLE, _, _ when !in_record -> "record_label"

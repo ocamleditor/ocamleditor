@@ -52,8 +52,8 @@ class widget ~editor ?packing () =
               match result.mark with
                 | Some (m1, m2) ->
                   let page = match result.page with Some x -> x | _ -> assert false in
-                  page#buffer#delete_mark (`MARK m1);
-                  page#buffer#delete_mark (`MARK m2);
+                  GtkText.Buffer.delete_mark page#buffer#as_buffer m1;
+                  GtkText.Buffer.delete_mark page#buffer#as_buffer m2;
                   result.mark <- None
                 | None -> ()
             end
@@ -141,8 +141,11 @@ class widget ~editor ?packing () =
   in
 object (self)
   inherit GObj.widget vbox#as_widget
+  inherit Messages.page
 
   val mutable signalid_row_expanded = None
+
+  method parent_changed messages = ()
 
   initializer
     signalid_row_expanded <-

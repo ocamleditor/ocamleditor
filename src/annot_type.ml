@@ -1,7 +1,7 @@
 (*
 
   OCamlEditor
-  Copyright (C) 2010, 2011 Francesco Tovagliari
+  Copyright (C) 2010-2012 Francesco Tovagliari
 
   This file is part of OCamlEditor.
 
@@ -76,8 +76,8 @@ object (self)
                       let index2 = Convert.offset_from_pos (buffer#get_text ~start:bol ~stop:eol ()) ~pos:index2 in
                       let stop_iter = buffer#get_iter (`LINECHAR ((line - 1), index2)) in
                       buffer#apply_tag tag ~start:start_iter ~stop:stop_iter;
-                      let mark1 = buffer#create_mark start_iter in
-                      let mark2 = buffer#create_mark stop_iter in
+                      let mark1 = buffer#create_mark(* ~name:(Gtk_util.create_mark_name "Annot_type.apply_tag")*) start_iter in
+                      let mark2 = buffer#create_mark(* ~name:(Gtk_util.create_mark_name "Annot_type.apply_tag")*) stop_iter in
                       tag_bounds <- Some (mark1, mark2, (start, stop));
                       let markup = (Print_type.markup2 (Miscellanea.trim type_annot)) in
                       Some markup
@@ -106,14 +106,14 @@ object (self)
         buffer#delete_mark stop;
 
   method tooltip where =
-    if !Preferences.preferences.Preferences.pref_annot_type_tooltips_impl = 0
+    if Preferences.preferences#get.Preferences.pref_annot_type_tooltips_impl = 0
     then (self#popup where ())
     else begin
       match self#apply_tag where with
         | None -> ()
         | Some markup ->
           let markup = sprintf "<span font='%s'>%s</span>"
-            !Preferences.preferences.Preferences.pref_compl_font markup in
+            Preferences.preferences#get.Preferences.pref_compl_font markup in
           view#misc#set_tooltip_markup markup;
     end
 
@@ -123,13 +123,13 @@ object (self)
       | Some markup ->
         let popup = GWindow.window ~kind:`POPUP ~type_hint:`MENU
           ~decorated:false ~focus_on_map:false ~border_width:1 ~show:false () in
-        let color = Color.set_value 0.75 (`NAME !Preferences.preferences.Preferences.pref_bg_color_popup) in
+        let color = Color.set_value 0.75 (`NAME Preferences.preferences#get.Preferences.pref_bg_color_popup) in
         popup#misc#modify_bg [`NORMAL, color];
         popup#misc#set_can_focus false;
         let ebox = GBin.event_box ~packing:popup#add () in
-        ebox#misc#modify_bg [`NORMAL, (`NAME !Preferences.preferences.Preferences.pref_bg_color_popup)];
+        ebox#misc#modify_bg [`NORMAL, (`NAME Preferences.preferences#get.Preferences.pref_bg_color_popup)];
         let label = GMisc.label ~markup ~xalign:0.0 ~xpad:4 ~ypad:4 ~packing:ebox#add () in
-        label#misc#modify_font_by_name !Preferences.preferences.Preferences.pref_compl_font;
+        label#misc#modify_font_by_name Preferences.preferences#get.Preferences.pref_compl_font;
         tag_popup <- Some popup;
         begin
           match position with
@@ -159,7 +159,7 @@ object (self)
               let x = x - popup#misc#allocation.Gtk.width - 5 in
               popup#move ~x ~y;
         end;
-        let incr = if !Preferences.preferences.Preferences.pref_annot_type_tooltips_delay = 0 then 0.106 else 0.479 in
+        let incr = if Preferences.preferences#get.Preferences.pref_annot_type_tooltips_delay = 0 then 0.106 else 0.479 in
         Gmisclib.Util.fade_window ~incr popup;
 
 end

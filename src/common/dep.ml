@@ -1,7 +1,7 @@
 (*
 
   OCamlEditor
-  Copyright (C) 2010, 2011 Francesco Tovagliari
+  Copyright (C) 2010-2012 Francesco Tovagliari
 
   This file is part of OCamlEditor.
 
@@ -20,20 +20,24 @@
 
 *)
 
+
 open Printf
-open Miscellanea
 
 exception Loop_found of string
 
 let trim = let re = Str.regexp "[ \n\r\n\t]+$" in Str.replace_first re ""
 let (^^) = Filename.check_suffix
 let (!$) = Filename.chop_extension
+let (//) = Filename.concat
+
+let redirect_stderr = if Sys.os_type = "Win32" then " 2>NUL" else " 2>/dev/null"
 
 let re1 = Str.regexp ":\\( \\|$\\)"
 let re2 = Str.regexp " \\\\[\r\n]+"
 let re3 = Str.regexp " "
 let re_ss = Str.regexp "\\\\ "
 let re_00 = Str.regexp "\x00\x00"
+let split_nl = Str.split (Str.regexp "\n")
 
 (** replace_extension *)
 let replace_extension x =
@@ -41,7 +45,7 @@ let replace_extension x =
     (if x ^^ "cmi" then "mli" else if x ^^ "cmx" then "ml" else assert false);;
 
 (** find_dep *)
-let find_dep ?pp ?includes ?(with_errors=true) target =
+let find_dep ?pp ?includes ?(with_errors=true) ?(echo=true) target =
   let dir = Filename.dirname target in
   let anti_loop = ref [] in
   let table = Hashtbl.create 7 in
@@ -54,10 +58,10 @@ let find_dep ?pp ?includes ?(with_errors=true) target =
     (match dir with "." -> "*.ml" | _ -> dir // "*.ml *.ml")
     redirect_stderr
   in
-  printf "%s\n%!" command;
-  let ocamldep = Miscellanea.expand command in
+  if echo then (printf "%s\n%!" command);
+  let ocamldep = Cmd.expand command in
   let ocamldep = Str.global_replace re2 " " ocamldep in
-  let entries = Miscellanea.split "\n" ocamldep in
+  let entries = split_nl ocamldep in
   List.iter begin fun entry ->
     match Str.split re1 entry with
       | key :: [] -> Hashtbl.add table key None
@@ -91,8 +95,8 @@ let find_dep ?pp ?includes ?(with_errors=true) target =
   List.rev (List.map replace_extension !result)
 
 (** find *)
-let find ?pp ?includes ?with_errors targets =
-  let deps = List.map (find_dep ?pp ?includes ?with_errors) targets in
+let find ?pp ?includes ?with_errors ?(echo=true) targets =
+  let deps = List.map (find_dep ?pp ?includes ?with_errors ~echo) targets in
   let deps = List.flatten deps in
   List.rev (List.fold_left begin fun acc x ->
     if not (List.mem x acc) then x :: acc else acc
@@ -109,7 +113,7 @@ let find_dependants =
     let cmd = sprintf "%s -modules -native %s*.ml %s*.mli%s"
       (Ocaml_config.ocamldep()) dir dir redirect_stderr in
     printf "%s (%s)\n%!" cmd modname;
-    let ocamldep = Miscellanea.expand cmd in
+    let ocamldep = Cmd.expand cmd in
     let entries = Str.split re1 ocamldep in
     let entries =
       List.map begin fun entry ->
@@ -141,15 +145,4 @@ let find_dependants =
 let find_dependants ~targets ~modname =
   let dependants = List.map (fun target -> find_dependants ~target ~modname) targets in
   List.flatten dependants
-
-
-
-
-
-
-
-
-
-
-
-
+;;

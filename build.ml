@@ -1,7 +1,7 @@
 (*
 
   OCamlEditor
-  Copyright (C) 2010, 2011 Francesco Tovagliari
+  Copyright (C) 2010-2012 Francesco Tovagliari
 
   This file is part of OCamlEditor.
 
@@ -22,12 +22,19 @@
 
 #load "unix.cma"
 #load "str.cma"
+#use "src/common/cmd.ml"
+#use "src/common/miscellanea.ml"
 
-(** Configuration Section --------------------------------------------------- *)
 
-let lablgtk2 = "+lablgtk2"
+(** Configuration Section =================================================== *)
 
-let includes = lablgtk2 ^ " +xml-light +ocamldoc"
+(* Search path (-I)
+   Please set the right search path for lablgtk2 and xml-light.
+*)
+let lablgtk2  = "+lablgtk2"
+let xml_light = ""  (* +xml-light *)
+let ocamldoc  = "+ocamldoc"
+
 
 (* If you have Microsoft-based native Win32 port, set ccopt to your
    "Microsoft Platform SDK\Lib" and "Microsoft Visual Studio 8\VC\lib"
@@ -39,12 +46,15 @@ let ccopt =
       (* "-ccopt \"-LC:\\Programmi\\MIC977~1\\Lib -LC:\\Programmi\\MID05A~1\\VC\\lib\"" *)
     | _ -> ""
 
+
 (* If you have Lablgtk-2.14.2 or earlier, use the modified version of gtkThread.ml
    to reduce CPU consumption, as proposed in
    http://yquem.inria.fr/pipermail/lablgtk/2009-December/000335.html *)
 let use_modified_gtkThread = true
 
-(** End of Configuration Section -------------------------------------------- *)
+(** End of Configuration Section ============================================ *)
+
+
 
 open Printf
 open Arg
@@ -70,8 +80,9 @@ let ocaml_src = "ocaml-src"
 let parsing = ocaml_src ^ "/parsing"
 let typing = ocaml_src ^ "/typing"
 let utils = ocaml_src ^ "/utils"
-let includes = sprintf "%s %s %s %s gmisclib common oebuild" parsing typing utils includes
-let libs = "unix str threads odoc_info toplevellib lablgtk gtkThread.o xml-light gmisclib common oebuildlib"
+let search_path  = String.concat " " [lablgtk2; xml_light; ocamldoc]
+let search_path = sprintf "%s %s %s %s gmisclib common icons otherwidgets oebuild" parsing typing utils search_path
+let libs = "unix str threads dynlink odoc_info lablgtk gtkThread.o xml-light gmisclib common icons otherwidgets oebuildlib"
 
 let oebuild_name = sprintf "oebuild%s" ext
 let oebuild_command = "oebuild" // oebuild_name
@@ -90,15 +101,6 @@ let rec mkdir_p d =
     mkdir_p (Filename.dirname d);
     mkdir d
   end
-
-(** pushd and popd *)
-let pushd, popd =
-  let stack = Stack.create () in
-  begin fun dir ->
-    let cwd = Sys.getcwd () in
-    Stack.push cwd stack;
-    Sys.chdir dir
-  end, (fun () -> Sys.chdir (Stack.pop stack))
 
 (** Copy file *)
 let copy_file ic oc =
@@ -123,6 +125,36 @@ let rm = if is_win32 then "DEL /F /Q" else "rm -f"
 let rmr = if is_win32 then "DEL /F /Q /S" else "rm -fr"
 
 
+(** substitute *)
+let (!!) = sprintf "(*%s*)";;
+
+let substitute ~filename repl =
+  let ichan = open_in_bin filename in
+  let tmp, ochan = Filename.open_temp_file (Filename.basename filename) "" in
+  Pervasives.set_binary_mode_out ochan true;
+  let finally () =
+    close_in_noerr ichan;
+    close_out_noerr ochan;
+    let new_filename = filename in
+    remove_file new_filename;
+    cp tmp new_filename;
+    remove_file tmp;
+  in
+  begin
+    try
+      while true do
+        let line = input_line ichan in
+        let line = replace_all ~regexp:false repl line in
+        fprintf ochan "%s\n" line;
+      done;
+      assert false;
+    with
+      | End_of_file -> finally()
+      | ex -> finally(); raise ex
+  end;;
+
+
+
 
 (** Targets ----------------------------------------------------------------- *)
 
@@ -139,6 +171,9 @@ let clean ?(all=false) () =
   let all = if all then "-all" else "" in
   kprintf run "%s ocamleditor.ml -clean%s" oebuild_command all;
   kprintf run "%s common/common.ml -a -byt -opt -clean%s" oebuild_command all;
+  kprintf run "%s gmisclib/gmisclib.ml -a -byt -opt -clean%s" oebuild_command all;
+  kprintf run "%s otherwidgets/otherwidgets.ml -a -byt -opt -clean%s" oebuild_command all;
+  kprintf run "%s icons/icons.ml -a -byt -opt -clean%s" oebuild_command all;
   kprintf run "%s oebuild/oebuild_tool.ml -a -byt -opt -o oebuild/oebuild -clean%s" oebuild_command all;
   kprintf run "%s oeproc/oeproc.ml -byt -opt -o oeproc/oeproc -clean%s" oebuild_command all;
   clean_parsers()
@@ -158,36 +193,47 @@ let cleanall () =
 let common () =
   pushd "common";
   kprintf run
-    "ocamlc -a -o common.cma -thread -w syumx str.cma unix.cma threads.cma \
-miscellanea.ml quote.ml ocaml_config.ml cmd_line_args.ml dep.mli dep.ml common.ml";
+    "ocamlc -a -o common.cma -annot -thread -w syumx str.cma unix.cma threads.cma \
+cmd.ml miscellanea.ml file.ml quote.ml ocaml_config.ml cmd_line_args.ml dep.mli dep.ml list_opt.ml common.ml";
   if !can_compile_native then begin
     kprintf run
-      "ocamlopt -a -o common.cmxa -thread -w syumx miscellanea.ml quote.ml \
-ocaml_config.ml cmd_line_args.ml dep.mli dep.ml common.ml";
+      "ocamlopt -a -o common.cmxa -annot -thread -w syumx cmd.ml miscellanea.ml file.ml quote.ml \
+ocaml_config.ml cmd_line_args.ml dep.mli dep.ml list_opt.ml common.ml";
   end;
+  popd()
+
+(** icons *)
+let icons () =
+  common();
+  pushd "icons";
+  kprintf run "%s icons.ml -a -byt %s -cflags \"%s%s\" -I \"%s ../common\""
+    (".." // oebuild_command) (if !can_compile_native then "-opt" else "") debug (if !annot then " -annot" else "") lablgtk2;
   popd()
 
 (** gmisclib *)
 let gmisclib () =
   pushd "gmisclib";
-  kprintf run "%s gmisclib.ml -a -cflags \"%s%s\" -I \"%s\" -l \"unix str lablgtk\""
-    (".." // oebuild_command) debug (if !annot then " -annot" else "") lablgtk2;
+  kprintf run "%s gmisclib.ml -a -byt %s -cflags \"%s%s\" -I \"%s\""
+    (".." // oebuild_command) (if !can_compile_native then "-opt" else "") debug (if !annot then " -annot" else "") lablgtk2;
+  popd()
+
+(** otherwidgets *)
+let otherwidgets () =
+  pushd "otherwidgets";
+  kprintf run "%s otherwidgets.ml -a -byt %s -cflags \"-w sy %s%s\" -I \"%s ../icons ../common\""
+    (".." // oebuild_command) (if !can_compile_native then "-opt" else "") debug (if !annot then " -annot" else "") lablgtk2;
   popd()
 
 (** oebuild *)
 let oebuild () =
   common();
   pushd "oebuild";
-  kprintf run "ocamlc -a -o oebuildlib.cma -thread -w syumx -annot -I ../common \
-str.cma unix.cma threads.cma common.cma oebuild_util.ml oebuild_table.mli oebuild_table.ml oebuild.ml";
-  kprintf run "ocamlc -o %s -thread -w syumx -I ../common \
-str.cma unix.cma threads.cma common.cma oebuildlib.cma oebuild_tool.ml"
+  kprintf run "ocamlc -a -o oebuildlib.cma -thread -w syumx -annot -I ../common str.cma unix.cma threads.cma common.cma oebuild_util.ml oebuild_table.mli oebuild_table.ml oebuild.ml";
+  kprintf run "ocamlc -o %s -thread -w syumx -I ../common str.cma unix.cma threads.cma common.cma oebuildlib.cma oebuild_tool.ml"
     oebuild_name;
   if !can_compile_native then begin
-    kprintf run "ocamlopt -a -o oebuildlib.cmxa -thread -w syumx -I ../common \
-oebuild_util.ml oebuild_table.mli oebuild_table.ml oebuild.ml";
-    kprintf run "ocamlopt -o oebuild.opt%s %s -thread -w syumx -I ../common \
-str.cmxa unix.cmxa threads.cmxa common.cmxa oebuildlib.cmxa oebuild_tool.ml"
+    kprintf run "ocamlopt -a -o oebuildlib.cmxa -thread -w syumx -I ../common oebuild_util.ml oebuild_table.mli oebuild_table.ml oebuild.ml";
+    kprintf run "ocamlopt -o oebuild.opt%s %s -thread -w syumx -I ../common str.cmxa unix.cmxa threads.cmxa common.cmxa oebuildlib.cmxa oebuild_tool.ml"
       ext ccopt;
   end;
   popd()
@@ -213,20 +259,32 @@ let lexyacc () =
   run "ocamllex err_lexer.mll";
   run "ocamlyacc err_parser.mly"
 
+(** generate_oebuild_script *)
+let generate_oebuild_script () =
+  run "ocaml -I common str.cma unix.cma common.cma generate_oebuild_script.ml"
+
 (** ocamleditor *)
 let ocamleditor () =
   cp (if use_modified_gtkThread then "gtkThread3.ml" else "gtkThread4.ml") "gtkThread2.ml";
+  if Sys.ocaml_version >= "3.12.0" then begin
+    substitute ~filename:((Sys.getcwd()) // "odoc.ml") [!!"@REPL_1@", "| Target _ -> ()"; !!"@REPL_2@", ", _"];
+  end;
+  icons();
   gmisclib();
+  otherwidgets();
   lexyacc();
   kprintf run
-    "%s ocamleditor.ml%s -thread -lflags \"-linkall%s\" -cflags \"-w syumx%s%s\" -I \"%s\" -l \"%s\""
+    "%s ocamleditor.ml%s %s -thread -lflags \"-linkall%s%s\" -cflags \"-w syumx%s%s%s\" -I \"%s\" -l \"%s\""
       oebuild_command
       (if !prof then " -prof" else "")
+      (if !can_compile_native then "-opt" else "-byt")
       debug
+      (if !can_compile_native then " -inline 50" else "")
       debug
       (if !annot then " -annot" else "")
-      includes
-      libs
+      (if !can_compile_native then " -inline 50" else "")
+      search_path
+      libs;;
 
 (** compiler_libs *)
 let compiler_libs () =
@@ -234,8 +292,8 @@ let compiler_libs () =
   if (Unix.lstat ocaml_src_path).Unix.st_kind = Unix.S_LNK then
     (kprintf failwith "%s is a symbolic link" ocaml_src_path);
   oebuild();
-  let write files =
-    let ochan = open_out "top.ml" in
+  let write top files =
+    let ochan = open_out top in
     let finally () = close_out ochan in
     try
       output_string ochan (String.concat "\n" (List.map (fun x -> sprintf "open %s"
@@ -245,7 +303,7 @@ let compiler_libs () =
   in
   let compile ?(clean=false) root path =
     Sys.chdir path;
-    let files = List.filter (fun x -> Filename.check_suffix x ".mli")
+    let files = List.filter (fun x -> Filename.check_suffix x ".mli" || Filename.check_suffix x ".ml")
       (Array.to_list (Sys.readdir ".")) in
     if clean then begin
       List.iter begin fun x ->
@@ -256,17 +314,23 @@ let compiler_libs () =
       end files;
     end;
     if Sys.file_exists "lexer.mll" then (run "ocamllex lexer.mll");
+    if Sys.file_exists "linenum.mll" then (run "ocamllex linenum.mll");
     if Sys.file_exists "parser.mly" then (run "ocamlyacc parser.mly");
-    write files;
-    run ((".."//".."//"oebuild"//"oebuild") ^ " -I \"../utils ../parsing ../typing\" top.ml -c");
-    Sys.remove "top.ml";
+    let top = sprintf "top_%s.ml" (Filename.basename path) in
+    write top files;
+    run ((".."//".."//"oebuild"//"oebuild") ^ " -I \"../utils ../parsing ../typing\" " ^ top ^ " -c");
+    (*kprintf run "%s -I \"../utils ../parsing ../typing\" %s -opt -a -lflags \"-linkall\" -o %s"
+      (".."//".."//"oebuild"//"oebuild") top (Filename.basename path);*)
+    Sys.remove top;
     Sys.remove ".oebuild";
     Sys.chdir root
   in
   let root = Sys.getcwd () in
   compile ~clean:true root (ocaml_src // "utils");
   compile ~clean:true root (ocaml_src // "parsing");
-  compile ~clean:true root (ocaml_src // "typing")
+  compile ~clean:true root (ocaml_src // "typing");
+;;
+
 
 (** install *)
 let install () =
@@ -276,7 +340,7 @@ let install () =
     kprintf run "cp -vru ../pixmaps/* %s" pixmaps;
     let bin = sprintf "%s/bin" !prefix in
     mkdir_p bin;
-    kprintf run "cp -v ocamleditor %s" bin;
+    kprintf run "cp -v ocamleditor%s %s/ocamleditor" (if !can_compile_native then ".opt" else "") bin;
     kprintf run "cp -v oebuild/oebuild%s %s" ext bin;
     if !can_compile_native then begin
       kprintf run "cp -v oebuild/oebuild%s.opt %s" ext bin;
@@ -305,6 +369,7 @@ let with_compiler_libs () =
 
 (** release *)
 let release () =
+  generate_oebuild_script();
   cleanall();
   if Sys.file_exists "ocaml-src" then (kprintf run "RMDIR /S /Q ocaml-src");
   Sys.chdir "..";
@@ -331,13 +396,13 @@ let all () =
   oeproc ();
   ocamleditor()
 
-(** icons *)
-let icons () =
+(** mkicons *)
+let mkicons () =
   let pixmaps = ".." // "pixmaps" in
   let files = Array.to_list (Sys.readdir pixmaps) in
   let files = List.filter (fun x -> Filename.check_suffix x ".png") files in
-  ignore (Sys.command "cat ../header > icons.ml");
-  let filename = "icons.ml" in
+  ignore (Sys.command "cat ../header > icons/icons.ml");
+  let filename = "icons/icons.ml" in
   let ochan = open_out_gen [Open_append; Open_binary] 0o644 filename in
   try
     fprintf ochan "let (//) = Filename.concat\n\nlet create pixbuf = GMisc.image ~pixbuf ()\n\n";
@@ -345,7 +410,7 @@ let icons () =
       let new_name = Str.global_replace (Str.regexp "-") "_" file in
       Sys.rename (pixmaps // file) (pixmaps // new_name);
       let icon_name = Filename.basename (Filename.chop_extension new_name) in
-      fprintf ochan "let %s = GdkPixbuf.from_file (Oe_config.ocamleditor_pixmaps // \"%s\")\n" icon_name new_name
+      fprintf ochan "let %s = GdkPixbuf.from_file (Common.application_pixmaps // \"%s\")\n" icon_name new_name
     end files;
     close_out_noerr ochan;
   with _ -> close_out_noerr ochan
@@ -358,11 +423,15 @@ let _ = begin
       fun () ->
         let cwd = Sys.getcwd () in
         Sys.chdir "src";
-        can_compile_native := if is_win32 then Sys.command "ML" = 0 else !can_compile_native;
-        printf "Installation prefix ..................... : %s\n%!" !prefix;
-        printf "Native .................................. : %b\n%!" !can_compile_native;
-        printf "use_modified_gtkThread .................. : %b\n%!" use_modified_gtkThread;
-        printf "ccopt ................................... : %s\n%!" ccopt;
+        can_compile_native := if is_win32 then Sys.command "ML /? 1>NUL" = 0 || Sys.command "as -version" = 0 else !can_compile_native;
+        let ocaml_version = Str.global_replace
+          (Str.regexp "\n") " - " (Str.global_replace (Str.regexp "\n$") "" (expand "ocamlc -v")) in
+        if not is_win32 then
+          (printf "Installation prefix .. : %s\n%!" !prefix);
+        printf "OCaml ................ : %s\n%!" ocaml_version;
+        printf "Native ............... : %b\n%!" !can_compile_native;
+        printf "use_modified_gtkThread : %b\n%!" use_modified_gtkThread;
+        printf "ccopt ................ : %s\n%!" ccopt;
         f x;
         Sys.chdir cwd
     in
@@ -372,15 +441,17 @@ let _ = begin
       ("-all",                Unit (target all),                " Build OCamlEditor (default)");
       ("-with-compiler-libs", Unit (target with_compiler_libs), " Compile the OCaml compiler libraries and build OCamlEditor");
       ("-install",            Unit (target install),            " Install OCamlEditor (Unix only, you may need superuser permissions)");
-      ("-prefix",             Set_string prefix,                (sprintf " Installation prefix (default is %s)" !prefix));
+      ("-prefix",             Set_string prefix,                (sprintf " Installation prefix (Unix only, default is %s)" !prefix));
       ("-clean",              Unit (target clean),              " Remove object files");
       ("-cleanall",           Unit (target cleanall),           " Remove all the build output");
       ("-oebuild",            Unit (target oebuild),            " (undocumented)");
+      ("-common",             Unit (target common),             " (undocumented)");
+      ("-icons",              Unit (target icons),              " (undocumented)");
       ("-gmisclib",           Unit (target gmisclib),           " (undocumented)");
       ("-oeproc",             Unit (target oeproc),             " (undocumented)");
       ("-compiler-libs",      Unit (target compiler_libs),      " (undocumented)");
       ("-lexyacc",            Unit (target lexyacc),            " (undocumented)");
-      ("-icons",              Unit (target icons),              " (undocumented)");
+      ("-mkicons",            Unit (target mkicons),            " (undocumented)");
       ("-ocamleditor",        Unit (target ocamleditor),        " (undocumented)");
       ("-uninstall",          Unit (target uninstall),          " (undocumented)");
       ("-release",            Unit (target release),            " (undocumented)");

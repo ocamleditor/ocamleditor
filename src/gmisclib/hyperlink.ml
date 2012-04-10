@@ -1,7 +1,7 @@
 (*
 
   OCamlEditor
-  Copyright (C) 2010, 2011 Francesco Tovagliari
+  Copyright (C) 2010-2012 Francesco Tovagliari
 
   This file is part of OCamlEditor.
 
@@ -35,6 +35,7 @@ end
 
 (** hyperlink *)
 and hyperlink ~(view : GText.view) ?(use_ctrl_key=true) () =
+  let not_use_ctrl_key = not use_ctrl_key in
   let buffer = view#buffer in
   let hover = new hover () in
   let activate = new activate () in
@@ -65,7 +66,7 @@ object (self)
 
   method enable () =
     ignore(view#event#connect#after#motion_notify ~callback:begin fun ev ->
-      if not use_ctrl_key || GdkEvent.Motion.state ev = 4 then begin
+      if not_use_ctrl_key || GdkEvent.Motion.state ev = 4 then begin
         let x = int_of_float (GdkEvent.Motion.x ev) in
         let y = int_of_float (GdkEvent.Motion.y ev) in
         self#apply_hover ~x ~y;
@@ -103,7 +104,7 @@ object (self)
       end);
       ignore(view#event#connect#key_release ~callback:begin fun ev ->
         let key = GdkEvent.Key.keyval ev in
-        if not use_ctrl_key || (key = GdkKeysyms._Control_L || key = GdkKeysyms._Control_R)
+        if not_use_ctrl_key || (key = GdkKeysyms._Control_L || key = GdkKeysyms._Control_R)
         then (self#remove_hover ());
         false
       end);

@@ -2,7 +2,7 @@
 (*
 
   OCamlEditor
-  Copyright (C) 2010, 2011 Francesco Tovagliari
+  Copyright (C) 2010-2012 Francesco Tovagliari
 
   This file is part of OCamlEditor.
 
@@ -29,10 +29,13 @@ exception Project_already_exists of string
 exception Cannot_rename of string
 
 type t = {
-  mutable root               : string; (* ROOT directory of the project (non-persistent) *)
-  mutable ocaml_home         : string; (* Prefix of the ocamlc "bin" dir.;
-    empty string means default ocaml compiler (the one reacheable from $PATH) *)
-  mutable ocamllib           : string; (*  *)
+  (* ROOT directory of the project (non-persistent) *)
+  mutable root               : string;
+  mutable ocaml_home         : string; (* Unused *)
+  (* Full path of the std. lib., either from the OCAMLLIB e. v. or from 'ocamlc -where';
+     when written to the XML project file, if equals to 'ocamlc -where', it is translated in "". *)
+  mutable ocamllib           : string;
+  mutable ocamllib_from_env  : bool;
   mutable encoding           : string option;
   mutable name               : string;
   mutable modified           : bool;
@@ -56,11 +59,13 @@ type t = {
 let extension = ".xml"
 let src = "src"
 let bak = "bak"
-let tmp = "tmp"
+let tmp = ".tmp"
 
 let path_src p = p.root // src
 let path_bak p = p.root // bak
 let path_tmp p = p.root // tmp
+let path_cache p = p.root // ".cache"
+
 
 (** abs_of_tmp *)
 let abs_of_tmp proj filename =
@@ -69,26 +74,35 @@ let abs_of_tmp proj filename =
     | Some relname -> (path_src proj) // relname
 
 (** set_ocaml_home *)
-let set_ocaml_home ~ocamllib ~ocaml_home project =
-  project.ocaml_home <- ocaml_home;
+let set_ocaml_home ~ocamllib project =
+  let ocamllib, from_env =
+    match ocamllib with
+      | "" -> Ocaml_config.ocamllib (), false
+      | path when Sys.file_exists path -> path, true
+      | _ -> Ocaml_config.ocamllib (), false
+  in
+  project.ocaml_home <- "";
   project.ocamllib <- ocamllib;
+  project.ocamllib_from_env <- from_env;
   Unix.putenv "OCAML_HOME" project.ocaml_home;
   Ocaml_config.putenv_ocamllib (Some project.ocamllib);
   project.autocomp_compiler <- sprintf "%s -c -thread -annot" (Ocaml_config.ocamlc());
   ignore (Thread.create begin fun () ->
-    project.can_compile_native <- Ocaml_config.can_compile_native ~ocaml_home:project.ocaml_home ();
+    project.can_compile_native <- (Ocaml_config.can_compile_native ~ocaml_home:project.ocaml_home ()) <> None;
   end ())
 
 (** can_compile_native *)
-let can_compile_native proj = Ocaml_config.can_compile_native ~ocaml_home:proj.ocaml_home ()
+let can_compile_native proj = (Ocaml_config.can_compile_native ~ocaml_home:proj.ocaml_home ()) <> None
 
 (** create *)
 let create ~filename () =
   let root = Filename.dirname filename in
+  let ocamllib, from_env = match Oe_config.getenv_ocamllib with None -> "", false | Some x -> x, true in
   let proj = {
     root               = root;
     ocaml_home         = "";
-    ocamllib           = (match Oe_config.system_ocamllib with None -> "" | Some x -> x);
+    ocamllib           = ocamllib;
+    ocamllib_from_env  = from_env;
     encoding           = Some "UTF-8";
     name               = Filename.chop_extension (Filename.basename filename);
     modified           = true;
@@ -106,9 +120,14 @@ let create ~filename () =
     in_source_path     = Miscellanea.filename_relative (root // src);
     source_paths       = (try File.readtree (root // src) with Sys_error _ -> []);
     can_compile_native = true;
-    symbols            = {Oe.syt_table=[]; syt_ts=Hashtbl.create 7; syt_critical=Mutex.create()};
+    symbols            = {
+      Oe.syt_table = [];
+      syt_ts       = Hashtbl.create 7;
+      syt_odoc     = Hashtbl.create 7;
+      syt_critical = Mutex.create()
+    };
   } in
-  proj
+  proj;;
 
 (** set_runtime_build_task *)
 let set_runtime_build_task proj rconf rbt_string =
@@ -121,7 +140,8 @@ let set_runtime_build_task proj rconf rbt_string =
 let to_xml proj =
   Xml.Element ("project", [], [
     Xml.Element ("ocaml_home", [], [Xml.PCData proj.ocaml_home]);
-    Xml.Element ("ocamllib", [], [Xml.PCData proj.ocamllib]);
+    Xml.Element ("ocamllib", [], [Xml.PCData
+      (if proj.ocamllib_from_env then proj.ocamllib else "")]);
     Xml.Element ("encoding", [], [Xml.PCData (match proj.encoding with None -> "" | Some x -> x)]);
     Xml.Element ("name", [], [Xml.PCData proj.name]);
     Xml.Element ("author", [], [Xml.PCData proj.author]);
@@ -169,7 +189,7 @@ let to_xml proj =
           Xml.Element ("pp", [], [Xml.PCData t.Bconf.pp]);
           Xml.Element ("cflags", [], [Xml.PCData t.Bconf.cflags]);
           Xml.Element ("lflags", [], [Xml.PCData t.Bconf.lflags]);
-          Xml.Element ("is_library", [], [Xml.PCData (string_of_bool t.Bconf.is_library)]);
+          Xml.Element ("outkind", [], [Xml.PCData (Bconf.string_of_outkind t.Bconf.outkind)]);
           Xml.Element ("outname", [], [Xml.PCData t.Bconf.outname]);
           Xml.Element ("lib_install_path", [], [Xml.PCData t.Bconf.lib_install_path]);
           Xml.Element ("external_tasks", [],
@@ -190,7 +210,7 @@ let to_xml proj =
         ])
       end proj.build
     );
-  ])
+  ]);;
 
 (** from_file *)
 let from_file filename =
@@ -270,7 +290,8 @@ let from_file filename =
               | "pp" -> target.Bconf.pp <- value tp
               | "cflags" -> target.Bconf.cflags <- value tp
               | "lflags" -> target.Bconf.lflags <- value tp
-              | "is_library" -> target.Bconf.is_library <- bool_of_string (value tp)
+              | "is_library" -> target.Bconf.outkind <- (if bool_of_string (value tp) then Bconf.Library else Bconf.Executable)
+              | "outkind" -> target.Bconf.outkind <- Bconf.outkind_of_string (value tp)
               | "outname" -> target.Bconf.outname <- value tp
               | "runtime_build_task" ->
                 runtime_build_task := (value tp);
@@ -306,16 +327,16 @@ let from_file filename =
           end tnode;
           incr i;
           (*target.Bconf.runtime_build_task <- Bconf.rbt_of_string target !runtime_build_task;*)
-          if !create_default_runtime && not target.Bconf.is_library then begin
+          if !create_default_runtime && target.Bconf.outkind = Bconf.Executable then begin
             proj.runtime <- {
               Rconf.id = (List.length proj.runtime);
-              id_build = target.Bconf.id;
-              name = target.Bconf.name;
-              default = target.Bconf.default;
-              build_task = Bconf.rbt_of_string target !runtime_build_task;
-              env = [!runtime_env];
+              id_build    = target.Bconf.id;
+              name        = target.Bconf.name;
+              default     = target.Bconf.default;
+              build_task  = Bconf.rbt_of_string target !runtime_build_task;
+              env         = [!runtime_env];
               env_replace = false;
-              args = !runtime_args
+              args        = !runtime_args
             } :: proj.runtime;
           end;
           target :: acc;
@@ -329,14 +350,15 @@ let from_file filename =
   end !rbt_map;
   (* Set default runtime configuration *)
   begin
-    try ignore (List.find (fun x -> x.Rconf.default) proj.runtime)
-    with Not_found -> begin
-      try (List.hd proj.runtime).Rconf.default <- true with Failure "hd" -> ()
-    end
+    match List_opt.find (fun x -> x.Rconf.default) proj.runtime with
+      | None ->
+        (match proj.runtime with pr :: _ -> pr.Rconf.default <- true | _ -> ());
+      | _ -> ()
   end;
+  (* Translate ocamllib: "" -> 'ocamlc -where' *)
+  set_ocaml_home ~ocamllib:proj.ocamllib proj;
   (*  *)
-  set_ocaml_home ~ocamllib:proj.ocamllib ~ocaml_home:proj.ocaml_home proj;
-  proj
+  proj;;
 
 (** convert_to_utf8 *)
 let convert_to_utf8 proj text = match proj.encoding with
@@ -363,12 +385,12 @@ let get_includes =
 let get_load_path proj =
   let includes = get_includes proj in
   let includes = "+threads" :: includes in
-  let ocamllib = Ocaml_config.ocamllib() in
+  let ocamllib = proj.ocamllib in
   let paths = List.map begin fun inc ->
     if inc.[0] = '+' then (Filename.concat ocamllib (String.sub inc 1 (String.length inc - 1)))
     else inc
   end includes in
-  List.filter ((<>) ocamllib) ((proj.root // src):: paths)
+  (*List.filter ((<>) ocamllib)*) (ocamllib :: (proj.root // src) :: paths)
 
 (** [load_path proj where] adds to [where] the {i load path} of [proj].*)
 let load_path proj where = where := !where @ (get_load_path proj)
@@ -385,14 +407,14 @@ let save ?editor proj =
       | Some editor ->
         proj.files <- List.map begin fun (file, offset) ->
           file,
-          match editor#get_page (Oe.Page_file file) with
+          match editor#get_page (`FILENAME file#path) with
             | None -> 0
             | Some page ->
               if page#load_complete then (page#buffer#get_iter `INSERT)#offset
               else page#initial_offset
         end proj.files;
         let active_filename =
-          match editor#get_page Oe.Page_current with None -> "" | Some page -> page#get_filename
+          match editor#get_page `ACTIVE with None -> "" | Some page -> page#get_filename
         in active_filename
   in
   let filename = filename proj in
@@ -430,7 +452,7 @@ let save ?editor proj =
 
 (** load *)
 let load filename =
-  let proj = if Filename.check_suffix filename ".mlp" then begin
+  let proj = if filename ^^ ".mlp" then begin
     (* Check for old version project file *)
     let old_project_filename = sprintf "%s%s"
       (Filename.chop_extension filename) Project_old_1.project_name_extension in
@@ -518,3 +540,21 @@ let refresh proj =
   proj.version <- np.version;
   proj.in_source_path <- Miscellanea.filename_relative (np.root // src);
   proj.source_paths <- (try File.readtree (np.root // src) with Sys_error _ -> [])
+
+(** clear_cache *)
+let clear_cache proj =
+  let rmr = if Sys.os_type = "Win32" then "DEL /F /Q /S" else "rm -fr" in
+  let dir = path_cache proj in
+  let files = Sys.readdir dir in
+  Array.iter begin fun x ->
+    let filename = dir // x in
+    if Sys.file_exists filename then begin
+      Sys.remove filename;
+      printf "File removed %s...\n%!" filename;
+    end
+  end files;
+  let cmd = sprintf "%s \"%s\"\\*" rmr (path_tmp proj) in
+  Printf.printf "%s\n%!" cmd;
+  Sys.command cmd;;
+
+

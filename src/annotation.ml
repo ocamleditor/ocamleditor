@@ -1,7 +1,7 @@
 (*
 
   OCamlEditor
-  Copyright (C) 2010, 2011 Francesco Tovagliari
+  Copyright (C) 2010-2012 Francesco Tovagliari
 
   This file is part of OCamlEditor.
 
@@ -107,7 +107,7 @@ let (!!) filename = (Filename.chop_extension filename) ^ ".annot"
 
 (** find *)
 let rec find ~project ~filename () =
-  if Filename.check_suffix filename ".ml" then begin
+  if filename ^^ ".ml" then begin
     let fileannot = !! filename in
     try
       if Sys.file_exists filename then begin
@@ -138,11 +138,9 @@ let rec find ~project ~filename () =
 
 (** find_block_at_offset' *)
 let find_block_at_offset' annot offset =
-  try
-    Some (List.find begin fun block ->
-      block.Oe.annot_start.Oe.annot_cnum <= offset && offset < block.Oe.annot_stop.Oe.annot_cnum
-    end annot.Oe.annot_blocks);
-  with Not_found -> None
+  List_opt.find begin fun block ->
+    block.Oe.annot_start.Oe.annot_cnum <= offset && offset < block.Oe.annot_stop.Oe.annot_cnum
+  end annot.Oe.annot_blocks;;
 
 (** find_block_at_offset *)
 let find_block_at_offset ~project ~filename ~offset =
@@ -158,8 +156,8 @@ let preload ~project =
     GtkThread2.async (Activity.add Activity.Annot) name;
     try
       let src_path = Project.path_src project in
-      let files = File.readdirs ~links:false src_path in
-      let files = List.filter (fun x -> x ^^ ".ml") files in
+      let files = File.readdirs (*~links:false*) (Some (fun x -> x ^^ ".ml")) src_path in
+      (*let files = List.filter (fun x -> x ^^ ".ml") files in*)
       List.iter (fun filename -> ignore (find ~project ~filename ())) files;
       finally()
     with ex -> begin

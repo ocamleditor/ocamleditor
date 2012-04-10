@@ -1,5 +1,8 @@
 bak
 tmp
+share
+.cache
+.tmp
 *.annot
 *.exe
 *.bak
@@ -17,3 +20,6 @@ err_lexer.ml
 err_parser.ml
 err_parser.mli
 Thumbs.db
+*.xcf
+splash*.*
+*.xcf

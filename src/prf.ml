@@ -1,7 +1,7 @@
 (*
 
   OCamlEditor
-  Copyright (C) 2010, 2011 Francesco Tovagliari
+  Copyright (C) 2010-2012 Francesco Tovagliari
 
   This file is part of OCamlEditor.
 
@@ -45,36 +45,23 @@ let prf_paint_global_gutter          = create true  "prf_paint_global_gutter"
 let prf_error_indication_tooltip     = create true  "prf_error_indication_tooltip"
 let prf_error_indication_appy_tag    = create true  "prf_error_indication_appy_tag"
 let prf_lexical_tag_insert           = create false "prf_lexical_tag_insert"
-let prf_location_history_add         = create true  "prf_location_history_add"
-let prf_paint_gutter          = create true  "prf_paint_gutter"
+let prf_draw_gutter          = create true  "prf_draw_gutter"
 let prf_none_other_markers           = create true  "prf_none_other_markers"
-let prf_draw_dot_leaders             = create true  "prf_draw_dot_leaders"
 let prf_draw_white_spces             = create true  "prf_draw_white_spces"
 *)
 
-let prf_line_numbers                 = create true  "prf_line_numbers"
-let prf_other_markers                = create true  "prf_other_markers"
+(*let prf_line_numbers          = create true  "prf_line_numbers"
+let prf_other_markers         = create true  "prf_other_markers"
 let prf_scan_folding_points   = create true  "prf_scan_folding_points"
 let prf_outline_select        = create true  "prf_outline_select"
 let innermost_enclosing_delim = create true  "innermost_enclosing_delim"
 let prf_delimiters_scan       = create true  "prf_delimiters_scan"
 let prf_autosave              = create true  "prf_autosave"
 let prf_compile_buffer        = create true  "prf_compile_buffer"
+let prf_draw_dot_leaders      = create true  "prf_draw_dot_leaders"
+let prf_location_history_add  = create true  "prf_location_history_add"*)
 
-(*
-                                                     Calls     Avg      Tot          calls/min
------------------------------------------------------------------------------------------
-prf_scan_folding_points .......................... :  1621   0.050    81.62   0.87%  2.88
-prf_other_markers ................................ :  3450   0.008    26.87   0.29%  6.14
-innermost_enclosing_delim ........................ :  1136   0.012    13.48   0.14%  2.02
-prf_compile_buffer ............................... :   264   0.029     7.77   0.08%  0.47
-prf_line_numbers ................................. :  2482   0.003     7.71   0.08%  4.42
-prf_autosave ..................................... :  1867   0.000     0.64   0.01%  3.32
-prf_outline_select ............................... :     0  -1.#IO     0.00   0.00%  0.00
-prf_delimiters_scan .............................. :     0  -1.#IO     0.00   0.00%  0.00
------------------------------------------------------------------------------------------
 
-*)
 
 let crono func f x =
   if not func.enabled then (f x) else
@@ -94,7 +81,7 @@ let print () =
   let total = (Unix.gettimeofday()) -. start_time in
   printf "%50s   %5s%8s %8s %7s  %8s \n%!" "" "Calls" "Avg" "Tot" "" "calls/min";
   printf "\
------------------------------------------------------------------------------------------\n%!";
+----------------------------------------------------------------------------------------------\n%!";
   let perc = ref 0.0 in
   List.iter begin fun cr ->
     if cr.enabled then begin
@@ -106,6 +93,6 @@ let print () =
     end
   end (List.rev (List.sort (fun a b -> Pervasives.compare a.time b.time) !funcs));
   printf "\
------------------------------------------------------------------------------------------\n%!";
+----------------------------------------------------------------------------------------------\n%!";
   printf "%-50s   %5d  %6.3f  %7.2f  %5.2f%%\n%!" (Miscellanea.rpad " " ' ' 50) 0 0.0 total !perc
 

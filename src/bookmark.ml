@@ -1,7 +1,7 @@
 (*
 
   OCamlEditor
-  Copyright (C) 2010, 2011 Francesco Tovagliari
+  Copyright (C) 2010-2012 Francesco Tovagliari
 
   This file is part of OCamlEditor.
 
@@ -33,20 +33,22 @@ type t = {
 
 let bookmarks_filename = Filename.concat Oe_config.ocamleditor_user_home "bookmarks-1.5.0"
 
-let bookmarks = new GUtil.variable []
+let bookmarks = (*new GUtil.variable*) ref []
 
-let icons = [
-  0, Icons.b0;
-  1, Icons.b1;
-  2, Icons.b2;
-  3, Icons.b3;
-  4, Icons.b4;
-  5, Icons.b5;
-  6, Icons.b6;
-  7, Icons.b7;
-  8, Icons.b8;
-  9, Icons.b9;
-]
+let limit = 1000
+
+let icon = function
+  | 0 -> Some Icons.b0
+  | 1 -> Some Icons.b1
+  | 2 -> Some Icons.b2
+  | 3 -> Some Icons.b3
+  | 4 -> Some Icons.b4
+  | 5 -> Some Icons.b5
+  | 6 -> Some Icons.b6
+  | 7 -> Some Icons.b7
+  | 8 -> Some Icons.b8
+  | 9 -> Some Icons.b9
+  | _ -> None;;
 
 (** Read bookmarks at startup *)
 let _ = begin
@@ -65,7 +67,7 @@ let _ = begin
                 num = num;
                 marker = None;
               } in
-              bookmarks#set (bm :: bookmarks#get);
+              bookmarks := bm :: !bookmarks;
             | _ -> assert false
         done;
       with End_of_file -> ()
@@ -81,7 +83,7 @@ end
 (** remove *)
 let rec remove ~num =
   try
-    let bm = List.find (fun x -> x.num = num) bookmarks#get in
+    let bm = List.find (fun x -> x.num = num) !bookmarks in
     begin
       match bm.loc with
         | Mark mark ->
@@ -94,7 +96,8 @@ let rec remove ~num =
         | _ -> ()
     end;
     bm.loc <- (Offset 0);
-    bookmarks#set (List.filter (fun x -> x.num <> num) bookmarks#get);
+    (*bookmarks#set [];*)
+    bookmarks := (List.filter (fun x -> x.num <> num) !bookmarks);
     write()
   with Not_found -> ()
 
@@ -126,7 +129,7 @@ and write () =
           | `OFFSET offset -> print offset
         end
       with Invalid_argument "bookmark" -> ()
-    end bookmarks#get;
+    end !bookmarks;
     close_out outchan
   with ex -> begin
     close_out outchan;
@@ -158,9 +161,27 @@ let offset_to_mark (buffer : GText.buffer) bm =
     | Mark mark -> mark
     | Offset offset ->
       let offset = min offset buffer#char_count in
-      let mark = buffer#create_mark (buffer#get_iter (`OFFSET offset)) in
+      let mark = buffer#create_mark(* ~name:(Gtk_util.create_mark_name "Bookmark.offset_to_mark")*) (buffer#get_iter (`OFFSET offset)) in
       bm.loc <- (Mark mark);
       mark
+
+(** find *)
+let find filename buffer iter =
+  try
+    Some (List.find begin fun bm ->
+      if bm.filename = filename then begin
+        let mark = offset_to_mark buffer bm in
+        iter#line = (buffer#get_iter (`MARK mark))#line
+      end else false
+    end !bookmarks)
+  with Not_found -> None
+;;
+
+(** actual_maximum *)
+let actual_maximum () =
+  List.fold_left begin fun acc bm ->
+    max acc bm.num
+  end 0 !bookmarks;;
 
 (** create *)
 let create ~num ~filename ~mark ~marker () =
@@ -171,5 +192,5 @@ let create ~num ~filename ~mark ~marker () =
     num = num;
     marker = Some marker;
   } in
-  bookmarks#set (bm :: bookmarks#get);
+  bookmarks := (bm :: !bookmarks);
   write()
