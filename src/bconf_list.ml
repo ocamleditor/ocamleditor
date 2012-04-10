@@ -1,7 +1,7 @@
 (*
 
   OCamlEditor
-  Copyright (C) 2010, 2011 Francesco Tovagliari
+  Copyright (C) 2010-2012 Francesco Tovagliari
 
   This file is part of OCamlEditor.
 
@@ -30,6 +30,7 @@ let (//) = Filename.concat
 
 (** view *)
 class view ~editor ~project ?packing () =
+  (* "editor#project" is different from "project" when "project" is a new (i.e. you are in "New project" dialog window) *)
   let selection_changed = new selection_changed () in
   let removed = new removed () in
   let add_bconf = new add_bconf () in
@@ -40,8 +41,8 @@ class view ~editor ~project ?packing () =
   let col_name  = cols#add Gobject.Data.string in
   let col_default = cols#add Gobject.Data.boolean in
   let model = GTree.tree_store cols in
-  let renderer = GTree.cell_renderer_text [] in
-  let renderer_pixbuf = GTree.cell_renderer_pixbuf [`XPAD 3] in
+  let renderer = GTree.cell_renderer_text [`XPAD 5] in
+  let renderer_pixbuf = GTree.cell_renderer_pixbuf [] in
   let renderer_default = GTree.cell_renderer_toggle [`RADIO false; `ACTIVATABLE true; `WIDTH 50] in
   let vc = GTree.view_column ~title:"Name" () in
   let _ = vc#pack ~expand:false renderer_pixbuf in
@@ -54,7 +55,7 @@ class view ~editor ~project ?packing () =
   let _ = vc_default#add_attribute renderer_default "active" col_default in
   let _ = vc_default#set_sizing `FIXED in
   let sw = GBin.scrolled_window ~shadow_type:`IN ~hpolicy:`AUTOMATIC ~vpolicy:`AUTOMATIC ~packing:vbox#add () in
-  let view = GTree.view ~model:model ~headers_visible:true ~reorderable:false ~width:270 (*~height:385*) ~packing:sw#add () in
+  let view = GTree.view ~model:model ~headers_visible:true ~reorderable:false ~width:285 (*~height:385*) ~packing:sw#add () in
   let _ = view#misc#set_property "enable-tree-lines" (`BOOL true) in
   let _ = view#append_column vc in
   let _ = view#append_column vc_default in
@@ -108,10 +109,9 @@ object (self)
   method length = List.length (self#to_list())
 
   method current_path () =
-    try
-      let path = List.hd (List.rev view#selection#get_selected_rows) in
-      Some path
-    with Failure "hd" -> None
+    match List.rev view#selection#get_selected_rows with
+      | path :: _ -> Some path
+      | [] -> None
 
   method private current () =
     let path = self#current_path () in
@@ -128,15 +128,19 @@ object (self)
     model#set ~row ~column:col_name "Build Configurations";
     model#set ~row ~column:col_default false;*)
     List.iter begin fun bconf ->
-      let bconf = {bconf with id = bconf.id} in
-      let row = model#append (*~parent:row*) () in
-      model#set ~row ~column:col_data (BCONF bconf);
-      model#set ~row ~column:col_name bconf.name;
-      model#set ~row ~column:col_default bconf.default;
-      List.iter begin fun task ->
-        ignore (self#append_task ~parent:row ~task)
-      end bconf.Bconf.external_tasks;
-      view#selection#select_iter row
+      GtkThread2.sync begin fun () ->
+        let bconf = {bconf with id = bconf.id} in
+        let row = model#append (*~parent:row*) () in
+        model#set ~row ~column:col_data (BCONF bconf);
+        model#set ~row ~column:col_name bconf.name;
+        model#set ~row ~column:col_default bconf.default;
+        List.iter begin fun task ->
+          GtkThread2.sync begin fun () ->
+            ignore (self#append_task ~parent:row ~task)
+          end ()
+        end bconf.Bconf.external_tasks;
+        view#selection#select_iter row
+      end ()
     end bcs;
     view#expand_all()
 
@@ -158,29 +162,41 @@ object (self)
       end else false
     end;
 
-  initializer
+  method reset () =
+    let current_selection =
+      match view#selection#get_selected_rows with
+        | [] -> None
+        | path :: _ -> Some path
+    in
+    model#clear();
     self#append project.Project.build;
+    match current_selection with
+      | Some path -> view#selection#select_path path
+      | _ -> self#select_default_configuration()
+
+  initializer
+    self#reset();
     ignore (view#selection#connect#changed ~callback:begin fun () ->
       if List.length view#selection#get_selected_rows = 0 then begin
         selection_changed#call None;
       end else begin
-        try
-          let path = List.hd view#selection#get_selected_rows in
-          begin
-            match self#get path with
-              | BCONF bc ->
-                b_clean#misc#set_sensitive true;
-                b_compile#misc#set_sensitive true;
-                b_etask#misc#set_sensitive true;
-                b_run#misc#set_sensitive (bc.Bconf.is_library);
-              | _ ->
-                b_clean#misc#set_sensitive false;
-                b_compile#misc#set_sensitive false;
-                b_etask#misc#set_sensitive true;
-                b_run#misc#set_sensitive true;
-          end;
-          selection_changed#call (Some path);
-        with Failure "hd" -> assert false
+        match view#selection#get_selected_rows with
+          | path :: _ ->
+            begin
+              match self#get path with
+                | BCONF bc ->
+                  b_clean#misc#set_sensitive true;
+                  b_compile#misc#set_sensitive true;
+                  b_etask#misc#set_sensitive true;
+                  b_run#misc#set_sensitive (bc.Bconf.outkind <> Executable);
+                | _ ->
+                  b_clean#misc#set_sensitive false;
+                  b_compile#misc#set_sensitive false;
+                  b_etask#misc#set_sensitive true;
+                  b_run#misc#set_sensitive true;
+            end;
+            selection_changed#call (Some path);
+          | [] -> assert false
       end
     end);
     (* b_add#connect#clicked *)
@@ -193,7 +209,7 @@ object (self)
     end in
     (*b_clean#connect#clicked*)
     let _ = b_clean#connect#clicked ~callback:begin fun () ->
-      Gaux.may (self#current()) ~f:(fun (_, bconf) -> Bconf_console.exec ~project ~editor `CLEAN bconf)
+      Gaux.may (self#current()) ~f:(fun (_, bconf) -> Bconf_console.exec ~editor `CLEAN bconf)
     end in
     (* b_etask#connect#clicked *)
     let _ = b_etask#connect#clicked ~callback:begin fun () ->
@@ -216,15 +232,15 @@ object (self)
     (*b_compile#connect#clicked*)
     let _ = b_compile#connect#clicked ~callback:begin fun () ->
       Gaux.may (self#current()) ~f:begin fun (_, bconf) ->
-        Bconf_console.exec ~project ~editor `COMPILE bconf;
+        Bconf_console.exec ~editor `COMPILE bconf;
       end
     end in
     (*b_run#connect#clicked*)
     let _ = b_run#connect#clicked ~callback:begin fun () ->
       Gaux.may (self#current_path ()) ~f:begin fun path ->
         match self#get path with
-          | BCONF bconf -> Bconf_console.exec ~project ~editor `INSTALL_LIBRARY bconf
-          | ETASK etask -> Bconf_console.exec_sync ~project ~editor [`OTHER, etask]
+          | BCONF bconf -> Bconf_console.exec ~editor `INSTALL_LIBRARY bconf
+          | ETASK etask -> Bconf_console.exec_sync ~editor [`OTHER, etask]
           | _ -> ()
       end
     end in
@@ -290,13 +306,15 @@ object (self)
               let descr = if bconf.byt then ["Bytecode"] else [] in
               let descr = descr @ (if bconf.opt then ["Native-code"] else []) in
               let descr = String.concat ", " descr in
-              let descr = (if bconf.is_library then "Library" else "Executable") ^ " &#8226; " ^ descr in
+              let descr = (string_of_outkind bconf.outkind) ^ " &#8226; " ^ descr in
               renderer#set_properties [`MARKUP (sprintf
                 "<b>%s</b>\n<span weight='light' size='smaller' style='italic'>%s</span>" name descr)];
-              if bconf.is_library then begin
-                renderer_pixbuf#set_properties [`VISIBLE true; `PIXBUF Icons.library; `XALIGN 0.0]
-              end else begin
+              if bconf.outkind = Executable then begin
                 renderer_pixbuf#set_properties [`VISIBLE true; `PIXBUF Icons.start_16; `XALIGN 0.0]
+              end else if bconf.outkind = Plugin then begin
+                renderer_pixbuf#set_properties [`VISIBLE true; `PIXBUF Icons.plugin; `XALIGN 0.0]
+              end else begin
+                renderer_pixbuf#set_properties [`VISIBLE true; `PIXBUF Icons.library; `XALIGN 0.0]
               end
             | ETASK _ ->
               renderer_pixbuf#set_properties [`VISIBLE true; `PIXBUF Icons.etask_16; `XALIGN 0.0]

@@ -23,26 +23,28 @@
 open Printf
 
 type t = {
-  delay  : int; (* ms *)
-  prio   : int; (* unused *)
+  delay          : int; (* ms *)
   mutable buffer : (unit -> unit) option;
+  mutable id     : GMain.Timeout.id option;
 }
 
-let create ~delay ?(prio=300) () = {
+let create ~delay () = {
   delay  = int_of_float (delay *. 1000.);
-  prio   = prio;
   buffer = None;
+  id     = None;
 }
 
-let signal lac func = lac.buffer <- Some func
-
-let start lac =
-  GMain.Timeout.add ~ms:lac.delay ~callback:begin fun () ->
-    Gaux.may lac.buffer ~f:begin fun f ->
+let start liim =
+  liim.id <- Some (GMain.Timeout.add ~ms:liim.delay ~callback:begin fun () ->
+    Gaux.may liim.buffer ~f:begin fun f ->
       try
         f ();
-        lac.buffer <- None;
+        liim.buffer <- None;
       with ex -> Printf.eprintf "File \"liim.ml\": %s\n%s\n%!" (Printexc.to_string ex) (Printexc.get_backtrace());
     end;
     true
-  end;;
+  end);;
+
+let set liim func = liim.buffer <- Some func
+
+let destroy liim = Gaux.may liim.id ~f:GMain.Timeout.remove

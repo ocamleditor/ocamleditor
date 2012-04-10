@@ -1,7 +1,7 @@
 (*
 
   OCamlEditor
-  Copyright (C) 2010, 2011 Francesco Tovagliari
+  Copyright (C) 2010-2012 Francesco Tovagliari
 
   This file is part of OCamlEditor.
 
@@ -39,11 +39,15 @@ class view ~bconf_list ?packing () =
   let _ = GMisc.label ~text:"Build configuration" ~xalign:0.0 ~packing:box#add () in
   let cols = new GTree.column_list in
   let col_bc = cols#add Gobject.Data.caml in
+  let col_bc_pixbuf = cols#add (Gobject.Data.gobject_by_name "GdkPixbuf") in
   let col_name = cols#add Gobject.Data.string in
   let model_bc = GTree.list_store cols in
   let combo_bc = GEdit.combo_box ~model:model_bc ~packing:box#add () in
-  let rend = GTree.cell_renderer_text [] in
+  let rend = GTree.cell_renderer_text [`XPAD 5] in
+  let rend_pixbuf = GTree.cell_renderer_pixbuf [] in
+  let _ = combo_bc#pack rend_pixbuf in
   let _ = combo_bc#pack rend in
+  let _ = combo_bc#add_attribute rend_pixbuf "pixbuf" col_bc_pixbuf in
   let _ = combo_bc#add_attribute rend "text" col_name in
   (* Prior Build Task *)
   let box = GPack.vbox ~packing:vbox#pack () in
@@ -54,8 +58,8 @@ class view ~bconf_list ?packing () =
   let col_rbt = cols#add Gobject.Data.caml in
   let model_rbt = GTree.list_store cols in
   let combo_rbt = GEdit.combo_box ~active:0 ~model:model_rbt ~packing:box#pack () in
-  let rend_pb = GTree.cell_renderer_pixbuf [`XPAD 2] in
-  let rend = GTree.cell_renderer_text [] in
+  let rend_pb = GTree.cell_renderer_pixbuf [] in
+  let rend = GTree.cell_renderer_text [`XPAD 5] in
   let _ = combo_rbt#pack rend_pb in
   let _ = combo_rbt#pack rend in
   let _ = combo_rbt#add_attribute rend_pb "pixbuf" col_rbt_pb in
@@ -79,7 +83,7 @@ object (self)
         let rbts = [
           `NONE, Icons.empty_16;
           `CLEAN, Icons.clear_build_16;
-          `COMPILE, Icons.build_16; 
+          `COMPILE, Icons.build_16;
           `REBUILD, Icons.empty_16
         ] @ (List.map (fun x -> (`ETASK x, Icons.etask_16)) bc.Bconf.external_tasks) in
         model_rbt#clear();
@@ -120,10 +124,11 @@ object (self)
 
   method set_bconfigs () =
     model_bc#clear();
-    let bconfigs = List.filter (fun bc -> not bc.Bconf.is_library && bc.Bconf.files <> "") (bconf_list#get_bconfigs()) in
+    let bconfigs = List.filter (fun bc -> bc.Bconf.outkind = Bconf.Executable && bc.Bconf.files <> "") (bconf_list#get_bconfigs()) in
     List.iter begin fun bc ->
       let row = model_bc#append () in
       model_bc#set ~row ~column:col_bc bc;
+      model_bc#set ~row ~column:col_bc_pixbuf Icons.start_16;
       model_bc#set ~row ~column:col_name bc.Bconf.name;
     end bconfigs;
 
@@ -151,6 +156,7 @@ object (self)
 
   method entry_name = entry_name
   method combo_bc = combo_bc
+  method combo_rbt = combo_rbt
 end
 
 

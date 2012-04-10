@@ -1,7 +1,7 @@
 (*
 
   OCamlEditor
-  Copyright (C) 2010, 2011 Francesco Tovagliari
+  Copyright (C) 2010-2012 Francesco Tovagliari
 
   This file is part of OCamlEditor.
 
@@ -20,7 +20,7 @@
 
 *)
 
-open Miscellanea
+
 open Printf
 
 let rec putenv_ocamllib value =
@@ -28,19 +28,14 @@ let rec putenv_ocamllib value =
     | "Win32" ->
       let value = match value with None -> "" | Some x -> x in
       Unix.putenv "OCAMLLIB" value
-    | _ when value = None -> ignore (Sys.command "unset OCAMLLIB")
-    | _ ->
-      begin
-        match value with
-          | Some "" -> putenv_ocamllib None
-          | Some x -> Unix.putenv "OCAMLLIB" x
-          | None -> assert false
-      end
+    | _ -> ignore (Sys.command "unset OCAMLLIB")
+
+let redirect_stderr = if Sys.os_type = "Win32" then " 2>NUL" else " 2>/dev/null"
 
 let find_best_compiler compilers =
   try
     List.find begin fun comp ->
-      try ignore (kprintf expand "%s -version%s" comp redirect_stderr); true with _ -> false
+      try ignore (kprintf Cmd.expand "%s -version%s" comp redirect_stderr); true with _ -> false
     end compilers
   with Not_found ->
     kprintf failwith "Cannot find compilers: %s" (String.concat ", " compilers)
@@ -51,36 +46,38 @@ let find_tool which path =
       | `BEST_OCAMLC -> ["ocamlc.opt"; "ocamlc"]
       | `BEST_OCAMLOPT -> ["ocamlopt.opt"; "ocamlopt"]
       | `BEST_OCAMLDEP -> ["ocamldep.opt"; "ocamldep"]
-      | `OCAMLC -> ["ocamlc"]
       | `BEST_OCAMLDOC -> ["ocamldoc.opt"; "ocamldoc"]
+      | `OCAMLC -> ["ocamlc"]
       | `OCAML -> ["ocaml"]
   in
   let quote    = if path <> "" && Sys.os_type = "Win32" && String.contains path ' ' then Filename.quote else (fun x -> x) in
-  let path     = if path <> "" then path // "bin" else "" in
-  find_best_compiler (List.map quote (List.map ((//) path) commands))
+  let path     = if path <> "" then Filename.concat path "bin" else "" in
+  find_best_compiler (List.map quote (List.map (Filename.concat path) commands))
 
 let get_home () = try Sys.getenv "OCAML_HOME" with Not_found -> ""
 
-let expand_includes compact =
-  if String.length compact > 0 then
-    ("-I " ^ (String.concat " -I " (Miscellanea.split " +" compact))) else ""
+let expand_includes =
+  let split = Str.split (Str.regexp " +") in
+  fun compact ->
+    if String.length compact > 0 then
+      ("-I " ^ (String.concat " -I " (split compact))) else ""
 
-(** OCaml Tools path *)
+(** OCaml Tools *)
 
-let ocamlc () = find_tool `BEST_OCAMLC (get_home ())
+let ocamlc ()   = find_tool `BEST_OCAMLC (get_home ())
 let ocamlopt () = find_tool `BEST_OCAMLOPT (get_home ())
 let ocamldep () = find_tool `BEST_OCAMLDEP (get_home ())
 let ocamldoc () = find_tool `BEST_OCAMLDOC (get_home ())
-let ocaml () = find_tool `OCAML (get_home ())
-let ocamllib () = Miscellanea.expand ~first_line:true ((ocamlc()) ^ " -where")
+let ocaml ()    = find_tool `OCAML (get_home ())
+let ocamllib () = Cmd.expand ~first_line:true ((ocamlc()) ^ " -where")
 
 (** OCaml Version *)
 
 let ocaml_version ?(compiler=ocamlc()) () =
-  Miscellanea.expand (compiler ^ " -v " ^ redirect_stderr)
+  Cmd.expand (compiler ^ " -v " ^ redirect_stderr)
 
 (** can_compile_native *)
-let can_compile_native ~ocaml_home () =
+let can_compile_native ?ocaml_home () =
   let result = ref false in
   let filename = Filename.temp_file "test_native" ".ml" in
   let ochan = open_out filename in
@@ -91,28 +88,27 @@ let can_compile_native ~ocaml_home () =
     with _ -> (close_out ochan)
   end;
   let outname = Filename.chop_extension filename in
-  let compiler = find_tool `BEST_OCAMLOPT ocaml_home in
+  let compiler = match ocaml_home with
+    | Some home -> find_tool `BEST_OCAMLOPT home
+    | _ -> "ocamlopt"
+  in
   let cmd = sprintf "%s -o %s %s%s" compiler outname filename redirect_stderr in
   result := (Sys.command cmd) = 0;
-  ignore (Thread.create begin fun () ->
-    Sys.remove filename;
-    if Sys.file_exists outname then (Sys.remove outname);
-    let cmi = outname ^ ".cmi" in
-    if Sys.file_exists cmi then (Sys.remove cmi);
-    let cmx = outname ^ ".cmx" in
-    if Sys.file_exists cmx then (Sys.remove cmx);
-    let obj = outname ^ ".o" in
-    if Sys.file_exists obj then (Sys.remove obj);
-    let obj = outname ^ ".obj" in
-    if Sys.file_exists obj then (Sys.remove obj);
-  end ());
-  !result
-
-
-
-
-
-
-
-
-
+  if Sys.file_exists filename then (Sys.remove filename);
+  if Sys.file_exists outname then (Sys.remove outname);
+  let cmi = outname ^ ".cmi" in
+  if Sys.file_exists cmi then (Sys.remove cmi);
+  let cmx = outname ^ ".cmx" in
+  if Sys.file_exists cmx then (Sys.remove cmx);
+  let obj = outname ^ ".o" in
+  if Sys.file_exists obj then (Sys.remove obj);
+  let obj = outname ^ ".obj" in
+  if Sys.file_exists obj then (Sys.remove obj);
+  if !result then begin
+    let conf = kprintf Cmd.expand "%s -config" compiler in
+    let re = Str.regexp "ccomp_type: \\(.*\\)\n" in
+    if Str.search_forward re conf 0 >= 0 then begin
+      Some (Str.matched_group 1 conf)
+    end else Some "<unknown ccomp_type>"
+  end else None;
+;;

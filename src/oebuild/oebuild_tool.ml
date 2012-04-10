@@ -1,7 +1,7 @@
 (*
 
   OCamlEditor
-  Copyright (C) 2010, 2011 Francesco Tovagliari
+  Copyright (C) 2010-2012 Francesco Tovagliari
 
   This file is part of OCamlEditor.
 
@@ -23,12 +23,11 @@
 open Printf
 open Arg
 open Oebuild
-open Miscellanea
 
 (** main *)
 let main () = begin
   let target = ref [] in
-  let is_library = ref false in
+  let outkind = ref Executable in
   let is_clean = ref false in
   let is_clean_all = ref false in
   let compilation = ref [] in
@@ -69,7 +68,9 @@ let main () = begin
     ("-byt",         Unit (add_compilation Bytecode), " Bytecode compilation (default).");
     ("-opt",         Unit (add_compilation Native),   " Native-code compilation.");
     ("-c",           Set compile_only,                " Compile only.");
-    ("-a",           Set is_library,                  " Build a library. ");
+    ("-a",           Unit (fun _ -> outkind := Library), " Build a library. ");
+    ("-shared",      Unit (fun _ -> outkind := Plugin), " Build a plugin. ");
+    ("-pack",        Unit (fun _ -> outkind := Pack), " Pack object files.");
     ("-I",           Set_string includes,             "\"<includes>\" Includes, separated by spaces.");
     ("-l",           Set_string libs,                 "\"<libs>\" Libraries, separated by spaces (e.g. -l \"unix str\"). When the library name ends with \".o\" is interpreted as compiled object file, not as library.");
     ("-m",           Set_string mods,                 "\"<objects>\" Other required object files.");
@@ -84,7 +85,7 @@ let main () = begin
     ("-run-byt",     Unit (set_run_code Bytecode),    " Run the resulting bytecode executable.");
     ("-run-opt",     Unit (set_run_code Native),      " Run the resulting native-code executable.");
     ("--",           Rest set_run_args,               "<run-args> Command line arguments for the -run, -run-byt or -run-opt options.");
-    ("-clean",       Set is_clean,                    " Remove output files appropriate to the target selected and exit.");
+    ("-clean",       Set is_clean,                    " Remove output files for the selected target and exit.");
     ("-clean-all",   Set is_clean_all,                " Remove all build output and exit.");
     ("-dep",         Unit dep,                        " Print dependencies and exit.");
     ("-output-name", Set print_output_name,           " (undocumented)");
@@ -107,7 +108,7 @@ let main () = begin
   (** print_output_name *)
   if !print_output_name then begin
     List.iter begin fun compilation ->
-      let outname = get_output_name ~compilation ~is_library:!is_library
+      let outname = get_output_name ~compilation ~outkind:!outkind
         ~outname:!output_name ~targets:!target in
       printf "%s\n%!" outname;
     end compilation;
@@ -117,7 +118,7 @@ let main () = begin
   if !is_clean || !is_clean_all then begin
     let deps = Dep.find ~pp:!pp (*~includes:!includes*) ~with_errors:true !target in
     List.iter begin fun compilation ->
-      clean ~all:!is_clean_all ~compilation ~is_library:!is_library ~outname:!output_name ~targets:!target ~deps ();
+      clean ~all:!is_clean_all ~compilation ~outkind:!outkind ~outname:!output_name ~targets:!target ~deps ();
     end compilation;
     if !is_clean_all then (clean_all());
     exit 0;
@@ -126,7 +127,7 @@ let main () = begin
   let last_outname = ref None in
   let outnames =
     List.map begin fun compilation ->
-      let outname = get_output_name ~compilation ~is_library:!is_library ~outname:!output_name ~targets:!target in
+      let outname = get_output_name ~compilation ~outkind:!outkind ~outname:!output_name ~targets:!target in
       match
         if !no_build then Built_successfully, [] else begin
           let deps = Dep.find ~pp:!pp (* ~includes:!includes*) ~with_errors:true !target in
@@ -135,7 +136,7 @@ let main () = begin
             ~includes:!includes
             ~libs:!libs
             ~other_mods:!mods
-            ~is_library:!is_library
+            ~outkind:!outkind
             ~compile_only:!compile_only
             ~thread:!thread
             ~vmthread:!vmthread
@@ -154,14 +155,15 @@ let main () = begin
         | Built_successfully, deps ->
           begin
             match !install with
-              | Some path -> install_output ~compilation ~outname ~is_library:!is_library ~deps ~path;
+              | Some path -> install_output ~compilation ~outname ~outkind:!outkind ~deps ~path
+                ~ccomp_type:(Ocaml_config.can_compile_native ());
               | _ -> ()
           end;
           last_outname := Some outname;
           (compilation, Some outname)
     end compilation;
   in
-  if not !is_library then begin
+  if !outkind = Executable then begin
     try
       begin
         match !run_code with
@@ -180,4 +182,4 @@ let main () = begin
   end;
 end
 
-let _ = crono ~label:"Build time" main ()
+let _ = Oebuild_util.crono ~label:"Build time" main ()

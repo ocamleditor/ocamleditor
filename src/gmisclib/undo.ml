@@ -1,7 +1,7 @@
 (*
 
   OCamlEditor
-  Copyright (C) 2010, 2011 Francesco Tovagliari
+  Copyright (C) 2010-2012 Francesco Tovagliari
 
   This file is part of OCamlEditor.
 
@@ -24,11 +24,11 @@ open Printf
 open GUtil
 
 type action =
-  | Insert of action_insert
-  | Delete of action_delete
+  | Insert      of action_insert
+  | Delete      of action_delete
   | Begin_block of string (* Block name *)
-  | End_block of string (* Block name *)
-  | Func of ((unit -> bool) * (unit -> bool))
+  | End_block   of string (* Block name *)
+  | Func        of ((unit -> bool) * (unit -> bool))
   (* If the first function (f) returns false its inverse function (g) is not stored in the
      undo stack: the undo manager only applies f and discards g. *)
 
@@ -38,10 +38,10 @@ and action_insert = {
 }
 
 and action_delete = {
-  mutable text : string;      (* Text deleted *)
-  mutable where : int;        (* Where to reinsert *)
+  mutable text   : string;    (* Text deleted *)
+  mutable where  : int;       (* Where to reinsert *)
   mutable bounds : int * int; (* Selection bounds *)
-  mutable prev : int;         (* Previous delete position in the same action *)
+  mutable prev   : int;       (* Previous delete position in the same action *)
 }
 
 class manager ~(buffer : GText.buffer) =
@@ -257,8 +257,14 @@ object (self)
   method end_block () =
     if enabled && current_block_name <> "" then
       self#push_pending_action();
-      self#push (End_block current_block_name)
-        ((buffer#get_iter `INSERT)#offset, (buffer#get_iter `SEL_BOUND)#offset);
+      begin
+        match Stack.top current_stack with
+          | (Begin_block name), _, _ when name = current_block_name ->
+            ignore (Stack.pop current_stack) (* remove empty blocks from the stack *)
+          | _ ->
+            self#push (End_block current_block_name)
+              ((buffer#get_iter `INSERT)#offset, (buffer#get_iter `SEL_BOUND)#offset);
+      end;
       current_block_name <- "";
       buffer#end_user_action();
 
@@ -285,6 +291,8 @@ object (self)
     GtkSignal.handler_block text_buffer sign_delete;
     GtkSignal.handler_block text_buffer sign_insert;
 
+  method is_enabled = enabled
+
   method can_undo = (not (Stack.is_empty undos))
     || (match pending_action with Some e when current_stack == undos -> true | _ -> false)
 
@@ -293,6 +301,8 @@ object (self)
 
   method redo () = self#revert redos
   method undo () = self#revert undos
+
+  method length = Stack.length undos, Stack.length redos
 
   method connect = new manager_signals ~undo ~redo ~can_undo_changed ~can_redo_changed
 end

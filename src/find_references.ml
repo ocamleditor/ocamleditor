@@ -2,6 +2,7 @@ open Printf
 open GUtil
 open Annotation
 open Definition
+open Miscellanea
 
 type get_page = string -> Editor_page.page
 type goto_page = Editor_page.page -> unit
@@ -51,8 +52,8 @@ class widget ~editor ?packing () =
               match result.mark with
                 | Some (m1, m2) ->
                   let page = match result.page with Some x -> x | _ -> assert false in
-                  page#buffer#delete_mark (`MARK m1);
-                  page#buffer#delete_mark (`MARK m2);
+                  GtkText.Buffer.delete_mark page#buffer#as_buffer m1;
+                  GtkText.Buffer.delete_mark page#buffer#as_buffer m2;
                   result.mark <- None
                 | None -> ()
             end
@@ -103,7 +104,7 @@ class widget ~editor ?packing () =
             page#view#scroll_lazy start;
             page#buffer#select_range start stop;
             if grab_focus || page#view#misc#get_flag `HAS_FOCUS then
-              Gtk_util.idle_add page#view#misc#grab_focus;
+              Gmisclib.Idle.add page#view#misc#grab_focus;
       end;
     with Failure "hd" -> ()
   in
@@ -124,16 +125,44 @@ class widget ~editor ?packing () =
       end;
       if view#misc#get_flag `HAS_FOCUS then (selection_changed ~grab_focus:true()) else (view#misc#grab_focus ());
     end;
+    (** Paint roots background with a different color *)
+    vc_text#set_cell_data_func renderer begin fun model row ->
+      let path = model#get_path row in
+      let depth = GTree.Path.get_depth path in
+       renderer#set_properties [
+         `CELL_BACKGROUND Oe_config.find_references_title_bgcolor;
+         `FOREGROUND Oe_config.find_references_title_fgcolor;
+         `CELL_BACKGROUND_SET (depth = 1);
+         `FOREGROUND_SET (depth = 1);
+         ]
+    end;
     (** Destroy view *)
     view#connect#destroy ~callback:destroy_marks;
   in
 object (self)
   inherit GObj.widget vbox#as_widget
+  inherit Messages.page
+
+  val mutable signalid_row_expanded = None
+
+  method parent_changed messages = ()
+
+  initializer
+    signalid_row_expanded <-
+      Some (view#connect#after#row_expanded ~callback:begin fun row path ->
+        let area = view#get_cell_area ~path () in
+        let y = view#vadjustment#value +. float (Gdk.Rectangle.y area) in
+        Gmisclib.Idle.add ~prio:600 (fun () ->
+          view#vadjustment#set_value (min y (view#vadjustment#upper -. view#vadjustment#page_size)));
+      end);
 
   method private set_root_text ~root ~filename ~name =
-    model#set ~row:root ~column:col_text (sprintf "References to identifier <tt>%s</tt> in module <tt>%s</tt>"
-      name (String.capitalize (Filename.chop_extension (Filename.basename filename))));
+    model#set ~row:root ~column:col_text (sprintf "<b>References to identifier </b><tt>%s</tt><b> in module </b><tt>%s</tt>"
+      name (modname_of_path filename));
+    Gaux.may signalid_row_expanded ~f:view#misc#handler_block;
     view#expand_row (model#get_path root);
+    Gaux.may signalid_row_expanded ~f:view#misc#handler_unblock;
+
 
   method private append_row_definition ~root ~filename =
     let definition = model#append ~parent:root () in
@@ -168,7 +197,7 @@ object (self)
       self#append_row_file ~parent ~filename ~page:get_page ~goto ~references
     end ref_ext
 
-  method find ~project (source : source) =
+  method find ~(project : Project.t) (source : source) =
     search_started#call();
     let root = model#append () in
     let usages = ref root in
@@ -176,7 +205,7 @@ object (self)
     begin
       match source with
         | `DEF_FILE_POS (filename, offset, page, goto) ->
-          let int_refs = Definition.find_references ~src_path:(Project.path_src project) ~filename ~offset () in
+          let int_refs = Definition.find_references ~src_path:(Project.path_src project) ~project ~filename ~offset () in
           begin
             match int_refs with
               | None -> ()
@@ -190,7 +219,9 @@ object (self)
                 (* line of the definition *)
                 let line = Miscellanea.get_line_from_file ~filename a in
                 self#append_row_line ~parent:def_node ~page ~goto ~line ~start:rstart ~stop:rstop ~filename;
+                Gaux.may signalid_row_expanded ~f:view#misc#handler_block;
                 view#expand_row (model#get_path def_node);
+                Gaux.may signalid_row_expanded ~f:view#misc#handler_unblock;
                 (** Internal references *)
                 if result.ref_int <> [] then begin
                   self#append_row_file ~parent:!usages ~filename ~page ~goto ~references:result.ref_int
@@ -201,7 +232,7 @@ object (self)
         | `DEF_PAGE_ITER (page, iter, get_page, goto) ->
           let filename = page#get_filename in
           let offset = Glib.Utf8.offset_to_pos (page#buffer#get_text ()) ~pos:0 ~off:iter#offset in
-          let int_refs = Definition.find_references ~src_path:(Project.path_src project) ~filename ~offset () in
+          let int_refs = Definition.find_references ~src_path:(Project.path_src project) ~project ~filename ~offset () in
           begin
             match int_refs with
               | None -> ()
@@ -217,7 +248,9 @@ object (self)
                 let iter = iter_of_linechar a 0 in
                 let line = iter#get_text ~stop:iter#forward_to_line_end in
                 self#append_row_line ~parent:def_node ~page:(fun _ -> page) ~goto ~line ~start:rstart ~stop:rstop ~filename;
+                Gaux.may signalid_row_expanded ~f:view#misc#handler_block;
                 view#expand_row (model#get_path def_node);
+                Gaux.may signalid_row_expanded ~f:view#misc#handler_unblock;
                 (** Internal references *)
                 if result.ref_int <> [] then begin
                   self#append_row_file ~parent:!usages ~filename ~page:(fun _ -> page) ~goto ~references:result.ref_int
@@ -226,17 +259,17 @@ object (self)
                 self#append_external ~parent:!usages ~get_page ~goto result.ref_ext
           end;
         | `EXT (fullname, ref_ext, get_page, goto) ->
-          model#set ~row:root ~column:col_text (sprintf "References to <tt>%s</tt>" fullname);
+          model#set ~row:root ~column:col_text (sprintf "<b>References to </b><tt>%s</tt>" fullname);
           self#append_external ~parent:!usages ~get_page ~goto ref_ext;
     end;
+    Gaux.may signalid_row_expanded ~f:view#misc#handler_block;
     view#expand_row (model#get_path root);
     view#expand_row (model#get_path !definition);
     view#expand_row (model#get_path !usages);
     if model#iter_n_children (Some !usages) = 1 then (view#expand_row (model#get_path (model#iter_children ~nth:0 (Some !usages))));
+    Gaux.may signalid_row_expanded ~f:view#misc#handler_unblock;
     search_finished#call();
-    Gtk_util.idle_add (fun () -> view#scroll_to_cell ~align:(0.0, 0.0) (model#get_path root) vc_text);
-    view#set_cursor (model#get_path root) vc_text;
-
+    Gmisclib.Idle.add (fun () -> view#scroll_to_cell ~align:(0.0, 0.0) (model#get_path root) vc_text);
 
     method connect = new signals ~search_started ~search_finished
 end

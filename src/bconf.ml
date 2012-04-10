@@ -1,7 +1,7 @@
 (*
 
   OCamlEditor
-  Copyright (C) 2010, 2011 Francesco Tovagliari
+  Copyright (C) 2010-2012 Francesco Tovagliari
 
   This file is part of OCamlEditor.
 
@@ -24,25 +24,27 @@ open Printf
 open Miscellanea
 
 type t = {
-  mutable id : int;
-  mutable name : string;
-  mutable default : bool;
-  mutable byt : bool;
-  mutable opt : bool;
-  mutable libs : string;
-  mutable other_objects : string;
-  mutable files : string;
-  mutable includes : string;
-  mutable thread : bool;
-  mutable vmthread : bool;
-  mutable pp : string;
-  mutable cflags : string;
-  mutable lflags : string;
-  mutable is_library : bool;
-  mutable outname : string;
+  mutable id               : int;
+  mutable name             : string;
+  mutable default          : bool;
+  mutable byt              : bool;
+  mutable opt              : bool;
+  mutable libs             : string;
+  mutable other_objects    : string;
+  mutable files            : string;
+  mutable includes         : string;
+  mutable thread           : bool;
+  mutable vmthread         : bool;
+  mutable pp               : string;
+  mutable cflags           : string;
+  mutable lflags           : string;
+  mutable outkind          : output_kind;
+  mutable outname          : string;
   mutable lib_install_path : string;
-  mutable external_tasks : Task.t list;
-} and rbt = [ `NONE | `CLEAN | `COMPILE | `REBUILD | `ETASK of Task.t ]
+  mutable external_tasks   : Task.t list;
+}
+and rbt = [ `NONE | `CLEAN | `COMPILE | `REBUILD | `ETASK of Task.t ]
+and output_kind = Executable | Library | Plugin | Pack
 
 let default_runtime_build_task = `COMPILE
 
@@ -71,26 +73,39 @@ let rbt_of_string bconf = function
     with Not_found -> default_runtime_build_task
   end
 
+let string_of_outkind = function
+  | Executable -> "Executable"
+  | Library -> "Library"
+  | Plugin -> "Plugin"
+  | Pack -> "Pack"
+
+let outkind_of_string = function
+  | "Executable" -> Executable
+  | "Library" -> Library
+  | "Plugin" -> Plugin
+  | "Pack" -> Pack
+  | _ -> assert false
+
 (** create *)
 let create ~id ~name = {
-  id = id;
-  name = name;
-  default = (id = 0);
-  byt = true;
-  opt = false;
-  libs = "";
-  other_objects = "";
-  files = "";
-  includes = "";
-  thread = false;
-  vmthread = false;
-  pp = "";
-  cflags = "";
-  lflags = "";
-  is_library = false;
-  outname = "";
+  id               = id;
+  name             = name;
+  default          = (id = 0);
+  byt              = true;
+  opt              = false;
+  libs             = "";
+  other_objects    = "";
+  files            = "";
+  includes         = "";
+  thread           = false;
+  vmthread         = false;
+  pp               = "";
+  cflags           = "";
+  lflags           = "";
+  outkind          = Executable;
+  outname          = "";
   lib_install_path = "";
-  external_tasks = []
+  external_tasks   = []
 }
 
 (** find_dependencies *)
@@ -118,7 +133,13 @@ let create_cmd_line ?(flags=[]) ?(can_compile_native=true) bconf =
   @ (if bconf.includes <> "" then ["-I"; (quote (bconf.includes))] else [])
   @ (if bconf.libs <> "" then ["-l"; (quote (bconf.libs))] else [])
   @ (if bconf.other_objects <> "" then ["-m"; quote (bconf.other_objects)] else [])
-  @ (if bconf.is_library then ["-a"] else [])
+  @ begin
+      match bconf.outkind with
+        | Executable -> []
+        | Library -> ["-a"]
+        | Plugin -> ["-shared"]
+        | Pack -> ["-pack"]
+    end
   @ (if bconf.byt then ["-byt"] else [])
   @ (if bconf.opt && can_compile_native then ["-opt"] else [])
   @ (if bconf.thread then ["-thread"] else [])
@@ -161,7 +182,7 @@ let convert_from_1 old_filename =
     target.vmthread <- t.Bconf_old_1.vmthread;
     target.cflags <- t.Bconf_old_1.cflags;
     target.lflags <- t.Bconf_old_1.lflags;
-    target.is_library <- (t.Bconf_old_1.libname <> None);
+    target.outkind <- (if t.Bconf_old_1.libname <> None then Library else Executable);
     target.outname <- "";
     target.lib_install_path <- "";
     target

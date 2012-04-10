@@ -1,7 +1,7 @@
 (*
 
   OCamlEditor
-  Copyright (C) 2010, 2011 Francesco Tovagliari
+  Copyright (C) 2010-2012 Francesco Tovagliari
 
   This file is part of OCamlEditor.
 
@@ -22,25 +22,25 @@
 
 
 type t = {
-  mutable id : int;
-  mutable id_build : int;
-  mutable name : string;
-  mutable default : bool;
-  mutable build_task : Bconf.rbt;
-  mutable env : string list;
+  mutable id          : int;
+  mutable id_build    : int;
+  mutable name        : string;
+  mutable default     : bool;
+  mutable build_task  : Bconf.rbt;
+  mutable env         : string list;
   mutable env_replace : bool;
-  mutable args : string;
+  mutable args        : string;
 }
 
 let create ~id ~name ~id_build = {
-   id = id;
-   id_build = id_build;
-   name = name;
-   default = false;
-   build_task = `NONE;
-   env = [];
+   id          = id;
+   id_build    = id_build;
+   name        = name;
+   default     = false;
+   build_task  = `NONE;
+   env         = [];
    env_replace = false;
-   args = ""
+   args        = ""
 }
 
 

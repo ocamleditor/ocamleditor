@@ -1,7 +1,7 @@
 (*
 
   OCamlEditor
-  Copyright (C) 2010, 2011 Francesco Tovagliari
+  Copyright (C) 2010-2012 Francesco Tovagliari
 
   This file is part of OCamlEditor.
 
@@ -35,9 +35,6 @@ let create () = {
   max_width = 0;
 }
 
-(** find *)
-let find y lnl = List.assoc y lnl.locked
-
 (** print *)
 let print ~view ~x ~y ~num ~width_chars lnl =
   let text = string_of_int num in
@@ -53,7 +50,7 @@ let print ~view ~x ~y ~num ~width_chars lnl =
       view#add_child_in_window ~child:label#coerce ~which_window:`LEFT ~x:0 ~y:0;
       label
   in
-  (try (find y lnl)#misc#hide() with Not_found -> ());
+  (match List_opt.assoc y lnl.locked with Some x -> x#misc#hide() | _ -> ());
   lnl.locked <- (y, label) :: lnl.locked;
   label#set_width_chars width_chars;
   label#misc#show();
@@ -75,10 +72,7 @@ let reset lnl =
 
 (** hide *)
 let hide y lnl =
-  try
-    let lnl = find y lnl in 
-    lnl#misc#hide();
-  with Not_found -> ()
+  match List_opt.assoc y lnl.locked with Some lnl -> lnl#misc#hide() | _ -> ()
 
 
 

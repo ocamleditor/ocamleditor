@@ -1,7 +1,7 @@
 (*
 
   OCamlEditor
-  Copyright (C) 2010, 2011 Francesco Tovagliari
+  Copyright (C) 2010-2012 Francesco Tovagliari
 
   This file is part of OCamlEditor.
 
@@ -25,3 +25,26 @@ open Dep
 open Quote
 open Cmd_line_args
 open Ocaml_config
+open File
+open List_opt
+
+let application_param =
+  try
+    List.fold_left begin fun acc x ->
+      match Str.split (Str.regexp "=") x with
+        | n :: v :: [] -> (n, v) :: acc
+        | n :: [] -> (n, "") :: acc
+        | _ -> acc
+    end [] (Str.split (Str.regexp ",") (Sys.getenv "OCAMLEDITORPARAM"))
+  with Not_found -> [];;
+
+let application_debug = try (List.assoc "debug" application_param) = "2" with Not_found -> false;;
+
+let application_pixmaps =
+  let path = !! (Sys.getcwd()) // "pixmaps" in
+  if Sys.file_exists path then path else begin
+    let path = (!! (!! Sys.executable_name)) // "pixmaps" in
+    if Sys.file_exists path then path
+    else ((!! (!! Sys.executable_name)) // "share" // "pixmaps" // "ocamleditor")
+  end
+

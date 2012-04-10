@@ -1,7 +1,7 @@
 (*
 
   OCamlEditor
-  Copyright (C) 2010, 2011 Francesco Tovagliari
+  Copyright (C) 2010-2012 Francesco Tovagliari
 
   This file is part of OCamlEditor.
 
@@ -34,6 +34,7 @@ let find_forward ?start ?stop ?(all=true) ~(buffer : GText.buffer) ~regexp ~canc
   in
   let iter = ref start_iter#copy in
   let linenum = ref 0 in
+  let bol = ref 0 in
   let lines_involved = ref [] in
   begin
     try
@@ -45,7 +46,8 @@ let find_forward ?start ?stop ?(all=true) ~(buffer : GText.buffer) ~regexp ~canc
             buffer#get_text ~start:!iter ~stop:stop_text ()
           end
         in
-        linenum := (!iter#line + 1); 
+        linenum := (!iter#line + 1);
+        bol := (!iter#set_line_index 0)#offset;
         let offsets = ref [] in
         let pos = ref 0 in
         begin
@@ -67,7 +69,7 @@ let find_forward ?start ?stop ?(all=true) ~(buffer : GText.buffer) ~regexp ~canc
         end;
         if List.length !offsets > 0 then begin
           lines_involved :=
-            {Find_text.line = line; linenum = !linenum; offsets = (List.rev !offsets); marks = []} ::
+            {Find_text.line = line; linenum = !linenum; bol = !bol; offsets = (List.rev !offsets); marks = []} ::
             !lines_involved;
         end;
         iter := !iter#forward_line;
@@ -83,6 +85,7 @@ let find_forward ?start ?stop ?(all=true) ~(buffer : GText.buffer) ~regexp ~canc
 let find_backward ~(start : GText.iter) ~(buffer : GText.buffer) ~regexp ~canceled () =
   let iter = ref start#copy in
   let linenum = ref 0 in
+  let bol = ref 0 in
   let lines_involved = ref [] in
   begin
     try
@@ -92,7 +95,8 @@ let find_backward ~(start : GText.iter) ~(buffer : GText.buffer) ~regexp ~cancel
           buffer#get_text ~start:start_line ~stop:!iter ()
         in
         begin
-          linenum := !iter#line + 1; 
+          linenum := !iter#line + 1;
+          bol := (!iter#set_line_index 0)#offset;
           let offsets = ref [] in
           let pos = ref (String.length line) in
           begin
@@ -112,7 +116,7 @@ let find_backward ~(start : GText.iter) ~(buffer : GText.buffer) ~regexp ~cancel
           end;
           if List.length !offsets > 0 then begin
             lines_involved :=
-              {Find_text.line = line; linenum = !linenum; offsets = (List.rev !offsets); marks = []} ::
+              {Find_text.line = line; linenum = !linenum; bol = !bol; offsets = (List.rev !offsets); marks = []} ::
               !lines_involved;
           end;
           iter := !iter#backward_line;

@@ -1,5 +1,5 @@
 ;  OCamlEditor
-;  Copyright (C) 2010, 2011 Francesco Tovagliari
+;  Copyright (C) 2010-2012 Francesco Tovagliari
 ;
 ;  This file is part of OCamlEditor.
 ;
@@ -16,19 +16,37 @@
 ;  You should have received a copy of the GNU General Public License
 ;  along with this program. If not, see <http://www.gnu.org/licenses/>.
 
+;	!include "MUI2.nsh"
 Name "OCamlEditor"
-OutFile "ocamleditor-1.6.2-setup.exe"
+OutFile "ocamleditor-1.7.0-win.exe"
 InstallDir $PROGRAMFILES\OCamlEditor
-
-; Registry key to check for directory (so if you install again, it will 
-; overwrite the old one automatically)
 InstallDirRegKey HKLM "Software\OCamlEditor" "Install_Dir"
+
+;; Request application privileges for Windows Vista
+RequestExecutionLevel Admin
+
+;  !define MUI_HEADERIMAGE
+;  !define MUI_HEADERIMAGE_BITMAP "nsis.bmp" ; optional
+;  ;!define MUI_ABORTWARNING
+;
+;  !insertmacro MUI_PAGE_LICENSE "COPYING"
+;  !insertmacro MUI_PAGE_COMPONENTS
+;  !insertmacro MUI_PAGE_DIRECTORY
+;  !insertmacro MUI_PAGE_INSTFILES
+;  
+;  !insertmacro MUI_UNPAGE_CONFIRM
+;  !insertmacro MUI_UNPAGE_INSTFILES
+;  !insertmacro MUI_LANGUAGE "English"
+
+VIProductVersion "1.7.0.0"
+VIAddVersionKey "ProductName" "OCamlEditor"
+VIAddVersionKey "LegalCopyright" "Copyright © 2010-2012 Francesco Tovagliari"
+VIAddVersionKey "FileDescription" "OCamlEditor Setup"
+VIAddVersionKey "FileVersion" "1.7.0"
+;Icon "pixmaps\oe.ico"
 
 LicenseText "Please read the following License Agreement. You must accept the terms of this agreement before continuing with the installation."
 LicenseData "COPYING"
-
-; Request application privileges for Windows Vista
-RequestExecutionLevel Admin
 
 ; Pages
 ;--------------------------------
@@ -37,9 +55,9 @@ Page license
 Page components
 Page directory
 Page instfiles
-
-UninstPage uninstConfirm
-UninstPage instfiles
+;
+;UninstPage uninstConfirm
+;UninstPage instfiles
 
 ;--------------------------------
 
@@ -48,20 +66,32 @@ Section "OCamlEditor (required)"
   ; Set output path to the installation directory.
   SetOutPath $INSTDIR\bin
   File "src\ocamleditor.bat"
-  File "src\ocamleditor.exe"
+  !system 'if exist src\ocamleditor.opt.exe ren src\ocamleditor.exe ocamleditor.tmp'
+  !system 'if exist src\ocamleditor.opt.exe ren src\ocamleditor.opt.exe ocamleditor.exe'
+  File "src\ocamleditor.exe" 
+  !system 'if exist src\ocamleditor.tmp ren src\ocamleditor.exe ocamleditor.opt.exe'
+  !system 'if exist src\ocamleditor.tmp ren src\ocamleditor.tmp ocamleditor.exe'
 	File "src\oeproc\oeproc.exe"   
 	File "src\oebuild\oebuild.exe"   
 	File /NonFatal "src\oeproc\oeproc.opt.exe"   
 	File /NonFatal "src\oebuild\oebuild.opt.exe"   
   SetOutPath $INSTDIR
   ; Put file there
-  File "COPYING"
+  File /oname=README.txt "README"
+  File /oname=NEWS.txt "NEWS"
+  File /oname=COPIYNG.txt "COPYING"
 	File /r ".\pixmaps"
   ; Write the installation path into the registry
   WriteRegStr HKLM SOFTWARE\OCamlEditor "Install_Dir" "$INSTDIR"
   ; Write the uninstall keys for Windows
+  WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\OCamlEditor" "DisplayIcon" '"$INSTDIR\pixmaps\oe.ico"'
   WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\OCamlEditor" "DisplayName" "OCamlEditor"
+  WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\OCamlEditor" "DisplayVersion" "1.7.0"
   WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\OCamlEditor" "UninstallString" '"$INSTDIR\uninstall.exe"'
+  WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\OCamlEditor" "InstallLocation" '"$INSTDIR"'
+  WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\OCamlEditor" "HelpLink" "http://ocamleditor.forge.ocamlcore.org"
+  WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\OCamlEditor" "Readme" '"$INSTDIR\README.txt"'
+  WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\OCamlEditor" "Publisher" "Francesco Tovagliari"
   WriteRegDWORD HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\OCamlEditor" "NoModify" 1
   WriteRegDWORD HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\OCamlEditor" "NoRepair" 1
   WriteUninstaller "uninstall.exe"

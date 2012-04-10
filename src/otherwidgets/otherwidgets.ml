@@ -1,7 +1,7 @@
 (*
 
   OCamlEditor
-  Copyright (C) 2010, 2011 Francesco Tovagliari
+  Copyright (C) 2010-2012 Francesco Tovagliari
 
   This file is part of OCamlEditor.
 
@@ -20,54 +20,15 @@
 
 *)
 
-type t = {
-  blocks : block list;
-  mtime : float;
-}
-and block = {
-  start : position;
-  stop : position;
-  annotations : annotation list
-}
-and position = {
-  pos_fname : string;
-  pos_lnum : int;
-  pos_bol : int;
-  pos_cnum : int;
-}
-and annotation =
-  | Type of string
-  | Def of (string * position * position option)
-  | Int_ref of (string * position * position)
-  | Ext_ref of string
-  | Stack
-  | Tail
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+open Tree
+open About
+open Key_assist
+open License
+open Check_for_updates
+open Activity
+open Checklist
+open Dialog
+open Dialog_goto
+open Dialog_rename
+open Dialog_save_as
+open Dialog_file_new

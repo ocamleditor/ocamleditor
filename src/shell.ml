@@ -152,7 +152,7 @@ object (self)
 
   initializer
     h#add "";
-    view#misc#modify_font_by_name !preferences.pref_base_font;
+    view#misc#modify_font_by_name preferences#get.pref_base_font;
     view#misc#set_size_chars ~width:80 ~height:25 ~lang:"C" ();
     view#event#connect#key_press ~callback:
       begin fun ev ->
@@ -192,7 +192,7 @@ object (self)
         done
       end ();
     end (List.map Unix.descr_of_in_channel [errchan; inchan]));
-    
+
 end
 
 

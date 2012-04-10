@@ -1,7 +1,7 @@
 (*
 
   OCamlEditor
-  Copyright (C) 2010, 2011 Francesco Tovagliari
+  Copyright (C) 2010-2012 Francesco Tovagliari
 
   This file is part of OCamlEditor.
 
@@ -70,7 +70,7 @@ let delete ?(bak=false) ~filename () =
     let id = Hashtbl.find table filename in
     Hashtbl.remove table filename;
     let chan = open_out_bin table_filename in
-    lazy (output_value chan table) /*finally*/ lazy (close_out chan);
+    lazy (output_value chan table) /*finally*/ lazy (close_out_noerr chan);
     let pathid = path // id in
     if Sys.file_exists pathid then begin
       if bak then begin
@@ -80,6 +80,19 @@ let delete ?(bak=false) ~filename () =
       end else (Sys.remove pathid)
     end
   with Not_found -> ()
+
+(** clean_backup *)
+let clean_backup () =
+  (* Clean old backup copies *)
+  let bak = path // "bak" in
+  let backups = Sys.readdir bak in
+  let limit = Unix.time() -. keep_backup in
+  Array.iter begin fun basename ->
+    let filename = bak // basename in
+    let stat = Unix.stat filename in
+    let tm = stat.Unix.st_mtime in
+    if (Sys.file_exists filename) && tm < limit then (Sys.remove filename)
+  end backups;;
 
 (** recover *)
 let recover () =
@@ -119,17 +132,7 @@ let recover () =
         dialog#destroy()
       | _ -> clean_up(); dialog#destroy()
   end;
-  (* Clean old backup copies *)
-  let bak = path // "bak" in
-  let backups = Sys.readdir bak in
-  let limit = Unix.time() -. keep_backup in
-  Array.iter begin fun basename ->
-    let filename = bak // basename in
-    let stat = Unix.stat filename in
-    let tm = stat.Unix.st_mtime in
-    if (Sys.file_exists filename) && tm < limit then (Sys.remove filename)
-  end backups
-
+  clean_backup();;
 
 
 

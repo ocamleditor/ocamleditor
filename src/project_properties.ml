@@ -1,7 +1,7 @@
 (*
 
   OCamlEditor
-  Copyright (C) 2010, 2011 Francesco Tovagliari
+  Copyright (C) 2010-2012 Francesco Tovagliari
 
   This file is part of OCamlEditor.
 
@@ -25,11 +25,9 @@ open Miscellanea
 open Printf
 
 
-class window ~editor ?(callback=ignore) ?page project =
-  let width = 105 in
-  let window = GWindow.window ~modal:false ~title:("Project \""^project.name^"\"")
-    ~icon:Icons.oe ~border_width:5 ~position:`CENTER () in
-  let box = GPack.vbox ~packing:window#add ~spacing:5 () in
+class widget ~editor ?(callback=ignore) ~project ?page_num ?packing ?show () =
+  let width = 120 in
+  let box = GPack.vbox ?packing ~spacing:5 () in
   let notebook = GPack.notebook ~packing:(box#pack ~fill:true ~expand:true) () in
   (* General tab *)
   let gbox = GPack.vbox ~border_width:8 ~spacing:8 () in
@@ -42,12 +40,10 @@ class window ~editor ?(callback=ignore) ?page project =
   in
   let encodings = ["UTF-8"; "CP1252"; "Default"] in
   let entry_encoding, (_, _) = GEdit.combo_box_entry_text ~strings:encodings () in
-  let _ = entry_encoding#set_active (match project.encoding with None -> (List.length encodings - 1)
-    | Some x -> (try Miscellanea.Xlist.pos x encodings with Not_found -> 0)) in
-  let name_entry = GEdit.entry ~text:project.name () in
-  let desc_entry = GEdit.entry ~text:project.description () in
-  let author_entry = GEdit.entry ~text:project.author () in
-  let version_entry = GEdit.entry ~text:project.version () in
+  let name_entry = GEdit.entry () in
+  let desc_entry = GEdit.entry () in
+  let author_entry = GEdit.entry () in
+  let version_entry = GEdit.entry () in
   let _ = mk_entry entry_box "Encoding:" entry_encoding in
   let _ = mk_entry entry_box "Name:" name_entry in
   let _ = mk_entry entry_box "Description:" desc_entry in
@@ -60,13 +56,11 @@ class window ~editor ?(callback=ignore) ?page project =
   let home_box = GPack.hbox ~spacing:3 () in
   let home_entry = GEdit.entry ~width:300 ~editable:false ~packing:home_box#add () in
   let home_choose = GButton.button ~label:"  ...  " ~packing:home_box#pack () in
+  let chooser = GWindow.file_chooser_dialog ~action:`SELECT_FOLDER () in
   let _ =
-    home_entry#set_text project.Project.root;
     home_choose#connect#clicked ~callback:begin fun () ->
-      let chooser = GWindow.file_chooser_dialog ~action:`SELECT_FOLDER () in
       chooser#add_button_stock `OK `OK;
       chooser#add_button_stock `CANCEL `CANCEL;
-      ignore (chooser#set_current_folder (Filename.dirname project.Project.root));
       let choose () =
         Gaux.may chooser#filename ~f:begin fun dir ->
           home_entry#set_text (Filename.concat dir name_entry#text);
@@ -77,9 +71,9 @@ class window ~editor ?(callback=ignore) ?page project =
         | _ -> chooser#destroy()
     end;
   in
-  let src_entry = GEdit.entry ~text:(project.root // Project.src) ~editable:false () in
-  let bak_entry = GEdit.entry ~text:(project.root // Project.bak) ~editable:false () in
-  let doc_entry = GEdit.entry ~text:"" ~editable:false () in
+  let src_entry = GEdit.entry ~editable:false () in
+  let bak_entry = GEdit.entry ~editable:false () in
+  let doc_entry = GEdit.entry ~editable:false () in
   let _ = List.iter (fun x -> x#misc#set_sensitive false) [src_entry; bak_entry; doc_entry] in
   let _ = mk_entry entry_box "Project directory:" home_box in
   let _ = mk_entry entry_box "Project source path:" src_entry in
@@ -108,13 +102,6 @@ class window ~editor ?(callback=ignore) ?page project =
     ignore (check_autocomp_enabled#connect#after#toggled ~callback:begin fun () ->
       enable check_autocomp_enabled#active;
     end);
-    let set_params () =
-      check_autocomp_enabled#set_active project.Project.autocomp_enabled;
-      enable project.Project.autocomp_enabled;
-      range_autocomp_delay#adjustment#set_value (project.Project.autocomp_delay *. 1000.);
-      entry_autocomp_cflags#set_text project.Project.autocomp_cflags;
-    in
-    frame#misc#connect#map ~callback:set_params
   in
   (** Build Configurations Tab *)
   let bconf_box = GPack.vbox ~spacing:8 ~border_width:8 () in
@@ -186,17 +173,17 @@ class window ~editor ?(callback=ignore) ?page project =
   (** Buttons *)
   let bb = GPack.button_box `HORIZONTAL ~layout:`END ~spacing:8 ~border_width:8
     ~packing:(box#pack ~expand:false) () in
-  let ok_butt = GButton.button ~stock:`OK ~packing:bb#add () in
-  let apply_butt = GButton.button ~stock:`APPLY ~packing:bb#add () in
-  let cancel_butt = GButton.button ~use_mnemonic:false ~stock:`CLOSE ~packing:bb#add () in
-  let help_butt = GButton.button ~use_mnemonic:false ~stock:`HELP ~packing:bb#add () in
-  let _ = bb#set_child_secondary help_butt#coerce true in
-  let _ = help_butt#misc#set_sensitive false in
-  let _ = bconf_list#misc#connect#map ~callback:(fun () -> help_butt#misc#set_sensitive true) in
-  let _ = bconf_list#misc#connect#unmap ~callback:(fun () -> help_butt#misc#set_sensitive false) in
-  let _ = help_butt#connect#clicked ~callback:begin fun () ->
+  let button_ok = GButton.button ~stock:`OK ~packing:bb#add () in
+  let button_apply = GButton.button ~stock:`APPLY ~packing:bb#add () in
+  let button_close = GButton.button ~use_mnemonic:false ~stock:`CLOSE ~packing:bb#add () in
+  let button_help = GButton.button ~use_mnemonic:false ~stock:`HELP ~packing:bb#add () in
+  let _ = bb#set_child_secondary button_help#coerce true in
+  let _ = button_help#misc#set_sensitive false in
+  let _ = bconf_list#misc#connect#map ~callback:(fun () -> button_help#misc#set_sensitive true) in
+  let _ = bconf_list#misc#connect#unmap ~callback:(fun () -> button_help#misc#set_sensitive false) in
+  let _ = button_help#connect#clicked ~callback:begin fun () ->
     let cmd = sprintf "\"%s\" --help" Oe_config.oebuild_command in
-    let text = Miscellanea.expand cmd in
+    let text = Cmd.expand cmd in
     let window = GWindow.message_dialog ~title:cmd ~position:`CENTER ~message_type:`INFO
       ~buttons:GWindow.Buttons.ok () in
     let label = GMisc.label ~text ~packing:window#vbox#add () in
@@ -204,25 +191,52 @@ class window ~editor ?(callback=ignore) ?page project =
     match window#run () with _ -> window#destroy()
   end in
 object (self)
-  inherit GWindow.window window#as_window
+  inherit GObj.widget box#as_widget
+
+  val project_changed = new project_changed ()
+  val project_name_changed = new project_name_changed ()
+  val show = new show ()
+
+  method button_close = button_close
 
   method private bconfigs_ok =
     bconf_list#length > 0 && project.Project.build <> [] && begin
       List.for_all (fun bc -> bc.Bconf.files <> "") project.Project.build
     end && (not bconf_page#changed)
 
+  method reset () =
+    entry_encoding#set_active (match project.encoding with None -> (List.length encodings - 1)
+      | Some x -> (try Miscellanea.Xlist.pos x encodings with Not_found -> 0));
+    name_entry#set_text project.name;
+    desc_entry#set_text project.description;
+    author_entry#set_text project.author;
+    version_entry#set_text project.version;
+    home_entry#set_text project.Project.root;
+    ignore (chooser#set_current_folder (Filename.dirname project.Project.root));
+    src_entry#set_text (project.root // Project.src);
+    bak_entry#set_text (project.root // Project.bak);
+    doc_entry#set_text "";
+    GtkThread2.async ocaml_home#reset ();
+    check_autocomp_enabled#set_active project.Project.autocomp_enabled;
+    range_box#misc#set_sensitive (check_autocomp_enabled#active);
+    entry_autocomp_cflags#misc#set_sensitive (check_autocomp_enabled#active);
+    range_autocomp_delay#adjustment#set_value (project.Project.autocomp_delay *. 1000.);
+    entry_autocomp_cflags#set_text project.Project.autocomp_cflags;
+    GtkThread2.async bconf_list#reset ();
+    GtkThread2.async rconf_list#reset ();
+
   method save () =
-    Project.set_ocaml_home ~ocamllib:ocaml_home#ocamllib ~ocaml_home:ocaml_home#location project;
-    project.encoding <- (match entry_encoding#entry#text with "Default" -> None | enc -> Some enc);
-    project.name <- name_entry#text;
-    project.description <- desc_entry#text;
-    project.author <- author_entry#text;
-    project.version <- version_entry#text;
-    project.root <- home_entry#text;
-    project.autocomp_enabled <- check_autocomp_enabled#active;
-    project.autocomp_delay <- range_autocomp_delay#adjustment#value /. 1000.;
-    project.autocomp_cflags <- entry_autocomp_cflags#text;
     try
+      Project.set_ocaml_home ~ocamllib:ocaml_home#ocamllib project;
+      project.encoding         <- (match entry_encoding#entry#text with "Default" -> None | enc -> Some enc);
+      project.name             <- name_entry#text;
+      project.description      <- desc_entry#text;
+      project.author           <- author_entry#text;
+      project.version          <- version_entry#text;
+      project.root             <- home_entry#text;
+      project.autocomp_enabled <- check_autocomp_enabled#active;
+      project.autocomp_delay   <- range_autocomp_delay#adjustment#value /. 1000.;
+      project.autocomp_cflags  <- entry_autocomp_cflags#text;
       callback project;
       (* Save bconfigs and rconfigs *)
       project.Project.build <- (bconf_list#get_bconfigs ());
@@ -231,13 +245,15 @@ object (self)
         List.exists (fun bc -> bc.Bconf.id = rtc.Rconf.id_build) project.Project.build
       end rconfigs;
       Project.save ~editor project;
+      project_changed#call();
       (*  *)
       bconf_page#set_changed false;
       (*  *)
-      if project.Project.autocomp_enabled then
-        (editor#with_current_page (fun p -> p#compile_buffer ~commit:false ()))
-      else begin
+      if project.Project.autocomp_enabled then begin
+        editor#with_current_page (fun p -> p#compile_buffer ~commit:false ());
+      end else begin
         List.iter begin fun page ->
+          page#compile_buffer ~commit:false ();
           page#error_indication#remove_tag();
           page#global_gutter#misc#draw (Some (Gdk.Rectangle.create
             ~x:page#global_gutter#misc#allocation.Gtk.x
@@ -246,11 +262,18 @@ object (self)
             ~height:page#global_gutter#misc#allocation.Gtk.height
           )) end editor#pages;
       end
-    with Project.Project_already_exists path ->
-      Dialog.info ~message:("Directory \""^path^
-        "\" already exists.\nPlease choose another name for your project.") self
+    with
+      | Project.Project_already_exists path ->
+        Dialog.info ~message:("Directory \""^path^
+          "\" already exists.\nPlease choose another name for your project.") self
+      | ex -> Dialog.display_exn self ex
 
-  initializer
+  method goto_page = notebook#goto_page
+
+  method connect = new signals ~project_changed ~project_name_changed ~show
+
+  method private init () =
+    self#reset();
     if Sys.file_exists project.root then begin
       name_entry#set_editable false;
       home_choose#misc#set_sensitive false;
@@ -261,7 +284,7 @@ object (self)
     (* Entries *)
     name_entry#connect#changed ~callback:begin fun () ->
       home_entry#set_text (Filename.concat (Filename.dirname home_entry#text) name_entry#text);
-      window#set_title (replace_all ["\".*\"", "\""^name_entry#text^"\""] window#title)
+      project_name_changed#call name_entry#text;
     end;
     let set_paths () =
       src_entry#set_text (Filename.concat home_entry#text "src");
@@ -272,42 +295,52 @@ object (self)
     set_paths();
     name_entry#misc#grab_focus();
     (* Buttons *)
-    apply_butt#connect#clicked ~callback:self#save;
-    ok_butt#connect#clicked ~callback:(fun () -> self#save(); cancel_butt#clicked());
-    cancel_butt#connect#clicked ~callback:window#destroy;
+    button_apply#connect#clicked ~callback:self#save;
+    button_ok#connect#clicked ~callback:(fun () -> self#save(); button_close#clicked());
     (* *)
     notebook#goto_page 0;
 (*    notebook#connect#switch_page ~callback:begin fun num ->
       if num = 2 && bconf_page#changed then (GtkSignal.stop_emit(); notebook#goto_page 1)
     end;*)
     bconf_page#connect#changed ~callback:begin fun () ->
-      bconf_list#view#misc#hide();
-      bconf_list#view#misc#show();
+      GtkBase.Widget.queue_draw bconf_list#view#as_widget;
     end;
-    (* Window *)
-    window#event#connect#key_release ~callback:begin fun ev ->
-      ignore(if GdkEvent.Key.keyval ev = GdkKeysyms._Escape then cancel_butt#clicked());
-      true
-    end;
-    Gaux.may page ~f:notebook#goto_page;
-    window#show()
+    Gaux.may page_num ~f:notebook#goto_page;
+
+  initializer self#init()
 end
 
-let create ~editor ?callback ?project ?page () =
-  let project = match project with
-    | Some p -> p
-    | None ->
-      let rec mkname n =
-        if n = 100 then (failwith "Project_properties (mkname)");
-        let name = sprintf "Untitled_%d" n in
-        if not (Sys.file_exists (Oe_config.user_home // name)) then name else (mkname (n + 1))
-      in
-      let name = mkname 0 in
-      let filename = List.fold_left Filename.concat Oe_config.user_home
-        [name; name^Project.extension] in
-      Project.create ~filename ()
-  in
-  new window ~editor ?callback ?page project
+and project_changed () = object (self) inherit [unit] GUtil.signal () as super end
+and project_name_changed () = object (self) inherit [string] GUtil.signal () as super end
+and show () = object (self) inherit [unit] GUtil.signal () as super end
+
+and signals ~project_changed ~project_name_changed ~show =
+object (self)
+  inherit GUtil.ml_signals [
+    project_changed#disconnect;
+    project_name_changed#disconnect;
+    show#disconnect]
+  method project_changed = project_changed#connect ~after
+  method project_name_changed = project_name_changed#connect ~after
+  method show = show#connect ~after
+end
+
+(** create *)
+let create ~editor ?callback ?new_project ?page_num ?show () =
+  let project = match new_project with None -> editor#project | Some p -> p in
+  let window = GWindow.window ~modal:false ~title:("Project \""^project.name^"\"")
+    ~icon:Icons.oe ~border_width:5 ~position:`CENTER () in
+  let widget = new widget ~editor ~packing:window#add ~project ?callback ?page_num ?show () in
+  ignore (widget#button_close#connect#clicked ~callback:window#misc#hide);
+  ignore (widget#connect#project_name_changed ~callback:begin fun name ->
+    window#set_title (replace_all ["\".*\"", "\"" ^ name ^ "\""] window#title)
+  end);
+  ignore (window#event#connect#key_press ~callback:begin fun ev ->
+    if GdkEvent.Key.keyval ev = GdkKeysyms._Escape
+    then (widget#button_close#clicked(); true) else false
+  end);
+  if show = Some true then (window#show());
+  window, widget
 
 
 

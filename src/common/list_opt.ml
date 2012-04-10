@@ -1,7 +1,7 @@
 (*
 
   OCamlEditor
-  Copyright (C) 2010, 2011 Francesco Tovagliari
+  Copyright (C) 2010-2012 Francesco Tovagliari
 
   This file is part of OCamlEditor.
 
@@ -21,8 +21,21 @@
 *)
 
 
-type page_id = Current | Num of int | File of File.file | View of Text.view
+let rec assoc x = function
+    [] -> None
+  | (a,b)::l -> if compare a x = 0 then Some b else assoc x l
 
-exception No_current_view
-exception No_current_buffer
+let rec for_all2 p l1 l2 =
+  match (l1, l2) with
+    ([], []) -> true
+  | (a1::l1, a2::l2) -> p a1 a2 && for_all2 p l1 l2
+  | (_, _) -> false;;
 
+let rec find p = function
+  | [] -> None
+  | x :: l -> if p x then Some x else find p l
+
+let rec may_find p ll f default =
+  match ll with
+  | [] -> default
+  | x :: l -> if p x then f x else may_find p l f default

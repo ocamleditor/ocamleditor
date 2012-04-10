@@ -1,7 +1,7 @@
 (*
 
   OCamlEditor
-  Copyright (C) 2010, 2011 Francesco Tovagliari
+  Copyright (C) 2010-2012 Francesco Tovagliari
 
   This file is part of OCamlEditor.
 
@@ -20,15 +20,21 @@
 
 *)
 
+
 open Printf
 open Oebuild_util
-open Miscellanea
 
 module Table = Oebuild_table
 
 type compilation_type = Bytecode | Native | Unspecified
+type output_kind = Executable | Library | Plugin | Pack
 type build_exit = Built_successfully | Build_failed of int
 type process_err_func = (stderr:in_channel -> unit)
+
+let string_of_compilation_type = function
+  | Bytecode -> "Bytecode"
+  | Native -> "Native"
+  | Unspecified -> "Unspecified"
 
 let ocamlc = Ocaml_config.ocamlc()
 let ocamlopt = Ocaml_config.ocamlopt()
@@ -56,11 +62,11 @@ let compile ?(times : Table.t option) ~opt ~compiler ~cflags ~includes ~filename
   end else 0
 
 (** link *)
-let link ~compiler ~a ~lflags ~includes ~libs ~outname ~deps
+let link ~compiler ~outkind ~lflags ~includes ~libs ~outname ~deps
     ?(process_err : process_err_func option) () =
   let opt = compiler = ocamlopt in
   let libs =
-    if opt && a then "" else
+    if opt && outkind = Library then "" else
       let ext = if opt then "cmxa" else "cma" in
       let libs = List.map begin fun x ->
         if Filename.check_suffix x ".o" then begin
@@ -76,55 +82,63 @@ let link ~compiler ~a ~lflags ~includes ~libs ~outname ~deps
   let deps = String.concat " " deps in
   kprintf (exec (*command*) ?process_err) "%s %s %s -o %s %s %s %s"
     compiler
-    (if a then "-a" else "")
+    (match outkind with Library -> "-a" | Plugin -> "-shared" | Pack -> "-pack" | Executable -> "")
     lflags
     outname
     includes
     libs
     deps
+;;
 
 (** get_output_name *)
-let get_output_name ~compilation ~is_library ~outname ~targets =
+let get_output_name ~compilation ~outkind ~outname ~targets =
   let o_ext =
-    if is_library then begin
-      if compilation = Native then ".cmxa" else ".cma"
-    end else begin
-      if compilation = Native then ".opt" ^ (win32 ".exe" "") else (win32 ".exe" "")
-    end
+    match outkind with
+      | Library when compilation = Native -> ".cmxa"
+      | Library -> ".cma"
+      | Executable when compilation = Native -> ".opt" ^ (win32 ".exe" "")
+      | Executable -> win32 ".exe" ""
+      | Plugin -> ".cmxs"
+      | Pack -> ".cmx"
   in
   let name =
     if outname = "" then begin
-      try
-        let last = List.hd (List.rev targets) in
-        Filename.chop_extension last
-      with Failure "hd" -> assert false
+      match (List.rev targets) with
+        | last :: _ -> Filename.chop_extension last
+        | _ -> assert false
     end else outname
   in
   name ^ o_ext
+;;
 
 (** install_output *)
-let install_output ~compilation ~is_library ~outname ~deps ~path =
-  if is_library then begin
-    let path =
-      let path = ocamllib // path in
+let install_output ~compilation ~outkind ~outname ~deps ~path ~ccomp_type =
+  let dest_outname = Filename.basename outname in
+  match outkind with
+    | Library ->
+      let path =
+        let path = ocamllib // path in
+        mkdir_p path;
+        path
+      in
+      cp outname (path // dest_outname);
+      let deps_mod = List.map Filename.chop_extension deps in
+      let deps_mod = remove_dupl deps_mod in
+      let cmis = List.map (fun d -> sprintf "%s.cmi" d) deps_mod in
+      let mlis = List.map (fun cmi -> sprintf "%s.mli" (Filename.chop_extension cmi)) cmis in
+      let mlis = List.filter Sys.file_exists mlis in
+      List.iter (fun x -> ignore (cp x (path // (Filename.basename x)))) cmis;
+      List.iter (fun x -> ignore (cp x (path // (Filename.basename x)))) mlis;
+      if compilation = Native then begin
+        let ext = match ccomp_type with Some "msvc" -> ".lib" | Some _ ->  ".a" | None -> assert false in
+        let basename = sprintf "%s%s" (Filename.chop_extension outname) ext in
+        cp basename (path // (Filename.basename basename));
+      end;
+    | Executable ->
       mkdir_p path;
-      path
-    in
-    cp outname (path // outname);
-    let cmis = List.map (fun d -> sprintf "%s.cmi" (Filename.chop_extension d)) deps in
-    let mlis = List.map (fun cmi -> sprintf "%s.mli" (Filename.chop_extension cmi)) cmis in
-    let mlis = List.filter Sys.file_exists mlis in
-    List.iter (fun x -> ignore (cp x (path // x))) cmis;
-    List.iter (fun x -> ignore (cp x (path // x))) mlis;
-    if compilation = Native then begin
-      let ext = win32 "lib" "a" in
-      let basename = sprintf "%s.%s" (Filename.chop_extension outname) ext in
-      cp basename (path // basename);
-    end;
-  end else begin
-    mkdir_p path;
-    cp outname (path // outname);
-  end
+      cp outname (path // dest_outname)
+    | Plugin | Pack -> eprintf "\"install_output\" not implemented for Plugin or Pack."
+;;
 
 (** run_output *)
 let run_output ~outname ~args =
@@ -142,6 +156,7 @@ let run_output ~outname ~args =
     let args = Array.of_list args in
     Unix.execv cmd args
   end
+;;
 
 (** sort_dependencies *)
 let sort_dependencies ~deps subset =
@@ -150,6 +165,7 @@ let sort_dependencies ~deps subset =
     if List.mem x subset then (result := x :: !result)
   end deps;
   List.rev !result
+;;
 
 (** filter_inconsistent_assumptions_error *)
 let filter_inconsistent_assumptions_error ~compiler_output ~recompile ~targets ~deps ~(cache : Table.t) ~opt =
@@ -171,7 +187,7 @@ let filter_inconsistent_assumptions_error ~compiler_output ~recompile ~targets ~
           let modname = Str.matched_group 2 last_error in
           let dependants = Dep.find_dependants ~targets ~modname in
           let dependants = sort_dependencies ~deps dependants in
-          let original_error = Buffer.contents compiler_output in
+          let _ (*original_error*) = Buffer.contents compiler_output in
           eprintf "Warning (oebuild): the following files make inconsistent assumptions over interface/implementation %s: %s\n%!"
             modname (String.concat ", " dependants);
           List.iter begin fun filename ->
@@ -190,16 +206,18 @@ let filter_inconsistent_assumptions_error ~compiler_output ~recompile ~targets ~
         with Not_found -> ()
       end
     with Not_found -> ()) : process_err_func)
+;;
 
 (** Building *)
-let build ~compilation ~includes ~libs ~other_mods ~is_library ~compile_only
+let build ~compilation ~includes ~libs ~other_mods ~outkind ~compile_only
     ~thread ~vmthread ~annot ~pp ~cflags ~lflags ~outname ~deps ~ms_paths
     ~targets ?(prof=false) () =
+  let split_space = Str.split (Str.regexp " +") in
   (* includes *)
   let includes = ref includes in
   includes := Ocaml_config.expand_includes !includes;
   (* libs *)
-  let libs = Miscellanea.split " +" libs in
+  let libs = split_space libs in
   (* flags *)
   let cflags = ref cflags in
   let lflags = ref lflags in
@@ -210,8 +228,8 @@ let build ~compilation ~includes ~libs ~other_mods ~is_library ~compile_only
   if pp <> "" then (cflags := !cflags ^ " -pp " ^ pp);
   (* compiling *)
   let compiler = if prof then "ocamlcp -p a" else if compilation = Native then ocamlopt else ocamlc in
-  (*printf "%s%!" (Miscellanea.expand (compiler ^ " -v"));*)
-  let mods = Miscellanea.split " +" other_mods in
+  (*printf "%s%!" (Cmd.expand (compiler ^ " -v"));*)
+  let mods = split_space other_mods in
   let mods = if compilation = Native then List.map (sprintf "%s.cmx") mods else List.map (sprintf "%s.cmo") mods in
   if compilation = Native && !ms_paths then begin
     lflags := !lflags ^
@@ -269,7 +287,7 @@ let build ~compilation ~includes ~libs ~other_mods ~is_library ~compile_only
         let rec try_link () =
           let recompile = ref [] in
           let link_exit =
-            link ~compiler ~a:is_library ~lflags:!lflags
+            link ~compiler ~outkind ~lflags:!lflags
               ~includes:!includes ~libs ~deps:obj_deps ~outname
               ~process_err:(filter_inconsistent_assumptions_error ~compiler_output ~recompile ~targets ~deps ~cache:times ~opt) ()
           in
@@ -290,13 +308,15 @@ let build ~compilation ~includes ~libs ~other_mods ~is_library ~compile_only
   in
   Table.write times;
   if build_exit = 0 then Built_successfully else (Build_failed build_exit)
+;;
 
 (** clean *)
-let clean ?(all=false) ~compilation ~is_library ~outname ~targets ~deps () =
-  let outname = get_output_name ~compilation ~is_library ~outname ~targets in
+let clean ?(all=false) ~compilation ~outkind ~outname ~targets ~deps () =
+  let outname = get_output_name ~compilation ~outkind ~outname ~targets in
   let files = List.map begin fun name ->
     let name = Filename.chop_extension name in
-    (if true || not is_library || all then [name ^ ".cmi"] else []) @
+    [name ^ ".cmi"] @
+    (if true || outkind <> Library || all then [name ^ ".cmi"] else []) @
     [ (name ^ ".cmo");
       (name ^ ".cmx");
       (name ^ ".obj");
@@ -305,9 +325,10 @@ let clean ?(all=false) ~compilation ~is_library ~outname ~targets ~deps () =
     ]
   end deps in
   let files = List.flatten files in
-  let files = if not is_library || all then outname :: files else files in
+  let files = if outkind = Executable || all then outname :: files else files in
   let files = remove_dupl files in
   List.iter (fun file -> remove_file ~verbose:true file) files
+;;
 
 (** clean_all *)
 let suffixes sufs name = List.exists (fun suf -> name ^^ suf) sufs
@@ -330,22 +351,4 @@ let clean_all () =
   in
   clean_dir cwd;
   exit 0
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+;;

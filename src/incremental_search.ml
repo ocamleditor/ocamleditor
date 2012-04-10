@@ -1,7 +1,7 @@
 (*
 
   OCamlEditor
-  Copyright (C) 2010, 2011 Francesco Tovagliari
+  Copyright (C) 2010-2012 Francesco Tovagliari
 
   This file is part of OCamlEditor.
 
@@ -124,7 +124,7 @@ class incremental () =
               | STOP_AFTER bound when i1#offset >= bound ->
                 false
               | _ ->
-                Gtk_util.idle_add (fun () -> ignore (view#scroll_to_iter ~use_align:true ~xalign:1.0 ~yalign:0.5 i1));
+                Gmisclib.Idle.add (fun () -> ignore (view#scroll_to_iter ~use_align:true ~xalign:1.0 ~yalign:0.5 i1));
                 if status#backward then buffer#select_range i2 i1
                 else buffer#select_range i1 i2;
                 true
@@ -145,7 +145,7 @@ class incremental () =
           else Str.search_forward pat text pos in
         let start = buffer#get_iter_at_char pos in
         let stop = buffer#get_iter_at_char (Str.match_end()) in
-        Gtk_util.idle_add (fun () -> ignore (view#scroll_to_iter ~use_align:true ~xalign:1.0 ~yalign:0.5 start));
+        Gmisclib.Idle.add (fun () -> ignore (view#scroll_to_iter ~use_align:true ~xalign:1.0 ~yalign:0.5 start));
         if status#backward then buffer#select_range stop start
         else buffer#select_range start stop;
         true
@@ -165,21 +165,26 @@ class incremental () =
         status#set_text_find "";
         status#set_project project;
         self#set_view (Some view);
-        let w =
+        let dialog =
           match Sys.os_type with
 (*            | "Win32" -> GWindow.window ~allow_grow:false
                 ~kind:`POPUP ~type_hint:`MENU ~modal:true ~border_width:5 ()*)
             | _ -> GWindow.window ~allow_grow:true
-                ~decorated:false ~modal:true ~border_width:1 ()
+                ?type_hint:(match Sys.os_type with
+                  | "Win32" -> Some `UTILITY (* to skip taskbar on Windows *)
+                  | _ -> None)
+                ~decorated:false ~modal:false ~border_width:1 ()
         in
+        dialog#set_skip_taskbar_hint true;
+        dialog#set_skip_pager_hint true;
         let move () =
           (* Coordinate del puntatore relative al desktop *)
           let pX, pY = Gdk.Window.get_pointer_location (Gdk.Window.root_parent ()) in
           (* Coordinate del puntatore relative alla vista *)
           let win = (match view#get_window `WIDGET
-            with None -> failwith "Incremental_search.i_search `WIDGET = None" | Some w -> w) in
+            with None -> failwith "Incremental_search.i_search: view#get_window `WIDGET = None" | Some w -> w) in
           let px, py = Gdk.Window.get_pointer_location win in
-          w#move ~x:(pX - px + view#misc#allocation.Gtk.width - w#misc#allocation.Gtk.width - 5) ~y:(pY - py + 5);
+          dialog#move ~x:(pX - px + view#misc#allocation.Gtk.width - dialog#misc#allocation.Gtk.width - 5) ~y:(pY - py + 5);
         in
         let search ?(inc=false) (dir : [`BACKWARD | `FORWARD]) =
           begin
@@ -190,10 +195,12 @@ class incremental () =
           status#set_incremental inc;
           self#find ~control:STOP ~view ()
         in
-        let ebox = GBin.event_box ~border_width:0 ~packing:w#add () in
+        let ebox = GBin.event_box ~border_width:0 ~packing:dialog#add () in
         let box = GPack.hbox ~spacing:0 ~border_width:5 ~packing:ebox#add () in
-        w#misc#modify_bg [`NORMAL, `NAME "black"];
-(*        let _ = ebox#misc#modify_bg [`NORMAL, `NAME !Preferences.preferences.Preferences.pref_bg_color_popup] in*)
+        let color = `NAME  Preferences.preferences#get.Preferences.pref_bg_color_popup in
+        let border_color = Color.set_value 0.90 color in
+        dialog#misc#modify_bg [`NORMAL, border_color];
+        let _ = ebox#misc#modify_bg [`NORMAL, color] in
         let lab = GMisc.label ~markup:"<b><big>Search for: </big></b>"
           ~xalign:0.0 ~xpad:0 ~packing:(box#pack ~expand:true ~fill:true) () in
         let e = GEdit.entry ~packing:(box#pack ~expand:false ~fill:false) () in
@@ -212,20 +219,20 @@ class incremental () =
               end;
             end
         end;
-        w#event#connect#focus_out ~callback:begin fun ev ->
-          w#destroy();
+        dialog#event#connect#focus_out ~callback:begin fun ev ->
+          dialog#destroy();
           true
         end;
-        w#event#connect#key_press ~callback:
+        dialog#event#connect#key_press ~callback:
           begin fun ev ->
             let state = GdkEvent.Key.state ev and key = GdkEvent.Key.keyval ev in
             if state = [`CONTROL] && key = GdkKeysyms._e then (search `FORWARD; true)
-            else if key = _Left || key = _Right || key = _Escape then (w#destroy(); true)
+            else if key = _Left || key = _Right || key = _Escape then (dialog#destroy(); true)
             else if key = _Up then (move(); search `BACKWARD; true)
             else if key = _Down then (move(); search `FORWARD; true)
             else false;
           end;
-        w#connect#destroy ~callback:
+        dialog#connect#destroy ~callback:
           begin fun () ->
             status#set_incremental !inc;
             status#set_backward !old_back;
@@ -234,7 +241,7 @@ class incremental () =
             status#set_use_regexp !old_regexp;
           end;
         move();
-        w#show();
+        dialog#show();
         move();
         e#misc#grab_focus()
 
@@ -245,7 +252,7 @@ class incremental () =
           Dialog.info view ~message:(s ^ " \"" ^ text ^ "\" not found.");
           false
         | SEARCH_TO_BOTTOM ->
-          Gtk_util.idle_add (fun () -> ignore (view#scroll_to_iter (view#buffer#get_iter (if status#backward then `START else `END))));
+          Gmisclib.Idle.add (fun () -> ignore (view#scroll_to_iter (view#buffer#get_iter (if status#backward then `START else `END))));
           let message = GWindow.message_dialog
             ~message:(if status#backward then "Top reached searching \""^text^"\" backward.\nSearch from the end?"
               else "Bottom reached searching \""^text^"\" forward.\nSearch from the beginning?")

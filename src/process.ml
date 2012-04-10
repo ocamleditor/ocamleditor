@@ -1,7 +1,7 @@
 (*
 
   OCamlEditor
-  Copyright (C) 2010, 2011 Francesco Tovagliari
+  Copyright (C) 2010-2012 Francesco Tovagliari
 
   This file is part of OCamlEditor.
 
@@ -25,20 +25,17 @@ open Printf
 exception Not_started
 
 type t = {
-  prog : string;
-  args : string array;
-  env : string array;
+  prog             : string;
+  args             : string array;
+  env              : string array;
   mutable cmd_line : string;
-  mutable at_exit : (unit -> unit);
-  mutable pid : int option;
+  mutable at_exit  : (unit -> unit);
+  mutable pid      : int option;
   mutable channels : (in_channel * out_channel * in_channel) option;
-  mutex : Mutex.t;
-  cond : Condition.t;
-  mutable started : bool;
+  mutex            : Mutex.t;
+  cond             : Condition.t;
+  mutable started  : bool;
 }
-
-let re = Str.regexp " +"
-let (//) = Filename.concat
 
 (** channels *)
 let channels p =
@@ -81,7 +78,7 @@ let rec waitpid_non_intr pid =
 
 (** close *)
 let close proc =
-  try 
+  try
     let (inchan, outchan, errchan) as chans = channels proc in
     match Sys.os_type with
     | "Win32" -> ignore (Unix.close_process_full chans)
@@ -157,7 +154,7 @@ let start p =
   end
 
 (** getpid *)
-let getpid p = 
+let getpid p =
   ignore (channels p);
   match p.pid with Some pid -> pid | _ -> failwith "Process.getpid"
 
@@ -168,17 +165,17 @@ let cmd_line proc = proc.cmd_line
 let create ?(at_exit=ignore) ?(env=Unix.environment()) ~prog ?(args=[||]) () =
   let arg_string = String.concat " " (Array.to_list args) in
   let cmd_line = prog ^ " " ^ arg_string in
-  { 
-    env = env;
-    prog = prog;
-    args = args;
+  {
+    env      = env;
+    prog     = prog;
+    args     = args;
     cmd_line = cmd_line;
-    pid = None;
+    pid      = None;
     channels = None;
-    mutex = Mutex.create();
-    cond = Condition.create();
-    at_exit = at_exit;
-    started = false;
+    mutex    = Mutex.create();
+    cond     = Condition.create();
+    at_exit  = at_exit;
+    started  = false;
   }
 
 

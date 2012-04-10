@@ -7,7 +7,7 @@
 OCamlEditor is a source code editor and build tool for OCaml.
 
 
-COPYRIGHT:
+COPYRIGHT
 
   This program is distributed under the GNU GENERAL PUBLIC LICENSE Version 3.
   See the enclosed file COPYING for more details.
@@ -21,8 +21,7 @@ COPYRIGHT:
   Automatique and Kyoto University.
 
 
-
-DEPENDENCIES:
+DEPENDENCIES
 
   * Objective Caml 3.11.2 with the compiler libraries available from the
     OCaml source distribution;
@@ -30,23 +29,25 @@ DEPENDENCIES:
   * Xml-light.
 
 
-HOW TO COMPILE:
+HOW TO COMPILE
 
   Compile the OCaml source tree, then change to the OCamlEditor toplevel
-  directory and edit the value of "includes" and "ccopt" at the beginning
-  of "build.ml", following the comments in this file. Then, do:
+  directory and edit the "Configuration Section" at the beginning of
+  "build.ml", following the comments in that file. Then, do:
 
     ln -s /path/to/ocaml/compiled/sources src/ocaml-src
     ocaml build.ml
 
-  The name of the command is "ocamleditor", you can find it in the "src"
+  The name of the command is "ocamleditor.opt" (or "ocamleditor" if the
+  native compilation is not supported), you can find it in the "src"
   directory.
 
 
 HOW TO COMPILE without having to build the entire OCaml source tree
 (for example under Windows if you're using the MSVC version of OCaml):
 
-  Edit the value of "includes" and "ccopt" at the beginning of "build.ml".
+  Edit the "Configuration Section" at the beginning of "build.ml", following
+  the comments in that file. Then, do:
 
     mkdir src\ocaml-src
 
@@ -57,11 +58,12 @@ HOW TO COMPILE without having to build the entire OCaml source tree
 
     ocaml build.ml -with-compiler-libs
 
-  Under Windows the name of the command is "ocamleditor.bat", you can find
-  it in the "src" directory.
+  Under Windows the name of the command is "ocamleditor.opt.exe" (or
+  "ocamleditor.bat" if the native compilation is not supperted), you can
+  find it in the "src" directory.
 
 
-INSTALLATION:
+INSTALLATION
 
   For Linux, become superuser and run:
 
@@ -77,7 +79,7 @@ INSTALLATION:
   http://nsis.sourceforge.net
 
 
-DEVELOPMENT:
+DEVELOPMENT
 
   The main page for development is hosted on the OCaml Forge, see the
   project's page:
@@ -94,17 +96,17 @@ DEVELOPMENT:
     git clone git://github.com/ftovagliari/ocamleditor.git
 
 
-NOTES:
+NOTES
 
   * The most common application settings are accessible from the
-    Preferences	window however other options may be specified in file
-    "oe_config.ml".
-  * OCamlEditor creates a folder named ".ocamleditor" in your HOME
+    Preferences window, however other options may be changed by editing
+    "oe_config.ml" before compiling.
+  * The program creates a folder named ".ocamleditor" in your HOME
     directory with informations like preferences, recently opened
     projects, etc.
 
 
-AUTHOR:
+AUTHOR
 
   You can report bugs or give feedbacks by e-mail to
   Francesco Tovagliari <ftovagliari@gmail.com>

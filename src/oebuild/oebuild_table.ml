@@ -1,7 +1,7 @@
 (*
 
   OCamlEditor
-  Copyright (C) 2010, 2011 Francesco Tovagliari
+  Copyright (C) 2010-2012 Francesco Tovagliari
 
   This file is part of OCamlEditor.
 
@@ -23,7 +23,9 @@
 
 open Printf
 
-type t = (string, float) Hashtbl.t (* <filename.[opt|byt], last-compiled> *)
+(* <filename.[opt|byt], last-compiled> *)
+type t = (string, float) Hashtbl.t
+
 let oebuild_times_filename = ".oebuild"
 
 let (^^) filename opt = filename ^ (if opt then ".opt" else ".byt")
@@ -71,3 +73,4 @@ let update =
     if ctime > 0.0 && ((Unix.stat filename).Unix.st_mtime) >= ctime then begin
       remove cache filename opt;
     end
+;;

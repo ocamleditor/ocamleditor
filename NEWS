@@ -1,3 +1,28 @@
+2012-04-09  Release 1.7.0
+-------------------------
+
+  * Module Browser: navigation around compiled modules; navigation hystory;
+    hyperlinks; symbol search; documentation viewer.
+  * Structure Pane.
+  * Editor context menu.
+  * Automatic build script generation (partial, dependencies between targets
+    and external build tasks are not implemented).
+  * Find File: improved responsiveness; added ability to find files in all
+    projects and ability to switch between open files.
+  * Improved code folding.
+  * Improved completion.
+  * Find/Replace: in search results pane, lines contained in comments or
+    strings are colorized properly.
+  * Find/Replace in Path: new search path option "Only open files".
+  * Buttons "Replace in File" and "Skip File" in the Replace dialog box.
+  * Code templates: added new templates; ability to create custom templates.
+  * Ability to build archives with the "-shared" and "-pack" complier options.
+  * Ability to jump to a specific character offset in the buffer.
+  * Tab key advance to the column that lines up with the start of the next
+    word in the previous line.
+  * OCamlEditor can be compiled in native code.
+  * Various other improvements and changes.
+
 2011-02-28  Release 1.6.1
 -------------------------
 
@@ -8,8 +33,7 @@
   * Fixed bug in undo/redo.
   * Fixed bug in dependencies detection.
   * Fixed absolute paths in project file.
-  * Fixed wrong path separator under Windows when running executable in
-    subfolder.
+  * Fixed wrong path separator under Windows when running executable.
   * Fixed bugs with word-wrap.
   * Various other fixes.
 

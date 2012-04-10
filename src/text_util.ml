@@ -1,7 +1,7 @@
 (*
 
   OCamlEditor
-  Copyright (C) 2010, 2011 Francesco Tovagliari
+  Copyright (C) 2010-2012 Francesco Tovagliari
 
   This file is part of OCamlEditor.
 
@@ -20,39 +20,21 @@
 
 *)
 
-type level = Warning of int | Error
 
-type message = {
-  er_filename : string;
-  er_level : level;
-  er_line : int;
-  er_characters : int * int;
-  er_location : string;
-  er_message : string;
-  er_inconsistent_assumptions : string option;
-}
+let string_width s =
+  let width = ref 0 in
+  for i = 0 to String.length s - 1 do
+    if s.[i] = '\t' then width := (!width / 8 + 1) * 8
+    else incr width
+  done;
+  !width
 
-type t = {
-  er_warnings : message list;
-  er_errors : message list;
-}
-
-let re_inconsistent_assumptions = Str.regexp
-  ".*make[ \t\r\n]+inconsistent[ \t\r\n]+assumptions[ \t\r\n]+over[ \t\r\n]+\\(interface\\|implementation\\)[ \t\r\n]+\\([^ \t\r\n]+\\)[ \t\r\n]*"
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+let blanks                 = [13;10;32;9]
+let not_blank c            = not (List.mem c blanks)
+let whitespace_middot      = "." (*"\xC2\xB7"*)
+let whitespace_tab         = "\xC2\xBB"
+let whitespace_crlf        = "\xC2\xA4\xC2\xB6"
+let whitespace_lf          = "\xC2\xB6"
+let create_middot_string   = Miscellanea.Memo.fast ~f:(fun x ->
+  String.concat "" (Miscellanea.Xlist.list_full whitespace_middot x))
 

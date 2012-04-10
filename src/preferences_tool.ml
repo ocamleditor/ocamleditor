@@ -1,7 +1,7 @@
 (*
 
   OCamlEditor
-  Copyright (C) 2010, 2011 Francesco Tovagliari
+  Copyright (C) 2010-2012 Francesco Tovagliari
 
   This file is part of OCamlEditor.
 
@@ -63,9 +63,10 @@ let color_name color =
 let (//) = Filename.concat
 
 (** create_align *)
-let create_align ?title ?(indent=13) ~(vbox : GPack.box) () = 
+let create_align ?title ?(indent=13) ~(vbox : GPack.box) () =
   let box = GPack.vbox ~spacing:8 ~packing:vbox#pack () in
-  let indent = match title with None -> 0
+  let indent = match title with
+    | None -> 0
     | Some title ->
       let label = GMisc.label ~markup:(sprintf "<b>%s</b>" title) ~xalign:0.0 ~packing:box#add () in
       indent
@@ -93,9 +94,9 @@ end
 
 
 (** preferences *)
-and preferences ~(editor : Editor.editor) () = 
-  let window = GWindow.window ~allow_shrink:false ~allow_grow:false ~resizable:true ~width:660 
-    ~type_hint:`DIALOG ~modal:true ~title:"Preferences" ~position:`CENTER ~icon:Icons.oe ~show:false () in 
+and preferences ~(editor : Editor.editor) () =
+  let window = GWindow.window ~allow_shrink:false ~allow_grow:false ~resizable:true ~width:700
+    ~type_hint:`DIALOG ~modal:true ~title:"Preferences" ~position:`CENTER ~icon:Icons.oe ~show:false () in
   let vbox = GPack.vbox ~border_width:8 ~spacing:8 ~packing:window#add () in
   let hbox = GPack.hbox ~spacing:8 ~packing:vbox#add () in
   let cols = new GTree.column_list in
@@ -123,11 +124,10 @@ object (self)
     List.iter (fun (_, p) -> p#misc#hide()) pages;
     page#misc#show();
   method write () =
-    List.iter (fun (_, page) -> page#write !Preferences.preferences) pages;
-    editor#set_tab_pos !Preferences.preferences.Preferences.pref_tab_pos;
-    editor#code_folding_enabled#set !Preferences.preferences.Preferences.pref_code_folding_enabled;
-    editor#show_global_gutter#set !Preferences.preferences.Preferences.pref_show_global_gutter;
-    ignore (editor#redisplay_views());
+    List.iter (fun (_, page) -> page#write Preferences.preferences#get) pages;
+    editor#set_tab_pos Preferences.preferences#get.Preferences.pref_tab_pos;
+    editor#code_folding_enabled#set Preferences.preferences#get.Preferences.pref_code_folding_enabled;
+    editor#show_global_gutter#set Preferences.preferences#get.Preferences.pref_show_global_gutter;
   method ok () =
     self#write();
     Preferences.save();
@@ -139,7 +139,7 @@ object (self)
     let page = page title ~packing:hbox#add () in
     model#set ~row ~column title;
     page#misc#hide();
-    page#read !Preferences.preferences;
+    page#read Preferences.preferences#get;
     pages <- (title, page) :: pages
   initializer
     (* Tree *)
@@ -147,20 +147,21 @@ object (self)
     let row = model#append () in self#create "Fonts" row (new pref_fonts);
     let row as parent = model#append () in self#create "Editor" row (new pref_editor);
     let row = model#append ~parent () in self#create "Actions" row (new pref_editor_actions);
+    let row = model#append ~parent () in self#create "Code Templates" row (new pref_templ);
     let row = model#append ~parent () in self#create "Color" row (new pref_color);
     view#expand_all();
     view#selection#set_mode `SINGLE;
-    view#selection#connect#changed ~callback:begin fun () ->
-      try
-        let path = List.hd view#selection#get_selected_rows in
-        let title = model#get ~row:(model#get_iter path) ~column in
-        self#show_page title
-      with Failure "hd" -> ()
-    end;
-    (* Buttons *) 
-    cancel_button#connect#clicked ~callback:window#destroy;
-    ok_button#connect#clicked ~callback:self#ok;
-    reset_button#connect#clicked ~callback:self#reset_defaults;
+    ignore (view#selection#connect#changed ~callback:begin fun () ->
+      match view#selection#get_selected_rows with
+        | path :: _ ->
+          let title = model#get ~row:(model#get_iter path) ~column in
+          self#show_page title
+        | _ -> ()
+    end);
+    (* Buttons *)
+    ignore (cancel_button#connect#clicked ~callback:window#destroy);
+    ignore (ok_button#connect#clicked ~callback:self#ok);
+    ignore (reset_button#connect#clicked ~callback:self#reset_defaults);
     (*  *)
     window#present();
     view#selection#select_path (GTree.Path.create [0])
@@ -189,14 +190,14 @@ and pref_view title ?packing () =
   let top = ref 0 in
   let width = 65 in
   let none_action_label = GMisc.label ~text:"" ~packing:(table#attach ~top:0 ~left:0) () in
-  let label_menubar = GMisc.label ~width ~text:"Show\nMenubar" ~justify:`CENTER ~xalign:0.5 ~packing:(table#attach ~top:!top ~left:1) () in
+  (*let label_menubar = GMisc.label ~width ~text:"Show\nMenubar" ~justify:`CENTER ~xalign:0.5 ~packing:(table#attach ~top:!top ~left:1) () in*)
   let label_toolbar = GMisc.label ~width ~text:"Show\nToolbar" ~justify:`CENTER ~xalign:0.5 ~packing:(table#attach ~top:!top ~left:2) () in
   let label_tabbar = GMisc.label ~width ~text:"Show\nTabs" ~justify:`CENTER ~xalign:0.5 ~packing:(table#attach ~top:!top ~left:3) () in
   let label_messages = GMisc.label ~width ~text:"Keep\nMessages" ~justify:`CENTER ~xalign:0.5 ~packing:(table#attach ~top:!top ~left:4) () in
   let label_fullscreen = GMisc.label ~width ~text:"Full-Screen" ~justify:`CENTER ~xalign:0.5 ~packing:(table#attach ~top:!top ~left:6) () in
   let _ = incr top in
   let fst_action_label = GMisc.label ~text:"Workspace 1:" ~xalign:0.0 ~packing:(table#attach ~top:!top ~left:0) () in
-  let check_menubar_1 = GButton.check_button ~packing:(table#attach ~fill:`NONE ~top:!top ~left:1) () in
+  (*let check_menubar_1 = GButton.check_button ~packing:(table#attach ~fill:`NONE ~top:!top ~left:1) () in*)
   let check_toolbar_1 = GButton.check_button ~packing:(table#attach ~fill:`NONE ~top:!top ~left:2) () in
   let check_tabbar_1 = GButton.check_button ~packing:(table#attach ~fill:`NONE ~top:!top ~left:3) () in
   let check_messages_1 = GButton.check_button ~packing:(table#attach ~fill:`NONE ~top:!top ~left:4) () in
@@ -204,7 +205,7 @@ and pref_view title ?packing () =
   let _ = incr top in
 (*  let snd_action_check = GButton.check_button ~label:"Second level:" ~packing:(table#attach ~top:!top ~left:0) () in*)
   let snd_action_label = GMisc.label ~text:"Workspace 2:" ~xalign:0.0 ~packing:(table#attach ~top:!top ~left:0) () in
-  let check_menubar_2 = GButton.check_button ~packing:(table#attach ~fill:`NONE ~top:!top ~left:1) () in
+  (*let check_menubar_2 = GButton.check_button ~packing:(table#attach ~fill:`NONE ~top:!top ~left:1) () in*)
   let check_toolbar_2 = GButton.check_button ~packing:(table#attach ~fill:`NONE ~top:!top ~left:2) () in
   let check_tabbar_2 = GButton.check_button ~packing:(table#attach ~fill:`NONE ~top:!top ~left:3) () in
   let check_messages_2 = GButton.check_button ~packing:(table#attach ~fill:`NONE ~top:!top ~left:4) () in
@@ -225,19 +226,19 @@ and pref_view title ?packing () =
 object (self)
   inherit page title vbox
 
-  method write pref = 
+  method write pref =
     pref.Preferences.pref_tab_pos <- (match combo_orient#active
       with 0 -> `TOP | 1 | 5 -> `RIGHT | 2 -> `BOTTOM | 3 | 4 -> `LEFT | _ -> assert false);
     pref.Preferences.pref_tab_vertical_text <- (match combo_orient#active
       with 0 | 1 | 2 | 3 -> false | 4 | 5 -> true | _ -> assert false);
     pref.Preferences.pref_tab_label_type <- combo_labtype#active;
     pref.Preferences.pref_check_updates <- check_software_update#active;
-    pref.Preferences.pref_max_view_1_menubar <- check_menubar_1#active;
+    (*pref.Preferences.pref_max_view_1_menubar <- check_menubar_1#active;*)
     pref.Preferences.pref_max_view_1_toolbar <- check_toolbar_1#active;
     pref.Preferences.pref_max_view_1_tabbar <- check_tabbar_1#active;
     pref.Preferences.pref_max_view_1_messages <- check_messages_1#active;
     pref.Preferences.pref_max_view_1_fullscreen <- check_fullscreen_1#active;
-    pref.Preferences.pref_max_view_2_menubar <- check_menubar_2#active;
+    (*pref.Preferences.pref_max_view_2_menubar <- check_menubar_2#active;*)
     pref.Preferences.pref_max_view_2_toolbar <- check_toolbar_2#active;
     pref.Preferences.pref_max_view_2_tabbar <- check_tabbar_2#active;
     pref.Preferences.pref_max_view_2_messages <- check_messages_2#active;
@@ -251,12 +252,12 @@ object (self)
       | `LEFT, true -> 4 | `RIGHT, true -> 5);
     combo_labtype#set_active pref.Preferences.pref_tab_label_type;
     check_software_update#set_active pref.Preferences.pref_check_updates;
-    check_menubar_1#set_active pref.Preferences.pref_max_view_1_menubar;
+    (*check_menubar_1#set_active pref.Preferences.pref_max_view_1_menubar;*)
     check_toolbar_1#set_active pref.Preferences.pref_max_view_1_toolbar;
     check_tabbar_1#set_active pref.Preferences.pref_max_view_1_tabbar;
     check_messages_1#set_active pref.Preferences.pref_max_view_1_messages;
     check_fullscreen_1#set_active pref.Preferences.pref_max_view_1_fullscreen;
-    check_menubar_2#set_active pref.Preferences.pref_max_view_2_menubar;
+    (*check_menubar_2#set_active pref.Preferences.pref_max_view_2_menubar;*)
     check_toolbar_2#set_active pref.Preferences.pref_max_view_2_toolbar;
     check_tabbar_2#set_active pref.Preferences.pref_max_view_2_tabbar;
     check_messages_2#set_active pref.Preferences.pref_max_view_2_messages;
@@ -309,7 +310,7 @@ object (self)
 (*  initializer
     combo_annot_type_tooltips_delay#misc#set_sensitive check_annot_type_enabled#active;*)
 
-  method write pref = 
+  method write pref =
     pref.Preferences.pref_editor_bak <- check_bak#active;
     pref.Preferences.pref_editor_trim_lines <- check_trim#active;
     pref.Preferences.pref_smart_keys_home <- combo_home#active;
@@ -319,7 +320,7 @@ object (self)
     (*pref.Preferences.pref_annot_type_tooltips_impl <- combo_annot_type_tooltips_impl#active;*)*)
     pref.Preferences.pref_search_word_at_cursor <- check_search_word_at_cursor#active;
 
-  method read pref = 
+  method read pref =
     check_bak#set_active pref.Preferences.pref_editor_bak;
     check_trim#set_active pref.Preferences.pref_editor_trim_lines;
     combo_home#set_active pref.Preferences.pref_smart_keys_home;
@@ -331,33 +332,37 @@ object (self)
 end
 
 (** pref_fonts *)
-and pref_fonts title ?packing () = 
+and pref_fonts title ?packing () =
   let vbox = GPack.vbox ~spacing ?packing () in
   let notebook = GPack.notebook ~packing:vbox#add () in
   let border_width = 5 in
-  let preview_text = "abcdefghijk ABCDEFGHIJK òàùèéì" in
+  let preview_text = "abcdefghijk ABCDEFGHIJK òàùèéì →" in
   let font_editor = GMisc.font_selection ~preview_text ~border_width () in
   let box_compl = GPack.vbox ~border_width ~spacing:8 () in
   let font_compl = GMisc.font_selection ~preview_text ~packing:box_compl#add () in
   let button_greek = GButton.check_button ~label:"Use greek letters in types" ~packing:box_compl#pack () in
   let font_other = GMisc.font_selection ~preview_text ~border_width () in
+  let font_odoc = GMisc.font_selection ~preview_text ~border_width () in
   let _ = notebook#append_page ~tab_label:(GMisc.label ~text:"Editor" ())#coerce font_editor#coerce in
   let _ = notebook#append_page ~tab_label:(GMisc.label ~text:"Completion" ())#coerce box_compl#coerce in
-  let _ = notebook#append_page ~tab_label:(GMisc.label ~text:"Other" ())#coerce font_other#coerce in
+  let _ = notebook#append_page ~tab_label:(GMisc.label ~text:"Output" ())#coerce font_other#coerce in
+  let _ = notebook#append_page ~tab_label:(GMisc.label ~text:"Documentation" ())#coerce font_odoc#coerce in
 
 object (self)
   inherit page title vbox
 
-  method write pref = 
+  method write pref =
     pref.Preferences.pref_base_font <- font_editor#font_name;
     pref.Preferences.pref_compl_font <- font_compl#font_name;
     pref.Preferences.pref_output_font <- font_other#font_name;
+    pref.Preferences.pref_odoc_font <- font_odoc#font_name;
     pref.Preferences.pref_compl_greek <- button_greek#active;
 
   method read pref =
     font_editor#set_font_name pref.Preferences.pref_base_font;
     font_compl#set_font_name pref.Preferences.pref_compl_font;
     font_other#set_font_name pref.Preferences.pref_output_font;
+    font_odoc#set_font_name pref.Preferences.pref_odoc_font;
     button_greek#set_active pref.Preferences.pref_compl_greek;
 end
 
@@ -402,7 +407,7 @@ object (self)
       entry_right_margin#misc#set_sensitive check_right_margin#active;
     end);
 
-  method write pref = 
+  method write pref =
     pref.Preferences.pref_editor_tab_width <- entry_tab_width#value_as_int;
     pref.Preferences.pref_editor_tab_spaces <- check_tab_spaces#active;
     pref.Preferences.pref_editor_wrap <- check_wrap#active;
@@ -417,7 +422,7 @@ object (self)
     pref.Preferences.pref_err_tooltip <- check_error_tooltip#active;
     pref.Preferences.pref_err_gutter <- check_error_gutter#active;
 
-  method read pref = 
+  method read pref =
     entry_tab_width#set_value (float pref.Preferences.pref_editor_tab_width);
     check_tab_spaces#set_active pref.Preferences.pref_editor_tab_spaces;
     check_wrap#set_active pref.Preferences.pref_editor_wrap;
@@ -435,7 +440,7 @@ object (self)
 end
 
 (** pref_color *)
-and pref_color title ?packing () = 
+and pref_color title ?packing () =
   let vbox = GPack.vbox ~spacing ?packing () in
   let notebook = GPack.notebook ~packing:vbox#add () in
   let border_width = 5 in
@@ -491,8 +496,8 @@ and pref_color title ?packing () =
   let buffer = new Ocaml_text.buffer ~lexical_enabled:true () in
   let _ = buffer#set_text ocaml_preview in
   let preview = new Ocaml_text.view ~buffer () in
-  let _ = Gtk_util.idle_add (fun () -> preview#buffer#place_cursor ~where:(preview#buffer#start_iter#forward_lines 5)) in
-  let _ = Preferences_apply.apply (preview :> Text.view) !Preferences.preferences in
+  let _ = Gmisclib.Idle.add (fun () -> preview#buffer#place_cursor ~where:(preview#buffer#start_iter#forward_lines 5)) in
+  let _ = Preferences_apply.apply (preview :> Text.view) Preferences.preferences#get in
   let _ = preview#set_editable false in
   let _ = osw#add preview#coerce in
   let _ = color_ocaml#add osw#coerce in
@@ -529,7 +534,7 @@ object (self)
         let path = List.hd tag_view#selection#get_selected_rows in
         let tname = tag_model#get ~row:(tag_model#get_iter path) ~column:tag_col in
         current_tag <- tname;
-        match List.assoc tname tags with color, weight, style, underline ->
+        match List.assoc tname tags with color, weight, style, underline, _ ->
           fg_button#set_color (GDraw.color color);
           weight_check#set_active (weight <> `NORMAL);
           style_check#set_active (style <> `NORMAL);
@@ -564,23 +569,22 @@ object (self)
     let style = if sc#active then `ITALIC else `NORMAL in
     let underline = if uc#active then `SINGLE else `NONE in
     if current_tag <> "" then begin
-      tags <- (current_tag, (`NAME (color_name color), weight, style, underline)) :: (List.remove_assoc current_tag tags);
+      tags <- (current_tag, (`NAME (color_name color), weight, style, underline, `MEDIUM)) :: (List.remove_assoc current_tag tags);
     end;
-    let temp_pref = {!Preferences.preferences with
+    let temp_pref = {Preferences.preferences#get with
       Preferences.pref_bg_color = (color_name bg_button#color, false (*check_bg_theme#active*));
       Preferences.pref_tags = tags;
       Preferences.pref_ocamldoc_paragraph_bgcolor_1 = Some (color_name opb_button#color);
       Preferences.pref_ocamldoc_paragraph_bgcolor_2 = Some (color_name opb2_button#color);
     } in
     let tag_names, colors = List.split tags in
-    Lexical.init_tags ~tags:tag_names ~colors
+    preview#tbuffer#init_tags ~tags:tag_names ~colors
       ~ocamldoc_paragraph_bgcolor_1:temp_pref.Preferences.pref_ocamldoc_paragraph_bgcolor_1
-      ~ocamldoc_paragraph_bgcolor_2:temp_pref.Preferences.pref_ocamldoc_paragraph_bgcolor_2
-      (preview#buffer :> GText.buffer);
+      ~ocamldoc_paragraph_bgcolor_2:temp_pref.Preferences.pref_ocamldoc_paragraph_bgcolor_2 ();
     Lexical.tag (preview#buffer :> GText.buffer);
     Preferences_apply.apply (preview :> Text.view) temp_pref;
 
-  method write pref = 
+  method write pref =
     pref.Preferences.pref_bg_color_popup <- color_name bg_button_popup#color;
     pref.Preferences.pref_fg_color_popup <- color_name fg_button_popup#color;
     pref.Preferences.pref_bg_color <- (color_name bg_button#color, false (*check_bg_theme#active*));
@@ -596,7 +600,7 @@ object (self)
     pref.Preferences.pref_ocamldoc_paragraph_bgcolor_1 <- Some (color_name opb_button#color);
     pref.Preferences.pref_ocamldoc_paragraph_bgcolor_2 <- Some (color_name opb2_button#color);
 
-  method read pref = 
+  method read pref =
     bg_button_popup#set_color (GDraw.color (`NAME pref.Preferences.pref_bg_color_popup));
     fg_button_popup#set_color (GDraw.color (`NAME pref.Preferences.pref_fg_color_popup));
     tags <- List.sort Pervasives.compare pref.Preferences.pref_tags;
@@ -604,7 +608,7 @@ object (self)
 (*    check_bg_theme#set_active (snd pref.Preferences.pref_bg_color);*)
     tag_model#clear();
     List.iter begin fun tag ->
-      try 
+      try
         let row = tag_model#append () in
         let label = List.assoc (fst tag) Preferences.tag_labels in
         tag_model#set ~row ~column:tag_col (fst tag);
@@ -622,6 +626,49 @@ object (self)
     Gaux.may pref.Preferences.pref_ocamldoc_paragraph_bgcolor_1 ~f:(fun color -> opb_button#set_color (GDraw.color (`NAME color)));
     Gaux.may pref.Preferences.pref_ocamldoc_paragraph_bgcolor_2 ~f:(fun color -> opb2_button#set_color (GDraw.color (`NAME color)));
     self#set_tag (fg_button, weight_check, style_check, underline_check);
+end
+
+and pref_templ title ?packing () =
+  let vbox = GPack.vbox ~spacing ?packing () in
+  let align = create_align ~title:"Custom Templates" ~vbox () in
+  let box = GPack.vbox ~spacing:1 ~packing:align#add () in
+  let label_text = "Select an OCaml library containing custom templates" in
+  let _ = GMisc.label ~xalign:0.0
+    ~markup:(label_text ^ ":")
+    ~packing:box#pack ()
+  in
+  let hbox = GPack.hbox ~spacing:3 ~packing:box#pack () in
+  let entry = GEdit.entry ~editable:false ~packing:hbox#add () in
+  let button = GButton.button ~label:" ... " ~packing:hbox#pack () in
+  let _ =
+    ignore (button#connect#clicked ~callback:begin fun () ->
+      let chooser = GWindow.file_chooser_dialog ~action:`OPEN ~title:(label_text ^ " (.cma)")
+        ~icon:Icons.oe ~position:`CENTER ~modal:true () in
+      chooser#set_filter (GFile.filter ~patterns:["*.cma"] ());
+      ignore (chooser#set_filename entry#text);
+      chooser#add_button_stock `OK `OK;
+      chooser#add_button_stock `CANCEL `CANCEL;
+      match chooser#run () with
+        | `OK ->
+          Gaux.may chooser#filename ~f:(fun name -> entry#set_text name);
+          chooser#destroy()
+        | _ -> chooser#destroy()
+    end)
+  in
+  let label = GMisc.label ~markup:"<b>How to create custom templates</b>" () in
+  let expander = GBin.expander ~packing:vbox#add () in
+  let _ = expander#set_label_widget label#coerce in
+  let sw = GBin.scrolled_window ~hpolicy:`AUTOMATIC ~vpolicy:`AUTOMATIC ~packing:expander#add () in
+  let markup = Template.help in
+  let label = GMisc.label ~xalign:0.0 ~yalign:0.0 ~xpad:3 ~ypad:3 ~markup ~line_wrap:false ~selectable:true ~packing:sw#add_with_viewport () in
+object (self)
+  inherit page title vbox
+  method write pref =
+    pref.Preferences.pref_editor_custom_templ_filename <- entry#text;
+    Templ.load_custom `user;
+
+  method read pref =
+    ignore (entry#set_text pref.Preferences.pref_editor_custom_templ_filename);
 end
 
 let create ~editor () =

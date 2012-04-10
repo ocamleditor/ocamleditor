@@ -8,7 +8,7 @@ open Printf
 
 let multi_space = regexp "\\( \\( +\\)\\)\\|(\\*\\*\\(\\*+\\)\\|(\\*\\* \\|(\\* \\|(\\*\\|\\*)"
 
-let tags, colors = List.split !Preferences.preferences.Preferences.pref_tags
+let tags, colors = List.split Preferences.preferences#get.Preferences.pref_tags
 
 let tags = ref tags
 let colors = ref colors
@@ -16,12 +16,12 @@ let colors = ref colors
 (* Initialization *)
 let init_tags ?(tags=(!tags)) ?(colors=(!colors))
     ?(ocamldoc_paragraph_enabled=Oe_config.ocamldoc_paragraph_bgcolor_enabled)
-    ?(ocamldoc_paragraph_bgcolor_1=(!Preferences.preferences.Preferences.pref_ocamldoc_paragraph_bgcolor_1))
-    ?(ocamldoc_paragraph_bgcolor_2=(!Preferences.preferences.Preferences.pref_ocamldoc_paragraph_bgcolor_2))
+    ?(ocamldoc_paragraph_bgcolor_1=(Preferences.preferences#get.Preferences.pref_ocamldoc_paragraph_bgcolor_1))
+    ?(ocamldoc_paragraph_bgcolor_2=(Preferences.preferences#get.Preferences.pref_ocamldoc_paragraph_bgcolor_2))
     (tb : #GText.buffer) =
   let table = new GText.tag_table tb#tag_table in
   List.iter2 tags colors ~f:
-    begin fun tagname (col, weight, style, undline) ->
+    begin fun tagname (col, weight, style, undline, scale) ->
       if tagname <> "highlight_current_line" then begin
         begin
           match table#lookup tagname with
@@ -29,11 +29,11 @@ let init_tags ?(tags=(!tags)) ?(colors=(!colors))
             | Some t -> table#remove t
         end;
         let tag = tb#create_tag ~name:tagname
-          [`FOREGROUND_GDK (GDraw.color col); `WEIGHT weight; `STYLE style; `UNDERLINE undline] in
+          [`FOREGROUND_GDK (GDraw.color col); `WEIGHT weight; `STYLE style; `UNDERLINE undline; `SCALE scale] in
         if tagname = "ocamldoc" then begin
           if ocamldoc_paragraph_enabled then begin
             Gaux.may ocamldoc_paragraph_bgcolor_2 ~f:begin fun bg2 ->
-              Gtk_util.set_tag_paragraph_background tag bg2;
+              Gmisclib.Util.set_tag_paragraph_background tag bg2;
             end;
           end;
           Gaux.may (table#lookup "ocamldoc-paragraph") ~f:table#remove;
@@ -41,7 +41,7 @@ let init_tags ?(tags=(!tags)) ?(colors=(!colors))
             [`FOREGROUND_GDK (GDraw.color col); `WEIGHT weight; `STYLE style; `UNDERLINE undline; `PIXELS_BELOW_LINES 1; `PIXELS_ABOVE_LINES 1] in
           if ocamldoc_paragraph_enabled then begin
             Gaux.may ocamldoc_paragraph_bgcolor_1 ~f:begin fun bg1 ->
-              Gtk_util.set_tag_paragraph_background tag bg1;
+              Gmisclib.Util.set_tag_paragraph_background tag bg1;
             end
           end
         end
@@ -83,22 +83,22 @@ let tpos ~(start : GText.iter) ~lines pos =
   in
   result
 
+let tag_lident = function
+  | _, METHOD, _, _ | _, PRIVATE, _, _ -> "method_name_def"
+  | _, IN, _, _ | _, INITIALIZER, _, _ | _, NEW, _, _ | _, OF, _, _ -> "lident"
+  | "define", _, _, _  -> "name_def"
+  | _ -> "lident"
+
 (* Tagging *)
 
-let tag =
-  let tag_lident = function
-    | _, METHOD, _, _ | _, PRIVATE, _, _ -> "method_name_def"
-    | _, IN, _, _ | _, INITIALIZER, _, _ | _, NEW, _, _ | _, OF, _, _ -> "lident"
-    | "define", _, _, _  -> "name_def"
-    | _ -> "lident"
-  in fun ?start ?stop (tb : GText.buffer) ->
+let tag ?start ?stop (tb : GText.buffer) =
   let start = Gaux.default tb#start_iter ~opt:start
   and stop = Gaux.default tb#end_iter ~opt:stop in
   (* Se start e stop sono all'interno di commenti allora prendo come start e stop
      l'inizio del primo commento e la fine del secondo. *)
   let text = tb#get_text () in
   let text = Glib.Convert.convert_with_fallback ~fallback:"?" ~from_codeset:"utf8" ~to_codeset:Oe_config.ocaml_codeset text in
-  let global_comments =(* Comments.Utf8 []*) Comments.scan text in
+  let global_comments = Comments.scan text in
   let start = match Comments.enclosing global_comments start#offset with
     | None -> start
     | Some (x, y) ->
@@ -114,13 +114,16 @@ let tag =
   let i_text = (Glib.Convert.convert_with_fallback ~fallback:"?" ~from_codeset:"utf8" ~to_codeset:Oe_config.ocaml_codeset u_text) in
   let buffer = Lexing.from_string i_text in
   let extra_bytes = ref 0 in
-  let comments = (*Comments.Utf8 []*) Comments.scan_utf8 u_text in
+  let comments = Comments.scan_utf8 u_text in
   let succ_comments = ref comments in
   let last = ref ("", EOF, 0, 0) in
   let last_but_one = ref ("", EOF, 0, 0) in
   let in_record = ref false in
   let in_record_label = ref false in
-  tb#remove_all_tags ~start ~stop;
+  List.iter begin function
+    | tagname when tagname <> "highlight_current_line" -> tb#remove_tag_by_name tagname ~start ~stop
+    | _ -> ()
+  end !tags;
   try
     while true do
       try
@@ -195,7 +198,7 @@ let tag =
           | CHAR _
           | STRING _
               -> "char"
-          | BACKQUOTE
+          (*| BACKQUOTE*)
           | INFIXOP0 _
           | INFIXOP1 _
           | INFIXOP2 _
@@ -209,10 +212,11 @@ let tag =
           | QUESTION
           | TILDE
               -> "label"
-          | UIDENT _ -> "uident"
+          | UIDENT _ | BACKQUOTE -> "uident"
           | LIDENT _ ->
               begin match !last with
                 | _, (QUESTION | TILDE), _, _ -> "label"
+                | _, BACKQUOTE, _, _ -> "number"
                 (* TODO:  *)
                 | _, LBRACE, _, _ when !in_record -> "record_label"
                 | _, MUTABLE, _, _ when !in_record -> "record_label"

@@ -1,7 +1,7 @@
 (*
 
   OCamlEditor
-  Copyright (C) 2010, 2011 Francesco Tovagliari
+  Copyright (C) 2010-2012 Francesco Tovagliari
 
   This file is part of OCamlEditor.
 
@@ -28,7 +28,7 @@ type t = {
   mutable pref_tags : (string * text_properties) list
 }
 
-and text_properties = GDraw.color * Pango.Tags.weight * Pango.Tags.style * Pango.Tags.underline
+and text_properties = GDraw.color * Pango.Tags.weight * Pango.Tags.style * Pango.Tags.underline * Pango.Tags.scale
 
 let pref_filename = Filename.concat Oe_config.ocamleditor_user_home "preferences"
 

@@ -1,7 +1,7 @@
 (*
 
   OCamlEditor
-  Copyright (C) 2010, 2011 Francesco Tovagliari
+  Copyright (C) 2010-2012 Francesco Tovagliari
 
   This file is part of OCamlEditor.
 
@@ -55,7 +55,7 @@ let analyse ?(utf8=true) ?pend ?(error=ignore) text f =
     end
 
 (** scan *)
-let scan ?(utf8=true) text f =
+let scan ?(utf8=true) ?(ignore_lexer_error=true) text f =
   let text = if utf8 then Glib.Convert.convert_with_fallback ~fallback:"?"
       ~from_codeset:"utf8" ~to_codeset:Oe_config.ocaml_codeset text
     else text in
@@ -69,7 +69,7 @@ let scan ?(utf8=true) text f =
         let stop = Lexing.lexeme_end lexbuf in
         f ~token ~start ~stop;
     done
-  with End_of_file | Lexer.Error _ -> ()
+  with End_of_file -> () | Lexer.Error _ when ignore_lexer_error -> ()
 
 (** Moduli aperti con "open" nel testo. *)
 let paths_opened text =
@@ -103,7 +103,7 @@ let strings text =
         None
       | _ -> None
   end;
-  List.rev !strings
+  (*List.rev*) !strings
 
 (** in_string *)
 let in_string ?(utf8=true) text =

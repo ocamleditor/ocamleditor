@@ -1,7 +1,7 @@
 (*
 
   OCamlEditor
-  Copyright (C) 2010, 2011 Francesco Tovagliari
+  Copyright (C) 2010-2012 Francesco Tovagliari
 
   This file is part of OCamlEditor.
 
@@ -155,7 +155,7 @@ let find_innermost_enclosing_delim ?(utf8=true) text pos =
             | BEGIN _ | LPAREN | LBRACKET | LBRACE | DO (*| TRY | LET*) ->
               stack := (start, stop) :: !stack
             | END _ | RPAREN | RBRACKET | RBRACE | DONE (*| WITH | IN*) ->
-              if List.length !stack > 0 then (stack := List.tl !stack)
+              (match !stack with _ :: tl -> stack := tl | _ -> ())
             | _ -> ()
         end
       end;
@@ -166,52 +166,97 @@ let find_innermost_enclosing_delim ?(utf8=true) text pos =
   !stack;; (* [start, stop] of the left part of the innermost enclosing delimiters *)
 
 (** scan_folding_points
-  * We play on the fact that the only construct that may not have the closing
+  * on the assumption that the only construct that may not have the closing
   * delimiter is the global "let" binding.
   *)
-let scan_folding_points text =
-  let delim = ref [] in
-  let stack = ref [] in
-  let pending_let = ref [] in
-  let rec pop recursive stop (*token*) =
-    match !stack with
-      | start :: tl when recursive && (List.hd !pending_let) ->
-        (* Skip unclosed toplevel "let" bindings *)
-        stack := tl;
-        pending_let := List.tl !pending_let;
-        pop recursive stop
-      | (start(*, tok*)) :: tl (*when tok = (List.hd !pending_let) (*token*) *) ->
-        delim := (start, stop) :: !delim;
-        stack := tl;
-        pending_let := List.tl !pending_let
-      | _ -> ()
-  in
-  begin
-    try
-      Lex.scan ~utf8:true text begin fun ~token ~start ~stop ->
+let rec scan_folding_points =
+  let re_end_comment = Str.regexp "\\*)" in
+  fun text ->
+    let delim = ref [] in
+    let start = ref 0 in
+    let stack = ref [] in
+    let pending_let = ref [] in
+    let rec pop recursive stop =
+      match !stack with
+        | start :: tl when recursive && (match !pending_let with x :: _ -> x | _ -> assert false) ->
+          (* Skip unclosed toplevel "let" bindings *)
+          stack := tl;
+          pending_let := List.tl !pending_let;
+          pop recursive stop
+        | (start) :: tl ->
+          delim := (start, stop) :: !delim;
+          stack := tl;
+          pending_let := List.tl !pending_let
+        | _ -> ()
+    in
+    begin
+      try
+        Lex.scan ~utf8:true ~ignore_lexer_error:false text begin fun ~token ~start ~stop ->
+          match token with
+            | BEGIN    -> pending_let := false :: !pending_let; stack := stop :: !stack;
+            | LET      -> pending_let := true  :: !pending_let; stack := stop :: !stack;
+            | DO       -> pending_let := false :: !pending_let; stack := stop :: !stack;
+            | LBRACE   -> pending_let := false :: !pending_let; stack := stop :: !stack;
+            | LBRACKET -> pending_let := false :: !pending_let; stack := stop :: !stack;
+            | OBJECT   -> pending_let := false :: !pending_let; stack := stop :: !stack;
+            | STRUCT   -> pending_let := false :: !pending_let; stack := stop :: !stack;
+            | SIG      -> pending_let := false :: !pending_let; stack := stop :: !stack;
+            | END      -> pop true start (*`BEGIN*)
+            | IN       -> pop false start (*`LET*)
+            | SEMISEMI -> pop false start (*`LET*)
+            | DONE     -> pop true start (*`DO*)
+            | RBRACE   -> pop true start (*`LBRACE*)
+            | RBRACKET -> pop true start (*`LBRACKET*)
+            | _ -> ()
+        end;
+      with
+        | Lexer.Error (Lexer.Unterminated_string, _) -> ()
+        | Lexer.Error (Lexer.Unterminated_comment, _) -> ()
+        | Lexer.Error (Lexer.Unterminated_string_in_comment, _) -> ()
+        | Lexer.Error _ as ex -> ()
+          (*Printf.eprintf "File \"delimiters.ml\": %s\n%s\n%!" (Printexc.to_string ex) (Printexc.get_backtrace());*)
+        | Sys_error("_none_: No such file or directory") -> begin
+          let pos = (Str.search_forward re_end_comment text 0) + 2 in
+          let d, p = scan_folding_points (Str.string_after text pos) in
+          delim := d;
+          start := pos;
+        end
+    end;
+    List.iter (fun a -> delim := (a, -1) :: !delim) !stack;
+    !delim, !start;;
+
+(** find_closing_folding_point *)
+let find_closing_folding_point text =
+  let result = ref None in
+  let stack = ref 0 in
+  try
+    Lex.scan ~utf8:true text begin fun ~token ~start ~stop ->
+      begin
         match token with
-          | BEGIN -> pending_let := false :: !pending_let; stack := (stop(*, `BEGIN*)) :: !stack;
-          | LET -> pending_let := true :: !pending_let; stack := (stop(*, `LET*)) :: !stack;
-          | DO -> pending_let := false :: !pending_let; stack := (stop(*, `DO*)) :: !stack;
-          | LBRACE -> pending_let := false :: !pending_let; stack := (stop(*, `LBRACE*)) :: !stack;
-          | LBRACKET -> pending_let := false :: !pending_let; stack := (stop(*, `LBRACKET*)) :: !stack;
-          | OBJECT -> pending_let := false :: !pending_let; stack := (stop(*, `OBJECT*)) :: !stack;
-          | STRUCT -> pending_let := false :: !pending_let; stack := (stop(*, `STRUCT*)) :: !stack;
-          | SIG -> pending_let := false :: !pending_let; stack := (stop(*, `SIG*)) :: !stack;
-          (*  *)
-          | END -> pop true start (*`BEGIN*)
-          | IN -> pop false start (*`LET*)
-          | SEMISEMI -> pop false start (*`LET*)
-          | DONE -> pop true start (*`DO*)
-          | RBRACE -> pop true start (*`LBRACE*)
-          | RBRACKET -> pop true start (*`LBRACKET*)
+          | BEGIN    -> incr stack;
+          | LET      -> incr stack;
+          | DO       -> incr stack;
+          | LBRACE   -> incr stack;
+          | LBRACKET -> incr stack;
+          | OBJECT   -> incr stack;
+          | STRUCT   -> incr stack;
+          | SIG      -> incr stack;
+          | END      -> decr stack;
+          | DONE     -> decr stack;
+          | RBRACE   -> decr stack;
+          | RBRACKET -> decr stack;
+          | IN       -> decr stack;
+          | SEMISEMI -> decr stack;
           | _ -> ()
       end;
-    with
-      | Lexer.Error _ as ex -> (printf "Delimiters.scan_folding_points: %s\n%!" (Printexc.to_string ex))
-      | Sys_error("_none_: No such file or directory") -> ()
-  end;
-  !delim (* No matter if the order is reversed. *);;
+      if !stack = 0 then begin
+        result := Some start;
+        raise Exit
+      end
+    end;
+    !result
+  with Exit -> !result
+;;
 
 (** scan *)
 let scan text =

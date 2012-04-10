@@ -1,7 +1,7 @@
 (*
 
   OCamlEditor
-  Copyright (C) 2010, 2011 Francesco Tovagliari
+  Copyright (C) 2010-2012 Francesco Tovagliari
 
   This file is part of OCamlEditor.
 
@@ -25,9 +25,7 @@ open GdkKeysyms
 open GUtil
 open Gobject
 open Find_text
-
-let (//) = Filename.concat
-let (^^) = Filename.check_suffix
+open Miscellanea
 
 let strip_cr =
   let re = Str.regexp "\r$" in
@@ -41,59 +39,69 @@ class widget
     ~(editor : Editor.editor)
     ?(buffer : GText.buffer option)
     ?packing () =
-  let search_started = new search_started () in
-  let search_finished = new search_finished () in
-  let editor_buffer = buffer in
-  let vbox = GPack.vbox ?packing () in
-  let paned = GPack.paned `HORIZONTAL ~packing:vbox#add () in
-  let toolbar = GButton.toolbar ~style:`ICONS ~orientation:`HORIZONTAL ~packing:vbox#pack () in
-  let _ = toolbar#set_icon_size `MENU in
-  let button_stop = GButton.tool_button ~stock:`STOP ~packing:toolbar#insert () in
-  let _ = GButton.separator_tool_item ~packing:toolbar#insert () in
-  let button_prev_file = GButton.tool_button ~stock:`MEDIA_REWIND ~packing:toolbar#insert () in
-  let button_prev_line = GButton.tool_button ~stock:`MEDIA_PREVIOUS ~packing:toolbar#insert () in
-  let button_next_line = GButton.tool_button ~stock:`MEDIA_NEXT ~packing:toolbar#insert () in
-  let button_next_file = GButton.tool_button ~stock:`MEDIA_FORWARD ~packing:toolbar#insert () in
-  let _ = GButton.separator_tool_item ~packing:toolbar#insert () in
-  let button_remove = GButton.tool_button ~stock:`REMOVE ~packing:toolbar#insert () in
-  let _ = GButton.separator_tool_item ~packing:toolbar#insert () in
-  let button_restart = GButton.tool_button ~stock:`REFRESH ~packing:toolbar#insert () in
+  let search_started    = new search_started () in
+  let search_finished   = new search_finished () in
+  let editor_buffer     = buffer in
+  let vbox              = GPack.vbox ?packing () in
+  let paned             = GPack.paned `HORIZONTAL ~packing:vbox#add () in
+  let toolbar           = GButton.toolbar ~style:`ICONS ~orientation:`HORIZONTAL ~packing:vbox#pack () in
+  let _                 = toolbar#set_icon_size `MENU in
+  let button_stop       = GButton.tool_button ~stock:`STOP ~packing:toolbar#insert () in
+  let _                 = GButton.separator_tool_item ~packing:toolbar#insert () in
+  let button_prev_file  = GButton.tool_button ~stock:`MEDIA_REWIND ~packing:toolbar#insert () in
+  let _                 = button_prev_file#misc#set_tooltip_text "Previous file" in
+  let button_prev_line  = GButton.tool_button ~stock:`MEDIA_PREVIOUS ~packing:toolbar#insert () in
+  let _                 = button_prev_line#misc#set_tooltip_text "Previous line" in
+  let button_next_line  = GButton.tool_button ~stock:`MEDIA_NEXT ~packing:toolbar#insert () in
+  let _                 = button_next_line#misc#set_tooltip_text "Next line" in
+  let button_next_file  = GButton.tool_button ~stock:`MEDIA_FORWARD ~packing:toolbar#insert () in
+  let _                 = button_next_file#misc#set_tooltip_text "Next file" in
+  let _                 = GButton.separator_tool_item ~packing:toolbar#insert () in
+  let button_remove     = GButton.tool_button ~stock:`REMOVE ~packing:toolbar#insert () in
+  let _                 = button_remove#misc#set_tooltip_text "Remove entry" in
+  let _                 = GButton.separator_tool_item ~packing:toolbar#insert () in
+  let button_restart    = GButton.tool_button ~stock:`REFRESH ~packing:toolbar#insert () in
+  let _                 = button_restart#misc#set_tooltip_text "Repeat current search" in
   let button_new_search = GButton.tool_button ~stock:`FIND ~packing:toolbar#insert () in
-  let _ = GButton.separator_tool_item ~packing:toolbar#insert () in
-  let item_message = GButton.tool_item ~packing:toolbar#insert () in
-  let label_message = GMisc.label ~packing:item_message#add () in
-  (*  *) 
-  let lsw = GBin.scrolled_window ~shadow_type:`IN ~hpolicy:`NEVER ~vpolicy:`AUTOMATIC
-    ~packing:(paned#pack1 ~resize:true ~shrink:true) () in
-  let rsw = GBin.scrolled_window ~shadow_type:`IN ~hpolicy:`AUTOMATIC ~vpolicy:`AUTOMATIC
+  let _                 = button_new_search#misc#set_tooltip_text "New search" in
+  let _                 = GButton.separator_tool_item ~packing:toolbar#insert () in
+  let item_message      = GButton.tool_item ~packing:toolbar#insert () in
+  let label_message     = GMisc.label ~packing:item_message#add () in
+  (*  *)
+  let lsw               = GBin.scrolled_window ~shadow_type:`IN ~hpolicy:`NEVER ~vpolicy:`AUTOMATIC
+    ~packing:(paned#pack1 ~resize:false ~shrink:true) () in
+  let rsw               = GBin.scrolled_window ~shadow_type:`IN ~hpolicy:`AUTOMATIC ~vpolicy:`AUTOMATIC
     ~packing:(paned#pack2 ~resize:true ~shrink:true) () in
-  let tbuf = new Ocaml_text.buffer () in
-  let preview = new Ocaml_text.view ~buffer:tbuf () in
-  let _ = Preferences_apply.apply (preview :> Text.view) !Preferences.preferences in
-  let _ = rsw#add preview#coerce in
-  let _ = paned#set_position 420 in
-  let _ = tbuf#create_tag ~name:"find_text_result_line" [] in
-  (*  *) 
-  let cols = new GTree.column_list in
-  let col_file  = cols#add Gobject.Data.string in
-  let col_hits  = cols#add Gobject.Data.int in
-  let col_path  = cols#add Gobject.Data.string in
-  let model = GTree.list_store cols in
-  let view = GTree.view ~model:model ~headers_clickable:true ~packing:lsw#add () in
-  let _ = view#misc#set_property "enable-grid-lines" (`INT 3) in
-  let renderer = GTree.cell_renderer_text [] in
-  let vc_file = GTree.view_column ~title:"File" ~renderer:(renderer, ["text", col_file]) () in
-  let vc_hits = GTree.view_column ~title:"Hits" ~renderer:(renderer, ["text", col_hits]) () in
-  let vc_path = GTree.view_column ~title:"Directory" ~renderer:(renderer, ["text", col_path]) () in
-  let _ = vc_file#set_resizable true in
-  let _ = vc_hits#set_resizable true in
-  let _ = vc_path#set_resizable true in
+  let tbuf              = new Ocaml_text.buffer () in
+  let preview           = new Ocaml_text.view ~buffer:tbuf () in
+  let _                 = Preferences_apply.apply (preview :> Text.view) Preferences.preferences#get in
+  let _                 = rsw#add preview#coerce in
+  let _                 = tbuf#create_tag ~name:"find_text_result_line" [] in
+  (*  *)
+  let cols              = new GTree.column_list in
+  let col_file          = cols#add Gobject.Data.string in
+  let col_hits          = cols#add Gobject.Data.int in
+  let col_path          = cols#add Gobject.Data.string in
+  let model             = GTree.list_store cols in
+  let view              = GTree.view ~model:model ~headers_clickable:true ~packing:lsw#add () in
+  let _                 = view#misc#set_property "enable-grid-lines" (`INT 3) in
+  let _                 = Gaux.may Oe_config.find_text_output_font_condensed ~f:view#misc#modify_font_by_name in
+  let renderer          = GTree.cell_renderer_text [(*`STRETCH `CONDENSED*)] in
+  let vc_file           = GTree.view_column ~title:"File" ~renderer:(renderer, ["text", col_file]) () in
+  let vc_hits           = GTree.view_column ~title:"Hits" ~renderer:(renderer, ["text", col_hits]) () in
+  let vc_path           = GTree.view_column ~title:"Directory" ~renderer:(renderer, ["text", col_path]) () in
+  let _                 = vc_file#set_resizable true in
+  let _                 = vc_hits#set_resizable true in
+  let _                 = vc_path#set_resizable true in
 object (self)
   inherit GObj.widget vbox#as_widget
+  inherit Messages.page
+
   val mutable options = None
   val project = editor#project
   (*  *)
   val mutable sigids = []
+  val mutable sigid_changed = None
   val mutable delete_marks = []
   val mutable selected_text_bounds = None
   val mutable canceled = false
@@ -104,23 +112,31 @@ object (self)
   val mutable current_line_selected = None
   val mutable n_rows = 0
 
+  method parent_changed messages = ()
+
   initializer
-    view#append_column vc_file;
-    view#append_column vc_hits;
-    view#append_column vc_path;
+(*    lsw#hadjustment#connect#changed ~callback:begin fun () ->
+      if paned#position > 1 then begin
+        paned_position := Some paned#position;
+      end
+    end;*)
+    ignore (view#append_column vc_file);
+    ignore (view#append_column vc_hits);
+    ignore (view#append_column vc_path);
     vc_file#set_sort_column_id 0;
     vc_hits#set_sort_column_id 1;
     vc_path#set_sort_column_id 2;
     preview#set_smart_click false;
     preview#set_highlight_current_line (Some (Color.name_of_gdk (Preferences.tag_color "highlight_current_line")));
     preview#set_show_line_numbers false;
-    preview#set_current_line_border_color (`NAME "#707070");
+    preview#set_show_markers false;
+    preview#set_current_line_border_color Oe_config.find_text_output_border_color;
     preview#set_editable false;
     preview#set_cursor_visible false;
     preview#set_pixels_above_lines 3;
     preview#set_pixels_below_lines 3;
     preview#set_border_window_size `LEFT 0;
-    preview#buffer#connect#after#mark_set ~callback:begin fun iter mark ->
+    ignore (preview#buffer#connect#after#mark_set ~callback:begin fun iter mark ->
       match GtkText.Mark.get_name mark with
         | Some "insert" ->
           if preview#buffer#has_selection then begin
@@ -128,15 +144,27 @@ object (self)
             preview#buffer#place_cursor (preview#buffer#get_iter `SEL_BOUND)
           end
         | _ -> ()
-    end;
-    let bgcolor = preview#misc#style#bg `SELECTED in
-    let fgcolor = preview#misc#style#fg `SELECTED in
-    let _ = tbuf#create_tag ~name:"find_text_result_hit"
-      [`BACKGROUND_GDK bgcolor; `FOREGROUND_GDK fgcolor] in
+    end);
+    let bgcolor =
+      match fst Oe_config.find_text_output_highlight with
+        | `DEFAULT -> [`BACKGROUND_GDK (preview#misc#style#bg `ACTIVE)]
+        | `NAME name -> [`BACKGROUND name]
+        | `NONE -> []
+    in
+    let fgcolor =
+      match snd Oe_config.find_text_output_highlight with
+        | `DEFAULT -> [`FOREGROUND_GDK (preview#misc#style#fg `ACTIVE)]
+        | `NAME name -> [`FOREGROUND name]
+        | `NONE -> []
+    in
+    let _ = tbuf#create_tag ~name:"find_text_result_hit" (bgcolor @ fgcolor) in
     let _ = tbuf#create_tag ~name:"find_text_result_linenum"
-      [`FOREGROUND "#000000"; `WEIGHT `NORMAL; `BACKGROUND_FULL_HEIGHT_SET true; `SCALE `SMALL] in
-    let _ = tbuf#create_tag ~name:"find_text_insensitive" 
+      [Oe_config.find_text_output_linenumber_fgcolor; `WEIGHT `NORMAL;
+      `BACKGROUND_FULL_HEIGHT_SET true; `SCALE `SMALL;] in
+    let _ = tbuf#create_tag ~name:"find_text_insensitive"
       [`FOREGROUND "#b0b0b0"; `STYLE `ITALIC] in
+    let tag_test = tbuf#create_tag ~name:"test" [`FOREGROUND "green"; `STYLE `ITALIC] in
+    Gmisclib.Util.set_tag_paragraph_background tag_test "yellow";
     let _ = Gaux.may (preview#get_window `TEXT) ~f:(fun w -> Gdk.Window.set_cursor w (Gdk.Cursor.create `ARROW)) in
     (*  *)
     ignore (button_remove#connect#clicked ~callback:self#remove_entry);
@@ -190,7 +218,8 @@ object (self)
       | _ -> GTree.Path.create [0]
     in
     view#selection#select_path path;
-    view#scroll_to_cell ~align:(0.4, 0.0) path vc_file;
+    if (GTree.Path.get_indices path).(0) < List.length results then
+      view#scroll_to_cell ~align:(0.4, 0.0) path vc_file;
 
   method prev_line () = self#move_line `PREV
   method next_line () = self#move_line `NEXT
@@ -248,11 +277,12 @@ object (self)
               match buffer with
                 | None ->
                   (* Search  *)
-                  self#find_in_path begin
-                    match self#options.path with
+                  self#find_in_path (*begin
+                    match *)self#options.path(* with
                       | Project_source -> Project.path_src project
                       | Specified path -> path
-                  end
+                      | Only_open_files -> assert false
+                  end*)
                 | Some buffer ->
                   (* Search  *)
                   self#find_in_buffer buffer;
@@ -264,7 +294,7 @@ object (self)
             if all <> (Some false) then (GtkThread2.sync self#display ());
             GtkThread2.sync search_finished#call ();
           end else begin
-            let view = match editor#get_page Editor_types.Current with Some p -> (p#view :> Text.view) | _ -> assert false in
+            let view = match editor#get_page `ACTIVE with Some p -> (p#view :> Text.view) | _ -> assert false in
             (* Search  *)
             GtkThread2.sync begin fun () ->
               Find_text_in_buffer.find self#options.direction ~view ~canceled:(fun () -> self#canceled)
@@ -290,7 +320,7 @@ object (self)
               (if n_res > 1 then sprintf " (%d %s)" count_dirs
                 (if count_dirs = 1 then "directory" else "directories") else "");
           | _ ->
-            let bufname = match editor#get_page Editor_types.Current with Some p -> p#get_filename | _ -> assert false in
+            let bufname = match editor#get_page `ACTIVE with Some p -> p#get_filename | _ -> assert false in
             kprintf label_message#set_text "%d hits in \xC2\xAB%s\xC2\xBB" hits (Filename.basename bufname)
       end ()
   end
@@ -307,7 +337,7 @@ object (self)
         ~canceled:(fun () -> self#canceled) () with
       | None -> ()
       | Some lines_involved ->
-        let filename = match editor#get_page Editor_types.Current with Some p -> p#get_filename | _ -> assert false in
+        let filename = match editor#get_page `ACTIVE with Some p -> p#get_filename | _ -> assert false in
         results <- {filename = filename; lines = lines_involved} :: results;
         hits <- List.fold_left (fun acc res -> acc + (List.fold_left (fun acc l ->
           acc + (List.length l.offsets)) 0 res.lines)) 0 results
@@ -317,6 +347,7 @@ object (self)
     if Sys.file_exists filename then begin
       let ichan = open_in filename in
       let linenum = ref 0 in
+      let bol = ref 0 in
       let lines_involved = ref [] in
       let finally () =
         close_in ichan;
@@ -328,7 +359,8 @@ object (self)
       begin
         try
           while true do
-            let line = strip_cr (input_line ichan) in
+            let real_line = input_line ichan in
+            let line = strip_cr real_line in
             incr linenum;
             let offsets = ref [] in
             let pos = ref 0 in
@@ -348,9 +380,10 @@ object (self)
               with Not_found -> ()
             end;
             if List.length !offsets > 0 then begin
-              lines_involved := {line = line; linenum = !linenum; offsets = (List.rev !offsets); marks = []} ::
+              lines_involved := {line = line; linenum = !linenum; bol = !bol; offsets = (List.rev !offsets); marks = []} ::
                 !lines_involved;
-            end
+            end;
+            bol := !bol + (String.length real_line + 1);
           done
         with
           | End_of_file -> ()
@@ -360,23 +393,42 @@ object (self)
     end
 
   (** find_in_path *)
-  method private find_in_path path =
-    let files = File.Util.ls ~dir:path ~pattern:(match self#options.pattern with None -> "*" | Some x -> x) in
-    let files = List.map (fun x -> path // x) files in
-    let _, files = List.partition (fun x -> if Sys.file_exists x then (Sys.is_directory x) else false) files in
-    let old_hits = hits in
-    List.iter self#find_in_file files;
-    if hits > old_hits then (count_dirs <- count_dirs + 1);
-    if self#options.recursive then
-      begin
-        let directories = File.Util.lsd ~dir:path ~pattern:"*" in
-        let directories = List.map (fun x -> path // x) directories in
-        List.iter self#find_in_path directories;
-      end
+  method private find_in_path = function
+    | Project_source ->
+      self#find_in_path'
+        ~recursive:self#options.recursive
+        ?pattern:(Gaux.may_map self#options.pattern ~f:File.Util.unix_regexp)
+        [Project.path_src project]
+    | Specified spec_path ->
+      self#find_in_path'
+        ~recursive:self#options.recursive
+        ?pattern:(Gaux.may_map self#options.pattern ~f:File.Util.unix_regexp)
+        [spec_path]
+    | Only_open_files ->
+      List.iter (fun (page : Editor_page.page) ->
+        self#find_in_file page#get_filename) editor#pages
+
+  method private find_in_path' ?recursive ?pattern paths =
+    List.iter begin fun path ->
+      let entries = Array.to_list (Sys.readdir path) in
+      let entries = List.map (fun x -> path // x) entries in
+      let dirs, files = List.partition (fun x ->  Sys.file_exists x && Sys.is_directory x) entries in
+      let files =
+        match pattern with
+          | Some pat -> List.filter (File.Util.exact_match ~pat) files
+          | _ -> files
+      in
+      let old_hits = hits in
+      List.iter self#find_in_file files;
+      if hits > old_hits then (count_dirs <- count_dirs + 1);
+      match recursive with
+        | Some true when dirs <> [] -> self#find_in_path' ?recursive ?pattern dirs;
+        | _ -> ()
+    end paths
 
   (** replace *)
-  method replace () = 
-    let dialog_confirm_replace = GWindow.dialog ~show:false ~title:"Confirm Replace" ~width:500
+  method replace () =
+    let dialog_confirm_replace = GWindow.dialog ~show:false ~title:"Confirm Replace"
       ~type_hint:`DIALOG ~urgency_hint:true ~border_width:8
       ~position:`CENTER ?parent:(GWindow.toplevel self) () in
     dialog_confirm_replace#vbox#set_border_width 8;
@@ -393,22 +445,22 @@ object (self)
     entry_filename#misc#set_can_focus false;
     entry_find#misc#set_can_focus false;
     entry_repl#entry#misc#grab_focus();
-    dialog_confirm_replace#add_button "Skip" `SKIP;
     dialog_confirm_replace#add_button "Skip File" `SKIP_FILE;
+    dialog_confirm_replace#add_button "Skip" `SKIP;
     dialog_confirm_replace#add_button "Replace" `REPLACE;
+    dialog_confirm_replace#add_button "Replace in File" `REPLACE_FILE;
     dialog_confirm_replace#add_button "Replace All" `REPLACE_ALL;
     dialog_confirm_replace#add_button "Done" `DONE;
     let replace_all = ref false in
+    let replace_file = ref "" in
     view#selection#unselect_all();
     let buffers = ref [] in
-(*    let old_autocomp_enabled = project.Project.autocomp_enabled in
-    project.Project.autocomp_enabled <- false;*)
     try
       List.iter begin function {filename = filename; lines = lines} as res ->
-        let pagefile = Editor_types.File (File.create filename ()) in
+        let pagefile = `FILENAME filename in
         let page = match editor#get_page pagefile with
           | None ->
-            editor#open_file ~active:false ~offset:0 filename;
+            ignore (editor#open_file ~active:false ~offset:0 filename);
             begin
               match editor#get_page pagefile with
                 | None -> assert false
@@ -416,22 +468,22 @@ object (self)
             end
           | Some page ->
             (*if not page#load_complete then (ignore (page#load()));*)
-            if not page#load_complete then (ignore (editor#load_page ~scroll:false page));
+            if not page#load_complete then (ignore ( editor#load_page ~scroll:false page));
             page
         in
         let old_error_indication_enabled = page#error_indication#enabled in
         page#error_indication#set_enabled false;
         page#buffer#undo#begin_block ~name:"replace";
-        buffers := page#buffer :: !buffers; 
+        buffers := page#buffer :: !buffers;
         self#place_marks res;
         let path =
-          try
-            let path = List.hd view#selection#get_selected_rows in
-            GTree.Path.next path;
-            path
-          with Failure "hd" -> (GTree.Path.create [0])
+          match view#selection#get_selected_rows with
+            | path :: _ ->
+              GTree.Path.next path;
+              path
+            | _ -> (GTree.Path.create [0])
         in
-        if not !replace_all then begin
+        if not !replace_all && !replace_file = "" then begin
           view#selection#select_path path;
           view#scroll_to_cell path vc_file;
         end;
@@ -455,7 +507,7 @@ object (self)
           page#buffer#insert templ;
           if page#buffer#lexical_enabled then begin
             let iter = page#buffer#get_iter `INSERT in
-            Lexical.tag page#view#buffer  
+            Lexical.tag page#view#buffer
               ~start:((iter#backward_chars (Glib.Utf8.length templ))#set_line_index 0)
               ~stop:iter#forward_line;
           end;
@@ -467,42 +519,43 @@ object (self)
               match marks with [] -> () | marks ->
                 List.iter begin fun (m1, m2) ->
                   editor#goto_view page#view;
-                  if not !replace_all then (self#select_line (preview#buffer#get_iter (`LINE !i)));
+                  if not !replace_all && !replace_file = "" then (self#select_line (preview#buffer#get_iter (`LINE !i)));
                   page#view#tbuffer#select_marks ~start:(`NAME m1) ~stop:(`NAME m2);
                   let text = page#view#tbuffer#selection_text () in
                   let _, _, templ = replacement_text m1 m2 in
                   entry_filename#set_text filename;
                   entry_find#set_text text;
                   entry_repl#entry#set_text templ;
-                  if not !replace_all then begin
+                  if not !replace_all && !replace_file = "" then begin
                     page#view#scroll_lazy (page#view#buffer#get_iter_at_mark (`NAME m1));
                     match dialog_confirm_replace#run () with
                       | `SKIP -> ();
                       | `SKIP_FILE -> raise Skip_file;
                       | `REPLACE -> replace m1 m2;
+                      | `REPLACE_FILE -> replace_file := filename; replace m1 m2;
                       | `REPLACE_ALL -> replace_all := true;
                       | _ -> raise Exit;
                   end;
-                  if !replace_all then (replace m1 m2);
+                  if !replace_all || !replace_file = filename then (replace m1 m2);
                 end marks
             end;
             incr i;
           end res.lines;
           page#error_indication#set_enabled old_error_indication_enabled;
+          replace_file := "";
         with Skip_file -> ()
       end results;
       List.iter (fun b -> b#undo#end_block()) !buffers;
-      (*project.Project.autocomp_enabled <- old_autocomp_enabled;*)
       raise Exit
     with Exit ->
       dialog_confirm_replace#destroy()
-      
+
 
   (** place_marks *)
   method private place_marks res =
     try
       let page =
-        match editor#get_page (Editor_types.File (File.create res.filename ())) with
+        match editor#get_page (`FILENAME res.filename) with
           | None -> raise Not_found
           | Some page ->
             (*if not page#load_complete then (ignore (page#load()));*)
@@ -556,17 +609,18 @@ object (self)
     preview#buffer#apply_tag_by_name "find_text_result_line"
       ~start:(iter#set_line_offset 0)
       ~stop:((iter#set_line_offset 0)#forward_to_line_end);
+    preview#draw_current_line_background ~force:true iter;
     preview#scroll_lazy (preview#buffer#get_iter_at_mark `INSERT);
 
   (** get_selected_result *)
   method private get_selected_result () =
     let path =
-      try List.hd view#selection#get_selected_rows
-      with Failure "hd" -> begin
-        let first = GTree.Path.create [0] in
-        view#selection#select_path first;
-        first
-      end
+      match view#selection#get_selected_rows with
+        | x :: _ -> x
+        | _ ->
+          let first = GTree.Path.create [0] in
+          view#selection#select_path first;
+          first
     in
     let row = model#get_iter path in
     let file = model#get ~row ~column:col_file in
@@ -575,21 +629,21 @@ object (self)
     List.find (fun {filename=fn} -> fn = filename) results
 
   (** set_insensitive *)
-  method private set_insensitive () = 
+  method private set_insensitive () =
     preview#buffer#remove_tag_by_name "find_text_result_line"
       ~start:preview#buffer#start_iter ~stop:preview#buffer#end_iter;
     preview#buffer#apply_tag_by_name "find_text_insensitive"
       ~start:preview#buffer#start_iter ~stop:preview#buffer#end_iter;
 
   (** activate *)
-  method private activate ?(grab_focus=false) iter = 
+  method private activate ?(grab_focus=false) iter =
     let res = self#get_selected_result () in
     try
       let lines_involved = res.lines in
       let filename = res.filename in
-      editor#open_file ~active:true ~offset:0 filename;
+      ignore (editor#open_file ~active:true ~offset:0 filename);
       let page =
-        match editor#get_page (Editor_types.File (File.create filename ()))
+        match editor#get_page (`FILENAME filename)
         with None -> raise Not_found | Some page -> page
       in
       self#place_marks res;
@@ -603,14 +657,14 @@ object (self)
           | _ -> ()
       end
     with
-      | Not_found -> (if Oe_config.ocamleditor_debug then assert false)
+      | Not_found -> (if Common.application_debug then assert false)
       | GText.No_such_mark _ -> begin
           List.iter (fun x -> x.marks <- []) res.lines;
           self#activate ~grab_focus iter;
         end
 
   (** display *)
-  method private display () = 
+  method private display () =
     (* Sort *)
     List.iter begin fun result ->
       result.lines <- List.sort (fun {linenum = l1} {linenum = l2} -> compare l1 l2) result.lines
@@ -624,16 +678,30 @@ object (self)
       let lines_involved = res.lines in
       List.nth lines_involved iter#line
     in*)
-    (* We track marks for future removal. *)
-    List.iter begin function {filename=filename; lines=lines_involved} as res->
+    List.iter begin function {filename=filename; lines=lines_involved} ->
       let row = model#append () in
       model#set ~row ~column:col_file (Filename.basename filename);
       model#set ~row ~column:col_hits (List.fold_left (fun acc {offsets=x} -> acc + (List.length x)) 0 lines_involved);
       model#set ~row ~column:col_path (Filename.dirname filename);
       n_rows <- n_rows + 1;
-      self#place_marks res;
+      (*(*GtkThread.async*) self#place_marks res;*)
     end results;
-    ignore (view#selection#connect#after#changed ~callback:begin fun () ->
+    let get_text filename = Buffer.contents (File.read filename) in
+    let get_text = Miscellanea.Memo.fast ~f:get_text in
+    let get_comments filename =
+      if List.exists ((^^) filename) [".ml"; ".mli"; ".mll"; ".mly"] then
+        let text = get_text filename in
+        let comments = match Comments.scan_utf8 text with Comments.Utf8 x -> x | _ -> assert false in
+        let comments = List.map (fun (a, b, _, odoc) ->
+          (Convert.offset_from_pos text ~pos:a, Convert.offset_from_pos text ~pos:b, odoc)) comments
+        in
+        let strings = Lex.strings text in
+        comments, strings
+      else [], []
+    in
+    let get_comments = Miscellanea.Memo.fast ~f:get_comments in
+    Gaux.may sigid_changed ~f:(fun id -> view#selection#misc#disconnect id);
+    sigid_changed <- Some (view#selection#connect#after#changed ~callback:begin fun () ->
       try
         let path = List.hd view#selection#get_selected_rows in
         let row = model#get_iter path in
@@ -647,21 +715,71 @@ object (self)
         let i = ref 0 in
         let maxlinenum = List.fold_left (fun acc {linenum=x} -> max acc x) 0 lines_involved in
         let maxlinenum_length = String.length (string_of_int maxlinenum) in
-        List.iter begin fun {line=line; linenum=linenum; offsets=hits} ->
+        let comments, strings = get_comments filename in
+        (* Display lines *)
+        List.iter begin fun {line=line0; linenum=linenum; bol=bol; offsets=hits} ->
           begin
             try
-              let line = Project.convert_to_utf8 project line in
-              let scarto, line = 0, (*ltrim*) line in
-              let line = sprintf "%s: %s"
-                (Miscellanea.lpad (string_of_int linenum) ' ' maxlinenum_length) line in
-              tbuf#insert (line ^ (if !i = List.length lines_involved - 1 then "" else "\n"));
+              let utf8_line_length = Glib.Utf8.length line0 in
+              let scarto = 0 in
+              let disaply_line = sprintf "%s: %s"
+                (Miscellanea.lpad (string_of_int linenum) ' ' maxlinenum_length) line0 in
+              tbuf#insert (disaply_line ^ (if !i = List.length lines_involved - 1 then "" else "\n"));
               let iter = tbuf#get_iter `INSERT in
               if tbuf#lexical_enabled then begin
-                Lexical.tag (tbuf :> GText.buffer)
-                  ~start:((iter#backward_chars (Glib.Utf8.length line))#set_line_index 0)
-                  ~stop:iter#forward_line;
+                let eol = bol + utf8_line_length in
+                let start = iter#backward_char#backward_chars utf8_line_length in
+                let stop = iter#forward_line in
+                let is_line_not_colorized = ref true in
+                begin
+                  try
+                    List.iter begin fun (bc, ec, odoc) ->
+                      let comment = if odoc then "ocamldoc" else "comment" in
+                      if bc <= bol && eol <= ec then begin
+                        tbuf#apply_tag_by_name comment ~start ~stop;
+                        raise Exit
+                      end else if bol <= bc && bc <= eol && eol <= ec then begin (* |----|=====| *)
+                        let len = bc - bol in
+                        let i = start#forward_chars len in
+                        Lexical.tag (tbuf :> GText.buffer) ~start ~stop:i;
+                        tbuf#apply_tag_by_name comment ~start:i ~stop:stop#forward_line;
+                        raise Exit
+                      end else if bc < bol && bol < ec && ec < eol then begin (* |=====|----| *)
+                        let i = start#forward_chars (ec - bol) in
+                        tbuf#apply_tag_by_name comment ~start ~stop:i;
+                        Lexical.tag (tbuf :> GText.buffer) ~start:i ~stop:i#forward_to_line_end;
+                        raise Exit;
+                      end
+                    end comments;
+                  with Exit -> is_line_not_colorized := false;
+                end;
+                if !is_line_not_colorized then begin
+                  begin
+                    try
+                      List.iter begin fun {Lex.lexeme=lxm; start=bs; length=len} ->
+                        let es = bs + (Glib.Utf8.length lxm) + 2 in
+                        if bs <= bol && eol <= es then begin
+                          tbuf#apply_tag_by_name "char" ~start ~stop:start#forward_line;
+                          raise Exit
+                        end else if bol < bs && bs < eol && eol < es then begin (* |----|=====| *)
+                          let i = start#forward_chars (bs - bol) in
+                          Lexical.tag (tbuf :> GText.buffer) ~start ~stop:i;
+                          tbuf#apply_tag_by_name "char" ~start:i ~stop:iter#forward_line;
+                          raise Exit
+                        end else if bs < bol && bol < es && es < eol then begin (* |=====|----| *)
+                          let i = start#forward_chars (bs + len - bol) in
+                          tbuf#apply_tag_by_name "char" ~start ~stop:i;
+                          Lexical.tag (tbuf :> GText.buffer) ~start:i ~stop:i#forward_to_line_end;
+                          raise Exit
+                        end
+                      end strings;
+                    with Exit -> is_line_not_colorized := false;
+                  end;
+                  if !is_line_not_colorized then
+                    (Lexical.tag (tbuf :> GText.buffer) ~start ~stop:start#forward_to_line_end);
+                end;
               end;
-              tbuf#apply_tag_by_name "find_text_result_linenum" 
+              tbuf#apply_tag_by_name "find_text_result_linenum"
                 ~start:(tbuf#get_iter (`LINECHAR (!i, 0)))
                 ~stop:(tbuf#get_iter (`LINECHAR (!i, maxlinenum_length + 2)));
               List.iter begin fun (start, stop) ->
@@ -679,28 +797,25 @@ object (self)
         current_line_selected <- None;
       with Failure "hd" -> ()
     end);
-    view#connect#after#row_activated ~callback:begin fun path iter ->
+    ignore (view#connect#after#row_activated ~callback:begin fun path iter ->
       ignore (self#select_line (tbuf#get_iter `SEL_BOUND));
       preview#misc#grab_focus();
-    end;
-    (* lines preview focus_in  *)
-    preview#event#connect#focus_in ~callback:begin fun ev ->
+    end);
+    ignore (preview#event#connect#focus_in ~callback:begin fun ev ->
       if tbuf#char_count > 0 then begin
         let bgcolor = Color.name_of_gdk (Preferences.tag_color "highlight_current_line") in
-        Gtk_util.set_tag_paragraph_background preview#highlight_current_line_tag bgcolor;
+        Gmisclib.Util.set_tag_paragraph_background preview#highlight_current_line_tag bgcolor;
         let iter = tbuf#get_iter `INSERT in
         self#select_line iter;
         self#activate ~grab_focus:false iter;
         current_line_selected <- (Some iter#line);
       end;
       false
-    end;
-    (* lines preview focus_out  *)
-    preview#event#connect#focus_out ~callback:begin fun ev ->
+    end);
+    ignore (preview#event#connect#focus_out ~callback:begin fun ev ->
       false
-    end;
-    (* double-click event on the preview activates the line. *)
-    preview#event#connect#button_press ~callback:begin fun ev ->
+    end);
+    ignore (preview#event#connect#button_press ~callback:begin fun ev ->
       let x = int_of_float (GdkEvent.Button.x ev) in
       let y = int_of_float (GdkEvent.Button.y ev) in
       let x, y = preview#window_to_buffer_coords ~tag:`TEXT ~x ~y in
@@ -716,9 +831,8 @@ object (self)
           self#activate ~grab_focus:false iter;
           false
         | _ -> false
-    end;
-    (* Lines preview: key_press event moves across the lines and activates them. *)
-    preview#event#connect#key_press ~callback:begin fun ev ->
+    end);
+    ignore (preview#event#connect#key_press ~callback:begin fun ev ->
       let key = GdkEvent.Key.keyval ev in
       let iter = preview#buffer#get_iter `INSERT in
       if key = _Up then self#prev_line ()
@@ -727,21 +841,21 @@ object (self)
         self#activate ~grab_focus:true iter;
       end;
       true
-    end;
+    end);
     (*  *)
-    preview#event#connect#key_release ~callback:begin fun ev ->
+    ignore (preview#event#connect#key_release ~callback:begin fun ev ->
       let key = GdkEvent.Key.keyval ev in
       if key = GdkKeysyms._Tab then ()
       else if key = GdkKeysyms._ISO_Left_Tab then (view#misc#grab_focus());
       true;
-    end;
+    end);
     (*  *)
     ignore (preview#connect#destroy ~callback:begin fun () ->
       List.iter (fun f -> try f () with GText.No_such_mark _ -> ()) delete_marks;
       List.iter editor#connect#disconnect sigids
     end);
     view#selection#select_path (GTree.Path.create [0]);
-    if editor_buffer <> None then (lsw#misc#hide ())
+    if editor_buffer <> None then (lsw#misc#hide ());
 
   method connect = new signals ~search_started ~search_finished
 end

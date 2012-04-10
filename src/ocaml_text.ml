@@ -1,7 +1,7 @@
 (*
 
   OCamlEditor
-  Copyright (C) 2010, 2011 Francesco Tovagliari
+  Copyright (C) 2010-2012 Francesco Tovagliari
 
   This file is part of OCamlEditor.
 
@@ -27,8 +27,6 @@ open Miscellanea
 open Printf
 
 
-let re_trailng_blanks = Miscellanea.regexp "\\([ \t]+\\)\r?$"
-
 let shells = ref []
 
 let create_shell = ref ((fun () -> failwith "Ocaml_text.create_shell") : unit -> unit)
@@ -36,17 +34,24 @@ let show_messages = ref ((fun () -> failwith "Ocaml_text.show_messages") : unit 
 
 (** Buffer *)
 class buffer ?project ?file ?(lexical_enabled=false) () =
+  let check_lexical_coloring_enabled filename =
+    filename ^^ ".ml" || filename ^^ ".mli" || filename ^^ ".mll" || filename ^^ ".mly"
+  in
 object (self)
   inherit Text.buffer ?file () as super
   val mutable lexical_enabled = (lexical_enabled || begin
     match file with
-      | Some file when (file#name ^^ ".ml" || file#name ^^ ".mli" || file#name ^^ ".mll" || file#name ^^ ".mly") -> true
+      | Some file when check_lexical_coloring_enabled file#name -> true
       | _ -> false
   end)
+  val mutable lexical_tags = []
   val mutable shell : Shell.shell option = None
   val mutable select_word_state = []
   val mutable select_word_state_init = None
   val mutable changed_after_last_autocomp = 0.0
+
+  method check_lexical_coloring_enabled = check_lexical_coloring_enabled
+  method colorize ?start ?stop () = Lexical.tag ?start ?stop self#as_gtext_buffer
 
   method changed_after_last_autocomp = changed_after_last_autocomp
   method set_changed_after_last_autocomp x = changed_after_last_autocomp <- x
@@ -54,10 +59,10 @@ object (self)
   method set_lexical_enabled x = lexical_enabled <- x
   method lexical_enabled = lexical_enabled
 
-  method indent ?(dir=(`FORWARD : [`FORWARD | `BACKWARD])) ?start ?stop () =
+  method indent ?decrease () =
     let old = lexical_enabled in
     self#set_lexical_enabled false;
-    super#indent ~dir ?start ?stop ();
+    super#indent ?decrease ();
     self#set_lexical_enabled old;
 
   method trim_lines () =
@@ -68,7 +73,7 @@ object (self)
         let it = self#get_iter (`LINE i) in
         let line = self#get_line_at_iter it in
         try
-          let _ = Str.search_forward re_trailng_blanks line 0 in
+          let _ = Str.search_forward (Miscellanea.regexp "\\([ \t]+\\)\r?\n$") line 0 in
           let len = String.length (Str.matched_group 1 line) in
           let stop = it#forward_to_line_end in
           let start = stop#backward_chars len in
@@ -82,9 +87,8 @@ object (self)
 
   method select_shell () =
     shell <- (match !shells with
-      | [] -> None
-      | [sh] -> Some sh
-      | x -> Some (List.hd x));
+      | sh :: _ -> Some sh
+      | _ -> None)
 
   method send_to_shell () =
     let phrase = self#phrase_at_cursor () in
@@ -127,7 +131,7 @@ object (self)
           after := true;
           let anon, real = List.partition (fun x -> x = -1) !block_start in
           block_start := anon;
-          if real <> [] then start := List.hd real;
+          if real <> [] then start := (match real with x :: _ -> x | _ -> assert false);
         end;
         match token with
         | CLASS | EXTERNAL | EXCEPTION | FUNCTOR
@@ -164,8 +168,8 @@ object (self)
           let selection = self#selection_text () in
           let start, stop = self#selection_bounds in
           let start, stop = if start#compare stop > 0 then stop, start else start, stop in
-          if String.contains selection '_' then begin
-            let parts = Miscellanea.split "_" selection in
+          if String.contains selection '_' || String.contains selection '.' then begin
+            let parts = Miscellanea.split "[_.]" selection in
             let start = ref start in
             select_word_state <- List.map begin fun p ->
               match !start#forward_search p with
@@ -180,18 +184,18 @@ object (self)
                 select_word_state_init <- None;
                 select_word_state <- List.filter (fun (_, b) -> init#compare b < 0) select_word_state;
           end;
-          try
-            select_word_state_init <- None;
-            let a, b = List.hd select_word_state in
-            self#select_range a b;
-            select_word_state <- List.tl select_word_state;
-            a, b
-          with Failure "hd" -> begin
-            self#place_cursor start;
-            let bounds = self#select_ocaml_word ~pat:Ocaml_word_bound.regexp () in
-            select_word_state_init <- None;
-            bounds
-          end
+          select_word_state_init <- None;
+          match select_word_state with
+            | (a, b) as hd :: tl ->
+              self#select_range a b;
+              select_word_state <- tl;
+              hd
+            | _ ->
+              self#place_cursor start;
+              (*let bounds = self#select_ocaml_word ~pat:Ocaml_word_bound.regexp () in*)
+              let bounds = self#select_ocaml_word ~pat:Ocaml_word_bound.longid_sharp () in
+              select_word_state_init <- None;
+              bounds
         end else begin
           select_word_state_init <- Some (self#get_iter `INSERT);
           let bounds = super#select_word ~pat:Ocaml_word_bound.regexp () in
@@ -207,7 +211,9 @@ object (self)
     end)#forward_char in
     let lident = Miscellanea.trim (self#get_text ~start ~stop ()) in
     let lident = Str.split_delim (Miscellanea.regexp "\\.") lident in
-    let lident = if try List.hd lident = "" with _ -> false then List.tl lident else lident in
+    let lident =
+      if match lident with x :: _ -> x = "" | _ -> false
+      then List.tl lident else lident in
     lident
 
   method get_annot iter =
@@ -220,8 +226,8 @@ object (self)
               | Some project ->
                 begin
                   match project.Project.in_source_path file#path with
-                    | Some filename ->
-                      Annotation.find_block_at_offset ~filename ~offset:iter#offset
+                    | Some _ ->
+                      Annotation.find_block_at_offset ~project ~filename:file#path ~offset:iter#offset
                         (*~offset:(Glib.Utf8.offset_to_pos (self#get_text ()) ~pos:0 ~off:iter#offset)*)
                     | _ -> None
                 end;
@@ -229,24 +235,36 @@ object (self)
           end;
     end else None
 
+  method tag_table_lexical : (GText.tag option) list = lexical_tags
+
   initializer
     (** Lexical *)
-    Lexical.init_tags (*?ocamldoc_paragraph_enabled*) (self :> GText.buffer);
-    (** Lexical coloring disabled for undo of indent *)
+    (*let ocamldoc_paragraph_enabled =
+      match file with
+        | Some file when file#name ^^ ".ml" -> Oe_config.ocamldoc_paragraph_bgcolor_enabled
+        | _ -> false
+    in*)
+    self#init_tags ();
+    let tag_table = new GText.tag_table self#tag_table in
+    lexical_tags <- List.map (fun x -> Some x) (Miscellanea.Xlist.filter_map begin fun n ->
+    match tag_table#lookup n with
+        | Some t -> Some (new GText.tag t)
+        | _ -> None
+    end !Lexical.tags);
+    (* Lexical coloring disabled for undo of indent *)
     let old_lexical = ref lexical_enabled in
-    undo#connect#undo ~callback:begin fun ~name ->
+    ignore (undo#connect#undo ~callback:begin fun ~name ->
       if name = "indent" then (old_lexical := self#lexical_enabled; self#set_lexical_enabled false;);
-    end;
-    undo#connect#after#undo ~callback:begin fun ~name ->
+    end);
+    ignore (undo#connect#after#undo ~callback:begin fun ~name ->
       if name = "indent" then (self#set_lexical_enabled !old_lexical);
-    end;
-    undo#connect#redo ~callback:begin fun ~name ->
+    end);
+    ignore (undo#connect#redo ~callback:begin fun ~name ->
       if name = "indent" then (old_lexical := self#lexical_enabled; self#set_lexical_enabled false;);
-    end;
-    undo#connect#after#redo ~callback:begin fun ~name ->
+    end);
+    ignore (undo#connect#after#redo ~callback:begin fun ~name ->
       if name = "indent" then (self#set_lexical_enabled !old_lexical);
-    end;
-    ()
+    end);
 
   method as_text_buffer = (self :> Text.buffer)
 end
@@ -354,88 +372,6 @@ object (self)
       match iter with None -> None | Some iter -> buffer#get_annot iter
     end else None
 
-  method completion () =
-    if buffer#lexical_enabled then
-      try
-        let it = self#buffer#get_iter `INSERT in
-        (* Quando disabilitare il popup *)
-        (* 1. Nei commenti *)
-        begin match Comments.enclosing
-          (Comments.scan (Glib.Convert.convert_with_fallback ~fallback:"" ~from_codeset:"utf8" ~to_codeset:Oe_config.ocaml_codeset
-            (buffer#get_text ()))) it#offset
-        with None -> () | Some _ -> raise Not_found;
-        end;
-        (* 2. Nelle stringhe *)
-        if Lex.in_string (buffer#get_text ()) it#offset then raise Not_found;
-        let lident = buffer#get_lident_at_cursor () in
-        let paths_opened = Lex.paths_opened (buffer#get_text ()) in
-        let create_popup =
-          if List.length lident = 1 then begin
-            Completion.uident_lookup ~paths_opened
-          end else if List.length lident = 2 then begin
-            Completion.dot_lookup ~modlid:(List.hd lident)
-          end else if List.length lident >= 3 then begin
-            Completion.uident_lookup ~paths_opened
-          end else
-            Completion.uident_lookup ~paths_opened
-         in
-        (* Callback per il popup: get_word restituisce la stringa usata dal popup
-          per posizionarsi sulla riga; on_type è la funzione usata dal popup per inserire
-          stringhe nel testo; on_row_activated è l'azione da fare quando si conferma una riga
-          del popup.
-        *)
-        let get_word () =
-          let start, stop = buffer#select_word ~pat:Ocaml_word_bound.regexp ~select:false  ~limit:['.'] () in
-          buffer#get_text ~start ~stop:(self#buffer#get_iter `INSERT) () in
-        let on_type txt = if self#editable then (self#buffer#insert ~iter:(self#buffer#get_iter `INSERT) txt) in
-        let on_row_activated txt =
-          if self#editable then begin
-            buffer#select_word ~pat:Ocaml_word_bound.regexp ~limit:['.'] ();
-            buffer#delete_selection ();
-            buffer#insert ~iter:(self#buffer#get_iter `INSERT) txt
-          end
-        in
-        let p = create_popup ~on_row_activated ~on_type ~on_search:get_word in
-        p#misc#connect#destroy ~callback:self#misc#grab_focus;
-        (* Aggiornare il testo mentre si digita *)
-        ignore (p#event#connect#key_press ~callback:begin fun ev ->
-          let state = GdkEvent.Key.state ev and key = GdkEvent.Key.keyval ev in
-          let ins = buffer#get_iter `INSERT in
-          if key = _BackSpace then begin
-            buffer#delete ~start:ins ~stop:ins#backward_char;
-            p#search (get_word())
-          end else if key = _Delete then begin
-            buffer#delete ~start:ins ~stop:ins#forward_char;
-          end else if GdkEvent.Key.string ev = "." then begin
-            p#activate();
-            if self#editable then (buffer#insert ~iter:(buffer#get_iter `INSERT) (GdkEvent.Key.string ev))
-          end else if (state = [] || state = [`SHIFT]) && not (List.mem key [
-              _Return;
-              _Up;
-              _Down;
-              _Page_Up;
-              _Page_Down;
-              _End;
-              _Home;
-              _Escape
-            ]) then (if self#editable then (buffer#insert ~iter:ins (GdkEvent.Key.string ev)));
-          false
-        end);
-        ignore (self#scroll_to_iter it);
-        let x, y = self#get_location_at_cursor () in
-        p#move ~x ~y;
-        Gaux.may (GWindow.toplevel self) ~f:(fun parent -> p#window#set_transient_for parent#as_window);
-        p#window#set_opacity 0.0;
-        p#present();
-        let alloc = p#misc#allocation in
-        let x, y =
-          (if x + alloc.Gtk.width > (Gdk.Screen.width()) then (Gdk.Screen.width() - alloc.Gtk.width) else x),
-          (if y + alloc.Gtk.height > (Gdk.Screen.height()) then (Gdk.Screen.height() - alloc.Gtk.height) else y);
-        in
-        p#move ~x ~y;
-        Gtk_util.fade_window p#window;
-      with Not_found -> ();
-
   method code_folding = match code_folding with Some m -> m | _ -> assert false
 
   method scroll_lazy iter =
@@ -443,11 +379,6 @@ object (self)
     if (self#code_folding#is_folded iter) <> None then begin
       self#code_folding#expand iter;
     end;
-
-  method align_definitions () =
-    buffer#undo#begin_block ~name:"dot_leaders";
-    Alignment.align_selection self#as_tview;
-    buffer#undo#end_block();
 
   initializer
     code_folding <- Some (new Code_folding.manager ~view:(self :> Text.view));
@@ -460,7 +391,7 @@ object (self)
         match GdkEvent.get_type ev with
           | `BUTTON_RELEASE when !two_button_press ->
             two_button_press := false;
-            Gtk_util.idle_add (fun () -> ignore (self#obuffer#select_word ~pat:Ocaml_word_bound.regexp ()));
+            Gmisclib.Idle.add (fun () -> ignore (self#obuffer#select_word ~pat:Ocaml_word_bound.regexp ()));
             false
           | _ -> false
       end else false
@@ -489,20 +420,4 @@ object (self)
           | _ -> false
       end else false
     end);
-    (** Keypress *)
-    ignore (self#event#connect#key_press ~callback:
-      begin fun ev ->
-        let key = GdkEvent.Key.keyval ev in
-        let state = GdkEvent.Key.state ev in
-        if state = [`MOD2] && key = _igrave then begin
-          buffer#delete ~start:(self#buffer#get_iter `INSERT) ~stop:(self#buffer#get_iter `SEL_BOUND);
-          buffer#insert "~";
-          true
-        end else if state = [`MOD2] && key = _apostrophe then begin
-          buffer#delete ~start:(self#buffer#get_iter `INSERT) ~stop:(self#buffer#get_iter `SEL_BOUND);
-          buffer#insert "`";
-          true
-        end else false;
-      end);
-    ()
 end

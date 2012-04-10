@@ -1,7 +1,7 @@
 (*
 
   OCamlEditor
-  Copyright (C) 2010, 2011 Francesco Tovagliari
+  Copyright (C) 2010-2012 Francesco Tovagliari
 
   This file is part of OCamlEditor.
 
@@ -20,9 +20,14 @@
 
 *)
 
+open Printf
+open Miscellanea
+
 type t =
   | Templ of templ
   | Action of (Ocaml_text.view -> unit)
+
+and scope = Project | User | Application
 
 and templ = t_elem list
 
@@ -42,37 +47,118 @@ and t_elem =
   | I                (* Represents the insertion point *)
   | S                (* Represents the selection bound *)
 
+and spec = scope * string * string * t
+
+let sort = List.sort (fun (_, x1, _, _) (_, x2, _, _) -> Pervasives.compare x1 x2);;
+
+let blanks = [13;10;32;9]
+let is_blank c = List.mem c blanks
+let is_not_blank c = not (List.mem c blanks)
+
+module Action = struct
+  let get_indent ~(buffer : GText.buffer) ~(iter : GText.iter) =
+    let bol = iter#set_line_index 0 in
+    let bot = bol#forward_find_char is_not_blank in
+    bot#line_index;;
+
+  let get_text_within_delimiters view =
+    let view = (view :> Text.view) in
+    let where = view#buffer#get_iter `INSERT in
+    view#matching_delim_goto ~select:true ();
+    let start, stop = view#buffer#selection_bounds in
+    let text_within_delimiters = view#buffer#get_text ~start ~stop () in
+    view#buffer#place_cursor ~where;
+    view#matching_delim_goto ~select:true ~strict:false ();
+    let start, stop = view#buffer#selection_bounds in
+    view#matching_delim_remove_tag ();
+    view#buffer#place_cursor ~where;
+    start, stop, text_within_delimiters;;
+
+  let remove_delimiters view =
+    let start, stop, text_within_delimiters = get_text_within_delimiters view in
+    view#buffer#delete ~start ~stop;
+    let text_within_delimiters = Miscellanea.trim text_within_delimiters in
+    view#buffer#insert text_within_delimiters;
+    view#matching_delim_remove_tag ();
+    let iter = view#buffer#get_iter `INSERT in
+    view#buffer#select_range iter (iter#backward_chars (Glib.Utf8.length text_within_delimiters));;
+
+  let be_parent view =
+    let start, stop, text_within_delimiters = get_text_within_delimiters view in
+    view#buffer#delete ~start ~stop;
+    let text = Miscellanea.trim text_within_delimiters in
+    let text = if text.[String.length text - 1] = ';' then String.sub text 0 (String.length text - 1) else text in
+    let new_text = "(" ^ text ^ ")" in
+    view#buffer#insert new_text;
+    let iter = view#buffer#get_iter `INSERT in
+    view#buffer#select_range iter (iter#backward_chars (Glib.Utf8.length new_text));;
+
+  let be_unparent view =
+    let start, stop, text_within_delimiters = get_text_within_delimiters view in
+    let indent = get_indent ~buffer:view#buffer ~iter:start in
+    let d1 = start#get_text ~stop:start#forward_char in
+    let d2 = stop#get_text ~stop:stop#backward_char in
+    if d1 = "(" && d2 = ")" then begin
+      let break_after_arrow =
+        let start = start#forward_char in
+        let stop = stop#backward_char in
+        let eol = start#forward_to_line_end in
+        match start#forward_search ~limit:eol "->" with
+          | Some (_, arrow) ->
+            let break = arrow#forward_find_char ~limit:eol is_not_blank in
+            let has_break = break#equal eol in
+            let break = if has_break then break#forward_char else break in
+            let t1 = start#get_text ~stop:break in
+            let t2 = break#get_text ~stop in
+            Some (Miscellanea.rtrim t1, t2, has_break)
+          | _ -> None
+      in
+      view#buffer#delete ~start ~stop;
+      let indent_step = String.make view#tbuffer#tab_width ' ' in
+      view#buffer#delete ~start ~stop;
+      let spaces = String.make indent ' ' in
+      let new_text =
+        match break_after_arrow with
+          | None ->
+            "begin\n" ^ spaces ^ indent_step ^
+            (Str.global_replace (!~~ "\n") ("\n" ^ indent_step) text_within_delimiters) ^ "\n" ^
+            spaces ^ "end"
+          | Some (t1, t2, has_break) ->
+            "begin " ^  t1 ^ "\n" ^
+            (if has_break then t2 else
+              spaces ^ indent_step ^ (Str.global_replace (!~~ "\n") ("\n" ^ indent_step) t2)) ^
+            "\n" ^ spaces ^ "end"
+      in
+      view#buffer#insert new_text;
+      let iter = view#buffer#get_iter `INSERT in
+      view#buffer#select_range iter (iter#backward_chars (Glib.Utf8.length new_text));
+    end;;
+
+  let align view =
+    if view#buffer#has_selection then begin
+      let start, stop = view#buffer#selection_bounds in
+      Alignment.align ~buffer:view#buffer ~start ~stop;
+    end;;
+end
 
 
 (** spec
-    template_name * description * code
+    scope * template_name * description * code
 *)
-let spec : (string * string * t) list =
+let spec : spec list ref =
   (** Actions *)
   let actions : ((string * string * (Ocaml_text.view -> unit)) list) = [
-    "() remove", "Remove delimiters", begin fun view ->
-      let view = (view :> Text.view) in
-      let where = view#buffer#get_iter `INSERT in
-      view#matching_delim_goto ~select:true ();
-      let start, stop = view#buffer#selection_bounds in
-      let text = Miscellanea.trim (view#buffer#get_text ~start ~stop ()) in
-      view#buffer#place_cursor ~where;
-      view#matching_delim_goto ~select:true ~strict:false ();
-      let start, stop = view#buffer#selection_bounds in
-      view#matching_delim_remove_tag ();
-      view#buffer#delete ~start ~stop;
-      view#buffer#insert text;
-      view#matching_delim_remove_tag ();
-      let iter = view#buffer#get_iter `INSERT in
-      view#buffer#select_range iter (iter#backward_chars (Glib.Utf8.length text));
-    end;
-    "align", "Align/collapse definitions", (fun view -> view#align_definitions());
+    "() remove", "Remove delimiters", Action.remove_delimiters;
+    "be()", "Replace currently highlighted delimiters with parentheses", Action.be_parent;
+    "be)(", "Replace currently highlighted parentheses with \"begin ... end\"", Action.be_unparent;
+    "align", "Align/collapse definitions", Action.align;
   ] in
   (** Templates *)
   let templates = [
     "()", "(<selection>)", [T "("; SELECTION_TRIM ; T ")"; I];
 
-    "descr", "Project description", [DESCRIPTION];
+    "descr", "Insert project description", [DESCRIPTION];
+    "curf",  "Insert current filename", [CURRENT_FILENAME];
 
     "be", "begin <selection> end",
       [T0 "begin"; NL; IN; SELECTION; OUT; T0 "end;"; I; NL];
@@ -92,7 +178,7 @@ let spec : (string * string * t) list =
       TI "end;";
     ];
 
-    "ign", "ignore (<selection>)", [I; T "ignore ("; SELECTION; T ")"; I];
+    "ign", "ignore (<selection>)", [I; T "ignore ("; SELECTION; T ")"];
 
     "ignbe", "ignore begin ... end",
       [T0 "ignore begin"; NL; IN; SELECTION; OUT; T0 "end;"; I; NL];
@@ -189,9 +275,9 @@ let spec : (string * string * t) list =
     "qqb", "(** <block> *)", [T0 "(**"; NL; SELECTION; T0 "*)"; NL];
     "qqbi", "(** <block> *)", [T0 "(**"; NL; IN; SELECTION; OUT; T0 "*)"; NL];
   ] in
-  let actions = List.map (fun (a, b, c) -> a, b, Action c) actions in
-  let templates = List.map (fun (a, b, c) -> a, b, Templ c) templates in
-  List.sort (fun (x1, _, _) (x2, _, _) -> Pervasives.compare x1 x2) (actions @ templates)
+  let actions = List.map (fun (a, b, c) -> Application, a, b, Action c) actions in
+  let templates = List.map (fun (a, b, c) -> Application, a, b, Templ c) templates in
+  ref (sort (actions @ templates))
 
 
 

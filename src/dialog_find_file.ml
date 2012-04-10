@@ -1,7 +1,7 @@
 (*
 
   OCamlEditor
-  Copyright (C) 2010, 2011 Francesco Tovagliari
+  Copyright (C) 2010-2012 Francesco Tovagliari
 
   This file is part of OCamlEditor.
 
@@ -20,158 +20,160 @@
 
 *)
 
+open Printf
 open Miscellanea
 
-let create ?(all=true) ~(editor : Editor.editor) ~path () =
-  let title = if all then "Find File..." else "Select File..." in
-  let window = GWindow.window ~title ~icon:Icons.oe
-    ~width:600 ~height:400 ~modal:true ~position:`CENTER ~border_width:5 ~show:false () in
-(*    Gaux.may (GWindow.toplevel vbox) ~f:(fun x -> window#set_transient_for x#as_window);*)
-  let vbox = GPack.vbox ~spacing:8 ~packing:window#add () in
-  let entry = GEdit.entry ~packing:(vbox#pack ~expand:false) () in
-  let cols = new GTree.column_list in
-  let col_icon  = cols#add Gobject.Data.string in
-  let col_name  = cols#add Gobject.Data.string in
-  let col_path  = cols#add Gobject.Data.string in
-  let col_changed  = cols#add Gobject.Data.boolean in
-  let model = GTree.list_store cols in
-  let renderer = GTree.cell_renderer_text [] in
-  let renderer_bold = GTree.cell_renderer_text [] in
-  let renderer_bool = GTree.cell_renderer_toggle [] in
-  let renderer_icon = GTree.cell_renderer_pixbuf [] in
-  renderer_bold#set_properties [(*`WEIGHT `BOLD*)];
-  renderer_icon#set_properties [`STOCK_SIZE `MENU];
-  let vc_icon = GTree.view_column ~title:"" ~renderer:(renderer_icon, ["stock-id", col_icon]) () in
-  let vc_name = GTree.view_column ~title:"File" ~renderer:(renderer_bold, ["text", col_name]) () in
-  let vc_path = GTree.view_column ~title:"Path" ~renderer:(renderer, ["text", col_path]) () in
-  let vc_changed = GTree.view_column ~title:"Changed"
-    ~renderer:(renderer_bool, ["active", col_changed]) () in
-  let sw = GBin.scrolled_window ~shadow_type:`IN ~hpolicy:`AUTOMATIC ~vpolicy:`AUTOMATIC
-    ~packing:vbox#add () in
-  let view = GTree.view ~model:model ~headers_visible:false ~reorderable:true ~width:130
-    ~enable_search:false ~packing:sw#add () in
-  view#append_column vc_icon;
-  view#append_column vc_name;
-  view#append_column vc_path;
-  view#append_column vc_changed;
-  vc_changed#set_visible false;
-  vc_name#set_cell_data_func renderer_bold begin fun model row ->
-    let p = model#get ~row ~column:col_path in
-    renderer_bold#set_properties [`WEIGHT (if Miscellanea.filename_relative path p <> None then `BOLD else `NORMAL)]
+let filter =
+  let names = List.map (!~~) ["README"; "INSTALL"; "NEWS"; "BUGS"; "CONTRIB"; "Makefile"; "TODO"; "AUTHORS"; "ChangeLog"] in
+  fun filename ->
+    filename ^^ ".ml"  ||
+    filename ^^ ".mli" ||
+    filename ^^ ".mll" ||
+    filename ^^ ".mly" ||
+    filename ^^ ".bat" ||
+    filename ^^ ".cmd" ||
+    filename ^^ ".txt" ||
+    filename ^^ ".sh"  ||
+    List.exists (fun re -> Str.string_match re filename 0) names;;
+
+let pixbuf_open_in_editor = Icons.button_close
+
+let help = "<small>Press \"<tt>Ctrl+Return</tt>\" to toggle open/close; press \"<tt>F3</tt>\" to move focus to the search entry; press \"<tt>Ctrl+Shift+L</tt>\" to show the list of files currently open in the editor.</small>";;
+
+(** create *)
+let create ?(all=true) ~(editor : Editor.editor) ~roots () =
+  let title                = if all then "Find File" else "Select File" in
+  let window               = GWindow.window ~title ~icon:Icons.oe ~height:500 ~modal:true ~position:`CENTER ~border_width:5 ~show:false () in
+  let vbox                 = GPack.vbox ~spacing:5 ~packing:window#add () in
+  (** Quick file chooser *)
+  let source               =
+    if all then begin
+      kprintf window#set_title "%s" title;
+      `path (roots, editor#file_history.File_history.content)
+    end else `filelist editor#file_history.File_history.content
+  in
+  let quick_file_chooser   = new Quick_file_chooser.widget ~source ~name:""~filter ~packing:vbox#add () in
+  let _                    = GMisc.label ~xalign:0.0 ~width:600 ~line_wrap:true ~markup:help ~packing:vbox#pack () in
+  (** Buttons *)
+  let bbox                 = GPack.button_box `HORIZONTAL ~layout:`END ~border_width:8 ~spacing:8
+                             ~packing:(vbox#pack ~expand:false) () in
+  let button_close         = GButton.button ~label:"Close Files" ~packing:bbox#add () in
+  let _                    = button_close#set_focus_on_click false in
+  let _                    = button_close#misc#set_tooltip_text "Ctrl+Return" in
+  let button_open          = GButton.button ~label:"Open Files" ~packing:bbox#add () in
+  let _                    = button_open#set_focus_on_click false in
+  let _                    = button_open#misc#set_tooltip_text "Return" in
+  let button_done          = GButton.button ~label:"Done" ~packing:bbox#add () in
+  let button_clear_history = GButton.button ~label:"Clear File History" ~packing:bbox#add () in
+  let _                    = button_clear_history#set_focus_on_click false in
+  bbox#set_child_secondary button_clear_history#coerce true;
+  (** Actions *)
+  ignore (button_clear_history#connect#clicked ~callback:begin fun () ->
+    File_history.clear editor#file_history;
+  end);
+  ignore (button_done#connect#clicked ~callback:(fun () -> window#misc#hide(); window#destroy()));
+  quick_file_chooser#set_default_choose_func begin fun ~filename ~has_cursor ->
+    ignore (editor#open_file ~active:has_cursor ~offset:0 filename);
+    `set pixbuf_open_in_editor;
   end;
-  view#selection#set_mode `MULTIPLE;
-  let find filter =
-    let filenames =
-      let files = if all then (File.readdirs path) else [] in
-      let recent = List.filter (fun x -> not (List.mem x files))
-        editor#file_history.File_history.content in
-      let recent = List.filter Sys.file_exists recent in
-      let files = List.filter begin fun x ->
-        (Filename.check_suffix x ".ml" ||
-        Filename.check_suffix x ".mli" ||
-        Filename.check_suffix x ".mll" ||
-        Filename.check_suffix x ".mly" ||
-        Filename.check_suffix x ".bat" ||
-        Filename.check_suffix x ".cmd" ||
-        Filename.check_suffix x ".txt" ||
-        Filename.check_suffix x ".sh")
-      end files in
-      let files = files @ recent in
-      let files = if filter = "" then files else begin
-        List.filter begin fun x ->
-          (Str.string_match (Str.regexp_case_fold filter) (Filename.basename x) 0)
-        end files
-      end in
-      files
-    in
-    model#clear();
-    List.iter begin fun filename ->
-      let row = model#append() in
-      model#set ~row ~column:col_name (Filename.basename filename);
-      model#set ~row ~column:col_path (Filename.dirname filename);
-      let opened, changed =
-        match editor#get_page (Editor_types.File (File.create filename ())) with
+  ignore (button_open#connect#clicked ~callback:begin fun () ->
+    quick_file_chooser#activate();
+  end);
+  ignore (button_close#connect#clicked ~callback:begin fun () ->
+    quick_file_chooser#activate ~f:begin fun ~filename ~has_cursor ->
+      Gaux.may (editor#get_page (`FILENAME filename)) ~f:editor#dialog_confirm_close;
+      `clear
+    end ();
+  end);
+  ignore (quick_file_chooser#view#connect#row_activated ~callback:begin fun _ _ ->
+    quick_file_chooser#activate();
+    window#destroy()
+  end);
+  let show_currently_opened () =
+    quick_file_chooser#display (quick_file_chooser#get_paths_with_icon ());
+    Gmisclib.Idle.add ~prio:300 begin fun () ->
+      editor#with_current_page begin fun page ->
+        let filename = page#get_filename in
+        match quick_file_chooser#get_path ~filename with
+          | Some path ->
+            quick_file_chooser#select_path path;
+            quick_file_chooser#set_cursor path;
+          | _ -> ()
+      end
+    end
+  in
+  begin
+    match quick_file_chooser#source with
+      | `path (hd :: roots, _) ->
+        let project = editor#project in
+        let is_relative =  Miscellanea.filename_relative hd in
+        let len = String.length hd in
+        quick_file_chooser#set_cell_data_func begin fun model row ->
+          let dirname = model#get ~row ~column:Quick_file_chooser.col_path in
+          let ld = String.length dirname in
+          quick_file_chooser#renderer#set_properties [`WEIGHT
+            (if ld >= len && is_relative dirname <> None then `BOLD else `NORMAL)]
+        end
+      | _ -> ()
+  end;
+  (** Update icons *)
+  let icon_func ~filename =
+    let opened, changed =
+      begin
+        try
+          match editor#get_page (`FILENAME filename) with
           | None -> false, false
           | Some page -> true, page#view#buffer#modified
-      in
-      model#set ~row ~column:col_icon (if changed then "gtk-floppy"
-        else (if opened then "gtk-apply" else ""));
-      model#set ~row ~column:col_changed changed;
+        with Unix.Unix_error _ -> false, false
+      end;
+    in
+    if changed then Some Icons.save_14 else (if opened then Some pixbuf_open_in_editor else None)
+  in
+  let update_icons () =
+    GtkThread2.sync quick_file_chooser#reset_icons ();
+    let filenames = List.map (fun p -> p#get_filename) editor#pages in
+    List.iter begin fun filename ->
+      GtkThread2.sync begin fun () ->
+        match quick_file_chooser#get_path ~filename with
+          | Some path ->
+            let row = quick_file_chooser#model#get_iter path in
+            let pixbuf = icon_func ~filename in
+            quick_file_chooser#set_icon ~row pixbuf;
+          | _ -> ()
+      end ();
     end filenames;
-    view#selection#select_path (GTree.Path.create [0]);
   in
-  let bbox = GPack.button_box `HORIZONTAL ~layout:`END ~border_width:8 ~spacing:8
-    ~packing:(vbox#pack ~expand:false) () in
-  let button_close = GButton.button ~label:"Close Files" ~packing:bbox#add () in
-  let button_ok = GButton.button ~label:"Open Files" ~packing:bbox#add () in
-  let button_cancel = GButton.button ~label:"Done" ~packing:bbox#add () in
-  let button_clear_history = GButton.button ~label:"Clear File History" ~packing:bbox#add () in
-  bbox#set_child_secondary button_clear_history#coerce true;
-  button_clear_history#connect#clicked ~callback:begin fun () ->
-    File_history.clear editor#file_history;
-    find entry#text
-  end;
-  button_cancel#connect#clicked ~callback:window#destroy;
-  let activate () =
-    List.iter begin fun path ->
-      let row = model#get_iter path in
-      let path = model#get ~row ~column:col_path in
-      let name = model#get ~row ~column:col_name in
-      ignore (editor#open_file ~active:true ~offset:0 (Filename.concat path name))
-    end view#selection#get_selected_rows;
-    window#destroy()
-  in
-  button_ok#connect#clicked ~callback:activate;
-  button_close#connect#clicked ~callback:begin fun () ->
-    List.iter begin fun path ->
-      let row = model#get_iter path in
-      let path = model#get ~row ~column:col_path in
-      let name = model#get ~row ~column:col_name in
-      editor#open_file ~active:true ~offset:0 (Filename.concat path name);
-      Gaux.may (editor#get_page Editor_types.Current) ~f:editor#dialog_confirm_close;
-    end view#selection#get_selected_rows;
-    find entry#text
-  end;
-  view#connect#row_activated ~callback:begin fun path _ ->
-    activate ();
-  end;
-  window#event#connect#key_press ~callback:begin fun ev ->
+  (** Escape *)
+  ignore (window#event#connect#key_press ~callback:begin fun ev ->
+    let state = GdkEvent.Key.state ev in
     let key = GdkEvent.Key.keyval ev in
     if key = GdkKeysyms._Escape then (window#destroy(); true)
-    else if key = GdkKeysyms._Return then (activate(); true)
-    else if key = GdkKeysyms._Down && ((GdkEvent.Key.state ev) = []) then begin
-      view#misc#grab_focus();
-      (try view#selection#select_path (GTree.Path.create [0]) with _ -> ());
-      false
-    end else begin
-      false
-    end
-  end;
-  view#event#connect#key_press ~callback:begin fun ev ->
-    let key = GdkEvent.Key.keyval ev in
-    if key = GdkKeysyms._BackSpace then begin
-      (try entry#set_text (String.sub entry#text 0 (entry#text_length - 1)) with _ -> ());
-      entry#misc#grab_focus();
-      entry#set_position entry#text_length;
+    else if List.for_all (fun x -> List.mem x [`CONTROL; `SHIFT]) state && key = GdkKeysyms._L then begin
+      show_currently_opened ();
       true
-    end else if key = GdkKeysyms._Left then begin
-      entry#misc#grab_focus();
-      entry#set_position (entry#text_length - 1);
+    end else if state = [`CONTROL] && key = GdkKeysyms._Return then begin
+      quick_file_chooser#activate ~f:begin fun ~filename ~has_cursor ->
+        match editor#get_page (`FILENAME filename) with
+          | Some page ->
+            let is_closed = editor#dialog_confirm_close page in
+            if is_closed then `clear else `ignore
+          | _ ->
+            ignore (editor#open_file ~active:has_cursor ~offset:0 filename);
+            `set pixbuf_open_in_editor
+      end ();
       true
-    end else if key = GdkKeysyms._Right then begin
-      entry#misc#grab_focus();
-      entry#set_position entry#text_length;
+    end else if key = GdkKeysyms._Return then begin
+      quick_file_chooser#activate();
+      window#destroy();
       true
-    end else begin
-      entry#set_text (entry#text ^ (GdkEvent.Key.string ev));
-      false
-    end
-  end;
-  entry#connect#changed ~callback:begin fun () ->
-    let filter = (Str.global_replace (!~ "*") "[-+ 'a-zA-Z!^%&$()@#;,_0-9]*" entry#text) in
-    find filter;
-  end;
-  (*find "";*)
-  view#set_search_column 1;
-  entry#misc#grab_focus();
-  window#present()
+    end else false
+  end);
+  (** Present *)
+  window#present();
+  quick_file_chooser#update_model();
+  update_icons ();
+  show_currently_opened();
+;;
+
+
+
