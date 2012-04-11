@@ -195,7 +195,7 @@ object (self)
       view#buffer#remove_all_tags ~start:(view#buffer#get_iter `START) ~stop:(view#buffer#get_iter `END);
     end ();
     (** Process instantiation *)
-    let proc, start_proc = Task.prepare task in
+    let proc, start_proc = Task_process.create task in
     (** Print command line *)
     GtkThread2.async begin fun () ->
       self#view#set_editable true;

@@ -20,6 +20,7 @@
 
 *)
 
+
 open Printf
 
 type kind = [ `CLEAN | `CLEANALL | `ANNOT | `COMPILE | `RUN | `OTHER]
@@ -72,8 +73,8 @@ let create ~name ~env ?(env_replace=false) ~dir ~cmd ~args ?phase () = {
     always_run  = false;
   }
 
-(** prepare *)
-let prepare task =
+(** handle *)
+let handle task f =
   let tenv = Array.of_list task.env in
   let env =
     if task.env_replace then Array.concat [(*Unix.environment();*) tenv]
@@ -82,18 +83,5 @@ let prepare task =
   let prog = Quote.path task.cmd in
   let args = List.map Quote.arg task.args in
   let args = Array.of_list args in
-  let proc = Process.create ~env ~prog ~args () in (* 2>&1 *)
-  let task_working_dir = if task.dir <> "" then task.dir else (Sys.getcwd ()) in
-  proc, fun () ->
-    let cwd = Sys.getcwd () in
-    Sys.chdir task_working_dir;
-    Process.start proc;
-    Sys.chdir cwd
-
-
-
-
-
-
-
-
+  let dir = if task.dir <> "" then task.dir else (Sys.getcwd ()) in
+  f ~env ~dir ~prog ~args;;

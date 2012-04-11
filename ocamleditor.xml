@@ -10,22 +10,17 @@
   <autocomp enabled="true" delay="1." cflags=""/>
   <open_files>
     <filename offset="21396" active="false">mbrowser_compl.ml</filename>
-    <filename offset="3574" active="true">mbrowser_slist.ml</filename>
+    <filename offset="3574" active="false">mbrowser_slist.ml</filename>
     <filename offset="18584" active="false">editor.ml</filename>
     <filename offset="21917" active="false">project.ml</filename>
-    <filename offset="2029" active="false">otherwidgets/dialog_rename.ml</filename>
-    <filename offset="18947" active="false">mbrowser_tool.ml</filename>
-    <filename offset="47711" active="false">menu.ml</filename>
     <filename offset="28964" active="false">browser.ml</filename>
-    <filename offset="18391" active="false">bconf_console.ml</filename>
-    <filename offset="4988" active="false">text.ml</filename>
-    <filename offset="1054" active="false">C:\Objective Caml\devel\ocamleditor\build.ml</filename>
-    <filename offset="8370" active="false">oebuild/oebuild_script_util.ml</filename>
-    <filename offset="5577" active="false">text_init.ml</filename>
-    <filename offset="771" active="false">gmisclib/gmisclib.ml</filename>
-    <filename offset="966" active="false">timeout.ml</filename>
-    <filename offset="1510" active="false">gmisclib/util.ml</filename>
-    <filename offset="9180" active="false">editor_page.ml</filename>
+    <filename offset="8911" active="false">C:\Objective Caml\devel\ocamleditor\build.ml</filename>
+    <filename offset="0" active="false">oebuild/oebuild_script_util.ml</filename>
+    <filename offset="0" active="false">bconf.ml</filename>
+    <filename offset="2583" active="true">task.ml</filename>
+    <filename offset="0" active="false">generate_oebuild_script.ml</filename>
+    <filename offset="3621" active="false">process.ml</filename>
+    <filename offset="7608" active="false">bconf_console.ml</filename>
   </open_files>
   <runtime>
     <configuration>
