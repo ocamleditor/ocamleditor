@@ -32,7 +32,7 @@
    Please set the right search path for lablgtk2 and xml-light.
 *)
 let lablgtk2  = "+lablgtk2"
-let xml_light = ""  (* +xml-light *)
+let xml_light = "+xml-light"  (* +xml-light *)
 let ocamldoc  = "+ocamldoc"
 
 
