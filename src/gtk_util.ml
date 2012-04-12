@@ -37,6 +37,7 @@ let window widget ?parent ?(destroy_child=true) ?(fade=false) ?(focus=true) ?(es
     ~border_width:1
     ~deletable:true
     ~focus_on_map:focus
+    ~type_hint:(if Sys.os_type = "Win32" then `UTILITY else `DIALOG)
     ~show:false ()
   in
   let ebox = GBin.event_box ~packing:window#add () in

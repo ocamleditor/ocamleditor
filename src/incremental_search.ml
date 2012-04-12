@@ -172,7 +172,7 @@ class incremental () =
             | _ -> GWindow.window ~allow_grow:true
                 ?type_hint:(match Sys.os_type with
                   | "Win32" -> Some `UTILITY (* to skip taskbar on Windows *)
-                  | _ -> None)
+                  | _ -> Some `DIALOG)
                 ~decorated:false ~modal:false ~border_width:1 ()
         in
         dialog#set_skip_taskbar_hint true;

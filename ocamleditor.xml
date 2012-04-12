@@ -14,13 +14,17 @@
     <filename offset="18584" active="false">editor.ml</filename>
     <filename offset="21917" active="false">project.ml</filename>
     <filename offset="28964" active="false">browser.ml</filename>
-    <filename offset="8911" active="false">C:\Objective Caml\devel\ocamleditor\build.ml</filename>
-    <filename offset="0" active="false">oebuild/oebuild_script_util.ml</filename>
+    <filename offset="8795" active="false">C:\Objective Caml\devel\ocamleditor\build.ml</filename>
+    <filename offset="1780" active="false">oebuild/oebuild_script_util.ml</filename>
     <filename offset="0" active="false">bconf.ml</filename>
-    <filename offset="2583" active="true">task.ml</filename>
-    <filename offset="0" active="false">generate_oebuild_script.ml</filename>
+    <filename offset="1750" active="false">task.ml</filename>
+    <filename offset="3113" active="false">generate_oebuild_script.ml</filename>
     <filename offset="3621" active="false">process.ml</filename>
-    <filename offset="7608" active="false">bconf_console.ml</filename>
+    <filename offset="7620" active="false">bconf_console.ml</filename>
+    <filename offset="0" active="false">common/miscellanea.ml</filename>
+    <filename offset="2034" active="false">oebuild/oebuild_util.ml</filename>
+    <filename offset="0" active="false">common/cmd.ml</filename>
+    <filename offset="0" active="true">build_script.ml</filename>
   </open_files>
   <runtime>
     <configuration>
