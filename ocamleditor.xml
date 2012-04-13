@@ -9,7 +9,7 @@
   <version>1.7.0</version>
   <autocomp enabled="true" delay="1." cflags=""/>
   <open_files>
-    <filename offset="21396" active="false">mbrowser_compl.ml</filename>
+    <filename offset="17073" active="false">mbrowser_compl.ml</filename>
     <filename offset="3574" active="false">mbrowser_slist.ml</filename>
     <filename offset="18584" active="false">editor.ml</filename>
     <filename offset="21917" active="false">project.ml</filename>
@@ -24,7 +24,10 @@
     <filename offset="0" active="false">common/miscellanea.ml</filename>
     <filename offset="2034" active="false">oebuild/oebuild_util.ml</filename>
     <filename offset="0" active="false">common/cmd.ml</filename>
-    <filename offset="0" active="true">build_script.ml</filename>
+    <filename offset="832" active="false">build_script.ml</filename>
+    <filename offset="6836" active="false">incremental_search.ml</filename>
+    <filename offset="827" active="true">gtk_util.ml</filename>
+    <filename offset="8844" active="false">templ.ml</filename>
   </open_files>
   <runtime>
     <configuration>

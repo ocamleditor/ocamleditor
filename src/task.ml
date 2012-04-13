@@ -30,7 +30,7 @@ type t = {
   mutable name        : string;
   mutable env         : string list;
   mutable env_replace : bool; (* After system environment *)
-  mutable dir         : string;       (* Working directory: relative to the project source directory (actually: Sys.getcwd()) *)
+  mutable dir         : string; (* Working directory: relative to the project source directory (actually: Sys.getcwd()) *)
   mutable cmd         : string;
   mutable args        : string list;
   mutable phase       : phase option;

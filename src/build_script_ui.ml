@@ -23,6 +23,7 @@
 
 open Miscellanea
 open Printf
+open GdkKeysyms
 
 let default_basename = "_build.ml"
 
@@ -90,6 +91,12 @@ let window ~project () =
   ignore (button_ok#connect#clicked ~callback:(fun () -> if widget#apply() then window#destroy()));
   ignore (button_cancel#connect#clicked ~callback:window#destroy);
   ignore (widget#is_valid#connect#changed ~callback:button_ok#misc#set_sensitive);
+  ignore (window#event#connect#key_press ~callback:begin fun ev ->
+    let key = GdkEvent.Key.keyval ev in
+    if key = _Return then (button_ok#clicked(); true)
+    else if key = _Escape then (window#destroy(); true)
+    else false
+  end);
   window#show();;
 
 
