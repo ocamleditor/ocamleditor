@@ -9,27 +9,20 @@
   <version>1.7.0</version>
   <autocomp enabled="true" delay="1." cflags=""/>
   <open_files>
-    <filename offset="9354" active="false">project.ml</filename>
     <filename offset="2299" active="false">C:\Objective Caml\devel\ocamleditor\build.ml</filename>
     <filename offset="8859" active="false">oebuild/oebuild_script_util.ml</filename>
-    <filename offset="1323" active="false">task.ml</filename>
-    <filename offset="3060" active="false">generate_oebuild_script.ml</filename>
     <filename offset="1440" active="false">build_script.ml</filename>
-    <filename offset="1653" active="false">build_script_ui.ml</filename>
     <filename offset="5323" active="false">etask_page.ml</filename>
     <filename offset="23059" active="false">bconf_console.ml</filename>
-    <filename offset="1172" active="false">task_process.ml</filename>
     <filename offset="2050" active="false">oebuild/oebuild_util.ml</filename>
-    <filename offset="0" active="false">C:\Objective Caml\devel\ocamleditor\admin_tools.ml</filename>
     <filename offset="4867" active="false">oebuild/oebuild_tool.ml</filename>
     <filename offset="13385" active="false">oebuild/oebuild.ml</filename>
-    <filename offset="9596" active="false">bconf_page.ml</filename>
+    <filename offset="14123" active="false">bconf_page.ml</filename>
     <filename offset="5203" active="false">bconf.ml</filename>
-    <filename offset="0" active="false">C:\Objective Caml\devel\ocamleditor\tools\mkicons.ml</filename>
-    <filename offset="0" active="false">C:\Objective Caml\devel\ocamleditor\tools\base.ml</filename>
-    <filename offset="0" active="false">C:\Objective Caml\devel\ocamleditor\tools\release.ml</filename>
-    <filename offset="0" active="false">C:\Objective Caml\devel\ocamleditor\build_tasks.ml</filename>
     <filename offset="5113" active="false">common/miscellanea.ml</filename>
+    <filename offset="9019" active="false">C:\Objective Caml\devel\ocamleditor\build\tools.ml</filename>
+    <filename offset="7183" active="false">bconf_list.ml</filename>
+    <filename offset="7294" active="true">project_properties.ml</filename>
   </open_files>
   <runtime>
     <configuration>

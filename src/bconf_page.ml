@@ -295,8 +295,10 @@ object (self)
     let _ = radio_executable#connect#clicked ~callback:begin fun () ->
       align_lib#misc#set_sensitive (not radio_executable#active);
       align_exec#misc#set_sensitive radio_executable#active;
-      if radio_executable#active then (entry_main_module#misc#grab_focus())
-      else (button_lib_modules#misc#grab_focus());
+      if signals_enabled then begin
+        if radio_executable#active then (entry_main_module#misc#grab_focus())
+        else (button_lib_modules#misc#grab_focus());
+      end
     end in
     ignore (self#connect#changed ~callback:(fun () -> page_changed <- true))
 
@@ -373,7 +375,7 @@ object (self)
     check_native#set_active (List.mem "HAS_NATIVE" bc.restrictions);
     (*  *)
     signals_enabled <- true;
-    self#update_cmd_line bc;
+    Gmisclib.Idle.add ~prio:300 (fun () -> self#update_cmd_line bc);
 
   method private update_cmd_line bconf =
     let cmd, args = create_cmd_line bconf in

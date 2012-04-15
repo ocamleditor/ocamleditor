@@ -177,27 +177,23 @@ object (self)
   initializer
     self#reset();
     ignore (view#selection#connect#changed ~callback:begin fun () ->
-      if List.length view#selection#get_selected_rows = 0 then begin
-        selection_changed#call None;
-      end else begin
-        match view#selection#get_selected_rows with
-          | path :: _ ->
-            begin
-              match self#get path with
-                | BCONF bc ->
-                  b_clean#misc#set_sensitive true;
-                  b_compile#misc#set_sensitive true;
-                  b_etask#misc#set_sensitive true;
-                  b_run#misc#set_sensitive (bc.Bconf.outkind <> Executable);
-                | _ ->
-                  b_clean#misc#set_sensitive false;
-                  b_compile#misc#set_sensitive false;
-                  b_etask#misc#set_sensitive true;
-                  b_run#misc#set_sensitive true;
-            end;
-            selection_changed#call (Some path);
-          | [] -> assert false
-      end
+      match view#selection#get_selected_rows with
+        | path :: _ ->
+          selection_changed#call (Some path);
+          Gmisclib.Idle.add ~prio:300 begin fun () ->
+            match self#get path with
+              | BCONF bc ->
+                b_clean#misc#set_sensitive true;
+                b_compile#misc#set_sensitive true;
+                b_etask#misc#set_sensitive true;
+                b_run#misc#set_sensitive (bc.Bconf.outkind <> Executable);
+              | _ ->
+                b_clean#misc#set_sensitive false;
+                b_compile#misc#set_sensitive false;
+                b_etask#misc#set_sensitive true;
+                b_run#misc#set_sensitive true;
+          end;
+        | [] -> selection_changed#call None
     end);
     (* b_add#connect#clicked *)
     let _ = b_add#connect#clicked ~callback:begin fun () ->
