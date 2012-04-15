@@ -22,7 +22,8 @@
     <filename offset="5113" active="false">common/miscellanea.ml</filename>
     <filename offset="9019" active="false">C:\Objective Caml\devel\ocamleditor\build\tools.ml</filename>
     <filename offset="7183" active="false">bconf_list.ml</filename>
-    <filename offset="7294" active="true">project_properties.ml</filename>
+    <filename offset="6728" active="true">project_properties.ml</filename>
+    <filename offset="1292" active="false">C:\Objective Caml\devel\ocamleditor\NEWS</filename>
   </open_files>
   <runtime>
     <configuration>
@@ -434,7 +435,7 @@
             <arg>tools.ml</arg>
             <arg>-mkrelease</arg>
           </args>
-          <phase></phase>
+          <phase>Before_clean</phase>
         </task>
       </external_tasks>
       <restrictions></restrictions>

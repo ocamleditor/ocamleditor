@@ -135,20 +135,24 @@ class widget ~editor ?(callback=ignore) ~project ?page_num ?packing ?show () =
           match bconf_list#get path with
             | Bconf_list.BCONF bc ->
               set_title "Build Configuration";
-              if not (bconf_page#misc#get_flag `SENSITIVE) then (bconf_page#misc#set_sensitive true);
-              if not (bconf_page#misc#get_flag `VISIBLE) then begin
-                etask_page#misc#hide ();
-                bconf_page#misc#show();
-              end;
-              Gmisclib.Idle.add ~prio:200 (fun () -> bconf_page#set bc);
+              Gmisclib.Idle.add (fun () -> bconf_page#set bc);
+              Gmisclib.Idle.add begin fun () ->
+                if not (bconf_page#misc#get_flag `SENSITIVE) then (bconf_page#misc#set_sensitive true);
+                if not (bconf_page#misc#get_flag `VISIBLE) then begin
+                  etask_page#misc#hide ();
+                  bconf_page#misc#show();
+              end
+              end
             | Bconf_list.ETASK et ->
               set_title "External Build Task";
-              if not (etask_page#misc#get_flag `SENSITIVE) then (etask_page#misc#set_sensitive true);
-              if not (etask_page#misc#get_flag `VISIBLE) then begin
-                bconf_page#misc#hide ();
-                etask_page#misc#show();
-              end;
-              Gmisclib.Idle.add ~prio:200 (fun () -> etask_page#set et);
+              Gmisclib.Idle.add (fun () -> etask_page#set et);
+              Gmisclib.Idle.add begin fun () ->
+                if not (etask_page#misc#get_flag `SENSITIVE) then (etask_page#misc#set_sensitive true);
+                if not (etask_page#misc#get_flag `VISIBLE) then begin
+                  bconf_page#misc#hide ();
+                  etask_page#misc#show();
+                end;
+              end
             | _ -> ()
         end
   end in
