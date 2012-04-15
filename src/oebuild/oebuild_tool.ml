@@ -26,6 +26,7 @@ open Oebuild
 
 (** main *)
 let main () = begin
+  let enabled = ref true in
   let target = ref [] in
   let outkind = ref Executable in
   let is_clean = ref false in
@@ -64,6 +65,10 @@ let main () = begin
       exit 0;
     end
   in
+  let check_restrictions restr =
+    let restr = Str.split (Str.regexp "[ ,]+") restr in
+    enabled := check_restrictions restr
+  in
   let speclist = Arg.align [
     ("-byt",         Unit (add_compilation Bytecode), " Bytecode compilation (default).");
     ("-opt",         Unit (add_compilation Native),   " Native-code compilation.");
@@ -88,6 +93,13 @@ let main () = begin
     ("-clean",       Set is_clean,                    " Remove output files for the selected target and exit.");
     ("-clean-all",   Set is_clean_all,                " Remove all build output and exit.");
     ("-dep",         Unit dep,                        " Print dependencies and exit.");
+    ("-when",        String check_restrictions,       "\"<c1,c2,...>\" Exit immediately if one of the specified conditions is not true.
+                      Recognized conditions are:
+
+                        IS_UNIX    : O.S. type is Unix
+                        IS_WIN32   : O.S. type is Win32
+                        IS_CYGWIN  : O.S. type is Cygwin
+                        HAS_NATIVE : Native compilation is supported\n");
     ("-output-name", Set print_output_name,           " (undocumented)");
     ("-msvc",        Set ms_paths,                    " (undocumented)");
     ("-no-build",    Set no_build,                    " (undocumented)");
@@ -101,7 +113,11 @@ let main () = begin
   let help_message = sprintf "\nUsage:\n  %s target.ml... [options]\n\nOptions:" command_name in
   Arg.parse speclist add_target help_message;
   target := List.rev !target;
-  if List.length !target = 0 then (invalid_arg "No target was specified");
+  if List.length !target = 0 then begin
+    Arg.usage speclist help_message;
+    exit 0;
+  end;
+  if not !enabled then (exit 0);
   (** Compilation mode *)
   let compilation = if !compilation = [] then [Bytecode] else !compilation in
   let compilation = List.sort Pervasives.compare compilation in

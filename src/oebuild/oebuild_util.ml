@@ -67,10 +67,10 @@ let command ?(echo=true) cmd =
 let iter_chan chan f = try while true do f chan done with End_of_file -> ()
 
 (** exec *)
-let exec ?(echo=true) ?(join=true) ?at_exit ?(process_err=(fun ~stderr -> prerr_endline (input_line stderr))) cmd =
+let exec ?(env=Unix.environment()) ?(echo=true) ?(join=true) ?at_exit ?(process_err=(fun ~stderr -> prerr_endline (input_line stderr))) cmd =
   let cmd = Str.global_replace re_spaces " " cmd in
   if echo then (print_endline cmd);
-  let (inchan, _, errchan) as channels = Unix.open_process_full cmd (Unix.environment()) in
+  let (inchan, _, errchan) as channels = Unix.open_process_full cmd env in
   let close () =
     match Unix.close_process_full channels with
       | Unix.WEXITED code -> code

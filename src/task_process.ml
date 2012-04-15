@@ -23,16 +23,16 @@
 
 (** create *)
 let create task =
-  Task.handle task begin fun ~env ~dir ~prog ~args ->
+  Task.handle begin fun ~env ~dir ~prog ~args ->
     let proc = Process.create ~env ~prog ~args () in (* 2>&1 *)
     proc, fun () ->
       let cwd =
-        if task.Task.dir <> "" then
+        if task.Task.et_dir <> "" then
           let old = Sys.getcwd () in
-          Sys.chdir task.Task.dir;
+          Sys.chdir task.Task.et_dir;
           Some old
         else None
       in
       Process.start proc;
       match cwd with Some old -> Sys.chdir old | _ -> ()
-  end;;
+  end task;;

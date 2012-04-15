@@ -183,7 +183,7 @@ class widget ~editor ?(callback=ignore) ~project ?page_num ?packing ?show () =
   let _ = bconf_list#misc#connect#unmap ~callback:(fun () -> button_help#misc#set_sensitive false) in
   let _ = button_help#connect#clicked ~callback:begin fun () ->
     let cmd = sprintf "\"%s\" --help" Oe_config.oebuild_command in
-    let text = Cmd.expand cmd in
+    let text = Cmd.expand ~trim:false cmd in
     let window = GWindow.message_dialog ~title:cmd ~position:`CENTER ~message_type:`INFO
       ~buttons:GWindow.Buttons.ok () in
     let label = GMisc.label ~text ~packing:window#vbox#add () in

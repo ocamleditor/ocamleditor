@@ -147,7 +147,7 @@ object (self)
   method append_task ~parent ~task =
     let row = model#append ~parent () in
     model#set ~row ~column:col_data (ETASK task);
-    model#set ~row ~column:col_name task.Task.name;
+    model#set ~row ~column:col_name task.Task.et_name;
     model#set ~row ~column:col_default false;
     view#expand_row (model#get_path parent);
     row

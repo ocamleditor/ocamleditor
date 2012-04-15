@@ -26,7 +26,7 @@ exception Not_started
 
 type t = {
   prog             : string;
-  args             : string array;
+  args             : string list;
   env              : string array;
   mutable cmd_line : string;
   mutable at_exit  : (unit -> unit);
@@ -162,9 +162,10 @@ let getpid p =
 let cmd_line proc = proc.cmd_line
 
 (** create *)
-let create ?(at_exit=ignore) ?(env=Unix.environment()) ~prog ?(args=[||]) () =
-  let arg_string = String.concat " " (Array.to_list args) in
-  let cmd_line = prog ^ " " ^ arg_string in
+let create ?(at_exit=ignore) ?(env=Unix.environment()) ~prog ?(args=[]) () =
+  let args = List.map Quote.arg args in
+  let arg_string = String.concat " " args in
+  let cmd_line = (Quote.path prog) ^ " " ^ arg_string in
   {
     env      = env;
     prog     = prog;

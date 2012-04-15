@@ -36,6 +36,7 @@ let mk_target_filenames project filenames =
 class view ~project ?packing () =
   let changed = new changed () in
   let xalign = 0.0 in
+  let indent = 21 in
   let mainbox = GPack.vbox ~spacing:8 ?packing () in
   let entry_name = GEdit.entry ~packing:mainbox#pack () in
   let nb = GPack.notebook ~packing:mainbox#add () in
@@ -50,7 +51,7 @@ class view ~project ?packing () =
   let label_radio_archive = GMisc.label ~markup:"Build an archive" () in
   let _ = radio_archive#add label_radio_archive#coerce in
 
-  let align_lib = GBin.alignment ~padding:(0,0,21,0) ~packing:mbox#add () in
+  let align_lib = GBin.alignment ~padding:(0,0,indent,0) ~packing:mbox#add () in
   let lbox = GPack.vbox ~spacing:8 ~packing:align_lib#add () in
 
   (** Output kind *)
@@ -172,6 +173,21 @@ class view ~project ?packing () =
   let _ = GMisc.label ~text:"Linker flags" ~xalign ~packing:box#add () in
   let entry_lflags = GEdit.entry ~packing:box#add () in
 
+  (** Restrictions Tab *)
+  let vbox = GPack.vbox ~width:550 ~border_width:5 ~spacing:8 () in
+  let _ = nb#append_page ~tab_label:(GMisc.label ~text:"Restrictions" ())#coerce vbox#coerce in
+  let _ = GMisc.label ~xalign:0.0 ~line_wrap:true ~justify:`LEFT ~width:550
+    ~text:"Specify what constraints must be satisfied to enable the execution of \
+commands on this build configuration. The selected conditions will be verified at \
+any attempt to perform a \"Clean\" or \"Build\" or any other external task, from \
+both within the IDE and from the generated build script." ~packing:vbox#pack () in
+  let align = GBin.alignment ~padding:(0,0,indent,0) ~packing:vbox#add () in
+  let cbox = GPack.vbox ~spacing:3 ~packing:align#add () in
+  let check_unix = GButton.check_button ~label:"O.S. type is Unix" ~packing:cbox#pack () in
+  let check_win32 = GButton.check_button ~label:"O.S. type is Win32" ~packing:cbox#pack () in
+  let check_cygwin = GButton.check_button ~label:"O.S. type is Cygwin" ~packing:cbox#pack () in
+  let check_native = GButton.check_button ~label:"Native compilation is supported" ~packing:cbox#pack () in
+
   (*  *)
   let cmd_line = GEdit.entry ~editable:false () in
 object (self)
@@ -181,6 +197,24 @@ object (self)
   val mutable page_changed = false
 
   initializer
+    let set_restr bconf check c =
+      bconf.restrictions <-
+        Miscellanea.Xlist.remove_dupl (if check#active
+          then (c :: bconf.restrictions)
+          else (List.filter ((<>) c) bconf.restrictions))
+    in
+    let connect_restr (check, c) =
+      ignore (check#connect#toggled ~callback:begin fun () ->
+        self#update (fun bconf -> set_restr bconf check c) ();
+        changed#call()
+      end);
+    in
+    List.iter connect_restr [
+      check_unix, "IS_UNIX";
+      check_win32, "IS_WIN32";
+      check_cygwin, "IS_CYGWIN";
+      check_native, "HAS_NATIVE"
+    ];
     ignore (entry_name#connect#changed
       ~callback:begin fun () ->
         self#update (fun bconf -> bconf.name <- entry_name#text) ();
@@ -333,6 +367,10 @@ object (self)
         entry_main_module#set_text filename;
       with Failure "hd" -> (ignore (entry_main_module#set_text ""))
     end;
+    check_unix#set_active (List.mem "IS_UNIX" bc.restrictions);
+    check_win32#set_active (List.mem "IS_WIN32" bc.restrictions);
+    check_cygwin#set_active (List.mem "IS_CYGWIN" bc.restrictions);
+    check_native#set_active (List.mem "HAS_NATIVE" bc.restrictions);
     (*  *)
     signals_enabled <- true;
     self#update_cmd_line bc;

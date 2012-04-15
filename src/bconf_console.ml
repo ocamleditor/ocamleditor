@@ -53,10 +53,10 @@ class view ~(editor : Editor.editor) ?(task_kind=(`OTHER : Task.kind)) ~task ?pa
       tooltips#set_tip ~text:"Start" button_run#coerce;
       (Icons.create Icons.start_16);
     | `CLEAN | `CLEANALL->
-      tooltips#set_tip ~text:task.Task.name button_run#coerce;
+      tooltips#set_tip ~text:task.Task.et_name button_run#coerce;
       (Icons.create Icons.clear_build_16);
     | `ANNOT | `COMPILE ->
-      tooltips#set_tip ~text:task.Task.name button_run#coerce;
+      tooltips#set_tip ~text:task.Task.et_name button_run#coerce;
       (Icons.create Icons.build_16);
   end#coerce in
   let view = GText.view ~editable:(task_kind = `RUN) ~cursor_visible:true ~packing:sw#add () in
@@ -183,7 +183,7 @@ object (self)
           Gmisclib.Idle.add (fun () -> ignore (view#scroll_to_mark `INSERT));
         end;
         working_status_changed#call false;
-        Activity.remove task.Task.name;
+        Activity.remove task.Task.et_name;
       end ()
     in
     if task_kind = `COMPILE && Oe_config.save_all_before_compiling then (editor#save_all());
@@ -295,7 +295,7 @@ object (self)
     ignore (Messages.vmessages#connect#remove_page ~callback:begin fun child ->
       if child#misc#get_oid = vbox#misc#get_oid then begin
         match process with None -> () | Some _ ->
-          Dialog.process_still_active ~name:task.Task.name
+          Dialog.process_still_active ~name:task.Task.et_name
             ~ok:self#stop ~cancel:(fun () -> raise Messages.Cancel_process_termination) ()
       end
     end);
@@ -409,7 +409,7 @@ let views : (string * (view * GObj.widget)) list ref = ref []
 
 (** create *)
 let create ~editor task_kind task =
-  let console_id = sprintf "%s %s %s" task.Task.name task.Task.cmd (String.concat " " task.Task.args) in
+  let console_id = sprintf "%s %s %s" task.Task.et_name task.Task.et_cmd (String.concat " " task.Task.et_args) in
   try
     let (console, box) = List.assoc console_id !views in
     console#set_task task;
@@ -421,18 +421,18 @@ let create ~editor task_kind task =
           let box = GPack.hbox ~spacing:3 () in
           let icon = (Icons.create Icons.start_16) in
           box#pack icon#coerce;
-          let _ = GMisc.label ~text:task.Task.name ~packing:box#pack () in
+          let _ = GMisc.label ~text:task.Task.et_name ~packing:box#pack () in
           box#coerce, Some begin fun active ->
             (*if finished then (icon#misc#hide()) else (icon#misc#show());*)
             if not active then (icon#misc#set_sensitive false) else (icon#misc#set_sensitive true);
           end
-        | _ -> (GMisc.label ~text:task.Task.name ())#coerce, None
+        | _ -> (GMisc.label ~text:task.Task.et_name ())#coerce, None
     in
     let page = new view ~editor ~task_kind ~task () in
     if task_kind = `RUN then begin
       page#set_close_tab_func begin fun () ->
         if page#has_process then
-          Dialog.process_still_active ~name:task.Task.name
+          Dialog.process_still_active ~name:task.Task.et_name
             ~ok:page#stop ~cancel:GtkSignal.stop_emit ()
       end;
     end;
@@ -473,26 +473,30 @@ let exec ~editor ?use_thread task_kind bconf =
   let can_compile_native = project.Project.can_compile_native in
   let filter_tasks = Bconf.filter_external_tasks bconf in
   let tasks_clean () =
-    (* External build tasks *)
-    let et_before_clean = filter_tasks Task.Before_clean in
-    let et_clean = filter_tasks Task.Clean in
-    let et_clean = if et_clean = [] then [`CLEAN, begin
-      let cmd, args = Bconf.create_cmd_line bconf in
-      let name = sprintf "Clean \xC2\xAB%s\xC2\xBB" (Filename.basename bconf.Bconf.name) in
-      Task.create ~name ~env:[] ~dir:"" ~cmd ~args:(args @ ["-clean"]) ()
-    end] else et_clean in
-    let et_after_clean = filter_tasks Task.After_clean in
-    (* Execute sequence *)
-    Project.clean_tmp project;
-    et_before_clean @ et_clean @ et_after_clean;
+    if Oebuild.check_restrictions bconf.restrictions then
+      (* External build tasks *)
+      let et_before_clean = filter_tasks Task.Before_clean in
+      let et_clean = filter_tasks Task.Clean in
+      let et_clean = if et_clean = [] then [`CLEAN, begin
+        let cmd, args = Bconf.create_cmd_line bconf in
+        let name = sprintf "Clean \xC2\xAB%s\xC2\xBB" (Filename.basename bconf.Bconf.name) in
+        Task.create ~name ~env:[] ~dir:"" ~cmd ~args:(args @ ["-clean"]) ()
+      end] else et_clean in
+      let et_after_clean = filter_tasks Task.After_clean in
+      (* Execute sequence *)
+      Project.clean_tmp project;
+      et_before_clean @ et_clean @ et_after_clean;
+    else []
   in
   let tasks_annot () =
-    [`ANNOT, begin
-      let cmd, args = Bconf.create_cmd_line bconf in
-      let args = "-c"  :: "-annot" :: args in
-      let name = sprintf "Compile \xC2\xAB%s\xC2\xBB" (Filename.basename bconf.Bconf.name) in
-      Task.create ~name ~env:[] ~dir:"" ~cmd ~args ()
-    end]
+    if Oebuild.check_restrictions bconf.restrictions then
+      [`ANNOT, begin
+        let cmd, args = Bconf.create_cmd_line bconf in
+        let args = "-c"  :: "-annot" :: args in
+        let name = sprintf "Compile \xC2\xAB%s\xC2\xBB" (Filename.basename bconf.Bconf.name) in
+        Task.create ~name ~env:[] ~dir:"" ~cmd ~args ()
+      end]
+    else []
   in
   let compile_name = sprintf "Compile \xC2\xAB%s\xC2\xBB" (Filename.basename bconf.name) in
   let build_name = sprintf "Build \xC2\xAB%s\xC2\xBB" (Filename.basename bconf.name) in
@@ -503,7 +507,7 @@ let exec ~editor ?use_thread task_kind bconf =
       let task = Task.create ~name:"Clean Project" ~env:[] ~dir:"" ~cmd
         ~args:(args @ ["-clean-all"]) () in
       let console = create ~editor `CLEANALL task in
-      console#button_run#connect#clicked ~callback:(fun () -> ignore (console#run()));
+      ignore (console#button_run#connect#clicked ~callback:(fun () -> ignore (console#run())));
       ignore(console#run ?use_thread ())
     | `CLEAN -> exec_sync ~editor (tasks_clean ());
     | `ANNOT -> exec_sync ~editor (tasks_annot ());
@@ -512,30 +516,32 @@ let exec ~editor ?use_thread task_kind bconf =
     | `COMPILE_ONLY ->
       exec_sync ~editor ~at_exit (tasks_compile ~flags:["-c"] ~name:compile_name ~can_compile_native bconf);
     | `RCONF rc ->
-      let oebuild, args = Bconf.create_cmd_line bconf in
-      let name = rc.Rconf.name in
-      let prior_tasks =
-        match rc.Rconf.build_task with
-          | `NONE -> []
-          | `CLEAN -> tasks_clean ()
-          | `COMPILE -> tasks_compile ~name:build_name ~can_compile_native bconf
-          | `REBUILD -> tasks_clean () @ tasks_compile ~name:build_name ~can_compile_native bconf
-          | `ETASK name ->
-            let etask = List.find ((=) name) bconf.Bconf.external_tasks in
-            [`OTHER, etask]
-      in
-      let tasks = prior_tasks @ [
-        `RUN, Task.create
-          ~name
-          ~env:rc.Rconf.env
-          ~env_replace:rc.Rconf.env_replace
-          ~dir:""
-          ~cmd:oebuild
-          ~args:(args @ (["-no-build"; "-run"; "--"] @
-            (List.map Quote.arg (Cmd_line_args.parse rc.Rconf.args)))) ();
-      ] in
-      let rec f () = ignore (exec_sync ~run_cb:f ~editor tasks) in
-      f();
+      if Oebuild.check_restrictions bconf.restrictions then
+        let oebuild, args = Bconf.create_cmd_line bconf in
+        let name = rc.Rconf.name in
+        let prior_tasks =
+          match rc.Rconf.build_task with
+            | `NONE -> []
+            | `CLEAN -> tasks_clean ()
+            | `COMPILE -> tasks_compile ~name:build_name ~can_compile_native bconf
+            | `REBUILD -> tasks_clean () @ tasks_compile ~name:build_name ~can_compile_native bconf
+            | `ETASK name ->
+              let etask = List.find ((=) name) bconf.Bconf.external_tasks in
+              [`OTHER, etask]
+        in
+        let tasks = prior_tasks @ [
+          `RUN, Task.create
+            ~name
+            ~env:rc.Rconf.env
+            ~env_replace:rc.Rconf.env_replace
+            ~dir:""
+            ~cmd:oebuild
+            ~args:(args @ (["-no-build"; "-run"; "--"] @
+              (List.map Quote.arg (Cmd_line_args.parse rc.Rconf.args)))) ();
+        ] in
+        let rec f () = ignore (exec_sync ~run_cb:f ~editor tasks) in
+        f();
+      else ()
     | `INSTALL_LIBRARY ->
       let oebuild, args = Bconf.create_cmd_line bconf in
       let name = Filename.basename bconf.Bconf.name in

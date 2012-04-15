@@ -195,18 +195,20 @@ let to_xml proj =
           Xml.Element ("external_tasks", [],
             List.map begin fun task ->
               Xml.Element ("task", [], [
-                Xml.Element ("name", [], [Xml.PCData (task.Task.name)]);
-                Xml.Element ("always_run", [], [Xml.PCData (string_of_bool task.Task.always_run)]);
-                Xml.Element ("env", ["replace", string_of_bool task.Task.env_replace],
-                  List.map (fun x -> Xml.Element ("var", [], [Xml.PCData x])) task.Task.env);
-                Xml.Element ("dir", [], [Xml.PCData (task.Task.dir)]);
-                Xml.Element ("cmd", [], [Xml.PCData (task.Task.cmd)]);
+                Xml.Element ("name", [], [Xml.PCData (task.Task.et_name)]);
+                Xml.Element ("always_run_in_project", [], [Xml.PCData (string_of_bool task.Task.et_always_run_in_project)]);
+                Xml.Element ("always_run_in_script", [], [Xml.PCData (string_of_bool task.Task.et_always_run_in_script)]);
+                Xml.Element ("env", ["replace", string_of_bool task.Task.et_env_replace],
+                  List.map (fun x -> Xml.Element ("var", [], [Xml.PCData x])) task.Task.et_env);
+                Xml.Element ("dir", [], [Xml.PCData (task.Task.et_dir)]);
+                Xml.Element ("cmd", [], [Xml.PCData (task.Task.et_cmd)]);
                 Xml.Element ("args", [],
-                  List.map (fun x -> Xml.Element ("arg", [], [Xml.PCData x])) task.Task.args);
+                  List.map (fun x -> Xml.Element ("arg", [], [Xml.PCData x])) task.Task.et_args);
                 Xml.Element ("phase", [], [Xml.PCData
-                  (match task.Task.phase with Some x -> Task.string_of_phase x | _ -> "")]);
+                  (match task.Task.et_phase with Some x -> Task.string_of_phase x | _ -> "")]);
               ])
-            end t.Bconf.external_tasks)
+            end t.Bconf.external_tasks);
+          Xml.Element ("restrictions", [], [Xml.PCData (String.concat "," t.Bconf.restrictions)]);
         ])
       end proj.build
     );
@@ -308,21 +310,24 @@ let from_file filename =
                   let task = Task.create ~name:"" ~env:[] ~dir:"" ~cmd:"" ~args:[] () in
                   Xml.iter begin fun tp ->
                     match Xml.tag tp with
-                      | "name" -> task.Task.name <- value tp
-                      | "always_run" -> task.Task.always_run <- bool_of_string (value tp)
+                      | "name" -> task.Task.et_name <- value tp
+                      | "always_run" -> task.Task.et_always_run_in_project <- bool_of_string (value tp) (* obsolete *)
+                      | "always_run_in_project" -> task.Task.et_always_run_in_project <- bool_of_string (value tp)
+                      | "always_run_in_script" -> task.Task.et_always_run_in_script <- bool_of_string (value tp)
                       | "env" ->
-                        task.Task.env <- values tp;
-                        task.Task.env_replace <- (try bool_of_string (Xml.attrib tp "replace") with Xml.No_attribute _ -> false)
-                      | "dir" -> task.Task.dir <- value tp
-                      | "cmd" -> task.Task.cmd <- value tp
-                      | "args" -> task.Task.args <- values tp
-                      | "phase" -> task.Task.phase <-
+                        task.Task.et_env <- values tp;
+                        task.Task.et_env_replace <- (try bool_of_string (Xml.attrib tp "replace") with Xml.No_attribute _ -> false)
+                      | "dir" -> task.Task.et_dir <- value tp
+                      | "cmd" -> task.Task.et_cmd <- value tp
+                      | "args" -> task.Task.et_args <- values tp
+                      | "phase" -> task.Task.et_phase <-
                         (match value tp with "" -> None | x -> Some (Task.phase_of_string x))
                       | _ -> ()
                   end tnode;
                   task :: acc
                 end [] tp in
                 target.Bconf.external_tasks <- List.rev external_tasks;
+              | "restrictions" -> target.Bconf.restrictions <- (Str.split (!~ ",") (value tp))
               | _ -> ()
           end tnode;
           incr i;

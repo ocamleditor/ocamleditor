@@ -25,6 +25,7 @@ open Arg
 open Printf
 open Oebuild
 open Oebuild_util
+open Task
 
 type target = {
   output_name : string;
@@ -41,7 +42,11 @@ type target = {
   pp : string;
   library_install_dir : string;
   other_objects : string;
+  external_tasks : int list;
+  restrictions : string list;
 }
+
+exception Error
 
 let pushd, popd =
   let stack = Stack.create () in
@@ -116,7 +121,10 @@ let show = function num, (name, t) ->
   in
   let outkind = string_of_outkind t.output_kind in
   let compilation = string_of_compilation_type (ccomp_type <> None) t in
-  let prop_1 = ["Output name", (String.concat ", " outname)] in
+  let prop_1 = [
+    "Restrictions", (String.concat "," t.restrictions);
+    "Output name", (String.concat ", " outname);
+  ] in
   let prop_2 = [
     "Search path (-I)", t.search_path;
     "Required libraries", t.required_libraries;
@@ -132,6 +140,27 @@ let show = function num, (name, t) ->
   let maxlength = List.fold_left (fun cand (x, _) -> let len = String.length x in max cand len) 0 properties in
   List.iter (fun (n, v) -> printf "  %s : %s\n" (rpad (n ^ " ") '.' maxlength) v) properties
 ;;
+
+module ETask = struct
+  let filter tasks phase =
+    List.filter begin fun task ->
+      if task.et_always_run_in_script then
+        match task.et_phase with
+          | Some ph -> ph = phase
+          | _ -> false
+      else false
+    end tasks;;
+
+  let execute = Task.handle begin fun ~env ~dir ~prog ~args ->
+    let cmd = sprintf "%s %s" prog (String.concat " " args) in
+    let old_dir = Sys.getcwd () in
+    Sys.chdir dir;
+    let exit_code = Oebuild_util.exec ~env cmd in
+    Sys.chdir old_dir;
+    if exit_code > 0 then raise Error
+  end
+
+end
 
 (** Command *)
 module Command = struct
@@ -159,64 +188,80 @@ module Command = struct
           with Not_found -> false
         end;;
 
-  let execute_target command = function _, (name, t) ->
+  let execute_target ~(external_tasks : (int * Task.t) list) ~command  (_, (name, t)) =
+    if Oebuild.check_restrictions t.restrictions then
       let compilation = (if t.compilation_bytecode then [Bytecode] else [])
         @ (if t.compilation_native && (ccomp_type <> None) then [Native] else []) in
       let files = Str.split (Str.regexp " +") t.toplevel_modules in
-      let deps = Dep.find ~pp:t.pp ~with_errors:true ~echo:false files in
+      let deps () = Dep.find ~pp:t.pp ~with_errors:true ~echo:false files in
+      let etasks = List.map (fun x -> snd (List.nth external_tasks x)) t.external_tasks in
       List.iter begin fun compilation ->
         let outname = get_output_name ~compilation ~outkind:t.output_kind ~outname:t.output_name ~targets:files in
         match command with
-          | Build -> begin
-            match build
-              ~compilation
-              ~includes:t.search_path
-              ~libs:t.required_libraries
-              ~other_mods:t.other_objects
-              ~outkind:t.output_kind
-              ~compile_only:false
-              ~thread:t.thread
-              ~vmthread:t.vmthread
-              ~annot:false
-              ~pp:t.pp
-              ~cflags:t.compiler_flags
-              ~lflags:t.linker_flags
-              ~outname
-              ~deps
-              ~ms_paths:(ref false)
-              ~targets:files ()
-            with
-              | Built_successfully -> ()
-              | Build_failed n -> popd(); exit n
-          end
+          | Build ->
+            List.iter ETask.execute (ETask.filter etasks Before_compile);
+            let deps = deps() in
+            (*List.iter ETask.execute (ETask.filter etasks Compile);*)
+            begin
+              match build
+                ~compilation
+                ~includes:t.search_path
+                ~libs:t.required_libraries
+                ~other_mods:t.other_objects
+                ~outkind:t.output_kind
+                ~compile_only:false
+                ~thread:t.thread
+                ~vmthread:t.vmthread
+                ~annot:false
+                ~pp:t.pp
+                ~cflags:t.compiler_flags
+                ~lflags:t.linker_flags
+                ~outname
+                ~deps
+                ~ms_paths:(ref false)
+                ~targets:files ()
+              with
+                | Built_successfully ->
+                  List.iter ETask.execute (ETask.filter etasks After_compile);
+                | Build_failed n -> popd(); exit n
+            end
           | Install ->
+            let deps = deps() in
             install_output ~compilation ~outkind:t.output_kind ~outname ~deps ~path:t.library_install_dir ~ccomp_type
           | Clean ->
-            clean ~compilation ~outkind:t.output_kind ~outname ~targets:files ~deps ()
+            List.iter ETask.execute (ETask.filter etasks Before_clean);
+            let deps = deps() in
+            clean ~compilation ~outkind:t.output_kind ~outname ~targets:files ~deps ();
+            List.iter ETask.execute (ETask.filter etasks After_clean);
           | Distclean ->
+            let deps = deps() in
+            List.iter ETask.execute (ETask.filter etasks Before_clean);
             clean ~compilation ~outkind:t.output_kind ~outname ~targets:files ~deps ~all:true ();
+            List.iter ETask.execute (ETask.filter etasks After_clean);
           | Show -> assert false
       end compilation;;
 
-  let execute ~target targets =
+  let execute ~external_tasks ~target targets =
     pushd !Option.change_dir;
-    let command = match !command with Some c -> c | _ -> assert false in
-    begin
-      match command with
-        | Distclean ->
-          List.iter (fun t -> execute_target command ((*Some*) (0, t))) targets;
-          clean_all()
-        | Show ->
-          printf "%s\n%!" (system_config ());
-          Printf.printf "\n%!" ;
-          List.iter begin fun t ->
-            show t;
-            print_newline();
-            print_newline();
-          end target;
-        | _ -> List.iter (execute_target command) target
-    end;
-    popd();
+    try
+      let command = match !command with Some c -> c | _ -> assert false in
+      begin
+        match command with
+          | Distclean ->
+            List.iter (fun t -> execute_target external_tasks command (0, t)) targets;
+            clean_all()
+          | Show ->
+            printf "%s\n%!" (system_config ());
+            Printf.printf "\n%!" ;
+            List.iter begin fun t ->
+              show t;
+              print_newline();
+              print_newline();
+            end target;
+          | _ -> List.iter (execute_target ~external_tasks ~command) target
+      end;
+      popd();
+    with ex -> popd();
 end
 
 (** add_target *)
@@ -233,7 +278,7 @@ let add_target targets name =
   with Not_found -> ();;
 
 (** main *)
-let main targets =
+let main ~external_tasks ~targets =
   let parse_anon targets x = if not (Command.set x) then (add_target targets x) in
   let speclist = [
     ("-C",      Set_string Option.change_dir, "<dir> Change directory before running (default is \"src\")");
@@ -271,7 +316,7 @@ let main targets =
   then (Arg.usage speclist help_message)
   else begin
     (match !Command.command with None -> Command.command := Some Command.Build | _ -> ());
-    Command.execute ~target:(List.rev !target) targets
+    Command.execute ~external_tasks ~target:(List.rev !target) targets
   end;;
 
 

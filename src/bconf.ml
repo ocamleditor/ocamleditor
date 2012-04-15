@@ -42,6 +42,7 @@ type t = {
   mutable outname          : string;
   mutable lib_install_path : string;
   mutable external_tasks   : Task.t list;
+  mutable restrictions     : string list;
 }
 and rbt = [ `NONE | `CLEAN | `COMPILE | `REBUILD | `ETASK of Task.t ]
 and output_kind = Executable | Library | Plugin | Pack
@@ -53,14 +54,14 @@ let string_of_rbt = function
   | `CLEAN -> "<CLEAN>"
   | `COMPILE -> "<COMPILE>"
   | `REBUILD -> "<REBUILD>"
-  | `ETASK task -> task.Task.name
+  | `ETASK task -> task.Task.et_name
 
 let markup_of_rbt = function
   | `NONE -> "None"
   | `CLEAN -> "Clean"
   | `COMPILE -> "Build"
   | `REBUILD -> "Rebuild <small><i>(Clean and Build)</i></small>"
-  | `ETASK task -> Glib.Markup.escape_text task.Task.name
+  | `ETASK task -> Glib.Markup.escape_text task.Task.et_name
 
 let rbt_of_string bconf = function
   | "<NONE>" -> `NONE
@@ -69,7 +70,7 @@ let rbt_of_string bconf = function
   | "<REBUILD>" -> `REBUILD
   | task_name -> begin
     try
-      `ETASK (List.find (fun x -> x.Task.name = task_name) bconf.external_tasks)
+      `ETASK (List.find (fun x -> x.Task.et_name = task_name) bconf.external_tasks)
     with Not_found -> default_runtime_build_task
   end
 
@@ -105,7 +106,8 @@ let create ~id ~name = {
   outkind          = Executable;
   outname          = "";
   lib_install_path = "";
-  external_tasks   = []
+  external_tasks   = [];
+  restrictions     = [];
 }
 
 (** find_dependencies *)
@@ -114,9 +116,9 @@ let find_dependencies bconf = Dep.find (Miscellanea.split " +" bconf.files)
 (** filter_external_tasks *)
 let filter_external_tasks bconf phase =
   Miscellanea.Xlist.filter_map begin fun task ->
-    match task.Task.phase with
+    match task.Task.et_phase with
     | Some ph ->
-      if task.Task.always_run && phase = ph then Some (`OTHER, task) else None
+      if task.Task.et_always_run_in_project && phase = ph then Some (`OTHER, task) else None
     | _ -> None
   end bconf.external_tasks
 
@@ -149,16 +151,18 @@ let create_cmd_line ?(flags=[]) ?(can_compile_native=true) bconf =
 
 (** tasks_compile *)
 let tasks_compile ?(name="tasks_compile") ?(flags=[]) ?can_compile_native bconf =
-  let filter_tasks = filter_external_tasks bconf in
-  let et_before_compile = filter_tasks Task.Before_compile in
-  let et_compile = filter_tasks Task.Compile in
-  let et_compile = if et_compile = [] then [`COMPILE, begin
-    let cmd, args = create_cmd_line ~flags ?can_compile_native bconf in
-    Task.create ~name ~env:[] ~dir:"" ~cmd ~args ()
-  end] else et_compile in
-  let et_after_compile = filter_tasks Task.After_compile in
-  (* Execute sequence *)
-  et_before_compile @ et_compile @ et_after_compile
+  if Oebuild.check_restrictions bconf.restrictions then
+    let filter_tasks = filter_external_tasks bconf in
+    let et_before_compile = filter_tasks Task.Before_compile in
+    let et_compile = filter_tasks Task.Compile in
+    let et_compile = if et_compile = [] then [`COMPILE, begin
+      let cmd, args = create_cmd_line ~flags ?can_compile_native bconf in
+      Task.create ~name ~env:[] ~dir:"" ~cmd ~args ()
+    end] else et_compile in
+    let et_after_compile = filter_tasks Task.After_compile in
+    (* Execute sequence *)
+    et_before_compile @ et_compile @ et_after_compile
+  else []
 
 (** Convert from old file version *)
 let convert_from_1 old_filename =

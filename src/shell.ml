@@ -29,7 +29,7 @@ let protect f x = try f x with _ -> ()
 
 let count = ref 0
 
-class shell ~prog ~(env : string array) ~(args : string array) ?packing ?show () =
+class shell ~prog ~(env : string array) ~(args : string list) ?packing ?show () =
   let view = GText.view ~cursor_visible:true ~editable:false ?packing ?show () in
   let buf = view#buffer in
   let process = Process.create ~env ~prog ~args () in

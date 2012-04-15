@@ -24,17 +24,18 @@
 open Printf
 
 let expand =
-  let trim =
+  let trimfunc =
      let replace = Str.global_replace (Str.regexp "\\(^[ \t\r\n]+\\)\\|\\([ \t\r\n]+$\\)") in
      fun str -> replace "" str
-  in fun ?(first_line=false) ?filter command ->
+  in fun ?(trim=true) ?(first_line=false) ?filter command ->
     let ichan = Unix.open_process_in command in
     let finally () = ignore (Unix.close_process_in ichan) in
     let data = Buffer.create 100 in
     begin
       try
+        let get_line ichan = if trim then trimfunc (input_line ichan) else input_line ichan in
         while true do
-          let line = trim (input_line ichan) in
+          let line = get_line ichan in
           if first_line && String.length line = 0 then begin
           end else if first_line then begin
             Buffer.add_string data line;

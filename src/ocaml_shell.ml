@@ -57,7 +57,7 @@ class ocaml_shell ?project () =
   let _ = tooltips#set_tip ~text:"Kill process" b_kill#coerce in
   (*  *)
   let prog = Ocaml_config.ocaml() in
-  let sh = new Shell.ocaml ~prog ~env:(Unix.environment()) ~args:[||] ~packing:sw#add () in
+  let sh = new Shell.ocaml ~prog ~env:(Unix.environment()) ~args:[] ~packing:sw#add () in
   let _ = Ocaml_text.shells := sh :: !Ocaml_text.shells in
 object (self)
   inherit GObj.widget vbox#as_widget as super

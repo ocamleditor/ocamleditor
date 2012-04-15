@@ -24,8 +24,9 @@
 open Miscellanea
 open Printf
 open Bconf
+open Task
 
-let print_configs ochan bconfigs =
+let print_configs ochan bconfigs external_tasks =
   let i = ref 0 in
   let print = fprintf ochan "  %s\n" in
   output_string ochan "let targets = [\n";
@@ -47,9 +48,37 @@ let print_configs ochan bconfigs =
     kprintf print "  pp                   = %S;" bc.pp;
     kprintf print "  library_install_dir  = %S; (\x2A Relative to the Standard Library Directory \x2A)" bc.lib_install_path;
     kprintf print "  other_objects        = %S;" bc.other_objects;
+    kprintf print "  external_tasks       = [%s];" (String.concat "; " (List.assoc bc external_tasks));
+    kprintf print "  restrictions         = [%s];" (String.concat "; " (List.map (sprintf "%S") bc.restrictions));
     kprintf print "};";
   end bconfigs;
   output_string ochan "];;\n";;
+
+let print_external_tasks ochan bconfigs =
+  let i = ref 0 in
+  let print = fprintf ochan "  %s\n" in
+  output_string ochan "let external_tasks = [\n";
+  let ets = List.map begin fun bc ->
+    let ets = List.map begin fun et ->
+      let name = sprintf "%d" !i in
+      kprintf print "%s, {" name;
+      kprintf print "  et_name                  = %S;" et.et_name;
+      kprintf print "  et_env                   = [%s];" (String.concat ";" (List.map (sprintf "%S") et.et_env));
+      kprintf print "  et_env_replace           = %b;" et.et_env_replace;
+      kprintf print "  et_dir                   = %S;" et.et_dir;
+      kprintf print "  et_cmd                   = %S;" et.et_cmd;
+      kprintf print "  et_args                  = [%s];" (String.concat ";" (List.map (sprintf "%S") et.et_args));
+      kprintf print "  et_phase                 = %s;" (match et.et_phase with Some p -> "Some " ^ (Task.string_of_phase p) | _ -> "None");
+      kprintf print "  et_always_run_in_project = %b;" et.et_always_run_in_project;
+      kprintf print "  et_always_run_in_script  = %b;" et.et_always_run_in_script;
+      kprintf print "};";
+      incr i;
+      name
+    end bc.external_tasks in
+    bc, ets
+  end bconfigs in
+  output_string ochan "];;\n";
+  ets;;
 
 let create ~project ~filename () =
   let ochan = open_out_bin filename in
@@ -58,13 +87,17 @@ let create ~project ~filename () =
     output_string ochan "(\x2A\n   Please edit the \"Build Configurations\" section at the end\n   of this file to set the right options for your system.\n\x2A)\n\n";
     output_string ochan Oebuild_script.code;
     output_string ochan "open Arg\n";
+    output_string ochan "open Task\n";
+    output_string ochan "\n";
+    let ets = print_external_tasks ochan project.Project.build in
     output_string ochan "\n\n";
     output_string ochan "(\x2A Build Configurations ==================================================== \x2A)\n\n";
     (*  *)
-    print_configs ochan project.Project.build;
+    print_configs ochan project.Project.build ets;
     output_string ochan "\n";
+    output_string ochan "(\x2A End of Build Configurations ============================================= \x2A)\n\n";
     (*  *)
-    output_string ochan "let _ = main targets\n";
+    output_string ochan "let _ = main ~external_tasks ~targets\n";
     (*  *)
     finally();
   with ex -> begin

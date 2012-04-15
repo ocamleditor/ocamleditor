@@ -352,3 +352,13 @@ let clean_all () =
   clean_dir cwd;
   exit 0
 ;;
+
+(** check_restrictions *)
+let check_restrictions restr =
+  List.for_all begin function
+    | "IS_UNIX" -> Sys.os_type = "Unix"
+    | "IS_WIN32" -> Sys.os_type = "Win32"
+    | "IS_CYGWIN" -> Sys.os_type = "Cygwin"
+    | "HAS_NATIVE" -> Ocaml_config.can_compile_native () <> None (* should be cached *)
+    | _ -> false
+  end restr;;

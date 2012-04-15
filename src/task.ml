@@ -27,14 +27,15 @@ type kind = [ `CLEAN | `CLEANALL | `ANNOT | `COMPILE | `RUN | `OTHER]
 type phase = Before_clean | Clean | After_clean | Before_compile | Compile | After_compile
 
 type t = {
-  mutable name        : string;
-  mutable env         : string list;
-  mutable env_replace : bool; (* After system environment *)
-  mutable dir         : string; (* Working directory: relative to the project source directory (actually: Sys.getcwd()) *)
-  mutable cmd         : string;
-  mutable args        : string list;
-  mutable phase       : phase option;
-  mutable always_run  : bool;
+  mutable et_name                  : string;
+  mutable et_env                   : string list;
+  mutable et_env_replace           : bool; (* After system environment *)
+  mutable et_dir                   : string; (* Working directory: relative to the project source directory (actually: Sys.getcwd()) *)
+  mutable et_cmd                   : string;
+  mutable et_args                  : string list;
+  mutable et_phase                 : phase option;
+  mutable et_always_run_in_project : bool;
+  mutable et_always_run_in_script  : bool;
 }
 
 let string_of_phase = function
@@ -63,25 +64,24 @@ let phase_of_string = function
   | _ -> failwith "phase_of_string"
 
 let create ~name ~env ?(env_replace=false) ~dir ~cmd ~args ?phase () = {
-    name        = name;
-    env         = env;
-    env_replace = env_replace;
-    dir         = dir;
-    cmd         = cmd;
-    args        = args;
-    phase       = phase;
-    always_run  = false;
+    et_name                  = name;
+    et_env                   = env;
+    et_env_replace           = env_replace;
+    et_dir                   = dir;
+    et_cmd                   = cmd;
+    et_args                  = args;
+    et_phase                 = phase;
+    et_always_run_in_project = false;
+    et_always_run_in_script  = true;
   }
 
 (** handle *)
-let handle task f =
-  let tenv = Array.of_list task.env in
+let handle f task =
+  let tenv = Array.of_list task.et_env in
   let env =
-    if task.env_replace then Array.concat [(*Unix.environment();*) tenv]
+    if task.et_env_replace then Array.concat [(*Unix.environment();*) tenv]
     else (Array.concat [tenv (* takes precedence *); Unix.environment()])
   in
-  let prog = Quote.path task.cmd in
-  let args = List.map Quote.arg task.args in
-  let args = Array.of_list args in
-  let dir = if task.dir <> "" then task.dir else (Sys.getcwd ()) in
-  f ~env ~dir ~prog ~args;;
+  let prog = task.et_cmd in
+  let dir = if task.et_dir <> "" then task.et_dir else (Sys.getcwd ()) in
+  f ~env ~dir ~prog ~args:task.et_args;;
