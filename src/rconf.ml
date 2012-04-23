@@ -27,9 +27,9 @@ type t = {
   mutable name        : string;
   mutable default     : bool;
   mutable build_task  : Bconf.rbt;
-  mutable env         : string list;
+  mutable env         : (bool * string) list;
   mutable env_replace : bool;
-  mutable args        : string;
+  mutable args        : (bool * string) list;
 }
 
 let create ~id ~name ~id_build = {
@@ -40,7 +40,7 @@ let create ~id ~name ~id_build = {
    build_task  = `NONE;
    env         = [];
    env_replace = false;
-   args        = ""
+   args        = []
 }
 
 

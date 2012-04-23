@@ -132,13 +132,13 @@ class incremental () =
 
     method private find_regexp ~control (view : Text.view) start =
       let text_to_find = Glib.Convert.convert_with_fallback ~fallback:"?"
-        ~from_codeset:"utf8" ~to_codeset:Oe_config.ocaml_codeset status#text_find in
+        ~from_codeset:"UTF-8" ~to_codeset:Oe_config.ocaml_codeset status#text_find in
       let buffer = view#buffer in
       try
         let ins = if status#backward then start#backward_char else start in
         let pos = ins#offset in
         let text = Glib.Convert.convert_with_fallback ~fallback:"?"
-          ~from_codeset:"utf8" ~to_codeset:Oe_config.ocaml_codeset (buffer#get_text ()) in
+          ~from_codeset:"UTF-8" ~to_codeset:Oe_config.ocaml_codeset (buffer#get_text ()) in
         let pat = if status#case_sensitive then Str.regexp text_to_find
           else Str.regexp_case_fold text_to_find in
         let pos = if status#backward then Str.search_backward pat text pos

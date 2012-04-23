@@ -28,15 +28,19 @@ open GdkKeysyms
 let default_basename = "_build.ml"
 
 class widget ~project ?packing () =
-  let vbox            = GPack.vbox ?packing () in
+  let spacing         = 3 in
+  let vbox            = GPack.vbox ~spacing:13 ?packing () in
   let text_filename   = "Specify the file to be created by the generation process" in
-  let fbox            = GPack.vbox ~packing:vbox#pack () in
+  let fbox            = GPack.vbox ~spacing ~packing:vbox#pack () in
   let _               = GMisc.label ~text:text_filename ~xalign:0.0 ~packing:fbox#pack () in
   let box             = GPack.hbox ~spacing:5 ~packing:fbox#pack () in
   let entry_filename  = GEdit.entry
     ~text:((!! (Project.filename project)) // default_basename)
     ~packing:box#add () in
   let button_filename = GButton.button ~label:"  ...  " ~packing:box#pack () in
+  (*let abox            = GPack.vbox ~spacing ~packing:vbox#add () in
+  let _               = GMisc.label ~text:"Define the command line arguments for the build script" ~xalign:0.0 ~packing:abox#pack () in
+  let arguments       = new Build_script_args_widget.widget ~project ~packing:abox#add () in*)
 object (self)
   inherit GObj.widget vbox#as_widget
   val mutable is_valid = new GUtil.variable true
@@ -91,12 +95,12 @@ let window ~project () =
   ignore (button_ok#connect#clicked ~callback:(fun () -> if widget#apply() then window#destroy()));
   ignore (button_cancel#connect#clicked ~callback:window#destroy);
   ignore (widget#is_valid#connect#changed ~callback:button_ok#misc#set_sensitive);
-  ignore (window#event#connect#key_press ~callback:begin fun ev ->
+  (*ignore (window#event#connect#key_press ~callback:begin fun ev ->
     let key = GdkEvent.Key.keyval ev in
     if key = _Return then (button_ok#clicked(); true)
     else if key = _Escape then (window#destroy(); true)
     else false
-  end);
+  end);*)
   window#show();;
 
 

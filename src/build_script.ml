@@ -63,11 +63,15 @@ let print_external_tasks ochan bconfigs =
       let name = sprintf "%d" !i in
       kprintf print "%s, {" name;
       kprintf print "  et_name                  = %S;" et.et_name;
-      kprintf print "  et_env                   = [%s];" (String.concat ";" (List.map (sprintf "%S") et.et_env));
+      kprintf print "  et_env                   = [%s];"
+        (String.concat ";" (List.map (sprintf "%S")
+          (Xlist.filter_map (fun (x, y) -> if x then Some y else None) et.et_env)));
       kprintf print "  et_env_replace           = %b;" et.et_env_replace;
       kprintf print "  et_dir                   = %S;" et.et_dir;
       kprintf print "  et_cmd                   = %S;" et.et_cmd;
-      kprintf print "  et_args                  = [%s];" (String.concat ";" (List.map (sprintf "%S") et.et_args));
+      kprintf print "  et_args                  = [%s];"
+        (String.concat "; " (List.map (sprintf "true,%S")
+          (Xlist.filter_map (fun (x, y) -> if x then Some y else None) et.et_args)));
       kprintf print "  et_phase                 = %s;" (match et.et_phase with Some p -> "Some " ^ (Task.string_of_phase p) | _ -> "None");
       kprintf print "  et_always_run_in_project = %b;" et.et_always_run_in_project;
       kprintf print "  et_always_run_in_script  = %b;" et.et_always_run_in_script;

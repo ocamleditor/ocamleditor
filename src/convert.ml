@@ -33,8 +33,8 @@ let locale_is_utf8, locale_charset =
 
 let is_utf8, default_charset = locale_is_utf8, locale_charset
 
-let to_utf8 = Glib.Convert.convert ~from_codeset:default_charset ~to_codeset:"utf8"
-let from_utf8 = Glib.Convert.convert ~from_codeset:"utf8" ~to_codeset:default_charset
+let to_utf8 = Glib.Convert.convert ~from_codeset:default_charset ~to_codeset:"UTF-8"
+let from_utf8 = Glib.Convert.convert ~from_codeset:"UTF-8" ~to_codeset:default_charset
 
 let offset_from_pos text ~pos =
   if Glib.Utf8.validate text then (Glib.Utf8.length (String.sub text 0 pos)) else pos

@@ -68,16 +68,8 @@ class view ?packing () =
         dialog#destroy()
       | _ -> dialog#destroy()
   end in
-  (* Command line arguments *)
-  let box = GPack.vbox ~packing:vbox#pack () in
-  let _ = GMisc.label
-    ~markup:"Command line arguments <small>(separated by spaces, use \" to quote and \\\" inside quoted arguments)</small>"
-    ~xalign ~packing:box#add () in
-  let entry_args = GEdit.entry ~packing:box#add () in
-  (* Environment *)
-  let box = GPack.vbox ~packing:vbox#pack () in
-  let _ = GMisc.label ~markup:"Environment (<small><tt>NAME=VALUE</tt></small>)" ~xalign ~packing:box#add () in
-  let entry_env = Entry_env.create ~packing:box#add () in
+  (* Command line arguments and Environment Variables *)
+  let entry_args, entry_env = Args_env_widget.create vbox in
 object (self)
   inherit GObj.widget vbox#as_widget
   val mutable etask = None
@@ -92,7 +84,7 @@ object (self)
     ignore (entry_cmd#connect#changed
       ~callback:(self#update (fun etask -> etask.Task.et_cmd <- entry_cmd#text)));
     ignore (entry_args#connect#changed
-      ~callback:(self#update (fun etask -> etask.Task.et_args <- (Cmd_line_args.parse entry_args#text))));
+      ~callback:(self#update (fun etask -> etask.Task.et_args <- entry_args#entries)));
     ignore (entry_env#connect#changed
       ~callback:(self#update (fun etask -> etask.Task.et_env <- entry_env#entries)));
     ignore (entry_env#connect#replace_changed
@@ -108,7 +100,7 @@ object (self)
     check_always_project#set_active et.Task.et_always_run_in_project;
     check_always_script#set_active et.Task.et_always_run_in_script;
     entry_cmd#set_text et.Task.et_cmd;
-    entry_args#set_text (Cmd_line_args.format et.Task.et_args);
+    entry_args#set_entries et.Task.et_args;
     entry_env#set_entries et.Task.et_env;
     entry_env#set_replace et.Task.et_env_replace;
     button_dir#set_text et.Task.et_dir;
@@ -116,11 +108,7 @@ object (self)
       | Some ph -> combo_phase#set_active (Miscellanea.Xlist.pos ph phases);
       | None -> combo_phase#set_active 0;
 
-  method private update update_func () =
-    Gaux.may etask ~f:begin fun et ->
-      update_func et;
-      changed#call()
-    end;
+  method private update update_func () = Gaux.may etask ~f:update_func;
 
   method entry_name = entry_name
 

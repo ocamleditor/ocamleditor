@@ -340,7 +340,7 @@ object (self)
             match
               Comments.nearest (Comments.scan
                 (Glib.Convert.convert_with_fallback ~fallback:"?"
-                  ~from_codeset:"utf8" ~to_codeset:Oe_config.ocaml_codeset (tb#get_text ()))) pos
+                  ~from_codeset:"UTF-8" ~to_codeset:Oe_config.ocaml_codeset (tb#get_text ()))) pos
             with
               | None -> false
               | Some (b, e) ->
@@ -363,7 +363,7 @@ object (self)
         || Glib.Unichar.isspace iter#char
         || begin
           match Comments.enclosing
-            (Comments.scan (Glib.Convert.convert_with_fallback ~fallback:"" ~from_codeset:"utf8" ~to_codeset:Oe_config.ocaml_codeset
+            (Comments.scan (Glib.Convert.convert_with_fallback ~fallback:"" ~from_codeset:"UTF-8" ~to_codeset:Oe_config.ocaml_codeset
               (self#buffer#get_text ()))) iter#offset
           with None -> false | _ -> true;
         end

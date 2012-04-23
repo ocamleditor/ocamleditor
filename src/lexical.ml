@@ -97,7 +97,7 @@ let tag ?start ?stop (tb : GText.buffer) =
   (* Se start e stop sono all'interno di commenti allora prendo come start e stop
      l'inizio del primo commento e la fine del secondo. *)
   let text = tb#get_text () in
-  let text = Glib.Convert.convert_with_fallback ~fallback:"?" ~from_codeset:"utf8" ~to_codeset:Oe_config.ocaml_codeset text in
+  let text = Glib.Convert.convert_with_fallback ~fallback:"?" ~from_codeset:"UTF-8" ~to_codeset:Oe_config.ocaml_codeset text in
   let global_comments = Comments.scan text in
   let start = match Comments.enclosing global_comments start#offset with
     | None -> start
@@ -111,7 +111,7 @@ let tag ?start ?stop (tb : GText.buffer) =
   let u_text = tb#get_text ~start ~stop () in
   let lines = line_starts u_text in
   let tpos = tpos ~start ~lines in
-  let i_text = (Glib.Convert.convert_with_fallback ~fallback:"?" ~from_codeset:"utf8" ~to_codeset:Oe_config.ocaml_codeset u_text) in
+  let i_text = (Glib.Convert.convert_with_fallback ~fallback:"?" ~from_codeset:"UTF-8" ~to_codeset:Oe_config.ocaml_codeset u_text) in
   let buffer = Lexing.from_string i_text in
   let extra_bytes = ref 0 in
   let comments = Comments.scan_utf8 u_text in

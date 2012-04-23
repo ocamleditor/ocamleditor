@@ -117,7 +117,7 @@ class widget ~editor ?(callback=ignore) ~project ?page_num ?packing ?show () =
   let vbox = GPack.vbox ~spacing:8 ~packing:hbox#add () in
   let label_title = GMisc.label ~markup:"" ~xalign:0.0 ~packing:vbox#pack () in
   let bconf_page = new Bconf_page.view ~project ~packing:vbox#add () in
-  let etask_page = new Etask_page.view ~packing:vbox#pack () in
+  let etask_page = new Etask_page.view ~packing:vbox#add () in
   let set_title x = kprintf label_title#set_label "<b><big>%s</big></b>" x in
   let hide_all () =
     bconf_page#misc#hide ();
@@ -140,8 +140,8 @@ class widget ~editor ?(callback=ignore) ~project ?page_num ?packing ?show () =
                 if not (bconf_page#misc#get_flag `SENSITIVE) then (bconf_page#misc#set_sensitive true);
                 if not (bconf_page#misc#get_flag `VISIBLE) then begin
                   etask_page#misc#hide ();
-                  bconf_page#misc#show();
-              end
+                  bconf_page#misc#show ();
+                end
               end
             | Bconf_list.ETASK et ->
               set_title "External Build Task";
@@ -150,7 +150,7 @@ class widget ~editor ?(callback=ignore) ~project ?page_num ?packing ?show () =
                 if not (etask_page#misc#get_flag `SENSITIVE) then (etask_page#misc#set_sensitive true);
                 if not (etask_page#misc#get_flag `VISIBLE) then begin
                   bconf_page#misc#hide ();
-                  etask_page#misc#show();
+                  etask_page#misc#show ();
                 end;
               end
             | _ -> ()

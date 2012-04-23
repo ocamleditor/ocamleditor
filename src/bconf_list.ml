@@ -123,21 +123,17 @@ object (self)
     end
 
   method append bcs =
-(*    let row = model#append() in
-    model#set ~row ~column:col_data ROOT;
-    model#set ~row ~column:col_name "Build Configurations";
-    model#set ~row ~column:col_default false;*)
     List.iter begin fun bconf ->
       GtkThread2.sync begin fun () ->
         let bconf = {bconf with id = bconf.id} in
-        let row = model#append (*~parent:row*) () in
+        bconf.Bconf.external_tasks <- List.map (fun et ->
+          {et with Task.et_name = et.Task.et_name}) bconf.Bconf.external_tasks;
+        let row = model#append () in
         model#set ~row ~column:col_data (BCONF bconf);
         model#set ~row ~column:col_name bconf.name;
         model#set ~row ~column:col_default bconf.default;
         List.iter begin fun task ->
-          GtkThread2.sync begin fun () ->
-            ignore (self#append_task ~parent:row ~task)
-          end ()
+          GtkThread2.sync (fun () -> ignore (self#append_task ~parent:row ~task)) ()
         end bconf.Bconf.external_tasks;
         view#selection#select_iter row
       end ()

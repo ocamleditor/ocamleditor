@@ -98,7 +98,7 @@ object (self)
             let comments =
               let text = buffer#get_text () in
               GtkThread2.sync Comments.scan_locale (Glib.Convert.convert_with_fallback ~fallback:""
-                ~from_codeset:"utf8" ~to_codeset:Oe_config.ocaml_codeset text)
+                ~from_codeset:"UTF-8" ~to_codeset:Oe_config.ocaml_codeset text)
             in
             (* Adjust start and stop positions *)
             let start = start#backward_line#set_line_index 0 in

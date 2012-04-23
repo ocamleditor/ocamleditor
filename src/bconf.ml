@@ -126,28 +126,31 @@ let filter_external_tasks bconf phase =
 let create_cmd_line ?(flags=[]) ?(can_compile_native=true) bconf =
   let quote = Filename.quote in
   let files = Cmd_line_args.parse bconf.files in
-  Oe_config.oebuild_command,
-  files
-  @ ["-annot"]
-  @ (if bconf.pp <> "" then ["-pp"; quote bconf.pp] else [])
-  @ (if bconf.cflags <> "" then ["-cflags"; (quote bconf.cflags)] else [])
-  @ (if bconf.lflags <> "" then ["-lflags"; (quote (bconf.lflags))] else [])
-  @ (if bconf.includes <> "" then ["-I"; (quote (bconf.includes))] else [])
-  @ (if bconf.libs <> "" then ["-l"; (quote (bconf.libs))] else [])
-  @ (if bconf.other_objects <> "" then ["-m"; quote (bconf.other_objects)] else [])
-  @ begin
-      match bconf.outkind with
-        | Executable -> []
-        | Library -> ["-a"]
-        | Plugin -> ["-shared"]
-        | Pack -> ["-pack"]
-    end
-  @ (if bconf.byt then ["-byt"] else [])
-  @ (if bconf.opt && can_compile_native then ["-opt"] else [])
-  @ (if bconf.thread then ["-thread"] else [])
-  @ (if bconf.vmthread then ["-vmthread"] else [])
-  @ (if bconf.outname <> "" then ["-o"; quote (bconf.outname)] else [])
-  @ flags
+  let args =
+    files
+    @ ["-annot"]
+    @ (if bconf.pp <> "" then ["-pp"; quote bconf.pp] else [])
+    @ (if bconf.cflags <> "" then ["-cflags"; (quote bconf.cflags)] else [])
+    @ (if bconf.lflags <> "" then ["-lflags"; (quote (bconf.lflags))] else [])
+    @ (if bconf.includes <> "" then ["-I"; (quote (bconf.includes))] else [])
+    @ (if bconf.libs <> "" then ["-l"; (quote (bconf.libs))] else [])
+    @ (if bconf.other_objects <> "" then ["-m"; quote (bconf.other_objects)] else [])
+    @ begin
+        match bconf.outkind with
+          | Executable -> []
+          | Library -> ["-a"]
+          | Plugin -> ["-shared"]
+          | Pack -> ["-pack"]
+      end
+    @ (if bconf.byt then ["-byt"] else [])
+    @ (if bconf.opt && can_compile_native then ["-opt"] else [])
+    @ (if bconf.thread then ["-thread"] else [])
+    @ (if bconf.vmthread then ["-vmthread"] else [])
+    @ (if bconf.outname <> "" then ["-o"; quote (bconf.outname)] else [])
+    @ flags
+  in
+  let args = List.map (fun a -> true, a) args in
+  Oe_config.oebuild_command, args
 
 (** tasks_compile *)
 let tasks_compile ?(name="tasks_compile") ?(flags=[]) ?can_compile_native bconf =

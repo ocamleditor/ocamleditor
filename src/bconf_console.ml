@@ -308,7 +308,7 @@ object (self)
           match process_outchan with None -> ()
             | Some ochan ->
               output_string ochan (Glib.Convert.convert_with_fallback ~fallback:"?"
-                ~from_codeset:"utf8" ~to_codeset:Oe_config.ocaml_codeset txt);
+                ~from_codeset:"UTF-8" ~to_codeset:Oe_config.ocaml_codeset txt);
               flush ochan;
         end ())
       end);
@@ -409,7 +409,10 @@ let views : (string * (view * GObj.widget)) list ref = ref []
 
 (** create *)
 let create ~editor task_kind task =
-  let console_id = sprintf "%s %s %s" task.Task.et_name task.Task.et_cmd (String.concat " " task.Task.et_args) in
+  let console_id = sprintf "%s %s %s"
+    task.Task.et_name
+    task.Task.et_cmd
+    (String.concat " " (List.flatten (Xlist.filter_map (fun (e, v) -> if e then Some (Cmd_line_args.parse v) else None) task.Task.et_args))) in
   try
     let (console, box) = List.assoc console_id !views in
     console#set_task task;
@@ -480,7 +483,7 @@ let exec ~editor ?use_thread task_kind bconf =
       let et_clean = if et_clean = [] then [`CLEAN, begin
         let cmd, args = Bconf.create_cmd_line bconf in
         let name = sprintf "Clean \xC2\xAB%s\xC2\xBB" (Filename.basename bconf.Bconf.name) in
-        Task.create ~name ~env:[] ~dir:"" ~cmd ~args:(args @ ["-clean"]) ()
+        Task.create ~name ~env:[] ~dir:"" ~cmd ~args:(args @ [true, "-clean"]) ()
       end] else et_clean in
       let et_after_clean = filter_tasks Task.After_clean in
       (* Execute sequence *)
@@ -492,7 +495,7 @@ let exec ~editor ?use_thread task_kind bconf =
     if Oebuild.check_restrictions bconf.restrictions then
       [`ANNOT, begin
         let cmd, args = Bconf.create_cmd_line bconf in
-        let args = "-c"  :: "-annot" :: args in
+        let args = (true, "-c") :: (true, "-annot") :: args in
         let name = sprintf "Compile \xC2\xAB%s\xC2\xBB" (Filename.basename bconf.Bconf.name) in
         Task.create ~name ~env:[] ~dir:"" ~cmd ~args ()
       end]
@@ -505,7 +508,7 @@ let exec ~editor ?use_thread task_kind bconf =
     | `CLEANALL ->
       let cmd, args = Bconf.create_cmd_line bconf in
       let task = Task.create ~name:"Clean Project" ~env:[] ~dir:"" ~cmd
-        ~args:(args @ ["-clean-all"]) () in
+        ~args:(args @ [true, "-clean-all"]) () in
       let console = create ~editor `CLEANALL task in
       ignore (console#button_run#connect#clicked ~callback:(fun () -> ignore (console#run())));
       ignore(console#run ?use_thread ())
@@ -536,8 +539,8 @@ let exec ~editor ?use_thread task_kind bconf =
             ~env_replace:rc.Rconf.env_replace
             ~dir:""
             ~cmd:oebuild
-            ~args:(args @ (["-no-build"; "-run"; "--"] @
-              (List.map Quote.arg (Cmd_line_args.parse rc.Rconf.args)))) ();
+            ~args:(args @ ([true, "-no-build"; true, "-run"; true, "--"] @
+              ((*List.map Quote.arg*) (List.filter (fun (e, v) -> e) rc.Rconf.args)))) ();
         ] in
         let rec f () = ignore (exec_sync ~run_cb:f ~editor tasks) in
         f();
@@ -551,7 +554,7 @@ let exec ~editor ?use_thread task_kind bconf =
           ~env:[]
           ~dir:""
           ~cmd:oebuild
-          ~args:(args @ ["-install"; bconf.Bconf.lib_install_path]) ();
+          ~args:(args @ [true, "-install " ^ bconf.Bconf.lib_install_path]) ();
       ] in
       let rec f () = ignore (exec_sync ~run_cb:f ~editor tasks) in
       f();

@@ -472,7 +472,7 @@ object (self)
     Pervasives.compare o1 o2
 
   method private markup ~name ~typ ~kind =
-    let name = Glib.Convert.convert_with_fallback ~fallback:"" ~from_codeset:Oe_config.ocaml_codeset ~to_codeset:"utf8" name in
+    let name = Glib.Convert.convert_with_fallback ~fallback:"" ~from_codeset:Oe_config.ocaml_codeset ~to_codeset:"UTF-8" name in
     let markup_name = Glib.Markup.escape_text name in
     let markup_name =
       match kind with
@@ -481,7 +481,7 @@ object (self)
     in
     Hashtbl.add table_markup_name col_counter markup_name;
     (*  *)
-    let typ = Glib.Convert.convert_with_fallback ~fallback:"" ~from_codeset:Oe_config.ocaml_codeset ~to_codeset:"utf8" typ in
+    let typ = Glib.Convert.convert_with_fallback ~fallback:"" ~from_codeset:Oe_config.ocaml_codeset ~to_codeset:"UTF-8" typ in
     let markup_type = if typ = "" then markup_name else
       sprintf "%s <span color='%s'>%s</span>"
         markup_name

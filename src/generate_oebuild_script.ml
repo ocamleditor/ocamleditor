@@ -95,6 +95,7 @@ let create_script () =
       "../common/cmd";
       "../common/ocaml_config";
       "../common/dep";
+      "../common/cmd_line_args";
       "../task";
       "oebuild_util";
       "oebuild_table";

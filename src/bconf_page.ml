@@ -177,7 +177,7 @@ class view ~project ?packing () =
   let vbox = GPack.vbox ~width:550 ~border_width:5 ~spacing:8 () in
   let _ = nb#append_page ~tab_label:(GMisc.label ~text:"Restrictions" ())#coerce vbox#coerce in
   let _ = GMisc.label ~xalign:0.0 ~line_wrap:true ~justify:`LEFT ~width:550
-    ~text:"Specify what constraints must be satisfied to enable the execution of \
+    ~text:"Specify which constraints must be satisfied to enable the execution of \
 commands on this build configuration. The selected conditions will be verified at \
 any attempt to perform a \"Clean\" or \"Build\" or any other external task, from \
 both within the IDE and from the generated build script." ~packing:vbox#pack () in
@@ -310,7 +310,7 @@ object (self)
   method private update update_func () =
     Gaux.may bconf ~f:begin fun bc ->
       update_func bc;
-      self#update_cmd_line bc;
+      Gmisclib.Idle.add ~prio:300 (fun () -> self#update_cmd_line bc);
       (*changed#call()*)
     end;
 
@@ -379,6 +379,7 @@ object (self)
 
   method private update_cmd_line bconf =
     let cmd, args = create_cmd_line bconf in
+    let args = Xlist.filter_map (fun (e, a) -> if e then Some a else None) args in
     let cmd = sprintf "%s %s" cmd (String.concat " " args) in
     cmd_line#set_text cmd
 

@@ -96,7 +96,8 @@ object (self)
     self#append project.Project.runtime;
     match current_selection with
       | Some path -> view#selection#select_path path
-      | _ -> b_add#clicked()
+      | _ when project.Project.runtime = [] -> b_add#clicked()
+      | _ -> ()
 
   method private append rcs =
     List.iter begin fun rconf ->
@@ -143,26 +144,26 @@ object (self)
     (** b_add#connect#clicked *)
     let _ =
       ignore (b_add#connect#clicked ~callback:begin fun () ->
-        try
-          let rconfigs = self#to_list() in
-          let default = List.length rconfigs = 0 in
-          let id = (List.fold_left (fun acc t -> max acc t.Rconf.id) (-1) rconfigs) + 1 in
-          let name = sprintf "New Run Configuration %d" id in
-          let bconfigs = List.filter (fun bc -> bc.Bconf.outkind = Bconf.Executable && bc.Bconf.files <> "") (bconf_list#get_bconfigs()) in
-          let bconfigs = List.sort (fun bc1 bc2 ->
-            if bc1.Bconf.default then (-1)
-            else if bc2.Bconf.default then 1
-            else (Pervasives.compare bc1.Bconf.id bc2.Bconf.id)) bconfigs in
-          let bc = List.hd bconfigs in
-          let rc = Rconf.create ~name ~id ~id_build:bc.Bconf.id in
-          rc.Rconf.default <- default;
-          self#append [rc];
-          page#set_bconfigs();
-          page#set_tasks();
-          page#combo_bc#set_active 0;
-          page#combo_rbt#set_active 2; (* 2 = build *)
-          Gmisclib.Idle.add ~prio:300 page#entry_name#misc#grab_focus
-        with Failure "hd" -> ()
+        let rconfigs = self#to_list() in
+        let default = List.length rconfigs = 0 in
+        let id = (List.fold_left (fun acc t -> max acc t.Rconf.id) (-1) rconfigs) + 1 in
+        let name = sprintf "New Run Configuration %d" id in
+        let bconfigs = List.filter (fun bc -> bc.Bconf.outkind = Bconf.Executable && bc.Bconf.files <> "") (bconf_list#get_bconfigs()) in
+        let bconfigs = List.sort (fun bc1 bc2 ->
+          if bc1.Bconf.default then (-1)
+          else if bc2.Bconf.default then 1
+          else (Pervasives.compare bc1.Bconf.id bc2.Bconf.id)) bconfigs in
+        match bconfigs with
+          | bc :: _ ->
+            let rc = Rconf.create ~name ~id ~id_build:bc.Bconf.id in
+            rc.Rconf.default <- default;
+            self#append [rc];
+            page#set_bconfigs();
+            page#set_tasks();
+            page#combo_bc#set_active 0;
+            page#combo_rbt#set_active 2; (* 2 = build *)
+            Gmisclib.Idle.add ~prio:300 page#entry_name#misc#grab_focus
+          | [] -> ()
       end);
       (** b_remove#connect#clicked *)
       ignore (b_remove#connect#clicked ~callback:begin fun () ->

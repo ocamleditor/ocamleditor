@@ -28,11 +28,11 @@ type phase = Before_clean | Clean | After_clean | Before_compile | Compile | Aft
 
 type t = {
   mutable et_name                  : string;
-  mutable et_env                   : string list;
+  mutable et_env                   : (bool * string) list;
   mutable et_env_replace           : bool; (* After system environment *)
   mutable et_dir                   : string; (* Working directory: relative to the project source directory (actually: Sys.getcwd()) *)
   mutable et_cmd                   : string;
-  mutable et_args                  : string list;
+  mutable et_args                  : (bool * string) list;
   mutable et_phase                 : phase option;
   mutable et_always_run_in_project : bool;
   mutable et_always_run_in_script  : bool;
@@ -80,8 +80,13 @@ let handle f task =
   let tenv = Array.of_list task.et_env in
   let env =
     if task.et_env_replace then Array.concat [(*Unix.environment();*) tenv]
-    else (Array.concat [tenv (* takes precedence *); Unix.environment()])
+    else (Array.concat [tenv (* takes precedence *);
+      (Array.map (fun e -> true, e) (Unix.environment()))])
   in
+  let env = List.filter (fun (e, _) -> e) (Array.to_list env) in
+  let env = Array.of_list (List.map (fun (_, v) -> v) env) in
   let prog = task.et_cmd in
   let dir = if task.et_dir <> "" then task.et_dir else (Sys.getcwd ()) in
-  f ~env ~dir ~prog ~args:task.et_args;;
+  let args = List.filter (fun (e, _) -> e) task.et_args in
+  let args = List.flatten (List.map (fun (_, v) -> Cmd_line_args.parse v) args) in
+  f ~env ~dir ~prog ~args;;

@@ -51,7 +51,7 @@ let rec compile_buffer ~project ~editor ~page ?(commit=false) () =
   let text = (page#buffer :> GText.buffer)#get_text () in
   let text =
     Glib.Convert.convert_with_fallback ~fallback:"?"
-      ~from_codeset:"utf8" ~to_codeset:Oe_config.ocaml_codeset text
+      ~from_codeset:"UTF-8" ~to_codeset:Oe_config.ocaml_codeset text
   in
   try
     let tmp = Project.path_tmp project in

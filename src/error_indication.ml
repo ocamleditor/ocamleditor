@@ -245,7 +245,7 @@ object (self)
               let ebox = GBin.event_box ~packing:popup#add () in
               ebox#misc#modify_bg [`NORMAL, bg_color];
               let error_message = Glib.Convert.convert_with_fallback ~fallback:"?"
-                ~from_codeset:Oe_config.ocaml_codeset ~to_codeset:"utf8" error.Oe.er_message
+                ~from_codeset:Oe_config.ocaml_codeset ~to_codeset:"UTF-8" error.Oe.er_message
               in
               let markup = (*(error.Oe.er_location) ^*)
                 (Print_type.markup3 error_message) in

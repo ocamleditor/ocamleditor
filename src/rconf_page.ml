@@ -36,7 +36,7 @@ class view ~bconf_list ?packing () =
   let entry_name = create_entry ~packing:vbox#pack () in
   (* Build configuration *)
   let box = GPack.vbox ~packing:vbox#pack () in
-  let _ = GMisc.label ~text:"Build configuration" ~xalign:0.0 ~packing:box#add () in
+  let _ = GMisc.label ~text:"Executable" ~xalign:0.0 ~packing:box#add () in
   let cols = new GTree.column_list in
   let col_bc = cols#add Gobject.Data.caml in
   let col_bc_pixbuf = cols#add (Gobject.Data.gobject_by_name "GdkPixbuf") in
@@ -64,13 +64,8 @@ class view ~bconf_list ?packing () =
   let _ = combo_rbt#pack rend in
   let _ = combo_rbt#add_attribute rend_pb "pixbuf" col_rbt_pb in
   let _ = combo_rbt#add_attribute rend "markup" col_rbt_descr in
-  (* Command Line Arguments *)
-  let entry_args = create_entry ~label:"Command line arguments" ~packing:vbox#pack () in
-  (* Environment *)
-  let box = GPack.vbox ~packing:vbox#pack () in
-  let _ = GMisc.label ~markup:"Environment (<small><tt>NAME=VALUE</tt></small>)" ~xalign:0.0 ~packing:box#add () in
-  let entry_env = Entry_env.create ~packing:box#add () in
-
+  (* Command Line Arguments and Environment Variables *)
+  let entry_args, entry_env = Args_env_widget.create vbox in
 object (self)
   inherit GObj.widget vbox#as_widget
   val mutable rconfig = None
@@ -100,25 +95,18 @@ object (self)
     ignore (combo_bc#connect#changed ~callback:self#set_tasks);
     ignore (combo_rbt#connect#changed ~callback:begin fun () ->
       Gaux.may rconfig ~f:begin fun rc ->
-        Gaux.may combo_rbt#active_iter ~f:begin fun row ->
-          rc.Rconf.build_task <- model_rbt#get ~row ~column:col_rbt;
-        end
+        Gaux.may combo_rbt#active_iter ~f:(fun row ->
+          rc.Rconf.build_task <- model_rbt#get ~row ~column:col_rbt)
       end;
     end);
     ignore (entry_args#connect#changed ~callback:begin fun () ->
-      Gaux.may rconfig ~f:begin fun rc ->
-        rc.Rconf.args <- entry_args#text
-      end;
+      Gaux.may rconfig ~f:(fun rc -> rc.Rconf.args <- entry_args#entries);
     end);
     ignore (entry_env#connect#changed ~callback:begin fun () ->
-      Gaux.may rconfig ~f:begin fun rc ->
-        rc.Rconf.env <- entry_env#entries
-      end;
+      Gaux.may rconfig ~f:(fun rc -> rc.Rconf.env <- entry_env#entries);
     end);
     ignore (entry_env#connect#replace_changed ~callback:begin fun is_replace ->
-      Gaux.may rconfig ~f:begin fun rc ->
-        rc.Rconf.env_replace <- is_replace
-      end;
+      Gaux.may rconfig ~f:(fun rc -> rc.Rconf.env_replace <- is_replace);
     end);
     combo_bc#set_active 0
 
@@ -150,7 +138,7 @@ object (self)
           true
         | _ -> false
     end;
-    entry_args#set_text rc.Rconf.args;
+    entry_args#set_entries rc.Rconf.args;
     entry_env#set_entries rc.Rconf.env;
     entry_env#set_replace rc.Rconf.env_replace;
 

@@ -65,9 +65,9 @@ let oebuild () =
 
 (** compiler_libs *)
 let compiler_libs () =
+  oebuild();
   let ocaml_src_path = (Sys.getcwd()) // ocaml_src in
   if (Unix.lstat ocaml_src_path).Unix.st_kind <> Unix.S_LNK then begin
-    oebuild();
     let write top files =
       let ochan = open_out top in
       let finally () = close_out ochan in
@@ -248,7 +248,7 @@ let _ = main ~dir:"../src" ~targets:[
   "-clean",                   (clean ?all:None),       " (undocumented)";
   "-distclean",               distclean,               " (undocumented)";
 ] ~options:[
-  "-use-modified-gtkThread",  Bool (fun x -> use_modified_gtkThread := x), "{true|false} (default: true)";
-  "-has-native",              Bool (fun x -> has_native := x),             "{true|false} Whether native compilation is supported (default: false)";
-  "-ccopt",                   Set_string ccopt,                            " (default: \"\")";
+  "-dont-use-modified-gtkThread",  Clear use_modified_gtkThread,    "";
+  "-has-native",              Bool (fun x -> has_native := x), "{true|false} Whether native compilation is supported (default: false)";
+  "-ccopt",                   Set_string ccopt,                " (default: \"\")";
 ] ()

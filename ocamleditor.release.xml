@@ -6,27 +6,27 @@
   <name>ocamleditor</name>
   <author>Francesco Tovagliari</author>
   <description/>
-  <version>1.7.0</version>
+  <version>1.7.1</version>
   <autocomp enabled="true" delay="1." cflags=""/>
   <open_files>
     <filename offset="0" active="true">../NEWS</filename>
   </open_files>
   <runtime>
-    <configuration>
+    <configuration name="ocamleditor" default="true" id_build="0" id="0">
       <id>0</id>
       <id_build>0</id_build>
       <name>ocamleditor</name>
       <default>true</default>
       <build_task>&lt;COMPILE&gt;</build_task>
       <env replace="false">
-        <var>OCAMLEDITORPARAM=debug=2</var>
-        <var>DEBUG_UNDO=0</var>
+        <var enabled="true">OCAMLEDITORPARAM=debug=2</var>
+        <var enabled="true">DEBUG_UNDO=0</var>
       </env>
-      <args></args>
+      <args/>
     </configuration>
   </runtime>
   <build>
-    <configuration>
+    <configuration name="common" default="false" id="4">
       <id>4</id>
       <name>common</name>
       <default>false</default>
@@ -45,8 +45,9 @@
       <outname>common/common</outname>
       <lib_install_path></lib_install_path>
       <external_tasks/>
+      <restrictions></restrictions>
     </configuration>
-    <configuration>
+    <configuration name="icons" default="false" id="10">
       <id>10</id>
       <name>icons</name>
       <default>false</default>
@@ -65,8 +66,9 @@
       <outname>icons</outname>
       <lib_install_path></lib_install_path>
       <external_tasks/>
+      <restrictions></restrictions>
     </configuration>
-    <configuration>
+    <configuration name="oebuildlib" default="false" id="7">
       <id>7</id>
       <name>oebuildlib</name>
       <default>false</default>
@@ -85,8 +87,9 @@
       <outname>oebuildlib</outname>
       <lib_install_path></lib_install_path>
       <external_tasks/>
+      <restrictions></restrictions>
     </configuration>
-    <configuration>
+    <configuration name="oebuild" default="false" id="5">
       <id>5</id>
       <name>oebuild</name>
       <default>false</default>
@@ -105,8 +108,9 @@
       <outname>oebuild/oebuild</outname>
       <lib_install_path></lib_install_path>
       <external_tasks/>
+      <restrictions></restrictions>
     </configuration>
-    <configuration>
+    <configuration name="oeproc" default="false" id="6">
       <id>6</id>
       <name>oeproc</name>
       <default>false</default>
@@ -125,8 +129,9 @@
       <outname>oeproc/oeproc</outname>
       <lib_install_path></lib_install_path>
       <external_tasks/>
+      <restrictions>IS_WIN32</restrictions>
     </configuration>
-    <configuration>
+    <configuration name="gmisclib" default="false" id="8">
       <id>8</id>
       <name>gmisclib</name>
       <default>false</default>
@@ -145,8 +150,9 @@
       <outname>gmisclib</outname>
       <lib_install_path></lib_install_path>
       <external_tasks/>
+      <restrictions></restrictions>
     </configuration>
-    <configuration>
+    <configuration name="otherwidgets" default="false" id="9">
       <id>9</id>
       <name>otherwidgets</name>
       <default>false</default>
@@ -165,8 +171,9 @@
       <outname>otherwidgets</outname>
       <lib_install_path></lib_install_path>
       <external_tasks/>
+      <restrictions></restrictions>
     </configuration>
-    <configuration>
+    <configuration name="ocamleditor" default="true" id="0">
       <id>0</id>
       <name>ocamleditor</name>
       <default>true</default>
@@ -185,105 +192,114 @@
       <outname>ocamleditor</outname>
       <lib_install_path></lib_install_path>
       <external_tasks>
-        <task>
+        <task name="oebuild">
           <name>oebuild</name>
-          <always_run>false</always_run>
+          <always_run_in_project>false</always_run_in_project>
+          <always_run_in_script>false</always_run_in_script>
           <env replace="false"/>
           <dir>..</dir>
           <cmd>ocaml</cmd>
           <args>
-            <arg>build.ml</arg>
-            <arg>-oebuild</arg>
+            <arg enabled="true">build.ml</arg>
+            <arg enabled="true">-oebuild</arg>
           </args>
           <phase>Before_compile</phase>
         </task>
-        <task>
+        <task name="oeproc">
           <name>oeproc</name>
-          <always_run>false</always_run>
+          <always_run_in_project>false</always_run_in_project>
+          <always_run_in_script>false</always_run_in_script>
           <env replace="false"/>
           <dir>..</dir>
           <cmd>ocaml</cmd>
           <args>
-            <arg>build.ml</arg>
-            <arg>-oeproc</arg>
+            <arg enabled="true">build.ml</arg>
+            <arg enabled="true">-oeproc</arg>
           </args>
           <phase>Before_compile</phase>
         </task>
-        <task>
+        <task name="External Build">
           <name>External Build</name>
-          <always_run>false</always_run>
+          <always_run_in_project>false</always_run_in_project>
+          <always_run_in_script>false</always_run_in_script>
           <env replace="false"/>
           <dir>..</dir>
           <cmd>ocaml</cmd>
           <args>
-            <arg>build.ml</arg>
-            <arg>-annot</arg>
+            <arg enabled="true">build.ml</arg>
+            <arg enabled="true">-annot</arg>
           </args>
           <phase>Compile</phase>
         </task>
-        <task>
+        <task name="Compiler Libs">
           <name>Compiler Libs</name>
-          <always_run>false</always_run>
+          <always_run_in_project>false</always_run_in_project>
+          <always_run_in_script>false</always_run_in_script>
           <env replace="false"/>
           <dir>..</dir>
           <cmd>ocaml</cmd>
           <args>
-            <arg>build.ml</arg>
-            <arg>-with-compiler-libs</arg>
+            <arg enabled="true">build.ml</arg>
+            <arg enabled="true">-with-compiler-libs</arg>
           </args>
           <phase>Before_clean</phase>
         </task>
-        <task>
+        <task name="mkicons">
           <name>mkicons</name>
-          <always_run>false</always_run>
+          <always_run_in_project>false</always_run_in_project>
+          <always_run_in_script>false</always_run_in_script>
           <env replace="false"/>
           <dir>..</dir>
           <cmd>ocaml</cmd>
           <args>
-            <arg>build.ml</arg>
-            <arg>-mkicons</arg>
+            <arg enabled="true">build.ml</arg>
+            <arg enabled="true">-mkicons</arg>
           </args>
           <phase>Before_clean</phase>
         </task>
-        <task>
+        <task name="Release">
           <name>Release</name>
-          <always_run>false</always_run>
+          <always_run_in_project>false</always_run_in_project>
+          <always_run_in_script>false</always_run_in_script>
           <env replace="false"/>
           <dir>..</dir>
           <cmd>ocaml</cmd>
           <args>
-            <arg>build.ml</arg>
-            <arg>-release</arg>
+            <arg enabled="true">build.ml</arg>
+            <arg enabled="true">-release</arg>
           </args>
           <phase>Before_clean</phase>
         </task>
-        <task>
+        <task name="Lex & Yacc">
           <name>Lex &amp; Yacc</name>
-          <always_run>false</always_run>
+          <always_run_in_project>false</always_run_in_project>
+          <always_run_in_script>false</always_run_in_script>
           <env replace="false"/>
           <dir>..</dir>
           <cmd>ocaml</cmd>
           <args>
-            <arg>build.ml</arg>
-            <arg>-lexyacc</arg>
+            <arg enabled="true">build.ml</arg>
+            <arg enabled="true">-lexyacc</arg>
           </args>
-          <phase>Before_clean</phase>
+          <phase>Before_compile</phase>
         </task>
-        <task>
+        <task name="gmisclib">
           <name>gmisclib</name>
-          <always_run>false</always_run>
+          <always_run_in_project>false</always_run_in_project>
+          <always_run_in_script>false</always_run_in_script>
           <env replace="false"/>
           <dir>..</dir>
           <cmd>ocaml</cmd>
           <args>
-            <arg>build.ml</arg>
-            <arg>-gmisclib</arg>
+            <arg enabled="true">build.ml</arg>
+            <arg enabled="true">-gmisclib</arg>
           </args>
           <phase>Before_clean</phase>
         </task>
       </external_tasks>
+      <restrictions></restrictions>
     </configuration>
-    <configuration>
+    <configuration name="ocamleditor-native" default="false" id="11">
       <id>11</id>
       <name>ocamleditor-native</name>
       <default>false</default>
@@ -296,12 +312,119 @@
       <thread>true</thread>
       <vmthread>false</vmthread>
       <pp></pp>
-      <cflags>-w syxm -g</cflags>
-      <lflags>-linkall -g</lflags>
+      <cflags>-w syxm -g -inline 50</cflags>
+      <lflags>-linkall -g  -inline 50</lflags>
       <outkind>Executable</outkind>
       <outname>ocamleditor</outname>
       <lib_install_path></lib_install_path>
       <external_tasks/>
+      <restrictions></restrictions>
+    </configuration>
+    <configuration name="ocamleditor-by-script" default="false" id="12">
+      <id>12</id>
+      <name>ocamleditor-by-script</name>
+      <default>false</default>
+      <byt>false</byt>
+      <opt>true</opt>
+      <libs>unix str threads dynlink odoc_info lablgtk gtkThread.o xml-light gmisclib common icons otherwidgets oebuildlib</libs>
+      <other_objects></other_objects>
+      <files>ocamleditor.ml</files>
+      <includes>ocaml-src/parsing ocaml-src/typing ocaml-src/utils +lablgtk2 +xml-light +ocamldoc gmisclib common icons otherwidgets oebuild </includes>
+      <thread>true</thread>
+      <vmthread>false</vmthread>
+      <pp></pp>
+      <cflags>-w syxm -g -inline 50</cflags>
+      <lflags>-linkall -g  -inline 50</lflags>
+      <outkind>Executable</outkind>
+      <outname>ocamleditor</outname>
+      <lib_install_path></lib_install_path>
+      <external_tasks>
+        <task name="prepare-build">
+          <name>prepare-build</name>
+          <always_run_in_project>false</always_run_in_project>
+          <always_run_in_script>true</always_run_in_script>
+          <env replace="false"/>
+          <dir>../build</dir>
+          <cmd>ocaml</cmd>
+          <args>
+            <arg enabled="true">tools.ml</arg>
+            <arg enabled="true">-prepare-build</arg>
+          </args>
+          <phase>Before_compile</phase>
+        </task>
+        <task name="clean-lex-yacc">
+          <name>clean-lex-yacc</name>
+          <always_run_in_project>false</always_run_in_project>
+          <always_run_in_script>true</always_run_in_script>
+          <env replace="false"/>
+          <dir>../build</dir>
+          <cmd>ocaml</cmd>
+          <args>
+            <arg enabled="true">tools.ml</arg>
+            <arg enabled="true">-clean-lex-yacc</arg>
+          </args>
+          <phase>After_clean</phase>
+        </task>
+      </external_tasks>
+      <restrictions></restrictions>
+    </configuration>
+    <configuration name="tools" default="false" id="13">
+      <id>13</id>
+      <name>tools</name>
+      <default>false</default>
+      <byt>true</byt>
+      <opt>false</opt>
+      <libs></libs>
+      <other_objects></other_objects>
+      <files></files>
+      <includes></includes>
+      <thread>false</thread>
+      <vmthread>false</vmthread>
+      <pp></pp>
+      <cflags></cflags>
+      <lflags></lflags>
+      <outkind>Executable</outkind>
+      <outname></outname>
+      <lib_install_path></lib_install_path>
+      <external_tasks>
+        <task name="--">
+          <name>--</name>
+          <always_run_in_project>true</always_run_in_project>
+          <always_run_in_script>false</always_run_in_script>
+          <env replace="false"/>
+          <dir></dir>
+          <cmd>true</cmd>
+          <args/>
+          <phase>Compile</phase>
+        </task>
+        <task name="mkicons">
+          <name>mkicons</name>
+          <always_run_in_project>false</always_run_in_project>
+          <always_run_in_script>false</always_run_in_script>
+          <env replace="false"/>
+          <dir>../build</dir>
+          <cmd>ocaml</cmd>
+          <args>
+            <arg enabled="true">tools.ml</arg>
+            <arg enabled="true">-mkicons</arg>
+          </args>
+          <phase>Before_clean</phase>
+        </task>
+        <task name="mkrelease">
+          <name>mkrelease</name>
+          <always_run_in_project>false</always_run_in_project>
+          <always_run_in_script>false</always_run_in_script>
+          <env replace="false"/>
+          <dir>../build</dir>
+          <cmd>ocaml</cmd>
+          <args>
+            <arg enabled="true">tools.ml</arg>
+            <arg enabled="true">-mkrelease</arg>
+          </args>
+          <phase>Before_clean</phase>
+        </task>
+      </external_tasks>
+      <restrictions></restrictions>
     </configuration>
   </build>
 </project>

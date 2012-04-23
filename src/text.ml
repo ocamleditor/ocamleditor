@@ -340,9 +340,9 @@ object (self)
     let start = pos#backward_chars 5 in
     let stop = pos#forward_chars 5 in
     let text55 = Glib.Convert.convert_with_fallback ~fallback:"?"
-      ~from_codeset:"utf8" ~to_codeset:Oe_config.ocaml_codeset (self#buffer#get_text ~start ~stop ()) in
+      ~from_codeset:"UTF-8" ~to_codeset:Oe_config.ocaml_codeset (self#buffer#get_text ~start ~stop ()) in
     let text = Glib.Convert.convert_with_fallback ~fallback:"?"
-      ~from_codeset:"utf8" ~to_codeset:Oe_config.ocaml_codeset (self#buffer#get_text ()) in
+      ~from_codeset:"UTF-8" ~to_codeset:Oe_config.ocaml_codeset (self#buffer#get_text ()) in
     if Delimiters.is_delimiter ~utf8:false text55 (pos#offset - start#offset) then begin
       ignore (self#matching_delim_apply_tag text pos#offset)
     end else begin

@@ -9,38 +9,41 @@
   <version>1.7.0</version>
   <autocomp enabled="true" delay="1." cflags=""/>
   <open_files>
-    <filename offset="2299" active="false">C:\Objective Caml\devel\ocamleditor\build.ml</filename>
-    <filename offset="8859" active="false">oebuild/oebuild_script_util.ml</filename>
-    <filename offset="1440" active="false">build_script.ml</filename>
-    <filename offset="5323" active="false">etask_page.ml</filename>
-    <filename offset="23059" active="false">bconf_console.ml</filename>
-    <filename offset="2050" active="false">oebuild/oebuild_util.ml</filename>
-    <filename offset="4867" active="false">oebuild/oebuild_tool.ml</filename>
-    <filename offset="13385" active="false">oebuild/oebuild.ml</filename>
-    <filename offset="14123" active="false">bconf_page.ml</filename>
-    <filename offset="5203" active="false">bconf.ml</filename>
-    <filename offset="5113" active="false">common/miscellanea.ml</filename>
-    <filename offset="9019" active="false">C:\Objective Caml\devel\ocamleditor\build\tools.ml</filename>
-    <filename offset="7183" active="false">bconf_list.ml</filename>
-    <filename offset="6728" active="true">project_properties.ml</filename>
-    <filename offset="1292" active="false">C:\Objective Caml\devel\ocamleditor\NEWS</filename>
+    <filename offset="1456" active="false">etask_page.ml</filename>
+    <filename offset="0" active="false">bconf_page.ml</filename>
+    <filename offset="0" active="false">bconf.ml</filename>
+    <filename offset="9790" active="false">C:\Objective Caml\devel\ocamleditor\build\tools.ml</filename>
+    <filename offset="5544" active="false">bconf_list.ml</filename>
+    <filename offset="1167" active="false">rconf_page.ml</filename>
+    <filename offset="2467" active="false">task.ml</filename>
+    <filename offset="3796" active="false">rconf_list.ml</filename>
+    <filename offset="1247" active="false">rconf.ml</filename>
+    <filename offset="2542" active="false">build_script.ml</filename>
+    <filename offset="10522" active="false">oebuild/oebuild_script_util.ml</filename>
+    <filename offset="2826" active="false">generate_oebuild_script.ml</filename>
+    <filename offset="3450" active="false">build_script_ui.ml</filename>
+    <filename offset="10219" active="false">build_script_args_widget.ml</filename>
+    <filename offset="1306" active="false">entry_list.ml</filename>
+    <filename offset="52" active="true">C:\Objective Caml\devel\ocamleditor\NEWS</filename>
+    <filename offset="7706" active="false">project.ml</filename>
+    <filename offset="1044" active="false">C:\Objective Caml\devel\ocamleditor\build.ml</filename>
   </open_files>
   <runtime>
-    <configuration>
+    <configuration name="ocamleditor" default="true" id_build="0" id="0">
       <id>0</id>
       <id_build>0</id_build>
       <name>ocamleditor</name>
       <default>true</default>
       <build_task>&lt;COMPILE&gt;</build_task>
       <env replace="false">
-        <var>OCAMLEDITORPARAM=debug=2</var>
-        <var>DEBUG_UNDO=0</var>
+        <var enabled="true">OCAMLEDITORPARAM=debug=2</var>
+        <var enabled="true">DEBUG_UNDO=0</var>
       </env>
-      <args></args>
+      <args/>
     </configuration>
   </runtime>
   <build>
-    <configuration>
+    <configuration name="common" default="false" id="4">
       <id>4</id>
       <name>common</name>
       <default>false</default>
@@ -61,7 +64,7 @@
       <external_tasks/>
       <restrictions></restrictions>
     </configuration>
-    <configuration>
+    <configuration name="icons" default="false" id="10">
       <id>10</id>
       <name>icons</name>
       <default>false</default>
@@ -82,7 +85,7 @@
       <external_tasks/>
       <restrictions></restrictions>
     </configuration>
-    <configuration>
+    <configuration name="oebuildlib" default="false" id="7">
       <id>7</id>
       <name>oebuildlib</name>
       <default>false</default>
@@ -103,7 +106,7 @@
       <external_tasks/>
       <restrictions></restrictions>
     </configuration>
-    <configuration>
+    <configuration name="oebuild" default="false" id="5">
       <id>5</id>
       <name>oebuild</name>
       <default>false</default>
@@ -124,7 +127,7 @@
       <external_tasks/>
       <restrictions></restrictions>
     </configuration>
-    <configuration>
+    <configuration name="oeproc" default="false" id="6">
       <id>6</id>
       <name>oeproc</name>
       <default>false</default>
@@ -145,7 +148,7 @@
       <external_tasks/>
       <restrictions>IS_WIN32</restrictions>
     </configuration>
-    <configuration>
+    <configuration name="gmisclib" default="false" id="8">
       <id>8</id>
       <name>gmisclib</name>
       <default>false</default>
@@ -166,7 +169,7 @@
       <external_tasks/>
       <restrictions></restrictions>
     </configuration>
-    <configuration>
+    <configuration name="otherwidgets" default="false" id="9">
       <id>9</id>
       <name>otherwidgets</name>
       <default>false</default>
@@ -187,7 +190,7 @@
       <external_tasks/>
       <restrictions></restrictions>
     </configuration>
-    <configuration>
+    <configuration name="ocamleditor" default="true" id="0">
       <id>0</id>
       <name>ocamleditor</name>
       <default>true</default>
@@ -206,7 +209,7 @@
       <outname>ocamleditor</outname>
       <lib_install_path></lib_install_path>
       <external_tasks>
-        <task>
+        <task name="oebuild">
           <name>oebuild</name>
           <always_run_in_project>false</always_run_in_project>
           <always_run_in_script>false</always_run_in_script>
@@ -214,12 +217,12 @@
           <dir>..</dir>
           <cmd>ocaml</cmd>
           <args>
-            <arg>build.ml</arg>
-            <arg>-oebuild</arg>
+            <arg enabled="true">build.ml</arg>
+            <arg enabled="true">-oebuild</arg>
           </args>
           <phase>Before_compile</phase>
         </task>
-        <task>
+        <task name="oeproc">
           <name>oeproc</name>
           <always_run_in_project>false</always_run_in_project>
           <always_run_in_script>false</always_run_in_script>
@@ -227,12 +230,12 @@
           <dir>..</dir>
           <cmd>ocaml</cmd>
           <args>
-            <arg>build.ml</arg>
-            <arg>-oeproc</arg>
+            <arg enabled="true">build.ml</arg>
+            <arg enabled="true">-oeproc</arg>
           </args>
           <phase>Before_compile</phase>
         </task>
-        <task>
+        <task name="External Build">
           <name>External Build</name>
           <always_run_in_project>false</always_run_in_project>
           <always_run_in_script>false</always_run_in_script>
@@ -240,12 +243,12 @@
           <dir>..</dir>
           <cmd>ocaml</cmd>
           <args>
-            <arg>build.ml</arg>
-            <arg>-annot</arg>
+            <arg enabled="true">build.ml</arg>
+            <arg enabled="true">-annot</arg>
           </args>
           <phase>Compile</phase>
         </task>
-        <task>
+        <task name="Compiler Libs">
           <name>Compiler Libs</name>
           <always_run_in_project>false</always_run_in_project>
           <always_run_in_script>false</always_run_in_script>
@@ -253,12 +256,12 @@
           <dir>..</dir>
           <cmd>ocaml</cmd>
           <args>
-            <arg>build.ml</arg>
-            <arg>-with-compiler-libs</arg>
+            <arg enabled="true">build.ml</arg>
+            <arg enabled="true">-with-compiler-libs</arg>
           </args>
           <phase>Before_clean</phase>
         </task>
-        <task>
+        <task name="mkicons">
           <name>mkicons</name>
           <always_run_in_project>false</always_run_in_project>
           <always_run_in_script>false</always_run_in_script>
@@ -266,12 +269,12 @@
           <dir>..</dir>
           <cmd>ocaml</cmd>
           <args>
-            <arg>build.ml</arg>
-            <arg>-mkicons</arg>
+            <arg enabled="true">build.ml</arg>
+            <arg enabled="true">-mkicons</arg>
           </args>
           <phase>Before_clean</phase>
         </task>
-        <task>
+        <task name="Release">
           <name>Release</name>
           <always_run_in_project>false</always_run_in_project>
           <always_run_in_script>false</always_run_in_script>
@@ -279,12 +282,12 @@
           <dir>..</dir>
           <cmd>ocaml</cmd>
           <args>
-            <arg>build.ml</arg>
-            <arg>-release</arg>
+            <arg enabled="true">build.ml</arg>
+            <arg enabled="true">-release</arg>
           </args>
           <phase>Before_clean</phase>
         </task>
-        <task>
+        <task name="Lex & Yacc">
           <name>Lex &amp; Yacc</name>
           <always_run_in_project>false</always_run_in_project>
           <always_run_in_script>false</always_run_in_script>
@@ -292,12 +295,12 @@
           <dir>..</dir>
           <cmd>ocaml</cmd>
           <args>
-            <arg>build.ml</arg>
-            <arg>-lexyacc</arg>
+            <arg enabled="true">build.ml</arg>
+            <arg enabled="true">-lexyacc</arg>
           </args>
           <phase>Before_compile</phase>
         </task>
-        <task>
+        <task name="gmisclib">
           <name>gmisclib</name>
           <always_run_in_project>false</always_run_in_project>
           <always_run_in_script>false</always_run_in_script>
@@ -305,15 +308,15 @@
           <dir>..</dir>
           <cmd>ocaml</cmd>
           <args>
-            <arg>build.ml</arg>
-            <arg>-gmisclib</arg>
+            <arg enabled="true">build.ml</arg>
+            <arg enabled="true">-gmisclib</arg>
           </args>
           <phase>Before_clean</phase>
         </task>
       </external_tasks>
       <restrictions></restrictions>
     </configuration>
-    <configuration>
+    <configuration name="ocamleditor-native" default="false" id="11">
       <id>11</id>
       <name>ocamleditor-native</name>
       <default>false</default>
@@ -334,7 +337,7 @@
       <external_tasks/>
       <restrictions></restrictions>
     </configuration>
-    <configuration>
+    <configuration name="ocamleditor-by-script" default="false" id="12">
       <id>12</id>
       <name>ocamleditor-by-script</name>
       <default>false</default>
@@ -353,7 +356,7 @@
       <outname>ocamleditor</outname>
       <lib_install_path></lib_install_path>
       <external_tasks>
-        <task>
+        <task name="prepare-build">
           <name>prepare-build</name>
           <always_run_in_project>false</always_run_in_project>
           <always_run_in_script>true</always_run_in_script>
@@ -361,12 +364,12 @@
           <dir>../build</dir>
           <cmd>ocaml</cmd>
           <args>
-            <arg>tools.ml</arg>
-            <arg>-prepare-build</arg>
+            <arg enabled="true">tools.ml</arg>
+            <arg enabled="true">-prepare-build</arg>
           </args>
           <phase>Before_compile</phase>
         </task>
-        <task>
+        <task name="clean-lex-yacc">
           <name>clean-lex-yacc</name>
           <always_run_in_project>false</always_run_in_project>
           <always_run_in_script>true</always_run_in_script>
@@ -374,15 +377,15 @@
           <dir>../build</dir>
           <cmd>ocaml</cmd>
           <args>
-            <arg>tools.ml</arg>
-            <arg>-clean-lex-yacc</arg>
+            <arg enabled="true">tools.ml</arg>
+            <arg enabled="true">-clean-lex-yacc</arg>
           </args>
           <phase>After_clean</phase>
         </task>
       </external_tasks>
       <restrictions></restrictions>
     </configuration>
-    <configuration>
+    <configuration name="tools" default="false" id="13">
       <id>13</id>
       <name>tools</name>
       <default>false</default>
@@ -401,7 +404,7 @@
       <outname></outname>
       <lib_install_path></lib_install_path>
       <external_tasks>
-        <task>
+        <task name="--">
           <name>--</name>
           <always_run_in_project>true</always_run_in_project>
           <always_run_in_script>false</always_run_in_script>
@@ -411,7 +414,7 @@
           <args/>
           <phase>Compile</phase>
         </task>
-        <task>
+        <task name="mkicons">
           <name>mkicons</name>
           <always_run_in_project>false</always_run_in_project>
           <always_run_in_script>false</always_run_in_script>
@@ -419,12 +422,12 @@
           <dir>../build</dir>
           <cmd>ocaml</cmd>
           <args>
-            <arg>tools.ml</arg>
-            <arg>-mkicons</arg>
+            <arg enabled="true">tools.ml</arg>
+            <arg enabled="true">-mkicons</arg>
           </args>
           <phase>Before_clean</phase>
         </task>
-        <task>
+        <task name="mkrelease">
           <name>mkrelease</name>
           <always_run_in_project>false</always_run_in_project>
           <always_run_in_script>false</always_run_in_script>
@@ -432,8 +435,8 @@
           <dir>../build</dir>
           <cmd>ocaml</cmd>
           <args>
-            <arg>tools.ml</arg>
-            <arg>-mkrelease</arg>
+            <arg enabled="true">tools.ml</arg>
+            <arg enabled="true">-mkrelease</arg>
           </args>
           <phase>Before_clean</phase>
         </task>

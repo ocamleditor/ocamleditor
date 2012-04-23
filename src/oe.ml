@@ -64,7 +64,6 @@ and symbol_kind =
   | Std_lib
   | Lib
 
-
 (** Annot *)
 type annot = {
   annot_blocks                : annot_block list;

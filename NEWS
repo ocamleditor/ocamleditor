@@ -1,3 +1,15 @@
+2012-04-23  Release 1.7.1
+-------------------------
+
+  * Improved responsiveness of "Build configuration" window.
+  * More compact XML project file (the new format is not compatible with
+    previous versions of OCamlEditor).
+  * Ability to enable/disable command line arguments and environment variables
+    from "Runtime configurations" and "External build tasks".
+  * Minor build system reorganization.
+  * Fix "utf8" to the official name "UTF-8".
+  * Fix problem with "Runtime configurations" window.
+
 2012-04-09  Release 1.7.0
 -------------------------
 
