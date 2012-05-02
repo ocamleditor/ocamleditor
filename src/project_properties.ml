@@ -58,17 +58,17 @@ class widget ~editor ?(callback=ignore) ~project ?page_num ?packing ?show () =
   let home_choose = GButton.button ~label:"  ...  " ~packing:home_box#pack () in
   let chooser = GWindow.file_chooser_dialog ~action:`SELECT_FOLDER () in
   let _ =
+    chooser#add_button_stock `OK `OK;
+    chooser#add_button_stock `CANCEL `CANCEL;
+    let choose () =
+      Gaux.may chooser#filename ~f:begin fun dir ->
+        home_entry#set_text (Filename.concat dir name_entry#text);
+      end
+    in
     home_choose#connect#clicked ~callback:begin fun () ->
-      chooser#add_button_stock `OK `OK;
-      chooser#add_button_stock `CANCEL `CANCEL;
-      let choose () =
-        Gaux.may chooser#filename ~f:begin fun dir ->
-          home_entry#set_text (Filename.concat dir name_entry#text);
-        end
-      in
       ignore (chooser#connect#current_folder_changed ~callback:choose);
       match chooser#run() with
-        | _ -> chooser#destroy()
+        | _ -> chooser#misc#hide()
     end;
   in
   let src_entry = GEdit.entry ~editable:false () in
@@ -159,16 +159,20 @@ class widget ~editor ?(callback=ignore) ~project ?page_num ?packing ?show () =
   let _ = bconf_list#connect#add_bconf ~callback:bconf_page#entry_name#misc#grab_focus in
   let _ = bconf_list#connect#add_etask ~callback:etask_page#entry_name#misc#grab_focus in
   let _ = bconf_page#entry_name#connect#changed ~callback:begin fun () ->
-    let path = match bconf_list#current_path() with Some x -> x | _ -> assert false in
-    let row = bconf_list#model#get_iter path in
-    let column = bconf_list#column_name in
-    bconf_list#model#set ~row ~column bconf_page#entry_name#text
+    match bconf_list#current_path() with
+      | Some path ->
+        let row = bconf_list#model#get_iter path in
+        let column = bconf_list#column_name in
+        bconf_list#model#set ~row ~column bconf_page#entry_name#text
+      | _ -> ()
   end in
   let _ = etask_page#entry_name#connect#changed ~callback:begin fun () ->
-    let path = match bconf_list#current_path () with Some x -> x | _ -> assert false in
-    let row = bconf_list#model#get_iter path in
-    let column = bconf_list#column_name in
-    bconf_list#model#set ~row ~column etask_page#entry_name#text
+    match bconf_list#current_path () with
+      | Some path ->
+        let row = bconf_list#model#get_iter path in
+        let column = bconf_list#column_name in
+        bconf_list#model#set ~row ~column etask_page#entry_name#text
+      | _ -> ()
   end in
   let _ = bconf_box#pack bconf_page#entry_cmd_line#coerce in
   let _ = bconf_list#select_default_configuration () in

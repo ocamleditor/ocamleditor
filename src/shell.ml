@@ -25,12 +25,12 @@ end
 
 (* The shell class. Now encapsulated *)
 
-let protect f x = try f x with _ -> ()
+let protect f x = try f x with _ -> ();;
 
 let count = ref 0
 
 class shell ~prog ~(env : string array) ~(args : string list) ?packing ?show () =
-  let view = GText.view ~cursor_visible:true ~editable:false ?packing ?show () in
+  let view = GText.view ~cursor_visible:false ~editable:false ?packing ?show () in
   let buf = view#buffer in
   let process = Process.create ~env ~prog ~args () in
   let _ = Process.start process in
@@ -161,7 +161,7 @@ object (self)
 	if key = _Return && state = [] then (self#return (); true)
         else if key = _Up && state = [`CONTROL] then (self#history `next; true)
         else if key = _Down && state = [`CONTROL] then (self#history `previous; true)
-	else (self#keypress (GdkEvent.Key.string ev); false);
+	else true(*(self#keypress (GdkEvent.Key.string ev); false)*);
       end;
     buffer#connect#after#insert_text ~callback:
       begin fun it s ->
@@ -206,3 +206,5 @@ object (self)
   initializer
     Lexical.init_tags buffer;
 end
+
+

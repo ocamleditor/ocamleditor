@@ -969,9 +969,13 @@ object (self)
 end
 
 let browser = begin
+  Project_xml.init();
   Sys.chdir (Filename.dirname Sys.executable_name);
-  Unix.putenv "GTK_SETLOCALE" "0";
-  let locale = GtkMain.Main.init () in
+  (*GtkMain.Main.disable_setlocale();*)
+  (*Unix.putenv "LANGUAGE" "C";*)
+  (*Unix.putenv "GTK_SETLOCALE" "0";*)
+  (*let locale = Glib.Main.setlocale `ALL (Some "C") in*)
+  let locale = GtkMain.Main.init ~setlocale:false () in
   let window = GWindow.window
     ~title:Oe_config.title
     ~icon:Icons.oe

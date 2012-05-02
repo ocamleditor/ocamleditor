@@ -12,21 +12,25 @@
     <filename offset="1456" active="false">etask_page.ml</filename>
     <filename offset="0" active="false">bconf_page.ml</filename>
     <filename offset="0" active="false">bconf.ml</filename>
-    <filename offset="9790" active="false">C:\Objective Caml\devel\ocamleditor\build\tools.ml</filename>
-    <filename offset="5544" active="false">bconf_list.ml</filename>
+    <filename offset="7315" active="false">C:\Objective Caml\devel\ocamleditor\build\tools.ml</filename>
+    <filename offset="7585" active="true">bconf_list.ml</filename>
     <filename offset="1167" active="false">rconf_page.ml</filename>
-    <filename offset="2467" active="false">task.ml</filename>
+    <filename offset="917" active="false">task.ml</filename>
     <filename offset="3796" active="false">rconf_list.ml</filename>
     <filename offset="1247" active="false">rconf.ml</filename>
-    <filename offset="2542" active="false">build_script.ml</filename>
-    <filename offset="10522" active="false">oebuild/oebuild_script_util.ml</filename>
-    <filename offset="2826" active="false">generate_oebuild_script.ml</filename>
-    <filename offset="3450" active="false">build_script_ui.ml</filename>
-    <filename offset="10219" active="false">build_script_args_widget.ml</filename>
-    <filename offset="1306" active="false">entry_list.ml</filename>
-    <filename offset="52" active="true">C:\Objective Caml\devel\ocamleditor\NEWS</filename>
-    <filename offset="7706" active="false">project.ml</filename>
-    <filename offset="1044" active="false">C:\Objective Caml\devel\ocamleditor\build.ml</filename>
+    <filename offset="832" active="false">build_script.ml</filename>
+    <filename offset="1487" active="false">oebuild/oebuild_script_util.ml</filename>
+    <filename offset="2740" active="false">generate_oebuild_script.ml</filename>
+    <filename offset="1363" active="false">build_script_ui.ml</filename>
+    <filename offset="11001" active="false">build_script_args_widget.ml</filename>
+    <filename offset="733" active="false">build_script_args.ml</filename>
+    <filename offset="16592" active="false">project_xml.ml</filename>
+    <filename offset="1681" active="false">C:\Objective Caml\devel\ocamleditor\build.ml</filename>
+    <filename offset="4818" active="false">project.ml</filename>
+    <filename offset="4601" active="false">build_script_printer.ml</filename>
+    <filename offset="2676" active="false">project_properties.ml</filename>
+    <filename offset="4902" active="false">process.ml</filename>
+    <filename offset="603" active="false">C:\Objective Caml\devel\ocamleditor\NEWS</filename>
   </open_files>
   <runtime>
     <configuration name="ocamleditor" default="true" id_build="0" id="0">
@@ -56,8 +60,8 @@
       <thread>true</thread>
       <vmthread>false</vmthread>
       <pp></pp>
-      <cflags></cflags>
-      <lflags></lflags>
+      <cflags>-g</cflags>
+      <lflags>-g</lflags>
       <outkind>Library</outkind>
       <outname>common/common</outname>
       <lib_install_path></lib_install_path>
@@ -77,8 +81,8 @@
       <thread>false</thread>
       <vmthread>false</vmthread>
       <pp></pp>
-      <cflags></cflags>
-      <lflags></lflags>
+      <cflags>-g</cflags>
+      <lflags>-g</lflags>
       <outkind>Library</outkind>
       <outname>icons</outname>
       <lib_install_path></lib_install_path>
@@ -161,8 +165,8 @@
       <thread>false</thread>
       <vmthread>false</vmthread>
       <pp></pp>
-      <cflags></cflags>
-      <lflags></lflags>
+      <cflags>-g</cflags>
+      <lflags>-g</lflags>
       <outkind>Library</outkind>
       <outname>gmisclib</outname>
       <lib_install_path></lib_install_path>
@@ -182,8 +186,8 @@
       <thread>false</thread>
       <vmthread>false</vmthread>
       <pp></pp>
-      <cflags>-w sy</cflags>
-      <lflags>-w sy</lflags>
+      <cflags>-w sy -g</cflags>
+      <lflags>-w sy -g</lflags>
       <outkind>Library</outkind>
       <outname>otherwidgets</outname>
       <lib_install_path></lib_install_path>
@@ -440,8 +444,22 @@
           </args>
           <phase>Before_clean</phase>
         </task>
+        <task name="mkversion">
+          <name>mkversion</name>
+          <always_run_in_project>false</always_run_in_project>
+          <always_run_in_script>false</always_run_in_script>
+          <env replace="false"/>
+          <dir>../build</dir>
+          <cmd>ocaml</cmd>
+          <args>
+            <arg enabled="true">mkversion.ml</arg>
+            <arg enabled="true">1.7.2</arg>
+          </args>
+          <phase></phase>
+        </task>
       </external_tasks>
       <restrictions></restrictions>
     </configuration>
   </build>
+  <build_script filename="C:\\Objective Caml\\devel\\ocamleditor\\C:\\Objective Caml\\devel\\ocamleditor\\C:\\Objective Caml\\devel\\ocamleditor\\C:\\Objective Caml\\devel\\ocamleditor\\C:\\Objective Caml\\devel\\ocamleditor\\C:\\Objective Caml\\devel\\ocamleditor\\C:\\Objective Caml\\devel\\ocamleditor\\C:\\Objective Caml\\devel\\ocamleditor\\C:\\Objective Caml\\devel\\ocamleditor\\C:\\Objective Caml\\devel\\ocamleditor\\C:\\Objective Caml\\devel\\ocamleditor\\C:\\Objective Caml\\devel\\ocamleditor\\_build.ml"/>
 </project>

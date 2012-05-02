@@ -221,10 +221,6 @@ object (self)
     try
       let inchan, outchan, errchan = Process.channels proc in
       process_outchan <- Some outchan;
-      (** Print the PID of the process *)
-      GtkThread2.async begin fun () ->
-        kprintf (view#buffer#insert ~tag_names:["bold"; "output"]) "PID=%d\n\n" (Process.getpid proc);
-      end ();
       (** Thread looping over the standard output of the process *)
       let th_in = Thread.create (self#iter_chan begin fun ic ->
         let line = input_line ic in

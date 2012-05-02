@@ -24,10 +24,10 @@
 open Miscellanea
 open Printf
 open GdkKeysyms
-
-let default_basename = "_build.ml"
+open Build_script
 
 class widget ~project ?packing () =
+  let build_script    = project.Project.build_script in
   let spacing         = 3 in
   let vbox            = GPack.vbox ~spacing:13 ?packing () in
   let text_filename   = "Specify the file to be created by the generation process" in
@@ -35,12 +35,12 @@ class widget ~project ?packing () =
   let _               = GMisc.label ~text:text_filename ~xalign:0.0 ~packing:fbox#pack () in
   let box             = GPack.hbox ~spacing:5 ~packing:fbox#pack () in
   let entry_filename  = GEdit.entry
-    ~text:((!! (Project.filename project)) // default_basename)
+    ~text:build_script.bs_filename
     ~packing:box#add () in
   let button_filename = GButton.button ~label:"  ...  " ~packing:box#pack () in
-  (*let abox            = GPack.vbox ~spacing ~packing:vbox#add () in
+  let abox            = GPack.vbox ~spacing ~packing:vbox#add () in
   let _               = GMisc.label ~text:"Define the command line arguments for the build script" ~xalign:0.0 ~packing:abox#pack () in
-  let arguments       = new Build_script_args_widget.widget ~project ~packing:abox#add () in*)
+  let widget_args     = new Build_script_args_widget.widget ~project ~packing:abox#add () in
 object (self)
   inherit GObj.widget vbox#as_widget
   val mutable is_valid = new GUtil.variable true
@@ -52,16 +52,24 @@ object (self)
 
   method is_valid = is_valid
 
+  method private save ~filename () =
+    project.Project.build_script <- {
+      bs_filename = Filename.basename filename;
+      bs_args     = widget_args#get_arguments();
+    };
+    Build_script_printer.print ~project ~filename ();
+    Project.save project
+
   method apply () =
     let filename = entry_filename#text in
     if Sys.file_exists filename then begin
       let response = Dialog.confirm ~message:(sprintf
         "Are you sure you want to overwrite file \xC2\xAB%s\xC2\xBB?" (Filename.basename filename))
-        ~yes:("Overwrite", (Build_script.create ~project ~filename))
+        ~yes:("Overwrite", (self#save ~filename))
         ~no:("Do Not Overwrite", ignore)
         ~title:"Overwrite File" self
       in response <> `CANCEL
-    end else (Build_script.create ~project ~filename (); true);
+    end else (self#save ~filename (); true);
 
   method private choose_file () =
     let window = GWindow.file_chooser_dialog
@@ -81,12 +89,11 @@ object (self)
         Gaux.may window#filename ~f:entry_filename#set_text;
         window#destroy()
       | _ -> window#destroy()
-
 end
 
 let window ~project () =
   let window = GWindow.window ~title:"Generate Build Script"
-    ~modal:true ~border_width:8 ~width:500 ~position:`CENTER ~icon:Icons.oe ~show:false () in
+    ~modal:true ~border_width:8 ~width:950 ~height:500 ~position:`CENTER ~icon:Icons.oe ~show:false () in
   let vbox = GPack.vbox ~spacing:8 ~packing:window#add () in
   let widget = new widget ~project ~packing:vbox#add () in
   let bbox = GPack.button_box `HORIZONTAL ~layout:`END ~spacing:8 ~packing:vbox#pack () in

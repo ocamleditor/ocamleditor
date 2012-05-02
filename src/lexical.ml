@@ -260,8 +260,7 @@ let tag ?start ?stop (tb : GText.buffer) =
         end;
         last_but_one := !last;
         last := (tag, token, start, stop)
-      with
-        | (Lexer.Error (_, _)) as ex -> ()
+      with Lexer.Error _ -> ()
     done;
   with
     | End_of_file ->

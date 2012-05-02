@@ -176,18 +176,20 @@ object (self)
       match view#selection#get_selected_rows with
         | path :: _ ->
           selection_changed#call (Some path);
-          Gmisclib.Idle.add ~prio:300 begin fun () ->
+          begin
             match self#get path with
               | BCONF bc ->
-                b_clean#misc#set_sensitive true;
-                b_compile#misc#set_sensitive true;
-                b_etask#misc#set_sensitive true;
-                b_run#misc#set_sensitive (bc.Bconf.outkind <> Executable);
+                Gmisclib.Idle.add ~prio:300 (fun () ->
+                  b_clean#misc#set_sensitive true;
+                  b_compile#misc#set_sensitive true;
+                  b_etask#misc#set_sensitive true;
+                  b_run#misc#set_sensitive (bc.Bconf.outkind <> Executable));
               | _ ->
-                b_clean#misc#set_sensitive false;
-                b_compile#misc#set_sensitive false;
-                b_etask#misc#set_sensitive true;
-                b_run#misc#set_sensitive true;
+                Gmisclib.Idle.add ~prio:300 (fun () ->
+                  b_clean#misc#set_sensitive false;
+                  b_compile#misc#set_sensitive false;
+                  b_etask#misc#set_sensitive true;
+                  b_run#misc#set_sensitive true);
           end;
         | [] -> selection_changed#call None
     end);

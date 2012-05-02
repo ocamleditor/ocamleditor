@@ -112,32 +112,6 @@ let lex_yacc () =
   run "ocamllex err_lexer.mll";
   run "ocamlyacc err_parser.mly";;
 
-(** substitute *)
-let substitute ~filename repl =
-  let ichan = open_in_bin filename in
-  let tmp, ochan = Filename.open_temp_file (Filename.basename filename) "" in
-  Pervasives.set_binary_mode_out ochan true;
-  let finally () =
-    close_in_noerr ichan;
-    close_out_noerr ochan;
-    let new_filename = filename in
-    remove_file new_filename;
-    cp tmp new_filename;
-    remove_file tmp;
-  in
-  begin
-    try
-      while true do
-        let line = input_line ichan in
-        let line = replace_all ~regexp:false repl line in
-        fprintf ochan "%s\n" line;
-      done;
-      assert false;
-    with
-      | End_of_file -> finally()
-      | ex -> finally(); raise ex
-  end;;
-
 (** prepare_build *)
 let prepare_build () =
   compiler_libs();

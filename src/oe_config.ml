@@ -131,7 +131,8 @@ let current_line_border_adjust, dash_style, dash_style_offset =
 
 
 
-let title, version = "OCamlEditor", "1.7.1"
+let title = "OCamlEditor"
+let version = "1.7.2"
 
 let ocaml_codeset = "ISO-8859-1"
 

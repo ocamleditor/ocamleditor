@@ -50,7 +50,8 @@ let main () = begin
   GtkThread2.main ();
 end
 
-let _ = Printexc.print main ()
+let _ =
+  Printexc.print main ()
 
 
 
