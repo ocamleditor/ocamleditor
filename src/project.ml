@@ -130,7 +130,7 @@ let create ~filename () =
       syt_critical = Mutex.create()
     };
     build_script       = {
-      Build_script.bs_filename = root // Build_script.default_filename;
+      Build_script.bs_filename = Build_script.default_filename;
       bs_args                  = [];
     };
   } in

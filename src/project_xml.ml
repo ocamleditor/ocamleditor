@@ -294,7 +294,7 @@ let read filename =
         proj.build <- List.rev bconfigs
       | "build_script" ->
         proj.build_script <- {
-          Build_script.bs_filename = proj.root // (attrib node "filename" identity "");
+          Build_script.bs_filename = (*proj.root // *)(attrib node "filename" identity "");
           bs_args                  =
             Xml.map begin fun arg ->
               let bsa_doc     = ref "" in

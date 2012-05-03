@@ -151,6 +151,11 @@ object (self)
     end
 
   initializer
+    buffer#place_cursor buffer#end_iter;
+    let txt = "(Press F8 in the editor to evaluate expressions here)\n\n" in
+    self#insert txt;
+    self#set_input_start ();
+    (*  *)
     h#add "";
     view#misc#modify_font_by_name preferences#get.pref_base_font;
     view#misc#set_size_chars ~width:80 ~height:25 ~lang:"C" ();
@@ -158,8 +163,8 @@ object (self)
       begin fun ev ->
         let key = GdkEvent.Key.keyval ev in
         let state = GdkEvent.Key.state ev in
-	if key = _Return && state = [] then (self#return (); true)
-        else if key = _Up && state = [`CONTROL] then (self#history `next; true)
+	(*if key = _Return && state = [] then (self#return (); true)
+        else *)if key = _Up && state = [`CONTROL] then (self#history `next; true)
         else if key = _Down && state = [`CONTROL] then (self#history `previous; true)
 	else true(*(self#keypress (GdkEvent.Key.string ev); false)*);
       end;

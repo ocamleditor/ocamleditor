@@ -13,7 +13,7 @@
     <filename offset="0" active="false">bconf_page.ml</filename>
     <filename offset="0" active="false">bconf.ml</filename>
     <filename offset="7315" active="false">C:\Objective Caml\devel\ocamleditor\build\tools.ml</filename>
-    <filename offset="7585" active="true">bconf_list.ml</filename>
+    <filename offset="7643" active="false">bconf_list.ml</filename>
     <filename offset="1167" active="false">rconf_page.ml</filename>
     <filename offset="917" active="false">task.ml</filename>
     <filename offset="3796" active="false">rconf_list.ml</filename>
@@ -31,6 +31,7 @@
     <filename offset="2676" active="false">project_properties.ml</filename>
     <filename offset="4902" active="false">process.ml</filename>
     <filename offset="603" active="false">C:\Objective Caml\devel\ocamleditor\NEWS</filename>
+    <filename offset="448" active="true">shell.ml</filename>
   </open_files>
   <runtime>
     <configuration name="ocamleditor" default="true" id_build="0" id="0">
@@ -461,5 +462,5 @@
       <restrictions></restrictions>
     </configuration>
   </build>
-  <build_script filename="C:\\Objective Caml\\devel\\ocamleditor\\C:\\Objective Caml\\devel\\ocamleditor\\C:\\Objective Caml\\devel\\ocamleditor\\C:\\Objective Caml\\devel\\ocamleditor\\C:\\Objective Caml\\devel\\ocamleditor\\C:\\Objective Caml\\devel\\ocamleditor\\C:\\Objective Caml\\devel\\ocamleditor\\C:\\Objective Caml\\devel\\ocamleditor\\C:\\Objective Caml\\devel\\ocamleditor\\C:\\Objective Caml\\devel\\ocamleditor\\C:\\Objective Caml\\devel\\ocamleditor\\C:\\Objective Caml\\devel\\ocamleditor\\_build.ml"/>
+  <build_script filename="_build.ml"/>
 </project>

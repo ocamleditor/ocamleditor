@@ -39,8 +39,8 @@
       <thread>true</thread>
       <vmthread>false</vmthread>
       <pp></pp>
-      <cflags></cflags>
-      <lflags></lflags>
+      <cflags>-g</cflags>
+      <lflags>-g</lflags>
       <outkind>Library</outkind>
       <outname>common/common</outname>
       <lib_install_path></lib_install_path>
@@ -60,8 +60,8 @@
       <thread>false</thread>
       <vmthread>false</vmthread>
       <pp></pp>
-      <cflags></cflags>
-      <lflags></lflags>
+      <cflags>-g</cflags>
+      <lflags>-g</lflags>
       <outkind>Library</outkind>
       <outname>icons</outname>
       <lib_install_path></lib_install_path>
@@ -144,8 +144,8 @@
       <thread>false</thread>
       <vmthread>false</vmthread>
       <pp></pp>
-      <cflags></cflags>
-      <lflags></lflags>
+      <cflags>-g</cflags>
+      <lflags>-g</lflags>
       <outkind>Library</outkind>
       <outname>gmisclib</outname>
       <lib_install_path></lib_install_path>
@@ -165,8 +165,8 @@
       <thread>false</thread>
       <vmthread>false</vmthread>
       <pp></pp>
-      <cflags>-w sy</cflags>
-      <lflags>-w sy</lflags>
+      <cflags>-w sy -g</cflags>
+      <lflags>-w sy -g</lflags>
       <outkind>Library</outkind>
       <outname>otherwidgets</outname>
       <lib_install_path></lib_install_path>
@@ -423,8 +423,22 @@
           </args>
           <phase>Before_clean</phase>
         </task>
+        <task name="mkversion">
+          <name>mkversion</name>
+          <always_run_in_project>false</always_run_in_project>
+          <always_run_in_script>false</always_run_in_script>
+          <env replace="false"/>
+          <dir>../build</dir>
+          <cmd>ocaml</cmd>
+          <args>
+            <arg enabled="true">mkversion.ml</arg>
+            <arg enabled="true">1.7.2</arg>
+          </args>
+          <phase></phase>
+        </task>
       </external_tasks>
       <restrictions></restrictions>
     </configuration>
   </build>
+  <build_script filename="_build.ml"/>
 </project>

@@ -35,17 +35,18 @@ class widget ~project ?packing () =
   let _               = GMisc.label ~text:text_filename ~xalign:0.0 ~packing:fbox#pack () in
   let box             = GPack.hbox ~spacing:5 ~packing:fbox#pack () in
   let entry_filename  = GEdit.entry
-    ~text:build_script.bs_filename
+    ~text:(project.Project.root // build_script.bs_filename)
     ~packing:box#add () in
   let button_filename = GButton.button ~label:"  ...  " ~packing:box#pack () in
   let abox            = GPack.vbox ~spacing ~packing:vbox#add () in
-  let _               = GMisc.label ~text:"Define the command line arguments for the build script" ~xalign:0.0 ~packing:abox#pack () in
+  let _               = GMisc.label ~text:"Define the command line arguments for the build script" ~xalign:0.0 ~packing:abox#pack ~show:false () in
   let widget_args     = new Build_script_args_widget.widget ~project ~packing:abox#add () in
 object (self)
   inherit GObj.widget vbox#as_widget
   val mutable is_valid = new GUtil.variable true
 
   initializer
+    widget_args#misc#hide();
     ignore (button_filename#connect#clicked ~callback:self#choose_file);
     ignore (entry_filename#connect#changed
       ~callback:(fun () -> is_valid#set (Filename.check_suffix entry_filename#text ".ml")));
@@ -93,7 +94,7 @@ end
 
 let window ~project () =
   let window = GWindow.window ~title:"Generate Build Script"
-    ~modal:true ~border_width:8 ~width:950 ~height:500 ~position:`CENTER ~icon:Icons.oe ~show:false () in
+    ~modal:true ~border_width:8 (*~width:950 ~height:500*) ~position:`CENTER ~icon:Icons.oe ~show:false () in
   let vbox = GPack.vbox ~spacing:8 ~packing:window#add () in
   let widget = new widget ~project ~packing:vbox#add () in
   let bbox = GPack.button_box `HORIZONTAL ~layout:`END ~spacing:8 ~packing:vbox#pack () in
