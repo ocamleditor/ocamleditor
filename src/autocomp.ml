@@ -86,7 +86,6 @@ let rec compile_buffer ~project ~editor ~page ?(commit=false) () =
           in
           replace_output_file project tmp rel_filename ".annot";
           replace_output_file project tmp rel_filename ".cmi";
-
     (*      if false && commit && exit_code = 0 then begin
             let current_time = (Unix.time () +. 1.) in
             replace_output_file project basename ".cmo";
@@ -95,7 +94,6 @@ let rec compile_buffer ~project ~editor ~page ?(commit=false) () =
             Hashtbl.add oebuild_times basename (current_time(*, false*));
             Oebuild.write_cache oebuild_times;
           end;*)
-
           let errors = Error.parse_string (Buffer.contents compiler_output) in
           GtkThread2.async page#error_indication#apply_tag errors;
           (** Outline *)
@@ -116,7 +114,7 @@ let rec compile_buffer ~project ~editor ~page ?(commit=false) () =
           end;
           Activity.remove activity_name;
         in
-        let exit_code = Oebuild_util.exec ~echo:true ~join:false ~at_exit ~process_err command in
+        let exit_code = Oebuild_util.exec ~echo:true ~join:false (*false*) ~at_exit ~process_err command in
         ()
     (*end ()*)
   with ex -> begin

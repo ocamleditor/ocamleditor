@@ -132,7 +132,7 @@ let current_line_border_adjust, dash_style, dash_style_offset =
 
 
 let title = "OCamlEditor"
-let version = "1.7.2"
+let version = "1.7.3"
 
 let ocaml_codeset = "ISO-8859-1"
 
@@ -220,10 +220,20 @@ let _ = Ocaml_config.putenv_ocamllib None
 
 (** Theme *)
 let _ =
-  if is_win32 && Sys.file_exists ((Filename.dirname ocamleditor_bin) // "share" // "themes")
+  let themes = (Filename.dirname ocamleditor_bin) // "share" // "themes" in
+  if is_win32 && Sys.file_exists themes
   then begin
-    GtkMain.Rc.parse_string "gtk-theme-name = \"MurrinaCandido\"";
-    GtkMain.Rc.parse_string "gtk-font-name=\"Sans 8\"";
+    let themes = 
+      List.filter begin fun x ->
+        let name = themes // x in 
+        Sys.is_directory name && x.[0] <> '#'
+      end (Array.to_list (Sys.readdir themes))
+    in
+    match themes with 
+      | theme_name :: _ -> 
+        kprintf GtkMain.Rc.parse_string "gtk-theme-name = \"%s\"" theme_name;
+        GtkMain.Rc.parse_string "gtk-font-name=\"Sans 8\"";
+      | _ -> ()
   end;;
 
 

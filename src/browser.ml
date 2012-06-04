@@ -181,7 +181,7 @@ object (self)
     let pat1 = "*"^Project.extension in
     let pat2 = "*" ^ Project_old_1.project_name_extension in
     let dialog = GWindow.file_chooser_dialog ~action:`OPEN ~width:600 ~height:600
-      ~title:"Open project..." ~icon:Icons.oe ~position:`CENTER ~show:false () in
+      ~title:"Open project..." ~icon:Icons.oe (*~position:`CENTER*) ~show:false () in
     dialog#add_filter (GFile.filter
       ~name:(sprintf "%s projects (%s)" Oe_config.title pat1) ~patterns:[pat1] ());
     dialog#add_filter (GFile.filter

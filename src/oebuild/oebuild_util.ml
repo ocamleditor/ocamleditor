@@ -72,24 +72,25 @@ let exec ?(env=Unix.environment()) ?(echo=true) ?(join=true) ?at_exit ?(process_
   if echo then (print_endline cmd);
   let (inchan, _, errchan) as channels = Unix.open_process_full cmd env in
   let close () =
-    match Unix.close_process_full channels with
-      | Unix.WEXITED code -> code
-      | _ -> (-1)
+  match Unix.close_process_full channels with
+	| Unix.WEXITED code -> code
+	| _ -> (-1)
   in
   let thi =
     Thread.create begin fun () ->
-      iter_chan inchan (fun chan -> print_endline (input_line chan))
+      iter_chan inchan (fun chan -> print_endline (input_line chan));
     end ()
   in
   let the =
     Thread.create begin fun () ->
       iter_chan errchan (fun chan -> process_err ~stderr:chan);
-      match at_exit with None -> () | Some f -> ignore (close()); f()
+      Thread.join thi;
+      (match at_exit with None -> () | Some f -> ignore (close()); f());
     end ()
   in
   if join then begin
-    Thread.join the;
     Thread.join thi;
+    Thread.join the;
   end;
   if at_exit = None then (close()) else 0
 

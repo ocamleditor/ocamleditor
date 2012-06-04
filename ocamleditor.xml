@@ -1,7 +1,7 @@
 <!-- OCamlEditor XML Project -->
 <project>
   <ocaml_home></ocaml_home>
-  <ocamllib>C:\Objective Caml\lib</ocamllib>
+  <ocamllib></ocamllib>
   <encoding>UTF-8</encoding>
   <name>ocamleditor</name>
   <author>Francesco Tovagliari</author>
@@ -9,29 +9,15 @@
   <version>1.7.0</version>
   <autocomp enabled="true" delay="1." cflags=""/>
   <open_files>
-    <filename offset="1456" active="false">etask_page.ml</filename>
-    <filename offset="0" active="false">bconf_page.ml</filename>
-    <filename offset="0" active="false">bconf.ml</filename>
-    <filename offset="7315" active="false">C:\Objective Caml\devel\ocamleditor\build\tools.ml</filename>
-    <filename offset="7643" active="false">bconf_list.ml</filename>
-    <filename offset="1167" active="false">rconf_page.ml</filename>
-    <filename offset="917" active="false">task.ml</filename>
-    <filename offset="3796" active="false">rconf_list.ml</filename>
-    <filename offset="1247" active="false">rconf.ml</filename>
-    <filename offset="832" active="false">build_script.ml</filename>
-    <filename offset="1487" active="false">oebuild/oebuild_script_util.ml</filename>
-    <filename offset="2740" active="false">generate_oebuild_script.ml</filename>
-    <filename offset="1363" active="false">build_script_ui.ml</filename>
-    <filename offset="11001" active="false">build_script_args_widget.ml</filename>
-    <filename offset="733" active="false">build_script_args.ml</filename>
-    <filename offset="16592" active="false">project_xml.ml</filename>
-    <filename offset="1681" active="false">C:\Objective Caml\devel\ocamleditor\build.ml</filename>
-    <filename offset="4818" active="false">project.ml</filename>
-    <filename offset="4601" active="false">build_script_printer.ml</filename>
-    <filename offset="2676" active="false">project_properties.ml</filename>
-    <filename offset="4902" active="false">process.ml</filename>
-    <filename offset="603" active="false">C:\Objective Caml\devel\ocamleditor\NEWS</filename>
-    <filename offset="448" active="true">shell.ml</filename>
+    <filename offset="4988" active="true">autocomp.ml</filename>
+    <filename offset="5830" active="false">outline.ml</filename>
+    <filename offset="1436" active="false">oebuild/oebuild_util.ml</filename>
+    <filename offset="0" active="false">ocamleditor.ml</filename>
+    <filename offset="737" active="false">oe_config.ml</filename>
+    <filename offset="8056" active="false">browser.ml</filename>
+    <filename offset="0" active="false">generate_oebuild_script.ml</filename>
+    <filename offset="10071" active="false">build_script_args_widget.ml</filename>
+    <filename offset="0" active="false">build_script_args.ml</filename>
   </open_files>
   <runtime>
     <configuration name="ocamleditor" default="true" id_build="0" id="0">
@@ -454,7 +440,7 @@
           <cmd>ocaml</cmd>
           <args>
             <arg enabled="true">mkversion.ml</arg>
-            <arg enabled="true">1.7.2</arg>
+            <arg enabled="true">1.7.3</arg>
           </args>
           <phase></phase>
         </task>

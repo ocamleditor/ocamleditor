@@ -616,7 +616,7 @@ object (self)
                     drawable#set_line_attributes ~width:1 ~style:`ON_OFF_DASH ();
                     drawable#set_foreground current_line_border_color;
                     Gdk.GC.set_dashes drawable#gc ~offset:1 [1; 2];
-                    drawable#rectangle ~x:self#left_margin ~y ~filled:false
+                    drawable#rectangle ~x:(self#left_margin - 1) ~y ~filled:false
                       ~width:(w0 - adjust - self#left_margin) ~height:(h - adjust) ();
                   | _ -> ()
               end;
