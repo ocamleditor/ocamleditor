@@ -124,6 +124,7 @@ let current_line_border_adjust, dash_style, dash_style_offset =
     | 2, 16 -> 2, `DOUBLE_DASH, None
     | 2, 20 -> 1, `ON_OFF_DASH, (Some 2)
     | 2, 22 -> 2, `DOUBLE_DASH, None
+    | 2, 24 -> 1, `ON_OFF_DASH, (Some 2)
     | _     -> 1, `DOUBLE_DASH, None
 
 (** End of Configuration Section ============================================ *)
@@ -223,14 +224,14 @@ let _ =
   let themes = (Filename.dirname ocamleditor_bin) // "share" // "themes" in
   if is_win32 && Sys.file_exists themes
   then begin
-    let themes = 
+    let themes =
       List.filter begin fun x ->
-        let name = themes // x in 
+        let name = themes // x in
         Sys.is_directory name && x.[0] <> '#'
       end (Array.to_list (Sys.readdir themes))
     in
-    match themes with 
-      | theme_name :: _ -> 
+    match themes with
+      | theme_name :: _ ->
         kprintf GtkMain.Rc.parse_string "gtk-theme-name = \"%s\"" theme_name;
         GtkMain.Rc.parse_string "gtk-font-name=\"Sans 8\"";
       | _ -> ()
