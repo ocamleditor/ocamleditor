@@ -9,11 +9,11 @@
   <version>1.7.0</version>
   <autocomp enabled="true" delay="1." cflags=""/>
   <open_files>
-    <filename offset="4988" active="true">autocomp.ml</filename>
-    <filename offset="5830" active="false">outline.ml</filename>
+    <filename offset="5186" active="false">autocomp.ml</filename>
+    <filename offset="2569" active="false">outline.ml</filename>
     <filename offset="1436" active="false">oebuild/oebuild_util.ml</filename>
     <filename offset="0" active="false">ocamleditor.ml</filename>
-    <filename offset="737" active="false">oe_config.ml</filename>
+    <filename offset="6843" active="true">oe_config.ml</filename>
     <filename offset="8056" active="false">browser.ml</filename>
     <filename offset="0" active="false">generate_oebuild_script.ml</filename>
     <filename offset="10071" active="false">build_script_args_widget.ml</filename>
