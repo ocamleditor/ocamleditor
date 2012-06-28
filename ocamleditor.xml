@@ -9,15 +9,23 @@
   <version>1.7.0</version>
   <autocomp enabled="true" delay="1." cflags=""/>
   <open_files>
-    <filename offset="4988" active="true">autocomp.ml</filename>
+    <filename offset="4988" active="false">autocomp.ml</filename>
     <filename offset="5830" active="false">outline.ml</filename>
     <filename offset="1436" active="false">oebuild/oebuild_util.ml</filename>
-    <filename offset="0" active="false">ocamleditor.ml</filename>
-    <filename offset="737" active="false">oe_config.ml</filename>
-    <filename offset="8056" active="false">browser.ml</filename>
+    <filename offset="1871" active="false">ocamleditor.ml</filename>
+    <filename offset="9902" active="false">oe_config.ml</filename>
+    <filename offset="38905" active="false">browser.ml</filename>
     <filename offset="0" active="false">generate_oebuild_script.ml</filename>
     <filename offset="10071" active="false">build_script_args_widget.ml</filename>
     <filename offset="0" active="false">build_script_args.ml</filename>
+    <filename offset="737" active="false">odoc.ml</filename>
+    <filename offset="368" active="false">C:\ocaml\devel\ocamleditor\README</filename>
+    <filename offset="225639" active="false">otherwidgets/about.ml</filename>
+    <filename offset="49531" active="false">menu.ml</filename>
+    <filename offset="30586" active="false">editor.ml</filename>
+    <filename offset="8139" active="false">C:\ocaml\devel\ocamleditor\build\tools.ml</filename>
+    <filename offset="16689" active="false">project_properties.ml</filename>
+    <filename offset="1990" active="true">external_tools.ml</filename>
   </open_files>
   <runtime>
     <configuration name="ocamleditor" default="true" id_build="0" id="0">

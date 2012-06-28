@@ -216,8 +216,8 @@ struct
         Gtk_util.with_tag !!`TT ~buffer begin fun () ->
           insert_text ~f buffer text ftag;
         end
-      (*(*@REPL_1@*)
-      | Ref (text, _(*@REPL_2@*)) ->*)
+      (*| Target _ -> ()
+      | Ref (text, _, _) ->*)
       | Target _ -> ()
       | Ref (text, _, _) ->
         buffer#insert ~tags:[!!`SANS	] text;

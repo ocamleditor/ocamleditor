@@ -546,19 +546,20 @@ let xpm = [|
 
 let pixbuf = GdkPixbuf.from_xpm_data xpm
 
-let window ~name ~version () =
+let window parent ~name ~version () =
   let window = GWindow.window
     ~kind:`POPUP
     ~type_hint:`MENU
     ~icon:Icons.oe
     ~resizable:false
     ~modal:true
-    ~position:`CENTER
+    ~position:`CENTER_ON_PARENT
     ~border_width:1
     ~title:("About " ^ name)
     ~show:false
     ()
   in
+  window#set_transient_for parent;
   let ebox = GBin.event_box ~border_width:0 ~packing:window#add () in
   ebox#misc#set_property "visible-window" (`BOOL true);
   let vbox = GPack.vbox ~packing:ebox#add () in

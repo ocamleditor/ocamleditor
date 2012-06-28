@@ -918,7 +918,7 @@ let help ~browser ~group ~flags items =
   ignore (license#connect#activate ~callback:(fun () -> (License.window ())#present()));
   let about = GMenu.menu_item ~label:"About OCamlEditor..." ~packing:menu#add () in
   ignore (about#connect#activate ~callback:begin fun () ->
-    let about = About.window ~name:Oe_config.title ~version:Oe_config.version() in
+    let about = About.window browser#window#as_window ~name:Oe_config.title ~version:Oe_config.version() in
     about#present()
   end);
   help

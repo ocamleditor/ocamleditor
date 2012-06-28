@@ -181,7 +181,7 @@ object (self)
     let pat1 = "*"^Project.extension in
     let pat2 = "*" ^ Project_old_1.project_name_extension in
     let dialog = GWindow.file_chooser_dialog ~action:`OPEN ~width:600 ~height:600
-      ~title:"Open project..." ~icon:Icons.oe (*~position:`CENTER*) ~show:false () in
+      ~title:"Open project..." ~icon:Icons.oe ~position:`CENTER ~show:false () in
     dialog#add_filter (GFile.filter
       ~name:(sprintf "%s projects (%s)" Oe_config.title pat1) ~patterns:[pat1] ());
     dialog#add_filter (GFile.filter
@@ -906,11 +906,6 @@ object (self)
     self#set_tabbar_visible !is_tabbar_visible;
     self#set_outline_visible !is_outline_visible;
     window#resize ~width:!width ~height:!height;
-    let screen_width = Gdk.Screen.width ~screen () in
-    let screen_height = Gdk.Screen.height ~screen () in
-    let y = if (float_of_int !height) > (float_of_int screen_height) /. 10. *. 9.2 then 0
-      else ((screen_height - !height) / 2) in
-    window#move ~x:((screen_width - !width) / 2) ~y;
     window#show();
     Messages.vmessages#set_position (!height * 7 / 10);
     Messages.hmessages#set_position (!width * 7 / 10);
