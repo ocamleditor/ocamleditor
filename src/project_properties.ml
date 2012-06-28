@@ -156,8 +156,8 @@ class widget ~editor ?(callback=ignore) ~project ?page_num ?packing ?show () =
             | _ -> ()
         end
   end in
-  let _ = bconf_list#connect#add_bconf ~callback:bconf_page#entry_name#misc#grab_focus in
-  let _ = bconf_list#connect#add_etask ~callback:etask_page#entry_name#misc#grab_focus in
+  let _ = bconf_list#connect#add_bconf ~callback:(fun () -> Gmisclib.Idle.add bconf_page#entry_name#misc#grab_focus) in
+  let _ = bconf_list#connect#add_etask ~callback:(fun () -> Gmisclib.Idle.add etask_page#entry_name#misc#grab_focus) in
   let _ = bconf_page#entry_name#connect#changed ~callback:begin fun () ->
     match bconf_list#current_path() with
       | Some path ->

@@ -123,7 +123,7 @@ object (self)
     end
 
   method append bcs =
-    List.iter begin fun bconf ->
+    let rows = List.map begin fun bconf ->
       GtkThread2.sync begin fun () ->
         let bconf = {bconf with id = bconf.id} in
         bconf.Bconf.external_tasks <- List.map (fun et ->
@@ -135,10 +135,12 @@ object (self)
         List.iter begin fun task ->
           GtkThread2.sync (fun () -> ignore (self#append_task ~parent:row ~task)) ()
         end bconf.Bconf.external_tasks;
-        view#selection#select_iter row
+        (*view#selection#select_iter row*)
+        row
       end ()
-    end bcs;
-    view#expand_all()
+    end bcs in
+    view#expand_all();
+    rows
 
   method append_task ~parent ~task =
     let row = model#append ~parent () in
@@ -198,7 +200,8 @@ object (self)
       let bconfigs = Miscellanea.Xlist.filter_map (function BCONF x -> Some x | _ -> None) (self#to_list()) in
       let id = (List.fold_left (fun acc t -> max acc t.id) (-1) bconfigs) + 1 in
       let name = sprintf "New Build Configuration %d" id in
-      self#append [Bconf.create ~name ~id];
+      let rows = self#append [Bconf.create ~name ~id] in
+      (match rows with [row] -> view#selection#select_iter row | _ -> ());
       add_bconf#call();
     end in
     (*b_clean#connect#clicked*)
