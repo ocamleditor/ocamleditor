@@ -12,7 +12,7 @@
     <filename offset="4988" active="false">autocomp.ml</filename>
     <filename offset="5830" active="false">outline.ml</filename>
     <filename offset="1871" active="false">ocamleditor.ml</filename>
-    <filename offset="9902" active="false">oe_config.ml</filename>
+    <filename offset="3229" active="false">oe_config.ml</filename>
     <filename offset="38467" active="false">browser.ml</filename>
     <filename offset="0" active="false">generate_oebuild_script.ml</filename>
     <filename offset="10071" active="false">build_script_args_widget.ml</filename>
@@ -22,8 +22,10 @@
     <filename offset="49531" active="false">menu.ml</filename>
     <filename offset="30586" active="false">editor.ml</filename>
     <filename offset="8139" active="false">C:\ocaml\devel\ocamleditor\build\tools.ml</filename>
-    <filename offset="5691" active="true">bconf_list.ml</filename>
-    <filename offset="13160" active="false">bconf_page.ml</filename>
+    <filename offset="7737" active="false">bconf_list.ml</filename>
+    <filename offset="1467" active="false">bconf_page.ml</filename>
+    <filename offset="8176" active="false">project_properties.ml</filename>
+    <filename offset="1593" active="true">external_tools.ml</filename>
   </open_files>
   <runtime>
     <configuration name="ocamleditor" default="true" id_build="0" id="0">

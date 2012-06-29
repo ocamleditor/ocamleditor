@@ -39,8 +39,9 @@ let rec read () =
     let tools = (if Oe_config.is_win32 then [
       ("1000", "Console", "start \"$(project_name)\" cmd /K cd \"$(project_source)\"");
       ("1001", "Explorer", "explorer \"$(project_source)\"");
+      ("1002", "Open with Notepad", "notepad \"$(current_filename)\"");
     ] else []) @ [
-      ("1002", "OCamlBrowser", "ocamlbrowser -I \"$(project_source)\"")
+      ("2002", "OCamlBrowser", "ocamlbrowser -I \"$(project_source)\"")
     ] in
     write tools;
     read ()
