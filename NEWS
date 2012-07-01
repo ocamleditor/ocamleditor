@@ -1,3 +1,17 @@
+2012-07-12 Release 1.7.3
+------------------------
+
+  * Upgrade to ocaml-3.12.1.
+  * Project file splitted into two files, so as to keep separate local data.
+  * Bookmarks are now local to the project.
+  * Added "Open with Notepad" to "External tools" (Windows only, useful to edit 
+    batch files if you replace your Notepad with Notepad2).
+  * Removed backward compatibility with old projects v.1.1.
+  * Fix dot leaders rendering on GTK-2.24.
+  * Fix minor usability issues in "Project properties" dialog.
+  * Fix crash on Windows7.
+
+
 2012-05-03  Release 1.7.2
 -------------------------
 

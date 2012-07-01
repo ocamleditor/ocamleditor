@@ -64,7 +64,11 @@ let compile ?(times : Table.t option) ~opt ~compiler ~cflags ~includes ~filename
 (** link *)
 let link ~compiler ~outkind ~lflags ~includes ~libs ~outname ~deps
     ?(process_err : process_err_func option) () =
-  let opt = compiler = ocamlopt in
+  let opt = 
+    match ocamlopt with
+      | Some ocamlopt -> compiler = ocamlopt 
+      | _ -> false
+   in
   let libs =
     if opt && outkind = Library then "" else
       let ext = if opt then "cmxa" else "cma" in
@@ -227,7 +231,10 @@ let build ~compilation ~includes ~libs ~other_mods ~outkind ~compile_only
   if annot then (cflags := !cflags ^ " -annot");
   if pp <> "" then (cflags := !cflags ^ " -pp " ^ pp);
   (* compiling *)
-  let compiler = if prof then "ocamlcp -p a" else if compilation = Native then ocamlopt else ocamlc in
+  let compiler = if prof then "ocamlcp -p a" else if compilation = Native then 
+      (match ocamlopt with Some x -> x | _ -> failwith "You asked me to compile in native code but ocamlopt command was not found") 
+    else ocamlc 
+  in
   (*printf "%s%!" (Cmd.expand (compiler ^ " -v"));*)
   let mods = split_space other_mods in
   let mods = if compilation = Native then List.map (sprintf "%s.cmx") mods else List.map (sprintf "%s.cmo") mods in

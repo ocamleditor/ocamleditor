@@ -34,11 +34,10 @@ let redirect_stderr = if Sys.os_type = "Win32" then " 2>NUL" else " 2>/dev/null"
 
 let find_best_compiler compilers =
   try
-    List.find begin fun comp ->
+    Some (List.find begin fun comp ->
       try ignore (kprintf Cmd.expand "%s -version%s" comp redirect_stderr); true with _ -> false
-    end compilers
-  with Not_found ->
-    kprintf failwith "Cannot find compilers: %s" (String.concat ", " compilers)
+    end compilers)
+  with Not_found -> None;;
 
 let find_tool which path =
   let commands =
@@ -64,11 +63,11 @@ let expand_includes =
 
 (** OCaml Tools *)
 
-let ocamlc ()   = find_tool `BEST_OCAMLC (get_home ())
-let ocamlopt () = find_tool `BEST_OCAMLOPT (get_home ())
-let ocamldep () = find_tool `BEST_OCAMLDEP (get_home ())
-let ocamldoc () = find_tool `BEST_OCAMLDOC (get_home ())
-let ocaml ()    = find_tool `OCAML (get_home ())
+let ocamlc ()   = match find_tool `BEST_OCAMLC (get_home ()) with Some x -> x | _ -> failwith "Cannot find 'ocamlc'"
+let ocamlopt () = find_tool `BEST_OCAMLOPT (get_home ()) 
+let ocamldep () = match find_tool `BEST_OCAMLDEP (get_home ()) with Some x -> x | _ -> failwith "Cannot find 'ocamldep'"
+let ocamldoc () = match find_tool `BEST_OCAMLDOC (get_home ()) with Some x -> x | _ -> failwith "Cannot find 'ocamldoc'"
+let ocaml ()    = match find_tool `OCAML (get_home ()) with Some x -> x | _ -> failwith "Cannot find 'ocaml'"
 let ocamllib () = Cmd.expand ~first_line:true ((ocamlc()) ^ " -where")
 
 (** OCaml Version *)
@@ -90,25 +89,28 @@ let can_compile_native ?ocaml_home () =
   let outname = Filename.chop_extension filename in
   let compiler = match ocaml_home with
     | Some home -> find_tool `BEST_OCAMLOPT home
-    | _ -> "ocamlopt"
+    | _ -> Some "ocamlopt"
   in
-  let cmd = sprintf "%s -o %s %s%s" compiler outname filename redirect_stderr in
-  result := (Sys.command cmd) = 0;
-  if Sys.file_exists filename then (Sys.remove filename);
-  if Sys.file_exists outname then (Sys.remove outname);
-  let cmi = outname ^ ".cmi" in
-  if Sys.file_exists cmi then (Sys.remove cmi);
-  let cmx = outname ^ ".cmx" in
-  if Sys.file_exists cmx then (Sys.remove cmx);
-  let obj = outname ^ ".o" in
-  if Sys.file_exists obj then (Sys.remove obj);
-  let obj = outname ^ ".obj" in
-  if Sys.file_exists obj then (Sys.remove obj);
-  if !result then begin
-    let conf = kprintf Cmd.expand "%s -config" compiler in
-    let re = Str.regexp "ccomp_type: \\(.*\\)\n" in
-    if Str.search_forward re conf 0 >= 0 then begin
-      Some (Str.matched_group 1 conf)
-    end else Some "<unknown ccomp_type>"
-  end else None;
+  match compiler with 
+    | Some compiler ->
+      let cmd = sprintf "%s -o %s %s%s" compiler outname filename redirect_stderr in
+      result := (Sys.command cmd) = 0;
+      if Sys.file_exists filename then (Sys.remove filename);
+      if Sys.file_exists outname then (Sys.remove outname);
+      let cmi = outname ^ ".cmi" in
+      if Sys.file_exists cmi then (Sys.remove cmi);
+      let cmx = outname ^ ".cmx" in
+      if Sys.file_exists cmx then (Sys.remove cmx);
+      let obj = outname ^ ".o" in
+      if Sys.file_exists obj then (Sys.remove obj);
+      let obj = outname ^ ".obj" in
+      if Sys.file_exists obj then (Sys.remove obj);
+      if !result then begin
+        let conf = kprintf Cmd.expand "%s -config" compiler in
+        let re = Str.regexp "ccomp_type: \\(.*\\)\n" in
+        if Str.search_forward re conf 0 >= 0 then begin
+          Some (Str.matched_group 1 conf)
+        end else Some "<unknown ccomp_type>"
+      end else None;
+    | _ -> None
 ;;

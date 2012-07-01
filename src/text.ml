@@ -128,7 +128,7 @@ end
 
 
 (** View *)
-and view ?buffer () =
+and view ?project ?buffer () =
   let buffer = match buffer with None -> new buffer () | Some b -> b in
   let view = GText.view ~buffer:buffer#as_gtext_buffer () in
   let create_highlight_current_line_tag () =
@@ -710,22 +710,27 @@ object (self)
             (* Special bookmarks *)
             let iter = ref (expose_top#set_line_index 0) in
             begin
-              match buffer#file with
-                | Some file ->
-                  let filename = file#path in
-                  while !iter#compare expose_bottom < 0 do
-                    begin
-                      match Bookmark.find filename buffer#as_gtext_buffer !iter with
-                        | Some bm when bm.Oe.bm_num >= Bookmark.limit ->
-                          drawable#set_line_attributes ~width:2 ~style:`SOLID ();
-                          drawable#set_foreground Oe_config.horizontal_line_color;
-                          let y, h = view#get_line_yrange !iter in
-                          let y = y - y0 + h in
-                          drawable#line ~x:0 ~y ~x:w0 ~y;
-                        | _ -> ()
-                    end;
-                    iter := !iter#forward_line;
-                  done;
+              match project with
+                | Some project ->
+                  begin
+                    match buffer#file with
+                      | Some file ->
+                        let filename = file#path in
+                        while !iter#compare expose_bottom < 0 do
+                          begin
+                            match Project.find_bookmark project filename buffer#as_gtext_buffer !iter with
+                              | Some bm when bm.Oe.bm_num >= Bookmark.limit ->
+                                drawable#set_line_attributes ~width:2 ~style:`SOLID ();
+                                drawable#set_foreground Oe_config.horizontal_line_color;
+                                let y, h = view#get_line_yrange !iter in
+                                let y = y - y0 + h in
+                                drawable#line ~x:0 ~y ~x:w0 ~y;
+                              | _ -> ()
+                          end;
+                          iter := !iter#forward_line;
+                        done;
+                      | _ -> ()
+                  end;
                 | _ -> ()
             end;
             (* Whitespace characters *)

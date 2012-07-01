@@ -273,7 +273,7 @@ end
 and view ?project ?buffer () =
   let buffer = match buffer with None -> new buffer ?project () | Some b -> b in
 object (self)
-  inherit Text.view ~buffer:buffer#as_text_buffer () as super
+  inherit Text.view ?project ~buffer:buffer#as_text_buffer () as super
   val mutable popup = None
   val mutable smart_click = true;
   val mutable code_folding = None

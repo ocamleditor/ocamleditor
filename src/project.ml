@@ -279,6 +279,19 @@ let set_bookmark bookmark proj =
   proj.bookmarks <- bookmark :: proj.bookmarks;
   save_bookmarks proj;;
 
+(** find_bookmark *)
+let find_bookmark proj filename buffer iter =
+  List_opt.find begin fun bm ->
+    if bm.Oe.bm_filename = filename then begin
+      let mark = Bookmark.offset_to_mark buffer bm in
+      iter#line = (buffer#get_iter (`MARK mark))#line
+    end else false
+  end proj.bookmarks;;
+
+(** get_actual_maximum_bookmark *) 
+let get_actual_maximum_bookmark project =
+  List.fold_left (fun acc bm -> max acc bm.Oe.bm_num) 0 project.bookmarks;;
+
 (** load *)
 let load filename =
   let proj = !read_xml filename in

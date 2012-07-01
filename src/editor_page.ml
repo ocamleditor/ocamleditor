@@ -321,7 +321,7 @@ object (self)
   end
 
   method revert () = Gaux.may file ~f:begin fun file ->
-    Bookmark.write();
+    Project.save_bookmarks project;
     let old_markers =
       try
         let bms = List.filter (fun bm -> bm.Oe.bm_filename = file#path) project.Project_type.bookmarks (*!Bookmark.bookmarks*) in
@@ -402,7 +402,7 @@ object (self)
                 bm.Oe.bm_marker <- Some marker;
                 view#gutter.Gutter.markers <- marker :: view#gutter.Gutter.markers
             end project.Project_type.bookmarks (*!Bookmark.bookmarks*);
-            Bookmark.write();
+            Project.save_bookmarks project;
             if !redraw then (GtkBase.Widget.queue_draw text_view#as_widget);
             true
           with Glib.Convert.Error (_, message) -> begin
@@ -541,12 +541,12 @@ object (self)
             match !start_selection with
               | Some started when started#equal where ->
                 begin
-                  match Bookmark.find self#get_filename buffer#as_gtext_buffer where with
+                  match Project.find_bookmark project self#get_filename buffer#as_gtext_buffer where with
                     | Some bm when bm.Oe.bm_num >= Bookmark.limit ->
                       editor#bookmark_remove ~num:bm.Oe.bm_num;
                       GtkBase.Widget.queue_draw text_view#as_widget;
                     | _ ->
-                      let num = Bookmark.actual_maximum () in
+                      let num = Project.get_actual_maximum_bookmark project in
                       let num = if num >= Bookmark.limit then num + 1 else Bookmark.limit in
                       let callback (mark : Gtk.text_mark) =
                         editor#bookmark_remove ~num;

@@ -52,6 +52,7 @@ let ccopt =
    http://yquem.inria.fr/pipermail/lablgtk/2009-December/000335.html *)
 let use_modified_gtkThread = true
 
+
 (** End of Configuration Section ============================================ *)
 
 
@@ -61,6 +62,8 @@ open Arg
 
 exception Build_error of int
 
+let can_compile_native = ref true 
+let force_bytecode = ref false
 let (//) = Filename.concat
 let is_win32 = Sys.os_type = "Win32"
 let ext = if is_win32 then ".exe" else ""
@@ -69,7 +72,6 @@ let prefix = ref "/usr/local"
 let debug = " -g"
 let annot = ref false
 let prof = ref false
-let can_compile_native = ref true
 
 let ccopt = try Unix.getenv "OCAMLEDITOR_CCOPT" with Not_found -> ccopt
 let use_modified_gtkThread =
@@ -423,7 +425,10 @@ let _ = begin
       fun () ->
         let cwd = Sys.getcwd () in
         Sys.chdir "src";
-        can_compile_native := if is_win32 then Sys.command "ML /? 1>NUL" = 0 || Sys.command "as -version" = 0 else !can_compile_native;
+        can_compile_native := 
+          if !force_bytecode then false
+          else if is_win32 then Sys.command "ML /? 1>NUL" = 0 || Sys.command "as -version" = 0 
+          else !can_compile_native;
         let ocaml_version = Str.global_replace
           (Str.regexp "\n") " - " (Str.global_replace (Str.regexp "\n$") "" (expand "ocamlc -v")) in
         if not is_win32 then
@@ -444,6 +449,7 @@ let _ = begin
       ("-prefix",             Set_string prefix,                (sprintf " Installation prefix (Unix only, default is %s)" !prefix));
       ("-clean",              Unit (target clean),              " Remove object files");
       ("-cleanall",           Unit (target cleanall),           " Remove all the build output");
+      ("-byt",                Set force_bytecode,               " Force bytecode compilation");
       ("-oebuild",            Unit (target oebuild),            " (undocumented)");
       ("-common",             Unit (target common),             " (undocumented)");
       ("-icons",              Unit (target icons),              " (undocumented)");

@@ -38,6 +38,9 @@ HOW TO COMPILE
     ln -s /path/to/ocaml/compiled/sources src/ocaml-src
     ocaml build.ml
 
+  If the native code compiler is not available on your platform, compile with
+  "ocaml build.ml -byt".
+
   The name of the command is "ocamleditor.opt" (or "ocamleditor" if the
   native compilation is not supported), you can find it in the "src"
   directory.
@@ -58,6 +61,9 @@ HOW TO COMPILE without having to build the entire OCaml source tree
 
     ocaml build.ml -with-compiler-libs
 
+  If the native code compiler is not available on your platform, compile with
+  "ocaml build.ml -with-compiler-libs -byt".
+
   Under Windows the name of the command is "ocamleditor.opt.exe" (or
   "ocamleditor.bat" if the native compilation is not supperted), you can
   find it in the "src" directory.
@@ -67,12 +73,15 @@ INSTALLATION
 
   For Linux, become superuser and run:
 
-    ocaml build.ml -install [-prefix <path>]
+    ocaml build.ml -install [-prefix <path>] [-byt]
 
   By default, commands will be installed under "/usr/local/bin" and icons
   under "/usr/local/share/pixmaps/ocamleditor". You can specify an
   installation prefix other than "/usr/local" by giving an absolute file
   name as argument.
+
+  If the native code compiler is not available on your platform, add "-byt"
+  to the command line.
 
   Windows users may build an installer by compiling the included NSIS
   script, "ocamleditor.nsi". The free NSIS install system can be found at

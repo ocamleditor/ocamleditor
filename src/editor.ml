@@ -274,7 +274,7 @@ object (self)
               -1
           end);
           if page#view#realized then (Gmisclib.Idle.add (*~prio:300*) (fun () -> self#goto_view page#view));
-          Gmisclib.Idle.add ~prio:300 Bookmark.write;
+          Gmisclib.Idle.add ~prio:300 (fun () -> Project.save_bookmarks project);
     with Not_found -> ()
 
   method scroll_to_definition iter =
@@ -701,7 +701,7 @@ object (self)
     end;
 
   method close page =
-    Bookmark.write();
+    Project.save_bookmarks page#project;
     if page#buffer#modified then (page#revert());
     page#buffer#set_modified false;
     remove_page#call page;
