@@ -332,7 +332,7 @@ object (self)
           in
           let parent = project.Project.root // Project.src in
           let filename = List.fold_left (fun acc x -> acc // x) parent (Miscellanea.filename_split basename) in
-          editor#open_file ~active:true ~offset:0 filename;
+          editor#open_file ~active:true ~scroll_offset:0 ~offset:0 filename;
           match editor#get_page (`FILENAME filename) with
             | None -> false
             | Some page ->

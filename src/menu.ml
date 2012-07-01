@@ -94,7 +94,7 @@ let file ~browser ~group ~flags items =
         let mi = GMenu.menu_item ~label ~packing:(file_recent_menu#insert ~pos:1) () in
         recent_items := mi :: !recent_items;
         ignore (mi#connect#activate ~callback:(fun () ->
-          ignore (editor#open_file ~active:true ~offset:0 filename)));
+          ignore (editor#open_file ~active:true ~scroll_offset:0 ~offset:0 filename)));
         if !count > 30 then (raise Exit)
       end (List.rev editor#file_history.File_history.content);
     with Exit -> ()

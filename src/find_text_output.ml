@@ -460,7 +460,7 @@ object (self)
         let pagefile = `FILENAME filename in
         let page = match editor#get_page pagefile with
           | None ->
-            ignore (editor#open_file ~active:false ~offset:0 filename);
+            ignore (editor#open_file ~active:false ~scroll_offset:0 ~offset:0 filename);
             begin
               match editor#get_page pagefile with
                 | None -> assert false
@@ -641,7 +641,7 @@ object (self)
     try
       let lines_involved = res.lines in
       let filename = res.filename in
-      ignore (editor#open_file ~active:true ~offset:0 filename);
+      ignore (editor#open_file ~active:true ~scroll_offset:0 ~offset:0 filename);
       let page =
         match editor#get_page (`FILENAME filename)
         with None -> raise Not_found | Some page -> page

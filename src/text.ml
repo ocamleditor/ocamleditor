@@ -449,6 +449,12 @@ object (self)
     (pX - px + self#misc#allocation.Gtk.width),
     (pY - py)
 
+  method get_scroll_top () =
+    let vrect = self#visible_rect in
+    let y0 = Gdk.Rectangle.y vrect in
+    let start, _ = self#get_line_at_y y0 in
+    start#offset
+
   method draw_current_line_background ?(force=false) (ins : GText.iter) =
     let cur_line = ins#line in
     if cur_line <> prev_line_background || ins#ends_line || force then begin

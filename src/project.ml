@@ -41,8 +41,8 @@ type t = {
   mutable author             : string;
   mutable description        : string;
   mutable version            : string;
-  mutable files              : (File.file * int) list; (* Currently open files in the editor (non-persistent) *)
-  mutable open_files         : (string * int * bool) list; (* filename, current offset, active *)
+  mutable files              : (File.file * (int * int)) list; (* Currently open files in the editor (non-persistent) (filename, scrollTopOffset, cursorOffset) *)
+  mutable open_files         : (string * int * int * bool) list; (* filename, scroll top offset, current offset, active *)
   mutable build              : Bconf.t list; (* Build configurations *)
   mutable runtime            : Rconf.t list; (* Runtime configurations *)
   mutable autocomp_enabled   : bool;
@@ -58,6 +58,8 @@ type t = {
 
 let write_xml = ref (fun _ -> failwith "write_xml")
 let read_xml = ref (fun _ -> failwith "read_xml")
+let to_local_xml = ref (fun _ -> failwith "to_local_xml")
+let from_local_xml : (t -> unit) ref = ref (fun _ -> failwith "from_local_xml")
 
 let extension = ".xml"
 let src = "src"
@@ -192,13 +194,14 @@ let save ?editor proj =
   let active_filename =
     match editor with None -> ""
       | Some editor ->
-        proj.files <- List.map begin fun (file, offset) ->
+        proj.files <- List.map begin fun (file, (scroll_offset, offset)) ->
           file,
           match editor#get_page (`FILENAME file#path) with
-            | None -> 0
+            | None -> 0, 0
             | Some page ->
-              if page#load_complete then (page#buffer#get_iter `INSERT)#offset
-              else page#initial_offset
+              let scroll_top = page#view#get_scroll_top () in
+              if page#load_complete then scroll_top, (page#buffer#get_iter `INSERT)#offset
+              else page#scroll_offset, page#initial_offset
         end proj.files;
         let active_filename =
           match editor#get_page `ACTIVE with None -> "" | Some page -> page#get_filename
@@ -212,24 +215,29 @@ let save ?editor proj =
     if not (Sys.file_exists (proj.root // tmp)) then (Unix.mkdir (proj.root // tmp) 0o777);
     proj.modified <- false;
     unload_path proj Config.load_path;
-    proj.open_files <- List.rev_map begin fun (file, offset) ->
+    proj.open_files <- List.rev_map begin fun (file, (scroll_offset, offset)) ->
       let active = active_filename = file#path in
       begin
         match proj.in_source_path file#path with
           | None ->
             if Filename.is_implicit file#path then (filename_unix_implicit file#path) else file#path
           | Some rel -> filename_unix_implicit rel
-      end, offset, active
+      end, scroll_offset, offset, active
     end proj.files;
     let root = proj.root in
     let files = proj.files in
     proj.root <- "";
     proj.files <- [];
     (* output XML *)
+    let output_xml filename xml =
+      let xml = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<!-- OCamlEditor XML Project -->\n" ^ xml in
+      let outchan = open_out_bin filename in
+      lazy (output_string outchan xml) /*finally*/ lazy (close_out outchan);
+    in
     let xml = Xml.to_string_fmt (!write_xml proj) in
-    let xml = "<!-- OCamlEditor XML Project -->\n" ^ xml in
-    let outchan = kprintf open_out_bin "%s%s" (Filename.chop_extension filename) extension in
-    lazy (output_string outchan xml) /*finally*/ lazy (close_out outchan);
+    output_xml filename xml;
+    let xml = Xml.to_string_fmt (!to_local_xml proj) in
+    output_xml ((Filename.chop_extension filename) ^ ".local" ^ extension) xml;
     (* restore non persistent values *)
     proj.root <- root;
     proj.files <- files;
@@ -240,12 +248,13 @@ let save ?editor proj =
 (** load *)
 let load filename =
   let proj = !read_xml filename in
+  !from_local_xml proj;
   proj.root <- Filename.dirname filename;
   (*  *)
   if not (Sys.file_exists (proj.root // tmp)) then (Unix.mkdir (proj.root // tmp) 0o777);
   (*  *)
-  proj.open_files <- List.map begin fun (filename, offset, active) ->
-    (if Filename.is_implicit filename then proj.root // src // filename else filename), offset, active
+  proj.open_files <- List.map begin fun (filename, scroll_offset, offset, active) ->
+    (if Filename.is_implicit filename then proj.root // src // filename else filename), scroll_offset, offset, active
   end proj.open_files;
   proj
 
@@ -268,9 +277,9 @@ let rename_file proj file new_name =
   else (file#rename new_name)
 
 (** Adds filename to the open file list. *)
-let add_file proj ~offset file =
+let add_file proj ~scroll_offset ~offset file =
   if not (List.mem_assoc file proj.files) then begin
-    proj.files <- (file, offset) :: proj.files;
+    proj.files <- (file, (scroll_offset, offset)) :: proj.files;
   end
 
 (** Removes filename from the open file list. *)

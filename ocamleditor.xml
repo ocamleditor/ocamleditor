@@ -9,25 +9,26 @@
   <version>1.7.0</version>
   <autocomp enabled="true" delay="1." cflags=""/>
   <open_files>
-    <filename offset="4988" active="false">autocomp.ml</filename>
     <filename offset="5830" active="false">outline.ml</filename>
-    <filename offset="1871" active="false">ocamleditor.ml</filename>
-    <filename offset="4547" active="false">oe_config.ml</filename>
-    <filename offset="38467" active="false">browser.ml</filename>
-    <filename offset="0" active="false">generate_oebuild_script.ml</filename>
-    <filename offset="10071" active="false">build_script_args_widget.ml</filename>
-    <filename offset="0" active="false">build_script_args.ml</filename>
-    <filename offset="737" active="false">odoc.ml</filename>
-    <filename offset="1064" active="false">C:\ocaml\devel\ocamleditor\README</filename>
-    <filename offset="49531" active="false">menu.ml</filename>
-    <filename offset="23249" active="false">editor.ml</filename>
+    <filename offset="4396" active="false">oe_config.ml</filename>
+    <filename offset="4356" active="false">menu.ml</filename>
+    <filename offset="12285" active="true">editor.ml</filename>
     <filename offset="8275" active="false">C:\ocaml\devel\ocamleditor\build\tools.ml</filename>
     <filename offset="5613" active="false">bconf_list.ml</filename>
-    <filename offset="1467" active="false">bconf_page.ml</filename>
+    <filename offset="9600" active="false">bconf_page.ml</filename>
     <filename offset="8176" active="false">project_properties.ml</filename>
-    <filename offset="21175" active="false">editor_page.ml</filename>
-    <filename offset="4553" active="false">bookmark.ml</filename>
-    <filename offset="2543" active="true">oebuild/oebuild_util.ml</filename>
+    <filename offset="18209" active="false">editor_page.ml</filename>
+    <filename offset="4172" active="false">bookmark.ml</filename>
+    <filename offset="2491" active="false">project.ml</filename>
+    <filename offset="8365" active="false">project_xml.ml</filename>
+    <filename offset="7287" active="false">browser.ml</filename>
+    <filename offset="1786" active="false">preferences.ml</filename>
+    <filename offset="18197" active="false">text.ml</filename>
+    <filename offset="3033" active="false">code_folding.ml</filename>
+    <filename offset="14504" active="false">bconf_console.ml</filename>
+    <filename offset="7068" active="false">dialog_find_file.ml</filename>
+    <filename offset="7237" active="false">editor_dialog.ml</filename>
+    <filename offset="28601" active="false">find_text_output.ml</filename>
   </open_files>
   <runtime>
     <configuration name="ocamleditor" default="true" id_build="0" id="0">

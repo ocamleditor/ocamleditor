@@ -167,11 +167,11 @@ object (self)
       self#load_mli page#project mli
     end else if filename ^^ ".mli" then begin
       let ml = (Filename.chop_extension filename) ^ ".ml" in
-      ignore (self#open_file ~active:true ~offset:0 ml)
+      ignore (self#open_file ~active:true ~scroll_offset:0 ~offset:0 ml)
     end
 
   method private load_mli proj filename =
-    if Sys.file_exists filename then (ignore (self#open_file ~active:true ~offset:0 filename))
+    if Sys.file_exists filename then (ignore (self#open_file ~active:true ~scroll_offset:0 ~offset:0 filename))
     else begin
       ignore (Dialog.confirm
         ~title:"Create File"
@@ -204,7 +204,7 @@ object (self)
     if Sys.file_exists filename then begin
       match self#get_page (`FILENAME filename) with
         | None ->
-          ignore (self#open_file ~active:true ~offset:0 filename);
+          ignore (self#open_file ~active:true ~scroll_offset:0 ~offset:0 filename);
           self#location_history_goto location
         | Some page ->
           let view = (page#view :> Text.view) in
@@ -256,7 +256,7 @@ object (self)
       let bm = List.find (fun bm -> bm.Bookmark.num = num) !Bookmark.bookmarks in
       match self#get_page (`FILENAME bm.Bookmark.filename) with
         | None ->
-          let _ = self#open_file ~active:true ~offset:0 bm.Bookmark.filename in
+          let _ = self#open_file ~active:true ~scroll_offset:0 ~offset:0 bm.Bookmark.filename in
           Gmisclib.Idle.add ~prio:300 (fun () -> self#bookmark_goto ~num)
         | Some page ->
           if not page#view#realized then (self#goto_view page#view);
@@ -284,7 +284,7 @@ object (self)
             match self#get_page (`FILENAME filename) with
               | Some page -> page
               | None ->
-                ignore (self#open_file ~active:true ~offset:0 filename);
+                ignore (self#open_file ~active:true ~scroll_offset:0 ~offset:0 filename);
                 get_page ()
           in
           let page = get_page() in
@@ -306,7 +306,7 @@ object (self)
             if not page#load_complete then (self#load_page page);
             page
           | None ->
-            ignore (self#open_file ~active:true ~offset:0 filename);
+            ignore (self#open_file ~active:true ~scroll_offset:0 ~offset:0filename);
             get_page filename
       in
       let goto_page = (fun page -> self#goto_view (page#view :> Text.view)) in
@@ -545,7 +545,7 @@ object (self)
       end else (page#error_indication#hide_tooltip ~force:false ());
       false;
 
-    method open_file ~active ~offset filename =
+    method open_file ~active ~scroll_offset ~offset filename =
       try
         let page =
           try
@@ -564,7 +564,7 @@ object (self)
                 page
               with Not_found -> begin
                 let file = File.create filename () in
-                let page = new Editor_page.page ~file ~project ~offset ~editor:self () in
+                let page = new Editor_page.page ~file ~project ~scroll_offset ~offset ~editor:self () in
                 ignore (page#connect#file_changed ~callback:(fun _ -> switch_page#call page));
                 (** Tab Label with close button *)
                 let button_close = GButton.button ~relief:`NONE () in

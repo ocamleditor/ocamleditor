@@ -162,11 +162,11 @@ object (self)
     let active_exists = ref false in
     let i = ref 0 in
     let _ =
-      List.map (begin fun (filename, offset, active) ->
+      List.map (begin fun (filename, scroll_offset, offset, active) ->
         incr i;
         active_exists := !active_exists || active;
         let active = active || (List.length proj.open_files = !i && not !active_exists) in
-        editor#open_file ~active ~offset filename;
+        editor#open_file ~active ~scroll_offset ~offset filename;
       end) proj.open_files
     in
     editor#set_history_switch_page_locked false;
@@ -677,7 +677,8 @@ object (self)
       begin
         match page#file with None -> () | Some file ->
           let offset = page#initial_offset in
-          self#with_current_project (fun project -> Project.add_file project ~offset file);
+          let scroll_offset = page#view#get_scroll_top () in
+          self#with_current_project (fun project -> Project.add_file project ~scroll_offset ~offset file);
       end;
       Gaux.may menu ~f:begin fun menu ->
         menu.Menu.window_signal_locked <- true;
@@ -690,7 +691,7 @@ object (self)
         menu.Menu.window_n_childs <- menu.Menu.window_n_childs + 1;
         let _ = item#connect#toggled ~callback:begin fun () ->
           if not menu.Menu.window_signal_locked then begin
-            ignore (editor#open_file ~active:true ~offset:0 page#get_filename)
+            ignore (editor#open_file ~active:true ~scroll_offset:0 ~offset:0 page#get_filename)
           end
         end in
         menu.Menu.window_pages <- (page#misc#get_oid, item) :: menu.Menu.window_pages;

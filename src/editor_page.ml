@@ -46,7 +46,7 @@ let markup_label filename =
 
 
 (** Editor page *)
-class page ?file ~project ~offset ~editor () =
+class page ?file ~project ~scroll_offset ~offset ~editor () =
   let file_changed             = new file_changed () in
   let buffer                   = new Ocaml_text.buffer ~project ?file () in
   let sw, text_view, ocaml_view = create_view ~project ~buffer ?file () in
@@ -254,6 +254,7 @@ object (self)
   method redo () = if not (buffer#undo#redo()) then (text_view#scroll_lazy (buffer#get_iter `INSERT))
 
   method initial_offset : int = offset
+  method scroll_offset = scroll_offset
 
   method set_code_folding_enabled x =
     let is_ml = match file with None -> false | Some file ->
@@ -360,9 +361,12 @@ object (self)
             buffer#insert (Project.convert_to_utf8 project file#read);
             (* Initial cursor position *)
             if scroll then begin
-              let where = buffer#get_iter (`OFFSET offset) in
-              buffer#place_cursor ~where;
-              self#view#scroll_lazy where;
+              Gmisclib.Idle.add begin fun () ->
+                let where = buffer#get_iter (`OFFSET offset) in
+                buffer#place_cursor ~where;
+                let where = buffer#get_iter (`OFFSET scroll_offset) in
+                ignore (self#view#scroll_to_iter ~use_align:true where);
+              end;
             end;
             (* Colorize *)
             if buffer#lexical_enabled then (Lexical.tag self#view#buffer);

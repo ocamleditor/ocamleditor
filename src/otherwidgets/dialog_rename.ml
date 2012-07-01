@@ -82,7 +82,7 @@ let show ~editor ~page () =
                 File.write filename text;
                 update_page();
                 (* Reopen the page in the editor *)
-                match editor#open_file ~active:true ~offset:0 filename with
+                match editor#open_file ~active:true ~scroll_offset:0 ~offset:0 filename with
                   | Some page ->
                     editor#load_page ?scroll:None page;
                     editor#goto_view page#view;
