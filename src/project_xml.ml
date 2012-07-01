@@ -22,8 +22,10 @@
 
 
 open Project
+open Project_type
 open Printf
 open Miscellanea
+open Oe
 
 (** write *)
 let write proj =
@@ -42,10 +44,6 @@ let write proj =
       "enabled", string_of_bool proj.autocomp_enabled;
       "delay", string_of_float proj.autocomp_delay;
       "cflags", proj.autocomp_cflags], []);
-   (* Xml.Element ("open_files", [],
-      (List.map (fun (x, scroll_off, off, active) -> Xml.Element ("filename",
-        ["offset", string_of_int off; "active", (string_of_bool active)],
-        [Xml.PCData x])) proj.open_files));*)
     Xml.Element ("runtime", [],
       List.map begin fun t ->
         Xml.Element ("configuration", [
@@ -370,23 +368,9 @@ let read filename =
   (*  *)
   proj;;
 
-(** to_local_xml *)
-let to_local_xml proj = 
-  Xml.Element begin 
-    "local", [], [
-      Xml.Element ("open_files", [],
-        (List.map (fun (x, scroll_off, off, active) -> Xml.Element ("filename", [
-          "scroll", string_of_int scroll_off; 
-          "cursor", string_of_int off; 
-          "active", (string_of_bool active)
-        ], [Xml.PCData x])) proj.open_files))
-    ]
-  end;;
-
 (** from_local_xml *)
 let from_local_xml proj = 
-  let filename = Project.filename proj in
-  let filename = (Filename.chop_extension filename) ^ ".local" ^ Project.extension in
+  let filename = Project.filename_local proj in
   if Sys.file_exists filename then begin
     let parser = XmlParser.make () in
     let xml = XmlParser.parse parser (XmlParser.SFile filename) in
@@ -394,22 +378,32 @@ let from_local_xml proj =
       try String.concat "\n" (List.map Xml.pcdata (Xml.children xml))
       with Xml.Not_element _ -> ""
     in
-    let get_scroll xml = try int_of_string (Xml.attrib xml "scroll") with Xml.No_attribute _ -> 0 in
+    let get_int name xml = try int_of_string (Xml.attrib xml name) with Xml.No_attribute _ -> 0 in
     let get_cursor xml = try int_of_string (Xml.attrib xml "cursor") with Xml.No_attribute _ -> 0 in
     let get_active xml = try bool_of_string (Xml.attrib xml "active") with Xml.No_attribute _ -> false in
     Xml.iter begin fun node ->
       match Xml.tag node with
         | "open_files" -> 
-          let files = Xml.fold (fun acc x -> ((value x), (get_scroll x), (get_cursor x), (get_active x)) :: acc) [] node in
+          let files = Xml.fold (fun acc x -> ((value x), (get_int "scroll" x), (get_cursor x), (get_active x)) :: acc) [] node in
           proj.open_files <- List.rev files;
+        | "bookmarks" -> 
+          Xml.iter begin fun xml ->
+            let bm = {
+              bm_filename = (value xml);
+              bm_loc = Offset (get_int "offset" xml);
+              bm_num = (get_int "num" xml);
+              bm_marker = None;
+            } in
+            Project.set_bookmark bm proj
+          end node;
+          
         | _ -> ()
-    end xml
+    end xml;
   end;;
 
 let init () =
   Project.write_xml := write;
   Project.read_xml := read;
-  Project.to_local_xml := to_local_xml;
   Project.from_local_xml := from_local_xml;
 
 

@@ -227,11 +227,11 @@ object (self)
   method bookmark_remove ~num =
     self#with_current_page begin fun page ->
       let old_marker =
-        try (List.find (fun bm -> bm.Bookmark.num = num) !Bookmark.bookmarks).Bookmark.marker
+        try (List.find (fun bm -> bm.Oe.bm_num = num) project.Project_type.bookmarks (*!Bookmark.bookmarks*)).Oe.bm_marker
         with Not_found -> None
       in
       Gaux.may old_marker ~f:(fun old -> Gutter.destroy_markers page#view#gutter [old]);
-      Bookmark.remove ~num;
+      Project.remove_bookmark num project;
       page#view#draw_gutter();
     end
 
@@ -241,35 +241,38 @@ object (self)
       let where = match where with Some x -> x | _ -> page#buffer#get_iter `INSERT in
       let mark = page#buffer#create_mark(* ~name:(Gtk_util.create_mark_name "Editor.bookmark_create")*) where in
       let old_marker =
-        try (List.find (fun bm -> bm.Bookmark.num = num) !Bookmark.bookmarks).Bookmark.marker
+        try (List.find (fun bm -> bm.Oe.bm_num = num) project.Project_type.bookmarks (*!Bookmark.bookmarks*)).Oe.bm_marker
         with Not_found -> None
       in
       Gaux.may old_marker ~f:(fun old -> Gutter.destroy_markers page#view#gutter [old]);
       let marker = Gutter.create_marker ~kind:(`Bookmark num) ~mark ?pixbuf:(Bookmark.icon num) ?callback () in
-      Bookmark.create ~num ~filename ~mark ~marker ();
+      let bm = Bookmark.create ~num ~filename ~mark ~marker () in
+      Project.set_bookmark bm project;
       page#view#gutter.Gutter.markers <- marker :: page#view#gutter.Gutter.markers;
       page#view#draw_gutter();
     end
 
   method bookmark_goto ~num =
     try
-      let bm = List.find (fun bm -> bm.Bookmark.num = num) !Bookmark.bookmarks in
-      match self#get_page (`FILENAME bm.Bookmark.filename) with
+      let bm = List.find (fun bm -> bm.Oe.bm_num = num) project.Project_type.bookmarks (*!Bookmark.bookmarks*) in
+      match self#get_page (`FILENAME bm.Oe.bm_filename) with
         | None ->
-          let _ = self#open_file ~active:true ~scroll_offset:0 ~offset:0 bm.Bookmark.filename in
+          let _ = self#open_file ~active:true ~scroll_offset:0 ~offset:0 bm.Oe.bm_filename in
           Gmisclib.Idle.add ~prio:300 (fun () -> self#bookmark_goto ~num)
         | Some page ->
           if not page#view#realized then (self#goto_view page#view);
-          Bookmark.apply bm begin function
+          ignore (Bookmark.apply bm begin function
             | `OFFSET offset ->
               let _ = Bookmark.offset_to_mark (page#buffer :> GText.buffer) bm in
               self#bookmark_goto ~num;
+              -1
             | `ITER it ->
               let where = new GText.iter it in
               page#view#scroll_lazy where;
               page#buffer#place_cursor ~where;
               page#view#misc#grab_focus();
-          end;
+              -1
+          end);
           if page#view#realized then (Gmisclib.Idle.add (*~prio:300*) (fun () -> self#goto_view page#view));
           Gmisclib.Idle.add ~prio:300 Bookmark.write;
     with Not_found -> ()
@@ -750,11 +753,11 @@ object (self)
   method private add_timeouts () =
     (** Auto-compilation *)
     ignore (GMain.Timeout.add ~ms:500 ~callback:begin fun () ->
-      if project.Project.autocomp_enabled then begin
+      if project.Project_type.autocomp_enabled then begin
         try
           self#with_current_page begin fun page ->
             if page#buffer#changed_after_last_autocomp > 0.0 then begin
-              if Unix.gettimeofday() -. page#buffer#changed_after_last_autocomp > project.Project.autocomp_delay (*/. 2.*)
+              if Unix.gettimeofday() -. page#buffer#changed_after_last_autocomp > project.Project_type.autocomp_delay (*/. 2.*)
               then (page#compile_buffer ~commit:false ())
             end
           end
@@ -839,15 +842,15 @@ object (self)
     end);
     (** Record last active page *)
     let rec get_history project =
-      match List_opt.assoc project.Project.name history_switch_page with
+      match List_opt.assoc project.Project_type.name history_switch_page with
         | Some x -> x
         | _ ->
-          history_switch_page <- (project.Project.name, []) :: history_switch_page;
+          history_switch_page <- (project.Project_type.name, []) :: history_switch_page;
           get_history project
     in
     let replace_history project hist =
-      history_switch_page <- List.remove_assoc project.Project.name history_switch_page;
-      history_switch_page <- (project.Project.name, hist) :: history_switch_page;
+      history_switch_page <- List.remove_assoc project.Project_type.name history_switch_page;
+      history_switch_page <- (project.Project_type.name, hist) :: history_switch_page;
     in
     ignore (notebook#connect#switch_page ~callback:begin fun next_page_num ->
       if not history_switch_page_locked && notebook#current_page >= 0 then begin

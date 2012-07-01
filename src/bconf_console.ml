@@ -209,7 +209,7 @@ object (self)
 (*      kprintf (view#buffer#insert ~tag_names:["bold"; "output"]) "Environment: %s" (String.concat "; " task.Task.env);
       kprintf (view#buffer#insert ~tag_names:["bold"; "output"]) "\nWorking directory: %s\n" task.Task.dir;
       kprintf (view#buffer#insert ~tag_names:["bold"; "output"]) "Command:\n%s\n" (Process.cmd_line proc);*)
-      kprintf (view#buffer#insert ~tag_names:["bold"; "output"]) "%s\n" (Cmd.expand (project.Project.autocomp_compiler ^ " -v"));
+      kprintf (view#buffer#insert ~tag_names:["bold"; "output"]) "%s\n" (Cmd.expand (project.Project_type.autocomp_compiler ^ " -v"));
       kprintf (view#buffer#insert ~tag_names:["bold"; "output"]) "%s\n" (Process.cmd_line proc);
       signal_enabled <- true;
       Mutex.unlock m_write;
@@ -330,9 +330,9 @@ object (self)
             try int_of_string (Str.matched_group (group + 3) !line)
             with Invalid_argument "Str.matched_group" -> start
           in
-          let parent = project.Project.root // Project.src in
+          let parent = project.Project_type.root // Project.src in
           let filename = List.fold_left (fun acc x -> acc // x) parent (Miscellanea.filename_split basename) in
-          editor#open_file ~active:true ~scroll_offset:0 ~offset:0 filename;
+          ignore (editor#open_file ~active:true ~scroll_offset:0 ~offset:0 filename);
           match editor#get_page (`FILENAME filename) with
             | None -> false
             | Some page ->
@@ -469,7 +469,7 @@ let exec_sync ?run_cb ?(use_thread=true) ?(at_exit=ignore) ~editor tasks =
 (** exec *)
 let exec ~editor ?use_thread task_kind bconf =
   let project = editor#project in
-  let can_compile_native = project.Project.can_compile_native in
+  let can_compile_native = project.Project_type.can_compile_native in
   let filter_tasks = Bconf.filter_external_tasks bconf in
   let tasks_clean () =
     if Oebuild.check_restrictions bconf.restrictions then

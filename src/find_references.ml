@@ -197,7 +197,7 @@ object (self)
       self#append_row_file ~parent ~filename ~page:get_page ~goto ~references
     end ref_ext
 
-  method find ~(project : Project.t) (source : source) =
+  method find ~(project : Project_type.t) (source : source) =
     search_started#call();
     let root = model#append () in
     let usages = ref root in

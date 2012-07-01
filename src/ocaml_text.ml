@@ -225,7 +225,7 @@ object (self)
             match project with
               | Some project ->
                 begin
-                  match project.Project.in_source_path file#path with
+                  match project.Project_type.in_source_path file#path with
                     | Some _ ->
                       Annotation.find_block_at_offset ~project ~filename:file#path ~offset:iter#offset
                         (*~offset:(Glib.Utf8.offset_to_pos (self#get_text ()) ~pos:0 ~off:iter#offset)*)

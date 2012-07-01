@@ -113,6 +113,17 @@ and error_message = {
 }
 
 
+(** Bookmarks *)
+type bm_location = Mark of Gtk.text_mark | Offset of int
+
+type bookmark = {
+  bm_num            : int;
+  bm_filename       : string;
+  mutable bm_loc    : bm_location;
+  mutable bm_marker : Gutter.marker option;
+}
+
+
 (** Browser *)
 type browser_maximized_view_action = {
   mva_menubar                 : bool;

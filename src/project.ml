@@ -22,43 +22,14 @@
 
 open Miscellanea
 open Printf
+open Project_type
 
 exception Project_already_exists of string
 
 exception Cannot_rename of string
 
-type t = {
-  (* ROOT directory of the project (non-persistent) *)
-  mutable root               : string;
-  mutable ocaml_home         : string; (* Unused *)
-  (* Full path of the std. lib., either from the OCAMLLIB e. v. or from 'ocamlc -where';
-     when written to the XML project file, if equals to 'ocamlc -where', it is translated in "". *)
-  mutable ocamllib           : string;
-  mutable ocamllib_from_env  : bool;
-  mutable encoding           : string option;
-  mutable name               : string;
-  mutable modified           : bool;
-  mutable author             : string;
-  mutable description        : string;
-  mutable version            : string;
-  mutable files              : (File.file * (int * int)) list; (* Currently open files in the editor (non-persistent) (filename, scrollTopOffset, cursorOffset) *)
-  mutable open_files         : (string * int * int * bool) list; (* filename, scroll top offset, current offset, active *)
-  mutable build              : Bconf.t list; (* Build configurations *)
-  mutable runtime            : Rconf.t list; (* Runtime configurations *)
-  mutable autocomp_enabled   : bool;
-  mutable autocomp_delay     : float;
-  mutable autocomp_cflags    : string;
-  mutable autocomp_compiler  : string;
-  mutable in_source_path     : string -> string option;
-  mutable source_paths       : string list;
-  mutable can_compile_native : bool;
-  mutable symbols            : Oe.symbol_cache;
-  mutable build_script       : Build_script.t;
-}
-
 let write_xml = ref (fun _ -> failwith "write_xml")
 let read_xml = ref (fun _ -> failwith "read_xml")
-let to_local_xml = ref (fun _ -> failwith "to_local_xml")
 let from_local_xml : (t -> unit) ref = ref (fun _ -> failwith "from_local_xml")
 
 let extension = ".xml"
@@ -135,6 +106,7 @@ let create ~filename () =
       Build_script.bs_filename = Build_script.default_filename;
       bs_args                  = [];
     };
+    bookmarks          = [];
   } in
   proj;;
 
@@ -159,8 +131,11 @@ let convert_from_utf8 proj text = match proj.encoding with
   | None -> Convert.from_utf8 text
   | Some to_codeset -> Glib.Convert.convert ~from_codeset:"UTF-8" ~to_codeset text
 
-(** Returns the full filename of the project. *)
+(** Returns the full filename of the project configuration file. *)
 let filename proj = Filename.concat proj.root (proj.name ^ extension)
+
+(** Returns the full filename of the project local configuration file. *)
+let filename_local proj = (Filename.chop_extension (filename proj)) ^ ".local" ^ extension
 
 (** get_includes*)
 let get_includes =
@@ -189,6 +164,38 @@ let unload_path proj where =
   let path = get_load_path proj in
   where := List.filter (fun w -> not (List.mem w path)) !where
 
+(** output_xml *)
+let output_xml filename xml =
+  let xml = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<!-- OCamlEditor XML Project -->\n" ^ xml in
+  let outchan = open_out_bin filename in
+  lazy (output_string outchan xml) /*finally*/ lazy (close_out outchan);;
+
+let xml_of_open_files proj =
+  Xml.Element ("open_files", [],
+    (List.map (fun (x, scroll_off, off, active) -> Xml.Element ("filename", [
+      "scroll", string_of_int scroll_off; 
+      "cursor", string_of_int off; 
+      "active", (string_of_bool active)
+    ], [Xml.PCData x])) proj.open_files));;
+
+let xml_of_bookmarks proj =
+  Xml.Element ("bookmarks", [], 
+    List.map begin fun bm ->
+      Xml.Element ("bookmark", [
+        "num", string_of_int bm.Oe.bm_num;
+        "offset", string_of_int (Bookmark.apply bm begin function
+          | `ITER iter -> GtkText.Iter.get_offset iter
+          | `OFFSET offset -> offset
+        end)
+      ], [Xml.PCData bm.Oe.bm_filename])
+    end proj.bookmarks);;
+
+let xml_of_local childs = Xml.Element ("local", [], childs);;
+
+let save_local filename proj = 
+  let xml = Xml.to_string_fmt (xml_of_local [(xml_of_open_files proj); (xml_of_bookmarks proj)]) in
+  output_xml filename xml;;
+
 (** save. Creates [home], [home/src], [home/bak], [home/tmp] if not existing. *)
 let save ?editor proj =
   let active_filename =
@@ -208,6 +215,7 @@ let save ?editor proj =
         in active_filename
   in
   let filename = filename proj in
+  let filename_local = filename_local proj in
   try
     if not (Sys.file_exists proj.root) then (Unix.mkdir proj.root 0o777);
     if not (Sys.file_exists (proj.root // src)) then (Unix.mkdir (proj.root // src) 0o777);
@@ -229,21 +237,47 @@ let save ?editor proj =
     proj.root <- "";
     proj.files <- [];
     (* output XML *)
-    let output_xml filename xml =
-      let xml = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<!-- OCamlEditor XML Project -->\n" ^ xml in
-      let outchan = open_out_bin filename in
-      lazy (output_string outchan xml) /*finally*/ lazy (close_out outchan);
-    in
     let xml = Xml.to_string_fmt (!write_xml proj) in
     output_xml filename xml;
-    let xml = Xml.to_string_fmt (!to_local_xml proj) in
-    output_xml ((Filename.chop_extension filename) ^ ".local" ^ extension) xml;
+    save_local filename_local proj;
     (* restore non persistent values *)
     proj.root <- root;
     proj.files <- files;
     load_path proj Config.load_path;
-  with Unix.Unix_error (err, _, _) -> print_endline (Unix.error_message err)
+  with Unix.Unix_error (err, _, _) -> print_endline (Unix.error_message err);;
 
+(** save_bookmarks *)
+let save_bookmarks proj =
+  let filename = filename_local proj in
+  let xml = 
+    if Sys.file_exists filename then begin
+      let parser = XmlParser.make () in
+      let xml = XmlParser.parse parser (XmlParser.SFile filename) in
+      let xml = Xml.map begin fun node ->
+        match Xml.tag node with
+          | "bookmarks" -> xml_of_bookmarks proj
+          | _ -> node
+      end xml in
+      xml_of_local xml;
+    end else (xml_of_local [xml_of_bookmarks proj])
+  in
+  output_xml filename (Xml.to_string_fmt xml);;
+
+(** remove_bookmark *)  
+let remove_bookmark num proj =
+  proj.bookmarks <- List.filter (fun x -> x.Oe.bm_num <> num) proj.bookmarks;;
+
+(** set_bookmark *)  
+let set_bookmark bookmark proj =
+  begin
+    match List_opt.find (fun x -> x.Oe.bm_num = bookmark.Oe.bm_num) proj.bookmarks with
+      | Some bookmark ->
+        Bookmark.remove bookmark;
+        remove_bookmark bookmark.Oe.bm_num proj;
+      | _ -> ()
+  end;
+  proj.bookmarks <- bookmark :: proj.bookmarks;
+  save_bookmarks proj;;
 
 (** load *)
 let load filename =

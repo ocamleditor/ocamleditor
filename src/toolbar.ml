@@ -205,7 +205,7 @@ object (self)
         browser#with_current_project (fun project ->
           browser#with_default_build_config begin fun bconfig ->
             label := sprintf "Clean \xC2\xAB%s\xC2\xBB" bconfig.Bconf.name;
-            let bconfigs = project.Project.build in
+            let bconfigs = project.Project_type.build in
             List.iter begin fun tg ->
               let item = GMenu.menu_item ~label:tg.Bconf.name ~packing:menu#add () in
               ignore (item#connect#activate ~callback:begin fun () ->
@@ -225,7 +225,7 @@ object (self)
         browser#with_current_project (fun project ->
           browser#with_default_build_config begin fun bconfig ->
             label := sprintf "Compile \xC2\xAB%s\xC2\xBB" bconfig.Bconf.name;
-            let bconfigs = project.Project.build in
+            let bconfigs = project.Project_type.build in
             List.iter begin fun tg ->
               let item = GMenu.menu_item ~label:tg.Bconf.name ~packing:menu#add () in
               ignore (item#connect#activate ~callback:begin fun () ->
@@ -245,7 +245,7 @@ object (self)
         browser#with_current_project (fun project ->
           browser#with_default_build_config begin fun bconfig ->
             label := sprintf "Build \xC2\xAB%s\xC2\xBB" bconfig.Bconf.name;
-            let bconfigs = project.Project.build in
+            let bconfigs = project.Project_type.build in
             List.iter begin fun tg ->
               let item = GMenu.menu_item ~label:tg.Bconf.name ~packing:menu#add () in
               ignore (item#connect#activate ~callback:begin fun () ->
@@ -258,7 +258,7 @@ object (self)
       ignore (tool_run#connect#clicked ~callback:begin fun () ->
         browser#with_current_project (fun project ->
           browser#with_default_runtime_config (fun rc ->
-            let bc = List.find (fun b -> b.Bconf.id = rc.Rconf.id_build) project.Project.build in
+            let bc = List.find (fun b -> b.Bconf.id = rc.Rconf.id_build) project.Project_type.build in
             ignore (Bconf_console.exec ~editor (`RCONF rc) bc)))
       end);
       ignore (tool_run#connect#popup ~callback:begin fun (label, menu) ->
@@ -266,7 +266,7 @@ object (self)
           browser#with_default_runtime_config (fun default_rc ->
             browser#with_default_build_config begin fun bconfig ->
               label := sprintf "Run \xC2\xAB%s\xC2\xBB" default_rc.Rconf.name;
-              let bconfigs = project.Project.build in
+              let bconfigs = project.Project_type.build in
               List.iter begin fun rc ->
                 let item = GMenu.menu_item ~label:rc.Rconf.name ~packing:menu#add () in
                 ignore (item#connect#activate ~callback:begin fun () ->
@@ -275,7 +275,7 @@ object (self)
                     ignore (Bconf_console.exec ~editor (`RCONF rc) bc)
                   with Not_found -> ()
                 end);
-              end project.Project.runtime;
+              end project.Project_type.runtime;
             end))
       end);
       (** Location History *)

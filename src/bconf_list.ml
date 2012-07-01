@@ -167,7 +167,7 @@ object (self)
         | path :: _ -> Some path
     in
     model#clear();
-    self#append project.Project.build;
+    self#append project.Project_type.build;
     match current_selection with
       | Some path -> view#selection#select_path path
       | _ -> self#select_default_configuration()

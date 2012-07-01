@@ -37,16 +37,16 @@ module Modules :
     }
     val read :
       ?filter:string -> path:string list -> unit -> (string * string) list
-    val get_descr : project:Project.t -> t list
+    val get_descr : project:Project_type.t -> t list
   end
 
 module Cache :
   sig
-    val reset : project:Project.t -> unit
+    val reset : project:Project_type.t -> unit
     val update :
       cache:Oe.symbol_cache -> value_path:string list -> unit -> bool
-    val save : project:Project.t -> unit
-    val load : project:Project.t -> unit
+    val save : project:Project_type.t -> unit
+    val load : project:Project_type.t -> unit
   end
 
 val find_by_modulepath :
@@ -55,10 +55,10 @@ val find_by_modulepath :
 val filter_methods : Oe.symbol_cache -> string list -> Oe.symbol list
 val find_local_defs :
   regexp:Str.regexp ->
-  project:Project.t -> filename:string -> offset:int -> Oe.symbol list
+  project:Project_type.t -> filename:string -> offset:int -> Oe.symbol list
 val filter_by_name :
   ?use_longidents:bool ->
-  ?include_locals:Project.t * string * int ->
+  ?include_locals:Project_type.t * string * int ->
   ?include_methods:bool ->
   ?include_modules:string list ->
   regexp:Str.regexp -> Oe.symbol list -> Oe.symbol list

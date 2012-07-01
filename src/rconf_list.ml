@@ -89,14 +89,14 @@ object (self)
   method reset () =
     let current_selection =
       match view#selection#get_selected_rows with
-        | path :: _ when project.Project.runtime <> [] -> Some path
+        | path :: _ when project.Project_type.runtime <> [] -> Some path
         | _ -> None
     in
     model#clear();
-    self#append project.Project.runtime;
+    self#append project.Project_type.runtime;
     match current_selection with
       | Some path -> view#selection#select_path path
-      | _ when project.Project.runtime = [] -> b_add#clicked()
+      | _ when project.Project_type.runtime = [] -> b_add#clicked()
       | _ -> ()
 
   method private append rcs =

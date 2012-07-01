@@ -93,7 +93,7 @@ let main () = begin
     ("-clean",       Set is_clean,                    " Remove output files for the selected target and exit.");
     ("-clean-all",   Set is_clean_all,                " Remove all build output and exit.");
     ("-dep",         Unit dep,                        " Print dependencies and exit.");
-    ("-when",        String check_restrictions,       "\"<c1,c2,...>\" Exit immediately if one of the specified conditions is not true.
+    ("-when",        String check_restrictions,       "\"<c1,c2,...>\" Exit immediately if any condition specified here is not true.
                       Recognized conditions are:
 
                         IS_UNIX    : O.S. type is Unix

@@ -295,7 +295,7 @@ object (self)
             (tm.Unix.tm_mon + 1) tm.Unix.tm_mday tm.Unix.tm_hour tm.Unix.tm_min tm.Unix.tm_sec
           in
           kprintf status_filename#misc#set_tooltip_markup "%s%s\nLast modified: %s\n%d bytes"
-            (if project.Project.in_source_path file#path <> None then "<b>" ^ project.Project.name ^ "</b>\n" else "")
+            (if project.Project_type.in_source_path file#path <> None then "<b>" ^ project.Project_type.name ^ "</b>\n" else "")
             file#path
             last_modified
             stat.Unix.st_size;
@@ -324,9 +324,9 @@ object (self)
     Bookmark.write();
     let old_markers =
       try
-        let bms = List.filter (fun bm -> bm.Bookmark.filename = file#path) !Bookmark.bookmarks in
+        let bms = List.filter (fun bm -> bm.Oe.bm_filename = file#path) project.Project_type.bookmarks (*!Bookmark.bookmarks*) in
         List.iter Bookmark.mark_to_offset bms;
-        Xlist.filter_map (fun bm -> bm.Bookmark.marker) bms
+        Xlist.filter_map (fun bm -> bm.Oe.bm_marker) bms
       with Not_found -> []
     in
     Gutter.destroy_markers view#gutter old_markers;
@@ -389,27 +389,27 @@ object (self)
             (* Bookmarks: offsets to marks *)
             let redraw = ref false in
             List.iter begin fun bm ->
-              if bm.Bookmark.filename = file#path then
+              if bm.Oe.bm_filename = file#path then
                 let mark = (Bookmark.offset_to_mark (self#buffer :> GText.buffer) bm) in
                 let callback =
-                  if bm.Bookmark.num >= Bookmark.limit then Some (fun _ ->
-                    editor#bookmark_remove ~num:bm.Bookmark.num;
+                  if bm.Oe.bm_num >= Bookmark.limit then Some (fun _ ->
+                    editor#bookmark_remove ~num:bm.Oe.bm_num;
                     redraw := true;
                     true)
                   else None
                 in
-                let marker = Gutter.create_marker ~mark ?pixbuf:(Bookmark.icon bm.Bookmark.num) ?callback () in
-                bm.Bookmark.marker <- Some marker;
+                let marker = Gutter.create_marker ~mark ?pixbuf:(Bookmark.icon bm.Oe.bm_num) ?callback () in
+                bm.Oe.bm_marker <- Some marker;
                 view#gutter.Gutter.markers <- marker :: view#gutter.Gutter.markers
-            end !Bookmark.bookmarks;
+            end project.Project_type.bookmarks (*!Bookmark.bookmarks*);
             Bookmark.write();
             if !redraw then (GtkBase.Widget.queue_draw text_view#as_widget);
             true
           with Glib.Convert.Error (_, message) -> begin
-            let message = if project.Project.encoding <> Some "UTF-8" then (kprintf Convert.to_utf8
+            let message = if project.Project_type.encoding <> Some "UTF-8" then (kprintf Convert.to_utf8
               "Cannot convert file\n\n%s\n\nfrom %s codeset to UTF-8.\n\n%s"
                 file#path
-                (match project.Project.encoding with None -> "Default" | Some x -> x)
+                (match project.Project_type.encoding with None -> "Default" | Some x -> x)
                 message) else message
             in
             let dialog = GWindow.message_dialog ~title:"Text file contains invalid characters."
@@ -421,8 +421,8 @@ object (self)
 
   method compile_buffer ~commit () =
     let filename = self#get_filename in
-    if project.Project.autocomp_enabled
-    && ((project.Project.in_source_path filename) <> None)
+    if project.Project_type.autocomp_enabled
+    && ((project.Project_type.in_source_path filename) <> None)
     && (filename ^^ ".ml" || filename ^^ ".mli") then begin
       buffer#set_changed_after_last_autocomp 0.0;
       Autocomp.compile_buffer ~project ~editor ~page:self ~commit ();
@@ -542,8 +542,8 @@ object (self)
               | Some started when started#equal where ->
                 begin
                   match Bookmark.find self#get_filename buffer#as_gtext_buffer where with
-                    | Some bm when bm.Bookmark.num >= Bookmark.limit ->
-                      editor#bookmark_remove ~num:bm.Bookmark.num;
+                    | Some bm when bm.Oe.bm_num >= Bookmark.limit ->
+                      editor#bookmark_remove ~num:bm.Oe.bm_num;
                       GtkBase.Widget.queue_draw text_view#as_widget;
                     | _ ->
                       let num = Bookmark.actual_maximum () in

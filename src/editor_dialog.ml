@@ -158,7 +158,7 @@ let save_modified ~editor ~close ~callback pages =
 
 (** file_open *)
 let file_open ~editor () =
-  let path = editor#project.Project.root // Project.src in
+  let path = editor#project.Project_type.root // Project.src in
   let filters = [
     ("Source files", ["*.ml*"; "README*"; "INSTALL*";
       "ChangeLog"; "CHANGES"; "NEWS*"; "TODO*"; "BUGS*"; "CONTRIB*";

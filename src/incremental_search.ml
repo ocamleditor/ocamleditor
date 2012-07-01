@@ -29,7 +29,7 @@ let set_last_incremental = ref (fun text regexp -> failwith "set_last_incrementa
 (* Options *)
 class status () =
   object (self)
-    val mutable project : Project.t option = None
+    val mutable project : Project_type.t option = None
     val mutable text_find = ""
     val mutable text_replace = ""
     val mutable backward = false;
@@ -124,7 +124,8 @@ class incremental () =
               | STOP_AFTER bound when i1#offset >= bound ->
                 false
               | _ ->
-                Gmisclib.Idle.add (fun () -> ignore (view#scroll_to_iter ~use_align:true ~xalign:1.0 ~yalign:0.5 i1));
+                view#scroll_lazy i1;
+                (*Gmisclib.Idle.add (fun () -> ignore (view#scroll_to_iter ~use_align:true ~xalign:1.0 ~yalign:0.5 i1));*)
                 if status#backward then buffer#select_range i2 i1
                 else buffer#select_range i1 i2;
                 true
@@ -145,7 +146,8 @@ class incremental () =
           else Str.search_forward pat text pos in
         let start = buffer#get_iter_at_char pos in
         let stop = buffer#get_iter_at_char (Str.match_end()) in
-        Gmisclib.Idle.add (fun () -> ignore (view#scroll_to_iter ~use_align:true ~xalign:1.0 ~yalign:0.5 start));
+        view#scroll_lazy start;
+        (*Gmisclib.Idle.add (fun () -> ignore (view#scroll_to_iter ~use_align:true ~xalign:1.0 ~yalign:0.5 start));*)
         if status#backward then buffer#select_range stop start
         else buffer#select_range start stop;
         true

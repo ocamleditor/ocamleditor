@@ -21,6 +21,7 @@
 *)
 
 open Project
+open Project_type
 open Miscellanea
 open Printf
 
@@ -110,7 +111,7 @@ class widget ~editor ?(callback=ignore) ~project ?page_num ?packing ?show () =
   let hbox = GPack.hbox ~spacing:8 ~packing:bconf_box#add () in
   let bconf_list = new Bconf_list.view ~editor ~project ~packing:hbox#pack () in
   let _ =
-    if List.length project.Project.build = 0 then begin
+    if List.length project.Project_type.build = 0 then begin
       bconf_list#button_add#clicked();
     end;
   in
@@ -214,8 +215,8 @@ object (self)
   method button_close = button_close
 
   method private bconfigs_ok =
-    bconf_list#length > 0 && project.Project.build <> [] && begin
-      List.for_all (fun bc -> bc.Bconf.files <> "") project.Project.build
+    bconf_list#length > 0 && project.Project_type.build <> [] && begin
+      List.for_all (fun bc -> bc.Bconf.files <> "") project.Project_type.build
     end && (not bconf_page#changed)
 
   method reset () =
@@ -225,17 +226,17 @@ object (self)
     desc_entry#set_text project.description;
     author_entry#set_text project.author;
     version_entry#set_text project.version;
-    home_entry#set_text project.Project.root;
-    ignore (chooser#set_current_folder (Filename.dirname project.Project.root));
+    home_entry#set_text project.root;
+    ignore (chooser#set_current_folder (Filename.dirname project.root));
     src_entry#set_text (project.root // Project.src);
     bak_entry#set_text (project.root // Project.bak);
     doc_entry#set_text "";
     GtkThread2.async ocaml_home#reset ();
-    check_autocomp_enabled#set_active project.Project.autocomp_enabled;
+    check_autocomp_enabled#set_active project.autocomp_enabled;
     range_box#misc#set_sensitive (check_autocomp_enabled#active);
     entry_autocomp_cflags#misc#set_sensitive (check_autocomp_enabled#active);
-    range_autocomp_delay#adjustment#set_value (project.Project.autocomp_delay *. 1000.);
-    entry_autocomp_cflags#set_text project.Project.autocomp_cflags;
+    range_autocomp_delay#adjustment#set_value (project.autocomp_delay *. 1000.);
+    entry_autocomp_cflags#set_text project.autocomp_cflags;
     GtkThread2.async bconf_list#reset ();
     GtkThread2.async rconf_list#reset ();
 
@@ -253,17 +254,17 @@ object (self)
       project.autocomp_cflags  <- entry_autocomp_cflags#text;
       callback project;
       (* Save bconfigs and rconfigs *)
-      project.Project.build <- (bconf_list#get_bconfigs ());
+      project.build <- (bconf_list#get_bconfigs ());
       let rconfigs = rconf_list#get_rconfigs() in
-      project.Project.runtime <- List.filter begin fun rtc ->
-        List.exists (fun bc -> bc.Bconf.id = rtc.Rconf.id_build) project.Project.build
+      project.runtime <- List.filter begin fun rtc ->
+        List.exists (fun bc -> bc.Bconf.id = rtc.Rconf.id_build) project.build
       end rconfigs;
       Project.save ~editor project;
       project_changed#call();
       (*  *)
       bconf_page#set_changed false;
       (*  *)
-      if project.Project.autocomp_enabled then begin
+      if project.autocomp_enabled then begin
         editor#with_current_page (fun p -> p#compile_buffer ~commit:false ());
       end else begin
         List.iter begin fun page ->

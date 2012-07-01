@@ -716,7 +716,7 @@ object (self)
                   while !iter#compare expose_bottom < 0 do
                     begin
                       match Bookmark.find filename buffer#as_gtext_buffer !iter with
-                        | Some bm when bm.Bookmark.num >= Bookmark.limit ->
+                        | Some bm when bm.Oe.bm_num >= Bookmark.limit ->
                           drawable#set_line_attributes ~width:2 ~style:`SOLID ();
                           drawable#set_foreground Oe_config.horizontal_line_color;
                           let y, h = view#get_line_yrange !iter in

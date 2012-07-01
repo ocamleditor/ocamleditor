@@ -26,7 +26,7 @@ open GUtil
 open Miscellanea
 
 let mk_target_filenames project filenames =
-  let filenames = Miscellanea.Xlist.filter_map project.Project.in_source_path filenames in
+  let filenames = Miscellanea.Xlist.filter_map project.Project_type.in_source_path filenames in
   if Oe_config.is_win32 then begin
     List.map begin fun filename ->
       Miscellanea.filename_unix_implicit filename
@@ -82,7 +82,7 @@ class view ~project ?packing () =
   end in
   (** Install path for library *)
   let box = GPack.vbox ~packing:lbox#pack () in
-  let ocamllib = project.Project.ocamllib in
+  let ocamllib = project.Project_type.ocamllib in
   let markup = sprintf "Installation path, relative to the standard library directory (<small><tt>%s</tt></small>) " ocamllib in
   let _ = GMisc.label ~markup ~xalign:0.0 ~packing:box#pack () in
   let hbox = GPack.hbox ~spacing:3 ~packing:box#pack () in
@@ -175,10 +175,10 @@ class view ~project ?packing () =
 
   (** Restrictions Tab *)
   let vbox = GPack.vbox ~width:550 ~border_width:5 ~spacing:8 () in
-  let _ = nb#append_page ~tab_label:(GMisc.label ~text:"Restrictions" ())#coerce vbox#coerce in
+  let _ = nb#append_page ~tab_label:(GMisc.label ~text:"Conditions" ())#coerce vbox#coerce in
   let _ = GMisc.label ~xalign:0.0 ~line_wrap:true ~justify:`LEFT ~width:550
-    ~text:"Specify which constraints must be satisfied to enable the execution of \
-commands on this build configuration. The selected conditions will be verified at \
+    ~text:"Specify the conditions that determine whether commands on this build \
+configuration should run. The selected conditions will be verified at \
 any attempt to perform a \"Clean\" or \"Build\" or any other external task, from \
 both within the IDE and from the generated build script." ~packing:vbox#pack () in
   let align = GBin.alignment ~padding:(0,0,indent,0) ~packing:vbox#add () in

@@ -651,7 +651,7 @@ let project ~browser ~group ~flags items =
   ignore (project_run#connect#activate ~callback:begin fun () ->
     browser#with_current_project (fun project ->
       browser#with_default_runtime_config (fun rc ->
-        let bc = List.find (fun b -> b.Bconf.id = rc.Rconf.id_build) project.Project.build in
+        let bc = List.find (fun b -> b.Bconf.id = rc.Rconf.id_build) project.Project_type.build in
         ignore (Bconf_console.exec ~editor (`RCONF rc) bc)))
   end);
   (** Clean... *)
@@ -758,10 +758,10 @@ let project ~browser ~group ~flags items =
             ignore (Bconf_console.exec ~editor `CLEAN tg)
           end);
         end;
-      end project.Project.build;
+      end project.Project_type.build;
       Gmisclib.Idle.add begin fun () ->
         let item_all = GMenu.menu_item ~label:"All configurations" ~packing:build_menu#add () in
-        let _ = item_all#connect#activate ~callback:(fun () -> browser#build_all project.Project.build) in
+        let _ = item_all#connect#activate ~callback:(fun () -> browser#build_all project.Project_type.build) in
         item_all#add_accelerator ~group ~modi:[`CONTROL;`MOD1] GdkKeysyms._F10 ~flags;
         ignore (GMenu.separator_item ~packing:build_menu#add ());
       end;
@@ -772,18 +772,18 @@ let project ~browser ~group ~flags items =
             ignore (Bconf_console.exec ~editor `COMPILE tg)
           end);
         end
-      end project.Project.build;
+      end project.Project_type.build;
       List.iter begin fun rc ->
         Gmisclib.Idle.add begin fun () ->
           let item = GMenu.menu_item ~label:rc.Rconf.name ~packing:run_menu#add () in
           ignore (item#connect#activate ~callback:begin fun () ->
             try
-              let bc = List.find (fun b -> b.Bconf.id = rc.Rconf.id_build) project.Project.build in
+              let bc = List.find (fun b -> b.Bconf.id = rc.Rconf.id_build) project.Project_type.build in
               ignore (Bconf_console.exec ~editor (`RCONF rc) bc)
             with Not_found -> ()
           end);
         end
-      end project.Project.runtime;
+      end project.Project_type.runtime;
     end
   end);
   project

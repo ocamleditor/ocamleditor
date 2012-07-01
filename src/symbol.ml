@@ -100,11 +100,11 @@ module Modules = struct
     List.map begin fun (name, filename) ->
       let descr =
         let dirname = Filename.dirname filename in
-        let in_source_path = project.Project.in_source_path dirname <> None in
-        if in_source_path then (sprintf "%s (project)" project.Project.name)
-        else if project.Project.ocamllib = dirname then "StdLib"
+        let in_source_path = project.Project_type.in_source_path dirname <> None in
+        if in_source_path then (sprintf "%s (project)" project.Project_type.name)
+        else if project.Project_type.ocamllib = dirname then "StdLib"
         else begin
-          match Miscellanea.filename_relative project.Project.ocamllib dirname with
+          match Miscellanea.filename_relative project.Project_type.ocamllib dirname with
             | None -> filename
             | Some extra -> "+" ^ extra
         end
@@ -325,7 +325,7 @@ module Cache = struct
     cache_dir // "symbols";;
 
   let reset ~project =
-    let name = (sprintf "Loading symbols (%s)..." project.Project.name) in
+    let name = (sprintf "Loading symbols (%s)..." project.Project_type.name) in
     let finally () = GtkThread2.async Activity.remove name in
     ignore (Thread.create begin fun () ->
       GtkThread2.async (Activity.add Activity.Symbol) name;
@@ -333,7 +333,7 @@ module Cache = struct
         let modules = Modules.get_descr ~project in
         List.iter begin fun md ->
           ignore (Signature.read
-            ~cache:project.Project.symbols
+            ~cache:project.Project_type.symbols
             ~filename:md.Modules.mo_filename
             ~modlid:md.Modules.mo_name ());
         end modules;
@@ -385,7 +385,7 @@ module Cache = struct
     let chan = open_out_bin filename in
     let finally () = close_out chan in
     try
-      let cache = Oe.Dump (Oe.magic, (project.Project.symbols.Oe.syt_table, project.Project.symbols.Oe.syt_ts)) in
+      let cache = Oe.Dump (Oe.magic, (project.Project_type.symbols.Oe.syt_table, project.Project_type.symbols.Oe.syt_ts)) in
       output_value chan cache;
       finally();
     with ex -> begin
@@ -400,8 +400,8 @@ module Cache = struct
       let finally () = close_in chan in
       try
         let ((table, ts) : (symbol list * (string, float) Hashtbl.t)) = Oe.open_dump (input_value chan) in
-        project.Project.symbols.Oe.syt_table <- table;
-        project.Project.symbols.Oe.syt_ts <- ts;
+        project.Project_type.symbols.Oe.syt_table <- table;
+        project.Project_type.symbols.Oe.syt_ts <- ts;
         finally();
       with Bad_magic_number -> begin
         finally();
@@ -421,7 +421,7 @@ let find_parent (cache : symbol_cache) ?(update_cache=false) symbol =
   try Some (List.find (fun s -> s.sy_id = parent) s_table) with Not_found -> None;;
 
 (* find_local_defs *)
-let find_local_defs ~regexp ~(project : Project.t) ~filename ~offset =
+let find_local_defs ~regexp ~(project : Project_type.t) ~filename ~offset =
   match Annotation.find ~project ~filename () with
     | None -> []
     | Some an ->

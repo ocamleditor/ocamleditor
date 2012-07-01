@@ -21,6 +21,7 @@
 *)
 
 open Project
+open Project_type
 open Miscellanea
 open Tree
 

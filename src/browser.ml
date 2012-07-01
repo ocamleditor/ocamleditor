@@ -21,6 +21,7 @@
 *)
 
 open Project
+open Project_type
 open GdkKeysyms
 open Printf
 open Miscellanea
@@ -176,7 +177,7 @@ object (self)
 
   method dialog_project_open () =
     let project_home =
-      match self#current_project#get with Some p -> p.Project.root | _ -> Oe_config.user_home
+      match self#current_project#get with Some p -> p.Project_type.root | _ -> Oe_config.user_home
     in
     let pat1 = "*"^Project.extension in
     let dialog = GWindow.file_chooser_dialog ~action:`OPEN ~width:600 ~height:600
@@ -268,7 +269,7 @@ object (self)
 
   method dialog_find_file ?all () =
     self#with_current_project begin fun project ->
-      let current = project.Project.root in
+      let current = project.Project_type.root in
       let roots = project_history.File_history.content in (* project filenames .xml *)
       let roots = List.filter ((<>) current) (List.map Filename.dirname roots) in
       let roots = current :: roots in
@@ -316,7 +317,7 @@ object (self)
     let filename = match ed#get_page `ACTIVE with None -> "" | Some page -> page#get_filename in
     let text =
       (Printf.sprintf "%s • %s"
-        (match self#current_project#get with Some p -> p.Project.name | _ -> "")
+        (match self#current_project#get with Some p -> p.Project_type.name | _ -> "")
         filename
       ) in
     window_title_menu_label#set_label (sprintf "<b>%s</b>" text);
@@ -609,7 +610,7 @@ object (self)
     match current_project#get with
       | Some project ->
         begin
-          match List_opt.find (fun x -> x.Rconf.default) project.Project.runtime with
+          match List_opt.find (fun x -> x.Rconf.default) project.Project_type.runtime with
             | Some rconf -> f rconf
             | _ ->
               self#dialog_project_properties ~page_num:2 ()

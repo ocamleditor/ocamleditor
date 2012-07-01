@@ -80,7 +80,7 @@ object (self)
   method ocamllib = entry_ocamllib#text
 
   method reset () =
-    entry_ocamllib#set_text (if project.Project.ocamllib_from_env then project.Project.ocamllib else "");
+    entry_ocamllib#set_text (if project.Project_type.ocamllib_from_env then project.Project_type.ocamllib else "");
 
   initializer
     ignore (button_native#connect#clicked ~callback:begin fun () ->

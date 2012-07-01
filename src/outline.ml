@@ -148,7 +148,7 @@ class widget ~project ~page ~tmp =
   let type_color_sel    = Color.name_of_gdk (view#misc#style#fg `SELECTED) in
   let type_color_sel_re = Str.regexp_string type_color_sel in
   let dump_filename     =
-    match project.Project.in_source_path page#get_filename with
+    match project.Project_type.in_source_path page#get_filename with
       | Some rel ->
         let tmp = Project.path_tmp project in
         tmp // ((Filename.chop_extension rel) ^ ".outline")
@@ -323,8 +323,9 @@ object (self)
               page#view#misc#grab_focus();
             end else begin
               buffer#place_cursor ~where;
-              Gmisclib.Idle.add ~prio:300 (fun () ->
-                ignore ((page#view :> GText.view)#scroll_to_iter ~use_align:true ~xalign:1.0 ~yalign:0.38 where));
+              page#view#scroll_lazy where;
+              (*Gmisclib.Idle.add ~prio:300 (fun () ->
+                ignore ((page#view :> GText.view)#scroll_to_iter ~use_align:true ~xalign:1.0 ~yalign:0.38 where));*)
             end;
           with Not_found -> ()
             | ex -> Printf.eprintf "File \"outline.ml\": %s\n%s\n%!" (Printexc.to_string ex) (Printexc.get_backtrace());

@@ -43,7 +43,7 @@ let find_def ~annot ~name =
   end [] annot.annot_blocks;;
 
 (** find_ext_ref *)
-let find_ext_ref ~(project : Project.t) ~src_path from =
+let find_ext_ref ~(project : Project_type.t) ~src_path from =
   let comp = match from with
     | `MATCH (def_filename, def_name) ->
       let mod_name = modname_of_path def_filename in
@@ -75,7 +75,7 @@ let find_ext_ref ~(project : Project.t) ~src_path from =
   List.sort (fun (x, _) (y, _) -> Pervasives.compare x y) !ext_references;;
 
 (** find_references *)
-let find_references ?src_path ~(project : Project.t) ~filename ~offset (* offset of a definition (def) or let...in *) () =
+let find_references ?src_path ~(project : Project_type.t) ~filename ~offset (* offset of a definition (def) or let...in *) () =
   match Annotation.find ~project ~filename () with
     | None -> None
     | Some annots ->
@@ -117,7 +117,7 @@ let find_references ?src_path ~(project : Project.t) ~filename ~offset (* offset
       end;;
 
 (** find_definition *)
-let find_definition ~(project : Project.t) ~page  ~(iter : GText.iter) =
+let find_definition ~(project : Project_type.t) ~page  ~(iter : GText.iter) =
   match page#buffer#get_annot iter with
     | None -> None
     | Some { annot_annotations = annot_annotations; annot_start=block_start; annot_stop=block_stop } ->
@@ -137,13 +137,13 @@ let find_definition ~(project : Project.t) ~page  ~(iter : GText.iter) =
               let lident = (Longident.flatten (Longident.parse name)) in
               let filename = (List.hd lident) ^ ".ml" in
               let lident, filename, fullname =
-                try lident, filename, Misc.find_in_path project.Project.source_paths filename
+                try lident, filename, Misc.find_in_path project.Project_type.source_paths filename
                 with Not_found ->
                   (* Check if the module is an internal module *)
                   let current_mod = page#get_filename in
                   let current_mod = Filename.basename current_mod in
                   let lident = (String.capitalize (Filename.chop_extension current_mod)) :: lident in
-                  lident, current_mod, Misc.find_in_path project.Project.source_paths current_mod
+                  lident, current_mod, Misc.find_in_path project.Project_type.source_paths current_mod
               in
               (* get the exact (case senstive) file name *)
               let file_exists =
@@ -151,12 +151,12 @@ let find_definition ~(project : Project.t) ~page  ~(iter : GText.iter) =
                 List.mem filename files
               in
               let fullname =
-                if not file_exists then (Misc.find_in_path project.Project.source_paths (String.uncapitalize filename))
+                if not file_exists then (Misc.find_in_path project.Project_type.source_paths (String.uncapitalize filename))
                 else fullname
               in
               (*  *)
               let filename =
-                match project.Project.in_source_path fullname with
+                match project.Project_type.in_source_path fullname with
                   | Some x -> x | _ -> assert false
               in
               let nested = List.length lident > 2 in

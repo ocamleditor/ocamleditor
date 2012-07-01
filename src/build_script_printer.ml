@@ -87,7 +87,7 @@ let print_external_tasks ochan bconfigs =
   ets;;
 
 let print_cmd_line_args ochan project =
-  let args = project.Project.build_script.bs_args in
+  let args = project.Project_type.build_script.bs_args in
   let get_ident arg = "arg_" ^ Str.string_after arg.bsa_key 1 in
   List.iter begin fun arg ->
     let default =
@@ -123,11 +123,11 @@ let print ~project ~filename () =
     output_string ochan "\n";
     print_cmd_line_args ochan project;
     output_string ochan "\n";
-    let ets = print_external_tasks ochan project.Project.build in
+    let ets = print_external_tasks ochan project.Project_type.build in
     output_string ochan "\n\n";
     output_string ochan "(\x2A Build Configurations ==================================================== \x2A)\n\n";
     (*  *)
-    print_configs ochan project.Project.build ets;
+    print_configs ochan project.Project_type.build ets;
     output_string ochan "\n";
     output_string ochan "(\x2A End of Build Configurations ============================================= \x2A)\n\n";
     (*  *)
