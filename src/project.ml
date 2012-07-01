@@ -239,30 +239,7 @@ let save ?editor proj =
 
 (** load *)
 let load filename =
-  let proj = if filename ^^ ".mlp" then begin
-    (* Check for old version project file *)
-    let old_project_filename = sprintf "%s%s"
-      (Filename.chop_extension filename) Project_old_1.project_name_extension in
-    let old = Project_old_1.load old_project_filename in
-    let proj = create ~filename () in
-    proj.modified <- old.Project_old_1.modified;
-    proj.author <- old.Project_old_1.author;
-    proj.description <- old.Project_old_1.description;
-    proj.version <- old.Project_old_1.version;
-    proj.files <- List.map (fun x -> x, 0) old.Project_old_1.files;
-    proj.open_files <- List.map (fun x -> x, 0, false) old.Project_old_1.loadfiles;
-    (* Check for old version targets file *)
-    let old_filename = proj.root // Bconf_old_1.filename in
-    if Sys.file_exists old_filename then begin
-      proj.build <- Bconf.convert_from_1 old_filename;
-      Sys.rename old_filename (old_filename^".bak");
-    end;
-    Sys.rename old_project_filename (old_project_filename^".bak");
-    save proj;
-    proj;
-  end else begin
-    !read_xml filename;
-  end in
+  let proj = !read_xml filename in
   proj.root <- Filename.dirname filename;
   (*  *)
   if not (Sys.file_exists (proj.root // tmp)) then (Unix.mkdir (proj.root // tmp) 0o777);

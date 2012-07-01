@@ -517,83 +517,8 @@ let save () =
   lazy (output_string chan xml) @$ lazy (close_out chan);
   preferences#set {preferences#get with pref_timestamp = Unix.gettimeofday()}
 
-(** load_old *)
-let load_old () =
-  if Sys.file_exists Preferences_old_1.pref_filename then begin
-    let chan = open_in_bin Preferences_old_1.pref_filename in
-    let old = lazy ((Marshal.from_channel chan) : Preferences_old_1.t) @$ lazy (close_in chan) in
-    Sys.remove Preferences_old_1.pref_filename;
-    preferences#set {
-      pref_timestamp                    = (Unix.gettimeofday());
-      pref_check_updates                = true;
-      pref_base_font                    = old.Preferences_old_1.pref_base_font;
-      pref_tab_pos                      = old.Preferences_old_1.pref_tab_pos;
-      pref_tab_vertical_text            = defaults.pref_tab_vertical_text;
-      pref_tab_label_type               = defaults.pref_tab_label_type;
-      pref_bg_color                     = old.Preferences_old_1.pref_bg_color;
-      pref_bg_color_popup               = old.Preferences_old_1.pref_bg_color_popup;
-      pref_fg_color_popup               = defaults.pref_fg_color_popup;
-      pref_tags                         = old.Preferences_old_1.pref_tags;
-      pref_editor_tab_width             = defaults.pref_editor_tab_width;
-      pref_editor_tab_spaces            = defaults.pref_editor_tab_spaces;
-      pref_editor_wrap                  = defaults.pref_editor_wrap;
-      pref_editor_trim_lines            = defaults.pref_editor_trim_lines;
-      pref_editor_bak                   = defaults.pref_editor_bak;
-      pref_editor_custom_templ_filename = defaults.pref_editor_custom_templ_filename;
-      pref_compl_font                   = defaults.pref_compl_font;
-      pref_compl_greek                  = defaults.pref_compl_greek;
-      pref_output_font                  = defaults.pref_output_font;
-      pref_output_bg                    = defaults.pref_output_bg;
-      pref_output_fg_stdin              = defaults.pref_output_fg_stdin;
-      pref_output_fg_stdout             = defaults.pref_output_fg_stdout;
-      pref_output_fg_err                = defaults.pref_output_fg_err;
-      pref_output_fg_warn               = defaults.pref_output_fg_warn;
-      pref_smart_keys_home              = defaults.pref_smart_keys_home;
-      pref_smart_keys_end               = defaults.pref_smart_keys_end;
-      pref_annot_type_tooltips_enabled  = defaults.pref_annot_type_tooltips_enabled;
-      pref_annot_type_tooltips_delay    = defaults.pref_annot_type_tooltips_delay;
-      pref_annot_type_tooltips_impl     = defaults.pref_annot_type_tooltips_impl;
-      pref_search_word_at_cursor        = defaults.pref_search_word_at_cursor;
-      pref_highlight_current_line       = defaults.pref_highlight_current_line;
-      pref_show_line_numbers            = defaults.pref_show_line_numbers;
-      pref_indent_lines                 = defaults.pref_indent_lines;
-      pref_right_margin_visible         = defaults.pref_right_margin_visible;
-      pref_right_margin                 = defaults.pref_right_margin;
-      pref_max_view_1_menubar           = defaults.pref_max_view_1_menubar;
-      pref_max_view_1_toolbar           = defaults.pref_max_view_1_toolbar;
-      pref_max_view_1_tabbar            = defaults.pref_max_view_1_tabbar;
-      pref_max_view_1_messages          = defaults.pref_max_view_1_messages;
-      pref_max_view_1_fullscreen        = defaults.pref_max_view_1_fullscreen;
-      pref_max_view_2                   = defaults.pref_max_view_2;
-      pref_max_view_2_menubar           = defaults.pref_max_view_2_menubar;
-      pref_max_view_2_toolbar           = defaults.pref_max_view_2_toolbar;
-      pref_max_view_2_tabbar            = defaults.pref_max_view_2_tabbar;
-      pref_max_view_2_messages          = defaults.pref_max_view_2_messages;
-      pref_max_view_2_fullscreen        = defaults.pref_max_view_2_fullscreen;
-      pref_max_view_fullscreen          = defaults.pref_max_view_fullscreen;
-      pref_ocamldoc_paragraph_bgcolor_1 = defaults.pref_ocamldoc_paragraph_bgcolor_1;
-      pref_ocamldoc_paragraph_bgcolor_2 = defaults.pref_ocamldoc_paragraph_bgcolor_2;
-      pref_code_folding_enabled         = defaults.pref_code_folding_enabled;
-      pref_show_global_gutter           = defaults.pref_show_global_gutter;
-      pref_err_underline                = defaults.pref_err_underline;
-      pref_err_tooltip                  = defaults.pref_err_tooltip;
-      pref_err_gutter                   = defaults.pref_err_gutter;
-      pref_show_whitespace_chars        = defaults.pref_show_whitespace_chars;
-      pref_outline_show_types           = defaults.pref_outline_show_types;
-      pref_odoc_font                    = defaults.pref_odoc_font;
-    };
-    (try ignore (List.assoc "highlight" preferences#get.pref_tags);
-    with Not_found -> begin
-      preferences#get.pref_tags <- (List.find (fun (x, _) -> x = "highlight")
-        (List.combine default_tags default_colors)) :: preferences#get.pref_tags
-    end);
-    save();
-  end
-;;
-
 (** load *)
 let load () =
-  load_old ();
   let pref = try from_file pref_filename with ex -> begin
     Printf.eprintf "File \"preferences.ml\": %s\n%s\n%!" (Printexc.to_string ex) (Printexc.get_backtrace());
     create_defaults ()
