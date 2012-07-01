@@ -430,7 +430,7 @@
           <cmd>ocaml</cmd>
           <args>
             <arg enabled="true">mkversion.ml</arg>
-            <arg enabled="true">1.7.3</arg>
+            <arg enabled="true">1.7.4</arg>
           </args>
           <phase></phase>
         </task>
