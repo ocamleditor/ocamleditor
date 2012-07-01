@@ -365,7 +365,9 @@ object (self)
                 let where = buffer#get_iter (`OFFSET offset) in
                 buffer#place_cursor ~where;
                 let where = buffer#get_iter (`OFFSET scroll_offset) in
-                ignore (self#view#scroll_to_iter ~use_align:true where);
+                Gmisclib.Idle.add ~prio:300 begin fun () ->
+                  ignore (self#view#scroll_to_iter ~use_align:(self#view#scroll_to_iter where) ~xalign:1.0 where);
+                 end
               end;
             end;
             (* Colorize *)
