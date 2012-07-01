@@ -23,9 +23,9 @@ COPYRIGHT
 
 DEPENDENCIES
 
-  * Objective Caml 3.11.2 with the compiler libraries available from the
+  * Objective Caml 3.12.1 with the compiler libraries available from the
     OCaml source distribution;
-  * Lablgtk-2.14;
+  * Lablgtk-2.14.2;
   * Xml-light.
 
 
