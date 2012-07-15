@@ -187,7 +187,7 @@ object (self)
     dialog#add_filter (GFile.filter
       ~name:(sprintf "%s projects (%s)" Oe_config.title pat1) ~patterns:[pat1] ());
     dialog#add_filter (GFile.filter
-      ~name:(sprintf "Old %s projects (%s)" Oe_config.title pat2) ~patterns:[pat2] ());
+      ~name:(sprintf "%s projects old version (%s)" Oe_config.title pat2) ~patterns:[pat2] ());
     dialog#add_select_button_stock `OK `OK;
     dialog#add_button_stock `CANCEL `CANCEL;
     dialog#set_select_multiple false;
