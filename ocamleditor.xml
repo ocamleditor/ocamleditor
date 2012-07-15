@@ -1,3 +1,4 @@
+<?xml version="1.0" encoding="UTF-8"?>
 <!-- OCamlEditor XML Project -->
 <project>
   <ocaml_home></ocaml_home>
@@ -6,9 +7,8 @@
   <name>ocamleditor</name>
   <author>Francesco Tovagliari</author>
   <description/>
-  <version>1.7.0</version>
+  <version>1.7.4</version>
   <autocomp enabled="true" delay="1." cflags=""/>
-  <open_files/>
   <runtime>
     <configuration name="ocamleditor" default="true" id_build="0" id="0">
       <id>0</id>
@@ -430,7 +430,7 @@
           <cmd>ocaml</cmd>
           <args>
             <arg enabled="true">mkversion.ml</arg>
-            <arg enabled="true">1.7.3</arg>
+            <arg enabled="true">1.7.2</arg>
           </args>
           <phase></phase>
         </task>

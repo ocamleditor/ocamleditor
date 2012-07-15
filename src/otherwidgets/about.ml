@@ -587,6 +587,8 @@ let window parent ~name ~version () =
 
   let check_for_updates () =
     try
+      spinner#set_stock `DIALOG_INFO;
+      spinner#set_icon_size `MENU;
       if try int_of_string (List.assoc "debug" Common.application_param) >= 1 with Not_found -> false then (raise Exit);
       begin
         match Check_for_updates.check version () with
@@ -606,12 +608,10 @@ let window parent ~name ~version () =
             end);
           | None -> label#set_text "There are no updates available."
       end;
-      spinner#set_stock `DIALOG_INFO;
-      spinner#set_icon_size `MENU;
     with ex -> begin
       kprintf label#set_text "Unable to contact server for updates (%s)." (Printexc.to_string ex);
       spinner#set_pixbuf Icons.warning_14;
-      spinner#misc#hide()
+      (*spinner#misc#hide()*)
     end
   in
 
