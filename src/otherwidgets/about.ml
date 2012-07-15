@@ -573,10 +573,13 @@ let window parent ~name ~version () =
   ehbox#misc#modify_bg [`NORMAL, `NAME "#ffffff"];
   let hbox = GPack.hbox ~spacing:3 ~border_width:2 ~packing:ehbox#add () in
   let spinner = GMisc.image ~file:(Common.application_pixmaps // "spinner_16.gif") ~packing:hbox#pack () in
-  let label = GMisc.label ~text:"Checking for updates..." ~height:16 ~packing:hbox#pack () in
-  label#misc#modify_fg [`NORMAL, `NAME "#808080"];
-  label#misc#modify_font_by_name "Sans 7";
-  
+  let label = GMisc.label ~text:"Checking for updates..." ~height:22 ~packing:hbox#pack () in
+  let modify_label label =
+    label#misc#modify_fg [`NORMAL, `NAME "#808080"];
+    label#misc#modify_font_by_name "Sans 7";
+  in
+  modify_label label;
+
   ebox#misc#modify_bg [`NORMAL, `NAME "#ffffff"];
   window#misc#modify_bg [`NORMAL, `NAME "#c9c9c9"];
   window#set_skip_taskbar_hint true;
@@ -584,19 +587,23 @@ let window parent ~name ~version () =
 
   let check_for_updates () =
     try
-      (*if try int_of_string (List.assoc "debug" Common.application_param) >= 1 with Not_found -> false then (raise Exit);*)
+      if try int_of_string (List.assoc "debug" Common.application_param) >= 1 with Not_found -> false then (raise Exit);
       begin
         match Check_for_updates.check version () with
-          | Some ver -> 
+          | Some ver ->
             label#misc#hide();
             let text = sprintf "A new version of %s is available (%s)" name ver in
-            let button = GButton.link_button ~label:text Check_for_updates.url ~packing:hbox#pack () in
-            button#misc#modify_font_by_name "Sans 7";
-            GtkButton.LinkButton.set_uri_hook begin fun _ url ->
-              let cmd = if Sys.os_type = "Win32" then "start " ^ url else url in
-              ignore (Sys.command cmd);
-            end;
-            (*kprintf label#set_text "A new version of %s is available (%s)" name ver;*)
+            let button = GButton.button ~packing:hbox#pack () in
+            let label = GMisc.label ~text ~packing:button#add () in
+            modify_label label;
+            button#set_relief `NONE;
+            ignore (button#connect#clicked ~callback:begin fun () ->
+              window#misc#hide();
+              let url = Check_for_updates.url in
+              let cmd = if Sys.os_type = "Win32" then "start " ^ url else "xdg-open " ^ url in
+              ignore (GMain.Idle.add (fun () -> ignore (Sys.command cmd); false));
+              window#destroy();
+            end);
           | None -> label#set_text "There are no updates available."
       end;
       spinner#set_stock `DIALOG_INFO;
