@@ -378,14 +378,14 @@ let release () =
   let name = Filename.basename (Sys.getcwd ()) in
   Sys.chdir "..";
   kprintf remove_file "%s.tar.gz" name;
-  kprintf run "mv -f %s/%s.xml %s/%s.tmp.xml" name name name name;
-  kprintf run "cp %s/%s.project.release %s/%s.xml" name name name name;
+  kprintf run "mv -f %s/%s.project %s/%s.tmp.project" name name name name;
+  kprintf run "cp %s/%s.project.release %s/%s.project" name name name name;
   kprintf run "tar --mode=755 -cf %s.tar %s/src %s/pixmaps" name name name;
-  kprintf run "tar --mode=655 -rf %s.tar %s/README %s/NEWS %s/COPYING %s/%s.xml %s/ocamleditor.nsi %s/build.ml %s/header"
+  kprintf run "tar --mode=655 -rf %s.tar %s/README %s/NEWS %s/COPYING %s/%s.project %s/ocamleditor.nsi %s/build.ml %s/header"
     name name name name name name name name name;
   kprintf run "gzip -c %s.tar > %s.tar.gz" name name;
   kprintf Sys.remove "%s.tar" name;
-  kprintf run "mv -f %s/%s.tmp.xml %s/%s.xml" name name name name;
+  kprintf run "mv -f %s/%s.tmp.project %s/%s.project" name name name name;
   kprintf Sys.chdir "%s/src" name;
   kprintf run "mkdir ocaml-src";
   kprintf run "cp -ru ..\\..\\ocaml-src .";
