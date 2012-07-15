@@ -32,7 +32,7 @@ let _ =
       (sprintf "let version = \"%s\"" version);
   ];
 
-  substitute ~filename:"../ocamleditor.release.xml" ~regexp:true [
+  substitute ~filename:"../ocamleditor.project.release" ~regexp:true [
     "  <version>[0-9]+[.][0-9]+[.][0-9]+</version>",
       (sprintf "  <version>%s</version>" version);
   ];

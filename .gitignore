@@ -25,3 +25,10 @@ splash*.*
 *.xcf
 _build.ml
 *.local.xml
+*.project.local
+src/oebuild/oebuild
+src/oebuild/oebuild.opt
+src/ocamleditor
+src/ocamleditor.opt
+
+

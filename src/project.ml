@@ -32,7 +32,8 @@ let write_xml = ref (fun _ -> failwith "write_xml")
 let read_xml = ref (fun _ -> failwith "read_xml")
 let from_local_xml : (t -> unit) ref = ref (fun _ -> failwith "from_local_xml")
 
-let extension = ".xml"
+let extension = ".project"
+let old_extension = ".xml"
 let src = "src"
 let bak = "bak"
 let tmp = ".tmp"
@@ -133,9 +134,11 @@ let convert_from_utf8 proj text = match proj.encoding with
 
 (** Returns the full filename of the project configuration file. *)
 let filename proj = Filename.concat proj.root (proj.name ^ extension)
+let mk_old_filename filename = (Filename.chop_extension filename) ^ old_extension
 
 (** Returns the full filename of the project local configuration file. *)
-let filename_local proj = (Filename.chop_extension (filename proj)) ^ ".local" ^ extension
+let filename_local proj = (filename proj) ^ ".local"
+let mk_old_filename_local proj = (Filename.chop_extension (filename proj)) ^ ".local" ^ old_extension
 
 (** get_includes*)
 let get_includes =
@@ -173,13 +176,13 @@ let output_xml filename xml =
 let xml_of_open_files proj =
   Xml.Element ("open_files", [],
     (List.map (fun (x, scroll_off, off, active) -> Xml.Element ("filename", [
-      "scroll", string_of_int scroll_off; 
-      "cursor", string_of_int off; 
+      "scroll", string_of_int scroll_off;
+      "cursor", string_of_int off;
       "active", (string_of_bool active)
     ], [Xml.PCData x])) proj.open_files));;
 
 let xml_of_bookmarks proj =
-  Xml.Element ("bookmarks", [], 
+  Xml.Element ("bookmarks", [],
     List.map begin fun bm ->
       Xml.Element ("bookmark", [
         "num", string_of_int bm.Oe.bm_num;
@@ -192,7 +195,7 @@ let xml_of_bookmarks proj =
 
 let xml_of_local childs = Xml.Element ("local", [], childs);;
 
-let save_local filename proj = 
+let save_local filename proj =
   let xml = Xml.to_string_fmt (xml_of_local [(xml_of_open_files proj); (xml_of_bookmarks proj)]) in
   output_xml filename xml;;
 
@@ -249,7 +252,7 @@ let save ?editor proj =
 (** save_bookmarks *)
 let save_bookmarks proj =
   let filename = filename_local proj in
-  let xml = 
+  let xml =
     if Sys.file_exists filename then begin
       let parser = XmlParser.make () in
       let xml = XmlParser.parse parser (XmlParser.SFile filename) in
@@ -263,11 +266,11 @@ let save_bookmarks proj =
   in
   output_xml filename (Xml.to_string_fmt xml);;
 
-(** remove_bookmark *)  
+(** remove_bookmark *)
 let remove_bookmark num proj =
   proj.bookmarks <- List.filter (fun x -> x.Oe.bm_num <> num) proj.bookmarks;;
 
-(** set_bookmark *)  
+(** set_bookmark *)
 let set_bookmark bookmark proj =
   begin
     match List_opt.find (fun x -> x.Oe.bm_num = bookmark.Oe.bm_num) proj.bookmarks with
@@ -288,14 +291,16 @@ let find_bookmark proj filename buffer iter =
     end else false
   end proj.bookmarks;;
 
-(** get_actual_maximum_bookmark *) 
+(** get_actual_maximum_bookmark *)
 let get_actual_maximum_bookmark project =
   List.fold_left (fun acc bm -> max acc bm.Oe.bm_num) 0 project.bookmarks;;
 
 (** load *)
 let load filename =
+  let filename = if Sys.file_exists filename then filename else mk_old_filename filename in
   let proj = !read_xml filename in
   !from_local_xml proj;
+  (*  *)
   proj.root <- Filename.dirname filename;
   (*  *)
   if not (Sys.file_exists (proj.root // tmp)) then (Unix.mkdir (proj.root // tmp) 0o777);
@@ -303,6 +308,12 @@ let load filename =
   proj.open_files <- List.map begin fun (filename, scroll_offset, offset, active) ->
     (if Filename.is_implicit filename then proj.root // src // filename else filename), scroll_offset, offset, active
   end proj.open_files;
+  (* Remove old version filenames *)
+  let old = mk_old_filename filename in
+  if Sys.file_exists old then (Sys.remove old);
+  let old = mk_old_filename_local proj in
+  if Sys.file_exists old then (Sys.remove old);
+  (*  *)
   proj
 
 (** backup_file *)

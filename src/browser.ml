@@ -173,6 +173,7 @@ object (self)
     editor#set_history_switch_page_locked false;
     proj.open_files <- [];
     proj.modified <- false;
+    proj
 
 
   method dialog_project_open () =
@@ -180,17 +181,24 @@ object (self)
       match self#current_project#get with Some p -> p.Project_type.root | _ -> Oe_config.user_home
     in
     let pat1 = "*"^Project.extension in
+    let pat2 = "*"^Project.old_extension in
     let dialog = GWindow.file_chooser_dialog ~action:`OPEN ~width:600 ~height:600
       ~title:"Open project..." ~icon:Icons.oe ~position:`CENTER ~show:false () in
     dialog#add_filter (GFile.filter
       ~name:(sprintf "%s projects (%s)" Oe_config.title pat1) ~patterns:[pat1] ());
+    dialog#add_filter (GFile.filter
+      ~name:(sprintf "Old %s projects (%s)" Oe_config.title pat2) ~patterns:[pat2] ());
     dialog#add_select_button_stock `OK `OK;
     dialog#add_button_stock `CANCEL `CANCEL;
     dialog#set_select_multiple false;
     dialog#set_current_folder (Filename.dirname project_home);
     match dialog#run () with
       | `OK ->
-        List.iter (fun filename -> self#project_open filename) dialog#get_filenames;
+        List.iter begin fun filename ->
+          let filename, save = if filename ^^ Project.old_extension then (Filename.chop_extension filename) ^ Project.extension, true else filename, false in
+          let proj = self#project_open filename in
+          if save then Project.save ~editor proj
+        end dialog#get_filenames;
         dialog#destroy()
       | _ -> dialog#destroy()
 
@@ -255,7 +263,7 @@ object (self)
     ignore (Project_properties.create ~show:true ~editor ~new_project ~callback:begin fun proj ->
       self#project_close();
       Project.save ~editor new_project;
-      self#project_open (Project.filename proj);
+      ignore (self#project_open (Project.filename proj));
     end ());
 
   method dialog_file_new = Dialog_file_new.show ~editor:self#editor;
@@ -745,7 +753,7 @@ object (self)
           Gmisclib.Idle.add ~prio:600 begin fun () ->
             let item = GMenu.check_menu_item ~label ~packing:menu.Menu.project#add () in
             ignore (item#connect#after#toggled ~callback:(fun () ->
-              if not menu.Menu.project_history_signal_locked && item#active then (self#project_open filename)));
+              if not menu.Menu.project_history_signal_locked && item#active then (ignore (self#project_open filename))));
             menu.Menu.project_history <- (filename, item) :: menu.Menu.project_history;
           end;
         end project_names;
@@ -757,10 +765,11 @@ object (self)
     (** Load current project *)
     let rec load_current_proj history =
       match history with [] -> () | filename :: _ ->
-        if Sys.file_exists filename then (self#project_open filename)
+        if Sys.file_exists filename then (ignore (self#project_open filename))
         else (load_current_proj (List.tl history))
     in
     File_history.read project_history;
+    project_history.File_history.content <- List.filter (fun x -> (x ^^ Project.extension)) project_history.File_history.content;
     project_history_changed#call project_history;
     load_current_proj project_history.File_history.content;
 

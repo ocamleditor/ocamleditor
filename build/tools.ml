@@ -196,7 +196,7 @@ let mkrelease () =
   Sys.chdir "..";
   kprintf remove_file "%s.tar.gz" name;
   kprintf run "mv -f %s/%s.xml %s/%s.tmp.xml" name name name name;
-  kprintf run "cp %s/%s.release.xml %s/%s.xml" name name name name;
+  kprintf run "cp %s/%s.project.release %s/%s.xml" name name name name;
   kprintf run "tar --mode=755 -cf %s.tar %s/src %s/pixmaps %s/build" name name name name;
   kprintf run "tar --mode=655 -rf %s.tar %s/README %s/NEWS %s/COPYING %s/%s.xml %s/ocamleditor.nsi %s/build.ml %s/header"
     name name name name name name name name name;

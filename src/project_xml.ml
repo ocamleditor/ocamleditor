@@ -369,8 +369,9 @@ let read filename =
   proj;;
 
 (** from_local_xml *)
-let from_local_xml proj = 
+let from_local_xml proj =
   let filename = Project.filename_local proj in
+  let filename = if Sys.file_exists filename then filename else Project.mk_old_filename_local proj in
   if Sys.file_exists filename then begin
     let parser = XmlParser.make () in
     let xml = XmlParser.parse parser (XmlParser.SFile filename) in
@@ -383,20 +384,20 @@ let from_local_xml proj =
     let get_active xml = try bool_of_string (Xml.attrib xml "active") with Xml.No_attribute _ -> false in
     Xml.iter begin fun node ->
       match Xml.tag node with
-        | "open_files" -> 
+        | "open_files" ->
           let files = Xml.fold (fun acc x -> ((value x), (get_int "scroll" x), (get_cursor x), (get_active x)) :: acc) [] node in
           proj.open_files <- List.rev files;
-        | "bookmarks" -> 
+        | "bookmarks" ->
           Xml.iter begin fun xml ->
             let bm = {
               bm_filename = (value xml);
-              bm_loc = Offset (get_int "offset" xml);
-              bm_num = (get_int "num" xml);
-              bm_marker = None;
+              bm_loc      = Offset (get_int "offset" xml);
+              bm_num      = (get_int "num" xml);
+              bm_marker   = None;
             } in
             Project.set_bookmark bm proj
           end node;
-          
+
         | _ -> ()
     end xml;
   end;;

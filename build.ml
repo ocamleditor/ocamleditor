@@ -62,7 +62,7 @@ open Arg
 
 exception Build_error of int
 
-let can_compile_native = ref true 
+let can_compile_native = ref true
 let force_bytecode = ref false
 let (//) = Filename.concat
 let is_win32 = Sys.os_type = "Win32"
@@ -379,7 +379,7 @@ let release () =
   Sys.chdir "..";
   kprintf remove_file "%s.tar.gz" name;
   kprintf run "mv -f %s/%s.xml %s/%s.tmp.xml" name name name name;
-  kprintf run "cp %s/%s.release.xml %s/%s.xml" name name name name;
+  kprintf run "cp %s/%s.project.release %s/%s.xml" name name name name;
   kprintf run "tar --mode=755 -cf %s.tar %s/src %s/pixmaps" name name name;
   kprintf run "tar --mode=655 -rf %s.tar %s/README %s/NEWS %s/COPYING %s/%s.xml %s/ocamleditor.nsi %s/build.ml %s/header"
     name name name name name name name name name;
@@ -425,9 +425,9 @@ let _ = begin
       fun () ->
         let cwd = Sys.getcwd () in
         Sys.chdir "src";
-        can_compile_native := 
+        can_compile_native :=
           if !force_bytecode then false
-          else if is_win32 then Sys.command "ML /? 1>NUL" = 0 || Sys.command "as -version" = 0 
+          else if is_win32 then Sys.command "ML /? 1>NUL" = 0 || Sys.command "as -version" = 0
           else !can_compile_native;
         let ocaml_version = Str.global_replace
           (Str.regexp "\n") " - " (Str.global_replace (Str.regexp "\n$") "" (expand "ocamlc -v")) in
