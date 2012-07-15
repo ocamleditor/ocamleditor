@@ -25,6 +25,7 @@ open Printf
 let host = "ocamleditor.forge.ocamlcore.org"
 let path = if Common.application_debug then "/VERSION_TEST.txt" else "/VERSION.txt"
 let re = Str.regexp "^VERSION=\\([0-9]\\.[0-9]\\(\\.[0-9]\\)?\\)\r?$"
+let url = "http://ocamleditor.forge.ocamlcore.org/"
 
 (** init_socket *)
 let init_socket addr port =
@@ -88,7 +89,6 @@ let dialog ~verbose ~current_version ~title () =
             | Some ver ->
               let vbox = GPack.vbox ~spacing:13 () in
               let label = sprintf "A new version of %s is available (%s)" title ver in
-              let url = "http://ocamleditor.forge.ocamlcore.org/" in
               if Sys.os_type = "Win32" then begin
                 let button = GButton.link_button ~label url ~packing:vbox#pack () in
                 GtkButton.LinkButton.set_uri_hook begin fun _ url ->

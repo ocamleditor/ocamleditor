@@ -27,7 +27,7 @@ open Printf
 
 
 class widget ~editor ?(callback=ignore) ~project ?page_num ?packing ?show () =
-  let width = 120 in
+  let width = 125 in
   let box = GPack.vbox ?packing ~spacing:5 () in
   let notebook = GPack.notebook ~packing:(box#pack ~fill:true ~expand:true) () in
   (* General tab *)

@@ -576,7 +576,7 @@ let window parent ~name ~version () =
   let label = GMisc.label ~text:"Checking for updates..." ~height:16 ~packing:hbox#pack () in
   label#misc#modify_fg [`NORMAL, `NAME "#808080"];
   label#misc#modify_font_by_name "Sans 7";
-
+  
   ebox#misc#modify_bg [`NORMAL, `NAME "#ffffff"];
   window#misc#modify_bg [`NORMAL, `NAME "#c9c9c9"];
   window#set_skip_taskbar_hint true;
@@ -584,10 +584,19 @@ let window parent ~name ~version () =
 
   let check_for_updates () =
     try
-      if try int_of_string (List.assoc "debug" Common.application_param) >= 1 with Not_found -> false then (raise Exit);
+      (*if try int_of_string (List.assoc "debug" Common.application_param) >= 1 with Not_found -> false then (raise Exit);*)
       begin
         match Check_for_updates.check version () with
-          | Some ver -> kprintf label#set_text "A new version of %s is available (%s)" name ver;
+          | Some ver -> 
+            label#misc#hide();
+            let text = sprintf "A new version of %s is available (%s)" name ver in
+            let button = GButton.link_button ~label:text Check_for_updates.url ~packing:hbox#pack () in
+            button#misc#modify_font_by_name "Sans 7";
+            GtkButton.LinkButton.set_uri_hook begin fun _ url ->
+              let cmd = if Sys.os_type = "Win32" then "start " ^ url else url in
+              ignore (Sys.command cmd);
+            end;
+            (*kprintf label#set_text "A new version of %s is available (%s)" name ver;*)
           | None -> label#set_text "There are no updates available."
       end;
       spinner#set_stock `DIALOG_INFO;
