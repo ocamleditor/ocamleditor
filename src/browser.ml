@@ -197,8 +197,9 @@ object (self)
         List.iter begin fun filename ->
           let filename, save = if filename ^^ Project.old_extension then (Filename.chop_extension filename) ^ Project.extension, true else filename, false in
           let proj = self#project_open filename in
-          if save then Project.save ~editor proj
-        end dialog#get_filenames;
+          Quick_file_chooser.add_roots ~roots:[Filename.dirname filename] ~filter:Dialog_find_file.filter;
+          if save then (Project.save ~editor proj);
+       end dialog#get_filenames;
         dialog#destroy()
       | _ -> dialog#destroy()
 

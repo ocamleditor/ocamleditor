@@ -75,9 +75,9 @@ let warning_tootip_enabled               = false
   `THEME          : Based on the GTK theme.
   `NAME "#ffffff" : Specific color. *)
 let gutter_bg_color                      = (*`THEME*) `CALC 0.93
-let gutter_fg_color                      = (*`THEME*) `CALC 0.50 
+let gutter_fg_color                      = (*`THEME*) `CALC 0.50
 let gutter_border_color                  = (*`THEME*) `CALC 0.875
-let gutter_marker_color                  = (*`THEME*) `CALC 0.65
+let gutter_marker_color                  = (*`THEME*) `CALC 0.50
 let code_folding_scope_color             = `NAME "#e5e5e5" (* disabled *)
 let code_folding_highlight_color         = "#eeeeee"
 let code_folding_hightlight_gradient     = ["#f4f4f4"; "#f9f9f9"; "#fefefe"] (* [] for no gradient *)

@@ -614,24 +614,21 @@ end
 
 let init ~roots ~filter =
   let widget = new widget ~source:(`path (roots, [])) ~name:"" ~filter () in
-  widget#update_model ~blocking:true ()
-;;
+  widget#update_model ~blocking:true ();;
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+let add_roots ~roots ~filter =
+  let name = "" in
+  match List_opt.assoc name !models with
+    | Some model ->
+      models := List.remove_assoc name !models;
+      begin
+        match model.source with
+          | `path (rr, filelist) ->
+            let roots = rr @ roots in
+            init ~roots ~filter
+          | _ -> assert false
+      end
+    | _ -> init ~roots ~filter
 
 
 

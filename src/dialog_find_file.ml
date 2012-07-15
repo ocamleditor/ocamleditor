@@ -52,7 +52,7 @@ let create ?(all=true) ~(editor : Editor.editor) ~roots () =
       `path (roots, editor#file_history.File_history.content)
     end else `filelist editor#file_history.File_history.content
   in
-  let quick_file_chooser   = new Quick_file_chooser.widget ~source ~name:""~filter ~packing:vbox#add () in
+  let quick_file_chooser   = new Quick_file_chooser.widget ~source ~name:"" ~filter ~packing:vbox#add () in
   let _                    = GMisc.label ~xalign:0.0 ~width:600 ~line_wrap:true ~markup:help ~packing:vbox#pack () in
   (** Buttons *)
   let bbox                 = GPack.button_box `HORIZONTAL ~layout:`END ~border_width:8 ~spacing:8
