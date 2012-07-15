@@ -410,7 +410,7 @@ object (self)
 
   method private find_in_path' ?recursive ?pattern paths =
     List.iter begin fun path ->
-      let entries = Array.to_list (Sys.readdir path) in
+      let entries = if (Unix.lstat path).Unix.st_kind = Unix.S_LNK then [] else Array.to_list (Sys.readdir path) in
       let entries = List.map (fun x -> path // x) entries in
       let dirs, files = List.partition (fun x ->  Sys.file_exists x && Sys.is_directory x) entries in
       let files =
