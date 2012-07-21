@@ -647,7 +647,7 @@ object (self)
         with None -> raise Not_found | Some page -> page
       in
       self#place_marks res;
-      begin
+      Gmisclib.Idle.add (fun () -> begin
         match List.nth lines_involved iter#line with
           | {marks = ((mark_start, mark_stop) :: _) } ->
             let where = page#buffer#get_iter_at_mark (`NAME mark_start) in
@@ -655,7 +655,7 @@ object (self)
             page#view#scroll_lazy where;
             if grab_focus then (page#view#misc#grab_focus()) else (preview#misc#grab_focus())
           | _ -> ()
-      end
+      end)
     with
       | Not_found -> (if Common.application_debug then assert false)
       | GText.No_such_mark _ -> begin

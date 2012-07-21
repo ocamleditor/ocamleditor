@@ -227,7 +227,7 @@ object (self)
   method bookmark_remove ~num =
     self#with_current_page begin fun page ->
       let old_marker =
-        try (List.find (fun bm -> bm.Oe.bm_num = num) project.Project_type.bookmarks (*!Bookmark.bookmarks*)).Oe.bm_marker
+        try (List.find (fun bm -> bm.Oe.bm_num = num) project.Project_type.bookmarks).Oe.bm_marker
         with Not_found -> None
       in
       Gaux.may old_marker ~f:(fun old -> Gutter.destroy_markers page#view#gutter [old]);
@@ -241,7 +241,7 @@ object (self)
       let where = match where with Some x -> x | _ -> page#buffer#get_iter `INSERT in
       let mark = page#buffer#create_mark(* ~name:(Gtk_util.create_mark_name "Editor.bookmark_create")*) where in
       let old_marker =
-        try (List.find (fun bm -> bm.Oe.bm_num = num) project.Project_type.bookmarks (*!Bookmark.bookmarks*)).Oe.bm_marker
+        try (List.find (fun bm -> bm.Oe.bm_num = num) project.Project_type.bookmarks).Oe.bm_marker
         with Not_found -> None
       in
       Gaux.may old_marker ~f:(fun old -> Gutter.destroy_markers page#view#gutter [old]);
@@ -254,25 +254,27 @@ object (self)
 
   method bookmark_goto ~num =
     try
-      let bm = List.find (fun bm -> bm.Oe.bm_num = num) project.Project_type.bookmarks (*!Bookmark.bookmarks*) in
+      let bm = List.find (fun bm -> bm.Oe.bm_num = num) project.Project_type.bookmarks in
       match self#get_page (`FILENAME bm.Oe.bm_filename) with
         | None ->
           let _ = self#open_file ~active:true ~scroll_offset:0 ~offset:0 bm.Oe.bm_filename in
           Gmisclib.Idle.add ~prio:300 (fun () -> self#bookmark_goto ~num)
         | Some page ->
           if not page#view#realized then (self#goto_view page#view);
-          ignore (Bookmark.apply bm begin function
-            | `OFFSET offset ->
-              let _ = Bookmark.offset_to_mark (page#buffer :> GText.buffer) bm in
-              self#bookmark_goto ~num;
-              -1
-            | `ITER it ->
-              let where = new GText.iter it in
-              page#view#scroll_lazy where;
-              page#buffer#place_cursor ~where;
-              page#view#misc#grab_focus();
-              -1
-          end);
+          Gmisclib.Idle.add begin fun () ->
+            ignore (Bookmark.apply bm begin function
+              | `OFFSET offset ->
+                let _ = Bookmark.offset_to_mark (page#buffer :> GText.buffer) bm in
+                self#bookmark_goto ~num;
+                -1
+              | `ITER it ->
+                let where = new GText.iter it in
+                page#view#scroll_lazy where;
+                page#buffer#place_cursor ~where;
+                page#view#misc#grab_focus();
+                -1
+            end)
+          end;
           if page#view#realized then (Gmisclib.Idle.add (*~prio:300*) (fun () -> self#goto_view page#view));
           Gmisclib.Idle.add ~prio:300 (fun () -> Project.save_bookmarks project);
     with Not_found -> ()

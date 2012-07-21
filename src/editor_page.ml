@@ -324,7 +324,7 @@ object (self)
     Project.save_bookmarks project;
     let old_markers =
       try
-        let bms = List.filter (fun bm -> bm.Oe.bm_filename = file#path) project.Project_type.bookmarks (*!Bookmark.bookmarks*) in
+        let bms = List.filter (fun bm -> bm.Oe.bm_filename = file#path) project.Project_type.bookmarks in
         List.iter Bookmark.mark_to_offset bms;
         Xlist.filter_map (fun bm -> bm.Oe.bm_marker) bms
       with Not_found -> []
@@ -403,7 +403,7 @@ object (self)
                 let marker = Gutter.create_marker ~mark ?pixbuf:(Bookmark.icon bm.Oe.bm_num) ?callback () in
                 bm.Oe.bm_marker <- Some marker;
                 view#gutter.Gutter.markers <- marker :: view#gutter.Gutter.markers
-            end project.Project_type.bookmarks (*!Bookmark.bookmarks*);
+            end project.Project_type.bookmarks;
             Project.save_bookmarks project;
             if !redraw then (GtkBase.Widget.queue_draw text_view#as_widget);
             true
