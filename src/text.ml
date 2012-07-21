@@ -168,15 +168,26 @@ object (self)
   val mutable word_wrap = false
   val mutable show_dot_leaders = true
   val mutable signal_id_highlight_current_line = None
-  val mutable mark_occurrences = None
+  val mutable mark_occurrences_manager = None
+  val mutable mark_occurrences : string option = None
 
-  method mark_occurrences = match mark_occurrences with Some x -> x | _ -> assert false
+  method mark_occurrences_manager = match mark_occurrences_manager with Some x -> x | _ -> assert false
 
   method as_gtext_view = (self :> GText.view)
   method tbuffer = buffer
 
   method show_whitespace_chars = show_whitespace_chars
   method set_show_whitespace_chars x = show_whitespace_chars <- x
+
+  method set_mark_occurrences x =
+    self#mark_occurrences_manager#mark();
+    mark_occurrences <- x;
+    match mark_occurrences with
+      | Some color ->
+        self#mark_occurrences_manager#tag#set_property (`BACKGROUND_GDK (GDraw.color (`NAME color)));
+      | _ -> ()
+
+  method mark_occurrences = mark_occurrences
 
   method word_wrap = word_wrap
   method set_word_wrap x =
@@ -265,7 +276,7 @@ object (self)
         end
       | Some color ->
         current_line_bg_color <- `NAME color;
-        current_line_border_color <- Color.set_value 0.82 current_line_bg_color;
+        current_line_border_color <- `NAME (Color.add_value color 0.27);
         Gmisclib.Util.set_tag_paragraph_background highlight_current_line_tag color;
         let id = self#buffer#connect#mark_set ~callback:begin fun iter mark ->
           match GtkText.Mark.get_name mark with
@@ -882,5 +893,5 @@ object (self)
     ignore (buffer#undo#connect#redo ~callback:before);
     ignore (buffer#undo#connect#after#redo ~callback:after);
     Gmisclib.Idle.add (fun () -> self#draw_current_line_background ~force:true (buffer#get_iter `INSERT));
-    mark_occurrences <- Some (new Mark_occurrences.manager ~view:self);
+    mark_occurrences_manager <- Some (new Mark_occurrences.manager ~view:self);
 end

@@ -394,6 +394,13 @@ and pref_editor title ?packing () =
     ~label:"Visible right margin at column:" ~packing:hbox#pack () in
   let entry_right_margin = GEdit.spin_button
     ~numeric:true ~digits:0 ~rate:1.0 ~adjustment ~packing:hbox#pack () in
+  let hbox = GPack.hbox ~spacing:5 ~packing:(box#attach ~top:3 ~left:0) () in
+  let check_mark_occurrences = GButton.check_button ~active:false ~label:"Mark occurrences" ~packing:hbox#pack () in
+  let mo_button = GButton.color_button ~packing:(hbox#pack ~fill:false) () in
+  let _ = mo_button#set_relief `NONE in
+  let _ = check_mark_occurrences#connect#toggled ~callback:begin fun () ->
+    mo_button#misc#set_sensitive check_mark_occurrences#active
+  end in
   (** Error indication *)
   let align = create_align ~title:"Error indication" ~vbox () in
   let box = GPack.table ~row_spacings ~col_spacings ~packing:align#add () in
@@ -421,6 +428,7 @@ object (self)
     pref.Preferences.pref_err_underline <- check_error_underline#active;
     pref.Preferences.pref_err_tooltip <- check_error_tooltip#active;
     pref.Preferences.pref_err_gutter <- check_error_gutter#active;
+    pref.Preferences.pref_editor_mark_occurrences <- (if check_mark_occurrences#active then Some (color_name mo_button#color) else None);
 
   method read pref =
     entry_tab_width#set_value (float pref.Preferences.pref_editor_tab_width);
@@ -437,6 +445,8 @@ object (self)
     check_error_underline#set_active (pref.Preferences.pref_err_underline);
     check_error_tooltip#set_active (pref.Preferences.pref_err_tooltip);
     check_error_gutter#set_active (pref.Preferences.pref_err_gutter);
+    check_mark_occurrences#set_active (pref.Preferences.pref_editor_mark_occurrences <> None);
+    Gaux.may pref.Preferences.pref_editor_mark_occurrences ~f:(fun color -> mo_button#set_color (GDraw.color (`NAME color)));
 end
 
 (** pref_color *)

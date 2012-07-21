@@ -26,6 +26,8 @@ let apply (view : Text.view) pref =
     then `COLOR (view#misc#style#base `NORMAL)
     else (`NAME (fst pref.Preferences.pref_bg_color))
   in
+  view#set_mark_occurrences pref.Preferences.pref_editor_mark_occurrences;
+  view#mark_occurrences_manager#mark();
   view#set_show_indent_lines pref.Preferences.pref_indent_lines;
   view#set_show_line_numbers pref.Preferences.pref_show_line_numbers;
   view#set_line_numbers_font pref.Preferences.pref_base_font;

@@ -303,7 +303,7 @@ object (self)
       let height = float height in
       (*let width = width - 1 in*)
       (** Comments *)
-      if Oe_config.global_gutter_comments_enabled && tag_error_bounds = [] && view#mark_occurrences#table = [] then begin
+      if Oe_config.global_gutter_comments_enabled && tag_error_bounds = [] && view#mark_occurrences_manager#table = [] then begin
         match Comments.scan_utf8 (buffer#get_text ()) with
           | Comments.Utf8 comments ->
             Gdk.GC.set_dashes drawable#gc ~offset:0 [1; 1];
@@ -344,24 +344,30 @@ object (self)
           then (`NAME Oe_config.warning_unused_color) else Oe_config.warning_popup_border_color);
       end tag_warning_bounds;
       (** Mark Occurrences *)
-      let bg = `NAME Oe_config.mark_occurrences_bgcolor in
-      List.iter begin fun (m1, m2) ->
-        let start = buffer#get_iter_at_mark m1 in
-        let stop = buffer#get_iter_at_mark m2 in
-        let line_start = float start#line in
-        let line_stop = float stop#line in
-        let y1 = int_of_float ((line_start /. line_count) *. height) in
-        let y2 = int_of_float ((line_stop /. line_count) *. height) in
-        let y1 = y1 + alloc.Gtk.width - 1 in
-        let y2 = y2 + alloc.Gtk.width + 1 in
-        let width = width - 1 in
-        let height = y2 - y1 in
-        drawable#set_line_attributes ~width:1 ~style:`SOLID ();
-        drawable#set_foreground bg;
-        drawable#rectangle ~filled:true ~x:0 ~y:y1 ~width ~height ();
-        drawable#set_foreground Oe_config.mark_occurrences_color;
-        drawable#rectangle ~filled:false ~x:0 ~y:y1 ~width ~height ();
-      end view#mark_occurrences#table;
+      begin
+        match Preferences.preferences#get.Preferences.pref_editor_mark_occurrences with
+          | Some color ->
+            let bg = `NAME color in
+            let border = `NAME (Color.add_value color ~sfact:0.75 0.13) in
+            List.iter begin fun (m1, m2) ->
+              let start = buffer#get_iter_at_mark m1 in
+              let stop = buffer#get_iter_at_mark m2 in
+              let line_start = float start#line in
+              let line_stop = float stop#line in
+              let y1 = int_of_float ((line_start /. line_count) *. height) in
+              let y2 = int_of_float ((line_stop /. line_count) *. height) in
+              let y1 = y1 + alloc.Gtk.width - 1 in
+              let y2 = y2 + alloc.Gtk.width + 1 in
+              let width = width - 1 in
+              let height = y2 - y1 in
+              drawable#set_line_attributes ~width:1 ~style:`SOLID ();
+              drawable#set_foreground bg;
+              drawable#rectangle ~filled:true ~x:0 ~y:y1 ~width ~height ();
+              drawable#set_foreground border;
+              drawable#rectangle ~filled:false ~x:0 ~y:y1 ~width ~height ();
+            end view#mark_occurrences_manager#table;
+          | _ -> ()
+      end;
       (** Errors *)
       List.iter begin fun (start, _, _) ->
         draw_marker start Oe_config.error_underline_color;

@@ -27,10 +27,11 @@ class manager ~view =
   let buffer = view#tbuffer in
 object (self)
   val mark_set = new mark_set ()
-  val tag = buffer#create_tag ?name:(Some "mark_occurrences") [`BACKGROUND Oe_config.mark_occurrences_bgcolor]
+  val tag = buffer#create_tag ?name:(Some "mark_occurrences") []
   val mutable table : (GText.mark * GText.mark) list = []
 
   method table = table
+  method tag : GText.tag = tag
 
   method clear () =
     if table <> [] then begin
@@ -47,29 +48,32 @@ object (self)
 
   method mark () =
     self#clear();
-    let text = trim (buffer#selection_text ()) in
-    if String.length text > 1 && not (String.contains text '\n') && not (String.contains text '\r') then begin
-      (*let vrect = view#visible_rect in
-      let h0 = Gdk.Rectangle.height vrect in
-      let y0 = Gdk.Rectangle.y vrect in
-      let start, _ = view#get_line_at_y y0 in
-      let stop, _ = view#get_line_at_y (y0 + h0) in
-      let stop = stop#forward_line in*)
-      let start = buffer#start_iter in
-      let stop = buffer#end_iter in
-      let iter = ref start in
-      while !iter#compare stop < 0 do
-        match !iter#forward_search ?flags:None ?limit:(Some stop) text with
-          | Some (a, b) ->
-            iter := b;
-            buffer#apply_tag tag ~start:a ~stop:b;
-            let m1 = `MARK (buffer#create_mark ?name:None ?left_gravity:None a) in
-            let m2 = `MARK (buffer#create_mark ?name:None ?left_gravity:None b) in
-            table <- (m1, m2) :: table;
-          | _ -> iter := stop
-      done;
-      if table <> [] then mark_set#call()
-    end
+    match view#mark_occurrences with
+      | Some color ->
+        let text = trim (buffer#selection_text ()) in
+        if String.length text > 1 && not (String.contains text '\n') && not (String.contains text '\r') then begin
+          (*let vrect = view#visible_rect in
+          let h0 = Gdk.Rectangle.height vrect in
+          let y0 = Gdk.Rectangle.y vrect in
+          let start, _ = view#get_line_at_y y0 in
+          let stop, _ = view#get_line_at_y (y0 + h0) in
+          let stop = stop#forward_line in*)
+          let start = buffer#start_iter in
+          let stop = buffer#end_iter in
+          let iter = ref start in
+          while !iter#compare stop < 0 do
+            match !iter#forward_search ?flags:None ?limit:(Some stop) text with
+              | Some (a, b) ->
+                iter := b;
+                buffer#apply_tag tag ~start:a ~stop:b;
+                let m1 = `MARK (buffer#create_mark ?name:None ?left_gravity:None a) in
+                let m2 = `MARK (buffer#create_mark ?name:None ?left_gravity:None b) in
+                table <- (m1, m2) :: table;
+              | _ -> iter := stop
+          done;
+          if table <> [] then mark_set#call()
+        end
+      | _ -> ()
 
   method connect = new signals ~mark_set
 end

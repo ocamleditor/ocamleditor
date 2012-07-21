@@ -520,7 +520,7 @@ object (self)
       error_indication#paint_global_gutter()
     end);
     (** Mark occurrences *)
-    ignore (view#mark_occurrences#connect#mark_set ~callback:error_indication#paint_global_gutter);
+    ignore (view#mark_occurrences_manager#connect#mark_set ~callback:error_indication#paint_global_gutter);
     (** Special bookmarks: draw an horizontal line.  *)
     let start_selection = ref None in
     let _ = text_view#event#connect#after#button_press ~callback:begin fun ev ->
