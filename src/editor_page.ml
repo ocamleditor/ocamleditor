@@ -167,13 +167,13 @@ class page ?file ~project ~scroll_offset ~offset ~editor () =
   let vscrollbar               = GRange.scrollbar `VERTICAL ~adjustment:sw#vadjustment ~packing:svbox#add () in
   let _                        =
     text_view#event#connect#scroll ~callback:begin fun ev ->
-      let sign                     = match GdkEvent.Scroll.direction ev with
+      let sign = match GdkEvent.Scroll.direction ev with
         | `UP when sw#vadjustment#value > sw#vadjustment#lower -> (-.1.)
         | `DOWN when sw#vadjustment#value < sw#vadjustment#upper -. sw#vadjustment#page_size -> 1.
         | _ -> 0.
       in
       if sign <> 0. then begin
-        let value                    = sw#vadjustment#value +. (sw#vadjustment#step_increment *. sign) in
+        let value = sw#vadjustment#value +. (sw#vadjustment#step_increment *. sign) in
         (sw#vadjustment#set_value value);
       end;
       false
@@ -519,6 +519,8 @@ object (self)
     ignore (ocaml_view#code_folding#connect#toggled ~callback:begin fun (expand, _, _) ->
       error_indication#paint_global_gutter()
     end);
+    (** Mark occurrences *)
+    ignore (view#mark_occurrences#connect#mark_set ~callback:error_indication#paint_global_gutter);
     (** Special bookmarks: draw an horizontal line.  *)
     let start_selection = ref None in
     let _ = text_view#event#connect#after#button_press ~callback:begin fun ev ->

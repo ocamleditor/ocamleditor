@@ -31,7 +31,7 @@ let string_width s =
 
 let blanks                 = [13;10;32;9]
 let not_blank c            = not (List.mem c blanks)
-let whitespace_middot      = "." (*"\xC2\xB7"*)
+let whitespace_middot      = (*"."*) "\xC2\xB7"
 let whitespace_tab         = "\xC2\xBB"
 let whitespace_crlf        = "\xC2\xA4\xC2\xB6"
 let whitespace_lf          = "\xC2\xB6"

@@ -1,6 +1,7 @@
 2012-??-?? Release 1.7.5
 ------------------------
 
+  * Automatically highlight all occurrences of the currently selected word.
   * Changed project file extension from ".xml" to ".project".
   * Fix infinite loop in "Find in Path" in presence of symbolic links.
   * Fix: quick file chooser doesn't load files when project is opened

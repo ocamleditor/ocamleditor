@@ -168,6 +168,9 @@ object (self)
   val mutable word_wrap = false
   val mutable show_dot_leaders = true
   val mutable signal_id_highlight_current_line = None
+  val mutable mark_occurrences = None
+
+  method mark_occurrences = match mark_occurrences with Some x -> x | _ -> assert false
 
   method as_gtext_view = (self :> GText.view)
   method tbuffer = buffer
@@ -878,5 +881,6 @@ object (self)
     ignore (buffer#undo#connect#after#undo ~callback:after);
     ignore (buffer#undo#connect#redo ~callback:before);
     ignore (buffer#undo#connect#after#redo ~callback:after);
-    Gmisclib.Idle.add (fun () -> self#draw_current_line_background ~force:true (buffer#get_iter `INSERT))
+    Gmisclib.Idle.add (fun () -> self#draw_current_line_background ~force:true (buffer#get_iter `INSERT));
+    mark_occurrences <- Some (new Mark_occurrences.manager ~view:self);
 end

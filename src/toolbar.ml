@@ -106,7 +106,6 @@ object (self)
     toolbar#insert tool_save_all#as_tool_item;
     tool_save_all#set_icon_widget (GMisc.image ~pixbuf:Icons.save_all_16 ())#coerce;
     (*tool_save_all#connect#popup ~callback:save_all_popup#call;*)
-    toolbar#insert tool_close_file;
     (** Undo/Redo *)
     let _ = GButton.separator_tool_item ~packing:toolbar#insert () in
     toolbar#insert tool_undo;
@@ -142,6 +141,9 @@ object (self)
     toolbar#insert tool_back#as_tool_item;
     toolbar#insert tool_forward#as_tool_item;
     toolbar#insert tool_last_edit_loc;
+    let _ = GButton.separator_tool_item ~draw:false ~expand:true ~packing:toolbar#insert () in
+    toolbar#insert tool_close_file;
+    tool_close_file#set_icon_widget (GMisc.image ~pixbuf:Icons.close_16 ())#coerce;
     ()
 
   method bind_signals : 'a -> unit = fun browser ->

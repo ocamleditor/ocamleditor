@@ -139,6 +139,7 @@ let file ~browser ~group ~flags items =
   (** Close current *)
   let _ = GMenu.separator_item ~packing:menu#add () in
   menu#add (items.file_close :> GMenu.menu_item);
+  items.file_close#add_accelerator ~group ~modi:[`CONTROL] GdkKeysyms._F4 ~flags;
   ignore (items.file_close#connect#activate ~callback:begin fun () ->
     editor#with_current_page (fun p -> ignore (editor#dialog_confirm_close p))
   end);

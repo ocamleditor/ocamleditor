@@ -467,16 +467,18 @@ object (self)
         buffer#add_signal_handler (buffer#connect#after#delete_range ~callback:(fun ~start ~stop -> callback start ()));
         (** Mark Set *)
         buffer#add_signal_handler (buffer#connect#after#mark_set ~callback:begin fun _ mark ->
+          let is_insert = match GtkText.Mark.get_name mark with Some "insert" -> true | _ -> false in
           if buffer#has_selection then begin
             let start, stop = buffer#selection_bounds in
             let nlines = stop#line - start#line in
             let nchars = stop#offset - start#offset in
             kprintf page#status_pos_sel#set_text "%d (%d)" nlines nchars;
-          end else page#status_pos_sel#set_text "0";
-          match GtkText.Mark.get_name mark with
-            | Some name when name = "insert" ->
-              Timeout.set tout_delim (self#cb_tout_delim page);
-            | _ -> ()
+            if is_insert then page#view#mark_occurrences#mark ()
+          end else begin
+            page#view#mark_occurrences#clear();
+            page#status_pos_sel#set_text "0";
+          end;
+          if is_insert then Timeout.set tout_delim (self#cb_tout_delim page)
         end);
         (** Paste clipboard *)
         ignore (page#view#connect#paste_clipboard ~callback:begin fun () ->

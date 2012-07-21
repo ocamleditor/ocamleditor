@@ -63,6 +63,7 @@ let clear_24 = GdkPixbuf.from_file (Common.application_pixmaps // "clear_24.png"
 let clear_build_16 = GdkPixbuf.from_file (Common.application_pixmaps // "clear_build_16.png")
 let clear_build_24 = GdkPixbuf.from_file (Common.application_pixmaps // "clear_build_24.png")
 let close = GdkPixbuf.from_file (Common.application_pixmaps // "close.png")
+let close_16 = GdkPixbuf.from_file (Common.application_pixmaps // "close_16.png")
 let compile_all_16 = GdkPixbuf.from_file (Common.application_pixmaps // "compile_all_16.png")
 let compile_file_16 = GdkPixbuf.from_file (Common.application_pixmaps // "compile_file_16.png")
 let constructor = GdkPixbuf.from_file (Common.application_pixmaps // "constructor.png")

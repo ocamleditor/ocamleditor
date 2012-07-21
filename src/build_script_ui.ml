@@ -26,7 +26,7 @@ open Printf
 open GdkKeysyms
 open Build_script
 
-let enable_widget_args = true
+let enable_widget_args = false
 
 class widget ~project ?packing () =
   let build_script    = project.Project_type.build_script in
