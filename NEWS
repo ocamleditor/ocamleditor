@@ -1,3 +1,14 @@
+2012-??-?? Release 1.7.5
+------------------------
+
+  * Changed project file extension from ".xml" to ".project".
+  * Fix infinite loop in "Find in Path" in presence of symbolic links.
+  * Fix: quick file chooser doesn't load files when project is opened
+    from dialog.
+  * Fix scroll issue with bookmarks and hyperlinks from "Find in Path" results.
+  * Other minor bug fixes.
+
+
 2012-07-13 Release 1.7.4
 ------------------------
 
