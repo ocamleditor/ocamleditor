@@ -7,7 +7,7 @@
   <name>ocamleditor</name>
   <author>Francesco Tovagliari</author>
   <description/>
-  <version>1.7.0</version>
+  <version>1.7.5</version>
   <autocomp enabled="true" delay="1." cflags=""/>
   <runtime>
     <configuration name="ocamleditor" default="true" id_build="0" id="0">
@@ -430,7 +430,7 @@
           <cmd>ocaml</cmd>
           <args>
             <arg enabled="true">mkversion.ml</arg>
-            <arg enabled="true">1.7.4</arg>
+            <arg enabled="true">1.7.5</arg>
           </args>
           <phase></phase>
         </task>

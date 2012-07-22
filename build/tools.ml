@@ -193,16 +193,20 @@ let mkrelease () =
   if Sys.file_exists ocaml_src then (kprintf run "RMDIR /S /Q %s" ocaml_src);
   Sys.chdir "..";
   let name = Filename.basename (Sys.getcwd ()) in
+  let version = get_line_from_file ~filename:"VERSION" 1 in
+  let package = sprintf "%s-%s" name version in
   Sys.chdir "..";
-  kprintf remove_file "%s.tar.gz" name;
+  kprintf remove_file "%s.tar.gz" package;
+  kprintf run "mklink /d %s %s" package name;
   kprintf run "mv -f %s/%s.project %s/%s.tmp.project" name name name name;
   kprintf run "cp %s/%s.project.release %s/%s.project" name name name name;
-  kprintf run "tar --mode=755 -cf %s.tar %s/src %s/pixmaps %s/build" name name name name;
-  kprintf run "tar --mode=655 -rf %s.tar %s/README %s/NEWS %s/COPYING %s/%s.project %s/ocamleditor.nsi %s/build.ml %s/header"
-    name name name name name name name name name;
-  kprintf run "gzip -c %s.tar > %s.tar.gz" name name;
-  kprintf Sys.remove "%s.tar" name;
+  kprintf run "tar --mode=755 -cf %s.tar %s/src %s/pixmaps %s/build" package package package package;
+  kprintf run "tar --mode=655 -rf %s.tar %s/README %s/NEWS %s/COPYING %s/%s.project %s/ocamleditor.nsi %s/build.ml %s/header %s/VERSION"
+    package package package package package name package package package package;
+  kprintf run "gzip -c %s.tar > %s.tar.gz" package package;
+  kprintf Sys.remove "%s.tar" package;
   kprintf run "mv -f %s/%s.tmp.project %s/%s.project" name name name name;
+  kprintf run "rmdir %s" package;
   kprintf Sys.chdir "%s/src" name;
   kprintf run "mkdir %s" ocaml_src;
   kprintf run "cp -ru ..\\..\\%s ." ocaml_src;

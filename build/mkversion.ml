@@ -47,4 +47,8 @@ let _ =
     "  WriteRegStr HKLM \"Software[\\]Microsoft[\\]Windows[\\]CurrentVersion[\\]Uninstall[\\]OCamlEditor\" \"DisplayVersion\" \"[0-9]+[.][0-9]+[.][0-9]+\"",
       (sprintf "  WriteRegStr HKLM \"Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\OCamlEditor\" \"DisplayVersion\" \"%s\"" version);
   ];
+
+  let chan = open_out_bin "../VERSION" in
+  output_string chan version;
+  close_out_noerr chan
 ;;

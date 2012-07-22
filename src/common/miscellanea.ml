@@ -255,7 +255,7 @@ let get_line_from_file ~filename lnum =
     end;
     close_in chan;
     !result
-  with ex -> (close_in chan; raise ex)
+  with ex -> (close_in chan; raise ex);;
 
 (** exec_lines *)
 let exec_lines command =
