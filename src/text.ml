@@ -169,7 +169,7 @@ object (self)
   val mutable show_dot_leaders = true
   val mutable signal_id_highlight_current_line = None
   val mutable mark_occurrences_manager = None
-  val mutable mark_occurrences : string option = None
+  val mutable mark_occurrences : (bool * string) = false, ""
 
   method mark_occurrences_manager = match mark_occurrences_manager with Some x -> x | _ -> assert false
 
@@ -183,7 +183,7 @@ object (self)
     self#mark_occurrences_manager#mark();
     mark_occurrences <- x;
     match mark_occurrences with
-      | Some color ->
+      | true, color ->
         self#mark_occurrences_manager#tag#set_property (`BACKGROUND_GDK (GDraw.color (`NAME color)));
       | _ -> ()
 

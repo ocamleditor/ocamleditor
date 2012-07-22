@@ -77,7 +77,7 @@ let create_align ?title ?(indent=13) ~(vbox : GPack.box) () =
 
 let spacing = 13
 let xalign = 0.0
-let col_spacings = 8
+let col_spacings = 21
 let row_spacings = 5
 
 (** page *)
@@ -90,6 +90,7 @@ object (self)
   inherit GObj.widget box#as_widget
   method virtual write : Preferences.t -> unit
   method virtual read : Preferences.t -> unit
+  method title = title
 end
 
 
@@ -114,15 +115,19 @@ and preferences ~(editor : Editor.editor) () =
     ~spacing:8 ~packing:(vbox#pack ~expand:false) () in
   let ok_button = GButton.button ~stock:`OK ~packing:button_box#add () in
   let cancel_button = GButton.button ~stock:`CANCEL ~packing:button_box#add () in
-  let reset_button = GButton.button ~label:"Restore Defaults" ~packing:button_box#add () in
+  let reset_button = GButton.button ~label:"Reset All" ~packing:button_box#add () in
   let _ = button_box#set_child_secondary reset_button#coerce true in
+  let reset_page_button = GButton.button ~label:"Reset Page" ~packing:button_box#add () in
+  let _ = button_box#set_child_secondary reset_page_button#coerce true in
 object (self)
   inherit GObj.widget vbox#as_widget
   val mutable pages = []
+  val mutable current = ""
   method show_page title =
     let page = List.assoc title pages in
     List.iter (fun (_, p) -> p#misc#hide()) pages;
     page#misc#show();
+    current <- title;
   method write () =
     List.iter (fun (_, page) -> page#write Preferences.preferences#get) pages;
     editor#set_tab_pos Preferences.preferences#get.Preferences.pref_tab_pos;
@@ -135,6 +140,11 @@ object (self)
   method reset_defaults () =
     let defaults = Preferences.create_defaults() in
     List.iter (fun (_, page) -> page#read defaults) pages;
+  method reset_page_defaults () =
+    let defaults = Preferences.create_defaults() in
+    match List_opt.find (fun (t, _) -> t = current) pages with
+      | Some (_, p) -> p#read defaults
+      | _ -> ()
   method create title row  (page : string -> ?packing:(GObj.widget -> unit) -> unit -> page) =
     let page = page title ~packing:hbox#add () in
     model#set ~row ~column title;
@@ -162,6 +172,7 @@ object (self)
     ignore (cancel_button#connect#clicked ~callback:window#destroy);
     ignore (ok_button#connect#clicked ~callback:self#ok);
     ignore (reset_button#connect#clicked ~callback:self#reset_defaults);
+    ignore (reset_page_button#connect#clicked ~callback:self#reset_page_defaults);
     (*  *)
     window#present();
     view#selection#select_path (GTree.Path.create [0])
@@ -395,12 +406,11 @@ and pref_editor title ?packing () =
   let entry_right_margin = GEdit.spin_button
     ~numeric:true ~digits:0 ~rate:1.0 ~adjustment ~packing:hbox#pack () in
   let hbox = GPack.hbox ~spacing:5 ~packing:(box#attach ~top:3 ~left:0) () in
-  let check_mark_occurrences = GButton.check_button ~active:false ~label:"Mark occurrences" ~packing:hbox#pack () in
+  let check_mark_occurrences = GButton.check_button ~active:false ~label:"Highlight all occurrences of the\nselected word" ~packing:hbox#pack () in
+  let hbox = GPack.hbox ~spacing:5 ~packing:(box#attach ~top:3 ~left:1) () in
+  let _ = GMisc.label ~text:"Color:" ~packing:hbox#pack () in
   let mo_button = GButton.color_button ~packing:(hbox#pack ~fill:false) () in
   let _ = mo_button#set_relief `NONE in
-  let _ = check_mark_occurrences#connect#toggled ~callback:begin fun () ->
-    mo_button#misc#set_sensitive check_mark_occurrences#active
-  end in
   (** Error indication *)
   let align = create_align ~title:"Error indication" ~vbox () in
   let box = GPack.table ~row_spacings ~col_spacings ~packing:align#add () in
@@ -413,6 +423,9 @@ object (self)
     ignore (check_right_margin#connect#toggled ~callback:begin fun () ->
       entry_right_margin#misc#set_sensitive check_right_margin#active;
     end);
+  ignore (check_mark_occurrences#connect#toggled ~callback:begin fun () ->
+    hbox#misc#set_sensitive check_mark_occurrences#active
+  end);
 
   method write pref =
     pref.Preferences.pref_editor_tab_width <- entry_tab_width#value_as_int;
@@ -428,7 +441,8 @@ object (self)
     pref.Preferences.pref_err_underline <- check_error_underline#active;
     pref.Preferences.pref_err_tooltip <- check_error_tooltip#active;
     pref.Preferences.pref_err_gutter <- check_error_gutter#active;
-    pref.Preferences.pref_editor_mark_occurrences <- (if check_mark_occurrences#active then Some (color_name mo_button#color) else None);
+    let color = color_name mo_button#color in
+    pref.Preferences.pref_editor_mark_occurrences <- check_mark_occurrences#active, color;
 
   method read pref =
     entry_tab_width#set_value (float pref.Preferences.pref_editor_tab_width);
@@ -445,8 +459,10 @@ object (self)
     check_error_underline#set_active (pref.Preferences.pref_err_underline);
     check_error_tooltip#set_active (pref.Preferences.pref_err_tooltip);
     check_error_gutter#set_active (pref.Preferences.pref_err_gutter);
-    check_mark_occurrences#set_active (pref.Preferences.pref_editor_mark_occurrences <> None);
-    Gaux.may pref.Preferences.pref_editor_mark_occurrences ~f:(fun color -> mo_button#set_color (GDraw.color (`NAME color)));
+    let enabled, color = pref.Preferences.pref_editor_mark_occurrences in
+    check_mark_occurrences#set_active (not enabled);
+    check_mark_occurrences#set_active enabled;
+    mo_button#set_color (GDraw.color (`NAME color));
 end
 
 (** pref_color *)

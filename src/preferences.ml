@@ -40,7 +40,7 @@ type t = {
   mutable pref_editor_wrap                  : bool;
   mutable pref_editor_trim_lines            : bool;
   mutable pref_editor_custom_templ_filename : string;
-  mutable pref_editor_mark_occurrences      : string option;
+  mutable pref_editor_mark_occurrences      : bool * string;
   mutable pref_compl_font                   : string;
   mutable pref_compl_greek                  : bool;
   mutable pref_output_font                  : string;
@@ -170,7 +170,7 @@ let defaults = {
   pref_editor_wrap                  = false;
   pref_editor_trim_lines            = false;
   pref_editor_custom_templ_filename = "";
-  pref_editor_mark_occurrences      = Some "#90ff90";
+  pref_editor_mark_occurrences      = true, "#90ff90";
   pref_compl_font                   = "Sans 9";
   pref_compl_greek                  = true;
   pref_output_font                  = "monospace 8";
@@ -364,7 +364,10 @@ let to_xml pref =
       Xml.Element ("pref_editor_wrap", [], [Xml.PCData (string_of_bool pref.pref_editor_wrap)]);
       Xml.Element ("pref_editor_trim_lines", [], [Xml.PCData (string_of_bool pref.pref_editor_trim_lines)]);
       Xml.Element ("pref_editor_bak", [], [Xml.PCData (string_of_bool pref.pref_editor_bak)]);
-      Xml.Element ("pref_editor_mark_occurrences", [], [Xml.PCData (match pref.pref_editor_mark_occurrences with Some x -> x | _ -> "")]);
+      begin
+        let enabled, color = pref.pref_editor_mark_occurrences in
+        Xml.Element ("pref_editor_mark_occurrences", ["enabled", (string_of_bool enabled)], [Xml.PCData color]);
+      end;
       Xml.Element ("pref_editor_custom_templ_filename", [], [Xml.PCData (pref.pref_editor_custom_templ_filename)]);
       Xml.Element ("pref_compl_font", [], [Xml.PCData pref.pref_compl_font]);
       Xml.Element ("pref_compl_greek", [], [Xml.PCData (string_of_bool pref.pref_compl_greek)]);
@@ -462,7 +465,7 @@ let from_file filename =
         | "pref_editor_trim_lines" -> pref.pref_editor_trim_lines <- bool_of_string (value node)
         | "pref_editor_bak" -> pref.pref_editor_bak <- bool_of_string (value node)
         | "pref_editor_custom_templ_filename" -> pref.pref_editor_custom_templ_filename <- value node
-        | "pref_editor_mark_occurrences" -> pref.pref_editor_mark_occurrences <- (let x = value node in if x = "" then None else Some x)
+        | "pref_editor_mark_occurrences" -> pref.pref_editor_mark_occurrences <- ((bool_of_string (Xml.attrib node "enabled")), value node)
         | "pref_compl_font" -> pref.pref_compl_font <- value node
         | "pref_compl_greek" -> pref.pref_compl_greek <- bool_of_string (value node)
         | "pref_output_font" -> pref.pref_output_font <- value node
