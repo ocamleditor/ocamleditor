@@ -124,7 +124,8 @@ object (self)
         let popup = GWindow.window ~kind:`POPUP ~type_hint:`MENU
           ~decorated:false ~focus_on_map:false ~border_width:1 ~show:false () in
         let color = Color.set_value 0.75 (`NAME Preferences.preferences#get.Preferences.pref_bg_color_popup) in
-        popup#misc#modify_bg [`NORMAL, color];
+        let color = Color.add_value Preferences.preferences#get.Preferences.pref_bg_color_popup 0.1 in
+        popup#misc#modify_bg [`NORMAL, `NAME color];
         popup#misc#set_can_focus false;
         let ebox = GBin.event_box ~packing:popup#add () in
         ebox#misc#modify_bg [`NORMAL, (`NAME Preferences.preferences#get.Preferences.pref_bg_color_popup)];

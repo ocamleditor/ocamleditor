@@ -95,14 +95,13 @@ DEVELOPMENT
 
     https://forge.ocamlcore.org/projects/ocamleditor
 
-  The public git repository is hosted on github. You can browse the source
-  tree from:
+  You can browse the source tree from:
 
-    http://github.com/ftovagliari/ocamleditor
+    https://forge.ocamlcore.org/scm/browser.php?group_id=141
 
   or clone it by doing:
 
-    git clone git://github.com/ftovagliari/ocamleditor.git
+    git clone https://forge.ocamlcore.org/anonscm/git/ocamleditor/ocamleditor.git
 
 
 NOTES

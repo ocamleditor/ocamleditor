@@ -816,8 +816,7 @@ object (self)
           let stop = stop#forward_line#set_line_index 0 in
           match Preferences.preferences#get.Preferences.pref_ocamldoc_paragraph_bgcolor_1 with
             | Some color ->
-              let color = `NAME color in
-              drawable#set_foreground (Color.set_value 0.92 color);
+              drawable#set_foreground (`NAME (Color.add_value color 0.08));
               drawable#set_line_attributes ~width:1 ~style:`SOLID ();
               let hadjust = match hadjustment with Some adj -> int_of_float adj#value | _ -> 0 in
               while !start#forward_line#compare stop <= 0 && not (!start#equal self#buffer#end_iter) do
