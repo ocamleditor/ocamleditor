@@ -35,7 +35,7 @@ let rec is_delimiter ?(utf8=true) text pos =
     try
       Lex.scan ~utf8 text begin fun ~token ~start ~stop ->
         match token with
-          | BEGIN _ | END _ | LET | IN | LPAREN | RPAREN | LBRACKET
+          | BEGIN | END | LET | IN | LPAREN | RPAREN | LBRACKET
           | RBRACKET | LBRACE | TRY | WITH | RBRACE | DO | DONE
             when start <= pos && pos <= stop ->
               result := true;
@@ -152,9 +152,9 @@ let find_innermost_enclosing_delim ?(utf8=true) text pos =
       Lex.scan ~utf8 text begin fun ~token ~start ~stop ->
         if pos < start then raise End_of_file else begin
           match token with
-            | BEGIN _ | LPAREN | LBRACKET | LBRACE | DO (*| TRY | LET*) ->
+            | BEGIN | LPAREN | LBRACKET | LBRACE | DO (*| TRY | LET*) ->
               stack := (start, stop) :: !stack
-            | END _ | RPAREN | RBRACKET | RBRACE | DONE (*| WITH | IN*) ->
+            | END | RPAREN | RBRACKET | RBRACE | DONE (*| WITH | IN*) ->
               (match !stack with _ :: tl -> stack := tl | _ -> ())
             | _ -> ()
         end
@@ -211,8 +211,8 @@ let rec scan_folding_points =
         end;
       with
         | Lexer.Error (Lexer.Unterminated_string, _) -> ()
-        | Lexer.Error (Lexer.Unterminated_comment, _) -> ()
-        | Lexer.Error (Lexer.Unterminated_string_in_comment, _) -> ()
+        | Lexer.Error (Lexer.Unterminated_comment _, _) -> ()
+        | Lexer.Error (Lexer.Unterminated_string_in_comment _, _) -> ()
         | Lexer.Error _ as ex -> ()
           (*Printf.eprintf "File \"delimiters.ml\": %s\n%s\n%!" (Printexc.to_string ex) (Printexc.get_backtrace());*)
         | Sys_error("_none_: No such file or directory") -> begin
@@ -267,8 +267,8 @@ let scan text =
     try
       Lex.scan ~utf8:true text begin fun ~token ~start ~stop ->
         match token with
-          | BEGIN _ | DO | TRY | LET | MATCH | OBJECT | STRUCT | SIG -> stack := start :: !stack;
-          | END _  | DONE | WITH | IN ->
+          | BEGIN | DO | TRY | LET | MATCH | OBJECT | STRUCT | SIG -> stack := start :: !stack;
+          | END | DONE | WITH | IN ->
             if !skip = 0 then begin
               match !stack with
                 | hd :: tl ->

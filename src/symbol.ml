@@ -170,14 +170,14 @@ module Signature = struct
   ;;
 
   let rec read_module_type ~filename ~parent_longid = function
-    | Tmty_ident path -> (* TODO: parse_module_type, Tmty_ident *)
+    | Mty_ident path -> (* TODO: parse_module_type, Tmty_ident *)
       []
-    | Tmty_signature signature ->
+    | Mty_signature signature ->
       let modlid = match parent_longid with x :: _ -> x | _ -> "" in
       let symbols = read' (signature, filename, modlid) in
       let symbols = List.map (fun it -> {it with sy_id = parent_longid @ (List.tl it.sy_id)}) symbols in
       symbols
-    | Tmty_functor (ident, md, mc) -> read_module_type filename parent_longid mc
+    | Mty_functor (ident, md, mc) -> read_module_type filename parent_longid mc
 
   and read' (sign, filename, modlid) =
     let buf = Buffer.create 1024 in
@@ -199,9 +199,9 @@ module Signature = struct
       }
     in
     List.fold_left begin function acc -> function
-      | Tsig_value (id, value_description) ->
+      | Sig_value (id, value_description) ->
         (print Pvalue id (Printtyp.value_description id formatter) value_description) :: acc;
-      | Tsig_type (id, type_declaration, _) ->
+      | Sig_type (id, type_declaration, _) ->
         let acc =
           begin match type_declaration.type_manifest with
             | None ->
@@ -219,12 +219,13 @@ module Signature = struct
         (* Costruttori di tipi varianti *)
         begin match type_declaration.type_kind with
           | Type_variant cc ->
-            List.fold_left begin fun acc (n, tel) ->
+            List.fold_left begin fun acc (ident, tel, _(* TODO: Types.type_expr option *)) ->
+              let n = Ident.name ident in
               let symbol =
                 if List.length tel = 0 then
-                  print Pconstructor (Ident.create n) ignore ()
+                  print Pconstructor ident ignore ()
                 else begin
-                  let items = List.map (print Pconstructor (Ident.create n) (Printtyp.type_expr formatter)) tel in
+                  let items = List.map (print Pconstructor ident (Printtyp.type_expr formatter)) tel in
                   ListLabels.fold_left
                     ~f:begin fun acc it -> {
                       sy_id        = acc.sy_id;
@@ -248,25 +249,25 @@ module Signature = struct
             end acc cc
           | _ -> acc
         end
-      | Tsig_exception (id, exception_declaration) ->
+      | Sig_exception (id, exception_declaration) ->
         (print Pexception id (Printtyp.exception_declaration id formatter)
           exception_declaration) :: acc;
-      | Tsig_module (id, module_type, _) ->
+      | Sig_module (id, module_type, _) ->
         let module_item = print Pmodule id (Printtyp.ident formatter) id in
         let module_items = read_module_type
           ~filename  ~parent_longid:module_item.sy_id module_type
         in
         module_item :: module_items @ acc;
-      | Tsig_modtype (id, _) ->
+      | Sig_modtype (id, _) ->
         (print Pmodtype id (Printtyp.ident formatter) id) :: acc;
-      | Tsig_class (id, class_declaration, _) ->
+      | Sig_class (id, class_declaration, _) ->
         begin
           let class_item = print Pclass id (Printtyp.class_declaration id formatter) class_declaration in
           let class_items = read_class_declaration
             ~filename ~parent_id:class_item.sy_id ~id class_declaration in
           class_item :: class_items @ acc;
         end
-      | Tsig_cltype (id, cltype_declaration, _) -> acc
+      | Sig_class_type (id, cltype_declaration, _) -> acc
     end [] sign
   ;;
 
@@ -281,7 +282,7 @@ module Signature = struct
             | Env.Inconsistent_import _ ->
               Env.reset_cache();
               read'' ((*None, *)filename, modlid)
-            | Env.Not_an_interface _ -> raise Not_found
+            | Env.Illegal_renaming _ -> raise Not_found
             | _ ->
               Printf.eprintf "File \"symbol.ml\": %s\n%s\n%!" (Printexc.to_string exc) (Printexc.get_backtrace());
               Env.report_error Format.err_formatter e;

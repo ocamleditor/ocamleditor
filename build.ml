@@ -79,11 +79,8 @@ let use_modified_gtkThread =
   with Not_found -> use_modified_gtkThread
 
 let ocaml_src = "ocaml-src"
-let parsing = ocaml_src ^ "/parsing"
-let typing = ocaml_src ^ "/typing"
-let utils = ocaml_src ^ "/utils"
-let search_path  = String.concat " " [lablgtk2; xml_light; ocamldoc]
-let search_path = sprintf "%s %s %s %s gmisclib common icons otherwidgets oebuild" parsing typing utils search_path
+let search_path = String.concat " " ["+compiler-libs"; lablgtk2; xml_light; ocamldoc]
+let search_path = sprintf "%s gmisclib common icons otherwidgets oebuild" search_path
 let libs = "unix str threads dynlink odoc_info lablgtk gtkThread.o xml-light gmisclib common icons otherwidgets oebuildlib"
 
 let oebuild_name = sprintf "oebuild%s" ext
@@ -195,7 +192,7 @@ let cleanall () =
 let common () =
   pushd "common";
   kprintf run
-    "ocamlc -a -o common.cma -annot -thread -w syumx str.cma unix.cma threads.cma \
+    "ocamlc -a -o common.cma -annot -thread -w syumx \
 cmd.ml miscellanea.ml file.ml quote.ml ocaml_config.ml cmd_line_args.ml dep.mli dep.ml list_opt.ml common.ml";
   if !can_compile_native then begin
     kprintf run
@@ -230,7 +227,7 @@ let otherwidgets () =
 let oebuild () =
   common();
   pushd "oebuild";
-  kprintf run "ocamlc -a -o oebuildlib.cma -thread -w syumx -annot -I ../common str.cma unix.cma threads.cma common.cma oebuild_util.ml oebuild_table.mli oebuild_table.ml oebuild.ml";
+  kprintf run "ocamlc -a -o oebuildlib.cma -thread -w syumx -annot -I ../common common.cma oebuild_util.ml oebuild_table.mli oebuild_table.ml oebuild.ml";
   kprintf run "ocamlc -o %s -thread -w syumx -I ../common str.cma unix.cma threads.cma common.cma oebuildlib.cma oebuild_tool.ml"
     oebuild_name;
   if !can_compile_native then begin

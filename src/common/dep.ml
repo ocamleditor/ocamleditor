@@ -32,7 +32,7 @@ let (//) = Filename.concat
 
 let redirect_stderr = if Sys.os_type = "Win32" then " 2>NUL" else " 2>/dev/null"
 
-let re1 = Str.regexp ":\\( \\|$\\)"
+let re1 = Str.regexp " ?:\\( \\|$\\)"
 let re2 = Str.regexp " \\\\[\r\n]+"
 let re3 = Str.regexp " "
 let re_ss = Str.regexp "\\\\ "
@@ -104,7 +104,7 @@ let find ?pp ?includes ?with_errors ?(echo=true) targets =
 
 (** find_dependants *)
 let find_dependants =
-  let re = Str.regexp "\\(.+\\.mli?\\): ?\\(.*\\)" in
+  let re = Str.regexp "\\(.+\\.mli?\\) ?: ?\\(.*\\)" in
   let re1 = Str.regexp "\r?\n" in
   let re2 = Str.regexp " " in
   fun ~target ~modname ->

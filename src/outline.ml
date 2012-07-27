@@ -495,7 +495,12 @@ object (self)
 
   method private set_location ~model loc rr =
     let loc_filename, loc_pos =
-      match loc.Odoc_types.loc_impl with Some (a, b) -> a, b | _ -> "", 0
+      (*match loc.Odoc_types.loc_impl with Some (a, b) -> a, b | _ -> "", 0*)
+      match loc.Odoc_types.loc_impl with
+        | Some loc ->
+          loc.Location.loc_start.Lexing.pos_fname,
+          loc.Location.loc_start.Lexing.pos_cnum
+        | _ -> "", 0
     in
     buffer#block_signal_handlers ();
     let mark = buffer#create_mark(* ~name:(Gtk_util.create_mark_name "Outline.set_location")*) ?left_gravity:None (buffer#get_iter (`OFFSET loc_pos)) in
