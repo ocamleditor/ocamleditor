@@ -8,7 +8,7 @@
   <author>Francesco Tovagliari</author>
   <description/>
   <version>1.7.5</version>
-  <autocomp enabled="true" delay="1." cflags=""/>
+  <autocomp enabled="true" delay="1.01" cflags="-w +a"/>
   <runtime>
     <configuration name="ocamleditor" default="true" id_build="0" id="0">
       <id>0</id>
@@ -72,14 +72,14 @@
       <default>false</default>
       <byt>true</byt>
       <opt>true</opt>
-      <libs>unix str threads common</libs>
+      <libs></libs>
       <other_objects></other_objects>
       <files>oebuild/oebuild.ml</files>
       <includes>common oebuild</includes>
       <thread>true</thread>
       <vmthread>false</vmthread>
       <pp></pp>
-      <cflags>-w y</cflags>
+      <cflags>-w y-31</cflags>
       <lflags></lflags>
       <outkind>Library</outkind>
       <outname>oebuildlib</outname>
@@ -100,8 +100,8 @@
       <thread>true</thread>
       <vmthread>false</vmthread>
       <pp></pp>
-      <cflags>-w y</cflags>
-      <lflags></lflags>
+      <cflags>-w y-31</cflags>
+      <lflags>-w -31</lflags>
       <outkind>Executable</outkind>
       <outname>oebuild/oebuild</outname>
       <lib_install_path></lib_install_path>
@@ -184,8 +184,8 @@
       <thread>true</thread>
       <vmthread>false</vmthread>
       <pp></pp>
-      <cflags>-w syxm -g</cflags>
-      <lflags>-linkall -g</lflags>
+      <cflags>-w syxm-31 -g</cflags>
+      <lflags>-linkall -g -w -31</lflags>
       <outkind>Executable</outkind>
       <outname>ocamleditor</outname>
       <lib_install_path></lib_install_path>
@@ -430,7 +430,7 @@
           <cmd>ocaml</cmd>
           <args>
             <arg enabled="true">mkversion.ml</arg>
-            <arg enabled="true">1.7.2</arg>
+            <arg enabled="true">1.8.0</arg>
           </args>
           <phase></phase>
         </task>
