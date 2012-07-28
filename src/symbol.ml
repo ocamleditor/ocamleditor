@@ -129,28 +129,27 @@ module Signature = struct
   let read_class_declaration ~filename ~parent_id ~id cd =
     let buf = Buffer.create 1024 in
     let formatter = Format.formatter_of_buffer buf in
-    let print id printtyp typ =
+    let print printtyp typ =
       Buffer.clear buf;
       printtyp typ;
       Format.pp_print_flush formatter ();
       (Buffer.contents buf)
     in
-    let dummy_id = Ident.create "" in
-    match cd with {
+    (*match cd with {
       cty_params = cty_params;
-      cty_type = cty_type;
-      cty_path = cty_path
-    } ->
+      cty_type   = cty_type;
+      cty_path   = cty_path; _
+    } ->*)
       begin
         match Printtyp.tree_of_class_declaration id cd Types.Trec_first with
-          | Osig_class (vir_flag, name, params, clt, rs) ->
+          | Osig_class (_(*vir_flag*), _(*name*), _(*params*), clt, _(*rs*)) ->
             let rec parse_class_type = function
-              | Octy_signature (self_ty, csil) ->
+              | Octy_signature (_(*self_ty*), csil) ->
                 Miscellanea.Xlist.filter_map begin function
                   | Ocsg_method (name, priv, virt, ty) ->
                     Some {
                       sy_id           = parent_id @ [name];
-                      sy_type         = sprintf "%s : %s" name (print dummy_id (!Oprint.out_type formatter) ty);
+                      sy_type         = sprintf "%s : %s" name (print (!Oprint.out_type formatter) ty);
                       sy_kind         =
                         if virt && priv then Pmethod_private_virtual
                         else if virt then Pmethod_virtual
@@ -170,14 +169,14 @@ module Signature = struct
   ;;
 
   let rec read_module_type ~filename ~parent_longid = function
-    | Mty_ident path -> (* TODO: parse_module_type, Tmty_ident *)
+    | Mty_ident _(*path*) -> (* TODO: parse_module_type, Tmty_ident *)
       []
     | Mty_signature signature ->
       let modlid = match parent_longid with x :: _ -> x | _ -> "" in
       let symbols = read' (signature, filename, modlid) in
       let symbols = List.map (fun it -> {it with sy_id = parent_longid @ (List.tl it.sy_id)}) symbols in
       symbols
-    | Mty_functor (ident, md, mc) -> read_module_type filename parent_longid mc
+    | Mty_functor (_(*ident*), _(*md*), mc) -> read_module_type ~filename ~parent_longid mc
 
   and read' (sign, filename, modlid) =
     let buf = Buffer.create 1024 in
@@ -209,7 +208,7 @@ module Signature = struct
               (print kind id (Printtyp.type_declaration id formatter) type_declaration) :: acc
             | Some te ->
               begin match te.desc with
-                | Tobject (te, me) -> acc (* Niente definizione dei tipi oggetto *)
+                | Tobject _(*(te, me)*) -> acc (* Niente definizione dei tipi oggetto *)
                 | _ ->
                   let kind = kind_of_typekind type_declaration.type_kind in
                   (print kind id (Printtyp.type_declaration id formatter) type_declaration) :: acc
@@ -267,7 +266,7 @@ module Signature = struct
             ~filename ~parent_id:class_item.sy_id ~id class_declaration in
           class_item :: class_items @ acc;
         end
-      | Sig_class_type (id, cltype_declaration, _) -> acc
+      | Sig_class_type _(*(id, cltype_declaration, _)*) -> acc
     end [] sign
   ;;
 
@@ -382,7 +381,7 @@ module Cache = struct
       | _ -> false;;
 
   let save ~project =
-    let filename = create_filename project in
+    let filename = create_filename ~project in
     let chan = open_out_bin filename in
     let finally () = close_out chan in
     try
@@ -395,7 +394,7 @@ module Cache = struct
     end;;
 
   let load ~project =
-    let filename = create_filename project in
+    let filename = create_filename ~project in
     if Sys.file_exists filename then begin
       let chan = open_in_bin filename in
       let finally () = close_in chan in
@@ -422,8 +421,8 @@ let find_parent (cache : symbol_cache) ?(update_cache=false) symbol =
   try Some (List.find (fun s -> s.sy_id = parent) s_table) with Not_found -> None;;
 
 (* find_local_defs *)
-let find_local_defs ~regexp ~(project : Project_type.t) ~filename ~offset =
-  match Annotation.find ~project ~filename () with
+let find_local_defs ~regexp (*~(project : Project_type.t)*) ~filename ~offset =
+  match Annotation.find ~filename () with
     | None -> []
     | Some an ->
       let blocks = an.Oe.annot_blocks in
@@ -520,8 +519,8 @@ let filter_by_name
   in
   let result =
     match include_locals with
-      | Some (project, filename, offset) ->
-        let locals = find_local_defs ~regexp ~project ~filename ~offset in
+      | Some (_(*project*), filename, offset) ->
+        let locals = find_local_defs ~regexp (*~project*) ~filename ~offset in
         locals @ result
       | _ -> result
   in

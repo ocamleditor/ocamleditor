@@ -25,7 +25,6 @@ open Printf
 open GdkKeysyms
 open Oe
 open Miscellanea
-open Mbrowser_tool
 open Mbrowser_slist
 
 type compl =
@@ -152,7 +151,7 @@ object (self)
     let iter = ins#backward_find_char (fun x -> Glib.Utf8.from_unichar x = "#") in
     let prefix = page#buffer#get_text ~start:iter#forward_char ~stop:ins () in
     let offset = iter#backward_char#offset in
-    let annot = Annotation.find_block_at_offset ~project ~filename ~offset in
+    let annot = Annotation.find_block_at_offset ~filename ~offset in
     let class_type =
       match annot with
         | None -> (* try to lookup obj_name in the ident. table *)
@@ -189,7 +188,7 @@ object (self)
       ~(symbol_list : symbol_list)
       ~longid
       ~path =
-    let paths_opened = Lex.paths_opened (page#buffer#get_text ()) in
+    (*let paths_opened = Lex.paths_opened (page#buffer#get_text ()) in*)
     let row = symbol_list#model#get_iter path in
     let symbol = symbol_list#model#get ~row ~column:col_symbol_data in
     let id = if longid then Symbol.concat_value_path symbol else symbol_list#model#get ~row ~column:col_search in
@@ -215,7 +214,7 @@ object (self)
     let start = backward_to_id_start (if longid then re_longid else re_id) in
     let stop = forward_to_id_stop (if longid then re_longid else re_id) in
     page#buffer#select_range start stop;
-    page#buffer#delete_selection ();
+    ignore (page#buffer#delete_selection ());
     let start = page#buffer#get_iter `INSERT in
     page#buffer#insert ~iter:start id;
     (*page#buffer#select_range start (start#backward_chars (Glib.Utf8.length id));*)
@@ -331,7 +330,7 @@ object (self)
         end;
       end);
       (** row_activated *)
-      ignore (symbol_list#view#connect#row_activated ~callback:begin fun path _ ->
+      ignore (symbol_list#view#connect#row_activated ~callback:begin fun _ _ ->
         self#activate_row ~symbol_list ();
       end);
       (** selection changed *)
@@ -392,7 +391,7 @@ object (self)
         let x, y = match xy with Some (x, y) -> x, y | _ -> 0,0 in
         let window = Gtk_util.window self#coerce ~x ~y ~focus:true ~escape:false ~show:(xy <> None) () in
         current_window <- Some window;
-        ignore (window#event#connect#focus_out ~callback:begin fun ev ->
+        ignore (window#event#connect#focus_out ~callback:begin fun _ ->
           self#hide();
           true (* Prevent the event to be propagated to the Gtk_util.window
                   focus_out handler, which destroys the window. *)
@@ -480,9 +479,9 @@ end
 let cache : (string * (GWindow.window * completion)) list ref = ref [];;
 
 let create ~project ?(page : Editor_page.page option) () =
-  let compl =
+  let _ =
     try
-      let window, compl = List.assoc (Project.filename project) !cache in
+      let _, compl = List.assoc (Project.filename project) !cache in
       ignore (compl#present ?page ());
       compl
     with Not_found -> begin

@@ -21,7 +21,6 @@
 *)
 
 open Printf
-open Miscellanea
 
 type hover = Out | Mark of (int * int * bool) | Region
 type tag_table_kind = Hidden | Readonly
@@ -54,7 +53,7 @@ class manager ~(view : Text.view) =
   let min_length = 3 in
   let buffer = view#buffer in
   let font = Gaux.may_map !Oe_config.code_folding_font ~f:Gdk.Font.load_fontset in
-  let code_folding_scope_color = Oe_config.code_folding_scope_color in
+  (*let code_folding_scope_color = Oe_config.code_folding_scope_color in*)
   let code_folding_fold_line_color = `COLOR (Preferences.tag_color "lident") in
   let set_highlight_background tag = Gmisclib.Util.set_tag_paragraph_background tag in
 object (self)
@@ -130,7 +129,7 @@ object (self)
     end
 
   method is_folded (i1 : GText.iter) =
-    match List_opt.find (fun {tag=t} -> i1#has_tag t) table_tag_hidden with
+    match List_opt.find (fun {tag=t; _} -> i1#has_tag t) table_tag_hidden with
       | Some entry -> Some entry.nlines
       | _ -> None
 
@@ -145,7 +144,7 @@ object (self)
           ms
         with Not_found -> (raise Exit)
       in
-      let unmatched, (yb1, yb2, _, _, _), _ = List.find begin fun (unmatched, (_, _, yv1, yv2, h1), _) ->
+      let unmatched, (yb1, yb2, _, _, _), _ = List.find begin fun (_(*unmatched*), (_, _, yv1, _(*yv2*), h1), _) ->
         yv1 <= y && y <= yv1 + h1
       end !ms in
       Mark (yb1, yb2, unmatched)
@@ -284,7 +283,7 @@ object (self)
             end;*)
             (* Markers *)
             let xm = xm - 1 in
-            List.iter begin fun (unmatched, _, (is_collapsed, ym1, ym2, h1, h2)) ->
+            List.iter begin fun (unmatched, _, (is_collapsed, ym1, ym2, _(*h1*), _(*h2*))) ->
               drawable#set_line_attributes ~width:(if unmatched then 1 else 2) ();
               if is_collapsed then begin
                 let xm = xm - 2 in
@@ -312,7 +311,7 @@ object (self)
     let stop = stop#set_line_index 0 in
     while not (!iter#equal stop) do
       begin
-        match List_opt.find (fun {tag=t} -> !iter#has_tag t) table_tag_hidden with
+        match List_opt.find (fun {tag=t; _} -> !iter#has_tag t) table_tag_hidden with
           | Some entry -> entry.tag#set_properties [`INVISIBLE fold; `INVISIBLE_SET fold]
           | _ -> ()
       end;
@@ -354,7 +353,7 @@ object (self)
           Gmisclib.Idle.add view#draw_gutter;
           Gaux.may view#signal_expose ~f:(fun id -> view#misc#handler_unblock id);
           toggled#call (true, start, stop);
-        | Some {mark_start_fold=m1; mark_stop_fold=m2; tag=tag} ->
+        | Some {mark_start_fold=m1; mark_stop_fold=m2; tag=tag; _} ->
           self#range ~fold:true start stop;
           let iter = ref start in
           let n = stop#line - start#line in
@@ -363,7 +362,7 @@ object (self)
           Gaux.may signal_expose ~f:(fun id -> view#misc#handler_block id);
           begin
             match self#remove_tag_from_table Readonly start with
-              | Some {tag=tag_ro} ->
+              | Some {tag=tag_ro; _} ->
                 buffer#remove_tag tag_ro ~start:start_of_line_folding_point ~stop;
               | _ -> assert false
           end;
@@ -397,7 +396,7 @@ object (self)
           toggled#call (false, start, stop);
     end;
 
-  method private fold (window : Gdk.window) x y =
+  method private fold (_ : Gdk.window) x y =
     try
       begin
         match self#is_hover x y with
@@ -426,7 +425,7 @@ object (self)
   method private remove_tag_from_table which_table iter =
     let tag_table = match which_table with Hidden -> table_tag_hidden | Readonly -> table_tag_readonly in
     let res, tab =
-      List.fold_left begin fun (res, acc) ({tag=t} as entry) ->
+      List.fold_left begin fun (res, acc) ({tag=t; _} as entry) ->
         if res = None && iter#has_tag t then (Some entry, acc) else (res, entry :: acc)
       end (None, []) tag_table
     in
@@ -449,8 +448,8 @@ object (self)
 
   method expand (iter : GText.iter) =
     let tags_owned_by_iter ~which_table =
-      let tags = List.filter (fun {tag=tag} -> iter#has_tag tag) which_table in
-      List.sort begin fun {mark_start_fold=ma} {mark_start_fold=mb} ->
+      let tags = List.filter (fun {tag=tag; _} -> iter#has_tag tag) which_table in
+      List.sort begin fun {mark_start_fold=ma; _} {mark_start_fold=mb; _} ->
         let ia = buffer#get_iter_at_mark ma in
         let ib = buffer#get_iter_at_mark mb in
         ia#compare ib
@@ -458,7 +457,7 @@ object (self)
     in
     (*  *)
     let tags = tags_owned_by_iter ~which_table:table_tag_readonly in
-    List.iter begin fun {mark_start_fold=m1; mark_stop_fold=m2; tag=tag} ->
+    List.iter begin fun {mark_start_fold=m1; mark_stop_fold=m2; tag=tag; _} ->
       let start = buffer#get_iter_at_mark m1 in
       let stop = buffer#get_iter_at_mark m2 in
       buffer#remove_tag tag ~start:(start#set_line_index 0) ~stop;
@@ -466,7 +465,7 @@ object (self)
     end tags;
     (*  *)
     let tags = tags_owned_by_iter ~which_table:table_tag_hidden in
-    List.iter begin fun {mark_start_fold=m1; mark_stop_fold=m2; tag=tag} ->
+    List.iter begin fun {mark_start_fold=m1; mark_stop_fold=m2; tag=tag; _} ->
       let start = buffer#get_iter_at_mark m1 in
       let stop = buffer#get_iter_at_mark m2 in
       buffer#remove_tag tag ~start ~stop;
@@ -479,12 +478,12 @@ object (self)
 
   method expand_all () =
 
-    List.iter begin fun {mark_start_fold=m1; mark_stop_fold=m2; tag=tag} ->
+    List.iter begin fun {mark_start_fold=m1; mark_stop_fold=m2; tag=tag; _} ->
       let start = buffer#get_iter_at_mark m1 in
       let stop = buffer#get_iter_at_mark m2 in
       buffer#remove_tag tag ~start ~stop;
     end table_tag_hidden;
-    List.iter begin fun {mark_start_fold=m1; mark_stop_fold=m2; tag=tag} ->
+    List.iter begin fun {mark_start_fold=m1; mark_stop_fold=m2; tag=tag; _} ->
       let start = buffer#get_iter_at_mark m1 in
       let stop = buffer#get_iter_at_mark m2 in
       buffer#remove_tag tag ~start:(start#set_line_index 0) ~stop;
@@ -556,7 +555,7 @@ object (self)
     end;
 
   method private init () =
-    signal_expose <- Some (view#event#connect#after#expose ~callback:begin fun ev ->
+    signal_expose <- Some (view#event#connect#after#expose ~callback:begin fun _ ->
       if enabled then (self#draw_markers ());
       false
     end);
@@ -596,7 +595,7 @@ and code_folding_list_signals ~toggled = object
   method toggled = toggled#connect ~after
 end
 
-and toggled () = object (self) inherit [bool * GText.iter * GText.iter] GUtil.signal () as super end
+and toggled () = object inherit [bool * GText.iter * GText.iter] GUtil.signal () end
 
 
 

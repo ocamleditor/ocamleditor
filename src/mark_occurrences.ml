@@ -49,7 +49,7 @@ object (self)
   method mark () =
     self#clear();
     match view#mark_occurrences with
-      | true, color ->
+      | true, _ ->
         let text = trim (buffer#selection_text ()) in
         if String.length text > 1 && not (String.contains text '\n') && not (String.contains text '\r') then begin
           (*let vrect = view#visible_rect in
@@ -83,5 +83,5 @@ and signals ~mark_set = object
   method mark_set = mark_set#connect ~after
 end
 
-and mark_set () = object (self) inherit [unit] GUtil.signal () as super end
+and mark_set () = object inherit [unit] GUtil.signal () end
 

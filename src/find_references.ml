@@ -1,6 +1,5 @@
 open Printf
 open GUtil
-open Annotation
 open Definition
 open Miscellanea
 
@@ -44,7 +43,7 @@ class widget ~editor ?packing () =
   let markup line = "<tt>" ^ (Glib.Markup.escape_text (Miscellanea.trim line)) ^ "</tt>" in
   (** Destroy marks in buffers *)
   let destroy_marks () =
-    model#foreach begin fun path row ->
+    model#foreach begin fun _ row ->
       begin
         match model#get ~row ~column:col_result with
           | Some result ->
@@ -111,12 +110,12 @@ class widget ~editor ?packing () =
     with Failure "hd" -> ()
   in
   let _ =
-    view#append_column vc_text;
+    ignore (view#append_column vc_text);
     view#misc#set_property "enable-tree-lines" (`BOOL true);
     view#selection#set_mode `SINGLE;
-    view#selection#connect#after#changed ~callback:(fun () -> selection_changed ~grab_focus:false ());
+    ignore (view#selection#connect#after#changed ~callback:(fun () -> selection_changed ~grab_focus:false ()));
     (** Row activated *)
-    view#connect#row_activated ~callback:begin fun path _ ->
+    ignore (view#connect#row_activated ~callback:begin fun path _ ->
       view#expand_row path;
       begin
         match model#get ~row:(model#get_iter path) ~column:col_result with
@@ -126,7 +125,7 @@ class widget ~editor ?packing () =
           | Some _ -> ()
       end;
       if view#misc#get_flag `HAS_FOCUS then (selection_changed ~grab_focus:true()) else (view#misc#grab_focus ());
-    end;
+    end);
     (** Paint roots background with a different color *)
     vc_text#set_cell_data_func renderer begin fun model row ->
       let path = model#get_path row in
@@ -151,7 +150,7 @@ object (self)
 
   initializer
     signalid_row_expanded <-
-      Some (view#connect#after#row_expanded ~callback:begin fun row path ->
+      Some (view#connect#after#row_expanded ~callback:begin fun _ path ->
         let area = view#get_cell_area ~path () in
         let y = view#vadjustment#value +. float (Gdk.Rectangle.y area) in
         Gmisclib.Idle.add ~prio:600 (fun () ->
@@ -189,7 +188,7 @@ object (self)
   method private append_row_file ~parent ~filename ~page ~goto ~references =
     let row = model#append ~parent () in
     model#set ~row ~column:col_text (Filename.basename filename);
-    List.iter begin fun (name, ((a, _) as rstart), rstop) ->
+    List.iter begin fun (_, ((a, _) as rstart), rstop) ->
       let line = Miscellanea.get_line_from_file ~filename a in
       self#append_row_line ~parent:row ~page ~goto ~filename ~line ~start:rstart ~stop:rstop;
     end references;
@@ -213,7 +212,7 @@ object (self)
               | None -> ()
               | Some result ->
                 (** Definition *)
-                let name, ((a, b) as rstart), ((c, d) as rstop) = result.ref_def in
+                let name, ((a, _) as rstart), (_ as rstop) = result.ref_def in
                 self#set_root_text ~root ~filename ~name;
                 let def_node, usages_node = self#append_row_definition ~root ~filename in
                 usages := usages_node;
@@ -241,7 +240,7 @@ object (self)
               | Some result ->
                 let iter_of_linechar = iter_of_linechar page in
                 (** Definition *)
-                let name, ((a, b) as rstart), ((c, d) as rstop) = result.ref_def in
+                let name, ((a, _) as rstart), (_ as rstop) = result.ref_def in
                 self#set_root_text ~root ~filename ~name;
                 let def_node, usages_node = self#append_row_definition ~root ~filename in
                 usages := usages_node;
@@ -276,10 +275,10 @@ object (self)
     method connect = new signals ~search_started ~search_finished
 end
 
-and search_started () = object (self) inherit [unit] signal () as super end
-and search_finished () = object (self) inherit [unit] signal () as super end
+and search_started () = object inherit [unit] signal () end
+and search_finished () = object inherit [unit] signal () end
 and signals ~search_started ~search_finished =
-object (self)
+object 
   inherit ml_signals [search_started#disconnect; search_finished#disconnect]
   method search_started = search_started#connect ~after
   method search_finished = search_finished#connect ~after

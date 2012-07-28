@@ -7,7 +7,7 @@
   <name>ocamleditor</name>
   <author>Francesco Tovagliari</author>
   <description/>
-  <version>1.7.5</version>
+  <version>1.8.0</version>
   <autocomp enabled="true" delay="1.01" cflags=""/>
   <runtime>
     <configuration name="ocamleditor" default="true" id_build="0" id="0">
@@ -30,7 +30,7 @@
       <default>false</default>
       <byt>true</byt>
       <opt>true</opt>
-      <libs>threads</libs>
+      <libs></libs>
       <other_objects></other_objects>
       <files>common/common.ml</files>
       <includes>common</includes>
@@ -135,7 +135,7 @@
       <default>false</default>
       <byt>true</byt>
       <opt>true</opt>
-      <libs>unix str lablgtk</libs>
+      <libs></libs>
       <other_objects></other_objects>
       <files>gmisclib/gmisclib.ml</files>
       <includes>+lablgtk2 gmisclib</includes>
@@ -184,8 +184,8 @@
       <thread>true</thread>
       <vmthread>false</vmthread>
       <pp></pp>
-      <cflags>-w syxm-31 -g</cflags>
-      <lflags>-linkall -g -w -31</lflags>
+      <cflags>-w syxm -g</cflags>
+      <lflags>-linkall -g</lflags>
       <outkind>Executable</outkind>
       <outname>ocamleditor</outname>
       <lib_install_path></lib_install_path>

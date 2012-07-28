@@ -128,7 +128,7 @@ class page ?file ~project ~scroll_offset ~offset ~editor () =
     location_goto Location_history.goto_last_edit_location
   end in
   (** Font size *)
-  let _                        = button_font_incr#event#connect#button_press ~callback:begin fun ev ->
+  let _                        = button_font_incr#event#connect#button_press ~callback:begin fun _ ->
     let fd                       = text_view#misc#pango_context#font_description in
     let size                     = Pango.Font.get_size fd + Pango.scale in
     Pango.Font.modify fd ~size ();
@@ -137,7 +137,7 @@ class page ?file ~project ~scroll_offset ~offset ~editor () =
     Gmisclib.Idle.add text_view#draw_gutter;
     true
   end in
-  let _                        = button_font_decr#event#connect#button_press ~callback:begin fun ev ->
+  let _                        = button_font_decr#event#connect#button_press ~callback:begin fun _ ->
     let fd                       = text_view#misc#pango_context#font_description in
     let size                     = Pango.Font.get_size fd in
     if size - Pango.scale >= (7 * Pango.scale) then begin
@@ -150,13 +150,13 @@ class page ?file ~project ~scroll_offset ~offset ~editor () =
     true;
   end in
   (** Row spacing *)
-  let _                        = button_rowspacing_incr#event#connect#button_press ~callback:begin fun ev ->
+  let _                        = button_rowspacing_incr#event#connect#button_press ~callback:begin fun _ ->
     text_view#set_pixels_above_lines (min 2 (text_view#pixels_above_lines + 1));
     text_view#set_pixels_below_lines (min 2 (text_view#pixels_below_lines + 1));
     Gmisclib.Idle.add text_view#draw_gutter;
     true
   end in
-  let _                        = button_rowspacing_decr#event#connect#button_press ~callback:begin fun ev ->
+  let _                        = button_rowspacing_decr#event#connect#button_press ~callback:begin fun _ ->
     text_view#set_pixels_above_lines (max 0 (text_view#pixels_above_lines - 1));
     text_view#set_pixels_below_lines (max 0 (text_view#pixels_below_lines - 1));
     Gmisclib.Idle.add text_view#draw_gutter;
@@ -433,7 +433,7 @@ object (self)
       self#set_outline None;
     end
 
-  method tooltip ?(typ=false) ((x, y) as location) =
+  method tooltip ?(typ=false) ((*(x, y) as*) location) =
     let location = `XY location in
     if typ then (self#annot_type#tooltip location);
     if Preferences.preferences#get.Preferences.pref_err_tooltip
@@ -475,11 +475,11 @@ object (self)
       false
     end);
     (** Clean up type annotation tag *)
-    text_view#event#connect#scroll ~callback:(fun _ -> annot_type#remove_tag(); error_indication#hide_tooltip(); false);
-    text_view#event#connect#leave_notify ~callback:(fun _ -> annot_type#remove_tag(); error_indication#hide_tooltip(); false);
-    text_view#event#connect#focus_out ~callback:(fun _ -> annot_type#remove_tag(); error_indication#hide_tooltip(); false);
+    ignore (text_view#event#connect#scroll ~callback:(fun _ -> annot_type#remove_tag(); error_indication#hide_tooltip(); false));
+    ignore (text_view#event#connect#leave_notify ~callback:(fun _ -> annot_type#remove_tag(); error_indication#hide_tooltip(); false));
+    ignore (text_view#event#connect#focus_out ~callback:(fun _ -> annot_type#remove_tag(); error_indication#hide_tooltip(); false));
     (** Horizontal scrollbar appears/disappears according to the window size *)
-    ignore (sw#misc#connect#size_allocate ~callback:begin fun x ->
+    ignore (sw#misc#connect#size_allocate ~callback:begin fun _ ->
       let alloc = sw#misc#allocation in
       if not resized then (spaned#set_position ((alloc.Gtk.width) * 6 / 10));
       if hscrollbar#adjustment#page_size = hscrollbar#adjustment#upper
@@ -516,7 +516,7 @@ object (self)
     ignore (Activity.table#connect#changed ~callback:activate_spinner);
     activate_spinner Activity.table#get;
     (** Code folding *)
-    ignore (ocaml_view#code_folding#connect#toggled ~callback:begin fun (expand, _, _) ->
+    ignore (ocaml_view#code_folding#connect#toggled ~callback:begin fun _(*(expand, _, _)*) ->
       error_indication#paint_global_gutter()
     end);
     (** Mark occurrences *)
@@ -552,7 +552,7 @@ object (self)
                     | _ ->
                       let num = Project.get_actual_maximum_bookmark project in
                       let num = if num >= Bookmark.limit then num + 1 else Bookmark.limit in
-                      let callback (mark : Gtk.text_mark) =
+                      let callback (_ : Gtk.text_mark) =
                         editor#bookmark_remove ~num;
                         GtkBase.Widget.queue_draw text_view#as_widget;
                         true
@@ -595,10 +595,10 @@ object (self)
 end
 
 (** Signals *)
-and file_changed () = object (self) inherit [File.file option] signal () as super end
+and file_changed () = object inherit [File.file option] signal () end
 
 and signals ~file_changed =
-object (self)
+object
   inherit ml_signals [file_changed#disconnect]
   method file_changed = file_changed#connect ~after
 end

@@ -173,7 +173,6 @@ struct
         if c <> "\n" then insert_newline ~buffer;
         buffer#insert ~tags:[!!`SMALL] "\n";
         let i = ref 0 in
-        let last = List.length elems - 1 in
         List.iter begin fun text ->
           Gtk_util.with_tag !!`LI ~buffer begin fun () ->
             buffer#insert "• ";
@@ -206,13 +205,13 @@ struct
         insert_newline ~buffer;
         insert_text buffer text ftag;
         insert_newline ~buffer;
-      | Title (n, opt_label, text) ->
+      | Title (n, _(*opt_label*), text) ->
         if not !pending_newline then (insert_newline ~buffer; pending_newline := false);
         Gtk_util.with_tag !!(`TITLE n) ~buffer (fun () -> insert_text buffer text ftag);
         insert_newline ~buffer;
       | Latex text ->
         buffer#insert text;
-      | Link (refer, text) ->
+      | Link (_(*refer*), text) ->
         Gtk_util.with_tag !!`TT ~buffer begin fun () ->
           insert_text ~f buffer text ftag;
         end
@@ -232,7 +231,7 @@ struct
         end mlist
       | Index_list ->
           buffer#insert "Index List";
-      | Custom (string, text) ->
+      | Custom (_(*string*), text) ->
         insert_text buffer text ftag;
   ;;
 

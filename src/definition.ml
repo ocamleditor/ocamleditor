@@ -57,7 +57,7 @@ let find_ext_ref ~(project : Project_type.t) ~src_path from =
   List.iter begin fun filename ->
     let current_file_refs = ref [] in
     begin
-      match find ~project ~filename () with
+      match find ~filename () with
         | None -> ()
         | Some annots ->
           List.iter begin fun block ->
@@ -76,7 +76,7 @@ let find_ext_ref ~(project : Project_type.t) ~src_path from =
 
 (** find_references *)
 let find_references ?src_path ~(project : Project_type.t) ~filename ~offset (* offset of a definition (def) or let...in *) () =
-  match Annotation.find ~project ~filename () with
+  match Annotation.find ~filename () with
     | None -> None
     | Some annots ->
       begin
@@ -162,7 +162,7 @@ let find_definition ~(project : Project_type.t) ~page  ~(iter : GText.iter) =
               let nested = List.length lident > 2 in
               let ident = List.hd (List.rev lident) in
               begin
-                match Annotation.find ~project ~filename () with
+                match Annotation.find ~filename () with
                   | None -> None
                   | Some annot ->
                     let defs = find_def ~annot ~name:ident in
@@ -188,7 +188,7 @@ let find_definition ~(project : Project_type.t) ~page  ~(iter : GText.iter) =
                      Some (block_start, block_stop, page#get_filename, block_start, block_stop)
                    | _ -> None
                 end;
-              | Some (_, start, stop) ->
+              | _ ->
                 Some (block_start, block_stop, page#get_filename, block_start, block_stop)
           end
       end;;

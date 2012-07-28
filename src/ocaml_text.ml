@@ -20,12 +20,8 @@
 
 *)
 
-open Str
-open GdkKeysyms
 open Parser
 open Miscellanea
-open Printf
-
 
 let shells = ref []
 
@@ -167,14 +163,14 @@ object (self)
         if self#has_selection then begin
           let selection = self#selection_text () in
           let start, stop = self#selection_bounds in
-          let start, stop = if start#compare stop > 0 then stop, start else start, stop in
+          let start, _ = if start#compare stop > 0 then stop, start else start, stop in
           if String.contains selection '_' || String.contains selection '.' then begin
             let parts = Miscellanea.split "[_.]" selection in
             let start = ref start in
             select_word_state <- List.map begin fun p ->
               match !start#forward_search p with
                 | None -> assert false
-                | Some ((a, b) as bounds) ->
+                | Some ((_, b) as bounds) ->
                   start := b;
                   bounds
             end parts;
@@ -191,7 +187,7 @@ object (self)
               select_word_state <- tl;
               hd
             | _ ->
-              self#place_cursor start;
+              self#place_cursor ~where:start;
               (*let bounds = self#select_ocaml_word ~pat:Ocaml_word_bound.regexp () in*)
               let bounds = self#select_ocaml_word ~pat:Ocaml_word_bound.longid_sharp () in
               select_word_state_init <- None;
@@ -227,7 +223,7 @@ object (self)
                 begin
                   match project.Project_type.in_source_path file#path with
                     | Some _ ->
-                      Annotation.find_block_at_offset ~project ~filename:file#path ~offset:iter#offset
+                      Annotation.find_block_at_offset ~filename:file#path ~offset:iter#offset
                         (*~offset:(Glib.Utf8.offset_to_pos (self#get_text ()) ~pos:0 ~off:iter#offset)*)
                     | _ -> None
                 end;

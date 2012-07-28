@@ -20,9 +20,7 @@
 
 *)
 
-open GdkKeysyms
 open Printf
-open Miscellanea
 open Text_util
 
 (** Buffer *)
@@ -310,7 +308,7 @@ object (self)
     ignore (self#scroll_to_iter it);
     self#place_cursor_onscreen();
 
-  method goto () = Dialog_goto.show self ()
+  method goto () = Dialog_goto.show ~view:self ()
 
   method private matching_delim_apply_tag (text : string) (offset : int) = (*(None : (int * int * int * int) option)*)
     match Delimiters.find_match ~utf8:false text offset with
@@ -624,7 +622,7 @@ object (self)
             begin
               if self#misc#get_flag `HAS_FOCUS && Oe_config.current_line_border_enabled then begin
                 match highlight_current_line with
-                  | Some color ->
+                  | Some _ ->
                     let iter = buffer#get_iter `INSERT in
                     let y, h = view#get_line_yrange iter in
                     let y = y - y0 in
@@ -720,7 +718,7 @@ object (self)
             end;
             (* ocamldoc_paragraph_bgcolor_enabled *)
             if Oe_config.ocamldoc_paragraph_border_enabled
-            then (self#draw_paragraph_border drawable start stop y0 h0 w0);
+            then (self#draw_paragraph_border drawable start stop y0 w0);
             (* Special bookmarks *)
             let iter = ref (expose_top#set_line_index 0) in
             begin
@@ -808,7 +806,7 @@ object (self)
       Printf.eprintf "File \"text.ml\": %s\n%s\n%!" (Printexc.to_string ex) (Printexc.get_backtrace());
       false
 
-  method private draw_paragraph_border drawable start stop y0 h0 w0 =
+  method private draw_paragraph_border drawable start stop y0 w0 =
     match buffer#tag_ocamldoc_paragraph with
       | Some tag ->
         begin

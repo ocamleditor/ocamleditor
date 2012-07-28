@@ -261,11 +261,11 @@ object (self)
             view#buffer#insert ~iter:(self#buffer#get_iter `END) ~tag_names:["error"; tag_location_name] (line ^ "\n");
           end else begin
             let _pt = match !pending with None -> []
-              | Some (pl, pt) ->
+              | Some (_(*pl*), pt) ->
                 let start = (self#buffer#get_iter `END)#backward_line in
                 view#buffer#apply_tag_by_name tag ~start ~stop:(self#buffer#get_iter `END);
                 if not !first_error_line && tag = "error" then begin
-                  view#buffer#create_mark ~name:"first_error_line" start;
+                  ignore (view#buffer#create_mark ~name:"first_error_line" start);
                   first_error_line := true;
                 end;
                 (*pending := None;*)
@@ -340,18 +340,20 @@ object (self)
               let buf = (page#buffer :> Text.buffer) in
               let lines = buf#line_count in
               if linenum < lines - 1 then begin
-                let it = buf#get_iter (`LINE (linenum - 1)) in
-                let it = it#set_line_index 0 in
-                let line = it#get_text ~stop:it#forward_to_line_end in
-                let c = Convert.offset_from_pos line ~pos:start in
-                let where = it#forward_chars c in
-                let len = Convert.offset_from_pos (buf#get_text ~start:it ~stop:buf#end_iter ()) ~pos:len in
-                buf#select_range where (it#forward_chars len);
-                if (buf#get_iter `INSERT)#compare (buf#get_iter `SEL_BOUND) = 0 then (ignore(buf#select_word()));
-                ignore (page#view#scroll_lazy where);
-                page#view#misc#grab_focus();
+                Gmisclib.Idle.add begin fun () ->
+                  let it = buf#get_iter (`LINE (linenum - 1)) in
+                  let it = it#set_line_index 0 in
+                  let line = it#get_text ~stop:it#forward_to_line_end in
+                  let c = Convert.offset_from_pos line ~pos:start in
+                  let where = it#forward_chars c in
+                  let len = Convert.offset_from_pos (buf#get_text ~start:it ~stop:buf#end_iter ()) ~pos:len in
+                  buf#select_range where (it#forward_chars len);
+                  if (buf#get_iter `INSERT)#compare (buf#get_iter `SEL_BOUND) = 0 then (ignore(buf#select_word()));
+                  ignore (page#view#scroll_lazy where);
+                  page#view#misc#grab_focus();
+                end;
                 true
-          end else false;
+             end else false;
         end else false;
       end else false
     end in
@@ -366,8 +368,8 @@ object (self)
       List.iter begin fun t ->
         try
           let _ = List.assoc t#get_oid tag_locations in
-          let start = iter#backward_to_tag_toggle (Some t) in
-          let stop = iter#forward_to_tag_toggle (Some t) in
+          (*let start = iter#backward_to_tag_toggle (Some t) in
+          let stop = iter#forward_to_tag_toggle (Some t) in*)
           t#set_properties [`UNDERLINE `LOW];
           Gaux.may (view#get_window `TEXT) ~f:(fun w -> Gdk.Window.set_cursor w (Gdk.Cursor.create `HAND1));
         with Not_found -> () (* The cursor is not inside a tag_location *)
@@ -376,7 +378,7 @@ object (self)
     end in
     (*  *)
 (*    button_run#connect#clicked ~callback:(fun () -> ignore (self#run ()));*)
-    button_stop#connect#clicked ~callback:self#stop;
+    ignore (button_stop#connect#clicked ~callback:self#stop);
     view#misc#modify_font_by_name Preferences.preferences#get.Preferences.pref_output_font;
     view#misc#modify_base [`NORMAL, `NAME Preferences.preferences#get.Preferences.pref_output_bg];
     ignore (view#buffer#create_tag ~name:"input"
@@ -395,11 +397,11 @@ object (self)
   method connect = new signals ~working_status_changed
 end
 and signals ~working_status_changed =
-object (self)
+object
   inherit GUtil.ml_signals [working_status_changed#disconnect]
   method working_status_changed = working_status_changed#connect ~after
 end
-and working_status_changed () = object (self) inherit [bool] GUtil.signal () end
+and working_status_changed () = object inherit [bool] GUtil.signal () end
 
 let views : (string * (view * GObj.widget)) list ref = ref []
 
@@ -410,7 +412,7 @@ let create ~editor task_kind task =
     task.Task.et_cmd
     (String.concat " " (List.flatten (Xlist.filter_map (fun (e, v) -> if e then Some (Cmd_line_args.parse v) else None) task.Task.et_args))) in
   try
-    let (console, box) = List.assoc console_id !views in
+    let (console, _) = List.assoc console_id !views in
     console#set_task task;
     console
   with Not_found -> begin
@@ -439,7 +441,7 @@ let create ~editor task_kind task =
     ignore (page#connect#working_status_changed ~callback:begin fun active ->
       (match set_active_func with None -> page#active#set | Some f -> f) active
     end);
-    page#misc#connect#destroy ~callback:(fun () -> views := List.remove_assoc console_id !views);
+    ignore (page#misc#connect#destroy ~callback:(fun () -> views := List.remove_assoc console_id !views));
     views := (console_id, (page, page#vbox#coerce)) :: !views;
     page
   end
@@ -536,7 +538,7 @@ let exec ~editor ?use_thread task_kind bconf =
             ~dir:""
             ~cmd:oebuild
             ~args:(args @ ([true, "-no-build"; true, "-run"; true, "--"] @
-              ((*List.map Quote.arg*) (List.filter (fun (e, v) -> e) rc.Rconf.args)))) ();
+              ((*List.map Quote.arg*) (List.filter (fun (e, _) -> e) rc.Rconf.args)))) ();
         ] in
         let rec f () = ignore (exec_sync ~run_cb:f ~editor tasks) in
         f();

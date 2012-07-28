@@ -196,7 +196,7 @@ let create ~project ~(editor : Editor.editor) ?(buffer : GText.buffer option) ?w
     entry_find#entry#set_text text;
   end;
   entry_find#entry#misc#grab_focus();
-  if entry_pattern#entry#text = "" then (entry_pattern#entry#set_text "*.ml?");
+  if entry_pattern#entry#text = "" then (entry_pattern#entry#set_text "*.{ml,txt,mll,mly}");
   let callback () =
     let not_empty = String.length entry_find#entry#text > 0 in
     button_find#misc#set_sensitive not_empty;

@@ -63,7 +63,7 @@ let rec get_def = function
     end
 
 (** parse_file *)
-let parse_file ~project ~filename ~ts =
+let parse_file ~filename ~ts =
   Mutex.lock table_critical;
   let name = "Parsing " ^ (Filename.basename filename) ^ "..." in
   GtkThread2.async (Activity.add Activity.Annot) name;
@@ -108,7 +108,7 @@ let (!!) filename = (Filename.chop_extension filename) ^ ".annot"
 exception Expired of int
 
 (** find *)
-let find ~project ~filename () =
+let find ~filename () =
   if filename ^^ ".ml" then begin
     let fileannot = !! filename in
     try
@@ -124,7 +124,7 @@ let find ~project ~filename () =
               else if ca.Oe.annot_mtime < amtime then (raise Not_found)
               else (raise Not_found)
             with Not_found -> begin
-              parse_file ~project ~filename:fileannot ~ts:amtime;
+              parse_file ~filename:fileannot ~ts:amtime;
               Hashtbl.find table fileannot;
             end
           in
@@ -149,8 +149,8 @@ let find_block_at_offset' annot offset =
   end annot.Oe.annot_blocks;;
 
 (** find_block_at_offset *)
-let find_block_at_offset ~project ~filename ~offset =
-  match find ~project ~filename () with
+let find_block_at_offset ~filename ~offset =
+  match find ~filename () with
     | None -> None
     | Some annot -> find_block_at_offset' annot offset
 
@@ -164,7 +164,7 @@ let preload ~project =
       let src_path = Project.path_src project in
       let files = File.readdirs (*~links:false*) (Some (fun x -> x ^^ ".ml")) src_path in
       (*let files = List.filter (fun x -> x ^^ ".ml") files in*)
-      List.iter (fun filename -> ignore (find ~project ~filename ())) files;
+      List.iter (fun filename -> ignore (find ~filename ())) files;
       finally()
     with ex -> begin
       Printf.eprintf "File \"annotation.ml\": %s\n%s\n%!" (Printexc.to_string ex) (Printexc.get_backtrace());

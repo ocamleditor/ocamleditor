@@ -197,7 +197,7 @@ object (self)
     self#parse ();
     (** Events *)
     signal_selection_changed <- Some (view#selection#connect#after#changed ~callback:self#select_element);
-    ignore (view#connect#after#row_activated ~callback:begin fun path _ ->
+    ignore (view#connect#after#row_activated ~callback:begin fun _ _ ->
       self#select_element();
       page#view#misc#grab_focus();
     end);
@@ -211,10 +211,10 @@ object (self)
       try
         begin
           match GtkTree.TreeView.Tooltip.get_context view#as_tree_view ~x ~y ~kbd with
-            | (x, y, Some (model, path, row)) ->
+            | (x, y, Some (_, _, row)) ->
               begin
                 match view#get_path_at_pos ~x ~y with
-                  | Some (tpath, vc, _, _) ->
+                  | Some (tpath, _, _, _) ->
                     let col_id =
                       match current_model with
                         | Some model -> model#get ~row ~column:col_id
@@ -247,7 +247,7 @@ object (self)
           try
             let iter = buffer#get_iter_at_mark (`MARK mark) in
             let rr, _ =
-              List.find begin fun (rr, (m, _)) ->
+              List.find begin fun (_, (m, _)) ->
                 if true (*rr#valid*) then begin
                   let it = buffer#get_iter_at_mark (`MARK m) in
                   it#compare iter <= 0
@@ -288,7 +288,7 @@ object (self)
         begin
           try
             let col_id = match current_model with Some m -> m#get ~row:(m#get_iter path) ~column:col_id | _ -> assert false in
-            let rr, (mark, callback) = List.find (fun (rr, _) -> col_id = rr) locations in
+            let _, (mark, _) = List.find (fun (rr, _) -> col_id = rr) locations in
             let where = buffer#get_iter_at_mark (`MARK mark) in
             if select_range then begin
               let tag_table = new GText.tag_table page#buffer#tag_table in
@@ -401,7 +401,7 @@ object (self)
     (** Toolbar buttons *)
     ignore (button_show_types#connect#toggled ~callback:begin fun () ->
       Gaux.may current_model ~f:begin fun (model : GTree.tree_store) ->
-        model#foreach begin fun path row ->
+        model#foreach begin fun _ row ->
           let id = model#get ~row ~column:col_id in
           let markup =
             if button_show_types#active then
@@ -493,8 +493,8 @@ object (self)
     Hashtbl.add table_markup col_counter markup_type;
     if not button_show_types#active || typ = "" then markup_name else markup_type
 
-  method private set_location ~model loc rr =
-    let loc_filename, loc_pos =
+  method private set_location loc rr =
+    let _, loc_pos =
       (*match loc.Odoc_types.loc_impl with Some (a, b) -> a, b | _ -> "", 0*)
       match loc.Odoc_types.loc_impl with
         | Some loc ->
@@ -528,7 +528,7 @@ object (self)
         match me with
           | Module.Element_module elem ->
             GtkThread2.sync begin fun () ->
-              self#set_location ~model elem.Module.m_loc col_counter;
+              self#set_location elem.Module.m_loc col_counter;
               let name = get_relative elem.Module.m_name in
               model#set ~row ~column:col_name name;
               model#set ~row ~column:col_name_sort name;
@@ -538,7 +538,7 @@ object (self)
             end ()
           | Module.Element_module_type elem ->
             GtkThread2.sync begin fun () ->
-              self#set_location ~model elem.Module.mt_loc col_counter;
+              self#set_location elem.Module.mt_loc col_counter;
               let name = get_relative elem.Module.mt_name in
               model#set ~row ~column:col_name name;
               model#set ~row ~column:col_name_sort name;
@@ -550,7 +550,7 @@ object (self)
               model#set ~row ~column:col_name name;
               model#set ~row ~column:col_name_sort elem.Module.im_name;
               model#set ~row ~column:col_markup (self#markup ~name ~typ:"" ~kind:Module);
-              (*self#set_location ~model elem.Module.im_loc rr;*)
+              (*self#set_location elem.Module.im_loc rr;*)
             end ();
           | Module.Element_class elem ->
             GtkThread2.sync begin fun () ->
@@ -560,7 +560,7 @@ object (self)
               model#set ~row ~column:col_name name;
               model#set ~row ~column:col_name_sort name;
               model#set ~row ~column:col_markup (self#markup ~name ~typ:"" ~kind);
-              self#set_location ~model elem.Class.cl_loc col_counter;
+              self#set_location elem.Class.cl_loc col_counter;
             end ();
             (** Class_structure *)
             self#append_class ~model ~row modu elem;
@@ -571,7 +571,7 @@ object (self)
               model#set ~row ~column:col_name_sort name;
               model#set ~row ~column:col_icon (pixbuf_of_kind Class_type);
               model#set ~row ~column:col_markup (self#markup ~name ~typ:"" ~kind:Class_type);
-              self#set_location ~model elem.Class.clt_loc col_counter;
+              self#set_location elem.Class.clt_loc col_counter;
             end ()
           | Module.Element_value elem ->
             GtkThread2.sync begin fun () ->
@@ -584,7 +584,7 @@ object (self)
               model#set ~row ~column:col_type typ;
               model#set ~row ~column:col_markup (self#markup ~name ~typ ~kind);
               model#set ~row ~column:col_icon (pixbuf_of_kind kind);
-              self#set_location ~model elem.Value.val_loc col_counter;
+              self#set_location elem.Value.val_loc col_counter;
               tooltips <- (col_counter, typ) :: tooltips;
             end ();
           | Module.Element_exception elem ->
@@ -594,13 +594,13 @@ object (self)
               model#set ~row ~column:col_name_sort name;
               model#set ~row ~column:col_icon (pixbuf_of_kind Exception);
               model#set ~row ~column:col_markup (self#markup ~name ~typ:"" ~kind:Exception);
-              self#set_location ~model elem.Exception.ex_loc col_counter;
+              self#set_location elem.Exception.ex_loc col_counter;
             end ()
-          | Module.Element_type elem ->
+          | Module.Element_type _ ->
             GtkThread2.sync begin fun () ->
               ignore (model#remove row);
             end ()
-          | Module.Element_module_comment elem ->
+          | Module.Element_module_comment _ ->
             GtkThread2.sync begin fun () ->
               ignore (model#remove row);
             end ()
@@ -619,7 +619,7 @@ object (self)
             model#set ~row ~column:col_name_sort ("0" ^ name ^ "0");
             model#set ~row ~column:col_icon (pixbuf_of_kind Class_inherit);
             model#set ~row ~column:col_markup (self#markup ~name ~typ:"" ~kind:Class_inherit);
-            (*self#set_location ~model inher.Class.ic_loc rr;*)
+            (*self#set_location inher.Class.ic_loc rr;*)
           end ()
         end inherited;
         List.iter begin function
@@ -630,7 +630,7 @@ object (self)
               if father = elem.Class.cl_name then begin
                 let row = model#append ~parent:row () in
                 let name = Name.get_relative elem.Class.cl_name attr_name in
-                self#set_location ~model attr.Odoc_value.att_value.Odoc_value.val_loc col_counter;
+                self#set_location attr.Odoc_value.att_value.Odoc_value.val_loc col_counter;
                 Odoc_info.reset_type_names();
                 let typ = string_of_type_expr attr.Odoc_value.att_value.Odoc_value.val_type in
                 let kind =
@@ -669,10 +669,10 @@ object (self)
               model#set ~row ~column:col_type typ;
               model#set ~row ~column:col_markup (self#markup ~name ~typ ~kind);
               model#set ~row ~column:col_icon (pixbuf_of_kind kind);
-              self#set_location ~model met.Odoc_value.met_value.Odoc_value.val_loc col_counter;
+              self#set_location met.Odoc_value.met_value.Odoc_value.val_loc col_counter;
               tooltips <- (col_counter, typ) :: tooltips;
               end ()
-          | Class.Class_comment text -> ()
+          | Class.Class_comment _ -> ()
         end elems;
       | _ -> ()
 
@@ -688,7 +688,7 @@ object (self)
         let row, rr = GtkThread2.sync begin fun () ->
           let row = model#append ~parent:row_types () in
           let rr = col_counter in
-          self#set_location ~model elem.Type.ty_loc rr;
+          self#set_location elem.Type.ty_loc rr;
           row, rr
         end () in
         Odoc_info.reset_type_names();

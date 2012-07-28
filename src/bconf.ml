@@ -20,9 +20,6 @@
 
 *)
 
-open Printf
-open Miscellanea
-
 type t = {
   mutable id               : int;
   mutable name             : string;

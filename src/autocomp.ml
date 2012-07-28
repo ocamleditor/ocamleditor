@@ -66,8 +66,8 @@ let rec compile_buffer ~project ~editor ~page ?(commit=false) () =
         let includes = Project.get_includes project in
         let command = sprintf "%s %s %s -I ../%s %s ../%s/%s"
           project.Project_type.autocomp_compiler
-          project.Project_type.autocomp_cflags
           "-w +a"
+          project.Project_type.autocomp_cflags
           Project.tmp
           (let includes = String.concat " -I " includes in if includes = "" then "" else "-I " ^ includes)
           Project.tmp

@@ -189,8 +189,7 @@ let file ~browser ~group ~flags items =
 (** edit *)
 let edit ~browser ~group ~flags
     ~get_menu_item_undo
-    ~get_menu_item_redo
-    items =
+    ~get_menu_item_redo items =
   let editor = browser#editor in
   let edit = GMenu.menu_item ~label:"Edit" () in
   let menu = GMenu.menu ~packing:edit#set_submenu () in
@@ -622,7 +621,7 @@ let project ~browser ~group ~flags items =
   project_clean_current#set_image (Icons.create Icons.clear_build_16)#coerce;
   project_clean_current#add_accelerator ~group ~modi:[`CONTROL] GdkKeysyms._F9 ~flags;
   ignore (project_clean_current#connect#activate ~callback:begin fun () ->
-    browser#with_current_project (fun project ->
+    browser#with_current_project (fun _ ->
       browser#with_default_build_config (fun bconfig ->
         ignore (Bconf_console.exec ~editor `CLEAN bconfig)))
   end);
@@ -631,7 +630,7 @@ let project ~browser ~group ~flags items =
   project_compile_only#set_image (Icons.create Icons.compile_all_16)#coerce;
   project_compile_only#add_accelerator ~group ~modi:[`CONTROL] GdkKeysyms._F10 ~flags;
   ignore (project_compile_only#connect#activate ~callback:begin fun () ->
-    browser#with_current_project (fun project ->
+    browser#with_current_project (fun _ ->
       browser#with_default_build_config (fun bconfig ->
         if Oe_config.save_all_before_compiling then (browser#save_all());
         ignore (Bconf_console.exec ~editor `COMPILE_ONLY bconfig)))
@@ -640,7 +639,7 @@ let project ~browser ~group ~flags items =
   let project_build = GMenu.image_menu_item ~label:"Build" ~packing:menu#add () in
   project_build#set_image (Icons.create Icons.build_16)#coerce;
   ignore (project_build#connect#activate ~callback:begin fun () ->
-    browser#with_current_project (fun project ->
+    browser#with_current_project (fun _ ->
       browser#with_default_build_config (fun bconfig ->
         if Oe_config.save_all_before_compiling then (browser#save_all());
         ignore (Bconf_console.exec ~editor `COMPILE bconfig)))
@@ -844,7 +843,7 @@ let window ~browser ~group ~flags
   ignore (window_switch#connect#activate ~callback:editor#dialog_file_select);
   window_switch#add_accelerator ~group ~modi:[`CONTROL] GdkKeysyms._B ~flags;
   (*window_switch#misc#set_sensitive (List.length !items > 0);*)
-  let sep = GMenu.separator_item ~packing:menu#add () in
+  let _ = GMenu.separator_item ~packing:menu#add () in
   (** Navigation Backward *)
   let backward = GMenu.image_menu_item ~label:"Back" ~packing:menu#append () in
   let forward = GMenu.image_menu_item ~label:"Forward" ~packing:menu#append () in

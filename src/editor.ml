@@ -21,9 +21,7 @@
 *)
 
 open GUtil
-open Unix
 open Miscellanea
-open Project
 open Printf
 open Preferences
 
@@ -219,7 +217,7 @@ object (self)
                   (Some (Location_history.create_mark ~buffer:(view :> GText.view)#buffer ~offset));
                 page#buffer#get_iter (`OFFSET offset);
           in
-          view#buffer#place_cursor where;
+          view#buffer#place_cursor ~where;
           ignore (view#scroll_lazy where);
           view#misc#grab_focus();
     end
@@ -263,7 +261,7 @@ object (self)
           if not page#view#realized then (self#goto_view page#view);
           Gmisclib.Idle.add begin fun () ->
             ignore (Bookmark.apply bm begin function
-              | `OFFSET offset ->
+              | `OFFSET _ ->
                 let _ = Bookmark.offset_to_mark (page#buffer :> GText.buffer) bm in
                 self#bookmark_goto ~num;
                 -1
@@ -320,13 +318,13 @@ object (self)
           begin
             match page#buffer#get_annot iter with
               | None -> ()
-              | Some { Oe.annot_annotations = annot_annotations } ->
+              | Some { Oe.annot_annotations = annot_annotations; _ } ->
                 Gaux.may (Annotation.get_ext_ref annot_annotations) ~f:begin fun fullname ->
                   let ext_refs = Definition.find_ext_ref ~project ~src_path:(Project.path_src self#project) (`EXACT fullname) in
                   self#find_references' (`EXT (fullname, ext_refs, get_page, goto_page));
                 end
           end;
-        | Some (_, _, filename, start, stop) ->
+        | Some (_, _, filename, start, _) ->
           let def_source =
             match self#get_page (`FILENAME filename) with
               | None ->
@@ -514,33 +512,33 @@ object (self)
       let basename = Filename.basename filename in
       let item = GMenu.image_menu_item ~label:(sprintf "Close \xC2\xAB%s\xC2\xBB" basename) ~packing:menu#add () in
       item#set_image (GMisc.image ~stock:`CLOSE ~icon_size:`MENU ())#coerce;
-      item#connect#activate ~callback:(fun () -> ignore (self#dialog_confirm_close page));
+      ignore (item#connect#activate ~callback:(fun () -> ignore (self#dialog_confirm_close page)));
       let item = GMenu.image_menu_item ~label:(sprintf "Close All Except \xC2\xAB%s\xC2\xBB" basename) ~packing:menu#add () in
-      item#connect#activate ~callback:(fun () -> self#close_all ~except:page ());
+      ignore (item#connect#activate ~callback:(fun () -> self#close_all ~except:page ()));
       let item = GMenu.image_menu_item ~label:(sprintf "Revert \xC2\xAB%s\xC2\xBB" basename) ~packing:menu#add () in
       item#set_image (GMisc.image ~stock:`REVERT_TO_SAVED ~icon_size:`MENU ())#coerce;
-      item#connect#activate ~callback:(fun () -> self#revert page);
+      ignore (item#connect#activate ~callback:(fun () -> self#revert page));
       let _ = GMenu.separator_item ~packing:menu#add () in
       let item = GMenu.image_menu_item ~label:"Switch to Implementation/Interface" ~packing:menu#add () in
-      item#connect#activate ~callback:(fun () -> self#switch_mli_ml page);
+      ignore (item#connect#activate ~callback:(fun () -> self#switch_mli_ml page));
       let _ = GMenu.separator_item ~packing:menu#add () in
       let item = GMenu.image_menu_item ~label:"Save As..." ~packing:menu#add () in
       item#set_image (GMisc.image ~stock:`SAVE_AS ~icon_size:`MENU ())#coerce;
-      item#connect#activate ~callback:(fun () -> self#dialog_save_as page);
+      ignore (item#connect#activate ~callback:(fun () -> self#dialog_save_as page));
       let item = GMenu.image_menu_item ~label:(sprintf "Rename \xC2\xAB%s\xC2\xBB" basename) ~packing:menu#add () in
-      item#connect#activate ~callback:(fun () -> self#dialog_rename page);
+      ignore (item#connect#activate ~callback:(fun () -> self#dialog_rename page));
       Gaux.may page#file ~f:(fun file -> item#misc#set_sensitive file#is_writable);
       let item = GMenu.image_menu_item ~label:(sprintf "Delete \xC2\xAB%s\xC2\xBB" basename) ~packing:menu#add () in
       item#set_image (GMisc.image ~stock:`DELETE ~icon_size:`MENU ())#coerce;
-      item#connect#activate ~callback:self#dialog_delete_current;
+      ignore (item#connect#activate ~callback:self#dialog_delete_current);
       Gaux.may page#file ~f:(fun file -> item#misc#set_sensitive file#is_writable);
       let _ = GMenu.separator_item ~packing:menu#add () in
       let item = GMenu.image_menu_item ~label:(sprintf "Compile \xC2\xAB%s\xC2\xBB" basename) ~packing:menu#add () in
       item#set_image (GMisc.image ~pixbuf:Icons.compile_file_16 ())#coerce;
-      item#connect#activate ~callback:(fun () -> page#compile_buffer ~commit:false ());
+      ignore (item#connect#activate ~callback:(fun () -> page#compile_buffer ~commit:false ()));
       menu#popup ~time:(GdkEvent.Button.time ev) ~button:3;
 
-    method private callback_query_tooltip (page : Editor_page.page) ~x ~y ~kbd tooltip =
+    method private callback_query_tooltip (page : Editor_page.page) ~x ~y ~kbd _ =
       if x > page#view#gutter.Gutter.size && y > 10 && y < (Gdk.Rectangle.height page#view#visible_rect) - 10 then begin
         let f () =
           let location = page#view#window_to_buffer_coords ~tag:`WIDGET ~x ~y in
@@ -640,7 +638,7 @@ object (self)
         None
       end
 
-  method revert (page : Editor_page.page) = Gaux.may page#file ~f:begin fun file ->
+  method revert (page : Editor_page.page) = Gaux.may page#file ~f:begin fun _ ->
     if page#buffer#modified then ignore (Dialog.confirm
       ~title:"Revert File"
       ~image:(GMisc.image ~stock:`REVERT_TO_SAVED ~icon_size:`DIALOG ())#coerce
@@ -694,7 +692,7 @@ object (self)
 
   method close_all ?except () =
     let except = match except with
-      | None -> fun p -> false
+      | None -> fun _ -> false
       | Some page -> fun p -> p = page
     in
     let modified, close = List.partition (fun p -> p#buffer#modified && (not (except p))) pages in
@@ -824,7 +822,7 @@ object (self)
     ignore (Timeout.start tout_delim);
     ignore (Timeout.start tout_fast);
     (** Switch page: update the statusbar and remove annot tag *)
-    ignore (notebook#connect#after#switch_page ~callback:begin fun num ->
+    ignore (notebook#connect#after#switch_page ~callback:begin fun _ ->
       (* Clean up type annotation tag and error indications *)
       List.iter (fun page -> page#annot_type#remove_tag ()) pages;
       (* Current page *)
@@ -856,7 +854,7 @@ object (self)
       history_switch_page <- List.remove_assoc project.Project_type.name history_switch_page;
       history_switch_page <- (project.Project_type.name, hist) :: history_switch_page;
     in
-    ignore (notebook#connect#switch_page ~callback:begin fun next_page_num ->
+    ignore (notebook#connect#switch_page ~callback:begin fun _ ->
       if not history_switch_page_locked && notebook#current_page >= 0 then begin
         let last_page = notebook#get_nth_page notebook#current_page in
         let hist = get_history project in
@@ -896,7 +894,7 @@ object (self)
                 let iter = page#buffer#get_iter_at_mark (`MARK mark) in
                 loc.Location_history.offset <- iter#offset;
                 loc.Location_history.mark <- None;
-              | Some mark -> loc.Location_history.mark <- None;
+              | Some _ -> loc.Location_history.mark <- None;
               | _ -> ()
           end else begin
             (* If the buffer is not saved, location is unmeaningful; it only
@@ -910,16 +908,16 @@ object (self)
 end
 
 (** Signals *)
-and switch_page () = object (self) inherit [Editor_page.page] signal () as super end
-and remove_page () = object (self) inherit [Editor_page.page] signal () end
-and modified_changed () = object (self) inherit [unit] signal () end
-and changed () = object (self) inherit [unit] signal () end
-and add_page () = object (self) inherit [Editor_page.page] signal () as super end
-and file_history_changed () = object (self) inherit [File_history.t] signal () as super end
+and switch_page () = object inherit [Editor_page.page] signal () end
+and remove_page () = object inherit [Editor_page.page] signal () end
+and modified_changed () = object inherit [unit] signal () end
+and changed () = object inherit [unit] signal () end
+and add_page () = object inherit [Editor_page.page] signal () end
+and file_history_changed () = object inherit [File_history.t] signal () end
 
 and signals ~add_page ~switch_page ~remove_page ~changed ~modified_changed
   ~file_history_changed =
-object (self)
+object
   inherit ml_signals [switch_page#disconnect;
     remove_page#disconnect; modified_changed#disconnect;
     add_page#disconnect; changed#disconnect]
