@@ -26,11 +26,11 @@
 open Printf
 open Arg
 
+let required_ocaml_version = "4.00.0"
 let has_native             = ref false
 let ccopt                  = ref (try Unix.getenv "OCAMLEDITOR_CCOPT" with Not_found -> "")
 let use_modified_gtkThread = ref
   (try ignore (Unix.getenv "OCAMLEDITOR_GTKTHREAD"); true with Not_found -> true)
-let ocaml_src              = "ocaml-src"
 let ext                    = if is_win32 then ".exe" else ""
 let oebuild_name           = sprintf "oebuild%s" ext
 let oebuild_command        = "oebuild" // oebuild_name
@@ -63,48 +63,6 @@ let oebuild () =
   end;
   popd();;
 
-(** compiler_libs *)
-let compiler_libs () =
-  oebuild();
-  let ocaml_src_path = (Sys.getcwd()) // ocaml_src in
-  if (Unix.lstat ocaml_src_path).Unix.st_kind <> Unix.S_LNK then begin
-    let write top files =
-      let ochan = open_out top in
-      let finally () = close_out ochan in
-      try
-        output_string ochan (String.concat "\n" (List.map (fun x -> sprintf "open %s"
-          (String.capitalize (Filename.chop_extension x))) files));
-        finally()
-      with ex -> (finally (); raise ex)
-    in
-    let compile ?(clean=false) root path =
-      Sys.chdir path;
-      let files = List.filter (fun x -> Filename.check_suffix x ".mli" || Filename.check_suffix x ".ml")
-        (Array.to_list (Sys.readdir ".")) in
-      if clean then begin
-        List.iter begin fun x ->
-          let cmi = sprintf "%s.cmi" (Filename.chop_extension x) in
-          if Sys.file_exists cmi then (Sys.remove cmi);
-          let cmo = sprintf "%s.cmo" (Filename.chop_extension x) in
-          if Sys.file_exists cmo then (Sys.remove cmo);
-        end files;
-      end;
-      if Sys.file_exists "lexer.mll" then (run "ocamllex lexer.mll");
-      if Sys.file_exists "linenum.mll" then (run "ocamllex linenum.mll");
-      if Sys.file_exists "parser.mly" then (run "ocamlyacc parser.mly");
-      let top = sprintf "top_%s.ml" (Filename.basename path) in
-      write top files;
-      run ((".."//".."//"oebuild"//"oebuild") ^ " -I \"../utils ../parsing ../typing\" " ^ top ^ " -c");
-      Sys.remove top;
-      Sys.remove ".oebuild";
-      Sys.chdir root;
-    in
-    let root = Sys.getcwd () in
-    compile ~clean:true root (ocaml_src // "utils");
-    compile ~clean:true root (ocaml_src // "parsing");
-    compile ~clean:true root (ocaml_src // "typing");
-  end;;
-
 (** lex_yacc *)
 let lex_yacc () =
   run "ocamllex annot_lexer.mll";
@@ -114,10 +72,9 @@ let lex_yacc () =
 
 (** prepare_build *)
 let prepare_build () =
-  compiler_libs();
-  if Sys.ocaml_version >= "3.12.0" then begin
+  if Sys.ocaml_version >= required_ocaml_version then begin
     substitute ~filename:((Sys.getcwd()) // "odoc.ml") [!!"@REPL_1@", "| Target _ -> ()"; !!"@REPL_2@", ", _"];
-  end;
+  end else eprintf "You are using OCaml-%s but version %s is required." Sys.ocaml_version required_ocaml_version;
   lex_yacc();;
 
 (** mkicons *)
@@ -190,7 +147,6 @@ let generate_oebuild_script () =
 let mkrelease () =
   generate_oebuild_script();
   distclean();
-  if Sys.file_exists ocaml_src then (kprintf run "RMDIR /S /Q %s" ocaml_src);
   Sys.chdir "..";
   let name = Filename.basename (Sys.getcwd ()) in
   let version = get_line_from_file ~filename:"VERSION" 1 in
@@ -208,16 +164,13 @@ let mkrelease () =
   kprintf run "mv -f %s/%s.tmp.project %s/%s.project" name name name name;
   kprintf run "rmdir %s" package;
   kprintf Sys.chdir "%s/src" name;
-  kprintf run "mkdir %s" ocaml_src;
-  kprintf run "cp -ru ..\\..\\%s ." ocaml_src;
   pushd "..";
-  run "ocaml build.ml -with-compiler-libs";
+  run "ocaml build.ml -annot";
   popd();;
 
 (** Main *)
 let _ = main ~dir:"../src" ~targets:[
   "-prepare-build",           prepare_build,           " (undocumented)";
-  "-compiler-libs",           compiler_libs,           " (undocumented)";
   "-lex-yacc",                lex_yacc,                " (undocumented)";
   "-mkicons",                 mkicons,                 " (undocumented)";
   "-mkrelease",               mkrelease,               " (undocumented)";

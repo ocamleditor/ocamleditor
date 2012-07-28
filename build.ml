@@ -78,7 +78,6 @@ let use_modified_gtkThread =
   try ignore (Unix.getenv "OCAMLEDITOR_GTKTHREAD"); true
   with Not_found -> use_modified_gtkThread
 
-let ocaml_src = "ocaml-src"
 let search_path = String.concat " " ["+compiler-libs"; lablgtk2; xml_light; ocamldoc]
 let search_path = sprintf "%s gmisclib common icons otherwidgets oebuild" search_path
 let libs = "unix str threads dynlink odoc_info lablgtk gtkThread.o xml-light gmisclib common icons otherwidgets oebuildlib"
@@ -285,52 +284,6 @@ let ocamleditor () =
       search_path
       libs;;
 
-(** compiler_libs *)
-let compiler_libs () =
-  let ocaml_src_path = (Sys.getcwd()) // ocaml_src in
-  if (Unix.lstat ocaml_src_path).Unix.st_kind = Unix.S_LNK then
-    (kprintf failwith "%s is a symbolic link" ocaml_src_path);
-  oebuild();
-  let write top files =
-    let ochan = open_out top in
-    let finally () = close_out ochan in
-    try
-      output_string ochan (String.concat "\n" (List.map (fun x -> sprintf "open %s"
-        (String.capitalize (Filename.chop_extension x))) files));
-      finally()
-    with ex -> (finally (); raise ex)
-  in
-  let compile ?(clean=false) root path =
-    Sys.chdir path;
-    let files = List.filter (fun x -> Filename.check_suffix x ".mli" || Filename.check_suffix x ".ml")
-      (Array.to_list (Sys.readdir ".")) in
-    if clean then begin
-      List.iter begin fun x ->
-        let cmi = sprintf "%s.cmi" (Filename.chop_extension x) in
-        if Sys.file_exists cmi then (Sys.remove cmi);
-        let cmo = sprintf "%s.cmo" (Filename.chop_extension x) in
-        if Sys.file_exists cmo then (Sys.remove cmo);
-      end files;
-    end;
-    if Sys.file_exists "lexer.mll" then (run "ocamllex lexer.mll");
-    if Sys.file_exists "linenum.mll" then (run "ocamllex linenum.mll");
-    if Sys.file_exists "parser.mly" then (run "ocamlyacc parser.mly");
-    let top = sprintf "top_%s.ml" (Filename.basename path) in
-    write top files;
-    run ((".."//".."//"oebuild"//"oebuild") ^ " -I \"../utils ../parsing ../typing\" " ^ top ^ " -c");
-    (*kprintf run "%s -I \"../utils ../parsing ../typing\" %s -opt -a -lflags \"-linkall\" -o %s"
-      (".."//".."//"oebuild"//"oebuild") top (Filename.basename path);*)
-    Sys.remove top;
-    Sys.remove ".oebuild";
-    Sys.chdir root
-  in
-  let root = Sys.getcwd () in
-  compile ~clean:true root (ocaml_src // "utils");
-  compile ~clean:true root (ocaml_src // "parsing");
-  compile ~clean:true root (ocaml_src // "typing");
-;;
-
-
 (** install *)
 let install () =
   if not is_win32 then begin
@@ -359,60 +312,12 @@ let uninstall () =
     end
   end
 
-(** with_compiler_libs *)
-let with_compiler_libs () =
-  annot := true;
-  compiler_libs ();
-  oeproc ();
-  ocamleditor()
-
-(** release *)
-let release () =
-  generate_oebuild_script();
-  cleanall();
-  if Sys.file_exists "ocaml-src" then (kprintf run "RMDIR /S /Q ocaml-src");
-  Sys.chdir "..";
-  let name = Filename.basename (Sys.getcwd ()) in
-  Sys.chdir "..";
-  kprintf remove_file "%s.tar.gz" name;
-  kprintf run "mv -f %s/%s.project %s/%s.tmp.project" name name name name;
-  kprintf run "cp %s/%s.project.release %s/%s.project" name name name name;
-  kprintf run "tar --mode=755 -cf %s.tar %s/src %s/pixmaps" name name name;
-  kprintf run "tar --mode=655 -rf %s.tar %s/README %s/NEWS %s/COPYING %s/%s.project %s/ocamleditor.nsi %s/build.ml %s/header"
-    name name name name name name name name name;
-  kprintf run "gzip -c %s.tar > %s.tar.gz" name name;
-  kprintf Sys.remove "%s.tar" name;
-  kprintf run "mv -f %s/%s.tmp.project %s/%s.project" name name name name;
-  kprintf Sys.chdir "%s/src" name;
-  kprintf run "mkdir ocaml-src";
-  kprintf run "cp -ru ..\\..\\ocaml-src .";
-  with_compiler_libs()
-
 (** all *)
 let all () =
   annot := true;
   oebuild ();
   oeproc ();
   ocamleditor()
-
-(** mkicons *)
-let mkicons () =
-  let pixmaps = ".." // "pixmaps" in
-  let files = Array.to_list (Sys.readdir pixmaps) in
-  let files = List.filter (fun x -> Filename.check_suffix x ".png") files in
-  ignore (Sys.command "cat ../header > icons/icons.ml");
-  let filename = "icons/icons.ml" in
-  let ochan = open_out_gen [Open_append; Open_binary] 0o644 filename in
-  try
-    fprintf ochan "let (//) = Filename.concat\n\nlet create pixbuf = GMisc.image ~pixbuf ()\n\n";
-    List.iter begin fun file ->
-      let new_name = Str.global_replace (Str.regexp "-") "_" file in
-      Sys.rename (pixmaps // file) (pixmaps // new_name);
-      let icon_name = Filename.basename (Filename.chop_extension new_name) in
-      fprintf ochan "let %s = GdkPixbuf.from_file (Common.application_pixmaps // \"%s\")\n" icon_name new_name
-    end files;
-    close_out_noerr ochan;
-  with _ -> close_out_noerr ochan
 
 
 (** Main -------------------------------------------------------------------- *)
@@ -441,7 +346,6 @@ let _ = begin
     let target f x = target_func := mktarget f x in
     let speclist = [
       ("-all",                Unit (target all),                " Build OCamlEditor (default)");
-      ("-with-compiler-libs", Unit (target with_compiler_libs), " Compile the OCaml compiler libraries and build OCamlEditor");
       ("-install",            Unit (target install),            " Install OCamlEditor (Unix only, you may need superuser permissions)");
       ("-prefix",             Set_string prefix,                (sprintf " Installation prefix (Unix only, default is %s)" !prefix));
       ("-clean",              Unit (target clean),              " Remove object files");
@@ -452,12 +356,9 @@ let _ = begin
       ("-icons",              Unit (target icons),              " (undocumented)");
       ("-gmisclib",           Unit (target gmisclib),           " (undocumented)");
       ("-oeproc",             Unit (target oeproc),             " (undocumented)");
-      ("-compiler-libs",      Unit (target compiler_libs),      " (undocumented)");
       ("-lexyacc",            Unit (target lexyacc),            " (undocumented)");
-      ("-mkicons",            Unit (target mkicons),            " (undocumented)");
       ("-ocamleditor",        Unit (target ocamleditor),        " (undocumented)");
       ("-uninstall",          Unit (target uninstall),          " (undocumented)");
-      ("-release",            Unit (target release),            " (undocumented)");
       ("-annot",              Set annot,                        " (undocumented)");
       ("-prof",               Set prof,                         " (undocumented)");
     ] in
