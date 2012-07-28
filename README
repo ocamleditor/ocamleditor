@@ -23,19 +23,17 @@ COPYRIGHT
 
 DEPENDENCIES
 
-  * Objective Caml 3.12.1 with the compiler libraries available from the
-    OCaml source distribution;
+  * OCaml-4.00.0;
   * Lablgtk-2.14.2;
   * Xml-light.
 
 
 HOW TO COMPILE
 
-  Compile the OCaml source tree, then change to the OCamlEditor toplevel
-  directory and edit the "Configuration Section" at the beginning of
-  "build.ml", following the comments in that file. Then, do:
+  Change to the OCamlEditor toplevel directory and edit the "Configuration
+  Section" at the beginning of "build.ml", following the comments in that
+  file. Then, do:
 
-    ln -s /path/to/ocaml/compiled/sources src/ocaml-src
     ocaml build.ml
 
   If the native code compiler is not available on your platform, compile with
@@ -44,29 +42,6 @@ HOW TO COMPILE
   The name of the command is "ocamleditor.opt" (or "ocamleditor" if the
   native compilation is not supported), you can find it in the "src"
   directory.
-
-
-HOW TO COMPILE without having to build the entire OCaml source tree
-(for example under Windows if you're using the MSVC version of OCaml):
-
-  Edit the "Configuration Section" at the beginning of "build.ml", following
-  the comments in that file. Then, do:
-
-    mkdir src\ocaml-src
-
-  Download from http://caml.inria.fr/ the source tarball corresponding to
-  your OCaml version installed and copy the directories "utils", "parsing"
-  and "typing" to the newly created "ocaml-src" directory; then from the
-  OCamlEditor toplevel directory compile with:
-
-    ocaml build.ml -with-compiler-libs
-
-  If the native code compiler is not available on your platform, compile with
-  "ocaml build.ml -with-compiler-libs -byt".
-
-  Under Windows the name of the command is "ocamleditor.opt.exe" (or
-  "ocamleditor.bat" if the native compilation is not supperted), you can
-  find it in the "src" directory.
 
 
 INSTALLATION
