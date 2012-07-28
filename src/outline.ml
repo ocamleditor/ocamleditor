@@ -619,7 +619,7 @@ object (self)
             model#set ~row ~column:col_name_sort ("0" ^ name ^ "0");
             model#set ~row ~column:col_icon (pixbuf_of_kind Class_inherit);
             model#set ~row ~column:col_markup (self#markup ~name ~typ:"" ~kind:Class_inherit);
-            (*self#set_location inher.Class.ic_loc rr;*)
+            (*self#set_location inher.Class.cl_loc col_counter;*)
           end ()
         end inherited;
         List.iter begin function

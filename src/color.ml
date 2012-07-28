@@ -20,17 +20,6 @@
 
 *)
 
-let set_value value =
-  let value = if value < 0. then 0.
-    else if value > 1.0 then 1.
-    else value
-  in fun color ->
-    let gdk = GDraw.color color in
-    `RGB (
-      (int_of_float (float (Gdk.Color.red gdk) *. value)),
-      (int_of_float (float (Gdk.Color.green gdk) *. value)),
-      (int_of_float (float (Gdk.Color.blue gdk) *. value))
-    )
 
 let name = function `RGB (red, green, blue) -> Printf.sprintf "#%X%X%X" red green blue
 
@@ -41,31 +30,6 @@ let name_of_gdk color =
   name (`RGB (r, g, b))
 
 let rgb f name = Scanf.sscanf name "#%2x%2x%2x" f;;
-
-(*let hsl_of_name r g b =
-  let r = (float r) /. 255. in
-  let g = (float g) /. 255. in
-  let b = (float b) /. 255. in
-  let v = max (max r g) b in
-  let m = min (min r g) b in
-  let l = (m +. v) /. 2. in
-  if l <= 0. then (0., 0., 0.)
-  else begin
-    let vm = v -. m in
-    let s = vm in
-    if s > 0. then begin
-      let s = s /. (if l <= 0.5 then v +. m else 2. -. v -. m) in
-      let r2 = (v -. r) /. vm in
-      let g2 = (v -. g) /. vm in
-      let b2 = (v -. b) /. vm in
-      let h =
-        if r = v then (if g = m then 5. +. b2 else 1. -. g2)
-        else if g = v then (if b = m then 1. +. r2 else 3. -. b2)
-        else (if r = m then 3. +. g2 else 5. -. r2)
-      in
-      h /. 6., s, l
-    end else (0., s, l)
-  end;;*)
 
 let hsv_of_name r g b f =
   let r = (float r) /. 255. in
@@ -116,8 +80,43 @@ let add_value name ?(sfact=1.0) x =
   let xv = x in
   rgb hsv_of_name name (fun h s v -> name_of_hsv h (min 1. (s +. xs)) (min 1. (v -. xv)));;
 
+(*let hsl_of_name r g b =
+  let r = (float r) /. 255. in
+  let g = (float g) /. 255. in
+  let b = (float b) /. 255. in
+  let v = max (max r g) b in
+  let m = min (min r g) b in
+  let l = (m +. v) /. 2. in
+  if l <= 0. then (0., 0., 0.)
+  else begin
+    let vm = v -. m in
+    let s = vm in
+    if s > 0. then begin
+      let s = s /. (if l <= 0.5 then v +. m else 2. -. v -. m) in
+      let r2 = (v -. r) /. vm in
+      let g2 = (v -. g) /. vm in
+      let b2 = (v -. b) /. vm in
+      let h =
+        if r = v then (if g = m then 5. +. b2 else 1. -. g2)
+        else if g = v then (if b = m then 1. +. r2 else 3. -. b2)
+        else (if r = m then 3. +. g2 else 5. -. r2)
+      in
+      h /. 6., s, l
+    end else (0., s, l)
+  end;;*)
 
-
+(* Deprecated: use add_value *)
+let set_value value =
+  let value = if value < 0. then 0.
+    else if value > 1.0 then 1.
+    else value
+  in fun color ->
+    let gdk = GDraw.color color in
+    `RGB (
+      (int_of_float (float (Gdk.Color.red gdk) *. value)),
+      (int_of_float (float (Gdk.Color.green gdk) *. value)),
+      (int_of_float (float (Gdk.Color.blue gdk) *. value))
+    );;
 
 
 

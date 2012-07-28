@@ -221,8 +221,7 @@ object (self)
   method set_changed_after_last_autosave x = changed_after_last_autosave <- x
 
   method private set_tag_annot_background () =
-    annot_type#tag#set_property (`BACKGROUND
-      (Color.name (Color.set_value 1.0 (`NAME Preferences.preferences#get.Preferences.pref_bg_color_popup))));
+    annot_type#tag#set_property (`BACKGROUND Preferences.preferences#get.Preferences.pref_bg_color_popup);
 
   method read_only = read_only
   method set_read_only ro =

@@ -226,7 +226,7 @@ let otherwidgets () =
 let oebuild () =
   common();
   pushd "oebuild";
-  kprintf run "ocamlc -a -o oebuildlib.cma -thread -w syumx -annot -I ../common common.cma oebuild_util.ml oebuild_table.mli oebuild_table.ml oebuild.ml";
+  kprintf run "ocamlc -a -o oebuildlib.cma -thread -w syumx -annot -I ../common oebuild_util.ml oebuild_table.mli oebuild_table.ml oebuild.ml";
   kprintf run "ocamlc -o %s -thread -w syumx -I ../common str.cma unix.cma threads.cma common.cma oebuildlib.cma oebuild_tool.ml"
     oebuild_name;
   if !can_compile_native then begin

@@ -199,10 +199,10 @@ class incremental () =
         in
         let ebox = GBin.event_box ~border_width:0 ~packing:dialog#add () in
         let box = GPack.hbox ~spacing:0 ~border_width:5 ~packing:ebox#add () in
-        let color = `NAME  Preferences.preferences#get.Preferences.pref_bg_color_popup in
-        let border_color = Color.set_value 0.90 color in
-        dialog#misc#modify_bg [`NORMAL, border_color];
-        let _ = ebox#misc#modify_bg [`NORMAL, color] in
+        let color = Preferences.preferences#get.Preferences.pref_bg_color_popup in
+        let border_color = Color.add_value color 0.13 in
+        dialog#misc#modify_bg [`NORMAL, `NAME border_color];
+        let _ = ebox#misc#modify_bg [`NORMAL, `NAME color] in
         let lab = GMisc.label ~markup:"<b><big>Search for: </big></b>"
           ~xalign:0.0 ~xpad:0 ~packing:(box#pack ~expand:true ~fill:true) () in
         let e = GEdit.entry ~packing:(box#pack ~expand:false ~fill:false) () in
