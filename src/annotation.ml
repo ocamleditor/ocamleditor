@@ -97,7 +97,7 @@ let parse_file ~project ~filename ~ts =
           end
         with ex -> (close_in ichan);
       end
-    with Sys_error _ -> ()
+    with ex -> (Printf.eprintf "File \"annotation.ml\": %s\n%s\n%!" (Printexc.to_string ex) (Printexc.get_backtrace());)
   end;
   GtkThread2.async Activity.remove name;
   Mutex.unlock table_critical
@@ -105,8 +105,10 @@ let parse_file ~project ~filename ~ts =
 
 let (!!) filename = (Filename.chop_extension filename) ^ ".annot"
 
+exception Expired of int
+
 (** find *)
-let rec find ~project ~filename () =
+let find ~project ~filename () =
   if filename ^^ ".ml" then begin
     let fileannot = !! filename in
     try
@@ -114,7 +116,7 @@ let rec find ~project ~filename () =
         if Sys.file_exists fileannot then begin
           let amtime = (Unix.stat fileannot).Unix.st_mtime in
           let smtime = (Unix.stat filename).Unix.st_mtime in
-          if smtime > amtime then (raise Not_found);
+          if smtime > amtime then (raise (Expired 1));
           let annot =
             try
               let ca = Hashtbl.find table fileannot in
@@ -127,11 +129,15 @@ let rec find ~project ~filename () =
             end
           in
           Some annot
-        end else (raise Not_found)
-      end else (raise Not_found)
-    with Not_found -> begin
+        end else (raise (Expired 2))
+      end else (raise (Expired 3))
+    with Expired code -> begin
       Hashtbl.remove table fileannot;
-      if Sys.file_exists fileannot then (try Sys.remove fileannot with Sys_error _ -> ());
+      if Sys.file_exists fileannot then begin
+        try Sys.remove fileannot
+        with ex -> Printf.eprintf "File \"annotation.ml\": %s\n%s\n%!"
+          (Printexc.to_string ex) (Printexc.get_backtrace());
+      end;
       None
     end
   end else None

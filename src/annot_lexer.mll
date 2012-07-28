@@ -35,6 +35,7 @@ rule token = parse
   | sp                                                      { SP }
   | '\x29' lf                                               { CLOSE_PAREN }
   | sp (['0'-'9']+ as lxm)                                  { NUM (int_of_string lxm) }
+  | "\"_none_\" 1 0 -1"                                     { NOPOS }
   | '"' ([^'"']+ as filename) '"'                           { FILENAME filename }
   | "type("                                                 { TYPE }
   | "call("                                                 { CALL }

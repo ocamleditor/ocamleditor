@@ -86,25 +86,27 @@ class widget ~editor ?packing () =
               | Some page -> page
             in
             result.goto_page page;
-            let start, stop = match result.mark with
-              | None ->
-                let (a, b), (c, d) = result.offset in
-                let start = iter_of_linechar page a b in
-                let stop = iter_of_linechar page c d in
-                let name = new_mark_name() in
-                let start = page#buffer#create_mark ~name start in
-                let name = new_mark_name() in
-                let stop = page#buffer#create_mark ~name stop in
-                result.mark <- Some (start, stop);
-                start, stop
-              | Some (start, stop) -> start, stop
-            in
-            let start = page#buffer#get_iter_at_mark (`MARK start) in
-            let stop = page#buffer#get_iter_at_mark (`MARK stop) in
-            page#view#scroll_lazy start;
-            page#buffer#select_range start stop;
-            if grab_focus || page#view#misc#get_flag `HAS_FOCUS then
-              Gmisclib.Idle.add page#view#misc#grab_focus;
+            Gmisclib.Idle.add begin fun () ->
+              let start, stop = match result.mark with
+                | None ->
+                  let (a, b), (c, d) = result.offset in
+                  let start = iter_of_linechar page a b in
+                  let stop = iter_of_linechar page c d in
+                  let name = new_mark_name() in
+                  let start = page#buffer#create_mark ~name start in
+                  let name = new_mark_name() in
+                  let stop = page#buffer#create_mark ~name stop in
+                  result.mark <- Some (start, stop);
+                  start, stop
+                | Some (start, stop) -> start, stop
+              in
+              let start = page#buffer#get_iter_at_mark (`MARK start) in
+              let stop = page#buffer#get_iter_at_mark (`MARK stop) in
+              page#view#scroll_lazy start;
+              page#buffer#select_range start stop;
+              if grab_focus || page#view#misc#get_flag `HAS_FOCUS then
+                Gmisclib.Idle.add page#view#misc#grab_focus;
+             end
       end;
     with Failure "hd" -> ()
   in

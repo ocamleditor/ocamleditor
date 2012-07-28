@@ -229,45 +229,6 @@
           </args>
           <phase>Compile</phase>
         </task>
-        <task name="Compiler Libs">
-          <name>Compiler Libs</name>
-          <always_run_in_project>false</always_run_in_project>
-          <always_run_in_script>false</always_run_in_script>
-          <env replace="false"/>
-          <dir>..</dir>
-          <cmd>ocaml</cmd>
-          <args>
-            <arg enabled="true">build.ml</arg>
-            <arg enabled="true">-with-compiler-libs</arg>
-          </args>
-          <phase>Before_clean</phase>
-        </task>
-        <task name="mkicons">
-          <name>mkicons</name>
-          <always_run_in_project>false</always_run_in_project>
-          <always_run_in_script>false</always_run_in_script>
-          <env replace="false"/>
-          <dir>..</dir>
-          <cmd>ocaml</cmd>
-          <args>
-            <arg enabled="true">build.ml</arg>
-            <arg enabled="true">-mkicons</arg>
-          </args>
-          <phase>Before_clean</phase>
-        </task>
-        <task name="Release">
-          <name>Release</name>
-          <always_run_in_project>false</always_run_in_project>
-          <always_run_in_script>false</always_run_in_script>
-          <env replace="false"/>
-          <dir>..</dir>
-          <cmd>ocaml</cmd>
-          <args>
-            <arg enabled="true">build.ml</arg>
-            <arg enabled="true">-release</arg>
-          </args>
-          <phase>Before_clean</phase>
-        </task>
         <task name="Lex & Yacc">
           <name>Lex &amp; Yacc</name>
           <always_run_in_project>false</always_run_in_project>
@@ -306,7 +267,7 @@
       <libs>unix str threads dynlink odoc_info lablgtk gtkThread.o xml-light gmisclib common icons otherwidgets oebuildlib</libs>
       <other_objects></other_objects>
       <files>ocamleditor.ml</files>
-      <includes>ocaml-src/parsing ocaml-src/typing ocaml-src/utils +lablgtk2 +xml-light +ocamldoc gmisclib common icons otherwidgets oebuild </includes>
+      <includes>+compiler-libs +lablgtk2 +xml-light +ocamldoc gmisclib common icons otherwidgets oebuild </includes>
       <thread>true</thread>
       <vmthread>false</vmthread>
       <pp></pp>
@@ -327,7 +288,7 @@
       <libs>unix str threads dynlink odoc_info lablgtk gtkThread.o xml-light gmisclib common icons otherwidgets oebuildlib</libs>
       <other_objects></other_objects>
       <files>ocamleditor.ml</files>
-      <includes>ocaml-src/parsing ocaml-src/typing ocaml-src/utils +lablgtk2 +xml-light +ocamldoc gmisclib common icons otherwidgets oebuild </includes>
+      <includes>+compiler-libs +lablgtk2 +xml-light +ocamldoc gmisclib common icons otherwidgets oebuild </includes>
       <thread>true</thread>
       <vmthread>false</vmthread>
       <pp></pp>

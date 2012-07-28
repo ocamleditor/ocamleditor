@@ -201,7 +201,7 @@ let has_definition_references ~page ~iter =
   let ext_refs =
     match page#buffer#get_annot iter with
       | None -> []
-      | Some { Oe.annot_annotations = annot_annotations } ->
+      | Some { Oe.annot_annotations = annot_annotations; _ } ->
         begin
           match Annotation.get_ext_ref annot_annotations with
             | Some fullname ->
