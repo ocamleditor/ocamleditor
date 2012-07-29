@@ -629,16 +629,16 @@ object (self)
   method window : GWindow.window = window
 
   method exit (editor : Editor.editor) () =
-    if maximized_view_action = `NONE then (self#set_geometry());
-    (* Save geometry *)
-    let chan = open_out (Filename.concat Oe_config.ocamleditor_user_home "geometry") in
-    fprintf chan "%s" geometry;
-    close_out_noerr chan;
-    window#misc#hide();
-    (*  *)
-    let finalize () =
-      try
-        ignore(Messages.vmessages#remove_all_tabs());
+    try
+      ignore(Messages.vmessages#remove_all_tabs());
+      if maximized_view_action = `NONE then (self#set_geometry());
+      (* Save geometry *)
+      let chan = open_out (Filename.concat Oe_config.ocamleditor_user_home "geometry") in
+      fprintf chan "%s" geometry;
+      close_out_noerr chan;
+      window#misc#hide();
+      (*  *)
+      let finalize () =
         (* Save project *)
         begin
           try self#with_current_project begin fun project ->
@@ -653,11 +653,11 @@ object (self)
         finalize();
         GMain.Main.quit();
         Pervasives.exit 0
-      with Messages.Cancel_process_termination -> (GtkSignal.stop_emit())
-    in
-    let pages = List.filter (fun p -> p#buffer#modified) editor#pages in
-    let pages = List.map (fun x -> true, x) pages in
-    editor#dialog_save_modified ~close:false ~callback:finalize pages
+      in
+      let pages = List.filter (fun p -> p#buffer#modified) editor#pages in
+      let pages = List.map (fun x -> true, x) pages in
+      editor#dialog_save_modified ~close:false ~callback:finalize pages
+    with Messages.Cancel_process_termination -> (GtkSignal.stop_emit())
 
   method private init () =
     let _ = Editor.set_menu_item_nav_history_sensitive := self#set_menu_item_nav_history_sensitive in
