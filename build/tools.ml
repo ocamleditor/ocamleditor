@@ -72,9 +72,8 @@ let lex_yacc () =
 
 (** prepare_build *)
 let prepare_build () =
-  if Sys.ocaml_version >= required_ocaml_version then begin
-    substitute ~filename:((Sys.getcwd()) // "odoc.ml") [!!"@REPL_1@", "| Target _ -> ()"; !!"@REPL_2@", ", _"];
-  end else eprintf "You are using OCaml-%s but version %s is required." Sys.ocaml_version required_ocaml_version;
+  if Sys.ocaml_version < required_ocaml_version then 
+    eprintf "You are using OCaml-%s but version %s is required." Sys.ocaml_version required_ocaml_version;
   lex_yacc();;
 
 (** mkicons *)

@@ -7,8 +7,8 @@
   <name>ocamleditor</name>
   <author>Francesco Tovagliari</author>
   <description/>
-  <version>1.8.0</version>
-  <autocomp enabled="true" delay="1.01" cflags=""/>
+  <version>1.7.0</version>
+  <autocomp enabled="true" delay="1." cflags=""/>
   <runtime>
     <configuration name="ocamleditor" default="true" id_build="0" id="0">
       <id>0</id>
@@ -79,7 +79,7 @@
       <thread>true</thread>
       <vmthread>false</vmthread>
       <pp></pp>
-      <cflags>-w y-31</cflags>
+      <cflags>-w y</cflags>
       <lflags></lflags>
       <outkind>Library</outkind>
       <outname>oebuildlib</outname>
@@ -100,8 +100,8 @@
       <thread>true</thread>
       <vmthread>false</vmthread>
       <pp></pp>
-      <cflags>-w y-31</cflags>
-      <lflags>-w -31</lflags>
+      <cflags>-w y</cflags>
+      <lflags></lflags>
       <outkind>Executable</outkind>
       <outname>oebuild/oebuild</outname>
       <lib_install_path></lib_install_path>
@@ -177,7 +177,7 @@
       <default>true</default>
       <byt>true</byt>
       <opt>false</opt>
-      <libs>unix str threads dynlink odoc_info lablgtk gtkThread.o xml-light gmisclib common icons otherwidgets oebuildlib</libs>
+      <libs>ocamlcommon unix str threads dynlink odoc_info lablgtk gtkThread.o xml-light gmisclib common icons otherwidgets oebuildlib</libs>
       <other_objects></other_objects>
       <files>ocamleditor.ml</files>
       <includes>+compiler-libs +lablgtk2 +xml-light +ocamldoc gmisclib common icons otherwidgets oebuild </includes>
@@ -185,7 +185,7 @@
       <vmthread>false</vmthread>
       <pp></pp>
       <cflags>-w syxm -g</cflags>
-      <lflags>-linkall -g</lflags>
+      <lflags>-g</lflags>
       <outkind>Executable</outkind>
       <outname>ocamleditor</outname>
       <lib_install_path></lib_install_path>
@@ -229,6 +229,45 @@
           </args>
           <phase>Compile</phase>
         </task>
+        <task name="Compiler Libs">
+          <name>Compiler Libs</name>
+          <always_run_in_project>false</always_run_in_project>
+          <always_run_in_script>false</always_run_in_script>
+          <env replace="false"/>
+          <dir>..</dir>
+          <cmd>ocaml</cmd>
+          <args>
+            <arg enabled="true">build.ml</arg>
+            <arg enabled="true">-with-compiler-libs</arg>
+          </args>
+          <phase>Before_clean</phase>
+        </task>
+        <task name="mkicons">
+          <name>mkicons</name>
+          <always_run_in_project>false</always_run_in_project>
+          <always_run_in_script>false</always_run_in_script>
+          <env replace="false"/>
+          <dir>..</dir>
+          <cmd>ocaml</cmd>
+          <args>
+            <arg enabled="true">build.ml</arg>
+            <arg enabled="true">-mkicons</arg>
+          </args>
+          <phase>Before_clean</phase>
+        </task>
+        <task name="Release">
+          <name>Release</name>
+          <always_run_in_project>false</always_run_in_project>
+          <always_run_in_script>false</always_run_in_script>
+          <env replace="false"/>
+          <dir>..</dir>
+          <cmd>ocaml</cmd>
+          <args>
+            <arg enabled="true">build.ml</arg>
+            <arg enabled="true">-release</arg>
+          </args>
+          <phase>Before_clean</phase>
+        </task>
         <task name="Lex & Yacc">
           <name>Lex &amp; Yacc</name>
           <always_run_in_project>false</always_run_in_project>
@@ -264,7 +303,7 @@
       <default>false</default>
       <byt>false</byt>
       <opt>true</opt>
-      <libs>unix str threads dynlink odoc_info lablgtk gtkThread.o xml-light gmisclib common icons otherwidgets oebuildlib</libs>
+      <libs>ocamlcommon unix str threads dynlink odoc_info lablgtk gtkThread.o xml-light gmisclib common icons otherwidgets oebuildlib</libs>
       <other_objects></other_objects>
       <files>ocamleditor.ml</files>
       <includes>+compiler-libs +lablgtk2 +xml-light +ocamldoc gmisclib common icons otherwidgets oebuild </includes>
@@ -288,7 +327,7 @@
       <libs>unix str threads dynlink odoc_info lablgtk gtkThread.o xml-light gmisclib common icons otherwidgets oebuildlib</libs>
       <other_objects></other_objects>
       <files>ocamleditor.ml</files>
-      <includes>+compiler-libs +lablgtk2 +xml-light +ocamldoc gmisclib common icons otherwidgets oebuild </includes>
+      <includes>ocaml-src/parsing ocaml-src/typing ocaml-src/utils +lablgtk2 +xml-light +ocamldoc gmisclib common icons otherwidgets oebuild </includes>
       <thread>true</thread>
       <vmthread>false</vmthread>
       <pp></pp>
@@ -391,7 +430,7 @@
           <cmd>ocaml</cmd>
           <args>
             <arg enabled="true">mkversion.ml</arg>
-            <arg enabled="true">1.8.0</arg>
+            <arg enabled="true">1.7.4</arg>
           </args>
           <phase></phase>
         </task>

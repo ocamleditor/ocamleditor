@@ -62,6 +62,7 @@ open Arg
 
 exception Build_error of int
 
+let required_ocaml_version = "4.00.0"
 let can_compile_native = ref true
 let force_bytecode = ref false
 let (//) = Filename.concat
@@ -80,7 +81,7 @@ let use_modified_gtkThread =
 
 let search_path = String.concat " " ["+compiler-libs"; lablgtk2; xml_light; ocamldoc]
 let search_path = sprintf "%s gmisclib common icons otherwidgets oebuild" search_path
-let libs = "unix str threads dynlink odoc_info lablgtk gtkThread.o xml-light gmisclib common icons otherwidgets oebuildlib"
+let libs = "ocamlcommon unix str threads dynlink odoc_info lablgtk gtkThread.o xml-light gmisclib common icons otherwidgets oebuildlib"
 
 let oebuild_name = sprintf "oebuild%s" ext
 let oebuild_command = "oebuild" // oebuild_name
@@ -263,16 +264,15 @@ let generate_oebuild_script () =
 
 (** ocamleditor *)
 let ocamleditor () =
+  if Sys.ocaml_version < required_ocaml_version then 
+    eprintf "You are using OCaml-%s but version %s is required." Sys.ocaml_version required_ocaml_version;
   cp (if use_modified_gtkThread then "gtkThread3.ml" else "gtkThread4.ml") "gtkThread2.ml";
-  if Sys.ocaml_version >= "3.12.0" then begin
-    substitute ~filename:((Sys.getcwd()) // "odoc.ml") [!!"@REPL_1@", "| Target _ -> ()"; !!"@REPL_2@", ", _"];
-  end;
   icons();
   gmisclib();
   otherwidgets();
   lexyacc();
   kprintf run
-    "%s ocamleditor.ml%s %s -thread -lflags \"-linkall%s%s\" -cflags \"-w syumx%s%s%s\" -I \"%s\" -l \"%s\""
+    "%s ocamleditor.ml%s %s -thread -lflags \"%s%s\" -cflags \"-w syumx%s%s%s\" -I \"%s\" -l \"%s\""
       oebuild_command
       (if !prof then " -prof" else "")
       (if !can_compile_native then "-opt" else "-byt")
