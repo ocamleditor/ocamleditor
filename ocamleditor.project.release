@@ -185,7 +185,7 @@
       <vmthread>false</vmthread>
       <pp></pp>
       <cflags>-w syxm -g</cflags>
-      <lflags>-linkall -g</lflags>
+      <lflags>-g</lflags>
       <outkind>Executable</outkind>
       <outname>ocamleditor</outname>
       <lib_install_path></lib_install_path>
@@ -311,7 +311,7 @@
       <vmthread>false</vmthread>
       <pp></pp>
       <cflags>-w syxm -g -inline 50</cflags>
-      <lflags>-linkall -g  -inline 50</lflags>
+      <lflags>-g  -inline 50</lflags>
       <outkind>Executable</outkind>
       <outname>ocamleditor</outname>
       <lib_install_path></lib_install_path>
@@ -332,7 +332,7 @@
       <vmthread>false</vmthread>
       <pp></pp>
       <cflags>-w syxm -g -inline 50</cflags>
-      <lflags>-linkall -g  -inline 50</lflags>
+      <lflags>-g  -inline 50</lflags>
       <outkind>Executable</outkind>
       <outname>ocamleditor</outname>
       <lib_install_path></lib_install_path>
