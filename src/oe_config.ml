@@ -45,9 +45,6 @@ let ocamleditor_user_home =
 
 (** Configuration Section =================================================== *)
 
-let editor_left_margin                   = 1
-let editor_pixels_above_lines            = 0
-let editor_pixels_below_lines            = 0
 let save_all_before_compiling            = true
 let autosave_enabled                     = true
 let autosave_interval                    = 5_000 (* milliseconds *)

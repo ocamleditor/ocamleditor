@@ -154,6 +154,7 @@ object (self)
     let row = model#append () in self#create "General" row (new pref_view);
     let row = model#append () in self#create "Fonts" row (new pref_fonts);
     let row as parent = model#append () in self#create "Editor" row (new pref_editor);
+    let row = model#append ~parent () in self#create "Display" row (new pref_editor_display);
     let row = model#append ~parent () in self#create "Actions" row (new pref_editor_actions);
     let row = model#append ~parent () in self#create "Code Templates" row (new pref_templ);
     let row = model#append ~parent () in self#create "Color" row (new pref_color);
@@ -378,51 +379,84 @@ end
 
 (** pref_editor *)
 and pref_editor title ?packing () =
+  let vbox                  = GPack.vbox ~spacing ?packing () in
+  let align                 = create_align ~title:"Tab Settings/Word Wrap" ~vbox () in
+  let box                   = GPack.vbox ~spacing:row_spacings ~packing:align#add () in
+  let tbox                  = GPack.hbox ~spacing:8 ~packing:box#pack () in
+  let _                     = GMisc.label ~text:"Tab width:" ~packing:tbox#pack () in
+  let adjustment            = GData.adjustment ~page_size:0.0 () in
+  let entry_tab_width       = GEdit.spin_button ~adjustment ~rate:1.0 ~digits:0 ~numeric:true ~packing:tbox#add () in
+  let check_tab_spaces      = GButton.check_button ~label:"Use spaces instead of tabs" ~packing:tbox#add () in
+  let _                     = check_tab_spaces#misc#set_sensitive false in
+  let check_wrap            = GButton.check_button ~label:"Wrap text, breaking lines between words" ~packing:box#pack () in
+  (** Line spacing *)
+  let align                 = create_align ~title:"Spacing" ~vbox () in
+  let box                   = GPack.table ~row_spacings ~col_spacings ~packing:align#add () in
+  let _                     = GMisc.label ~text:"Left margin (pixels):" ~xalign:0. ~packing:(box#attach ~top:0 ~left:0) () in
+  let adjustment            = GData.adjustment ~lower:1.0 ~page_size:0.0 () in
+  let entry_left_margin     = GEdit.spin_button ~adjustment ~rate:1.0 ~digits:0 ~numeric:true ~packing:(box#attach ~top:0 ~left:1) () in
+  let _                     = GMisc.label ~text:"Pixels above lines:" ~xalign:0. ~packing:(box#attach ~top:1 ~left:0) () in
+  let adjustment            = GData.adjustment ~page_size:0.0 () in
+  let entry_pixels_above    = GEdit.spin_button ~adjustment ~rate:1.0 ~digits:0 ~numeric:true ~packing:(box#attach ~top:1 ~left:1) () in
+  let _                     = GMisc.label ~text:"Pixels below lines:" ~xalign:0. ~packing:(box#attach ~top:2 ~left:0) () in
+  let adjustment            = GData.adjustment ~page_size:0.0 () in
+  let entry_pixels_below    = GEdit.spin_button ~adjustment ~rate:1.0 ~digits:0 ~numeric:true ~packing:(box#attach ~top:2 ~left:1) () in
+  (** Error indication *)
+  let align                 = create_align ~title:"Error Indication" ~vbox () in
+  let box                   = GPack.table ~row_spacings ~col_spacings ~packing:align#add () in
+  let check_error_underline = GButton.check_button ~label:"Underline errors" ~packing:(box#attach ~top:0 ~left:0) () in
+  let check_error_gutter    = GButton.check_button ~label:"Show in gutter" ~packing:(box#attach ~top:0 ~left:1) () in
+  let check_error_tooltip   = GButton.check_button ~label:"Show tooltip" ~packing:(box#attach ~top:1 ~left:0) () in
+object
+  inherit page title vbox
+
+  method write pref =
+    pref.Preferences.pref_editor_tab_width <- entry_tab_width#value_as_int;
+    pref.Preferences.pref_editor_tab_spaces <- check_tab_spaces#active;
+    pref.Preferences.pref_editor_wrap <- check_wrap#active;
+    pref.Preferences.pref_editor_left_margin <- entry_left_margin#value_as_int;
+    pref.Preferences.pref_editor_pixels_lines <- entry_pixels_above#value_as_int, entry_pixels_below#value_as_int;
+    pref.Preferences.pref_err_underline <- check_error_underline#active;
+    pref.Preferences.pref_err_tooltip <- check_error_tooltip#active;
+    pref.Preferences.pref_err_gutter <- check_error_gutter#active;
+
+  method read pref =
+    entry_tab_width#set_value (float pref.Preferences.pref_editor_tab_width);
+    check_tab_spaces#set_active pref.Preferences.pref_editor_tab_spaces;
+    check_wrap#set_active pref.Preferences.pref_editor_wrap;
+    entry_left_margin#set_value (float pref.Preferences.pref_editor_left_margin);
+    let above, below = pref.Preferences.pref_editor_pixels_lines in
+    entry_pixels_above#set_value (float above);
+    entry_pixels_below#set_value (float below);
+    check_error_underline#set_active (pref.Preferences.pref_err_underline);
+    check_error_tooltip#set_active (pref.Preferences.pref_err_tooltip);
+    check_error_gutter#set_active (pref.Preferences.pref_err_gutter);
+end
+
+(** pref_editor_display *)
+and pref_editor_display title ?packing () =
   let vbox                         = GPack.vbox ~spacing ?packing () in
-  (*  *)
-  let align                        = create_align ~title:"Tab Settings/Word Wrap" ~vbox () in
+  let align                        = create_align ~title:"Settings" ~vbox () in
   let box                          = GPack.vbox ~spacing:row_spacings ~packing:align#add () in
-  let tbox                         = GPack.hbox ~spacing:8 ~packing:box#pack () in
-  let _                            = GMisc.label ~text:"Tab width:" ~packing:tbox#pack () in
-  let adjustment                   = GData.adjustment ~page_size:0.0 () in
-  let entry_tab_width              = GEdit.spin_button ~adjustment ~rate:1.0 ~digits:0 ~numeric:true ~packing:tbox#add () in
-  let check_tab_spaces             = GButton.check_button ~label:"Use spaces instead of tabs" ~packing:tbox#add () in
-  let _                            = check_tab_spaces#misc#set_sensitive false in
-  let check_wrap                   = GButton.check_button ~label:"Wrap text, breaking lines between words" ~packing:box#pack () in
-  (** Display *)
-  let align                        = create_align ~title:"Display" ~vbox () in
-  let box                          = GPack.table ~row_spacings ~col_spacings ~packing:align#add () in
-  let check_show_line_numbers      = GButton.check_button ~label:"Show line numbers" ~packing:(box#attach ~top:0 ~left:0) () in
-  let check_highlight_current_line = GButton.check_button ~label:"Highlight current line" ~packing:(box#attach ~top:0 ~left:1) () in
-  let check_indent_lines           = GButton.check_button ~label:"Show indentation guidelines" ~packing:(box#attach ~top:1 ~left:0) () in
-  let check_code_folding           = GButton.check_button ~label:"Enable code folding" ~packing:(box#attach ~top:1 ~left:1) () in
-  let check_global_gutter          = GButton.check_button ~label:"Show global gutter" ~packing:(box#attach ~top:2 ~left:0) () in
-  let hbox                         = GPack.hbox ~spacing:5 ~packing:(box#attach ~top:2 ~left:1) () in
+  let check_show_line_numbers      = GButton.check_button ~label:"Show line numbers" ~packing:box#pack () in
+  let check_highlight_current_line = GButton.check_button ~label:"Highlight current line" ~packing:box#pack () in
+  let check_indent_lines           = GButton.check_button ~label:"Show indentation guidelines" ~packing:box#pack () in
+  let check_code_folding           = GButton.check_button ~label:"Enable code folding" ~packing:box#pack () in
+  let check_global_gutter          = GButton.check_button ~label:"Show global gutter" ~packing:box#pack () in
+  let hbox                         = GPack.hbox ~spacing:5 ~packing:box#pack () in
   let adjustment                   = GData.adjustment ~lower:0. ~upper:300. ~step_incr:1. ~page_size:0. () in
-  let check_right_margin           = GButton.check_button ~active:false
-    ~label:"Visible right margin at column:" ~packing:hbox#pack () in
-  let entry_right_margin           = GEdit.spin_button
-    ~numeric:true ~digits:0 ~rate:1.0 ~adjustment ~packing:hbox#pack () in
-  let hbox                         = GPack.hbox ~spacing:5 ~packing:(box#attach ~top:3 ~left:0) () in
-  let check_mark_occurrences       = GButton.check_button ~active:false ~label:"Highlight all occurrences of the\nselected word" ~packing:hbox#pack () in
-  let mo_hbox                      = GPack.hbox ~spacing:5 ~packing:(box#attach ~top:3 ~left:1) () in
+  let check_right_margin           = GButton.check_button ~active:false ~label:"Visible right margin at column:" ~packing:hbox#pack () in
+  let entry_right_margin           = GEdit.spin_button ~numeric:true ~digits:0 ~rate:1.0 ~adjustment ~packing:hbox#pack () in
+  let mo_vbox                      = GPack.vbox ~spacing:5 ~packing:box#pack () in
+  let check_mark_occurrences       = GButton.check_button ~active:false ~label:"Highlight all occurrences of the selected word" ~packing:mo_vbox#pack () in
+  let mo_align                     = GBin.alignment ~padding:(0, 0, 25, 0) ~packing:mo_vbox#add () in
+  let mo_hbox                      = GPack.hbox ~spacing:5 ~packing:mo_align#add () in
   let _                            = GMisc.label ~text:"Color:" ~packing:mo_hbox#pack () in
   let mo_button                    = GButton.color_button ~packing:(mo_hbox#pack ~fill:false) () in
   let _                            = mo_button#set_relief `NONE in
-  let hbox                         = GPack.hbox ~spacing:5 ~packing:(box#attach ~top:4 ~left:0) () in
-  let _                            = GMisc.label ~text:"Pixels above/below lines:" ~packing:hbox#pack () in
-  let adjustment                   = GData.adjustment ~page_size:0.0 () in
-  let entry_pixels_above           = GEdit.spin_button ~adjustment ~rate:1.0 ~digits:0 ~numeric:true ~packing:hbox#add () in
-  let adjustment                   = GData.adjustment ~page_size:0.0 () in
-  let entry_pixels_below           = GEdit.spin_button ~adjustment ~rate:1.0 ~digits:0 ~numeric:true ~packing:hbox#add () in
-  (** Error indication *)
-  let align                        = create_align ~title:"Error indication" ~vbox () in
-  let box                          = GPack.table ~row_spacings ~col_spacings ~packing:align#add () in
-  let check_error_underline        = GButton.check_button ~label:"Underline errors" ~packing:(box#attach ~top:0 ~left:0) () in
-  let check_error_gutter           = GButton.check_button ~label:"Show in gutter" ~packing:(box#attach ~top:0 ~left:1) () in
-  let check_error_tooltip          = GButton.check_button ~label:"Show tooltip" ~packing:(box#attach ~top:1 ~left:0) () in
-object (self)
+object
   inherit page title vbox
+
   initializer
     ignore (check_right_margin#connect#toggled ~callback:begin fun () ->
       entry_right_margin#misc#set_sensitive check_right_margin#active;
@@ -432,10 +466,6 @@ object (self)
   end);
 
   method write pref =
-    pref.Preferences.pref_editor_tab_width <- entry_tab_width#value_as_int;
-    pref.Preferences.pref_editor_tab_spaces <- check_tab_spaces#active;
-    pref.Preferences.pref_editor_wrap <- check_wrap#active;
-    pref.Preferences.pref_editor_pixels_lines <- entry_pixels_above#value_as_int, entry_pixels_below#value_as_int;
     pref.Preferences.pref_highlight_current_line <- check_highlight_current_line#active;
     pref.Preferences.pref_show_line_numbers <- check_show_line_numbers#active;
     pref.Preferences.pref_indent_lines <- check_indent_lines#active;
@@ -443,19 +473,10 @@ object (self)
     pref.Preferences.pref_right_margin <- entry_right_margin#value_as_int;
     pref.Preferences.pref_code_folding_enabled <- check_code_folding#active;
     pref.Preferences.pref_show_global_gutter <- check_global_gutter#active;
-    pref.Preferences.pref_err_underline <- check_error_underline#active;
-    pref.Preferences.pref_err_tooltip <- check_error_tooltip#active;
-    pref.Preferences.pref_err_gutter <- check_error_gutter#active;
     let color = color_name mo_button#color in
     pref.Preferences.pref_editor_mark_occurrences <- check_mark_occurrences#active, color;
 
   method read pref =
-    entry_tab_width#set_value (float pref.Preferences.pref_editor_tab_width);
-    check_tab_spaces#set_active pref.Preferences.pref_editor_tab_spaces;
-    check_wrap#set_active pref.Preferences.pref_editor_wrap;
-    let above, below = pref.Preferences.pref_editor_pixels_lines in
-    entry_pixels_above#set_value (float above);
-    entry_pixels_below#set_value (float below);
     check_highlight_current_line#set_active pref.Preferences.pref_highlight_current_line;
     check_show_line_numbers#set_active pref.Preferences.pref_show_line_numbers;
     check_indent_lines#set_active pref.Preferences.pref_indent_lines;
@@ -464,9 +485,6 @@ object (self)
     entry_right_margin#set_value (float pref.Preferences.pref_right_margin);
     check_code_folding#set_active (pref.Preferences.pref_code_folding_enabled);
     check_global_gutter#set_active (pref.Preferences.pref_show_global_gutter);
-    check_error_underline#set_active (pref.Preferences.pref_err_underline);
-    check_error_tooltip#set_active (pref.Preferences.pref_err_tooltip);
-    check_error_gutter#set_active (pref.Preferences.pref_err_gutter);
     let enabled, color = pref.Preferences.pref_editor_mark_occurrences in
     check_mark_occurrences#set_active (not enabled);
     check_mark_occurrences#set_active enabled;

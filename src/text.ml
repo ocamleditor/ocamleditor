@@ -616,7 +616,7 @@ object (self)
             let expose_bottom, _ = self#get_line_at_y (expose_y + (Gdk.Rectangle.height expose_area)) in
             (*  *)
             let adjust      = Oe_config.current_line_border_adjust in
-            let hadjust     = match hadjustment with Some adj -> int_of_float adj#value | _ -> 0 in
+            let hadjust     = match hadjustment with Some adj -> int_of_float adj#value - self#left_margin | _ -> 0 in
             let drawable    = new GDraw.drawable window in
             (* Current line border *)
             begin
@@ -641,7 +641,7 @@ object (self)
             end;
             (* Indentation guidelines *)
             if show_indent_lines && not self#show_whitespace_chars
-            then (self#draw_indent_lines drawable) start stop y0 h0;
+            then (self#draw_indent_lines drawable) start stop y0;
             (* Gutter border *)
             begin
               match self#get_window `LEFT with
@@ -840,7 +840,6 @@ object (self)
     Text_init.realize self;
     Text_init.select_lines_from_gutter self;
     (** Margin and line spacings *)
-    self#set_left_margin Oe_config.editor_left_margin;
     (* To avoid strange application crash, avoid to draw the border of
        matching delimiters when we are in the middle of an insert_text event.
        This is done by setting current_matching_tag_bounds_draw to [], still

@@ -22,6 +22,7 @@
 
 
 let apply (view : Text.view) pref =
+  view#set_left_margin pref.Preferences.pref_editor_left_margin;
   let above, below = pref.Preferences.pref_editor_pixels_lines in
   view#set_pixels_above_lines above;
   view#set_pixels_below_lines below;

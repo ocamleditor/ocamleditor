@@ -40,6 +40,7 @@ type t = {
   mutable pref_editor_trim_lines            : bool;
   mutable pref_editor_custom_templ_filename : string;
   mutable pref_editor_mark_occurrences      : bool * string;
+  mutable pref_editor_left_margin           : int;
   mutable pref_editor_pixels_lines          : int * int;
   mutable pref_compl_font                   : string;
   mutable pref_compl_greek                  : bool;
@@ -171,6 +172,7 @@ let create_defaults () = {
   pref_editor_trim_lines            = false;
   pref_editor_custom_templ_filename = "";
   pref_editor_mark_occurrences      = true, "#90ff90";
+  pref_editor_left_margin           = 1;
   pref_editor_pixels_lines          = 0,0;
   pref_compl_font                   = "Sans 9";
   pref_compl_greek                  = true;
@@ -309,6 +311,7 @@ let to_xml pref =
         Xml.Element ("pref_editor_mark_occurrences", ["enabled", (string_of_bool enabled)], [Xml.PCData color]);
       end;
       Xml.Element ("pref_editor_custom_templ_filename", [], [Xml.PCData (pref.pref_editor_custom_templ_filename)]);
+      Xml.Element ("pref_editor_left_margin", [], [Xml.PCData (string_of_int pref.pref_editor_left_margin)]);
       begin
         let above, below = pref.pref_editor_pixels_lines in
         Xml.Element ("pref_editor_pixels_lines", ["above", string_of_int above; "below", string_of_int below], []);
@@ -411,6 +414,7 @@ let from_file filename =
         | "pref_editor_bak" -> pref.pref_editor_bak <- bool_of_string (value node)
         | "pref_editor_custom_templ_filename" -> pref.pref_editor_custom_templ_filename <- value node
         | "pref_editor_mark_occurrences" -> pref.pref_editor_mark_occurrences <- ((bool_of_string (Xml.attrib node "enabled")), value node)
+        | "pref_editor_left_margin" -> pref.pref_editor_left_margin <- int_of_string (value node)
         | "pref_editor_pixels_lines" -> pref.pref_editor_pixels_lines <- (int_of_string (Xml.attrib node "above")), (int_of_string (Xml.attrib node "below"))
         | "pref_compl_font" -> pref.pref_compl_font <- value node
         | "pref_compl_greek" -> pref.pref_compl_greek <- bool_of_string (value node)
