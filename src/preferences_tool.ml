@@ -143,16 +143,19 @@ object (self)
     match List_opt.find (fun (t, _) -> t = current) pages with
       | Some (_, p) -> p#read defaults
       | _ -> ()
-  method create title row  (page : string -> ?packing:(GObj.widget -> unit) -> unit -> page) =
-    let page = page title ~packing:hbox#add () in
+  method create ?(idle=false) title row  (page : string -> ?packing:(GObj.widget -> unit) -> unit -> page) =
     model#set ~row ~column title;
-    page#misc#hide();
-    page#read Preferences.preferences#get;
-    pages <- (title, page) :: pages
+    let f () =
+      let page = page title ~packing:hbox#add () in
+      page#misc#hide();
+      page#read Preferences.preferences#get;
+      pages <- (title, page) :: pages
+    in
+    if idle then Gmisclib.Idle.add f else f()
   initializer
     (* Tree *)
     let row = model#append () in self#create "General" row (new pref_view);
-    let row = model#append () in self#create "Fonts" row (new pref_fonts);
+    let row = model#append () in self#create ~idle:true "Fonts" row (new pref_fonts);
     let row as parent = model#append () in self#create "Editor" row (new pref_editor);
     let row = model#append ~parent () in self#create "Display" row (new pref_editor_display);
     let row = model#append ~parent () in self#create "Actions" row (new pref_editor_actions);
@@ -173,8 +176,8 @@ object (self)
     ignore (reset_button#connect#clicked ~callback:self#reset_defaults);
     ignore (reset_page_button#connect#clicked ~callback:self#reset_page_defaults);
     (*  *)
+    Gmisclib.Idle.add (fun () -> view#selection#select_path (GTree.Path.create [0]));
     window#present();
-    view#selection#select_path (GTree.Path.create [0])
 end
 
 
@@ -233,7 +236,7 @@ and pref_view title ?packing () =
   (* Software Update *)
   let align                 = create_align ~title:"Software Update" ~vbox () in
   let check_software_update = GButton.check_button ~label:"Automatically check for updates" ~packing:align#add () in
-object (self)
+object
   inherit page title vbox
 
   method write pref =
@@ -314,7 +317,7 @@ and pref_editor_actions title ?packing () =
   let align                       = create_align ~title:"Searching" ~vbox () in
   let box                         = GPack.vbox ~spacing:row_spacings ~packing:align#add () in
   let check_search_word_at_cursor = GButton.check_button ~label:"Search word at cursor" ~packing:box#pack () in
-object (self)
+object
   inherit page title vbox
 
 (*  initializer
@@ -357,8 +360,7 @@ and pref_fonts title ?packing () =
   let _            = notebook#append_page ~tab_label:(GMisc.label ~text:"Completion" ())#coerce box_compl#coerce in
   let _            = notebook#append_page ~tab_label:(GMisc.label ~text:"Output" ())#coerce font_other#coerce in
   let _            = notebook#append_page ~tab_label:(GMisc.label ~text:"Documentation" ())#coerce font_odoc#coerce in
-
-object (self)
+object
   inherit page title vbox
 
   method write pref =
@@ -714,7 +716,7 @@ and pref_templ title ?packing () =
   let sw         = GBin.scrolled_window ~hpolicy:`AUTOMATIC ~vpolicy:`AUTOMATIC ~packing:expander#add () in
   let markup     = Template.help in
   let label      = GMisc.label ~xalign:0.0 ~yalign:0.0 ~xpad:3 ~ypad:3 ~markup ~line_wrap:false ~selectable:true ~packing:sw#add_with_viewport () in
-object (self)
+object
   inherit page title vbox
   method write pref =
     pref.Preferences.pref_editor_custom_templ_filename <- entry#text;
@@ -725,7 +727,5 @@ object (self)
 end
 
 (** create *)
-let create ~editor () =
-  let pref = new preferences ~editor () in
-  pref
+let create = new preferences
 
