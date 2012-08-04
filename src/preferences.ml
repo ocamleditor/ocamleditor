@@ -21,7 +21,6 @@
 *)
 
 open Miscellanea
-open Printf
 
 type t = {
   mutable pref_timestamp                    : float;
@@ -41,6 +40,7 @@ type t = {
   mutable pref_editor_trim_lines            : bool;
   mutable pref_editor_custom_templ_filename : string;
   mutable pref_editor_mark_occurrences      : bool * string;
+  mutable pref_editor_pixels_lines          : int * int;
   mutable pref_compl_font                   : string;
   mutable pref_compl_greek                  : bool;
   mutable pref_output_font                  : string;
@@ -153,7 +153,7 @@ let default_colors : text_properties list = [
   (`NAME "#474747"), `NORMAL, `ITALIC, `NONE, `MEDIUM;
 ]
 
-let defaults = {
+let create_defaults () = {
   pref_timestamp                    = (Unix.gettimeofday());
   pref_base_font                    = "monospace 9";
   pref_tab_pos                      = `TOP;
@@ -171,6 +171,7 @@ let defaults = {
   pref_editor_trim_lines            = false;
   pref_editor_custom_templ_filename = "";
   pref_editor_mark_occurrences      = true, "#90ff90";
+  pref_editor_pixels_lines          = 0,0;
   pref_compl_font                   = "Sans 9";
   pref_compl_greek                  = true;
   pref_output_font                  = "monospace 8";
@@ -212,67 +213,6 @@ let defaults = {
   pref_show_whitespace_chars        = false;
   pref_outline_show_types           = false;
   pref_odoc_font                    = "Serif 9";
-}
-
-let create_defaults () = {
-  pref_timestamp                    = (Unix.gettimeofday());
-  pref_base_font                    = defaults.pref_base_font;
-  pref_tab_pos                      = defaults.pref_tab_pos;
-  pref_check_updates                = defaults.pref_check_updates;
-  pref_tab_vertical_text            = defaults.pref_tab_vertical_text;
-  pref_tab_label_type               = defaults.pref_tab_label_type;
-  pref_bg_color                     = defaults.pref_bg_color;
-  pref_bg_color_popup               = defaults.pref_bg_color_popup;
-  pref_fg_color_popup               = defaults.pref_fg_color_popup;
-  pref_tags                         = defaults.pref_tags;
-  pref_editor_tab_width             = defaults.pref_editor_tab_width;
-  pref_editor_tab_spaces            = defaults.pref_editor_tab_spaces;
-  pref_editor_bak                   = defaults.pref_editor_bak;
-  pref_editor_wrap                  = defaults.pref_editor_wrap;
-  pref_editor_trim_lines            = defaults.pref_editor_trim_lines;
-  pref_editor_custom_templ_filename = defaults.pref_editor_custom_templ_filename;
-  pref_editor_mark_occurrences      = defaults.pref_editor_mark_occurrences;
-  pref_compl_font                   = defaults.pref_compl_font;
-  pref_compl_greek                  = defaults.pref_compl_greek;
-  pref_output_font                  = defaults.pref_output_font;
-  pref_output_bg                    = defaults.pref_output_bg;
-  pref_output_fg_stdin              = defaults.pref_output_fg_stdin;
-  pref_output_fg_stdout             = defaults.pref_output_fg_stdout;
-  pref_output_fg_err                = defaults.pref_output_fg_err;
-  pref_output_fg_warn               = defaults.pref_output_fg_warn;
-  pref_smart_keys_home              = defaults.pref_smart_keys_home;
-  pref_smart_keys_end               = defaults.pref_smart_keys_end;
-  pref_annot_type_tooltips_enabled  = defaults.pref_annot_type_tooltips_enabled;
-  pref_annot_type_tooltips_delay    = defaults.pref_annot_type_tooltips_delay;
-  pref_annot_type_tooltips_impl     = defaults.pref_annot_type_tooltips_impl;
-  pref_search_word_at_cursor        = defaults.pref_search_word_at_cursor;
-  pref_highlight_current_line       = defaults.pref_highlight_current_line;
-  pref_show_line_numbers            = defaults.pref_show_line_numbers;
-  pref_indent_lines                 = defaults.pref_indent_lines;
-  pref_right_margin_visible         = defaults.pref_right_margin_visible;
-  pref_right_margin                 = defaults.pref_right_margin;
-  pref_max_view_1_menubar           = defaults.pref_max_view_1_menubar;
-  pref_max_view_1_toolbar           = defaults.pref_max_view_1_toolbar;
-  pref_max_view_1_tabbar            = defaults.pref_max_view_1_tabbar;
-  pref_max_view_1_messages          = defaults.pref_max_view_1_messages;
-  pref_max_view_1_fullscreen        = defaults.pref_max_view_1_fullscreen;
-  pref_max_view_2                   = defaults.pref_max_view_2;
-  pref_max_view_2_menubar           = defaults.pref_max_view_2_menubar;
-  pref_max_view_2_toolbar           = defaults.pref_max_view_2_toolbar;
-  pref_max_view_2_tabbar            = defaults.pref_max_view_2_tabbar;
-  pref_max_view_2_messages          = defaults.pref_max_view_2_messages;
-  pref_max_view_2_fullscreen        = defaults.pref_max_view_2_fullscreen;
-  pref_max_view_fullscreen          = defaults.pref_max_view_fullscreen;
-  pref_ocamldoc_paragraph_bgcolor_1 = defaults.pref_ocamldoc_paragraph_bgcolor_1;
-  pref_ocamldoc_paragraph_bgcolor_2 = defaults.pref_ocamldoc_paragraph_bgcolor_2;
-  pref_code_folding_enabled         = defaults.pref_code_folding_enabled;
-  pref_show_global_gutter           = defaults.pref_show_global_gutter;
-  pref_err_underline                = defaults.pref_err_underline;
-  pref_err_tooltip                  = defaults.pref_err_tooltip;
-  pref_err_gutter                   = defaults.pref_err_gutter;
-  pref_show_whitespace_chars        = defaults.pref_show_whitespace_chars;
-  pref_outline_show_types           = defaults.pref_outline_show_types;
-  pref_odoc_font                    = defaults.pref_odoc_font;
 }
 
 let preferences = new GUtil.variable (create_defaults ())
@@ -369,6 +309,10 @@ let to_xml pref =
         Xml.Element ("pref_editor_mark_occurrences", ["enabled", (string_of_bool enabled)], [Xml.PCData color]);
       end;
       Xml.Element ("pref_editor_custom_templ_filename", [], [Xml.PCData (pref.pref_editor_custom_templ_filename)]);
+      begin
+        let above, below = pref.pref_editor_pixels_lines in
+        Xml.Element ("pref_editor_pixels_lines", ["above", string_of_int above; "below", string_of_int below], []);
+      end;
       Xml.Element ("pref_compl_font", [], [Xml.PCData pref.pref_compl_font]);
       Xml.Element ("pref_compl_greek", [], [Xml.PCData (string_of_bool pref.pref_compl_greek)]);
       Xml.Element ("pref_output_font", [], [Xml.PCData pref.pref_output_font]);
@@ -421,6 +365,7 @@ let to_xml pref =
 let from_file filename =
   try
     let xml = Xml.parse_file filename in
+    let default_pref = create_defaults () in
     let pref = create_defaults () in
     let value xml =
       match Xml.children xml with
@@ -454,11 +399,11 @@ let from_file filename =
             )) :: pref.pref_tags
           end node;
           List.iter begin fun (tag, _) ->
-            if try List.assoc tag pref.pref_tags; false with Not_found -> true then begin
-              let defaults = List.assoc tag defaults.pref_tags in
+            if try ignore (List.assoc tag pref.pref_tags); false with Not_found -> true then begin
+              let defaults = List.assoc tag default_pref.pref_tags in
               pref.pref_tags <- (tag, defaults) :: pref.pref_tags
             end
-          end defaults.pref_tags
+          end default_pref.pref_tags
         | "pref_editor_tab_width" -> pref.pref_editor_tab_width <- int_of_string (value node)
         | "pref_editor_tab_spaces" -> pref.pref_editor_tab_spaces <- bool_of_string (value node)
         | "pref_editor_wrap" -> pref.pref_editor_wrap <- bool_of_string (value node)
@@ -466,6 +411,7 @@ let from_file filename =
         | "pref_editor_bak" -> pref.pref_editor_bak <- bool_of_string (value node)
         | "pref_editor_custom_templ_filename" -> pref.pref_editor_custom_templ_filename <- value node
         | "pref_editor_mark_occurrences" -> pref.pref_editor_mark_occurrences <- ((bool_of_string (Xml.attrib node "enabled")), value node)
+        | "pref_editor_pixels_lines" -> pref.pref_editor_pixels_lines <- (int_of_string (Xml.attrib node "above")), (int_of_string (Xml.attrib node "below"))
         | "pref_compl_font" -> pref.pref_compl_font <- value node
         | "pref_compl_greek" -> pref.pref_compl_greek <- bool_of_string (value node)
         | "pref_output_font" -> pref.pref_output_font <- value node
@@ -499,7 +445,7 @@ let from_file filename =
         | "pref_max_view_fullscreen" -> pref.pref_max_view_fullscreen <- bool_of_string (value node)
         | "pref_ocamldoc_paragraph_bgcolor" ->
           pref.pref_ocamldoc_paragraph_bgcolor_1 <- Some (value node);
-          pref.pref_ocamldoc_paragraph_bgcolor_2 <- defaults.pref_ocamldoc_paragraph_bgcolor_2;
+          pref.pref_ocamldoc_paragraph_bgcolor_2 <- default_pref.pref_ocamldoc_paragraph_bgcolor_2;
         | "pref_ocamldoc_paragraph_bgcolor_1" -> pref.pref_ocamldoc_paragraph_bgcolor_1 <- (match value node with "" -> None | x -> Some x)
         | "pref_ocamldoc_paragraph_bgcolor_2" -> pref.pref_ocamldoc_paragraph_bgcolor_2 <- (match value node with "" -> None | x -> Some x)
         | "pref_code_folding_enabled" -> pref.pref_code_folding_enabled <- bool_of_string (value node)

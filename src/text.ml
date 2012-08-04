@@ -840,9 +840,7 @@ object (self)
     Text_init.realize self;
     Text_init.select_lines_from_gutter self;
     (** Margin and line spacings *)
-    self#set_left_margin 1;
-    self#set_pixels_above_lines Oe_config.editor_pixels_above_lines;
-    self#set_pixels_below_lines Oe_config.editor_pixels_below_lines;
+    self#set_left_margin Oe_config.editor_left_margin;
     (* To avoid strange application crash, avoid to draw the border of
        matching delimiters when we are in the middle of an insert_text event.
        This is done by setting current_matching_tag_bounds_draw to [], still

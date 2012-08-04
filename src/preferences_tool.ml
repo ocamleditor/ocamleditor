@@ -21,8 +21,6 @@
 *)
 
 
-open Gdk
-open Miscellanea
 open Printf
 
 let ocaml_preview =
@@ -68,7 +66,7 @@ let create_align ?title ?(indent=13) ~(vbox : GPack.box) () =
   let indent = match title with
     | None -> 0
     | Some title ->
-      let label = GMisc.label ~markup:(sprintf "<b>%s</b>" title) ~xalign:0.0 ~packing:box#add () in
+      let _ = GMisc.label ~markup:(sprintf "<b>%s</b>" title) ~xalign:0.0 ~packing:box#add () in
       indent
   in
   let align = GBin.alignment ~padding:(0, 0, indent, 0) ~packing:box#add () in
@@ -83,10 +81,10 @@ let row_spacings = 5
 (** page *)
 class virtual page title (box : GPack.box) =
   let tbox = GPack.vbox ~spacing:3 ~packing:box#pack () in
-  let label = GMisc.label ~markup:(sprintf "<big><b>%s</b></big>" title) ~xalign:0.0 ~packing:tbox#pack () in
-  let sep = GMisc.separator `HORIZONTAL ~packing:tbox#pack () in
-  let _ = box#reorder_child tbox#coerce ~pos:0 in
-object (self)
+  let _    = GMisc.label ~markup:(sprintf "<big><b>%s</b></big>" title) ~xalign:0.0 ~packing:tbox#pack () in
+  let _    = GMisc.separator `HORIZONTAL ~packing:tbox#pack () in
+  let _    = box#reorder_child tbox#coerce ~pos:0 in
+object
   inherit GObj.widget box#as_widget
   method virtual write : Preferences.t -> unit
   method virtual read : Preferences.t -> unit
@@ -96,29 +94,29 @@ end
 
 (** preferences *)
 and preferences ~(editor : Editor.editor) () =
-  let window = GWindow.window ~allow_shrink:false ~allow_grow:false ~resizable:true ~width:700
+  let window            = GWindow.window ~allow_shrink:false ~allow_grow:false ~resizable:true ~width:750
     ~type_hint:`DIALOG ~modal:true ~title:"Preferences" ~position:`CENTER ~icon:Icons.oe ~show:false () in
-  let vbox = GPack.vbox ~border_width:8 ~spacing:8 ~packing:window#add () in
-  let hbox = GPack.hbox ~spacing:8 ~packing:vbox#add () in
-  let cols = new GTree.column_list in
-  let column  = cols#add Gobject.Data.string in
-  let model = GTree.tree_store cols in
-  let renderer = GTree.cell_renderer_text [] in
-  let view_column = GTree.view_column ~title:"File" ~renderer:(renderer, ["text", column]) () in
-  let sw = GBin.scrolled_window ~shadow_type:`IN ~hpolicy:`AUTOMATIC ~vpolicy:`AUTOMATIC
+  let vbox              = GPack.vbox ~border_width:8 ~spacing:8 ~packing:window#add () in
+  let hbox              = GPack.hbox ~spacing:8 ~packing:vbox#add () in
+  let cols              = new GTree.column_list in
+  let column            = cols#add Gobject.Data.string in
+  let model             = GTree.tree_store cols in
+  let renderer          = GTree.cell_renderer_text [] in
+  let view_column       = GTree.view_column ~title:"File" ~renderer:(renderer, ["text", column]) () in
+  let sw                = GBin.scrolled_window ~shadow_type:`IN ~hpolicy:`AUTOMATIC ~vpolicy:`AUTOMATIC
     ~packing:(hbox#pack ~expand:false) () in
-  let view = GTree.view ~model:model ~headers_visible:false ~reorderable:false ~width:140
+  let view              = GTree.view ~model:model ~headers_visible:false ~reorderable:false ~width:140
     ~height:300 ~packing:sw#add () in
-  let _ = view#append_column view_column in
-  let _ = GMisc.separator `HORIZONTAL ~packing:vbox#pack () in
-  let button_box = GPack.button_box `HORIZONTAL ~layout:`END ~border_width:5
+  let _                 = view#append_column view_column in
+  let _                 = GMisc.separator `HORIZONTAL ~packing:vbox#pack () in
+  let button_box        = GPack.button_box `HORIZONTAL ~layout:`END ~border_width:5
     ~spacing:8 ~packing:(vbox#pack ~expand:false) () in
-  let ok_button = GButton.button ~stock:`OK ~packing:button_box#add () in
-  let cancel_button = GButton.button ~stock:`CANCEL ~packing:button_box#add () in
-  let reset_button = GButton.button ~label:"Reset All" ~packing:button_box#add () in
-  let _ = button_box#set_child_secondary reset_button#coerce true in
+  let ok_button         = GButton.button ~stock:`OK ~packing:button_box#add () in
+  let cancel_button     = GButton.button ~stock:`CANCEL ~packing:button_box#add () in
+  let reset_button      = GButton.button ~label:"Reset All" ~packing:button_box#add () in
+  let _                 = button_box#set_child_secondary reset_button#coerce true in
   let reset_page_button = GButton.button ~label:"Reset Page" ~packing:button_box#add () in
-  let _ = button_box#set_child_secondary reset_page_button#coerce true in
+  let _                 = button_box#set_child_secondary reset_page_button#coerce true in
 object (self)
   inherit GObj.widget vbox#as_widget
   val mutable pages = []
@@ -181,11 +179,11 @@ end
 
 (** pref_view *)
 and pref_view title ?packing () =
-  let vbox = GPack.vbox ~spacing ?packing () in
-  let align = create_align ~title:"Tabs" ~vbox () in
-  let table = GPack.table ~col_spacings ~row_spacings ~packing:align#add () in
-  let _ = GMisc.label ~text:"Orientation:" ~xalign ~packing:(table#attach ~top:0 ~left:0 ~expand:`NONE) () in
-  let _ = GMisc.label ~text:"Label type:" ~xalign ~packing:(table#attach ~top:1 ~left:0 ~expand:`NONE) () in
+  let vbox                  = GPack.vbox ~spacing ?packing () in
+  let align                 = create_align ~title:"Tabs" ~vbox () in
+  let table                 = GPack.table ~col_spacings ~row_spacings ~packing:align#add () in
+  let _                     = GMisc.label ~text:"Orientation:" ~xalign ~packing:(table#attach ~top:0 ~left:0 ~expand:`NONE) () in
+  let _                     = GMisc.label ~text:"Label type:" ~xalign ~packing:(table#attach ~top:1 ~left:0 ~expand:`NONE) () in
 (*  let _ = GMisc.label ~text:"Insertions:" ~xalign ~packing:(table#attach ~top:2 ~left:0 ~expand:`NONE) () in*)
   let combo_orient, _ = GEdit.combo_box_text ~strings:[
       "Top"; "Right"; "Bottom"; "Left"; "Vertical on the left"; "Vertical on the right"
@@ -195,33 +193,33 @@ and pref_view title ?packing () =
 (*  let combo_insert, _ = GEdit.combo_box_text ~strings:["Insert at end"; "Insert at beginning"; "Sort alphabetically"]
     ~packing:(table#attach ~top:2 ~left:1 ~expand:`X) () in*)
   (* Maximize View *)
-  let align = create_align ~title:"Workspaces" ~vbox () in
-  let box = GPack.vbox ~spacing:row_spacings ~packing:align#add () in
-  let table = GPack.table ~homogeneous:false ~col_spacings ~row_spacings ~packing:box#pack () in
-  let top = ref 0 in
-  let width = 65 in
-  let none_action_label = GMisc.label ~text:"" ~packing:(table#attach ~top:0 ~left:0) () in
+  let align                 = create_align ~title:"Workspaces" ~vbox () in
+  let box                   = GPack.vbox ~spacing:row_spacings ~packing:align#add () in
+  let table                 = GPack.table ~homogeneous:false ~col_spacings ~row_spacings ~packing:box#pack () in
+  let top                   = ref 0 in
+  let width                 = 65 in
+  let none_action_label     = GMisc.label ~text:"" ~packing:(table#attach ~top:0 ~left:0) () in
   (*let label_menubar = GMisc.label ~width ~text:"Show\nMenubar" ~justify:`CENTER ~xalign:0.5 ~packing:(table#attach ~top:!top ~left:1) () in*)
-  let label_toolbar = GMisc.label ~width ~text:"Show\nToolbar" ~justify:`CENTER ~xalign:0.5 ~packing:(table#attach ~top:!top ~left:2) () in
-  let label_tabbar = GMisc.label ~width ~text:"Show\nTabs" ~justify:`CENTER ~xalign:0.5 ~packing:(table#attach ~top:!top ~left:3) () in
-  let label_messages = GMisc.label ~width ~text:"Keep\nMessages" ~justify:`CENTER ~xalign:0.5 ~packing:(table#attach ~top:!top ~left:4) () in
-  let label_fullscreen = GMisc.label ~width ~text:"Full-Screen" ~justify:`CENTER ~xalign:0.5 ~packing:(table#attach ~top:!top ~left:6) () in
-  let _ = incr top in
-  let fst_action_label = GMisc.label ~text:"Workspace 1:" ~xalign:0.0 ~packing:(table#attach ~top:!top ~left:0) () in
+  let label_toolbar         = GMisc.label ~width ~text:"Show\nToolbar" ~justify:`CENTER ~xalign:0.5 ~packing:(table#attach ~top:!top ~left:2) () in
+  let label_tabbar          = GMisc.label ~width ~text:"Show\nTabs" ~justify:`CENTER ~xalign:0.5 ~packing:(table#attach ~top:!top ~left:3) () in
+  let label_messages        = GMisc.label ~width ~text:"Keep\nMessages" ~justify:`CENTER ~xalign:0.5 ~packing:(table#attach ~top:!top ~left:4) () in
+  let label_fullscreen      = GMisc.label ~width ~text:"Full-Screen" ~justify:`CENTER ~xalign:0.5 ~packing:(table#attach ~top:!top ~left:6) () in
+  let _                     = incr top in
+  let fst_action_label      = GMisc.label ~text:"Workspace 1:" ~xalign:0.0 ~packing:(table#attach ~top:!top ~left:0) () in
   (*let check_menubar_1 = GButton.check_button ~packing:(table#attach ~fill:`NONE ~top:!top ~left:1) () in*)
-  let check_toolbar_1 = GButton.check_button ~packing:(table#attach ~fill:`NONE ~top:!top ~left:2) () in
-  let check_tabbar_1 = GButton.check_button ~packing:(table#attach ~fill:`NONE ~top:!top ~left:3) () in
-  let check_messages_1 = GButton.check_button ~packing:(table#attach ~fill:`NONE ~top:!top ~left:4) () in
-  let check_fullscreen_1 = GButton.check_button ~packing:(table#attach ~fill:`NONE ~top:!top ~left:6) () in
-  let _ = incr top in
+  let check_toolbar_1       = GButton.check_button ~packing:(table#attach ~fill:`NONE ~top:!top ~left:2) () in
+  let check_tabbar_1        = GButton.check_button ~packing:(table#attach ~fill:`NONE ~top:!top ~left:3) () in
+  let check_messages_1      = GButton.check_button ~packing:(table#attach ~fill:`NONE ~top:!top ~left:4) () in
+  let check_fullscreen_1    = GButton.check_button ~packing:(table#attach ~fill:`NONE ~top:!top ~left:6) () in
+  let _                     = incr top in
 (*  let snd_action_check = GButton.check_button ~label:"Second level:" ~packing:(table#attach ~top:!top ~left:0) () in*)
-  let snd_action_label = GMisc.label ~text:"Workspace 2:" ~xalign:0.0 ~packing:(table#attach ~top:!top ~left:0) () in
+  let snd_action_label      = GMisc.label ~text:"Workspace 2:" ~xalign:0.0 ~packing:(table#attach ~top:!top ~left:0) () in
   (*let check_menubar_2 = GButton.check_button ~packing:(table#attach ~fill:`NONE ~top:!top ~left:1) () in*)
-  let check_toolbar_2 = GButton.check_button ~packing:(table#attach ~fill:`NONE ~top:!top ~left:2) () in
-  let check_tabbar_2 = GButton.check_button ~packing:(table#attach ~fill:`NONE ~top:!top ~left:3) () in
-  let check_messages_2 = GButton.check_button ~packing:(table#attach ~fill:`NONE ~top:!top ~left:4) () in
-  let check_fullscreen_2 = GButton.check_button ~packing:(table#attach ~fill:`NONE ~top:!top ~left:6) () in
-  let use_maximize = GButton.check_button ~label:"Use maximized window instead of full-screen" ~packing:box#pack () in
+  let check_toolbar_2       = GButton.check_button ~packing:(table#attach ~fill:`NONE ~top:!top ~left:2) () in
+  let check_tabbar_2        = GButton.check_button ~packing:(table#attach ~fill:`NONE ~top:!top ~left:3) () in
+  let check_messages_2      = GButton.check_button ~packing:(table#attach ~fill:`NONE ~top:!top ~left:4) () in
+  let check_fullscreen_2    = GButton.check_button ~packing:(table#attach ~fill:`NONE ~top:!top ~left:6) () in
+  let use_maximize          = GButton.check_button ~label:"Use maximized window instead of full-screen" ~packing:box#pack () in
 (*  let _ = snd_action_check#connect#toggled ~callback:begin fun () ->
     check_menubar_2#misc#set_sensitive snd_action_check#active;
     check_toolbar_2#misc#set_sensitive snd_action_check#active;
@@ -229,10 +227,10 @@ and pref_view title ?packing () =
     check_messages_2#misc#set_sensitive snd_action_check#active;
     check_fullscreen_2#misc#set_sensitive snd_action_check#active;
   end in
-  let _ = snd_action_check#set_active true in
-  let _ = snd_action_check#set_active false in*)
+  let _                     = snd_action_check#set_active true in
+  let _                     = snd_action_check#set_active false in*)
   (* Software Update *)
-  let align = create_align ~title:"Software Update" ~vbox () in
+  let align                 = create_align ~title:"Software Update" ~vbox () in
   let check_software_update = GButton.check_button ~label:"Automatically check for updates" ~packing:align#add () in
 object (self)
   inherit page title vbox
@@ -278,23 +276,23 @@ object (self)
 end
 
 and pref_editor_actions title ?packing () =
-  let vbox = GPack.vbox ~spacing ?packing () in
+  let vbox                        = GPack.vbox ~spacing ?packing () in
   (* Smart Keys *)
-  let align = create_align ~title:"Smart Keys" ~vbox () in
-  let skbox = GPack.table ~row_spacings:row_spacings ~col_spacings:col_spacings ~packing:align#add () in
-  let _ = GMisc.label ~text:"Home: " ~xalign:0.0 ~packing:(skbox#attach ~top:0 ~left:0) () in
+  let align                       = create_align ~title:"Smart Keys" ~vbox () in
+  let skbox                       = GPack.table ~row_spacings:row_spacings ~col_spacings:col_spacings ~packing:align#add () in
+  let _                           = GMisc.label ~text:"Home: " ~xalign:0.0 ~packing:(skbox#attach ~top:0 ~left:0) () in
   let combo_home, _ = GEdit.combo_box_text ~active:0 ~strings:
     ["Move to beginning of first word"; "Move to first column position"]
     ~packing:(skbox#attach ~top:0 ~left:1 ~expand:`X) () in
-  let _ = GMisc.label ~text:"End: " ~xalign:0.0 ~packing:(skbox#attach ~top:1 ~left:0) () in
+  let _                           = GMisc.label ~text:"End: " ~xalign:0.0 ~packing:(skbox#attach ~top:1 ~left:0) () in
   let combo_end, _ = GEdit.combo_box_text ~active:0 ~strings:
     ["Move to last column position (includes whitespace)"; "Move to end of last character"]
     ~packing:(skbox#attach ~top:1 ~left:1 ~expand:`X) () in
 (*  (* Type Annotation *)
-  let align = create_align ~title:"Type Annotations" ~vbox () in
-  let box = GPack.vbox ~spacing:row_spacings ~packing:align#add () in
-  let table_annot_type = GPack.table ~row_spacings:row_spacings ~col_spacings:col_spacings ~packing:box#add () in
-  let check_annot_type_enabled = GButton.check_button ~label:"Enable tooltips"
+  let align                       = create_align ~title:"Type Annotations" ~vbox () in
+  let box                         = GPack.vbox ~spacing:row_spacings ~packing:align#add () in
+  let table_annot_type            = GPack.table ~row_spacings:row_spacings ~col_spacings:col_spacings ~packing:box#add () in
+  let check_annot_type_enabled    = GButton.check_button ~label:"Enable tooltips"
     ~packing:(table_annot_type#attach ~top:0 ~left:0) () in
   let combo_annot_type_tooltips_delay, _ = GEdit.combo_box_text ~strings:
     ["Show immediately"; "Show after delay"]
@@ -303,17 +301,17 @@ and pref_editor_actions title ?packing () =
   let combo_annot_type_tooltips_impl, _ = GEdit.combo_box_text ~show:false ~strings:
     ["Use popups"; "Use GTK tooltips"]
     ~packing:(table_annot_type#attach ~top:1 ~left:1 ~expand:`X) () in*)
-  let _ = check_annot_type_enabled#connect#toggled ~callback:begin fun () ->
+  let _                           = check_annot_type_enabled#connect#toggled ~callback:begin fun () ->
     combo_annot_type_tooltips_delay#misc#set_sensitive check_annot_type_enabled#active;
   end in*)
   (* File Saving *)
-  let align = create_align ~title:"File Saving" ~vbox () in
-  let box = GPack.vbox ~spacing:row_spacings ~packing:align#add () in
-  let check_bak = GButton.check_button ~label:"Create a backup copy of files before saving" ~packing:box#pack () in
-  let check_trim = GButton.check_button ~label:"Strip trailing whitespace" ~packing:box#pack () in
+  let align                       = create_align ~title:"File Saving" ~vbox () in
+  let box                         = GPack.vbox ~spacing:row_spacings ~packing:align#add () in
+  let check_bak                   = GButton.check_button ~label:"Create a backup copy of files before saving" ~packing:box#pack () in
+  let check_trim                  = GButton.check_button ~label:"Strip trailing whitespace" ~packing:box#pack () in
   (* Searching *)
-  let align = create_align ~title:"Searching" ~vbox () in
-  let box = GPack.vbox ~spacing:row_spacings ~packing:align#add () in
+  let align                       = create_align ~title:"Searching" ~vbox () in
+  let box                         = GPack.vbox ~spacing:row_spacings ~packing:align#add () in
   let check_search_word_at_cursor = GButton.check_button ~label:"Search word at cursor" ~packing:box#pack () in
 object (self)
   inherit page title vbox
@@ -344,20 +342,20 @@ end
 
 (** pref_fonts *)
 and pref_fonts title ?packing () =
-  let vbox = GPack.vbox ~spacing ?packing () in
-  let notebook = GPack.notebook ~packing:vbox#add () in
+  let vbox         = GPack.vbox ~spacing ?packing () in
+  let notebook     = GPack.notebook ~packing:vbox#add () in
   let border_width = 5 in
   let preview_text = "abcdefghijk ABCDEFGHIJK òàùèéì →" in
-  let font_editor = GMisc.font_selection ~preview_text ~border_width () in
-  let box_compl = GPack.vbox ~border_width ~spacing:8 () in
-  let font_compl = GMisc.font_selection ~preview_text ~packing:box_compl#add () in
+  let font_editor  = GMisc.font_selection ~preview_text ~border_width () in
+  let box_compl    = GPack.vbox ~border_width ~spacing:8 () in
+  let font_compl   = GMisc.font_selection ~preview_text ~packing:box_compl#add () in
   let button_greek = GButton.check_button ~label:"Use greek letters in types" ~packing:box_compl#pack () in
-  let font_other = GMisc.font_selection ~preview_text ~border_width () in
-  let font_odoc = GMisc.font_selection ~preview_text ~border_width () in
-  let _ = notebook#append_page ~tab_label:(GMisc.label ~text:"Editor" ())#coerce font_editor#coerce in
-  let _ = notebook#append_page ~tab_label:(GMisc.label ~text:"Completion" ())#coerce box_compl#coerce in
-  let _ = notebook#append_page ~tab_label:(GMisc.label ~text:"Output" ())#coerce font_other#coerce in
-  let _ = notebook#append_page ~tab_label:(GMisc.label ~text:"Documentation" ())#coerce font_odoc#coerce in
+  let font_other   = GMisc.font_selection ~preview_text ~border_width () in
+  let font_odoc    = GMisc.font_selection ~preview_text ~border_width () in
+  let _            = notebook#append_page ~tab_label:(GMisc.label ~text:"Editor" ())#coerce font_editor#coerce in
+  let _            = notebook#append_page ~tab_label:(GMisc.label ~text:"Completion" ())#coerce box_compl#coerce in
+  let _            = notebook#append_page ~tab_label:(GMisc.label ~text:"Output" ())#coerce font_other#coerce in
+  let _            = notebook#append_page ~tab_label:(GMisc.label ~text:"Documentation" ())#coerce font_odoc#coerce in
 
 object (self)
   inherit page title vbox
@@ -380,43 +378,49 @@ end
 
 (** pref_editor *)
 and pref_editor title ?packing () =
-  let vbox = GPack.vbox ~spacing ?packing () in
+  let vbox                         = GPack.vbox ~spacing ?packing () in
   (*  *)
-  let align = create_align ~title:"Tab Settings/Word Wrap" ~vbox () in
-  let box = GPack.vbox ~spacing:row_spacings ~packing:align#add () in
-  let tbox = GPack.hbox ~spacing:8 ~packing:box#pack () in
-  let _ = GMisc.label ~text:"Tab width:" ~packing:tbox#pack () in
-  let adjustment = GData.adjustment ~page_size:0.0 () in
-  let entry_tab_width = GEdit.spin_button ~adjustment ~rate:1.0 ~digits:0 ~numeric:true ~packing:tbox#add () in
-  let check_tab_spaces = GButton.check_button ~label:"Use spaces instead of tabs" ~packing:tbox#add () in
-  let _ = check_tab_spaces#misc#set_sensitive false in
-  let check_wrap = GButton.check_button ~label:"Wrap text, breaking lines between words" ~packing:box#pack () in
+  let align                        = create_align ~title:"Tab Settings/Word Wrap" ~vbox () in
+  let box                          = GPack.vbox ~spacing:row_spacings ~packing:align#add () in
+  let tbox                         = GPack.hbox ~spacing:8 ~packing:box#pack () in
+  let _                            = GMisc.label ~text:"Tab width:" ~packing:tbox#pack () in
+  let adjustment                   = GData.adjustment ~page_size:0.0 () in
+  let entry_tab_width              = GEdit.spin_button ~adjustment ~rate:1.0 ~digits:0 ~numeric:true ~packing:tbox#add () in
+  let check_tab_spaces             = GButton.check_button ~label:"Use spaces instead of tabs" ~packing:tbox#add () in
+  let _                            = check_tab_spaces#misc#set_sensitive false in
+  let check_wrap                   = GButton.check_button ~label:"Wrap text, breaking lines between words" ~packing:box#pack () in
   (** Display *)
-  let align = create_align ~title:"Display" ~vbox () in
-  let box = GPack.table ~row_spacings ~col_spacings ~packing:align#add () in
-  let check_show_line_numbers = GButton.check_button ~label:"Show line numbers" ~packing:(box#attach ~top:0 ~left:0) () in
+  let align                        = create_align ~title:"Display" ~vbox () in
+  let box                          = GPack.table ~row_spacings ~col_spacings ~packing:align#add () in
+  let check_show_line_numbers      = GButton.check_button ~label:"Show line numbers" ~packing:(box#attach ~top:0 ~left:0) () in
   let check_highlight_current_line = GButton.check_button ~label:"Highlight current line" ~packing:(box#attach ~top:0 ~left:1) () in
-  let check_indent_lines = GButton.check_button ~label:"Show indentation guidelines" ~packing:(box#attach ~top:1 ~left:0) () in
-  let check_code_folding = GButton.check_button ~label:"Enable code folding" ~packing:(box#attach ~top:1 ~left:1) () in
-  let check_global_gutter = GButton.check_button ~label:"Show global gutter" ~packing:(box#attach ~top:2 ~left:0) () in
-  let hbox = GPack.hbox ~spacing:5 ~packing:(box#attach ~top:2 ~left:1) () in
-  let adjustment = GData.adjustment ~lower:0. ~upper:300. ~step_incr:1. ~page_size:0. () in
-  let check_right_margin = GButton.check_button ~active:false
+  let check_indent_lines           = GButton.check_button ~label:"Show indentation guidelines" ~packing:(box#attach ~top:1 ~left:0) () in
+  let check_code_folding           = GButton.check_button ~label:"Enable code folding" ~packing:(box#attach ~top:1 ~left:1) () in
+  let check_global_gutter          = GButton.check_button ~label:"Show global gutter" ~packing:(box#attach ~top:2 ~left:0) () in
+  let hbox                         = GPack.hbox ~spacing:5 ~packing:(box#attach ~top:2 ~left:1) () in
+  let adjustment                   = GData.adjustment ~lower:0. ~upper:300. ~step_incr:1. ~page_size:0. () in
+  let check_right_margin           = GButton.check_button ~active:false
     ~label:"Visible right margin at column:" ~packing:hbox#pack () in
-  let entry_right_margin = GEdit.spin_button
+  let entry_right_margin           = GEdit.spin_button
     ~numeric:true ~digits:0 ~rate:1.0 ~adjustment ~packing:hbox#pack () in
-  let hbox = GPack.hbox ~spacing:5 ~packing:(box#attach ~top:3 ~left:0) () in
-  let check_mark_occurrences = GButton.check_button ~active:false ~label:"Highlight all occurrences of the\nselected word" ~packing:hbox#pack () in
-  let hbox = GPack.hbox ~spacing:5 ~packing:(box#attach ~top:3 ~left:1) () in
-  let _ = GMisc.label ~text:"Color:" ~packing:hbox#pack () in
-  let mo_button = GButton.color_button ~packing:(hbox#pack ~fill:false) () in
-  let _ = mo_button#set_relief `NONE in
+  let hbox                         = GPack.hbox ~spacing:5 ~packing:(box#attach ~top:3 ~left:0) () in
+  let check_mark_occurrences       = GButton.check_button ~active:false ~label:"Highlight all occurrences of the\nselected word" ~packing:hbox#pack () in
+  let mo_hbox                      = GPack.hbox ~spacing:5 ~packing:(box#attach ~top:3 ~left:1) () in
+  let _                            = GMisc.label ~text:"Color:" ~packing:mo_hbox#pack () in
+  let mo_button                    = GButton.color_button ~packing:(mo_hbox#pack ~fill:false) () in
+  let _                            = mo_button#set_relief `NONE in
+  let hbox                         = GPack.hbox ~spacing:5 ~packing:(box#attach ~top:4 ~left:0) () in
+  let _                            = GMisc.label ~text:"Pixels above/below lines:" ~packing:hbox#pack () in
+  let adjustment                   = GData.adjustment ~page_size:0.0 () in
+  let entry_pixels_above           = GEdit.spin_button ~adjustment ~rate:1.0 ~digits:0 ~numeric:true ~packing:hbox#add () in
+  let adjustment                   = GData.adjustment ~page_size:0.0 () in
+  let entry_pixels_below           = GEdit.spin_button ~adjustment ~rate:1.0 ~digits:0 ~numeric:true ~packing:hbox#add () in
   (** Error indication *)
-  let align = create_align ~title:"Error indication" ~vbox () in
-  let box = GPack.table ~row_spacings ~col_spacings ~packing:align#add () in
-  let check_error_underline = GButton.check_button ~label:"Underline errors" ~packing:(box#attach ~top:0 ~left:0) () in
-  let check_error_gutter = GButton.check_button ~label:"Show in gutter" ~packing:(box#attach ~top:0 ~left:1) () in
-  let check_error_tooltip = GButton.check_button ~label:"Show tooltip" ~packing:(box#attach ~top:1 ~left:0) () in
+  let align                        = create_align ~title:"Error indication" ~vbox () in
+  let box                          = GPack.table ~row_spacings ~col_spacings ~packing:align#add () in
+  let check_error_underline        = GButton.check_button ~label:"Underline errors" ~packing:(box#attach ~top:0 ~left:0) () in
+  let check_error_gutter           = GButton.check_button ~label:"Show in gutter" ~packing:(box#attach ~top:0 ~left:1) () in
+  let check_error_tooltip          = GButton.check_button ~label:"Show tooltip" ~packing:(box#attach ~top:1 ~left:0) () in
 object (self)
   inherit page title vbox
   initializer
@@ -424,13 +428,14 @@ object (self)
       entry_right_margin#misc#set_sensitive check_right_margin#active;
     end);
   ignore (check_mark_occurrences#connect#toggled ~callback:begin fun () ->
-    hbox#misc#set_sensitive check_mark_occurrences#active
+    mo_hbox#misc#set_sensitive check_mark_occurrences#active
   end);
 
   method write pref =
     pref.Preferences.pref_editor_tab_width <- entry_tab_width#value_as_int;
     pref.Preferences.pref_editor_tab_spaces <- check_tab_spaces#active;
     pref.Preferences.pref_editor_wrap <- check_wrap#active;
+    pref.Preferences.pref_editor_pixels_lines <- entry_pixels_above#value_as_int, entry_pixels_below#value_as_int;
     pref.Preferences.pref_highlight_current_line <- check_highlight_current_line#active;
     pref.Preferences.pref_show_line_numbers <- check_show_line_numbers#active;
     pref.Preferences.pref_indent_lines <- check_indent_lines#active;
@@ -448,6 +453,9 @@ object (self)
     entry_tab_width#set_value (float pref.Preferences.pref_editor_tab_width);
     check_tab_spaces#set_active pref.Preferences.pref_editor_tab_spaces;
     check_wrap#set_active pref.Preferences.pref_editor_wrap;
+    let above, below = pref.Preferences.pref_editor_pixels_lines in
+    entry_pixels_above#set_value (float above);
+    entry_pixels_below#set_value (float below);
     check_highlight_current_line#set_active pref.Preferences.pref_highlight_current_line;
     check_show_line_numbers#set_active pref.Preferences.pref_show_line_numbers;
     check_indent_lines#set_active pref.Preferences.pref_indent_lines;
@@ -467,89 +475,89 @@ end
 
 (** pref_color *)
 and pref_color title ?packing () =
-  let vbox = GPack.vbox ~spacing ?packing () in
-  let notebook = GPack.notebook ~packing:vbox#add () in
-  let border_width = 5 in
+  let vbox             = GPack.vbox ~spacing ?packing () in
+  let notebook         = GPack.notebook ~packing:vbox#add () in
+  let border_width     = 5 in
   (* tags *)
-  let cols = new GTree.column_list in
-  let tag_col = cols#add Gobject.Data.string in
-  let lab_col = cols#add Gobject.Data.string in
-  let tag_model = GTree.list_store cols in
+  let cols             = new GTree.column_list in
+  let tag_col          = cols#add Gobject.Data.string in
+  let lab_col          = cols#add Gobject.Data.string in
+  let tag_model        = GTree.list_store cols in
   (* Syntax coloring *)
-  let color_ocaml = GPack.vbox ~border_width ~spacing:8 () in
-  let _ = notebook#append_page ~tab_label:(GMisc.label ~text:"OCaml" ())#coerce color_ocaml#coerce in
-  let hbox = GPack.hbox ~spacing:8 ~packing:color_ocaml#pack () in
-  let _ = GMisc.label ~text:"Background color:" ~xalign ~packing:hbox#pack () in
-  let bg_button = GButton.color_button ~packing:hbox#pack () in
-  let _ = bg_button#set_relief `NONE in
+  let color_ocaml      = GPack.vbox ~border_width ~spacing:8 () in
+  let _                = notebook#append_page ~tab_label:(GMisc.label ~text:"OCaml" ())#coerce color_ocaml#coerce in
+  let hbox             = GPack.hbox ~spacing:8 ~packing:color_ocaml#pack () in
+  let _                = GMisc.label ~text:"Background color:" ~xalign ~packing:hbox#pack () in
+  let bg_button        = GButton.color_button ~packing:hbox#pack () in
+  let _                = bg_button#set_relief `NONE in
 (*  let check_bg_theme = GButton.check_button ~label:"From theme (requires restart)" ~packing:hbox#add () in
-  let _ =
+  let _                =
       check_bg_theme#connect#toggled ~callback:begin fun () ->
       bg_button#misc#set_sensitive (not check_bg_theme#active)
     end
   in*)
-  let tag_box = GPack.hbox ~border_width:0 ~spacing:8 ~packing:color_ocaml#pack () in
-  let sw = GBin.scrolled_window ~shadow_type:`IN ~hpolicy:`AUTOMATIC ~vpolicy:`AUTOMATIC
+  let tag_box          = GPack.hbox ~border_width:0 ~spacing:8 ~packing:color_ocaml#pack () in
+  let sw               = GBin.scrolled_window ~shadow_type:`IN ~hpolicy:`AUTOMATIC ~vpolicy:`AUTOMATIC
     ~packing:tag_box#pack () in
-  let tag_view = GTree.view ~width:200 ~height:150 ~headers_visible:false ~model:tag_model ~packing:sw#add () in
-  let renderer = GTree.cell_renderer_text [] in
-  let tag_vc = GTree.view_column ~renderer:(renderer, ["text", tag_col]) () in
-  let _ = tag_view#append_column tag_vc in
-  let lab_vc = GTree.view_column ~title:"Text Elements" ~renderer:(renderer, ["text", lab_col]) () in
-  let _ = tag_view#append_column lab_vc in
-  let _ = tag_vc#set_visible false in
-  let prop_box = GPack.vbox ~border_width:0 ~packing:(tag_box#pack ~expand:false) () in
-  let fg_box = GPack.hbox ~spacing:5 ~packing:(prop_box#pack ~expand:false) () in
-  let fg_lab = GMisc.label ~text:"Color:" ~packing:(fg_box#pack ~expand:false) () in
-  let fg_button = GButton.color_button ~packing:(fg_box#pack ~expand:false) () in
-  let _ = fg_button#set_relief `NONE in
-  let weight_check = GButton.check_button ~label:"Bold" ~packing:(prop_box#pack ~expand:false) () in
-  let style_check = GButton.check_button ~label:"Italic" ~packing:(prop_box#pack ~expand:false) () in
-  let underline_check = GButton.check_button ~label:"Underline" ~packing:(prop_box#pack ~expand:false) () in
-  let _ = weight_check#set_image (GMisc.image ~stock:`BOLD ())#coerce in
-  let _ = style_check#set_image (GMisc.image ~stock:`ITALIC ())#coerce in
-  let _ = underline_check#set_image (GMisc.image ~stock:`UNDERLINE ())#coerce in
-  let opb_box = GPack.hbox ~spacing:5 ~packing:(prop_box#pack ~expand:false) ~show:false () in
-  let opb_lab = GMisc.label ~xalign:0.0
+  let tag_view         = GTree.view ~width:200 ~height:150 ~headers_visible:false ~model:tag_model ~packing:sw#add () in
+  let renderer         = GTree.cell_renderer_text [] in
+  let tag_vc           = GTree.view_column ~renderer:(renderer, ["text", tag_col]) () in
+  let _                = tag_view#append_column tag_vc in
+  let lab_vc           = GTree.view_column ~title:"Text Elements" ~renderer:(renderer, ["text", lab_col]) () in
+  let _                = tag_view#append_column lab_vc in
+  let _                = tag_vc#set_visible false in
+  let prop_box         = GPack.vbox ~border_width:0 ~packing:(tag_box#pack ~expand:false) () in
+  let fg_box           = GPack.hbox ~spacing:5 ~packing:(prop_box#pack ~expand:false) () in
+  let fg_lab           = GMisc.label ~text:"Color:" ~packing:(fg_box#pack ~expand:false) () in
+  let fg_button        = GButton.color_button ~packing:(fg_box#pack ~expand:false) () in
+  let _                = fg_button#set_relief `NONE in
+  let weight_check     = GButton.check_button ~label:"Bold" ~packing:(prop_box#pack ~expand:false) () in
+  let style_check      = GButton.check_button ~label:"Italic" ~packing:(prop_box#pack ~expand:false) () in
+  let underline_check  = GButton.check_button ~label:"Underline" ~packing:(prop_box#pack ~expand:false) () in
+  let _                = weight_check#set_image (GMisc.image ~stock:`BOLD ())#coerce in
+  let _                = style_check#set_image (GMisc.image ~stock:`ITALIC ())#coerce in
+  let _                = underline_check#set_image (GMisc.image ~stock:`UNDERLINE ())#coerce in
+  let opb_box          = GPack.hbox ~spacing:5 ~packing:(prop_box#pack ~expand:false) ~show:false () in
+  let opb_lab          = GMisc.label ~xalign:0.0
     ~markup:"Paragraph background colors:" (* \n<small>(only applies to comments preceded\nby a blank line)</small> *)
     ~packing:opb_box#pack () in
-  let opb_button = GButton.color_button ~packing:(opb_box#pack ~fill:false) () in
-  let _ = opb_button#set_relief `NONE in
-  let opb2_button = GButton.color_button ~packing:(opb_box#pack ~fill:false) () in
-  let _ = opb2_button#set_relief `NONE in
+  let opb_button       = GButton.color_button ~packing:(opb_box#pack ~fill:false) () in
+  let _                = opb_button#set_relief `NONE in
+  let opb2_button      = GButton.color_button ~packing:(opb_box#pack ~fill:false) () in
+  let _                = opb2_button#set_relief `NONE in
   (* OCaml Preview *)
-  let osw = GBin.scrolled_window ~height:200 ~hpolicy:`AUTOMATIC ~vpolicy:`AUTOMATIC ~shadow_type:`IN () in
-  let buffer = new Ocaml_text.buffer ~lexical_enabled:true () in
-  let _ = buffer#set_text ocaml_preview in
-  let preview = new Ocaml_text.view ~buffer () in
-  let _ = Gmisclib.Idle.add (fun () -> preview#buffer#place_cursor ~where:(preview#buffer#start_iter#forward_lines 5)) in
-  let _ = Preferences_apply.apply (preview :> Text.view) Preferences.preferences#get in
-  let _ = preview#set_editable false in
-  let _ = osw#add preview#coerce in
-  let _ = color_ocaml#add osw#coerce in
+  let osw              = GBin.scrolled_window ~height:200 ~hpolicy:`AUTOMATIC ~vpolicy:`AUTOMATIC ~shadow_type:`IN () in
+  let buffer           = new Ocaml_text.buffer ~lexical_enabled:true () in
+  let _                = buffer#set_text ocaml_preview in
+  let preview          = new Ocaml_text.view ~buffer () in
+  let _                = Gmisclib.Idle.add (fun () -> preview#buffer#place_cursor ~where:(preview#buffer#start_iter#forward_lines 5)) in
+  let _                = Preferences_apply.apply (preview :> Text.view) Preferences.preferences#get in
+  let _                = preview#set_editable false in
+  let _                = osw#add preview#coerce in
+  let _                = color_ocaml#add osw#coerce in
   (* color_compl *)
-  let color_compl = GPack.vbox ~border_width () in
-  let table = GPack.table ~row_spacings ~col_spacings ~packing:color_compl#pack () in
-  let _ = GMisc.label ~text:"Background color:" ~xalign ~packing:(table#attach ~top:0 ~left:0) () in
-  let _ = GMisc.label ~text:"Foreground color:" ~xalign ~packing:(table#attach ~top:1 ~left:0) () in
-  let bg_button_popup = GButton.color_button ~packing:(table#attach ~top:0 ~left:1 ~expand:`X) () in
-  let fg_button_popup = GButton.color_button ~packing:(table#attach ~top:1 ~left:1 ~expand:`X) () in
-  let _ = notebook#append_page ~tab_label:(GMisc.label ~text:"Completion" ())#coerce color_compl#coerce in
+  let color_compl      = GPack.vbox ~border_width () in
+  let table            = GPack.table ~row_spacings ~col_spacings ~packing:color_compl#pack () in
+  let _                = GMisc.label ~text:"Background color:" ~xalign ~packing:(table#attach ~top:0 ~left:0) () in
+  let _                = GMisc.label ~text:"Foreground color:" ~xalign ~packing:(table#attach ~top:1 ~left:0) () in
+  let bg_button_popup  = GButton.color_button ~packing:(table#attach ~top:0 ~left:1 ~expand:`X) () in
+  let fg_button_popup  = GButton.color_button ~packing:(table#attach ~top:1 ~left:1 ~expand:`X) () in
+  let _                = notebook#append_page ~tab_label:(GMisc.label ~text:"Completion" ())#coerce color_compl#coerce in
   (* color_other *)
-  let color_other = GPack.vbox ~border_width () in
-  let table = GPack.table ~row_spacings ~col_spacings ~packing:color_other#pack () in
-  let button_bg = GButton.color_button ~packing:(table#attach ~top:0 ~left:1 ~expand:`X) () in
-  let button_fg_stdin = GButton.color_button ~packing:(table#attach ~top:1 ~left:1 ~expand:`X) () in
+  let color_other      = GPack.vbox ~border_width () in
+  let table            = GPack.table ~row_spacings ~col_spacings ~packing:color_other#pack () in
+  let button_bg        = GButton.color_button ~packing:(table#attach ~top:0 ~left:1 ~expand:`X) () in
+  let button_fg_stdin  = GButton.color_button ~packing:(table#attach ~top:1 ~left:1 ~expand:`X) () in
   let button_fg_stdout = GButton.color_button ~packing:(table#attach ~top:2 ~left:1 ~expand:`X) () in
-  let button_fg_err = GButton.color_button ~packing:(table#attach ~top:3 ~left:1 ~expand:`X) () in
-  let button_fg_warn = GButton.color_button ~packing:(table#attach ~top:4 ~left:1 ~expand:`X) () in
-  let _ = GMisc.label ~xalign ~text:"Background color:" ~packing:(table#attach ~top:0 ~left:0) () in
-  let _ = GMisc.label ~xalign ~text:"Standard input:" ~packing:(table#attach ~top:1 ~left:0) () in
-  let _ = GMisc.label ~xalign ~text:"Standard output:" ~packing:(table#attach ~top:2 ~left:0) () in
-  let _ = GMisc.label ~xalign ~text:"Errors:" ~packing:(table#attach ~top:3 ~left:0) () in
-  let _ = GMisc.label ~xalign ~text:"Warnings:" ~packing:(table#attach ~top:4 ~left:0) () in
+  let button_fg_err    = GButton.color_button ~packing:(table#attach ~top:3 ~left:1 ~expand:`X) () in
+  let button_fg_warn   = GButton.color_button ~packing:(table#attach ~top:4 ~left:1 ~expand:`X) () in
+  let _                = GMisc.label ~xalign ~text:"Background color:" ~packing:(table#attach ~top:0 ~left:0) () in
+  let _                = GMisc.label ~xalign ~text:"Standard input:" ~packing:(table#attach ~top:1 ~left:0) () in
+  let _                = GMisc.label ~xalign ~text:"Standard output:" ~packing:(table#attach ~top:2 ~left:0) () in
+  let _                = GMisc.label ~xalign ~text:"Errors:" ~packing:(table#attach ~top:3 ~left:0) () in
+  let _                = GMisc.label ~xalign ~text:"Warnings:" ~packing:(table#attach ~top:4 ~left:0) () in
   (* *)
-  let _ = notebook#append_page ~tab_label:(GMisc.label ~text:"Message Pane" ())#coerce color_other#coerce in
+  let _                = notebook#append_page ~tab_label:(GMisc.label ~text:"Message Pane" ())#coerce color_other#coerce in
 object (self)
   inherit page title vbox
   val mutable tags = []
@@ -654,21 +662,22 @@ object (self)
     self#set_tag (fg_button, weight_check, style_check, underline_check);
 end
 
+(** pref_templ *)
 and pref_templ title ?packing () =
-  let vbox = GPack.vbox ~spacing ?packing () in
-  let align = create_align ~title:"Custom Templates" ~vbox () in
-  let box = GPack.vbox ~spacing:1 ~packing:align#add () in
+  let vbox       = GPack.vbox ~spacing ?packing () in
+  let align      = create_align ~title:"Custom Templates" ~vbox () in
+  let box        = GPack.vbox ~spacing:1 ~packing:align#add () in
   let label_text = "Select an OCaml library containing custom templates" in
-  let _ = GMisc.label ~xalign:0.0
+  let _          = GMisc.label ~xalign:0.0
     ~markup:(label_text ^ ":")
     ~packing:box#pack ()
   in
-  let hbox = GPack.hbox ~spacing:3 ~packing:box#pack () in
-  let entry = GEdit.entry ~editable:false ~packing:hbox#add () in
-  let button = GButton.button ~label:" ... " ~packing:hbox#pack () in
-  let _ =
+  let hbox       = GPack.hbox ~spacing:3 ~packing:box#pack () in
+  let entry      = GEdit.entry ~editable:false ~packing:hbox#add () in
+  let button     = GButton.button ~label:" ... " ~packing:hbox#pack () in
+  let _          =
     ignore (button#connect#clicked ~callback:begin fun () ->
-      let chooser = GWindow.file_chooser_dialog ~action:`OPEN ~title:(label_text ^ " (.cma)")
+      let chooser    = GWindow.file_chooser_dialog ~action:`OPEN ~title:(label_text ^ " (.cma)")
         ~icon:Icons.oe ~position:`CENTER ~modal:true () in
       chooser#set_filter (GFile.filter ~patterns:["*.cma"] ());
       ignore (chooser#set_filename entry#text);
@@ -681,12 +690,12 @@ and pref_templ title ?packing () =
         | _ -> chooser#destroy()
     end)
   in
-  let label = GMisc.label ~markup:"<b>How to create custom templates</b>" () in
-  let expander = GBin.expander ~packing:vbox#add () in
-  let _ = expander#set_label_widget label#coerce in
-  let sw = GBin.scrolled_window ~hpolicy:`AUTOMATIC ~vpolicy:`AUTOMATIC ~packing:expander#add () in
-  let markup = Template.help in
-  let label = GMisc.label ~xalign:0.0 ~yalign:0.0 ~xpad:3 ~ypad:3 ~markup ~line_wrap:false ~selectable:true ~packing:sw#add_with_viewport () in
+  let label      = GMisc.label ~markup:"<b>How to create custom templates</b>" () in
+  let expander   = GBin.expander ~packing:vbox#add () in
+  let _          = expander#set_label_widget label#coerce in
+  let sw         = GBin.scrolled_window ~hpolicy:`AUTOMATIC ~vpolicy:`AUTOMATIC ~packing:expander#add () in
+  let markup     = Template.help in
+  let label      = GMisc.label ~xalign:0.0 ~yalign:0.0 ~xpad:3 ~ypad:3 ~markup ~line_wrap:false ~selectable:true ~packing:sw#add_with_viewport () in
 object (self)
   inherit page title vbox
   method write pref =
@@ -697,6 +706,7 @@ object (self)
     ignore (entry#set_text pref.Preferences.pref_editor_custom_templ_filename);
 end
 
+(** create *)
 let create ~editor () =
   let pref = new preferences ~editor () in
   pref

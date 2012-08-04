@@ -151,8 +151,9 @@ class page ?file ~project ~scroll_offset ~offset ~editor () =
   end in
   (** Row spacing *)
   let _                        = button_rowspacing_incr#event#connect#button_press ~callback:begin fun _ ->
-    text_view#set_pixels_above_lines (min 2 (text_view#pixels_above_lines + 1));
-    text_view#set_pixels_below_lines (min 2 (text_view#pixels_below_lines + 1));
+    let above, below = Preferences.preferences#get.Preferences.pref_editor_pixels_lines in
+    text_view#set_pixels_above_lines (min (2 + above) (text_view#pixels_above_lines + 1));
+    text_view#set_pixels_below_lines (min (2 + below) (text_view#pixels_below_lines + 1));
     Gmisclib.Idle.add text_view#draw_gutter;
     true
   end in

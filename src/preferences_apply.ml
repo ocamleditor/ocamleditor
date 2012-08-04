@@ -22,6 +22,9 @@
 
 
 let apply (view : Text.view) pref =
+  let above, below = pref.Preferences.pref_editor_pixels_lines in
+  view#set_pixels_above_lines above;
+  view#set_pixels_below_lines below;
   let color = if snd pref.Preferences.pref_bg_color
     then `COLOR (view#misc#style#base `NORMAL)
     else (`NAME (fst pref.Preferences.pref_bg_color))
