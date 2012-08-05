@@ -48,7 +48,7 @@ object (self)
 
   method mark () =
     self#clear();
-    match view#mark_occurrences with
+    match view#options#mark_occurrences with
       | true, _ ->
         let text = trim (buffer#selection_text ()) in
         if String.length text > 1 && not (String.contains text '\n') && not (String.contains text '\r') then begin

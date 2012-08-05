@@ -269,6 +269,7 @@ object (self)
     end;
     Preferences_apply.apply view Preferences.preferences#get;
     self#set_code_folding_enabled Preferences.preferences#get.Preferences.pref_code_folding_enabled;
+    ocaml_view#code_folding#set_fold_line_color (`COLOR (Preferences.tag_color "lident"));
     Gaux.may (GtkText.TagTable.lookup buffer#tag_table "tag_matching_delim")
       ~f:(fun x -> GtkText.TagTable.remove buffer#tag_table x);
     ignore (buffer#create_tag ~name:"tag_matching_delim" [
@@ -581,13 +582,13 @@ object (self)
 
   method set_word_wrap value =
     image_toggle_wrap#set_pixbuf (if value then Icons.wrap_on_14 else Icons.wrap_off_14);
-    text_view#set_word_wrap value;
+    text_view#options#set_word_wrap value;
     word_wrap <- value;
     Gmisclib.Idle.add (fun () -> GtkBase.Widget.queue_draw text_view#as_widget);
 
   method set_show_whitespace value =
     image_toggle_whitespace#set_pixbuf (if value then Icons.whitespace_on_14 else Icons.whitespace_off_14);
-    text_view#set_show_whitespace_chars value;
+    text_view#options#set_show_whitespace_chars value;
     show_whitespace <- value;
     Gmisclib.Idle.add (fun () -> GtkBase.Widget.queue_draw text_view#as_widget);
 

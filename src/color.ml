@@ -21,7 +21,7 @@
 *)
 
 
-let name = function `RGB (red, green, blue) -> Printf.sprintf "#%X%X%X" red green blue
+let name = function `RGB (red, green, blue) -> Printf.sprintf "#%02X%02X%02X" red green blue
 
 let name_of_gdk color =
   let r = Gdk.Color.red color in
@@ -29,7 +29,7 @@ let name_of_gdk color =
   let b = Gdk.Color.blue color in
   name (`RGB (r, g, b))
 
-let rgb f name = Scanf.sscanf name "#%2x%2x%2x" f;;
+let rgb f name = try Scanf.sscanf name "#%2x%2x%2x" f with _ -> Scanf.sscanf name "#%1x%1x%1x" f;;
 
 let hsv_of_name r g b f =
   let r = (float r) /. 255. in
@@ -70,6 +70,9 @@ let name_of_hsv h s v =
       else v, p, q
     end
   in
+  let r = if r < 0. then 0. else r in
+  let g = if g < 0. then 0. else g in
+  let b = if b < 0. then 0. else b in
   let r = int_of_float (r *. 255.) in
   let g = int_of_float (g *. 255.) in
   let b = int_of_float (b *. 255.) in

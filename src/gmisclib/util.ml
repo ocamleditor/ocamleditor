@@ -30,7 +30,8 @@ let fade_window_enabled = ref false
 (** fade_window *)
 let fade_window =
   if !fade_window_enabled then begin
-    fun ?(incr=0.159) ?(stop=0.96) window ->
+    (*fun ?(incr=0.159) ?(stop=0.96) window ->*)
+    fun ?(incr=0.25) ?(stop=1.0) window ->
       window#set_opacity 0.0;
       window#show();
       let callback =

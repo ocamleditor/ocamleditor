@@ -42,6 +42,9 @@ type t = {
   mutable pref_editor_mark_occurrences      : bool * string;
   mutable pref_editor_left_margin           : int;
   mutable pref_editor_pixels_lines          : int * int;
+  mutable pref_editor_save_all_bef_comp     : bool;
+  mutable pref_editor_dot_leaders           : bool;
+  mutable pref_editor_current_line_border   : bool;
   mutable pref_compl_font                   : string;
   mutable pref_compl_greek                  : bool;
   mutable pref_output_font                  : string;
@@ -58,7 +61,9 @@ type t = {
   mutable pref_search_word_at_cursor        : bool;
   mutable pref_highlight_current_line       : bool;
   mutable pref_show_line_numbers            : bool;
-  mutable pref_indent_lines                 : bool;
+  mutable pref_editor_indent_lines          : bool;
+  mutable pref_editor_indent_lines_color_s  : string;
+  mutable pref_editor_indent_lines_color_d  : string;
   mutable pref_right_margin_visible         : bool;
   mutable pref_right_margin                 : int;
   mutable pref_max_view_1_menubar           : bool;
@@ -173,7 +178,10 @@ let create_defaults () = {
   pref_editor_custom_templ_filename = "";
   pref_editor_mark_occurrences      = true, "#90ff90";
   pref_editor_left_margin           = 1;
-  pref_editor_pixels_lines          = 0,0;
+  pref_editor_pixels_lines          = 0,1;
+  pref_editor_save_all_bef_comp     = true;
+  pref_editor_dot_leaders           = false;
+  pref_editor_current_line_border   = false;
   pref_compl_font                   = "Sans 9";
   pref_compl_greek                  = true;
   pref_output_font                  = "monospace 8";
@@ -190,7 +198,9 @@ let create_defaults () = {
   pref_search_word_at_cursor        = true;
   pref_highlight_current_line       = true;
   pref_show_line_numbers            = true;
-  pref_indent_lines                 = true;
+  pref_editor_indent_lines          = true;
+  pref_editor_indent_lines_color_s  = "#d0d0d0";
+  pref_editor_indent_lines_color_d  = "#a0a0a0";
   pref_right_margin_visible         = false;
   pref_right_margin                 = 80;
   pref_max_view_1_menubar           = true;
@@ -316,6 +326,9 @@ let to_xml pref =
         let above, below = pref.pref_editor_pixels_lines in
         Xml.Element ("pref_editor_pixels_lines", ["above", string_of_int above; "below", string_of_int below], []);
       end;
+      Xml.Element ("pref_editor_save_all_bef_comp", [], [Xml.PCData (string_of_bool pref.pref_editor_save_all_bef_comp)]);
+      Xml.Element ("pref_editor_dot_leaders", [], [Xml.PCData (string_of_bool pref.pref_editor_dot_leaders)]);
+      Xml.Element ("pref_editor_current_line_border", [], [Xml.PCData (string_of_bool pref.pref_editor_current_line_border)]);
       Xml.Element ("pref_compl_font", [], [Xml.PCData pref.pref_compl_font]);
       Xml.Element ("pref_compl_greek", [], [Xml.PCData (string_of_bool pref.pref_compl_greek)]);
       Xml.Element ("pref_output_font", [], [Xml.PCData pref.pref_output_font]);
@@ -332,7 +345,10 @@ let to_xml pref =
       Xml.Element ("pref_search_word_at_cursor", [], [Xml.PCData (string_of_bool pref. pref_search_word_at_cursor)]);
       Xml.Element ("pref_highlight_current_line", [], [Xml.PCData (string_of_bool pref.pref_highlight_current_line)]);
       Xml.Element ("pref_show_line_numbers", [], [Xml.PCData (string_of_bool pref.pref_show_line_numbers)]);
-      Xml.Element ("pref_indent_lines", [], [Xml.PCData (string_of_bool pref.pref_indent_lines)]);
+      Xml.Element ("pref_editor_indent_lines", [
+        "solid_lines_color", pref.pref_editor_indent_lines_color_s;
+        "dashed_lines_color", pref.pref_editor_indent_lines_color_d;
+      ], [Xml.PCData (string_of_bool pref.pref_editor_indent_lines)]);
       Xml.Element ("pref_right_margin_visible", [], [Xml.PCData (string_of_bool pref.pref_right_margin_visible)]);
       Xml.Element ("pref_right_margin", [], [Xml.PCData (string_of_int pref.pref_right_margin)]);
       Xml.Element ("pref_max_view_1_menubar", [], [Xml.PCData (string_of_bool pref.pref_max_view_1_menubar)]);
@@ -416,6 +432,9 @@ let from_file filename =
         | "pref_editor_mark_occurrences" -> pref.pref_editor_mark_occurrences <- ((bool_of_string (Xml.attrib node "enabled")), value node)
         | "pref_editor_left_margin" -> pref.pref_editor_left_margin <- int_of_string (value node)
         | "pref_editor_pixels_lines" -> pref.pref_editor_pixels_lines <- (int_of_string (Xml.attrib node "above")), (int_of_string (Xml.attrib node "below"))
+        | "pref_editor_save_all_bef_comp" -> pref.pref_editor_save_all_bef_comp <- (bool_of_string (value node))
+        | "pref_editor_dot_leaders" -> pref.pref_editor_dot_leaders <- (bool_of_string (value node))
+        | "pref_editor_current_line_border" -> pref.pref_editor_current_line_border <- (bool_of_string (value node));
         | "pref_compl_font" -> pref.pref_compl_font <- value node
         | "pref_compl_greek" -> pref.pref_compl_greek <- bool_of_string (value node)
         | "pref_output_font" -> pref.pref_output_font <- value node
@@ -432,7 +451,12 @@ let from_file filename =
         | "pref_search_word_at_cursor" -> pref.pref_search_word_at_cursor <- bool_of_string (value node)
         | "pref_highlight_current_line" -> pref.pref_highlight_current_line <- bool_of_string (value node)
         | "pref_show_line_numbers" -> pref.pref_show_line_numbers <- bool_of_string (value node)
-        | "pref_indent_lines" -> pref.pref_indent_lines <- bool_of_string (value node)
+        | "pref_editor_indent_lines" ->
+          pref.pref_editor_indent_lines <- bool_of_string (value node);
+          pref.pref_editor_indent_lines_color_s <-
+            (try Xml.attrib node "solid_lines_color" with Xml.No_attribute _ -> default_pref.pref_editor_indent_lines_color_s);
+          pref.pref_editor_indent_lines_color_d <-
+            (try Xml.attrib node "solid_lines_dashed" with Xml.No_attribute _ -> default_pref.pref_editor_indent_lines_color_d);
         | "pref_right_margin_visible" -> pref.pref_right_margin_visible <- bool_of_string (value node)
         | "pref_right_margin" -> pref.pref_right_margin <- int_of_string (value node)
         | "pref_max_view_1_menubar" -> pref.pref_max_view_1_menubar <- bool_of_string (value node)

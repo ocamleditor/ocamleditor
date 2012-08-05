@@ -186,7 +186,7 @@ object (self)
         Activity.remove task.Task.et_name;
       end ()
     in
-    if task_kind = `COMPILE && Oe_config.save_all_before_compiling then (editor#save_all());
+    if task_kind = `COMPILE && Preferences.preferences#get.Preferences.pref_editor_save_all_bef_comp then (editor#save_all());
     has_errors <- false;
     GtkThread2.async begin fun () ->
       (try view#buffer#delete_mark (`NAME "first_error_line");

@@ -135,65 +135,31 @@ and view ?project ?buffer () =
 object (self)
   inherit GText.view view#as_view as super
 
+  val mutable options = new Text_options.options ()
   val mutable tbuffer = buffer
   val mutable hadjustment : GData.adjustment option = None
   val mutable vadjustment : GData.adjustment option = None
-  val mutable highlight_current_line = None
   val mutable prev_line_background = 0
   val mutable highlight_current_line_tag = create_highlight_current_line_tag ()
-  val mutable base_color : GDraw.color = `WHITE
   val mutable current_matching_tag_bounds = []
   val mutable current_matching_tag_bounds_draw = []
   val mutable approx_char_width = 0
-  val mutable smart_home = true;
-  val mutable smart_end = true;
-  val mutable visible_right_margin : (int * GDraw.color) option = None;
-  val mutable current_line_border_color :GDraw.color = `NAME "#d0d0d0"
-  val mutable current_line_bg_color : GDraw.color = `NAME "#f0f0f0"
-  val visible_right_margin_dash = [1; 3]
   val line_num_labl = Line_num_labl.create()
-  val mutable line_numbers_font = view#misc#pango_context#font_name
-  val mutable show_line_numbers = true
-  val mutable show_markers = true
-  val mutable show_indent_lines = true
   val visible_height = new GUtil.variable 0
   val mutable signal_expose : GtkSignal.id option = None
   val gutter = Gutter.create()
   val mutable gutter_icons = []
   val hyperlink = new Gmisclib.Text.Hyperlink.hyperlink ~view ()
   val mutable realized = false
-  val mutable show_whitespace_chars = false
-  val mutable word_wrap = false
-  val mutable show_dot_leaders = true
   val mutable signal_id_highlight_current_line = None
   val mutable mark_occurrences_manager = None
-  val mutable mark_occurrences : (bool * string) = false, ""
 
   method mark_occurrences_manager = match mark_occurrences_manager with Some x -> x | _ -> assert false
 
   method as_gtext_view = (self :> GText.view)
   method tbuffer = buffer
 
-  method show_whitespace_chars = show_whitespace_chars
-  method set_show_whitespace_chars x = show_whitespace_chars <- x
-
-  method set_mark_occurrences x =
-    self#mark_occurrences_manager#mark();
-    mark_occurrences <- x;
-    match mark_occurrences with
-      | true, color ->
-        self#mark_occurrences_manager#tag#set_property (`BACKGROUND_GDK (GDraw.color (`NAME color)));
-      | _ -> ()
-
-  method mark_occurrences = mark_occurrences
-
-  method word_wrap = word_wrap
-  method set_word_wrap x =
-    self#set_wrap_mode (if x then `WORD else `NONE);
-    word_wrap <- x
-
-  method show_dot_leaders = show_dot_leaders
-  method set_show_dot_leaders x = show_dot_leaders <- x
+  method options = options
 
   method realized = realized
   method set_realized x = realized <- x
@@ -210,15 +176,6 @@ object (self)
     tbuffer <- tbuf;
     super#set_buffer buf
 
-  method smart_home = smart_home
-  method set_smart_home x = smart_home <- x
-
-  method smart_end = smart_end
-  method set_smart_end x = smart_end <- x
-
-  method set_base_color x = base_color <- x
-  method base_color = base_color
-
   method approx_char_width = approx_char_width
 
   method modify_font fontname =
@@ -226,66 +183,13 @@ object (self)
     approx_char_width <- GPango.to_pixels (self#misc#pango_context#get_metrics())#approx_char_width;
     Gmisclib.Idle.add self#draw_gutter
 
-  method visible_right_margin = visible_right_margin
-  method set_visible_right_margin x = visible_right_margin <- x
-
-  method set_line_numbers_font fontname =
-    Line_num_labl.iter (fun x -> x#misc#modify_font_by_name fontname) line_num_labl;
-    line_numbers_font <- fontname;
-
-  method set_show_line_numbers x =
-    show_line_numbers <- x;
-    Line_num_labl.reset line_num_labl;
-    Gmisclib.Idle.add self#draw_gutter
-
-  method show_line_numbers = show_line_numbers
-
-  method set_show_markers x =
-    show_markers <- x;
-    Gmisclib.Idle.add self#draw_gutter
-
-  method show_markers = show_markers
-
-  method set_show_indent_lines x = show_indent_lines <- x
-  method show_indent_lines = show_indent_lines
-
-  method line_numbers_font = line_numbers_font
-
-  method current_line_border_color = current_line_border_color
-  method set_current_line_border_color x = current_line_border_color <- x
-
   method create_highlight_current_line_tag () =
     let tag_table = new GText.tag_table buffer#tag_table in
     tag_table#remove highlight_current_line_tag#as_tag;
     highlight_current_line_tag <- create_highlight_current_line_tag();
-    self#set_highlight_current_line highlight_current_line
+    self#options#set_highlight_current_line options#highlight_current_line
 
   method line_num_labl = line_num_labl
-
-  method set_highlight_current_line x =
-    highlight_current_line <- x;
-    prev_line_background <- 0;
-    match x with
-      | None ->
-        Gaux.may signal_id_highlight_current_line ~f:begin fun id ->
-          self#tbuffer#remove_signal_handler id;
-          GtkSignal.disconnect self#tbuffer#as_buffer id;
-          signal_id_highlight_current_line <- None
-        end
-      | Some color ->
-        current_line_bg_color <- `NAME color;
-        current_line_border_color <- `NAME (Color.add_value color 0.27);
-        Gmisclib.Util.set_tag_paragraph_background highlight_current_line_tag color;
-        let id = self#buffer#connect#mark_set ~callback:begin fun iter mark ->
-          match GtkText.Mark.get_name mark with
-            | Some name when name = "insert" -> self#draw_current_line_background iter
-            | _ -> ()
-        end in
-        signal_id_highlight_current_line <- Some id;
-        self#tbuffer#add_signal_handler id;
-        self#draw_current_line_background ~force:true (self#buffer#get_iter `INSERT)
-
-  method highlight_current_line = highlight_current_line
 
   method highlight_current_line_tag = highlight_current_line_tag
 
@@ -484,9 +388,9 @@ object (self)
 
   method private set_gutter_size () =
     let gutter_fold_size = gutter.Gutter.fold_size + 4 in (* 4 = borders around fold_size *)
-    let fixed = if show_markers then Gutter.icon_size + gutter_fold_size else 0 in
+    let fixed = if options#show_markers then Gutter.icon_size + gutter_fold_size else 0 in
     let size =
-      if show_line_numbers then begin
+      if options#show_line_numbers then begin
         approx_char_width <- GPango.to_pixels (self#misc#pango_context#get_metrics())#approx_char_width;
         let max_line = buffer#end_iter#line in
         let n_chars = String.length (string_of_int (max_line + 1)) in
@@ -521,7 +425,7 @@ object (self)
         let start, _ = self#get_line_at_y y0 in
         let stop, _ = self#get_line_at_y (y0 + h0) in
         (** Line Numbers *)
-        if realized && show_line_numbers then begin
+        if realized && options#show_line_numbers then begin
           (*Prf.crono Prf.prf_line_numbers begin fun () ->*)
             Line_num_labl.reset line_num_labl;
             let iter = ref start#backward_line in
@@ -620,19 +524,19 @@ object (self)
             let drawable    = new GDraw.drawable window in
             (* Current line border *)
             begin
-              if self#misc#get_flag `HAS_FOCUS && Oe_config.current_line_border_enabled then begin
-                match highlight_current_line with
+              if self#misc#get_flag `HAS_FOCUS && options#current_line_border_enabled then begin
+                match options#highlight_current_line with
                   | Some _ ->
                     let iter = buffer#get_iter `INSERT in
                     let y, h = view#get_line_yrange iter in
                     let y = y - y0 in
                     if iter#equal buffer#end_iter && iter#line_index = 0 then begin
                       (* Fix for draw_current_line_background *)
-                      drawable#set_foreground current_line_bg_color;
+                      drawable#set_foreground options#current_line_bg_color;
                       drawable#rectangle ~x:self#left_margin ~y ~filled:true ~width:w0 ~height:h ();
                     end;
                     drawable#set_line_attributes ~width:1 ~style:`ON_OFF_DASH ();
-                    drawable#set_foreground current_line_border_color;
+                    drawable#set_foreground options#current_line_border_color;
                     Gdk.GC.set_dashes drawable#gc ~offset:1 [1; 2];
                     drawable#rectangle ~x:(self#left_margin - 1) ~y ~filled:false
                       ~width:(w0 - adjust - self#left_margin) ~height:(h - adjust) ();
@@ -640,7 +544,7 @@ object (self)
               end;
             end;
             (* Indentation guidelines *)
-            if show_indent_lines && not self#show_whitespace_chars
+            if options#show_indent_lines && not options#show_whitespace_chars
             then (self#draw_indent_lines drawable) start stop y0;
             (* Gutter border *)
             begin
@@ -656,7 +560,7 @@ object (self)
             end;
             (* Right margin line *)
             begin
-              match visible_right_margin with
+              match options#visible_right_margin with
                 | Some (column, color) ->
                   let x = approx_char_width * column - hadjust in
                   drawable#set_line_attributes ~style:`SOLID ();
@@ -733,7 +637,7 @@ object (self)
                             match Project.find_bookmark project filename buffer#as_gtext_buffer !iter with
                               | Some bm when bm.Oe.bm_num >= Bookmark.limit ->
                                 drawable#set_line_attributes ~width:2 ~style:`SOLID ();
-                                drawable#set_foreground Oe_config.horizontal_line_color;
+                                drawable#set_foreground (`COLOR (Preferences.tag_color "lident"));
                                 let y, h = view#get_line_yrange !iter in
                                 let y = y - y0 + h in
                                 drawable#line ~x:0 ~y ~x:w0 ~y;
@@ -746,7 +650,7 @@ object (self)
                 | _ -> ()
             end;
             (* Whitespace characters *)
-            if self#show_whitespace_chars then begin
+            if options#show_whitespace_chars then begin
               let iter        = ref expose_top in
               let pango       = self#misc#pango_context in
               let layout      = pango#create_layout in
@@ -755,7 +659,7 @@ object (self)
                 let x = Gdk.Rectangle.x rect - hadjust in
                 let y = Gdk.Rectangle.y rect - y0 in
                 Pango.Layout.set_text layout text;
-                drawable#put_layout ~x ~y ~fore:self#base_color layout;
+                drawable#put_layout ~x ~y ~fore:options#base_color layout;
                 drawable#put_layout ~x ~y ~fore:Oe_config.indent_lines_dashed_color layout;
               in
               while !iter#compare expose_bottom < 0 do
@@ -779,7 +683,7 @@ object (self)
               done
             end;
             (* Dot leaders *)
-            if Oe_config.dot_leaders_enabled && not self#show_whitespace_chars && self#show_dot_leaders then begin
+            if options#show_dot_leaders && not options#show_whitespace_chars then begin
               (*Prf.crono Prf.prf_draw_dot_leaders begin fun () ->*)
                 Gdk.GC.set_fill drawable#gc `SOLID;
                 drawable#set_line_attributes ~style:Oe_config.dash_style ();
@@ -836,6 +740,44 @@ object (self)
       | _ -> ()
 
   initializer
+    ignore (options#connect#mark_occurrences_changed ~callback:(fun _ -> self#mark_occurrences_manager#mark()));
+    ignore (options#connect#after#mark_occurrences_changed ~callback:begin function
+      | true, color ->
+        self#mark_occurrences_manager#tag#set_property (`BACKGROUND_GDK (GDraw.color (`NAME color)));
+      | _ -> ()
+    end);
+    ignore (options#connect#after#line_numbers_changed ~callback:begin fun _ ->
+      Line_num_labl.reset line_num_labl;
+      Gmisclib.Idle.add self#draw_gutter
+    end);
+    ignore (options#connect#line_numbers_font_changed ~callback:begin fun fontname ->
+      Line_num_labl.iter (fun x -> x#misc#modify_font_by_name fontname) line_num_labl
+    end);
+    options#set_line_numbers_font view#misc#pango_context#font_name;
+    ignore (options#connect#after#show_markers_changed ~callback:(fun _ -> Gmisclib.Idle.add self#draw_gutter));
+    ignore (options#connect#word_wrap_changed ~callback:(fun x -> self#set_wrap_mode (if x then `WORD else `NONE)));
+    ignore (options#connect#after#highlight_current_line_changed ~callback:begin fun x ->
+      prev_line_background <- 0;
+      match x with
+        | None ->
+          Gaux.may signal_id_highlight_current_line ~f:begin fun id ->
+            self#tbuffer#remove_signal_handler id;
+            GtkSignal.disconnect self#tbuffer#as_buffer id;
+            signal_id_highlight_current_line <- None
+          end
+        | Some color ->
+          options#set_current_line_bg_color (`NAME color);
+          options#set_current_line_border_color (`NAME (Color.add_value color 0.27));
+          Gmisclib.Util.set_tag_paragraph_background highlight_current_line_tag color;
+          let id = self#buffer#connect#mark_set ~callback:begin fun iter mark ->
+            match GtkText.Mark.get_name mark with
+              | Some name when name = "insert" -> self#draw_current_line_background iter
+              | _ -> ()
+          end in
+          signal_id_highlight_current_line <- Some id;
+          self#tbuffer#add_signal_handler id;
+          self#draw_current_line_background ~force:true (self#buffer#get_iter `INSERT)
+    end);
     Text_init.key_press self;
     Text_init.realize self;
     Text_init.select_lines_from_gutter self;

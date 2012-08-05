@@ -80,7 +80,7 @@ class widget ~project ?(is_completion=false) ?(enable_history=true) ?width ?heig
   let _ =
     odoc_buffer#undo#disable();
     odoc_sw#add odoc_view#coerce;
-    pref.Preferences.pref_indent_lines <- false;
+    pref.Preferences.pref_editor_indent_lines <- false;
     pref.Preferences.pref_highlight_current_line <- false;
     pref.Preferences.pref_show_line_numbers <- false;
     pref.Preferences.pref_right_margin_visible <- false;
@@ -98,8 +98,8 @@ class widget ~project ?(is_completion=false) ?(enable_history=true) ?width ?heig
     odoc_view#set_right_margin 8;
     odoc_view#set_wrap_mode `WORD;
     odoc_view#misc#set_has_tooltip false;
-    odoc_view#set_show_markers false;
-    odoc_view#set_show_dot_leaders false;
+    odoc_view#options#set_show_markers false;
+    odoc_view#options#set_show_dot_leaders false;
     odoc_view#set_accepts_tab false;
     odoc_view#set_border_window_size ~typ:`LEFT ~size:0;
     odoc_view#buffer#insert "\n";

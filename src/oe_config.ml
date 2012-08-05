@@ -45,15 +45,12 @@ let ocamleditor_user_home =
 
 (** Configuration Section =================================================== *)
 
-let save_all_before_compiling            = true
 let autosave_enabled                     = true
 let autosave_interval                    = 5_000 (* milliseconds *)
 let autosave_keep_backup                 = 3. *. 24. *. 60. *. 60.  (* 3 days, in milliseconds *)
-let current_line_border_enabled          = true
 let ocamldoc_paragraph_border_enabled    = true
 let ocamldoc_paragraph_bgcolor_enabled   = true
 let fade_window_enabled                  = true (* Fade effect for popup windows *)
-let dot_leaders_enabled                  = true
 let indent_lines_solid_color             = `NAME "#d0d0d0" (*"#e3e3e3"*)
 let indent_lines_dashed_color            = `NAME "#a0a0a0" (*"#c9c9c9"*)
 let matching_delim_border_color          = `NAME "#ff0000"
@@ -79,7 +76,6 @@ let gutter_marker_color                  = (*`THEME*) `CALC 0.50
 let code_folding_scope_color             = `NAME "#e5e5e5" (* disabled *)
 let code_folding_highlight_color         = "#eeeeee"
 let code_folding_hightlight_gradient     = ["#f4f4f4"; "#f9f9f9"; "#fefefe"] (* [] for no gradient *)
-let horizontal_line_color                = `NAME "#000000" (* Line drawn by clicking on the gutter. *)
 let code_folding_font                    = ref (Some "-*-*-medium-r-*-sans-10-*-*-*-*-*-*-*")
                                           (* Font for the "n lines" label in the fold line; it must be 10 pixels height. None for no label *)
 let global_gutter_comments_enabled       = false

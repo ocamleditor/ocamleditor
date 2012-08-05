@@ -81,7 +81,7 @@ let draw_indent_lines view (drawable : GDraw.drawable) start stop y0 =
   (*hline := !hline * 2;*)
   (* Draw lines *)
   let lines1, lines2 = List.partition (fun (x, _) -> (x - left_margin) mod (2 * buffer#tab_width * view#approx_char_width) = 0) !lines in
-  drawable#set_foreground Oe_config.indent_lines_solid_color;
+  drawable#set_foreground view#options#indent_lines_color_solid;
   drawable#set_line_attributes ~width:1 ~style:`SOLID ();
   List.iter begin fun (x, xlines) ->
     List.iter begin fun (y1, y2) ->
@@ -89,13 +89,14 @@ let draw_indent_lines view (drawable : GDraw.drawable) start stop y0 =
     end !xlines
   end lines2;
   Gdk.GC.set_dashes drawable#gc ~offset:1 [1; 2];
+  let color_dashed = view#options#indent_lines_color_dashed in
   List.iter begin fun (x, xlines) ->
     List.iter begin fun (y1, y2) ->
       if y2 - y1 > !hline then begin
-        drawable#set_foreground view#base_color;
+        drawable#set_foreground view#options#base_color;
         drawable#set_line_attributes ~width:1 ~style:`SOLID ();
         drawable#line ~x ~y:y1 ~x ~y:y2;
-        drawable#set_foreground Oe_config.indent_lines_dashed_color;
+        drawable#set_foreground color_dashed;
         drawable#set_line_attributes ~width:1 ~style:`ON_OFF_DASH ();
         drawable#line ~x ~y:y1 ~x ~y:y2
       end

@@ -632,7 +632,7 @@ let project ~browser ~group ~flags items =
   ignore (project_compile_only#connect#activate ~callback:begin fun () ->
     browser#with_current_project (fun _ ->
       browser#with_default_build_config (fun bconfig ->
-        if Oe_config.save_all_before_compiling then (browser#save_all());
+        if Preferences.preferences#get.Preferences.pref_editor_save_all_bef_comp then (browser#save_all());
         ignore (Bconf_console.exec ~editor `COMPILE_ONLY bconfig)))
   end);
   (** Build current *)
@@ -641,7 +641,7 @@ let project ~browser ~group ~flags items =
   ignore (project_build#connect#activate ~callback:begin fun () ->
     browser#with_current_project (fun _ ->
       browser#with_default_build_config (fun bconfig ->
-        if Oe_config.save_all_before_compiling then (browser#save_all());
+        if Preferences.preferences#get.Preferences.pref_editor_save_all_bef_comp then (browser#save_all());
         ignore (Bconf_console.exec ~editor `COMPILE bconfig)))
   end);
   (** Run current *)

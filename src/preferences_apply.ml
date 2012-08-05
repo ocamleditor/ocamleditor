@@ -30,38 +30,44 @@ let apply (view : Text.view) pref =
     then `COLOR (view#misc#style#base `NORMAL)
     else (`NAME (fst pref.Preferences.pref_bg_color))
   in
-  view#set_mark_occurrences pref.Preferences.pref_editor_mark_occurrences;
   view#mark_occurrences_manager#mark();
-  view#set_show_indent_lines pref.Preferences.pref_indent_lines;
-  view#set_show_line_numbers pref.Preferences.pref_show_line_numbers;
-  view#set_line_numbers_font pref.Preferences.pref_base_font;
+  view#options#set_mark_occurrences pref.Preferences.pref_editor_mark_occurrences;
+  view#mark_occurrences_manager#mark();
+  view#options#set_show_indent_lines pref.Preferences.pref_editor_indent_lines;
+  view#options#set_indent_lines_color_solid (`NAME pref.Preferences.pref_editor_indent_lines_color_s);
+  view#options#set_indent_lines_color_dashed (`NAME pref.Preferences.pref_editor_indent_lines_color_d);
+  view#options#set_show_line_numbers pref.Preferences.pref_show_line_numbers;
+  view#options#set_line_numbers_font pref.Preferences.pref_base_font;
   view#modify_font pref.Preferences.pref_base_font;
-  view#set_word_wrap pref.Preferences.pref_editor_wrap;
-  view#set_base_color begin
+  view#options#set_word_wrap pref.Preferences.pref_editor_wrap;
+  view#options#set_show_dot_leaders pref.Preferences.pref_editor_dot_leaders;
+  view#options#set_current_line_border_enabled pref.Preferences.pref_editor_current_line_border;
+  view#options#set_text_color (Color.name_of_gdk (Preferences.tag_color "lident"));
+  view#options#set_base_color begin
     if snd pref.Preferences.pref_bg_color then begin
       (* "Use theme color" option removed *)
-      let color = `NAME (fst ((Preferences.create_defaults()).Preferences.pref_bg_color)) in
+      let color = (*`NAME*) (fst ((Preferences.create_defaults()).Preferences.pref_bg_color)) in
       (*view#misc#modify_bg [`NORMAL, (Oe_config.gutter_color_bg color)];*)
-      view#misc#modify_base [`NORMAL, color];
+      view#misc#modify_base [`NORMAL, `NAME color];
       color;
     end else begin
-      let color = `NAME (fst pref.Preferences.pref_bg_color) in
-      view#misc#modify_base [`NORMAL, color];
+      let color = (*`NAME*) (fst pref.Preferences.pref_bg_color) in
+      view#misc#modify_base [`NORMAL, `NAME color];
       color;
     end;
   end;
   if pref.Preferences.pref_highlight_current_line then begin
-    view#set_highlight_current_line
+    view#options#set_highlight_current_line
       (Some (match (List.assoc "highlight_current_line" pref.Preferences.pref_tags)
         with ((`NAME c), _, _, _, _) -> c | _ -> assert false));
-  end else (view#set_highlight_current_line None);
+  end else (view#options#set_highlight_current_line None);
   view#tbuffer#set_tab_width pref.Preferences.pref_editor_tab_width;
   view#tbuffer#set_tab_spaces pref.Preferences.pref_editor_tab_spaces;
-  view#set_smart_home (pref.Preferences.pref_smart_keys_home = 0);
-  view#set_smart_end (pref.Preferences.pref_smart_keys_end = 1);
+  view#options#set_smart_home (pref.Preferences.pref_smart_keys_home = 0);
+  view#options#set_smart_end (pref.Preferences.pref_smart_keys_end = 1);
   if pref.Preferences.pref_right_margin_visible then begin
-    view#set_visible_right_margin (Some
+    view#options#set_visible_right_margin (Some
       (pref.Preferences.pref_right_margin, Oe_config.right_margin_line_color))
-  end else (view#set_visible_right_margin None);
+  end else (view#options#set_visible_right_margin None);
 
 

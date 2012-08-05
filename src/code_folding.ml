@@ -54,7 +54,6 @@ class manager ~(view : Text.view) =
   let buffer = view#buffer in
   let font = Gaux.may_map !Oe_config.code_folding_font ~f:Gdk.Font.load_fontset in
   (*let code_folding_scope_color = Oe_config.code_folding_scope_color in*)
-  let code_folding_fold_line_color = `COLOR (Preferences.tag_color "lident") in
   let set_highlight_background tag = Gmisclib.Util.set_tag_paragraph_background tag in
 object (self)
   val mutable enabled = true;
@@ -68,6 +67,7 @@ object (self)
   val mutable tag_highlight = buffer#create_tag
     ~name:(sprintf "tag_code_folding_focus_%f" (Unix.gettimeofday())) []
   val toggled = new toggled ()
+  val mutable fold_line_color = `NAME "#000000"
 
   method enabled = enabled
   method set_enabled x =
@@ -82,6 +82,9 @@ object (self)
       folding_points <- [];
       Gmisclib.Idle.add view#draw_gutter;
     end;
+
+  method fold_line_color = fold_line_color
+  method set_fold_line_color x = fold_line_color <- x
 
   method scan_folding_points () =
     if enabled then begin
@@ -162,7 +165,7 @@ object (self)
         begin
           match font with
             | None ->
-              drawable#set_foreground code_folding_fold_line_color;
+              drawable#set_foreground fold_line_color;
               Gdk.GC.set_fill drawable#gc `SOLID;
               Gdk.GC.set_dashes drawable#gc ~offset [2; 2];
               drawable#set_line_attributes ~style:Oe_config.dash_style ();
@@ -174,12 +177,12 @@ object (self)
               let aw = 9 in
               let margin = 40 in
               let w0 = w0 - margin - w/2 in
-              drawable#set_foreground code_folding_fold_line_color;
+              drawable#set_foreground fold_line_color;
               drawable#arc ~x:w0 ~y:(y - 6) ~width:aw ~height:12 ~start:89. ~angle:181. ();
               drawable#arc ~x:(w0 + w - aw) ~y:(y - 6) ~width:aw ~height:12 ~start:91. ~angle:(-.181.) ();
               drawable#string text ~font ~x:w0 ~y:(y + 3);
               (* Draw line *)
-              drawable#set_foreground code_folding_fold_line_color;
+              drawable#set_foreground fold_line_color;
               Gdk.GC.set_fill drawable#gc `SOLID;
               Gdk.GC.set_dashes drawable#gc ~offset [2; 2];
               drawable#set_line_attributes ~style:Oe_config.dash_style ();

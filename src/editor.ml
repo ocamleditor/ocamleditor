@@ -98,7 +98,7 @@ object (self)
   method set_show_whitespace_chars x =
     show_whitespace_chars <- x;
     List.iter begin fun page ->
-      page#view#set_show_whitespace_chars x;
+      page#view#options#set_show_whitespace_chars x;
       page#set_show_whitespace x;
       (*GtkBase.Widget.queue_draw page#view#as_widget*)
     end (pages @ (snd (List.split pages_cache)))
@@ -107,7 +107,7 @@ object (self)
   method set_word_wrap x =
     word_wrap <- x;
     List.iter begin fun page ->
-      page#view#set_word_wrap x;
+      page#view#options#set_word_wrap x;
       page#set_word_wrap x;
       (*GtkBase.Widget.queue_draw page#view#as_widget;*)
     end (pages @ (snd (List.split pages_cache)))
@@ -441,8 +441,8 @@ object (self)
       if not page#load_complete then begin
         (** Load page *)
         ignore (page#load ~scroll ());
-        page#view#set_show_whitespace_chars show_whitespace_chars;
-        page#view#set_word_wrap word_wrap;
+        page#view#options#set_show_whitespace_chars show_whitespace_chars;
+        page#view#options#set_word_wrap word_wrap;
         (** Insert_text and Delete range *)
         let buffer = page#buffer in
         let view = page#view in

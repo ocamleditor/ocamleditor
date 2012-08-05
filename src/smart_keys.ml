@@ -27,7 +27,7 @@ let smart_home ~view state =
   let buffer : GText.buffer = view#buffer in
   let iter = buffer#get_iter `INSERT in
   if iter#chars_in_line > 1 then begin
-    if view#smart_home then begin
+    if view#options#smart_home then begin
       let prev = iter#copy in
       let where = iter#set_line_offset 0 in
       let where = if Glib.Unichar.isspace where#char then begin
@@ -39,7 +39,7 @@ let smart_home ~view state =
       buffer#move_mark `INSERT ~where;
       if state <> [`SHIFT] then buffer#move_mark `SEL_BOUND ~where;
       prev#compare where <> 0
-    end else if iter#starts_line && (not view#smart_home) then begin
+    end else if iter#starts_line && (not view#options#smart_home) then begin
       let where = iter#forward_find_char not_blank in
       buffer#move_mark `INSERT ~where;
       if state <> [`SHIFT] then buffer#move_mark `SEL_BOUND ~where;
@@ -63,7 +63,7 @@ let smart_end ~view state =
     buffer#move_mark `INSERT ~where;
     if state <> [`SHIFT] then buffer#move_mark `SEL_BOUND ~where;
     true
-  end else if not iter#ends_line && view#smart_end then begin
+  end else if not iter#ends_line && view#options#smart_end then begin
     let prev = iter#copy in
     let where = backward_non_blank iter#forward_to_line_end in
     buffer#move_mark `INSERT ~where;

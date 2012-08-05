@@ -279,6 +279,7 @@ object
     use_maximize#set_active (not pref.Preferences.pref_max_view_fullscreen);
 end
 
+(** pref_editor_actions *)
 and pref_editor_actions title ?packing () =
   let vbox                        = GPack.vbox ~spacing ?packing () in
   (* Smart Keys *)
@@ -311,6 +312,7 @@ and pref_editor_actions title ?packing () =
   (* File Saving *)
   let align                       = create_align ~title:"File Saving" ~vbox () in
   let box                         = GPack.vbox ~spacing:row_spacings ~packing:align#add () in
+  let check_save_all_bef_comp     = GButton.check_button ~label:"Save all before compiling" ~packing:box#pack () in
   let check_bak                   = GButton.check_button ~label:"Create a backup copy of files before saving" ~packing:box#pack () in
   let check_trim                  = GButton.check_button ~label:"Strip trailing whitespace" ~packing:box#pack () in
   (* Searching *)
@@ -332,6 +334,7 @@ object
     pref.Preferences.pref_annot_type_tooltips_delay <- combo_annot_type_tooltips_delay#active;
     (*pref.Preferences.pref_annot_type_tooltips_impl <- combo_annot_type_tooltips_impl#active;*)*)
     pref.Preferences.pref_search_word_at_cursor <- check_search_word_at_cursor#active;
+    pref.Preferences.pref_editor_save_all_bef_comp <- check_save_all_bef_comp#active;
 
   method read pref =
     check_bak#set_active pref.Preferences.pref_editor_bak;
@@ -342,6 +345,7 @@ object
     combo_annot_type_tooltips_delay#set_active pref.Preferences.pref_annot_type_tooltips_delay;
     (*combo_annot_type_tooltips_impl#set_active pref.Preferences.pref_annot_type_tooltips_impl;*)*)
     check_search_word_at_cursor#set_active pref.Preferences.pref_search_word_at_cursor;
+    check_save_all_bef_comp#set_active pref.Preferences.pref_editor_save_all_bef_comp
 end
 
 (** pref_fonts *)
@@ -437,12 +441,27 @@ end
 
 (** pref_editor_display *)
 and pref_editor_display title ?packing () =
+  let indent                       = 25 in
   let vbox                         = GPack.vbox ~spacing ?packing () in
   let align                        = create_align ~title:"Settings" ~vbox () in
   let box                          = GPack.vbox ~spacing:row_spacings ~packing:align#add () in
   let check_show_line_numbers      = GButton.check_button ~label:"Show line numbers" ~packing:box#pack () in
   let check_highlight_current_line = GButton.check_button ~label:"Highlight current line" ~packing:box#pack () in
+  let clb_vbox                     = GPack.vbox ~spacing:5 ~packing:box#pack () in
+  let clb_align                    = GBin.alignment ~padding:(0, 0, indent, 0) ~packing:clb_vbox#add () in
+  let check_current_line_border    = GButton.check_button ~label:"Draw border" ~packing:clb_align#add () in
   let check_indent_lines           = GButton.check_button ~label:"Show indentation guidelines" ~packing:box#pack () in
+  let il_vbox                      = GPack.vbox ~spacing:5 ~packing:box#pack () in
+  let il_align                     = GBin.alignment ~padding:(0, 0, indent, 0) ~packing:il_vbox#add () in
+  let il_vbox                      = GPack.vbox ~spacing:5 ~packing:il_align#add () in
+  let il_hbox                      = GPack.hbox ~spacing:5 ~packing:il_vbox#add () in
+  let _                            = GMisc.label ~text:"Solid lines color:" ~packing:il_hbox#pack () in
+  let il_button_solid              = GButton.color_button ~packing:(il_hbox#pack ~fill:false) () in
+  let _                            = il_button_solid#set_relief `NONE in
+  let _                            = GMisc.label ~text:"Dashed lines color:" ~packing:il_hbox#pack () in
+  let il_button_dashed             = GButton.color_button ~packing:(il_hbox#pack ~fill:false) () in
+  let _                            = il_button_dashed#set_relief `NONE in
+  let check_show_dot_leaders       = GButton.check_button ~label:"Show dot leaders" ~packing:box#pack () in
   let check_code_folding           = GButton.check_button ~label:"Enable code folding" ~packing:box#pack () in
   let check_global_gutter          = GButton.check_button ~label:"Show global gutter" ~packing:box#pack () in
   let hbox                         = GPack.hbox ~spacing:5 ~packing:box#pack () in
@@ -451,7 +470,7 @@ and pref_editor_display title ?packing () =
   let entry_right_margin           = GEdit.spin_button ~numeric:true ~digits:0 ~rate:1.0 ~adjustment ~packing:hbox#pack () in
   let mo_vbox                      = GPack.vbox ~spacing:5 ~packing:box#pack () in
   let check_mark_occurrences       = GButton.check_button ~active:false ~label:"Highlight all occurrences of the selected word" ~packing:mo_vbox#pack () in
-  let mo_align                     = GBin.alignment ~padding:(0, 0, 25, 0) ~packing:mo_vbox#add () in
+  let mo_align                     = GBin.alignment ~padding:(0, 0, indent, 0) ~packing:mo_vbox#add () in
   let mo_hbox                      = GPack.hbox ~spacing:5 ~packing:mo_align#add () in
   let _                            = GMisc.label ~text:"Color:" ~packing:mo_hbox#pack () in
   let mo_button                    = GButton.color_button ~packing:(mo_hbox#pack ~fill:false) () in
@@ -466,22 +485,34 @@ object
   ignore (check_mark_occurrences#connect#toggled ~callback:begin fun () ->
     mo_hbox#misc#set_sensitive check_mark_occurrences#active
   end);
+  ignore (check_highlight_current_line#connect#toggled ~callback:begin fun () ->
+    check_current_line_border#misc#set_sensitive check_highlight_current_line#active
+  end);
+  ignore (check_indent_lines#connect#toggled ~callback:begin fun () ->
+    il_align#misc#set_sensitive check_indent_lines#active
+  end);
 
   method write pref =
     pref.Preferences.pref_highlight_current_line <- check_highlight_current_line#active;
     pref.Preferences.pref_show_line_numbers <- check_show_line_numbers#active;
-    pref.Preferences.pref_indent_lines <- check_indent_lines#active;
+    pref.Preferences.pref_editor_indent_lines <- check_indent_lines#active;
     pref.Preferences.pref_right_margin_visible <- check_right_margin#active;
     pref.Preferences.pref_right_margin <- entry_right_margin#value_as_int;
     pref.Preferences.pref_code_folding_enabled <- check_code_folding#active;
     pref.Preferences.pref_show_global_gutter <- check_global_gutter#active;
     let color = color_name mo_button#color in
     pref.Preferences.pref_editor_mark_occurrences <- check_mark_occurrences#active, color;
+    pref.Preferences.pref_editor_dot_leaders <- check_show_dot_leaders#active;
+    pref.Preferences.pref_editor_current_line_border <- check_current_line_border#active;
+    pref.Preferences.pref_editor_indent_lines_color_s <- color_name il_button_solid#color;
+    pref.Preferences.pref_editor_indent_lines_color_d <- color_name il_button_dashed#color;
 
   method read pref =
     check_highlight_current_line#set_active pref.Preferences.pref_highlight_current_line;
     check_show_line_numbers#set_active pref.Preferences.pref_show_line_numbers;
-    check_indent_lines#set_active pref.Preferences.pref_indent_lines;
+    let enabled = pref.Preferences.pref_editor_indent_lines in
+    check_indent_lines#set_active (not enabled);
+    check_indent_lines#set_active enabled;
     check_right_margin#set_active (not pref.Preferences.pref_right_margin_visible);
     check_right_margin#set_active pref.Preferences.pref_right_margin_visible;
     entry_right_margin#set_value (float pref.Preferences.pref_right_margin);
@@ -491,6 +522,12 @@ object
     check_mark_occurrences#set_active (not enabled);
     check_mark_occurrences#set_active enabled;
     mo_button#set_color (GDraw.color (`NAME color));
+    check_show_dot_leaders#set_active pref.Preferences.pref_editor_dot_leaders;
+    check_current_line_border#set_active pref.Preferences.pref_editor_current_line_border;
+    check_highlight_current_line#set_active (not pref.Preferences.pref_highlight_current_line);
+    check_highlight_current_line#set_active pref.Preferences.pref_highlight_current_line;
+    il_button_solid#set_color (GDraw.color (`NAME pref.Preferences.pref_editor_indent_lines_color_s));
+    il_button_dashed#set_color (GDraw.color (`NAME pref.Preferences.pref_editor_indent_lines_color_d));
 end
 
 (** pref_color *)
