@@ -379,7 +379,7 @@ object (self)
   initializer
     let cf = new Code_folding.manager ~view:(self :> Text.view) in
     code_folding <- Some cf;
-    cf#set_fold_line_color (`COLOR (Preferences.tag_color "lident"));
+    cf#set_fold_line_color options#text_color;
     self#create_highlight_current_line_tag(); (* recreate current line tag after code folding highlight to draw it above *)
     (** Double-click selects OCaml identifiers; click on a selected range
       reduces the selection to part of the identifier. *)

@@ -499,8 +499,6 @@ object (self)
       with ex -> eprintf "%s\n%s\n%!" (Printexc.to_string ex) (Printexc.get_backtrace())
     (*end ()*)
 
-  method draw_indent_lines = Text_indent_lines.draw_indent_lines self
-
   method private expose ev =
     try
       begin
@@ -545,7 +543,7 @@ object (self)
             end;
             (* Indentation guidelines *)
             if options#show_indent_lines && not options#show_whitespace_chars
-            then (self#draw_indent_lines drawable) start stop y0;
+            then (Text_indent_lines.draw_indent_lines self drawable) start stop y0;
             (* Gutter border *)
             begin
               match self#get_window `LEFT with
@@ -637,7 +635,7 @@ object (self)
                             match Project.find_bookmark project filename buffer#as_gtext_buffer !iter with
                               | Some bm when bm.Oe.bm_num >= Bookmark.limit ->
                                 drawable#set_line_attributes ~width:2 ~style:`SOLID ();
-                                drawable#set_foreground (`COLOR (Preferences.tag_color "lident"));
+                                drawable#set_foreground options#text_color;
                                 let y, h = view#get_line_yrange !iter in
                                 let y = y - y0 + h in
                                 drawable#line ~x:0 ~y ~x:w0 ~y;
@@ -660,7 +658,7 @@ object (self)
                 let y = Gdk.Rectangle.y rect - y0 in
                 Pango.Layout.set_text layout text;
                 drawable#put_layout ~x ~y ~fore:options#base_color layout;
-                drawable#put_layout ~x ~y ~fore:Oe_config.indent_lines_dashed_color layout;
+                drawable#put_layout ~x ~y ~fore:options#indent_lines_color_solid layout;
               in
               while !iter#compare expose_bottom < 0 do
                 let line_num = !iter#line in
@@ -687,7 +685,7 @@ object (self)
               (*Prf.crono Prf.prf_draw_dot_leaders begin fun () ->*)
                 Gdk.GC.set_fill drawable#gc `SOLID;
                 drawable#set_line_attributes ~style:Oe_config.dash_style ();
-                drawable#set_foreground (`COLOR (Preferences.tag_color "lident"));
+                drawable#set_foreground options#text_color;
                 let offset = self#left_margin - hadjust in
                 Alignment.iter ~start:expose_top ~stop:expose_bottom begin fun _ _ start stop _ ->
                   let start = start#forward_char in

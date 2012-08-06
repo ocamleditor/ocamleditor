@@ -67,7 +67,7 @@ let apply (view : Text.view) pref =
   view#options#set_smart_end (pref.Preferences.pref_smart_keys_end = 1);
   if pref.Preferences.pref_right_margin_visible then begin
     view#options#set_visible_right_margin (Some
-      (pref.Preferences.pref_right_margin, Oe_config.right_margin_line_color))
+      (pref.Preferences.pref_right_margin, `NAME pref.Preferences.pref_right_margin_color))
   end else (view#options#set_visible_right_margin None);
 
 

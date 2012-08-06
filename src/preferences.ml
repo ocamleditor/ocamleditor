@@ -66,6 +66,7 @@ type t = {
   mutable pref_editor_indent_lines_color_d  : string;
   mutable pref_right_margin_visible         : bool;
   mutable pref_right_margin                 : int;
+  mutable pref_right_margin_color           : string;
   mutable pref_max_view_1_menubar           : bool;
   mutable pref_max_view_1_toolbar           : bool;
   mutable pref_max_view_1_tabbar            : bool;
@@ -203,6 +204,7 @@ let create_defaults () = {
   pref_editor_indent_lines_color_d  = "#a0a0a0";
   pref_right_margin_visible         = false;
   pref_right_margin                 = 80;
+  pref_right_margin_color           = "#e0e0e0";
   pref_max_view_1_menubar           = true;
   pref_max_view_1_toolbar           = false;
   pref_max_view_1_tabbar            = false;
@@ -351,6 +353,7 @@ let to_xml pref =
       ], [Xml.PCData (string_of_bool pref.pref_editor_indent_lines)]);
       Xml.Element ("pref_right_margin_visible", [], [Xml.PCData (string_of_bool pref.pref_right_margin_visible)]);
       Xml.Element ("pref_right_margin", [], [Xml.PCData (string_of_int pref.pref_right_margin)]);
+      Xml.Element ("pref_right_margin_color", [], [Xml.PCData pref.pref_right_margin_color]);
       Xml.Element ("pref_max_view_1_menubar", [], [Xml.PCData (string_of_bool pref.pref_max_view_1_menubar)]);
       Xml.Element ("pref_max_view_1_toolbar", [], [Xml.PCData (string_of_bool pref.pref_max_view_1_toolbar)]);
       Xml.Element ("pref_max_view_1_tabbar", [], [Xml.PCData (string_of_bool pref.pref_max_view_1_tabbar)]);
@@ -459,6 +462,7 @@ let from_file filename =
             (try Xml.attrib node "solid_lines_dashed" with Xml.No_attribute _ -> default_pref.pref_editor_indent_lines_color_d);
         | "pref_right_margin_visible" -> pref.pref_right_margin_visible <- bool_of_string (value node)
         | "pref_right_margin" -> pref.pref_right_margin <- int_of_string (value node)
+        | "pref_right_margin_color" -> pref.pref_right_margin_color <- (value node)
         | "pref_max_view_1_menubar" -> pref.pref_max_view_1_menubar <- bool_of_string (value node)
         | "pref_max_view_1_toolbar" -> pref.pref_max_view_1_toolbar <- bool_of_string (value node)
         | "pref_max_view_1_tabbar" -> pref.pref_max_view_1_tabbar <- bool_of_string (value node)

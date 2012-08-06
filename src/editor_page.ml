@@ -269,7 +269,7 @@ object (self)
     end;
     Preferences_apply.apply view Preferences.preferences#get;
     self#set_code_folding_enabled Preferences.preferences#get.Preferences.pref_code_folding_enabled;
-    ocaml_view#code_folding#set_fold_line_color (`COLOR (Preferences.tag_color "lident"));
+    ocaml_view#code_folding#set_fold_line_color ocaml_view#options#text_color;
     Gaux.may (GtkText.TagTable.lookup buffer#tag_table "tag_matching_delim")
       ~f:(fun x -> GtkText.TagTable.remove buffer#tag_table x);
     ignore (buffer#create_tag ~name:"tag_matching_delim" [

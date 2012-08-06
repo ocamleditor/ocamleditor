@@ -464,10 +464,16 @@ and pref_editor_display title ?packing () =
   let check_show_dot_leaders       = GButton.check_button ~label:"Show dot leaders" ~packing:box#pack () in
   let check_code_folding           = GButton.check_button ~label:"Enable code folding" ~packing:box#pack () in
   let check_global_gutter          = GButton.check_button ~label:"Show global gutter" ~packing:box#pack () in
-  let hbox                         = GPack.hbox ~spacing:5 ~packing:box#pack () in
+  let rm_vbox                      = GPack.vbox ~spacing:5 ~packing:box#pack () in
+  let hbox                         = GPack.hbox ~spacing:5 ~packing:rm_vbox#pack () in
   let adjustment                   = GData.adjustment ~lower:0. ~upper:300. ~step_incr:1. ~page_size:0. () in
   let check_right_margin           = GButton.check_button ~active:false ~label:"Visible right margin at column:" ~packing:hbox#pack () in
   let entry_right_margin           = GEdit.spin_button ~numeric:true ~digits:0 ~rate:1.0 ~adjustment ~packing:hbox#pack () in
+  let rm_align                     = GBin.alignment ~padding:(0, 0, indent, 0) ~packing:rm_vbox#add () in
+  let rm_hbox                      = GPack.hbox ~spacing:5 ~packing:rm_align#add () in
+  let _                            = GMisc.label ~text:"Color:" ~packing:rm_hbox#pack () in
+  let rm_button                    = GButton.color_button ~packing:(rm_hbox#pack ~fill:false) () in
+  let _                            = rm_button#set_relief `NONE in
   let mo_vbox                      = GPack.vbox ~spacing:5 ~packing:box#pack () in
   let check_mark_occurrences       = GButton.check_button ~active:false ~label:"Highlight all occurrences of the selected word" ~packing:mo_vbox#pack () in
   let mo_align                     = GBin.alignment ~padding:(0, 0, indent, 0) ~packing:mo_vbox#add () in
@@ -491,12 +497,17 @@ object
   ignore (check_indent_lines#connect#toggled ~callback:begin fun () ->
     il_align#misc#set_sensitive check_indent_lines#active
   end);
+  ignore (check_right_margin#connect#toggled ~callback:begin fun () ->
+    rm_align#misc#set_sensitive check_right_margin#active
+  end);
 
   method write pref =
     pref.Preferences.pref_highlight_current_line <- check_highlight_current_line#active;
     pref.Preferences.pref_show_line_numbers <- check_show_line_numbers#active;
     pref.Preferences.pref_editor_indent_lines <- check_indent_lines#active;
+    let color = color_name rm_button#color in
     pref.Preferences.pref_right_margin_visible <- check_right_margin#active;
+    pref.Preferences.pref_right_margin_color <- color;
     pref.Preferences.pref_right_margin <- entry_right_margin#value_as_int;
     pref.Preferences.pref_code_folding_enabled <- check_code_folding#active;
     pref.Preferences.pref_show_global_gutter <- check_global_gutter#active;
@@ -513,9 +524,11 @@ object
     let enabled = pref.Preferences.pref_editor_indent_lines in
     check_indent_lines#set_active (not enabled);
     check_indent_lines#set_active enabled;
-    check_right_margin#set_active (not pref.Preferences.pref_right_margin_visible);
-    check_right_margin#set_active pref.Preferences.pref_right_margin_visible;
+    let enabled = pref.Preferences.pref_right_margin_visible in
+    check_right_margin#set_active (not enabled);
+    check_right_margin#set_active enabled;
     entry_right_margin#set_value (float pref.Preferences.pref_right_margin);
+    rm_button#set_color (GDraw.color (`NAME pref.Preferences.pref_right_margin_color));
     check_code_folding#set_active (pref.Preferences.pref_code_folding_enabled);
     check_global_gutter#set_active (pref.Preferences.pref_show_global_gutter);
     let enabled, color = pref.Preferences.pref_editor_mark_occurrences in
