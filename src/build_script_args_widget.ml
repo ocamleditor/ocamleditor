@@ -21,7 +21,6 @@
 *)
 
 
-open Project
 open Project_type
 open Bconf
 open Task

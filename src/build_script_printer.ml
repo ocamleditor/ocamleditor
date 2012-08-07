@@ -28,6 +28,7 @@ open Task
 open Build_script
 open Build_script_args
 
+(** print_configs *)
 let print_configs ochan bconfigs external_tasks =
   let i = ref 0 in
   let print = fprintf ochan "  %s\n" in
@@ -52,16 +53,49 @@ let print_configs ochan bconfigs external_tasks =
     kprintf print "  other_objects        = %S;" bc.other_objects;
     kprintf print "  external_tasks       = [%s];" (String.concat "; " (List.assoc bc external_tasks));
     kprintf print "  restrictions         = [%s];" (String.concat "; " (List.map (sprintf "%S") bc.restrictions));
+    kprintf print "  dependencies         = [%s];" (String.concat "; " (List.map (sprintf "%d") bc.dependencies));
     kprintf print "};";
   end bconfigs;
   output_string ochan "];;\n";;
 
-let print_external_tasks ochan bconfigs =
+(** ident_of_arg *)
+let ident_of_arg =
+  let normalize_ident =
+    let re = Str.regexp "[-]" in
+    Str.global_replace re "_"
+  in
+  fun arg -> "arg_" ^ (normalize_ident (Str.string_after arg.bsa_key 1));;
+
+(** print_add_args *)
+let print_add_args bc et args =
+  List.fold_left begin fun acc arg ->
+    let abc, aet = arg.bsa_task in
+    if bc.Bconf.id = abc.Bconf.id && et.Task.et_name = aet.Task.et_name then
+      match arg.bsa_mode with
+        | `add ->
+          let arg =
+            match arg.bsa_pass with
+              | `key -> arg.bsa_key
+              | `value -> sprintf "%s" (ident_of_arg arg)
+              | `key_value -> sprintf "%s %s" arg.bsa_key (ident_of_arg arg)
+          in
+          arg :: acc
+        | `replace _ -> acc (* TODO:  *)
+    else acc
+  end [] args;;
+
+(** print_external_tasks *)
+let print_external_tasks ochan project =
+  let bconfigs = project.Project_type.build in
+  let args = project.Project_type.build_script.bs_args in
   let i = ref 0 in
   let print = fprintf ochan "  %s\n" in
   output_string ochan "let external_tasks = [\n";
   let ets = List.map begin fun bc ->
     let ets = List.map begin fun et ->
+      let base_args = Xlist.filter_map (fun (x, y) -> if x then Some y else None) et.et_args in
+      let custom_args = print_add_args bc et args in
+      let args = base_args @ custom_args in
       let name = sprintf "%d" !i in
       kprintf print "%s, {" name;
       kprintf print "  et_name                  = %S;" et.et_name;
@@ -72,8 +106,7 @@ let print_external_tasks ochan bconfigs =
       kprintf print "  et_dir                   = %S;" et.et_dir;
       kprintf print "  et_cmd                   = %S;" et.et_cmd;
       kprintf print "  et_args                  = [%s];"
-        (String.concat "; " (List.map (sprintf "true,%S")
-          (Xlist.filter_map (fun (x, y) -> if x then Some y else None) et.et_args)));
+        (String.concat "; " (List.map (sprintf "true,%S") args));
       kprintf print "  et_phase                 = %s;" (match et.et_phase with Some p -> "Some " ^ (Task.string_of_phase p) | _ -> "None");
       kprintf print "  et_always_run_in_project = %b;" et.et_always_run_in_project;
       kprintf print "  et_always_run_in_script  = %b;" et.et_always_run_in_script;
@@ -86,9 +119,9 @@ let print_external_tasks ochan bconfigs =
   output_string ochan "];;\n";
   ets;;
 
+(** print_cmd_line_args *)
 let print_cmd_line_args ochan project =
   let args = project.Project_type.build_script.bs_args in
-  let get_ident arg = "arg_" ^ Str.string_after arg.bsa_key 1 in
   List.iter begin fun arg ->
     let default =
       match arg.bsa_default with
@@ -96,22 +129,22 @@ let print_cmd_line_args ochan project =
         | `bool x -> string_of_bool x
         | `string x -> sprintf "%S" x
     in
-    fprintf ochan "let %s = ref %s\n" (get_ident arg) default;
+    fprintf ochan "let %s = ref %s\n" (ident_of_arg arg) default;
   end args;
   fprintf ochan "let cmd_line_args = [\n";
   List.iter begin fun arg ->
     let typ =
       match arg.bsa_type with
-        | Flag_Set -> sprintf "Set %s" (get_ident arg)
-        | Flag_Clear -> sprintf "Clear %s" (get_ident arg)
+        | Flag_Set -> sprintf "Set %s" (ident_of_arg arg)
+        | Flag_Clear -> sprintf "Clear %s" (ident_of_arg arg)
         | Bool -> "Bool (fun _ -> ())"
-        | String -> sprintf "Set_string %s" (get_ident arg)
+        | String -> sprintf "Set_string %s" (ident_of_arg arg)
     in
     fprintf ochan "  %S, %s,\n    %S;\n" arg.bsa_key typ arg.bsa_doc;
   end args;
-  fprintf ochan "]\n";
-;;
+  fprintf ochan "]\n";;
 
+(** print *)
 let print ~project ~filename () =
   let ochan = open_out_bin filename in
   let finally () = close_out_noerr ochan in
@@ -123,7 +156,7 @@ let print ~project ~filename () =
     output_string ochan "\n";
     print_cmd_line_args ochan project;
     output_string ochan "\n";
-    let ets = print_external_tasks ochan project.Project_type.build in
+    let ets = print_external_tasks ochan project in
     output_string ochan "\n\n";
     output_string ochan "(\x2A Build Configurations ==================================================== \x2A)\n\n";
     (*  *)
@@ -131,7 +164,7 @@ let print ~project ~filename () =
     output_string ochan "\n";
     output_string ochan "(\x2A End of Build Configurations ============================================= \x2A)\n\n";
     (*  *)
-    output_string ochan "let _ = main ~external_tasks ~targets\n";
+    output_string ochan "let _ = main ~cmd_line_args ~external_tasks ~targets\n";
     (*  *)
     finally();
   with ex -> begin

@@ -30,6 +30,12 @@ let create_mark_name =
     incr count;
     prefix ^ (string_of_int !count);;
 
+let esc_destroy_window window =
+  ignore (window#event#connect#key_press ~callback:begin fun ev ->
+    let key = GdkEvent.Key.keyval ev in
+    if key = GdkKeysyms._Escape then (window#destroy(); true) else false
+  end);;
+
 (** window *)
 let window widget ?parent ?(destroy_child=true) ?(fade=false) ?(focus=true) ?(escape=true) ?(show=true) ~x ~y () =
   let window = GWindow.window
@@ -50,12 +56,7 @@ let window widget ?parent ?(destroy_child=true) ?(fade=false) ?(focus=true) ?(es
     window#destroy();
     true
   end);
-  if escape then begin
-    ignore (window#event#connect#key_release ~callback:begin fun ev ->
-      let key = GdkEvent.Key.keyval ev in
-      if key = GdkKeysyms._Escape then (window#destroy(); true) else false
-    end);
-  end;
+  if escape then esc_destroy_window window;
   window#set_skip_pager_hint true;
   window#set_skip_taskbar_hint true;
   Gaux.may parent ~f:(fun parent -> Gaux.may (GWindow.toplevel parent) ~f:(fun x -> window#set_transient_for x#as_window));

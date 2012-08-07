@@ -694,7 +694,10 @@ let project ~browser ~group ~flags items =
   (** Generate build script *)
   let project_script = GMenu.image_menu_item ~label:"Generate Build Script" ~packing:menu#add () in
   ignore (project_script#connect#activate ~callback:(fun () ->
-    browser#with_current_project (fun project -> Build_script_ui.window ~project ())));
+    browser#with_current_project begin fun project ->
+      let dialog = Build_script_ui.window ~project () in
+      Gaux.may (GWindow.toplevel editor) ~f:(fun w -> dialog#set_transient_for w#as_window);
+    end));
   (** Project Refresh *)
   let project_refresh = GMenu.image_menu_item ~label:"Refresh" ~packing:menu#add () in
   project_refresh#set_image (GMisc.image ~stock:`REFRESH ~icon_size:`MENU ())#coerce;

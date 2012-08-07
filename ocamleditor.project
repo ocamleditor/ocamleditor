@@ -44,6 +44,7 @@
       <lib_install_path></lib_install_path>
       <external_tasks/>
       <restrictions></restrictions>
+      <dependencies></dependencies>
     </configuration>
     <configuration name="icons" default="false" id="10">
       <id>10</id>
@@ -65,6 +66,7 @@
       <lib_install_path></lib_install_path>
       <external_tasks/>
       <restrictions></restrictions>
+      <dependencies></dependencies>
     </configuration>
     <configuration name="oebuildlib" default="false" id="7">
       <id>7</id>
@@ -86,6 +88,7 @@
       <lib_install_path></lib_install_path>
       <external_tasks/>
       <restrictions></restrictions>
+      <dependencies></dependencies>
     </configuration>
     <configuration name="oebuild" default="false" id="5">
       <id>5</id>
@@ -107,6 +110,7 @@
       <lib_install_path></lib_install_path>
       <external_tasks/>
       <restrictions></restrictions>
+      <dependencies></dependencies>
     </configuration>
     <configuration name="oeproc" default="false" id="6">
       <id>6</id>
@@ -128,6 +132,7 @@
       <lib_install_path></lib_install_path>
       <external_tasks/>
       <restrictions>IS_WIN32</restrictions>
+      <dependencies></dependencies>
     </configuration>
     <configuration name="gmisclib" default="false" id="8">
       <id>8</id>
@@ -149,6 +154,7 @@
       <lib_install_path></lib_install_path>
       <external_tasks/>
       <restrictions></restrictions>
+      <dependencies></dependencies>
     </configuration>
     <configuration name="otherwidgets" default="false" id="9">
       <id>9</id>
@@ -170,6 +176,7 @@
       <lib_install_path></lib_install_path>
       <external_tasks/>
       <restrictions></restrictions>
+      <dependencies></dependencies>
     </configuration>
     <configuration name="ocamleditor" default="true" id="0">
       <id>0</id>
@@ -296,6 +303,7 @@
         </task>
       </external_tasks>
       <restrictions></restrictions>
+      <dependencies>4,10,7,5,6,8,9</dependencies>
     </configuration>
     <configuration name="ocamleditor-native" default="false" id="11">
       <id>11</id>
@@ -317,6 +325,7 @@
       <lib_install_path></lib_install_path>
       <external_tasks/>
       <restrictions></restrictions>
+      <dependencies></dependencies>
     </configuration>
     <configuration name="ocamleditor-by-script" default="false" id="12">
       <id>12</id>
@@ -365,6 +374,7 @@
         </task>
       </external_tasks>
       <restrictions></restrictions>
+      <dependencies></dependencies>
     </configuration>
     <configuration name="tools" default="false" id="13">
       <id>13</id>
@@ -434,8 +444,22 @@
           </args>
           <phase></phase>
         </task>
+        <task name="generate_oebuild_script">
+          <name>generate_oebuild_script</name>
+          <always_run_in_project>false</always_run_in_project>
+          <always_run_in_script>false</always_run_in_script>
+          <env replace="false"/>
+          <dir>../build</dir>
+          <cmd>ocaml</cmd>
+          <args>
+            <arg enabled="true">tools.ml</arg>
+            <arg enabled="true">-generate-oebuild-script</arg>
+          </args>
+          <phase></phase>
+        </task>
       </external_tasks>
       <restrictions></restrictions>
+      <dependencies></dependencies>
     </configuration>
   </build>
   <build_script filename="_build.ml"/>

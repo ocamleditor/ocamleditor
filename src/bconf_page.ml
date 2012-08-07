@@ -173,6 +173,11 @@ class view ~project ?packing () =
   let _ = GMisc.label ~text:"Linker flags" ~xalign ~packing:box#add () in
   let entry_lflags = GEdit.entry ~packing:box#add () in
 
+  (** Dependencies Tab *)
+  let vbox = GPack.vbox ~border_width:5 ~spacing:8 () in
+  let _ = nb#append_page ~tab_label:(GMisc.label ~text:"Dependencies" ())#coerce vbox#coerce in
+  let widget_deps = Bconf_page_deps.create ~project ~packing:vbox#add () in
+
   (** Restrictions Tab *)
   let vbox = GPack.vbox ~width:550 ~border_width:5 ~spacing:8 () in
   let _ = nb#append_page ~tab_label:(GMisc.label ~text:"Conditions" ())#coerce vbox#coerce in
@@ -197,6 +202,10 @@ object (self)
   val mutable page_changed = false
 
   initializer
+    ignore (widget_deps#connect#changed ~callback:begin fun () ->
+      self#update (fun bconf -> bconf.dependencies <- widget_deps#get()) ();
+      changed#call()
+    end;);
     let set_restr bconf check c =
       bconf.restrictions <-
         Miscellanea.Xlist.remove_dupl (if check#active
@@ -317,6 +326,7 @@ object (self)
   method set bc =
     signals_enabled <- false;
     bconf <- Some bc;
+    widget_deps#set bc;
     entry_name#set_text bc.name;
     combo_comp#set_active (match bc.byt, bc.opt with
       | true, false -> 0

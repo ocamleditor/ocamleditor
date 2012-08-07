@@ -104,6 +104,7 @@ let write proj =
               ])
             end t.Bconf.external_tasks);
           Xml.Element ("restrictions", [], [Xml.PCData (String.concat "," t.Bconf.restrictions)]);
+          Xml.Element ("dependencies", [], [Xml.PCData (String.concat "," (List.map string_of_int t.Bconf.dependencies))]);
         ])
       end proj.build
     );
@@ -271,6 +272,7 @@ let read filename =
                 end [] tp in
                 target.Bconf.external_tasks <- List.rev external_tasks;
               | "restrictions" -> target.Bconf.restrictions <- (Str.split (!~ ",") (value tp))
+              | "dependencies" -> target.Bconf.dependencies <- (List.map int_of_string (Str.split (!~ ",") (value tp)))
               | _ -> ()
           end tnode;
           incr i;

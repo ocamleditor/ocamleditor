@@ -278,12 +278,12 @@ let add_target targets name =
   with Not_found -> ();;
 
 (** main *)
-let main ~external_tasks ~targets =
+let main ~cmd_line_args ~external_tasks ~targets =
   let parse_anon targets x = if not (Command.set x) then (add_target targets x) in
   let speclist = [
     ("-C",      Set_string Option.change_dir, "<dir> Change directory before running (default is \"src\")");
     (*("-prefix", Set_string Option.prefix,     "<dir> When installing libraries use <dir> instead of `ocamlc -where` as root");*)
-  ] in
+  ] @ cmd_line_args in
   let speclist = Arg.align speclist in
   let command_name = Filename.basename Sys.argv.(0) in
   (* Print targets *)

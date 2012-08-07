@@ -23,10 +23,9 @@
 
 open Miscellanea
 open Printf
-open GdkKeysyms
 open Build_script
 
-let enable_widget_args = false
+let enable_widget_args = true
 
 class widget ~project ?packing () =
   let build_script    = project.Project_type.build_script in
@@ -113,7 +112,8 @@ let window ~project () =
     else if key = _Escape then (window#destroy(); true)
     else false
   end);*)
-  window#show();;
+  window#show();
+  window;;
 
 
 

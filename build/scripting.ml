@@ -53,7 +53,8 @@ let copy_file ic oc =
     if n = 0 then () else (output oc buff 0 n; copy())
   in copy()
 
-let cp src dst =
+let cp ?(echo=false) src dst =
+  if echo then (printf "%s -> %s\n%!" src dst);
   let ic = open_in_bin src in
   let oc = open_out_bin dst in
   let finally () = close_out oc; close_in ic in

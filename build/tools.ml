@@ -29,14 +29,13 @@ open Arg
 let required_ocaml_version = "4.00.0"
 let has_native             = ref false
 let ccopt                  = ref (try Unix.getenv "OCAMLEDITOR_CCOPT" with Not_found -> "")
-let use_modified_gtkThread = ref
-  (try ignore (Unix.getenv "OCAMLEDITOR_GTKTHREAD"); true with Not_found -> true)
+let use_modified_gtkThread = ref true
 let ext                    = if is_win32 then ".exe" else ""
 let oebuild_name           = sprintf "oebuild%s" ext
 let oebuild_command        = "oebuild" // oebuild_name
 let (!!)                   = sprintf "(*%s*)";;
 
-(** common *)
+(*(** common *)
 let common () =
   pushd "common";
   kprintf run
@@ -61,7 +60,7 @@ let oebuild () =
     kprintf run "ocamlopt -o oebuild.opt%s %s -thread -w syumx -I ../common str.cmxa unix.cmxa threads.cmxa common.cmxa oebuildlib.cmxa oebuild_tool.ml"
       ext !ccopt;
   end;
-  popd();;
+  popd();;*)
 
 (** lex_yacc *)
 let lex_yacc () =
@@ -72,8 +71,9 @@ let lex_yacc () =
 
 (** prepare_build *)
 let prepare_build () =
-  if Sys.ocaml_version < required_ocaml_version then 
+  if Sys.ocaml_version < required_ocaml_version then
     eprintf "You are using OCaml-%s but version %s is required." Sys.ocaml_version required_ocaml_version;
+  cp ~echo:true (if !use_modified_gtkThread then "gtkThread3.ml" else "gtkThread4.ml") "gtkThread2.ml";
   lex_yacc();;
 
 (** mkicons *)

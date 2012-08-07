@@ -297,40 +297,40 @@ object (self)
       notebook#remove runtime_box#coerce;
     end;
     (* Entries *)
-    name_entry#connect#changed ~callback:begin fun () ->
+    ignore (name_entry#connect#changed ~callback:begin fun () ->
       home_entry#set_text (Filename.concat (Filename.dirname home_entry#text) name_entry#text);
       project_name_changed#call name_entry#text;
-    end;
+    end);
     let set_paths () =
       src_entry#set_text (Filename.concat home_entry#text "src");
       bak_entry#set_text (Filename.concat home_entry#text "bak");
       doc_entry#set_text (Filename.concat home_entry#text "doc");
     in
-    home_entry#connect#changed ~callback:set_paths;
+    ignore (home_entry#connect#changed ~callback:set_paths);
     set_paths();
     name_entry#misc#grab_focus();
     (* Buttons *)
-    button_apply#connect#clicked ~callback:self#save;
-    button_ok#connect#clicked ~callback:(fun () -> self#save(); button_close#clicked());
+    ignore (button_apply#connect#clicked ~callback:self#save);
+    ignore (button_ok#connect#clicked ~callback:(fun () -> self#save(); button_close#clicked()));
     (* *)
     notebook#goto_page 0;
 (*    notebook#connect#switch_page ~callback:begin fun num ->
       if num = 2 && bconf_page#changed then (GtkSignal.stop_emit(); notebook#goto_page 1)
     end;*)
-    bconf_page#connect#changed ~callback:begin fun () ->
+    ignore (bconf_page#connect#changed ~callback:begin fun () ->
       GtkBase.Widget.queue_draw bconf_list#view#as_widget;
-    end;
+    end);
     Gaux.may page_num ~f:notebook#goto_page;
 
   initializer self#init()
 end
 
-and project_changed () = object (self) inherit [unit] GUtil.signal () as super end
-and project_name_changed () = object (self) inherit [string] GUtil.signal () as super end
-and show () = object (self) inherit [unit] GUtil.signal () as super end
+and project_changed () = object inherit [unit] GUtil.signal () end
+and project_name_changed () = object inherit [string] GUtil.signal () end
+and show () = object inherit [unit] GUtil.signal () end
 
 and signals ~project_changed ~project_name_changed ~show =
-object (self)
+object
   inherit GUtil.ml_signals [
     project_changed#disconnect;
     project_name_changed#disconnect;

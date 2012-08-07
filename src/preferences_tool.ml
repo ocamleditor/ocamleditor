@@ -96,6 +96,7 @@ end
 and preferences ~(editor : Editor.editor) () =
   let window            = GWindow.window ~allow_shrink:false ~allow_grow:false ~resizable:true ~width:750
     ~type_hint:`DIALOG ~modal:true ~title:"Preferences" ~position:`CENTER ~icon:Icons.oe ~show:false () in
+  let _                 = Gaux.may (GWindow.toplevel editor) ~f:(fun w -> window#set_transient_for w#as_window) in
   let vbox              = GPack.vbox ~border_width:8 ~spacing:8 ~packing:window#add () in
   let hbox              = GPack.hbox ~spacing:8 ~packing:vbox#add () in
   let cols              = new GTree.column_list in
