@@ -27,6 +27,7 @@ open Cmd_line_args
 open Ocaml_config
 open File
 open List_opt
+open Argc
 
 let application_param =
   try

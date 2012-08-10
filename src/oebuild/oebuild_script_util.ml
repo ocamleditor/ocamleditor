@@ -160,109 +160,6 @@ module ETask = struct
     Sys.chdir old_dir;
     if exit_code > 0 then raise Error
   end
-
-end
-
-(** Command *)
-module Command = struct
-  type t = Show | Build | Install | Clean | Distclean
-
-  let command : t option ref = ref None
-
-  let commands = [
-    "show",      (Show,      " <target>... Show the build options of a target");
-    "build",     (Build,     " <target>... Build a target (default)");
-    "install",   (Install,   " <target>... Install a library");
-    "clean",     (Clean,     " <target>... Remove output files for the selected target");
-    "distclean", (Distclean, "Remove all build output");
-  ]
-
-  let set name =
-    match !command with
-      | Some _ -> false
-      | None ->
-        begin
-          try
-            let c, _ = List.assoc name commands in
-            command := Some c;
-            true
-          with Not_found -> false
-        end;;
-
-  let execute_target ~(external_tasks : (int * Task.t) list) ~command  (_, (name, t)) =
-    if Oebuild.check_restrictions t.restrictions then
-      let compilation = (if t.compilation_bytecode then [Bytecode] else [])
-        @ (if t.compilation_native && (ccomp_type <> None) then [Native] else []) in
-      let files = Str.split (Str.regexp " +") t.toplevel_modules in
-      let deps () = Dep.find ~pp:t.pp ~with_errors:true ~echo:false files in
-      let etasks = List.map (fun x -> snd (List.nth external_tasks x)) t.external_tasks in
-      List.iter begin fun compilation ->
-        let outname = get_output_name ~compilation ~outkind:t.output_kind ~outname:t.output_name ~targets:files in
-        match command with
-          | Build ->
-            List.iter ETask.execute (ETask.filter etasks Before_compile);
-            let deps = deps() in
-            (*List.iter ETask.execute (ETask.filter etasks Compile);*)
-            begin
-              match build
-                ~compilation
-                ~includes:t.search_path
-                ~libs:t.required_libraries
-                ~other_mods:t.other_objects
-                ~outkind:t.output_kind
-                ~compile_only:false
-                ~thread:t.thread
-                ~vmthread:t.vmthread
-                ~annot:false
-                ~pp:t.pp
-                ~cflags:t.compiler_flags
-                ~lflags:t.linker_flags
-                ~outname
-                ~deps
-                ~ms_paths:(ref false)
-                ~targets:files ()
-              with
-                | Built_successfully ->
-                  List.iter ETask.execute (ETask.filter etasks After_compile);
-                | Build_failed n -> popd(); exit n
-            end
-          | Install ->
-            let deps = deps() in
-            install_output ~compilation ~outkind:t.output_kind ~outname ~deps ~path:t.library_install_dir ~ccomp_type
-          | Clean ->
-            List.iter ETask.execute (ETask.filter etasks Before_clean);
-            let deps = deps() in
-            clean ~compilation ~outkind:t.output_kind ~outname ~targets:files ~deps ();
-            List.iter ETask.execute (ETask.filter etasks After_clean);
-          | Distclean ->
-            let deps = deps() in
-            List.iter ETask.execute (ETask.filter etasks Before_clean);
-            clean ~compilation ~outkind:t.output_kind ~outname ~targets:files ~deps ~all:true ();
-            List.iter ETask.execute (ETask.filter etasks After_clean);
-          | Show -> assert false
-      end compilation;;
-
-  let execute ~external_tasks ~target targets =
-    pushd !Option.change_dir;
-    try
-      let command = match !command with Some c -> c | _ -> assert false in
-      begin
-        match command with
-          | Distclean ->
-            List.iter (fun t -> execute_target external_tasks command (0, t)) targets;
-            clean_all()
-          | Show ->
-            printf "%s\n%!" (system_config ());
-            Printf.printf "\n%!" ;
-            List.iter begin fun t ->
-              show t;
-              print_newline();
-              print_newline();
-            end target;
-          | _ -> List.iter (execute_target ~external_tasks ~command) target
-      end;
-      popd();
-    with ex -> popd();
 end
 
 (** add_target *)
@@ -273,51 +170,167 @@ let add_target targets name =
     begin
       try
         let n = int_of_string name in
-        target := (n, List.nth targets (n - 1)) :: !target
+        target := (n, List.nth targets (n - 1)) :: !target;
       with _ -> target := (0, (name, (List.assoc name targets))) :: !target
     end
-  with Not_found -> ();;
+  with Not_found -> (raise (Arg.Bad (sprintf "Invalid target `%s'" name)));;
 
 (** main *)
 let main ~cmd_line_args ~external_tasks ~targets =
-  let parse_anon targets x = if not (Command.set x) then (add_target targets x) in
-  let speclist = [
+  let module Command = struct
+    type t = [`Show | `Build | `Install | `Clean | `Distclean]
+
+    exception Unrecognized_command of string
+
+    let string_of_command = function
+      | `Show -> "show"
+      | `Build -> "build"
+      | `Install -> "install"
+      | `Clean -> "clean"
+      | `Distclean -> "distclean";;
+
+    let command_of_string = function
+      | "show" -> `Show
+      | "build" -> `Build
+      | "install" -> `Install
+      | "clean" -> `Clean
+      | "disclean" -> `Distclean
+      | x -> raise (Unrecognized_command (sprintf "`%s' is not a recognized command." x));;
+
+    let options =
+      List.map (fun (a, b, c, d) -> a, Arg.align b, c, d) [
+        `Show,      [], "Show the build options of a target",          "";
+        `Build,     [], "Build a target",                              "";
+        `Install,   [], "Install a library",                           "";
+        `Clean,     [], "Remove output files for the selected target", "";
+        `Distclean, [], "Remove all build output",                     "";
+      ];;
+
+    let anon_fun = function
+      | `Show -> add_target targets
+      | `Build -> add_target targets
+      | `Install -> add_target targets
+      | `Clean -> add_target targets
+      | `Distclean as x -> kprintf failwith "Invalid anonymous argument for command `%s'" (string_of_command x);;
+
+    let execute_target ~command  (_, (name, t)) =
+      if Oebuild.check_restrictions t.restrictions then
+        let compilation = (if t.compilation_bytecode then [Bytecode] else [])
+          @ (if t.compilation_native && (ccomp_type <> None) then [Native] else []) in
+        let files = Str.split (Str.regexp " +") t.toplevel_modules in
+        let deps () = Dep.find ~pp:t.pp ~with_errors:true ~echo:false files in
+        let etasks = List.map (fun x -> snd (List.nth external_tasks x)) t.external_tasks in
+        List.iter begin fun compilation ->
+          let outname = get_output_name ~compilation ~outkind:t.output_kind ~outname:t.output_name ~targets:files in
+          match command with
+            | `Build ->
+              List.iter ETask.execute (ETask.filter etasks Before_compile);
+              let deps = deps() in
+              (*List.iter ETask.execute (ETask.filter etasks Compile);*)
+              begin
+                match build
+                  ~compilation
+                  ~includes:t.search_path
+                  ~libs:t.required_libraries
+                  ~other_mods:t.other_objects
+                  ~outkind:t.output_kind
+                  ~compile_only:false
+                  ~thread:t.thread
+                  ~vmthread:t.vmthread
+                  ~annot:false
+                  ~pp:t.pp
+                  ~cflags:t.compiler_flags
+                  ~lflags:t.linker_flags
+                  ~outname
+                  ~deps
+                  ~ms_paths:(ref false)
+                  ~targets:files ()
+                with
+                  | Built_successfully ->
+                    List.iter ETask.execute (ETask.filter etasks After_compile);
+                  | Build_failed n -> popd(); exit n
+              end
+            | `Install ->
+              let deps = deps() in
+              install_output ~compilation ~outkind:t.output_kind ~outname ~deps ~path:t.library_install_dir ~ccomp_type
+            | `Clean ->
+              List.iter ETask.execute (ETask.filter etasks Before_clean);
+              let deps = deps() in
+              clean ~compilation ~outkind:t.output_kind ~outname ~targets:files ~deps ();
+              List.iter ETask.execute (ETask.filter etasks After_clean);
+            | `Distclean ->
+              let deps = deps() in
+              List.iter ETask.execute (ETask.filter etasks Before_clean);
+              clean ~compilation ~outkind:t.output_kind ~outname ~targets:files ~deps ~all:true ();
+              List.iter ETask.execute (ETask.filter etasks After_clean);
+            | `Show -> assert false
+        end compilation;;
+
+    let execute command =
+      pushd !Option.change_dir;
+      let target = List.rev !target in
+      try
+        begin
+          match command with
+            | `Distclean ->
+              List.iter (fun t -> execute_target ~command (0, t)) targets;
+              clean_all()
+            | `Show ->
+              printf "%s\n%!" (system_config ());
+              Printf.printf "\n%!" ;
+              if target = [] then (raise (Arg.Bad "show: no target specified"));
+              List.iter begin fun t ->
+                show t;
+                print_newline();
+                print_newline();
+              end target;
+            | _ ->
+              if target = [] then (raise (Arg.Bad (sprintf "%s: no target specified" (string_of_command command))));
+              List.iter (execute_target ~command) target
+        end;
+        popd();
+      with Arg.Bad _ as ex ->
+        popd();
+        raise ex
+      | ex ->
+        popd();
+        Printf.eprintf "File \"oebuild_script_util.ml\": %s\n%s\n%!" (Printexc.to_string ex) (Printexc.get_backtrace());;
+  end in
+
+  let module Argc = Argc.Make (Command) in
+
+  let global_options = [
     ("-C",      Set_string Option.change_dir, "<dir> Change directory before running (default is \"src\")");
     (*("-prefix", Set_string Option.prefix,     "<dir> When installing libraries use <dir> instead of `ocamlc -where` as root");*)
   ] @ cmd_line_args in
-  let speclist = Arg.align speclist in
+  let global_options = Arg.align global_options in
   let command_name = Filename.basename Sys.argv.(0) in
   (* Print targets *)
   let i = ref 0 in
   let maxlength = List.fold_left (fun cand (x, _) -> let len = String.length x in max cand len) 0 targets in
-  let descr = String.concat "\n" (List.map begin fun (name, tg) ->
+  let help_of_targets = String.concat "\n" (List.map begin fun (name, tg) ->
     incr i;
     let name = rpad name ' ' maxlength in
     sprintf "  %2d) %s %s, %s" !i name
       (string_of_outkind tg.output_kind) (string_of_compilation_type (ccomp_type <> None) tg)
   end targets) in
-  (* Print commands *)
-  let cmds = List.map begin fun (c, (_, d)) ->
-    if d.[0] = ' ' then begin
-      let pos = try String.index_from d 1 ' ' with Not_found -> String.length d in
-      let arg = Str.string_before d pos in
-      (c ^ arg), (try Str.string_after d (pos + 1) with _ -> "")
-    end else c, d
-  end Command.commands in
-  let maxlength = List.fold_left (fun cand (x, _) -> let len = String.length x in max cand len) 0 cmds in
-  let cmds = String.concat "\n" (List.map begin fun (c, d) ->
-    let c = rpad c ' ' maxlength in
-    sprintf "  %s %s" c d
-  end cmds) in
-  (* Help message *)
-  let help_message = sprintf "\nUsage\n  Please first edit the \"Build Configurations\" section at the end of\n  file \"%s\" to set the right options for your system, then do:\n\n    ocaml %s <command> [global options]\n\nCommands\n%s\n\nTargets\n%s\n\nGlobal Options"
-    command_name command_name cmds descr in
-  Arg.parse speclist (parse_anon targets) help_message;
-  if !Arg.current = 1
-  then (Arg.usage speclist help_message)
-  else begin
-    (match !Command.command with None -> Command.command := Some Command.Build | _ -> ());
-    Command.execute ~external_tasks ~target:(List.rev !target) targets
-  end;;
-
+  let usage_msg = sprintf
+    "USAGE\n  ocaml %s [global_options*] <command> [options*] [targets*]\n  ocaml %s <command> --help"
+      command_name command_name
+  in
+  let help_string () =
+    sprintf "%s\n\nGLOBAL OPTIONS%s\nCOMMANDS%s\n\nTARGETS\n%s"
+      usage_msg (Arg.usage_string global_options "") Argc.help_of_commands help_of_targets
+  in
+  try Argc.parse ~usage_msg ~global_options Command.execute
+  with
+    | Arg.Help _ -> print_endline (help_string ())
+    | Arg.Bad msg -> prerr_endline msg
+    | Argc.Help_Command (cmd, (specs, descr, usage), msg) ->
+      let name = Command.string_of_command cmd in
+      printf "%s %s - %s\n\nUSAGE\n  ocaml %s [global_options*] %s [options*] [targets*]\n\nOPTIONS%s"
+        command_name name descr command_name name (Arg.usage_string specs "")
+    | Command.Unrecognized_command msg -> prerr_endline msg
+    | ex -> prerr_endline (Printexc.to_string ex)
+;;
 
