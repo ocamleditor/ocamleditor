@@ -88,6 +88,7 @@ class widget ~project ?packing () =
   let col_opt_et_name   = cols#add Gobject.Data.string in
   let col_opt_arg       = cols#add Gobject.Data.string in
   let col_opt_pass      = cols#add Gobject.Data.string in
+  let col_opt_def_flag  = cols#add Gobject.Data.boolean in
   let col_opt_def_value = cols#add Gobject.Data.string in
   let model             = GTree.list_store cols in
   let rend_type         = GTree.cell_renderer_combo [`EDITABLE true; `HAS_ENTRY false; `TEXT_COLUMN col_opt_type; `MODEL (Some model_type#coerce)] in
@@ -107,6 +108,7 @@ class widget ~project ?packing () =
   let _                 = vc_opt_def#pack ~expand:true rend_def_flag in
   let _                 = vc_opt_def#pack ~expand:true rend_def_string in
   let _                 = vc_opt_def#pack ~expand:true rend_def_bool in
+  let _                 = vc_opt_def#add_attribute rend_def_flag "active" col_opt_def_flag in
   let _                 = vc_opt_def#add_attribute rend_def_string "text" col_opt_def_value in
   let _                 = vc_opt_def#add_attribute rend_def_bool "text" col_opt_def_value in
   let vc_opt_et_name    = GTree.view_column ~renderer:(rend_et_name, ["text", col_opt_et_name]) ~title:"For task..." () in
@@ -167,6 +169,8 @@ object (self)
       if is_flag && default_value <> ""
       then model#set ~row ~column:col_opt_def_value "";
 
+      if is_flag then model#set ~row ~column:col_opt_def_flag false;
+
       Gmisclib.Idle.add view#misc#grab_focus
     end);
     ignore (rend_name#connect#edited ~callback:begin fun path text ->
@@ -194,9 +198,10 @@ object (self)
       model#set ~row ~column:col_opt_pass text;
       Gmisclib.Idle.add view#misc#grab_focus
     end);
-    (*ignore (rend_def_flag#connect#toggled ~callback:begin fun path ->
-      let row = model#get_iter path in ()
-    end);*)
+    ignore (rend_def_flag#connect#toggled ~callback:begin fun path ->
+      let row = model#get_iter path in 
+      model#set ~row ~column:col_opt_def_flag (not (model#get ~row ~column:col_opt_def_flag));
+    end);
     ignore (rend_def_bool#connect#edited ~callback:begin fun path text ->
       let row = model#get_iter path in
       model#set ~row ~column:col_opt_def_value text;
@@ -212,7 +217,7 @@ object (self)
     vc_opt_def#set_cell_data_func rend_def_flag begin fun _ row ->
       let is_flag = self#is_flag row in
       let is_bool = self#is_bool row in
-      rend_def_flag#set_properties [`ACTIVATABLE is_flag; `VISIBLE false];
+      rend_def_flag#set_properties [`ACTIVATABLE is_flag; `VISIBLE is_flag];
       rend_def_string#set_properties [`EDITABLE (not is_flag && not is_bool); `VISIBLE (not is_flag && not is_bool)];
       rend_def_bool#set_properties [`EDITABLE is_bool; `VISIBLE is_bool];
     end;
@@ -304,7 +309,7 @@ object (self)
       model#set ~row ~column:col_opt_doc arg.bsa_doc;
       begin
         match arg.bsa_default with
-          | `flag -> ()
+          | `flag x -> model#set ~row ~column:col_opt_def_flag x;
           | `bool x -> model#set ~row ~column:col_opt_def_value (string_of_bool x);
           | `string x -> model#set ~row ~column:col_opt_def_value x;
       end;
@@ -325,7 +330,7 @@ object (self)
           let bsa_type = type_of_string (model#get ~row ~column:col_opt_type) in
           let bsa_default =
             match bsa_type with
-              | Flag -> `flag
+              | Flag -> `flag (model#get ~row ~column:col_opt_def_flag)
               | Bool -> `bool (bool_of_string (model#get ~row ~column:col_opt_def_value))
               | String -> `string (model#get ~row ~column:col_opt_def_value)
           in

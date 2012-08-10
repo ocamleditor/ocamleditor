@@ -193,11 +193,11 @@ let common () =
   pushd "common";
   kprintf run
     "ocamlc -a -o common.cma -annot -thread -w syumx \
-cmd.ml miscellanea.ml file.ml quote.ml ocaml_config.ml cmd_line_args.ml dep.mli dep.ml list_opt.ml common.ml";
+cmd.ml miscellanea.ml file.ml quote.ml ocaml_config.ml cmd_line_args.ml dep.mli dep.ml list_opt.ml argc.mli argc.ml common.ml";
   if !can_compile_native then begin
     kprintf run
       "ocamlopt -a -o common.cmxa -annot -thread -w syumx cmd.ml miscellanea.ml file.ml quote.ml \
-ocaml_config.ml cmd_line_args.ml dep.mli dep.ml list_opt.ml common.ml";
+ocaml_config.ml cmd_line_args.ml dep.mli dep.ml list_opt.ml argc.mli argc.ml common.ml";
   end;
   popd()
 

@@ -124,9 +124,8 @@ let main () = begin
   (** print_output_name *)
   if !print_output_name then begin
     List.iter begin fun compilation ->
-      let outname = get_output_name ~compilation ~outkind:!outkind
-        ~outname:!output_name ~targets:!target in
-      printf "%s\n%!" outname;
+      let outname = get_output_name ~compilation ~outkind:!outkind ~outname:!output_name ~targets:!target in
+      match outname with Some outname -> printf "%s\n%!" outname | _ -> ();
     end compilation;
     exit 0;
   end;
@@ -144,39 +143,44 @@ let main () = begin
   let outnames =
     List.map begin fun compilation ->
       let outname = get_output_name ~compilation ~outkind:!outkind ~outname:!output_name ~targets:!target in
-      match
-        if !no_build then Built_successfully, [] else begin
-          let deps = Dep.find ~pp:!pp (* ~includes:!includes*) ~with_errors:true !target in
-          (build
-            ~compilation
-            ~includes:!includes
-            ~libs:!libs
-            ~other_mods:!mods
-            ~outkind:!outkind
-            ~compile_only:!compile_only
-            ~thread:!thread
-            ~vmthread:!vmthread
-            ~annot:!annot
-            ~pp:!pp
-            ~cflags:!cflags
-            ~lflags:!lflags
-            ~outname
-            ~deps
-            ~targets:!target
-            ~prof:!prof
-            ~ms_paths ()), deps
-        end
-      with
-        | Build_failed code, _ -> exit code (*(compilation, None)*)
-        | Built_successfully, deps ->
+      match outname with
+        | Some outname ->
           begin
-            match !install with
-              | Some path -> install_output ~compilation ~outname ~outkind:!outkind ~deps ~path
-                ~ccomp_type:(Ocaml_config.can_compile_native ());
-              | _ -> ()
-          end;
-          last_outname := Some outname;
-          (compilation, Some outname)
+            match
+              if !no_build then Built_successfully, [] else begin
+                let deps = Dep.find ~pp:!pp (* ~includes:!includes*) ~with_errors:true !target in
+                (build
+                  ~compilation
+                  ~includes:!includes
+                  ~libs:!libs
+                  ~other_mods:!mods
+                  ~outkind:!outkind
+                  ~compile_only:!compile_only
+                  ~thread:!thread
+                  ~vmthread:!vmthread
+                  ~annot:!annot
+                  ~pp:!pp
+                  ~cflags:!cflags
+                  ~lflags:!lflags
+                  ~outname
+                  ~deps
+                  ~targets:!target
+                  ~prof:!prof
+                  ~ms_paths ()), deps
+              end
+            with
+              | Build_failed code, _ -> exit code (*(compilation, None)*)
+              | Built_successfully, deps ->
+                begin
+                  match !install with
+                    | Some path -> install_output ~compilation ~outname ~outkind:!outkind ~deps ~path
+                      ~ccomp_type:(Ocaml_config.can_compile_native ());
+                    | _ -> ()
+                end;
+                last_outname := Some outname;
+                (compilation, Some outname)
+          end
+        | _ -> (compilation, None)
     end compilation;
   in
   if !outkind = Executable then begin

@@ -35,33 +35,6 @@ let oebuild_name           = sprintf "oebuild%s" ext
 let oebuild_command        = "oebuild" // oebuild_name
 let (!!)                   = sprintf "(*%s*)";;
 
-(*(** common *)
-let common () =
-  pushd "common";
-  kprintf run
-    "ocamlc -a -o common.cma -annot -thread -w syumx str.cma unix.cma threads.cma \
-cmd.ml miscellanea.ml file.ml quote.ml ocaml_config.ml cmd_line_args.ml dep.mli dep.ml list_opt.ml common.ml";
-  if !has_native then begin
-    kprintf run
-      "ocamlopt -a -o common.cmxa -annot -thread -w syumx cmd.ml miscellanea.ml file.ml quote.ml \
-ocaml_config.ml cmd_line_args.ml dep.mli dep.ml list_opt.ml common.ml";
-  end;
-  popd();;
-
-(** oebuild *)
-let oebuild () =
-  common();
-  pushd "oebuild";
-  kprintf run "ocamlc -a -o oebuildlib.cma -thread -w syumx -annot -I ../common str.cma unix.cma threads.cma common.cma oebuild_util.ml oebuild_table.mli oebuild_table.ml oebuild.ml";
-  kprintf run "ocamlc -o %s -thread -w syumx -I ../common str.cma unix.cma threads.cma common.cma oebuildlib.cma oebuild_tool.ml"
-    oebuild_name;
-  if !has_native then begin
-    kprintf run "ocamlopt -a -o oebuildlib.cmxa -thread -w syumx -I ../common oebuild_util.ml oebuild_table.mli oebuild_table.ml oebuild.ml";
-    kprintf run "ocamlopt -o oebuild.opt%s %s -thread -w syumx -I ../common str.cmxa unix.cmxa threads.cmxa common.cmxa oebuildlib.cmxa oebuild_tool.ml"
-      ext !ccopt;
-  end;
-  popd();;*)
-
 (** lex_yacc *)
 let lex_yacc () =
   run "ocamllex annot_lexer.mll";

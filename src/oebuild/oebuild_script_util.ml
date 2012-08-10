@@ -28,6 +28,7 @@ open Oebuild_util
 open Task
 
 type target = {
+  id : int;
   output_name : string;
   output_kind : output_kind;
   compilation_bytecode : bool;
@@ -117,8 +118,10 @@ let show = function num, (name, t) ->
     (if t.compilation_bytecode then [Bytecode] else []) @
     (if t.compilation_native && ccomp_type <> None then [Native] else [])
   in
-  let outname = List.map (fun compilation ->
-    get_output_name ~compilation ~outkind:t.output_kind ~outname:t.output_name ~targets:files) compilation
+  let outname = List.map begin fun compilation ->
+    let oname = get_output_name ~compilation ~outkind:t.output_kind ~outname:t.output_name ~targets:files in
+    match oname with Some x -> x | _ -> ""
+  end compilation
   in
   let outkind = string_of_outkind t.output_kind in
   let compilation = string_of_compilation_type (ccomp_type <> None) t in
@@ -194,7 +197,7 @@ let main ~cmd_line_args ~external_tasks ~targets =
       | "build" -> `Build
       | "install" -> `Install
       | "clean" -> `Clean
-      | "disclean" -> `Distclean
+      | "distclean" -> `Distclean
       | x -> raise (Unrecognized_command (sprintf "`%s' is not a recognized command." x));;
 
     let options =
@@ -211,7 +214,8 @@ let main ~cmd_line_args ~external_tasks ~targets =
       | `Build -> add_target targets
       | `Install -> add_target targets
       | `Clean -> add_target targets
-      | `Distclean as x -> kprintf failwith "Invalid anonymous argument for command `%s'" (string_of_command x);;
+      | `Distclean as x ->
+        fun arg -> kprintf failwith "Invalid anonymous argument `%s' for command `%s'" arg (string_of_command x);;
 
     let execute_target ~command  (_, (name, t)) =
       if Oebuild.check_restrictions t.restrictions then
@@ -221,49 +225,54 @@ let main ~cmd_line_args ~external_tasks ~targets =
         let deps () = Dep.find ~pp:t.pp ~with_errors:true ~echo:false files in
         let etasks = List.map (fun x -> snd (List.nth external_tasks x)) t.external_tasks in
         List.iter begin fun compilation ->
-          let outname = get_output_name ~compilation ~outkind:t.output_kind ~outname:t.output_name ~targets:files in
-          match command with
-            | `Build ->
-              List.iter ETask.execute (ETask.filter etasks Before_compile);
-              let deps = deps() in
-              (*List.iter ETask.execute (ETask.filter etasks Compile);*)
+          match get_output_name ~compilation ~outkind:t.output_kind ~outname:t.output_name ~targets:files with
+            | Some outname ->
               begin
-                match build
-                  ~compilation
-                  ~includes:t.search_path
-                  ~libs:t.required_libraries
-                  ~other_mods:t.other_objects
-                  ~outkind:t.output_kind
-                  ~compile_only:false
-                  ~thread:t.thread
-                  ~vmthread:t.vmthread
-                  ~annot:false
-                  ~pp:t.pp
-                  ~cflags:t.compiler_flags
-                  ~lflags:t.linker_flags
-                  ~outname
-                  ~deps
-                  ~ms_paths:(ref false)
-                  ~targets:files ()
-                with
-                  | Built_successfully ->
-                    List.iter ETask.execute (ETask.filter etasks After_compile);
-                  | Build_failed n -> popd(); exit n
+                match command with
+                  | `Build ->
+                    List.iter ETask.execute (ETask.filter etasks Before_compile);
+                    let deps = deps() in
+                    (*List.iter ETask.execute (ETask.filter etasks Compile);*)
+                    begin
+                      match build
+                        ~compilation
+                        ~includes:t.search_path
+                        ~libs:t.required_libraries
+                        ~other_mods:t.other_objects
+                        ~outkind:t.output_kind
+                        ~compile_only:false
+                        ~thread:t.thread
+                        ~vmthread:t.vmthread
+                        ~annot:false
+                        ~pp:t.pp
+                        ~cflags:t.compiler_flags
+                        ~lflags:t.linker_flags
+                        ~outname
+                        ~deps
+                        ~ms_paths:(ref false)
+                        ~targets:files ()
+                      with
+                        | Built_successfully ->
+                          List.iter ETask.execute (ETask.filter etasks After_compile);
+                        | Build_failed n -> popd(); exit n
+                    end
+                  | `Install ->
+                    let deps = deps() in
+                    install_output ~compilation ~outkind:t.output_kind ~outname ~deps ~path:t.library_install_dir ~ccomp_type
+                  | `Clean ->
+                    List.iter ETask.execute (ETask.filter etasks Before_clean);
+                    let deps = deps() in
+                    clean ~compilation ~outkind:t.output_kind ~outname ~targets:files ~deps ();
+                    List.iter ETask.execute (ETask.filter etasks After_clean);
+                  | `Distclean ->
+                    let deps = deps() in
+                    List.iter ETask.execute (ETask.filter etasks Before_clean);
+                    if files <> [] then
+                      (clean ~compilation ~outkind:t.output_kind ~outname ~targets:files ~deps ~all:true ());
+                    List.iter ETask.execute (ETask.filter etasks After_clean);
+                  | `Show -> assert false
               end
-            | `Install ->
-              let deps = deps() in
-              install_output ~compilation ~outkind:t.output_kind ~outname ~deps ~path:t.library_install_dir ~ccomp_type
-            | `Clean ->
-              List.iter ETask.execute (ETask.filter etasks Before_clean);
-              let deps = deps() in
-              clean ~compilation ~outkind:t.output_kind ~outname ~targets:files ~deps ();
-              List.iter ETask.execute (ETask.filter etasks After_clean);
-            | `Distclean ->
-              let deps = deps() in
-              List.iter ETask.execute (ETask.filter etasks Before_clean);
-              clean ~compilation ~outkind:t.output_kind ~outname ~targets:files ~deps ~all:true ();
-              List.iter ETask.execute (ETask.filter etasks After_clean);
-            | `Show -> assert false
+            | _ -> ()
         end compilation;;
 
     let execute command =

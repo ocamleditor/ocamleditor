@@ -64,9 +64,9 @@ let compile ?(times : Table.t option) ~opt ~compiler ~cflags ~includes ~filename
 (** link *)
 let link ~compiler ~outkind ~lflags ~includes ~libs ~outname ~deps
     ?(process_err : process_err_func option) () =
-  let opt = 
+  let opt =
     match ocamlopt with
-      | Some ocamlopt -> compiler = ocamlopt 
+      | Some ocamlopt -> compiler = ocamlopt
       | _ -> false
    in
   let libs =
@@ -96,23 +96,27 @@ let link ~compiler ~outkind ~lflags ~includes ~libs ~outname ~deps
 
 (** get_output_name *)
 let get_output_name ~compilation ~outkind ~outname ~targets =
-  let o_ext =
-    match outkind with
-      | Library when compilation = Native -> ".cmxa"
-      | Library -> ".cma"
-      | Executable when compilation = Native -> ".opt" ^ (win32 ".exe" "")
-      | Executable -> win32 ".exe" ""
-      | Plugin -> ".cmxs"
-      | Pack -> ".cmx"
-  in
-  let name =
-    if outname = "" then begin
-      match (List.rev targets) with
-        | last :: _ -> Filename.chop_extension last
-        | _ -> assert false
-    end else outname
-  in
-  name ^ o_ext
+  match targets with
+    | [] -> None
+    | _ -> Some begin
+      let o_ext =
+        match outkind with
+          | Library when compilation = Native -> ".cmxa"
+          | Library -> ".cma"
+          | Executable when compilation = Native -> ".opt" ^ (win32 ".exe" "")
+          | Executable -> win32 ".exe" ""
+          | Plugin -> ".cmxs"
+          | Pack -> ".cmx"
+      in
+      let name =
+        if outname = "" then begin
+          match (List.rev targets) with
+            | last :: _ -> Filename.chop_extension last
+            | _ -> assert false
+        end else outname
+      in
+      name ^ o_ext
+    end
 ;;
 
 (** install_output *)
@@ -231,9 +235,9 @@ let build ~compilation ~includes ~libs ~other_mods ~outkind ~compile_only
   if annot then (cflags := !cflags ^ " -annot");
   if pp <> "" then (cflags := !cflags ^ " -pp " ^ pp);
   (* compiling *)
-  let compiler = if prof then "ocamlcp -p a" else if compilation = Native then 
-      (match ocamlopt with Some x -> x | _ -> failwith "You asked me to compile in native code but ocamlopt command was not found") 
-    else ocamlc 
+  let compiler = if prof then "ocamlcp -p a" else if compilation = Native then
+      (match ocamlopt with Some x -> x | _ -> failwith "You asked me to compile in native code but ocamlopt command was not found")
+    else ocamlc
   in
   (*printf "%s%!" (Cmd.expand (compiler ^ " -v"));*)
   let mods = split_space other_mods in
@@ -332,7 +336,7 @@ let clean ?(all=false) ~compilation ~outkind ~outname ~targets ~deps () =
     ]
   end deps in
   let files = List.flatten files in
-  let files = if outkind = Executable || all then outname :: files else files in
+  let files = if outkind = Executable || all then (match outname with Some x -> x :: files | _ -> files) else files in
   let files = remove_dupl files in
   List.iter (fun file -> remove_file ~verbose:true file) files
 ;;

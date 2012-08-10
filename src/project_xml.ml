@@ -123,9 +123,9 @@ let write proj =
           Xml.Element ("mode", [], [Xml.PCData
             (match arg.Build_script_args.bsa_mode with `add -> Build_script_args.string_of_add | `replace x -> x)]);
           Xml.Element ("default", [
-            "type", (match arg.Build_script_args.bsa_default with `flag -> "flag" | `bool _ -> "bool" | `string _ -> "string")
+            "type", (match arg.Build_script_args.bsa_default with `flag _ -> "flag" | `bool _ -> "bool" | `string _ -> "string")
           ], [Xml.PCData
-            (match arg.Build_script_args.bsa_default with `flag -> "" | `bool x -> string_of_bool x | `string x -> x)]);
+            (match arg.Build_script_args.bsa_default with `flag x -> string_of_bool x | `bool x -> string_of_bool x | `string x -> x)]);
           Xml.Element ("doc", [], [Xml.PCData arg.Build_script_args.bsa_doc]);
         ])
       end proj.build_script.Build_script.bs_args)
@@ -299,7 +299,7 @@ let read filename =
             Xml.map begin fun arg ->
               let bsa_doc     = ref "" in
               let bsa_mode    = ref `add in
-              let bsa_default = ref `flag in
+              let bsa_default = ref (`flag false) in
               let bsa_task    = ref (None, None) in
               Xml.iter begin fun tp ->
                 match Xml.tag tp with
@@ -314,7 +314,7 @@ let read filename =
                     bsa_default := begin
                       match fattrib tp "type" identity
                           (fun _ -> invalid_arg "from_file, build_script, default") with
-                        | "flag" -> `flag
+                        | "flag" -> `flag (bool_of_string (value tp))
                         | "bool" -> `bool (bool_of_string (value tp))
                         | "string" -> `string (value tp)
                         | _ -> !bsa_default

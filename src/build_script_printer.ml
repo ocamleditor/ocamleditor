@@ -37,6 +37,7 @@ let print_configs ochan bconfigs external_tasks =
     incr i;
     kprintf print "(\x2A %d \x2A)" !i;
     kprintf print "%S, {" bc.name;
+    kprintf print "  id                   = %d;" bc.id;
     kprintf print "  output_name          = %S;" bc.outname;
     kprintf print "  output_kind          = %s;" (string_of_outkind bc.outkind);
     kprintf print "  compilation_bytecode = %b;" bc.byt;
@@ -75,9 +76,9 @@ let print_add_args bc et args =
         | `add ->
           let arg =
             match arg.bsa_pass with
-              | `key -> arg.bsa_key
-              | `value -> sprintf "%s" (ident_of_arg arg)
-              | `key_value -> sprintf "%s %s" arg.bsa_key (ident_of_arg arg)
+              | `key -> sprintf "!%s,\"%s\"" (ident_of_arg arg) arg.bsa_key
+              | `value -> sprintf "true,\"%s\"" (ident_of_arg arg)
+              | `key_value -> sprintf "true,\"%s %s\"" arg.bsa_key (ident_of_arg arg)
           in
           arg :: acc
         | `replace _ -> acc (* TODO:  *)
@@ -94,6 +95,7 @@ let print_external_tasks ochan project =
   let ets = List.map begin fun bc ->
     let ets = List.map begin fun et ->
       let base_args = Xlist.filter_map (fun (x, y) -> if x then Some y else None) et.et_args in
+      let base_args = List.map (sprintf "true,%S") base_args in
       let custom_args = print_add_args bc et args in
       let args = base_args @ custom_args in
       let name = sprintf "%d" !i in
@@ -105,8 +107,7 @@ let print_external_tasks ochan project =
       kprintf print "  et_env_replace           = %b;" et.et_env_replace;
       kprintf print "  et_dir                   = %S;" et.et_dir;
       kprintf print "  et_cmd                   = %S;" et.et_cmd;
-      kprintf print "  et_args                  = [%s];"
-        (String.concat "; " (List.map (sprintf "true,%S") args));
+      kprintf print "  et_args                  = [%s];" (String.concat "; " args);
       kprintf print "  et_phase                 = %s;" (match et.et_phase with Some p -> "Some " ^ (Task.string_of_phase p) | _ -> "None");
       kprintf print "  et_always_run_in_project = %b;" et.et_always_run_in_project;
       kprintf print "  et_always_run_in_script  = %b;" et.et_always_run_in_script;
@@ -125,7 +126,7 @@ let print_cmd_line_args ochan project =
   List.iter begin fun arg ->
     let default =
       match arg.bsa_default with
-        | `flag -> "false"
+        | `flag x -> string_of_bool x
         | `bool x -> string_of_bool x
         | `string x -> sprintf "%S" x
     in
