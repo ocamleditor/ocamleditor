@@ -146,41 +146,6 @@ let add_target targets name =
     end
   with Not_found -> (raise (Arg.Bad (sprintf "Invalid target `%s'" name)));;
 
-(** Show *)
-let show = function num, (name, t) ->
-  let files = Str.split (Str.regexp " +") t.toplevel_modules in
-  let deps = Dep.find ~pp:t.pp ~with_errors:true ~echo:false files in
-  let compilation =
-    (if t.compilation_bytecode then [Bytecode] else []) @
-    (if t.compilation_native && ccomp_type <> None then [Native] else [])
-  in
-  let outname = List.map begin fun compilation ->
-    let oname = get_output_name ~compilation ~outkind:t.output_kind ~outname:t.output_name ~targets:files in
-    match oname with Some x -> x | _ -> ""
-  end compilation
-  in
-  let outkind = string_of_outkind t.output_kind in
-  let compilation = string_of_compilation_type (ccomp_type <> None) t in
-  let prop_1 = [
-    "Restrictions", (String.concat "," t.restrictions);
-    "Output name", (String.concat ", " outname);
-  ] in
-  let prop_2 = [
-    "Search path (-I)", t.search_path;
-    "Required libraries", t.required_libraries;
-    "Compiler flags", t.compiler_flags;
-    "Linker flags", t.linker_flags;
-    "Toplevel modules", t.toplevel_modules;
-    "Dependencies", (String.concat " " deps);
-  ] in
-  let properties = if t.output_kind = Library then prop_1 @ [
-    "Install directory", (Oebuild.ocamllib // t.library_install_dir)
-  ] @ prop_2 else prop_1 @ prop_2 in
-  printf "%d) %s (%s, %s)\n%!" num name outkind compilation;
-  let maxlength = List.fold_left (fun cand (x, _) -> let len = String.length x in max cand len) 0 properties in
-  List.iter (fun (n, v) -> printf "  %s : %s\n" (rpad (n ^ " ") '.' maxlength) v) properties
-;;
-
 (** main *)
 let main ~cmd_line_args ~external_tasks ~targets =
   let module Command = struct
@@ -225,13 +190,57 @@ let main ~cmd_line_args ~external_tasks ~targets =
         let _, tg = List.find (fun (_, tg) -> tg.id = id) targets in tg
       with Not_found -> assert false;;
 
+    (** Show *)
+    let show = function num, (name, t) ->
+      let files = Str.split (Str.regexp " +") t.toplevel_modules in
+      (*let deps = Dep.find ~pp:t.pp ~with_errors:true ~echo:false files in*)
+      let b_deps = t.build_dependencies in
+      let b_deps = List.map find_target_by_id b_deps in
+      let b_deps = List.map begin fun tg ->
+        let name, _ = List.find (fun (_, t) -> t.id = tg.id) targets in
+        name
+      end b_deps in
+      let compilation =
+        (if t.compilation_bytecode then [Bytecode] else []) @
+        (if t.compilation_native && ccomp_type <> None then [Native] else [])
+      in
+      let outname = List.map begin fun compilation ->
+        let oname = get_output_name ~compilation ~outkind:t.output_kind ~outname:t.output_name ~targets:files in
+        match oname with Some x -> x | _ -> ""
+      end compilation
+      in
+      let outkind = string_of_outkind t.output_kind in
+      let compilation = string_of_compilation_type (ccomp_type <> None) t in
+      let prop_1 = [
+        "Restrictions", (String.concat "," t.restrictions);
+        "Output name", (String.concat ", " outname);
+      ] in
+      let prop_2 = [
+        "Search path (-I)", t.search_path;
+        "Required libraries", t.required_libraries;
+        "Compiler flags", t.compiler_flags;
+        "Linker flags", t.linker_flags;
+        "Toplevel modules", t.toplevel_modules;
+        "Dependencies", (String.concat ", " b_deps);
+      ] in
+      let properties = if t.output_kind = Library then prop_1 @ [
+        "Install directory", (Oebuild.ocamllib // t.library_install_dir)
+      ] @ prop_2 else prop_1 @ prop_2 in
+      printf "%d) %s (%s, %s)\n%!" num name outkind compilation;
+      let maxlength = List.fold_left (fun cand (x, _) -> let len = String.length x in max cand len) 0 properties in
+      List.iter (fun (n, v) -> printf "  %s : %s\n" (rpad (n ^ " ") '.' maxlength) v) properties;;
+
+    (** execute_target *)
     let rec execute_target ~command target =
       if Oebuild.check_restrictions target.restrictions then
         let compilation = (if target.compilation_bytecode then [Bytecode] else [])
           @ (if target.compilation_native && (ccomp_type <> None) then [Native] else []) in
         let files = Str.split (Str.regexp " +") target.toplevel_modules in
         let deps () = Dep.find ~pp:target.pp ~with_errors:true ~echo:false files in
-        let etasks = List.map (fun x -> snd (List.nth external_tasks x)) target.external_tasks in
+        let etasks = List.map begin fun name ->
+          let mktarget = try List.assoc name external_tasks with Not_found -> assert false in
+          mktarget()
+        end target.external_tasks in
         List.iter begin fun compilation ->
           match get_output_name ~compilation ~outkind:target.output_kind ~outname:target.output_name ~targets:files with
             | Some outname ->
@@ -268,8 +277,14 @@ let main ~cmd_line_args ~external_tasks ~targets =
                         | Build_failed n -> popd(); exit n
                     end
                   | `Install ->
-                    let deps = deps() in
-                    install_output ~compilation ~outkind:target.output_kind ~outname ~deps ~path:target.library_install_dir ~ccomp_type
+                    begin
+                      match target.output_kind with
+                        | Library ->
+                          let deps = deps() in
+                          install_output ~compilation ~outkind:target.output_kind ~outname ~deps ~path:target.library_install_dir ~ccomp_type
+                        | Executable -> failwith "\"install\" not implemented for Executable."
+                        | Plugin | Pack -> failwith "\"install\" not implemented for Plugin or Pack."
+                    end;
                   | `Clean ->
                     List.iter ETask.execute (ETask.filter etasks Before_clean);
                     let deps = deps() in
@@ -286,6 +301,7 @@ let main ~cmd_line_args ~external_tasks ~targets =
             | _ -> ()
         end compilation;;
 
+    (** execute *)
     let execute command =
       pushd !Option.change_dir;
       let target = List.rev !target in
@@ -320,7 +336,7 @@ let main ~cmd_line_args ~external_tasks ~targets =
   let module Argc = Argc.Make (Command) in
 
   let global_options = [
-    ("-C",      Set_string Option.change_dir, "<dir> Change directory before running (default is \"src\")");
+    ("-C",      Set_string Option.change_dir, "<dir> Change directory before running [default: src]");
     (*("-prefix", Set_string Option.prefix,     "<dir> When installing libraries use <dir> instead of `ocamlc -where` as root");*)
   ] @ cmd_line_args in
   let global_options = Arg.align global_options in
@@ -335,7 +351,7 @@ let main ~cmd_line_args ~external_tasks ~targets =
       (string_of_outkind tg.output_kind) (string_of_compilation_type (ccomp_type <> None) tg)
   end targets) in
   let usage_msg = sprintf
-    "USAGE\n  ocaml %s [global_options*] <command> [options*] [targets*]\n  ocaml %s <command> --help"
+    "\nUSAGE\n  ocaml %s [global_options*] <command> [options*] [targets*]\n  ocaml %s <command> --help"
       command_name command_name
   in
   let help_string () =

@@ -56,7 +56,9 @@ let _ =
   let row = model_bool#append () in model_bool#set ~row ~column "false";
 ;;
 
-let taskname_of_task (bc, et) = sprintf "%s\n%s" bc.name et.et_name
+let taskname_of_task = function
+  | Some (bc, et) -> sprintf "%s\n%s" bc.name et.et_name
+  | _ -> ""
 
 class widget ~project ?packing () =
   let hbox              = GPack.hbox ~spacing:5 ?packing () in
@@ -70,7 +72,7 @@ class widget ~project ?packing () =
       List.iter begin fun et ->
         let row               = model_et#append () in
         let bc_et             = bc, et in
-        model_et#set ~row ~column:col_et_name (taskname_of_task bc_et);
+        model_et#set ~row ~column:col_et_name (taskname_of_task (Some bc_et));
         model_et#set ~row ~column:col_et bc_et;
       end bc.external_tasks
     end project.build
@@ -199,7 +201,7 @@ object (self)
       Gmisclib.Idle.add view#misc#grab_focus
     end);
     ignore (rend_def_flag#connect#toggled ~callback:begin fun path ->
-      let row = model#get_iter path in 
+      let row = model#get_iter path in
       model#set ~row ~column:col_opt_def_flag (not (model#get ~row ~column:col_opt_def_flag));
     end);
     ignore (rend_def_bool#connect#edited ~callback:begin fun path text ->
@@ -269,7 +271,11 @@ object (self)
       | path :: [] ->
         let row = model#get_iter path in
         let et_name = model#get ~row ~column:col_opt_et_name in
-        Gaux.may (self#find_task_by_name et_name) ~f:(fun (_, et) -> self#fill_model_arg' et.et_args);
+        begin
+          match self#find_task_by_name et_name with
+            | Some (_, et) -> self#fill_model_arg' et.et_args
+            | None -> self#fill_model_arg' []
+        end;
       | _ -> model_arg#clear();
 
   method add () =
@@ -325,8 +331,9 @@ object (self)
   method get_arguments () =
     let arguments = ref [] in
     model#foreach begin fun path row ->
-      match self#find_task_by_name (model#get ~row ~column:col_opt_et_name) with
-        | Some bc_et ->
+      let bc_et = self#find_task_by_name (model#get ~row ~column:col_opt_et_name) in
+      (*match self#find_task_by_name (model#get ~row ~column:col_opt_et_name) with
+        | Some bc_et ->*)
           let bsa_type = type_of_string (model#get ~row ~column:col_opt_type) in
           let bsa_default =
             match bsa_type with
@@ -348,7 +355,7 @@ object (self)
             bsa_pass    = (pass_of_string (model#get ~row ~column:col_opt_pass))
           } :: !arguments;
           false
-        | _-> false
+        (*| _-> false*)
     end;
     List.rev !arguments
 end

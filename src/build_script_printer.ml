@@ -70,19 +70,21 @@ let ident_of_arg =
 (** print_add_args *)
 let print_add_args bc et args =
   List.fold_left begin fun acc arg ->
-    let abc, aet = arg.bsa_task in
-    if bc.Bconf.id = abc.Bconf.id && et.Task.et_name = aet.Task.et_name then
-      match arg.bsa_mode with
-        | `add ->
-          let arg =
-            match arg.bsa_pass with
-              | `key -> sprintf "!%s,\"%s\"" (ident_of_arg arg) arg.bsa_key
-              | `value -> sprintf "true,\"%s\"" (ident_of_arg arg)
-              | `key_value -> sprintf "true,\"%s %s\"" arg.bsa_key (ident_of_arg arg)
-          in
-          arg :: acc
-        | `replace _ -> acc (* TODO:  *)
-    else acc
+    match arg.bsa_task with
+      | Some (abc, aet) ->
+        if bc.Bconf.id = abc.Bconf.id && et.Task.et_name = aet.Task.et_name then
+          match arg.bsa_mode with
+            | `add ->
+              let arg =
+                match arg.bsa_pass with
+                  | `key -> sprintf "!%s,\"%s\"" (ident_of_arg arg) arg.bsa_key
+                  | `value -> sprintf "true,\"%s\"" (ident_of_arg arg)
+                  | `key_value -> sprintf "true,\"%s %s\"" arg.bsa_key (ident_of_arg arg)
+              in
+              arg :: acc
+            | `replace _ -> acc (* TODO:  *)
+        else acc
+      | _ -> acc
   end [] args;;
 
 (** print_external_tasks *)
@@ -99,7 +101,7 @@ let print_external_tasks ochan project =
       let custom_args = print_add_args bc et args in
       let args = base_args @ custom_args in
       let name = sprintf "%d" !i in
-      kprintf print "%s, {" name;
+      kprintf print "%s, (fun () -> {" name;
       kprintf print "  et_name                  = %S;" et.et_name;
       kprintf print "  et_env                   = [%s];"
         (String.concat ";" (List.map (sprintf "%S")
@@ -111,7 +113,7 @@ let print_external_tasks ochan project =
       kprintf print "  et_phase                 = %s;" (match et.et_phase with Some p -> "Some " ^ (Task.string_of_phase p) | _ -> "None");
       kprintf print "  et_always_run_in_project = %b;" et.et_always_run_in_project;
       kprintf print "  et_always_run_in_script  = %b;" et.et_always_run_in_script;
-      kprintf print "};";
+      kprintf print "});";
       incr i;
       name
     end bc.external_tasks in
@@ -140,7 +142,13 @@ let print_cmd_line_args ochan project =
         | Bool -> "Bool (fun _ -> ())"
         | String -> sprintf "Set_string %s" (ident_of_arg arg)
     in
-    fprintf ochan "  %S, %s,\n    \" %s\";\n" arg.bsa_key typ (String.escaped arg.bsa_doc);
+    let default_value =
+      match arg.bsa_default with
+        | `flag x -> if x then "Set" else "Not Set"
+        | `bool x -> string_of_bool x
+        | `string x -> String.escaped x
+    in
+    fprintf ochan "  %S, %s,\n    \" %s [default: %s]\";\n" arg.bsa_key typ (String.escaped arg.bsa_doc) default_value;
   end args;
   fprintf ochan "]\n";;
 

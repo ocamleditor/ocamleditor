@@ -65,7 +65,7 @@ module Make (C : COMMAND) = struct
   let parse_argv
       args
       ~(global_options : speclist)
-      ?(usage_msg=sprintf "USAGE\n  %s [global_options*] <command> [options*] [args*]\n  %s <command> --help" args.(0) args.(0))
+      ?(usage_msg=sprintf "\nUSAGE\n  %s [global_options*] <command> [options*] [args*]\n  %s <command> --help" args.(0) args.(0))
       execute_command =
     command := None;
     Arg.current := 0;

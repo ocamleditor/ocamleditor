@@ -26,14 +26,15 @@
 open Printf
 open Arg
 
-let required_ocaml_version = "4.00.0"
-let has_native             = ref false
-let ccopt                  = ref (try Unix.getenv "OCAMLEDITOR_CCOPT" with Not_found -> "")
-let use_modified_gtkThread = ref true
-let ext                    = if is_win32 then ".exe" else ""
-let oebuild_name           = sprintf "oebuild%s" ext
-let oebuild_command        = "oebuild" // oebuild_name
-let (!!)                   = sprintf "(*%s*)";;
+let required_ocaml_version      = "4.00.0"
+let has_native                  = ref false
+let prefix                      = ref "/usr/local"
+let ccopt                       = ref (try Unix.getenv "OCAMLEDITOR_CCOPT" with Not_found -> "")
+let use_original_gtkThread = ref true
+let ext                         = if is_win32 then ".exe" else ""
+let oebuild_name                = sprintf "oebuild%s" ext
+let oebuild_command             = "oebuild" // oebuild_name
+let (!!)                        = sprintf "(*%s*)";;
 
 (** lex_yacc *)
 let lex_yacc () =
@@ -50,7 +51,7 @@ let generate_oebuild_script () =
 let prepare_build () =
   if Sys.ocaml_version < required_ocaml_version then
     eprintf "You are using OCaml-%s but version %s is required." Sys.ocaml_version required_ocaml_version;
-  cp ~echo:true (if !use_modified_gtkThread then "gtkThread3.ml" else "gtkThread4.ml") "gtkThread2.ml";
+  cp ~echo:true (if !use_original_gtkThread then "gtkThread3.ml" else "gtkThread4.ml") "gtkThread2.ml";
   lex_yacc();
   generate_oebuild_script();;
 
@@ -116,6 +117,34 @@ let distclean () =
   if Sys.file_exists (Filename.parent_dir_name // ".tmp") then
     (kprintf run "%s %s" rmr (Filename.parent_dir_name // ".tmp" // "*"));;
 
+(** install *)
+let install () =
+  if not is_win32 then begin
+    let pixmaps = sprintf "%s/share/pixmaps/ocamleditor" !prefix in
+    mkdir_p pixmaps;
+    kprintf run "cp -vru ../pixmaps/* %s" pixmaps;
+    let bin = sprintf "%s/bin" !prefix in
+    mkdir_p bin;
+    kprintf run "cp -v ocamleditor%s %s/ocamleditor" (if !has_native then ".opt" else "") bin;
+    kprintf run "cp -v oebuild/oebuild%s %s" ext bin;
+    if !has_native then begin
+      kprintf run "cp -v oebuild/oebuild%s.opt %s" ext bin;
+    end;
+  end
+
+(** uninstall *)
+let uninstall () =
+  if not is_win32 then begin
+    printf "prefix is \"%s\", continue (yes/no)? %!" !prefix;
+    let line = input_line stdin in
+    if line = "yes" then begin
+      kprintf run "rm -vIr %s/share/pixmaps/ocamleditor" !prefix;
+      kprintf run "rm -vi %s/bin/ocamleditor" !prefix;
+      kprintf run "rm -vi %s/bin/oebuild%s" !prefix ext;
+      kprintf run "rm -vi %s/bin/oebuild%s.opt" !prefix ext;
+    end
+  end
+
 (** mkrelease *)
 let mkrelease () =
   generate_oebuild_script();
@@ -152,7 +181,8 @@ let _ = main ~dir:"../src" ~targets:[
   "-clean",                   (clean ?all:None),       " (undocumented)";
   "-distclean",               distclean,               " (undocumented)";
 ] ~options:[
-  "-dont-use-modified-gtkThread",  Clear use_modified_gtkThread,    "";
+  "-prefix",                  Set_string prefix,               (sprintf "Installation prefix (Unix only, default is %s)" !prefix);
+  "-use-original-gtkThread",  Clear use_original_gtkThread,    "Don't set this flag if you have Lablgtk-2.14.2 or earlier (by default use the included modified version of gtkThread.ml to reduce CPU consumption)";
   "-has-native",              Bool (fun x -> has_native := x), "{true|false} Whether native compilation is supported (default: false)";
   "-ccopt",                   Set_string ccopt,                " (default: \"\")";
 ] ()

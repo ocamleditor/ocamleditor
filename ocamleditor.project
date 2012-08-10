@@ -424,11 +424,19 @@
     </configuration>
   </build>
   <build_script filename="_build.ml">
-    <arg type="Flag" key="-dont-use-modified-gtkThread" pass="-key">
+    <arg type="String" key="-prefix" pass="-key value">
+      <task/>
+      <mode>&lt;ADD&gt;</mode>
+      <default type="string">/usr/local</default>
+      <doc>Installation prefix (Unix only)</doc>
+    </arg>
+    <arg type="Flag" key="-use-original-gtkThread" pass="-key">
       <task bconf="12" task_name="prepare-build"/>
       <mode>&lt;ADD&gt;</mode>
       <default type="flag">false</default>
-      <doc> dont-use-modified-gtkThread</doc>
+      <doc>Don&apos;t set this flag if you have Lablgtk-2.14.2 or
+                           earlier (by default use the included modified
+                           version of gtkThread.ml to reduce CPU consumption)</doc>
     </arg>
   </build_script>
 </project>

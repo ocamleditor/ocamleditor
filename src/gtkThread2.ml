@@ -43,7 +43,10 @@ let gui_safe () =
 let has_jobs () = not (with_jobs Queue.is_empty)
 let n_jobs () = with_jobs Queue.length
 let do_next_job () = with_jobs Queue.take ()
-let async j x = with_jobs (Queue.add (fun () -> j x))
+(*let async j x = with_jobs (Queue.add (fun () -> j x))*)
+let async j x = with_jobs
+    (Queue.add (fun () ->
+      GtkSignal.safe_call j x ~where:"asynchronous call"))
 type 'a result = Val of 'a | Exn of exn | NA
 let sync f x =
   if cannot_sync () then f x else
@@ -60,6 +63,12 @@ let sync f x =
   while !res = NA do Condition.wait c m done;
   match !res with Val y -> y | Exn e -> raise e | NA -> assert false
 
+let do_jobs () =
+  Thread.delay 0.013;
+  for i = 1 to n_jobs () do do_next_job () done;
+  true
+
+
 (* We check first whether there are some event pending, and run
    some iterations. We then need to delay, thus focing a thread switch. *)
 
@@ -71,11 +80,10 @@ let thread_main_real () =
     while Glib.Main.is_running loop do
       let i = ref 0 in
       while !i < 100 && Glib.Main.pending () do
-	Glib.Main.iteration true;
+	ignore (Glib.Main.iteration true);
 	incr i
       done;
-      Thread.delay 0.013;
-      for i = 1 to n_jobs () do do_next_job () done
+      ignore (do_jobs())
     done;
     Main.loops := List.tl !Main.loops;
   with exn ->

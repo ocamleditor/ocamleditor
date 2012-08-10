@@ -116,10 +116,10 @@ let write proj =
           "pass", (Build_script_args.string_of_pass arg.Build_script_args.bsa_pass);
         ], [
           Xml.Element ("task",
-            (let bc, et = arg.Build_script_args.bsa_task in [
+            (match arg.Build_script_args.bsa_task with Some (bc, et) -> [
               "bconf", string_of_int bc.Bconf.id;
               "task_name", et.Task.et_name;
-            ]), []);
+            ] | None -> []), []);
           Xml.Element ("mode", [], [Xml.PCData
             (match arg.Build_script_args.bsa_mode with `add -> Build_script_args.string_of_add | `replace x -> x)]);
           Xml.Element ("default", [
@@ -329,10 +329,8 @@ let read filename =
                         List_opt.find (fun et -> et.Task.et_name = name)
                           (List.flatten (List.map (fun bc -> bc.Bconf.external_tasks) proj.build))
                       in
-                      let bconf = fattrib tp "bconf" find_bconf
-                        (fun _ -> invalid_arg "from_file, build_script, task, bconf(1)") in
-                      let task = fattrib tp "task_name" find_task
-                        (fun _ -> invalid_arg "from_file, build_script, task, task(1)") in
+                      let bconf = fattrib tp "bconf" find_bconf (fun _ -> None) in
+                      let task = fattrib tp "task_name" find_task (fun _ -> None) in
                       bconf, task
                     end
                   | _ -> ()
@@ -346,8 +344,8 @@ let read filename =
                 bsa_default = !bsa_default;
                 bsa_task    = begin
                   match !bsa_task with
-                    | Some bc, Some et -> bc, et
-                    | _ -> invalid_arg "from_file, build_script, bsa_task"
+                    | Some bc, Some et -> Some (bc, et)
+                    | _ -> None
                 end;
                 bsa_pass    = fattrib arg "pass" Build_script_args.pass_of_string
                   (fun _ -> invalid_arg "from_file, build_script, pass");
