@@ -44,7 +44,7 @@
       <lib_install_path></lib_install_path>
       <external_tasks/>
       <restrictions></restrictions>
-      <dependencies></dependencies>
+      <build_dependencies></build_dependencies>
     </configuration>
     <configuration name="icons" default="false" id="10">
       <id>10</id>
@@ -66,7 +66,7 @@
       <lib_install_path></lib_install_path>
       <external_tasks/>
       <restrictions></restrictions>
-      <dependencies></dependencies>
+      <build_dependencies></build_dependencies>
     </configuration>
     <configuration name="oebuildlib" default="false" id="7">
       <id>7</id>
@@ -88,7 +88,7 @@
       <lib_install_path></lib_install_path>
       <external_tasks/>
       <restrictions></restrictions>
-      <dependencies></dependencies>
+      <build_dependencies></build_dependencies>
     </configuration>
     <configuration name="oebuild" default="false" id="5">
       <id>5</id>
@@ -110,7 +110,7 @@
       <lib_install_path></lib_install_path>
       <external_tasks/>
       <restrictions></restrictions>
-      <dependencies></dependencies>
+      <build_dependencies></build_dependencies>
     </configuration>
     <configuration name="oeproc" default="false" id="6">
       <id>6</id>
@@ -132,7 +132,7 @@
       <lib_install_path></lib_install_path>
       <external_tasks/>
       <restrictions>IS_WIN32</restrictions>
-      <dependencies></dependencies>
+      <build_dependencies></build_dependencies>
     </configuration>
     <configuration name="gmisclib" default="false" id="8">
       <id>8</id>
@@ -154,7 +154,7 @@
       <lib_install_path></lib_install_path>
       <external_tasks/>
       <restrictions></restrictions>
-      <dependencies></dependencies>
+      <build_dependencies></build_dependencies>
     </configuration>
     <configuration name="otherwidgets" default="false" id="9">
       <id>9</id>
@@ -176,7 +176,7 @@
       <lib_install_path></lib_install_path>
       <external_tasks/>
       <restrictions></restrictions>
-      <dependencies></dependencies>
+      <build_dependencies></build_dependencies>
     </configuration>
     <configuration name="ocamleditor-bytecode" default="true" id="0">
       <id>0</id>
@@ -236,19 +236,6 @@
           </args>
           <phase>Compile</phase>
         </task>
-        <task name="mkicons">
-          <name>mkicons</name>
-          <always_run_in_project>false</always_run_in_project>
-          <always_run_in_script>false</always_run_in_script>
-          <env replace="false"/>
-          <dir>..</dir>
-          <cmd>ocaml</cmd>
-          <args>
-            <arg enabled="true">build.ml</arg>
-            <arg enabled="true">-mkicons</arg>
-          </args>
-          <phase>Before_clean</phase>
-        </task>
         <task name="Release">
           <name>Release</name>
           <always_run_in_project>false</always_run_in_project>
@@ -275,22 +262,9 @@
           </args>
           <phase>Before_compile</phase>
         </task>
-        <task name="gmisclib">
-          <name>gmisclib</name>
-          <always_run_in_project>false</always_run_in_project>
-          <always_run_in_script>false</always_run_in_script>
-          <env replace="false"/>
-          <dir>..</dir>
-          <cmd>ocaml</cmd>
-          <args>
-            <arg enabled="true">build.ml</arg>
-            <arg enabled="true">-gmisclib</arg>
-          </args>
-          <phase>Before_clean</phase>
-        </task>
       </external_tasks>
       <restrictions></restrictions>
-      <dependencies>4,10,7,5,6,8,9</dependencies>
+      <build_dependencies></build_dependencies>
     </configuration>
     <configuration name="ocamleditor-native" default="false" id="11">
       <id>11</id>
@@ -312,7 +286,7 @@
       <lib_install_path></lib_install_path>
       <external_tasks/>
       <restrictions></restrictions>
-      <dependencies>4,10,7,5,6,8,9</dependencies>
+      <build_dependencies></build_dependencies>
     </configuration>
     <configuration name="ocamleditor" default="false" id="12">
       <id>12</id>
@@ -361,7 +335,7 @@
         </task>
       </external_tasks>
       <restrictions></restrictions>
-      <dependencies>4,10,7,5,6,8,9</dependencies>
+      <build_dependencies>4,10,7,5,6,8,9</build_dependencies>
     </configuration>
     <configuration name="tools" default="false" id="13">
       <id>13</id>
@@ -429,7 +403,7 @@
             <arg enabled="true">mkversion.ml</arg>
             <arg enabled="true">1.8.0</arg>
           </args>
-          <phase></phase>
+          <phase>Before_clean</phase>
         </task>
         <task name="generate_oebuild_script">
           <name>generate_oebuild_script</name>
@@ -442,33 +416,11 @@
             <arg enabled="true">tools.ml</arg>
             <arg enabled="true">-generate-oebuild-script</arg>
           </args>
-          <phase></phase>
+          <phase>Before_clean</phase>
         </task>
       </external_tasks>
       <restrictions></restrictions>
-      <dependencies></dependencies>
-    </configuration>
-    <configuration name="argc" default="false" id="14">
-      <id>14</id>
-      <name>argc</name>
-      <default>false</default>
-      <byt>true</byt>
-      <opt>false</opt>
-      <libs></libs>
-      <other_objects></other_objects>
-      <files>common/argc.ml</files>
-      <includes>common</includes>
-      <thread>false</thread>
-      <vmthread>false</vmthread>
-      <pp></pp>
-      <cflags></cflags>
-      <lflags></lflags>
-      <outkind>Library</outkind>
-      <outname></outname>
-      <lib_install_path></lib_install_path>
-      <external_tasks/>
-      <restrictions></restrictions>
-      <dependencies></dependencies>
+      <build_dependencies></build_dependencies>
     </configuration>
   </build>
   <build_script filename="_build.ml">

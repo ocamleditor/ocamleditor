@@ -21,26 +21,26 @@
 *)
 
 type t = {
-  mutable id               : int;
-  mutable name             : string;
-  mutable default          : bool;
-  mutable byt              : bool;
-  mutable opt              : bool;
-  mutable libs             : string;
-  mutable other_objects    : string;
-  mutable files            : string;
-  mutable includes         : string;
-  mutable thread           : bool;
-  mutable vmthread         : bool;
-  mutable pp               : string;
-  mutable cflags           : string;
-  mutable lflags           : string;
-  mutable outkind          : output_kind;
-  mutable outname          : string;
-  mutable lib_install_path : string;
-  mutable external_tasks   : Task.t list;
-  mutable restrictions     : string list;
-  mutable dependencies     : int list; (* id list *)
+  mutable id                 : int;
+  mutable name               : string;
+  mutable default            : bool;
+  mutable byt                : bool;
+  mutable opt                : bool;
+  mutable libs               : string;
+  mutable other_objects      : string;
+  mutable files              : string;
+  mutable includes           : string;
+  mutable thread             : bool;
+  mutable vmthread           : bool;
+  mutable pp                 : string;
+  mutable cflags             : string;
+  mutable lflags             : string;
+  mutable outkind            : output_kind;
+  mutable outname            : string;
+  mutable lib_install_path   : string;
+  mutable external_tasks     : Task.t list;
+  mutable restrictions       : string list;
+  mutable build_dependencies : int list; (* id list *)
 }
 and rbt = [ `NONE | `CLEAN | `COMPILE | `REBUILD | `ETASK of Task.t ]
 and output_kind = Executable | Library | Plugin | Pack
@@ -87,26 +87,26 @@ let outkind_of_string = function
 
 (** create *)
 let create ~id ~name = {
-  id               = id;
-  name             = name;
-  default          = (id = 0);
-  byt              = true;
-  opt              = false;
-  libs             = "";
-  other_objects    = "";
-  files            = "";
-  includes         = "";
-  thread           = false;
-  vmthread         = false;
-  pp               = "";
-  cflags           = "";
-  lflags           = "";
-  outkind          = Executable;
-  outname          = "";
-  lib_install_path = "";
-  external_tasks   = [];
-  restrictions     = [];
-  dependencies     = [];
+  id                 = id;
+  name               = name;
+  default            = (id = 0);
+  byt                = true;
+  opt                = false;
+  libs               = "";
+  other_objects      = "";
+  files              = "";
+  includes           = "";
+  thread             = false;
+  vmthread           = false;
+  pp                 = "";
+  cflags             = "";
+  lflags             = "";
+  outkind            = Executable;
+  outname            = "";
+  lib_install_path   = "";
+  external_tasks     = [];
+  restrictions       = [];
+  build_dependencies = [];
 }
 
 (** find_dependencies *)

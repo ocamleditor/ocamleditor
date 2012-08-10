@@ -42,12 +42,17 @@ let lex_yacc () =
   run "ocamllex err_lexer.mll";
   run "ocamlyacc err_parser.mly";;
 
+(** generate_oebuild_script *)
+let generate_oebuild_script () =
+  run "ocaml -I common str.cma unix.cma common.cma generate_oebuild_script.ml";;
+
 (** prepare_build *)
 let prepare_build () =
   if Sys.ocaml_version < required_ocaml_version then
     eprintf "You are using OCaml-%s but version %s is required." Sys.ocaml_version required_ocaml_version;
   cp ~echo:true (if !use_modified_gtkThread then "gtkThread3.ml" else "gtkThread4.ml") "gtkThread2.ml";
-  lex_yacc();;
+  lex_yacc();
+  generate_oebuild_script();;
 
 (** mkicons *)
 let mkicons () =
@@ -110,10 +115,6 @@ let distclean () =
   kprintf run "%s %s" rmr (Filename.parent_dir_name // "bak");
   if Sys.file_exists (Filename.parent_dir_name // ".tmp") then
     (kprintf run "%s %s" rmr (Filename.parent_dir_name // ".tmp" // "*"));;
-
-(** generate_oebuild_script *)
-let generate_oebuild_script () =
-  run "ocaml -I common str.cma unix.cma common.cma generate_oebuild_script.ml";;
 
 (** mkrelease *)
 let mkrelease () =

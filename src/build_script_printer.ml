@@ -54,7 +54,7 @@ let print_configs ochan bconfigs external_tasks =
     kprintf print "  other_objects        = %S;" bc.other_objects;
     kprintf print "  external_tasks       = [%s];" (String.concat "; " (List.assoc bc external_tasks));
     kprintf print "  restrictions         = [%s];" (String.concat "; " (List.map (sprintf "%S") bc.restrictions));
-    kprintf print "  dependencies         = [%s];" (String.concat "; " (List.map (sprintf "%d") bc.dependencies));
+    kprintf print "  build_dependencies   = [%s];" (String.concat "; " (List.map (sprintf "%d") bc.build_dependencies));
     kprintf print "};";
   end bconfigs;
   output_string ochan "];;\n";;

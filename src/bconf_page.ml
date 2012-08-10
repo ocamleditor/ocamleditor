@@ -203,7 +203,7 @@ object (self)
 
   initializer
     ignore (widget_deps#connect#changed ~callback:begin fun () ->
-      self#update (fun bconf -> bconf.dependencies <- widget_deps#get()) ();
+      self#update (fun bconf -> bconf.build_dependencies <- widget_deps#get()) ();
       changed#call()
     end;);
     let set_restr bconf check c =

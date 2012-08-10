@@ -560,7 +560,7 @@ object (self)
             begin
               match options#visible_right_margin with
                 | Some (column, color) ->
-                  let x = approx_char_width * column - hadjust in
+                  let x = approx_char_width * column - hadjust - 1 in (* -1 per evitare sovrapposizione col cursore *)
                   drawable#set_line_attributes ~style:`SOLID ();
                   drawable#set_foreground color;
                   drawable#line ~x ~y:0 ~x ~y:h0;

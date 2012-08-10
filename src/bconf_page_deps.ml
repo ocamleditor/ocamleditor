@@ -106,7 +106,7 @@ object (self)
           model#set ~row ~column:col_name dep.Bconf.name;
           current_ids <- dep.Bconf.id :: current_ids;
         | _ -> ()
-    end bc.Bconf.dependencies;
+    end bc.Bconf.build_dependencies;
     List.iter model#misc#handler_unblock signal_ids;
     current_bc <- Some bc;
 
