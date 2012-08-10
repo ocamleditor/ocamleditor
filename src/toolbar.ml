@@ -200,18 +200,18 @@ object (self)
       ignore (tool_clean#connect#clicked ~callback:begin fun () ->
         browser#with_current_project (fun project ->
           browser#with_default_build_config begin fun bconfig ->
-            ignore (Bconf_console.exec ~editor `CLEAN bconfig)
+            ignore (Task_console.exec ~editor `CLEAN bconfig)
           end)
       end);
       ignore (tool_clean#connect#popup ~callback:begin fun (label, menu) ->
         browser#with_current_project (fun project ->
           browser#with_default_build_config begin fun bconfig ->
-            label := sprintf "Clean \xC2\xAB%s\xC2\xBB" bconfig.Bconf.name;
+            label := sprintf "Clean \xC2\xAB%s\xC2\xBB" bconfig.Target.name;
             let bconfigs = project.Project_type.build in
             List.iter begin fun tg ->
-              let item = GMenu.menu_item ~label:tg.Bconf.name ~packing:menu#add () in
+              let item = GMenu.menu_item ~label:tg.Target.name ~packing:menu#add () in
               ignore (item#connect#activate ~callback:begin fun () ->
-                ignore (Bconf_console.exec ~editor `CLEAN tg)
+                ignore (Task_console.exec ~editor `CLEAN tg)
               end);
             end bconfigs;
           end)
@@ -220,18 +220,18 @@ object (self)
       ignore (tool_build#connect#clicked ~callback:begin fun () ->
         browser#with_current_project (fun project ->
           browser#with_default_build_config begin fun bconfig ->
-            ignore (Bconf_console.exec ~editor `COMPILE_ONLY bconfig)
+            ignore (Task_console.exec ~editor `COMPILE_ONLY bconfig)
           end)
       end);
       ignore (tool_build#connect#popup ~callback:begin fun (label, menu) ->
         browser#with_current_project (fun project ->
           browser#with_default_build_config begin fun bconfig ->
-            label := sprintf "Compile \xC2\xAB%s\xC2\xBB" bconfig.Bconf.name;
+            label := sprintf "Compile \xC2\xAB%s\xC2\xBB" bconfig.Target.name;
             let bconfigs = project.Project_type.build in
             List.iter begin fun tg ->
-              let item = GMenu.menu_item ~label:tg.Bconf.name ~packing:menu#add () in
+              let item = GMenu.menu_item ~label:tg.Target.name ~packing:menu#add () in
               ignore (item#connect#activate ~callback:begin fun () ->
-                ignore (Bconf_console.exec ~editor `COMPILE_ONLY tg)
+                ignore (Task_console.exec ~editor `COMPILE_ONLY tg)
               end);
             end bconfigs;
           end)
@@ -240,18 +240,18 @@ object (self)
       ignore (tool_link#connect#clicked ~callback:begin fun () ->
         browser#with_current_project (fun project ->
           browser#with_default_build_config begin fun bconfig ->
-            ignore (Bconf_console.exec ~editor `COMPILE bconfig)
+            ignore (Task_console.exec ~editor `COMPILE bconfig)
           end)
       end);
       ignore (tool_link#connect#popup ~callback:begin fun (label, menu) ->
         browser#with_current_project (fun project ->
           browser#with_default_build_config begin fun bconfig ->
-            label := sprintf "Build \xC2\xAB%s\xC2\xBB" bconfig.Bconf.name;
+            label := sprintf "Build \xC2\xAB%s\xC2\xBB" bconfig.Target.name;
             let bconfigs = project.Project_type.build in
             List.iter begin fun tg ->
-              let item = GMenu.menu_item ~label:tg.Bconf.name ~packing:menu#add () in
+              let item = GMenu.menu_item ~label:tg.Target.name ~packing:menu#add () in
               ignore (item#connect#activate ~callback:begin fun () ->
-                ignore (Bconf_console.exec ~editor `COMPILE tg)
+                ignore (Task_console.exec ~editor `COMPILE tg)
               end); ()
             end bconfigs;
           end)
@@ -260,8 +260,8 @@ object (self)
       ignore (tool_run#connect#clicked ~callback:begin fun () ->
         browser#with_current_project (fun project ->
           browser#with_default_runtime_config (fun rc ->
-            let bc = List.find (fun b -> b.Bconf.id = rc.Rconf.id_target) project.Project_type.build in
-            ignore (Bconf_console.exec ~editor (`RCONF rc) bc)))
+            let bc = List.find (fun b -> b.Target.id = rc.Rconf.id_target) project.Project_type.build in
+            ignore (Task_console.exec ~editor (`RCONF rc) bc)))
       end);
       ignore (tool_run#connect#popup ~callback:begin fun (label, menu) ->
         browser#with_current_project (fun project ->
@@ -273,8 +273,8 @@ object (self)
                 let item = GMenu.menu_item ~label:rc.Rconf.name ~packing:menu#add () in
                 ignore (item#connect#activate ~callback:begin fun () ->
                   try
-                    let bc = List.find (fun b -> b.Bconf.id = rc.Rconf.id_target) bconfigs in
-                    ignore (Bconf_console.exec ~editor (`RCONF rc) bc)
+                    let bc = List.find (fun b -> b.Target.id = rc.Rconf.id_target) bconfigs in
+                    ignore (Task_console.exec ~editor (`RCONF rc) bc)
                   with Not_found -> ()
                 end);
               end project.Project_type.runtime;

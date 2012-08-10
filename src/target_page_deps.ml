@@ -44,11 +44,11 @@ object
   inherit GObj.widget sw#as_widget
   initializer
     vc_name#set_cell_data_func renderer begin fun model row ->
-      match (model#get ~row ~column:col_bc).Bconf.outkind with
-        | Bconf.Executable -> renderer_pixbuf#set_properties [`VISIBLE true; `PIXBUF Icons.start_16; `XALIGN 0.0]
-        | Bconf.Library -> renderer_pixbuf#set_properties [`VISIBLE true; `PIXBUF Icons.library; `XALIGN 0.0]
-        | Bconf.Plugin -> renderer_pixbuf#set_properties [`VISIBLE true; `PIXBUF Icons.plugin; `XALIGN 0.0]
-        | Bconf.Pack -> renderer_pixbuf#set_properties [`VISIBLE true; `PIXBUF Icons.library; `XALIGN 0.0]
+      match (model#get ~row ~column:col_bc).Target.outkind with
+        | Target.Executable -> renderer_pixbuf#set_properties [`VISIBLE true; `PIXBUF Icons.start_16; `XALIGN 0.0]
+        | Target.Library -> renderer_pixbuf#set_properties [`VISIBLE true; `PIXBUF Icons.library; `XALIGN 0.0]
+        | Target.Plugin -> renderer_pixbuf#set_properties [`VISIBLE true; `PIXBUF Icons.plugin; `XALIGN 0.0]
+        | Target.Pack -> renderer_pixbuf#set_properties [`VISIBLE true; `PIXBUF Icons.library; `XALIGN 0.0]
     end
 
   method model = model
@@ -87,26 +87,26 @@ object (self)
     model#foreach begin fun path _ ->
       try
         let row = model#get_iter path in
-        let id = (model#get ~row ~column:col_bc).Bconf.id in
+        let id = (model#get ~row ~column:col_bc).Target.id in
         result := id :: !result;
         false
       with Failure("Gobject.get_caml") -> false;
     end;
     List.rev !result;
 
-  method set (bc : Bconf.t) =
+  method set (bc : Target.t) =
     List.iter model#misc#handler_block signal_ids;
     model#clear();
     current_ids <- [];
     List.iter begin fun dep_id ->
-      match List_opt.find (fun x -> x.Bconf.id = dep_id) bconfigs with
+      match List_opt.find (fun x -> x.Target.id = dep_id) bconfigs with
         | Some dep ->
           let row = model#append () in
           model#set ~row ~column:col_bc dep;
-          model#set ~row ~column:col_name dep.Bconf.name;
-          current_ids <- dep.Bconf.id :: current_ids;
+          model#set ~row ~column:col_name dep.Target.name;
+          current_ids <- dep.Target.id :: current_ids;
         | _ -> ()
-    end bc.Bconf.dependencies;
+    end bc.Target.dependencies;
     List.iter model#misc#handler_unblock signal_ids;
     current_bc <- Some bc;
 
@@ -133,7 +133,7 @@ object (self)
             let bconf = bclist#model#get ~row ~column:col_bc in
             let name = bclist#model#get ~row ~column:col_name in
             let row = model#append () in
-            let id = bconf.Bconf.id in
+            let id = bconf.Target.id in
             model#set ~row ~column:col_bc bconf;
             model#set ~row ~column:col_name name;
             current_ids <- id :: current_ids;
@@ -145,10 +145,10 @@ object (self)
         ignore (bclist#view#connect#row_activated ~callback:(fun _ _ -> button_ok#clicked()));
         let model = bclist#model in
         List.iter begin fun bc ->
-          if not (List.mem bc.Bconf.id (current.Bconf.id :: current_ids)) then begin
+          if not (List.mem bc.Target.id (current.Target.id :: current_ids)) then begin
             let row = model#append () in
             model#set ~row ~column:col_bc bc;
-            model#set ~row ~column:col_name bc.Bconf.name
+            model#set ~row ~column:col_name bc.Target.name
           end
         end bconfigs;
         window#show()
@@ -161,7 +161,7 @@ object (self)
       let row = reference#iter in
       let bconf = model#get ~row ~column:col_bc in
       ignore (model#remove row);
-      let id = bconf.Bconf.id in
+      let id = bconf.Target.id in
       current_ids <- List.filter ((<>) id) current_ids;
     end rr;
     changed#call();

@@ -80,15 +80,15 @@ object (self)
           `CLEAN, Icons.clear_build_16;
           `COMPILE, Icons.build_16;
           `REBUILD, Icons.empty_16
-        ] @ (List.map (fun x -> (`ETASK x, Icons.etask_16)) bc.Bconf.external_tasks) in
+        ] @ (List.map (fun x -> (`ETASK x, Icons.etask_16)) bc.Target.external_tasks) in
         model_rbt#clear();
         List.iter begin fun (rbt, icon) ->
           let row = model_rbt#append () in
           model_rbt#set ~row ~column:col_rbt_pb icon;
-          model_rbt#set ~row ~column:col_rbt_descr (Bconf.markup_of_rbt rbt);
+          model_rbt#set ~row ~column:col_rbt_descr (Target.markup_of_rbt rbt);
           model_rbt#set ~row ~column:col_rbt rbt
         end rbts;
-        Gaux.may rconfig ~f:(fun rc -> rc.Rconf.id_target <- bc.Bconf.id);
+        Gaux.may rconfig ~f:(fun rc -> rc.Rconf.id_target <- bc.Target.id);
 
   initializer
     self#set_bconfigs();
@@ -112,12 +112,12 @@ object (self)
 
   method set_bconfigs () =
     model_bc#clear();
-    let bconfigs = List.filter (fun bc -> bc.Bconf.outkind = Bconf.Executable && bc.Bconf.files <> "") (bconf_list#get_bconfigs()) in
+    let bconfigs = List.filter (fun bc -> bc.Target.outkind = Target.Executable && bc.Target.files <> "") (bconf_list#get_bconfigs()) in
     List.iter begin fun bc ->
       let row = model_bc#append () in
       model_bc#set ~row ~column:col_bc bc;
       model_bc#set ~row ~column:col_bc_pixbuf Icons.start_16;
-      model_bc#set ~row ~column:col_name bc.Bconf.name;
+      model_bc#set ~row ~column:col_name bc.Target.name;
     end bconfigs;
 
   method set rc =
@@ -125,7 +125,7 @@ object (self)
     entry_name#set_text rc.Rconf.name;
     model_bc#foreach begin fun path row ->
       let bc = model_bc#get ~row ~column:col_bc in
-      if bc.Bconf.id = rc.Rconf.id_target then begin
+      if bc.Target.id = rc.Rconf.id_target then begin
         combo_bc#set_active_iter (Some row);
         true
       end else false

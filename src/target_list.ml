@@ -21,10 +21,10 @@
 *)
 
 open Printf
-open Bconf
+open Target
 open GUtil
 
-type c = ROOT | BCONF of Bconf.t | ETASK of Task.t
+type c = ROOT | BCONF of Target.t | ETASK of Task.t
 
 let (//) = Filename.concat
 
@@ -88,7 +88,7 @@ object (self)
   method model = model
   method view = view
   method column_name = col_name
-  method has_errors bconf = bconf.Bconf.files = "";
+  method has_errors bconf = bconf.Target.files = "";
 
   method button_add = b_add
 
@@ -126,15 +126,15 @@ object (self)
     let rows = List.map begin fun bconf ->
       GtkThread2.sync begin fun () ->
         let bconf = {bconf with id = bconf.id} in
-        bconf.Bconf.external_tasks <- List.map (fun et ->
-          {et with Task.et_name = et.Task.et_name}) bconf.Bconf.external_tasks;
+        bconf.Target.external_tasks <- List.map (fun et ->
+          {et with Task.et_name = et.Task.et_name}) bconf.Target.external_tasks;
         let row = model#append () in
         model#set ~row ~column:col_data (BCONF bconf);
         model#set ~row ~column:col_name bconf.name;
         model#set ~row ~column:col_default bconf.default;
         List.iter begin fun task ->
           GtkThread2.sync (fun () -> ignore (self#append_task ~parent:row ~task)) ()
-        end bconf.Bconf.external_tasks;
+        end bconf.Target.external_tasks;
         (*view#selection#select_iter row*)
         row
       end ()
@@ -185,7 +185,7 @@ object (self)
                   b_clean#misc#set_sensitive true;
                   b_compile#misc#set_sensitive true;
                   b_etask#misc#set_sensitive true;
-                  b_run#misc#set_sensitive (bc.Bconf.outkind <> Executable));
+                  b_run#misc#set_sensitive (bc.Target.outkind <> Executable));
               | _ ->
                 Gmisclib.Idle.add ~prio:300 (fun () ->
                   b_clean#misc#set_sensitive false;
@@ -200,13 +200,13 @@ object (self)
       let bconfigs = Miscellanea.Xlist.filter_map (function BCONF x -> Some x | _ -> None) (self#to_list()) in
       let id = (List.fold_left (fun acc t -> max acc t.id) (-1) bconfigs) + 1 in
       let name = sprintf "New Target %d" id in
-      let rows = self#append [Bconf.create ~name ~id] in
+      let rows = self#append [Target.create ~name ~id] in
       (match rows with [row] -> view#selection#select_iter row | _ -> ());
       add_bconf#call();
     end in
     (*b_clean#connect#clicked*)
     let _ = b_clean#connect#clicked ~callback:begin fun () ->
-      Gaux.may (self#current()) ~f:(fun (_, bconf) -> Bconf_console.exec ~editor `CLEAN bconf)
+      Gaux.may (self#current()) ~f:(fun (_, bconf) -> Task_console.exec ~editor `CLEAN bconf)
     end in
     (* b_etask#connect#clicked *)
     let _ = b_etask#connect#clicked ~callback:begin fun () ->
@@ -217,7 +217,7 @@ object (self)
           | BCONF bconf ->
             let row = self#append_task ~parent ~task in
             view#set_cursor (model#get_path row) vc;
-            bconf.Bconf.external_tasks <- bconf.Bconf.external_tasks @ [task];
+            bconf.Target.external_tasks <- bconf.Target.external_tasks @ [task];
             add_etask#call();
           | (*ETASK*) _ ->
             if GTree.Path.up path then (f path)
@@ -229,15 +229,15 @@ object (self)
     (*b_compile#connect#clicked*)
     let _ = b_compile#connect#clicked ~callback:begin fun () ->
       Gaux.may (self#current()) ~f:begin fun (_, bconf) ->
-        Bconf_console.exec ~editor `COMPILE bconf;
+        Task_console.exec ~editor `COMPILE bconf;
       end
     end in
     (*b_run#connect#clicked*)
     let _ = b_run#connect#clicked ~callback:begin fun () ->
       Gaux.may (self#current_path ()) ~f:begin fun path ->
         match self#get path with
-          | BCONF bconf -> Bconf_console.exec ~editor `INSTALL_LIBRARY bconf
-          | ETASK etask -> Bconf_console.exec_sync ~editor [[`OTHER, etask]]
+          | BCONF bconf -> Task_console.exec ~editor `INSTALL_LIBRARY bconf
+          | ETASK etask -> Task_console.exec_sync ~editor [[`OTHER, etask]]
           | _ -> ()
       end
     end in
@@ -253,7 +253,7 @@ object (self)
               if GTree.Path.up parent then begin
                 match self#get parent with
                   | BCONF bc ->
-                    bc.Bconf.external_tasks <- List.filter ((<>) task) bc.Bconf.external_tasks;
+                    bc.Target.external_tasks <- List.filter ((<>) task) bc.Target.external_tasks;
                   | _ -> assert false
               end
             | _ -> ()

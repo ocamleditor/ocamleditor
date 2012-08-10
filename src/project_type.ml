@@ -37,7 +37,7 @@ type t = {
   mutable version            : string;
   mutable files              : (File.file * (int * int)) list; (* Currently open files in the editor (non-persistent) (filename, scrollTopOffset, cursorOffset) *)
   mutable open_files         : (string * int * int * bool) list; (* filename, scroll top offset, current offset, active *)
-  mutable build              : Bconf.t list; (* Build configurations *)
+  mutable build              : Target.t list; (* Build configurations *)
   mutable runtime            : Rconf.t list; (* Runtime configurations *)
   mutable autocomp_enabled   : bool;
   mutable autocomp_delay     : float;

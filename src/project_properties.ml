@@ -109,7 +109,7 @@ class widget ~editor ?(callback=ignore) ~project ?page_num ?packing ?show () =
   let _ = notebook#append_page
     ~tab_label:(GMisc.label ~text:"Targets" ())#coerce bconf_box#coerce in
   let hbox = GPack.hbox ~spacing:8 ~packing:bconf_box#add () in
-  let bconf_list = new Bconf_list.view ~editor ~project ~packing:hbox#pack () in
+  let bconf_list = new Target_list.view ~editor ~project ~packing:hbox#pack () in
   let _ =
     if List.length project.Project_type.build = 0 then begin
       bconf_list#button_add#clicked();
@@ -117,7 +117,7 @@ class widget ~editor ?(callback=ignore) ~project ?page_num ?packing ?show () =
   in
   let vbox = GPack.vbox ~spacing:8 ~packing:hbox#add () in
   let label_title = GMisc.label ~markup:"" ~xalign:0.0 ~packing:vbox#pack () in
-  let bconf_page = new Bconf_page.view ~project ~packing:vbox#add () in
+  let bconf_page = new Target_page.view ~project ~packing:vbox#add () in
   let etask_page = new Etask_page.view ~packing:vbox#add () in
   let set_title x = kprintf label_title#set_label "<b><big>%s</big></b>" x in
   let hide_all () =
@@ -134,7 +134,7 @@ class widget ~editor ?(callback=ignore) ~project ?page_num ?packing ?show () =
     | Some path ->
         begin
           match bconf_list#get path with
-            | Bconf_list.BCONF bc ->
+            | Target_list.BCONF bc ->
               set_title "Target";
               Gmisclib.Idle.add (fun () -> bconf_page#set bc);
               Gmisclib.Idle.add begin fun () ->
@@ -144,7 +144,7 @@ class widget ~editor ?(callback=ignore) ~project ?page_num ?packing ?show () =
                   bconf_page#misc#show ();
                 end
               end
-            | Bconf_list.ETASK et ->
+            | Target_list.ETASK et ->
               set_title "External Build Task";
               Gmisclib.Idle.add (fun () -> etask_page#set et);
               Gmisclib.Idle.add begin fun () ->
@@ -216,7 +216,7 @@ object (self)
 
   method private bconfigs_ok =
     bconf_list#length > 0 && project.Project_type.build <> [] && begin
-      List.for_all (fun bc -> bc.Bconf.files <> "") project.Project_type.build
+      List.for_all (fun bc -> bc.Target.files <> "") project.Project_type.build
     end && (not bconf_page#changed)
 
   method reset () =
@@ -257,7 +257,7 @@ object (self)
       project.build <- (bconf_list#get_bconfigs ());
       let rconfigs = rconf_list#get_rconfigs() in
       project.runtime <- List.filter begin fun rtc ->
-        List.exists (fun bc -> bc.Bconf.id = rtc.Rconf.id_target) project.build
+        List.exists (fun bc -> bc.Target.id = rtc.Rconf.id_target) project.build
       end rconfigs;
       Project.save ~editor project;
       project_changed#call();

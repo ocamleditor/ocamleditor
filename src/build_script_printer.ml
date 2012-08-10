@@ -23,7 +23,7 @@
 
 open Miscellanea
 open Printf
-open Bconf
+open Target
 open Task
 open Build_script
 open Build_script_args
@@ -72,7 +72,7 @@ let print_add_args bc et args =
   List.fold_left begin fun acc arg ->
     match arg.bsa_task with
       | Some (abc, aet) ->
-        if bc.Bconf.id = abc.Bconf.id && et.Task.et_name = aet.Task.et_name then
+        if bc.Target.id = abc.Target.id && et.Task.et_name = aet.Task.et_name then
           match arg.bsa_mode with
             | `add ->
               let arg =

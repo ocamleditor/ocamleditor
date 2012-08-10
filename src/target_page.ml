@@ -21,7 +21,7 @@
 *)
 
 open Printf
-open Bconf
+open Target
 open GUtil
 open Miscellanea
 
@@ -178,7 +178,7 @@ class view ~project ?packing () =
   (** Dependencies Tab *)
   let vbox = GPack.vbox ~border_width:5 ~spacing:8 () in
   let _ = nb#append_page ~tab_label:(GMisc.label ~text:"Direct Dependencies" ())#coerce vbox#coerce in
-  let widget_deps = Bconf_page_deps.create ~project ~packing:vbox#add () in
+  let widget_deps = Target_page_deps.create ~project ~packing:vbox#add () in
 
   (** Restrictions Tab *)
   let vbox = GPack.vbox ~width:550 ~border_width:5 ~spacing:8 () in

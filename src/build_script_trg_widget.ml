@@ -41,12 +41,12 @@ object (self)
   initializer
     vc_bconf#set_cell_data_func rend_bconf begin fun model row ->
       let bconf = model#get ~row ~column:col_bconf in
-      rend_bconf#set_properties [`TEXT bconf.Bconf.name];
-      match bconf.Bconf.outkind with
-        | Bconf.Executable -> rend_pixbuf#set_properties [`VISIBLE true; `PIXBUF Icons.start_16; `XALIGN 0.0]
-        | Bconf.Library -> rend_pixbuf#set_properties [`VISIBLE true; `PIXBUF Icons.library; `XALIGN 0.0]
-        | Bconf.Plugin -> rend_pixbuf#set_properties [`VISIBLE true; `PIXBUF Icons.plugin; `XALIGN 0.0]
-        | Bconf.Pack -> rend_pixbuf#set_properties [`VISIBLE true; `PIXBUF Icons.library; `XALIGN 0.0]
+      rend_bconf#set_properties [`TEXT bconf.Target.name];
+      match bconf.Target.outkind with
+        | Target.Executable -> rend_pixbuf#set_properties [`VISIBLE true; `PIXBUF Icons.start_16; `XALIGN 0.0]
+        | Target.Library -> rend_pixbuf#set_properties [`VISIBLE true; `PIXBUF Icons.library; `XALIGN 0.0]
+        | Target.Plugin -> rend_pixbuf#set_properties [`VISIBLE true; `PIXBUF Icons.plugin; `XALIGN 0.0]
+        | Target.Pack -> rend_pixbuf#set_properties [`VISIBLE true; `PIXBUF Icons.library; `XALIGN 0.0]
     end;
     List.iter begin fun bc ->
       let row = model#append () in

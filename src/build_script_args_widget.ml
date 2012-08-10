@@ -22,7 +22,7 @@
 
 
 open Project_type
-open Bconf
+open Target
 open Task
 open Printf
 open Build_script

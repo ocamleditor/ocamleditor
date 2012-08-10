@@ -47,26 +47,26 @@ let write proj =
     Xml.Element ("targets", [],
       List.map begin fun t ->
         Xml.Element ("target", [
-            "name", t.Bconf.name;
-            "default", string_of_bool t.Bconf.default;
-            "id", string_of_int t.Bconf.id], [
-          (*Xml.Element ("id", [], [Xml.PCData (string_of_int t.Bconf.id)]); (* Deprecated from version 1.7.1 *)
-          Xml.Element ("name", [], [Xml.PCData t.Bconf.name]);             (* Deprecated from version 1.7.1 *)
-          Xml.Element ("default", [], [Xml.PCData (string_of_bool t.Bconf.default)]); (* Deprecated from version 1.7.1 *)*)
-          Xml.Element ("byt", [], [Xml.PCData (string_of_bool t.Bconf.byt)]);
-          Xml.Element ("opt", [], [Xml.PCData (string_of_bool t.Bconf.opt)]);
-          Xml.Element ("libs", [], [Xml.PCData t.Bconf.libs]);
-          Xml.Element ("other_objects", [], [Xml.PCData t.Bconf.other_objects]);
-          Xml.Element ("files", [], [Xml.PCData t.Bconf.files]);
-          Xml.Element ("includes", [], [Xml.PCData t.Bconf.includes]);
-          Xml.Element ("thread", [], [Xml.PCData (string_of_bool t.Bconf.thread)]);
-          Xml.Element ("vmthread", [], [Xml.PCData (string_of_bool t.Bconf.vmthread)]);
-          Xml.Element ("pp", [], [Xml.PCData t.Bconf.pp]);
-          Xml.Element ("cflags", [], [Xml.PCData t.Bconf.cflags]);
-          Xml.Element ("lflags", [], [Xml.PCData t.Bconf.lflags]);
-          Xml.Element ("outkind", [], [Xml.PCData (Bconf.string_of_outkind t.Bconf.outkind)]);
-          Xml.Element ("outname", [], [Xml.PCData t.Bconf.outname]);
-          Xml.Element ("lib_install_path", [], [Xml.PCData t.Bconf.lib_install_path]);
+            "name", t.Target.name;
+            "default", string_of_bool t.Target.default;
+            "id", string_of_int t.Target.id], [
+          (*Xml.Element ("id", [], [Xml.PCData (string_of_int t.Target.id)]); (* Deprecated from version 1.7.1 *)
+          Xml.Element ("name", [], [Xml.PCData t.Target.name]);             (* Deprecated from version 1.7.1 *)
+          Xml.Element ("default", [], [Xml.PCData (string_of_bool t.Target.default)]); (* Deprecated from version 1.7.1 *)*)
+          Xml.Element ("byt", [], [Xml.PCData (string_of_bool t.Target.byt)]);
+          Xml.Element ("opt", [], [Xml.PCData (string_of_bool t.Target.opt)]);
+          Xml.Element ("libs", [], [Xml.PCData t.Target.libs]);
+          Xml.Element ("other_objects", [], [Xml.PCData t.Target.other_objects]);
+          Xml.Element ("files", [], [Xml.PCData t.Target.files]);
+          Xml.Element ("includes", [], [Xml.PCData t.Target.includes]);
+          Xml.Element ("thread", [], [Xml.PCData (string_of_bool t.Target.thread)]);
+          Xml.Element ("vmthread", [], [Xml.PCData (string_of_bool t.Target.vmthread)]);
+          Xml.Element ("pp", [], [Xml.PCData t.Target.pp]);
+          Xml.Element ("cflags", [], [Xml.PCData t.Target.cflags]);
+          Xml.Element ("lflags", [], [Xml.PCData t.Target.lflags]);
+          Xml.Element ("outkind", [], [Xml.PCData (Target.string_of_outkind t.Target.outkind)]);
+          Xml.Element ("outname", [], [Xml.PCData t.Target.outname]);
+          Xml.Element ("lib_install_path", [], [Xml.PCData t.Target.lib_install_path]);
           Xml.Element ("external_tasks", [],
             List.map begin fun task ->
               Xml.Element ("task", ["name", task.Task.et_name], [
@@ -82,9 +82,9 @@ let write proj =
                 Xml.Element ("phase", [], [Xml.PCData
                   (match task.Task.et_phase with Some x -> Task.string_of_phase x | _ -> "")]);
               ])
-            end t.Bconf.external_tasks);
-          Xml.Element ("restrictions", [], [Xml.PCData (String.concat "," t.Bconf.restrictions)]);
-          Xml.Element ("dependencies", [], [Xml.PCData (String.concat "," (List.map string_of_int t.Bconf.dependencies))]);
+            end t.Target.external_tasks);
+          Xml.Element ("restrictions", [], [Xml.PCData (String.concat "," t.Target.restrictions)]);
+          Xml.Element ("dependencies", [], [Xml.PCData (String.concat "," (List.map string_of_int t.Target.dependencies))]);
         ])
       end proj.build
     );
@@ -99,7 +99,7 @@ let write proj =
           Xml.Element ("id_target", [], [Xml.PCData (string_of_int t.Rconf.id_target)]); (* Deprecated from version 1.7.1 *)
           Xml.Element ("name", [], [Xml.PCData t.Rconf.name]); (* Deprecated from version 1.7.1 *)
           Xml.Element ("default", [], [Xml.PCData (string_of_bool t.Rconf.default)]); (* Deprecated from version 1.7.1 *)*)
-          Xml.Element ("build_task", [], [Xml.PCData (Bconf.string_of_rbt t.Rconf.build_task)]);
+          Xml.Element ("build_task", [], [Xml.PCData (Target.string_of_rbt t.Rconf.build_task)]);
           Xml.Element ("env", ["replace", string_of_bool t.Rconf.env_replace],
             List.map (fun (e, v) -> Xml.Element ("var", ["enabled", string_of_bool e], [Xml.PCData v])) t.Rconf.env
           );
@@ -117,7 +117,7 @@ let write proj =
         ], [
           Xml.Element ("task",
             (match arg.Build_script_args.bsa_task with Some (bc, et) -> [
-              "bconf", string_of_int bc.Bconf.id;
+              "bconf", string_of_int bc.Target.id;
               "task_name", et.Task.et_name;
             ] | None -> []), []);
           Xml.Element ("mode", [], [Xml.PCData
@@ -207,34 +207,34 @@ let read filename =
       | "targets" | "build" (* Backward compatibility with 1.7.5 *) ->
         let i = ref 0 in
         let bconfigs = Xml.fold begin fun acc tnode ->
-          let target = Bconf.create ~id:0 ~name:(sprintf "Config_%d" !i) in
+          let target = Target.create ~id:0 ~name:(sprintf "Config_%d" !i) in
           let runtime_build_task = ref "" in
           let runtime_env = ref (false, "") in
           let runtime_args = ref (false, "") in
           let create_default_runtime = ref false in
-          target.Bconf.id <- attrib tnode "id" int_of_string 0;
-          target.Bconf.name <- attrib tnode "name" identity "";
-          target.Bconf.default <- attrib tnode "default" bool_of_string false;
+          target.Target.id <- attrib tnode "id" int_of_string 0;
+          target.Target.name <- attrib tnode "name" identity "";
+          target.Target.default <- attrib tnode "default" bool_of_string false;
           Xml.iter begin fun tp ->
             match Xml.tag tp with
-              | "id" -> target.Bconf.id <- int_of_string (value tp) (* Backward compatibility with 1.7.0 *)
-              | "name" -> target.Bconf.name <- value tp (* Backward compatibility with 1.7.0 *)
-              | "default" -> target.Bconf.default <- bool_of_string (value tp) (* Backward compatibility with 1.7.0 *)
-              | "byt" -> target.Bconf.byt <- bool_of_string (value tp)
-              | "opt" -> target.Bconf.opt <- bool_of_string (value tp)
-              | "libs" -> target.Bconf.libs <- value tp
-              | "other_objects" -> target.Bconf.other_objects <- value tp
-              | "mods" -> target.Bconf.other_objects <- value tp (*  *)
-              | "files" -> target.Bconf.files <- value tp
-              | "includes" -> target.Bconf.includes <- value tp
-              | "thread" -> target.Bconf.thread <- bool_of_string (value tp)
-              | "vmthread" -> target.Bconf.vmthread <- bool_of_string (value tp)
-              | "pp" -> target.Bconf.pp <- value tp
-              | "cflags" -> target.Bconf.cflags <- value tp
-              | "lflags" -> target.Bconf.lflags <- value tp
-              | "is_library" -> target.Bconf.outkind <- (if bool_of_string (value tp) then Bconf.Library else Bconf.Executable)
-              | "outkind" -> target.Bconf.outkind <- Bconf.outkind_of_string (value tp)
-              | "outname" -> target.Bconf.outname <- value tp
+              | "id" -> target.Target.id <- int_of_string (value tp) (* Backward compatibility with 1.7.0 *)
+              | "name" -> target.Target.name <- value tp (* Backward compatibility with 1.7.0 *)
+              | "default" -> target.Target.default <- bool_of_string (value tp) (* Backward compatibility with 1.7.0 *)
+              | "byt" -> target.Target.byt <- bool_of_string (value tp)
+              | "opt" -> target.Target.opt <- bool_of_string (value tp)
+              | "libs" -> target.Target.libs <- value tp
+              | "other_objects" -> target.Target.other_objects <- value tp
+              | "mods" -> target.Target.other_objects <- value tp (*  *)
+              | "files" -> target.Target.files <- value tp
+              | "includes" -> target.Target.includes <- value tp
+              | "thread" -> target.Target.thread <- bool_of_string (value tp)
+              | "vmthread" -> target.Target.vmthread <- bool_of_string (value tp)
+              | "pp" -> target.Target.pp <- value tp
+              | "cflags" -> target.Target.cflags <- value tp
+              | "lflags" -> target.Target.lflags <- value tp
+              | "is_library" -> target.Target.outkind <- (if bool_of_string (value tp) then Target.Library else Target.Executable)
+              | "outkind" -> target.Target.outkind <- Target.outkind_of_string (value tp)
+              | "outname" -> target.Target.outname <- value tp
               | "runtime_build_task" ->
                 runtime_build_task := (value tp);
                 create_default_runtime := true;
@@ -242,7 +242,7 @@ let read filename =
                 runtime_env := (attrib tp "enabed" bool_of_string true, value tp);
               | "runtime_args" | "run" ->
                 runtime_args := (attrib tp "enabed" bool_of_string true, value tp);
-              | "lib_install_path" -> target.Bconf.lib_install_path <- value tp
+              | "lib_install_path" -> target.Target.lib_install_path <- value tp
               | "external_tasks" ->
                 let external_tasks = Xml.fold begin fun acc tnode ->
                   let task = Task.create ~name:"" ~env:[] ~dir:"" ~cmd:"" ~args:[] () in
@@ -270,20 +270,20 @@ let read filename =
                   end tnode;
                   task :: acc
                 end [] tp in
-                target.Bconf.external_tasks <- List.rev external_tasks;
-              | "restrictions" -> target.Bconf.restrictions <- (Str.split (!~ ",") (value tp))
-              | "dependencies" -> target.Bconf.dependencies <- (List.map int_of_string (Str.split (!~ ",") (value tp)))
+                target.Target.external_tasks <- List.rev external_tasks;
+              | "restrictions" -> target.Target.restrictions <- (Str.split (!~ ",") (value tp))
+              | "dependencies" -> target.Target.dependencies <- (List.map int_of_string (Str.split (!~ ",") (value tp)))
               | _ -> ()
           end tnode;
           incr i;
-          (*target.Bconf.runtime_build_task <- Bconf.rbt_of_string target !runtime_build_task;*)
-          if !create_default_runtime && target.Bconf.outkind = Bconf.Executable then begin
+          (*target.Target.runtime_build_task <- Target.rbt_of_string target !runtime_build_task;*)
+          if !create_default_runtime && target.Target.outkind = Target.Executable then begin
             proj.runtime <- {
               Rconf.id    = (List.length proj.runtime);
-              id_target   = target.Bconf.id;
-              name        = target.Bconf.name;
-              default     = target.Bconf.default;
-              build_task  = Bconf.rbt_of_string target !runtime_build_task;
+              id_target   = target.Target.id;
+              name        = target.Target.name;
+              default     = target.Target.default;
+              build_task  = Target.rbt_of_string target !runtime_build_task;
               env         = [!runtime_env];
               env_replace = false;
               args        = [!runtime_args]
@@ -323,11 +323,11 @@ let read filename =
                     bsa_task := begin
                       let find_bconf id =
                         let id = int_of_string id in
-                        List_opt.find (fun bc -> bc.Bconf.id = id) proj.build
+                        List_opt.find (fun bc -> bc.Target.id = id) proj.build
                       in
                       let find_task name =
                         List_opt.find (fun et -> et.Task.et_name = name)
-                          (List.flatten (List.map (fun bc -> bc.Bconf.external_tasks) proj.build))
+                          (List.flatten (List.map (fun bc -> bc.Target.external_tasks) proj.build))
                       in
                       let bconf = fattrib tp "bconf" find_bconf (fun _ -> None) in
                       let task = fattrib tp "task_name" find_task (fun _ -> None) in

@@ -510,12 +510,12 @@ object (self)
 
   method build_all configs =
     let tasks = List.map begin fun bconf ->
-      let cmd, args = Bconf.create_cmd_line bconf in
-      let name = sprintf "Build \xC2\xAB%s\xC2\xBB" (Filename.basename bconf.Bconf.name) in
+      let cmd, args = Target.create_cmd_line bconf in
+      let name = sprintf "Build \xC2\xAB%s\xC2\xBB" (Filename.basename bconf.Target.name) in
       let task = Task.create ~name ~env:[] ~dir:"" ~cmd ~args () in
       `COMPILE, task
     end configs in
-    self#with_current_project (fun project -> ignore (Bconf_console.exec_sync ~editor [tasks]))
+    self#with_current_project (fun project -> ignore (Task_console.exec_sync ~editor [tasks]))
 
   method annot_type () =
     editor#with_current_page begin fun page ->

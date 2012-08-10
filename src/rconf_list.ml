@@ -113,9 +113,9 @@ object (self)
     view#expand_all()
 
   method private markup rc =
-    match List_opt.find (fun bc -> bc.Bconf.id = rc.Rconf.id_target) (bconf_list#get_bconfigs()) with
+    match List_opt.find (fun bc -> bc.Target.id = rc.Rconf.id_target) (bconf_list#get_bconfigs()) with
       | Some bconf ->
-        sprintf "<b>%s</b>\n<small><i>%s</i></small>" rc.Rconf.name bconf.Bconf.name
+        sprintf "<b>%s</b>\n<small><i>%s</i></small>" rc.Rconf.name bconf.Target.name
       | _ -> ""
 
   initializer
@@ -148,14 +148,14 @@ object (self)
         let default = List.length rconfigs = 0 in
         let id = (List.fold_left (fun acc t -> max acc t.Rconf.id) (-1) rconfigs) + 1 in
         let name = sprintf "New Run Configuration %d" id in
-        let bconfigs = List.filter (fun bc -> bc.Bconf.outkind = Bconf.Executable && bc.Bconf.files <> "") (bconf_list#get_bconfigs()) in
+        let bconfigs = List.filter (fun bc -> bc.Target.outkind = Target.Executable && bc.Target.files <> "") (bconf_list#get_bconfigs()) in
         let bconfigs = List.sort (fun bc1 bc2 ->
-          if bc1.Bconf.default then (-1)
-          else if bc2.Bconf.default then 1
-          else (Pervasives.compare bc1.Bconf.id bc2.Bconf.id)) bconfigs in
+          if bc1.Target.default then (-1)
+          else if bc2.Target.default then 1
+          else (Pervasives.compare bc1.Target.id bc2.Target.id)) bconfigs in
         match bconfigs with
           | bc :: _ ->
-            let rc = Rconf.create ~name ~id ~id_target:bc.Bconf.id in
+            let rc = Rconf.create ~name ~id ~id_target:bc.Target.id in
             rc.Rconf.default <- default;
             self#append [rc];
             page#set_bconfigs();
@@ -183,8 +183,8 @@ object (self)
           let row = model#get_iter path in
           let rc = model#get ~row ~column:col_data in
           let bconfigs = (bconf_list#get_bconfigs()) in
-          match List_opt.find (fun b -> b.Bconf.id = rc.Rconf.id_target) bconfigs with
-            | Some bc -> ignore (Bconf_console.exec ~editor (`RCONF rc) bc)
+          match List_opt.find (fun b -> b.Target.id = rc.Rconf.id_target) bconfigs with
+            | Some bc -> ignore (Task_console.exec ~editor (`RCONF rc) bc)
             | _ -> ()
         end
       end);
@@ -205,17 +205,17 @@ object (self)
       end);
       ignore (view#misc#connect#map ~callback:begin fun () ->
         b_add#misc#set_sensitive begin
-          List.exists (fun bc -> bc.Bconf.outkind = Bconf.Executable && bc.Bconf.files <> "") (bconf_list#get_bconfigs())
+          List.exists (fun bc -> bc.Target.outkind = Target.Executable && bc.Target.files <> "") (bconf_list#get_bconfigs())
         end
       end);
       (** Remove all run configurations linked to the build configurations removed. *)
       bconf_list#connect#removed ~callback:begin fun elements ->
         List.iter begin function
-          | Bconf_list.BCONF bc ->
+          | Target_list.BCONF bc ->
             let paths = ref [] in
             model#foreach begin fun path row ->
               let rc = self#get path in
-              if rc.Rconf.id_target = bc.Bconf.id then (paths := path :: !paths);
+              if rc.Rconf.id_target = bc.Target.id then (paths := path :: !paths);
               false
             end;
             let rows = List.map model#get_iter !paths in

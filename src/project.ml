@@ -114,8 +114,8 @@ let create ~filename () =
 (** set_runtime_build_task *)
 let set_runtime_build_task proj rconf rbt_string =
   rconf.Rconf.build_task <- try
-    let bconf = List.find (fun b -> b.Bconf.id = rconf.Rconf.id_target) proj.build in
-    Bconf.rbt_of_string bconf rbt_string
+    let bconf = List.find (fun b -> b.Target.id = rconf.Rconf.id_target) proj.build in
+    Target.rbt_of_string bconf rbt_string
   with Not_found -> `NONE
 
 (** to_xml *)
@@ -144,7 +144,7 @@ let mk_old_filename_local proj = (Filename.chop_extension (filename proj)) ^ ".l
 let get_includes =
   let re = Str.regexp "[ \t\r\n]+" in
   fun proj ->
-    let includes = String.concat " " (List.map (fun t -> t.Bconf.includes) proj.build) in
+    let includes = String.concat " " (List.map (fun t -> t.Target.includes) proj.build) in
     let includes = Str.split re includes in
     Xlist.remove_dupl includes
 
@@ -346,7 +346,7 @@ let remove_file proj filename =
 
 (** Returns the names of the libraries of all build configurations. *)
 let get_libraries proj =
-  let libs = String.concat " " (List.map (fun t -> t.Bconf.libs) proj.build) in
+  let libs = String.concat " " (List.map (fun t -> t.Target.libs) proj.build) in
   Miscellanea.Xlist.remove_dupl (Miscellanea.split "[ \r\n\t]+" libs)
 
 (** clean_tmp *)
@@ -359,7 +359,7 @@ let clean_tmp proj =
 
 (** default_build_config *)
 let default_build_config project =
-  try Some (List.find (fun x -> x.Bconf.default) project.build) with Not_found -> None
+  try Some (List.find (fun x -> x.Target.default) project.build) with Not_found -> None
 
 (** refresh *)
 let refresh proj =

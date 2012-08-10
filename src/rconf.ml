@@ -26,7 +26,7 @@ type t = {
   mutable id_target   : int;
   mutable name        : string;
   mutable default     : bool;
-  mutable build_task  : Bconf.rbt;
+  mutable build_task  : Target.rbt;
   mutable env         : (bool * string) list;
   mutable env_replace : bool;
   mutable args        : (bool * string) list;

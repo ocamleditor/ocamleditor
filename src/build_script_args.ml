@@ -26,7 +26,7 @@ type t = {
   bsa_key     : string;
   bsa_doc     : string;
   bsa_default : [ `flag of bool | `bool of bool | `string of string ];
-  bsa_task    : (Bconf.t * Task.t) option;
+  bsa_task    : (Target.t * Task.t) option;
   bsa_mode    : [`add | `replace of string];
   bsa_pass    : [ `key | `value | `key_value ];
 }
