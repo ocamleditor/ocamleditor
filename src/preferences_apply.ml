@@ -43,7 +43,7 @@ let apply (view : Text.view) pref =
   view#options#set_show_dot_leaders pref.Preferences.pref_editor_dot_leaders;
   view#options#set_current_line_border_enabled pref.Preferences.pref_editor_current_line_border;
   view#options#set_text_color (Color.name_of_gdk (Preferences.tag_color "lident"));
-  view#options#set_base_color begin
+  let default_bg_color =
     if snd pref.Preferences.pref_bg_color then begin
       (* "Use theme color" option removed *)
       let color = (*`NAME*) (fst ((Preferences.create_defaults()).Preferences.pref_bg_color)) in
@@ -55,11 +55,12 @@ let apply (view : Text.view) pref =
       view#misc#modify_base [`NORMAL, `NAME color];
       color;
     end;
-  end;
+  in
+  view#options#set_base_color default_bg_color;
   if pref.Preferences.pref_highlight_current_line then begin
     view#options#set_highlight_current_line
       (Some (match (List.assoc "highlight_current_line" pref.Preferences.pref_tags)
-        with ((`NAME c), _, _, _, _) -> c | _ -> assert false));
+        with ((`NAME c), _, _, _, _, _) -> c | _ -> assert false));
   end else (view#options#set_highlight_current_line None);
   view#tbuffer#set_tab_width pref.Preferences.pref_editor_tab_width;
   view#tbuffer#set_tab_spaces pref.Preferences.pref_editor_tab_spaces;
@@ -69,5 +70,12 @@ let apply (view : Text.view) pref =
     view#options#set_visible_right_margin (Some
       (pref.Preferences.pref_right_margin, `NAME pref.Preferences.pref_right_margin_color))
   end else (view#options#set_visible_right_margin None);
+  match List_opt.assoc "selection" pref.Preferences.pref_tags with
+    | Some (fg_color, _, _, _, _, (bg_default, bg_color)) ->
+      let bg_color = if bg_default then view#options#text_color else bg_color in
+      view#misc#modify_base [`SELECTED, bg_color; `ACTIVE, bg_color];
+      let fg_color = if bg_default then `NAME default_bg_color else fg_color in
+      view#misc#modify_text [`SELECTED, fg_color; `ACTIVE, fg_color];
+    | _ -> assert false
 
 

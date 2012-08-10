@@ -90,7 +90,13 @@ type t = {
   mutable pref_outline_show_types           : bool;
   mutable pref_odoc_font                    : string;
 }
-and text_properties = GDraw.color * Pango.Tags.weight * Pango.Tags.style * Pango.Tags.underline * Pango.Tags.scale
+and text_properties =
+  GDraw.color *
+  Pango.Tags.weight *
+  Pango.Tags.style *
+  Pango.Tags.underline *
+  Pango.Tags.scale *
+  (bool * GDraw.color)
 
 let pref_filename = Filename.concat Oe_config.ocamleditor_user_home "preferences.xml"
 
@@ -114,6 +120,7 @@ let default_tags = [
     "highlight";
     "highlight_current_line";
     "record_label";
+    "selection"
   ]
 
 let tag_labels = List.combine default_tags [
@@ -135,29 +142,31 @@ let tag_labels = List.combine default_tags [
     "ocamldoc";
     "Delimiter match highlight";
     "Line highlight";
-    "Record label"
+    "Record label";
+    "Selection";
   ]
 
 let default_colors : text_properties list = [
-  (`NAME "blue"), `BOLD, `NORMAL, `NONE, `MEDIUM;
-  (`NAME "forestgreen"), `BOLD, `NORMAL, `NONE, `MEDIUM;
+  (`NAME "blue"),         `BOLD,   `NORMAL, `NONE, `MEDIUM, (true,  `NAME "#FFFFFF");
+  (`NAME "forestgreen"),  `BOLD,   `NORMAL, `NONE, `MEDIUM, (true,  `NAME "#FFFFFF");
 (*    (`NAME "forestgreen"), `BOLD, `NORMAL, `NONE, `MEDIUM;*)
-  (`NAME "purple"), `BOLD, `NORMAL, `NONE, `MEDIUM;
-  (`NAME "firebrick3"), `NORMAL, `NORMAL, `NONE, `MEDIUM;
-  (`NAME "indianred4"), `NORMAL, `NORMAL, `NONE, `MEDIUM;
-  (`NAME "saddlebrown"), `BOLD, `NORMAL, `NONE, `MEDIUM;
-  (`NAME "midnightblue"), `BOLD, `NORMAL, `NONE, `MEDIUM;
-  (`NAME "blue"), `NORMAL, `NORMAL, `NONE, `MEDIUM;
-  (`NAME "black"), `BOLD, `NORMAL, `NONE, `MEDIUM;
-  (`NAME "black"), `NORMAL, `NORMAL, `NONE, `MEDIUM;
-  (`NAME "black"), `NORMAL, `NORMAL, `NONE, `MEDIUM;
-  (`NAME "black"), `NORMAL, `NORMAL, `NONE, `MEDIUM;
-  (`NAME "black"), `NORMAL, `NORMAL, `NONE, `MEDIUM;
-  (`NAME "deeppink3"), `NORMAL, `ITALIC, `NONE, `MEDIUM;
-  (`NAME "deeppink3"), `NORMAL, `ITALIC, `NONE, `MEDIUM;
-  (`NAME "#FFFF00"), `NORMAL, `NORMAL, `LOW, `MEDIUM;
-  (`NAME "#F9F9CA"), `NORMAL, `NORMAL, `NONE, `MEDIUM;(* #E8F2FF *) (* #F7F7D7 *)
-  (`NAME "#474747"), `NORMAL, `ITALIC, `NONE, `MEDIUM;
+  (`NAME "purple"),       `BOLD,   `NORMAL, `NONE, `MEDIUM, (true,  `NAME "#FFFFFF");
+  (`NAME "firebrick3"),   `NORMAL, `NORMAL, `NONE, `MEDIUM, (true,  `NAME "#FFFFFF");
+  (`NAME "indianred4"),   `NORMAL, `NORMAL, `NONE, `MEDIUM, (true,  `NAME "#FFFFFF");
+  (`NAME "saddlebrown"),  `BOLD,   `NORMAL, `NONE, `MEDIUM, (true,  `NAME "#FFFFFF");
+  (`NAME "midnightblue"), `BOLD,   `NORMAL, `NONE, `MEDIUM, (true,  `NAME "#FFFFFF");
+  (`NAME "blue"),         `NORMAL, `NORMAL, `NONE, `MEDIUM, (true,  `NAME "#FFFFFF");
+  (`NAME "black"),        `BOLD,   `NORMAL, `NONE, `MEDIUM, (true,  `NAME "#FFFFFF");
+  (`NAME "black"),        `NORMAL, `NORMAL, `NONE, `MEDIUM, (true,  `NAME "#FFFFFF");
+  (`NAME "black"),        `NORMAL, `NORMAL, `NONE, `MEDIUM, (true,  `NAME "#FFFFFF");
+  (`NAME "black"),        `NORMAL, `NORMAL, `NONE, `MEDIUM, (true,  `NAME "#FFFFFF");
+  (`NAME "black"),        `NORMAL, `NORMAL, `NONE, `MEDIUM, (true,  `NAME "#FFFFFF");
+  (`NAME "deeppink3"),    `NORMAL, `ITALIC, `NONE, `MEDIUM, (true,  `NAME "#FFFFFF");
+  (`NAME "deeppink3"),    `NORMAL, `ITALIC, `NONE, `MEDIUM, (true,  `NAME "#FFFFFF");
+  (`NAME "#FFFF00"),      `NORMAL, `NORMAL, `LOW,  `MEDIUM, (true,  `NAME "#FFFFFF");
+  (`NAME "#F9F9CA"),      `NORMAL, `NORMAL, `NONE, `MEDIUM, (true,  `NAME "#FFFFFF");(* #E8F2FF *) (* #F7F7D7 *)
+  (`NAME "#474747"),      `NORMAL, `ITALIC, `NONE, `MEDIUM, (true,  `NAME "#FFFFFF");
+  (`NAME "#FFFFFF"),      `NORMAL, `NORMAL, `NONE, `MEDIUM, (false, `NAME "#1F80ED");
 ]
 
 let create_defaults () = {
@@ -177,7 +186,7 @@ let create_defaults () = {
   pref_editor_wrap                  = false;
   pref_editor_trim_lines            = false;
   pref_editor_custom_templ_filename = "";
-  pref_editor_mark_occurrences      = true, "#90ff90";
+  pref_editor_mark_occurrences      = true, "#E0E0E0";
   pref_editor_left_margin           = 1;
   pref_editor_pixels_lines          = 0,1;
   pref_editor_save_all_bef_comp     = true;
@@ -302,7 +311,7 @@ let to_xml pref =
       Xml.Element ("pref_bg_color_popup", [], [Xml.PCData pref.pref_bg_color_popup]);
       Xml.Element ("pref_fg_color_popup", [], [Xml.PCData pref.pref_fg_color_popup]);
       Xml.Element ("pref_tags", [],
-        List.map begin fun (id, (color, weight, style, uline, scale)) ->
+        List.map begin fun (id, (color, weight, style, uline, scale, (bg_default, bg_color))) ->
           Xml.Element ("tag", [
             ("name", id);
             ("color", string_of_color color);
@@ -310,6 +319,8 @@ let to_xml pref =
             ("style", string_of_style style);
             ("underline", string_of_underline uline);
             ("scale", "MEDIUM");
+            ("bg_default", string_of_bool bg_default);
+            ("bg_color", string_of_color bg_color);
           ], []);
         end pref.pref_tags
       );
@@ -417,7 +428,9 @@ let from_file filename =
               (weight_of_string (Xml.attrib tp "weight")),
               (style_of_string (Xml.attrib tp "style")),
               (underline_of_string (Xml.attrib tp "underline")),
-              (try scale_of_string (Xml.attrib tp "scale") with Xml.No_attribute _ -> `MEDIUM)
+              (try scale_of_string (Xml.attrib tp "scale") with Xml.No_attribute _ -> `MEDIUM),
+              ((try bool_of_string (Xml.attrib tp "bg_default") with Xml.No_attribute _ -> true),
+                (try color_of_string (Xml.attrib tp "bg_color") with Xml.No_attribute _ -> `NAME "#FFFFFF"))
             )) :: pref.pref_tags
           end node;
           List.iter begin fun (tag, _) ->
@@ -514,12 +527,12 @@ let load () =
 (** tag_color *)
 let tag_color tagname =
   match List.assoc tagname preferences#get.pref_tags with
-    | color, _, _, _, _ -> GDraw.color color
+    | color, _, _, _, _, _ -> GDraw.color color
 
 (** tag_underline *)
 let tag_underline tagname =
   match List.assoc tagname preferences#get.pref_tags with
-    | _, _, _, underline, _ -> underline
+    | _, _, _, underline, _, _ -> underline
 
 (** reset_defaults *)
 let reset_defaults () =

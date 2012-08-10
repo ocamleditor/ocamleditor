@@ -86,12 +86,6 @@ let string_of_outkind = function
   | Plugin -> "Plugin"
   | Pack -> "Pack";;
 
-(** Options *)
-module Option = struct
-  let prefix = ref ""
-  let change_dir = ref "src"
-end
-
 (** system_config *)
 let ccomp_type = Ocaml_config.can_compile_native ()
 
@@ -109,6 +103,12 @@ let system_config () =
   let maxlength = List.fold_left (fun cand (x, _) -> let len = String.length x in max cand len) 0 properties in
   List.iter (fun (n, v) -> bprintf buf "  %s : %s\n" (rpad (n ^ " ") '.' maxlength) v) properties;
   Buffer.contents buf;;
+
+(** Options *)
+module Option = struct
+  let prefix = ref ""
+  let change_dir = ref "src"
+end
 
 (** Show *)
 let show = function num, (name, t) ->

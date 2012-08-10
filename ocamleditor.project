@@ -475,7 +475,7 @@
     <arg type="Flag" key="-dont-use-modified-gtkThread" pass="-key">
       <task bconf="12" task_name="prepare-build"/>
       <mode>&lt;ADD&gt;</mode>
-      <default type="flag"></default>
+      <default type="flag">false</default>
       <doc> dont-use-modified-gtkThread</doc>
     </arg>
   </build_script>

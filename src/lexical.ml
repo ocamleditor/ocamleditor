@@ -1,8 +1,6 @@
   (* $Id: lexical.ml,v 1.14.2.1 2003/03/13 11:47:20 garrigue Exp $ *)
 
-open StdLabels
 open Parser
-open Lexing
 open Str
 open Printf
 
@@ -20,16 +18,17 @@ let init_tags ?(tags=(!tags)) ?(colors=(!colors))
     ?(ocamldoc_paragraph_bgcolor_2=(Preferences.preferences#get.Preferences.pref_ocamldoc_paragraph_bgcolor_2))
     (tb : #GText.buffer) =
   let table = new GText.tag_table tb#tag_table in
-  List.iter2 tags colors ~f:
-    begin fun tagname (col, weight, style, undline, scale) ->
+  List.iter2
+    begin fun tagname (col, weight, style, undline, scale, (bg_default, bg_color)) ->
       if tagname <> "highlight_current_line" then begin
         begin
           match table#lookup tagname with
             | None -> ()
             | Some t -> table#remove t
         end;
-        let tag = tb#create_tag ~name:tagname
-          [`FOREGROUND_GDK (GDraw.color col); `WEIGHT weight; `STYLE style; `UNDERLINE undline; `SCALE scale] in
+        let properties = [`FOREGROUND_GDK (GDraw.color col); `WEIGHT weight; `STYLE style; `UNDERLINE undline; `SCALE scale] in
+        let properties = if bg_default then properties else (`BACKGROUND_GDK (GDraw.color bg_color)) :: properties in
+        let tag = tb#create_tag ~name:tagname properties in
         if tagname = "ocamldoc" then begin
           if ocamldoc_paragraph_enabled then begin
             Gaux.may ocamldoc_paragraph_bgcolor_2 ~f:begin fun bg2 ->
@@ -46,13 +45,13 @@ let init_tags ?(tags=(!tags)) ?(colors=(!colors))
           end
         end
       end
-    end;
-  begin
+    end tags colors;;
+  (*begin
     match table#lookup "error" with
       | None -> ()
       | Some t -> table#remove t
   end;
-  ignore(tb#create_tag ~name:"error" [`FOREGROUND "red"; `WEIGHT `BOLD])
+  ignore(tb#create_tag ~name:"error" [`FOREGROUND "red"; `WEIGHT `BOLD])*)
 
 (* Line_offset *)
 let line_starts s =
@@ -139,7 +138,7 @@ let tag ?start ?stop (tb : GText.buffer) =
         (*printf "(%d, %d) (%d, %d)\n%!" lstart lstop u_lstart u_lstop;*)
         let lexeme = String.sub u_text u_lstart u_length in
         let start1 = lstart + !extra_bytes in
-        let prev, succ, start = Comments.partition !succ_comments start1  in
+        let _, succ, start = Comments.partition !succ_comments start1  in
         succ_comments := succ;
         let extra_bytes_in_comments = start - start1 in
         let extra_bytes_in_lexeme = u_length - length in
@@ -226,13 +225,9 @@ let tag ?start ?stop (tb : GText.buffer) =
                 | _, LPAREN, _, _ ->
                   (match !last_but_one with
                     | _, (QUESTION | TILDE), _, _ -> "label"
-                    | _ -> (match lexeme with
-                      | "failwith" | "raise" | "invalid_arg" -> "custom"
-                      | _ ->"lident"))
+                    | _ -> (if lexeme = "failwith" || lexeme = "raise" || lexeme = "invalid_arg" then "custom" else "lident"))
                 | last ->
-                  (match lexeme with
-                    | "failwith" | "raise" | "invalid_arg" -> "custom"
-                    | _ -> tag_lident last)
+                  (if lexeme = "failwith" || lexeme = "raise" || lexeme = "invalid_arg" then "custom" else tag_lident last)
               end
           | COLON ->
               begin match !last with
