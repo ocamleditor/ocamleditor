@@ -103,6 +103,10 @@ let odoc_tag_properties                  = [ (* These properties apply to ocamld
                                           `PIXELS_BELOW_LINES 2;
                                           `WRAP_MODE `WORD]
 let outline_type_color                   = module_browser_secondary_title_color
+let outline_selection_bg_color           = "#1F80ED"
+let outline_selection_fg_color           = "#FFFFFF"
+let outline_active_bg_color              = "#B1C3D8"
+let outline_active_fg_color              = "#000000" 
 let layout_find_references               = `VERTICAL
 let layout_find_module_browser           = `VERTICAL
 (* Path relative to the project home directory where to find custom templates. *)
