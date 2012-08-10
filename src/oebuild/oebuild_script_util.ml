@@ -44,6 +44,7 @@ type target = {
   other_objects : string;
   external_tasks : int list;
   restrictions : string list;
+  dependencies : int list;
 }
 
 exception Error
@@ -309,7 +310,7 @@ let main ~cmd_line_args ~external_tasks ~targets =
     sprintf "  %s %s" c d
   end cmds) in
   (* Help message *)
-  let help_message = sprintf "\nUsage\n  Please first edit the \"Build Configurations\" section at the end of\n  file \"%s\" to set the right options for your system, then do:\n\n    ocaml %s <command> [options]\n\nCommands\n%s\n\nTargets\n%s\n\nOptions"
+  let help_message = sprintf "\nUsage\n  Please first edit the \"Build Configurations\" section at the end of\n  file \"%s\" to set the right options for your system, then do:\n\n    ocaml %s <command> [global options]\n\nCommands\n%s\n\nTargets\n%s\n\nGlobal Options"
     command_name command_name cmds descr in
   Arg.parse speclist (parse_anon targets) help_message;
   if !Arg.current = 1

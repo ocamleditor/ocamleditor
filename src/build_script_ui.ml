@@ -94,7 +94,7 @@ object (self)
 end
 
 let window ~project () =
-  let width = if enable_widget_args then Some 950 else None in
+  let width = if enable_widget_args then Some 1024 else None in
   let height = if enable_widget_args then Some 500 else None in
   let window = GWindow.window ~title:"Generate Build Script"
     ~modal:true ~border_width:8 ?width ?height ~position:`CENTER ~icon:Icons.oe ~show:false () in
@@ -112,6 +112,7 @@ let window ~project () =
     else if key = _Escape then (window#destroy(); true)
     else false
   end);*)
+  Gtk_util.esc_destroy_window window;
   window#show();
   window;;
 

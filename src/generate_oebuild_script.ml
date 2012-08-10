@@ -92,6 +92,7 @@ let create_script () =
     output_string ochan "let split re = Str.split (Str.regexp re)\n";
     let modules = [
       "../common/quote";
+      "../common/argc";
       "../common/cmd";
       "../common/ocaml_config";
       "../common/dep";

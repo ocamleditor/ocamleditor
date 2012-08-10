@@ -125,7 +125,7 @@ let print_cmd_line_args ochan project =
   List.iter begin fun arg ->
     let default =
       match arg.bsa_default with
-        | `flag x -> string_of_bool x
+        | `flag -> "false"
         | `bool x -> string_of_bool x
         | `string x -> sprintf "%S" x
     in
@@ -135,12 +135,11 @@ let print_cmd_line_args ochan project =
   List.iter begin fun arg ->
     let typ =
       match arg.bsa_type with
-        | Flag_Set -> sprintf "Set %s" (ident_of_arg arg)
-        | Flag_Clear -> sprintf "Clear %s" (ident_of_arg arg)
+        | Flag -> sprintf "Set %s" (ident_of_arg arg)
         | Bool -> "Bool (fun _ -> ())"
         | String -> sprintf "Set_string %s" (ident_of_arg arg)
     in
-    fprintf ochan "  %S, %s,\n    %S;\n" arg.bsa_key typ arg.bsa_doc;
+    fprintf ochan "  %S, %s,\n    \" %s\";\n" arg.bsa_key typ (String.escaped arg.bsa_doc);
   end args;
   fprintf ochan "]\n";;
 

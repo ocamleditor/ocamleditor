@@ -178,9 +178,9 @@
       <restrictions></restrictions>
       <dependencies></dependencies>
     </configuration>
-    <configuration name="ocamleditor" default="true" id="0">
+    <configuration name="ocamleditor-bytecode" default="true" id="0">
       <id>0</id>
-      <name>ocamleditor</name>
+      <name>ocamleditor-bytecode</name>
       <default>true</default>
       <byt>true</byt>
       <opt>false</opt>
@@ -235,19 +235,6 @@
             <arg enabled="true">-annot</arg>
           </args>
           <phase>Compile</phase>
-        </task>
-        <task name="Compiler Libs">
-          <name>Compiler Libs</name>
-          <always_run_in_project>false</always_run_in_project>
-          <always_run_in_script>false</always_run_in_script>
-          <env replace="false"/>
-          <dir>..</dir>
-          <cmd>ocaml</cmd>
-          <args>
-            <arg enabled="true">build.ml</arg>
-            <arg enabled="true">-with-compiler-libs</arg>
-          </args>
-          <phase>Before_clean</phase>
         </task>
         <task name="mkicons">
           <name>mkicons</name>
@@ -325,11 +312,11 @@
       <lib_install_path></lib_install_path>
       <external_tasks/>
       <restrictions></restrictions>
-      <dependencies></dependencies>
+      <dependencies>4,10,7,5,6,8,9</dependencies>
     </configuration>
-    <configuration name="ocamleditor-by-script" default="false" id="12">
+    <configuration name="ocamleditor" default="false" id="12">
       <id>12</id>
-      <name>ocamleditor-by-script</name>
+      <name>ocamleditor</name>
       <default>false</default>
       <byt>false</byt>
       <opt>true</opt>
@@ -374,7 +361,7 @@
         </task>
       </external_tasks>
       <restrictions></restrictions>
-      <dependencies></dependencies>
+      <dependencies>4,10,7,5,6,8,9</dependencies>
     </configuration>
     <configuration name="tools" default="false" id="13">
       <id>13</id>
@@ -440,7 +427,7 @@
           <cmd>ocaml</cmd>
           <args>
             <arg enabled="true">mkversion.ml</arg>
-            <arg enabled="true">1.7.4</arg>
+            <arg enabled="true">1.8.0</arg>
           </args>
           <phase></phase>
         </task>
@@ -461,6 +448,35 @@
       <restrictions></restrictions>
       <dependencies></dependencies>
     </configuration>
+    <configuration name="argc" default="false" id="14">
+      <id>14</id>
+      <name>argc</name>
+      <default>false</default>
+      <byt>true</byt>
+      <opt>false</opt>
+      <libs></libs>
+      <other_objects></other_objects>
+      <files>common/argc.ml</files>
+      <includes>common</includes>
+      <thread>false</thread>
+      <vmthread>false</vmthread>
+      <pp></pp>
+      <cflags></cflags>
+      <lflags></lflags>
+      <outkind>Library</outkind>
+      <outname></outname>
+      <lib_install_path></lib_install_path>
+      <external_tasks/>
+      <restrictions></restrictions>
+      <dependencies></dependencies>
+    </configuration>
   </build>
-  <build_script filename="_build.ml"/>
+  <build_script filename="_build.ml">
+    <arg type="Flag" key="-dont-use-modified-gtkThread" pass="-key">
+      <task bconf="12" task_name="prepare-build"/>
+      <mode>&lt;ADD&gt;</mode>
+      <default type="flag"></default>
+      <doc> dont-use-modified-gtkThread</doc>
+    </arg>
+  </build_script>
 </project>

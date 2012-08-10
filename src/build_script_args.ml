@@ -25,26 +25,25 @@ type t = {
   bsa_type    : bsa_type;
   bsa_key     : string;
   bsa_doc     : string;
-  bsa_default : [ `flag of bool | `bool of bool | `string of string ];
+  bsa_default : [ `flag | `bool of bool | `string of string ];
   bsa_task    : Bconf.t * Task.t;
   bsa_mode    : [`add | `replace of string];
   bsa_pass    : [ `key | `value | `key_value ];
 }
-and bsa_type = Flag_Set | Flag_Clear | Bool | String
+and bsa_type = Flag | Bool | String
 
 let string_of_add = "<ADD>"
 
 let string_of_type = function
-  | Flag_Set -> "Flag_Set"
-  | Flag_Clear -> "Flag_Clear"
+  | Flag -> "Flag"
   | Bool -> "Bool"
   | String -> "String"
 
 let type_of_string = function
-   | "Flag_Set" -> Flag_Set
-   | "Flag_Clear" -> Flag_Clear
+   | "Flag" -> Flag
    | "Bool" -> Bool
    | "String" -> String
+   | "Flag_Set" | "Flag_Clear" -> Flag
    | _ -> invalid_arg "type_of_string"
 
 let string_of_pass = function

@@ -598,7 +598,7 @@ object (self)
                                 incr n_display_lines
                               done;
                               (*  *)
-                              let x = approx_char_width * !x_chars - hadjust in
+                              let x = approx_char_width * !x_chars - hadjust - 1 in (* -1 per evitare sovrapposizione col cursore *)
                               let width_chars = stop#line_index - start#line_index in
                               let width = approx_char_width * width_chars in
                               let pango = self#misc#pango_context in

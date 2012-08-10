@@ -171,9 +171,9 @@
       <external_tasks/>
       <restrictions></restrictions>
     </configuration>
-    <configuration name="ocamleditor" default="true" id="0">
+    <configuration name="ocamleditor-bytecode" default="true" id="0">
       <id>0</id>
-      <name>ocamleditor</name>
+      <name>ocamleditor-bytecode</name>
       <default>true</default>
       <byt>true</byt>
       <opt>false</opt>
@@ -318,9 +318,9 @@
       <external_tasks/>
       <restrictions></restrictions>
     </configuration>
-    <configuration name="ocamleditor-by-script" default="false" id="12">
+    <configuration name="ocamleditor" default="false" id="12">
       <id>12</id>
-      <name>ocamleditor-by-script</name>
+      <name>ocamleditor</name>
       <default>false</default>
       <byt>false</byt>
       <opt>true</opt>
@@ -430,7 +430,7 @@
           <cmd>ocaml</cmd>
           <args>
             <arg enabled="true">mkversion.ml</arg>
-            <arg enabled="true">1.7.2</arg>
+            <arg enabled="true">1.8.0</arg>
           </args>
           <phase></phase>
         </task>

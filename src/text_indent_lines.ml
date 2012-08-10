@@ -37,7 +37,7 @@ let scan_indent view (start : GText.iter) (stop : GText.iter) =
 
 (** draw_indent_lines *)
 let draw_indent_lines view (drawable : GDraw.drawable) start stop y0 =
-  let left_margin = view#left_margin in
+  let left_margin = view#left_margin + 1 in (* +1 per evitare di coprire la linea del cursore *)
   let buffer = view#tbuffer in
   let indents = scan_indent view start stop in
   let count = ref buffer#line_count in
