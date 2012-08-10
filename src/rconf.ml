@@ -23,18 +23,18 @@
 
 type t = {
   mutable id          : int;
-  mutable id_target   : int;
+  mutable target_id   : int;
   mutable name        : string;
   mutable default     : bool;
-  mutable build_task  : Target.rbt;
+  mutable build_task  : Target.task;
   mutable env         : (bool * string) list;
   mutable env_replace : bool;
   mutable args        : (bool * string) list;
 }
 
-let create ~id ~name ~id_target = {
+let create ~id ~name ~target_id = {
    id          = id;
-   id_target   = id_target;
+   target_id   = target_id;
    name        = name;
    default     = false;
    build_task  = `NONE;

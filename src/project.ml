@@ -112,10 +112,10 @@ let create ~filename () =
   proj;;
 
 (** set_runtime_build_task *)
-let set_runtime_build_task proj rconf rbt_string =
+let set_runtime_build_task proj rconf task_string =
   rconf.Rconf.build_task <- try
-    let bconf = List.find (fun b -> b.Target.id = rconf.Rconf.id_target) proj.build in
-    Target.rbt_of_string bconf rbt_string
+    let target = List.find (fun b -> b.Target.id = rconf.Rconf.target_id) proj.build in
+    Target.task_of_string target task_string
   with Not_found -> `NONE
 
 (** to_xml *)
@@ -357,8 +357,8 @@ let clean_tmp proj =
     with _ -> ()
   end (Sys.readdir path)
 
-(** default_build_config *)
-let default_build_config project =
+(** default_target *)
+let default_target project =
   try Some (List.find (fun x -> x.Target.default) project.build) with Not_found -> None
 
 (** refresh *)

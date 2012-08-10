@@ -29,7 +29,7 @@ open Build_script
 open Build_script_args
 
 (** print_configs *)
-let print_configs ochan bconfigs external_tasks =
+let print_configs ochan targets external_tasks =
   let i = ref 0 in
   let print = fprintf ochan "  %s\n" in
   output_string ochan "let targets = [\n";
@@ -39,7 +39,7 @@ let print_configs ochan bconfigs external_tasks =
     kprintf print "%S, {" bc.name;
     kprintf print "  id                   = %d;" bc.id;
     kprintf print "  output_name          = %S;" bc.outname;
-    kprintf print "  output_kind          = %s;" (string_of_outkind bc.outkind);
+    kprintf print "  target_type          = %s;" (string_of_target_type bc.target_type);
     kprintf print "  compilation_bytecode = %b;" bc.byt;
     kprintf print "  compilation_native   = %b;" bc.opt;
     kprintf print "  toplevel_modules     = %S;" bc.files;
@@ -56,7 +56,7 @@ let print_configs ochan bconfigs external_tasks =
     kprintf print "  restrictions         = [%s];" (String.concat "; " (List.map (sprintf "%S") bc.restrictions));
     kprintf print "  dependencies         = [%s];" (String.concat "; " (List.map (sprintf "%d") bc.dependencies));
     kprintf print "};";
-  end bconfigs;
+  end targets;
   output_string ochan "];;\n";;
 
 (** ident_of_arg *)
@@ -89,7 +89,7 @@ let print_add_args bc et args =
 
 (** print_external_tasks *)
 let print_external_tasks ochan project =
-  let bconfigs = project.Project_type.build in
+  let targets = project.Project_type.build in
   let args = project.Project_type.build_script.bs_args in
   let i = ref 0 in
   let print = fprintf ochan "  %s\n" in
@@ -118,7 +118,7 @@ let print_external_tasks ochan project =
       name
     end bc.external_tasks in
     bc, ets
-  end bconfigs in
+  end targets in
   output_string ochan "];;\n";
   ets;;
 

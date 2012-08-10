@@ -27,8 +27,8 @@ let cols     = new GTree.column_list
 let col_bc   = cols#add Gobject.Data.caml
 let col_name = cols#add Gobject.Data.string
 
-(** bconf_list *)
-class bconf_list ?packing () =
+(** target_list *)
+class target_list ?packing () =
   let sw              = GBin.scrolled_window ~shadow_type:`IN ~hpolicy:`AUTOMATIC ~vpolicy:`AUTOMATIC ?packing () in
   let model           = GTree.list_store cols in
   let renderer        = GTree.cell_renderer_text [] in
@@ -44,7 +44,7 @@ object
   inherit GObj.widget sw#as_widget
   initializer
     vc_name#set_cell_data_func renderer begin fun model row ->
-      match (model#get ~row ~column:col_bc).Target.outkind with
+      match (model#get ~row ~column:col_bc).Target.target_type with
         | Target.Executable -> renderer_pixbuf#set_properties [`VISIBLE true; `PIXBUF Icons.start_16; `XALIGN 0.0]
         | Target.Library -> renderer_pixbuf#set_properties [`VISIBLE true; `PIXBUF Icons.library; `XALIGN 0.0]
         | Target.Plugin -> renderer_pixbuf#set_properties [`VISIBLE true; `PIXBUF Icons.plugin; `XALIGN 0.0]
@@ -57,14 +57,14 @@ end
 
 (** widget *)
 class widget ~project ?packing () =
-  let bconfigs      = project.Project_type.build in
+  let targets      = project.Project_type.build in
   let hbox          = GPack.hbox ~spacing:8 ?packing () in
-  let bconf_widget  = new bconf_list ~packing:hbox#add () in
+  let target_widget  = new target_list ~packing:hbox#add () in
   let bbox          = GPack.button_box `VERTICAL ~layout:`START ~spacing:8 ~packing:hbox#pack () in
   let button_add    = GButton.button ~stock:`ADD ~packing:bbox#pack () in
   let button_remove = GButton.button ~stock:`REMOVE ~packing:bbox#pack () in
-  let model         = bconf_widget#model in
-  let view          = bconf_widget#view in
+  let model         = target_widget#model in
+  let view          = target_widget#view in
 object (self)
   inherit GObj.widget hbox#as_widget
   val mutable changed = new changed()
@@ -99,7 +99,7 @@ object (self)
     model#clear();
     current_ids <- [];
     List.iter begin fun dep_id ->
-      match List_opt.find (fun x -> x.Target.id = dep_id) bconfigs with
+      match List_opt.find (fun x -> x.Target.id = dep_id) targets with
         | Some dep ->
           let row = model#append () in
           model#set ~row ~column:col_bc dep;
@@ -121,7 +121,7 @@ object (self)
         Gaux.may (GWindow.toplevel hbox) ~f:(fun w -> window#set_transient_for w#as_window);
         Gtk_util.esc_destroy_window window;
         let vbox = GPack.vbox ~spacing:8 ~border_width:5 ~packing:window#add () in
-        let bclist = new bconf_list ~packing:vbox#add () in
+        let bclist = new target_list ~packing:vbox#add () in
         let bbox = GPack.button_box `HORIZONTAL ~layout:`END ~spacing:8 ~packing:vbox#pack () in
         let button_ok = GButton.button ~stock:`OK ~packing:bbox#pack () in
         let button_cancel = GButton.button ~stock:`CANCEL ~packing:bbox#pack () in
@@ -130,11 +130,11 @@ object (self)
           let paths = bclist#view#selection#get_selected_rows in
           List.iter begin fun path ->
             let row = bclist#model#get_iter path in
-            let bconf = bclist#model#get ~row ~column:col_bc in
+            let target = bclist#model#get ~row ~column:col_bc in
             let name = bclist#model#get ~row ~column:col_name in
             let row = model#append () in
-            let id = bconf.Target.id in
-            model#set ~row ~column:col_bc bconf;
+            let id = target.Target.id in
+            model#set ~row ~column:col_bc target;
             model#set ~row ~column:col_name name;
             current_ids <- id :: current_ids;
           end paths;
@@ -150,7 +150,7 @@ object (self)
             model#set ~row ~column:col_bc bc;
             model#set ~row ~column:col_name bc.Target.name
           end
-        end bconfigs;
+        end targets;
         window#show()
       | _ -> ()
 
@@ -159,16 +159,16 @@ object (self)
     let rr = List.map model#get_row_reference paths in
     List.iter begin fun reference ->
       let row = reference#iter in
-      let bconf = model#get ~row ~column:col_bc in
+      let target = model#get ~row ~column:col_bc in
       ignore (model#remove row);
-      let id = bconf.Target.id in
+      let id = target.Target.id in
       current_ids <- List.filter ((<>) id) current_ids;
     end rr;
     changed#call();
     self#update_button_state();
 
   method private update_button_state () =
-    button_add#misc#set_sensitive (List.length current_ids < List.length bconfigs - 1);
+    button_add#misc#set_sensitive (List.length current_ids < List.length targets - 1);
     button_remove#misc#set_sensitive (view#selection#get_selected_rows <> [] && (List.length current_ids > 0));
 
   method connect = new signals ~changed

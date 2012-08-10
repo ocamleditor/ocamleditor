@@ -30,7 +30,7 @@ let create_entry ?label ~packing () =
   GEdit.entry ~packing:vbox#pack ()
 
 (** view *)
-class view ~bconf_list ?packing () =
+class view ~target_list ?packing () =
   let vbox = GPack.vbox ~spacing:8 ?packing () in
   let title = GMisc.label ~markup:"<big><b>Executable</b></big>" ~xalign:0.0 ~packing:vbox#pack () in
   let entry_name = create_entry ~packing:vbox#pack () in
@@ -53,17 +53,17 @@ class view ~bconf_list ?packing () =
   let box = GPack.vbox ~packing:vbox#pack () in
   let _ = GMisc.label ~text:"Prior build task" ~xalign:0.0 ~packing:box#pack () in
   let cols = new GTree.column_list in
-  let col_rbt_pb = cols#add (Gobject.Data.gobject_by_name "GdkPixbuf") in
-  let col_rbt_descr = cols#add Gobject.Data.string in
-  let col_rbt = cols#add Gobject.Data.caml in
-  let model_rbt = GTree.list_store cols in
-  let combo_rbt = GEdit.combo_box ~active:0 ~model:model_rbt ~packing:box#pack () in
+  let col_task_pb = cols#add (Gobject.Data.gobject_by_name "GdkPixbuf") in
+  let col_task_descr = cols#add Gobject.Data.string in
+  let col_task = cols#add Gobject.Data.caml in
+  let model_task = GTree.list_store cols in
+  let combo_task = GEdit.combo_box ~active:0 ~model:model_task ~packing:box#pack () in
   let rend_pb = GTree.cell_renderer_pixbuf [] in
   let rend = GTree.cell_renderer_text [`XPAD 5] in
-  let _ = combo_rbt#pack rend_pb in
-  let _ = combo_rbt#pack rend in
-  let _ = combo_rbt#add_attribute rend_pb "pixbuf" col_rbt_pb in
-  let _ = combo_rbt#add_attribute rend "markup" col_rbt_descr in
+  let _ = combo_task#pack rend_pb in
+  let _ = combo_task#pack rend in
+  let _ = combo_task#add_attribute rend_pb "pixbuf" col_task_pb in
+  let _ = combo_task#add_attribute rend "markup" col_task_descr in
   (* Command Line Arguments and Environment Variables *)
   let entry_args, entry_env = Args_env_widget.create vbox in
 object (self)
@@ -75,28 +75,28 @@ object (self)
       | None -> ()
       | Some row ->
         let bc = model_bc#get ~row ~column:col_bc in
-        let rbts = [
+        let tasks = [
           `NONE, Icons.empty_16;
           `CLEAN, Icons.clear_build_16;
           `COMPILE, Icons.build_16;
           `REBUILD, Icons.empty_16
         ] @ (List.map (fun x -> (`ETASK x, Icons.etask_16)) bc.Target.external_tasks) in
-        model_rbt#clear();
-        List.iter begin fun (rbt, icon) ->
-          let row = model_rbt#append () in
-          model_rbt#set ~row ~column:col_rbt_pb icon;
-          model_rbt#set ~row ~column:col_rbt_descr (Target.markup_of_rbt rbt);
-          model_rbt#set ~row ~column:col_rbt rbt
-        end rbts;
-        Gaux.may rconfig ~f:(fun rc -> rc.Rconf.id_target <- bc.Target.id);
+        model_task#clear();
+        List.iter begin fun (task, icon) ->
+          let row = model_task#append () in
+          model_task#set ~row ~column:col_task_pb icon;
+          model_task#set ~row ~column:col_task_descr (Target.markup_of_task task);
+          model_task#set ~row ~column:col_task task
+        end tasks;
+        Gaux.may rconfig ~f:(fun rc -> rc.Rconf.target_id <- bc.Target.id);
 
   initializer
-    self#set_bconfigs();
+    self#set_targets();
     ignore (combo_bc#connect#changed ~callback:self#set_tasks);
-    ignore (combo_rbt#connect#changed ~callback:begin fun () ->
+    ignore (combo_task#connect#changed ~callback:begin fun () ->
       Gaux.may rconfig ~f:begin fun rc ->
-        Gaux.may combo_rbt#active_iter ~f:(fun row ->
-          rc.Rconf.build_task <- model_rbt#get ~row ~column:col_rbt)
+        Gaux.may combo_task#active_iter ~f:(fun row ->
+          rc.Rconf.build_task <- model_task#get ~row ~column:col_task)
       end;
     end);
     ignore (entry_args#connect#changed ~callback:begin fun () ->
@@ -110,31 +110,31 @@ object (self)
     end);
     combo_bc#set_active 0
 
-  method set_bconfigs () =
+  method set_targets () =
     model_bc#clear();
-    let bconfigs = List.filter (fun bc -> bc.Target.outkind = Target.Executable && bc.Target.files <> "") (bconf_list#get_bconfigs()) in
+    let targets = List.filter (fun bc -> bc.Target.target_type = Target.Executable && bc.Target.files <> "") (target_list#get_targets()) in
     List.iter begin fun bc ->
       let row = model_bc#append () in
       model_bc#set ~row ~column:col_bc bc;
       model_bc#set ~row ~column:col_bc_pixbuf Icons.start_16;
       model_bc#set ~row ~column:col_name bc.Target.name;
-    end bconfigs;
+    end targets;
 
   method set rc =
     rconfig <- Some rc;
     entry_name#set_text rc.Rconf.name;
     model_bc#foreach begin fun path row ->
       let bc = model_bc#get ~row ~column:col_bc in
-      if bc.Target.id = rc.Rconf.id_target then begin
+      if bc.Target.id = rc.Rconf.target_id then begin
         combo_bc#set_active_iter (Some row);
         true
       end else false
     end;
-    model_rbt#foreach begin fun path row ->
-      let rbt = model_rbt#get ~row ~column:col_rbt in
-      match model_rbt#get ~row ~column:col_rbt with
+    model_task#foreach begin fun path row ->
+      let task = model_task#get ~row ~column:col_task in
+      match model_task#get ~row ~column:col_task with
         | x when x = rc.Rconf.build_task ->
-          combo_rbt#set_active_iter (Some row);
+          combo_task#set_active_iter (Some row);
           true
         | _ -> false
     end;
@@ -144,7 +144,7 @@ object (self)
 
   method entry_name = entry_name
   method combo_bc = combo_bc
-  method combo_rbt = combo_rbt
+  method combo_task = combo_task
 end
 
 

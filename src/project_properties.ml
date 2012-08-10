@@ -105,43 +105,43 @@ class widget ~editor ?(callback=ignore) ~project ?page_num ?packing ?show () =
     end);
   in
   (** Targets Tab *)
-  let bconf_box = GPack.vbox ~spacing:8 ~border_width:8 () in
+  let target_box = GPack.vbox ~spacing:8 ~border_width:8 () in
   let _ = notebook#append_page
-    ~tab_label:(GMisc.label ~text:"Targets" ())#coerce bconf_box#coerce in
-  let hbox = GPack.hbox ~spacing:8 ~packing:bconf_box#add () in
-  let bconf_list = new Target_list.view ~editor ~project ~packing:hbox#pack () in
+    ~tab_label:(GMisc.label ~text:"Targets" ())#coerce target_box#coerce in
+  let hbox = GPack.hbox ~spacing:8 ~packing:target_box#add () in
+  let target_list = new Target_list.view ~editor ~project ~packing:hbox#pack () in
   let _ =
     if List.length project.Project_type.build = 0 then begin
-      bconf_list#button_add#clicked();
+      target_list#button_add#clicked();
     end;
   in
   let vbox = GPack.vbox ~spacing:8 ~packing:hbox#add () in
   let label_title = GMisc.label ~markup:"" ~xalign:0.0 ~packing:vbox#pack () in
-  let bconf_page = new Target_page.view ~project ~packing:vbox#add () in
+  let target_page = new Target_page.view ~project ~packing:vbox#add () in
   let etask_page = new Etask_page.view ~packing:vbox#add () in
   let set_title x = kprintf label_title#set_label "<b><big>%s</big></b>" x in
   let hide_all () =
-    bconf_page#misc#hide ();
+    target_page#misc#hide ();
     etask_page#misc#hide ();
-    bconf_page#misc#set_sensitive true;
+    target_page#misc#set_sensitive true;
     etask_page#misc#set_sensitive true;
   in
   let _ = hide_all() in
-  let _ = bconf_list#connect#selection_changed ~callback:begin function
+  let _ = target_list#connect#selection_changed ~callback:begin function
     | None ->
-      bconf_page#misc#set_sensitive false;
+      target_page#misc#set_sensitive false;
       etask_page#misc#set_sensitive false;
     | Some path ->
         begin
-          match bconf_list#get path with
+          match target_list#get path with
             | Target_list.BCONF bc ->
               set_title "Target";
-              Gmisclib.Idle.add (fun () -> bconf_page#set bc);
+              Gmisclib.Idle.add (fun () -> target_page#set bc);
               Gmisclib.Idle.add begin fun () ->
-                if not (bconf_page#misc#get_flag `SENSITIVE) then (bconf_page#misc#set_sensitive true);
-                if not (bconf_page#misc#get_flag `VISIBLE) then begin
+                if not (target_page#misc#get_flag `SENSITIVE) then (target_page#misc#set_sensitive true);
+                if not (target_page#misc#get_flag `VISIBLE) then begin
                   etask_page#misc#hide ();
-                  bconf_page#misc#show ();
+                  target_page#misc#show ();
                 end
               end
             | Target_list.ETASK et ->
@@ -150,41 +150,41 @@ class widget ~editor ?(callback=ignore) ~project ?page_num ?packing ?show () =
               Gmisclib.Idle.add begin fun () ->
                 if not (etask_page#misc#get_flag `SENSITIVE) then (etask_page#misc#set_sensitive true);
                 if not (etask_page#misc#get_flag `VISIBLE) then begin
-                  bconf_page#misc#hide ();
+                  target_page#misc#hide ();
                   etask_page#misc#show ();
                 end;
               end
             | _ -> ()
         end
   end in
-  let _ = bconf_list#connect#add_bconf ~callback:(fun () -> Gmisclib.Idle.add bconf_page#entry_name#misc#grab_focus) in
-  let _ = bconf_list#connect#add_etask ~callback:(fun () -> Gmisclib.Idle.add etask_page#entry_name#misc#grab_focus) in
-  let _ = bconf_page#entry_name#connect#changed ~callback:begin fun () ->
-    match bconf_list#current_path() with
+  let _ = target_list#connect#add_target ~callback:(fun () -> Gmisclib.Idle.add target_page#entry_name#misc#grab_focus) in
+  let _ = target_list#connect#add_etask ~callback:(fun () -> Gmisclib.Idle.add etask_page#entry_name#misc#grab_focus) in
+  let _ = target_page#entry_name#connect#changed ~callback:begin fun () ->
+    match target_list#current_path() with
       | Some path ->
-        let row = bconf_list#model#get_iter path in
-        let column = bconf_list#column_name in
-        bconf_list#model#set ~row ~column bconf_page#entry_name#text
+        let row = target_list#model#get_iter path in
+        let column = target_list#column_name in
+        target_list#model#set ~row ~column target_page#entry_name#text
       | _ -> ()
   end in
   let _ = etask_page#entry_name#connect#changed ~callback:begin fun () ->
-    match bconf_list#current_path () with
+    match target_list#current_path () with
       | Some path ->
-        let row = bconf_list#model#get_iter path in
-        let column = bconf_list#column_name in
-        bconf_list#model#set ~row ~column etask_page#entry_name#text
+        let row = target_list#model#get_iter path in
+        let column = target_list#column_name in
+        target_list#model#set ~row ~column etask_page#entry_name#text
       | _ -> ()
   end in
-  let _ = bconf_box#pack bconf_page#entry_cmd_line#coerce in
-  let _ = bconf_list#select_default_configuration () in
+  let _ = target_box#pack target_page#entry_cmd_line#coerce in
+  let _ = target_list#select_default_configuration () in
   (** Runtime Configurations Tab *)
   let runtime_box = GPack.vbox ~spacing:8 ~border_width:8 () in
   let runtime_tab_label = GMisc.label ~text:"Executables" () in
   let _ = notebook#append_page
     ~tab_label:runtime_tab_label#coerce runtime_box#coerce in
   let hbox = GPack.hbox ~spacing:8 ~packing:runtime_box#add () in
-  let rconf_page = new Rconf_page.view ~bconf_list ~packing:(hbox#pack ~from:`END ~expand:true ~fill:true) () in
-  let rconf_list = new Rconf_list.view ~bconf_list ~editor ~project ~page:rconf_page ~packing:hbox#pack () in
+  let rconf_page = new Rconf_page.view ~target_list ~packing:(hbox#pack ~from:`END ~expand:true ~fill:true) () in
+  let rconf_list = new Rconf_list.view ~target_list ~editor ~project ~page:rconf_page ~packing:hbox#pack () in
   (** Buttons *)
   let bb = GPack.button_box `HORIZONTAL ~layout:`END ~spacing:8 ~border_width:8
     ~packing:(box#pack ~expand:false) () in
@@ -194,8 +194,8 @@ class widget ~editor ?(callback=ignore) ~project ?page_num ?packing ?show () =
   let button_help = GButton.button ~use_mnemonic:false ~stock:`HELP ~packing:bb#add () in
   let _ = bb#set_child_secondary button_help#coerce true in
   let _ = button_help#misc#set_sensitive false in
-  let _ = bconf_list#misc#connect#map ~callback:(fun () -> button_help#misc#set_sensitive true) in
-  let _ = bconf_list#misc#connect#unmap ~callback:(fun () -> button_help#misc#set_sensitive false) in
+  let _ = target_list#misc#connect#map ~callback:(fun () -> button_help#misc#set_sensitive true) in
+  let _ = target_list#misc#connect#unmap ~callback:(fun () -> button_help#misc#set_sensitive false) in
   let _ = button_help#connect#clicked ~callback:begin fun () ->
     let cmd = sprintf "\"%s\" --help" Oe_config.oebuild_command in
     let text = Cmd.expand ~trim:false cmd in
@@ -214,10 +214,10 @@ object (self)
 
   method button_close = button_close
 
-  method private bconfigs_ok =
-    bconf_list#length > 0 && project.Project_type.build <> [] && begin
+  (*method private targets_ok =
+    target_list#length > 0 && project.Project_type.build <> [] && begin
       List.for_all (fun bc -> bc.Target.files <> "") project.Project_type.build
-    end && (not bconf_page#changed)
+    end && (not target_page#changed)*)
 
   method reset () =
     entry_encoding#set_active (match project.encoding with None -> (List.length encodings - 1)
@@ -237,7 +237,7 @@ object (self)
     entry_autocomp_cflags#misc#set_sensitive (check_autocomp_enabled#active);
     range_autocomp_delay#adjustment#set_value (project.autocomp_delay *. 1000.);
     entry_autocomp_cflags#set_text project.autocomp_cflags;
-    GtkThread2.async bconf_list#reset ();
+    GtkThread2.async target_list#reset ();
     GtkThread2.async rconf_list#reset ();
 
   method save () =
@@ -253,16 +253,16 @@ object (self)
       project.autocomp_delay   <- range_autocomp_delay#adjustment#value /. 1000.;
       project.autocomp_cflags  <- entry_autocomp_cflags#text;
       callback project;
-      (* Save bconfigs and rconfigs *)
-      project.build <- (bconf_list#get_bconfigs ());
+      (* Save targets and rconfigs *)
+      project.build <- (target_list#get_targets ());
       let rconfigs = rconf_list#get_rconfigs() in
       project.runtime <- List.filter begin fun rtc ->
-        List.exists (fun bc -> bc.Target.id = rtc.Rconf.id_target) project.build
+        List.exists (fun bc -> bc.Target.id = rtc.Rconf.target_id) project.build
       end rconfigs;
       Project.save ~editor project;
       project_changed#call();
       (*  *)
-      bconf_page#set_changed false;
+      target_page#set_changed false;
       (*  *)
       if project.autocomp_enabled then begin
         editor#with_current_page (fun p -> p#compile_buffer ~commit:false ());
@@ -293,7 +293,7 @@ object (self)
       name_entry#set_editable false;
       home_choose#misc#set_sensitive false;
     end else begin
-      notebook#remove bconf_box#coerce;
+      notebook#remove target_box#coerce;
       notebook#remove runtime_box#coerce;
     end;
     (* Entries *)
@@ -315,10 +315,10 @@ object (self)
     (* *)
     notebook#goto_page 0;
 (*    notebook#connect#switch_page ~callback:begin fun num ->
-      if num = 2 && bconf_page#changed then (GtkSignal.stop_emit(); notebook#goto_page 1)
+      if num = 2 && target_page#changed then (GtkSignal.stop_emit(); notebook#goto_page 1)
     end;*)
-    ignore (bconf_page#connect#changed ~callback:begin fun () ->
-      GtkBase.Widget.queue_draw bconf_list#view#as_widget;
+    ignore (target_page#connect#changed ~callback:begin fun () ->
+      GtkBase.Widget.queue_draw target_list#view#as_widget;
     end);
     Gaux.may page_num ~f:notebook#goto_page;
 

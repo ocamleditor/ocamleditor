@@ -7,7 +7,7 @@
   <name>ocamleditor</name>
   <author>Francesco Tovagliari</author>
   <description/>
-  <version>1.7.0</version>
+  <version>1.8.0</version>
   <autocomp enabled="true" delay="1." cflags=""/>
   <targets>
     <target name="common" default="false" id="4">
@@ -22,7 +22,7 @@
       <pp></pp>
       <cflags>-g</cflags>
       <lflags>-g</lflags>
-      <outkind>Library</outkind>
+      <target_type>Library</target_type>
       <outname>common/common</outname>
       <lib_install_path></lib_install_path>
       <external_tasks/>
@@ -41,7 +41,7 @@
       <pp></pp>
       <cflags>-g</cflags>
       <lflags>-g</lflags>
-      <outkind>Library</outkind>
+      <target_type>Library</target_type>
       <outname>icons</outname>
       <lib_install_path></lib_install_path>
       <external_tasks/>
@@ -60,7 +60,7 @@
       <pp></pp>
       <cflags>-w y</cflags>
       <lflags></lflags>
-      <outkind>Library</outkind>
+      <target_type>Library</target_type>
       <outname>oebuildlib</outname>
       <lib_install_path></lib_install_path>
       <external_tasks/>
@@ -79,7 +79,7 @@
       <pp></pp>
       <cflags>-w y</cflags>
       <lflags></lflags>
-      <outkind>Executable</outkind>
+      <target_type>Executable</target_type>
       <outname>oebuild/oebuild</outname>
       <lib_install_path></lib_install_path>
       <external_tasks/>
@@ -98,7 +98,7 @@
       <pp></pp>
       <cflags>-w s</cflags>
       <lflags></lflags>
-      <outkind>Executable</outkind>
+      <target_type>Executable</target_type>
       <outname>oeproc/oeproc</outname>
       <lib_install_path></lib_install_path>
       <external_tasks/>
@@ -117,7 +117,7 @@
       <pp></pp>
       <cflags>-g</cflags>
       <lflags>-g</lflags>
-      <outkind>Library</outkind>
+      <target_type>Library</target_type>
       <outname>gmisclib</outname>
       <lib_install_path></lib_install_path>
       <external_tasks/>
@@ -136,7 +136,7 @@
       <pp></pp>
       <cflags>-w sy -g</cflags>
       <lflags>-w sy -g</lflags>
-      <outkind>Library</outkind>
+      <target_type>Library</target_type>
       <outname>otherwidgets</outname>
       <lib_install_path></lib_install_path>
       <external_tasks/>
@@ -155,7 +155,7 @@
       <pp></pp>
       <cflags>-w syxm -g</cflags>
       <lflags>-g</lflags>
-      <outkind>Executable</outkind>
+      <target_type>Executable</target_type>
       <outname>ocamleditor</outname>
       <lib_install_path></lib_install_path>
       <external_tasks>
@@ -235,7 +235,7 @@
       <pp></pp>
       <cflags>-w syxm -g -inline 50</cflags>
       <lflags>-g  -inline 50</lflags>
-      <outkind>Executable</outkind>
+      <target_type>Executable</target_type>
       <outname>ocamleditor</outname>
       <lib_install_path></lib_install_path>
       <external_tasks/>
@@ -254,12 +254,12 @@
       <pp></pp>
       <cflags>-w syxm -g -inline 50</cflags>
       <lflags>-g  -inline 50</lflags>
-      <outkind>Executable</outkind>
+      <target_type>Executable</target_type>
       <outname>ocamleditor</outname>
       <lib_install_path></lib_install_path>
       <external_tasks>
         <task name="prepare-build">
-          <always_run_in_project>false</always_run_in_project>
+          <always_run_in_project>true</always_run_in_project>
           <always_run_in_script>true</always_run_in_script>
           <env replace="false"/>
           <dir>../build</dir>
@@ -271,7 +271,7 @@
           <phase>Before_compile</phase>
         </task>
         <task name="clean-lex-yacc">
-          <always_run_in_project>false</always_run_in_project>
+          <always_run_in_project>true</always_run_in_project>
           <always_run_in_script>true</always_run_in_script>
           <env replace="false"/>
           <dir>../build</dir>
@@ -298,7 +298,7 @@
       <pp></pp>
       <cflags></cflags>
       <lflags></lflags>
-      <outkind>Executable</outkind>
+      <target_type>Executable</target_type>
       <outname></outname>
       <lib_install_path></lib_install_path>
       <external_tasks>
@@ -365,7 +365,7 @@
     </target>
   </targets>
   <executables>
-    <executable name="ocamleditor" default="true" id_target="0" id="0">
+    <executable name="ocamleditor" default="true" target_id="0" id="0">
       <build_task>&lt;COMPILE&gt;</build_task>
       <env replace="false">
         <var enabled="true">OCAMLEDITORPARAM=debug=2</var>
@@ -382,7 +382,7 @@
       <doc>Installation prefix (Unix only)</doc>
     </arg>
     <arg type="Flag" key="-use-original-gtkThread" pass="-key">
-      <task bconf="12" task_name="prepare-build"/>
+      <task target_id="12" task_name="prepare-build"/>
       <mode>&lt;ADD&gt;</mode>
       <default type="flag">false</default>
       <doc>Don&apos;t set this flag if you have Lablgtk-2.14.2 or

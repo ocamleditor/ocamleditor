@@ -509,9 +509,9 @@ object (self)
     self#set_menu_item_nav_history_sensitive();
 
   method build_all configs =
-    let tasks = List.map begin fun bconf ->
-      let cmd, args = Target.create_cmd_line bconf in
-      let name = sprintf "Build \xC2\xAB%s\xC2\xBB" (Filename.basename bconf.Target.name) in
+    let tasks = List.map begin fun target ->
+      let cmd, args = Target.create_cmd_line target in
+      let name = sprintf "Build \xC2\xAB%s\xC2\xBB" (Filename.basename target.Target.name) in
       let task = Task.create ~name ~env:[] ~dir:"" ~cmd ~args () in
       `COMPILE, task
     end configs in
@@ -605,11 +605,11 @@ object (self)
 
   method with_current_project f = match current_project#get with Some p -> f p | _ -> ()
 
-  method with_default_build_config f =
+  method with_default_target f =
     match current_project#get with
       | Some project ->
         begin
-          match Project.default_build_config project with
+          match Project.default_target project with
             | Some bc -> f bc
             | _ -> ()
         end;

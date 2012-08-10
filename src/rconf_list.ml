@@ -24,7 +24,7 @@ open Printf
 open GUtil
 
 (** view *)
-class view ~bconf_list ~editor ~project ~page ?packing () =
+class view ~target_list ~editor ~project ~page ?packing () =
   (* "editor#project" is different from "project" when "project" is a new project
      (i.e. you are in "New project" dialog window) *)
   let selection_changed = new selection_changed () in
@@ -113,9 +113,9 @@ object (self)
     view#expand_all()
 
   method private markup rc =
-    match List_opt.find (fun bc -> bc.Target.id = rc.Rconf.id_target) (bconf_list#get_bconfigs()) with
-      | Some bconf ->
-        sprintf "<b>%s</b>\n<small><i>%s</i></small>" rc.Rconf.name bconf.Target.name
+    match List_opt.find (fun bc -> bc.Target.id = rc.Rconf.target_id) (target_list#get_targets()) with
+      | Some target ->
+        sprintf "<b>%s</b>\n<small><i>%s</i></small>" rc.Rconf.name target.Target.name
       | _ -> ""
 
   initializer
@@ -148,20 +148,20 @@ object (self)
         let default = List.length rconfigs = 0 in
         let id = (List.fold_left (fun acc t -> max acc t.Rconf.id) (-1) rconfigs) + 1 in
         let name = sprintf "New Run Configuration %d" id in
-        let bconfigs = List.filter (fun bc -> bc.Target.outkind = Target.Executable && bc.Target.files <> "") (bconf_list#get_bconfigs()) in
-        let bconfigs = List.sort (fun bc1 bc2 ->
+        let targets = List.filter (fun bc -> bc.Target.target_type = Target.Executable && bc.Target.files <> "") (target_list#get_targets()) in
+        let targets = List.sort (fun bc1 bc2 ->
           if bc1.Target.default then (-1)
           else if bc2.Target.default then 1
-          else (Pervasives.compare bc1.Target.id bc2.Target.id)) bconfigs in
-        match bconfigs with
+          else (Pervasives.compare bc1.Target.id bc2.Target.id)) targets in
+        match targets with
           | bc :: _ ->
-            let rc = Rconf.create ~name ~id ~id_target:bc.Target.id in
+            let rc = Rconf.create ~name ~id ~target_id:bc.Target.id in
             rc.Rconf.default <- default;
             self#append [rc];
-            page#set_bconfigs();
+            page#set_targets();
             page#set_tasks();
             page#combo_bc#set_active 0;
-            page#combo_rbt#set_active 2; (* 2 = build *)
+            page#combo_task#set_active 2; (* 2 = build *)
             Gmisclib.Idle.add ~prio:300 page#entry_name#misc#grab_focus
           | [] -> ()
       end);
@@ -182,8 +182,8 @@ object (self)
         Gaux.may (self#current_path ()) ~f:begin fun path ->
           let row = model#get_iter path in
           let rc = model#get ~row ~column:col_data in
-          let bconfigs = (bconf_list#get_bconfigs()) in
-          match List_opt.find (fun b -> b.Target.id = rc.Rconf.id_target) bconfigs with
+          let targets = (target_list#get_targets()) in
+          match List_opt.find (fun b -> b.Target.id = rc.Rconf.target_id) targets with
             | Some bc -> ignore (Task_console.exec ~editor (`RCONF rc) bc)
             | _ -> ()
         end
@@ -205,17 +205,17 @@ object (self)
       end);
       ignore (view#misc#connect#map ~callback:begin fun () ->
         b_add#misc#set_sensitive begin
-          List.exists (fun bc -> bc.Target.outkind = Target.Executable && bc.Target.files <> "") (bconf_list#get_bconfigs())
+          List.exists (fun bc -> bc.Target.target_type = Target.Executable && bc.Target.files <> "") (target_list#get_targets())
         end
       end);
       (** Remove all run configurations linked to the build configurations removed. *)
-      bconf_list#connect#removed ~callback:begin fun elements ->
+      target_list#connect#removed ~callback:begin fun elements ->
         List.iter begin function
           | Target_list.BCONF bc ->
             let paths = ref [] in
             model#foreach begin fun path row ->
               let rc = self#get path in
-              if rc.Rconf.id_target = bc.Target.id then (paths := path :: !paths);
+              if rc.Rconf.target_id = bc.Target.id then (paths := path :: !paths);
               false
             end;
             let rows = List.map model#get_iter !paths in

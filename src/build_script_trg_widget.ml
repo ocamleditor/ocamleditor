@@ -22,27 +22,27 @@
 
 
 class widget ~project ?packing () =
-  let bconfigs        = project.Project_type.build in
+  let targets         = project.Project_type.build in
   let hbox            = GPack.hbox ~spacing:5 ?packing () in
   let sw              = GBin.scrolled_window ~shadow_type:`IN ~hpolicy:`AUTOMATIC ~vpolicy:`AUTOMATIC ~packing:hbox#add () in
   let cols            = new GTree.column_list in
-  let col_bconf       = cols#add Gobject.Data.caml in
-  let rend_bconf      = GTree.cell_renderer_text [] in
+  let col_target       = cols#add Gobject.Data.caml in
+  let rend_target      = GTree.cell_renderer_text [] in
   let rend_pixbuf     = GTree.cell_renderer_pixbuf [] in
   let model           = GTree.list_store cols in
-  let vc_bconf        = GTree.view_column ~title:"Target" () in
-  let _               = vc_bconf#pack ~expand:false rend_pixbuf in
-  let _               = vc_bconf#pack ~expand:true rend_bconf in
+  let vc_target        = GTree.view_column ~title:"Target" () in
+  let _               = vc_target#pack ~expand:false rend_pixbuf in
+  let _               = vc_target#pack ~expand:true rend_target in
   let view            = GTree.view ~model ~headers_visible:false ~reorderable:true ~enable_search:false ~packing:sw#add () in
   let _               = view#selection#set_mode `MULTIPLE in
-  let _               = view#append_column vc_bconf in
+  let _               = view#append_column vc_target in
 object (self)
   inherit GObj.widget hbox#as_widget
   initializer
-    vc_bconf#set_cell_data_func rend_bconf begin fun model row ->
-      let bconf = model#get ~row ~column:col_bconf in
-      rend_bconf#set_properties [`TEXT bconf.Target.name];
-      match bconf.Target.outkind with
+    vc_target#set_cell_data_func rend_target begin fun model row ->
+      let target = model#get ~row ~column:col_target in
+      rend_target#set_properties [`TEXT target.Target.name];
+      match target.Target.target_type with
         | Target.Executable -> rend_pixbuf#set_properties [`VISIBLE true; `PIXBUF Icons.start_16; `XALIGN 0.0]
         | Target.Library -> rend_pixbuf#set_properties [`VISIBLE true; `PIXBUF Icons.library; `XALIGN 0.0]
         | Target.Plugin -> rend_pixbuf#set_properties [`VISIBLE true; `PIXBUF Icons.plugin; `XALIGN 0.0]
@@ -50,6 +50,6 @@ object (self)
     end;
     List.iter begin fun bc ->
       let row = model#append () in
-      model#set ~row ~column:col_bconf bc;
-    end bconfigs;
+      model#set ~row ~column:col_target bc;
+    end targets;
 end

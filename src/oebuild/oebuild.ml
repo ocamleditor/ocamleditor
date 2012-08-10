@@ -27,7 +27,7 @@ open Oebuild_util
 module Table = Oebuild_table
 
 type compilation_type = Bytecode | Native | Unspecified
-type output_kind = Executable | Library | Plugin | Pack
+type output_type = Executable | Library | Plugin | Pack
 type build_exit = Built_successfully | Build_failed of int
 type process_err_func = (stderr:in_channel -> unit)
 

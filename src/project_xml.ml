@@ -50,9 +50,6 @@ let write proj =
             "name", t.Target.name;
             "default", string_of_bool t.Target.default;
             "id", string_of_int t.Target.id], [
-          (*Xml.Element ("id", [], [Xml.PCData (string_of_int t.Target.id)]); (* Deprecated from version 1.7.1 *)
-          Xml.Element ("name", [], [Xml.PCData t.Target.name]);             (* Deprecated from version 1.7.1 *)
-          Xml.Element ("default", [], [Xml.PCData (string_of_bool t.Target.default)]); (* Deprecated from version 1.7.1 *)*)
           Xml.Element ("byt", [], [Xml.PCData (string_of_bool t.Target.byt)]);
           Xml.Element ("opt", [], [Xml.PCData (string_of_bool t.Target.opt)]);
           Xml.Element ("libs", [], [Xml.PCData t.Target.libs]);
@@ -64,13 +61,12 @@ let write proj =
           Xml.Element ("pp", [], [Xml.PCData t.Target.pp]);
           Xml.Element ("cflags", [], [Xml.PCData t.Target.cflags]);
           Xml.Element ("lflags", [], [Xml.PCData t.Target.lflags]);
-          Xml.Element ("outkind", [], [Xml.PCData (Target.string_of_outkind t.Target.outkind)]);
+          Xml.Element ("target_type", [], [Xml.PCData (Target.string_of_target_type t.Target.target_type)]);
           Xml.Element ("outname", [], [Xml.PCData t.Target.outname]);
           Xml.Element ("lib_install_path", [], [Xml.PCData t.Target.lib_install_path]);
           Xml.Element ("external_tasks", [],
             List.map begin fun task ->
               Xml.Element ("task", ["name", task.Task.et_name], [
-                (*Xml.Element ("name", [], [Xml.PCData (task.Task.et_name)]); (* Deprecated from version 1.7.1 *)*)
                 Xml.Element ("always_run_in_project", [], [Xml.PCData (string_of_bool task.Task.et_always_run_in_project)]);
                 Xml.Element ("always_run_in_script", [], [Xml.PCData (string_of_bool task.Task.et_always_run_in_script)]);
                 Xml.Element ("env", ["replace", string_of_bool task.Task.et_env_replace],
@@ -93,13 +89,9 @@ let write proj =
         Xml.Element ("executable", [
             "name", t.Rconf.name;
             "default", string_of_bool t.Rconf.default;
-            "id_target", string_of_int t.Rconf.id_target;
+            "target_id", string_of_int t.Rconf.target_id;
             "id", string_of_int t.Rconf.id], [
-          (*Xml.Element ("id", [], [Xml.PCData (string_of_int t.Rconf.id)]); (* Deprecated from version 1.7.1 *)
-          Xml.Element ("id_target", [], [Xml.PCData (string_of_int t.Rconf.id_target)]); (* Deprecated from version 1.7.1 *)
-          Xml.Element ("name", [], [Xml.PCData t.Rconf.name]); (* Deprecated from version 1.7.1 *)
-          Xml.Element ("default", [], [Xml.PCData (string_of_bool t.Rconf.default)]); (* Deprecated from version 1.7.1 *)*)
-          Xml.Element ("build_task", [], [Xml.PCData (Target.string_of_rbt t.Rconf.build_task)]);
+          Xml.Element ("build_task", [], [Xml.PCData (Target.string_of_task t.Rconf.build_task)]);
           Xml.Element ("env", ["replace", string_of_bool t.Rconf.env_replace],
             List.map (fun (e, v) -> Xml.Element ("var", ["enabled", string_of_bool e], [Xml.PCData v])) t.Rconf.env
           );
@@ -117,7 +109,7 @@ let write proj =
         ], [
           Xml.Element ("task",
             (match arg.Build_script_args.bsa_task with Some (bc, et) -> [
-              "bconf", string_of_int bc.Target.id;
+              "target_id", string_of_int bc.Target.id;
               "task_name", et.Task.et_name;
             ] | None -> []), []);
           Xml.Element ("mode", [], [Xml.PCData
@@ -148,7 +140,7 @@ let read filename =
   let values node =
     List.rev (Xml.fold (fun acc x -> (value x) :: acc) [] node)
   in
-  let rbt_map = ref [] in
+  let task_map = ref [] in
   Xml.iter begin fun node ->
     match Xml.tag node with
       | "ocaml_home" -> proj.ocaml_home <- value node
@@ -169,7 +161,7 @@ let read filename =
         let runtime = Xml.fold begin fun acc tnode ->
           let config  = {
             Rconf.id    = (attrib tnode "id" int_of_string 0);
-            id_target   = (try (attrib tnode "id_target" int_of_string 0) with Xml.No_attribute _ -> attrib tnode "id_build" int_of_string 0); (* Backward compatibility with 1.7.5 *)
+            target_id   = (try (attrib tnode "target_id" int_of_string 0) with Xml.No_attribute _ -> attrib tnode "id_build" int_of_string 0); (* Backward compatibility with 1.7.5 *)
             name        = (attrib tnode "name" identity "");
             default     = (attrib tnode "default" bool_of_string false);
             build_task  = `NONE;
@@ -180,12 +172,12 @@ let read filename =
           Xml.iter begin fun tp ->
             match Xml.tag tp with
               | "id" -> config.Rconf.id <- int_of_string (value tp) (* Backward compatibility with 1.7.0 *)
-              | "id_build" -> config.Rconf.id_target <- int_of_string (value tp) (* Backward compatibility with 1.7.0 *)
+              | "id_build" -> config.Rconf.target_id <- int_of_string (value tp) (* Backward compatibility with 1.7.0 *)
               | "name" -> config.Rconf.name <- value tp; (* Backward compatibility with 1.7.0 *)
               | "default" -> config.Rconf.default <- bool_of_string (value tp); (* Backward compatibility with 1.7.0 *)
               | "build_task" ->
                 config.Rconf.build_task <- `NONE;
-                rbt_map := (config, (value tp)) :: !rbt_map
+                task_map := (config, (value tp)) :: !task_map
               | "env" ->
                 config.Rconf.env <-
                   List.rev (Xml.fold (fun acc var ->
@@ -206,7 +198,7 @@ let read filename =
         proj.runtime <- List.rev runtime;
       | "targets" | "build" (* Backward compatibility with 1.7.5 *) ->
         let i = ref 0 in
-        let bconfigs = Xml.fold begin fun acc tnode ->
+        let targets = Xml.fold begin fun acc tnode ->
           let target = Target.create ~id:0 ~name:(sprintf "Config_%d" !i) in
           let runtime_build_task = ref "" in
           let runtime_env = ref (false, "") in
@@ -232,8 +224,8 @@ let read filename =
               | "pp" -> target.Target.pp <- value tp
               | "cflags" -> target.Target.cflags <- value tp
               | "lflags" -> target.Target.lflags <- value tp
-              | "is_library" -> target.Target.outkind <- (if bool_of_string (value tp) then Target.Library else Target.Executable)
-              | "outkind" -> target.Target.outkind <- Target.outkind_of_string (value tp)
+              | "is_library" -> target.Target.target_type <- (if bool_of_string (value tp) then Target.Library else Target.Executable)
+              | "target_type" | "outkind" -> target.Target.target_type <- Target.target_type_of_string (value tp)
               | "outname" -> target.Target.outname <- value tp
               | "runtime_build_task" ->
                 runtime_build_task := (value tp);
@@ -276,14 +268,14 @@ let read filename =
               | _ -> ()
           end tnode;
           incr i;
-          (*target.Target.runtime_build_task <- Target.rbt_of_string target !runtime_build_task;*)
-          if !create_default_runtime && target.Target.outkind = Target.Executable then begin
+          (*target.Target.runtime_build_task <- Target.task_of_string target !runtime_build_task;*)
+          if !create_default_runtime && target.Target.target_type = Target.Executable then begin
             proj.runtime <- {
               Rconf.id    = (List.length proj.runtime);
-              id_target   = target.Target.id;
+              target_id   = target.Target.id;
               name        = target.Target.name;
               default     = target.Target.default;
-              build_task  = Target.rbt_of_string target !runtime_build_task;
+              build_task  = Target.task_of_string target !runtime_build_task;
               env         = [!runtime_env];
               env_replace = false;
               args        = [!runtime_args]
@@ -291,7 +283,7 @@ let read filename =
           end;
           target :: acc;
         end [] node in
-        proj.build <- List.rev bconfigs
+        proj.build <- List.rev targets
       | "build_script" ->
         proj.build_script <- {
           Build_script.bs_filename = (*proj.root // *)(attrib node "filename" identity "");
@@ -321,7 +313,7 @@ let read filename =
                     end
                   | "task" ->
                     bsa_task := begin
-                      let find_bconf id =
+                      let find_target id =
                         let id = int_of_string id in
                         List_opt.find (fun bc -> bc.Target.id = id) proj.build
                       in
@@ -329,9 +321,9 @@ let read filename =
                         List_opt.find (fun et -> et.Task.et_name = name)
                           (List.flatten (List.map (fun bc -> bc.Target.external_tasks) proj.build))
                       in
-                      let bconf = fattrib tp "bconf" find_bconf (fun _ -> None) in
+                      let target = fattrib tp "target_id" find_target (fun _ -> None) in
                       let task = fattrib tp "task_name" find_task (fun _ -> None) in
-                      bconf, task
+                      target, task
                     end
                   | _ -> ()
               end arg;
@@ -355,7 +347,7 @@ let read filename =
       | _ -> ()
   end xml;
   (* Patch build tasks connected to the runtime *)
-  List.iter (fun (rconf, rbt_string) -> set_runtime_build_task proj rconf rbt_string) !rbt_map;
+  List.iter (fun (rconf, task_string) -> set_runtime_build_task proj rconf task_string) !task_map;
   (* Set default runtime configuration *)
   begin
     match List_opt.find (fun x -> x.Rconf.default) proj.runtime with

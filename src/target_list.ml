@@ -33,7 +33,7 @@ class view ~editor ~project ?packing () =
   (* "editor#project" is different from "project" when "project" is a new (i.e. you are in "New project" dialog window) *)
   let selection_changed = new selection_changed () in
   let removed = new removed () in
-  let add_bconf = new add_bconf () in
+  let add_target = new add_target () in
   let add_etask = new add_etask () in
   let vbox = GPack.vbox ~spacing:5 ?packing () in
   let cols = new GTree.column_list in
@@ -66,7 +66,7 @@ class view ~editor ~project ?packing () =
   let bbox = GPack.button_box `HORIZONTAL ~layout:`SPREAD ~child_width:25 ~packing:vbox#pack () in
   let b_add = GButton.button ~packing:bbox#add () in
   let _ = tooltips#set_tip ~text:"Create a new build configuration" b_add#coerce in
-  let _ = b_add#set_image (Icons.create Icons.bconf_24)#coerce in
+  let _ = b_add#set_image (Icons.create Icons.target_24)#coerce in
   let b_etask = GButton.button ~packing:bbox#add () in
   let _ = tooltips#set_tip ~text:"Add an external build task" b_etask#coerce in
   let _ = b_etask#set_image (Icons.create Icons.etask_24)#coerce in
@@ -88,7 +88,7 @@ object (self)
   method model = model
   method view = view
   method column_name = col_name
-  method has_errors bconf = bconf.Target.files = "";
+  method has_errors target = target.Target.files = "";
 
   method button_add = b_add
 
@@ -104,7 +104,7 @@ object (self)
     end;
     List.rev !lst
 
-  method get_bconfigs () = Miscellanea.Xlist.filter_map (function BCONF x -> Some x | _ -> None) (self#to_list())
+  method get_targets () = Miscellanea.Xlist.filter_map (function BCONF x -> Some x | _ -> None) (self#to_list())
 
   method length = List.length (self#to_list())
 
@@ -123,18 +123,18 @@ object (self)
     end
 
   method append bcs =
-    let rows = List.map begin fun bconf ->
+    let rows = List.map begin fun target ->
       GtkThread2.sync begin fun () ->
-        let bconf = {bconf with id = bconf.id} in
-        bconf.Target.external_tasks <- List.map (fun et ->
-          {et with Task.et_name = et.Task.et_name}) bconf.Target.external_tasks;
+        let target = {target with id = target.id} in
+        target.Target.external_tasks <- List.map (fun et ->
+          {et with Task.et_name = et.Task.et_name}) target.Target.external_tasks;
         let row = model#append () in
-        model#set ~row ~column:col_data (BCONF bconf);
-        model#set ~row ~column:col_name bconf.name;
-        model#set ~row ~column:col_default bconf.default;
+        model#set ~row ~column:col_data (BCONF target);
+        model#set ~row ~column:col_name target.name;
+        model#set ~row ~column:col_default target.default;
         List.iter begin fun task ->
           GtkThread2.sync (fun () -> ignore (self#append_task ~parent:row ~task)) ()
-        end bconf.Target.external_tasks;
+        end target.Target.external_tasks;
         (*view#selection#select_iter row*)
         row
       end ()
@@ -185,7 +185,7 @@ object (self)
                   b_clean#misc#set_sensitive true;
                   b_compile#misc#set_sensitive true;
                   b_etask#misc#set_sensitive true;
-                  b_run#misc#set_sensitive (bc.Target.outkind <> Executable));
+                  b_run#misc#set_sensitive (bc.Target.target_type <> Executable));
               | _ ->
                 Gmisclib.Idle.add ~prio:300 (fun () ->
                   b_clean#misc#set_sensitive false;
@@ -197,16 +197,16 @@ object (self)
     end);
     (* b_add#connect#clicked *)
     let _ = b_add#connect#clicked ~callback:begin fun () ->
-      let bconfigs = Miscellanea.Xlist.filter_map (function BCONF x -> Some x | _ -> None) (self#to_list()) in
-      let id = (List.fold_left (fun acc t -> max acc t.id) (-1) bconfigs) + 1 in
+      let targets = Miscellanea.Xlist.filter_map (function BCONF x -> Some x | _ -> None) (self#to_list()) in
+      let id = (List.fold_left (fun acc t -> max acc t.id) (-1) targets) + 1 in
       let name = sprintf "New Target %d" id in
       let rows = self#append [Target.create ~name ~id] in
       (match rows with [row] -> view#selection#select_iter row | _ -> ());
-      add_bconf#call();
+      add_target#call();
     end in
     (*b_clean#connect#clicked*)
     let _ = b_clean#connect#clicked ~callback:begin fun () ->
-      Gaux.may (self#current()) ~f:(fun (_, bconf) -> Task_console.exec ~editor `CLEAN bconf)
+      Gaux.may (self#current()) ~f:(fun (_, target) -> Task_console.exec ~editor `CLEAN target)
     end in
     (* b_etask#connect#clicked *)
     let _ = b_etask#connect#clicked ~callback:begin fun () ->
@@ -214,10 +214,10 @@ object (self)
         let task = Task.create ~name:"External Build Task" ~env:[] ~dir:"" ~cmd:"" ~args:[] () in
         let parent = model#get_iter path in
         match self#get path with
-          | BCONF bconf ->
+          | BCONF target ->
             let row = self#append_task ~parent ~task in
             view#set_cursor (model#get_path row) vc;
-            bconf.Target.external_tasks <- bconf.Target.external_tasks @ [task];
+            target.Target.external_tasks <- target.Target.external_tasks @ [task];
             add_etask#call();
           | (*ETASK*) _ ->
             if GTree.Path.up path then (f path)
@@ -228,15 +228,15 @@ object (self)
     end in
     (*b_compile#connect#clicked*)
     let _ = b_compile#connect#clicked ~callback:begin fun () ->
-      Gaux.may (self#current()) ~f:begin fun (_, bconf) ->
-        Task_console.exec ~editor `COMPILE bconf;
+      Gaux.may (self#current()) ~f:begin fun (_, target) ->
+        Task_console.exec ~editor `COMPILE target;
       end
     end in
     (*b_run#connect#clicked*)
     let _ = b_run#connect#clicked ~callback:begin fun () ->
       Gaux.may (self#current_path ()) ~f:begin fun path ->
         match self#get path with
-          | BCONF bconf -> Task_console.exec ~editor `INSTALL_LIBRARY bconf
+          | BCONF target -> Task_console.exec ~editor `INSTALL_LIBRARY target
           | ETASK etask -> Task_console.exec_sync ~editor [[`OTHER, etask]]
           | _ -> ()
       end
@@ -261,8 +261,8 @@ object (self)
         let data_removed = List.map self#get paths in
         let rows = List.map model#get_iter paths in
         List.iter (fun row -> ignore (model#remove row)) rows;
-        let bconfigs = self#to_list() in
-        let index = min last_path_index (List.length bconfigs - 1) in
+        let targets = self#to_list() in
+        let index = min last_path_index (List.length targets - 1) in
         view#selection#select_path (GTree.Path.create [index]);
         removed#call data_removed;
       with Failure "hd" -> ()
@@ -293,22 +293,22 @@ object (self)
         begin
           match model#get ~row ~column:col_data with
             | ROOT ->
-              renderer_pixbuf#set_properties [`VISIBLE true; `PIXBUF Icons.bconf_16; `XALIGN 0.0];
-            | BCONF bconf ->
+              renderer_pixbuf#set_properties [`VISIBLE true; `PIXBUF Icons.target_16; `XALIGN 0.0];
+            | BCONF target ->
               renderer_pixbuf#set_properties [
-                `VISIBLE (self#has_errors bconf);
+                `VISIBLE (self#has_errors target);
                 `PIXBUF ((GMisc.image ())#misc#render_icon ~size:`MENU `DIALOG_WARNING);
                 `XALIGN 0.0];
               let name = model#get ~row ~column:col_name in
-              let descr = if bconf.byt then ["Bytecode"] else [] in
-              let descr = descr @ (if bconf.opt then ["Native-code"] else []) in
+              let descr = if target.byt then ["Bytecode"] else [] in
+              let descr = descr @ (if target.opt then ["Native-code"] else []) in
               let descr = String.concat ", " descr in
-              let descr = (string_of_outkind bconf.outkind) ^ " &#8226; " ^ descr in
+              let descr = (string_of_target_type target.target_type) ^ " &#8226; " ^ descr in
               renderer#set_properties [`MARKUP (sprintf
                 "<b>%s</b>\n<span weight='light' size='smaller' style='italic'>%s</span>" name descr)];
-              if bconf.outkind = Executable then begin
+              if target.target_type = Executable then begin
                 renderer_pixbuf#set_properties [`VISIBLE true; `PIXBUF Icons.start_16; `XALIGN 0.0]
-              end else if bconf.outkind = Plugin then begin
+              end else if target.target_type = Plugin then begin
                 renderer_pixbuf#set_properties [`VISIBLE true; `PIXBUF Icons.plugin; `XALIGN 0.0]
               end else begin
                 renderer_pixbuf#set_properties [`VISIBLE true; `PIXBUF Icons.library; `XALIGN 0.0]
@@ -324,19 +324,19 @@ object (self)
       renderer_default#set_properties [`VISIBLE (match id with BCONF _ -> true | _ -> false)]
     end;
 
-  method connect = new signals ~selection_changed ~removed ~add_bconf ~add_etask
+  method connect = new signals ~selection_changed ~removed ~add_target ~add_etask
 end
 
 and selection_changed () = object (self) inherit [Gtk.tree_path option] signal () as super end
 and removed () = object (self) inherit [c list] signal () as super end
-and add_bconf () = object (self) inherit [unit] signal () as super end
+and add_target () = object (self) inherit [unit] signal () as super end
 and add_etask () = object (self) inherit [unit] signal () as super end
-and signals ~selection_changed ~removed ~add_bconf ~add_etask =
+and signals ~selection_changed ~removed ~add_target ~add_etask =
 object (self)
-  inherit ml_signals [selection_changed#disconnect; removed#disconnect; add_bconf#disconnect; add_etask#disconnect]
+  inherit ml_signals [selection_changed#disconnect; removed#disconnect; add_target#disconnect; add_etask#disconnect]
   method selection_changed = selection_changed#connect ~after
   method removed = removed#connect ~after
-  method add_bconf = add_bconf#connect ~after
+  method add_target = add_target#connect ~after
   method add_etask = add_etask#connect ~after
 end
 

@@ -491,18 +491,18 @@ let exec_sync ?run_cb ?(use_thread=true) ?(at_exit=ignore) ~editor task_groups =
 
 
 (** exec *)
-let exec ~editor ?use_thread ?(with_deps=false) task_kind bconf =
+let exec ~editor ?use_thread ?(with_deps=false) task_kind target =
   let project = editor#project in
   let can_compile_native = project.Project_type.can_compile_native in
-  let filter_tasks = Target.filter_external_tasks bconf in
+  let filter_tasks = Target.filter_external_tasks target in
   let tasks_clean () =
-    if Oebuild.check_restrictions bconf.restrictions then
+    if Oebuild.check_restrictions target.restrictions then
       (* External build tasks *)
       let et_before_clean = filter_tasks Task.Before_clean in
       let et_clean = filter_tasks Task.Clean in
       let et_clean = if et_clean = [] then [`CLEAN, begin
-        let cmd, args = Target.create_cmd_line bconf in
-        let name = sprintf "Clean \xC2\xAB%s\xC2\xBB" (Filename.basename bconf.Target.name) in
+        let cmd, args = Target.create_cmd_line target in
+        let name = sprintf "Clean \xC2\xAB%s\xC2\xBB" (Filename.basename target.Target.name) in
         Task.create ~name ~env:[] ~dir:"" ~cmd ~args:(args @ [true, "-clean"]) ()
       end] else et_clean in
       let et_after_clean = filter_tasks Task.After_clean in
@@ -512,11 +512,11 @@ let exec ~editor ?use_thread ?(with_deps=false) task_kind bconf =
     else []
   in
   let tasks_annot () =
-    if Oebuild.check_restrictions bconf.restrictions then
+    if Oebuild.check_restrictions target.restrictions then
       [`ANNOT, begin
-        let cmd, args = Target.create_cmd_line bconf in
+        let cmd, args = Target.create_cmd_line target in
         let args = (true, "-c") :: (true, "-annot") :: args in
-        let name = sprintf "Compile \xC2\xAB%s\xC2\xBB" (Filename.basename bconf.Target.name) in
+        let name = sprintf "Compile \xC2\xAB%s\xC2\xBB" (Filename.basename target.Target.name) in
         Task.create ~name ~env:[] ~dir:"" ~cmd ~args ()
       end]
     else []
@@ -525,17 +525,17 @@ let exec ~editor ?use_thread ?(with_deps=false) task_kind bconf =
     if with_deps then
       List.map begin fun id ->
         match List_opt.find (fun bc -> bc.id = id) project.Project_type.build with
-          | Some bconf -> bconf
+          | Some target -> target
           | _ -> assert false
-      end bconf.dependencies
+      end target.dependencies
     else []
   in
-  let compile_name = sprintf "Compile \xC2\xAB%s\xC2\xBB" (Filename.basename bconf.name) in
-  let build_name = sprintf "Build \xC2\xAB%s\xC2\xBB" (Filename.basename bconf.name) in
+  let compile_name = sprintf "Compile \xC2\xAB%s\xC2\xBB" (Filename.basename target.name) in
+  let build_name = sprintf "Build \xC2\xAB%s\xC2\xBB" (Filename.basename target.name) in
   let at_exit = fun () -> GtkThread2.async editor#with_current_page (fun p -> p#compile_buffer ~commit:false ()) in
   match task_kind with
     | `CLEANALL ->
-      let cmd, args = Target.create_cmd_line bconf in
+      let cmd, args = Target.create_cmd_line target in
       let task = Task.create ~name:"Clean Project" ~env:[] ~dir:"" ~cmd
         ~args:(args @ [true, "-clean-all"]) () in
       let console = create ~editor `CLEANALL task in
@@ -544,22 +544,22 @@ let exec ~editor ?use_thread ?(with_deps=false) task_kind bconf =
     | `CLEAN -> exec_sync ~editor [tasks_clean ()];
     | `ANNOT -> exec_sync ~editor [tasks_annot ()];
     | `COMPILE ->
-      let rec f () = exec_sync ~run_cb:f ~editor ~at_exit (tasks_compile ~name:build_name ~build_deps ~can_compile_native bconf) in
+      let rec f () = exec_sync ~run_cb:f ~editor ~at_exit (tasks_compile ~name:build_name ~build_deps ~can_compile_native target) in
       f()
     | `COMPILE_ONLY ->
-      exec_sync ~editor ~at_exit (tasks_compile ~flags:["-c"] ~name:compile_name ~build_deps ~can_compile_native bconf);
+      exec_sync ~editor ~at_exit (tasks_compile ~flags:["-c"] ~name:compile_name ~build_deps ~can_compile_native target);
     | `RCONF rc ->
-      if Oebuild.check_restrictions bconf.restrictions then
-        let oebuild, args = Target.create_cmd_line bconf in
+      if Oebuild.check_restrictions target.restrictions then
+        let oebuild, args = Target.create_cmd_line target in
         let name = rc.Rconf.name in
         let prior_tasks =
           match rc.Rconf.build_task with
             | `NONE -> []
             | `CLEAN -> [tasks_clean ()]
-            | `COMPILE -> tasks_compile ~name:build_name ~build_deps ~can_compile_native bconf
-            | `REBUILD -> [(tasks_clean ()); List.flatten (tasks_compile ~name:build_name ~build_deps ~can_compile_native bconf)]
+            | `COMPILE -> tasks_compile ~name:build_name ~build_deps ~can_compile_native target
+            | `REBUILD -> [(tasks_clean ()); List.flatten (tasks_compile ~name:build_name ~build_deps ~can_compile_native target)]
             | `ETASK name ->
-              let etask = List.find ((=) name) bconf.Target.external_tasks in
+              let etask = List.find ((=) name) target.Target.external_tasks in
               [[`OTHER, etask]]
         in
         let tasks = prior_tasks @ [[
@@ -576,15 +576,15 @@ let exec ~editor ?use_thread ?(with_deps=false) task_kind bconf =
         f();
       else ()
     | `INSTALL_LIBRARY ->
-      let oebuild, args = Target.create_cmd_line bconf in
-      let name = Filename.basename bconf.Target.name in
+      let oebuild, args = Target.create_cmd_line target in
+      let name = Filename.basename target.Target.name in
       let tasks = (*prior_tasks @*) [
         `RUN, Task.create
           ~name
           ~env:[]
           ~dir:""
           ~cmd:oebuild
-          ~args:(args @ [true, "-install " ^ bconf.Target.lib_install_path]) ();
+          ~args:(args @ [true, "-install " ^ target.Target.lib_install_path]) ();
       ] in
       let rec f () = ignore (exec_sync ~run_cb:f ~editor [tasks]) in
       f();

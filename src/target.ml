@@ -24,64 +24,64 @@
 open Printf
 
 type t = {
-  mutable id                 : int;
-  mutable name               : string;
-  mutable default            : bool;
-  mutable byt                : bool;
-  mutable opt                : bool;
-  mutable libs               : string;
-  mutable other_objects      : string;
-  mutable files              : string;
-  mutable includes           : string;
-  mutable thread             : bool;
-  mutable vmthread           : bool;
-  mutable pp                 : string;
-  mutable cflags             : string;
-  mutable lflags             : string;
-  mutable outkind            : output_kind;
-  mutable outname            : string;
-  mutable lib_install_path   : string;
-  mutable external_tasks     : Task.t list;
-  mutable restrictions       : string list;
-  mutable dependencies       : int list; (* id list *)
+  mutable id               : int;
+  mutable name             : string;
+  mutable default          : bool;
+  mutable byt              : bool;
+  mutable opt              : bool;
+  mutable libs             : string;
+  mutable other_objects    : string;
+  mutable files            : string;
+  mutable includes         : string;
+  mutable thread           : bool;
+  mutable vmthread         : bool;
+  mutable pp               : string;
+  mutable cflags           : string;
+  mutable lflags           : string;
+  mutable target_type      : target_type;
+  mutable outname          : string;
+  mutable lib_install_path : string;
+  mutable external_tasks   : Task.t list;
+  mutable restrictions     : string list;
+  mutable dependencies     : int list; (* id list *)
 }
-and rbt = [ `NONE | `CLEAN | `COMPILE | `REBUILD | `ETASK of Task.t ]
-and output_kind = Executable | Library | Plugin | Pack
+and task = [ `NONE | `CLEAN | `COMPILE | `REBUILD | `ETASK of Task.t ]
+and target_type = Executable | Library | Plugin | Pack
 
 let default_runtime_build_task = `COMPILE
 
-let string_of_rbt = function
+let string_of_task = function
   | `NONE -> "<NONE>"
   | `CLEAN -> "<CLEAN>"
   | `COMPILE -> "<COMPILE>"
   | `REBUILD -> "<REBUILD>"
   | `ETASK task -> task.Task.et_name
 
-let markup_of_rbt = function
+let markup_of_task = function
   | `NONE -> "None"
   | `CLEAN -> "Clean"
   | `COMPILE -> "Build"
   | `REBUILD -> "Rebuild <small><i>(Clean and Build)</i></small>"
   | `ETASK task -> Glib.Markup.escape_text task.Task.et_name
 
-let rbt_of_string bconf = function
+let task_of_string target = function
   | "<NONE>" -> `NONE
   | "<CLEAN>" -> `CLEAN
   | "<COMPILE>" -> `COMPILE
   | "<REBUILD>" -> `REBUILD
   | task_name -> begin
     try
-      `ETASK (List.find (fun x -> x.Task.et_name = task_name) bconf.external_tasks)
+      `ETASK (List.find (fun x -> x.Task.et_name = task_name) target.external_tasks)
     with Not_found -> default_runtime_build_task
   end
 
-let string_of_outkind = function
+let string_of_target_type = function
   | Executable -> "Executable"
   | Library -> "Library"
   | Plugin -> "Plugin"
   | Pack -> "Pack"
 
-let outkind_of_string = function
+let target_type_of_string = function
   | "Executable" -> Executable
   | "Library" -> Library
   | "Plugin" -> Plugin
@@ -104,7 +104,7 @@ let create ~id ~name = {
   pp                 = "";
   cflags             = "";
   lflags             = "";
-  outkind            = Executable;
+  target_type            = Executable;
   outname            = "";
   lib_install_path   = "";
   external_tasks     = [];
@@ -113,57 +113,57 @@ let create ~id ~name = {
 }
 
 (** find_dependencies *)
-let find_dependencies bconf = Dep.find (Miscellanea.split " +" bconf.files)
+let find_dependencies target = Dep.find (Miscellanea.split " +" target.files)
 
 (** filter_external_tasks *)
-let filter_external_tasks bconf phase =
+let filter_external_tasks target phase =
   Miscellanea.Xlist.filter_map begin fun task ->
     match task.Task.et_phase with
     | Some ph ->
       if task.Task.et_always_run_in_project && phase = ph then Some (`OTHER, task) else None
     | _ -> None
-  end bconf.external_tasks
+  end target.external_tasks
 
 (** create_cmd_line *)
-let create_cmd_line ?(flags=[]) ?(can_compile_native=true) bconf =
+let create_cmd_line ?(flags=[]) ?(can_compile_native=true) target =
   let quote = Filename.quote in
-  let files = Cmd_line_args.parse bconf.files in
+  let files = Cmd_line_args.parse target.files in
   let args =
     files
     @ ["-annot"]
-    @ (if bconf.pp <> "" then ["-pp"; quote bconf.pp] else [])
-    @ (if bconf.cflags <> "" then ["-cflags"; (quote bconf.cflags)] else [])
-    @ (if bconf.lflags <> "" then ["-lflags"; (quote (bconf.lflags))] else [])
-    @ (if bconf.includes <> "" then ["-I"; (quote (bconf.includes))] else [])
-    @ (if bconf.libs <> "" then ["-l"; (quote (bconf.libs))] else [])
-    @ (if bconf.other_objects <> "" then ["-m"; quote (bconf.other_objects)] else [])
+    @ (if target.pp <> "" then ["-pp"; quote target.pp] else [])
+    @ (if target.cflags <> "" then ["-cflags"; (quote target.cflags)] else [])
+    @ (if target.lflags <> "" then ["-lflags"; (quote (target.lflags))] else [])
+    @ (if target.includes <> "" then ["-I"; (quote (target.includes))] else [])
+    @ (if target.libs <> "" then ["-l"; (quote (target.libs))] else [])
+    @ (if target.other_objects <> "" then ["-m"; quote (target.other_objects)] else [])
     @ begin
-        match bconf.outkind with
+        match target.target_type with
           | Executable -> []
           | Library -> ["-a"]
           | Plugin -> ["-shared"]
           | Pack -> ["-pack"]
       end
-    @ (if bconf.byt then ["-byt"] else [])
-    @ (if bconf.opt && can_compile_native then ["-opt"] else [])
-    @ (if bconf.thread then ["-thread"] else [])
-    @ (if bconf.vmthread then ["-vmthread"] else [])
-    @ (if bconf.outname <> "" then ["-o"; quote (bconf.outname)] else [])
+    @ (if target.byt then ["-byt"] else [])
+    @ (if target.opt && can_compile_native then ["-opt"] else [])
+    @ (if target.thread then ["-thread"] else [])
+    @ (if target.vmthread then ["-vmthread"] else [])
+    @ (if target.outname <> "" then ["-o"; quote (target.outname)] else [])
     @ flags
   in
   let args = List.map (fun a -> true, a) args in
   Oe_config.oebuild_command, args
 
 (** tasks_compile *)
-let rec tasks_compile ?(name="tasks_compile") ?(flags=[]) ?(build_deps=[]) ?can_compile_native bconf =
-  if Oebuild.check_restrictions bconf.restrictions then begin
+let rec tasks_compile ?(name="tasks_compile") ?(flags=[]) ?(build_deps=[]) ?can_compile_native target =
+  if Oebuild.check_restrictions target.restrictions then begin
     let build_deps = List.map (fun bc -> List.flatten (tasks_compile ~name:(sprintf "Build \xC2\xAB%s\xC2\xBB" bc.name) ~flags ?can_compile_native bc)) build_deps in
     let build_deps = List.flatten build_deps in
-    let filter_tasks = filter_external_tasks bconf in
+    let filter_tasks = filter_external_tasks target in
     let et_before_compile = filter_tasks Task.Before_compile in
     let et_compile = filter_tasks Task.Compile in
     let et_compile = if et_compile = [] then [`COMPILE, begin
-      let cmd, args = create_cmd_line ~flags ?can_compile_native bconf in
+      let cmd, args = create_cmd_line ~flags ?can_compile_native target in
       Task.create ~name ~env:[] ~dir:"" ~cmd ~args ()
     end] else et_compile in
     let et_after_compile = filter_tasks Task.After_compile in
@@ -173,15 +173,15 @@ let rec tasks_compile ?(name="tasks_compile") ?(flags=[]) ?(build_deps=[]) ?can_
 
 (** Convert from old file version *)
 let convert_from_1 old_filename =
-  let bconfigs = if Sys.file_exists old_filename then begin
+  let targets = if Sys.file_exists old_filename then begin
     let ichan = open_in_bin old_filename in
-    let (bconfigs : Bconf_old_1.t list) = input_value ichan in
+    let (targets : Bconf_old_1.t list) = input_value ichan in
     close_in ichan;
-    List.rev bconfigs
+    List.rev targets
   end else [] in
   (* write new file version *)
   let i = ref (-1) in
-  let bconfigs = List.map begin fun t ->
+  let targets = List.map begin fun t ->
     incr i;
     let target = create ~id:!i ~name:(string_of_int !i) in
     target.default <- (!i = 0);
@@ -193,13 +193,13 @@ let convert_from_1 old_filename =
     target.vmthread <- t.Bconf_old_1.vmthread;
     target.cflags <- t.Bconf_old_1.cflags;
     target.lflags <- t.Bconf_old_1.lflags;
-    target.outkind <- (if t.Bconf_old_1.libname <> None then Library else Executable);
+    target.target_type <- (if t.Bconf_old_1.libname <> None then Library else Executable);
     target.outname <- "";
     target.lib_install_path <- "";
     target
-  end bconfigs in
+  end targets in
 (*  if Sys.file_exists old_filename then (Sys.remove old_filename);*)
-  bconfigs
+  targets
 
 
 

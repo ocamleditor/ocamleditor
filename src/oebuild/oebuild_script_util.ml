@@ -30,7 +30,7 @@ open Task
 type target = {
   id : int;
   output_name : string;
-  output_kind : output_kind;
+  target_type : Oebuild.output_type;
   compilation_bytecode : bool;
   compilation_native : bool;
   toplevel_modules : string;
@@ -82,7 +82,7 @@ let create_target_func ?tg targets =
       (match tg with Some f -> create_target f | _ -> create_target default_target)
     | [] -> fun _ -> ();;
 
-let string_of_outkind = function
+let string_of_output_type = function
   | Executable -> "Executable"
   | Library -> "Library"
   | Plugin -> "Plugin"
@@ -205,11 +205,11 @@ let main ~cmd_line_args ~external_tasks ~targets =
         (if t.compilation_native && ccomp_type <> None then [Native] else [])
       in
       let outname = List.map begin fun compilation ->
-        let oname = get_output_name ~compilation ~outkind:t.output_kind ~outname:t.output_name ~targets:files in
+        let oname = get_output_name ~compilation ~outkind:t.target_type ~outname:t.output_name ~targets:files in
         match oname with Some x -> x | _ -> ""
       end compilation
       in
-      let outkind = string_of_outkind t.output_kind in
+      let outkind = string_of_output_type t.target_type in
       let compilation = string_of_compilation_type (ccomp_type <> None) t in
       let prop_1 = [
         "Restrictions", (String.concat "," t.restrictions);
@@ -223,7 +223,7 @@ let main ~cmd_line_args ~external_tasks ~targets =
         "Toplevel modules", t.toplevel_modules;
         "Dependencies", (String.concat ", " b_deps);
       ] in
-      let properties = if t.output_kind = Library then prop_1 @ [
+      let properties = if t.target_type = Library then prop_1 @ [
         "Install directory", (Oebuild.ocamllib // t.library_install_dir)
       ] @ prop_2 else prop_1 @ prop_2 in
       printf "%d) %s (%s, %s)\n%!" num name outkind compilation;
@@ -242,7 +242,7 @@ let main ~cmd_line_args ~external_tasks ~targets =
           mktarget()
         end target.external_tasks in
         List.iter begin fun compilation ->
-          match get_output_name ~compilation ~outkind:target.output_kind ~outname:target.output_name ~targets:files with
+          match get_output_name ~compilation ~outkind:target.target_type ~outname:target.output_name ~targets:files with
             | Some outname ->
               begin
                 match command with
@@ -259,7 +259,7 @@ let main ~cmd_line_args ~external_tasks ~targets =
                         ~includes:target.search_path
                         ~libs:target.required_libraries
                         ~other_mods:target.other_objects
-                        ~outkind:target.output_kind
+                        ~outkind:target.target_type
                         ~compile_only:false
                         ~thread:target.thread
                         ~vmthread:target.vmthread
@@ -278,23 +278,23 @@ let main ~cmd_line_args ~external_tasks ~targets =
                     end
                   | `Install ->
                     begin
-                      match target.output_kind with
+                      match target.target_type with
                         | Library ->
                           let deps = deps() in
-                          install_output ~compilation ~outkind:target.output_kind ~outname ~deps ~path:target.library_install_dir ~ccomp_type
+                          install_output ~compilation ~outkind:target.target_type ~outname ~deps ~path:target.library_install_dir ~ccomp_type
                         | Executable -> failwith "\"install\" not implemented for Executable."
                         | Plugin | Pack -> failwith "\"install\" not implemented for Plugin or Pack."
                     end;
                   | `Clean ->
                     List.iter ETask.execute (ETask.filter etasks Before_clean);
                     let deps = deps() in
-                    clean ~compilation ~outkind:target.output_kind ~outname ~targets:files ~deps ();
+                    clean ~compilation ~outkind:target.target_type ~outname ~targets:files ~deps ();
                     List.iter ETask.execute (ETask.filter etasks After_clean);
                   | `Distclean ->
                     let deps = deps() in
                     List.iter ETask.execute (ETask.filter etasks Before_clean);
                     if files <> [] then
-                      (clean ~compilation ~outkind:target.output_kind ~outname ~targets:files ~deps ~all:true ());
+                      (clean ~compilation ~outkind:target.target_type ~outname ~targets:files ~deps ~all:true ());
                     List.iter ETask.execute (ETask.filter etasks After_clean);
                   | `Show -> assert false
               end
@@ -348,7 +348,7 @@ let main ~cmd_line_args ~external_tasks ~targets =
     incr i;
     let name = rpad name ' ' maxlength in
     sprintf "  %2d) %s %s, %s" !i name
-      (string_of_outkind tg.output_kind) (string_of_compilation_type (ccomp_type <> None) tg)
+      (string_of_output_type tg.target_type) (string_of_compilation_type (ccomp_type <> None) tg)
   end targets) in
   let usage_msg = sprintf
     "\nUSAGE\n  ocaml %s [global_options*] <command> [options*] [targets*]\n  ocaml %s <command> --help"

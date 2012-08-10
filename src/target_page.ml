@@ -199,24 +199,24 @@ both within the IDE and from the generated build script." ~packing:vbox#pack () 
   let cmd_line = GEdit.entry ~editable:false () in
 object (self)
   inherit GObj.widget mainbox#as_widget
-  val mutable bconf = None
+  val mutable target = None
   val mutable signals_enabled = true
   val mutable page_changed = false
 
   initializer
     ignore (widget_deps#connect#changed ~callback:begin fun () ->
-      self#update (fun bconf -> bconf.dependencies <- widget_deps#get()) ();
+      self#update (fun target -> target.dependencies <- widget_deps#get()) ();
       changed#call()
     end;);
-    let set_restr bconf check c =
-      bconf.restrictions <-
+    let set_restr target check c =
+      target.restrictions <-
         Miscellanea.Xlist.remove_dupl (if check#active
-          then (c :: bconf.restrictions)
-          else (List.filter ((<>) c) bconf.restrictions))
+          then (c :: target.restrictions)
+          else (List.filter ((<>) c) target.restrictions))
     in
     let connect_restr (check, c) =
       ignore (check#connect#toggled ~callback:begin fun () ->
-        self#update (fun bconf -> set_restr bconf check c) ();
+        self#update (fun target -> set_restr target check c) ();
         changed#call()
       end);
     in
@@ -228,50 +228,50 @@ object (self)
     ];
     ignore (entry_name#connect#changed
       ~callback:begin fun () ->
-        self#update (fun bconf -> bconf.name <- entry_name#text) ();
+        self#update (fun target -> target.name <- entry_name#text) ();
         changed#call()
       end);
     ignore (combo_comp#connect#changed
       ~callback:begin fun () ->
-        self#update (fun bconf -> bconf.byt <- (combo_comp#active = 0 || combo_comp#active = 2)) ();
+        self#update (fun target -> target.byt <- (combo_comp#active = 0 || combo_comp#active = 2)) ();
         changed#call()
       end);
     ignore (combo_comp#connect#changed
-      ~callback:(self#update (fun bconf -> bconf.opt <- (combo_comp#active = 1 || combo_comp#active = 2))));
+      ~callback:(self#update (fun target -> target.opt <- (combo_comp#active = 1 || combo_comp#active = 2))));
     ignore (entry_libs#connect#changed
-      ~callback:(self#update (fun bconf -> bconf.libs <- entry_libs#text)));
+      ~callback:(self#update (fun target -> target.libs <- entry_libs#text)));
     ignore (entry_mods#connect#changed
-      ~callback:(self#update (fun bconf -> bconf.other_objects <- entry_mods#text)));
+      ~callback:(self#update (fun target -> target.other_objects <- entry_mods#text)));
     ignore (entry_main_module#connect#changed
-      ~callback:(self#update begin fun bconf ->
+      ~callback:(self#update begin fun target ->
         if signals_enabled then begin
-          bconf.files <- entry_main_module#text;
+          target.files <- entry_main_module#text;
           if entry_outname#text = "" then (entry_outname#set_text
             (Filename.chop_extension (Filename.basename entry_main_module#text)))
         end
       end));
     ignore (entry_lib_modules#connect#changed
-      ~callback:(self#update begin fun bconf ->
+      ~callback:(self#update begin fun target ->
         if signals_enabled then begin
-          bconf.files <- entry_lib_modules#text
+          target.files <- entry_lib_modules#text
         end
       end));
     ignore (entry_includes#connect#changed
-      ~callback:(self#update (fun bconf -> bconf.includes <- entry_includes#text)));
+      ~callback:(self#update (fun target -> target.includes <- entry_includes#text)));
     ignore (check_thread#connect#toggled
-      ~callback:(self#update (fun bconf -> bconf.thread <- check_thread#active)));
+      ~callback:(self#update (fun target -> target.thread <- check_thread#active)));
     ignore (check_vmthread#connect#toggled
-      ~callback:(self#update (fun bconf -> bconf.vmthread <- check_vmthread#active)));
+      ~callback:(self#update (fun target -> target.vmthread <- check_vmthread#active)));
     ignore (entry_pp#connect#changed
-      ~callback:(self#update (fun bconf -> bconf.pp <- entry_pp#text)));
+      ~callback:(self#update (fun target -> target.pp <- entry_pp#text)));
     ignore (entry_cflags#connect#changed
-      ~callback:(self#update (fun bconf -> bconf.cflags <- entry_cflags#text)));
+      ~callback:(self#update (fun target -> target.cflags <- entry_cflags#text)));
     ignore (entry_lflags#connect#changed
-      ~callback:(self#update (fun bconf -> bconf.lflags <- entry_lflags#text)));
+      ~callback:(self#update (fun target -> target.lflags <- entry_lflags#text)));
     ignore (radio_archive#connect#after#toggled
-      ~callback:(self#update begin fun bconf ->
+      ~callback:(self#update begin fun target ->
         if signals_enabled then begin
-          bconf.outkind <- begin
+          target.target_type <- begin
             if radio_archive#active then
               (match combo_kind#active with 0 -> Library | 1 -> Plugin | 2 -> Pack | _ -> assert false)
             else Executable;
@@ -281,15 +281,15 @@ object (self)
         end
       end));
     ignore (combo_kind#connect#changed
-      ~callback:(self#update (fun bconf -> bconf.outkind <-
+      ~callback:(self#update (fun target -> target.target_type <-
         if radio_archive#active then
           (match combo_kind#active with 0 -> Library | 1 -> Plugin | 2 -> Pack | _ -> assert false)
         else Executable)));
     ignore (entry_outname#connect#changed
-      ~callback:(self#update (fun bconf -> bconf.outname <- entry_outname#text)));
+      ~callback:(self#update (fun target -> target.outname <- entry_outname#text)));
     ignore (entry_lib_install#connect#changed
-      ~callback:(self#update begin fun bconf ->
-        bconf.lib_install_path <- entry_lib_install#text
+      ~callback:(self#update begin fun target ->
+        target.lib_install_path <- entry_lib_install#text
       end));
     let _ = check_thread#connect#toggled ~callback:begin fun () ->
       if signals_enabled then begin
@@ -319,7 +319,7 @@ object (self)
   method entry_name = entry_name
 
   method private update update_func () =
-    Gaux.may bconf ~f:begin fun bc ->
+    Gaux.may target ~f:begin fun bc ->
       update_func bc;
       Gmisclib.Idle.add ~prio:300 (fun () -> self#update_cmd_line bc);
       (*changed#call()*)
@@ -327,7 +327,7 @@ object (self)
 
   method set bc =
     signals_enabled <- false;
-    bconf <- Some bc;
+    target <- Some bc;
     widget_deps#set bc;
     entry_name#set_text bc.name;
     combo_comp#set_active (match bc.byt, bc.opt with
@@ -358,14 +358,14 @@ object (self)
     entry_cflags#set_text bc.cflags;
     entry_lflags#set_text bc.lflags;
     begin
-      match bc.outkind with
+      match bc.target_type with
         | Executable -> radio_executable#set_active true
         | _ -> radio_archive#set_active true
     end;
-    combo_kind#set_active (match bc.outkind with Library -> 0 | Plugin -> 1 | Pack -> 2 | _ -> 0);
+    combo_kind#set_active (match bc.target_type with Library -> 0 | Plugin -> 1 | Pack -> 2 | _ -> 0);
     entry_outname#set_text bc.outname;
     entry_lib_install#set_text bc.lib_install_path;
-    if (List.mem bc.outkind [Library; Plugin; Pack]) then begin
+    if (List.mem bc.target_type [Library; Plugin; Pack]) then begin
       align_lib#misc#set_sensitive true;
       align_exec#misc#set_sensitive false;
       entry_lib_modules#set_text bc.files;
@@ -389,8 +389,8 @@ object (self)
     signals_enabled <- true;
     Gmisclib.Idle.add ~prio:300 (fun () -> self#update_cmd_line bc);
 
-  method private update_cmd_line bconf =
-    let cmd, args = create_cmd_line bconf in
+  method private update_cmd_line target =
+    let cmd, args = create_cmd_line target in
     let args = Xlist.filter_map (fun (e, a) -> if e then Some a else None) args in
     let cmd = sprintf "%s %s" cmd (String.concat " " args) in
     cmd_line#set_text cmd

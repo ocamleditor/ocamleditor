@@ -199,81 +199,81 @@ object (self)
       (* clean *)
       ignore (tool_clean#connect#clicked ~callback:begin fun () ->
         browser#with_current_project (fun project ->
-          browser#with_default_build_config begin fun bconfig ->
-            ignore (Task_console.exec ~editor `CLEAN bconfig)
+          browser#with_default_target begin fun target ->
+            ignore (Task_console.exec ~editor `CLEAN target)
           end)
       end);
       ignore (tool_clean#connect#popup ~callback:begin fun (label, menu) ->
         browser#with_current_project (fun project ->
-          browser#with_default_build_config begin fun bconfig ->
-            label := sprintf "Clean \xC2\xAB%s\xC2\xBB" bconfig.Target.name;
-            let bconfigs = project.Project_type.build in
+          browser#with_default_target begin fun target ->
+            label := sprintf "Clean \xC2\xAB%s\xC2\xBB" target.Target.name;
+            let targets = project.Project_type.build in
             List.iter begin fun tg ->
               let item = GMenu.menu_item ~label:tg.Target.name ~packing:menu#add () in
               ignore (item#connect#activate ~callback:begin fun () ->
                 ignore (Task_console.exec ~editor `CLEAN tg)
               end);
-            end bconfigs;
+            end targets;
           end)
       end);
       (* build *)
       ignore (tool_build#connect#clicked ~callback:begin fun () ->
         browser#with_current_project (fun project ->
-          browser#with_default_build_config begin fun bconfig ->
-            ignore (Task_console.exec ~editor `COMPILE_ONLY bconfig)
+          browser#with_default_target begin fun target ->
+            ignore (Task_console.exec ~editor `COMPILE_ONLY target)
           end)
       end);
       ignore (tool_build#connect#popup ~callback:begin fun (label, menu) ->
         browser#with_current_project (fun project ->
-          browser#with_default_build_config begin fun bconfig ->
-            label := sprintf "Compile \xC2\xAB%s\xC2\xBB" bconfig.Target.name;
-            let bconfigs = project.Project_type.build in
+          browser#with_default_target begin fun target ->
+            label := sprintf "Compile \xC2\xAB%s\xC2\xBB" target.Target.name;
+            let targets = project.Project_type.build in
             List.iter begin fun tg ->
               let item = GMenu.menu_item ~label:tg.Target.name ~packing:menu#add () in
               ignore (item#connect#activate ~callback:begin fun () ->
                 ignore (Task_console.exec ~editor `COMPILE_ONLY tg)
               end);
-            end bconfigs;
+            end targets;
           end)
       end);
       (* link *)
       ignore (tool_link#connect#clicked ~callback:begin fun () ->
         browser#with_current_project (fun project ->
-          browser#with_default_build_config begin fun bconfig ->
-            ignore (Task_console.exec ~editor `COMPILE bconfig)
+          browser#with_default_target begin fun target ->
+            ignore (Task_console.exec ~editor `COMPILE target)
           end)
       end);
       ignore (tool_link#connect#popup ~callback:begin fun (label, menu) ->
         browser#with_current_project (fun project ->
-          browser#with_default_build_config begin fun bconfig ->
-            label := sprintf "Build \xC2\xAB%s\xC2\xBB" bconfig.Target.name;
-            let bconfigs = project.Project_type.build in
+          browser#with_default_target begin fun target ->
+            label := sprintf "Build \xC2\xAB%s\xC2\xBB" target.Target.name;
+            let targets = project.Project_type.build in
             List.iter begin fun tg ->
               let item = GMenu.menu_item ~label:tg.Target.name ~packing:menu#add () in
               ignore (item#connect#activate ~callback:begin fun () ->
                 ignore (Task_console.exec ~editor `COMPILE tg)
               end); ()
-            end bconfigs;
+            end targets;
           end)
       end);
       (* run *)
       ignore (tool_run#connect#clicked ~callback:begin fun () ->
         browser#with_current_project (fun project ->
           browser#with_default_runtime_config (fun rc ->
-            let bc = List.find (fun b -> b.Target.id = rc.Rconf.id_target) project.Project_type.build in
+            let bc = List.find (fun b -> b.Target.id = rc.Rconf.target_id) project.Project_type.build in
             ignore (Task_console.exec ~editor (`RCONF rc) bc)))
       end);
       ignore (tool_run#connect#popup ~callback:begin fun (label, menu) ->
         browser#with_current_project (fun project ->
           browser#with_default_runtime_config (fun default_rc ->
-            browser#with_default_build_config begin fun bconfig ->
+            browser#with_default_target begin fun target ->
               label := sprintf "Run \xC2\xAB%s\xC2\xBB" default_rc.Rconf.name;
-              let bconfigs = project.Project_type.build in
+              let targets = project.Project_type.build in
               List.iter begin fun rc ->
                 let item = GMenu.menu_item ~label:rc.Rconf.name ~packing:menu#add () in
                 ignore (item#connect#activate ~callback:begin fun () ->
                   try
-                    let bc = List.find (fun b -> b.Target.id = rc.Rconf.id_target) bconfigs in
+                    let bc = List.find (fun b -> b.Target.id = rc.Rconf.target_id) targets in
                     ignore (Task_console.exec ~editor (`RCONF rc) bc)
                   with Not_found -> ()
                 end);
@@ -290,7 +290,7 @@ object (self)
     (*end*)
 
   method update current_project =
-    let dbf = match current_project with None -> None | Some x -> Project.default_build_config x in
+    let dbf = match current_project with None -> None | Some x -> Project.default_target x in
     let editor_empty = List.length editor#pages = 0 in
     let current_modified = match editor#get_page `ACTIVE
       with Some p when p#buffer#modified -> true | _ -> false in

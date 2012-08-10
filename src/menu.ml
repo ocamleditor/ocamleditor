@@ -622,8 +622,8 @@ let project ~browser ~group ~flags items =
   project_clean_current#add_accelerator ~group ~modi:[`CONTROL] GdkKeysyms._F9 ~flags;
   ignore (project_clean_current#connect#activate ~callback:begin fun () ->
     browser#with_current_project (fun _ ->
-      browser#with_default_build_config (fun bconfig ->
-        ignore (Task_console.exec ~editor `CLEAN bconfig)))
+      browser#with_default_target (fun target ->
+        ignore (Task_console.exec ~editor `CLEAN target)))
   end);
   (** Compile current *)
   let project_compile_only = GMenu.image_menu_item ~label:"Compile" ~packing:menu#add () in
@@ -631,18 +631,18 @@ let project ~browser ~group ~flags items =
   project_compile_only#add_accelerator ~group ~modi:[`CONTROL] GdkKeysyms._F10 ~flags;
   ignore (project_compile_only#connect#activate ~callback:begin fun () ->
     browser#with_current_project (fun _ ->
-      browser#with_default_build_config (fun bconfig ->
+      browser#with_default_target (fun target ->
         if Preferences.preferences#get.Preferences.pref_editor_save_all_bef_comp then (browser#save_all());
-        ignore (Task_console.exec ~editor `COMPILE_ONLY bconfig)))
+        ignore (Task_console.exec ~editor `COMPILE_ONLY target)))
   end);
   (** Build current *)
   let project_build = GMenu.image_menu_item ~label:"Build" ~packing:menu#add () in
   project_build#set_image (Icons.create Icons.build_16)#coerce;
   ignore (project_build#connect#activate ~callback:begin fun () ->
     browser#with_current_project (fun _ ->
-      browser#with_default_build_config (fun bconfig ->
+      browser#with_default_target (fun target ->
         if Preferences.preferences#get.Preferences.pref_editor_save_all_bef_comp then (browser#save_all());
-        ignore (Task_console.exec ~editor `COMPILE bconfig)))
+        ignore (Task_console.exec ~editor `COMPILE target)))
   end);
   (** Run current *)
   let project_run = GMenu.image_menu_item ~label:"Run" ~packing:menu#add () in
@@ -651,7 +651,7 @@ let project ~browser ~group ~flags items =
   ignore (project_run#connect#activate ~callback:begin fun () ->
     browser#with_current_project (fun project ->
       browser#with_default_runtime_config (fun rc ->
-        let bc = List.find (fun b -> b.Target.id = rc.Rconf.id_target) project.Project_type.build in
+        let bc = List.find (fun b -> b.Target.id = rc.Rconf.target_id) project.Project_type.build in
         ignore (Task_console.exec ~editor (`RCONF rc) bc)))
   end);
   (** Clean... *)
@@ -671,8 +671,8 @@ let project ~browser ~group ~flags items =
   project_clean#add_accelerator ~group ~modi:[`CONTROL; `MOD1] GdkKeysyms._F9 ~flags;
   ignore (project_clean#connect#activate ~callback:begin fun () ->
     browser#with_current_project (fun project ->
-      browser#with_default_build_config (fun bconfig ->
-        ignore (Task_console.exec ~editor `CLEANALL bconfig);
+      browser#with_default_target (fun target ->
+        ignore (Task_console.exec ~editor `CLEANALL target);
         Project.clean_tmp project));
   end);
   let sep1 = GMenu.separator_item ~packing:menu#add () in
@@ -689,8 +689,8 @@ let project ~browser ~group ~flags items =
   ignore (dialog_project_properties#connect#activate ~callback:(fun () ->
     browser#dialog_project_properties ?page_num:(Some 0) ?show:(Some true) ()));
   dialog_project_properties#add_accelerator ~group ~modi:[`CONTROL; `SHIFT] GdkKeysyms._P ~flags;
-  (** Targets... *)
-  let project_targets = GMenu.image_menu_item ~label:"Targets..." ~packing:menu#add () in
+  (** Targets *)
+  let project_targets = GMenu.image_menu_item ~label:"Targets" ~packing:menu#add () in
   ignore (project_targets#connect#activate ~callback:(fun () ->
     browser#dialog_project_properties ?page_num:(Some 1) ?show:(Some true) ()));
   project_targets#add_accelerator ~group ~modi:[] GdkKeysyms._F12 ~flags;
@@ -712,11 +712,11 @@ let project ~browser ~group ~flags items =
   let sep3 = GMenu.separator_item ~packing:menu#add () in
   (** Callback *)
   ignore (project#misc#connect#state_changed ~callback:begin fun _ ->
-    browser#with_default_build_config begin fun bconfig ->
-      kprintf (set_label project_clean_current) "Clean \xC2\xAB%s\xC2\xBB" bconfig.Target.name;
-      kprintf (set_label project_compile_only) "Compile \xC2\xAB%s\xC2\xBB" bconfig.Target.name;
-      kprintf (set_label project_build) "Build \xC2\xAB%s\xC2\xBB" bconfig.Target.name;
-      kprintf (set_label project_run) "Run \xC2\xAB%s\xC2\xBB" bconfig.Target.name;
+    browser#with_default_target begin fun target ->
+      kprintf (set_label project_clean_current) "Clean \xC2\xAB%s\xC2\xBB" target.Target.name;
+      kprintf (set_label project_compile_only) "Compile \xC2\xAB%s\xC2\xBB" target.Target.name;
+      kprintf (set_label project_build) "Build \xC2\xAB%s\xC2\xBB" target.Target.name;
+      kprintf (set_label project_run) "Run \xC2\xAB%s\xC2\xBB" target.Target.name;
     end;
     editor#with_current_page begin fun page ->
       let name = Filename.basename page#get_filename in
@@ -789,7 +789,7 @@ let project ~browser ~group ~flags items =
           let item = GMenu.menu_item ~label:rc.Rconf.name ~packing:run_menu#add () in
           ignore (item#connect#activate ~callback:begin fun () ->
             try
-              let bc = List.find (fun b -> b.Target.id = rc.Rconf.id_target) project.Project_type.build in
+              let bc = List.find (fun b -> b.Target.id = rc.Rconf.target_id) project.Project_type.build in
               ignore (Task_console.exec ~editor (`RCONF rc) bc)
             with Not_found -> ()
           end);
