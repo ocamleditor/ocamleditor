@@ -20,6 +20,9 @@
 
 *)
 
+
+open Printf
+
 type t = {
   mutable id                 : int;
   mutable name               : string;
@@ -152,8 +155,10 @@ let create_cmd_line ?(flags=[]) ?(can_compile_native=true) bconf =
   Oe_config.oebuild_command, args
 
 (** tasks_compile *)
-let tasks_compile ?(name="tasks_compile") ?(flags=[]) ?can_compile_native bconf =
-  if Oebuild.check_restrictions bconf.restrictions then
+let rec tasks_compile ?(name="tasks_compile") ?(flags=[]) ?(build_deps=[]) ?can_compile_native bconf =
+  if Oebuild.check_restrictions bconf.restrictions then begin
+    let build_deps = List.map (fun bc -> List.flatten (tasks_compile ~name:(sprintf "Build \xC2\xAB%s\xC2\xBB" bc.name) ~flags ?can_compile_native bc)) build_deps in
+    let build_deps = List.flatten build_deps in
     let filter_tasks = filter_external_tasks bconf in
     let et_before_compile = filter_tasks Task.Before_compile in
     let et_compile = filter_tasks Task.Compile in
@@ -163,8 +168,8 @@ let tasks_compile ?(name="tasks_compile") ?(flags=[]) ?can_compile_native bconf 
     end] else et_compile in
     let et_after_compile = filter_tasks Task.After_compile in
     (* Execute sequence *)
-    et_before_compile @ et_compile @ et_after_compile
-  else []
+    [build_deps @ et_before_compile @ et_compile @ et_after_compile]
+  end else []
 
 (** Convert from old file version *)
 let convert_from_1 old_filename =

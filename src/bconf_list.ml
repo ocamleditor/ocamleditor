@@ -237,7 +237,7 @@ object (self)
       Gaux.may (self#current_path ()) ~f:begin fun path ->
         match self#get path with
           | BCONF bconf -> Bconf_console.exec ~editor `INSTALL_LIBRARY bconf
-          | ETASK etask -> Bconf_console.exec_sync ~editor [`OTHER, etask]
+          | ETASK etask -> Bconf_console.exec_sync ~editor [[`OTHER, etask]]
           | _ -> ()
       end
     end in

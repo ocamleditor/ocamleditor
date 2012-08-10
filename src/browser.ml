@@ -515,7 +515,7 @@ object (self)
       let task = Task.create ~name ~env:[] ~dir:"" ~cmd ~args () in
       `COMPILE, task
     end configs in
-    self#with_current_project (fun project -> ignore (Bconf_console.exec_sync ~editor tasks))
+    self#with_current_project (fun project -> ignore (Bconf_console.exec_sync ~editor [tasks]))
 
   method annot_type () =
     editor#with_current_page begin fun page ->

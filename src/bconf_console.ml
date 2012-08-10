@@ -85,6 +85,10 @@ object (self)
   val mutable button_run_signals = []
   val mutable current_run_cb = None
   val mutable current_use_thread = None
+  val mutable tab_label : GMisc.label option = None
+
+  method set_tab_label label = tab_label <- Some label
+  method tab_label = match tab_label with Some x -> x | _ -> assert false
 
   method parent_changed messages =
     toolbar#misc#hide();
@@ -163,8 +167,8 @@ object (self)
         with Not_found -> ()
       end;
       let sid = button_run#connect#clicked ~callback:begin fun () ->
-        match task_kind, run_cb with
-          | `RUN, Some f -> ignore (f ())
+        match (*task_kind,*) run_cb with
+          | (*`RUN,*) Some f -> ignore (f ())
           | _ -> ignore (callback())
       end in
       button_run_signals <- (button_run#misc#get_oid, sid) :: button_run_signals;
@@ -209,7 +213,7 @@ object (self)
 (*      kprintf (view#buffer#insert ~tag_names:["bold"; "output"]) "Environment: %s" (String.concat "; " task.Task.env);
       kprintf (view#buffer#insert ~tag_names:["bold"; "output"]) "\nWorking directory: %s\n" task.Task.dir;
       kprintf (view#buffer#insert ~tag_names:["bold"; "output"]) "Command:\n%s\n" (Process.cmd_line proc);*)
-      kprintf (view#buffer#insert ~tag_names:["bold"; "output"]) "%s\n" (Cmd.expand (project.Project_type.autocomp_compiler ^ " -v"));
+      (*kprintf (view#buffer#insert ~tag_names:["bold"; "output"]) "%s\n" (Cmd.expand (project.Project_type.autocomp_compiler ^ " -v"));*)
       kprintf (view#buffer#insert ~tag_names:["bold"; "output"]) "%s\n" (Process.cmd_line proc);
       signal_enabled <- true;
       Mutex.unlock m_write;
@@ -416,18 +420,20 @@ let create ~editor task_kind task =
     console#set_task task;
     console
   with Not_found -> begin
-    let label_widget, set_active_func =
+    let label_widget, set_active_func, label =
       match task_kind with
         | `RUN (*| `OTHER*) ->
           let box = GPack.hbox ~spacing:3 () in
           let icon = (Icons.create Icons.start_16) in
           box#pack icon#coerce;
-          let _ = GMisc.label ~text:task.Task.et_name ~packing:box#pack () in
+          let label = GMisc.label ~text:task.Task.et_name ~packing:box#pack () in
           box#coerce, Some begin fun active ->
             (*if finished then (icon#misc#hide()) else (icon#misc#show());*)
             if not active then (icon#misc#set_sensitive false) else (icon#misc#set_sensitive true);
-          end
-        | _ -> (GMisc.label ~text:task.Task.et_name ())#coerce, None
+          end, label
+        | _ ->
+          let label = GMisc.label ~text:task.Task.et_name () in
+          label#coerce, None, label
     in
     let page = new view ~editor ~task_kind ~task () in
     if task_kind = `RUN then begin
@@ -437,6 +443,7 @@ let create ~editor task_kind task =
             ~ok:page#stop ~cancel:GtkSignal.stop_emit ()
       end;
     end;
+    page#set_tab_label label;
     Messages.vmessages#append_page ~label_widget ~with_spinner:(task_kind <> `RUN) page#as_page;
     ignore (page#connect#working_status_changed ~callback:begin fun active ->
       (match set_active_func with None -> page#active#set | Some f -> f) active
@@ -447,29 +454,44 @@ let create ~editor task_kind task =
   end
 
 (** exec_sync *)
-let exec_sync ?run_cb ?(use_thread=true) ?(at_exit=ignore) ~editor tasks =
-  let f = begin fun () ->
-      begin
-        try
-          List.iter begin fun (task_kind, task) ->
-            let console = GtkThread2.sync (create ~editor task_kind) task in
-            begin
-              match console#run ?run_cb ~use_thread:true () with
-                | None -> ();
-                | Some th -> Thread.join th;
-            end;
-            if console#has_errors || console#killed then (raise Exit)
-          end tasks
-        with Exit -> ()
-      end;
+let exec_sync ?run_cb ?(use_thread=true) ?(at_exit=ignore) ~editor task_groups =
+  let mode : [`all | `group | `single] = `single in
+  let f tasks =
+    try
+      ignore (List.fold_left begin fun acc (task_kind, task) ->
+        let console =
+          match acc with
+            | Some console when mode = `all || mode = `group ->
+              console#set_task task;
+              console
+            | _ -> GtkThread2.sync (create ~editor task_kind) task
+        in
+        (*if mode = `single then (GtkThread2.async console#tab_label#set_text task.Task.et_name);*)
+        begin
+          match console#run ?run_cb ~use_thread:true () with
+            | None -> ();
+            | Some th -> Thread.join th;
+        end;
+        if console#has_errors || console#killed then (raise Exit);
+        Some console
+      end None tasks);
       at_exit()
-    end
+    with Exit -> (at_exit(); raise Exit)
   in
-  if use_thread then (ignore(Thread.create f ())) else (f())
+  let g () =
+    try
+      begin
+        match mode with
+          | `group -> List.iter (fun ts -> f ts) task_groups
+          | `all | `single -> f (List.flatten task_groups)
+      end;
+    with Exit -> ()
+  in
+  if use_thread then (ignore(Thread.create g ())) else (g ())
 
 
 (** exec *)
-let exec ~editor ?use_thread task_kind bconf =
+let exec ~editor ?use_thread ?(with_deps=false) task_kind bconf =
   let project = editor#project in
   let can_compile_native = project.Project_type.can_compile_native in
   let filter_tasks = Bconf.filter_external_tasks bconf in
@@ -499,6 +521,15 @@ let exec ~editor ?use_thread task_kind bconf =
       end]
     else []
   in
+  let build_deps =
+    if with_deps then
+      List.map begin fun id ->
+        match List_opt.find (fun bc -> bc.id = id) project.Project_type.build with
+          | Some bconf -> bconf
+          | _ -> assert false
+      end bconf.build_dependencies
+    else []
+  in
   let compile_name = sprintf "Compile \xC2\xAB%s\xC2\xBB" (Filename.basename bconf.name) in
   let build_name = sprintf "Build \xC2\xAB%s\xC2\xBB" (Filename.basename bconf.name) in
   let at_exit = fun () -> GtkThread2.async editor#with_current_page (fun p -> p#compile_buffer ~commit:false ()) in
@@ -510,12 +541,13 @@ let exec ~editor ?use_thread task_kind bconf =
       let console = create ~editor `CLEANALL task in
       ignore (console#button_run#connect#clicked ~callback:(fun () -> ignore (console#run())));
       ignore(console#run ?use_thread ())
-    | `CLEAN -> exec_sync ~editor (tasks_clean ());
-    | `ANNOT -> exec_sync ~editor (tasks_annot ());
+    | `CLEAN -> exec_sync ~editor [tasks_clean ()];
+    | `ANNOT -> exec_sync ~editor [tasks_annot ()];
     | `COMPILE ->
-      exec_sync ~editor ~at_exit (tasks_compile ~name:build_name ~can_compile_native bconf);
+      let rec f () = exec_sync ~run_cb:f ~editor ~at_exit (tasks_compile ~name:build_name ~build_deps ~can_compile_native bconf) in
+      f()
     | `COMPILE_ONLY ->
-      exec_sync ~editor ~at_exit (tasks_compile ~flags:["-c"] ~name:compile_name ~can_compile_native bconf);
+      exec_sync ~editor ~at_exit (tasks_compile ~flags:["-c"] ~name:compile_name ~build_deps ~can_compile_native bconf);
     | `RCONF rc ->
       if Oebuild.check_restrictions bconf.restrictions then
         let oebuild, args = Bconf.create_cmd_line bconf in
@@ -523,14 +555,14 @@ let exec ~editor ?use_thread task_kind bconf =
         let prior_tasks =
           match rc.Rconf.build_task with
             | `NONE -> []
-            | `CLEAN -> tasks_clean ()
-            | `COMPILE -> tasks_compile ~name:build_name ~can_compile_native bconf
-            | `REBUILD -> tasks_clean () @ tasks_compile ~name:build_name ~can_compile_native bconf
+            | `CLEAN -> [tasks_clean ()]
+            | `COMPILE -> tasks_compile ~name:build_name ~build_deps ~can_compile_native bconf
+            | `REBUILD -> [(tasks_clean ()); List.flatten (tasks_compile ~name:build_name ~build_deps ~can_compile_native bconf)]
             | `ETASK name ->
               let etask = List.find ((=) name) bconf.Bconf.external_tasks in
-              [`OTHER, etask]
+              [[`OTHER, etask]]
         in
-        let tasks = prior_tasks @ [
+        let tasks = prior_tasks @ [[
           `RUN, Task.create
             ~name
             ~env:rc.Rconf.env
@@ -539,7 +571,7 @@ let exec ~editor ?use_thread task_kind bconf =
             ~cmd:oebuild
             ~args:(args @ ([true, "-no-build"; true, "-run"; true, "--"] @
               ((*List.map Quote.arg*) (List.filter (fun (e, _) -> e) rc.Rconf.args)))) ();
-        ] in
+        ]] in
         let rec f () = ignore (exec_sync ~run_cb:f ~editor tasks) in
         f();
       else ()
@@ -554,7 +586,7 @@ let exec ~editor ?use_thread task_kind bconf =
           ~cmd:oebuild
           ~args:(args @ [true, "-install " ^ bconf.Bconf.lib_install_path]) ();
       ] in
-      let rec f () = ignore (exec_sync ~run_cb:f ~editor tasks) in
+      let rec f () = ignore (exec_sync ~run_cb:f ~editor [tasks]) in
       f();
     | _ -> assert false
 

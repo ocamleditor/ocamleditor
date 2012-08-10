@@ -660,6 +660,9 @@ let project ~browser ~group ~flags items =
   (** Build... *)
   let build_item = GMenu.image_menu_item ~label:"Build..." ~packing:(menu#insert ~pos:5) () in
   let build_menu = GMenu.menu ~packing:build_item#set_submenu () in
+  (** Build with dependencies... *)
+  let build_dep_item = GMenu.image_menu_item ~label:"Build with dependencies..." ~packing:(menu#insert ~pos:6) () in
+  let build_dep_menu = GMenu.menu ~packing:build_dep_item#set_submenu () in
   (** Run... *)
   let run_item = GMenu.image_menu_item ~label:"Run..." ~packing:menu#add () in
   let run_menu = GMenu.menu ~packing:run_item#set_submenu () in
@@ -746,6 +749,7 @@ let project ~browser ~group ~flags items =
     (*  *)
     Gmisclib.Idle.add (fun () -> List.iter clean_menu#remove clean_menu#children);
     Gmisclib.Idle.add (fun () -> List.iter build_menu#remove build_menu#children);
+    Gmisclib.Idle.add (fun () -> List.iter build_dep_menu#remove build_dep_menu#children);
     Gmisclib.Idle.add (fun () -> List.iter run_menu#remove run_menu#children);
     browser#with_current_project begin fun project ->
       let current_project_filename = Project.filename project in
@@ -773,6 +777,10 @@ let project ~browser ~group ~flags items =
           let item = GMenu.menu_item ~label:tg.Bconf.name ~packing:build_menu#add () in
           ignore (item#connect#activate ~callback:begin fun () ->
             ignore (Bconf_console.exec ~editor `COMPILE tg)
+          end);
+          let item = GMenu.menu_item ~label:tg.Bconf.name ~packing:build_dep_menu#add () in
+          ignore (item#connect#activate ~callback:begin fun () ->
+            ignore (Bconf_console.exec ~editor ~with_deps:true `COMPILE tg)
           end);
         end
       end project.Project_type.build;
