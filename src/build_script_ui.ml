@@ -62,6 +62,7 @@ object (self)
     ignore (button_filename#connect#clicked ~callback:self#choose_file);
     ignore (entry_filename#connect#changed
       ~callback:(fun () -> is_valid#set (Filename.check_suffix entry_filename#text ".ml")));
+    Gmisclib.Idle.add entry_filename#misc#grab_focus
 
   method is_valid = is_valid
 

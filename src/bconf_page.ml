@@ -43,12 +43,12 @@ class view ~project ?packing () =
 
   (** Target Tab *)
   let vbox = GPack.vbox ~border_width:5 ~spacing:13 () in
-  let _ = nb#append_page ~tab_label:(GMisc.label ~text:"Target" ())#coerce vbox#coerce in
+  let _ = nb#append_page ~tab_label:(GMisc.label ~text:"Output" ())#coerce vbox#coerce in
   (** Library *)
   (* Build a library with the specified toplevel modules *)
   let mbox = GPack.vbox ~spacing:0 ~packing:(vbox#pack ~expand:false) () in
   let radio_archive = GButton.radio_button ~packing:mbox#add () in
-  let label_radio_archive = GMisc.label ~markup:"Build an archive" () in
+  let label_radio_archive = GMisc.label ~markup:"Archive" () in
   let _ = radio_archive#add label_radio_archive#coerce in
 
   let align_lib = GBin.alignment ~padding:(0,0,indent,0) ~packing:mbox#add () in
@@ -104,9 +104,11 @@ class view ~project ?packing () =
   end in*)
   (** Executable *)
   let mbox = GPack.vbox ~spacing:0 ~packing:(vbox#pack ~expand:false) () in
-  let radio_executable = GButton.radio_button ~group:radio_archive#group ~packing:mbox#add () in
-  let label_radio_executable = GMisc.label ~markup:"Build an executable with the specified main module" () in
+  let lmbox = GPack.hbox ~spacing:0 ~packing:mbox#pack () in
+  let radio_executable = GButton.radio_button ~group:radio_archive#group ~packing:lmbox#pack () in
+  let label_radio_executable = GMisc.label ~xalign:0.0 ~markup:"Executable." () in
   let _ = radio_executable#add label_radio_executable#coerce in
+  let _ = GMisc.label ~xalign:0.0 ~markup:" Main module: " ~packing:lmbox#add () in
   let align_exec = GBin.alignment ~padding:(0,0,21,0) ~packing:mbox#add () in
   let box = GPack.vbox ~spacing:8 ~packing:align_exec#add () in
   let hbox = GPack.hbox ~spacing:3 ~packing:(box#pack ~expand:false) () in
@@ -137,7 +139,7 @@ class view ~project ?packing () =
 
   (** Options Tab *)
   let vbox = GPack.vbox ~width:550 ~border_width:5 ~spacing:8 () in
-  let _ = nb#append_page ~tab_label:(GMisc.label ~text:"Options" ())#coerce vbox#coerce in
+  let _ = nb#append_page ~tab_label:(GMisc.label ~text:"Build Settings" ())#coerce vbox#coerce in
 
   let box = GPack.vbox ~spacing:0 ~packing:vbox#pack () in
   let _ = GMisc.label ~text:"Compilation: " ~xalign:0.0 ~packing:box#pack () in
@@ -175,7 +177,7 @@ class view ~project ?packing () =
 
   (** Dependencies Tab *)
   let vbox = GPack.vbox ~border_width:5 ~spacing:8 () in
-  let _ = nb#append_page ~tab_label:(GMisc.label ~text:"Dependencies" ())#coerce vbox#coerce in
+  let _ = nb#append_page ~tab_label:(GMisc.label ~text:"Direct Dependencies" ())#coerce vbox#coerce in
   let widget_deps = Bconf_page_deps.create ~project ~packing:vbox#add () in
 
   (** Restrictions Tab *)
@@ -203,7 +205,7 @@ object (self)
 
   initializer
     ignore (widget_deps#connect#changed ~callback:begin fun () ->
-      self#update (fun bconf -> bconf.build_dependencies <- widget_deps#get()) ();
+      self#update (fun bconf -> bconf.dependencies <- widget_deps#get()) ();
       changed#call()
     end;);
     let set_restr bconf check c =

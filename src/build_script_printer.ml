@@ -54,7 +54,7 @@ let print_configs ochan bconfigs external_tasks =
     kprintf print "  other_objects        = %S;" bc.other_objects;
     kprintf print "  external_tasks       = [%s];" (String.concat "; " (List.assoc bc external_tasks));
     kprintf print "  restrictions         = [%s];" (String.concat "; " (List.map (sprintf "%S") bc.restrictions));
-    kprintf print "  build_dependencies   = [%s];" (String.concat "; " (List.map (sprintf "%d") bc.build_dependencies));
+    kprintf print "  dependencies         = [%s];" (String.concat "; " (List.map (sprintf "%d") bc.dependencies));
     kprintf print "};";
   end bconfigs;
   output_string ochan "];;\n";;
@@ -157,7 +157,7 @@ let print ~project ~filename () =
   let ochan = open_out_bin filename in
   let finally () = close_out_noerr ochan in
   try
-    output_string ochan "(\x2A\n   Please edit the \"Build Configurations\" section at the end\n   of this file to set the right options for your system.\n\x2A)\n\n";
+    output_string ochan "(\x2A\n   Please edit the \"Targets\" section at the end\n   of this file to set the right options for your system.\n\x2A)\n\n";
     output_string ochan Oebuild_script.code;
     output_string ochan "open Arg\n";
     output_string ochan "open Task\n";
@@ -166,11 +166,11 @@ let print ~project ~filename () =
     output_string ochan "\n";
     let ets = print_external_tasks ochan project in
     output_string ochan "\n\n";
-    output_string ochan "(\x2A Build Configurations ==================================================== \x2A)\n\n";
+    output_string ochan "(\x2A Targets ==================================================== \x2A)\n\n";
     (*  *)
     print_configs ochan project.Project_type.build ets;
     output_string ochan "\n";
-    output_string ochan "(\x2A End of Build Configurations ============================================= \x2A)\n\n";
+    output_string ochan "(\x2A End of Targets ============================================= \x2A)\n\n";
     (*  *)
     output_string ochan "let _ = main ~cmd_line_args ~external_tasks ~targets\n";
     (*  *)

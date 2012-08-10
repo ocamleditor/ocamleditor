@@ -9,25 +9,8 @@
   <description/>
   <version>1.8.0</version>
   <autocomp enabled="true" delay="1." cflags=""/>
-  <runtime>
-    <configuration name="ocamleditor" default="true" id_build="0" id="0">
-      <id>0</id>
-      <id_build>0</id_build>
-      <name>ocamleditor</name>
-      <default>true</default>
-      <build_task>&lt;COMPILE&gt;</build_task>
-      <env replace="false">
-        <var enabled="true">OCAMLEDITORPARAM=debug=2</var>
-        <var enabled="true">DEBUG_UNDO=0</var>
-      </env>
-      <args/>
-    </configuration>
-  </runtime>
-  <build>
-    <configuration name="common" default="false" id="4">
-      <id>4</id>
-      <name>common</name>
-      <default>false</default>
+  <targets>
+    <target name="common" default="false" id="4">
       <byt>true</byt>
       <opt>true</opt>
       <libs></libs>
@@ -44,11 +27,9 @@
       <lib_install_path></lib_install_path>
       <external_tasks/>
       <restrictions></restrictions>
-    </configuration>
-    <configuration name="icons" default="false" id="10">
-      <id>10</id>
-      <name>icons</name>
-      <default>false</default>
+      <dependencies></dependencies>
+    </target>
+    <target name="icons" default="false" id="10">
       <byt>true</byt>
       <opt>true</opt>
       <libs></libs>
@@ -65,11 +46,9 @@
       <lib_install_path></lib_install_path>
       <external_tasks/>
       <restrictions></restrictions>
-    </configuration>
-    <configuration name="oebuildlib" default="false" id="7">
-      <id>7</id>
-      <name>oebuildlib</name>
-      <default>false</default>
+      <dependencies></dependencies>
+    </target>
+    <target name="oebuildlib" default="false" id="7">
       <byt>true</byt>
       <opt>true</opt>
       <libs></libs>
@@ -86,11 +65,9 @@
       <lib_install_path></lib_install_path>
       <external_tasks/>
       <restrictions></restrictions>
-    </configuration>
-    <configuration name="oebuild" default="false" id="5">
-      <id>5</id>
-      <name>oebuild</name>
-      <default>false</default>
+      <dependencies></dependencies>
+    </target>
+    <target name="oebuild" default="false" id="5">
       <byt>true</byt>
       <opt>true</opt>
       <libs>unix str threads common</libs>
@@ -107,11 +84,9 @@
       <lib_install_path></lib_install_path>
       <external_tasks/>
       <restrictions></restrictions>
-    </configuration>
-    <configuration name="oeproc" default="false" id="6">
-      <id>6</id>
-      <name>oeproc</name>
-      <default>false</default>
+      <dependencies></dependencies>
+    </target>
+    <target name="oeproc" default="false" id="6">
       <byt>true</byt>
       <opt>true</opt>
       <libs>str unix threads</libs>
@@ -128,11 +103,9 @@
       <lib_install_path></lib_install_path>
       <external_tasks/>
       <restrictions>IS_WIN32</restrictions>
-    </configuration>
-    <configuration name="gmisclib" default="false" id="8">
-      <id>8</id>
-      <name>gmisclib</name>
-      <default>false</default>
+      <dependencies></dependencies>
+    </target>
+    <target name="gmisclib" default="false" id="8">
       <byt>true</byt>
       <opt>true</opt>
       <libs></libs>
@@ -149,11 +122,9 @@
       <lib_install_path></lib_install_path>
       <external_tasks/>
       <restrictions></restrictions>
-    </configuration>
-    <configuration name="otherwidgets" default="false" id="9">
-      <id>9</id>
-      <name>otherwidgets</name>
-      <default>false</default>
+      <dependencies></dependencies>
+    </target>
+    <target name="otherwidgets" default="false" id="9">
       <byt>true</byt>
       <opt>true</opt>
       <libs></libs>
@@ -170,11 +141,9 @@
       <lib_install_path></lib_install_path>
       <external_tasks/>
       <restrictions></restrictions>
-    </configuration>
-    <configuration name="ocamleditor-bytecode" default="true" id="0">
-      <id>0</id>
-      <name>ocamleditor-bytecode</name>
-      <default>true</default>
+      <dependencies></dependencies>
+    </target>
+    <target name="ocamleditor-bytecode" default="true" id="0">
       <byt>true</byt>
       <opt>false</opt>
       <libs>ocamlcommon unix str threads dynlink odoc_info lablgtk gtkThread.o xml-light gmisclib common icons otherwidgets oebuildlib</libs>
@@ -191,7 +160,6 @@
       <lib_install_path></lib_install_path>
       <external_tasks>
         <task name="oebuild">
-          <name>oebuild</name>
           <always_run_in_project>false</always_run_in_project>
           <always_run_in_script>false</always_run_in_script>
           <env replace="false"/>
@@ -204,7 +172,6 @@
           <phase>Before_compile</phase>
         </task>
         <task name="oeproc">
-          <name>oeproc</name>
           <always_run_in_project>false</always_run_in_project>
           <always_run_in_script>false</always_run_in_script>
           <env replace="false"/>
@@ -217,7 +184,6 @@
           <phase>Before_compile</phase>
         </task>
         <task name="External Build">
-          <name>External Build</name>
           <always_run_in_project>false</always_run_in_project>
           <always_run_in_script>false</always_run_in_script>
           <env replace="false"/>
@@ -229,34 +195,7 @@
           </args>
           <phase>Compile</phase>
         </task>
-        <task name="Compiler Libs">
-          <name>Compiler Libs</name>
-          <always_run_in_project>false</always_run_in_project>
-          <always_run_in_script>false</always_run_in_script>
-          <env replace="false"/>
-          <dir>..</dir>
-          <cmd>ocaml</cmd>
-          <args>
-            <arg enabled="true">build.ml</arg>
-            <arg enabled="true">-with-compiler-libs</arg>
-          </args>
-          <phase>Before_clean</phase>
-        </task>
-        <task name="mkicons">
-          <name>mkicons</name>
-          <always_run_in_project>false</always_run_in_project>
-          <always_run_in_script>false</always_run_in_script>
-          <env replace="false"/>
-          <dir>..</dir>
-          <cmd>ocaml</cmd>
-          <args>
-            <arg enabled="true">build.ml</arg>
-            <arg enabled="true">-mkicons</arg>
-          </args>
-          <phase>Before_clean</phase>
-        </task>
         <task name="Release">
-          <name>Release</name>
           <always_run_in_project>false</always_run_in_project>
           <always_run_in_script>false</always_run_in_script>
           <env replace="false"/>
@@ -269,7 +208,6 @@
           <phase>Before_clean</phase>
         </task>
         <task name="Lex & Yacc">
-          <name>Lex &amp; Yacc</name>
           <always_run_in_project>false</always_run_in_project>
           <always_run_in_script>false</always_run_in_script>
           <env replace="false"/>
@@ -281,26 +219,11 @@
           </args>
           <phase>Before_compile</phase>
         </task>
-        <task name="gmisclib">
-          <name>gmisclib</name>
-          <always_run_in_project>false</always_run_in_project>
-          <always_run_in_script>false</always_run_in_script>
-          <env replace="false"/>
-          <dir>..</dir>
-          <cmd>ocaml</cmd>
-          <args>
-            <arg enabled="true">build.ml</arg>
-            <arg enabled="true">-gmisclib</arg>
-          </args>
-          <phase>Before_clean</phase>
-        </task>
       </external_tasks>
       <restrictions></restrictions>
-    </configuration>
-    <configuration name="ocamleditor-native" default="false" id="11">
-      <id>11</id>
-      <name>ocamleditor-native</name>
-      <default>false</default>
+      <dependencies>4,10,7,5,6,8,9</dependencies>
+    </target>
+    <target name="ocamleditor-native" default="false" id="11">
       <byt>false</byt>
       <opt>true</opt>
       <libs>ocamlcommon unix str threads dynlink odoc_info lablgtk gtkThread.o xml-light gmisclib common icons otherwidgets oebuildlib</libs>
@@ -317,11 +240,9 @@
       <lib_install_path></lib_install_path>
       <external_tasks/>
       <restrictions></restrictions>
-    </configuration>
-    <configuration name="ocamleditor" default="false" id="12">
-      <id>12</id>
-      <name>ocamleditor</name>
-      <default>false</default>
+      <dependencies></dependencies>
+    </target>
+    <target name="ocamleditor" default="false" id="12">
       <byt>false</byt>
       <opt>true</opt>
       <libs>ocamlcommon unix str threads dynlink odoc_info lablgtk gtkThread.o xml-light gmisclib common icons otherwidgets oebuildlib</libs>
@@ -338,7 +259,6 @@
       <lib_install_path></lib_install_path>
       <external_tasks>
         <task name="prepare-build">
-          <name>prepare-build</name>
           <always_run_in_project>false</always_run_in_project>
           <always_run_in_script>true</always_run_in_script>
           <env replace="false"/>
@@ -351,7 +271,6 @@
           <phase>Before_compile</phase>
         </task>
         <task name="clean-lex-yacc">
-          <name>clean-lex-yacc</name>
           <always_run_in_project>false</always_run_in_project>
           <always_run_in_script>true</always_run_in_script>
           <env replace="false"/>
@@ -365,11 +284,9 @@
         </task>
       </external_tasks>
       <restrictions></restrictions>
-    </configuration>
-    <configuration name="tools" default="false" id="13">
-      <id>13</id>
-      <name>tools</name>
-      <default>false</default>
+      <dependencies>4,10,7,5,6,8,9</dependencies>
+    </target>
+    <target name="tools" default="false" id="13">
       <byt>true</byt>
       <opt>false</opt>
       <libs></libs>
@@ -385,18 +302,16 @@
       <outname></outname>
       <lib_install_path></lib_install_path>
       <external_tasks>
-        <task name="--">
-          <name>--</name>
+        <task name="<tools>">
           <always_run_in_project>true</always_run_in_project>
           <always_run_in_script>false</always_run_in_script>
           <env replace="false"/>
           <dir></dir>
-          <cmd>true</cmd>
+          <cmd>echo</cmd>
           <args/>
           <phase>Compile</phase>
         </task>
         <task name="mkicons">
-          <name>mkicons</name>
           <always_run_in_project>false</always_run_in_project>
           <always_run_in_script>false</always_run_in_script>
           <env replace="false"/>
@@ -409,7 +324,6 @@
           <phase>Before_clean</phase>
         </task>
         <task name="mkrelease">
-          <name>mkrelease</name>
           <always_run_in_project>false</always_run_in_project>
           <always_run_in_script>false</always_run_in_script>
           <env replace="false"/>
@@ -422,7 +336,6 @@
           <phase>Before_clean</phase>
         </task>
         <task name="mkversion">
-          <name>mkversion</name>
           <always_run_in_project>false</always_run_in_project>
           <always_run_in_script>false</always_run_in_script>
           <env replace="false"/>
@@ -432,11 +345,49 @@
             <arg enabled="true">mkversion.ml</arg>
             <arg enabled="true">1.8.0</arg>
           </args>
-          <phase></phase>
+          <phase>Before_clean</phase>
+        </task>
+        <task name="generate_oebuild_script">
+          <always_run_in_project>false</always_run_in_project>
+          <always_run_in_script>false</always_run_in_script>
+          <env replace="false"/>
+          <dir>../build</dir>
+          <cmd>ocaml</cmd>
+          <args>
+            <arg enabled="true">tools.ml</arg>
+            <arg enabled="true">-generate-oebuild-script</arg>
+          </args>
+          <phase>Before_clean</phase>
         </task>
       </external_tasks>
       <restrictions></restrictions>
-    </configuration>
-  </build>
-  <build_script filename="_build.ml"/>
+      <dependencies></dependencies>
+    </target>
+  </targets>
+  <executables>
+    <executable name="ocamleditor" default="true" id_target="0" id="0">
+      <build_task>&lt;COMPILE&gt;</build_task>
+      <env replace="false">
+        <var enabled="true">OCAMLEDITORPARAM=debug=2</var>
+        <var enabled="true">DEBUG_UNDO=0</var>
+      </env>
+      <args/>
+    </executable>
+  </executables>
+  <build_script filename="_build.ml">
+    <arg type="String" key="-prefix" pass="-key value">
+      <task/>
+      <mode>&lt;ADD&gt;</mode>
+      <default type="string">/usr/local</default>
+      <doc>Installation prefix (Unix only)</doc>
+    </arg>
+    <arg type="Flag" key="-use-original-gtkThread" pass="-key">
+      <task bconf="12" task_name="prepare-build"/>
+      <mode>&lt;ADD&gt;</mode>
+      <default type="flag">false</default>
+      <doc>Don&apos;t set this flag if you have Lablgtk-2.14.2 or
+                           earlier (by default use the included modified
+                           version of gtkThread.ml to reduce CPU consumption)</doc>
+    </arg>
+  </build_script>
 </project>

@@ -199,7 +199,7 @@ object (self)
     let _ = b_add#connect#clicked ~callback:begin fun () ->
       let bconfigs = Miscellanea.Xlist.filter_map (function BCONF x -> Some x | _ -> None) (self#to_list()) in
       let id = (List.fold_left (fun acc t -> max acc t.id) (-1) bconfigs) + 1 in
-      let name = sprintf "New Build Configuration %d" id in
+      let name = sprintf "New Target %d" id in
       let rows = self#append [Bconf.create ~name ~id] in
       (match rows with [row] -> view#selection#select_iter row | _ -> ());
       add_bconf#call();

@@ -114,7 +114,7 @@ let create ~filename () =
 (** set_runtime_build_task *)
 let set_runtime_build_task proj rconf rbt_string =
   rconf.Rconf.build_task <- try
-    let bconf = List.find (fun b -> b.Bconf.id = rconf.Rconf.id_build) proj.build in
+    let bconf = List.find (fun b -> b.Bconf.id = rconf.Rconf.id_target) proj.build in
     Bconf.rbt_of_string bconf rbt_string
   with Not_found -> `NONE
 

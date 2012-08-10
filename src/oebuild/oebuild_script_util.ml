@@ -45,7 +45,7 @@ type target = {
   other_objects : string;
   external_tasks : int list;
   restrictions : string list;
-  build_dependencies : int list;
+  dependencies : int list;
 }
 
 type target_map_entry = int * (string * target)
@@ -194,7 +194,7 @@ let main ~cmd_line_args ~external_tasks ~targets =
     let show = function num, (name, t) ->
       let files = Str.split (Str.regexp " +") t.toplevel_modules in
       (*let deps = Dep.find ~pp:t.pp ~with_errors:true ~echo:false files in*)
-      let b_deps = t.build_dependencies in
+      let b_deps = t.dependencies in
       let b_deps = List.map find_target_by_id b_deps in
       let b_deps = List.map begin fun tg ->
         let name, _ = List.find (fun (_, t) -> t.id = tg.id) targets in
@@ -247,7 +247,7 @@ let main ~cmd_line_args ~external_tasks ~targets =
               begin
                 match command with
                   | `Build ->
-                    let b_deps = target.build_dependencies in
+                    let b_deps = target.dependencies in
                     let b_deps = List.map find_target_by_id b_deps in
                     List.iter (execute_target ~command) b_deps;
                     List.iter ETask.execute (ETask.filter etasks Before_compile);

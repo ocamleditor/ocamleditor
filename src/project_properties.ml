@@ -104,10 +104,10 @@ class widget ~editor ?(callback=ignore) ~project ?page_num ?packing ?show () =
       enable check_autocomp_enabled#active;
     end);
   in
-  (** Build Configurations Tab *)
+  (** Targets Tab *)
   let bconf_box = GPack.vbox ~spacing:8 ~border_width:8 () in
   let _ = notebook#append_page
-    ~tab_label:(GMisc.label ~text:"Build" ())#coerce bconf_box#coerce in
+    ~tab_label:(GMisc.label ~text:"Targets" ())#coerce bconf_box#coerce in
   let hbox = GPack.hbox ~spacing:8 ~packing:bconf_box#add () in
   let bconf_list = new Bconf_list.view ~editor ~project ~packing:hbox#pack () in
   let _ =
@@ -135,7 +135,7 @@ class widget ~editor ?(callback=ignore) ~project ?page_num ?packing ?show () =
         begin
           match bconf_list#get path with
             | Bconf_list.BCONF bc ->
-              set_title "Build Configuration";
+              set_title "Target";
               Gmisclib.Idle.add (fun () -> bconf_page#set bc);
               Gmisclib.Idle.add begin fun () ->
                 if not (bconf_page#misc#get_flag `SENSITIVE) then (bconf_page#misc#set_sensitive true);
@@ -179,7 +179,7 @@ class widget ~editor ?(callback=ignore) ~project ?page_num ?packing ?show () =
   let _ = bconf_list#select_default_configuration () in
   (** Runtime Configurations Tab *)
   let runtime_box = GPack.vbox ~spacing:8 ~border_width:8 () in
-  let runtime_tab_label = GMisc.label ~text:"Run" () in
+  let runtime_tab_label = GMisc.label ~text:"Executables" () in
   let _ = notebook#append_page
     ~tab_label:runtime_tab_label#coerce runtime_box#coerce in
   let hbox = GPack.hbox ~spacing:8 ~packing:runtime_box#add () in
@@ -257,7 +257,7 @@ object (self)
       project.build <- (bconf_list#get_bconfigs ());
       let rconfigs = rconf_list#get_rconfigs() in
       project.runtime <- List.filter begin fun rtc ->
-        List.exists (fun bc -> bc.Bconf.id = rtc.Rconf.id_build) project.build
+        List.exists (fun bc -> bc.Bconf.id = rtc.Rconf.id_target) project.build
       end rconfigs;
       Project.save ~editor project;
       project_changed#call();

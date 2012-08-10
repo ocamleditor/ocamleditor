@@ -3,6 +3,10 @@
 
   * Upgrade to OCaml-4.00.0
   * More options in "Preferences Dialog".
+  * Renamed "Build Configuration" to "Target" and renamed other features of
+    the build system.
+  * Added "Direct Dependencies" list which identifies the targets upon which
+    a target depends.
 
 
 2012-07-27 Release 1.7.5

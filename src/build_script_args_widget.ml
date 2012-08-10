@@ -327,7 +327,7 @@ object (self)
           | `replace arg -> arg
       end;
       model#set ~row ~column:col_opt_pass (string_of_pass arg.bsa_pass);
-    end args
+    end args;
 
   method get_arguments () =
     let arguments = ref [] in

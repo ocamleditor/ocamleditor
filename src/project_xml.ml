@@ -44,35 +44,15 @@ let write proj =
       "enabled", string_of_bool proj.autocomp_enabled;
       "delay", string_of_float proj.autocomp_delay;
       "cflags", proj.autocomp_cflags], []);
-    Xml.Element ("runtime", [],
+    Xml.Element ("targets", [],
       List.map begin fun t ->
-        Xml.Element ("configuration", [
-            "name", t.Rconf.name;
-            "default", string_of_bool t.Rconf.default;
-            "id_build", string_of_int t.Rconf.id_build;
-            "id", string_of_int t.Rconf.id], [
-          Xml.Element ("id", [], [Xml.PCData (string_of_int t.Rconf.id)]); (* Deprecated from version 1.7.1 *)
-          Xml.Element ("id_build", [], [Xml.PCData (string_of_int t.Rconf.id_build)]); (* Deprecated from version 1.7.1 *)
-          Xml.Element ("name", [], [Xml.PCData t.Rconf.name]); (* Deprecated from version 1.7.1 *)
-          Xml.Element ("default", [], [Xml.PCData (string_of_bool t.Rconf.default)]); (* Deprecated from version 1.7.1 *)
-          Xml.Element ("build_task", [], [Xml.PCData (Bconf.string_of_rbt t.Rconf.build_task)]);
-          Xml.Element ("env", ["replace", string_of_bool t.Rconf.env_replace],
-            List.map (fun (e, v) -> Xml.Element ("var", ["enabled", string_of_bool e], [Xml.PCData v])) t.Rconf.env
-          );
-          Xml.Element ("args", [],
-            List.map (fun (e, v) -> Xml.Element ("arg", ["enabled", string_of_bool e], [Xml.PCData v])) t.Rconf.args);
-        ])
-      end proj.runtime
-    );
-    Xml.Element ("build", [],
-      List.map begin fun t ->
-        Xml.Element ("configuration", [
+        Xml.Element ("target", [
             "name", t.Bconf.name;
             "default", string_of_bool t.Bconf.default;
             "id", string_of_int t.Bconf.id], [
-          Xml.Element ("id", [], [Xml.PCData (string_of_int t.Bconf.id)]); (* Deprecated from version 1.7.1 *)
+          (*Xml.Element ("id", [], [Xml.PCData (string_of_int t.Bconf.id)]); (* Deprecated from version 1.7.1 *)
           Xml.Element ("name", [], [Xml.PCData t.Bconf.name]);             (* Deprecated from version 1.7.1 *)
-          Xml.Element ("default", [], [Xml.PCData (string_of_bool t.Bconf.default)]); (* Deprecated from version 1.7.1 *)
+          Xml.Element ("default", [], [Xml.PCData (string_of_bool t.Bconf.default)]); (* Deprecated from version 1.7.1 *)*)
           Xml.Element ("byt", [], [Xml.PCData (string_of_bool t.Bconf.byt)]);
           Xml.Element ("opt", [], [Xml.PCData (string_of_bool t.Bconf.opt)]);
           Xml.Element ("libs", [], [Xml.PCData t.Bconf.libs]);
@@ -90,7 +70,7 @@ let write proj =
           Xml.Element ("external_tasks", [],
             List.map begin fun task ->
               Xml.Element ("task", ["name", task.Task.et_name], [
-                Xml.Element ("name", [], [Xml.PCData (task.Task.et_name)]); (* Deprecated from version 1.7.1 *)
+                (*Xml.Element ("name", [], [Xml.PCData (task.Task.et_name)]); (* Deprecated from version 1.7.1 *)*)
                 Xml.Element ("always_run_in_project", [], [Xml.PCData (string_of_bool task.Task.et_always_run_in_project)]);
                 Xml.Element ("always_run_in_script", [], [Xml.PCData (string_of_bool task.Task.et_always_run_in_script)]);
                 Xml.Element ("env", ["replace", string_of_bool task.Task.et_env_replace],
@@ -104,9 +84,29 @@ let write proj =
               ])
             end t.Bconf.external_tasks);
           Xml.Element ("restrictions", [], [Xml.PCData (String.concat "," t.Bconf.restrictions)]);
-          Xml.Element ("build_dependencies", [], [Xml.PCData (String.concat "," (List.map string_of_int t.Bconf.build_dependencies))]);
+          Xml.Element ("dependencies", [], [Xml.PCData (String.concat "," (List.map string_of_int t.Bconf.dependencies))]);
         ])
       end proj.build
+    );
+    Xml.Element ("executables", [],
+      List.map begin fun t ->
+        Xml.Element ("executable", [
+            "name", t.Rconf.name;
+            "default", string_of_bool t.Rconf.default;
+            "id_target", string_of_int t.Rconf.id_target;
+            "id", string_of_int t.Rconf.id], [
+          (*Xml.Element ("id", [], [Xml.PCData (string_of_int t.Rconf.id)]); (* Deprecated from version 1.7.1 *)
+          Xml.Element ("id_target", [], [Xml.PCData (string_of_int t.Rconf.id_target)]); (* Deprecated from version 1.7.1 *)
+          Xml.Element ("name", [], [Xml.PCData t.Rconf.name]); (* Deprecated from version 1.7.1 *)
+          Xml.Element ("default", [], [Xml.PCData (string_of_bool t.Rconf.default)]); (* Deprecated from version 1.7.1 *)*)
+          Xml.Element ("build_task", [], [Xml.PCData (Bconf.string_of_rbt t.Rconf.build_task)]);
+          Xml.Element ("env", ["replace", string_of_bool t.Rconf.env_replace],
+            List.map (fun (e, v) -> Xml.Element ("var", ["enabled", string_of_bool e], [Xml.PCData v])) t.Rconf.env
+          );
+          Xml.Element ("args", [],
+            List.map (fun (e, v) -> Xml.Element ("arg", ["enabled", string_of_bool e], [Xml.PCData v])) t.Rconf.args);
+        ])
+      end proj.runtime
     );
     Xml.Element ("build_script", ["filename", proj.build_script.Build_script.bs_filename],
       List.map begin fun arg ->
@@ -165,11 +165,11 @@ let read filename =
       | "open_files" | "load_files" -> (* backward compatibility with 1.7.2 *)
         let files = Xml.fold (fun acc x -> ((value x), 0, (get_offset x), (get_active x)) :: acc) [] node in
         proj.open_files <- List.rev files;
-      | "runtime" ->
+      | "executables" | "runtime" (* Backward compatibility with 1.7.5 *) ->
         let runtime = Xml.fold begin fun acc tnode ->
           let config  = {
             Rconf.id    = (attrib tnode "id" int_of_string 0);
-            id_build    = (attrib tnode "id_build" int_of_string 0);
+            id_target   = (try (attrib tnode "id_target" int_of_string 0) with Xml.No_attribute _ -> attrib tnode "id_build" int_of_string 0); (* Backward compatibility with 1.7.5 *)
             name        = (attrib tnode "name" identity "");
             default     = (attrib tnode "default" bool_of_string false);
             build_task  = `NONE;
@@ -180,7 +180,7 @@ let read filename =
           Xml.iter begin fun tp ->
             match Xml.tag tp with
               | "id" -> config.Rconf.id <- int_of_string (value tp) (* Backward compatibility with 1.7.0 *)
-              | "id_build" -> config.Rconf.id_build <- int_of_string (value tp) (* Backward compatibility with 1.7.0 *)
+              | "id_build" -> config.Rconf.id_target <- int_of_string (value tp) (* Backward compatibility with 1.7.0 *)
               | "name" -> config.Rconf.name <- value tp; (* Backward compatibility with 1.7.0 *)
               | "default" -> config.Rconf.default <- bool_of_string (value tp); (* Backward compatibility with 1.7.0 *)
               | "build_task" ->
@@ -204,7 +204,7 @@ let read filename =
           config :: acc
         end [] node in
         proj.runtime <- List.rev runtime;
-      | "build" ->
+      | "targets" | "build" (* Backward compatibility with 1.7.5 *) ->
         let i = ref 0 in
         let bconfigs = Xml.fold begin fun acc tnode ->
           let target = Bconf.create ~id:0 ~name:(sprintf "Config_%d" !i) in
@@ -272,15 +272,15 @@ let read filename =
                 end [] tp in
                 target.Bconf.external_tasks <- List.rev external_tasks;
               | "restrictions" -> target.Bconf.restrictions <- (Str.split (!~ ",") (value tp))
-              | "build_dependencies" -> target.Bconf.build_dependencies <- (List.map int_of_string (Str.split (!~ ",") (value tp)))
+              | "dependencies" -> target.Bconf.dependencies <- (List.map int_of_string (Str.split (!~ ",") (value tp)))
               | _ -> ()
           end tnode;
           incr i;
           (*target.Bconf.runtime_build_task <- Bconf.rbt_of_string target !runtime_build_task;*)
           if !create_default_runtime && target.Bconf.outkind = Bconf.Executable then begin
             proj.runtime <- {
-              Rconf.id = (List.length proj.runtime);
-              id_build    = target.Bconf.id;
+              Rconf.id    = (List.length proj.runtime);
+              id_target   = target.Bconf.id;
               name        = target.Bconf.name;
               default     = target.Bconf.default;
               build_task  = Bconf.rbt_of_string target !runtime_build_task;

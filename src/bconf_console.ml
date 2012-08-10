@@ -527,7 +527,7 @@ let exec ~editor ?use_thread ?(with_deps=false) task_kind bconf =
         match List_opt.find (fun bc -> bc.id = id) project.Project_type.build with
           | Some bconf -> bconf
           | _ -> assert false
-      end bconf.build_dependencies
+      end bconf.dependencies
     else []
   in
   let compile_name = sprintf "Compile \xC2\xAB%s\xC2\xBB" (Filename.basename bconf.name) in

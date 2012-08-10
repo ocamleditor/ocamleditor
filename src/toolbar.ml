@@ -260,7 +260,7 @@ object (self)
       ignore (tool_run#connect#clicked ~callback:begin fun () ->
         browser#with_current_project (fun project ->
           browser#with_default_runtime_config (fun rc ->
-            let bc = List.find (fun b -> b.Bconf.id = rc.Rconf.id_build) project.Project_type.build in
+            let bc = List.find (fun b -> b.Bconf.id = rc.Rconf.id_target) project.Project_type.build in
             ignore (Bconf_console.exec ~editor (`RCONF rc) bc)))
       end);
       ignore (tool_run#connect#popup ~callback:begin fun (label, menu) ->
@@ -273,7 +273,7 @@ object (self)
                 let item = GMenu.menu_item ~label:rc.Rconf.name ~packing:menu#add () in
                 ignore (item#connect#activate ~callback:begin fun () ->
                   try
-                    let bc = List.find (fun b -> b.Bconf.id = rc.Rconf.id_build) bconfigs in
+                    let bc = List.find (fun b -> b.Bconf.id = rc.Rconf.id_target) bconfigs in
                     ignore (Bconf_console.exec ~editor (`RCONF rc) bc)
                   with Not_found -> ()
                 end);

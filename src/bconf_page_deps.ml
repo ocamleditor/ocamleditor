@@ -33,7 +33,7 @@ class bconf_list ?packing () =
   let model           = GTree.list_store cols in
   let renderer        = GTree.cell_renderer_text [] in
   let renderer_pixbuf = GTree.cell_renderer_pixbuf [] in
-  let vc_name         = GTree.view_column ~title:"" () in
+  let vc_name         = GTree.view_column ~title:"Direct Dependencies" () in
   let _               = vc_name#pack ~expand:false renderer_pixbuf in
   let _               = vc_name#pack ~expand:true renderer in
   let _               = vc_name#add_attribute renderer "text" col_name in
@@ -106,7 +106,7 @@ object (self)
           model#set ~row ~column:col_name dep.Bconf.name;
           current_ids <- dep.Bconf.id :: current_ids;
         | _ -> ()
-    end bc.Bconf.build_dependencies;
+    end bc.Bconf.dependencies;
     List.iter model#misc#handler_unblock signal_ids;
     current_bc <- Some bc;
 

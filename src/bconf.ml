@@ -43,7 +43,7 @@ type t = {
   mutable lib_install_path   : string;
   mutable external_tasks     : Task.t list;
   mutable restrictions       : string list;
-  mutable build_dependencies : int list; (* id list *)
+  mutable dependencies       : int list; (* id list *)
 }
 and rbt = [ `NONE | `CLEAN | `COMPILE | `REBUILD | `ETASK of Task.t ]
 and output_kind = Executable | Library | Plugin | Pack
@@ -109,7 +109,7 @@ let create ~id ~name = {
   lib_install_path   = "";
   external_tasks     = [];
   restrictions       = [];
-  build_dependencies = [];
+  dependencies       = [];
 }
 
 (** find_dependencies *)

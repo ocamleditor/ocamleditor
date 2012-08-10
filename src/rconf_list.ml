@@ -113,7 +113,7 @@ object (self)
     view#expand_all()
 
   method private markup rc =
-    match List_opt.find (fun bc -> bc.Bconf.id = rc.Rconf.id_build) (bconf_list#get_bconfigs()) with
+    match List_opt.find (fun bc -> bc.Bconf.id = rc.Rconf.id_target) (bconf_list#get_bconfigs()) with
       | Some bconf ->
         sprintf "<b>%s</b>\n<small><i>%s</i></small>" rc.Rconf.name bconf.Bconf.name
       | _ -> ""
@@ -155,7 +155,7 @@ object (self)
           else (Pervasives.compare bc1.Bconf.id bc2.Bconf.id)) bconfigs in
         match bconfigs with
           | bc :: _ ->
-            let rc = Rconf.create ~name ~id ~id_build:bc.Bconf.id in
+            let rc = Rconf.create ~name ~id ~id_target:bc.Bconf.id in
             rc.Rconf.default <- default;
             self#append [rc];
             page#set_bconfigs();
@@ -183,7 +183,7 @@ object (self)
           let row = model#get_iter path in
           let rc = model#get ~row ~column:col_data in
           let bconfigs = (bconf_list#get_bconfigs()) in
-          match List_opt.find (fun b -> b.Bconf.id = rc.Rconf.id_build) bconfigs with
+          match List_opt.find (fun b -> b.Bconf.id = rc.Rconf.id_target) bconfigs with
             | Some bc -> ignore (Bconf_console.exec ~editor (`RCONF rc) bc)
             | _ -> ()
         end
@@ -215,7 +215,7 @@ object (self)
             let paths = ref [] in
             model#foreach begin fun path row ->
               let rc = self#get path in
-              if rc.Rconf.id_build = bc.Bconf.id then (paths := path :: !paths);
+              if rc.Rconf.id_target = bc.Bconf.id then (paths := path :: !paths);
               false
             end;
             let rows = List.map model#get_iter !paths in

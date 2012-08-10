@@ -32,11 +32,11 @@ let create_entry ?label ~packing () =
 (** view *)
 class view ~bconf_list ?packing () =
   let vbox = GPack.vbox ~spacing:8 ?packing () in
-  let title = GMisc.label ~markup:"<big><b>Run Configuration</b></big>" ~xalign:0.0 ~packing:vbox#pack () in
+  let title = GMisc.label ~markup:"<big><b>Executable</b></big>" ~xalign:0.0 ~packing:vbox#pack () in
   let entry_name = create_entry ~packing:vbox#pack () in
   (* Build configuration *)
   let box = GPack.vbox ~packing:vbox#pack () in
-  let _ = GMisc.label ~text:"Executable" ~xalign:0.0 ~packing:box#add () in
+  let _ = GMisc.label ~text:"Target" ~xalign:0.0 ~packing:box#add () in
   let cols = new GTree.column_list in
   let col_bc = cols#add Gobject.Data.caml in
   let col_bc_pixbuf = cols#add (Gobject.Data.gobject_by_name "GdkPixbuf") in
@@ -88,7 +88,7 @@ object (self)
           model_rbt#set ~row ~column:col_rbt_descr (Bconf.markup_of_rbt rbt);
           model_rbt#set ~row ~column:col_rbt rbt
         end rbts;
-        Gaux.may rconfig ~f:(fun rc -> rc.Rconf.id_build <- bc.Bconf.id);
+        Gaux.may rconfig ~f:(fun rc -> rc.Rconf.id_target <- bc.Bconf.id);
 
   initializer
     self#set_bconfigs();
@@ -125,7 +125,7 @@ object (self)
     entry_name#set_text rc.Rconf.name;
     model_bc#foreach begin fun path row ->
       let bc = model_bc#get ~row ~column:col_bc in
-      if bc.Bconf.id = rc.Rconf.id_build then begin
+      if bc.Bconf.id = rc.Rconf.id_target then begin
         combo_bc#set_active_iter (Some row);
         true
       end else false

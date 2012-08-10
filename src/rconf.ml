@@ -23,7 +23,7 @@
 
 type t = {
   mutable id          : int;
-  mutable id_build    : int;
+  mutable id_target   : int;
   mutable name        : string;
   mutable default     : bool;
   mutable build_task  : Bconf.rbt;
@@ -32,9 +32,9 @@ type t = {
   mutable args        : (bool * string) list;
 }
 
-let create ~id ~name ~id_build = {
+let create ~id ~name ~id_target = {
    id          = id;
-   id_build    = id_build;
+   id_target   = id_target;
    name        = name;
    default     = false;
    build_task  = `NONE;

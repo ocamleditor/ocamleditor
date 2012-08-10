@@ -651,7 +651,7 @@ let project ~browser ~group ~flags items =
   ignore (project_run#connect#activate ~callback:begin fun () ->
     browser#with_current_project (fun project ->
       browser#with_default_runtime_config (fun rc ->
-        let bc = List.find (fun b -> b.Bconf.id = rc.Rconf.id_build) project.Project_type.build in
+        let bc = List.find (fun b -> b.Bconf.id = rc.Rconf.id_target) project.Project_type.build in
         ignore (Bconf_console.exec ~editor (`RCONF rc) bc)))
   end);
   (** Clean... *)
@@ -689,8 +689,8 @@ let project ~browser ~group ~flags items =
   ignore (dialog_project_properties#connect#activate ~callback:(fun () ->
     browser#dialog_project_properties ?page_num:(Some 0) ?show:(Some true) ()));
   dialog_project_properties#add_accelerator ~group ~modi:[`CONTROL; `SHIFT] GdkKeysyms._P ~flags;
-  (** Build Configurations... *)
-  let project_targets = GMenu.image_menu_item ~label:"Build Configurations..." ~packing:menu#add () in
+  (** Targets... *)
+  let project_targets = GMenu.image_menu_item ~label:"Targets..." ~packing:menu#add () in
   ignore (project_targets#connect#activate ~callback:(fun () ->
     browser#dialog_project_properties ?page_num:(Some 1) ?show:(Some true) ()));
   project_targets#add_accelerator ~group ~modi:[] GdkKeysyms._F12 ~flags;
@@ -789,7 +789,7 @@ let project ~browser ~group ~flags items =
           let item = GMenu.menu_item ~label:rc.Rconf.name ~packing:run_menu#add () in
           ignore (item#connect#activate ~callback:begin fun () ->
             try
-              let bc = List.find (fun b -> b.Bconf.id = rc.Rconf.id_build) project.Project_type.build in
+              let bc = List.find (fun b -> b.Bconf.id = rc.Rconf.id_target) project.Project_type.build in
               ignore (Bconf_console.exec ~editor (`RCONF rc) bc)
             with Not_found -> ()
           end);
