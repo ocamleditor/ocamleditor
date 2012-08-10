@@ -356,13 +356,13 @@
       <outname></outname>
       <lib_install_path></lib_install_path>
       <external_tasks>
-        <task name="--">
-          <name>--</name>
+        <task name="<tools>">
+          <name>&lt;tools&gt;</name>
           <always_run_in_project>true</always_run_in_project>
           <always_run_in_script>false</always_run_in_script>
           <env replace="false"/>
           <dir></dir>
-          <cmd>true</cmd>
+          <cmd>echo</cmd>
           <args/>
           <phase>Compile</phase>
         </task>

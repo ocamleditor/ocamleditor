@@ -171,8 +171,8 @@ let main ~cmd_line_args ~external_tasks ~targets =
     let options =
       List.map (fun (a, b, c, d) -> a, Arg.align b, c, d) [
         `Show,      [], "Show the build options of a target",          "";
-        `Build,     [], "Build a target",                              "";
-        `Install,   [], "Install a library",                           "";
+        `Build,     [], "Build libraries and executables",             "";
+        `Install,   [], "Install libraries and executables",           "";
         `Clean,     [], "Remove output files for the selected target", "";
         `Distclean, [], "Remove all build output",                     "";
       ];;

@@ -30,6 +30,7 @@ let enable_widget_args = true
 class widget ~project ?packing () =
   let build_script    = project.Project_type.build_script in
   let spacing         = 3 in
+  let border_width    = 5 in
   let vbox            = GPack.vbox ~spacing:13 ?packing () in
   let text_filename   = "Specify the file to be created by the generation process" in
   let fbox            = GPack.vbox ~spacing ~packing:vbox#pack () in
@@ -39,7 +40,17 @@ class widget ~project ?packing () =
     ~text:(project.Project_type.root // build_script.bs_filename)
     ~packing:box#add () in
   let button_filename = GButton.button ~label:"  ...  " ~packing:box#pack () in
-  let abox            = GPack.vbox ~spacing ~packing:vbox#add () in
+  let notebook        = GPack.notebook ~packing:vbox#add () in
+  (* Build Configurations (Targets) *)
+  let abox            = GPack.vbox ~border_width ~spacing () in
+  let tab_label       = (GMisc.label ~text:"Targets" ())#coerce in
+  let _               = notebook#append_page ~tab_label abox#coerce in
+  let _               = GMisc.label ~text:"" ~xalign:0.0 ~packing:abox#pack ~show:true () in
+  let widget_trg      = new Build_script_trg_widget.widget ~project ~packing:abox#add () in
+  (* Command Line Arguments *)
+  let abox            = GPack.vbox ~border_width ~spacing () in
+  let tab_label       = (GMisc.label ~text:"Command Line Arguments" ())#coerce in
+  let _               = notebook#append_page ~tab_label abox#coerce in
   let _               = GMisc.label ~text:"Define the command line arguments for the build script" ~xalign:0.0 ~packing:abox#pack ~show:enable_widget_args () in
   let widget_args     = new Build_script_args_widget.widget ~project ~packing:abox#add () in
 object (self)
@@ -94,10 +105,8 @@ object (self)
 end
 
 let window ~project () =
-  let width = if enable_widget_args then Some 1024 else None in
-  let height = if enable_widget_args then Some 500 else None in
   let window = GWindow.window ~title:"Generate Build Script"
-    ~modal:true ~border_width:8 ?width ?height ~position:`CENTER ~icon:Icons.oe ~show:false () in
+    ~modal:true ~border_width:8 ~position:`CENTER ~icon:Icons.oe ~show:false () in
   let vbox = GPack.vbox ~spacing:8 ~packing:window#add () in
   let widget = new widget ~project ~packing:vbox#add () in
   let bbox = GPack.button_box `HORIZONTAL ~layout:`END ~spacing:8 ~packing:vbox#pack () in
