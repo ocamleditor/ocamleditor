@@ -649,6 +649,7 @@ object (self)
         (* Save project and file history *)
         File_history.write editor#file_history;
         self#project_write_history();
+        Preferences.save();
         (*  *)
         finalize();
         GMain.Main.quit();

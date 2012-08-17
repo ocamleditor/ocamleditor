@@ -32,7 +32,7 @@ class editor () =
   let hpaned = GPack.paned `HORIZONTAL () in
   let notebook = GPack.notebook ~tab_border:0 ~show_border:false
     ~packing:(hpaned#pack2 ~resize:true ~shrink:true) ~scrollable:true () in
-  let _ = hpaned#set_position 250 in
+  let _ = hpaned#set_position Preferences.preferences#get.Preferences.pref_outline_width in
   let incremental_search = new Incremental_search.incremental () in
   let switch_page = new switch_page () in
   let remove_page = new remove_page () in
@@ -71,6 +71,10 @@ object (self)
     if show_outline then begin
       (try hpaned#remove hpaned#child1 with Gpointer.Null -> ());
       hpaned#pack1 ~resize:false ~shrink:true widget;
+      ignore (widget#misc#connect#size_allocate ~callback:begin fun _ ->
+        Preferences.preferences#get.Preferences.pref_outline_width <- hpaned#position;
+        Gmisclib.Idle.add ~prio:300 Preferences.save
+      end);
     end
 
   method set_history_switch_page_locked x =

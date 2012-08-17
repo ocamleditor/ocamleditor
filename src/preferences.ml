@@ -88,6 +88,7 @@ type t = {
   mutable pref_err_gutter                   : bool;
   mutable pref_show_whitespace_chars        : bool;
   mutable pref_outline_show_types           : bool;
+  mutable pref_outline_width                : int;
   mutable pref_odoc_font                    : string;
 }
 and text_properties =
@@ -235,6 +236,7 @@ let create_defaults () = {
   pref_err_gutter                   = true;
   pref_show_whitespace_chars        = false;
   pref_outline_show_types           = false;
+  pref_outline_width                = 250;
   pref_odoc_font                    = "Serif 9";
 }
 
@@ -386,6 +388,7 @@ let to_xml pref =
       Xml.Element ("pref_err_gutter", [], [Xml.PCData (string_of_bool pref.pref_err_gutter)]);
       Xml.Element ("pref_show_whitespace_chars", [], [Xml.PCData (string_of_bool pref.pref_show_whitespace_chars)]);
       Xml.Element ("pref_outline_show_types", [], [Xml.PCData (string_of_bool pref.pref_outline_show_types)]);
+      Xml.Element ("pref_outline_width", [], [Xml.PCData (string_of_int pref.pref_outline_width)]);
       Xml.Element ("pref_odoc_font", [], [Xml.PCData (pref.pref_odoc_font)]);
 
     ])
@@ -500,6 +503,7 @@ let from_file filename =
         | "pref_err_gutter" -> pref.pref_err_gutter <- bool_of_string (value node)
         | "pref_show_whitespace_chars" -> pref.pref_show_whitespace_chars <- bool_of_string (value node)
         | "pref_outline_show_types" -> pref.pref_outline_show_types <- bool_of_string (value node)
+        | "pref_outline_width" -> pref.pref_outline_width <- int_of_string (value node)
         | "pref_odoc_font" -> pref.pref_odoc_font <- value node
 
        | _ -> ()
