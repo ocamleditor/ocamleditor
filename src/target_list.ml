@@ -147,7 +147,25 @@ object (self)
     let row = model#get_iter path in
     model#get ~row ~column:col_data
 
-  method get_targets () = Miscellanea.Xlist.filter_map (function Target x -> Some x | ETask _ -> None) (self#to_list())
+  method get_targets () =
+    let targets = ref [] in
+    let current = ref None in
+    let rev_cur_tasks () = match !current with Some cur -> cur.external_tasks <- List.rev cur.external_tasks | _ -> () in
+    model#foreach begin fun _ row ->
+      begin
+        match model#get ~row ~column:col_data with
+          | Target target ->
+            rev_cur_tasks();
+            targets := target :: !targets;
+            target.external_tasks <- [];
+            current := Some target;
+          | ETask task ->
+            (match !current with Some cur -> cur.external_tasks <- task :: cur.external_tasks | _ -> ())
+      end;
+      false
+    end;
+    rev_cur_tasks();
+    List.rev !targets
 
   method length = List.length (self#to_list())
 
