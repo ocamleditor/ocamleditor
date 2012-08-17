@@ -63,6 +63,8 @@ object (self)
 
   method tout_delim = tout_delim
 
+  method paned = hpaned
+
   method clear_cache () =
     List.iter (fun (_, p) -> p#destroy()) pages_cache;
     pages_cache <- []
@@ -71,9 +73,6 @@ object (self)
     if show_outline then begin
       (try hpaned#remove hpaned#child1 with Gpointer.Null -> ());
       hpaned#pack1 ~resize:false ~shrink:true widget;
-      ignore (widget#misc#connect#size_allocate ~callback:begin fun _ ->
-        Preferences.preferences#get.Preferences.pref_outline_width <- hpaned#position;
-      end);
     end
 
   method set_history_switch_page_locked x =

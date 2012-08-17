@@ -21,10 +21,6 @@
 *)
 
 open GUtil
-open GdkKeysyms
-open Project
-open Preferences
-open Printf
 
 exception Cancel_process_termination
 
@@ -32,6 +28,7 @@ let hpaned = GPack.paned `HORIZONTAL ()
 let vpaned = GPack.paned `VERTICAL ()
 
 let table = Hashtbl.create 17
+
 (** page *)
 class virtual page =
 object (self)
@@ -115,7 +112,8 @@ object (self)
 
   method visible = visible
 
-  method set_position x = paned#set_position x
+  method set_position = paned#set_position
+  method position = paned#position
 
   method remove_all_tabs () =
     try

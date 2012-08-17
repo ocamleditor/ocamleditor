@@ -181,7 +181,7 @@
       <lib_install_path></lib_install_path>
       <external_tasks>
         <task name="prepare-build">
-          <always_run_in_project>true</always_run_in_project>
+          <always_run_in_project>false</always_run_in_project>
           <always_run_in_script>true</always_run_in_script>
           <env replace="false"/>
           <dir>../build</dir>
@@ -193,7 +193,7 @@
           <phase>Before_compile</phase>
         </task>
         <task name="clean-lex-yacc">
-          <always_run_in_project>true</always_run_in_project>
+          <always_run_in_project>false</always_run_in_project>
           <always_run_in_script>true</always_run_in_script>
           <env replace="false"/>
           <dir>../build</dir>

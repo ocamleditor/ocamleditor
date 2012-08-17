@@ -630,6 +630,9 @@ object (self)
 
   method exit (editor : Editor.editor) () =
     try
+      Preferences.preferences#get.Preferences.pref_hmessages_width <- Messages.hmessages#position;
+      Preferences.preferences#get.Preferences.pref_vmessages_height <- Messages.vmessages#position;
+      Preferences.preferences#get.Preferences.pref_outline_width <- editor#paned#position;
       ignore(Messages.vmessages#remove_all_tabs());
       if maximized_view_action = `NONE then (self#set_geometry());
       (* Save geometry *)
@@ -918,8 +921,8 @@ object (self)
     self#set_outline_visible !is_outline_visible;
     window#resize ~width:!width ~height:!height;
     window#show();
-    Messages.vmessages#set_position (!height * 7 / 10);
-    Messages.hmessages#set_position (!width * 7 / 10);
+    Gmisclib.Idle.add ~prio:300 (fun () -> Messages.vmessages#set_position (Preferences.preferences#get.Preferences.pref_vmessages_height));
+    Gmisclib.Idle.add ~prio:300 (fun () -> Messages.hmessages#set_position (Preferences.preferences#get.Preferences.pref_hmessages_width));
     ignore (window#event#connect#after#delete ~callback:(fun _ -> self#exit editor (); true));
     (*  *)
     Ocaml_text.create_shell := self#shell;

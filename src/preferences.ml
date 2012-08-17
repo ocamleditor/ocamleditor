@@ -89,6 +89,8 @@ type t = {
   mutable pref_show_whitespace_chars        : bool;
   mutable pref_outline_show_types           : bool;
   mutable pref_outline_width                : int;
+  mutable pref_hmessages_width              : int;
+  mutable pref_vmessages_height             : int;
   mutable pref_odoc_font                    : string;
 }
 and text_properties =
@@ -237,6 +239,8 @@ let create_defaults () = {
   pref_show_whitespace_chars        = false;
   pref_outline_show_types           = false;
   pref_outline_width                = 250;
+  pref_hmessages_width              = 1000;
+  pref_vmessages_height             = 800;
   pref_odoc_font                    = "Serif 9";
 }
 
@@ -389,6 +393,8 @@ let to_xml pref =
       Xml.Element ("pref_show_whitespace_chars", [], [Xml.PCData (string_of_bool pref.pref_show_whitespace_chars)]);
       Xml.Element ("pref_outline_show_types", [], [Xml.PCData (string_of_bool pref.pref_outline_show_types)]);
       Xml.Element ("pref_outline_width", [], [Xml.PCData (string_of_int pref.pref_outline_width)]);
+      Xml.Element ("pref_hmessages_width", [], [Xml.PCData (string_of_int pref.pref_hmessages_width)]);
+      Xml.Element ("pref_vmessages_height", [], [Xml.PCData (string_of_int pref.pref_vmessages_height)]);
       Xml.Element ("pref_odoc_font", [], [Xml.PCData (pref.pref_odoc_font)]);
 
     ])
@@ -504,6 +510,8 @@ let from_file filename =
         | "pref_show_whitespace_chars" -> pref.pref_show_whitespace_chars <- bool_of_string (value node)
         | "pref_outline_show_types" -> pref.pref_outline_show_types <- bool_of_string (value node)
         | "pref_outline_width" -> pref.pref_outline_width <- int_of_string (value node)
+        | "pref_hmessages_width" -> pref.pref_hmessages_width <- int_of_string (value node)
+        | "pref_vmessages_height" -> pref.pref_vmessages_height <- int_of_string (value node)
         | "pref_odoc_font" -> pref.pref_odoc_font <- value node
 
        | _ -> ()
