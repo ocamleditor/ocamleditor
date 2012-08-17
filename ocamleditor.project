@@ -387,19 +387,34 @@
     </executable>
   </executables>
   <build_script filename="_build.ml">
-    <arg type="String" key="-prefix" pass="-key value">
-      <task target_id="12" task_name="prepare-build"/>
-      <mode>&lt;ADD&gt;</mode>
-      <default type="string">/usr/local</default>
-      <doc>Installation prefix (Unix only)</doc>
-    </arg>
-    <arg type="Flag" key="-use-original-gtkThread" pass="-key">
-      <task target_id="12" task_name="prepare-build"/>
-      <mode>&lt;ADD&gt;</mode>
-      <default type="flag">false</default>
-      <doc>Don&apos;t set this flag if you have Lablgtk-2.14.2 or
+    <targets>
+      <target target_id="13" show="false"/>
+      <target target_id="12" show="true" installer_task_name="install"/>
+      <target target_id="11" show="false"/>
+      <target target_id="0" show="true"/>
+      <target target_id="9" show="false"/>
+      <target target_id="8" show="false"/>
+      <target target_id="6" show="true"/>
+      <target target_id="5" show="true"/>
+      <target target_id="7" show="false"/>
+      <target target_id="10" show="false"/>
+      <target target_id="4" show="false"/>
+    </targets>
+    <args>
+      <arg type="String" key="-prefix" pass="-key value">
+        <task target_id="12" task_name="prepare-build"/>
+        <mode>&lt;ADD&gt;</mode>
+        <default type="string">/usr/local</default>
+        <doc>Installation prefix (Unix only)</doc>
+      </arg>
+      <arg type="Flag" key="-use-original-gtkThread" pass="-key">
+        <task target_id="12" task_name="prepare-build"/>
+        <mode>&lt;ADD&gt;</mode>
+        <default type="flag">false</default>
+        <doc>Don&apos;t set this flag if you have Lablgtk-2.14.2 or
                            earlier (by default use the included modified
                            version of gtkThread.ml to reduce CPU consumption)</doc>
-    </arg>
+      </arg>
+    </args>
   </build_script>
 </project>

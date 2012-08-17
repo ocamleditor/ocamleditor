@@ -202,6 +202,23 @@ let show = fun targets -> function num, (name, t) ->
   let maxlength = List.fold_left (fun cand (x, _) -> let len = String.length x in max cand len) 0 properties in
   List.iter (fun (n, v) -> printf "  %s : %s\n" (rpad (n ^ " ") '.' maxlength) v) properties;;
 
+(** install *)
+let install ~compilation ~outname ~external_tasks ~deps target =
+  match target.target_type with
+    | Library ->
+      let deps = deps() in
+      install_output ~compilation ~outkind:target.target_type ~outname ~deps ~path:target.library_install_dir ~ccomp_type
+    | Executable ->
+      begin
+        match target.installer_task with
+          | Some installer_task ->
+            let _, f = List.find (fun (num, _) -> num = installer_task) external_tasks in
+            ETask.execute (f ())
+          | _ -> eprintf "Command \"install\" is not available for target \"%d\"" target.num
+      end;
+      raise Exit;
+    | Plugin | Pack -> failwith "\"install\" not implemented for Plugin or Pack.";;
+
 (** execute_target *)
 let rec execute_target ~external_tasks ~targets ~command target =
   if Oebuild.check_restrictions target.restrictions then
@@ -219,52 +236,8 @@ let rec execute_target ~external_tasks ~targets ~command target =
           | Some outname ->
             begin
               match command with
-                | `Build ->
-                  let b_deps = find_target_dependencies targets target in
-                  List.iter (execute_target ~external_tasks ~targets ~command) b_deps;
-                  List.iter ETask.execute (ETask.filter etasks Before_compile);
-                  let deps = deps() in
-                  (*List.iter ETask.execute (ETask.filter etasks Compile);*)
-                  begin
-                    match build
-                      ~compilation
-                      ~includes:target.search_path
-                      ~libs:target.required_libraries
-                      ~other_mods:target.other_objects
-                      ~outkind:target.target_type
-                      ~compile_only:false
-                      ~thread:target.thread
-                      ~vmthread:target.vmthread
-                      ~annot:false
-                      ~pp:target.pp
-                      ~cflags:target.compiler_flags
-                      ~lflags:target.linker_flags
-                      ~outname
-                      ~deps
-                      ~ms_paths:(ref false)
-                      ~targets:files ()
-                    with
-                      | Built_successfully ->
-                        List.iter ETask.execute (ETask.filter etasks After_compile);
-                      | Build_failed n -> popd(); exit n
-                  end
-                | `Install ->
-                  begin
-                    match target.target_type with
-                      | Library ->
-                        let deps = deps() in
-                        install_output ~compilation ~outkind:target.target_type ~outname ~deps ~path:target.library_install_dir ~ccomp_type
-                      | Executable ->
-                        begin
-                          match target.installer_task with
-                            | Some installer_task ->
-                              let _, f = List.find (fun (num, _) -> num = installer_task) external_tasks in
-                              ETask.execute (f ())
-                            | _ -> eprintf "Command \"install\" is not available for target \"%d\"" target.num
-                        end;
-                        raise Exit;
-                      | Plugin | Pack -> failwith "\"install\" not implemented for Plugin or Pack."
-                  end;
+                | `Build -> build ~targets ~external_tasks ~etasks ~deps ~compilation ~outname ~files target
+                | `Install -> install ~compilation ~outname ~external_tasks ~deps target
                 | `Clean ->
                   List.iter ETask.execute (ETask.filter etasks Before_clean);
                   let deps = deps() in
@@ -281,6 +254,35 @@ let rec execute_target ~external_tasks ~targets ~command target =
           | _ -> ()
       end compilation
     with Exit -> ()
+
+(** build *)
+and build ~targets ~external_tasks ~etasks ~deps ~compilation ~outname ~files target =
+  let b_deps = find_target_dependencies targets target in
+  List.iter (execute_target ~external_tasks ~targets ~command:`Build) b_deps;
+  List.iter ETask.execute (ETask.filter etasks Before_compile);
+  let deps = deps() in
+  (*List.iter ETask.execute (ETask.filter etasks Compile);*)
+  match Oebuild.build
+    ~compilation
+    ~includes:target.search_path
+    ~libs:target.required_libraries
+    ~other_mods:target.other_objects
+    ~outkind:target.target_type
+    ~compile_only:false
+    ~thread:target.thread
+    ~vmthread:target.vmthread
+    ~annot:false
+    ~pp:target.pp
+    ~cflags:target.compiler_flags
+    ~lflags:target.linker_flags
+    ~outname
+    ~deps
+    ~ms_paths:(ref false)
+    ~targets:files ()
+  with
+    | Built_successfully ->
+      List.iter ETask.execute (ETask.filter etasks After_compile);
+    | Build_failed n -> popd(); exit n
 ;;
 
 (** main *)

@@ -130,7 +130,7 @@ let install () =
     if !has_native then begin
       kprintf run "cp -v oebuild/oebuild%s.opt %s" ext bin;
     end;
-  end else prerr_endline "This script is not available under Win32.
+  end else prerr_endline "This script is not available under Windows.
 To install OCamlEditor, please use the included ocamleditor.nsi script.
 You will need the free NSIS install system (http://nsis.sourceforge.net).";;
 
@@ -145,7 +145,7 @@ let uninstall () =
       kprintf run "rm -vi %s/bin/oebuild%s" !prefix ext;
       kprintf run "rm -vi %s/bin/oebuild%s.opt" !prefix ext;
     end
-  end else prerr_endline "This script is not available under Win32";;
+  end else prerr_endline "This script is not available under Windows";;
 
 (** mkrelease *)
 let mkrelease () =
