@@ -385,6 +385,7 @@ object (self)
       reduces the selection to part of the identifier. *)
     let two_button_press = ref false in
     ignore (self#event#connect#button_release ~callback:begin fun ev ->
+      self#misc#grab_focus();
       if smart_click then begin
         match GdkEvent.get_type ev with
           | `BUTTON_RELEASE when !two_button_press ->

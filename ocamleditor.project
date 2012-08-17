@@ -388,17 +388,17 @@
   </executables>
   <build_script filename="_build.ml">
     <targets>
-      <target target_id="13" show="false"/>
-      <target target_id="12" show="true" installer_task_name="install"/>
-      <target target_id="11" show="false"/>
-      <target target_id="0" show="true"/>
-      <target target_id="9" show="false"/>
-      <target target_id="8" show="false"/>
-      <target target_id="6" show="true"/>
-      <target target_id="5" show="true"/>
-      <target target_id="7" show="false"/>
-      <target target_id="10" show="false"/>
       <target target_id="4" show="false"/>
+      <target target_id="10" show="false"/>
+      <target target_id="7" show="false"/>
+      <target target_id="5" show="true"/>
+      <target target_id="6" show="true"/>
+      <target target_id="8" show="false"/>
+      <target target_id="9" show="false"/>
+      <target target_id="0" show="true"/>
+      <target target_id="11" show="false"/>
+      <target target_id="12" show="true" installer_task_name="install"/>
+      <target target_id="13" show="false"/>
     </targets>
     <args>
       <arg type="String" key="-prefix" pass="-key value">
