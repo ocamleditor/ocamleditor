@@ -256,9 +256,13 @@ object (self)
     try
       let bm = List.find (fun bm -> bm.Oe.bm_num = num) project.Prj.bookmarks in
       match self#get_page (`FILENAME bm.Oe.bm_filename) with
-        | None ->
+        | None when Sys.file_exists bm.Oe.bm_filename ->
           let _ = self#open_file ~active:true ~scroll_offset:0 ~offset:0 bm.Oe.bm_filename in
           Gmisclib.Idle.add ~prio:300 (fun () -> self#bookmark_goto ~num)
+        | None ->
+          Dialog.info ~title:"File does not exist" ~message_type:`INFO
+            ~message:(sprintf "File \xC2\xAB%s\xC2\xBB does not exist." bm.Oe.bm_filename) self;
+          self#bookmark_remove ~num
         | Some page ->
           if not page#view#realized then (self#goto_view page#view);
           Gmisclib.Idle.add begin fun () ->
