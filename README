@@ -4,7 +4,13 @@
 
 
 
-OCamlEditor is a source code editor and build tool for OCaml.
+OCamlEditor is a source code editor and build tool for the OCaml
+programming language.
+
+It provides many features to facilitate editing code, accessing API
+reference directly from the editor and compiling projects. It is entirely
+written in OCaml using LablGtk for the graphical user interface; it is
+light-weight, free and open source and works on Linux and Windows.
 
 
 COPYRIGHT

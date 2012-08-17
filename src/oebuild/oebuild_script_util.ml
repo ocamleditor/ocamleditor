@@ -245,10 +245,12 @@ let rec execute_target ~external_tasks ~targets ~command target =
                   List.iter ETask.execute (ETask.filter etasks After_clean);
                 | `Distclean ->
                   let deps = deps() in
-                  List.iter ETask.execute (ETask.filter etasks Before_clean);
-                  if files <> [] then
+                  List.iter ETask.execute (ETask.filter etasks Before_distclean);
+                  let distclean = (ETask.filter etasks Distclean) in
+                  if distclean <> [] then (List.iter ETask.execute distclean)
+                  else if files <> [] then
                     (clean ~compilation ~outkind:target.target_type ~outname ~targets:files ~deps ~all:true ());
-                  List.iter ETask.execute (ETask.filter etasks After_clean);
+                  List.iter ETask.execute (ETask.filter etasks After_distclean);
                 | `Show -> assert false
             end
           | _ -> ()
@@ -333,7 +335,7 @@ let main ~cmd_line_args ~external_tasks ~targets =
           match command with
             | `Distclean ->
               List.iter (fun (_, t) -> execute_target ~external_tasks ~targets ~command t) targets;
-              clean_all()
+              Oebuild.clean_all();
             | `Show ->
               printf "%s\n%!" (system_config ());
               Printf.printf "\n%!" ;

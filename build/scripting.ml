@@ -43,7 +43,7 @@ let rec mkdir_p d =
   if not (Sys.file_exists d) then begin
     mkdir_p (Filename.dirname d);
     mkdir d
-  end
+  end;;
 
 (** Copy file *)
 let copy_file ic oc =
@@ -66,7 +66,7 @@ let remove_file ?(verbose=false) filename =
   then (if verbose then (print_endline filename); Sys.remove filename)
 
 let rm = if is_win32 then "DEL /F /Q" else "rm -f"
-let rmr = if is_win32 then "DEL /F /Q /S" else "rm -fr"
+let rmr = if is_win32 then "RMDIR /Q /S" else "rm -fr"
 
 (** substitute *)
 let substitute ~filename ?(regexp=false) repl =

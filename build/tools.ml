@@ -26,15 +26,15 @@
 open Printf
 open Arg
 
-let required_ocaml_version      = "4.00.0"
-let has_native                  = ref false
-let prefix                      = ref "/usr/local"
-let ccopt                       = ref (try Unix.getenv "OCAMLEDITOR_CCOPT" with Not_found -> "")
-let use_original_gtkThread = ref true
-let ext                         = if is_win32 then ".exe" else ""
-let oebuild_name                = sprintf "oebuild%s" ext
-let oebuild_command             = "oebuild" // oebuild_name
-let (!!)                        = sprintf "(*%s*)";;
+let required_ocaml_version = "4.00.0"
+let has_native             = ref false
+let prefix                 = ref "/usr/local"
+let ccopt                  = ref (try Unix.getenv "OCAMLEDITOR_CCOPT" with Not_found -> "")
+let use_modified_gtkThread = ref false
+let ext                    = if is_win32 then ".exe" else ""
+let oebuild_name           = sprintf "oebuild%s" ext
+let oebuild_command        = "oebuild" // oebuild_name
+let (!!)                   = sprintf "(*%s*)";;
 
 (** lex_yacc *)
 let lex_yacc () =
@@ -47,20 +47,14 @@ let lex_yacc () =
 let generate_oebuild_script () =
   run "ocaml -I common str.cma unix.cma common.cma generate_oebuild_script.ml";;
 
-(** prepare_build *)
-let prepare_build () =
-  if Sys.ocaml_version < required_ocaml_version then
-    eprintf "You are using OCaml-%s but version %s is required." Sys.ocaml_version required_ocaml_version;
-  cp ~echo:true (if !use_original_gtkThread then "gtkThread3.ml" else "gtkThread4.ml") "gtkThread2.ml";
-  lex_yacc();
-  generate_oebuild_script();;
-
 (** mkicons *)
 let mkicons () =
+  if not (Sys.file_exists "icons") then (mkdir "icons");
   let pixmaps = ".." // "pixmaps" in
   let files = Array.to_list (Sys.readdir pixmaps) in
   let files = List.filter (fun x -> Filename.check_suffix x ".png") files in
-  ignore (Sys.command "cat ../header > icons/icons.ml");
+  let cat = if Sys.os_type = "Win32" then "TYPE" else "cat" in
+  ignore (kprintf run "%s %s > %s" cat (".."//"header") ("icons"//"icons.ml"));
   let filename = "icons/icons.ml" in
   let ochan = open_out_gen [Open_append; Open_binary] 0o644 filename in
   begin
@@ -75,6 +69,14 @@ let mkicons () =
       close_out_noerr ochan;
     with _ -> close_out_noerr ochan;
   end;;
+
+(** prepare_build *)
+let prepare_build () =
+  if Sys.ocaml_version < required_ocaml_version then
+    eprintf "You are using OCaml-%s but version %s is required." Sys.ocaml_version required_ocaml_version;
+  cp ~echo:true (if !use_modified_gtkThread then "gtkThreadModified.ml" else "gtkThreadOriginal.ml") "gtkThread2.ml";
+  lex_yacc();
+  generate_oebuild_script();;
 
 (** clean_lex_yacc *)
 let clean_lex_yacc () =
@@ -112,10 +114,15 @@ let distclean () =
     "oebuild"//"oebuild.opt";
     "oeproc"//"oeproc";
     "oeproc"//"oeproc.opt";
+    "gtkThread2.ml";
+    "icons/icons.ml"
   ];
-  kprintf run "%s %s" rmr (Filename.parent_dir_name // "bak");
-  if Sys.file_exists (Filename.parent_dir_name // ".tmp") then
-    (kprintf run "%s %s" rmr (Filename.parent_dir_name // ".tmp" // "*"));;
+  let rmdir dir = if Sys.file_exists dir then (kprintf run "%s %s" rmr dir) in
+  rmdir (Filename.parent_dir_name // "bak");
+  rmdir (Filename.parent_dir_name // ".tmp");
+  rmdir (Filename.parent_dir_name // ".cache");
+  kprintf run "%s icons" rmr
+;;
 
 (** install *)
 let install () =
@@ -185,7 +192,7 @@ let _ = main ~dir:"../src" ~targets:[
   "-distclean",               distclean,               " (undocumented)";
 ] ~options:[
   "-prefix",                  Set_string prefix,               (sprintf "Installation prefix (Unix only, default is %s)" !prefix);
-  "-use-original-gtkThread",  Clear use_original_gtkThread,    "Don't set this flag if you have Lablgtk-2.14.2 or earlier (by default use the included modified version of gtkThread.ml to reduce CPU consumption)";
+  "-use-modified-gtkThread",  Set use_modified_gtkThread,    "Set this flag if you have Lablgtk-2.14.2 or earlier for using the included modified version of gtkThread.ml to reduce CPU consumption";
   "-has-native",              Bool (fun x -> has_native := x), "{true|false} Whether native compilation is supported (default: false)";
   "-ccopt",                   Set_string ccopt,                " (default: \"\")";
 ] ()
