@@ -62,8 +62,8 @@ class view ~editor ~project ?packing () =
   let _                 = view#selection#set_mode `SINGLE in
   let tooltips          = GData.tooltips () in
   (* Buttons *)
-  let bbox              = GPack.hbox ~spacing:2 ~packing:vbox#pack () in
-  let b_add             = GButton.button ~packing:bbox#pack () in
+  let bbox              = GPack.hbox ~spacing:3 ~packing:vbox#pack () in
+  (*let b_add             = GButton.button ~packing:bbox#pack () in
   let _                 = tooltips#set_tip ~text:"Create a new target" b_add#coerce in
   let _                 = b_add#set_image (Icons.create Icons.target_24)#coerce in
   let b_etask           = GButton.button ~packing:bbox#pack () in
@@ -71,11 +71,11 @@ class view ~editor ~project ?packing () =
   let _                 = b_etask#set_image (Icons.create Icons.etask_24)#coerce in
   let b_duplicate       = GButton.button ~packing:bbox#pack () in
   let _                 = tooltips#set_tip ~text:"Duplicate" b_duplicate#coerce in
-  let _                 = b_duplicate#set_image (GMisc.image ~stock:`COPY ~icon_size:`BUTTON ())#coerce in
-  (*let b_new = Gmisclib.Button.Menu_button.create ~packing:bbox#pack () in
+  let _                 = b_duplicate#set_image (GMisc.image ~stock:`COPY ~icon_size:`BUTTON ())#coerce in*)
+  let b_new             = Gmisclib.Button.Button_menu.create ~packing:bbox#pack () in
   let _                 = b_new#set_image  (GMisc.image ~stock:`NEW ~icon_size:`BUTTON ())#coerce in
-  let _                 = b_new#misc#set_tooltip_text "New..." in*)
-  let _                 = GMisc.separator `HORIZONTAL ~packing:bbox#pack () in
+  let _                 = b_new#misc#set_tooltip_text "New..." in
+  let _                 = GMisc.label ~text:"" ~packing:bbox#add () in
   let b_up              = GButton.button ~packing:bbox#pack () in
   let _                 = tooltips#set_tip ~text:"Move Up" b_up#coerce in
   let _                 = b_up#set_image (GMisc.image ~stock:`GO_UP ~icon_size:`BUTTON ())#coerce in
@@ -85,7 +85,7 @@ class view ~editor ~project ?packing () =
   let b_remove          = GButton.button ~packing:bbox#pack () in
   let _                 = tooltips#set_tip ~text:"Delete selected items" b_remove#coerce in
   let _                 = b_remove#set_image (GMisc.image ~stock:`DELETE ~icon_size:`BUTTON ())#coerce in
-  let _                 = GMisc.separator `HORIZONTAL ~packing:bbox#pack () in
+  let _                 = GMisc.label ~text:"" ~packing:bbox#add () in
   let b_clean           = GButton.button ~packing:bbox#pack () in
   let _                 = tooltips#set_tip ~text:"Clean" b_clean#coerce in
   let _                 = b_clean#set_image (Icons.create Icons.clear_build_24)#coerce in
@@ -101,24 +101,25 @@ object (self)
   initializer
     self#reset();
     ignore (view#selection#connect#changed ~callback:self#selection_changed);
-    (* b_add#connect#clicked *)
+    (*(* b_add#connect#clicked *)
     let _ = b_add#connect#clicked ~callback:(fun () -> ignore (self#add_target ())) in
-    (*b_clean#connect#clicked*)
-    let _ = b_clean#connect#clicked ~callback:begin fun () ->
-      self#with_current (fun _ -> function Target target -> Task_console.exec ~editor `CLEAN target | ETask _ -> ());
-    end in
     (* b_etask#connect#clicked *)
     let _ = b_etask#connect#clicked ~callback:self#add_external_task in
     (* b_duplicate#connect#clicked *)
-    let _ = b_duplicate#connect#clicked ~callback:self#duplicate in
+    let _ = b_duplicate#connect#clicked ~callback:self#duplicate in*)
     (* b_new *)
-    (*ignore (b_new#connect#popup ~callback:begin fun (label, menu) ->
+    b_new#set_menu_only ();
+    ignore (b_new#connect#show_menu ~callback:begin fun (label, menu) ->
       label := None;
       let item = GMenu.image_menu_item ~image:(GMisc.image ~pixbuf:Icons.target_16 ())#coerce ~label:"Create a new target" ~packing:menu#append () in
-      ignore (item#connect#activate ~callback:self#add_target);
+      ignore (item#connect#activate ~callback:(fun () -> ignore (self#add_target ())));
       let item = GMenu.image_menu_item ~image:(GMisc.image ~pixbuf:Icons.etask_16 ())#coerce ~label:"Add an external build task" ~packing:menu#append () in
       ignore (item#connect#activate ~callback:self#add_external_task);
-    end);*)
+      let item = GMenu.image_menu_item ~image:(GMisc.image ~stock:`COPY ())#coerce ~label:"Duplicate" ~packing:menu#append () in
+      ignore (item#connect#activate ~callback:self#duplicate);
+    end);
+    (*b_clean#connect#clicked*)
+    ignore (b_clean#connect#clicked ~callback:self#clean);
     (*b_compile#connect#clicked*)
     ignore (b_compile#connect#clicked ~callback:self#compile);
     (*b_run#connect#clicked*)
@@ -282,6 +283,9 @@ object (self)
 
   method private compile () =
     self#with_current (fun _ -> function Target target -> Task_console.exec ~editor `COMPILE target | ETask _ -> ());
+
+  method private clean () =
+    self#with_current (fun _ -> function Target target -> Task_console.exec ~editor `CLEAN target | ETask _ -> ());
 
   method private remove () =
     try

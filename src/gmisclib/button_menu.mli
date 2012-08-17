@@ -20,32 +20,48 @@
 
 *)
 
-(** A more compact alternative for the {!GButton.menu_tool_button}. *)
-class menu_tool_button :
-  toolbar:GButton.toolbar ->
-  ?homogeneous:bool ->
-  ?stock:GtkStock.id ->
+
+(** A widget containing a button and a small additional button with an arrow.
+    When clicked, the arrow button pops up a dropdown menu. *)
+class button_menu :
   ?label:string ->
-  ?packing:(GButton.tool_item_o -> unit) ->
+  ?relief:Gtk.Tags.relief_style ->
+  ?stock:GtkStock.id ->
+  ?packing:(GObj.widget -> unit) ->
   unit ->
   object
-    method as_tool_item : GButton.tool_item
     method as_widget : Gtk.widget Gtk.obj
     method button : GButton.button
     method clear_menu_only : unit -> unit
     method coerce : GObj.widget
-    method connect : Button_menu.signals
+    method connect : signals
     method destroy : unit -> unit
     method drag : GObj.drag_ops
     method get_oid : int
     method misc : GObj.misc_ops
     method set_image : GObj.widget -> unit
+
+    (** Set this flag when you want to make the main button to show the menu when cliked. *)
     method set_menu_only : unit -> unit
   end
 
+and signals :
+  clicked:unit GUtil.signal ->
+  show_menu:(string option ref * GMenu.menu) GUtil.signal ->
+  object ('a)
+    val after : bool
+    method disconnect : GtkSignal.id -> unit
+    method after : 'a
+
+    (** Emitted when the main button is clicked. *)
+    method clicked : callback:(unit -> unit) -> GtkSignal.id
+
+    (** Emitted before the menu is shown. *)
+    method show_menu :
+      callback:(string option ref * GMenu.menu -> unit) -> GtkSignal.id
+  end
+
 val create :
-  toolbar:GButton.toolbar ->
-  ?homogeneous:bool ->
-  ?stock:GtkStock.id ->
   ?label:string ->
-  ?packing:(GButton.tool_item_o -> unit) -> unit -> menu_tool_button
+  ?relief:Gtk.Tags.relief_style ->
+  ?stock:GtkStock.id -> ?packing:(GObj.widget -> unit) -> unit -> button_menu

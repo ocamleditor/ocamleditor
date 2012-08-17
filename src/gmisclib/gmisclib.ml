@@ -44,7 +44,7 @@ module Toolbar =
 
 module Button =
   struct
-    module Menu_button = Menu_button
+    module Button_menu = Button_menu
   end
 
 module Util =
