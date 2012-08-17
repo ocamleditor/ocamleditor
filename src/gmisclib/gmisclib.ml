@@ -21,6 +21,16 @@
 *)
 
 
+module Button =
+  struct
+    let button_menu = new Button_menu.button_menu
+  end
+
+module Entry =
+  struct
+    let combo_search = new Entry_combo_search.widget
+  end
+
 module Idle =
   struct
     let add     = Util.idle_add
@@ -29,33 +39,27 @@ module Idle =
 
 module Text =
   struct
-    module Hyperlink = Hyperlink
-(*    module Popup =
-      struct
-        let create = Util.window
-      end*)
-    module Undo = Undo
+    let hyperlink    = new Hyperlink.hyperlink
+    let undo_manager = new Undo.manager
   end
 
 module Toolbar =
   struct
-    module Menu_tool_button = Menu_tool_button
-  end
-
-module Button =
-  struct
-    module Button_menu = Button_menu
+    let menu_tool_button = new Menu_tool_button.menu_tool_button
   end
 
 module Util =
   struct
     exception Mark_deleted
-    let fade_window_enabled          = Util.fade_window_enabled
-    let fade_window                  = Util.fade_window
-    let set_tag_paragraph_background = Util.set_tag_paragraph_background
-    let get_iter_at_mark_safe        = Util.get_iter_at_mark_safe
-    let get_iter_at_mark_opt         = Util.get_iter_at_mark_opt
-    let treeview_is_path_onscreen    = Util.treeview_is_path_onscreen
+    let fade_window_enabled          = Gmisclib_util.fade_window_enabled
+    let fade_window                  = Gmisclib_util.fade_window
+    let set_tag_paragraph_background = Gmisclib_util.set_tag_paragraph_background
+    let get_iter_at_mark_safe        = Gmisclib_util.get_iter_at_mark_safe
+    let get_iter_at_mark_opt         = Gmisclib_util.get_iter_at_mark_opt
+    let treeview_is_path_onscreen    = Gmisclib_util.treeview_is_path_onscreen
   end
 
-
+module Window =
+  struct
+    let popup = new Window.popup
+  end

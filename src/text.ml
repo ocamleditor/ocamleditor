@@ -31,7 +31,7 @@ fun ?buffer ?file () ->
 object (self)
   inherit GText.buffer buffer#as_buffer
 
-  val undo = new Gmisclib.Text.Undo.manager ~buffer
+  val undo = Gmisclib.Text.undo_manager ~buffer
   val mutable tab_width = 2
   val mutable tab_spaces = true
   val mutable signal_handlers = []
@@ -149,7 +149,7 @@ object (self)
   val mutable signal_expose : GtkSignal.id option = None
   val gutter = Gutter.create()
   val mutable gutter_icons = []
-  val hyperlink = new Gmisclib.Text.Hyperlink.hyperlink ~view ()
+  val hyperlink = Gmisclib.Text.hyperlink ~view ()
   val mutable realized = false
   val mutable signal_id_highlight_current_line = None
   val mutable mark_occurrences_manager = None

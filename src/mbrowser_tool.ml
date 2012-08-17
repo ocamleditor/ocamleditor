@@ -106,7 +106,7 @@ class widget ~project ?(is_completion=false) ?(enable_history=true) ?width ?heig
     paned#set_position (900 / 5 * 2);
   in
   (* Hyperlink created after Ocaml_text.view to give precedence to the hyperlink tag. *)
-  let hyperlink      = new Gmisclib.Text.Hyperlink.hyperlink ~view:(odoc_view :> GText.view) ~use_ctrl_key:false () in
+  let hyperlink      = Gmisclib.Text.hyperlink ~view:(odoc_view :> GText.view) ~use_ctrl_key:false () in
   let _              = hyperlink#enable() in
 object (self)
   inherit GObj.widget ebox#as_widget

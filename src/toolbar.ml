@@ -24,8 +24,6 @@ open Printf
 open GUtil
 open Miscellanea
 
-module Menu_tool_button = Gmisclib.Toolbar.Menu_tool_button
-
 class ['a] toolbar ~(messages : Messages.messages) ~(hmessages : Messages.messages) ~(editor : Editor.editor) () =
   let tool_messages_clicked    = new tool_messages_clicked () in
   let tool_hmessages_clicked   = new tool_hmessages_clicked () in
@@ -34,7 +32,7 @@ class ['a] toolbar ~(messages : Messages.messages) ~(hmessages : Messages.messag
   let tool_new_file            = GButton.tool_button ~stock:`NEW ~label:"New" () in
   let tool_open_file           = GButton.tool_button ~stock:`OPEN ~label:"Open" () in
   let tool_save                = GButton.tool_button ~stock:`SAVE ~homogeneous:false ~label:"Save" () in
-  let tool_save_all            = Menu_tool_button.create ~homogeneous:false ~toolbar ~label:"Save All" () in
+  let tool_save_all            = Gmisclib.Toolbar.menu_tool_button ~homogeneous:false ~toolbar ~label:"Save All" () in
   let tool_close_file          = GButton.tool_button ~stock:`CLOSE ~label:"Close" () in
   let tool_undo                = GButton.tool_button ~stock:`UNDO ~label:"Undo" () in
   let tool_redo                = GButton.tool_button ~stock:`REDO ~label:"Redo" () in
@@ -50,13 +48,13 @@ class ['a] toolbar ~(messages : Messages.messages) ~(hmessages : Messages.messag
   let tool_hmessages_sign      = tool_hmessages#connect#clicked ~callback:(fun () ->
                                    tool_hmessages_clicked#call (not hmessages#visible)) in
   let tool_eval                = GButton.tool_button ~stock:`EXECUTE ~label:"Toplevel" () in
-  let tool_clean               = Menu_tool_button.create ~toolbar ~homogeneous:false () in
+  let tool_clean               = Gmisclib.Toolbar.menu_tool_button ~toolbar ~homogeneous:false () in
   let tool_compile_file        = GButton.tool_button ~label:"Compile File" () in
-  let tool_build               = Menu_tool_button.create ~toolbar ~homogeneous:false () in
-  let tool_link                = Menu_tool_button.create ~toolbar ~homogeneous:false () in
-  let tool_run                 = Menu_tool_button.create ~toolbar ~homogeneous:false () in
-  let tool_back                = Menu_tool_button.create ~toolbar ~stock:`GO_BACK ~label:"Previous Location" ~homogeneous:false () in
-  let tool_forward             = Menu_tool_button.create ~toolbar ~stock:`GO_FORWARD ~label:"Next Location" ~homogeneous:false () in
+  let tool_build               = Gmisclib.Toolbar.menu_tool_button ~toolbar ~homogeneous:false () in
+  let tool_link                = Gmisclib.Toolbar.menu_tool_button ~toolbar ~homogeneous:false () in
+  let tool_run                 = Gmisclib.Toolbar.menu_tool_button ~toolbar ~homogeneous:false () in
+  let tool_back                = Gmisclib.Toolbar.menu_tool_button ~toolbar ~stock:`GO_BACK ~label:"Previous Location" ~homogeneous:false () in
+  let tool_forward             = Gmisclib.Toolbar.menu_tool_button ~toolbar ~stock:`GO_FORWARD ~label:"Next Location" ~homogeneous:false () in
   let tool_last_edit_loc       = GButton.tool_button ~stock:`GOTO_LAST ~label:"Last Edit Location" () in
   let tool_entry_find          = GEdit.combo_box_entry
     ~wrap_width:3
