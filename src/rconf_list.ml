@@ -89,14 +89,14 @@ object (self)
   method reset () =
     let current_selection =
       match view#selection#get_selected_rows with
-        | path :: _ when project.Project_type.runtime <> [] -> Some path
+        | path :: _ when project.Prj.executables <> [] -> Some path
         | _ -> None
     in
     model#clear();
-    self#append project.Project_type.runtime;
+    self#append project.Prj.executables;
     match current_selection with
       | Some path -> view#selection#select_path path
-      | _ when project.Project_type.runtime = [] -> b_add#clicked()
+      | _ when project.Prj.executables = [] -> b_add#clicked()
       | _ -> ()
 
   method private append rcs =
@@ -208,10 +208,10 @@ object (self)
           List.exists (fun bc -> bc.Target.target_type = Target.Executable && bc.Target.files <> "") (target_list#get_targets())
         end
       end);
-      (** Remove all run configurations linked to the build configurations removed. *)
+      (** Remove all executable configurations linked to the targets removed. *)
       target_list#connect#removed ~callback:begin fun elements ->
         List.iter begin function
-          | Target_list.BCONF bc ->
+          | Target_list.Target bc ->
             let paths = ref [] in
             model#foreach begin fun path row ->
               let rc = self#get path in

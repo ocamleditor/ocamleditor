@@ -22,7 +22,7 @@
 
 open Printf
 open Oe
-open Project_type
+open Prj
 
 let bookmarks_filename = Filename.concat Oe_config.ocamleditor_user_home "bookmarks-1.5.0"
 

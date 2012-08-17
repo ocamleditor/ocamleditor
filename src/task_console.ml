@@ -213,7 +213,7 @@ object (self)
 (*      kprintf (view#buffer#insert ~tag_names:["bold"; "output"]) "Environment: %s" (String.concat "; " task.Task.env);
       kprintf (view#buffer#insert ~tag_names:["bold"; "output"]) "\nWorking directory: %s\n" task.Task.dir;
       kprintf (view#buffer#insert ~tag_names:["bold"; "output"]) "Command:\n%s\n" (Process.cmd_line proc);*)
-      (*kprintf (view#buffer#insert ~tag_names:["bold"; "output"]) "%s\n" (Cmd.expand (project.Project_type.autocomp_compiler ^ " -v"));*)
+      (*kprintf (view#buffer#insert ~tag_names:["bold"; "output"]) "%s\n" (Cmd.expand (project.Prj.autocomp_compiler ^ " -v"));*)
       kprintf (view#buffer#insert ~tag_names:["bold"; "output"]) "%s\n" (Process.cmd_line proc);
       signal_enabled <- true;
       Mutex.unlock m_write;
@@ -334,7 +334,7 @@ object (self)
             try int_of_string (Str.matched_group (group + 3) !line)
             with Invalid_argument "Str.matched_group" -> start
           in
-          let parent = project.Project_type.root // Project.src in
+          let parent = project.Prj.root // Project.src in
           let filename = List.fold_left (fun acc x -> acc // x) parent (Miscellanea.filename_split basename) in
           ignore (editor#open_file ~active:true ~scroll_offset:0 ~offset:0 filename);
           match editor#get_page (`FILENAME filename) with
@@ -493,7 +493,7 @@ let exec_sync ?run_cb ?(use_thread=true) ?(at_exit=ignore) ~editor task_groups =
 (** exec *)
 let exec ~editor ?use_thread ?(with_deps=false) task_kind target =
   let project = editor#project in
-  let can_compile_native = project.Project_type.can_compile_native in
+  let can_compile_native = project.Prj.can_compile_native in
   let filter_tasks = Target.filter_external_tasks target in
   let tasks_clean () =
     if Oebuild.check_restrictions target.restrictions then
@@ -524,7 +524,7 @@ let exec ~editor ?use_thread ?(with_deps=false) task_kind target =
   let build_deps =
     if with_deps then
       List.map begin fun id ->
-        match List_opt.find (fun bc -> bc.id = id) project.Project_type.build with
+        match List_opt.find (fun bc -> bc.id = id) project.Prj.targets with
           | Some target -> target
           | _ -> assert false
       end target.dependencies

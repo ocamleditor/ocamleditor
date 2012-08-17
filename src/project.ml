@@ -22,7 +22,7 @@
 
 open Miscellanea
 open Printf
-open Project_type
+open Prj
 
 exception Project_already_exists of string
 
@@ -88,8 +88,8 @@ let create ~filename () =
     version            = "1.0.0";
     files              = [];
     open_files         = [];
-    build              = [];
-    runtime            = [];
+    targets            = [];
+    executables        = [];
     autocomp_enabled   = true;
     autocomp_delay     = 1.0;
     autocomp_cflags    = "";
@@ -114,7 +114,7 @@ let create ~filename () =
 (** set_runtime_build_task *)
 let set_runtime_build_task proj rconf task_string =
   rconf.Rconf.build_task <- try
-    let target = List.find (fun b -> b.Target.id = rconf.Rconf.target_id) proj.build in
+    let target = List.find (fun b -> b.Target.id = rconf.Rconf.target_id) proj.targets in
     Target.task_of_string target task_string
   with Not_found -> `NONE
 
@@ -144,7 +144,7 @@ let mk_old_filename_local proj = (Filename.chop_extension (filename proj)) ^ ".l
 let get_includes =
   let re = Str.regexp "[ \t\r\n]+" in
   fun proj ->
-    let includes = String.concat " " (List.map (fun t -> t.Target.includes) proj.build) in
+    let includes = String.concat " " (List.map (fun t -> t.Target.includes) proj.targets) in
     let includes = Str.split re includes in
     Xlist.remove_dupl includes
 
@@ -344,9 +344,9 @@ let add_file proj ~scroll_offset ~offset file =
 let remove_file proj filename =
   proj.files <- List.filter (fun (f, _) -> f#path <> filename) proj.files
 
-(** Returns the names of the libraries of all build configurations. *)
+(** Returns the names of the libraries of all targets. *)
 let get_libraries proj =
-  let libs = String.concat " " (List.map (fun t -> t.Target.libs) proj.build) in
+  let libs = String.concat " " (List.map (fun t -> t.Target.libs) proj.targets) in
   Miscellanea.Xlist.remove_dupl (Miscellanea.split "[ \r\n\t]+" libs)
 
 (** clean_tmp *)
@@ -359,7 +359,7 @@ let clean_tmp proj =
 
 (** default_target *)
 let default_target project =
-  try Some (List.find (fun x -> x.Target.default) project.build) with Not_found -> None
+  try Some (List.find (fun x -> x.Target.default) project.targets) with Not_found -> None
 
 (** refresh *)
 let refresh proj =

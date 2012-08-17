@@ -21,7 +21,7 @@
 *)
 
 
-open Project_type
+open Prj
 open Target
 open Task
 open Printf
@@ -75,7 +75,7 @@ class widget ~project ?packing () =
         model_et#set ~row ~column:col_et_name (taskname_of_task (Some bc_et));
         model_et#set ~row ~column:col_et bc_et;
       end bc.external_tasks
-    end project.build
+    end project.targets
   in
   (* Model for task arguments *)
   let cols_arg          = new GTree.column_list in

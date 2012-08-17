@@ -399,7 +399,7 @@ object (self)
       if String.length text > 0 then begin
         let pat = sprintf ".*%s.*" (Str.quote text) in
         let regexp = Str.regexp_case_fold pat in
-        let symbols = Symbol.filter_by_name ~regexp project.Project_type.symbols.syt_table in
+        let symbols = Symbol.filter_by_name ~regexp project.Prj.symbols.syt_table in
         self#create_widget_search_results ~symbols ~fill ()
       end;
     end
@@ -417,7 +417,7 @@ object (self)
         ~include_modules:path
         ~include_locals:(project, page#get_filename, offset)
         ~regexp
-        project.Project_type.symbols.syt_table
+        project.Prj.symbols.syt_table
       in
       self#create_widget_search_results ~symbols ~f ()
     end;
@@ -425,12 +425,12 @@ object (self)
   (** find_symbol *)
   method private find_symbol ?(root=[]) text =
     let ident = Longident.flatten (Longident.parse text) in
-    match Symbol.find_by_modulepath ~kind:type_kinds project.Project_type.symbols ident with
+    match Symbol.find_by_modulepath ~kind:type_kinds project.Prj.symbols ident with
       | None ->
         (* If the symbol is relative, search recursively in the parent module *)
         let rec find ?(root=[]) text =
           let absolute_ident = root @ ident in
-          match Symbol.find_by_modulepath ~kind:type_kinds project.Project_type.symbols absolute_ident with
+          match Symbol.find_by_modulepath ~kind:type_kinds project.Prj.symbols absolute_ident with
             | None ->
               if root = [] then None else begin
                 let root = (*try*) Xlist.rev_tl root (*with Invalid_argument "Empty List" -> []*) in
@@ -442,7 +442,7 @@ object (self)
           match find ~root text with
             | None ->
               let pervasives_ident = "Pervasives" :: ident in
-              Symbol.find_by_modulepath project.Project_type.symbols pervasives_ident
+              Symbol.find_by_modulepath project.Prj.symbols pervasives_ident
             | symbol -> symbol
         end;
       | symbol -> symbol
@@ -466,7 +466,7 @@ object (self)
   method create_widget_libraries () =
     let wlibs = self#create_widget ~kind:`Directory () in
     widget_libraries <- Some wlibs;
-    let ocamllib = project.Project_type.ocamllib in
+    let ocamllib = project.Prj.ocamllib in
     let project_load_path = List.sort begin fun a b ->
       if a = ocamllib then -1 else if b = ocamllib then 1 else compare a b
     end (Project.get_load_path project) in
@@ -535,7 +535,7 @@ object (self)
     Index.close wlib#index;
     wlib#vc_icon#set_visible false;
     wlib#vc_add_descr#set_visible true;
-    if lib_path = project.Project_type.ocamllib then
+    if lib_path = project.Prj.ocamllib then
       wlib#set_title (Filename.dirname lib_path) "Standard Library"
     else (wlib#set_title (Filename.dirname lib_path) (Filename.basename lib_path));
     self#push wlib;
@@ -593,7 +593,7 @@ object (self)
   method create_widget_module ~module_path ?(lib_path="") ?(sort=false) ?(f=fun _ -> ()) () =
     let module_path_str = String.concat "." module_path in
     Activity.wrap Activity.Symbol begin fun () ->
-      let cache_changed = Symbol.Cache.update ~cache:project.Project_type.symbols ~value_path:module_path () in
+      let cache_changed = Symbol.Cache.update ~cache:project.Prj.symbols ~value_path:module_path () in
       let widget =
         try
           if cache_changed then (raise Not_found);
@@ -601,7 +601,7 @@ object (self)
           self#create_widget ~kind:`Module ~model ~index ()
         with Not_found ->
           let len = List.length module_path + 1 in
-          let entries = Symbol.filter_by_modulepath ~update_cache:false project.Project_type.symbols module_path in
+          let entries = Symbol.filter_by_modulepath ~update_cache:false project.Prj.symbols module_path in
           let entries = List.filter begin fun s ->
             s.sy_id <> module_path && List.length s.sy_id = len
           end entries in
@@ -638,7 +638,7 @@ object (self)
   method create_widget_class ~class_path ?(lib_path="") ?(f=fun _ -> ()) () =
     Activity.wrap Activity.Symbol begin fun () ->
       let widget = self#create_widget ~kind:`Class () in
-      let entries = Symbol.filter_methods project.Project_type.symbols class_path in
+      let entries = Symbol.filter_methods project.Prj.symbols class_path in
       let entries = List.filter (fun s -> s.sy_id <> class_path) entries in
       let entries = List.sort (fun a b -> compare a.sy_id b.sy_id) entries in
       widget#fill entries;
@@ -870,11 +870,11 @@ object (self)
                 else self#create_widget_library ~lib_path ~f ()
               in
               begin
-                match Symbol.find_parent project.Project_type.symbols symbol' with
+                match Symbol.find_parent project.Prj.symbols symbol' with
                   | Some parent when current_page#is_search_output -> go symbol' parent;
                   | Some parent ->
                     begin
-                      match Symbol.find_parent project.Project_type.symbols parent with
+                      match Symbol.find_parent project.Prj.symbols parent with
                         | Some p_parent -> go parent p_parent;
                         | _ ->
                           let parent_path = Symbol.get_parent_path parent in

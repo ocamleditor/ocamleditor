@@ -26,7 +26,7 @@ open GUtil
 open Miscellanea
 
 let mk_target_filenames project filenames =
-  let filenames = Miscellanea.Xlist.filter_map project.Project_type.in_source_path filenames in
+  let filenames = Miscellanea.Xlist.filter_map project.Prj.in_source_path filenames in
   if Oe_config.is_win32 then begin
     List.map begin fun filename ->
       Miscellanea.filename_unix_implicit filename
@@ -82,7 +82,7 @@ class view ~project ?packing () =
   end in
   (** Install path for library *)
   let box = GPack.vbox ~packing:lbox#pack () in
-  let ocamllib = project.Project_type.ocamllib in
+  let ocamllib = project.Prj.ocamllib in
   let markup = sprintf "Installation path, relative to the standard library directory (<small><tt>%s</tt></small>) " ocamllib in
   let _ = GMisc.label ~markup ~xalign:0.0 ~packing:box#pack () in
   let hbox = GPack.hbox ~spacing:3 ~packing:box#pack () in

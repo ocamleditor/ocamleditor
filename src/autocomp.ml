@@ -55,7 +55,7 @@ let rec compile_buffer ~project ~editor ~page ?(commit=false) () =
   in
   try
     let tmp = Project.path_tmp project in
-    match project.Project_type.in_source_path filename with
+    match project.Prj.in_source_path filename with
       | None -> ()
       | Some rel_name ->
         let tmp_filename = (tmp // rel_name) in
@@ -65,9 +65,9 @@ let rec compile_buffer ~project ~editor ~page ?(commit=false) () =
         (* Compile *)
         let includes = Project.get_includes project in
         let command = sprintf "%s %s %s -I ../%s %s ../%s/%s"
-          project.Project_type.autocomp_compiler
+          project.Prj.autocomp_compiler
           "-w +a"
-          project.Project_type.autocomp_cflags
+          project.Prj.autocomp_cflags
           Project.tmp
           (let includes = String.concat " -I " includes in if includes = "" then "" else "-I " ^ includes)
           Project.tmp
@@ -82,7 +82,7 @@ let rec compile_buffer ~project ~editor ~page ?(commit=false) () =
         in
         let at_exit () =
           (* Replace output files and update the table of compilation times of oebuild *)
-          let rel_filename = match project.Project_type.in_source_path filename with
+          let rel_filename = match project.Prj.in_source_path filename with
             | Some x -> Filename.chop_extension x | _ -> assert false
           in
           replace_output_file project tmp rel_filename ".annot";

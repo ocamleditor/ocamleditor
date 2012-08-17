@@ -57,9 +57,9 @@ end
 
 (** widget *)
 class widget ~project ?packing () =
-  let targets      = project.Project_type.build in
+  let targets       = project.Prj.targets in
   let hbox          = GPack.hbox ~spacing:8 ?packing () in
-  let target_widget  = new target_list ~packing:hbox#add () in
+  let target_widget = new target_list ~packing:hbox#add () in
   let bbox          = GPack.button_box `VERTICAL ~layout:`START ~spacing:8 ~packing:hbox#pack () in
   let button_add    = GButton.button ~stock:`ADD ~packing:bbox#pack () in
   let button_remove = GButton.button ~stock:`REMOVE ~packing:bbox#pack () in
@@ -114,7 +114,7 @@ object (self)
     match current_bc with
       | Some current ->
         let window = GWindow.window ~modal:true ~type_hint:`DIALOG
-          ~title:"Select one or more build configurations"
+          ~title:"Select one or more targets"
           ~icon:Icons.oe ~height:300 ~width:300 ~position:`CENTER
           ~allow_shrink:true ~allow_grow:true ~show:false ()
         in

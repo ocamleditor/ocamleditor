@@ -195,7 +195,7 @@ object (self)
       ignore (tool_compile_file#connect#clicked ~callback:begin fun () ->
         editor#with_current_page (fun p -> p#compile_buffer ~commit:false ())
       end);
-      (** Build configurations *)
+      (** Targets *)
       (* clean *)
       ignore (tool_clean#connect#clicked ~callback:begin fun () ->
         browser#with_current_project (fun project ->
@@ -207,7 +207,7 @@ object (self)
         browser#with_current_project (fun project ->
           browser#with_default_target begin fun target ->
             label := sprintf "Clean \xC2\xAB%s\xC2\xBB" target.Target.name;
-            let targets = project.Project_type.build in
+            let targets = project.Prj.targets in
             List.iter begin fun tg ->
               let item = GMenu.menu_item ~label:tg.Target.name ~packing:menu#add () in
               ignore (item#connect#activate ~callback:begin fun () ->
@@ -227,7 +227,7 @@ object (self)
         browser#with_current_project (fun project ->
           browser#with_default_target begin fun target ->
             label := sprintf "Compile \xC2\xAB%s\xC2\xBB" target.Target.name;
-            let targets = project.Project_type.build in
+            let targets = project.Prj.targets in
             List.iter begin fun tg ->
               let item = GMenu.menu_item ~label:tg.Target.name ~packing:menu#add () in
               ignore (item#connect#activate ~callback:begin fun () ->
@@ -247,7 +247,7 @@ object (self)
         browser#with_current_project (fun project ->
           browser#with_default_target begin fun target ->
             label := sprintf "Build \xC2\xAB%s\xC2\xBB" target.Target.name;
-            let targets = project.Project_type.build in
+            let targets = project.Prj.targets in
             List.iter begin fun tg ->
               let item = GMenu.menu_item ~label:tg.Target.name ~packing:menu#add () in
               ignore (item#connect#activate ~callback:begin fun () ->
@@ -260,7 +260,7 @@ object (self)
       ignore (tool_run#connect#clicked ~callback:begin fun () ->
         browser#with_current_project (fun project ->
           browser#with_default_runtime_config (fun rc ->
-            let bc = List.find (fun b -> b.Target.id = rc.Rconf.target_id) project.Project_type.build in
+            let bc = List.find (fun b -> b.Target.id = rc.Rconf.target_id) project.Prj.targets in
             ignore (Task_console.exec ~editor (`RCONF rc) bc)))
       end);
       ignore (tool_run#connect#popup ~callback:begin fun (label, menu) ->
@@ -268,7 +268,7 @@ object (self)
           browser#with_default_runtime_config (fun default_rc ->
             browser#with_default_target begin fun target ->
               label := sprintf "Run \xC2\xAB%s\xC2\xBB" default_rc.Rconf.name;
-              let targets = project.Project_type.build in
+              let targets = project.Prj.targets in
               List.iter begin fun rc ->
                 let item = GMenu.menu_item ~label:rc.Rconf.name ~packing:menu#add () in
                 ignore (item#connect#activate ~callback:begin fun () ->
@@ -277,7 +277,7 @@ object (self)
                     ignore (Task_console.exec ~editor (`RCONF rc) bc)
                   with Not_found -> ()
                 end);
-              end project.Project_type.runtime;
+              end project.Prj.executables;
             end))
       end);
       (** Location History *)

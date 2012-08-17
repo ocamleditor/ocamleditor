@@ -21,7 +21,7 @@
 *)
 
 open Project
-open Project_type
+open Prj
 open Miscellanea
 open Printf
 
@@ -111,8 +111,8 @@ class widget ~editor ?(callback=ignore) ~project ?page_num ?packing ?show () =
   let hbox = GPack.hbox ~spacing:8 ~packing:target_box#add () in
   let target_list = new Target_list.view ~editor ~project ~packing:hbox#pack () in
   let _ =
-    if List.length project.Project_type.build = 0 then begin
-      target_list#button_add#clicked();
+    if List.length project.Prj.targets = 0 then begin
+      ignore (target_list#add_target());
     end;
   in
   let vbox = GPack.vbox ~spacing:8 ~packing:hbox#add () in
@@ -134,7 +134,7 @@ class widget ~editor ?(callback=ignore) ~project ?page_num ?packing ?show () =
     | Some path ->
         begin
           match target_list#get path with
-            | Target_list.BCONF bc ->
+            | Target_list.Target bc ->
               set_title "Target";
               Gmisclib.Idle.add (fun () -> target_page#set bc);
               Gmisclib.Idle.add begin fun () ->
@@ -144,7 +144,7 @@ class widget ~editor ?(callback=ignore) ~project ?page_num ?packing ?show () =
                   target_page#misc#show ();
                 end
               end
-            | Target_list.ETASK et ->
+            | Target_list.ETask et ->
               set_title "External Build Task";
               Gmisclib.Idle.add (fun () -> etask_page#set et);
               Gmisclib.Idle.add begin fun () ->
@@ -154,26 +154,23 @@ class widget ~editor ?(callback=ignore) ~project ?page_num ?packing ?show () =
                   etask_page#misc#show ();
                 end;
               end
-            | _ -> ()
         end
   end in
   let _ = target_list#connect#add_target ~callback:(fun () -> Gmisclib.Idle.add target_page#entry_name#misc#grab_focus) in
   let _ = target_list#connect#add_etask ~callback:(fun () -> Gmisclib.Idle.add etask_page#entry_name#misc#grab_focus) in
   let _ = target_page#entry_name#connect#changed ~callback:begin fun () ->
-    match target_list#current_path() with
-      | Some path ->
-        let row = target_list#model#get_iter path in
-        let column = target_list#column_name in
-        target_list#model#set ~row ~column target_page#entry_name#text
-      | _ -> ()
+    target_list#with_current begin fun path _ ->
+      let row = target_list#model#get_iter path in
+      let column = target_list#column_name in
+      target_list#model#set ~row ~column target_page#entry_name#text
+    end
   end in
   let _ = etask_page#entry_name#connect#changed ~callback:begin fun () ->
-    match target_list#current_path () with
-      | Some path ->
-        let row = target_list#model#get_iter path in
-        let column = target_list#column_name in
-        target_list#model#set ~row ~column etask_page#entry_name#text
-      | _ -> ()
+    target_list#with_current begin fun path _ ->
+      let row = target_list#model#get_iter path in
+      let column = target_list#column_name in
+      target_list#model#set ~row ~column etask_page#entry_name#text
+    end
   end in
   let _ = target_box#pack target_page#entry_cmd_line#coerce in
   let _ = target_list#select_default_configuration () in
@@ -215,8 +212,8 @@ object (self)
   method button_close = button_close
 
   (*method private targets_ok =
-    target_list#length > 0 && project.Project_type.build <> [] && begin
-      List.for_all (fun bc -> bc.Target.files <> "") project.Project_type.build
+    target_list#length > 0 && project.Prj.build <> [] && begin
+      List.for_all (fun bc -> bc.Target.files <> "") project.Prj.build
     end && (not target_page#changed)*)
 
   method reset () =
@@ -254,10 +251,10 @@ object (self)
       project.autocomp_cflags  <- entry_autocomp_cflags#text;
       callback project;
       (* Save targets and rconfigs *)
-      project.build <- (target_list#get_targets ());
+      project.targets <- (target_list#get_targets ());
       let rconfigs = rconf_list#get_rconfigs() in
-      project.runtime <- List.filter begin fun rtc ->
-        List.exists (fun bc -> bc.Target.id = rtc.Rconf.target_id) project.build
+      project.executables <- List.filter begin fun rtc ->
+        List.exists (fun bc -> bc.Target.id = rtc.Rconf.target_id) project.targets
       end rconfigs;
       Project.save ~editor project;
       project_changed#call();

@@ -22,119 +22,148 @@
 
 open Printf
 open Target
+open Task
 open GUtil
 
-type c = ROOT | BCONF of Target.t | ETASK of Task.t
-
-let (//) = Filename.concat
+type item = Target of Target.t | ETask of Task.t
 
 (** view *)
 class view ~editor ~project ?packing () =
   (* "editor#project" is different from "project" when "project" is a new (i.e. you are in "New project" dialog window) *)
   let selection_changed = new selection_changed () in
-  let removed = new removed () in
-  let add_target = new add_target () in
-  let add_etask = new add_etask () in
-  let vbox = GPack.vbox ~spacing:5 ?packing () in
-  let cols = new GTree.column_list in
-  let col_data  = cols#add Gobject.Data.caml in
-  let col_name  = cols#add Gobject.Data.string in
-  let col_default = cols#add Gobject.Data.boolean in
-  let model = GTree.tree_store cols in
-  let renderer = GTree.cell_renderer_text [`XPAD 5] in
-  let renderer_pixbuf = GTree.cell_renderer_pixbuf [] in
-  let renderer_default = GTree.cell_renderer_toggle [`RADIO false; `ACTIVATABLE true; `WIDTH 50] in
-  let vc = GTree.view_column ~title:"Name" () in
-  let _ = vc#pack ~expand:false renderer_pixbuf in
-  let _ = vc#pack ~expand:true renderer in
-  let _ = vc#add_attribute renderer "text" col_name in
-  let _ = vc#set_min_width 220 in
-  let _ = vc#set_max_width 220 in
-  let vc_default = GTree.view_column ~title:"Default" () in
-  let _ = vc_default#pack ~expand:true renderer_default in
-  let _ = vc_default#add_attribute renderer_default "active" col_default in
-  let _ = vc_default#set_sizing `FIXED in
-  let sw = GBin.scrolled_window ~shadow_type:`IN ~hpolicy:`AUTOMATIC ~vpolicy:`AUTOMATIC ~packing:vbox#add () in
-  let view = GTree.view ~model:model ~headers_visible:true ~reorderable:false ~width:285 (*~height:385*) ~packing:sw#add () in
-  let _ = view#misc#set_property "enable-tree-lines" (`BOOL true) in
-  let _ = view#append_column vc in
-  let _ = view#append_column vc_default in
-  let _ = vc_default#set_visible true in
-  let _ = view#selection#set_mode `SINGLE in
-  let tooltips = GData.tooltips () in
+  let removed           = new removed () in
+  let add_target        = new add_target () in
+  let add_etask         = new add_etask () in
+  let vbox              = GPack.vbox ~spacing:5 ?packing () in
+  let cols              = new GTree.column_list in
+  let col_data          = cols#add Gobject.Data.caml in
+  let col_name          = cols#add Gobject.Data.string in
+  let col_default       = cols#add Gobject.Data.boolean in
+  let model             = GTree.tree_store cols in
+  let renderer          = GTree.cell_renderer_text [`XPAD 5] in
+  let renderer_pixbuf   = GTree.cell_renderer_pixbuf [] in
+  let renderer_default  = GTree.cell_renderer_toggle [`RADIO false; `ACTIVATABLE true; `WIDTH 50] in
+  let vc                = GTree.view_column ~title:"Name" () in
+  let _                 = vc#pack ~expand:false renderer_pixbuf in
+  let _                 = vc#pack ~expand:true renderer in
+  let _                 = vc#add_attribute renderer "text" col_name in
+  let _                 = vc#set_min_width 220 in
+  let _                 = vc#set_max_width 220 in
+  let vc_default        = GTree.view_column ~title:"Default" () in
+  let _                 = vc_default#pack ~expand:true renderer_default in
+  let _                 = vc_default#add_attribute renderer_default "active" col_default in
+  let _                 = vc_default#set_sizing `FIXED in
+  let sw                = GBin.scrolled_window ~shadow_type:`IN ~hpolicy:`AUTOMATIC ~vpolicy:`AUTOMATIC ~packing:vbox#add () in
+  let view              = GTree.view ~model:model ~headers_visible:true ~reorderable:true ~width:285 (*~height:385*) ~packing:sw#add () in
+  let _                 = view#misc#set_property "enable-tree-lines" (`BOOL true) in
+  let _                 = view#append_column vc in
+  let _                 = view#append_column vc_default in
+  let _                 = vc_default#set_visible true in
+  let _                 = view#selection#set_mode `SINGLE in
+  let tooltips          = GData.tooltips () in
   (* Buttons *)
-  let bbox = GPack.button_box `HORIZONTAL ~layout:`SPREAD ~child_width:25 ~packing:vbox#pack () in
-  let b_add = GButton.button ~packing:bbox#add () in
-  let _ = tooltips#set_tip ~text:"Create a new build configuration" b_add#coerce in
-  let _ = b_add#set_image (Icons.create Icons.target_24)#coerce in
-  let b_etask = GButton.button ~packing:bbox#add () in
-  let _ = tooltips#set_tip ~text:"Add an external build task" b_etask#coerce in
-  let _ = b_etask#set_image (Icons.create Icons.etask_24)#coerce in
-  let b_remove = GButton.button ~packing:bbox#add () in
-  let _ = tooltips#set_tip ~text:"Delete selected items" b_remove#coerce in
-  let _ = b_remove#set_image (GMisc.image ~stock:`DELETE ~icon_size:`BUTTON ())#coerce in
-  let b_clean = GButton.button ~packing:bbox#add () in
-  let _ = tooltips#set_tip ~text:"Clean" b_clean#coerce in
-  let _ = b_clean#set_image (Icons.create Icons.clear_build_24)#coerce in
-  let b_compile = GButton.button ~packing:bbox#add () in
-  let _ = tooltips#set_tip ~text:"Build" b_compile#coerce in
-  let _ = b_compile#set_image (Icons.create Icons.build_24)#coerce in
-  let b_run = GButton.button ~packing:bbox#add () in
-  let _ = tooltips#set_tip ~text:"Run external task/Install library" b_run#coerce in
-  let _ = b_run#set_image (Icons.create Icons.start_16)#coerce in
+  let bbox              = GPack.hbox ~spacing:2 ~packing:vbox#pack () in
+  let b_add             = GButton.button ~packing:bbox#pack () in
+  let _                 = tooltips#set_tip ~text:"Create a new target" b_add#coerce in
+  let _                 = b_add#set_image (Icons.create Icons.target_24)#coerce in
+  let b_etask           = GButton.button ~packing:bbox#pack () in
+  let _                 = tooltips#set_tip ~text:"Add an external build task" b_etask#coerce in
+  let _                 = b_etask#set_image (Icons.create Icons.etask_24)#coerce in
+  let b_duplicate       = GButton.button ~packing:bbox#pack () in
+  let _                 = tooltips#set_tip ~text:"Duplicate" b_duplicate#coerce in
+  let _                 = b_duplicate#set_image (GMisc.image ~stock:`COPY ~icon_size:`BUTTON ())#coerce in
+  (*let b_new = Gmisclib.Button.Menu_button.create ~packing:bbox#pack () in
+  let _                 = b_new#set_image  (GMisc.image ~stock:`NEW ~icon_size:`BUTTON ())#coerce in
+  let _                 = b_new#misc#set_tooltip_text "New..." in*)
+  let _                 = GMisc.separator `HORIZONTAL ~packing:bbox#pack () in
+  let b_up              = GButton.button ~packing:bbox#pack () in
+  let _                 = tooltips#set_tip ~text:"Move Up" b_up#coerce in
+  let _                 = b_up#set_image (GMisc.image ~stock:`GO_UP ~icon_size:`BUTTON ())#coerce in
+  let b_down            = GButton.button ~packing:bbox#pack () in
+  let _                 = tooltips#set_tip ~text:"Move Down" b_down#coerce in
+  let _                 = b_down#set_image (GMisc.image ~stock:`GO_DOWN ~icon_size:`BUTTON ())#coerce in
+  let b_remove          = GButton.button ~packing:bbox#pack () in
+  let _                 = tooltips#set_tip ~text:"Delete selected items" b_remove#coerce in
+  let _                 = b_remove#set_image (GMisc.image ~stock:`DELETE ~icon_size:`BUTTON ())#coerce in
+  let _                 = GMisc.separator `HORIZONTAL ~packing:bbox#pack () in
+  let b_clean           = GButton.button ~packing:bbox#pack () in
+  let _                 = tooltips#set_tip ~text:"Clean" b_clean#coerce in
+  let _                 = b_clean#set_image (Icons.create Icons.clear_build_24)#coerce in
+  let b_compile         = GButton.button ~packing:bbox#pack () in
+  let _                 = tooltips#set_tip ~text:"Build" b_compile#coerce in
+  let _                 = b_compile#set_image (Icons.create Icons.build_24)#coerce in
+  let b_run             = GButton.button ~packing:bbox#pack () in
+  let _                 = tooltips#set_tip ~text:"Run external task/Install library" b_run#coerce in
+  let _                 = b_run#set_image (GMisc.image ~xalign:0.5 ~width:24 ~pixbuf:Icons.start_16 ())#coerce in
 object (self)
   inherit GObj.widget vbox#as_widget
+
+  initializer
+    self#reset();
+    ignore (view#selection#connect#changed ~callback:self#selection_changed);
+    (* b_add#connect#clicked *)
+    let _ = b_add#connect#clicked ~callback:(fun () -> ignore (self#add_target ())) in
+    (*b_clean#connect#clicked*)
+    let _ = b_clean#connect#clicked ~callback:begin fun () ->
+      self#with_current (fun _ -> function Target target -> Task_console.exec ~editor `CLEAN target | ETask _ -> ());
+    end in
+    (* b_etask#connect#clicked *)
+    let _ = b_etask#connect#clicked ~callback:self#add_external_task in
+    (* b_duplicate#connect#clicked *)
+    let _ = b_duplicate#connect#clicked ~callback:self#duplicate in
+    (* b_new *)
+    (*ignore (b_new#connect#popup ~callback:begin fun (label, menu) ->
+      label := None;
+      let item = GMenu.image_menu_item ~image:(GMisc.image ~pixbuf:Icons.target_16 ())#coerce ~label:"Create a new target" ~packing:menu#append () in
+      ignore (item#connect#activate ~callback:self#add_target);
+      let item = GMenu.image_menu_item ~image:(GMisc.image ~pixbuf:Icons.etask_16 ())#coerce ~label:"Add an external build task" ~packing:menu#append () in
+      ignore (item#connect#activate ~callback:self#add_external_task);
+    end);*)
+    (*b_compile#connect#clicked*)
+    ignore (b_compile#connect#clicked ~callback:self#compile);
+    (*b_run#connect#clicked*)
+    ignore (b_run#connect#clicked ~callback:self#run);
+    (* b_remove#connect#clicked *)
+    ignore (b_remove#connect#clicked ~callback:self#remove);
+    (**  *)
+    ignore (b_up#connect#clicked ~callback:(fun () -> self#move `UP));
+    ignore (b_down#connect#clicked ~callback:(fun () -> self#move `DOWN));
+    (* Default check toggled *)
+    ignore (renderer_default#connect#toggled ~callback:self#toggle_default);
+    (* Description (byt, opt) *)
+    vc#set_cell_data_func renderer self#cell_data_func;
+    (* Show hide column "default" *)
+    vc_default#set_cell_data_func renderer_default begin fun model row ->
+      let id = model#get ~row ~column:col_data in
+      renderer_default#set_properties [`VISIBLE (match id with Target _ -> true | ETask _ -> false)]
+    end;
 
   method model = model
   method view = view
   method column_name = col_name
-  method has_errors target = target.Target.files = "";
-
-  method button_add = b_add
+  method has_errors target = target.files = "";
 
   method get path =
     let row = model#get_iter path in
     model#get ~row ~column:col_data
 
-  method private to_list () =
-    let lst = ref [] in
-    model#foreach begin fun path row ->
-      lst := (model#get ~row ~column:col_data) :: !lst;
-      false
-    end;
-    List.rev !lst
-
-  method get_targets () = Miscellanea.Xlist.filter_map (function BCONF x -> Some x | _ -> None) (self#to_list())
+  method get_targets () = Miscellanea.Xlist.filter_map (function Target x -> Some x | ETask _ -> None) (self#to_list())
 
   method length = List.length (self#to_list())
 
-  method current_path () =
-    match List.rev view#selection#get_selected_rows with
-      | path :: _ -> Some path
-      | [] -> None
-
-  method private current () =
-    let path = self#current_path () in
-    begin
-      match path with None -> None | Some path ->
-        (match self#get path with
-          | BCONF bc -> Some (path, bc)
-          | _ -> None)
-    end
-
-  method append bcs =
+  method private append bcs =
     let rows = List.map begin fun target ->
       GtkThread2.sync begin fun () ->
         let target = {target with id = target.id} in
-        target.Target.external_tasks <- List.map (fun et ->
-          {et with Task.et_name = et.Task.et_name}) target.Target.external_tasks;
+        target.external_tasks <- List.map (fun et ->
+          {et with Task.et_name = et.Task.et_name}) target.external_tasks;
         let row = model#append () in
-        model#set ~row ~column:col_data (BCONF target);
+        model#set ~row ~column:col_data (Target target);
         model#set ~row ~column:col_name target.name;
         model#set ~row ~column:col_default target.default;
         List.iter begin fun task ->
           GtkThread2.sync (fun () -> ignore (self#append_task ~parent:row ~task)) ()
-        end target.Target.external_tasks;
+        end target.external_tasks;
         (*view#selection#select_iter row*)
         row
       end ()
@@ -142,9 +171,9 @@ object (self)
     view#expand_all();
     rows
 
-  method append_task ~parent ~task =
+  method private append_task ~parent ~task =
     let row = model#append ~parent () in
-    model#set ~row ~column:col_data (ETASK task);
+    model#set ~row ~column:col_data (ETask task);
     model#set ~row ~column:col_name task.Task.et_name;
     model#set ~row ~column:col_default false;
     view#expand_row (model#get_path parent);
@@ -160,179 +189,229 @@ object (self)
       end else false
     end;
 
-  method reset () =
-    let current_selection =
-      match view#selection#get_selected_rows with
-        | [] -> None
-        | path :: _ -> Some path
-    in
-    model#clear();
-    self#append project.Project_type.build;
-    match current_selection with
-      | Some path -> view#selection#select_path path
-      | _ -> self#select_default_configuration()
+  method private create_id () =
+    let targets = Miscellanea.Xlist.filter_map (function Target x -> Some x | ETask _ -> None) (self#to_list()) in
+    (List.fold_left (fun acc t -> max acc t.id) (-1) targets) + 1
 
-  initializer
-    self#reset();
-    ignore (view#selection#connect#changed ~callback:begin fun () ->
-      match view#selection#get_selected_rows with
-        | path :: _ ->
-          selection_changed#call (Some path);
-          begin
-            match self#get path with
-              | BCONF bc ->
-                Gmisclib.Idle.add ~prio:300 (fun () ->
-                  b_clean#misc#set_sensitive true;
-                  b_compile#misc#set_sensitive true;
-                  b_etask#misc#set_sensitive true;
-                  b_run#misc#set_sensitive (bc.Target.target_type <> Executable));
-              | _ ->
-                Gmisclib.Idle.add ~prio:300 (fun () ->
-                  b_clean#misc#set_sensitive false;
-                  b_compile#misc#set_sensitive false;
-                  b_etask#misc#set_sensitive true;
-                  b_run#misc#set_sensitive true);
-          end;
-        | [] -> selection_changed#call None
-    end);
-    (* b_add#connect#clicked *)
-    let _ = b_add#connect#clicked ~callback:begin fun () ->
-      let targets = Miscellanea.Xlist.filter_map (function BCONF x -> Some x | _ -> None) (self#to_list()) in
-      let id = (List.fold_left (fun acc t -> max acc t.id) (-1) targets) + 1 in
-      let name = sprintf "New Target %d" id in
-      let rows = self#append [Target.create ~name ~id] in
-      (match rows with [row] -> view#selection#select_iter row | _ -> ());
-      add_target#call();
-    end in
-    (*b_clean#connect#clicked*)
-    let _ = b_clean#connect#clicked ~callback:begin fun () ->
-      Gaux.may (self#current()) ~f:(fun (_, target) -> Task_console.exec ~editor `CLEAN target)
-    end in
-    (* b_etask#connect#clicked *)
-    let _ = b_etask#connect#clicked ~callback:begin fun () ->
-      let rec f path =
+  method add_target () =
+    let id = self#create_id () in
+    let name = sprintf "New Target %d" id in
+    let rows = self#append [Target.create ~name ~id] in
+    begin
+      match rows with
+        | [row] ->
+          let path = model#get_path row in
+          view#set_cursor path vc;
+          add_target#call();
+          path
+        | _ -> assert false
+    end;
+
+  method add_external_task () =
+    let rec f path = function
+      | Target target ->
         let task = Task.create ~name:"External Build Task" ~env:[] ~dir:"" ~cmd:"" ~args:[] () in
         let parent = model#get_iter path in
-        match self#get path with
-          | BCONF target ->
-            let row = self#append_task ~parent ~task in
-            view#set_cursor (model#get_path row) vc;
-            target.Target.external_tasks <- target.Target.external_tasks @ [task];
-            add_etask#call();
-          | (*ETASK*) _ ->
-            if GTree.Path.up path then (f path)
+        let row = self#append_task ~parent ~task in
+        view#set_cursor (model#get_path row) vc;
+        target.external_tasks <- target.external_tasks @ [task];
+        add_etask#call();
+      | ETask _ ->
+        if GTree.Path.up path then (f path (self#get path))
+    in
+    self#with_current f;
+
+  method private move dir =
+    self#with_current begin fun path ->
+      let iter = model#get_iter path in
+      let scroll path =
+        view#set_cursor path vc;
+        (*let x = match dir with `UP -> 0.1 | `DOWN -> 0.9 in
+        view#scroll_to_cell ~align:(x, x) path vc;*)
       in
-      match view#selection#get_selected_rows with
-        | path :: [] -> f path
-        | _ -> ()
-    end in
-    (*b_compile#connect#clicked*)
-    let _ = b_compile#connect#clicked ~callback:begin fun () ->
-      Gaux.may (self#current()) ~f:begin fun (_, target) ->
-        Task_console.exec ~editor `COMPILE target;
-      end
-    end in
-    (*b_run#connect#clicked*)
-    let _ = b_run#connect#clicked ~callback:begin fun () ->
-      Gaux.may (self#current_path ()) ~f:begin fun path ->
-        match self#get path with
-          | BCONF target -> Task_console.exec ~editor `INSTALL_LIBRARY target
-          | ETASK etask -> Task_console.exec_sync ~editor [[`OTHER, etask]]
-          | _ -> ()
-      end
-    end in
-    (* b_remove#connect#clicked *)
-    let _ = b_remove#connect#clicked ~callback:begin fun () ->
-      try
-        let last_path_index = (GTree.Path.get_indices (List.hd view#selection#get_selected_rows)).(0) in
-        let paths = view#selection#get_selected_rows in
-        List.iter begin fun path ->
-          match self#get path with
-            | ETASK task ->
-              let parent = GTree.Path.copy path in
-              if GTree.Path.up parent then begin
-                match self#get parent with
-                  | BCONF bc ->
-                    bc.Target.external_tasks <- List.filter ((<>) task) bc.Target.external_tasks;
-                  | _ -> assert false
-              end
-            | _ -> ()
-        end paths;
-        let data_removed = List.map self#get paths in
-        let rows = List.map model#get_iter paths in
-        List.iter (fun row -> ignore (model#remove row)) rows;
-        let targets = self#to_list() in
-        let index = min last_path_index (List.length targets - 1) in
-        view#selection#select_path (GTree.Path.create [index]);
-        removed#call data_removed;
-      with Failure "hd" -> ()
-    end in
-    (* Default check toggled *)
-    let _ = renderer_default#connect#toggled ~callback:begin fun row ->
-      let row = model#get_iter row in
-      let active = model#get ~row ~column:col_default in
-      if not active then begin
-        model#foreach begin fun _ row ->
-          (model#set ~row ~column:col_default false);
+      function
+        | Target _ when dir = `UP && GTree.Path.prev path ->
+          ignore (model#move_before ~iter ~pos:(model#get_iter path));
+          scroll path;
+        | Target _ when dir = `DOWN ->
           begin
-            match model#get ~row ~column:col_data with
-              | BCONF bc -> bc.default <- false
-              | _ -> ()
+            try
+              GTree.Path.next path;
+              ignore (model#move_after ~iter ~pos:(model#get_iter path));
+              scroll path;
+            with Failure _ -> ()
           end;
-          false
+        | Target _ -> ()
+        | ETask _ when dir = `UP && GTree.Path.prev path ->
+          ignore (model#move_before ~iter ~pos:(model#get_iter path));
+          scroll path;
+        | ETask _ when dir = `DOWN ->
+          begin
+            try
+              GTree.Path.next path;
+              ignore (model#move_after ~iter ~pos:(model#get_iter path));
+              scroll path;
+            with Failure _ -> ()
+          end;
+        | ETask _ -> ()
+    end
+
+  method private run () =
+    self#with_current begin fun _ -> function
+      | Target target -> Task_console.exec ~editor `INSTALL_LIBRARY target
+      | ETask etask -> Task_console.exec_sync ~editor [[`OTHER, etask]]
+    end
+
+  method private compile () =
+    self#with_current (fun _ -> function Target target -> Task_console.exec ~editor `COMPILE target | ETask _ -> ());
+
+  method private remove () =
+    try
+      let last_path_index = (GTree.Path.get_indices (List.hd view#selection#get_selected_rows)).(0) in
+      let paths = view#selection#get_selected_rows in
+      List.iter begin fun path ->
+        match self#get path with
+          | ETask task ->
+            let parent = GTree.Path.copy path in
+            if GTree.Path.up parent then begin
+              match self#get parent with
+                | Target bc ->
+                  bc.external_tasks <- List.filter ((<>) task) bc.external_tasks;
+                | ETask _ -> assert false
+            end
+          | Target _ -> ()
+      end paths;
+      let data_removed = List.map self#get paths in
+      let rows = List.map model#get_iter paths in
+      List.iter (fun row -> ignore (model#remove row)) rows;
+      let targets = self#to_list() in
+      let index = min last_path_index (List.length targets - 1) in
+      view#selection#select_path (GTree.Path.create [index]);
+      removed#call data_removed;
+    with Failure "hd" -> ()
+
+  method private duplicate () =
+    self#with_current begin fun path -> function
+      | Target original ->
+        begin
+          let target = {original with id=self#create_id (); name=original.name^" - Copy"; external_tasks = []; default=false} in
+          match self#append [target] with
+            | [row] ->
+              view#set_cursor (model#get_path row) vc;
+              add_target#call()
+            | _ -> assert false
         end;
-        model#set ~row ~column:col_default true;
-        match model#get ~row ~column:col_data with
-          | BCONF bc -> bc.default <- true
-          | _ -> ()
-      end
-    end in
-    (* Description (byt, opt) *)
-    vc#set_cell_data_func renderer begin fun model row ->
-      try
+      | ETask original when GTree.Path.up path ->
+        begin
+          match self#get path with
+            | Target target_parent ->
+              let task = {original with et_name=original.et_name^" - Copy"} in
+              let row = self#append_task ~parent:(model#get_iter path) ~task in
+              view#set_cursor (model#get_path row) vc;
+              target_parent.external_tasks <- target_parent.external_tasks @ [task];
+              add_etask#call()
+            | ETask _ -> ()
+        end;
+      | ETask _ -> ()
+    end
+
+  method private selection_changed () =
+    match view#selection#get_selected_rows with
+      | path :: _ ->
+        selection_changed#call (Some path);
+        begin
+          match self#get path with
+            | Target bc ->
+              Gmisclib.Idle.add ~prio:300 (fun () ->
+                b_clean#misc#set_sensitive true;
+                b_compile#misc#set_sensitive true;
+                (*b_etask#misc#set_sensitive true;*)
+                b_run#misc#set_sensitive (bc.target_type <> Executable));
+            | ETask _ ->
+              Gmisclib.Idle.add ~prio:300 (fun () ->
+                b_clean#misc#set_sensitive false;
+                b_compile#misc#set_sensitive false;
+                (*b_etask#misc#set_sensitive true;*)
+                b_run#misc#set_sensitive true);
+        end;
+      | [] -> selection_changed#call None
+
+  method toggle_default row =
+    let row = model#get_iter row in
+    let active = model#get ~row ~column:col_default in
+    if not active then begin
+      model#foreach begin fun _ row ->
+        (model#set ~row ~column:col_default false);
         begin
           match model#get ~row ~column:col_data with
-            | ROOT ->
-              renderer_pixbuf#set_properties [`VISIBLE true; `PIXBUF Icons.target_16; `XALIGN 0.0];
-            | BCONF target ->
-              renderer_pixbuf#set_properties [
-                `VISIBLE (self#has_errors target);
-                `PIXBUF ((GMisc.image ())#misc#render_icon ~size:`MENU `DIALOG_WARNING);
-                `XALIGN 0.0];
-              let name = model#get ~row ~column:col_name in
-              let descr = if target.byt then ["Bytecode"] else [] in
-              let descr = descr @ (if target.opt then ["Native-code"] else []) in
-              let descr = String.concat ", " descr in
-              let descr = (string_of_target_type target.target_type) ^ " &#8226; " ^ descr in
-              renderer#set_properties [`MARKUP (sprintf
-                "<b>%s</b>\n<span weight='light' size='smaller' style='italic'>%s</span>" name descr)];
-              if target.target_type = Executable then begin
-                renderer_pixbuf#set_properties [`VISIBLE true; `PIXBUF Icons.start_16; `XALIGN 0.0]
-              end else if target.target_type = Plugin then begin
-                renderer_pixbuf#set_properties [`VISIBLE true; `PIXBUF Icons.plugin; `XALIGN 0.0]
-              end else begin
-                renderer_pixbuf#set_properties [`VISIBLE true; `PIXBUF Icons.library; `XALIGN 0.0]
-              end
-            | ETASK _ ->
-              renderer_pixbuf#set_properties [`VISIBLE true; `PIXBUF Icons.etask_16; `XALIGN 0.0]
-          end
-      with Not_found -> ()
+            | Target bc -> bc.default <- false
+            | ETask _ -> ()
+        end;
+        false
+      end;
+      model#set ~row ~column:col_default true;
+      match model#get ~row ~column:col_data with
+        | Target bc -> bc.default <- true
+        | ETask _ -> ()
+    end
+
+  method private cell_data_func model row =
+    try
+      begin
+        match model#get ~row ~column:col_data with
+          | Target target ->
+            renderer_pixbuf#set_properties [
+              `VISIBLE (self#has_errors target);
+              `PIXBUF ((GMisc.image ())#misc#render_icon ~size:`MENU `DIALOG_WARNING);
+              `XALIGN 0.0];
+            let name = model#get ~row ~column:col_name in
+            let descr = if target.byt then ["Bytecode"] else [] in
+            let descr = descr @ (if target.opt then ["Native-code"] else []) in
+            let descr = String.concat ", " descr in
+            let descr = (string_of_target_type target.target_type) ^ " &#8226; " ^ descr in
+            renderer#set_properties [`MARKUP (sprintf
+              "<b>%s</b>\n<span weight='light' size='smaller' style='italic'>%s</span>" name descr)];
+            if target.target_type = Executable then begin
+              renderer_pixbuf#set_properties [`VISIBLE true; `PIXBUF Icons.start_16; `XALIGN 0.0]
+            end else if target.target_type = Plugin then begin
+              renderer_pixbuf#set_properties [`VISIBLE true; `PIXBUF Icons.plugin; `XALIGN 0.0]
+            end else begin
+              renderer_pixbuf#set_properties [`VISIBLE true; `PIXBUF Icons.library; `XALIGN 0.0]
+            end
+          | ETask _ ->
+            renderer_pixbuf#set_properties [`VISIBLE true; `PIXBUF Icons.etask_16; `XALIGN 0.0]
+        end
+    with Not_found -> ()
+
+  method reset () =
+    model#clear();
+    ignore (self#append project.Prj.targets);
+    self#with_current
+      ~default:self#select_default_configuration
+      (fun path _ -> view#selection#select_path path);
+
+  method with_current ?default f =
+    match view#selection#get_selected_rows with
+      | path :: [] -> f path (self#get path)
+      | _ -> Gaux.may default ~f:(fun g -> g())
+
+  method private to_list () =
+    let lst = ref [] in
+    model#foreach begin fun _ row ->
+      lst := (model#get ~row ~column:col_data) :: !lst;
+      false
     end;
-    (* Show hide column "default" *)
-    vc_default#set_cell_data_func renderer_default begin fun model row ->
-      let id = model#get ~row ~column:col_data in
-      renderer_default#set_properties [`VISIBLE (match id with BCONF _ -> true | _ -> false)]
-    end;
+    List.rev !lst
 
   method connect = new signals ~selection_changed ~removed ~add_target ~add_etask
 end
 
-and selection_changed () = object (self) inherit [Gtk.tree_path option] signal () as super end
-and removed () = object (self) inherit [c list] signal () as super end
-and add_target () = object (self) inherit [unit] signal () as super end
-and add_etask () = object (self) inherit [unit] signal () as super end
+and selection_changed () = object inherit [Gtk.tree_path option] signal () end
+and removed () = object inherit [item list] signal () end
+and add_target () = object inherit [unit] signal () end
+and add_etask () = object inherit [unit] signal () end
 and signals ~selection_changed ~removed ~add_target ~add_etask =
-object (self)
+object
   inherit ml_signals [selection_changed#disconnect; removed#disconnect; add_target#disconnect; add_etask#disconnect]
   method selection_changed = selection_changed#connect ~after
   method removed = removed#connect ~after

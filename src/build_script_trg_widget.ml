@@ -22,20 +22,20 @@
 
 
 class widget ~project ?packing () =
-  let targets         = project.Project_type.build in
-  let hbox            = GPack.hbox ~spacing:5 ?packing () in
-  let sw              = GBin.scrolled_window ~shadow_type:`IN ~hpolicy:`AUTOMATIC ~vpolicy:`AUTOMATIC ~packing:hbox#add () in
-  let cols            = new GTree.column_list in
-  let col_target       = cols#add Gobject.Data.caml in
-  let rend_target      = GTree.cell_renderer_text [] in
-  let rend_pixbuf     = GTree.cell_renderer_pixbuf [] in
-  let model           = GTree.list_store cols in
-  let vc_target        = GTree.view_column ~title:"Target" () in
-  let _               = vc_target#pack ~expand:false rend_pixbuf in
-  let _               = vc_target#pack ~expand:true rend_target in
-  let view            = GTree.view ~model ~headers_visible:false ~reorderable:true ~enable_search:false ~packing:sw#add () in
-  let _               = view#selection#set_mode `MULTIPLE in
-  let _               = view#append_column vc_target in
+  let targets     = project.Prj.targets in
+  let hbox        = GPack.hbox ~spacing:5 ?packing () in
+  let sw          = GBin.scrolled_window ~shadow_type:`IN ~hpolicy:`AUTOMATIC ~vpolicy:`AUTOMATIC ~packing:hbox#add () in
+  let cols        = new GTree.column_list in
+  let col_target  = cols#add Gobject.Data.caml in
+  let rend_target = GTree.cell_renderer_text [] in
+  let rend_pixbuf = GTree.cell_renderer_pixbuf [] in
+  let model       = GTree.list_store cols in
+  let vc_target   = GTree.view_column ~title:"Target" () in
+  let _           = vc_target#pack ~expand:false rend_pixbuf in
+  let _           = vc_target#pack ~expand:true rend_target in
+  let view        = GTree.view ~model ~headers_visible:false ~reorderable:true ~enable_search:false ~packing:sw#add () in
+  let _           = view#selection#set_mode `MULTIPLE in
+  let _           = view#append_column vc_target in
 object (self)
   inherit GObj.widget hbox#as_widget
   initializer

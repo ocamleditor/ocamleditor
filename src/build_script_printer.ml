@@ -89,8 +89,8 @@ let print_add_args bc et args =
 
 (** print_external_tasks *)
 let print_external_tasks ochan project =
-  let targets = project.Project_type.build in
-  let args = project.Project_type.build_script.bs_args in
+  let targets = project.Prj.targets in
+  let args = project.Prj.build_script.bs_args in
   let i = ref 0 in
   let print = fprintf ochan "  %s\n" in
   output_string ochan "let external_tasks = [\n";
@@ -124,7 +124,7 @@ let print_external_tasks ochan project =
 
 (** print_cmd_line_args *)
 let print_cmd_line_args ochan project =
-  let args = project.Project_type.build_script.bs_args in
+  let args = project.Prj.build_script.bs_args in
   List.iter begin fun arg ->
     let default =
       match arg.bsa_default with
@@ -168,7 +168,7 @@ let print ~project ~filename () =
     output_string ochan "\n\n";
     output_string ochan "(\x2A Targets ==================================================== \x2A)\n\n";
     (*  *)
-    print_configs ochan project.Project_type.build ets;
+    print_configs ochan project.Prj.targets ets;
     output_string ochan "\n";
     output_string ochan "(\x2A End of Targets ============================================= \x2A)\n\n";
     (*  *)

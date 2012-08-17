@@ -57,7 +57,7 @@ let load_custom kind =
   in
   match kind with
     | `project project ->
-      let filename = project.Project_type.root // Oe_config.template_project_filename in
+      let filename = project.Prj.root // Oe_config.template_project_filename in
       load filename Project;
     | `user ->
       let filename = Preferences.preferences#get.Preferences.pref_editor_custom_templ_filename in
@@ -122,7 +122,7 @@ let apply ~project (view : Ocaml_text.view) (templ : Templates.t) =
           | CURRENT_FILENAME ->
             Gaux.may view#obuffer#file ~f:(fun file -> buffer#insert file#name)
           | CURRENT_LINE -> buffer#insert (string_of_int ((buffer#get_iter `INSERT)#line + 1))
-          | DESCRIPTION -> buffer#insert project.Project_type.description
+          | DESCRIPTION -> buffer#insert project.Prj.description
         end templ;
       | Action func -> func view
   end;

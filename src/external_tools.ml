@@ -21,7 +21,7 @@
 *)
 
 open Project
-open Project_type
+open Prj
 open Miscellanea
 open Tree
 

@@ -225,7 +225,7 @@ object (self)
   method bookmark_remove ~num =
     self#with_current_page begin fun page ->
       let old_marker =
-        try (List.find (fun bm -> bm.Oe.bm_num = num) project.Project_type.bookmarks).Oe.bm_marker
+        try (List.find (fun bm -> bm.Oe.bm_num = num) project.Prj.bookmarks).Oe.bm_marker
         with Not_found -> None
       in
       Gaux.may old_marker ~f:(fun old -> Gutter.destroy_markers page#view#gutter [old]);
@@ -239,7 +239,7 @@ object (self)
       let where = match where with Some x -> x | _ -> page#buffer#get_iter `INSERT in
       let mark = page#buffer#create_mark(* ~name:(Gtk_util.create_mark_name "Editor.bookmark_create")*) where in
       let old_marker =
-        try (List.find (fun bm -> bm.Oe.bm_num = num) project.Project_type.bookmarks).Oe.bm_marker
+        try (List.find (fun bm -> bm.Oe.bm_num = num) project.Prj.bookmarks).Oe.bm_marker
         with Not_found -> None
       in
       Gaux.may old_marker ~f:(fun old -> Gutter.destroy_markers page#view#gutter [old]);
@@ -252,7 +252,7 @@ object (self)
 
   method bookmark_goto ~num =
     try
-      let bm = List.find (fun bm -> bm.Oe.bm_num = num) project.Project_type.bookmarks in
+      let bm = List.find (fun bm -> bm.Oe.bm_num = num) project.Prj.bookmarks in
       match self#get_page (`FILENAME bm.Oe.bm_filename) with
         | None ->
           let _ = self#open_file ~active:true ~scroll_offset:0 ~offset:0 bm.Oe.bm_filename in
@@ -755,11 +755,11 @@ object (self)
   method private add_timeouts () =
     (** Auto-compilation *)
     ignore (GMain.Timeout.add ~ms:500 ~callback:begin fun () ->
-      if project.Project_type.autocomp_enabled then begin
+      if project.Prj.autocomp_enabled then begin
         try
           self#with_current_page begin fun page ->
             if page#buffer#changed_after_last_autocomp > 0.0 then begin
-              if Unix.gettimeofday() -. page#buffer#changed_after_last_autocomp > project.Project_type.autocomp_delay (*/. 2.*)
+              if Unix.gettimeofday() -. page#buffer#changed_after_last_autocomp > project.Prj.autocomp_delay (*/. 2.*)
               then (page#compile_buffer ~commit:false ())
             end
           end
@@ -844,15 +844,15 @@ object (self)
     end);
     (** Record last active page *)
     let rec get_history project =
-      match List_opt.assoc project.Project_type.name history_switch_page with
+      match List_opt.assoc project.Prj.name history_switch_page with
         | Some x -> x
         | _ ->
-          history_switch_page <- (project.Project_type.name, []) :: history_switch_page;
+          history_switch_page <- (project.Prj.name, []) :: history_switch_page;
           get_history project
     in
     let replace_history project hist =
-      history_switch_page <- List.remove_assoc project.Project_type.name history_switch_page;
-      history_switch_page <- (project.Project_type.name, hist) :: history_switch_page;
+      history_switch_page <- List.remove_assoc project.Prj.name history_switch_page;
+      history_switch_page <- (project.Prj.name, hist) :: history_switch_page;
     in
     ignore (notebook#connect#switch_page ~callback:begin fun _ ->
       if not history_switch_page_locked && notebook#current_page >= 0 then begin

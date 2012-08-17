@@ -150,7 +150,7 @@ class widget ~project ~page ~tmp =
   let type_color_sel    = Color.name_of_gdk (view#misc#style#fg `SELECTED) in
   let type_color_sel_re = Str.regexp_string type_color_sel in
   let dump_filename     =
-    match project.Project_type.in_source_path page#get_filename with
+    match project.Prj.in_source_path page#get_filename with
       | Some rel ->
         let tmp = Project.path_tmp project in
         tmp // ((Filename.chop_extension rel) ^ ".outline")

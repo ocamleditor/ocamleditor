@@ -22,7 +22,7 @@
 
 
 open Project
-open Project_type
+open Prj
 open Printf
 open Miscellanea
 open Oe
@@ -82,7 +82,7 @@ let write proj =
           Xml.Element ("restrictions", [], [Xml.PCData (String.concat "," t.Target.restrictions)]);
           Xml.Element ("dependencies", [], [Xml.PCData (String.concat "," (List.map string_of_int t.Target.dependencies))]);
         ])
-      end proj.build
+      end proj.targets
     );
     Xml.Element ("executables", [],
       List.map begin fun t ->
@@ -98,7 +98,7 @@ let write proj =
           Xml.Element ("args", [],
             List.map (fun (e, v) -> Xml.Element ("arg", ["enabled", string_of_bool e], [Xml.PCData v])) t.Rconf.args);
         ])
-      end proj.runtime
+      end proj.executables
     );
     Xml.Element ("build_script", ["filename", proj.build_script.Build_script.bs_filename],
       List.map begin fun arg ->
@@ -195,7 +195,7 @@ let read filename =
           end tnode;
           config :: acc
         end [] node in
-        proj.runtime <- List.rev runtime;
+        proj.executables <- List.rev runtime;
       | "targets" | "build" (* Backward compatibility with 1.7.5 *) ->
         let i = ref 0 in
         let targets = Xml.fold begin fun acc tnode ->
@@ -270,8 +270,8 @@ let read filename =
           incr i;
           (*target.Target.runtime_build_task <- Target.task_of_string target !runtime_build_task;*)
           if !create_default_runtime && target.Target.target_type = Target.Executable then begin
-            proj.runtime <- {
-              Rconf.id    = (List.length proj.runtime);
+            proj.executables <- {
+              Rconf.id    = (List.length proj.executables);
               target_id   = target.Target.id;
               name        = target.Target.name;
               default     = target.Target.default;
@@ -279,11 +279,11 @@ let read filename =
               env         = [!runtime_env];
               env_replace = false;
               args        = [!runtime_args]
-            } :: proj.runtime;
+            } :: proj.executables;
           end;
           target :: acc;
         end [] node in
-        proj.build <- List.rev targets
+        proj.targets <- List.rev targets
       | "build_script" ->
         proj.build_script <- {
           Build_script.bs_filename = (*proj.root // *)(attrib node "filename" identity "");
@@ -315,11 +315,11 @@ let read filename =
                     bsa_task := begin
                       let find_target id =
                         let id = int_of_string id in
-                        List_opt.find (fun bc -> bc.Target.id = id) proj.build
+                        List_opt.find (fun bc -> bc.Target.id = id) proj.targets
                       in
                       let find_task name =
                         List_opt.find (fun et -> et.Task.et_name = name)
-                          (List.flatten (List.map (fun bc -> bc.Target.external_tasks) proj.build))
+                          (List.flatten (List.map (fun bc -> bc.Target.external_tasks) proj.targets))
                       in
                       let target = fattrib tp "target_id" find_target (fun _ -> None) in
                       let task = fattrib tp "task_name" find_task (fun _ -> None) in
@@ -350,9 +350,9 @@ let read filename =
   List.iter (fun (rconf, task_string) -> set_runtime_build_task proj rconf task_string) !task_map;
   (* Set default runtime configuration *)
   begin
-    match List_opt.find (fun x -> x.Rconf.default) proj.runtime with
+    match List_opt.find (fun x -> x.Rconf.default) proj.executables with
       | None ->
-        (match proj.runtime with pr :: _ -> pr.Rconf.default <- true | _ -> ());
+        (match proj.executables with pr :: _ -> pr.Rconf.default <- true | _ -> ());
       | _ -> ()
   end;
   (* Translate ocamllib: "" -> 'ocamlc -where' *)

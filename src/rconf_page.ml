@@ -34,7 +34,7 @@ class view ~target_list ?packing () =
   let vbox = GPack.vbox ~spacing:8 ?packing () in
   let title = GMisc.label ~markup:"<big><b>Executable</b></big>" ~xalign:0.0 ~packing:vbox#pack () in
   let entry_name = create_entry ~packing:vbox#pack () in
-  (* Build configuration *)
+  (* Build Target *)
   let box = GPack.vbox ~packing:vbox#pack () in
   let _ = GMisc.label ~text:"Target" ~xalign:0.0 ~packing:box#add () in
   let cols = new GTree.column_list in

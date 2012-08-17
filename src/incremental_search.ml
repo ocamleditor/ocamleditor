@@ -29,7 +29,7 @@ let set_last_incremental = ref (fun text regexp -> failwith "set_last_incrementa
 (* Options *)
 class status () =
   object (self)
-    val mutable project : Project_type.t option = None
+    val mutable project : Prj.t option = None
     val mutable text_find = ""
     val mutable text_replace = ""
     val mutable backward = false;

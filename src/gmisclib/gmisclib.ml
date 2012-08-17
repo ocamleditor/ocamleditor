@@ -42,6 +42,11 @@ module Toolbar =
     module Menu_tool_button = Menu_tool_button
   end
 
+module Button =
+  struct
+    module Menu_button = Menu_button
+  end
+
 module Util =
   struct
     exception Mark_deleted

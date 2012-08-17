@@ -28,7 +28,7 @@ open Build_script
 let enable_widget_args = true
 
 class widget ~project ?packing () =
-  let build_script    = project.Project_type.build_script in
+  let build_script    = project.Prj.build_script in
   let spacing         = 3 in
   let border_width    = 5 in
   let vbox            = GPack.vbox ~spacing:13 ?packing () in
@@ -37,11 +37,11 @@ class widget ~project ?packing () =
   let _               = GMisc.label ~text:text_filename ~xalign:0.0 ~packing:fbox#pack () in
   let box             = GPack.hbox ~spacing:5 ~packing:fbox#pack () in
   let entry_filename  = GEdit.entry
-    ~text:(project.Project_type.root // build_script.bs_filename)
+    ~text:(project.Prj.root // build_script.bs_filename)
     ~packing:box#add () in
   let button_filename = GButton.button ~label:"  ...  " ~packing:box#pack () in
   let notebook        = GPack.notebook ~packing:vbox#add () in
-  (* Build Configurations (Targets) *)
+  (* Targets *)
   let abox            = GPack.vbox ~border_width ~spacing () in
   let tab_label       = (GMisc.label ~text:"Targets" ())#coerce in
   let _               = notebook#append_page ~tab_label abox#coerce in
@@ -67,7 +67,7 @@ object (self)
   method is_valid = is_valid
 
   method private save ~filename () =
-    project.Project_type.build_script <- {
+    project.Prj.build_script <- {
       bs_filename = Filename.basename filename;
       bs_args     = widget_args#get_arguments();
     };

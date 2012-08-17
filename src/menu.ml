@@ -651,7 +651,7 @@ let project ~browser ~group ~flags items =
   ignore (project_run#connect#activate ~callback:begin fun () ->
     browser#with_current_project (fun project ->
       browser#with_default_runtime_config (fun rc ->
-        let bc = List.find (fun b -> b.Target.id = rc.Rconf.target_id) project.Project_type.build in
+        let bc = List.find (fun b -> b.Target.id = rc.Rconf.target_id) project.Prj.targets in
         ignore (Task_console.exec ~editor (`RCONF rc) bc)))
   end);
   (** Clean... *)
@@ -690,7 +690,7 @@ let project ~browser ~group ~flags items =
     browser#dialog_project_properties ?page_num:(Some 0) ?show:(Some true) ()));
   dialog_project_properties#add_accelerator ~group ~modi:[`CONTROL; `SHIFT] GdkKeysyms._P ~flags;
   (** Targets *)
-  let project_targets = GMenu.image_menu_item ~label:"Targets" ~packing:menu#add () in
+  let project_targets = GMenu.image_menu_item ~image:(Icons.create Icons.target_16)#coerce ~label:"Targets" ~packing:menu#add () in
   ignore (project_targets#connect#activate ~callback:(fun () ->
     browser#dialog_project_properties ?page_num:(Some 1) ?show:(Some true) ()));
   project_targets#add_accelerator ~group ~modi:[] GdkKeysyms._F12 ~flags;
@@ -765,10 +765,10 @@ let project ~browser ~group ~flags items =
             ignore (Task_console.exec ~editor `CLEAN tg)
           end);
         end;
-      end project.Project_type.build;
+      end project.Prj.targets;
       Gmisclib.Idle.add begin fun () ->
         let item_all = GMenu.menu_item ~label:"All configurations" ~packing:build_menu#add () in
-        let _ = item_all#connect#activate ~callback:(fun () -> browser#build_all project.Project_type.build) in
+        let _ = item_all#connect#activate ~callback:(fun () -> browser#build_all project.Prj.targets) in
         item_all#add_accelerator ~group ~modi:[`CONTROL;`MOD1] GdkKeysyms._F10 ~flags;
         ignore (GMenu.separator_item ~packing:build_menu#add ());
       end;
@@ -783,18 +783,18 @@ let project ~browser ~group ~flags items =
             ignore (Task_console.exec ~editor ~with_deps:true `COMPILE tg)
           end);
         end
-      end project.Project_type.build;
+      end project.Prj.targets;
       List.iter begin fun rc ->
         Gmisclib.Idle.add begin fun () ->
           let item = GMenu.menu_item ~label:rc.Rconf.name ~packing:run_menu#add () in
           ignore (item#connect#activate ~callback:begin fun () ->
             try
-              let bc = List.find (fun b -> b.Target.id = rc.Rconf.target_id) project.Project_type.build in
+              let bc = List.find (fun b -> b.Target.id = rc.Rconf.target_id) project.Prj.targets in
               ignore (Task_console.exec ~editor (`RCONF rc) bc)
             with Not_found -> ()
           end);
         end
-      end project.Project_type.runtime;
+      end project.Prj.executables;
     end
   end);
   project

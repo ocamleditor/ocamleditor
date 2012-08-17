@@ -198,7 +198,7 @@ object (self)
       self#append_row_file ~parent ~filename ~page:get_page ~goto ~references
     end ref_ext
 
-  method find ~(project : Project_type.t) (source : source) =
+  method find ~(project : Prj.t) (source : source) =
     search_started#call();
     let root = model#append () in
     let usages = ref root in
@@ -278,7 +278,7 @@ end
 and search_started () = object inherit [unit] signal () end
 and search_finished () = object inherit [unit] signal () end
 and signals ~search_started ~search_finished =
-object 
+object
   inherit ml_signals [search_started#disconnect; search_finished#disconnect]
   method search_started = search_started#connect ~after
   method search_finished = search_finished#connect ~after
