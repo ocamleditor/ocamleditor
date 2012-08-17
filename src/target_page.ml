@@ -239,13 +239,14 @@ object (self)
       ~callback:begin fun () ->
         self#update begin fun target ->
           target.byt <- (combo_comp#active = 0 || combo_comp#active = 2);
-          (*self#set_inline target;*)
+          self#set_inline target;
         end ();
         changed#call()
       end);
     ignore (combo_comp#connect#changed
       ~callback:(self#update begin fun target ->
         target.opt <- (combo_comp#active = 1 || combo_comp#active = 2);
+        self#set_inline target;
       end));
     let update_inline () =
       self#update begin fun target ->

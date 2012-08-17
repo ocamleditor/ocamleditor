@@ -36,14 +36,14 @@ DEPENDENCIES
 
 HOW TO COMPILE
 
-  Change to the OCamlEditor toplevel directory and edit the "Configuration
-  Section" at the beginning of "build.ml", following the comments in that
-  file. Then, do:
+  Change to the OCamlEditor toplevel directory and execute:
 
-    ocaml build.ml
+    ocaml _build.ml build ocamleditor
 
-  If the native code compiler is not available on your platform, compile with
-  "ocaml build.ml -byt".
+  If the OCaml native code compiler is not available on your platform, compile
+  with:
+
+    ocaml _build.ml build ocamleditor-bytecode
 
   The name of the command is "ocamleditor.opt" (or "ocamleditor" if the
   native compilation is not supported), you can find it in the "src"
@@ -52,17 +52,14 @@ HOW TO COMPILE
 
 INSTALLATION
 
-  For Linux, become superuser and run:
+  For Linux, become superuser and execute:
 
-    ocaml build.ml -install [-prefix <path>] [-byt]
+    ocaml _build.ml [-prefix <path>] install ocamleditor
 
   By default, commands will be installed under "/usr/local/bin" and icons
   under "/usr/local/share/pixmaps/ocamleditor". You can specify an
   installation prefix other than "/usr/local" by giving an absolute file
   name as argument.
-
-  If the native code compiler is not available on your platform, add "-byt"
-  to the command line.
 
   Windows users may build an installer by compiling the included NSIS
   script, "ocamleditor.nsi". The free NSIS install system can be found at

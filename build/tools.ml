@@ -132,7 +132,8 @@ let install () =
     kprintf run "cp -vru ../pixmaps/* %s" pixmaps;
     let bin = sprintf "%s/bin" !prefix in
     mkdir_p bin;
-    kprintf run "cp -v ocamleditor%s %s/ocamleditor" (if !has_native then ".opt" else "") bin;
+    let filename = if Sys.file_exists "ocamleditor.opt" then "ocamleditor.opt" else "ocamleditor" in
+    kprintf run "cp -v %s %s/ocamleditor" filename bin;
     kprintf run "cp -v oebuild/oebuild%s %s" ext bin;
     if !has_native then begin
       kprintf run "cp -v oebuild/oebuild%s.opt %s" ext bin;
@@ -144,8 +145,7 @@ let install () =
         let version = get_line_from_file ~filename:"../VERSION" 1 in
         let cmd = sprintf "..\\ocamleditor-%s" version in
         ignore (Sys.command cmd)
-      | _ ->
-      prerr_endline "This script is not available under Windows.
+      | _ -> prerr_endline "This script is not available under Windows.
 To install OCamlEditor, please use the included ocamleditor.nsi script.
 You will need the free NSIS install system (http://nsis.sourceforge.net).";
   end;;
@@ -174,18 +174,15 @@ let mkrelease () =
   Sys.chdir "..";
   kprintf remove_file "%s.tar.gz" package;
   kprintf run "mklink /d %s %s" package name;
-  kprintf run "mv -f %s/%s.project %s/%s.tmp.project" name name name name;
-  kprintf run "cp %s/%s.project.release %s/%s.project" name name name name;
   kprintf run "tar --mode=755 -cf %s.tar %s/src %s/pixmaps %s/build" package package package package;
-  kprintf run "tar --mode=655 -rf %s.tar %s/README %s/NEWS %s/COPYING %s/%s.project %s/ocamleditor.nsi %s/build.ml %s/header %s/VERSION"
+  kprintf run "tar --mode=655 -rf %s.tar %s/README %s/NEWS %s/COPYING %s/%s.project %s/ocamleditor.nsi %s/_build.ml %s/header %s/VERSION"
     package package package package package name package package package package;
   kprintf run "gzip -c %s.tar > %s.tar.gz" package package;
   kprintf Sys.remove "%s.tar" package;
-  kprintf run "mv -f %s/%s.tmp.project %s/%s.project" name name name name;
   kprintf run "rmdir %s" package;
   kprintf Sys.chdir "%s/src" name;
   pushd "..";
-  run "ocaml build.ml -annot";
+  run "ocaml _build.ml build ocamleditor";
   popd();;
 
 (** Main *)
@@ -193,6 +190,7 @@ let _ = main ~dir:"../src" ~targets:[
   "-prepare-build",           prepare_build,           " (undocumented)";
   "-lex-yacc",                lex_yacc,                " (undocumented)";
   "-install",                 install,                 " (undocumented)";
+  "-uninstall",               uninstall,               " (undocumented)";
   "-mkicons",                 mkicons,                 " (undocumented)";
   "-mkrelease",               mkrelease,               " (undocumented)";
   "-generate-oebuild-script", generate_oebuild_script, " (undocumented)";
@@ -201,8 +199,7 @@ let _ = main ~dir:"../src" ~targets:[
   "-distclean",               distclean,               " (undocumented)";
 ] ~options:[
   "-prefix",                  Set_string prefix,               (sprintf "Installation prefix (Unix only, default is %s)" !prefix);
-  "-use-modified-gtkThread",  Set use_modified_gtkThread,    "Set this flag if you have Lablgtk-2.14.2 or earlier for using the included modified version of gtkThread.ml to reduce CPU consumption";
+  "-use-modified-gtkThread",  Set use_modified_gtkThread,      "Set this flag if you have Lablgtk-2.14.2 or earlier for using the included modified version of gtkThread.ml to reduce CPU consumption";
   "-has-native",              Bool (fun x -> has_native := x), "{true|false} Whether native compilation is supported (default: false)";
-  "-byt",                     Clear has_native,         "Like \"-has-native false\"";
-  "-ccopt",                   Set_string ccopt,         " (default: \"\")";
+  "-ccopt",                   Set_string ccopt,                " (default: \"\")";
 ] ()
