@@ -30,7 +30,7 @@ COPYRIGHT
 DEPENDENCIES
 
   * OCaml-4.00.0;
-  * Lablgtk-2.14.2;
+  * Lablgtk-2.16.0;
   * Xml-light.
 
 

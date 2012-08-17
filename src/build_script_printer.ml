@@ -58,6 +58,7 @@ let print_targets ochan targets external_tasks =
     kprintf print "  thread               = %b;" tg.thread;
     kprintf print "  vmthread             = %b;" tg.vmthread;
     kprintf print "  pp                   = %S;" tg.pp;
+    kprintf print "  inline               = %s;" (match tg.inline with Some x -> sprintf "Some %d" x | _ -> "None");
     kprintf print "  library_install_dir  = %S; (\x2A Relative to the Standard Library Directory \x2A)" tg.lib_install_path;
     kprintf print "  other_objects        = %S;" tg.other_objects;
     kprintf print "  external_tasks       = [%s];" (String.concat "; " (List.map (fun (n, _) -> string_of_int n) (List.assoc tg external_tasks)));

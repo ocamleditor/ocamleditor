@@ -33,8 +33,8 @@ module Entry =
 
 module Idle =
   struct
-    let add     = Util.idle_add
-    let add_gen = Util.idle_add_gen
+    let add     = Gmisclib_util.idle_add
+    let add_gen = Gmisclib_util.idle_add_gen
   end
 
 module Text =

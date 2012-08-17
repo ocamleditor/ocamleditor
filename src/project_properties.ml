@@ -136,7 +136,7 @@ class widget ~editor ?(callback=ignore) ~project ?page_num ?packing ?show () =
           match target_list#get path with
             | Target_list.Target bc ->
               set_title "Target";
-              Gmisclib.Idle.add (fun () -> target_page#set bc);
+              Gmisclib.Idle.add (fun () -> target_page#set_target bc);
               Gmisclib.Idle.add begin fun () ->
                 if not (target_page#misc#get_flag `SENSITIVE) then (target_page#misc#set_sensitive true);
                 if not (target_page#misc#get_flag `VISIBLE) then begin
@@ -146,7 +146,7 @@ class widget ~editor ?(callback=ignore) ~project ?page_num ?packing ?show () =
               end
             | Target_list.ETask et ->
               set_title "External Build Task";
-              Gmisclib.Idle.add (fun () -> etask_page#set et);
+              Gmisclib.Idle.add (fun () -> etask_page#set_task et);
               Gmisclib.Idle.add begin fun () ->
                 if not (etask_page#misc#get_flag `SENSITIVE) then (etask_page#misc#set_sensitive true);
                 if not (etask_page#misc#get_flag `VISIBLE) then begin

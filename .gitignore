@@ -23,7 +23,6 @@ Thumbs.db
 *.xcf
 splash*.*
 *.xcf
-_build.ml
 *.local.xml
 *.project.local
 src/oebuild/oebuild

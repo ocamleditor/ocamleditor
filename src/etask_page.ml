@@ -94,7 +94,7 @@ object (self)
     ignore (button_dir#connect#changed
       ~callback:(self#update (fun etask -> etask.Task.et_dir <- button_dir#text)));
 
-  method set et =
+  method set_task et =
     etask <- Some et;
     entry_name#set_text et.Task.et_name;
     check_always_project#set_active et.Task.et_always_run_in_project;

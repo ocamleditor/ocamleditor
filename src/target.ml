@@ -36,6 +36,7 @@ type t = {
   mutable thread           : bool;
   mutable vmthread         : bool;
   mutable pp               : string;
+  mutable inline           : int option;
   mutable cflags           : string;
   mutable lflags           : string;
   mutable target_type      : target_type;
@@ -102,6 +103,7 @@ let create ~id ~name = {
   thread             = false;
   vmthread           = false;
   pp                 = "";
+  inline             = None;
   cflags             = "";
   lflags             = "";
   target_type            = Executable;

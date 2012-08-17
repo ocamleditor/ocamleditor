@@ -42,6 +42,7 @@ let main () = begin
   let compile_only = ref false in
   let annot = ref false in
   let pp = ref "" in
+  let inline : int option ref = ref None in
   let output_name = ref "" in
   let run_code = ref None in
   let run_args = ref [] in
@@ -85,6 +86,7 @@ let main () = begin
     ("-vmthread",    Set vmthread,                    " Add -vmthread option to both cflags and lflags.");
     ("-annot",       Set annot,                       " Add -annot option to cflags.");
     ("-pp",          Set_string pp,                   " Add -pp option to the compiler.");
+    ("-inline",      Int (fun x -> inline := Some x), " Add -inline option to the compiler.");
     ("-o",           Set_string output_name,          "\"<filename>\" Output file name. Extension {.cm[x]a | [.opt][.exe]} is automatically added to the resulting filename according to the -a and -opt options and the type of O.S.");
     ("-run",         Unit (set_run_code Unspecified), " Run the resulting executable (native-code takes precedence) giving each argument after \"--\" on the command line (\"-run --\" for no arguments).");
     ("-run-byt",     Unit (set_run_code Bytecode),    " Run the resulting bytecode executable.");
@@ -160,6 +162,7 @@ let main () = begin
                   ~vmthread:!vmthread
                   ~annot:!annot
                   ~pp:!pp
+                  ?inline:!inline
                   ~cflags:!cflags
                   ~lflags:!lflags
                   ~outname

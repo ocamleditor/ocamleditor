@@ -141,11 +141,15 @@ class view ~project ?packing () =
   let vbox = GPack.vbox ~width:550 ~border_width:5 ~spacing:8 () in
   let _ = nb#append_page ~tab_label:(GMisc.label ~text:"Build Settings" ())#coerce vbox#coerce in
 
-  let box = GPack.vbox ~spacing:0 ~packing:vbox#pack () in
+  let box = GPack.hbox ~spacing:0 ~packing:vbox#pack () in
   let _ = GMisc.label ~text:"Compilation: " ~xalign:0.0 ~packing:box#pack () in
   let combo_comp, _ = GEdit.combo_box_text
     ~strings:["Bytecode"; "Native-code"; "Bytecode and native"]
     ~active:0 ~packing:box#add () in
+
+  let check_inline = GButton.check_button ~label:"-inline: " ~packing:box#pack () in
+  let adjustment_inline = GData.adjustment ~lower:0.0 ~upper:1000. ~page_size:0.0 () in
+  let entry_inline = GEdit.spin_button ~adjustment:adjustment_inline ~rate:1.0 ~digits:0 ~numeric:true ~packing:box#pack () in
 
   let box = GPack.vbox ~packing:(vbox#pack ~expand:false) () in
   let _ = GMisc.label ~markup:"Search path <small><tt>(-I)</tt></small>" ~xalign ~packing:box#add () in
@@ -233,11 +237,31 @@ object (self)
       end);
     ignore (combo_comp#connect#changed
       ~callback:begin fun () ->
-        self#update (fun target -> target.byt <- (combo_comp#active = 0 || combo_comp#active = 2)) ();
+        self#update begin fun target ->
+          target.byt <- (combo_comp#active = 0 || combo_comp#active = 2);
+          (*self#set_inline target;*)
+        end ();
         changed#call()
       end);
     ignore (combo_comp#connect#changed
-      ~callback:(self#update (fun target -> target.opt <- (combo_comp#active = 1 || combo_comp#active = 2))));
+      ~callback:(self#update begin fun target ->
+        target.opt <- (combo_comp#active = 1 || combo_comp#active = 2);
+      end));
+    let update_inline () =
+      self#update begin fun target ->
+        if signals_enabled then begin
+          target.inline <- (if target.opt && check_inline#active then Some entry_inline#value_as_int else None);
+        end
+      end ();
+      changed#call()
+    in
+    ignore (check_inline#connect#after#toggled ~callback:update_inline);
+    ignore (check_inline#connect#after#toggled ~callback:begin fun () ->
+      if signals_enabled then begin
+        entry_inline#misc#set_sensitive check_inline#active;
+      end
+    end);
+    ignore (adjustment_inline#connect#after#value_changed ~callback:update_inline);
     ignore (entry_libs#connect#changed
       ~callback:(self#update (fun target -> target.libs <- entry_libs#text)));
     ignore (entry_mods#connect#changed
@@ -318,6 +342,12 @@ object (self)
   method entry_cmd_line = cmd_line
   method entry_name = entry_name
 
+  method private set_inline target =
+    check_inline#set_active (target.opt && target.inline <> None);
+    entry_inline#set_value (match target.inline with Some inline -> float inline | _ -> 1.);
+    check_inline#misc#set_sensitive target.opt;
+    entry_inline#misc#set_sensitive (target.opt && check_inline#active);
+
   method private update update_func () =
     Gaux.may target ~f:begin fun bc ->
       update_func bc;
@@ -325,25 +355,26 @@ object (self)
       (*changed#call()*)
     end;
 
-  method set bc =
+  method set_target tg =
     signals_enabled <- false;
-    target <- Some bc;
-    widget_deps#set bc;
-    entry_name#set_text bc.name;
-    combo_comp#set_active (match bc.byt, bc.opt with
+    target <- Some tg;
+    widget_deps#set tg;
+    entry_name#set_text tg.name;
+    combo_comp#set_active (match tg.byt, tg.opt with
       | true, false -> 0
       | false, true -> 1
       | true, true -> 2
       | _ -> 0);
-    entry_libs#set_text bc.libs;
-    entry_mods#set_text bc.other_objects;
-    entry_includes#set_text bc.includes;
-    if bc.thread then begin
+    self#set_inline tg;
+    entry_libs#set_text tg.libs;
+    entry_mods#set_text tg.other_objects;
+    entry_includes#set_text tg.includes;
+    if tg.thread then begin
       check_thread#set_active true;
       check_thread#misc#set_sensitive true;
       check_vmthread#set_active false;
       check_vmthread#misc#set_sensitive false;
-    end else if bc.vmthread then begin
+    end else if tg.vmthread then begin
       check_thread#set_active false;
       check_thread#misc#set_sensitive false;
       check_vmthread#set_active true;
@@ -354,40 +385,40 @@ object (self)
       check_vmthread#set_active false;
       check_vmthread#misc#set_sensitive true;
     end;
-    entry_pp#set_text bc.pp;
-    entry_cflags#set_text bc.cflags;
-    entry_lflags#set_text bc.lflags;
+    entry_pp#set_text tg.pp;
+    entry_cflags#set_text tg.cflags;
+    entry_lflags#set_text tg.lflags;
     begin
-      match bc.target_type with
+      match tg.target_type with
         | Executable -> radio_executable#set_active true
-        | _ -> radio_archive#set_active true
+        | Library | Pack | Plugin -> radio_archive#set_active true
     end;
-    combo_kind#set_active (match bc.target_type with Library -> 0 | Plugin -> 1 | Pack -> 2 | _ -> 0);
-    entry_outname#set_text bc.outname;
-    entry_lib_install#set_text bc.lib_install_path;
-    if (List.mem bc.target_type [Library; Plugin; Pack]) then begin
+    combo_kind#set_active (match tg.target_type with Library -> 0 | Plugin -> 1 | Pack -> 2 | Executable -> 0);
+    entry_outname#set_text tg.outname;
+    entry_lib_install#set_text tg.lib_install_path;
+    if (List.mem tg.target_type [Library; Plugin; Pack]) then begin
       align_lib#misc#set_sensitive true;
       align_exec#misc#set_sensitive false;
-      entry_lib_modules#set_text bc.files;
+      entry_lib_modules#set_text tg.files;
       entry_main_module#set_text "";
     end else begin
       align_lib#misc#set_sensitive false;
       align_exec#misc#set_sensitive true;
       entry_lib_modules#set_text "";
-      let filename = Miscellanea.split " +" bc.files in
+      let filename = Miscellanea.split " +" tg.files in
       assert (List.length filename <= 1);
       try
         let filename = List.hd filename in
         entry_main_module#set_text filename;
       with Failure "hd" -> (ignore (entry_main_module#set_text ""))
     end;
-    check_unix#set_active (List.mem "IS_UNIX" bc.restrictions);
-    check_win32#set_active (List.mem "IS_WIN32" bc.restrictions);
-    check_cygwin#set_active (List.mem "IS_CYGWIN" bc.restrictions);
-    check_native#set_active (List.mem "HAS_NATIVE" bc.restrictions);
+    check_unix#set_active (List.mem "IS_UNIX" tg.restrictions);
+    check_win32#set_active (List.mem "IS_WIN32" tg.restrictions);
+    check_cygwin#set_active (List.mem "IS_CYGWIN" tg.restrictions);
+    check_native#set_active (List.mem "HAS_NATIVE" tg.restrictions);
     (*  *)
     signals_enabled <- true;
-    Gmisclib.Idle.add ~prio:300 (fun () -> self#update_cmd_line bc);
+    Gmisclib.Idle.add ~prio:300 (fun () -> self#update_cmd_line tg);
 
   method private update_cmd_line target =
     let cmd, args = create_cmd_line target in

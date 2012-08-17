@@ -20,6 +20,7 @@
       <thread>true</thread>
       <vmthread>false</vmthread>
       <pp></pp>
+      <inline></inline>
       <cflags>-g</cflags>
       <lflags>-g</lflags>
       <target_type>Library</target_type>
@@ -39,6 +40,7 @@
       <thread>false</thread>
       <vmthread>false</vmthread>
       <pp></pp>
+      <inline></inline>
       <cflags>-g</cflags>
       <lflags>-g</lflags>
       <target_type>Library</target_type>
@@ -71,6 +73,7 @@
       <thread>true</thread>
       <vmthread>false</vmthread>
       <pp></pp>
+      <inline></inline>
       <cflags>-w y</cflags>
       <lflags></lflags>
       <target_type>Library</target_type>
@@ -90,6 +93,7 @@
       <thread>true</thread>
       <vmthread>false</vmthread>
       <pp></pp>
+      <inline></inline>
       <cflags>-w y</cflags>
       <lflags></lflags>
       <target_type>Executable</target_type>
@@ -109,6 +113,7 @@
       <thread>true</thread>
       <vmthread>false</vmthread>
       <pp></pp>
+      <inline></inline>
       <cflags>-w s</cflags>
       <lflags></lflags>
       <target_type>Executable</target_type>
@@ -128,6 +133,7 @@
       <thread>false</thread>
       <vmthread>false</vmthread>
       <pp></pp>
+      <inline></inline>
       <cflags>-g</cflags>
       <lflags>-g</lflags>
       <target_type>Library</target_type>
@@ -147,6 +153,7 @@
       <thread>false</thread>
       <vmthread>false</vmthread>
       <pp></pp>
+      <inline></inline>
       <cflags>-w sy -g</cflags>
       <lflags>-w sy -g</lflags>
       <target_type>Library</target_type>
@@ -166,107 +173,9 @@
       <thread>true</thread>
       <vmthread>false</vmthread>
       <pp></pp>
+      <inline></inline>
       <cflags>-w syxm -g</cflags>
       <lflags>-g</lflags>
-      <target_type>Executable</target_type>
-      <outname>ocamleditor</outname>
-      <lib_install_path></lib_install_path>
-      <external_tasks>
-        <task name="oebuild">
-          <always_run_in_project>false</always_run_in_project>
-          <always_run_in_script>false</always_run_in_script>
-          <env replace="false"/>
-          <dir>..</dir>
-          <cmd>ocaml</cmd>
-          <args>
-            <arg enabled="true">build.ml</arg>
-            <arg enabled="true">-oebuild</arg>
-          </args>
-          <phase>Before_compile</phase>
-        </task>
-        <task name="oeproc">
-          <always_run_in_project>false</always_run_in_project>
-          <always_run_in_script>false</always_run_in_script>
-          <env replace="false"/>
-          <dir>..</dir>
-          <cmd>ocaml</cmd>
-          <args>
-            <arg enabled="true">build.ml</arg>
-            <arg enabled="true">-oeproc</arg>
-          </args>
-          <phase>Before_compile</phase>
-        </task>
-        <task name="External Build">
-          <always_run_in_project>false</always_run_in_project>
-          <always_run_in_script>false</always_run_in_script>
-          <env replace="false"/>
-          <dir>..</dir>
-          <cmd>ocaml</cmd>
-          <args>
-            <arg enabled="true">build.ml</arg>
-            <arg enabled="true">-annot</arg>
-          </args>
-          <phase>Compile</phase>
-        </task>
-        <task name="Release">
-          <always_run_in_project>false</always_run_in_project>
-          <always_run_in_script>false</always_run_in_script>
-          <env replace="false"/>
-          <dir>..</dir>
-          <cmd>ocaml</cmd>
-          <args>
-            <arg enabled="true">build.ml</arg>
-            <arg enabled="true">-release</arg>
-          </args>
-          <phase>Before_clean</phase>
-        </task>
-        <task name="Lex & Yacc">
-          <always_run_in_project>false</always_run_in_project>
-          <always_run_in_script>false</always_run_in_script>
-          <env replace="false"/>
-          <dir>..</dir>
-          <cmd>ocaml</cmd>
-          <args>
-            <arg enabled="true">build.ml</arg>
-            <arg enabled="true">-lexyacc</arg>
-          </args>
-          <phase>Before_compile</phase>
-        </task>
-      </external_tasks>
-      <restrictions></restrictions>
-      <dependencies>4,10,7,5,6,8,9</dependencies>
-    </target>
-    <target name="ocamleditor-native" default="false" id="11">
-      <byt>false</byt>
-      <opt>true</opt>
-      <libs>ocamlcommon unix str threads dynlink odoc_info lablgtk gtkThread.o xml-light gmisclib common icons otherwidgets oebuildlib</libs>
-      <other_objects></other_objects>
-      <files>ocamleditor.ml</files>
-      <includes>+compiler-libs +lablgtk2 +ocamldoc gmisclib common icons otherwidgets oebuild </includes>
-      <thread>true</thread>
-      <vmthread>false</vmthread>
-      <pp></pp>
-      <cflags>-w syxm -g -inline 50</cflags>
-      <lflags>-g  -inline 50</lflags>
-      <target_type>Executable</target_type>
-      <outname>ocamleditor</outname>
-      <lib_install_path></lib_install_path>
-      <external_tasks/>
-      <restrictions></restrictions>
-      <dependencies></dependencies>
-    </target>
-    <target name="ocamleditor" default="false" id="12">
-      <byt>false</byt>
-      <opt>true</opt>
-      <libs>ocamlcommon unix str threads dynlink odoc_info lablgtk gtkThread.o xml-light gmisclib common icons otherwidgets oebuildlib</libs>
-      <other_objects></other_objects>
-      <files>ocamleditor.ml</files>
-      <includes>+compiler-libs +lablgtk2 +ocamldoc gmisclib common icons otherwidgets oebuild </includes>
-      <thread>true</thread>
-      <vmthread>false</vmthread>
-      <pp></pp>
-      <cflags>-w syxm -g -inline 50</cflags>
-      <lflags>-g  -inline 50</lflags>
       <target_type>Executable</target_type>
       <outname>ocamleditor</outname>
       <lib_install_path></lib_install_path>
@@ -323,6 +232,95 @@
       <restrictions></restrictions>
       <dependencies>4,10,7,5,6,8,9</dependencies>
     </target>
+    <target name="ocamleditor" default="false" id="12">
+      <byt>true</byt>
+      <opt>true</opt>
+      <libs>ocamlcommon unix str threads dynlink odoc_info lablgtk gtkThread.o xml-light gmisclib common icons otherwidgets oebuildlib</libs>
+      <other_objects></other_objects>
+      <files>ocamleditor.ml</files>
+      <includes>+compiler-libs +lablgtk2 +ocamldoc gmisclib common icons otherwidgets oebuild </includes>
+      <thread>true</thread>
+      <vmthread>false</vmthread>
+      <pp></pp>
+      <inline>50</inline>
+      <cflags>-w syxm -g</cflags>
+      <lflags>-g</lflags>
+      <target_type>Executable</target_type>
+      <outname>ocamleditor</outname>
+      <lib_install_path></lib_install_path>
+      <external_tasks>
+        <task name="prepare-build">
+          <always_run_in_project>true</always_run_in_project>
+          <always_run_in_script>true</always_run_in_script>
+          <env replace="false"/>
+          <dir>../build</dir>
+          <cmd>ocaml</cmd>
+          <args>
+            <arg enabled="true">tools.ml</arg>
+            <arg enabled="true">-prepare-build</arg>
+          </args>
+          <phase>Before_compile</phase>
+        </task>
+        <task name="clean-lex-yacc">
+          <always_run_in_project>true</always_run_in_project>
+          <always_run_in_script>true</always_run_in_script>
+          <env replace="false"/>
+          <dir>../build</dir>
+          <cmd>ocaml</cmd>
+          <args>
+            <arg enabled="true">tools.ml</arg>
+            <arg enabled="true">-clean-lex-yacc</arg>
+          </args>
+          <phase>After_clean</phase>
+        </task>
+        <task name="distclean">
+          <always_run_in_project>false</always_run_in_project>
+          <always_run_in_script>true</always_run_in_script>
+          <env replace="false"/>
+          <dir>../build</dir>
+          <cmd>ocaml</cmd>
+          <args>
+            <arg enabled="true">tools.ml</arg>
+            <arg enabled="true">-distclean</arg>
+          </args>
+          <phase>After_distclean</phase>
+        </task>
+        <task name="install">
+          <always_run_in_project>false</always_run_in_project>
+          <always_run_in_script>false</always_run_in_script>
+          <env replace="false"/>
+          <dir>../build</dir>
+          <cmd>ocaml</cmd>
+          <args>
+            <arg enabled="true">tools.ml</arg>
+            <arg enabled="true">-install</arg>
+          </args>
+          <phase>Before_clean</phase>
+        </task>
+      </external_tasks>
+      <restrictions></restrictions>
+      <dependencies>4,10,7,5,6,8,9</dependencies>
+    </target>
+    <target name="ocamleditor-native" default="false" id="11">
+      <byt>false</byt>
+      <opt>true</opt>
+      <libs>ocamlcommon unix str threads dynlink odoc_info lablgtk gtkThread.o xml-light gmisclib common icons otherwidgets oebuildlib</libs>
+      <other_objects></other_objects>
+      <files>ocamleditor.ml</files>
+      <includes>+compiler-libs +lablgtk2 +ocamldoc gmisclib common icons otherwidgets oebuild </includes>
+      <thread>true</thread>
+      <vmthread>false</vmthread>
+      <pp></pp>
+      <inline>50</inline>
+      <cflags>-w syxm -g</cflags>
+      <lflags>-g</lflags>
+      <target_type>Executable</target_type>
+      <outname>ocamleditor</outname>
+      <lib_install_path></lib_install_path>
+      <external_tasks/>
+      <restrictions></restrictions>
+      <dependencies></dependencies>
+    </target>
     <target name="tools" default="false" id="13">
       <byt>true</byt>
       <opt>false</opt>
@@ -333,6 +331,7 @@
       <thread>false</thread>
       <vmthread>false</vmthread>
       <pp></pp>
+      <inline></inline>
       <cflags></cflags>
       <lflags></lflags>
       <target_type>Executable</target_type>
@@ -401,17 +400,17 @@
   </executables>
   <build_script filename="_build.ml">
     <targets>
-      <target target_id="13" show="false"/>
+      <target target_id="4" show="false"/>
+      <target target_id="10" show="false"/>
+      <target target_id="7" show="false"/>
+      <target target_id="5" show="true"/>
+      <target target_id="6" show="true"/>
+      <target target_id="8" show="false"/>
+      <target target_id="9" show="false"/>
+      <target target_id="0" show="true" installer_task_name="install"/>
       <target target_id="12" show="true" installer_task_name="install"/>
       <target target_id="11" show="false"/>
-      <target target_id="0" show="true"/>
-      <target target_id="9" show="false"/>
-      <target target_id="8" show="false"/>
-      <target target_id="6" show="true"/>
-      <target target_id="5" show="true"/>
-      <target target_id="7" show="false"/>
-      <target target_id="10" show="false"/>
-      <target target_id="4" show="false"/>
+      <target target_id="13" show="false"/>
     </targets>
     <args>
       <arg type="String" key="-prefix" pass="-key value">

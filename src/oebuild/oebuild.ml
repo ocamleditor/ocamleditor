@@ -218,7 +218,7 @@ let filter_inconsistent_assumptions_error ~compiler_output ~recompile ~targets ~
 
 (** Building *)
 let build ~compilation ~includes ~libs ~other_mods ~outkind ~compile_only
-    ~thread ~vmthread ~annot ~pp ~cflags ~lflags ~outname ~deps ~ms_paths
+    ~thread ~vmthread ~annot ~pp ?inline ~cflags ~lflags ~outname ~deps ~ms_paths
     ~targets ?(prof=false) () =
   let split_space = Str.split (Str.regexp " +") in
   (* includes *)
@@ -234,6 +234,14 @@ let build ~compilation ~includes ~libs ~other_mods ~outkind ~compile_only
   if vmthread then (cflags := !cflags ^ " -vmthread"; lflags := !lflags ^ " -vmthread");
   if annot then (cflags := !cflags ^ " -annot");
   if pp <> "" then (cflags := !cflags ^ " -pp " ^ pp);
+  begin
+    match inline with
+      | Some inline when compilation = Native ->
+        let inline = string_of_int inline in
+        cflags := !cflags ^ " -inline " ^ inline;
+        lflags := !lflags ^ " -inline " ^ inline;
+      | _ -> ()
+  end;
   (* compiling *)
   let compiler = if prof then "ocamlcp -p a" else if compilation = Native then
       (match ocamlopt with Some x -> x | _ -> failwith "You asked me to compile in native code but ocamlopt command was not found")

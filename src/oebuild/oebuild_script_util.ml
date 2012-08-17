@@ -42,6 +42,7 @@ type target = {
   thread : bool;
   vmthread : bool;
   pp : string;
+  inline : int option;
   library_install_dir : string;
   other_objects : string;
   external_tasks : int list;
@@ -275,6 +276,7 @@ and build ~targets ~external_tasks ~etasks ~deps ~compilation ~outname ~files ta
     ~vmthread:target.vmthread
     ~annot:false
     ~pp:target.pp
+    ?inline:target.inline
     ~cflags:target.compiler_flags
     ~lflags:target.linker_flags
     ~outname

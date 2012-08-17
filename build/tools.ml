@@ -137,9 +137,18 @@ let install () =
     if !has_native then begin
       kprintf run "cp -v oebuild/oebuild%s.opt %s" ext bin;
     end;
-  end else prerr_endline "This script is not available under Windows.
+  end else begin
+    let exit_code = kprintf Sys.command "\"%s\" ..\\ocamleditor.nsi" (Filename.quote "%ProgramFiles(x86)%\\NSIS\\makensis") in
+    match exit_code with
+      | 0 ->
+        let version = get_line_from_file ~filename:"../VERSION" 1 in
+        let cmd = sprintf "..\\ocamleditor-%s" version in
+        ignore (Sys.command cmd)
+      | _ ->
+      prerr_endline "This script is not available under Windows.
 To install OCamlEditor, please use the included ocamleditor.nsi script.
-You will need the free NSIS install system (http://nsis.sourceforge.net).";;
+You will need the free NSIS install system (http://nsis.sourceforge.net).";
+  end;;
 
 (** uninstall *)
 let uninstall () =
@@ -194,5 +203,6 @@ let _ = main ~dir:"../src" ~targets:[
   "-prefix",                  Set_string prefix,               (sprintf "Installation prefix (Unix only, default is %s)" !prefix);
   "-use-modified-gtkThread",  Set use_modified_gtkThread,    "Set this flag if you have Lablgtk-2.14.2 or earlier for using the included modified version of gtkThread.ml to reduce CPU consumption";
   "-has-native",              Bool (fun x -> has_native := x), "{true|false} Whether native compilation is supported (default: false)";
-  "-ccopt",                   Set_string ccopt,                " (default: \"\")";
+  "-byt",                     Clear has_native,         "Like \"-has-native false\"";
+  "-ccopt",                   Set_string ccopt,         " (default: \"\")";
 ] ()
