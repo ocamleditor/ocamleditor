@@ -115,6 +115,14 @@ let create ~id ~name = {
 (** find_dependencies *)
 let find_dependencies target = Dep.find (Miscellanea.split " +" target.files)
 
+(** find_target_dependencies *)
+let rec find_target_dependencies targets trg =
+  Miscellanea.Xlist.remove_dupl (List.flatten (List.map begin fun id ->
+    match List_opt.find (fun tg -> tg.id = id) targets with
+      | Some target -> (find_target_dependencies targets target) @ [target]
+      | _ -> []
+  end trg.dependencies));;
+
 (** filter_external_tasks *)
 let filter_external_tasks target phase =
   Miscellanea.Xlist.filter_map begin fun task ->

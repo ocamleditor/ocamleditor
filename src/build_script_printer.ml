@@ -35,7 +35,7 @@ let print_configs ochan targets external_tasks =
   output_string ochan "let targets = [\n";
   List.iter begin fun bc ->
     incr i;
-    kprintf print "(\x2A %d \x2A)" !i;
+    kprintf print "\n  (\x2A %d \x2A)" !i;
     kprintf print "%S, {" bc.name;
     kprintf print "  id                   = %d;" bc.id;
     kprintf print "  output_name          = %S;" bc.outname;
@@ -101,7 +101,7 @@ let print_external_tasks ochan project =
       let custom_args = print_add_args bc et args in
       let args = base_args @ custom_args in
       let name = sprintf "%d" !i in
-      kprintf print "%s, (fun () -> {" name;
+      kprintf print "\n  %s, (fun () -> {" name;
       kprintf print "  et_name                  = %S;" et.et_name;
       kprintf print "  et_env                   = [%s];"
         (String.concat ";" (List.map (sprintf "%S")

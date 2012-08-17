@@ -521,15 +521,7 @@ let exec ~editor ?use_thread ?(with_deps=false) task_kind target =
       end]
     else []
   in
-  let build_deps =
-    if with_deps then
-      List.map begin fun id ->
-        match List_opt.find (fun bc -> bc.id = id) project.Prj.targets with
-          | Some target -> target
-          | _ -> assert false
-      end target.dependencies
-    else []
-  in
+  let build_deps = if with_deps then Target.find_target_dependencies project.Prj.targets target else [] in
   let compile_name = sprintf "Compile \xC2\xAB%s\xC2\xBB" (Filename.basename target.name) in
   let build_name = sprintf "Build \xC2\xAB%s\xC2\xBB" (Filename.basename target.name) in
   let at_exit = fun () -> GtkThread2.async editor#with_current_page (fun p -> p#compile_buffer ~commit:false ()) in

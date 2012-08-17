@@ -62,7 +62,14 @@ let pushd, popd =
 
 let rpad txt c width =
   let result = txt ^ (String.make width c) in
-  String.sub result 0 width
+  String.sub result 0 width;;
+
+let list_pos x l =
+  let rec f l n =
+    match l with
+      | [] -> raise Not_found
+      | a :: b -> if x = a then n else f b (n + 1)
+  in f l 0;;
 
 let get_compilation_types native t =
   (if t.compilation_bytecode then [Bytecode] else []) @ (if t.compilation_native && native then [Native] else [])
@@ -142,7 +149,9 @@ let add_target targets name =
       try
         let n = int_of_string name in
         target := (n, List.nth targets (n - 1)) :: !target;
-      with _ -> target := (0, (name, (List.assoc name targets))) :: !target
+      with _ ->
+        let num = list_pos name (fst (List.split targets)) + 1 in
+        target := (num, (name, (List.assoc name targets))) :: !target
     end
   with Not_found -> (raise (Arg.Bad (sprintf "Invalid target `%s'" name)));;
 
@@ -185,17 +194,19 @@ let main ~cmd_line_args ~external_tasks ~targets =
       | `Distclean as x ->
         fun arg -> kprintf failwith "Invalid anonymous argument `%s' for command `%s'" arg (string_of_command x);;
 
-    let find_target_by_id id =
-      try
-        let _, tg = List.find (fun (_, tg) -> tg.id = id) targets in tg
-      with Not_found -> assert false;;
+    let rec find_target_dependencies targets trg =
+      remove_dupl (List.flatten (List.map begin fun id ->
+        try
+          let _, target = List.find (fun (_, tg) -> tg.id = id) targets in
+          (find_target_dependencies targets target) @ [target]
+        with Not_found -> []
+      end trg.dependencies));;
 
     (** Show *)
     let show = function num, (name, t) ->
       let files = Str.split (Str.regexp " +") t.toplevel_modules in
       (*let deps = Dep.find ~pp:t.pp ~with_errors:true ~echo:false files in*)
-      let b_deps = t.dependencies in
-      let b_deps = List.map find_target_by_id b_deps in
+      let b_deps = find_target_dependencies targets t in
       let b_deps = List.map begin fun tg ->
         let name, _ = List.find (fun (_, t) -> t.id = tg.id) targets in
         name
@@ -226,7 +237,7 @@ let main ~cmd_line_args ~external_tasks ~targets =
       let properties = if t.target_type = Library then prop_1 @ [
         "Install directory", (Oebuild.ocamllib // t.library_install_dir)
       ] @ prop_2 else prop_1 @ prop_2 in
-      printf "%d) %s (%s, %s)\n%!" num name outkind compilation;
+      printf "%2d) %s (%s, %s)\n%!" num name outkind compilation;
       let maxlength = List.fold_left (fun cand (x, _) -> let len = String.length x in max cand len) 0 properties in
       List.iter (fun (n, v) -> printf "  %s : %s\n" (rpad (n ^ " ") '.' maxlength) v) properties;;
 
@@ -247,8 +258,7 @@ let main ~cmd_line_args ~external_tasks ~targets =
               begin
                 match command with
                   | `Build ->
-                    let b_deps = target.dependencies in
-                    let b_deps = List.map find_target_by_id b_deps in
+                    let b_deps = find_target_dependencies targets target in
                     List.iter (execute_target ~command) b_deps;
                     List.iter ETask.execute (ETask.filter etasks Before_compile);
                     let deps = deps() in
@@ -351,7 +361,7 @@ let main ~cmd_line_args ~external_tasks ~targets =
       (string_of_output_type tg.target_type) (string_of_compilation_type (ccomp_type <> None) tg)
   end targets) in
   let usage_msg = sprintf
-    "\nUSAGE\n  ocaml %s [global_options*] <command> [options*] [targets*]\n  ocaml %s <command> --help"
+    "\nUSAGE\n  ocaml %s [global_options*] <command> [options*] [targets*]\n  ocaml %s <command> -help"
       command_name command_name
   in
   let help_string () =

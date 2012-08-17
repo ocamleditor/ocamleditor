@@ -5,6 +5,7 @@
   * More options in "Preferences Dialog".
   * Renamed "Build Configuration" to "Target" and renamed other features of
     the build system.
+  * Added "Duplicate", "Move Up" and "Move Down" to the target list.
   * Added "Direct Dependencies" list which identifies the targets upon which
     a target depends.
 
