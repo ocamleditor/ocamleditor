@@ -282,6 +282,18 @@
           </args>
           <phase>After_clean</phase>
         </task>
+        <task name="install">
+          <always_run_in_project>false</always_run_in_project>
+          <always_run_in_script>false</always_run_in_script>
+          <env replace="false"/>
+          <dir>../build</dir>
+          <cmd>ocaml</cmd>
+          <args>
+            <arg enabled="true">tools.ml</arg>
+            <arg enabled="true">-install</arg>
+          </args>
+          <phase>Before_clean</phase>
+        </task>
       </external_tasks>
       <restrictions></restrictions>
       <dependencies>4,10,7,5,6,8,9</dependencies>
@@ -376,7 +388,7 @@
   </executables>
   <build_script filename="_build.ml">
     <arg type="String" key="-prefix" pass="-key value">
-      <task/>
+      <task target_id="12" task_name="prepare-build"/>
       <mode>&lt;ADD&gt;</mode>
       <default type="string">/usr/local</default>
       <doc>Installation prefix (Unix only)</doc>

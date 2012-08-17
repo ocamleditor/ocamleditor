@@ -23,7 +23,14 @@
 
 type t = {
   bs_filename : string;
+  bs_targets  : target list;
   bs_args     : Build_script_args.t list;
+}
+
+and target = {
+  bst_target           : Target.t;
+  bst_show             : bool;
+  bst_installer_task   : Task.t option
 }
 
 let default_filename = "_build.ml"

@@ -21,8 +21,6 @@
 *)
 
 
-open Printf
-
 type kind = [ `CLEAN | `CLEANALL | `ANNOT | `COMPILE | `RUN | `OTHER]
 type phase = Before_clean | Clean | After_clean | Before_compile | Compile | After_compile
 

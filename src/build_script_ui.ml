@@ -69,7 +69,8 @@ object (self)
   method private save ~filename () =
     project.Prj.build_script <- {
       bs_filename = Filename.basename filename;
-      bs_args     = widget_args#get_arguments();
+      bs_targets  = widget_trg#get();
+      bs_args     = widget_args#get();
     };
     Build_script_printer.print ~project ~filename ();
     Project.save project

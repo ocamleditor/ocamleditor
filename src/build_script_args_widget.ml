@@ -229,7 +229,7 @@ object (self)
       rend_pass_flag#set_properties [`VISIBLE is_flag];
       rend_pass#set_properties [`VISIBLE (not is_flag); `EDITABLE (not is_flag); `MODE (if is_flag then `INERT else `EDITABLE)];
     end;
-    self#set_arguments project.build_script.bs_args;
+    self#set project.build_script.bs_args;
 
   method private is_flag row = model#get ~row ~column:col_opt_type = "Flag"
 
@@ -308,7 +308,7 @@ object (self)
     in
     List.iter remove_path paths
 
-  method set_arguments args =
+  method set args =
     List.iter begin fun arg ->
       let row = model#append () in
       model#set ~row ~column:col_opt_type (string_of_type arg.bsa_type);
@@ -329,7 +329,7 @@ object (self)
       model#set ~row ~column:col_opt_pass (string_of_pass arg.bsa_pass);
     end args;
 
-  method get_arguments () =
+  method get () =
     let arguments = ref [] in
     model#foreach begin fun path row ->
       let bc_et = self#find_task_by_name (model#get ~row ~column:col_opt_et_name) in

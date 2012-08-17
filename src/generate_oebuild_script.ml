@@ -77,8 +77,9 @@ module Util = struct
 
   let test () =
     let cmd = sprintf "ocaml %s" filename in
-    Printf.printf "%s\n%!" cmd;
-    ignore (Sys.command cmd)
+    Printf.printf "Testing %s...\n  %s\n%!" filename cmd;
+    let exit_code = Sys.command cmd in
+    Printf.printf "%s\n%!" (if exit_code = 0 then "" else sprintf "Exit code: %d" exit_code);
 end
 
 let create_script () =

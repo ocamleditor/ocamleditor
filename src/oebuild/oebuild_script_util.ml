@@ -28,6 +28,7 @@ open Oebuild_util
 open Task
 
 type target = {
+  num : int;
   id : int;
   output_name : string;
   target_type : Oebuild.output_type;
@@ -46,6 +47,8 @@ type target = {
   external_tasks : int list;
   restrictions : string list;
   dependencies : int list;
+  show : bool;
+  installer_task : int option;
 }
 
 type target_map_entry = int * (string * target)
@@ -63,13 +66,6 @@ let pushd, popd =
 let rpad txt c width =
   let result = txt ^ (String.make width c) in
   String.sub result 0 width;;
-
-let list_pos x l =
-  let rec f l n =
-    match l with
-      | [] -> raise Not_found
-      | a :: b -> if x = a then n else f b (n + 1)
-  in f l 0;;
 
 let get_compilation_types native t =
   (if t.compilation_bytecode then [Bytecode] else []) @ (if t.compilation_native && native then [Native] else [])
@@ -147,13 +143,145 @@ let add_target targets name =
   try
     begin
       try
-        let n = int_of_string name in
-        target := (n, List.nth targets (n - 1)) :: !target;
+        let num = int_of_string name in
+        if num <= 0 then (raise Exit);
+        let name_tg = try List.find (fun (_, tg) -> tg.num = num) targets with Not_found -> raise Exit in
+        target := (num, name_tg) :: !target;
       with _ ->
-        let num = list_pos name (fst (List.split targets)) + 1 in
-        target := (num, (name, (List.assoc name targets))) :: !target
+        let tg = List.assoc name targets in
+        if tg.num <= 0 then (raise Exit);
+        target := (tg.num, (name, tg)) :: !target;
     end
-  with Not_found -> (raise (Arg.Bad (sprintf "Invalid target `%s'" name)));;
+  with Exit | Not_found -> (raise (Arg.Bad (sprintf "Invalid target `%s'" name)));;
+
+(** find_target_dependencies *)
+let rec find_target_dependencies targets trg =
+  remove_dupl (List.flatten (List.map begin fun id ->
+    try
+      let _, target = List.find (fun (_, tg) -> tg.id = id) targets in
+      (find_target_dependencies targets target) @ [target]
+    with Not_found -> []
+  end trg.dependencies));;
+
+(** Show *)
+let show = fun targets -> function num, (name, t) ->
+  let files = Str.split (Str.regexp " +") t.toplevel_modules in
+  (*let deps = Dep.find ~pp:t.pp ~with_errors:true ~echo:false files in*)
+  let b_deps = find_target_dependencies targets t in
+  let b_deps = List.map begin fun tg ->
+    let name, _ = List.find (fun (_, t) -> t.id = tg.id) targets in
+    name
+  end b_deps in
+  let compilation =
+    (if t.compilation_bytecode then [Bytecode] else []) @
+    (if t.compilation_native && ccomp_type <> None then [Native] else [])
+  in
+  let outname = List.map begin fun compilation ->
+    let oname = get_output_name ~compilation ~outkind:t.target_type ~outname:t.output_name ~targets:files in
+    match oname with Some x -> x | _ -> ""
+  end compilation
+  in
+  let outkind = string_of_output_type t.target_type in
+  let compilation = string_of_compilation_type (ccomp_type <> None) t in
+  let prop_1 = [
+    "Restrictions", (String.concat "," t.restrictions);
+    "Output name", (String.concat ", " outname);
+  ] in
+  let prop_2 = [
+    "Search path (-I)", t.search_path;
+    "Required libraries", t.required_libraries;
+    "Compiler flags", t.compiler_flags;
+    "Linker flags", t.linker_flags;
+    "Toplevel modules", t.toplevel_modules;
+    "Dependencies", (String.concat ", " b_deps);
+  ] in
+  let properties = if t.target_type = Library then prop_1 @ [
+    "Install directory", (Oebuild.ocamllib // t.library_install_dir)
+  ] @ prop_2 else prop_1 @ prop_2 in
+  printf "%2d) %s (%s, %s)\n%!" num name outkind compilation;
+  let maxlength = List.fold_left (fun cand (x, _) -> let len = String.length x in max cand len) 0 properties in
+  List.iter (fun (n, v) -> printf "  %s : %s\n" (rpad (n ^ " ") '.' maxlength) v) properties;;
+
+(** execute_target *)
+let rec execute_target ~external_tasks ~targets ~command target =
+  if Oebuild.check_restrictions target.restrictions then
+    let compilation = (if target.compilation_bytecode then [Bytecode] else [])
+      @ (if target.compilation_native && (ccomp_type <> None) then [Native] else []) in
+    let files = Str.split (Str.regexp " +") target.toplevel_modules in
+    let deps () = Dep.find ~pp:target.pp ~with_errors:true ~echo:false files in
+    let etasks = List.map begin fun name ->
+      let mktarget = try List.assoc name external_tasks with Not_found -> assert false in
+      mktarget()
+    end target.external_tasks in
+    try
+      List.iter begin fun compilation ->
+        match get_output_name ~compilation ~outkind:target.target_type ~outname:target.output_name ~targets:files with
+          | Some outname ->
+            begin
+              match command with
+                | `Build ->
+                  let b_deps = find_target_dependencies targets target in
+                  List.iter (execute_target ~external_tasks ~targets ~command) b_deps;
+                  List.iter ETask.execute (ETask.filter etasks Before_compile);
+                  let deps = deps() in
+                  (*List.iter ETask.execute (ETask.filter etasks Compile);*)
+                  begin
+                    match build
+                      ~compilation
+                      ~includes:target.search_path
+                      ~libs:target.required_libraries
+                      ~other_mods:target.other_objects
+                      ~outkind:target.target_type
+                      ~compile_only:false
+                      ~thread:target.thread
+                      ~vmthread:target.vmthread
+                      ~annot:false
+                      ~pp:target.pp
+                      ~cflags:target.compiler_flags
+                      ~lflags:target.linker_flags
+                      ~outname
+                      ~deps
+                      ~ms_paths:(ref false)
+                      ~targets:files ()
+                    with
+                      | Built_successfully ->
+                        List.iter ETask.execute (ETask.filter etasks After_compile);
+                      | Build_failed n -> popd(); exit n
+                  end
+                | `Install ->
+                  begin
+                    match target.target_type with
+                      | Library ->
+                        let deps = deps() in
+                        install_output ~compilation ~outkind:target.target_type ~outname ~deps ~path:target.library_install_dir ~ccomp_type
+                      | Executable ->
+                        begin
+                          match target.installer_task with
+                            | Some installer_task ->
+                              let _, f = List.find (fun (num, _) -> num = installer_task) external_tasks in
+                              ETask.execute (f ())
+                            | _ -> eprintf "Command \"install\" is not available for target \"%d\"" target.num
+                        end;
+                        raise Exit;
+                      | Plugin | Pack -> failwith "\"install\" not implemented for Plugin or Pack."
+                  end;
+                | `Clean ->
+                  List.iter ETask.execute (ETask.filter etasks Before_clean);
+                  let deps = deps() in
+                  clean ~compilation ~outkind:target.target_type ~outname ~targets:files ~deps ();
+                  List.iter ETask.execute (ETask.filter etasks After_clean);
+                | `Distclean ->
+                  let deps = deps() in
+                  List.iter ETask.execute (ETask.filter etasks Before_clean);
+                  if files <> [] then
+                    (clean ~compilation ~outkind:target.target_type ~outname ~targets:files ~deps ~all:true ());
+                  List.iter ETask.execute (ETask.filter etasks After_clean);
+                | `Show -> assert false
+            end
+          | _ -> ()
+      end compilation
+    with Exit -> ()
+;;
 
 (** main *)
 let main ~cmd_line_args ~external_tasks ~targets =
@@ -194,123 +322,6 @@ let main ~cmd_line_args ~external_tasks ~targets =
       | `Distclean as x ->
         fun arg -> kprintf failwith "Invalid anonymous argument `%s' for command `%s'" arg (string_of_command x);;
 
-    let rec find_target_dependencies targets trg =
-      remove_dupl (List.flatten (List.map begin fun id ->
-        try
-          let _, target = List.find (fun (_, tg) -> tg.id = id) targets in
-          (find_target_dependencies targets target) @ [target]
-        with Not_found -> []
-      end trg.dependencies));;
-
-    (** Show *)
-    let show = function num, (name, t) ->
-      let files = Str.split (Str.regexp " +") t.toplevel_modules in
-      (*let deps = Dep.find ~pp:t.pp ~with_errors:true ~echo:false files in*)
-      let b_deps = find_target_dependencies targets t in
-      let b_deps = List.map begin fun tg ->
-        let name, _ = List.find (fun (_, t) -> t.id = tg.id) targets in
-        name
-      end b_deps in
-      let compilation =
-        (if t.compilation_bytecode then [Bytecode] else []) @
-        (if t.compilation_native && ccomp_type <> None then [Native] else [])
-      in
-      let outname = List.map begin fun compilation ->
-        let oname = get_output_name ~compilation ~outkind:t.target_type ~outname:t.output_name ~targets:files in
-        match oname with Some x -> x | _ -> ""
-      end compilation
-      in
-      let outkind = string_of_output_type t.target_type in
-      let compilation = string_of_compilation_type (ccomp_type <> None) t in
-      let prop_1 = [
-        "Restrictions", (String.concat "," t.restrictions);
-        "Output name", (String.concat ", " outname);
-      ] in
-      let prop_2 = [
-        "Search path (-I)", t.search_path;
-        "Required libraries", t.required_libraries;
-        "Compiler flags", t.compiler_flags;
-        "Linker flags", t.linker_flags;
-        "Toplevel modules", t.toplevel_modules;
-        "Dependencies", (String.concat ", " b_deps);
-      ] in
-      let properties = if t.target_type = Library then prop_1 @ [
-        "Install directory", (Oebuild.ocamllib // t.library_install_dir)
-      ] @ prop_2 else prop_1 @ prop_2 in
-      printf "%2d) %s (%s, %s)\n%!" num name outkind compilation;
-      let maxlength = List.fold_left (fun cand (x, _) -> let len = String.length x in max cand len) 0 properties in
-      List.iter (fun (n, v) -> printf "  %s : %s\n" (rpad (n ^ " ") '.' maxlength) v) properties;;
-
-    (** execute_target *)
-    let rec execute_target ~command target =
-      if Oebuild.check_restrictions target.restrictions then
-        let compilation = (if target.compilation_bytecode then [Bytecode] else [])
-          @ (if target.compilation_native && (ccomp_type <> None) then [Native] else []) in
-        let files = Str.split (Str.regexp " +") target.toplevel_modules in
-        let deps () = Dep.find ~pp:target.pp ~with_errors:true ~echo:false files in
-        let etasks = List.map begin fun name ->
-          let mktarget = try List.assoc name external_tasks with Not_found -> assert false in
-          mktarget()
-        end target.external_tasks in
-        List.iter begin fun compilation ->
-          match get_output_name ~compilation ~outkind:target.target_type ~outname:target.output_name ~targets:files with
-            | Some outname ->
-              begin
-                match command with
-                  | `Build ->
-                    let b_deps = find_target_dependencies targets target in
-                    List.iter (execute_target ~command) b_deps;
-                    List.iter ETask.execute (ETask.filter etasks Before_compile);
-                    let deps = deps() in
-                    (*List.iter ETask.execute (ETask.filter etasks Compile);*)
-                    begin
-                      match build
-                        ~compilation
-                        ~includes:target.search_path
-                        ~libs:target.required_libraries
-                        ~other_mods:target.other_objects
-                        ~outkind:target.target_type
-                        ~compile_only:false
-                        ~thread:target.thread
-                        ~vmthread:target.vmthread
-                        ~annot:false
-                        ~pp:target.pp
-                        ~cflags:target.compiler_flags
-                        ~lflags:target.linker_flags
-                        ~outname
-                        ~deps
-                        ~ms_paths:(ref false)
-                        ~targets:files ()
-                      with
-                        | Built_successfully ->
-                          List.iter ETask.execute (ETask.filter etasks After_compile);
-                        | Build_failed n -> popd(); exit n
-                    end
-                  | `Install ->
-                    begin
-                      match target.target_type with
-                        | Library ->
-                          let deps = deps() in
-                          install_output ~compilation ~outkind:target.target_type ~outname ~deps ~path:target.library_install_dir ~ccomp_type
-                        | Executable -> failwith "\"install\" not implemented for Executable."
-                        | Plugin | Pack -> failwith "\"install\" not implemented for Plugin or Pack."
-                    end;
-                  | `Clean ->
-                    List.iter ETask.execute (ETask.filter etasks Before_clean);
-                    let deps = deps() in
-                    clean ~compilation ~outkind:target.target_type ~outname ~targets:files ~deps ();
-                    List.iter ETask.execute (ETask.filter etasks After_clean);
-                  | `Distclean ->
-                    let deps = deps() in
-                    List.iter ETask.execute (ETask.filter etasks Before_clean);
-                    if files <> [] then
-                      (clean ~compilation ~outkind:target.target_type ~outname ~targets:files ~deps ~all:true ());
-                    List.iter ETask.execute (ETask.filter etasks After_clean);
-                  | `Show -> assert false
-              end
-            | _ -> ()
-        end compilation;;
-
     (** execute *)
     let execute command =
       pushd !Option.change_dir;
@@ -319,20 +330,20 @@ let main ~cmd_line_args ~external_tasks ~targets =
         begin
           match command with
             | `Distclean ->
-              List.iter (fun (_, t) -> execute_target ~command t) targets;
+              List.iter (fun (_, t) -> execute_target ~external_tasks ~targets ~command t) targets;
               clean_all()
             | `Show ->
               printf "%s\n%!" (system_config ());
               Printf.printf "\n%!" ;
               if target = [] then (raise (Arg.Bad "show: no target specified"));
               List.iter begin fun t ->
-                show t;
+                show targets t;
                 print_newline();
                 print_newline();
               end target;
             | _ ->
               if target = [] then (raise (Arg.Bad (sprintf "%s: no target specified" (string_of_command command))));
-              List.iter (fun (_, (_, t)) -> execute_target ~command t) target
+              List.iter (fun (_, (_, t)) -> execute_target ~external_tasks ~targets ~command t) target
         end;
         popd();
       with Arg.Bad _ as ex ->
@@ -352,14 +363,13 @@ let main ~cmd_line_args ~external_tasks ~targets =
   let global_options = Arg.align global_options in
   let command_name = Filename.basename Sys.argv.(0) in
   (* Print targets *)
-  let i = ref 0 in
   let maxlength = List.fold_left (fun cand (x, _) -> let len = String.length x in max cand len) 0 targets in
+  let targets_shown = List.filter (fun (_, tg) -> tg.show) targets in
   let help_of_targets = String.concat "\n" (List.map begin fun (name, tg) ->
-    incr i;
     let name = rpad name ' ' maxlength in
-    sprintf "  %2d) %s %s, %s" !i name
+    sprintf "  %2d) %s %s, %s" tg.num name
       (string_of_output_type tg.target_type) (string_of_compilation_type (ccomp_type <> None) tg)
-  end targets) in
+  end targets_shown) in
   let usage_msg = sprintf
     "\nUSAGE\n  ocaml %s [global_options*] <command> [options*] [targets*]\n  ocaml %s <command> -help"
       command_name command_name

@@ -28,33 +28,43 @@ open Task
 open Build_script
 open Build_script_args
 
-(** print_configs *)
-let print_configs ochan targets external_tasks =
+(** print_targets *)
+let print_targets ochan targets external_tasks =
   let i = ref 0 in
   let print = fprintf ochan "  %s\n" in
   output_string ochan "let targets = [\n";
-  List.iter begin fun bc ->
-    incr i;
+  List.iter begin fun {bst_target=tg; bst_show; _} ->
+    let installer_task =
+      try
+        let num, _ = List.find (fun (_, it) -> it) (List.assoc tg external_tasks) in
+        sprintf "Some %d" num
+      with Not_found -> "None"
+    in
+    if bst_show then (incr i);
+    let num = if bst_show then !i else 0 in
     kprintf print "\n  (\x2A %d \x2A)" !i;
-    kprintf print "%S, {" bc.name;
-    kprintf print "  id                   = %d;" bc.id;
-    kprintf print "  output_name          = %S;" bc.outname;
-    kprintf print "  target_type          = %s;" (string_of_target_type bc.target_type);
-    kprintf print "  compilation_bytecode = %b;" bc.byt;
-    kprintf print "  compilation_native   = %b;" bc.opt;
-    kprintf print "  toplevel_modules     = %S;" bc.files;
-    kprintf print "  search_path          = %S; (\x2A -I \x2A)" bc.includes;
-    kprintf print "  required_libraries   = %S;" bc.libs;
-    kprintf print "  compiler_flags       = %S;" bc.cflags;
-    kprintf print "  linker_flags         = %S;" bc.lflags;
-    kprintf print "  thread               = %b;" bc.thread;
-    kprintf print "  vmthread             = %b;" bc.vmthread;
-    kprintf print "  pp                   = %S;" bc.pp;
-    kprintf print "  library_install_dir  = %S; (\x2A Relative to the Standard Library Directory \x2A)" bc.lib_install_path;
-    kprintf print "  other_objects        = %S;" bc.other_objects;
-    kprintf print "  external_tasks       = [%s];" (String.concat "; " (List.assoc bc external_tasks));
-    kprintf print "  restrictions         = [%s];" (String.concat "; " (List.map (sprintf "%S") bc.restrictions));
-    kprintf print "  dependencies         = [%s];" (String.concat "; " (List.map (sprintf "%d") bc.dependencies));
+    kprintf print "%S, {" tg.name;
+    kprintf print "  num                  = %d;" num;
+    kprintf print "  id                   = %d;" tg.id;
+    kprintf print "  output_name          = %S;" tg.outname;
+    kprintf print "  target_type          = %s;" (string_of_target_type tg.target_type);
+    kprintf print "  compilation_bytecode = %b;" tg.byt;
+    kprintf print "  compilation_native   = %b;" tg.opt;
+    kprintf print "  toplevel_modules     = %S;" tg.files;
+    kprintf print "  search_path          = %S; (\x2A -I \x2A)" tg.includes;
+    kprintf print "  required_libraries   = %S;" tg.libs;
+    kprintf print "  compiler_flags       = %S;" tg.cflags;
+    kprintf print "  linker_flags         = %S;" tg.lflags;
+    kprintf print "  thread               = %b;" tg.thread;
+    kprintf print "  vmthread             = %b;" tg.vmthread;
+    kprintf print "  pp                   = %S;" tg.pp;
+    kprintf print "  library_install_dir  = %S; (\x2A Relative to the Standard Library Directory \x2A)" tg.lib_install_path;
+    kprintf print "  other_objects        = %S;" tg.other_objects;
+    kprintf print "  external_tasks       = [%s];" (String.concat "; " (List.map (fun (n, _) -> string_of_int n) (List.assoc tg external_tasks)));
+    kprintf print "  restrictions         = [%s];" (String.concat "; " (List.map (sprintf "%S") tg.restrictions));
+    kprintf print "  dependencies         = [%s];" (String.concat "; " (List.map (sprintf "%d") tg.dependencies));
+    kprintf print "  show                 = %b;" bst_show;
+    kprintf print "  installer_task       = %s;" installer_task;
     kprintf print "};";
   end targets;
   output_string ochan "];;\n";;
@@ -94,30 +104,32 @@ let print_external_tasks ochan project =
   let i = ref 0 in
   let print = fprintf ochan "  %s\n" in
   output_string ochan "let external_tasks = [\n";
-  let ets = List.map begin fun bc ->
-    let ets = List.map begin fun et ->
-      let base_args = Xlist.filter_map (fun (x, y) -> if x then Some y else None) et.et_args in
-      let base_args = List.map (sprintf "true,%S") base_args in
-      let custom_args = print_add_args bc et args in
-      let args = base_args @ custom_args in
-      let name = sprintf "%d" !i in
-      kprintf print "\n  %s, (fun () -> {" name;
-      kprintf print "  et_name                  = %S;" et.et_name;
-      kprintf print "  et_env                   = [%s];"
-        (String.concat ";" (List.map (sprintf "%S")
-          (Xlist.filter_map (fun (x, y) -> if x then Some y else None) et.et_env)));
-      kprintf print "  et_env_replace           = %b;" et.et_env_replace;
-      kprintf print "  et_dir                   = %S;" et.et_dir;
-      kprintf print "  et_cmd                   = %S;" et.et_cmd;
-      kprintf print "  et_args                  = [%s];" (String.concat "; " args);
-      kprintf print "  et_phase                 = %s;" (match et.et_phase with Some p -> "Some " ^ (Task.string_of_phase p) | _ -> "None");
-      kprintf print "  et_always_run_in_project = %b;" et.et_always_run_in_project;
-      kprintf print "  et_always_run_in_script  = %b;" et.et_always_run_in_script;
-      kprintf print "});";
-      incr i;
-      name
-    end bc.external_tasks in
-    bc, ets
+  let targets = project.Prj.build_script.bs_targets in
+  let ets = List.map begin fun {bst_target=tg; bst_installer_task; _} ->
+    let ets =
+      List.map begin fun et ->
+        let base_args = Xlist.filter_map (fun (x, y) -> if x then Some y else None) et.et_args in
+        let base_args = List.map (sprintf "true,%S") base_args in
+        let custom_args = print_add_args tg et args in
+        let args = base_args @ custom_args in
+        let index = !i in
+        kprintf print "\n  %d, (fun () -> {" index;
+        kprintf print "  et_name                  = %S;" et.et_name;
+        kprintf print "  et_env                   = [%s];"
+          (String.concat ";" (List.map (sprintf "%S")
+            (Xlist.filter_map (fun (x, y) -> if x then Some y else None) et.et_env)));
+        kprintf print "  et_env_replace           = %b;" et.et_env_replace;
+        kprintf print "  et_dir                   = %S;" et.et_dir;
+        kprintf print "  et_cmd                   = %S;" et.et_cmd;
+        kprintf print "  et_args                  = [%s];" (String.concat "; " args);
+        kprintf print "  et_phase                 = %s;" (match et.et_phase with Some p -> "Some " ^ (Task.string_of_phase p) | _ -> "None");
+        kprintf print "  et_always_run_in_project = %b;" et.et_always_run_in_project;
+        kprintf print "  et_always_run_in_script  = %b;" et.et_always_run_in_script;
+        kprintf print "});";
+        incr i;
+        index, (match bst_installer_task with Some task when task.et_name = et.et_name -> true | _ -> false)
+      end tg.external_tasks
+    in tg, ets
   end targets in
   output_string ochan "];;\n";
   ets;;
@@ -168,7 +180,7 @@ let print ~project ~filename () =
     output_string ochan "\n\n";
     output_string ochan "(\x2A Targets ==================================================== \x2A)\n\n";
     (*  *)
-    print_configs ochan project.Prj.targets ets;
+    print_targets ochan project.Prj.build_script.bs_targets ets;
     output_string ochan "\n";
     output_string ochan "(\x2A End of Targets ============================================= \x2A)\n\n";
     (*  *)
