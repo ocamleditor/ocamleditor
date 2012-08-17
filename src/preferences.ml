@@ -189,7 +189,7 @@ let create_defaults () = {
   pref_editor_wrap                  = false;
   pref_editor_trim_lines            = false;
   pref_editor_custom_templ_filename = "";
-  pref_editor_mark_occurrences      = true, "#E0E0E0";
+  pref_editor_mark_occurrences      = true, "#FFFF54";
   pref_editor_left_margin           = 1;
   pref_editor_pixels_lines          = 0,1;
   pref_editor_save_all_bef_comp     = true;
@@ -240,7 +240,7 @@ let create_defaults () = {
   pref_outline_show_types           = false;
   pref_outline_width                = 250;
   pref_hmessages_width              = 1000;
-  pref_vmessages_height             = 800;
+  pref_vmessages_height             = 600;
   pref_odoc_font                    = "Serif 9";
 }
 
