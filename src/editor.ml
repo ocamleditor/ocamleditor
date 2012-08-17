@@ -73,7 +73,6 @@ object (self)
       hpaned#pack1 ~resize:false ~shrink:true widget;
       ignore (widget#misc#connect#size_allocate ~callback:begin fun _ ->
         Preferences.preferences#get.Preferences.pref_outline_width <- hpaned#position;
-        Gmisclib.Idle.add ~prio:300 Preferences.save
       end);
     end
 
