@@ -162,7 +162,7 @@ let find_task proj name =
 
 (** xml_bs_targets *)
 let xml_bs_targets proj node =
-  Xml.fold begin fun acc target_node ->
+  List.rev (Xml.fold begin fun acc target_node ->
     try
       {Build_script.
         bst_target         = (match fattrib target_node "target_id" (find_target proj) (fun _ -> None) with Some x -> x | _ -> raise Exit);
@@ -170,7 +170,7 @@ let xml_bs_targets proj node =
         bst_installer_task = fattrib target_node "installer_task_name" (find_task proj) (fun _ -> None)
       } :: acc
     with Exit -> acc
-  end [] node;;
+  end [] node);;
 
 (** xml_bs_args *)
 let xml_bs_args proj node =
