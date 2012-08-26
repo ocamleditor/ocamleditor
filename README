@@ -40,8 +40,7 @@ HOW TO COMPILE
 
     ocaml _build.ml build ocamleditor
 
-  If the OCaml native code compiler is not available on your platform, compile
-  with:
+  If the native code compiler is not available on your platform, compile with:
 
     ocaml _build.ml build ocamleditor-bytecode
 
