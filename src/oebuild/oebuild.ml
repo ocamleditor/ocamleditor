@@ -66,7 +66,7 @@ let link ~compilation ~compiler ~outkind ~lflags ~package ~includes ~libs ~outna
     ?(process_err : process_err_func option) () =
   let opt = compilation = Native && ocamlopt <> None in
   let libs =
-    if opt && outkind = Library then "" else
+    if (*opt &&*) outkind <> Executable then "" else
       let ext = if opt then "cmxa" else "cma" in
       let libs = List.map begin fun x ->
         if Filename.check_suffix x ".o" then begin
@@ -83,7 +83,7 @@ let link ~compilation ~compiler ~outkind ~lflags ~package ~includes ~libs ~outna
   let deps = String.concat " " deps in
   kprintf (exec (*command*) ?process_err) "%s%s %s %s -o %s %s %s %s"
     compiler
-    (if use_findlib && (outkind <> Library || not opt) then " -linkpkg" else "")
+    (if use_findlib && outkind = Executable then " -linkpkg" else "")
     (match outkind with Library -> "-a" | Plugin -> "-shared" | Pack -> "-pack" | Executable -> "")
     lflags
     outname

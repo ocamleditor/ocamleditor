@@ -54,6 +54,7 @@ let write proj =
         Xml.Element ("libs", [], [Xml.PCData t.Target.libs]);
         Xml.Element ("other_objects", [], [Xml.PCData t.Target.other_objects]);
         Xml.Element ("files", [], [Xml.PCData t.Target.files]);
+        Xml.Element ("package", [], [Xml.PCData t.Target.package]);
         Xml.Element ("includes", [], [Xml.PCData t.Target.includes]);
         Xml.Element ("thread", [], [Xml.PCData (string_of_bool t.Target.thread)]);
         Xml.Element ("vmthread", [], [Xml.PCData (string_of_bool t.Target.vmthread)]);
@@ -310,6 +311,7 @@ let read filename =
               | "other_objects" -> target.Target.other_objects <- value tp
               | "mods" -> target.Target.other_objects <- value tp (*  *)
               | "files" -> target.Target.files <- value tp
+              | "package" -> target.Target.package <- value tp
               | "includes" -> target.Target.includes <- value tp
               | "thread" -> target.Target.thread <- bool_of_string (value tp)
               | "vmthread" -> target.Target.vmthread <- bool_of_string (value tp)

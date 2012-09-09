@@ -16,6 +16,7 @@
       <libs></libs>
       <other_objects></other_objects>
       <files>common/common.ml</files>
+      <package></package>
       <includes>common</includes>
       <thread>true</thread>
       <vmthread>false</vmthread>
@@ -36,6 +37,7 @@
       <libs></libs>
       <other_objects></other_objects>
       <files>icons/icons.ml</files>
+      <package>lablgtk2</package>
       <includes>common</includes>
       <thread>false</thread>
       <vmthread>false</vmthread>
@@ -69,6 +71,7 @@
       <libs></libs>
       <other_objects></other_objects>
       <files>oebuild/oebuild.ml</files>
+      <package></package>
       <includes>common oebuild</includes>
       <thread>true</thread>
       <vmthread>false</vmthread>
@@ -89,13 +92,14 @@
       <libs>common</libs>
       <other_objects></other_objects>
       <files>oebuild/oebuild_tool.ml</files>
+      <package>unix,str</package>
       <includes>common oebuild</includes>
       <thread>true</thread>
       <vmthread>false</vmthread>
       <pp></pp>
       <inline></inline>
       <cflags>-w y</cflags>
-      <lflags>-verbose</lflags>
+      <lflags></lflags>
       <target_type>Executable</target_type>
       <outname>oebuild/oebuild</outname>
       <lib_install_path></lib_install_path>
@@ -109,6 +113,7 @@
       <libs></libs>
       <other_objects></other_objects>
       <files>oeproc/oeproc.ml</files>
+      <package>unix,str</package>
       <includes>common oeproc</includes>
       <thread>true</thread>
       <vmthread>false</vmthread>
@@ -129,6 +134,7 @@
       <libs></libs>
       <other_objects></other_objects>
       <files>gmisclib/gmisclib.ml</files>
+      <package>lablgtk2</package>
       <includes>gmisclib</includes>
       <thread>false</thread>
       <vmthread>false</vmthread>
@@ -149,6 +155,7 @@
       <libs></libs>
       <other_objects></other_objects>
       <files>otherwidgets/otherwidgets.ml</files>
+      <package>lablgtk2</package>
       <includes>icons common otherwidgets</includes>
       <thread>false</thread>
       <vmthread>false</vmthread>
@@ -166,10 +173,11 @@
     <target name="ocamleditor-bytecode" default="true" id="0">
       <byt>true</byt>
       <opt>false</opt>
-      <libs>ocamlcommon unix str threads dynlink odoc_info xml-light lablgtk gtkThread.o gmisclib common icons otherwidgets oebuildlib</libs>
+      <libs>ocamlcommon dynlink odoc_info xml-light gmisclib common icons otherwidgets oebuildlib</libs>
       <other_objects></other_objects>
       <files>ocamleditor.ml</files>
-      <includes>+lablgtk2 +compiler-libs +ocamldoc gmisclib common icons otherwidgets oebuild </includes>
+      <package>str,lablgtk2</package>
+      <includes>+compiler-libs +ocamldoc gmisclib common icons otherwidgets oebuild </includes>
       <thread>true</thread>
       <vmthread>false</vmthread>
       <pp></pp>
@@ -235,10 +243,11 @@
     <target name="ocamleditor" default="false" id="12">
       <byt>false</byt>
       <opt>true</opt>
-      <libs>ocamlcommon unix str threads dynlink odoc_info xml-light lablgtk gtkThread.o gmisclib common icons otherwidgets oebuildlib</libs>
+      <libs>ocamlcommon dynlink odoc_info xml-light gmisclib common icons otherwidgets oebuildlib</libs>
       <other_objects></other_objects>
       <files>ocamleditor.ml</files>
-      <includes>+lablgtk2 +compiler-libs +ocamldoc gmisclib common icons otherwidgets oebuild </includes>
+      <package>lablgtk2,str</package>
+      <includes>+compiler-libs +ocamldoc gmisclib common icons otherwidgets oebuild </includes>
       <thread>true</thread>
       <vmthread>false</vmthread>
       <pp></pp>
@@ -304,10 +313,11 @@
     <target name="ocamleditor-native" default="false" id="11">
       <byt>false</byt>
       <opt>true</opt>
-      <libs>ocamlcommon unix str threads dynlink odoc_info xml-light lablgtk gtkThread.o gmisclib common icons otherwidgets oebuildlib</libs>
+      <libs>ocamlcommon dynlink odoc_info xml-light gmisclib common icons otherwidgets oebuildlib</libs>
       <other_objects></other_objects>
       <files>ocamleditor.ml</files>
-      <includes>+lablgtk2 +compiler-libs +ocamldoc gmisclib common icons otherwidgets oebuild </includes>
+      <package>lablgtk2,str</package>
+      <includes>+compiler-libs +ocamldoc gmisclib common icons otherwidgets oebuild </includes>
       <thread>true</thread>
       <vmthread>false</vmthread>
       <pp></pp>
@@ -327,6 +337,7 @@
       <libs></libs>
       <other_objects></other_objects>
       <files></files>
+      <package></package>
       <includes></includes>
       <thread>false</thread>
       <vmthread>false</vmthread>

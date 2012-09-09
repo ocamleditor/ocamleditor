@@ -249,13 +249,11 @@ object (self)
       project.autocomp_enabled <- check_autocomp_enabled#active;
       project.autocomp_delay   <- range_autocomp_delay#adjustment#value /. 1000.;
       project.autocomp_cflags  <- entry_autocomp_cflags#text;
-      callback project;
-      (* Save targets and rconfigs *)
-      project.targets <- (target_list#get_targets ());
-      let rconfigs = rconf_list#get_rconfigs() in
-      project.executables <- List.filter begin fun rtc ->
+      project.targets          <- (target_list#get_targets ());
+      project.executables      <- List.filter begin fun rtc ->
         List.exists (fun bc -> bc.Target.id = rtc.Rconf.target_id) project.targets
-      end rconfigs;
+      end (rconf_list#get_rconfigs());
+      callback project;
       Project.save ~editor project;
       project_changed#call();
       (*  *)
