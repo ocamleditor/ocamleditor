@@ -35,6 +35,7 @@ type target = {
   compilation_bytecode : bool;
   compilation_native : bool;
   toplevel_modules : string;
+  package : string;
   search_path : string;
   required_libraries : string;
   compiler_flags : string;
@@ -189,12 +190,13 @@ let show = fun targets -> function num, (name, t) ->
     "Output name", (String.concat ", " outname);
   ] in
   let prop_2 = [
-    "Search path (-I)", t.search_path;
+    "Findlib packages", t.package;
+    "Search path", t.search_path;
     "Required libraries", t.required_libraries;
     "Compiler flags", t.compiler_flags;
     "Linker flags", t.linker_flags;
     "Toplevel modules", t.toplevel_modules;
-    "Dependencies", (String.concat ", " b_deps);
+    "Target dependencies", (String.concat ", " b_deps);
   ] in
   let properties = if t.target_type = Library then prop_1 @ [
     "Install directory", (Oebuild.ocamllib // t.library_install_dir)
@@ -267,6 +269,7 @@ and build ~targets ~external_tasks ~etasks ~deps ~compilation ~outname ~files ta
   (*List.iter ETask.execute (ETask.filter etasks Compile);*)
   match Oebuild.build
     ~compilation
+    ~package:target.package
     ~includes:target.search_path
     ~libs:target.required_libraries
     ~other_mods:target.other_objects

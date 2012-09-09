@@ -41,7 +41,7 @@ let ocamlopt = Ocaml_config.ocamlopt()
 let ocamllib = Ocaml_config.ocamllib()
 
 (** compile *)
-let compile ?(times : Table.t option) ~opt ~compiler ~cflags ~includes ~filename
+let compile ?(times : Table.t option) ~opt ~compiler ~cflags ~package ~includes ~filename
     ?(process_err : process_err_func option) () =
   if Sys.file_exists filename then begin
     try
@@ -62,13 +62,9 @@ let compile ?(times : Table.t option) ~opt ~compiler ~cflags ~includes ~filename
   end else 0
 
 (** link *)
-let link ~compiler ~outkind ~lflags ~includes ~libs ~outname ~deps
+let link ~compilation ~compiler ~outkind ~lflags ~package ~includes ~libs ~outname ~deps
     ?(process_err : process_err_func option) () =
-  let opt =
-    match ocamlopt with
-      | Some ocamlopt -> compiler = ocamlopt
-      | _ -> false
-   in
+  let opt = compilation = Native && ocamlopt <> None in
   let libs =
     if opt && outkind = Library then "" else
       let ext = if opt then "cmxa" else "cma" in
@@ -83,9 +79,11 @@ let link ~compiler ~outkind ~lflags ~includes ~libs ~outname ~deps
       end libs in
       String.concat " " libs
   in
+  let use_findlib = package <> "" in
   let deps = String.concat " " deps in
-  kprintf (exec (*command*) ?process_err) "%s %s %s -o %s %s %s %s"
+  kprintf (exec (*command*) ?process_err) "%s%s %s %s -o %s %s %s %s"
     compiler
+    (if use_findlib && (outkind <> Library || not opt) then " -linkpkg" else "")
     (match outkind with Library -> "-a" | Plugin -> "-shared" | Pack -> "-pack" | Executable -> "")
     lflags
     outname
@@ -217,7 +215,7 @@ let filter_inconsistent_assumptions_error ~compiler_output ~recompile ~targets ~
 ;;
 
 (** Building *)
-let build ~compilation ~includes ~libs ~other_mods ~outkind ~compile_only
+let build ~compilation ~package ~includes ~libs ~other_mods ~outkind ~compile_only
     ~thread ~vmthread ~annot ~pp ?inline ~cflags ~lflags ~outname ~deps ~ms_paths
     ~targets ?(prof=false) () =
   let split_space = Str.split (Str.regexp " +") in
@@ -243,9 +241,19 @@ let build ~compilation ~includes ~libs ~other_mods ~outkind ~compile_only
       | _ -> ()
   end;
   (* compiling *)
-  let compiler = if prof then "ocamlcp -p a" else if compilation = Native then
-      (match ocamlopt with Some x -> x | _ -> failwith "You asked me to compile in native code but ocamlopt command was not found")
-    else ocamlc
+  let compiler =
+    if prof then "ocamlcp -p a"
+    else begin
+      let compiler =
+        if compilation = Native then
+          (match ocamlopt with Some x -> x | _ -> failwith "ocamlopt 1was not found")
+        else ocamlc
+      in
+      let use_findlib = package <> "" in
+      if use_findlib then
+        sprintf "ocamlfind %s -package %s" (Filename.chop_extension compiler) package
+      else compiler
+    end
   in
   (*printf "%s%!" (Cmd.expand (compiler ^ " -v"));*)
   let mods = split_space other_mods in
@@ -268,14 +276,14 @@ let build ~compilation ~includes ~libs ~other_mods ~outkind ~compile_only
             Table.update ~deps ~opt times filename;
             let exit_code = compile
               ~process_err:(filter_inconsistent_assumptions_error ~compiler_output ~recompile ~targets ~deps ~cache:times ~opt)
-              ~times ~opt ~compiler ~cflags:!cflags ~includes:!includes ~filename ()
+              ~times ~opt ~compiler ~cflags:!cflags ~package ~includes:!includes ~filename ()
             in
             if exit_code <> 0 then (Table.remove times filename opt);
             exit_code
           in
           if List.length !recompile > 0 then begin
             List.iter begin fun filename ->
-              compilation_exit := compile ~times ~opt ~compiler ~cflags:!cflags ~includes:!includes ~filename ();
+              compilation_exit := compile ~times ~opt ~compiler ~cflags:!cflags ~package ~includes:!includes ~filename ();
               if !compilation_exit <> 0 then (raise Exit)
             end !recompile;
             print_newline();
@@ -306,13 +314,14 @@ let build ~compilation ~includes ~libs ~other_mods ~outkind ~compile_only
         let rec try_link () =
           let recompile = ref [] in
           let link_exit =
-            link ~compiler ~outkind ~lflags:!lflags
+            link ~compilation ~compiler ~outkind ~lflags:!lflags
+              ~package
               ~includes:!includes ~libs ~deps:obj_deps ~outname
               ~process_err:(filter_inconsistent_assumptions_error ~compiler_output ~recompile ~targets ~deps ~cache:times ~opt) ()
           in
           if List.length !recompile > 0 then begin
             List.iter begin fun filename ->
-              ignore (compile ~times ~opt ~compiler ~cflags:!cflags ~includes:!includes ~filename ())
+              ignore (compile ~times ~opt ~compiler ~cflags:!cflags ~package ~includes:!includes ~filename ())
             end !recompile;
             Buffer.clear compiler_output;
             try_link()

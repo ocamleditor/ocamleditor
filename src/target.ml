@@ -32,6 +32,7 @@ type t = {
   mutable libs             : string;
   mutable other_objects    : string;
   mutable files            : string;
+  mutable package          : string;
   mutable includes         : string;
   mutable thread           : bool;
   mutable vmthread         : bool;
@@ -99,6 +100,7 @@ let create ~id ~name = {
   libs               = "";
   other_objects      = "";
   files              = "";
+  package            = "";
   includes           = "";
   thread             = false;
   vmthread           = false;
@@ -144,6 +146,7 @@ let create_cmd_line ?(flags=[]) ?(can_compile_native=true) target =
     @ (if target.pp <> "" then ["-pp"; quote target.pp] else [])
     @ (if target.cflags <> "" then ["-cflags"; (quote target.cflags)] else [])
     @ (if target.lflags <> "" then ["-lflags"; (quote (target.lflags))] else [])
+    @ (if target.package <> "" then ["-package"; (quote (target.package))] else [])
     @ (if target.includes <> "" then ["-I"; (quote (target.includes))] else [])
     @ (if target.libs <> "" then ["-l"; (quote (target.libs))] else [])
     @ (if target.other_objects <> "" then ["-m"; quote (target.other_objects)] else [])

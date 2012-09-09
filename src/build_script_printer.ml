@@ -51,6 +51,7 @@ let print_targets ochan targets external_tasks =
     kprintf print "  compilation_bytecode = %b;" tg.byt;
     kprintf print "  compilation_native   = %b;" tg.opt;
     kprintf print "  toplevel_modules     = %S;" tg.files;
+    kprintf print "  package              = %S;" tg.package;
     kprintf print "  search_path          = %S; (\x2A -I \x2A)" tg.includes;
     kprintf print "  required_libraries   = %S;" tg.libs;
     kprintf print "  compiler_flags       = %S;" tg.cflags;

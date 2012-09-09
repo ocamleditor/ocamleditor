@@ -151,6 +151,10 @@ class view ~project ?packing () =
   let adjustment_inline = GData.adjustment ~lower:0.0 ~upper:1000. ~page_size:0.0 () in
   let entry_inline = GEdit.spin_button ~adjustment:adjustment_inline ~rate:1.0 ~digits:0 ~numeric:true ~packing:box#pack () in
 
+  let box = GPack.vbox ~packing:(vbox#pack ~expand:false) ~show:true () in
+  let _ = GMisc.label ~markup:"Findlib packages <small><tt>(-package)</tt></small>" ~xalign ~packing:box#add () in
+  let entry_package = GEdit.entry ~packing:box#add () in
+
   let box = GPack.vbox ~packing:(vbox#pack ~expand:false) () in
   let _ = GMisc.label ~markup:"Search path <small><tt>(-I)</tt></small>" ~xalign ~packing:box#add () in
   let entry_includes = GEdit.entry ~packing:box#add () in
@@ -159,7 +163,7 @@ class view ~project ?packing () =
   let _ = GMisc.label ~markup:"Required libraries <small><tt>(-l)</tt></small>" ~xalign ~packing:box#add () in
   let entry_libs = GEdit.entry ~packing:box#add () in
 
-  let box = GPack.vbox ~packing:(vbox#pack ~expand:false) () in
+  let box = GPack.vbox ~packing:(vbox#pack ~expand:false) ~show:false () in
   let _ = GMisc.label ~markup:"Other required object files <small><tt>(-m)</tt></small>" ~xalign ~packing:box#add () in
   let entry_mods = GEdit.entry ~packing:box#add () in
 
@@ -281,6 +285,8 @@ object (self)
           target.files <- entry_lib_modules#text
         end
       end));
+    ignore (entry_package#connect#changed
+      ~callback:(self#update (fun target -> target.package <- entry_package#text)));
     ignore (entry_includes#connect#changed
       ~callback:(self#update (fun target -> target.includes <- entry_includes#text)));
     ignore (check_thread#connect#toggled
@@ -369,6 +375,7 @@ object (self)
     self#set_inline tg;
     entry_libs#set_text tg.libs;
     entry_mods#set_text tg.other_objects;
+    entry_package#set_text tg.package;
     entry_includes#set_text tg.includes;
     if tg.thread then begin
       check_thread#set_active true;

@@ -131,7 +131,8 @@ let create ~editor ~page () =
     toggle_word_wrap#set_active editor#word_wrap;
     (*show_menubar#set_active (get_menu_item_view_menubar())#active;*)
     List.iter (fun (w, s) -> w#misc#handler_unblock s) sigids;
-    gmenu#popup ~button:3 ~time:(GdkEvent.get_time ev);
+    gmenu#popup ~button:3 ~time:(GdkEvent.Button.time ev);
+    Gdk.Window.set_cursor gmenu#misc#window (Gdk.Cursor.create `ARROW);
     true
   in
   ignore(page#view#event#connect#button_press ~callback:begin fun ev ->

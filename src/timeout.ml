@@ -34,7 +34,7 @@ let create ~delay () = {
   id     = None;
 }
 
-let start timeout =
+let start timeout = 
   timeout.id <- Some (GMain.Timeout.add ~ms:timeout.delay ~callback:begin fun () ->
     Gaux.may timeout.buffer ~f:begin fun f ->
       (*try*)

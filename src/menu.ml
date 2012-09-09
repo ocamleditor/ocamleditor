@@ -615,6 +615,11 @@ let project ~browser ~group ~flags items =
   let editor = browser#editor in
   let project = GMenu.menu_item ~label:"Project" () in
   let menu = items.project in
+  let cursor = Gdk.Cursor.create `ARROW in
+  ignore (menu#event#connect#expose ~callback:begin fun _ ->
+    Gdk.Window.set_cursor menu#misc#window cursor;
+    false
+  end);
   project#set_submenu menu;
   (** Clean current *)
   let project_clean_current = GMenu.image_menu_item ~label:"Clean" ~packing:menu#add () in

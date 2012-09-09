@@ -33,6 +33,7 @@ let main () = begin
   let is_clean_all = ref false in
   let compilation = ref [] in
   let prof = ref false in
+  let package = ref "" in
   let includes = ref "" in
   let cflags = ref "" in
   let lflags = ref "" in
@@ -77,8 +78,11 @@ let main () = begin
     ("-a",           Unit (fun _ -> outkind := Library), " Build a library. ");
     ("-shared",      Unit (fun _ -> outkind := Plugin), " Build a plugin. ");
     ("-pack",        Unit (fun _ -> outkind := Pack), " Pack object files.");
-    ("-I",           Set_string includes,             "\"<includes>\" Includes, separated by spaces.");
-    ("-l",           Set_string libs,                 "\"<libs>\" Libraries, separated by spaces (e.g. -l \"unix str\"). When the library name ends with \".o\" is interpreted as compiled object file, not as library.");
+    ("-package",     Set_string package,              "\"<package-name-list>\" Option passed to ocamlfind.");
+    ("-I",           Set_string includes,             "\"<paths>\" Search paths, separated by spaces.");
+    ("-l",           Set_string libs,                 "\"<libs>\" Libraries, separated by spaces (e.g. -l \"unix str\").
+                                 When the library name ends with \".o\" is interpreted
+                                 as compiled object file, not as library.");
     ("-m",           Set_string mods,                 "\"<objects>\" Other required object files.");
     ("-cflags",      Set_string cflags,               "\"<flags>\" Flags passed to the compiler.");
     ("-lflags",      Set_string lflags,               "\"<flags>\" Flags passed to the linker.");
@@ -87,8 +91,12 @@ let main () = begin
     ("-annot",       Set annot,                       " Add -annot option to cflags.");
     ("-pp",          Set_string pp,                   " Add -pp option to the compiler.");
     ("-inline",      Int (fun x -> inline := Some x), " Add -inline option to the compiler.");
-    ("-o",           Set_string output_name,          "\"<filename>\" Output file name. Extension {.cm[x]a | [.opt][.exe]} is automatically added to the resulting filename according to the -a and -opt options and the type of O.S.");
-    ("-run",         Unit (set_run_code Unspecified), " Run the resulting executable (native-code takes precedence) giving each argument after \"--\" on the command line (\"-run --\" for no arguments).");
+    ("-o",           Set_string output_name,          "\"<filename>\" Output file name. Extension {.cm[x]a | [.opt][.exe]}
+                                 is automatically added to the resulting filename according
+                                 to the -a and -opt options and the type of O.S.");
+    ("-run",         Unit (set_run_code Unspecified), " Run the resulting executable (native-code takes precedence) giving
+                                 each argument after \"--\" on the command line
+                                 (\"-run --\" for no arguments).");
     ("-run-byt",     Unit (set_run_code Bytecode),    " Run the resulting bytecode executable.");
     ("-run-opt",     Unit (set_run_code Native),      " Run the resulting native-code executable.");
     ("--",           Rest set_run_args,               "<run-args> Command line arguments for the -run, -run-byt or -run-opt options.");
@@ -96,12 +104,12 @@ let main () = begin
     ("-clean-all",   Set is_clean_all,                " Remove all build output and exit.");
     ("-dep",         Unit dep,                        " Print dependencies and exit.");
     ("-when",        String check_restrictions,       "\"<c1,c2,...>\" Exit immediately if any condition specified here is not true.
-                      Recognized conditions are:
+                                 Recognized conditions are:
 
-                        IS_UNIX    : O.S. type is Unix
-                        IS_WIN32   : O.S. type is Win32
-                        IS_CYGWIN  : O.S. type is Cygwin
-                        HAS_NATIVE : Native compilation is supported\n");
+                                   IS_UNIX    : O.S. type is Unix
+                                   IS_WIN32   : O.S. type is Win32
+                                   IS_CYGWIN  : O.S. type is Cygwin
+                                   HAS_NATIVE : Native compilation is supported\n");
     ("-output-name", Set print_output_name,           " (undocumented)");
     ("-msvc",        Set ms_paths,                    " (undocumented)");
     ("-no-build",    Set no_build,                    " (undocumented)");
@@ -153,6 +161,7 @@ let main () = begin
                 let deps = Dep.find ~pp:!pp (* ~includes:!includes*) ~with_errors:true !target in
                 (build
                   ~compilation
+                  ~package:!package
                   ~includes:!includes
                   ~libs:!libs
                   ~other_mods:!mods
