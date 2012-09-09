@@ -253,9 +253,11 @@ object (self)
       project.executables      <- List.filter begin fun rtc ->
         List.exists (fun bc -> bc.Target.id = rtc.Rconf.target_id) project.targets
       end (rconf_list#get_rconfigs());
+      project.autocomp_i_cache    <- get_autocomp_i_cache project;
       callback project;
       Project.save ~editor project;
       project_changed#call();
+      (*  *)
       (*  *)
       target_page#set_changed false;
       (*  *)

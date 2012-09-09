@@ -336,12 +336,12 @@ object (self)
   method parse ?(force=false) () =
     if tmp <> "" then begin
       let dump_filename = dump_filename in
-      let cmd = sprintf "%s -dump %s %s%s %s%s"
+      let cmd = sprintf "%s -dump %s %s %s %s%s"
         (Ocaml_config.ocamldoc())
         (Quote.arg dump_filename)
         (" -I +threads")
         (*(if project.Project.thread then " -thread" else if project.Project.vmthread then " -vmthread" else "")*)
-        (if includes = [] then "" else (" -I " ^ (String.concat " -I " (List.map Quote.arg includes))))
+        project.Prj.autocomp_i_cache
         (Quote.arg tmp)
         (if Common.application_debug then Miscellanea.redirect_stderr else "")
       in

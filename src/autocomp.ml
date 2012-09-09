@@ -63,13 +63,12 @@ let rec compile_buffer ~project ~editor ~page ?(commit=false) () =
         let chan = open_out_bin tmp_filename in
         lazy (output_string chan text) /*finally*/ lazy (close_out chan);
         (* Compile *)
-        let includes = Project.get_includes project in
         let command = sprintf "%s %s %s -I ../%s %s ../%s/%s"
           project.Prj.autocomp_compiler
           "-w +a"
           project.Prj.autocomp_cflags
           Project.tmp
-          (let includes = String.concat " -I " includes in if includes = "" then "" else "-I " ^ includes)
+          project.Prj.autocomp_i_cache
           Project.tmp
           rel_name
         in
