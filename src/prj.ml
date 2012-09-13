@@ -43,7 +43,7 @@ type t = {
   mutable autocomp_delay     : float;
   mutable autocomp_cflags    : string;
   mutable autocomp_compiler  : string;
-  mutable autocomp_i_cache   : string;
+  mutable search_path        : string list;
   mutable in_source_path     : string -> string option;
   mutable source_paths       : string list;
   mutable can_compile_native : bool;

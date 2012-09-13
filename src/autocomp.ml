@@ -68,7 +68,7 @@ let rec compile_buffer ~project ~editor ~page ?(commit=false) () =
           "-w +a"
           project.Prj.autocomp_cflags
           Project.tmp
-          project.Prj.autocomp_i_cache
+          (Project.get_search_path_i_format project)
           Project.tmp
           rel_name
         in

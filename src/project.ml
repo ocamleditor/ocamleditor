@@ -94,7 +94,7 @@ let create ~filename () =
     autocomp_delay     = 1.0;
     autocomp_cflags    = "";
     autocomp_compiler  = "";
-    autocomp_i_cache   = "";
+    search_path        = [];
     in_source_path     = Miscellanea.filename_relative (root // src);
     source_paths       = (try File.readtree (root // src) with Sys_error _ -> []);
     can_compile_native = true;
@@ -150,9 +150,27 @@ let get_includes =
     let includes = Str.split re includes in
     Xlist.remove_dupl includes
 
+(** get_search_path *)
+let get_search_path proj =
+  let package = String.concat "," (List.map (fun t -> t.Target.package) proj.targets) in
+  let package = Str.split (Miscellanea.regexp ",") package in
+  let package = List.filter ((<>) "") package in
+  let package = List.map begin fun package ->
+    match kprintf Miscellanea.exec_lines "ocamlfind query %s" package with
+      | hd :: [] -> hd
+      | _ -> ""
+  end (Xlist.remove_dupl package) in
+  let package = Xlist.remove_dupl package in
+  let includes = Xlist.remove_dupl (get_includes proj) in
+  package @ includes;;
+
+(** get_search_path_i_format *)
+let get_search_path_i_format proj =
+  if proj.search_path = [] then "" else "-I " ^ (String.concat " -I " proj.search_path);;
+
 (** Returns the {i load path} of the project: includes and [src]. *)
 let get_load_path proj =
-  let includes = get_includes proj in
+  let includes = proj.search_path in
   let includes = "+threads" :: includes in
   let ocamllib = proj.ocamllib in
   let paths = List.map begin fun inc ->
@@ -297,21 +315,6 @@ let find_bookmark proj filename buffer iter =
 let get_actual_maximum_bookmark project =
   List.fold_left (fun acc bm -> max acc bm.Oe.bm_num) 0 project.bookmarks;;
 
-(** get_autocomp_i_cache *)
-let get_autocomp_i_cache proj =
-  let package = String.concat "," (List.map (fun t -> t.Target.package) proj.targets) in
-  let package = Str.split (Miscellanea.regexp ",") package in
-  let package = List.filter ((<>) "") package in
-  let package = List.map begin fun package ->
-    match kprintf Miscellanea.exec_lines "ocamlfind query %s -i-format" package with
-      | hd :: [] -> hd
-      | _ -> ""
-  end (Xlist.remove_dupl package) in
-  let package = String.concat " " (Xlist.remove_dupl package) in
-  let includes = Xlist.remove_dupl (get_includes proj) in
-  let includes = if includes = [] then "" else "-I " ^ (String.concat " -I " includes) in
-  package ^ " " ^ includes;;
-
 (** load *)
 let load filename =
   let filename = if Sys.file_exists filename then filename else mk_old_filename filename in
@@ -326,7 +329,7 @@ let load filename =
     (if Filename.is_implicit filename then proj.root // src // filename else filename), scroll_offset, offset, active
   end proj.open_files;
   (*  *)
-  proj.autocomp_i_cache <- get_autocomp_i_cache proj;
+  proj.search_path <- get_search_path proj;
   (* Remove old version filenames *)
   let old = mk_old_filename filename in
   if Sys.file_exists old then (Sys.remove old);

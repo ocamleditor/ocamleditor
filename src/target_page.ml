@@ -153,7 +153,9 @@ class view ~project ?packing () =
 
   let box = GPack.vbox ~packing:(vbox#pack ~expand:false) ~show:true () in
   let _ = GMisc.label ~markup:"Findlib packages <small><tt>(-package)</tt></small>" ~xalign ~packing:box#add () in
-  let entry_package = GEdit.entry ~packing:box#add () in
+  let flbox = GPack.hbox ~spacing:3 ~packing:box#pack () in
+  let entry_package = GEdit.entry ~packing:flbox#add () in
+  let button_package = GButton.button ~label:"  ...  " ~packing:flbox#pack () in
 
   let box = GPack.vbox ~packing:(vbox#pack ~expand:false) () in
   let _ = GMisc.label ~markup:"Search path <small><tt>(-I)</tt></small>" ~xalign ~packing:box#add () in

@@ -122,7 +122,6 @@ class widget ~project ~page ~tmp =
     button_refresh#misc#set_can_focus false;
   in
   (*  *)
-  let includes          = Project.get_includes project in
   let sw                = GBin.scrolled_window ~shadow_type:`IN ~hpolicy:`AUTOMATIC ~vpolicy:`AUTOMATIC ~packing:vbox#add () in
   let cols              = new GTree.column_list in
   let col_icon          = cols#add (Gobject.Data.gobject_by_name "GdkPixbuf") in
@@ -341,7 +340,7 @@ object (self)
         (Quote.arg dump_filename)
         (" -I +threads")
         (*(if project.Project.thread then " -thread" else if project.Project.vmthread then " -vmthread" else "")*)
-        project.Prj.autocomp_i_cache
+        (Project.get_search_path_i_format project)
         (Quote.arg tmp)
         (if Common.application_debug then Miscellanea.redirect_stderr else "")
       in

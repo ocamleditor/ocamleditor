@@ -41,13 +41,13 @@ struct
         match file with
           | Some file ->
             let out_filename = Filename.temp_file (Filename.basename (Filename.chop_extension filename)) ".tmp" in
-            let includes = Project.get_includes project in
-            let cmd = sprintf "%s -dump %s %s%s %s%s"
+            let search_path = Project.get_search_path_i_format project in
+            let cmd = sprintf "%s -dump %s %s %s %s%s"
               (Ocaml_config.ocamldoc())
               (Quote.arg out_filename)
               (" -I +threads")
               (*(if project.Project.thread then " -thread" else if project.Project.vmthread then " -vmthread" else "")*)
-              (if includes = [] then "" else (" -I " ^ (String.concat " -I " (List.map Quote.arg includes))))
+              search_path
               (Quote.arg file)
               (if Common.application_debug then ""(*Miscellanea.redirect_stderr*) else "")
             in

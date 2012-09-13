@@ -180,9 +180,9 @@ object (self)
           let ml = (Filename.chop_extension filename) ^ ".ml" in
           let old = Sys.getcwd () in
           Sys.chdir (Filename.dirname filename);
-          let includes = Project.get_includes proj in
+          let search_path = Project.get_search_path_i_format project in
           let cmd = (sprintf "ocamlc -i -w a -thread %s %s > %s"
-            (String.concat " " (List.map (fun x -> "-I " ^ x) includes))
+            search_path
             (Filename.basename ml) (Filename.basename filename)) in
           ignore (Sys.command cmd);
           Sys.chdir old;
