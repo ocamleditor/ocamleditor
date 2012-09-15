@@ -22,7 +22,7 @@
 
 
 class popup ?(position=(`SOUTH:[`NORTH | `SOUTH | `POINTER])) ?border_width ~widget () =
-  let popup = GWindow.window(* ~kind:`POPUP*) ~type_hint:`UTILITY ~decorated:false ~focus_on_map:true ~modal:false ~deletable:true ~border_width:1 () in
+  let popup = GWindow.window(* ~kind:`POPUP*) ~type_hint:`UTILITY ~decorated:false ~focus_on_map:true ~modal:false ~deletable:true ~border_width:1 ~title:"" () in
   let ebox = GBin.event_box ~packing:popup#add () in
   let vbox = GPack.vbox ?border_width ~packing:ebox#add () in
   (*let _ = popup#misc#modify_bg [`NORMAL, `COLOR (ebox#misc#style#bg `ACTIVE)] in *)

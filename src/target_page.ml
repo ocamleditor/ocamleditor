@@ -137,8 +137,8 @@ class view ~project ?packing () =
   let _ = GMisc.label ~markup:"Output file name <small><tt>(-o)</tt></small>" ~xalign ~packing:box#add () in
   let entry_outname = GEdit.entry ~packing:box#add () in
 
-  (** Options Tab *)
-  let vbox = GPack.vbox ~width:550 ~border_width:5 ~spacing:8 () in
+  (** Build Settings Tab *)
+  let vbox = GPack.vbox ~width:640 ~border_width:5 ~spacing:13 () in
   let _ = nb#append_page ~tab_label:(GMisc.label ~text:"Build Settings" ())#coerce vbox#coerce in
 
   let box = GPack.hbox ~spacing:0 ~packing:vbox#pack () in
@@ -214,6 +214,20 @@ object (self)
   val mutable page_changed = false
 
   initializer
+    (*  *)
+    button_package#set_focus_on_click false;
+    ignore (button_package#connect#clicked ~callback:begin fun () ->
+      let widget, window = Findlib_list.dialog flbox#coerce () in
+      Gaux.may target ~f:(fun tg -> widget#select_packages (Str.split (Miscellanea.regexp ", *") tg.package));
+      window#set_on_popdown begin fun () ->
+        entry_package#misc#grab_focus ();
+        entry_package#set_position (Glib.Utf8.length entry_package#text);
+      end;
+      ignore (widget#connect#changed ~callback:begin fun _ ->
+        entry_package#set_text (String.concat "," (widget#get_selected_packages()))
+      end);
+    end);
+    (*  *)
     ignore (widget_deps#connect#changed ~callback:begin fun () ->
       self#update (fun target -> target.dependencies <- widget_deps#get()) ();
       changed#call()

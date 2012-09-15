@@ -50,7 +50,7 @@
       <lib_install_path></lib_install_path>
       <external_tasks>
         <task name="mkicons">
-          <always_run_in_project>false</always_run_in_project>
+          <always_run_in_project>true</always_run_in_project>
           <always_run_in_script>true</always_run_in_script>
           <env replace="false"/>
           <dir>../build</dir>
@@ -176,8 +176,8 @@
       <libs>ocamlcommon dynlink odoc_info xml-light gmisclib common icons otherwidgets oebuildlib</libs>
       <other_objects></other_objects>
       <files>ocamleditor.ml</files>
-      <package>str,lablgtk2</package>
-      <includes>+compiler-libs +ocamldoc gmisclib common icons otherwidgets oebuild </includes>
+      <package>str,lablgtk2,compiler-libs</package>
+      <includes>+ocamldoc gmisclib common icons otherwidgets oebuild </includes>
       <thread>true</thread>
       <vmthread>false</vmthread>
       <pp></pp>
@@ -246,8 +246,8 @@
       <libs>ocamlcommon dynlink odoc_info xml-light gmisclib common icons otherwidgets oebuildlib</libs>
       <other_objects></other_objects>
       <files>ocamleditor.ml</files>
-      <package>lablgtk2,str</package>
-      <includes>+compiler-libs +ocamldoc gmisclib common icons otherwidgets oebuild </includes>
+      <package>lablgtk2,str,compiler-libs</package>
+      <includes>+ocamldoc gmisclib common icons otherwidgets oebuild </includes>
       <thread>true</thread>
       <vmthread>false</vmthread>
       <pp></pp>
@@ -316,8 +316,8 @@
       <libs>ocamlcommon dynlink odoc_info xml-light gmisclib common icons otherwidgets oebuildlib</libs>
       <other_objects></other_objects>
       <files>ocamleditor.ml</files>
-      <package>lablgtk2,str</package>
-      <includes>+compiler-libs +ocamldoc gmisclib common icons otherwidgets oebuild </includes>
+      <package>lablgtk2,str,compiler-libs</package>
+      <includes>+ocamldoc gmisclib common icons otherwidgets oebuild </includes>
       <thread>true</thread>
       <vmthread>false</vmthread>
       <pp></pp>
@@ -434,9 +434,9 @@
         <task target_id="12" task_name="prepare-build"/>
         <mode>&lt;ADD&gt;</mode>
         <default type="flag">false</default>
-        <doc>Set this flag if you have Lablgtk-2.14.2 or
-                           earlier for using the included modified
-                           version of gtkThread.ml to reduce CPU consumption</doc>
+        <doc>Set this flag if you have Lablgtk-2.14.2 or earlier
+                           and you want to use the included modified version of 
+                           gtkThread.ml to reduce CPU consumption</doc>
       </arg>
     </args>
   </build_script>
