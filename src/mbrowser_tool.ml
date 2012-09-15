@@ -695,12 +695,12 @@ object (self)
 
   (** insert_odoc *)
   method private insert_odoc ~project ~symbol () =
-    let odoc = Odoc.Database.find_name ~project ~symbol in
+    let odoc = Oe_doc.Database.find_name ~project ~symbol in
     let buffer = (odoc_buffer :> GText.buffer) in
     if odoc <> [] then begin
       let f () =
         List.iter (fun result ->
-          Odoc.Printer.insert ~buffer ~kind:symbol.Oe.sy_kind result) odoc;
+          Oe_doc.Printer.insert ~buffer ~kind:symbol.Oe.sy_kind result) odoc;
       in
       odoc_buffer#block_signal_handlers ();
       Gaux.may odoc_view#signal_expose ~f:odoc_view#misc#handler_block;
@@ -713,14 +713,14 @@ object (self)
   (** insert_odoc_full_module *)
   method private insert_odoc_full_module ~project ~symbol () =
     Gmisclib.Idle.add ~prio:100 begin fun () ->
-      match Odoc.Database.find_module ~project ~symbol with
+      match Oe_doc.Database.find_module ~project ~symbol with
         | Some odoc ->
           Gdk.Window.set_cursor self#misc#window (Gdk.Cursor.create `WATCH);
           Gaux.may (odoc_view#get_window `TEXT) ~f:(fun w -> Gdk.Window.set_cursor w (Gdk.Cursor.create `WATCH));
           let colorize ~start ~stop = Lexical.tag ~start ~stop in
           odoc_buffer#block_signal_handlers ();
           Gaux.may odoc_view#signal_expose ~f:odoc_view#misc#handler_block;
-          Odoc.Printer.insert_full_module ~buffer:(odoc_buffer :> GText.buffer) ~colorize ~tag:odoc_tag odoc;
+          Oe_doc.Printer.insert_full_module ~buffer:(odoc_buffer :> GText.buffer) ~colorize ~tag:odoc_tag odoc;
           odoc_buffer#place_cursor ~where:odoc_buffer#start_iter;
           Gaux.may odoc_view#signal_expose ~f:odoc_view#misc#handler_unblock;
           odoc_buffer#unblock_signal_handlers ();
