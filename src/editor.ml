@@ -625,6 +625,7 @@ object (self)
                 page#set_tab_widget (align, button_close, lab);
                 (** Append tab *)
                 let _ = notebook#append_page ~tab_label:ebox#coerce page#coerce in
+                notebook#set_tab_reorderable page#coerce true;
                 self#set_tab_pos ~page Preferences.preferences#get.Preferences.pref_tab_pos;
                 if active then begin
                   self#load_page page;
