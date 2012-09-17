@@ -251,11 +251,15 @@ let edit ~browser ~group ~flags
     browser#with_current_project (fun project ->
       editor#with_current_page (fun page -> Templ.popup project page#ocaml_view))));
   templates#add_accelerator ~group ~modi:[`CONTROL] GdkKeysyms._j ~flags;
+  (** Structure (test) *)
+  let structure = GMenu.menu_item ~label:"Structure (test)" ~packing:menu#add () in
+  ignore (structure#connect#activate ~callback:(fun () ->
+    editor#with_current_page begin fun page ->
+      let widget, popup = Cmt_view.window ~editor ~page:page () in
+      ()
+    end));
+  structure#add_accelerator ~group ~modi:[`CONTROL; `SHIFT] GdkKeysyms._space ~flags;
   (** Completion *)
-  (*let complet = GMenu.menu_item ~label:"Completion (old)" ~packing:menu#add () in
-  ignore (complet#connect#activate ~callback:(fun () ->
-    editor#with_current_page (fun page -> page#ocaml_view#completion ())));
-  complet#add_accelerator ~group ~modi:[`CONTROL; `SHIFT] GdkKeysyms._space ~flags;*)
   let complet = GMenu.menu_item ~label:"Completion" ~packing:menu#add () in
   ignore (complet#connect#activate ~callback:begin fun () ->
     browser#with_current_project begin fun project ->

@@ -91,6 +91,14 @@ let pixbuf_of_kind = function
   | Bookmark pixbuf -> pixbuf
   | Unknown -> Icons.none_14;;
 
+let cols              = new GTree.column_list
+let col_icon          = cols#add (Gobject.Data.gobject_by_name "GdkPixbuf")
+let col_name          = cols#add Gobject.Data.string
+let col_name_sort     = cols#add Gobject.Data.string
+let col_type          = cols#add Gobject.Data.string
+let col_markup        = cols#add Gobject.Data.string
+let col_id            = cols#add Gobject.Data.int
+
 class widget ~project ~page ~tmp =
   let show_types           = Preferences.preferences#get.Preferences.pref_outline_show_types in
   let buffer               = (page#buffer :> Ocaml_text.buffer) in
@@ -123,13 +131,6 @@ class widget ~project ~page ~tmp =
   in
   (*  *)
   let sw                = GBin.scrolled_window ~shadow_type:`IN ~hpolicy:`AUTOMATIC ~vpolicy:`AUTOMATIC ~packing:vbox#add () in
-  let cols              = new GTree.column_list in
-  let col_icon          = cols#add (Gobject.Data.gobject_by_name "GdkPixbuf") in
-  let col_name          = cols#add Gobject.Data.string in
-  let col_name_sort     = cols#add Gobject.Data.string in
-  let col_type          = cols#add Gobject.Data.string in
-  let col_markup        = cols#add Gobject.Data.string in
-  let col_id            = cols#add Gobject.Data.int in
   let view              = GTree.view ~headers_visible:false ~packing:sw#add () in
   let renderer_pixbuf   = GTree.cell_renderer_pixbuf [`YPAD 0; `XPAD 0] in
   let renderer_markup   = GTree.cell_renderer_text [`YPAD 0] in

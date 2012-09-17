@@ -54,23 +54,22 @@ let rec compile_buffer ~project ~editor ~page ?(commit=false) () =
       ~from_codeset:"UTF-8" ~to_codeset:Oe_config.ocaml_codeset text
   in
   try
-    let tmp = Project.path_tmp project in
-    match project.Prj.in_source_path filename with
+    match Project.tmp_of_abs project filename with
       | None -> ()
-      | Some rel_name ->
-        let tmp_filename = (tmp // rel_name) in
+      | Some (tmp, relname) ->
+        let tmp_filename = tmp // relname in
         Miscellanea.mkdir_p (Filename.dirname tmp_filename);
         let chan = open_out_bin tmp_filename in
         lazy (output_string chan text) /*finally*/ lazy (close_out chan);
         (* Compile *)
         let command = sprintf "%s %s %s -I ../%s %s ../%s/%s"
           project.Prj.autocomp_compiler
-          "-w +a"
+          "-w +a -bin-annot"
           project.Prj.autocomp_cflags
           Project.tmp
           (Project.get_search_path_i_format project)
           Project.tmp
-          rel_name
+          relname
         in
         let compiler_output = Buffer.create 101 in
         let process_err ~stderr =

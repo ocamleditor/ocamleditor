@@ -50,6 +50,13 @@ let abs_of_tmp proj filename =
     | None -> filename
     | Some relname -> (path_src proj) // relname
 
+(** tmp_of_abs *)
+let tmp_of_abs proj filename =
+  let tmp = path_tmp proj in
+  match proj.Prj.in_source_path filename with
+    | None -> None
+    | Some rel_name -> Some (tmp, rel_name) ;;
+
 (** set_ocaml_home *)
 let set_ocaml_home ~ocamllib project =
   let ocamllib, from_env =
