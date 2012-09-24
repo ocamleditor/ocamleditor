@@ -27,6 +27,7 @@ open Miscellanea
 open Cmt_format
 open Location
 open Typedtree
+open Asttypes
 
 let cols              = new GTree.column_list
 let col_icon          = cols#add (Gobject.Data.gobject_by_name "GdkPixbuf")
@@ -44,7 +45,7 @@ let string_of_loc loc =
 class widget ~editor ~page ?packing () =
   let sw              = GBin.scrolled_window ~shadow_type:`IN ~hpolicy:`AUTOMATIC ~vpolicy:`AUTOMATIC ?packing () in
   let model           = GTree.tree_store cols in
-  let view            = GTree.view ~model ~headers_visible:false ~packing:sw#add ~width:150 ~height:300 () in
+  let view            = GTree.view ~model ~headers_visible:false ~packing:sw#add ~width:350 ~height:500 () in
   let renderer_pixbuf = GTree.cell_renderer_pixbuf [`YPAD 0; `XPAD 0] in
   let renderer_markup = GTree.cell_renderer_text [`YPAD 0] in
   let vc              = GTree.view_column () in
@@ -72,10 +73,10 @@ object (self)
     let filename_cmt = (Filename.chop_extension filename) ^ ".cmt" in
     let cmt = Cmt_format.read_cmt filename_cmt in
     model#clear();
-    self#parse cmt.cmt_annots
+    self#parse cmt.cmt_annots;
 
   method private parse = function
-    | Implementation impl -> self#parse_struct impl.str_items
+    | Implementation impl -> List.iter self#append_struct impl.str_items
     | Partial_implementation part_impl ->
       let row = model#append () in
       model#set ~row ~column:col_icon Icons.attribute;
@@ -85,54 +86,109 @@ object (self)
     | Packed _ -> ()
 
   method private append ?parent ?icon markup =
-    let row = model#append ?parent () in
-    Gaux.may icon ~f:(model#set ~row ~column:col_icon);
-    model#set ~row ~column:col_markup markup;
-    row
+    GtkThread2.sync begin fun () ->
+      let row = model#append ?parent () in
+      Gaux.may icon ~f:(model#set ~row ~column:col_icon);
+      model#set ~row ~column:col_markup markup;
+      row
+    end ()
 
-  method private parse_struct =
-    List.iter begin fun item ->
-      match item.str_desc with
-        | Tstr_eval expr -> ignore (self#append "Tstr_eval")
-        | Tstr_value (_, pe) ->
-          List.iter (fun (pat, expr) -> ignore (self#append  (self#parse_pattern pat.pat_desc))) pe
-        | Tstr_exception (id, loc, _) -> ignore (self#append (Ident.name id))
-        | Typedtree.Tstr_class classes -> List.iter self#parse_class_decl classes
-        | _ -> ()
-    end
+  method private append_struct ?parent item =
+    match item.str_desc with
+      | Tstr_eval expr -> ignore (self#append ?parent "Tstr_eval")
+      | Tstr_value (_, pe) ->
+        List.iter (fun (pat, expr) -> ignore (self#append_pattern ?parent pat.pat_desc expr.exp_desc)) pe
+      | Tstr_class classes -> List.iter (self#append_class ?parent) classes
+      | Tstr_type decls -> List.iter (self#append_type ?parent) decls
+      | Tstr_exception (_, loc, decl) -> ignore (self#append ?parent ~icon:Icons.exc loc.txt)
+      | Tstr_module (_, loc, module_expr) ->
+        let icon =
+          match module_expr.mod_desc with
+            | Tmod_functor _ -> Icons.module_funct
+            | _ -> Icons.module_impl
+        in
+        let parent = self#append ?parent ~icon (sprintf "<b>%s</b>" loc.txt) in
+        self#append_module ~parent module_expr.mod_desc;
+        view#expand_row (model#get_path parent);
+      | _ -> ()
 
-  method private parse_pattern = function
-    | Tpat_var (id, _) -> Ident.name id
-    | _ -> ""
+  method private append_module ?parent mod_desc =
+    match mod_desc with
+      | Tmod_functor (_, floc, mtype, mexpr) ->
+        self#append_module ?parent mexpr.mod_desc
+      | Tmod_structure str -> List.iter (self#append_struct ?parent) str.str_items
+      | Tmod_ident _ -> ignore (self#append ?parent "Tmod_ident")
+      | Tmod_apply _ -> ()
+      | Tmod_constraint _ -> ignore (self#append ?parent "Tmod_constraint")
+      | Tmod_unpack _ -> ignore (self#append ?parent "Tmod_unpack")
 
-  method private parse_class_expr_desc ~parent = function
+  method private append_type ?parent (_, loc, decl) =
+    let icon =
+      match decl.typ_kind with
+        | Ttype_abstract -> Icons.type_abstract
+        | Ttype_variant _ -> Icons.type_variant
+        | Ttype_record _ -> Icons.type_record
+    in
+    ignore (self#append ?parent ~icon loc.txt)
+
+  method private append_pattern ?parent pat_desc exp_desc =
+    let is_function = match exp_desc with Texp_function _ -> true | _ -> false in
+    match pat_desc with
+      | Tpat_var (id, _) ->
+        let icon = if is_function then Icons.func else Icons.simple in
+        Some (self#append ?parent ~icon (Ident.name id))
+      | _ -> None
+
+  method private append_class_item ?parent = function
     | Tcl_structure str ->
       List.map begin fun fi ->
         match fi.cf_desc with
           | Tcf_inher (_, cl_expr, id, inherited_fields, inherited_methods) ->
-            let parent = self#parse_class_expr_desc ~parent cl_expr.cl_desc in
-            List.iter (fun (x, _) -> ignore (self#append ~parent (sprintf "<i>%s</i>" x))) inherited_methods;
+            let parent = self#append_class_item ?parent cl_expr.cl_desc in
+            List.iter (fun (x, _) -> ignore (self#append ?parent (sprintf "<i>%s</i>" x))) inherited_methods;
             parent
           | Tcf_init expr ->
-            self#append ~parent (sprintf "<i>initializer</i>:%s" (string_of_loc fi.cf_loc));
-          | _ -> self#append ~parent (sprintf "Tcf_...");
+            Some (self#append ~icon:Icons.init ?parent (sprintf "<i>initializer</i>:%s" (string_of_loc fi.cf_loc)));
+          | Tcf_val (_, loc, mutable_flag, _, kind, _) ->
+            let icon = match kind with
+              | Tcfk_virtual _ when mutable_flag = Mutable -> Icons.attribute_mutable_virtual
+              | Tcfk_virtual _  -> Icons.attribute_virtual
+              | Typedtree.Tcfk_concrete _ when mutable_flag = Mutable -> Icons.attribute_mutable
+              | Typedtree.Tcfk_concrete _ -> Icons.attribute
+            in
+            Some (self#append ?parent ~icon loc.txt (*(string_of_loc loc.loc)*));
+          | Tcf_meth (_, loc, private_flag, kind, _) ->
+            let icon = match kind with
+              | Tcfk_virtual _ when private_flag = Private -> Icons.met_private_virtual
+              | Tcfk_virtual _  -> Icons.met_virtual
+              | Typedtree.Tcfk_concrete _ when private_flag = Private -> Icons.met_private
+              | Typedtree.Tcfk_concrete _ -> Icons.met
+            in
+            Some (self#append ?parent ~icon loc.txt (*(string_of_loc loc.loc)*));
+          | _ -> Some (self#append ?parent (sprintf "Tcf_..."));
       end str.cstr_fields;
       parent
     | Tcl_fun (_, _, _, cl_expr, _) ->
-      self#parse_class_expr_desc ~parent cl_expr.cl_desc;
+      self#append_class_item ?parent cl_expr.cl_desc;
     | Tcl_ident (_, lid, _) ->
-      self#append ~parent ~icon:Icons.class_inherit (String.concat "." (Longident.flatten lid.txt));
+      Some (self#append ?parent ~icon:Icons.class_inherit (String.concat "." (Longident.flatten lid.txt)));
     | Tcl_apply (cl_expr, _) ->
-      self#parse_class_expr_desc ~parent cl_expr.cl_desc;
-    | Tcl_let (_, _, _, desc) ->
-      self#parse_class_expr_desc ~parent desc.cl_desc;
+      self#append_class_item ?parent cl_expr.cl_desc;
+    | Tcl_let (_, _, lets, desc) ->
+      List.iter begin fun (_, loc, expr) ->
+        let is_function = match expr.exp_desc with Texp_function _ -> true | _ -> false in
+        let icon = if is_function then Icons.func else Icons.simple in
+        ignore (self#append ~icon ?parent loc.txt)
+      end lets;
+      self#append_class_item ?parent desc.cl_desc;
     | Tcl_constraint (cl_expr, _, _, _, _) ->
-      self#parse_class_expr_desc ~parent cl_expr.cl_desc;
+      self#append_class_item ?parent cl_expr.cl_desc;
 
-  method private parse_class_decl (infos, _, _) =
+  method private append_class ?parent (infos, _, _) =
     let icon = if infos.ci_virt = Asttypes.Virtual then Icons.class_virtual else Icons.classe in
-    let parent = self#append ~icon infos.ci_id_name.txt in
-    ignore (self#parse_class_expr_desc ~parent infos.ci_expr.cl_desc);
+    let parent = self#append ~icon (sprintf "<b>%s</b>" infos.ci_id_name.txt) in
+    ignore (self#append_class_item ~parent infos.ci_expr.cl_desc);
+    view#expand_row (model#get_path parent);
 
   method connect = new signals ~changed
 end

@@ -258,14 +258,14 @@ object (self)
       match self#get_page (`FILENAME bm.Oe.bm_filename) with
         | None when Sys.file_exists bm.Oe.bm_filename ->
           let _ = self#open_file ~active:true ~scroll_offset:0 ~offset:0 bm.Oe.bm_filename in
-          Gmisclib.Idle.add ~prio:300 (fun () -> self#bookmark_goto ~num)
+          self#bookmark_goto ~num
         | None ->
           Dialog.info ~title:"File does not exist" ~message_type:`INFO
             ~message:(sprintf "File \xC2\xAB%s\xC2\xBB does not exist." bm.Oe.bm_filename) self;
           self#bookmark_remove ~num
         | Some page ->
           if not page#view#realized then (self#goto_view page#view);
-          Gmisclib.Idle.add begin fun () ->
+          Gmisclib.Idle.add ~prio:300 begin fun () ->
             ignore (Bookmark.apply bm begin function
               | `OFFSET _ ->
                 let _ = Bookmark.offset_to_mark (page#buffer :> GText.buffer) bm in
@@ -300,11 +300,14 @@ object (self)
           let view = (page#view :> Text.view) in
           self#goto_view view;
           switch_page#call page;
-          let start = page#buffer#get_iter (`OFFSET start) in
-          let stop = page#buffer#get_iter (`OFFSET stop) in
-          page#buffer#select_range start stop;
-          page#view#scroll_lazy start;
-          self#location_history_add ~iter:start ~kind:(`BROWSE : Location_history.kind) ();
+          Gmisclib.Idle.add begin fun () ->
+            let start = page#buffer#get_iter (`OFFSET start) in
+            let stop = page#buffer#get_iter (`OFFSET stop) in
+            page#buffer#select_range start stop;
+            page#view#scroll_lazy start;
+            self#location_history_add ~iter:start ~kind:(`BROWSE : Location_history.kind) ();
+          end;
+          Gmisclib.Idle.add ~prio:300 page#misc#grab_focus
     end
 
   method find_references (iter : GText.iter) =

@@ -184,7 +184,7 @@ let get_load_path proj =
     if inc.[0] = '+' then (Filename.concat ocamllib (String.sub inc 1 (String.length inc - 1)))
     else inc
   end includes in
-  (*List.filter ((<>) ocamllib)*) (ocamllib :: (proj.root // src) :: paths)
+  ocamllib :: (List.filter ((<>) ocamllib) ((proj.root // src) :: paths))
 
 (** [load_path proj where] adds to [where] the {i load path} of [proj].*)
 let load_path proj where = where := !where @ (get_load_path proj)

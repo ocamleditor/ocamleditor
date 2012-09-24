@@ -45,6 +45,7 @@ class widget ?packing () =
   let _           = view#append_column vc_toggle in
   let _           = view#append_column vc_name in
   let _           = view#append_column vc_descr in
+  let _           = view#set_search_column 1 in
 object (self)
   inherit GObj.widget sw#as_widget
   val changed = new changed()
@@ -116,7 +117,8 @@ let create = new widget
 
 let dialog (parent : GObj.widget) () =
   let window = Gmisclib.Window.popup ~widget:parent () in
-  (*let window = GWindow.window ~show:false () in*)
+  (*let window = GWindow.window ~title:"Select Findlib packages..." ~position:`CENTER ~modal:true ~show:false () in*)
+  Gaux.may (GWindow.toplevel parent) ~f:(fun x -> window#set_transient_for x#as_window);
   let vbox = GPack.vbox ~border_width:5 ~packing:window#add () in
   let widget = create ~packing:vbox#add () in
   let bbox = GPack.button_box `HORIZONTAL ~layout:`END ~border_width:5 ~packing:vbox#pack () in
