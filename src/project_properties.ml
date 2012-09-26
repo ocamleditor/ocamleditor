@@ -256,6 +256,7 @@ object (self)
       project.search_path    <- get_search_path project;
       callback project;
       Project.save ~editor project;
+      Project.refresh project;
       project_changed#call();
       (*  *)
       (*  *)

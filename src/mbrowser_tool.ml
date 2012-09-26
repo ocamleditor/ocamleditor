@@ -273,10 +273,10 @@ object (self)
   method private init_timeout_odoc () =
     let id = GMain.Timeout.add ~ms:100 ~callback:begin fun () ->
       begin
-        (*try*)
+        try
           if vbox#misc#get_flag `REALIZED && box_odoc#misc#get_flag `VISIBLE
           then (self#update_module_details ())
-        (*with ex -> Printf.eprintf "File \"module_browser_tool.ml\": %s\n%s\n%!" (Printexc.to_string ex) (Printexc.get_backtrace());*)
+        with ex -> Printf.eprintf "File \"module_browser_tool.ml\": %s\n%s\n%!" (Printexc.to_string ex) (Printexc.get_backtrace());
       end;
       true
     end in
