@@ -98,17 +98,19 @@ let rec compile_buffer ~project ~editor ~page ?(commit=false) () =
           (** Outline *)
           let no_errors = errors.Oe.er_errors = [] in
           if editor#show_outline then begin
-            Gmisclib.Idle.add ~prio:500 begin fun () ->
+            Gmisclib.Idle.add ~prio:300 (*500*) begin fun () ->
               match page#outline with
                 | None ->
-                  let ol = new Outline.widget ~project ~page ~tmp:tmp_filename in
+                  (*let ol = new Outline.widget ~project ~page ~tmp:tmp_filename in*)
+                  let ol = new Cmt_view.widget ~editor ~page () in
                   Gaux.may page#outline ~f:(fun x -> x#destroy());
                   page#set_outline (Some ol);
                   editor#with_current_page begin fun current ->
                     if current#get_oid = page#get_oid then (editor#pack_outline ol#coerce)
                   end;
                 | Some ol ->
-                  if no_errors then (Timeout.set tout (fun () -> ol#parse ?force:None ())) (*else (ol#add_markers ~kind:`Error ())*);
+                  (*if no_errors then (Timeout.set tout (fun () -> ol#parse ?force:None ())) (*else (ol#add_markers ~kind:`Error ())*);*)
+                  if no_errors then (Timeout.set tout (fun () -> ol#load ())) (*else (ol#add_markers ~kind:`Error ())*);
             end
           end;
           Activity.remove activity_name;

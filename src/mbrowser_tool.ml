@@ -394,14 +394,16 @@ object (self)
   (** find *)
   method find ?text ?(fill=false) () =
     Timeout.set tout_entry_find begin fun () ->
-      let text = match text with None -> entry_find#text | Some x -> x in
-      entry_find#misc#set_property "secondary-icon-sensitive" (`BOOL (String.length text > 0));
-      if String.length text > 0 then begin
-        let pat = sprintf ".*%s.*" (Str.quote text) in
-        let regexp = Str.regexp_case_fold pat in
-        let symbols = Symbol.filter_by_name ~regexp project.Prj.symbols.syt_table in
-        self#create_widget_search_results ~symbols ~fill ()
-      end;
+      GtkThread.async begin fun () ->
+        let text = match text with None -> entry_find#text | Some x -> x in
+        entry_find#misc#set_property "secondary-icon-sensitive" (`BOOL (String.length text > 0));
+        if String.length text > 0 then begin
+          let pat = sprintf ".*%s.*" (Str.quote text) in
+          let regexp = Str.regexp_case_fold pat in
+          let symbols = Symbol.filter_by_name ~regexp project.Prj.symbols.syt_table in
+          self#create_widget_search_results ~symbols ~fill ()
+        end;
+      end ()
     end
 
   (** find_compl *)
