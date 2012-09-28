@@ -281,7 +281,9 @@ object (self)
 
   method private append_struct ?parent item =
     match item.str_desc with
-      | Tstr_eval expr -> ignore (self#append ?parent "Tstr_eval" "")
+      | Tstr_eval expr ->
+        let loc = {item.str_loc with loc_end = item.str_loc.loc_start} in
+        ignore (self#append ?parent ~loc ~loc_body:expr.exp_loc "_" "")
       | Tstr_value (_, pe) ->
         List.iter (fun (pat, expr) -> ignore (self#append_pattern ?parent pat)) pe
       | Tstr_class classes -> List.iter (self#append_class ?parent) classes
