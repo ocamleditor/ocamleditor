@@ -95,6 +95,7 @@ let met_private_virtual = GdkPixbuf.from_file (Common.application_pixmaps // "me
 let met_virtual = GdkPixbuf.from_file (Common.application_pixmaps // "met_virtual.png")
 let module_funct = GdkPixbuf.from_file (Common.application_pixmaps // "module_funct.png")
 let module_impl = GdkPixbuf.from_file (Common.application_pixmaps // "module_impl.png")
+let module_type = GdkPixbuf.from_file (Common.application_pixmaps // "module_type.png")
 let none_14 = GdkPixbuf.from_file (Common.application_pixmaps // "none_14.png")
 let oe = GdkPixbuf.from_file (Common.application_pixmaps // "oe.png")
 let oe100 = GdkPixbuf.from_file (Common.application_pixmaps // "oe100.png")

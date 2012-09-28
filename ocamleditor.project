@@ -8,7 +8,7 @@
   <author>Francesco Tovagliari</author>
   <description/>
   <version>1.8.0</version>
-  <autocomp enabled="true" delay="1." cflags=""/>
+  <autocomp enabled="true" delay="0.764" cflags=""/>
   <targets>
     <target name="common" default="false" id="4">
       <byt>true</byt>

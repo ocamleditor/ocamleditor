@@ -546,6 +546,7 @@ object (self)
       item#set_image (GMisc.image ~pixbuf:Icons.compile_file_16 ())#coerce;
       ignore (item#connect#activate ~callback:(fun () -> page#compile_buffer ~commit:false ()));
       menu#popup ~time:(GdkEvent.Button.time ev) ~button:3;
+      Gdk.Window.set_cursor menu#misc#window (Gdk.Cursor.create `ARROW);
 
     method private callback_query_tooltip (page : Editor_page.page) ~x ~y ~kbd _ =
       if x > page#view#gutter.Gutter.size && y > 10 && y < (Gdk.Rectangle.height page#view#visible_rect) - 10 then begin

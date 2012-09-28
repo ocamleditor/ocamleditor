@@ -98,7 +98,7 @@ let rec compile_buffer ~project ~editor ~page ?(commit=false) () =
           (** Outline *)
           let no_errors = errors.Oe.er_errors = [] in
           if editor#show_outline then begin
-            Gmisclib.Idle.add ~prio:300 (*500*) begin fun () ->
+            Gmisclib.Idle.add ~prio:100 (*500*) begin fun () ->
               match page#outline with
                 | None ->
                   (*let ol = new Outline.widget ~project ~page ~tmp:tmp_filename in*)
@@ -110,7 +110,7 @@ let rec compile_buffer ~project ~editor ~page ?(commit=false) () =
                   end;
                 | Some ol ->
                   (*if no_errors then (Timeout.set tout (fun () -> ol#parse ?force:None ())) (*else (ol#add_markers ~kind:`Error ())*);*)
-                  if no_errors then (Timeout.set tout (fun () -> ol#load ())) (*else (ol#add_markers ~kind:`Error ())*);
+                  if no_errors then (*(Timeout.set tout (fun () ->*) ol#load ()(* )) *) (*else (ol#add_markers ~kind:`Error ())*);
             end
           end;
           Activity.remove activity_name;

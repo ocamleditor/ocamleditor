@@ -53,6 +53,7 @@ type kind =
   | Type_record
   | Module
   | Module_functor
+  | Module_type
   | Exception
   | Error
   | Warning
@@ -86,6 +87,7 @@ let pixbuf_of_kind = function
   | Class_inherit -> Some Icons.class_inherit
   | Module -> Some Icons.module_impl
   | Module_functor -> Some Icons.module_funct
+  | Module_type -> Some Icons.module_type
   | Exception -> Some Icons.exc
   | Error -> Some Icons.error_14
   | Warning -> Some Icons.warning_14
@@ -102,6 +104,7 @@ let col_icon          = cols#add (Gobject.Data.gobject_by_name "GdkPixbuf")
 let col_markup        = cols#add Gobject.Data.string
 let col_loc           = cols#add Gobject.Data.caml
 let col_loc_body      = cols#add Gobject.Data.caml
+let col_lazy : (unit -> unit) list GTree.column         = cols#add Gobject.Data.caml
 (*let col_name          = cols#add Gobject.Data.string
 let col_name_sort     = cols#add Gobject.Data.string
 let col_type          = cols#add Gobject.Data.string
@@ -115,7 +118,7 @@ let string_of_loc loc =
 let linechar_of_loc loc =
   let _, a, b = Location.get_pos_info loc.loc_start in
   let _, c, d = Location.get_pos_info loc.loc_end in
-  (a - 1), b, (c - 1), d
+  ((a - 1), b), ((c - 1), d)
 
 let is_function type_expr =
   let rec f t =
@@ -152,11 +155,15 @@ class widget ~editor ~page ?packing () =
   let type_color_re     = Str.regexp_string type_color in
   let type_color_sel    = Color.name_of_gdk (view#misc#style#fg `SELECTED) in
   let type_color_sel_re = Str.regexp_string type_color_sel in
+  let buffer : Ocaml_text.buffer = page#buffer in
 object (self)
   inherit GObj.widget sw#as_widget
   val changed = new changed()
   val mutable last_selected_path = None
   val mutable signal_selection_changed = None
+  val mutable timestamp = "", 0.0
+  val mutable filename = ""
+  val mutable marks : (string * Gtk.text_mark) list = []
 
   initializer
     (** Replace foreground color whene row is selected *)
@@ -209,6 +216,17 @@ object (self)
       self#select_element();
       page#view#misc#grab_focus();
     end);
+    ignore (view#selection#connect#changed ~callback:begin fun () ->
+      match view#selection#get_selected_rows with
+        | path :: _ ->
+          let row = model#get_iter path in
+          begin
+            try List.iter (fun f -> f()) (List.rev (model#get ~row ~column:col_lazy));
+            with Failure _ -> ()
+          end;
+          model#set ~row ~column:col_lazy [];
+        | _ -> ()
+    end);
     (*ignore (view#misc#connect#realize ~callback:begin fun () ->
       let show = Preferences.preferences#get.Preferences.pref_outline_show_types in
       if show <> button_show_types#active then button_show_types#clicked()
@@ -226,23 +244,41 @@ object (self)
       | path :: _ ->
         let row = model#get_iter path in
         Gaux.may (model#get ~row ~column:col_loc) ~f:begin fun loc ->
-          let a, b, c, d = linechar_of_loc loc in
-          let where = page#buffer#get_iter (`LINECHAR (a, b)) in
-          let stop = page#buffer#get_iter (`LINECHAR (c, d)) in
-          page#buffer#select_range where stop;
-          page#view#scroll_lazy where;
+          let ts_filename, ts_time = timestamp in
+          if ts_filename = filename && ts_time = (Unix.stat filename).Unix.st_mtime then begin
+            let start, stop = linechar_of_loc loc in
+            let where = buffer#get_iter (`LINECHAR start) in
+            let stop = buffer#get_iter (`LINECHAR stop) in
+            buffer#select_range where stop;
+            page#view#scroll_lazy where;
+          end else begin
+            match List_opt.assoc (GTree.Path.to_string path) marks with
+              | Some mark when not (GtkText.Mark.get_deleted mark) ->
+                let where = buffer#get_iter_at_mark (`MARK mark) in
+                buffer#place_cursor ~where;
+                page#view#scroll_lazy where;
+              | _ -> ()
+          end
         end
 
   method load () =
     let source = page#get_filename in
     match Project.tmp_of_abs editor#project source with
       | Some (tmp, relname) ->
-        self#load' (tmp // relname);
+        Miscellanea.crono  self#load' (tmp // relname);
       | _ -> ()
 
-  method private load' filename =
+  method private load' file =
+    filename <- file;
     let filename_cmt = (Filename.chop_extension filename) ^ ".cmt" in
+    timestamp <- file, (Unix.stat filename).Unix.st_mtime;
     let cmt = Cmt_format.read_cmt filename_cmt in
+    GtkThread2.sync begin fun () ->
+      buffer#block_signal_handlers ();
+      List.iter (fun (_, mark) -> (*GtkThread2.sync*) buffer#delete_mark (`MARK mark)) marks;
+      buffer#unblock_signal_handlers ();
+      marks <- [];
+    end ();
     model#clear();
     self#parse cmt.cmt_annots;
 
@@ -257,25 +293,42 @@ object (self)
     | Packed _ -> ()
 
   method private append ?parent ?kind ?loc ?loc_body name typ =
+    let markup_name =
+      match kind with
+        | Some Class | Some Class_virtual | Some Class_type | Some Module | Some Module_functor ->
+          "<b>" ^ (Glib.Markup.escape_text name) ^ "</b>"
+        | Some Initializer | Some Class_let_bindings | Some Method_inherited -> "<i>" ^ (Glib.Markup.escape_text name) ^ "</i>"
+        | _ -> Glib.Markup.escape_text name
+    in
+    let typ_utf8 = Glib.Convert.convert_with_fallback ~fallback:"" ~from_codeset:Oe_config.ocaml_codeset ~to_codeset:"UTF-8" typ in
+    let markup = if typ = "" then markup_name else String.concat "" [
+      markup_name; " <span color='"; type_color; "'> : ";
+      (Print_type.markup2 (Miscellanea.replace_all ~regexp:true ["\n", ""; " +", " "] typ_utf8));
+      "</span>"
+    ] in
     GtkThread2.sync begin fun () ->
       let row = model#append ?parent () in
-      let markup_name =
-        match kind with
-          | Some Class | Some Class_virtual | Some Class_type | Some Module | Some Module_functor ->
-            "<b>" ^ (Glib.Markup.escape_text name) ^ "</b>"
-          | Some Initializer | Some Class_let_bindings | Some Method_inherited -> "<i>" ^ (Glib.Markup.escape_text name) ^ "</i>"
-          | _ -> Glib.Markup.escape_text name
-      in
-      Gaux.may kind ~f:(fun k -> Gaux.may (pixbuf_of_kind k) ~f:(model#set ~row ~column:col_icon));
-      let typ_utf8 = Glib.Convert.convert_with_fallback ~fallback:"" ~from_codeset:Oe_config.ocaml_codeset ~to_codeset:"UTF-8" typ in
-      let markup = if typ = "" then markup_name else String.concat "" [
-        markup_name; " <span color='"; type_color; "'> : ";
-        (Print_type.markup2 (Miscellanea.replace_all ~regexp:true ["\n", ""; " +", " "] typ_utf8));
-        "</span>"
-      ] in
       model#set ~row ~column:col_markup markup;
       model#set ~row ~column:col_loc loc;
       model#set ~row ~column:col_loc_body loc_body;
+      Gaux.may kind ~f:(fun k -> Gaux.may (pixbuf_of_kind k) ~f:(model#set ~row ~column:col_icon));
+
+      begin
+        match loc with
+          | Some loc ->
+              let (line, chars), _ = linechar_of_loc loc in
+              if line < buffer#end_iter#line + 1 then begin
+                let iter : GText.iter = buffer#get_iter (`LINE (line - 1)) in
+                let iter = iter#forward_chars chars in
+                if iter#line + 1 = line then begin
+                  buffer#block_signal_handlers ();
+                  let mark = buffer#create_mark(* ~name:(Gtk_util.create_mark_name "Outline.set_location")*) ?left_gravity:None iter in
+                  marks <- (GTree.Path.to_string (model#get_path row), mark) :: marks;
+                  buffer#unblock_signal_handlers ()
+                end
+              end
+          | _ -> ()
+      end;
       row
     end ()
 
@@ -285,9 +338,9 @@ object (self)
         let loc = {item.str_loc with loc_end = item.str_loc.loc_start} in
         ignore (self#append ?parent ~loc ~loc_body:expr.exp_loc "_" "")
       | Tstr_value (_, pe) ->
-        List.iter (fun (pat, expr) -> ignore (self#append_pattern ?parent pat)) pe
+        List.iter (fun (pat, _) -> ignore (self#append_pattern ?parent pat)) pe
       | Tstr_class classes -> List.iter (self#append_class ?parent) classes
-      | Tstr_class_type classes -> List.iter (self#append_class_type ?parent) classes
+      | Tstr_class_type classes -> List.iter (fun (_, loc, decl) -> self#append_class_type ?parent ~loc decl) classes
       | Tstr_type decls -> List.iter (self#append_type ?parent) decls
       | Tstr_exception (_, loc, decl) ->
         let exn_params = self#string_of_core_types decl.exn_params in
@@ -298,10 +351,33 @@ object (self)
             | Tmod_functor _ -> Module_functor
             | _ -> Module
         in
-        let parent = self#append ?parent ~kind ~loc:loc.loc loc.txt "" in
-        self#append_module ~parent module_expr.mod_desc;
-        view#expand_row (model#get_path parent);
-      | _ -> ()
+        let parent_mod = self#append ?parent ~kind ~loc:loc.loc loc.txt "" in
+        let f () = self#append_module ~parent:parent_mod module_expr.mod_desc in
+        begin
+          match parent with
+            | Some _ -> model#set ~row:parent_mod ~column:col_lazy [f];
+            | _ -> f()
+        end;
+        view#expand_row (model#get_path parent_mod);
+      | Tstr_modtype (_, loc, mt) ->
+        let parent = self#append ?parent ~kind:Module_type ~loc:loc.loc loc.txt "" in
+        model#set ~row:parent ~column:col_lazy [fun () -> self#append_module_type ~parent mt.mty_desc];
+      | Tstr_recmodule _ -> ()
+      | Tstr_include _ | Tstr_open _ | Tstr_exn_rebind _ | Tstr_primitive _ -> ()
+
+  method private append_sig ?parent item =
+    match item.sig_desc with
+      | Tsig_value _ -> ignore (self#append ?parent "Tsig_value" "")
+      | Tsig_type _ -> ignore (self#append ?parent "Tsig_type" "")
+      | Tsig_exception _ -> ignore (self#append ?parent "Tsig_exception" "")
+      | Tsig_module _ -> ignore (self#append ?parent "Tsig_module" "")
+      | Tsig_recmodule _ -> ignore (self#append ?parent "Tsig_recmodule" "")
+      | Tsig_modtype _ -> ignore (self#append ?parent "Tsig_modtype" "")
+      | Tsig_open _ -> ignore (self#append ?parent "Tsig_open" "")
+      | Tsig_include _ -> ignore (self#append ?parent "Tsig_include" "")
+      | Tsig_class _ -> ignore (self#append ?parent "Tsig_class" "")
+      | Tsig_class_type decls ->
+        List.iter (fun info -> self#append_class_type ?parent ~loc:info.ci_id_name info) decls;
 
   method private append_module ?parent mod_desc =
     match mod_desc with
@@ -313,6 +389,16 @@ object (self)
       | Tmod_apply _ -> ()
       | Tmod_constraint _ -> ignore (self#append ?parent "Tmod_constraint" "")
       | Tmod_unpack _ -> ignore (self#append ?parent "Tmod_unpack" "")
+
+  method private append_module_type ?parent mod_desc =
+    match mod_desc with
+      | Tmty_functor (_, floc, mtype, mexpr) ->
+        self#append_module_type ?parent mexpr.mty_desc
+      | Tmty_ident (path, loc) -> ignore (self#append ?parent ~loc:loc.loc "Tmty_ident" "")
+      | Tmty_signature sign ->
+        List.iter (self#append_sig ?parent) sign.sig_items
+      | Tmty_with _ -> ignore (self#append ?parent "Tmty_with" "")
+      | Tmty_typeof _ -> ignore (self#append ?parent "Tmty_typeof" "")
 
   method private append_type ?parent (_, loc, decl) =
     let kind =
@@ -328,6 +414,114 @@ object (self)
         | Ttype_record decls -> self#string_of_type_record decls
     in
     ignore (self#append ?parent ~kind ~loc:loc.loc loc.txt typ)
+
+  method private append_pattern ?parent pat =
+    match pat.pat_desc with
+      | Tpat_var (_, loc) ->
+        let kind = if is_function pat.pat_type then Function else Simple in
+        Odoc_info.reset_type_names();
+        Some (self#append ?parent ~kind ~loc:loc.loc loc.txt (string_of_type_expr pat.pat_type))
+      | Tpat_tuple pats ->
+        List.iter (fun pat -> ignore (self#append_pattern ?parent pat)) pats;
+        None
+      | (*Tpat_construct _ | Tpat_any | Tpat_alias _ | Tpat_constant _
+      | Tpat_variant _ | Tpat_record _ | Tpat_array _ | Tpat_or _
+      | Tpat_lazy*) _ -> None
+
+  method private append_class ?parent (infos, _, _) =
+    let kind = if infos.ci_virt = Asttypes.Virtual then Class_virtual else Class in
+    let parent = self#append ~kind ?parent ~loc:infos.ci_id_name.loc infos.ci_id_name.txt "" in
+    let let_bindings_parent = self#append ~kind:Class_let_bindings ~loc:infos.ci_id_name.loc ~parent "let-bindings" "" in
+    let count_meth = ref 0 in
+    ignore (self#append_class_item ~let_bindings_parent ~count_meth ~parent infos.ci_expr.cl_desc);
+    let has_childs =
+      try (model#get ~row:let_bindings_parent ~column:col_lazy) <> [] with Failure _ -> false
+    in
+    if not has_childs then (ignore (model#remove let_bindings_parent));
+    if !count_meth > 0 then begin
+      Gmisclib.Idle.add ~prio:100 begin fun () ->
+        try view#expand_row (model#get_path parent) with Gpointer.Null -> ()
+      end;
+    end
+
+  method private append_class_item ?let_bindings_parent ?count_meth ?parent = function
+    | Tcl_structure str ->
+      List.map begin fun fi ->
+        match fi.cf_desc with
+          | Tcf_inher (_, cl_expr, id, inherited_fields, inherited_methods) ->
+            let parent = self#append_class_item ?let_bindings_parent ?count_meth ?parent cl_expr.cl_desc in
+            Gaux.may parent ~f:begin fun parent ->
+              model#set ~row:parent ~column:col_lazy
+                [fun () -> List.iter (fun (x, _) -> ignore (self#append ~kind:Method_inherited ~parent x "")) inherited_methods];
+            end;
+            parent
+          | Tcf_init _ ->
+            let loc = {fi.cf_loc with loc_end = fi.cf_loc.loc_start} in
+            Some (self#append ~kind:Initializer ~loc ?parent "initializer" "");
+          | Tcf_val (_, loc, mutable_flag, _, kind, _) ->
+            let typ, kind = match kind with
+              | Tcfk_virtual ct when mutable_flag = Mutable ->
+                string_of_type_expr ct.ctyp_type, Attribute_mutable_virtual
+              | Tcfk_virtual ct  ->
+                string_of_type_expr ct.ctyp_type, Attribute_virtual
+              | Tcfk_concrete te when mutable_flag = Mutable ->
+                string_of_type_expr te.exp_type, Attribute_mutable
+              | Tcfk_concrete te ->
+                string_of_type_expr te.exp_type, Attribute
+            in
+            Some (self#append ?parent ~kind ~loc:loc.loc loc.txt typ);
+          | Tcf_meth (_, loc, private_flag, kind, _) ->
+            let kind, typ, loc_body = match kind with
+              | Tcfk_virtual ct when private_flag = Private ->
+                Method_private_virtual, string_of_type_expr ct.ctyp_type, ct.ctyp_loc
+              | Tcfk_virtual ct ->
+                Method_virtual, string_of_type_expr ct.ctyp_type, ct.ctyp_loc
+              | Tcfk_concrete te when private_flag = Private ->
+                Method_private, string_of_type_expr te.exp_type, te.exp_loc
+              | Tcfk_concrete te ->
+                Method, string_of_type_expr te.exp_type, te.exp_loc
+            in
+            Gaux.may count_meth ~f:(fun x -> incr x);
+            Some (self#append ?parent ~kind ~loc:loc.loc ~loc_body:loc_body loc.txt typ);
+          | Tcf_constr (ct1, _) -> Some (self#append ?parent ~loc:ct1.ctyp_loc (sprintf "Tcf_constr") "");
+      end str.cstr_fields;
+      parent
+    | Tcl_fun (_, _, _, cl_expr, _) ->
+      self#append_class_item ?let_bindings_parent ?count_meth ?parent cl_expr.cl_desc;
+    | Tcl_ident (_, lid, _) ->
+      Some (self#append ?parent ~kind:Class_inherit ~loc:lid.loc (String.concat "." (Longident.flatten lid.txt)) "");
+    | Tcl_apply (cl_expr, _) ->
+      self#append_class_item ?let_bindings_parent ?count_meth ?parent cl_expr.cl_desc;
+    | Tcl_let (_, lets, _, desc) ->
+      Gaux.may let_bindings_parent ~f:begin fun row ->
+        let prev = try model#get ~row ~column:col_lazy with Failure _ -> [] in
+        model#set ~row ~column:col_lazy ((fun () ->
+          List.iter begin fun (pat, expr) ->
+            ignore (self#append_pattern ~parent:row pat);
+          end lets;) :: prev)
+      end;
+      self#append_class_item ?let_bindings_parent ?count_meth ?parent desc.cl_desc;
+    | Tcl_constraint (cl_expr, _, _, _, _) ->
+      self#append_class_item ?let_bindings_parent ?count_meth ?parent cl_expr.cl_desc;
+
+  method private append_class_type ?parent ~loc infos =
+    let parent = self#append ~kind:Class_type ?parent ~loc:loc.loc loc.txt "" in
+    ignore (self#append_class_type_item ~parent infos.ci_expr.cltyp_desc);
+
+  method private append_class_type_item ?parent = function
+    | Tcty_constr _ -> ignore (self#append ?parent (sprintf "Tcty_constr") "")
+    | Tcty_signature sign ->
+      List.iter begin fun field ->
+        match field.ctf_desc with
+          | Tctf_inher _ -> ignore (self#append ?parent (sprintf "Tctf_inher") "")
+          | Tctf_val _ -> ignore (self#append ?parent (sprintf "Tctf_val") "")
+          | Tctf_virt _ -> ignore (self#append ?parent (sprintf "Tctf_virt") "")
+          | Tctf_meth (id, private_flag, ct) ->
+            let kind = match private_flag with Private -> Method_private | _ -> Method in
+            ignore (self#append ?parent ~kind id (string_of_type_expr ct.ctyp_type))
+          | Tctf_cstr _ -> ignore (self#append ?parent (sprintf "Tctf_cstr") "")
+      end sign.csig_fields
+    | Tcty_fun (_, _, class_type) -> ignore (self#append_class_type_item ?parent class_type.cltyp_desc)
 
   method private string_of_type_abstract decl =
     match decl.typ_manifest with
@@ -352,103 +546,6 @@ object (self)
 
   method private string_of_core_types ctl =
     String.concat " * " (List.map (fun ct -> string_of_type_expr ct.ctyp_type) ctl)
-
-  method private append_pattern ?parent pat =
-    match pat.pat_desc with
-      | Tpat_var (_, loc) ->
-        let kind = if is_function pat.pat_type then Function else Simple in
-        Odoc_info.reset_type_names();
-        Some (self#append ?parent ~kind ~loc:loc.loc loc.txt (string_of_type_expr pat.pat_type))
-      | Tpat_tuple pats ->
-        List.iter (fun pat -> ignore (self#append_pattern ?parent pat)) pats;
-        None
-      | (*Tpat_construct _ | Tpat_any | Tpat_alias _ | Tpat_constant _
-      | Tpat_variant _ | Tpat_record _ | Tpat_array _ | Tpat_or _
-      | Tpat_lazy*) _ -> None
-
-  method private append_class ?parent (infos, _, _) =
-    let kind = if infos.ci_virt = Asttypes.Virtual then Class_virtual else Class in
-    let parent = self#append ~kind ?parent ~loc:infos.ci_id_name.loc infos.ci_id_name.txt "" in
-    let let_bindings_parent = self#append ~kind:Class_let_bindings ~loc:infos.ci_id_name.loc ~parent "let-bindings" "" in
-    ignore (self#append_class_item ~let_bindings_parent ~parent infos.ci_expr.cl_desc);
-    if model#iter_n_children (Some let_bindings_parent) = 0 then (ignore (model#remove let_bindings_parent));
-    Gmisclib.Idle.add ~prio:100 (fun () -> try view#expand_row (model#get_path parent) with Gpointer.Null -> ());
-
-  method private append_class_item ?let_bindings_parent ?parent = function
-    | Tcl_structure str ->
-      List.map begin fun fi ->
-        match fi.cf_desc with
-          | Tcf_inher (_, cl_expr, id, inherited_fields, inherited_methods) ->
-            let parent = self#append_class_item ?let_bindings_parent ?parent cl_expr.cl_desc in
-            List.iter (fun (x, _) -> ignore (self#append ~kind:Method_inherited ?parent x "")) inherited_methods;
-            parent
-          | Tcf_init _ ->
-            let loc = {fi.cf_loc with loc_end = fi.cf_loc.loc_start} in
-            Some (self#append ~kind:Initializer ~loc ?parent "initializer" "");
-          | Tcf_val (_, loc, mutable_flag, _, kind, _) ->
-            (*Odoc_info.reset_type_names();*)
-            let typ, kind = match kind with
-              | Tcfk_virtual ct when mutable_flag = Mutable ->
-                string_of_type_expr ct.ctyp_type, Attribute_mutable_virtual
-              | Tcfk_virtual ct  ->
-                string_of_type_expr ct.ctyp_type, Attribute_virtual
-              | Tcfk_concrete te when mutable_flag = Mutable ->
-                string_of_type_expr te.exp_type, Attribute_mutable
-              | Tcfk_concrete te ->
-                string_of_type_expr te.exp_type, Attribute
-            in
-            Some (self#append ?parent ~kind ~loc:loc.loc loc.txt typ);
-          | Tcf_meth (_, loc, private_flag, kind, _) ->
-            (*Odoc_info.reset_type_names();*)
-            let kind, typ, loc_body = match kind with
-              | Tcfk_virtual ct when private_flag = Private ->
-                Method_private_virtual, string_of_type_expr ct.ctyp_type, ct.ctyp_loc
-              | Tcfk_virtual ct ->
-                Method_virtual, string_of_type_expr ct.ctyp_type, ct.ctyp_loc
-              | Tcfk_concrete te when private_flag = Private ->
-                Method_private, string_of_type_expr te.exp_type, te.exp_loc
-              | Tcfk_concrete te ->
-                Method, string_of_type_expr te.exp_type, te.exp_loc
-            in
-            Some (self#append ?parent ~kind ~loc:loc.loc ~loc_body:loc_body loc.txt typ);
-          | Tcf_constr (ct1, _) -> Some (self#append ?parent ~loc:ct1.ctyp_loc (sprintf "Tcf_constr") "");
-      end str.cstr_fields;
-      parent
-    | Tcl_fun (_, _, _, cl_expr, _) ->
-      self#append_class_item ?let_bindings_parent ?parent cl_expr.cl_desc;
-    | Tcl_ident (_, lid, _) ->
-      Some (self#append ?parent ~kind:Class_inherit ~loc:lid.loc (String.concat "." (Longident.flatten lid.txt)) "");
-    | Tcl_apply (cl_expr, _) ->
-      self#append_class_item ?let_bindings_parent ?parent cl_expr.cl_desc;
-    | Tcl_let (_, lets, _, desc) ->
-      List.iter begin fun (*(_, loc, expr)*) (pat, expr) ->
-        ignore (self#append_pattern ?parent:let_bindings_parent pat(*.pat_desc expr*));
-        (*let is_function = match expr with Texp_function _ -> true | _ -> false in
-        let icon = if is_function then Icons.func else Icons.simple in
-        ignore (self#append ~icon ?parent (sprintf "%s:%s" loc.txt (Odoc_info.string_of_type_expr expr.exp_type)))*)
-      end lets;
-      self#append_class_item ?let_bindings_parent ?parent desc.cl_desc;
-    | Tcl_constraint (cl_expr, _, _, _, _) ->
-      self#append_class_item ?let_bindings_parent ?parent cl_expr.cl_desc;
-
-  method private append_class_type ?parent (_, loc, infos) =
-    let parent = self#append ~kind:Class_type ?parent ~loc:loc.loc loc.txt "" in
-    ignore (self#append_class_type_item ~parent infos.ci_expr.cltyp_desc);
-
-  method private append_class_type_item ?parent = function
-    | Tcty_constr _ -> ignore (self#append ?parent (sprintf "Tcty_constr") "")
-    | Tcty_signature sign ->
-      List.iter begin fun field ->
-        match field.ctf_desc with
-          | Tctf_inher _ -> ignore (self#append ?parent (sprintf "Tctf_inher") "")
-          | Tctf_val _ -> ignore (self#append ?parent (sprintf "Tctf_val") "")
-          | Tctf_virt _ -> ignore (self#append ?parent (sprintf "Tctf_virt") "")
-          | Tctf_meth (id, private_flag, ct) ->
-            let kind = match private_flag with Private -> Method_private | _ -> Method in
-            ignore (self#append ?parent ~kind id (string_of_type_expr ct.ctyp_type))
-          | Tctf_cstr _ -> ignore (self#append ?parent (sprintf "Tctf_cstr") "")
-      end sign.csig_fields
-    | Tcty_fun (_, _, _cl_type) -> ignore (self#append_class_type_item ?parent _cl_type.cltyp_desc)
 
   method connect = new signals ~changed
 end
