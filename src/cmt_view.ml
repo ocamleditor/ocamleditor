@@ -98,17 +98,13 @@ let pixbuf_of_kind = function
   | Class_let_bindings -> None
   | Unknown -> None;;
 
-
-let cols              = new GTree.column_list
-let col_icon          = cols#add (Gobject.Data.gobject_by_name "GdkPixbuf")
-let col_markup        = cols#add Gobject.Data.string
-let col_loc           = cols#add Gobject.Data.caml
-let col_loc_body      = cols#add Gobject.Data.caml
-let col_lazy : (unit -> unit) list GTree.column         = cols#add Gobject.Data.caml
-(*let col_name          = cols#add Gobject.Data.string
-let col_name_sort     = cols#add Gobject.Data.string
-let col_type          = cols#add Gobject.Data.string
-let col_id            = cols#add Gobject.Data.int*)
+let cols         = new GTree.column_list
+let col_icon     = cols#add (Gobject.Data.gobject_by_name "GdkPixbuf")
+let col_name     = cols#add Gobject.Data.string
+let col_markup   = cols#add Gobject.Data.string
+let col_loc      = cols#add Gobject.Data.caml
+let col_loc_body = cols#add Gobject.Data.caml
+let col_lazy : (unit -> unit) list GTree.column = cols#add Gobject.Data.caml
 
 let string_of_loc loc =
   let filename, a, b = Location.get_pos_info loc.loc_start in
@@ -126,17 +122,44 @@ let is_function type_expr =
       | Types.Tarrow _ -> true
       | Types.Tlink t -> f t
       | _ -> false
-  in
-  f type_expr;;
+  in f type_expr;;
 
 let string_of_type_expr te =
   match te.desc with
     | Tarrow (_, _, t2, _) -> Odoc_info.string_of_type_expr t2
-    | _ -> Odoc_info.string_of_type_expr te
+    | _ -> Odoc_info.string_of_type_expr te;;
 
 class widget ~editor ~page ?packing () =
-  let sw                = GBin.scrolled_window ~shadow_type:`IN ~hpolicy:`AUTOMATIC ~vpolicy:`AUTOMATIC ?packing () in
+  let show_types           = Preferences.preferences#get.Preferences.pref_outline_show_types in
+  let vbox                 = GPack.vbox ?packing () in
+  let toolbar              = GPack.hbox ~spacing:0 ~packing:vbox#pack ~show:true () in
+  let button_refresh       = GButton.button ~relief:`NONE ~packing:toolbar#pack () in
+  let button_show_types    = GButton.toggle_button ~active:show_types ~relief:`NONE ~packing:toolbar#pack () in
+  let button_sort          = GButton.toggle_button ~relief:`NONE ~packing:toolbar#pack () in
+  let button_sort_rev      = GButton.toggle_button ~relief:`NONE ~packing:toolbar#pack () in
+  let button_select_struct = GButton.button ~relief:`NONE ~packing:toolbar#pack () in
+  let button_select_buf    = GButton.button ~relief:`NONE ~packing:toolbar#pack () in
+  let _                    = button_refresh#set_image (GMisc.image (*~stock:`REFRESH*) ~pixbuf:Icons.refresh14 ~icon_size:`MENU ())#coerce in
+  let _                    = button_sort#set_image (GMisc.image (*~stock:`SORT_ASCENDING*) ~pixbuf:Icons.sort_asc ~icon_size:`MENU ())#coerce in
+  let _                    = button_sort_rev#set_image (GMisc.image (*~stock:`SORT_DESCENDING*) ~pixbuf:Icons.sort_asc_rev ~icon_size:`MENU ())#coerce in
+  let _                    = button_show_types#set_image (GMisc.image ~pixbuf:Icons.typ ())#coerce in
+  let _                    = button_select_buf#set_image (GMisc.image ~pixbuf:Icons.select_in_buffer ())#coerce in
+  let _                    = button_select_struct#set_image (GMisc.image ~pixbuf:Icons.select_in_structure ())#coerce in
+  let _                    = button_sort#misc#set_tooltip_text "Sort by name" in
+  let _                    = button_sort_rev#misc#set_tooltip_text "Sort by reverse name" in
+  let _                    = button_show_types#misc#set_tooltip_text "Show types" in
+  let _                    = button_select_struct#misc#set_tooltip_text "Select in Structure Pane" in
+  let _                    = button_select_buf#misc#set_tooltip_text "Select in Buffer" in
+  let _ =
+    button_show_types#misc#set_can_focus false;
+    button_sort#misc#set_can_focus false;
+    button_sort_rev#misc#set_can_focus false;
+    button_select_struct#misc#set_can_focus false;
+    button_select_buf#misc#set_can_focus false;
+    button_refresh#misc#set_can_focus false;
+  in
   let model             = GTree.tree_store cols in
+  let sw                = GBin.scrolled_window ~shadow_type:`IN ~hpolicy:`AUTOMATIC ~vpolicy:`AUTOMATIC ~packing:vbox#add () in
   let view              = GTree.view ~model ~headers_visible:false ~packing:sw#add ~width:350 ~height:500 () in
   let renderer_pixbuf   = GTree.cell_renderer_pixbuf [`YPAD 0; `XPAD 0] in
   let renderer_markup   = GTree.cell_renderer_text [`YPAD 0] in
@@ -157,16 +180,22 @@ class widget ~editor ~page ?packing () =
   let type_color_sel_re = Str.regexp_string type_color_sel in
   let buffer : Ocaml_text.buffer = page#buffer in
 object (self)
-  inherit GObj.widget sw#as_widget
+  inherit GObj.widget vbox#as_widget
+
   val changed = new changed()
   val mutable last_selected_path = None
   val mutable signal_selection_changed = None
   val mutable timestamp = "", 0.0
   val mutable filename = ""
-  val mutable marks : (string * Gtk.text_mark) list = []
+  val mutable marks = []
+  val mutable collapsed_paths = []
+  val mutable expanded_paths = []
+  val mutable rows_expanded = []
+  val mutable selected_path = None
+  val mutable types = []
 
   initializer
-    (** Replace foreground color whene row is selected *)
+    (** Replace foreground color when row is selected *)
     let replace_color_in_markup (model : GTree.tree_store) invert path =
       let row = model#get_iter path in
       let markup = model#get ~row ~column:col_markup in
@@ -187,6 +216,7 @@ object (self)
     end);
     (** Tooltips *)
     view#misc#set_has_tooltip true;
+    let label_tooltip = ref (GMisc.label ~markup:" " ()) in
     ignore (view#misc#connect#query_tooltip ~callback: begin fun ~x ~y ~kbd tooltip ->
       try
         begin
@@ -195,15 +225,27 @@ object (self)
               begin
                 match view#get_path_at_pos ~x ~y with
                   | Some (tpath, _, _, _) ->
-                    let markup = model#get ~row ~column:col_markup in
-                    let pos = String.index markup ':' + 1 in
-                    let markup = (Str.string_before markup pos) ^ "\n" ^ (Str.string_after markup pos) in
-                    let markup = sprintf "<big>%s</big>" markup in
-                    GtkBase.Tooltip.set_markup tooltip markup;
-                    (*let label = GMisc.label ~markup () in
-                    GtkBase.Tooltip.set_custom tooltip label#as_widget;*) (* This flickers on some platforms *)
-                    GtkTree.TreeView.Tooltip.set_row view#as_tree_view tooltip tpath;
-                    true
+                    begin
+                      match List_opt.assoc tpath types with
+                        | Some typ ->
+                          let name = model#get ~row ~column:col_name in
+                          let markup = sprintf "<big><tt><span fgcolor='#0000ff'>%s</span> :\n%s</tt></big>" name (Print_type.markup2 typ) in
+                          (*GtkBase.Tooltip.set_markup tooltip markup;*)
+                          (*GtkBase.Tooltip.set_tip_area tooltip (view#get_cell_area ~path:tpath (*~col:vc*) ());*)
+                          !label_tooltip#set_label markup;
+                          GtkTree.TreeView.Tooltip.set_row view#as_tree_view tooltip tpath;
+                          begin
+                            match !label_tooltip#misc#parent with
+                              | Some _ ->
+                                label_tooltip := GMisc.label ~markup ();
+                                (GtkBase.Tooltip.set_custom tooltip) !label_tooltip#as_widget;
+                                true
+                              | _ ->
+                                (GtkBase.Tooltip.set_custom tooltip) !label_tooltip#as_widget; 
+                                true
+                          end;
+                        | _ -> false
+                    end;
                   | _ -> false
               end
             | _ -> false
@@ -211,28 +253,40 @@ object (self)
       with Not_found | Gpointer.Null -> false
     end);
     (** Events *)
-    signal_selection_changed <- Some (view#selection#connect#after#changed ~callback:self#select_element);
+    signal_selection_changed <- Some (view#selection#connect#after#changed ~callback:begin fun () ->
+      self#select_element();
+      match view#selection#get_selected_rows with
+        | path :: _ ->
+          let row = model#get_iter path in
+          self#force_lazy row;
+          selected_path <- Some (self#get_id_path row)
+        | _ -> ()
+    end);
     ignore (view#connect#after#row_activated ~callback:begin fun _ _ ->
       self#select_element();
       page#view#misc#grab_focus();
     end);
-    ignore (view#selection#connect#changed ~callback:begin fun () ->
-      match view#selection#get_selected_rows with
-        | path :: _ ->
-          let row = model#get_iter path in
-          begin
-            try List.iter (fun f -> f()) (List.rev (model#get ~row ~column:col_lazy));
-            with Failure _ -> ()
-          end;
-          model#set ~row ~column:col_lazy [];
-        | _ -> ()
+    ignore (view#connect#row_expanded ~callback:begin fun row path ->
+      self#add_expanded_paths (self#get_id_path row) path
     end);
-    (*ignore (view#misc#connect#realize ~callback:begin fun () ->
+    ignore (view#connect#row_collapsed ~callback:begin fun row _ ->
+      expanded_paths <- List.remove_assoc (self#get_id_path row) expanded_paths;
+    end);
+    ignore (view#misc#connect#realize ~callback:begin fun () ->
       let show = Preferences.preferences#get.Preferences.pref_outline_show_types in
       if show <> button_show_types#active then button_show_types#clicked()
-    end);*)
+    end);
+    (**  *)
+    ignore (button_refresh#connect#clicked ~callback:self#load);
     (**  *)
     self#load()
+
+  method private force_lazy row =
+    begin
+      try List.iter (fun f -> f()) (List.rev (model#get ~row ~column:col_lazy));
+      with Failure _ -> ()
+    end;
+    model#set ~row ~column:col_lazy []
 
   method view = view
 
@@ -244,21 +298,15 @@ object (self)
       | path :: _ ->
         let row = model#get_iter path in
         Gaux.may (model#get ~row ~column:col_loc) ~f:begin fun loc ->
-          let ts_filename, ts_time = timestamp in
-          if ts_filename = filename && ts_time = (Unix.stat filename).Unix.st_mtime then begin
-            let start, stop = linechar_of_loc loc in
-            let where = buffer#get_iter (`LINECHAR start) in
-            let stop = buffer#get_iter (`LINECHAR stop) in
-            buffer#select_range where stop;
-            page#view#scroll_lazy where;
-          end else begin
-            match List_opt.assoc (GTree.Path.to_string path) marks with
-              | Some mark when not (GtkText.Mark.get_deleted mark) ->
-                let where = buffer#get_iter_at_mark (`MARK mark) in
-                buffer#place_cursor ~where;
-                page#view#scroll_lazy where;
-              | _ -> ()
-          end
+          match List_opt.assoc (GTree.Path.to_string path) marks with
+            | Some mark when not (GtkText.Mark.get_deleted mark) ->
+              let start = buffer#get_iter_at_mark (`MARK mark) in
+              let _, (c, d) = linechar_of_loc loc in
+              let stop = ref start in
+              while !stop#line < c || !stop#line_index < d do stop := !stop#forward_char done;
+              buffer#select_range start !stop;
+              page#view#scroll_lazy start;
+            | _ -> ()
         end
 
   method load () =
@@ -273,6 +321,7 @@ object (self)
     let filename_cmt = (Filename.chop_extension filename) ^ ".cmt" in
     timestamp <- file, (Unix.stat filename).Unix.st_mtime;
     let cmt = Cmt_format.read_cmt filename_cmt in
+    (* Delete previous marks in the buffer and clear the model and other conatiners *)
     GtkThread2.sync begin fun () ->
       buffer#block_signal_handlers ();
       List.iter (fun (_, mark) -> (*GtkThread2.sync*) buffer#delete_mark (`MARK mark)) marks;
@@ -280,7 +329,25 @@ object (self)
       marks <- [];
     end ();
     model#clear();
+    rows_expanded <- [];
+    collapsed_paths <- [];
+    types <- [];
+    (* Parse .cmt file *)
     self#parse cmt.cmt_annots;
+    (*  *)
+    List.iter view#expand_row rows_expanded;
+    (* Select the same row that was selected in the previous tree *)
+    Gaux.may selected_path ~f:begin fun sid ->
+      GtkThread2.async model#foreach begin fun path row ->
+        let id = self#get_id_path row in
+        if id = sid then begin
+          Gaux.may signal_selection_changed ~f:view#selection#misc#handler_block;
+          view#selection#select_path path;
+          Gaux.may signal_selection_changed ~f:view#selection#misc#handler_unblock;
+          true
+        end else false
+      end
+    end
 
   method private parse = function
     | Implementation impl -> List.iter self#append_struct impl.str_items
@@ -302,28 +369,31 @@ object (self)
     in
     let typ_utf8 = Glib.Convert.convert_with_fallback ~fallback:"" ~from_codeset:Oe_config.ocaml_codeset ~to_codeset:"UTF-8" typ in
     let markup = if typ = "" then markup_name else String.concat "" [
-      markup_name; " <span color='"; type_color; "'> : ";
+      markup_name; " <span color='"; type_color; "'>: ";
       (Print_type.markup2 (Miscellanea.replace_all ~regexp:true ["\n", ""; " +", " "] typ_utf8));
       "</span>"
     ] in
     GtkThread2.sync begin fun () ->
       let row = model#append ?parent () in
+      model#set ~row ~column:col_name name;
       model#set ~row ~column:col_markup markup;
       model#set ~row ~column:col_loc loc;
       model#set ~row ~column:col_loc_body loc_body;
       Gaux.may kind ~f:(fun k -> Gaux.may (pixbuf_of_kind k) ~f:(model#set ~row ~column:col_icon));
-
+      let path = model#get_path row in
+      types <- (path, typ) :: types;
       begin
         match loc with
           | Some loc ->
-              let (line, chars), _ = linechar_of_loc loc in
-              if line < buffer#end_iter#line + 1 then begin
-                let iter : GText.iter = buffer#get_iter (`LINE (line - 1)) in
-                let iter = iter#forward_chars chars in
-                if iter#line + 1 = line then begin
+              let (line, start), _ = linechar_of_loc loc in
+              if line <= buffer#end_iter#line then begin
+                let iter : GText.iter = buffer#get_iter (`LINE line) in
+                let iter = iter#set_line_index 0 in
+                let iter = iter#forward_chars start in
+                if iter#line = line then begin
                   buffer#block_signal_handlers ();
                   let mark = buffer#create_mark(* ~name:(Gtk_util.create_mark_name "Outline.set_location")*) ?left_gravity:None iter in
-                  marks <- (GTree.Path.to_string (model#get_path row), mark) :: marks;
+                  marks <- (GTree.Path.to_string path, mark) :: marks;
                   buffer#unblock_signal_handlers ()
                 end
               end
@@ -358,7 +428,7 @@ object (self)
             | Some _ -> model#set ~row:parent_mod ~column:col_lazy [f];
             | _ -> f()
         end;
-        view#expand_row (model#get_path parent_mod);
+        rows_expanded <- (model#get_path parent_mod) :: rows_expanded;
       | Tstr_modtype (_, loc, mt) ->
         let parent = self#append ?parent ~kind:Module_type ~loc:loc.loc loc.txt "" in
         model#set ~row:parent ~column:col_lazy [fun () -> self#append_module_type ~parent mt.mty_desc];
@@ -433,26 +503,41 @@ object (self)
     let parent = self#append ~kind ?parent ~loc:infos.ci_id_name.loc infos.ci_id_name.txt "" in
     let let_bindings_parent = self#append ~kind:Class_let_bindings ~loc:infos.ci_id_name.loc ~parent "let-bindings" "" in
     let count_meth = ref 0 in
-    ignore (self#append_class_item ~let_bindings_parent ~count_meth ~parent infos.ci_expr.cl_desc);
-    let has_childs =
-      try (model#get ~row:let_bindings_parent ~column:col_lazy) <> [] with Failure _ -> false
+    let id_path = self#get_id_path let_bindings_parent in
+    let expand_lets = List_opt.assoc id_path expanded_paths <> None in
+    ignore (self#append_class_item ~let_bindings_parent ~expand_lets ~count_meth ~parent infos.ci_expr.cl_desc);
+    let not_has_childs =
+      try
+        model#iter_n_children (Some let_bindings_parent) = 0 &&
+        (model#get ~row:let_bindings_parent ~column:col_lazy) = []
+      with Failure _ -> true
     in
-    if not has_childs then (ignore (model#remove let_bindings_parent));
+    if not_has_childs then (ignore (model#remove let_bindings_parent))
+    else if not expand_lets then begin
+      let path = model#get_path let_bindings_parent in
+      self#add_collapsed_paths id_path path;
+    end;
     if !count_meth > 0 then begin
-      Gmisclib.Idle.add ~prio:100 begin fun () ->
-        try view#expand_row (model#get_path parent) with Gpointer.Null -> ()
-      end;
+      rows_expanded <- (model#get_path parent) :: rows_expanded;
     end
 
-  method private append_class_item ?let_bindings_parent ?count_meth ?parent = function
+  method private append_class_item ?let_bindings_parent ?(expand_lets=false) ?count_meth ?parent = function
     | Tcl_structure str ->
       List.map begin fun fi ->
         match fi.cf_desc with
           | Tcf_inher (_, cl_expr, id, inherited_fields, inherited_methods) ->
-            let parent = self#append_class_item ?let_bindings_parent ?count_meth ?parent cl_expr.cl_desc in
+            let parent = self#append_class_item ?let_bindings_parent ~expand_lets ?count_meth ?parent cl_expr.cl_desc in
             Gaux.may parent ~f:begin fun parent ->
-              model#set ~row:parent ~column:col_lazy
-                [fun () -> List.iter (fun (x, _) -> ignore (self#append ~kind:Method_inherited ~parent x "")) inherited_methods];
+              let f () = List.iter (fun (x, _) -> ignore (self#append ~kind:Method_inherited ~parent x "")) inherited_methods in
+              let id_path = self#get_id_path parent in
+              let expand_inher = List_opt.assoc id_path expanded_paths <> None in
+              if expand_inher then begin
+                f();
+                rows_expanded <- (model#get_path parent) :: rows_expanded;
+              end else begin
+                self#add_collapsed_paths (self#get_id_path parent) (model#get_path parent);
+                model#set ~row:parent ~column:col_lazy [f];
+              end
             end;
             parent
           | Tcf_init _ ->
@@ -487,28 +572,41 @@ object (self)
       end str.cstr_fields;
       parent
     | Tcl_fun (_, _, _, cl_expr, _) ->
-      self#append_class_item ?let_bindings_parent ?count_meth ?parent cl_expr.cl_desc;
+      self#append_class_item ?let_bindings_parent ~expand_lets ?count_meth ?parent cl_expr.cl_desc;
     | Tcl_ident (_, lid, _) ->
       Some (self#append ?parent ~kind:Class_inherit ~loc:lid.loc (String.concat "." (Longident.flatten lid.txt)) "");
     | Tcl_apply (cl_expr, _) ->
-      self#append_class_item ?let_bindings_parent ?count_meth ?parent cl_expr.cl_desc;
+      self#append_class_item ?let_bindings_parent ~expand_lets ?count_meth ?parent cl_expr.cl_desc;
     | Tcl_let (_, lets, _, desc) ->
       Gaux.may let_bindings_parent ~f:begin fun row ->
-        let prev = try model#get ~row ~column:col_lazy with Failure _ -> [] in
-        model#set ~row ~column:col_lazy ((fun () ->
-          List.iter begin fun (pat, expr) ->
+        let f () =
+          List.iteri begin fun i (pat, expr) ->
             ignore (self#append_pattern ~parent:row pat);
-          end lets;) :: prev)
+            if i = 0 && expand_lets then begin
+              let path = model#get_path row in
+              rows_expanded <- path ::  rows_expanded;
+              self#add_expanded_paths (self#get_id_path row) path
+            end
+          end lets
+        in
+        if expand_lets then f() else begin
+          let prev = try model#get ~row ~column:col_lazy with Failure _ -> [] in
+          model#set ~row ~column:col_lazy (f :: prev)
+        end
       end;
-      self#append_class_item ?let_bindings_parent ?count_meth ?parent desc.cl_desc;
+      self#append_class_item ?let_bindings_parent ~expand_lets ?count_meth ?parent desc.cl_desc;
     | Tcl_constraint (cl_expr, _, _, _, _) ->
-      self#append_class_item ?let_bindings_parent ?count_meth ?parent cl_expr.cl_desc;
+      self#append_class_item ?let_bindings_parent ~expand_lets ?count_meth ?parent cl_expr.cl_desc;
 
   method private append_class_type ?parent ~loc infos =
     let parent = self#append ~kind:Class_type ?parent ~loc:loc.loc loc.txt "" in
-    ignore (self#append_class_type_item ~parent infos.ci_expr.cltyp_desc);
+    let count_meth = ref 0 in
+    ignore (self#append_class_type_item ~parent ~count_meth infos.ci_expr.cltyp_desc);
+    if !count_meth > 0 then begin
+      rows_expanded <- (model#get_path parent) :: rows_expanded;
+    end
 
-  method private append_class_type_item ?parent = function
+  method private append_class_type_item ?parent ?count_meth = function
     | Tcty_constr _ -> ignore (self#append ?parent (sprintf "Tcty_constr") "")
     | Tcty_signature sign ->
       List.iter begin fun field ->
@@ -517,10 +615,11 @@ object (self)
           | Tctf_val _ -> ignore (self#append ?parent (sprintf "Tctf_val") "")
           | Tctf_virt _ -> ignore (self#append ?parent (sprintf "Tctf_virt") "")
           | Tctf_meth (id, private_flag, ct) ->
+            Gaux.may count_meth ~f:(fun x -> incr x);
             let kind = match private_flag with Private -> Method_private | _ -> Method in
-            ignore (self#append ?parent ~kind id (string_of_type_expr ct.ctyp_type))
+            ignore (self#append ?parent ~kind ~loc:field.ctf_loc id (string_of_type_expr ct.ctyp_type))
           | Tctf_cstr _ -> ignore (self#append ?parent (sprintf "Tctf_cstr") "")
-      end sign.csig_fields
+      end (List.rev sign.csig_fields)
     | Tcty_fun (_, _, class_type) -> ignore (self#append_class_type_item ?parent class_type.cltyp_desc)
 
   method private string_of_type_abstract decl =
@@ -530,22 +629,37 @@ object (self)
 
   method private string_of_type_record decls =
     Odoc_info.reset_type_names();
-    String.concat "" ["{ \n";
-      String.concat "; \n" (List.map begin fun (_, loc, _is_mutable, ct, _) ->
+    String.concat "" ["{ \n  ";
+      String.concat ";\n  " (List.map begin fun (_, loc, _is_mutable, ct, _) ->
         loc.txt ^ ": " ^ string_of_type_expr ct.ctyp_type
       end decls);
       " \n}"]
 
   method private string_of_type_variant decls =
     Odoc_info.reset_type_names();
-    String.concat "\n | " (List.map begin fun (_, loc, types, _) ->
+    "   " ^ (String.concat "\n | " (List.map begin fun (_, loc, types, _) ->
       loc.txt ^
         let ts = self#string_of_core_types types in
         if ts = "" then "" else (" of " ^ ts)
-    end decls)
+    end decls))
 
   method private string_of_core_types ctl =
     String.concat " * " (List.map (fun ct -> string_of_type_expr ct.ctyp_type) ctl)
+
+  method private get_id_path row =
+    let rec loop row id =
+      match model#iter_parent row with
+        | Some parent ->
+          loop parent ((model#get ~row:parent ~column:col_name) ^ "." ^ id)
+        | _ -> id
+    in
+    loop row (model#get ~row ~column:col_name)
+
+  method private add_expanded_paths id path =
+    expanded_paths <- (id, path) :: (List.remove_assoc id expanded_paths)
+
+  method private add_collapsed_paths id path =
+    collapsed_paths <- (id, path) :: (List.remove_assoc id collapsed_paths)
 
   method connect = new signals ~changed
 end

@@ -219,7 +219,7 @@ object (self)
     ignore (button_package#connect#clicked ~callback:begin fun () ->
       let widget, window = Findlib_list.dialog flbox#coerce () in
       Gaux.may target ~f:(fun tg -> widget#select_packages (Str.split (Miscellanea.regexp ", *") tg.package));
-      window#set_on_popdown(*connect#destroy*) begin fun () ->
+      window#(*set_on_popdown*)connect#destroy begin fun () ->
         entry_package#misc#grab_focus ();
         entry_package#set_position (Glib.Utf8.length entry_package#text);
       end;

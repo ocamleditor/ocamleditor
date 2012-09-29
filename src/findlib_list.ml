@@ -116,18 +116,31 @@ end
 let create = new widget
 
 let dialog (parent : GObj.widget) () =
-  let window = Gmisclib.Window.popup ~widget:parent () in
-  (*let window = GWindow.window ~title:"Select Findlib packages..." ~position:`CENTER ~modal:true ~show:false () in*)
+  (*let window = Gmisclib.Window.popup ~widget:parent () in*)
+  let window = GWindow.window ~title:"Select Findlib packages..." ~position:`CENTER ~modal:true ~show:false () in
   Gaux.may (GWindow.toplevel parent) ~f:(fun x -> window#set_transient_for x#as_window);
   let vbox = GPack.vbox ~border_width:5 ~packing:window#add () in
   let widget = create ~packing:vbox#add () in
   let bbox = GPack.button_box `HORIZONTAL ~layout:`END ~border_width:5 ~packing:vbox#pack () in
   let button_close = GButton.button ~stock:`CLOSE ~packing:bbox#pack () in
-  ignore (button_close#connect#clicked ~callback:window#popdown);
+  ignore (button_close#connect#clicked ~callback:window#destroy);
   window#resize ~width:parent#misc#allocation.Gtk.width ~height:400 ;
   ignore (window#event#connect#key_press ~callback:begin fun ev ->
-    if GdkEvent.Key.keyval ev = GdkKeysyms._Escape then (window#popdown (); true)
+    if GdkEvent.Key.keyval ev = GdkKeysyms._Escape then (window#destroy (); true)
     else false
   end);
   window#present();
+  let x, y =
+    let x0, y0 = Gdk.Window.get_pointer_location (Gdk.Window.root_parent ()) in
+    let x, y = parent#misc#toplevel#misc#pointer in
+    let alloc = parent#misc#allocation in
+    let alloc_popup = window#misc#allocation in
+    let x = x0 - x + alloc.Gtk.x in
+    let y = y0 - y + alloc.Gtk.y + alloc.Gtk.height in
+    let x, y =
+      (if x + alloc_popup.Gtk.width > (Gdk.Screen.width()) then (Gdk.Screen.width() - alloc_popup.Gtk.width - 3) else x),
+      (if y + alloc_popup.Gtk.height > (Gdk.Screen.height()) then (Gdk.Screen.height() - alloc_popup.Gtk.height - 3) else y);
+    in x, y
+  in
+  window#move ~x ~y:(y + 3);
   widget, window;;
