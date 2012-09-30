@@ -229,21 +229,14 @@ object (self)
                       match List_opt.assoc tpath types with
                         | Some typ ->
                           let name = model#get ~row ~column:col_name in
-                          let markup = sprintf "<big><tt><span fgcolor='#0000ff'>%s</span> :\n%s</tt></big>" name (Print_type.markup2 typ) in
+                          let markup = sprintf "<big><span color='darkblue'>%s</span> :\n%s</big>" name (Print_type.markup2 typ) in
                           (*GtkBase.Tooltip.set_markup tooltip markup;*)
                           (*GtkBase.Tooltip.set_tip_area tooltip (view#get_cell_area ~path:tpath (*~col:vc*) ());*)
                           !label_tooltip#set_label markup;
                           GtkTree.TreeView.Tooltip.set_row view#as_tree_view tooltip tpath;
-                          begin
-                            match !label_tooltip#misc#parent with
-                              | Some _ ->
-                                label_tooltip := GMisc.label ~markup ();
-                                (GtkBase.Tooltip.set_custom tooltip) !label_tooltip#as_widget;
-                                true
-                              | _ ->
-                                (GtkBase.Tooltip.set_custom tooltip) !label_tooltip#as_widget; 
-                                true
-                          end;
+                          Gaux.may !label_tooltip#misc#parent ~f:(fun _ -> label_tooltip := GMisc.label ~markup ());
+                          GtkBase.Tooltip.set_custom tooltip !label_tooltip#as_widget;
+                          true
                         | _ -> false
                     end;
                   | _ -> false

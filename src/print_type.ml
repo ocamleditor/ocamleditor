@@ -51,7 +51,7 @@ let greeks_markup = [
   (*"&apos;z\\([0-9]*\\)", "&#970;<sub>\\1</sub>";*)
 ];;
 
-let gt = [ "-&gt;", " &#8594; "; (*"-&gt;", " <big>&#8594;</big> ";*)" *", " &#215;"];;
+let gt = [ "-&gt;", "&#8594;";(* "-&gt;", "<big>&#8594;</big>";*) " *", " &#215;"];;
 
 let replace_greek descr =
   if Preferences.preferences#get.Preferences.pref_compl_greek then begin
