@@ -96,12 +96,12 @@ object (self)
     let line = self#get_line_at_iter iter in
     let pos = iter#line_index in
     let start = try Str.search_backward pat line pos with Not_found -> 0 in
-    if start = pos then begin
-      if Glib.Unichar.isspace iter#backward_char#char then
+    if start = pos && pos > 0 then begin
+      if Glib.Unichar.isspace iter#backward_char#char then begin
         if search then
           self#select_word ~iter:iter#backward_char ~pat ~select ~search ()
         else (iter, iter)
-      else self#select_word ~iter:iter#backward_char ~pat ~select ~search ()
+      end else self#select_word ~iter:iter#backward_char ~pat ~select ~search ()
     end else begin
       let start = if start = 0 then start else start + 1 in
       let stop = try Str.search_forward pat line pos with Not_found -> Glib.Utf8.length line in

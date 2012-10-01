@@ -103,6 +103,7 @@ let rec compile_buffer ~project ~editor ~page ?(commit=false) () =
                 | None ->
                   (*let ol = new Outline.widget ~project ~page ~tmp:tmp_filename in*)
                   let ol = new Cmt_view.widget ~editor ~page () in
+                  ol#load();
                   Gaux.may page#outline ~f:(fun x -> x#destroy());
                   page#set_outline (Some ol);
                   editor#with_current_page begin fun current ->

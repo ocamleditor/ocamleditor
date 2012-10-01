@@ -91,7 +91,7 @@ object (self)
             | Some ol -> self#pack_outline ol#coerce
             | _ ->
               (try hpaned#remove hpaned#child1 with Gpointer.Null -> ());
-              page#compile_buffer ~commit:false ()
+              page#compile_buffer ~commit:false ();
         end;
       end else (try hpaned#remove hpaned#child1 with Gpointer.Null -> ());
     with Gpointer.Null -> ()
@@ -850,7 +850,12 @@ object (self)
         match page#outline with
           | Some outline when self#show_outline && outline#get_oid <> hpaned#child1#get_oid ->
             self#pack_outline outline#coerce
-          | _ -> page#compile_buffer ~commit:false ()
+          | _ -> ()(*
+    (*if page#buffer#changed_after_last_autocomp > 0.0 then begin*)
+            Printf.printf "*************1  %f\n%!" page#buffer#changed_after_last_autocomp;
+            page#compile_buffer ~commit:false ();
+            Printf.printf "*************2\n%!" ;
+(*end*)*)
       end
     end);
     (** Record last active page *)
