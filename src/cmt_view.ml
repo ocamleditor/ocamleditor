@@ -263,6 +263,9 @@ object (self)
       Preferences.preferences#get.Preferences.pref_outline_show_types <- button_show_types#active;
       (*Preferences.save();*)
     end);
+    ignore (button_select_struct#connect#clicked ~callback:begin fun () ->
+      self#select ?align:None (page#buffer#get_mark `INSERT)
+    end);
 
   method private force_lazy row =
     begin
@@ -273,7 +276,36 @@ object (self)
 
   method view = view
 
-  method select ?(align : float option) (mark : Gtk.text_mark) = ()
+  method select ?(align : float option) (mark : Gtk.text_mark) =
+    let iter = buffer#get_iter_at_mark (`MARK mark) in
+    let found = ref None in
+    model#foreach begin fun path _ ->
+      try
+        let info = Hashtbl.find table_info path in
+        match info.mark with
+          | Some mark ->
+            let i = buffer#get_iter_at_mark (`MARK mark) in
+            if i#compare iter > 0 then true
+            else begin
+              found := Some path;
+              false
+            end
+          | _ -> false
+      with Not_found -> false
+    end;
+    Gaux.may !found ~f:begin fun path ->
+      Gaux.may signal_selection_changed ~f:view#selection#misc#handler_block;
+      view#selection#select_path path;
+      Gaux.may signal_selection_changed ~f:view#selection#misc#handler_unblock;
+      match align with
+        | Some align ->
+          view#vadjustment#set_value (align *. view#vadjustment#upper);
+        | None when page#view#misc#get_flag `HAS_FOCUS ->
+          if not (Gmisclib.Util.treeview_is_path_onscreen view path) then begin
+            view#scroll_to_cell ~align:(0.38, 0.) path vc;
+          end
+        | _ -> ()
+    end
 
   method select_element () =
     match view#selection#get_selected_rows with
@@ -285,7 +317,12 @@ object (self)
             match info.mark with
               | Some mark when not (GtkText.Mark.get_deleted mark) ->
                 let start = buffer#get_iter_at_mark (`MARK mark) in
-                let _, (c, d) = linechar_of_loc loc in
+                let row = model#get_iter path in
+                let name = model#get ~row ~column:col_name in
+                let length = Glib.Utf8.length name in
+                let stop = start#forward_chars length in
+                buffer#select_range start stop;
+                (*let _, (c, d) = linechar_of_loc loc in
                 let _, ts = timestamp in
                 begin
                   try
@@ -297,7 +334,7 @@ object (self)
                       buffer#select_range start !stop;
                     end else (buffer#place_cursor ~where:start);
                   with Unix.Unix_error (Unix.ENOENT, _, _) -> (buffer#place_cursor ~where:start)
-                end;
+                end;*)
                 page#view#scroll_lazy start;
               | _ -> ()
           end
