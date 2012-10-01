@@ -287,13 +287,17 @@ object (self)
                 let start = buffer#get_iter_at_mark (`MARK mark) in
                 let _, (c, d) = linechar_of_loc loc in
                 let _, ts = timestamp in
-                if ts = (Unix.stat filename).Unix.st_mtime then begin (* .tmp/filename *)
-                  let stop = ref start in
-                  while (!stop#line < c || !stop#line_index < d) && not (!stop#equal buffer#end_iter) do
-                    stop := !stop#forward_char
-                  done;
-                  buffer#select_range start !stop;
-                end else (buffer#place_cursor ~where:start);
+                begin
+                  try
+                    if ts = (Unix.stat filename).Unix.st_mtime then begin (* .tmp/filename *)
+                      let stop = ref start in
+                      while (!stop#line < c || !stop#line_index < d) && not (!stop#equal buffer#end_iter) do
+                        stop := !stop#forward_char
+                      done;
+                      buffer#select_range start !stop;
+                    end else (buffer#place_cursor ~where:start);
+                  with Unix.Unix_error (Unix.ENOENT, _, _) -> (buffer#place_cursor ~where:start)
+                end;
                 page#view#scroll_lazy start;
               | _ -> ()
           end
