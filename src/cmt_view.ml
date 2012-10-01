@@ -102,6 +102,7 @@ type info = {
   typ          : string;
   kind         : kind option;
   location     : Location.t option;
+  (*body         : ;*)
   mutable mark : Gtk.text_mark option;
 }
 
@@ -278,7 +279,6 @@ object (self)
     match view#selection#get_selected_rows with
       | [] -> ()
       | path :: _ ->
-        let row = model#get_iter path in
         try
           let info = Hashtbl.find table_info path in
           Gaux.may info.location ~f:begin fun loc ->
@@ -286,9 +286,14 @@ object (self)
               | Some mark when not (GtkText.Mark.get_deleted mark) ->
                 let start = buffer#get_iter_at_mark (`MARK mark) in
                 let _, (c, d) = linechar_of_loc loc in
-                let stop = ref start in
-                while !stop#line < c || !stop#line_index < d do stop := !stop#forward_char done;
-                buffer#select_range start !stop;
+                let _, ts = timestamp in
+                if ts = (Unix.stat filename).Unix.st_mtime then begin (* .tmp/filename *)
+                  let stop = ref start in
+                  while (!stop#line < c || !stop#line_index < d) && not (!stop#equal buffer#end_iter) do
+                    stop := !stop#forward_char
+                  done;
+                  buffer#select_range start !stop;
+                end else (buffer#place_cursor ~where:start);
                 page#view#scroll_lazy start;
               | _ -> ()
           end
