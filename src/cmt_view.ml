@@ -106,11 +106,12 @@ type info = {
   mutable mark : Gtk.text_mark option;
 }
 
-let cols         = new GTree.column_list
-let col_icon     = cols#add (Gobject.Data.gobject_by_name "GdkPixbuf")
-let col_name     = cols#add Gobject.Data.string
-let col_markup   = cols#add Gobject.Data.string
-let col_lazy : (unit -> unit) list GTree.column = cols#add Gobject.Data.caml
+let cols               = new GTree.column_list
+let col_icon           = cols#add (Gobject.Data.gobject_by_name "GdkPixbuf")
+let col_name           = cols#add Gobject.Data.string
+let col_markup         = cols#add Gobject.Data.string
+let col_lazy           : (unit -> unit) list GTree.column = cols#add Gobject.Data.caml
+let col_default_sort   = cols#add Gobject.Data.int
 
 let string_of_loc loc =
   let filename, a, b = Location.get_pos_info loc.loc_start in
@@ -165,8 +166,10 @@ class widget ~editor ~page ?packing () =
     button_refresh#misc#set_can_focus false;
   in
   let model                = GTree.tree_store cols in
+  let model_sort_default   = GTree.model_sort model in
+  let model_sort_name      = GTree.model_sort model in
   let sw                   = GBin.scrolled_window ~shadow_type:`IN ~hpolicy:`AUTOMATIC ~vpolicy:`AUTOMATIC ~packing:vbox#add () in
-  let view                 = GTree.view ~model ~headers_visible:false ~packing:sw#add ~width:350 ~height:500 () in
+  let view                 = GTree.view ~model:model_sort_default ~headers_visible:false ~packing:sw#add ~width:350 ~height:500 () in
   let renderer_pixbuf      = GTree.cell_renderer_pixbuf [`YPAD 0; `XPAD 0] in
   let renderer_markup      = GTree.cell_renderer_text [`YPAD 0] in
   let vc                   = GTree.view_column () in
@@ -174,6 +177,7 @@ class widget ~editor ~page ?packing () =
   let _                    = vc#pack ~expand:false renderer_markup in
   let _                    = vc#add_attribute renderer_pixbuf "pixbuf" col_icon in
   let _                    = vc#add_attribute renderer_markup "markup" col_markup in
+
   let _                    = view#selection#set_mode `SINGLE in
   let _                    = view#append_column vc in
   let _                    = view#misc#set_property "enable-tree-lines" (`BOOL true) in
@@ -197,9 +201,10 @@ object (self)
   val mutable filename = ""
   val mutable table_collapsed_by_default = []
   val mutable table_expanded_by_user = []
-  val mutable table_expanded_by_default = []
+  val mutable table_expanded_by_default = [] (* child_paths *)
   val table_info = Hashtbl.create 17
   val mutable selected_path = None
+  val mutable count = 0
 
   initializer
     (** Replace foreground color when row is selected *)
@@ -216,6 +221,8 @@ object (self)
     ignore (view#selection#connect#changed ~callback:begin fun () ->
       match view#selection#get_selected_rows with
         | path :: _ ->
+          let smodel = self#get_model () in
+          let path = smodel#convert_path_to_child_path path in
           Gaux.may last_selected_path ~f:(replace_color_in_markup model true);
           replace_color_in_markup model false path;
           last_selected_path <- Some path;
@@ -229,6 +236,8 @@ object (self)
       self#select_element();
       match view#selection#get_selected_rows with
         | path :: _ ->
+          let smodel = self#get_model () in
+          let path = smodel#convert_path_to_child_path path in
           let row = model#get_iter path in
           self#force_lazy row;
           selected_path <- Some (self#get_id_path row)
@@ -239,9 +248,14 @@ object (self)
       page#view#misc#grab_focus();
     end);
     ignore (view#connect#row_expanded ~callback:begin fun row path ->
+      let model = self#get_model() in
+      let row = model#convert_iter_to_child_iter row in
+      let path = model#convert_path_to_child_path path in
       self#add_table_expanded_by_user (self#get_id_path row) path
     end);
     ignore (view#connect#row_collapsed ~callback:begin fun row _ ->
+      let model = self#get_model() in
+      let row = model#convert_iter_to_child_iter row in
       table_expanded_by_user <- List.remove_assoc (self#get_id_path row) table_expanded_by_user;
     end);
     ignore (view#misc#connect#realize ~callback:begin fun () ->
@@ -266,6 +280,24 @@ object (self)
     ignore (button_select_struct#connect#clicked ~callback:begin fun () ->
       self#select ?align:None (page#buffer#get_mark `INSERT)
     end);
+    (* Sort *)
+    model_sort_default#set_sort_column_id col_default_sort.GTree.index `ASCENDING;
+    model_sort_name#set_sort_column_id col_name.GTree.index `ASCENDING;
+    let signal_button_sort : GtkSignal.id option ref = ref None in
+    let signal_button_sort_rev : GtkSignal.id option ref = ref None in
+    signal_button_sort := Some (button_sort#connect#after#toggled ~callback:begin fun () ->
+      let model = if button_sort#active then model_sort_name else model_sort_default in
+      view#set_model (Some model#coerce);
+      List.iter begin fun path ->
+        let path = model#convert_child_path_to_path path in
+        view#expand_row path
+      end (table_expanded_by_default @ (List.map (fun (_, x) -> x) table_expanded_by_user));
+    end);
+
+  method private compare_default model i1 i2 =
+    let o1 = model#get ~row:i1 ~column:col_default_sort in
+    let o2 = model#get ~row:i2 ~column:col_default_sort in
+    Pervasives.compare o1 o2
 
   method private force_lazy row =
     begin
@@ -279,6 +311,7 @@ object (self)
   method select ?(align : float option) (mark : Gtk.text_mark) =
     let iter = buffer#get_iter_at_mark (`MARK mark) in
     let found = ref None in
+    let smodel = self#get_model () in
     model#foreach begin fun path _ ->
       try
         let info = Hashtbl.find table_info path in
@@ -294,6 +327,8 @@ object (self)
       with Not_found -> false
     end;
     Gaux.may !found ~f:begin fun path ->
+      let path = smodel#convert_child_path_to_path path in
+      view#expand_to_path path;
       Gaux.may signal_selection_changed ~f:view#selection#misc#handler_block;
       view#selection#select_path path;
       Gaux.may signal_selection_changed ~f:view#selection#misc#handler_unblock;
@@ -311,30 +346,19 @@ object (self)
     match view#selection#get_selected_rows with
       | [] -> ()
       | path :: _ ->
+        let smodel = self#get_model () in
+        let child_path = smodel#convert_path_to_child_path path in
         try
-          let info = Hashtbl.find table_info path in
+          let info = Hashtbl.find table_info child_path in
           Gaux.may info.location ~f:begin fun loc ->
             match info.mark with
               | Some mark when not (GtkText.Mark.get_deleted mark) ->
                 let start = buffer#get_iter_at_mark (`MARK mark) in
-                let row = model#get_iter path in
+                let row = model#get_iter child_path in
                 let name = model#get ~row ~column:col_name in
                 let length = Glib.Utf8.length name in
                 let stop = start#forward_chars length in
                 buffer#select_range start stop;
-                (*let _, (c, d) = linechar_of_loc loc in
-                let _, ts = timestamp in
-                begin
-                  try
-                    if ts = (Unix.stat filename).Unix.st_mtime then begin (* .tmp/filename *)
-                      let stop = ref start in
-                      while (!stop#line < c || !stop#line_index < d) && not (!stop#equal buffer#end_iter) do
-                        stop := !stop#forward_char
-                      done;
-                      buffer#select_range start !stop;
-                    end else (buffer#place_cursor ~where:start);
-                  with Unix.Unix_error (Unix.ENOENT, _, _) -> (buffer#place_cursor ~where:start)
-                end;*)
                 page#view#scroll_lazy start;
               | _ -> ()
           end
@@ -362,13 +386,18 @@ object (self)
           buffer#unblock_signal_handlers ();
         end ();
         model#clear();
+        count <- 0;
         table_expanded_by_default <- [];
         table_collapsed_by_default <- [];
         Hashtbl.clear table_info;
         (* Parse .cmt file *)
         Gaux.may cmt ~f:(fun cmt -> self#parse cmt.cmt_annots);
         (*  *)
-        List.iter view#expand_row table_expanded_by_default;
+        let smodel = self#get_model () in
+        List.iter begin fun path ->
+          let path = smodel#convert_child_path_to_path path in
+          view#expand_row path
+        end table_expanded_by_default;
         (* Select the same row that was selected in the previous tree *)
         Gaux.may selected_path ~f:begin fun sid ->
           GtkThread2.async model#foreach begin fun path row ->
@@ -412,6 +441,10 @@ object (self)
       "</span>"
     ] else markup_name
 
+  method private get_model : unit -> GTree.model_sort = fun () ->
+    if view#model#misc#get_oid = model_sort_default#misc#get_oid then model_sort_default
+    else model_sort_name
+
   method private create_tooltip ~x ~y ~kbd tooltip =
     try
       begin
@@ -420,21 +453,21 @@ object (self)
             begin
               match view#get_path_at_pos ~x ~y with
                 | Some (tpath, _, _, _) ->
-                  begin
-                    let info = Hashtbl.find table_info tpath in
-                    if info.typ <> "" then begin
-                      let name = model#get ~row ~column:col_name in
-                      let markup = sprintf "<span color='darkblue'>%s</span> :\n%s"
-                        (Glib.Markup.escape_text name) (Print_type.markup2 info.typ) in
-                      (*GtkBase.Tooltip.set_markup tooltip markup;*)
-                      (*GtkBase.Tooltip.set_tip_area tooltip (view#get_cell_area ~path:tpath (*~col:vc*) ());*)
-                      !label_tooltip#set_label markup;
-                      GtkTree.TreeView.Tooltip.set_row view#as_tree_view tooltip tpath;
-                      Gaux.may !label_tooltip#misc#parent ~f:(fun _ -> label_tooltip := GMisc.label ~markup ());
-                      GtkBase.Tooltip.set_custom tooltip !label_tooltip#as_widget;
-                      true
-                    end else false
-                  end;
+                  let model = self#get_model() in
+                  let child_path = model#convert_path_to_child_path tpath in
+                  let info = Hashtbl.find table_info child_path in
+                  if info.typ <> "" then begin
+                    let name = model#get ~row ~column:col_name in
+                    let markup = sprintf "<span color='darkblue'>%s</span> :\n%s"
+                      (Glib.Markup.escape_text name) (Print_type.markup2 info.typ) in
+                    (*GtkBase.Tooltip.set_markup tooltip markup;*)
+                    (*GtkBase.Tooltip.set_tip_area tooltip (view#get_cell_area ~path:tpath (*~col:vc*) ());*)
+                    !label_tooltip#set_label markup;
+                    GtkTree.TreeView.Tooltip.set_row view#as_tree_view tooltip tpath;
+                    Gaux.may !label_tooltip#misc#parent ~f:(fun _ -> label_tooltip := GMisc.label ~markup ());
+                    GtkBase.Tooltip.set_custom tooltip !label_tooltip#as_widget;
+                    true
+                  end else false
                 | _ -> false
             end
           | _ -> false
@@ -448,6 +481,8 @@ object (self)
       let path = model#get_path row in
       model#set ~row ~column:col_name name;
       model#set ~row ~column:col_markup markup;
+      model#set ~row ~column:col_default_sort count;
+      count <- count + 1;
       let info = {
         typ      = typ;
         kind     = kind;
@@ -498,7 +533,7 @@ object (self)
             | Some _ -> model#set ~row:parent_mod ~column:col_lazy [f];
             | _ -> f()
         end;
-        table_expanded_by_default <- (model#get_path parent_mod) :: table_expanded_by_default;
+        self#add_table_expanded_by_default parent_mod;
       | Tstr_modtype (_, loc, mt) ->
         let parent = self#append ?parent ~kind:Module_type ~loc:loc.loc loc.txt "" in
         model#set ~row:parent ~column:col_lazy [fun () -> self#append_module_type ~parent mt.mty_desc];
@@ -528,7 +563,7 @@ object (self)
             | Some _ -> model#set ~row:parent_mod ~column:col_lazy [f];
             | _ -> f()
         end;
-        table_expanded_by_default <- (model#get_path parent_mod) :: table_expanded_by_default;
+        self#add_table_expanded_by_default parent_mod;
       | Tsig_recmodule _ -> ignore (self#append ?parent "Tsig_recmodule" "")
       | Tsig_modtype (_, loc, modtype_decl) ->
         let parent = self#append ?parent ~kind:Module_type ~loc:loc.loc loc.txt "" in
@@ -597,7 +632,7 @@ object (self)
   method private append_class ?parent (infos, _, _) =
     let kind = if infos.ci_virt = Asttypes.Virtual then Class_virtual else Class in
     let parent = self#append ~kind ?parent ~loc:infos.ci_id_name.loc infos.ci_id_name.txt "" in
-    let let_bindings_parent = self#append ~kind:Class_let_bindings ~loc:infos.ci_id_name.loc ~parent "let-bindings" "" in
+    let let_bindings_parent = self#append ~kind:Class_let_bindings (*~loc:infos.ci_id_name.loc*) ~parent "<let-bindings>" "" in
     let count_meth = ref 0 in
     let id_path = self#get_id_path let_bindings_parent in
     let expand_lets = List_opt.assoc id_path table_expanded_by_user <> None in
@@ -614,9 +649,7 @@ object (self)
       let path = model#get_path let_bindings_parent in
       self#add_table_collapsed_by_default id_path path;
     end;
-    if !count_meth > 0 then begin
-      table_expanded_by_default <- (model#get_path parent) :: table_expanded_by_default;
-    end
+    if !count_meth > 0 then (self#add_table_expanded_by_default parent)
 
   method private append_class_item ?let_bindings_parent ?(expand_lets=false) ?count_meth ?parent = function
     | Tcl_structure str ->
@@ -630,7 +663,7 @@ object (self)
               let expand_inher = List_opt.assoc id_path table_expanded_by_user <> None in
               if expand_inher then begin
                 f();
-                table_expanded_by_default <- (model#get_path parent) :: table_expanded_by_default;
+                self#add_table_expanded_by_default parent;
               end else begin
                 self#add_table_collapsed_by_default (self#get_id_path parent) (model#get_path parent);
                 model#set ~row:parent ~column:col_lazy [f];
@@ -681,7 +714,7 @@ object (self)
             ignore (self#append_pattern ~parent:row pat);
             if i = 0 && expand_lets then begin
               let path = model#get_path row in
-              table_expanded_by_default <- path ::  table_expanded_by_default;
+              self#add_table_expanded_by_default row;
               self#add_table_expanded_by_user (self#get_id_path row) path
             end
           end lets
@@ -699,9 +732,7 @@ object (self)
     let parent = self#append ~kind:Class_type ?parent ~loc:loc.loc loc.txt "" in
     let count_meth = ref 0 in
     ignore (self#append_class_type_item ~parent ~count_meth infos.ci_expr.cltyp_desc);
-    if !count_meth > 0 then begin
-      table_expanded_by_default <- (model#get_path parent) :: table_expanded_by_default;
-    end
+    if !count_meth > 0 then (self#add_table_expanded_by_default parent)
 
   method private append_class_type_item ?parent ?count_meth = function
     | Tcty_constr _ -> ignore (self#append ?parent (sprintf "Tcty_constr") "")
@@ -757,6 +788,9 @@ object (self)
 
   method private add_table_collapsed_by_default id path =
     table_collapsed_by_default <- (id, path) :: (List.remove_assoc id table_collapsed_by_default)
+
+  method private add_table_expanded_by_default row =
+    table_expanded_by_default <- (model#get_path row) :: table_expanded_by_default;
 
   method connect = new signals ~changed
 end
