@@ -113,6 +113,14 @@ let col_markup         = cols#add Gobject.Data.string
 let col_lazy           : (unit -> unit) list GTree.column = cols#add Gobject.Data.caml
 let col_default_sort   = cols#add Gobject.Data.int
 
+let string_rev str =
+  let len = String.length str in
+  let rts = String.make len ' ' in
+  for i = 0 to len - 1 do rts.[len - i - 1] <- str.[i] done;
+  rts;;
+
+let string_rev = Miscellanea.Memo.fast ~f:string_rev;;
+
 let string_of_loc loc =
   let filename, a, b = Location.get_pos_info loc.loc_start in
   let _, c, d = Location.get_pos_info loc.loc_end in
@@ -168,6 +176,7 @@ class widget ~editor ~page ?packing () =
   let model                  = GTree.tree_store cols in
   let model_sort_default     = GTree.model_sort model in
   let model_sort_name        = GTree.model_sort model in
+  let model_sort_name_rev    = GTree.model_sort model in
   let sw                     = GBin.scrolled_window ~shadow_type:`IN ~hpolicy:`AUTOMATIC ~vpolicy:`AUTOMATIC ~packing:vbox#add () in
   let view                   = GTree.view ~model:model_sort_default ~headers_visible:false ~packing:sw#add ~width:350 ~height:500 () in
   let renderer_pixbuf        = GTree.cell_renderer_pixbuf [`YPAD 0; `XPAD 0] in
@@ -284,10 +293,25 @@ object (self)
     (* Sort *)
     model_sort_default#set_sort_column_id col_default_sort.GTree.index `ASCENDING;
     model_sort_name#set_sort_column_id col_name.GTree.index `ASCENDING;
+    model_sort_name_rev#set_default_sort_func self#compare_name_rev;
     let signal_button_sort : GtkSignal.id option ref = ref None in
     let signal_button_sort_rev : GtkSignal.id option ref = ref None in
     signal_button_sort := Some (button_sort#connect#after#toggled ~callback:begin fun () ->
+      Gaux.may !signal_button_sort_rev ~f:button_sort_rev#misc#handler_block;
+      button_sort_rev#set_active false;
+      Gaux.may !signal_button_sort_rev ~f:button_sort_rev#misc#handler_unblock;
       let model = if button_sort#active then model_sort_name else model_sort_default in
+      view#set_model (Some model#coerce);
+      List.iter begin fun path ->
+        let path = model#convert_child_path_to_path path in
+        view#expand_row path
+      end (table_expanded_by_default @ (List.map (fun (_, x) -> x) table_expanded_by_user));
+    end);
+    signal_button_sort_rev := Some (button_sort_rev#connect#after#toggled ~callback:begin fun () ->
+      Gaux.may !signal_button_sort ~f:button_sort#misc#handler_block;
+      button_sort#set_active false;
+      Gaux.may !signal_button_sort ~f:button_sort#misc#handler_unblock;
+      let model = if button_sort_rev#active then model_sort_name_rev else model_sort_default in
       view#set_model (Some model#coerce);
       List.iter begin fun path ->
         let path = model#convert_child_path_to_path path in
@@ -299,6 +323,13 @@ object (self)
     let o1 = model#get ~row:i1 ~column:col_default_sort in
     let o2 = model#get ~row:i2 ~column:col_default_sort in
     Pervasives.compare o1 o2
+
+  method private compare_name_rev model i1 i2 =
+    let name1 = model#get ~row:i1 ~column:col_name in
+    let name2 = model#get ~row:i2 ~column:col_name in
+    let name1 = string_rev name1 in
+    let name2 = string_rev name2 in
+    Pervasives.compare name1 name2
 
   method private force_lazy row =
     let result = ref false in
@@ -477,7 +508,8 @@ object (self)
 
   method private get_model : unit -> GTree.model_sort = fun () ->
     if view#model#misc#get_oid = model_sort_default#misc#get_oid then model_sort_default
-    else model_sort_name
+    else if view#model#misc#get_oid = model_sort_name#misc#get_oid then model_sort_name
+    else model_sort_name_rev
 
   method private create_tooltip ~x ~y ~kbd tooltip =
     try
