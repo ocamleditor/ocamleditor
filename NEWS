@@ -11,6 +11,9 @@
   * Automated build script generation: ability to specify custom command line
     arguments; new commands "install" and "distclean"; ability to hide
     targets; dependencies between targets and external build tasks.
+  * Added support to use packages installed with Findlib.
+  * "Structure pane" revamped: now reads informations from "-bin-annot".
+  * Various other fixes.
 
 
 2012-07-27 Release 1.7.5
