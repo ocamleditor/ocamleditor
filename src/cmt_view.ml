@@ -242,7 +242,7 @@ object (self)
     ignore (view#misc#connect#query_tooltip ~callback:self#create_tooltip);
     (** Events *)
     signal_selection_changed <- Some (view#selection#connect#after#changed ~callback:begin fun () ->
-      self#select_element();
+      self#select_name_in_buffer();
       match view#selection#get_selected_rows with
         | path :: _ ->
           let smodel = self#get_model () in
@@ -253,7 +253,7 @@ object (self)
         | _ -> ()
     end);
     ignore (view#connect#after#row_activated ~callback:begin fun _ _ ->
-      self#select_element();
+      self#select_name_in_buffer();
       page#view#misc#grab_focus();
     end);
     ignore (view#connect#row_expanded ~callback:begin fun row path ->
@@ -319,29 +319,6 @@ object (self)
       end (table_expanded_by_default @ (List.map (fun (_, x) -> x) table_expanded_by_user));
     end);
 
-  method private compare_default model i1 i2 =
-    let o1 = model#get ~row:i1 ~column:col_default_sort in
-    let o2 = model#get ~row:i2 ~column:col_default_sort in
-    Pervasives.compare o1 o2
-
-  method private compare_name_rev model i1 i2 =
-    let name1 = model#get ~row:i1 ~column:col_name in
-    let name2 = model#get ~row:i2 ~column:col_name in
-    let name1 = string_rev name1 in
-    let name2 = string_rev name2 in
-    Pervasives.compare name1 name2
-
-  method private force_lazy row =
-    let result = ref false in
-    begin
-      try
-        List.iter (fun f -> f()) (List.rev (model#get ~row ~column:col_lazy));
-        result := true;
-      with Failure _ -> ()
-    end;
-    model#set ~row ~column:col_lazy [];
-    !result
-
   method view = view
 
   method select_from_buffer ?(align : float option) (mark : Gtk.text_mark) =
@@ -405,7 +382,7 @@ object (self)
           with Not_found -> ()
         end
 
-  method select_element () =
+  method select_name_in_buffer () =
     match view#selection#get_selected_rows with
       | [] -> ()
       | path :: _ ->
@@ -433,10 +410,10 @@ object (self)
     let source = page#get_filename in
     match Project.tmp_of_abs editor#project source with
       | Some (tmp, relname) ->
-        Miscellanea.crono  self#load' (tmp // relname);
+        Miscellanea.crono  self#load_file (tmp // relname);
       | _ -> ()
 
-  method private load' file =
+  method private load_file file =
     filename <- file;
     let ext = if filename ^^ ".ml" then Some ".cmt" else if filename ^^ ".mli" then Some ".cmti" else None in
     match ext with
@@ -505,11 +482,6 @@ object (self)
       (Print_type.markup2 (Miscellanea.replace_all ~regexp:true ["\n", ""; " +", " "] typ_utf8));
       "</span>"
     ] else markup_name
-
-  method private get_model : unit -> GTree.model_sort = fun () ->
-    if view#model#misc#get_oid = model_sort_default#misc#get_oid then model_sort_default
-    else if view#model#misc#get_oid = model_sort_name#misc#get_oid then model_sort_name
-    else model_sort_name_rev
 
   method private create_tooltip ~x ~y ~kbd tooltip =
     try
@@ -856,6 +828,38 @@ object (self)
   method private string_of_core_types ctl =
     String.concat " * " (List.map (fun ct -> string_of_type_expr ct.ctyp_type) ctl)
 
+  method private add_table_expanded_by_user id path =
+    table_expanded_by_user <- (id, path) :: (List.remove_assoc id table_expanded_by_user)
+
+  method private add_table_collapsed_by_default id path =
+    table_collapsed_by_default <- (id, path) :: (List.remove_assoc id table_collapsed_by_default)
+
+  method private add_table_expanded_by_default row =
+    table_expanded_by_default <- (model#get_path row) :: table_expanded_by_default;
+
+  method private compare_default model i1 i2 =
+    let o1 = model#get ~row:i1 ~column:col_default_sort in
+    let o2 = model#get ~row:i2 ~column:col_default_sort in
+    Pervasives.compare o1 o2
+
+  method private compare_name_rev model i1 i2 =
+    let name1 = model#get ~row:i1 ~column:col_name in
+    let name2 = model#get ~row:i2 ~column:col_name in
+    let name1 = string_rev name1 in
+    let name2 = string_rev name2 in
+    Pervasives.compare name1 name2
+
+  method private force_lazy row =
+    let result = ref false in
+    begin
+      try
+        List.iter (fun f -> f()) (List.rev (model#get ~row ~column:col_lazy));
+        result := true;
+      with Failure _ -> ()
+    end;
+    model#set ~row ~column:col_lazy [];
+    !result
+
   method private get_id_path row =
     let rec loop row id =
       match model#iter_parent row with
@@ -865,14 +869,10 @@ object (self)
     in
     loop row (model#get ~row ~column:col_name)
 
-  method private add_table_expanded_by_user id path =
-    table_expanded_by_user <- (id, path) :: (List.remove_assoc id table_expanded_by_user)
-
-  method private add_table_collapsed_by_default id path =
-    table_collapsed_by_default <- (id, path) :: (List.remove_assoc id table_collapsed_by_default)
-
-  method private add_table_expanded_by_default row =
-    table_expanded_by_default <- (model#get_path row) :: table_expanded_by_default;
+  method private get_model : unit -> GTree.model_sort = fun () ->
+    if view#model#misc#get_oid = model_sort_default#misc#get_oid then model_sort_default
+    else if view#model#misc#get_oid = model_sort_name#misc#get_oid then model_sort_name
+    else model_sort_name_rev
 
   method connect = new signals ~changed
 end
