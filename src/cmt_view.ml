@@ -55,6 +55,7 @@ type kind =
   | Module
   | Module_functor
   | Module_type
+  | Module_include
   | Exception
   | Error
   | Warning
@@ -89,6 +90,7 @@ let pixbuf_of_kind = function
   | Module -> Some Icons.module_impl
   | Module_functor -> Some Icons.module_funct
   | Module_type -> Some Icons.module_type
+  | Module_include -> Some Icons.module_include
   | Exception -> Some Icons.exc
   | Error -> Some Icons.error_14
   | Warning -> Some Icons.warning_14
@@ -471,7 +473,7 @@ object (self)
   method private create_markup ?kind name typ =
     let markup_name =
       match kind with
-        | Some Class | Some Class_virtual | Some Class_type | Some Module | Some Module_functor ->
+        | Some Class | Some Class_virtual | Some Class_type | Some Module | Some Module_functor | Some Module_include ->
           "<b>" ^ (Glib.Markup.escape_text name) ^ "</b>"
         | Some Initializer | Some Class_let_bindings | Some Method_inherited -> "<i>" ^ (Glib.Markup.escape_text name) ^ "</i>"
         | _ -> Glib.Markup.escape_text name
@@ -613,7 +615,7 @@ object (self)
         in
         model#set ~row:parent ~column:col_lazy [f];
       | Tsig_open _ -> ignore (self#append ?parent "Tsig_open" "")
-      | Tsig_include _ -> ignore (self#append ?parent "Tsig_include" "")
+      | Tsig_include (modtype, _) -> self#append_module_type ?parent modtype.mty_desc
       | Tsig_class classes ->
         List.iter (fun clty -> self#append_class_type ?parent ~loc:clty.ci_id_name clty) classes;
       | Tsig_class_type decls ->
@@ -625,7 +627,7 @@ object (self)
         self#append_module ?parent mexpr.mod_desc
       | Tmod_structure str ->
         List.iter (self#append_struct_item ?parent) str.str_items
-      | Tmod_ident _ -> ignore (self#append ?parent "Tmod_ident" "")
+      | Tmod_ident (_, loc) -> ignore (self#append ?parent ~loc:loc.loc (String.concat "." (Longident.flatten loc.txt)) "")
       | Tmod_apply _ -> ()
       | Tmod_constraint _ -> ignore (self#append ?parent "Tmod_constraint" "")
       | Tmod_unpack _ -> ignore (self#append ?parent "Tmod_unpack" "")
@@ -634,7 +636,8 @@ object (self)
     match mod_desc with
       | Tmty_functor (_, floc, mtype, mexpr) ->
         self#append_module_type ?parent mexpr.mty_desc
-      | Tmty_ident (path, loc) -> ignore (self#append ?parent ~loc:loc.loc "Tmty_ident" "")
+      | Tmty_ident (path, loc) ->
+        ignore (self#append ?parent ~kind:Module_include ~loc:loc.loc (Path.name path) "")
       | Tmty_signature sign ->
         List.iter (self#append_sig_item ?parent) sign.sig_items
       | Tmty_with _ -> ignore (self#append ?parent "Tmty_with" "")
@@ -794,12 +797,22 @@ object (self)
       List.iter begin fun field ->
         match field.ctf_desc with
           | Tctf_inher _ -> ignore (self#append ?parent (sprintf "Tctf_inher") "")
-          | Tctf_val _ -> ignore (self#append ?parent (sprintf "Tctf_val") "")
+          | Tctf_val (id, mutable_flag, virtual_flag, ct) ->
+            let kind = match mutable_flag, virtual_flag with
+              | Mutable, Virtual -> Attribute_mutable_virtual
+              | Immutable, Virtual -> Attribute_virtual
+              | Mutable, Concrete -> Attribute_mutable
+              | Immutable, Concrete -> Attribute
+            in
+            let typ = string_of_type_expr ct.ctyp_type in
+            let loc = field.ctf_loc in (* This location is not correct  *)
+            ignore(self#append ?parent ~kind ~loc ~loc_body:ct.ctyp_loc id typ);
           | Tctf_virt _ -> ignore (self#append ?parent (sprintf "Tctf_virt") "")
           | Tctf_meth (id, private_flag, ct) ->
             Gaux.may count_meth ~f:incr;
             let kind = match private_flag with Private -> Method_private | _ -> Method in
-            ignore (self#append ?parent ~kind ~loc:field.ctf_loc id (string_of_type_expr ct.ctyp_type))
+            let loc = field.ctf_loc in (* This location is not correct  *)
+            ignore (self#append ?parent ~kind ~loc ~loc_body:ct.ctyp_loc id (string_of_type_expr ct.ctyp_type))
           | Tctf_cstr _ -> ignore (self#append ?parent (sprintf "Tctf_cstr") "")
       end (List.rev sign.csig_fields)
     | Tcty_fun (_, _, class_type) -> ignore (self#append_class_type_item ?parent class_type.cltyp_desc)
