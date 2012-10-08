@@ -37,6 +37,7 @@ type kind =
   | Class_virtual
   | Class_type
   | Class_inherit
+  | Class_let_bindings
   | Attribute
   | Attribute_mutable
   | Attribute_mutable_virtual
@@ -61,7 +62,6 @@ type kind =
   | Folder_errors
   | Dependencies
   | Bookmark of GdkPixbuf.pixbuf
-  | Class_let_bindings
   | Unknown
 
 let pixbuf_of_kind = function
@@ -85,6 +85,7 @@ let pixbuf_of_kind = function
   | Class_virtual -> Some Icons.class_virtual
   | Class_type -> Some Icons.class_type
   | Class_inherit -> Some Icons.class_inherit
+  | Class_let_bindings -> None
   | Module -> Some Icons.module_impl
   | Module_functor -> Some Icons.module_funct
   | Module_type -> Some Icons.module_type
@@ -95,14 +96,13 @@ let pixbuf_of_kind = function
   | Folder_errors -> Some Icons.folder_error
   | Dependencies -> None
   | Bookmark pixbuf -> Some pixbuf
-  | Class_let_bindings -> None
   | Unknown -> None;;
 
 type info = {
   typ          : string;
   kind         : kind option;
   location     : Location.t option;
-  (*body         : ;*)
+  body         : Location.t option;
   mutable mark : Gtk.text_mark option;
 }
 
@@ -137,59 +137,59 @@ let string_of_type_expr te =
     | _ -> Odoc_info.string_of_type_expr te;;
 
 class widget ~editor ~page ?packing () =
-  let show_types           = Preferences.preferences#get.Preferences.pref_outline_show_types in
-  let vbox                 = GPack.vbox ?packing () in
-  let toolbar              = GPack.hbox ~spacing:0 ~packing:vbox#pack ~show:true () in
-  let button_refresh       = GButton.button ~relief:`NONE ~packing:toolbar#pack () in
-  let button_show_types    = GButton.toggle_button ~active:show_types ~relief:`NONE ~packing:toolbar#pack () in
-  let button_sort          = GButton.toggle_button ~relief:`NONE ~packing:toolbar#pack () in
-  let button_sort_rev      = GButton.toggle_button ~relief:`NONE ~packing:toolbar#pack () in
-  let button_select_struct = GButton.button ~relief:`NONE ~packing:toolbar#pack () in
-  let button_select_buf    = GButton.button ~relief:`NONE ~packing:toolbar#pack () in
-  let _                    = button_refresh#set_image (GMisc.image (*~stock:`REFRESH*) ~pixbuf:Icons.refresh14 ~icon_size:`MENU ())#coerce in
-  let _                    = button_sort#set_image (GMisc.image (*~stock:`SORT_ASCENDING*) ~pixbuf:Icons.sort_asc ~icon_size:`MENU ())#coerce in
-  let _                    = button_sort_rev#set_image (GMisc.image (*~stock:`SORT_DESCENDING*) ~pixbuf:Icons.sort_asc_rev ~icon_size:`MENU ())#coerce in
-  let _                    = button_show_types#set_image (GMisc.image ~pixbuf:Icons.typ ())#coerce in
-  let _                    = button_select_buf#set_image (GMisc.image ~pixbuf:Icons.select_in_buffer ())#coerce in
-  let _                    = button_select_struct#set_image (GMisc.image ~pixbuf:Icons.select_in_structure ())#coerce in
-  let _                    = button_sort#misc#set_tooltip_text "Sort by name" in
-  let _                    = button_sort_rev#misc#set_tooltip_text "Sort by reverse name" in
-  let _                    = button_show_types#misc#set_tooltip_text "Show types" in
-  let _                    = button_select_struct#misc#set_tooltip_text "Select in Structure Pane" in
-  let _                    = button_select_buf#misc#set_tooltip_text "Select in Buffer" in
-  let _                    =
+  let show_types             = Preferences.preferences#get.Preferences.pref_outline_show_types in
+  let vbox                   = GPack.vbox ?packing () in
+  let toolbar                = GPack.hbox ~spacing:0 ~packing:vbox#pack ~show:true () in
+  let button_refresh         = GButton.button ~relief:`NONE ~packing:toolbar#pack () in
+  let button_show_types      = GButton.toggle_button ~active:show_types ~relief:`NONE ~packing:toolbar#pack () in
+  let button_sort            = GButton.toggle_button ~relief:`NONE ~packing:toolbar#pack () in
+  let button_sort_rev        = GButton.toggle_button ~relief:`NONE ~packing:toolbar#pack () in
+  let button_select_from_buf = GButton.button ~relief:`NONE ~packing:toolbar#pack () in
+  let button_select_buf      = GButton.button ~relief:`NONE ~packing:toolbar#pack () in
+  let _                      = button_refresh#set_image (GMisc.image (*~stock:`REFRESH*) ~pixbuf:Icons.refresh14 ~icon_size:`MENU ())#coerce in
+  let _                      = button_sort#set_image (GMisc.image (*~stock:`SORT_ASCENDING*) ~pixbuf:Icons.sort_asc ~icon_size:`MENU ())#coerce in
+  let _                      = button_sort_rev#set_image (GMisc.image (*~stock:`SORT_DESCENDING*) ~pixbuf:Icons.sort_asc_rev ~icon_size:`MENU ())#coerce in
+  let _                      = button_show_types#set_image (GMisc.image ~pixbuf:Icons.typ ())#coerce in
+  let _                      = button_select_buf#set_image (GMisc.image ~pixbuf:Icons.select_in_buffer ())#coerce in
+  let _                      = button_select_from_buf#set_image (GMisc.image ~pixbuf:Icons.select_in_structure ())#coerce in
+  let _                      = button_sort#misc#set_tooltip_text "Sort by name" in
+  let _                      = button_sort_rev#misc#set_tooltip_text "Sort by reverse name" in
+  let _                      = button_show_types#misc#set_tooltip_text "Show types" in
+  let _                      = button_select_from_buf#misc#set_tooltip_text "Select in Structure Pane" in
+  let _                      = button_select_buf#misc#set_tooltip_text "Select in Buffer" in
+  let _                      =
     button_show_types#misc#set_can_focus false;
     button_sort#misc#set_can_focus false;
     button_sort_rev#misc#set_can_focus false;
-    button_select_struct#misc#set_can_focus false;
+    button_select_from_buf#misc#set_can_focus false;
     button_select_buf#misc#set_can_focus false;
     button_refresh#misc#set_can_focus false;
   in
-  let model                = GTree.tree_store cols in
-  let model_sort_default   = GTree.model_sort model in
-  let model_sort_name      = GTree.model_sort model in
-  let sw                   = GBin.scrolled_window ~shadow_type:`IN ~hpolicy:`AUTOMATIC ~vpolicy:`AUTOMATIC ~packing:vbox#add () in
-  let view                 = GTree.view ~model:model_sort_default ~headers_visible:false ~packing:sw#add ~width:350 ~height:500 () in
-  let renderer_pixbuf      = GTree.cell_renderer_pixbuf [`YPAD 0; `XPAD 0] in
-  let renderer_markup      = GTree.cell_renderer_text [`YPAD 0] in
-  let vc                   = GTree.view_column () in
-  let _                    = vc#pack ~expand:false renderer_pixbuf in
-  let _                    = vc#pack ~expand:false renderer_markup in
-  let _                    = vc#add_attribute renderer_pixbuf "pixbuf" col_icon in
-  let _                    = vc#add_attribute renderer_markup "markup" col_markup in
+  let model                  = GTree.tree_store cols in
+  let model_sort_default     = GTree.model_sort model in
+  let model_sort_name        = GTree.model_sort model in
+  let sw                     = GBin.scrolled_window ~shadow_type:`IN ~hpolicy:`AUTOMATIC ~vpolicy:`AUTOMATIC ~packing:vbox#add () in
+  let view                   = GTree.view ~model:model_sort_default ~headers_visible:false ~packing:sw#add ~width:350 ~height:500 () in
+  let renderer_pixbuf        = GTree.cell_renderer_pixbuf [`YPAD 0; `XPAD 0] in
+  let renderer_markup        = GTree.cell_renderer_text [`YPAD 0] in
+  let vc                     = GTree.view_column () in
+  let _                      = vc#pack ~expand:false renderer_pixbuf in
+  let _                      = vc#pack ~expand:false renderer_markup in
+  let _                      = vc#add_attribute renderer_pixbuf "pixbuf" col_icon in
+  let _                      = vc#add_attribute renderer_markup "markup" col_markup in
 
-  let _                    = view#selection#set_mode `SINGLE in
-  let _                    = view#append_column vc in
-  let _                    = view#misc#set_property "enable-tree-lines" (`BOOL true) in
-  let _                    = view#misc#modify_font_by_name Preferences.preferences#get.Preferences.pref_compl_font in
-  let _                    = view#misc#modify_base [`SELECTED, `NAME Oe_config.outline_selection_bg_color; `ACTIVE, `NAME Oe_config.outline_active_bg_color] in
-  let _                    = view#misc#modify_text [`SELECTED, `NAME Oe_config.outline_selection_fg_color; `ACTIVE, `NAME Oe_config.outline_active_fg_color] in
-  let type_color           = Oe_config.outline_type_color in
-  let type_color_re        = Str.regexp_string type_color in
-  let type_color_sel       = Color.name_of_gdk (view#misc#style#fg `SELECTED) in
-  let type_color_sel_re    = Str.regexp_string type_color_sel in
-  let span_type_color      = " <span color='" ^ type_color ^ "'>: " in
-  let label_tooltip        = ref (GMisc.label ~markup:" " ()) in
+  let _                      = view#selection#set_mode `SINGLE in
+  let _                      = view#append_column vc in
+  let _                      = view#misc#set_property "enable-tree-lines" (`BOOL true) in
+  let _                      = view#misc#modify_font_by_name Preferences.preferences#get.Preferences.pref_compl_font in
+  let _                      = view#misc#modify_base [`SELECTED, `NAME Oe_config.outline_selection_bg_color; `ACTIVE, `NAME Oe_config.outline_active_bg_color] in
+  let _                      = view#misc#modify_text [`SELECTED, `NAME Oe_config.outline_selection_fg_color; `ACTIVE, `NAME Oe_config.outline_active_fg_color] in
+  let type_color             = Oe_config.outline_type_color in
+  let type_color_re          = Str.regexp_string type_color in
+  let type_color_sel         = Color.name_of_gdk (view#misc#style#fg `SELECTED) in
+  let type_color_sel_re      = Str.regexp_string type_color_sel in
+  let span_type_color        = " <span color='" ^ type_color ^ "'>: " in
+  let label_tooltip          = ref (GMisc.label ~markup:" " ()) in
   let buffer : Ocaml_text.buffer = page#buffer in
 object (self)
   inherit GObj.widget vbox#as_widget
@@ -264,6 +264,7 @@ object (self)
     end);
     (** Buttons *)
     ignore (button_refresh#connect#clicked ~callback:self#load);
+    ignore (button_select_buf#connect#clicked ~callback:self#select_in_buffer);
     ignore (button_show_types#connect#toggled ~callback:begin fun () ->
       model#foreach begin fun path row ->
         let name = model#get ~row ~column:col_name in
@@ -277,8 +278,8 @@ object (self)
       Preferences.preferences#get.Preferences.pref_outline_show_types <- button_show_types#active;
       (*Preferences.save();*)
     end);
-    ignore (button_select_struct#connect#clicked ~callback:begin fun () ->
-      self#select ?align:None (page#buffer#get_mark `INSERT)
+    ignore (button_select_from_buf#connect#clicked ~callback:begin fun () ->
+      self#select_from_buffer ?align:None (page#buffer#get_mark `INSERT)
     end);
     (* Sort *)
     model_sort_default#set_sort_column_id col_default_sort.GTree.index `ASCENDING;
@@ -300,15 +301,19 @@ object (self)
     Pervasives.compare o1 o2
 
   method private force_lazy row =
+    let result = ref false in
     begin
-      try List.iter (fun f -> f()) (List.rev (model#get ~row ~column:col_lazy));
+      try
+        List.iter (fun f -> f()) (List.rev (model#get ~row ~column:col_lazy));
+        result := true;
       with Failure _ -> ()
     end;
-    model#set ~row ~column:col_lazy []
+    model#set ~row ~column:col_lazy [];
+    !result
 
   method view = view
 
-  method select ?(align : float option) (mark : Gtk.text_mark) =
+  method select_from_buffer ?(align : float option) (mark : Gtk.text_mark) =
     let iter = buffer#get_iter_at_mark (`MARK mark) in
     let found = ref None in
     let smodel = self#get_model () in
@@ -328,19 +333,46 @@ object (self)
     end;
     Gaux.may !found ~f:begin fun path ->
       let path = smodel#convert_child_path_to_path path in
-      view#expand_to_path path;
-      Gaux.may signal_selection_changed ~f:view#selection#misc#handler_block;
-      view#selection#select_path path;
-      Gaux.may signal_selection_changed ~f:view#selection#misc#handler_unblock;
-      match align with
-        | Some align ->
-          view#vadjustment#set_value (align *. view#vadjustment#upper);
-        | None when page#view#misc#get_flag `HAS_FOCUS ->
-          if not (Gmisclib.Util.treeview_is_path_onscreen view path) then begin
-            view#scroll_to_cell ~align:(0.38, 0.) path vc;
-          end
-        | _ -> ()
+      let row = model#get_iter path in
+      let has_lazy = self#force_lazy row in
+      if has_lazy then self#select_from_buffer ?align mark else begin
+        view#expand_to_path path;
+        Gaux.may signal_selection_changed ~f:view#selection#misc#handler_block;
+        view#selection#select_path path;
+        Gaux.may signal_selection_changed ~f:view#selection#misc#handler_unblock;
+        match align with
+          | Some align ->
+            view#vadjustment#set_value (align *. view#vadjustment#upper);
+          | None when page#view#misc#get_flag `HAS_FOCUS ->
+            if not (Gmisclib.Util.treeview_is_path_onscreen view path) then begin
+              view#scroll_to_cell ~align:(0.38, 0.) path vc;
+            end
+          | _ -> ()
+      end
     end
+
+  method select_in_buffer () =
+    match view#selection#get_selected_rows with
+      | [] -> ()
+      | path :: _ ->
+        let _, ts = timestamp in
+        if ts = (Unix.stat filename).Unix.st_mtime then begin
+          let smodel = self#get_model () in
+          let child_path = smodel#convert_path_to_child_path path in
+          try
+            let info = Hashtbl.find table_info child_path in
+            Gaux.may info.body ~f:begin fun loc ->
+              let start, stop = linechar_of_loc loc in
+              let start = buffer#get_iter (`LINECHAR start) in
+              let stop = buffer#get_iter (`LINECHAR stop) in
+              let start = start#set_line_index 0 in
+              let stop = stop#forward_line#set_line_index 0 in
+              buffer#select_range stop start;
+              page#view#scroll_lazy start;
+              page#view#misc#grab_focus();
+            end
+          with Not_found -> ()
+        end
 
   method select_element () =
     match view#selection#get_selected_rows with
@@ -356,7 +388,9 @@ object (self)
                 let start = buffer#get_iter_at_mark (`MARK mark) in
                 let row = model#get_iter child_path in
                 let name = model#get ~row ~column:col_name in
-                let length = Glib.Utf8.length name in
+                let length = match info.kind with
+                  | Some Class_let_bindings -> 0
+                  | _ -> Glib.Utf8.length name in
                 let stop = start#forward_chars length in
                 buffer#select_range start stop;
                 page#view#scroll_lazy start;
@@ -487,6 +521,7 @@ object (self)
         typ      = typ;
         kind     = kind;
         location = loc;
+        body     = loc_body;
         mark     = None;
       } in
       Gaux.may kind ~f:(fun k -> Gaux.may (pixbuf_of_kind k) ~f:(model#set ~row ~column:col_icon));
@@ -513,7 +548,7 @@ object (self)
         let loc = {item.str_loc with loc_end = item.str_loc.loc_start} in
         ignore (self#append ?parent ~loc ~loc_body:expr.exp_loc "_" "")
       | Tstr_value (_, pe) ->
-        List.iter (fun (pat, _) -> ignore (self#append_pattern ?parent pat)) pe
+        List.iter (fun x -> ignore (self#append_pattern ?parent x)) pe
       | Tstr_class classes -> List.iter (self#append_class ?parent) classes
       | Tstr_class_type classes -> List.iter (fun (_, loc, decl) -> self#append_class_type ?parent ~loc decl) classes
       | Tstr_type decls -> List.iter (self#append_type ?parent) decls
@@ -614,25 +649,39 @@ object (self)
         | Ttype_variant decls -> self#string_of_type_variant decls
         | Ttype_record decls -> self#string_of_type_record decls
     in
-    ignore (self#append ?parent ~kind ~loc:loc.loc loc.txt typ)
+    ignore (self#append ?parent ~kind ~loc:loc.loc ~loc_body:decl.typ_loc loc.txt typ)
 
-  method private append_pattern ?parent pat =
+  method private append_pattern ?parent (pat, expr) =
     match pat.pat_desc with
       | Tpat_var (_, loc) ->
         let kind = if is_function pat.pat_type then Function else Simple in
         Odoc_info.reset_type_names();
-        Some (self#append ?parent ~kind ~loc:loc.loc loc.txt (string_of_type_expr pat.pat_type))
+        let parent = self#append ?parent ~kind ~loc:loc.loc ~loc_body:expr.exp_loc loc.txt (string_of_type_expr pat.pat_type) in
+        Some parent
       | Tpat_tuple pats ->
-        List.iter (fun pat -> ignore (self#append_pattern ?parent pat)) pats;
+        List.iter (fun p -> ignore (self#append_pattern ?parent (p, expr))) pats;
         None
+      (*| Tpat_alias (pat, _, loc) -> self#append_pattern ?parent (pat, expr)*)
       | (*Tpat_construct _ | Tpat_any | Tpat_alias _ | Tpat_constant _
       | Tpat_variant _ | Tpat_record _ | Tpat_array _ | Tpat_or _
-      | Tpat_lazy*) _ -> None
+      | Tpat_lazy*) _ -> None (*Some (self#append ?parent "append_pattern" "")*)
+
+  method private append_expression ?parent exp =
+    match exp.exp_desc with
+      | Texp_ident _ -> ignore (self#append ?parent "Texp_ident" "")
+      | Texp_function (_, pel, _) ->
+        List.iter (fun pe -> ignore (self#append_pattern ?parent pe)) pel
+      | Texp_let (_, pes, expr) ->
+        List.iter (fun pe -> ignore (self#append_pattern ?parent pe)) pes
+      | Texp_apply (expr, el) -> self#append_expression ?parent expr
+      | Texp_sequence _ -> ignore (self#append ?parent "Texp_sequence" "")
+      | _ -> ignore (self#append ?parent "x" "")
 
   method private append_class ?parent (infos, _, _) =
     let kind = if infos.ci_virt = Asttypes.Virtual then Class_virtual else Class in
     let parent = self#append ~kind ?parent ~loc:infos.ci_id_name.loc infos.ci_id_name.txt "" in
-    let let_bindings_parent = self#append ~kind:Class_let_bindings (*~loc:infos.ci_id_name.loc*) ~parent "<let-bindings>" "" in
+    let loc = {infos.ci_expr.cl_loc with loc_end = infos.ci_expr.cl_loc.loc_start} in
+    let let_bindings_parent = self#append ~kind:Class_let_bindings ~loc ~parent "<let-bindings>" "" in
     let count_meth = ref 0 in
     let id_path = self#get_id_path let_bindings_parent in
     let expand_lets = List_opt.assoc id_path table_expanded_by_user <> None in
@@ -670,9 +719,10 @@ object (self)
               end
             end;
             parent
-          | Tcf_init _ ->
+          | Tcf_init expr ->
             let loc = {fi.cf_loc with loc_end = fi.cf_loc.loc_start} in
-            Some (self#append ~kind:Initializer ~loc ?parent "initializer" "");
+            let parent = self#append ~kind:Initializer ~loc ~loc_body:fi.cf_loc ?parent "initializer" "" in
+            Some parent;
           | Tcf_val (_, loc, mutable_flag, _, kind, _) ->
             let typ, kind = match kind with
               | Tcfk_virtual ct when mutable_flag = Mutable ->
@@ -710,8 +760,8 @@ object (self)
     | Tcl_let (_, lets, _, desc) ->
       Gaux.may let_bindings_parent ~f:begin fun row ->
         let f () =
-          List.iteri begin fun i (pat, expr) ->
-            ignore (self#append_pattern ~parent:row pat);
+          List.iteri begin fun i pe ->
+            ignore (self#append_pattern ~parent:row pe);
             if i = 0 && expand_lets then begin
               let path = model#get_path row in
               self#add_table_expanded_by_default row;

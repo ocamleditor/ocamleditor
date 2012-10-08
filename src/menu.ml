@@ -567,7 +567,7 @@ let view ~browser ~group ~flags
   ignore (select_in_outline#connect#activate ~callback:(fun () ->
     editor#with_current_page (fun page ->
       editor#set_show_outline true;
-      Gaux.may page#outline ~f:(fun ol -> ol#select ?align:None (page#buffer#get_mark `INSERT)))));
+      Gaux.may page#outline ~f:(fun ol -> ol#select_from_buffer ?align:None (page#buffer#get_mark `INSERT)))));
   (** Show Whitespace Characters *)
   let show_whitespace_chars = GMenu.check_menu_item
     ~active:editor#show_whitespace_chars

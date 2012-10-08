@@ -62,7 +62,7 @@ let create ~editor ~page () =
   ignore (select_in_structure_pane#connect#activate ~callback:begin fun () ->
     editor#with_current_page (fun page ->
       editor#set_show_outline true;
-      Gaux.may page#outline ~f:(fun ol -> ol#select ?align:None (page#buffer#get_mark `INSERT)));
+      Gaux.may page#outline ~f:(fun ol -> ol#select_from_buffer ?align:None (page#buffer#get_mark `INSERT)));
   end);
   let find_definition = GMenu.menu_item ~label:"Find Definition" ~packing:gmenu#append () in
   let find_references = GMenu.menu_item ~label:"Find References" ~packing:gmenu#append () in
