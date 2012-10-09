@@ -850,7 +850,7 @@ object (self)
         match page#outline with
           | Some outline when self#show_outline && outline#get_oid <> hpaned#child1#get_oid ->
             self#pack_outline outline#coerce
-          | _ -> ()(*
+          | _ -> self#pack_outline (Outline.create_empty()) (*
     (*if page#buffer#changed_after_last_autocomp > 0.0 then begin*)
             Printf.printf "*************1  %f\n%!" page#buffer#changed_after_last_autocomp;
             page#compile_buffer ~commit:false ();
