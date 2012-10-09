@@ -30,5 +30,6 @@ src/oebuild/oebuild.opt
 src/ocamleditor
 src/ocamleditor.opt
 src/gtkThread2.ml
+src/oebuild_script.ml
 icons
 

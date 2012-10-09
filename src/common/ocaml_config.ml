@@ -23,7 +23,7 @@
 
 open Printf
 
-let rec putenv_ocamllib value =
+let putenv_ocamllib value =
   match Sys.os_type with
     | "Win32" ->
       let value = match value with None -> "" | Some x -> x in
@@ -64,7 +64,7 @@ let expand_includes =
 (** OCaml Tools *)
 
 let ocamlc ()   = match find_tool `BEST_OCAMLC (get_home ()) with Some x -> x | _ -> failwith "Cannot find 'ocamlc'"
-let ocamlopt () = find_tool `BEST_OCAMLOPT (get_home ()) 
+let ocamlopt () = find_tool `BEST_OCAMLOPT (get_home ())
 let ocamldep () = match find_tool `BEST_OCAMLDEP (get_home ()) with Some x -> x | _ -> failwith "Cannot find 'ocamldep'"
 let ocamldoc () = match find_tool `BEST_OCAMLDOC (get_home ()) with Some x -> x | _ -> failwith "Cannot find 'ocamldoc'"
 let ocaml ()    = match find_tool `OCAML (get_home ()) with Some x -> x | _ -> failwith "Cannot find 'ocaml'"
@@ -91,7 +91,7 @@ let can_compile_native ?ocaml_home () =
     | Some home -> find_tool `BEST_OCAMLOPT home
     | _ -> Some "ocamlopt"
   in
-  match compiler with 
+  match compiler with
     | Some compiler ->
       let cmd = sprintf "%s -o %s %s%s" compiler outname filename redirect_stderr in
       result := (Sys.command cmd) = 0;
