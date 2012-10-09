@@ -246,12 +246,13 @@ let build ~compilation ~package ~includes ~libs ~other_mods ~outkind ~compile_on
     else begin
       let compiler =
         if compilation = Native then
-          (match ocamlopt with Some x -> x | _ -> failwith "ocamlopt 1was not found")
+          (match ocamlopt with Some x -> x | _ -> failwith "ocamlopt was not found")
         else ocamlc
       in
       let use_findlib = package <> "" in
       if use_findlib then
-        sprintf "ocamlfind %s -package %s" (Filename.chop_extension compiler) package
+        let cmp = try Filename.chop_extension compiler with Invalid_argument "Filename.chop_extension" -> compiler in
+        sprintf "ocamlfind %s -package %s" cmp package
       else compiler
     end
   in

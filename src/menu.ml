@@ -861,7 +861,7 @@ let window ~browser ~group ~flags
   let forward = GMenu.image_menu_item ~label:"Forward" ~packing:menu#append () in
   get_menu_item_nav_history_backward := (fun () -> backward);
   get_menu_item_nav_history_forward := (fun () -> forward);
-  backward#set_image (GMisc.image ~stock:`GO_BACK ~icon_size:`MENU ())#coerce;
+  backward#set_image (GMisc.image ~pixbuf:Icons.go_back ~icon_size:`MENU ())#coerce;
   let backward_menu = GMenu.menu ~packing:backward#set_submenu () in
   let prev = GMenu.menu_item ~label:"Previous Location" ~packing:backward_menu#add () in
   prev#add_accelerator ~group ~modi:[`MOD1] GdkKeysyms._Left ~flags;
@@ -870,7 +870,7 @@ let window ~browser ~group ~flags
   let _ = GMenu.separator_item ~packing:backward_menu#add () in
   browser#create_menu_history `BACK ~menu:backward_menu;
   (** Navigation Forward *)
-  forward#set_image (GMisc.image ~stock:`GO_FORWARD ~icon_size:`MENU ())#coerce;
+  forward#set_image (GMisc.image ~pixbuf:Icons.go_forward ~icon_size:`MENU ())#coerce;
   let forward_menu = GMenu.menu ~packing:forward#set_submenu () in
   let next = GMenu.menu_item ~label:"Next Location" ~packing:forward_menu#add () in
   next#add_accelerator ~group ~modi:[`MOD1] GdkKeysyms._Right ~flags;
@@ -881,7 +881,7 @@ let window ~browser ~group ~flags
   (** Last Edit Location *)
   let last_edit_location = GMenu.image_menu_item ~label:"Last Edit Location" ~packing:menu#append () in
   last_edit_location#add_accelerator ~group ~modi:[`MOD1] GdkKeysyms._End ~flags;
-  last_edit_location#set_image (GMisc.image ~stock:`GOTO_LAST ~icon_size:`MENU ())#coerce;
+  last_edit_location#set_image (GMisc.image ~pixbuf:Icons.goto_last ~icon_size:`MENU ())#coerce;
   ignore (last_edit_location#connect#activate ~callback:(fun () -> browser#goto_location `LAST));
   get_menu_item_nav_history_last := (fun () -> last_edit_location);
   (** Clear Location History *)

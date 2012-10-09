@@ -168,7 +168,7 @@
       <lib_install_path></lib_install_path>
       <external_tasks/>
       <restrictions></restrictions>
-      <dependencies></dependencies>
+      <dependencies>4,10</dependencies>
     </target>
     <target name="ocamleditor-bytecode" default="true" id="0">
       <byt>true</byt>

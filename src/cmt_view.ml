@@ -614,7 +614,7 @@ object (self)
             | Tmodtype_manifest mt -> self#append_module_type ~parent mt.mty_desc
         in
         model#set ~row:parent ~column:col_lazy [f];
-      | Tsig_open _ -> ignore (self#append ?parent "Tsig_open" "")
+      | Tsig_open _ -> ()
       | Tsig_include (modtype, _) -> self#append_module_type ?parent modtype.mty_desc
       | Tsig_class classes ->
         List.iter (fun clty -> self#append_class_type ?parent ~loc:clty.ci_id_name clty) classes;

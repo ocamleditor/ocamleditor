@@ -53,9 +53,12 @@ class ['a] toolbar ~(messages : Messages.messages) ~(hmessages : Messages.messag
   let tool_build               = Gmisclib.Toolbar.menu_tool_button ~toolbar ~homogeneous:false () in
   let tool_link                = Gmisclib.Toolbar.menu_tool_button ~toolbar ~homogeneous:false () in
   let tool_run                 = Gmisclib.Toolbar.menu_tool_button ~toolbar ~homogeneous:false () in
-  let tool_back                = Gmisclib.Toolbar.menu_tool_button ~toolbar ~stock:`GO_BACK ~label:"Previous Location" ~homogeneous:false () in
-  let tool_forward             = Gmisclib.Toolbar.menu_tool_button ~toolbar ~stock:`GO_FORWARD ~label:"Next Location" ~homogeneous:false () in
-  let tool_last_edit_loc       = GButton.tool_button ~stock:`GOTO_LAST ~label:"Last Edit Location" () in
+  let tool_back                = Gmisclib.Toolbar.menu_tool_button ~toolbar ~label:"Previous Location" ~homogeneous:false () in
+  let _                        = tool_back#set_image (GMisc.image ~pixbuf:Icons.go_back ())#coerce in
+  let tool_forward             = Gmisclib.Toolbar.menu_tool_button ~toolbar ~label:"Next Location" ~homogeneous:false () in
+  let _                        = tool_forward#set_image (GMisc.image ~pixbuf:Icons.go_forward ())#coerce in
+  let tool_last_edit_loc       = GButton.tool_button ~label:"Last Edit Location" () in
+  let _                        = tool_last_edit_loc#set_icon_widget (GMisc.image ~pixbuf:Icons.goto_last ())#coerce in
   let tool_entry_find          = GEdit.combo_box_entry
     ~wrap_width:3
     ~focus_on_click:false
