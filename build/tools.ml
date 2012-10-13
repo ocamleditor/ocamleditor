@@ -87,7 +87,7 @@ let clean_lex_yacc () =
   remove_file "err_parser.ml";
   remove_file "err_parser.mli";;
 
-(** clean *)
+(*(** clean *)
 let clean ?(all=false) () =
   let all = if all then "-all" else "" in
   kprintf run "%s ocamleditor.ml -clean%s" oebuild_command all;
@@ -97,13 +97,14 @@ let clean ?(all=false) () =
   kprintf run "%s icons/icons.ml -a -byt -opt -clean%s" oebuild_command all;
   kprintf run "%s oebuild/oebuild_tool.ml -a -byt -opt -o oebuild/oebuild -clean%s" oebuild_command all;
   kprintf run "%s oeproc/oeproc.ml -byt -opt -o oeproc/oeproc -clean%s" oebuild_command all;
-  clean_lex_yacc();;
+  clean_lex_yacc();;*)
 
 (** distclean *)
 let distclean () =
   clean_lex_yacc();
-  clean ~all:true ();
-  kprintf run "%s *.exe *.bak *.annot *~" rm;
+  (*clean ~all:true ();*)
+  let run_no_errors cmd = try run cmd with Script_error _ -> () in
+  kprintf run_no_errors "%s *.exe *.bak *.annot *~" rm;
   List.iter remove_file [
     "geometry";
     "Thumbs.db";
@@ -117,11 +118,11 @@ let distclean () =
     "gtkThread2.ml";
     "icons/icons.ml"
   ];
-  let rmdir dir = if Sys.file_exists dir then (kprintf run "%s %s" rmr dir) in
+  let rmdir dir = if Sys.file_exists dir then (kprintf run_no_errors "%s %s" rmr dir) in
   rmdir (Filename.parent_dir_name // "bak");
   rmdir (Filename.parent_dir_name // ".tmp");
   rmdir (Filename.parent_dir_name // ".cache");
-  kprintf run "%s icons" rmr
+  kprintf run_no_errors "%s icons" rmr
 ;;
 
 (** install *)
@@ -195,7 +196,7 @@ let _ = main ~dir:"../src" ~targets:[
   "-mkrelease",               mkrelease,               " (undocumented)";
   "-generate-oebuild-script", generate_oebuild_script, " (undocumented)";
   "-clean-lex-yacc",          clean_lex_yacc,          " (undocumented)";
-  "-clean",                   (clean ?all:None),       " (undocumented)";
+  (*"-clean",                   (clean ?all:None),       " (undocumented)";*)
   "-distclean",               distclean,               " (undocumented)";
 ] ~options:[
   "-prefix",                  Set_string prefix,               (sprintf "Installation prefix (Unix only, default is %s)" !prefix);

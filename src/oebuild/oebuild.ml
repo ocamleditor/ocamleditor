@@ -340,38 +340,31 @@ let build ~compilation ~package ~includes ~libs ~other_mods ~outkind ~compile_on
 ;;
 
 (** clean *)
-let clean ?(all=false) ~compilation ~outkind ~outname ~targets ~deps () =
-  let outname = get_output_name ~compilation ~outkind ~outname ~targets in
+let obj_extensions = [".cmi"; ".cmo"; ".cmx"; ".o"; ".obj"; ".annot"; ".cmt"; ".cmti"]
+let lib_extensions = [".cma"; ".cmxa"; ".lib"; ".a"]
+
+let clean ~deps () =
   let files = List.map begin fun name ->
     let name = Filename.chop_extension name in
-    [name ^ ".cmi"] @
-    (if true || outkind <> Library || all then [name ^ ".cmi"] else []) @
-    [ (name ^ ".cmo");
-      (name ^ ".cmx");
-      (name ^ ".obj");
-      (name ^ ".o");
-      (name ^ ".annot");
-    ]
+    List.map ((^) name) obj_extensions
   end deps in
   let files = List.flatten files in
-  let files = if outkind = Executable || all then (match outname with Some x -> x :: files | _ -> files) else files in
+  (*let files = if outkind = Executable || all then (match outname with Some x -> x :: files | _ -> files) else files in*)
   let files = remove_dupl files in
-  List.iter (fun file -> remove_file ~verbose:true file) files
+  List.iter (fun file -> remove_file ~verbose:false file) files
 ;;
 
-(** clean_all *)
-let suffixes sufs name = List.exists (fun suf -> name ^^ suf) sufs
-
-let clean_all () =
+(** distclean - doesn't remove executables *)
+let distclean () =
   let cwd = Sys.getcwd() in
+  let exists_suffix sufs name = List.exists (fun suf -> name ^^ suf) sufs in
   let rec clean_dir dir =
     if not ((Unix.lstat dir).Unix.st_kind = Unix.S_LNK) then begin
       let files = Sys.readdir dir in
       let files = Array.to_list files in
       let files = List.map (fun x -> dir // x) files in
       let directories, files = List.partition Sys.is_directory files in
-      let files = List.filter
-        (suffixes [".cmi"; ".cmo"; ".cmx"; ".obj"; ".cma"; ".cmxa"; ".lib"; ".a"; ".o"; ".annot"]) files in
+      let files = List.filter (exists_suffix (obj_extensions @ lib_extensions)) files in
       List.iter (remove_file ~verbose:false) files;
       let oebuild_times_filename = dir // Table.oebuild_times_filename in
       remove_file ~verbose:false oebuild_times_filename;
@@ -379,7 +372,6 @@ let clean_all () =
     end
   in
   clean_dir cwd;
-  exit 0
 ;;
 
 (** check_restrictions *)

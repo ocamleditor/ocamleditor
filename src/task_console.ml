@@ -52,7 +52,7 @@ class view ~(editor : Editor.editor) ?(task_kind=(`OTHER : Task.kind)) ~task ?pa
     | `OTHER | `RUN ->
       tooltips#set_tip ~text:"Start" button_run#coerce;
       (Icons.create Icons.start_16);
-    | `CLEAN | `CLEANALL->
+    | `CLEAN | `CLEANALL ->
       tooltips#set_tip ~text:task.Task.et_name button_run#coerce;
       (Icons.create Icons.clear_build_16);
     | `ANNOT | `COMPILE ->
@@ -527,12 +527,36 @@ let exec ~editor ?use_thread ?(with_deps=false) task_kind target =
   let at_exit = fun () -> GtkThread2.async editor#with_current_page (fun p -> p#compile_buffer ~commit:false ()) in
   match task_kind with
     | `CLEANALL ->
+      (* External tasks before and after distclean *)
+      let before = Target.filter_external_tasks target Task.Before_distclean in
+      let after = Target.filter_external_tasks target Task.After_distclean in
+      (*  *)
       let cmd, args = Target.create_cmd_line target in
-      let task = Task.create ~name:"Clean Project" ~env:[] ~dir:"" ~cmd
-        ~args:(args @ [true, "-clean-all"]) () in
-      let console = create ~editor `CLEANALL task in
+      let task = Task.create ~name:"Clean Project" ~env:[] ~dir:"" ~cmd ~args:(args @ [true, "-distclean"]) () in
+      exec_sync ~editor [before @ [`CLEANALL, task] @ after];
+      (*let console = create ~editor `CLEANALL task in
       ignore (console#button_run#connect#clicked ~callback:(fun () -> ignore (console#run())));
-      ignore(console#run ?use_thread ())
+      ignore(console#run ?use_thread ());*)
+      (* Remove executables *)
+      List.iter begin fun target ->
+        let compilation =
+          (if target.byt then [Oebuild.Bytecode] else [])
+            @ (if target.opt && project.Prj.can_compile_native then [Oebuild.Native] else [])
+        in
+        let files = Str.split (Str.regexp " +") target.files in
+        let outname = target.outname in
+        let outkind = match target.target_type with
+          | Executable -> Oebuild.Executable
+          | Library -> Oebuild.Library
+          | Plugin -> Oebuild.Plugin
+          | Pack -> Oebuild.Pack
+        in
+        List.iter begin fun compilation ->
+          match Oebuild.get_output_name ~compilation ~outkind ~outname ~targets:files with
+            | Some outname -> Oebuild_util.remove_file ~verbose:false outname
+            | _ -> ()
+        end compilation
+      end project.Prj.targets;
     | `CLEAN -> exec_sync ~editor [tasks_clean ()];
     | `ANNOT -> exec_sync ~editor [tasks_annot ()];
     | `COMPILE ->

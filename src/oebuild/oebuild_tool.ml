@@ -30,7 +30,7 @@ let main () = begin
   let target = ref [] in
   let outkind = ref Executable in
   let is_clean = ref false in
-  let is_clean_all = ref false in
+  let is_distclean = ref false in
   let compilation = ref [] in
   let prof = ref false in
   let package = ref "" in
@@ -101,7 +101,6 @@ let main () = begin
     ("-run-opt",     Unit (set_run_code Native),      " Run the resulting native-code executable.");
     ("--",           Rest set_run_args,               "<run-args> Command line arguments for the -run, -run-byt or -run-opt options.");
     ("-clean",       Set is_clean,                    " Remove output files for the selected target and exit.");
-    ("-clean-all",   Set is_clean_all,                " Remove all build output and exit.");
     ("-dep",         Unit dep,                        " Print dependencies and exit.");
     ("-when",        String check_restrictions,       "\"<c1,c2,...>\" Exit immediately if any condition specified here is not true.
                                  Recognized conditions are:
@@ -115,6 +114,7 @@ let main () = begin
     ("-no-build",    Set no_build,                    " (undocumented)");
     ("-install",     String set_install,              " (undocumented)");
     ("-prof",        Set prof,                        " (undocumented)");
+    ("-distclean",   Set is_distclean,                " (undocumented)");
 (*    ("-cs", Set compile_separately, " Compile separately without recompiling unmodified modules.");*)
 (*    ("-install", Set_string install, "\"<path>\" Copy the output to the specified directory. When building libraries the path is relative to " ^
       (win32 "%OCAMLLIB%" "$OCAMLLIB") ^ ". Create all non-existing directories.");*)
@@ -140,12 +140,10 @@ let main () = begin
     exit 0;
   end;
   (** Clean *)
-  if !is_clean || !is_clean_all then begin
+  if !is_clean || !is_distclean then begin
     let deps = Dep.find ~pp:!pp (*~includes:!includes*) ~with_errors:true !target in
-    List.iter begin fun compilation ->
-      clean ~all:!is_clean_all ~compilation ~outkind:!outkind ~outname:!output_name ~targets:!target ~deps ();
-    end compilation;
-    if !is_clean_all then (clean_all());
+    if !is_clean then (clean ~deps ());
+    if !is_distclean then (distclean ());
     exit 0;
   end;
   (** Build, install and run *)
