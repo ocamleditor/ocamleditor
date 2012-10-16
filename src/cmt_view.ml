@@ -293,9 +293,9 @@ object (self)
       self#select_from_buffer ?align:None (page#buffer#get_mark `INSERT)
     end);
     (* Sort *)
-    model_sort_default#set_sort_column_id col_default_sort.GTree.index `ASCENDING;
+    (*model_sort_default#set_sort_column_id col_default_sort.GTree.index `ASCENDING;
     model_sort_name#set_sort_column_id col_name.GTree.index `ASCENDING;
-    model_sort_name_rev#set_default_sort_func self#compare_name_rev;
+    model_sort_name_rev#set_default_sort_func self#compare_name_rev;*)
     let signal_button_sort : GtkSignal.id option ref = ref None in
     let signal_button_sort_rev : GtkSignal.id option ref = ref None in
     signal_button_sort := Some (button_sort#connect#after#toggled ~callback:begin fun () ->
@@ -435,9 +435,18 @@ object (self)
         table_collapsed_by_default <- [];
         Hashtbl.clear table_info;
         (* Parse .cmt file *)
+        let smodel = self#get_model () in
+        view#set_model None;
+        (* Disable sort *)
+        model#set_sort_column_id (-2) `ASCENDING;
+        model_sort_default#set_sort_column_id (-1) `ASCENDING;
+        model_sort_name#set_sort_column_id (-1) `ASCENDING;
+        model_sort_name_rev#reset_default_sort_func ();
+        (* Create tree *)
         Gaux.may cmt ~f:(fun cmt -> self#parse cmt.cmt_annots);
         (*  *)
-        let smodel = self#get_model () in
+        view#set_model (Some smodel#coerce);
+        (*  *)
         List.iter begin fun path ->
           let path = smodel#convert_child_path_to_path path in
           view#expand_row path
@@ -453,7 +462,12 @@ object (self)
               true
             end else false
           end
-        end
+        end;
+        GtkThread2.async begin fun () ->
+          model_sort_default#set_sort_column_id col_default_sort.GTree.index `ASCENDING;
+          model_sort_name#set_sort_column_id col_name.GTree.index `ASCENDING;
+          model_sort_name_rev#set_default_sort_func self#compare_name_rev;
+        end ();
       | _ -> ()
 
   method private parse = function
@@ -516,21 +530,26 @@ object (self)
 
   method private append ?parent ?kind ?loc ?loc_body name typ =
     let markup = self#create_markup ?kind name typ in
-    GtkThread2.sync begin fun () ->
-      let row = model#append ?parent () in
-      let path = model#get_path row in
-      model#set ~row ~column:col_name name;
-      model#set ~row ~column:col_markup markup;
-      model#set ~row ~column:col_default_sort count;
-      count <- count + 1;
-      let info = {
-        typ      = typ;
-        kind     = kind;
-        location = loc;
-        body     = loc_body;
-        mark     = None;
-      } in
-      Gaux.may kind ~f:(fun k -> Gaux.may (pixbuf_of_kind k) ~f:(model#set ~row ~column:col_icon));
+    let info = {
+      typ      = typ;
+      kind     = kind;
+      location = loc;
+      body     = loc_body;
+      mark     = None;
+    } in
+    let path, row =
+      (*GtkThread2.sync begin fun () ->*)
+        let row = model#append ?parent () in
+        let path = model#get_path row in
+        model#set ~row ~column:col_name name;
+        model#set ~row ~column:col_markup markup;
+        model#set ~row ~column:col_default_sort count;
+        count <- count + 1;
+        Gaux.may kind ~f:(fun k -> Gaux.may (pixbuf_of_kind k) ~f:(model#set ~row ~column:col_icon));
+        path, row
+     (* end ()*)
+    in
+    (*GtkThread2.sync begin fun () ->*)
       Gaux.may loc ~f:begin fun loc ->
         let (line, start), _ = linechar_of_loc loc in
         if line <= buffer#end_iter#line then begin
@@ -545,8 +564,8 @@ object (self)
         end
       end;
       Hashtbl.add table_info path info;
-      row
-    end ()
+    (*end ();*)
+    row
 
   method private append_struct_item ?parent item =
     match item.str_desc with
