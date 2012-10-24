@@ -757,7 +757,7 @@ object (self)
         List.iter begin fun (filename, label) ->
           Gmisclib.Idle.add ~prio:600 begin fun () ->
             let item = GMenu.check_menu_item ~label ~packing:menu.Menu.project#add () in
-            item#misc#set_tooltip_text filename;
+            item#misc#set_tooltip_text (Filename.dirname filename);
             ignore (item#connect#after#toggled ~callback:(fun () ->
               if not menu.Menu.project_history_signal_locked && item#active then (ignore (self#project_open filename))));
             menu.Menu.project_history <- (filename, item) :: menu.Menu.project_history;

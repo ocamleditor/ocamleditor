@@ -848,7 +848,7 @@ object (self)
     ignore (self#connect#switch_page ~callback:begin fun _ ->
       self#with_current_page begin fun page ->
         match page#outline with
-          | Some outline when self#show_outline && outline#get_oid <> hpaned#child1#get_oid ->
+          | Some outline when self#show_outline (*&& outline#get_oid <> hpaned#child1#get_oid*) ->
             self#pack_outline outline#coerce
           | _ -> self#pack_outline (Outline.create_empty()) (*
     (*if page#buffer#changed_after_last_autocomp > 0.0 then begin*)
