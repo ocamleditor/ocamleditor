@@ -31,7 +31,8 @@ DEPENDENCIES
 
   * OCaml-4.00.0;
   * Lablgtk-2.16.0 (installed with Findlib);
-  * Xml-light.
+  * Xml-light (installed at `ocamlc -where`);
+  * Findlib-1.3.3.
 
 
 HOW TO COMPILE
