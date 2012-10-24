@@ -240,7 +240,7 @@ let create_defaults () = {
   pref_outline_show_types           = false;
   pref_outline_width                = 250;
   pref_hmessages_width              = 1000;
-  pref_vmessages_height             = 600;
+  pref_vmessages_height             = 300;
   pref_odoc_font                    = "Serif 9";
 }
 
