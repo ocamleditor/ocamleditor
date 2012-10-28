@@ -87,22 +87,16 @@ let clean_lex_yacc () =
   remove_file "err_parser.ml";
   remove_file "err_parser.mli";;
 
-(*(** clean *)
-let clean ?(all=false) () =
-  let all = if all then "-all" else "" in
-  kprintf run "%s ocamleditor.ml -clean%s" oebuild_command all;
-  kprintf run "%s common/common.ml -a -byt -opt -clean%s" oebuild_command all;
-  kprintf run "%s gmisclib/gmisclib.ml -a -byt -opt -clean%s" oebuild_command all;
-  kprintf run "%s otherwidgets/otherwidgets.ml -a -byt -opt -clean%s" oebuild_command all;
-  kprintf run "%s icons/icons.ml -a -byt -opt -clean%s" oebuild_command all;
-  kprintf run "%s oebuild/oebuild_tool.ml -a -byt -opt -o oebuild/oebuild -clean%s" oebuild_command all;
-  kprintf run "%s oeproc/oeproc.ml -byt -opt -o oeproc/oeproc -clean%s" oebuild_command all;
-  clean_lex_yacc();;*)
-
 (** distclean *)
 let distclean () =
+  kprintf run "%s ocamleditor.ml -distclean" oebuild_command;
+  kprintf run "%s common/common.ml -a -byt -opt -distclean" oebuild_command;
+  kprintf run "%s gmisclib/gmisclib.ml -a -byt -opt -distclean" oebuild_command;
+  kprintf run "%s otherwidgets/otherwidgets.ml -a -byt -opt -distclean" oebuild_command;
+  kprintf run "%s icons/icons.ml -a -byt -opt -distclean" oebuild_command;
+  kprintf run "%s oebuild/oebuild_tool.ml -a -byt -opt -o oebuild/oebuild -distclean" oebuild_command;
+  kprintf run "%s oeproc/oeproc.ml -byt -opt -o oeproc/oeproc -distclean" oebuild_command;
   clean_lex_yacc();
-  (*clean ~all:true ();*)
   let run_no_errors cmd = try run cmd with Script_error _ -> () in
   kprintf run_no_errors "%s *.exe *.bak *.annot *~" rm;
   List.iter remove_file [

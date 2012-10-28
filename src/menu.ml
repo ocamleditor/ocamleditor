@@ -651,7 +651,7 @@ let project ~browser ~group ~flags items =
   project_run#add_accelerator ~group ~modi:[`CONTROL] GdkKeysyms._F11 ~flags;
   ignore (project_run#connect#activate ~callback:begin fun () ->
     browser#with_current_project (fun project ->
-      browser#with_default_runtime_config (fun rc ->
+      browser#with_default_runtime_config ~open_dialog:true (fun rc ->
         let bc = List.find (fun b -> b.Target.id = rc.Rconf.target_id) project.Prj.targets in
         ignore (Task_console.exec ~editor (`RCONF rc) bc)))
   end);
@@ -717,7 +717,9 @@ let project ~browser ~group ~flags items =
       kprintf (set_label project_clean_current) "Clean \xC2\xAB%s\xC2\xBB" target.Target.name;
       kprintf (set_label project_compile_only) "Compile \xC2\xAB%s\xC2\xBB" target.Target.name;
       kprintf (set_label project_build) "Build \xC2\xAB%s\xC2\xBB" target.Target.name;
-      kprintf (set_label project_run) "Run \xC2\xAB%s\xC2\xBB" target.Target.name;
+    end;
+    browser#with_default_runtime_config ~open_dialog:false begin fun rc ->
+      kprintf (set_label project_run) "Run \xC2\xAB%s\xC2\xBB" rc.Rconf.name;
     end;
     editor#with_current_page begin fun page ->
       let name = Filename.basename page#get_filename in

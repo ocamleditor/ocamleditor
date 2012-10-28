@@ -257,8 +257,7 @@ object (self)
       callback project;
       Project.save ~editor project;
       Project.refresh project;
-      project_changed#call();
-      (*  *)
+      project_changed#call project;
       (*  *)
       target_page#set_changed false;
       (*  *)
@@ -323,7 +322,7 @@ object (self)
   initializer self#init()
 end
 
-and project_changed () = object inherit [unit] GUtil.signal () end
+and project_changed () = object inherit [Prj.t] GUtil.signal () end
 and project_name_changed () = object inherit [string] GUtil.signal () end
 and show () = object inherit [unit] GUtil.signal () end
 

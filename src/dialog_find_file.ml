@@ -24,7 +24,7 @@ open Printf
 open Miscellanea
 
 let filter =
-  let names = List.map (!~~) ["README"; "INSTALL"; "NEWS"; "BUGS"; "CONTRIB"; "Makefile"; "TODO"; "AUTHORS"; "ChangeLog"] in
+  let names = List.map (!~~) ["README"; "INSTALL"; "NEWS"; "BUGS"; "CONTRIB"; "Makefile"; "TODO"; "AUTHORS"; "ChangeLog"; "META"] in
   fun filename ->
     filename ^^ ".ml"  ||
     filename ^^ ".mli" ||
@@ -34,7 +34,11 @@ let filter =
     filename ^^ ".cmd" ||
     filename ^^ ".txt" ||
     filename ^^ ".sh"  ||
-    List.exists (fun re -> Str.string_match re filename 0) names;;
+    let len = String.length filename in
+    List.exists begin fun re ->
+      try ignore (Str.search_backward re filename len); true
+      with Not_found -> false
+    end names;;
 
 let pixbuf_open_in_editor = Icons.button_close
 

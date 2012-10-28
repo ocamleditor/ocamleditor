@@ -177,7 +177,7 @@
       <other_objects></other_objects>
       <files>ocamleditor.ml</files>
       <package>str,lablgtk2,compiler-libs</package>
-      <includes>+ocamldoc gmisclib common icons otherwidgets oebuild </includes>
+      <includes>+ocamldoc +xml-light gmisclib common icons otherwidgets oebuild </includes>
       <thread>true</thread>
       <vmthread>false</vmthread>
       <pp></pp>
@@ -235,7 +235,7 @@
       <other_objects></other_objects>
       <files>ocamleditor.ml</files>
       <package>lablgtk2,str,compiler-libs</package>
-      <includes>+ocamldoc gmisclib common icons otherwidgets oebuild </includes>
+      <includes>+ocamldoc +xml-light gmisclib common icons otherwidgets oebuild </includes>
       <thread>true</thread>
       <vmthread>false</vmthread>
       <pp></pp>
@@ -305,7 +305,7 @@
       <other_objects></other_objects>
       <files>ocamleditor.ml</files>
       <package>lablgtk2,str,compiler-libs</package>
-      <includes>+ocamldoc gmisclib common icons otherwidgets oebuild </includes>
+      <includes>+ocamldoc +xml-light gmisclib common icons otherwidgets oebuild </includes>
       <thread>true</thread>
       <vmthread>false</vmthread>
       <pp></pp>
@@ -439,5 +439,6 @@
                            gtkThread.ml to reduce CPU consumption</doc>
       </arg>
     </args>
+    <commands/>
   </build_script>
 </project>

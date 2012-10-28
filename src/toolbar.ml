@@ -260,26 +260,24 @@ object (self)
       (* run *)
       ignore (tool_run#connect#clicked ~callback:begin fun () ->
         browser#with_current_project (fun project ->
-          browser#with_default_runtime_config (fun rc ->
+          browser#with_default_runtime_config ~open_dialog:true (fun rc ->
             let bc = List.find (fun b -> b.Target.id = rc.Rconf.target_id) project.Prj.targets in
             ignore (Task_console.exec ~editor (`RCONF rc) bc)))
       end);
       ignore (tool_run#connect#show_menu ~callback:begin fun (label, menu) ->
         browser#with_current_project (fun project ->
-          browser#with_default_runtime_config (fun default_rc ->
-            browser#with_default_target begin fun target ->
-              label := Some (sprintf "Run \xC2\xAB%s\xC2\xBB" default_rc.Rconf.name);
-              let targets = project.Prj.targets in
-              List.iter begin fun rc ->
-                let item = GMenu.menu_item ~label:rc.Rconf.name ~packing:menu#add () in
-                ignore (item#connect#activate ~callback:begin fun () ->
-                  try
-                    let bc = List.find (fun b -> b.Target.id = rc.Rconf.target_id) targets in
-                    ignore (Task_console.exec ~editor (`RCONF rc) bc)
-                  with Not_found -> ()
-                end);
-              end project.Prj.executables;
-            end))
+          browser#with_default_runtime_config ~open_dialog:true (fun default_rc ->
+            label := Some (sprintf "Run \xC2\xAB%s\xC2\xBB" default_rc.Rconf.name);
+            let targets = project.Prj.targets in
+            List.iter begin fun rc ->
+              let item = GMenu.menu_item ~label:rc.Rconf.name ~packing:menu#add () in
+              ignore (item#connect#activate ~callback:begin fun () ->
+                try
+                  let bc = List.find (fun b -> b.Target.id = rc.Rconf.target_id) targets in
+                  ignore (Task_console.exec ~editor (`RCONF rc) bc)
+                with Not_found -> ()
+              end);
+            end project.Prj.executables))
       end);
       (** Location History *)
       tool_back#connect#clicked ~callback:(fun () -> browser#goto_location `PREV);

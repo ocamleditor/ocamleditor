@@ -70,7 +70,7 @@ object (self)
     File_history.create
       ~filename:Oe_config.project_history_filename
       ~max_length:Oe_config.project_history_max_length
-  val mutable dialog_project_properties = []
+  val mutable cache_dialog_project_properties = []
   val mutable menu = None
   val mutable pref_max_view_2 = false
   val mutable pref_max_view_fullscreen = false
@@ -144,7 +144,7 @@ object (self)
     editor#set_history_switch_page_locked true;
     (*crono ~label:"close_all" *)editor#close_all ();
     editor#pack_outline (Outline.create_empty());
-    self#with_current_project editor#set_project;
+    editor#set_project proj;
     Sys.chdir (proj.root // Project.src);
     window#set_title (Convert.to_utf8 proj.name);
     (File_history.add project_history) filename;
@@ -207,14 +207,14 @@ object (self)
     self#with_current_project begin fun project ->
       let id = Project.filename project in
       let remove_from_cache () =
-        dialog_project_properties <- List.filter (fun (x, _) -> x <> id) dialog_project_properties
+        cache_dialog_project_properties <- List.filter (fun (x, _) -> x <> id) cache_dialog_project_properties
       in
       try
         begin
-          match List.assoc id dialog_project_properties with
+          match List.assoc id cache_dialog_project_properties with
             | window, widget, `ICONIFIED ->
               remove_from_cache();
-              dialog_project_properties <- (id, (window, widget, `VISIBLE)) :: dialog_project_properties;
+              cache_dialog_project_properties <- (id, (window, widget, `VISIBLE)) :: cache_dialog_project_properties;
               if show then begin
                 Gaux.may page_num ~f:widget#goto_page;
                 window#present();
@@ -228,6 +228,10 @@ object (self)
         end;
       with Not_found ->
         let window, widget = Project_properties.create ~editor ?page_num ~show () in
+        (* Because of "widget" (the "Project Properties" dialog) is cached,
+           browser#current_project and the project instance stored in the dialog can
+           be different objects (i.e. after a project switch in the IDE).  *)
+        ignore (widget#connect#project_changed ~callback:(fun proj -> current_project#set (Some proj)));
         ignore (window#connect#destroy ~callback:(fun _ -> remove_from_cache()));
         ignore (window#misc#connect#hide ~callback:begin fun () ->
           toolbar#update current_project#get;
@@ -242,14 +246,14 @@ object (self)
             match GdkEvent.WindowState.new_window_state ev with
               | [`ICONIFIED] ->
                 remove_from_cache();
-                dialog_project_properties <- (id, (window, widget, `ICONIFIED)) :: dialog_project_properties;
+                cache_dialog_project_properties <- (id, (window, widget, `ICONIFIED)) :: cache_dialog_project_properties;
               | _ ->
                 remove_from_cache();
-                dialog_project_properties <- (id, (window, widget, `VISIBLE)) :: dialog_project_properties;
+                cache_dialog_project_properties <- (id, (window, widget, `VISIBLE)) :: cache_dialog_project_properties;
           end;
           false
         end);
-        dialog_project_properties <- (id, (window, widget, `VISIBLE)) :: dialog_project_properties;
+        cache_dialog_project_properties <- (id, (window, widget, `VISIBLE)) :: cache_dialog_project_properties;
     end
 
   method dialog_project_new () =
@@ -261,11 +265,14 @@ object (self)
     let name = mkname 0 in
     let filename = Oe_config.user_home // name // (name^Project.extension) in
     let new_project = Project.create ~filename () in
-    ignore (Project_properties.create ~show:true ~editor ~new_project ~callback:begin fun proj ->
-      self#project_close();
-      Project.save ~editor new_project;
-      ignore (self#project_open (Project.filename proj));
-    end ());
+    let _, widget =
+      Project_properties.create ~show:true ~editor ~new_project ~callback:begin fun proj ->
+        self#project_close();
+        Project.save ~editor new_project;
+        ignore (self#project_open (Project.filename proj));
+      end ()
+    in
+    ignore (widget#connect#project_changed ~callback:(fun proj -> current_project#set (Some proj)));
 
   method dialog_file_new = Dialog_file_new.show ~editor:self#editor;
 
@@ -606,25 +613,19 @@ object (self)
   method with_current_project f = match current_project#get with Some p -> f p | _ -> ()
 
   method with_default_target f =
-    match current_project#get with
-      | Some project ->
-        begin
-          match Project.default_target project with
-            | Some bc -> f bc
-            | _ -> ()
-        end;
-      | _ -> ()
+    self#with_current_project begin fun project ->
+      match Project.default_target project with
+        | Some bc -> f bc
+        | _ -> ()
+    end
 
-  method with_default_runtime_config f =
-    match current_project#get with
-      | Some project ->
-        begin
-          match List_opt.find (fun x -> x.Rconf.default) project.Prj.executables with
-            | Some rconf -> f rconf
-            | _ ->
-              self#dialog_project_properties ~page_num:2 ()
-        end;
-      | _ -> ()
+  method with_default_runtime_config ~open_dialog f =
+    self#with_current_project begin fun project ->
+      match List_opt.find (fun x -> x.Rconf.default) project.Prj.executables with
+        | Some rconf -> f rconf
+        | None when open_dialog -> self#dialog_project_properties ~page_num:2 ()
+        | _ -> ()
+    end
 
   method window : GWindow.window = window
 
@@ -663,7 +664,7 @@ object (self)
       editor#dialog_save_modified ~close:false ~callback:finalize pages
     with Messages.Cancel_process_termination -> (GtkSignal.stop_emit())
 
-  method private init () =
+   initializer
     let _ = Editor.set_menu_item_nav_history_sensitive := self#set_menu_item_nav_history_sensitive in
     (** Menubar items *)
     let menu_item_view_menubar = ref [] in
@@ -946,8 +947,6 @@ object (self)
     ~tabbar_visibility_changed ~outline_visibility_changed
     ~vmessages_visibility_changed ~hvmessages_visibility_changed
     ~project_history_changed
-
-  initializer self#init()
 
 end
 

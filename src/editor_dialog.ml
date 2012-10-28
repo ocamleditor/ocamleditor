@@ -160,7 +160,7 @@ let save_modified ~editor ~close ~callback pages =
 let file_open ~editor () =
   let path = editor#project.Prj.root // Project.src in
   let filters = [
-    ("Source files", ["*.ml*"; "README*"; "INSTALL*";
+    ("Source files", ["*.ml*"; "README*"; "INSTALL*"; "META";
       "ChangeLog"; "CHANGES"; "NEWS*"; "TODO*"; "BUGS*"; "CONTRIB*";
       "Makefile*"; "*.sh"; "*.bat"; "*.cmd"]);
     ("All files", ["*"])]
