@@ -270,18 +270,6 @@
           </args>
           <phase>After_clean</phase>
         </task>
-        <task name="distclean">
-          <always_run_in_project>false</always_run_in_project>
-          <always_run_in_script>false</always_run_in_script>
-          <env replace="false"/>
-          <dir>../build</dir>
-          <cmd>ocaml</cmd>
-          <args>
-            <arg enabled="true">tools.ml</arg>
-            <arg enabled="true">-distclean</arg>
-          </args>
-          <phase>After_distclean</phase>
-        </task>
         <task name="install">
           <always_run_in_project>false</always_run_in_project>
           <always_run_in_script>false</always_run_in_script>
@@ -392,7 +380,7 @@
             <arg enabled="true">tools.ml</arg>
             <arg enabled="true">-distclean</arg>
           </args>
-          <phase>After_distclean</phase>
+          <phase></phase>
         </task>
       </external_tasks>
       <restrictions></restrictions>
@@ -439,6 +427,8 @@
                            gtkThread.ml to reduce CPU consumption</doc>
       </arg>
     </args>
-    <commands/>
+    <commands>
+      <command name="Distclean" target_id="13" task_name="distclean"/>
+    </commands>
   </build_script>
 </project>

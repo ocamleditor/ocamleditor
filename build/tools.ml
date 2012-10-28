@@ -89,29 +89,10 @@ let clean_lex_yacc () =
 
 (** distclean *)
 let distclean () =
-  kprintf run "%s ocamleditor.ml -distclean" oebuild_command;
-  kprintf run "%s common/common.ml -a -byt -opt -distclean" oebuild_command;
-  kprintf run "%s gmisclib/gmisclib.ml -a -byt -opt -distclean" oebuild_command;
-  kprintf run "%s otherwidgets/otherwidgets.ml -a -byt -opt -distclean" oebuild_command;
-  kprintf run "%s icons/icons.ml -a -byt -opt -distclean" oebuild_command;
-  kprintf run "%s oebuild/oebuild_tool.ml -a -byt -opt -o oebuild/oebuild -distclean" oebuild_command;
-  kprintf run "%s oeproc/oeproc.ml -byt -opt -o oeproc/oeproc -distclean" oebuild_command;
   clean_lex_yacc();
+  remove_file "oebuild_script.ml";
   let run_no_errors cmd = try run cmd with Script_error _ -> () in
   kprintf run_no_errors "%s *.exe *.bak *.annot *~" rm;
-  List.iter remove_file [
-    "geometry";
-    "Thumbs.db";
-    ".." // "pixmaps" // "Thumbs.db";
-    "oebuild"//"oebuild.exe";
-    "oebuild"//"oebuild.opt.exe";
-    "oebuild"//"oebuild";
-    "oebuild"//"oebuild.opt";
-    "oeproc"//"oeproc";
-    "oeproc"//"oeproc.opt";
-    "gtkThread2.ml";
-    "icons/icons.ml"
-  ];
   let rmdir dir = if Sys.file_exists dir then (kprintf run_no_errors "%s %s" rmr dir) in
   rmdir (Filename.parent_dir_name // "bak");
   rmdir (Filename.parent_dir_name // ".tmp");
@@ -161,7 +142,9 @@ let uninstall () =
 (** mkrelease *)
 let mkrelease () =
   generate_oebuild_script();
-  distclean();
+  pushd "..";
+  run "ocaml _build.ml distclean";
+  popd();
   Sys.chdir "..";
   let name = Filename.basename (Sys.getcwd ()) in
   let version = get_line_from_file ~filename:"VERSION" 1 in
