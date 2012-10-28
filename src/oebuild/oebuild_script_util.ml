@@ -247,11 +247,7 @@ let rec execute_target ~external_tasks ~targets ~command target =
                   Oebuild.clean ~deps ();
                   List.iter ETask.execute (ETask.filter etasks After_clean);
                 | `Distclean ->
-                  List.iter ETask.execute (ETask.filter etasks Before_distclean);
-                  let distclean = (ETask.filter etasks Distclean) in
-                  if distclean <> [] then (List.iter ETask.execute distclean)
-                  else if files <> [] then (Oebuild_util.remove_file ~verbose:false outname);
-                  List.iter ETask.execute (ETask.filter etasks After_distclean);
+                  if files <> [] then (Oebuild_util.remove_file ~verbose:false outname);
                 | `Show -> assert false
             end
           | _ -> ()
@@ -291,7 +287,7 @@ and build ~targets ~external_tasks ~etasks ~deps ~compilation ~outname ~files ta
 ;;
 
 (** main *)
-let main ~cmd_line_args ~external_tasks ~targets =
+let main ~cmd_line_args ~external_tasks ~general_commands ~targets =
   let module Command = struct
     type t = [`Show | `Build | `Install | `Clean | `Distclean]
 
@@ -338,7 +334,13 @@ let main ~cmd_line_args ~external_tasks ~targets =
           match command with
             | `Distclean ->
               List.iter (fun (_, t) -> execute_target ~external_tasks ~targets ~command t) targets;
-              Oebuild.distclean()
+              Oebuild.distclean();
+              begin
+                try
+                  let task = List.assoc (List.assoc `Distclean general_commands) external_tasks in
+                  ETask.execute (task ())
+                with Not_found -> ()
+              end;
             | `Show ->
               printf "%s\n%!" (system_config ());
               Printf.printf "\n%!" ;
@@ -391,8 +393,15 @@ let main ~cmd_line_args ~external_tasks ~targets =
     | Arg.Bad msg -> prerr_endline msg
     | Argc.Help_Command (cmd, (specs, descr, usage), msg) ->
       let name = Command.string_of_command cmd in
-      printf "%s %s - %s\n\nUSAGE\n  ocaml %s [global_options*] %s [options*] [targets*]\n\nOPTIONS%s"
-        command_name name descr command_name name (Arg.usage_string specs "")
+      begin
+        match cmd with
+          | `Distclean ->
+            printf "%s %s - %s\n\nUSAGE\n  ocaml %s [global_options*] %s\n\nOPTIONS%s"
+              command_name name descr command_name name (Arg.usage_string specs "")
+          | _ ->
+            printf "%s %s - %s\n\nUSAGE\n  ocaml %s [global_options*] %s [options*] [targets*]\n\nOPTIONS%s"
+              command_name name descr command_name name (Arg.usage_string specs "")
+      end;
     | Command.Unrecognized_command msg -> prerr_endline msg
     | ex -> prerr_endline (Printexc.to_string ex)
 ;;

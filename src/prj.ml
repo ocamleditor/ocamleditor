@@ -52,3 +52,12 @@ type t = {
   mutable bookmarks          : Oe.bookmark list;
 }
 
+let find_target proj id =
+  List_opt.find (fun bc -> bc.Target.id = id) proj.targets;;
+
+let find_target_string proj id = find_target proj (int_of_string id)
+
+let find_task proj name =
+  List_opt.find (fun et -> et.Task.et_name = name)
+    (List.flatten (List.map (fun bc -> bc.Target.external_tasks) proj.targets));;
+

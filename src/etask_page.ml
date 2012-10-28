@@ -35,7 +35,7 @@ class view ?packing () =
   (* Phase *)
   let box = GPack.vbox ~packing:vbox#pack () in
   let _ = GMisc.label ~text:"Phase" ~xalign ~packing:box#add () in
-  let phases = [Before_clean; Clean; After_clean; Before_compile; Compile; After_compile; Before_distclean; Distclean; After_distclean] in
+  let phases = [Before_clean; Clean; After_clean; Before_compile; Compile; After_compile] in
   let strings = List.map Task.descr_of_phase phases in
   let combo_phase, _ = GEdit.combo_box_text ~strings ~active:0 ~packing:box#add () in
   let callback () = combo_phase#misc#set_sensitive (check_always_project#active || check_always_script#active) in

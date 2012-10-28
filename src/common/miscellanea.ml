@@ -105,6 +105,16 @@ module Xlist =
 
   end
 
+module Opt = struct
+  let map x f = match x with Some x -> f x | _ -> None
+  let may x f = match x with Some x -> f x | _ -> ()
+  let may_default x default f = match x with None -> f default | Some x -> x
+  let default x y = match x with Some x -> x | _ -> y
+  let exn exn x = match x with Some x -> x | _ -> raise exn
+  let filter l = Xlist.filter_map (fun x -> x) l
+end
+
+
 
 (** {6 Memoization} *)
 

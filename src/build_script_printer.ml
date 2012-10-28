@@ -136,6 +136,25 @@ let print_external_tasks ochan project =
   output_string ochan "];;\n";
   ets;;
 
+(** print_general_commands *)
+let print_general_commands ochan external_tasks project =
+  let commands = project.Prj.build_script.bs_commands in
+  fprintf ochan "let general_commands = [\n";
+  List.iter begin fun command ->
+    let target = command.bsc_target in
+    let task = command.bsc_task in
+    List_opt.may_find begin fun (tg, _) ->
+      tg.id = target.id && task.et_name = task.et_name
+    end external_tasks begin fun (tg, et_indexes) ->
+      let et = List.combine tg.external_tasks et_indexes in
+      match List_opt.find (fun (et, _) -> et.et_name = task.et_name) et with
+        | Some (_, (index, _)) ->
+          fprintf ochan "  `%s, %d;\n" (Build_script.string_of_command command.bsc_name) index;
+        | _ -> ()
+    end ();
+  end commands;
+  fprintf ochan "]\n";;
+
 (** print_cmd_line_args *)
 let print_cmd_line_args ochan project =
   let args = project.Prj.build_script.bs_args in
@@ -180,13 +199,15 @@ let print ~project ~filename () =
     output_string ochan "\n";
     let ets = print_external_tasks ochan project in
     output_string ochan "\n\n";
+    let general_commands = print_general_commands ochan ets project in
+    output_string ochan "\n\n";
     output_string ochan "(\x2A Targets ==================================================== \x2A)\n\n";
     (*  *)
     print_targets ochan project.Prj.build_script.bs_targets ets;
     output_string ochan "\n";
     output_string ochan "(\x2A End of Targets ============================================= \x2A)\n\n";
     (*  *)
-    output_string ochan "let _ = main ~cmd_line_args ~external_tasks ~targets\n";
+    output_string ochan "let _ = main ~cmd_line_args ~external_tasks ~general_commands ~targets\n";
     (*  *)
     finally();
   with ex -> begin

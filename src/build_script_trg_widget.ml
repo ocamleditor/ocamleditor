@@ -138,7 +138,7 @@ object (self)
       let installer_task =
         match model#get ~row ~column:col_install_task with
           | "" -> None
-          | task_name -> Project_xml.find_task project task_name
+          | task_name -> Prj.find_task project task_name
       in
       targets := {
         bst_target         = model#get ~row ~column:col_target;

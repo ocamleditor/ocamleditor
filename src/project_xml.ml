@@ -134,9 +134,19 @@ let write proj =
             Xml.Element ("doc", [], [Xml.PCData arg.Build_script_args.bsa_doc]);
           ])
         end proj.build_script.Build_script.bs_args
+      in
+      let commands =
+        List.map begin fun cmd ->
+          Xml.Element ("command", [
+            "name", (Build_script.string_of_command cmd.Build_script.bsc_name);
+            "target_id", string_of_int cmd.Build_script.bsc_target.Target.id;
+            "task_name", (cmd.Build_script.bsc_task.Task.et_name);
+          ], [])
+        end proj.build_script.Build_script.bs_commands
       in [
         Xml.Element ("targets", [], targets);
-        Xml.Element ("args", [], args)
+        Xml.Element ("args", [], args);
+        Xml.Element ("commands", [], commands);
       ])
   ]);;
 
@@ -153,20 +163,12 @@ let attrib node name f default =
 let fattrib node name f default =
   match List_opt.assoc name (Xml.attribs node) with Some v -> f v | _ -> (default ());;
 
-let find_target proj id =
-  let id = int_of_string id in
-  List_opt.find (fun bc -> bc.Target.id = id) proj.targets;;
-
-let find_task proj name =
-  List_opt.find (fun et -> et.Task.et_name = name)
-    (List.flatten (List.map (fun bc -> bc.Target.external_tasks) proj.targets));;
-
 (** xml_bs_targets *)
 let xml_bs_targets proj node =
   List.rev (Xml.fold begin fun acc target_node ->
     try
       {Build_script.
-        bst_target         = (match fattrib target_node "target_id" (find_target proj) (fun _ -> None) with Some x -> x | _ -> raise Exit);
+        bst_target         = (match fattrib target_node "target_id" (find_target_string proj) (fun _ -> None) with Some x -> x | _ -> raise Exit);
         bst_show           = fattrib target_node "show" bool_of_string (fun () -> true);
         bst_installer_task = fattrib target_node "installer_task_name" (find_task proj) (fun _ -> None)
       } :: acc
@@ -200,7 +202,7 @@ let xml_bs_args proj node =
           end
         | "task" ->
           bsa_task := begin
-            let target = fattrib tp "target_id" (find_target proj) (fun _ -> None) in
+            let target = fattrib tp "target_id" (find_target_string proj) (fun _ -> None) in
             let task = fattrib tp "task_name" (find_task proj) (fun _ -> None) in
             target, task
           end
@@ -222,6 +224,19 @@ let xml_bs_args proj node =
         (fun _ -> invalid_arg "from_file, build_script, pass");
     }
   end node;;
+
+(** xml_commands *)
+let xml_commands proj node =
+  List.rev (Xml.fold begin fun acc target_node ->
+    try
+      {Build_script.
+        bsc_name   = (fattrib target_node "name" Build_script.command_of_string (fun _ -> raise Exit));
+        bsc_target = (match fattrib target_node "target_id" (find_target_string proj) (fun _ -> None) with Some x -> x | _ -> raise Exit);
+        bsc_task   = fattrib target_node "task_name"
+          (fun y -> match find_task proj y with Some x -> x | _ -> assert false) (fun _ -> raise Exit)
+      } :: acc
+    with Exit -> acc
+  end [] node);;
 
 (** read *)
 let read filename =
@@ -387,6 +402,7 @@ let read filename =
           bs_filename = filename;
           bs_targets  = fold node "targets" (xml_bs_targets proj) [];
           bs_args     = fold node "args" (xml_bs_args proj) [];
+          bs_commands = fold node "commands" (xml_commands proj) [];
         }
       | _ -> ()
   end xml;

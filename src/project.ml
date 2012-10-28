@@ -115,7 +115,7 @@ let create ~filename () =
       Build_script.bs_filename = Build_script.default_filename;
       bs_targets               = [];
       bs_args                  = [];
-      (*bs_commands              = [];*)
+      bs_commands              = [];
     };
     bookmarks          = [];
   } in

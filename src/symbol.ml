@@ -450,7 +450,7 @@ let find_local_defs ~regexp (*~(project : Prj.t)*) ~filename ~offset =
         sy_type      = typ;
         sy_filename  = filename;
         sy_local     = true;
-      }) (Miscellanea.Xlist.filter_map (fun x -> x) defs)
+      }) (Opt.filter defs)
 ;;
 
 (*

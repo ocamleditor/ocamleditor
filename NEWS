@@ -2,17 +2,26 @@
 ------------------------
 
   * Upgrade to OCaml-4.00.0
-  * More options in "Preferences Dialog".
-  * Renamed "Build Configuration" to "Target" and renamed other features of
-    the build system.
-  * Added "Duplicate", "Move Up" and "Move Down" to the target list.
-  * Added "Direct Dependencies" list which identifies the targets upon which
-    a target depends.
-  * Automated build script generation: ability to specify custom command line
-    arguments; new commands "install" and "distclean"; ability to hide
-    targets; dependencies between targets and external build tasks.
-  * Added support to use packages installed with Findlib.
+
+  * More options in Preferences dialog.
+
+  * Project Properties dialog
+
+    - Renamed "Build Configuration" to "Target" and renamed other features of
+      the build system.
+    - New buttons "Duplicate", "Move Up" and "Move Down" in the target list.
+    - New tab "Direct (Target) Dependencies".
+    - Support for using packages installed with Findlib.
+
+  * Automated build script generation
+
+    - Ability to specify custom command line arguments;
+    - New commands "install" and "distclean";
+    - Ability to hide targets in the script;
+    - Dependencies between targets and external build tasks.
+
   * "Structure pane" revamped: now reads informations from "-bin-annot".
+
   * Various other fixes.
 
 

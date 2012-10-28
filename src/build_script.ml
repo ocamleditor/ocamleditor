@@ -22,9 +22,10 @@
 
 
 type t = {
-  bs_filename : string;
-  bs_targets  : target list;
-  bs_args     : Build_script_args.t list;
+  bs_filename      : string;
+  bs_targets       : target list;
+  bs_args          : Build_script_args.t list;
+  bs_commands      : command list;
 }
 
 and target = {
@@ -32,5 +33,22 @@ and target = {
   bst_show             : bool;
   bst_installer_task   : Task.t option
 }
+
+and command = {
+  bsc_name   : [`Distclean | `Install | `Uninstall];
+  bsc_target : Target.t;
+  bsc_task   : Task.t;
+}
+
+let string_of_command = function
+  | `Distclean -> "Distclean"
+  | `Install -> "Install"
+  | `Uninstall -> "Uninstall"
+
+let command_of_string = function
+  | "Distclean" -> `Distclean
+  | "Install" -> `Install
+  | "Uninstall" -> `Uninstall
+  | _ -> failwith "string_of_command"
 
 let default_filename = "_build.ml"

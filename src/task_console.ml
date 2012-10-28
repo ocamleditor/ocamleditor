@@ -527,13 +527,9 @@ let exec ~editor ?use_thread ?(with_deps=false) task_kind target =
   let at_exit = fun () -> GtkThread2.async editor#with_current_page (fun p -> p#compile_buffer ~commit:false ()) in
   match task_kind with
     | `CLEANALL ->
-      (* External tasks before and after distclean *)
-      let before = Target.filter_external_tasks target Task.Before_distclean in
-      let after = Target.filter_external_tasks target Task.After_distclean in
-      (*  *)
       let cmd, args = Target.create_cmd_line target in
       let task = Task.create ~name:"Clean Project" ~env:[] ~dir:"" ~cmd ~args:(args @ [true, "-distclean"]) () in
-      exec_sync ~editor [before @ [`CLEANALL, task] @ after];
+      exec_sync ~editor [[`CLEANALL, task]];
       (*let console = create ~editor `CLEANALL task in
       ignore (console#button_run#connect#clicked ~callback:(fun () -> ignore (console#run())));
       ignore(console#run ?use_thread ());*)

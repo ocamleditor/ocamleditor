@@ -53,6 +53,13 @@ class widget ~project ?packing () =
   let _               = notebook#append_page ~tab_label abox#coerce in
   let _               = GMisc.label ~text:"Define the command line arguments for the build script" ~xalign:0.0 ~packing:abox#pack ~show:enable_widget_args () in
   let widget_args     = new Build_script_args_widget.widget ~project ~packing:abox#add () in
+  (* General Commands *)
+  let abox            = GPack.vbox ~border_width ~spacing () in
+  let tab_label       = (GMisc.label ~text:"General Commands" ())#coerce in
+  let _               = notebook#append_page ~tab_label abox#coerce in
+  let _               = GMisc.label ~text:"" ~xalign:0.0 ~packing:abox#pack () in
+  let widget_cmds     = new Build_script_cmds_widget.widget ~project ~packing:abox#add () in
+  (*  *)
 object (self)
   inherit GObj.widget vbox#as_widget
   val mutable is_valid = new GUtil.variable true
@@ -71,6 +78,7 @@ object (self)
       bs_filename = Filename.basename filename;
       bs_targets  = widget_trg#get();
       bs_args     = widget_args#get();
+      bs_commands = (Opt.filter [widget_cmds#get()]);
     };
     Build_script_printer.print ~project ~filename ();
     Project.save project

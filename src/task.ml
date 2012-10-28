@@ -23,8 +23,7 @@
 
 type kind = [ `CLEAN | `CLEANALL | `ANNOT | `COMPILE | `RUN | `OTHER]
 type phase =
-  Before_clean | Clean | After_clean | Before_compile | Compile |
-  After_compile | Before_distclean | Distclean | After_distclean
+  Before_clean | Clean | After_clean | Before_compile | Compile | After_compile
 
 type t = {
   mutable et_name                  : string;
@@ -45,9 +44,6 @@ let string_of_phase = function
   | Before_compile -> "Before_compile"
   | Compile -> "Compile"
   | After_compile -> "After_compile"
-  | Before_distclean -> "Before_distclean"
-  | Distclean -> "Distclean"
-  | After_distclean -> "After_distclean"
 
 let descr_of_phase = function
   | Before_clean -> "Pre-clean"
@@ -56,9 +52,6 @@ let descr_of_phase = function
   | Before_compile -> "Pre-build"
   | Compile -> "Build"
   | After_compile -> "Post-build"
-  | Before_distclean -> "Pre-distclean"
-  | Distclean -> "Distclean"
-  | After_distclean -> "Post-distclean"
 
 let phase_of_string = function
   | "Before_clean" -> Before_clean
@@ -67,9 +60,6 @@ let phase_of_string = function
   | "Before_compile" -> Before_compile
   | "Compile" -> Compile
   | "After_compile" -> After_compile
-  | "Before_distclean" -> Before_distclean
-  | "Distclean" -> Distclean
-  | "After_distclean" -> After_distclean
   | _ -> failwith "phase_of_string"
 
 let create ~name ~env ?(env_replace=false) ~dir ~cmd ~args ?phase () = {
