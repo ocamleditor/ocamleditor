@@ -50,7 +50,7 @@ type target = {
   restrictions : string list;
   dependencies : int list;
   show : bool;
-  installer_task : int option;
+  (*installer_task : int option;*)
 }
 
 type target_map_entry = int * (string * target)
@@ -210,8 +210,8 @@ let install ~compilation ~outname ~external_tasks ~deps target =
   match target.target_type with
     | Library ->
       let deps = deps() in
-      install_output ~compilation ~outkind:target.target_type ~outname ~deps ~path:target.library_install_dir ~ccomp_type
-    | Executable ->
+      Oebuild.install ~compilation ~outkind:target.target_type ~outname ~deps ~path:target.library_install_dir ~ccomp_type
+    | Executable (*->
       begin
         match target.installer_task with
           | Some installer_task ->
@@ -219,8 +219,10 @@ let install ~compilation ~outname ~external_tasks ~deps target =
             ETask.execute (f ())
           | _ -> eprintf "Command \"install\" is not available for target \"%d\"" target.num
       end;
-      raise Exit;
-    | Plugin | Pack -> failwith "\"install\" not implemented for Plugin or Pack.";;
+      raise Exit;*)
+    | Plugin | Pack ->
+      eprintf "\"install\" not implemented for Executable, Plugin or Pack.";
+      raise Exit;;
 
 (** execute_target *)
 let rec execute_target ~external_tasks ~targets ~command target =
@@ -341,6 +343,13 @@ let main ~cmd_line_args ~external_tasks ~general_commands ~targets =
                   ETask.execute (task ())
                 with Not_found -> ()
               end;
+            (*| `Install ->
+              begin
+                try
+                  let task = List.assoc (List.assoc `Install general_commands) external_tasks in
+                  ETask.execute (task ())
+                with Not_found -> ()
+              end;*)
             | `Show ->
               printf "%s\n%!" (system_config ());
               Printf.printf "\n%!" ;

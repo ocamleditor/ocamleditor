@@ -102,14 +102,14 @@ let write proj =
         List.map begin fun target ->
           Xml.Element ("target",
             begin
-              let installer_task_name =
+              (*let installer_task_name =
                 match target.Build_script.bst_installer_task with
                   | Some task -> ["installer_task_name", task.Task.et_name]
                   | None -> []
-              in [
+              in *)[
                 "target_id", (string_of_int target.Build_script.bst_target.Target.id);
                 "show", (string_of_bool target.Build_script.bst_show);
-              ] @ installer_task_name
+              ] (*@ installer_task_name*)
             end, [])
         end proj.build_script.Build_script.bs_targets
       in
@@ -170,7 +170,7 @@ let xml_bs_targets proj node =
       {Build_script.
         bst_target         = (match fattrib target_node "target_id" (find_target_string proj) (fun _ -> None) with Some x -> x | _ -> raise Exit);
         bst_show           = fattrib target_node "show" bool_of_string (fun () -> true);
-        bst_installer_task = fattrib target_node "installer_task_name" (find_task proj) (fun _ -> None)
+        (*bst_installer_task = fattrib target_node "installer_task_name" (find_task proj) (fun _ -> None)*)
       } :: acc
     with Exit -> acc
   end [] node);;

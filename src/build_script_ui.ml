@@ -58,7 +58,8 @@ class widget ~project ?packing () =
   let tab_label       = (GMisc.label ~text:"General Commands" ())#coerce in
   let _               = notebook#append_page ~tab_label abox#coerce in
   let _               = GMisc.label ~text:"" ~xalign:0.0 ~packing:abox#pack () in
-  let widget_cmds     = new Build_script_cmds_widget.widget ~project ~packing:abox#add () in
+  let cmd_distclean   = new Build_script_cmds_widget.widget `Distclean ~project ~packing:abox#pack () in
+  let cmd_install     = new Build_script_cmds_widget.widget `Install ~project ~packing:abox#pack () in
   (*  *)
 object (self)
   inherit GObj.widget vbox#as_widget
@@ -78,7 +79,7 @@ object (self)
       bs_filename = Filename.basename filename;
       bs_targets  = widget_trg#get();
       bs_args     = widget_args#get();
-      bs_commands = (Opt.filter [widget_cmds#get()]);
+      bs_commands = (Opt.filter [cmd_distclean#get(); cmd_install#get()]);
     };
     Build_script_printer.print ~project ~filename ();
     Project.save project

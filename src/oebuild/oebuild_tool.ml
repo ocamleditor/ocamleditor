@@ -39,7 +39,7 @@ let main () = begin
   let lflags = ref "" in
   let libs = ref "" in
   let mods = ref "" in
-  let install = ref None in
+  let install_flag = ref None in
   let compile_only = ref false in
   let annot = ref false in
   let pp = ref "" in
@@ -56,7 +56,7 @@ let main () = begin
   let add_compilation x () = compilation := x :: !compilation in
   let set_run_args x = run_args := x :: !run_args in
   let set_run_code x () = run_code := Some x in
-  let set_install x = install := Some x in
+  let set_install x = install_flag := Some x in
   let dep () =
     try
       let deps = Dep.find ~pp:!pp (*~includes:!includes*) ~with_errors:true !target in
@@ -182,8 +182,8 @@ let main () = begin
               | Build_failed code, _ -> exit code (*(compilation, None)*)
               | Built_successfully, deps ->
                 begin
-                  match !install with
-                    | Some path -> install_output ~compilation ~outname ~outkind:!outkind ~deps ~path
+                  match !install_flag with
+                    | Some path -> install ~compilation ~outname ~outkind:!outkind ~deps ~path
                       ~ccomp_type:(Ocaml_config.can_compile_native ());
                     | _ -> ()
                 end;

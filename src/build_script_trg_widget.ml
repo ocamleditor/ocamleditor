@@ -38,22 +38,22 @@ class widget ~project ?packing () =
   let cols              = new GTree.column_list in
   let col_target        = cols#add Gobject.Data.caml in
   let col_show          = cols#add Gobject.Data.boolean in
-  let col_install_task  = cols#add Gobject.Data.string in
+  (*let col_install_task  = cols#add Gobject.Data.string in*)
   let rend_target       = GTree.cell_renderer_text [] in
   let rend_pixbuf       = GTree.cell_renderer_pixbuf [] in
-  let rend_show         = GTree.cell_renderer_toggle [] in
+  let rend_show         = GTree.cell_renderer_toggle [`XALIGN 0.0] in
   let rend_install_task = GTree.cell_renderer_combo [`EDITABLE true; `HAS_ENTRY false; `TEXT_COLUMN col_itask; `MODEL (Some model_itask#coerce)] in
   let model             = GTree.list_store cols in
   let vc_target         = GTree.view_column ~title:"Target" () in
   let _                 = vc_target#pack ~expand:false rend_pixbuf in
   let _                 = vc_target#pack ~expand:true rend_target in
   let vc_show           = GTree.view_column ~title:"Show" ~renderer:(rend_show, ["active", col_show]) () in
-  let vc_install_task   = GTree.view_column ~title:"Installer Task" ~renderer:(rend_install_task, ["text", col_install_task]) () in
+  (*let vc_install_task   = GTree.view_column ~title:"Installer Task" ~renderer:(rend_install_task, ["text", col_install_task]) () in*)
   let view              = GTree.view ~model ~headers_visible:true ~reorderable:true ~enable_search:false ~packing:sw#add () in
   let _                 = view#selection#set_mode `MULTIPLE in
   let _                 = view#append_column vc_target in
   let _                 = view#append_column vc_show in
-  let _                 = view#append_column vc_install_task in
+  (*let _                 = view#append_column vc_install_task in*)
 object (self)
   inherit GObj.widget hbox#as_widget
   val mutable table = []
@@ -68,7 +68,7 @@ object (self)
         | Target.Plugin -> rend_pixbuf#set_properties [`VISIBLE true; `PIXBUF Icons.plugin; `XALIGN 0.0]
         | Target.Pack -> rend_pixbuf#set_properties [`VISIBLE true; `PIXBUF Icons.library; `XALIGN 0.0]
     end;
-    vc_install_task#set_cell_data_func rend_install_task begin fun model row ->
+    (*vc_install_task#set_cell_data_func rend_install_task begin fun model row ->
       let target = model#get ~row ~column:col_target in
       match target.Target.target_type with
         | Target.Executable ->
@@ -77,22 +77,22 @@ object (self)
         | Target.Library
         | Target.Plugin
         | Target.Pack -> rend_install_task#set_properties [`FOREGROUND_GDK (view#misc#style#fg `INSENSITIVE); `EDITABLE false; `TEXT "Not Applicable"; `STYLE `ITALIC]
-    end;
+    end;*)
     ignore (rend_show#connect#toggled ~callback:begin fun path ->
       let row = model#get_iter path in
       model#set ~row ~column:col_show (not (model#get ~row ~column:col_show));
     end);
-    (* Fill model_itask *)
+    (*(* Fill model_itask *)
     ignore (rend_install_task#connect#edited ~callback:begin fun path text ->
       let row = model#get_iter path in
-(*      let task_name =
+      let task_name =
         match text with
           | "<None>" ->
-      in*)
+      in
       model#set ~row ~column:col_install_task text;
-    end);
-    ignore (view#selection#connect#after#changed ~callback:self#fill_model_itask);
-    ignore (view#connect#cursor_changed ~callback:self#fill_model_itask);
+    end);*)
+    (*ignore (view#selection#connect#after#changed ~callback:self#fill_model_itask);
+    ignore (view#connect#cursor_changed ~callback:self#fill_model_itask);*)
     (* Fill model *)
     List.iter begin fun tg ->
       let row = model#append () in
@@ -103,7 +103,7 @@ object (self)
     (*  *)
     self#set project.build_script.bs_targets;
 
-  method private fill_model_itask () =
+  (*method private fill_model_itask () =
     model_itask#clear();
     match view#selection#get_selected_rows with
       | path :: [] ->
@@ -115,7 +115,7 @@ object (self)
           let row = model_itask#append () in
           model_itask#set ~row ~column:col_itask task.et_name
         end target.external_tasks
-      | _ -> ();
+      | _ -> ();*)
 
   method set build_script_targets =
     List.iter begin fun bst ->
@@ -123,27 +123,27 @@ object (self)
         | Some path ->
           let row = model#get_iter path in
           model#set ~row ~column:col_show bst.bst_show;
-          let task_name =
+          (*let task_name =
             match bst.bst_installer_task with
               | Some itask -> itask.Task.et_name
               | _ -> ""
           in
-          model#set ~row ~column:col_install_task task_name;
+          model#set ~row ~column:col_install_task task_name;*)
         | _ -> ()
     end build_script_targets;
 
   method get () =
     let targets = ref [] in
     model#foreach begin fun _ row ->
-      let installer_task =
+     (* let installer_task =
         match model#get ~row ~column:col_install_task with
           | "" -> None
           | task_name -> Prj.find_task project task_name
-      in
+      in*)
       targets := {
         bst_target         = model#get ~row ~column:col_target;
         bst_show           = model#get ~row ~column:col_show;
-        bst_installer_task = installer_task;
+        (*bst_installer_task = installer_task;*)
       } :: !targets;
       false
     end;

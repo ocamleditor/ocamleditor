@@ -28,10 +28,11 @@ open Target
 open Printf
 open Miscellanea
 
-class widget ~project ?packing () =
+class widget kind ~project ?packing () =
   let vbox        = GPack.vbox ~spacing:13 ?packing () in
   let box         = GPack.vbox ~spacing:3 ~packing:vbox#pack () in
-  let _           = GMisc.label ~text:"Select an external task for the \"distclean\" command" ~xalign:0.0 ~packing:box#pack () in
+  let text        = sprintf "Select an external task for the \"%s\" command" (Build_script.string_of_command kind) in
+  let _           = GMisc.label ~text ~xalign:0.0 ~packing:box#pack () in
   let cols        = new GTree.column_list in
   let col_pixbuf  = cols#add (Gobject.Data.gobject_by_name "GdkPixbuf") in
   let col_name    = cols#add Gobject.Data.string in
@@ -72,14 +73,14 @@ object (self)
     self#set project
 
   method private string_of_task task =
-    sprintf "%s%s %s"
-      (if task.et_dir <> "" then task.et_dir ^ "/" else "")
+    sprintf "%s %s%s"
       task.et_cmd
+      (if task.et_dir <> "" then task.et_dir ^ "/" else "")
       (String.concat " " (List.map (fun (active, arg) -> if active then arg else "") task.et_args))
 
   method set project =
     let commands = project.Prj.build_script.bs_commands in
-    List_opt.may_find (fun cmd -> cmd.bsc_name = `Distclean) commands begin fun command ->
+    List_opt.may_find (fun cmd -> cmd.bsc_name = kind) commands begin fun command ->
       model#foreach begin fun _ row ->
         match model#get ~row ~column:col_task with
           | Some (target_id, task_name) ->
@@ -96,7 +97,7 @@ object (self)
     try
       Opt.map combo#active_iter begin fun row ->
         Opt.map (model#get ~row ~column:col_task) begin fun (target_id, task_name) -> Some {
-            bsc_name   = `Distclean;
+            bsc_name   = kind;
             bsc_target = Opt.exn Exit (Prj.find_target project target_id);
             bsc_task   = Opt.exn Exit (Prj.find_task project task_name);
           }

@@ -770,7 +770,7 @@ let project ~browser ~group ~flags items =
         end;
       end project.Prj.targets;
       Gmisclib.Idle.add begin fun () ->
-        let item_all = GMenu.menu_item ~label:"All configurations" ~packing:build_menu#add () in
+        let item_all = GMenu.menu_item ~label:"All targets" ~packing:build_menu#add () in
         let _ = item_all#connect#activate ~callback:(fun () -> browser#build_all project.Prj.targets) in
         item_all#add_accelerator ~group ~modi:[`CONTROL;`MOD1] GdkKeysyms._F10 ~flags;
         ignore (GMenu.separator_item ~packing:build_menu#add ());

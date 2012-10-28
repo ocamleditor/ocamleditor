@@ -117,8 +117,8 @@ let get_output_name ~compilation ~outkind ~outname ~targets =
     end
 ;;
 
-(** install_output *)
-let install_output ~compilation ~outkind ~outname ~deps ~path ~ccomp_type =
+(** install *)
+let install ~compilation ~outkind ~outname ~deps ~path ~ccomp_type =
   let dest_outname = Filename.basename outname in
   match outkind with
     | Library ->
@@ -143,7 +143,7 @@ let install_output ~compilation ~outkind ~outname ~deps ~path ~ccomp_type =
     | Executable ->
       mkdir_p path;
       cp outname (path // dest_outname)
-    | Plugin | Pack -> eprintf "\"install_output\" not implemented for Plugin or Pack."
+    | Plugin | Pack -> eprintf "\"Oebuild.install\" not implemented for Plugin or Pack."
 ;;
 
 (** run_output *)

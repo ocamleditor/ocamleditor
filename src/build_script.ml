@@ -31,7 +31,7 @@ type t = {
 and target = {
   bst_target           : Target.t;
   bst_show             : bool;
-  bst_installer_task   : Task.t option
+  (*bst_installer_task   : Task.t option*)
 }
 
 and command = {
