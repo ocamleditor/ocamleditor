@@ -28,11 +28,10 @@ open Target
 open Printf
 open Miscellanea
 
-class widget kind ~project ?packing () =
+class widget kind ~label ~project ?packing () =
   let vbox        = GPack.vbox ~spacing:13 ?packing () in
   let box         = GPack.vbox ~spacing:3 ~packing:vbox#pack () in
-  let text        = sprintf "Select an external task for the \"%s\" command" (Build_script.string_of_command kind) in
-  let _           = GMisc.label ~text ~xalign:0.0 ~packing:box#pack () in
+  let _           = GMisc.label ~text:label ~xalign:0.0 ~packing:box#pack () in
   let cols        = new GTree.column_list in
   let col_pixbuf  = cols#add (Gobject.Data.gobject_by_name "GdkPixbuf") in
   let col_name    = cols#add Gobject.Data.string in

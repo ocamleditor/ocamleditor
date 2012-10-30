@@ -54,7 +54,8 @@ INSTALLATION
 
   For Linux, become superuser and execute:
 
-    ocaml _build.ml [-prefix <path>] install ocamleditor
+    cd build
+    ocaml tools.ml [-prefix <path>] install
 
   By default, commands will be installed under "/usr/local/bin" and icons
   under "/usr/local/share/pixmaps/ocamleditor". You can specify an
