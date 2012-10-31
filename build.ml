@@ -22,11 +22,8 @@ open Oebuild_script_util
 open Arg
 open Task
 
-let arg_prefix = ref "/usr/local"
 let arg_use_modified_gtkThread = ref false
 let cmd_line_args = [
-  "-prefix", Set_string arg_prefix,
-    " Installation prefix (Unix only) [default: /usr/local]";
   "-use-modified-gtkThread", Set arg_use_modified_gtkThread,
     " Set this flag if you have Lablgtk-2.14.2 or earlier\n                           and you want to use the included modified version of \n                           gtkThread.ml to reduce CPU consumption [default: Not Set]";
 ]
@@ -37,9 +34,9 @@ let external_tasks = [
     et_name                  = "mkicons";
     et_env                   = [];
     et_env_replace           = false;
-    et_dir                   = "../build";
+    et_dir                   = "..";
     et_cmd                   = "ocaml";
-    et_args                  = [true,"tools.ml"; true,"-mkicons"];
+    et_args                  = [true,"tools/mkicons.ml"];
     et_phase                 = Some Before_compile;
     et_always_run_in_project = true;
     et_always_run_in_script  = true;
@@ -49,75 +46,27 @@ let external_tasks = [
     et_name                  = "prepare-build";
     et_env                   = [];
     et_env_replace           = false;
-    et_dir                   = "../build";
+    et_dir                   = "..";
     et_cmd                   = "ocaml";
-    et_args                  = [true,"tools.ml"; true,"-prepare-build"];
+    et_args                  = [true,"tools/prepare_build.ml"];
     et_phase                 = Some Before_compile;
     et_always_run_in_project = false;
     et_always_run_in_script  = true;
   });
   
   2, (fun () -> {
-    et_name                  = "clean-lex-yacc";
-    et_env                   = [];
-    et_env_replace           = false;
-    et_dir                   = "../build";
-    et_cmd                   = "ocaml";
-    et_args                  = [true,"tools.ml"; true,"-clean-lex-yacc"];
-    et_phase                 = Some After_clean;
-    et_always_run_in_project = false;
-    et_always_run_in_script  = false;
-  });
-  
-  3, (fun () -> {
-    et_name                  = "install";
-    et_env                   = [];
-    et_env_replace           = false;
-    et_dir                   = "../build";
-    et_cmd                   = "ocaml";
-    et_args                  = [true,"tools.ml"; true,"-install"];
-    et_phase                 = Some Before_clean;
-    et_always_run_in_project = false;
-    et_always_run_in_script  = false;
-  });
-  
-  4, (fun () -> {
     et_name                  = "prepare-build";
     et_env                   = [];
     et_env_replace           = false;
-    et_dir                   = "../build";
+    et_dir                   = "..";
     et_cmd                   = "ocaml";
-    et_args                  = [true,"tools.ml"; true,"-prepare-build"; !arg_use_modified_gtkThread,"-use-modified-gtkThread"; true,"-prefix arg_prefix"];
+    et_args                  = [true,"tools/prepare_build.ml"; !arg_use_modified_gtkThread,"-use-modified-gtkThread"];
     et_phase                 = Some Before_compile;
     et_always_run_in_project = true;
     et_always_run_in_script  = true;
   });
   
-  5, (fun () -> {
-    et_name                  = "clean-lex-yacc";
-    et_env                   = [];
-    et_env_replace           = false;
-    et_dir                   = "../build";
-    et_cmd                   = "ocaml";
-    et_args                  = [true,"tools.ml"; true,"-clean-lex-yacc"];
-    et_phase                 = Some After_clean;
-    et_always_run_in_project = false;
-    et_always_run_in_script  = false;
-  });
-  
-  6, (fun () -> {
-    et_name                  = "install";
-    et_env                   = [];
-    et_env_replace           = false;
-    et_dir                   = "../build";
-    et_cmd                   = "ocaml";
-    et_args                  = [true,"tools.ml"; true,"-install"];
-    et_phase                 = Some Before_clean;
-    et_always_run_in_project = false;
-    et_always_run_in_script  = false;
-  });
-  
-  7, (fun () -> {
+  3, (fun () -> {
     et_name                  = "<tools>";
     et_env                   = [];
     et_env_replace           = false;
@@ -129,23 +78,23 @@ let external_tasks = [
     et_always_run_in_script  = false;
   });
   
-  8, (fun () -> {
+  4, (fun () -> {
     et_name                  = "mkrelease";
     et_env                   = [];
     et_env_replace           = false;
-    et_dir                   = "../build";
+    et_dir                   = "..";
     et_cmd                   = "ocaml";
-    et_args                  = [true,"tools.ml"; true,"-mkrelease"];
+    et_args                  = [true,"tools/mkrelease.ml"];
     et_phase                 = Some Before_clean;
     et_always_run_in_project = false;
     et_always_run_in_script  = false;
   });
   
-  9, (fun () -> {
+  5, (fun () -> {
     et_name                  = "mkversion";
     et_env                   = [];
     et_env_replace           = false;
-    et_dir                   = "../build";
+    et_dir                   = "../tools";
     et_cmd                   = "ocaml";
     et_args                  = [true,"mkversion.ml"; true,"1.8.0"];
     et_phase                 = Some Before_clean;
@@ -153,25 +102,37 @@ let external_tasks = [
     et_always_run_in_script  = false;
   });
   
-  10, (fun () -> {
+  6, (fun () -> {
     et_name                  = "generate_oebuild_script";
     et_env                   = [];
     et_env_replace           = false;
-    et_dir                   = "../build";
+    et_dir                   = "..";
     et_cmd                   = "ocaml";
-    et_args                  = [true,"tools.ml"; true,"-generate-oebuild-script"];
+    et_args                  = [true,"tools/prepare_build.ml"; true,"-generate-oebuild-script"];
     et_phase                 = Some Before_clean;
     et_always_run_in_project = false;
     et_always_run_in_script  = false;
   });
   
-  11, (fun () -> {
+  7, (fun () -> {
+    et_name                  = "install";
+    et_env                   = [];
+    et_env_replace           = false;
+    et_dir                   = "..";
+    et_cmd                   = "ocaml";
+    et_args                  = [true,"tools/install.ml"];
+    et_phase                 = Some Before_clean;
+    et_always_run_in_project = false;
+    et_always_run_in_script  = false;
+  });
+  
+  8, (fun () -> {
     et_name                  = "distclean";
     et_env                   = [];
     et_env_replace           = false;
-    et_dir                   = "../build";
+    et_dir                   = "..";
     et_cmd                   = "ocaml";
-    et_args                  = [true,"tools.ml"; true,"-distclean"];
+    et_args                  = [true,"tools/distclean.ml"];
     et_phase                 = None;
     et_always_run_in_project = false;
     et_always_run_in_script  = false;
@@ -180,8 +141,7 @@ let external_tasks = [
 
 
 let general_commands = [
-  `Distclean, 11;
-  `Install, 6;
+  `Distclean, 8;
 ]
 
 
@@ -367,7 +327,7 @@ let targets = [
     other_objects        = "";
     external_tasks       = [];
     restrictions         = [];
-    dependencies         = [4; 10];
+    dependencies         = [];
     show                 = false;
   };
   
@@ -391,7 +351,7 @@ let targets = [
     inline               = None;
     library_install_dir  = ""; (* Relative to the Standard Library Directory *)
     other_objects        = "";
-    external_tasks       = [1; 2; 3];
+    external_tasks       = [1];
     restrictions         = [];
     dependencies         = [4; 10; 7; 5; 6; 8; 9];
     show                 = true;
@@ -417,7 +377,7 @@ let targets = [
     inline               = Some 50;
     library_install_dir  = ""; (* Relative to the Standard Library Directory *)
     other_objects        = "";
-    external_tasks       = [4; 5; 6];
+    external_tasks       = [2];
     restrictions         = [];
     dependencies         = [4; 10; 7; 5; 6; 8; 9];
     show                 = true;
@@ -469,7 +429,7 @@ let targets = [
     inline               = None;
     library_install_dir  = ""; (* Relative to the Standard Library Directory *)
     other_objects        = "";
-    external_tasks       = [7; 8; 9; 10; 11];
+    external_tasks       = [3; 4; 5; 6; 7; 8];
     restrictions         = [];
     dependencies         = [];
     show                 = false;

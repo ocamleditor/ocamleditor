@@ -314,7 +314,7 @@ let main ~cmd_line_args ~external_tasks ~general_commands ~targets =
       List.map (fun (a, b, c, d) -> a, Arg.align b, c, d) [
         `Show,      [], "Show the build options of a target",          "";
         `Build,     [], "Build libraries and executables",             "";
-        `Install,   [], "Install libraries and executables",           "";
+        `Install,   [], "Install libraries as subdirectories relative to the standard library directory",           "";
         `Clean,     [], "Remove output files for the selected target", "";
         `Distclean, [], "Remove all build output",                     "";
       ];;

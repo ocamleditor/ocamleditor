@@ -39,11 +39,11 @@ HOW TO COMPILE
 
   Change to the OCamlEditor toplevel directory and execute:
 
-    ocaml _build.ml build ocamleditor
+    ocaml build.ml build ocamleditor
 
   If the native code compiler is not available on your platform, compile with:
 
-    ocaml _build.ml build ocamleditor-bytecode
+    ocaml build.ml build ocamleditor-bytecode
 
   The name of the command is "ocamleditor.opt" (or "ocamleditor" if the
   native compilation is not supported), you can find it in the "src"
@@ -54,8 +54,7 @@ INSTALLATION
 
   For Linux, become superuser and execute:
 
-    cd build
-    ocaml tools.ml [-prefix <path>] install
+    ocaml tools/install.ml [-prefix <path>]
 
   By default, commands will be installed under "/usr/local/bin" and icons
   under "/usr/local/share/pixmaps/ocamleditor". You can specify an

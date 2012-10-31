@@ -32,4 +32,8 @@ src/ocamleditor.opt
 src/gtkThread2.ml
 src/oebuild_script.ml
 icons
+_oasis
+setup.data
+setup.log
+setup.ml
 

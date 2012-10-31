@@ -53,11 +53,10 @@
           <always_run_in_project>true</always_run_in_project>
           <always_run_in_script>true</always_run_in_script>
           <env replace="false"/>
-          <dir>../build</dir>
+          <dir>..</dir>
           <cmd>ocaml</cmd>
           <args>
-            <arg enabled="true">tools.ml</arg>
-            <arg enabled="true">-mkicons</arg>
+            <arg enabled="true">tools/mkicons.ml</arg>
           </args>
           <phase>Before_compile</phase>
         </task>
@@ -168,7 +167,7 @@
       <lib_install_path></lib_install_path>
       <external_tasks/>
       <restrictions></restrictions>
-      <dependencies>4,10</dependencies>
+      <dependencies></dependencies>
     </target>
     <target name="ocamleditor-bytecode" default="true" id="0">
       <byt>true</byt>
@@ -192,37 +191,12 @@
           <always_run_in_project>false</always_run_in_project>
           <always_run_in_script>true</always_run_in_script>
           <env replace="false"/>
-          <dir>../build</dir>
+          <dir>..</dir>
           <cmd>ocaml</cmd>
           <args>
-            <arg enabled="true">tools.ml</arg>
-            <arg enabled="true">-prepare-build</arg>
+            <arg enabled="true">tools/prepare_build.ml</arg>
           </args>
           <phase>Before_compile</phase>
-        </task>
-        <task name="clean-lex-yacc">
-          <always_run_in_project>false</always_run_in_project>
-          <always_run_in_script>false</always_run_in_script>
-          <env replace="false"/>
-          <dir>../build</dir>
-          <cmd>ocaml</cmd>
-          <args>
-            <arg enabled="true">tools.ml</arg>
-            <arg enabled="true">-clean-lex-yacc</arg>
-          </args>
-          <phase>After_clean</phase>
-        </task>
-        <task name="install">
-          <always_run_in_project>false</always_run_in_project>
-          <always_run_in_script>false</always_run_in_script>
-          <env replace="false"/>
-          <dir>../build</dir>
-          <cmd>ocaml</cmd>
-          <args>
-            <arg enabled="true">tools.ml</arg>
-            <arg enabled="true">-install</arg>
-          </args>
-          <phase>Before_clean</phase>
         </task>
       </external_tasks>
       <restrictions></restrictions>
@@ -250,37 +224,12 @@
           <always_run_in_project>true</always_run_in_project>
           <always_run_in_script>true</always_run_in_script>
           <env replace="false"/>
-          <dir>../build</dir>
+          <dir>..</dir>
           <cmd>ocaml</cmd>
           <args>
-            <arg enabled="true">tools.ml</arg>
-            <arg enabled="true">-prepare-build</arg>
+            <arg enabled="true">tools/prepare_build.ml</arg>
           </args>
           <phase>Before_compile</phase>
-        </task>
-        <task name="clean-lex-yacc">
-          <always_run_in_project>false</always_run_in_project>
-          <always_run_in_script>false</always_run_in_script>
-          <env replace="false"/>
-          <dir>../build</dir>
-          <cmd>ocaml</cmd>
-          <args>
-            <arg enabled="true">tools.ml</arg>
-            <arg enabled="true">-clean-lex-yacc</arg>
-          </args>
-          <phase>After_clean</phase>
-        </task>
-        <task name="install">
-          <always_run_in_project>false</always_run_in_project>
-          <always_run_in_script>false</always_run_in_script>
-          <env replace="false"/>
-          <dir>../build</dir>
-          <cmd>ocaml</cmd>
-          <args>
-            <arg enabled="true">tools.ml</arg>
-            <arg enabled="true">-install</arg>
-          </args>
-          <phase>Before_clean</phase>
         </task>
       </external_tasks>
       <restrictions></restrictions>
@@ -338,11 +287,10 @@
           <always_run_in_project>false</always_run_in_project>
           <always_run_in_script>false</always_run_in_script>
           <env replace="false"/>
-          <dir>../build</dir>
+          <dir>..</dir>
           <cmd>ocaml</cmd>
           <args>
-            <arg enabled="true">tools.ml</arg>
-            <arg enabled="true">-mkrelease</arg>
+            <arg enabled="true">tools/mkrelease.ml</arg>
           </args>
           <phase>Before_clean</phase>
         </task>
@@ -350,7 +298,7 @@
           <always_run_in_project>false</always_run_in_project>
           <always_run_in_script>false</always_run_in_script>
           <env replace="false"/>
-          <dir>../build</dir>
+          <dir>../tools</dir>
           <cmd>ocaml</cmd>
           <args>
             <arg enabled="true">mkversion.ml</arg>
@@ -362,11 +310,22 @@
           <always_run_in_project>false</always_run_in_project>
           <always_run_in_script>false</always_run_in_script>
           <env replace="false"/>
-          <dir>../build</dir>
+          <dir>..</dir>
           <cmd>ocaml</cmd>
           <args>
-            <arg enabled="true">tools.ml</arg>
+            <arg enabled="true">tools/prepare_build.ml</arg>
             <arg enabled="true">-generate-oebuild-script</arg>
+          </args>
+          <phase>Before_clean</phase>
+        </task>
+        <task name="install">
+          <always_run_in_project>false</always_run_in_project>
+          <always_run_in_script>false</always_run_in_script>
+          <env replace="false"/>
+          <dir>..</dir>
+          <cmd>ocaml</cmd>
+          <args>
+            <arg enabled="true">tools/install.ml</arg>
           </args>
           <phase>Before_clean</phase>
         </task>
@@ -374,11 +333,10 @@
           <always_run_in_project>false</always_run_in_project>
           <always_run_in_script>false</always_run_in_script>
           <env replace="false"/>
-          <dir>../build</dir>
+          <dir>..</dir>
           <cmd>ocaml</cmd>
           <args>
-            <arg enabled="true">tools.ml</arg>
-            <arg enabled="true">-distclean</arg>
+            <arg enabled="true">tools/distclean.ml</arg>
           </args>
           <phase></phase>
         </task>
@@ -397,7 +355,7 @@
       <args/>
     </executable>
   </executables>
-  <build_script filename="_build.ml">
+  <build_script filename="build.ml">
     <targets>
       <target target_id="4" show="false"/>
       <target target_id="10" show="false"/>
@@ -412,12 +370,6 @@
       <target target_id="13" show="false"/>
     </targets>
     <args>
-      <arg type="String" key="-prefix" pass="-key value">
-        <task target_id="12" task_name="prepare-build"/>
-        <mode>&lt;ADD&gt;</mode>
-        <default type="string">/usr/local</default>
-        <doc>Installation prefix (Unix only)</doc>
-      </arg>
       <arg type="Flag" key="-use-modified-gtkThread" pass="-key">
         <task target_id="12" task_name="prepare-build"/>
         <mode>&lt;ADD&gt;</mode>

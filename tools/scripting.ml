@@ -97,7 +97,7 @@ let substitute ~filename ?(regexp=false) repl =
 (** Main *)
 open Arg
 
-let main ?dir ~targets ~options () =
+let main ?dir ?(targets=[]) ?default_target ~options () =
   try
     let mktarget f x =
       fun () ->
@@ -121,6 +121,7 @@ let main ?dir ~targets ~options () =
     begin
       match !target_func with
         | Some f -> f ();
+        | None when default_target <> None -> (match default_target with Some f -> f() | _ -> assert false)
         | _ -> Arg.usage speclist help_message
     end;
     exit 0;
