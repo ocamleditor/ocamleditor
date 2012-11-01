@@ -28,7 +28,6 @@ open Printf
 
 let prefix     = ref "/usr/local"
 let ext        = if is_win32 then ".exe" else ""
-let has_native = ref false
 
 let install () =
   if not is_win32 then begin
@@ -39,10 +38,8 @@ let install () =
     mkdir_p bin;
     let filename = if Sys.file_exists "ocamleditor.opt" then "ocamleditor.opt" else "ocamleditor" in
     kprintf run "cp -v %s %s/ocamleditor" filename bin;
-    kprintf run "cp -v oebuild/oebuild%s %s" ext bin;
-    if !has_native then begin
-      kprintf run "cp -v oebuild/oebuild%s.opt %s" ext bin;
-    end;
+    let filename = if Sys.file_exists "oebuild/oebuild.opt" then "oebuild/oebuild.opt" else "oebuild/oebuild" in
+    kprintf run "cp -v %s %s" filename bin;
   end else begin
     let exit_code = kprintf Sys.command "\"%s\" ..\\ocamleditor.nsi" (Filename.quote "%ProgramFiles(x86)%\\NSIS\\makensis") in
     match exit_code with
@@ -55,7 +52,6 @@ To install OCamlEditor, please use the included ocamleditor.nsi script.
 You will need the free NSIS install system (http://nsis.sourceforge.net).";
   end;;
 
-let _ = main ~default_target:install ~options:[
+let _ = main ~dir:"../src" ~default_target:install ~options:[
   "-prefix", Set_string prefix, (sprintf " Installation prefix (Unix only, default is %s)" !prefix);
-  "-has-native", Bool (fun x -> has_native := x), "{true|false} Whether native compilation is supported (default: false)";
 ] ()

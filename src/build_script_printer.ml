@@ -84,7 +84,7 @@ let print_add_args bc et args =
                 match arg.bsa_pass with
                   | `key -> sprintf "!%s,\"%s\"" (ident_of_arg arg) arg.bsa_key
                   | `value -> sprintf "true,\"%s\"" (ident_of_arg arg)
-                  | `key_value -> sprintf "true,\"%s %s\"" arg.bsa_key (ident_of_arg arg)
+                  | `key_value -> sprintf "true,(sprintf \"%s %%S\" !%s)" arg.bsa_key (ident_of_arg arg)
               in
               arg :: acc
             | `replace _ -> acc (* TODO:  *)
@@ -188,6 +188,7 @@ let print ~project ~filename () =
     output_string ochan Oebuild_script.code;
     output_string ochan "open Arg\n";
     output_string ochan "open Task\n";
+    output_string ochan "open Printf";
     output_string ochan "\n";
     print_cmd_line_args ochan project;
     output_string ochan "\n";

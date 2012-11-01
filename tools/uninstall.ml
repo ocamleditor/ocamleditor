@@ -31,14 +31,10 @@ let ext        = if is_win32 then ".exe" else ""
 
 let uninstall () =
   if not is_win32 then begin
-    printf "prefix is \"%s\", continue (yes/no)? %!" !prefix;
-    let line = input_line stdin in
-    if line = "yes" then begin
-      kprintf run "rm -vIr %s/share/pixmaps/ocamleditor" !prefix;
-      kprintf run "rm -vi %s/bin/ocamleditor" !prefix;
-      kprintf run "rm -vi %s/bin/oebuild%s" !prefix ext;
-      kprintf run "rm -vi %s/bin/oebuild%s.opt" !prefix ext;
-    end
+    kprintf run "rm -vfr %s/share/pixmaps/ocamleditor" !prefix;
+    kprintf run "rm -vf %s/bin/ocamleditor" !prefix;
+    kprintf run "rm -vf %s/bin/oebuild%s" !prefix ext;
+    kprintf run "rm -vf %s/bin/oebuild%s.opt" !prefix ext;
   end else prerr_endline "This script is not available under Windows";;
 
 let _ = main ~default_target:uninstall ~options:[

@@ -329,17 +329,6 @@
           </args>
           <phase>Before_clean</phase>
         </task>
-        <task name="distclean">
-          <always_run_in_project>false</always_run_in_project>
-          <always_run_in_script>false</always_run_in_script>
-          <env replace="false"/>
-          <dir>..</dir>
-          <cmd>ocaml</cmd>
-          <args>
-            <arg enabled="true">tools/distclean.ml</arg>
-          </args>
-          <phase></phase>
-        </task>
         <task name="Uninstall OCamlEditor">
           <always_run_in_project>false</always_run_in_project>
           <always_run_in_script>false</always_run_in_script>
@@ -350,6 +339,17 @@
             <arg enabled="true">tools/uninstall.ml</arg>
           </args>
           <phase>Before_clean</phase>
+        </task>
+        <task name="distclean">
+          <always_run_in_project>false</always_run_in_project>
+          <always_run_in_script>false</always_run_in_script>
+          <env replace="false"/>
+          <dir>..</dir>
+          <cmd>ocaml</cmd>
+          <args>
+            <arg enabled="true">tools/distclean.ml</arg>
+          </args>
+          <phase></phase>
         </task>
       </external_tasks>
       <restrictions></restrictions>
@@ -388,6 +388,12 @@
         <doc>Set this flag if you have Lablgtk-2.14.2 or earlier
                            and you want to use the included modified version of 
                            gtkThread.ml to reduce CPU consumption</doc>
+      </arg>
+      <arg type="String" key="-prefix" pass="-key value">
+        <task target_id="13" task_name="Uninstall OCamlEditor"/>
+        <mode>&lt;ADD&gt;</mode>
+        <default type="string">/usr/local</default>
+        <doc>Installation/Uninstallation prefix (Unix only)</doc>
       </arg>
     </args>
     <commands>
