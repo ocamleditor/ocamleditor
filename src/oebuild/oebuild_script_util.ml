@@ -285,37 +285,44 @@ let main ~cmd_line_args ~external_tasks ~general_commands ~targets =
 
     exception Unrecognized_command of string
 
+    let command tag =
+      try
+        let descr_install = snd (List.assoc tag general_commands) in
+        [tag, [], descr_install, ""]
+      with Not_found -> [];;
+
+    let command_install = command `Install
+    let command_uninstall = command `Uninstall
+
     let string_of_command = function
       | `Show -> "show"
       | `Build -> "build"
-      | `Install -> "install"
-      | `Uninstall -> "uninstall"
+      | `Install when command_install <> [] -> "install"
+      | `Uninstall when command_uninstall <> [] -> "uninstall"
       | `Install_lib -> "install-lib"
       | `Clean -> "clean"
-      | `Distclean -> "distclean";;
+      | `Distclean -> "distclean"
+      | `Install | `Uninstall -> assert false;;
 
     let command_of_string = function
       | "show" -> `Show
       | "build" -> `Build
-      | "install" -> `Install
-      | "uninstall" -> `Uninstall
+      | "install" when command_install <> [] -> `Install
+      | "uninstall" when command_uninstall <> [] -> `Uninstall
       | "install-lib" -> `Install_lib
       | "clean" -> `Clean
       | "distclean" -> `Distclean
       | x -> raise (Unrecognized_command (sprintf "`%s' is not a recognized command." x));;
 
     let options =
-      let descr_install = snd (List.assoc `Install general_commands) in
-      let descr_uninstall = snd (List.assoc `Uninstall general_commands) in
-      List.map (fun (a, b, c, d) -> a, Arg.align b, c, d) [
+      List.map (fun (a, b, c, d) -> a, Arg.align b, c, d) ([
         `Build,       [], "Build libraries and executables (default command)", "";
-        `Install,     [], descr_install                                      , "";
-        `Uninstall,   [], descr_uninstall,                                     "";
+      ] @ command_install @ command_uninstall @ [
         `Clean,       [], "Remove output files for the selected target",       "";
         `Distclean,   [], "Remove all build output",                           "";
         `Install_lib, [], "Install libraries as subdirectories relative\n               to the standard library directory", "";
         `Show,        [], "Show the build options of a target",                "";
-      ];;
+      ]);;
 
     let anon_fun = function
       | `Show -> add_target targets
@@ -371,7 +378,6 @@ let main ~cmd_line_args ~external_tasks ~general_commands ~targets =
 
   let global_options = [
     ("-C",      Set_string Option.change_dir, "<dir> Change directory before running [default: src]");
-    (*("-prefix", Set_string Option.prefix,     "<dir> When installing libraries use <dir> instead of `ocamlc -where` as root");*)
   ] @ cmd_line_args in
   let global_options = Arg.align global_options in
   let command_name = Filename.basename Sys.argv.(0) in
