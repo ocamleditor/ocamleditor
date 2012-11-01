@@ -102,7 +102,7 @@ let main ?dir ?(targets=[]) ?default_target ~options () =
     let mktarget f x =
       fun () ->
         (match dir with Some dir -> pushd dir | _ -> ());
-        let finally () = match dir with None -> popd() | _ -> () in
+        let finally () = match dir with Some _ -> popd() | _ -> () in
         (try f x with ex -> (finally(); raise ex));
         finally();
     in
@@ -121,7 +121,7 @@ let main ?dir ?(targets=[]) ?default_target ~options () =
     begin
       match !target_func with
         | Some f -> f ();
-        | None when default_target <> None -> (match default_target with Some f -> f() | _ -> assert false)
+        | None when default_target <> None -> (match default_target with Some f -> (mktarget f ()) () | _ -> assert false)
         | _ -> Arg.usage speclist help_message
     end;
     exit 0;

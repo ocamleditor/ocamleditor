@@ -103,47 +103,21 @@ object (self)
     (*  *)
     self#set project.build_script.bs_targets;
 
-  (*method private fill_model_itask () =
-    model_itask#clear();
-    match view#selection#get_selected_rows with
-      | path :: [] ->
-        let row = model#get_iter path in
-        let target = model#get ~row ~column:col_target in
-        let row = model_itask#append () in
-        model_itask#set ~row ~column:col_itask "<None>";
-        List.iter begin fun task ->
-          let row = model_itask#append () in
-          model_itask#set ~row ~column:col_itask task.et_name
-        end target.external_tasks
-      | _ -> ();*)
-
   method set build_script_targets =
     List.iter begin fun bst ->
       match List_opt.assoc bst.bst_target.Target.id table with
         | Some path ->
           let row = model#get_iter path in
           model#set ~row ~column:col_show bst.bst_show;
-          (*let task_name =
-            match bst.bst_installer_task with
-              | Some itask -> itask.Task.et_name
-              | _ -> ""
-          in
-          model#set ~row ~column:col_install_task task_name;*)
         | _ -> ()
     end build_script_targets;
 
   method get () =
     let targets = ref [] in
     model#foreach begin fun _ row ->
-     (* let installer_task =
-        match model#get ~row ~column:col_install_task with
-          | "" -> None
-          | task_name -> Prj.find_task project task_name
-      in*)
       targets := {
         bst_target         = model#get ~row ~column:col_target;
         bst_show           = model#get ~row ~column:col_show;
-        (*bst_installer_task = installer_task;*)
       } :: !targets;
       false
     end;

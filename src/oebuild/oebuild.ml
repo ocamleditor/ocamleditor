@@ -140,10 +140,10 @@ let install ~compilation ~outkind ~outname ~deps ~path ~ccomp_type =
         let basename = sprintf "%s%s" (Filename.chop_extension outname) ext in
         cp basename (path // (Filename.basename basename));
       end;
-    | Executable ->
+    | Executable (*->
       mkdir_p path;
-      cp outname (path // dest_outname)
-    | Plugin | Pack -> eprintf "\"Oebuild.install\" not implemented for Plugin or Pack."
+      cp outname (path // dest_outname)*)
+    | Plugin | Pack -> eprintf "\"Oebuild.install\" not implemented for Executable, Plugin or Pack."
 ;;
 
 (** run_output *)

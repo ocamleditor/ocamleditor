@@ -97,6 +97,7 @@ object (self)
       Opt.map combo#active_iter begin fun row ->
         Opt.map (model#get ~row ~column:col_task) begin fun (target_id, task_name) -> Some {
             bsc_name   = kind;
+            bsc_descr  = task_name;
             bsc_target = Opt.exn Exit (Prj.find_target project target_id);
             bsc_task   = Opt.exn Exit (Prj.find_task project task_name);
           }

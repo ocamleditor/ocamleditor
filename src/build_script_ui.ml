@@ -29,7 +29,7 @@ let enable_widget_args = true
 
 class widget ~project ?packing () =
   let build_script    = project.Prj.build_script in
-  let spacing         = 3 in
+  let spacing         = 8 in
   let border_width    = 5 in
   let vbox            = GPack.vbox ~spacing:13 ?packing () in
   let text_filename   = "Specify the file to be created by the generation process" in
@@ -58,9 +58,12 @@ class widget ~project ?packing () =
   let tab_label       = (GMisc.label ~text:"General Commands" ())#coerce in
   let _               = notebook#append_page ~tab_label abox#coerce in
   let _               = GMisc.label ~text:"" ~xalign:0.0 ~packing:abox#pack () in
-  let label           = sprintf "Select an external task to be executed after the \"%s\" command" (Build_script.string_of_command `Distclean) in
+  let label           = sprintf "Select an external task to be executed after the \"%s\" command: " (Build_script.string_of_command `Distclean) in
   let cmd_distclean   = new Build_script_cmds_widget.widget `Distclean ~label ~project ~packing:abox#pack () in
-  (*let cmd_install     = new Build_script_cmds_widget.widget `Install ~project ~packing:abox#pack () in*)
+  let label           = sprintf "Select an external task to be executed as \"%s\" command: " (Build_script.string_of_command `Install) in
+  let cmd_install     = new Build_script_cmds_widget.widget `Install ~label ~project ~packing:abox#pack () in
+  let label           = sprintf "Select an external task to be executed as \"%s\" command: " (Build_script.string_of_command `Uninstall) in
+  let cmd_uninstall   = new Build_script_cmds_widget.widget `Uninstall ~label ~project ~packing:abox#pack () in
   (*  *)
 object (self)
   inherit GObj.widget vbox#as_widget
@@ -80,7 +83,7 @@ object (self)
       bs_filename = Filename.basename filename;
       bs_targets  = widget_trg#get();
       bs_args     = widget_args#get();
-      bs_commands = (Opt.filter [cmd_distclean#get()(*; cmd_install#get()*)]);
+      bs_commands = (Opt.filter [cmd_distclean#get(); cmd_install#get(); cmd_uninstall#get()]);
     };
     Build_script_printer.print ~project ~filename ();
     Project.save project

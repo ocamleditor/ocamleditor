@@ -28,9 +28,9 @@ open Printf
 
 let mkrelease () =
   if is_win32 then begin
-    run "ocaml tools.ml -generate-oebuild-script";
     pushd "..";
-    run "ocaml _build.ml distclean";
+    run "ocaml tools/prepare_build.ml -generate-oebuild-script";
+    run "ocaml build.ml distclean";
     popd();
     Sys.chdir "..";
     let name = Filename.basename (Sys.getcwd ()) in
@@ -39,15 +39,15 @@ let mkrelease () =
     Sys.chdir "..";
     kprintf remove_file "%s.tar.gz" package;
     kprintf run "mklink /d %s %s" package name;
-    kprintf run "tar --mode=755 -cf %s.tar %s/src %s/pixmaps %s/build" package package package package;
-    kprintf run "tar --mode=655 -rf %s.tar %s/README %s/NEWS %s/COPYING %s/%s.project %s/ocamleditor.nsi %s/_build.ml %s/header %s/VERSION %s/setup.ml %s/_oasis"
+    kprintf run "tar --mode=755 -cf %s.tar %s/src %s/pixmaps %s/tools" package package package package;
+    kprintf run "tar --mode=655 -rf %s.tar %s/README %s/NEWS %s/COPYING %s/%s.project %s/ocamleditor.nsi %s/build.ml %s/header %s/VERSION %s/setup.ml %s/_oasis"
       package package package package package name package package package package package package;
     kprintf run "gzip -c %s.tar > %s.tar.gz" package package;
     kprintf Sys.remove "%s.tar" package;
     kprintf run "rmdir %s" package;
     kprintf Sys.chdir "%s/src" name;
     pushd "..";
-    run "ocaml _build.ml build ocamleditor";
+    run "ocaml build.ml build ocamleditor";
     popd()
   end;;
 

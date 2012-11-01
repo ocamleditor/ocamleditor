@@ -318,7 +318,7 @@
           </args>
           <phase>Before_clean</phase>
         </task>
-        <task name="install">
+        <task name="Install OCamlEditor">
           <always_run_in_project>false</always_run_in_project>
           <always_run_in_script>false</always_run_in_script>
           <env replace="false"/>
@@ -339,6 +339,17 @@
             <arg enabled="true">tools/distclean.ml</arg>
           </args>
           <phase></phase>
+        </task>
+        <task name="Uninstall OCamlEditor">
+          <always_run_in_project>false</always_run_in_project>
+          <always_run_in_script>false</always_run_in_script>
+          <env replace="false"/>
+          <dir>..</dir>
+          <cmd>ocaml</cmd>
+          <args>
+            <arg enabled="true">tools/uninstall.ml</arg>
+          </args>
+          <phase>Before_clean</phase>
         </task>
       </external_tasks>
       <restrictions></restrictions>
@@ -380,7 +391,9 @@
       </arg>
     </args>
     <commands>
-      <command name="Distclean" target_id="13" task_name="distclean"/>
+      <command name="Distclean" descr="distclean" target_id="13" task_name="distclean"/>
+      <command name="Install" descr="Install OCamlEditor" target_id="13" task_name="Install OCamlEditor"/>
+      <command name="Uninstall" descr="Uninstall OCamlEditor" target_id="13" task_name="Uninstall OCamlEditor"/>
     </commands>
   </build_script>
 </project>

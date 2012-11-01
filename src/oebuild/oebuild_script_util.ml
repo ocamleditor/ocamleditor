@@ -50,7 +50,6 @@ type target = {
   restrictions : string list;
   dependencies : int list;
   show : bool;
-  (*installer_task : int option;*)
 }
 
 type target_map_entry = int * (string * target)
@@ -205,22 +204,13 @@ let show = fun targets -> function num, (name, t) ->
   let maxlength = List.fold_left (fun cand (x, _) -> let len = String.length x in max cand len) 0 properties in
   List.iter (fun (n, v) -> printf "  %s : %s\n" (rpad (n ^ " ") '.' maxlength) v) properties;;
 
-(** install *)
-let install ~compilation ~outname ~external_tasks ~deps target =
+(** install_lib *)
+let install_lib ~compilation ~outname ~external_tasks ~deps target =
   match target.target_type with
     | Library ->
       let deps = deps() in
       Oebuild.install ~compilation ~outkind:target.target_type ~outname ~deps ~path:target.library_install_dir ~ccomp_type
-    | Executable (*->
-      begin
-        match target.installer_task with
-          | Some installer_task ->
-            let _, f = List.find (fun (num, _) -> num = installer_task) external_tasks in
-            ETask.execute (f ())
-          | _ -> eprintf "Command \"install\" is not available for target \"%d\"" target.num
-      end;
-      raise Exit;*)
-    | Plugin | Pack ->
+    | Executable | Plugin | Pack ->
       eprintf "\"install\" not implemented for Executable, Plugin or Pack.";
       raise Exit;;
 
@@ -242,7 +232,7 @@ let rec execute_target ~external_tasks ~targets ~command target =
             begin
               match command with
                 | `Build -> build ~targets ~external_tasks ~etasks ~deps ~compilation ~outname ~files target
-                | `Install -> install ~compilation ~outname ~external_tasks ~deps target
+                | `Install_lib -> install_lib ~compilation ~outname ~external_tasks ~deps target
                 | `Clean ->
                   List.iter ETask.execute (ETask.filter etasks Before_clean);
                   let deps = deps() in
@@ -250,7 +240,7 @@ let rec execute_target ~external_tasks ~targets ~command target =
                   List.iter ETask.execute (ETask.filter etasks After_clean);
                 | `Distclean ->
                   if files <> [] then (Oebuild_util.remove_file ~verbose:false outname);
-                | `Show -> assert false
+                | `Show | `Install | `Uninstall -> assert false
             end
           | _ -> ()
       end compilation
@@ -291,7 +281,7 @@ and build ~targets ~external_tasks ~etasks ~deps ~compilation ~outname ~files ta
 (** main *)
 let main ~cmd_line_args ~external_tasks ~general_commands ~targets =
   let module Command = struct
-    type t = [`Show | `Build | `Install | `Clean | `Distclean]
+    type t = [`Show | `Build | `Install | `Uninstall | `Install_lib | `Clean | `Distclean]
 
     exception Unrecognized_command of string
 
@@ -299,6 +289,8 @@ let main ~cmd_line_args ~external_tasks ~general_commands ~targets =
       | `Show -> "show"
       | `Build -> "build"
       | `Install -> "install"
+      | `Uninstall -> "uninstall"
+      | `Install_lib -> "install-lib"
       | `Clean -> "clean"
       | `Distclean -> "distclean";;
 
@@ -306,25 +298,31 @@ let main ~cmd_line_args ~external_tasks ~general_commands ~targets =
       | "show" -> `Show
       | "build" -> `Build
       | "install" -> `Install
+      | "uninstall" -> `Uninstall
+      | "install-lib" -> `Install_lib
       | "clean" -> `Clean
       | "distclean" -> `Distclean
       | x -> raise (Unrecognized_command (sprintf "`%s' is not a recognized command." x));;
 
     let options =
+      let descr_install = snd (List.assoc `Install general_commands) in
+      let descr_uninstall = snd (List.assoc `Uninstall general_commands) in
       List.map (fun (a, b, c, d) -> a, Arg.align b, c, d) [
-        `Show,      [], "Show the build options of a target",          "";
-        `Build,     [], "Build libraries and executables",             "";
-        `Install,   [], "Install libraries as subdirectories relative to the standard library directory",           "";
-        `Clean,     [], "Remove output files for the selected target", "";
-        `Distclean, [], "Remove all build output",                     "";
+        `Build,       [], "Build libraries and executables (default command)", "";
+        `Install,     [], descr_install                                      , "";
+        `Uninstall,   [], descr_uninstall,                                     "";
+        `Clean,       [], "Remove output files for the selected target",       "";
+        `Distclean,   [], "Remove all build output",                           "";
+        `Install_lib, [], "Install libraries as subdirectories relative\n               to the standard library directory", "";
+        `Show,        [], "Show the build options of a target",                "";
       ];;
 
     let anon_fun = function
       | `Show -> add_target targets
       | `Build -> add_target targets
-      | `Install -> add_target targets
+      | `Install_lib -> add_target targets
       | `Clean -> add_target targets
-      | `Distclean as x ->
+      | (`Install | `Uninstall | `Distclean) as x ->
         fun arg -> kprintf failwith "Invalid anonymous argument `%s' for command `%s'" arg (string_of_command x);;
 
     (** execute *)
@@ -333,23 +331,20 @@ let main ~cmd_line_args ~external_tasks ~general_commands ~targets =
       let target = List.rev !target in
       try
         begin
+          let execute_general_command command =
+            try
+              let index, descr = List.assoc command general_commands in
+              let task = List.assoc index external_tasks in
+              ETask.execute (task ())
+            with Not_found -> ()
+          in
           match command with
             | `Distclean ->
               List.iter (fun (_, t) -> execute_target ~external_tasks ~targets ~command t) targets;
               Oebuild.distclean();
-              begin
-                try
-                  let task = List.assoc (List.assoc `Distclean general_commands) external_tasks in
-                  ETask.execute (task ())
-                with Not_found -> ()
-              end;
-            (*| `Install ->
-              begin
-                try
-                  let task = List.assoc (List.assoc `Install general_commands) external_tasks in
-                  ETask.execute (task ())
-                with Not_found -> ()
-              end;*)
+              execute_general_command `Distclean;
+            | (`Install | `Uninstall) as command ->
+              execute_general_command command;
             | `Show ->
               printf "%s\n%!" (system_config ());
               Printf.printf "\n%!" ;
@@ -396,7 +391,7 @@ let main ~cmd_line_args ~external_tasks ~general_commands ~targets =
     sprintf "%s\n\nGLOBAL OPTIONS%s\nCOMMANDS%s\n\nTARGETS\n%s"
       usage_msg (Arg.usage_string global_options "") Argc.help_of_commands help_of_targets
   in
-  try Argc.parse ~usage_msg ~global_options Command.execute
+  try Argc.parse ~usage_msg ~global_options ~default_command:`Build Command.execute
   with
     | Arg.Help _ -> print_endline (help_string ())
     | Arg.Bad msg -> prerr_endline msg

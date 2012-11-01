@@ -39,11 +39,11 @@ HOW TO COMPILE
 
   Change to the OCamlEditor toplevel directory and execute:
 
-    ocaml build.ml build ocamleditor
+    ocaml build.ml ocamleditor
 
   If the native code compiler is not available on your platform, compile with:
 
-    ocaml build.ml build ocamleditor-bytecode
+    ocaml build.ml ocamleditor-bytecode
 
   The name of the command is "ocamleditor.opt" (or "ocamleditor" if the
   native compilation is not supported), you can find it in the "src"

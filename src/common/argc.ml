@@ -22,13 +22,14 @@
 
 
 type command_descr = string
+type command_usage = string
 type speclist = (Arg.key * Arg.spec * Arg.doc) list
 
 module type COMMAND = sig
   type t
   val string_of_command : t -> string
   val command_of_string : string -> t
-  val options : (t * speclist * command_descr * string) list
+  val options : (t * speclist * command_descr * command_usage) list
   val anon_fun : t -> string -> unit
 end
 
@@ -36,7 +37,7 @@ module Make (C : COMMAND) = struct
   open Printf
 
   exception Command_found
-  exception Help_Command of C.t * (speclist * command_descr * string) * string
+  exception Help_Command of C.t * (speclist * command_descr * command_usage) * string
 
   let command : C.t option ref = ref None;;
 
@@ -65,6 +66,7 @@ module Make (C : COMMAND) = struct
   let parse_argv
       args
       ~(global_options : speclist)
+      ?default_command
       ?(usage_msg=sprintf "\nUSAGE\n  %s [global_options*] <command> [options*] [args*]\n  %s <command> --help" args.(0) args.(0))
       execute_command =
     command := None;
@@ -72,7 +74,13 @@ module Make (C : COMMAND) = struct
     let parse_anon arg =
       match !command with
         | None ->
-          command := Some (C.command_of_string arg);
+          let cmd =
+            try C.command_of_string arg
+            with ex ->
+              decr Arg.current;
+              (match default_command with Some c -> c | _ -> raise ex)
+          in
+          command := Some cmd;
           raise Command_found
         | _ -> assert false
     in
@@ -124,7 +132,7 @@ module Make (C : COMMAND) = struct
         raise (Arg.Bad (sprintf "unknown global option `%s'\n%s" (args.(!Arg.current)) (help_string())))
       | Arg.Help _ -> raise (Arg.Help (help_string()));;
 
-  let parse ~global_options ?usage_msg f =
-    parse_argv Sys.argv ~global_options ?usage_msg f;;
+  let parse ~global_options ?default_command ?usage_msg f =
+    parse_argv Sys.argv ~global_options ?default_command ?usage_msg f;;
 end;;
 

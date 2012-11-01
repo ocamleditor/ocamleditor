@@ -31,11 +31,11 @@ type t = {
 and target = {
   bst_target           : Target.t;
   bst_show             : bool;
-  (*bst_installer_task   : Task.t option*)
 }
 
 and command = {
-  bsc_name   : [`Distclean | `Install | `Uninstall];
+  bsc_name   : [`Distclean | `Install | `Uninstall | `Install_lib ];
+  bsc_descr  : string;
   bsc_target : Target.t;
   bsc_task   : Task.t;
 }
@@ -44,11 +44,13 @@ let string_of_command = function
   | `Distclean -> "Distclean"
   | `Install -> "Install"
   | `Uninstall -> "Uninstall"
+  | `Install_lib -> "Install_lib"
 
 let command_of_string = function
   | "Distclean" -> `Distclean
   | "Install" -> `Install
   | "Uninstall" -> `Uninstall
+  | "Install_lib" -> `Install_lib
   | _ -> failwith "string_of_command"
 
 let default_filename = "_build.ml"

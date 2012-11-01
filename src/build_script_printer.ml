@@ -34,12 +34,6 @@ let print_targets ochan targets external_tasks =
   let print = fprintf ochan "  %s\n" in
   output_string ochan "let targets = [\n";
   List.iter begin fun {bst_target=tg; bst_show(*; _*)} ->
-    (*let installer_task =
-      try
-        let num, _ = List.find (fun (_, it) -> it) (List.assoc tg external_tasks) in
-        sprintf "Some %d" num
-      with Not_found -> "None"
-    in*)
     if bst_show then (incr i);
     let num = if bst_show then !i else 0 in
     kprintf print "\n  (\x2A %d \x2A)" !i;
@@ -66,7 +60,6 @@ let print_targets ochan targets external_tasks =
     kprintf print "  restrictions         = [%s];" (String.concat "; " (List.map (sprintf "%S") tg.restrictions));
     kprintf print "  dependencies         = [%s];" (String.concat "; " (List.map (sprintf "%d") tg.dependencies));
     kprintf print "  show                 = %b;" bst_show;
-    (*kprintf print "  installer_task       = %s;" installer_task;*)
     kprintf print "};";
   end targets;
   output_string ochan "];;\n";;
@@ -107,7 +100,7 @@ let print_external_tasks ochan project =
   let print = fprintf ochan "  %s\n" in
   output_string ochan "let external_tasks = [\n";
   let targets = project.Prj.build_script.bs_targets in
-  let ets = List.map begin fun {bst_target=tg;(* bst_installer_task;*) _} ->
+  let ets = List.map begin fun {bst_target=tg; _} ->
     let ets =
       List.map begin fun et ->
         let base_args = Xlist.filter_map (fun (x, y) -> if x then Some y else None) et.et_args in
@@ -129,7 +122,7 @@ let print_external_tasks ochan project =
         kprintf print "  et_always_run_in_script  = %b;" et.et_always_run_in_script;
         kprintf print "});";
         incr i;
-        index(*, (match bst_installer_task with Some task when task.et_name = et.et_name -> true | _ -> false)*)
+        index
       end tg.external_tasks
     in tg, ets
   end targets in
@@ -149,7 +142,8 @@ let print_general_commands ochan external_tasks project =
       let et = List.combine tg.external_tasks et_indexes in
       match List_opt.find (fun (et, _) -> et.et_name = task.et_name) et with
         | Some (_, index(*, _)*)) ->
-          fprintf ochan "  `%s, %d;\n" (Build_script.string_of_command command.bsc_name) index;
+          fprintf ochan "  `%s, (%d, %S);\n"
+            (Build_script.string_of_command command.bsc_name) index command.bsc_descr;
         | _ -> ()
     end ();
   end commands;

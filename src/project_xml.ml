@@ -100,17 +100,10 @@ let write proj =
     Xml.Element ("build_script", ["filename", proj.build_script.Build_script.bs_filename],
       let targets =
         List.map begin fun target ->
-          Xml.Element ("target",
-            begin
-              (*let installer_task_name =
-                match target.Build_script.bst_installer_task with
-                  | Some task -> ["installer_task_name", task.Task.et_name]
-                  | None -> []
-              in *)[
+          Xml.Element ("target", [
                 "target_id", (string_of_int target.Build_script.bst_target.Target.id);
                 "show", (string_of_bool target.Build_script.bst_show);
-              ] (*@ installer_task_name*)
-            end, [])
+              ], [])
         end proj.build_script.Build_script.bs_targets
       in
       let args =
@@ -139,6 +132,7 @@ let write proj =
         List.map begin fun cmd ->
           Xml.Element ("command", [
             "name", (Build_script.string_of_command cmd.Build_script.bsc_name);
+            "descr", cmd.Build_script.bsc_descr;
             "target_id", string_of_int cmd.Build_script.bsc_target.Target.id;
             "task_name", (cmd.Build_script.bsc_task.Task.et_name);
           ], [])
@@ -170,7 +164,6 @@ let xml_bs_targets proj node =
       {Build_script.
         bst_target         = (match fattrib target_node "target_id" (find_target_string proj) (fun _ -> None) with Some x -> x | _ -> raise Exit);
         bst_show           = fattrib target_node "show" bool_of_string (fun () -> true);
-        (*bst_installer_task = fattrib target_node "installer_task_name" (find_task proj) (fun _ -> None)*)
       } :: acc
     with Exit -> acc
   end [] node);;
@@ -231,6 +224,7 @@ let xml_commands proj node =
     try
       {Build_script.
         bsc_name   = (fattrib target_node "name" Build_script.command_of_string (fun _ -> raise Exit));
+        bsc_descr  = (attrib target_node "descr" (fun x -> x) "");
         bsc_target = (match fattrib target_node "target_id" (find_target_string proj) (fun _ -> None) with Some x -> x | _ -> raise Exit);
         bsc_task   = fattrib target_node "task_name"
           (fun y -> match find_task proj y with Some x -> x | _ -> assert false) (fun _ -> raise Exit)

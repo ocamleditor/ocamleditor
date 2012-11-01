@@ -21,6 +21,7 @@
 *)
 
 type command_descr = string
+type command_usage = string
 type speclist = (Arg.key * Arg.spec * Arg.doc) list
 
 module type COMMAND =
@@ -28,14 +29,14 @@ module type COMMAND =
     type t
     val string_of_command : t -> string
     val command_of_string : string -> t
-    val options : (t * speclist * command_descr * string) list
+    val options : (t * speclist * command_descr * command_usage) list
     val anon_fun : t -> string -> unit
   end
 
 module Make :
   functor (C : COMMAND) ->
     sig
-      exception Help_Command of C.t * (speclist * command_descr * string) *
+      exception Help_Command of C.t * (speclist * command_descr * command_usage) *
                   string
       val command : C.t option ref
 
@@ -43,12 +44,15 @@ module Make :
 
       val help_of_commands : string
 
+      val parse :
+        global_options:speclist ->
+        ?default_command:C.t ->
+        ?usage_msg:Arg.usage_msg -> (C.t -> unit) -> unit
+
       val parse_argv :
         string array ->
         global_options:speclist ->
+        ?default_command:C.t ->
         ?usage_msg:Arg.usage_msg -> (C.t -> unit) -> unit
 
-      val parse :
-        global_options:speclist ->
-        ?usage_msg:Arg.usage_msg -> (C.t -> unit) -> unit
     end
