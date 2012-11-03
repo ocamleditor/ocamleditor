@@ -99,10 +99,11 @@ let create_script () =
       "../common/dep";
       "../common/cmd_line_args";
       "../task";
+      "../build_script_command";
       "oebuild_util";
       "oebuild_table";
       "oebuild";
-      "oebuild_script_util";
+      "../build_script_util";
     ] in
     List.iter begin fun name ->
       let buf = Util.replace_header (File.read (name ^ ".ml")) in
@@ -112,7 +113,7 @@ let create_script () =
       output_string ochan buf;
       output_string ochan "end\n";
     end modules;
-    output_string ochan "\nopen Oebuild\nopen Oebuild_script_util\n";
+    output_string ochan "\nopen Oebuild\nopen Build_script_util\n";
     finally();
     Util.test();
   with ex -> (finally());;

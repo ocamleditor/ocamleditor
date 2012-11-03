@@ -70,7 +70,7 @@ let ident_of_arg =
     let re = Str.regexp "[-]" in
     Str.global_replace re "_"
   in
-  fun arg -> "arg_" ^ (normalize_ident (Str.string_after arg.bsa_key 1));;
+  fun arg -> sprintf "arg_%d_%s" arg.bsa_id (normalize_ident (Str.string_after arg.bsa_key 1));;
 
 (** print_add_args *)
 let print_add_args bc et args =
@@ -80,11 +80,15 @@ let print_add_args bc et args =
         if bc.Target.id = abc.Target.id && et.Task.et_name = aet.Task.et_name then
           match arg.bsa_mode with
             | `add ->
+              let condition =
+                sprintf "command = %s" (Build_script_command.code_of_command arg.bsa_cmd)
+              in
               let arg =
                 match arg.bsa_pass with
-                  | `key -> sprintf "!%s,\"%s\"" (ident_of_arg arg) arg.bsa_key
-                  | `value -> sprintf "true,\"%s\"" (ident_of_arg arg)
-                  | `key_value -> sprintf "true,(sprintf \"%s %%S\" !%s)" arg.bsa_key (ident_of_arg arg)
+                  | `key -> sprintf "%s && !%s, \"%s\"" condition (ident_of_arg arg) arg.bsa_key
+                  | `value -> sprintf "%s, \"%s\"" condition (ident_of_arg arg)
+                  | `key_value -> sprintf "%s, (sprintf \"%s %%S\" !%s)"
+                    condition arg.bsa_key (ident_of_arg arg)
               in
               arg :: acc
             | `replace _ -> acc (* TODO:  *)
@@ -108,7 +112,7 @@ let print_external_tasks ochan project =
         let custom_args = print_add_args tg et args in
         let args = base_args @ custom_args in
         let index = !i in
-        kprintf print "\n  %d, (fun () -> {" index;
+        kprintf print "\n  %d, (fun command -> {" index;
         kprintf print "  et_name                  = %S;" et.et_name;
         kprintf print "  et_env                   = [%s];"
           (String.concat ";" (List.map (sprintf "%S")
@@ -161,22 +165,29 @@ let print_cmd_line_args ochan project =
     in
     fprintf ochan "let %s = ref %s\n" (ident_of_arg arg) default;
   end args;
-  fprintf ochan "let cmd_line_args = [\n";
-  List.iter begin fun arg ->
-    let typ =
-      match arg.bsa_type with
-        | Flag -> sprintf "Set %s" (ident_of_arg arg)
-        | Bool -> "Bool (fun _ -> ())"
-        | String -> sprintf "Set_string %s" (ident_of_arg arg)
-    in
-    let default_value =
-      match arg.bsa_default with
-        | `flag x -> if x then "Set" else "Not Set"
-        | `bool x -> string_of_bool x
-        | `string x -> String.escaped x
-    in
-    fprintf ochan "  %S, %s,\n    \" %s [default: %s]\";\n" arg.bsa_key typ (String.escaped arg.bsa_doc) default_value;
-  end args;
+  (*  *)
+  let cargs = List.map (fun a -> a.bsa_cmd, a) args in
+  let groups = Xlist.group_assoc cargs in
+  fprintf ochan "\nlet cmd_line_args = [\n";
+  List.iter begin fun (cmd, args) ->
+    fprintf ochan "  %s, [\n" (Build_script_command.code_of_command cmd);
+    List.iter begin fun arg ->
+      let typ =
+        match arg.bsa_type with
+          | Flag -> sprintf "Set %s" (ident_of_arg arg)
+          | Bool -> "Bool (fun _ -> ())"
+          | String -> sprintf "Set_string %s" (ident_of_arg arg)
+      in
+      let default_value =
+        match arg.bsa_default with
+          | `flag x -> if x then "Set" else "Not Set"
+          | `bool x -> string_of_bool x
+          | `string x -> String.escaped x
+      in
+      fprintf ochan "    %S, %s,\n      \" %s [default: %s]\";\n" arg.bsa_key typ (String.escaped arg.bsa_doc) default_value;
+    end args;
+    fprintf ochan "  ];\n";
+  end groups;
   fprintf ochan "]\n";;
 
 (** print *)
@@ -184,11 +195,10 @@ let print ~project ~filename () =
   let ochan = open_out_bin filename in
   let finally () = close_out_noerr ochan in
   try
-    output_string ochan "(\x2A\n   Please edit the \"Targets\" section at the end\n   of this file to set the right options for your system.\n\x2A)\n\n";
     output_string ochan Oebuild_script.code;
     output_string ochan "open Arg\n";
     output_string ochan "open Task\n";
-    output_string ochan "open Printf";
+    output_string ochan "open Printf\n";
     output_string ochan "\n";
     print_cmd_line_args ochan project;
     output_string ochan "\n";

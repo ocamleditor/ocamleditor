@@ -221,9 +221,9 @@ let rec execute_target ~external_tasks ~targets ~command target =
       @ (if target.compilation_native && (ccomp_type <> None) then [Native] else []) in
     let files = Str.split (Str.regexp " +") target.toplevel_modules in
     let deps () = Dep.find ~pp:target.pp ~with_errors:true ~echo:false files in
-    let etasks = List.map begin fun name ->
-      let mktarget = try List.assoc name external_tasks with Not_found -> assert false in
-      mktarget()
+    let etasks = List.map begin fun index ->
+      let mktask = try List.assoc index external_tasks with Not_found -> assert false in
+      mktask command
     end target.external_tasks in
     try
       List.iter begin fun compilation ->
@@ -281,47 +281,46 @@ and build ~targets ~external_tasks ~etasks ~deps ~compilation ~outname ~files ta
 (** main *)
 let main ~cmd_line_args ~external_tasks ~general_commands ~targets =
   let module Command = struct
-    type t = [`Show | `Build | `Install | `Uninstall | `Install_lib | `Clean | `Distclean]
+    type t = Build_script_command.t
 
-    exception Unrecognized_command of string
+    let find_args tag = try List.assoc tag cmd_line_args with Not_found -> []
 
     let command tag =
       try
-        let descr_install = snd (List.assoc tag general_commands) in
-        [tag, [], descr_install, ""]
+        let descr = snd (List.assoc tag general_commands) in
+        [tag, (find_args tag), descr, ""]
       with Not_found -> [];;
 
     let command_install = command `Install
     let command_uninstall = command `Uninstall
 
     let string_of_command = function
-      | `Show -> "show"
-      | `Build -> "build"
-      | `Install when command_install <> [] -> "install"
-      | `Uninstall when command_uninstall <> [] -> "uninstall"
-      | `Install_lib -> "install-lib"
-      | `Clean -> "clean"
-      | `Distclean -> "distclean"
-      | `Install | `Uninstall -> assert false;;
+      | `Install as c when command_install <> [] -> Build_script_command.string_of_command c
+      | `Uninstall as c when command_uninstall <> [] -> Build_script_command.string_of_command c
+      | `Install | `Uninstall -> assert false
+      | x -> Build_script_command.string_of_command x;;
 
     let command_of_string = function
-      | "show" -> `Show
-      | "build" -> `Build
       | "install" when command_install <> [] -> `Install
       | "uninstall" when command_uninstall <> [] -> `Uninstall
-      | "install-lib" -> `Install_lib
-      | "clean" -> `Clean
-      | "distclean" -> `Distclean
-      | x -> raise (Unrecognized_command (sprintf "`%s' is not a recognized command." x));;
+      | ("install" | "uninstall") as c -> raise (Build_script_command.Unrecognized_command c)
+      | x -> Build_script_command.command_of_string x;;
 
     let options =
       List.map (fun (a, b, c, d) -> a, Arg.align b, c, d) ([
-        `Build,       [], "Build libraries and executables (default command)", "";
-      ] @ command_install @ command_uninstall @ [
-        `Clean,       [], "Remove output files for the selected target",       "";
-        `Distclean,   [], "Remove all build output",                           "";
-        `Install_lib, [], "Install libraries as subdirectories relative\n               to the standard library directory", "";
-        `Show,        [], "Show the build options of a target",                "";
+        `Build,       (find_args `Build),
+          "Build libraries and executables (default command)", "";
+      ] @
+        command_install @
+        command_uninstall @ [
+        `Clean,       (find_args `Clean),
+          "Remove output files for the selected target",       "";
+        `Distclean,   (find_args `Distclean),
+          "Remove all build output",                           "";
+        `Install_lib, (find_args `Install_lib),
+          "Install libraries as subdirectories relative\n               to the standard library directory", "";
+        `Show,        (find_args `Show),
+          "Show the build options of a target",                "";
       ]);;
 
     let anon_fun = function
@@ -342,7 +341,7 @@ let main ~cmd_line_args ~external_tasks ~general_commands ~targets =
             try
               let index, descr = List.assoc command general_commands in
               let task = List.assoc index external_tasks in
-              ETask.execute (task ())
+              ETask.execute (task command)
             with Not_found -> ()
           in
           match command with
@@ -378,7 +377,7 @@ let main ~cmd_line_args ~external_tasks ~general_commands ~targets =
 
   let global_options = [
     ("-C",      Set_string Option.change_dir, "<dir> Change directory before running [default: src]");
-  ] @ cmd_line_args in
+  ] in
   let global_options = Arg.align global_options in
   let command_name = Filename.basename Sys.argv.(0) in
   (* Print targets *)
@@ -390,7 +389,7 @@ let main ~cmd_line_args ~external_tasks ~general_commands ~targets =
       (string_of_output_type tg.target_type) (string_of_compilation_type (ccomp_type <> None) tg)
   end targets_shown) in
   let usage_msg = sprintf
-    "\nUSAGE\n  ocaml %s [global_options*] <command> [options*] [targets*]\n  ocaml %s <command> -help"
+    "\nUSAGE\n  ocaml %s [global-options*] <command> [command-options*] [targets*]\n  ocaml %s <command> -help"
       command_name command_name
   in
   let help_string () =
@@ -412,7 +411,7 @@ let main ~cmd_line_args ~external_tasks ~general_commands ~targets =
             printf "%s %s - %s\n\nUSAGE\n  ocaml %s [global_options*] %s [options*] [targets*]\n\nOPTIONS%s"
               command_name name descr command_name name (Arg.usage_string specs "")
       end;
-    | Command.Unrecognized_command msg -> prerr_endline msg
+    | Build_script_command.Unrecognized_command msg -> prerr_endline msg
     | ex -> prerr_endline (Printexc.to_string ex)
 ;;
 

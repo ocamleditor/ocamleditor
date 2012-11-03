@@ -109,9 +109,11 @@ let write proj =
       let args =
         List.map begin fun arg ->
           Xml.Element ("arg", [
+            "id", (string_of_int arg.Build_script_args.bsa_id);
             "type", (Build_script_args.string_of_type arg.Build_script_args.bsa_type);
             "key", arg.Build_script_args.bsa_key;
             "pass", (Build_script_args.string_of_pass arg.Build_script_args.bsa_pass);
+            "command", (Build_script_command.string_of_command arg.Build_script_args.bsa_cmd);
           ], [
             Xml.Element ("task",
               (match arg.Build_script_args.bsa_task with Some (bc, et) -> [
@@ -170,6 +172,7 @@ let xml_bs_targets proj node =
 
 (** xml_bs_args *)
 let xml_bs_args proj node =
+  let count_bsa_id = ref 0 in
   Xml.map begin fun arg ->
     let bsa_doc     = ref "" in
     let bsa_mode    = ref `add in
@@ -202,6 +205,7 @@ let xml_bs_args proj node =
         | _ -> ()
     end arg;
     {Build_script_args.
+      bsa_id      = fattrib arg "id" int_of_string (fun () -> incr count_bsa_id; !count_bsa_id);
       bsa_type    = fattrib arg "type" Build_script_args.type_of_string
         (fun _ -> invalid_arg "from_file, build_script, type");
       bsa_key     = attrib arg "key" (fun x -> x) "";
@@ -215,6 +219,8 @@ let xml_bs_args proj node =
       end;
       bsa_pass    = fattrib arg "pass" Build_script_args.pass_of_string
         (fun _ -> invalid_arg "from_file, build_script, pass");
+      bsa_cmd    = fattrib arg "command" Build_script_command.command_of_string
+        (fun _ -> `Show);
     }
   end node;;
 

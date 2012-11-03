@@ -56,6 +56,16 @@ let _ =
   let row = model_bool#append () in model_bool#set ~row ~column "false";
 ;;
 
+let cols_cmd  = new GTree.column_list
+let col_cmd   = cols_cmd#add Gobject.Data.string
+let model_cmd = GTree.list_store cols_cmd
+let model_cmd_fill values =
+  let column = col_cmd in
+  model_cmd#clear();
+  let g x = let row = model_cmd#append () in model_cmd#set ~row ~column x in
+  List.iter (fun x -> g (Build_script_command.string_of_command x)) values;;
+let _ = model_cmd_fill Build_script_command.commands;;
+
 let taskname_of_task = function
   | Some (bc, et) -> sprintf "%s\n%s" bc.name et.et_name
   | _ -> ""
@@ -89,6 +99,7 @@ class widget ~project ?packing () =
   let col_opt_doc       = cols#add Gobject.Data.string in
   let col_opt_et_name   = cols#add Gobject.Data.string in
   let col_opt_arg       = cols#add Gobject.Data.string in
+  let col_opt_cmd       = cols#add Gobject.Data.string in
   let col_opt_pass      = cols#add Gobject.Data.string in
   let col_opt_def_flag  = cols#add Gobject.Data.boolean in
   let col_opt_def_value = cols#add Gobject.Data.string in
@@ -98,6 +109,7 @@ class widget ~project ?packing () =
   let rend_doc          = GTree.cell_renderer_text [`EDITABLE true] in
   let rend_et_name      = GTree.cell_renderer_combo [`EDITABLE true; `HAS_ENTRY false; `TEXT_COLUMN col_et_name; `MODEL (Some model_et#coerce)] in
   let rend_args         = GTree.cell_renderer_combo [`EDITABLE true; `HAS_ENTRY false; `TEXT_COLUMN col_arg; `MODEL (Some model_arg#coerce)] in
+  let rend_cmd          = GTree.cell_renderer_combo [`EDITABLE true; `HAS_ENTRY false; `TEXT_COLUMN col_cmd; `MODEL (Some model_cmd#coerce)] in
   let rend_pass_flag    = GTree.cell_renderer_text [`EDITABLE false] in
   let rend_pass         = GTree.cell_renderer_combo [`EDITABLE true; `HAS_ENTRY false; `TEXT_COLUMN col_arg; `MODEL (Some model_pass#coerce)] in
   let rend_def_flag     = GTree.cell_renderer_toggle [`ACTIVATABLE true] in
@@ -115,6 +127,7 @@ class widget ~project ?packing () =
   let _                 = vc_opt_def#add_attribute rend_def_bool "text" col_opt_def_value in
   let vc_opt_et_name    = GTree.view_column ~renderer:(rend_et_name, ["text", col_opt_et_name]) ~title:"For task..." () in
   let vc_opt_arg        = GTree.view_column ~renderer:(rend_args, ["text", col_opt_arg]) ~title:"Add/Replace" () in
+  let vc_opt_cmd        = GTree.view_column ~renderer:(rend_cmd, ["text", col_opt_cmd]) ~title:"When..." () in
   let vc_opt_pass       = GTree.view_column (*~renderer:(rend_pass, ["text", col_opt_pass])*) ~title:"Pass as..." () in
   let _                 = vc_opt_pass#pack ~expand:true rend_pass_flag in
   let _                 = vc_opt_pass#pack ~expand:true rend_pass in
@@ -131,6 +144,7 @@ class widget ~project ?packing () =
   let _                 = view#append_column vc_opt_def in
   let _                 = view#append_column vc_opt_et_name in
   let _                 = view#append_column vc_opt_arg in
+  let _                 = view#append_column vc_opt_cmd in
   let _                 = view#append_column vc_opt_pass in
   let _                 = vc_opt_type#set_min_width 75 in
   let _                 = vc_opt_name#set_min_width 100 in
@@ -141,6 +155,8 @@ class widget ~project ?packing () =
   let _                 = vc_opt_def#set_resizable true in
   let _                 = vc_opt_et_name#set_resizable true in
   let _                 = vc_opt_arg#set_resizable true in
+  let _                 = vc_opt_arg#set_visible false in
+  let _                 = vc_opt_cmd#set_resizable true in
   let _                 = vc_opt_pass#set_resizable true in
   (* Button Box *)
   let bbox              = GPack.button_box `VERTICAL ~layout:`START ~spacing:5 ~packing:hbox#pack () in
@@ -184,7 +200,7 @@ object (self)
     end);
     ignore (rend_et_name#connect#edited ~callback:begin fun path text ->
       let row = model#get_iter path in
-      model#set ~row ~column:col_opt_arg string_of_add ;
+      model#set ~row ~column:col_opt_arg string_of_add; (* Set ADD as default value *)
       model#set ~row ~column:col_opt_et_name text;
       self#update_pass row;
       Gmisclib.Idle.add view#misc#grab_focus
@@ -195,6 +211,11 @@ object (self)
       model#set ~row ~column:col_opt_arg text;
       self#update_pass row;
       Gmisclib.Idle.add view#misc#grab_focus;
+    end);
+    ignore (rend_cmd#connect#edited ~callback:begin fun path text ->
+      let row = model#get_iter path in
+      model#set ~row ~column:col_opt_cmd text;
+      Gmisclib.Idle.add view#misc#grab_focus
     end);
     ignore (rend_pass#connect#edited ~callback:begin fun path text ->
       let row = model#get_iter path in
@@ -326,11 +347,13 @@ object (self)
           | `add -> string_of_add
           | `replace arg -> arg
       end;
+      model#set ~row ~column:col_opt_cmd (Build_script_command.string_of_command arg.bsa_cmd);
       model#set ~row ~column:col_opt_pass (string_of_pass arg.bsa_pass);
     end args;
 
   method get () =
     let arguments = ref [] in
+    let count = ref 0 in
     model#foreach begin fun path row ->
       let bc_et = self#find_task_by_name (model#get ~row ~column:col_opt_et_name) in
       (*match self#find_task_by_name (model#get ~row ~column:col_opt_et_name) with
@@ -347,14 +370,17 @@ object (self)
             if arg = string_of_add then `add else (`replace arg)
           in
           arguments := {
+            bsa_id      = !count;
             bsa_type    = bsa_type;
             bsa_key     = (model#get ~row ~column:col_opt_key);
             bsa_doc     = (model#get ~row ~column:col_opt_doc);
             bsa_default = bsa_default;
             bsa_task    = bc_et;
             bsa_mode    = bsa_mode;
-            bsa_pass    = (pass_of_string (model#get ~row ~column:col_opt_pass))
+            bsa_pass    = (pass_of_string (model#get ~row ~column:col_opt_pass));
+            bsa_cmd     = (Build_script_command.command_of_string (model#get ~row ~column:col_opt_cmd))
           } :: !arguments;
+          incr count;
           false
         (*| _-> false*)
     end;

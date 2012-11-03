@@ -103,6 +103,18 @@ module Xlist =
       for i = 1 to n do seq := x :: !seq done;
       !seq;;
 
+    let group_assoc ll =
+      let groups = ref [] in
+      List.iter begin fun (k, v) ->
+
+        begin
+          try
+            let group = List.assoc k !groups in
+            group := v :: !group
+          with Not_found -> (groups := (k, ref [v]) :: !groups);
+        end;
+      end ll;
+      List.rev (List.map (fun (k, group) -> (k, List.rev !group)) !groups);;
   end
 
 module Opt = struct

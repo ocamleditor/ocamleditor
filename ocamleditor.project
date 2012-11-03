@@ -381,7 +381,7 @@
       <target target_id="13" show="false"/>
     </targets>
     <args>
-      <arg type="Flag" key="-use-modified-gtkThread" pass="-key">
+      <arg id="0" type="Flag" key="-use-modified-gtkThread" pass="-key" command="build">
         <task target_id="12" task_name="prepare-build"/>
         <mode>&lt;ADD&gt;</mode>
         <default type="flag">false</default>
@@ -389,11 +389,17 @@
                            and you want to use the included modified version of 
                            gtkThread.ml to reduce CPU consumption</doc>
       </arg>
-      <arg type="String" key="-prefix" pass="-key value">
+      <arg id="1" type="String" key="-prefix" pass="-key value" command="install">
+        <task target_id="13" task_name="Install OCamlEditor"/>
+        <mode>&lt;ADD&gt;</mode>
+        <default type="string">/usr/local</default>
+        <doc>Installation prefix (Unix only)</doc>
+      </arg>
+      <arg id="2" type="String" key="-prefix" pass="-key value" command="uninstall">
         <task target_id="13" task_name="Uninstall OCamlEditor"/>
         <mode>&lt;ADD&gt;</mode>
         <default type="string">/usr/local</default>
-        <doc>Installation/Uninstallation prefix (Unix only)</doc>
+        <doc>Uninstallation prefix (Unix only)</doc>
       </arg>
     </args>
     <commands>
