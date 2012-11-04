@@ -476,7 +476,13 @@ object (self)
     | Partial_implementation impl ->
       Array.iter begin function
         | Partial_structure impl -> List.iter self#append_struct_item impl.str_items
-        | _ -> 
+        | Partial_structure_item impl -> self#append_struct_item impl
+        | Partial_expression expr -> self#append_expression expr
+        | Partial_signature sign -> List.iter self#append_sig_item sign.sig_items
+        | Partial_signature_item sign -> self#append_sig_item sign
+        | Partial_module_type mt -> self#append_module_type mt.mty_desc
+        | Partial_pattern _
+        | Partial_class_expr _ ->
           let row = model#append () in
           model#set ~row ~column:col_markup "Partial_implementation"
       end impl;
@@ -890,8 +896,9 @@ object (self)
     let result = ref false in
     begin
       try
-        List.iter (fun f -> f()) (List.rev (model#get ~row ~column:col_lazy));
-        result := true;
+        let callbacks = List.rev (model#get ~row ~column:col_lazy) in
+        List.iter (fun f -> f()) callbacks;
+        result := callbacks <> [];
       with Failure _ -> ()
     end;
     model#set ~row ~column:col_lazy [];

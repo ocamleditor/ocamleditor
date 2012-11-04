@@ -289,6 +289,12 @@ module Signature = struct
               []
         end
       | Not_found | Sys_error _ -> []
+      | Cmi_format.Error (Cmi_format.Not_an_interface msg) ->
+        eprintf "Not_an_interface: %s\n" msg; []
+      | Cmi_format.Error (Cmi_format.Wrong_version_interface (a, b)) ->
+        eprintf "Wrong_version_interface: %s, %s\n" a b; []
+      | Cmi_format.Error (Cmi_format.Corrupted_interface msg) ->
+        eprintf "Corrupted_interface: %s\n" msg; []
   ;;
 
   (* filename is the .cmi file's full name *)
