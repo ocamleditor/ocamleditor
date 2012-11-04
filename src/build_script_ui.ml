@@ -51,7 +51,7 @@ class widget ~project ?packing () =
   let abox            = GPack.vbox ~border_width ~spacing () in
   let tab_label       = (GMisc.label ~text:"Command Line Arguments" ())#coerce in
   let _               = notebook#append_page ~tab_label abox#coerce in
-  let _               = GMisc.label ~text:"Define the command line arguments for the build script" ~xalign:0.0 ~packing:abox#pack ~show:enable_widget_args () in
+  let _               = GMisc.label ~text:"Define the command line arguments for the build script commands" ~xalign:0.0 ~packing:abox#pack ~show:enable_widget_args () in
   let widget_args     = new Build_script_args_widget.widget ~project ~packing:abox#add () in
   (* General Commands *)
   let abox            = GPack.vbox ~border_width ~spacing () in

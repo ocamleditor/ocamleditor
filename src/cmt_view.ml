@@ -471,10 +471,15 @@ object (self)
       | _ -> ()
 
   method private parse = function
-    | Implementation impl -> List.iter self#append_struct_item impl.str_items
-    | Partial_implementation part_impl ->
-      let row = model#append () in
-      model#set ~row ~column:col_markup "Partial_implementation"
+    | Implementation impl ->
+      List.iter self#append_struct_item impl.str_items
+    | Partial_implementation impl ->
+      Array.iter begin function
+        | Partial_structure impl -> List.iter self#append_struct_item impl.str_items
+        | _ -> 
+          let row = model#append () in
+          model#set ~row ~column:col_markup "Partial_implementation"
+      end impl;
     | Interface sign ->
       List.iter self#append_sig_item sign.sig_items;
     | Partial_interface part_intf ->

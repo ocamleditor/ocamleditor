@@ -189,8 +189,7 @@ let xml_bs_args proj node =
           end
         | "default" ->
           bsa_default := begin
-            match fattrib tp "type" (fun x -> x)
-                (fun _ -> invalid_arg "from_file, build_script, default") with
+            match fattrib tp "type" (fun x -> x) (fun () -> "string") with
               | "flag" -> `flag (bool_of_string (value tp))
               | "bool" -> `bool (bool_of_string (value tp))
               | "string" -> `string (value tp)
@@ -206,8 +205,7 @@ let xml_bs_args proj node =
     end arg;
     {Build_script_args.
       bsa_id      = fattrib arg "id" int_of_string (fun () -> incr count_bsa_id; !count_bsa_id);
-      bsa_type    = fattrib arg "type" Build_script_args.type_of_string
-        (fun _ -> invalid_arg "from_file, build_script, type");
+      bsa_type    = fattrib arg "type" Build_script_args.type_of_string (fun _ -> Build_script_args.String);
       bsa_key     = attrib arg "key" (fun x -> x) "";
       bsa_doc     = !bsa_doc;
       bsa_mode    = !bsa_mode;
@@ -217,10 +215,8 @@ let xml_bs_args proj node =
           | Some bc, Some et -> Some (bc, et)
           | _ -> None
       end;
-      bsa_pass    = fattrib arg "pass" Build_script_args.pass_of_string
-        (fun _ -> invalid_arg "from_file, build_script, pass");
-      bsa_cmd    = fattrib arg "command" Build_script_command.command_of_string
-        (fun _ -> `Show);
+      bsa_pass    = fattrib arg "pass" Build_script_args.pass_of_string (fun _ -> `key_value);
+      bsa_cmd    = fattrib arg "command" Build_script_command.command_of_string (fun _ -> `Show);
     }
   end node;;
 

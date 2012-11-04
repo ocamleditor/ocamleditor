@@ -85,9 +85,11 @@ let print_add_args bc et args =
               in
               let arg =
                 match arg.bsa_pass with
-                  | `key -> sprintf "%s && !%s, \"%s\"" condition (ident_of_arg arg) arg.bsa_key
-                  | `value -> sprintf "%s, \"%s\"" condition (ident_of_arg arg)
-                  | `key_value -> sprintf "%s, (sprintf \"%s %%S\" !%s)"
+                  | `key -> sprintf "\n                                %s && !%s, \"%s\"" condition (ident_of_arg arg) arg.bsa_key
+                  | `value -> sprintf "\n                                %s, \"%s\"" condition (ident_of_arg arg)
+                  | `key_value when arg.bsa_type = Bool -> sprintf "\n                                %s, (sprintf \"%s %%b\" !%s)"
+                    condition arg.bsa_key (ident_of_arg arg)
+                  | `key_value -> sprintf "\n                                %s, (sprintf \"%s %%S\" !%s)"
                     condition arg.bsa_key (ident_of_arg arg)
               in
               arg :: acc
@@ -180,12 +182,12 @@ let print_cmd_line_args ochan project =
       in
       let default_value =
         match arg.bsa_default with
-          | `flag x -> if x then "Set" else "Not Set"
-          | `bool x -> string_of_bool x
-          | `string x -> String.escaped x
+          | `flag _ -> sprintf "\" ^ (sprintf \"%%s\" (if !%s then \"Set\" else \"Not Set\")) ^ \"" (ident_of_arg arg)
+          | `bool _ -> sprintf "\" ^ (string_of_bool !%s) ^ \"" (ident_of_arg arg)
+          | `string _ -> sprintf "\" ^ !%s ^ \"" (ident_of_arg arg)
       in
-      fprintf ochan "    %S, %s,\n      \" %s [default: %s]\";\n" arg.bsa_key typ (String.escaped arg.bsa_doc) default_value;
-    end args;
+      fprintf ochan "    %S, %s,\n      (\" %s [default: %s]\");\n" arg.bsa_key typ (String.escaped arg.bsa_doc) default_value;
+    end (List.rev args);
     fprintf ochan "  ];\n";
   end groups;
   fprintf ochan "]\n";;

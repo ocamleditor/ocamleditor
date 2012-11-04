@@ -127,7 +127,7 @@ class widget ~project ?packing () =
   let _                 = vc_opt_def#add_attribute rend_def_bool "text" col_opt_def_value in
   let vc_opt_et_name    = GTree.view_column ~renderer:(rend_et_name, ["text", col_opt_et_name]) ~title:"For task..." () in
   let vc_opt_arg        = GTree.view_column ~renderer:(rend_args, ["text", col_opt_arg]) ~title:"Add/Replace" () in
-  let vc_opt_cmd        = GTree.view_column ~renderer:(rend_cmd, ["text", col_opt_cmd]) ~title:"When..." () in
+  let vc_opt_cmd        = GTree.view_column ~renderer:(rend_cmd, ["text", col_opt_cmd]) ~title:"Command" () in
   let vc_opt_pass       = GTree.view_column (*~renderer:(rend_pass, ["text", col_opt_pass])*) ~title:"Pass as..." () in
   let _                 = vc_opt_pass#pack ~expand:true rend_pass_flag in
   let _                 = vc_opt_pass#pack ~expand:true rend_pass in
@@ -138,13 +138,13 @@ class widget ~project ?packing () =
   let _                 = view#selection#set_mode `SINGLE in
   let _                 = view#set_headers_clickable true in
   let _                 = view#misc#set_property "enable-grid-lines" (`INT 2) in
+  let _                 = view#append_column vc_opt_cmd in
   let _                 = view#append_column vc_opt_type in
   let _                 = view#append_column vc_opt_name in
   let _                 = view#append_column vc_opt_doc in
   let _                 = view#append_column vc_opt_def in
   let _                 = view#append_column vc_opt_et_name in
   let _                 = view#append_column vc_opt_arg in
-  let _                 = view#append_column vc_opt_cmd in
   let _                 = view#append_column vc_opt_pass in
   let _                 = vc_opt_type#set_min_width 75 in
   let _                 = vc_opt_name#set_min_width 100 in
@@ -311,7 +311,7 @@ object (self)
     model#set ~row ~column:col_opt_key "";
     model#set ~row ~column:col_opt_doc "";
     model#set ~row ~column:col_opt_def_value "";
-    view#set_cursor (model#get_path row) vc_opt_type;
+    view#set_cursor (model#get_path row) vc_opt_cmd;
     view#misc#grab_focus();
 
   method remove () =
