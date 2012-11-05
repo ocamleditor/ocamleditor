@@ -143,7 +143,7 @@ object (self)
     Project.load_path proj Config.load_path;
     editor#set_history_switch_page_locked true;
     (*crono ~label:"close_all" *)editor#close_all ();
-    editor#pack_outline (Outline.create_empty());
+    editor#pack_outline (Cmt_view.empty());
     editor#set_project proj;
     Sys.chdir (proj.root // Project.src);
     window#set_title (Convert.to_utf8 proj.name);

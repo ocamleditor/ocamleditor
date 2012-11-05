@@ -647,9 +647,9 @@ object (self)
         with None -> raise Not_found | Some page -> page
       in
       self#place_marks res;
-      Gmisclib.Idle.add (fun () -> begin
+      Gmisclib.Idle.add ~prio:100 (fun () -> begin
         match List.nth lines_involved iter#line with
-          | {marks = ((mark_start, mark_stop) :: _) } ->
+          | {marks = ((mark_start, mark_stop) :: _); _} ->
             let where = page#buffer#get_iter_at_mark (`NAME mark_start) in
             page#buffer#select_range where (page#buffer#get_iter_at_mark (`NAME mark_stop));
             page#view#scroll_lazy where;
@@ -815,16 +815,29 @@ object (self)
     ignore (preview#event#connect#focus_out ~callback:begin fun ev ->
       false
     end);
-    ignore (preview#event#connect#button_press ~callback:begin fun ev ->
+    let two_button_press = ref false in
+    let get_iter ev =
       let x = int_of_float (GdkEvent.Button.x ev) in
       let y = int_of_float (GdkEvent.Button.y ev) in
       let x, y = preview#window_to_buffer_coords ~tag:`TEXT ~x ~y in
-      let iter = preview#get_iter_at_location ~x ~y in
+      preview#get_iter_at_location ~x ~y
+    in
+    ignore (preview#event#connect#button_release ~callback:begin fun ev ->
+      let iter = get_iter ev in
       match GdkEvent.get_type ev with
-        | `TWO_BUTTON_PRESS ->
+        | `BUTTON_RELEASE when !two_button_press ->
+          two_button_press := false;
           self#select_line iter;
           self#activate ~grab_focus:true iter;
-          preview#buffer#place_cursor (iter#set_line_index 0);
+          preview#buffer#place_cursor ~where:(iter#set_line_index 0);
+          false
+        | _ -> false
+    end);
+    ignore (preview#event#connect#button_press ~callback:begin fun ev ->
+      let iter = get_iter ev in
+      match GdkEvent.get_type ev with
+        | `TWO_BUTTON_PRESS ->
+          two_button_press := true;
           true
         | `BUTTON_PRESS ->
           self#select_line iter;

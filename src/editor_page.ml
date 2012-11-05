@@ -430,7 +430,7 @@ object (self)
       buffer#set_changed_after_last_autocomp 0.0;
       Autocomp.compile_buffer ~project ~editor ~page:self ~commit ();
     end else begin
-      editor#pack_outline (Outline.create_empty());
+      editor#pack_outline (Cmt_view.empty());
       self#set_outline None;
     end
 

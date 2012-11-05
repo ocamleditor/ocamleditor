@@ -26,15 +26,15 @@ let arg_2_prefix = ref "/usr/local"
 let cmd_line_args = [
   `Build, [
     "-use-modified-gtkThread", Set arg_0_use_modified_gtkThread,
-      " Set this flag if you have Lablgtk-2.14.2 or earlier\n                           and you want to use the included modified version of \n                           gtkThread.ml to reduce CPU consumption [default: Not Set]";
+      (" Set this flag if you have Lablgtk-2.14.2 or earlier\n                           and you want to use the included modified version of \n                           gtkThread.ml to reduce CPU consumption [default: " ^ (sprintf "%s" (if !arg_0_use_modified_gtkThread then "Set" else "Not Set")) ^ "]");
   ];
   `Install, [
     "-prefix", Set_string arg_1_prefix,
-      " Installation prefix (Unix only) [default: /usr/local]";
+      (" Installation prefix (Unix only) [default: " ^ !arg_1_prefix ^ "]");
   ];
   `Uninstall, [
     "-prefix", Set_string arg_2_prefix,
-      " Uninstallation prefix (Unix only) [default: /usr/local]";
+      (" Uninstallation prefix (Unix only) [default: " ^ !arg_2_prefix ^ "]");
   ];
 ]
 
@@ -70,7 +70,8 @@ let external_tasks = [
     et_env_replace           = false;
     et_dir                   = "..";
     et_cmd                   = "ocaml";
-    et_args                  = [true,"tools/prepare_build.ml"; command = `Build && !arg_0_use_modified_gtkThread, "-use-modified-gtkThread"];
+    et_args                  = [true,"tools/prepare_build.ml"; 
+                                command = `Build && !arg_0_use_modified_gtkThread, "-use-modified-gtkThread"];
     et_phase                 = Some Before_compile;
     et_always_run_in_project = true;
     et_always_run_in_script  = true;
@@ -130,7 +131,8 @@ let external_tasks = [
     et_env_replace           = false;
     et_dir                   = "..";
     et_cmd                   = "ocaml";
-    et_args                  = [true,"tools/install.ml"; command = `Install, (sprintf "-prefix %S" !arg_1_prefix)];
+    et_args                  = [true,"tools/install.ml"; 
+                                command = `Install, (sprintf "-prefix %S" !arg_1_prefix)];
     et_phase                 = Some Before_clean;
     et_always_run_in_project = false;
     et_always_run_in_script  = false;
@@ -142,7 +144,8 @@ let external_tasks = [
     et_env_replace           = false;
     et_dir                   = "..";
     et_cmd                   = "ocaml";
-    et_args                  = [true,"tools/uninstall.ml"; command = `Uninstall, (sprintf "-prefix %S" !arg_2_prefix)];
+    et_args                  = [true,"tools/uninstall.ml"; 
+                                command = `Uninstall, (sprintf "-prefix %S" !arg_2_prefix)];
     et_phase                 = Some Before_clean;
     et_always_run_in_project = false;
     et_always_run_in_script  = false;

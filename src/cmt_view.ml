@@ -474,7 +474,7 @@ object (self)
     | Implementation impl ->
       List.iter self#append_struct_item impl.str_items
     | Partial_implementation impl ->
-      Array.iter begin function
+      (*Array.iter begin function
         | Partial_structure impl -> List.iter self#append_struct_item impl.str_items
         | Partial_structure_item impl -> self#append_struct_item impl
         | Partial_expression expr -> self#append_expression expr
@@ -482,10 +482,10 @@ object (self)
         | Partial_signature_item sign -> self#append_sig_item sign
         | Partial_module_type mt -> self#append_module_type mt.mty_desc
         | Partial_pattern _
-        | Partial_class_expr _ ->
+        | Partial_class_expr _ ->*)
           let row = model#append () in
           model#set ~row ~column:col_markup "Partial_implementation"
-      end impl;
+      (*end impl;*)
     | Interface sign ->
       List.iter self#append_sig_item sign.sig_items;
     | Partial_interface part_intf ->
@@ -940,3 +940,13 @@ let window ~editor ~page () =
   end);
   window#present();
   widget, window;;
+
+
+(** empty *)
+let empty () =
+  let vp = GBin.viewport () in
+  let label = GMisc.label ~xalign:0.5 ~yalign:0. ~xpad:3 ~ypad:3
+    ~text:"Structure is not available" ~packing:vp#add () in
+  vp#misc#modify_bg [`NORMAL, `NAME "#ffffff"];
+  label#misc#modify_fg [`NORMAL, `NAME "#d0d0d0"];
+  vp#coerce;;
