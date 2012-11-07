@@ -104,17 +104,16 @@ module Xlist =
       !seq;;
 
     let group_assoc ll =
-      let groups = ref [] in
-      List.iter begin fun (k, v) ->
-
-        begin
+      let groups =
+        List.fold_left begin fun groups (k, v) ->
           try
-            let group = List.assoc k !groups in
-            group := v :: !group
-          with Not_found -> (groups := (k, ref [v]) :: !groups);
-        end;
-      end ll;
-      List.rev (List.map (fun (k, group) -> (k, List.rev !group)) !groups);;
+            let group = List.assoc k groups in
+            group := v :: !group;
+            groups
+          with Not_found -> (k, ref [v]) :: groups;
+        end [] ll
+      in
+      List.map (fun (k, group) -> (k, List.rev !group)) groups;;
   end
 
 module Opt = struct
