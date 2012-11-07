@@ -26,11 +26,28 @@
 
 open Printf
 
-let prefix     = ref "/usr/local"
-let ext        = if is_win32 then ".exe" else ""
+let prefix   = ref "/usr/local"
+let ext      = if is_win32 then ".exe" else ""
+let gmisclib = ref false
 
 let install () =
-  if not is_win32 then begin
+  if !gmisclib then begin
+    let libname = "gmisclib" in
+    let cmas = ["../" ^ libname] in
+    let ar = String.concat " " (List.map (fun x -> x ^ (if Sys.os_type = "Win32" then ".lib" else ".a")) cmas) in
+    let find ext =
+      let files = Array.to_list (Sys.readdir ".") in
+      let files = List.filter (fun x -> Filename.check_suffix x ext) files in
+      String.concat " " files
+    in
+    let cmas = List.map (fun x -> [x ^ ".cma"; x ^ ".cmxa"]) cmas in
+    let cmas = String.concat " " (List.flatten cmas) in
+    (*  *)
+    pushd libname;
+    ignore (kprintf Sys.command "ocamlfind remove %s" libname);
+    ignore (kprintf Sys.command "ocamlfind install %s META %s %s %s %s" libname cmas ar (find ".cmi") (find ".mli"));
+    popd();
+  end else if not is_win32 then begin
     let pixmaps = sprintf "%s/share/pixmaps/ocamleditor" !prefix in
     mkdir_p pixmaps;
     kprintf run "cp -vru ../pixmaps/* %s" pixmaps;
@@ -53,5 +70,6 @@ You will need the free NSIS install system (http://nsis.sourceforge.net).";
   end;;
 
 let _ = main ~dir:"../src" ~default_target:install ~options:[
-  "-prefix", Set_string prefix, (sprintf " Installation prefix (Unix only, default is %s)" !prefix);
+  "-prefix",   Set_string prefix,   (sprintf " Installation prefix (Unix only, default is %s)" !prefix);
+  "-gmisclib", Set gmisclib, (sprintf " Install gmisclib");
 ] ()

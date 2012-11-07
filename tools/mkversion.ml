@@ -37,6 +37,11 @@ let _ =
       (sprintf "  <version>%s</version>" version);
   ];
 
+  substitute ~filename:"../src/gmisclib/META" ~regexp:true [
+    "version=\"[0-9]+[.][0-9]+[.][0-9]+\"",
+      (sprintf "version=\"%s\"" version);
+  ];
+
   substitute ~filename:"../ocamleditor.nsi" ~regexp:true [
     "OutFile \"ocamleditor-[0-9]+[.][0-9]+[.][0-9]+.exe\"",
       (sprintf "OutFile \"ocamleditor-%s.exe\"" version);
