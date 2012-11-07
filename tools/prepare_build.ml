@@ -40,7 +40,7 @@ let prepare_build () =
   run "ocamlyacc annot_parser.mly";
   run "ocamllex err_lexer.mll";
   run "ocamlyacc err_parser.mly";
-  generate_oebuild_script();;
+  try generate_oebuild_script() with Failure msg -> raise (Script_error 2);;
 
 let _ = main ~default_target:prepare_build ~targets:[
   "-generate-oebuild-script", generate_oebuild_script, " (undocumented)";
