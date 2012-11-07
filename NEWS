@@ -16,8 +16,8 @@
   * Automated build script generation
 
     - Ability to specify custom command line arguments;
-    - New commands "install" and "distclean";
-    - Ability to hide targets in the script;
+    - New commands "install", "uninstall" and "distclean";
+    - Ability to hide targets;
     - Dependencies between targets and external build tasks.
 
   * "Structure pane" revamped: now read informations from "-bin-annot".
