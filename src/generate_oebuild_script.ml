@@ -79,7 +79,7 @@ module Util = struct
     let cmd = sprintf "ocaml %s" filename in
     Printf.printf "Testing %s...\n  %s\n%!" filename cmd;
     let exit_code = Sys.command cmd in
-    Printf.printf "%s\n%!" (if exit_code = 0 then "" else sprintf "Exit code: %d" exit_code);
+    if exit_code > 0 then failwith "Test failed"
 end
 
 let create_script () =
@@ -116,7 +116,7 @@ let create_script () =
     output_string ochan "\nopen Oebuild\nopen Build_script_util\n";
     finally();
     Util.test();
-  with ex -> (finally());;
+  with ex -> (finally(); raise ex);;
 
 let code_of_script () =
   let buf = File.read filename in
