@@ -216,7 +216,7 @@ let filter_inconsistent_assumptions_error ~compiler_output ~recompile ~targets ~
 
 (** Building *)
 let build ~compilation ~package ~includes ~libs ~other_mods ~outkind ~compile_only
-    ~thread ~vmthread ~annot ~pp ?inline ~cflags ~lflags ~outname ~deps ~ms_paths
+    ~thread ~vmthread ~annot ~bin_annot ~pp ?inline ~cflags ~lflags ~outname ~deps ~ms_paths
     ~targets ?(prof=false) () =
   let split_space = Str.split (Str.regexp " +") in
   (* includes *)
@@ -231,6 +231,7 @@ let build ~compilation ~package ~includes ~libs ~other_mods ~outkind ~compile_on
   if thread then (cflags := !cflags ^ " -thread"; lflags := !lflags ^ " -thread");
   if vmthread then (cflags := !cflags ^ " -vmthread"; lflags := !lflags ^ " -vmthread");
   if annot then (cflags := !cflags ^ " -annot");
+  if bin_annot then (cflags := !cflags ^ " -bin-annot");
   if pp <> "" then (cflags := !cflags ^ " -pp " ^ pp);
   begin
     match inline with

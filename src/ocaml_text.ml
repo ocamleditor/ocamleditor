@@ -212,25 +212,6 @@ object (self)
       then List.tl lident else lident in
     lident
 
-  method get_annot iter =
-    if changed_after_last_autocomp = 0.0 then begin
-      match file with
-        | None -> None
-        | Some file ->
-          begin
-            match project with
-              | Some project ->
-                begin
-                  match project.Prj.in_source_path file#path with
-                    | Some _ ->
-                      Annotation.find_block_at_offset ~filename:file#path ~offset:iter#offset
-                        (*~offset:(Glib.Utf8.offset_to_pos (self#get_text ()) ~pos:0 ~off:iter#offset)*)
-                    | _ -> None
-                end;
-              | _ -> None
-          end;
-    end else None
-
   method tag_table_lexical : (GText.tag option) list = lexical_tags
 
   initializer
@@ -351,6 +332,29 @@ object (self)
       self#misc#grab_focus();
     end
 
+  method get_annot iter =
+    if buffer#changed_after_last_autocomp = 0.0 then begin
+      match buffer#as_text_buffer#file with
+        | None -> None
+        | Some file ->
+          begin
+            match project with
+              | Some project ->
+                begin
+                  match project.Prj.in_source_path file#path with
+                    | Some _ ->
+
+                      let filename = file#path in
+                      (*Binannot.get_annot ~filename ~offset:iter#offset;*)
+
+                      Annotation.find_block_at_offset ~filename ~offset:iter#offset
+                        (*~offset:(Glib.Utf8.offset_to_pos (self#get_text ()) ~pos:0 ~off:iter#offset)*)
+                    | _ -> None
+                end;
+              | _ -> None
+          end;
+    end else None
+
   method get_annot_at_location ~x ~y =
     if self#misc#get_flag `HAS_FOCUS && ((*not*) buffer#changed_after_last_autocomp = 0.0) then begin
       let iter =
@@ -365,7 +369,7 @@ object (self)
         end
         then None else (Some iter)
       in
-      match iter with None -> None | Some iter -> buffer#get_annot iter
+      Opt.map iter self#get_annot;
     end else None
 
   method code_folding = match code_folding with Some m -> m | _ -> assert false

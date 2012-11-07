@@ -29,6 +29,7 @@ open Location
 open Typedtree
 open Asttypes
 open Types
+open Binannot
 
 type kind =
   | Function
@@ -122,16 +123,6 @@ let string_rev str =
   rts;;
 
 let string_rev = Miscellanea.Memo.fast ~f:string_rev;;
-
-let string_of_loc loc =
-  let filename, a, b = Location.get_pos_info loc.loc_start in
-  let _, c, d = Location.get_pos_info loc.loc_end in
-  sprintf "%s, %d:%d -- %d:%d" filename a b c d;;
-
-let linechar_of_loc loc =
-  let _, a, b = Location.get_pos_info loc.loc_start in
-  let _, c, d = Location.get_pos_info loc.loc_end in
-  ((a - 1), b), ((c - 1), d)
 
 let is_function type_expr =
   let rec f t =
@@ -372,7 +363,7 @@ object (self)
           try
             let info = Hashtbl.find table_info child_path in
             Gaux.may info.body ~f:begin fun loc ->
-              let start, stop = linechar_of_loc loc in
+              let start, stop = Binannot.linechar_of_loc loc in
               let start = buffer#get_iter (`LINECHAR start) in
               let stop = buffer#get_iter (`LINECHAR stop) in
               let start = start#set_line_index 0 in
@@ -411,64 +402,65 @@ object (self)
   method load () =
     let source = page#get_filename in
     match Project.tmp_of_abs editor#project source with
-      | Some (tmp, relname) ->
-        Miscellanea.crono  self#load_file (tmp // relname);
+      | Some (tmp, relname) -> self#load_file (tmp // relname);
       | _ -> ()
 
   method private load_file file =
+    let cmi, cmt = Binannot.read ~filename:file in
     filename <- file;
-    let ext = if filename ^^ ".ml" then Some ".cmt" else if filename ^^ ".mli" then Some ".cmti" else None in
+    timestamp <- filename, (Unix.stat filename).Unix.st_mtime;
+    (*let ext = if filename ^^ ".ml" then Some ".cmt" else if filename ^^ ".mli" then Some ".cmti" else None in
     match ext with
       | Some ext ->
         let filename_cmt = (Filename.chop_extension filename) ^ ext in
         timestamp <- file, (Unix.stat filename).Unix.st_mtime;
-        let cmi, cmt = Cmt_format.read filename_cmt in
+        let cmi, cmt = Cmt_format.read filename_cmt in*)
         (* Delete previous marks in the buffer and clear the model and other conatiners *)
-        GtkThread2.sync begin fun () ->
-          buffer#block_signal_handlers ();
-          Hashtbl.iter (fun _ info -> match info.mark with Some mark -> buffer#delete_mark (`MARK mark) | _ -> ()) table_info;
-          buffer#unblock_signal_handlers ();
-        end ();
-        model#clear();
-        count <- 0;
-        table_expanded_by_default <- [];
-        table_collapsed_by_default <- [];
-        Hashtbl.clear table_info;
-        (* Parse .cmt file *)
-        let smodel = self#get_model () in
-        view#set_model None;
-        (* Disable sort *)
-        model#set_sort_column_id (-2) `ASCENDING;
-        model_sort_default#set_sort_column_id (-1) `ASCENDING;
-        model_sort_name#set_sort_column_id (-1) `ASCENDING;
-        model_sort_name_rev#reset_default_sort_func ();
-        (* Create tree *)
-        Gaux.may cmt ~f:(fun cmt -> self#parse cmt.cmt_annots);
-        (*  *)
-        view#set_model (Some smodel#coerce);
-        (*  *)
-        List.iter begin fun path ->
-          let path = smodel#convert_child_path_to_path path in
-          view#expand_row path
-        end table_expanded_by_default;
-        (* Select the same row that was selected in the previous tree *)
-        Gaux.may selected_path ~f:begin fun sid ->
-          GtkThread2.async model#foreach begin fun path row ->
-            let id = self#get_id_path row in
-            if id = sid then begin
-              Gaux.may signal_selection_changed ~f:view#selection#misc#handler_block;
-              view#selection#select_path path;
-              Gaux.may signal_selection_changed ~f:view#selection#misc#handler_unblock;
-              true
-            end else false
-          end
-        end;
-        GtkThread2.async begin fun () ->
-          model_sort_default#set_sort_column_id col_default_sort.GTree.index `ASCENDING;
-          model_sort_name#set_sort_column_id col_name.GTree.index `ASCENDING;
-          model_sort_name_rev#set_default_sort_func self#compare_name_rev;
-        end ();
-      | _ -> ()
+      GtkThread2.sync begin fun () ->
+        buffer#block_signal_handlers ();
+        Hashtbl.iter (fun _ info -> match info.mark with Some mark -> buffer#delete_mark (`MARK mark) | _ -> ()) table_info;
+        buffer#unblock_signal_handlers ();
+      end ();
+      model#clear();
+      count <- 0;
+      table_expanded_by_default <- [];
+      table_collapsed_by_default <- [];
+      Hashtbl.clear table_info;
+      (* Parse .cmt file *)
+      let smodel = self#get_model () in
+      view#set_model None;
+      (* Disable sort *)
+      model#set_sort_column_id (-2) `ASCENDING;
+      model_sort_default#set_sort_column_id (-1) `ASCENDING;
+      model_sort_name#set_sort_column_id (-1) `ASCENDING;
+      model_sort_name_rev#reset_default_sort_func ();
+      (* Create tree *)
+      Gaux.may cmt ~f:(fun cmt -> self#parse cmt.cmt_annots);
+      (*  *)
+      view#set_model (Some smodel#coerce);
+      (*  *)
+      List.iter begin fun path ->
+        let path = smodel#convert_child_path_to_path path in
+        view#expand_row path
+      end table_expanded_by_default;
+      (* Select the same row that was selected in the previous tree *)
+      Gaux.may selected_path ~f:begin fun sid ->
+        GtkThread2.async model#foreach begin fun path row ->
+          let id = self#get_id_path row in
+          if id = sid then begin
+            Gaux.may signal_selection_changed ~f:view#selection#misc#handler_block;
+            view#selection#select_path path;
+            Gaux.may signal_selection_changed ~f:view#selection#misc#handler_unblock;
+            true
+          end else false
+        end
+      end;
+      GtkThread2.async begin fun () ->
+        model_sort_default#set_sort_column_id col_default_sort.GTree.index `ASCENDING;
+        model_sort_name#set_sort_column_id col_name.GTree.index `ASCENDING;
+        model_sort_name_rev#set_default_sort_func self#compare_name_rev;
+      end ();
+      (*| _ -> () *)
 
   method private parse = function
     | Implementation impl ->
@@ -562,7 +554,7 @@ object (self)
     in
     (*GtkThread2.sync begin fun () ->*)
       Gaux.may loc ~f:begin fun loc ->
-        let (line, start), _ = linechar_of_loc loc in
+        let (line, start), _ = Binannot.linechar_of_loc loc in
         if line <= buffer#end_iter#line then begin
           let iter : GText.iter = buffer#get_iter (`LINE line) in
           (*let iter = iter#set_line_index 0 in*)
@@ -705,7 +697,7 @@ object (self)
 
   method private append_expression ?parent exp =
     match exp.exp_desc with
-      | Texp_ident _ -> ignore (self#append ?parent "Texp_ident" "")
+      | Texp_ident (_, lid, _) -> ignore (self#append ?parent (Longident.last lid.txt) "")
       | Texp_function (_, pel, _) ->
         List.iter (fun pe -> ignore (self#append_pattern ?parent pe)) pel
       | Texp_let (_, pes, expr) ->

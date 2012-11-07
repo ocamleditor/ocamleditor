@@ -528,7 +528,7 @@ object (self)
     editor#with_current_page begin fun page ->
       let iter = `ITER (page#buffer#get_iter `INSERT) in
       page#annot_type#popup (*~position:`TOP_RIGHT*) iter ();
-      if Preferences.preferences#get.Preferences.pref_err_tooltip then (page#error_indication#tooltip ~sticky:true iter)
+      if Preferences.preferences#get.Preferences.pref_err_tooltip then (page#error_indication#tooltip ~sticky:true iter);
     end
 
   method annot_type_copy () =
@@ -995,7 +995,6 @@ let browser = begin
   in
   new browser window;
 end
-
 
 
 

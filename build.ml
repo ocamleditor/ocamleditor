@@ -21,17 +21,17 @@ open Printf
 
 let arg_0_use_modified_gtkThread = ref false
 let arg_1_prefix = ref "/usr/local"
-let arg_2_prefix = ref "/usr/local"
-let arg_3_gmisclib = ref false
+let arg_2_gmisclib = ref false
+let arg_3_prefix = ref "/usr/local"
 
 let cmd_line_args = [
   `Uninstall, [
-    "-prefix", Set_string arg_2_prefix,
-      (" Uninstallation prefix (Unix only) [default: " ^ !arg_2_prefix ^ "]");
+    "-prefix", Set_string arg_3_prefix,
+      (" Uninstallation prefix (Unix only) [default: " ^ !arg_3_prefix ^ "]");
   ];
   `Install, [
-    "-gmisclib", Set arg_3_gmisclib,
-      (" Install the gmisclib library (miscellaneous widgets \n             based on Lablgtk2) [default: " ^ (sprintf "%s" (if !arg_3_gmisclib then "Set" else "Not Set")) ^ "]");
+    "-gmisclib", Set arg_2_gmisclib,
+      (" Install the gmisclib library (miscellaneous widgets \n             based on LablGtk2) [default: " ^ (sprintf "%s" (if !arg_2_gmisclib then "Set" else "Not Set")) ^ "]");
     "-prefix", Set_string arg_1_prefix,
       (" Installation prefix (Unix only) [default: " ^ !arg_1_prefix ^ "]");
   ];
@@ -135,7 +135,7 @@ let external_tasks = [
     et_dir                   = "..";
     et_cmd                   = "ocaml";
     et_args                  = [true,"tools/install.ml"; 
-                                command = `Install && !arg_3_gmisclib, "-gmisclib"; 
+                                command = `Install && !arg_2_gmisclib, "-gmisclib"; 
                                 command = `Install, (sprintf "-prefix %S" !arg_1_prefix)];
     et_phase                 = Some Before_clean;
     et_always_run_in_project = false;
@@ -149,7 +149,7 @@ let external_tasks = [
     et_dir                   = "..";
     et_cmd                   = "ocaml";
     et_args                  = [true,"tools/uninstall.ml"; 
-                                command = `Uninstall, (sprintf "-prefix %S" !arg_2_prefix)];
+                                command = `Uninstall, (sprintf "-prefix %S" !arg_3_prefix)];
     et_phase                 = Some Before_clean;
     et_always_run_in_project = false;
     et_always_run_in_script  = false;

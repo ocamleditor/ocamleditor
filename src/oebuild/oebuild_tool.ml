@@ -42,6 +42,7 @@ let main () = begin
   let install_flag = ref None in
   let compile_only = ref false in
   let annot = ref false in
+  let bin_annot = ref false in
   let pp = ref "" in
   let inline : int option ref = ref None in
   let output_name = ref "" in
@@ -89,6 +90,7 @@ let main () = begin
     ("-thread",      Set thread,                      " Add -thread option to both cflags and lflags.");
     ("-vmthread",    Set vmthread,                    " Add -vmthread option to both cflags and lflags.");
     ("-annot",       Set annot,                       " Add -annot option to cflags.");
+    ("-bin-annot",   Set bin_annot,                   " Add -bin-annot option to cflags.");
     ("-pp",          Set_string pp,                   " Add -pp option to the compiler.");
     ("-inline",      Int (fun x -> inline := Some x), " Add -inline option to the compiler.");
     ("-o",           Set_string output_name,          "\"<filename>\" Output file name. Extension {.cm[x]a | [.opt][.exe]}
@@ -168,6 +170,7 @@ let main () = begin
                   ~thread:!thread
                   ~vmthread:!vmthread
                   ~annot:!annot
+                  ~bin_annot:!bin_annot
                   ~pp:!pp
                   ?inline:!inline
                   ~cflags:!cflags

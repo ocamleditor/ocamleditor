@@ -264,6 +264,7 @@ and build ~targets ~external_tasks ~etasks ~deps ~compilation ~outname ~files ta
     ~thread:target.thread
     ~vmthread:target.vmthread
     ~annot:false
+    ~bin_annot:false
     ~pp:target.pp
     ?inline:target.inline
     ~cflags:target.compiler_flags
@@ -412,6 +413,7 @@ let main ~cmd_line_args ~external_tasks ~general_commands ~targets =
               command_name name descr command_name name (Arg.usage_string specs "")
       end;
     | Build_script_command.Unrecognized_command msg -> prerr_endline msg
+    | Error -> exit 2
     | ex -> prerr_endline (Printexc.to_string ex)
 ;;
 

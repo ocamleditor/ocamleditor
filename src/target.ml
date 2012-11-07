@@ -142,7 +142,7 @@ let create_cmd_line ?(flags=[]) ?(can_compile_native=true) target =
   let files = Cmd_line_args.parse target.files in
   let args =
     files
-    @ ["-annot"]
+    @ ["-annot"; "-bin-annot"]
     @ (if target.pp <> "" then ["-pp"; quote target.pp] else [])
     @ (if target.cflags <> "" then ["-cflags"; (quote target.cflags)] else [])
     @ (if target.lflags <> "" then ["-lflags"; (quote (target.lflags))] else [])

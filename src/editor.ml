@@ -325,7 +325,7 @@ object (self)
       match Definition.find_definition ~project:self#project ~page ~iter with
         | None ->
           begin
-            match page#buffer#get_annot iter with
+            match page#ocaml_view#get_annot iter with
               | None -> ()
               | Some { Oe.annot_annotations = annot_annotations; _ } ->
                 Gaux.may (Annotation.get_ext_ref annot_annotations) ~f:begin fun fullname ->

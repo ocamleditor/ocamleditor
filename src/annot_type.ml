@@ -35,7 +35,7 @@ object (self)
 
   method get position =
     let annot = match position with
-      | `ITER iter -> view#obuffer#get_annot iter
+      | `ITER iter -> view#get_annot iter
       | `XY (x, y) -> view#get_annot_at_location ~x ~y
     in
     match annot with

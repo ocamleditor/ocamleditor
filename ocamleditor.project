@@ -395,7 +395,14 @@
         <default type="string">/usr/local</default>
         <doc>Installation prefix (Unix only)</doc>
       </arg>
-      <arg id="2" type="String" key="-prefix" pass="-key value" command="uninstall">
+      <arg id="2" type="Flag" key="-gmisclib" pass="-key" command="install">
+        <task target_id="13" task_name="Install OCamlEditor"/>
+        <mode>&lt;ADD&gt;</mode>
+        <default type="flag">false</default>
+        <doc>Install the gmisclib library (miscellaneous widgets 
+             based on LablGtk2)</doc>
+      </arg>
+      <arg id="3" type="String" key="-prefix" pass="-key value" command="uninstall">
         <task target_id="13" task_name="Uninstall OCamlEditor"/>
         <mode>&lt;ADD&gt;</mode>
         <default type="string">/usr/local</default>
