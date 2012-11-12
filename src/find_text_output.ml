@@ -647,21 +647,23 @@ object (self)
         with None -> raise Not_found | Some page -> page
       in
       self#place_marks res;
-      Gmisclib.Idle.add ~prio:100 (fun () -> begin
+      Gmisclib.Idle.add ~prio:300 (fun () -> begin
         match List.nth lines_involved iter#line with
           | {marks = ((mark_start, mark_stop) :: _); _} ->
-            let where = page#buffer#get_iter_at_mark (`NAME mark_start) in
-            page#buffer#select_range where (page#buffer#get_iter_at_mark (`NAME mark_stop));
-            page#view#scroll_lazy where;
-            if grab_focus then (page#view#misc#grab_focus()) else (preview#misc#grab_focus())
+            begin
+              try
+                let where = page#buffer#get_iter_at_mark (`NAME mark_start) in
+                page#buffer#select_range where (page#buffer#get_iter_at_mark (`NAME mark_stop));
+                page#view#scroll_lazy where;
+                if grab_focus then (page#view#misc#grab_focus()) else (preview#misc#grab_focus())
+              with GText.No_such_mark _ -> begin
+                List.iter (fun x -> x.marks <- []) res.lines;
+                self#activate ~grab_focus iter;
+              end
+            end;
           | _ -> ()
       end)
-    with
-      | Not_found -> (if Common.application_debug then assert false)
-      | GText.No_such_mark _ -> begin
-          List.iter (fun x -> x.marks <- []) res.lines;
-          self#activate ~grab_focus iter;
-        end
+    with Not_found -> (if Common.application_debug then assert false)
 
   (** display *)
   method private display () =

@@ -27,6 +27,8 @@ open Oe
 open Miscellanea
 open Mbrowser_slist
 
+module Log = Common.Log.Make(struct let prefix = "Mbrowser_compl" end)
+
 type compl =
   | Compl_module of string list * string (* module_path x module_name *)
   | Compl_class of string
@@ -176,7 +178,7 @@ object (self)
     in
     match class_type with
       | Some class_type ->
-        Printf.printf "class_type = %s\n%!" class_type;
+        Log.println `TRACE "class_type = %s\n%!" class_type;
         let class_path = Longident.flatten (Longident.parse class_type) in
         let f = widget#select_symbol_by_prefix ~module_path:class_path ~prefix ~kind:[] in
         widget#create_widget_class ~class_path ~f ();
@@ -271,7 +273,7 @@ object (self)
                   self#apply_completion ~page ~symbol_list ~longid ~path;
                   self#hide()
                 | Oe.Pclass when is_class ->
-                  Printf.printf " = %b\n%!" longid;
+                  Log.println `TRACE " = %b\n%!" longid;
                   self#apply_completion ~page ~symbol_list ~longid ~path;
                   self#hide()
                 | Oe.Pmodule | Oe.Pmodtype | Oe.Pclass | Oe.Pcltype | Oe.Std_lib | Oe.Lib -> ()

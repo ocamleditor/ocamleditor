@@ -345,9 +345,9 @@ object (self)
                     | Some _ ->
 
                       let filename = file#path in
-                      (*Binannot.get_annot ~filename ~offset:iter#offset;*)
+                      let bin_annot = Binannot.find_type ~filename ~offset:iter#offset in
 
-                      Annotation.find_block_at_offset ~filename ~offset:iter#offset
+                      Some (bin_annot, Annotation.find_block_at_offset ~filename ~offset:iter#offset)
                         (*~offset:(Glib.Utf8.offset_to_pos (self#get_text ()) ~pos:0 ~off:iter#offset)*)
                     | _ -> None
                 end;

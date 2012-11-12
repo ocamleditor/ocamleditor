@@ -24,6 +24,8 @@ open Miscellanea
 open Printf
 open Prj
 
+module Log = Common.Log.Make(struct let prefix = "Project" end)
+
 exception Project_already_exists of string
 
 exception Cannot_rename of string
@@ -415,7 +417,7 @@ let clear_cache proj =
     end
   end files;
   let cmd = sprintf "%s \"%s\"\\*" rmr (path_tmp proj) in
-  Printf.printf "%s\n%!" cmd;
+  Log.println `TRACE "%s\n%!" cmd;
   Sys.command cmd;;
 
 

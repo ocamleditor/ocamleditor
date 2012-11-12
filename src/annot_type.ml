@@ -38,17 +38,23 @@ object (self)
       | `ITER iter -> view#get_annot iter
       | `XY (x, y) -> view#get_annot_at_location ~x ~y
     in
+    let open Binannot in
+    let open Location in
+    let open Lexing in
     match annot with
-      | None -> None
-      | Some {
+      | Some (Some {ba_loc; ba_type}, _ (*Some {
           Oe.annot_start = start;
           annot_stop = stop;
           annot_annotations = annot_annotations;
-        } ->
-        let type_annot = match Annotation.get_type annot_annotations with Some x -> x | None -> "" in
+        }*)) ->
+        let type_annot = ba_type in
+        let start = ba_loc.loc_start.pos_lnum, (ba_loc.loc_start.pos_cnum - ba_loc.loc_start.pos_bol) in
+        let stop = ba_loc.loc_end.pos_lnum, (ba_loc.loc_end.pos_cnum - ba_loc.loc_end.pos_bol) in
+        (*let type_annot = match Annotation.get_type annot_annotations with Some x -> x | None -> "" in
         let start = start.Oe.annot_lnum, (start.Oe.annot_cnum - start.Oe.annot_bol) in
-        let stop = stop.Oe.annot_lnum, (stop.Oe.annot_cnum - stop.Oe.annot_bol) in
+        let stop = stop.Oe.annot_lnum, (stop.Oe.annot_cnum - stop.Oe.annot_bol) in*)
         Some (start, stop, type_annot)
+      | _ -> None
 
   method apply_tag (where : source_point) =
     match self#get where with

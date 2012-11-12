@@ -123,7 +123,6 @@ module Signature = struct
     | Type_record _ -> Ptype_record;;
 
   let find_path modlid =
-    Printf.printf "Config.load_path = %s\n%!" (String.concat "; " !Config.load_path);
     Misc.find_in_path_uncap !Config.load_path (modlid^(".cmi"))
 
   let read_class_declaration ~filename ~parent_id ~id cd =

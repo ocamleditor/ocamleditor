@@ -326,12 +326,12 @@ object (self)
         | None ->
           begin
             match page#ocaml_view#get_annot iter with
-              | None -> ()
-              | Some { Oe.annot_annotations = annot_annotations; _ } ->
+              | Some (_, Some { Oe.annot_annotations = annot_annotations; _ }) ->
                 Gaux.may (Annotation.get_ext_ref annot_annotations) ~f:begin fun fullname ->
                   let ext_refs = Definition.find_ext_ref ~project ~src_path:(Project.path_src self#project) (`EXACT fullname) in
                   self#find_references' (`EXT (fullname, ext_refs, get_page, goto_page));
                 end
+              | _ -> ()
           end;
         | Some (_, _, filename, start, _) ->
           let def_source =

@@ -42,7 +42,6 @@ let ocamleditor_user_home =
   if not (Sys.file_exists ocamleditor_user_home) then (Unix.mkdir ocamleditor_user_home 509);
   ocamleditor_user_home
 
-
 (** Configuration Section =================================================== *)
 
 let autosave_enabled                     = true
@@ -106,7 +105,7 @@ let outline_type_color                   = module_browser_secondary_title_color
 let outline_selection_bg_color           = "#1F80ED"
 let outline_selection_fg_color           = "#FFFFFF"
 let outline_active_bg_color              = "#B1C3D8"
-let outline_active_fg_color              = "#000000" 
+let outline_active_fg_color              = "#000000"
 let layout_find_references               = `VERTICAL
 let layout_find_module_browser           = `VERTICAL
 (* Path relative to the project home directory where to find custom templates. *)

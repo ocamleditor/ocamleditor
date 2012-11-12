@@ -119,8 +119,7 @@ let find_references ?src_path ~(project : Prj.t) ~filename ~offset (* offset of 
 (** find_definition *)
 let find_definition ~(project : Prj.t) ~page  ~(iter : GText.iter) =
   match page#ocaml_view#get_annot iter with
-    | None -> None
-    | Some { annot_annotations = annot_annotations; annot_start=block_start; annot_stop=block_stop } ->
+    | Some (_, Some { annot_annotations = annot_annotations; annot_start=block_start; annot_stop=block_stop }) ->
       let block_start = block_start.annot_cnum in
       let block_stop = block_stop.annot_cnum in
       begin
@@ -191,7 +190,9 @@ let find_definition ~(project : Prj.t) ~page  ~(iter : GText.iter) =
               | _ ->
                 Some (block_start, block_stop, page#get_filename, block_start, block_stop)
           end
-      end;;
+      end
+    | _ -> None
+;;
 
 
 (** has_definition_references *)
@@ -200,14 +201,14 @@ let has_definition_references ~page ~iter =
   let defs = find_definition ~project ~page ~iter in
   let ext_refs =
     match page#ocaml_view#get_annot iter with
-      | None -> []
-      | Some { Oe.annot_annotations = annot_annotations; _ } ->
+      | Some (_, Some { Oe.annot_annotations = annot_annotations; _ }) ->
         begin
           match Annotation.get_ext_ref annot_annotations with
             | Some fullname ->
               find_ext_ref ~project ~src_path:(Project.path_src project) (`EXACT fullname)
             | _ -> []
         end
+      | _ -> []
   in
   defs <> None, defs <> None || ext_refs <> []
 

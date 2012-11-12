@@ -25,9 +25,18 @@ open Printf
 open Miscellanea
 open Cmt_format
 open Typedtree
-open Asttypes
 open Location
 open Lexing
+
+type t = {
+  ba_loc  : Location.t;
+  ba_type : string;
+}
+
+exception Found of t
+
+module Log = Common.Log.Make(struct let prefix = "Binannot" end)
+let _ = Log.set_verbosity `TRACE
 
 let string_of_loc loc =
   let filename, a, b = Location.get_pos_info loc.loc_start in
@@ -53,100 +62,170 @@ let read ~filename =
     | _ -> kprintf invalid_arg "Binannot.read \"%s\"" filename
 
 (** find_pattern *)
-let rec find_pattern f offset {pat_desc; pat_loc; pat_type; pat_extra; _} =
+let rec find_pattern f offset ?(opt=false, false) {pat_desc; pat_loc; pat_type; pat_extra; _} =
   if pat_loc <== offset then begin
     let fp = find_pattern f offset in
-    let is_opt = ref false in
-    let is_sth = ref false in
-    begin
+    let (opt, sth) as result =
       match pat_desc with
-        | Tpat_tuple pl -> List.iter fp pl
-        | Tpat_alias (pat, _, _) -> fp pat
-        | Tpat_construct (_, _, _, pl, _) -> List.iter fp pl
-        | Tpat_variant (_, pat, _) -> Opt.may pat fp
-        | Tpat_record (ll, _) -> List.iter (fun (_, _, _, pat) -> fp pat) ll
-        | Tpat_array pl -> List.iter fp pl
-        | Tpat_or (pat1, pat2, _) -> fp pat1; fp pat2
-        | Tpat_lazy pat -> fp pat
-        | Tpat_constant _ -> Printf.printf "Tpat_constant\n%!" ;
-        | Tpat_any -> Printf.printf "Tpat_any\n%!" ;
+        | Tpat_tuple pl ->
+          Log.println `DEBUG "Tpat_tuple";
+          List.fold_left (fun opt pat -> fp ~opt pat) opt pl
+        | Tpat_alias (pat, _, _) ->
+          Log.println `DEBUG "Tpat_alias" ;
+          fp ~opt pat
+        | Tpat_construct (_, loc, _, pl, _) ->
+          Log.println `DEBUG "Tpat_construct (%s) (%s) (%d)" (Longident.last loc.txt) (string_of_loc loc.loc) (List.length pl);
+          List.fold_left (fun opt pat -> fp ~opt pat) opt pl
+        | Tpat_variant (lab, pat, _) ->
+          Log.println `DEBUG "Tpat_variant (%s)" lab;
+          Opt.map_default pat opt (fun pat -> fp ~opt pat)
+        | Tpat_record (ll, _) ->
+          Log.println `DEBUG "Tpat_record ";
+          List.fold_left (fun opt (_, _, _, pat) -> fp ~opt pat) opt ll
+        | Tpat_array pl ->
+          Log.println `DEBUG "Tpat_array ";
+          List.fold_left (fun opt pat -> fp ~opt pat) opt pl
+        | Tpat_or (pat1, pat2, _) ->
+          Log.println `DEBUG "Tpat_or ";
+          List.fold_left (fun opt pat -> fp ~opt pat) opt [pat1; pat2]
+        | Tpat_lazy pat ->
+          Log.println `DEBUG "Tpat_lazy ";
+          fp ~opt pat
+        | Tpat_constant _ ->
+          Log.println `DEBUG "Tpat_constant" ;
+          opt
+        | Tpat_any ->
+          Log.println `DEBUG "Tpat_any" ;
+          opt
         | Tpat_var (id, loc) ->
-          is_opt := (Ident.name id) = "*opt*";
-          is_sth := (Ident.name id) = "*sth*";
-          Printf.printf "-->%s (pat_extra=%d) (loc=%s; %s)\n%!"
+          Log.println `DEBUG "Tpat_var: %s (pat_extra=%d) (loc=%s; %s)"
             (Ident.name id) (List.length pat_extra) (string_of_loc loc.loc) (loc.txt);
+          (Ident.name id) = "*opt*", (Ident.name id) = "*sth*"
+    in
+    if not opt && not sth then begin
+       Log.println `DEBUG "find_pattern: %s (pat_extra=%d) (%b,%b)"
+         (string_of_loc pat_loc) (List.length pat_extra) opt sth;
+       f pat_loc (string_of_type_expr pat_type)
     end;
-    (*List.iter (fun (pa, loc) -> if loc <== offset then Printf.printf "pat_extra\n%!" ;) pat_extra;*)
-    Printf.printf "find_pattern: %s (pat_extra=%d)\n%!" (string_of_loc pat_loc) (List.length pat_extra);
-    if not !is_opt then (f pat_loc (string_of_type_expr pat_type))
-  end
+    result
+  end else opt
 
 (** find_expression *)
-and find_expression f offset ?loc {exp_desc; exp_loc; exp_type; exp_extra; _} =
+and find_expression f offset ?(opt=false,false) ?loc {exp_desc; exp_loc; exp_type; exp_extra; _} =
   let loc = Opt.default loc exp_loc in
   if loc <== offset then begin
-    let fe = find_expression f offset in
-    let fp = find_pattern f offset in
-    begin
+    let (opt, sth) as result =
+      let fe = find_expression f offset in
+      let fp = find_pattern f offset in
       match exp_desc with
-        | Texp_ident (_, loc, vd) ->
-          Printf.printf "==> %s %s\n%!" (Longident.last loc.txt) (string_of_loc loc.loc);
-          (*f loc.loc (string_of_type_expr vd.Types.val_type)*)
+        | Texp_ident (id, loc, vd) ->
+          Log.println `DEBUG "Texp_ident: %s %s (%s)" (Longident.last loc.txt) (string_of_loc loc.loc) (Path.name id);
+          Path.name id = "*opt*", Path.name id = "*sth*"
         | Texp_let (_, pe, expr) ->
-          List.iter begin fun (p, e) ->
-            match p.pat_desc with
-              | Tpat_var (id, _) when Ident.name id = "*opt*" -> fp p; fe e
-              | _ -> fp p
-          end pe;
-          fe expr
+          Log.println `DEBUG "Texp_let " ;
+          ignore (List.fold_left begin fun opt (p, e) ->
+            fp p;
+            fe ~opt e
+          end opt pe);
+          fe ~opt:(false, false) expr
         | Texp_function (lab, pe, _) ->
-          Printf.printf "Texp_function %s (pe=%d) (exp_extra=%d)\n%!" lab (List.length pe) (List.length exp_extra);
-          List.iter (fun (p, e) -> fp p; fe e) pe;
+          Log.println `DEBUG "Texp_function: %s (pe=%d) (exp_extra=%d) (%s)"
+            lab (List.length pe) (List.length exp_extra) (string_of_loc exp_loc);
+          List.fold_left begin fun opt (p, e) ->
+            fp p;
+            fe ~opt e;
+          end opt pe;
+        | Texp_match (expr, pe, _) ->
+          Log.println `DEBUG "Texp_match: " ;
+          let opt = fe ~opt expr in
+          let o1, s1 = opt in
+          let opt =
+            List.fold_left begin fun opt (p, e) ->
+              if not o1 then (ignore (fp p));
+              fe ~opt e;
+            end opt pe
+          in
+          opt
         | Texp_apply (e, ll) ->
-          fe e;
-          List.iter (fun (_, e, _) -> Opt.may e fe) ll
-        | Texp_match (expr, ll, _) ->
-          fe expr;
-          List.iter (fun (p, e) -> fp p; fe e) ll;
+          Log.println `DEBUG "Texp_apply: " ;
+          let opt = fe ~opt e in
+          List.fold_left (fun opt (_, e, _) -> Opt.map_default e opt (fun e -> fe ~opt e)) opt ll
         | Texp_try (expr, ll) ->
-          fe expr;
-          List.iter (fun (p, e) -> fp p; fe e) ll;
-        | Texp_tuple ll -> List.iter fe ll
-        | Texp_construct (_, _, _, ll, _) -> List.iter fe ll
-        | Texp_variant (_, expr) -> Opt.may expr fe
+          let opt = fe expr in
+          List.fold_left begin fun opt (p, e) ->
+            fp p;
+            fe ~opt e
+          end opt ll;
+        | Texp_tuple ll ->
+          Log.println `DEBUG "Texp_tuple: " ;
+          List.fold_left (fun opt e -> fe ~opt e) opt ll
+        | Texp_construct (_, _, _, ll, _) ->
+          Log.println `DEBUG "Texp_construct: " ;
+          List.fold_left (fun opt e -> fe ~opt e) opt ll
+        | Texp_variant (_, expr) ->
+          Opt.map_default expr opt (fun e -> fe ~opt e)
         | Texp_record (ll, expr) ->
-          List.iter (fun (_, _, _, e) -> fe e) ll;
-          Opt.may expr fe
-        | Texp_field (expr, _, _, _) -> fe expr
-        | Texp_setfield (e1, _, _, _, e2) -> fe e1; fe e2
-        | Texp_array ll -> List.iter fe ll
+          let opt = List.fold_left (fun opt (_, _, _, e) -> fe ~opt e) opt ll in
+          Opt.map_default expr opt (fun e -> fe ~opt e)
+        | Texp_field (expr, _, _, _) ->
+          fe ~opt expr
+        | Texp_setfield (e1, _, _, _, e2) ->
+          let opt = fe ~opt e1 in
+          fe ~opt e2
+        | Texp_array ll ->
+          List.fold_left (fun opt e -> fe ~opt e) opt ll
         | Texp_ifthenelse (e1, e2, e3) ->
-          fe e1;
-          fe e2;
-          Opt.may e3 fe;
-        | Texp_sequence (e1, e2) -> fe e1; fe e2
-        | Texp_while (e1, e2) -> fe e1; fe e2
-        | Texp_for (_, _, e1, e2, _, e3) -> fe e1; fe e2; fe e3
-        | Texp_when (e1, e2) -> fe e1; fe e2
+          let opt = fe ~opt e1 in
+          let opt = fe ~opt e2 in
+          Opt.map_default e3 opt (fun e -> fe ~opt e)
+        | Texp_sequence (e1, e2) ->
+          let opt = fe ~opt e1 in
+          fe ~opt e2
+        | Texp_while (e1, e2) ->
+          let opt = fe ~opt e1 in
+          fe ~opt e2
+        | Texp_for (_, _, e1, e2, _, e3) ->
+          let opt = fe ~opt e1 in
+          let opt = fe ~opt e2 in
+          fe ~opt e3
+        | Texp_when (e1, e2) ->
+          let opt = fe ~opt e1 in
+          fe ~opt e2
         | Texp_send (e1, _, e2) ->
-          fe e1;
-          Opt.may e2 fe
-        | Texp_new (_, _, class_decl) -> Printf.printf "Texp_new\n%!" ;
-        | Texp_instvar _ -> ()
-        | Texp_setinstvar (_, _, _, expr) -> fe expr
-        | Texp_override (_, ll) -> List.iter (fun (_, _, e) -> fe e) ll;
+          let opt = fe e1 in
+          Opt.map_default e2 opt (fun e -> fe ~opt e)
+        | Texp_new (_, _, class_decl) ->
+          Log.println `DEBUG "Texp_new" ;
+          opt
+        | Texp_instvar _ -> opt
+        | Texp_setinstvar (_, _, _, expr) ->
+          fe ~opt expr
+        | Texp_override (_, ll) ->
+          List.fold_left (fun opt (_, _, e) -> fe ~opt e) opt ll;
         | Texp_letmodule (_, _, mod_expr, expr) ->
           find_module_expr f offset mod_expr;
-          fe expr
-        | Texp_assert expr -> fe expr
-        | Texp_assertfalse -> ()
-        | Texp_lazy expr -> fe expr
-        | Texp_object (cl_str, _) -> find_class_structure f offset cl_str
-        | Texp_pack mod_expr -> find_module_expr f offset mod_expr
-        | Texp_constant _ -> Printf.printf "Texp_constant\n%!" ;
-    end;
-    f loc (string_of_type_expr exp_type)
-  end
+          fe ~opt expr
+        | Texp_assert expr ->
+          fe ~opt expr
+        | Texp_assertfalse -> opt
+        | Texp_lazy expr ->
+          fe ~opt expr
+        | Texp_object (cl_str, _) ->
+          find_class_structure f offset cl_str;
+          opt
+        | Texp_pack mod_expr ->
+          find_module_expr f offset mod_expr;
+          opt
+        | Texp_constant _ ->
+          Log.println `DEBUG "Texp_constant" ;
+          opt
+    in
+    if not opt && not sth then begin
+       Log.println `DEBUG "find_expression: %s (%b,%b)" (string_of_loc exp_loc) opt sth;
+      f loc (string_of_type_expr exp_type);
+      result
+    end else if sth then opt, false else result
+  end else opt
 
 (** find_module_expr *)
 and find_module_expr f offset {mod_desc; mod_loc; _} =
@@ -159,8 +238,8 @@ and find_module_expr f offset {mod_desc; mod_loc; _} =
           find_module_expr f offset me1;
           find_module_expr f offset me2;
         | Tmod_constraint (me, _, _, _) -> find_module_expr f offset me;
-        | Tmod_unpack (expr, _) -> find_expression f offset expr
-        | Tmod_ident _ -> Printf.printf "*** Tmod_ident \n%!" ;
+        | Tmod_unpack (expr, _) -> ignore (find_expression f offset expr)
+        | Tmod_ident _ -> Log.println `DEBUG "*** Tmod_ident " ;
     end;
   end
 
@@ -168,7 +247,7 @@ and find_module_expr f offset {mod_desc; mod_loc; _} =
 and find_module_type f offset {mty_desc; mty_loc; _} =
   if mty_loc <== offset then begin
     match mty_desc with
-      | Tmty_ident _ -> Printf.printf "Tmty_ident\n%!";
+      | Tmty_ident _ -> Log.println `DEBUG "Tmty_ident";
       | Tmty_signature sign -> List.iter (find_signature_item f offset) sign.sig_items
       | Tmty_functor (_, _, mt1, mt2) ->
         find_module_type f offset mt1;
@@ -193,8 +272,8 @@ and find_signature_item f offset {sig_desc; sig_loc; _} =
       | Tsig_modtype (_, _, Tmodtype_manifest mt) -> fmt mt
       | Tsig_open _ -> ()
       | Tsig_include (mt, sign) -> fmt mt;
-      | Tsig_class ll -> Printf.printf "Tsig_class\n%!";
-      | Tsig_class_type ll -> Printf.printf "Tsig_class_type\n%!" ;
+      | Tsig_class ll -> Log.println `DEBUG "Tsig_class";
+      | Tsig_class_type ll -> Log.println `DEBUG "Tsig_class_type" ;
   end
 
 (** find_value_description *)
@@ -220,13 +299,13 @@ and find_class_field f offset {cf_desc; cf_loc} =
   if cf_loc <== offset then begin
     match cf_desc with
       | Tcf_val (name, _, _, _, Tcfk_virtual core_type, _) -> find_core_type f offset core_type
-      | Tcf_val (name, _, _, _, Tcfk_concrete expr, _) -> find_expression f offset expr
+      | Tcf_val (name, _, _, _, Tcfk_concrete expr, _) -> ignore (find_expression f offset expr)
       | Tcf_meth (_, loc, _, Tcfk_virtual core_type, _) -> find_core_type f offset (*~loc:loc.loc*) core_type
-      | Tcf_meth (_, loc, _, Tcfk_concrete expr, _) -> find_expression f (*~loc:loc.loc*) offset expr
+      | Tcf_meth (_, loc, _, Tcfk_concrete expr, _) -> ignore (find_expression f (*~loc:loc.loc*) offset expr)
       | Tcf_constr (ct1, ct2) ->
         find_core_type f offset ct1;
         find_core_type f offset ct2;
-      | Tcf_init expr -> find_expression f offset expr
+      | Tcf_init expr -> ignore (find_expression f offset expr)
       | Tcf_inher (_, class_expr, _, _, _) -> find_class_expr f offset class_expr
   end
 
@@ -242,17 +321,17 @@ and find_class_expr f offset {cl_desc; cl_loc; _} =
       | Tcl_structure str -> find_class_structure f offset str
       | Tcl_fun (_, pat, ll, expr, _) ->
         find_pattern f offset pat;
-        List.iter (fun (_, _, expr) -> find_expression f offset expr) ll;
+        List.iter (fun (_, _, expr) -> ignore (find_expression f offset expr)) ll;
         find_class_expr f offset expr
       | Tcl_apply (expr, ll) ->
         find_class_expr f offset expr;
-        List.iter (function (_, Some expr, _) -> find_expression f offset expr | _ -> ()) ll;
+        List.iter (function (_, Some expr, _) -> ignore (find_expression f offset expr) | _ -> ()) ll;
       | Tcl_let (_, ll, ll2, expr) ->
         List.iter begin fun (pat, expr) ->
           find_pattern f offset pat;
-          find_expression f offset expr;
+          ignore (find_expression f offset expr);
         end ll;
-        List.iter (fun (_, _, expr) -> find_expression f offset expr) ll2;
+        List.iter (fun (_, _, expr) -> ignore (find_expression f offset expr)) ll2;
         find_class_expr f offset expr;
       | Tcl_constraint (cle, clt, _, _, _) ->
         find_class_expr f offset cle;
@@ -317,11 +396,11 @@ and find_exception_declaration f offset {exn_params; exn_exn; exn_loc; _} =
 and find_structure_item f offset {str_desc; str_loc; _} =
   if str_loc <== offset then
     match str_desc with
-      | Tstr_eval expr -> find_expression f offset expr;
+      | Tstr_eval expr -> ignore (find_expression f offset expr);
       | Tstr_value (_, pe) ->
         List.iter begin fun (pat, expr) ->
           find_pattern f offset pat;
-          find_expression f offset expr;
+          ignore (find_expression f offset expr);
         end pe
       | Tstr_open (_, lid) -> f str_loc (String.concat "." (Longident.flatten lid.txt))
       | Tstr_include (module_expr, _) -> find_module_expr f offset module_expr
@@ -336,22 +415,35 @@ and find_structure_item f offset {str_desc; str_loc; _} =
           find_module_type f offset mt;
           find_module_expr f offset me;
         end ll
-      | Tstr_exn_rebind _ -> Printf.printf "Tstr_exn_rebind\n%!" ;
+      | Tstr_exn_rebind _ -> Log.println `DEBUG "Tstr_exn_rebind" ;
       | Tstr_primitive (_, _, vd) -> find_value_description f offset vd
 ;;
 
-(** get_annot *)
-let get_annot ~filename ~offset =
+(** find_part_impl *)
+let find_part_impl f offset = function
+  | Partial_structure {str_items; _} -> List.iter (find_structure_item f offset) str_items
+  | Partial_structure_item item -> find_structure_item f offset item
+  | Partial_expression expr -> ignore (find_expression f offset expr)
+  | Partial_pattern pat -> ignore (find_pattern f offset pat)
+  | Partial_class_expr cl_expr -> ignore (find_class_expr f offset cl_expr)
+  | Partial_signature sigs ->List.iter (find_signature_item f offset) sigs.sig_items
+  | Partial_signature_item sig_item -> find_signature_item f offset sig_item
+  | Partial_module_type mtyp -> find_module_type f offset mtyp;;
+
+(** find_type *)
+let find_type ~filename ~offset =
   let cmi, cmt = read ~filename in
-  let f loc txt =
-    Printf.printf "--------> %d; %s : %s\n%!" offset (string_of_loc loc) txt;
-    raise Exit;
+  let f ba_loc ba_type =
+    Log.println `TRACE "%d; %s : %s" offset (string_of_loc ba_loc) ba_type;
+    raise (Found {ba_loc; ba_type});
   in
   try
     Opt.may cmt begin fun cmt ->
       Odoc_info.reset_type_names();
       match cmt.cmt_annots with
         | Implementation {str_items; _} -> List.iter (find_structure_item f offset) str_items
+        | Partial_implementation parts -> Array.iter (find_part_impl f offset) parts
         | _ -> ()
-    end
-  with Exit -> ()
+    end;
+    None
+  with Found ba -> Some ba

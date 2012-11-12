@@ -119,6 +119,7 @@ module Xlist =
 module Opt = struct
   let map x f = match x with Some x -> f x | _ -> None
   let may x f = match x with Some x -> f x | _ -> ()
+  let map_default x default f = match x with Some x -> f x | _ -> default
   let may_default x default f = match x with None -> f default | Some x -> x
   let default x y = match x with Some x -> x | _ -> y
   let exn exn x = match x with Some x -> x | _ -> raise exn

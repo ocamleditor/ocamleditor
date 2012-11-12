@@ -49,3 +49,9 @@ let application_pixmaps =
     else ((!! (!! Sys.executable_name)) // "share" // "pixmaps" // "ocamleditor")
   end
 
+module Log = Log.Make(struct
+  let channel = stderr
+  let verbosity = `DEBUG
+  let print_timestamp = false
+end)
+
