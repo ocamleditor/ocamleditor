@@ -325,7 +325,7 @@ object (self)
       match Definition.find_definition ~page ~iter with
         | None ->
           Opt.may page#annot_type begin fun at ->
-            match at#get_annot iter with
+            match at#get_annot_at_iter iter with
               | Some (_, Some { Oe.annot_annotations = annot_annotations; _ }) ->
                 Gaux.may (Annotation.get_ext_ref annot_annotations) ~f:begin fun fullname ->
                   let ext_refs = Definition.find_ext_ref ~project ~src_path:(Project.path_src self#project) (`EXACT fullname) in

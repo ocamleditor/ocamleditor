@@ -25,6 +25,12 @@ open Miscellanea
 
 type source_point = [`ITER of GText.iter | `XY of (int * int)]
 
+type info = {
+  at_start  : int * int;
+  at_stop   : int * int;
+  at_type   : string;
+}
+
 class annot_type ~page =
   let view : Ocaml_text.view = page#ocaml_view in
   let buffer = view#obuffer in
@@ -35,8 +41,7 @@ object (self)
 
   method tag = tag
 
-
-  method get_annot iter =
+  method get_annot_at_iter iter =
     if buffer#changed_after_last_autocomp = 0.0 then begin
       match buffer#as_text_buffer#file with
         | None -> None
@@ -44,10 +49,8 @@ object (self)
           begin
             match page#project.Prj.in_source_path file#path with
               | Some _ ->
-
                 let filename = file#path in
                 let bin_annot = Binannot_type.find ~page in
-
                 Some (bin_annot, Annotation.find_block_at_offset ~filename ~offset:iter#offset)
                   (*~offset:(Glib.Utf8.offset_to_pos (self#get_text ()) ~pos:0 ~off:iter#offset)*)
               | _ -> None
@@ -68,13 +71,12 @@ object (self)
         end
         then None else (Some iter)
       in
-      Opt.map_default iter None self#get_annot;
+      Opt.map_default iter None self#get_annot_at_iter;
     end else None
 
-
-  method get position =
+  method get_type position =
     let annot = match position with
-      | `ITER iter -> self#get_annot iter
+      | `ITER iter -> self#get_annot_at_iter iter
       | `XY (x, y) -> self#get_annot_at_location ~x ~y
     in
     let open Binannot_type in
@@ -86,25 +88,26 @@ object (self)
           annot_stop = stop;
           annot_annotations = annot_annotations;
         }*)) ->
-        let type_annot = ba_type in
-        let start = ba_loc.loc_start.pos_lnum, (ba_loc.loc_start.pos_cnum - ba_loc.loc_start.pos_bol) in
-        let stop = ba_loc.loc_end.pos_lnum, (ba_loc.loc_end.pos_cnum - ba_loc.loc_end.pos_bol) in
+        let at_type = ba_type in
+        let at_start = ba_loc.loc_start.pos_lnum, (ba_loc.loc_start.pos_cnum - ba_loc.loc_start.pos_bol) in
+        let at_stop = ba_loc.loc_end.pos_lnum, (ba_loc.loc_end.pos_cnum - ba_loc.loc_end.pos_bol) in
         (*let type_annot = match Annotation.get_type annot_annotations with Some x -> x | None -> "" in
         let start = start.Oe.annot_lnum, (start.Oe.annot_cnum - start.Oe.annot_bol) in
         let stop = stop.Oe.annot_lnum, (stop.Oe.annot_cnum - stop.Oe.annot_bol) in*)
-        Some (start, stop, type_annot)
+        (*Some (at_start, at_stop, at_type);*)
+        Some {at_start; at_stop; at_type}
       | _ -> None
 
   method apply_tag (where : source_point) =
-    match self#get where with
-      | Some (start, stop, type_annot) when (not view#buffer#has_selection) ->
+    match self#get_type where with
+      | Some {at_start; at_stop; at_type} when (not view#buffer#has_selection) ->
         begin
           match tag_bounds with
-            | Some (_, _, (prev_start, prev_stop)) when start = prev_start && stop = prev_stop -> None
+            | Some (_, _, (prev_start, prev_stop)) when at_start = prev_start && at_stop = prev_stop -> None
             | _ ->
               self#remove_tag ();
               let line_count = buffer#line_count in
-              let line, index1 = start in
+              let line, index1 = at_start in
               if line <= line_count then begin
                 let start_iter = buffer#get_iter (`LINE (line - 1)) in
                 if index1 < start_iter#bytes_in_line then begin
@@ -112,7 +115,7 @@ object (self)
                   let eol = bol#forward_to_line_end in
                   let index1 = Convert.offset_from_pos (buffer#get_text ~start:bol ~stop:eol ()) ~pos:index1 in
                   let start_iter = buffer#get_iter (`LINECHAR ((line - 1), index1)) in
-                  let line, index2 = stop in
+                  let line, index2 = at_stop in
                   if line <= line_count then begin
                     let stop_iter = buffer#get_iter (`LINE (line - 1)) in
                     if index2 < stop_iter#bytes_in_line then begin
@@ -123,8 +126,8 @@ object (self)
                       buffer#apply_tag tag ~start:start_iter ~stop:stop_iter;
                       let mark1 = buffer#create_mark(* ~name:(Gtk_util.create_mark_name "Annot_type.apply_tag")*) start_iter in
                       let mark2 = buffer#create_mark(* ~name:(Gtk_util.create_mark_name "Annot_type.apply_tag")*) stop_iter in
-                      tag_bounds <- Some (mark1, mark2, (start, stop));
-                      let markup = (Print_type.markup2 (Miscellanea.trim type_annot)) in
+                      tag_bounds <- Some (mark1, mark2, (at_start, at_stop));
+                      let markup = (Print_type.markup2 (Miscellanea.trim at_type)) in
                       Some markup
                     end else None
                   end else None

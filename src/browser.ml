@@ -534,11 +534,11 @@ object (self)
   method annot_type_copy () =
     editor#with_current_page begin fun page ->
       Opt.may page#annot_type begin fun annot_type ->
-        match annot_type#get (`ITER (page#buffer#get_iter `INSERT)) with
-          | Some (_, _, type_annot) ->
+        match annot_type#get_type (`ITER (page#buffer#get_iter `INSERT)) with
+          | Some {Annot_type.at_type; _} ->
             self#annot_type();
             let clipboard = GData.clipboard Gdk.Atom.clipboard in
-            clipboard#set_text type_annot;
+            clipboard#set_text at_type;
           | _ -> ()
       end
     end

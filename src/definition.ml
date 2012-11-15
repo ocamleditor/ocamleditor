@@ -120,7 +120,7 @@ let find_references ?src_path ~(project : Prj.t) ~filename ~offset (* offset of 
 let find_definition ~page ~(iter : GText.iter) =
   Opt.map_default page#annot_type None begin fun x ->
     let project = page#project in
-    match x#get_annot iter with
+    match x#get_annot_at_iter iter with
       | Some (_, Some { annot_annotations = annot_annotations; annot_start=block_start; annot_stop=block_stop }) ->
         let block_start = block_start.annot_cnum in
         let block_stop = block_stop.annot_cnum in
@@ -204,7 +204,7 @@ let has_definition_references ~page ~iter =
   let defs = find_definition ~page ~iter in
   let ext_refs =
     Opt.map_default page#annot_type [] begin fun x ->
-      match x#get_annot iter with
+      match x#get_annot_at_iter iter with
         | Some (_, Some { Oe.annot_annotations = annot_annotations; _ }) ->
           begin
             match Annotation.get_ext_ref annot_annotations with
