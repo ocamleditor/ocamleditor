@@ -91,7 +91,7 @@ object (self)
             | Some ol -> self#pack_outline ol#coerce
             | _ ->
               (try hpaned#remove hpaned#child1 with Gpointer.Null -> ());
-              page#compile_buffer ~commit:false ();
+              page#compile_buffer ?join:None();
         end;
       end else (try hpaned#remove hpaned#child1 with Gpointer.Null -> ());
     with Gpointer.Null -> ()
@@ -285,7 +285,7 @@ object (self)
 
   method scroll_to_definition iter =
     self#with_current_page begin fun page ->
-      match Definition.find_definition ~project:self#project ~page ~iter with
+      match Definition.find_definition ~page ~iter with
         | None -> ()
         | Some (_, _, filename, start, stop) ->
           self#location_history_add ~iter ~kind:`BROWSE ();
@@ -322,10 +322,10 @@ object (self)
             get_page filename
       in
       let goto_page = (fun page -> self#goto_view (page#view :> Text.view)) in
-      match Definition.find_definition ~project:self#project ~page ~iter with
+      match Definition.find_definition ~page ~iter with
         | None ->
-          begin
-            match page#ocaml_view#get_annot iter with
+          Opt.may page#annot_type begin fun at ->
+            match at#get_annot iter with
               | Some (_, Some { Oe.annot_annotations = annot_annotations; _ }) ->
                 Gaux.may (Annotation.get_ext_ref annot_annotations) ~f:begin fun fullname ->
                   let ext_refs = Definition.find_ext_ref ~project ~src_path:(Project.path_src self#project) (`EXACT fullname) in
@@ -544,7 +544,7 @@ object (self)
       let _ = GMenu.separator_item ~packing:menu#add () in
       let item = GMenu.image_menu_item ~label:(sprintf "Compile \xC2\xAB%s\xC2\xBB" basename) ~packing:menu#add () in
       item#set_image (GMisc.image ~pixbuf:Icons.compile_file_16 ())#coerce;
-      ignore (item#connect#activate ~callback:(fun () -> page#compile_buffer ~commit:false ()));
+      ignore (item#connect#activate ~callback:(fun () -> page#compile_buffer ?join:None ()));
       menu#popup ~time:(GdkEvent.Button.time ev) ~button:3;
       Gdk.Window.set_cursor menu#misc#window (Gdk.Cursor.create `ARROW);
 
@@ -738,10 +738,10 @@ object (self)
   method redisplay_views () =
     self#with_current_page begin fun page ->
       Gmisclib.Idle.add page#redisplay;
-      Gmisclib.Idle.add ~prio:400 (fun () -> page#compile_buffer ~commit:true ());
+      Gmisclib.Idle.add ~prio:400 (fun () -> page#compile_buffer ?join:None ());
       List.iter (fun p -> if p != page then begin
         Gmisclib.Idle.add ~prio:300 p#redisplay;
-        (*Gmisclib.Idle.add ~prio:400 (fun () -> p#compile_buffer ~commit:true ());*)
+        (*Gmisclib.Idle.add ~prio:400 (fun () -> p#compile_buffer ());*)
       end) pages;
     end;
 
@@ -757,7 +757,7 @@ object (self)
 
   method private cb_tout_delim page () =
     page#view#matching_delim ();
-    page#annot_type#remove_tag();
+    Opt.may page#annot_type (fun x -> x#remove_tag());
     page#error_indication#hide_tooltip();
 
   method connect = new signals ~add_page ~switch_page ~remove_page ~changed ~modified_changed
@@ -771,7 +771,7 @@ object (self)
           self#with_current_page begin fun page ->
             if page#buffer#changed_after_last_autocomp > 0.0 then begin
               if Unix.gettimeofday() -. page#buffer#changed_after_last_autocomp > project.Prj.autocomp_delay (*/. 2.*)
-              then (page#compile_buffer ~commit:false ())
+              then (page#compile_buffer ?join:None ())
             end
           end
         with ex -> begin
@@ -835,7 +835,7 @@ object (self)
     (** Switch page: update the statusbar and remove annot tag *)
     ignore (notebook#connect#after#switch_page ~callback:begin fun _ ->
       (* Clean up type annotation tag and error indications *)
-      List.iter (fun page -> page#annot_type#remove_tag ()) pages;
+      List.iter (fun page -> Opt.may page#annot_type (fun x -> x#remove_tag ())) pages;
       (* Current page *)
       self#with_current_page begin fun page ->
         if not page#load_complete && not history_switch_page_locked then (self#load_page page);
@@ -853,7 +853,7 @@ object (self)
           | _ -> self#pack_outline (Cmt_view.empty()) (*
     (*if page#buffer#changed_after_last_autocomp > 0.0 then begin*)
             Printf.printf "*************1  %f\n%!" page#buffer#changed_after_last_autocomp;
-            page#compile_buffer ~commit:false ();
+            page#compile_buffer ();
             Printf.printf "*************2\n%!" ;
 (*end*)*)
       end

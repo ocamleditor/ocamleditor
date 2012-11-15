@@ -332,46 +332,6 @@ object (self)
       self#misc#grab_focus();
     end
 
-  method get_annot iter =
-    if buffer#changed_after_last_autocomp = 0.0 then begin
-      match buffer#as_text_buffer#file with
-        | None -> None
-        | Some file ->
-          begin
-            match project with
-              | Some project ->
-                begin
-                  match project.Prj.in_source_path file#path with
-                    | Some _ ->
-
-                      let filename = file#path in
-                      let bin_annot = Binannot_type.find ~project ~filename ~offset:iter#offset in
-
-                      Some (bin_annot, Annotation.find_block_at_offset ~filename ~offset:iter#offset)
-                        (*~offset:(Glib.Utf8.offset_to_pos (self#get_text ()) ~pos:0 ~off:iter#offset)*)
-                    | _ -> None
-                end;
-              | _ -> None
-          end;
-    end else None
-
-  method get_annot_at_location ~x ~y =
-    if self#misc#get_flag `HAS_FOCUS && ((*not*) buffer#changed_after_last_autocomp = 0.0) then begin
-      let iter =
-        let iter = self#get_iter_at_location ~x ~y in
-        if iter#ends_line
-        || Glib.Unichar.isspace iter#char
-        || begin
-          match Comments.enclosing
-            (Comments.scan (Glib.Convert.convert_with_fallback ~fallback:"" ~from_codeset:"UTF-8" ~to_codeset:Oe_config.ocaml_codeset
-              (self#buffer#get_text ()))) iter#offset
-          with None -> false | _ -> true;
-        end
-        then None else (Some iter)
-      in
-      Opt.map_default iter None self#get_annot;
-    end else None
-
   method code_folding = match code_folding with Some m -> m | _ -> assert false
 
   method scroll_lazy iter =

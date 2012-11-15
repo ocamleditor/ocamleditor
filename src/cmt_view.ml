@@ -137,6 +137,16 @@ let string_of_type_expr te =
     | Tarrow (_, _, t2, _) -> Odoc_info.string_of_type_expr t2
     | _ -> Odoc_info.string_of_type_expr te;;
 
+(** empty *)
+let empty () =
+  let vp = GBin.viewport () in
+  let label = GMisc.label ~xalign:0.5 ~yalign:0. ~xpad:3 ~ypad:3
+    ~text:"Structure is not available" ~packing:vp#add () in
+  vp#misc#modify_bg [`NORMAL, `NAME "#ffffff"];
+  label#misc#modify_fg [`NORMAL, `NAME "#d0d0d0"];
+  vp#coerce;;
+
+(** widget *)
 class widget ~editor ~page ?packing () =
   let show_types             = Preferences.preferences#get.Preferences.pref_outline_show_types in
   let vbox                   = GPack.vbox ?packing () in
@@ -363,7 +373,7 @@ object (self)
           try
             let info = Hashtbl.find table_info child_path in
             Gaux.may info.body ~f:begin fun loc ->
-              let start, stop = Binannot_type.linechar_of_loc loc in
+              let start, stop = Binannot.linechar_of_loc loc in
               let start = buffer#get_iter (`LINECHAR start) in
               let stop = buffer#get_iter (`LINECHAR stop) in
               let start = start#set_line_index 0 in
@@ -400,14 +410,10 @@ object (self)
         with Not_found -> ()
 
   method load () =
-    let source = page#get_filename in
-    self#load_file source
-
-  method private load_file file =
-    match Binannot_type.read ~project:page#project ~filename:file with
+    match Binannot.read ~page with
       | None -> ()
       | Some (cmi, cmt) ->
-        filename <- file;
+        filename <- page#get_filename;
         timestamp <- filename, (Unix.stat filename).Unix.st_mtime;
         (*let ext = if filename ^^ ".ml" then Some ".cmt" else if filename ^^ ".mli" then Some ".cmti" else None in
         match ext with
@@ -475,8 +481,9 @@ object (self)
         | Partial_module_type mt -> self#append_module_type mt.mty_desc
         | Partial_pattern _
         | Partial_class_expr _ ->*)
-          let row = model#append () in
-          model#set ~row ~column:col_markup "Partial_implementation"
+          editor#pack_outline (empty())#coerce
+          (*let row = model#append () in
+          model#set ~row ~column:col_markup "Partial_implementation"*)
       (*end impl;*)
     | Interface sign ->
       List.iter self#append_sig_item sign.sig_items;
@@ -554,7 +561,7 @@ object (self)
     in
     (*GtkThread2.sync begin fun () ->*)
       Gaux.may loc ~f:begin fun loc ->
-        let (line, start), _ = Binannot_type.linechar_of_loc loc in
+        let (line, start), _ = Binannot.linechar_of_loc loc in
         if line <= buffer#end_iter#line then begin
           let iter : GText.iter = buffer#get_iter (`LINE line) in
           (*let iter = iter#set_line_index 0 in*)
@@ -936,11 +943,3 @@ let window ~editor ~page () =
   widget, window;;
 
 
-(** empty *)
-let empty () =
-  let vp = GBin.viewport () in
-  let label = GMisc.label ~xalign:0.5 ~yalign:0. ~xpad:3 ~ypad:3
-    ~text:"Structure is not available" ~packing:vp#add () in
-  vp#misc#modify_bg [`NORMAL, `NAME "#ffffff"];
-  label#misc#modify_fg [`NORMAL, `NAME "#d0d0d0"];
-  vp#coerce;;

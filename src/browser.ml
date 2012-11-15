@@ -527,24 +527,26 @@ object (self)
   method annot_type () =
     editor#with_current_page begin fun page ->
       let iter = `ITER (page#buffer#get_iter `INSERT) in
-      page#annot_type#popup (*~position:`TOP_RIGHT*) iter ();
+      Opt.may page#annot_type (fun at -> at#popup (*~position:`TOP_RIGHT*) iter ());
       if Preferences.preferences#get.Preferences.pref_err_tooltip then (page#error_indication#tooltip ~sticky:true iter);
     end
 
   method annot_type_copy () =
     editor#with_current_page begin fun page ->
-      match page#annot_type#get (`ITER (page#buffer#get_iter `INSERT)) with
-        | Some (_, _, type_annot) ->
-          self#annot_type();
-          let clipboard = GData.clipboard Gdk.Atom.clipboard in
-          clipboard#set_text type_annot;
-        | _ -> ()
+      Opt.may page#annot_type begin fun annot_type ->
+        match annot_type#get (`ITER (page#buffer#get_iter `INSERT)) with
+          | Some (_, _, type_annot) ->
+            self#annot_type();
+            let clipboard = GData.clipboard Gdk.Atom.clipboard in
+            clipboard#set_text type_annot;
+          | _ -> ()
+      end
     end
 
   method annot_type_set_tooltips x =
     Preferences.preferences#get.Preferences.pref_annot_type_tooltips_enabled <- x;
     Preferences.save();
-    editor#with_current_page (fun page -> page#annot_type#remove_tag())
+    editor#with_current_page (fun page -> Opt.may page#annot_type (fun x -> x#remove_tag()))
 
   method create_menu_history dir ~menu =
     let history = match dir with

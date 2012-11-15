@@ -203,7 +203,7 @@ object (self)
   val mutable resized = false
   val mutable changed_after_last_autosave = false
   val mutable load_complete = false
-  val annot_type = new Annot_type.annot_type ocaml_view
+  val mutable annot_type = None
   val error_indication = new Error_indication.error_indication ocaml_view vscrollbar (global_gutter, global_gutter_ebox)
   val mutable outline = None
   val mutable word_wrap = editor#word_wrap
@@ -222,7 +222,8 @@ object (self)
   method set_changed_after_last_autosave x = changed_after_last_autosave <- x
 
   method private set_tag_annot_background () =
-    annot_type#tag#set_property (`BACKGROUND Preferences.preferences#get.Preferences.pref_bg_color_popup);
+    Opt.may annot_type (fun annot_type ->
+      annot_type#tag#set_property (`BACKGROUND Preferences.preferences#get.Preferences.pref_bg_color_popup));
 
   method read_only = read_only
   method set_read_only ro =
@@ -312,7 +313,7 @@ object (self)
       let text = Project.convert_from_utf8 project (buffer#get_text ()) in
       file#write text;
       Gmisclib.Idle.add self#update_statusbar;
-      Gmisclib.Idle.add (fun () -> self#compile_buffer ~commit:true ());
+      Gmisclib.Idle.add (fun () -> self#compile_buffer ?join:None ());
       (* Delete existing recovery copy *)
       self#set_changed_after_last_autosave false;
       Autosave.delete ~filename:file#path ();
@@ -388,7 +389,7 @@ object (self)
             (*  *)
             self#set_code_folding_enabled editor#code_folding_enabled#get; (* calls scan_folding_points, if enabled *)
             self#view#matching_delim ();
-            Gmisclib.Idle.add ~prio:300 (fun () -> self#compile_buffer ~commit:false ());
+            Gmisclib.Idle.add ~prio:300 (fun () -> self#compile_buffer ?join:None ());
             (* Bookmarks: offsets to marks *)
             let redraw = ref false in
             List.iter begin fun bm ->
@@ -422,13 +423,13 @@ object (self)
           false;
         end
 
-  method compile_buffer ~commit () =
+  method compile_buffer ?join () =
     let filename = self#get_filename in
     if project.Prj.autocomp_enabled
     && ((project.Prj.in_source_path filename) <> None)
     && (filename ^^ ".ml" || filename ^^ ".mli") then begin
       buffer#set_changed_after_last_autocomp 0.0;
-      Autocomp.compile_buffer ~project ~editor ~page:self ~commit ();
+      Autocomp.compile_buffer ~project ~editor ~page:self ?join ();
     end else begin
       editor#pack_outline (Cmt_view.empty());
       self#set_outline None;
@@ -436,7 +437,7 @@ object (self)
 
   method tooltip ?(typ=false) ((*(x, y) as*) location) =
     let location = `XY location in
-    if typ then (self#annot_type#tooltip location);
+    if typ then (Opt.may annot_type (fun at -> at#tooltip location));
     if Preferences.preferences#get.Preferences.pref_err_tooltip
     then (error_indication#tooltip location)
 
@@ -444,9 +445,21 @@ object (self)
 
   method create_menu () = Editor_menu.create ~editor ~page:self ()
 
-  initializer self#init()
+  method set_word_wrap value =
+    image_toggle_wrap#set_pixbuf (if value then Icons.wrap_on_14 else Icons.wrap_off_14);
+    text_view#options#set_word_wrap value;
+    word_wrap <- value;
+    Gmisclib.Idle.add (fun () -> GtkBase.Widget.queue_draw text_view#as_widget);
 
-  method init () =
+  method set_show_whitespace value =
+    image_toggle_whitespace#set_pixbuf (if value then Icons.whitespace_on_14 else Icons.whitespace_off_14);
+    text_view#options#set_show_whitespace_chars value;
+    show_whitespace <- value;
+    Gmisclib.Idle.add (fun () -> GtkBase.Widget.queue_draw text_view#as_widget);
+
+  initializer
+    annot_type <- Some (new Annot_type.annot_type ~page:self);
+    (**  *)
     view#hyperlink#enable();
     self#set_tag_annot_background();
     (** Expose: Statusbar *)
@@ -476,9 +489,9 @@ object (self)
       false
     end);
     (** Clean up type annotation tag *)
-    ignore (text_view#event#connect#scroll ~callback:(fun _ -> annot_type#remove_tag(); error_indication#hide_tooltip(); false));
-    ignore (text_view#event#connect#leave_notify ~callback:(fun _ -> annot_type#remove_tag(); error_indication#hide_tooltip(); false));
-    ignore (text_view#event#connect#focus_out ~callback:(fun _ -> annot_type#remove_tag(); error_indication#hide_tooltip(); false));
+    ignore (text_view#event#connect#scroll ~callback:(fun _ -> Opt.may annot_type (fun at -> at#remove_tag()); error_indication#hide_tooltip(); false));
+    ignore (text_view#event#connect#leave_notify ~callback:(fun _ -> Opt.may annot_type (fun at -> at#remove_tag()); error_indication#hide_tooltip(); false));
+    ignore (text_view#event#connect#focus_out ~callback:(fun _ -> Opt.may annot_type (fun at -> at#remove_tag()); error_indication#hide_tooltip(); false));
     (** Horizontal scrollbar appears/disappears according to the window size *)
     ignore (sw#misc#connect#size_allocate ~callback:begin fun _ ->
       let alloc = sw#misc#allocation in
@@ -491,7 +504,7 @@ object (self)
     ignore (self#view#hyperlink#connect#hover ~callback:begin fun (bounds, iter) ->
       if iter#inside_word then begin
         editor#with_current_page begin fun page ->
-          match Definition.find_definition ~project:editor#project ~page ~iter with
+          match Definition.find_definition ~page ~iter with
             | None -> ()
             | Some (start, stop, _, _, _) ->
               let start = buffer#get_iter (`OFFSET start) in
@@ -579,18 +592,6 @@ object (self)
     in
     self#set_show_whitespace show_whitespace;
     ignore (button_toggle_whitespace#event#connect#button_press ~callback);
-
-  method set_word_wrap value =
-    image_toggle_wrap#set_pixbuf (if value then Icons.wrap_on_14 else Icons.wrap_off_14);
-    text_view#options#set_word_wrap value;
-    word_wrap <- value;
-    Gmisclib.Idle.add (fun () -> GtkBase.Widget.queue_draw text_view#as_widget);
-
-  method set_show_whitespace value =
-    image_toggle_whitespace#set_pixbuf (if value then Icons.whitespace_on_14 else Icons.whitespace_off_14);
-    text_view#options#set_show_whitespace_chars value;
-    show_whitespace <- value;
-    Gmisclib.Idle.add (fun () -> GtkBase.Widget.queue_draw text_view#as_widget);
 
   method connect = new signals ~file_changed
 end

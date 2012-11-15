@@ -194,7 +194,7 @@ object (self)
         Gaux.may ~f:(fun p -> p#ocaml_view#obuffer#send_to_shell ()) (editor#get_page `ACTIVE)
       end);
       ignore (tool_compile_file#connect#clicked ~callback:begin fun () ->
-        editor#with_current_page (fun p -> p#compile_buffer ~commit:false ())
+        editor#with_current_page (fun p -> p#compile_buffer ?join:None ())
       end);
       (** Targets *)
       (* clean *)

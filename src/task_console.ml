@@ -524,7 +524,7 @@ let exec ~editor ?use_thread ?(with_deps=false) task_kind target =
   let build_deps = if with_deps then Target.find_target_dependencies project.Prj.targets target else [] in
   let compile_name = sprintf "Compile \xC2\xAB%s\xC2\xBB" (Filename.basename target.name) in
   let build_name = sprintf "Build \xC2\xAB%s\xC2\xBB" (Filename.basename target.name) in
-  let at_exit = fun () -> GtkThread2.async editor#with_current_page (fun p -> p#compile_buffer ~commit:false ()) in
+  let at_exit = fun () -> GtkThread2.async editor#with_current_page (fun p -> p#compile_buffer ?join:None ()) in
   match task_kind with
     | `CLEANALL ->
       let cmd, args = Target.create_cmd_line target in

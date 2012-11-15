@@ -681,7 +681,7 @@ let project ~browser ~group ~flags items =
   let project_comp_file = GMenu.image_menu_item ~label:"Compile file" ~packing:menu#add () in
   project_comp_file#set_image (GMisc.image ~pixbuf:Icons.compile_file_16 ())#coerce;
   ignore (project_comp_file#connect#activate ~callback:begin fun () ->
-    browser#editor#with_current_page (fun p -> p#compile_buffer ~commit:false ())
+    browser#editor#with_current_page (fun p -> p#compile_buffer ?join:None ())
   end);
   let sep2 = GMenu.separator_item ~packing:menu#add () in
   (** Project Properties *)

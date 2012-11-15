@@ -43,7 +43,7 @@ let replace_output_file project tmp rel_filename ext =
   end
 
 (** compile_buffer *)
-let rec compile_buffer ~project ~editor ~page ?(commit=false) () =
+let compile_buffer ~project ~editor ~page ?(join=false) () =
   (*Prf.crono Prf.prf_compile_buffer (fun () ->*)
   let activity_name = "Compiling " ^ page#get_filename ^ "..." in
   Activity.add Activity.Compile_buffer activity_name;
@@ -116,7 +116,7 @@ let rec compile_buffer ~project ~editor ~page ?(commit=false) () =
           end;
           Activity.remove activity_name;
         in
-        let exit_code = Oebuild_util.exec ~echo:true ~join:false (*false*) ~at_exit ~process_err command in
+        let exit_code = Oebuild_util.exec ~echo:true ~join (*false*) ~at_exit ~process_err command in
         ()
     (*end ()*)
   with ex -> begin

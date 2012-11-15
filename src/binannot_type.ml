@@ -21,12 +21,11 @@
 *)
 
 
-open Printf
 open Miscellanea
 open Cmt_format
 open Typedtree
 open Location
-open Lexing
+open Binannot
 
 type t = {
   ba_loc  : Location.t;
@@ -37,37 +36,6 @@ exception Found of t
 
 module Log = Common.Log.Make(struct let prefix = "Binannot_type" end)
 let _ = Log.set_verbosity `TRACE
-
-let string_of_loc loc =
-  let filename, a, b = Location.get_pos_info loc.loc_start in
-  let _, c, d = Location.get_pos_info loc.loc_end in
-  sprintf "%s, %d:%d(%d) -- %d:%d(%d)" filename a b (loc.loc_start.pos_cnum) c d (loc.loc_end.pos_cnum);;
-
-let linechar_of_loc loc =
-  let _, a, b = Location.get_pos_info loc.loc_start in
-  let _, c, d = Location.get_pos_info loc.loc_end in
-  ((a - 1), b), ((c - 1), d)
-
-let string_of_type_expr te = Odoc_info.string_of_type_expr te;;
-
-let (<==) loc offset = loc.loc_start.pos_cnum <= offset && offset <= loc.loc_end.pos_cnum
-
-(** read *)
-let read ~project ~filename =
-  let ext = if filename ^^ ".ml" then Some ".cmt" else if filename ^^ ".mli" then Some ".cmti" else None in
-  match ext with
-    | Some ext ->
-      begin
-        match Project.tmp_of_abs project filename with
-          | Some (tmp, relname) ->
-            let source = tmp // relname in
-            let cmt = (Filename.chop_extension source) ^ ext in
-            let mtime_src = (Unix.stat source).Unix.st_mtime in
-            let mtime_cmt = (Unix.stat cmt).Unix.st_mtime in
-            if mtime_cmt >= mtime_src then Some (Cmt_format.read cmt) else None
-          | _ -> None
-      end;
-    | _ -> kprintf invalid_arg "Binannot_type.read \"%s\"" filename
 
 (** find_pattern *)
 let rec find_pattern f offset ?(opt=false, false) {pat_desc; pat_loc; pat_type; pat_extra; _} =
@@ -439,10 +407,11 @@ let find_part_impl f offset = function
   | Partial_module_type mtyp -> find_module_type f offset mtyp;;
 
 (** find *)
-let find ~project ~filename ~offset =
-  match read ~project ~filename with
+let find ~page =
+  match Binannot.read ~page with
     | Some (cmi, cmt) ->
       begin
+        let offset = (page#buffer#get_iter `INSERT)#offset in
         let f ba_loc ba_type =
           Log.println `TRACE "%d; %s : %s" offset (string_of_loc ba_loc) ba_type;
           raise (Found {ba_loc; ba_type});

@@ -117,98 +117,103 @@ let find_references ?src_path ~(project : Prj.t) ~filename ~offset (* offset of 
       end;;
 
 (** find_definition *)
-let find_definition ~(project : Prj.t) ~page  ~(iter : GText.iter) =
-  match page#ocaml_view#get_annot iter with
-    | Some (_, Some { annot_annotations = annot_annotations; annot_start=block_start; annot_stop=block_stop }) ->
-      let block_start = block_start.annot_cnum in
-      let block_stop = block_stop.annot_cnum in
-      begin
-        match Annotation.get_ref annot_annotations with
-        | Some (Int_ref (_ , start, stop)) ->
-          (* The block is an internal reference *)
-          let start = start.annot_cnum in
-          let stop = stop.annot_cnum in
-          Some (block_start, block_stop, page#get_filename, start, stop)
-        | Some (Ext_ref name) ->
-          (* The block is an external reference *)
-          begin
-            try
-              let lident = (Longident.flatten (Longident.parse name)) in
-              let filename = (List.hd lident) ^ ".ml" in
-              let lident, filename, fullname =
-                try lident, filename, Misc.find_in_path project.Prj.source_paths filename
-                with Not_found ->
-                  (* Check if the module is an internal module *)
-                  let current_mod = page#get_filename in
-                  let current_mod = Filename.basename current_mod in
-                  let lident = (String.capitalize (Filename.chop_extension current_mod)) :: lident in
-                  lident, current_mod, Misc.find_in_path project.Prj.source_paths current_mod
-              in
-              (* get the exact (case senstive) file name *)
-              let file_exists =
-                let files = Array.to_list (Sys.readdir (Filename.dirname fullname)) in
-                List.mem filename files
-              in
-              let fullname =
-                if not file_exists then (Misc.find_in_path project.Prj.source_paths (String.uncapitalize filename))
-                else fullname
-              in
-              (*  *)
-              let filename =
-                match project.Prj.in_source_path fullname with
-                  | Some x -> x | _ -> assert false
-              in
-              let nested = List.length lident > 2 in
-              let ident = List.hd (List.rev lident) in
-              begin
-                match Annotation.find ~filename () with
-                  | None -> None
-                  | Some annot ->
-                    let defs = find_def ~annot ~name:ident in
-                    let def =
-                      if nested then List.hd defs else (List.find (fun (_, (_, _, stop)) -> stop = None) defs)
-                    in
-                    let block, _ = def in
-                    Some (block_start, block_stop, fullname,
-                      block.annot_start.annot_cnum, block.annot_stop.annot_cnum)
-              end
-            with Not_found | Failure "hd" -> None
-          end
-        | _ ->
-          begin (* The block where iter is placed is a definition (def) or a let...in *)
-            match Annotation.get_def annot_annotations with
-              | None -> (* let...in *)
-                let offset = Glib.Utf8.offset_to_pos
-                  (page#view#buffer#get_text ?start:None ?stop:None ?slice:None ?visible:None ()) ~pos:0 ~off:iter#offset
+let find_definition ~page ~(iter : GText.iter) =
+  Opt.map_default page#annot_type None begin fun x ->
+    let project = page#project in
+    match x#get_annot iter with
+      | Some (_, Some { annot_annotations = annot_annotations; annot_start=block_start; annot_stop=block_stop }) ->
+        let block_start = block_start.annot_cnum in
+        let block_stop = block_stop.annot_cnum in
+        begin
+          match Annotation.get_ref annot_annotations with
+          | Some (Int_ref (_ , start, stop)) ->
+            (* The block is an internal reference *)
+            let start = start.annot_cnum in
+            let stop = stop.annot_cnum in
+            Some (block_start, block_stop, page#get_filename, start, stop)
+          | Some (Ext_ref name) ->
+            (* The block is an external reference *)
+            begin
+              try
+                let lident = (Longident.flatten (Longident.parse name)) in
+                let filename = (List.hd lident) ^ ".ml" in
+                let lident, filename, fullname =
+                  try lident, filename, Misc.find_in_path project.Prj.source_paths filename
+                  with Not_found ->
+                    (* Check if the module is an internal module *)
+                    let current_mod = page#get_filename in
+                    let current_mod = Filename.basename current_mod in
+                    let lident = (String.capitalize (Filename.chop_extension current_mod)) :: lident in
+                    lident, current_mod, Misc.find_in_path project.Prj.source_paths current_mod
                 in
+                (* get the exact (case senstive) file name *)
+                let file_exists =
+                  let files = Array.to_list (Sys.readdir (Filename.dirname fullname)) in
+                  List.mem filename files
+                in
+                let fullname =
+                  if not file_exists then (Misc.find_in_path project.Prj.source_paths (String.uncapitalize filename))
+                  else fullname
+                in
+                (*  *)
+                let filename =
+                  match project.Prj.in_source_path fullname with
+                    | Some x -> x | _ -> assert false
+                in
+                let nested = List.length lident > 2 in
+                let ident = List.hd (List.rev lident) in
                 begin
-                 match find_references ~project ~filename:page#get_filename ~offset () with
-                   | Some references when references.ref_int <> [] ->
-                     Some (block_start, block_stop, page#get_filename, block_start, block_stop)
-                   | _ -> None
-                end;
-              | _ ->
-                Some (block_start, block_stop, page#get_filename, block_start, block_stop)
-          end
-      end
-    | _ -> None
+                  match Annotation.find ~filename () with
+                    | None -> None
+                    | Some annot ->
+                      let defs = find_def ~annot ~name:ident in
+                      let def =
+                        if nested then List.hd defs else (List.find (fun (_, (_, _, stop)) -> stop = None) defs)
+                      in
+                      let block, _ = def in
+                      Some (block_start, block_stop, fullname,
+                        block.annot_start.annot_cnum, block.annot_stop.annot_cnum)
+                end
+              with Not_found | Failure "hd" -> None
+            end
+          | _ ->
+            begin (* The block where iter is placed is a definition (def) or a let...in *)
+              match Annotation.get_def annot_annotations with
+                | None -> (* let...in *)
+                  let offset = Glib.Utf8.offset_to_pos
+                    (page#view#buffer#get_text ?start:None ?stop:None ?slice:None ?visible:None ()) ~pos:0 ~off:iter#offset
+                  in
+                  begin
+                   match find_references ~project ~filename:page#get_filename ~offset () with
+                     | Some references when references.ref_int <> [] ->
+                       Some (block_start, block_stop, page#get_filename, block_start, block_stop)
+                     | _ -> None
+                  end;
+                | _ ->
+                  Some (block_start, block_stop, page#get_filename, block_start, block_stop)
+            end
+        end
+      | _ -> None
+  end
 ;;
 
 
 (** has_definition_references *)
 let has_definition_references ~page ~iter =
   let project = page#project in
-  let defs = find_definition ~project ~page ~iter in
+  let defs = find_definition ~page ~iter in
   let ext_refs =
-    match page#ocaml_view#get_annot iter with
-      | Some (_, Some { Oe.annot_annotations = annot_annotations; _ }) ->
-        begin
-          match Annotation.get_ext_ref annot_annotations with
-            | Some fullname ->
-              find_ext_ref ~project ~src_path:(Project.path_src project) (`EXACT fullname)
-            | _ -> []
-        end
-      | _ -> []
+    Opt.map_default page#annot_type [] begin fun x ->
+      match x#get_annot iter with
+        | Some (_, Some { Oe.annot_annotations = annot_annotations; _ }) ->
+          begin
+            match Annotation.get_ext_ref annot_annotations with
+              | Some fullname ->
+                find_ext_ref ~project ~src_path:(Project.path_src project) (`EXACT fullname)
+              | _ -> []
+          end
+        | _ -> []
+    end
   in
   defs <> None, defs <> None || ext_refs <> []
 

@@ -262,10 +262,10 @@ object (self)
       target_page#set_changed false;
       (*  *)
       if project.autocomp_enabled then begin
-        editor#with_current_page (fun p -> p#compile_buffer ~commit:false ());
+        editor#with_current_page (fun p -> p#compile_buffer ?join:None ());
       end else begin
         List.iter begin fun page ->
-          page#compile_buffer ~commit:false ();
+          page#compile_buffer ?join:None ();
           page#error_indication#remove_tag();
           page#global_gutter#misc#draw (Some (Gdk.Rectangle.create
             ~x:page#global_gutter#misc#allocation.Gtk.x

@@ -21,11 +21,13 @@
 *)
 
 open Printf
+open Miscellanea
 
 type source_point = [`ITER of GText.iter | `XY of (int * int)]
 
-class annot_type (view : Ocaml_text.view) =
-  let buffer = view#buffer in
+class annot_type ~page =
+  let view : Ocaml_text.view = page#ocaml_view in
+  let buffer = view#obuffer in
   let tag = buffer#create_tag ~name:"tag_annot" [] in
 object (self)
   val mutable tag_bounds = None
@@ -33,10 +35,47 @@ object (self)
 
   method tag = tag
 
+
+  method get_annot iter =
+    if buffer#changed_after_last_autocomp = 0.0 then begin
+      match buffer#as_text_buffer#file with
+        | None -> None
+        | Some file ->
+          begin
+            match page#project.Prj.in_source_path file#path with
+              | Some _ ->
+
+                let filename = file#path in
+                let bin_annot = Binannot_type.find ~page in
+
+                Some (bin_annot, Annotation.find_block_at_offset ~filename ~offset:iter#offset)
+                  (*~offset:(Glib.Utf8.offset_to_pos (self#get_text ()) ~pos:0 ~off:iter#offset)*)
+              | _ -> None
+          end;
+    end else None
+
+  method get_annot_at_location ~x ~y =
+    if view#misc#get_flag `HAS_FOCUS && ((*not*) buffer#changed_after_last_autocomp = 0.0) then begin
+      let iter =
+        let iter = view#get_iter_at_location ~x ~y in
+        if iter#ends_line
+        || Glib.Unichar.isspace iter#char
+        || begin
+          match Comments.enclosing
+            (Comments.scan (Glib.Convert.convert_with_fallback ~fallback:"" ~from_codeset:"UTF-8" ~to_codeset:Oe_config.ocaml_codeset
+              (view#buffer#get_text ()))) iter#offset
+          with None -> false | _ -> true;
+        end
+        then None else (Some iter)
+      in
+      Opt.map_default iter None self#get_annot;
+    end else None
+
+
   method get position =
     let annot = match position with
-      | `ITER iter -> view#get_annot iter
-      | `XY (x, y) -> view#get_annot_at_location ~x ~y
+      | `ITER iter -> self#get_annot iter
+      | `XY (x, y) -> self#get_annot_at_location ~x ~y
     in
     let open Binannot_type in
     let open Location in
