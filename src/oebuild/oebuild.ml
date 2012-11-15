@@ -257,7 +257,6 @@ let build ~compilation ~package ~includes ~libs ~other_mods ~outkind ~compile_on
       else compiler
     end
   in
-  (*printf "%s%!" (Cmd.expand (compiler ^ " -v"));*)
   let mods = split_space other_mods in
   let mods = if compilation = Native then List.map (sprintf "%s.cmx") mods else List.map (sprintf "%s.cmo") mods in
   if compilation = Native && !ms_paths then begin

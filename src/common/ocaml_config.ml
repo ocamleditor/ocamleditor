@@ -93,7 +93,7 @@ let can_compile_native ?ocaml_home () =
   in
   match compiler with
     | Some compiler ->
-      let cmd = sprintf "%s -o %s %s%s" compiler outname filename redirect_stderr in
+      let cmd = sprintf "%s -o %s %s%s" compiler outname filename ""(*redirect_stderr*) in
       result := (Sys.command cmd) = 0;
       if Sys.file_exists filename then (Sys.remove filename);
       if Sys.file_exists outname then (Sys.remove outname);

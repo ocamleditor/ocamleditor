@@ -35,7 +35,7 @@ type t = {
 
 exception Found of t
 
-module Log = Common.Log.Make(struct let prefix = "Binannot" end)
+module Log = Common.Log.Make(struct let prefix = "Binannot_type" end)
 let _ = Log.set_verbosity `TRACE
 
 let string_of_loc loc =
@@ -53,13 +53,21 @@ let string_of_type_expr te = Odoc_info.string_of_type_expr te;;
 let (<==) loc offset = loc.loc_start.pos_cnum <= offset && offset <= loc.loc_end.pos_cnum
 
 (** read *)
-let read ~filename =
+let read ~project ~filename =
   let ext = if filename ^^ ".ml" then Some ".cmt" else if filename ^^ ".mli" then Some ".cmti" else None in
   match ext with
     | Some ext ->
-      let filename_cmt = (Filename.chop_extension filename) ^ ext in
-      Cmt_format.read filename_cmt
-    | _ -> kprintf invalid_arg "Binannot.read \"%s\"" filename
+      begin
+        match Project.tmp_of_abs project filename with
+          | Some (tmp, relname) ->
+            let source = tmp // relname in
+            let cmt = (Filename.chop_extension source) ^ ext in
+            let mtime_src = (Unix.stat source).Unix.st_mtime in
+            let mtime_cmt = (Unix.stat cmt).Unix.st_mtime in
+            if mtime_cmt >= mtime_src then Some (Cmt_format.read cmt) else None
+          | _ -> None
+      end;
+    | _ -> kprintf invalid_arg "Binannot_type.read \"%s\"" filename
 
 (** find_pattern *)
 let rec find_pattern f offset ?(opt=false, false) {pat_desc; pat_loc; pat_type; pat_extra; _} =
@@ -430,20 +438,24 @@ let find_part_impl f offset = function
   | Partial_signature_item sig_item -> find_signature_item f offset sig_item
   | Partial_module_type mtyp -> find_module_type f offset mtyp;;
 
-(** find_type *)
-let find_type ~filename ~offset =
-  let cmi, cmt = read ~filename in
-  let f ba_loc ba_type =
-    Log.println `TRACE "%d; %s : %s" offset (string_of_loc ba_loc) ba_type;
-    raise (Found {ba_loc; ba_type});
-  in
-  try
-    Opt.may cmt begin fun cmt ->
-      Odoc_info.reset_type_names();
-      match cmt.cmt_annots with
-        | Implementation {str_items; _} -> List.iter (find_structure_item f offset) str_items
-        | Partial_implementation parts -> Array.iter (find_part_impl f offset) parts
-        | _ -> ()
-    end;
-    None
-  with Found ba -> Some ba
+(** find *)
+let find ~project ~filename ~offset =
+  match read ~project ~filename with
+    | Some (cmi, cmt) ->
+      begin
+        let f ba_loc ba_type =
+          Log.println `TRACE "%d; %s : %s" offset (string_of_loc ba_loc) ba_type;
+          raise (Found {ba_loc; ba_type});
+        in
+        try
+          Opt.may cmt begin fun cmt ->
+            Odoc_info.reset_type_names();
+            match cmt.cmt_annots with
+              | Implementation {str_items; _} -> List.iter (find_structure_item f offset) str_items
+              | Partial_implementation parts -> Array.iter (find_part_impl f offset) parts
+              | _ -> ()
+          end;
+          None
+        with Found ba -> Some ba
+      end;
+    | _ -> None

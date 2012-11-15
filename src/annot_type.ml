@@ -38,7 +38,7 @@ object (self)
       | `ITER iter -> view#get_annot iter
       | `XY (x, y) -> view#get_annot_at_location ~x ~y
     in
-    let open Binannot in
+    let open Binannot_type in
     let open Location in
     let open Lexing in
     match annot with

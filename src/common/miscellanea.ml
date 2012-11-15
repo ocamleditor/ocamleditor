@@ -117,11 +117,11 @@ module Xlist =
   end
 
 module Opt = struct
-  let map x f = match x with Some x -> f x | _ -> None
-  let may x f = match x with Some x -> f x | _ -> ()
-  let map_default x default f = match x with Some x -> f x | _ -> default
-  let may_default x default f = match x with None -> f default | Some x -> x
-  let default x y = match x with Some x -> x | _ -> y
+  let may opt f = match opt with Some x -> f x | _ -> ()
+  let map opt f = match opt with Some x -> Some (f x) | _ -> None
+  let map_default opt default f = match opt with Some x -> f x | _ -> default
+  let default opt def = match opt with Some x -> x   | _ -> def
+
   let exn exn x = match x with Some x -> x | _ -> raise exn
   let filter l = Xlist.filter_map (fun x -> x) l
 end

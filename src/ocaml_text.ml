@@ -345,7 +345,7 @@ object (self)
                     | Some _ ->
 
                       let filename = file#path in
-                      let bin_annot = Binannot.find_type ~filename ~offset:iter#offset in
+                      let bin_annot = Binannot_type.find ~project ~filename ~offset:iter#offset in
 
                       Some (bin_annot, Annotation.find_block_at_offset ~filename ~offset:iter#offset)
                         (*~offset:(Glib.Utf8.offset_to_pos (self#get_text ()) ~pos:0 ~off:iter#offset)*)
@@ -369,7 +369,7 @@ object (self)
         end
         then None else (Some iter)
       in
-      Opt.map iter self#get_annot;
+      Opt.map_default iter None self#get_annot;
     end else None
 
   method code_folding = match code_folding with Some m -> m | _ -> assert false
