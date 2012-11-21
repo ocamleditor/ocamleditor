@@ -165,6 +165,7 @@ let preload ~project =
       let files = File.readdirs (*~links:false*) (Some (fun x -> x ^^ ".ml")) src_path in
       (*let files = List.filter (fun x -> x ^^ ".ml") files in*)
       List.iter (fun filename -> ignore (find ~filename ())) files;
+      List.iter (fun filename -> Binannot_ident.scan ~project ~filename ()) files;
       finally()
     with ex -> begin
       Printf.eprintf "File \"annotation.ml\": %s\n%s\n%!" (Printexc.to_string ex) (Printexc.get_backtrace());

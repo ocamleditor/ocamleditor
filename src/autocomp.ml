@@ -114,6 +114,7 @@ let compile_buffer ~project ~editor ~page ?(join=false) () =
                   if no_errors then (*(Timeout.set tout (fun () ->*) ol#load ()(* )) *) (*else (ol#add_markers ~kind:`Error ())*);
             end
           end;
+          (*Gmisclib.Idle.add (fun () -> Binannot_ident.scan ~page);*)
           Activity.remove activity_name;
         in
         let exit_code = Oebuild_util.exec ~echo:true ~join (*false*) ~at_exit ~process_err command in

@@ -407,9 +407,10 @@ let find_part_impl f offset = function
   | Partial_module_type mtyp -> find_module_type f offset mtyp;;
 
 (** find *)
-let find ~page =
-  match Binannot.read ~page with
-    | Some (cmi, cmt) ->
+let find  ~page =
+  let compile_buffer () = page#compile_buffer ?join:(Some true) () in
+  match Binannot.read_cmt ~project:page#project ~filename:page#get_filename ~compile_buffer () with
+    | Some (filename, _, cmt) ->
       begin
         let offset = (page#buffer#get_iter `INSERT)#offset in
         let f ba_loc ba_type =
@@ -417,8 +418,8 @@ let find ~page =
           raise (Found {ba_loc; ba_type});
         in
         try
-          Opt.may cmt begin fun cmt ->
-            Odoc_info.reset_type_names();
+          Odoc_info.reset_type_names();
+          begin
             match cmt.cmt_annots with
               | Implementation {str_items; _} -> List.iter (find_structure_item f offset) str_items
               | Partial_implementation parts -> Array.iter (find_part_impl f offset) parts

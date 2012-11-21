@@ -410,9 +410,10 @@ object (self)
         with Not_found -> ()
 
   method load () =
-    match Binannot.read ~page with
+    let compile_buffer () = page#compile_buffer ?join:(Some true) () in
+    match Binannot.read_cmt ~project:page#project ~filename:page#get_filename ~compile_buffer () with
       | None -> ()
-      | Some (cmi, cmt) ->
+      | Some (_, _, cmt) ->
         filename <- page#get_filename;
         timestamp <- filename, (Unix.stat filename).Unix.st_mtime;
         (*let ext = if filename ^^ ".ml" then Some ".cmt" else if filename ^^ ".mli" then Some ".cmti" else None in
@@ -441,7 +442,7 @@ object (self)
           model_sort_name#set_sort_column_id (-1) `ASCENDING;
           model_sort_name_rev#reset_default_sort_func ();
           (* Create tree *)
-          Gaux.may cmt ~f:(fun cmt -> self#parse cmt.cmt_annots);
+          self#parse cmt.cmt_annots;
           (*  *)
           view#set_model (Some smodel#coerce);
           (*  *)

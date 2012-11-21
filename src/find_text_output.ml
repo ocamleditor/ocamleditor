@@ -176,6 +176,28 @@ object (self)
     ignore (button_prev_line#connect#clicked ~callback:self#prev_line);
     ignore (button_next_line#connect#clicked ~callback:self#next_line);
     ignore (vbox#connect#destroy ~callback:dialog#destroy);
+    (* Tooltips *)
+    view#misc#set_has_tooltip true;
+    ignore (view#misc#connect#query_tooltip ~callback: begin fun ~x ~y ~kbd tooltip ->
+      try
+        begin
+          match GtkTree.TreeView.Tooltip.get_context view#as_tree_view ~x ~y ~kbd with
+            | (x, y, Some (_, _, row)) ->
+              begin
+                match view#get_path_at_pos ~x ~y with
+                  | Some (tpath, _, _, _) ->
+                    let filename =
+                      (model#get ~row ~column:col_path) // (model#get ~row ~column:col_file)
+                    in
+                    GtkBase.Tooltip.set_text tooltip filename;
+                    GtkTree.TreeView.Tooltip.set_row view#as_tree_view tooltip tpath;
+                    true
+                  | _ -> false
+              end
+            | _ -> false
+        end
+      with Not_found | Gpointer.Null -> false
+    end);
 
   method set_options x = options <- Some x
   method private options = match options with Some x -> x | _ -> invalid_arg "Options not specified"

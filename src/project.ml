@@ -178,6 +178,16 @@ let get_search_path proj =
 let get_search_path_i_format proj =
   if proj.search_path = [] then "" else "-I " ^ (String.concat " -I " proj.search_path);;
 
+(** get_search_path_local *)
+let get_search_path_local proj =
+  let paths = proj.search_path in
+  (proj.root // src) ::
+  Xlist.filter_map begin fun path ->
+    if path.[0] = '+' then None
+    else if not (Filename.is_relative path) then None
+    else Some (proj.root // src // path)
+  end paths;;
+
 (** Returns the {i load path} of the project: includes and [src]. *)
 let get_load_path proj =
   let includes = proj.search_path in

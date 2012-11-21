@@ -439,6 +439,25 @@ let search ~browser ~group ~flags items =
       find_references#misc#set_sensitive ref_sensitive;
     end;
   end);
+  (** Test *)
+  let test = GMenu.image_menu_item
+    ~label:"Test Definition/References" ~packing:menu#add () in
+  ignore (test#connect#activate ~callback:(fun () ->
+    editor#with_current_page begin fun page ->
+      let offset = (page#buffer#get_iter `INSERT)#offset in
+      let project = page#project in
+      let filename = page#get_filename in
+      let f () =
+        Binannot_ident.find_ident
+          ~project
+          ~filename
+          ~offset
+          ~compile_buffer:(fun () -> page#compile_buffer ?join:(Some true))  ()
+      in
+      ignore (crono f ())
+      (*ignore (Thread.create (GtkThread.async f)  ())*)
+    end));
+  test#add_accelerator ~group ~modi:[`MOD1] GdkKeysyms._p ~flags;
   (** Find file *)
   let dialog_find_file = GMenu.menu_item ~label:"Find File..." ~packing:menu#add () in
   ignore (dialog_find_file#connect#activate ~callback:(fun () -> browser#dialog_find_file ?all:(Some true) ()));
