@@ -414,95 +414,15 @@ let search ~browser ~group ~flags items =
       ignore (editor#scroll_to_definition (page#buffer#get_iter `INSERT)))));
   find_definition#add_accelerator ~group ~modi:[`CONTROL] GdkKeysyms._Return ~flags;
   (** Find references *)
-  let find_references = GMenu.image_menu_item
-    ~label:"Find References" ~packing:menu#add () in
-  ignore (find_references#connect#activate ~callback:begin
-    Activity.wrap Activity.Annot begin fun () ->
-      editor#with_current_page begin fun page ->
-        editor#find_references (page#buffer#get_iter `INSERT)
-      end
+  let find_references = GMenu.image_menu_item ~label:"Find References" ~packing:menu#add () in
+  find_references#add_accelerator ~group ~modi:[`CONTROL; `SHIFT] GdkKeysyms._Return ~flags;
+  ignore (find_references#connect#activate ~callback:(fun () -> Menu_op.find_definition_references editor));
+  ignore (search_item#misc#connect#state_changed ~callback:begin fun state ->
+    if state = `NORMAL then begin
+      Gmisclib.Idle.add (fun () -> Menu_op.has_definition editor find_definition);
+      Gmisclib.Idle.add (fun () -> Menu_op.has_references editor find_references);
     end
   end);
-  find_references#add_accelerator ~group ~modi:[`CONTROL; `SHIFT] GdkKeysyms._Return ~flags;
-  ignore (search_item#misc#connect#state_changed ~callback:begin fun _ ->
-    Gmisclib.Idle.add begin fun () ->
-      let def_sensitive, ref_sensitive =
-        match editor#get_page `ACTIVE with
-          | None -> false, false
-          | Some page ->
-            let iter = page#buffer#get_iter `INSERT in
-            if not iter#ends_line && not (Glib.Unichar.isspace iter#char) then begin
-              Definition.has_definition_references ~page ~iter
-            end else false, false
-      in
-      find_definition#misc#set_sensitive def_sensitive;
-      find_references#misc#set_sensitive ref_sensitive;
-    end;
-  end);
-  (** Test *)
-  let test = GMenu.image_menu_item ~label:"Test Definition/References" ~packing:menu#add () in
-  ignore (test#connect#activate ~callback:(fun () ->
-    editor#with_current_page begin fun page ->
-      let widget = new Search_results.widget ~editor () in
-      widget#button_new_search#misc#set_sensitive false;
-      let hbox = GPack.hbox ~spacing:3 () in
-      let _ = GMisc.image ~pixbuf:Icons.search_results_16 ~packing:hbox#pack () in
-      let label = GMisc.label ~packing:hbox#pack () in
-      let iter = page#buffer#get_iter `INSERT in
-      let mark = page#buffer#create_mark iter in
-      ignore (widget#misc#connect#destroy ~callback:(fun () -> page#buffer#delete_mark (`MARK mark)));
-      ignore (widget#connect#search_started ~callback:begin fun () ->
-        let project = page#project in
-        let filename = page#get_filename in
-        let results =
-          Binannot_ident.find_ident
-            ~project
-            ~filename
-            ~offset:(page#buffer#get_iter (`MARK mark))#offset
-            ~compile_buffer:(fun () -> page#compile_buffer ?join:(Some true))  ()
-        in
-        let def_name = ref "" in
-        let results =
-          let open Binannot in
-          let open Binannot_ident in
-          let open Search_results in
-          match results with
-            | None -> []
-            | Some {bai_def; bai_refs} ->
-              def_name := (match bai_refs with ident :: _ -> ident.ident_name | [] -> "");
-              let results = (match bai_def with | Some x -> [x] | _ -> []) @ bai_refs in
-              let results = List.map (fun ident -> ident.ident_fname, ident) results in
-              let results = List.rev (Miscellanea.Xlist.group_assoc results) in
-              List.map begin fun (filename, idents) ->
-                let real_filenames = ref [] in
-                let locations =
-                  List.map begin fun ident ->
-                    let pixbuf =
-                      match ident.ident_kind with
-                        | Def _ -> Some (widget#misc#render_icon ~size:`MENU `EDIT)
-                        | Int_ref _ | Ext_ref -> None
-                    in
-                    let fn = ident.ident_loc.Location.loc_start.Lexing.pos_fname in
-                    if not (List.mem fn !real_filenames) then (real_filenames := fn :: !real_filenames);
-                    pixbuf, ident.ident_loc
-                  end (List.rev idents)
-                in
-                let real_filename = match !real_filenames with fn :: [] -> fn | _ -> assert false in
-                let timestamp = (Unix.stat real_filename).Unix.st_mtime in
-                {filename; real_filename; locations; timestamp}
-              end results
-        in
-        widget#set_results results;
-        (*  *)
-        if widget#misc#parent = None then
-          (ignore (Messages.vmessages#append_page ~label_widget:hbox#coerce widget#as_page));
-        label#set_text !def_name;
-        kprintf widget#label_message#set_label "References to identifier <tt>%s</tt>" (Glib.Markup.escape_text !def_name);
-        widget#present ();
-      end);
-      widget#start_search();
-    end));
-  test#add_accelerator ~group ~modi:[`MOD1] GdkKeysyms._p ~flags;
   (** Find file *)
   let dialog_find_file = GMenu.menu_item ~label:"Find File..." ~packing:menu#add () in
   ignore (dialog_find_file#connect#activate ~callback:(fun () -> browser#dialog_find_file ?all:(Some true) ()));

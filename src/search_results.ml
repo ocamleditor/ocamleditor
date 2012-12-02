@@ -253,9 +253,11 @@ object (self)
         (lnum, line, locs)
       end lines
     in
+    let parse = Lexical_markup.parse Preferences.preferences#get in
     List.iter begin fun (lnum, line, locs) ->
-      let markup = (*String.trim*) line in
-      let markup = Glib.Markup.escape_text (Convert.to_utf8 markup) in
+      let line = (*String.trim*) line in
+      let markup = parse line in
+      let markup = Convert.to_utf8 markup in
       let pixbuf = List.fold_left (fun acc (p, _) -> max p acc) None locs in
       let row = model_lines#append () in
       model_lines#set ~row ~column:col_locations locs;

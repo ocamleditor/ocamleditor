@@ -503,5 +503,25 @@ let find_ident ~project ~filename ~offset ?compile_buffer () =
   with Not_found -> None
 ;;
 
+(** find_definition *)
+let find_definition ~project ~filename ~offset ?compile_buffer () =
+  scan ~project ~filename ?compile_buffer ();
+  try
+    let {locations; _} as entry = Hashtbl.find table_idents filename in
+    let ident = locations.(offset) in
+    Opt.map_default ident None begin fun ident ->
+      match ident.ident_kind with
+        | Def _ -> Some ident
+        | Int_ref def -> entry.locations.(def.loc_start.pos_cnum)
+        | Ext_ref ->
+          begin
+            match find_external_definition ~project ~ident with
+              | Some (Project_def def) -> Some def
+              | Some Library_def -> None
+              | None -> None
+          end
+    end;
+  with Not_found -> None
+
 
 

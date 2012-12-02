@@ -285,30 +285,44 @@ object (self)
 
   method scroll_to_definition iter =
     self#with_current_page begin fun page ->
-      match Definition.find_definition ~page ~iter with
-        | None -> ()
-        | Some (_, _, filename, start, stop) ->
+      let project = self#project in
+      let filename = page#get_filename in
+      let offset = iter#offset in
+      match
+        Binannot_ident.find_definition
+          ~project
+          ~filename
+          ~offset
+          ~compile_buffer:(fun () -> page#compile_buffer ?join:(Some true))  ()
+      with
+        | Some ident ->
           self#location_history_add ~iter ~kind:`BROWSE ();
-          let rec get_page () =
-            match self#get_page (`FILENAME filename) with
-              | Some page -> page
-              | None ->
-                ignore (self#open_file ~active:true ~scroll_offset:0 ~offset:0 filename);
-                get_page ()
-          in
-          let page = get_page() in
-          let view = (page#view :> Text.view) in
-          self#goto_view view;
-          switch_page#call page;
-          Gmisclib.Idle.add begin fun () ->
-            let start = page#buffer#get_iter (`OFFSET start) in
-            let stop = page#buffer#get_iter (`OFFSET stop) in
-            page#buffer#select_range start stop;
-            page#view#scroll_lazy start;
-            self#location_history_add ~iter:start ~kind:(`BROWSE : Location_history.kind) ();
-          end;
-          Gmisclib.Idle.add ~prio:300 page#misc#grab_focus
+          self#goto_ident ident
+        | _ -> ()
     end
+
+  method goto_ident ident =
+    let open Location in
+    let open Lexing in
+    match self#get_page (`FILENAME ident.Binannot.ident_fname) with
+      | Some page ->
+        if not page#load_complete then (ignore (self#load_page ~scroll:false page));
+        let loc = ident.Binannot.ident_loc in
+        let buffer = page#buffer in
+        let ts = buffer#changed_timestamp in
+        if ts <= (Unix.stat loc.loc_start.pos_fname).Unix.st_mtime then begin
+          let start = buffer#get_iter (`OFFSET loc.loc_start.pos_cnum) in
+          let stop = buffer#get_iter (`OFFSET loc.loc_end.pos_cnum) in
+          buffer#select_range start stop;
+          page#ocaml_view#scroll_lazy start;
+          self#goto_view page#view;
+          switch_page#call page;
+          self#location_history_add ~iter:start ~kind:(`BROWSE : Location_history.kind) ();
+          page#view#misc#grab_focus()
+        end
+      | _ ->
+        ignore (self#open_file ~active:false ~scroll_offset:0 ~offset:0 ident.Binannot.ident_fname);
+        self#goto_ident ident
 
   method find_references (iter : GText.iter) =
     self#with_current_page begin fun page ->

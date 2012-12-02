@@ -546,6 +546,12 @@ let tag_underline tagname =
   match List.assoc tagname preferences#get.pref_tags with
     | _, _, _, underline, _, _ -> underline
 
+(** tag_colorname *)
+let tag_colorname tagname =
+  match List.assoc tagname preferences#get.pref_tags with
+    | `NAME color, _, _, _, _, _ -> color
+    | _ -> assert false
+
 (** reset_defaults *)
 let reset_defaults () =
   if Sys.file_exists pref_filename then Sys.remove pref_filename;
