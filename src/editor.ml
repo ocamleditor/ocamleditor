@@ -731,7 +731,7 @@ object (self)
           file_history_changed#call file_history;
           (* Delete existing recovery copy *)
           page#set_changed_after_last_autosave false;
-          page#buffer#set_changed_after_last_autocomp 0.0;
+          page#buffer#set_changed_after_last_autocomp false;
           Autosave.delete ~filename:file#path ();
     end;
 
@@ -769,8 +769,8 @@ object (self)
       if project.Prj.autocomp_enabled then begin
         try
           self#with_current_page begin fun page ->
-            if page#buffer#changed_after_last_autocomp > 0.0 then begin
-              if Unix.gettimeofday() -. page#buffer#changed_after_last_autocomp > project.Prj.autocomp_delay (*/. 2.*)
+            if page#buffer#changed_after_last_autocomp then begin
+              if Unix.gettimeofday() -. page#buffer#changed_timestamp > project.Prj.autocomp_delay (*/. 2.*)
               then (page#compile_buffer ?join:None ())
             end
           end

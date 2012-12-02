@@ -189,7 +189,7 @@ object (self)
     let row = model#append ~parent () in
     model#set ~row ~column:col_text (Filename.basename filename);
     List.iter begin fun (_, ((a, _) as rstart), rstop) ->
-      let line = Miscellanea.get_line_from_file ~filename a in
+      let _, line = match Miscellanea.get_lines_from_file ~filename [a] with x :: _ -> x | _ -> assert false in
       self#append_row_line ~parent:row ~page ~goto ~filename ~line ~start:rstart ~stop:rstop;
     end references;
 
@@ -218,7 +218,7 @@ object (self)
                 usages := usages_node;
                 definition := def_node;
                 (* line of the definition *)
-                let line = Miscellanea.get_line_from_file ~filename a in
+                let _, line = match Miscellanea.get_lines_from_file ~filename [a] with x :: _ -> x | _ -> assert false in
                 self#append_row_line ~parent:def_node ~page ~goto ~line ~start:rstart ~stop:rstop ~filename;
                 Gaux.may signalid_row_expanded ~f:view#misc#handler_block;
                 view#expand_row (model#get_path def_node);

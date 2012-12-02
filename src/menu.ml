@@ -440,22 +440,67 @@ let search ~browser ~group ~flags items =
     end;
   end);
   (** Test *)
-  let test = GMenu.image_menu_item
-    ~label:"Test Definition/References" ~packing:menu#add () in
+  let test = GMenu.image_menu_item ~label:"Test Definition/References" ~packing:menu#add () in
   ignore (test#connect#activate ~callback:(fun () ->
     editor#with_current_page begin fun page ->
-      let offset = (page#buffer#get_iter `INSERT)#offset in
-      let project = page#project in
-      let filename = page#get_filename in
-      let f () =
-        Binannot_ident.find_ident
-          ~project
-          ~filename
-          ~offset
-          ~compile_buffer:(fun () -> page#compile_buffer ?join:(Some true))  ()
-      in
-      ignore (crono f ())
-      (*ignore (Thread.create (GtkThread.async f)  ())*)
+      let widget = new Search_results.widget ~editor () in
+      widget#button_new_search#misc#set_sensitive false;
+      let hbox = GPack.hbox ~spacing:3 () in
+      let _ = GMisc.image ~pixbuf:Icons.search_results_16 ~packing:hbox#pack () in
+      let label = GMisc.label ~packing:hbox#pack () in
+      let iter = page#buffer#get_iter `INSERT in
+      let mark = page#buffer#create_mark iter in
+      ignore (widget#misc#connect#destroy ~callback:(fun () -> page#buffer#delete_mark (`MARK mark)));
+      ignore (widget#connect#search_started ~callback:begin fun () ->
+        let project = page#project in
+        let filename = page#get_filename in
+        let results =
+          Binannot_ident.find_ident
+            ~project
+            ~filename
+            ~offset:(page#buffer#get_iter (`MARK mark))#offset
+            ~compile_buffer:(fun () -> page#compile_buffer ?join:(Some true))  ()
+        in
+        let def_name = ref "" in
+        let results =
+          let open Binannot in
+          let open Binannot_ident in
+          let open Search_results in
+          match results with
+            | None -> []
+            | Some {bai_def; bai_refs} ->
+              def_name := (match bai_refs with ident :: _ -> ident.ident_name | [] -> "");
+              let results = (match bai_def with | Some x -> [x] | _ -> []) @ bai_refs in
+              let results = List.map (fun ident -> ident.ident_fname, ident) results in
+              let results = List.rev (Miscellanea.Xlist.group_assoc results) in
+              List.map begin fun (filename, idents) ->
+                let real_filenames = ref [] in
+                let locations =
+                  List.map begin fun ident ->
+                    let pixbuf =
+                      match ident.ident_kind with
+                        | Def _ -> Some (widget#misc#render_icon ~size:`MENU `EDIT)
+                        | Int_ref _ | Ext_ref -> None
+                    in
+                    let fn = ident.ident_loc.Location.loc_start.Lexing.pos_fname in
+                    if not (List.mem fn !real_filenames) then (real_filenames := fn :: !real_filenames);
+                    pixbuf, ident.ident_loc
+                  end (List.rev idents)
+                in
+                let real_filename = match !real_filenames with fn :: [] -> fn | _ -> assert false in
+                let timestamp = (Unix.stat real_filename).Unix.st_mtime in
+                {filename; real_filename; locations; timestamp}
+              end results
+        in
+        widget#set_results results;
+        (*  *)
+        if widget#misc#parent = None then
+          (ignore (Messages.vmessages#append_page ~label_widget:hbox#coerce widget#as_page));
+        label#set_text !def_name;
+        kprintf widget#label_message#set_label "References to identifier <tt>%s</tt>" (Glib.Markup.escape_text !def_name);
+        widget#present ();
+      end);
+      widget#start_search();
     end));
   test#add_accelerator ~group ~modi:[`MOD1] GdkKeysyms._p ~flags;
   (** Find file *)

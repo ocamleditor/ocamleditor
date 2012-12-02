@@ -42,7 +42,7 @@ object (self)
   method tag = tag
 
   method get_annot_at_iter iter =
-    if buffer#changed_after_last_autocomp = 0.0 then begin
+    if not buffer#changed_after_last_autocomp then begin
       match buffer#as_text_buffer#file with
         | None -> None
         | Some file ->
@@ -58,7 +58,7 @@ object (self)
     end else None
 
   method get_annot_at_location ~x ~y =
-    if view#misc#get_flag `HAS_FOCUS && ((*not*) buffer#changed_after_last_autocomp = 0.0) then begin
+    if view#misc#get_flag `HAS_FOCUS && (not buffer#changed_after_last_autocomp) then begin
       let iter =
         let iter = view#get_iter_at_location ~x ~y in
         if iter#ends_line

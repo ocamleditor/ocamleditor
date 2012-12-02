@@ -115,11 +115,6 @@ object (self)
   method parent_changed messages = ()
 
   initializer
-(*    lsw#hadjustment#connect#changed ~callback:begin fun () ->
-      if paned#position > 1 then begin
-        paned_position := Some paned#position;
-      end
-    end;*)
     ignore (view#append_column vc_file);
     ignore (view#append_column vc_hits);
     ignore (view#append_column vc_path);

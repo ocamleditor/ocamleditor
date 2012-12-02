@@ -32,10 +32,10 @@ let _ = Log.set_verbosity `DEBUG
 type ident_kind = Def of Location.t | Int_ref of Location.t | Ext_ref
 
 type ident = {
-  mutable ident_fname : string;
-  mutable ident_kind  : ident_kind;
-  ident_name          : string;
-  ident_loc           : Location.t;
+  mutable ident_fname      : string;
+  mutable ident_kind       : ident_kind;
+  ident_name               : string;
+  ident_loc                : Location.t;
 }
 
 type entry = { (* An entry collects all ident annotations of a source file. *)
@@ -62,6 +62,9 @@ let linechar_of_loc loc =
   let _, a, b = Location.get_pos_info loc.loc_start in
   let _, c, d = Location.get_pos_info loc.loc_end in
   ((a - 1), b), ((c - 1), d)
+
+let cnum_of_loc loc =
+  loc.loc_start.pos_fname, loc.loc_start.pos_cnum, loc.loc_end.pos_cnum
 
 let string_of_type_expr te = Odoc_info.string_of_type_expr te;;
 

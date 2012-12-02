@@ -260,23 +260,30 @@ module Search =
     *)
   end
 
-(** get_line_from_file *)
-let get_line_from_file ~filename lnum =
+(** get_lines_from_file *)
+let get_lines_from_file ~filename lnums =
   let chan = open_in filename in
-  let result = ref "" in
+  let result = ref [] in
   let i = ref 1 in
+  let lnums = ref (List.sort compare (Xlist.remove_dupl lnums)) in
   try
     begin
       try
-        while true do
-          let line = input_line chan in
-          if !i = lnum then (result := line; raise End_of_file);
-          incr i;
+        while !lnums <> [] do
+          match !lnums with
+            | lnum :: tl ->
+              let line = input_line chan in
+              if !i = lnum then begin
+                result := (lnum, line) :: !result;
+                lnums := tl;
+              end;
+              incr i;
+            | _ -> assert false
         done;
       with End_of_file -> ()
     end;
     close_in chan;
-    !result
+    List.rev !result
   with ex -> (close_in chan; raise ex);;
 
 (** exec_lines *)

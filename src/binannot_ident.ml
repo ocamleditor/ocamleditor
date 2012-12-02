@@ -67,10 +67,10 @@ let rec iter_pattern f {pat_desc; pat_loc; pat_type; pat_extra; _} =
       []
     | Tpat_var (id, loc) ->
       [{
-        ident_fname = "";
-        ident_kind  = Def loc.Location.loc;
-        ident_name  = Ident.name id;
-        ident_loc   = loc.Location.loc;
+        ident_fname      = "";
+        ident_kind       = Def loc.Location.loc;
+        ident_name       = Ident.name id;
+        ident_loc        = loc.Location.loc;
       }]
 
 (** iter_expression *)
@@ -87,10 +87,10 @@ and iter_expression f {exp_desc; exp_loc; exp_type; exp_extra; _} =
     | Texp_ident (id, loc, vd) ->
       let ident_kind = if Ident.name (Path.head id) = Path.last id then Int_ref vd.Types.val_loc else Ext_ref in
       let annot = {
-        ident_fname = "";
+        ident_fname      = "";
         ident_kind;
-        ident_name = Path.name id;
-        ident_loc = loc.Location.loc
+        ident_name       = Path.name id;
+        ident_loc        = loc.Location.loc
       } in
       f annot;
     | Texp_let (_, pe, expr) ->
@@ -104,10 +104,10 @@ and iter_expression f {exp_desc; exp_loc; exp_type; exp_extra; _} =
             let def_loc =
               {pe_loc with loc_end = {pe_loc.loc_start with pos_cnum = pe_loc.loc_start.pos_cnum + String.length label}}
             in {
-              ident_fname = "";
-              ident_kind  = Def e.exp_loc;
-              ident_name  = label;
-              ident_loc   = def_loc
+              ident_fname      = "";
+              ident_kind       = Def e.exp_loc;
+              ident_name       = label;
+              ident_loc        = def_loc
             }
           end p.pat_extra)
         in
@@ -333,7 +333,7 @@ and iter_structure_item f {str_desc; str_loc; _} =
 
 (** register *)
 let register filename entry ({ident_loc; ident_kind; _} as annot) =
-  if (*ident.[0] <> '*'*) ident_loc <> Location.none then begin
+  if ident_loc <> Location.none then begin
     annot.ident_fname <- filename;
     let start = ident_loc.loc_start.pos_cnum in
     let stop = ident_loc.loc_end.pos_cnum in
@@ -358,8 +358,8 @@ let scan ~project ~filename ?compile_buffer () =
     begin
       let timestamp = try (Hashtbl.find table_idents filename).timestamp with Not_found -> 0. in
       match Binannot.read_cmt ~project ~filename ~timestamp ?compile_buffer () with
-        | Some (filename, timestamp, cmt) ->
-          let size = (Unix.stat filename).Unix.st_size + 1 in
+        | Some (filename, timestamp, ({cmt_sourcefile = Some cmt_sourcefile; _} as cmt)) ->
+          let size = (Unix.stat (cmt.cmt_builddir // cmt_sourcefile)).Unix.st_size + 1 in
           let entry = {
             timestamp;
             locations = Array.create size None;
@@ -410,7 +410,7 @@ let find_external_definition ~project ~ident =
                             raise (Found def_ident)
                       | Int_ref _ | Ext_ref | Def _ -> ()
               done;
-              assert false
+              None
             with Found def_ident -> Some (Project_def def_ident);
           end;
         with Not_found (* Misc.find_in_path_uncap *) -> Some Library_def
@@ -486,7 +486,8 @@ let find_definition_and_references ~project ~entry ~ident =
             let refs = find_library_external_references ~project ~ident in
             {bai_def = None; bai_refs = refs}
           | None ->
-            {bai_def = None; bai_refs = []}
+            let lib_refs = find_library_external_references ~project ~ident in
+            {bai_def = None; bai_refs = lib_refs}
       end
 ;;
 
@@ -496,12 +497,10 @@ let find_ident ~project ~filename ~offset ?compile_buffer () =
   try
     let {locations; _} as entry = Hashtbl.find table_idents filename in
     let ident = locations.(offset) in
-    Opt.may ident begin fun ident ->
-      let {bai_def; bai_refs} = find_definition_and_references ~project ~entry ~ident in
-      Opt.may bai_def print_ident;
-      List.iter print_ident bai_refs
+    Opt.map_default ident None begin fun ident ->
+      Some (find_definition_and_references ~project ~entry ~ident)
     end;
-  with Not_found -> Printf.eprintf "find_ident %s %d Not_found\n%!" filename offset;
+  with Not_found -> None
 ;;
 
 

@@ -380,7 +380,8 @@ object (self)
                 | None ->
                   signal_buffer_changed <- Some (buffer#connect#changed ~callback:begin fun () ->
                     changed_after_last_autosave <- true;
-                    buffer#set_changed_after_last_autocomp (Unix.gettimeofday())
+                    buffer#set_changed_timestamp (Unix.gettimeofday());
+                    buffer#set_changed_after_last_autocomp true
                   end);
                 | _ -> ()
             end;
@@ -428,7 +429,7 @@ object (self)
     if project.Prj.autocomp_enabled
     && ((project.Prj.in_source_path filename) <> None)
     && (filename ^^ ".ml" || filename ^^ ".mli") then begin
-      buffer#set_changed_after_last_autocomp 0.0;
+      buffer#set_changed_after_last_autocomp false;
       Autocomp.compile_buffer ~project ~editor ~page:self ?join ();
     end else begin
       editor#pack_outline (Cmt_view.empty());
