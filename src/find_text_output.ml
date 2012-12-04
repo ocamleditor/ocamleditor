@@ -485,7 +485,7 @@ object (self)
             end
           | Some page ->
             (*if not page#load_complete then (ignore (page#load()));*)
-            if not page#load_complete then (ignore ( editor#load_page ~scroll:false page));
+            if not page#load_complete then (editor#load_page ?scroll:(Some false) page);
             page
         in
         let old_error_indication_enabled = page#error_indication#enabled in
@@ -576,7 +576,7 @@ object (self)
           | None -> raise Not_found
           | Some page ->
             (*if not page#load_complete then (ignore (page#load()));*)
-            if not page#load_complete then (ignore (editor#load_page ~scroll:false page));
+            if not page#load_complete then (editor#load_page ?scroll:(Some false) page);
             page
       in
       (*let max_ln = List.fold_left (fun acc {linenum=x} -> max x acc) 0 res.lines in
@@ -590,10 +590,10 @@ object (self)
               let bline = page#buffer#get_text ~start:iter ~stop:iter#forward_to_line_end () in
               if (Project.convert_to_utf8 project (strip_cr line)) = (strip_cr bline) then begin
                 let name_start = new_mark_name() in
-                let _ = page#buffer#create_mark ~name:name_start (iter#forward_chars start) in
+                let (_ : Gtk.text_mark) = page#buffer#create_mark ?name:(Some name_start) ?left_gravity:None (iter#forward_chars start) in
                 delete_marks <- (fun () -> page#buffer#delete_mark (`NAME name_start)) :: delete_marks;
                 let name_stop = new_mark_name() in
-                let _ = page#buffer#create_mark ~name:name_stop (iter#forward_chars stop) in
+                let (_ : Gtk.text_mark) = page#buffer#create_mark ?name:(Some name_stop) ?left_gravity:None (iter#forward_chars stop) in
                 delete_marks <- (fun () -> page#buffer#delete_mark (`NAME name_stop)) :: delete_marks;
                 result_line.marks <- result_line.marks @ [(name_start, name_stop)];
               end else (raise (Buffer_changed ((ln + 1), bline, line)))

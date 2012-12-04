@@ -27,22 +27,33 @@ open Miscellanea
 
 
 module Log = Common.Log.Make(struct let prefix = "Binannot" end)
-let _ = Log.set_verbosity `DEBUG
+let _ = Log.set_verbosity `ERROR
 
-type ident_kind = Def of Location.t | Int_ref of Location.t | Ext_ref
+type name = string
+
+type definition = {
+  mutable def_name : string;
+  mutable def_loc  : Location.t;
+  def_scope        : Location.t
+}
+
+type ident_kind =
+  | Def of definition
+  | Int_ref of Location.t (* Location of its defintion *)
+  | Ext_ref
 
 type ident = {
-  mutable ident_fname      : string;
-  mutable ident_kind       : ident_kind;
-  ident_name               : string;
-  ident_loc                : Location.t;
+  mutable ident_fname : string; (* Filename *)
+  mutable ident_kind  : ident_kind;
+  ident_loc           : name Location.loc; (* Name of the ident and location *)
 }
 
 type entry = { (* An entry collects all ident annotations of a source file. *)
-  timestamp : float; (* mtime of the cmt file read *)
-  locations : ident option array; (* Map from file offsets to idents *)
-  int_refs  : (Location.t, ident) Hashtbl.t; (* Map from def's locations to all its internal refs. *)
-  ext_refs  : (string, ident) Hashtbl.t; (* Map from module names (compilation units) to all external references  *)
+  timestamp           : float; (* mtime of the cmt file read *)
+  locations           : ident option array; (* Map from file offsets to idents *)
+  int_refs            : (Location.t, ident) Hashtbl.t; (* Map from def's locations to all its internal refs. *)
+  ext_refs            : (string, ident) Hashtbl.t; (* Map from module names (compilation units) to all external references *)
+  mutable definitions : definition list; (* List of all definitions in the file *)
 }
 
 let table_idents : (string, entry) Hashtbl.t = Hashtbl.create 7 (* source filename, entry *)
@@ -114,16 +125,16 @@ let read_cmt ~project ~filename:source ?(timestamp=0.) ?compile_buffer () =
 ;;
 
 (** print_ident *)
-let print_ident {ident_kind; ident_name; ident_loc; _} =
+let print_ident {ident_kind; ident_loc; _} =
   let loc' =
     match ident_kind with
-      | Def loc -> "scope: " ^ (string_of_loc loc)
-      | Int_ref def -> "def: " ^ (string_of_loc def)
+      | Def loc -> "scope: " ^ (string_of_loc loc.def_scope)
+      | Int_ref def_loc -> "def: " ^ (string_of_loc def_loc)
       | Ext_ref -> ""
   in
   printf "%-7s: %-30s (%-12s) (%-19s) %s\n%!"
     (String.uppercase (string_of_kind ident_kind))
-    ident_name (string_of_loc ident_loc) loc' ident_loc.loc_start.pos_fname;
+    ident_loc.txt (string_of_loc ident_loc.loc) loc' ident_loc.loc.loc_start.pos_fname;
 ;;
 
 

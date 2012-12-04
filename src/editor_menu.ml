@@ -91,11 +91,7 @@ let create ~editor ~page () =
     editor#with_current_page (fun page ->
       ignore (editor#scroll_to_definition (page#buffer#get_iter `INSERT)))));
   ignore (find_references#connect#activate ~callback:begin
-    Activity.wrap Activity.Annot begin fun () ->
-      editor#with_current_page begin fun page ->
-        editor#find_references (page#buffer#get_iter `INSERT)
-      end
-    end
+    Activity.wrap Activity.Annot (fun () -> Menu_op.find_definition_references editor)
   end);
   (*  *)
   let callback ev =
@@ -112,19 +108,8 @@ let create ~editor ~page () =
     delete#misc#set_sensitive page#buffer#has_selection;
     select_all#connect#activate ~callback:page#buffer#select_all;
 
-    Gmisclib.Idle.add begin fun () ->
-      let def_sensitive, ref_sensitive =
-        match editor#get_page `ACTIVE with
-          | None -> false, false
-          | Some page ->
-            let iter = page#buffer#get_iter `INSERT in
-            if not iter#ends_line && not (Glib.Unichar.isspace iter#char) then begin
-              Definition.has_definition_references ~page ~iter
-            end else false, false
-      in
-      find_definition#misc#set_sensitive def_sensitive;
-      find_references#misc#set_sensitive ref_sensitive;
-    end;
+    Gmisclib.Idle.add (fun () -> Menu_op.set_has_definition editor find_definition);
+    Gmisclib.Idle.add (fun () -> Menu_op.set_has_references editor find_references);
 
     List.iter (fun (w, s) -> w#misc#handler_block s) sigids;
     show_whitespace_characters#set_active editor#show_whitespace_chars;

@@ -50,9 +50,7 @@ object (self)
             match page#project.Prj.in_source_path file#path with
               | Some _ ->
                 let filename = file#path in
-                let bin_annot = Binannot_type.find ~page in
-                Some (bin_annot, Annotation.find_block_at_offset ~filename ~offset:iter#offset)
-                  (*~offset:(Glib.Utf8.offset_to_pos (self#get_text ()) ~pos:0 ~off:iter#offset)*)
+                Binannot_type.find ~page ()
               | _ -> None
           end;
     end else None
@@ -83,11 +81,7 @@ object (self)
     let open Location in
     let open Lexing in
     match annot with
-      | Some (Some {ba_loc; ba_type}, _ (*Some {
-          Oe.annot_start = start;
-          annot_stop = stop;
-          annot_annotations = annot_annotations;
-        }*)) ->
+      | Some {ba_loc; ba_type} ->
         let at_type = ba_type in
         let at_start = ba_loc.loc_start.pos_lnum, (ba_loc.loc_start.pos_cnum - ba_loc.loc_start.pos_bol) in
         let at_stop = ba_loc.loc_end.pos_lnum, (ba_loc.loc_end.pos_cnum - ba_loc.loc_end.pos_bol) in

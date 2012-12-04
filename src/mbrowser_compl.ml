@@ -149,33 +149,10 @@ object (self)
   method private compl_class ~text ~page () =
     let re1 = Miscellanea.regexp "[a-zA-Z_0-9']$" in
     let ins = page#buffer#get_iter `INSERT in
-    let filename = page#get_filename in
     let iter = ins#backward_find_char (fun x -> Glib.Utf8.from_unichar x = "#") in
     let prefix = page#buffer#get_text ~start:iter#forward_char ~stop:ins () in
-    let offset = iter#backward_char#offset in
-    let annot = Annotation.find_block_at_offset ~filename ~offset in
-    let class_type =
-      match annot with
-        | None -> (* try to lookup obj_name in the ident. table *)
-          let stop = iter in
-          let start = (stop#backward_find_char (fun x -> not (Str.string_match re1 (Glib.Utf8.from_unichar x) 0)))#forward_char in
-          let obj_name = page#buffer#get_text ~start ~stop () in
-          let obj_types =
-            Miscellanea.Xlist.filter_map begin fun ((f, n), (dstop, dtype)) ->
-              if f = filename && n = obj_name then begin
-                match dstop with
-                  | None -> Some dtype
-                  | Some stop when offset >= stop.Oe.annot_cnum ->
-                    Some dtype
-                  | _ -> None
-              end else None
-            end !Annotation.itable
-          in
-          (* TODO: exculde non-class types from the list *)
-          (* The head of the list is the last defined name *)
-          (match obj_types with [] -> None | x :: _ -> x);
-        | Some block -> Annotation.get_type block.Oe.annot_annotations
-    in
+    let typ = Binannot_type.find ~page ~iter:iter#backward_char () in
+    let class_type = Opt.map typ (fun x -> x.Binannot_type.ba_type) in
     match class_type with
       | Some class_type ->
         Log.println `TRACE "class_type = %s\n%!" class_type;

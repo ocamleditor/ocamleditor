@@ -35,7 +35,7 @@ type t = {
 exception Found of t
 
 module Log = Common.Log.Make(struct let prefix = "Binannot_type" end)
-let _ = Log.set_verbosity `TRACE
+let _ = Log.set_verbosity `ERROR
 
 (** find_pattern *)
 let rec find_pattern f offset ?(opt=false, false) {pat_desc; pat_loc; pat_type; pat_extra; _} =
@@ -406,13 +406,11 @@ let find_part_impl f offset = function
   | Partial_signature_item sig_item -> find_signature_item f offset sig_item
   | Partial_module_type mtyp -> find_module_type f offset mtyp;;
 
-(** find *)
-let find  ~page =
-  let compile_buffer () = page#compile_buffer ?join:(Some true) () in
-  match Binannot.read_cmt ~project:page#project ~filename:page#get_filename ~compile_buffer () with
+(** find_by_offset *)
+let find_by_offset ~project ~filename ~offset ?compile_buffer () =
+  match Binannot.read_cmt ~project ~filename ?compile_buffer () with
     | Some (filename, _, cmt) ->
       begin
-        let offset = (page#buffer#get_iter `INSERT)#offset in
         let f ba_loc ba_type =
           Log.println `TRACE "%d; %s : %s" offset (string_of_loc ba_loc) ba_type;
           raise (Found {ba_loc; ba_type});
@@ -429,3 +427,29 @@ let find  ~page =
         with Found ba -> Some ba
       end;
     | _ -> None
+
+(** find *)
+let find ~page ?iter () =
+  let compile_buffer () = page#compile_buffer ?join:(Some true) () in
+  let iter = match iter with Some x -> x | _ -> page#buffer#get_iter `INSERT in
+  find_by_offset ~project:page#project ~filename:page#get_filename ~offset:iter#offset ~compile_buffer ()
+(*  match Binannot.read_cmt ~project:page#project ~filename:page#get_filename ~compile_buffer () with
+    | Some (filename, _, cmt) ->
+      begin
+        let offset = iter#offset in
+        let f ba_loc ba_type =
+          Log.println `TRACE "%d; %s : %s" offset (string_of_loc ba_loc) ba_type;
+          raise (Found {ba_loc; ba_type});
+        in
+        try
+          Odoc_info.reset_type_names();
+          begin
+            match cmt.cmt_annots with
+              | Implementation {str_items; _} -> List.iter (find_structure_item f offset) str_items
+              | Partial_implementation parts -> Array.iter (find_part_impl f offset) parts
+              | _ -> ()
+          end;
+          None
+        with Found ba -> Some ba
+      end;
+    | _ -> None*)

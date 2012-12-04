@@ -33,11 +33,11 @@ type t = {
   filename      : string;
   real_filename : string;
   timestamp     : float;
-  locations     : (GdkPixbuf.pixbuf option * Location.t) list; (* filename, start_offset, stop_offset *)
+  locations     : (GdkPixbuf.pixbuf option * string Location.loc) list; (* filename, start_offset, stop_offset *)
 }
 
 (** widget *)
-class widget ~(editor : Editor.editor) ?packing () =
+class widget ~editor(* : Editor.editor)*) ?packing () =
   let search_started    = new search_started () in
   let search_finished   = new search_finished () in
   let vbox              = GPack.vbox ?packing () in
@@ -102,17 +102,21 @@ class widget ~(editor : Editor.editor) ?packing () =
   let col_pixbuf        = cols#add ((Gobject.Data.gobject_option : (GdkPixbuf.pixbuf option) Gobject.data_conv)) in
   let col_markup        = cols#add Gobject.Data.string in
   let col_line_num      = cols#add Gobject.Data.int in
+  let col_matches_num   = cols#add Gobject.Data.string_option in
   let col_locations     = cols#add Gobject.Data.caml in
   let model_lines       = GTree.list_store cols in
   let view_lines        = GTree.view ~model:model_lines ~headers_visible:false ~packing:rsw#add () in
   let _                 = view_lines#misc#set_property "enable-grid-lines" (`INT 2) in
   let renderer          = GTree.cell_renderer_text [`YPAD 0; `XPAD 0; `XALIGN 1.0; `CELL_BACKGROUND gutter_bg_color] in
+  let renderer_matches_num = GTree.cell_renderer_text [`YPAD 0; `XPAD 0; `XALIGN 0.5; `SCALE `SMALL; `FOREGROUND "#0000ff"; `CELL_BACKGROUND gutter_bg_color] in
   let renderer_markup   = GTree.cell_renderer_text [`YPAD 2; `XPAD 0; ] in
   let renderer_pixbuf   = GTree.cell_renderer_pixbuf [`YPAD 0; `XPAD 0; `CELL_BACKGROUND gutter_bg_color] in
   let vc_line_num       = GTree.view_column ~title:"" () in
   let _                 = vc_line_num#pack ~expand:false renderer_pixbuf in
+  let _                 = vc_line_num#pack ~expand:false renderer_matches_num in
   let _                 = vc_line_num#pack ~expand:true renderer in
   let _                 = vc_line_num#add_attribute renderer_pixbuf "pixbuf" col_pixbuf in
+  let _                 = vc_line_num#add_attribute renderer_matches_num "markup" col_matches_num in
   let _                 = vc_line_num#add_attribute renderer "markup" col_line_num in
   let vc_markup         = GTree.view_column ~title:"" ~renderer:(renderer_markup, ["markup", col_markup]) () in
   let _                 = view_lines#append_column vc_line_num in
@@ -245,11 +249,11 @@ object (self)
     Gaux.may signal_lines_selection_changed ~f:view_lines#selection#misc#handler_unblock;
 
   method private set_locations {real_filename; locations; _} =
-    let line_nums = List.map (fun (_, loc) -> loc.loc_start.pos_lnum) locations in
+    let line_nums = List.map (fun (_, loc) -> loc.loc.loc_start.pos_lnum) locations in
     let lines = Miscellanea.get_lines_from_file ~filename:real_filename line_nums in
     let locations_lines =
       List.map begin fun (lnum, line) ->
-        let locs = List.filter (fun (_, loc) -> lnum = loc.loc_start.pos_lnum) locations in
+        let locs = List.filter (fun (_, loc) -> lnum = loc.loc.loc_start.pos_lnum) locations in
         (lnum, line, locs)
       end lines
     in
@@ -264,6 +268,8 @@ object (self)
       model_lines#set ~row ~column:col_pixbuf pixbuf;
       model_lines#set ~row ~column:col_line_num lnum;
       model_lines#set ~row ~column:col_markup markup;
+      let len = List.length locs in
+      if len > 1 then model_lines#set ~row ~column:col_matches_num (Some ("<i>" ^ (string_of_int len) ^ "</i>"))
     end locations_lines;
     List.length locations_lines
 
@@ -275,7 +281,7 @@ object (self)
         begin
           match editor#get_page (`FILENAME filename) with
             | Some page ->
-              if not page#load_complete then (ignore (editor#load_page ~scroll:false page));
+              if not page#load_complete then (editor#load_page ?scroll:(Some false) page);
               begin
                 match view_lines#selection#get_selected_rows with
                   | path :: _ ->
@@ -288,8 +294,8 @@ object (self)
                       let locs = model_lines#get ~row ~column:col_locations in
                       match locs with
                         | (_, loc) :: _ ->
-                          let start = buffer#get_iter (`OFFSET loc.loc_start.pos_cnum) in
-                          let stop = buffer#get_iter (`OFFSET loc.loc_end.pos_cnum) in
+                          let start = buffer#get_iter (`OFFSET loc.loc.loc_start.pos_cnum) in
+                          let stop = buffer#get_iter (`OFFSET loc.loc.loc_end.pos_cnum) in
                           buffer#select_range start stop;
                           page#ocaml_view#scroll_lazy start;
                           editor#goto_view page#view;

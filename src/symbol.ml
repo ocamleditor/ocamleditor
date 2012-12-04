@@ -426,36 +426,32 @@ let find_parent (cache : symbol_cache) ?(update_cache=false) symbol =
   try Some (List.find (fun s -> s.sy_id = parent) s_table) with Not_found -> None;;
 
 (* find_local_defs *)
-let find_local_defs ~regexp (*~(project : Prj.t)*) ~filename ~offset =
-  match Annotation.find ~filename () with
-    | None -> []
-    | Some an ->
-      let blocks = an.Oe.annot_blocks in
-      let defs =
-        (* start non comprende gli spazi bianchi e commenti *)
-        List.map begin fun block ->
-          match Annotation.get_def block.Oe.annot_annotations with
-            | Some (name, start, stop) when Str.string_match regexp name 0 ->
-              let typ =
-                match Annotation.get_type block.Oe.annot_annotations with
-                  | None -> "???"
-                  | Some typ -> typ
-              in
-              let stop = match stop with Some stop -> stop.Oe.annot_cnum | _ -> max_int in
-              if start.Oe.annot_cnum <= offset && offset < stop
-              then (Some (name, typ))
-              else None
-            | _ -> None
-        end blocks
+let find_local_defs ~regexp ~(project : Prj.t) ~filename ~offset =
+  let open Location in
+  let open Lexing in
+  let open Binannot in
+  match Binannot_ident.find_local_definitions ~project ~filename () with
+    | Some local_defs ->
+      let names =
+        List.fold_left begin fun acc def ->
+          if def.def_scope.loc_start.pos_cnum < offset && offset < def.def_scope.loc_end.pos_cnum
+          then def :: acc else acc
+        end [] local_defs
       in
       let modlid = modname_of_path filename in
-      List.map (fun (name, typ) -> {
-        sy_id        = [modlid; name];
-        sy_kind      = Pvalue;
-        sy_type      = typ;
-        sy_filename  = filename;
-        sy_local     = true;
-      }) (Opt.filter defs)
+      List.map (fun def ->
+        let typ =
+          match Binannot_type.find_by_offset ~project ~filename ~offset:def.def_loc.loc_start.pos_cnum () with
+            | Some typ -> typ.Binannot_type.ba_type
+            | _ -> ""
+        in {
+          sy_id        = [modlid; def.def_name];
+          sy_kind      = Pvalue;
+          sy_type      = typ;
+          sy_filename  = filename;
+          sy_local     = true;
+        }) names
+    | _ -> []
 ;;
 
 (*
@@ -524,8 +520,8 @@ let filter_by_name
   in
   let result =
     match include_locals with
-      | Some (_(*project*), filename, offset) ->
-        let locals = find_local_defs ~regexp (*~project*) ~filename ~offset in
+      | Some (project, filename, offset) ->
+        let locals = find_local_defs ~regexp ~project ~filename ~offset in
         locals @ result
       | _ -> result
   in

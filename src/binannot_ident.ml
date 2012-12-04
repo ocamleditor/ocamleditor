@@ -68,9 +68,8 @@ let rec iter_pattern f {pat_desc; pat_loc; pat_type; pat_extra; _} =
     | Tpat_var (id, loc) ->
       [{
         ident_fname      = "";
-        ident_kind       = Def loc.Location.loc;
-        ident_name       = Ident.name id;
-        ident_loc        = loc.Location.loc;
+        ident_kind       = Def {def_name=loc.txt; def_loc=loc.Location.loc; def_scope=loc.loc};
+        ident_loc        = Location.mkloc (Ident.name id) loc.Location.loc;
       }]
 
 (** iter_expression *)
@@ -79,18 +78,21 @@ and iter_expression f {exp_desc; exp_loc; exp_type; exp_extra; _} =
   let fp = iter_pattern f in
   let fpe expr pe =
     List.iter begin fun (p, e) ->
-      List.iter (fun d -> d.ident_kind <- Def expr.exp_loc; f d) (fp p);
+      List.iter (fun d -> d.ident_kind <- Def {def_name=""; def_loc=Location.none; def_scope=expr.exp_loc}; f d) (fp p);
       fe e;
     end pe
   in
   match exp_desc with
     | Texp_ident (id, loc, vd) ->
-      let ident_kind = if Ident.name (Path.head id) = Path.last id then Int_ref vd.Types.val_loc else Ext_ref in
+      let ident_kind =
+        if Ident.name (Path.head id) = Path.last id
+        then Int_ref vd.Types.val_loc
+        else Ext_ref
+      in
       let annot = {
         ident_fname      = "";
         ident_kind;
-        ident_name       = Path.name id;
-        ident_loc        = loc.Location.loc
+        ident_loc        = Location.mkloc (Path.name id) loc.Location.loc;
       } in
       f annot;
     | Texp_let (_, pe, expr) ->
@@ -99,15 +101,14 @@ and iter_expression f {exp_desc; exp_loc; exp_type; exp_extra; _} =
     | Texp_function (label, pe, _) ->
       List.iter begin fun (p, e) ->
         let defs =
-          (List.map (fun d -> d.ident_kind <- Def e.exp_loc; d) (fp p)) @
+          (List.map (fun d -> d.ident_kind <- Def {def_name=""; def_loc=none; def_scope=e.exp_loc}; d) (fp p)) @
           (List.map begin fun (pe, pe_loc) ->
             let def_loc =
               {pe_loc with loc_end = {pe_loc.loc_start with pos_cnum = pe_loc.loc_start.pos_cnum + String.length label}}
             in {
               ident_fname      = "";
-              ident_kind       = Def e.exp_loc;
-              ident_name       = label;
-              ident_loc        = def_loc
+              ident_kind       = Def {def_name=""; def_loc=none; def_scope=e.exp_loc};
+              ident_loc        = Location.mkloc label def_loc
             }
           end p.pat_extra)
         in
@@ -117,7 +118,7 @@ and iter_expression f {exp_desc; exp_loc; exp_type; exp_extra; _} =
     | Texp_match (expr, pe, _) ->
       fe expr;
       List.iter begin fun (p, e) ->
-        List.iter (fun d -> d.ident_kind <- Def e.exp_loc; f d) (fp p);
+        List.iter (fun d -> d.ident_kind <- Def {def_name=""; def_loc=none; def_scope=e.exp_loc}; f d) (fp p);
         fe e;
       end pe
     | Texp_apply (expr, pe) ->
@@ -126,7 +127,7 @@ and iter_expression f {exp_desc; exp_loc; exp_type; exp_extra; _} =
     | Texp_try (expr, pe) ->
       fe expr;
       List.iter begin fun (p, e) ->
-        List.iter (fun d -> d.ident_kind <- Def e.exp_loc; f d) (fp p);
+        List.iter (fun d -> d.ident_kind <- Def {def_name=""; def_loc=none; def_scope=e.exp_loc}; f d) (fp p);
         fe e;
       end pe
     | Texp_tuple el -> List.iter fe el
@@ -235,7 +236,7 @@ and iter_class_expr f {cl_desc; cl_loc; _} =
     | Tcl_structure str -> iter_class_structure f str
     | Tcl_fun (_, pat, ll, expr, _) ->
       let defs = iter_pattern f pat in
-      List.iter (fun d -> d.ident_kind <- Def expr.cl_loc; f d) defs;
+      List.iter (fun d -> d.ident_kind <- Def {def_name=""; def_loc=none; def_scope=expr.cl_loc}; f d) defs;
       (*List.iter (fun (_, _, expr) -> ignore (iter_expression f expr)) ll;*)
       iter_class_expr f expr
     | Tcl_apply (expr, ll) ->
@@ -244,7 +245,7 @@ and iter_class_expr f {cl_desc; cl_loc; _} =
     | Tcl_let (_, ll, ll2, c_expr) ->
       List.iter begin fun (p, e) ->
         let defs = iter_pattern f p in
-        List.iter (fun d -> d.ident_kind <- Def c_expr.cl_loc; f d) defs;
+        List.iter (fun d -> d.ident_kind <- Def {def_name=""; def_loc=none; def_scope=c_expr.cl_loc}; f d) defs;
         iter_expression f e;
       end ll;
       (*List.iter begin fun (_, loc, expr) ->
@@ -312,7 +313,8 @@ and iter_structure_item f {str_desc; str_loc; _} =
           defs @ acc
         end [] pe)
       in
-      List.iter (fun d -> d.ident_kind <- Def {str_loc with loc_start = str_loc.loc_end; loc_end = Lexing.dummy_pos}) defs;
+      List.iter (fun d -> d.ident_kind <-
+        Def {def_name=""; def_loc=none; def_scope={str_loc with loc_start = str_loc.loc_end; loc_end = Lexing.dummy_pos}}) defs;
       List.iter f defs
     | Tstr_open (_, lid) -> ()
     | Tstr_include (module_expr, _) -> ()
@@ -332,21 +334,24 @@ and iter_structure_item f {str_desc; str_loc; _} =
 ;;
 
 (** register *)
-let register filename entry ({ident_loc; ident_kind; _} as annot) =
-  if ident_loc <> Location.none then begin
-    annot.ident_fname <- filename;
-    let start = ident_loc.loc_start.pos_cnum in
-    let stop = ident_loc.loc_end.pos_cnum in
-    for i = start to stop do entry.locations.(i) <- Some annot done;
+let register filename entry ({ident_loc; ident_kind; _} as ident) =
+  if ident_loc.loc <> Location.none then begin
+    ident.ident_fname <- filename;
+    let start = ident_loc.loc.loc_start.pos_cnum in
+    let stop = ident_loc.loc.loc_end.pos_cnum in
+    for i = start to stop do entry.locations.(i) <- Some ident done;
     match ident_kind with
-      | Int_ref def -> Hashtbl.add entry.int_refs def annot
+      | Int_ref def_loc -> Hashtbl.add entry.int_refs def_loc ident;
       | Ext_ref ->
         begin
-          match Longident.flatten (Longident.parse annot.ident_name) with
-            | modname :: _ -> Hashtbl.add entry.ext_refs modname annot
+          match Longident.flatten (Longident.parse ident.ident_loc.txt) with
+            | modname :: _ -> Hashtbl.add entry.ext_refs modname ident
             | _ -> ()
         end;
-      | Def _ -> ()
+      | Def def ->
+        if def.def_name = "" then (def.def_name <- ident_loc.txt);
+        if def.def_loc = Location.none then def.def_loc <- ident_loc.loc;
+        entry.definitions <- def :: entry.definitions;
   end
 
 (** scan *)
@@ -362,9 +367,10 @@ let scan ~project ~filename ?compile_buffer () =
           let size = (Unix.stat (cmt.cmt_builddir // cmt_sourcefile)).Unix.st_size + 1 in
           let entry = {
             timestamp;
-            locations = Array.create size None;
-            int_refs  = Hashtbl.create 7;
-            ext_refs  = Hashtbl.create 7
+            locations   = Array.create size None;
+            int_refs    = Hashtbl.create 7;
+            ext_refs    = Hashtbl.create 7;
+            definitions = [];
           } in
           Hashtbl.replace table_idents filename entry;
           let f = register filename entry in
@@ -386,7 +392,7 @@ let scan ~project ~filename ?compile_buffer () =
 
 (** find_external_definition *)
 let find_external_definition ~project ~ident =
-  let longid = Longident.parse ident.ident_name in
+  let longid = Longident.parse ident.ident_loc.txt in
   match Longident.flatten longid with
     | name :: _ :: _ ->
       let name = name ^ ".ml" in
@@ -402,11 +408,11 @@ let find_external_definition ~project ~ident =
               for i = Array.length locations - 1 downto 0 do
                 match locations.(i) with
                   | None -> ()
-                  | Some ({ident_kind; ident_name; _} as def_ident) ->
+                  | Some ({ident_kind; ident_loc; _} as def_ident) ->
                     match ident_kind with
-                      | Def scope when
-                          scope.loc_end.pos_cnum = -1 &&
-                          ident_name = ext_name ->
+                      | Def def when
+                          def.def_scope.loc_end.pos_cnum = -1 &&
+                          ident_loc.txt = ext_name ->
                             raise (Found def_ident)
                       | Int_ref _ | Ext_ref | Def _ -> ()
               done;
@@ -434,13 +440,13 @@ let scan_project_files ~project ?(sort=true) f =
 (** find_project_external_references *)
 let find_project_external_references ~project ~def =
   match def.ident_kind with
-    | Def scope when scope.loc_end.pos_cnum = -1 ->
-      let def_modname = modname_of_path def.ident_loc.loc_start.pos_fname in
+    | Def d when d.def_scope.loc_end.pos_cnum = -1 ->
+      let def_modname = modname_of_path def.ident_loc.loc.loc_start.pos_fname in
       scan_project_files ~project begin fun acc filename entry ->
         try
           let mod_refs = Hashtbl.find_all entry.ext_refs def_modname in
-          acc @ List.filter begin fun {ident_name; _} ->
-            (Longident.last (Longident.parse ident_name)) = def.ident_name
+          acc @ List.filter begin fun {ident_loc; _} ->
+            (Longident.last (Longident.parse ident_loc.txt)) = def.ident_loc.txt
           end mod_refs
         with Not_found -> acc
       end;
@@ -448,25 +454,25 @@ let find_project_external_references ~project ~def =
 ;;
 
 (** find_library_external_references *)
-let find_library_external_references ~project ~ident:{ident_kind; ident_name; _} =
+let find_library_external_references ~project ~ident:{ident_kind; ident_loc; _} =
   match ident_kind with
     | Ext_ref ->
       scan_project_files ~project begin fun acc filename entry ->
-        match Longident.flatten (Longident.parse ident_name) with
+        match Longident.flatten (Longident.parse ident_loc.txt) with
           | mod_name :: _ :: _ ->
             let all_refs = Hashtbl.find_all entry.ext_refs mod_name in
-            let refs = List.filter (fun x -> x.ident_name = ident_name) all_refs in
+            let refs = List.filter (fun x -> x.ident_loc.txt = ident_loc.txt) all_refs in
             acc @ refs;
           | _ -> assert false
       end
     | Def _ | Int_ref _ -> []
 ;;
 
-(** find_definition_and_references *)
-let find_definition_and_references ~project ~entry ~ident =
+(** find_definition_and_references' *)
+let find_definition_and_references' ~project ~entry ~ident =
   match ident.ident_kind with
     | Def _ -> (* Cursor offset is on a Def *)
-      let int_refs = Hashtbl.find_all entry.int_refs ident.ident_loc in
+      let int_refs = Hashtbl.find_all entry.int_refs ident.ident_loc.loc in
       let ext_refs = find_project_external_references ~project ~def:ident in
       {bai_def = Some ident; bai_refs = int_refs @ ext_refs}
     | Int_ref def -> (* Cursor offset is on an Int_ref *)
@@ -479,7 +485,7 @@ let find_definition_and_references ~project ~entry ~ident =
         match find_external_definition ~project ~ident with
           | Some (Project_def def) ->
             let entry_def = try Some (Hashtbl.find table_idents def.ident_fname) with Not_found -> None in
-            let int_refs = Opt.map_default entry_def [] (fun e -> Hashtbl.find_all e.int_refs def.ident_loc) in
+            let int_refs = Opt.map_default entry_def [] (fun e -> Hashtbl.find_all e.int_refs def.ident_loc.loc) in
             let ext_refs = find_project_external_references ~project ~def in
             {bai_def = Some def; bai_refs = int_refs @ ext_refs}
           | Some Library_def ->
@@ -495,10 +501,28 @@ let find_definition_and_references ~project ~entry ~ident =
 let find_ident ~project ~filename ~offset ?compile_buffer () =
   scan ~project ~filename ?compile_buffer ();
   try
+    let {locations; _} = Hashtbl.find table_idents filename in
+    locations.(offset)
+  with Not_found -> None
+;;
+
+(** find_local_definitions *)
+let find_local_definitions ~project ~filename ?compile_buffer () =
+  scan ~project ~filename ?compile_buffer ();
+  try
+    let {definitions; _} = Hashtbl.find table_idents filename in
+    Some definitions
+  with Not_found -> None
+;;
+
+(** find_definition_and_references *)
+let find_definition_and_references ~project ~filename ~offset ?compile_buffer () =
+  scan ~project ~filename ?compile_buffer ();
+  try
     let {locations; _} as entry = Hashtbl.find table_idents filename in
-    let ident = locations.(offset) in
+    let ident = find_ident ~project ~filename ~offset ?compile_buffer () in
     Opt.map_default ident None begin fun ident ->
-      Some (find_definition_and_references ~project ~entry ~ident)
+      Some (find_definition_and_references' ~project ~entry ~ident)
     end;
   with Not_found -> None
 ;;

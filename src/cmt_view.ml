@@ -569,7 +569,7 @@ object (self)
           let iter = iter#forward_chars start in
           if iter#line = line then begin
             buffer#block_signal_handlers ();
-            info.mark <- Some (buffer#create_mark ?left_gravity:None iter);
+            info.mark <- Some (buffer#create_mark ?name:None ?left_gravity:None iter);
             buffer#unblock_signal_handlers ()
           end
         end

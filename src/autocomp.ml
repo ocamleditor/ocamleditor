@@ -62,9 +62,8 @@ let compile_buffer ~project ~editor ~page ?(join=false) () =
         let chan = open_out_bin tmp_filename in
         lazy (output_string chan text) /*finally*/ lazy (close_out chan);
         (* Compile *)
-        let command = sprintf "%s %s %s -I ../%s %s ../%s/%s"
+        let command = sprintf "%s %s -I ../%s %s ../%s/%s"
           project.Prj.autocomp_compiler
-          "-w +a -bin-annot"
           project.Prj.autocomp_cflags
           Project.tmp
           (Project.get_search_path_i_format project)

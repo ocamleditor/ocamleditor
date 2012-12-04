@@ -283,22 +283,23 @@ object (self)
           Gmisclib.Idle.add ~prio:300 (fun () -> Project.save_bookmarks project);
     with Not_found -> ()
 
-  method scroll_to_definition iter =
-    self#with_current_page begin fun page ->
-      let project = self#project in
-      let filename = page#get_filename in
-      let offset = iter#offset in
-      match
+  method get_definition (iter : GText.iter) =
+    match self#get_page `ACTIVE with
+      | Some page ->
+        let project = self#project in
+        let filename = page#get_filename in
+        let offset = iter#offset in
         Binannot_ident.find_definition
           ~project
           ~filename
           ~offset
           ~compile_buffer:(fun () -> page#compile_buffer ?join:(Some true))  ()
-      with
-        | Some ident ->
-          self#location_history_add ~iter ~kind:`BROWSE ();
-          self#goto_ident ident
-        | _ -> ()
+      | _ -> None
+
+  method scroll_to_definition iter =
+    Gaux.may (self#get_definition iter) ~f:begin fun ident ->
+      self#location_history_add ~iter ~kind:`BROWSE ();
+      self#goto_ident ident
     end
 
   method goto_ident ident =
@@ -306,13 +307,13 @@ object (self)
     let open Lexing in
     match self#get_page (`FILENAME ident.Binannot.ident_fname) with
       | Some page ->
-        if not page#load_complete then (ignore (self#load_page ~scroll:false page));
+        if not page#load_complete then (self#load_page ~scroll:false page);
         let loc = ident.Binannot.ident_loc in
         let buffer = page#buffer in
         let ts = buffer#changed_timestamp in
-        if ts <= (Unix.stat loc.loc_start.pos_fname).Unix.st_mtime then begin
-          let start = buffer#get_iter (`OFFSET loc.loc_start.pos_cnum) in
-          let stop = buffer#get_iter (`OFFSET loc.loc_end.pos_cnum) in
+        if ts <= (Unix.stat loc.loc.loc_start.pos_fname).Unix.st_mtime then begin
+          let start = buffer#get_iter (`OFFSET loc.loc.loc_start.pos_cnum) in
+          let stop = buffer#get_iter (`OFFSET loc.loc.loc_end.pos_cnum) in
           buffer#select_range start stop;
           page#ocaml_view#scroll_lazy start;
           self#goto_view page#view;
@@ -323,72 +324,6 @@ object (self)
       | _ ->
         ignore (self#open_file ~active:false ~scroll_offset:0 ~offset:0 ident.Binannot.ident_fname);
         self#goto_ident ident
-
-  method find_references (iter : GText.iter) =
-    self#with_current_page begin fun page ->
-      let rec get_page filename =
-        match self#get_page (`FILENAME filename) with
-          | Some page ->
-            if not page#load_complete then (self#load_page page);
-            page
-          | None ->
-            ignore (self#open_file ~active:true ~scroll_offset:0 ~offset:0filename);
-            get_page filename
-      in
-      let goto_page = (fun page -> self#goto_view (page#view :> Text.view)) in
-      match Definition.find_definition ~page ~iter with
-        | None ->
-          Opt.may page#annot_type begin fun at ->
-            match at#get_annot_at_iter iter with
-              | Some (_, Some { Oe.annot_annotations = annot_annotations; _ }) ->
-                Gaux.may (Annotation.get_ext_ref annot_annotations) ~f:begin fun fullname ->
-                  let ext_refs = Definition.find_ext_ref ~project ~src_path:(Project.path_src self#project) (`EXACT fullname) in
-                  self#find_references' (`EXT (fullname, ext_refs, get_page, goto_page));
-                end
-              | _ -> ()
-          end;
-        | Some (_, _, filename, start, _) ->
-          let def_source =
-            match self#get_page (`FILENAME filename) with
-              | None ->
-                `DEF_FILE_POS (filename, start, get_page, goto_page)
-              | Some page ->
-                if not page#load_complete then (self#load_page page);
-                let text = page#buffer#get_text () in
-                let start = Convert.offset_from_pos text ~pos:start in
-                let start = page#buffer#get_iter (`OFFSET start) in
-                `DEF_PAGE_ITER (page, start, get_page, (goto_page))
-          in
-          self#find_references' def_source;
-    end
-
-  val mutable find_references_results = None;
-
-  method private find_references' def_source =
-    let page = match find_references_results with
-      | None ->
-        let widget = new Find_references.widget ~editor:self () in
-        ignore (widget#misc#connect#destroy ~callback:begin fun () ->
-          find_references_results <- None;
-        end);
-        widget
-      | Some x -> x
-    in
-    let hbox = GPack.hbox ~spacing:3 () in
-    let label = GMisc.label ~packing:hbox#pack () in
-    let messages = match Oe_config.layout_find_references with `HORIZONTAL -> Messages.hmessages | _ -> Messages.vmessages in
-    ignore (page#connect#search_started ~callback:begin fun () ->
-      if page#misc#parent = None then
-        (ignore (messages#append_page ~label_widget:hbox#coerce page#as_page));
-      label#set_text "Search";
-      page#present();
-    end);
-    ignore (page#connect#search_finished ~callback:begin fun () ->
-      page#active#set false;
-      page#present();
-    end);
-    page#find ~project:self#project def_source;
-    find_references_results <- Some page;
 
   method dialog_file_select () = Editor_dialog.file_select ~editor:self ()
 

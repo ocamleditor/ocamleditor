@@ -55,6 +55,7 @@ val find_by_modulepath :
 val filter_methods : Oe.symbol_cache -> string list -> Oe.symbol list
 val find_local_defs :
   regexp:Str.regexp ->
+  project:Prj.t ->
   filename:string -> offset:int -> Oe.symbol list
 val filter_by_name :
   ?use_longidents:bool ->

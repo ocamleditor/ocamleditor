@@ -72,7 +72,7 @@ let set_ocaml_home ~ocamllib project =
   project.ocamllib_from_env <- from_env;
   Unix.putenv "OCAML_HOME" project.ocaml_home;
   Ocaml_config.putenv_ocamllib (Some project.ocamllib);
-  project.autocomp_compiler <- sprintf "%s -c -thread -annot" (Ocaml_config.ocamlc());
+  project.autocomp_compiler <- sprintf "%s -c -w +a -thread -bin-annot" (Ocaml_config.ocamlc());
   ignore (Thread.create begin fun () ->
     project.can_compile_native <- (Ocaml_config.can_compile_native ~ocaml_home:project.ocaml_home ()) <> None;
   end ())

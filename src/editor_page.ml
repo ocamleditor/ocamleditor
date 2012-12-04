@@ -504,14 +504,20 @@ object (self)
     (** Hyperlinks *)
     ignore (self#view#hyperlink#connect#hover ~callback:begin fun (bounds, iter) ->
       if iter#inside_word then begin
-        editor#with_current_page begin fun page ->
-          match Definition.find_definition ~page ~iter with
-            | None -> ()
-            | Some (start, stop, _, _, _) ->
-              let start = buffer#get_iter (`OFFSET start) in
-              let stop = buffer#get_iter (`OFFSET stop) in
-              bounds := Some (start, stop)
-        end
+        match editor#get_definition iter with
+          | None -> ()
+          | Some _ ->
+            match
+              Binannot_ident.find_ident
+                ~project ~filename:self#get_filename ~offset:iter#offset
+                ~compile_buffer:(fun () -> self#compile_buffer ?join:(Some true)) ()
+            with
+              | Some ident_at_iter ->
+                let _, start, stop = Binannot.cnum_of_loc ident_at_iter.Binannot.ident_loc.Location.loc in
+                let start = buffer#get_iter (`OFFSET start) in
+                let stop = buffer#get_iter (`OFFSET stop) in
+                bounds := Some (start, stop)
+              | _ -> ()
       end
     end);
     ignore (self#view#hyperlink#connect#activate ~callback:begin fun iter ->

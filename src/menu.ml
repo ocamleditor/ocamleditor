@@ -419,8 +419,8 @@ let search ~browser ~group ~flags items =
   ignore (find_references#connect#activate ~callback:(fun () -> Menu_op.find_definition_references editor));
   ignore (search_item#misc#connect#state_changed ~callback:begin fun state ->
     if state = `NORMAL then begin
-      Gmisclib.Idle.add (fun () -> Menu_op.has_definition editor find_definition);
-      Gmisclib.Idle.add (fun () -> Menu_op.has_references editor find_references);
+      Gmisclib.Idle.add (fun () -> Menu_op.set_has_definition editor find_definition);
+      Gmisclib.Idle.add (fun () -> Menu_op.set_has_references editor find_references);
     end
   end);
   (** Find file *)

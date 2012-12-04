@@ -20,7 +20,15 @@
     - Ability to hide targets;
     - Dependencies between targets and external build tasks.
 
-  * "Structure pane" revamped: now read informations from "-bin-annot".
+  * Structure Pane revamped: now is based on ".cmt" files.
+
+  * Inferred Types: now are based on ".cmt" files.
+
+  * Find Definition/References:
+      - now based on ".cmt" files;
+      - search results are now displayed in a new widget.
+
+  * Completion: more accurate completion of local definitions.
 
   * More options in Preferences dialog.
 
@@ -126,7 +134,7 @@
   * Code templates.
   * Show line endings.
   * File tab context menu.
-  * Find definition/references, based on ".annot" files. Shortcuts for
+  * Find Definition/References, based on ".annot" files. Shortcuts for
     "find definition" are Ctrl+Click or Ctrl+Return; shortcut for "find
     references" is Shift+Ctrl+Return. When you move to a definition,
     navigation is stored in the location history.

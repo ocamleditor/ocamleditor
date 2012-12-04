@@ -23,7 +23,7 @@
 open Printf
 open Miscellanea
 
-let table = Hashtbl.create 17
+(*let table = Hashtbl.create 17
 let table_critical = Mutex.create()
 let itable = ref []
 
@@ -153,7 +153,7 @@ let find_block_at_offset ~filename ~offset =
   match find ~filename () with
     | None -> None
     | Some annot -> find_block_at_offset' annot offset
-
+*)
 (** preload *)
 let preload ~project =
   let name = "Parsing \xC2\xAB.annot\xC2\xBB files..." in
@@ -163,8 +163,7 @@ let preload ~project =
     try
       let src_path = Project.path_src project in
       let files = File.readdirs (*~links:false*) (Some (fun x -> x ^^ ".ml")) src_path in
-      (*let files = List.filter (fun x -> x ^^ ".ml") files in*)
-      List.iter (fun filename -> ignore (find ~filename ())) files;
+      (*List.iter (fun filename -> ignore (find ~filename ())) files;*)
       List.iter (fun filename -> Binannot_ident.scan ~project ~filename ()) files;
       finally()
     with ex -> begin

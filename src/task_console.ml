@@ -515,7 +515,7 @@ let exec ~editor ?use_thread ?(with_deps=false) task_kind target =
     if Oebuild.check_restrictions target.restrictions then
       [`ANNOT, begin
         let cmd, args = Target.create_cmd_line target in
-        let args = (true, "-c") :: (true, "-annot") :: args in
+        let args = (true, "-c") (*:: (true, "-annot")*) :: args in
         let name = sprintf "Compile \xC2\xAB%s\xC2\xBB" (Filename.basename target.Target.name) in
         Task.create ~name ~env:[] ~dir:"" ~cmd ~args ()
       end]
