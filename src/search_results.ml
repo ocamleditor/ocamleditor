@@ -125,7 +125,12 @@ class widget ~editor(* : Editor.editor)*) ?packing () =
   let _                 = view_lines#misc#modify_base [
     `SELECTED, `COLOR (Preferences.tag_color "highlight_current_line");
     `NORMAL,   `NAME (fst pref.Preferences.pref_bg_color);
-    `ACTIVE, `NAME gutter_bg_color
+    `ACTIVE,   `NAME gutter_bg_color
+  ] in
+  let _                 = view_lines#misc#modify_text [
+    `SELECTED, `COLOR (Preferences.tag_color "lident");
+    `NORMAL,   `COLOR (Preferences.tag_color "lident");
+    `ACTIVE,   `COLOR (Preferences.tag_color "lident");
   ] in
   let _                 = view_lines#misc#modify_font_by_name pref.Preferences.pref_base_font in
 object (self)
