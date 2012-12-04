@@ -34,7 +34,7 @@ let mkrelease () =
     popd();
     Sys.chdir "..";
     let name = Filename.basename (Sys.getcwd ()) in
-    let version = get_line_from_file ~filename:"VERSION" 1 in
+    let version = match get_lines_from_file ~filename:"VERSION" [1] with (_, x) :: [] -> x | _ -> assert false in
     let package = sprintf "%s-%s" name version in
     Sys.chdir "..";
     kprintf remove_file "%s.tar.gz" package;

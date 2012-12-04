@@ -61,7 +61,7 @@ let install () =
     let exit_code = kprintf Sys.command "\"%s\" ..\\ocamleditor.nsi" (Filename.quote "%ProgramFiles(x86)%\\NSIS\\makensis") in
     match exit_code with
       | 0 ->
-        let version = get_line_from_file ~filename:"../VERSION" 1 in
+        let version = match get_lines_from_file ~filename:"../VERSION" [1] with (_, x) :: [] -> x | _ -> assert false in
         let cmd = sprintf "..\\ocamleditor-%s" version in
         ignore (Sys.command cmd)
       | _ -> prerr_endline "This script is not available under Windows.
