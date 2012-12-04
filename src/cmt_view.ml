@@ -327,7 +327,6 @@ object (self)
   method select_from_buffer ?(align : float option) (mark : Gtk.text_mark) =
     let iter = buffer#get_iter_at_mark (`MARK mark) in
     let found = ref None in
-    let smodel = self#get_model () in
     model#foreach begin fun path _ ->
       try
         let info = Hashtbl.find table_info path in
@@ -343,10 +342,11 @@ object (self)
       with Not_found -> false
     end;
     Gaux.may !found ~f:begin fun path ->
-      let path = smodel#convert_child_path_to_path path in
       let row = model#get_iter path in
       let has_lazy = self#force_lazy row in
       if has_lazy then self#select_from_buffer ?align mark else begin
+        let smodel = self#get_model () in
+        let path = smodel#convert_child_path_to_path path in
         view#expand_to_path path;
         Gaux.may signal_selection_changed ~f:view#selection#misc#handler_block;
         view#selection#select_path path;

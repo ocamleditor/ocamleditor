@@ -147,7 +147,7 @@ object (self)
     kprintf self#set_title_markup "Module <b><tt>%s</tt></b>" (Symbol.string_of_id module_path);
 
   method private compl_class ~text ~page () =
-    let re1 = Miscellanea.regexp "[a-zA-Z_0-9']$" in
+    (*let re1 = Miscellanea.regexp "[a-zA-Z_0-9']$" in*)
     let ins = page#buffer#get_iter `INSERT in
     let iter = ins#backward_find_char (fun x -> Glib.Utf8.from_unichar x = "#") in
     let prefix = page#buffer#get_text ~start:iter#forward_char ~stop:ins () in

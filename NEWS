@@ -26,7 +26,7 @@
 
   * Find Definition/References:
       - now based on ".cmt" files;
-      - search results are now displayed in a new widget.
+      - search results are displayed in a new widget.
 
   * Completion: more accurate completion of local definitions.
 
