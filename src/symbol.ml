@@ -432,11 +432,19 @@ let find_local_defs ~regexp ~(project : Prj.t) ~filename ~offset =
   let open Binannot in
   match Binannot_ident.find_local_definitions ~project ~filename () with
     | Some local_defs ->
-      let names =
+      let defs =
         List.fold_left begin fun acc def ->
-          if def.def_scope.loc_start.pos_cnum < offset && offset < def.def_scope.loc_end.pos_cnum
+          if def.def_scope.loc_start.pos_cnum < offset && offset < def.def_scope.loc_end.pos_cnum && Str.string_match regexp def.def_name 0
           then def :: acc else acc
         end [] local_defs
+      in
+      let defs =
+        List.fold_left begin fun acc def ->
+          match List_opt.find (fun d -> d.def_name = def.def_name) acc with
+            | Some d when d.def_scope.loc_start.pos_cnum > def.def_scope.loc_start.pos_cnum -> acc
+            | Some d -> def :: (List.filter ((<>) d) acc)
+            | None -> def :: acc
+        end [] defs
       in
       let modlid = modname_of_path filename in
       List.map (fun def ->
@@ -450,7 +458,7 @@ let find_local_defs ~regexp ~(project : Prj.t) ~filename ~offset =
           sy_type      = typ;
           sy_filename  = filename;
           sy_local     = true;
-        }) names
+        }) defs
     | _ -> []
 ;;
 
