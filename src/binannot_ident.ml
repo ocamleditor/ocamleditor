@@ -236,7 +236,8 @@ and iter_expression f {exp_desc; exp_loc; exp_type; exp_extra; _} =
 (** iter_module_expr *)
 and iter_module_expr f {mod_desc; mod_loc; _} =
   match mod_desc with
-    | Tmod_structure {str_items; _} -> List.iter (iter_structure_item f) str_items
+    | Tmod_structure {str_items; _} ->
+      List.iter (iter_structure_item f) str_items
     | Tmod_functor (_, _, _, mod_expr) -> iter_module_expr f mod_expr
     | Tmod_apply (me1, me2, _) ->
       iter_module_expr f me1;
@@ -269,7 +270,24 @@ and iter_signature_item f {sig_desc; sig_loc; _} =
     | Tsig_recmodule ll -> List.iter (fun (_, _, mt) -> fmt mt) ll
     | Tsig_modtype (_, _, Tmodtype_abstract) -> ()
     | Tsig_modtype (_, _, Tmodtype_manifest mt) -> fmt mt
-    | Tsig_open _ -> ()
+    | Tsig_open (path, loc) ->
+      let ident_kind =
+        if Ident.name (Path.head path) = Path.last path
+        then Int_ref none else Ext_ref
+      in
+      let ident = {
+        ident_kind;
+        ident_fname = "";
+        ident_loc   = Location.mkloc (Path.name path) loc.loc;
+      } in
+      f ident;
+
+      (*let ident = {
+        ident_kind  = Open;
+        ident_fname = "";
+        ident_loc   = Location.mkloc (Path.name path) loc.loc;
+      } in
+      f ident;*)
     | Tsig_include (mt, sign) -> fmt mt;
     | Tsig_class ll -> ()
     | Tsig_class_type ll -> ()
@@ -409,7 +427,24 @@ and iter_structure_item f {str_desc; str_loc; _} =
       List.iter (fun d -> d.ident_kind <-
         Def {def_name=""; def_loc=none; def_scope={str_loc with loc_start = str_loc.loc_end; loc_end = Lexing.dummy_pos}}) defs;
       List.iter f defs
-    | Tstr_open (_, lid) -> ()
+    | Tstr_open (path, loc) ->
+      let ident_kind =
+        if Ident.name (Path.head path) = Path.last path
+        then Int_ref none else Ext_ref
+      in
+      let ident = {
+        ident_kind;
+        ident_fname = "";
+        ident_loc   = Location.mkloc (Path.name path) loc.loc;
+      } in
+      f ident;
+      print_ident ident;
+      (*let ident = {
+        ident_kind  = Open;
+        ident_fname = "";
+        ident_loc   = Location.mkloc (Path.name path) loc.loc;
+      } in
+      f ident;*)
     | Tstr_include (module_expr, _) -> ()
     | Tstr_class ll -> List.iter (fun (cd, _, _) -> iter_class_expr f cd.ci_expr) ll
     | Tstr_class_type ll -> List.iter (fun (_, _, cd) -> iter_class_type f cd.ci_expr) ll
@@ -422,7 +457,15 @@ and iter_structure_item f {str_desc; str_loc; _} =
         ident_loc   = loc;
       };
       iter_exception_declaration f ed
-    | Tstr_module (_, _, me) -> iter_module_expr f me
+    | Tstr_module (_, loc, me) ->
+      let ident_kind = Def {def_name=loc.txt; def_loc=loc.loc; def_scope=me.mod_loc} in
+      f {
+        ident_kind;
+        ident_fname = "";
+        ident_loc   = loc;
+      };
+      Log.println `TRACE "Tstr_module: %s %s %s" (loc.txt) (string_of_loc loc.loc) (string_of_loc me.mod_loc);
+      iter_module_expr f me
     | Tstr_modtype (_, _, mt) -> iter_module_type f mt
     | Tstr_recmodule ll ->
       List.iter begin fun (_, _, mt, me) ->
@@ -461,6 +504,7 @@ let register filename entry ({ident_loc; ident_kind; _} as ident) =
         if def.def_name = "" then (def.def_name <- ident_loc.txt);
         if def.def_loc = Location.none then def.def_loc <- ident_loc.loc;
         entry.definitions <- def :: entry.definitions;
+      | Open -> ()
   end
 
 (** scan *)
@@ -524,7 +568,7 @@ let find_external_definition ~project ~ident =
                             raise (Found def_ident)
                       | Def_constr def
                           when def.def_name = ext_name -> raise (Found def_ident)
-                      | Int_ref _ | Ext_ref | Def _ | Def_constr _ -> ()
+                      | Int_ref _ | Ext_ref | Def _ | Def_constr _ | Open -> ()
               done;
               None
             with Found def_ident -> Some (Project_def def_ident);
@@ -564,7 +608,7 @@ let find_project_external_references =
     match def.ident_kind with
       | Def d when d.def_scope.loc_end.pos_cnum = -1 -> find_project_external_references' project def
       | Def_constr _ -> find_project_external_references' project def
-      | Int_ref _ | Ext_ref | Def _ -> []
+      | Int_ref _ | Ext_ref | Def _ | Open -> []
 ;;
 
 (** find_library_external_references *)
@@ -579,7 +623,7 @@ let find_library_external_references ~project ~ident:{ident_kind; ident_loc; _} 
             acc @ refs;
           | _ -> assert false
       end
-    | Def_constr _ | Def _ | Int_ref _ -> []
+    | Def_constr _ | Def _ | Int_ref _ | Open -> []
 ;;
 
 (** find_definition_and_references' *)
@@ -609,6 +653,7 @@ let find_definition_and_references' ~project ~entry ~ident =
             let lib_refs = find_library_external_references ~project ~ident in
             {bai_def = None; bai_refs = lib_refs}
       end
+    | Open -> {bai_def = None; bai_refs = []}
 ;;
 
 (** find_ident *)
@@ -658,6 +703,21 @@ let find_definition ~project ~filename ~offset ?compile_buffer () =
               | Some Library_def -> None
               | None -> None
           end
+        | Open ->
+          let fname =
+            let lid = Longident.flatten (Longident.parse ident.ident_loc.txt) in
+            match lid with hd :: _ -> hd ^ ".ml" | [] -> assert false
+          in
+          let paths = Project.get_search_path_local project in
+          try
+            let ident_fname = Misc.find_in_path_uncap paths fname in
+            Some {
+              ident_fname;
+              ident_kind   = Open;
+              ident_loc    = Location.mknoloc ident_fname
+            }
+          with Not_found -> None
+
     end;
   with Not_found -> None
 

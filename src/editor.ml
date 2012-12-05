@@ -153,8 +153,10 @@ object (self)
           List_opt.find (fun p ->
             p#get_oid = (notebook#get_nth_page notebook#current_page)#get_oid) pages
         | `FILENAME filename ->
+          let uncapitalize = if Sys.os_type = "Win32" then String.uncapitalize else (fun x -> x) in
+          let filename = uncapitalize filename in
           List_opt.find (fun p ->
-            match p#file with None -> false | Some f -> f#path = filename) pages
+            match p#file with None -> false | Some f -> uncapitalize f#path = filename) pages
         | `NUM n -> List_opt.find (fun p -> p#get_oid = (notebook#get_nth_page n)#get_oid) pages
         | `VIEW v -> List_opt.find (fun p -> p#view#get_oid = v#get_oid) pages
 
@@ -305,24 +307,30 @@ object (self)
   method goto_ident ident =
     let open Location in
     let open Lexing in
-    match self#get_page (`FILENAME ident.Binannot.ident_fname) with
+    let filename = ident.Binannot.ident_fname in
+    match self#get_page (`FILENAME filename) with
       | Some page ->
         if not page#load_complete then (self#load_page ~scroll:false page);
         let loc = ident.Binannot.ident_loc in
         let buffer = page#buffer in
         let ts = buffer#changed_timestamp in
-        if ts <= (Unix.stat loc.loc.loc_start.pos_fname).Unix.st_mtime then begin
-          let start = buffer#get_iter (`OFFSET loc.loc.loc_start.pos_cnum) in
-          let stop = buffer#get_iter (`OFFSET loc.loc.loc_end.pos_cnum) in
-          buffer#select_range start stop;
-          page#ocaml_view#scroll_lazy start;
+        if ts <= (Unix.stat filename (*loc.loc.loc_start.pos_fname*)).Unix.st_mtime then begin
+          if loc.loc <> Location.none then begin
+            let start = loc.loc.loc_start.pos_cnum in
+            let stop = loc.loc.loc_end.pos_cnum in
+            let start = buffer#get_iter (`OFFSET start) in
+            let stop = buffer#get_iter (`OFFSET stop) in
+            buffer#select_range start stop;
+            page#ocaml_view#scroll_lazy start;
+          end;
           self#goto_view page#view;
           switch_page#call page;
-          self#location_history_add ~iter:start ~kind:(`BROWSE : Location_history.kind) ();
-          page#view#misc#grab_focus()
+          let iter = buffer#get_iter `INSERT in
+          self#location_history_add ~iter ~kind:(`BROWSE : Location_history.kind) ();
+          Gmisclib.Idle.add page#view#misc#grab_focus
         end
       | _ ->
-        ignore (self#open_file ~active:false ~scroll_offset:0 ~offset:0 ident.Binannot.ident_fname);
+        ignore (self#open_file ~active:false ~scroll_offset:0 ~offset:0 filename);
         self#goto_ident ident
 
   method dialog_file_select () = Editor_dialog.file_select ~editor:self ()

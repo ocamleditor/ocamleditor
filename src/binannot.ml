@@ -42,6 +42,7 @@ type ident_kind =
   | Def_constr of definition
   | Int_ref of Location.t (* Location of its defintion *)
   | Ext_ref
+  | Open
 
 type ident = {
   mutable ident_fname : string; (* Filename *)
@@ -64,6 +65,7 @@ let string_of_kind = function
   | Def_constr _ -> "Def_constr"
   | Int_ref _ -> "Int_ref"
   | Ext_ref -> "Ext_ref"
+  | Open -> "Open"
 
 let string_of_loc loc =
   let filename, a, b = Location.get_pos_info loc.loc_start in
@@ -134,6 +136,7 @@ let print_ident {ident_kind; ident_loc; _} =
       | Def_constr def -> "def: " ^ (string_of_loc def.def_loc)
       | Int_ref def_loc -> "def: " ^ (string_of_loc def_loc)
       | Ext_ref -> ""
+      | Open -> "(open)"
   in
   printf "%-7s: %-30s (%-12s) (%-19s) %s\n%!"
     (String.uppercase (string_of_kind ident_kind))

@@ -26,7 +26,9 @@
 
   * Find Definition/References:
       - now based on ".cmt" files;
-      - search results are displayed in a new widget.
+      - search results are displayed in a new widget;
+      - new ability to search variant and exception constructors and
+        record labels.
 
   * Completion: more accurate completion of local definitions.
 
