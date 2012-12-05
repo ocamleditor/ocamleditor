@@ -30,7 +30,7 @@ open Lexing
 open Binannot
 
 module Log = Common.Log.Make(struct let prefix = "Binannot_ident" end)
-let _ = Log.set_verbosity `DEBUG
+let _ = Log.set_verbosity `TRACE
 
 exception Found of ident
 
@@ -49,7 +49,19 @@ let rec iter_pattern f {pat_desc; pat_loc; pat_type; pat_extra; _} =
       List.flatten (List.fold_left (fun acc pat -> (fp pat) :: acc) [] pl)
     | Tpat_alias (pat, _, _) ->
       fp pat
-    | Tpat_construct (_, loc, _, pl, _) ->
+    | Tpat_construct (path, loc, _, pl, _) ->
+      (*Log.println `TRACE "Tpat_construct: %s %s" (Path.name path) (string_of_loc loc.loc);*)
+      let ident_kind =
+        if Ident.name (Path.head path) = Path.last path
+        then Int_ref none
+        else Ext_ref
+      in
+      let ident = {
+        ident_fname      = "";
+        ident_kind;
+        ident_loc        = Location.mkloc (Path.name path) loc.Location.loc;
+      } in
+      f ident;
       List.flatten (List.fold_left (fun acc pat -> (fp pat) :: acc) [] pl)
     | Tpat_variant (lab, pat, _) ->
       Opt.map_default pat [] (fun pat -> fp pat)
@@ -131,8 +143,23 @@ and iter_expression f {exp_desc; exp_loc; exp_type; exp_extra; _} =
         fe e;
       end pe
     | Texp_tuple el -> List.iter fe el
-    | Texp_construct (_, _, _, el, _) -> List.iter fe el
-    | Texp_variant (_, expr) -> Opt.may expr fe
+    | Texp_construct (path, loc, _, el, _) ->
+      let ident_kind =
+        if Ident.name (Path.head path) = Path.last path
+        then Int_ref none
+        else Ext_ref
+      in
+      let ident = {
+        ident_fname      = "";
+        ident_kind;
+        ident_loc        = Location.mkloc (Path.name path) loc.Location.loc;
+      } in
+      f ident;
+      (*Log.println `TRACE "Texp_construct: %s %s" (Path.name path) (string_of_loc loc.loc);*)
+      List.iter fe el
+    | Texp_variant (label, expr) ->
+      (*Log.println `TRACE "Texp_variant: %s" label ;*)
+      Opt.may expr fe
     | Texp_record (ll, expr) ->
       List.iter (fun (_, _, _, e) -> fe e) ll;
       Opt.may expr fe
@@ -144,9 +171,14 @@ and iter_expression f {exp_desc; exp_loc; exp_type; exp_extra; _} =
     | Texp_while (e1, e2) -> fe e1; fe e2
     | Texp_for (_, _, e1, e2, _, e3) -> fe e1; fe e2; fe e3
     | Texp_when (e1, e2) -> fe e1; fe e2
-    | Texp_send (e1, _, e2) -> fe e1; Opt.may e2 fe
+    | Texp_send (e1, meth, e2) ->
+      (*let name = match meth with Tmeth_name x -> "(M) " ^ x | Tmeth_val id -> "(V) " ^ (Ident.name id) in
+      Log.println `TRACE "Texp_send: %s %s [%s]"
+        name (string_of_loc e1.exp_loc) (match e2 with Some e -> string_of_loc e.exp_loc | _ -> "");*)
+      fe e1; Opt.may e2 fe
     | Texp_new (_, _, class_decl) -> ()
-    | Texp_instvar _ -> ()
+    | Texp_instvar (p, path, loc) -> ()
+      (*Log.println `TRACE "Texp_instvar: (%s)%s %s" (Path.name p) (Path.name path) (string_of_loc loc.loc);*)
     | Texp_setinstvar (_, _, _, expr) -> fe expr
     | Texp_override (_, ll) -> List.iter (fun (_, _, e) -> fe e) ll
     | Texp_letmodule (_, _, mod_expr, expr) ->
@@ -217,9 +249,13 @@ and iter_core_type f ?loc {ctyp_desc; ctyp_type; ctyp_loc; _} = ()
 and iter_class_field f {cf_desc; cf_loc} =
   match cf_desc with
     | Tcf_val (name, _, _, _, Tcfk_virtual core_type, _) -> iter_core_type f core_type
-    | Tcf_val (name, _, _, _, Tcfk_concrete expr, _) -> ignore (iter_expression f expr)
+    | Tcf_val (name, loc, _, _, Tcfk_concrete expr, _) ->
+      (*Log.println `TRACE "Tcf_val: %s %s" name (string_of_loc loc.loc);*)
+      ignore (iter_expression f expr)
     | Tcf_meth (_, loc, _, Tcfk_virtual core_type, _) -> iter_core_type f (*~loc:loc.loc*) core_type
-    | Tcf_meth (_, loc, _, Tcfk_concrete expr, _) -> ignore (iter_expression f (*~loc:loc.loc*) expr)
+    | Tcf_meth (name, loc, _, Tcfk_concrete expr, _) ->
+      (*Log.println `TRACE "Tcf_meth: %s %s" name (string_of_loc loc.loc);*)
+      ignore (iter_expression f (*~loc:loc.loc*) expr)
     | Tcf_constr (ct1, ct2) ->
       iter_core_type f ct1;
       iter_core_type f ct2;
@@ -286,7 +322,14 @@ and iter_type_declaration f {typ_kind; typ_manifest; typ_cstrs; typ_loc; _} =
     match typ_kind with
       | Ttype_abstract -> ()
       | Ttype_variant ll ->
-        List.iter begin fun (_, _, ct, _) ->
+        List.iter begin fun (_, loc, ct, sc) ->
+          let ident_kind = Def_constr {def_name=loc.txt; def_loc=loc.loc; def_scope=none} in
+          f {
+            ident_fname      = "";
+            ident_kind;
+            ident_loc        = loc;
+          };
+          (*Log.println `TRACE "Ttype_variant: %s %s (%s)" loc.txt (string_of_loc loc.loc) (string_of_loc sc);*)
           List.iter (iter_core_type f) ct
         end ll
       | Ttype_record ll ->
@@ -341,14 +384,23 @@ let register filename entry ({ident_loc; ident_kind; _} as ident) =
     let stop = ident_loc.loc.loc_end.pos_cnum in
     for i = start to stop do entry.locations.(i) <- Some ident done;
     match ident_kind with
-      | Int_ref def_loc -> Hashtbl.add entry.int_refs def_loc ident;
+      | Int_ref x when x = none ->
+        begin
+          match List_opt.find (fun {def_name; _} -> def_name = ident.ident_loc.txt) entry.definitions with
+            | Some def ->
+              ident.ident_kind <- (Int_ref def.def_loc);
+              Hashtbl.add entry.int_refs def.def_loc ident;
+            | _ -> () (* assert false *)
+        end;
+      | Int_ref def_loc ->
+        Hashtbl.add entry.int_refs def_loc ident;
       | Ext_ref ->
         begin
           match Longident.flatten (Longident.parse ident.ident_loc.txt) with
             | modname :: _ -> Hashtbl.add entry.ext_refs modname ident
             | _ -> ()
         end;
-      | Def def ->
+      | Def def | Def_constr def ->
         if def.def_name = "" then (def.def_name <- ident_loc.txt);
         if def.def_loc = Location.none then def.def_loc <- ident_loc.loc;
         entry.definitions <- def :: entry.definitions;
@@ -410,11 +462,12 @@ let find_external_definition ~project ~ident =
                   | None -> ()
                   | Some ({ident_kind; ident_loc; _} as def_ident) ->
                     match ident_kind with
-                      | Def def when
-                          def.def_scope.loc_end.pos_cnum = -1 &&
-                          ident_loc.txt = ext_name ->
+                      | Def def
+                          when def.def_scope.loc_end.pos_cnum = -1 && ident_loc.txt = ext_name ->
                             raise (Found def_ident)
-                      | Int_ref _ | Ext_ref | Def _ -> ()
+                      | Def_constr def
+                          when def.def_name = ext_name -> raise (Found def_ident)
+                      | Int_ref _ | Ext_ref | Def _ | Def_constr _ -> ()
               done;
               None
             with Found def_ident -> Some (Project_def def_ident);
@@ -438,9 +491,8 @@ let scan_project_files ~project ?(sort=true) f =
 ;;
 
 (** find_project_external_references *)
-let find_project_external_references ~project ~def =
-  match def.ident_kind with
-    | Def d when d.def_scope.loc_end.pos_cnum = -1 ->
+let find_project_external_references =
+  let find_project_external_references' project def =
       let def_modname = modname_of_path def.ident_loc.loc.loc_start.pos_fname in
       scan_project_files ~project begin fun acc filename entry ->
         try
@@ -450,7 +502,12 @@ let find_project_external_references ~project ~def =
           end mod_refs
         with Not_found -> acc
       end;
-    | Int_ref _ | Ext_ref | Def _ -> []
+  in
+  fun ~project ~def ->
+    match def.ident_kind with
+      | Def d when d.def_scope.loc_end.pos_cnum = -1 -> find_project_external_references' project def
+      | Def_constr _ -> find_project_external_references' project def
+      | Int_ref _ | Ext_ref | Def _ -> []
 ;;
 
 (** find_library_external_references *)
@@ -465,13 +522,13 @@ let find_library_external_references ~project ~ident:{ident_kind; ident_loc; _} 
             acc @ refs;
           | _ -> assert false
       end
-    | Def _ | Int_ref _ -> []
+    | Def_constr _ | Def _ | Int_ref _ -> []
 ;;
 
 (** find_definition_and_references' *)
 let find_definition_and_references' ~project ~entry ~ident =
   match ident.ident_kind with
-    | Def _ -> (* Cursor offset is on a Def *)
+    | Def _ | Def_constr _ -> (* Cursor offset is on a Def *)
       let int_refs = Hashtbl.find_all entry.int_refs ident.ident_loc.loc in
       let ext_refs = find_project_external_references ~project ~def:ident in
       {bai_def = Some ident; bai_refs = int_refs @ ext_refs}
@@ -535,7 +592,7 @@ let find_definition ~project ~filename ~offset ?compile_buffer () =
     let ident = locations.(offset) in
     Opt.map_default ident None begin fun ident ->
       match ident.ident_kind with
-        | Def _ -> Some ident
+        | Def _ | Def_constr _ -> Some ident
         | Int_ref def -> entry.locations.(def.loc_start.pos_cnum)
         | Ext_ref ->
           begin

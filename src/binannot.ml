@@ -39,6 +39,7 @@ type definition = {
 
 type ident_kind =
   | Def of definition
+  | Def_constr of definition
   | Int_ref of Location.t (* Location of its defintion *)
   | Ext_ref
 
@@ -60,6 +61,7 @@ let table_idents : (string, entry) Hashtbl.t = Hashtbl.create 7 (* source filena
 
 let string_of_kind = function
   | Def _ -> "Def"
+  | Def_constr _ -> "Def_constr"
   | Int_ref _ -> "Int_ref"
   | Ext_ref -> "Ext_ref"
 
@@ -67,7 +69,7 @@ let string_of_loc loc =
   let filename, a, b = Location.get_pos_info loc.loc_start in
   let _, c, d = Location.get_pos_info loc.loc_end in
   (*sprintf "%s, %d:%d(%d) -- %d:%d(%d)" filename a b (loc.loc_start.pos_cnum) c d (loc.loc_end.pos_cnum);;*)
-  sprintf "%d--%d" (loc.loc_start.pos_cnum) (loc.loc_end.pos_cnum);;
+  sprintf "%s:%d--%d" filename (loc.loc_start.pos_cnum) (loc.loc_end.pos_cnum);;
 
 let linechar_of_loc loc =
   let _, a, b = Location.get_pos_info loc.loc_start in
@@ -129,6 +131,7 @@ let print_ident {ident_kind; ident_loc; _} =
   let loc' =
     match ident_kind with
       | Def loc -> "scope: " ^ (string_of_loc loc.def_scope)
+      | Def_constr def -> "def: " ^ (string_of_loc def.def_loc)
       | Int_ref def_loc -> "def: " ^ (string_of_loc def_loc)
       | Ext_ref -> ""
   in
