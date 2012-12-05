@@ -50,23 +50,33 @@ let rec iter_pattern f {pat_desc; pat_loc; pat_type; pat_extra; _} =
     | Tpat_alias (pat, _, _) ->
       fp pat
     | Tpat_construct (path, loc, _, pl, _) ->
-      (*Log.println `TRACE "Tpat_construct: %s %s" (Path.name path) (string_of_loc loc.loc);*)
       let ident_kind =
         if Ident.name (Path.head path) = Path.last path
-        then Int_ref none
-        else Ext_ref
+        then Int_ref none else Ext_ref
       in
       let ident = {
-        ident_fname      = "";
         ident_kind;
-        ident_loc        = Location.mkloc (Path.name path) loc.Location.loc;
+        ident_fname = "";
+        ident_loc   = Location.mkloc (Path.name path) loc.Location.loc;
       } in
       f ident;
       List.flatten (List.fold_left (fun acc pat -> (fp pat) :: acc) [] pl)
-    | Tpat_variant (lab, pat, _) ->
+    | Tpat_variant (_, pat, _) ->
       Opt.map_default pat [] (fun pat -> fp pat)
     | Tpat_record (ll, _) ->
-      List.flatten (List.fold_left (fun acc (_, _, _, pat) -> (fp pat) :: acc) [] ll)
+      List.flatten (List.fold_left begin fun acc (path, loc, _, pat) ->
+        let ident_kind =
+          if Ident.name (Path.head path) = Path.last path
+          then Int_ref none else Ext_ref
+        in
+        let ident = {
+          ident_kind;
+          ident_fname = "";
+          ident_loc   = Location.mkloc (Path.name path) loc.Location.loc;
+        } in
+        f ident;
+        (fp pat) :: acc
+      end [] ll)
     | Tpat_array pl ->
       List.flatten (List.fold_left (fun acc pat -> (fp pat) :: acc) [] pl)
     | Tpat_or (pat1, pat2, _) ->
@@ -146,25 +156,57 @@ and iter_expression f {exp_desc; exp_loc; exp_type; exp_extra; _} =
     | Texp_construct (path, loc, _, el, _) ->
       let ident_kind =
         if Ident.name (Path.head path) = Path.last path
-        then Int_ref none
-        else Ext_ref
+        then Int_ref none else Ext_ref
       in
       let ident = {
-        ident_fname      = "";
         ident_kind;
-        ident_loc        = Location.mkloc (Path.name path) loc.Location.loc;
+        ident_fname = "";
+        ident_loc   = Location.mkloc (Path.name path) loc.Location.loc;
       } in
       f ident;
-      (*Log.println `TRACE "Texp_construct: %s %s" (Path.name path) (string_of_loc loc.loc);*)
       List.iter fe el
-    | Texp_variant (label, expr) ->
-      (*Log.println `TRACE "Texp_variant: %s" label ;*)
+    | Texp_variant (_, expr) ->
       Opt.may expr fe
     | Texp_record (ll, expr) ->
-      List.iter (fun (_, _, _, e) -> fe e) ll;
+      List.iter begin fun (path, loc, _, e) ->
+        let ident_kind =
+          if Ident.name (Path.head path) = Path.last path
+          then Int_ref none else Ext_ref
+        in
+        let ident = {
+          ident_kind;
+          ident_fname = "";
+          ident_loc   = Location.mkloc (Path.name path) loc.Location.loc;
+        } in
+        f ident;
+        fe e
+      end ll;
       Opt.may expr fe
-    | Texp_field (expr, _, _, _) -> fe expr
-    | Texp_setfield (e1, _, _, _, e2) -> fe e1; fe e2
+    | Texp_field (expr, path, loc, _) ->
+      let ident_kind =
+        if Ident.name (Path.head path) = Path.last path
+        then Int_ref none else Ext_ref
+      in
+      let ident = {
+        ident_kind;
+        ident_fname = "";
+        ident_loc   = Location.mkloc (Path.name path) loc.Location.loc;
+      } in
+      f ident;
+      fe expr
+    | Texp_setfield (e1, path, loc, _, e2) ->
+      let ident_kind =
+        if Ident.name (Path.head path) = Path.last path
+        then Int_ref none else Ext_ref
+      in
+      let ident = {
+        ident_kind;
+        ident_fname = "";
+        ident_loc   = Location.mkloc (Path.name path) loc.Location.loc;
+      } in
+      f ident;
+      fe e1;
+      fe e2
     | Texp_array el -> List.iter fe el
     | Texp_ifthenelse (e1, e2, e3) -> fe e1; fe e2; Opt.may e3 fe
     | Texp_sequence (e1, e2) -> fe e1; fe e2
@@ -322,18 +364,25 @@ and iter_type_declaration f {typ_kind; typ_manifest; typ_cstrs; typ_loc; _} =
     match typ_kind with
       | Ttype_abstract -> ()
       | Ttype_variant ll ->
-        List.iter begin fun (_, loc, ct, sc) ->
+        List.iter begin fun (_, loc, ct, _(* Scope inside the definition *)) ->
           let ident_kind = Def_constr {def_name=loc.txt; def_loc=loc.loc; def_scope=none} in
           f {
-            ident_fname      = "";
             ident_kind;
-            ident_loc        = loc;
+            ident_fname = "";
+            ident_loc   = loc;
           };
-          (*Log.println `TRACE "Ttype_variant: %s %s (%s)" loc.txt (string_of_loc loc.loc) (string_of_loc sc);*)
           List.iter (iter_core_type f) ct
         end ll
       | Ttype_record ll ->
-        List.iter (fun (_, _, _, ct, _) -> iter_core_type f ct) ll
+        List.iter begin fun (_, loc, _, ct, _) ->
+          let ident_kind = Def_constr {def_name=loc.txt; def_loc=loc.loc; def_scope=none} in
+          f {
+            ident_kind;
+            ident_fname = "";
+            ident_loc   = loc;
+          };
+          iter_core_type f ct
+        end ll
   end;
   List.iter begin fun (ct1, ct2, _) ->
     iter_core_type f ct1;
@@ -342,7 +391,8 @@ and iter_type_declaration f {typ_kind; typ_manifest; typ_cstrs; typ_loc; _} =
   Opt.may typ_manifest (iter_core_type f);
 
 (** iter_exception_declaration *)
-and iter_exception_declaration f {exn_params; exn_exn; exn_loc; _} = List.iter (iter_core_type f) exn_params
+and iter_exception_declaration f {exn_params; exn_exn; exn_loc} =
+  List.iter (iter_core_type f) exn_params
 
 (** iter_structure_item *)
 and iter_structure_item f {str_desc; str_loc; _} =
@@ -364,7 +414,14 @@ and iter_structure_item f {str_desc; str_loc; _} =
     | Tstr_class ll -> List.iter (fun (cd, _, _) -> iter_class_expr f cd.ci_expr) ll
     | Tstr_class_type ll -> List.iter (fun (_, _, cd) -> iter_class_type f cd.ci_expr) ll
     | Tstr_type ll -> List.iter (fun (_, _, td) -> iter_type_declaration f td) ll
-    | Tstr_exception (_, _, ed) -> iter_exception_declaration f ed
+    | Tstr_exception (_, loc, ed) ->
+      let ident_kind = Def_constr {def_name=loc.txt; def_loc=loc.loc; def_scope=none} in
+      f {
+        ident_kind;
+        ident_fname = "";
+        ident_loc   = loc;
+      };
+      iter_exception_declaration f ed
     | Tstr_module (_, _, me) -> iter_module_expr f me
     | Tstr_modtype (_, _, mt) -> iter_module_type f mt
     | Tstr_recmodule ll ->
