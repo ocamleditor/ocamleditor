@@ -22,71 +22,7 @@
 
 
 open Printf
-
-(** find_definition_references *)
-let find_definition_references editor =
-  editor#with_current_page begin fun page ->
-    let widget = new Search_results.widget ~editor () in
-    widget#button_new_search#misc#set_sensitive false;
-    let hbox = GPack.hbox ~spacing:3 () in
-    let _ = GMisc.image ~pixbuf:Icons.search_results_16 ~packing:hbox#pack () in
-    let label = GMisc.label ~packing:hbox#pack () in
-    let iter = page#buffer#get_iter `INSERT in
-    let mark = page#buffer#create_mark ?name:None ?left_gravity:None iter in
-    ignore (widget#misc#connect#destroy ~callback:(fun () -> page#buffer#delete_mark (`MARK mark)));
-    ignore (widget#connect#search_started ~callback:begin fun () ->
-      let project = page#project in
-      let filename = page#get_filename in
-      let results =
-        Binannot_ident.find_definition_and_references
-          ~project
-          ~filename
-          ~offset:(page#buffer#get_iter (`MARK mark))#offset
-          ~compile_buffer:(fun () -> page#compile_buffer ?join:(Some true))  ()
-      in
-      let def_name = ref "" in
-      let results =
-        let open Binannot in
-        let open Binannot_ident in
-        let open Search_results in
-        let open Location in
-        match results with
-          | None -> []
-          | Some {bai_def; bai_refs} ->
-            def_name := (match bai_refs with ident :: _ -> ident.ident_loc.txt | [] -> "");
-            let results = (match bai_def with | Some x -> [x] | _ -> []) @ bai_refs in
-            let results = List.map (fun ident -> ident.ident_fname, ident) results in
-            let results = List.rev (Miscellanea.Xlist.group_assoc results) in
-            List.map begin fun (filename, idents) ->
-              let real_filenames = ref [] in
-              let locations =
-                List.map begin fun ident ->
-                  let pixbuf =
-                    match ident.ident_kind with
-                      | Def _ | Def_constr _ | Def_module _ -> Some (widget#misc#render_icon ~size:`MENU `EDIT)
-                      | Int_ref _ | Ext_ref -> None
-                  in
-                  let fn = ident.ident_loc.loc.loc_start.Lexing.pos_fname in
-                  if not (List.mem fn !real_filenames) then (real_filenames := fn :: !real_filenames);
-                  pixbuf, ident.ident_loc
-                end (List.rev idents)
-              in
-              let real_filename = match !real_filenames with fn :: [] -> fn | _ -> assert false in
-              let timestamp = (Unix.stat real_filename).Unix.st_mtime in
-              {filename; real_filename; locations; timestamp}
-            end results
-      in
-      widget#set_results results;
-      (*  *)
-      if widget#misc#parent = None then
-        (ignore (Messages.vmessages#append_page ~label_widget:hbox#coerce widget#as_page));
-      label#set_text !def_name;
-      kprintf widget#label_message#set_label "References to identifier <tt>%s</tt>" (Glib.Markup.escape_text !def_name);
-      widget#present ();
-    end);
-    widget#start_search();
-  end
-;;
+open Miscellanea
 
 (** set_has_definition *)
 let set_has_definition editor item =
@@ -117,3 +53,135 @@ let set_has_references editor item =
   end
 ;;
 
+(** set_has_used_components *)
+let set_has_used_components editor label item =
+  editor#with_current_page begin fun page ->
+    let project = editor#project in
+    let filename = page#get_filename in
+    let offset = (page#buffer#get_iter `INSERT)#offset in
+    let open Binannot in
+    match
+      Binannot_ident.find_used_components
+        ~project
+        ~filename
+        ~offset
+        ~compile_buffer:(fun () -> page#compile_buffer ?join:(Some true))  ()
+    with
+      | Some (ident, used_components) when used_components <> [] ->
+        label#set_label (sprintf "Find Used Components of <tt>%s</tt>" ident.ident_loc.Location.txt);
+        item#misc#show();
+      | _ -> item#misc#hide();
+  end
+;;
+
+(** create_search_results_pane *)
+let create_search_results_pane ~editor ~page =
+  let widget = new Search_results.widget ~editor () in
+  widget#button_new_search#misc#set_sensitive false;
+  let hbox = GPack.hbox ~spacing:3 () in
+  let _ = GMisc.image ~pixbuf:Icons.search_results_16 ~packing:hbox#pack () in
+  let label = GMisc.label ~packing:hbox#pack () in
+  let iter = page#buffer#get_iter `INSERT in
+  let mark = page#buffer#create_mark ?name:None ?left_gravity:None iter in
+  ignore (widget#misc#connect#destroy ~callback:(fun () -> page#buffer#delete_mark (`MARK mark)));
+  ignore (widget#connect#after#search_started ~callback:begin fun () ->
+    if widget#misc#parent = None then
+      (ignore (Messages.vmessages#append_page ~label_widget:hbox#coerce widget#as_page));
+    widget#present ();
+  end);
+  widget, mark, label
+;;
+
+(** find_definition_references *)
+let find_definition_references editor =
+  editor#with_current_page begin fun page ->
+    let widget, mark, label = create_search_results_pane ~editor ~page in
+    ignore (widget#connect#search_started ~callback:begin fun () ->
+      let project = page#project in
+      let filename = page#get_filename in
+      let results =
+        Binannot_ident.find_definition_and_references
+          ~project
+          ~filename
+          ~offset:(page#buffer#get_iter (`MARK mark))#offset
+          ~compile_buffer:(fun () -> page#compile_buffer ?join:(Some true))  ()
+      in
+      let def_name = ref "" in
+      let results =
+        let open Binannot in
+        let open Binannot_ident in
+        let open Search_results in
+        let open Location in
+        match results with
+          | None -> []
+          | Some {bai_def; bai_refs} ->
+            def_name := (match bai_refs with ident :: _ -> ident.ident_loc.txt | [] -> "");
+            let results = (match bai_def with | Some x -> [x] | _ -> []) @ bai_refs in
+            let results = List.map (fun ident -> ident.ident_fname, ident) results in
+            let results = List.rev (Miscellanea.Xlist.group_assoc results) in
+            List.map begin fun (filename, idents) ->
+              let real_filenames = ref [] in
+              let locations =
+                List.map begin fun ident ->
+                  let pixbuf =
+                    match ident.ident_kind with
+                      | Def _ | Def_constr _ | Def_module _ -> Some (widget#misc#render_icon ~size:`MENU `EDIT)
+                      | Int_ref _ | Ext_ref | Open _ -> None
+                  in
+                  let fn = ident.ident_loc.loc.loc_start.Lexing.pos_fname in
+                  if not (List.mem fn !real_filenames) then (real_filenames := fn :: !real_filenames);
+                  pixbuf, ident.ident_loc
+                end (List.rev idents)
+              in
+              let real_filename = match !real_filenames with fn :: [] -> fn | _ -> assert false in
+              let timestamp = (Unix.stat real_filename).Unix.st_mtime in
+              {filename; real_filename; locations; timestamp}
+            end results
+      in
+      widget#set_results results;
+      label#set_text !def_name;
+      kprintf widget#label_message#set_label "References to identifier <tt>%s</tt>" (Glib.Markup.escape_text !def_name);
+    end);
+    widget#start_search();
+  end
+;;
+
+(** find_used_components *)
+let find_used_components editor =
+  editor#with_current_page begin fun page ->
+    let project = editor#project in
+    let filename = page#get_filename in
+    let offset = (page#buffer#get_iter `INSERT)#offset in
+    let open Binannot in
+    let open Search_results in
+    let open Location in
+    match
+      Binannot_ident.find_used_components
+        ~project
+        ~filename
+        ~offset
+        ~compile_buffer:(fun () -> page#compile_buffer ?join:(Some true))  ()
+    with
+      | Some (ident, used_components) when used_components <> [] ->
+        let widget, _, label = create_search_results_pane ~editor ~page in
+        ignore (widget#connect#search_started ~callback:begin fun () ->
+          let real_filename =
+            match Project.tmp_of_abs project filename with
+              | None -> page#get_filename
+              | Some (tmp, relname) -> tmp // relname
+          in
+          let timestamp = (Unix.stat real_filename).Unix.st_mtime in
+          let locations =
+            List.map (fun ident -> None, ident.ident_loc) (List.rev used_components)
+          in
+          let results =
+            {filename = page#get_filename; real_filename; locations; timestamp}
+          in
+          widget#set_results [results];
+          label#set_text ident.ident_loc.txt;
+          kprintf widget#label_message#set_label "Used components of Module <tt>%s</tt>" (Glib.Markup.escape_text ident.ident_loc.txt);
+        end);
+        widget#start_search();
+      | _ -> ()
+  end
+;;

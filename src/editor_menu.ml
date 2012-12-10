@@ -66,6 +66,8 @@ let create ~editor ~page () =
   end);
   let find_definition = GMenu.menu_item ~label:"Find Definition" ~packing:gmenu#append () in
   let find_references = GMenu.menu_item ~label:"Find References" ~packing:gmenu#append () in
+  let find_used_components = GMenu.menu_item ~packing:gmenu#append () in
+  let label_find_used_components = GMisc.label ~xalign:0. ~markup:"" ~packing:find_used_components#add () in
   gmenu#append (GMenu.separator_item ());
   (* Show Whitespace Characters and Toggle Word-Wrap*)
   let show_whitespace_characters = GMenu.check_menu_item ~label:"Show Whitespace Characters" ~packing:gmenu#append () in
@@ -93,8 +95,10 @@ let create ~editor ~page () =
   ignore (find_references#connect#activate ~callback:begin
     Activity.wrap Activity.Annot (fun () -> Menu_op.find_definition_references editor)
   end);
+  ignore (find_used_components#connect#activate ~callback:(fun () -> Menu_op.find_used_components editor));
   (*  *)
   let callback ev =
+    find_used_components#misc#hide();
     let clip = GData.clipboard Gdk.Atom.clipboard in
     cut#connect#activate ~callback:(fun () -> page#buffer#cut_clipboard ?default_editable:None clip);
     cut#misc#set_sensitive page#buffer#has_selection;
@@ -110,6 +114,7 @@ let create ~editor ~page () =
 
     Gmisclib.Idle.add (fun () -> Menu_op.set_has_definition editor find_definition);
     Gmisclib.Idle.add (fun () -> Menu_op.set_has_references editor find_references);
+    Gmisclib.Idle.add (fun () -> Menu_op.set_has_used_components editor label_find_used_components find_used_components);
 
     List.iter (fun (w, s) -> w#misc#handler_block s) sigids;
     show_whitespace_characters#set_active editor#show_whitespace_chars;

@@ -43,6 +43,7 @@ type ident_kind =
   | Def_module of definition
   | Int_ref of Location.t (* Location of its defintion *)
   | Ext_ref
+  | Open of Location.t (* Scope *)
 
 type ident = {
   mutable ident_fname : string; (* Filename *)
@@ -66,6 +67,7 @@ let string_of_kind = function
   | Def_constr _ -> "Def_constr"
   | Int_ref _ -> "Int_ref"
   | Ext_ref -> "Ext_ref"
+  | Open _ -> "Open"
 
 let string_of_loc loc =
   let filename, a, b = Location.get_pos_info loc.loc_start in
@@ -83,7 +85,7 @@ let cnum_of_loc loc =
 
 let string_of_type_expr te = Odoc_info.string_of_type_expr te;;
 
-let (<==) loc offset = loc.loc_start.pos_cnum <= offset && offset <= loc.loc_end.pos_cnum
+let (<==) loc offset = loc.loc_start.pos_cnum <= offset && (offset <= loc.loc_end.pos_cnum || loc.loc_end.pos_cnum = -1)
 
 (** read_cmt *)
 let read_cmt ~project ~filename:source ?(timestamp=0.) ?compile_buffer () =
@@ -137,8 +139,9 @@ let print_ident {ident_kind; ident_loc; _} =
       | Def_constr def -> "def: " ^ (string_of_loc def.def_loc)
       | Int_ref def_loc -> "def: " ^ (string_of_loc def_loc)
       | Ext_ref -> ""
+      | Open scope -> "scope: " ^ (string_of_loc scope)
   in
-  printf "%-7s: %-30s (%-12s) (%-19s) %s\n%!"
+  printf "%-11s: %-30s (%-12s) (%-19s) %s\n%!"
     (String.uppercase (string_of_kind ident_kind))
     ident_loc.txt (string_of_loc ident_loc.loc) loc' ident_loc.loc.loc_start.pos_fname;
 ;;

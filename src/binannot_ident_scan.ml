@@ -34,7 +34,7 @@ let _ = Log.set_verbosity `TRACE
 
 exception Found of ident
 
-type ext_def = Project_def of ident | Project_file of ident | Library_def
+type ext_def = Project_def of ident | Project_file of ident | Library_def | No_def
 
 (** iter_pattern *)
 let rec iter_pattern f {pat_desc; pat_loc; pat_type; pat_extra; _} =
@@ -43,10 +43,11 @@ let rec iter_pattern f {pat_desc; pat_loc; pat_type; pat_extra; _} =
     | Tpat_tuple pl ->
       List.flatten (List.fold_left (fun acc pat -> (fp pat) :: acc) [] pl)
     | Tpat_alias (pat, id, loc) ->
+      let name_loc = pat_loc(*loc.loc*) in
       {
         ident_fname      = "";
-        ident_kind       = Def {def_name=loc.txt; def_loc=(*pat_loc*)loc.loc; def_scope=none};
-        ident_loc        = Location.mkloc (Ident.name id) loc.loc;
+        ident_kind       = Def {def_name=loc.txt; def_loc=name_loc; def_scope=none};
+        ident_loc        = Location.mkloc (Ident.name id) name_loc;
       } :: (fp pat)
     | Tpat_construct (path, loc, _, pl, _) ->
       let ident_kind =
@@ -108,11 +109,21 @@ and iter_expression f {exp_desc; exp_loc; exp_type; exp_extra; _} =
       fe e;
     end pe
   in
+  List.iter begin fun (exp, loc') ->
+    match exp with
+      | Texp_open (path, loc, _) ->
+        f {
+          ident_kind  = Open loc';
+          ident_fname = "";
+          ident_loc   = Location.mkloc (Path.name path) loc.loc;
+        };
+      | _ -> ()
+  end exp_extra;
   match exp_desc with
     | Texp_ident (id, loc, vd) ->
       let ident_kind =
         if Ident.name (Path.head id) = Path.last id
-        then Int_ref none (*vd.Types.val_loc*) (* Questa loc non è corretta in caso di alias *)
+        then Int_ref (*none*) vd.Types.val_loc (* In caso di alias val_loc si riferisce all'intero binding e non solo al nome *)
         else Ext_ref
       in
       let ident = {
@@ -223,10 +234,11 @@ and iter_expression f {exp_desc; exp_loc; exp_type; exp_extra; _} =
     | Texp_for (_, _, e1, e2, _, e3) -> fe e1; fe e2; fe e3
     | Texp_when (e1, e2) -> fe e1; fe e2
     | Texp_send (e1, meth, e2) ->
-      (*let name = match meth with Tmeth_name x -> "(M) " ^ x | Tmeth_val id -> "(V) " ^ (Ident.name id) in
+     (* let name = match meth with Tmeth_name x -> "(M) " ^ x | Tmeth_val id -> "(V) " ^ (Ident.name id) in
       Log.println `TRACE "Texp_send: %s %s [%s]"
         name (string_of_loc e1.exp_loc) (match e2 with Some e -> string_of_loc e.exp_loc | _ -> "");*)
-      fe e1; Opt.may e2 fe
+      fe e1;
+      Opt.may e2 fe
     | Texp_new (_, _, class_decl) -> ()
     | Texp_instvar (p, path, loc) -> ()
       (*Log.println `TRACE "Texp_instvar: (%s)%s %s" (Path.name p) (Path.name path) (string_of_loc loc.loc);*)
@@ -286,7 +298,7 @@ and iter_signature_item f {sig_desc; sig_loc; _} =
     | Tsig_modtype (_, _, Tmodtype_manifest mt) -> fmt mt
     | Tsig_open (path, loc) ->
       f {
-        ident_kind  = Ext_ref;
+        ident_kind  = Open {loc_start = loc.loc.loc_end; loc_end = dummy_pos; loc_ghost=false};
         ident_fname = "";
         ident_loc   = Location.mkloc (Path.name path) loc.loc;
       };
@@ -427,7 +439,7 @@ and iter_structure_item f {str_desc; str_loc; _} =
       List.iter f defs
     | Tstr_open (path, loc) ->
       f {
-        ident_kind  = Ext_ref;
+        ident_kind  = Open {loc_start = loc.loc.loc_end; loc_end = dummy_pos; loc_ghost=false};
         ident_fname = "";
         ident_loc   = Location.mkloc (Path.name path) loc.loc;
       };
@@ -482,16 +494,28 @@ let register filename entry ({ident_loc; ident_kind; _} as ident) =
       | Int_ref x when x = none ->
         begin
           match List_opt.find begin fun {def_name; def_scope; _} ->
-            def_name = ident.ident_loc.txt && (def_scope.loc_end.pos_cnum = -1 || def_scope <== start)
+            def_name = ident.ident_loc.txt && def_scope <== start
           end entry.definitions with
             | Some def ->
               ident.ident_kind <- (Int_ref def.def_loc);
               Hashtbl.add entry.int_refs def.def_loc ident;
             | _ -> () (* assert false *)
         end;
-      | Int_ref def_loc ->
+      | Int_ref def_loc (*when List.exists (fun d -> d.def_loc = def_loc) entry.definitions*) ->
+        (* When Int_ref refers to a recursive function, its def is not yet regstered in entry.definitions *)
         Hashtbl.add entry.int_refs def_loc ident;
-      | Ext_ref ->
+      (*| Int_ref _ -> (* This case fixes the wrong location of the Int_ref definition when Int_ref refers to an alias. *)
+        let def_loc =
+          List_opt.find begin fun d ->
+            d.def_name = ident.ident_loc.txt && d.def_scope <== ident.ident_loc.loc.loc_start.pos_cnum
+          end entry.definitions
+        in
+        Opt.may def_loc begin fun {def_loc; _} ->
+          let ident = {ident with ident_kind = Int_ref def_loc} in
+          Hashtbl.add entry.int_refs def_loc ident;
+          for i = ident.ident_loc.loc.loc_start.pos_cnum to ident.ident_loc.loc.loc_end.pos_cnum do entry.locations.(i) <- Some ident done;
+        end*)
+      | Ext_ref | Open _ ->
         begin
           match Longident.flatten (Longident.parse ident.ident_loc.txt) with
             | modname :: _ -> Hashtbl.add entry.ext_refs modname ident
@@ -507,7 +531,7 @@ let register filename entry ({ident_loc; ident_kind; _} as ident) =
               let parents = List.map (fun d -> d.def_name) parents in
               let path = if parents = [] then (Miscellanea.modname_of_path filename) else String.concat "." parents in
               def.def_name <- String.concat "." (List.filter ((<>) "") [path; def.def_name]);
-            | Def _ | Def_constr _ | Int_ref _ | Ext_ref -> ()
+            | Def _ | Def_constr _ | Int_ref _ | Ext_ref | Open _ -> ()
         end;
         entry.definitions <- def :: entry.definitions;
   end
