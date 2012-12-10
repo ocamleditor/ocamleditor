@@ -318,8 +318,8 @@ object (self)
           if loc.loc <> Location.none then begin
             let start = loc.loc.loc_start.pos_cnum in
             let stop = loc.loc.loc_end.pos_cnum in
-            let start = buffer#get_iter (`OFFSET start) in
-            let stop = buffer#get_iter (`OFFSET stop) in
+            let start = buffer#get_iter (`OFFSET (max 0 start)) in
+            let stop = buffer#get_iter (`OFFSET (max 0 stop)) in
             buffer#select_range start stop;
             page#ocaml_view#scroll_lazy start;
           end;

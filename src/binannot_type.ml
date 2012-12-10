@@ -378,7 +378,7 @@ and find_structure_item f offset {str_desc; str_loc; _} =
           find_pattern f offset pat;
           ignore (find_expression f offset expr);
         end pe
-      | Tstr_open (_, lid) -> f str_loc (String.concat "." (Longident.flatten lid.txt))
+      | Tstr_open (_, lid) -> f str_loc (Odoc_misc.string_of_longident lid.txt)
       | Tstr_include (module_expr, _) -> find_module_expr f offset module_expr
       | Tstr_class ll -> List.iter (fun (cd, _, _) -> find_class_expr f offset cd.ci_expr) ll
       | Tstr_class_type ll -> List.iter (fun (_, _, cd) -> find_class_type f offset cd.ci_expr) ll

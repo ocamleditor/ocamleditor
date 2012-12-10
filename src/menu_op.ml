@@ -63,8 +63,8 @@ let find_definition_references editor =
                 List.map begin fun ident ->
                   let pixbuf =
                     match ident.ident_kind with
-                      | Def _ | Def_constr _ -> Some (widget#misc#render_icon ~size:`MENU `EDIT)
-                      | Int_ref _ | Ext_ref | Open -> None
+                      | Def _ | Def_constr _ | Def_module _ -> Some (widget#misc#render_icon ~size:`MENU `EDIT)
+                      | Int_ref _ | Ext_ref -> None
                   in
                   let fn = ident.ident_loc.loc.loc_start.Lexing.pos_fname in
                   if not (List.mem fn !real_filenames) then (real_filenames := fn :: !real_filenames);

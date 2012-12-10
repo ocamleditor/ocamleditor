@@ -32,17 +32,17 @@ let _ = Log.set_verbosity `ERROR
 type name = string
 
 type definition = {
-  mutable def_name : string;
-  mutable def_loc  : Location.t;
-  def_scope        : Location.t
+  mutable def_name  : string;
+  mutable def_loc   : Location.t;
+  mutable def_scope : Location.t
 }
 
 type ident_kind =
   | Def of definition
   | Def_constr of definition
+  | Def_module of definition
   | Int_ref of Location.t (* Location of its defintion *)
   | Ext_ref
-  | Open
 
 type ident = {
   mutable ident_fname : string; (* Filename *)
@@ -62,10 +62,10 @@ let table_idents : (string, entry) Hashtbl.t = Hashtbl.create 7 (* source filena
 
 let string_of_kind = function
   | Def _ -> "Def"
+  | Def_module _ -> "Def_module"
   | Def_constr _ -> "Def_constr"
   | Int_ref _ -> "Int_ref"
   | Ext_ref -> "Ext_ref"
-  | Open -> "Open"
 
 let string_of_loc loc =
   let filename, a, b = Location.get_pos_info loc.loc_start in
@@ -133,10 +133,10 @@ let print_ident {ident_kind; ident_loc; _} =
   let loc' =
     match ident_kind with
       | Def loc -> "scope: " ^ (string_of_loc loc.def_scope)
+      | Def_module def -> "def: " ^ (string_of_loc def.def_loc)
       | Def_constr def -> "def: " ^ (string_of_loc def.def_loc)
       | Int_ref def_loc -> "def: " ^ (string_of_loc def_loc)
       | Ext_ref -> ""
-      | Open -> "(open)"
   in
   printf "%-7s: %-30s (%-12s) (%-19s) %s\n%!"
     (String.uppercase (string_of_kind ident_kind))
