@@ -299,10 +299,12 @@ object (self)
                       let locs = model_lines#get ~row ~column:col_locations in
                       match locs with
                         | (_, loc) :: _ ->
-                          let start = buffer#get_iter (`OFFSET loc.loc.loc_start.pos_cnum) in
-                          let stop = buffer#get_iter (`OFFSET loc.loc.loc_end.pos_cnum) in
-                          buffer#select_range start stop;
-                          page#ocaml_view#scroll_lazy start;
+                          if loc.loc <> Location.none && loc.loc.loc_start.pos_cnum >= 0 && loc.loc.loc_end.pos_cnum >= 0 then begin
+                            let start = buffer#get_iter (`OFFSET loc.loc.loc_start.pos_cnum) in
+                            let stop = buffer#get_iter (`OFFSET loc.loc.loc_end.pos_cnum) in
+                            buffer#select_range start stop;
+                            page#ocaml_view#scroll_lazy start;
+                          end;
                           editor#goto_view page#view;
                           if focus then page#view#misc#grab_focus()
                         | _ -> ()
