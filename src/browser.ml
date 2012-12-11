@@ -526,9 +526,11 @@ object (self)
 
   method annot_type () =
     editor#with_current_page begin fun page ->
-      let iter = `ITER (page#buffer#get_iter `INSERT) in
-      Opt.may page#annot_type (fun at -> at#popup (*~position:`TOP_RIGHT*) iter ());
-      if Preferences.preferences#get.Preferences.pref_err_tooltip then (page#error_indication#tooltip ~sticky:true iter);
+      try
+        let iter = `ITER (page#buffer#get_iter `INSERT) in
+        Opt.may page#annot_type (fun at -> at#popup (*~position:`TOP_RIGHT*) iter ());
+        if Preferences.preferences#get.Preferences.pref_err_tooltip then (page#error_indication#tooltip ~sticky:true iter);
+      with ex -> Printf.eprintf "File \"browser.ml\": %s\n%s\n%!" (Printexc.to_string ex) (Printexc.get_backtrace());
     end
 
   method annot_type_copy () =

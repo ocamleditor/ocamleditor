@@ -249,7 +249,7 @@ and find_signature_item f offset {sig_desc; sig_loc; _} =
       | Tsig_open _ -> ()
       | Tsig_include (mt, sign) -> fmt mt;
       | Tsig_class ll -> Log.println `DEBUG "Tsig_class";
-      | Tsig_class_type ll -> Log.println `DEBUG "Tsig_class_type" ;
+      | Tsig_class_type ll -> Log.println `DEBUG "Tsig_class_type"
   end
 
 (** find_value_description *)
@@ -431,7 +431,7 @@ let find_by_offset ~project ~filename ~offset ?compile_buffer () =
 (** find *)
 let find ~page ?iter () =
   let compile_buffer () = page#compile_buffer ?join:(Some true) () in
-  let iter = match iter with Some x -> x | _ -> page#buffer#get_iter `INSERT in
+  let iter = match iter with Some it -> it | _ -> page#buffer#get_iter `INSERT in
   find_by_offset ~project:page#project ~filename:page#get_filename ~offset:iter#offset ~compile_buffer ()
 (*  match Binannot.read_cmt ~project:page#project ~filename:page#get_filename ~compile_buffer () with
     | Some (filename, _, cmt) ->

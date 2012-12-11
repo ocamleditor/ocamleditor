@@ -44,8 +44,6 @@ let parse pref =
   let span = Miscellanea.Memo.fast ~f:span in
   fun text ->
     let buffer = Lexing.from_string text in
-    let in_record = ref false in
-    let in_record_label = ref false in
     let out = Buffer.create (String.length text) in
     let pos = ref 0 in
     let pending = ref false in
@@ -55,6 +53,11 @@ let parse pref =
         pending := false
       end;
     in
+    let tag = ref "" in
+    let last = ref EOF in
+    let last_but_one = ref EOF in
+    let in_record = ref false in
+    let in_record_label = ref false in
     try
       while true do
         try
@@ -62,7 +65,7 @@ let parse pref =
           let lstart = Lexing.lexeme_start buffer in
           (*let lstop = Lexing.lexeme_end buffer in*)
           let lexeme = Lexing.lexeme buffer in
-          let tag =
+          tag := begin
             match token with
             | AMPERAMPER
             | AMPERSAND
@@ -131,10 +134,11 @@ let parse pref =
                 -> "label"
             | UIDENT _ | BACKQUOTE -> "uident"
             | LIDENT _ ->
-                (*begin match !last with
-                  | _, (QUESTION | TILDE), _, _ -> "label"
-                  | _, BACKQUOTE, _, _ -> "number"
-                  (* TODO:  *)
+                begin match !last with
+                  | QUESTION | TILDE -> "label"
+                  | BACKQUOTE -> "number"
+                  | _ -> ""
+                  (*(* TODO:  *)
                   | _, LBRACE, _, _ when !in_record -> "record_label"
                   | _, MUTABLE, _, _ when !in_record -> "record_label"
                   | _, WITH, _, _ when !in_record -> "record_label"
@@ -145,8 +149,8 @@ let parse pref =
                       | _, (QUESTION | TILDE), _, _ -> "label"
                       | _ -> (if lexeme = "failwith" || lexeme = "raise" || lexeme = "invalid_arg" then "custom" else "lident"))
                   | last ->
-                    (if lexeme = "failwith" || lexeme = "raise" || lexeme = "invalid_arg" then "custom" else tag_lident last)
-                end*) ""
+                    (if lexeme = "failwith" || lexeme = "raise" || lexeme = "invalid_arg" then "custom" else tag_lident last)*)
+                end
             | COLON -> ""
                 (*begin match !last with
                   _, LIDENT _, lstart, lstop ->
@@ -167,21 +171,25 @@ let parse pref =
             | ASSERT -> "custom"
             | EOF -> raise End_of_file
             | _ -> ""
-          in
-          Buffer.add_string out (String.sub text !pos (lstart - !pos));
+          end;
+          Buffer.add_string out (Glib.Markup.escape_text (String.sub text !pos (lstart - !pos)));
           close_pending();
-          if tag <> "" then begin
-            Buffer.add_string out (span tag);
+          if !tag <> "" then begin
+            Buffer.add_string out (span !tag);
             Buffer.add_string out (Glib.Markup.escape_text lexeme);
-            if tag <> "char" then (Buffer.add_string out "</span>") else (pending := true);
-          end else (Buffer.add_string out lexeme);
+            if !tag <> "char" then (Buffer.add_string out "</span>") else (pending := true);
+          end else (Buffer.add_string out (Glib.Markup.escape_text lexeme));
           pos := lstart + (String.length lexeme);
+          last_but_one := !last;
+          last := token;
         with Lexer.Error _ -> ()
       done;
       close_pending();
       Buffer.contents out
     with
       | End_of_file ->
+        let lexeme = (String.sub text !pos (String.length text - !pos)) in
+        Buffer.add_string out (Glib.Markup.escape_text lexeme);
         close_pending();
         Buffer.contents out
         (*(* comments *)
@@ -215,4 +223,7 @@ let parse pref =
       | (Lexer.Error (error, _)) as ex ->
         close_pending();
         Buffer.contents out
-      | ex -> (printf "Lexical: %s\n%!" (Printexc.to_string ex)); ""
+      | ex ->
+        close_pending();
+        (printf "Lexical_markup: %s\n%!" (Printexc.to_string ex));
+        ""

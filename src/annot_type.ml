@@ -48,9 +48,7 @@ object (self)
         | Some file ->
           begin
             match page#project.Prj.in_source_path file#path with
-              | Some _ ->
-                let filename = file#path in
-                Binannot_type.find ~page ()
+              | Some _ -> Binannot_type.find ~page ~iter ()
               | _ -> None
           end;
     end else None
@@ -105,7 +103,7 @@ object (self)
               if line <= line_count then begin
                 let start_iter = buffer#get_iter (`LINE (line - 1)) in
                 if index1 < start_iter#bytes_in_line then begin
-                  let bol = buffer#get_iter (`LINE (line - 1)) in
+                  let bol = start_iter (*buffer#get_iter (`LINE (line - 1))*) in
                   let eol = bol#forward_to_line_end in
                   let index1 = Convert.offset_from_pos (buffer#get_text ~start:bol ~stop:eol ()) ~pos:index1 in
                   let start_iter = buffer#get_iter (`LINECHAR ((line - 1), index1)) in

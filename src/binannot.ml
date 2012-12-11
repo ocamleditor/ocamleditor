@@ -85,7 +85,8 @@ let cnum_of_loc loc =
 
 let string_of_type_expr te = Odoc_info.string_of_type_expr te;;
 
-let (<==) loc offset = loc.loc_start.pos_cnum <= offset && (offset <= loc.loc_end.pos_cnum || loc.loc_end.pos_cnum = -1)
+let (<==) loc offset = loc.loc_start.pos_cnum <= offset && offset <= loc.loc_end.pos_cnum
+let (<==<) loc offset = loc.loc_start.pos_cnum <= offset && (offset <= loc.loc_end.pos_cnum || loc.loc_end.pos_cnum = -1)
 
 (** read_cmt *)
 let read_cmt ~project ~filename:source ?(timestamp=0.) ?compile_buffer () =

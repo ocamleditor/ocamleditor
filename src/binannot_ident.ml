@@ -224,7 +224,7 @@ let find_used_components ~project ~filename ~offset ?compile_buffer () =
                 let uses = Hashtbl.find_all entry.ext_refs modname in
                 let uses = List.filter begin function
                   | {ident_kind = Open _; _} -> false
-                  | u -> scope <== u.ident_loc.loc.loc_start.pos_cnum
+                  | u -> scope <==< u.ident_loc.loc.loc_start.pos_cnum
                 end uses in
                 Some (ident, uses)
               | [] -> assert false
