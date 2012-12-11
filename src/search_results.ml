@@ -262,10 +262,13 @@ object (self)
         (lnum, line, locs)
       end lines
     in
-    let parse = Lexical_markup.parse Preferences.preferences#get in
+    let open Lexical_markup in
+    let open Lexical_markup.Range in
+    let parse = parse Preferences.preferences#get in
     List.iter begin fun (lnum, line, locs) ->
+      let ranges = List.map (fun (_, l) -> !!(l.loc)) locs in
       let line = (*String.trim*) line in
-      let markup = parse line in
+      let markup = parse ~highlights:ranges line in
       let markup = Convert.to_utf8 markup in
       let pixbuf = List.fold_left (fun acc (p, _) -> max p acc) None locs in
       let row = model_lines#append () in
@@ -274,7 +277,8 @@ object (self)
       model_lines#set ~row ~column:col_line_num lnum;
       model_lines#set ~row ~column:col_markup markup;
       let len = List.length locs in
-      if len > 1 then model_lines#set ~row ~column:col_matches_num (Some ("<i>" ^ (string_of_int len) ^ "</i>"))
+      if len > 1 then model_lines#set ~row ~column:col_matches_num
+        (Some (String.concat "" ["<i>"; (string_of_int len); "</i>"]))
     end locations_lines;
     List.length locations_lines
 

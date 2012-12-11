@@ -23,6 +23,28 @@
 
 open Parser
 open Printf
+open Location
+open Lexing
+
+module Range = struct
+  let range_of_loc {loc_start; loc_end; _} =
+    loc_start.pos_cnum - loc_start.pos_bol,
+    loc_end.pos_cnum - loc_end.pos_bol
+
+  let (!!) = range_of_loc
+
+  let rec range_intersection ((a1, b1) as r1) ((a2, b2) as r2) =
+    (* a1 <= b1 && a2 <= b2 *)
+    if a1 <= a2 then
+      if b2 <= b1 then Some r2
+      else if a2 <= b1 then Some (a2, b1)
+      else None
+    else range_intersection r2 r1;;
+
+  let (^^) = range_intersection
+end
+
+open Range
 
 let tag_lident = function
   | _, METHOD, _, _ | _, PRIVATE, _, _ -> "method_name_def"
@@ -32,17 +54,22 @@ let tag_lident = function
 
 let parse pref =
   let tags = pref.Preferences.pref_tags in
-  let span tagname =
+  let _, bgcolor_highlight = Preferences.preferences#get.Preferences.pref_editor_mark_occurrences in
+  let span_highlight text =
+    String.concat "" ["<span bgcolor='"; bgcolor_highlight; "'>"; (Glib.Markup.escape_text text); "</span>"]
+  in
+  let span (highlight, tagname) =
     match List.assoc tagname tags with
       | `NAME color, weight, style, underline, _, _ ->
         let weight    = match weight with `BOLD -> " font_weight='bold'" | _ -> "" in
         let style     = match style with `ITALIC -> " font_style='italic'" | _ -> "" in
         let underline = match underline with `LOW -> " underline='low'" | _ -> "" in
-        sprintf "<span color='%s'%s%s%s>" color weight style underline
+        let bgcolor   = if highlight then " bgcolor='" ^ bgcolor_highlight ^"'" else "" in
+        String.concat "" ["<span color='"; color; "'"; weight; style; underline; bgcolor; ">"]
       | _ -> assert false
   in
   let span = Miscellanea.Memo.fast ~f:span in
-  fun text ->
+  fun ?(highlights=[]) text ->
     let buffer = Lexing.from_string text in
     let out = Buffer.create (String.length text) in
     let pos = ref 0 in
@@ -62,8 +89,7 @@ let parse pref =
       while true do
         try
           let token = Lexer.token buffer in
-          let lstart = Lexing.lexeme_start buffer in
-          (*let lstop = Lexing.lexeme_end buffer in*)
+          let (lstart, lstop) as range = Lexing.lexeme_start buffer, Lexing.lexeme_end buffer in
           let lexeme = Lexing.lexeme buffer in
           tag := begin
             match token with
@@ -172,13 +198,47 @@ let parse pref =
             | EOF -> raise End_of_file
             | _ -> ""
           end;
+
           Buffer.add_string out (Glib.Markup.escape_text (String.sub text !pos (lstart - !pos)));
           close_pending();
+          (*  *)
+          let add with_span =
+            match List.fold_left (fun acc h -> match h ^^ range with None -> acc | x -> x) None highlights with
+              | Some (a, b) when a < b ->
+                if with_span then begin
+                  if a = lstart && b = lstop then begin
+                    Buffer.add_string out (span (true, !tag));
+                    Buffer.add_string out (Glib.Markup.escape_text lexeme);
+                  end else begin (* TODO: Other cases non implemented *)
+                    Buffer.add_string out (span (false, !tag));
+                    Buffer.add_string out (Glib.Markup.escape_text lexeme);
+                  end
+                end else begin
+                  if a = lstart && b = lstop then begin
+                    let before = String.sub text lstart (b - lstart) in
+                    let after = String.sub text b (lstop - b) in
+                    if before <> "" then (Buffer.add_string out (span_highlight before));
+                    if after <> "" then (Buffer.add_string out (Glib.Markup.escape_text after));
+                  end else begin
+                    let before = String.sub text lstart (a - lstart) in
+                    let middle = String.sub text a (b - a) in
+                    let after = String.sub text b (lstop - b) in
+                    if before <> "" then (Buffer.add_string out (Glib.Markup.escape_text before););
+                    if middle <> "" then (Buffer.add_string out (span_highlight middle));
+                    if after <> "" then (Buffer.add_string out (Glib.Markup.escape_text after););
+                  end
+                end
+              | _ ->
+                if with_span then (Buffer.add_string out (span (false, !tag)));
+                Buffer.add_string out (Glib.Markup.escape_text lexeme);
+          in
+          (*  *)
           if !tag <> "" then begin
-            Buffer.add_string out (span !tag);
-            Buffer.add_string out (Glib.Markup.escape_text lexeme);
+            add true;
             if !tag <> "char" then (Buffer.add_string out "</span>") else (pending := true);
-          end else (Buffer.add_string out (Glib.Markup.escape_text lexeme));
+          end else begin
+            add false;
+          end;
           pos := lstart + (String.length lexeme);
           last_but_one := !last;
           last := token;
@@ -189,6 +249,7 @@ let parse pref =
     with
       | End_of_file ->
         let lexeme = (String.sub text !pos (String.length text - !pos)) in
+        (* TODO: consider highlights *)
         Buffer.add_string out (Glib.Markup.escape_text lexeme);
         close_pending();
         Buffer.contents out
