@@ -151,7 +151,7 @@ let find_used_components editor =
   editor#with_current_page begin fun page ->
     let project = editor#project in
     let filename = page#get_filename in
-    let offset = (page#buffer#get_iter `INSERT)#offset in
+    let iter = page#buffer#get_iter `INSERT in
     let open Binannot in
     let open Search_results in
     let open Location in
@@ -159,7 +159,7 @@ let find_used_components editor =
       Binannot_ident.find_used_components
         ~project
         ~filename
-        ~offset
+        ~offset: iter#offset
         ~compile_buffer:(fun () -> page#compile_buffer ?join:(Some true))  ()
     with
       | Some (ident, used_components) when used_components <> [] ->
@@ -179,7 +179,10 @@ let find_used_components editor =
           in
           widget#set_results [results];
           label#set_text ident.ident_loc.txt;
-          kprintf widget#label_message#set_label "Used components of Module <tt>%s</tt>" (Glib.Markup.escape_text ident.ident_loc.txt);
+          kprintf widget#label_message#set_label
+            "Used components of module <tt>%s</tt>, opened at file %s, line %d"
+              (Glib.Markup.escape_text ident.ident_loc.txt)
+              (Filename.basename filename) (iter#line + 1);
         end);
         widget#start_search();
       | _ -> ()

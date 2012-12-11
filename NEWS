@@ -30,8 +30,8 @@
       - new ability to search variant and exception constructors and
         record labels.
 
-  * New: "Find Used Components of Module", finds all components of an open
-    module that are in use.
+  * New: "Find Used Components of Module", finds all used components of an
+    opened module.
 
   * Completion: more accurate completion of local definitions.
 

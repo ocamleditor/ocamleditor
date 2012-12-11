@@ -263,7 +263,11 @@ and iter_expression f {exp_desc; exp_loc; exp_type; exp_extra; _} =
 and iter_module_expr f {mod_desc; mod_loc; _} =
   match mod_desc with
     | Tmod_structure {str_items; _} ->
-      List.iter (iter_structure_item f) str_items
+      let annots = List.fold_left (fun acc item -> (iter_structure_item f item) @ acc) [] str_items in
+      List.iter begin function
+        | {ident_kind = Open loc; _} as annot -> annot.ident_kind <- Open {loc with loc_end = mod_loc.loc_end}
+        | _ -> ()
+      end annots;
     | Tmod_functor (_, _, _, mod_expr) -> iter_module_expr f mod_expr
     | Tmod_apply (me1, me2, _) ->
       iter_module_expr f me1;
@@ -276,7 +280,12 @@ and iter_module_expr f {mod_desc; mod_loc; _} =
 and iter_module_type f {mty_desc; mty_loc; _} =
   match mty_desc with
     | Tmty_ident _ -> ()
-    | Tmty_signature sign -> List.iter (iter_signature_item f) sign.sig_items
+    | Tmty_signature sign ->
+      let annots = List.fold_left (fun acc item -> (iter_signature_item f item) @ acc) [] sign.sig_items in
+      List.iter begin function
+        | {ident_kind = Open loc; _} as annot -> annot.ident_kind <- Open {loc with loc_end = mty_loc.loc_end}
+        | _ -> ()
+      end annots;
     | Tmty_functor (_, _, mt1, mt2) ->
       iter_module_type f mt1;
       iter_module_type f mt2;
@@ -289,22 +298,38 @@ and iter_module_type f {mty_desc; mty_loc; _} =
 and iter_signature_item f {sig_desc; sig_loc; _} =
   let fmt = iter_module_type f in
   match sig_desc with
-    | Tsig_value (_, _, vd) -> iter_value_description f vd
-    | Tsig_type ll -> List.iter (fun (_, _, td) -> iter_type_declaration f td) ll
-    | Tsig_exception (_, _, ed) -> iter_exception_declaration f ed
-    | Tsig_module (_, _, mt) -> iter_module_type f mt
-    | Tsig_recmodule ll -> List.iter (fun (_, _, mt) -> fmt mt) ll
-    | Tsig_modtype (_, _, Tmodtype_abstract) -> ()
-    | Tsig_modtype (_, _, Tmodtype_manifest mt) -> fmt mt
+    | Tsig_value (_, _, vd) ->
+      iter_value_description f vd;
+      []
+    | Tsig_type ll ->
+      List.iter (fun (_, _, td) -> iter_type_declaration f td) ll;
+      []
+    | Tsig_exception (_, _, ed) ->
+      iter_exception_declaration f ed;
+      []
+    | Tsig_module (_, _, mt) ->
+      iter_module_type f mt;
+      []
+    | Tsig_recmodule ll ->
+      List.iter (fun (_, _, mt) -> fmt mt) ll;
+      []
+    | Tsig_modtype (_, _, Tmodtype_abstract) -> []
+    | Tsig_modtype (_, _, Tmodtype_manifest mt) ->
+      fmt mt;
+      []
     | Tsig_open (path, loc) ->
-      f {
+      let annot = {
         ident_kind  = Open {loc_start = loc.loc.loc_end; loc_end = dummy_pos; loc_ghost=false};
         ident_fname = "";
         ident_loc   = Location.mkloc (Path.name path) loc.loc;
-      };
-    | Tsig_include (mt, sign) -> fmt mt;
-    | Tsig_class ll -> ()
-    | Tsig_class_type ll -> ()
+      } in
+      f annot;
+      [annot]
+    | Tsig_include (mt, sign) ->
+      fmt mt;
+      []
+    | Tsig_class ll -> []
+    | Tsig_class_type ll -> []
 
 (** iter_value_description *)
 and iter_value_description f {val_desc; val_loc; _} = iter_core_type f val_desc
@@ -425,7 +450,9 @@ and iter_exception_declaration f {exn_params; exn_exn; exn_loc} =
 (** iter_structure_item *)
 and iter_structure_item f {str_desc; str_loc; _} =
   match str_desc with
-    | Tstr_eval expr -> ignore (iter_expression f expr);
+    | Tstr_eval expr ->
+      ignore (iter_expression f expr);
+      []
     | Tstr_value (_, pe) ->
       let defs =
         List.rev (List.fold_left begin fun acc (pat, expr) ->
@@ -436,17 +463,26 @@ and iter_structure_item f {str_desc; str_loc; _} =
       in
       List.iter (fun d -> d.ident_kind <-
         Def {def_name=""; def_loc=none; def_scope={str_loc with loc_start = str_loc.loc_end; loc_end = Lexing.dummy_pos}}) defs;
-      List.iter f defs
+      List.iter f defs;
+      []
     | Tstr_open (path, loc) ->
-      f {
+      let annot = {
         ident_kind  = Open {loc_start = loc.loc.loc_end; loc_end = dummy_pos; loc_ghost=false};
         ident_fname = "";
         ident_loc   = Location.mkloc (Path.name path) loc.loc;
-      };
-    | Tstr_include (module_expr, _) -> ()
-    | Tstr_class ll -> List.iter (fun (cd, _, _) -> iter_class_expr f cd.ci_expr) ll
-    | Tstr_class_type ll -> List.iter (fun (_, _, cd) -> iter_class_type f cd.ci_expr) ll
-    | Tstr_type ll -> List.iter (fun (_, _, td) -> iter_type_declaration f td) ll
+      } in
+      f annot;
+      [annot]
+    | Tstr_include (module_expr, _) -> []
+    | Tstr_class ll -> List.iter (fun (cd, _, _) ->
+      iter_class_expr f cd.ci_expr) ll;
+      []
+    | Tstr_class_type ll -> List.iter (fun (_, _, cd) ->
+      iter_class_type f cd.ci_expr) ll;
+      []
+    | Tstr_type ll -> List.iter (fun (_, _, td) ->
+      iter_type_declaration f td) ll;
+      []
     | Tstr_exception (_, loc, ed) ->
       let ident_kind = Def_constr {def_name=loc.txt; def_loc=loc.loc; def_scope=none} in
       f {
@@ -454,21 +490,24 @@ and iter_structure_item f {str_desc; str_loc; _} =
         ident_fname = "";
         ident_loc   = loc;
       };
-      iter_exception_declaration f ed
+      iter_exception_declaration f ed;
+      []
     | Tstr_module (_, loc, me) ->
       f {
         ident_kind  = Def_module {def_name=loc.txt; def_loc=loc.loc; def_scope=me.mod_loc};
         ident_fname = "";
         ident_loc   = loc;
       };
-      iter_module_expr f me
+      iter_module_expr f me;
+      []
     | Tstr_modtype (_, loc, mt) ->
       f {
         ident_kind  = Def_module {def_name=loc.txt; def_loc=loc.loc; def_scope=mt.mty_loc};
         ident_fname = "";
         ident_loc   = loc;
       };
-      iter_module_type f mt
+      iter_module_type f mt;
+      []
     | Tstr_recmodule ll ->
       List.iter begin fun (_, loc, mt, me) ->
         f {
@@ -478,9 +517,12 @@ and iter_structure_item f {str_desc; str_loc; _} =
         };
         iter_module_type f mt;
         iter_module_expr f me;
-      end ll
-    | Tstr_exn_rebind _ -> ()
-    | Tstr_primitive (_, _, vd) -> iter_value_description f vd
+      end ll;
+      []
+    | Tstr_exn_rebind _ -> []
+    | Tstr_primitive (_, _, vd) ->
+      iter_value_description f vd;
+      []
 ;;
 
 (** register *)
@@ -559,7 +601,7 @@ let scan ~project ~filename ?compile_buffer () =
           begin
             match cmt.cmt_annots with
               | Implementation {str_items; _} ->
-                List.iter (iter_structure_item f) str_items;
+                List.iter (fun item -> ignore (iter_structure_item f item)) str_items;
               (*| Partial_implementation parts -> Array.iter (fold_part_impl f) parts*)
               | _ -> ()
           end
