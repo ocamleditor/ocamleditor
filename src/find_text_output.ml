@@ -36,7 +36,7 @@ let new_mark_name = let i = ref 0 in fun () -> incr i; sprintf "find_text_%d" !i
 (** widget *)
 class widget
     ~(dialog : GWindow.window)
-    ~(editor : Editor.editor)
+    ~editor(* : Editor.editor)*)
     ?(buffer : GText.buffer option)
     ?packing () =
   let search_started    = new search_started () in
@@ -422,7 +422,7 @@ object (self)
         ?pattern:(Gaux.may_map self#options.pattern ~f:File.Util.unix_regexp)
         [spec_path]
     | Only_open_files ->
-      List.iter (fun (page : Editor_page.page) ->
+      List.iter (fun page (*: Editor_page.page)*) ->
         self#find_in_file page#get_filename) editor#pages
 
   method private find_in_path' ?recursive ?pattern paths =
@@ -509,7 +509,7 @@ object (self)
         let replacement_text m1 m2 =
           let start = page#buffer#get_iter_at_mark (`NAME m1) in
           let stop = page#buffer#get_iter_at_mark (`NAME m2) in
-          let text = page#buffer#get_text ~start ~stop () in
+          let text = page#buffer#get_text ?start:(Some start) ?stop:(Some stop) ?slice:None ?visible:None () in
           let templ =
             try
               if self#options.use_regexp then Str.replace_first l_regexp self#options.text_repl text else self#options.text_repl
@@ -521,7 +521,7 @@ object (self)
           let start, stop, _ = replacement_text m1 m2 in
           let templ = entry_repl#entry#text in
           page#buffer#delete ~start ~stop;
-          page#buffer#insert templ;
+          page#buffer#insert ?iter:None ?tag_names:None ?tags:None templ;
           if page#buffer#lexical_enabled then begin
             let iter = page#buffer#get_iter `INSERT in
             Lexical.tag page#view#buffer
@@ -587,7 +587,7 @@ object (self)
             let ln = ln - 1 in
             List.iter begin fun (start, stop) ->
               let iter = page#buffer#get_iter (`LINECHAR (ln, 0)) in
-              let bline = page#buffer#get_text ~start:iter ~stop:iter#forward_to_line_end () in
+              let bline = page#buffer#get_text ?start:(Some iter) ?stop:(Some iter#forward_to_line_end) ?slice:None ?visible:None () in
               if (Project.convert_to_utf8 project (strip_cr line)) = (strip_cr bline) then begin
                 let name_start = new_mark_name() in
                 let (_ : Gtk.text_mark) = page#buffer#create_mark ?name:(Some name_start) ?left_gravity:None (iter#forward_chars start) in

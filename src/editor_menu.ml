@@ -93,12 +93,11 @@ let create ~editor ~page () =
     editor#with_current_page (fun page ->
       ignore (editor#scroll_to_definition (page#buffer#get_iter `INSERT)))));
   ignore (find_references#connect#activate ~callback:begin
-    Activity.wrap Activity.Annot (fun () -> Menu_op.find_definition_references editor)
+    Activity.wrap Activity.Annot (fun () -> Menu_search.find_definition_references editor)
   end);
-  ignore (find_used_components#connect#activate ~callback:(fun () -> Menu_op.find_used_components editor));
+  ignore (find_used_components#connect#activate ~callback:(fun () -> Menu_search.find_used_components editor));
   (*  *)
   let callback ev =
-    find_used_components#misc#hide();
     let clip = GData.clipboard Gdk.Atom.clipboard in
     cut#connect#activate ~callback:(fun () -> page#buffer#cut_clipboard ?default_editable:None clip);
     cut#misc#set_sensitive page#buffer#has_selection;
@@ -112,9 +111,12 @@ let create ~editor ~page () =
     delete#misc#set_sensitive page#buffer#has_selection;
     select_all#connect#activate ~callback:page#buffer#select_all;
 
-    Gmisclib.Idle.add (fun () -> Menu_op.set_has_definition editor find_definition);
-    Gmisclib.Idle.add (fun () -> Menu_op.set_has_references editor find_references);
-    Gmisclib.Idle.add (fun () -> Menu_op.set_has_used_components editor label_find_used_components find_used_components);
+    Menu_search.update_items_visibility
+      ~label_find_used_components
+      ~find_used_components
+      ~find_definition
+      ~find_references
+      editor;
 
     List.iter (fun (w, s) -> w#misc#handler_block s) sigids;
     show_whitespace_characters#set_active editor#show_whitespace_chars;

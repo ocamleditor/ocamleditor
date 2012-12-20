@@ -111,9 +111,7 @@ class widget ~editor ?(callback=ignore) ~project ?page_num ?packing ?show () =
   let hbox = GPack.hbox ~spacing:8 ~packing:target_box#add () in
   let target_list = new Target_list.view ~editor ~project ~packing:hbox#pack () in
   let _ =
-    if List.length project.Prj.targets = 0 then begin
-      ignore (target_list#add_target());
-    end;
+    if List.length project.Prj.targets = 0 then (ignore (target_list#add_target()));
   in
   let vbox = GPack.vbox ~spacing:8 ~packing:hbox#add () in
   let label_title = GMisc.label ~markup:"" ~xalign:0.0 ~packing:vbox#pack () in
@@ -210,6 +208,7 @@ object (self)
   val show = new show ()
 
   method button_close = button_close
+  method target_list = target_list
 
   (*method private targets_ok =
     target_list#length > 0 && project.Prj.build <> [] && begin
@@ -284,7 +283,7 @@ object (self)
 
   method connect = new signals ~project_changed ~project_name_changed ~show
 
-  method private init () =
+  initializer
     self#reset();
     if Sys.file_exists project.root then begin
       name_entry#set_editable false;
@@ -319,7 +318,6 @@ object (self)
     end);
     Gaux.may page_num ~f:notebook#goto_page;
 
-  initializer self#init()
 end
 
 and project_changed () = object inherit [Prj.t] GUtil.signal () end

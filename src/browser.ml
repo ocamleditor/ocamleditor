@@ -211,24 +211,29 @@ object (self)
       in
       try
         begin
+          let create_first_target widget =
+            if List.length project.Prj.targets = 0 then (ignore (widget#target_list#add_target()));
+          in
           match List.assoc id cache_dialog_project_properties with
             | window, widget, `ICONIFIED ->
               remove_from_cache();
               cache_dialog_project_properties <- (id, (window, widget, `VISIBLE)) :: cache_dialog_project_properties;
               if show then begin
                 Gaux.may page_num ~f:widget#goto_page;
+                create_first_target widget;
                 window#present();
               end
             | window, widget, state ->
               (*widget#reset();*)
               if show then begin
                 Gaux.may page_num ~f:widget#goto_page;
+                create_first_target widget;
                 window#present();
               end
         end;
       with Not_found ->
         let window, widget = Project_properties.create ~editor ?page_num ~show () in
-        (* Because of "widget" (the "Project Properties" dialog) is cached,
+        (* Since "widget" (the "Project Properties" dialog) is cached,
            browser#current_project and the project instance stored in the dialog can
            be different objects (i.e. after a project switch in the IDE).  *)
         ignore (widget#connect#project_changed ~callback:(fun proj -> current_project#set (Some proj)));
@@ -289,7 +294,8 @@ object (self)
       let roots = project_history.File_history.content in (* project filenames .xml *)
       let roots = List.filter ((<>) current) (List.map Filename.dirname roots) in
       let roots = current :: roots in
-      Dialog_find_file.create ?all ~roots ~editor ()
+      let dialog = Dialog_find_file.create ?all ~roots ~editor () in
+      dialog#set_transient_for window#as_window;
     end
 
   method menubar_visible = menubar_visible
@@ -570,49 +576,6 @@ object (self)
         with _ -> ()
       end
     with Exit -> ()
-
-  method find_and_replace
-      ?(find_all=false)
-      ?(search_word_at_cursor=(Preferences.preferences#get.Preferences.pref_search_word_at_cursor))
-      () =
-    self#with_current_project begin fun project ->
-      editor#with_current_page begin fun page ->
-        let buffer = page#view#buffer in
-        let dialog, page = Find_text_dialog.create ~buffer ~editor:editor
-          ~project ~find_all ~search_word_at_cursor ()
-        in
-        let hbox = GPack.hbox ~spacing:3 () in
-        let icon = GMisc.image ~pixbuf:Icons.search_results_16 ~packing:hbox#pack () in
-        let label = GMisc.label ~packing:hbox#pack () in
-        ignore (page#connect#search_started ~callback:begin fun () ->
-          if page#misc#parent = None then
-            (ignore (Messages.vmessages#append_page ~label_widget:hbox#coerce page#as_page));
-          label#set_text page#text_to_find;
-          page#present ();
-        end);
-        ignore (page#connect#search_finished ~callback:begin fun () ->
-          page#active#set false;
-          page#present();
-        end);
-        if not find_all then (dialog#show())
-      end
-    end
-
-  method find_next () =
-    editor#with_current_page begin fun page ->
-      try
-       Find_text_in_buffer.find Find_text.Forward
-         ~view:page#view ~canceled:(fun () -> false)
-      with Find_text.No_current_regexp -> self#find_and_replace()
-    end
-
-  method search_again () =
-    try
-      editor#with_current_page begin fun page ->
-        Find_text_in_buffer.find Find_text.status.Find_text.direction
-         ~view:page#view ~canceled:(fun () -> false)
-      end
-    with Find_text.No_current_regexp -> self#find_and_replace()
 
   method with_current_project f = match current_project#get with Some p -> f p | _ -> ()
 
@@ -999,18 +962,3 @@ let browser = begin
   in
   new browser window;
 end
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

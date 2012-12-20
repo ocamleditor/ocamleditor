@@ -50,8 +50,8 @@ class ['a] toolbar ~(messages : Messages.messages) ~(hmessages : Messages.messag
   let tool_eval                = GButton.tool_button ~stock:`EXECUTE ~label:"Toplevel" () in
   let tool_clean               = Gmisclib.Toolbar.menu_tool_button ~toolbar ~homogeneous:false () in
   let tool_compile_file        = GButton.tool_button ~label:"Compile File" () in
+  let tool_compile             = Gmisclib.Toolbar.menu_tool_button ~toolbar ~homogeneous:false () in
   let tool_build               = Gmisclib.Toolbar.menu_tool_button ~toolbar ~homogeneous:false () in
-  let tool_link                = Gmisclib.Toolbar.menu_tool_button ~toolbar ~homogeneous:false () in
   let tool_run                 = Gmisclib.Toolbar.menu_tool_button ~toolbar ~homogeneous:false () in
   let tool_back                = Gmisclib.Toolbar.menu_tool_button ~toolbar ~label:"Previous Location" ~homogeneous:false () in
   let _                        = tool_back#set_image (GMisc.image ~pixbuf:Icons.go_back ())#coerce in
@@ -125,16 +125,16 @@ object (self)
     tool_eval#misc#set_tooltip_text "Eval in Toplevel";
     toolbar#insert tool_compile_file;
     tool_compile_file#set_icon_widget (Icons.create Icons.compile_file_16)#coerce;
-    (** Clean, Build, Run *)
+    (** Clean, Compile, Build, Run *)
     let _ = GButton.separator_tool_item ~packing:toolbar#insert () in
     toolbar#insert tool_clean#as_tool_item;
     tool_clean#set_image (GMisc.image ~pixbuf:Icons.clear_build_16 ())#coerce;
+    toolbar#insert tool_compile#as_tool_item;
+    tool_compile#set_image (GMisc.image ~pixbuf:Icons.compile_all_16 ())#coerce;
+    tool_compile#misc#set_tooltip_text "Compile only";
     toolbar#insert tool_build#as_tool_item;
-    tool_build#set_image (GMisc.image ~pixbuf:Icons.compile_all_16 ())#coerce;
-    tool_build#misc#set_tooltip_text "Compile only";
-    toolbar#insert tool_link#as_tool_item;
-    tool_link#set_image (GMisc.image ~pixbuf:Icons.build_16 ())#coerce;
-    tool_link#misc#set_tooltip_text "Build";
+    tool_build#set_image (GMisc.image ~pixbuf:Icons.build_16 ())#coerce;
+    tool_build#misc#set_tooltip_text "Build";
     toolbar#insert tool_run#as_tool_item;
     tool_run#set_image (GMisc.image ~pixbuf:Icons.start_16 ())#coerce;
     (** Location History *)
@@ -148,145 +148,146 @@ object (self)
     ()
 
   method bind_signals : 'a -> unit = fun browser ->
-    (*browser#with_current_project begin fun project ->*)
-      (** file *)
-      ignore (tool_new_file#connect#clicked ~callback:browser#dialog_file_new);
-      ignore (tool_open_file#connect#clicked ~callback:editor#dialog_file_open);
-      ignore (tool_save#connect#clicked ~callback:begin fun () ->
-        Gaux.may ~f:editor#save (editor#get_page `ACTIVE)
-      end);
-      ignore (tool_save_all#connect#clicked ~callback:browser#save_all);
-      ignore (tool_save_all#connect#show_menu ~callback:begin fun (label, menu) ->
-        List.iter begin fun p ->
-          if p#view#buffer#modified then begin
-            let item = GMenu.menu_item ~label:(Filename.basename p#get_filename) ~packing:menu#append () in
-            ignore (item#connect#activate ~callback:p#save);
-          end
-        end editor#pages;
-      end);
-      ignore (tool_close_file#connect#clicked ~callback:(fun () ->
-        editor#with_current_page (fun page -> ignore (editor#dialog_confirm_close page))));
-      (** undo/redo *)
-      ignore (tool_undo#connect#clicked ~callback:(fun () -> editor#with_current_page (fun p -> p#undo())));
-      ignore (tool_redo#connect#clicked ~callback:(fun () -> editor#with_current_page (fun p -> p#redo())));
-      (** find/replace *)
-      let search_again () =
-        browser#with_current_project begin fun project ->
-          Find_text.update_status
-            ~project
-            ~text_find:tool_entry_find#entry#text ();
-          browser#search_again ();
-        end;
-      in
-      ignore (tool_find_repl#connect#clicked ~callback:(fun () ->
-        browser#find_and_replace ?find_all:None ?search_word_at_cursor:None ()));
-      ignore (tool_entry_find#entry#event#connect#key_press ~callback:begin fun ev ->
-        if GdkEvent.Key.keyval ev = GdkKeysyms._Return then begin
-          search_again ();
-          true
-        end else false
-      end);
-      ignore (tool_find#connect#clicked ~callback:search_again);
-      (** Messages, eval, compile file *)
-      ignore (self#connect#tool_messages_clicked ~callback:(fun _-> ((browser#set_vmessages_visible (not messages#visible)) : unit)));
-      ignore (self#connect#tool_hmessages_clicked ~callback:(fun _-> ((browser#set_hmessages_visible (not hmessages#visible)) : unit)));
-      ignore (tool_eval#connect#clicked ~callback:begin fun () ->
-        Gaux.may ~f:(fun p -> p#ocaml_view#obuffer#send_to_shell ()) (editor#get_page `ACTIVE)
-      end);
-      ignore (tool_compile_file#connect#clicked ~callback:begin fun () ->
-        editor#with_current_page (fun p -> p#compile_buffer ?join:None ())
-      end);
-      (** Targets *)
-      (* clean *)
-      ignore (tool_clean#connect#clicked ~callback:begin fun () ->
-        browser#with_current_project (fun project ->
-          browser#with_default_target begin fun target ->
-            ignore (Task_console.exec ~editor `CLEAN target)
-          end)
-      end);
-      ignore (tool_clean#connect#show_menu ~callback:begin fun (label, menu) ->
-        browser#with_current_project (fun project ->
-          browser#with_default_target begin fun target ->
-            label := Some (sprintf "Clean \xC2\xAB%s\xC2\xBB" target.Target.name);
-            let targets = project.Prj.targets in
-            List.iter begin fun tg ->
-              let item = GMenu.menu_item ~label:tg.Target.name ~packing:menu#add () in
-              ignore (item#connect#activate ~callback:begin fun () ->
-                ignore (Task_console.exec ~editor `CLEAN tg)
-              end);
-            end targets;
-          end)
-      end);
-      (* build *)
-      ignore (tool_build#connect#clicked ~callback:begin fun () ->
-        browser#with_current_project (fun project ->
-          browser#with_default_target begin fun target ->
-            ignore (Task_console.exec ~editor `COMPILE_ONLY target)
-          end)
-      end);
-      ignore (tool_build#connect#show_menu ~callback:begin fun (label, menu) ->
-        browser#with_current_project (fun project ->
-          browser#with_default_target begin fun target ->
-            label := Some (sprintf "Compile \xC2\xAB%s\xC2\xBB" target.Target.name);
-            let targets = project.Prj.targets in
-            List.iter begin fun tg ->
-              let item = GMenu.menu_item ~label:tg.Target.name ~packing:menu#add () in
-              ignore (item#connect#activate ~callback:begin fun () ->
-                ignore (Task_console.exec ~editor `COMPILE_ONLY tg)
-              end);
-            end targets;
-          end)
-      end);
-      (* link *)
-      ignore (tool_link#connect#clicked ~callback:begin fun () ->
-        browser#with_current_project (fun project ->
-          browser#with_default_target begin fun target ->
-            ignore (Task_console.exec ~editor `COMPILE target)
-          end)
-      end);
-      ignore (tool_link#connect#show_menu ~callback:begin fun (label, menu) ->
-        browser#with_current_project (fun project ->
-          browser#with_default_target begin fun target ->
-            label := Some (sprintf "Build \xC2\xAB%s\xC2\xBB" target.Target.name);
-            let targets = project.Prj.targets in
-            List.iter begin fun tg ->
-              let item = GMenu.menu_item ~label:tg.Target.name ~packing:menu#add () in
-              ignore (item#connect#activate ~callback:begin fun () ->
-                ignore (Task_console.exec ~editor `COMPILE tg)
-              end); ()
-            end targets;
-          end)
-      end);
-      (* run *)
-      ignore (tool_run#connect#clicked ~callback:begin fun () ->
-        browser#with_current_project (fun project ->
-          browser#with_default_runtime_config ~open_dialog:true (fun rc ->
-            let bc = List.find (fun b -> b.Target.id = rc.Rconf.target_id) project.Prj.targets in
-            ignore (Task_console.exec ~editor (`RCONF rc) bc)))
-      end);
-      ignore (tool_run#connect#show_menu ~callback:begin fun (label, menu) ->
-        browser#with_current_project (fun project ->
-          browser#with_default_runtime_config ~open_dialog:true (fun default_rc ->
-            label := Some (sprintf "Run \xC2\xAB%s\xC2\xBB" default_rc.Rconf.name);
-            let targets = project.Prj.targets in
-            List.iter begin fun rc ->
-              let item = GMenu.menu_item ~label:rc.Rconf.name ~packing:menu#add () in
-              ignore (item#connect#activate ~callback:begin fun () ->
-                try
-                  let bc = List.find (fun b -> b.Target.id = rc.Rconf.target_id) targets in
-                  ignore (Task_console.exec ~editor (`RCONF rc) bc)
-                with Not_found -> ()
-              end);
-            end project.Prj.executables))
-      end);
-      (** Location History *)
-      tool_back#connect#clicked ~callback:(fun () -> browser#goto_location `PREV);
-      tool_forward#connect#clicked ~callback:(fun () -> browser#goto_location `NEXT);
-      tool_last_edit_loc#connect#clicked ~callback:(fun () -> browser#goto_location `LAST);
-      tool_back#connect#show_menu ~callback:(fun (dir, menu) -> browser#create_menu_history `BACK ~menu);
-      tool_forward#connect#show_menu ~callback:(fun (dir, menu) -> browser#create_menu_history `FORWARD ~menu);
-      ()
-    (*end*)
+    (** file *)
+    ignore (tool_new_file#connect#clicked ~callback:browser#dialog_file_new);
+    ignore (tool_open_file#connect#clicked ~callback:editor#dialog_file_open);
+    ignore (tool_save#connect#clicked ~callback:begin fun () ->
+      Gaux.may ~f:editor#save (editor#get_page `ACTIVE)
+    end);
+    ignore (tool_save_all#connect#clicked ~callback:browser#save_all);
+    ignore (tool_save_all#connect#show_menu ~callback:begin fun (label, menu) ->
+      List.iter begin fun p ->
+        if p#view#buffer#modified then begin
+          let item = GMenu.menu_item ~label:(Filename.basename p#get_filename) ~packing:menu#append () in
+          ignore (item#connect#activate ~callback:p#save);
+        end
+      end editor#pages;
+    end);
+    ignore (tool_close_file#connect#clicked ~callback:(fun () ->
+      editor#with_current_page (fun page -> ignore (editor#dialog_confirm_close page))));
+    (** undo/redo *)
+    ignore (tool_undo#connect#clicked ~callback:(fun () -> editor#with_current_page (fun p -> p#undo())));
+    ignore (tool_redo#connect#clicked ~callback:(fun () -> editor#with_current_page (fun p -> p#redo())));
+    (** find/replace *)
+    let search_again () =
+      browser#with_current_project begin fun project ->
+        Find_text.update_status
+          ~project
+          ~text_find:tool_entry_find#entry#text ();
+        Menu_search.search_again editor;
+      end;
+    in
+    ignore (tool_find_repl#connect#clicked ~callback:(fun () ->
+      Menu_search.find_replace ?find_all:None ?search_word_at_cursor:None editor));
+    ignore (tool_entry_find#entry#event#connect#key_press ~callback:begin fun ev ->
+      if GdkEvent.Key.keyval ev = GdkKeysyms._Return then begin
+        search_again ();
+        true
+      end else false
+    end);
+    ignore (tool_find#connect#clicked ~callback:search_again);
+    (** Messages, eval, compile file *)
+    ignore (self#connect#tool_messages_clicked ~callback:(fun _-> ((browser#set_vmessages_visible (not messages#visible)) : unit)));
+    ignore (self#connect#tool_hmessages_clicked ~callback:(fun _-> ((browser#set_hmessages_visible (not hmessages#visible)) : unit)));
+    ignore (tool_eval#connect#clicked ~callback:begin fun () ->
+      Gaux.may ~f:(fun p -> p#ocaml_view#obuffer#send_to_shell ()) (editor#get_page `ACTIVE)
+    end);
+    ignore (tool_compile_file#connect#clicked ~callback:begin fun () ->
+      editor#with_current_page begin fun p ->
+        if Preferences.preferences#get.Preferences.pref_editor_save_all_bef_comp then (editor#save_all());
+        p#compile_buffer ?join:None ()
+      end
+    end);
+    (** Targets *)
+    (* clean *)
+    ignore (tool_clean#connect#clicked ~callback:begin fun () ->
+      browser#with_current_project (fun project ->
+        browser#with_default_target begin fun target ->
+          ignore (Task_console.exec ~editor `CLEAN target)
+        end)
+    end);
+    ignore (tool_clean#connect#show_menu ~callback:begin fun (label, menu) ->
+      browser#with_current_project (fun project ->
+        browser#with_default_target begin fun target ->
+          label := Some (sprintf "Clean \xC2\xAB%s\xC2\xBB" target.Target.name);
+          let targets = project.Prj.targets in
+          List.iter begin fun tg ->
+            let item = GMenu.menu_item ~label:tg.Target.name ~packing:menu#add () in
+            ignore (item#connect#activate ~callback:begin fun () ->
+              ignore (Task_console.exec ~editor `CLEAN tg)
+            end);
+          end targets;
+        end)
+    end);
+    (* build *)
+    ignore (tool_compile#connect#clicked ~callback:begin fun () ->
+      browser#with_current_project (fun project ->
+        browser#with_default_target begin fun target ->
+          ignore (Task_console.exec ~editor `COMPILE_ONLY target)
+        end)
+    end);
+    ignore (tool_compile#connect#show_menu ~callback:begin fun (label, menu) ->
+      browser#with_current_project (fun project ->
+        browser#with_default_target begin fun target ->
+          label := Some (sprintf "Compile \xC2\xAB%s\xC2\xBB" target.Target.name);
+          let targets = project.Prj.targets in
+          List.iter begin fun tg ->
+            let item = GMenu.menu_item ~label:tg.Target.name ~packing:menu#add () in
+            ignore (item#connect#activate ~callback:begin fun () ->
+              ignore (Task_console.exec ~editor `COMPILE_ONLY tg)
+            end);
+          end targets;
+        end)
+    end);
+    (* link *)
+    ignore (tool_build#connect#clicked ~callback:begin fun () ->
+      browser#with_current_project (fun project ->
+        browser#with_default_target begin fun target ->
+          ignore (Task_console.exec ~editor `COMPILE target)
+        end)
+    end);
+    ignore (tool_build#connect#show_menu ~callback:begin fun (label, menu) ->
+      browser#with_current_project (fun project ->
+        browser#with_default_target begin fun target ->
+          label := Some (sprintf "Build \xC2\xAB%s\xC2\xBB" target.Target.name);
+          let targets = project.Prj.targets in
+          List.iter begin fun tg ->
+            let item = GMenu.menu_item ~label:tg.Target.name ~packing:menu#add () in
+            ignore (item#connect#activate ~callback:begin fun () ->
+              ignore (Task_console.exec ~editor `COMPILE tg)
+            end); ()
+          end targets;
+        end)
+    end);
+    (* run *)
+    ignore (tool_run#connect#clicked ~callback:begin fun () ->
+      browser#with_current_project (fun project ->
+        browser#with_default_runtime_config ~open_dialog:true (fun rc ->
+          let bc = List.find (fun b -> b.Target.id = rc.Rconf.target_id) project.Prj.targets in
+          ignore (Task_console.exec ~editor (`RCONF rc) bc)))
+    end);
+    ignore (tool_run#connect#show_menu ~callback:begin fun (label, menu) ->
+      browser#with_current_project (fun project ->
+        browser#with_default_runtime_config ~open_dialog:true (fun default_rc ->
+          label := Some (sprintf "Run \xC2\xAB%s\xC2\xBB" default_rc.Rconf.name);
+          let targets = project.Prj.targets in
+          List.iter begin fun rc ->
+            let item = GMenu.menu_item ~label:rc.Rconf.name ~packing:menu#add () in
+            ignore (item#connect#activate ~callback:begin fun () ->
+              try
+                let bc = List.find (fun b -> b.Target.id = rc.Rconf.target_id) targets in
+                ignore (Task_console.exec ~editor (`RCONF rc) bc)
+              with Not_found -> ()
+            end);
+          end project.Prj.executables))
+    end);
+    (** Location History *)
+    tool_back#connect#clicked ~callback:(fun () -> browser#goto_location `PREV);
+    tool_forward#connect#clicked ~callback:(fun () -> browser#goto_location `NEXT);
+    tool_last_edit_loc#connect#clicked ~callback:(fun () -> browser#goto_location `LAST);
+    tool_back#connect#show_menu ~callback:(fun (dir, menu) -> browser#create_menu_history `BACK ~menu);
+    tool_forward#connect#show_menu ~callback:(fun (dir, menu) -> browser#create_menu_history `FORWARD ~menu);
+    ()
 
   method update current_project =
     let dbf = match current_project with None -> None | Some x -> Project.default_target x in
@@ -305,6 +306,7 @@ object (self)
     tool_item_find_entry#misc#set_sensitive (current_project <> None && not editor_empty);
     (*  *)
     tool_clean#misc#set_sensitive (current_project <> None && dbf <> None);
+    tool_compile#misc#set_sensitive (current_project <> None && dbf <> None);
     tool_build#misc#set_sensitive (current_project <> None && dbf <> None);
     tool_run#misc#set_sensitive (current_project <> None && dbf <> None);
     editor#with_current_page begin fun p ->

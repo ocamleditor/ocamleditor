@@ -215,6 +215,7 @@ let _ = Ocaml_config.putenv_ocamllib None
 
 (** Theme *)
 let _ =
+  GtkMain.Rc.parse_string "gtk-button-images = 0";
   let themes = (Filename.dirname ocamleditor_bin) // "share" // "themes" in
   if is_win32 && Sys.file_exists themes
   then begin
@@ -227,6 +228,7 @@ let _ =
     match themes with
       | theme_name :: _ ->
         kprintf GtkMain.Rc.parse_string "gtk-theme-name = \"%s\"" theme_name;
+        GtkMain.Rc.parse_string "gtk-button-images = 0";
         GtkMain.Rc.parse_string "gtk-font-name=\"Sans 8\"";
       | _ -> ()
   end;;

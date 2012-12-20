@@ -24,7 +24,8 @@
 
   * Inferred Types: now are based on ".cmt" files.
 
-  * Find Definition/References:
+  * Find Definition/References
+
       - now based on ".cmt" files;
       - search results are displayed in a new widget;
       - new ability to search variant and exception constructors and

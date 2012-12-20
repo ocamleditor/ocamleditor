@@ -25,7 +25,7 @@ open Miscellanea
 open Find_text
 
 (** create *)
-let create ~project ~(editor : Editor.editor) ?(buffer : GText.buffer option) ?widget
+let create ~project ~editor ?(buffer : GText.buffer option) ?widget
     ?(search_word_at_cursor=false)
     ?(find_all=false) () =
   let buffer_has_selection =
@@ -35,6 +35,8 @@ let create ~project ~(editor : Editor.editor) ?(buffer : GText.buffer option) ?w
   let title = if search_in_path then "Find/Replace in Path" else "Find/Replace Text" in
   let dialog = GWindow.window ~title ~icon:Icons.oe ~width:600 ~position:`CENTER
     ~type_hint:`DIALOG ~border_width:8 ~modal:true ~show:false () in
+  let _ = dialog#set_skip_taskbar_hint true in
+  let _ = dialog#set_skip_pager_hint true in
   let hbox = GPack.hbox ~spacing:13 ~packing:dialog#add () in
   let vbox = GPack.vbox ~spacing:13 ~packing:hbox#add () in
   let table = GPack.table ~row_spacings:5 ~col_spacings:5 ~packing:(vbox#pack ~expand:false) () in
@@ -171,10 +173,10 @@ let create ~project ~(editor : Editor.editor) ?(buffer : GText.buffer option) ?w
   (** Default values in entries *)
   let text =
     if search_word_at_cursor then begin
-      match editor#get_page (`ACTIVE)
+      match editor#get_page `ACTIVE
       with None -> "" | Some page ->
-        let start, stop = page#buffer#select_word ~pat:Ocaml_word_bound.regexp ~select:false () in
-        page#buffer#get_text ~start ~stop ()
+        let start, stop = page#buffer#select_word ?iter:None ?pat:(Some Ocaml_word_bound.regexp) ?select:(Some false) ?search:None () in
+        page#buffer#get_text ?start:(Some start) ?stop:(Some stop) ?slice:None ?visible:None ()
     end else ""
   in
   let text =

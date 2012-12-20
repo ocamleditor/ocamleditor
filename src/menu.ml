@@ -341,32 +341,26 @@ let search ~browser ~group ~flags items =
   let find_repl = GMenu.image_menu_item ~label:"Find and Replace" ~packing:menu#add () in
   find_repl#set_image (GMisc.image ~stock:`FIND_AND_REPLACE ~icon_size:`MENU ())#coerce;
   ignore (find_repl#connect#activate ~callback:(fun () ->
-    browser#find_and_replace ?find_all:None ?search_word_at_cursor:None ()));
+    Menu_search.find_replace ?find_all:None ?search_word_at_cursor:None editor));
   find_repl#add_accelerator ~group ~modi:[`CONTROL] GdkKeysyms._f ~flags;
   (** Find Next *)
   let find_next = GMenu.image_menu_item ~label:"Find Next" ~packing:menu#add () in
-  ignore (find_next#connect#activate ~callback:browser#find_next);
+  ignore (find_next#connect#activate ~callback:(fun () -> Menu_search.find_next editor));
   find_next#add_accelerator ~group GdkKeysyms._F3 ~flags;
   (** Find Previous *)
   let find_prev = GMenu.image_menu_item ~label:"Find Previous" ~packing:menu#add () in
-  ignore (find_prev#connect#activate ~callback:begin fun () ->
-    try
-      editor#with_current_page (fun page ->
-        Find_text_in_buffer.find Find_text.Backward
-          ~view:page#view ~canceled:(fun () -> false))
-    with Find_text.No_current_regexp -> ()
-  end);
+  ignore (find_prev#connect#activate ~callback:(fun () -> Menu_search.find_prev editor));
   find_prev#add_accelerator ~group ~modi:[`SHIFT] GdkKeysyms._F3 ~flags;
   (** Search Again *)
   let search_again = GMenu.image_menu_item ~label:"Search Again" ~packing:menu#add () in
   search_again#set_image (GMisc.image ~pixbuf:Icons.search_again_16 ())#coerce;
-  ignore (search_again#connect#activate ~callback:browser#search_again);
+  ignore (search_again#connect#activate ~callback:(fun () -> Menu_search.search_again editor));
   search_again#add_accelerator ~group ~modi:[`CONTROL] GdkKeysyms._F3 ~flags;
   (** Find All *)
   let find_all = GMenu.image_menu_item ~label:"Find All" ~packing:menu#add () in
   find_all#set_image (GMisc.image ~pixbuf:Icons.search_results_16 ())#coerce;
   ignore (find_all#connect#activate ~callback:(fun () ->
-    browser#find_and_replace ?find_all:(Some true) ?search_word_at_cursor:(Some true) ()));
+    Menu_search.find_replace ?find_all:(Some true) ?search_word_at_cursor:(Some true) editor));
   find_all#add_accelerator ~group ~modi:[`CONTROL; `SHIFT] GdkKeysyms._f ~flags;
   (** Search Incremental *)
   let i_search = GMenu.image_menu_item ~label:"Search Incremental" ~packing:menu#add () in
@@ -376,23 +370,7 @@ let search ~browser ~group ~flags items =
   (** Find/Replace in Path *)
   let find_in_path = GMenu.image_menu_item ~label:"Find/Replace in Path" ~packing:menu#add () in
   ignore (find_in_path#connect#activate ~callback:begin fun () ->
-    browser#with_current_project begin fun project ->
-      let dialog, page = Find_text_dialog.create ~editor ~project () in
-      let hbox = GPack.hbox ~spacing:3 () in
-      let _icon = GMisc.image ~pixbuf:Icons.search_results_16 ~packing:hbox#pack () in
-      let label = GMisc.label ~packing:hbox#pack () in
-      ignore (page#connect#search_started ~callback:begin fun () ->
-        if page#misc#parent = None then
-          (ignore (Messages.vmessages#append_page ~label_widget:hbox#coerce page#as_page));
-        label#set_text page#text_to_find;
-        page#present ();
-      end);
-      ignore (page#connect#search_finished ~callback:begin fun () ->
-        page#active#set false;
-        page#present ();
-      end);
-      dialog#show();
-    end
+    Menu_search.find_replace ?search_word_at_cursor:(Some true) editor;
   end);
   find_in_path#add_accelerator ~group ~modi:[`CONTROL] GdkKeysyms._p ~flags;
   (** Clear find/replace history *)
@@ -416,11 +394,20 @@ let search ~browser ~group ~flags items =
   (** Find references *)
   let find_references = GMenu.image_menu_item ~label:"Find References" ~packing:menu#add () in
   find_references#add_accelerator ~group ~modi:[`CONTROL; `SHIFT] GdkKeysyms._Return ~flags;
-  ignore (find_references#connect#activate ~callback:(fun () -> Menu_op.find_definition_references editor));
+  ignore (find_references#connect#activate ~callback:(fun () -> Menu_search.find_definition_references editor));
+  (** Find used components *)
+  let find_used_components = GMenu.image_menu_item ~packing:menu#add () in
+  let label_find_used_components = GMisc.label ~xalign:0. ~markup:"" ~packing:find_used_components#add () in
+  ignore (find_used_components#connect#activate ~callback:(fun () -> Menu_search.find_used_components editor));
+  (** *)
   ignore (search_item#misc#connect#state_changed ~callback:begin fun state ->
     if state = `NORMAL then begin
-      Gmisclib.Idle.add (fun () -> Menu_op.set_has_definition editor find_definition);
-      Gmisclib.Idle.add (fun () -> Menu_op.set_has_references editor find_references);
+      Menu_search.update_items_visibility
+        ~label_find_used_components
+        ~find_used_components
+        ~find_definition
+        ~find_references
+        editor
     end
   end);
   (** Find file *)
@@ -601,32 +588,30 @@ let project ~browser ~group ~flags items =
     false
   end);
   project#set_submenu menu;
-  (** Clean current *)
-  let project_clean_current = GMenu.image_menu_item ~label:"Clean" ~packing:menu#add () in
-  project_clean_current#set_image (Icons.create Icons.clear_build_16)#coerce;
-  project_clean_current#add_accelerator ~group ~modi:[`CONTROL] GdkKeysyms._F9 ~flags;
-  ignore (project_clean_current#connect#activate ~callback:begin fun () ->
+  (** Clean default target *)
+  let project_clean_default_target = GMenu.image_menu_item ~label:"Clean" ~packing:menu#add () in
+  project_clean_default_target#set_image (Icons.create Icons.clear_build_16)#coerce;
+  project_clean_default_target#add_accelerator ~group ~modi:[`CONTROL] GdkKeysyms._F9 ~flags;
+  ignore (project_clean_default_target#connect#activate ~callback:begin fun () ->
     browser#with_current_project (fun _ ->
       browser#with_default_target (fun target ->
         ignore (Task_console.exec ~editor `CLEAN target)))
   end);
-  (** Compile current *)
+  (** Compile *)
   let project_compile_only = GMenu.image_menu_item ~label:"Compile" ~packing:menu#add () in
   project_compile_only#set_image (Icons.create Icons.compile_all_16)#coerce;
   project_compile_only#add_accelerator ~group ~modi:[`CONTROL] GdkKeysyms._F10 ~flags;
   ignore (project_compile_only#connect#activate ~callback:begin fun () ->
     browser#with_current_project (fun _ ->
       browser#with_default_target (fun target ->
-        if Preferences.preferences#get.Preferences.pref_editor_save_all_bef_comp then (browser#save_all());
         ignore (Task_console.exec ~editor `COMPILE_ONLY target)))
   end);
-  (** Build current *)
+  (** Build *)
   let project_build = GMenu.image_menu_item ~label:"Build" ~packing:menu#add () in
   project_build#set_image (Icons.create Icons.build_16)#coerce;
   ignore (project_build#connect#activate ~callback:begin fun () ->
     browser#with_current_project (fun _ ->
       browser#with_default_target (fun target ->
-        if Preferences.preferences#get.Preferences.pref_editor_save_all_bef_comp then (browser#save_all());
         ignore (Task_console.exec ~editor `COMPILE target)))
   end);
   (** Run current *)
@@ -665,7 +650,10 @@ let project ~browser ~group ~flags items =
   let project_comp_file = GMenu.image_menu_item ~label:"Compile file" ~packing:menu#add () in
   project_comp_file#set_image (GMisc.image ~pixbuf:Icons.compile_file_16 ())#coerce;
   ignore (project_comp_file#connect#activate ~callback:begin fun () ->
-    browser#editor#with_current_page (fun p -> p#compile_buffer ?join:None ())
+    browser#editor#with_current_page begin fun p ->
+      if Preferences.preferences#get.Preferences.pref_editor_save_all_bef_comp then (editor#save_all());
+      p#compile_buffer ?join:None ()
+    end
   end);
   let sep2 = GMenu.separator_item ~packing:menu#add () in
   (** Project Properties *)
@@ -698,7 +686,7 @@ let project ~browser ~group ~flags items =
   (** Callback *)
   ignore (project#misc#connect#state_changed ~callback:begin fun _ ->
     browser#with_default_target begin fun target ->
-      kprintf (set_label project_clean_current) "Clean \xC2\xAB%s\xC2\xBB" target.Target.name;
+      kprintf (set_label project_clean_default_target) "Clean \xC2\xAB%s\xC2\xBB" target.Target.name;
       kprintf (set_label project_compile_only) "Compile \xC2\xAB%s\xC2\xBB" target.Target.name;
       kprintf (set_label project_build) "Build \xC2\xAB%s\xC2\xBB" target.Target.name;
     end;
@@ -717,21 +705,24 @@ let project ~browser ~group ~flags items =
     end;
     (*  *)
     let has_current_project = browser#current_project#get <> None in
-    project_clean_current#misc#set_sensitive has_current_project;
-    project_clean_current#misc#set_property "sensitive" (`BOOL has_current_project);
-    project_compile_only#misc#set_property "sensitive" (`BOOL has_current_project);
-    project_build#misc#set_property "sensitive" (`BOOL has_current_project);
-    project_run#misc#set_property "sensitive" (`BOOL has_current_project);
-    clean_item#misc#set_property "sensitive" (`BOOL has_current_project);
-    build_item#misc#set_property "sensitive" (`BOOL has_current_project);
-    run_item#misc#set_property "sensitive" (`BOOL has_current_project);
-    project_clean#misc#set_property "sensitive" (`BOOL has_current_project);
+    let has_default_target = match browser#current_project#get with Some x when Project.default_target x <> None -> true | _ -> false in
+    project_clean_default_target#misc#set_sensitive has_default_target;
+    project_clean_default_target#misc#set_property "sensitive" (`BOOL has_default_target);
+    project_compile_only#misc#set_property "sensitive" (`BOOL has_default_target);
+    project_build#misc#set_property "sensitive" (`BOOL has_default_target);
+    project_run#misc#set_property "sensitive" (`BOOL has_default_target);
+    project_script#misc#set_property "sensitive" (`BOOL has_default_target);
+    build_dep_item#misc#set_property "sensitive" (`BOOL has_default_target);
+    clean_item#misc#set_property "sensitive" (`BOOL has_default_target);
+    build_item#misc#set_property "sensitive" (`BOOL has_default_target);
+    run_item#misc#set_property "sensitive" (`BOOL has_default_target);
+    project_clean#misc#set_property "sensitive" (`BOOL has_default_target);
     project_refresh#misc#set_property "sensitive" (`BOOL has_current_project);
     project_targets#misc#set_property "sensitive" (`BOOL has_current_project);
     dialog_project_properties#misc#set_property "sensitive" (`BOOL has_current_project);
     project_comp_file#misc#set_property "sensitive" (`BOOL has_current_project);
-    sep1#misc#set_property "sensitive" (`BOOL has_current_project);
-    sep2#misc#set_property "sensitive" (`BOOL has_current_project);
+    sep1#misc#set_property "sensitive" (`BOOL has_default_target);
+    sep2#misc#set_property "sensitive" (`BOOL has_default_target);
     sep3#misc#set_property "visible" (`BOOL (browser#project_history.File_history.content <> []));
     (*  *)
     Gmisclib.Idle.add (fun () -> List.iter clean_menu#remove clean_menu#children);
