@@ -30,11 +30,28 @@ open Location
 open Lexing
 
 type t = {
-  filename      : string;
-  real_filename : string;
-  timestamp     : float;
-  locations     : (GdkPixbuf.pixbuf option * string Location.loc) list; (* filename, start_offset, stop_offset *)
+  filename          : string;
+  real_filename     : string;
+  timestamp         : float;
+  mutable locations : locations;
 }
+
+and locations =
+  | Offset of (GdkPixbuf.pixbuf option * string Location.loc) list
+  | Mark of (GdkPixbuf.pixbuf option * GText.buffer * Gtk.text_mark * Gtk.text_mark) list
+
+let count_locations {locations; _} =
+  match locations with
+    | Offset locs -> List.length locs
+    | Mark locs -> List.length locs
+
+let ranges_of_locations = function
+  | Offset locs -> List.map (fun (_, loc) -> Lexical_markup.Range.range_of_loc loc.loc) locs
+  | Mark marks -> List.map begin fun (_, buffer, m1, m2) ->
+    let start = (buffer#get_iter (`MARK m1))#line_index in
+    let stop = (buffer#get_iter (`MARK m2))#line_index in
+    start, stop
+  end marks
 
 (** widget *)
 class widget ~editor(* : Editor.editor)*) ?packing () =
@@ -169,6 +186,17 @@ object (self)
       self#active#set false;
       self#present ();
     end);
+    ignore (vbox#connect#destroy ~callback:begin fun () ->
+      List.iter begin fun res ->
+        match res.locations with
+          | Offset _ -> ()
+          | Mark marks ->
+            List.iter begin fun (_, buffer, m1, m2) ->
+              (try buffer#delete_mark (`MARK m1) with GText.No_such_mark _ -> ());
+              (try buffer#delete_mark (`MARK m2) with GText.No_such_mark _ -> ());
+            end marks;
+      end results
+    end);
     (* Tooltips *)
     let set_tooltips view f =
       view#misc#set_has_tooltip true;
@@ -221,11 +249,12 @@ object (self)
         end
       | _ -> view_files#selection#select_path (GTree.Path.create [0]);
 
-  method set_results : t list -> unit = fun results ->
+  method set_results : t list -> unit = fun res ->
     self#clear();
     let dirs = ref [] in
-    List.iter begin fun ({filename; locations; _} as entry) ->
-      let row_hits = List.length locations in
+    results <- res;
+    List.iter begin fun ({filename; _} as entry) ->
+      let row_hits = count_locations entry in
       let dir = Filename.dirname filename in
       dirs := dir :: !dirs;
       hits <- hits + row_hits;
@@ -236,7 +265,7 @@ object (self)
       model_files#set ~row ~column:col_path dir;
       model_files#set ~row ~column:col_hits row_hits;
       model_files#set ~row ~column:col_entry entry;
-    end results
+    end results;
 
   method private files_selection_changed () =
     Gaux.may signal_lines_selection_changed ~f:view_lines#selection#misc#handler_block;
@@ -254,39 +283,64 @@ object (self)
     Gaux.may signal_lines_selection_changed ~f:view_lines#selection#misc#handler_unblock;
 
   method private set_locations {real_filename; locations; _} =
-    let line_nums = List.map (fun (_, loc) -> loc.loc.loc_start.pos_lnum) locations in
-    let lines = Miscellanea.get_lines_from_file ~filename:real_filename line_nums in
-    let locations_lines =
+    let locations_in_lines =
+      let lines =
+        match locations with
+          | Offset locs ->
+            let line_nums = List.map (fun (_, loc) -> loc.loc.loc_start.pos_lnum) locs in
+            Miscellanea.get_lines_from_file ~filename:real_filename line_nums
+          | Mark locs ->
+            List.sort (fun (n1, _) (n2, _) -> compare n1 n2)
+              (List.fold_left begin fun acc (_, (buffer : GText.buffer), mark_start, _) ->
+                let iter = buffer#get_iter (`MARK mark_start) in
+                let lnum = iter#line + 1 in
+                if List.mem_assoc lnum acc then acc else
+                  let start = iter#set_line_index 0 in
+                  let stop = iter#forward_to_line_end in
+                  let text = buffer#get_text ~start ~stop () in
+                  (lnum, text) :: acc
+              end [] locs)
+      in
       List.map begin fun (lnum, line) ->
-        let locs = List.filter (fun (_, loc) -> lnum = loc.loc.loc_start.pos_lnum) locations in
-        (lnum, line, locs)
+        let line_locs =
+          match locations with
+            | Offset locs -> Offset (List.filter (fun (_, loc) -> lnum = loc.loc.loc_start.pos_lnum) locs)
+            | Mark locs -> Mark (List.filter begin fun (_, buffer, mark_start, _) ->
+              let iter = buffer#get_iter (`MARK mark_start) in
+              lnum = iter#line + 1
+            end locs)
+        in
+        (lnum, line, line_locs)
       end lines
     in
     let open Lexical_markup in
-    let open Lexical_markup.Range in
     let parse = parse Preferences.preferences#get in
-    List.iter begin fun (lnum, line, locs) ->
-      let ranges = List.map (fun (_, l) -> !!(l.loc)) locs in
+    List.iter begin fun (lnum, line, line_locs) ->
+      let ranges = ranges_of_locations line_locs in
       let line = (*String.trim*) line in
       let markup = parse ~highlights:ranges line in
       let markup = Convert.to_utf8 markup in
-      let pixbuf = List.fold_left (fun acc (p, _) -> max p acc) None locs in
+      let pixbuf =
+        match line_locs with
+          | Offset locs -> List.fold_left (fun acc (pixbuf, _) -> max pixbuf acc) None locs
+          | Mark locs -> List.fold_left (fun acc (pixbuf, _, _, _) -> max pixbuf acc) None locs
+      in
       let row = model_lines#append () in
-      model_lines#set ~row ~column:col_locations locs;
+      model_lines#set ~row ~column:col_locations line_locs;
       model_lines#set ~row ~column:col_pixbuf pixbuf;
       model_lines#set ~row ~column:col_line_num lnum;
       model_lines#set ~row ~column:col_markup markup;
-      let len = List.length locs in
+      let len = match line_locs with Offset x -> List.length x | Mark x -> List.length x in
       if len > 1 then model_lines#set ~row ~column:col_matches_num
         (Some (String.concat "" ["<i>"; (string_of_int len); "</i>"]))
-    end locations_lines;
-    List.length locations_lines
+    end locations_in_lines;
+    List.length locations_in_lines
 
   method private lines_selection_changed ?(focus=false) () =
     match view_files#selection#get_selected_rows with
       | path :: _ ->
         let row = model_files#get_iter path in
-        let {filename; timestamp; _} = model_files#get ~row ~column:col_entry in
+        let {filename; _} as entry = model_files#get ~row ~column:col_entry in 
         begin
           match editor#get_page (`FILENAME filename) with
             | Some page ->
@@ -295,27 +349,24 @@ object (self)
                 match view_lines#selection#get_selected_rows with
                   | path :: _ ->
                     let buffer = page#buffer in
-                    let ts = buffer#changed_timestamp in
-                    if ts > timestamp then (view_lines#misc#set_sensitive false)
-                    else begin
-                      view_lines#misc#set_sensitive true;
                       let row = model_lines#get_iter path in
-                      let locs = model_lines#get ~row ~column:col_locations in
-                      match locs with
-                        | (_, loc) :: _ ->
-                          if loc.loc <> Location.none && loc.loc.loc_start.pos_cnum >= 0 && loc.loc.loc_end.pos_cnum >= 0 then begin
-                            let start = buffer#get_iter (`OFFSET loc.loc.loc_start.pos_cnum) in
-                            let stop = buffer#get_iter (`OFFSET loc.loc.loc_end.pos_cnum) in
+                      let line_locs = model_lines#get ~row ~column:col_locations in
+                      begin
+                        match line_locs with
+                          | Offset _ ->
+                            entry.locations <- self#create_marks ~buffer:buffer#as_gtext_buffer ~locations:entry.locations;
+                            model_lines#clear();
+                            ignore (self#set_locations entry);
+                            view_lines#selection#select_path path;
+                          | Mark ((_, buffer, mark_start, mark_stop) :: _) ->
+                            let start = buffer#get_iter (`MARK mark_start) in
+                            let stop = buffer#get_iter (`MARK mark_stop) in
                             buffer#select_range start stop;
                             page#ocaml_view#scroll_lazy start;
-                          end;
-                          editor#goto_view page#view;
-                          if focus then page#view#misc#grab_focus()
-                        | _ -> ()
-                    end;
-                    (*Gaux.may signal_lines_selection_changed ~f:view_lines#selection#misc#handler_block;
-                    view_lines#set_cursor ~cell:renderer_markup ~edit:true path vc_markup;
-                    Gaux.may signal_lines_selection_changed ~f:view_lines#selection#misc#handler_unblock;*)
+                            editor#goto_view page#view;
+                            if focus then page#view#misc#grab_focus()
+                          | Mark _ -> assert false
+                      end
                   | _ -> ()
               end
             | _ ->
@@ -324,12 +375,33 @@ object (self)
         end;
       | _ -> ()
 
+  method private create_marks ~(buffer : GText.buffer) ~locations =
+    match locations with
+      | (Mark _) as x -> x
+      | Offset locs ->
+        Mark begin
+          List.map begin fun (pixbuf, loc) ->
+            if loc.loc <> Location.none && loc.loc.loc_start.pos_cnum >= 0 && loc.loc.loc_end.pos_cnum >= 0 then begin
+              let start = buffer#get_iter (`OFFSET loc.loc.loc_start.pos_cnum) in
+              let stop = buffer#get_iter (`OFFSET loc.loc.loc_end.pos_cnum) in
+              let mark_start = buffer#create_mark start in
+              let mark_stop = buffer#create_mark stop in
+              pixbuf, buffer, mark_start, mark_stop
+            end else begin
+              let start = buffer#get_iter `INSERT in
+              let mark_start = buffer#create_mark start in
+              let mark_stop = buffer#create_mark start in
+              pixbuf, buffer, mark_start, mark_stop
+            end;
+          end locs
+        end
+
   method private row_line_activated _ _ = self#lines_selection_changed ~focus:true ()
 
   method private row_file_activated path _ =
     let row = model_files#get_iter path in
     let entry = model_files#get ~row ~column:col_entry in
-    if List.length entry.locations = 1 then begin
+    if count_locations entry = 1 then begin
       let path0 = GTree.Path.create [0] in
       view_lines#selection#select_path path0;
       self#row_line_activated path0 vc_line_num

@@ -370,7 +370,7 @@ let search ~browser ~group ~flags items =
   (** Find/Replace in Path *)
   let find_in_path = GMenu.image_menu_item ~label:"Find/Replace in Path" ~packing:menu#add () in
   ignore (find_in_path#connect#activate ~callback:begin fun () ->
-    Menu_search.find_replace ?search_word_at_cursor:(Some true) editor;
+    Menu_search.find_replace ~find_in_buffer:false ?search_word_at_cursor:(Some true) editor;
   end);
   find_in_path#add_accelerator ~group ~modi:[`CONTROL] GdkKeysyms._p ~flags;
   (** Clear find/replace history *)

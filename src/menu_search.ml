@@ -27,11 +27,12 @@ open Miscellanea
 (** find_replace *)
 let find_replace
     ?(find_all=false)
+    ?(find_in_buffer=true)
     ?(search_word_at_cursor=(Preferences.preferences#get.Preferences.pref_search_word_at_cursor))
     editor =
   editor#with_current_page begin fun page ->
-    let buffer = page#view#buffer in
-    let dialog, page = Find_text_dialog.create ~buffer ~editor
+    let buffer = if find_in_buffer then Some page#view#buffer else None in
+    let dialog, page = Find_text_dialog.create ?buffer ~editor
       ~project:editor#project ~find_all ~search_word_at_cursor ()
     in
     Gaux.may (GWindow.toplevel editor) ~f:(fun tl -> dialog#set_transient_for tl#as_window);
@@ -181,12 +182,12 @@ let find_definition_references editor =
                   in
                   let fn = ident.ident_loc.loc.loc_start.Lexing.pos_fname in
                   if not (List.mem fn !real_filenames) then (real_filenames := fn :: !real_filenames);
-                  pixbuf, ident.ident_loc
+                  (pixbuf, ident.ident_loc)
                 end (List.rev idents)
               in
               let real_filename = match !real_filenames with fn :: [] -> fn | _ -> assert false in
               let timestamp = (Unix.stat real_filename).Unix.st_mtime in
-              {filename; real_filename; locations; timestamp}
+              {filename; real_filename; locations = Offset locations; timestamp}
             end results
       in
       widget#set_results results;
@@ -222,14 +223,14 @@ let find_used_components editor =
           in
           let timestamp = (Unix.stat real_filename).Unix.st_mtime in
           let used_components =
-            List.map (fun ident -> None, ident.ident_loc) (List.rev used_components)
+            Offset (List.map (fun ident -> (None, ident.ident_loc)) (List.rev used_components))
           in
           let location_open =
             match Binannot_ident.find_ident ~project ~filename ~offset:iter#offset () with
-              | Some annot -> [None, annot.ident_loc]
-              | _ -> []
+              | Some annot -> Offset [None, annot.ident_loc]
+              | _ -> Offset []
           in
-          let result_open = {filename = page#get_filename; real_filename; locations=location_open; timestamp} in
+          let result_open = {filename = page#get_filename; real_filename; locations = location_open; timestamp} in
           let results = result_open :: {result_open with locations = used_components} :: [] in
           widget#set_results results;
           label#set_text ident.ident_loc.txt;

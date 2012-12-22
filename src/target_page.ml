@@ -43,7 +43,7 @@ class view ~project ?packing () =
 
   (** Target Tab *)
   let vbox = GPack.vbox ~border_width:5 ~spacing:13 () in
-  let _ = nb#append_page ~tab_label:(GMisc.label ~text:"General" ())#coerce vbox#coerce in
+  let _ = nb#append_page ~tab_label:(GMisc.label ~text:"Target Type" ())#coerce vbox#coerce in
   (** Library *)
   (* Build a library with the specified toplevel modules *)
   let mbox = GPack.vbox ~spacing:0 ~packing:(vbox#pack ~expand:false) () in
