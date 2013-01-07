@@ -1,7 +1,7 @@
 (*
 
   OCamlEditor
-  Copyright (C) 2010-2012 Francesco Tovagliari
+  Copyright (C) 2010-2013 Francesco Tovagliari
 
   This file is part of OCamlEditor.
 
@@ -166,11 +166,11 @@ let get_search_path proj =
   let package = Str.split (Miscellanea.regexp ",") package in
   let package = List.filter ((<>) "") package in
   let package = List.map begin fun package ->
-    match kprintf Miscellanea.exec_lines "ocamlfind query %s" package with
+    match kprintf Miscellanea.exec_lines "ocamlfind query %s %s" package Miscellanea.redirect_stderr with
       | hd :: [] -> hd
       | _ -> ""
   end (Xlist.remove_dupl package) in
-  let package = Xlist.remove_dupl package in
+  let package = Xlist.remove_dupl (List.filter ((<>) "") package) in
   let includes = Xlist.remove_dupl (get_includes proj) in
   package @ includes;;
 

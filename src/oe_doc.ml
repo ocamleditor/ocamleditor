@@ -1,7 +1,7 @@
 (*
 
   OCamlEditor
-  Copyright (C) 2010-2012 Francesco Tovagliari
+  Copyright (C) 2010-2013 Francesco Tovagliari
 
   This file is part of OCamlEditor.
 
@@ -49,9 +49,9 @@ struct
               (*(if project.Project.thread then " -thread" else if project.Project.vmthread then " -vmthread" else "")*)
               search_path
               (Quote.arg file)
-              (if Common.application_debug then ""(*Miscellanea.redirect_stderr*) else "")
+              (if App_config.application_debug then Miscellanea.redirect_stderr else "")
             in
-            ignore (Oebuild_util.exec ~echo:true ~join:true cmd);
+            ignore (Oebuild_util.exec ~echo:App_config.application_debug ~join:true cmd);
             Some out_filename
           | _ -> None
       end;
@@ -489,6 +489,19 @@ struct
     let editor_font_family = Pango.Font.get_family (GPango.font_description editor_font) in
     let odoc_font = Preferences.preferences#get.Preferences.pref_odoc_font in
     let set_acc_margin tag = Gobject.Property.set tag#as_tag {Gobject.name="accumulative-margin"; conv=Gobject.Data.boolean} true in
+    let black = Color.name_of_gdk (Preferences.tag_color "lident") in
+    let gray = Color.add_value ~sfact:0.0 black (-.0.2) in
+    let default_bg_color =
+      if snd Preferences.preferences#get.Preferences.pref_bg_color then begin
+        (* "Use theme color" option removed *)
+        let color = (*`NAME*) (fst ((Preferences.create_defaults()).Preferences.pref_bg_color)) in
+        color;
+      end else begin
+        let color = (*`NAME*) (fst Preferences.preferences#get.Preferences.pref_bg_color) in
+        color;
+      end;
+    in
+    let bgparagraph = Color.add_value ~sfact:0.0 default_bg_color 0.06 in
     let tags = [
       `BOLD,        buffer#create_tag [`WEIGHT `BOLD];
       `ITALIC,      buffer#create_tag [`STYLE `ITALIC];
@@ -503,7 +516,7 @@ struct
       `LARGE,       buffer#create_tag [`SCALE `X_LARGE];
       `TT,          buffer#create_tag [`FONT editor_font; `FOREGROUND "#5C6585"];
       `TTB,         buffer#create_tag [`FONT editor_font];
-      `TTF,         buffer#create_tag [`FAMILY editor_font_family; `FOREGROUND "#5C6585"];
+      `TTF,         buffer#create_tag [`FAMILY editor_font_family; `SIZE_POINTS 24.0; `WEIGHT `BOLD(*; `FOREGROUND "#5C6585"*)];
       `TYPE,        buffer#create_tag [`FONT editor_font; `PIXELS_ABOVE_LINES 4];
       `TYPE_COMMENT, buffer#create_tag [`FONT odoc_font; `PIXELS_ABOVE_LINES 0; `INDENT (2 * indent)];
       `TYPE2,       buffer#create_tag [`FONT editor_font; `BACKGROUND_FULL_HEIGHT true;
@@ -516,21 +529,23 @@ struct
       `LEFT_MARGIN,      buffer#create_tag [`LEFT_MARGIN indent];
       `LINE_SPACING_SMALL,  buffer#create_tag [`SIZE_POINTS 0.5];
       `LINE_SPACING_BIG,  buffer#create_tag [`SIZE_POINTS 8.];
-      `TITLE 9,     buffer#create_tag [`WEIGHT `BOLD; `SIZE_POINTS 10.0; `PIXELS_ABOVE_LINES 3; `PIXELS_BELOW_LINES 2];
-      `TITLE 8,     buffer#create_tag [`WEIGHT `BOLD; `SIZE_POINTS 11.0; `PIXELS_ABOVE_LINES 5; `PIXELS_BELOW_LINES 3];
-      `TITLE 7,     buffer#create_tag [`WEIGHT `BOLD; `SIZE_POINTS 11.5; `PIXELS_ABOVE_LINES 8; `PIXELS_BELOW_LINES 5];
-      `TITLE 6,     buffer#create_tag [`WEIGHT `BOLD; `SIZE_POINTS 15.0; `PIXELS_ABOVE_LINES 13; `PIXELS_BELOW_LINES 8(*; `UNDERLINE `LOW*);(* `JUSTIFICATION `CENTER*)];
-      `TITLE 5,     buffer#create_tag [`WEIGHT `BOLD; `SIZE_POINTS 16.0; `PIXELS_ABOVE_LINES 13; `PIXELS_BELOW_LINES 8];
-      `TITLE 4,     buffer#create_tag [`WEIGHT `BOLD; `SIZE_POINTS 17.0; `PIXELS_ABOVE_LINES 21; `PIXELS_BELOW_LINES 13];
-      `TITLE 3,     buffer#create_tag [`WEIGHT `BOLD; `SIZE_POINTS 17.0; `PIXELS_ABOVE_LINES 21; `PIXELS_BELOW_LINES 13];
-      `TITLE 2,     buffer#create_tag [`WEIGHT `BOLD; `SIZE_POINTS 17.5; `PIXELS_ABOVE_LINES 21; `PIXELS_BELOW_LINES 13];
-      `TITLE 1,     buffer#create_tag [`WEIGHT `BOLD; `SIZE_POINTS 18.0; `PIXELS_ABOVE_LINES 21; `PIXELS_BELOW_LINES 13];
-      `TITLE 0,     buffer#create_tag [`WEIGHT `BOLD; `SIZE_POINTS 18.0; `PIXELS_ABOVE_LINES 0; `PIXELS_BELOW_LINES 13];
+
+      `TITLE 9,     buffer#create_tag [`WEIGHT `BOLD; `SIZE_POINTS 13.0; `PIXELS_ABOVE_LINES 21; `PIXELS_BELOW_LINES 13; `FOREGROUND gray];
+      `TITLE 8,     buffer#create_tag [`WEIGHT `BOLD; `SIZE_POINTS 14.0; `PIXELS_ABOVE_LINES 21; `PIXELS_BELOW_LINES 13; `FOREGROUND gray];
+      `TITLE 7,     buffer#create_tag [`WEIGHT `BOLD; `SIZE_POINTS 15.0; `PIXELS_ABOVE_LINES 21; `PIXELS_BELOW_LINES 13; `FOREGROUND gray];
+      `TITLE 6,     buffer#create_tag [`WEIGHT `BOLD; `SIZE_POINTS 19.0; `PIXELS_ABOVE_LINES 13; `PIXELS_BELOW_LINES 13];
+
+      `TITLE 5,     buffer#create_tag [`WEIGHT `BOLD; `SIZE_POINTS 13.0; `PIXELS_ABOVE_LINES 13; `PIXELS_BELOW_LINES 8; `FOREGROUND gray];
+      `TITLE 4,     buffer#create_tag [`WEIGHT `BOLD; `SIZE_POINTS 13.5; `PIXELS_ABOVE_LINES 21; `PIXELS_BELOW_LINES 13; `FOREGROUND gray];
+      `TITLE 3,     buffer#create_tag [`WEIGHT `BOLD; `SIZE_POINTS 14.0; `PIXELS_ABOVE_LINES 21; `PIXELS_BELOW_LINES 13; `FOREGROUND gray];
+      `TITLE 2,     buffer#create_tag [`WEIGHT `BOLD; `SIZE_POINTS 15.0; `PIXELS_ABOVE_LINES 21; `PIXELS_BELOW_LINES 13; `FOREGROUND gray];
+      `TITLE 1,     buffer#create_tag [`WEIGHT `BOLD; `SIZE_POINTS 19.0; `PIXELS_ABOVE_LINES 13; `PIXELS_BELOW_LINES 13];
+      `TITLE 0,     buffer#create_tag [`WEIGHT `BOLD; `SIZE_POINTS 21.0; `PIXELS_ABOVE_LINES 13; `PIXELS_BELOW_LINES 13(*; `UNDERLINE `SINGLE*)];
     ] in
     let ftag x = (*try*) List.assoc x tags (*with Not_found -> assert false*) in
     let (!!) = ftag in
     List.iter set_acc_margin [!!`PARAM; !!`PARAM_DESCR; !!`LI; !!`LEFT_MARGIN; !!`TYPE; !!`TYPE_COMMENT; !!`TYPE2];
-    List.iter (fun t -> Gmisclib.Util.set_tag_paragraph_background t "#f0f0f0") [!!`TYPE2];
+    List.iter (fun t -> Gmisclib.Util.set_tag_paragraph_background t bgparagraph) [!!`TYPE2];
     (* Synchronize with preferences *)
     ignore (Preferences.preferences#connect#changed ~callback:begin fun pref ->
       List.iter begin fun t ->
@@ -610,7 +625,7 @@ struct
     (* Title and module description *)
     let fix_ocamldoc = ref (Gaux.may_map ~f:(fun x -> trim (Odoc_info.string_of_info x)) odoc.Module.m_info) in
     with_tag_odoc begin fun () ->
-      buffer#insert ~tags:[!!(`TITLE 0)] "Module ";
+      (*buffer#insert ~tags:[!!(`TITLE 0)] "Module ";*)
       buffer#insert ~tags:[!!(`TITLE 0); !!`TTF] odoc.Module.m_name;
       Info.insert_info ~newline_before:true (!!) buffer odoc.Module.m_info;
       buffer#insert "\n\n";

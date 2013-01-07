@@ -1,7 +1,7 @@
 (*
 
   OCamlEditor
-  Copyright (C) 2010-2012 Francesco Tovagliari
+  Copyright (C) 2010-2013 Francesco Tovagliari
 
   This file is part of OCamlEditor.
 
@@ -59,7 +59,9 @@ let prf_delimiters_scan       = create true  "prf_delimiters_scan"
 let prf_autosave              = create true  "prf_autosave"
 let prf_compile_buffer        = create true  "prf_compile_buffer"
 let prf_draw_dot_leaders      = create true  "prf_draw_dot_leaders"
-let prf_location_history_add  = create true  "prf_location_history_add"*)
+*)
+let prf_location_history_add  = create true  "prf_location_history_add"
+let prf_colorize_within_nearest_tag_bounds  = create true  "prf_colorize_within_nearest_tag_bounds"
 
 
 

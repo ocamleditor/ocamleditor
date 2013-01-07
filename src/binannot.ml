@@ -1,7 +1,7 @@
 (*
 
   OCamlEditor
-  Copyright (C) 2010-2012 Francesco Tovagliari
+  Copyright (C) 2010-2013 Francesco Tovagliari
 
   This file is part of OCamlEditor.
 
@@ -116,7 +116,7 @@ let read_cmt ~project ~filename:source ?(timestamp=0.) ?compile_buffer () =
               end else None
             end;
           end;
-        | _ -> kprintf invalid_arg "Binannot.read \"%s\"" source
+        | _ -> None (*kprintf invalid_arg "Binannot.read_cmt \"%s\"" source*)
       in
       result
   with

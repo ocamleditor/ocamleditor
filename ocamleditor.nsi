@@ -43,7 +43,7 @@ VIAddVersionKey "ProductName" "OCamlEditor"
 VIAddVersionKey "LegalCopyright" "Copyright © 2010-2012 Francesco Tovagliari"
 VIAddVersionKey "FileDescription" "OCamlEditor Setup"
 VIAddVersionKey "FileVersion" "1.8.0"
-;Icon "pixmaps\oe.ico"
+;Icon "share\pixmaps\oe.ico"
 
 LicenseText "Please read the following License Agreement. You must accept the terms of this agreement before continuing with the installation."
 LicenseData "COPYING"
@@ -84,7 +84,7 @@ Section "OCamlEditor (required)"
   ; Write the installation path into the registry
   WriteRegStr HKLM SOFTWARE\OCamlEditor "Install_Dir" "$INSTDIR"
   ; Write the uninstall keys for Windows
-  WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\OCamlEditor" "DisplayIcon" '"$INSTDIR\pixmaps\oe.ico"'
+  WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\OCamlEditor" "DisplayIcon" '"$INSTDIR\share\pixmaps\oe1_48.ico"'
   WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\OCamlEditor" "DisplayName" "OCamlEditor"
   WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\OCamlEditor" "DisplayVersion" "1.8.0"
   WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\OCamlEditor" "UninstallString" '"$INSTDIR\uninstall.exe"'
@@ -105,8 +105,8 @@ Section "Start Menu Shortcuts"
   CreateDirectory "$SMPROGRAMS\OCamlEditor"
   SetOutPath $INSTDIR\bin
   CreateShortCut "$SMPROGRAMS\OCamlEditor\Uninstall.lnk" "$INSTDIR\uninstall.exe" "" "$INSTDIR\uninstall.exe" 0
-  CreateShortCut "$SMPROGRAMS\OCamlEditor\OCamlEditor.lnk" "$INSTDIR\bin\ocamleditor.bat" "" "$INSTDIR\pixmaps\oe.ico" 0 SW_SHOWMINIMIZED
-  CreateShortCut "$DESKTOP\OCamlEditor.lnk" "$INSTDIR\bin\ocamleditor.bat" "" "$INSTDIR\pixmaps\oe.ico" 0 SW_SHOWMINIMIZED 
+  CreateShortCut "$SMPROGRAMS\OCamlEditor\OCamlEditor.lnk" "$INSTDIR\bin\ocamleditor.bat" "" "$INSTDIR\share\pixmaps\oe1_48.ico" 0 SW_SHOWMINIMIZED
+  CreateShortCut "$DESKTOP\OCamlEditor.lnk" "$INSTDIR\bin\ocamleditor.bat" "" "$INSTDIR\share\pixmaps\oe1_48.ico" 0 SW_SHOWMINIMIZED 
   
 SectionEnd
 

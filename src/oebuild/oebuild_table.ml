@@ -1,7 +1,7 @@
 (*
 
   OCamlEditor
-  Copyright (C) 2010-2012 Francesco Tovagliari
+  Copyright (C) 2010-2013 Francesco Tovagliari
 
   This file is part of OCamlEditor.
 
@@ -68,7 +68,7 @@ let update =
       end
     with Not_found -> 0.0
   in
-  fun ~deps ~opt (cache : t) filename ->
+  fun ~opt (cache : t) filename ->
     let ctime = get_last_compiled_time ~opt cache filename in
     if ctime > 0.0 && ((Unix.stat filename).Unix.st_mtime) >= ctime then begin
       remove cache filename opt;

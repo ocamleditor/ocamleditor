@@ -1,7 +1,7 @@
 (*
 
   OCamlEditor
-  Copyright (C) 2010-2012 Francesco Tovagliari
+  Copyright (C) 2010-2013 Francesco Tovagliari
 
   This file is part of OCamlEditor.
 
@@ -21,9 +21,7 @@
 *)
 
 open Tree
-open About
 open Key_assist
-open License
 open Check_for_updates
 open Activity
 open Checklist

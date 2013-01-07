@@ -1,7 +1,7 @@
 (*
 
   OCamlEditor
-  Copyright (C) 2010-2012 Francesco Tovagliari
+  Copyright (C) 2010-2013 Francesco Tovagliari
 
   This file is part of OCamlEditor.
 
@@ -42,13 +42,13 @@ let message ?(title="") ~message message_type =
   ignore(message#run());
   message#destroy()
 
-let display_exn widget ?(message="") e =
+let display_exn widget ?title ?(message="") e =
   match GWindow.toplevel widget with
     | None -> ()
     | Some parent ->
-      let message = sprintf "%s\n\n%s" message (Printexc.to_string e) in
-      let message = Miscellanea.trim message in
-      let dialog = GWindow.message_dialog ~message
+      let message = sprintf "%s\n\n%s\n\n%s" message (Printexc.to_string e) (Printexc.get_backtrace()) in
+      let message = String.trim message in
+      let dialog = GWindow.message_dialog ~message ?title
         ~modal:true ~destroy_with_parent:false ~position:`CENTER ~parent
         ~message_type:`ERROR ~buttons:(GWindow.Buttons.ok) () in
       ignore(dialog#run());
@@ -67,7 +67,7 @@ let process_still_active ~name ~ok ~cancel () =
   end;
   dialog#destroy();;
 
-let confirm ?(title="") ?image ~message ~yes ~no parent =
+let confirm ?(title="") ?image ~message ~yes ~no ?(cancel=true) parent =
   let dialog = GWindow.dialog
     ~title
     ~urgency_hint:true
@@ -80,7 +80,7 @@ let confirm ?(title="") ?image ~message ~yes ~no parent =
   let no_text, no_func = no in
   dialog#add_button yes_text `YES;
   dialog#add_button no_text `NO;
-  dialog#add_button "Cancel" `CANCEL;
+  if cancel then (dialog#add_button "Cancel" `CANCEL);
   dialog#set_default_response `YES;
   dialog#set_skip_taskbar_hint false;
   dialog#set_skip_pager_hint false;

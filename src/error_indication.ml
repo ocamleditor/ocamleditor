@@ -1,7 +1,7 @@
 (*
 
   OCamlEditor
-  Copyright (C) 2010-2012 Francesco Tovagliari
+  Copyright (C) 2010-2013 Francesco Tovagliari
 
   This file is part of OCamlEditor.
 
@@ -395,7 +395,7 @@ object (self)
               let start = ref (buffer#get_iter_at_mark (`MARK start)) in
               let stop = buffer#get_iter_at_mark (`MARK stop) in
               let stop = if bottom#compare stop < 0 then bottom else stop in
-              while !start#compare stop <= 0 do
+              while !start#compare stop < 0 do
                 begin
                   try
                     if top#compare !start <= 0 && !start#chars_in_line > 1 then begin

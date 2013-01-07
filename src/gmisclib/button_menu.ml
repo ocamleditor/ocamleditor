@@ -1,7 +1,7 @@
 (*
 
   OCamlEditor
-  Copyright (C) 2010-2012 Francesco Tovagliari
+  Copyright (C) 2010-2013 Francesco Tovagliari
 
   This file is part of OCamlEditor.
 
@@ -22,55 +22,49 @@
 
 let icon_normal =
   GdkPixbuf.from_xpm_data [|
-    "5 16 2 1";
+    "5 7 2 1";
     " 	c None";
     ".	c #000000";
-    "     ";
-    "     ";
-    "     ";
-    "     ";
-    "     ";
     "     ";
     "     ";
     ".....";
     " ... ";
     "  .  ";
-    "     ";
-    "     ";
-    "     ";
-    "     ";
     "     ";
     "     "|];;
 
 let icon_pressed =
   GdkPixbuf.from_xpm_data [|
-    "5 16 2 1";
+    "5 7 2 1";
     " 	c None";
     ".	c #000000";
     "     ";
     "     ";
     "     ";
     "     ";
-    "     ";
-    "     ";
-    "     ";
-    "     ";
     ".....";
     " ... ";
-    "  .  ";
-    "     ";
-    "     ";
-    "     ";
-    "     ";
-    "     "|];;
+    "  .  "|];;
 
 
 class button_menu ?(label="") ?(relief=`NORMAL) ?stock ?packing () =
   let box = GPack.hbox ~spacing:0 ?packing () in
   let button = GButton.button ~relief ?stock ~packing:box#pack () in
   let button_menu = GButton.button ~relief ~packing:box#pack () in
+  let _ = button#misc#set_name "gmisclib_button_menu_left" in
+  let _ = button_menu#misc#set_name "gmisclib_button_menu_right" in
   let clicked = new clicked () in
   let show_menu = new show_menu () in
+(*  let _ = GtkMain.Rc.parse_string "
+style \"gmisclib_button_menu_left\" {
+  GtkButton::inner-border = { 0, 0, 0, 0 }
+}
+style \"gmisclib_button_menu_right\" {
+  GtkButton::inner-border = { 0, 0, 0, 0 }
+}
+widget \"*.gmisclib_button_menu_left\" style \"gmisclib_button_menu_left\"
+widget \"*.gmisclib_button_menu_right\" style \"gmisclib_button_menu_right\"
+" in*)
 object (self)
   inherit GObj.widget box#as_widget
   val relief = relief

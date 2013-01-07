@@ -1,7 +1,7 @@
 (*
 
   OCamlEditor
-  Copyright (C) 2010-2012 Francesco Tovagliari
+  Copyright (C) 2010-2013 Francesco Tovagliari
 
   This file is part of OCamlEditor.
 
@@ -27,6 +27,7 @@ open Printf
 open Miscellanea
 open GUtil
 open Oe
+open Menu_types
 
 class browser window =
   let switch_project = new switch_project () in
@@ -185,9 +186,9 @@ object (self)
     let dialog = GWindow.file_chooser_dialog ~action:`OPEN ~width:600 ~height:600
       ~title:"Open project..." ~icon:Icons.oe ~position:`CENTER ~show:false () in
     dialog#add_filter (GFile.filter
-      ~name:(sprintf "%s projects (%s)" Oe_config.title pat1) ~patterns:[pat1] ());
+      ~name:(sprintf "%s projects (%s)" About.program_name pat1) ~patterns:[pat1] ());
     dialog#add_filter (GFile.filter
-      ~name:(sprintf "%s projects old version (%s)" Oe_config.title pat2) ~patterns:[pat2] ());
+      ~name:(sprintf "%s projects old version (%s)" About.program_name pat2) ~patterns:[pat2] ());
     dialog#add_select_button_stock `OK `OK;
     dialog#add_button_stock `CANCEL `CANCEL;
     dialog#set_select_multiple false;
@@ -460,10 +461,6 @@ object (self)
     toolbar#tool_forward#misc#set_sensitive (not forward);
     toolbar#tool_last_edit_loc#misc#set_sensitive (not last);
 
-  method check_for_updates ?(verbose=true) () =
-    Check_for_updates.dialog ~verbose
-      ~current_version:Oe_config.version ~title:Oe_config.title ()
-
   method goto_location dir =
     let move = function
       | `NEXT ->
@@ -634,6 +631,7 @@ object (self)
    initializer
     let _ = Editor.set_menu_item_nav_history_sensitive := self#set_menu_item_nav_history_sensitive in
     (** Menubar items *)
+    let open Menu_types in
     let menu_item_view_menubar = ref [] in
     let menu_item_view_toolbar = ref [] in
     let menu_item_view_tabbar = ref [] in
@@ -653,7 +651,7 @@ object (self)
       ~menu_item_view_outline
       ~menu_item_view_messages ~menu_item_view_hmessages () in
     menu <- Some menu_items;
-    List.iter menubar#prepend menu_items.Menu.menu_items;
+    List.iter menubar#prepend menu_items.menu_items;
     (** Update Window menu with files added to the editor *)
     ignore (editor#connect#add_page ~callback:begin fun page ->
       begin
@@ -663,22 +661,22 @@ object (self)
           self#with_current_project (fun project -> Project.add_file project ~scroll_offset ~offset file);
       end;
       Gaux.may menu ~f:begin fun menu ->
-        menu.Menu.window_signal_locked <- true;
+        menu.window_signal_locked <- true;
         let basename = Filename.basename page#get_filename in
         let label = sprintf "%s%s" basename (if page#buffer#modified then "*" else "") in
-        let group = menu.Menu.window_radio_group in
+        let group = menu.window_radio_group in
         let item = GMenu.radio_menu_item ?group ~active:true
-          ~label ~packing:(menu.Menu.window#insert ~pos:menu.Menu.window_n_childs) ()
+          ~label ~packing:(menu.window#insert ~pos:menu.window_n_childs) ()
         in
-        menu.Menu.window_n_childs <- menu.Menu.window_n_childs + 1;
+        menu.window_n_childs <- menu.window_n_childs + 1;
         let _ = item#connect#toggled ~callback:begin fun () ->
-          if not menu.Menu.window_signal_locked then begin
+          if not menu.window_signal_locked then begin
             ignore (editor#open_file ~active:true ~scroll_offset:0 ~offset:0 page#get_filename)
           end
         end in
-        menu.Menu.window_pages <- (page#misc#get_oid, item) :: menu.Menu.window_pages;
-        menu.Menu.window_signal_locked <- false;
-        menu.Menu.window_radio_group <- Some item#group;
+        menu.window_pages <- (page#misc#get_oid, item) :: menu.window_pages;
+        menu.window_signal_locked <- false;
+        menu.window_radio_group <- Some item#group;
       end;
     end);
     (** Update Window menu with files removed from the editor *)
@@ -688,10 +686,10 @@ object (self)
         window#set_title (Convert.to_utf8 project.name);
         Gaux.may menu ~f:begin fun menu ->
           try
-            let item = List.assoc page#misc#get_oid menu.Menu.window_pages in
+            let item = List.assoc page#misc#get_oid menu.window_pages in
             item#destroy();
-            menu.Menu.window_pages <- List.remove_assoc page#misc#get_oid menu.Menu.window_pages;
-	    menu.Menu.window_n_childs <- menu.Menu.window_n_childs - 1;
+            menu.window_pages <- List.remove_assoc page#misc#get_oid menu.window_pages;
+	    menu.window_n_childs <- menu.window_n_childs - 1;
           with Not_found -> ()
         end;
       end
@@ -700,14 +698,14 @@ object (self)
     ignore (editor#connect#switch_page ~callback:begin fun page ->
       Gaux.may menu ~f:begin fun menu ->
         let basename = Filename.basename page#get_filename in
-        kprintf (Menu.set_label menu.Menu.file_rename) "Rename \xC2\xAB%s\xC2\xBB" basename;
-        menu.Menu.file_switch#misc#set_sensitive
+        kprintf (Menu.set_label menu.file_rename) "Rename \xC2\xAB%s\xC2\xBB" basename;
+        menu.file_switch#misc#set_sensitive
           ((basename ^^ ".ml") || (basename ^^ ".mli"));
-        kprintf (Menu.set_label menu.Menu.file_close) "Close \xC2\xAB%s\xC2\xBB" basename;
-        kprintf (Menu.set_label menu.Menu.file_close_all) "Close All Except \xC2\xAB%s\xC2\xBB" basename;
-        kprintf (Menu.set_label menu.Menu.file_revert) "Revert to Saved \xC2\xAB%s\xC2\xBB" basename;
-        kprintf (Menu.set_label menu.Menu.file_delete) "Delete \xC2\xAB%s\xC2\xBB" basename;
-        match List_opt.assoc page#misc#get_oid menu.Menu.window_pages with
+        kprintf (Menu.set_label menu.file_close) "Close \xC2\xAB%s\xC2\xBB" basename;
+        kprintf (Menu.set_label menu.file_close_all) "Close All Except \xC2\xAB%s\xC2\xBB" basename;
+        kprintf (Menu.set_label menu.file_revert) "Revert to Saved \xC2\xAB%s\xC2\xBB" basename;
+        kprintf (Menu.set_label menu.file_delete) "Delete \xC2\xAB%s\xC2\xBB" basename;
+        match List_opt.assoc page#misc#get_oid menu.window_pages with
           | Some item ->kprintf (Menu.set_label item) "%s" basename
           | _ -> ()
       end;
@@ -716,19 +714,19 @@ object (self)
     ignore (self#connect#project_history_changed ~callback:begin fun history ->
       Gaux.may menu ~f:begin fun menu ->
         Gmisclib.Idle.add ~prio:600 begin fun () ->
-          List.iter (fun (_, i) -> menu.Menu.project#remove (i :> GMenu.menu_item)) menu.Menu.project_history;
-          menu.Menu.project_history <- []
+          List.iter (fun (_, i) -> menu.project#remove (i :> GMenu.menu_item)) menu.project_history;
+          menu.project_history <- []
         end;
         let project_names = List.map (fun x -> x, Filename.chop_extension (Filename.basename x)) history.File_history.content in
         let project_names = List.sort (fun (_, x1) (_, x2) ->
           compare (String.lowercase x1) (String.lowercase x2)) project_names in
         List.iter begin fun (filename, label) ->
           Gmisclib.Idle.add ~prio:600 begin fun () ->
-            let item = GMenu.check_menu_item ~label ~packing:menu.Menu.project#add () in
+            let item = GMenu.check_menu_item ~label ~packing:menu.project#add () in
             item#misc#set_tooltip_text (Filename.dirname filename);
             ignore (item#connect#after#toggled ~callback:(fun () ->
-              if not menu.Menu.project_history_signal_locked && item#active then (ignore (self#project_open filename))));
-            menu.Menu.project_history <- (filename, item) :: menu.Menu.project_history;
+              if not menu.project_history_signal_locked && item#active then (ignore (self#project_open filename))));
+            menu.project_history <- (filename, item) :: menu.project_history;
           end;
         end project_names;
       end
@@ -827,9 +825,7 @@ object (self)
       toolbar#update current_project#get;
       update_toolbar_save();
       update_toolbar_undo();
-      Gaux.may (editor#get_page `ACTIVE) ~f:begin fun page ->
-        self#set_title editor;
-      end;
+      Gaux.may (editor#get_page `ACTIVE) ~f:(fun _ -> self#set_title editor);
       self#set_menu_item_nav_history_sensitive();
     in
     ignore (editor#connect#switch_page ~callback);
@@ -844,9 +840,9 @@ object (self)
           then (fun x -> x#misc#show()) else (fun x -> x#misc#hide())
         in
         List.iter f [
-          menu.Menu.file_recent_select;
-          menu.Menu.file_recent_clear;
-          menu.Menu.file_recent_sep;
+          menu.file_recent_select;
+          menu.file_recent_clear;
+          menu.file_recent_sep;
         ]
       end;
     end);
@@ -861,7 +857,7 @@ object (self)
     Quick_file_chooser.init ~roots ~filter:Dialog_find_file.filter;
     (** Geometry settings *)
     let screen = window#screen in
-    let height = ref 650 in
+    let height = ref 700 in
     let width = ref 1052 in
     let pos_x = ref None in
     let pos_y = ref None in
@@ -889,15 +885,13 @@ object (self)
     self#set_outline_visible !is_outline_visible;
     window#resize ~width:!width ~height:!height;
     window#show();
-    Gmisclib.Idle.add ~prio:300 (fun () -> Messages.vmessages#set_position (Preferences.preferences#get.Preferences.pref_vmessages_height));
+    Gmisclib.Idle.add ~prio:300 begin fun () ->
+      Messages.vmessages#set_position (Preferences.preferences#get.Preferences.pref_vmessages_height);
+    end;
     Gmisclib.Idle.add ~prio:300 (fun () -> Messages.hmessages#set_position (Preferences.preferences#get.Preferences.pref_hmessages_width));
     ignore (window#event#connect#after#delete ~callback:(fun _ -> self#exit editor (); true));
     (*  *)
     Ocaml_text.create_shell := self#shell;
-    (* Check for updates at startup *)
-    if Preferences.preferences#get.Preferences.pref_check_updates then begin
-      Gmisclib.Idle.add (fun () -> self#check_for_updates ~verbose:false ())
-    end;
     (* Load custom templates *)
     begin
       try Templ.load_custom `user;
@@ -952,7 +946,7 @@ let browser = begin
   (*let locale = Glib.Main.setlocale `ALL (Some "C") in*)
   let locale = GtkMain.Main.init ~setlocale:false () in
   let window = GWindow.window
-    ~title:Oe_config.title
+    ~title:About.program_name
     ~icon:Icons.oe
     ~type_hint:`NORMAL
     ~kind:`TOPLEVEL

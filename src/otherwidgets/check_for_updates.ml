@@ -1,7 +1,7 @@
 (*
 
   OCamlEditor
-  Copyright (C) 2010-2012 Francesco Tovagliari
+  Copyright (C) 2010-2013 Francesco Tovagliari
 
   This file is part of OCamlEditor.
 
@@ -23,7 +23,7 @@
 open Printf
 
 let host = "ocamleditor.forge.ocamlcore.org"
-let path = if Common.application_debug then "/VERSION_TEST.txt" else "/VERSION.txt"
+let path = if App_config.application_debug then "/VERSION_TEST.txt" else "/VERSION.txt"
 let re = Str.regexp "^VERSION=\\([0-9]\\.[0-9]\\(\\.[0-9]\\)?\\)\r?$"
 let url = "http://ocamleditor.forge.ocamlcore.org/"
 
@@ -74,41 +74,3 @@ let check current_version () = begin
   end;
   !result
 end
-
-(** dialog *)
-let dialog ~verbose ~current_version ~title () =
-  let dialog = GWindow.dialog ~icon:Icons.oe ~urgency_hint:true ~position:`CENTER ~modal:true ~border_width:8
-    ~title:"Software Update" ~show:false () in
-  try
-    dialog#add_button_stock `OK `OK;
-    let widget =
-      try
-        begin
-          match check current_version (); with
-            | None -> if verbose then ((GMisc.label ~text:"There are no updates available." ())#coerce) else (raise Exit)
-            | Some ver ->
-              let vbox = GPack.vbox ~spacing:13 () in
-              let label = sprintf "A new version of %s is available (%s)" title ver in
-              if Sys.os_type = "Win32" then begin
-                let button = GButton.link_button ~label url ~packing:vbox#pack () in
-                GtkButton.LinkButton.set_uri_hook begin fun _ url ->
-                  ignore (Sys.command ("start " ^ url));
-                  dialog#response `OK
-                end;
-              end else begin
-                ignore(GMisc.label ~text:label ~packing:vbox#pack ());
-                ignore(GMisc.label ~selectable:true ~text:url ~packing:vbox#pack ());
-              end;
-              vbox#coerce
-        end
-      with _ -> (if verbose then ((GMisc.label ~text:"Unable to contact server for updates." ())#coerce) else (raise Exit))
-    in
-    dialog#vbox#set_border_width 8;
-    dialog#vbox#set_spacing 8;
-    let hbox = GPack.hbox ~spacing:8 ~packing:dialog#vbox#pack () in
-    let _ = GMisc.image ~stock:`DIALOG_INFO ~icon_size:`DIALOG ~packing:hbox#add () in
-    hbox#add widget;
-    match dialog#run () with _ -> dialog#destroy()
-  with Exit -> (dialog#destroy())
-
-

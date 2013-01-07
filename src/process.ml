@@ -1,7 +1,7 @@
 (*
 
   OCamlEditor
-  Copyright (C) 2010-2012 Francesco Tovagliari
+  Copyright (C) 2010-2013 Francesco Tovagliari
 
   This file is part of OCamlEditor.
 
@@ -101,9 +101,9 @@ let kill p =
       | "Win32" ->
         let taskkill = sprintf "TASKKILL /F /T /PID %d" pid in
         let exit_code = Sys.command taskkill in
-        printf "%s (%d)\n%!" taskkill exit_code;
+        if App_config.application_debug then printf "%s (%d)\n%!" taskkill exit_code;
       | _ ->
-        printf "kill %d\n%!" pid;
+        if App_config.application_debug then printf "kill %d\n%!" pid;
         Unix.kill pid Sys.sigkill;
         (*(try ignore (Unix.wait()); with Unix.Unix_error (Unix.ECHILD as err, _, _) -> ());*)
         ignore (Unix.waitpid [Unix.WNOHANG; Unix.WUNTRACED] pid);
@@ -139,7 +139,8 @@ let start p =
               end;
         end;
         Mutex.unlock p.mutex;
-        printf "(%d) %s\n%!" (match p.pid with Some pid -> pid | _ -> 0) p.cmd_line;
+        if App_config.application_debug then
+          printf "(%d) %s\n%!" (match p.pid with Some pid -> pid | _ -> 0) p.cmd_line;
         if p.pid = None then (p.started <- false)
       | _ ->
         Mutex.lock p.mutex;
@@ -150,7 +151,8 @@ let start p =
         p.pid <- Some pid;
         Condition.broadcast p.cond;
         Mutex.unlock p.mutex;
-        printf "(%d) %s\n%!" (match p.pid with Some pid -> pid | _ -> assert false) p.cmd_line;
+        if App_config.application_debug then
+          printf "(%d) %s\n%!" (match p.pid with Some pid -> pid | _ -> assert false) p.cmd_line;
   end
 
 (** getpid *)

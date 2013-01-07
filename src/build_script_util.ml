@@ -1,7 +1,7 @@
 (*
 
   OCamlEditor
-  Copyright (C) 2010-2012 Francesco Tovagliari
+  Copyright (C) 2010-2013 Francesco Tovagliari
 
   This file is part of OCamlEditor.
 
@@ -35,7 +35,7 @@ type target = {
   compilation_bytecode : bool;
   compilation_native : bool;
   toplevel_modules : string;
-  package : string;
+  mutable package : string;
   search_path : string;
   required_libraries : string;
   compiler_flags : string;
@@ -44,6 +44,7 @@ type target = {
   vmthread : bool;
   pp : string;
   inline : int option;
+  nodep : bool;
   library_install_dir : string;
   other_objects : string;
   external_tasks : int list;
@@ -138,7 +139,7 @@ module ETask = struct
 end
 
 (** add_target *)
-let target : target_map_entry list ref = ref []
+let targets_selected : target_map_entry list ref = ref []
 
 let add_target targets name =
   try
@@ -147,11 +148,11 @@ let add_target targets name =
         let num = int_of_string name in
         if num <= 0 then (raise Exit);
         let name_tg = try List.find (fun (_, tg) -> tg.num = num) targets with Not_found -> raise Exit in
-        target := (num, name_tg) :: !target;
+        targets_selected := (num, name_tg) :: !targets_selected;
       with _ ->
         let tg = List.assoc name targets in
         if tg.num <= 0 then (raise Exit);
-        target := (tg.num, (name, tg)) :: !target;
+        targets_selected := (tg.num, (name, tg)) :: !targets_selected;
     end
   with Exit | Not_found -> (raise (Arg.Bad (sprintf "Invalid target `%s'" name)));;
 
@@ -215,7 +216,7 @@ let install_lib ~compilation ~outname ~external_tasks ~deps target =
       raise Exit;;
 
 (** execute_target *)
-let rec execute_target ~external_tasks ~targets ~command target =
+let rec execute_target ~external_tasks ~targets:avail_targets ~command target =
   if Oebuild.check_restrictions target.restrictions then
     let compilation = (if target.compilation_bytecode then [Bytecode] else [])
       @ (if target.compilation_native && (ccomp_type <> None) then [Native] else []) in
@@ -231,7 +232,7 @@ let rec execute_target ~external_tasks ~targets ~command target =
           | Some outname ->
             begin
               match command with
-                | `Build -> build ~targets ~external_tasks ~etasks ~deps ~compilation ~outname ~files target
+                | `Build -> build ~targets:avail_targets ~external_tasks ~etasks ~deps ~compilation ~outname ~files target
                 | `Install_lib -> install_lib ~compilation ~outname ~external_tasks ~deps target
                 | `Clean ->
                   List.iter ETask.execute (ETask.filter etasks Before_clean);
@@ -247,11 +248,11 @@ let rec execute_target ~external_tasks ~targets ~command target =
     with Exit -> ()
 
 (** build *)
-and build ~targets ~external_tasks ~etasks ~deps ~compilation ~outname ~files target =
-  let b_deps = find_target_dependencies targets target in
-  List.iter (execute_target ~external_tasks ~targets ~command:`Build) b_deps;
+and build ~targets:avail_targets ~external_tasks ~etasks ~deps ~compilation ~outname ~files target =
+  let b_deps = find_target_dependencies avail_targets target in
+  List.iter (execute_target ~external_tasks ~targets:avail_targets ~command:`Build) b_deps;
   List.iter ETask.execute (ETask.filter etasks Before_compile);
-  let deps = deps() in
+  let deps = if target.nodep then files else deps() in
   (*List.iter ETask.execute (ETask.filter etasks Compile);*)
   match Oebuild.build
     ~compilation
@@ -280,7 +281,7 @@ and build ~targets ~external_tasks ~etasks ~deps ~compilation ~outname ~files ta
 ;;
 
 (** main *)
-let main ~cmd_line_args ~external_tasks ~general_commands ~targets =
+let main ~cmd_line_args ~external_tasks ~general_commands ~targets:avail_targets =
   let module Command = struct
     type t = Build_script_command.t
 
@@ -325,17 +326,17 @@ let main ~cmd_line_args ~external_tasks ~general_commands ~targets =
       ]);;
 
     let anon_fun = function
-      | `Show -> add_target targets
-      | `Build -> add_target targets
-      | `Install_lib -> add_target targets
-      | `Clean -> add_target targets
+      | `Show -> add_target avail_targets
+      | `Build -> add_target avail_targets
+      | `Install_lib -> add_target avail_targets
+      | `Clean -> add_target avail_targets
       | (`Install | `Uninstall | `Distclean) as x ->
         fun arg -> kprintf failwith "Invalid anonymous argument `%s' for command `%s'" arg (string_of_command x);;
 
     (** execute *)
     let execute command =
       pushd !Option.change_dir;
-      let target = List.rev !target in
+      let targets = List.rev !targets_selected in
       try
         begin
           let execute_general_command command =
@@ -347,7 +348,7 @@ let main ~cmd_line_args ~external_tasks ~general_commands ~targets =
           in
           match command with
             | `Distclean ->
-              List.iter (fun (_, t) -> execute_target ~external_tasks ~targets ~command t) targets;
+              List.iter (fun (_, t) -> execute_target ~external_tasks ~targets:avail_targets ~command t) avail_targets;
               Oebuild.distclean();
               execute_general_command `Distclean;
             | (`Install | `Uninstall) as command ->
@@ -355,15 +356,15 @@ let main ~cmd_line_args ~external_tasks ~general_commands ~targets =
             | `Show ->
               printf "%s\n%!" (system_config ());
               Printf.printf "\n%!" ;
-              if target = [] then (raise (Arg.Bad "show: no target specified"));
+              if targets = [] then (raise (Arg.Bad "show: no target specified"));
               List.iter begin fun t ->
-                show targets t;
+                show avail_targets t;
                 print_newline();
                 print_newline();
-              end target;
+              end targets;
             | _ ->
-              if target = [] then (raise (Arg.Bad (sprintf "%s: no target specified" (string_of_command command))));
-              List.iter (fun (_, (_, t)) -> execute_target ~external_tasks ~targets ~command t) target
+              if targets = [] then (raise (Arg.Bad (sprintf "%s: no target specified" (string_of_command command))));
+              List.iter (fun (_, (_, tg)) -> execute_target ~external_tasks ~targets:avail_targets ~command tg) targets
         end;
         popd();
       with Arg.Bad _ as ex ->
@@ -382,8 +383,8 @@ let main ~cmd_line_args ~external_tasks ~general_commands ~targets =
   let global_options = Arg.align global_options in
   let command_name = Filename.basename Sys.argv.(0) in
   (* Print targets *)
-  let maxlength = List.fold_left (fun cand (x, _) -> let len = String.length x in max cand len) 0 targets in
-  let targets_shown = List.filter (fun (_, tg) -> tg.show) targets in
+  let maxlength = List.fold_left (fun cand (x, _) -> let len = String.length x in max cand len) 0 avail_targets in
+  let targets_shown = List.filter (fun (_, tg) -> tg.show) avail_targets in
   let help_of_targets = String.concat "\n" (List.map begin fun (name, tg) ->
     let name = rpad name ' ' maxlength in
     sprintf "  %2d) %s %s, %s" tg.num name

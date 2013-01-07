@@ -1,7 +1,7 @@
 (*
 
   OCamlEditor
-  Copyright (C) 2010-2012 Francesco Tovagliari
+  Copyright (C) 2010-2013 Francesco Tovagliari
 
   This file is part of OCamlEditor.
 
@@ -109,7 +109,7 @@ class widget ~source ~name ?filter ?packing () =
   let box               = GPack.hbox ~spacing:5 ~packing:sbox#pack () in
   let _                 = GMisc.label ~markup:"Search for <small>(\"<tt>?</tt>\" matches any single character, \"<tt>*</tt>\" matches any string)</small>:" ~xalign:0.0 ~yalign:1.0 ~packing:box#add () in
   let label_count       = GMisc.label ~xalign:1.0 ~yalign:1.0 ~height:16 ~packing:box#pack () in
-  let icon_progress     = GMisc.image ~width:16 ~file:(Common.application_pixmaps // "spinner_16.gif") ~packing:box#pack () in
+  let icon_progress     = GMisc.image ~width:16 ~file:(App_config.application_pixmaps // "spinner_16.gif") ~packing:box#pack () in
   let entry             = GEdit.entry ~packing:sbox#pack () in
   let model, filelist =
     match source with
@@ -468,10 +468,11 @@ object (self)
     let queue = Queue.create () in
     let filter_dir d = not (List.mem d [".tmp"; "bak"]) in
     let do_search dirname =
-      if filter_dir (Filename.basename dirname) then
+      if filter_dir (Filename.basename dirname) then begin
         let filenames = File.readdirs ~recursive:false filter dirname in
-        List.iter (fun x -> Queue.add x queue) filenames;
+        List.iter (fun x ->  Queue.add x queue) filenames;
         Hashtbl.replace model.rtimes dirname (Unix.gettimeofday());
+      end
     in
     let scan_tree roots =
       match !roots with

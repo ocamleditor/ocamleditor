@@ -1,7 +1,7 @@
 (*
 
   OCamlEditor
-  Copyright (C) 2010-2012 Francesco Tovagliari
+  Copyright (C) 2010-2013 Francesco Tovagliari
 
   This file is part of OCamlEditor.
 
@@ -27,6 +27,7 @@ open Oebuild
 (** main *)
 let main () = begin
   let enabled = ref true in
+  let nodep = ref false in
   let target = ref [] in
   let outkind = ref Executable in
   let is_clean = ref false in
@@ -60,7 +61,7 @@ let main () = begin
   let set_install x = install_flag := Some x in
   let dep () =
     try
-      let deps = Dep.find ~pp:!pp (*~includes:!includes*) ~with_errors:true !target in
+      let deps = Dep.find ~pp:!pp ~with_errors:true !target in
       printf "%s\n%!" (String.concat " " deps);
       exit 0;
     with Dep.Loop_found msg -> begin
@@ -104,6 +105,7 @@ let main () = begin
     ("--",           Rest set_run_args,               "<run-args> Command line arguments for the -run, -run-byt or -run-opt options.");
     ("-clean",       Set is_clean,                    " Remove output files for the selected target and exit.");
     ("-dep",         Unit dep,                        " Print dependencies and exit.");
+    ("-no-dep",      Set nodep,                       " Do not detect module dependencies.");
     ("-when",        String check_restrictions,       "\"<c1,c2,...>\" Exit immediately if any condition specified here is not true.
                                  Recognized conditions are:
 
@@ -143,7 +145,7 @@ let main () = begin
   end;
   (** Clean *)
   if !is_clean || !is_distclean then begin
-    let deps = Dep.find ~pp:!pp (*~includes:!includes*) ~with_errors:true !target in
+    let deps = Dep.find ~pp:!pp ~with_errors:true !target in
     if !is_clean then (clean ~deps ());
     if !is_distclean then (distclean ());
     exit 0;
@@ -157,8 +159,11 @@ let main () = begin
         | Some outname ->
           begin
             match
-              if !no_build then Built_successfully, [] else begin
-                let deps = Dep.find ~pp:!pp (* ~includes:!includes*) ~with_errors:true !target in
+              if !no_build then Built_successfully, []
+              else begin
+                let deps =
+                  if !nodep then !target else Dep.find ~pp:!pp ~with_errors:true !target
+                in
                 (build
                   ~compilation
                   ~package:!package

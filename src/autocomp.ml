@@ -1,7 +1,7 @@
 (*
 
   OCamlEditor
-  Copyright (C) 2010-2012 Francesco Tovagliari
+  Copyright (C) 2010-2013 Francesco Tovagliari
 
   This file is part of OCamlEditor.
 
@@ -25,9 +25,6 @@ open Miscellanea
 
 let re_tmp = Miscellanea.regexp (sprintf "File \"..[\\/]%s[\\/]" Project.tmp)
 let (!!) = Filename.quote
-
-let tout = Timeout.create ~delay:2.0 ()
-let _ = Timeout.start tout
 
 (** replace_output_file *)
 let replace_output_file project tmp rel_filename ext =
@@ -62,13 +59,14 @@ let compile_buffer ~project ~editor ~page ?(join=false) () =
         let chan = open_out_bin tmp_filename in
         lazy (output_string chan text) /*finally*/ lazy (close_out chan);
         (* Compile *)
-        let command = sprintf "%s %s -I ../%s %s ../%s/%s"
+        let command = sprintf "%s %s -I ../%s %s ../%s/%s %s"
           project.Prj.autocomp_compiler
           project.Prj.autocomp_cflags
           Project.tmp
           (Project.get_search_path_i_format project)
           Project.tmp
           relname
+          (if App_config.application_debug then redirect_stderr else "")
         in
         let compiler_output = Buffer.create 101 in
         let process_err ~stderr =
@@ -97,26 +95,24 @@ let compile_buffer ~project ~editor ~page ?(join=false) () =
           (** Outline *)
           let no_errors = errors.Oe.er_errors = [] in
           if editor#show_outline then begin
-            Gmisclib.Idle.add ~prio:100 (*500*) begin fun () ->
+            Gmisclib.Idle.add ~prio:100 begin fun () ->
               match page#outline with
                 | None ->
-                  (*let ol = new Outline.widget ~project ~page ~tmp:tmp_filename in*)
                   let ol = new Cmt_view.widget ~editor ~page () in
                   ol#load ();
                   Gaux.may page#outline ~f:(fun x -> x#destroy());
                   page#set_outline (Some ol);
-                  editor#with_current_page begin fun current ->
-                    if current#get_oid = page#get_oid then (editor#pack_outline ol#coerce)
+                  editor#with_current_page begin fun current_page ->
+                    if current_page#get_oid = page#get_oid then (editor#pack_outline ol#coerce)
                   end;
                 | Some ol ->
                   (*if no_errors then (Timeout.set tout (fun () -> ol#parse ?force:None ())) (*else (ol#add_markers ~kind:`Error ())*);*)
                   if no_errors then (*(Timeout.set tout (fun () ->*) ol#load ()(* )) *) (*else (ol#add_markers ~kind:`Error ())*);
             end
           end;
-          (*Gmisclib.Idle.add (fun () -> Binannot_ident.scan ~page);*)
           Activity.remove activity_name;
         in
-        let exit_code = Oebuild_util.exec ~echo:true ~join (*false*) ~at_exit ~process_err command in
+        let exit_code = Oebuild_util.exec ~echo:App_config.application_debug ~join (*false*) ~at_exit ~process_err command in
         ()
     (*end ()*)
   with ex -> begin

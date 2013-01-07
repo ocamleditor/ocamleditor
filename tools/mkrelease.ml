@@ -39,7 +39,7 @@ let mkrelease () =
     Sys.chdir "..";
     kprintf remove_file "%s.tar.gz" package;
     kprintf run "mklink /d %s %s" package name;
-    kprintf run "tar --mode=755 -cf %s.tar %s/src %s/pixmaps %s/tools" package package package package;
+    kprintf run "tar --mode=755 -cf %s.tar %s/src %s/share %s/tools" package package package package;
     kprintf run "tar --mode=655 -rf %s.tar %s/README %s/NEWS %s/COPYING %s/%s.project %s/ocamleditor.nsi %s/build.ml %s/header %s/VERSION"
       package package package package package name package package package package;
     kprintf run "gzip -c %s.tar > %s.tar.gz" package package;

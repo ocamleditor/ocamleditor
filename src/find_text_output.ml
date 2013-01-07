@@ -1,7 +1,7 @@
 (*
 
   OCamlEditor
-  Copyright (C) 2010-2012 Francesco Tovagliari
+  Copyright (C) 2010-2013 Francesco Tovagliari
 
   This file is part of OCamlEditor.
 
@@ -680,7 +680,7 @@ object (self)
             end;
           | _ -> ()
       end)
-    with Not_found -> (if Common.application_debug then assert false)
+    with Not_found -> (if App_config.application_debug then assert false)
 
   (** display *)
   method private display () =

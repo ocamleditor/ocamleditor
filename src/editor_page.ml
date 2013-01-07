@@ -1,7 +1,7 @@
 (*
 
   OCamlEditor
-  Copyright (C) 2010-2012 Francesco Tovagliari
+  Copyright (C) 2010-2013 Francesco Tovagliari
 
   This file is part of OCamlEditor.
 
@@ -44,6 +44,21 @@ let markup_label filename =
   let shortname = shortname filename in
   if filename ^^ ".mli" then "<i>"^shortname^"</i>" else shortname
 
+let create_small_button ?button ?tooltip ~pixbuf ?callback ?packing ?show () =
+  let button =
+    match button with Some b -> b | _ -> GButton.button ~relief:`NONE ?packing ?show ()
+  in
+  button#set_image (GMisc.image ~pixbuf ())#coerce;
+  button#set_focus_on_click false;
+  button#misc#set_name "smallbutton";
+  Gaux.may tooltip ~f:button#misc#set_tooltip_text;
+  Gaux.may callback ~f:(fun callback -> ignore (button#connect#clicked ~callback));
+  button;;
+
+let create_small_toggle_button ?tooltip ~pixbuf ?callback ?packing ?show () =
+  let button = GButton.toggle_button ~relief:`NONE ?packing ?show () in
+  let _ = create_small_button ~button:(button :> GButton.button) ?tooltip ~pixbuf ?callback ?packing () in
+  button;;
 
 (** Editor page *)
 class page ?file ~project ~scroll_offset ~offset ~editor () =
@@ -51,19 +66,19 @@ class page ?file ~project ~scroll_offset ~offset ~editor () =
   let buffer                   = new Ocaml_text.buffer ~project ?file () in
   let sw, text_view, ocaml_view = create_view ~project ~buffer ?file () in
   let vbox                     = GPack.vbox ~spacing:0 () in
-  let phbox                    = GPack.hbox ~spacing:1 ~packing:vbox#add () in
-  let _                        = phbox#add sw#coerce in
-  let svbox                    = GPack.vbox ~spacing:1 ~packing:phbox#pack () in
-  let global_gutter_ebox       = GBin.event_box ~packing:phbox#pack () in
+  let textbox                  = GPack.hbox ~spacing:1 ~packing:vbox#add () in
+  let _                        = textbox#add sw#coerce in (* Text box *)
+  let svbox                    = GPack.vbox ~spacing:1 ~packing:textbox#pack () in (* Vertical scrollbar box *)
+  let global_gutter_ebox       = GBin.event_box ~packing:textbox#pack () in (* Global gutter box *)
   (** Status bar *)
   let _                        = GMisc.separator `HORIZONTAL ~packing:(vbox#pack ~expand:false) () in
-  let sobox                    = GPack.hbox ~spacing:2 ~border_width:0 ~packing:vbox#pack () in
-  let spaned                   = GPack.paned `HORIZONTAL ~packing:sobox#add () in
+  let sbbox                    = GPack.hbox ~spacing:1 ~border_width:0 ~packing:vbox#pack () in
+  let spaned                   = GPack.paned `HORIZONTAL ~packing:sbbox#add () in
   let sbox                     = GPack.hbox ~spacing:1 ~border_width:0 ~packing:(spaned#pack1 ~shrink:false) () in
   let status_modified          = GMisc.image ~icon_size:`MENU ~packing:sbox#pack () in
   let _                        = GMisc.separator `VERTICAL ~packing:sbox#pack () in
   let status_filename          = GMisc.label ~selectable:true ~xalign:0.0 ~xpad:5 ~width:240 ~ellipsize:`END ~packing:sbox#add () in
-  let _                        = GMisc.separator `VERTICAL ~packing:sbox#pack () in
+  let sep_status_pos_box       = GMisc.separator `VERTICAL ~packing:sbox#pack () in
   let status_pos_box           = GPack.hbox ~spacing:3 ~packing:sbox#pack () in
   let _                        = GMisc.label ~xalign:0.0 ~yalign:0.5 ~text:"Ln:" ~packing:status_pos_box#pack () in
   let status_pos_lin           = GMisc.label ~xalign:0.0 ~yalign:0.5 ~width:33 ~packing:status_pos_box#pack () in
@@ -79,94 +94,87 @@ class page ?file ~project ~scroll_offset ~offset ~editor () =
   let _                        = GMisc.separator `VERTICAL ~packing:sbox#pack () in
   let spinner                  = GMisc.image ~width:15 ~packing:sbox#pack () in
   let _                        = GMisc.separator `VERTICAL ~packing:sbox#pack () in
+  let button_dotview           = create_small_toggle_button
+    ~pixbuf:Icons.graph_14
+    ~packing:sbbox#pack ()
+    ~show:(Oe_config.dot_version <> None)
+  in
   (** Icons for font size and row spacing adjustment *)
-  let button_font_incr         = GBin.event_box ~packing:sobox#pack () in
-  let _                        = button_font_incr#misc#set_property "visible-window" (`BOOL false) in
-  let _                        = GMisc.image ~pixbuf:Icons.zoom_in_14 ~packing:button_font_incr#add () in
-  let button_font_decr         = GBin.event_box ~packing:sobox#pack () in
-  let _                        = button_font_decr#misc#set_property "visible-window" (`BOOL false) in
-  let _                        = GMisc.image ~pixbuf:Icons.zoom_out_14 ~packing:button_font_decr#add () in
-  let button_rowspacing_incr   = GBin.event_box ~packing:sobox#pack () in
-  let _                        = button_rowspacing_incr#misc#set_property "visible-window" (`BOOL false) in
-  let _                        = GMisc.image ~pixbuf:Icons.lines_in_14 ~packing:button_rowspacing_incr#add () in
-  let button_rowspacing_decr   = GBin.event_box ~packing:sobox#pack () in
-  let _                        = button_rowspacing_decr#misc#set_property "visible-window" (`BOOL false) in
-  let _                        = GMisc.image ~pixbuf:Icons.lines_out_14 ~packing:button_rowspacing_decr#add () in
+  let button_font_incr = create_small_button
+    ~pixbuf:Icons.zoom_in_14
+    ~packing:sbbox#pack
+    ~callback:begin fun () ->
+      let fd = text_view#misc#pango_context#font_description in
+      let size = Pango.Font.get_size fd + Pango.scale in
+      Pango.Font.modify fd ~size ();
+      text_view#misc#modify_font fd;
+      Line_num_labl.iter (fun lab -> lab#misc#modify_font fd) text_view#line_num_labl;
+      Gmisclib.Idle.add text_view#draw_gutter;
+    end ()
+  in
+  let button_font_decr = create_small_button
+    ~pixbuf:Icons.zoom_out_14
+    ~packing:sbbox#pack
+    ~callback:begin fun () ->
+      let fd = text_view#misc#pango_context#font_description in
+      let size = Pango.Font.get_size fd in
+      if size - Pango.scale >= (7 * Pango.scale) then begin
+        let size = size - Pango.scale in
+        Pango.Font.modify fd ~size ();
+        text_view#misc#modify_font fd;
+        Line_num_labl.iter (fun lab -> lab#misc#modify_font fd) text_view#line_num_labl;
+        Gmisclib.Idle.add text_view#draw_gutter
+      end
+    end ()
+  in
+  let button_rowspacing_incr = create_small_button
+    ~pixbuf:Icons.lines_in_14
+    ~packing:sbbox#pack
+    ~callback:begin fun () ->
+      let above, below = Preferences.preferences#get.Preferences.pref_editor_pixels_lines in
+      text_view#set_pixels_above_lines (min (2 + above) (text_view#pixels_above_lines + 1));
+      text_view#set_pixels_below_lines (min (2 + below) (text_view#pixels_below_lines + 1));
+      Gmisclib.Idle.add text_view#draw_gutter;
+    end ()
+  in
+  let button_rowspacing_decr = create_small_button
+    ~pixbuf:Icons.lines_out_14
+    ~packing:sbbox#pack
+    ~callback:begin fun () ->
+      text_view#set_pixels_above_lines (max 0 (text_view#pixels_above_lines - 1));
+      text_view#set_pixels_below_lines (max 0 (text_view#pixels_below_lines - 1));
+      Gmisclib.Idle.add text_view#draw_gutter;
+    end ()
+  in
   (** Show whitespace and word wrap *)
-  let button_toggle_wrap       = GBin.event_box ~packing:sobox#pack () in
-  let _                        = button_toggle_wrap#misc#set_property "visible-window" (`BOOL false) in
-  let image_toggle_wrap        = GMisc.image ~packing:button_toggle_wrap#add () in
-  let button_toggle_whitespace = GBin.event_box ~packing:sobox#pack () in
-  let _                        = button_toggle_whitespace#misc#set_property "visible-window" (`BOOL false) in
-  let image_toggle_whitespace  = GMisc.image ~packing:button_toggle_whitespace#add () in
+  let button_toggle_wrap = create_small_toggle_button ~pixbuf:Icons.wrap_off_14 ~packing:sbbox#pack () in
+  let button_toggle_whitespace = create_small_toggle_button ~pixbuf:Icons.whitespace_off_14 ~packing:sbbox#pack () in
   (** Navigation buttons in the statusbar *)
   (*let first_sep = GMisc.separator `VERTICAL ~packing:sobox#pack () in*)
   let location_goto where =
     match where editor#location_history with
-      | None -> true
-      | Some loc -> editor#location_history_goto loc; true
+      | None -> ()
+      | Some loc -> editor#location_history_goto loc
   in
-  let button_h_prev            = GBin.event_box ~packing:sobox#pack (*~show:false*) () in
-  let _                        = button_h_prev#misc#set_tooltip_text "Back" in
-  let _                        = button_h_prev#misc#set_property "visible-window" (`BOOL false) in
-  let _                        = GMisc.image ~pixbuf:Icons.arrow_prev_14 ~packing:button_h_prev#add () in
-  let _                        = button_h_prev#event#connect#button_press ~callback:begin fun _ ->
-    location_goto Location_history.previous
-  end in
-  let button_h_next            = GBin.event_box ~packing:sobox#pack (*~show:false*) () in
-  let _                        = button_h_next#misc#set_tooltip_text "Forward" in
-  let _                        = button_h_next#misc#set_property "visible-window" (`BOOL false) in
-  let _                        = GMisc.image ~pixbuf:Icons.arrow_next_14 ~packing:button_h_next#add () in
-  let _                        = button_h_next#event#connect#button_press ~callback:begin fun _ ->
-    location_goto Location_history.next
-  end in
-  let button_h_last            = GBin.event_box ~packing:sobox#pack (*~show:false*) () in
-  let _                        = button_h_last#misc#set_tooltip_text "Last Edit Location" in
-  let _                        = button_h_last#misc#set_property "visible-window" (`BOOL false) in
-  let _                        = GMisc.image ~pixbuf:Icons.arrow_last_14 ~packing:button_h_last#add () in
-  let _                        = button_h_last#event#connect#button_press ~callback:begin fun _ ->
-    location_goto Location_history.goto_last_edit_location
-  end in
-  (** Font size *)
-  let _                        = button_font_incr#event#connect#button_press ~callback:begin fun _ ->
-    let fd                       = text_view#misc#pango_context#font_description in
-    let size                     = Pango.Font.get_size fd + Pango.scale in
-    Pango.Font.modify fd ~size ();
-    text_view#misc#modify_font fd;
-    Line_num_labl.iter (fun lab -> lab#misc#modify_font fd) text_view#line_num_labl;
-    Gmisclib.Idle.add text_view#draw_gutter;
-    true
-  end in
-  let _                        = button_font_decr#event#connect#button_press ~callback:begin fun _ ->
-    let fd                       = text_view#misc#pango_context#font_description in
-    let size                     = Pango.Font.get_size fd in
-    if size - Pango.scale >= (7 * Pango.scale) then begin
-      let size                     = size - Pango.scale in
-      Pango.Font.modify fd ~size ();
-      text_view#misc#modify_font fd;
-      Line_num_labl.iter (fun lab -> lab#misc#modify_font fd) text_view#line_num_labl;
-      Gmisclib.Idle.add text_view#draw_gutter
-    end;
-    true;
-  end in
-  (** Row spacing *)
-  let _                        = button_rowspacing_incr#event#connect#button_press ~callback:begin fun _ ->
-    let above, below = Preferences.preferences#get.Preferences.pref_editor_pixels_lines in
-    text_view#set_pixels_above_lines (min (2 + above) (text_view#pixels_above_lines + 1));
-    text_view#set_pixels_below_lines (min (2 + below) (text_view#pixels_below_lines + 1));
-    Gmisclib.Idle.add text_view#draw_gutter;
-    true
-  end in
-  let _                        = button_rowspacing_decr#event#connect#button_press ~callback:begin fun _ ->
-    text_view#set_pixels_above_lines (max 0 (text_view#pixels_above_lines - 1));
-    text_view#set_pixels_below_lines (max 0 (text_view#pixels_below_lines - 1));
-    Gmisclib.Idle.add text_view#draw_gutter;
-    true;
-  end in
+  let button_h_prev            = create_small_button
+    ~pixbuf:Icons.arrow_prev_14
+    ~tooltip:"Back"
+    ~packing:sbbox#pack
+    ~callback:(fun _ -> location_goto Location_history.previous) () in
+  let button_h_next            = create_small_button
+    ~pixbuf:Icons.arrow_next_14
+    ~tooltip:"Forward"
+    ~packing:sbbox#pack
+    ~callback:(fun _ -> location_goto Location_history.next) () in
+  let button_h_last            = create_small_button
+    ~pixbuf:Icons.arrow_last_14
+    ~tooltip:"Last Edit Location"
+    ~packing:sbbox#pack
+    ~callback:(fun _ -> location_goto Location_history.goto_last_edit_location) () in
   (** Scrollbars *)
-  let hscrollbar               = GRange.scrollbar `HORIZONTAL ~adjustment:sw#hadjustment ~packing:spaned#add2 () in
-  let vscrollbar               = GRange.scrollbar `VERTICAL ~adjustment:sw#vadjustment ~packing:svbox#add () in
-  let _                        =
+  let hscrollbar = GRange.scrollbar `HORIZONTAL ~adjustment:sw#hadjustment ~packing:spaned#add2 () in
+  let vscrollbar = GRange.scrollbar `VERTICAL ~adjustment:sw#vadjustment (*~update_policy:`DELAYED*) ~packing:svbox#add () in
+  let _ =
     text_view#event#connect#scroll ~callback:begin fun ev ->
       let sign = match GdkEvent.Scroll.direction ev with
         | `UP when sw#vadjustment#value > sw#vadjustment#lower -> (-.1.)
@@ -206,9 +214,13 @@ object (self)
   val mutable annot_type = None
   val error_indication = new Error_indication.error_indication ocaml_view vscrollbar (global_gutter, global_gutter_ebox)
   val mutable outline = None
+  val mutable dotview = None
   val mutable word_wrap = editor#word_wrap
   val mutable show_whitespace = editor#show_whitespace_chars
   val mutable signal_buffer_changed = None
+  val mutable signal_button_toggle_wrap = None
+  val mutable signal_button_toggle_whitespace = None
+  val mutable signal_button_dotview = None
 
   method annot_type = annot_type
   method error_indication = error_indication
@@ -447,16 +459,73 @@ object (self)
   method create_menu () = Editor_menu.create ~editor ~page:self ()
 
   method set_word_wrap value =
-    image_toggle_wrap#set_pixbuf (if value then Icons.wrap_on_14 else Icons.wrap_off_14);
+    Gaux.may signal_button_toggle_wrap ~f:button_toggle_wrap#misc#handler_block;
+    button_toggle_wrap#set_active value;
+    Gaux.may signal_button_toggle_wrap ~f:button_toggle_wrap#misc#handler_unblock;
     text_view#options#set_word_wrap value;
     word_wrap <- value;
     Gmisclib.Idle.add (fun () -> GtkBase.Widget.queue_draw text_view#as_widget);
 
   method set_show_whitespace value =
-    image_toggle_whitespace#set_pixbuf (if value then Icons.whitespace_on_14 else Icons.whitespace_off_14);
+    Gaux.may signal_button_toggle_whitespace ~f:button_toggle_whitespace#misc#handler_block;
+    button_toggle_whitespace#set_active value;
+    Gaux.may signal_button_toggle_whitespace ~f:button_toggle_whitespace#misc#handler_unblock;
     text_view#options#set_show_whitespace_chars value;
     show_whitespace <- value;
     Gmisclib.Idle.add (fun () -> GtkBase.Widget.queue_draw text_view#as_widget);
+
+  method button_dep_graph = button_dotview
+
+  method private show_dep_graph () =
+    match dotview with
+      | Some widget ->
+        widget#destroy();
+        dotview <- None;
+        textbox#misc#show();
+        List.iter (fun b -> b#misc#set_sensitive true)
+          [button_font_incr; button_font_decr; button_rowspacing_incr; button_rowspacing_decr; button_h_prev; button_h_next; button_h_last];
+        List.iter (fun b -> b#misc#set_sensitive true) [button_toggle_wrap; button_toggle_whitespace];
+        hscrollbar#misc#show();
+        status_pos_box#misc#show();
+        sep_status_pos_box#misc#show();
+      | None ->
+        begin
+          let reset_button () =
+            Gaux.may signal_button_dotview ~f:button_dotview#misc#handler_block;
+            button_dotview#set_active false;
+            Gaux.may signal_button_dotview ~f:button_dotview#misc#handler_unblock;
+          in
+          try
+            Opt.may_default (editor#project.Prj.in_source_path self#get_filename) begin fun filename ->
+              let filename = String.concat "/" (Miscellanea.filename_split filename) in
+              let on_ready_cb viewer =
+                Opt.may viewer begin fun viewer ->
+                  if button_dotview#active then begin
+                    textbox#misc#hide();
+                    vbox#reorder_child viewer#coerce ~pos:0;
+                    dotview <- Some viewer;
+                    List.iter (fun b -> b#misc#set_sensitive false)
+                      [button_font_incr; button_font_decr; button_rowspacing_incr; button_rowspacing_decr;
+                      button_h_prev; button_h_next; button_h_last];
+                    List.iter (fun b -> b#misc#set_sensitive false) [button_toggle_wrap; button_toggle_whitespace];
+                    hscrollbar#misc#hide();
+                    status_pos_box#misc#hide();
+                    sep_status_pos_box#misc#hide();
+                  end
+                end
+              in
+              match Dot.draw ~project:editor#project ~filename ~packing:vbox#add ~on_ready_cb () with
+                | None -> reset_button() | _ -> ();
+            end begin fun () ->
+              let title = "Could not show dependencies graph" in
+              let message = sprintf "%s for file: \n\n%s" title self#get_filename in
+              Dialog.message ~title ~message `INFO;
+              reset_button ()
+            end ()
+          with ex ->
+            reset_button();
+            Dialog.display_exn self ~title:"Error creating dependencies graph" ex
+        end;
 
   initializer
     annot_type <- Some (new Annot_type.annot_type ~page:self);
@@ -521,7 +590,7 @@ object (self)
       end
     end);
     ignore (self#view#hyperlink#connect#activate ~callback:begin fun iter ->
-      editor#scroll_to_definition iter;
+      editor#scroll_to_definition ~page:self ~iter;
     end);
     (** Spinner *)
     let activate_spinner (active : Activity.t list) =
@@ -531,7 +600,7 @@ object (self)
           spinner#misc#set_tooltip_text "";
         | msgs ->
           let msgs = snd (List.split msgs) in
-          spinner#set_file (Common.application_pixmaps // "spinner.gif");
+          spinner#set_file (App_config.application_pixmaps // "spinner.gif");
           spinner#misc#set_tooltip_text (String.concat "\n" (List.rev msgs));
     in
     ignore (Activity.table#connect#changed ~callback:activate_spinner);
@@ -587,18 +656,18 @@ object (self)
         | _ -> false
     end in
     (**  *)
-    let callback _ =
-      self#set_word_wrap (not word_wrap);
-      true
-    in
+    let callback _ = self#set_word_wrap (not word_wrap) in
     self#set_word_wrap word_wrap;
-    ignore (button_toggle_wrap#event#connect#button_press ~callback);
-    let callback _ =
-      self#set_show_whitespace (not show_whitespace);
-      true
-    in
+    signal_button_toggle_wrap <- Some (button_toggle_wrap#connect#clicked ~callback);
+    let callback _ = self#set_show_whitespace (not show_whitespace) in
     self#set_show_whitespace show_whitespace;
-    ignore (button_toggle_whitespace#event#connect#button_press ~callback);
+    signal_button_toggle_whitespace <- Some (button_toggle_whitespace#connect#clicked ~callback);
+    (** Dotview *)
+    if Oe_config.dot_version <> None then begin
+      (signal_button_dotview <- Some (button_dotview#connect#clicked ~callback:self#show_dep_graph));
+      button_dotview#misc#set_tooltip_text (Menu_view.get_switch_viewer_label (Some self));
+      button_dotview#misc#set_sensitive (Menu_view.get_switch_view_sensitive editor#project self);
+    end
 
   method connect = new signals ~file_changed
 end

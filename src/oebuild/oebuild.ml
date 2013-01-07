@@ -1,7 +1,7 @@
 (*
 
   OCamlEditor
-  Copyright (C) 2010-2012 Francesco Tovagliari
+  Copyright (C) 2010-2013 Francesco Tovagliari
 
   This file is part of OCamlEditor.
 
@@ -39,6 +39,22 @@ let string_of_compilation_type = function
 let ocamlc = Ocaml_config.ocamlc()
 let ocamlopt = Ocaml_config.ocamlopt()
 let ocamllib = Ocaml_config.ocamllib()
+
+(** check_package_list *)
+let check_package_list =
+  let redirect_stderr = if Sys.os_type = "Win32" then " 1>NUL 2>NUL" else " 2>/dev/null" in
+  fun package_list ->
+    let package_list = Str.split (Str.regexp "[, ]") package_list in
+    let available, unavailable =
+      List.partition begin fun package ->
+        kprintf (Oebuild_util.command ~echo:false) "ocamlfind query %s %s" package redirect_stderr = 0
+      end package_list
+    in
+    if unavailable <> [] then begin
+      eprintf "Warning (oebuild): the following packages are not found: %s\n"
+        (String.concat ", " unavailable);
+    end;
+    String.concat "," available;;
 
 (** compile *)
 let compile ?(times : Table.t option) ~opt ~compiler ~cflags ~package ~includes ~filename
@@ -191,7 +207,7 @@ let filter_inconsistent_assumptions_error ~compiler_output ~recompile ~targets ~
         try
           let _ = Str.search_backward re_inconsistent_assumptions last_error (String.length last_error) in
           let modname = Str.matched_group 2 last_error in
-          let dependants = Dep.find_dependants ~targets ~modname in
+          let dependants = Dep.find_dependants ~path:(List.map Filename.dirname targets) ~modname in
           let dependants = sort_dependencies ~deps dependants in
           let _ (*original_error*) = Buffer.contents compiler_output in
           eprintf "Warning (oebuild): the following files make inconsistent assumptions over interface/implementation %s: %s\n%!"
@@ -242,6 +258,7 @@ let build ~compilation ~package ~includes ~libs ~other_mods ~outkind ~compile_on
       | _ -> ()
   end;
   (* compiling *)
+  let package = check_package_list package in
   let compiler =
     if prof then "ocamlcp -p a"
     else begin
@@ -257,6 +274,7 @@ let build ~compilation ~package ~includes ~libs ~other_mods ~outkind ~compile_on
       else compiler
     end
   in
+  (*  *)
   let mods = split_space other_mods in
   let mods = if compilation = Native then List.map (sprintf "%s.cmx") mods else List.map (sprintf "%s.cmo") mods in
   if compilation = Native && !ms_paths then begin
@@ -274,7 +292,7 @@ let build ~compilation ~package ~includes ~libs ~other_mods ~outkind ~compile_on
         let rec try_compile filename =
           let recompile = ref [] in
           let compile_exit =
-            Table.update ~deps ~opt times filename;
+            Table.update ~opt times filename;
             let exit_code = compile
               ~process_err:(filter_inconsistent_assumptions_error ~compiler_output ~recompile ~targets ~deps ~cache:times ~opt)
               ~times ~opt ~compiler ~cflags:!cflags ~package ~includes:!includes ~filename ()

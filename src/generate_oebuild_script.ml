@@ -1,7 +1,7 @@
 (*
 
   OCamlEditor
-  Copyright (C) 2010-2012 Francesco Tovagliari
+  Copyright (C) 2010-2013 Francesco Tovagliari
 
   This file is part of OCamlEditor.
 
@@ -95,6 +95,7 @@ let create_script () =
       "../common/quote";
       "../common/argc";
       "../common/cmd";
+      "../common/app_config";
       "../common/ocaml_config";
       "../common/dep";
       "../common/cmd_line_args";

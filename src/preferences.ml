@@ -1,7 +1,7 @@
 (*
 
   OCamlEditor
-  Copyright (C) 2010-2012 Francesco Tovagliari
+  Copyright (C) 2010-2013 Francesco Tovagliari
 
   This file is part of OCamlEditor.
 
@@ -23,6 +23,7 @@
 open Miscellanea
 
 type t = {
+  mutable pref_general_theme                : string option;
   mutable pref_timestamp                    : float;
   mutable pref_base_font                    : string;
   mutable pref_tab_pos                      : Gtk.Tags.position;
@@ -173,6 +174,7 @@ let default_colors : text_properties list = [
 ]
 
 let create_defaults () = {
+  pref_general_theme                = (match Oe_config.themes_dir with Some _ -> Some "MurrinaCandido" | _ -> None);
   pref_timestamp                    = (Unix.gettimeofday());
   pref_base_font                    = "monospace 9";
   pref_tab_pos                      = `TOP;
@@ -307,6 +309,7 @@ let color_of_string name = `NAME name
 let to_xml pref =
   let xml =
     Xml.Element ("preferences", [], [
+      Xml.Element ("pref_general_theme", [], [Xml.PCData (Opt.default pref.pref_general_theme "")]);
       Xml.Element ("pref_base_font", [], [Xml.PCData pref.pref_base_font]);
       Xml.Element ("pref_check_updates", [], [Xml.PCData (string_of_bool pref.pref_check_updates)]);
       Xml.Element ("pref_tab_pos", [], [Xml.PCData (string_of_pos pref.pref_tab_pos)]);
@@ -419,6 +422,7 @@ let from_file filename =
     let bg_color_theme = ref false in
     Xml.iter begin fun node ->
       match Xml.tag node with
+        | "pref_general_theme" -> pref.pref_general_theme <- (if value node = "" then None else Some (value node))
         | "pref_check_updates" -> pref.pref_check_updates <- bool_of_string (value node)
         | "pref_base_font" -> pref.pref_base_font <- value node
         | "pref_tab_pos" -> pref.pref_tab_pos <- pos_of_string (value node)

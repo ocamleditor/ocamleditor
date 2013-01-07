@@ -1,7 +1,7 @@
 (*
 
   OCamlEditor
-  Copyright (C) 2010-2012 Francesco Tovagliari
+  Copyright (C) 2010-2013 Francesco Tovagliari
 
   This file is part of OCamlEditor.
 
@@ -20,31 +20,31 @@
 
 *)
 
-open Printf
-
 type t = {
   delay          : int; (* ms *)
-  mutable buffer : (unit -> unit) option;
+  mutable buffer : (unit -> unit) option array;
   mutable id     : GMain.Timeout.id option;
 }
 
-let create ~delay () = {
+let create ~delay ?(len=1) () = {
   delay  = int_of_float (delay *. 1000.);
-  buffer = None;
+  buffer = Array.make len None;
   id     = None;
 }
 
-let start timeout = 
+let start timeout =
   timeout.id <- Some (GMain.Timeout.add ~ms:timeout.delay ~callback:begin fun () ->
-    Gaux.may timeout.buffer ~f:begin fun f ->
+    Array.iteri begin fun i -> function
+      | Some f ->
       (*try*)
         f ();
-        timeout.buffer <- None;
+        Array.unsafe_set timeout.buffer i None;
       (*with ex -> Printf.eprintf "File \"timeout.ml\": %s\n%s\n%!" (Printexc.to_string ex) (Printexc.get_backtrace());*)
-    end;
+      | _ -> ()
+    end timeout.buffer;
     true
   end);;
 
-let set timeout func = timeout.buffer <- Some func
+let set timeout i func = Array.unsafe_set timeout.buffer i (Some func)
 
 let destroy timeout = Gaux.may timeout.id ~f:GMain.Timeout.remove

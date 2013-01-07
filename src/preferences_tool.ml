@@ -1,7 +1,7 @@
 (*
 
   OCamlEditor
-  Copyright (C) 2010-2012 Francesco Tovagliari
+  Copyright (C) 2010-2013 Francesco Tovagliari
 
   This file is part of OCamlEditor.
 
@@ -22,6 +22,7 @@
 
 
 open Printf
+open Miscellanea
 
 let ocaml_preview =
 "(* Syntax Coloring Preview *)
@@ -94,6 +95,7 @@ end
 
 (** preferences *)
 and preferences ~(editor : Editor.editor) () =
+  let initial_gtk_theme = Preferences.preferences#get.Preferences.pref_general_theme in
   let window            = GWindow.window ~allow_shrink:false ~allow_grow:false ~resizable:true ~width:750
     ~type_hint:`DIALOG ~modal:true ~title:"Preferences" ~position:`CENTER ~icon:Icons.oe ~show:false () in
   let _                 = Gaux.may (GWindow.toplevel editor) ~f:(fun w -> window#set_transient_for w#as_window) in
@@ -122,28 +124,48 @@ object (self)
   inherit GObj.widget vbox#as_widget
   val mutable pages = []
   val mutable current = ""
+
   method show_page title =
     let page = List.assoc title pages in
     List.iter (fun (_, p) -> p#misc#hide()) pages;
     page#misc#show();
     current <- title;
+
   method write () =
     List.iter (fun (_, page) -> page#write Preferences.preferences#get) pages;
     editor#set_tab_pos Preferences.preferences#get.Preferences.pref_tab_pos;
     editor#code_folding_enabled#set Preferences.preferences#get.Preferences.pref_code_folding_enabled;
     editor#show_global_gutter#set Preferences.preferences#get.Preferences.pref_show_global_gutter;
+    begin
+      match Preferences.preferences#get.Preferences.pref_general_theme with
+        | Some theme as new_theme when new_theme <> None && new_theme <> initial_gtk_theme ->
+          Gtk_theme.set_theme ~theme ();
+        | Some _ as new_theme when new_theme <> None && new_theme = initial_gtk_theme -> ()
+        | _ -> self#reset_theme();
+    end;
+
   method ok () =
     self#write();
     Preferences.save();
     window#destroy();
+
+  method cancel () =
+    self#reset_theme();
+    window#destroy()
+
   method reset_defaults () =
     let defaults = Preferences.create_defaults() in
     List.iter (fun (_, page) -> page#read defaults) pages;
+
   method reset_page_defaults () =
     let defaults = Preferences.create_defaults() in
     match List_opt.find (fun (t, _) -> t = current) pages with
       | Some (_, p) -> p#read defaults
       | _ -> ()
+
+  method private reset_theme () =
+    Gtk_theme.set_theme ?theme:initial_gtk_theme ()
+
   method create ?(idle=false) title row  (page : string -> ?packing:(GObj.widget -> unit) -> unit -> page) =
     model#set ~row ~column title;
     let f () =
@@ -153,6 +175,7 @@ object (self)
       pages <- (title, page) :: pages
     in
     if idle then Gmisclib.Idle.add f else f()
+
   initializer
     (* Tree *)
     let row = model#append () in self#create "General" row (new pref_view);
@@ -172,7 +195,7 @@ object (self)
         | _ -> ()
     end);
     (* Buttons *)
-    ignore (cancel_button#connect#clicked ~callback:window#destroy);
+    ignore (cancel_button#connect#clicked ~callback:self#cancel);
     ignore (ok_button#connect#clicked ~callback:self#ok);
     ignore (reset_button#connect#clicked ~callback:self#reset_defaults);
     ignore (reset_page_button#connect#clicked ~callback:self#reset_page_defaults);
@@ -185,15 +208,19 @@ end
 (** pref_view *)
 and pref_view title ?packing () =
   let vbox                  = GPack.vbox ~spacing ?packing () in
+  let align                 = create_align ~vbox () in
+  let table                 = GPack.table ~col_spacings ~row_spacings ~packing:align#add ~show:(Oe_config.themes_dir <> None) () in
+  let combo_theme, _        = GEdit.combo_box_text ~strings:Gtk_theme.avail_themes ~packing:(table#attach ~top:0 ~left:1 ~expand:`X) () in
+  let _                     = GMisc.label ~text:"Look and feel:" ~xalign ~packing:(table#attach ~top:0 ~left:0 ~expand:`NONE) () in
   let align                 = create_align ~title:"Tabs" ~vbox () in
   let table                 = GPack.table ~col_spacings ~row_spacings ~packing:align#add () in
   let _                     = GMisc.label ~text:"Orientation:" ~xalign ~packing:(table#attach ~top:0 ~left:0 ~expand:`NONE) () in
   let _                     = GMisc.label ~text:"Label type:" ~xalign ~packing:(table#attach ~top:1 ~left:0 ~expand:`NONE) () in
 (*  let _ = GMisc.label ~text:"Insertions:" ~xalign ~packing:(table#attach ~top:2 ~left:0 ~expand:`NONE) () in*)
-  let combo_orient, _ = GEdit.combo_box_text ~strings:[
+  let combo_orient, _       = GEdit.combo_box_text ~strings:[
       "Top"; "Right"; "Bottom"; "Left"; "Vertical on the left"; "Vertical on the right"
     ] ~packing:(table#attach ~top:0 ~left:1 ~expand:`X) () in
-  let combo_labtype, _ = GEdit.combo_box_text ~strings:["Name"; "Shortname"]
+  let combo_labtype, _       = GEdit.combo_box_text ~strings:["Name"; "Shortname"]
     ~packing:(table#attach ~top:1 ~left:1 ~expand:`X) () in
 (*  let combo_insert, _ = GEdit.combo_box_text ~strings:["Insert at end"; "Insert at beginning"; "Sort alphabetically"]
     ~packing:(table#attach ~top:2 ~left:1 ~expand:`X) () in*)
@@ -234,19 +261,28 @@ and pref_view title ?packing () =
   end in
   let _                     = snd_action_check#set_active true in
   let _                     = snd_action_check#set_active false in*)
-  (* Software Update *)
-  let align                 = create_align ~title:"Software Update" ~vbox () in
-  let check_software_update = GButton.check_button ~label:"Automatically check for updates" ~packing:align#add () in
-object
+object (self)
   inherit page title vbox
 
+  initializer
+    match Oe_config.themes_dir with
+      | Some _ ->
+        ignore (combo_theme#connect#changed ~callback:begin fun () ->
+          let theme = self#get_theme_name() in
+          Gtk_theme.set_theme ?theme ()
+        end);
+      | _ -> ()
+
+  method private get_theme_name () =
+    try Some (List.nth Gtk_theme.avail_themes combo_theme#active) with Invalid_argument _ -> None
+
   method write pref =
+    pref.Preferences.pref_general_theme <- self#get_theme_name();
     pref.Preferences.pref_tab_pos <- (match combo_orient#active
       with 0 -> `TOP | 1 | 5 -> `RIGHT | 2 -> `BOTTOM | 3 | 4 -> `LEFT | _ -> assert false);
     pref.Preferences.pref_tab_vertical_text <- (match combo_orient#active
       with 0 | 1 | 2 | 3 -> false | 4 | 5 -> true | _ -> assert false);
     pref.Preferences.pref_tab_label_type <- combo_labtype#active;
-    pref.Preferences.pref_check_updates <- check_software_update#active;
     (*pref.Preferences.pref_max_view_1_menubar <- check_menubar_1#active;*)
     pref.Preferences.pref_max_view_1_toolbar <- check_toolbar_1#active;
     pref.Preferences.pref_max_view_1_tabbar <- check_tabbar_1#active;
@@ -261,11 +297,12 @@ object
     pref.Preferences.pref_max_view_fullscreen <- not use_maximize#active;
 
   method read pref =
+    combo_theme#set_active (match pref.Preferences.pref_general_theme with
+      | Some name -> Xlist.pos name Gtk_theme.avail_themes | _ -> -1);
     combo_orient#set_active (match pref.Preferences.pref_tab_pos, pref.Preferences.pref_tab_vertical_text with
       | `TOP, _ -> 0 | `RIGHT, false -> 1 | `BOTTOM, _ -> 2 | `LEFT, false -> 3
       | `LEFT, true -> 4 | `RIGHT, true -> 5);
     combo_labtype#set_active pref.Preferences.pref_tab_label_type;
-    check_software_update#set_active pref.Preferences.pref_check_updates;
     (*check_menubar_1#set_active pref.Preferences.pref_max_view_1_menubar;*)
     check_toolbar_1#set_active pref.Preferences.pref_max_view_1_toolbar;
     check_tabbar_1#set_active pref.Preferences.pref_max_view_1_tabbar;

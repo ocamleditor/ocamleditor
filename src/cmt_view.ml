@@ -1,7 +1,7 @@
 (*
 
   OCamlEditor
-  Copyright (C) 2010-2012 Francesco Tovagliari
+  Copyright (C) 2010-2013 Francesco Tovagliari
 
   This file is part of OCamlEditor.
 
@@ -30,6 +30,9 @@ open Typedtree
 open Asttypes
 open Types
 open Binannot_type
+
+module Log = Common.Log.Make(struct let prefix = "Cmt_view" end)
+let _ = Log.set_verbosity `DEBUG
 
 type kind =
   | Function
@@ -291,7 +294,7 @@ object (self)
       (*Preferences.save();*)
     end);
     ignore (button_select_from_buf#connect#clicked ~callback:begin fun () ->
-      self#select_from_buffer ?align:None (page#buffer#get_mark `INSERT)
+      ignore (self#select_from_buffer ?align:None (page#buffer#get_mark `INSERT))
     end);
     (* Sort *)
     (*model_sort_default#set_sort_column_id col_default_sort.GTree.index `ASCENDING;
@@ -341,26 +344,29 @@ object (self)
           | _ -> false
       with Not_found -> false
     end;
+    let is_selected = ref false in
     Gaux.may !found ~f:begin fun path ->
       let row = model#get_iter path in
       let has_lazy = self#force_lazy row in
-      if has_lazy then self#select_from_buffer ?align mark else begin
+      if has_lazy then is_selected := self#select_from_buffer ?align mark else begin
         let smodel = self#get_model () in
         let path = smodel#convert_child_path_to_path path in
         view#expand_to_path path;
         Gaux.may signal_selection_changed ~f:view#selection#misc#handler_block;
         view#selection#select_path path;
         Gaux.may signal_selection_changed ~f:view#selection#misc#handler_unblock;
+        is_selected := true;
         match align with
           | Some align ->
             view#vadjustment#set_value (align *. view#vadjustment#upper);
           | None when page#view#misc#get_flag `HAS_FOCUS ->
             if not (Gmisclib.Util.treeview_is_path_onscreen view path) then begin
               view#scroll_to_cell ~align:(0.38, 0.) path vc;
-            end
+            end;
           | _ -> ()
       end
-    end
+    end;
+    !is_selected
 
   method select_in_buffer () =
     match view#selection#get_selected_rows with
@@ -482,7 +488,10 @@ object (self)
         | Partial_module_type mt -> self#append_module_type mt.mty_desc
         | Partial_pattern _
         | Partial_class_expr _ ->*)
-          editor#pack_outline (empty())#coerce
+
+          Log.println `DEBUG "Partial_implementation: %s" page#get_filename;
+          (*editor#pack_outline (empty())#coerce*)
+
           (*let row = model#append () in
           model#set ~row ~column:col_markup "Partial_implementation"*)
       (*end impl;*)

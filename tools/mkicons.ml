@@ -28,7 +28,7 @@ open Printf
 
 let mkicons () =
   if not (Sys.file_exists "icons") then (mkdir "icons");
-  let pixmaps = ".." // "pixmaps" in
+  let pixmaps = ".." // "share" // "pixmaps" in
   let files = Array.to_list (Sys.readdir pixmaps) in
   let files = List.filter (fun x -> Filename.check_suffix x ".png") files in
   let cat = if Sys.os_type = "Win32" then "TYPE" else "cat" in
@@ -41,7 +41,7 @@ let mkicons () =
       let new_name = Str.global_replace (Str.regexp "-") "_" file in
       Sys.rename (pixmaps // file) (pixmaps // new_name);
       let icon_name = Filename.basename (Filename.chop_extension new_name) in
-      fprintf ochan "let %s = GdkPixbuf.from_file (Common.application_pixmaps // \"%s\")\n" icon_name new_name
+      fprintf ochan "let %s = GdkPixbuf.from_file (App_config.application_pixmaps // \"%s\")\n" icon_name new_name
     end files;
     close_out_noerr ochan;
   with _ -> close_out_noerr ochan;;

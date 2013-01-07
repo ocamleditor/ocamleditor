@@ -1,7 +1,7 @@
 (*
 
   OCamlEditor
-  Copyright (C) 2010-2012 Francesco Tovagliari
+  Copyright (C) 2010-2013 Francesco Tovagliari
 
   This file is part of OCamlEditor.
 
@@ -63,9 +63,9 @@ class widget ~project ?(is_completion=false) ?(enable_history=true) ?width ?heig
   let _                   = button_layout_slist#set_icon_widget (GMisc.image ~pixbuf:Icons.paned_right_hide ~icon_size:`MENU ())#coerce in
   let button_layout_odoc  = GButton.radio_tool_button ~label:"Documentation" ~homogeneous:false ~group:button_layout_both ~packing:toolbar#insert () in
   let _                   = button_layout_odoc#set_icon_widget (GMisc.image ~pixbuf:Icons.paned_right_full ~icon_size:`MENU ())#coerce in
-  let _                   = GButton.separator_tool_item ~draw:false ~expand:true ~packing:toolbar#insert () in
+  let _                   = GButton.separator_tool_item ~draw:true ~expand:false ~packing:toolbar#insert () in
   let button_detach       = GButton.tool_button ~label:"Detach" ~homogeneous:false ~packing:toolbar#insert () in
-  let _                   = button_detach#set_icon_widget (GMisc.image ~pixbuf:Icons.detach ~icon_size:`MENU ())#coerce in
+  let _                   = GMisc.image ~pixbuf:Icons.detach ~icon_size:`MENU ~packing:button_detach#set_icon_widget () in
   let box_slist           = GPack.vbox ~packing:paned#add1 () in
   let label_title         = GMisc.label ~markup:"" ~xalign:0.5 ~xpad:3 ~ypad:5 ~packing:box_slist#pack () in
   let stack_box           = GPack.hbox ~packing:box_slist#add () in
@@ -94,8 +94,8 @@ class widget ~project ?(is_completion=false) ?(enable_history=true) ?width ?heig
     odoc_view#set_pixels_inside_wrap 0;
     odoc_view#set_editable false;
     odoc_view#set_cursor_visible false;
-    odoc_view#set_left_margin 8;
-    odoc_view#set_right_margin 8;
+    odoc_view#set_left_margin Oe_config.odoc_margin;
+    odoc_view#set_right_margin Oe_config.odoc_margin;
     odoc_view#set_wrap_mode `WORD;
     odoc_view#misc#set_has_tooltip false;
     odoc_view#options#set_show_markers false;
@@ -393,7 +393,7 @@ object (self)
 
   (** find *)
   method find ?text ?(fill=false) () =
-    Timeout.set tout_entry_find begin fun () ->
+    Timeout.set tout_entry_find 0 begin fun () ->
       GtkThread.async begin fun () ->
         let text = match text with None -> entry_find#text | Some x -> x in
         entry_find#misc#set_property "secondary-icon-sensitive" (`BOOL (String.length text > 0));
@@ -509,7 +509,7 @@ object (self)
     wlibs#view#selection#set_mode `MULTIPLE;
     wlibs#view#set_cursor (GTree.Path.create [0]) wlibs#vc_type_descr;
     wlibs#view#misc#grab_focus();
-    wlibs#set_title "" "Index of Libraries";
+    wlibs#set_title ~subtitle:"" "Index of Libraries";
     self#push wlibs;
 
   (** create_widget_library *)
@@ -585,7 +585,8 @@ object (self)
       end);
       wmods#vc_icon#set_visible false;
       wmods#vc_add_descr#set_visible true;
-      wmods#set_title "" "Index of Modules";
+      wmods#set_title ~subtitle:"" "Index of Modules";
+      if button_layout_odoc#get_active then button_layout_both#set_active true;
       if push then (self#push wmods);
     with Exit ->
       cache_widget_modules := List.filter (fun (id, _) -> id <> cache_id) !cache_widget_modules;
@@ -724,6 +725,8 @@ object (self)
           Gaux.may odoc_view#signal_expose ~f:odoc_view#misc#handler_block;
           Oe_doc.Printer.insert_full_module ~buffer:(odoc_buffer :> GText.buffer) ~colorize ~tag:odoc_tag odoc;
           odoc_buffer#place_cursor ~where:odoc_buffer#start_iter;
+          Gmisclib.Idle.add ~prio:100 (fun () ->
+            odoc_view#scroll_to_mark ~use_align:false ~within_margin:0.4 ~yalign:0.0 `INSERT);
           Gaux.may odoc_view#signal_expose ~f:odoc_view#misc#handler_unblock;
           odoc_buffer#unblock_signal_handlers ();
           Gdk.Window.set_cursor self#misc#window (Gdk.Cursor.create `ARROW);
@@ -841,7 +844,9 @@ object (self)
     self#show_current_page()
 
   (** go_home *)
-  method go_home () = while not (self#go_back()) do () done
+  method go_home () =
+    while not (self#go_back()) do () done;
+    if button_layout_odoc#get_active then button_layout_both#set_active true;
 
   (** go_up *)
   method go_up () =
@@ -985,16 +990,19 @@ object (self)
             window#destroy();
             detached <- None, Some messages;
             self#present ();
+            Gaux.may (GWindow.toplevel self) ~f:(fun w -> w#present())
           with Not_found -> assert false
         end;
       | _, messages ->
+        button_detach#misc#set_sensitive false;
         button_detach#misc#set_state `NORMAL;
         vbox#reorder_child ~pos:0 toolbar#coerce;
-        let window = GWindow.window ~title ~icon:Icons.oe ~width:900 ~height:600 ~border_width:0 ~allow_shrink:true ~position:`CENTER () in
+        let window = GWindow.window ~title ~icon:Icons.oe ~width:1000 ~height:600 ~border_width:0 ~allow_shrink:true ~position:`CENTER () in
         self#misc#reparent window#coerce;
         button_detach#set_icon_widget (GMisc.image ~pixbuf:Icons.attach ())#coerce;
         detached <- Some window, messages;
         window#show();
+        button_detach#misc#set_sensitive true;
 
   (** connect *)
   method connect = new widget_signals ~switch_page ~add_page
@@ -1006,8 +1014,8 @@ and widget_signals ~switch_page ~add_page = object
   method switch_page = switch_page#connect ~after
   method add_page = add_page#connect ~after
 end
-and switch_page () = object (self) inherit [symbol_list] GUtil.signal () as super end
-and add_page () = object (self) inherit [symbol_list] GUtil.signal () as super end
+and switch_page () = object inherit [symbol_list] GUtil.signal () end
+and add_page () = object inherit [symbol_list] GUtil.signal () end
 
 (** create *)
 let create_window ~project =

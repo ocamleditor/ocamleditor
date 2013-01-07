@@ -1,7 +1,7 @@
 (*
 
   OCamlEditor
-  Copyright (C) 2010-2012 Francesco Tovagliari
+  Copyright (C) 2010-2013 Francesco Tovagliari
 
   This file is part of OCamlEditor.
 
@@ -45,12 +45,12 @@ let replace_extension x =
     (if x ^^ "cmi" then "mli" else if x ^^ "cmx" then "ml" else assert false);;
 
 (** find_dep *)
-let find_dep ?pp ?includes ?(with_errors=true) ?(echo=true) target =
+let find_dep ?pp ?(with_errors=true) ?(echo=true) target =
   let dir = Filename.dirname target in
   let anti_loop = ref [] in
   let table = Hashtbl.create 7 in
   let redirect_stderr = if with_errors then "" else (if Sys.os_type = "Win32" then " 2>NUL" else " 2>/dev/null") in
-  let command = sprintf "%s%s %s -native -slash %s %s %s"
+  let command = sprintf "%s%s %s -native -slash -one-line %s %s %s"
     (Ocaml_config.ocamldep())
     (match pp with Some pp when pp <> "" -> " -pp " ^ pp | _ -> "" )
     (Ocaml_config.expand_includes dir)
@@ -95,8 +95,8 @@ let find_dep ?pp ?includes ?(with_errors=true) ?(echo=true) target =
   List.rev (List.map replace_extension !result)
 
 (** find *)
-let find ?pp ?includes ?with_errors ?(echo=true) targets =
-  let deps = List.map (find_dep ?pp ?includes ?with_errors ~echo) targets in
+let find ?pp ?with_errors ?(echo=true) targets =
+  let deps = List.map (find_dep ?pp ?with_errors ~echo) targets in
   let deps = List.flatten deps in
   List.rev (List.fold_left begin fun acc x ->
     if not (List.mem x acc) then x :: acc else acc
@@ -107,9 +107,9 @@ let find_dependants =
   let re = Str.regexp "\\(.+\\.mli?\\) ?: ?\\(.*\\)" in
   let re1 = Str.regexp "\r?\n" in
   let re2 = Str.regexp " " in
-  fun ~target ~modname ->
-    let dir = Filename.dirname target in
-    let dir = if dir = Filename.current_dir_name then "" else (dir ^ "/") in
+  fun ~dirname ~modname ->
+    (*let dir = Filename.dirname target in*)
+    let dir = if dirname = Filename.current_dir_name then "" else (dirname ^ "/") in
     let cmd = sprintf "%s -modules -native %s*.ml %s*.mli%s"
       (Ocaml_config.ocamldep()) dir dir redirect_stderr in
     printf "%s (%s)\n%!" cmd modname;
@@ -142,7 +142,7 @@ let find_dependants =
     in
     loop modname
 
-let find_dependants ~targets ~modname =
-  let dependants = List.map (fun target -> find_dependants ~target ~modname) targets in
+let find_dependants ~path ~modname =
+  let dependants = List.map (fun dirname -> find_dependants ~dirname ~modname) path in
   List.flatten dependants
 ;;

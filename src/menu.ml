@@ -1,7 +1,7 @@
 (*
 
   OCamlEditor
-  Copyright (C) 2010-2012 Francesco Tovagliari
+  Copyright (C) 2010-2013 Francesco Tovagliari
 
   This file is part of OCamlEditor.
 
@@ -23,168 +23,10 @@
 open Printf
 open GdkKeysyms
 open Miscellanea
-
-type t = {
-  mutable menu_items                    : GMenu.menu_item list;
-  file_rename                           : GMenu.menu_item;
-  file_recent_select                    : GMenu.menu_item;
-  file_recent_clear                     : GMenu.menu_item;
-  file_recent_sep                       : GMenu.menu_item;
-  file_switch                           : GMenu.menu_item;
-  file_close                            : GMenu.image_menu_item;
-  file_close_all                        : GMenu.menu_item;
-  file_revert                           : GMenu.image_menu_item;
-  file_delete                           : GMenu.image_menu_item;
-  window                                : GMenu.menu;
-  mutable window_radio_group            : Gtk.radio_menu_item Gtk.group option;
-  mutable window_pages                  : (int (* page oid *) * GMenu.radio_menu_item) list;
-  mutable window_signal_locked          : bool;
-  mutable window_n_childs               : int;
-  project                               : GMenu.menu;
-  mutable project_history               : (string * GMenu.check_menu_item) list;
-  mutable project_history_signal_locked : bool;
-}
+open Menu_types
 
 (** set_label *)
 let set_label item text = item#misc#set_property "label" (`STRING (Some text));;
-
-(** file *)
-let file ~browser ~group ~flags items =
-  let editor = browser#editor in
-  let file = GMenu.menu_item ~label:"File" () in
-  let menu = GMenu.menu ~packing:file#set_submenu () in
-  (** New Project *)
-  let new_project = GMenu.menu_item ~label:"New Project..." ~packing:menu#add () in
-  ignore (new_project#connect#activate ~callback:browser#dialog_project_new);
-  (** New file *)
-  let new_file = GMenu.image_menu_item ~image:(GMisc.image ~stock:`NEW ~icon_size:`MENU ())
-    ~label:"New File..." ~packing:menu#add () in
-  new_file#add_accelerator ~group ~modi:[`CONTROL] GdkKeysyms._n ~flags;
-  ignore (new_file#connect#activate ~callback:browser#dialog_file_new);
-  (** Open Project *)
-  let _ = GMenu.separator_item ~packing:menu#add () in
-  let project_open = GMenu.image_menu_item
-    ~label:"Open Project..." ~packing:menu#add () in
-  ignore (project_open#connect#activate ~callback:browser#dialog_project_open);
-  project_open#add_accelerator ~group ~modi:[`CONTROL;`SHIFT] GdkKeysyms._o ~flags;
-  (** Open File *)
-  let open_file = GMenu.image_menu_item ~image:(GMisc.image ~stock:`OPEN ~icon_size:`MENU ())
-    ~label:"Open File..." ~packing:menu#add () in
-  open_file#add_accelerator ~group ~modi:[`CONTROL] GdkKeysyms._o ~flags;
-  ignore (open_file#connect#activate ~callback:editor#dialog_file_open);
-  (** Recent Files... *)
-  let file_recent = GMenu.menu_item ~label:"Recent Files" ~packing:menu#add () in
-  let file_recent_menu = GMenu.menu ~packing:file_recent#set_submenu () in
-  (* file_recent_select *)
-  file_recent_menu#add items.file_recent_select;
-  ignore (items.file_recent_select#connect#activate ~callback:begin fun () ->
-    browser#dialog_find_file ?all:(Some false) ()
-  end);
-  items.file_recent_select#add_accelerator ~group ~modi:[`CONTROL] GdkKeysyms._K ~flags;
-  (* recent items *)
-  let recent_items = ref [] in
-  ignore (file_recent#connect#activate ~callback:begin fun () ->
-    let count = ref 0 in
-    try
-      List.iter file_recent_menu#remove !recent_items;
-      recent_items := [];
-      List.iter begin fun filename ->
-        incr count;
-        let label = filename in
-        let mi = GMenu.menu_item ~label ~packing:(file_recent_menu#insert ~pos:1) () in
-        recent_items := mi :: !recent_items;
-        ignore (mi#connect#activate ~callback:(fun () ->
-          ignore (editor#open_file ~active:true ~scroll_offset:0 ~offset:0 filename)));
-        if !count > 30 then (raise Exit)
-      end (List.rev editor#file_history.File_history.content);
-    with Exit -> ()
-  end);
-  (* file_recent_clear *)
-  file_recent_menu#add items.file_recent_sep;
-  file_recent_menu#add items.file_recent_clear;
-  ignore (items.file_recent_clear#connect#activate ~callback:editor#file_history_clear);
-  (** Switch Implementation/Interface *)
-  menu#add items.file_switch;
-  ignore (items.file_switch#connect#activate ~callback:(fun () -> editor#with_current_page editor#switch_mli_ml));
-  items.file_switch#add_accelerator ~group ~modi:[`CONTROL; `SHIFT] GdkKeysyms._I ~flags;
-  (** Save *)
-  let _ = GMenu.separator_item ~packing:menu#add () in
-  let save_file = GMenu.image_menu_item ~label:"Save" ~packing:menu#add () in
-  save_file#set_image (GMisc.image ~pixbuf:Icons.save_16 ())#coerce;
-  save_file#add_accelerator ~group ~modi:[`CONTROL] GdkKeysyms._s ~flags;
-  ignore (save_file#connect#activate ~callback:begin fun () ->
-    Gaux.may ~f:editor#save (editor#get_page `ACTIVE)
-  end);
-  (** Save as.. *)
-  let save_as = GMenu.image_menu_item
-    ~image:(GMisc.image ~pixbuf:Icons.save_as_16 ())
-    ~label:"Save As..." ~packing:menu#add () in
-  save_as#add_accelerator ~group ~modi:[`CONTROL; `SHIFT] GdkKeysyms._s ~flags;
-  ignore (save_as#connect#activate ~callback:begin fun () ->
-    Gaux.may ~f:editor#dialog_save_as (editor#get_page `ACTIVE)
-  end);
-  (** Save All *)
-  let save_all = GMenu.image_menu_item ~label:"Save All" ~packing:menu#add () in
-  save_all#add_accelerator ~group ~modi:[`CONTROL; `SHIFT] GdkKeysyms._a ~flags;
-  ignore (save_all#connect#activate ~callback:browser#save_all);
-  save_all#set_image (GMisc.image ~pixbuf:Icons.save_all_16 ())#coerce;
-  (** Rename *)
-  menu#add items.file_rename;
-  ignore (items.file_rename#connect#activate ~callback:begin fun () ->
-    editor#with_current_page begin fun current_page ->
-      editor#dialog_rename current_page;
-      browser#set_title browser#editor
-    end
-  end);
-  (** Close current *)
-  let _ = GMenu.separator_item ~packing:menu#add () in
-  menu#add (items.file_close :> GMenu.menu_item);
-  items.file_close#add_accelerator ~group ~modi:[`CONTROL] GdkKeysyms._F4 ~flags;
-  ignore (items.file_close#connect#activate ~callback:begin fun () ->
-    editor#with_current_page (fun p -> ignore (editor#dialog_confirm_close p))
-  end);
-  (** Close all except current *)
-  menu#add items.file_close_all;
-  ignore (items.file_close_all#connect#activate ~callback:begin fun () ->
-    editor#with_current_page (fun p -> editor#close_all ?except:(Some p) ())
-  end);
-  (** Revert current *)
-  menu#add (items.file_revert :> GMenu.menu_item);
-  ignore (items.file_revert#connect#activate ~callback:begin fun () ->
-    editor#with_current_page editor#revert
-  end);
-  (** Delete current *)
-  let _ = GMenu.separator_item ~packing:menu#add () in
-  menu#add (items.file_delete :> GMenu.menu_item);
-  ignore (items.file_delete#connect#activate ~callback:editor#dialog_delete_current);
-  (** Exit *)
-  let _ = GMenu.separator_item ~packing:menu#add () in
-  let quit = GMenu.image_menu_item ~label:"Exit" ~packing:menu#add () in
-  quit#set_image (GMisc.image ~stock:`QUIT ~icon_size:`MENU ())#coerce;
-  ignore (quit#connect#activate ~callback:(fun () -> browser#exit editor ()));
-  (** callback *)
-  ignore (file#misc#connect#state_changed ~callback:begin fun _ ->
-    let has_current_page = editor#get_page `ACTIVE <> None in
-    List.iter (fun i -> i#misc#set_sensitive has_current_page) [
-      (items.file_switch :> GMenu.menu_item);
-      (save_file :> GMenu.menu_item);
-      (save_as :> GMenu.menu_item);
-      (save_all :> GMenu.menu_item);
-      (items.file_rename :> GMenu.menu_item);
-      (items.file_close :> GMenu.menu_item);
-      (items.file_close_all :> GMenu.menu_item);
-      (items.file_revert :> GMenu.menu_item);
-      (items.file_delete :> GMenu.menu_item);
-    ];
-    editor#with_current_page begin fun page ->
-      let name = page#get_filename in
-      items.file_switch#misc#set_sensitive (name ^^ ".ml" || name ^^ ".mli")
-    end;
-    let has_current_project = browser#current_project#get <> None in
-    new_file#misc#set_sensitive has_current_project;
-  end);
-  file
-;;
 
 (** edit *)
 let edit ~browser ~group ~flags
@@ -387,12 +229,14 @@ let search ~browser ~group ~flags items =
   (** Find definition *)
   let find_definition = GMenu.image_menu_item
     ~label:"Find Definition" ~packing:menu#add () in
+  find_definition#set_image (GMisc.image ~pixbuf:Icons.definition ())#coerce;
   ignore (find_definition#connect#activate ~callback:(fun () ->
     editor#with_current_page (fun page ->
-      ignore (editor#scroll_to_definition (page#buffer#get_iter `INSERT)))));
+      ignore (editor#scroll_to_definition ~page ~iter:(page#buffer#get_iter `INSERT)))));
   find_definition#add_accelerator ~group ~modi:[`CONTROL] GdkKeysyms._Return ~flags;
   (** Find references *)
   let find_references = GMenu.image_menu_item ~label:"Find References" ~packing:menu#add () in
+  find_references#set_image (GMisc.image ~pixbuf:Icons.references ())#coerce;
   find_references#add_accelerator ~group ~modi:[`CONTROL; `SHIFT] GdkKeysyms._Return ~flags;
   ignore (find_references#connect#activate ~callback:(fun () -> Menu_search.find_definition_references editor));
   (** Find used components *)
@@ -461,6 +305,11 @@ let view ~browser ~group ~flags
   let editor = browser#editor in
   let view = GMenu.menu_item ~label:"View" () in
   let menu = GMenu.menu ~packing:view#set_submenu () in
+  let switch_viewer = GMenu.menu_item ~label:"Switch Viewer to \xC2\xABDependencies\xC2\xBB" ~packing:menu#add () in
+  ignore (switch_viewer#connect#activate ~callback:begin fun () ->
+    editor#with_current_page (fun page -> page#button_dep_graph#clicked ())
+  end);
+  let _ = GMenu.separator_item ~packing:menu#add () in
   (*begin
     let item = GMenu.check_menu_item ~label:"Menubar" ~active:browser#menubar_visible ~packing:menu#add () in
     item#add_accelerator ~group ~modi:[`CONTROL; `MOD1] GdkKeysyms._n ~flags;
@@ -518,10 +367,7 @@ let view ~browser ~group ~flags
   let code_folding_menu = GMenu.menu ~packing:code_folding#set_submenu () in
   let enable_code_folding = GMenu.check_menu_item ~label:"Enable Code Folding" ~packing:code_folding_menu#add () in
   ignore (enable_code_folding#connect#after#toggled ~callback:begin fun () ->
-    editor#code_folding_enabled#set enable_code_folding#active;
-    editor#with_current_page (fun page -> page#ocaml_view#code_folding#set_enabled enable_code_folding#active);
-    Preferences.preferences#get.Preferences.pref_code_folding_enabled <- enable_code_folding#active;
-    Preferences.save()
+    Menu_view.toggle_code_folding ~enable_code_folding editor
   end);
   let collapse_enclosing = GMenu.menu_item ~label:"Toggle Current Fold" ~packing:code_folding_menu#add () in
   ignore (collapse_enclosing#connect#activate ~callback:(fun () ->
@@ -551,231 +397,21 @@ let view ~browser ~group ~flags
     ~callback:(Editor_menu.toggle_word_wrap_toggled ~editor) in
   (** Callback *)
   ignore (view#misc#connect#state_changed ~callback:begin fun _ ->
-    let page = editor#get_page `ACTIVE in
-    let has_current_page = page <> None in
-    let is_ml =
-      match page with
-        | None -> false
-        | Some page ->
-         let name = page#get_filename in
-         name ^^ ".ml" || name ^^ ".mli"
-    in
-    code_folding#misc#set_sensitive is_ml;
-    select_in_outline#misc#set_sensitive is_ml;
-    enable_code_folding#set_active Preferences.preferences#get.Preferences.pref_code_folding_enabled;
-    List.iter (fun x -> x#misc#set_sensitive enable_code_folding#active) [collapse_enclosing; unfold_all];
-    show_whitespace_chars#misc#handler_block signal_show_whitespace_chars;
-    show_whitespace_chars#set_active (editor#show_whitespace_chars);
-    show_whitespace_chars#misc#handler_unblock signal_show_whitespace_chars;
-    show_whitespace_chars#misc#set_sensitive has_current_page;
-    toggle_word_wrap#misc#handler_block signal_toggle_wrod_wrap;
-    toggle_word_wrap#set_active editor#word_wrap;
-    toggle_word_wrap#misc#handler_unblock signal_toggle_wrod_wrap;
-    toggle_word_wrap#misc#set_sensitive has_current_page;
+    Menu_view.update_labels
+      ~code_folding
+      ~select_in_outline
+      ~enable_code_folding
+      ~collapse_enclosing
+      ~unfold_all
+      ~show_whitespace_chars
+      ~signal_show_whitespace_chars
+      ~toggle_word_wrap
+      ~signal_toggle_wrod_wrap
+      ~switch_viewer
+  editor
   end);
   (*  *)
   view
-;;
-
-(** project *)
-let project ~browser ~group ~flags items =
-  let editor = browser#editor in
-  let project = GMenu.menu_item ~label:"Project" () in
-  let menu = items.project in
-  let cursor = Gdk.Cursor.create `ARROW in
-  ignore (menu#event#connect#expose ~callback:begin fun _ ->
-    Gdk.Window.set_cursor menu#misc#window cursor;
-    false
-  end);
-  project#set_submenu menu;
-  (** Clean default target *)
-  let project_clean_default_target = GMenu.image_menu_item ~label:"Clean" ~packing:menu#add () in
-  project_clean_default_target#set_image (Icons.create Icons.clear_build_16)#coerce;
-  project_clean_default_target#add_accelerator ~group ~modi:[`CONTROL] GdkKeysyms._F9 ~flags;
-  ignore (project_clean_default_target#connect#activate ~callback:begin fun () ->
-    browser#with_current_project (fun _ ->
-      browser#with_default_target (fun target ->
-        ignore (Task_console.exec ~editor `CLEAN target)))
-  end);
-  (** Compile *)
-  let project_compile_only = GMenu.image_menu_item ~label:"Compile" ~packing:menu#add () in
-  project_compile_only#set_image (Icons.create Icons.compile_all_16)#coerce;
-  project_compile_only#add_accelerator ~group ~modi:[`CONTROL] GdkKeysyms._F10 ~flags;
-  ignore (project_compile_only#connect#activate ~callback:begin fun () ->
-    browser#with_current_project (fun _ ->
-      browser#with_default_target (fun target ->
-        ignore (Task_console.exec ~editor `COMPILE_ONLY target)))
-  end);
-  (** Build *)
-  let project_build = GMenu.image_menu_item ~label:"Build" ~packing:menu#add () in
-  project_build#set_image (Icons.create Icons.build_16)#coerce;
-  ignore (project_build#connect#activate ~callback:begin fun () ->
-    browser#with_current_project (fun _ ->
-      browser#with_default_target (fun target ->
-        ignore (Task_console.exec ~editor `COMPILE target)))
-  end);
-  (** Run current *)
-  let project_run = GMenu.image_menu_item ~label:"Run" ~packing:menu#add () in
-  project_run#set_image (Icons.create Icons.start_16)#coerce;
-  project_run#add_accelerator ~group ~modi:[`CONTROL] GdkKeysyms._F11 ~flags;
-  ignore (project_run#connect#activate ~callback:begin fun () ->
-    browser#with_current_project (fun project ->
-      browser#with_default_runtime_config ~open_dialog:true (fun rc ->
-        let bc = List.find (fun b -> b.Target.id = rc.Rconf.target_id) project.Prj.targets in
-        ignore (Task_console.exec ~editor (`RCONF rc) bc)))
-  end);
-  (** Clean... *)
-  let clean_item = GMenu.image_menu_item ~label:"Clean..." ~packing:menu#add () in
-  let clean_menu = GMenu.menu ~packing:clean_item#set_submenu () in
-  (** Build... *)
-  let build_item = GMenu.image_menu_item ~label:"Build..." ~packing:(menu#insert ~pos:5) () in
-  let build_menu = GMenu.menu ~packing:build_item#set_submenu () in
-  (** Build with dependencies... *)
-  let build_dep_item = GMenu.image_menu_item ~label:"Build with dependencies..." ~packing:(menu#insert ~pos:6) () in
-  let build_dep_menu = GMenu.menu ~packing:build_dep_item#set_submenu () in
-  (** Run... *)
-  let run_item = GMenu.image_menu_item ~label:"Run..." ~packing:menu#add () in
-  let run_menu = GMenu.menu ~packing:run_item#set_submenu () in
-  (** Clean Project *)
-  let project_clean = GMenu.image_menu_item ~label:"Clean Project" ~packing:menu#add () in
-  project_clean#add_accelerator ~group ~modi:[`CONTROL; `MOD1] GdkKeysyms._F9 ~flags;
-  ignore (project_clean#connect#activate ~callback:begin fun () ->
-    browser#with_current_project (fun project ->
-      browser#with_default_target (fun target ->
-        ignore (Task_console.exec ~editor `CLEANALL target);
-        Project.clean_tmp project));
-  end);
-  let sep1 = GMenu.separator_item ~packing:menu#add () in
-  (** Compile file *)
-  let project_comp_file = GMenu.image_menu_item ~label:"Compile file" ~packing:menu#add () in
-  project_comp_file#set_image (GMisc.image ~pixbuf:Icons.compile_file_16 ())#coerce;
-  ignore (project_comp_file#connect#activate ~callback:begin fun () ->
-    browser#editor#with_current_page begin fun p ->
-      if Preferences.preferences#get.Preferences.pref_editor_save_all_bef_comp then (editor#save_all());
-      p#compile_buffer ?join:None ()
-    end
-  end);
-  let sep2 = GMenu.separator_item ~packing:menu#add () in
-  (** Project Properties *)
-  let dialog_project_properties = GMenu.image_menu_item ~label:"Properties" ~packing:menu#add () in
-  dialog_project_properties#set_image (GMisc.image ~stock:`PROPERTIES ~icon_size:`MENU ())#coerce;
-  ignore (dialog_project_properties#connect#activate ~callback:(fun () ->
-    browser#dialog_project_properties ?page_num:(Some 0) ?show:(Some true) ()));
-  dialog_project_properties#add_accelerator ~group ~modi:[`CONTROL; `SHIFT] GdkKeysyms._P ~flags;
-  (** Targets *)
-  let project_targets = GMenu.image_menu_item ~image:(Icons.create Icons.target_16)#coerce ~label:"Targets" ~packing:menu#add () in
-  ignore (project_targets#connect#activate ~callback:(fun () ->
-    browser#dialog_project_properties ?page_num:(Some 1) ?show:(Some true) ()));
-  project_targets#add_accelerator ~group ~modi:[] GdkKeysyms._F12 ~flags;
-  (** Generate build script *)
-  let project_script = GMenu.image_menu_item ~label:"Generate Build Script" ~packing:menu#add () in
-  ignore (project_script#connect#activate ~callback:(fun () ->
-    browser#with_current_project begin fun project ->
-      let dialog = Build_script_ui.window ~project () in
-      Gaux.may (GWindow.toplevel editor) ~f:(fun w -> dialog#set_transient_for w#as_window);
-    end));
-  (** Project Refresh *)
-  let project_refresh = GMenu.image_menu_item ~label:"Refresh" ~packing:menu#add () in
-  project_refresh#set_image (GMisc.image ~stock:`REFRESH ~icon_size:`MENU ())#coerce;
-  ignore (project_refresh#connect#activate ~callback:browser#refresh);
-  (** Project Clear Cache *)
-  let project_clear_cache = GMenu.image_menu_item ~label:"Clear Cache" ~packing:menu#add () in
-  ignore (project_clear_cache#connect#activate ~callback:browser#clear_cache);
-  (*  *)
-  let sep3 = GMenu.separator_item ~packing:menu#add () in
-  (** Callback *)
-  ignore (project#misc#connect#state_changed ~callback:begin fun _ ->
-    browser#with_default_target begin fun target ->
-      kprintf (set_label project_clean_default_target) "Clean \xC2\xAB%s\xC2\xBB" target.Target.name;
-      kprintf (set_label project_compile_only) "Compile \xC2\xAB%s\xC2\xBB" target.Target.name;
-      kprintf (set_label project_build) "Build \xC2\xAB%s\xC2\xBB" target.Target.name;
-    end;
-    browser#with_default_runtime_config ~open_dialog:false begin fun rc ->
-      kprintf (set_label project_run) "Run \xC2\xAB%s\xC2\xBB" rc.Rconf.name;
-    end;
-    editor#with_current_page begin fun page ->
-      let name = Filename.basename page#get_filename in
-      if name ^^ ".ml" || name ^^ ".mli" then begin
-        kprintf (set_label project_comp_file) "Compile \xC2\xAB%s\xC2\xBB" name;
-        project_comp_file#misc#set_sensitive true
-      end else begin
-        kprintf (set_label project_comp_file) "Compile";
-        project_comp_file#misc#set_sensitive false
-      end;
-    end;
-    (*  *)
-    let has_current_project = browser#current_project#get <> None in
-    let has_default_target = match browser#current_project#get with Some x when Project.default_target x <> None -> true | _ -> false in
-    project_clean_default_target#misc#set_sensitive has_default_target;
-    project_clean_default_target#misc#set_property "sensitive" (`BOOL has_default_target);
-    project_compile_only#misc#set_property "sensitive" (`BOOL has_default_target);
-    project_build#misc#set_property "sensitive" (`BOOL has_default_target);
-    project_run#misc#set_property "sensitive" (`BOOL has_default_target);
-    project_script#misc#set_property "sensitive" (`BOOL has_default_target);
-    build_dep_item#misc#set_property "sensitive" (`BOOL has_default_target);
-    clean_item#misc#set_property "sensitive" (`BOOL has_default_target);
-    build_item#misc#set_property "sensitive" (`BOOL has_default_target);
-    run_item#misc#set_property "sensitive" (`BOOL has_default_target);
-    project_clean#misc#set_property "sensitive" (`BOOL has_default_target);
-    project_refresh#misc#set_property "sensitive" (`BOOL has_current_project);
-    project_targets#misc#set_property "sensitive" (`BOOL has_current_project);
-    dialog_project_properties#misc#set_property "sensitive" (`BOOL has_current_project);
-    project_comp_file#misc#set_property "sensitive" (`BOOL has_current_project);
-    sep1#misc#set_property "sensitive" (`BOOL has_default_target);
-    sep2#misc#set_property "sensitive" (`BOOL has_default_target);
-    sep3#misc#set_property "visible" (`BOOL (browser#project_history.File_history.content <> []));
-    (*  *)
-    Gmisclib.Idle.add (fun () -> List.iter clean_menu#remove clean_menu#children);
-    Gmisclib.Idle.add (fun () -> List.iter build_menu#remove build_menu#children);
-    Gmisclib.Idle.add (fun () -> List.iter build_dep_menu#remove build_dep_menu#children);
-    Gmisclib.Idle.add (fun () -> List.iter run_menu#remove run_menu#children);
-    browser#with_current_project begin fun project ->
-      let current_project_filename = Project.filename project in
-      List.iter  begin fun (filename, item) ->
-        items.project_history_signal_locked <- true;
-        item#set_active (filename = current_project_filename);
-        items.project_history_signal_locked <- false;
-      end items.project_history;
-      List.iter begin fun tg ->
-        Gmisclib.Idle.add begin fun () ->
-          let item = GMenu.menu_item ~label:tg.Target.name ~packing:clean_menu#add () in
-          ignore (item#connect#activate ~callback:begin fun () ->
-            ignore (Task_console.exec ~editor `CLEAN tg)
-          end);
-        end;
-      end project.Prj.targets;
-      Gmisclib.Idle.add begin fun () ->
-        let item_all = GMenu.menu_item ~label:"All targets" ~packing:build_menu#add () in
-        let _ = item_all#connect#activate ~callback:(fun () -> browser#build_all project.Prj.targets) in
-        item_all#add_accelerator ~group ~modi:[`CONTROL;`MOD1] GdkKeysyms._F10 ~flags;
-        ignore (GMenu.separator_item ~packing:build_menu#add ());
-      end;
-      List.iter begin fun tg ->
-        Gmisclib.Idle.add begin fun () ->
-          let item = GMenu.menu_item ~label:tg.Target.name ~packing:build_menu#add () in
-          ignore (item#connect#activate ~callback:begin fun () ->
-            ignore (Task_console.exec ~editor `COMPILE tg)
-          end);
-          let item = GMenu.menu_item ~label:tg.Target.name ~packing:build_dep_menu#add () in
-          ignore (item#connect#activate ~callback:begin fun () ->
-            ignore (Task_console.exec ~editor ~with_deps:true `COMPILE tg)
-          end);
-        end
-      end project.Prj.targets;
-      List.iter begin fun rc ->
-        Gmisclib.Idle.add begin fun () ->
-          let item = GMenu.menu_item ~label:rc.Rconf.name ~packing:run_menu#add () in
-          ignore (item#connect#activate ~callback:begin fun () ->
-            try
-              let bc = List.find (fun b -> b.Target.id = rc.Rconf.target_id) project.Prj.targets in
-              ignore (Task_console.exec ~editor (`RCONF rc) bc)
-            with Not_found -> ()
-          end);
-        end
-      end project.Prj.executables;
-    end
-  end);
-  project
 ;;
 
 (** tools *)
@@ -895,21 +531,14 @@ let help ~browser ~group ~flags items =
   ignore (gc_compact#connect#activate ~callback:Gc.compact);
   let clear_cache = GMenu.menu_item ~label:"Clear Editor Cache" ~packing:menu#add () in
   ignore (clear_cache#connect#activate ~callback:editor#clear_cache);
-  if try int_of_string (List.assoc "debug" Common.application_param) >= 1 with Not_found -> false then begin
+  (*if try int_of_string (List.assoc "debug" App_config.application_param) >= 1 with Not_found -> false then begin*)
     let crono = GMenu.menu_item ~label:"Print Debug Info" ~packing:menu#add () in
     crono#add_accelerator ~group ~modi:[`CONTROL; `MOD1] GdkKeysyms._apostrophe ~flags;
     ignore (crono#connect#activate ~callback:(Print_debug_info.print ~editor));
-  end;
+  (*end;*)
   let _ = GMenu.separator_item ~packing:menu#add () in
-  let check_for_updates = GMenu.menu_item ~label:"Check for Updates..." ~packing:menu#add () in
-  ignore (check_for_updates#connect#activate ~callback:(fun () -> browser#check_for_updates ?verbose:None ()));
-  let license = GMenu.menu_item ~label:"License" ~packing:menu#add () in
-  ignore (license#connect#activate ~callback:(fun () -> (License.window ())#present()));
-  let about = GMenu.menu_item ~label:"About OCamlEditor..." ~packing:menu#add () in
-  ignore (about#connect#activate ~callback:begin fun () ->
-    let about = About.window browser#window#as_window ~name:Oe_config.title ~version:Oe_config.version() in
-    about#present()
-  end);
+  let about = GMenu.menu_item ~label:(sprintf "About %s..." About.program_name) ~packing:menu#add () in
+  ignore (about#connect#activate ~callback:Menu_help.about);
   help
 ;;
 
@@ -949,7 +578,7 @@ let create ~browser ~group
     project_history_signal_locked = false;
   } in
   items.menu_items <- List.rev [
-    file ~browser ~group ~flags items;
+    Menu_file.file ~browser ~group ~flags items;
     edit ~browser ~group ~flags
       ~get_menu_item_undo
       ~get_menu_item_redo
@@ -962,7 +591,7 @@ let create ~browser ~group
       ~menu_item_view_outline
       ~menu_item_view_messages
       ~menu_item_view_hmessages items;
-    project ~browser ~group ~flags items;
+    Menu_project.project ~browser ~group ~flags items;
     tools ~browser ~group ~flags items;
     window ~browser ~group ~flags
       ~get_menu_item_nav_history_backward

@@ -1,7 +1,7 @@
 (*
 
   OCamlEditor
-  Copyright (C) 2010-2012 Francesco Tovagliari
+  Copyright (C) 2010-2013 Francesco Tovagliari
 
   This file is part of OCamlEditor.
 
@@ -40,6 +40,10 @@ let finally = fun f1 f2 ->
 let (@$) = finally
 
 let ( /* ) x f = f x and ( */ ) f x = f x;;
+
+let rec fixpoint f v =
+  let v' = f v in
+  if v = v' then v else fixpoint f v'
 
 (** crono *)
 let crono ?(label="Time") f x =
@@ -118,6 +122,7 @@ module Xlist =
 
 module Opt = struct
   let may opt f = match opt with Some x -> f x | _ -> ()
+  let may_default opt f g y = match opt with Some x -> f x | _ -> g y
   let map opt f = match opt with Some x -> Some (f x) | _ -> None
   let map_default opt default f = match opt with Some x -> f x | _ -> default
   let default opt def = match opt with Some x -> x   | _ -> def
@@ -285,6 +290,34 @@ let get_lines_from_file ~filename lnums =
     close_in chan;
     List.rev !result
   with ex -> (close_in chan; raise ex);;
+
+(** map_file_lines *)
+let map_file_lines filename f =
+  let ichan = open_in filename in
+  let tempfile, tchan = Filename.open_temp_file (Filename.basename filename) ".tmp" in
+  let finally () =
+    close_in_noerr ichan;
+    close_out_noerr tchan;
+  in
+  try
+    begin
+      try
+        let lnum = ref 0 in
+        while true do
+          let line = (input_line ichan) ^ "\n" in
+          let new_line = f ~lnum:!lnum ~line in
+          output_string tchan new_line;
+          incr lnum
+        done;
+      with End_of_file -> ()
+    end;
+    finally();
+    if Sys.file_exists filename then Sys.remove filename;
+    if Sys.file_exists tempfile then Sys.rename tempfile filename;
+  with ex -> begin
+    finally();
+    raise ex
+  end;;
 
 (** exec_lines *)
 let exec_lines command =

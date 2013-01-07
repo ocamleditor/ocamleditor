@@ -1,7 +1,7 @@
 (*
 
   OCamlEditor
-  Copyright (C) 2010-2012 Francesco Tovagliari
+  Copyright (C) 2010-2013 Francesco Tovagliari
 
   This file is part of OCamlEditor.
 
@@ -340,7 +340,7 @@ object (self)
     match view_files#selection#get_selected_rows with
       | path :: _ ->
         let row = model_files#get_iter path in
-        let {filename; _} as entry = model_files#get ~row ~column:col_entry in 
+        let {filename; _} as entry = model_files#get ~row ~column:col_entry in
         begin
           match editor#get_page (`FILENAME filename) with
             | Some page ->
@@ -361,9 +361,12 @@ object (self)
                           | Mark ((_, buffer, mark_start, mark_stop) :: _) ->
                             let start = buffer#get_iter (`MARK mark_start) in
                             let stop = buffer#get_iter (`MARK mark_stop) in
+                            let old = page#view#options#mark_occurrences in
+                            page#view#options#set_mark_occurrences (false, "");
                             buffer#select_range start stop;
                             page#ocaml_view#scroll_lazy start;
                             editor#goto_view page#view;
+                            page#view#options#set_mark_occurrences old;
                             if focus then page#view#misc#grab_focus()
                           | Mark _ -> assert false
                       end

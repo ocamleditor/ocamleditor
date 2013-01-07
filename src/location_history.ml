@@ -1,7 +1,7 @@
 (*
 
   OCamlEditor
-  Copyright (C) 2010-2012 Francesco Tovagliari
+  Copyright (C) 2010-2013 Francesco Tovagliari
 
   This file is part of OCamlEditor.
 
@@ -104,8 +104,8 @@ let equal l1 l2 =
   end
 
 (** in_proximity *)
-let in_proximity nh ~(view : GText.view) ~filename ~offset = function
-  | {filename=fn; mark=(Some mark)} when filename = fn ->
+let in_proximity ~(view : GText.view) ~filename ~offset = function
+  | {filename=fn; mark=(Some mark); _} when filename = fn ->
     if not (GtkText.Mark.get_deleted mark) then begin
       let ofs = (view#buffer#get_iter_at_mark (`MARK mark))#offset in
       abs (offset - ofs) < proximity;
@@ -146,7 +146,7 @@ let add_location nh ~kind ~(view : GText.view) ~filename ~offset =
   begin
     match nh.history with
       | top :: tl ->
-        if false && in_proximity nh ~view ~filename ~offset top then begin
+        if false && in_proximity ~view ~filename ~offset top then begin
           destroy top;
           nh.history <- loc :: tl
         end else (nh.history <- loc :: nh.history);
@@ -156,10 +156,10 @@ let add_location nh ~kind ~(view : GText.view) ~filename ~offset =
   loc
 
 let add nh ~kind ~(view : GText.view) ~filename ~offset =
-  (*Prf.crono Prf.prf_location_history_add begin fun () ->*)
+  Prf.crono Prf.prf_location_history_add begin fun () ->
   let in_proximity =
     match nh.history with
-      | top :: _ -> in_proximity nh ~view ~filename ~offset top
+      | top :: _ -> in_proximity ~view ~filename ~offset top
       | _ -> false
   in
   match kind with
@@ -183,7 +183,7 @@ let add nh ~kind ~(view : GText.view) ~filename ~offset =
               m
             | _ -> create_mark ~buffer:view#buffer ~offset
           in
-          let loc = {kind=`EDIT; filename=filename; mark=(Some mark); offset=offset} in
+          let loc = {kind=`EDIT; filename; mark=(Some mark); offset} in
           nh.history <- loc :: nh.history;
           loc
         end
@@ -191,7 +191,7 @@ let add nh ~kind ~(view : GText.view) ~filename ~offset =
       Queue.push loc queue
     | `EDIT -> ()
     | `BROWSE -> ignore (add_location nh ~kind ~view ~filename ~offset)
-  (*end ()*)
+  end ()
 
 (** last_edit_location *)
 let last_edit_location nh = List_opt.find (fun loc -> loc.kind = `EDIT) nh.history

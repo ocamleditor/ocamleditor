@@ -1,7 +1,7 @@
 (*
 
   OCamlEditor
-  Copyright (C) 2010-2012 Francesco Tovagliari
+  Copyright (C) 2010-2013 Francesco Tovagliari
 
   This file is part of OCamlEditor.
 
@@ -23,14 +23,14 @@
 
 open Printf
 
+let redirect_stderr = if Sys.os_type = "Win32" then " 2>NUL" else " 2>/dev/null"
+
 let putenv_ocamllib value =
   match Sys.os_type with
     | "Win32" ->
       let value = match value with None -> "" | Some x -> x in
       Unix.putenv "OCAMLLIB" value
     | _ -> ignore (Sys.command "unset OCAMLLIB")
-
-let redirect_stderr = if Sys.os_type = "Win32" then " 2>NUL" else " 2>/dev/null"
 
 let find_best_compiler compilers =
   try
@@ -93,7 +93,9 @@ let can_compile_native ?ocaml_home () =
   in
   match compiler with
     | Some compiler ->
-      let cmd = sprintf "%s -o %s %s%s" compiler outname filename ""(*redirect_stderr*) in
+      let cmd = sprintf "%s -o %s %s%s" compiler outname filename
+        (if App_config.application_debug then redirect_stderr else "")
+      in
       result := (Sys.command cmd) = 0;
       if Sys.file_exists filename then (Sys.remove filename);
       if Sys.file_exists outname then (Sys.remove outname);

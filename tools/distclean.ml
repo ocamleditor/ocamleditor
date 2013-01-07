@@ -34,6 +34,8 @@ let distclean () =
   remove_file "err_parser.ml";
   remove_file "err_parser.mli";;
   remove_file "oebuild_script.ml";
+  remove_file "ocamleditor.opt.exe.manifest";
+  remove_file "resource.res";
   let run_no_errors cmd = try run cmd with Script_error _ -> () in
   kprintf run_no_errors "%s *.exe *.bak *.annot *~" rm;
   let rmdir dir = if Sys.file_exists dir then (kprintf run_no_errors "%s %s" rmr dir) in
@@ -42,7 +44,7 @@ let distclean () =
   rmdir (Filename.parent_dir_name // ".cache");
   kprintf run_no_errors "%s icons" rmr;
   pushd "..";
-  run "oasis setup";
+  (*run "oasis setup";*)
   popd();
 ;;
 

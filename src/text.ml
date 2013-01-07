@@ -1,7 +1,7 @@
 (*
 
   OCamlEditor
-  Copyright (C) 2010-2012 Francesco Tovagliari
+  Copyright (C) 2010-2013 Francesco Tovagliari
 
   This file is part of OCamlEditor.
 
@@ -692,11 +692,11 @@ object (self)
                   let len = stop#line_index - start#line_index in
                   if len > 2 then begin
                     let x1 = approx_char_width * start#line_index + offset in
-                    let x2 = approx_char_width * stop#line_index + offset in
+                    let x2 = approx_char_width * (stop#line_index - 1) + offset in
                     let y, h = self#get_line_yrange start in
                     let y = y - y0 + h - 3 (*(min 3 (h / 5))*) in
-                    Gdk.GC.set_dashes drawable#gc ~offset:(x2 (*- x1*)) [1; approx_char_width - 1];  (*6*)
-                    drawable#line ~x:x2 ~y ~x:x1 ~y;
+                    Gdk.GC.set_dashes drawable#gc ~offset:(x2 - 6 (*- x1*)) [1; approx_char_width - 1];
+                    drawable#line ~x:x1 ~y ~x:x2 ~y;
                   end
                 end
               (*end;*)

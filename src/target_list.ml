@@ -1,7 +1,7 @@
 (*
 
   OCamlEditor
-  Copyright (C) 2010-2012 Francesco Tovagliari
+  Copyright (C) 2010-2013 Francesco Tovagliari
 
   This file is part of OCamlEditor.
 
@@ -76,15 +76,15 @@ class view ~editor ~project ?packing () =
   let _                 = b_new#set_image  (GMisc.image ~stock:`NEW ~icon_size:`BUTTON ())#coerce in
   let _                 = b_new#misc#set_tooltip_text "New..." in
   let _                 = GMisc.label ~text:"" ~packing:bbox#add () in
+  let b_remove          = GButton.button ~packing:bbox#pack () in
+  let _                 = tooltips#set_tip ~text:"Delete selected items" b_remove#coerce in
+  let _                 = b_remove#set_image (GMisc.image ~stock:`DELETE ~icon_size:`BUTTON ())#coerce in
   let b_up              = GButton.button ~packing:bbox#pack () in
   let _                 = tooltips#set_tip ~text:"Move Up" b_up#coerce in
   let _                 = b_up#set_image (GMisc.image ~stock:`GO_UP ~icon_size:`BUTTON ())#coerce in
   let b_down            = GButton.button ~packing:bbox#pack () in
   let _                 = tooltips#set_tip ~text:"Move Down" b_down#coerce in
   let _                 = b_down#set_image (GMisc.image ~stock:`GO_DOWN ~icon_size:`BUTTON ())#coerce in
-  let b_remove          = GButton.button ~packing:bbox#pack () in
-  let _                 = tooltips#set_tip ~text:"Delete selected items" b_remove#coerce in
-  let _                 = b_remove#set_image (GMisc.image ~stock:`DELETE ~icon_size:`BUTTON ())#coerce in
   let _                 = GMisc.label ~text:"" ~packing:bbox#add () in
   let b_clean           = GButton.button ~packing:bbox#pack () in
   let _                 = tooltips#set_tip ~text:"Clean" b_clean#coerce in
@@ -288,29 +288,37 @@ object (self)
     self#with_current (fun _ -> function Target target -> Task_console.exec ~editor `CLEAN target | ETask _ -> ());
 
   method private remove () =
-    try
-      let last_path_index = (GTree.Path.get_indices (List.hd view#selection#get_selected_rows)).(0) in
-      let paths = view#selection#get_selected_rows in
-      List.iter begin fun path ->
-        match self#get path with
-          | ETask task ->
-            let parent = GTree.Path.copy path in
-            if GTree.Path.up parent then begin
-              match self#get parent with
-                | Target bc ->
-                  bc.external_tasks <- List.filter ((<>) task) bc.external_tasks;
-                | ETask _ -> assert false
-            end
-          | Target _ -> ()
-      end paths;
-      let data_removed = List.map self#get paths in
-      let rows = List.map model#get_iter paths in
-      List.iter (fun row -> ignore (model#remove row)) rows;
-      let targets = self#to_list() in
-      let index = min last_path_index (List.length targets - 1) in
-      view#selection#select_path (GTree.Path.create [index]);
-      removed#call data_removed;
-    with Failure "hd" -> ()
+    let delete () =
+      try
+        let last_path_index = (GTree.Path.get_indices (List.hd view#selection#get_selected_rows)).(0) in
+        let paths = view#selection#get_selected_rows in
+        List.iter begin fun path ->
+          match self#get path with
+            | ETask task ->
+              let parent = GTree.Path.copy path in
+              if GTree.Path.up parent then begin
+                match self#get parent with
+                  | Target bc ->
+                    bc.external_tasks <- List.filter ((<>) task) bc.external_tasks;
+                  | ETask _ -> assert false
+              end
+            | Target _ -> ()
+        end paths;
+        let data_removed = List.map self#get paths in
+        let rows = List.map model#get_iter paths in
+        List.iter (fun row -> ignore (model#remove row)) rows;
+        let targets = self#to_list() in
+        let index = min last_path_index (List.length targets - 1) in
+        view#selection#select_path (GTree.Path.create [index]);
+        removed#call data_removed;
+      with Failure "hd" -> ()
+    in
+    ignore (Dialog.confirm ~title:"Remove from targets"
+      ~message:(sprintf "Are you sure you want to remove the selected items from target list?" )
+      ~yes:("Remove", delete)
+      ~no:("Cancel", ignore)
+      ~cancel:false
+      vbox)
 
   method private duplicate () =
     self#with_current begin fun path -> function

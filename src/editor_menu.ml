@@ -1,7 +1,7 @@
 (*
 
   OCamlEditor
-  Copyright (C) 2010-2012 Francesco Tovagliari
+  Copyright (C) 2010-2013 Francesco Tovagliari
 
   This file is part of OCamlEditor.
 
@@ -57,15 +57,35 @@ let create ~editor ~page () =
   ignore (eval_in_toplevel#connect#activate ~callback:begin fun () ->
     editor#with_current_page (fun page -> page#ocaml_view#obuffer#send_to_shell ());
   end);
+  eval_in_toplevel#misc#set_sensitive (Menu_file.get_file_switch_sensitive page);
   let select_in_structure_pane = GMenu.image_menu_item ~label:"Select in Structure Pane" ~packing:gmenu#append () in
   select_in_structure_pane#set_image (GMisc.image ~pixbuf:Icons.select_in_structure ())#coerce;
   ignore (select_in_structure_pane#connect#activate ~callback:begin fun () ->
-    editor#with_current_page (fun page ->
-      editor#set_show_outline true;
-      Gaux.may page#outline ~f:(fun ol -> ol#select_from_buffer ?align:None (page#buffer#get_mark `INSERT)));
+    editor#with_current_page begin
+      let sigid = ref None in
+      let rec f page =
+        if editor#show_outline then begin
+          Gaux.may !sigid ~f:begin fun id ->
+            editor#disconnect id;
+            sigid := None;
+          end;
+          match page#outline with
+            | Some ol ->
+              ignore (ol#select_from_buffer ?align:None (page#buffer#get_mark `INSERT))
+            | _ -> ()
+        end else begin
+          sigid := Some (editor#connect#outline_visibility_changed
+            ~callback:(function true -> f page | false -> ()));
+          editor#set_show_outline true;
+        end;
+      in f
+    end
   end);
-  let find_definition = GMenu.menu_item ~label:"Find Definition" ~packing:gmenu#append () in
-  let find_references = GMenu.menu_item ~label:"Find References" ~packing:gmenu#append () in
+  select_in_structure_pane#misc#set_sensitive (Menu_file.get_file_switch_sensitive page);
+  let find_definition = GMenu.image_menu_item ~label:"Find Definition" ~packing:gmenu#append () in
+  find_definition#set_image (GMisc.image ~pixbuf:Icons.definition ())#coerce;
+  let find_references = GMenu.image_menu_item ~label:"Find References" ~packing:gmenu#append () in
+  find_references#set_image (GMisc.image ~pixbuf:Icons.references ())#coerce;
   let find_used_components = GMenu.menu_item ~packing:gmenu#append () in
   let label_find_used_components = GMisc.label ~xalign:0. ~markup:"" ~packing:find_used_components#add () in
   gmenu#append (GMenu.separator_item ());
@@ -91,7 +111,7 @@ let create ~editor ~page () =
   (*  *)
   ignore (find_definition#connect#activate ~callback:(fun () ->
     editor#with_current_page (fun page ->
-      ignore (editor#scroll_to_definition (page#buffer#get_iter `INSERT)))));
+      ignore (editor#scroll_to_definition ~page ~iter:(page#buffer#get_iter `INSERT)))));
   ignore (find_references#connect#activate ~callback:begin
     Activity.wrap Activity.Annot (fun () -> Menu_search.find_definition_references editor)
   end);

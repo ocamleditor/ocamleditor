@@ -1,7 +1,7 @@
 (*
 
   OCamlEditor
-  Copyright (C) 2010-2012 Francesco Tovagliari
+  Copyright (C) 2010-2013 Francesco Tovagliari
 
   This file is part of OCamlEditor.
 
@@ -102,8 +102,12 @@ let create ?(all=true) ~(editor : Editor.editor) ~roots () =
         let filename = page#get_filename in
         match quick_file_chooser#get_path ~filename with
           | Some path ->
-            quick_file_chooser#select_path path;
-            quick_file_chooser#set_cursor path;
+            begin
+              try
+                quick_file_chooser#select_path path;
+                quick_file_chooser#set_cursor path;
+              with Gpointer.Null -> ()
+            end;
           | _ -> ()
       end
     end

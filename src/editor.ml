@@ -1,7 +1,7 @@
 (*
 
   OCamlEditor
-  Copyright (C) 2010-2012 Francesco Tovagliari
+  Copyright (C) 2010-2013 Francesco Tovagliari
 
   This file is part of OCamlEditor.
 
@@ -38,16 +38,18 @@ class editor () =
   let remove_page = new remove_page () in
   let modified_changed = new modified_changed () in
   let file_history_changed = new file_history_changed () in
+  let outline_visibility_changed = new outline_visibility_changed () in
   let changed = new changed () in
   let add_page = new add_page () in
 object (self)
   inherit GObj.widget hpaned#as_widget
+
   (*val mutable closing_all = false*)
   val mutable history_switch_page_locked = false
   val mutable pages = []
   val mutable pages_cache = []
   val mutable project = Project.create ~filename:"untitled.xyz" ()
-  val tout_delim = Timeout.create ~delay:1.0 ()
+  val tout_delim = Timeout.create ~delay:1.0 ~len:2 ()
   val tout_fast = Timeout.create ~delay:0.3 ()
   val location_history = Location_history.create()
   val mutable file_history =
@@ -73,6 +75,7 @@ object (self)
     if show_outline then begin
       (try hpaned#remove hpaned#child1 with Gpointer.Null -> ());
       hpaned#pack1 ~resize:false ~shrink:true widget;
+      outline_visibility_changed#call true;
     end
 
   method set_history_switch_page_locked x =
@@ -193,13 +196,11 @@ object (self)
         ~no:("Do Not Create", fun () -> ()) self);
     end
 
-  method location_history_add ~iter ~kind () =
-    self#with_current_page begin fun page ->
-      Location_history.add location_history
-        ~kind ~view:(page#view :> GText.view)
-        ~filename:page#get_filename ~offset:iter#offset;
-      Gmisclib.Idle.add ~prio:600 !set_menu_item_nav_history_sensitive
-    end
+  method location_history_add ~page ~iter ~kind () =
+    Location_history.add location_history
+      ~kind ~view:(page#view :> GText.view)
+      ~filename:page#get_filename ~offset:iter#offset;
+    Timeout.set tout_delim 1 !set_menu_item_nav_history_sensitive;
 
   method location_history_goto location =
     let filename = location.Location_history.filename in
@@ -298,9 +299,9 @@ object (self)
           ~compile_buffer:(fun () -> page#compile_buffer ?join:(Some true))  ()
       | _ -> None
 
-  method scroll_to_definition iter =
+  method scroll_to_definition ~page ~iter =
     Gaux.may (self#get_definition iter) ~f:begin fun ident ->
-      self#location_history_add ~iter ~kind:`BROWSE ();
+      self#location_history_add ~page ~iter ~kind:`BROWSE ();
       self#goto_ident ident
     end
 
@@ -320,13 +321,16 @@ object (self)
             let stop = loc.loc.loc_end.pos_cnum in
             let start = buffer#get_iter (`OFFSET (max 0 start)) in
             let stop = buffer#get_iter (`OFFSET (max 0 stop)) in
+            let old = page#view#options#mark_occurrences in
+            page#view#options#set_mark_occurrences (false, "");
             buffer#select_range start stop;
             page#ocaml_view#scroll_lazy start;
+            page#view#options#set_mark_occurrences old
           end;
           self#goto_view page#view;
           switch_page#call page;
           let iter = buffer#get_iter `INSERT in
-          self#location_history_add ~iter ~kind:(`BROWSE : Location_history.kind) ();
+          self#location_history_add ~page ~iter ~kind:(`BROWSE : Location_history.kind) ();
           Gmisclib.Idle.add page#view#misc#grab_focus
         end
       | _ ->
@@ -381,27 +385,36 @@ object (self)
       tbox#set_child_packing ~expand:false ~fill:false label#coerce;
     end pgs;
 
-    method private colorize_within_nearest_tag_bounds (buffer : Ocaml_text.buffer) iter =
-      let tag_table_lexical = buffer#tag_table_lexical in
-      let n = 3 in (* to match: ?(label=...) *)
-      let count = ref n in
+    val tags_to_toggle = 3 (* to match: ?(label=...) 3 *)
+    method private colorize_within_nearest_tag_bounds buffer iter =
+      Prf.crono Prf.prf_colorize_within_nearest_tag_bounds begin fun () ->
+      (*let tag_table_lexical = buffer#tag_table_lexical in*)
+      let count = ref tags_to_toggle in
       let start =
         let start = ref iter in
           while !count <> 0 && not !start#is_start do
-            start := !start#backward_char;
-            List.iter (fun tag -> if !start#begins_tag tag then decr count) tag_table_lexical;
+            start := !start#backward_to_tag_toggle None;
+            if !start#begins_tag None then decr count;
+            (*start := !start#backward_char;
+            List.iter (fun tag -> if !start#begins_tag tag then decr count) tag_table_lexical;*)
           done;
-          !start
+          !start;
       in
-      count := n;
+      count := tags_to_toggle;
       let stop =
         let stop = ref iter in
           while !count <> 0 && not !stop#is_end do
-            stop := !stop#forward_char;
-            List.iter (fun tag -> if !stop#ends_tag tag then decr count) tag_table_lexical;
+            stop := !stop#forward_to_tag_toggle None;
+            (*if !stop#ends_tag None then *)
+            decr count;
+            (*stop := !stop#forward_char;
+            List.iter (fun tag -> if !stop#ends_tag tag then decr count) tag_table_lexical;*)
           done;
           !stop
-      in Lexical.tag buffer#as_gtext_buffer ~start ~stop
+      in
+      Printf.printf "----> %d\n%!" (stop#offset - start#offset);
+      crono ~label:"Lexical.tag" (fun () -> Lexical.tag buffer ~start ~stop) ()
+      end ()
 
     method load_page ?(scroll=true) (page : Editor_page.page) =
       if not page#load_complete then begin
@@ -411,21 +424,22 @@ object (self)
         page#view#options#set_word_wrap word_wrap;
         (** Insert_text and Delete range *)
         let buffer = page#buffer in
+        let gtext_buffer = buffer#as_gtext_buffer in
         let view = page#view in
         let ocaml_view = page#ocaml_view in
         let cb_tout_fast () =
           ocaml_view#code_folding#scan_folding_points ();
           if buffer#lexical_enabled then begin
             let iter = buffer#get_iter `INSERT in
-            self#colorize_within_nearest_tag_bounds buffer iter;
+            self#colorize_within_nearest_tag_bounds gtext_buffer iter;
           end;
           view#draw_gutter ();
         in
         let callback iter _ =
           Gmisclib.Idle.add ~prio:100 (fun () -> view#draw_current_line_background ~force:true (buffer#get_iter `INSERT));
-          Timeout.set tout_fast cb_tout_fast;
-          Timeout.set tout_delim (self#cb_tout_delim page);
-          self#location_history_add ~iter ~kind:`EDIT ();
+          Timeout.set tout_fast 0 cb_tout_fast;
+          Timeout.set tout_delim 0 (self#cb_tout_delim page);
+          self#location_history_add ~page ~iter ~kind:`EDIT ();
         in
         buffer#add_signal_handler (buffer#connect#insert_text ~callback);
         buffer#add_signal_handler (buffer#connect#after#delete_range ~callback:(fun ~start ~stop -> callback start ()));
@@ -442,7 +456,7 @@ object (self)
             page#view#mark_occurrences_manager#clear();
             page#status_pos_sel#set_text "0";
           end;
-          if is_insert then Timeout.set tout_delim (self#cb_tout_delim page)
+          if is_insert then Timeout.set tout_delim 0 (self#cb_tout_delim page)
         end);
         (** Paste clipboard *)
         ignore (page#view#connect#paste_clipboard ~callback:begin fun () ->
@@ -487,6 +501,13 @@ object (self)
       let _ = GMenu.separator_item ~packing:menu#add () in
       let item = GMenu.image_menu_item ~label:"Switch to Implementation/Interface" ~packing:menu#add () in
       ignore (item#connect#activate ~callback:(fun () -> self#switch_mli_ml page));
+      item#misc#set_sensitive (Menu_file.get_file_switch_sensitive page);
+      self#with_current_page begin fun page ->
+        let label = Menu_view.get_switch_viewer_label (Some page) in
+        let switch_viewer = GMenu.menu_item ~label ~packing:menu#add () in
+        ignore (switch_viewer#connect#activate ~callback:page#button_dep_graph#clicked);
+        switch_viewer#misc#set_sensitive (Menu_view.get_switch_view_sensitive self#project page)
+      end;
       let _ = GMenu.separator_item ~packing:menu#add () in
       let item = GMenu.image_menu_item ~label:"Save As..." ~packing:menu#add () in
       item#set_image (GMisc.image ~stock:`SAVE_AS ~icon_size:`MENU ())#coerce;
@@ -502,6 +523,7 @@ object (self)
       let item = GMenu.image_menu_item ~label:(sprintf "Compile \xC2\xAB%s\xC2\xBB" basename) ~packing:menu#add () in
       item#set_image (GMisc.image ~pixbuf:Icons.compile_file_16 ())#coerce;
       ignore (item#connect#activate ~callback:(fun () -> page#compile_buffer ?join:None ()));
+      item#misc#set_sensitive (Menu_file.get_file_switch_sensitive page);
       menu#popup ~time:(GdkEvent.Button.time ev) ~button:3;
       Gdk.Window.set_cursor menu#misc#window (Gdk.Cursor.create `ARROW);
 
@@ -512,7 +534,7 @@ object (self)
           page#tooltip ~typ:preferences#get.Preferences.pref_annot_type_tooltips_enabled location;
         in
         if (*true ||*) preferences#get.Preferences.pref_annot_type_tooltips_delay = 1 then begin
-          Timeout.set tout_delim (GtkThread2.async f);
+          Timeout.set tout_delim 0 (GtkThread2.async f);
         end else (f());
       end else (page#error_indication#hide_tooltip ~force:false ());
       false;
@@ -717,8 +739,10 @@ object (self)
     Opt.may page#annot_type (fun x -> x#remove_tag());
     page#error_indication#hide_tooltip();
 
-  method connect = new signals ~add_page ~switch_page ~remove_page ~changed ~modified_changed
-    ~file_history_changed
+  val signals = new signals hpaned#as_widget ~add_page ~switch_page ~remove_page ~changed ~modified_changed
+    ~file_history_changed ~outline_visibility_changed
+  method connect = signals
+  method disconnect = signals#disconnect
 
   method private add_timeouts () =
     (** Auto-compilation *)
@@ -887,17 +911,20 @@ and modified_changed () = object inherit [unit] signal () end
 and changed () = object inherit [unit] signal () end
 and add_page () = object inherit [Editor_page.page] signal () end
 and file_history_changed () = object inherit [File_history.t] signal () end
+and outline_visibility_changed () = object inherit [bool] signal () end
 
-and signals ~add_page ~switch_page ~remove_page ~changed ~modified_changed
-  ~file_history_changed =
+and signals hpaned ~add_page ~switch_page ~remove_page ~changed ~modified_changed
+  ~file_history_changed ~outline_visibility_changed =
 object
-  inherit ml_signals [switch_page#disconnect;
+  inherit GObj.widget_signals_impl hpaned
+  inherit add_ml_signals hpaned [switch_page#disconnect;
     remove_page#disconnect; modified_changed#disconnect;
-    add_page#disconnect; changed#disconnect]
+    add_page#disconnect; changed#disconnect; outline_visibility_changed#disconnect]
   method switch_page = switch_page#connect ~after
   method remove_page = remove_page#connect ~after
   method modified_changed = modified_changed#connect ~after
   method changed = changed#connect ~after
   method add_page = add_page#connect ~after
   method file_history_changed = file_history_changed#connect ~after
+  method outline_visibility_changed = outline_visibility_changed#connect ~after
 end

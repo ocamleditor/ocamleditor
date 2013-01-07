@@ -1,7 +1,7 @@
 (*
 
   OCamlEditor
-  Copyright (C) 2010-2012 Francesco Tovagliari
+  Copyright (C) 2010-2013 Francesco Tovagliari
 
   This file is part of OCamlEditor.
 
@@ -60,6 +60,7 @@ let write proj =
         Xml.Element ("vmthread", [], [Xml.PCData (string_of_bool t.Target.vmthread)]);
         Xml.Element ("pp", [], [Xml.PCData t.Target.pp]);
         Xml.Element ("inline", [], [Xml.PCData (match t.Target.inline with Some num -> string_of_int num | _ -> "")]);
+        Xml.Element ("nodep", [], [Xml.PCData (string_of_bool t.Target.nodep)]);
         Xml.Element ("cflags", [], [Xml.PCData t.Target.cflags]);
         Xml.Element ("lflags", [], [Xml.PCData t.Target.lflags]);
         Xml.Element ("target_type", [], [Xml.PCData (Target.string_of_target_type t.Target.target_type)]);
@@ -328,6 +329,7 @@ let read filename =
               | "vmthread" -> target.Target.vmthread <- bool_of_string (value tp)
               | "pp" -> target.Target.pp <- value tp
               | "inline" -> target.Target.inline <- (let x = value tp in if x = "" then None else Some (int_of_string x))
+              | "nodep" -> target.Target.nodep <- bool_of_string (value tp)
               | "cflags" -> target.Target.cflags <- value tp
               | "lflags" -> target.Target.lflags <- value tp
               | "is_library" -> target.Target.target_type <- (if bool_of_string (value tp) then Target.Library else Target.Executable)

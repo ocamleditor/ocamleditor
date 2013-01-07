@@ -50,7 +50,7 @@ let install () =
   end else if not is_win32 then begin
     let pixmaps = sprintf "%s/share/pixmaps/ocamleditor" !prefix in
     mkdir_p pixmaps;
-    kprintf run "cp -vru ../pixmaps/* %s" pixmaps;
+    kprintf run "cp -vru ../share/pixmaps/* %s" pixmaps;
     let bin = sprintf "%s/bin" !prefix in
     mkdir_p bin;
     let filename = if Sys.file_exists "ocamleditor.opt" then "ocamleditor.opt" else "ocamleditor" in

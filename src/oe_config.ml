@@ -1,7 +1,7 @@
 (*
 
   OCamlEditor
-  Copyright (C) 2010-2012 Francesco Tovagliari
+  Copyright (C) 2010-2013 Francesco Tovagliari
 
   This file is part of OCamlEditor.
 
@@ -35,7 +35,7 @@ let user_home =
 let ocamleditor_user_home =
   let dirname =
     if try ignore (Sys.getenv "OCAMLEDITOR_MINGW"); true with Not_found -> false then ".ocamleditor.mingw"
-    else if Common.application_debug then ".ocamleditor.test"
+    else if App_config.application_debug then ".ocamleditor.test"
     else ".ocamleditor"
   in
   let ocamleditor_user_home = user_home // dirname in
@@ -44,6 +44,8 @@ let ocamleditor_user_home =
 
 (** Configuration Section =================================================== *)
 
+let dot_viewer : [`DEFAULT | `PDF]       = `DEFAULT
+let pdf_viewer                           = if is_win32 then "" else "xpdf"
 let autosave_enabled                     = true
 let autosave_interval                    = 5_000 (* milliseconds *)
 let autosave_keep_backup                 = 3. *. 24. *. 60. *. 60.  (* 3 days, in milliseconds *)
@@ -96,11 +98,12 @@ let location_history_max_length          = 30 (* hint *)
 let location_history_max_edit            = 5
 let module_browser_max_results           = 150 (* Max. number of search results to display in the search_entry as you type *)
 let module_browser_secondary_title_color = "#877033"
-let completion_popup_default_dimensions  = 640, 300
+let completion_popup_default_dimensions  = 700, 350
 let odoc_tag_properties                  = [ (* These properties apply to ocamldoc comments only, not to the type descriptions. *)
                                           `PIXELS_INSIDE_WRAP 2;
                                           `PIXELS_BELOW_LINES 2;
                                           `WRAP_MODE `WORD]
+let odoc_margin                          = 30
 let outline_type_color                   = module_browser_secondary_title_color
 let outline_selection_bg_color           = "#1F80ED"
 let outline_selection_fg_color           = "#FFFFFF"
@@ -110,24 +113,10 @@ let layout_find_references               = `VERTICAL
 let layout_find_module_browser           = `VERTICAL
 (* Path relative to the project home directory where to find custom templates. *)
 let template_project_filename            = ".extensions" // "templates.cma"
-(* Adjustments according to the GTK version *)
-let gtk_major, gtk_minor, _              = GMain.Main.version
-let current_line_border_adjust, dash_style, dash_style_offset =
-  match gtk_major, gtk_minor with
-    | 2, 14 -> 2, `ON_OFF_DASH, None
-    | 2, 16 -> 2, `DOUBLE_DASH, None
-    | 2, 20 -> 1, `ON_OFF_DASH, (Some 2)
-    | 2, 22 -> 2, `DOUBLE_DASH, None
-    | 2, 24 -> 1, `ON_OFF_DASH, (Some 2)
-    | _     -> 1, `DOUBLE_DASH, None
 
 (** End of Configuration Section ============================================ *)
 
 
-
-
-let title = "OCamlEditor"
-let version = "1.8.0"
 
 let ocaml_codeset = "ISO-8859-1"
 
@@ -155,12 +144,12 @@ let find_best ?(param="--help") prog =
       let ok =
         try
           let cmd = sprintf "%s %s%s" (Filename.quote comp) param redirect_stderr in
-          if Common.application_debug then (printf "Checking for %s... %!" cmd);
+          if App_config.application_debug then (printf "Checking for %s... %!" cmd);
           ignore (Cmd.expand ~first_line:true cmd);
           true
         with _ -> false
       in
-      if Common.application_debug then (printf "%b\n%!" ok);
+      if App_config.application_debug then (printf "%b\n%!" ok);
       ok
     end prog
   with Not_found ->
@@ -210,28 +199,33 @@ let oeproc_command =
     find_best ~param:"" commands
   else "unused"
 
+let dot_version =
+  let redirect_stderr = if Sys.os_type = "Win32" then " 2>&1" else " 2>&1" in
+  try (match kprintf Miscellanea.exec_lines "dot -V %s" redirect_stderr with ver :: [] -> Some ver | _ -> None)
+  with Failure _ -> None
+
+(** GTK config *)
+(* Adjustments according to the GTK version *)
+let gtk_major, gtk_minor, _ = GMain.Main.version
+let current_line_border_adjust, dash_style, dash_style_offset =
+  match gtk_major, gtk_minor with
+    | 2, 14 -> 2, `ON_OFF_DASH, None
+    | 2, 16 -> 2, `DOUBLE_DASH, None
+    | 2, 20 -> 1, `ON_OFF_DASH, (Some 2)
+    | 2, 22 -> 2, `DOUBLE_DASH, None
+    | 2, 24 when Sys.os_type = "Win32" -> 1, `DOUBLE_DASH, None
+    | 2, 24 -> 1, `ON_OFF_DASH, (Some 2)
+    | _     -> 1, `DOUBLE_DASH, None
+
+let themes_dir =
+  let themes = (!! (!! Sys.executable_name)) // "share" // "themes" in
+  if Sys.os_type = "Win32" && Sys.file_exists themes then Some themes else None;;
+
 (** Clear OCAMLLIB environment variable *)
 let _ = Ocaml_config.putenv_ocamllib None
 
-(** Theme *)
-let _ =
-  GtkMain.Rc.parse_string "gtk-button-images = 0";
-  let themes = (Filename.dirname ocamleditor_bin) // "share" // "themes" in
-  if is_win32 && Sys.file_exists themes
-  then begin
-    let themes =
-      List.filter begin fun x ->
-        let name = themes // x in
-        Sys.is_directory name && x.[0] <> '#'
-      end (Array.to_list (Sys.readdir themes))
-    in
-    match themes with
-      | theme_name :: _ ->
-        kprintf GtkMain.Rc.parse_string "gtk-theme-name = \"%s\"" theme_name;
-        GtkMain.Rc.parse_string "gtk-button-images = 0";
-        GtkMain.Rc.parse_string "gtk-font-name=\"Sans 8\"";
-      | _ -> ()
-  end;;
+
+
 
 
 

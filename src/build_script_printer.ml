@@ -1,7 +1,7 @@
 (*
 
   OCamlEditor
-  Copyright (C) 2010-2012 Francesco Tovagliari
+  Copyright (C) 2010-2013 Francesco Tovagliari
 
   This file is part of OCamlEditor.
 
@@ -54,6 +54,7 @@ let print_targets ochan targets external_tasks =
     kprintf print "  vmthread             = %b;" tg.vmthread;
     kprintf print "  pp                   = %S;" tg.pp;
     kprintf print "  inline               = %s;" (match tg.inline with Some x -> sprintf "Some %d" x | _ -> "None");
+    kprintf print "  nodep                = %b;" tg.nodep;
     kprintf print "  library_install_dir  = %S; (\x2A Relative to the Standard Library Directory \x2A)" tg.lib_install_path;
     kprintf print "  other_objects        = %S;" tg.other_objects;
     kprintf print "  external_tasks       = [%s];" (String.concat "; " (List.map (fun (n(*, _*)) -> string_of_int n) (List.assoc tg external_tasks)));
@@ -206,7 +207,7 @@ let print ~project ~filename () =
     output_string ochan "\n";
     let ets = print_external_tasks ochan project in
     output_string ochan "\n\n";
-    let general_commands = print_general_commands ochan ets project in
+    print_general_commands ochan ets project;
     output_string ochan "\n\n";
     output_string ochan "(\x2A Targets ==================================================== \x2A)\n\n";
     (*  *)

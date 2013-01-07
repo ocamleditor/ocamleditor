@@ -1,7 +1,7 @@
 (*
 
   OCamlEditor
-  Copyright (C) 2010-2012 Francesco Tovagliari
+  Copyright (C) 2010-2013 Francesco Tovagliari
 
   This file is part of OCamlEditor.
 
@@ -67,9 +67,9 @@ open a specific project, you can copy the library in:
 
 <tt>  %s</tt>
 
-" Oe_config.title
-  Oe_config.title
-  Oe_config.title
+" About.program_name
+  About.program_name
+  About.program_name
   (Filename.concat "<i>&lt;your-project-root&gt;</i>" Oe_config.template_project_filename);;
 
 

@@ -22,6 +22,7 @@
       <vmthread>false</vmthread>
       <pp></pp>
       <inline></inline>
+      <nodep>false</nodep>
       <cflags>-g</cflags>
       <lflags>-g</lflags>
       <target_type>Library</target_type>
@@ -43,6 +44,7 @@
       <vmthread>false</vmthread>
       <pp></pp>
       <inline></inline>
+      <nodep>false</nodep>
       <cflags>-g</cflags>
       <lflags>-g</lflags>
       <target_type>Library</target_type>
@@ -76,6 +78,7 @@
       <vmthread>false</vmthread>
       <pp></pp>
       <inline></inline>
+      <nodep>false</nodep>
       <cflags>-w y</cflags>
       <lflags></lflags>
       <target_type>Library</target_type>
@@ -97,6 +100,7 @@
       <vmthread>false</vmthread>
       <pp></pp>
       <inline></inline>
+      <nodep>false</nodep>
       <cflags>-w y</cflags>
       <lflags></lflags>
       <target_type>Executable</target_type>
@@ -118,6 +122,7 @@
       <vmthread>false</vmthread>
       <pp></pp>
       <inline></inline>
+      <nodep>false</nodep>
       <cflags>-w s</cflags>
       <lflags></lflags>
       <target_type>Executable</target_type>
@@ -139,6 +144,7 @@
       <vmthread>false</vmthread>
       <pp></pp>
       <inline></inline>
+      <nodep>false</nodep>
       <cflags>-g</cflags>
       <lflags>-g</lflags>
       <target_type>Library</target_type>
@@ -160,6 +166,7 @@
       <vmthread>false</vmthread>
       <pp></pp>
       <inline></inline>
+      <nodep>false</nodep>
       <cflags>-w sy -g</cflags>
       <lflags>-w sy -g</lflags>
       <target_type>Library</target_type>
@@ -175,12 +182,13 @@
       <libs>ocamlcommon dynlink odoc_info xml-light gmisclib common icons otherwidgets oebuildlib</libs>
       <other_objects></other_objects>
       <files>ocamleditor.ml</files>
-      <package>str,lablgtk2,compiler-libs</package>
+      <package>compiler-libs,lablgtk2,lablgtk2.rsvg,str</package>
       <includes>+ocamldoc +xml-light gmisclib common icons otherwidgets oebuild </includes>
       <thread>true</thread>
       <vmthread>false</vmthread>
       <pp></pp>
       <inline></inline>
+      <nodep>false</nodep>
       <cflags>-w syxm -g</cflags>
       <lflags>-g</lflags>
       <target_type>Executable</target_type>
@@ -202,26 +210,49 @@
       <restrictions></restrictions>
       <dependencies>4,10,7,5,6,8,9</dependencies>
     </target>
-    <target name="ocamleditor" default="false" id="12">
+    <target name="ocamleditor-native" default="false" id="11">
       <byt>false</byt>
       <opt>true</opt>
       <libs>ocamlcommon dynlink odoc_info xml-light gmisclib common icons otherwidgets oebuildlib</libs>
       <other_objects></other_objects>
       <files>ocamleditor.ml</files>
-      <package>lablgtk2,str,compiler-libs</package>
+      <package>compiler-libs,lablgtk2,lablgtk2.rsvg,str</package>
       <includes>+ocamldoc +xml-light gmisclib common icons otherwidgets oebuild </includes>
       <thread>true</thread>
       <vmthread>false</vmthread>
       <pp></pp>
       <inline>50</inline>
+      <nodep>false</nodep>
       <cflags>-w syxm -g</cflags>
       <lflags>-g</lflags>
       <target_type>Executable</target_type>
       <outname>ocamleditor</outname>
       <lib_install_path></lib_install_path>
+      <external_tasks/>
+      <restrictions></restrictions>
+      <dependencies>4,10,7,5,6,8,9</dependencies>
+    </target>
+    <target name="ocamleditorLib" default="false" id="14">
+      <byt>false</byt>
+      <opt>true</opt>
+      <libs></libs>
+      <other_objects></other_objects>
+      <files>ocamleditor_lib.ml</files>
+      <package>compiler-libs,lablgtk2,lablgtk2.rsvg,str</package>
+      <includes>+ocamldoc +xml-light gmisclib common icons otherwidgets oebuild </includes>
+      <thread>true</thread>
+      <vmthread>false</vmthread>
+      <pp></pp>
+      <inline>50</inline>
+      <nodep>false</nodep>
+      <cflags>-w syxm -g</cflags>
+      <lflags>-g</lflags>
+      <target_type>Library</target_type>
+      <outname>ocamleditor_lib</outname>
+      <lib_install_path></lib_install_path>
       <external_tasks>
         <task name="prepare-build">
-          <always_run_in_project>true</always_run_in_project>
+          <always_run_in_project>false</always_run_in_project>
           <always_run_in_script>true</always_run_in_script>
           <env replace="false"/>
           <dir>..</dir>
@@ -235,18 +266,41 @@
       <restrictions></restrictions>
       <dependencies>4,10,7,5,6,8,9</dependencies>
     </target>
-    <target name="ocamleditor-native" default="false" id="11">
+    <target name="ocamleditor-win32" default="false" id="15">
       <byt>false</byt>
       <opt>true</opt>
-      <libs>ocamlcommon dynlink odoc_info xml-light gmisclib common icons otherwidgets oebuildlib</libs>
+      <libs>resource.obj ocamlcommon dynlink odoc_info xml-light gmisclib common icons otherwidgets oebuildlib ocamleditor_lib</libs>
       <other_objects></other_objects>
       <files>ocamleditor.ml</files>
-      <package>lablgtk2,str,compiler-libs</package>
+      <package>compiler-libs,lablgtk2,lablgtk2.rsvg,str</package>
       <includes>+ocamldoc +xml-light gmisclib common icons otherwidgets oebuild </includes>
       <thread>true</thread>
       <vmthread>false</vmthread>
       <pp></pp>
       <inline>50</inline>
+      <nodep>true</nodep>
+      <cflags>-w syxm -g</cflags>
+      <lflags>-g</lflags>
+      <target_type>Executable</target_type>
+      <outname>ocamleditor</outname>
+      <lib_install_path></lib_install_path>
+      <external_tasks/>
+      <restrictions>IS_WIN32</restrictions>
+      <dependencies>14</dependencies>
+    </target>
+    <target name="ocamleditor" default="false" id="12">
+      <byt>false</byt>
+      <opt>true</opt>
+      <libs>ocamlcommon dynlink odoc_info xml-light gmisclib common icons otherwidgets oebuildlib ocamleditor_lib</libs>
+      <other_objects></other_objects>
+      <files>ocamleditor.ml</files>
+      <package>compiler-libs,lablgtk2,lablgtk2.rsvg,str</package>
+      <includes>+ocamldoc +xml-light gmisclib common icons otherwidgets oebuild </includes>
+      <thread>true</thread>
+      <vmthread>false</vmthread>
+      <pp></pp>
+      <inline>50</inline>
+      <nodep>true</nodep>
       <cflags>-w syxm -g</cflags>
       <lflags>-g</lflags>
       <target_type>Executable</target_type>
@@ -254,7 +308,7 @@
       <lib_install_path></lib_install_path>
       <external_tasks/>
       <restrictions></restrictions>
-      <dependencies>4,10,7,5,6,8,9</dependencies>
+      <dependencies>14</dependencies>
     </target>
     <target name="tools" default="false" id="13">
       <byt>true</byt>
@@ -268,6 +322,7 @@
       <vmthread>false</vmthread>
       <pp></pp>
       <inline></inline>
+      <nodep>false</nodep>
       <cflags></cflags>
       <lflags></lflags>
       <target_type>Executable</target_type>
@@ -376,13 +431,15 @@
       <target target_id="8" show="false"/>
       <target target_id="9" show="false"/>
       <target target_id="0" show="true"/>
-      <target target_id="12" show="true"/>
       <target target_id="11" show="false"/>
+      <target target_id="14" show="false"/>
+      <target target_id="15" show="true"/>
+      <target target_id="12" show="true"/>
       <target target_id="13" show="false"/>
     </targets>
     <args>
       <arg id="0" type="Flag" key="-use-modified-gtkThread" pass="-key" command="build">
-        <task target_id="12" task_name="prepare-build"/>
+        <task target_id="14" task_name="prepare-build"/>
         <mode>&lt;ADD&gt;</mode>
         <default type="flag">false</default>
         <doc>Set this flag if you have Lablgtk-2.14.2 or earlier

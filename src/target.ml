@@ -1,7 +1,7 @@
 (*
 
   OCamlEditor
-  Copyright (C) 2010-2012 Francesco Tovagliari
+  Copyright (C) 2010-2013 Francesco Tovagliari
 
   This file is part of OCamlEditor.
 
@@ -38,6 +38,7 @@ type t = {
   mutable vmthread         : bool;
   mutable pp               : string;
   mutable inline           : int option;
+  mutable nodep            : bool;
   mutable cflags           : string;
   mutable lflags           : string;
   mutable target_type      : target_type;
@@ -106,6 +107,7 @@ let create ~id ~name = {
   vmthread           = false;
   pp                 = "";
   inline             = None;
+  nodep              = false;
   cflags             = "";
   lflags             = "";
   target_type            = Executable;
@@ -161,6 +163,7 @@ let create_cmd_line ?(flags=[]) ?(can_compile_native=true) target =
     @ (if target.opt && can_compile_native then ["-opt"] else [])
     @ (if target.thread then ["-thread"] else [])
     @ (if target.vmthread then ["-vmthread"] else [])
+    @ (if target.nodep then ["-no-dep"] else [])
     @ (if target.outname <> "" then ["-o"; quote (target.outname)] else [])
     @ flags
   in

@@ -1,7 +1,7 @@
 (*
 
   OCamlEditor
-  Copyright (C) 2010-2012 Francesco Tovagliari
+  Copyright (C) 2010-2013 Francesco Tovagliari
 
   This file is part of OCamlEditor.
 
@@ -185,6 +185,11 @@ class view ~project ?packing () =
   let _ = GMisc.label ~text:"Linker flags" ~xalign ~packing:box#add () in
   let entry_lflags = GEdit.entry ~packing:box#add () in
 
+  let expander_more_settings = GBin.expander ~expanded:false ~label:"More Settings" ~packing:vbox#pack () in
+  let more_vbox = GPack.vbox ~packing:expander_more_settings#add () in
+  let check_nodep = GButton.check_button ~packing:more_vbox#pack () in
+  let _ = check_nodep#add (GMisc.label ~markup:"Do not detect module dependencies (<tt>-no-dep</tt>)" ())#coerce in
+
   (** Dependencies Tab *)
   let vbox = GPack.vbox ~border_width:5 ~spacing:8 () in
   let _ = nb#append_page ~tab_label:(GMisc.label ~text:"Target Dependencies" ())#coerce vbox#coerce in
@@ -338,6 +343,8 @@ object (self)
       ~callback:(self#update begin fun target ->
         target.lib_install_path <- entry_lib_install#text
       end));
+    ignore (check_nodep#connect#toggled
+      ~callback:(self#update (fun target -> target.nodep <- check_nodep#active)));
     let _ = check_thread#connect#toggled ~callback:begin fun () ->
       if signals_enabled then begin
         check_vmthread#set_active false;
@@ -436,6 +443,7 @@ object (self)
         entry_main_module#set_text filename;
       with Failure "hd" -> (ignore (entry_main_module#set_text ""))
     end;
+    check_nodep#set_active tg.nodep;
     check_unix#set_active (List.mem "IS_UNIX" tg.restrictions);
     check_win32#set_active (List.mem "IS_WIN32" tg.restrictions);
     check_cygwin#set_active (List.mem "IS_CYGWIN" tg.restrictions);

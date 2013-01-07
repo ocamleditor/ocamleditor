@@ -1,7 +1,7 @@
 (*
 
   OCamlEditor
-  Copyright (C) 2010-2012 Francesco Tovagliari
+  Copyright (C) 2010-2013 Francesco Tovagliari
 
   This file is part of OCamlEditor.
 
@@ -128,11 +128,11 @@ let set_has_used_components editor label item =
   end
 
 (** create_search_results_pane *)
-let create_search_results_pane ~editor ~page =
+let create_search_results_pane ~pixbuf ~editor ~page =
   let widget = new Search_results.widget ~editor () in
   widget#button_new_search#misc#set_sensitive false;
   let hbox = GPack.hbox ~spacing:3 () in
-  let _ = GMisc.image ~pixbuf:Icons.search_results_16 ~packing:hbox#pack () in
+  let _ = GMisc.image ~pixbuf ~packing:hbox#pack () in
   let label = GMisc.label ~packing:hbox#pack () in
   let iter = page#buffer#get_iter `INSERT in
   let mark = page#buffer#create_mark ?name:None ?left_gravity:None iter in
@@ -147,7 +147,7 @@ let create_search_results_pane ~editor ~page =
 (** find_definition_references *)
 let find_definition_references editor =
   editor#with_current_page begin fun page ->
-    let widget, mark, label = create_search_results_pane ~editor ~page in
+    let widget, mark, label = create_search_results_pane ~pixbuf:Icons.references ~editor ~page in
     ignore (widget#connect#search_started ~callback:begin fun () ->
       let project = page#project in
       let filename = page#get_filename in
@@ -214,7 +214,7 @@ let find_used_components editor =
         ~compile_buffer:(fun () -> page#compile_buffer ?join:(Some true))  ()
     with
       | Some (ident, used_components) when used_components <> [] ->
-        let widget, _, label = create_search_results_pane ~editor ~page in
+        let widget, _, label = create_search_results_pane ~pixbuf:Icons.references ~editor ~page in
         ignore (widget#connect#search_started ~callback:begin fun () ->
           let real_filename =
             match Project.tmp_of_abs project filename with
@@ -250,7 +250,10 @@ let update_items_visibility
   ~find_definition
   ~find_references
   editor =
-    Gmisclib.Idle.add ~prio:100 (fun () -> set_has_used_components editor label_find_used_components find_used_components);
-    Gmisclib.Idle.add (fun () -> set_has_definition editor find_definition);
-    Gmisclib.Idle.add (fun () -> set_has_references editor find_references);
+    Gmisclib.Idle.add ~prio:100 begin fun () ->
+      set_has_used_components editor label_find_used_components find_used_components;
+      set_has_definition editor find_definition;
+      set_has_references editor find_references;
+    end
+;;
 
