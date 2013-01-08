@@ -80,7 +80,7 @@ let draw ~project ~filename ?dot_include_all ?dot_types ?packing ?on_ready_cb ()
       if Str.string_match re line 0 then (sprintf "\"%s\" [style=filled, color=magenta]" modname)
       else line
     end;
-    ignore (Oebuild_util.exec ~join:false ~at_exit:begin fun () ->
+    ignore (Oebuild_util.exec ~join:false ~echo:App_config.application_debug ~at_exit:begin fun () ->
       if Sys.file_exists dotfile then (Sys.remove dotfile);
       Device.draw ~filename:outfile viewer;
       Activity.remove activity_name;

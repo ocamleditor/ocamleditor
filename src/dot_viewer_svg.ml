@@ -129,10 +129,10 @@ module SVG = struct
         self#set_buffer (Buffer.contents (File.read filename));
         self#redisplay zooms.(self#zoom);
         Array.iter begin fun zm ->
-          GtkThread2.async begin fun () ->
+          Gmisclib.Idle.add ~prio:300 begin fun () ->
             try ignore (self#create_pixbuf zm)
             with ex -> Printf.eprintf "File \"dot.ml\": %s\n%s\n%!" (Printexc.to_string ex) (Printexc.get_backtrace());
-          end ()
+          end
         end zooms;
         if Sys.file_exists filename then (Sys.remove filename);
       end ();

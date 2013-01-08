@@ -38,5 +38,5 @@ let application_debug = try (List.assoc "debug" application_param) = "2" with No
 
 let application_pixmaps =
   let path = (!! (!! Sys.executable_name)) // "share" // "pixmaps" in
-  if Sys.file_exists path then path
+  if Sys.os_type = "Win32" && Sys.file_exists path then path
   else ((!! (!! Sys.executable_name)) // "share" // "pixmaps" // "ocamleditor")
