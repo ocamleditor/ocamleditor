@@ -1,26 +1,3 @@
-(*
-
-  OCamlEditor
-  Copyright (C) 2010-2013 Francesco Tovagliari
-
-  This file is part of OCamlEditor.
-
-  OCamlEditor is free software: you can redistribute it and/or modify
-  it under the terms of the GNU General Public License as published by
-  the Free Software Foundation, either version 3 of the License, or
-  (at your option) any later version.
-
-  OCamlEditor is distributed in the hope that it will be useful,
-  but WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-  GNU General Public License for more details.
-
-  You should have received a copy of the GNU General Public License
-  along with this program. If not, see <http://www.gnu.org/licenses/>.
-
-*)
-
-
 type command_descr = string
 type command_usage = string
 type speclist = (Arg.key * Arg.spec * Arg.doc) list
@@ -57,7 +34,7 @@ module Make (C : COMMAND) = struct
     "\n" ^ (String.concat "\n" (List.map (help_of_command maxlength) (List.rev commands)))
 
   let create_help_msg global_speclist usage_msg =
-    sprintf "%s\n\nGLOBAL OPTIONS%s\nCOMMANDS\n%s\n"
+    sprintf "%s\n\nGLOBAL OPTIONS%s\nCOMMANDS%s\n"
       usage_msg
       (Arg.usage_string global_speclist "") help_of_commands;;
 
@@ -67,7 +44,8 @@ module Make (C : COMMAND) = struct
       args
       ~(global_options : speclist)
       ?default_command
-      ?(usage_msg=sprintf "\nUSAGE\n  %s [global_options*] <command> [options*] [args*]\n  %s <command> --help" args.(0) args.(0))
+      ?(usage_msg=sprintf "\nUSAGE\n  %s [global_options*] <command> [options*] [args*]\n  %s <command> --help"
+        (Filename.basename args.(0)) (Filename.basename args.(0)))
       execute_command =
     command := None;
     Arg.current := 0;
@@ -91,7 +69,7 @@ module Make (C : COMMAND) = struct
           let cmd = C.string_of_command cmd in
           Arg.usage_string spec
             (sprintf "%s %s - %s\n\nUSAGE\n  %s [global_options*] %s [options*] [args*]\n\nOPTIONS"
-              args.(0) cmd descr args.(0) cmd)
+              (Filename.basename args.(0)) cmd descr (Filename.basename args.(0)) cmd)
         | _ -> create_help_msg global_options usage_msg
     in
     if Array.length args = 1 then (raise (Arg.Help (help_string())));

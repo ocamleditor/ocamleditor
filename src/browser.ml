@@ -222,6 +222,7 @@ object (self)
               if show then begin
                 Gaux.may page_num ~f:widget#goto_page;
                 create_first_target widget;
+                window#set_modal false;
                 window#present();
               end
             | window, widget, state ->
@@ -229,6 +230,7 @@ object (self)
               if show then begin
                 Gaux.may page_num ~f:widget#goto_page;
                 create_first_target widget;
+                window#set_modal false;
                 window#present();
               end
         end;
@@ -271,13 +273,14 @@ object (self)
     let name = mkname 0 in
     let filename = Oe_config.user_home // name // (name^Project.extension) in
     let new_project = Project.create ~filename () in
-    let _, widget =
+    let window, widget =
       Project_properties.create ~show:true ~editor ~new_project ~callback:begin fun proj ->
         self#project_close();
         Project.save ~editor new_project;
         ignore (self#project_open (Project.filename proj));
       end ()
     in
+    window#set_modal true;
     ignore (widget#connect#project_changed ~callback:(fun proj -> current_project#set (Some proj)));
 
   method dialog_file_new = Dialog_file_new.show ~editor:self#editor;

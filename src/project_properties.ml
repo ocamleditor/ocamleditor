@@ -293,9 +293,14 @@ object (self)
       notebook#remove runtime_box#coerce;
     end;
     (* Entries *)
-    ignore (name_entry#connect#changed ~callback:begin fun () ->
-      home_entry#set_text (Filename.concat (Filename.dirname home_entry#text) name_entry#text);
-      project_name_changed#call name_entry#text;
+    let signal_name_entry_changed = ref None in
+    signal_name_entry_changed := Some (name_entry#connect#changed ~callback:begin fun () ->
+      Gaux.may !signal_name_entry_changed ~f:name_entry#misc#handler_block;
+      if name_entry#text <> "" then begin
+        home_entry#set_text (Filename.concat (Filename.dirname home_entry#text) name_entry#text);
+        project_name_changed#call name_entry#text;
+      end;
+      Gaux.may !signal_name_entry_changed ~f:name_entry#misc#handler_unblock;
     end);
     let set_paths () =
       src_entry#set_text (Filename.concat home_entry#text "src");

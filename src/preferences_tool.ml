@@ -62,7 +62,7 @@ let color_name color =
 let (//) = Filename.concat
 
 (** create_align *)
-let create_align ?title ?(indent=13) ~(vbox : GPack.box) () =
+let create_align ?title ?(indent=13) ~(vbox : GPack.box) ?show () =
   let box = GPack.vbox ~spacing:8 ~packing:vbox#pack () in
   let indent = match title with
     | None -> 0
@@ -70,7 +70,7 @@ let create_align ?title ?(indent=13) ~(vbox : GPack.box) () =
       let _ = GMisc.label ~markup:(sprintf "<b>%s</b>" title) ~xalign:0.0 ~packing:box#add () in
       indent
   in
-  let align = GBin.alignment ~padding:(0, 0, indent, 0) ~packing:box#add () in
+  let align = GBin.alignment ~padding:(0, 0, indent, 0) ~packing:box#add ?show () in
   align
 
 
@@ -208,8 +208,8 @@ end
 (** pref_view *)
 and pref_view title ?packing () =
   let vbox                  = GPack.vbox ~spacing ?packing () in
-  let align                 = create_align ~vbox () in
-  let table                 = GPack.table ~col_spacings ~row_spacings ~packing:align#add ~show:(Oe_config.themes_dir <> None) () in
+  let align                 = create_align ~vbox ~show:(Oe_config.themes_dir <> None) () in
+  let table                 = GPack.table ~col_spacings ~row_spacings ~packing:align#add () in
   let combo_theme, _        = GEdit.combo_box_text ~strings:Gtk_theme.avail_themes ~packing:(table#attach ~top:0 ~left:1 ~expand:`X) () in
   let _                     = GMisc.label ~text:"Look and feel:" ~xalign ~packing:(table#attach ~top:0 ~left:0 ~expand:`NONE) () in
   let align                 = create_align ~title:"Tabs" ~vbox () in
@@ -277,7 +277,8 @@ object (self)
     try Some (List.nth Gtk_theme.avail_themes combo_theme#active) with Invalid_argument _ -> None
 
   method write pref =
-    pref.Preferences.pref_general_theme <- self#get_theme_name();
+    Opt.may Oe_config.themes_dir (fun _ ->
+      pref.Preferences.pref_general_theme <- self#get_theme_name());
     pref.Preferences.pref_tab_pos <- (match combo_orient#active
       with 0 -> `TOP | 1 | 5 -> `RIGHT | 2 -> `BOTTOM | 3 | 4 -> `LEFT | _ -> assert false);
     pref.Preferences.pref_tab_vertical_text <- (match combo_orient#active
@@ -297,8 +298,9 @@ object (self)
     pref.Preferences.pref_max_view_fullscreen <- not use_maximize#active;
 
   method read pref =
-    combo_theme#set_active (match pref.Preferences.pref_general_theme with
-      | Some name -> Xlist.pos name Gtk_theme.avail_themes | _ -> -1);
+    Opt.may Oe_config.themes_dir (fun _ ->
+      combo_theme#set_active (match pref.Preferences.pref_general_theme with
+        | Some name -> (try Xlist.pos name Gtk_theme.avail_themes with Not_found -> -1) | _ -> -1));
     combo_orient#set_active (match pref.Preferences.pref_tab_pos, pref.Preferences.pref_tab_vertical_text with
       | `TOP, _ -> 0 | `RIGHT, false -> 1 | `BOTTOM, _ -> 2 | `LEFT, false -> 3
       | `LEFT, true -> 4 | `RIGHT, true -> 5);

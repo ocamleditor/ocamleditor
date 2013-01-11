@@ -23,7 +23,7 @@
 
 module SVG = struct
 
-  let zooms = [|(*0.125; 0.25; 0.33;*) 0.5; 0.67; 0.75; 1.0; 1.07; 1.25; 1.5; 1.85; 2.0; 3.0; 4.0; 6.0; (*8.0; 12.0*)|]
+  let zooms = [|(*0.125; 0.25; 0.33;*) 0.5; 0.67; 0.75; 1.0; 1.07; 1.25; 1.5; 1.85; 2.0; 3.0; (*4.0; 6.0; 8.0; 12.0*)|]
 
   let lang = "svg"
 
@@ -87,12 +87,20 @@ module SVG = struct
               if xm0 <> xm then begin
                 let dx = xm0 -. xm in
                 let h = sw#hadjustment#value +. dx in
-                if h >= 0. && h <= (sw#hadjustment#upper -. sw#hadjustment#page_size) then (sw#hadjustment#set_value h);
+                let up = sw#hadjustment#upper -. sw#hadjustment#page_size in
+                if h >= 0. && h <= up
+                then sw#hadjustment#set_value h
+                else if h <= 0. then sw#hadjustment#set_value 0.
+                else if sw#hadjustment#value <> up then sw#hadjustment#set_value up
               end;
               if ym0 <> ym then begin
                 let dy = ym0 -. ym in
                 let v = sw#vadjustment#value +. dy in
-                if v >= 0. && v <= (sw#vadjustment#upper -. sw#vadjustment#page_size) then (sw#vadjustment#set_value v);
+                let up = sw#vadjustment#upper -. sw#vadjustment#page_size in
+                if v >= 0. && v <= up
+                then sw#vadjustment#set_value v
+                else if v <= 0. then sw#vadjustment#set_value 0.
+                else if sw#vadjustment#value <> up then sw#vadjustment#set_value up
               end
             end else incr count
           end else begin
@@ -130,7 +138,7 @@ module SVG = struct
         self#redisplay zooms.(self#zoom);
         Array.iter begin fun zm ->
           Gmisclib.Idle.add ~prio:300 begin fun () ->
-            try ignore (self#create_pixbuf zm)
+            try ignore (self#create_pixbuf zm);
             with ex -> Printf.eprintf "File \"dot.ml\": %s\n%s\n%!" (Printexc.to_string ex) (Printexc.get_backtrace());
           end
         end zooms;
