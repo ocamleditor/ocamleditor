@@ -997,7 +997,7 @@ object (self)
         button_detach#misc#set_sensitive false;
         button_detach#misc#set_state `NORMAL;
         vbox#reorder_child ~pos:0 toolbar#coerce;
-        let window = GWindow.window ~title ~icon:Icons.oe ~width:1000 ~height:600 ~border_width:0 ~allow_shrink:true ~position:`CENTER () in
+        let window = GWindow.window ~title ~icon:Icons.module_browser ~width:1000 ~height:600 ~border_width:0 ~allow_shrink:true ~position:`CENTER () in
         self#misc#reparent window#coerce;
         button_detach#set_icon_widget (GMisc.image ~pixbuf:Icons.attach ())#coerce;
         detached <- Some window, messages;
@@ -1028,8 +1028,11 @@ let create_window ~project =
 let append_to_messages ~project =
   let widget = new widget ~project () in
   messages#set_visible true;
-  let label_widget = (GMisc.label ~text:title ())#coerce in
-  let button = messages#append_page ~label_widget ~with_spinner:false widget#as_page in
+  let hbox = GPack.hbox ~spacing:1 () in
+  let icon = GMisc.image ~pixbuf:Icons.module_browser ~packing:hbox#pack () in
+  let label = GMisc.label ~text:title ~packing:hbox#add () in
+  let button = messages#append_page ~label_widget:hbox#coerce ~with_spinner:false widget#as_page in
   widget#create_widget_libraries ();
+  ignore (widget#connect#switch_page ~callback:(fun w -> label#set_text w#title.title));
   widget#present();
 ;;

@@ -36,7 +36,7 @@ let find_replace
       ~project:editor#project ~find_all ~search_word_at_cursor ()
     in
     Gaux.may (GWindow.toplevel editor) ~f:(fun tl -> dialog#set_transient_for tl#as_window);
-    let hbox = GPack.hbox ~spacing:3 () in
+    let hbox = GPack.hbox ~spacing:1 () in
     let _ = GMisc.image ~pixbuf:Icons.search_results_16 ~packing:hbox#pack () in
     let label = GMisc.label ~packing:hbox#pack () in
     ignore (page#connect#search_started ~callback:begin fun () ->
@@ -131,7 +131,7 @@ let set_has_used_components editor label item =
 let create_search_results_pane ~pixbuf ~editor ~page =
   let widget = new Search_results.widget ~editor () in
   widget#button_new_search#misc#set_sensitive false;
-  let hbox = GPack.hbox ~spacing:3 () in
+  let hbox = GPack.hbox ~spacing:1 () in
   let _ = GMisc.image ~pixbuf ~packing:hbox#pack () in
   let label = GMisc.label ~packing:hbox#pack () in
   let iter = page#buffer#get_iter `INSERT in

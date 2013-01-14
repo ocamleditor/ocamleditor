@@ -28,6 +28,9 @@ open Printf
 
 let required_ocaml_version = "4.00.0"
 let use_modified_gtkThread = ref false
+let record_backtrace = ref true
+
+let exe = if is_win32 then ".exe" else ""
 
 let generate_oebuild_script () =
   run "ocaml -I common str.cma unix.cma common.cma generate_oebuild_script.ml";;
@@ -50,7 +53,7 @@ let prepare_build () =
     cp ~echo:true (if !use_modified_gtkThread then "gtkThreadModified.ml" else "gtkThreadOriginal.ml") "gtkThread2.ml";
     if Sys.os_type = "Win32" then begin
       let pixmaps = ".." // "share" // "pixmaps" in
-      let icons = ["1_16"; "1_32"; "1_48"; "2_16"; "2_32"; "2_48"; "3_32"] in
+      let icons = [""] in
       let names = List.map (fun x -> "oe" ^ x ^ ".ico") icons in
       let filenames = List.map (fun x -> pixmaps // x) names in
       let finally () = List.iter remove_file names in
@@ -64,12 +67,16 @@ let prepare_build () =
     run "ocamllex err_lexer.mll";
     run "ocamlyacc err_parser.mly";
     test_rsvg();
+    substitute ~filename:"oe_config.ml" ~regexp:true
+      ["let _ = Printexc\\.record_backtrace \\(\\(true\\)\\|\\(false\\)\\)$",
+       (sprintf "let _ = Printexc.record_backtrace %b" !record_backtrace)];
     try generate_oebuild_script() with Failure msg -> raise (Script_error 2)
   end;;
 
 let _ = main ~default_target:prepare_build ~targets:[
   "-generate-oebuild-script", generate_oebuild_script, " (undocumented)";
 ]~options:[
+  "-record-backtrace",       Bool (fun x -> record_backtrace := x), " Turn recording of exception backtraces on or off";
   "-use-modified-gtkThread", Set use_modified_gtkThread, " Set this flag if you have Lablgtk-2.14.2 or earlier
                             for using the included modified version of gtkThread.ml
                             to reduce CPU consumption";

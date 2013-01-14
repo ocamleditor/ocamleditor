@@ -44,6 +44,7 @@ let _ = if true || App_config.application_debug then begin
     "Glib Charset", (sprintf "%b, %s" Convert.glib_is_utf8 Convert.glib_charset);
     "Locale Charset", (sprintf "%b, %s" Convert.locale_is_utf8 Convert.locale_charset);
     "Default Charset", (sprintf "%b, %s" Convert.is_utf8 Convert.default_charset);
+    "Backtrace status", (sprintf "%b" (Printexc.backtrace_status ()))
   ] in
   let maxlength = List.fold_left (fun cand (x, _) -> let len = String.length x in max cand len) 0 properties in
   List.iter (fun (n, v) -> printf "%s : %s\n" (rpad (n ^ " ") '.' maxlength) v) properties;

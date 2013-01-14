@@ -178,7 +178,7 @@ let print_cmd_line_args ochan project =
       let typ =
         match arg.bsa_type with
           | Flag -> sprintf "Set %s" (ident_of_arg arg)
-          | Bool -> "Bool (fun _ -> ())"
+          | Bool -> sprintf "Bool (fun x -> %s := x)" (ident_of_arg arg)
           | String -> sprintf "Set_string %s" (ident_of_arg arg)
       in
       let default_value =
@@ -188,7 +188,7 @@ let print_cmd_line_args ochan project =
           | `string _ -> sprintf "\" ^ !%s ^ \"" (ident_of_arg arg)
       in
       fprintf ochan "    %S, %s,\n      (\" %s [default: %s]\");\n" arg.bsa_key typ (String.escaped arg.bsa_doc) default_value;
-    end (List.rev args);
+    end args;
     fprintf ochan "  ];\n";
   end groups;
   fprintf ochan "]\n";;

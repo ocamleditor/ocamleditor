@@ -254,13 +254,13 @@ object (self)
           let smodel = self#get_model () in
           let path = smodel#convert_path_to_child_path path in
           let row = model#get_iter path in
-          self#force_lazy row;
+          ignore (self#force_lazy row);
           selected_path <- Some (self#get_id_path row)
         | _ -> ()
     end);
     ignore (view#connect#after#row_activated ~callback:begin fun _ _ ->
       self#select_name_in_buffer();
-      page#view#misc#grab_focus();
+      Gmisclib.Idle.add page#view#misc#grab_focus;
     end);
     ignore (view#connect#row_expanded ~callback:begin fun row path ->
       let model = self#get_model() in
@@ -607,7 +607,7 @@ object (self)
             | _ -> Module
         in
         let parent_mod = self#append ?parent ~kind ~loc:loc.loc loc.txt "" in
-        let f () = self#append_module ~parent:parent_mod module_expr.mod_desc in
+        let f () = ignore (self#append_module ~parent:parent_mod module_expr.mod_desc) in
         begin
           match parent with
             | Some _ -> model#set ~row:parent_mod ~column:col_lazy [f];
@@ -616,9 +616,16 @@ object (self)
         self#add_table_expanded_by_default parent_mod;
       | Tstr_modtype (_, loc, mt) ->
         let parent = self#append ?parent ~kind:Module_type ~loc:loc.loc loc.txt "" in
-        model#set ~row:parent ~column:col_lazy [fun () -> self#append_module_type ~parent mt.mty_desc];
+        model#set ~row:parent ~column:col_lazy [fun () -> ignore (self#append_module_type ~parent mt.mty_desc)];
+      | Tstr_include (me, idents) ->
+        let parent = self#append_module ?parent ~kind:Module_include me.mod_desc in
+        let f () = List.iter (fun ident -> ignore (self#append ?parent ~kind:Simple (Ident.name ident) "")) idents in
+        begin
+          match parent with
+            | Some row -> model#set ~row ~column:col_lazy [f];
+            | _ -> f ()
+        end;
       | Tstr_recmodule _ -> ()
-      | Tstr_include _
       | Tstr_open _
       | Tstr_exn_rebind _ | Tstr_primitive _ -> ()
 
@@ -639,7 +646,7 @@ object (self)
             | _ -> Module
         in
         let parent_mod = self#append ?parent ~kind ~loc:loc.loc loc.txt "" in
-        let f () = self#append_module_type ~parent:parent_mod mty.mty_desc in
+        let f () = ignore (self#append_module_type ~parent:parent_mod mty.mty_desc) in
         begin
           match parent with
             | Some _ -> model#set ~row:parent_mod ~column:col_lazy [f];
@@ -652,37 +659,67 @@ object (self)
         let f () =
           match modtype_decl with
             | Tmodtype_abstract -> ()
-            | Tmodtype_manifest mt -> self#append_module_type ~parent mt.mty_desc
+            | Tmodtype_manifest mt -> ignore (self#append_module_type ~parent mt.mty_desc)
         in
         model#set ~row:parent ~column:col_lazy [f];
       | Tsig_open _ -> ()
-      | Tsig_include (modtype, _) -> self#append_module_type ?parent modtype.mty_desc
+      | Tsig_include (mt, sign) ->
+        ignore (self#append_module_type ?parent ~kind:Module_include mt.mty_desc);
       | Tsig_class classes ->
         List.iter (fun clty -> self#append_class_type ?parent ~loc:clty.ci_id_name clty) classes;
       | Tsig_class_type decls ->
         List.iter (fun info -> self#append_class_type ?parent ~loc:info.ci_id_name info) decls;
 
-  method private append_module ?parent mod_desc =
+  method private append_module ?parent ?kind mod_desc =
     match mod_desc with
       | Tmod_functor (_, floc, mtype, mexpr) ->
         self#append_module ?parent mexpr.mod_desc
       | Tmod_structure str ->
-        List.iter (self#append_struct_item ?parent) str.str_items
-      | Tmod_ident (_, loc) -> ignore (self#append ?parent ~loc:loc.loc (String.concat "." (Longident.flatten loc.txt)) "")
-      | Tmod_apply _ -> ()
-      | Tmod_constraint _ -> ignore (self#append ?parent "Tmod_constraint" "")
-      | Tmod_unpack _ -> ignore (self#append ?parent "Tmod_unpack" "")
+        List.iter (self#append_struct_item ?parent) str.str_items;
+        None
+      | Tmod_ident (_, loc) -> Some (self#append ?parent ?kind ~loc:loc.loc (String.concat "." (Longident.flatten loc.txt)) "")
+      | Tmod_apply (me1, me2, _) ->
+        let p1 = self#append_module ?parent ~kind:Module_functor me1.mod_desc in
+        let f () =
+          let p2 = self#append_module ?parent:p1 me2.mod_desc in
+          ignore (self#append_mty ?parent:p2 me2.mod_type);
+          ignore (self#append_mty ?parent:p1 me1.mod_type)
+        in
+        Gaux.may p1 ~f:(fun row -> model#set ~row ~column:col_lazy [f]);
+        None
+      | Tmod_constraint _ -> Some (self#append ?parent "Tmod_constraint" "")
+      | Tmod_unpack _ -> Some (self#append ?parent "Tmod_unpack" "")
 
-  method private append_module_type ?parent mod_desc =
+  method private append_signature_item ?parent ?kind = function
+    | Sig_value (id, vd) -> Some (self#append ?parent ~kind:Simple (Ident.name id) (string_of_type_expr vd.val_type))
+    | Sig_type (id, td, _) -> Some (self#append ?parent (*~kind:Type*) (Ident.name id) "")
+    | Sig_exception (id, ed) -> Some (self#append ?parent ~kind:Exception (Ident.name id) "")
+    | Sig_module (id, mt, _) -> self#append_mty ?parent ~kind:Module_type mt
+    | Sig_modtype (id, md) -> Some (self#append ?parent "Sig_modtype" "")
+    | Sig_class (id, cd, _) -> Some (self#append ?parent "Sig_class" "")
+    | Sig_class_type (id, ctd, _) -> Some (self#append ?parent "Sig_class_type" "")
+
+  method private append_mty ?parent ?kind mod_type =
+    match mod_type with
+      | Mty_ident _ -> Some (self#append ?parent ?kind "Mty_ident" "")
+      | Mty_signature sign_items ->
+        List.iter (fun x -> ignore (self#append_signature_item ?parent ?kind x)) sign_items;
+        None
+      | Mty_functor (id, _, m2) ->
+        self#append_mty ?parent ?kind m2
+        (*ignore (self#append ?parent (Ident.name id) "")*)
+
+  method private append_module_type ?parent ?kind mod_desc =
     match mod_desc with
       | Tmty_functor (_, floc, mtype, mexpr) ->
         self#append_module_type ?parent mexpr.mty_desc
       | Tmty_ident (path, loc) ->
-        ignore (self#append ?parent ~kind:Module_include ~loc:loc.loc (Path.name path) "")
+        Some (self#append ?parent ~kind:Module_include ~loc:loc.loc (Path.name path) "")
       | Tmty_signature sign ->
-        List.iter (self#append_sig_item ?parent) sign.sig_items
-      | Tmty_with _ -> ignore (self#append ?parent "Tmty_with" "")
-      | Tmty_typeof _ -> ignore (self#append ?parent "Tmty_typeof" "")
+        List.iter (self#append_sig_item ?parent) sign.sig_items;
+        None
+      | Tmty_with _ -> Some (self#append ?parent "Tmty_with" "")
+      | Tmty_typeof me -> self#append_module ?parent me.mod_desc
 
   method private append_type ?parent (_, loc, decl) =
     let kind =
