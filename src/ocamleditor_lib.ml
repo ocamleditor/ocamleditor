@@ -57,7 +57,7 @@ let main () = begin
   (*
     THE FOLLOWING LINE IS PROCESSED BY "tools/prepare_build", DO NOT EDIT.
   *)
-  Dot_viewer.device := (module Dot_viewer_svg.SVG : Dot_viewer.DEVICE);
+  (*Dot_viewer.device := (module Dot_viewer_svg.SVG : Dot_viewer.DEVICE);*)
 
   GtkThread2.main ();
 end

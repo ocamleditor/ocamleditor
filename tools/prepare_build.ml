@@ -52,17 +52,10 @@ let prepare_build () =
   end else begin
     cp ~echo:true (if !use_modified_gtkThread then "gtkThreadModified.ml" else "gtkThreadOriginal.ml") "gtkThread2.ml";
     if Sys.os_type = "Win32" then begin
-      let pixmaps = ".." // "share" // "pixmaps" in
-      let icons = [""] in
-      let names = List.map (fun x -> "oe" ^ x ^ ".ico") icons in
-      let filenames = List.map (fun x -> pixmaps // x) names in
-      let finally () = List.iter remove_file names in
       try
-        List.iter2 cp filenames names;
         run "rc resource.rc";
         run "cvtres /machine:x86 resource.res";
-        finally()
-      with Script_error _ -> finally()
+      with Script_error _ -> ()
     end;
     run "ocamllex err_lexer.mll";
     run "ocamlyacc err_parser.mly";

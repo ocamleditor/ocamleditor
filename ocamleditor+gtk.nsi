@@ -121,8 +121,8 @@ Section "Start Menu Shortcuts"
   CreateDirectory "$SMPROGRAMS\OCamlEditor"
   SetOutPath $INSTDIR\bin
   CreateShortCut "$SMPROGRAMS\OCamlEditor\Uninstall.lnk" "$INSTDIR\uninstall.exe" "" "$INSTDIR\uninstall.exe" 0
-  CreateShortCut "$SMPROGRAMS\OCamlEditor\OCamlEditor.lnk" "$INSTDIR\bin\ocamleditor.bat" "" "$INSTDIR\share\pixmaps\oe1_48.ico" 0 SW_SHOWMINIMIZED
-  CreateShortCut "$DESKTOP\OCamlEditor.lnk" "$INSTDIR\bin\ocamleditor.bat" "" "$INSTDIR\share\pixmaps\oe1_48.ico" 0 SW_SHOWMINIMIZED 
+  CreateShortCut "$SMPROGRAMS\OCamlEditor\OCamlEditor.lnk" "$INSTDIR\bin\ocamleditor.bat" "" "$INSTDIR\share\pixmaps\oe.ico" 0 SW_SHOWMINIMIZED
+  CreateShortCut "$DESKTOP\OCamlEditor.lnk" "$INSTDIR\bin\ocamleditor.bat" "" "$INSTDIR\share\pixmaps\oe.ico" 0 SW_SHOWMINIMIZED 
   
 SectionEnd
 
