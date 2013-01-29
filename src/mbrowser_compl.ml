@@ -173,14 +173,15 @@ object (self)
     let id = if longid then Symbol.concat_value_path symbol else symbol_list#model#get ~row ~column:col_search in
     let re_id = !~ "[a-zA-Z_0-9']$" in
     let re_longid = !~ "[a-zA-Z_0-9'.]$" in
+    let start_iter = page#buffer#start_iter in
     let backward_to_id_start re =
       let iter = ref (page#buffer#get_iter `INSERT) in
       iter := !iter#backward_char;
       while
         let char = !iter#get_text ~stop:!iter#forward_char in
-        Str.string_match re char 0
+         Str.string_match re char 0 && (!iter#compare start_iter > 0)
       do iter := !iter#backward_char done;
-      !iter#forward_char;
+      if !iter#equal start_iter then !iter else !iter#forward_char;
     in
     let forward_to_id_stop re =
       let iter = ref (page#buffer#get_iter `INSERT) in

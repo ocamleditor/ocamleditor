@@ -412,7 +412,6 @@ object (self)
           done;
           !stop
       in
-      Printf.printf "----> %d\n%!" (stop#offset - start#offset);
       crono ~label:"Lexical.tag" (fun () -> Lexical.tag buffer ~start ~stop) ()
       end ()
 
