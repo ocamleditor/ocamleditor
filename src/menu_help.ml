@@ -24,9 +24,10 @@
 open Miscellanea
 open Printf
 
-let about () =
+let about editor () =
   let dialog = GWindow.about_dialog
-    ~type_hint:`SPLASHSCREEN
+    ~type_hint:(if Sys.os_type = "Win32" then `SPLASHSCREEN else `DIALOG)
+    ~modal:true
     ~position:`CENTER
     ~icon:Icons.oe
     ~name:About.program_name
@@ -50,6 +51,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>."
   in
   (*dialog#misc#modify_bg [`NORMAL, `WHITE];*)
   dialog#set_skip_taskbar_hint true;
+  dialog#set_skip_pager_hint true;
+  Gaux.may (GWindow.toplevel editor) ~f:(fun x -> dialog#set_transient_for x#as_window);
   let vbox = dialog#vbox in
   let align = GBin.alignment ~xalign:0.5 ~packing:vbox#add ~show:false () in
   let hbox = GPack.hbox ~spacing:3 ~packing:align#add () in

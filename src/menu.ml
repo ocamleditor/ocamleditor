@@ -538,7 +538,7 @@ let help ~browser ~group ~flags items =
   (*end;*)
   let _ = GMenu.separator_item ~packing:menu#add () in
   let about = GMenu.menu_item ~label:(sprintf "About %s..." About.program_name) ~packing:menu#add () in
-  ignore (about#connect#activate ~callback:Menu_help.about);
+  ignore (about#connect#activate ~callback:(Menu_help.about editor));
   help
 ;;
 
