@@ -24,7 +24,6 @@ open Printf
 open GdkKeysyms
 open GUtil
 open Gobject
-open Find_text
 open Miscellanea
 open Location
 open Lexing

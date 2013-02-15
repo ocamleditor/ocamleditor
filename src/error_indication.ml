@@ -26,7 +26,8 @@ open Miscellanea
 let forward_non_blank iter =
   let rec f it =
     let stop = it#forward_char in
-    if List.for_all ((<>) (it#get_text ~stop)) [" "; "\t"; "\r"] then it
+    let ch = it#get_text ~stop in
+    if List.for_all ((<>) ch) [" "; "\t"; "\r"] then it
     else f stop
   in
   f iter

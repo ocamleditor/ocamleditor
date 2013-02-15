@@ -22,12 +22,29 @@
 
 open Printf
 open Text_util
+open Miscellanea
 
 (** Buffer *)
 class buffer =
   let word_bound = Miscellanea.regexp "\\b" in
-fun ?buffer ?file () ->
+fun ?project ?buffer ?file () ->
   let buffer = match buffer with None -> GText.buffer () | Some b -> b in
+  let create_tmp_filename () = Filename.temp_file "buffer-" ".tmp", None in
+  let tmp_filename, project_tmp_path =
+    match project with
+      | Some project ->
+        begin
+          match file with
+            | Some file ->
+              begin
+                match Project.tmp_of_abs project file#path with
+                  | None -> create_tmp_filename ()
+                  | (Some (tmp, relname) as temp) -> tmp // relname, temp
+              end;
+            | _ -> create_tmp_filename ()
+        end;
+      | _ -> create_tmp_filename ()
+  in
 object (self)
   inherit GText.buffer buffer#as_buffer
 
@@ -36,6 +53,16 @@ object (self)
   val mutable tab_spaces = true
   val mutable signal_handlers = []
   val mutable tag_ocamldoc_paragraph : GText.tag option = None
+  val mutable tmp_filename = tmp_filename
+  val mutable project_tmp_path = project_tmp_path
+
+  initializer
+    at_exit begin fun () ->
+      match project with
+        | None ->
+          if Sys.file_exists tmp_filename then Sys.remove tmp_filename else ()
+        | _ -> ()
+    end
 
   method tag_ocamldoc_paragraph = tag_ocamldoc_paragraph
 
@@ -122,12 +149,28 @@ object (self)
     let stop = self#get_iter `INSERT in
     self#select_range (stop#backward_chars (Glib.Utf8.length text)) stop;
     undo#end_block ();
-end
 
+
+  method save_buffer () =
+    let text = buffer#get_text () in
+    let text =
+      Glib.Convert.convert_with_fallback ~fallback:"?"
+        ~from_codeset:"UTF-8" ~to_codeset:Oe_config.ocaml_codeset text
+    in
+    Miscellanea.mkdir_p (Filename.dirname tmp_filename);
+    let chan = open_out_bin tmp_filename in
+    begin
+      try
+        output_string chan text;
+        close_out chan;
+        tmp_filename, project_tmp_path
+      with ex -> (close_out chan; raise ex)
+    end;
+end
 
 (** View *)
 and view ?project ?buffer () =
-  let buffer = match buffer with None -> new buffer () | Some b -> b in
+  let buffer = match buffer with None -> new buffer ?project () | Some b -> b in
   let view = GText.view ~buffer:buffer#as_gtext_buffer () in
   let create_highlight_current_line_tag () =
     buffer#create_tag ~name:(sprintf "highlight_current_line_tag_%f" (Unix.gettimeofday())) []
@@ -153,6 +196,8 @@ object (self)
   val mutable realized = false
   val mutable signal_id_highlight_current_line = None
   val mutable mark_occurrences_manager = None
+
+  method project = project
 
   method mark_occurrences_manager = match mark_occurrences_manager with Some x -> x | _ -> assert false
 

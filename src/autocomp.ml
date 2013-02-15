@@ -45,19 +45,10 @@ let compile_buffer ~project ~editor ~page ?(join=false) () =
   let activity_name = "Compiling " ^ page#get_filename ^ "..." in
   Activity.add Activity.Compile_buffer activity_name;
   let filename = page#get_filename in
-  let text = (page#buffer :> GText.buffer)#get_text () in
-  let text =
-    Glib.Convert.convert_with_fallback ~fallback:"?"
-      ~from_codeset:"UTF-8" ~to_codeset:Oe_config.ocaml_codeset text
-  in
   try
-    match Project.tmp_of_abs project filename with
-      | None -> ()
-      | Some (tmp, relname) ->
-        let tmp_filename = tmp // relname in
-        Miscellanea.mkdir_p (Filename.dirname tmp_filename);
-        let chan = open_out_bin tmp_filename in
-        lazy (output_string chan text) /*finally*/ lazy (close_out chan);
+    match page#buffer#save_buffer() with
+      | _, None -> ()
+      | _, Some (tmp, relpath) ->
         (* Compile *)
         let command = sprintf "%s %s -I ../%s %s ../%s/%s %s"
           project.Prj.autocomp_compiler
@@ -65,7 +56,7 @@ let compile_buffer ~project ~editor ~page ?(join=false) () =
           Project.tmp
           (Project.get_search_path_i_format project)
           Project.tmp
-          relname
+          relpath
           (if App_config.application_debug then redirect_stderr else "")
         in
         let compiler_output = Buffer.create 101 in

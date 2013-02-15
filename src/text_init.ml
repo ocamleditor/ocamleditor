@@ -31,8 +31,14 @@ let key_press view =
     match state with
       | [] ->
         if key = _Tab then begin
-          view#tbuffer#indent ?decrease:None ();
-          view#draw_current_line_background ?force:(Some true) (view#buffer#get_iter `INSERT);
+          let ocp_indent_applied =
+            if Oe_config.ocp_indent_tab_key_enabled && Oe_config.ocp_indent_version <> None
+            then (Ocp_indent.indent ~view ()) else false
+          in
+          if not ocp_indent_applied then begin
+            view#tbuffer#indent ?decrease:None ();
+            view#draw_current_line_background ?force:(Some true) (view#buffer#get_iter `INSERT);
+          end;
           true
         end else if key = _Return || key = _BackSpace then begin
           Gmisclib.Idle.add ~prio:100 begin fun () ->
@@ -45,11 +51,11 @@ let key_press view =
         else false
       | [`MOD2] when key = _igrave ->
         view#buffer#delete ~start:(view#buffer#get_iter `INSERT) ~stop:(view#buffer#get_iter `SEL_BOUND);
-        view#buffer#insert "~";
+        view#buffer#insert ?iter:None ?tag_names:None ?tags:None "~";
         true
       | [`MOD2] when key = _apostrophe ->
         view#buffer#delete ~start:(view#buffer#get_iter `INSERT) ~stop:(view#buffer#get_iter `SEL_BOUND);
-        view#buffer#insert "`";
+        view#buffer#insert ?iter:None ?tag_names:None ?tags:None "`";
         true
       | [`CONTROL] when key = _Up -> ignore (view#scroll `UP); true
       | [`CONTROL] when key = _Down -> ignore (view#scroll `DOWN); true

@@ -52,6 +52,14 @@ let create ~editor ~page () =
   let select_all = GMenu.image_menu_item ~stock:`SELECT_ALL ~packing:gmenu#append () in
   gmenu#append (GMenu.separator_item ());
   (*  *)
+  if Oe_config.ocp_indent_version <> None then begin
+    let indent_all = GMenu.image_menu_item ~label:"Indent All" ~packing:gmenu#append () in
+    ignore (indent_all#connect#activate ~callback:begin fun () ->
+      editor#with_current_page (fun page -> ignore (Ocp_indent.indent ~view:page#view ~all:true ()));
+    end);
+    gmenu#append (GMenu.separator_item ());
+  end;
+  (*  *)
   let eval_in_toplevel = GMenu.image_menu_item ~label:"Eval in Toplevel" ~packing:gmenu#append () in
   eval_in_toplevel#set_image (GMisc.image ~stock:`EXECUTE ~icon_size:`MENU ())#coerce;
   ignore (eval_in_toplevel#connect#activate ~callback:begin fun () ->

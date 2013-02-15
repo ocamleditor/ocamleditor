@@ -75,18 +75,33 @@ let edit ~browser ~group ~flags
   ignore (toggle_case#connect#activate ~callback:(fun () ->
     editor#with_current_page (fun page -> page#buffer#toggle_case ())));
   toggle_case#add_accelerator ~group ~modi:[`CONTROL] GdkKeysyms._u ~flags;
-  (** Indent selection *)
-  let indent_selection = GMenu.image_menu_item ~label:"Indent Selection" ~packing:menu#add () in
-  indent_selection#set_image (GMisc.image ~stock:`INDENT ~icon_size:`MENU ())#coerce;
-  ignore (indent_selection#connect#activate ~callback:(fun () ->
+  (** Increase Selection Indent *)
+  let increase_selection_indent = GMenu.image_menu_item ~label:"Increase Selection Indent" ~packing:menu#add () in
+  increase_selection_indent#set_image (GMisc.image ~stock:`INDENT ~icon_size:`MENU ())#coerce;
+  ignore (increase_selection_indent#connect#activate ~callback:(fun () ->
     editor#with_current_page (fun page -> page#buffer#indent ?decrease:(Some false) ())));
-  indent_selection#add_accelerator ~group ~modi:[] GdkKeysyms._Tab ~flags;
-  (** UnIndent selection *)
-  let unindent_selection = GMenu.image_menu_item ~label:"Unindent Line/Selection" ~packing:menu#add () in
-  unindent_selection#set_image (GMisc.image ~stock:`UNINDENT ~icon_size:`MENU ())#coerce;
-  ignore (unindent_selection#connect#activate ~callback:(fun () ->
+  increase_selection_indent#add_accelerator ~group ~modi:[`CONTROL] GdkKeysyms._k ~flags;
+  (** Decrease Selection Indent *)
+  let decrease_selection_indent = GMenu.image_menu_item ~label:"Decrease Line/Selection Indent" ~packing:menu#add () in
+  decrease_selection_indent#set_image (GMisc.image ~stock:`UNINDENT ~icon_size:`MENU ())#coerce;
+  ignore (decrease_selection_indent#connect#activate ~callback:(fun () ->
     editor#with_current_page (fun page -> page#buffer#indent ?decrease:(Some true) ())));
-  unindent_selection#add_accelerator ~group ~modi:[`SHIFT] GdkKeysyms._Tab ~flags;
+  decrease_selection_indent#add_accelerator ~group ~modi:[`SHIFT] GdkKeysyms._Tab ~flags;
+  (** Indent Selection (ocp-indent) *)
+  let indent_selection = ref None in
+  let indent_all = ref None in
+  if Oe_config.ocp_indent_version <> None then begin
+    let item = GMenu.image_menu_item ~label:"Indent Line/Selection" ~packing:menu#add () in
+    let ocp_indent all page = ignore (Ocp_indent.indent ~view:page#view ~all ()) in
+    indent_selection := Some item;
+    (*item#set_image (GMisc.image ~stock:`INDENT ~icon_size:`MENU ())#coerce;*)
+    ignore (item#connect#activate ~callback:(fun () -> editor#with_current_page (ocp_indent false)));
+    item#add_accelerator ~group ~modi:[] GdkKeysyms._Tab ~flags;
+    let item = GMenu.image_menu_item ~label:"Indent All" ~packing:menu#add () in
+    indent_all := Some item;
+    (*item#set_image (GMisc.image ~stock:`INDENT ~icon_size:`MENU ())#coerce;*)
+    ignore (item#connect#activate ~callback:(fun () -> editor#with_current_page (ocp_indent true)));
+  end;
   (** Templates *)
   let templates = GMenu.menu_item ~label:"Templates..." ~packing:menu#add () in
   ignore (templates#connect#activate ~callback:(fun () ->
@@ -140,19 +155,21 @@ let edit ~browser ~group ~flags
       undo#misc#set_sensitive false;
       redo#misc#set_sensitive false;
     end;
-    List.iter (fun i -> i#misc#set_sensitive has_current_page) [
-      (select_word :> GMenu.menu_item);
-      (move_par_expr :> GMenu.menu_item);
-      (select_par_expr :> GMenu.menu_item);
-      (comment :> GMenu.menu_item);
-      (toggle_case :> GMenu.menu_item);
-      (templates :> GMenu.menu_item);
-      (complet :> GMenu.menu_item);
-      (annot_type :> GMenu.menu_item);
-      (to_shell :> GMenu.menu_item);
-      (select_all :> GMenu.menu_item);
-      (indent_selection :> GMenu.menu_item);
-      (unindent_selection :> GMenu.menu_item);
+    List.iter (function Some i -> i#misc#set_sensitive has_current_page | _ -> ()) [
+      Some (select_word :> GMenu.menu_item);
+      Some (move_par_expr :> GMenu.menu_item);
+      Some (select_par_expr :> GMenu.menu_item);
+      Some (comment :> GMenu.menu_item);
+      Some (toggle_case :> GMenu.menu_item);
+      Some (templates :> GMenu.menu_item);
+      Some (complet :> GMenu.menu_item);
+      Some (annot_type :> GMenu.menu_item);
+      Some (to_shell :> GMenu.menu_item);
+      Some (select_all :> GMenu.menu_item);
+      Some (increase_selection_indent :> GMenu.menu_item);
+      Some (decrease_selection_indent :> GMenu.menu_item);
+      (match !indent_selection with Some item -> Some (item :> GMenu.menu_item) | _ -> None);
+      (match !indent_all with Some item -> Some (item :> GMenu.menu_item) | _ -> None);
     ];
     editor#with_current_page begin fun page ->
       let name = page#get_filename in
@@ -165,7 +182,7 @@ let edit ~browser ~group ~flags
         (to_shell :> GMenu.menu_item);
       ];
       List.iter (fun x -> x#misc#set_sensitive page#buffer#has_selection)
-        [toggle_case#coerce; indent_selection#coerce];
+        [toggle_case#coerce; increase_selection_indent#coerce];
       let has_tag_delim = page#view#current_matching_tag_bounds <> [] in
       move_par_expr#misc#set_sensitive has_tag_delim;
       select_par_expr#misc#set_sensitive has_tag_delim;

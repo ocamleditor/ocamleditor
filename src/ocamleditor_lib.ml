@@ -27,7 +27,7 @@ open Oe_config
 
 let _ = if true || App_config.application_debug then begin
   let copyright = Str.replace_first (Str.regexp_string "©") "(c)" About.copyright in
-  Printf.printf "\n%s %s\n%s\n\n%!" About.program_name About.version copyright;
+  Printf.printf "\n%s %s\n\n%!" About.program_name About.version (*copyright*);
   let ocaml_version = Str.global_replace
     (Str.regexp "\n") " - " (Str.global_replace (Str.regexp "\n$") "" (Cmd.expand "ocamlc -v")) in
   let a, b, c = GMain.Main.version in
@@ -40,6 +40,7 @@ let _ = if true || App_config.application_debug then begin
   ] @
   (if is_win32 then ["oeproc", oeproc_command] else []) @ [
     "dot", (Opt.default dot_version "<Not Found>");
+    "ocp-indent", (Opt.default ocp_indent_version "<Not Found>");
     "GTK Version", (sprintf "%d.%d.%d" a b c);
     "Glib Charset", (sprintf "%b, %s" Convert.glib_is_utf8 Convert.glib_charset);
     "Locale Charset", (sprintf "%b, %s" Convert.locale_is_utf8 Convert.locale_charset);

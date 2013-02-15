@@ -34,7 +34,7 @@ class buffer ?project ?file ?(lexical_enabled=false) () =
     filename ^^ ".ml" || filename ^^ ".mli" || filename ^^ ".mll" || filename ^^ ".mly"
   in
 object (self)
-  inherit Text.buffer ?file () as super
+  inherit Text.buffer ?project ?file () as super
   val mutable lexical_enabled = (lexical_enabled || begin
     match file with
       | Some file when check_lexical_coloring_enabled file#name -> true

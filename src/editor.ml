@@ -412,7 +412,7 @@ object (self)
           done;
           !stop
       in
-      crono ~label:"Lexical.tag" (fun () -> Lexical.tag buffer ~start ~stop) ()
+      Lexical.tag buffer ~start ~stop 
       end ()
 
     method load_page ?(scroll=true) (page : Editor_page.page) =

@@ -46,6 +46,9 @@ let ocamleditor_user_home =
 
 let dot_viewer : [`DEFAULT | `PDF]       = `DEFAULT
 let pdf_viewer                           = if is_win32 then "" else "xpdf"
+let ocp_indent_tab_key_enabled           = true
+let ocp_indent_config                    = "with=2"
+let ocp_indent_empty_line : [`INDENT | `ALIGN] = `INDENT
 let autosave_enabled                     = true
 let autosave_interval                    = 5_000 (* milliseconds *)
 let autosave_keep_backup                 = 3. *. 24. *. 60. *. 60.  (* 3 days, in milliseconds *)
@@ -205,7 +208,12 @@ let oeproc_command =
 
 let dot_version =
   let redirect_stderr = if Sys.os_type = "Win32" then " 2>&1" else " 2>&1" in
-  try (match kprintf Miscellanea.exec_lines "dot -V %s" redirect_stderr with ver :: [] -> Some ver | _ -> None)
+  try (match kprintf Miscellanea.exec_lines "dot -V %s" redirect_stderr with ver :: _ -> Some ver | _ -> None)
+  with Failure _ -> None
+
+let ocp_indent_version =
+  let redirect_stderr = if Sys.os_type = "Win32" then " 2>&1" else " 2>&1" in
+  try (match kprintf Miscellanea.exec_lines "ocp-indent --version %s" redirect_stderr with ver :: _ -> Some ver | _ -> None)
   with Failure _ -> None
 
 (** GTK config *)
