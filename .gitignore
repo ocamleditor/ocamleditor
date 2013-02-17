@@ -35,4 +35,5 @@ _oasis
 setup.data
 setup.log
 setup.ml
+src/resources.res
 

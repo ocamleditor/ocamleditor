@@ -28,6 +28,7 @@ let about editor () =
   let dialog = GWindow.about_dialog
       ~type_hint:(if Sys.os_type = "Win32" then `SPLASHSCREEN else `DIALOG)
       ~modal:true
+      ~width:300
       ~position:`CENTER
       ~icon:Icons.oe
       ~name:About.program_name
