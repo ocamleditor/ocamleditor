@@ -35,6 +35,6 @@ let whitespace_middot      = (*"."*) "\xC2\xB7"
 let whitespace_tab         = "\xC2\xBB"
 let whitespace_crlf        = "\xC2\xA4\xC2\xB6"
 let whitespace_lf          = "\xC2\xB6"
-let create_middot_string   = Miscellanea.Memo.fast ~f:(fun x ->
+let create_middot_string   = Miscellanea.Memo.create ~f:(fun x ->
   String.concat "" (Miscellanea.Xlist.list_full whitespace_middot x))
 

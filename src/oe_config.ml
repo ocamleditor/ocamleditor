@@ -206,13 +206,13 @@ let oeproc_command =
     find_best ~param:"" commands
   else "unused"
 
+let redirect_stderr = if Sys.os_type = "Win32" then " 2>&1" else " 2>&1"
+
 let dot_version =
-  let redirect_stderr = if Sys.os_type = "Win32" then " 2>&1" else " 2>&1" in
   try (match kprintf Miscellanea.exec_lines "dot -V %s" redirect_stderr with ver :: _ -> Some ver | _ -> None)
   with Failure _ -> None
 
 let ocp_indent_version =
-  let redirect_stderr = if Sys.os_type = "Win32" then " 2>&1" else " 2>&1" in
   try (match kprintf Miscellanea.exec_lines "ocp-indent --version %s" redirect_stderr with ver :: _ -> Some ver | _ -> None)
   with Failure _ -> None
 

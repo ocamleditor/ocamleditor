@@ -48,7 +48,7 @@ struct
 
   (**** Memoized rexgexp *)
 
-  let (~!) = Miscellanea.Memo.fast ~f:Str.regexp;;
+  let (~!) = Miscellanea.Memo.create ~f:Str.regexp;;
 
   (************************************************************ Path name *)
 

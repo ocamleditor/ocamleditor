@@ -114,9 +114,9 @@ module Action = struct
           | _ -> None
       in
       view#buffer#delete ~start ~stop;
-      let indent_step = String.make view#tbuffer#tab_width ' ' in
+      let indent_step = Alignment.mk_spaces view#tbuffer#tab_width in
       view#buffer#delete ~start ~stop;
-      let spaces = String.make indent ' ' in
+      let spaces = Alignment.mk_spaces indent in
       let new_text =
         match break_after_arrow with
           | None ->

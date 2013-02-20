@@ -94,6 +94,8 @@ Section "OCamlEditor (required)"
   WriteRegDWORD HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\OCamlEditor" "NoModify" 1
   WriteRegDWORD HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\OCamlEditor" "NoRepair" 1
   WriteUninstaller "uninstall.exe"
+  SetOutPath $INSTDIR\share\pixmaps
+	File "src\ocamleditor.ico" 
   
 SectionEnd
 
@@ -121,8 +123,8 @@ Section "Start Menu Shortcuts"
   CreateDirectory "$SMPROGRAMS\OCamlEditor"
   SetOutPath $INSTDIR\bin
   CreateShortCut "$SMPROGRAMS\OCamlEditor\Uninstall.lnk" "$INSTDIR\uninstall.exe" "" "$INSTDIR\uninstall.exe" 0
-  CreateShortCut "$SMPROGRAMS\OCamlEditor\OCamlEditor.lnk" "$INSTDIR\bin\ocamleditor.bat" "" "$INSTDIR\share\pixmaps\oe.ico" 0 SW_SHOWMINIMIZED
-  CreateShortCut "$DESKTOP\OCamlEditor.lnk" "$INSTDIR\bin\ocamleditor.bat" "" "$INSTDIR\share\pixmaps\oe.ico" 0 SW_SHOWMINIMIZED 
+  CreateShortCut "$SMPROGRAMS\OCamlEditor\OCamlEditor.lnk" "$INSTDIR\bin\ocamleditor.bat" "" "$INSTDIR\share\pixmaps\ocamleditor.ico" 0 SW_SHOWMINIMIZED
+  CreateShortCut "$DESKTOP\OCamlEditor.lnk" "$INSTDIR\bin\ocamleditor.bat" "" "$INSTDIR\share\pixmaps\ocamleditor.ico" 0 SW_SHOWMINIMIZED 
   
 SectionEnd
 

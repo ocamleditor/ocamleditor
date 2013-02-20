@@ -22,6 +22,7 @@
 
 
 open Printf
+open Miscellanea
 
 (** mk_ocp_indent_command *)
 let mk_ocp_indent_command ?lines ?(config=Oe_config.ocp_indent_config) filename =
@@ -37,6 +38,7 @@ let mk_ocp_indent_command ?lines ?(config=Oe_config.ocp_indent_config) filename 
   in
   sprintf "ocp-indent --numeric%s%s %s" lines config filename;;
 
+(** forward_non_blank *)
 let forward_non_blank iter =
   let is_dirty = ref false in
   let rec f it =
@@ -67,10 +69,16 @@ let indent ~view ?(all=false) () =
           let spaces = int_of_string spaces in
           let start = buffer#get_iter (`LINE (start_line + i)) in
           let stop, is_dirty = forward_non_blank start in
-          if stop#line_index - start#line_index <> spaces || is_dirty then begin
+          let existing = stop#line_index - start#line_index in
+          if existing < spaces && not is_dirty then begin
+            let start = buffer#get_iter (`LINE (start_line + i)) in
+            buffer#insert ?iter:(Some start) ?tag_names:None ?tags:None (Alignment.mk_spaces (spaces - existing));
+          end else if existing > spaces && not is_dirty then begin
+            buffer#delete ~start ~stop:(start#set_line_index (existing - spaces));
+          end else if (*existing <> spaces ||*) is_dirty then begin
             buffer#delete ~start ~stop;
             let start = buffer#get_iter (`LINE (start_line + i)) in
-            buffer#insert ?iter:(Some start) ?tag_names:None ?tags:None (String.make spaces ' ');
+            buffer#insert ?iter:(Some start) ?tag_names:None ?tags:None (Alignment.mk_spaces spaces);
           end
         end lines;
         (*  *)

@@ -152,6 +152,15 @@ module Memo =
           Hashtbl.add memo key data;
           data;;
 
+    let create ~f =
+      let memo = Hashtbl.create 7 in
+      fun key ->
+        try Hashtbl.find memo key
+        with Not_found ->
+          let data = f key in
+          Hashtbl.add memo key data;
+          data;;
+
     let sfast ~f =
       let memo = Hashtbl.create 1 in
       let count = ref 0 in

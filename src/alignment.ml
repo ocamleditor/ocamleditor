@@ -24,24 +24,26 @@ open Printf
 
 (** iter *)
 (*let re_align = Str.regexp_case_fold "^[\t ]*\\(\\(let\\)\\|\\(mutable\\)\\)?[\t ]*\\([a-z_0-9']+\\)[\t ]*\\([:=]+\\).*";;
-let iter ~(start : GText.iter) ~stop f =
-  let iter = ref start in
-  while !iter#compare stop < 0 do
-    let line = !iter#get_text ~stop:!iter#forward_to_line_end in
-    if Str.string_match re_align line 0 then begin
-      let w1 = Str.matched_group 4 line in
-      let w2 = Str.matched_group 5 line in
-      match !iter#forward_search w1 with
-        | Some (a, b) ->
-          begin
-            match b#forward_search w2 with
-              | Some (c, d) -> f a b c d;
-              | _ -> ()
-          end
-        | _ -> ()
-    end;
-    iter := !iter#forward_line;
-  done*)
+   let iter ~(start : GText.iter) ~stop f =
+   let iter = ref start in
+   while !iter#compare stop < 0 do
+   let line = !iter#get_text ~stop:!iter#forward_to_line_end in
+   if Str.string_match re_align line 0 then begin
+    let w1 = Str.matched_group 4 line in
+    let w2 = Str.matched_group 5 line in
+    match !iter#forward_search w1 with
+      | Some (a, b) ->
+        begin
+          match b#forward_search w2 with
+            | Some (c, d) -> f a b c d;
+            | _ -> ()
+        end
+      | _ -> ()
+   end;
+   iter := !iter#forward_line;
+   done*)
+
+let mk_spaces n = String.make n ' '
 
 let re_align = Str.regexp_case_fold "^[\t ]*\\(\\(let[\t ]+\\)\\|\\(mutable[\t ]+\\)\\)?\\([a-z_0-9']+\\)[\t ]*\\([:=]+\\).*";;
 let iter ~(start : GText.iter) ~stop f =
@@ -89,7 +91,7 @@ let align ~(buffer : GText.buffer) ~start ~stop =
   iter top bottom begin fun prefix a b c d ->
     let width = c#line_index - a#line_index + prefix in
     if !max_width > width then
-      (inserts := (c#line, c#line_index, (String.make (!max_width - width) ' ')) :: !inserts)
+      (inserts := (c#line, c#line_index, (mk_spaces (!max_width - width))) :: !inserts)
   end;
   if !inserts = [] then (collapse buffer top bottom) else begin
     List.iter begin fun (line, index, spaces) ->
@@ -117,7 +119,7 @@ let indent_matching_previous ~(buffer : GText.buffer) =
         let prev = if prev#line_index = 0 && prev#char <> 32 && prev#char <> 9 then prev else prev#forward_find_char (fun x -> x <> 32 && x <> 9) in
         let length = prev#line_index - ins#line_index in
         if length > 0 then begin
-          let spaces = String.make length ' ' in
+          let spaces = mk_spaces length in
           buffer#insert spaces;
           true
         end else false
@@ -127,7 +129,7 @@ let indent_matching_previous ~(buffer : GText.buffer) =
 
 (** indent *)
 let indent ~buffer ?(decrease=false) () =
-  let mk_spaces length = String.make length (if buffer#tab_spaces then ' ' else '\t') in
+  let mk_spaces length = (if buffer#tab_spaces then mk_spaces length else String.make length '\t') in
   let i1, i2 = buffer#selection_bounds in
   buffer#undo#begin_block ~name:"indent";
   buffer#block_signal_handlers();
@@ -159,12 +161,12 @@ let indent ~buffer ?(decrease=false) () =
   end else begin
     (*let ins = buffer#get_iter `INSERT in*)
     let increase () =
-     (* Advance to the next indentation level *)
-     let spaces = mk_spaces buffer#tab_width in
-     tbuffer#insert spaces;
+      (* Advance to the next indentation level *)
+      let spaces = mk_spaces buffer#tab_width in
+      tbuffer#insert spaces;
     in
     (*if ins#ends_line && ins#line_index > 0 then (increase())
-    else*) if not (indent_matching_previous ~buffer:tbuffer)
+ngila  else*) if not (indent_matching_previous ~buffer:tbuffer)
     then increase();
     GtkSignal.stop_emit();
   end;

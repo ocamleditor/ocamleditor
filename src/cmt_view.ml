@@ -121,11 +121,11 @@ let col_default_sort   = cols#add Gobject.Data.int
 
 let string_rev str =
   let len = String.length str in
-  let rts = String.make len ' ' in
+  let rts = Alignment.mk_spaces len in
   for i = 0 to len - 1 do rts.[len - i - 1] <- str.[i] done;
   rts;;
 
-let string_rev = Miscellanea.Memo.fast ~f:string_rev;;
+let string_rev = Miscellanea.Memo.create ~f:string_rev;;
 
 let is_function type_expr =
   let rec f t =
