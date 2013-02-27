@@ -26,6 +26,7 @@ open Printf
 let (!$) = Filename.chop_extension
 let (//) = Filename.concat
 let (^^) = Filename.check_suffix
+let (<@) = List.mem
 let is_win32, win32 = (Sys.os_type = "Win32"), (fun a b -> match Sys.os_type with "Win32" -> a | _ -> b)
 let may opt f = match opt with Some x -> f x | _ -> ()
 let re_spaces = Str.regexp " +"

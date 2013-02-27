@@ -99,8 +99,8 @@ let link ~compilation ~compiler ~outkind ~lflags ~package ~includes ~libs ~outna
   let deps = String.concat " " deps in
   kprintf (exec (*command*) ?process_err) "%s%s %s %s -o %s %s %s %s"
     compiler
-    (if use_findlib && outkind = Executable then " -linkpkg" else "")
-    (match outkind with Library -> "-a" | Plugin -> "-shared" | Pack -> "-pack" | Executable -> "")
+    (if use_findlib && (outkind <@ [Executable; Plugin]) then " -linkpkg" else "")
+    (match outkind with Library -> "-a" | Plugin when opt -> "-shared" | Plugin -> "" | Pack -> "-pack" | Executable -> "")
     lflags
     outname
     includes
@@ -119,7 +119,8 @@ let get_output_name ~compilation ~outkind ~outname ~targets =
           | Library -> ".cma"
           | Executable when compilation = Native -> ".opt" ^ (win32 ".exe" "")
           | Executable -> win32 ".exe" ""
-          | Plugin -> ".cmxs"
+          | Plugin when compilation = Native -> ".cmxs"
+          | Plugin -> ".cma"
           | Pack -> ".cmx"
       in
       let name =
