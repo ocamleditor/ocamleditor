@@ -132,8 +132,3 @@ type browser_maximized_view_action = {
   mva_messages                : bool;
   mva_fullscreen              : bool;
 }
-
-
-
-
-

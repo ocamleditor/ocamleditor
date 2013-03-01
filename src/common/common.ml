@@ -25,7 +25,7 @@ open Dep
 open Quote
 open Cmd_line_args
 open Ocaml_config
-open File
+open File_util
 open List_opt
 open Argc
 

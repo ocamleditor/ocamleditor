@@ -107,7 +107,7 @@ let create_script () =
       "../build_script_util";
     ] in
     List.iter begin fun name ->
-      let buf = Util.replace_header (File.read (name ^ ".ml")) in
+      let buf = Util.replace_header (File_util.read (name ^ ".ml")) in
       let buf = Util.join_lines buf in
       let name = Filename.basename name in
       fprintf ochan "module %s = struct " (String.capitalize name);
@@ -120,7 +120,7 @@ let create_script () =
   with ex -> (finally(); raise ex);;
 
 let code_of_script () =
-  let buf = File.read filename in
+  let buf = File_util.read filename in
   let ochan = open_out_bin filename in
   let finally () = close_out_noerr ochan in
   try
@@ -131,7 +131,7 @@ let code_of_script () =
 
 let _ =
   pushd "oebuild";
-  Util.header := Buffer.contents (File.read (".."//".."//"header"));
+  Util.header := Buffer.contents (File_util.read (".."//".."//"header"));
   create_script ();
   code_of_script();
   let new_filename = ".."//filename in

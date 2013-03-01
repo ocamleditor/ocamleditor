@@ -469,7 +469,7 @@ object (self)
     let filter_dir d = not (List.mem d [".tmp"; "bak"]) in
     let do_search dirname =
       if filter_dir (Filename.basename dirname) then begin
-        let filenames = File.readdirs ~recursive:false filter dirname in
+        let filenames = File_util.readdirs ~recursive:false filter dirname in
         List.iter (fun x ->  Queue.add x queue) filenames;
         Hashtbl.replace model.rtimes dirname (Unix.gettimeofday());
       end
@@ -478,7 +478,7 @@ object (self)
       match !roots with
         | root :: tl ->
           roots := tl;
-          let dirs = File.readtree root in
+          let dirs = File_util.readtree root in
           List.iter begin fun dirname ->
             try
               let stat = Unix.stat dirname in

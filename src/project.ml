@@ -105,7 +105,7 @@ let create ~filename () =
     autocomp_compiler  = "";
     search_path        = [];
     in_source_path     = Miscellanea.filename_relative (root // src);
-    source_paths       = (try File.readtree (root // src) with Sys_error _ -> []);
+    source_paths       = (try File_util.readtree (root // src) with Sys_error _ -> []);
     can_compile_native = true;
     symbols            = {
       Oe.syt_table = [];
@@ -357,7 +357,7 @@ let load filename =
   proj;;
 
 (** backup_file *)
-let backup_file project (file : File.file) =
+let backup_file project (file : Editor_file.file) =
   let src = (project.root // src) in
   if starts_with src file#path then begin
     let rel = match Miscellanea.filename_relative src file#path with
@@ -369,9 +369,9 @@ let backup_file project (file : File.file) =
 (** rename_file. Updates project file on disk. Raise [Cannot_rename "..."] if [file] is read-only or
     the project file is read-only. *)
 let rename_file proj file new_name =
-  let project_file = File.create (filename proj) () in
-  if not project_file#is_writable then (raise (Cannot_rename "Cannot rename: project file is read-only."))
-  else if not file#is_writable then (raise (Cannot_rename "Cannot rename: file is read-only."))
+  let is_writeable = File_util.is_writeable (filename proj) in
+  if not is_writeable then (raise (Cannot_rename "Cannot rename: project file is read-only."))
+  else if not is_writeable then (raise (Cannot_rename "Cannot rename: file is read-only."))
   else (file#rename new_name)
 
 (** Adds filename to the open file list. *)
@@ -410,7 +410,7 @@ let refresh proj =
   proj.description <- np.description;
   proj.version <- np.version;
   proj.in_source_path <- Miscellanea.filename_relative (np.root // src);
-  proj.source_paths <- (try File.readtree (np.root // src) with Sys_error _ -> [])
+  proj.source_paths <- (try File_util.readtree (np.root // src) with Sys_error _ -> [])
 
 (** clear_cache *)
 let clear_cache proj =

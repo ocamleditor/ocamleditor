@@ -94,7 +94,7 @@ object (self)
   method tab_spaces = tab_spaces
   method set_tab_spaces x = tab_spaces <- x
 
-  method file : File.file option = file
+  method file : Editor_file.file option = file
 
   method select_all () = self#select_range self#start_iter self#end_iter
 

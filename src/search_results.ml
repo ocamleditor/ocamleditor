@@ -372,7 +372,7 @@ object (self)
                   | _ -> ()
               end
             | _ ->
-              ignore (editor#open_file ~active:false ~scroll_offset:0 ~offset:0 filename);
+              ignore (editor#open_file ~active:false ~scroll_offset:0 ~offset:0 ?remote:None filename);
               self#lines_selection_changed()
         end;
       | _ -> ()

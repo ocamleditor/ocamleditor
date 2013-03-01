@@ -41,10 +41,10 @@ let show ~editor ~page () =
         Gaux.may window#filename ~f:begin fun filename ->
           let buffer : GText.buffer = page#buffer#as_text_buffer#as_gtext_buffer in
           let write_file () =
-            File.write filename (buffer#get_text());
+            File_util.write filename (buffer#get_text());
             page#revert();
             (*editor#close page;*)
-            match editor#open_file ~active:true ~scroll_offset:0 ~offset:0 filename with
+            match editor#open_file ~active:true ~scroll_offset:0 ~offset:0 ?remote:None filename with
               | Some page ->
                 editor#load_page ?scroll:None page;
                 editor#goto_view page#view;

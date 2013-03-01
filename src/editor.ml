@@ -67,6 +67,8 @@ object (self)
 
   method paned = hpaned
 
+  method create_file ?parent name () = Editor_file.create ?parent name ()
+
   method clear_cache () =
     List.iter (fun (_, p) -> p#destroy()) pages_cache;
     pages_cache <- []
@@ -412,7 +414,7 @@ object (self)
           done;
           !stop
       in
-      Lexical.tag buffer ~start ~stop 
+      Lexical.tag buffer ~start ~stop
       end ()
 
     method load_page ?(scroll=true) (page : Editor_page.page) =
@@ -513,11 +515,11 @@ object (self)
       ignore (item#connect#activate ~callback:(fun () -> self#dialog_save_as page));
       let item = GMenu.image_menu_item ~label:(sprintf "Rename \xC2\xAB%s\xC2\xBB" basename) ~packing:menu#add () in
       ignore (item#connect#activate ~callback:(fun () -> self#dialog_rename page));
-      Gaux.may page#file ~f:(fun file -> item#misc#set_sensitive file#is_writable);
+      Gaux.may page#file ~f:(fun file -> item#misc#set_sensitive file#is_writeable);
       let item = GMenu.image_menu_item ~label:(sprintf "Delete \xC2\xAB%s\xC2\xBB" basename) ~packing:menu#add () in
       item#set_image (GMisc.image ~stock:`DELETE ~icon_size:`MENU ())#coerce;
       ignore (item#connect#activate ~callback:self#dialog_delete_current);
-      Gaux.may page#file ~f:(fun file -> item#misc#set_sensitive file#is_writable);
+      Gaux.may page#file ~f:(fun file -> item#misc#set_sensitive file#is_writeable);
       let _ = GMenu.separator_item ~packing:menu#add () in
       let item = GMenu.image_menu_item ~label:(sprintf "Compile \xC2\xAB%s\xC2\xBB" basename) ~packing:menu#add () in
       item#set_image (GMisc.image ~pixbuf:Icons.compile_file_16 ())#coerce;
@@ -538,7 +540,7 @@ object (self)
       end else (page#error_indication#hide_tooltip ~force:false ());
       false;
 
-    method open_file ~active ~scroll_offset ~offset filename =
+    method open_file ~active ~scroll_offset ~offset ?remote filename =
       try
         let page =
           try
@@ -556,7 +558,7 @@ object (self)
                 add_page#call page;
                 page
               with Not_found -> begin
-                let file = File.create filename () in
+                let file = Editor_file.create ?remote filename () in
                 let page = new Editor_page.page ~file ~project ~scroll_offset ~offset ~editor:self () in
                 ignore (page#connect#file_changed ~callback:(fun _ -> switch_page#call page));
                 (** Tab Label with close button *)

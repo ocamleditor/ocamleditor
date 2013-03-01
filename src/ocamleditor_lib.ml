@@ -41,6 +41,7 @@ let _ = if true || App_config.application_debug then begin
   (if is_win32 then ["oeproc", oeproc_command] else []) @ [
     "dot", (Opt.default dot_version "<Not Found>");
     "ocp-indent", (Opt.default ocp_indent_version "<Not Found>");
+    "plink", (Opt.default plink_version "<Not Found>");
     "GTK Version", (sprintf "%d.%d.%d" a b c);
     "Glib Charset", (sprintf "%b, %s" Convert.glib_is_utf8 Convert.glib_charset);
     "Locale Charset", (sprintf "%b, %s" Convert.locale_is_utf8 Convert.locale_charset);
@@ -53,6 +54,7 @@ let _ = if true || App_config.application_debug then begin
   print_newline();
 end
 
+(** main *)
 let main () = begin
   Browser.browser#window#present();
   (*

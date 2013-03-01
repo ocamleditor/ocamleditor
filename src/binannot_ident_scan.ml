@@ -616,7 +616,7 @@ let scan ~project ~filename ?compile_buffer () =
 
 (** scan_project_files *)
 let scan_project_files ~project ?(sort=true) f =
-  let src_files = File.readdirs ~links:false (Some (fun x -> x ^^ ".ml")) (project.Prj.root // Project.src) in
+  let src_files = File_util.readdirs ~links:false (Some (fun x -> x ^^ ".ml")) (project.Prj.root // Project.src) in
   let src_files = if sort then List.sort compare src_files else src_files in
   List.fold_left begin fun acc filename ->
     scan ~project ~filename ();

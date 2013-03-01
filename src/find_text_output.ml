@@ -414,12 +414,12 @@ object (self)
     | Project_source ->
       self#find_in_path'
         ~recursive:self#options.recursive
-        ?pattern:(Gaux.may_map self#options.pattern ~f:File.Util.unix_regexp)
+        ?pattern:(Gaux.may_map self#options.pattern ~f:File_util.Regexp.unix_regexp)
         [Project.path_src project]
     | Specified spec_path ->
       self#find_in_path'
         ~recursive:self#options.recursive
-        ?pattern:(Gaux.may_map self#options.pattern ~f:File.Util.unix_regexp)
+        ?pattern:(Gaux.may_map self#options.pattern ~f:File_util.Regexp.unix_regexp)
         [spec_path]
     | Only_open_files ->
       List.iter (fun page (*: Editor_page.page)*) ->
@@ -432,7 +432,7 @@ object (self)
       let dirs, files = List.partition (fun x ->  Sys.file_exists x && Sys.is_directory x) entries in
       let files =
         match pattern with
-          | Some pat -> List.filter (File.Util.exact_match ~pat) files
+          | Some pat -> List.filter (File_util.Regexp.exact_match ~pat) files
           | _ -> files
       in
       let old_hits = hits in
@@ -477,7 +477,7 @@ object (self)
         let pagefile = `FILENAME filename in
         let page = match editor#get_page pagefile with
           | None ->
-            ignore (editor#open_file ~active:false ~scroll_offset:0 ~offset:0 filename);
+            ignore (editor#open_file ~active:false ~scroll_offset:0 ~offset:0 ?remote:None filename);
             begin
               match editor#get_page pagefile with
                 | None -> assert false
@@ -658,7 +658,7 @@ object (self)
     try
       let lines_involved = res.lines in
       let filename = res.filename in
-      ignore (editor#open_file ~active:true ~scroll_offset:0 ~offset:0 filename);
+      ignore (editor#open_file ~active:true ~scroll_offset:0 ~offset:0 ?remote:None filename);
       let page =
         match editor#get_page (`FILENAME filename)
         with None -> raise Not_found | Some page -> page
@@ -705,7 +705,7 @@ object (self)
       n_rows <- n_rows + 1;
       (*(*GtkThread.async*) self#place_marks res;*)
     end results;
-    let get_text filename = Buffer.contents (File.read filename) in
+    let get_text filename = Buffer.contents (File_util.read filename) in
     let get_text = Miscellanea.Memo.create ~f:get_text in
     let get_comments filename =
       if List.exists ((^^) filename) [".ml"; ".mli"; ".mll"; ".mly"] then

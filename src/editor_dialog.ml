@@ -71,7 +71,7 @@ let file_select ~editor () =
     List.iter begin fun path ->
       let row = model#get_iter path in
       let filename = model#get ~row ~column:col_path in
-      ignore (editor#open_file ~active:true ~scroll_offset:0 ~offset:0 filename)
+      ignore (editor#open_file ~active:true ~scroll_offset:0 ~offset:0 ?remote:None filename)
     end view#selection#get_selected_rows;
     window#destroy()
   in
@@ -81,7 +81,7 @@ let file_select ~editor () =
     List.iter begin fun path ->
       let row = model#get_iter path in
       let filename = model#get ~row ~column:col_path in
-      let page = editor#open_file ~active:true ~scroll_offset:0 ~offset:0 filename in
+      let page = editor#open_file ~active:true ~scroll_offset:0 ~offset:0 ?remote:None filename in
       Gaux.may (editor#get_page `ACTIVE) ~f:(fun p -> ignore (editor#dialog_confirm_close p));
       closing := row :: !closing;
     end view#selection#get_selected_rows;
@@ -177,7 +177,7 @@ let file_open ~editor () =
   match dialog#run () with
     | `OK ->
       List.iter (fun filename ->
-        ignore (editor#open_file ~active:true ~scroll_offset:0 ~offset:0 filename)) dialog#get_filenames;
+        ignore (editor#open_file ~active:true ~scroll_offset:0 ~offset:0 ?remote:None filename)) dialog#get_filenames;
       dialog#destroy()
     | _ -> dialog#destroy()
 

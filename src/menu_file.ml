@@ -37,7 +37,7 @@ let file_recent_callback ~(file_recent_menu : GMenu.menu) editor =
       let mi = GMenu.menu_item ~label ~packing:(file_recent_menu#insert ~pos:1) () in
       recent_items := mi :: !recent_items;
       ignore (mi#connect#activate ~callback:(fun () ->
-        ignore (editor#open_file ~active:true ~scroll_offset:0 ~offset:0 filename)));
+        ignore (editor#open_file ~active:true ~scroll_offset:0 ~offset:0 ?remote:None filename)));
       if !count > 30 then (raise Exit)
     end (List.rev editor#file_history.File_history.content);
   with Exit -> ()
@@ -68,6 +68,18 @@ let file ~browser ~group ~flags items =
     ~label:"Open File..." ~packing:menu#add () in
   open_file#add_accelerator ~group ~modi:[`CONTROL] GdkKeysyms._o ~flags;
   ignore (open_file#connect#activate ~callback:editor#dialog_file_open);
+  begin
+    match !Plugins.remote with
+      | None -> ()
+      | Some plugin ->
+        (** Open remote... *)
+        let open_remote = GMenu.image_menu_item ~label:"Open Remote File..." ~packing:menu#add () in
+        ignore (open_remote#connect#activate ~callback:begin fun () ->
+            let module Remote = (val plugin) in
+            let file = Remote.create ~host:"gioia-devel" ~user:"" ~pwd:"" ~dirname:"/home/fran" ~basename:"dos2unix.ml" in
+            Printf.printf "%s\n%!" (file#read);
+          end);
+  end;
   (** Recent Files... *)
   let file_recent = GMenu.menu_item ~label:"Recent Files" ~packing:menu#add () in
   let file_recent_menu = GMenu.menu ~packing:file_recent#set_submenu () in

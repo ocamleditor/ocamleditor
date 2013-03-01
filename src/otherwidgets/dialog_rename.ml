@@ -53,7 +53,7 @@ let show ~editor ~page () =
         Gaux.may window#filename ~f:begin fun filename ->
           let buffer : GText.buffer = page#buffer#as_text_buffer#as_gtext_buffer in
           let update_page () =
-            let file = File.create filename () in
+            let file = editor#create_file ?parent:None filename () in
             page#set_file (Some file);
             colorize page filename
           in
@@ -79,10 +79,10 @@ let show ~editor ~page () =
                 if Sys.file_exists page#get_filename then (Sys.remove page#get_filename);
                 (* Create a new file with the given filename *)
                 close_out_noerr (open_out_gen [Open_creat; Open_trunc] 0o664 filename);
-                File.write filename text;
+                File_util.write filename text;
                 update_page();
                 (* Reopen the page in the editor *)
-                match editor#open_file ~active:true ~scroll_offset:0 ~offset:0 filename with
+                match editor#open_file ~active:true ~scroll_offset:0 ~offset:0 ?remote:None filename with
                   | Some page ->
                     editor#load_page ?scroll:None page;
                     editor#goto_view page#view;

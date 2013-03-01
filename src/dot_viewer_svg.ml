@@ -134,7 +134,7 @@ module SVG = struct
       self#clear_cache ();
       GtkThread2.async begin fun () ->
         self#misc#show();
-        self#set_buffer (Buffer.contents (File.read filename));
+        self#set_buffer (Buffer.contents (File_util.read filename));
         self#redisplay zooms.(self#zoom);
         Array.iter begin fun zm ->
           Gmisclib.Idle.add ~prio:300 begin fun () ->

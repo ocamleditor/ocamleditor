@@ -216,6 +216,10 @@ let ocp_indent_version =
   try (match kprintf Miscellanea.exec_lines "ocp-indent --version %s" redirect_stderr with ver :: _ -> Some ver | _ -> None)
   with Failure _ -> None
 
+let plink_version =
+  try (match kprintf Miscellanea.exec_lines "plink -V %s" redirect_stderr with ver :: _ -> Some ver | _ -> None)
+  with Failure _ -> None
+
 (** GTK config *)
 (* Adjustments according to the GTK version *)
 let gtk_major, gtk_minor, _ = GMain.Main.version

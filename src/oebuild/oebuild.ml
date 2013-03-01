@@ -99,7 +99,7 @@ let link ~compilation ~compiler ~outkind ~lflags ~package ~includes ~libs ~outna
   let deps = String.concat " " deps in
   kprintf (exec (*command*) ?process_err) "%s%s %s %s -o %s %s %s %s"
     compiler
-    (if use_findlib && (outkind <@ [Executable; Plugin]) then " -linkpkg" else "")
+    (if use_findlib && (outkind <@ [Executable]) then " -linkpkg" else "")
     (match outkind with Library -> "-a" | Plugin when opt -> "-shared" | Plugin -> "" | Pack -> "-pack" | Executable -> "")
     lflags
     outname

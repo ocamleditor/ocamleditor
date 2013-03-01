@@ -315,7 +315,7 @@ object (self)
             stat.Unix.st_size;
         with _ -> ()
 
-  method backup () = Gaux.may file ~f:begin fun (file : File.file) ->
+  method backup () = Gaux.may file ~f:begin fun (file : Editor_file.file) ->
     Project.backup_file project file
   end
 
@@ -350,7 +350,7 @@ object (self)
     buffer#delete ~start:buffer#start_iter ~stop:buffer#end_iter;
     ignore (self#load());
     buffer#unblock_signal_handlers();
-    self#set_file (Some (File.create file#path ()));
+    self#set_file (Some (Editor_file.create file#path ()));
     (*  *)
     self#set_changed_after_last_autosave false;
     Autosave.delete ~filename:file#path ();
@@ -547,7 +547,7 @@ object (self)
           if buffer#modified then begin
             let message = "File\n" ^ self#get_filename^"\nchanged on disk, reload?" in
             let yes = "Reload", self#revert in
-            let no = "Do Not Reload", (fun () -> self#set_file (Some (File.create f#path ()))) in
+            let no = "Do Not Reload", (fun () -> self#set_file (Some (Editor_file.create f#path ()))) in
             ignore (Dialog.confirm ~title:"Reload File" ~message ~yes ~no self);
           end else self#revert();
         self#set_read_only f#is_readonly;
@@ -673,7 +673,7 @@ object (self)
 end
 
 (** Signals *)
-and file_changed () = object inherit [File.file option] signal () end
+and file_changed () = object inherit [Editor_file.file option] signal () end
 
 and signals ~file_changed =
 object

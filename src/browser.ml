@@ -168,7 +168,7 @@ object (self)
         incr i;
         active_exists := !active_exists || active;
         let active = active || (List.length proj.open_files = !i && not !active_exists) in
-        editor#open_file ~active ~scroll_offset ~offset filename;
+        editor#open_file ~active ~scroll_offset ~offset ?remote:None filename;
       end) proj.open_files
     in
     editor#set_history_switch_page_locked false;
@@ -674,7 +674,7 @@ object (self)
         menu.window_n_childs <- menu.window_n_childs + 1;
         let _ = item#connect#toggled ~callback:begin fun () ->
           if not menu.window_signal_locked then begin
-            ignore (editor#open_file ~active:true ~scroll_offset:0 ~offset:0 page#get_filename)
+            ignore (editor#open_file ~active:true ~scroll_offset:0 ~offset:0 ?remote:None page#get_filename)
           end
         end in
         menu.window_pages <- (page#misc#get_oid, item) :: menu.window_pages;
@@ -940,7 +940,33 @@ object (self)
   method project_history_changed = project_history_changed#connect ~after
 end
 
+(** load_plugin *)
+let load_plugin basename =
+  let load filename =
+    let filename = Dynlink.adapt_filename filename in
+    Printf.printf "Plugin: %s...\n%!" filename;
+    if Sys.file_exists filename then begin
+      Dynlink.allow_unsafe_modules true;
+      Dynlink.loadfile filename;
+      Printf.printf "Plugin: %s OK\n%!" filename;
+    end
+  in
+  let dirname = (Filename.dirname Oe_config.ocamleditor_bin) // "plugins" in
+  load (dirname // basename)
+
+(** browser *)
 let browser = begin
+  begin
+    try load_plugin "remote.cma";
+    with Dynlink.Error error -> begin
+        Printf.printf "Error loading plugin: %s\n%!" (Dynlink.error_message error);
+(*        Dialog.message
+          ~title:"Error while loading plugin"
+          ~message:(sprintf "%s" (Dynlink.error_message error))
+          `ERROR*)
+      end
+  end;
+  Printf.printf "===> %b\n%!" (!Plugins.remote <> None);
   Project_xml.init();
   Sys.chdir (Filename.dirname Sys.executable_name);
   (*GtkMain.Main.disable_setlocale();*)
