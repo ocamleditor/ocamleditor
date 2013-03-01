@@ -77,7 +77,7 @@ let file ~browser ~group ~flags items =
         ignore (open_remote#connect#activate ~callback:begin fun () ->
             let module Remote = (val plugin) in
             let open Editor_file in
-            let remote = {host = "gioia-devel"; user = "root"; pwd = "alias"} in
+            let remote = {host = ""; user = ""; pwd = ""} in
             ignore (editor#open_file ~active:true ~scroll_offset:0 ~offset:0 ?remote:(Some remote) "/home/fran/dos2unix.ml");
           end);
   end;
