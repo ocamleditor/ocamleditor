@@ -120,7 +120,7 @@ let apply ~project (view : Ocaml_text.view) (templ : Templates.t) =
             let selection = trim selection in
             buffer#insert (if selection = "" then def else selection)
           | CURRENT_FILENAME ->
-            Gaux.may view#obuffer#file ~f:(fun file -> buffer#insert file#name)
+            Gaux.may view#obuffer#file ~f:(fun file -> buffer#insert file#basename)
           | CURRENT_LINE -> buffer#insert (string_of_int ((buffer#get_iter `INSERT)#line + 1))
           | DESCRIPTION -> buffer#insert project.Prj.description
         end templ;

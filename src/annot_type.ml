@@ -47,7 +47,7 @@ object (self)
         | None -> None
         | Some file ->
           begin
-            match page#project.Prj.in_source_path file#path with
+            match page#project.Prj.in_source_path file#filename with
               | Some _ -> Binannot_type.find ~page ~iter ()
               | _ -> None
           end;

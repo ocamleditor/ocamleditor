@@ -37,7 +37,7 @@ object (self)
   inherit Text.buffer ?project ?file () as super
   val mutable lexical_enabled = (lexical_enabled || begin
     match file with
-      | Some file when check_lexical_coloring_enabled file#name -> true
+      | Some file when check_lexical_coloring_enabled file#basename -> true
       | _ -> false
   end)
   val mutable lexical_tags = []

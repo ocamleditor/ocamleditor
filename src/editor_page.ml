@@ -205,7 +205,7 @@ class page ?file ~project ~scroll_offset ~offset ~editor () =
 object (self)
   inherit GObj.widget vbox#as_widget
   val mutable view = text_view
-  val mutable file = file
+  val mutable file : Editor_file_type.abstract_file option = file
   val mutable read_only = false;
   val mutable tab_widget : (GBin.alignment * GButton.button * GMisc.label) option = None
   val mutable resized = false
@@ -250,13 +250,13 @@ object (self)
       match file_obj with
         | Some file_obj ->
           let _, _, label = self#tab_widget in
-          label#set_text (shortname file_obj#path);
+          label#set_text (shortname file_obj#filename);
           self#update_statusbar();
         | None -> ()
     end;
     file_changed#call file_obj
 
-  method get_filename = match file with None -> "untitled.ml" | Some f -> f#path
+  method get_filename = match file with None -> "untitled.ml" | Some f -> f#filename
   method view = view
   method ocaml_view = ocaml_view
   method buffer = buffer
@@ -271,7 +271,7 @@ object (self)
 
   method set_code_folding_enabled x =
     let is_ml = match file with None -> false | Some file ->
-      file#name ^^ ".ml" || file#name ^^ ".mli" in
+      file#basename ^^ ".ml" || file#basename ^^ ".mli" in
     ocaml_view#code_folding#set_enabled (x && is_ml);
 
   method redisplay () =
@@ -302,15 +302,15 @@ object (self)
       | None -> ()
       | Some file ->
         try
-          kprintf status_filename#set_label "%s" file#path;
-          let stat = Unix.stat file#path in
+          kprintf status_filename#set_label "%s" file#filename;
+          let stat = Unix.stat file#filename in
           let tm = Unix.localtime stat.Unix.st_mtime in
           let last_modified = sprintf "%4d-%d-%d %02d:%02d:%02d" (tm.Unix.tm_year + 1900)
             (tm.Unix.tm_mon + 1) tm.Unix.tm_mday tm.Unix.tm_hour tm.Unix.tm_min tm.Unix.tm_sec
           in
           kprintf status_filename#misc#set_tooltip_markup "%s%s\nLast modified: %s\n%d bytes"
-            (if project.Prj.in_source_path file#path <> None then "<b>" ^ project.Prj.name ^ "</b>\n" else "")
-            file#path
+            (if project.Prj.in_source_path file#filename <> None then "<b>" ^ project.Prj.name ^ "</b>\n" else "")
+            file#filename
             last_modified
             stat.Unix.st_size;
         with _ -> ()
@@ -328,7 +328,7 @@ object (self)
       Gmisclib.Idle.add (fun () -> self#compile_buffer ?join:None ());
       (* Delete existing recovery copy *)
       self#set_changed_after_last_autosave false;
-      Autosave.delete ~filename:file#path ();
+      Autosave.delete ~filename:file#filename ();
       (*  *)
       buffer#set_modified false;
     end
@@ -338,7 +338,7 @@ object (self)
     Project.save_bookmarks project;
     let old_markers =
       try
-        let bms = List.filter (fun bm -> bm.Oe.bm_filename = file#path) project.Prj.bookmarks in
+        let bms = List.filter (fun bm -> bm.Oe.bm_filename = file#filename) project.Prj.bookmarks in
         List.iter Bookmark.mark_to_offset bms;
         Xlist.filter_map (fun bm -> bm.Oe.bm_marker) bms
       with Not_found -> []
@@ -350,10 +350,10 @@ object (self)
     buffer#delete ~start:buffer#start_iter ~stop:buffer#end_iter;
     ignore (self#load());
     buffer#unblock_signal_handlers();
-    self#set_file (Some (Editor_file.create file#path ()));
+    self#set_file (Some file);
     (*  *)
     self#set_changed_after_last_autosave false;
-    Autosave.delete ~filename:file#path ();
+    Autosave.delete ~filename:file#filename ();
     (*  *)
     Gmisclib.Idle.add ~prio:300 (fun () -> vscrollbar#adjustment#set_value vv);
     Gmisclib.Idle.add ~prio:400 begin fun () ->
@@ -406,7 +406,7 @@ object (self)
             (* Bookmarks: offsets to marks *)
             let redraw = ref false in
             List.iter begin fun bm ->
-              if bm.Oe.bm_filename = file#path then
+              if bm.Oe.bm_filename = file#filename then
                 let mark = (Bookmark.offset_to_mark (self#buffer :> GText.buffer) bm) in
                 let callback =
                   if bm.Oe.bm_num >= Bookmark.limit then Some (fun _ ->
@@ -425,7 +425,7 @@ object (self)
           with Glib.Convert.Error (_, message) -> begin
             let message = if project.Prj.encoding <> Some "UTF-8" then (kprintf Convert.to_utf8
               "Cannot convert file\n\n%s\n\nfrom %s codeset to UTF-8.\n\n%s"
-                file#path
+                file#filename
                 (match project.Prj.encoding with None -> "Default" | Some x -> x)
                 message) else message
             in
@@ -543,11 +543,11 @@ object (self)
     (** After focus_in, check whether the file is changed on disk *)
     ignore (text_view#event#connect#after#focus_in ~callback:begin fun _ ->
       Gaux.may self#file ~f:begin fun f ->
-        if Sys.file_exists f#path && f#changed then
+        if (Sys.file_exists f#filename || f#is_remote) && f#changed then
           if buffer#modified then begin
             let message = "File\n" ^ self#get_filename^"\nchanged on disk, reload?" in
             let yes = "Reload", self#revert in
-            let no = "Do Not Reload", (fun () -> self#set_file (Some (Editor_file.create f#path ()))) in
+            let no = "Do Not Reload", (fun () -> self#set_file (Some f)) in
             ignore (Dialog.confirm ~title:"Reload File" ~message ~yes ~no self);
           end else self#revert();
         self#set_read_only f#is_readonly;

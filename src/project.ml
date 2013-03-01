@@ -244,7 +244,7 @@ let save ?editor proj =
       | Some editor ->
         proj.files <- List.map begin fun (file, (scroll_offset, offset)) ->
           file,
-          match editor#get_page (`FILENAME file#path) with
+          match editor#get_page (`FILENAME file#filename) with
             | None -> 0, 0
             | Some page ->
               let scroll_top = page#view#get_scroll_top () in
@@ -265,11 +265,11 @@ let save ?editor proj =
     proj.modified <- false;
     unload_path proj Config.load_path;
     proj.open_files <- List.rev_map begin fun (file, (scroll_offset, offset)) ->
-      let active = active_filename = file#path in
+      let active = active_filename = file#filename in
       begin
-        match proj.in_source_path file#path with
+        match proj.in_source_path file#filename with
           | None ->
-            if Filename.is_implicit file#path then (filename_unix_implicit file#path) else file#path
+            if Filename.is_implicit file#filename then (filename_unix_implicit file#filename) else file#filename
           | Some rel -> filename_unix_implicit rel
       end, scroll_offset, offset, active
     end proj.files;
@@ -359,12 +359,12 @@ let load filename =
 (** backup_file *)
 let backup_file project (file : Editor_file.file) =
   let src = (project.root // src) in
-  if starts_with src file#path then begin
-    let rel = match Miscellanea.filename_relative src file#path with
+  if starts_with src file#filename then begin
+    let rel = match Miscellanea.filename_relative src file#filename with
       | None -> assert false | Some x -> Filename.dirname x in
     let move_to = project.root // bak // rel in
     ignore (file#backup ~move_to ())
-  end else print_endline ("Cannot create backup copy of \""^(Filename.quote file#path)^"\".")
+  end else print_endline ("Cannot create backup copy of \""^(Filename.quote file#filename)^"\".")
 
 (** rename_file. Updates project file on disk. Raise [Cannot_rename "..."] if [file] is read-only or
     the project file is read-only. *)
@@ -382,7 +382,7 @@ let add_file proj ~scroll_offset ~offset file =
 
 (** Removes filename from the open file list. *)
 let remove_file proj filename =
-  proj.files <- List.filter (fun (f, _) -> f#path <> filename) proj.files
+  proj.files <- List.filter (fun (f, _) -> f#filename <> filename) proj.files
 
 (** Returns the names of the libraries of all targets. *)
 let get_libraries proj =

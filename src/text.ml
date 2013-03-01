@@ -37,7 +37,7 @@ fun ?project ?buffer ?file () ->
           match file with
             | Some file ->
               begin
-                match Project.tmp_of_abs project file#path with
+                match Project.tmp_of_abs project file#filename with
                   | None -> create_tmp_filename ()
                   | (Some (tmp, relname) as temp) -> tmp // relname, temp
               end;
@@ -674,7 +674,7 @@ object (self)
                   begin
                     match buffer#file with
                       | Some file ->
-                        let filename = file#path in
+                        let filename = file#filename in
                         while !iter#compare expose_bottom < 0 do
                           begin
                             match Project.find_bookmark project filename buffer#as_gtext_buffer !iter with

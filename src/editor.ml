@@ -67,7 +67,7 @@ object (self)
 
   method paned = hpaned
 
-  method create_file ?parent name () = Editor_file.create ?parent name ()
+  method create_file ?remote filename = Editor_file.create ?remote filename
 
   method clear_cache () =
     List.iter (fun (_, p) -> p#destroy()) pages_cache;
@@ -161,7 +161,7 @@ object (self)
           let uncapitalize = if Sys.os_type = "Win32" then String.uncapitalize else (fun x -> x) in
           let filename = uncapitalize filename in
           List_opt.find (fun p ->
-            match p#file with None -> false | Some f -> uncapitalize f#path = filename) pages
+            match p#file with None -> false | Some f -> uncapitalize f#filename = filename) pages
         | `NUM n -> List_opt.find (fun p -> p#get_oid = (notebook#get_nth_page n)#get_oid) pages
         | `VIEW v -> List_opt.find (fun p -> p#view#get_oid = v#get_oid) pages
 
@@ -558,7 +558,7 @@ object (self)
                 add_page#call page;
                 page
               with Not_found -> begin
-                let file = Editor_file.create ?remote filename () in
+                let file = Editor_file.create ?remote filename in
                 let page = new Editor_page.page ~file ~project ~scroll_offset ~offset ~editor:self () in
                 ignore (page#connect#file_changed ~callback:(fun _ -> switch_page#call page));
                 (** Tab Label with close button *)
@@ -676,7 +676,7 @@ object (self)
 
   method delete_page page =
     if page#buffer#modified then (self#save page);
-    Gaux.may page#file ~f:(fun file -> Sys.remove file#path);
+    Gaux.may page#file ~f:(fun file -> Sys.remove file#filename);
     self#close page;
     pages_cache <- List.filter (fun (_, p) -> p#misc#get_oid <> page#misc#get_oid) pages_cache;
     notebook#remove page#coerce;
@@ -704,15 +704,15 @@ object (self)
       match page#file with
         | None -> ()
         | Some file ->
-          pages_cache <- (file#path, page) :: pages_cache;
+          pages_cache <- (file#filename, page) :: pages_cache;
           page#misc#hide();
           (* File history *)
-          File_history.add file_history file#path;
+          File_history.add file_history file#filename;
           file_history_changed#call file_history;
           (* Delete existing recovery copy *)
           page#set_changed_after_last_autosave false;
           page#buffer#set_changed_after_last_autocomp false;
-          Autosave.delete ~filename:file#path ();
+          Autosave.delete ~filename:file#filename ();
     end;
 
   method redisplay_views () =

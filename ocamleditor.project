@@ -476,7 +476,7 @@
         </task>
       </external_tasks>
       <restrictions></restrictions>
-      <dependencies>14</dependencies>
+      <dependencies></dependencies>
     </target>
   </targets>
   <executables>

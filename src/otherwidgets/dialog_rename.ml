@@ -53,7 +53,7 @@ let show ~editor ~page () =
         Gaux.may window#filename ~f:begin fun filename ->
           let buffer : GText.buffer = page#buffer#as_text_buffer#as_gtext_buffer in
           let update_page () =
-            let file = editor#create_file ?parent:None filename () in
+            let file = editor#create_file ?remote:None filename in
             page#set_file (Some file);
             colorize page filename
           in

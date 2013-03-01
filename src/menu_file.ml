@@ -76,8 +76,9 @@ let file ~browser ~group ~flags items =
         let open_remote = GMenu.image_menu_item ~label:"Open Remote File..." ~packing:menu#add () in
         ignore (open_remote#connect#activate ~callback:begin fun () ->
             let module Remote = (val plugin) in
-            let file = Remote.create ~host:"gioia-devel" ~user:"" ~pwd:"" ~dirname:"/home/fran" ~basename:"dos2unix.ml" in
-            Printf.printf "%s\n%!" (file#read);
+            let open Editor_file in
+            let remote = {host = "gioia-devel"; user = "root"; pwd = "alias"} in
+            ignore (editor#open_file ~active:true ~scroll_offset:0 ~offset:0 ?remote:(Some remote) "/home/fran/dos2unix.ml");
           end);
   end;
   (** Recent Files... *)

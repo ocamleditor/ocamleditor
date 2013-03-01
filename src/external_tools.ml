@@ -67,7 +67,7 @@ let get_macros ~get_editor ~get_current_project () =
     let current_filename =
       match editor#get_page `ACTIVE with
         | None -> ""
-        | Some page -> (match page#file with None -> "" | Some file -> file#path)
+        | Some page -> (match page#file with None -> "" | Some file -> file#filename)
     in
     let macros = [
       "$(project_home)", project.root;
