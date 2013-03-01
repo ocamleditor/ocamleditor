@@ -77,8 +77,27 @@ let file ~browser ~group ~flags items =
         ignore (open_remote#connect#activate ~callback:begin fun () ->
             let module Remote = (val plugin) in
             let open Editor_file in
-            let remote = {host = ""; user = ""; pwd = ""} in
-            ignore (editor#open_file ~active:true ~scroll_offset:0 ~offset:0 ?remote:(Some remote) "/home/fran/dos2unix.ml");
+            let window = GWindow.window ~show:false () in
+            let vbox = GPack.vbox ~packing:window#add () in
+            let hbox = GPack.hbox ~packing:vbox#pack () in
+            let _ = GMisc.label ~text:"Host" ~packing:hbox#pack () in
+            let entry_host = GEdit.entry ~packing:hbox#pack () in
+            let hbox = GPack.hbox ~packing:vbox#pack () in
+            let _ = GMisc.label ~text:"Filename" ~packing:hbox#pack () in
+            let entry_filename = GEdit.entry ~packing:hbox#pack () in
+            let hbox = GPack.hbox ~packing:vbox#pack () in
+            let _ = GMisc.label ~text:"User" ~packing:hbox#pack () in
+            let entry_user = GEdit.entry ~packing:hbox#pack () in
+            let hbox = GPack.hbox ~packing:vbox#pack () in
+            let _ = GMisc.label ~text:"Passowrd" ~packing:hbox#pack () in
+            let entry_pwd = GEdit.entry ~visibility:false ~packing:hbox#pack () in
+            let button_ok = GButton.button ~stock:`OK ~packing:vbox#pack () in
+            ignore (button_ok#connect#clicked ~callback:begin fun () ->
+              let remote = {host = entry_host#text; user = entry_user#text; pwd = entry_pwd#text} in
+              ignore (editor#open_file ~active:true ~scroll_offset:0 ~offset:0 ?remote:(Some remote) entry_filename#text);
+              window#destroy();
+            end);
+            window#show();
           end);
   end;
   (** Recent Files... *)
