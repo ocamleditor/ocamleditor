@@ -39,6 +39,7 @@ let distclean () =
   let run_no_errors cmd = try run cmd with Script_error _ -> () in
   kprintf run_no_errors "%s *.exe *.bak *.annot *~" rm;
   let rmdir dir = if Sys.file_exists dir then (kprintf run_no_errors "%s %s" rmr dir) in
+  rmdir (Filename.parent_dir_name // "plugins");
   rmdir (Filename.parent_dir_name // "bak");
   rmdir (Filename.parent_dir_name // ".tmp");
   rmdir (Filename.parent_dir_name // ".cache");

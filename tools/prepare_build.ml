@@ -35,17 +35,6 @@ let exe = if is_win32 then ".exe" else ""
 let generate_oebuild_script () =
   run "ocaml -I common str.cma unix.cma common.cma generate_oebuild_script.ml";;
 
-let test_rsvg () =
-  let have_rsvg = Sys.command "ocamlfind query lablgtk2.rsvg" = 0 in
-  if not have_rsvg then
-    substitute ~filename:"ocamleditor_lib.ml" ~regexp:true
-      ["[ ]+Dot_viewer.device := (module Dot_viewer_svg.SVG : Dot_viewer.DEVICE);",
-        "  (\042Dot_viewer.device := (module Dot_viewer_svg.SVG : Dot_viewer.DEVICE);\042)"]
-   else
-    substitute ~filename:"ocamleditor_lib.ml" ~regexp:false
-      ["  (\042Dot_viewer.device := (module Dot_viewer_svg.SVG : Dot_viewer.DEVICE);\042)",
-        "  Dot_viewer.device := (module Dot_viewer_svg.SVG : Dot_viewer.DEVICE);"];;
-
 let prepare_build () =
   if Sys.ocaml_version < required_ocaml_version then begin
     eprintf "You are using OCaml-%s but version %s is required." Sys.ocaml_version required_ocaml_version;
@@ -57,13 +46,14 @@ let prepare_build () =
         run "cvtres /machine:x86 resource.res";
       with Script_error _ -> ()
     end;
+    if not (Sys.file_exists "../plugins") then (mkdir "../plugins");
     run "ocamllex err_lexer.mll";
     run "ocamlyacc err_parser.mly";
-    test_rsvg();
     substitute ~filename:"oe_config.ml" ~regexp:true
       ["let _ = Printexc\\.record_backtrace \\(\\(true\\)\\|\\(false\\)\\)$",
        (sprintf "let _ = Printexc.record_backtrace %b" !record_backtrace)];
-    try generate_oebuild_script() with Failure msg -> raise (Script_error 2)
+    (try generate_oebuild_script() with Failure msg -> raise (Script_error 2));
+    print_newline()
   end;;
 
 let _ = main ~default_target:prepare_build ~targets:[

@@ -55,6 +55,7 @@ let print_targets ochan targets external_tasks =
     kprintf print "  pp                   = %S;" tg.pp;
     kprintf print "  inline               = %s;" (match tg.inline with Some x -> sprintf "Some %d" x | _ -> "None");
     kprintf print "  nodep                = %b;" tg.nodep;
+    kprintf print "  dontlinkdep          = %b;" tg.dontlinkdep;
     kprintf print "  library_install_dir  = %S; (\x2A Relative to the Standard Library Directory \x2A)" tg.lib_install_path;
     kprintf print "  other_objects        = %S;" tg.other_objects;
     kprintf print "  external_tasks       = [%s];" (String.concat "; " (List.map (fun (n(*, _*)) -> string_of_int n) (List.assoc tg external_tasks)));
@@ -68,7 +69,7 @@ let print_targets ochan targets external_tasks =
 (** ident_of_arg *)
 let ident_of_arg =
   let normalize_ident =
-    let re = Str.regexp "[-]" in
+    let re = Str.regexp "[-.]" in
     Str.global_replace re "_"
   in
   fun arg -> sprintf "arg_%d_%s" arg.bsa_id (normalize_ident (Str.string_after arg.bsa_key 1));;

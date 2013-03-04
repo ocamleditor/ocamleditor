@@ -546,6 +546,7 @@ let exec ~editor ?use_thread ?(with_deps=false) task_kind target =
           | Library -> Oebuild.Library
           | Plugin -> Oebuild.Plugin
           | Pack -> Oebuild.Pack
+          | External -> Oebuild.External
         in
         List.iter begin fun compilation ->
           match Oebuild.get_output_name ~compilation ~outkind ~outname ~targets:files with

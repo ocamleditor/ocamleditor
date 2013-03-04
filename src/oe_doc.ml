@@ -51,7 +51,7 @@ struct
               (Quote.arg file)
               (if App_config.application_debug then Miscellanea.redirect_stderr else "")
             in
-            ignore (Oebuild_util.exec ~echo:App_config.application_debug ~join:true cmd);
+            ignore (Oebuild_util.exec ~verbose:App_config.application_debug ~join:true cmd);
             Some out_filename
           | _ -> None
       end;

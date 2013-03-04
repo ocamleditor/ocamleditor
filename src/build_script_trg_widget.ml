@@ -67,6 +67,7 @@ object (self)
         | Target.Library -> rend_pixbuf#set_properties [`VISIBLE true; `PIXBUF Icons.library; `XALIGN 0.0]
         | Target.Plugin -> rend_pixbuf#set_properties [`VISIBLE true; `PIXBUF Icons.plugin; `XALIGN 0.0]
         | Target.Pack -> rend_pixbuf#set_properties [`VISIBLE true; `PIXBUF Icons.library; `XALIGN 0.0]
+        | Target.External -> rend_pixbuf#set_properties [`VISIBLE true; `PIXBUF Icons.etask_16; `XALIGN 0.0]
     end;
     (*vc_install_task#set_cell_data_func rend_install_task begin fun model row ->
       let target = model#get ~row ~column:col_target in

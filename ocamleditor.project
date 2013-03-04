@@ -7,7 +7,7 @@
   <name>ocamleditor</name>
   <author>Francesco Tovagliari</author>
   <description/>
-  <version>1.8.0</version>
+  <version>1.9.0</version>
   <autocomp enabled="true" delay="0.764" cflags=""/>
   <targets>
     <target name="common" default="false" id="4">
@@ -23,6 +23,7 @@
       <pp></pp>
       <inline></inline>
       <nodep>false</nodep>
+      <dontlinkdep>false</dontlinkdep>
       <cflags>-g</cflags>
       <lflags>-g</lflags>
       <target_type>Library</target_type>
@@ -45,6 +46,7 @@
       <pp></pp>
       <inline></inline>
       <nodep>false</nodep>
+      <dontlinkdep>false</dontlinkdep>
       <cflags>-g</cflags>
       <lflags>-g</lflags>
       <target_type>Library</target_type>
@@ -79,6 +81,7 @@
       <pp></pp>
       <inline></inline>
       <nodep>false</nodep>
+      <dontlinkdep>false</dontlinkdep>
       <cflags>-w y</cflags>
       <lflags></lflags>
       <target_type>Library</target_type>
@@ -101,6 +104,7 @@
       <pp></pp>
       <inline></inline>
       <nodep>false</nodep>
+      <dontlinkdep>false</dontlinkdep>
       <cflags>-w y</cflags>
       <lflags></lflags>
       <target_type>Executable</target_type>
@@ -123,6 +127,7 @@
       <pp></pp>
       <inline></inline>
       <nodep>false</nodep>
+      <dontlinkdep>false</dontlinkdep>
       <cflags>-w s</cflags>
       <lflags></lflags>
       <target_type>Executable</target_type>
@@ -145,6 +150,7 @@
       <pp></pp>
       <inline></inline>
       <nodep>false</nodep>
+      <dontlinkdep>false</dontlinkdep>
       <cflags>-g</cflags>
       <lflags>-g</lflags>
       <target_type>Library</target_type>
@@ -167,6 +173,7 @@
       <pp></pp>
       <inline></inline>
       <nodep>false</nodep>
+      <dontlinkdep>false</dontlinkdep>
       <cflags>-w sy -g</cflags>
       <lflags>-w sy -g</lflags>
       <target_type>Library</target_type>
@@ -176,53 +183,20 @@
       <restrictions></restrictions>
       <dependencies></dependencies>
     </target>
-    <target name="ocamleditor-bytecode" default="true" id="0">
-      <byt>true</byt>
-      <opt>false</opt>
-      <libs>ocamlcommon dynlink odoc_info xml-light gmisclib common icons otherwidgets oebuildlib</libs>
-      <other_objects></other_objects>
-      <files>ocamleditor.ml</files>
-      <package>compiler-libs,lablgtk2,lablgtk2.rsvg,str</package>
-      <includes>+ocamldoc +xml-light gmisclib common icons otherwidgets oebuild </includes>
-      <thread>true</thread>
-      <vmthread>false</vmthread>
-      <pp></pp>
-      <inline></inline>
-      <nodep>false</nodep>
-      <cflags>-w syxm -g</cflags>
-      <lflags>-g</lflags>
-      <target_type>Executable</target_type>
-      <outname>ocamleditor</outname>
-      <lib_install_path></lib_install_path>
-      <external_tasks>
-        <task name="prepare-build">
-          <always_run_in_project>false</always_run_in_project>
-          <always_run_in_script>true</always_run_in_script>
-          <env replace="false"/>
-          <dir>..</dir>
-          <cmd>ocaml</cmd>
-          <args>
-            <arg enabled="true">tools/prepare_build.ml</arg>
-          </args>
-          <phase>Before_compile</phase>
-        </task>
-      </external_tasks>
-      <restrictions></restrictions>
-      <dependencies>4,10,7,5,6,8,9</dependencies>
-    </target>
-    <target name="ocamleditor-native" default="false" id="11">
+    <target name="ocamleditor" default="false" id="12">
       <byt>false</byt>
       <opt>true</opt>
-      <libs>ocamlcommon dynlink odoc_info xml-light gmisclib common icons otherwidgets oebuildlib</libs>
+      <libs>ocamlcommon dynlink odoc_info xml-light gmisclib common icons otherwidgets oebuildlib ocamleditor_lib</libs>
       <other_objects></other_objects>
       <files>ocamleditor.ml</files>
-      <package>compiler-libs,lablgtk2,lablgtk2.rsvg,str</package>
+      <package>compiler-libs,lablgtk2,str</package>
       <includes>+ocamldoc +xml-light gmisclib common icons otherwidgets oebuild </includes>
       <thread>true</thread>
       <vmthread>false</vmthread>
       <pp></pp>
       <inline>50</inline>
-      <nodep>false</nodep>
+      <nodep>true</nodep>
+      <dontlinkdep>false</dontlinkdep>
       <cflags>-w syxm -g</cflags>
       <lflags>-g</lflags>
       <target_type>Executable</target_type>
@@ -230,55 +204,45 @@
       <lib_install_path></lib_install_path>
       <external_tasks/>
       <restrictions></restrictions>
-      <dependencies>4,10,7,5,6,8,9,14</dependencies>
+      <dependencies>14,19,16</dependencies>
     </target>
-    <target name="ocamleditorLib" default="false" id="14">
-      <byt>false</byt>
-      <opt>true</opt>
-      <libs></libs>
+    <target name="ocamleditor-bytecode" default="true" id="0">
+      <byt>true</byt>
+      <opt>false</opt>
+      <libs>ocamlcommon dynlink odoc_info xml-light gmisclib common icons otherwidgets oebuildlib</libs>
       <other_objects></other_objects>
-      <files>ocamleditor_lib.ml</files>
-      <package>compiler-libs,lablgtk2,lablgtk2.rsvg,str</package>
+      <files>ocamleditor.ml</files>
+      <package>compiler-libs,lablgtk2,str</package>
       <includes>+ocamldoc +xml-light gmisclib common icons otherwidgets oebuild </includes>
       <thread>true</thread>
       <vmthread>false</vmthread>
       <pp></pp>
-      <inline>50</inline>
+      <inline></inline>
       <nodep>false</nodep>
+      <dontlinkdep>false</dontlinkdep>
       <cflags>-w syxm -g</cflags>
       <lflags>-g</lflags>
-      <target_type>Library</target_type>
-      <outname>ocamleditor_lib</outname>
+      <target_type>Executable</target_type>
+      <outname>ocamleditor</outname>
       <lib_install_path></lib_install_path>
-      <external_tasks>
-        <task name="prepare-build">
-          <always_run_in_project>false</always_run_in_project>
-          <always_run_in_script>true</always_run_in_script>
-          <env replace="false"/>
-          <dir>..</dir>
-          <cmd>ocaml</cmd>
-          <args>
-            <arg enabled="true">tools/prepare_build.ml</arg>
-          </args>
-          <phase>Before_compile</phase>
-        </task>
-      </external_tasks>
+      <external_tasks/>
       <restrictions></restrictions>
-      <dependencies>4,10,7,5,6,8,9</dependencies>
+      <dependencies>4,10,7,5,6,8,9,20,17,18</dependencies>
     </target>
-    <target name="ocamleditor-win32" default="false" id="15">
+    <target name="ocamleditor-msvc" default="false" id="15">
       <byt>false</byt>
       <opt>true</opt>
       <libs>resource.obj ocamlcommon dynlink odoc_info xml-light gmisclib common icons otherwidgets oebuildlib ocamleditor_lib</libs>
       <other_objects></other_objects>
       <files>ocamleditor.ml</files>
-      <package>compiler-libs,lablgtk2,lablgtk2.rsvg,str</package>
+      <package>compiler-libs,lablgtk2,str</package>
       <includes>+ocamldoc +xml-light gmisclib common icons otherwidgets oebuild </includes>
       <thread>true</thread>
       <vmthread>false</vmthread>
       <pp></pp>
       <inline>50</inline>
       <nodep>true</nodep>
+      <dontlinkdep>false</dontlinkdep>
       <cflags>-w syxm -g</cflags>
       <lflags>-g</lflags>
       <target_type>Executable</target_type>
@@ -286,21 +250,22 @@
       <lib_install_path></lib_install_path>
       <external_tasks/>
       <restrictions>IS_WIN32</restrictions>
-      <dependencies>14</dependencies>
+      <dependencies>14,19,16</dependencies>
     </target>
-    <target name="ocamleditor" default="false" id="12">
+    <target name="ocamleditor-native" default="false" id="11">
       <byt>false</byt>
       <opt>true</opt>
-      <libs>ocamlcommon dynlink odoc_info xml-light gmisclib common icons otherwidgets oebuildlib ocamleditor_lib</libs>
+      <libs>ocamlcommon dynlink odoc_info xml-light gmisclib common icons otherwidgets oebuildlib</libs>
       <other_objects></other_objects>
       <files>ocamleditor.ml</files>
-      <package>compiler-libs,lablgtk2,lablgtk2.rsvg,str</package>
+      <package>compiler-libs,lablgtk2,str</package>
       <includes>+ocamldoc +xml-light gmisclib common icons otherwidgets oebuild </includes>
       <thread>true</thread>
       <vmthread>false</vmthread>
       <pp></pp>
       <inline>50</inline>
-      <nodep>true</nodep>
+      <nodep>false</nodep>
+      <dontlinkdep>false</dontlinkdep>
       <cflags>-w syxm -g</cflags>
       <lflags>-g</lflags>
       <target_type>Executable</target_type>
@@ -308,7 +273,157 @@
       <lib_install_path></lib_install_path>
       <external_tasks/>
       <restrictions></restrictions>
-      <dependencies>14</dependencies>
+      <dependencies>14,19,16</dependencies>
+    </target>
+    <target name="ocamleditorLib" default="false" id="14">
+      <byt>false</byt>
+      <opt>true</opt>
+      <libs></libs>
+      <other_objects></other_objects>
+      <files>ocamleditor_lib.ml</files>
+      <package>compiler-libs,lablgtk2,str</package>
+      <includes>+ocamldoc +xml-light gmisclib common icons otherwidgets oebuild </includes>
+      <thread>true</thread>
+      <vmthread>false</vmthread>
+      <pp></pp>
+      <inline>50</inline>
+      <nodep>false</nodep>
+      <dontlinkdep>false</dontlinkdep>
+      <cflags>-w syxm -g</cflags>
+      <lflags>-g</lflags>
+      <target_type>Library</target_type>
+      <outname>ocamleditor_lib</outname>
+      <lib_install_path></lib_install_path>
+      <external_tasks/>
+      <restrictions></restrictions>
+      <dependencies>4,10,5,6,8,9,20</dependencies>
+    </target>
+    <target name="plugin-remote-bytecode" default="false" id="17">
+      <byt>true</byt>
+      <opt>false</opt>
+      <libs></libs>
+      <other_objects></other_objects>
+      <files>remote.ml</files>
+      <package>curl</package>
+      <includes>common</includes>
+      <thread>false</thread>
+      <vmthread>false</vmthread>
+      <pp></pp>
+      <inline></inline>
+      <nodep>false</nodep>
+      <dontlinkdep>true</dontlinkdep>
+      <cflags>-g</cflags>
+      <lflags>-g dllcurl-helper.dll curl.cma</lflags>
+      <target_type>Library</target_type>
+      <outname>../plugins/remote</outname>
+      <lib_install_path></lib_install_path>
+      <external_tasks/>
+      <restrictions>HAVE_FL_PKG(curl)</restrictions>
+      <dependencies></dependencies>
+    </target>
+    <target name="plugin-remote-native" default="false" id="16">
+      <byt>false</byt>
+      <opt>true</opt>
+      <libs></libs>
+      <other_objects></other_objects>
+      <files>remote.ml</files>
+      <package>curl</package>
+      <includes>common</includes>
+      <thread>false</thread>
+      <vmthread>false</vmthread>
+      <pp></pp>
+      <inline></inline>
+      <nodep>false</nodep>
+      <dontlinkdep>true</dontlinkdep>
+      <cflags>-g</cflags>
+      <lflags>-g curl.cmxa</lflags>
+      <target_type>Plugin</target_type>
+      <outname>../plugins/remote</outname>
+      <lib_install_path></lib_install_path>
+      <external_tasks/>
+      <restrictions>HAVE_FL_PKG(curl)</restrictions>
+      <dependencies></dependencies>
+    </target>
+    <target name="plugin-dotviewer-byetcode" default="false" id="18">
+      <byt>true</byt>
+      <opt>false</opt>
+      <libs></libs>
+      <other_objects></other_objects>
+      <files>dot_viewer_svg.ml</files>
+      <package>lablgtk2.rsvg</package>
+      <includes>common gmisclib</includes>
+      <thread>true</thread>
+      <vmthread>false</vmthread>
+      <pp></pp>
+      <inline></inline>
+      <nodep>false</nodep>
+      <dontlinkdep>true</dontlinkdep>
+      <cflags>-w syxm -g</cflags>
+      <lflags>-g lablrsvg.cma</lflags>
+      <target_type>Library</target_type>
+      <outname>../plugins/dot_viewer_svg</outname>
+      <lib_install_path></lib_install_path>
+      <external_tasks/>
+      <restrictions>HAVE_FL_PKG(lablgtk2.rsvg)</restrictions>
+      <dependencies></dependencies>
+    </target>
+    <target name="plugin-dotviewer-native" default="false" id="19">
+      <byt>false</byt>
+      <opt>true</opt>
+      <libs></libs>
+      <other_objects></other_objects>
+      <files>dot_viewer_svg.ml</files>
+      <package>lablgtk2.rsvg</package>
+      <includes>common gmisclib</includes>
+      <thread>true</thread>
+      <vmthread>false</vmthread>
+      <pp></pp>
+      <inline></inline>
+      <nodep>false</nodep>
+      <dontlinkdep>true</dontlinkdep>
+      <cflags>-w syxm -g</cflags>
+      <lflags>-g lablrsvg.cmxa</lflags>
+      <target_type>Plugin</target_type>
+      <outname>../plugins/dot_viewer_svg</outname>
+      <lib_install_path></lib_install_path>
+      <external_tasks/>
+      <restrictions>HAVE_FL_PKG(lablgtk2.rsvg)</restrictions>
+      <dependencies></dependencies>
+    </target>
+    <target name="prepare-build" default="false" id="20">
+      <byt>true</byt>
+      <opt>false</opt>
+      <libs></libs>
+      <other_objects></other_objects>
+      <files></files>
+      <package></package>
+      <includes></includes>
+      <thread>false</thread>
+      <vmthread>false</vmthread>
+      <pp></pp>
+      <inline></inline>
+      <nodep>false</nodep>
+      <dontlinkdep>false</dontlinkdep>
+      <cflags></cflags>
+      <lflags></lflags>
+      <target_type>External</target_type>
+      <outname></outname>
+      <lib_install_path></lib_install_path>
+      <external_tasks>
+        <task name="prepare-build">
+          <always_run_in_project>true</always_run_in_project>
+          <always_run_in_script>true</always_run_in_script>
+          <env replace="false"/>
+          <dir>..</dir>
+          <cmd>ocaml</cmd>
+          <args>
+            <arg enabled="true">tools/prepare_build.ml</arg>
+          </args>
+          <phase>Compile</phase>
+        </task>
+      </external_tasks>
+      <restrictions></restrictions>
+      <dependencies></dependencies>
     </target>
     <target name="tools" default="false" id="13">
       <byt>true</byt>
@@ -323,6 +438,7 @@
       <pp></pp>
       <inline></inline>
       <nodep>false</nodep>
+      <dontlinkdep>false</dontlinkdep>
       <cflags></cflags>
       <lflags></lflags>
       <target_type>Executable</target_type>
@@ -330,7 +446,7 @@
       <lib_install_path></lib_install_path>
       <external_tasks>
         <task name="<tools>">
-          <always_run_in_project>true</always_run_in_project>
+          <always_run_in_project>false</always_run_in_project>
           <always_run_in_script>false</always_run_in_script>
           <env replace="false"/>
           <dir></dir>
@@ -357,7 +473,7 @@
           <cmd>ocaml</cmd>
           <args>
             <arg enabled="true">mkversion.ml</arg>
-            <arg enabled="true">1.8.0</arg>
+            <arg enabled="true">1.9.0</arg>
           </args>
           <phase>Before_clean</phase>
         </task>
@@ -404,75 +520,7 @@
           <args>
             <arg enabled="true">tools/distclean.ml</arg>
           </args>
-          <phase></phase>
-        </task>
-      </external_tasks>
-      <restrictions></restrictions>
-      <dependencies></dependencies>
-    </target>
-    <target name="remote-native" default="false" id="16">
-      <byt>false</byt>
-      <opt>true</opt>
-      <libs></libs>
-      <other_objects></other_objects>
-      <files>remote.ml</files>
-      <package>curl</package>
-      <includes>common</includes>
-      <thread>false</thread>
-      <vmthread>false</vmthread>
-      <pp></pp>
-      <inline></inline>
-      <nodep>true</nodep>
-      <cflags></cflags>
-      <lflags>-verbose &quot;libcurl-helper.lib&quot; curl.lib curl.cmxa</lflags>
-      <target_type>Plugin</target_type>
-      <outname>remote</outname>
-      <lib_install_path></lib_install_path>
-      <external_tasks>
-        <task name="Deploy remote-native">
-          <always_run_in_project>true</always_run_in_project>
-          <always_run_in_script>true</always_run_in_script>
-          <env replace="false"/>
-          <dir></dir>
-          <cmd>cp</cmd>
-          <args>
-            <arg enabled="true">remote.cmxs ../plugins</arg>
-          </args>
-          <phase>After_compile</phase>
-        </task>
-      </external_tasks>
-      <restrictions></restrictions>
-      <dependencies>14</dependencies>
-    </target>
-    <target name="remote-bytecode" default="false" id="17">
-      <byt>true</byt>
-      <opt>false</opt>
-      <libs></libs>
-      <other_objects></other_objects>
-      <files>remote.ml</files>
-      <package>curl</package>
-      <includes>common</includes>
-      <thread>false</thread>
-      <vmthread>false</vmthread>
-      <pp></pp>
-      <inline></inline>
-      <nodep>true</nodep>
-      <cflags></cflags>
-      <lflags>-verbose dllcurl-helper.dll curl.cma</lflags>
-      <target_type>Library</target_type>
-      <outname>remote</outname>
-      <lib_install_path></lib_install_path>
-      <external_tasks>
-        <task name="Deploy remote-bytecode">
-          <always_run_in_project>true</always_run_in_project>
-          <always_run_in_script>true</always_run_in_script>
-          <env replace="false"/>
-          <dir></dir>
-          <cmd>cp</cmd>
-          <args>
-            <arg enabled="true">remote.cma ../plugins</arg>
-          </args>
-          <phase>After_compile</phase>
+          <phase>Before_clean</phase>
         </task>
       </external_tasks>
       <restrictions></restrictions>
@@ -506,23 +554,27 @@
       <target target_id="6" show="true"/>
       <target target_id="8" show="false"/>
       <target target_id="9" show="false"/>
+      <target target_id="12" show="true"/>
       <target target_id="0" show="true"/>
+      <target target_id="15" show="true"/>
       <target target_id="11" show="false"/>
       <target target_id="14" show="false"/>
-      <target target_id="15" show="true"/>
-      <target target_id="12" show="true"/>
+      <target target_id="17" show="false"/>
+      <target target_id="16" show="false"/>
+      <target target_id="18" show="false"/>
+      <target target_id="19" show="false"/>
+      <target target_id="20" show="true"/>
       <target target_id="13" show="false"/>
-      <target target_id="16" show="true"/>
     </targets>
     <args>
       <arg id="0" type="Bool" key="-record-backtrace" pass="-key value" command="build">
-        <task target_id="14" task_name="prepare-build"/>
+        <task/>
         <mode>&lt;ADD&gt;</mode>
         <default type="bool">true</default>
         <doc>Turn recording of exception backtraces on or off</doc>
       </arg>
       <arg id="1" type="Flag" key="-use-modified-gtkThread" pass="-key" command="build">
-        <task target_id="14" task_name="prepare-build"/>
+        <task/>
         <mode>&lt;ADD&gt;</mode>
         <default type="flag">false</default>
         <doc>Set this flag if you have Lablgtk-2.14.2 or earlier
@@ -542,11 +594,23 @@
         <doc>Install the gmisclib library (miscellaneous widgets 
              based on LablGtk2)</doc>
       </arg>
-      <arg id="4" type="String" key="-prefix" pass="-key value" command="uninstall">
+      <arg id="4" type="Flag" key="-nsis" pass="-key" command="install">
+        <task target_id="13" task_name="Install OCamlEditor"/>
+        <mode>&lt;ADD&gt;</mode>
+        <default type="flag">false</default>
+        <doc>Create a Win32 installer with NSIS</doc>
+      </arg>
+      <arg id="5" type="String" key="-prefix" pass="-key value" command="uninstall">
         <task target_id="13" task_name="Uninstall OCamlEditor"/>
         <mode>&lt;ADD&gt;</mode>
         <default type="string">/usr/local</default>
         <doc>Uninstallation prefix (Unix only)</doc>
+      </arg>
+      <arg id="6" type="Flag" key="-ver-1.8.0" pass="-key" command="uninstall">
+        <task target_id="13" task_name="Uninstall OCamlEditor"/>
+        <mode>&lt;ADD&gt;</mode>
+        <default type="flag">false</default>
+        <doc>Uninstall OCamlEditor ver. 1.8.0 or earlier</doc>
       </arg>
     </args>
     <commands>

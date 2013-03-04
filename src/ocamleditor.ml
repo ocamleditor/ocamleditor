@@ -21,8 +21,7 @@
 *)
 
 
-let _ =
-  Printexc.print Ocamleditor_lib.main ()
+let _ = Printexc.print Ocamleditor_lib.main ()
 
 
 

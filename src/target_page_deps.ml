@@ -49,6 +49,7 @@ object
         | Target.Library -> renderer_pixbuf#set_properties [`VISIBLE true; `PIXBUF Icons.library; `XALIGN 0.0]
         | Target.Plugin -> renderer_pixbuf#set_properties [`VISIBLE true; `PIXBUF Icons.plugin; `XALIGN 0.0]
         | Target.Pack -> renderer_pixbuf#set_properties [`VISIBLE true; `PIXBUF Icons.library; `XALIGN 0.0]
+        | Target.External -> renderer_pixbuf#set_properties [`VISIBLE true; `PIXBUF Icons.etask_16; `XALIGN 0.0]
     end
 
   method model = model

@@ -58,8 +58,11 @@ let show ~editor ~page () =
             colorize page filename
           in
           let rename () =
-            Sys.rename page#get_filename filename;
-            update_page ();
+            match page#file with
+              | Some file ->
+                file#rename filename;
+                update_page ();
+              | _ -> assert false
           in
           if Sys.file_exists filename then begin
             let overwrite () =

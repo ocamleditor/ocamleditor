@@ -940,33 +940,8 @@ object (self)
   method project_history_changed = project_history_changed#connect ~after
 end
 
-(** load_plugin *)
-let load_plugin basename =
-  let load filename =
-    let filename = Dynlink.adapt_filename filename in
-    Printf.printf "Plugin: %s...\n%!" filename;
-    if Sys.file_exists filename then begin
-      Dynlink.allow_unsafe_modules true;
-      Dynlink.loadfile filename;
-      Printf.printf "Plugin: %s OK\n%!" filename;
-    end
-  in
-  let dirname = (Filename.dirname Oe_config.ocamleditor_bin) // "plugins" in
-  load (dirname // basename)
-
 (** browser *)
 let browser = begin
-  begin
-    try load_plugin "remote.cma";
-    with Dynlink.Error error -> begin
-        Printf.printf "Error loading plugin: %s\n%!" (Dynlink.error_message error);
-(*        Dialog.message
-          ~title:"Error while loading plugin"
-          ~message:(sprintf "%s" (Dynlink.error_message error))
-          `ERROR*)
-      end
-  end;
-  Printf.printf "===> %b\n%!" (!Plugins.remote <> None);
   Project_xml.init();
   Sys.chdir (Filename.dirname Sys.executable_name);
   (*GtkMain.Main.disable_setlocale();*)

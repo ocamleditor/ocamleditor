@@ -45,6 +45,7 @@ type target = {
   pp : string;
   inline : int option;
   nodep : bool;
+  dontlinkdep : bool;
   library_install_dir : string;
   other_objects : string;
   external_tasks : int list;
@@ -86,12 +87,6 @@ let create_target_func ?tg targets =
     | default_target :: _ ->
       (match tg with Some f -> create_target f | _ -> create_target default_target)
     | [] -> fun _ -> ();;
-
-let string_of_output_type = function
-  | Executable -> "Executable"
-  | Library -> "Library"
-  | Plugin -> "Plugin"
-  | Pack -> "Pack";;
 
 (** system_config *)
 let ccomp_type = Ocaml_config.can_compile_native ()
@@ -186,7 +181,7 @@ let show = fun targets -> function num, (name, t) ->
   let outkind = string_of_output_type t.target_type in
   let compilation = string_of_compilation_type (ccomp_type <> None) t in
   let prop_1 = [
-    "Restrictions", (String.concat "," t.restrictions);
+    "Restrictions", (String.concat " " t.restrictions);
     "Output name", (String.concat ", " outname);
   ] in
   let prop_2 = [
@@ -211,13 +206,13 @@ let install_lib ~compilation ~outname ~external_tasks ~deps target =
     | Library ->
       let deps = deps() in
       Oebuild.install ~compilation ~outkind:target.target_type ~outname ~deps ~path:target.library_install_dir ~ccomp_type
-    | Executable | Plugin | Pack ->
-      eprintf "\"install\" not implemented for Executable, Plugin or Pack.";
+    | Executable | Plugin | Pack | External ->
+      eprintf "\"install\" not implemented for Executable, Plugin, Pack or External.";
       raise Exit;;
 
 (** execute_target *)
-let rec execute_target ~external_tasks ~targets:avail_targets ~command target =
-  if Oebuild.check_restrictions target.restrictions then
+let rec execute_target ~external_tasks ~targets:avail_targets ~command ?target_deps target =
+  if Oebuild.check_restrictions target.restrictions then begin
     let compilation = (if target.compilation_bytecode then [Bytecode] else [])
       @ (if target.compilation_native && (ccomp_type <> None) then [Native] else []) in
     let files = Str.split (Str.regexp " +") target.toplevel_modules in
@@ -227,57 +222,85 @@ let rec execute_target ~external_tasks ~targets:avail_targets ~command target =
       mktask command
     end target.external_tasks in
     try
-      List.iter begin fun compilation ->
-        match get_output_name ~compilation ~outkind:target.target_type ~outname:target.output_name ~targets:files with
-          | Some outname ->
-            begin
-              match command with
-                | `Build -> build ~targets:avail_targets ~external_tasks ~etasks ~deps ~compilation ~outname ~files target
-                | `Install_lib -> install_lib ~compilation ~outname ~external_tasks ~deps target
-                | `Clean ->
-                  List.iter ETask.execute (ETask.filter etasks Before_clean);
-                  let deps = deps() in
-                  Oebuild.clean ~deps ();
-                  List.iter ETask.execute (ETask.filter etasks After_clean);
-                | `Distclean ->
-                  if files <> [] then (Oebuild_util.remove_file ~verbose:false outname);
-                | `Show | `Install | `Uninstall -> assert false
-            end
-          | _ -> ()
-      end compilation
+      match target.target_type with
+        | External when command = `Build ->
+          build ~targets:avail_targets ~external_tasks ~etasks ~deps ~compilation:Unspecified
+            ~outname:target.output_name ~files ?target_deps target
+        | External -> ()
+        | Executable | Library | Pack | Plugin ->
+          List.iter begin fun compilation ->
+              match get_output_name ~compilation ~outkind:target.target_type ~outname:target.output_name ~targets:files with
+                | Some outname ->
+                  begin
+                    match command with
+                      | `Build ->
+                        build ~targets:avail_targets ~external_tasks ~etasks ~deps ~compilation
+                          ~outname ~files ?target_deps target
+                      | `Install_lib -> install_lib ~compilation ~outname ~external_tasks ~deps target
+                      | `Clean ->
+                        List.iter ETask.execute (ETask.filter etasks Before_clean);
+                        let deps = deps() in
+                        Oebuild.clean ~deps ();
+                        List.iter ETask.execute (ETask.filter etasks After_clean);
+                      | `Distclean ->
+                        if files <> [] then (Oebuild_util.remove_file ~verbose:false outname);
+                      | `Show | `Install | `Uninstall -> assert false
+                  end
+                | _ -> ()
+            end compilation
     with Exit -> ()
+  end else begin
+    let target_name, _ =
+      try List.find (fun (_, t) -> t.id = target.id) avail_targets
+      with Not_found -> kprintf failwith "Target not found (id=%d)" target.id
+    in
+    Printf.printf "=== %s ===\n%!" target_name;
+    Printf.printf "Skipped: %s failed\n\n%!" (String.concat " AND " target.restrictions);
+  end
 
 (** build *)
-and build ~targets:avail_targets ~external_tasks ~etasks ~deps ~compilation ~outname ~files target =
-  let b_deps = find_target_dependencies avail_targets target in
-  List.iter (execute_target ~external_tasks ~targets:avail_targets ~command:`Build) b_deps;
+and build ~targets:avail_targets ~external_tasks ~etasks ~deps ~compilation ~outname ~files ?target_deps target =
+  let target_deps =
+    match target_deps with
+      | None -> [] (*find_target_dependencies avail_targets target*)
+      | Some x -> x
+  in
+  List.iter (execute_target ~external_tasks ~targets:avail_targets ~command:`Build) target_deps;
+  let target_name, _ =
+    try List.find (fun (_, t) -> t.id = target.id) avail_targets
+    with Not_found -> kprintf failwith "Target not found (id=%d)" target.id
+  in
+  Printf.printf "=== %s ===\n%!" target_name;
   List.iter ETask.execute (ETask.filter etasks Before_compile);
   let deps = if target.nodep then files else deps() in
-  (*List.iter ETask.execute (ETask.filter etasks Compile);*)
-  match Oebuild.build
-    ~compilation
-    ~package:target.package
-    ~includes:target.search_path
-    ~libs:target.required_libraries
-    ~other_mods:target.other_objects
-    ~outkind:target.target_type
-    ~compile_only:false
-    ~thread:target.thread
-    ~vmthread:target.vmthread
-    ~annot:false
-    ~bin_annot:false
-    ~pp:target.pp
-    ?inline:target.inline
-    ~cflags:target.compiler_flags
-    ~lflags:target.linker_flags
-    ~outname
-    ~deps
-    ~ms_paths:(ref false)
-    ~targets:files ()
-  with
-    | Built_successfully ->
-      List.iter ETask.execute (ETask.filter etasks After_compile);
-    | Build_failed n -> popd(); exit n
+  let tasks_compile = ETask.filter etasks Compile in
+  if tasks_compile <> [] then List.iter ETask.execute (tasks_compile)
+  else
+    match Oebuild.build
+        ~compilation
+        ~package:target.package
+        ~includes:target.search_path
+        ~libs:target.required_libraries
+        ~other_mods:target.other_objects
+        ~outkind:target.target_type
+        ~compile_only:false
+        ~thread:target.thread
+        ~vmthread:target.vmthread
+        ~annot:false
+        ~bin_annot:false
+        ~pp:target.pp
+        ?inline:target.inline
+        ~cflags:target.compiler_flags
+        ~lflags:target.linker_flags
+        ~outname
+        ~deps
+        ~dontlinkdep:target.dontlinkdep
+        (*~verbose:false*)
+        ~targets:files ()
+    with
+      | Built_successfully ->
+        List.iter ETask.execute (ETask.filter etasks After_compile);
+      | Build_failed n -> popd(); exit n
 ;;
 
 (** main *)
@@ -364,7 +387,11 @@ let main ~cmd_line_args ~external_tasks ~general_commands ~targets:avail_targets
               end targets;
             | _ ->
               if targets = [] then (raise (Arg.Bad (sprintf "%s: no target specified" (string_of_command command))));
-              List.iter (fun (_, (_, tg)) -> execute_target ~external_tasks ~targets:avail_targets ~command tg) targets
+              List.iter begin fun (_, (name, tg)) ->
+                let target_deps = remove_dupl (find_target_dependencies avail_targets tg) in
+                (*Printf.printf "%s: %s\n%!" name (String.concat ", " (List.map (fun t -> string_of_int t.id) target_deps));*)
+                execute_target ~external_tasks ~targets:avail_targets ~command ~target_deps tg
+              end targets
         end;
         popd();
       with Arg.Bad _ as ex ->

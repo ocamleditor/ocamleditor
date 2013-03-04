@@ -132,6 +132,11 @@ class view ~project ?packing () =
         chooser#destroy()
       | _ -> chooser#destroy()
   end in
+  (** Radio External *)
+  let mbox = GPack.vbox ~spacing:0 ~packing:(vbox#pack ~expand:false) () in
+  let radio_external = GButton.radio_button ~group:radio_archive#group ~packing:mbox#add () in
+  let label_radio_external = GMisc.label ~markup:"External tasks" () in
+  let _ = radio_external#add label_radio_external#coerce in
   (** Outname *)
   let box = GPack.vbox ~packing:(vbox#pack ~expand:false) () in
   let _ = GMisc.label ~markup:"Output file name <small><tt>(-o)</tt></small>" ~xalign ~packing:box#add () in
@@ -190,6 +195,12 @@ class view ~project ?packing () =
   let check_nodep = GButton.check_button ~packing:more_vbox#pack () in
   let _ = check_nodep#add (GMisc.label ~markup:"Do not detect module dependencies (<tt>-no-dep</tt>)" ())#coerce in
 
+  let check_dontlinkdep = GButton.check_button ~packing:more_vbox#pack () in
+  let _ = check_dontlinkdep#add (GMisc.label ~markup:"Do not link module dependencies (<tt>-dont-link-dep</tt>)" ())#coerce in
+  let _ = check_nodep#connect#toggled ~callback:begin fun () ->
+    check_dontlinkdep#misc#set_sensitive (not check_nodep#active)
+  end in
+
   (** Dependencies Tab *)
   let vbox = GPack.vbox ~border_width:5 ~spacing:8 () in
   let _ = nb#append_page ~tab_label:(GMisc.label ~text:"Target Dependencies" ())#coerce vbox#coerce in
@@ -205,6 +216,14 @@ any attempt to perform a \"Clean\" or \"Build\" or any other external task, from
 both within the IDE and from the generated build script." ~packing:vbox#pack () in
   let align = GBin.alignment ~padding:(0,0,indent,0) ~packing:vbox#add () in
   let cbox = GPack.vbox ~spacing:3 ~packing:align#add () in
+  let flbox = GPack.hbox ~spacing:5 ~packing:cbox#pack () in
+  let check_fl_pkg = GButton.check_button ~label:"The following Findlib packages are installed:" ~packing:flbox#pack () in
+  let entry_fl_pkg = GEdit.entry ~packing:flbox#add () in
+  let _ = check_fl_pkg#connect#toggled ~callback:begin fun () ->
+    entry_fl_pkg#misc#set_sensitive check_fl_pkg#active;
+    if check_fl_pkg#active then entry_fl_pkg#misc#grab_focus()
+  end; in
+  let _ = entry_fl_pkg#misc#set_sensitive false in
   let check_unix = GButton.check_button ~label:"O.S. type is Unix" ~packing:cbox#pack () in
   let check_win32 = GButton.check_button ~label:"O.S. type is Win32" ~packing:cbox#pack () in
   let check_cygwin = GButton.check_button ~label:"O.S. type is Cygwin" ~packing:cbox#pack () in
@@ -237,24 +256,35 @@ object (self)
       self#update (fun target -> target.dependencies <- widget_deps#get()) ();
       changed#call()
     end;);
-    let set_restr target check c =
-      target.restrictions <-
-        Miscellanea.Xlist.remove_dupl (if check#active
-          then (c :: target.restrictions)
-          else (List.filter ((<>) c) target.restrictions))
+    (*  *)
+    let checks = [
+      check_fl_pkg, begin fun () ->
+        let packages = String.trim entry_fl_pkg#text in
+        if packages <> "" then true, sprintf "HAVE_FL_PKG(%s)" packages else false, ""
+      end;
+      check_unix, (fun () -> true, "IS_UNIX");
+      check_win32, (fun () -> true, "IS_WIN32");
+      check_cygwin, (fun () -> true, "IS_CYGWIN");
+      check_native, (fun () -> true, "HAVE_NATIVE")
+    ] in
+    let update_restr () =
+      self#update begin fun target ->
+        if signals_enabled then
+          target.restrictions <-
+            List.fold_left begin fun acc (check, f) ->
+              if check#active then begin
+                let enabled, value = f () in
+                if enabled then value :: acc else acc
+              end else acc
+            end [] checks;
+      end ();
+      changed#call()
     in
-    let connect_restr (check, c) =
-      ignore (check#connect#toggled ~callback:begin fun () ->
-        self#update (fun target -> set_restr target check c) ();
-        changed#call()
-      end);
-    in
-    List.iter connect_restr [
-      check_unix, "IS_UNIX";
-      check_win32, "IS_WIN32";
-      check_cygwin, "IS_CYGWIN";
-      check_native, "HAS_NATIVE"
-    ];
+    List.iter begin fun (check, _) ->
+      ignore (check#connect#toggled ~callback:update_restr);
+    end checks;
+    ignore (entry_fl_pkg#connect#changed ~callback:update_restr);
+    (*  *)
     ignore (entry_name#connect#changed
       ~callback:begin fun () ->
         self#update (fun target -> target.name <- entry_name#text) ();
@@ -320,23 +350,45 @@ object (self)
       ~callback:(self#update (fun target -> target.cflags <- entry_cflags#text)));
     ignore (entry_lflags#connect#changed
       ~callback:(self#update (fun target -> target.lflags <- entry_lflags#text)));
+    (*  *)
+    let get_target_type () =
+      if radio_archive#active then
+        (match combo_kind#active with 0 -> Library | 1 -> Plugin | 2 -> Pack | _ -> assert false)
+      else if radio_executable#active then Executable
+      else if radio_external#active then External
+      else assert false;
+    in
     ignore (radio_archive#connect#after#toggled
       ~callback:(self#update begin fun target ->
         if signals_enabled then begin
-          target.target_type <- begin
-            if radio_archive#active then
-              (match combo_kind#active with 0 -> Library | 1 -> Plugin | 2 -> Pack | _ -> assert false)
-            else Executable;
-          end;
+          target.target_type <- get_target_type();
           entry_lib_modules#set_text "";
           entry_main_module#set_text "";
         end
       end));
     ignore (combo_kind#connect#changed
-      ~callback:(self#update (fun target -> target.target_type <-
-        if radio_archive#active then
-          (match combo_kind#active with 0 -> Library | 1 -> Plugin | 2 -> Pack | _ -> assert false)
-        else Executable)));
+        ~callback:(self#update (fun target -> target.target_type <- get_target_type())));
+    let _ = radio_executable#connect#clicked ~callback:begin fun () ->
+        align_lib#misc#set_sensitive (not radio_executable#active && not radio_external#active);
+        align_exec#misc#set_sensitive radio_executable#active;
+        if signals_enabled then begin
+          if radio_executable#active then (entry_main_module#misc#grab_focus())
+          else if radio_archive#active then (button_lib_modules#misc#grab_focus());
+        end
+      end in
+    let _ = radio_external#connect#after#toggled ~callback:begin
+        entry_outname#misc#set_sensitive (not radio_external#active);
+        align_lib#misc#set_sensitive (not radio_executable#active && not radio_external#active);
+        self#update begin fun target ->
+          if signals_enabled then begin
+            target.target_type <- get_target_type();
+            if radio_executable#active then (entry_main_module#misc#grab_focus())
+            else if radio_archive#active then (button_lib_modules#misc#grab_focus())
+          end
+        end;
+      end
+    in
+    (*  *)
     ignore (entry_outname#connect#changed
       ~callback:(self#update (fun target -> target.outname <- entry_outname#text)));
     ignore (entry_lib_install#connect#changed
@@ -345,6 +397,8 @@ object (self)
       end));
     ignore (check_nodep#connect#toggled
       ~callback:(self#update (fun target -> target.nodep <- check_nodep#active)));
+    ignore (check_dontlinkdep#connect#toggled
+      ~callback:(self#update (fun target -> target.dontlinkdep <- check_dontlinkdep#active)));
     let _ = check_thread#connect#toggled ~callback:begin fun () ->
       if signals_enabled then begin
         check_vmthread#set_active false;
@@ -355,14 +409,6 @@ object (self)
       if signals_enabled then begin
         check_thread#set_active false;
         check_thread#misc#set_sensitive (not check_vmthread#active);
-      end
-    end in
-    let _ = radio_executable#connect#clicked ~callback:begin fun () ->
-      align_lib#misc#set_sensitive (not radio_executable#active);
-      align_exec#misc#set_sensitive radio_executable#active;
-      if signals_enabled then begin
-        if radio_executable#active then (entry_main_module#misc#grab_focus())
-        else (button_lib_modules#misc#grab_focus());
       end
     end in
     ignore (self#connect#changed ~callback:(fun () -> page_changed <- true))
@@ -423,8 +469,9 @@ object (self)
       match tg.target_type with
         | Executable -> radio_executable#set_active true
         | Library | Pack | Plugin -> radio_archive#set_active true
+        | External -> radio_external#set_active true
     end;
-    combo_kind#set_active (match tg.target_type with Library -> 0 | Plugin -> 1 | Pack -> 2 | Executable -> 0);
+    combo_kind#set_active (match tg.target_type with Library -> 0 | Plugin -> 1 | Pack -> 2 | Executable | External -> 0);
     entry_outname#set_text tg.outname;
     entry_lib_install#set_text tg.lib_install_path;
     if (List.mem tg.target_type [Library; Plugin; Pack]) then begin
@@ -444,10 +491,20 @@ object (self)
       with Failure "hd" -> (ignore (entry_main_module#set_text ""))
     end;
     check_nodep#set_active tg.nodep;
+    check_dontlinkdep#set_active tg.dontlinkdep;
+    (*  *)
     check_unix#set_active (List.mem "IS_UNIX" tg.restrictions);
     check_win32#set_active (List.mem "IS_WIN32" tg.restrictions);
     check_cygwin#set_active (List.mem "IS_CYGWIN" tg.restrictions);
-    check_native#set_active (List.mem "HAS_NATIVE" tg.restrictions);
+    check_native#set_active ((List.mem "HAVE_NATIVE" tg.restrictions) || (List.mem "HAS_NATIVE" tg.restrictions));
+    entry_fl_pkg#set_text begin
+      match List_opt.find (fun res -> Str.string_match Oebuild.re_fl_pkg_exist res 0) tg.restrictions
+      with
+        | Some res ->
+          if Str.string_match Oebuild.re_fl_pkg_exist res 0 then Str.matched_group 1 res else ""
+        | None -> ""
+    end;
+    check_fl_pkg#set_active (entry_fl_pkg#text <> ""); (*(List.exists (fun r -> Str.string_match Oebuild.re_fl_pkg_exist r 0) tg.restrictions)*)
     (*  *)
     signals_enabled <- true;
     Gmisclib.Idle.add ~prio:300 (fun () -> self#update_cmd_line tg);

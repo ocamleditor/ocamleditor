@@ -29,6 +29,7 @@ open Printf
 let prefix   = ref "/usr/local"
 let ext      = if is_win32 then ".exe" else ""
 let gmisclib = ref false
+let nsis     = ref false
 
 let install () =
   if !gmisclib then begin
@@ -47,17 +48,7 @@ let install () =
     ignore (kprintf Sys.command "ocamlfind remove %s" libname);
     ignore (kprintf Sys.command "ocamlfind install %s META %s %s %s %s" libname cmas ar (find ".cmi") (find ".mli"));
     popd();
-  end else if not is_win32 then begin
-    let pixmaps = sprintf "%s/share/pixmaps/ocamleditor" !prefix in
-    mkdir_p pixmaps;
-    kprintf run "cp -vru ../share/pixmaps/* %s" pixmaps;
-    let bin = sprintf "%s/bin" !prefix in
-    mkdir_p bin;
-    let filename = if Sys.file_exists "ocamleditor.opt" then "ocamleditor.opt" else "ocamleditor" in
-    kprintf run "cp -v %s %s/ocamleditor" filename bin;
-    let filename = if Sys.file_exists "oebuild/oebuild.opt" then "oebuild/oebuild.opt" else "oebuild/oebuild" in
-    kprintf run "cp -v %s %s" filename bin;
-  end else begin
+  end else if !nsis then begin
     let exit_code = kprintf Sys.command "\"%s\" ..\\ocamleditor.nsi" (Filename.quote "%ProgramFiles(x86)%\\NSIS\\makensis") in
     match exit_code with
       | 0 ->
@@ -67,9 +58,24 @@ let install () =
       | _ -> prerr_endline "This script is not available under Windows.
 To install OCamlEditor, please use the included ocamleditor.nsi script.
 You will need the free NSIS install system (http://nsis.sourceforge.net).";
+  end else begin
+    let exe = if Sys.os_type = "Win32" then ".exe" else "" in
+    let icons = sprintf "%s/share/ocamleditor/icons" !prefix in
+    mkdir_p icons;
+    kprintf run "cp -vru ../icons/* %s" icons;
+    let plugins = sprintf "%s/share/ocamleditor/plugins" !prefix in
+    mkdir_p plugins;
+    kprintf run "cp -vru ../plugins/* %s" plugins;
+    let bin = sprintf "%s/bin" !prefix in
+    mkdir_p bin;
+    let filename = if Sys.file_exists ("ocamleditor.opt" ^ exe) then ("ocamleditor.opt" ^ exe) else ("ocamleditor" ^ exe) in
+    kprintf run "cp -v %s %s/ocamleditor%s" filename bin exe;
+    let filename = if Sys.file_exists ("oebuild/oebuild.opt" ^ exe) then ("oebuild/oebuild.opt" ^ exe) else ("oebuild/oebuild" ^ exe) in
+    kprintf run "cp -v %s %s" filename bin;
   end;;
 
 let _ = main ~dir:"../src" ~default_target:install ~options:[
   "-prefix",   Set_string prefix,   (sprintf " Installation prefix (Unix only, default is %s)" !prefix);
-  "-gmisclib", Set gmisclib, (sprintf " Install gmisclib");
+  "-gmisclib", Set gmisclib,        (sprintf " Install gmisclib");
+  "-nsis",     Set nsis,            (sprintf " Create a Win32 installer with NSIS");
 ] ()

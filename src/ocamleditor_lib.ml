@@ -35,7 +35,8 @@ let _ = if true || App_config.application_debug then begin
   let properties = [
     "OCaml Version", ocaml_version;
     "OCamlEditor User Home", ocamleditor_user_home;
-    "pixmaps", App_config.application_pixmaps;
+    "icons", App_config.application_icons;
+    "plugins", App_config.application_plugins;
     "oebuild", oebuild_command;
   ] @
   (if is_win32 then ["oeproc", oeproc_command] else []) @ [
@@ -56,12 +57,8 @@ end
 
 (** main *)
 let main () = begin
+  ignore (Plugin.load "dot_viewer_svg.cma"); 
   Browser.browser#window#present();
-  (*
-    THE FOLLOWING LINE IS PROCESSED BY "tools/prepare_build", DO NOT EDIT.
-  *)
-  (*Dot_viewer.device := (module Dot_viewer_svg.SVG : Dot_viewer.DEVICE);*)
-
   GtkThread2.main ();
 end
 

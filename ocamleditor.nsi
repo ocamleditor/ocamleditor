@@ -18,7 +18,7 @@
 
 ;	!include "MUI2.nsh"
 Name "OCamlEditor"
-OutFile "ocamleditor-1.8.0.exe"
+OutFile "ocamleditor-1.9.0.exe"
 InstallDir $PROGRAMFILES\OCamlEditor
 InstallDirRegKey HKLM "Software\OCamlEditor" "Install_Dir"
 
@@ -38,12 +38,12 @@ RequestExecutionLevel Admin
 ;  !insertmacro MUI_UNPAGE_INSTFILES
 ;  !insertmacro MUI_LANGUAGE "English"
 
-VIProductVersion "1.8.0.0"
+VIProductVersion "1.9.0.0"
 VIAddVersionKey "ProductName" "OCamlEditor"
 VIAddVersionKey "LegalCopyright" "Copyright © 2010-2012 Francesco Tovagliari"
 VIAddVersionKey "FileDescription" "OCamlEditor Setup"
-VIAddVersionKey "FileVersion" "1.8.0"
-;Icon "share\pixmaps\oe.ico"
+VIAddVersionKey "FileVersion" "1.9.0"
+;Icon "share\ocamleditor\icons\ocamleditor.ico"
 
 LicenseText "Please read the following License Agreement. You must accept the terms of this agreement before continuing with the installation."
 LicenseData "COPYING"
@@ -75,18 +75,26 @@ Section "OCamlEditor (required)"
 	File "src\oebuild\oebuild.exe"   
 	File /NonFatal "src\oeproc\oeproc.opt.exe"   
 	File /NonFatal "src\oebuild\oebuild.opt.exe"   
+
   SetOutPath $INSTDIR
   ; Put file there
   File /oname=README.txt "README"
   File /oname=NEWS.txt "NEWS"
   File /oname=COPIYNG.txt "COPYING"
-	File /r ".\pixmaps"
+
+  SetOutPath $INSTDIR\share\ocamleditor\icons
+	File "src\ocamleditor.ico" 
+  SetOutPath $INSTDIR\share\ocamleditor\icons
+	File "icons\*.*"
+  SetOutPath $INSTDIR\share\ocamleditor\plugins
+	File "plugins\*.*"
+
   ; Write the installation path into the registry
   WriteRegStr HKLM SOFTWARE\OCamlEditor "Install_Dir" "$INSTDIR"
   ; Write the uninstall keys for Windows
-  WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\OCamlEditor" "DisplayIcon" '"$INSTDIR\share\pixmaps\oe1_48.ico"'
+  WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\OCamlEditor" "DisplayIcon" '"$INSTDIR\bin\ocamleditor.exe"'
   WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\OCamlEditor" "DisplayName" "OCamlEditor"
-  WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\OCamlEditor" "DisplayVersion" "1.8.0"
+  WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\OCamlEditor" "DisplayVersion" "1.9.0"
   WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\OCamlEditor" "UninstallString" '"$INSTDIR\uninstall.exe"'
   WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\OCamlEditor" "InstallLocation" '"$INSTDIR"'
   WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\OCamlEditor" "HelpLink" "http://ocamleditor.forge.ocamlcore.org"
@@ -105,8 +113,8 @@ Section "Start Menu Shortcuts"
   CreateDirectory "$SMPROGRAMS\OCamlEditor"
   SetOutPath $INSTDIR\bin
   CreateShortCut "$SMPROGRAMS\OCamlEditor\Uninstall.lnk" "$INSTDIR\uninstall.exe" "" "$INSTDIR\uninstall.exe" 0
-  CreateShortCut "$SMPROGRAMS\OCamlEditor\OCamlEditor.lnk" "$INSTDIR\bin\ocamleditor.bat" "" "$INSTDIR\share\pixmaps\oe1_48.ico" 0 SW_SHOWMINIMIZED
-  CreateShortCut "$DESKTOP\OCamlEditor.lnk" "$INSTDIR\bin\ocamleditor.bat" "" "$INSTDIR\share\pixmaps\oe1_48.ico" 0 SW_SHOWMINIMIZED 
+  CreateShortCut "$SMPROGRAMS\OCamlEditor\OCamlEditor.lnk" "$INSTDIR\bin\ocamleditor.bat" "" "$INSTDIR\share\ocamleditor\icons\ocamleditor.ico" 0 SW_SHOWMINIMIZED
+  CreateShortCut "$DESKTOP\OCamlEditor.lnk" "$INSTDIR\bin\ocamleditor.bat" "" "$INSTDIR\share\ocamleditor\icons\ocamleditor.ico" 0 SW_SHOWMINIMIZED 
   
 SectionEnd
 

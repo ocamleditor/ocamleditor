@@ -27,7 +27,7 @@ open Oebuild_util
 module Table = Oebuild_table
 
 type compilation_type = Bytecode | Native | Unspecified
-type output_type = Executable | Library | Plugin | Pack
+type output_type = Executable | Library | Plugin | Pack | External
 type build_exit = Built_successfully | Build_failed of int
 type process_err_func = (stderr:in_channel -> unit)
 
@@ -35,6 +35,13 @@ let string_of_compilation_type = function
   | Bytecode -> "Bytecode"
   | Native -> "Native"
   | Unspecified -> "Unspecified"
+
+let string_of_output_type = function
+  | Executable -> "Executable"
+  | Library -> "Library"
+  | Plugin -> "Plugin"
+  | Pack -> "Pack"
+  | External -> "External";;
 
 let ocamlc = Ocaml_config.ocamlc()
 let ocamlopt = Ocaml_config.ocamlopt()
@@ -58,7 +65,7 @@ let check_package_list =
 
 (** compile *)
 let compile ?(times : Table.t option) ~opt ~compiler ~cflags ~package ~includes ~filename
-    ?(process_err : process_err_func option) () =
+    ?(process_err : process_err_func option) ~verbose () =
   if Sys.file_exists filename then begin
     try
       begin
@@ -67,10 +74,11 @@ let compile ?(times : Table.t option) ~opt ~compiler ~cflags ~package ~includes 
           | _ -> raise Not_found
       end
     with Not_found -> begin
-      let cmd = (sprintf "%s -c %s %s %s" compiler cflags includes filename) in
+      let verbose_opt = if verbose >= 4 then "-verbose" else "" in
+      let cmd = (sprintf "%s -c %s %s %s %s" compiler cflags includes filename verbose_opt) in
       let exit_code = match process_err with
         | None -> command cmd
-        | Some process_err -> exec ~process_err cmd
+        | Some process_err -> exec ~process_err ~verbose:(verbose>=2) cmd
       in
       may times (fun times -> Table.add times filename opt (Unix.gettimeofday()));
       exit_code
@@ -79,7 +87,7 @@ let compile ?(times : Table.t option) ~opt ~compiler ~cflags ~package ~includes 
 
 (** link *)
 let link ~compilation ~compiler ~outkind ~lflags ~package ~includes ~libs ~outname ~deps
-    ?(process_err : process_err_func option) () =
+    ?(process_err : process_err_func option) ~verbose () =
   let opt = compilation = Native && ocamlopt <> None in
   let libs =
     if (*opt &&*) outkind <> Executable then "" else
@@ -97,15 +105,16 @@ let link ~compilation ~compiler ~outkind ~lflags ~package ~includes ~libs ~outna
   in
   let use_findlib = package <> "" in
   let deps = String.concat " " deps in
-  kprintf (exec (*command*) ?process_err) "%s%s %s %s -o %s %s %s %s"
+  kprintf (exec (*command*) ?process_err ~verbose:(verbose>=2)) "%s%s %s %s -o %s %s %s %s %s"
     compiler
     (if use_findlib && (outkind <@ [Executable]) then " -linkpkg" else "")
-    (match outkind with Library -> "-a" | Plugin when opt -> "-shared" | Plugin -> "" | Pack -> "-pack" | Executable -> "")
+    (match outkind with Library -> "-a" | Plugin when opt -> "-shared" | Plugin -> "" | Pack -> "-pack" | Executable | External -> "")
     lflags
     outname
     includes
     libs
     deps
+    (if verbose >= 3 then "-verbose" else "")
 ;;
 
 (** get_output_name *)
@@ -122,6 +131,7 @@ let get_output_name ~compilation ~outkind ~outname ~targets =
           | Plugin when compilation = Native -> ".cmxs"
           | Plugin -> ".cma"
           | Pack -> ".cmx"
+          | External -> ""
       in
       let name =
         if outname = "" then begin
@@ -160,7 +170,7 @@ let install ~compilation ~outkind ~outname ~deps ~path ~ccomp_type =
     | Executable (*->
       mkdir_p path;
       cp outname (path // dest_outname)*)
-    | Plugin | Pack -> eprintf "\"Oebuild.install\" not implemented for Executable, Plugin or Pack."
+    | Plugin | Pack | External -> eprintf "\"Oebuild.install\" not implemented for Executable, Plugin, Pack or External."
 ;;
 
 (** run_output *)
@@ -233,9 +243,32 @@ let filter_inconsistent_assumptions_error ~compiler_output ~recompile ~targets ~
 
 (** Building *)
 let build ~compilation ~package ~includes ~libs ~other_mods ~outkind ~compile_only
-    ~thread ~vmthread ~annot ~bin_annot ~pp ?inline ~cflags ~lflags ~outname ~deps ~ms_paths
-    ~targets ?(prof=false) () =
-  let split_space = Str.split (Str.regexp " +") in
+    ~thread ~vmthread ~annot ~bin_annot ~pp ?inline ~cflags ~lflags ~outname ~deps ~dontlinkdep (*~ms_paths*)
+    ~targets ?(prof=false) ?(verbose=2) () =
+
+  if verbose >= 1 then begin
+    printf "%s %s"
+      (string_of_compilation_type compilation) (string_of_output_type outkind);
+    if outname <> ""    then (printf " %s\n" outname);
+    if dontlinkdep      then (printf "  ~dontlinkdep\n");
+    if compile_only     then (printf "  ~compile_only\n");
+    if thread           then (printf "  ~thread\n");
+    if vmthread         then (printf "  ~vmthread\n");
+    if bin_annot        then (printf "  ~binannot\n");
+    if package <> ""    then (printf "  ~package ... : %s\n" package);
+    if includes <> ""   then (printf "  ~search_path : %s\n" includes);
+    if libs <> ""       then (printf "  ~libs ...... : %s\n" libs);
+    if other_mods <> "" then (printf "  ~other_mods  : %s\n" other_mods);
+    (match inline with Some n ->
+                              printf "  ~inline .... : %d\n" n | _ -> ());
+    if cflags <> ""     then (printf "  ~cflags .... : %s\n" cflags);
+    if lflags <> ""     then (printf "  ~lflags .... : %s\n" cflags);
+    if targets <> []    then (printf "  ~source .... : %s\n" (String.concat "," targets));
+    if verbose >= 2 then (printf "\n");
+    printf "%!";
+  end;
+
+  let split_space = Str.split re_spaces in
   (* includes *)
   let includes = ref includes in
   includes := Ocaml_config.expand_includes !includes;
@@ -250,6 +283,7 @@ let build ~compilation ~package ~includes ~libs ~other_mods ~outkind ~compile_on
   if annot then (cflags := !cflags ^ " -annot");
   if bin_annot then (cflags := !cflags ^ " -bin-annot");
   if pp <> "" then (cflags := !cflags ^ " -pp " ^ pp);
+  (* inline *)
   begin
     match inline with
       | Some inline when compilation = Native ->
@@ -278,10 +312,10 @@ let build ~compilation ~package ~includes ~libs ~other_mods ~outkind ~compile_on
   (*  *)
   let mods = split_space other_mods in
   let mods = if compilation = Native then List.map (sprintf "%s.cmx") mods else List.map (sprintf "%s.cmo") mods in
-  if compilation = Native && !ms_paths then begin
+  (*if compilation = Native && !ms_paths then begin
     lflags := !lflags ^
       " -ccopt \"-LC:\\Programmi\\MIC977~1\\Lib -LC:\\Programmi\\MID05A~1\\VC\\lib -LC:\\GTK\\lib\""
-  end;
+  end;*)
   let times = Table.read () in
   let build_exit =
     let compilation_exit = ref 0 in
@@ -296,14 +330,14 @@ let build ~compilation ~package ~includes ~libs ~other_mods ~outkind ~compile_on
             Table.update ~opt times filename;
             let exit_code = compile
               ~process_err:(filter_inconsistent_assumptions_error ~compiler_output ~recompile ~targets ~deps ~cache:times ~opt)
-              ~times ~opt ~compiler ~cflags:!cflags ~package ~includes:!includes ~filename ()
+              ~times ~opt ~compiler ~cflags:!cflags ~package ~includes:!includes ~filename ~verbose ()
             in
             if exit_code <> 0 then (Table.remove times filename opt);
             exit_code
           in
           if List.length !recompile > 0 then begin
             List.iter begin fun filename ->
-              compilation_exit := compile ~times ~opt ~compiler ~cflags:!cflags ~package ~includes:!includes ~filename ();
+              compilation_exit := compile ~times ~opt ~compiler ~cflags:!cflags ~package ~includes:!includes ~filename ~verbose ();
               if !compilation_exit <> 0 then (raise Exit)
             end !recompile;
             print_newline();
@@ -323,13 +357,13 @@ let build ~compilation ~package ~includes ~libs ~other_mods ~outkind ~compile_on
     (** Link *)
     if !compilation_exit = 0 then begin
       let opt = compilation = Native in
-      let obj_deps =
+      let find_objs filenames =
         let ext = if compilation = Native then "cmx" else "cmo" in
-        let deps = List.filter (fun x -> x ^^ "ml") deps in
-        List.map (fun x -> sprintf "%s.%s" (Filename.chop_extension x) ext) deps
+        let filenames = List.filter (fun x -> x ^^ "ml") filenames in
+        List.map (fun x -> sprintf "%s.%s" (Filename.chop_extension x) ext) filenames
       in
+      let obj_deps = if dontlinkdep then find_objs targets else mods @ (find_objs deps) in
       if compile_only then !compilation_exit else begin
-        let obj_deps = mods @ obj_deps in
         let compiler_output = Buffer.create 100 in
         let rec try_link () =
           let recompile = ref [] in
@@ -337,11 +371,12 @@ let build ~compilation ~package ~includes ~libs ~other_mods ~outkind ~compile_on
             link ~compilation ~compiler ~outkind ~lflags:!lflags
               ~package
               ~includes:!includes ~libs ~deps:obj_deps ~outname
-              ~process_err:(filter_inconsistent_assumptions_error ~compiler_output ~recompile ~targets ~deps ~cache:times ~opt) ()
+              ~process_err:(filter_inconsistent_assumptions_error ~compiler_output ~recompile ~targets ~deps ~cache:times ~opt)
+              ~verbose ()
           in
           if List.length !recompile > 0 then begin
             List.iter begin fun filename ->
-              ignore (compile ~times ~opt ~compiler ~cflags:!cflags ~package ~includes:!includes ~filename ())
+              ignore (compile ~times ~opt ~compiler ~cflags:!cflags ~package ~includes:!includes ~filename ~verbose ())
             end !recompile;
             Buffer.clear compiler_output;
             try_link()
@@ -393,12 +428,22 @@ let distclean () =
   clean_dir cwd;
 ;;
 
+let re_fl_pkg_exist = Str.regexp "HAVE_FL_PKG(\\([-A-Za-z0-9_., ]+\\))"
+let re_comma = Str.regexp " *, *"
+
 (** check_restrictions *)
 let check_restrictions restr =
   List.for_all begin function
     | "IS_UNIX" -> Sys.os_type = "Unix"
     | "IS_WIN32" -> Sys.os_type = "Win32"
     | "IS_CYGWIN" -> Sys.os_type = "Cygwin"
-    | "HAS_NATIVE" -> Ocaml_config.can_compile_native () <> None (* should be cached *)
+    | "HAVE_NATIVE" | "HAS_NATIVE" -> Ocaml_config.can_compile_native () <> None (* should be cached *)
+    | res when Str.string_match re_fl_pkg_exist res 0 ->
+      let packages = Str.matched_group 1 res in
+      let packages = Str.split re_comma packages in
+      let redirect_stderr = if Sys.os_type = "Win32" then " 1>NUL 2>NUL" else " 2>/dev/null" in
+      packages = [] || List.for_all begin fun package ->
+        kprintf (Oebuild_util.command ~echo:false) "ocamlfind query %s %s" package redirect_stderr = 0
+      end packages
     | _ -> false
   end restr;;

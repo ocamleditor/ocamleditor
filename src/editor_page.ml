@@ -600,7 +600,7 @@ object (self)
           spinner#misc#set_tooltip_text "";
         | msgs ->
           let msgs = snd (List.split msgs) in
-          spinner#set_file (App_config.application_pixmaps // "spinner.gif");
+          spinner#set_file (App_config.application_icons // "spinner.gif");
           spinner#misc#set_tooltip_text (String.concat "\n" (List.rev msgs));
     in
     ignore (Activity.table#connect#changed ~callback:activate_spinner);

@@ -24,8 +24,12 @@
 open Miscellanea
 
 let get_switch_viewer_label page =
-  let device = match Oe_config.dot_viewer with `PDF -> (module Dot_viewer.PDF : Dot_viewer.DEVICE) | _ -> !Dot_viewer.device in
-  match device with (module DEV : Dot_viewer.DEVICE) ->
+  let device =
+    match Oe_config.dot_viewer with
+      | `PDF -> (module Dot_viewer_pdf.PDF : Dot_viewer_plugin.DEVICE)
+      | _ -> !Dot_viewer_plugin.device
+  in
+  match device with (module DEV : Dot_viewer_plugin.DEVICE) ->
     if not DEV.have_embedded_viewer then "Show Module Dependencies Graph"
     else begin
       match page with

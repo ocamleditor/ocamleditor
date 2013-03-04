@@ -27,7 +27,7 @@ open Printf
 
 let _ =
   let version = Sys.argv.(1) in
-  substitute ~filename:"../src/oe_config.ml" ~regexp:true [
+  substitute ~filename:"../src/about.ml" ~regexp:true [
     "let version = \"[0-9]+[.][0-9]+[.][0-9]+\"",
       (sprintf "let version = \"%s\"" version);
   ];
@@ -53,6 +53,16 @@ let _ =
       (sprintf "  WriteRegStr HKLM \"Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\OCamlEditor\" \"DisplayVersion\" \"%s\"" version);
   ];
 
+  substitute ~filename:"../ocamleditor+gtk.nsi" ~regexp:true [
+    "OutFile \"ocamleditor-[0-9]+[.][0-9]+[.][0-9]+-gtk.exe\"",
+      (sprintf "OutFile \"ocamleditor-%s-gtk.exe\"" version);
+    "VIProductVersion \"[0-9]+[.][0-9]+[.][0-9]+.0\"",
+      (sprintf "VIProductVersion \"%s.0\"" version);
+    "VIAddVersionKey \"FileVersion\" \"[0-9]+[.][0-9]+[.][0-9]+\"",
+      (sprintf "VIAddVersionKey \"FileVersion\" \"%s\"" version);
+    "  WriteRegStr HKLM \"Software[\\]Microsoft[\\]Windows[\\]CurrentVersion[\\]Uninstall[\\]OCamlEditor\" \"DisplayVersion\" \"[0-9]+[.][0-9]+[.][0-9]+\"",
+      (sprintf "  WriteRegStr HKLM \"Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\OCamlEditor\" \"DisplayVersion\" \"%s\"" version);
+  ];
   let chan = open_out_bin "../VERSION" in
   output_string chan version;
   close_out_noerr chan

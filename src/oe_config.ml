@@ -162,9 +162,6 @@ let find_best ?(param="--help") prog =
   with Not_found ->
     kprintf failwith "Cannot find: %s" (String.concat ", " prog)
 
-(** Directories *)
-let ocamleditor_bin = !! Sys.executable_name
-
 (** Commands *)
 let oebuild_command =
   let commands = [
@@ -206,19 +203,22 @@ let oeproc_command =
     find_best ~param:"" commands
   else "unused"
 
-let redirect_stderr = if Sys.os_type = "Win32" then " 2>&1" else " 2>&1"
-
-let dot_version =
-  try (match kprintf Miscellanea.exec_lines "dot -V %s" redirect_stderr with ver :: _ -> Some ver | _ -> None)
+let get_version command =
+  try
+    let redirect_stderr = if Sys.os_type = "Win32" then "1>NUL 2>NUL" else "1>/dev/null 2>/dev/null" in
+    let cmd = sprintf "%s %s" command redirect_stderr in
+    let status_not_found = if Sys.os_type = "Win32" then 9009 else 127 in
+    let status = Sys.command cmd in
+    if status = 0 || not (List.mem status [status_not_found]) then
+      let redirect_stderr = if Sys.os_type = "Win32" then " 2>&1" else " 2>&1" in
+      let cmd = sprintf "%s %s" command redirect_stderr in
+      (match kprintf Miscellanea.exec_lines "%s %s" cmd redirect_stderr with ver :: _ -> Some ver | _ -> None)
+    else failwith cmd
   with Failure _ -> None
 
-let ocp_indent_version =
-  try (match kprintf Miscellanea.exec_lines "ocp-indent --version %s" redirect_stderr with ver :: _ -> Some ver | _ -> None)
-  with Failure _ -> None
-
-let plink_version =
-  try (match kprintf Miscellanea.exec_lines "plink -V %s" redirect_stderr with ver :: _ -> Some ver | _ -> None)
-  with Failure _ -> None
+let dot_version = get_version "dot -V"
+let ocp_indent_version = get_version "ocp-indent --version"
+let plink_version = get_version "plink -V" (* exits with status = 1 *)
 
 (** GTK config *)
 (* Adjustments according to the GTK version *)

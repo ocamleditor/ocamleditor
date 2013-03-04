@@ -41,7 +41,7 @@ module SVG = struct
     let check_include_all = GButton.check_button ~label:"Include all modules" ~packing:cbox#pack () in
     let check_types       = GButton.check_button ~label:"Type dependency" ~packing:cbox#pack () in
   object (self)
-    inherit Dot_viewer.viewer
+    inherit Dot_viewer_plugin.viewer
     inherit GObj.widget hbox#as_widget
 
     val mutable buffer = ""
@@ -182,11 +182,13 @@ module SVG = struct
 
   end
 
-  let create ?packing () = Some ((new view ?packing ()) :> Dot_viewer.viewer)
+  let create ?packing () = Some ((new view ?packing ()) :> Dot_viewer_plugin.viewer)
 
   let draw ~filename dev =
     match dev with
       | None -> assert false
       | Some dev -> dev#display ~filename
 end
+
+let _ = Dot_viewer_plugin.device := (module SVG : Dot_viewer_plugin.DEVICE)
 

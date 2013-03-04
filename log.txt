@@ -1,0 +1,607 @@
+Bytecode Library common/common.cma
+  ~thread
+  ~search_path : common
+  ~cflags .... : -g
+  ~lflags .... : -g
+  ~source .... : common/common.ml
+
+ocamlc.opt -c -g -thread -I common common/quote.ml 
+ocamlc.opt -c -g -thread -I common common/cmd.ml 
+ocamlc.opt -c -g -thread -I common common/app_config.ml 
+ocamlc.opt -c -g -thread -I common common/ocaml_config.ml 
+ocamlc.opt -c -g -thread -I common common/miscellanea.ml 
+ocamlc.opt -c -g -thread -I common common/log.ml 
+ocamlc.opt -c -g -thread -I common common/list_opt.ml 
+ocamlc.opt -c -g -thread -I common common/file_util.ml 
+ocamlc.opt -c -g -thread -I common common/dep.mli 
+ocamlc.opt -c -g -thread -I common common/dep.ml 
+ocamlc.opt -c -g -thread -I common common/cmd_line_args.ml 
+ocamlc.opt -c -g -thread -I common common/argc.mli 
+ocamlc.opt -c -g -thread -I common common/argc.ml 
+ocamlc.opt -c -g -thread -I common common/common.ml 
+ocamlc.opt -a -g -thread -o common/common.cma -I common common/quote.cmo common/cmd.cmo common/app_config.cmo common/ocaml_config.cmo common/miscellanea.cmo common/log.cmo common/list_opt.cmo common/file_util.cmo common/dep.cmo common/cmd_line_args.cmo common/argc.cmo common/common.cmo 
+Native Library common/common.cmxa
+  ~thread
+  ~search_path : common
+  ~cflags .... : -g
+  ~lflags .... : -g
+  ~source .... : common/common.ml
+
+ocamlopt.opt -c -g -thread -I common common/quote.ml 
+ocamlopt.opt -c -g -thread -I common common/cmd.ml 
+ocamlopt.opt -c -g -thread -I common common/app_config.ml 
+ocamlopt.opt -c -g -thread -I common common/ocaml_config.ml 
+ocamlopt.opt -c -g -thread -I common common/miscellanea.ml 
+ocamlopt.opt -c -g -thread -I common common/log.ml 
+ocamlopt.opt -c -g -thread -I common common/list_opt.ml 
+ocamlopt.opt -c -g -thread -I common common/file_util.ml 
+ocamlopt.opt -c -g -thread -I common common/dep.mli 
+ocamlopt.opt -c -g -thread -I common common/dep.ml 
+ocamlopt.opt -c -g -thread -I common common/cmd_line_args.ml 
+ocamlopt.opt -c -g -thread -I common common/argc.mli 
+ocamlopt.opt -c -g -thread -I common common/argc.ml 
+ocamlopt.opt -c -g -thread -I common common/common.ml 
+ocamlopt.opt -a -g -thread -o common/common.cmxa -I common common/quote.cmx common/cmd.cmx common/app_config.cmx common/ocaml_config.cmx common/miscellanea.cmx common/log.cmx common/list_opt.cmx common/file_util.cmx common/dep.cmx common/cmd_line_args.cmx common/argc.cmx common/common.cmx 
+ocaml tools/mkicons.ml
+mkdir icons
+TYPE ..\header > icons\icons.ml
+Bytecode Library icons.cma
+  ~package ... : lablgtk2
+  ~search_path : common
+  ~cflags .... : -g
+  ~lflags .... : -g
+  ~source .... : icons/icons.ml
+
+ocamlfind ocamlc -package lablgtk2 -c -g -I common icons/icons.ml 
+ocamlfind ocamlc -package lablgtk2 -a -g -o icons.cma -I common icons/icons.cmo 
+ocaml tools/mkicons.ml
+TYPE ..\header > icons\icons.ml
+Native Library icons.cmxa
+  ~package ... : lablgtk2
+  ~search_path : common
+  ~cflags .... : -g
+  ~lflags .... : -g
+  ~source .... : icons/icons.ml
+
+ocamlfind ocamlopt -package lablgtk2 -c -g -I common icons/icons.ml 
+ocamlfind ocamlopt -package lablgtk2 -a -g -o icons.cmxa -I common icons/icons.cmx 
+Bytecode Library oebuildlib.cma
+  ~thread
+  ~search_path : common oebuild
+  ~cflags .... : -w y
+  ~source .... : oebuild/oebuild.ml
+
+ocamlc.opt -c -w y -thread -I common -I oebuild oebuild/oebuild_util.ml 
+ocamlc.opt -c -w y -thread -I common -I oebuild oebuild/oebuild_table.mli 
+ocamlc.opt -c -w y -thread -I common -I oebuild oebuild/oebuild_table.ml 
+ocamlc.opt -c -w y -thread -I common -I oebuild oebuild/oebuild.ml 
+ocamlc.opt -a -thread -o oebuildlib.cma -I common -I oebuild oebuild/oebuild_util.cmo oebuild/oebuild_table.cmo oebuild/oebuild.cmo 
+Native Library oebuildlib.cmxa
+  ~thread
+  ~search_path : common oebuild
+  ~cflags .... : -w y
+  ~source .... : oebuild/oebuild.ml
+
+ocamlopt.opt -c -w y -thread -I common -I oebuild oebuild/oebuild_util.ml 
+ocamlopt.opt -c -w y -thread -I common -I oebuild oebuild/oebuild_table.mli 
+ocamlopt.opt -c -w y -thread -I common -I oebuild oebuild/oebuild_table.ml 
+ocamlopt.opt -c -w y -thread -I common -I oebuild oebuild/oebuild.ml 
+ocamlopt.opt -a -thread -o oebuildlib.cmxa -I common -I oebuild oebuild/oebuild_util.cmx oebuild/oebuild_table.cmx oebuild/oebuild.cmx 
+Bytecode Library oebuildlib.cma
+  ~thread
+  ~search_path : common oebuild
+  ~cflags .... : -w y
+  ~source .... : oebuild/oebuild.ml
+
+ocamlc.opt -a -thread -o oebuildlib.cma -I common -I oebuild oebuild/oebuild_util.cmo oebuild/oebuild_table.cmo oebuild/oebuild.cmo 
+Native Library oebuildlib.cmxa
+  ~thread
+  ~search_path : common oebuild
+  ~cflags .... : -w y
+  ~source .... : oebuild/oebuild.ml
+
+ocamlopt.opt -a -thread -o oebuildlib.cmxa -I common -I oebuild oebuild/oebuild_util.cmx oebuild/oebuild_table.cmx oebuild/oebuild.cmx 
+Bytecode Executable oebuild/oebuild.exe
+  ~thread
+  ~package ... : unix,str
+  ~search_path : common oebuild
+  ~libs ...... : common
+  ~cflags .... : -w y
+  ~source .... : oebuild/oebuild_tool.ml
+
+ocamlfind ocamlc -package unix,str -c -w y -thread -I common -I oebuild oebuild/oebuild_tool.ml 
+ocamlfind ocamlc -package unix,str -linkpkg -thread -o oebuild/oebuild.exe -I common -I oebuild common.cma oebuild/oebuild_util.cmo oebuild/oebuild_table.cmo oebuild/oebuild.cmo oebuild/oebuild_tool.cmo 
+Bytecode Library oebuildlib.cma
+  ~thread
+  ~search_path : common oebuild
+  ~cflags .... : -w y
+  ~source .... : oebuild/oebuild.ml
+
+ocamlc.opt -a -thread -o oebuildlib.cma -I common -I oebuild oebuild/oebuild_util.cmo oebuild/oebuild_table.cmo oebuild/oebuild.cmo 
+Native Library oebuildlib.cmxa
+  ~thread
+  ~search_path : common oebuild
+  ~cflags .... : -w y
+  ~source .... : oebuild/oebuild.ml
+
+ocamlopt.opt -a -thread -o oebuildlib.cmxa -I common -I oebuild oebuild/oebuild_util.cmx oebuild/oebuild_table.cmx oebuild/oebuild.cmx 
+Native Executable oebuild/oebuild.opt.exe
+  ~thread
+  ~package ... : unix,str
+  ~search_path : common oebuild
+  ~libs ...... : common
+  ~cflags .... : -w y
+  ~source .... : oebuild/oebuild_tool.ml
+
+ocamlfind ocamlopt -package unix,str -c -w y -thread -I common -I oebuild oebuild/oebuild_tool.ml 
+ocamlfind ocamlopt -package unix,str -linkpkg -thread -o oebuild/oebuild.opt.exe -I common -I oebuild common.cmxa oebuild/oebuild_util.cmx oebuild/oebuild_table.cmx oebuild/oebuild.cmx oebuild/oebuild_tool.cmx 
+Bytecode Executable oeproc/oeproc.exe
+  ~thread
+  ~package ... : unix,str
+  ~search_path : common oeproc
+  ~cflags .... : -w s
+  ~source .... : oeproc/oeproc.ml
+
+ocamlfind ocamlc -package unix,str -c -w s -thread -I common -I oeproc oeproc/oeproc.ml 
+ocamlfind ocamlc -package unix,str -linkpkg -thread -o oeproc/oeproc.exe -I common -I oeproc oeproc/oeproc.cmo 
+Native Executable oeproc/oeproc.opt.exe
+  ~thread
+  ~package ... : unix,str
+  ~search_path : common oeproc
+  ~cflags .... : -w s
+  ~source .... : oeproc/oeproc.ml
+
+ocamlfind ocamlopt -package unix,str -c -w s -thread -I common -I oeproc oeproc/oeproc.ml 
+ocamlfind ocamlopt -package unix,str -linkpkg -thread -o oeproc/oeproc.opt.exe -I common -I oeproc oeproc/oeproc.cmx 
+Bytecode Library gmisclib.cma
+  ~package ... : lablgtk2
+  ~search_path : gmisclib
+  ~cflags .... : -g
+  ~lflags .... : -g
+  ~source .... : gmisclib/gmisclib.ml
+
+ocamlfind ocamlc -package lablgtk2 -c -g -I gmisclib gmisclib/window.ml 
+ocamlfind ocamlc -package lablgtk2 -c -g -I gmisclib gmisclib/undo.mli 
+ocamlfind ocamlc -package lablgtk2 -c -g -I gmisclib gmisclib/undo.ml 
+ocamlfind ocamlc -package lablgtk2 -c -g -I gmisclib gmisclib/button_menu.mli 
+ocamlfind ocamlc -package lablgtk2 -c -g -I gmisclib gmisclib/button_menu.ml 
+ocamlfind ocamlc -package lablgtk2 -c -g -I gmisclib gmisclib/menu_tool_button.mli 
+ocamlfind ocamlc -package lablgtk2 -c -g -I gmisclib gmisclib/menu_tool_button.ml 
+ocamlfind ocamlc -package lablgtk2 -c -g -I gmisclib gmisclib/hyperlink.ml 
+ocamlfind ocamlc -package lablgtk2 -c -g -I gmisclib gmisclib/gmisclib_util.ml 
+ocamlfind ocamlc -package lablgtk2 -c -g -I gmisclib gmisclib/entry_combo_search.mli 
+ocamlfind ocamlc -package lablgtk2 -c -g -I gmisclib gmisclib/entry_combo_search.ml 
+ocamlfind ocamlc -package lablgtk2 -c -g -I gmisclib gmisclib/gmisclib.ml 
+ocamlfind ocamlc -package lablgtk2 -a -g -o gmisclib.cma -I gmisclib gmisclib/window.cmo gmisclib/undo.cmo gmisclib/button_menu.cmo gmisclib/menu_tool_button.cmo gmisclib/hyperlink.cmo gmisclib/gmisclib_util.cmo gmisclib/entry_combo_search.cmo gmisclib/gmisclib.cmo 
+Native Library gmisclib.cmxa
+  ~package ... : lablgtk2
+  ~search_path : gmisclib
+  ~cflags .... : -g
+  ~lflags .... : -g
+  ~source .... : gmisclib/gmisclib.ml
+
+ocamlfind ocamlopt -package lablgtk2 -c -g -I gmisclib gmisclib/window.ml 
+ocamlfind ocamlopt -package lablgtk2 -c -g -I gmisclib gmisclib/undo.mli 
+ocamlfind ocamlopt -package lablgtk2 -c -g -I gmisclib gmisclib/undo.ml 
+ocamlfind ocamlopt -package lablgtk2 -c -g -I gmisclib gmisclib/button_menu.mli 
+ocamlfind ocamlopt -package lablgtk2 -c -g -I gmisclib gmisclib/button_menu.ml 
+ocamlfind ocamlopt -package lablgtk2 -c -g -I gmisclib gmisclib/menu_tool_button.mli 
+ocamlfind ocamlopt -package lablgtk2 -c -g -I gmisclib gmisclib/menu_tool_button.ml 
+ocamlfind ocamlopt -package lablgtk2 -c -g -I gmisclib gmisclib/hyperlink.ml 
+ocamlfind ocamlopt -package lablgtk2 -c -g -I gmisclib gmisclib/gmisclib_util.ml 
+ocamlfind ocamlopt -package lablgtk2 -c -g -I gmisclib gmisclib/entry_combo_search.mli 
+ocamlfind ocamlopt -package lablgtk2 -c -g -I gmisclib gmisclib/entry_combo_search.ml 
+ocamlfind ocamlopt -package lablgtk2 -c -g -I gmisclib gmisclib/gmisclib.ml 
+ocamlfind ocamlopt -package lablgtk2 -a -g -o gmisclib.cmxa -I gmisclib gmisclib/window.cmx gmisclib/undo.cmx gmisclib/button_menu.cmx gmisclib/menu_tool_button.cmx gmisclib/hyperlink.cmx gmisclib/gmisclib_util.cmx gmisclib/entry_combo_search.cmx gmisclib/gmisclib.cmx 
+Bytecode Library otherwidgets.cma
+  ~package ... : lablgtk2
+  ~search_path : icons common otherwidgets
+  ~cflags .... : -w sy -g
+  ~lflags .... : -w sy -g
+  ~source .... : otherwidgets/otherwidgets.ml
+
+ocamlfind ocamlc -package lablgtk2 -c -w sy -g -I icons -I common -I otherwidgets otherwidgets/tree.ml 
+ocamlfind ocamlc -package lablgtk2 -c -w sy -g -I icons -I common -I otherwidgets otherwidgets/key_assist.ml 
+ocamlfind ocamlc -package lablgtk2 -c -w sy -g -I icons -I common -I otherwidgets otherwidgets/dialog.ml 
+ocamlfind ocamlc -package lablgtk2 -c -w sy -g -I icons -I common -I otherwidgets otherwidgets/dialog_save_as.ml 
+ocamlfind ocamlc -package lablgtk2 -c -w sy -g -I icons -I common -I otherwidgets otherwidgets/dialog_rename.ml 
+ocamlfind ocamlc -package lablgtk2 -c -w sy -g -I icons -I common -I otherwidgets otherwidgets/dialog_goto.ml 
+ocamlfind ocamlc -package lablgtk2 -c -w sy -g -I icons -I common -I otherwidgets otherwidgets/dialog_file_new.ml 
+ocamlfind ocamlc -package lablgtk2 -c -w sy -g -I icons -I common -I otherwidgets otherwidgets/checklist.ml 
+ocamlfind ocamlc -package lablgtk2 -c -w sy -g -I icons -I common -I otherwidgets otherwidgets/check_for_updates.ml 
+ocamlfind ocamlc -package lablgtk2 -c -w sy -g -I icons -I common -I otherwidgets otherwidgets/activity.ml 
+ocamlfind ocamlc -package lablgtk2 -c -w sy -g -I icons -I common -I otherwidgets otherwidgets/otherwidgets.ml 
+ocamlfind ocamlc -package lablgtk2 -a -w sy -g -o otherwidgets.cma -I icons -I common -I otherwidgets otherwidgets/tree.cmo otherwidgets/key_assist.cmo otherwidgets/dialog.cmo otherwidgets/dialog_save_as.cmo otherwidgets/dialog_rename.cmo otherwidgets/dialog_goto.cmo otherwidgets/dialog_file_new.cmo otherwidgets/checklist.cmo otherwidgets/check_for_updates.cmo otherwidgets/activity.cmo otherwidgets/otherwidgets.cmo 
+ocaml tools/prepare_build.ml
+gtkThreadOriginal.ml -> gtkThread2.ml
+rc resource.rc
+Microsoft (R) Windows (R) Resource Compiler Version 6.1.7600.16385
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+cvtres /machine:x86 resource.res
+Microsoft (R) Windows Resource To Object Converter Version 9.00.30729.01
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+mkdir ../plugins
+ocamllex err_lexer.mll
+65 states, 415 transitions, table size 2050 bytes
+1654 additional bytes used for bindings
+ocamlyacc err_parser.mly
+ocaml -I common str.cma unix.cma common.cma generate_oebuild_script.ml
+Testing oebuild_script.ml...
+  ocaml oebuild_script.ml
+Native Library otherwidgets.cmxa
+  ~package ... : lablgtk2
+  ~search_path : icons common otherwidgets
+  ~cflags .... : -w sy -g
+  ~lflags .... : -w sy -g
+  ~source .... : otherwidgets/otherwidgets.ml
+
+ocamlfind ocamlopt -package lablgtk2 -c -w sy -g -I icons -I common -I otherwidgets otherwidgets/tree.ml 
+ocamlfind ocamlopt -package lablgtk2 -c -w sy -g -I icons -I common -I otherwidgets otherwidgets/key_assist.ml 
+ocamlfind ocamlopt -package lablgtk2 -c -w sy -g -I icons -I common -I otherwidgets otherwidgets/dialog.ml 
+ocamlfind ocamlopt -package lablgtk2 -c -w sy -g -I icons -I common -I otherwidgets otherwidgets/dialog_save_as.ml 
+ocamlfind ocamlopt -package lablgtk2 -c -w sy -g -I icons -I common -I otherwidgets otherwidgets/dialog_rename.ml 
+ocamlfind ocamlopt -package lablgtk2 -c -w sy -g -I icons -I common -I otherwidgets otherwidgets/dialog_goto.ml 
+ocamlfind ocamlopt -package lablgtk2 -c -w sy -g -I icons -I common -I otherwidgets otherwidgets/dialog_file_new.ml 
+ocamlfind ocamlopt -package lablgtk2 -c -w sy -g -I icons -I common -I otherwidgets otherwidgets/checklist.ml 
+ocamlfind ocamlopt -package lablgtk2 -c -w sy -g -I icons -I common -I otherwidgets otherwidgets/check_for_updates.ml 
+ocamlfind ocamlopt -package lablgtk2 -c -w sy -g -I icons -I common -I otherwidgets otherwidgets/activity.ml 
+ocamlfind ocamlopt -package lablgtk2 -c -w sy -g -I icons -I common -I otherwidgets otherwidgets/otherwidgets.ml 
+ocamlfind ocamlopt -package lablgtk2 -a -w sy -g -o otherwidgets.cmxa -I icons -I common -I otherwidgets otherwidgets/tree.cmx otherwidgets/key_assist.cmx otherwidgets/dialog.cmx otherwidgets/dialog_save_as.cmx otherwidgets/dialog_rename.cmx otherwidgets/dialog_goto.cmx otherwidgets/dialog_file_new.cmx otherwidgets/checklist.cmx otherwidgets/check_for_updates.cmx otherwidgets/activity.cmx otherwidgets/otherwidgets.cmx 
+ocaml tools/prepare_build.ml
+gtkThreadOriginal.ml -> gtkThread2.ml
+rc resource.rc
+Microsoft (R) Windows (R) Resource Compiler Version 6.1.7600.16385
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+cvtres /machine:x86 resource.res
+Microsoft (R) Windows Resource To Object Converter Version 9.00.30729.01
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+ocamllex err_lexer.mll
+65 states, 415 transitions, table size 2050 bytes
+1654 additional bytes used for bindings
+ocamlyacc err_parser.mly
+ocaml -I common str.cma unix.cma common.cma generate_oebuild_script.ml
+Testing oebuild_script.ml...
+  ocaml oebuild_script.ml
+Bytecode Library common/common.cma
+  ~thread
+  ~search_path : common
+  ~cflags .... : -g
+  ~lflags .... : -g
+  ~source .... : common/common.ml
+
+ocamlc.opt -a -g -thread -o common/common.cma -I common common/quote.cmo common/cmd.cmo common/app_config.cmo common/ocaml_config.cmo common/miscellanea.cmo common/log.cmo common/list_opt.cmo common/file_util.cmo common/dep.cmo common/cmd_line_args.cmo common/argc.cmo common/common.cmo 
+Native Library common/common.cmxa
+  ~thread
+  ~search_path : common
+  ~cflags .... : -g
+  ~lflags .... : -g
+  ~source .... : common/common.ml
+
+ocamlopt.opt -a -g -thread -o common/common.cmxa -I common common/quote.cmx common/cmd.cmx common/app_config.cmx common/ocaml_config.cmx common/miscellanea.cmx common/log.cmx common/list_opt.cmx common/file_util.cmx common/dep.cmx common/cmd_line_args.cmx common/argc.cmx common/common.cmx 
+ocaml tools/mkicons.ml
+TYPE ..\header > icons\icons.ml
+Bytecode Library icons.cma
+  ~package ... : lablgtk2
+  ~search_path : common
+  ~cflags .... : -g
+  ~lflags .... : -g
+  ~source .... : icons/icons.ml
+
+ocamlfind ocamlc -package lablgtk2 -c -g -I common icons/icons.ml 
+ocamlfind ocamlc -package lablgtk2 -a -g -o icons.cma -I common icons/icons.cmo 
+ocaml tools/mkicons.ml
+TYPE ..\header > icons\icons.ml
+Native Library icons.cmxa
+  ~package ... : lablgtk2
+  ~search_path : common
+  ~cflags .... : -g
+  ~lflags .... : -g
+  ~source .... : icons/icons.ml
+
+ocamlfind ocamlopt -package lablgtk2 -c -g -I common icons/icons.ml 
+ocamlfind ocamlopt -package lablgtk2 -a -g -o icons.cmxa -I common icons/icons.cmx 
+Bytecode Library oebuildlib.cma
+  ~thread
+  ~search_path : common oebuild
+  ~cflags .... : -w y
+  ~source .... : oebuild/oebuild.ml
+
+ocamlc.opt -a -thread -o oebuildlib.cma -I common -I oebuild oebuild/oebuild_util.cmo oebuild/oebuild_table.cmo oebuild/oebuild.cmo 
+Native Library oebuildlib.cmxa
+  ~thread
+  ~search_path : common oebuild
+  ~cflags .... : -w y
+  ~source .... : oebuild/oebuild.ml
+
+ocamlopt.opt -a -thread -o oebuildlib.cmxa -I common -I oebuild oebuild/oebuild_util.cmx oebuild/oebuild_table.cmx oebuild/oebuild.cmx 
+Bytecode Library oebuildlib.cma
+  ~thread
+  ~search_path : common oebuild
+  ~cflags .... : -w y
+  ~source .... : oebuild/oebuild.ml
+
+ocamlc.opt -a -thread -o oebuildlib.cma -I common -I oebuild oebuild/oebuild_util.cmo oebuild/oebuild_table.cmo oebuild/oebuild.cmo 
+Native Library oebuildlib.cmxa
+  ~thread
+  ~search_path : common oebuild
+  ~cflags .... : -w y
+  ~source .... : oebuild/oebuild.ml
+
+ocamlopt.opt -a -thread -o oebuildlib.cmxa -I common -I oebuild oebuild/oebuild_util.cmx oebuild/oebuild_table.cmx oebuild/oebuild.cmx 
+Bytecode Executable oebuild/oebuild.exe
+  ~thread
+  ~package ... : unix,str
+  ~search_path : common oebuild
+  ~libs ...... : common
+  ~cflags .... : -w y
+  ~source .... : oebuild/oebuild_tool.ml
+
+ocamlfind ocamlc -package unix,str -linkpkg -thread -o oebuild/oebuild.exe -I common -I oebuild common.cma oebuild/oebuild_util.cmo oebuild/oebuild_table.cmo oebuild/oebuild.cmo oebuild/oebuild_tool.cmo 
+Bytecode Library oebuildlib.cma
+  ~thread
+  ~search_path : common oebuild
+  ~cflags .... : -w y
+  ~source .... : oebuild/oebuild.ml
+
+ocamlc.opt -a -thread -o oebuildlib.cma -I common -I oebuild oebuild/oebuild_util.cmo oebuild/oebuild_table.cmo oebuild/oebuild.cmo 
+Native Library oebuildlib.cmxa
+  ~thread
+  ~search_path : common oebuild
+  ~cflags .... : -w y
+  ~source .... : oebuild/oebuild.ml
+
+ocamlopt.opt -a -thread -o oebuildlib.cmxa -I common -I oebuild oebuild/oebuild_util.cmx oebuild/oebuild_table.cmx oebuild/oebuild.cmx 
+Native Executable oebuild/oebuild.opt.exe
+  ~thread
+  ~package ... : unix,str
+  ~search_path : common oebuild
+  ~libs ...... : common
+  ~cflags .... : -w y
+  ~source .... : oebuild/oebuild_tool.ml
+
+ocamlfind ocamlopt -package unix,str -linkpkg -thread -o oebuild/oebuild.opt.exe -I common -I oebuild common.cmxa oebuild/oebuild_util.cmx oebuild/oebuild_table.cmx oebuild/oebuild.cmx oebuild/oebuild_tool.cmx 
+Bytecode Executable oeproc/oeproc.exe
+  ~thread
+  ~package ... : unix,str
+  ~search_path : common oeproc
+  ~cflags .... : -w s
+  ~source .... : oeproc/oeproc.ml
+
+ocamlfind ocamlc -package unix,str -linkpkg -thread -o oeproc/oeproc.exe -I common -I oeproc oeproc/oeproc.cmo 
+Native Executable oeproc/oeproc.opt.exe
+  ~thread
+  ~package ... : unix,str
+  ~search_path : common oeproc
+  ~cflags .... : -w s
+  ~source .... : oeproc/oeproc.ml
+
+ocamlfind ocamlopt -package unix,str -linkpkg -thread -o oeproc/oeproc.opt.exe -I common -I oeproc oeproc/oeproc.cmx 
+Bytecode Library gmisclib.cma
+  ~package ... : lablgtk2
+  ~search_path : gmisclib
+  ~cflags .... : -g
+  ~lflags .... : -g
+  ~source .... : gmisclib/gmisclib.ml
+
+ocamlfind ocamlc -package lablgtk2 -a -g -o gmisclib.cma -I gmisclib gmisclib/window.cmo gmisclib/undo.cmo gmisclib/button_menu.cmo gmisclib/menu_tool_button.cmo gmisclib/hyperlink.cmo gmisclib/gmisclib_util.cmo gmisclib/entry_combo_search.cmo gmisclib/gmisclib.cmo 
+Native Library gmisclib.cmxa
+  ~package ... : lablgtk2
+  ~search_path : gmisclib
+  ~cflags .... : -g
+  ~lflags .... : -g
+  ~source .... : gmisclib/gmisclib.ml
+
+ocamlfind ocamlopt -package lablgtk2 -a -g -o gmisclib.cmxa -I gmisclib gmisclib/window.cmx gmisclib/undo.cmx gmisclib/button_menu.cmx gmisclib/menu_tool_button.cmx gmisclib/hyperlink.cmx gmisclib/gmisclib_util.cmx gmisclib/entry_combo_search.cmx gmisclib/gmisclib.cmx 
+Bytecode Library otherwidgets.cma
+  ~package ... : lablgtk2
+  ~search_path : icons common otherwidgets
+  ~cflags .... : -w sy -g
+  ~lflags .... : -w sy -g
+  ~source .... : otherwidgets/otherwidgets.ml
+
+ocamlfind ocamlc -package lablgtk2 -a -w sy -g -o otherwidgets.cma -I icons -I common -I otherwidgets otherwidgets/tree.cmo otherwidgets/key_assist.cmo otherwidgets/dialog.cmo otherwidgets/dialog_save_as.cmo otherwidgets/dialog_rename.cmo otherwidgets/dialog_goto.cmo otherwidgets/dialog_file_new.cmo otherwidgets/checklist.cmo otherwidgets/check_for_updates.cmo otherwidgets/activity.cmo otherwidgets/otherwidgets.cmo 
+ocaml tools/prepare_build.ml
+gtkThreadOriginal.ml -> gtkThread2.ml
+rc resource.rc
+Microsoft (R) Windows (R) Resource Compiler Version 6.1.7600.16385
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+cvtres /machine:x86 resource.res
+Microsoft (R) Windows Resource To Object Converter Version 9.00.30729.01
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+ocamllex err_lexer.mll
+65 states, 415 transitions, table size 2050 bytes
+1654 additional bytes used for bindings
+ocamlyacc err_parser.mly
+ocaml -I common str.cma unix.cma common.cma generate_oebuild_script.ml
+Testing oebuild_script.ml...
+  ocaml oebuild_script.ml
+Native Library otherwidgets.cmxa
+  ~package ... : lablgtk2
+  ~search_path : icons common otherwidgets
+  ~cflags .... : -w sy -g
+  ~lflags .... : -w sy -g
+  ~source .... : otherwidgets/otherwidgets.ml
+
+ocamlfind ocamlopt -package lablgtk2 -a -w sy -g -o otherwidgets.cmxa -I icons -I common -I otherwidgets otherwidgets/tree.cmx otherwidgets/key_assist.cmx otherwidgets/dialog.cmx otherwidgets/dialog_save_as.cmx otherwidgets/dialog_rename.cmx otherwidgets/dialog_goto.cmx otherwidgets/dialog_file_new.cmx otherwidgets/checklist.cmx otherwidgets/check_for_updates.cmx otherwidgets/activity.cmx otherwidgets/otherwidgets.cmx 
+ocaml tools/prepare_build.ml
+gtkThreadOriginal.ml -> gtkThread2.ml
+rc resource.rc
+Microsoft (R) Windows (R) Resource Compiler Version 6.1.7600.16385
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+cvtres /machine:x86 resource.res
+Microsoft (R) Windows Resource To Object Converter Version 9.00.30729.01
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+ocamllex err_lexer.mll
+65 states, 415 transitions, table size 2050 bytes
+1654 additional bytes used for bindings
+ocamlyacc err_parser.mly
+ocaml -I common str.cma unix.cma common.cma generate_oebuild_script.ml
+Testing oebuild_script.ml...
+  ocaml oebuild_script.ml
+Native Library ocamleditor_lib.cmxa
+  ~thread
+  ~package ... : compiler-libs,lablgtk2,str
+  ~search_path : +ocamldoc +xml-light gmisclib common icons otherwidgets oebuild 
+  ~inline .... : 50
+  ~cflags .... : -w syxm -g
+  ~lflags .... : -w syxm -g
+  ~source .... : ocamleditor_lib.ml
+
+ocamlfind ocamlopt -package compiler-libs,lablgtk2,str -c -w syxm -g -thread -inline 50 -I +ocamldoc -I +xml-light -I gmisclib -I common -I icons -I otherwidgets -I oebuild oe_config.ml 
+ocamlfind ocamlopt -package compiler-libs,lablgtk2,str -c -w syxm -g -thread -inline 50 -I +ocamldoc -I +xml-light -I gmisclib -I common -I icons -I otherwidgets -I oebuild gtkThread2.ml 
+ocamlfind ocamlopt -package compiler-libs,lablgtk2,str -c -w syxm -g -thread -inline 50 -I +ocamldoc -I +xml-light -I gmisclib -I common -I icons -I otherwidgets -I oebuild convert.ml 
+ocamlfind ocamlopt -package compiler-libs,lablgtk2,str -c -w syxm -g -thread -inline 50 -I +ocamldoc -I +xml-light -I gmisclib -I common -I icons -I otherwidgets -I oebuild text_util.ml 
+ocamlfind ocamlopt -package compiler-libs,lablgtk2,str -c -w syxm -g -thread -inline 50 -I +ocamldoc -I +xml-light -I gmisclib -I common -I icons -I otherwidgets -I oebuild text_options.ml 
+ocamlfind ocamlopt -package compiler-libs,lablgtk2,str -c -w syxm -g -thread -inline 50 -I +ocamldoc -I +xml-light -I gmisclib -I common -I icons -I otherwidgets -I oebuild smart_keys.ml 
+ocamlfind ocamlopt -package compiler-libs,lablgtk2,str -c -w syxm -g -thread -inline 50 -I +ocamldoc -I +xml-light -I gmisclib -I common -I icons -I otherwidgets -I oebuild alignment.ml 
+ocamlfind ocamlopt -package compiler-libs,lablgtk2,str -c -w syxm -g -thread -inline 50 -I +ocamldoc -I +xml-light -I gmisclib -I common -I icons -I otherwidgets -I oebuild ocp_indent.ml 
+ocamlfind ocamlopt -package compiler-libs,lablgtk2,str -c -w syxm -g -thread -inline 50 -I +ocamldoc -I +xml-light -I gmisclib -I common -I icons -I otherwidgets -I oebuild gutter.ml 
+ocamlfind ocamlopt -package compiler-libs,lablgtk2,str -c -w syxm -g -thread -inline 50 -I +ocamldoc -I +xml-light -I gmisclib -I common -I icons -I otherwidgets -I oebuild color.ml 
+ocamlfind ocamlopt -package compiler-libs,lablgtk2,str -c -w syxm -g -thread -inline 50 -I +ocamldoc -I +xml-light -I gmisclib -I common -I icons -I otherwidgets -I oebuild text_init.ml 
+ocamlfind ocamlopt -package compiler-libs,lablgtk2,str -c -w syxm -g -thread -inline 50 -I +ocamldoc -I +xml-light -I gmisclib -I common -I icons -I otherwidgets -I oebuild text_indent_lines.ml 
+ocamlfind ocamlopt -package compiler-libs,lablgtk2,str -c -w syxm -g -thread -inline 50 -I +ocamldoc -I +xml-light -I gmisclib -I common -I icons -I otherwidgets -I oebuild task.ml 
+ocamlfind ocamlopt -package compiler-libs,lablgtk2,str -c -w syxm -g -thread -inline 50 -I +ocamldoc -I +xml-light -I gmisclib -I common -I icons -I otherwidgets -I oebuild bconf_old_1.ml 
+ocamlfind ocamlopt -package compiler-libs,lablgtk2,str -c -w syxm -g -thread -inline 50 -I +ocamldoc -I +xml-light -I gmisclib -I common -I icons -I otherwidgets -I oebuild target.ml 
+ocamlfind ocamlopt -package compiler-libs,lablgtk2,str -c -w syxm -g -thread -inline 50 -I +ocamldoc -I +xml-light -I gmisclib -I common -I icons -I otherwidgets -I oebuild rconf.ml 
+ocamlfind ocamlopt -package compiler-libs,lablgtk2,str -c -w syxm -g -thread -inline 50 -I +ocamldoc -I +xml-light -I gmisclib -I common -I icons -I otherwidgets -I oebuild oe.ml 
+ocamlfind ocamlopt -package compiler-libs,lablgtk2,str -c -w syxm -g -thread -inline 50 -I +ocamldoc -I +xml-light -I gmisclib -I common -I icons -I otherwidgets -I oebuild editor_file_type.ml 
+ocamlfind ocamlopt -package compiler-libs,lablgtk2,str -c -w syxm -g -thread -inline 50 -I +ocamldoc -I +xml-light -I gmisclib -I common -I icons -I otherwidgets -I oebuild plugins.ml 
+ocamlfind ocamlopt -package compiler-libs,lablgtk2,str -c -w syxm -g -thread -inline 50 -I +ocamldoc -I +xml-light -I gmisclib -I common -I icons -I otherwidgets -I oebuild editor_file.ml 
+ocamlfind ocamlopt -package compiler-libs,lablgtk2,str -c -w syxm -g -thread -inline 50 -I +ocamldoc -I +xml-light -I gmisclib -I common -I icons -I otherwidgets -I oebuild build_script_command.ml 
+ocamlfind ocamlopt -package compiler-libs,lablgtk2,str -c -w syxm -g -thread -inline 50 -I +ocamldoc -I +xml-light -I gmisclib -I common -I icons -I otherwidgets -I oebuild build_script_args.ml 
+ocamlfind ocamlopt -package compiler-libs,lablgtk2,str -c -w syxm -g -thread -inline 50 -I +ocamldoc -I +xml-light -I gmisclib -I common -I icons -I otherwidgets -I oebuild build_script.ml 
+ocamlfind ocamlopt -package compiler-libs,lablgtk2,str -c -w syxm -g -thread -inline 50 -I +ocamldoc -I +xml-light -I gmisclib -I common -I icons -I otherwidgets -I oebuild prj.ml 
+ocamlfind ocamlopt -package compiler-libs,lablgtk2,str -c -w syxm -g -thread -inline 50 -I +ocamldoc -I +xml-light -I gmisclib -I common -I icons -I otherwidgets -I oebuild bookmark.ml 
+ocamlfind ocamlopt -package compiler-libs,lablgtk2,str -c -w syxm -g -thread -inline 50 -I +ocamldoc -I +xml-light -I gmisclib -I common -I icons -I otherwidgets -I oebuild project.ml 
+ocamlfind ocamlopt -package compiler-libs,lablgtk2,str -c -w syxm -g -thread -inline 50 -I +ocamldoc -I +xml-light -I gmisclib -I common -I icons -I otherwidgets -I oebuild preferences.ml 
+ocamlfind ocamlopt -package compiler-libs,lablgtk2,str -c -w syxm -g -thread -inline 50 -I +ocamldoc -I +xml-light -I gmisclib -I common -I icons -I otherwidgets -I oebuild mark_occurrences.ml 
+ocamlfind ocamlopt -package compiler-libs,lablgtk2,str -c -w syxm -g -thread -inline 50 -I +ocamldoc -I +xml-light -I gmisclib -I common -I icons -I otherwidgets -I oebuild line_num_labl.ml 
+ocamlfind ocamlopt -package compiler-libs,lablgtk2,str -c -w syxm -g -thread -inline 50 -I +ocamldoc -I +xml-light -I gmisclib -I common -I icons -I otherwidgets -I oebuild comments.ml 
+ocamlfind ocamlopt -package compiler-libs,lablgtk2,str -c -w syxm -g -thread -inline 50 -I +ocamldoc -I +xml-light -I gmisclib -I common -I icons -I otherwidgets -I oebuild lexical.ml 
+ocamlfind ocamlopt -package compiler-libs,lablgtk2,str -c -w syxm -g -thread -inline 50 -I +ocamldoc -I +xml-light -I gmisclib -I common -I icons -I otherwidgets -I oebuild lex.ml 
+ocamlfind ocamlopt -package compiler-libs,lablgtk2,str -c -w syxm -g -thread -inline 50 -I +ocamldoc -I +xml-light -I gmisclib -I common -I icons -I otherwidgets -I oebuild delimiters.ml 
+ocamlfind ocamlopt -package compiler-libs,lablgtk2,str -c -w syxm -g -thread -inline 50 -I +ocamldoc -I +xml-light -I gmisclib -I common -I icons -I otherwidgets -I oebuild text.ml 
+ocamlfind ocamlopt -package compiler-libs,lablgtk2,str -c -w syxm -g -thread -inline 50 -I +ocamldoc -I +xml-light -I gmisclib -I common -I icons -I otherwidgets -I oebuild process.mli 
+ocamlfind ocamlopt -package compiler-libs,lablgtk2,str -c -w syxm -g -thread -inline 50 -I +ocamldoc -I +xml-light -I gmisclib -I common -I icons -I otherwidgets -I oebuild process.ml 
+ocamlfind ocamlopt -package compiler-libs,lablgtk2,str -c -w syxm -g -thread -inline 50 -I +ocamldoc -I +xml-light -I gmisclib -I common -I icons -I otherwidgets -I oebuild task_process.ml 
+ocamlfind ocamlopt -package compiler-libs,lablgtk2,str -c -w syxm -g -thread -inline 50 -I +ocamldoc -I +xml-light -I gmisclib -I common -I icons -I otherwidgets -I oebuild messages_tab.ml 
+ocamlfind ocamlopt -package compiler-libs,lablgtk2,str -c -w syxm -g -thread -inline 50 -I +ocamldoc -I +xml-light -I gmisclib -I common -I icons -I otherwidgets -I oebuild messages.ml 
+ocamlfind ocamlopt -package compiler-libs,lablgtk2,str -c -w syxm -g -thread -inline 50 -I +ocamldoc -I +xml-light -I gmisclib -I common -I icons -I otherwidgets -I oebuild timeout.ml 
+ocamlfind ocamlopt -package compiler-libs,lablgtk2,str -c -w syxm -g -thread -inline 50 -I +ocamldoc -I +xml-light -I gmisclib -I common -I icons -I otherwidgets -I oebuild prf.ml 
+ocamlfind ocamlopt -package compiler-libs,lablgtk2,str -c -w syxm -g -thread -inline 50 -I +ocamldoc -I +xml-light -I gmisclib -I common -I icons -I otherwidgets -I oebuild dot_viewer_pdf.ml 
+ocamlfind ocamlopt -package compiler-libs,lablgtk2,str -c -w syxm -g -thread -inline 50 -I +ocamldoc -I +xml-light -I gmisclib -I common -I icons -I otherwidgets -I oebuild dot_viewer_plugin.ml 
+ocamlfind ocamlopt -package compiler-libs,lablgtk2,str -c -w syxm -g -thread -inline 50 -I +ocamldoc -I +xml-light -I gmisclib -I common -I icons -I otherwidgets -I oebuild menu_view.ml 
+ocamlfind ocamlopt -package compiler-libs,lablgtk2,str -c -w syxm -g -thread -inline 50 -I +ocamldoc -I +xml-light -I gmisclib -I common -I icons -I otherwidgets -I oebuild plugin.ml 
+ocamlfind ocamlopt -package compiler-libs,lablgtk2,str -c -w syxm -g -thread -inline 50 -I +ocamldoc -I +xml-light -I gmisclib -I common -I icons -I otherwidgets -I oebuild menu_types.ml 
+ocamlfind ocamlopt -package compiler-libs,lablgtk2,str -c -w syxm -g -thread -inline 50 -I +ocamldoc -I +xml-light -I gmisclib -I common -I icons -I otherwidgets -I oebuild file_history.ml 
+ocamlfind ocamlopt -package compiler-libs,lablgtk2,str -c -w syxm -g -thread -inline 50 -I +ocamldoc -I +xml-light -I gmisclib -I common -I icons -I otherwidgets -I oebuild menu_file.ml 
+ocamlfind ocamlopt -package compiler-libs,lablgtk2,str -c -w syxm -g -thread -inline 50 -I +ocamldoc -I +xml-light -I gmisclib -I common -I icons -I otherwidgets -I oebuild location_history.ml 
+ocamlfind ocamlopt -package compiler-libs,lablgtk2,str -c -w syxm -g -thread -inline 50 -I +ocamldoc -I +xml-light -I gmisclib -I common -I icons -I otherwidgets -I oebuild incremental_search.ml 
+ocamlfind ocamlopt -package compiler-libs,lablgtk2,str -c -w syxm -g -thread -inline 50 -I +ocamldoc -I +xml-light -I gmisclib -I common -I icons -I otherwidgets -I oebuild preferences_apply.ml 
+ocamlfind ocamlopt -package compiler-libs,lablgtk2,str -c -w syxm -g -thread -inline 50 -I +ocamldoc -I +xml-light -I gmisclib -I common -I icons -I otherwidgets -I oebuild shell.ml 
+ocamlfind ocamlopt -package compiler-libs,lablgtk2,str -c -w syxm -g -thread -inline 50 -I +ocamldoc -I +xml-light -I gmisclib -I common -I icons -I otherwidgets -I oebuild ocaml_word_bound.ml 
+ocamlfind ocamlopt -package compiler-libs,lablgtk2,str -c -w syxm -g -thread -inline 50 -I +ocamldoc -I +xml-light -I gmisclib -I common -I icons -I otherwidgets -I oebuild code_folding.ml 
+ocamlfind ocamlopt -package compiler-libs,lablgtk2,str -c -w syxm -g -thread -inline 50 -I +ocamldoc -I +xml-light -I gmisclib -I common -I icons -I otherwidgets -I oebuild ocaml_text.ml 
+ocamlfind ocamlopt -package compiler-libs,lablgtk2,str -c -w syxm -g -thread -inline 50 -I +ocamldoc -I +xml-light -I gmisclib -I common -I icons -I otherwidgets -I oebuild print_type.ml 
+ocamlfind ocamlopt -package compiler-libs,lablgtk2,str -c -w syxm -g -thread -inline 50 -I +ocamldoc -I +xml-light -I gmisclib -I common -I icons -I otherwidgets -I oebuild error_indication.ml 
+ocamlfind ocamlopt -package compiler-libs,lablgtk2,str -c -w syxm -g -thread -inline 50 -I +ocamldoc -I +xml-light -I gmisclib -I common -I icons -I otherwidgets -I oebuild lexical_markup.ml 
+ocamlfind ocamlopt -package compiler-libs,lablgtk2,str -c -w syxm -g -thread -inline 50 -I +ocamldoc -I +xml-light -I gmisclib -I common -I icons -I otherwidgets -I oebuild search_results.ml 
+ocamlfind ocamlopt -package compiler-libs,lablgtk2,str -c -w syxm -g -thread -inline 50 -I +ocamldoc -I +xml-light -I gmisclib -I common -I icons -I otherwidgets -I oebuild find_text.ml 
+ocamlfind ocamlopt -package compiler-libs,lablgtk2,str -c -w syxm -g -thread -inline 50 -I +ocamldoc -I +xml-light -I gmisclib -I common -I icons -I otherwidgets -I oebuild find_text_in_buffer.ml 
+ocamlfind ocamlopt -package compiler-libs,lablgtk2,str -c -w syxm -g -thread -inline 50 -I +ocamldoc -I +xml-light -I gmisclib -I common -I icons -I otherwidgets -I oebuild find_text_output.ml 
+ocamlfind ocamlopt -package compiler-libs,lablgtk2,str -c -w syxm -g -thread -inline 50 -I +ocamldoc -I +xml-light -I gmisclib -I common -I icons -I otherwidgets -I oebuild find_text_dialog.ml 
+ocamlfind ocamlopt -package compiler-libs,lablgtk2,str -c -w syxm -g -thread -inline 50 -I +ocamldoc -I +xml-light -I gmisclib -I common -I icons -I otherwidgets -I oebuild binannot.ml 
+ocamlfind ocamlopt -package compiler-libs,lablgtk2,str -c -w syxm -g -thread -inline 50 -I +ocamldoc -I +xml-light -I gmisclib -I common -I icons -I otherwidgets -I oebuild binannot_ident_scan.ml 
+ocamlfind ocamlopt -package compiler-libs,lablgtk2,str -c -w syxm -g -thread -inline 50 -I +ocamldoc -I +xml-light -I gmisclib -I common -I icons -I otherwidgets -I oebuild binannot_ident.ml 
+ocamlfind ocamlopt -package compiler-libs,lablgtk2,str -c -w syxm -g -thread -inline 50 -I +ocamldoc -I +xml-light -I gmisclib -I common -I icons -I otherwidgets -I oebuild menu_search.ml 
+ocamlfind ocamlopt -package compiler-libs,lablgtk2,str -c -w syxm -g -thread -inline 50 -I +ocamldoc -I +xml-light -I gmisclib -I common -I icons -I otherwidgets -I oebuild editor_menu.ml 
+ocamlfind ocamlopt -package compiler-libs,lablgtk2,str -c -w syxm -g -thread -inline 50 -I +ocamldoc -I +xml-light -I gmisclib -I common -I icons -I otherwidgets -I oebuild dot.ml 
+ocamlfind ocamlopt -package compiler-libs,lablgtk2,str -c -w syxm -g -thread -inline 50 -I +ocamldoc -I +xml-light -I gmisclib -I common -I icons -I otherwidgets -I oebuild binannot_type.ml 
+ocamlfind ocamlopt -package compiler-libs,lablgtk2,str -c -w syxm -g -thread -inline 50 -I +ocamldoc -I +xml-light -I gmisclib -I common -I icons -I otherwidgets -I oebuild cmt_view.ml 
+ocamlfind ocamlopt -package compiler-libs,lablgtk2,str -c -w syxm -g -thread -inline 50 -I +ocamldoc -I +xml-light -I gmisclib -I common -I icons -I otherwidgets -I oebuild autosave.ml 
+ocamlfind ocamlopt -package compiler-libs,lablgtk2,str -c -w syxm -g -thread -inline 50 -I +ocamldoc -I +xml-light -I gmisclib -I common -I icons -I otherwidgets -I oebuild err_parser.mli 
+ocamlfind ocamlopt -package compiler-libs,lablgtk2,str -c -w syxm -g -thread -inline 50 -I +ocamldoc -I +xml-light -I gmisclib -I common -I icons -I otherwidgets -I oebuild err_parser.ml 
+ocamlfind ocamlopt -package compiler-libs,lablgtk2,str -c -w syxm -g -thread -inline 50 -I +ocamldoc -I +xml-light -I gmisclib -I common -I icons -I otherwidgets -I oebuild err_lexer.ml 
+ocamlfind ocamlopt -package compiler-libs,lablgtk2,str -c -w syxm -g -thread -inline 50 -I +ocamldoc -I +xml-light -I gmisclib -I common -I icons -I otherwidgets -I oebuild error.ml 
+ocamlfind ocamlopt -package compiler-libs,lablgtk2,str -c -w syxm -g -thread -inline 50 -I +ocamldoc -I +xml-light -I gmisclib -I common -I icons -I otherwidgets -I oebuild autocomp.ml 
+ocamlfind ocamlopt -package compiler-libs,lablgtk2,str -c -w syxm -g -thread -inline 50 -I +ocamldoc -I +xml-light -I gmisclib -I common -I icons -I otherwidgets -I oebuild annot_type.ml 
+ocamlfind ocamlopt -package compiler-libs,lablgtk2,str -c -w syxm -g -thread -inline 50 -I +ocamldoc -I +xml-light -I gmisclib -I common -I icons -I otherwidgets -I oebuild editor_page.ml 
+ocamlfind ocamlopt -package compiler-libs,lablgtk2,str -c -w syxm -g -thread -inline 50 -I +ocamldoc -I +xml-light -I gmisclib -I common -I icons -I otherwidgets -I oebuild editor_dialog.ml 
+ocamlfind ocamlopt -package compiler-libs,lablgtk2,str -c -w syxm -g -thread -inline 50 -I +ocamldoc -I +xml-light -I gmisclib -I common -I icons -I otherwidgets -I oebuild editor.ml 
+ocamlfind ocamlopt -package compiler-libs,lablgtk2,str -c -w syxm -g -thread -inline 50 -I +ocamldoc -I +xml-light -I gmisclib -I common -I icons -I otherwidgets -I oebuild task_console.ml 
+ocamlfind ocamlopt -package compiler-libs,lablgtk2,str -c -w syxm -g -thread -inline 50 -I +ocamldoc -I +xml-light -I gmisclib -I common -I icons -I otherwidgets -I oebuild toolbar.ml 
+ocamlfind ocamlopt -package compiler-libs,lablgtk2,str -c -w syxm -g -thread -inline 50 -I +ocamldoc -I +xml-light -I gmisclib -I common -I icons -I otherwidgets -I oebuild templates.ml 
+ocamlfind ocamlopt -package compiler-libs,lablgtk2,str -c -w syxm -g -thread -inline 50 -I +ocamldoc -I +xml-light -I gmisclib -I common -I icons -I otherwidgets -I oebuild about.ml 
+ocamlfind ocamlopt -package compiler-libs,lablgtk2,str -c -w syxm -g -thread -inline 50 -I +ocamldoc -I +xml-light -I gmisclib -I common -I icons -I otherwidgets -I oebuild template.ml 
+ocamlfind ocamlopt -package compiler-libs,lablgtk2,str -c -w syxm -g -thread -inline 50 -I +ocamldoc -I +xml-light -I gmisclib -I common -I icons -I otherwidgets -I oebuild gtk_theme.ml 
+ocamlfind ocamlopt -package compiler-libs,lablgtk2,str -c -w syxm -g -thread -inline 50 -I +ocamldoc -I +xml-light -I gmisclib -I common -I icons -I otherwidgets -I oebuild gtk_util.ml 
+ocamlfind ocamlopt -package compiler-libs,lablgtk2,str -c -w syxm -g -thread -inline 50 -I +ocamldoc -I +xml-light -I gmisclib -I common -I icons -I otherwidgets -I oebuild templ.ml 
+ocamlfind ocamlopt -package compiler-libs,lablgtk2,str -c -w syxm -g -thread -inline 50 -I +ocamldoc -I +xml-light -I gmisclib -I common -I icons -I otherwidgets -I oebuild symbol.mli 
+ocamlfind ocamlopt -package compiler-libs,lablgtk2,str -c -w syxm -g -thread -inline 50 -I +ocamldoc -I +xml-light -I gmisclib -I common -I icons -I otherwidgets -I oebuild symbol.ml 
+ocamlfind ocamlopt -package compiler-libs,lablgtk2,str -c -w syxm -g -thread -inline 50 -I +ocamldoc -I +xml-light -I gmisclib -I common -I icons -I otherwidgets -I oebuild quick_file_chooser.ml 
+ocamlfind ocamlopt -package compiler-libs,lablgtk2,str -c -w syxm -g -thread -inline 50 -I +ocamldoc -I +xml-light -I gmisclib -I common -I icons -I otherwidgets -I oebuild project_xml.ml 
+ocamlfind ocamlopt -package compiler-libs,lablgtk2,str -c -w syxm -g -thread -inline 50 -I +ocamldoc -I +xml-light -I gmisclib -I common -I icons -I otherwidgets -I oebuild target_page_deps.ml 
+ocamlfind ocamlopt -package compiler-libs,lablgtk2,str -c -w syxm -g -thread -inline 50 -I +ocamldoc -I +xml-light -I gmisclib -I common -I icons -I otherwidgets -I oebuild findlib_list.ml 
+ocamlfind ocamlopt -package compiler-libs,lablgtk2,str -c -w syxm -g -thread -inline 50 -I +ocamldoc -I +xml-light -I gmisclib -I common -I icons -I otherwidgets -I oebuild target_page.ml 
+ocamlfind ocamlopt -package compiler-libs,lablgtk2,str -c -w syxm -g -thread -inline 50 -I +ocamldoc -I +xml-light -I gmisclib -I common -I icons -I otherwidgets -I oebuild target_list.ml 
+ocamlfind ocamlopt -package compiler-libs,lablgtk2,str -c -w syxm -g -thread -inline 50 -I +ocamldoc -I +xml-light -I gmisclib -I common -I icons -I otherwidgets -I oebuild entry_list.ml 
+ocamlfind ocamlopt -package compiler-libs,lablgtk2,str -c -w syxm -g -thread -inline 50 -I +ocamldoc -I +xml-light -I gmisclib -I common -I icons -I otherwidgets -I oebuild entry_list_env.ml 
+ocamlfind ocamlopt -package compiler-libs,lablgtk2,str -c -w syxm -g -thread -inline 50 -I +ocamldoc -I +xml-light -I gmisclib -I common -I icons -I otherwidgets -I oebuild entry_list_args.ml 
+ocamlfind ocamlopt -package compiler-libs,lablgtk2,str -c -w syxm -g -thread -inline 50 -I +ocamldoc -I +xml-light -I gmisclib -I common -I icons -I otherwidgets -I oebuild args_env_widget.ml 
+ocamlfind ocamlopt -package compiler-libs,lablgtk2,str -c -w syxm -g -thread -inline 50 -I +ocamldoc -I +xml-light -I gmisclib -I common -I icons -I otherwidgets -I oebuild rconf_page.ml 
+ocamlfind ocamlopt -package compiler-libs,lablgtk2,str -c -w syxm -g -thread -inline 50 -I +ocamldoc -I +xml-light -I gmisclib -I common -I icons -I otherwidgets -I oebuild rconf_list.ml 
+ocamlfind ocamlopt -package compiler-libs,lablgtk2,str -c -w syxm -g -thread -inline 50 -I +ocamldoc -I +xml-light -I gmisclib -I common -I icons -I otherwidgets -I oebuild ocaml_home.ml 
+ocamlfind ocamlopt -package compiler-libs,lablgtk2,str -c -w syxm -g -thread -inline 50 -I +ocamldoc -I +xml-light -I gmisclib -I common -I icons -I otherwidgets -I oebuild etask_page.ml 
+ocamlfind ocamlopt -package compiler-libs,lablgtk2,str -c -w syxm -g -thread -inline 50 -I +ocamldoc -I +xml-light -I gmisclib -I common -I icons -I otherwidgets -I oebuild project_properties.ml 
+ocamlfind ocamlopt -package compiler-libs,lablgtk2,str -c -w syxm -g -thread -inline 50 -I +ocamldoc -I +xml-light -I gmisclib -I common -I icons -I otherwidgets -I oebuild ocaml_shell.ml 
+ocamlfind ocamlopt -package compiler-libs,lablgtk2,str -c -w syxm -g -thread -inline 50 -I +ocamldoc -I +xml-light -I gmisclib -I common -I icons -I otherwidgets -I oebuild print_debug_info.ml 
+ocamlfind ocamlopt -package compiler-libs,lablgtk2,str -c -w syxm -g -thread -inline 50 -I +ocamldoc -I +xml-light -I gmisclib -I common -I icons -I otherwidgets -I oebuild preferences_tool.ml 
+ocamlfind ocamlopt -package compiler-libs,lablgtk2,str -c -w syxm -g -thread -inline 50 -I +ocamldoc -I +xml-light -I gmisclib -I common -I icons -I otherwidgets -I oebuild build_script_trg_widget.ml 
+ocamlfind ocamlopt -package compiler-libs,lablgtk2,str -c -w syxm -g -thread -inline 50 -I +ocamldoc -I +xml-light -I gmisclib -I common -I icons -I otherwidgets -I oebuild oebuild_script.ml 
+ocamlfind ocamlopt -package compiler-libs,lablgtk2,str -c -w syxm -g -thread -inline 50 -I +ocamldoc -I +xml-light -I gmisclib -I common -I icons -I otherwidgets -I oebuild build_script_printer.ml 
+ocamlfind ocamlopt -package compiler-libs,lablgtk2,str -c -w syxm -g -thread -inline 50 -I +ocamldoc -I +xml-light -I gmisclib -I common -I icons -I otherwidgets -I oebuild build_script_cmds_widget.ml 
+ocamlfind ocamlopt -package compiler-libs,lablgtk2,str -c -w syxm -g -thread -inline 50 -I +ocamldoc -I +xml-light -I gmisclib -I common -I icons -I otherwidgets -I oebuild build_script_args_widget.ml 
+ocamlfind ocamlopt -package compiler-libs,lablgtk2,str -c -w syxm -g -thread -inline 50 -I +ocamldoc -I +xml-light -I gmisclib -I common -I icons -I otherwidgets -I oebuild build_script_ui.ml 
+ocamlfind ocamlopt -package compiler-libs,lablgtk2,str -c -w syxm -g -thread -inline 50 -I +ocamldoc -I +xml-light -I gmisclib -I common -I icons -I otherwidgets -I oebuild menu_project.ml 
+ocamlfind ocamlopt -package compiler-libs,lablgtk2,str -c -w syxm -g -thread -inline 50 -I +ocamldoc -I +xml-light -I gmisclib -I common -I icons -I otherwidgets -I oebuild menu_help.ml 
+ocamlfind ocamlopt -package compiler-libs,lablgtk2,str -c -w syxm -g -thread -inline 50 -I +ocamldoc -I +xml-light -I gmisclib -I common -I icons -I otherwidgets -I oebuild oe_doc.ml 
+ocamlfind ocamlopt -package compiler-libs,lablgtk2,str -c -w syxm -g -thread -inline 50 -I +ocamldoc -I +xml-light -I gmisclib -I common -I icons -I otherwidgets -I oebuild mbrowser_slist.ml 
+ocamlfind ocamlopt -package compiler-libs,lablgtk2,str -c -w syxm -g -thread -inline 50 -I +ocamldoc -I +xml-light -I gmisclib -I common -I icons -I otherwidgets -I oebuild mbrowser_tool.ml 
+ocamlfind ocamlopt -package compiler-libs,lablgtk2,str -c -w syxm -g -thread -inline 50 -I +ocamldoc -I +xml-light -I gmisclib -I common -I icons -I otherwidgets -I oebuild mbrowser_compl.ml 
+ocamlfind ocamlopt -package compiler-libs,lablgtk2,str -c -w syxm -g -thread -inline 50 -I +ocamldoc -I +xml-light -I gmisclib -I common -I icons -I otherwidgets -I oebuild external_tools.ml 
+ocamlfind ocamlopt -package compiler-libs,lablgtk2,str -c -w syxm -g -thread -inline 50 -I +ocamldoc -I +xml-light -I gmisclib -I common -I icons -I otherwidgets -I oebuild menu.ml 
+ocamlfind ocamlopt -package compiler-libs,lablgtk2,str -c -w syxm -g -thread -inline 50 -I +ocamldoc -I +xml-light -I gmisclib -I common -I icons -I otherwidgets -I oebuild dialog_find_file.ml 
+ocamlfind ocamlopt -package compiler-libs,lablgtk2,str -c -w syxm -g -thread -inline 50 -I +ocamldoc -I +xml-light -I gmisclib -I common -I icons -I otherwidgets -I oebuild annotation.ml 
+ocamlfind ocamlopt -package compiler-libs,lablgtk2,str -c -w syxm -g -thread -inline 50 -I +ocamldoc -I +xml-light -I gmisclib -I common -I icons -I otherwidgets -I oebuild browser.ml 
+ocamlfind ocamlopt -package compiler-libs,lablgtk2,str -c -w syxm -g -thread -inline 50 -I +ocamldoc -I +xml-light -I gmisclib -I common -I icons -I otherwidgets -I oebuild ocamleditor_lib.ml 
+ocamlfind ocamlopt -package compiler-libs,lablgtk2,str -a -g -thread -inline 50 -o ocamleditor_lib.cmxa -I +ocamldoc -I +xml-light -I gmisclib -I common -I icons -I otherwidgets -I oebuild oe_config.cmx gtkThread2.cmx convert.cmx text_util.cmx text_options.cmx smart_keys.cmx alignment.cmx ocp_indent.cmx gutter.cmx color.cmx text_init.cmx text_indent_lines.cmx task.cmx bconf_old_1.cmx target.cmx rconf.cmx oe.cmx editor_file_type.cmx plugins.cmx editor_file.cmx build_script_command.cmx build_script_args.cmx build_script.cmx prj.cmx bookmark.cmx project.cmx preferences.cmx mark_occurrences.cmx line_num_labl.cmx comments.cmx lexical.cmx lex.cmx delimiters.cmx text.cmx process.cmx task_process.cmx messages_tab.cmx messages.cmx timeout.cmx prf.cmx dot_viewer_pdf.cmx dot_viewer_plugin.cmx menu_view.cmx plugin.cmx menu_types.cmx file_history.cmx menu_file.cmx location_history.cmx incremental_search.cmx preferences_apply.cmx shell.cmx ocaml_word_bound.cmx code_folding.cmx ocaml_text.cmx print_type.cmx error_indication.cmx lexical_markup.cmx search_results.cmx find_text.cmx find_text_in_buffer.cmx find_text_output.cmx find_text_dialog.cmx binannot.cmx binannot_ident_scan.cmx binannot_ident.cmx menu_search.cmx editor_menu.cmx dot.cmx binannot_type.cmx cmt_view.cmx autosave.cmx err_parser.cmx err_lexer.cmx error.cmx autocomp.cmx annot_type.cmx editor_page.cmx editor_dialog.cmx editor.cmx task_console.cmx toolbar.cmx templates.cmx about.cmx template.cmx gtk_theme.cmx gtk_util.cmx templ.cmx symbol.cmx quick_file_chooser.cmx project_xml.cmx target_page_deps.cmx findlib_list.cmx target_page.cmx target_list.cmx entry_list.cmx entry_list_env.cmx entry_list_args.cmx args_env_widget.cmx rconf_page.cmx rconf_list.cmx ocaml_home.cmx etask_page.cmx project_properties.cmx ocaml_shell.cmx print_debug_info.cmx preferences_tool.cmx build_script_trg_widget.cmx oebuild_script.cmx build_script_printer.cmx build_script_cmds_widget.cmx build_script_args_widget.cmx build_script_ui.cmx menu_project.cmx menu_help.cmx oe_doc.cmx mbrowser_slist.cmx mbrowser_tool.cmx mbrowser_compl.cmx external_tools.cmx menu.cmx dialog_find_file.cmx annotation.cmx browser.cmx ocamleditor_lib.cmx 
+Native Plugin ../plugins/remote.cmxs
+  ~dontlinkdep
+  ~package ... : curl
+  ~search_path : common
+  ~cflags .... : -g
+  ~lflags .... : -g
+  ~source .... : remote.ml
+
+ocamlfind ocamlopt -package curl -c -g -I common remote.ml 
+ocamlfind ocamlopt -package curl -shared -g libcurl-helper.lib curl.lib curl.cmxa -o ../plugins/remote.cmxs -I common remote.cmx 
+Native Executable ocamleditor.opt.exe
+  ~thread
+  ~package ... : compiler-libs,lablgtk2,str
+  ~search_path : +ocamldoc +xml-light gmisclib common icons otherwidgets oebuild 
+  ~libs ...... : ocamlcommon dynlink odoc_info xml-light gmisclib common icons otherwidgets oebuildlib ocamleditor_lib
+  ~inline .... : 50
+  ~cflags .... : -w syxm -g
+  ~lflags .... : -w syxm -g
+  ~source .... : ocamleditor.ml
+
+ocamlfind ocamlopt -package compiler-libs,lablgtk2,str -c -w syxm -g -thread -inline 50 -I +ocamldoc -I +xml-light -I gmisclib -I common -I icons -I otherwidgets -I oebuild ocamleditor.ml 
+ocamlfind ocamlopt -package compiler-libs,lablgtk2,str -linkpkg -g -thread -inline 50 -o ocamleditor.opt.exe -I +ocamldoc -I +xml-light -I gmisclib -I common -I icons -I otherwidgets -I oebuild ocamlcommon.cmxa dynlink.cmxa odoc_info.cmxa xml-light.cmxa gmisclib.cmxa common.cmxa icons.cmxa otherwidgets.cmxa oebuildlib.cmxa ocamleditor_lib.cmxa ocamleditor.cmx 

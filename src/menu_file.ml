@@ -37,13 +37,61 @@ let file_recent_callback ~(file_recent_menu : GMenu.menu) editor =
       let mi = GMenu.menu_item ~label ~packing:(file_recent_menu#insert ~pos:1) () in
       recent_items := mi :: !recent_items;
       ignore (mi#connect#activate ~callback:(fun () ->
-        ignore (editor#open_file ~active:true ~scroll_offset:0 ~offset:0 ?remote:None filename)));
+          ignore (editor#open_file ~active:true ~scroll_offset:0 ~offset:0 ?remote:None filename)));
       if !count > 30 then (raise Exit)
     end (List.rev editor#file_history.File_history.content);
   with Exit -> ()
 
 let get_file_switch_sensitive page =
   let name = page#get_filename in (name ^^ ".ml" || name ^^ ".mli")
+
+(** load_plugin_remote *)
+let load_plugin_remote editor menu_item =
+  ignore (Plugin.load "remote.cma");
+  begin
+    match !Plugins.remote with
+      | None -> ()
+      | Some plugin ->
+        menu_item#misc#show();
+        ignore (menu_item#connect#activate ~callback:begin fun () ->
+              let module Remote = (val plugin) in
+              let open Editor_file in
+              let width = 100 in
+              let title =
+                match menu_item#misc#get_property "label" with
+                  | `STRING (Some x) -> x
+                  | _ -> ""
+              in
+              let window = GWindow.window ~position:`CENTER ~icon:Icons.oe ~title ~modal:true ~show:false () in
+              let vbox = GPack.vbox ~border_width:5 ~spacing:3 ~packing:window#add () in
+              let hbox = GPack.hbox ~spacing:3 ~packing:vbox#pack () in
+              let _ = GMisc.label ~text:"User@Host:" ~width ~xalign:0.0 ~packing:hbox#pack () in
+              let entry_user_host = GEdit.entry ~packing:hbox#pack () in
+              let hbox = GPack.hbox ~spacing:3 ~packing:vbox#pack () in
+              let _ = GMisc.label ~text:"Filename:" ~width ~xalign:0.0 ~packing:hbox#pack () in
+              let entry_filename = GEdit.entry ~packing:hbox#pack () in
+              let hbox = GPack.hbox ~spacing:3 ~packing:vbox#pack () in
+              let _ = GMisc.label ~text:"Passowrd:" ~width ~xalign:0.0 ~packing:hbox#pack () in
+              let entry_pwd = GEdit.entry ~visibility:false ~packing:hbox#pack () in
+              let bbox = GPack.button_box `HORIZONTAL ~layout:`END ~packing:vbox#pack () in
+              let button_ok = GButton.button ~stock:`OK ~packing:bbox#pack () in
+              let button_cancel = GButton.button ~stock:`CANCEL ~packing:bbox#pack () in
+              ignore (button_cancel#connect#clicked ~callback:window#destroy);
+              ignore (button_ok#connect#clicked ~callback:begin fun () ->
+                  try
+                    let user_host = entry_user_host#text in
+                    let pos = String.index user_host '@' in
+                    let user = Str.string_before user_host pos in
+                    let host = Str.string_after user_host (pos + 1) in
+                    let remote = {host; user; pwd = entry_pwd#text} in
+                    ignore (editor#open_file ~active:true ~scroll_offset:0 ~offset:0 ?remote:(Some remote) entry_filename#text);
+                    window#destroy();
+                  with Not_found ->
+                    Dialog.message ~title:"Invalid address" ~message:"Invalid address" `ERROR
+                end);
+              window#show();
+            end);
+  end
 
 let file ~browser ~group ~flags items =
   let editor = browser#editor in
@@ -54,60 +102,29 @@ let file ~browser ~group ~flags items =
   ignore (new_project#connect#activate ~callback:browser#dialog_project_new);
   (** New file *)
   let new_file = GMenu.image_menu_item ~image:(GMisc.image ~stock:`NEW ~icon_size:`MENU ())
-    ~label:"New File..." ~packing:menu#add () in
+      ~label:"New File..." ~packing:menu#add () in
   new_file#add_accelerator ~group ~modi:[`CONTROL] GdkKeysyms._n ~flags;
   ignore (new_file#connect#activate ~callback:browser#dialog_file_new);
   (** Open Project *)
   let _ = GMenu.separator_item ~packing:menu#add () in
   let project_open = GMenu.image_menu_item
-    ~label:"Open Project..." ~packing:menu#add () in
+      ~label:"Open Project..." ~packing:menu#add () in
   ignore (project_open#connect#activate ~callback:browser#dialog_project_open);
   project_open#add_accelerator ~group ~modi:[`CONTROL;`SHIFT] GdkKeysyms._o ~flags;
   (** Open File *)
   let open_file = GMenu.image_menu_item ~image:(GMisc.image ~stock:`OPEN ~icon_size:`MENU ())
-    ~label:"Open File..." ~packing:menu#add () in
+      ~label:"Open File..." ~packing:menu#add () in
   open_file#add_accelerator ~group ~modi:[`CONTROL] GdkKeysyms._o ~flags;
   ignore (open_file#connect#activate ~callback:editor#dialog_file_open);
-  begin
-    match !Plugins.remote with
-      | None -> ()
-      | Some plugin ->
-        (** Open remote... *)
-        let open_remote = GMenu.image_menu_item ~label:"Open Remote File..." ~packing:menu#add () in
-        ignore (open_remote#connect#activate ~callback:begin fun () ->
-            let module Remote = (val plugin) in
-            let open Editor_file in
-            let window = GWindow.window ~show:false () in
-            let vbox = GPack.vbox ~packing:window#add () in
-            let hbox = GPack.hbox ~packing:vbox#pack () in
-            let _ = GMisc.label ~text:"Host" ~packing:hbox#pack () in
-            let entry_host = GEdit.entry ~packing:hbox#pack () in
-            let hbox = GPack.hbox ~packing:vbox#pack () in
-            let _ = GMisc.label ~text:"Filename" ~packing:hbox#pack () in
-            let entry_filename = GEdit.entry ~packing:hbox#pack () in
-            let hbox = GPack.hbox ~packing:vbox#pack () in
-            let _ = GMisc.label ~text:"User" ~packing:hbox#pack () in
-            let entry_user = GEdit.entry ~packing:hbox#pack () in
-            let hbox = GPack.hbox ~packing:vbox#pack () in
-            let _ = GMisc.label ~text:"Passowrd" ~packing:hbox#pack () in
-            let entry_pwd = GEdit.entry ~visibility:false ~packing:hbox#pack () in
-            let button_ok = GButton.button ~stock:`OK ~packing:vbox#pack () in
-            ignore (button_ok#connect#clicked ~callback:begin fun () ->
-              let remote = {host = entry_host#text; user = entry_user#text; pwd = entry_pwd#text} in
-              ignore (editor#open_file ~active:true ~scroll_offset:0 ~offset:0 ?remote:(Some remote) entry_filename#text);
-              window#destroy();
-            end);
-            window#show();
-          end);
-  end;
+  let open_remote = GMenu.image_menu_item ~label:"Open Remote File..." ~show:false ~packing:menu#add () in
   (** Recent Files... *)
   let file_recent = GMenu.menu_item ~label:"Recent Files" ~packing:menu#add () in
   let file_recent_menu = GMenu.menu ~packing:file_recent#set_submenu () in
   (* file_recent_select *)
   file_recent_menu#add items.file_recent_select;
   ignore (items.file_recent_select#connect#activate ~callback:begin fun () ->
-    browser#dialog_find_file ?all:(Some false) ()
-  end);
+      browser#dialog_find_file ?all:(Some false) ()
+    end);
   items.file_recent_select#add_accelerator ~group ~modi:[`CONTROL] GdkKeysyms._K ~flags;
   (* recent items *)
   ignore (file_recent#connect#activate ~callback:(fun () -> file_recent_callback ~file_recent_menu editor));
@@ -125,16 +142,16 @@ let file ~browser ~group ~flags items =
   save_file#set_image (GMisc.image ~pixbuf:Icons.save_16 ())#coerce;
   save_file#add_accelerator ~group ~modi:[`CONTROL] GdkKeysyms._s ~flags;
   ignore (save_file#connect#activate ~callback:begin fun () ->
-    Gaux.may ~f:editor#save (editor#get_page `ACTIVE)
-  end);
+      Gaux.may ~f:editor#save (editor#get_page `ACTIVE)
+    end);
   (** Save as.. *)
   let save_as = GMenu.image_menu_item
-    ~image:(GMisc.image ~pixbuf:Icons.save_as_16 ())
-    ~label:"Save As..." ~packing:menu#add () in
+      ~image:(GMisc.image ~pixbuf:Icons.save_as_16 ())
+      ~label:"Save As..." ~packing:menu#add () in
   save_as#add_accelerator ~group ~modi:[`CONTROL; `SHIFT] GdkKeysyms._s ~flags;
   ignore (save_as#connect#activate ~callback:begin fun () ->
-    Gaux.may ~f:editor#dialog_save_as (editor#get_page `ACTIVE)
-  end);
+      Gaux.may ~f:editor#dialog_save_as (editor#get_page `ACTIVE)
+    end);
   (** Save All *)
   let save_all = GMenu.image_menu_item ~label:"Save All" ~packing:menu#add () in
   save_all#add_accelerator ~group ~modi:[`CONTROL; `SHIFT] GdkKeysyms._a ~flags;
@@ -143,28 +160,28 @@ let file ~browser ~group ~flags items =
   (** Rename *)
   menu#add items.file_rename;
   ignore (items.file_rename#connect#activate ~callback:begin fun () ->
-    editor#with_current_page begin fun current_page ->
-      editor#dialog_rename current_page;
-      browser#set_title browser#editor
-    end
-  end);
+      editor#with_current_page begin fun current_page ->
+        editor#dialog_rename current_page;
+        browser#set_title browser#editor
+      end
+    end);
   (** Close current *)
   let _ = GMenu.separator_item ~packing:menu#add () in
   menu#add (items.file_close :> GMenu.menu_item);
   items.file_close#add_accelerator ~group ~modi:[`CONTROL] GdkKeysyms._F4 ~flags;
   ignore (items.file_close#connect#activate ~callback:begin fun () ->
-    editor#with_current_page (fun p -> ignore (editor#dialog_confirm_close p))
-  end);
+      editor#with_current_page (fun p -> ignore (editor#dialog_confirm_close p))
+    end);
   (** Close all except current *)
   menu#add items.file_close_all;
   ignore (items.file_close_all#connect#activate ~callback:begin fun () ->
-    editor#with_current_page (fun p -> editor#close_all ?except:(Some p) ())
-  end);
+      editor#with_current_page (fun p -> editor#close_all ?except:(Some p) ())
+    end);
   (** Revert current *)
   menu#add (items.file_revert :> GMenu.menu_item);
   ignore (items.file_revert#connect#activate ~callback:begin fun () ->
-    editor#with_current_page editor#revert
-  end);
+      editor#with_current_page editor#revert
+    end);
   (** Delete current *)
   let _ = GMenu.separator_item ~packing:menu#add () in
   menu#add (items.file_delete :> GMenu.menu_item);
@@ -176,22 +193,23 @@ let file ~browser ~group ~flags items =
   ignore (quit#connect#activate ~callback:(fun () -> browser#exit editor ()));
   (** callback *)
   ignore (file#misc#connect#state_changed ~callback:begin fun _ ->
-    let page = editor#get_page `ACTIVE in
-    let has_current_page = page <> None in
-    List.iter (fun i -> i#misc#set_sensitive has_current_page) [
-      (items.file_switch :> GMenu.menu_item);
-      (save_file :> GMenu.menu_item);
-      (save_as :> GMenu.menu_item);
-      (save_all :> GMenu.menu_item);
-      (items.file_rename :> GMenu.menu_item);
-      (items.file_close :> GMenu.menu_item);
-      (items.file_close_all :> GMenu.menu_item);
-      (items.file_revert :> GMenu.menu_item);
-      (items.file_delete :> GMenu.menu_item);
-    ];
-    Opt.may page (fun page -> items.file_switch#misc#set_sensitive (get_file_switch_sensitive page));
-    let has_current_project = browser#current_project#get <> None in
-    new_file#misc#set_sensitive has_current_project;
-  end);
+      if !Plugins.remote = None then (load_plugin_remote editor open_remote);
+      let page = editor#get_page `ACTIVE in
+      let has_current_page = page <> None in
+      List.iter (fun i -> i#misc#set_sensitive has_current_page) [
+        (items.file_switch :> GMenu.menu_item);
+        (save_file :> GMenu.menu_item);
+        (save_as :> GMenu.menu_item);
+        (save_all :> GMenu.menu_item);
+        (items.file_rename :> GMenu.menu_item);
+        (items.file_close :> GMenu.menu_item);
+        (items.file_close_all :> GMenu.menu_item);
+        (items.file_revert :> GMenu.menu_item);
+        (items.file_delete :> GMenu.menu_item);
+      ];
+      Opt.may page (fun page -> items.file_switch#misc#set_sensitive (get_file_switch_sensitive page));
+      let has_current_project = browser#current_project#get <> None in
+      new_file#misc#set_sensitive has_current_project;
+    end);
   file;;
 

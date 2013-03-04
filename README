@@ -22,10 +22,6 @@ COPYRIGHT
   Creative Commons Attribution-NonCommercial-NoDerivs 3.0 Unported License
   (http://creativecommons.org/licenses/by-nc-nd/3.0/).
 
-  Files "lexical.ml", "gtkThread3.ml" and part of "file.ml" and "shell.ml"
-  are copyright 1999 Institut National de Recherche en Informatique et en
-  Automatique and Kyoto University.
-
 
 DEPENDENCIES
 
@@ -34,6 +30,7 @@ DEPENDENCIES
   * Xml-light (installed at "+xml-light");
   * Findlib-1.3.3;
   * ocp-indent (optional);
+  * ocurl-0.5.5 to allow remote editing (optional);
   * Dot command to display the module dependencies graph (optional);
   * Lablgtk.rsvg to embed the graph viewer in the editor (optional).
 
@@ -44,9 +41,9 @@ HOW TO COMPILE
 
     ocaml build.ml ocamleditor
 
-  Under Windows execute:
+  Under Windows with MSVC execute:
 
-    ocaml build.ml ocamleditor-win32
+    ocaml build.ml ocamleditor-msvc
 
   If the native code compiler is not available on your platform, compile with:
 
@@ -59,14 +56,19 @@ HOW TO COMPILE
 
 INSTALLATION
 
-  For Linux, become superuser and execute:
+  Since OCamlEditor-1.9.0 installation paths differs from that of previous
+  version, so please uninstall it by doing:
+
+    ocaml build.ml uninstall -ver-1.8.0 [-prefix <path>]
+
+  To install OCamlEditor become superuser and execute:
 
     ocaml build.ml install [-prefix <path>]
 
-  By default, commands will be installed under "/usr/local/bin" and icons
-  under "/usr/local/share/pixmaps/ocamleditor". You can specify an
-  installation prefix other than "/usr/local" by giving an absolute file
-  name as argument.
+  By default, commands will be installed under "/usr/local/bin", icons
+  under "/usr/local/share/ocamleditor/icons" and plugins under
+  "/usr/local/share/ocamleditor/icons". You can specify an installation
+  prefix other than "/usr/local" by giving an absolute file name as argument.
 
   Windows users may build an installer by compiling the included NSIS
   script, "ocamleditor.nsi". The free NSIS install system can be found at

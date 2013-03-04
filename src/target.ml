@@ -39,6 +39,7 @@ type t = {
   mutable pp               : string;
   mutable inline           : int option;
   mutable nodep            : bool;
+  mutable dontlinkdep      : bool;
   mutable cflags           : string;
   mutable lflags           : string;
   mutable target_type      : target_type;
@@ -49,7 +50,7 @@ type t = {
   mutable dependencies     : int list; (* id list *)
 }
 and task = [ `NONE | `CLEAN | `COMPILE | `REBUILD | `ETASK of Task.t ]
-and target_type = Executable | Library | Plugin | Pack
+and target_type = Executable | Library | Plugin | Pack | External
 
 let default_runtime_build_task = `COMPILE
 
@@ -83,12 +84,14 @@ let string_of_target_type = function
   | Library -> "Library"
   | Plugin -> "Plugin"
   | Pack -> "Pack"
+  | External -> "External"
 
 let target_type_of_string = function
   | "Executable" -> Executable
   | "Library" -> Library
   | "Plugin" -> Plugin
   | "Pack" -> Pack
+  | "External" -> External
   | _ -> assert false
 
 (** create *)
@@ -108,9 +111,10 @@ let create ~id ~name = {
   pp                 = "";
   inline             = None;
   nodep              = false;
+  dontlinkdep        = false;
   cflags             = "";
   lflags             = "";
-  target_type            = Executable;
+  target_type        = Executable;
   outname            = "";
   lib_install_path   = "";
   external_tasks     = [];
@@ -158,12 +162,14 @@ let create_cmd_line ?(flags=[]) ?(can_compile_native=true) target =
           | Library -> ["-a"]
           | Plugin -> ["-shared"]
           | Pack -> ["-pack"]
+          | External -> []
       end
     @ (if target.byt then ["-byt"] else [])
     @ (if target.opt && can_compile_native then ["-opt"] else [])
     @ (if target.thread then ["-thread"] else [])
     @ (if target.vmthread then ["-vmthread"] else [])
     @ (if target.nodep then ["-no-dep"] else [])
+    @ (if target.dontlinkdep then ["-dont-link-dep"] else [])
     @ (if target.outname <> "" then ["-o"; quote (target.outname)] else [])
     @ flags
   in

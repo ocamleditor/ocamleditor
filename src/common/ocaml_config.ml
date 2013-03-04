@@ -87,6 +87,7 @@ let can_compile_native ?ocaml_home () =
     with _ -> (close_out ochan)
   end;
   let outname = Filename.chop_extension filename in
+  let outname = outname ^ (if Sys.os_type = "Win32" then ".exe" else "") in
   let compiler = match ocaml_home with
     | Some home -> find_tool `BEST_OCAMLOPT home
     | _ -> Some "ocamlopt"

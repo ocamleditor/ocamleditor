@@ -51,8 +51,8 @@ let mk_dot_cmd ~outlang ~outfile ?(font_name="Helvetica")?(font_size=16) ?(label
 let draw ~project ~filename ?dot_include_all ?dot_types ?packing ?on_ready_cb () =
   let module Device =
     (val match Oe_config.dot_viewer with
-      | `DEFAULT -> !Dot_viewer.device
-      | `PDF -> (module Dot_viewer.PDF))
+      | `DEFAULT -> !Dot_viewer_plugin.device
+      | `PDF -> (module Dot_viewer_pdf.PDF))
   in
   let outlang       = Device.lang in
   let basename      = Filename.basename filename in
@@ -73,14 +73,14 @@ let draw ~project ~filename ?dot_include_all ?dot_types ?packing ?on_ready_cb ()
   let viewer        = Device.create ?packing () in
   let activity_name = "Generating module dependencies graph, please wait..." in
   Activity.add Activity.Other activity_name;
-  ignore (Oebuild_util.exec ~echo:App_config.application_debug ~join:false ~at_exit:begin fun () ->
+  ignore (Oebuild_util.exec ~verbose:App_config.application_debug ~join:false ~at_exit:begin fun () ->
     let modname = Miscellanea.modname_of_path filename in
     let re = kprintf Str.regexp "\"%s\" \\[.+" modname in
     map_file_lines dotfile begin fun ~lnum ~line ->
       if Str.string_match re line 0 then (sprintf "\"%s\" [style=filled, color=magenta]" modname)
       else line
     end;
-    ignore (Oebuild_util.exec ~join:false ~echo:App_config.application_debug ~at_exit:begin fun () ->
+    ignore (Oebuild_util.exec ~join:false ~verbose:App_config.application_debug ~at_exit:begin fun () ->
       if Sys.file_exists dotfile then (Sys.remove dotfile);
       Device.draw ~filename:outfile viewer;
       Activity.remove activity_name;

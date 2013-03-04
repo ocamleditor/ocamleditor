@@ -1,5 +1,25 @@
-2012-??-?? Release 1.8.0
-------------------------
+Version 1.9.0
+-------------
+
+  * New dependency: ocurl-0.5.5 (optional).
+
+  * Remote file editing.
+
+  * New "Target condition" to check whether a Findlib package is installed.
+
+  * New target type "External tasks" to allow creating targets made only of
+    external build tasks.
+
+  * New option "-dontlinkdep" to allow plugins to be built without linking
+    its (detected) module dependencies.
+
+  * Fix redundant build of target dependencies.
+
+  * Various other fixes.
+
+
+Version 1.8.0
+-------------
 
   * Upgrade to OCaml-4.00.0
 

@@ -57,7 +57,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>."
   let vbox = dialog#vbox in
   let align = GBin.alignment ~xalign:0.5 ~packing:vbox#add ~show:false () in
   let hbox = GPack.hbox ~spacing:3 ~packing:align#add () in
-  let spinner = GMisc.image ~file:(App_config.application_pixmaps // "spinner_16.gif") ~packing:hbox#pack () in
+  let spinner = GMisc.image ~file:(App_config.application_icons // "spinner_16.gif") ~packing:hbox#pack () in
   let label = GMisc.label ~text:"Checking for updates..." ~height:22 ~packing:hbox#pack () in
   let modify_label label =
     label#misc#modify_fg [`NORMAL, `NAME "#808080"];

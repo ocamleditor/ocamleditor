@@ -103,7 +103,7 @@ let compile_buffer ~project ~editor ~page ?(join=false) () =
           end;
           Activity.remove activity_name;
         in
-        let exit_code = Oebuild_util.exec ~echo:App_config.application_debug ~join (*false*) ~at_exit ~process_err command in
+        let exit_code = Oebuild_util.exec ~verbose:App_config.application_debug ~join (*false*) ~at_exit ~process_err command in
         ()
     (*end ()*)
   with ex -> begin

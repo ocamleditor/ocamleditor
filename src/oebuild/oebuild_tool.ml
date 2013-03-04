@@ -28,6 +28,7 @@ open Oebuild
 let main () = begin
   let enabled = ref true in
   let nodep = ref false in
+  let dontlinkdep = ref false in
   let target = ref [] in
   let outkind = ref Executable in
   let is_clean = ref false in
@@ -70,7 +71,7 @@ let main () = begin
     end
   in
   let check_restrictions restr =
-    let restr = Str.split (Str.regexp "[ ,]+") restr in
+    let restr = Str.split (Str.regexp " *& *") restr in
     enabled := check_restrictions restr
   in
   let speclist = Arg.align [
@@ -106,13 +107,15 @@ let main () = begin
     ("-clean",       Set is_clean,                    " Remove output files for the selected target and exit.");
     ("-dep",         Unit dep,                        " Print dependencies and exit.");
     ("-no-dep",      Set nodep,                       " Do not detect module dependencies.");
-    ("-when",        String check_restrictions,       "\"<c1,c2,...>\" Exit immediately if any condition specified here is not true.
+    ("-dont-link-dep", Set dontlinkdep,               " Do not link module dependencies.");
+    ("-when",        String check_restrictions,       "\"<c1&c2&...>\" Exit immediately if any condition specified here is not true.
                                  Recognized conditions are:
 
-                                   IS_UNIX    : O.S. type is Unix
-                                   IS_WIN32   : O.S. type is Win32
-                                   IS_CYGWIN  : O.S. type is Cygwin
-                                   HAS_NATIVE : Native compilation is supported\n");
+                                   HAVE_FL_PKG(packages,...) : Findlib packages are installed
+                                   IS_UNIX                   : O.S. type is Unix
+                                   IS_WIN32                  : O.S. type is Win32
+                                   IS_CYGWIN                 : O.S. type is Cygwin
+                                   HAVE_NATIVE               : Native compilation is supported\n");
     ("-output-name", Set print_output_name,           " (undocumented)");
     ("-msvc",        Set ms_paths,                    " (undocumented)");
     ("-no-build",    Set no_build,                    " (undocumented)");
@@ -182,9 +185,10 @@ let main () = begin
                   ~lflags:!lflags
                   ~outname
                   ~deps
+                  ~dontlinkdep:!dontlinkdep
                   ~targets:!target
                   ~prof:!prof
-                  ~ms_paths ()), deps
+                  (*~ms_paths*) ()), deps
               end
             with
               | Build_failed code, _ -> exit code (*(compilation, None)*)

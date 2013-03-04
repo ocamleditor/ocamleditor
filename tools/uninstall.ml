@@ -27,16 +27,25 @@
 open Printf
 
 let prefix     = ref "/usr/local"
+let ver_1_8_0  = ref false
 let ext        = if is_win32 then ".exe" else ""
 
 let uninstall () =
   if not is_win32 then begin
-    kprintf run "rm -vfr %s/share/pixmaps/ocamleditor" !prefix;
-    kprintf run "rm -vf %s/bin/ocamleditor" !prefix;
-    kprintf run "rm -vf %s/bin/oebuild%s" !prefix ext;
-    kprintf run "rm -vf %s/bin/oebuild%s.opt" !prefix ext;
+    if !ver_1_8_0 then begin
+      kprintf run "rm -vfr %s/share/pixmaps/ocamleditor" !prefix;
+      kprintf run "rm -vf %s/bin/ocamleditor" !prefix;
+      kprintf run "rm -vf %s/bin/oebuild%s" !prefix ext;
+      kprintf run "rm -vf %s/bin/oebuild%s.opt" !prefix ext;
+    end else begin
+      kprintf run "rm -vfr %s/share/ocamleditor" !prefix;
+      kprintf run "rm -vf %s/bin/ocamleditor" !prefix;
+      kprintf run "rm -vf %s/bin/oebuild%s" !prefix ext;
+      kprintf run "rm -vf %s/bin/oebuild%s.opt" !prefix ext;
+    end
   end else prerr_endline "This script is not available under Windows";;
 
 let _ = main ~default_target:uninstall ~options:[
   "-prefix", Set_string prefix, (sprintf " Installation prefix (Unix only, default is %s)" !prefix);
+  "-ver-1.8.0", Set ver_1_8_0,  (sprintf " Uninstall OCamlEditor version 1.8.0");
 ] ()

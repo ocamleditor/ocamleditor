@@ -57,159 +57,161 @@ module Remote = struct
   class file ~host ~user ~pwd ~filename : Editor_file_type.abstract_file =
     object (self)
 
-    val dirname = Filename.dirname filename
-    val connection =
-        let c = Curl.init () in
-        Gc.finalise Curl.cleanup c;
-        c
-    val mutable mtime = 0.0
+      val dirname = Filename.dirname filename
+      val connection =
+          let c = Curl.init () in
+          Gc.finalise Curl.cleanup c;
+          c
+      val mutable mtime = 0.0
 
-    initializer
-      match self#stat () with
-        | Some perm -> mtime <- perm.mtime;
-        | _ -> ()
+      initializer
+        match self#stat () with
+          | Some perm -> mtime <- perm.mtime;
+          | _ -> ()
 
-    method filename = filename
-    method basename = Filename.basename filename
+      method filename = filename
+      method basename = Filename.basename filename
 
-    method private get_url () = sprintf "sftp://%s:%s@%s%s" user pwd host filename
+      method private get_url () = sprintf "sftp://%s:%s@%s%s" user pwd host filename
 
-    method read =
-      let buf = Buffer.create 100 in
-      let url = self#get_url () in
-      Curl.set_url connection url;
-      (*Curl.set_ftplistonly connection true;*)
-      Curl.set_writefunction connection begin fun str ->
-        Buffer.add_string buf str;
-        String.length str;
-      end;
-      Curl.perform connection;
-      Buffer.contents buf;
+      method private protect : 'a 'b.('a -> 'b) -> 'a -> 'b = fun f x ->
+        try f x
+        with (Curl.CurlException (code, n, s) as ex) ->
+          Printf.eprintf "%d - %s - %s\n%!" n (Curl.strerror code) s;
+          raise ex
 
-    method write str =
-      try
-        let url = self#get_url () in
-        Curl.set_url connection url;
-        Curl.set_upload connection true;
-        let buf = ref str in
-        Curl.set_readfunction connection begin fun max_bytes ->
-          if !buf = "" then "" else
-            let blen = String.length !buf in
-            let len = min max_bytes blen in
-            let bytes = String.sub !buf 0 len in
-            buf := String.sub !buf len (blen - len);
-            bytes
-        end;
-        Curl.perform connection;
-        mtime <- Unix.gettimeofday();
-        ignore (self#stat());
-      with Curl.CurlException (code, n, s) ->
-        Printf.eprintf "%d - %s - %s\n%!" n (Curl.strerror code) s;
+      method read =
+        self#protect begin fun () ->
+          let buf = Buffer.create 100 in
+          let url = self#get_url () in
+          Curl.set_url connection url;
+          (*Curl.set_ftplistonly connection true;*)
+          Curl.set_writefunction connection begin fun str ->
+            Buffer.add_string buf str;
+            String.length str;
+          end;
+          Curl.perform connection;
+          Buffer.contents buf;
+        end ()
 
-    method private get_filetime () =
-      let url = self#get_url () in
-      Curl.set_url connection url;
-      let tm = Curl.get_filetime connection in
-      Curl.perform connection;
-      tm
+      method write str =
+        self#protect begin fun () ->
+          let url = self#get_url () in
+          Curl.set_url connection url;
+          Curl.set_upload connection true;
+          let buf = ref str in
+          Curl.set_readfunction connection begin fun max_bytes ->
+            if !buf = "" then "" else
+              let blen = String.length !buf in
+              let len = min max_bytes blen in
+              let bytes = String.sub !buf 0 len in
+              buf := String.sub !buf len (blen - len);
+              bytes
+          end;
+          Curl.perform connection;
+          mtime <- Unix.gettimeofday();
+          ignore (self#stat());
+        end ()
 
-  method private perm_of_string str =
-    assert (String.length str = 10);
-    0
+      method private perm_of_string str =
+        assert (String.length str = 10);
+        0
 
-  method private time_of_string str =
-    let open Unix in
-    match Str.split re_spaces str with
-      | [mon; day; year_time] ->
-        let ltm = Unix.localtime (Unix.gettimeofday ()) in
-        let year, hour, min =
-          if String.contains year_time ':' then
-            let time = Str.split re_colon year_time in
-            let year = ltm.tm_year in
-            begin
-              match time with
-                | [h; m] ->
-                  year,
-                  int_of_string h,
-                  int_of_string m
-                | _ -> assert false
-            end
-          else (int_of_string year_time) - 1900, 0, 0
-        in
-        mktime {
-          tm_sec = 0;
-          tm_min = min;
-          tm_hour = hour;
-          tm_mday = int_of_string day;
-          tm_mon = month_of_string mon;
-          tm_year = year;
-          tm_wday = 0;
-          tm_yday = 0;
-          tm_isdst = ltm.tm_isdst;
-        }
-      | _ -> assert false
+      method private time_of_string str =
+        let open Unix in
+        match Str.split re_spaces str with
+          | [mon; day; year_time] ->
+            let ltm = Unix.localtime (Unix.gettimeofday ()) in
+            let year, hour, min =
+              if String.contains year_time ':' then
+                let time = Str.split re_colon year_time in
+                let year = ltm.tm_year in
+                begin
+                  match time with
+                    | [h; m] ->
+                      year,
+                      int_of_string h,
+                      int_of_string m
+                    | _ -> assert false
+                end
+              else (int_of_string year_time) - 1900, 0, 0
+            in
+            mktime {
+              tm_sec = 0;
+              tm_min = min;
+              tm_hour = hour;
+              tm_mday = int_of_string day;
+              tm_mon = month_of_string mon;
+              tm_year = year;
+              tm_wday = 0;
+              tm_yday = 0;
+              tm_isdst = ltm.tm_isdst;
+            }
+          | _ -> assert false
 
-   method private stat () =
-      let url = sprintf "sftp://%s:%s@%s%s/" user pwd host dirname in
-      Curl.set_url connection url;
-      Curl.set_upload connection false;
-      let buf = Buffer.create 1000 in
-      Curl.set_writefunction connection begin fun str ->
-        Buffer.add_string buf str;
-        String.length str;
-      end;
-      Curl.perform connection;
-      let listing = Buffer.contents buf in
-      let re_filename = kprintf Str.regexp " %s$" self#basename in
-      try
-        let stop = Str.search_forward re_filename listing 0 in
-        let start = Str.search_backward re_cap listing stop in
-        let line = String.sub listing start (stop - start) in
-        let perm = String.sub line 0 10 in (* -rwxr--r-x *)
-        let time = String.sub line (String.length line - 12) 12 in (* 1554 Jan  7 18:41 *)
-        let stop = String.length line - 12 - 2 in
-        let start = Str.search_backward re_space line stop in
-        let size = int_of_string (String.sub line (start + 1) (stop - start)) in
-        let ftime, time = self#time_of_string time in
-        (*Printf.printf "%S -- %S -- (%d/%d/%d %d:%d) -- %d\n%!" line perm
-          (time.Unix.tm_year + 1900)
-          (time.Unix.tm_mon + 1)
-          time.Unix.tm_mday
-          time.Unix.tm_hour
-          time.Unix.tm_min
-          size;*)
-        Some {perm; size; mtime=ftime};
-      with Not_found -> None
+      method private stat () =
+        self#protect begin fun () ->
+          let url = sprintf "sftp://%s:%s@%s%s/" user pwd host dirname in
+          Curl.set_url connection url;
+          Curl.set_upload connection false;
+          let buf = Buffer.create 1000 in
+          Curl.set_writefunction connection begin fun str ->
+            Buffer.add_string buf str;
+            String.length str;
+          end;
+          Curl.perform connection;
+          let listing = Buffer.contents buf in
+          let re_filename = kprintf Str.regexp " %s$" self#basename in
+          try
+            let stop = Str.search_forward re_filename listing 0 in
+            let start = Str.search_backward re_cap listing stop in
+            let line = String.sub listing start (stop - start) in
+            let perm = String.sub line 0 10 in (* -rwxr--r-x *)
+            let time = String.sub line (String.length line - 12) 12 in (* 1554 Jan  7 18:41 *)
+            let stop = String.length line - 12 - 2 in
+            let start = Str.search_backward re_space line stop in
+            let size = int_of_string (String.sub line (start + 1) (stop - start)) in
+            let ftime, time = self#time_of_string time in
+            (*Printf.printf "%S -- %S -- (%d/%d/%d %d:%d) -- %d\n%!" line perm
+               (time.Unix.tm_year + 1900)
+               (time.Unix.tm_mon + 1)
+               time.Unix.tm_mday
+               time.Unix.tm_hour
+               time.Unix.tm_min
+               size;*)
+            Some {perm; size; mtime=ftime};
+          with Not_found -> None
+        end ()
 
-    method is_readonly =
-      match self#stat() with
-        | Some stat ->
-          let perm = stat.perm in
-          perm.[1] = 'r' && perm.[2] = '-'
-        | _ -> true
+      method is_readonly =
+        match self#stat() with
+          | Some stat ->
+            let perm = stat.perm in
+            perm.[1] = 'r' && perm.[2] = '-'
+          | _ -> true
 
-    method is_writeable =
-      match self#stat() with
-        | Some stat ->
-          let perm = stat.perm in
-          perm.[1] = 'r' && perm.[2] = 'w'
-        | _ -> false
+      method is_writeable =
+        match self#stat() with
+          | Some stat ->
+            let perm = stat.perm in
+            perm.[1] = 'r' && perm.[2] = 'w'
+          | _ -> false
 
-    method last_modified () =
-      match self#stat() with
-        | Some stat -> stat.mtime
-        | _ -> 0.0
+      method last_modified () =
+        match self#stat() with
+          | Some stat -> stat.mtime
+          | _ -> 0.0
 
-    method changed = mtime < self#last_modified()
+      method changed = mtime < self#last_modified()
 
-    method backup ?move_to () =
-      Printf.eprintf "[Remote] backup not implemented\n%!" ;
-      ""
+      method backup ?move_to () =
+        Printf.eprintf "[Remote] backup not implemented\n%!" ;
+        ""
 
-    method rename newname =
-      failwith "rename not implemented"
+      method rename newname =
+        failwith "rename not implemented"
 
-    method is_remote = true
+      method is_remote = true
 
     end
 
