@@ -441,19 +441,10 @@
       <dontlinkdep>false</dontlinkdep>
       <cflags></cflags>
       <lflags></lflags>
-      <target_type>Executable</target_type>
+      <target_type>External</target_type>
       <outname></outname>
       <lib_install_path></lib_install_path>
       <external_tasks>
-        <task name="<tools>">
-          <always_run_in_project>false</always_run_in_project>
-          <always_run_in_script>false</always_run_in_script>
-          <env replace="false"/>
-          <dir></dir>
-          <cmd>echo</cmd>
-          <args/>
-          <phase>Compile</phase>
-        </task>
         <task name="mkrelease">
           <always_run_in_project>false</always_run_in_project>
           <always_run_in_script>false</always_run_in_script>
@@ -563,7 +554,7 @@
       <target target_id="16" show="false"/>
       <target target_id="18" show="false"/>
       <target target_id="19" show="false"/>
-      <target target_id="20" show="true"/>
+      <target target_id="20" show="false"/>
       <target target_id="13" show="false"/>
     </targets>
     <args>

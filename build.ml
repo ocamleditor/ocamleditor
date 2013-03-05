@@ -78,18 +78,6 @@ let external_tasks = [
   });
   
   2, (fun command -> {
-    et_name                  = "<tools>";
-    et_env                   = [];
-    et_env_replace           = false;
-    et_dir                   = "";
-    et_cmd                   = "echo";
-    et_args                  = [];
-    et_phase                 = Some Compile;
-    et_always_run_in_project = false;
-    et_always_run_in_script  = false;
-  });
-  
-  3, (fun command -> {
     et_name                  = "mkrelease";
     et_env                   = [];
     et_env_replace           = false;
@@ -101,7 +89,7 @@ let external_tasks = [
     et_always_run_in_script  = false;
   });
   
-  4, (fun command -> {
+  3, (fun command -> {
     et_name                  = "mkversion";
     et_env                   = [];
     et_env_replace           = false;
@@ -113,7 +101,7 @@ let external_tasks = [
     et_always_run_in_script  = false;
   });
   
-  5, (fun command -> {
+  4, (fun command -> {
     et_name                  = "generate_oebuild_script";
     et_env                   = [];
     et_env_replace           = false;
@@ -125,7 +113,7 @@ let external_tasks = [
     et_always_run_in_script  = false;
   });
   
-  6, (fun command -> {
+  5, (fun command -> {
     et_name                  = "Install OCamlEditor";
     et_env                   = [];
     et_env_replace           = false;
@@ -140,7 +128,7 @@ let external_tasks = [
     et_always_run_in_script  = false;
   });
   
-  7, (fun command -> {
+  6, (fun command -> {
     et_name                  = "Uninstall OCamlEditor";
     et_env                   = [];
     et_env_replace           = false;
@@ -154,7 +142,7 @@ let external_tasks = [
     et_always_run_in_script  = false;
   });
   
-  8, (fun command -> {
+  7, (fun command -> {
     et_name                  = "distclean";
     et_env                   = [];
     et_env_replace           = false;
@@ -169,9 +157,9 @@ let external_tasks = [
 
 
 let general_commands = [
-  `Distclean, (8, "distclean");
-  `Install, (6, "Install OCamlEditor");
-  `Uninstall, (7, "Uninstall OCamlEditor");
+  `Distclean, (7, "distclean");
+  `Install, (5, "Install OCamlEditor");
+  `Uninstall, (6, "Uninstall OCamlEditor");
 ]
 
 
@@ -627,9 +615,9 @@ let targets = [
     show                 = false;
   };
   
-  (* 6 *)
+  (* 5 *)
   "prepare-build", {
-    num                  = 6;
+    num                  = 0;
     id                   = 20;
     output_name          = "";
     target_type          = External;
@@ -652,15 +640,15 @@ let targets = [
     external_tasks       = [1];
     restrictions         = [];
     dependencies         = [];
-    show                 = true;
+    show                 = false;
   };
   
-  (* 6 *)
+  (* 5 *)
   "tools", {
     num                  = 0;
     id                   = 13;
     output_name          = "";
-    target_type          = Executable;
+    target_type          = External;
     compilation_bytecode = true;
     compilation_native   = false;
     toplevel_modules     = "";
@@ -677,7 +665,7 @@ let targets = [
     dontlinkdep          = false;
     library_install_dir  = ""; (* Relative to the Standard Library Directory *)
     other_objects        = "";
-    external_tasks       = [2; 3; 4; 5; 6; 7; 8];
+    external_tasks       = [2; 3; 4; 5; 6; 7];
     restrictions         = [];
     dependencies         = [];
     show                 = false;

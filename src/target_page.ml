@@ -350,7 +350,7 @@ object (self)
       ~callback:(self#update (fun target -> target.cflags <- entry_cflags#text)));
     ignore (entry_lflags#connect#changed
       ~callback:(self#update (fun target -> target.lflags <- entry_lflags#text)));
-    (*  *)
+    (* Radio buttons signals *)
     let get_target_type () =
       if radio_archive#active then
         (match combo_kind#active with 0 -> Library | 1 -> Plugin | 2 -> Pack | _ -> assert false)
@@ -358,36 +358,40 @@ object (self)
       else if radio_external#active then External
       else assert false;
     in
+    let set_sensitive () =
+      align_lib#misc#set_sensitive (not radio_executable#active && not radio_external#active);
+      align_exec#misc#set_sensitive radio_executable#active;
+      entry_outname#misc#set_sensitive (not radio_external#active);
+      if radio_executable#active then (entry_main_module#misc#grab_focus())
+      else if radio_archive#active then (button_lib_modules#misc#grab_focus());
+    in
     ignore (radio_archive#connect#after#toggled
-      ~callback:(self#update begin fun target ->
-        if signals_enabled then begin
-          target.target_type <- get_target_type();
-          entry_lib_modules#set_text "";
-          entry_main_module#set_text "";
-        end
-      end));
-    ignore (combo_kind#connect#changed
-        ~callback:(self#update (fun target -> target.target_type <- get_target_type())));
-    let _ = radio_executable#connect#clicked ~callback:begin fun () ->
-        align_lib#misc#set_sensitive (not radio_executable#active && not radio_external#active);
-        align_exec#misc#set_sensitive radio_executable#active;
-        if signals_enabled then begin
-          if radio_executable#active then (entry_main_module#misc#grab_focus())
-          else if radio_archive#active then (button_lib_modules#misc#grab_focus());
-        end
-      end in
-    let _ = radio_external#connect#after#toggled ~callback:begin
-        entry_outname#misc#set_sensitive (not radio_external#active);
-        align_lib#misc#set_sensitive (not radio_executable#active && not radio_external#active);
+        ~callback:(self#update begin fun target ->
+            set_sensitive();
+            if signals_enabled then begin
+              target.target_type <- get_target_type();
+              entry_lib_modules#set_text "";
+              entry_main_module#set_text "";
+            end
+          end));
+    ignore (combo_kind#connect#changed ~callback:(self#update (fun target ->
+          target.target_type <- get_target_type())));
+    ignore (radio_executable#connect#clicked ~callback:begin fun () ->
         self#update begin fun target ->
+          set_sensitive();
           if signals_enabled then begin
             target.target_type <- get_target_type();
-            if radio_executable#active then (entry_main_module#misc#grab_focus())
-            else if radio_archive#active then (button_lib_modules#misc#grab_focus())
+          end
+         end ();
+      end);
+    ignore (radio_external#connect#toggled ~callback:begin
+        self#update begin fun target ->
+          set_sensitive();
+          if signals_enabled then begin
+            target.target_type <- get_target_type();
           end
         end;
-      end
-    in
+      end);
     (*  *)
     ignore (entry_outname#connect#changed
       ~callback:(self#update (fun target -> target.outname <- entry_outname#text)));
@@ -478,6 +482,11 @@ object (self)
       align_lib#misc#set_sensitive true;
       align_exec#misc#set_sensitive false;
       entry_lib_modules#set_text tg.files;
+      entry_main_module#set_text "";
+    end else if (List.mem tg.target_type [External]) then begin
+      align_lib#misc#set_sensitive false;
+      align_exec#misc#set_sensitive false;
+      entry_lib_modules#set_text "";
       entry_main_module#set_text "";
     end else begin
       align_lib#misc#set_sensitive false;
