@@ -55,25 +55,32 @@ let load_plugin_remote editor menu_item =
         menu_item#misc#show();
         ignore (menu_item#connect#activate ~callback:begin fun () ->
               let module Remote = (val plugin) in
-              let open Editor_file in
               let width = 100 in
               let title =
                 match menu_item#misc#get_property "label" with
                   | `STRING (Some x) -> x
                   | _ -> ""
               in
-              let window = GWindow.window ~position:`CENTER ~icon:Icons.oe ~title ~modal:true ~show:false () in
+              let window = GWindow.window
+                  ~resizable:false
+                  ~type_hint:`DIALOG
+                  ~allow_grow:false
+                  ~allow_shrink:false
+                  ~position:`CENTER
+                  ~icon:Icons.oe ~title ~modal:true ~show:false () in
+              Gaux.may (GWindow.toplevel editor) ~f:(fun x -> window#set_transient_for x#as_window);
               let vbox = GPack.vbox ~border_width:5 ~spacing:3 ~packing:window#add () in
               let hbox = GPack.hbox ~spacing:3 ~packing:vbox#pack () in
               let _ = GMisc.label ~text:"User@Host:" ~width ~xalign:0.0 ~packing:hbox#pack () in
               let entry_user_host = GEdit.entry ~packing:hbox#pack () in
               let hbox = GPack.hbox ~spacing:3 ~packing:vbox#pack () in
-              let _ = GMisc.label ~text:"Filename:" ~width ~xalign:0.0 ~packing:hbox#pack () in
-              let entry_filename = GEdit.entry ~packing:hbox#pack () in
-              let hbox = GPack.hbox ~spacing:3 ~packing:vbox#pack () in
               let _ = GMisc.label ~text:"Passowrd:" ~width ~xalign:0.0 ~packing:hbox#pack () in
               let entry_pwd = GEdit.entry ~visibility:false ~packing:hbox#pack () in
-              let bbox = GPack.button_box `HORIZONTAL ~layout:`END ~packing:vbox#pack () in
+              let hbox = GPack.hbox ~spacing:3 ~packing:vbox#pack () in
+              let _ = GMisc.label ~text:"Filename:" ~width ~xalign:0.0 ~packing:hbox#pack () in
+              let entry_filename = GEdit.entry (*~text:"/home/fran/dos2unix.ml"*) ~packing:hbox#pack () in
+              let _ = GMisc.separator `HORIZONTAL ~packing:vbox#pack () in
+              let bbox = GPack.button_box `HORIZONTAL ~border_width:3 ~spacing:3 ~layout:`END ~packing:vbox#pack () in
               let button_ok = GButton.button ~stock:`OK ~packing:bbox#pack () in
               let button_cancel = GButton.button ~stock:`CANCEL ~packing:bbox#pack () in
               ignore (button_cancel#connect#clicked ~callback:window#destroy);
@@ -83,11 +90,17 @@ let load_plugin_remote editor menu_item =
                     let pos = String.index user_host '@' in
                     let user = Str.string_before user_host pos in
                     let host = Str.string_after user_host (pos + 1) in
-                    let remote = {host; user; pwd = entry_pwd#text} in
+                    let remote = {Editor_file_type.host; user; pwd = entry_pwd#text} in
                     ignore (editor#open_file ~active:true ~scroll_offset:0 ~offset:0 ?remote:(Some remote) entry_filename#text);
                     window#destroy();
                   with Not_found ->
                     Dialog.message ~title:"Invalid address" ~message:"Invalid address" `ERROR
+                end);
+              ignore (window#event#connect#key_press ~callback:begin fun ev ->
+                  let key = GdkEvent.Key.keyval ev in
+                  if key = GdkKeysyms._Escape then (button_cancel#clicked(); true)
+                  else if key = GdkKeysyms._Return then (button_ok#clicked(); true)
+                  else false
                 end);
               window#show();
             end);

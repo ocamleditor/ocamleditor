@@ -625,7 +625,7 @@ object (self)
         in
         Some page
       with e -> begin
-        Dialog.display_exn self e;
+        Dialog.display_exn ~title:"Error while opening file" ~parent:self e;
         None
       end
 
@@ -641,9 +641,15 @@ object (self)
   method save_all () =
     List.iter (fun p -> if p#view#buffer#modified then self#save p) self#pages;
 
-  method dialog_save_as page = Dialog_save_as.show ~editor:self ~page ()
+  method dialog_save_as page =
+    match page#file with
+      | Some file when file#remote <> None -> Dialog_remote.save_as ~editor:self ~page ()
+      | _ -> Dialog_save_as.window ~editor:self ~page ()
 
-  method dialog_rename page = Dialog_rename.show ~editor:self ~page ()
+  method dialog_rename page =
+    match page#file with
+      | Some file when file#remote <> None -> Dialog_remote.rename ~editor:self ~page ()
+      | _ -> Dialog_rename.window ~editor:self ~page ()
 
   method save (page : Editor_page.page) =
 (*    try*)
@@ -658,25 +664,33 @@ object (self)
 
   method dialog_delete_current () =
     self#with_current_page begin fun page ->
-      let message = GWindow.message_dialog
-        ~title:"Delete file?"
-        ~message:("Delete file\n"^page#get_filename^"?")
-        ~message_type:`INFO
-        ~position:`CENTER
-        ~allow_grow:false
-        ~destroy_with_parent:false
-        ~modal:true
-        ~buttons:GWindow.Buttons.yes_no () in
-      Gaux.may (GWindow.toplevel self) ~f:(fun x -> message#set_transient_for x#as_window);
-      (match message#run() with
-        | `YES -> self#delete_page page
-        | _ -> ());
-      message#destroy();
+        match page#file with
+          | Some file ->
+            let filename =
+              match file#remote with
+                | None -> file#filename
+                | Some rmt -> sprintf "%s@%s:%s" rmt.Editor_file_type.user rmt.Editor_file_type.host file#filename
+            in
+            let message = GWindow.message_dialog
+                ~title:"Delete file?"
+                ~message:("Delete file\n\n"^filename^"?")
+                ~message_type:`INFO
+                ~position:`CENTER
+                ~allow_grow:false
+                ~destroy_with_parent:false
+                ~modal:true
+                ~buttons:GWindow.Buttons.yes_no () in
+            Gaux.may (GWindow.toplevel self) ~f:(fun x -> message#set_transient_for x#as_window);
+            (match message#run() with
+              | `YES -> self#delete_page page
+              | _ -> ());
+            message#destroy();
+          | _ -> ()
     end
 
   method delete_page page =
     if page#buffer#modified then (self#save page);
-    Gaux.may page#file ~f:(fun file -> Sys.remove file#filename);
+    Gaux.may page#file ~f:(fun file -> file#remove);
     self#close page;
     pages_cache <- List.filter (fun (_, p) -> p#misc#get_oid <> page#misc#get_oid) pages_cache;
     notebook#remove page#coerce;

@@ -99,7 +99,8 @@ let kill p =
     begin
       match Sys.os_type with
       | "Win32" ->
-        let taskkill = sprintf "TASKKILL /F /T /PID %d" pid in
+        let redirect = if App_config.application_debug then " 2>NUL 1>NUL" else "" in
+        let taskkill = sprintf "TASKKILL /F /T /PID %d%s" pid redirect in
         let exit_code = Sys.command taskkill in
         if App_config.application_debug then printf "%s (%d)\n%!" taskkill exit_code;
       | _ ->

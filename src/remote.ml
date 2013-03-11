@@ -57,7 +57,8 @@ module Remote = struct
   class file ~host ~user ~pwd ~filename : Editor_file_type.abstract_file =
     object (self)
 
-      val dirname = Filename.dirname filename
+      val mutable filename = filename
+
       val connection =
           let c = Curl.init () in
           Gc.finalise Curl.cleanup c;
@@ -70,15 +71,14 @@ module Remote = struct
           | _ -> ()
 
       method filename = filename
+      method dirname = Filename.dirname filename
       method basename = Filename.basename filename
 
       method private get_url () = sprintf "sftp://%s:%s@%s%s" user pwd host filename
 
       method private protect : 'a 'b.('a -> 'b) -> 'a -> 'b = fun f x ->
         try f x
-        with (Curl.CurlException (code, n, s) as ex) ->
-          Printf.eprintf "%d - %s - %s\n%!" n (Curl.strerror code) s;
-          raise ex
+        with Curl.CurlException (code, _, _) -> failwith (Curl.strerror code)
 
       method read =
         self#protect begin fun () ->
@@ -151,7 +151,7 @@ module Remote = struct
 
       method private stat () =
         self#protect begin fun () ->
-          let url = sprintf "sftp://%s:%s@%s%s/" user pwd host dirname in
+          let url = sprintf "sftp://%s:%s@%s%s/" user pwd host self#dirname in
           Curl.set_url connection url;
           Curl.set_upload connection false;
           let buf = Buffer.create 1000 in
@@ -204,20 +204,39 @@ module Remote = struct
 
       method changed = mtime < self#last_modified()
 
+      method exists = self#stat () <> None
+
       method backup ?move_to () =
         Printf.eprintf "[Remote] backup not implemented\n%!" ;
         ""
 
-      method rename newname =
-        failwith "rename not implemented"
+      method rename newpath =
+        self#protect begin fun () ->
+          let url = sprintf "sftp://%s:%s@%s" user pwd host in
+          Curl.set_url connection url;
+          Curl.set_postquote connection [sprintf "rename '%s' '%s'" filename newpath];
+          Curl.set_upload connection false;
+          Curl.perform connection;
+          filename <- newpath;
+        end ()
 
-      method is_remote = true
+      method remove = if self#exists then
+          self#protect begin fun () ->
+            let url = sprintf "sftp://%s:%s@%s" user pwd host in
+            Curl.set_url connection url;
+            Curl.set_postquote connection [sprintf "rm '%s'" filename];
+            Curl.set_upload connection false;
+            Curl.perform connection;
+          end ()
+
+      method remote = Some {Editor_file_type.host; user; pwd}
 
     end
 
   let create = new file
 
 end
+
 
 let _ = Plugins.remote := Some (module Remote : Plugins.REMOTE)
 

@@ -42,17 +42,24 @@ let message ?(title="") ~message message_type =
   ignore(message#run());
   message#destroy()
 
-let display_exn widget ?title ?(message="") e =
-  match GWindow.toplevel widget with
-    | None -> ()
-    | Some parent ->
-      let message = sprintf "%s\n\n%s\n\n%s" message (Printexc.to_string e) (Printexc.get_backtrace()) in
-      let message = String.trim message in
-      let dialog = GWindow.message_dialog ~message ?title
-        ~modal:true ~destroy_with_parent:false ~position:`CENTER ~parent
+let display_exn ?parent ?title ?(message="") e =
+  let display ?parent () =
+    let message = sprintf "%s\n\n%s\n\n%s" message (Printexc.to_string e) (Printexc.get_backtrace()) in
+    let message = String.trim message in
+    let dialog = GWindow.message_dialog ~message ?title
+        ~modal:true ~destroy_with_parent:false ~position:`CENTER ?parent
         ~message_type:`ERROR ~buttons:(GWindow.Buttons.ok) () in
-      ignore(dialog#run());
-      dialog#destroy()
+    ignore(dialog#run());
+    dialog#destroy()
+  in
+  match parent with
+    | None -> display ()
+    | Some widget ->
+      begin
+        match GWindow.toplevel widget with
+          | None -> display ()
+          | Some parent -> display ~parent ()
+      end
 
 let process_still_active ~name ~ok ~cancel () =
   let dialog = GWindow.message_dialog ~title:"Process is still active"

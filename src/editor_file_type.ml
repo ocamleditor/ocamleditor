@@ -20,10 +20,16 @@
 
 *)
 
+type remote_login = {
+  host : string;
+  user : string;
+  pwd  : string;
+}
 
 class type abstract_file  =
 object
   method filename : string
+  method dirname : string
   method basename : string
   method last_modified : unit -> float
   method is_readonly : bool
@@ -33,5 +39,7 @@ object
   method write : string -> unit
   method backup : ?move_to:string -> unit -> string
   method rename : string -> unit
-  method is_remote : bool
+  method remove : unit
+  method exists : bool
+  method remote : remote_login option
 end

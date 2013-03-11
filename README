@@ -29,10 +29,10 @@ DEPENDENCIES
   * Lablgtk-2.16.0 (installed with Findlib);
   * Xml-light (installed at "+xml-light");
   * Findlib-1.3.3;
-  * ocp-indent (optional);
-  * ocurl-0.5.5 to allow remote editing (optional);
-  * Dot command to display the module dependencies graph (optional);
-  * Lablgtk.rsvg to embed the graph viewer in the editor (optional).
+  * (optional) ocp-indent;
+  * (optional) ocurl-0.5.5 to allow remote editing;
+  * (optional) Dot command to display the module dependencies graph;
+  * (optional) Lablgtk.rsvg to embed the graph viewer in the editor.
 
 
 HOW TO COMPILE
@@ -67,7 +67,7 @@ INSTALLATION
 
   By default, commands will be installed under "/usr/local/bin", icons
   under "/usr/local/share/ocamleditor/icons" and plugins under
-  "/usr/local/share/ocamleditor/icons". You can specify an installation
+  "/usr/local/share/ocamleditor/plugins". You can specify an installation
   prefix other than "/usr/local" by giving an absolute file name as argument.
 
   Windows users may build an installer by compiling the included NSIS

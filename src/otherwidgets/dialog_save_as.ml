@@ -24,7 +24,22 @@
 open Miscellanea
 open Printf
 
-let show ~editor ~page () =
+(** write_file *)
+let write_file ~editor ~page ~text ~filename window =
+  File_util.write filename text;
+  page#revert();
+  (*editor#close page;*)
+  match editor#open_file ~active:true ~scroll_offset:0 ~offset:0 ?remote:None filename with
+    | Some page ->
+      editor#load_page ?scroll:None page;
+      editor#goto_view page#view;
+      window#destroy()
+    | _ ->
+      Dialog.info ~title:"Error" ~message_type:`ERROR
+        ~message:(sprintf "Cannot open file %s" filename) window
+
+(** window *)
+let window ~editor ~page () =
   let window = GWindow.file_chooser_dialog
     ~action:`SAVE ~icon:Icons.oe
     ~title:(sprintf "Save \xC2\xAB%s\xC2\xBB as..." (Filename.basename page#get_filename))
@@ -40,18 +55,8 @@ let show ~editor ~page () =
       | `OK ->
         Gaux.may window#filename ~f:begin fun filename ->
           let buffer : GText.buffer = page#buffer#as_text_buffer#as_gtext_buffer in
-          let write_file () =
-            File_util.write filename (buffer#get_text());
-            page#revert();
-            (*editor#close page;*)
-            match editor#open_file ~active:true ~scroll_offset:0 ~offset:0 ?remote:None filename with
-              | Some page ->
-                editor#load_page ?scroll:None page;
-                editor#goto_view page#view;
-                window#destroy()
-              | _ ->
-                Dialog.info ~title:"Error" ~message_type:`ERROR
-                  ~message:(sprintf "Cannot open file %s" filename) window;
+          let write () =
+            write_file ~editor ~page ~text:(buffer#get_text()) ~filename window
           in
           if Sys.file_exists filename then begin
             let overwrite () =
@@ -64,16 +69,10 @@ let show ~editor ~page () =
                 List_opt.may_find (fun p -> String.lowercase p#get_filename = lc_filename)
                   editor#pages editor#close ();
               end;
-              write_file ()
+              write()
             in
-            match
-              Dialog.confirm ~message:(sprintf
-                "Are you sure you want to overwrite file \xC2\xAB%s\xC2\xBB?" (Filename.basename filename))
-                ~yes:("Overwrite", overwrite)
-                ~no:("Do Not Overwrite", ignore)
-                ~title:"Overwrite File" window;
-            with `CANCEL | `NO -> run() | `YES -> window#destroy()
-          end else (write_file())
+            Dialog_rename.ask_overwrite ~run ~overwrite ~filename window
+          end else (write())
         end;
       | _ -> window#destroy()
   in run()

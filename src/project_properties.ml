@@ -277,7 +277,7 @@ object (self)
       | Project.Project_already_exists path ->
         Dialog.info ~message:("Directory \""^path^
           "\" already exists.\nPlease choose another name for your project.") self
-      | ex -> Dialog.display_exn self ex
+      | ex -> Dialog.display_exn ~parent:self ex
 
   method goto_page = notebook#goto_page
 

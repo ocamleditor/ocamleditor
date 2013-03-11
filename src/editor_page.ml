@@ -524,7 +524,7 @@ object (self)
             end ()
           with ex ->
             reset_button();
-            Dialog.display_exn self ~title:"Error creating dependencies graph" ex
+            Dialog.display_exn ~parent:self ~title:"Error creating dependencies graph" ex
         end;
 
   initializer
@@ -543,7 +543,7 @@ object (self)
     (** After focus_in, check whether the file is changed on disk *)
     ignore (text_view#event#connect#after#focus_in ~callback:begin fun _ ->
       Gaux.may self#file ~f:begin fun f ->
-        if (Sys.file_exists f#filename || f#is_remote) && f#changed then
+        if f#exists && f#changed then
           if buffer#modified then begin
             let message = "File\n" ^ self#get_filename^"\nchanged on disk, reload?" in
             let yes = "Reload", self#revert in

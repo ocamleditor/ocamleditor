@@ -39,7 +39,7 @@ let show ~view () =
           view#buffer#place_cursor ~where;
           view#scroll_lazy where;
           w#destroy();
-        with e -> Dialog.display_exn view e
+        with e -> Dialog.display_exn ~parent:view e
       in
       button_ok#connect#clicked ~callback:(fun () -> callback(); w#destroy());
       button_cancel#connect#clicked ~callback:w#destroy;
@@ -56,4 +56,4 @@ let show ~view () =
       line#misc#grab_focus();
       Gaux.may ~f:(fun x -> w#set_transient_for x#as_window) (GWindow.toplevel view);
       w#present()
-  end with e -> Dialog.display_exn view e;
+  end with e -> Dialog.display_exn ~parent:view e;

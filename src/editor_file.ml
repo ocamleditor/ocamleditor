@@ -26,18 +26,13 @@ open Unix
 open Printf
 open Editor_file_type
 
-type remote_login = {
-  host : string;
-  user : string;
-  pwd  : string;
-}
-
 class file filename =
   object (self)
 
     val mutable ts = (stat filename).st_mtime
 
     method filename = filename
+    method dirname = Filename.dirname filename
     method basename = Filename.basename filename
 
     method last_modified () = (stat filename).st_mtime
@@ -108,14 +103,18 @@ class file filename =
 
     method rename newname = Sys.rename filename newname;
 
-    method is_remote = false
+    method remove = if self#exists then Sys.remove filename
+
+    method exists = Sys.file_exists filename
+
+    method remote : remote_login option = None
   end
 
 (** create *)
 let create ?remote filename =
   match remote with
     | None -> (new file filename :> abstract_file)
-    | Some {host; user; pwd} ->
+    | Some {Editor_file_type.host; user; pwd} ->
       begin
         match !Plugins.remote with
           | Some plugin ->

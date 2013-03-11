@@ -24,19 +24,45 @@
 open Miscellanea
 open Printf
 
-let show ~editor ~page () =
-  let colorize page filename =
-    let old = page#buffer#lexical_enabled in
-    let is_lexical_enabled = page#buffer#check_lexical_coloring_enabled filename in
-    page#buffer#set_lexical_enabled is_lexical_enabled;
-    if is_lexical_enabled && not old then (page#buffer#colorize ?start:None ?stop:None ())
-    else if not is_lexical_enabled then begin
-      let start = page#buffer#start_iter in
-      let stop = page#buffer#end_iter in
-      List.iter (function Some t -> page#buffer#remove_tag t ~start ~stop | _ -> ()) page#buffer#tag_table_lexical;
-      page#error_indication#remove_tag();
-    end
-  in
+(** colorize *)
+let colorize page filename =
+  let old = page#buffer#lexical_enabled in
+  let is_lexical_enabled = page#buffer#check_lexical_coloring_enabled filename in
+  page#buffer#set_lexical_enabled is_lexical_enabled;
+  if is_lexical_enabled && not old then (page#buffer#colorize ?start:None ?stop:None ())
+  else if not is_lexical_enabled then begin
+    let start = page#buffer#start_iter in
+    let stop = page#buffer#end_iter in
+    List.iter (function Some t -> page#buffer#remove_tag t ~start ~stop | _ -> ()) page#buffer#tag_table_lexical;
+    page#error_indication#remove_tag();
+  end
+
+(** update_page *)
+let update_page ~editor ~page ~filename ?remote () =
+  let file = editor#create_file ?remote filename in
+  page#set_file (Some file);
+  colorize page filename
+
+(** rename *)
+let rename ~editor ~page ~filename () =
+  match page#file with
+    | Some file ->
+      file#rename filename;
+      update_page ~editor ~page ~filename ?remote:file#remote ();
+    | _ -> assert false
+
+(** ask_overwrite *)
+let ask_overwrite ~run ~overwrite ~filename window =
+  match
+    Dialog.confirm ~message:(sprintf
+        "Are you sure you want to overwrite file \xC2\xAB%s\xC2\xBB?" (Filename.basename filename))
+      ~yes:("Overwrite", overwrite)
+      ~no:("Do Not Overwrite", ignore)
+      ~title:"Overwrite File" window;
+  with `CANCEL | `NO -> run() | `YES -> window#destroy()
+
+(** window *)
+let window ~editor ~page () =
   let window = GWindow.file_chooser_dialog
     ~action:`SAVE ~icon:Icons.oe
     ~title:(sprintf "Rename \xC2\xAB%s\xC2\xBB" (Filename.basename page#get_filename))
@@ -52,18 +78,6 @@ let show ~editor ~page () =
       | `OK ->
         Gaux.may window#filename ~f:begin fun filename ->
           let buffer : GText.buffer = page#buffer#as_text_buffer#as_gtext_buffer in
-          let update_page () =
-            let file = editor#create_file ?remote:None filename in
-            page#set_file (Some file);
-            colorize page filename
-          in
-          let rename () =
-            match page#file with
-              | Some file ->
-                file#rename filename;
-                update_page ();
-              | _ -> assert false
-          in
           if Sys.file_exists filename then begin
             let overwrite () =
               if Sys.os_type = "Win32" then begin
@@ -83,7 +97,7 @@ let show ~editor ~page () =
                 (* Create a new file with the given filename *)
                 close_out_noerr (open_out_gen [Open_creat; Open_trunc] 0o664 filename);
                 File_util.write filename text;
-                update_page();
+                update_page ~editor ~page ~filename ();
                 (* Reopen the page in the editor *)
                 match editor#open_file ~active:true ~scroll_offset:0 ~offset:0 ?remote:None filename with
                   | Some page ->
@@ -95,22 +109,14 @@ let show ~editor ~page () =
                       ~message:(sprintf "Cannot open file %s" filename) window;
               end else begin
                 List_opt.may_find (fun p -> p#get_filename = filename) editor#pages editor#close ();
-                rename()
+                rename ~editor ~page ~filename ();
               end
             in
-            match
-              Dialog.confirm ~message:(sprintf
-                "Are you sure you want to overwrite file \xC2\xAB%s\xC2\xBB?" (Filename.basename filename))
-                ~yes:("Overwrite", overwrite)
-                ~no:("Do Not Overwrite", ignore)
-                ~title:"Overwrite File" window;
-            with `CANCEL | `NO -> run() | `YES -> window#destroy()
-          end else (rename(); window#destroy())
+            ask_overwrite ~run ~overwrite ~filename window
+          end else (rename ~editor ~page ~filename (); window#destroy())
         end;
       | _ -> window#destroy()
   in run()
-
-
 
 
 
