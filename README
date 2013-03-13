@@ -13,6 +13,7 @@ written in OCaml and uses LablGtk for the graphical user interface; it is
 light-weight, free and open source and works on Linux and Windows.
 
 
+
 COPYRIGHT
 
   This program is distributed under the GNU GENERAL PUBLIC LICENSE Version 3.
@@ -21,6 +22,7 @@ COPYRIGHT
   The OCamlEditor logo and the icons used are licensed under a
   Creative Commons Attribution-NonCommercial-NoDerivs 3.0 Unported License
   (http://creativecommons.org/licenses/by-nc-nd/3.0/).
+
 
 
 DEPENDENCIES
@@ -33,6 +35,7 @@ DEPENDENCIES
   * (optional) ocurl-0.5.5 to allow remote editing;
   * (optional) Dot command to display the module dependencies graph;
   * (optional) Lablgtk.rsvg to embed the graph viewer in the editor.
+
 
 
 HOW TO COMPILE
@@ -52,6 +55,7 @@ HOW TO COMPILE
   The name of the command is "ocamleditor.opt" (or "ocamleditor" if the
   native compilation is not supported), you can find it in the "src"
   directory.
+
 
 
 INSTALLATION
@@ -75,6 +79,7 @@ INSTALLATION
   http://nsis.sourceforge.net
 
 
+
 DEVELOPMENT
 
   The main page for development is hosted on the OCaml Forge, see the
@@ -91,6 +96,7 @@ DEVELOPMENT
     git clone https://forge.ocamlcore.org/anonscm/git/ocamleditor/ocamleditor.git
 
 
+
 INSTALLING Xml-Light WITH Findlib
 
   META
@@ -100,7 +106,13 @@ INSTALLING Xml-Light WITH Findlib
     archive(byte)="xml-light.cma"
     archive(native)="xml-light.cmxa"
 
-  ocamlfind install xml-light META *.cmi *.cma *.cmxa *.a (*.lib)
+  ocamlfind install xml-light META \
+    xml-light.cmxa xml-light.cma \
+    xml.mli xmlParser.mli dtd.mli \
+    xml.cmi xmlParser.cmi dtd.cmi \
+    xml.cmx dtd.cmx xmlParser.cmx \
+    xml-light.a(lib)
+
 
 
 NOTES
@@ -111,6 +123,7 @@ NOTES
   * The program creates a folder named ".ocamleditor" in your HOME
     directory with informations like preferences, recently opened
     projects, etc.
+
 
 
 AUTHOR
