@@ -27,17 +27,12 @@ open Printf
 let rename ~editor ~page () =
   match page#file with
     | None -> ()
-    | Some file ->
-      let filename =
-        match file#remote with
-          | None -> file#filename
-          | Some rmt -> sprintf "%s@%s:%s" rmt.Editor_file_type.user rmt.Editor_file_type.host file#filename
-      in
+    | Some _ ->
       let window = GWindow.dialog
           ~icon:Icons.oe ~title:(sprintf "Rename file?")
           ~position:`CENTER ~modal:true ~show:false ()
       in
-      let _ = GMisc.label ~text:(sprintf "Rename remote file\n\n%s" filename) ~xalign:0.0 ~packing:window#vbox#pack () in
+      let _ = GMisc.label ~text:(sprintf "Rename remote file\n\n%s" page#get_title) ~xalign:0.0 ~packing:window#vbox#pack () in
       let entry = GEdit.entry ~text:page#get_filename ~packing:window#vbox#pack () in
       window#add_button_stock `OK `OK;
       window#add_button_stock `CANCEL `CANCEL;
@@ -63,7 +58,9 @@ let rename ~editor ~page () =
                     | _ -> assert false
                 in
                 let newfile = Editor_file.create ~remote filename in
-                newfile#exists
+                let newfile_exists = newfile#exists in
+                newfile#cleanup();
+                newfile_exists
               in
               if new_filename_exists then begin
                 let overwrite () =
@@ -80,20 +77,15 @@ let rename ~editor ~page () =
       in run()
 
 (** save_as *)
-let save_as ~editor ~page () =
+let save_as ~page () =
   match page#file with
     | None -> ()
-    | Some file ->
-      let filename =
-        match file#remote with
-          | None -> file#filename
-          | Some rmt -> sprintf "%s@%s:%s" rmt.Editor_file_type.user rmt.Editor_file_type.host file#filename
-      in
+    | Some _ ->
       let window = GWindow.dialog
           ~icon:Icons.oe ~title:"Save as..."
           ~position:`CENTER ~modal:true ~show:false ()
       in
-      let _ = GMisc.label ~text:(sprintf "Save remote file\n\n%s\n\nas..." filename) ~xalign:0.0 ~packing:window#vbox#pack () in
+      let _ = GMisc.label ~text:(sprintf "Save remote file\n\n%s\n\nas:" page#get_title) ~xalign:0.0 ~packing:window#vbox#pack () in
       let entry = GEdit.entry ~text:page#get_filename ~packing:window#vbox#pack () in
       window#add_button_stock `OK `OK;
       window#add_button_stock `CANCEL `CANCEL;
@@ -119,7 +111,9 @@ let save_as ~editor ~page () =
                     | _ -> assert false
                 in
                 let newfile = Editor_file.create ~remote filename in
-                newfile#exists
+                let newfile_exists = newfile#exists in
+                newfile#cleanup();
+                newfile_exists
               in
               if new_filename_exists then begin
                 let overwrite () =
@@ -127,8 +121,8 @@ let save_as ~editor ~page () =
                 in
                 Dialog_rename.ask_overwrite ~run ~overwrite ~filename window
               end else begin
-                (*save_as();*)
-                window#destroy()
+                window#destroy();
+                failwith "\"Save as\" not implemented";
               end
             end else window#destroy()
           | _ -> window#destroy()

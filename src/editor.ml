@@ -643,7 +643,7 @@ object (self)
 
   method dialog_save_as page =
     match page#file with
-      | Some file when file#remote <> None -> Dialog_remote.save_as ~editor:self ~page ()
+      | Some file when file#remote <> None -> Dialog_remote.save_as ~page ()
       | _ -> Dialog_save_as.window ~editor:self ~page ()
 
   method dialog_rename page =
@@ -666,14 +666,9 @@ object (self)
     self#with_current_page begin fun page ->
         match page#file with
           | Some file ->
-            let filename =
-              match file#remote with
-                | None -> file#filename
-                | Some rmt -> sprintf "%s@%s:%s" rmt.Editor_file_type.user rmt.Editor_file_type.host file#filename
-            in
             let message = GWindow.message_dialog
                 ~title:"Delete file?"
-                ~message:("Delete file\n\n"^filename^"?")
+                ~message:("Delete file\n\n"^page#get_title^"?")
                 ~message_type:`INFO
                 ~position:`CENTER
                 ~allow_grow:false

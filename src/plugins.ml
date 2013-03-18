@@ -22,7 +22,41 @@
 
 
 module type REMOTE = sig
-  val create : host:string -> user:string -> pwd:string -> filename:string -> Editor_file_type.abstract_file
+  exception Error of int * string * string
+  val create : host:string -> user:string -> pwd:string -> sslkey:string -> sshpublickeyfile:string -> sslkeypasswd:string -> filename:string -> Editor_file_type.abstract_file
+  class widget :
+    ?packing:(GObj.widget -> unit) ->
+    unit ->
+    object
+      val obj : Gtk.widget Gtk.obj
+      method as_widget : Gtk.widget Gtk.obj
+      method coerce : GObj.widget
+      method connect : signals
+      method destroy : unit -> unit
+      method drag : GObj.drag_ops
+      method get_oid : int
+      method misc : GObj.misc_ops
+      method apply : unit -> unit
+    end
+    and open_file :
+      unit ->
+      object
+        val mutable callbacks : (GtkSignal.id * (Editor_file_type.remote_login * string -> unit)) list
+        method call : Editor_file_type.remote_login * string -> unit
+        method callbacks : (GtkSignal.id * (Editor_file_type.remote_login * string -> unit)) list
+        method connect :
+          after:bool -> callback:(Editor_file_type.remote_login * string -> unit) -> GtkSignal.id
+        method disconnect : GtkSignal.id -> bool
+      end
+    and signals :
+      open_file:open_file ->
+      object ('a)
+        val after : bool
+        val mutable disconnectors : (GtkSignal.id -> bool) list
+        method after : 'a
+        method disconnect : GtkSignal.id -> unit
+        method open_file : callback:(Editor_file_type.remote_login * string -> unit) -> GtkSignal.id
+      end
 end
 
 let remote : (module REMOTE) option ref = ref None

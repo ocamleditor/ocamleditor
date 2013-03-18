@@ -257,6 +257,15 @@ object (self)
     file_changed#call file_obj
 
   method get_filename = match file with None -> "untitled.ml" | Some f -> f#filename
+  method get_title =
+    match file with
+      | Some file ->
+        begin
+          match file#remote with
+            | None -> file#filename
+            | Some rmt -> sprintf "%s@%s%s" rmt.Editor_file_type.user rmt.Editor_file_type.host file#filename
+        end;
+      | _ -> ""
   method view = view
   method ocaml_view = ocaml_view
   method buffer = buffer
@@ -528,6 +537,9 @@ object (self)
         end;
 
   initializer
+    ignore (self#misc#connect#destroy ~callback:begin fun () ->
+      Opt.may file (fun f -> f#cleanup())
+    end);
     annot_type <- Some (new Annot_type.annot_type ~page:self);
     (**  *)
     view#hyperlink#enable();

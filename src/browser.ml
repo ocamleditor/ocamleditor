@@ -340,7 +340,11 @@ object (self)
       menubar_visible editor#show_tabs toolbar_visible outline_visible;
 
   method set_title ed =
-    let filename = match ed#get_page `ACTIVE with None -> "" | Some page -> page#get_filename in
+    let filename =
+      match ed#get_page `ACTIVE with
+        | None -> ""
+        | Some page -> page#get_title
+    in
     let text =
       (Printf.sprintf "%s • %s"
         (match self#current_project#get with Some p -> p.Prj.name | _ -> "")

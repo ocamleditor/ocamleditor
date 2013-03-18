@@ -21,25 +21,31 @@
 *)
 
 type remote_login = {
-  host : string;
-  user : string;
-  pwd  : string;
+  host             : string;
+  user             : string;
+  pwd              : string;
+  sslkey           : string;
+  sshpublickeyfile : string;
+  sslkeypasswd     : string;
 }
 
 class type abstract_file  =
 object
   method filename : string
+  method set_filename : string -> unit
   method dirname : string
   method basename : string
+  method changed : bool
   method last_modified : unit -> float
+  method exists : bool
   method is_readonly : bool
   method is_writeable : bool
-  method changed : bool
   method read : string
   method write : string -> unit
-  method backup : ?move_to:string -> unit -> string
+  method list : unit -> string list
   method rename : string -> unit
   method remove : unit
-  method exists : bool
   method remote : remote_login option
+  method backup : ?move_to:string -> unit -> string
+  method cleanup : unit -> unit
 end

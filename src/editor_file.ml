@@ -30,6 +30,7 @@ class file filename =
   object (self)
 
     val mutable ts = (stat filename).st_mtime
+    val mutable filename = filename
 
     method filename = filename
     method dirname = Filename.dirname filename
@@ -108,17 +109,23 @@ class file filename =
     method exists = Sys.file_exists filename
 
     method remote : remote_login option = None
+
+    method list : unit -> string list = fun () -> []
+
+    method set_filename fn = filename <- fn
+
+    method cleanup () = ()
   end
 
 (** create *)
 let create ?remote filename =
   match remote with
     | None -> (new file filename :> abstract_file)
-    | Some {Editor_file_type.host; user; pwd} ->
+    | Some {Editor_file_type.host; user; pwd; sslkey; sshpublickeyfile; sslkeypasswd} ->
       begin
         match !Plugins.remote with
           | Some plugin ->
             let module Remote = (val plugin) in
-            Remote.create ~host ~user ~pwd ~filename;
+            Remote.create ~host ~user ~pwd ~sslkey ~sshpublickeyfile ~sslkeypasswd ~filename;
           | None -> assert false
       end

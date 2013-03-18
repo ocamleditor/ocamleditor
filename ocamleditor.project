@@ -305,15 +305,15 @@
       <other_objects></other_objects>
       <files>remote.ml</files>
       <package>curl,lablgtk2</package>
-      <includes>common icons otherwidgets</includes>
+      <includes>common icons otherwidgets gmisclib</includes>
       <thread>false</thread>
       <vmthread>false</vmthread>
       <pp></pp>
       <inline></inline>
       <nodep>false</nodep>
       <dontlinkdep>true</dontlinkdep>
-      <cflags>-g</cflags>
-      <lflags>-g dllcurl-helper.dll curl.cma</lflags>
+      <cflags>-g -w -10</cflags>
+      <lflags>-g curl.cma</lflags>
       <target_type>Library</target_type>
       <outname>../plugins/remote</outname>
       <lib_install_path></lib_install_path>
@@ -328,14 +328,14 @@
       <other_objects></other_objects>
       <files>remote.ml</files>
       <package>curl,lablgtk2</package>
-      <includes>common icons otherwidgets</includes>
+      <includes>common icons otherwidgets gmisclib</includes>
       <thread>false</thread>
       <vmthread>false</vmthread>
       <pp></pp>
       <inline></inline>
       <nodep>false</nodep>
       <dontlinkdep>true</dontlinkdep>
-      <cflags>-g</cflags>
+      <cflags>-g -w -10</cflags>
       <lflags>-g curl.cmxa</lflags>
       <target_type>Plugin</target_type>
       <outname>../plugins/remote</outname>
