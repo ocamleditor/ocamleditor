@@ -311,7 +311,7 @@ object (self)
       | None -> ()
       | Some file ->
         try
-          kprintf status_filename#set_label "%s" file#filename;
+          status_filename#set_label self#get_title;
           let stat = Unix.stat file#filename in
           let tm = Unix.localtime stat.Unix.st_mtime in
           let last_modified = sprintf "%4d-%d-%d %02d:%02d:%02d" (tm.Unix.tm_year + 1900)
