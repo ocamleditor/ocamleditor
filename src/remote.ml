@@ -53,12 +53,6 @@ module Remote = struct
 
   exception Error of int * string * string
 
-  type stats = {
-    perm : string;
-    size : int;
-    mtime : float;
-  }
-
   (** file *)
   class file ~host ~user ~pwd ~sslkey ~sshpublickeyfile ~sslkeypasswd ~filename : Editor_file_type.abstract_file =
     object (self)
@@ -71,7 +65,7 @@ module Remote = struct
 
       initializer
         match self#stat () with
-          | Some perm -> mtime <- perm.mtime;
+          | Some perm -> mtime <- perm.Editor_file_type.mtime;
           | _ -> ()
 
       method cleanup () = curl#cleanup
@@ -132,7 +126,7 @@ module Remote = struct
             }
           | _ -> assert false
 
-      method private stat () =
+      method stat () =
         self#protect begin fun () ->
           let path = if filename = "" then "" else self#dirname in
           kprintf self#set_url "sftp://%s%s@%s%s/" user (if pwd = "" then "" else ":" ^ pwd) host path;
@@ -162,7 +156,7 @@ module Remote = struct
                time.Unix.tm_hour
                time.Unix.tm_min
                size;*)
-            Some {perm; size; mtime=ftime};
+            Some {Editor_file_type.perm; size; mtime=ftime};
           with Not_found -> None
         end ()
 
@@ -215,20 +209,20 @@ module Remote = struct
       method is_readonly =
         match self#stat() with
           | Some stat ->
-            let perm = stat.perm in
+            let perm = stat.Editor_file_type.perm in
             perm.[1] = 'r' && perm.[2] = '-'
           | _ -> true
 
       method is_writeable =
         match self#stat() with
           | Some stat ->
-            let perm = stat.perm in
+            let perm = stat.Editor_file_type.perm in
             perm.[1] = 'r' && perm.[2] = 'w'
           | _ -> false
 
       method last_modified () =
         match self#stat() with
-          | Some stat -> stat.mtime
+          | Some stat -> stat.Editor_file_type.mtime
           | _ -> 0.0
 
       method changed = mtime < self#last_modified()

@@ -312,16 +312,20 @@ object (self)
       | Some file ->
         try
           status_filename#set_label self#get_title;
-          let stat = Unix.stat file#filename in
-          let tm = Unix.localtime stat.Unix.st_mtime in
-          let last_modified = sprintf "%4d-%d-%d %02d:%02d:%02d" (tm.Unix.tm_year + 1900)
-            (tm.Unix.tm_mon + 1) tm.Unix.tm_mday tm.Unix.tm_hour tm.Unix.tm_min tm.Unix.tm_sec
-          in
-          kprintf status_filename#misc#set_tooltip_markup "%s%s\nLast modified: %s\n%d bytes"
-            (if project.Prj.in_source_path file#filename <> None then "<b>" ^ project.Prj.name ^ "</b>\n" else "")
-            file#filename
-            last_modified
-            stat.Unix.st_size;
+          begin
+            match file#stat() with
+              | Some stat ->
+                let tm = Unix.localtime (stat.Editor_file_type.mtime) in
+                let last_modified = sprintf "%4d-%d-%d %02d:%02d:%02d" (tm.Unix.tm_year + 1900)
+                  (tm.Unix.tm_mon + 1) tm.Unix.tm_mday tm.Unix.tm_hour tm.Unix.tm_min tm.Unix.tm_sec
+                in
+                kprintf status_filename#misc#set_tooltip_markup "%s%s\nLast modified: %s\n%d bytes"
+                  (if project.Prj.in_source_path file#filename <> None then "<b>" ^ project.Prj.name ^ "</b>\n" else "")
+                  self#get_title
+                  last_modified
+                  stat.Editor_file_type.size;
+              | _ -> ()
+          end;
         with _ -> ()
 
   method backup () = Gaux.may file ~f:begin fun (file : Editor_file.file) ->

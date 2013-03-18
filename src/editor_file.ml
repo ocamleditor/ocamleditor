@@ -115,6 +115,16 @@ class file filename =
     method set_filename fn = filename <- fn
 
     method cleanup () = ()
+
+    method stat () =
+      try
+        let ustats = Unix.stat filename in
+        Some {
+          Editor_file_type.perm = ""; (* TODO *)
+          size = ustats.Unix.st_size;
+          mtime = ustats.Unix.st_mtime;
+        }
+      with Unix.Unix_error _ -> None (* TODO *)
   end
 
 (** create *)

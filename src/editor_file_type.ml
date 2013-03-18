@@ -29,6 +29,12 @@ type remote_login = {
   sslkeypasswd     : string;
 }
 
+type stats = {
+  perm  : string;
+  size  : int;
+  mtime : float;
+}
+
 class type abstract_file  =
 object
   method filename : string
@@ -48,4 +54,5 @@ object
   method remote : remote_login option
   method backup : ?move_to:string -> unit -> string
   method cleanup : unit -> unit
+  method stat : unit -> stats option
 end
