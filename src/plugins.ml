@@ -22,8 +22,47 @@
 
 
 module type REMOTE = sig
+
   exception Error of int * string * string
+
   val create : host:string -> user:string -> pwd:string -> sslkey:string -> sshpublickeyfile:string -> sslkeypasswd:string -> filename:string -> Editor_file_type.abstract_file
+
+  val dialog_rename :
+    editor:< close : (< get_filename : string; .. > as 'a) -> unit;
+             create_file : ?remote:Editor_file_type.remote_login ->
+               string -> 'b;
+             pages : 'a list; .. > ->
+    page:< buffer : < check_lexical_coloring_enabled : string -> bool;
+                      colorize : ?start:'c -> ?stop:'d -> unit -> unit;
+                      end_iter : 'e; lexical_enabled : bool;
+                      remove_tag : 'f -> start:'g -> stop:'e -> unit;
+                      set_lexical_enabled : bool -> 'h; start_iter : 'g;
+                      tag_table_lexical : 'f option list; .. >;
+           error_indication : < remove_tag : unit -> unit; .. >;
+           file : < remote : Editor_file_type.remote_login option;
+                    rename : string -> 'i; .. >
+               option;
+           get_filename : string; get_title : string;
+           set_file : 'b option -> 'j; .. > ->
+    unit -> unit
+
+  val dialog_save_as :
+    editor:< goto_view : 'a -> 'b;
+             load_page : ?scroll:'c -> (< view : 'a; .. > as 'd) -> 'e;
+             open_file : active:bool ->
+               scroll_offset:int ->
+               offset:int -> ?remote:Editor_file_type.remote_login -> string -> 'd option;
+             .. > ->
+    page:< buffer : < as_text_buffer : < as_gtext_buffer : GText.buffer;
+                                         .. >;
+                      .. >;
+           file : < remote : Editor_file_type.remote_login option;
+                    .. >
+               option;
+           get_filename : string; get_title : string;
+           revert : unit -> 'g; .. > ->
+    unit -> unit
+
   class widget :
     ?packing:(GObj.widget -> unit) ->
     unit ->
@@ -60,6 +99,5 @@ module type REMOTE = sig
 end
 
 let remote : (module REMOTE) option ref = ref None
-
 
 

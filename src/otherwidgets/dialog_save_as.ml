@@ -21,15 +21,18 @@
 *)
 
 
-open Miscellanea
 open Printf
 
-(** write_file *)
-let write_file ~editor ~page ~text ~filename window =
-  File_util.write filename text;
+(** sync_editor *)
+let sync_editor ~editor ~page ~filename window =
+  let remote : Editor_file_type.remote_login option =
+    match page#file with
+      | Some file -> file#remote
+      | _ -> assert false
+  in
   page#revert();
   (*editor#close page;*)
-  match editor#open_file ~active:true ~scroll_offset:0 ~offset:0 ?remote:None filename with
+  match editor#open_file ~active:true ~scroll_offset:0 ~offset:0 ?remote filename with
     | Some page ->
       editor#load_page ?scroll:None page;
       editor#goto_view page#view;
@@ -37,6 +40,12 @@ let write_file ~editor ~page ~text ~filename window =
     | _ ->
       Dialog.info ~title:"Error" ~message_type:`ERROR
         ~message:(sprintf "Cannot open file %s" filename) window
+
+
+(** create_file *)
+let create_file ~editor ~page ~text ~filename window =
+  File_util.write filename text;
+  sync_editor ~editor ~page ~filename window
 
 (** window *)
 let window ~editor ~page () =
@@ -55,8 +64,8 @@ let window ~editor ~page () =
       | `OK ->
         Gaux.may window#filename ~f:begin fun filename ->
           let buffer : GText.buffer = page#buffer#as_text_buffer#as_gtext_buffer in
-          let write () =
-            write_file ~editor ~page ~text:(buffer#get_text()) ~filename window
+          let create_file () =
+            create_file ~editor ~page ~text:(buffer#get_text()) ~filename window
           in
           if Sys.file_exists filename then begin
             let overwrite () =
@@ -69,10 +78,10 @@ let window ~editor ~page () =
                 List_opt.may_find (fun p -> String.lowercase p#get_filename = lc_filename)
                   editor#pages editor#close ();
               end;
-              write()
+              create_file()
             in
             Dialog_rename.ask_overwrite ~run ~overwrite ~filename window
-          end else (write())
+          end else (create_file())
         end;
       | _ -> window#destroy()
   in run()

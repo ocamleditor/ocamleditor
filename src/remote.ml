@@ -79,12 +79,12 @@ module Remote = struct
           user (if pwd = "" then "" else ":" ^ pwd) host filename
 
       method private set_url url =
-          curl#set_url url;
-          if sslkey <> "" then begin
-            curl#set_sshprivatekeyfile sslkey;
-            curl#set_sslkeypasswd sslkeypasswd;
-          end;
-          if sshpublickeyfile <> "" then curl#set_sshpublickeyfile sshpublickeyfile;
+        curl#set_url url;
+        if sslkey <> "" then begin
+          curl#set_sshprivatekeyfile sslkey;
+          curl#set_sslkeypasswd sslkeypasswd;
+        end;
+        if sshpublickeyfile <> "" then curl#set_sshpublickeyfile sshpublickeyfile;
 
       method private protect : 'a 'b.('a -> 'b) -> 'a -> 'b = fun f x ->
         try f x
@@ -254,9 +254,8 @@ module Remote = struct
 
     end
 
-  let create =
-    let file = new file in
-    file
+  (** create *)
+  let create = new file
 
   (** widget *)
   class widget ?packing () =
@@ -347,7 +346,7 @@ module Remote = struct
     let _  = entry_filename#misc#set_sensitive false in
     let _  = entry_filename#misc#modify_font_by_name "sans 10" in
     object (self)
-      inherit GObj.widget vbox#as_widget
+    inherit GObj.widget vbox#as_widget
 
       val mutable history = read_history ()
       val mutable remote_file = None
@@ -357,10 +356,10 @@ module Remote = struct
             clear_history();
             history <- [];
             model_user_host#clear();
-        end);
+          end);
         ignore (self#misc#connect#destroy ~callback:begin fun _ ->
-          Opt.may remote_file (fun f -> f#cleanup())
-        end);
+            Opt.may remote_file (fun f -> f#cleanup())
+          end);
         List.iter begin fun text ->
           let row = model_user_host#append () in
           model_user_host#set ~row ~column:col_user_host text
@@ -383,50 +382,50 @@ module Remote = struct
             with Not_found -> true
           end);
         ignore (button_connect#connect#clicked ~callback:begin fun () ->
-          self#remote_connect();
-          entry_filename#misc#set_sensitive true;
-          entry_filename#misc#grab_focus();
-        end);
+            self#remote_connect();
+            entry_filename#misc#set_sensitive true;
+            entry_filename#misc#grab_focus();
+          end);
         ignore (entry_user_host#connect#changed ~callback:begin fun () ->
-          entry_filename#misc#set_sensitive false;
-          entry_pwd#set_text "";
-          entry_filename#set_text ""
-        end);
+            entry_filename#misc#set_sensitive false;
+            entry_pwd#set_text "";
+            entry_filename#set_text ""
+          end);
         ignore (entry_filename#connect#changed ~callback:begin fun () ->
-          if entry_filename#text = "" || entry_filename#text.[String.length entry_filename#text - 1] = '/' then self#file_completion()
-        end);
+            if entry_filename#text = "" || entry_filename#text.[String.length entry_filename#text - 1] = '/' then self#file_completion()
+          end);
         ignore (entry_filename_compl#connect#match_selected ~callback:begin fun model row ->
-          let is_directory filename =
-            let filename = if filename.[String.length filename - 1] = '/' then String.sub filename 0 (String.length filename - 1) else filename in
-            match remote_file with
-              | Some file ->
-                file#set_filename filename;
-                begin
-                  try ignore (file#list ()); true
-                  with
-                    | Error _ -> false
-                    | ex ->
-                      Printf.eprintf "File \"remote.ml\": %s\n%s\n%!" (Printexc.to_string ex) (Printexc.get_backtrace());
-                      false
-                end;
-              | _ -> false
-          in
-          Gdk.Window.set_cursor self#misc#window (Gdk.Cursor.create `WATCH);
-          entry_filename#set_editable false;
-          let row = model#convert_iter_to_child_iter row in
-          let filename = model_filename#get ~row ~column:col_filename in
-          let is_dir = is_directory filename in
-          if is_dir then begin
-            Gmisclib.Idle.add ~prio:200 begin fun () ->
-              let pos = entry_filename#insert_text ~pos:(Glib.Utf8.length entry_filename#text) "/" in
-              entry_filename#select_region ~start:pos ~stop:pos;
-              self#file_completion();
-              entry_filename#set_editable true;
-              Gdk.Window.set_cursor self#misc#window (Gdk.Cursor.create `ARROW);
-            end
-          end else (Gdk.Window.set_cursor self#misc#window (Gdk.Cursor.create `ARROW));
-          false
-        end)
+            let is_directory filename =
+              let filename = if filename.[String.length filename - 1] = '/' then String.sub filename 0 (String.length filename - 1) else filename in
+              match remote_file with
+                | Some file ->
+                  file#set_filename filename;
+                  begin
+                    try ignore (file#list ()); true
+                    with
+                      | Error _ -> false
+                      | ex ->
+                        Printf.eprintf "File \"remote.ml\": %s\n%s\n%!" (Printexc.to_string ex) (Printexc.get_backtrace());
+                        false
+                  end;
+                | _ -> false
+            in
+            Gdk.Window.set_cursor self#misc#window (Gdk.Cursor.create `WATCH);
+            entry_filename#set_editable false;
+            let row = model#convert_iter_to_child_iter row in
+            let filename = model_filename#get ~row ~column:col_filename in
+            let is_dir = is_directory filename in
+            if is_dir then begin
+              Gmisclib.Idle.add ~prio:200 begin fun () ->
+                let pos = entry_filename#insert_text ~pos:(Glib.Utf8.length entry_filename#text) "/" in
+                entry_filename#select_region ~start:pos ~stop:pos;
+                self#file_completion();
+                entry_filename#set_editable true;
+                Gdk.Window.set_cursor self#misc#window (Gdk.Cursor.create `ARROW);
+              end
+            end else (Gdk.Window.set_cursor self#misc#window (Gdk.Cursor.create `ARROW));
+            false
+          end)
 
       method private file_completion () =
         match remote_file with
@@ -517,6 +516,121 @@ module Remote = struct
       inherit GUtil.ml_signals [open_file#disconnect]
       method open_file = open_file#connect ~after
     end
+
+  (** dialog_rename *)
+  let dialog_rename ~editor ~page () =
+    match page#file with
+      | None -> ()
+      | Some _ ->
+        let window = GWindow.dialog
+            ~icon:Icons.oe ~title:(sprintf "Rename file?")
+            ~position:`CENTER ~modal:true ~show:false ()
+        in
+        let _ = GMisc.label ~text:(sprintf "Rename remote file\n\n%s" page#get_title) ~xalign:0.0 ~packing:window#vbox#pack () in
+        let entry = GEdit.entry ~text:page#get_filename ~packing:window#vbox#pack () in
+        window#add_button_stock `OK `OK;
+        window#add_button_stock `CANCEL `CANCEL;
+        window#set_border_width 8;
+        window#vbox#set_spacing 5;
+        ignore (window#event#connect#key_release ~callback:begin fun ev ->
+            let key = GdkEvent.Key.keyval ev in
+            if key = GdkKeysyms._Escape then (window#response `CANCEL; true)
+            else if key = GdkKeysyms._Return then begin
+              window#response `OK;
+              true
+            end else false
+          end);
+        let rec run () =
+          match window#run () with
+            | `OK ->
+              let filename = entry#text in
+              if filename <> page#get_filename then begin
+                let new_filename_exists =
+                  let remote =
+                    match page#file with
+                      | Some file -> (match file#remote with Some remote -> remote | _ -> assert false)
+                      | _ -> assert false
+                  in
+                  let newfile = Editor_file.create ~remote filename in
+                  let newfile_exists = newfile#exists in
+                  newfile#cleanup();
+                  newfile_exists
+                in
+                if new_filename_exists then begin
+                  let overwrite () =
+                    List_opt.may_find (fun p -> p#get_filename = filename) editor#pages editor#close ();
+                    Dialog_rename.rename ~editor ~page ~filename ();
+                  in
+                  Dialog_rename.ask_overwrite ~run ~overwrite ~filename window
+                end else begin
+                  Dialog_rename.rename ~editor ~page ~filename ();
+                  window#destroy()
+                end
+              end else window#destroy()
+            | _ -> window#destroy()
+        in run()
+
+  (** dialog_save_as *)
+  let dialog_save_as ~editor ~page () =
+    match page#file with
+      | None -> ()
+      | Some _ ->
+        let window = GWindow.dialog
+            ~icon:Icons.oe ~title:"Save as..."
+            ~position:`CENTER ~modal:true ~show:false ()
+        in
+        let _ = GMisc.label ~text:(sprintf "Save remote file\n\n%s\n\nas:" page#get_title) ~xalign:0.0 ~packing:window#vbox#pack () in
+        let entry = GEdit.entry ~text:page#get_filename ~packing:window#vbox#pack () in
+        window#add_button_stock `OK `OK;
+        window#add_button_stock `CANCEL `CANCEL;
+        window#set_border_width 8;
+        window#vbox#set_spacing 5;
+        ignore (window#event#connect#key_release ~callback:begin fun ev ->
+            let key = GdkEvent.Key.keyval ev in
+            if key = GdkKeysyms._Escape then (window#response `CANCEL; true)
+            else if key = GdkKeysyms._Return then begin
+              window#response `OK;
+              true
+            end else false
+          end);
+        let rec run () =
+          match window#run () with
+            | `OK ->
+              let filename = entry#text in
+              if filename <> page#get_filename then begin
+                let remote =
+                  match page#file with
+                    | Some file -> (match file#remote with Some remote -> remote | _ -> assert false)
+                    | _ -> assert false
+                in
+                let new_filename_exists =
+                  let newfile = Editor_file.create ~remote filename in
+                  let newfile_exists = newfile#exists in
+                  newfile#cleanup();
+                  newfile_exists
+                in
+                let buffer : GText.buffer = page#buffer#as_text_buffer#as_gtext_buffer in
+                let text = buffer#get_text () in
+                let create_file () =
+                  let open Editor_file_type in
+                  let newfile = new file ~host:remote.host ~user:remote.user ~pwd:remote.pwd
+                    ~sslkey:remote.sslkey ~sshpublickeyfile:remote.sshpublickeyfile
+                    ~sslkeypasswd:remote.sslkeypasswd
+                    ~filename
+                  in
+                  newfile#write text;
+                  Dialog_save_as.sync_editor ~editor ~page ~filename window;
+                  newfile#cleanup();
+                in
+                if new_filename_exists then begin
+                  Dialog_rename.ask_overwrite ~run ~overwrite:create_file ~filename window
+                end else begin
+                  create_file();
+                  window#destroy();
+                end
+              end else window#destroy()
+            | _ -> window#destroy()
+        in run()
 
 end
 

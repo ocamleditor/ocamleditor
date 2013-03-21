@@ -643,12 +643,20 @@ object (self)
 
   method dialog_save_as page =
     match page#file with
-      | Some file when file#remote <> None -> Dialog_remote.save_as ~page ()
+      | Some file when file#remote <> None ->
+        Opt.may !Plugins.remote begin fun plugin ->
+          let module Remote = (val plugin) in
+          Remote.dialog_save_as ~editor:self ~page ()
+        end
       | _ -> Dialog_save_as.window ~editor:self ~page ()
 
   method dialog_rename page =
     match page#file with
-      | Some file when file#remote <> None -> Dialog_remote.rename ~editor:self ~page ()
+      | Some file when file#remote <> None ->
+        Opt.may !Plugins.remote begin fun plugin ->
+          let module Remote = (val plugin) in
+          Remote.dialog_rename ~editor:self ~page ()
+        end
       | _ -> Dialog_rename.window ~editor:self ~page ()
 
   method save (page : Editor_page.page) =

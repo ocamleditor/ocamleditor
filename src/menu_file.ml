@@ -48,47 +48,44 @@ let get_file_switch_sensitive page =
 (** load_plugin_remote *)
 let load_plugin_remote editor menu_item =
   ignore (Plugin.load "remote.cma");
-  begin
-    match !Plugins.remote with
-      | None -> ()
-      | Some plugin ->
-        menu_item#misc#show();
-        ignore (menu_item#connect#activate ~callback:begin fun () ->
-            let module Remote = (val plugin) in
-            let title =
-              match menu_item#misc#get_property "label" with
-                | `STRING (Some x) -> x
-                | _ -> ""
-            in
-            let window = GWindow.window
-                ~resizable:false
-                ~type_hint:`DIALOG
-                ~allow_grow:false ~allow_shrink:false
-                ~position:`CENTER ~border_width:8
-                ~icon:Icons.oe ~title ~modal:true ~show:false ()
-            in
-            let vbox = GPack.vbox ~spacing:8 ~packing:window#add () in
-            let widget = new Remote.widget ~packing:vbox#add () in
-            let _ = GMisc.separator `HORIZONTAL ~packing:vbox#pack () in
-            let bbox = GPack.button_box `HORIZONTAL ~border_width:3 ~spacing:3 ~layout:`END ~packing:vbox#pack () in
-            let button_ok = GButton.button ~stock:`OK ~packing:bbox#pack () in
-            let button_cancel = GButton.button ~stock:`CANCEL ~packing:bbox#pack () in
-            Gaux.may (GWindow.toplevel editor) ~f:(fun x -> window#set_transient_for x#as_window);
-            ignore (button_cancel#connect#clicked ~callback:window#destroy);
-            ignore (button_ok#connect#clicked ~callback:begin fun () ->
-                widget#apply();
-              end);
-            ignore (window#event#connect#key_press ~callback:begin fun ev ->
-                let key = GdkEvent.Key.keyval ev in
-                if key = GdkKeysyms._Escape then (button_cancel#clicked(); true)
-                else false
-              end);
-            ignore (widget#connect#open_file ~callback:begin fun (remote, filename) ->
-                ignore (editor#open_file ~active:true ~scroll_offset:0 ~offset:0 ?remote:(Some remote) filename);
-                window#destroy();
-              end);
-            window#show();
+  Opt.may !Plugins.remote begin fun plugin ->
+    let module Remote = (val plugin) in
+    menu_item#misc#show();
+    ignore (menu_item#connect#activate ~callback:begin fun () ->
+        let title =
+          match menu_item#misc#get_property "label" with
+            | `STRING (Some x) -> x
+            | _ -> ""
+        in
+        let window = GWindow.window
+            ~resizable:false
+            ~type_hint:`DIALOG
+            ~allow_grow:false ~allow_shrink:false
+            ~position:`CENTER ~border_width:8
+            ~icon:Icons.oe ~title ~modal:true ~show:false ()
+        in
+        let vbox = GPack.vbox ~spacing:8 ~packing:window#add () in
+        let widget = new Remote.widget ~packing:vbox#add () in
+        let _ = GMisc.separator `HORIZONTAL ~packing:vbox#pack () in
+        let bbox = GPack.button_box `HORIZONTAL ~border_width:3 ~spacing:3 ~layout:`END ~packing:vbox#pack () in
+        let button_ok = GButton.button ~stock:`OK ~packing:bbox#pack () in
+        let button_cancel = GButton.button ~stock:`CANCEL ~packing:bbox#pack () in
+        Gaux.may (GWindow.toplevel editor) ~f:(fun x -> window#set_transient_for x#as_window);
+        ignore (button_cancel#connect#clicked ~callback:window#destroy);
+        ignore (button_ok#connect#clicked ~callback:begin fun () ->
+            widget#apply();
           end);
+        ignore (window#event#connect#key_press ~callback:begin fun ev ->
+            let key = GdkEvent.Key.keyval ev in
+            if key = GdkKeysyms._Escape then (button_cancel#clicked(); true)
+            else false
+          end);
+        ignore (widget#connect#open_file ~callback:begin fun (remote, filename) ->
+            ignore (editor#open_file ~active:true ~scroll_offset:0 ~offset:0 ?remote:(Some remote) filename);
+            window#destroy();
+          end);
+        window#show();
+      end);
   end
 
 let file ~browser ~group ~flags items =

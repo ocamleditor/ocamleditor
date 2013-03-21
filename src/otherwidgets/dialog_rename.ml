@@ -21,7 +21,6 @@
 *)
 
 
-open Miscellanea
 open Printf
 
 (** colorize *)
@@ -37,8 +36,8 @@ let colorize page filename =
     page#error_indication#remove_tag();
   end
 
-(** update_page *)
-let update_page ~editor ~page ~filename ?remote () =
+(** sync_page *)
+let sync_page ~editor ~page ~filename ?remote () =
   let file = editor#create_file ?remote filename in
   page#set_file (Some file);
   colorize page filename
@@ -48,7 +47,7 @@ let rename ~editor ~page ~filename () =
   match page#file with
     | Some file ->
       file#rename filename;
-      update_page ~editor ~page ~filename ?remote:file#remote ();
+      sync_page ~editor ~page ~filename ?remote:file#remote ();
     | _ -> assert false
 
 (** ask_overwrite *)
@@ -97,7 +96,7 @@ let window ~editor ~page () =
                 (* Create a new file with the given filename *)
                 close_out_noerr (open_out_gen [Open_creat; Open_trunc] 0o664 filename);
                 File_util.write filename text;
-                update_page ~editor ~page ~filename ();
+                sync_page ~editor ~page ~filename ();
                 (* Reopen the page in the editor *)
                 match editor#open_file ~active:true ~scroll_offset:0 ~offset:0 ?remote:None filename with
                   | Some page ->

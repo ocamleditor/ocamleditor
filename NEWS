@@ -3,7 +3,7 @@ Version 1.9.0
 
   * New dependency: ocurl-0.5.5 (optional).
 
-  * Remote file editing.
+  * Remote file editing via SFTP.
 
   * New "Target condition" to check whether a Findlib package is installed.
 
