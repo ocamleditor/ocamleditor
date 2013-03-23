@@ -23,20 +23,16 @@
 
 open Printf
 
+type dag = (string, string list) Hashtbl.t
+
 exception Loop_found of string
 
-let trim = let re = Str.regexp "[ \n\r\n\t]+$" in Str.replace_first re ""
 let (^^) = Filename.check_suffix
-let (!$) = Filename.chop_extension
-let (//) = Filename.concat
 
 let redirect_stderr = if Sys.os_type = "Win32" then " 2>NUL" else " 2>/dev/null"
 
 let re1 = Str.regexp " ?:\\( \\|$\\)"
-let re2 = Str.regexp " \\\\[\r\n]+"
 let re3 = Str.regexp " "
-let re_ss = Str.regexp "\\\\ "
-let re_00 = Str.regexp "\x00\x00"
 let split_nl = Str.split (Str.regexp "\n")
 
 (** replace_extension *)
@@ -44,46 +40,48 @@ let replace_extension x =
   sprintf "%s.%s" (Filename.chop_extension x)
     (if x ^^ "cmi" then "mli" else if x ^^ "cmx" then "ml" else assert false);;
 
-(** find_dep *)
-let find_dep ?pp ?(with_errors=true) ?(echo=true) target =
+(** ocamldep *)
+let ocamldep ?pp ?(with_errors=true) ?(verbose=true) target =
   let dir = Filename.dirname target in
-  let anti_loop = ref [] in
-  let table = Hashtbl.create 7 in
   let redirect_stderr = if with_errors then "" else (if Sys.os_type = "Win32" then " 2>NUL" else " 2>/dev/null") in
   let command = sprintf "%s%s %s -native -slash -one-line %s %s %s"
-    (Ocaml_config.ocamldep())
-    (match pp with Some pp when pp <> "" -> " -pp " ^ pp | _ -> "" )
-    (Ocaml_config.expand_includes dir)
-    (match dir with "." -> "*.mli" | _ -> dir // "*.mli *.mli")
-    (match dir with "." -> "*.ml" | _ -> dir // "*.ml *.ml")
-    redirect_stderr
+      (Ocaml_config.ocamldep())
+      (match pp with Some pp when pp <> "" -> " -pp " ^ pp | _ -> "" )
+      (Ocaml_config.expand_includes dir)
+      (match dir with "." -> "*.mli" | _ -> dir ^ "/" ^ "*.mli")
+      (match dir with "." -> "*.ml" | _ -> dir ^ "/" ^ "*.ml")
+      redirect_stderr
   in
-  if echo then (printf "%s\n%!" command);
+  if verbose then (printf "%s\n%!" command);
   let ocamldep = Cmd.expand command in
-  let ocamldep = Str.global_replace re2 " " ocamldep in
+  let table = Hashtbl.create 7 in
   let entries = split_nl ocamldep in
   List.iter begin fun entry ->
     match Str.split re1 entry with
-      | key :: [] -> Hashtbl.add table key None
+      | key :: _ when key ^^ ".cmo" -> ()
+      | key :: [] -> Hashtbl.replace table key []
       | [key; deps] ->
-        let deps = Str.global_replace re_ss "\x00\x00" deps in
         let deps = Str.split re3 deps in
-        let deps = List.map (Str.global_replace re_00 "\\ ") deps in
-        Hashtbl.add table key (Some deps)
+        Hashtbl.replace table key deps
       | _ -> eprintf "%s\n%s\n%!" command entry; assert false
   end entries;
+  (table : dag);;
+
+(** find_dep *)
+let find_dep ?pp ?(with_errors=true) ?(echo=true) target =
+  let table = ocamldep ?pp ~with_errors ~verbose:echo target in
   let target = (Filename.chop_extension target) ^ ".cmx" in
+  let anti_loop = ref [] in
   let result = ref [] in
   let rec find_chain target =
     if (List.mem target !anti_loop) && (not (List.mem target !result))
-      then (raise (Loop_found (String.concat " " (List.map replace_extension (target :: !anti_loop)))));
+    then (raise (Loop_found (String.concat " " (List.map replace_extension (target :: !anti_loop)))));
     anti_loop := target :: (List.filter (fun x -> x <> target) !anti_loop);
     try
       if not (List.mem target !result) then begin
         match Hashtbl.find table target with
-          | None ->
-            result := target :: !result
-          | Some deps ->
+          | [] -> result := target :: !result;
+          | deps ->
             List.iter find_chain deps;
             result := target :: !result;
       end
@@ -93,14 +91,82 @@ let find_dep ?pp ?(with_errors=true) ?(echo=true) target =
   in
   find_chain target;
   List.rev (List.map replace_extension !result)
+;;
+
+(** array_exists *)
+let array_exists from p a =
+  try for i = from to Array.length a - 1 do
+    if p a.(i) then raise Exit
+  done; false with Exit -> true
+
+(** reduce *)
+let reduce : dag -> dag = function table ->
+  let rec (<-?-) x y =
+    let deps = try Hashtbl.find table y with Not_found -> [] in
+    (List.mem x deps) || (List.exists ((<-?-) x) deps)
+  in
+  let is_descendant = (*Miscellanea.Memo.create2*) (<-?-) in
+  let reduce ll =
+    let stop = ref "" in
+    let rec reduce' ll =
+      let len = Array.length ll in
+      if len <= 1 then ll
+      else
+        let fst = ll.(0) in
+        if fst = !stop then ll
+        else begin
+          let len = len - 1 in
+          if array_exists 1 (is_descendant fst) ll
+          then begin
+            let tail = Array.make len "" in
+            Array.blit ll 1 tail 0 len;
+            reduce' tail
+          end else begin
+            if !stop = "" then (stop := fst);
+            Array.blit ll 1 ll 0 len;
+            ll.(len) <- fst;
+            reduce' ll
+          end
+        end
+    in
+    Array.to_list (reduce' (Array.of_list ll))
+  in
+  Hashtbl.iter (fun key deps -> Hashtbl.replace table key (reduce deps)) table;
+  table;;
+
+(** dot_of_dag *)
+let dot_of_dag (dag : dag) =
+  let buf = Buffer.create 1000 in
+  Buffer.add_string buf "digraph {\n";
+  Hashtbl.iter begin fun key ->
+    List.iter (kprintf (Buffer.add_string buf) "%S -> %S;\n" key)
+  end dag;
+  Buffer.add_string buf "}\n";
+  Buffer.contents buf;;
+
+(*
+
+#load "C:\\ocaml\\lib\\str.cma";;
+#load "C:\\ocaml\\lib\\unix.cma";;
+#load "C:\\ocaml\\devel\\ocamleditor\\src\\common\\app_config.cmo";;
+#load "C:\\ocaml\\devel\\ocamleditor\\src\\common\\cmd.cmo";;
+#load "C:\\ocaml\\devel\\ocamleditor\\src\\common\\ocaml_config.cmo";;
+#load "C:\\ocaml\\devel\\ocamleditor\\src\\common\\miscellanea.cmo";;
+#load "C:\\ocaml\\devel\\ocamleditor\\src\\common\\file_util.cmo";;
+#directory "C:\\ocaml\\devel\\ocamleditor\\src\\common"
+
+File_util.write "test.dot" (dot_of_dag (reduce (run_ocamldep "ocamleditor.ml")));;
+
+*)
 
 (** find *)
 let find ?pp ?with_errors ?(echo=true) targets =
   let deps = List.map (find_dep ?pp ?with_errors ~echo) targets in
   let deps = List.flatten deps in
   List.rev (List.fold_left begin fun acc x ->
-    if not (List.mem x acc) then x :: acc else acc
-  end [] deps)
+      if not (List.mem x acc) then x :: acc else acc
+    end [] deps)
+;;
 
 (** find_dependants *)
 let find_dependants =
@@ -111,7 +177,7 @@ let find_dependants =
     (*let dir = Filename.dirname target in*)
     let dir = if dirname = Filename.current_dir_name then "" else (dirname ^ "/") in
     let cmd = sprintf "%s -modules -native %s*.ml %s*.mli%s"
-      (Ocaml_config.ocamldep()) dir dir redirect_stderr in
+        (Ocaml_config.ocamldep()) dir dir redirect_stderr in
     printf "%s (%s)\n%!" cmd modname;
     let ocamldep = Cmd.expand cmd in
     let entries = Str.split re1 ocamldep in

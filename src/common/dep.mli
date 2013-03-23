@@ -21,6 +21,12 @@
 *)
 
 
+type dag
 exception Loop_found of string
+val ocamldep : ?pp:string ->
+  ?with_errors:bool ->
+  ?verbose:bool -> string -> dag
 val find : ?pp:string -> ?with_errors:bool -> ?echo:bool -> string list -> string list
 val find_dependants : path:string list -> modname:string -> string list
+val reduce : dag -> dag
+val dot_of_dag : dag -> string

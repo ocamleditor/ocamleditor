@@ -161,7 +161,7 @@ module Memo =
           Hashtbl.add memo key data;
           data;;
 
-    let create2 f = f = create (fun x -> create (f x))
+    let create2 f = create (fun x -> create (f x))
 
     let sfast ~f =
       let memo = Hashtbl.create 1 in
