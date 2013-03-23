@@ -30,7 +30,7 @@ struct
 
   (**** Memoized rexgexp *)
 
-  let (~!) = Miscellanea.Memo.create ~f:Str.regexp;;
+  let (~!) = Miscellanea.Memo.create Str.regexp;;
 
   (* Convert Windows-style directory separator '\' to caml-style '/' *)
   let caml_dir path =

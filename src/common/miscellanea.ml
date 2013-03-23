@@ -152,7 +152,7 @@ module Memo =
           Hashtbl.add memo key data;
           data;;
 
-    let create ~f =
+    let create f =
       let memo = Hashtbl.create 7 in
       fun key ->
         try Hashtbl.find memo key
@@ -160,6 +160,8 @@ module Memo =
           let data = f key in
           Hashtbl.add memo key data;
           data;;
+
+    let create2 f = f = create (fun x -> create (f x))
 
     let sfast ~f =
       let memo = Hashtbl.create 1 in

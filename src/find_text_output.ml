@@ -706,7 +706,7 @@ object (self)
       (*(*GtkThread.async*) self#place_marks res;*)
     end results;
     let get_text filename = Buffer.contents (File_util.read filename) in
-    let get_text = Miscellanea.Memo.create ~f:get_text in
+    let get_text = Miscellanea.Memo.create get_text in
     let get_comments filename =
       if List.exists ((^^) filename) [".ml"; ".mli"; ".mll"; ".mly"] then
         let text = get_text filename in
@@ -718,7 +718,7 @@ object (self)
         comments, strings
       else [], []
     in
-    let get_comments = Miscellanea.Memo.create ~f:get_comments in
+    let get_comments = Miscellanea.Memo.create get_comments in
     Gaux.may sigid_changed ~f:(fun id -> view#selection#misc#disconnect id);
     sigid_changed <- Some (view#selection#connect#after#changed ~callback:begin fun () ->
       try

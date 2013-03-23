@@ -65,7 +65,7 @@ let markup' descr =
   Miscellanea.replace_all
     ["\\([ \n(]\\|^\\)\\([?]?[a-z_][a-z0-9_']*\\):", "\\1<i><small>\\2:</small></i>"] descr
 
-let markup = Miscellanea.Memo.create ~f:markup'
+let markup = Miscellanea.Memo.create markup'
 
 let markup2' descr =
   let descr = replace_greek (Glib.Markup.escape_text descr) in
@@ -79,7 +79,7 @@ let markup2' descr =
     "\\(method[ \t\r\n]+\\)\\([A-Za-z0-9_']+\\)", "<small>\\1</small>\\2";
   ] descr
 
-let markup2 = Miscellanea.Memo.create ~f:markup2'
+let markup2 = Miscellanea.Memo.create markup2'
 
 let markup3' descr =
   let descr = replace_greek (Glib.Markup.escape_text descr) in
@@ -88,7 +88,7 @@ let markup3' descr =
     "\\([A-Z`][A-Za-z0-9_']+\\)\\.", "<b>\\1</b>.";
      ] descr
 
-let markup3 = Miscellanea.Memo.create ~f:markup3'
+let markup3 = Miscellanea.Memo.create markup3'
 
 let greeks = [
   "'a\\([0-9]*\\)", "α\\1";

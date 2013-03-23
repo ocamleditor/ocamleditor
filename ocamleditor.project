@@ -50,7 +50,7 @@
       <cflags>-g</cflags>
       <lflags>-g</lflags>
       <target_type>Library</target_type>
-      <outname>icons</outname>
+      <outname>icons/icons</outname>
       <lib_install_path></lib_install_path>
       <external_tasks>
         <task name="mkicons">

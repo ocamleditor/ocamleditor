@@ -68,7 +68,7 @@ let parse pref =
         String.concat "" ["<span color='"; color; "'"; weight; style; underline; bgcolor; ">"]
       | _ -> assert false
   in
-  let span = Miscellanea.Memo.create ~f:span in
+  let span = Miscellanea.Memo.create span in
   fun ?(highlights=[]) text ->
     let buffer = Lexing.from_string text in
     let out = Buffer.create (String.length text) in

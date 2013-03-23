@@ -25,7 +25,7 @@ open Printf
 
 (** sync_editor *)
 let sync_editor ~editor ~page ~filename window =
-  let remote : Editor_file_type.remote_login option =
+  let remote (*: Editor_file_type.remote_login option*) =
     match page#file with
       | Some file -> file#remote
       | _ -> assert false

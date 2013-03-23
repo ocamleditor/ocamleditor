@@ -125,7 +125,7 @@ let string_rev str =
   for i = 0 to len - 1 do rts.[len - i - 1] <- str.[i] done;
   rts;;
 
-let string_rev = Miscellanea.Memo.create ~f:string_rev;;
+let string_rev = Miscellanea.Memo.create string_rev;;
 
 let is_function type_expr =
   let rec f t =
