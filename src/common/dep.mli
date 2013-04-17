@@ -21,12 +21,12 @@
 *)
 
 
-type dag
+type dag = (string, string list) Hashtbl.t
 exception Loop_found of string
 val ocamldep : ?pp:string ->
   ?with_errors:bool ->
   ?verbose:bool -> string -> dag
 val find : ?pp:string -> ?with_errors:bool -> ?echo:bool -> string list -> string list
 val find_dependants : path:string list -> modname:string -> string list
-val reduce : dag -> dag
+val reduce : dag -> unit
 val dot_of_dag : dag -> string

@@ -48,8 +48,8 @@ let ocamldep ?pp ?(with_errors=true) ?(verbose=true) target =
       (Ocaml_config.ocamldep())
       (match pp with Some pp when pp <> "" -> " -pp " ^ pp | _ -> "" )
       (Ocaml_config.expand_includes dir)
-      (match dir with "." -> "*.mli" | _ -> dir ^ "/" ^ "*.mli")
-      (match dir with "." -> "*.ml" | _ -> dir ^ "/" ^ "*.ml")
+      (match dir with "." -> "*.mli" | _ -> dir ^ "/" ^ "*.mli *.mli")
+      (match dir with "." -> "*.ml" | _ -> dir ^ "/" ^ "*.ml *.ml")
       redirect_stderr
   in
   if verbose then (printf "%s\n%!" command);
@@ -100,7 +100,7 @@ let array_exists from p a =
   done; false with Exit -> true
 
 (** reduce *)
-let reduce : dag -> dag = function table ->
+let reduce : dag -> unit = function table ->
   let rec (<-?-) x y =
     let deps = try Hashtbl.find table y with Not_found -> [] in
     (List.mem x deps) || (List.exists ((<-?-) x) deps)
@@ -131,8 +131,8 @@ let reduce : dag -> dag = function table ->
     in
     Array.to_list (reduce' (Array.of_list ll))
   in
-  Hashtbl.iter (fun key deps -> Hashtbl.replace table key (reduce deps)) table;
-  table;;
+  Hashtbl.iter (fun key deps -> Hashtbl.replace table key (reduce deps)) table
+;;
 
 (** dot_of_dag *)
 let dot_of_dag (dag : dag) =
@@ -143,6 +143,53 @@ let dot_of_dag (dag : dag) =
   end dag;
   Buffer.add_string buf "}\n";
   Buffer.contents buf;;
+
+(** find' *)
+let find' target =
+  let target = (Filename.chop_extension target) ^ ".cmx" in
+  let deps = ocamldep target in
+  let out = Hashtbl.create 17 in
+  let rec add root =
+    let deps = try Hashtbl.find deps root with Not_found -> [] in
+    Hashtbl.replace out root deps;
+    List.iter add deps
+  in
+  add target;
+  reduce out;
+  (out : dag);;
+
+(** analyze *)
+let analyze dag =
+  let rdag =
+    let t = Hashtbl.create 17 in
+    Hashtbl.iter (fun key deps -> List.iter (fun d -> Hashtbl.add t d key) deps) dag;
+    t
+  in
+  let rec chain x =
+    try
+      begin
+        match Hashtbl.find_all rdag x with
+          | parent :: [] ->
+            let n_childs = try List.length (Hashtbl.find dag parent) with Not_found -> 0 in
+            if n_childs = 1 then x :: (chain parent) else [x]
+          | _ -> [x]
+      end;
+    with Not_found -> []
+  in
+  let leaves =
+    Hashtbl.fold begin fun key deps acc ->
+      match deps with
+        | [] -> (chain key) :: acc
+        | _ -> acc
+    end dag []
+  in
+  let fleaves = List.flatten leaves in
+  List.iter (Hashtbl.remove dag) fleaves;
+  Hashtbl.iter begin fun key deps ->
+    Hashtbl.replace dag key (List.filter (fun d -> not (List.mem d fleaves)) deps)
+  end dag;
+  leaves
+;;
 
 (*
 
@@ -155,7 +202,20 @@ let dot_of_dag (dag : dag) =
 #load "C:\\ocaml\\devel\\ocamleditor\\src\\common\\file_util.cmo";;
 #directory "C:\\ocaml\\devel\\ocamleditor\\src\\common"
 
-File_util.write "test.dot" (dot_of_dag (reduce (run_ocamldep "ocamleditor.ml")));;
+let dag = find' "editor_page.ml" in File_util.write "test.dot" (dot_of_dag dag);;
+
+let dag = find' "editor_page.ml" in for i = 1 to 5 do analyze dag done; File_util.write "test.dot" (dot_of_dag dag);;
+
+let dag = find' "prj.ml" in analyze dag;;
+
+let dag = find' "editor_page.ml" in for i = 1 to 3 do
+  let leaves = analyze dag in
+   List.iter begin fun g ->
+    Printf.printf "%s\n%!" (String.concat ", " g);
+    Printf.printf "-----------------------\n%!" ;
+  end leaves;
+  Printf.printf "************************\n%!" ;
+done;;
 
 *)
 
