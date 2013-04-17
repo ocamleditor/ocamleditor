@@ -209,6 +209,7 @@ object (self)
     results <- [];
     canceled <- false;
     sigids <- [];
+    List.iter (fun f -> try f () with GText.No_such_mark _ -> ()) delete_marks;
     delete_marks <- [];
     GtkThread2.sync model#clear ();
     GtkThread2.sync tbuf#set_text "";

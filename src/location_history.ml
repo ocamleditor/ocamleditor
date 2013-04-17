@@ -77,7 +77,7 @@ let length nh = List.length nh.history
 (** create_mark *)
 let create_mark ~(buffer : GText.buffer) ~offset =
   let ts = Unix.gettimeofday() in
-  buffer#create_mark ~name:(sprintf "%f" ts) (buffer#get_iter (`OFFSET offset))
+  buffer#create_mark ~name:(sprintf "location-history-%f" ts) (buffer#get_iter (`OFFSET offset))
 
 (** divide' *)
 let divide' n ll =
