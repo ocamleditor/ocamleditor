@@ -156,7 +156,7 @@ let add_location nh ~kind ~(view : GText.view) ~filename ~offset =
   loc
 
 let add nh ~kind ~(view : GText.view) ~filename ~offset =
-  Prf.crono Prf.prf_location_history_add begin fun () ->
+  (*Prf.crono Prf.prf_location_history_add begin fun () ->*)
   let in_proximity =
     match nh.history with
       | top :: _ -> in_proximity ~view ~filename ~offset top
@@ -191,7 +191,7 @@ let add nh ~kind ~(view : GText.view) ~filename ~offset =
       Queue.push loc queue
     | `EDIT -> ()
     | `BROWSE -> ignore (add_location nh ~kind ~view ~filename ~offset)
-  end ()
+  (*end ()*)
 
 (** last_edit_location *)
 let last_edit_location nh = List_opt.find (fun loc -> loc.kind = `EDIT) nh.history

@@ -390,7 +390,7 @@ object (self)
 
     val tags_to_toggle = 3 (* to match: ?(label=...) 3 *)
     method private colorize_within_nearest_tag_bounds buffer iter =
-      Prf.crono Prf.prf_colorize_within_nearest_tag_bounds begin fun () ->
+      (*Prf.crono Prf.prf_colorize_within_nearest_tag_bounds begin fun () ->*)
       (*let tag_table_lexical = buffer#tag_table_lexical in*)
       let count = ref tags_to_toggle in
       let start =
@@ -416,7 +416,7 @@ object (self)
           !stop
       in
       Lexical.tag buffer ~start ~stop
-      end ()
+      (*end ()*)
 
     method load_page ?(scroll=true) (page : Editor_page.page) =
       if not page#load_complete then begin
