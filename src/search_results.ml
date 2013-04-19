@@ -185,17 +185,7 @@ object (self)
       self#active#set false;
       self#present ();
     end);
-    ignore (vbox#connect#destroy ~callback:begin fun () ->
-      List.iter begin fun res ->
-        match res.locations with
-          | Offset _ -> ()
-          | Mark marks ->
-            List.iter begin fun (_, buffer, m1, m2) ->
-              (try buffer#delete_mark (`MARK m1) with GText.No_such_mark _ -> ());
-              (try buffer#delete_mark (`MARK m2) with GText.No_such_mark _ -> ());
-            end marks;
-      end results
-    end);
+    ignore (vbox#connect#destroy ~callback:self#destroy_marks);
     (* Tooltips *)
     let set_tooltips view f =
       view#misc#set_has_tooltip true;
@@ -398,6 +388,17 @@ object (self)
           end locs
         end
 
+  method private destroy_marks () =
+    List.iter begin fun res ->
+      match res.locations with
+        | Offset _ -> ()
+        | Mark marks ->
+          List.iter begin fun (_, buffer, m1, m2) ->
+            (try buffer#delete_mark (`MARK m1) with GText.No_such_mark _ -> ());
+            (try buffer#delete_mark (`MARK m2) with GText.No_such_mark _ -> ());
+          end marks;
+    end results
+
   method private row_line_activated _ _ = self#lines_selection_changed ~focus:true ()
 
   method private row_file_activated path _ =
@@ -410,6 +411,7 @@ object (self)
     end
 
   method clear () =
+    self#destroy_marks();
     hits <- 0;
     count_dirs <- 0;
     count_files <- 0;
