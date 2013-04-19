@@ -222,6 +222,7 @@ object (self)
   val mutable count = 0
 
   initializer
+    ignore (self#misc#connect#destroy ~callback:self#destroy_marks);
     (** Replace foreground color when row is selected *)
     let replace_color_in_markup (model : GTree.tree_store) invert path =
       let row = model#get_iter path in
@@ -415,6 +416,11 @@ object (self)
           end
         with Not_found -> ()
 
+  method private destroy_marks () =
+    buffer#block_signal_handlers ();
+    Hashtbl.iter (fun _ info -> match info.mark with Some mark -> buffer#delete_mark (`MARK mark) | _ -> ()) table_info;
+    buffer#unblock_signal_handlers ();
+
   method load () =
     let compile_buffer () = page#compile_buffer ?join:(Some true) () in
     match Binannot.read_cmt ~project:page#project ~filename:page#get_filename ~compile_buffer () with
@@ -429,11 +435,7 @@ object (self)
             timestamp <- file, (Unix.stat filename).Unix.st_mtime;
             let cmi, cmt = Cmt_format.read filename_cmt in*)
             (* Delete previous marks in the buffer and clear the model and other conatiners *)
-          GtkThread2.sync begin fun () ->
-            buffer#block_signal_handlers ();
-            Hashtbl.iter (fun _ info -> match info.mark with Some mark -> buffer#delete_mark (`MARK mark) | _ -> ()) table_info;
-            buffer#unblock_signal_handlers ();
-          end ();
+          GtkThread2.sync self#destroy_marks ();
           model#clear();
           count <- 0;
           table_expanded_by_default <- [];

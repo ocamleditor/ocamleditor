@@ -90,15 +90,16 @@ object (self)
   method set_show_outline show =
     show_outline <- show;
     try
-      if show then begin
-        self#with_current_page begin fun page ->
-          match page#outline with
-            | Some ol -> self#pack_outline ol#coerce
-            | _ ->
-              (try hpaned#remove hpaned#child1 with Gpointer.Null -> ());
-              page#compile_buffer ?join:None();
-        end;
-      end else (try hpaned#remove hpaned#child1 with Gpointer.Null -> ());
+      self#with_current_page begin fun page ->
+        match page#outline with
+          | Some ol when show -> self#pack_outline ol#coerce;
+          | Some ol ->
+            ol#destroy();
+            page#set_outline None;
+          | _ ->
+            (try hpaned#remove hpaned#child1 with Gpointer.Null -> ());
+            if show then (page#compile_buffer ?join:None());
+      end;
     with Gpointer.Null -> ()
 
   method show_whitespace_chars = show_whitespace_chars
