@@ -49,9 +49,13 @@ let prepare_build () =
     if not (Sys.file_exists "../plugins") then (mkdir "../plugins");
     run "ocamllex err_lexer.mll";
     run "ocamlyacc err_parser.mly";
-    substitute ~filename:"oe_config.ml" ~regexp:true
+    if not is_win32 then begin
+      (* Disabled because on Windows it changes the file permissions of oe_config.ml
+         forcing it to be recompiled for plugins.*)
+      substitute ~filename:"oe_config.ml" ~regexp:true
       ["let _ = Printexc\\.record_backtrace \\(\\(true\\)\\|\\(false\\)\\)$",
        (sprintf "let _ = Printexc.record_backtrace %b" !record_backtrace)];
+    end;
     (try generate_oebuild_script() with Failure msg -> raise (Script_error 2));
     print_newline()
   end;;

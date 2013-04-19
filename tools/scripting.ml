@@ -70,6 +70,7 @@ let rmr = if is_win32 then "RMDIR /Q /S" else "rm -fr"
 
 (** substitute *)
 let substitute ~filename ?(regexp=false) repl =
+  let perm = (Unix.stat filename).Unix.st_perm in
   let ichan = open_in_bin filename in
   let tmp, ochan = Filename.open_temp_file (Filename.basename filename) "" in
   Pervasives.set_binary_mode_out ochan true;
@@ -80,6 +81,7 @@ let substitute ~filename ?(regexp=false) repl =
     remove_file new_filename;
     cp tmp new_filename;
     remove_file tmp;
+    Unix.chmod new_filename perm;
   in
   begin
     try
@@ -126,3 +128,4 @@ let main ?dir ?(targets=[]) ?default_target ~options () =
     end;
     exit 0;
   with Script_error _ -> (exit 2)
+
