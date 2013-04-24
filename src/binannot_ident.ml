@@ -44,7 +44,14 @@ let find_external_definition ~project ~ext_ref =
       begin
         try
           let filename = Misc.find_in_path_uncap paths name in
-          let filename = if Sys.file_exists filename then filename else Filename.dirname filename // name in
+          let filename =
+            if Sys.os_type = "Win32" then begin
+              let dirname = Filename.dirname filename in
+              let basename = Filename.basename filename in
+              let files = Array.to_list (Sys.readdir dirname) in
+              if List.exists ((=) basename) files then filename else (Filename.dirname filename // name)
+            end else filename
+          in
           scan ~project ~filename ();
           let {locations; _} = Hashtbl.find table_idents filename in
           begin
