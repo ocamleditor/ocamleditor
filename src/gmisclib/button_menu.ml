@@ -74,6 +74,7 @@ object (self)
   val mutable tooltip_text = None
   val mutable sigid_button_press = None
   val mutable sigid_button_released = None
+  val mutable is_menu_only = false
 
   initializer
     ignore (button#connect#clicked ~callback:clicked#call);
@@ -84,17 +85,17 @@ object (self)
       button_menu#misc#set_state `PRELIGHT;
     end);
     ignore (button#connect#leave ~callback:begin fun _ ->
-      button_menu#set_image image_normal;
+      self#set_button_menu_child false;
       button_menu#misc#set_state `NORMAL;
       button_menu#set_relief relief;
     end);
     ignore (button#connect#pressed ~callback:begin fun _ ->
-      button_menu#set_image image_pressed;
+      self#set_button_menu_child true;
       button_menu#misc#set_state `ACTIVE;
       button_menu#set_relief `HALF;
     end);
     ignore (button#connect#released ~callback:begin fun _ ->
-      button_menu#set_image image_normal;
+      self#set_button_menu_child false;
       button_menu#misc#set_state `NORMAL;
     end);
     ignore (button_menu#connect#enter ~callback:begin fun _ ->
@@ -115,26 +116,47 @@ object (self)
 
   method set_image = button#set_image
 
+  method private set_button_menu_child pressed =
+    if not is_menu_only then (button_menu#set_image (if pressed then image_pressed else image_normal))
+
   method set_menu_only () =
-    sigid_button_press <- Some (button#event#connect#button_press ~callback:begin fun ev ->
-      self#popup_menu ev;
-      true
-    end);
-    sigid_button_released <- Some (button#connect#released ~callback:self#popdown_menu);
+    if not is_menu_only then begin
+      sigid_button_press <- Some (button#event#connect#button_press ~callback:begin fun ev ->
+          self#popup_menu ev;
+          true
+        end);
+      sigid_button_released <- Some (button#connect#released ~callback:self#popdown_menu);
+      button#misc#hide();
+      button_menu#remove button_menu#child;
+      let box = GPack.hbox ~spacing:3 ~packing:button_menu#add () in
+      let _ = GMisc.label ~text:button#label ~packing:box#add () in
+      let _ = GMisc.separator `VERTICAL ~packing:box#pack () in
+      box#pack (GMisc.arrow ~kind:`DOWN ())#coerce;
+      is_menu_only <- true;
+    end;
 
   method clear_menu_only () =
-    Gaux.may sigid_button_press ~f:button#misc#disconnect;
-    Gaux.may sigid_button_released ~f:button#misc#disconnect;
+    if is_menu_only then begin
+      Gaux.may sigid_button_press ~f:button#misc#disconnect;
+      Gaux.may sigid_button_released ~f:button#misc#disconnect;
+      button#misc#show();
+      button_menu#remove button_menu#child;
+      button_menu#set_label "";
+      self#set_button_menu_child false;
+      is_menu_only <- false;
+    end;
 
   method private popup_menu ev =
     (try tooltip_text <- Some (GtkBase.Widget.Tooltip.get_text box#as_widget) with Gpointer.Null -> ());
     box#misc#set_tooltip_text "";
-    button_menu#set_image image_pressed;
+    self#set_button_menu_child true;
     let time = GdkEvent.Button.time ev in
+
     let pos ~x ~y ~pushed_in =
-      let x0, y0 = Gdk.Window.get_position button#misc#window in
-      x0 + button#misc#allocation.Gtk.x,
-      (y0 + button#misc#allocation.Gtk.y + button#misc#allocation.Gtk.height),
+      let bt = if button#misc#get_flag `VISIBLE then button else button_menu in
+      let x0, y0 = Gdk.Window.get_position bt#misc#window in
+      x0 + bt#misc#allocation.Gtk.x,
+      (y0 + bt#misc#allocation.Gtk.y + bt#misc#allocation.Gtk.height),
       true
     in
     let menu = GMenu.menu () in
@@ -151,7 +173,7 @@ object (self)
         | None -> ()
     end;
     ignore (menu#connect#deactivate ~callback:begin fun () ->
-      button_menu#set_image image_normal;
+      self#set_button_menu_child false;
       button_menu#misc#set_state `NORMAL;
       button_menu#set_relief relief;
       button#misc#set_state `NORMAL;
