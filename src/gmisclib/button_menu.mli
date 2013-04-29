@@ -41,7 +41,7 @@ class button_menu :
     method misc : GObj.misc_ops
     method set_image : GObj.widget -> unit
 
-    (** Set this flag when you want to make the main button to show the menu when cliked. *)
+    (** Set this flag if you want to make the main button to show the menu when cliked. *)
     method set_menu_only : unit -> unit
   end
 

@@ -75,6 +75,7 @@ object (self)
   val mutable sigid_button_press = None
   val mutable sigid_button_released = None
   val mutable is_menu_only = false
+  val mutable image = None
 
   initializer
     ignore (button#connect#clicked ~callback:clicked#call);
@@ -114,7 +115,9 @@ object (self)
 
   method button = button
 
-  method set_image = button#set_image
+  method set_image x =
+    image <- Some x;
+    button#set_image x
 
   method private set_button_menu_child pressed =
     if not is_menu_only then (button_menu#set_image (if pressed then image_pressed else image_normal))
@@ -129,6 +132,13 @@ object (self)
       button#misc#hide();
       button_menu#remove button_menu#child;
       let box = GPack.hbox ~spacing:3 ~packing:button_menu#add () in
+      begin
+        match image with
+          | Some image ->
+            image#misc#unparent();
+            box#pack image;
+          | _ -> ()
+      end;
       let _ = GMisc.label ~text:button#label ~packing:box#add () in
       let _ = GMisc.separator `VERTICAL ~packing:box#pack () in
       box#pack (GMisc.arrow ~kind:`DOWN ())#coerce;
@@ -139,6 +149,13 @@ object (self)
     if is_menu_only then begin
       Gaux.may sigid_button_press ~f:button#misc#disconnect;
       Gaux.may sigid_button_released ~f:button#misc#disconnect;
+      begin
+        match image with
+          | Some image ->
+            image#misc#unparent();
+            button#set_image image;
+          | _ -> ()
+      end;
       button#misc#show();
       button_menu#remove button_menu#child;
       button_menu#set_label "";
