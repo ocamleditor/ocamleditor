@@ -165,6 +165,7 @@ object (self)
     let i = ref 0 in
     let _ =
       List.map (begin fun (filename, scroll_offset, offset, active) ->
+        let filename = List.fold_left (//) "" (filename_split filename) in
         incr i;
         active_exists := !active_exists || active;
         let active = active || (List.length proj.open_files = !i && not !active_exists) in
