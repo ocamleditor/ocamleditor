@@ -473,6 +473,7 @@ class widget
       let replace_file = ref "" in
       view#selection#unselect_all();
       let buffers = ref [] in
+      let pages = ref [] in
       try
         List.iter begin function {filename = filename; lines = lines} as res ->
           let pagefile = `FILENAME filename in
@@ -490,9 +491,12 @@ class widget
               page
           in
           let old_error_indication_enabled = page#error_indication#enabled in
+          let old_mark_occurrences = page#view#options#mark_occurrences in
+          page#view#options#set_mark_occurrences (false, "");
           page#error_indication#set_enabled false;
           page#buffer#undo#begin_block ~name:"replace";
           buffers := page#buffer :: !buffers;
+          pages := (page, old_mark_occurrences) :: !pages;
           self#place_marks res;
           let path =
             match view#selection#get_selected_rows with
@@ -563,9 +567,10 @@ class widget
             replace_file := "";
           with Skip_file -> ()
         end results;
-        List.iter (fun b -> b#undo#end_block()) !buffers;
         raise Exit
       with Exit ->
+        List.iter (fun b -> b#undo#end_block()) !buffers;
+        List.iter (fun (p, old) -> p#view#options#set_mark_occurrences old) !pages;
         dialog_confirm_replace#destroy()
 
 

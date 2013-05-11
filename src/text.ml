@@ -851,9 +851,15 @@ object (self)
     end);
     (** Fix bug in draw_current_line_background *)
     let before, after =
+      let old_mark_occurrences = ref None in
       let mark = ref None in
-      (fun ~name -> mark := Some (buffer#create_mark(* ~name:(Gtk_util.create_mark_name "Text.initializer")*) (buffer#get_iter `INSERT))),
       begin fun ~name ->
+        old_mark_occurrences := Some self#options#mark_occurrences;
+        self#options#set_mark_occurrences (false, "");
+        mark := Some (buffer#create_mark(* ~name:(Gtk_util.create_mark_name "Text.initializer")*) (buffer#get_iter `INSERT))
+      end,
+      begin fun ~name ->
+        Opt.may !old_mark_occurrences self#options#set_mark_occurrences;
         match !mark with
           | Some m ->
             let iter = ref (buffer#get_iter_at_mark (`MARK m)) in
