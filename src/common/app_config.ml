@@ -39,7 +39,11 @@ let application_debug = try (List.assoc "debug" application_param) = "2" with No
 let get_application_path name =
   (* ocamleditor-bytecode => base = .; ocamleditor-native => base = /home/...  *)
   let base = !! (!! Sys.executable_name) in
-  let path = if base = "." || base = (!!(Sys.getcwd())) then ".." // name else base // "share" // name in
+  let path =
+    if base = "." || base = (!!(Sys.getcwd()))
+    then ".." // name
+    else base // name
+  in
   let install_path = base // "share" // "ocamleditor" // name in
   if Sys.file_exists install_path then install_path else path
 
