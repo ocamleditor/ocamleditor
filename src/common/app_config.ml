@@ -36,18 +36,17 @@ let application_param =
 
 let application_debug = try (List.assoc "debug" application_param) = "2" with Not_found -> false;;
 
-let get_application_path name =
-  (* ocamleditor-bytecode => base = .; ocamleditor-native => base = /home/...  *)
-  let base = !! (!! Sys.executable_name) in
-  let path =
-    if base = "." || base = (!!(Sys.getcwd()))
-    then ".." // name
-    else base // name
+let get_application_dir name =
+  let is_app_in_cwd = !! Sys.executable_name = "." in
+  let prefix =
+    if is_app_in_cwd then ".." else !! (!! Sys.executable_name)
   in
-  let install_path = base // "share" // "ocamleditor" // name in
-  if Sys.file_exists install_path then install_path else path
+  let path = prefix // name in
+  if Sys.file_exists path && (Sys.is_directory path) then path
+  else
+    let install_path = prefix // "share" // "ocamleditor" // name in
+    install_path
 
-let application_icons = get_application_path "icons"
+let application_icons = get_application_dir "icons"
 
-let application_plugins = get_application_path "plugins"
-
+let application_plugins = get_application_dir "plugins"

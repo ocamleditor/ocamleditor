@@ -163,42 +163,27 @@ let find_best ?(param="--help") prog =
     kprintf failwith "Cannot find: %s" (String.concat ", " prog)
 
 (** Commands *)
+let find_command name =
+  let basename = name ^ (if is_win32 then ".exe" else "") in
+  let path = (!! Sys.executable_name) // basename in
+  if Sys.file_exists path && not (Sys.is_directory path) then path
+  else
+    let path = (!! Sys.executable_name) // name // basename in
+    if Sys.file_exists path then path
+    else basename
+
 let oebuild_command =
   let commands = [
-    begin
-      let basename = "oebuild.opt" ^ (if is_win32 then ".exe" else "") in
-      let filename = (Sys.getcwd()) // "oebuild" // basename in
-      if Sys.file_exists filename then filename
-      else begin
-        let path = (!! Sys.executable_name) // basename in
-        if Sys.file_exists path then path else basename;
-      end
-    end;
-    begin
-      let basename = "oebuild" ^ (if is_win32 then ".exe" else "") in
-      let filename = (Sys.getcwd()) // "oebuild" // basename in
-      if Sys.file_exists filename then filename
-      else begin
-        let path = (!! Sys.executable_name) // basename in
-        if Sys.file_exists path then path else basename;
-      end
-    end;
+    find_command "oebuild.opt";
+    find_command "oebuild";
   ] in
   find_best commands
 
 let oeproc_command =
   if is_win32 then
     let commands = [
-      begin
-        let basename = "oeproc.opt.exe" in
-        let filename = (Sys.getcwd()) // "oeproc" // basename in
-        if Sys.file_exists filename then filename else ((Sys.getcwd()) // basename)
-      end;
-      begin
-        let basename = "oeproc.exe" in
-        let filename = (Sys.getcwd()) // "oeproc" // basename in
-        if Sys.file_exists filename then filename else ((Sys.getcwd()) // basename)
-      end;
+      find_command "oeproc.opt";
+      find_command "oeproc";
     ] in
     find_best ~param:"" commands
   else "unused"
