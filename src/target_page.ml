@@ -65,14 +65,41 @@ class view ~project ?packing () =
   let hbox = GPack.hbox ~spacing:3 ~packing:box#pack () in
   let entry_lib_modules = GEdit.entry ~editable:true ~packing:hbox#add () in
   let button_lib_modules = GButton.button ~label:"  ...  " ~packing:(hbox#pack ~expand:false) () in
+  let filter_ml = GFile.filter ~name:"*.ml" ~patterns:["*.ml"] () in
+  let filter_top = ref (GFile.filter ~name:"All files" ~patterns:["*"] ()) in
+  let filter_toplevel_mods chooser () =
+    match chooser#current_folder with
+      | Some dir ->
+        chooser#unselect_all;
+        Gmisclib.Idle.add ~prio:100 begin fun () ->
+          if List.exists (fun x -> x#name = !filter_top#name) chooser#list_filters then chooser#remove_filter !filter_top;
+          let top_modules = Dep.find_top_modules dir in
+          let patterns = List.map Filename.basename top_modules in
+          let filter = GFile.filter ~name:(sprintf "Top-level modules in %s" (Filename.basename dir)) ~patterns () in
+          chooser#add_filter filter;
+          chooser#set_filter filter;
+          filter_top := filter;
+        end;
+      | _ -> ()
+  in
+  let create_button_filter_topmods chooser =
+    let button_find_top_modules = GButton.button ~label:"Filter top-level modules" () in
+    chooser#set_extra_widget button_find_top_modules#coerce;
+    ignore (button_find_top_modules#connect#clicked ~callback:(filter_toplevel_mods chooser));
+    ignore (chooser#connect#after#current_folder_changed ~callback:begin fun () ->
+      if List.exists (fun x -> x#name = !filter_top#name) chooser#list_filters then chooser#remove_filter !filter_top;
+      chooser#set_filter filter_ml;
+    end);
+  in
   let _ = button_lib_modules#connect#clicked ~callback:begin fun () ->
     let chooser = GWindow.file_chooser_dialog ~title:"Choose the toplevel modules for the library..."
       ~action:`OPEN ~position:`CENTER ~show:false () in
     chooser#add_select_button_stock `OK `OK;
     chooser#add_button_stock `CANCEL `CANCEL;
     chooser#set_select_multiple true;
-    chooser#set_filter (GFile.filter ~patterns:["*.ml"] ());
-    chooser#add_filter (GFile.filter ~patterns:["*.ml"] ());
+    chooser#add_filter filter_ml;
+    chooser#set_filter filter_ml;
+    create_button_filter_topmods chooser;
     match chooser#run () with
       | `OK ->
         let filenames = mk_target_filenames project chooser#get_filenames in
@@ -120,7 +147,9 @@ class view ~project ?packing () =
     chooser#add_select_button_stock `OK `OK;
     chooser#add_button_stock `CANCEL `CANCEL;
     chooser#set_select_multiple false;
-    chooser#set_filter (GFile.filter ~patterns:["*.ml"] ());
+    chooser#add_filter filter_ml;
+    chooser#set_filter filter_ml;
+    create_button_filter_topmods chooser;
     match chooser#run () with
       | `OK ->
         begin

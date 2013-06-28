@@ -28,6 +28,7 @@ type dag = (string, string list) Hashtbl.t
 exception Loop_found of string
 
 let (^^) = Filename.check_suffix
+let (//) = Filename.concat
 
 let redirect_stderr = if Sys.os_type = "Win32" then " 2>NUL" else " 2>/dev/null"
 
@@ -41,7 +42,7 @@ let replace_extension x =
     (if x ^^ "cmi" then "mli" else if x ^^ "cmx" then "ml" else assert false);;
 
 (** ocamldep *)
-let ocamldep ?pp ?(with_errors=true) ?(verbose=true) target =
+(*let ocamldep ?pp ?(with_errors=true) ?(verbose=true) target =
   let dir = Filename.dirname target in
   let redirect_stderr = if with_errors then "" else (if Sys.os_type = "Win32" then " 2>NUL" else " 2>/dev/null") in
   let command = sprintf "%s%s %s -native -slash -one-line %s %s %s"
@@ -65,7 +66,38 @@ let ocamldep ?pp ?(with_errors=true) ?(verbose=true) target =
         Hashtbl.replace table key deps
       | _ -> eprintf "%s\n%s\n%!" command entry; assert false
   end entries;
-  (table : dag);;
+  (table : dag);;*)
+
+  let ocamldep ?pp ?(with_errors=true) ?(verbose=true) ?(slash=true) ?(single=false) target =
+    let dir = Filename.dirname target in
+    let redirect_stderr = if with_errors then "" else (if Sys.os_type = "Win32" then " 2>NUL" else " 2>/dev/null") in
+    let filenames =
+      if single then target else
+        (match dir with "." -> "*.mli" | _ -> dir ^ "/" ^ "*.mli *.mli") ^ " " ^
+          (match dir with "." -> "*.ml" | _ -> dir ^ "/" ^ "*.ml *.ml")
+    in
+    let command = sprintf "%s%s %s -native -one-line %s %s %s"
+        (Ocaml_config.ocamldep())
+        (match pp with Some pp when pp <> "" -> " -pp " ^ pp | _ -> "" )
+        (Ocaml_config.expand_includes dir)
+        (if slash then "-slash" else "")
+        filenames
+        redirect_stderr
+    in
+    if verbose then (printf "%s\n%!" command);
+    let text = Cmd.expand command in
+    let entries = split_nl text in
+    let table = Hashtbl.create 7 in
+    List.iter begin fun entry ->
+      match Str.split re1 entry with
+        | key :: _ when key ^^ ".cmo" -> ()
+        | key :: [] -> Hashtbl.replace table key []
+        | [key; deps] ->
+          let deps = Str.split re3 deps in
+          Hashtbl.replace table key deps
+        | _ -> eprintf "%s\n%s\n%!" command entry; assert false
+    end entries;
+    (table : dag);;
 
 (** find_dep *)
 let find_dep ?pp ?(with_errors=true) ?(echo=true) target =
@@ -191,8 +223,8 @@ let analyze dag =
   leaves
 ;;
 
-(*
 
+(*
 #load "C:\\ocaml\\lib\\str.cma";;
 #load "C:\\ocaml\\lib\\unix.cma";;
 #load "C:\\ocaml\\devel\\ocamleditor\\src\\common\\app_config.cmo";;
@@ -202,9 +234,11 @@ let analyze dag =
 #load "C:\\ocaml\\devel\\ocamleditor\\src\\common\\file_util.cmo";;
 #directory "C:\\ocaml\\devel\\ocamleditor\\src\\common"
 
-let dag = find' "editor_page.ml" in File_util.write "test.dot" (dot_of_dag dag);;
 
-let dag = find' "editor_page.ml" in for i = 1 to 5 do analyze dag done; File_util.write "test.dot" (dot_of_dag dag);;
+
+let dag = find' "editor_page.ml" in File_util.write "D://temp/test.dot" (dot_of_dag dag);;
+
+let dag = find' "editor_page.ml" in for i = 1 to 5 do analyze dag done; File_util.write "D://temp/test.dot" (dot_of_dag dag);;
 
 let dag = find' "prj.ml" in analyze dag;;
 
@@ -272,3 +306,30 @@ let find_dependants ~path ~modname =
   let dependants = List.map (fun dirname -> find_dependants ~dirname ~modname) path in
   List.flatten dependants
 ;;
+
+(** find_top_modules *)
+let find_top_modules =
+  let module S = struct type t = string let compare = Pervasives.compare end in
+  let module Set = Set.Make (S) in
+  fun dir ->
+    let files = Array.to_list (Sys.readdir dir) in
+    let files = List.map (fun x -> dir // x) files in
+    let files = List.filter (fun x -> x ^^ ".ml" && not (Sys.is_directory x)) files in
+    let alldeps = List.map (fun filename ->
+        filename,
+        ocamldep ~slash:false ~single:true ~verbose:false filename) files in
+    let files = ref files in
+    List.iter begin fun (filename, table) ->
+      Hashtbl.iter begin fun _ deps ->
+        let mldeps = List.map (fun x -> (Filename.chop_extension x) ^ ".ml") deps in
+        let mldeps = List.filter ((<>) filename) mldeps in
+        let mldeps = List.map (fun x -> if Filename.is_implicit x then dir // x else x) mldeps in
+        files := List.filter (fun x -> not (List.mem x mldeps)) !files;
+      end table
+    end alldeps;
+    !files
+;;
+
+(*let _ = find_top_modules "C:\\ocaml\\devel\\cpdf\\src";;
+let _ = Miscellanea.crono find_top_modules "C:\\ocaml\\devel\\ocamleditor\\src";;*)
+
