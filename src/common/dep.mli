@@ -26,10 +26,6 @@ exception Loop_found of string
 val ocamldep : ?pp:string ->
   ?with_errors:bool ->
   ?verbose:bool  ->
-  ?slash:bool ->
-  ?single:bool -> string -> dag
+  ?slash:bool -> ?search_path:string -> string -> dag
 val find : ?pp:string -> ?with_errors:bool -> ?echo:bool -> string list -> string list
 val find_dependants : path:string list -> modname:string -> string list
-val reduce : dag -> unit
-val dot_of_dag : dag -> string
-val find_top_modules : string -> string list

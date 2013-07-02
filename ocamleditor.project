@@ -7,7 +7,7 @@
   <name>ocamleditor</name>
   <author>Francesco Tovagliari</author>
   <description/>
-  <version>1.9.3</version>
+  <version>1.9.4</version>
   <autocomp enabled="true" delay="0.764" cflags=""/>
   <targets>
     <target name="common" default="false" id="4">
@@ -464,7 +464,7 @@
           <cmd>ocaml</cmd>
           <args>
             <arg enabled="true">mkversion.ml</arg>
-            <arg enabled="true">1.9.3</arg>
+            <arg enabled="true">1.9.4</arg>
           </args>
           <phase>Before_clean</phase>
         </task>

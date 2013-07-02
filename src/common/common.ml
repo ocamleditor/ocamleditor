@@ -22,6 +22,7 @@
 
 open Miscellanea
 open Dep
+open Dep_ext
 open Quote
 open Cmd_line_args
 open Ocaml_config
