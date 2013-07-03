@@ -108,7 +108,7 @@ and preferences ~(editor : Editor.editor) () =
   let view_column       = GTree.view_column ~title:"File" ~renderer:(renderer, ["text", column]) () in
   let sw                = GBin.scrolled_window ~shadow_type:`IN ~hpolicy:`AUTOMATIC ~vpolicy:`AUTOMATIC
     ~packing:(hbox#pack ~expand:false) () in
-  let view              = GTree.view ~model:model ~headers_visible:false ~reorderable:false ~width:140
+  let view              = GTree.view ~model:model ~headers_visible:false ~reorderable:false ~width:160
     ~height:300 ~packing:sw#add () in
   let _                 = view#append_column view_column in
   let _                 = GMisc.separator `HORIZONTAL ~packing:vbox#pack () in
@@ -185,6 +185,9 @@ object (self)
     let row = model#append ~parent () in self#create "Actions" row (new pref_editor_actions);
     let row = model#append ~parent () in self#create "Code Templates" row (new pref_templ);
     let row = model#append ~parent () in self#create "Color" row (new pref_color);
+    if Sys.os_type = "Win32" then () else begin
+      let row = model#append () in self#create ~idle:true "PDF Viewer" row (new pref_pdf_viewer);
+    end;
     view#expand_all();
     view#selection#set_mode `SINGLE;
     ignore (view#selection#connect#changed ~callback:begin fun () ->
@@ -790,6 +793,43 @@ object (self)
       ~ocamldoc_paragraph_bgcolor_2:temp_pref.Preferences.pref_ocamldoc_paragraph_bgcolor_2 ();
     Lexical.tag (preview#buffer :> GText.buffer);
     Preferences_apply.apply (preview :> Text.view) temp_pref;
+end
+
+(** pref_pdf_viewer *)
+and pref_pdf_viewer title ?packing () =
+  let vbox       = GPack.vbox ~spacing ?packing () in
+  let align      = create_align ~vbox () in
+  let box        = GPack.vbox ~spacing:1 ~packing:align#add () in
+  let label_text = "Select a PDF viewer" in
+  let _          = GMisc.label ~xalign:0.0
+    ~markup:(label_text ^ ":")
+    ~packing:box#pack ()
+  in
+  let hbox       = GPack.hbox ~spacing:3 ~packing:box#pack () in
+  let entry      = GEdit.entry ~editable:true ~packing:hbox#add () in
+  let button     = GButton.button ~label:" ... " ~packing:hbox#pack () in
+  let _          =
+    ignore (button#connect#clicked ~callback:begin fun () ->
+      let chooser    = GWindow.file_chooser_dialog ~action:`OPEN ~title:label_text
+        ~icon:Icons.oe ~position:`CENTER ~modal:true () in
+      (*chooser#set_filter (GFile.filter ~patterns:["*.cma"] ());*)
+      ignore (chooser#set_filename entry#text);
+      chooser#add_button_stock `OK `OK;
+      chooser#add_button_stock `CANCEL `CANCEL;
+      match chooser#run () with
+        | `OK ->
+          Gaux.may chooser#filename ~f:(fun name -> entry#set_text name);
+          chooser#destroy()
+        | _ -> chooser#destroy()
+    end)
+  in
+object
+  inherit page title vbox
+  method write pref =
+    pref.Preferences.pref_pdf_viewer <- entry#text;
+
+  method read pref =
+    ignore (entry#set_text pref.Preferences.pref_pdf_viewer);
 end
 
 (** pref_templ *)

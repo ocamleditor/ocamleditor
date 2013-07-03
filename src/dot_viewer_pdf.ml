@@ -35,7 +35,9 @@ module PDF = struct
 
   let create ?packing () = None
 
-  let viewer_cmd ~filename = sprintf "%s %s" Oe_config.pdf_viewer filename
+  let viewer_cmd ~filename =
+    let cmd = if Sys.os_type = "Win32" then "" else Preferences.preferences#get.Preferences.pref_pdf_viewer in
+    sprintf "%s %s" cmd filename
 
   let open_file filename =
     ignore (Thread.create begin fun () ->

@@ -93,6 +93,7 @@ type t = {
   mutable pref_hmessages_width              : int;
   mutable pref_vmessages_height             : int;
   mutable pref_odoc_font                    : string;
+  mutable pref_pdf_viewer                   : string;
 }
 and text_properties =
   GDraw.color *
@@ -244,6 +245,7 @@ let create_defaults () = {
   pref_hmessages_width              = 1000;
   pref_vmessages_height             = 300;
   pref_odoc_font                    = "Serif 9";
+  pref_pdf_viewer                   = if Sys.os_type = "Win32" then "" else "xpdf"
 }
 
 let preferences = new GUtil.variable (create_defaults ())
@@ -399,7 +401,7 @@ let to_xml pref =
       Xml.Element ("pref_hmessages_width", [], [Xml.PCData (string_of_int pref.pref_hmessages_width)]);
       Xml.Element ("pref_vmessages_height", [], [Xml.PCData (string_of_int pref.pref_vmessages_height)]);
       Xml.Element ("pref_odoc_font", [], [Xml.PCData (pref.pref_odoc_font)]);
-
+      Xml.Element ("pref_pdf_viewer", [], [Xml.PCData (pref.pref_pdf_viewer)]);
     ])
   in
   let xml = Xml.to_string_fmt xml in
@@ -517,6 +519,7 @@ let from_file filename =
         | "pref_hmessages_width" -> pref.pref_hmessages_width <- int_of_string (value node)
         | "pref_vmessages_height" -> pref.pref_vmessages_height <- int_of_string (value node)
         | "pref_odoc_font" -> pref.pref_odoc_font <- value node
+        | "pref_pdf_viewer" -> pref.pref_pdf_viewer <- value node
 
        | _ -> ()
     end xml;

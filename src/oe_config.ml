@@ -45,7 +45,6 @@ let ocamleditor_user_home =
 (** Configuration Section =================================================== *)
 
 let dot_viewer : [`DEFAULT | `PDF]       = `DEFAULT
-let pdf_viewer                           = if is_win32 then "" else "xpdf"
 let ocp_indent_tab_key_enabled           = true
 let ocp_indent_config                    = "with=2"
 let ocp_indent_empty_line : [`INDENT | `ALIGN] = `INDENT
@@ -87,7 +86,7 @@ let find_references_title_bgcolor        = "#000000"
 let find_references_title_fgcolor        = "#ffffff"
 let find_replace_history_max_length      = 75
 (* Condensed font for the file list in the search results pane. None is default font. (`STRETCH `CONDENSED doesn't work) *)
-let find_text_output_font_condensed      = Some (match Sys.os_type with "Win32" -> "Arial" | _ -> "Helvetica") (*None*)
+let find_text_output_font_condensed      = Some (match Sys.os_type with "Win32" -> "Arial" | _ -> "Helvetica 9") (*None*)
 let find_text_output_border_color        = `NAME "#707070" (* Current line border color of the find text output pane *)
 let find_text_output_highlight           = `DEFAULT, `DEFAULT (*`NAME "#ffff7e", `NONE*) (* Background and foreground colors to highlight occurrences where the pattern matches.
                                           (`NONE=do not change color; `DEFAULT=default color; `NAME=specific color)*)
