@@ -39,14 +39,18 @@ let _ = if true || App_config.application_debug then begin
     "plugins", App_config.application_plugins;
     "oebuild", oebuild_command;
   ] @
-  (if is_win32 then ["oeproc", oeproc_command] else []) @ [
+  (if is_win32 then [
+     "oeproc", oeproc_command
+   ] else [
+     "xdg-open", (Opt.default xdg_open_version "<Not Found>");
+   ]) @ [
     "dot", (Opt.default dot_version "<Not Found>");
     "ocp-indent", (Opt.default ocp_indent_version "<Not Found>");
-    "plink", (Opt.default plink_version "<Not Found>");
     "GTK Version", (sprintf "%d.%d.%d" a b c);
-    "Glib Charset", (sprintf "%b, %s" Convert.glib_is_utf8 Convert.glib_charset);
+    (*"plink", (Opt.default plink_version "<Not Found>");*)
+    (*"Glib Charset", (sprintf "%b, %s" Convert.glib_is_utf8 Convert.glib_charset);
     "Locale Charset", (sprintf "%b, %s" Convert.locale_is_utf8 Convert.locale_charset);
-    "Default Charset", (sprintf "%b, %s" Convert.is_utf8 Convert.default_charset);
+    "Default Charset", (sprintf "%b, %s" Convert.is_utf8 Convert.default_charset);*)
     "Backtrace status", (sprintf "%b" (Printexc.backtrace_status ()))
   ] in
   let maxlength = List.fold_left (fun cand (x, _) -> let len = String.length x in max cand len) 0 properties in
@@ -57,7 +61,7 @@ end
 
 (** main *)
 let main () = begin
-  ignore (Plugin.load "dot_viewer_svg.cma"); 
+  ignore (Plugin.load "dot_viewer_svg.cma");
   Browser.browser#window#present();
   GtkThread2.main ();
 end

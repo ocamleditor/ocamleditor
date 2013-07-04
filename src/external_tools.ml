@@ -41,6 +41,7 @@ let rec read () =
       ("1000", "Console", "start \"$(project_name)\" cmd /K cd \"$(project_source)\"");
       ("1001", "Explorer", "explorer \"$(project_source)\"");
       ("1002", "Open with Notepad", "notepad \"$(current_filename)\"");
+      ("1003", "Open containing folder", "explorer \"$(current_filename_dir)\"");
     ] else []) @ [
       ("2002", "OCamlBrowser", "ocamlbrowser -I \"$(project_source)\"")
     ] in
@@ -74,6 +75,7 @@ let get_macros ~get_editor ~get_current_project () =
       "$(project_source)", (project.root // Project.src);
       "$(project_name)", project.name;
       "$(current_filename)", current_filename;
+      "$(current_filename_dir)", (Filename.dirname current_filename);
     ]in
     let translate_macro = replace_all ~regexp:false macros in
     let macros_help () = "Macros: " ^ (String.concat ", " (List.map fst macros)) in

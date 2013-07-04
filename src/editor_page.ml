@@ -132,8 +132,8 @@ class page ?file ~project ~scroll_offset ~offset ~editor () =
     ~packing:sbbox#pack
     ~callback:begin fun () ->
       let above, below = Preferences.preferences#get.Preferences.pref_editor_pixels_lines in
-      text_view#set_pixels_above_lines (min (2 + above) (text_view#pixels_above_lines + 1));
-      text_view#set_pixels_below_lines (min (2 + below) (text_view#pixels_below_lines + 1));
+      text_view#set_pixels_above_lines (min (4 + above) (text_view#pixels_above_lines + 1));
+      text_view#set_pixels_below_lines (min (4 + below) (text_view#pixels_below_lines + 1));
       Gmisclib.Idle.add text_view#draw_gutter;
     end ()
   in

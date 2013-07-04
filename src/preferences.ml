@@ -245,7 +245,9 @@ let create_defaults () = {
   pref_hmessages_width              = 1000;
   pref_vmessages_height             = 300;
   pref_odoc_font                    = "Serif 9";
-  pref_pdf_viewer                   = if Sys.os_type = "Win32" then "" else "xpdf"
+  pref_pdf_viewer                   =
+    if Sys.os_type = "Win32" then ""
+    else (match Oe_config.xdg_open_version with None -> "evince" | _ -> "xdg-open")
 }
 
 let preferences = new GUtil.variable (create_defaults ())

@@ -88,7 +88,7 @@ let draw_indent_lines view (drawable : GDraw.drawable) start stop y0 =
       if y2 - y1 > !hline then (drawable#line ~x ~y:y1 ~x ~y:y2)
     end !xlines
   end lines2;
-  Gdk.GC.set_dashes drawable#gc ~offset:1 [1; 2];
+  Gdk.GC.set_dashes drawable#gc ~offset:1 Oe_config.on_off_dashes;
   let color_dashed = view#options#indent_lines_color_dashed in
   List.iter begin fun (x, xlines) ->
     List.iter begin fun (y1, y2) ->

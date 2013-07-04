@@ -475,9 +475,9 @@ let targets = [
     show                 = false;
   };
   
-  (* 5 *)
+  (* 6 *)
   "ocamleditorLib", {
-    num                  = 0;
+    num                  = 6;
     id                   = 14;
     output_name          = "ocamleditor_lib";
     target_type          = Library;
@@ -500,10 +500,10 @@ let targets = [
     external_tasks       = [];
     restrictions         = [];
     dependencies         = [4; 10; 5; 6; 8; 9; 20];
-    show                 = false;
+    show                 = true;
   };
   
-  (* 5 *)
+  (* 6 *)
   "plugin-remote-bytecode", {
     num                  = 0;
     id                   = 17;
@@ -531,7 +531,7 @@ let targets = [
     show                 = false;
   };
   
-  (* 5 *)
+  (* 6 *)
   "plugin-remote-native", {
     num                  = 0;
     id                   = 16;
@@ -559,7 +559,7 @@ let targets = [
     show                 = false;
   };
   
-  (* 5 *)
+  (* 6 *)
   "plugin-dotviewer-byetcode", {
     num                  = 0;
     id                   = 18;
@@ -587,7 +587,7 @@ let targets = [
     show                 = false;
   };
   
-  (* 5 *)
+  (* 6 *)
   "plugin-dotviewer-native", {
     num                  = 0;
     id                   = 19;
@@ -615,7 +615,7 @@ let targets = [
     show                 = false;
   };
   
-  (* 5 *)
+  (* 6 *)
   "prepare-build", {
     num                  = 0;
     id                   = 20;
@@ -643,7 +643,7 @@ let targets = [
     show                 = false;
   };
   
-  (* 5 *)
+  (* 6 *)
   "tools", {
     num                  = 0;
     id                   = 13;

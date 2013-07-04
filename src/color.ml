@@ -24,9 +24,9 @@
 let name = function `RGB (red, green, blue) -> Printf.sprintf "#%02X%02X%02X" red green blue
 
 let name_of_gdk color =
-  let r = Gdk.Color.red color in
-  let g = Gdk.Color.green color in
-  let b = Gdk.Color.blue color in
+  let r = Gdk.Color.red color mod 256 in
+  let g = Gdk.Color.green color mod 256 in
+  let b = Gdk.Color.blue color mod 256 in
   name (`RGB (r, g, b))
 
 let rgb f name = try Scanf.sscanf name "#%2x%2x%2x" f with _ -> Scanf.sscanf name "#%1x%1x%1x" f;;

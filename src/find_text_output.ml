@@ -122,10 +122,13 @@ class widget
       vc_hits#set_sort_column_id 1;
       vc_path#set_sort_column_id 2;
       preview#set_smart_click false;
-      preview#options#set_highlight_current_line (Some (Color.name_of_gdk (Preferences.tag_color "highlight_current_line")));
+      let current_line_color = Color.name_of_gdk (Preferences.tag_color "highlight_current_line") in
+      preview#options#set_highlight_current_line (Some current_line_color);
       preview#options#set_show_line_numbers false;
       preview#options#set_show_markers false;
-      preview#options#set_current_line_border_color Oe_config.find_text_output_border_color;
+      preview#options#set_current_line_border_color
+        (match Oe_config.find_text_output_border_color with
+            Some color -> color | _ -> `NAME (Color.add_value current_line_color 0.1));
       preview#set_editable false;
       preview#set_cursor_visible false;
       preview#set_pixels_above_lines 3;

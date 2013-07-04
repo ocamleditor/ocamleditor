@@ -21,8 +21,18 @@
 *)
 
 
+open Printf
+
 let apply (view : Text.view) pref =
-  view#set_left_margin pref.Preferences.pref_editor_left_margin;
+  view#set_left_margin (pref.Preferences.pref_editor_left_margin + Oe_config.current_line_width);
+  view#set_current_line_border_x1 (view#left_margin - Oe_config.current_line_width / 2 (*- 1*)); (* 1 is the cursor width *)
+  view#set_current_line_border_x2 (view#left_margin - Oe_config.current_line_width / 2 + Oe_config.current_line_border_adjust + 1);
+  kprintf GtkMain.Rc.parse_string "
+style \"s1\" {
+  GtkTextView::cursor_aspect_ratio = %.1f
+}
+class \"GtkTextView\" style \"s1\"
+" Oe_config.cursor_aspect_ratio;
   let above, below = pref.Preferences.pref_editor_pixels_lines in
   view#set_pixels_above_lines above;
   view#set_pixels_below_lines below;

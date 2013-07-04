@@ -196,6 +196,10 @@ object (self)
   val mutable realized = false
   val mutable signal_id_highlight_current_line = None
   val mutable mark_occurrences_manager = None
+  val mutable current_line_border_x1 = 0
+  method set_current_line_border_x1 x = current_line_border_x1 <- x
+  val mutable current_line_border_x2 = 0
+  method set_current_line_border_x2 x = current_line_border_x2 <- x
 
   method project = project
 
@@ -565,27 +569,6 @@ object (self)
             let adjust      = Oe_config.current_line_border_adjust in
             let hadjust     = match hadjustment with Some adj -> int_of_float adj#value - self#left_margin | _ -> 0 in
             let drawable    = new GDraw.drawable window in
-            (* Current line border *)
-            begin
-              if self#misc#get_flag `HAS_FOCUS && options#current_line_border_enabled then begin
-                match options#highlight_current_line with
-                  | Some _ ->
-                    let iter = buffer#get_iter `INSERT in
-                    let y, h = view#get_line_yrange iter in
-                    let y = y - y0 in
-                    if iter#equal buffer#end_iter && iter#line_index = 0 then begin
-                      (* Fix for draw_current_line_background *)
-                      drawable#set_foreground options#current_line_bg_color;
-                      drawable#rectangle ~x:self#left_margin ~y ~filled:true ~width:w0 ~height:h ();
-                    end;
-                    drawable#set_line_attributes ~width:1 ~style:`ON_OFF_DASH ();
-                    drawable#set_foreground options#current_line_border_color;
-                    Gdk.GC.set_dashes drawable#gc ~offset:1 [1; 2];
-                    drawable#rectangle ~x:(self#left_margin - 1) ~y ~filled:false
-                      ~width:(w0 - adjust - self#left_margin) ~height:(h - adjust) ();
-                  | _ -> ()
-              end;
-            end;
             (* Indentation guidelines *)
             if options#show_indent_lines && not options#show_whitespace_chars
             then (Text_indent_lines.draw_indent_lines self drawable) start stop y0;
@@ -609,58 +592,6 @@ object (self)
                   drawable#set_line_attributes ~style:`SOLID ();
                   drawable#set_foreground color;
                   drawable#line ~x ~y:0 ~x ~y:h0;
-                | _ -> ()
-            end;
-            (* Border around matching delimiters *)
-            begin
-              match current_matching_tag_bounds_draw with
-                | (lstart, lstop) :: (rstart, rstop) :: [] ->
-                  drawable#set_foreground Oe_config.matching_delim_border_color;
-                  drawable#set_line_attributes ~width:1 ~style:`SOLID ();
-                  let draw start stop =
-                    match buffer#get_iter_at_mark_opt (`MARK start) with
-                      | Some start ->
-                        begin
-                          match buffer#get_iter_at_mark_opt (`MARK stop) with
-                            | Some stop ->
-                              let yl1, hl1 = view#get_line_yrange start in
-                              let yl1 = yl1 - y0 in
-                              (* count_displayed_lines *)
-                              let iter = ref (stop#set_line_index 0) in
-                              let x_chars = ref 0 in
-                              let lines_displayed = ref 1 in (* n-th display-line where "start" lies, counting from 1 *)
-                              while not (!iter#equal start) do
-                                if !iter#char = 9 then begin
-                                  x_chars := ((!x_chars / 8) * 8 + 8);
-                                end else (incr x_chars);
-                                iter := !iter#forward_char;
-                                if view#starts_display_line !iter then (x_chars := 0; incr lines_displayed)
-                              done;
-                              (* count how many display-lines constitute the line *)
-                              let n_display_lines = ref !lines_displayed in
-                              let i = stop#copy in
-                              while view#forward_display_line i && i#line = stop#line do
-                                incr n_display_lines
-                              done;
-                              (*  *)
-                              let x = approx_char_width * !x_chars - hadjust - 1 in (* -1 per evitare sovrapposizione col cursore *)
-                              let width_chars = stop#line_index - start#line_index in
-                              let width = approx_char_width * width_chars in
-                              let pango = self#misc#pango_context in
-                              let metrics = pango#get_metrics() in
-                              let height = (metrics#ascent + metrics#descent) / Pango.scale -  1 in
-                              let y =
-                                if !lines_displayed > 1 (*0 ?*)
-                                then yl1 + ((!lines_displayed - 1) * (hl1 / !n_display_lines))
-                                else yl1 + view#pixels_above_lines
-                              in
-                              drawable#rectangle ~x ~y ~width ~height ();
-                            | _ -> ()
-                        end
-                      | _ -> ()
-                  in
-                  draw lstart lstop;
-                  draw rstart rstop;
                 | _ -> ()
             end;
             (* ocamldoc_paragraph_bgcolor_enabled *)
@@ -729,7 +660,7 @@ object (self)
             if options#show_dot_leaders && not options#show_whitespace_chars then begin
               (*Prf.crono Prf.prf_draw_dot_leaders begin fun () ->*)
                 Gdk.GC.set_fill drawable#gc `SOLID;
-                drawable#set_line_attributes ~style:Oe_config.dash_style ();
+                drawable#set_line_attributes ~width:1 ~style:Oe_config.dash_style ();
                 drawable#set_foreground options#text_color;
                 let offset = self#left_margin - hadjust in
                 Alignment.iter ~start:expose_top ~stop:expose_bottom begin fun _ _ start stop _ ->
@@ -746,6 +677,79 @@ object (self)
                 end
               (*end;*)
             end (*()*);
+            (* Current line border *)
+            begin
+              if self#misc#get_flag `HAS_FOCUS && options#current_line_border_enabled then begin
+                match options#highlight_current_line with
+                  | Some _ ->
+                    let iter = buffer#get_iter `INSERT in
+                    let y, h = view#get_line_yrange iter in
+                    let y = y - y0 in
+                    if iter#equal buffer#end_iter && iter#line_index = 0 then begin
+                      (* Fix for draw_current_line_background *)
+                      drawable#set_foreground options#current_line_bg_color;
+                      drawable#rectangle ~x:self#left_margin ~y ~filled:true ~width:w0 ~height:h ();
+                    end;
+                    drawable#set_line_attributes ~join:Oe_config.current_line_join ~width:Oe_config.current_line_width ~style:Oe_config.current_line_style ();
+                    drawable#set_foreground options#current_line_border_color;
+                    Gdk.GC.set_dashes drawable#gc ~offset:1 Oe_config.on_off_dashes;
+                    drawable#rectangle ~x:current_line_border_x1 ~y ~filled:false
+                      ~width:(w0 - current_line_border_x2) ~height:(h - adjust) ();
+                  | _ -> ()
+              end;
+            end;
+            (* Border around matching delimiters *)
+            begin
+              match current_matching_tag_bounds_draw with
+                | (lstart, lstop) :: (rstart, rstop) :: [] ->
+                  drawable#set_foreground Oe_config.matching_delim_border_color;
+                  drawable#set_line_attributes ~width:1 ~style:`SOLID ();
+                  let draw start stop =
+                    match buffer#get_iter_at_mark_opt (`MARK start) with
+                      | Some start ->
+                        begin
+                          match buffer#get_iter_at_mark_opt (`MARK stop) with
+                            | Some stop ->
+                              let yl1, hl1 = view#get_line_yrange start in
+                              let yl1 = yl1 - y0 in
+                              (* count_displayed_lines *)
+                              let iter = ref (stop#set_line_index 0) in
+                              let x_chars = ref 0 in
+                              let lines_displayed = ref 1 in (* n-th display-line where "start" lies, counting from 1 *)
+                              while not (!iter#equal start) do
+                                if !iter#char = 9 then begin
+                                  x_chars := ((!x_chars / 8) * 8 + 8);
+                                end else (incr x_chars);
+                                iter := !iter#forward_char;
+                                if view#starts_display_line !iter then (x_chars := 0; incr lines_displayed)
+                              done;
+                              (* count how many display-lines constitute the line *)
+                              let n_display_lines = ref !lines_displayed in
+                              let i = stop#copy in
+                              while view#forward_display_line i && i#line = stop#line do
+                                incr n_display_lines
+                              done;
+                              (*  *)
+                              let x = approx_char_width * !x_chars - hadjust - 1 in (* -1 per evitare sovrapposizione col cursore *)
+                              let width_chars = stop#line_index - start#line_index in
+                              let width = approx_char_width * width_chars in
+                              let pango = self#misc#pango_context in
+                              let metrics = pango#get_metrics() in
+                              let height = (metrics#ascent + metrics#descent) / Pango.scale -  1 in
+                              let y =
+                                if !lines_displayed > 1 (*0 ?*)
+                                then yl1 + ((!lines_displayed - 1) * (hl1 / !n_display_lines))
+                                else yl1 + view#pixels_above_lines
+                              in
+                              drawable#rectangle ~x ~y ~width ~height ();
+                            | _ -> ()
+                        end
+                      | _ -> ()
+                  in
+                  draw lstart lstop;
+                  draw rstart rstop;
+                | _ -> ()
+            end;
             false;
           | _ -> false
       end;
@@ -810,7 +814,9 @@ object (self)
           end
         | Some color ->
           options#set_current_line_bg_color (`NAME color);
-          options#set_current_line_border_color (`NAME (Color.add_value color 0.27));
+          options#set_current_line_border_color
+            (match Oe_config.current_line_border_color with
+                Some color -> color | _ -> `NAME (Color.add_value color 0.1));  
           Gmisclib.Util.set_tag_paragraph_background highlight_current_line_tag color;
           let id = self#buffer#connect#mark_set ~callback:begin fun iter mark ->
             match GtkText.Mark.get_name mark with

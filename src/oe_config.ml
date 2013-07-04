@@ -64,6 +64,12 @@ let warning_underline_color              = warning_popup_border_color
 let warning_unused_color                 = "#a0a0a0"
 let warning_unused_properties            = [`FOREGROUND warning_unused_color; `STYLE `ITALIC]
 let warning_tootip_enabled               = false
+let current_line_border_color            = None (*Some (`NAME "#707070")*)
+let current_line_width                   = 2 (* Left margin is automatically increased by current_line_width *)
+let current_line_style                   = (*`ON_OFF_DASH*) `SOLID
+let current_line_join                    = (*`ROUND `MITER *) `BEVEL
+let cursor_aspect_ratio                  = 0.1  (*[0.0-1.0]*)
+let on_off_dashes                        = [1; 2]
 (* Gutter colors:
   `CALC factor    : Calculated according to the bg color of the text view.
                     [darker] 0.5 <= factor <= 1.0 [same as text view]
@@ -87,7 +93,7 @@ let find_references_title_fgcolor        = "#ffffff"
 let find_replace_history_max_length      = 75
 (* Condensed font for the file list in the search results pane. None is default font. (`STRETCH `CONDENSED doesn't work) *)
 let find_text_output_font_condensed      = Some (match Sys.os_type with "Win32" -> "Arial" | _ -> "Helvetica 9") (*None*)
-let find_text_output_border_color        = `NAME "#707070" (* Current line border color of the find text output pane *)
+let find_text_output_border_color        = current_line_border_color (* Current line border color of the find text output pane *)
 let find_text_output_highlight           = `DEFAULT, `DEFAULT (*`NAME "#ffff7e", `NONE*) (* Background and foreground colors to highlight occurrences where the pattern matches.
                                           (`NONE=do not change color; `DEFAULT=default color; `NAME=specific color)*)
 let find_text_output_linenumber_fgcolor  = `FOREGROUND "#000000"
@@ -191,9 +197,10 @@ let get_version command =
   try
     let redirect_stderr = if Sys.os_type = "Win32" then "1>NUL 2>NUL" else "1>/dev/null 2>/dev/null" in
     let cmd = sprintf "%s %s" command redirect_stderr in
-    let status_not_found = if Sys.os_type = "Win32" then 9009 else 127 in
+    let status_not_found = if Sys.os_type = "Win32" then [1; 9009] else [127] in
     let status = Sys.command cmd in
-    if status = 0 || not (List.mem status [status_not_found]) then
+    (*Printf.printf "%s -- %d\n%!" cmd status;*)
+    if status = 0 || not (List.mem status status_not_found) then
       let redirect_stderr = if Sys.os_type = "Win32" then " 2>&1" else " 2>&1" in
       let cmd = sprintf "%s %s" command redirect_stderr in
       (match kprintf Miscellanea.exec_lines "%s %s" cmd redirect_stderr with ver :: _ -> Some ver | _ -> None)
@@ -203,14 +210,15 @@ let get_version command =
 let dot_version = get_version "dot -V"
 let ocp_indent_version = get_version "ocp-indent --version"
 let plink_version = get_version "plink -V" (* exits with status = 1 *)
+let xdg_open_version = get_version "xdg-open --version"
 
 (** GTK config *)
 (* Adjustments according to the GTK version *)
 let gtk_major, gtk_minor, _ = GMain.Main.version
 let current_line_border_adjust, dash_style, dash_style_offset =
   match gtk_major, gtk_minor with
-    | 2, 14 -> 2, `ON_OFF_DASH, None
-    | 2, 16 -> 2, `DOUBLE_DASH, None
+    | 2, 14 -> 0, `ON_OFF_DASH, None
+    | 2, 16 -> 0, `DOUBLE_DASH, None
     | 2, 20 -> 1, `ON_OFF_DASH, (Some 2)
     | 2, 22 -> 2, `DOUBLE_DASH, None
     | 2, 24 when Sys.os_type = "Win32" -> 1, `DOUBLE_DASH, None
