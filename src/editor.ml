@@ -501,6 +501,22 @@ object (self)
       item#set_image (GMisc.image ~stock:`REVERT_TO_SAVED ~icon_size:`MENU ())#coerce;
       ignore (item#connect#activate ~callback:(fun () -> self#revert page));
       let _ = GMenu.separator_item ~packing:menu#add () in
+      let item = GMenu.menu_item ~label:"Copy Full Path" ~packing:menu#add () in
+      ignore (item#connect#activate ~callback:begin fun () ->
+        let clipboard = GData.clipboard Gdk.Atom.clipboard in
+        clipboard#set_text filename;
+      end);
+      let item = GMenu.menu_item ~label:"Open Containing Folder" ~packing:menu#add () in
+      ignore (item#connect#activate ~callback:begin fun () ->
+          let cmd =
+            match Sys.os_type with
+              | "Win32" | "Win64" -> Some (sprintf "explorer /select,\"%s\"" filename)
+              | _ when Oe_config.xdg_open_version <> None -> Some (sprintf "xdg-open %s" (Filename.quote (Filename.dirname filename)))
+              | _ -> None
+          in
+          Opt.may cmd (fun cmd -> ignore (Thread.create (fun () -> ignore (Sys.command cmd)) ()))
+      end);
+      let _ = GMenu.separator_item ~packing:menu#add () in
       let item = GMenu.image_menu_item ~label:"Switch to Implementation/Interface" ~packing:menu#add () in
       ignore (item#connect#activate ~callback:(fun () -> self#switch_mli_ml page));
       item#misc#set_sensitive (Menu_file.get_file_switch_sensitive page);
