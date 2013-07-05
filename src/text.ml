@@ -815,8 +815,7 @@ object (self)
         | Some color ->
           options#set_current_line_bg_color (`NAME color);
           options#set_current_line_border_color
-            (match Oe_config.current_line_border_color with
-                Some color -> color | _ -> `NAME (Color.add_value color 0.1));  
+            (Oe_config.current_line_border_color (Color.add_value ?sfact:None) color);
           Gmisclib.Util.set_tag_paragraph_background highlight_current_line_tag color;
           let id = self#buffer#connect#mark_set ~callback:begin fun iter mark ->
             match GtkText.Mark.get_name mark with

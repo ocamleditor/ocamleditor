@@ -64,7 +64,7 @@ let warning_underline_color              = warning_popup_border_color
 let warning_unused_color                 = "#a0a0a0"
 let warning_unused_properties            = [`FOREGROUND warning_unused_color; `STYLE `ITALIC]
 let warning_tootip_enabled               = false
-let current_line_border_color            = None (*Some (`NAME "#707070")*)
+let current_line_border_color            = fun add bgcolor -> `NAME (add bgcolor 0.1)
 let current_line_width                   = 2 (* Left margin is automatically increased by current_line_width *)
 let current_line_style                   = (*`ON_OFF_DASH*) `SOLID
 let current_line_join                    = (*`ROUND `MITER *) `BEVEL
@@ -93,7 +93,7 @@ let find_references_title_fgcolor        = "#ffffff"
 let find_replace_history_max_length      = 75
 (* Condensed font for the file list in the search results pane. None is default font. (`STRETCH `CONDENSED doesn't work) *)
 let find_text_output_font_condensed      = Some (match Sys.os_type with "Win32" -> "Arial" | _ -> "Helvetica 9") (*None*)
-let find_text_output_border_color        = current_line_border_color (* Current line border color of the find text output pane *)
+let find_text_output_border_color        = current_line_border_color(*fun _ _ -> `NAME "#707070"*) (* Current line border color of the find text output pane *)
 let find_text_output_highlight           = `DEFAULT, `DEFAULT (*`NAME "#ffff7e", `NONE*) (* Background and foreground colors to highlight occurrences where the pattern matches.
                                           (`NONE=do not change color; `DEFAULT=default color; `NAME=specific color)*)
 let find_text_output_linenumber_fgcolor  = `FOREGROUND "#000000"

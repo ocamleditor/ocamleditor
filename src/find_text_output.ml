@@ -127,8 +127,7 @@ class widget
       preview#options#set_show_line_numbers false;
       preview#options#set_show_markers false;
       preview#options#set_current_line_border_color
-        (match Oe_config.find_text_output_border_color with
-            Some color -> color | _ -> `NAME (Color.add_value current_line_color 0.1));
+        (Oe_config.find_text_output_border_color (Color.add_value ?sfact:None) current_line_color);
       preview#set_editable false;
       preview#set_cursor_visible false;
       preview#set_pixels_above_lines 3;
