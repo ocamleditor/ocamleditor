@@ -24,6 +24,10 @@
 open Printf
 open Miscellanea
 
+let messages  =
+  match Oe_config.layout_find_module_browser with
+    | `HORIZONTAL -> Messages.hmessages | _ -> Messages.vmessages;;
+
 (** Class OCaml Shell *)
 class ocaml_shell ?project () =
   let vbox = GPack.vbox () in
@@ -35,14 +39,19 @@ class ocaml_shell ?project () =
   let b_next = GButton.tool_button ~stock:`GO_DOWN ~packing:toolbar#insert () in
   let b_send = GButton.tool_button ~stock:`OK ~packing:toolbar#insert () in
   let _ = GButton.separator_tool_item ~packing:toolbar#insert () in*)
-  let b_use = GButton.tool_button ~packing:toolbar#insert () in
+  let b_use = GButton.tool_button ~label:"Use File" ~packing:toolbar#insert () in
   let _ = b_use#set_icon_widget (Icons.create Icons.file_ml)#coerce in
-  let b_load = GButton.tool_button ~packing:toolbar#insert () in
+  let b_load = GButton.tool_button ~label:"Load Bytecode" ~packing:toolbar#insert () in
   let _ = b_load#set_icon_widget (Icons.create Icons.file_cm)#coerce in
-  let b_directory = GButton.tool_button ~packing:toolbar#insert () in
+  let b_directory = GButton.tool_button ~label:"Import Directory" ~packing:toolbar#insert () in
   let _ = b_directory#set_icon_widget (Icons.create Icons.dir)#coerce in
-  let b_load_path = GButton.tool_button ~packing:toolbar#insert () in
+  let b_load_path = GButton.tool_button ~label:"Load Project Path" ~packing:toolbar#insert () in
   let _ = b_load_path#set_icon_widget (Icons.create Icons.load_proj)#coerce in
+  let _ = GButton.separator_tool_item ~packing:toolbar#insert () in
+  let b_rename = GButton.tool_button ~label:"Rename" ~packing:toolbar#insert () in
+  let _ = b_rename#set_icon_widget (GMisc.image ~pixbuf:Icons.edit ())#coerce in
+  let button_detach = GButton.tool_button ~label:"Detach" ~packing:toolbar#insert () in
+  let _ = button_detach#set_icon_widget (GMisc.image ~pixbuf:Icons.detach ())#coerce in
   let _ = GButton.separator_tool_item ~packing:toolbar#insert () in
   let b_kill = GButton.tool_button ~stock:`STOP ~packing:toolbar#insert () in
   (*  *)
@@ -55,15 +64,17 @@ class ocaml_shell ?project () =
   let _ = tooltips#set_tip ~text:"Import directory..." b_directory#coerce in
   let _ = tooltips#set_tip ~text:"Load project path" b_load_path#coerce in
   let _ = tooltips#set_tip ~text:"Kill process" b_kill#coerce in
+  let _ = tooltips#set_tip ~text:"Rename Toplevel Window" b_rename#coerce in
   (*  *)
   let prog = Ocaml_config.ocaml() in
   let sh = new Shell.ocaml ~prog ~env:(Unix.environment()) ~args:[] ~packing:sw#add () in
   let _ = Ocaml_text.shells := sh :: !Ocaml_text.shells in
 object (self)
-  inherit GObj.widget vbox#as_widget as super
-  inherit Messages.page
+  inherit GObj.widget vbox#as_widget
+  inherit Messages.page ~role:"ocaml-toplevel" as super
 
-  method parent_changed m =
+  method! parent_changed m =
+    super#parent_changed m;
     toolbar#misc#hide();
     if m = Messages.vmessages then begin
       toolbar#set_orientation `VERTICAL;
@@ -79,7 +90,6 @@ object (self)
     toolbar#misc#show();
 
   method textview = sh#textview
-  method label = "OCaml Toplevel"
   method alive = sh#alive
   method quit () =
     Ocaml_text.shells := List.filter ((<>) sh) !Ocaml_text.shells;
@@ -144,34 +154,48 @@ object (self)
     end);
     ignore (b_kill#connect#clicked ~callback:begin fun () ->
       self#quit();
-      List.iter (fun x -> x#misc#set_sensitive false) toolbar#children;
-    end)
+      List.iter (fun x -> if x#misc#get_oid <> button_detach#misc#get_oid then x#misc#set_sensitive false) toolbar#children;
+    end);
+    ignore (button_detach#connect#clicked ~callback:(fun () -> self#detach button_detach));
+    ignore (self#connect_detach#detached ~callback:(fun d -> b_rename#misc#set_sensitive (not d)));
+
+  method b_rename = b_rename
 end
 
 let append_page ?project (messages : Messages.messages) =
   let sh = new ocaml_shell ?project () in
+  sh#set_title "OCaml Toplevel";
+  sh#set_icon (Some Icons.toplevel);
   let label_widget =
-    let hbox = GPack.hbox () in
+    let hbox = GPack.hbox ~spacing:1 () in
+    let icon = GMisc.image ~pixbuf:Icons.toplevel ~packing:hbox#pack () in
     let ebox = GBin.event_box ~packing:hbox#add () in
     ebox#misc#set_property "visible-window" (`BOOL false);
-    let label = GMisc.label ~text:sh#label ~packing:ebox#add ~show:true () in
+    let label = GMisc.label ~text:sh#title ~packing:ebox#add ~show:true () in
     let entry = GEdit.entry ~packing:hbox#add ~show:false () in
     let is_label = ref true in
+    let is_busy = ref false in
     let toggle _ =
-      if !is_label then begin
-        entry#set_text label#text;
-        entry#set_width_chars (String.length label#text + 5);
-        ebox#misc#hide();
-        entry#misc#show();
-        entry#misc#grab_focus()
-      end else begin
-        label#set_text entry#text;
-        entry#misc#hide();
-        ebox#misc#show();
+      if not !is_busy then begin
+        is_busy := true;
+        if !is_label then begin
+          entry#set_text label#text;
+          entry#set_width_chars (String.length label#text + 5);
+          ebox#misc#hide();
+          entry#misc#show();
+          entry#misc#grab_focus();
+        end else begin
+          label#set_text entry#text;
+          entry#misc#hide();
+          ebox#misc#show();
+          sh#set_title entry#text;
+        end;
+        is_label := not !is_label;
+        is_busy := false;
       end;
-      is_label := not !is_label;
       true;
     in
+    sh#b_rename#connect#clicked ~callback:(fun () -> ignore (toggle ()));
     entry#event#connect#key_press ~callback:begin fun ev ->
       if GdkEvent.Key.keyval ev = GdkKeysyms._Return then (toggle())
       else false
@@ -193,7 +217,7 @@ let append_page ?project (messages : Messages.messages) =
   sh#present ();
   sh#misc#connect#destroy ~callback:sh#quit;
   sh#active#set false;
-  let ask ~cancel () = Dialog.process_still_active ~name:sh#label ~ok:sh#quit ~cancel () in
+  let ask ~cancel () = Dialog.process_still_active ~name:sh#title ~ok:sh#quit ~cancel () in
   sh#set_close_tab_func (fun () -> if sh#alive then (sh#quit()));
   ignore (messages#connect#remove_page ~callback:begin fun child ->
     if sh#alive && child#misc#get_oid = sh#misc#get_oid then

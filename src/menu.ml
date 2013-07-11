@@ -136,7 +136,7 @@ let edit ~browser ~group ~flags
   let _ = GMenu.separator_item ~packing:menu#add () in
   (** Eval in Toplevel *)
   let to_shell = GMenu.image_menu_item ~label:"Eval in Toplevel" ~packing:menu#add () in
-  to_shell#set_image (GMisc.image ~stock:`EXECUTE ~icon_size:`MENU ())#coerce;
+  to_shell#set_image (Icons.create Icons.toplevel)#coerce;
   ignore (to_shell#connect#activate ~callback:(fun () ->
     editor#with_current_page (fun page -> page#ocaml_view#obuffer#send_to_shell ())));
   to_shell#add_accelerator ~group ~modi:[] GdkKeysyms._F8 ~flags;

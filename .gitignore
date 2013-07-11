@@ -34,6 +34,6 @@ _oasis
 setup.data
 setup.log
 setup.ml
-src/resources.res
+src/resource.res
 src/icons
 

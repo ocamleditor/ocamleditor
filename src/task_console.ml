@@ -59,6 +59,9 @@ class view ~(editor : Editor.editor) ?(task_kind=(`OTHER : Task.kind)) ~task ?pa
       tooltips#set_tip ~text:task.Task.et_name button_run#coerce;
       (Icons.create Icons.build_16);
   end#coerce in
+  let _                 = GButton.separator_tool_item ~packing:toolbar#insert () in
+  let button_detach     = GButton.tool_button ~label:"Detach" ~packing:toolbar#insert () in
+  let _                 = button_detach#set_icon_widget (GMisc.image ~pixbuf:Icons.detach ())#coerce in
   let view = GText.view ~editable:(task_kind = `RUN) ~cursor_visible:true ~packing:sw#add () in
   let _ = view#set_right_margin 2 in
   let _ = view#set_left_margin 2 in
@@ -69,7 +72,7 @@ class view ~(editor : Editor.editor) ?(task_kind=(`OTHER : Task.kind)) ~task ?pa
   let _ = button_wrap#set_active true in
 object (self)
   inherit GObj.widget vbox#as_widget
-  inherit Messages.page
+  inherit Messages.page ~role:"task-console" as super
 
   val working_status_changed = new working_status_changed ()
   val m_write = Mutex.create ()
@@ -90,7 +93,8 @@ object (self)
   method set_tab_label label = tab_label <- Some label
   method tab_label = match tab_label with Some x -> x | _ -> assert false
 
-  method parent_changed messages =
+  method! parent_changed messages =
+    super#parent_changed messages;
     toolbar#misc#hide();
     if messages = Messages.vmessages then begin
       toolbar#set_orientation `VERTICAL;
@@ -292,6 +296,7 @@ object (self)
     with Process.Not_started -> (finally())
 
   initializer
+    ignore (button_detach#connect#clicked ~callback:(fun () -> self#detach button_detach));
     ignore (Messages.vmessages#connect#remove_page ~callback:begin fun child ->
       if child#misc#get_oid = vbox#misc#get_oid then begin
         match process with None -> () | Some _ ->
@@ -420,7 +425,7 @@ let create ~editor task_kind task =
     console#set_task task;
     console
   with Not_found -> begin
-    let label_widget, set_active_func, label =
+    let label_widget, set_active_func, label, icon =
       match task_kind with
         | `RUN (*| `OTHER*) ->
           let box = GPack.hbox ~spacing:3 () in
@@ -430,10 +435,10 @@ let create ~editor task_kind task =
           box#coerce, Some begin fun active ->
             (*if finished then (icon#misc#hide()) else (icon#misc#show());*)
             if not active then (icon#misc#set_sensitive false) else (icon#misc#set_sensitive true);
-          end, label
+          end, label, Some icon
         | _ ->
           let label = GMisc.label ~text:task.Task.et_name () in
-          label#coerce, None, label
+          label#coerce, None, label, None
     in
     let page = new view ~editor ~task_kind ~task () in
     if task_kind = `RUN then begin
@@ -444,6 +449,8 @@ let create ~editor task_kind task =
       end;
     end;
     page#set_tab_label label;
+    page#set_title task.Task.et_name;
+    Gaux.may icon ~f:(fun icon -> page#set_icon (Some icon#pixbuf));
     Messages.vmessages#append_page ~label_widget ~with_spinner:(task_kind <> `RUN) page#as_page;
     ignore (page#connect#working_status_changed ~callback:begin fun active ->
       (match set_active_func with None -> page#active#set | Some f -> f) active

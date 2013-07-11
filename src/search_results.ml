@@ -80,6 +80,9 @@ class widget ~editor(* : Editor.editor)*) ?packing () =
   let button_new_search = GButton.tool_button ~stock:`FIND ~packing:toolbar#insert () in
   let _                 = button_new_search#misc#set_tooltip_text "New search" in
   let _                 = GButton.separator_tool_item ~packing:toolbar#insert () in
+  let button_detach     = GButton.tool_button ~label:"Detach" ~packing:toolbar#insert () in
+  let _                 = button_detach#set_icon_widget (GMisc.image ~pixbuf:Icons.detach ())#coerce in
+  let _                 = GButton.separator_tool_item ~packing:toolbar#insert () in
   let item_message      = GButton.tool_item ~packing:toolbar#insert () in
   let label_message     = GMisc.label ~markup:"" ~packing:item_message#add () in
   (* Scrolled windows *)
@@ -151,7 +154,7 @@ class widget ~editor(* : Editor.editor)*) ?packing () =
   let _                 = view_lines#misc#modify_font_by_name pref.Preferences.pref_base_font in
 object (self)
   inherit GObj.widget vbox#as_widget
-  inherit Messages.page
+  inherit Messages.page ~role:"search-results"
 
   val project = editor#project
   val mutable canceled = false
@@ -162,6 +165,7 @@ object (self)
   val mutable signal_lines_selection_changed = None
 
   initializer
+    ignore (button_detach#connect#clicked ~callback:(fun () -> self#detach button_detach));
     ignore (button_remove#connect#clicked ~callback:self#remove_entry);
     ignore (button_stop#connect#clicked ~callback:(fun () -> canceled <- true));
     ignore (button_restart#connect#clicked ~callback:self#start_search);
@@ -487,7 +491,7 @@ object (self)
         view_files#scroll_to_cell ~align:(0.5, 0.0) next vc_file;
       | _ -> ()
 
-  method parent_changed messages = ()
+  (*method parent_changed messages = ()*)
   method new_search () = ()
   method button_stop = button_stop
   method button_remove = button_remove

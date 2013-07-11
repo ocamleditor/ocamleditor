@@ -61,7 +61,7 @@ let create ~editor ~page () =
   end;
   (*  *)
   let eval_in_toplevel = GMenu.image_menu_item ~label:"Eval in Toplevel" ~packing:gmenu#append () in
-  eval_in_toplevel#set_image (GMisc.image ~stock:`EXECUTE ~icon_size:`MENU ())#coerce;
+  eval_in_toplevel#set_image (Icons.create Icons.toplevel)#coerce;
   ignore (eval_in_toplevel#connect#activate ~callback:begin fun () ->
     editor#with_current_page (fun page -> page#ocaml_view#obuffer#send_to_shell ());
   end);

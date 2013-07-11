@@ -47,3 +47,4 @@ let mkicons () =
   with _ -> close_out_noerr ochan;;
 
 let _ = main ~default_target:mkicons ~options:[] ()
+

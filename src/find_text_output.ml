@@ -65,6 +65,9 @@ class widget
   let button_new_search = GButton.tool_button ~stock:`FIND ~packing:toolbar#insert () in
   let _                 = button_new_search#misc#set_tooltip_text "New search" in
   let _                 = GButton.separator_tool_item ~packing:toolbar#insert () in
+  let button_detach     = GButton.tool_button ~label:"Detach" ~packing:toolbar#insert () in
+  let _                 = button_detach#set_icon_widget (GMisc.image ~pixbuf:Icons.detach ())#coerce in
+  let _                 = GButton.separator_tool_item ~packing:toolbar#insert () in
   let item_message      = GButton.tool_item ~packing:toolbar#insert () in
   let label_message     = GMisc.label ~packing:item_message#add () in
   (*  *)
@@ -95,7 +98,7 @@ class widget
   let _                 = vc_path#set_resizable true in
   object (self)
     inherit GObj.widget vbox#as_widget
-    inherit Messages.page
+    inherit Messages.page ~role:"find-text-output"
 
     val mutable options = None
     val project = editor#project
@@ -112,9 +115,13 @@ class widget
     val mutable current_line_selected = None
     val mutable n_rows = 0
 
-    method parent_changed messages = ()
+    (*method parent_changed messages = ()*)
 
     initializer
+      ignore (button_detach#connect#clicked ~callback:(fun () -> self#detach button_detach));
+      ignore (self#connect_detach#detached ~callback:begin fun _ ->
+          Gaux.may (preview#get_window `TEXT) ~f:(fun w -> Gdk.Window.set_cursor w (Gdk.Cursor.create `ARROW))
+      end);
       ignore (view#append_column vc_file);
       ignore (view#append_column vc_hits);
       ignore (view#append_column vc_path);

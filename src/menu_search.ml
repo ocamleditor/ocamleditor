@@ -43,6 +43,8 @@ let find_replace
       if page#misc#parent = None then
         (ignore (Messages.vmessages#append_page ~label_widget:hbox#coerce page#as_page));
       label#set_text page#text_to_find;
+      page#set_title page#text_to_find;
+      page#set_icon (Some Icons.search_results_16);
       page#present ();
     end);
     ignore (page#connect#search_finished ~callback:begin fun () ->
@@ -192,6 +194,8 @@ let find_definition_references editor =
       in
       widget#set_results results;
       label#set_text !def_name;
+      widget#set_title !def_name;
+      widget#set_icon (Some Icons.references);
       kprintf widget#label_message#set_label "References to identifier <tt>%s</tt>" (Glib.Markup.escape_text !def_name);
     end);
     widget#start_search();
@@ -234,6 +238,8 @@ let find_used_components editor =
           let results = result_open :: {result_open with locations = used_components} :: [] in
           widget#set_results results;
           label#set_text ident.ident_loc.txt;
+          widget#set_title ident.ident_loc.txt;
+          widget#set_icon (Some Icons.references);
           kprintf widget#label_message#set_label
             "Used components of module <tt>%s</tt>, opened at file %s, line %d"
               (Glib.Markup.escape_text ident.ident_loc.txt)

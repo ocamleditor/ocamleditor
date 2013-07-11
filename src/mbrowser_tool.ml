@@ -110,7 +110,7 @@ class widget ~project ?(is_completion=false) ?(enable_history=true) ?width ?heig
   let _              = hyperlink#enable() in
 object (self)
   inherit GObj.widget ebox#as_widget
-  inherit Messages.page
+  inherit Messages.page ~role:"module-browser" as super
 
   val mutable search_results_length = 0
   val mutable widget_libraries = None
@@ -119,7 +119,7 @@ object (self)
   val mutable cache_widget_module = []
   val mutable tooltip_popup = None
   val mutable current_symbol = None
-  val mutable detached = None, Some messages
+  (*val mutable detached = None, Some messages*)
   val mutable radio_signals = []
   val tout_entry_find = Timeout.create ~delay:0.85 ()
   val switch_page = new switch_page ()
@@ -146,6 +146,11 @@ object (self)
       ignore (self#tooltip_destroy());
       (*  *)
       self#update_symbol_details widget ();
+    end);
+    (* Put toolbar on top of the window when detached. *)
+    ignore (self#connect_detach#detached ~callback:begin function
+      | true -> vbox#reorder_child ~pos:0 toolbar#coerce
+      | false -> vbox#reorder_child ~pos:10 toolbar#coerce;
     end);
     (*  *)
     self#init_key_bindings();
@@ -195,7 +200,7 @@ object (self)
     ignore (button_layout_both#connect#after#toggled ~callback:(fun () -> if button_layout_both#get_active then self#set_layout `both));
     ignore (button_layout_slist#connect#after#toggled ~callback:(fun () -> if button_layout_slist#get_active then self#set_layout `slist));
     ignore (button_layout_odoc#connect#after#toggled ~callback:(fun () -> if button_layout_odoc#get_active then self#set_layout `odoc));
-    ignore (button_detach#connect#clicked ~callback:self#detach);
+    ignore (button_detach#connect#clicked ~callback:(fun () -> self#detach button_detach));
     ignore (button_find#connect#clicked ~callback:find_and_fill);
     ignore (entry_find#connect#changed ~callback:self#find);
     ignore (button_remove#connect#clicked ~callback:begin fun () ->
@@ -977,34 +982,7 @@ object (self)
 
   method odoc_view = odoc_view
 
-  method parent_changed messages = detached <- None, Some messages
-
-  method private detach () =
-    match detached with
-      | Some window, Some messages ->
-        begin
-          try
-            vbox#reorder_child ~pos:10 toolbar#coerce;
-            ignore (messages#reparent self#misc#get_oid);
-            button_detach#set_icon_widget (GMisc.image ~pixbuf:Icons.detach ())#coerce;
-            window#destroy();
-            detached <- None, Some messages;
-            self#present ();
-            Gaux.may (GWindow.toplevel self) ~f:(fun w -> w#present())
-          with Not_found -> assert false
-        end;
-      | _, messages ->
-        button_detach#misc#set_sensitive false;
-        button_detach#misc#set_state `NORMAL;
-        vbox#reorder_child ~pos:0 toolbar#coerce;
-        let window = GWindow.window ~title ~icon:Icons.module_browser ~width:1000 ~height:600 ~border_width:0 ~allow_shrink:true ~position:`CENTER () in
-        self#misc#reparent window#coerce;
-        button_detach#set_icon_widget (GMisc.image ~pixbuf:Icons.attach ())#coerce;
-        detached <- Some window, messages;
-        window#show();
-        button_detach#misc#set_sensitive true;
-
-  (** connect *)
+    (** connect *)
   method connect = new widget_signals ~switch_page ~add_page
 end
 
@@ -1033,6 +1011,12 @@ let append_to_messages ~project =
   let label = GMisc.label ~text:title ~packing:hbox#add () in
   let button = messages#append_page ~label_widget:hbox#coerce ~with_spinner:false widget#as_page in
   widget#create_widget_libraries ();
-  ignore (widget#connect#switch_page ~callback:(fun w -> label#set_text w#title.title));
+  widget#set_title title;
+  widget#set_icon (Some icon#pixbuf);
+  ignore (widget#connect#switch_page ~callback:begin fun w ->
+    label#set_text w#title.title;
+    widget#set_title w#title.title;
+    widget#set_icon (Some icon#pixbuf);
+  end);
   widget#present();
 ;;

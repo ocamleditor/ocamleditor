@@ -21,6 +21,7 @@
 *)
 
 open GUtil
+open Miscellanea
 
 exception Cancel_process_termination
 
@@ -29,24 +30,117 @@ let vpaned = GPack.paned `VERTICAL ()
 
 let table = Hashtbl.create 17
 
+module Window_positions = struct
+  let filename = Filename.concat Oe_config.ocamleditor_user_home "message_window_positions"
+
+  let write positions =
+    let dump = Oe.Dump (Oe.magic, positions) in
+    let ochan = open_out_bin filename in
+    lazy (output_value ochan dump) @$ (lazy (close_out ochan))
+
+  let read () =
+    let ichan = open_in_gen [Open_binary; Open_creat] 0o777 filename in
+    lazy (try
+            let (positions : ((string, (int * int * int * int)) Hashtbl.t)) = Oe.open_dump (input_value ichan) in
+            positions
+          with End_of_file -> Hashtbl.create 7) @$ (lazy (close_in ichan))
+
+  let table = read()
+
+  let _ = at_exit (fun () -> write table)
+end
+
 (** page *)
-class virtual page =
+class virtual page ~role =
 object (self)
+  val detached = new detached ()
+  val mutable detached_window = None
   val active = new GUtil.variable true
   val mutable parent : messages option = None
   val mutable close_tab_func = None
+  val icon = new GUtil.variable None
+  val title = new GUtil.variable ""
+  method icon = icon#get
+  method set_icon = icon#set
+  method title = title#get
+  method set_title = title#set
   method as_page = (self :> page)
   method set_parent p = parent <- Some p
-  method present () = Gaux.may parent ~f:(fun messages -> messages#present self#coerce)
+  method present () =
+    match detached_window with
+      | Some window -> window#present()
+      | _ -> Gaux.may parent ~f:(fun messages -> messages#present self#coerce)
   method active = active
-  method virtual parent_changed : messages -> unit
+  (*method virtual parent_changed : messages -> unit*)
+  method parent_changed : messages -> unit = self#set_parent
   method virtual coerce : GObj.widget
   method virtual misc : GObj.misc_ops
   method virtual destroy : unit -> unit
   method set_close_tab_func f = close_tab_func <- Some f
-  method set_button b =
+  method set_button (b : GButton.button) =
     Gaux.may close_tab_func ~f:(fun f -> b#connect#clicked ~callback:f);
+
+  method connect_detach = new detach_signals ~detached
+
+  method private detach button_detach =
+    match detached_window with
+      | Some (window : GWindow.window) ->
+        begin
+          match parent with
+            | Some messages_pane ->
+              ignore (messages_pane#reparent self#misc#get_oid);
+              let x, y = Gdk.Window.get_position  window#misc#window in
+              let rect = window#misc#allocation in
+              Hashtbl.replace Window_positions.table window#role (x, y - 25, rect.Gtk.width, rect.Gtk.height);
+              window#destroy();
+              detached_window <- None;
+              detached#call false;
+              self#present ();
+              Gaux.may (GWindow.toplevel self) ~f:(fun w -> w#present());
+            | _ -> assert false
+        end;
+      | _ ->
+        button_detach#misc#set_sensitive false;
+        button_detach#misc#set_state `NORMAL;
+        let icon = match self#icon with Some x -> x | _ -> Icons.oe in
+        let rect = self#misc#allocation in
+        let window = GWindow.window ~title:self#title ~icon ~width:rect.Gtk.width ~height:rect.Gtk.height ~border_width:0 ~allow_shrink:true ~position:`CENTER ~show:false () in
+        window#set_role role;
+        (*ignore (window#connect#destroy ~callback:(fun () -> self#detach button_detach));*)
+        self#misc#reparent window#coerce;
+        detached_window <- Some window;
+        window#show();
+        begin
+          try
+            let x, y, width, height = Hashtbl.find Window_positions.table window#role in
+            window#move ~x ~y;
+            window#resize ~width ~height
+          with Not_found -> ()
+        end;
+        detached#call true;
+        button_detach#misc#set_sensitive true;
+
+  initializer
+    ignore (title#connect#changed ~callback:begin fun x ->
+      match detached_window with
+        | Some window -> window#set_title x
+        | _ -> ()
+    end);
+    ignore (icon#connect#changed ~callback:begin fun x ->
+      match detached_window with
+        | Some window -> window#set_icon x
+        | _ -> ()
+    end);
 end
+
+and detach_signals ~detached =
+object (self)
+  inherit ml_signals [detached#disconnect ]
+  method detached = detached#connect ~after
+end
+
+and detached () = object (self) inherit [bool] signal () end
+
 
 (** messages *)
 and messages ~(paned : GPack.paned) () =
@@ -104,11 +198,17 @@ object (self)
     let label_widget, page = Hashtbl.find table oid in
     let tab_label = new Messages_tab.widget ~with_spinner:false ~page () in
     ignore (tab_label#button#connect#clicked ~callback:page#destroy);
-    label_widget#misc#reparent tab_label#hbox#coerce;
-    page#misc#reparent self#coerce;
-    self#set_page ~tab_label:tab_label#coerce page#coerce;
-    self#remove_empty_page();
-    label_widget, page
+    match page#misc#parent with
+      | Some parent when parent#misc#get_oid = self#misc#get_oid ->
+        (*self#detach page;*)
+        label_widget, page
+      | Some _ ->
+        label_widget#misc#reparent tab_label#hbox#coerce;
+        page#misc#reparent self#coerce;
+        self#set_page ~tab_label:tab_label#coerce page#coerce;
+        self#remove_empty_page();
+        label_widget, page
+      | _ -> assert false
 
   method visible = visible
 
@@ -138,9 +238,9 @@ object (self)
       let page =
         let label = GMisc.label ~text:"No messages" () in
         object
-          inherit page
+          inherit page ~role:"<no-messages>"
           inherit GObj.widget label#as_widget
-          method parent_changed _ = ()
+          (*method parent_changed _ = ()*)
         end
       in
       notebook#set_show_tabs false;

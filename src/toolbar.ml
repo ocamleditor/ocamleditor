@@ -47,7 +47,8 @@ class ['a] toolbar ~(messages : Messages.messages) ~(hmessages : Messages.messag
                                    tool_messages_clicked#call (not messages#visible)) in
   let tool_hmessages_sign      = tool_hmessages#connect#clicked ~callback:(fun () ->
                                    tool_hmessages_clicked#call (not hmessages#visible)) in
-  let tool_eval                = GButton.tool_button ~stock:`EXECUTE ~label:"Toplevel" () in
+  let tool_eval                = GButton.tool_button ~label:"Toplevel" () in
+  let _                        = tool_eval#set_icon_widget (GMisc.image ~pixbuf:Icons.toplevel ())#coerce in
   let tool_clean               = Gmisclib.Toolbar.menu_tool_button ~toolbar ~homogeneous:false () in
   let tool_compile_file        = GButton.tool_button ~label:"Compile File" () in
   let tool_compile             = Gmisclib.Toolbar.menu_tool_button ~toolbar ~homogeneous:false () in
@@ -136,7 +137,7 @@ object (self)
     tool_build#set_image (GMisc.image ~pixbuf:Icons.build_16 ())#coerce;
     tool_build#misc#set_tooltip_text "Build";
     toolbar#insert tool_run#as_tool_item;
-    tool_run#set_image (GMisc.image ~pixbuf:Icons.start_16 ())#coerce;
+    tool_run#set_image (GMisc.image ~icon_size:`MENU ~pixbuf:Icons.start_16 ())#coerce;
     (** Location History *)
     let _ = GButton.separator_tool_item ~packing:toolbar#insert () in
     toolbar#insert tool_back#as_tool_item;
