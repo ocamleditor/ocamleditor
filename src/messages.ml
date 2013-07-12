@@ -83,15 +83,19 @@ object (self)
   method connect_detach = new detach_signals ~detached
 
   method private detach button_detach =
+    let update_window_position window =
+      let x, y = Gdk.Window.get_position  window#misc#window in
+      let rect = window#misc#allocation in
+      Hashtbl.replace Window_positions.table window#role (x, y - 25, rect.Gtk.width, rect.Gtk.height);
+      Window_positions.write Window_positions.table;
+    in
     match detached_window with
       | Some (window : GWindow.window) ->
         begin
           match parent with
             | Some messages_pane ->
               ignore (messages_pane#reparent self#misc#get_oid);
-              let x, y = Gdk.Window.get_position  window#misc#window in
-              let rect = window#misc#allocation in
-              Hashtbl.replace Window_positions.table window#role (x, y - 25, rect.Gtk.width, rect.Gtk.height);
+              update_window_position window;
               window#destroy();
               detached_window <- None;
               detached#call false;
@@ -100,13 +104,17 @@ object (self)
             | _ -> assert false
         end;
       | _ ->
-        button_detach#misc#set_sensitive false;
-        button_detach#misc#set_state `NORMAL;
+        button_detach#misc#set_sensitive false; (* Fixes the button state *)
+        (*button_detach#misc#set_state `NORMAL;*)
         let icon = match self#icon with Some x -> x | _ -> Icons.oe in
         let rect = self#misc#allocation in
         let window = GWindow.window ~title:self#title ~icon ~width:rect.Gtk.width ~height:rect.Gtk.height ~border_width:0 ~allow_shrink:true ~position:`CENTER ~show:false () in
         window#set_role role;
-        (*ignore (window#connect#destroy ~callback:(fun () -> self#detach button_detach));*)
+        ignore (window#event#connect#delete ~callback:begin fun _ ->
+          (*self#detach button_detach;*)
+          update_window_position window;
+          false
+        end);
         self#misc#reparent window#coerce;
         detached_window <- Some window;
         window#show();
