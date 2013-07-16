@@ -40,12 +40,14 @@ let find_replace
     let _ = GMisc.image ~pixbuf:Icons.search_results_16 ~packing:hbox#pack () in
     let label = GMisc.label ~packing:hbox#pack () in
     ignore (page#connect#search_started ~callback:begin fun () ->
-      if page#misc#parent = None then
-        (ignore (Messages.vmessages#append_page ~label_widget:hbox#coerce page#as_page));
-      label#set_text page#text_to_find;
-      page#set_title page#text_to_find;
-      page#set_icon (Some Icons.search_results_16);
-      page#present ();
+      try
+        if page#misc#parent = None then
+          (ignore (Messages.vmessages#append_page ~label_widget:hbox#coerce page#as_page));
+        label#set_text page#text_to_find;
+        page#set_title page#text_to_find;
+        if page#icon = None then page#set_icon (Some Icons.search_results_16);
+        page#present ();
+      with ex -> Printf.eprintf "File \"menu_search.ml\": %s\n%s\n%!" (Printexc.to_string ex) (Printexc.get_backtrace());
     end);
     ignore (page#connect#search_finished ~callback:begin fun () ->
       page#active#set false;
@@ -195,7 +197,7 @@ let find_definition_references editor =
       widget#set_results results;
       label#set_text !def_name;
       widget#set_title !def_name;
-      widget#set_icon (Some Icons.references);
+      if widget#icon = None then widget#set_icon (Some Icons.references);
       kprintf widget#label_message#set_label "References to identifier <tt>%s</tt>" (Glib.Markup.escape_text !def_name);
     end);
     widget#start_search();
@@ -239,7 +241,7 @@ let find_used_components editor =
           widget#set_results results;
           label#set_text ident.ident_loc.txt;
           widget#set_title ident.ident_loc.txt;
-          widget#set_icon (Some Icons.references);
+          if widget#icon = None then widget#set_icon (Some Icons.references);
           kprintf widget#label_message#set_label
             "Used components of module <tt>%s</tt>, opened at file %s, line %d"
               (Glib.Markup.escape_text ident.ident_loc.txt)
