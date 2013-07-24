@@ -86,7 +86,9 @@ let create ~get_editor ~get_current_project () =
     (* Tools *)
     let tools = ref (read ()) in
     let window = GWindow.window ~type_hint:`DIALOG ~icon:Icons.oe ~width:640 ~height:400
-      ~title:"Configure External Tools" ~position:`CENTER ~modal:true ~show:true () in
+      ~title:"Configure External Tools" ~position:`CENTER ~modal:true ~show:false () in
+    Gmisclib.Window.GeometryMemo.add ~key:"dialog-external-tools" ~window Preferences.geometry_memo;
+    window#show();
     let vbox = GPack.vbox ~spacing:8 ~border_width:5 ~packing:window#add () in
     (* Lista *)
     let cols = ["Id", Tree.STRING; "Name", Tree.STRING; "Command", Tree.STRING] in

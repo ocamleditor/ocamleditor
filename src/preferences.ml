@@ -94,6 +94,9 @@ type t = {
   mutable pref_vmessages_height             : int;
   mutable pref_odoc_font                    : string;
   mutable pref_pdf_viewer                   : string;
+  mutable pref_remember_window_geometry     : bool;
+  mutable pref_detach_message_panes_separately : bool;
+  mutable pref_geometry_delayed             : bool;
 }
 and text_properties =
   GDraw.color *
@@ -247,7 +250,10 @@ let create_defaults () = {
   pref_odoc_font                    = "Serif 9";
   pref_pdf_viewer                   =
     if Sys.os_type = "Win32" then ""
-    else (match Oe_config.xdg_open_version with None -> "evince" | _ -> "xdg-open")
+    else (match Oe_config.xdg_open_version with None -> "evince" | _ -> "xdg-open");
+  pref_remember_window_geometry     = true;
+  pref_detach_message_panes_separately = false;
+  pref_geometry_delayed             = false;
 }
 
 let preferences = new GUtil.variable (create_defaults ())
@@ -404,13 +410,17 @@ let to_xml pref =
       Xml.Element ("pref_vmessages_height", [], [Xml.PCData (string_of_int pref.pref_vmessages_height)]);
       Xml.Element ("pref_odoc_font", [], [Xml.PCData (pref.pref_odoc_font)]);
       Xml.Element ("pref_pdf_viewer", [], [Xml.PCData (pref.pref_pdf_viewer)]);
+      Xml.Element ("pref_remember_window_geometry", [], [Xml.PCData (string_of_bool pref.pref_remember_window_geometry)]);
+      Xml.Element ("pref_detach_message_panes_separately", [], [Xml.PCData (string_of_bool pref.pref_detach_message_panes_separately)]);
+      Xml.Element ("pref_geometry_delayed", [], [Xml.PCData (string_of_bool pref.pref_geometry_delayed)]);
+
     ])
   in
   let xml = Xml.to_string_fmt xml in
   "<!-- OCamlEditor XML Preferences -->\n" ^ xml
 ;;
 
-(** from_file *)
+
 let from_file filename =
   try
     let xml = Xml.parse_file filename in
@@ -522,6 +532,9 @@ let from_file filename =
         | "pref_vmessages_height" -> pref.pref_vmessages_height <- int_of_string (value node)
         | "pref_odoc_font" -> pref.pref_odoc_font <- value node
         | "pref_pdf_viewer" -> pref.pref_pdf_viewer <- value node
+        | "pref_remember_window_geometry" -> pref.pref_remember_window_geometry <- bool_of_string (value node)
+        | "pref_detach_message_panes_separately" -> pref.pref_detach_message_panes_separately <- bool_of_string (value node)
+        | "pref_geometry_delayed" -> pref.pref_geometry_delayed <- bool_of_string (value node)
 
        | _ -> ()
     end xml;
@@ -529,6 +542,9 @@ let from_file filename =
     pref
   with Xml.File_not_found _ -> create_defaults()
 ;;
+
+(** geometry_memo *)
+let geometry_memo = Gmisclib.Window.GeometryMemo.create ~filename:Oe_config.geometry_memo_filename ()
 
 (** save *)
 let save () =
@@ -543,7 +559,11 @@ let load () =
     Printf.eprintf "File \"preferences.ml\": %s\n%s\n%!" (Printexc.to_string ex) (Printexc.get_backtrace());
     create_defaults ()
   end in
-  preferences#set pref
+  Gmisclib.Window.GeometryMemo.set_enabled geometry_memo  pref.pref_remember_window_geometry;
+  Gmisclib.Window.GeometryMemo.set_delayed geometry_memo  pref.pref_geometry_delayed;
+  Otherwidgets_config.geometry_memo := (fun () -> geometry_memo);
+  preferences#set pref;
+;;
 
 (** tag_color *)
 let tag_color tagname =
@@ -570,3 +590,6 @@ let reset_defaults () =
 let _ = begin
   load();
 end
+
+
+

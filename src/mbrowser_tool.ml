@@ -995,13 +995,13 @@ end
 and switch_page () = object inherit [symbol_list] GUtil.signal () end
 and add_page () = object inherit [symbol_list] GUtil.signal () end
 
-(** create *)
+(*(** create *)
 let create_window ~project =
   let window = GWindow.window ~title ~position:`CENTER ~icon:Icons.oe ~width:900 ~height:600 ~allow_shrink:true ~show:false () in
   let widget = new widget ~project ~packing:window#add () in
   widget#create_widget_libraries ();
   window#show()
-;;
+;;*)
 
 let append_to_messages ~project =
   let widget = new widget ~project () in
@@ -1016,7 +1016,7 @@ let append_to_messages ~project =
   ignore (widget#connect#switch_page ~callback:begin fun w ->
     label#set_text w#title.title;
     widget#set_title w#title.title;
-    widget#set_icon (Some icon#pixbuf);
+    if widget#icon = None then widget#set_icon (Some icon#pixbuf);
   end);
   widget#present();
 ;;

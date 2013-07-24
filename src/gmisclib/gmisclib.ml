@@ -61,5 +61,6 @@ module Util =
 
 module Window =
   struct
+    module GeometryMemo = Window.GeometryMemo
     let popup = new Window.popup
   end

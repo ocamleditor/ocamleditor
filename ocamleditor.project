@@ -7,7 +7,7 @@
   <name>ocamleditor</name>
   <author>Francesco Tovagliari</author>
   <description/>
-  <version>1.9.5</version>
+  <version>1.9.6</version>
   <autocomp enabled="true" delay="0.764" cflags=""/>
   <targets>
     <target name="common" default="false" id="4">
@@ -163,11 +163,11 @@
     <target name="otherwidgets" default="false" id="9">
       <byt>true</byt>
       <opt>true</opt>
-      <libs></libs>
+      <libs>gmisclib</libs>
       <other_objects></other_objects>
       <files>otherwidgets/otherwidgets.ml</files>
       <package>lablgtk2</package>
-      <includes>icons common otherwidgets</includes>
+      <includes>icons common otherwidgets gmisclib</includes>
       <thread>false</thread>
       <vmthread>false</vmthread>
       <pp></pp>
@@ -181,7 +181,7 @@
       <lib_install_path></lib_install_path>
       <external_tasks/>
       <restrictions></restrictions>
-      <dependencies></dependencies>
+      <dependencies>8</dependencies>
     </target>
     <target name="ocamleditor" default="false" id="12">
       <byt>false</byt>
@@ -464,7 +464,7 @@
           <cmd>ocaml</cmd>
           <args>
             <arg enabled="true">mkversion.ml</arg>
-            <arg enabled="true">1.9.4</arg>
+            <arg enabled="true">1.9.6</arg>
           </args>
           <phase>Before_clean</phase>
         </task>

@@ -48,6 +48,7 @@ let help = "<small>Press \"<tt>Ctrl+Return</tt>\" to toggle open/close; press \"
 let create ?(all=true) ~(editor : Editor.editor) ~roots () =
   let title                = if all then "Find File" else "Select File" in
   let window               = GWindow.window ~title ~icon:Icons.oe ~height:500 ~modal:true ~type_hint:`DIALOG ~position:`CENTER ~border_width:5 ~show:false () in
+  let _ = Gmisclib.Window.GeometryMemo.add ~key:"dialog-find-file" ~window Preferences.geometry_memo in
   let _                    = window#set_skip_taskbar_hint true in
   let _                    = window#set_skip_pager_hint true in
   let vbox                 = GPack.vbox ~spacing:5 ~packing:window#add () in

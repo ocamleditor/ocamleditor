@@ -344,7 +344,7 @@ end
 let create ~editor ?callback ?new_project ?page_num ?show () =
   let project = match new_project with None -> editor#project | Some p -> p in
   let window = GWindow.window ~modal:false ~title:("Project \""^project.name^"\"")
-    ~icon:Icons.oe ~border_width:5 ~position:`CENTER () in
+    ~icon:Icons.oe ~border_width:5 ~position:`CENTER ~show:false () in
   let widget = new widget ~editor ~packing:window#add ~project ?callback ?page_num ?show () in
   ignore (widget#button_close#connect#clicked ~callback:window#misc#hide);
   ignore (widget#connect#project_name_changed ~callback:begin fun name ->
@@ -354,6 +354,7 @@ let create ~editor ?callback ?new_project ?page_num ?show () =
     if GdkEvent.Key.keyval ev = GdkKeysyms._Escape
     then (widget#button_close#clicked(); true) else false
   end);
+  Gmisclib.Window.GeometryMemo.add ~key:"project-properties" ~window Preferences.geometry_memo;
   if show = Some true then (window#show());
   window, widget
 

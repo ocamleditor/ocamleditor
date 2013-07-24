@@ -345,8 +345,8 @@ let targets = [
     compilation_native   = true;
     toplevel_modules     = "otherwidgets/otherwidgets.ml";
     package              = "lablgtk2";
-    search_path          = "icons common otherwidgets"; (* -I *)
-    required_libraries   = "";
+    search_path          = "icons common otherwidgets gmisclib"; (* -I *)
+    required_libraries   = "gmisclib";
     compiler_flags       = "-w sy -g";
     linker_flags         = "-w sy -g";
     thread               = false;
@@ -359,7 +359,7 @@ let targets = [
     other_objects        = "";
     external_tasks       = [];
     restrictions         = [];
-    dependencies         = [];
+    dependencies         = [8];
     show                 = false;
   };
   

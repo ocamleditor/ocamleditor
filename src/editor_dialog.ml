@@ -28,6 +28,7 @@ let file_select ~editor () =
   let window = GWindow.window ~title:"Switch"
     ~width:600 ~height:400 ~modal:true
     ~position:`CENTER ~border_width:5 ~show:false () in
+  Gmisclib.Window.GeometryMemo.add ~key:"dialog-switch-window" ~window Preferences.geometry_memo;
   Gaux.may (GWindow.toplevel editor) ~f:(fun x -> window#set_transient_for x#as_window);
   let vbox = GPack.vbox ~spacing:0 ~packing:window#add () in
   let cols = new GTree.column_list in

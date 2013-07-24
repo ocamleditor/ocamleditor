@@ -64,6 +64,7 @@ let load_plugin_remote editor menu_item =
             ~position:`CENTER ~border_width:8
             ~icon:Icons.oe ~title ~modal:true ~show:false ()
         in
+        Gmisclib.Window.GeometryMemo.add ~key:"dialog-remote-edit" ~window Preferences.geometry_memo;
         let vbox = GPack.vbox ~spacing:8 ~packing:window#add () in
         let widget = new Remote.widget ~packing:vbox#add () in
         let _ = GMisc.separator `HORIZONTAL ~packing:vbox#pack () in

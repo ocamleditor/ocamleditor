@@ -122,6 +122,7 @@ end
 let window ~project () =
   let window = GWindow.window ~title:"Generate Build Script"
     ~modal:true ~border_width:8 ~position:`CENTER ~icon:Icons.oe ~show:false () in
+  Gmisclib.Window.GeometryMemo.add ~key:"dialog-build-script" ~window Preferences.geometry_memo;
   let vbox = GPack.vbox ~spacing:8 ~packing:window#add () in
   let widget = new widget ~project ~packing:vbox#add () in
   let bbox = GPack.button_box `HORIZONTAL ~layout:`END ~spacing:8 ~packing:vbox#pack () in

@@ -35,6 +35,7 @@ let create ~project ~editor ?(buffer : GText.buffer option) ?widget
   let title = if search_in_path then "Find/Replace in Path" else "Find/Replace Text" in
   let dialog = GWindow.window ~title ~icon:Icons.oe ~width:600 ~position:`CENTER
     ~type_hint:`DIALOG ~border_width:8 ~modal:true ~show:false () in
+  Gmisclib.Window.GeometryMemo.add ~key:"dialog-find-text" ~window:dialog Preferences.geometry_memo;
   let _ = dialog#set_skip_taskbar_hint true in
   let _ = dialog#set_skip_pager_hint true in
   let hbox = GPack.hbox ~spacing:13 ~packing:dialog#add () in

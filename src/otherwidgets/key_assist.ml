@@ -60,11 +60,12 @@ let markup_left = "\
 open Printf
 
 let window () =
-  let win = GWindow.window ~icon:Icons.oe ~modal:true ~position:`CENTER
+  let window = GWindow.window ~icon:Icons.oe ~modal:true ~position:`CENTER
     ~show:false ~type_hint:`DIALOG ~title:"Key Assist" () in
-  win#set_skip_taskbar_hint true;
-  win#set_skip_pager_hint true;
-  let vbox = GPack.vbox ~packing:win#add () in
+  Gmisclib.Window.GeometryMemo.add ~key:"dialog-key-assist" ~window (!Otherwidgets_config.geometry_memo());
+  window#set_skip_taskbar_hint true;
+  window#set_skip_pager_hint true;
+  let vbox = GPack.vbox ~packing:window#add () in
   let box = GPack.vbox  ~border_width:13 ~spacing:21 ~packing:vbox#add () in
   (*let label = GMisc.label ~markup:"" ~xalign:0.0 ~yalign:0.0 ~packing:box#pack () in*)
   let hbox = GPack.hbox ~spacing:21 ~packing:box#pack () in
@@ -72,8 +73,8 @@ let window () =
   let label = GMisc.label ~markup:markup_right ~xalign:0.0 ~yalign:0.0 ~line_wrap:true ~packing:hbox#pack () in
   let bbox = GPack.button_box `HORIZONTAL ~border_width:8 ~packing:vbox#pack () in
   let b_ok = GButton.button ~stock:`OK ~packing:bbox#add () in
-  ignore (b_ok#connect#clicked ~callback:win#destroy);
-  win#present();
+  ignore (b_ok#connect#clicked ~callback:window#destroy);
+  window#present();
 ;;
 
 

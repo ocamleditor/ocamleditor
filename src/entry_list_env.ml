@@ -55,6 +55,7 @@ object (self)
       let env = List.sort Pervasives.compare (Array.to_list (Unix.environment ())) in
       let env = List.map (fun x -> false, x) env in
       let window = GWindow.window ~modal:true ~title:"Select Environment Variables" ~width:640 ~height:400 ~position:`CENTER () in
+      Gmisclib.Window.GeometryMemo.add ~key:"dialog-select-environment-variables" ~window Preferences.geometry_memo;
       let vbox = GPack.vbox ~spacing:8 ~border_width:5 ~packing:window#add () in
       let checklist = new Checklist.checklist ~packing:vbox#add env in
       let bbox = GPack.button_box `HORIZONTAL ~layout:`END ~spacing:8 ~border_width:5 ~packing:vbox#pack () in

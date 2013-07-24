@@ -41,6 +41,7 @@ let monitor ~message ~monitor ~f () =
     ~position:`CENTER
     ~show:false ()
   in
+  Gmisclib.Window.GeometryMemo.add (!Otherwidgets_config.geometry_memo()) ~key:"dialog-activity-monitor" ~window;
   window#set_skip_pager_hint true;
   window#set_skip_taskbar_hint true;
   window#set_resizable false;

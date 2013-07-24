@@ -30,26 +30,6 @@ let vpaned = GPack.paned `VERTICAL ()
 
 let table = Hashtbl.create 17
 
-module Window_positions = struct
-  let filename = Filename.concat Oe_config.ocamleditor_user_home "message_window_positions"
-
-  let write positions =
-    let dump = Oe.Dump (Oe.magic, positions) in
-    let ochan = open_out_bin filename in
-    lazy (output_value ochan dump) @$ (lazy (close_out ochan))
-
-  let read () =
-    let ichan = open_in_gen [Open_binary; Open_creat] 0o777 filename in
-    lazy (try
-            let (positions : ((string, (int * int * int * int)) Hashtbl.t)) = Oe.open_dump (input_value ichan) in
-            positions
-          with End_of_file -> Hashtbl.create 7) @$ (lazy (close_in ichan))
-
-  let table = read()
-
-  let _ = at_exit (fun () -> write table)
-end
-
 (** page *)
 class virtual page ~role =
 object (self)
@@ -83,50 +63,43 @@ object (self)
   method connect_detach = new detach_signals ~detached
 
   method private detach button_detach =
-    let update_window_position window =
-      let x, y = Gdk.Window.get_position  window#misc#window in
-      let rect = window#misc#allocation in
-      Hashtbl.replace Window_positions.table window#role (x, y - 25, rect.Gtk.width, rect.Gtk.height);
-      Window_positions.write Window_positions.table;
-    in
-    match detached_window with
-      | Some (window : GWindow.window) ->
-        begin
-          match parent with
-            | Some messages_pane ->
-              ignore (messages_pane#reparent self#misc#get_oid);
-              update_window_position window;
-              window#destroy();
-              detached_window <- None;
-              detached#call false;
-              self#present ();
-              Gaux.may (GWindow.toplevel self) ~f:(fun w -> w#present());
-            | _ -> assert false
-        end;
-      | _ ->
-        button_detach#misc#set_sensitive false; (* Fixes the button state *)
-        (*button_detach#misc#set_state `NORMAL;*)
-        let icon = match self#icon with Some x -> x | _ -> Icons.oe in
-        let rect = self#misc#allocation in
-        let window = GWindow.window ~title:self#title ~icon ~width:rect.Gtk.width ~height:rect.Gtk.height ~border_width:0 ~allow_shrink:true ~position:`CENTER ~show:false () in
-        window#set_role role;
-        ignore (window#event#connect#delete ~callback:begin fun _ ->
-          (*self#detach button_detach;*)
-          update_window_position window;
-          false
-        end);
-        self#misc#reparent window#coerce;
-        detached_window <- Some window;
-        window#show();
-        begin
-          try
-            let x, y, width, height = Hashtbl.find Window_positions.table window#role in
-            window#move ~x ~y;
-            window#resize ~width ~height
-          with Not_found -> ()
-        end;
-        detached#call true;
-        button_detach#misc#set_sensitive true;
+    if Preferences.preferences#get.Preferences.pref_detach_message_panes_separately then begin
+      match detached_window with
+        | Some (window : GWindow.window) ->
+          begin
+            match parent with
+              | Some messages_pane ->
+                ignore (messages_pane#reparent self#misc#get_oid);
+                window#destroy();
+                detached_window <- None;
+                detached#call false;
+                self#present ();
+                Gaux.may (GWindow.toplevel self) ~f:(fun w -> w#present());
+              | _ -> assert false
+          end;
+        | _ ->
+          button_detach#misc#set_sensitive false; (* Fixes the button state *)
+          (*button_detach#misc#set_state `NORMAL;*)
+          let icon = match self#icon with Some x -> x | _ -> Icons.oe in
+          let rect = self#misc#allocation in
+          let has_memo = Preferences.geometry_memo.Gmisclib.Window.GeometryMemo.enabled in
+          let memo_table = Preferences.geometry_memo.Gmisclib.Window.GeometryMemo.table in
+          let width, height =
+            if has_memo && Hashtbl.length memo_table > 0 then None, None else (Some rect.Gtk.width), (Some rect.Gtk.height)
+          in
+          let window = GWindow.window ~title:self#title ~icon ?width ?height ~border_width:0 ~allow_shrink:true ~position:`CENTER ~show:false () in
+          window#set_geometry_hints ~pos:true ~user_pos:true ~user_size:true self#coerce;
+          Gmisclib.Window.GeometryMemo.add ~key:role ~window Preferences.geometry_memo;
+          self#misc#reparent window#coerce;
+          detached_window <- Some window;
+          window#show();
+          detached#call true;
+          button_detach#misc#set_sensitive true;
+    end else begin
+      match parent with
+        | Some messages_pane -> messages_pane#detach button_detach
+        | _ -> assert false
+    end
 
   initializer
     ignore (title#connect#changed ~callback:begin fun x ->
@@ -156,25 +129,69 @@ and messages ~(paned : GPack.paned) () =
   let remove_page     = new remove_page () in
   let visible_changed = new visible_changed () in
 object (self)
+  val mutable detached_window = None
+  val mutable parent = None
   inherit GObj.widget notebook#as_widget
   inherit Messages_tab.drag_handler
 
   val mutable visible = true;
   val mutable empty_page = None
 
-  initializer self#init()
-
-  method private init () =
+  initializer
     paned#add2 notebook#coerce;
     notebook#set_tab_pos (if paned = hpaned then `BOTTOM(*`TOP*) else `BOTTOM);
     ignore (notebook#connect#remove ~callback:
       begin fun w ->
-        if self#empty && self#visible then (self#set_visible false);
+        try if self#empty && self#visible then (self#set_visible false);
+        with Gpointer.Null -> ()
       end);
     self#set_visible false;
     (*  *)
     notebook#drag#dest_set Messages_tab.targets ~actions:[`MOVE ];
     ignore (notebook#drag#connect#data_received ~callback:self#data_received);
+
+  method detach (button_detach : GButton.tool_button) =
+    match detached_window with
+      | Some (window : GWindow.window) ->
+        begin
+          match parent with
+            | Some (container : GObj.widget) ->
+              container#misc#hide_all();
+              button_detach#misc#set_sensitive false;
+              ignore (self#misc#reparent container#coerce);
+              detached_window <- None;
+              window#destroy();
+              (*detached#call false;*)
+              Gaux.may (GWindow.toplevel self) ~f:(fun w -> w#present());
+              container#misc#show_all();
+              button_detach#misc#set_sensitive true;
+              button_detach#misc#set_state `NORMAL;
+            | _ -> assert false
+        end;
+      | _ ->
+        button_detach#misc#set_sensitive false; (* Fixes the button state *)
+        let role = "messages-pane" in
+        let rect = self#misc#allocation in
+        let has_memo = Preferences.geometry_memo.Gmisclib.Window.GeometryMemo.enabled in
+        let memo_table = Preferences.geometry_memo.Gmisclib.Window.GeometryMemo.table in
+        let width, height =
+          if has_memo && Hashtbl.length memo_table > 0 then None, None else (Some rect.Gtk.width), (Some rect.Gtk.height)
+        in
+        let window = GWindow.window ~title:"Messages" ~icon:Icons.oe ?width ?height ~border_width:0 ~position:`CENTER ~allow_shrink:true ~show:false () in
+        window#set_geometry_hints ~pos:true ~user_pos:true ~user_size:true self#coerce;
+        Gmisclib.Window.GeometryMemo.add ~key:role ~window Preferences.geometry_memo;
+        ignore (window#event#connect#delete ~callback:begin fun _ ->
+            self#detach button_detach;
+            self#remove_all_tabs();
+            true
+        end);
+        parent <- self#misc#parent;
+        detached_window <- Some window;
+        self#misc#reparent window#coerce;
+        window#show();
+        (*detached#call true;*)
+        button_detach#misc#set_sensitive true;
+        button_detach#misc#set_state `NORMAL;
 
   method private empty =
     let len = List.length notebook#children in
@@ -225,9 +242,9 @@ object (self)
 
   method remove_all_tabs () =
     try
-      List.iter (fun c -> (remove_page#call c); notebook#remove c; c#destroy()) notebook#children;
+      List.iter (fun c -> try (remove_page#call c); notebook#remove c; c#destroy() with Gpointer.Null -> ()) notebook#children;
       self#set_visible false;
-    with Exit -> ()
+    with Gpointer.Null -> ()
 
   method append_page ~label_widget ?with_spinner (page : page) =
     let tab_label = new Messages_tab.widget ~label_widget ?with_spinner ~page () in
@@ -239,7 +256,11 @@ object (self)
 
   method set_visible x =
     if x <> visible then begin
-      if x then (paned#child2#misc#show ()) else (paned#child2#misc#hide ());
+      begin
+        match detached_window with
+          | Some window -> if x then (window#present ()) else (window#misc#hide ());
+          | _ -> if x then (paned#child2#misc#show ()) else (paned#child2#misc#hide ());
+      end;
       visible <- not visible;
     end;
     if visible && List.length notebook#children = 0 then begin

@@ -21,7 +21,5 @@
 *)
 
 
-let program_name = "OCamlEditor"
-let version = "1.9.6"
-let copyright = "Copyright © 2010-2013 Francesco Tovagliari"
+let geometry_memo : (unit -> Window.GeometryMemo.t) ref = ref (fun () -> failwith "Otherwidgets_config.geometry_memo")
 

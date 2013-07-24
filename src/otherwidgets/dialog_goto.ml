@@ -10,6 +10,7 @@ let show ~view () =
       ~allow_shrink:false
       ~position:`CENTER_ALWAYS
       ~modal:true () in
+    Gmisclib.Window.GeometryMemo.add (!Otherwidgets_config.geometry_memo()) ~key:"dialog-goto-line" ~window:w;
       let vbox = GPack.vbox ~border_width:8 ~spacing:8 ~packing:w#add () in
       let eb = GPack.hbox ~spacing:3 ~packing:vbox#add () in
       let _ = GMisc.label ~text:"Line Number: " ~xalign:0.0 ~width:120 ~packing:(eb#pack ~expand:false) () in

@@ -98,6 +98,7 @@ and preferences ~(editor : Editor.editor) () =
   let initial_gtk_theme = Preferences.preferences#get.Preferences.pref_general_theme in
   let window            = GWindow.window ~allow_shrink:false ~allow_grow:false ~resizable:true ~width:750
     ~type_hint:`DIALOG ~modal:true ~title:"Preferences" ~position:`CENTER ~icon:Icons.oe ~show:false () in
+  let _ = Gmisclib.Window.GeometryMemo.add ~key:"dialog-preferences" ~window Preferences.geometry_memo in
   let _                 = Gaux.may (GWindow.toplevel editor) ~f:(fun w -> window#set_transient_for w#as_window) in
   let vbox              = GPack.vbox ~border_width:8 ~spacing:8 ~packing:window#add () in
   let hbox              = GPack.hbox ~spacing:8 ~packing:vbox#add () in
@@ -228,7 +229,7 @@ and pref_view title ?packing () =
 (*  let combo_insert, _ = GEdit.combo_box_text ~strings:["Insert at end"; "Insert at beginning"; "Sort alphabetically"]
     ~packing:(table#attach ~top:2 ~left:1 ~expand:`X) () in*)
   (* Maximize View *)
-  let align                 = create_align ~title:"Workspaces" ~vbox () in
+  let align                 = create_align ~title:"Workspace" ~vbox () in
   let box                   = GPack.vbox ~spacing:row_spacings ~packing:align#add () in
   let table                 = GPack.table ~homogeneous:false ~col_spacings ~row_spacings ~packing:box#pack () in
   let top                   = ref 0 in
@@ -264,10 +265,19 @@ and pref_view title ?packing () =
   end in
   let _                     = snd_action_check#set_active true in
   let _                     = snd_action_check#set_active false in*)
+  (*let check_remember        = GButton.check_button ~label:"Remember windows position and size" ~packing:box#pack () in*)
+  let check_detach_sep      = GButton.check_button ~label:"Detach message panes separately" ~packing:box#pack () in
+  (*let check_geometry_delayed    = GButton.check_button ~label:"Update delayed" ~packing:box#pack ~show:false () in*)
 object (self)
   inherit page title vbox
 
   initializer
+    (*let callback () =
+      check_detach_sep#misc#set_sensitive check_remember#active;
+      check_geometry_delayed#misc#set_sensitive check_remember#active
+    in
+    ignore (check_remember#connect#toggled ~callback);
+    callback();*)
     match Oe_config.themes_dir with
       | Some _ ->
         ignore (combo_theme#connect#changed ~callback:begin fun () ->
@@ -299,6 +309,11 @@ object (self)
     pref.Preferences.pref_max_view_2_fullscreen <- check_fullscreen_2#active;
     pref.Preferences.pref_max_view_2 <- true (*snd_action_check#active*);
     pref.Preferences.pref_max_view_fullscreen <- not use_maximize#active;
+   (* pref.Preferences.pref_remember_window_geometry <- check_remember#active;
+    Gmisclib.Window.GeometryMemo.set_enabled Preferences.geometry_memo pref.Preferences.pref_remember_window_geometry;*)
+    pref.Preferences.pref_detach_message_panes_separately <- check_detach_sep#active;
+    (*pref.Preferences.pref_geometry_delayed <- check_geometry_delayed#active;
+    Gmisclib.Window.GeometryMemo.set_delayed Preferences.geometry_memo pref.Preferences.pref_geometry_delayed;*)
 
   method read pref =
     Opt.may Oe_config.themes_dir (fun _ ->
@@ -320,6 +335,9 @@ object (self)
     check_fullscreen_2#set_active pref.Preferences.pref_max_view_2_fullscreen;
     (*snd_action_check#set_active pref.Preferences.pref_max_view_2;*)
     use_maximize#set_active (not pref.Preferences.pref_max_view_fullscreen);
+    (*check_remember#set_active pref.Preferences.pref_remember_window_geometry;*)
+    check_detach_sep#set_active pref.Preferences.pref_detach_message_panes_separately;
+    (*check_geometry_delayed#set_active pref.Preferences.pref_geometry_delayed;*)
 end
 
 (** pref_editor_actions *)

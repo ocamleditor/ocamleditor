@@ -20,6 +20,7 @@
 
 *)
 
+open Otherwidgets_config
 open Tree
 open Key_assist
 open Check_for_updates

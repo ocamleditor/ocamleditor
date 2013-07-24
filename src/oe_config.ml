@@ -106,7 +106,7 @@ let location_history_max_length          = 30 (* hint *)
 let location_history_max_edit            = 5
 let module_browser_max_results           = 150 (* Max. number of search results to display in the search_entry as you type *)
 let module_browser_secondary_title_color = "#877033"
-let completion_popup_default_dimensions  = 700, 350
+let completion_popup_default_dimensions  = 800, 400
 let odoc_tag_properties                  = [ (* These properties apply to ocamldoc comments only, not to the type descriptions. *)
                                           `PIXELS_INSIDE_WRAP 2;
                                           `PIXELS_BELOW_LINES 2;
@@ -232,6 +232,11 @@ let themes_dir =
 (** Clear OCAMLLIB environment variable *)
 let _ = Ocaml_config.putenv_ocamllib None
 
+(** geometry_memo_filename *)
+let geometry_memo_filename = Filename.concat ocamleditor_user_home "geometry_memo.ocaml"
+let _ =
+  let old = Filename.concat ocamleditor_user_home "message_window_positions" in
+  if Sys.file_exists old then Sys.remove old
 
 
 
