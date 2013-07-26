@@ -26,6 +26,7 @@ open Printf
 type t = {
   mutable id               : int;
   mutable name             : string;
+  mutable descr            : string;
   mutable default          : bool;
   mutable byt              : bool;
   mutable opt              : bool;
@@ -98,6 +99,7 @@ let target_type_of_string = function
 let create ~id ~name = {
   id                 = id;
   name               = name;
+  descr              = "";
   default            = (id = 0);
   byt                = true;
   opt                = false;

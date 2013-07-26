@@ -28,6 +28,7 @@ open Oebuild_util
 open Task
 
 type target = {
+  descr : string;
   num : int;
   id : int;
   output_name : string;
@@ -196,9 +197,10 @@ let show = fun targets -> function num, (name, t) ->
   let properties = if t.target_type = Library then prop_1 @ [
     "Install directory", (Oebuild.ocamllib // t.library_install_dir)
   ] @ prop_2 else prop_1 @ prop_2 in
-  printf "%2d) %s (%s, %s)\n%!" num name outkind compilation;
+  printf "%2d) %s (%s, %s)%s\n\n%!" num name outkind compilation
+    (if t.descr <> "" then "\n    " ^ t.descr else "");
   let maxlength = List.fold_left (fun cand (x, _) -> let len = String.length x in max cand len) 0 properties in
-  List.iter (fun (n, v) -> printf "  %s : %s\n" (rpad (n ^ " ") '.' maxlength) v) properties;;
+  List.iter (fun (n, v) -> printf "    %s : %s\n" (rpad (n ^ " ") '.' maxlength) v) properties;;
 
 (** install_lib *)
 let install_lib ~compilation ~outname ~external_tasks ~deps target =
@@ -414,8 +416,9 @@ let main ~cmd_line_args ~external_tasks ~general_commands ~targets:avail_targets
   let targets_shown = List.filter (fun (_, tg) -> tg.show) avail_targets in
   let help_of_targets = String.concat "\n" (List.map begin fun (name, tg) ->
     let name = rpad name ' ' maxlength in
-    sprintf "  %2d) %s %s, %s" tg.num name
+    sprintf "  %2d) %s (%s, %s)%s" tg.num name
       (string_of_output_type tg.target_type) (string_of_compilation_type (ccomp_type <> None) tg)
+     	(if tg.descr <> "" then "\n      " ^ tg.descr else "")
   end targets_shown) in
   let usage_msg = sprintf
     "\nUSAGE\n  ocaml %s [global-options*] <command> [command-options*] [targets*]\n  ocaml %s <command> -help"

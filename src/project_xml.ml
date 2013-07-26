@@ -49,6 +49,7 @@ let write proj =
           "name", t.Target.name;
           "default", string_of_bool t.Target.default;
           "id", string_of_int t.Target.id], [
+        Xml.Element ("descr", [], [Xml.PCData (t.Target.descr)]);
         Xml.Element ("byt", [], [Xml.PCData (string_of_bool t.Target.byt)]);
         Xml.Element ("opt", [], [Xml.PCData (string_of_bool t.Target.opt)]);
         Xml.Element ("libs", [], [Xml.PCData t.Target.libs]);
@@ -315,6 +316,7 @@ let read filename =
           target.Target.default <- attrib tnode "default" bool_of_string false;
           Xml.iter begin fun tp ->
             match Xml.tag tp with
+              | "descr" -> target.Target.descr <- value tp
               | "id" -> target.Target.id <- int_of_string (value tp) (* Backward compatibility with 1.7.0 *)
               | "name" -> target.Target.name <- value tp (* Backward compatibility with 1.7.0 *)
               | "default" -> target.Target.default <- bool_of_string (value tp) (* Backward compatibility with 1.7.0 *)

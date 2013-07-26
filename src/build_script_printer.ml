@@ -38,6 +38,7 @@ let print_targets ochan targets external_tasks =
     let num = if bst_show then !i else 0 in
     kprintf print "\n  (\x2A %d \x2A)" !i;
     kprintf print "%S, {" tg.name;
+    kprintf print "  descr                = %S;" tg.descr;
     kprintf print "  num                  = %d;" num;
     kprintf print "  id                   = %d;" tg.id;
     kprintf print "  output_name          = %S;" tg.outname;

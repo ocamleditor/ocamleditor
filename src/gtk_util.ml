@@ -114,6 +114,12 @@ let with_tag ~(buffer : GText.buffer) tag f =
   buffer#apply_tag tag ~start:(buffer#get_iter_at_mark (`MARK m1)) ~stop:(buffer#get_iter `INSERT);
   buffer#delete_mark (`MARK m1);;
 
+(** increase_font_size *)
+let increase_font_size ?weight ?(increment=3) widget =
+  let fd = widget#misc#pango_context#font_description in
+  let size = Pango.Font.get_size fd + increment * Pango.scale in
+  Pango.Font.modify fd ?weight ~size ();
+  widget#misc#modify_font fd;;
 
 
 

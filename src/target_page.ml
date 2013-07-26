@@ -38,7 +38,11 @@ class view ~project ?packing () =
   let xalign = 0.0 in
   let indent = 21 in
   let mainbox = GPack.vbox ~spacing:8 ?packing () in
-  let entry_name = GEdit.entry ~packing:mainbox#pack () in
+  let table = GPack.table ~col_spacings:5 ~row_spacings:3 ~packing:mainbox#pack () in
+  let _ = GMisc.label ~text:"Name:" ~xalign:0.0 ~packing:(table#attach ~top:0 ~left:0 ~expand:`NONE) () in
+  let entry_name = GEdit.entry ~packing:(table#attach ~top:0 ~left:1 ~expand:`X) () in
+  let _ = GMisc.label ~text:"Description:" ~xalign:0.0 ~packing:(table#attach ~top:1 ~left:0 ~expand:`NONE) () in
+  let entry_descr = GEdit.entry ~packing:(table#attach ~top:1 ~left:1 ~expand:`X) () in
   let nb = GPack.notebook ~packing:mainbox#add () in
 
   (** Target Tab *)
@@ -319,6 +323,11 @@ object (self)
         self#update (fun target -> target.name <- entry_name#text) ();
         changed#call()
       end);
+    ignore (entry_descr#connect#changed
+      ~callback:begin fun () ->
+        self#update (fun target -> target.descr <- entry_descr#text) ();
+        changed#call()
+      end);
     ignore (combo_comp#connect#changed
       ~callback:begin fun () ->
         self#update begin fun target ->
@@ -469,6 +478,7 @@ object (self)
     target <- Some tg;
     widget_deps#set tg;
     entry_name#set_text tg.name;
+    entry_descr#set_text tg.descr;
     combo_comp#set_active (match tg.byt, tg.opt with
       | true, false -> 0
       | false, true -> 1

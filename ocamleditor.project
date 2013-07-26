@@ -11,6 +11,7 @@
   <autocomp enabled="true" delay="0.764" cflags=""/>
   <targets>
     <target name="common" default="false" id="4">
+      <descr></descr>
       <byt>true</byt>
       <opt>true</opt>
       <libs></libs>
@@ -34,6 +35,7 @@
       <dependencies></dependencies>
     </target>
     <target name="icons" default="false" id="10">
+      <descr></descr>
       <byt>true</byt>
       <opt>true</opt>
       <libs></libs>
@@ -69,6 +71,7 @@
       <dependencies></dependencies>
     </target>
     <target name="oebuildlib" default="false" id="7">
+      <descr></descr>
       <byt>true</byt>
       <opt>true</opt>
       <libs></libs>
@@ -92,6 +95,7 @@
       <dependencies></dependencies>
     </target>
     <target name="oebuild" default="false" id="5">
+      <descr></descr>
       <byt>true</byt>
       <opt>true</opt>
       <libs>common</libs>
@@ -115,6 +119,7 @@
       <dependencies>7</dependencies>
     </target>
     <target name="oeproc" default="false" id="6">
+      <descr></descr>
       <byt>true</byt>
       <opt>true</opt>
       <libs></libs>
@@ -138,6 +143,7 @@
       <dependencies></dependencies>
     </target>
     <target name="gmisclib" default="false" id="8">
+      <descr>Miscellaneous widgets based on LablGtk2.</descr>
       <byt>true</byt>
       <opt>true</opt>
       <libs></libs>
@@ -161,6 +167,7 @@
       <dependencies></dependencies>
     </target>
     <target name="otherwidgets" default="false" id="9">
+      <descr></descr>
       <byt>true</byt>
       <opt>true</opt>
       <libs>gmisclib</libs>
@@ -184,6 +191,7 @@
       <dependencies>8</dependencies>
     </target>
     <target name="ocamleditor" default="false" id="12">
+      <descr></descr>
       <byt>false</byt>
       <opt>true</opt>
       <libs>odoc_info gmisclib common icons otherwidgets oebuildlib ocamleditor_lib</libs>
@@ -207,6 +215,7 @@
       <dependencies>14,19,16</dependencies>
     </target>
     <target name="ocamleditor-bytecode" default="true" id="0">
+      <descr></descr>
       <byt>true</byt>
       <opt>false</opt>
       <libs>odoc_info gmisclib common icons otherwidgets oebuildlib</libs>
@@ -230,6 +239,7 @@
       <dependencies>4,10,7,5,6,8,9,20,17,18</dependencies>
     </target>
     <target name="ocamleditor-msvc" default="false" id="15">
+      <descr></descr>
       <byt>false</byt>
       <opt>true</opt>
       <libs>resource.obj odoc_info gmisclib common icons otherwidgets oebuildlib ocamleditor_lib</libs>
@@ -253,6 +263,7 @@
       <dependencies>14,19,16</dependencies>
     </target>
     <target name="ocamleditor-native" default="false" id="11">
+      <descr></descr>
       <byt>false</byt>
       <opt>true</opt>
       <libs>odoc_info gmisclib common icons otherwidgets oebuildlib</libs>
@@ -275,7 +286,8 @@
       <restrictions></restrictions>
       <dependencies>14,19,16</dependencies>
     </target>
-    <target name="ocamleditorLib" default="false" id="14">
+    <target name="ocamleditor-lib" default="false" id="14">
+      <descr></descr>
       <byt>false</byt>
       <opt>true</opt>
       <libs></libs>
@@ -299,6 +311,7 @@
       <dependencies>4,10,5,6,8,9,20</dependencies>
     </target>
     <target name="plugin-remote-bytecode" default="false" id="17">
+      <descr></descr>
       <byt>true</byt>
       <opt>false</opt>
       <libs></libs>
@@ -322,6 +335,7 @@
       <dependencies></dependencies>
     </target>
     <target name="plugin-remote-native" default="false" id="16">
+      <descr></descr>
       <byt>false</byt>
       <opt>true</opt>
       <libs></libs>
@@ -345,6 +359,7 @@
       <dependencies></dependencies>
     </target>
     <target name="plugin-dotviewer-byetcode" default="false" id="18">
+      <descr></descr>
       <byt>true</byt>
       <opt>false</opt>
       <libs></libs>
@@ -368,6 +383,7 @@
       <dependencies></dependencies>
     </target>
     <target name="plugin-dotviewer-native" default="false" id="19">
+      <descr></descr>
       <byt>false</byt>
       <opt>true</opt>
       <libs></libs>
@@ -391,6 +407,7 @@
       <dependencies></dependencies>
     </target>
     <target name="prepare-build" default="false" id="20">
+      <descr></descr>
       <byt>true</byt>
       <opt>false</opt>
       <libs></libs>
@@ -426,6 +443,7 @@
       <dependencies></dependencies>
     </target>
     <target name="tools" default="false" id="13">
+      <descr></descr>
       <byt>true</byt>
       <opt>false</opt>
       <libs></libs>
@@ -543,7 +561,7 @@
       <target target_id="7" show="false"/>
       <target target_id="5" show="true"/>
       <target target_id="6" show="true"/>
-      <target target_id="8" show="false"/>
+      <target target_id="8" show="true"/>
       <target target_id="9" show="false"/>
       <target target_id="12" show="true"/>
       <target target_id="0" show="true"/>
