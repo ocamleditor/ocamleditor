@@ -57,8 +57,7 @@ object
 end
 
 (** widget *)
-class widget ~project ?packing () =
-  let targets       = project.Prj.targets in
+class widget ~target_list ?packing () =
   let hbox          = GPack.hbox ~spacing:8 ?packing () in
   let target_widget = new target_list ~packing:hbox#add () in
   let bbox          = GPack.button_box `VERTICAL ~layout:`START ~spacing:8 ~packing:hbox#pack () in
@@ -68,6 +67,7 @@ class widget ~project ?packing () =
   let view          = target_widget#view in
 object (self)
   inherit GObj.widget hbox#as_widget
+  val mutable targets = target_list#get_targets()
   val mutable changed = new changed()
   val mutable current_bc = None
   val mutable current_ids = []
@@ -96,6 +96,7 @@ object (self)
     List.rev !result;
 
   method set (bc : Target.t) =
+    self#update_targets ();
     List.iter model#misc#handler_block signal_ids;
     model#clear();
     current_ids <- [];
@@ -114,6 +115,7 @@ object (self)
   method add () =
     match current_bc with
       | Some current ->
+        self#update_targets ();
         let window = GWindow.window ~modal:true ~type_hint:`DIALOG
           ~title:"Select one or more targets"
           ~icon:Icons.oe ~height:300 ~width:300 ~position:`CENTER
@@ -169,7 +171,10 @@ object (self)
     changed#call();
     self#update_button_state();
 
+  method private update_targets () = targets <- target_list#get_targets()
+
   method private update_button_state () =
+    self#update_targets ();
     button_add#misc#set_sensitive (List.length current_ids < List.length targets - 1);
     button_remove#misc#set_sensitive (view#selection#get_selected_rows <> [] && (List.length current_ids > 0));
 

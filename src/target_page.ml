@@ -33,7 +33,7 @@ let mk_target_filenames project filenames =
     end filenames
   end else filenames
 
-class view ~project ?packing () =
+class view ~project ~target_list ?packing () =
   let changed = new changed () in
   let xalign = 0.0 in
   let indent = 21 in
@@ -237,7 +237,7 @@ class view ~project ?packing () =
   (** Dependencies Tab *)
   let vbox = GPack.vbox ~border_width:5 ~spacing:8 () in
   let _ = nb#append_page ~tab_label:(GMisc.label ~text:"Target Dependencies" ())#coerce vbox#coerce in
-  let widget_deps = Target_page_deps.create ~project ~packing:vbox#add () in
+  let widget_deps = Target_page_deps.create ~target_list ~packing:vbox#add () in
 
   (** Restrictions Tab *)
   let vbox = GPack.vbox ~width:550 ~border_width:5 ~spacing:8 () in

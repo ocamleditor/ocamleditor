@@ -115,7 +115,7 @@ class widget ~editor ?(callback=ignore) ~project ?page_num ?packing ?show () =
   in
   let vbox = GPack.vbox ~spacing:8 ~packing:hbox#add () in
   let label_title = GMisc.label ~markup:"" ~xalign:0.0 ~packing:vbox#pack () in
-  let target_page = new Target_page.view ~project ~packing:vbox#add () in
+  let target_page = new Target_page.view ~target_list ~project ~packing:vbox#add () in
   let etask_page = new Etask_page.view ~packing:vbox#add () in
   let set_title x = kprintf label_title#set_label "<b><big>%s</big></b>" x in
   let hide_all () =
@@ -161,7 +161,7 @@ class widget ~editor ?(callback=ignore) ~project ?page_num ?packing ?show () =
       let row = target_list#model#get_iter path in
       let column = target_list#column_name in
       target_list#model#set ~row ~column target_page#entry_name#text
-    end
+    end;
   end in
   let _ = etask_page#entry_name#connect#changed ~callback:begin fun () ->
     target_list#with_current begin fun path _ ->
