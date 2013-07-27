@@ -24,6 +24,7 @@ open Printf
 open Target
 open Task
 open GUtil
+open Miscellanea
 
 type item = Target of Target.t | ETask of Task.t
 
@@ -54,7 +55,7 @@ class view ~editor ~project ?packing () =
   let _                 = vc_default#add_attribute renderer_default "active" col_default in
   let _                 = vc_default#set_sizing `FIXED in
   let sw                = GBin.scrolled_window ~shadow_type:`IN ~hpolicy:`AUTOMATIC ~vpolicy:`AUTOMATIC ~packing:vbox#add () in
-  let view              = GTree.view ~model:model ~headers_visible:true ~reorderable:true ~width:285 (*~height:385*) ~packing:sw#add () in
+  let view              = GTree.view ~model:model ~headers_visible:false ~reorderable:true ~width:285 (*~height:385*) ~packing:sw#add () in
   let _                 = view#misc#set_property "enable-tree-lines" (`BOOL true) in
   let _                 = view#append_column vc in
   let _                 = view#append_column vc_default in
@@ -138,6 +139,20 @@ object (self)
       let id = model#get ~row ~column:col_data in
       renderer_default#set_properties [`VISIBLE (match id with Target _ -> true | ETask _ -> false)]
     end;
+    ignore (view#drag#connect#drop ~callback:begin fun ctx ~x ~y ~time ->
+        Opt.map_default (view#get_path_at_pos ~x ~y) false begin fun (path, _, _, _) ->
+          let row = model#get_iter path in
+          match model#get ~row ~column:col_data with
+            | Target _ ->
+              Gmisclib.Idle.add begin fun () ->
+                if model#iter_has_child row then (GTree.Path.down path);
+                view#expand_to_path path;
+                view#selection#select_path path;
+              end;
+              false
+            | ETask _ -> true (* true aborts drop *);
+        end
+      end);
 
   method model = model
   method view = view
@@ -150,45 +165,79 @@ object (self)
 
   method get_targets () =
     let targets = ref [] in
-    let current = ref None in
-    let rev_cur_tasks () = match !current with Some cur -> cur.external_tasks <- List.rev cur.external_tasks | _ -> () in
+    let with_parent row f =
+      Opt.may (model#iter_parent row) begin fun row ->
+        match model#get ~row ~column:col_data with
+          | Target parent -> f parent
+          | ETask _ -> assert false (* External Tasks can not have children *);
+      end;
+    in
+    let open Target in
     model#foreach begin fun _ row ->
       begin
-        match model#get ~row ~column:col_data with
-          | Target target ->
-            rev_cur_tasks();
-            targets := target :: !targets;
-            target.external_tasks <- [];
-            current := Some target;
-          | ETask task ->
-            (match !current with Some cur -> cur.external_tasks <- task :: cur.external_tasks | _ -> ())
+        try
+          begin
+            match model#get ~row ~column:col_data with
+              | Target target ->
+                with_parent row begin fun parent ->
+                  parent.sub_targets <-
+                    target :: (List.filter (fun t -> t.id <> target.id) parent.sub_targets)
+                end;
+                targets := target :: !targets;
+                target.sub_targets <- [];
+                target.external_tasks <- [];
+              | ETask task ->
+                with_parent row begin fun parent ->
+                  parent.external_tasks <-
+                    task :: (List.filter ((<>) task) parent.external_tasks)
+                end;
+          end;
+          false
+        with ex -> Printf.eprintf "File \"target_list.ml\": %s\n%s\n%!" (Printexc.to_string ex) (Printexc.get_backtrace()); false
       end;
-      false
     end;
-    rev_cur_tasks();
+    List.iter (fun tg -> tg.external_tasks <- List.rev tg.external_tasks) !targets;
+    List.iter (fun tg -> tg.sub_targets <- List.rev tg.sub_targets) !targets;
     List.rev !targets
 
   method length = List.length (self#to_list())
 
-  method private append bcs =
+  method private append ?parent targets =
     let rows = List.map begin fun target ->
-      GtkThread2.sync begin fun () ->
-        let target = {target with id = target.id} in
-        target.external_tasks <- List.map (fun et ->
-          {et with Task.et_name = et.Task.et_name}) target.external_tasks;
-        let row = model#append () in
-        model#set ~row ~column:col_data (Target target);
-        model#set ~row ~column:col_name target.name;
-        model#set ~row ~column:col_default target.default;
-        List.iter begin fun task ->
-          GtkThread2.sync (fun () -> ignore (self#append_task ~parent:row ~task)) ()
-        end target.external_tasks;
-        (*view#selection#select_iter row*)
-        row
-      end ()
-    end bcs in
+        let exists = ref false in
+        model#foreach begin fun _ row ->
+          let item = model#get ~row ~column:col_data in
+          begin
+            match item with
+              | Target tg -> if tg.id = target.id then exists := true;
+              | ETask _ -> ()
+          end;
+          !exists
+        end;
+        if not !exists then begin
+          GtkThread2.sync begin fun () ->
+            let target = {target with id = target.id} in
+            target.external_tasks <- List.map (fun et ->
+                {et with Task.et_name = et.Task.et_name}) target.external_tasks;
+            let row = model#append ?parent () in
+            model#set ~row ~column:col_data (Target target);
+            model#set ~row ~column:col_name target.name;
+            model#set ~row ~column:col_default target.default;
+            let children = List.fold_right begin fun tg acc ->
+                try (List.find (fun t -> t.id = tg.id) project.Prj.targets) :: acc with Not_found -> acc
+              end target.Target.sub_targets []
+            in
+            GtkThread2.sync (fun () -> ignore (self#append ~parent:row children)) ();
+            List.iter begin fun task ->
+              GtkThread2.sync (fun () -> ignore (self#append_task ~parent:row ~task)) ()
+            end target.external_tasks;
+            (*view#selection#select_iter row*)
+            Some row
+          end ()
+        end else None
+      end targets in
     view#expand_all();
-    rows
+    Xlist.filter_map (fun x -> x) rows
 
   method private append_task ~parent ~task =
     let row = model#append ~parent () in

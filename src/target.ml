@@ -48,7 +48,8 @@ type t = {
   mutable lib_install_path : string;
   mutable external_tasks   : Task.t list;
   mutable restrictions     : string list;
-  mutable dependencies     : int list; (* id list *)
+  mutable dependencies     : int list; (* Build dependencies, id list *)
+  mutable sub_targets      : t list; (* For use with Findlib sub-packages *)
 }
 and task = [ `NONE | `CLEAN | `COMPILE | `REBUILD | `ETASK of Task.t ]
 and target_type = Executable | Library | Plugin | Pack | External
@@ -122,6 +123,7 @@ let create ~id ~name = {
   external_tasks     = [];
   restrictions       = [];
   dependencies       = [];
+  sub_targets        = [];
 }
 
 (** find_dependencies *)

@@ -48,7 +48,9 @@ let write proj =
       Xml.Element ("target", [
           "name", t.Target.name;
           "default", string_of_bool t.Target.default;
-          "id", string_of_int t.Target.id], [
+          "id", string_of_int t.Target.id;
+           "sub_targets", (String.concat "," (List.map (fun tg -> string_of_int tg.Target.id) t.Target.sub_targets)) ;
+          ], [
         Xml.Element ("descr", [], [Xml.PCData (t.Target.descr)]);
         Xml.Element ("byt", [], [Xml.PCData (string_of_bool t.Target.byt)]);
         Xml.Element ("opt", [], [Xml.PCData (string_of_bool t.Target.opt)]);
@@ -304,100 +306,110 @@ let read filename =
         end [] node in
         proj.executables <- List.rev runtime;
       | "targets" | "build" (* Backward compatibility with 1.7.5 *) ->
+        let open Target in
         let i = ref 0 in
-        let targets = Xml.fold begin fun acc tnode ->
-          let target = Target.create ~id:0 ~name:(sprintf "Config_%d" !i) in
-          let runtime_build_task = ref "" in
-          let runtime_env = ref (false, "") in
-          let runtime_args = ref (false, "") in
-          let create_default_runtime = ref false in
-          target.Target.id <- attrib tnode "id" int_of_string 0;
-          target.Target.name <- attrib tnode "name" (fun x -> x) "";
-          target.Target.default <- attrib tnode "default" bool_of_string false;
-          Xml.iter begin fun tp ->
-            match Xml.tag tp with
-              | "descr" -> target.Target.descr <- value tp
-              | "id" -> target.Target.id <- int_of_string (value tp) (* Backward compatibility with 1.7.0 *)
-              | "name" -> target.Target.name <- value tp (* Backward compatibility with 1.7.0 *)
-              | "default" -> target.Target.default <- bool_of_string (value tp) (* Backward compatibility with 1.7.0 *)
-              | "byt" -> target.Target.byt <- bool_of_string (value tp)
-              | "opt" -> target.Target.opt <- bool_of_string (value tp)
-              | "libs" -> target.Target.libs <- value tp
-              | "other_objects" -> target.Target.other_objects <- value tp
-              | "mods" -> target.Target.other_objects <- value tp (*  *)
-              | "files" -> target.Target.files <- value tp
-              | "package" -> target.Target.package <- value tp
-              | "includes" -> target.Target.includes <- value tp
-              | "thread" -> target.Target.thread <- bool_of_string (value tp)
-              | "vmthread" -> target.Target.vmthread <- bool_of_string (value tp)
-              | "pp" -> target.Target.pp <- value tp
-              | "inline" -> target.Target.inline <- (let x = value tp in if x = "" then None else Some (int_of_string x))
-              | "nodep" -> target.Target.nodep <- bool_of_string (value tp)
-              | "dontlinkdep" -> target.Target.dontlinkdep <- bool_of_string (value tp)
-              | "cflags" -> target.Target.cflags <- value tp
-              | "lflags" -> target.Target.lflags <- value tp
-              | "is_library" -> target.Target.target_type <- (if bool_of_string (value tp) then Target.Library else Target.Executable)
-              | "target_type" | "outkind" -> target.Target.target_type <- Target.target_type_of_string (value tp)
-              | "outname" -> target.Target.outname <- value tp
-              | "runtime_build_task" ->
-                runtime_build_task := (value tp);
-                create_default_runtime := true;
-              | "runtime_env" | "env" ->
-                runtime_env := (attrib tp "enabed" bool_of_string true, value tp);
-              | "runtime_args" | "run" ->
-                runtime_args := (attrib tp "enabed" bool_of_string true, value tp);
-              | "lib_install_path" -> target.Target.lib_install_path <- value tp
-              | "external_tasks" ->
-                let external_tasks =
-                  Xml.fold begin fun acc tnode ->
-                    let task = Task.create ~name:"" ~env:[] ~dir:"" ~cmd:"" ~args:[] () in
-                    task.Task.et_name <- attrib tnode "name" (fun x -> x) "";
-                    Xml.iter begin fun tp ->
-                      match Xml.tag tp with
-                        | "name" -> task.Task.et_name <- value tp (* Backward compatibility with 1.7.0 *)
-                        | "always_run" -> task.Task.et_always_run_in_project <- bool_of_string (value tp) (* Backward compatibility with 1.7.0 *)
-                        | "always_run_in_project" -> task.Task.et_always_run_in_project <- bool_of_string (value tp)
-                        | "always_run_in_script" -> task.Task.et_always_run_in_script <- bool_of_string (value tp)
-                        | "env" ->
-                          task.Task.et_env <-
-                            List.rev (Xml.fold (fun acc var ->
-                              (attrib var "enabled" bool_of_string true, value var) :: acc) [] tp);
-                          task.Task.et_env_replace <- (try bool_of_string (Xml.attrib tp "replace") with Xml.No_attribute _ -> false)
-                        | "dir" -> task.Task.et_dir <- value tp
-                        | "cmd" -> task.Task.et_cmd <- value tp
-                        | "args" ->
-                          task.Task.et_args <-
-                            List.rev (Xml.fold (fun acc arg ->
-                              (attrib arg "enabled" bool_of_string true, value arg) :: acc) [] tp);
-                        | "phase" -> task.Task.et_phase <-
-                          (match value tp with "" -> None | x -> Some (Task.phase_of_string x))
-                        | _ -> ()
-                    end tnode;
-                    task :: acc
-                  end [] tp
-                in
-                target.Target.external_tasks <- List.rev external_tasks;
-              | "restrictions" -> target.Target.restrictions <- (Str.split (!~ "&") (value tp))
-              | "dependencies" -> target.Target.dependencies <- (List.map int_of_string (Str.split (!~ ",") (value tp)))
-              | _ -> ()
-          end tnode;
-          incr i;
-          (*target.Target.runtime_build_task <- Target.task_of_string target !runtime_build_task;*)
-          if !create_default_runtime && target.Target.target_type = Target.Executable then begin
-            proj.executables <- {
-              Rconf.id    = (List.length proj.executables);
-              target_id   = target.Target.id;
-              name        = target.Target.name;
-              default     = target.Target.default;
-              build_task  = Target.task_of_string target !runtime_build_task;
-              env         = [!runtime_env];
-              env_replace = false;
-              args        = [!runtime_args]
-            } :: proj.executables;
-          end;
-          target :: acc;
-        end [] node in
-        proj.targets <- List.rev targets
+        let sub_targets = ref [] in
+        let targets =
+          Xml.fold begin fun acc tnode ->
+            let target = Target.create ~id:0 ~name:(sprintf "Config_%d" !i) in
+            let runtime_build_task = ref "" in
+            let runtime_env = ref (false, "") in
+            let runtime_args = ref (false, "") in
+            let create_default_runtime = ref false in
+            target.id <- attrib tnode "id" int_of_string 0;
+            target.name <- attrib tnode "name" (fun x -> x) "";
+            target.default <- attrib tnode "default" bool_of_string false;
+            sub_targets := (target.id, List.map int_of_string (attrib tnode "sub_targets" (Str.split (Str.regexp "[;, ]+")) [])) :: !sub_targets;
+            Xml.iter begin fun tp ->
+              match Xml.tag tp with
+                | "descr" -> target.descr <- value tp
+                | "id" -> target.id <- int_of_string (value tp) (* Backward compatibility with 1.7.0 *)
+                | "name" -> target.name <- value tp (* Backward compatibility with 1.7.0 *)
+                | "default" -> target.default <- bool_of_string (value tp) (* Backward compatibility with 1.7.0 *)
+                | "byt" -> target.byt <- bool_of_string (value tp)
+                | "opt" -> target.opt <- bool_of_string (value tp)
+                | "libs" -> target.libs <- value tp
+                | "other_objects" -> target.other_objects <- value tp
+                | "mods" -> target.other_objects <- value tp (*  *)
+                | "files" -> target.files <- value tp
+                | "package" -> target.package <- value tp
+                | "includes" -> target.includes <- value tp
+                | "thread" -> target.thread <- bool_of_string (value tp)
+                | "vmthread" -> target.vmthread <- bool_of_string (value tp)
+                | "pp" -> target.pp <- value tp
+                | "inline" -> target.inline <- (let x = value tp in if x = "" then None else Some (int_of_string x))
+                | "nodep" -> target.nodep <- bool_of_string (value tp)
+                | "dontlinkdep" -> target.dontlinkdep <- bool_of_string (value tp)
+                | "cflags" -> target.cflags <- value tp
+                | "lflags" -> target.lflags <- value tp
+                | "is_library" -> target.target_type <- (if bool_of_string (value tp) then Target.Library else Target.Executable)
+                | "target_type" | "outkind" -> target.target_type <- Target.target_type_of_string (value tp)
+                | "outname" -> target.outname <- value tp
+                | "runtime_build_task" ->
+                  runtime_build_task := (value tp);
+                  create_default_runtime := true;
+                | "runtime_env" | "env" ->
+                  runtime_env := (attrib tp "enabed" bool_of_string true, value tp);
+                | "runtime_args" | "run" ->
+                  runtime_args := (attrib tp "enabed" bool_of_string true, value tp);
+                | "lib_install_path" -> target.lib_install_path <- value tp
+                | "external_tasks" ->
+                  let external_tasks =
+                    Xml.fold begin fun acc tnode ->
+                      let task = Task.create ~name:"" ~env:[] ~dir:"" ~cmd:"" ~args:[] () in
+                      task.Task.et_name <- attrib tnode "name" (fun x -> x) "";
+                      Xml.iter begin fun tp ->
+                        match Xml.tag tp with
+                          | "name" -> task.Task.et_name <- value tp (* Backward compatibility with 1.7.0 *)
+                          | "always_run" -> task.Task.et_always_run_in_project <- bool_of_string (value tp) (* Backward compatibility with 1.7.0 *)
+                          | "always_run_in_project" -> task.Task.et_always_run_in_project <- bool_of_string (value tp)
+                          | "always_run_in_script" -> task.Task.et_always_run_in_script <- bool_of_string (value tp)
+                          | "env" ->
+                            task.Task.et_env <-
+                              List.rev (Xml.fold (fun acc var ->
+                                  (attrib var "enabled" bool_of_string true, value var) :: acc) [] tp);
+                            task.Task.et_env_replace <- (try bool_of_string (Xml.attrib tp "replace") with Xml.No_attribute _ -> false)
+                          | "dir" -> task.Task.et_dir <- value tp
+                          | "cmd" -> task.Task.et_cmd <- value tp
+                          | "args" ->
+                            task.Task.et_args <-
+                              List.rev (Xml.fold (fun acc arg ->
+                                  (attrib arg "enabled" bool_of_string true, value arg) :: acc) [] tp);
+                          | "phase" -> task.Task.et_phase <-
+                                         (match value tp with "" -> None | x -> Some (Task.phase_of_string x))
+                          | _ -> ()
+                      end tnode;
+                      task :: acc
+                    end [] tp
+                  in
+                  target.external_tasks <- List.rev external_tasks;
+                | "restrictions" -> target.restrictions <- (Str.split (!~ "&") (value tp))
+                | "dependencies" -> target.dependencies <- (List.map int_of_string (Str.split (!~ ",") (value tp)))
+                | _ -> ()
+            end tnode;
+            incr i;
+            (*target.runtime_build_task <- Target.task_of_string target !runtime_build_task;*)
+            if !create_default_runtime && target.target_type = Target.Executable then begin
+              proj.executables <- {
+                Rconf.id    = (List.length proj.executables);
+                target_id   = target.id;
+                name        = target.name;
+                default     = target.default;
+                build_task  = Target.task_of_string target !runtime_build_task;
+                env         = [!runtime_env];
+                env_replace = false;
+                args        = [!runtime_args]
+              } :: proj.executables;
+            end;
+            target :: acc;
+          end [] node
+        in
+        proj.targets <- List.rev targets;
+        List.iter begin fun tg ->
+          tg.sub_targets <-
+            let ids = try List.assoc tg.id !sub_targets with Not_found -> [] in
+            List.map (fun id -> try List.find (fun t -> t.id = id) proj.targets with Not_found -> assert false) ids
+        end proj.targets
       | "build_script" ->
         let filename = (attrib node "filename" (fun x -> x) "") in
         proj.build_script <- {Build_script.
