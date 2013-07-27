@@ -50,12 +50,17 @@ let forward_non_blank iter =
   f iter, !is_dirty
 
 (** indent *)
-let indent ~view ?(all=false) () =
+let indent ~view bounds =
   let buffer = view#tbuffer in
   let indent () =
     match buffer#save_buffer() with
       | filename, _ ->
-        let start, stop = if all then buffer#start_iter, buffer#end_iter else buffer#selection_bounds in
+        let start, stop =
+          match bounds with
+            | `SELECTION -> buffer#selection_bounds
+            | `BOUNDS iters -> iters
+            | `ALL -> buffer#start_iter, buffer#end_iter
+        in
         let start, stop = if start#compare stop > 0 then stop, start else start, stop in
         let stop = if not (stop#equal start) then stop#backward_line#forward_to_line_end else stop in
         let lines = start#line + 1, stop#line + 1 in
@@ -92,7 +97,7 @@ let indent ~view ?(all=false) () =
         view#draw_current_line_background ?force:(Some true) (buffer#get_iter `INSERT);
         true
   in
-  if not all && not buffer#has_selection then begin
+  if bounds = `SELECTION && not buffer#has_selection then begin
     let ins = buffer#get_iter `INSERT in
     let iter = ins#set_line_index 0 in
     let stop = if iter#ends_line then iter else iter#forward_to_line_end in

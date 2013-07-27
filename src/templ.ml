@@ -66,7 +66,7 @@ let load_custom kind =
 
 (** apply *)
 let apply ~project (view : Ocaml_text.view) (templ : Templates.t) =
-  view#tbuffer#undo#begin_block "Templates.apply";
+  view#tbuffer#undo#begin_block ~name:"Templates.apply";
   let buffer = view#obuffer in
   let start, stop = buffer#selection_bounds in
   let bol = start#set_line_index 0 in
@@ -126,15 +126,20 @@ let apply ~project (view : Ocaml_text.view) (templ : Templates.t) =
         end templ;
       | Action func -> func view
   end;
+  view#tbuffer#undo#end_block();
   let mark_end = buffer#create_mark(* ~name:(Gtk_util.create_mark_name "Templ.apply4")*) (buffer#get_iter `INSERT) in
+  (** Indent block *)
+  let start = buffer#get_iter_at_mark (`MARK mark_begin) in
+  let start = start#set_line_index 0 in
+  let stop = buffer#get_iter_at_mark (`MARK mark_end) in
+  let stop = stop#forward_line#set_line_index 0 in
+  ignore (Ocp_indent.indent ~view (`BOUNDS (start, stop)));
   (** Place cursor *)
-  begin
-    match !mark_i, !mark_s with
-      | None, None -> ()
-      | (Some mark), None -> buffer#place_cursor ~where:(buffer#get_iter_at_mark (`MARK mark));
-      | None, (Some mark) -> buffer#place_cursor ~where:(buffer#get_iter_at_mark (`MARK mark));
-      | (Some mi), (Some ms) -> buffer#select_range (buffer#get_iter_at_mark (`MARK mi)) (buffer#get_iter_at_mark (`MARK ms));
-  end;
+  (match !mark_i, !mark_s with
+    | None, None -> ()
+    | (Some mark), None -> buffer#place_cursor ~where:(buffer#get_iter_at_mark (`MARK mark));
+    | None, (Some mark) -> buffer#place_cursor ~where:(buffer#get_iter_at_mark (`MARK mark));
+    | (Some mi), (Some ms) -> buffer#select_range (buffer#get_iter_at_mark (`MARK mi)) (buffer#get_iter_at_mark (`MARK ms)));
   Gaux.may !mark_i ~f:(fun mark -> buffer#delete_mark (`MARK mark));
   Gaux.may !mark_s ~f:(fun mark -> buffer#delete_mark (`MARK mark));
   (** Fix bug in draw_current_line_background *)
@@ -161,8 +166,7 @@ let apply ~project (view : Ocaml_text.view) (templ : Templates.t) =
       ~start:(buffer#get_iter_at_mark (`MARK mark_begin))
       ~stop:(buffer#get_iter_at_mark (`MARK mark_end));*)
   end;
-  remove_marks();
-  view#tbuffer#undo#end_block()
+  remove_marks();;
 
 (** widget *)
 class widget ~project ~(view : Ocaml_text.view) ?packing ()=

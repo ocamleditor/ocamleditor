@@ -92,15 +92,15 @@ let edit ~browser ~group ~flags
   let indent_all = ref None in
   if Oe_config.ocp_indent_version <> None then begin
     let item = GMenu.image_menu_item ~label:"Indent Line/Selection" ~packing:menu#add () in
-    let ocp_indent all page = ignore (Ocp_indent.indent ~view:page#view ~all ()) in
+    let ocp_indent bounds page = ignore (Ocp_indent.indent ~view:page#view bounds) in
     indent_selection := Some item;
     (*item#set_image (GMisc.image ~stock:`INDENT ~icon_size:`MENU ())#coerce;*)
-    ignore (item#connect#activate ~callback:(fun () -> editor#with_current_page (ocp_indent false)));
+    ignore (item#connect#activate ~callback:(fun () -> editor#with_current_page (ocp_indent `SELECTION)));
     item#add_accelerator ~group ~modi:[] GdkKeysyms._Tab ~flags;
     let item = GMenu.image_menu_item ~label:"Indent All" ~packing:menu#add () in
     indent_all := Some item;
     (*item#set_image (GMisc.image ~stock:`INDENT ~icon_size:`MENU ())#coerce;*)
-    ignore (item#connect#activate ~callback:(fun () -> editor#with_current_page (ocp_indent true)));
+    ignore (item#connect#activate ~callback:(fun () -> editor#with_current_page (ocp_indent `ALL)));
   end;
   (** Templates *)
   let templates = GMenu.menu_item ~label:"Templates..." ~packing:menu#add () in

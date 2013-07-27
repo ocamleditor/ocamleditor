@@ -55,7 +55,7 @@ let create ~editor ~page () =
   if Oe_config.ocp_indent_version <> None then begin
     let indent_all = GMenu.image_menu_item ~label:"Indent All" ~packing:gmenu#append () in
     ignore (indent_all#connect#activate ~callback:begin fun () ->
-      editor#with_current_page (fun page -> ignore (Ocp_indent.indent ~view:page#view ~all:true ()));
+      editor#with_current_page (fun page -> ignore (Ocp_indent.indent ~view:page#view `ALL));
     end);
     gmenu#append (GMenu.separator_item ());
   end;
