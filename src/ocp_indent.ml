@@ -87,7 +87,7 @@ let indent ~view bounds =
           end
         end lines;
         (*  *)
-        if buffer#has_selection then begin
+        if bounds = `SELECTION && buffer#has_selection then begin
           let m = if (buffer#get_iter `INSERT)#compare (buffer#get_iter `SEL_BOUND) < 0
             then `INSERT else `SEL_BOUND in
           buffer#move_mark m ~where:(buffer#get_iter_at_char ?line:(Some start_line) start_line_index);
