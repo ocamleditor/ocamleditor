@@ -138,11 +138,11 @@ object (self)
     self#init_hyperlinks();
     (* On switch_page event *)
     ignore (self#connect#switch_page ~callback:begin fun widget ->
-      let subtitle = Miscellanea.trim widget#title.subtitle in
+      let subtitle = String.trim widget#title.subtitle in
       let subtitle = if subtitle = "" then "" else sprintf "\n<i><small>%s</small></i>" subtitle in
       kprintf label_title#set_label "<b><big>%s</big></b>" widget#title.title (*small_title*);
       let tooltip = subtitle ^ "\n" ^ widget#title.tooltip in
-      label_title#misc#set_tooltip_markup (Miscellanea.trim tooltip);
+      label_title#misc#set_tooltip_markup (String.trim tooltip);
       ignore (self#tooltip_destroy());
       (*  *)
       self#update_symbol_details widget ();

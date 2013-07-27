@@ -119,7 +119,7 @@ object (self)
                       let mark1 = buffer#create_mark(* ~name:(Gtk_util.create_mark_name "Annot_type.apply_tag")*) start_iter in
                       let mark2 = buffer#create_mark(* ~name:(Gtk_util.create_mark_name "Annot_type.apply_tag")*) stop_iter in
                       tag_bounds <- Some (mark1, mark2, (at_start, at_stop));
-                      let markup = (Print_type.markup2 (Miscellanea.trim at_type)) in
+                      let markup = (Print_type.markup2 (String.trim at_type)) in
                       Some markup
                     end else None
                   end else None

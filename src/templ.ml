@@ -115,9 +115,9 @@ let apply ~project (view : Ocaml_text.view) (templ : Templates.t) =
             end else begin
               buffer#insert selection;
             end
-          | SELECTION_TRIM -> buffer#insert (trim selection)
+          | SELECTION_TRIM -> buffer#insert (String.trim selection)
           | SELECTION_OPT def ->
-            let selection = trim selection in
+            let selection = String.trim selection in
             buffer#insert (if selection = "" then def else selection)
           | CURRENT_FILENAME ->
             Gaux.may view#obuffer#file ~f:(fun file -> buffer#insert file#basename)
@@ -126,22 +126,22 @@ let apply ~project (view : Ocaml_text.view) (templ : Templates.t) =
         end templ;
       | Action func -> func view
   end;
-  view#tbuffer#undo#end_block();
   let mark_end = buffer#create_mark(* ~name:(Gtk_util.create_mark_name "Templ.apply4")*) (buffer#get_iter `INSERT) in
-  (** Indent block *)
-  let start = buffer#get_iter_at_mark (`MARK mark_begin) in
-  let start = start#set_line_index 0 in
-  let stop = buffer#get_iter_at_mark (`MARK mark_end) in
-  let stop = stop#forward_line#set_line_index 0 in
-  ignore (Ocp_indent.indent ~view (`BOUNDS (start, stop)));
   (** Place cursor *)
   (match !mark_i, !mark_s with
     | None, None -> ()
     | (Some mark), None -> buffer#place_cursor ~where:(buffer#get_iter_at_mark (`MARK mark));
     | None, (Some mark) -> buffer#place_cursor ~where:(buffer#get_iter_at_mark (`MARK mark));
     | (Some mi), (Some ms) -> buffer#select_range (buffer#get_iter_at_mark (`MARK mi)) (buffer#get_iter_at_mark (`MARK ms)));
+  view#tbuffer#undo#end_block();
   Gaux.may !mark_i ~f:(fun mark -> buffer#delete_mark (`MARK mark));
   Gaux.may !mark_s ~f:(fun mark -> buffer#delete_mark (`MARK mark));
+  (** Indent block *)
+  let start = buffer#get_iter_at_mark (`MARK mark_begin) in
+  let start = start#set_line_index 0 in
+  let stop = buffer#get_iter_at_mark (`MARK mark_end) in
+  let stop = stop#forward_line#set_line_index 0 in
+  ignore (Ocp_indent.indent ~view (`BOUNDS (start, stop)));
   (** Fix bug in draw_current_line_background *)
   (*let iter = ref (buffer#get_iter_at_mark (`MARK mark_begin)) in
   let stop = buffer#get_iter_at_mark (`MARK mark_end) in

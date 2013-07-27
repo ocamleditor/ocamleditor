@@ -77,7 +77,7 @@ module Action = struct
   let remove_delimiters view =
     let start, stop, text_within_delimiters = get_text_within_delimiters view in
     view#buffer#delete ~start ~stop;
-    let text_within_delimiters = Miscellanea.trim text_within_delimiters in
+    let text_within_delimiters = String.trim text_within_delimiters in
     view#buffer#insert text_within_delimiters;
     view#matching_delim_remove_tag ();
     let iter = view#buffer#get_iter `INSERT in
@@ -86,7 +86,7 @@ module Action = struct
   let be_parent view =
     let start, stop, text_within_delimiters = get_text_within_delimiters view in
     view#buffer#delete ~start ~stop;
-    let text = Miscellanea.trim text_within_delimiters in
+    let text = String.trim text_within_delimiters in
     let text = if text.[String.length text - 1] = ';' then String.sub text 0 (String.length text - 1) else text in
     let new_text = "(" ^ text ^ ")" in
     view#buffer#insert new_text;

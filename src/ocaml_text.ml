@@ -156,7 +156,7 @@ object (self)
             pend := pos
         | _ -> ()
       done;
-      let phrase = Miscellanea.trim (String.sub text !start (!pend - !start)) in
+      let phrase = String.trim (String.sub text !start (!pend - !start)) in
       phrase
     end
 
@@ -209,7 +209,7 @@ object (self)
       not (Glib.Unichar.isalnum c) &&
       let s = Glib.Utf8.from_unichar c in not (List.mem s ["."; "_"; "'"])
     end)#forward_char in
-    let lident = Miscellanea.trim (self#get_text ~start ~stop ()) in
+    let lident = String.trim (self#get_text ~start ~stop ()) in
     let lident = Str.split_delim (Miscellanea.regexp "\\.") lident in
     let lident =
       if match lident with x :: _ -> x = "" | _ -> false

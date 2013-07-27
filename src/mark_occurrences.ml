@@ -50,7 +50,7 @@ object (self)
     self#clear();
     match view#options#mark_occurrences with
       | true, _ ->
-        let text = trim (buffer#selection_text ()) in
+        let text = String.trim (buffer#selection_text ()) in
         if String.length text > 1 && not (String.contains text '\n') && not (String.contains text '\r') then begin
           (*let vrect = view#visible_rect in
           let h0 = Gdk.Rectangle.height vrect in

@@ -623,7 +623,7 @@ struct
       buffer#insert ~tags:[!!(`LINE_SPACING_BIG)] nn;
     in
     (* Title and module description *)
-    let fix_ocamldoc = ref (Gaux.may_map ~f:(fun x -> trim (Odoc_info.string_of_info x)) odoc.Module.m_info) in
+    let fix_ocamldoc = ref (Gaux.may_map ~f:(fun x -> String.trim (Odoc_info.string_of_info x)) odoc.Module.m_info) in
     with_tag_odoc begin fun () ->
       (*buffer#insert ~tags:[!!(`TITLE 0)] "Module ";*)
       buffer#insert ~tags:[!!(`TITLE 0); !!`TTF] odoc.Module.m_name;
@@ -688,7 +688,7 @@ struct
           | Module.Element_module_comment elem ->
             (* This is to fix an ocamldoc bug. *)
             (match !fix_ocamldoc with
-              | Some text when trim (Odoc_info.string_of_text elem) = text ->
+              | Some text when String.trim (Odoc_info.string_of_text elem) = text ->
                 fix_ocamldoc := None;
               | _ -> with_tag_odoc (fun () -> insert_text buffer elem (!!)));
       (*end ()*)

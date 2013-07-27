@@ -32,7 +32,7 @@ let create messages =
   {Oe.er_warnings = warnings; er_errors = errors}
 
 let parse_string buf =
-  let lexbuf = Lexing.from_string (trim buf) in
+  let lexbuf = Lexing.from_string (String.trim buf) in
   try
     let messages = Err_parser.compiler_output Err_lexer.token lexbuf in
     create messages

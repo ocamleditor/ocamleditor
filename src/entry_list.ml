@@ -157,7 +157,7 @@ object (self)
       let checked = model#get ~row ~column:col_checked in
       let value = model#get ~row ~column:col_value in
       model#set ~row ~column:col_checked
-        (if Miscellanea.trim value = "" then false else not checked);
+        (if String.trim value = "" then false else not checked);
       changed#call();
     end);
     signal_row_inserted <-

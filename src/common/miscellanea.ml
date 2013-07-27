@@ -203,11 +203,8 @@ let regexp_case_fold = Memo.fast ~f:Str.regexp_case_fold
 (** Miscellaneus string functions *)
 
 let split re = Str.split (!~ re)
-let ltrim = replace_first (!~ "^[ \t\r\n]+") ""
-let rtrim = replace_first (!~ "[ \t\r\n]+$") ""
-let trim =
-   let replace = Str.global_replace (Str.regexp "\\(^[ \t\r\n]+\\)\\|\\([ \t\r\n]+$\\)") in
-   fun str -> replace "" str
+let ltrim = replace_first (!~ "^\\([ \t\r\n]+\\)") ""
+let rtrim = replace_first (!~ "\\([ \t\r\n]+\\)$") ""
 let trim_line = global_replace (!~ "[ \t]+\\($\\)") "\\1"
 
 let lpad txt c width =

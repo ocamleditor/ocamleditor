@@ -27,7 +27,7 @@ let show ~view () =
           let buf = view#buffer in
           let char = try int_of_string char#text with _ -> 0 in
           let where =
-            if Miscellanea.trim line#text = "" then begin
+            if String.trim line#text = "" then begin
               let offset = max 0 (min char buf#end_iter#offset) in
               buf#get_iter (`OFFSET offset)
             end else begin

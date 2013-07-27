@@ -59,7 +59,7 @@ object (self)
     try
       self#with_ocamllib begin fun () ->
         let compiler = match Ocaml_config.find_tool `OCAMLC "" with Some x -> x | _ -> assert false in
-        let output = Miscellanea.trim (Ocaml_config.ocaml_version ~compiler ()) in
+        let output = String.trim (Ocaml_config.ocaml_version ~compiler ()) in
         let lines = Miscellanea.split "\n" output in
         let version, stdlib = match lines with [a; b] -> a, b | _ -> assert false in
         version, stdlib
