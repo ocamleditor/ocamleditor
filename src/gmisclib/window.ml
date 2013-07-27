@@ -67,6 +67,10 @@ module GeometryMemo = struct
           try
             let x, y, width, height = Hashtbl.find memo.table key in
             let move_resize () =
+              let screen_width = Gdk.Screen.width () in
+              let screen_height = Gdk.Screen.height () in
+              let x = if x < 0 && x + width <= 0 then 0 else if x >= 0 && x + width >= screen_width then screen_width - width else x in
+              let y = if y < 0 && y + height <= 0 then 0 else if y >= 0 && y + height >= screen_height then screen_height - height else y in
               window#move ~x ~y;
               window#resize ~width ~height;
             in
