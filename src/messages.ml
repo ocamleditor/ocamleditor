@@ -85,7 +85,7 @@ object (self)
           let has_memo = Preferences.geometry_memo.Gmisclib.Window.GeometryMemo.enabled in
           let memo_table = Preferences.geometry_memo.Gmisclib.Window.GeometryMemo.table in
           let width, height =
-            if has_memo && Hashtbl.length memo_table > 0 then None, None else (Some rect.Gtk.width), (Some rect.Gtk.height)
+            if has_memo &&  Hashtbl.mem memo_table role then None, None else (Some rect.Gtk.width), (Some rect.Gtk.height)
           in
           let window = GWindow.window ~title:self#title ~icon ?width ?height ~border_width:0 ~allow_shrink:true ~position:`CENTER ~show:false () in
           window#set_geometry_hints ~pos:true ~user_pos:true ~user_size:true self#coerce;
@@ -175,7 +175,7 @@ object (self)
         let has_memo = Preferences.geometry_memo.Gmisclib.Window.GeometryMemo.enabled in
         let memo_table = Preferences.geometry_memo.Gmisclib.Window.GeometryMemo.table in
         let width, height =
-          if has_memo && Hashtbl.length memo_table > 0 then None, None else (Some rect.Gtk.width), (Some rect.Gtk.height)
+          if has_memo && Hashtbl.mem memo_table role then None, None else (Some rect.Gtk.width), (Some rect.Gtk.height)
         in
         let window = GWindow.window ~title:"Messages" ~icon:Icons.oe ?width ?height ~border_width:0 ~position:`CENTER ~allow_shrink:true ~show:false () in
         window#set_geometry_hints ~pos:true ~user_pos:true ~user_size:true self#coerce;
