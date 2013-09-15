@@ -29,7 +29,7 @@ let info ?(title="") ?(message_type=`INFO) ~message widget =
       if message <> "" then begin
         let message = GWindow.message_dialog ~message ~title
           ~modal:true ~position:`CENTER ~parent ~type_hint:`DIALOG
-          ?message_type ~buttons:(GWindow.Buttons.ok) () in
+          ~message_type ~buttons:(GWindow.Buttons.ok) () in
         message#set_transient_for parent#as_window;
         ignore(message#run());
         message#destroy()

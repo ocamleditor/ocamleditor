@@ -90,9 +90,12 @@ let find_project_external_references =
     scan_project_files ~project begin fun acc filename entry ->
       try
         let mod_refs = Hashtbl.find_all entry.ext_refs def_modname in
-        acc @ List.filter begin fun {ident_loc; _} ->
-          (Longident.last (Longident.parse ident_loc.txt)) = def.ident_loc.txt
-        end mod_refs
+        let filtered =
+          List.filter begin fun {ident_loc; _} ->
+            (Longident.last (Longident.parse ident_loc.txt)) = def.ident_loc.txt
+          end mod_refs
+        in
+        acc @ filtered
       with Not_found -> acc
     end;
   in

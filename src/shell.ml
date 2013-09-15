@@ -121,7 +121,7 @@ object (self)
   method insert text = buffer#insert text
 
   method private keypress c =
-    if not reading & c > " " then begin
+    if not reading && c > " " then begin
       reading <- true;
       self#set_input_start ();
     end

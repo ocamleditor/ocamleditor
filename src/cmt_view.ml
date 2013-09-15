@@ -619,9 +619,9 @@ object (self)
       | Tstr_modtype (_, loc, mt) ->
         let parent = self#append ?parent ~kind:Module_type ~loc:loc.loc loc.txt "" in
         model#set ~row:parent ~column:col_lazy [fun () -> ignore (self#append_module_type ~parent mt.mty_desc)];
-      | Tstr_include (me, idents) ->
+      | Tstr_include (me, sign) ->
         let parent = self#append_module ?parent ~kind:Module_include me.mod_desc in
-        let f () = List.iter (fun ident -> ignore (self#append ?parent ~kind:Simple (Ident.name ident) "")) idents in
+        let f () = List.iter (fun sign -> ignore (self#append_signature_item ?parent sign)) sign in
         begin
           match parent with
             | Some row -> model#set ~row ~column:col_lazy [f];

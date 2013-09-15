@@ -49,7 +49,7 @@ let rec find_pattern f offset ?(opt=false, false) {pat_desc; pat_loc; pat_type; 
         | Tpat_alias (pat, _, _) ->
           Log.println `DEBUG "Tpat_alias" ;
           fp ~opt pat
-        | Tpat_construct (_, loc, _, pl, _) ->
+        | Tpat_construct (loc, _, pl, _) ->
           Log.println `DEBUG "Tpat_construct (%s) (%s) (%d)" (Longident.last loc.txt) (string_of_loc loc.loc) (List.length pl);
           List.fold_left (fun opt pat -> fp ~opt pat) opt pl
         | Tpat_variant (lab, pat, _) ->
@@ -57,7 +57,7 @@ let rec find_pattern f offset ?(opt=false, false) {pat_desc; pat_loc; pat_type; 
           Opt.map_default pat opt (fun pat -> fp ~opt pat)
         | Tpat_record (ll, _) ->
           Log.println `DEBUG "Tpat_record ";
-          List.fold_left (fun opt (_, _, _, pat) -> fp ~opt pat) opt ll
+          List.fold_left (fun opt (_, _, pat) -> fp ~opt pat) opt ll
         | Tpat_array pl ->
           Log.println `DEBUG "Tpat_array ";
           List.fold_left (fun opt pat -> fp ~opt pat) opt pl
@@ -135,17 +135,17 @@ and find_expression f offset ?(opt=false,false) ?loc {exp_desc; exp_loc; exp_typ
         | Texp_tuple ll ->
           Log.println `DEBUG "Texp_tuple: " ;
           List.fold_left (fun opt e -> fe ~opt e) opt ll
-        | Texp_construct (_, _, _, ll, _) ->
+        | Texp_construct (_, _, ll, _) ->
           Log.println `DEBUG "Texp_construct: " ;
           List.fold_left (fun opt e -> fe ~opt e) opt ll
         | Texp_variant (_, expr) ->
           Opt.map_default expr opt (fun e -> fe ~opt e)
         | Texp_record (ll, expr) ->
-          let opt = List.fold_left (fun opt (_, _, _, e) -> fe ~opt e) opt ll in
+          let opt = List.fold_left (fun opt (_, _, e) -> fe ~opt e) opt ll in
           Opt.map_default expr opt (fun e -> fe ~opt e)
-        | Texp_field (expr, _, _, _) ->
+        | Texp_field (expr, _, _) ->
           fe ~opt expr
-        | Texp_setfield (e1, _, _, _, e2) ->
+        | Texp_setfield (e1, _, _, e2) ->
           let opt = fe ~opt e1 in
           fe ~opt e2
         | Texp_array ll ->
@@ -378,7 +378,7 @@ and find_structure_item f offset {str_desc; str_loc; _} =
           find_pattern f offset pat;
           ignore (find_expression f offset expr);
         end pe
-      | Tstr_open (_, lid) -> f str_loc (Odoc_misc.string_of_longident lid.txt)
+      | Tstr_open (_, _, lid) -> f str_loc (Odoc_misc.string_of_longident lid.txt)
       | Tstr_include (module_expr, _) -> find_module_expr f offset module_expr
       | Tstr_class ll -> List.iter (fun (cd, _, _) -> find_class_expr f offset cd.ci_expr) ll
       | Tstr_class_type ll -> List.iter (fun (_, _, cd) -> find_class_type f offset cd.ci_expr) ll

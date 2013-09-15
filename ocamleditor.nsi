@@ -87,7 +87,7 @@ Section "OCamlEditor (required)"
   SetOutPath $INSTDIR\share\ocamleditor\icons
 	File "icons\*.*"
   SetOutPath $INSTDIR\share\ocamleditor\plugins
-	File "plugins\*.*"
+	File /NonFatal "plugins\*.*"
 
   ; Write the installation path into the registry
   WriteRegStr HKLM SOFTWARE\OCamlEditor "Install_Dir" "$INSTDIR"

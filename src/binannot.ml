@@ -59,6 +59,35 @@ type entry = { (* An entry collects all ident annotations of a source file. *)
   mutable definitions : definition list; (* List of all definitions in the file *)
 }
 
+module Longident = struct
+  include Longident
+
+  (*
+    parse "A.B.c";;
+    - : t = Ldot (Ldot (Lident "A", "B"), "c")
+    flatten (parse "A.B.c");;
+    - : string list = ["A"; "B"; "c"]
+    last (parse "A.B.c");;
+    - : string = "c"
+  *)
+
+  let qualified = function
+    | Lident _ -> false
+    | Ldot _ -> true
+    | Lapply _ -> true
+
+  let mod_path = function
+    | Lident _ -> None
+    | Ldot (x, _) -> Some x
+    | Lapply (x, _) -> Some x
+
+  let of_type_expr typ name =
+    match mod_path typ with
+      | Some path -> Ldot (path, name)
+      | _ -> Longident.Lident name
+
+end
+
 let table_idents : (string, entry) Hashtbl.t = Hashtbl.create 7 (* source filename, entry *)
 
 let string_of_kind = function
@@ -84,6 +113,7 @@ let cnum_of_loc loc =
   loc.loc_start.pos_fname, loc.loc_start.pos_cnum, loc.loc_end.pos_cnum
 
 let string_of_type_expr te = Odoc_info.string_of_type_expr te;;
+let lid_of_type_expr te = Longident.parse (string_of_type_expr te)
 
 let (<==) loc offset = loc.loc_start.pos_cnum <= offset && offset <= loc.loc_end.pos_cnum
 let (<==<) loc offset = loc.loc_start.pos_cnum <= offset && (offset <= loc.loc_end.pos_cnum || loc.loc_end.pos_cnum = -1)
@@ -132,19 +162,25 @@ let read_cmt ~project ~filename:source ?(timestamp=0.) ?compile_buffer () =
 ;;
 
 (** print_ident *)
-let print_ident {ident_kind; ident_loc; _} =
+let print_ident ?filter {ident_kind; ident_loc; _} =
   let loc' =
     match ident_kind with
       | Def loc -> "scope: " ^ (string_of_loc loc.def_scope)
       | Def_module def -> "def: " ^ (string_of_loc def.def_loc)
       | Def_constr def -> "def: " ^ (string_of_loc def.def_loc)
       | Int_ref def_loc -> "def: " ^ (string_of_loc def_loc)
-      | Ext_ref -> ""
+      | Ext_ref -> "---"
       | Open scope -> "scope: " ^ (string_of_loc scope)
   in
-  printf "%-11s: %-30s (%-12s) (%-19s) %s\n%!"
-    (String.uppercase (string_of_kind ident_kind))
-    ident_loc.txt (string_of_loc ident_loc.loc) loc' ident_loc.loc.loc_start.pos_fname;
+  match filter with
+    | Some x when x <> ident_loc.txt -> ()
+    | _ ->
+      printf "%-11s: %-30s (use: %-12s) (%-19s) %s\n%!"
+        (String.uppercase (string_of_kind ident_kind))
+        ident_loc.txt
+        (string_of_loc ident_loc.loc)
+        loc'
+        ident_loc.loc.loc_start.pos_fname;
 ;;
 
 

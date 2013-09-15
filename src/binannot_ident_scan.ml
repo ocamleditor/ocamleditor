@@ -49,30 +49,45 @@ let rec iter_pattern f {pat_desc; pat_loc; pat_type; pat_extra; _} =
         ident_kind       = Def {def_name=loc.txt; def_loc=name_loc; def_scope=none};
         ident_loc        = Location.mkloc (Ident.name id) name_loc;
       } :: (fp pat)
-    | Tpat_construct (path, loc, _, pl, _) ->
-      let ident_kind =
-        if Ident.name (Path.head path) = Path.last path
-        then Int_ref none else Ext_ref
+    | Tpat_construct (loc, cd, pl, _) ->
+      let type_expr = lid_of_type_expr cd.Types.cstr_res in
+      let path, is_qualified =
+        match cd.Types.cstr_tag with
+          | Types.Cstr_exception (p, _) ->
+            let path = Longident.parse (Path.name p) in
+            path, Longident.qualified path
+          | Types.Cstr_constant _ | Types.Cstr_block _ ->
+            Longident.of_type_expr type_expr cd.Types.cstr_name,
+            Longident.qualified type_expr
       in
+      let ident_kind = if is_qualified then Ext_ref else Int_ref none in
       let ident = {
         ident_kind;
         ident_fname = "";
-        ident_loc   = Location.mkloc (Path.name path) loc.loc;
+        ident_loc   = Location.mkloc (Odoc_misc.string_of_longident path) loc.loc;
       } in
+      (*if Odoc_misc.string_of_longident loc.txt = "Buffer_changed" then begin
+        Printf.printf "==============>Tpat_construct: loc.txt=%s -- name=%s -- type=%s -- %s -- loc=%s\n%!"
+          (Odoc_misc.string_of_longident path)
+          cd.Types.cstr_name
+          (string_of_type_expr cd.Types.cstr_res)
+          (String.concat "," (List.map string_of_type_expr cd.Types.cstr_args))
+          (string_of_loc loc.loc);
+        print_ident ident;
+      end;*)
       f ident;
       List.flatten (List.fold_left (fun acc pat -> (fp pat) :: acc) [] pl)
     | Tpat_variant (_, pat, _) ->
       Opt.map_default pat [] (fun pat -> fp pat)
     | Tpat_record (ll, _) ->
-      List.flatten (List.fold_left begin fun acc (path, loc, _, pat) ->
-        let ident_kind =
-          if Ident.name (Path.head path) = Path.last path
-          then Int_ref none else Ext_ref
-        in
+      List.flatten (List.fold_left begin fun acc (loc, ld, pat) ->
+        let type_expr = lid_of_type_expr ld.Types.lbl_res in
+        let ident_kind = if Longident.qualified type_expr then Ext_ref else Int_ref none in
+        let path = Longident.of_type_expr type_expr ld.Types.lbl_name in
         let ident = {
           ident_kind;
           ident_fname = "";
-          ident_loc   = Location.mkloc (Path.name path) loc.loc;
+          ident_loc   = Location.mkloc (Odoc_misc.string_of_longident path) loc.loc;
         } in
         f ident;
         (fp pat) :: acc
@@ -111,7 +126,7 @@ and iter_expression f {exp_desc; exp_loc; exp_type; exp_extra; _} =
   in
   List.iter begin fun (exp, loc') ->
     match exp with
-      | Texp_open (path, loc, _) ->
+      | Texp_open (_, path, loc, _) ->
         f {
           ident_kind  = Open loc';
           ident_fname = "";
@@ -173,56 +188,69 @@ and iter_expression f {exp_desc; exp_loc; exp_type; exp_extra; _} =
         fe e;
       end pe
     | Texp_tuple el -> List.iter fe el
-    | Texp_construct (path, loc, _, el, _) ->
-      let ident_kind =
-        if Ident.name (Path.head path) = Path.last path
-        then Int_ref none else Ext_ref
+    | Texp_construct (loc, cd, el, _) ->
+      let type_expr = lid_of_type_expr cd.Types.cstr_res in
+      let path, is_qualified =
+        match cd.Types.cstr_tag with
+          | Types.Cstr_exception (p, _) ->
+            let path = Longident.parse (Path.name p) in
+            path, Longident.qualified path
+          | Types.Cstr_constant _ | Types.Cstr_block _ ->
+            Longident.of_type_expr type_expr cd.Types.cstr_name,
+            Longident.qualified type_expr
       in
+      let ident_kind = if is_qualified then Ext_ref else Int_ref none in
       let ident = {
         ident_kind;
         ident_fname = "";
-        ident_loc   = Location.mkloc (Path.name path) loc.Location.loc;
+        ident_loc   = Location.mkloc (Odoc_misc.string_of_longident path) loc.Location.loc;
       } in
+      (*if Odoc_misc.string_of_longident loc.txt = "Buffer_changed" then begin
+        Printf.printf "==============> Texp_construct: loc.txt=%s -- name=%s -- type=%s -- %s -- loc=%s\n%!"
+          (Odoc_misc.string_of_longident path)
+          cd.Types.cstr_name
+          (string_of_type_expr cd.Types.cstr_res)
+          (String.concat "," (List.map string_of_type_expr cd.Types.cstr_args))
+          (string_of_loc loc.loc);
+        print_ident ident;
+      end;*)
       f ident;
       List.iter fe el
     | Texp_variant (_, expr) ->
       Opt.may expr fe
     | Texp_record (ll, expr) ->
-      List.iter begin fun (path, loc, _, e) ->
-        let ident_kind =
-          if Ident.name (Path.head path) = Path.last path
-          then Int_ref none else Ext_ref
-        in
+      List.iter begin fun (loc, ld, e) ->
+        let type_expr = lid_of_type_expr ld.Types.lbl_res in
+        let ident_kind = if Longident.qualified type_expr then Ext_ref else Int_ref none in
+        let path = Longident.of_type_expr type_expr ld.Types.lbl_name in
         let ident = {
           ident_kind;
           ident_fname = "";
-          ident_loc   = Location.mkloc (Path.name path) loc.Location.loc;
+          ident_loc   = Location.mkloc (Odoc_misc.string_of_longident path) loc.Location.loc;
         } in
         f ident;
         fe e
       end ll;
       Opt.may expr fe
-    | Texp_field (expr, path, loc, _) ->
-      let ident_kind =
-        if Ident.name (Path.head path) = Path.last path
-        then Int_ref none else Ext_ref
-      in
+    | Texp_field (expr, loc, ld) ->
+      let type_expr = lid_of_type_expr ld.Types.lbl_res in
+      let ident_kind = if Longident.qualified type_expr then Ext_ref else Int_ref none in
+      let path = Longident.of_type_expr type_expr ld.Types.lbl_name in
       let ident = {
         ident_kind;
         ident_fname = "";
-        ident_loc   = Location.mkloc (Path.name path) loc.Location.loc;
+        ident_loc   = Location.mkloc (Odoc_misc.string_of_longident path) loc.Location.loc;
       } in
       f ident;
       fe expr
-    | Texp_setfield (e1, path, loc, _, e2) ->
-      let ident_kind =
-        if Ident.name (Path.head path) = Path.last path
-        then Int_ref none else Ext_ref
-      in
+    | Texp_setfield (e1, loc, ld, e2) ->
+      let type_expr = lid_of_type_expr ld.Types.lbl_res in
+      let ident_kind = if Longident.qualified type_expr then Ext_ref else Int_ref none in
+      let path = Longident.of_type_expr type_expr ld.Types.lbl_name in
       let ident = {
         ident_kind;
         ident_fname = "";
-        ident_loc   = Location.mkloc (Path.name path) loc.Location.loc;
+        ident_loc   = Location.mkloc (Odoc_misc.string_of_longident path) loc.Location.loc;
       } in
       f ident;
       fe e1;
@@ -317,7 +345,7 @@ and iter_signature_item f {sig_desc; sig_loc; _} =
     | Tsig_modtype (_, _, Tmodtype_manifest mt) ->
       fmt mt;
       []
-    | Tsig_open (path, loc) ->
+    | Tsig_open (_, path, loc) ->
       let annot = {
         ident_kind  = Open {loc_start = loc.loc.loc_end; loc_end = dummy_pos; loc_ghost=false};
         ident_fname = "";
@@ -465,7 +493,7 @@ and iter_structure_item f {str_desc; str_loc; _} =
         Def {def_name=""; def_loc=none; def_scope={str_loc with loc_start = str_loc.loc_end; loc_end = Lexing.dummy_pos}}) defs;
       List.iter f defs;
       []
-    | Tstr_open (path, loc) ->
+    | Tstr_open (_, path, loc) ->
       let annot = {
         ident_kind  = Open {loc_start = loc.loc.loc_end; loc_end = dummy_pos; loc_ghost=false};
         ident_fname = "";
@@ -483,7 +511,7 @@ and iter_structure_item f {str_desc; str_loc; _} =
     | Tstr_type ll -> List.iter (fun (_, _, td) ->
       iter_type_declaration f td) ll;
       []
-    | Tstr_exception (_, loc, ed) ->
+    | Tstr_exception (ident, loc, ed) ->
       let ident_kind = Def_constr {def_name=loc.txt; def_loc=loc.loc; def_scope=none} in
       f {
         ident_kind;
@@ -536,12 +564,12 @@ let register filename entry ({ident_loc; ident_kind; _} as ident) =
       | Int_ref x when x = none ->
         begin
           match List_opt.find begin fun {def_name; def_scope; _} ->
-            def_name = ident.ident_loc.txt && def_scope <== start
+            def_name = ident.ident_loc.txt  && (def_scope <== start || def_scope = none)
           end entry.definitions with
             | Some def ->
               ident.ident_kind <- (Int_ref def.def_loc);
               Hashtbl.add entry.int_refs def.def_loc ident;
-            | _ -> () (* assert false *)
+            | _ -> () (*assert false*)
         end;
       | Int_ref def_loc (*when List.exists (fun d -> d.def_loc = def_loc) entry.definitions*) ->
         (* When Int_ref refers to a recursive function, its def is not yet regstered in entry.definitions *)
