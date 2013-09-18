@@ -66,15 +66,6 @@ let rec iter_pattern f {pat_desc; pat_loc; pat_type; pat_extra; _} =
         ident_fname = "";
         ident_loc   = Location.mkloc (Odoc_misc.string_of_longident path) loc.loc;
       } in
-      (*if Odoc_misc.string_of_longident loc.txt = "Buffer_changed" then begin
-        Printf.printf "==============>Tpat_construct: loc.txt=%s -- name=%s -- type=%s -- %s -- loc=%s\n%!"
-          (Odoc_misc.string_of_longident path)
-          cd.Types.cstr_name
-          (string_of_type_expr cd.Types.cstr_res)
-          (String.concat "," (List.map string_of_type_expr cd.Types.cstr_args))
-          (string_of_loc loc.loc);
-        print_ident ident;
-      end;*)
       f ident;
       List.flatten (List.fold_left (fun acc pat -> (fp pat) :: acc) [] pl)
     | Tpat_variant (_, pat, _) ->
@@ -205,15 +196,6 @@ and iter_expression f {exp_desc; exp_loc; exp_type; exp_extra; _} =
         ident_fname = "";
         ident_loc   = Location.mkloc (Odoc_misc.string_of_longident path) loc.Location.loc;
       } in
-      (*if Odoc_misc.string_of_longident loc.txt = "Buffer_changed" then begin
-        Printf.printf "==============> Texp_construct: loc.txt=%s -- name=%s -- type=%s -- %s -- loc=%s\n%!"
-          (Odoc_misc.string_of_longident path)
-          cd.Types.cstr_name
-          (string_of_type_expr cd.Types.cstr_res)
-          (String.concat "," (List.map string_of_type_expr cd.Types.cstr_args))
-          (string_of_loc loc.loc);
-        print_ident ident;
-      end;*)
       f ident;
       List.iter fe el
     | Texp_variant (_, expr) ->

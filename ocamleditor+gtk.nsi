@@ -85,7 +85,7 @@ Section "OCamlEditor (required)"
   SetOutPath $INSTDIR\share\ocamleditor\icons
 	File "icons\*.*"
   SetOutPath $INSTDIR\share\ocamleditor\plugins
-	File "plugins\*.*"
+	File /NonFatal "plugins\*.*"
 
   SetOutPath $INSTDIR\share
   ; Write the installation path into the registry
@@ -108,18 +108,18 @@ SectionEnd
 Section "GTK2 Runtime Environment"
   ; Set output path to the installation directory.
   SetOutPath $INSTDIR
-  File /r "C:\devel\ocaml\Mig3\GTK2-Runtime\bin"
-  File /r "C:\devel\ocaml\Mig3\GTK2-Runtime\etc"
-  File /r "C:\devel\ocaml\Mig3\GTK2-Runtime\lib"
+  File /r "C:\devel\GTK2-Runtime\bin"
+  File /r "C:\devel\GTK2-Runtime\etc"
+  File /r "C:\devel\GTK2-Runtime\lib"
   SetOutPath $INSTDIR\share\themes
-  File /r "C:\devel\ocaml\Mig3\GTK2-Runtime\share\themes\MurrinaCandido"
-  File /r "C:\devel\ocaml\Mig3\GTK2-Runtime\share\themes\MurrinaCandido Revamped"
-  File /r "C:\devel\ocaml\Mig3\GTK2-Runtime\share\themes\ClearlooksClassic"
-  File /r "C:\devel\ocaml\Mig3\GTK2-Runtime\share\themes\Human-Oxygen"
-  File /r "C:\devel\ocaml\Mig3\GTK2-Runtime\share\themes\Oxygen Blend"
-  File /r "C:\devel\ocaml\Mig3\GTK2-Runtime\share\themes\kde4-oxygen-rmx"
-  File /r "C:\devel\ocaml\Mig3\GTK2-Runtime\share\themes\Raleigh"
-  File /r "C:\devel\ocaml\Mig3\GTK2-Runtime\share\themes\Redmond"
+  File /r "C:\devel\GTK2-Runtime\share\themes\MurrinaCandido"
+  File /r "C:\devel\GTK2-Runtime\share\themes\MurrinaCandido Revamped"
+  File /r "C:\devel\GTK2-Runtime\share\themes\ClearlooksClassic"
+  File /r "C:\devel\GTK2-Runtime\share\themes\Human-Oxygen"
+  File /r "C:\devel\GTK2-Runtime\share\themes\Oxygen Blend"
+  File /r "C:\devel\GTK2-Runtime\share\themes\kde4-oxygen-rmx"
+  File /r "C:\devel\GTK2-Runtime\share\themes\Raleigh"
+  File /r "C:\devel\GTK2-Runtime\share\themes\Redmond"
 SectionEnd
 
 ; Optional section (can be disabled by the user)
