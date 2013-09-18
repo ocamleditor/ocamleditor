@@ -40,6 +40,42 @@ let set_theme ?theme () =
             (fun theme -> kprintf GtkMain.Rc.parse_string "gtk-theme-name = \"%s\"" theme);
         | _ -> ()
     end;
+    (** General *)
+    GtkMain.Rc.parse_string "
+gtk-button-images = 0
+gtk-font-name=\"Sans 8\"
+";
+    (** Style for the Structure Pane (Outline) *)
+    begin
+      match Oe_config.outline_alternating_row_colors with
+        | None -> ()
+        | Some x ->
+          let pref = Preferences.preferences#get in
+          let base_color = fst pref.Preferences.pref_bg_color in
+          kprintf GtkMain.Rc.parse_string "\
+style \"outline-treestyle\" {
+  GtkTreeView::even-row-color = \"%s\"
+  GtkTreeView::odd-row-color = \"%s\"
+}
+widget \"*.outline_treeview\" style \"outline-treestyle\"
+" base_color (Color.name (Color.set_value x (`NAME base_color)))
+    end;
+    (** Style for the Target List *)
+    begin
+      match Oe_config.targetlist_alternating_row_colors with
+        | None -> ()
+        | Some x ->
+          let pref = Preferences.preferences#get in
+          let base_color = fst pref.Preferences.pref_bg_color in
+          kprintf GtkMain.Rc.parse_string "\
+style \"targetlist-treestyle\" {
+  GtkTreeView::even-row-color = \"%s\"
+  GtkTreeView::odd-row-color = \"%s\"
+}
+widget \"*.targetlist_treeview\" style \"targetlist-treestyle\"
+" base_color (Color.name (Color.set_value x (`NAME base_color)))
+    end;
+    (** Small buttons *)
     GtkMain.Rc.parse_string "
 style \"small-button\" {
   GtkButton::child-displacement-x = 0
@@ -49,8 +85,6 @@ style \"small-button\" {
   ythickness = 0
 }
 widget \"*.smallbutton\" style \"small-button\"
-gtk-button-images = 0
-gtk-font-name=\"Sans 8\"
-"
+";
   end;;
 

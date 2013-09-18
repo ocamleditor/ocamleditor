@@ -184,7 +184,7 @@ class widget ~editor ~page ?packing () =
   let model_sort_name        = GTree.model_sort model in
   let model_sort_name_rev    = GTree.model_sort model in
   let sw                     = GBin.scrolled_window ~shadow_type:`IN ~hpolicy:`AUTOMATIC ~vpolicy:`AUTOMATIC ~packing:vbox#add () in
-  let view                   = GTree.view ~model:model_sort_default ~headers_visible:false ~packing:sw#add ~width:350 ~height:500 () in
+  let view                   = GTree.view ~rules_hint:(Oe_config.outline_alternating_row_colors <> None) ~model:model_sort_default ~headers_visible:false ~packing:sw#add ~width:350 ~height:500 () in
   let renderer_pixbuf        = GTree.cell_renderer_pixbuf [`YPAD 0; `XPAD 0] in
   let renderer_markup        = GTree.cell_renderer_text [`YPAD 0] in
   let vc                     = GTree.view_column () in
@@ -195,6 +195,7 @@ class widget ~editor ~page ?packing () =
 
   let _                      = view#selection#set_mode `SINGLE in
   let _                      = view#append_column vc in
+  let _                      = view#misc#set_name "outline_treeview" in
   let _                      = view#misc#set_property "enable-tree-lines" (`BOOL true) in
   let _                      = view#misc#modify_font_by_name Preferences.preferences#get.Preferences.pref_compl_font in
   let _                      = view#misc#modify_base [`SELECTED, `NAME Oe_config.outline_selection_bg_color; `ACTIVE, `NAME Oe_config.outline_active_bg_color] in
@@ -990,5 +991,6 @@ let window ~editor ~page () =
   end);
   window#present();
   widget, window;;
+
 
 

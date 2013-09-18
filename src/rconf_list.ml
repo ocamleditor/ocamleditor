@@ -41,7 +41,8 @@ class view ~target_list ~editor ~project ~page ?packing () =
   let _ = vc#set_max_width 220 in
   let vc_default = GTree.view_column ~renderer:(renderer_bool, ["active", col_default]) ~title:"Default" () in
   let sw = GBin.scrolled_window ~shadow_type:`IN ~hpolicy:`AUTOMATIC ~vpolicy:`AUTOMATIC ~packing:vbox#add () in
-  let view = GTree.view ~model:model ~headers_visible:true ~reorderable:false ~width:285(* ~height:385*) ~packing:sw#add () in
+  let view = GTree.view ~rules_hint:(Oe_config.targetlist_alternating_row_colors <> None) ~model:model ~headers_visible:true ~reorderable:false ~width:285(* ~height:385*) ~packing:sw#add () in
+  let _  = view#misc#set_name "targetlist_treeview" in
   let _ = view#append_column vc in
   let _ = view#append_column vc_default in
   (* Buttons *)

@@ -80,7 +80,7 @@ let gutter_fg_color                      = (*`THEME*) `CALC 0.50
 let gutter_border_color                  = (*`THEME*) `CALC 0.875
 let gutter_marker_color                  = (*`THEME*) `CALC 0.50
 let code_folding_scope_color             = `NAME "#e5e5e5" (* disabled *)
-let code_folding_highlight_color         = "#eeeeee"
+let code_folding_highlight_color         = "#eef5f5"
 let code_folding_hightlight_gradient     = ["#f4f4f4"; "#f9f9f9"; "#fefefe"] (* [] for no gradient *)
 let code_folding_font                    = ref (Some "-*-*-medium-r-*-sans-10-*-*-*-*-*-*-*")
                                           (* Font for the "n lines" label in the fold line; it must be 10 pixels height. None for no label *)
@@ -117,10 +117,12 @@ let outline_selection_bg_color           = "#1F80ED"
 let outline_selection_fg_color           = "#FFFFFF"
 let outline_active_bg_color              = "#B1C3D8"
 let outline_active_fg_color              = "#000000"
+let outline_alternating_row_colors       = Some 0.93 (* like the gutter *)
 let layout_find_references               = `VERTICAL
 let layout_find_module_browser           = `VERTICAL
 (* Path relative to the project home directory where to find custom templates. *)
 let template_project_filename            = ".extensions" // "templates.cma"
+let targetlist_alternating_row_colors    = Some 0.93 (* like the gutter *)
 
 (** End of Configuration Section ============================================ *)
 
