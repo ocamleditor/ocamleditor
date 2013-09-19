@@ -1,3 +1,20 @@
+Version 1.10.0
+--------------
+
+  * Changed dependencies: OCaml-4.01.0, Findlib-1.4.0, ocurl-0.6 (optional).
+
+  * Ability to detach message panes in floating windows.
+
+  * Add "Filter toplevel modules".
+
+  * Add description field to targets.
+
+  * More visual options for "Current line highlight", cursor aspect ratio,
+    Structure Pane and Target List.
+
+  * Various fixes.
+
+
 Version 1.9.0
 -------------
 
