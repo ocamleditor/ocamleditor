@@ -54,8 +54,8 @@ let _ =
   ];
 
   substitute ~filename:"../ocamleditor+gtk.nsi" ~regexp:true [
-    "OutFile \"ocamleditor-[0-9]+[.][0-9]+[.][0-9]+-gtk.exe\"",
-      (sprintf "OutFile \"ocamleditor-%s-gtk.exe\"" version);
+    "OutFile \"OCamlEditor-[0-9]+[.][0-9]+[.][0-9]+-Windows.exe\"",
+      (sprintf "OutFile \"OCamlEditor-%s-Windows.exe\"" version);
     "VIProductVersion \"[0-9]+[.][0-9]+[.][0-9]+.0\"",
       (sprintf "VIProductVersion \"%s.0\"" version);
     "VIAddVersionKey \"FileVersion\" \"[0-9]+[.][0-9]+[.][0-9]+\"",

@@ -57,10 +57,10 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>."
   let vbox = dialog#vbox in
   let align = GBin.alignment ~xalign:0.5 ~packing:vbox#add ~show:false () in
   let hbox = GPack.hbox ~spacing:3 ~packing:align#add () in
-  let spinner = GMisc.image ~file:(App_config.application_icons // "spinner_16.gif") ~packing:hbox#pack () in
-  let label = GMisc.label ~text:"Checking for updates..." ~height:22 ~packing:hbox#pack () in
-  let modify_label label =
-    label#misc#modify_fg [`NORMAL, `NAME "#808080"];
+  let spinner = GMisc.image ~xalign:1.0 ~file:(App_config.application_icons // "spinner_16.gif") ~packing:hbox#add () in
+  let label = GMisc.label ~text:"Checking for updates..." ~height:22 ~xalign:0.0 ~yalign:0.5 ~packing:hbox#add () in
+  let modify_label ?(color="#808080") label =
+    label#misc#modify_fg [`NORMAL, `NAME color];
     label#misc#modify_font_by_name "Sans 7";
   in
   modify_label label;
@@ -68,19 +68,22 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>."
     try
       spinner#set_stock `DIALOG_INFO;
       spinner#set_icon_size `MENU;
+      spinner#misc#hide();
+      hbox#set_child_packing ~expand:true label#coerce;
+      label#set_xalign 0.5;
       if try int_of_string (List.assoc "debug" App_config.application_param) >= 1 with Not_found -> false then (raise Exit);
       begin
         match Check_for_updates.check About.version () with
         | Some ver ->
           label#misc#hide();
           let text = sprintf "A new version of %s is available (%s)" About.program_name ver in
-          let button = GButton.button ~packing:vbox#pack () in
+          let button = GButton.button ~packing:hbox#add () in
           let label = GMisc.label ~text ~packing:button#add () in
-          modify_label label;
+          modify_label ~color:"#0000ff" label;
           button#set_relief `NONE;
           ignore (button#connect#clicked ~callback:begin fun () ->
               dialog#misc#hide();
-              let url = Check_for_updates.url in
+              let url = Check_for_updates.home_page in
               let cmd = if Sys.os_type = "Win32" then "start " ^ url else "xdg-open " ^ url in
               ignore (GMain.Idle.add (fun () -> ignore (Sys.command cmd); false));
               dialog#destroy();

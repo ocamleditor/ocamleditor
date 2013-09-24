@@ -18,7 +18,7 @@
 
 ;	!include "MUI2.nsh"
 Name "OCamlEditor"
-OutFile "ocamleditor-1.10.0-gtk.exe"
+OutFile "OCamlEditor-1.10.0-Windows.exe"
 InstallDir $PROGRAMFILES\OCamlEditor
 InstallDirRegKey HKLM "Software\OCamlEditor" "Install_Dir"
 
@@ -111,6 +111,8 @@ Section "GTK2 Runtime Environment"
   File /r "C:\devel\GTK2-Runtime\bin"
   File /r "C:\devel\GTK2-Runtime\etc"
   File /r "C:\devel\GTK2-Runtime\lib"
+  SetOutPath $INSTDIR\bin
+  File /r "D:\curl-7.29.0\*.dll"
   SetOutPath $INSTDIR\share\themes
   File /r "C:\devel\GTK2-Runtime\share\themes\MurrinaCandido"
   File /r "C:\devel\GTK2-Runtime\share\themes\MurrinaCandido Revamped"
