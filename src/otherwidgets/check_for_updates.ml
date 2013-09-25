@@ -26,7 +26,8 @@ let is_debug = false && App_config.application_debug
 let host = if is_debug then "ocamleditor.forge.ocamlcore.org" else "git.ocamlcore.org"
 let path = if is_debug then "/VERSION_TEST.txt" else "/cgi-bin/gitweb.cgi?p=ocamleditor/ocamleditor.git;a=blob_plain;f=VERSION;hb=HEAD"
 let re = Str.regexp "^\\([0-9]+\\.[0-9]+\\(\\.[0-9]+\\)?\\)\r?$"
-let home_page = "http://ocamleditor.forge.ocamlcore.org/"
+let website_name = "ocamleditor.forge.ocamlcore.org"
+let website = "http://" ^ website_name ^ "/"
 
 (** init_socket *)
 let init_socket addr port =
@@ -75,3 +76,4 @@ let check current_version () = begin
   end;
   !result
 end
+

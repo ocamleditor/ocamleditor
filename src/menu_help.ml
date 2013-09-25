@@ -35,6 +35,8 @@ let about editor () =
       ~version:About.version
       ~copyright:About.copyright
       ~logo:Icons.logo
+      ~website_label:Check_for_updates.website
+      ~comments:(sprintf "Build %s" About.build_id)
       ~license:"OCamlEditor is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
 the Free Software Foundation, either version 3 of the License, or
@@ -83,7 +85,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>."
           button#set_relief `NONE;
           ignore (button#connect#clicked ~callback:begin fun () ->
               dialog#misc#hide();
-              let url = Check_for_updates.home_page in
+              let url = Check_for_updates.website in
               let cmd = if Sys.os_type = "Win32" then "start " ^ url else "xdg-open " ^ url in
               ignore (GMain.Idle.add (fun () -> ignore (Sys.command cmd); false));
               dialog#destroy();

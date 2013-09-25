@@ -22,6 +22,6 @@
 
 
 let program_name = "OCamlEditor"
-let version = "1.10.0"
+let version = "1.10.1"
 let copyright = "Copyright © 2010-2013 Francesco Tovagliari"
-
+let build_id = Build_id.timestamp

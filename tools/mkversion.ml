@@ -22,6 +22,9 @@
 
 
 #use "scripting.ml"
+#load "unix.cma"
+#directory "../src/common"
+#use "miscellanea.ml"
 
 open Printf
 
@@ -65,5 +68,8 @@ let _ =
   ];
   let chan = open_out_bin "../VERSION" in
   output_string chan version;
+  let commit = exec_lines "git log --no-color | head -1" in
+  output_string chan "\n";
+  output_string chan (String.trim (String.concat "" commit));
   close_out_noerr chan
 ;;

@@ -57,6 +57,11 @@ let prepare_build () =
        (sprintf "let _ = Printexc.record_backtrace %b" !record_backtrace)];
     end;
     (try generate_oebuild_script() with Failure msg -> raise (Script_error 2));
+    (*  *)
+    let chan = open_out_bin "../src/build_id.ml" in
+    kprintf (output_string chan) "let timestamp = \"%f\"" (Unix.gettimeofday ());
+    close_out_noerr chan;
+    (*  *)
     print_newline()
   end;;
 

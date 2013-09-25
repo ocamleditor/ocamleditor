@@ -36,6 +36,7 @@ let distclean () =
   remove_file "oebuild_script.ml";
   remove_file "ocamleditor.opt.exe.manifest";
   remove_file "resource.res";
+  remove_file "build_id.ml";
   let run_no_errors cmd = try run cmd with Script_error _ -> () in
   kprintf run_no_errors "%s *.exe *.bak *.annot *~" rm;
   let rmdir dir = if Sys.file_exists dir then (kprintf run_no_errors "%s %s" rmr dir) in

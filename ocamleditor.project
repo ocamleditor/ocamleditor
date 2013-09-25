@@ -7,7 +7,7 @@
   <name>ocamleditor</name>
   <author>Francesco Tovagliari</author>
   <description/>
-  <version>1.10.0</version>
+  <version>1.10.1</version>
   <autocomp enabled="true" delay="0.764" cflags=""/>
   <targets>
     <target name="common" default="false" id="4" sub_targets="">

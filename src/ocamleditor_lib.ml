@@ -63,6 +63,71 @@ end
 let main () = begin
   ignore (Plugin.load "dot_viewer_svg.cma");
   Browser.browser#window#present();
+
+
+(*  let window = Browser.browser#window in
+  begin
+    match window#misc#get_property "screen" with
+      | `OBJECT (Some screen) ->
+        let screen = Gobject.try_cast screen "GdkScreen" in
+        Printf.printf "w=%d; h=%d\n%!" (Gdk.Screen.width ~screen ()) (Gdk.Screen.height ~screen ());
+        (*window#move ~x:0 ~y:0;
+        window#resize ~width:(Gdk.Screen.width ~screen ()) ~height:(Gdk.Screen.height ~screen () - 1);*)
+      | _ -> Printf.printf "***\n%!" ;
+  end;*)
+
+
+  let stats() =
+    let parse inchan =
+      try
+        while true do
+          (*print_endline*) (input_line inchan) |> ignore
+        done
+      with End_of_file -> (flush_all ())
+    in
+    try
+      let locale =
+        try
+          if Sys.win32 then begin
+            let lines = Miscellanea.exec_lines "reg query \"hkcu\\Control Panel\\International\" /v LocaleName" in
+            let lines = List.map String.trim lines in
+            let locale =
+              List.find (fun l -> Str.string_match (Str.regexp "LocaleName.+") l 0) lines
+            in
+            Str.string_match (Str.regexp ".*[\t ]\\([a-zA-Z-][a-zA-Z-][a-zA-Z-][a-zA-Z-][a-zA-Z-]\\)") locale 0 |> ignore;
+            Str.matched_group 1 locale
+          end else begin
+            let lines = Miscellanea.exec_lines "locale" in
+            let locale =
+              List.find (fun l -> Str.string_match (Str.regexp ".*=.+") l 0) lines
+            in
+            Str.string_match (Str.regexp ".*=\\(.*\\)") locale 0 |> ignore;
+            Str.matched_group 1 locale
+          end
+        with ex -> "<Locale_not_found>"
+      in
+      let terms = [
+        Glib.get_user_name();
+        About.build_id;
+        (sprintf "%s-%s" About.program_name About.version);
+        Sys.os_type;
+        locale
+      ] in
+      let address, port = Check_for_updates.website_name, 80 in
+      let (sock, inchan, outchan) = Check_for_updates.init_socket address port in
+      let path = sprintf "%s?utm_source=%s&utm_medium=app_medium&utm_term=%s&utm_campaign=stat"
+          Check_for_updates.website About.program_name (String.concat "+" terms)
+      in
+      (*Printf.printf "%s\n%!" path;*)
+      ignore (Check_for_updates.submit_request ~close:true "GET" path outchan);
+      ignore (parse inchan);
+      Unix.shutdown sock Unix.SHUTDOWN_ALL;
+    with (Sys_error _) as ex -> begin
+        Printf.fprintf stderr "%s\n%!" (Printexc.to_string ex)
+      end
+  in
+  if Oe_config.stats_enabled && not App_config.application_debug then stats();
+
   GtkThread2.main ();
 end
 
