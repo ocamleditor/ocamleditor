@@ -35,7 +35,7 @@ let about editor () =
       ~version:About.version
       ~copyright:About.copyright
       ~logo:Icons.logo
-      ~website_label:Check_for_updates.website
+      (*~website:About.website*)
       ~comments:(sprintf "Build %s" About.build_id)
       ~license:"OCamlEditor is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -52,19 +52,35 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>."
       ~show:false
       ()
   in
-  (*dialog#misc#modify_bg [`NORMAL, `WHITE];*)
-  dialog#set_skip_taskbar_hint true;
-  dialog#set_skip_pager_hint true;
-  Gaux.may (GWindow.toplevel editor) ~f:(fun x -> dialog#set_transient_for x#as_window);
   let vbox = dialog#vbox in
-  let align = GBin.alignment ~xalign:0.5 ~packing:vbox#add ~show:false () in
-  let hbox = GPack.hbox ~spacing:3 ~packing:align#add () in
-  let spinner = GMisc.image ~xalign:1.0 ~file:(App_config.application_icons // "spinner_16.gif") ~packing:hbox#add () in
-  let label = GMisc.label ~text:"Checking for updates..." ~height:22 ~xalign:0.0 ~yalign:0.5 ~packing:hbox#add () in
   let modify_label ?(color="#808080") label =
     label#misc#modify_fg [`NORMAL, `NAME color];
     label#misc#modify_font_by_name "Sans 7";
   in
+  let hbox = GPack.hbox ~packing:vbox#pack () in
+  (* Link website *)
+  let link_button = GButton.button ~relief:`NONE ~packing:hbox#add () in
+  let label = GMisc.label ~text:(sprintf "Visit the %s website" About.program_name) ~packing:link_button#add () in
+  modify_label ~color:"#0000ff" label;
+  link_button#set_focus_on_click false;
+  ignore (link_button#connect#clicked ~callback:(fun () ->
+      kprintf open_url "%s?%s-%f"
+        About.website About.build_id (Unix.gettimeofday())));
+  (* Report a bug *)
+  let link_button = GButton.button ~relief:`NONE ~packing:hbox#add () in
+  let label = GMisc.label ~text:"Report a bug" ~packing:link_button#add () in
+  modify_label ~color:"#0000ff" label;
+  link_button#set_focus_on_click false;
+  ignore (link_button#connect#clicked ~callback:(fun () -> open_url About.issues));
+  (* Check for updates *)
+  (*dialog#misc#modify_bg [`NORMAL, `WHITE];*)
+  dialog#set_skip_taskbar_hint true;
+  dialog#set_skip_pager_hint true;
+  Gaux.may (GWindow.toplevel editor) ~f:(fun x -> dialog#set_transient_for x#as_window);
+  let align = GBin.alignment ~xalign:0.5 ~packing:vbox#add ~show:false () in
+  let hbox = GPack.hbox ~spacing:3 ~packing:align#add () in
+  let spinner = GMisc.image ~xalign:1.0 ~file:(App_config.application_icons // "spinner_16.gif") ~packing:hbox#add () in
+  let label = GMisc.label ~text:"Checking for updates..." ~height:22 ~xalign:0.0 ~yalign:0.5 ~packing:hbox#add () in
   modify_label label;
   let check_for_updates () =
     try
@@ -85,9 +101,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>."
           button#set_relief `NONE;
           ignore (button#connect#clicked ~callback:begin fun () ->
               dialog#misc#hide();
-              let url = Check_for_updates.website in
-              let cmd = if Sys.os_type = "Win32" then "start " ^ url else "xdg-open " ^ url in
-              ignore (GMain.Idle.add (fun () -> ignore (Sys.command cmd); false));
+              open_url About.releases;
               dialog#destroy();
             end);
         | None -> label#set_text "There are no updates available."

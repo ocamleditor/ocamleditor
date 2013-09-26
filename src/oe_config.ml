@@ -123,7 +123,6 @@ let layout_find_module_browser           = `VERTICAL
 (* Path relative to the project home directory where to find custom templates. *)
 let template_project_filename            = ".extensions" // "templates.cma"
 let targetlist_alternating_row_colors    = Some 0.93 (* like the gutter *)
-let stats_enabled                        = true
 
 (** End of Configuration Section ============================================ *)
 
