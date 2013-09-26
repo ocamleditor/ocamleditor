@@ -409,6 +409,35 @@ let redirect_stderr = if Sys.os_type = "Win32" then " 2>NUL" else " 2>/dev/null"
 let modname_of_path path =
   String.capitalize (Filename.chop_extension (Filename.basename path))
 
+(** open_url *)
+let open_url url =
+  let cmd = if Sys.os_type = "Win32" then "start " ^ url else "xdg-open " ^ url in
+  let exit_code = Sys.command cmd in
+  if exit_code > 0 then kprintf failwith "Cannot execute %s" cmd
+
+(** get_locale *)
+let get_locale () =
+  try
+    if Sys.win32 then begin
+      let lines = exec_lines "reg query \"hkcu\\Control Panel\\International\" /v LocaleName" in
+      let lines = List.map String.trim lines in
+      let locale =
+        List.find (fun l -> Str.string_match (Str.regexp "LocaleName.+") l 0) lines
+      in
+      Str.string_match (Str.regexp ".*[\t ]\\([a-zA-Z-][a-zA-Z-][a-zA-Z-][a-zA-Z-][a-zA-Z-]\\)") locale 0 |> ignore;
+      Some (Str.matched_group 1 locale)
+    end else begin
+      let lines = exec_lines "locale" in
+      let locale =
+        List.find (fun l -> Str.string_match (Str.regexp ".*=.+") l 0) lines
+      in
+      Str.string_match (Str.regexp ".*=\\(.*\\)") locale 0 |> ignore;
+      Some (Str.matched_group 1 locale)
+    end
+  with ex ->
+    Printf.eprintf "File \"miscellanea.ml\": %s\n%s\n%!" (Printexc.to_string ex) (Printexc.get_backtrace());
+    None
+
 
 
 
