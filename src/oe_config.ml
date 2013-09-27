@@ -117,12 +117,12 @@ let outline_selection_bg_color           = "#1F80ED"
 let outline_selection_fg_color           = "#FFFFFF"
 let outline_active_bg_color              = "#B1C3D8"
 let outline_active_fg_color              = "#000000"
-let outline_alternating_row_colors       = Some 0.93 (* like the gutter *)
+let outline_alternating_row_colors       = Some 0.95 (* like the gutter *)
 let layout_find_references               = `VERTICAL
 let layout_find_module_browser           = `VERTICAL
 (* Path relative to the project home directory where to find custom templates. *)
 let template_project_filename            = ".extensions" // "templates.cma"
-let targetlist_alternating_row_colors    = Some 0.93 (* like the gutter *)
+let targetlist_alternating_row_colors    = Some 0.95 (* like the gutter *)
 
 (** End of Configuration Section ============================================ *)
 

@@ -64,8 +64,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>."
   modify_label ~color:"#0000ff" label;
   link_button#set_focus_on_click false;
   ignore (link_button#connect#clicked ~callback:(fun () ->
-      kprintf open_url "%s?%s-%f"
-        About.website About.build_id (Unix.gettimeofday())));
+      kprintf open_url "%s?%s-%s-%s"
+        About.website Sys.os_type About.version About.build_id));
   (* Report a bug *)
   let link_button = GButton.button ~relief:`NONE ~packing:hbox#add () in
   let label = GMisc.label ~text:"Report a bug" ~packing:link_button#add () in
@@ -73,30 +73,29 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>."
   link_button#set_focus_on_click false;
   ignore (link_button#connect#clicked ~callback:(fun () -> open_url About.issues));
   (* Check for updates *)
-  (*dialog#misc#modify_bg [`NORMAL, `WHITE];*)
   dialog#set_skip_taskbar_hint true;
   dialog#set_skip_pager_hint true;
   Gaux.may (GWindow.toplevel editor) ~f:(fun x -> dialog#set_transient_for x#as_window);
-  let align = GBin.alignment ~xalign:0.5 ~packing:vbox#add ~show:false () in
+  let align = GBin.alignment ~xalign:0.5 ~packing:vbox#add () in
   let hbox = GPack.hbox ~spacing:3 ~packing:align#add () in
-  let spinner = GMisc.image ~xalign:1.0 ~file:(App_config.application_icons // "spinner_16.gif") ~packing:hbox#add () in
-  let label = GMisc.label ~text:"Checking for updates..." ~height:22 ~xalign:0.0 ~yalign:0.5 ~packing:hbox#add () in
+  let icon = GMisc.image ~xalign:1.0 ~file:(App_config.application_icons // "spinner_16.gif") ~packing:hbox#add ~show:false () in
+  let label = GMisc.label ~text:" " ~height:22 ~xalign:0.0 ~yalign:0.5 ~packing:hbox#add () in
+  icon#set_icon_size `MENU;
   modify_label label;
   let check_for_updates () =
     try
-      spinner#set_stock `DIALOG_INFO;
-      spinner#set_icon_size `MENU;
-      spinner#misc#hide();
+      icon#misc#hide();
       hbox#set_child_packing ~expand:true label#coerce;
       label#set_xalign 0.5;
       if try int_of_string (List.assoc "debug" App_config.application_param) >= 1 with Not_found -> false then (raise Exit);
       begin
         match Check_for_updates.check About.version () with
         | Some ver ->
+          icon#set_stock `DIALOG_INFO;
           label#misc#hide();
           let text = sprintf "A new version of %s is available (%s)" About.program_name ver in
-          let button = GButton.button ~packing:hbox#add () in
-          let label = GMisc.label ~text ~packing:button#add () in
+          let button = GButton.button ~packing:(hbox#pack ~expand:true ~fill:false) () in
+          let label = GMisc.label ~text ~xalign:0.5 ~yalign:0.5 ~packing:button#add () in
           modify_label ~color:"#0000ff" label;
           button#set_relief `NONE;
           ignore (button#connect#clicked ~callback:begin fun () ->
@@ -104,20 +103,21 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>."
               open_url About.releases;
               dialog#destroy();
             end);
-        | None -> label#set_text "There are no updates available."
+        | None ->
+          icon#set_stock `APPLY;
+          kprintf label#set_text "%s is up to date." About.program_name
       end;
     with ex -> begin
         kprintf label#set_text "Unable to contact server for updates (%s)." (Printexc.to_string ex);
-        spinner#set_pixbuf Icons.warning_14;
-        (*spinner#misc#hide()*)
+        icon#set_pixbuf Icons.warning_14;
       end
   in
   ignore (dialog#misc#connect#show ~callback:begin fun () ->
       let count = ref 0in
       ignore (GMain.Timeout.add ~ms:600 ~callback:begin fun () ->
           if !count = 1 then begin
-            align#misc#show();
-            (*ehbox#misc#show();*)
+            icon#misc#show();
+            label#set_text "Checking for updates...";
           end else if !count = 2 then (check_for_updates());
           incr count;
           true

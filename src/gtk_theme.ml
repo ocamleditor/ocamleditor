@@ -31,7 +31,7 @@ let avail_themes =
     | _ -> []
 
 let set_theme ?theme () =
-  Gmisclib.Idle.add begin fun () ->
+  Gmisclib.Idle.add ~prio:100 begin fun () ->
     begin
       match Oe_config.themes_dir with
         | Some _ ->

@@ -47,11 +47,9 @@ let _ = if true || App_config.application_debug then begin
     "dot", (Opt.default dot_version "<Not Found>");
     "ocp-indent", (Opt.default ocp_indent_version "<Not Found>");
     "GTK Version", (sprintf "%d.%d.%d" a b c);
-    (*"plink", (Opt.default plink_version "<Not Found>");*)
-    (*"Glib Charset", (sprintf "%b, %s" Convert.glib_is_utf8 Convert.glib_charset);
-    "Locale Charset", (sprintf "%b, %s" Convert.locale_is_utf8 Convert.locale_charset);
-    "Default Charset", (sprintf "%b, %s" Convert.is_utf8 Convert.default_charset);*)
-    "Backtrace status", (sprintf "%b" (Printexc.backtrace_status ()))
+    "Locale", (Opt.default (get_locale ()) "<Not Found>");
+    "Charset", (let x, charset = Glib.Convert.get_charset () in sprintf "%b, %s" x charset);
+    "Backtrace status", (sprintf "%b" (Printexc.backtrace_status ()));
   ] in
   let maxlength = List.fold_left (fun cand (x, _) -> let len = String.length x in max cand len) 0 properties in
   List.iter (fun (n, v) -> printf "%s : %s\n" (rpad (n ^ " ") '.' maxlength) v) properties;
@@ -63,7 +61,6 @@ end
 let main () = begin
   ignore (Plugin.load "dot_viewer_svg.cma");
   Browser.browser#window#present();
-
 
 (*  let window = Browser.browser#window in
   begin
