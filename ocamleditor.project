@@ -197,7 +197,7 @@
       <libs>odoc_info gmisclib common icons otherwidgets oebuildlib ocamleditor_lib</libs>
       <other_objects></other_objects>
       <files>ocamleditor.ml</files>
-      <package>compiler-libs.common,dynlink,lablgtk2,str,xml-light</package>
+      <package>compiler-libs.common,dynlink,lablgtk2,str,unix,xml-light</package>
       <includes>+ocamldoc gmisclib common icons otherwidgets oebuild </includes>
       <thread>true</thread>
       <vmthread>false</vmthread>
@@ -221,7 +221,7 @@
       <libs>odoc_info gmisclib common icons otherwidgets oebuildlib</libs>
       <other_objects></other_objects>
       <files>ocamleditor.ml</files>
-      <package>compiler-libs.common,dynlink,lablgtk2,str,xml-light</package>
+      <package>compiler-libs.common,dynlink,lablgtk2,str,unix,xml-light</package>
       <includes>+ocamldoc gmisclib common icons otherwidgets oebuild </includes>
       <thread>true</thread>
       <vmthread>false</vmthread>
@@ -245,7 +245,7 @@
       <libs>resource.obj odoc_info gmisclib common icons otherwidgets oebuildlib ocamleditor_lib</libs>
       <other_objects></other_objects>
       <files>ocamleditor.ml</files>
-      <package>compiler-libs.common,dynlink,lablgtk2,str,xml-light</package>
+      <package>compiler-libs.common,dynlink,lablgtk2,str,unix,xml-light</package>
       <includes>+ocamldoc gmisclib common icons otherwidgets oebuild </includes>
       <thread>true</thread>
       <vmthread>false</vmthread>
@@ -269,7 +269,7 @@
       <libs>odoc_info gmisclib common icons otherwidgets oebuildlib</libs>
       <other_objects></other_objects>
       <files>ocamleditor.ml</files>
-      <package>compiler-libs.common,dynlink,lablgtk2,str,xml-light</package>
+      <package>compiler-libs.common,dynlink,lablgtk2,str,unix,xml-light</package>
       <includes>+ocamldoc gmisclib common icons otherwidgets oebuild </includes>
       <thread>true</thread>
       <vmthread>false</vmthread>
@@ -293,7 +293,7 @@
       <libs></libs>
       <other_objects></other_objects>
       <files>ocamleditor_lib.ml</files>
-      <package>compiler-libs.common,dynlink,lablgtk2,str,xml-light</package>
+      <package>compiler-libs.common,dynlink,lablgtk2,str,unix,xml-light</package>
       <includes>+ocamldoc gmisclib common icons otherwidgets oebuild </includes>
       <thread>true</thread>
       <vmthread>false</vmthread>

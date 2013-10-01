@@ -10,7 +10,7 @@ programming language.
 It provides many features to facilitate editing code, accessing API
 reference directly from the editor and compiling projects. It is entirely
 written in OCaml and uses LablGtk for the graphical user interface; it is
-light-weight, free and open source and works on Linux and Windows.
+light-weight, free and open source and runs under Linux and Windows.
 
 
 

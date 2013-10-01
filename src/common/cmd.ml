@@ -58,3 +58,24 @@ let expand =
     finally();
     if Buffer.length data = 0 then (kprintf failwith "Cmd.expand: %s" command);
     Buffer.contents data;;
+
+(** redirect_stderr *)
+let redirect_stderr = if Sys.os_type = "Win32" then " 2>NUL" else " 2>/dev/null"
+
+(** exec_lines *)
+let exec_lines command =
+  let ch = Unix.open_process_in command in
+  set_binary_mode_in ch false;
+  let result = ref [] in
+  try
+    while true do
+      result := (input_line ch) :: !result;
+    done;
+    assert false
+  with End_of_file -> begin
+    ignore (Unix.close_process_in ch);
+    List.rev !result
+  end | e -> begin
+    ignore (Unix.close_process_in ch);
+    raise e
+  end

@@ -107,7 +107,7 @@ let link ~compilation ~compiler ~outkind ~lflags ~package ~includes ~libs ~outna
   let deps = String.concat " " deps in
   kprintf (exec (*command*) ?process_err ~verbose:(verbose>=2)) "%s%s %s %s -o %s %s %s %s %s"
     compiler
-    (if use_findlib && (outkind <@ [Executable]) then " -linkpkg" else "")
+    (if false && use_findlib && (outkind <@ [Executable]) then " -linkpkg" else "")
     (match outkind with Library -> "-a" | Plugin when opt -> "-shared" | Plugin -> "" | Pack -> "-pack" | Executable | External -> "")
     lflags
     outname
@@ -294,19 +294,34 @@ let build ~compilation ~package ~includes ~libs ~other_mods ~outkind ~compile_on
   end;
   (* compiling *)
   let package = check_package_list package in
-  let compiler =
-    if prof then "ocamlcp -p a"
+  let compiler, linker =
+    if prof then "ocamlcp -p a", "ocamlcp -p a"
     else begin
-      let compiler =
+      let ocaml_c_opt =
         if compilation = Native then
           (match ocamlopt with Some x -> x | _ -> failwith "ocamlopt was not found")
         else ocamlc
       in
       let use_findlib = package <> "" in
       if use_findlib then
-        let cmp = try Filename.chop_extension compiler with Invalid_argument "Filename.chop_extension" -> compiler in
-        sprintf "ocamlfind %s -package %s" cmp package
-      else compiler
+        let thread = if thread then "-thread" else if vmthread then "-vmthread" else "" in
+        let ocaml_c_opt = try Filename.chop_extension ocaml_c_opt with Invalid_argument "Filename.chop_extension" -> ocaml_c_opt in
+        let ocamlfind = sprintf "ocamlfind %s -package %s %s" ocaml_c_opt package thread in
+        let get_effective_command ocamlfind =
+          try
+            let cmd = sprintf "%s -verbose" ocamlfind in
+            let lines = kprintf Cmd.exec_lines "%s %s" cmd Cmd.redirect_stderr in
+            let effective_compiler = List.find (fun line -> String.sub line 0 2 = "+ ") lines in
+            let effective_compiler = Str.string_after effective_compiler 2  in
+            let effective_compiler = Str.replace_first (Str.regexp " -verbose") "" effective_compiler in
+            effective_compiler
+          with Not_found -> ocamlfind
+        in
+        let compiler = get_effective_command ocamlfind in
+        let linkpkg = if outkind <@ [Executable] then "-linkpkg" else "" in
+        let linker = kprintf get_effective_command "%s %s" ocamlfind linkpkg in
+        compiler, linker
+      else ocaml_c_opt, ocaml_c_opt
     end
   in
   (*  *)
@@ -368,7 +383,7 @@ let build ~compilation ~package ~includes ~libs ~other_mods ~outkind ~compile_on
         let rec try_link () =
           let recompile = ref [] in
           let link_exit =
-            link ~compilation ~compiler ~outkind ~lflags:!lflags
+            link ~compilation ~compiler:linker ~outkind ~lflags:!lflags
               ~package
               ~includes:!includes ~libs ~deps:obj_deps ~outname
               ~process_err:(filter_inconsistent_assumptions_error ~compiler_output ~recompile ~targets ~deps ~cache:times ~opt)
