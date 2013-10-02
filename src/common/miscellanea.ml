@@ -327,24 +327,6 @@ let map_file_lines filename f =
     raise ex
   end;;
 
-(** exec_lines *)
-let exec_lines command =
-  let ch = Unix.open_process_in command in
-  set_binary_mode_in ch false;
-  let result = ref [] in
-  try
-    while true do
-      result := (input_line ch) :: !result;
-    done;
-    assert false
-  with End_of_file -> begin
-    ignore (Unix.close_process_in ch);
-    List.rev !result
-  end | e -> begin
-    ignore (Unix.close_process_in ch);
-    raise e
-  end
-
 (** pushd and popd *)
 let pushd, popd =
   let stack = Stack.create () in
@@ -402,9 +384,6 @@ let filename_unix_implicit filename =
   let parts = if Filename.is_implicit filename then parts else (List.tl parts) in
   String.concat "/" parts;;
 
-(** redirect_stderr *)
-let redirect_stderr = if Sys.os_type = "Win32" then " 2>NUL" else " 2>/dev/null"
-
 (** modname_of_path *)
 let modname_of_path path =
   String.capitalize (Filename.chop_extension (Filename.basename path))
@@ -419,7 +398,7 @@ let open_url url =
 let get_locale () =
   try
     if Sys.win32 then begin
-      let lines = exec_lines "reg query \"hkcu\\Control Panel\\International\" /v LocaleName" in
+      let lines = Cmd.exec_lines "reg query \"hkcu\\Control Panel\\International\" /v LocaleName" in
       let lines = List.map String.trim lines in
       let locale =
         List.find (fun l -> Str.string_match (Str.regexp "LocaleName.+") l 0) lines
@@ -427,7 +406,7 @@ let get_locale () =
       Str.string_match (Str.regexp ".*[\t ]\\([a-zA-Z-][a-zA-Z-][a-zA-Z-][a-zA-Z-][a-zA-Z-]\\)") locale 0 |> ignore;
       Some (Str.matched_group 1 locale)
     end else begin
-      let lines = exec_lines "locale" in
+      let lines = Cmd.exec_lines "locale" in
       let locale =
         List.find (fun l -> Str.string_match (Str.regexp ".*=.+") l 0) lines
       in

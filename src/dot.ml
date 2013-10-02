@@ -40,7 +40,7 @@ let mk_ocamldoc_cmd ~project ?(dot_include_all=false) ?(dot_reduce=true) ?(dot_t
     (if dot_types then " -dot-types" else "")
     outfile
     (String.concat " " sourcefiles)
-    Miscellanea.redirect_stderr;;
+    Cmd.redirect_stderr;;
 
 (** mk_dot_cmd *)
 let mk_dot_cmd ~outlang ~outfile ?(font_name="Helvetica")?(font_size=16) ?(label="") ?(label_font_size=26) ?(rotate=0.) filename =

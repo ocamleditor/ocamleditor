@@ -101,7 +101,7 @@
       <libs>common</libs>
       <other_objects></other_objects>
       <files>oebuild/oebuild_tool.ml</files>
-      <package>unix,str</package>
+      <package>str,unix</package>
       <includes>common oebuild</includes>
       <thread>true</thread>
       <vmthread>false</vmthread>

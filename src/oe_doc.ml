@@ -49,7 +49,7 @@ struct
               (*(if project.Project.thread then " -thread" else if project.Project.vmthread then " -vmthread" else "")*)
               search_path
               (Quote.arg file)
-              (if App_config.application_debug then Miscellanea.redirect_stderr else "")
+              (if App_config.application_debug then Cmd.redirect_stderr else "")
             in
             ignore (Oebuild_util.exec ~verbose:App_config.application_debug ~join:true cmd);
             Some out_filename

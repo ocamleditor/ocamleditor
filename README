@@ -60,8 +60,8 @@ HOW TO COMPILE
 
 INSTALLATION
 
-  From OCamlEditor-1.9.0 installation paths have changed, so please uninstall
-  the previous version first. You can do this with the command
+  Beginning with OCamlEditor-1.9.0 installation paths have changed, so please
+  uninstall the previous version first. You can do this with the command
 
     ocaml build.ml uninstall -ver-1.8.0 [-prefix <path>]
 

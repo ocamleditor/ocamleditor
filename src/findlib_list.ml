@@ -60,7 +60,7 @@ object (self)
     end);
 
   method load () =
-    let lines = Miscellanea.exec_lines "ocamlfind list -describe" in
+    let lines = Cmd.exec_lines "ocamlfind list -describe" in
     let lines = List.fold_left begin fun (name_descr, acc) line ->
       match name_descr with
         | None ->
