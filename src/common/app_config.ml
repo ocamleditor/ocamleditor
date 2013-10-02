@@ -50,3 +50,27 @@ let get_application_dir name =
 let application_icons = get_application_dir "icons"
 
 let application_plugins = get_application_dir "plugins"
+
+(** get_locale *)
+let get_locale () =
+  try
+    if Sys.win32 then begin
+      let lines = Cmd.exec_lines "reg query \"hkcu\\Control Panel\\International\" /v LocaleName" in
+      let lines = List.map String.trim lines in
+      let locale =
+        List.find (fun l -> Str.string_match (Str.regexp "LocaleName.+") l 0) lines
+      in
+      Str.string_match (Str.regexp ".*[\t ]\\([a-zA-Z-][a-zA-Z-][a-zA-Z-][a-zA-Z-][a-zA-Z-]\\)") locale 0 |> ignore;
+      Some (Str.matched_group 1 locale)
+    end else begin
+      let lines = Cmd.exec_lines "locale" in
+      let locale =
+        List.find (fun l -> Str.string_match (Str.regexp ".*=.+") l 0) lines
+      in
+      Str.string_match (Str.regexp ".*=\\(.*\\)") locale 0 |> ignore;
+      Some (Str.matched_group 1 locale)
+    end
+  with ex ->
+    Printf.eprintf "File \"miscellanea.ml\": %s\n%s\n%!" (Printexc.to_string ex) (Printexc.get_backtrace());
+    None
+

@@ -35,6 +35,8 @@ let re_version    = Str.regexp "[ \t\r]+\\(.+\\)"
 class widget ?packing () =
   let sw          = GBin.scrolled_window ~shadow_type:`IN ~hpolicy:`AUTOMATIC ~vpolicy:`AUTOMATIC ?packing () in
   let model       = GTree.list_store cols in
+  let modelf      = GTree.model_filter model in
+  let _           = modelf#set_visible_column col_toggle in
   let rend_toggle = GTree.cell_renderer_toggle [] in
   let rend_text   = GTree.cell_renderer_text [] in
   let vc_toggle   = GTree.view_column ~title:"" ~renderer:(rend_toggle, ["active", col_toggle]) () in
@@ -48,16 +50,40 @@ class widget ?packing () =
   let _           = view#set_search_column 1 in
 object (self)
   inherit GObj.widget sw#as_widget
+
   val changed = new changed()
+
   initializer
+    vc_name#set_cell_data_func rend_text begin fun model row ->
+      let checked = model#get ~row ~column:col_toggle in
+      if checked && not self#is_current_model_filtered then begin
+        let color = Color.name (Color.set_value 0.90 (`COLOR (view#misc#style#base `NORMAL))) in
+        rend_text#set_properties [`CELL_BACKGROUND_SET true; `CELL_BACKGROUND color];
+        rend_toggle#set_properties [`CELL_BACKGROUND_SET true; `CELL_BACKGROUND color];
+      end else begin
+        rend_text#set_properties [`CELL_BACKGROUND_SET false];
+        rend_toggle#set_properties [`CELL_BACKGROUND_SET false];
+      end
+    end;
     self#load();
     ignore (rend_toggle#connect#toggled ~callback:begin fun path ->
+      let path =
+        if self#is_current_model_filtered then modelf#convert_path_to_child_path path else path
+      in
       let row = model#get_iter path in
       let name = model#get ~row ~column:col_name in
       let checked = model#get ~row ~column:col_toggle in
       model#set ~row ~column:col_toggle (not checked);
-      changed#call (name, checked)
+      changed#call (name, checked);
     end);
+
+  method private is_current_model_filtered =
+    let current_model_oid = view#model#misc#get_oid in
+    let modelf_oid = modelf#misc#get_oid in
+    current_model_oid = modelf_oid
+
+  method set_filter x =
+    view#set_model (if x then Some modelf#coerce else Some model#coerce)
 
   method load () =
     let lines = Cmd.exec_lines "ocamlfind list -describe" in
@@ -117,13 +143,17 @@ let create = new widget
 
 let dialog (parent : GObj.widget) () =
   (*let window = Gmisclib.Window.popup ~widget:parent () in*)
-  let window = GWindow.window ~title:"Select Findlib packages" ~position:`CENTER ~modal:true ~show:false () in
+  let window = GWindow.window ~title:"Select Findlib packages" ~position:`CENTER ~type_hint:`UTILITY ~modal:true ~show:false () in
   Gaux.may (GWindow.toplevel parent) ~f:(fun x -> window#set_transient_for x#as_window);
-  let vbox = GPack.vbox ~border_width:5 ~packing:window#add () in
+  let vbox = GPack.vbox ~border_width:5 ~spacing:5 ~packing:window#add () in
   let widget = create ~packing:vbox#add () in
-  let bbox = GPack.button_box `HORIZONTAL ~layout:`END ~border_width:5 ~packing:vbox#pack () in
+  let hbox = GPack.hbox ~spacing:8 ~packing:vbox#pack () in
+  let button_filter = GButton.check_button ~active:false ~label:"Show selected only" ~packing:hbox#pack () in
+  button_filter#set_focus_on_click false;
+  let bbox = GPack.button_box `HORIZONTAL ~layout:`END ~border_width:5 ~packing:hbox#add () in
   let button_close = GButton.button ~stock:`CLOSE ~packing:bbox#pack () in
   ignore (button_close#connect#clicked ~callback:window#destroy);
+  ignore (button_filter#connect#toggled ~callback:(fun () -> widget#set_filter button_filter#active));
   window#resize ~width:parent#misc#allocation.Gtk.width ~height:400 ;
   ignore (window#event#connect#key_press ~callback:begin fun ev ->
     if GdkEvent.Key.keyval ev = GdkKeysyms._Escape then (window#destroy (); true)

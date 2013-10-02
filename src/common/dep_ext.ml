@@ -132,18 +132,19 @@ let analyze dag =
 (*
 #load "C:\\ocaml\\lib\\str.cma";;
 #load "C:\\ocaml\\lib\\unix.cma";;
-#load "C:\\ocaml\\devel\\ocamleditor\\src\\common\\app_config.cmo";;
 #load "C:\\ocaml\\devel\\ocamleditor\\src\\common\\cmd.cmo";;
+#load "C:\\ocaml\\devel\\ocamleditor\\src\\common\\app_config.cmo";;
 #load "C:\\ocaml\\devel\\ocamleditor\\src\\common\\ocaml_config.cmo";;
 #load "C:\\ocaml\\devel\\ocamleditor\\src\\common\\miscellanea.cmo";;
 #load "C:\\ocaml\\devel\\ocamleditor\\src\\common\\file_util.cmo";;
+#load "C:\\ocaml\\devel\\ocamleditor\\src\\common\\dep.cmo";;
 #directory "C:\\ocaml\\devel\\ocamleditor\\src\\common"
 
 
 
 let dag = find' "editor_page.ml" in File_util.write "D://temp/test.dot" (dot_of_dag dag);;
 
-let dag = find' "editor_page.ml" in for i = 1 to 5 do analyze dag done; File_util.write "D://temp/test.dot" (dot_of_dag dag);;
+let dag = find' "editor_page.ml" in for i = 1 to 5 do analyze dag |> ignore done; File_util.write "D://temp/test.dot" (dot_of_dag dag);;
 
 let dag = find' "prj.ml" in analyze dag;;
 
