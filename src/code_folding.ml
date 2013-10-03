@@ -565,7 +565,13 @@ object (self)
     ignore (view#connect#set_scroll_adjustments ~callback:begin fun _ vertical ->
       match vertical with
         | Some vertical ->
-          ignore (vertical#connect#after#value_changed ~callback:self#scan_folding_points);
+          ignore (vertical#connect#value_changed ~callback:begin fun () ->
+              Gaux.may signal_expose ~f:(fun id -> view#misc#handler_block id);
+            end);
+          ignore (vertical#connect#after#value_changed ~callback:(fun () ->
+              Gmisclib.Idle.add ~prio:300 self#scan_folding_points;
+              Gmisclib.Idle.add ~prio:100 (fun () ->
+                  Gaux.may signal_expose ~f:(fun id -> view#misc#handler_unblock id))));
         | _ -> ()
     end);
     ignore (view#event#connect#after#button_release ~callback:begin fun ev ->

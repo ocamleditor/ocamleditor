@@ -549,13 +549,17 @@ object (self)
     view#hyperlink#enable();
     self#set_tag_annot_background();
     (** Expose: Statusbar *)
-    ignore (self#view#event#connect#after#expose ~callback:begin fun _ ->
-      let iter = self#buffer#get_iter `INSERT in
-      status_pos_lin#set_text (string_of_int (iter#line + 1));
-      status_pos_col#set_text (string_of_int iter#line_offset);
-      status_pos_off#set_text (string_of_int iter#offset);
-      false
-    end);
+    let signal_expose = ref (self#view#event#connect#after#expose ~callback:begin fun _ ->
+        let iter = self#buffer#get_iter `INSERT in
+        status_pos_lin#set_text (string_of_int (iter#line + 1));
+        status_pos_col#set_text (string_of_int iter#line_offset);
+        status_pos_off#set_text (string_of_int iter#offset);
+        false
+      end)
+    in
+    ignore (vscrollbar#connect#value_changed ~callback:(fun () -> view#misc#handler_block !signal_expose));
+    ignore (vscrollbar#connect#after#value_changed ~callback:(fun () ->
+        Gmisclib.Idle.add ~prio:300 (fun () -> view#misc#handler_unblock !signal_expose)));
     (** After focus_in, check whether the file is changed on disk *)
     ignore (text_view#event#connect#after#focus_in ~callback:begin fun _ ->
       Gaux.may self#file ~f:begin fun f ->

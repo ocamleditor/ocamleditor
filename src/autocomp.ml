@@ -57,7 +57,7 @@ let compile_buffer ~project ~editor ~page ?(join=false) () =
           (Project.get_search_path_i_format project)
           Project.tmp
           relpath
-          (if App_config.application_debug then Cmd.redirect_stderr else "")
+          ((*if App_config.application_debug then Cmd.redirect_stderr else*) "")
         in
         let compiler_output = Buffer.create 101 in
         let process_err ~stderr =

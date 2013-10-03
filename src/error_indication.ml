@@ -439,7 +439,12 @@ object (self)
     view#event#connect#button_press ~callback:unsticky;
     view#event#connect#leave_notify ~callback:unsticky;
     (** View: on expose draw underline for warnings *)
-    view#event#connect#after#expose ~callback:(fun ev -> (*Prf.crono Prf.prf_error_indication_view_expose*) self#expose ev);
+    let signal_expose =
+      ref (view#event#connect#after#expose ~callback:(fun ev -> (*Prf.crono Prf.prf_error_indication_view_expose*)self#expose ev))
+    in
+    ignore (vscrollbar#connect#value_changed ~callback:(fun () -> view#misc#handler_block !signal_expose));
+    ignore (vscrollbar#connect#after#value_changed ~callback:(fun () ->
+        Gmisclib.Idle.add ~prio:300 (fun () -> view#misc#handler_unblock !signal_expose)));
     (** Global_gutter: expose *)
     global_gutter#event#connect#expose ~callback:(fun _ -> (*Prf.crono Prf.prf_paint_global_gutter*) self#paint_global_gutter (); false);
     (** Global_gutter: button_press  *)

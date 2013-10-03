@@ -848,10 +848,20 @@ object (self)
           (* Redraw the entire window on horizontal scroll to refresh right margin *)
           ignore (h#connect#after#value_changed
             ~callback:(fun () -> GtkBase.Widget.queue_draw self#as_widget));
+          ignore (v#connect#value_changed ~callback:begin fun () ->
+            Gaux.may signal_expose ~f:(fun id -> view#misc#handler_block id);
+            end);
           (* Update gutter on vertical scroll changed *)
           ignore (v#connect#after#value_changed ~callback:begin fun () ->
-            Gmisclib.Idle.add self#draw_gutter;
-          end);
+              Gmisclib.Idle.add ~prio:100 begin fun () ->
+                self#draw_gutter();
+                Gaux.may signal_expose ~f:begin fun id ->
+                  view#misc#handler_unblock id;
+                  (*GtkBase.Widget.queue_draw self#as_widget*)
+                end
+              end;
+              (*Gmisclib.Idle.add self#draw_gutter;*)
+            end);
         | _ -> ()
     end);
     (** Fix bug in draw_current_line_background *)

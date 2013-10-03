@@ -21,6 +21,8 @@ Name "OCamlEditor"
 OutFile "OCamlEditor-1.10.2-Windows.exe"
 InstallDir $PROGRAMFILES\OCamlEditor
 InstallDirRegKey HKLM "Software\OCamlEditor" "Install_Dir"
+#!define GTK_RUNTIME C:\devel\GTK2-Runtime
+!define GTK_RUNTIME C:\devel\GTK-2.24.10-Runtime
 
 ;; Request application privileges for Windows Vista
 RequestExecutionLevel Admin
@@ -108,20 +110,13 @@ SectionEnd
 Section "GTK2 Runtime Environment"
   ; Set output path to the installation directory.
   SetOutPath $INSTDIR
-  File /r "C:\devel\GTK2-Runtime\bin"
-  File /r "C:\devel\GTK2-Runtime\etc"
-  File /r "C:\devel\GTK2-Runtime\lib"
+  File /r "${GTK_RUNTIME}\bin"
+  File /r "${GTK_RUNTIME}\etc"
+  File /r "${GTK_RUNTIME}\lib"
   SetOutPath $INSTDIR\bin
   File /r "D:\curl-7.29.0\*.dll"
   SetOutPath $INSTDIR\share\themes
-  File /r "C:\devel\GTK2-Runtime\share\themes\MurrinaCandido"
-  File /r "C:\devel\GTK2-Runtime\share\themes\MurrinaCandido Revamped"
-  File /r "C:\devel\GTK2-Runtime\share\themes\ClearlooksClassic"
-  File /r "C:\devel\GTK2-Runtime\share\themes\Human-Oxygen"
-  File /r "C:\devel\GTK2-Runtime\share\themes\Oxygen Blend"
-  File /r "C:\devel\GTK2-Runtime\share\themes\kde4-oxygen-rmx"
-  File /r "C:\devel\GTK2-Runtime\share\themes\Raleigh"
-  File /r "C:\devel\GTK2-Runtime\share\themes\Redmond"
+  File /r "${GTK_RUNTIME}\share\themes\*"
 SectionEnd
 
 ; Optional section (can be disabled by the user)
