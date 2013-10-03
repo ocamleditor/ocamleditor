@@ -87,19 +87,19 @@ let can_compile_native ?ocaml_home () =
     with _ -> (close_out ochan)
   end;
   let outname = Filename.chop_extension filename in
-  let outname = outname ^ (if Sys.os_type = "Win32" then ".exe" else "") in
+  let exename = outname ^ (if Sys.os_type = "Win32" then ".exe" else "") in
   let compiler = match ocaml_home with
     | Some home -> find_tool `BEST_OCAMLOPT home
     | _ -> Some "ocamlopt"
   in
   match compiler with
     | Some compiler ->
-      let cmd = sprintf "%s -o %s %s%s" compiler outname filename
+      let cmd = sprintf "%s -o %s %s%s" compiler exename filename
         (if App_config.application_debug then redirect_stderr else "")
       in
       result := (Sys.command cmd) = 0;
       if Sys.file_exists filename then (Sys.remove filename);
-      if Sys.file_exists outname then (Sys.remove outname);
+      if Sys.file_exists exename then (Sys.remove exename);
       let cmi = outname ^ ".cmi" in
       if Sys.file_exists cmi then (Sys.remove cmi);
       let cmx = outname ^ ".cmx" in
@@ -108,6 +108,10 @@ let can_compile_native ?ocaml_home () =
       if Sys.file_exists obj then (Sys.remove obj);
       let obj = outname ^ ".obj" in
       if Sys.file_exists obj then (Sys.remove obj);
+      if Sys.win32 then begin
+        let manifest = exename ^ ".manifest" in
+        if Sys.file_exists manifest then (Sys.remove manifest);
+      end;
       if !result then begin
         let conf = kprintf Cmd.expand "%s -config" compiler in
         let re = Str.regexp "ccomp_type: \\(.*\\)\n" in
