@@ -101,9 +101,14 @@ object (self)
         end;
         self#send_to_shell ()
       | Some sh ->
+        let phrase = String.trim phrase in
         if String.length phrase > 0 then begin
-          let phrase = if not (Str.string_match (Miscellanea.regexp ";;") phrase 0)
-          then (phrase ^ ";;") else phrase in
+          let phrase =
+            try
+              Str.search_backward (Miscellanea.regexp ";;") phrase (String.length phrase) |> ignore;
+              phrase
+            with Not_found -> phrase ^ ";;"
+          in
           sh#send phrase;
           sh#send "\n";
         end
