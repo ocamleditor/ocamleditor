@@ -45,6 +45,7 @@ let ocamleditor_user_home =
 (** Configuration Section =================================================== *)
 
 let dot_viewer : [`DEFAULT | `PDF]       = `DEFAULT
+let dot_attributes                      = " -Glabelloc=t -Gfontsize=26pt -Gfontname=\"Helvetica\" -Nfontsize=16pt -Nfontname=\"Helvetica\""
 let ocp_indent_tab_key_enabled           = true
 let ocp_indent_config                    = "with=2"
 let ocp_indent_empty_line : [`INDENT | `ALIGN] = `INDENT

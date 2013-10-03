@@ -43,9 +43,9 @@ let mk_ocamldoc_cmd ~project ?(dot_include_all=false) ?(dot_reduce=true) ?(dot_t
     Cmd.redirect_stderr;;
 
 (** mk_dot_cmd *)
-let mk_dot_cmd ~outlang ~outfile ?(font_name="Helvetica")?(font_size=16) ?(label="") ?(label_font_size=26) ?(rotate=0.) filename =
-  sprintf "dot -T%s -o %s -Glabel=\"%s\" -Glabelloc=t -Grotate=%.2f -Gfontsize=%dpt -Gfontname=\"%s\" -Nfontsize=%dpt -Nfontname=\"%s\" %s"
-    outlang outfile label rotate label_font_size font_name font_size font_name filename;;
+let mk_dot_cmd ~outlang ~outfile ?(label="") ?(rotate=0.) filename =
+  sprintf "dot -T%s -o %s -Glabel=\"%s\" -Grotate=%.2f %s %s"
+    outlang outfile label rotate Oe_config.dot_attributes filename;;
 
 (** draw *)
 let draw ~project ~filename ?dot_include_all ?dot_types ?packing ?on_ready_cb () =
@@ -56,7 +56,7 @@ let draw ~project ~filename ?dot_include_all ?dot_types ?packing ?on_ready_cb ()
   in
   let outlang       = Device.lang in
   let basename      = Filename.basename filename in
-  let label         = sprintf "Module dependencies for \xC2\xAB%s\xC2\xBB" basename in
+  let label         = sprintf "Dependency graph for \xC2\xAB%s\xC2\xBB" basename in
   let prefix = Filename.chop_extension basename in
   let dependencies = Dep.find [filename] in
   let dependants =
@@ -71,13 +71,15 @@ let draw ~project ~filename ?dot_include_all ?dot_types ?packing ?on_ready_cb ()
   let ocamldoc_cmd  = mk_ocamldoc_cmd ?dot_include_all ?dot_types ~project ~outfile:dotfile sourcefiles in
   let dot_cmd       = mk_dot_cmd ~outlang ~outfile ~label dotfile in
   let viewer        = Device.create ?packing () in
-  let activity_name = "Generating module dependencies graph, please wait..." in
+  let activity_name = "Generating module dependency graph, please wait..." in
   Activity.add Activity.Other activity_name;
   ignore (Oebuild_util.exec ~verbose:App_config.application_debug ~join:false ~at_exit:begin fun () ->
     let modname = Miscellanea.modname_of_path filename in
     let re = kprintf Str.regexp "\"%s\" \\[.+" modname in
+    let re1 = Str.regexp "\\(\".*\"\\) \\[style=filled, color=darkturquoise\\];$" in
     map_file_lines dotfile begin fun ~lnum ~line ->
-      if Str.string_match re line 0 then (sprintf "\"%s\" [style=filled, color=magenta]" modname)
+      if Str.string_match re line 0 then (sprintf "\"%s\" [style=filled, color=black, fontcolor=white];\n" modname)
+      else if Str.string_match re1 line 0 then (sprintf "%s;\n" (Str.matched_group 1 line))
       else line
     end;
     ignore (Oebuild_util.exec ~join:false ~verbose:App_config.application_debug ~at_exit:begin fun () ->

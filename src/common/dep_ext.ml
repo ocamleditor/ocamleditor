@@ -95,6 +95,12 @@ let find' target =
   reduce out;
   (out : dag);;
 
+(** iter *)
+let iter f (dag : dag) = Hashtbl.iter f dag
+
+(** fold *)
+let fold f (dag : dag) init = Hashtbl.fold f dag init
+
 (** analyze *)
 let analyze dag =
   let rdag =
@@ -127,37 +133,6 @@ let analyze dag =
   end dag;
   leaves
 ;;
-
-
-(*
-#load "C:\\ocaml\\lib\\str.cma";;
-#load "C:\\ocaml\\lib\\unix.cma";;
-#load "C:\\ocaml\\devel\\ocamleditor\\src\\common\\cmd.cmo";;
-#load "C:\\ocaml\\devel\\ocamleditor\\src\\common\\app_config.cmo";;
-#load "C:\\ocaml\\devel\\ocamleditor\\src\\common\\ocaml_config.cmo";;
-#load "C:\\ocaml\\devel\\ocamleditor\\src\\common\\miscellanea.cmo";;
-#load "C:\\ocaml\\devel\\ocamleditor\\src\\common\\file_util.cmo";;
-#load "C:\\ocaml\\devel\\ocamleditor\\src\\common\\dep.cmo";;
-#directory "C:\\ocaml\\devel\\ocamleditor\\src\\common"
-
-
-
-let dag = find' "editor_page.ml" in File_util.write "D://temp/test.dot" (dot_of_dag dag);;
-
-let dag = find' "editor_page.ml" in for i = 1 to 5 do analyze dag |> ignore done; File_util.write "D://temp/test.dot" (dot_of_dag dag);;
-
-let dag = find' "prj.ml" in analyze dag;;
-
-let dag = find' "editor_page.ml" in for i = 1 to 3 do
-  let leaves = analyze dag in
-   List.iter begin fun g ->
-    Printf.printf "%s\n%!" (String.concat ", " g);
-    Printf.printf "-----------------------\n%!" ;
-  end leaves;
-  Printf.printf "************************\n%!" ;
-done;;
-
-*)
 
 (** find_top_modules *)
 let find_top_modules dir =

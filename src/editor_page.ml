@@ -530,14 +530,14 @@ object (self)
               match Dot.draw ~project:editor#project ~filename ~packing:vbox#add ~on_ready_cb () with
                 | None -> reset_button() | _ -> ();
             end begin fun () ->
-              let title = "Could not show dependencies graph" in
+              let title = "Could not show dependency graph" in
               let message = sprintf "%s for file: \n\n%s" title self#get_filename in
               Dialog.message ~title ~message `INFO;
               reset_button ()
             end ()
           with ex ->
             reset_button();
-            Dialog.display_exn ~parent:self ~title:"Error creating dependencies graph" ex
+            Dialog.display_exn ~parent:self ~title:"Error creating dependency graph" ex
         end;
 
   initializer
