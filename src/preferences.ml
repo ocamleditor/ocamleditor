@@ -97,6 +97,7 @@ type t = {
   mutable pref_remember_window_geometry     : bool;
   mutable pref_detach_message_panes_separately : bool;
   mutable pref_geometry_delayed             : bool;
+  mutable pref_build_parallel               : bool;
 }
 and text_properties =
   GDraw.color *
@@ -254,6 +255,7 @@ let create_defaults () = {
   pref_remember_window_geometry     = true;
   pref_detach_message_panes_separately = false;
   pref_geometry_delayed             = false;
+  pref_build_parallel               = false;
 }
 
 let preferences = new GUtil.variable (create_defaults ())
@@ -413,6 +415,7 @@ let to_xml pref =
       Xml.Element ("pref_remember_window_geometry", [], [Xml.PCData (string_of_bool pref.pref_remember_window_geometry)]);
       Xml.Element ("pref_detach_message_panes_separately", [], [Xml.PCData (string_of_bool pref.pref_detach_message_panes_separately)]);
       Xml.Element ("pref_geometry_delayed", [], [Xml.PCData (string_of_bool pref.pref_geometry_delayed)]);
+      Xml.Element ("pref_build_parallel", [], [Xml.PCData (string_of_bool pref.pref_build_parallel)]);
 
     ])
   in
@@ -535,6 +538,7 @@ let from_file filename =
         | "pref_remember_window_geometry" -> pref.pref_remember_window_geometry <- bool_of_string (value node)
         | "pref_detach_message_panes_separately" -> pref.pref_detach_message_panes_separately <- bool_of_string (value node)
         | "pref_geometry_delayed" -> pref.pref_geometry_delayed <- bool_of_string (value node)
+        | "pref_build_parallel" -> pref.pref_build_parallel <- bool_of_string (value node)
 
        | _ -> ()
     end xml;

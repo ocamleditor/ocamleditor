@@ -963,3 +963,4 @@ object
   method file_history_changed = file_history_changed#connect ~after
   method outline_visibility_changed = outline_visibility_changed#connect ~after
 end
+

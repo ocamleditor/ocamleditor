@@ -60,13 +60,13 @@ let compile_buffer ~project ~editor ~page ?(join=false) () =
           ((*if App_config.application_debug then Cmd.redirect_stderr else*) "")
         in
         let compiler_output = Buffer.create 101 in
-        let process_err ~stderr =
+        let process_err stderr =
           let line = input_line stderr in
           let line = Str.replace_first re_tmp "File \"" line in
           Buffer.add_string compiler_output (Miscellanea.rtrim line);
           Buffer.add_char compiler_output '\n';
         in
-        let at_exit () =
+        let at_exit _ =
           (* Replace output files and update the table of compilation times of oebuild *)
           let rel_filename = match project.Prj.in_source_path filename with
             | Some x -> Filename.chop_extension x | _ -> assert false

@@ -556,7 +556,7 @@ let exec ~editor ?use_thread ?(with_deps=false) task_kind target =
           | External -> Oebuild.External
         in
         List.iter begin fun compilation ->
-          match Oebuild.get_output_name ~compilation ~outkind ~outname ~targets:files with
+          match Oebuild.get_output_name ~compilation ~outkind ~outname ~toplevel_modules:files with
             | Some outname -> Oebuild_util.remove_file ~verbose:false outname
             | _ -> ()
         end compilation

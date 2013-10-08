@@ -25,7 +25,7 @@ open Printf
 
 let apply (view : Text.view) pref =
   view#set_left_margin (pref.Preferences.pref_editor_left_margin + Oe_config.current_line_width);
-  view#set_current_line_border_x1 (view#left_margin - Oe_config.current_line_width / 2 (*- 1*)); (* 1 is the cursor width *)
+  view#set_current_line_border_x1 (view#left_margin - (max 1 (Oe_config.current_line_width / 2)) - 1);
   view#set_current_line_border_x2 (view#left_margin - Oe_config.current_line_width / 2 + Oe_config.current_line_border_adjust + 1);
   kprintf GtkMain.Rc.parse_string "
 style \"s1\" {

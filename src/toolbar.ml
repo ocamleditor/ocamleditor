@@ -40,7 +40,8 @@ class ['a] toolbar ~(messages : Messages.messages) ~(hmessages : Messages.messag
   let tool_item_find_entry     = GButton.tool_item ~homogeneous:false () in
   let tool_find                = GButton.tool_button ~label:"Find" () in
   let tool_messages            = GButton.toggle_tool_button ~active:messages#visible ~label:"Messages" (*~homogeneous:false*) () in
-  let _                        = tool_messages#set_icon_widget (GMisc.image ~pixbuf:Icons.paned_bottom ())#coerce in
+  let _                        = tool_messages#set_icon_widget (GMisc.image ~pixbuf:Icons.paned_bottom_large ())#coerce in
+  let _                        = tool_messages#set_homogeneous false in
   let tool_hmessages           = GButton.toggle_tool_button ~active:messages#visible ~label:"Messages" (*~homogeneous:false*) () in
   let _                        = tool_hmessages#set_icon_widget (GMisc.image ~pixbuf:Icons.paned_right ())#coerce in
   let tool_messages_sign       = tool_messages#connect#clicked ~callback:(fun () ->

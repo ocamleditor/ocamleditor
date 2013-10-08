@@ -72,5 +72,6 @@ let update =
     let ctime = get_last_compiled_time ~opt cache filename in
     if ctime > 0.0 && ((Unix.stat filename).Unix.st_mtime) >= ctime then begin
       remove cache filename opt;
-    end
+      true
+    end else ctime = 0.0
 ;;

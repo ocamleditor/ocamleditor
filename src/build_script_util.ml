@@ -130,7 +130,9 @@ module ETask = struct
     Sys.chdir dir;
     let exit_code = Oebuild_util.exec ~env cmd in
     Sys.chdir old_dir;
-    if exit_code > 0 then raise Error
+    match exit_code with
+      | Some 0 -> ()
+      | _ -> raise Error
   end
 end
 
@@ -175,7 +177,7 @@ let show = fun targets -> function num, (name, t) ->
     (if t.compilation_native && ccomp_type <> None then [Native] else [])
   in
   let outname = List.map begin fun compilation ->
-    let oname = get_output_name ~compilation ~outkind:t.target_type ~outname:t.output_name ~targets:files in
+    let oname = get_output_name ~compilation ~outkind:t.target_type ~outname:t.output_name ~toplevel_modules:files in
     match oname with Some x -> x | _ -> ""
   end compilation
   in
@@ -218,7 +220,7 @@ let rec execute_target ~external_tasks ~targets:avail_targets ~command ?target_d
     let compilation = (if target.compilation_bytecode then [Bytecode] else [])
       @ (if target.compilation_native && (ccomp_type <> None) then [Native] else []) in
     let files = Str.split (Str.regexp " +") target.toplevel_modules in
-    let deps () = Dep.find ~pp:target.pp ~with_errors:true ~echo:false files in
+    let deps () = Oebuild_dep.find ~pp:target.pp ~with_errors:true ~echo:false files in
     let etasks = List.map begin fun index ->
       let mktask = try List.assoc index external_tasks with Not_found -> assert false in
       mktask command
@@ -231,7 +233,7 @@ let rec execute_target ~external_tasks ~targets:avail_targets ~command ?target_d
         | External -> ()
         | Executable | Library | Pack | Plugin ->
           List.iter begin fun compilation ->
-              match get_output_name ~compilation ~outkind:target.target_type ~outname:target.output_name ~targets:files with
+              match get_output_name ~compilation ~outkind:target.target_type ~outname:target.output_name ~toplevel_modules:files with
                 | Some outname ->
                   begin
                     match command with
@@ -298,7 +300,7 @@ and build ~targets:avail_targets ~external_tasks ~etasks ~deps ~compilation ~out
         ~deps
         ~dontlinkdep:target.dontlinkdep
         (*~verbose:false*)
-        ~targets:files ()
+        ~toplevel_modules:files ()
     with
       | Built_successfully ->
         List.iter ETask.execute (ETask.filter etasks After_compile);

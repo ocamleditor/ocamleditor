@@ -30,6 +30,7 @@ let (<@) = List.mem
 let is_win32, win32 = (Sys.os_type = "Win32"), (fun a b -> match Sys.os_type with "Win32" -> a | _ -> b)
 let may opt f = match opt with Some x -> f x | _ -> ()
 let re_spaces = Str.regexp " +"
+let redirect_stderr = if Sys.os_type = "Win32" then " 2>NUL" else " 2>/dev/null"
 
 (** crono *)
 let crono ?(label="Time") f x =
@@ -68,32 +69,42 @@ let command ?(echo=true) cmd =
 let iter_chan chan f = try while true do f chan done with End_of_file -> ()
 
 (** exec *)
-let exec ?(env=Unix.environment()) ?(verbose=true) ?(join=true) ?at_exit ?(process_err=(fun ~stderr -> prerr_endline (input_line stderr))) cmd =
+let exec ?(env=Unix.environment()) ?(verbose=true) ?(join=true) ?at_exit
+    ?(process_in=(fun chan -> print_endline (input_line chan)))
+    ?(process_err=(fun chan -> prerr_endline (input_line chan)))
+    cmd =
   let cmd = Str.global_replace re_spaces " " cmd in
   if verbose then printf "%s\n%!" cmd;
+  let exit_code = ref (-9998) in
   let (inchan, _, errchan) as channels = Unix.open_process_full cmd env in
   let close () =
-  match Unix.close_process_full channels with
-	| Unix.WEXITED code -> code
-	| _ -> (-1)
+    match Unix.close_process_full channels with
+     	| Unix.WEXITED code -> code
+     	| _ -> (-9997)
   in
   let thi =
     Thread.create begin fun () ->
-      iter_chan inchan (fun chan -> print_endline (input_line chan));
+      iter_chan inchan process_in;
     end ()
   in
   let the =
     Thread.create begin fun () ->
-      iter_chan errchan (fun chan -> process_err ~stderr:chan);
+      iter_chan errchan process_err;
       Thread.join thi;
-      (match at_exit with None -> () | Some f -> ignore (close()); f());
+      begin
+        match at_exit with
+          | None -> ()
+          | Some f ->
+            exit_code := close();
+            f !exit_code
+      end;
     end ()
   in
   if join then begin
     Thread.join thi;
     Thread.join the;
   end;
-  if at_exit = None then (close()) else 0
+  if at_exit = None then Some (close()) else None;;
 
 (** Remove files with wildcards *)
 let rm = win32 "DEL /F /Q" "rm -f"
@@ -121,3 +132,14 @@ let rec mkdir_p ?(echo=true) d =
     (Unix.mkdir d 0o755)
   end
 
+(*(** replace_extension *)
+let replace_extension x =
+  sprintf "%s.%s" (Filename.chop_extension x)
+    (if x ^^ "cmi" then "mli" else if x ^^ "cmx" then "ml" else assert false);;*)
+
+(** replace_extension *)
+let replace_extension filename =
+  if Filename.check_suffix filename ".cmx" then (Filename.chop_extension filename) ^ ".ml"
+  else if Filename.check_suffix filename ".cmi" then (Filename.chop_extension filename) ^ ".mli"
+  else filename
+;;

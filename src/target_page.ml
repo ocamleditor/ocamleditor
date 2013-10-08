@@ -77,7 +77,7 @@ class view ~project ~target_list ?packing () =
         chooser#unselect_all;
         Gmisclib.Idle.add ~prio:100 begin fun () ->
           if List.exists (fun x -> x#name = !filter_top#name) chooser#list_filters then chooser#remove_filter !filter_top;
-          let top_modules = Dep_ext.find_top_modules dir in
+          let top_modules = Oebuild_dep_ext.find_top_modules dir in
           let patterns = List.map Filename.basename top_modules in
           let filter = GFile.filter ~name:(sprintf "Top-level modules in %s" (Filename.basename dir)) ~patterns () in
           chooser#add_filter filter;

@@ -29,7 +29,7 @@ let main () = begin
   let enabled = ref true in
   let nodep = ref false in
   let dontlinkdep = ref false in
-  let target = ref [] in
+  let toplevel_modules = ref [] in
   let outkind = ref Executable in
   let is_clean = ref false in
   let is_distclean = ref false in
@@ -55,17 +55,19 @@ let main () = begin
   let thread = ref false in
   let vmthread = ref false in
   let no_build = ref false in
-  let add_target x = target := x :: !target in
+  let jobs = ref 1 in
+  let serial = ref false in
+  let add_target x = toplevel_modules := x :: !toplevel_modules in
   let add_compilation x () = compilation := x :: !compilation in
   let set_run_args x = run_args := x :: !run_args in
   let set_run_code x () = run_code := Some x in
   let set_install x = install_flag := Some x in
   let dep () =
     try
-      let deps = Dep.find ~pp:!pp ~with_errors:true !target in
+      let deps = Oebuild_dep.find ~pp:!pp ~with_errors:true !toplevel_modules in
       printf "%s\n%!" (String.concat " " deps);
       exit 0;
-    with Dep.Loop_found msg -> begin
+    with Oebuild_dep.Loop_found msg -> begin
       printf "%s\n%!" msg;
       exit 0;
     end
@@ -122,6 +124,8 @@ let main () = begin
     ("-install",     String set_install,              " (undocumented)");
     ("-prof",        Set prof,                        " (undocumented)");
     ("-distclean",   Set is_distclean,                " (undocumented)");
+    ("-jobs",        Set_int jobs,                    " (undocumented)");
+    ("-serial",      Set serial,                      " (undocumented)");
 (*    ("-cs", Set compile_separately, " Compile separately without recompiling unmodified modules.");*)
 (*    ("-install", Set_string install, "\"<path>\" Copy the output to the specified directory. When building libraries the path is relative to " ^
       (win32 "%OCAMLLIB%" "$OCAMLLIB") ^ ". Create all non-existing directories.");*)
@@ -129,8 +133,8 @@ let main () = begin
   let command_name = Filename.basename Sys.argv.(0) in
   let help_message = sprintf "\nUsage:\n  %s target.ml... [options]\n\nOptions:" command_name in
   Arg.parse speclist add_target help_message;
-  target := List.rev !target;
-  if List.length !target = 0 then begin
+  toplevel_modules := List.rev !toplevel_modules;
+  if List.length !toplevel_modules = 0 then begin
     Arg.usage speclist help_message;
     exit 0;
   end;
@@ -141,14 +145,14 @@ let main () = begin
   (** print_output_name *)
   if !print_output_name then begin
     List.iter begin fun compilation ->
-      let outname = get_output_name ~compilation ~outkind:!outkind ~outname:!output_name ~targets:!target in
+      let outname = get_output_name ~compilation ~outkind:!outkind ~outname:!output_name ~toplevel_modules:!toplevel_modules in
       match outname with Some outname -> printf "%s\n%!" outname | _ -> ();
     end compilation;
     exit 0;
   end;
   (** Clean *)
   if !is_clean || !is_distclean then begin
-    let deps = Dep.find ~pp:!pp ~with_errors:true !target in
+    let deps = Oebuild_dep.find ~pp:!pp ~with_errors:true !toplevel_modules in
     if !is_clean then (clean ~deps ());
     if !is_distclean then (distclean ());
     exit 0;
@@ -157,7 +161,7 @@ let main () = begin
   let last_outname = ref None in
   let outnames =
     List.map begin fun compilation ->
-      let outname = get_output_name ~compilation ~outkind:!outkind ~outname:!output_name ~targets:!target in
+      let outname = get_output_name ~compilation ~outkind:!outkind ~outname:!output_name ~toplevel_modules:!toplevel_modules in
       match outname with
         | Some outname ->
           begin
@@ -165,7 +169,9 @@ let main () = begin
               if !no_build then Built_successfully, []
               else begin
                 let deps =
-                  if !nodep then !target else Dep.find ~pp:!pp ~with_errors:true !target
+                  if !nodep then !toplevel_modules
+                  else if !serial then Miscellanea.crono ~label:"Oebuild_dep.find" (fun () -> Oebuild_dep.find ~pp:!pp ~with_errors:true !toplevel_modules) ()
+                  else []
                 in
                 (build
                   ~compilation
@@ -186,15 +192,18 @@ let main () = begin
                   ~outname
                   ~deps
                   ~dontlinkdep:!dontlinkdep
-                  ~targets:!target
+                  ~toplevel_modules:!toplevel_modules
                   ~prof:!prof
-                  (*~ms_paths*) ()), deps
+                  ~jobs:!jobs
+                  ~serial:!serial
+                  ()), deps
               end
             with
               | Build_failed code, _ -> exit code (*(compilation, None)*)
               | Built_successfully, deps ->
                 begin
                   match !install_flag with
+                    | Some _ when not !serial -> failwith "-install is accepted only with -serial"
                     | Some path -> install ~compilation ~outname ~outkind:!outkind ~deps ~path
                       ~ccomp_type:(Ocaml_config.can_compile_native ());
                     | _ -> ()

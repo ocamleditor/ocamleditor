@@ -27,4 +27,4 @@ val add : t -> string -> bool -> float -> unit
 val remove : t -> string -> bool -> unit
 val read : unit -> t
 val write : t -> unit
-val update : opt:bool -> t -> string -> unit
+val update : opt:bool -> t -> string -> bool

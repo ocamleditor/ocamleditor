@@ -97,12 +97,14 @@ let create_script () =
       "../common/cmd";
       "../common/app_config";
       "../common/ocaml_config";
-      "../common/dep";
       "../common/cmd_line_args";
       "../task";
       "../build_script_command";
       "oebuild_util";
-      "oebuild_table";
+      "oebuild_dag";
+      "oebuild_dep";
+      "oebuild_dep_dag";
+      "oebuild_parallel";
       "oebuild";
       "../build_script_util";
     ] in

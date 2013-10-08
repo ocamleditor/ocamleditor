@@ -180,6 +180,7 @@ object (self)
   initializer
     (* Tree *)
     let row = model#append () in self#create "General" row (new pref_view);
+    let row = model#append () in self#create "Build" row (new pref_build);
     let row = model#append () in self#create ~idle:true "Fonts" row (new pref_fonts);
     let row as parent = model#append () in self#create "Editor" row (new pref_editor);
     let row = model#append ~parent () in self#create "Display" row (new pref_editor_display);
@@ -373,7 +374,7 @@ and pref_editor_actions title ?packing () =
   (* File Saving *)
   let align                       = create_align ~title:"File Saving" ~vbox () in
   let box                         = GPack.vbox ~spacing:row_spacings ~packing:align#add () in
-  let check_save_all_bef_comp     = GButton.check_button ~label:"Save all before compiling" ~packing:box#pack () in
+  (*let check_save_all_bef_comp     = GButton.check_button ~label:"Save all before compiling" ~packing:box#pack () in*)
   let check_bak                   = GButton.check_button ~label:"Create a backup copy of files before saving" ~packing:box#pack () in
   let check_trim                  = GButton.check_button ~label:"Strip trailing whitespace" ~packing:box#pack () in
   (* Searching *)
@@ -395,7 +396,7 @@ object
     pref.Preferences.pref_annot_type_tooltips_delay <- combo_annot_type_tooltips_delay#active;
     (*pref.Preferences.pref_annot_type_tooltips_impl <- combo_annot_type_tooltips_impl#active;*)*)
     pref.Preferences.pref_search_word_at_cursor <- check_search_word_at_cursor#active;
-    pref.Preferences.pref_editor_save_all_bef_comp <- check_save_all_bef_comp#active;
+    (*pref.Preferences.pref_editor_save_all_bef_comp <- check_save_all_bef_comp#active;*)
 
   method read pref =
     check_bak#set_active pref.Preferences.pref_editor_bak;
@@ -406,7 +407,7 @@ object
     combo_annot_type_tooltips_delay#set_active pref.Preferences.pref_annot_type_tooltips_delay;
     (*combo_annot_type_tooltips_impl#set_active pref.Preferences.pref_annot_type_tooltips_impl;*)*)
     check_search_word_at_cursor#set_active pref.Preferences.pref_search_word_at_cursor;
-    check_save_all_bef_comp#set_active pref.Preferences.pref_editor_save_all_bef_comp
+    (*check_save_all_bef_comp#set_active pref.Preferences.pref_editor_save_all_bef_comp*)
 end
 
 (** pref_fonts *)
@@ -845,9 +846,25 @@ object
   inherit page title vbox
   method write pref =
     pref.Preferences.pref_pdf_viewer <- entry#text;
-
   method read pref =
     ignore (entry#set_text pref.Preferences.pref_pdf_viewer);
+end
+
+(** pref_build *)
+and pref_build title ?packing () =
+  let vbox                    = GPack.vbox ~spacing ?packing () in
+  let check_save_all_bef_comp = GButton.check_button ~label:"Save all files before building" ~packing:vbox#pack () in
+  let check_build_parallel    = GButton.check_button ~label:"Parallel Compilation" ~packing:vbox#pack () in
+  object
+  inherit page title vbox
+
+  method write pref =
+    pref.Preferences.pref_editor_save_all_bef_comp <- check_save_all_bef_comp#active;
+    pref.Preferences.pref_build_parallel <- check_build_parallel#active;
+
+  method read pref =
+    check_save_all_bef_comp#set_active pref.Preferences.pref_editor_save_all_bef_comp;
+    check_build_parallel#set_active pref.Preferences.pref_build_parallel;
 end
 
 (** pref_templ *)

@@ -65,10 +65,10 @@ let warning_underline_color              = warning_popup_border_color
 let warning_unused_color                 = "#a0a0a0"
 let warning_unused_properties            = [`FOREGROUND warning_unused_color; `STYLE `ITALIC]
 let warning_tootip_enabled               = false
-let current_line_border_color            = fun add bgcolor -> `NAME (add bgcolor 0.1)
-let current_line_width                   = 2 (* Left margin is automatically increased by current_line_width *)
+let current_line_border_color            = fun add bgcolor -> `NAME (add bgcolor 0.2)
+let current_line_width                   = 1 (* Must be >= 1. Left margin is automatically increased by current_line_width *)
 let current_line_style                   = (*`ON_OFF_DASH*) `SOLID
-let current_line_join                    = (*`ROUND `MITER *) `BEVEL
+let current_line_join                    = (*`ROUND `MITER `BEVEL *) `BEVEL
 let cursor_aspect_ratio                  = 0.1  (*[0.0-1.0]*)
 let on_off_dashes                        = [1; 2]
 (* Gutter colors:

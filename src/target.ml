@@ -127,7 +127,7 @@ let create ~id ~name = {
 }
 
 (** find_dependencies *)
-let find_dependencies target = Dep.find (Miscellanea.split " +" target.files)
+let find_dependencies target = Oebuild_dep.find (Miscellanea.split " +" target.files)
 
 (** find_target_dependencies *)
 let rec find_target_dependencies targets trg =
@@ -148,10 +148,12 @@ let filter_external_tasks target phase =
 
 (** create_cmd_line *)
 let create_cmd_line ?(flags=[]) ?(can_compile_native=true) target =
+  let pref = Preferences.preferences#get in
   let quote = Filename.quote in
   let files = Cmd_line_args.parse target.files in
   let args =
     files
+    @ (if pref.Preferences.pref_build_parallel then [] else ["-serial"])
     @ ["-bin-annot"]
     @ (if target.pp <> "" then ["-pp"; quote target.pp] else [])
     @ (if target.cflags <> "" then ["-cflags"; (quote target.cflags)] else [])
