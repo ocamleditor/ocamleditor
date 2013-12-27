@@ -127,7 +127,8 @@ let create ~id ~name = {
 }
 
 (** find_dependencies *)
-let find_dependencies target = Oebuild_dep.find (Miscellanea.split " +" target.files)
+let find_dependencies target =
+  Oebuild_dep.ocamldep_toplevels (Miscellanea.split " +" target.files) |> Oebuild_dep.sort_dependencies
 
 (** find_target_dependencies *)
 let rec find_target_dependencies targets trg =
@@ -151,10 +152,12 @@ let create_cmd_line ?(flags=[]) ?(can_compile_native=true) target =
   let pref = Preferences.preferences#get in
   let quote = Filename.quote in
   let files = Cmd_line_args.parse target.files in
+  let serial_jobs = match pref.Preferences.pref_build_parallel with None -> ["-serial"] | Some n -> ["-jobs " ^ string_of_int n] in
   let args =
     files
-    @ (if pref.Preferences.pref_build_parallel then [] else ["-serial"])
+    @ serial_jobs
     @ ["-bin-annot"]
+    @ ["-verbose " ^ (string_of_int pref.Preferences.pref_build_verbosity)]
     @ (if target.pp <> "" then ["-pp"; quote target.pp] else [])
     @ (if target.cflags <> "" then ["-cflags"; (quote target.cflags)] else [])
     @ (if target.lflags <> "" then ["-lflags"; (quote (target.lflags))] else [])

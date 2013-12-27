@@ -111,6 +111,7 @@ let system_config () =
 module Option = struct
   let prefix = ref ""
   let change_dir = ref "src"
+  let verbosity = ref 2
 end
 
 (** ETask *)
@@ -220,7 +221,10 @@ let rec execute_target ~external_tasks ~targets:avail_targets ~command ?target_d
     let compilation = (if target.compilation_bytecode then [Bytecode] else [])
       @ (if target.compilation_native && (ccomp_type <> None) then [Native] else []) in
     let files = Str.split (Str.regexp " +") target.toplevel_modules in
-    let deps () = Oebuild_dep.find ~pp:target.pp ~with_errors:true ~echo:false files in
+    let deps () =
+      let verbose = !Option.verbosity >= 4 in
+      Oebuild_dep.ocamldep_toplevels ~verbose ~pp:target.pp ~with_errors:true files |> Oebuild_dep.sort_dependencies
+    in
     let etasks = List.map begin fun index ->
       let mktask = try List.assoc index external_tasks with Not_found -> assert false in
       mktask command
@@ -229,7 +233,7 @@ let rec execute_target ~external_tasks ~targets:avail_targets ~command ?target_d
       match target.target_type with
         | External when command = `Build ->
           build ~targets:avail_targets ~external_tasks ~etasks ~deps ~compilation:Unspecified
-            ~outname:target.output_name ~files ?target_deps target
+            ~outname:target.output_name ~files ?target_deps ~verbose:!Option.verbosity target
         | External -> ()
         | Executable | Library | Pack | Plugin ->
           List.iter begin fun compilation ->
@@ -239,7 +243,7 @@ let rec execute_target ~external_tasks ~targets:avail_targets ~command ?target_d
                     match command with
                       | `Build ->
                         build ~targets:avail_targets ~external_tasks ~etasks ~deps ~compilation
-                          ~outname ~files ?target_deps target
+                          ~outname ~files ?target_deps ~verbose:!Option.verbosity target
                       | `Install_lib -> install_lib ~compilation ~outname ~external_tasks ~deps target
                       | `Clean ->
                         List.iter ETask.execute (ETask.filter etasks Before_clean);
@@ -258,12 +262,14 @@ let rec execute_target ~external_tasks ~targets:avail_targets ~command ?target_d
       try List.find (fun (_, t) -> t.id = target.id) avail_targets
       with Not_found -> kprintf failwith "Target not found (id=%d)" target.id
     in
-    Printf.printf "=== %s ===\n%!" target_name;
-    Printf.printf "Skipped: %s failed\n\n%!" (String.concat " AND " target.restrictions);
+    if !Option.verbosity >= 1 then begin
+      Printf.printf "=== %s ===\n%!" target_name;
+      Printf.printf "Skipped: %s failed\n\n%!" (String.concat " AND " target.restrictions);
+    end
   end
 
 (** build *)
-and build ~targets:avail_targets ~external_tasks ~etasks ~deps ~compilation ~outname ~files ?target_deps target =
+and build ~targets:avail_targets ~external_tasks ~etasks ~deps ~compilation ~outname ~files ?target_deps ~verbose target =
   let target_deps =
     match target_deps with
       | None -> [] (*find_target_dependencies avail_targets target*)
@@ -274,13 +280,14 @@ and build ~targets:avail_targets ~external_tasks ~etasks ~deps ~compilation ~out
     try List.find (fun (_, t) -> t.id = target.id) avail_targets
     with Not_found -> kprintf failwith "Target not found (id=%d)" target.id
   in
-  Printf.printf "=== %s ===\n%!" target_name;
+  if !Option.verbosity >= 1 then Printf.printf "=== %s ===\n%!" target_name;
   List.iter ETask.execute (ETask.filter etasks Before_compile);
   let deps = if target.nodep then files else deps() in
   let tasks_compile = ETask.filter etasks Compile in
   if tasks_compile <> [] then List.iter ETask.execute (tasks_compile)
   else
-    match Oebuild.build
+    let crono = if !Option.verbosity >= 3 then Oebuild_util.crono else fun ?label f x -> f x in
+    match crono ~label:"Build time" (Oebuild.build
         ~compilation
         ~package:target.package
         ~includes:target.search_path
@@ -299,8 +306,8 @@ and build ~targets:avail_targets ~external_tasks ~etasks ~deps ~compilation ~out
         ~outname
         ~deps
         ~dontlinkdep:target.dontlinkdep
-        (*~verbose:false*)
-        ~toplevel_modules:files ()
+        ~verbose
+        ~toplevel_modules:files) ()
     with
       | Built_successfully ->
         List.iter ETask.execute (ETask.filter etasks After_compile);
@@ -403,13 +410,14 @@ let main ~cmd_line_args ~external_tasks ~general_commands ~targets:avail_targets
         raise ex
       | ex ->
         popd();
-        Printf.eprintf "File \"oebuild_script_util.ml\": %s\n%s\n%!" (Printexc.to_string ex) (Printexc.get_backtrace());;
+        Printf.eprintf "File \"build_script_util.ml\": %s\n%s\n%!" (Printexc.to_string ex) (Printexc.get_backtrace());;
   end in
 
   let module Argc = Argc.Make (Command) in
 
   let global_options = [
-    ("-C",      Set_string Option.change_dir, "<dir> Change directory before running [default: src]");
+    ("-C",       Set_string Option.change_dir, "<dir> Change directory before running [default: src]");
+    ("-verbose", Set_int Option.verbosity, " Verbosity level (0..5)");
   ] in
   let global_options = Arg.align global_options in
   let command_name = Filename.basename Sys.argv.(0) in

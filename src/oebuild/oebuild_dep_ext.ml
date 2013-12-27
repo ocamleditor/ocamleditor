@@ -24,25 +24,6 @@
 open Oebuild_dep_dag
 open Oebuild_util
 
-(** sort_dependencies *)
-let sort_dependencies (dag : t) =
-  let dag = Hashtbl.copy dag in
-  let get_leaves dag =
-    Hashtbl.fold begin fun key deps acc ->
-      let deps = List.filter (Hashtbl.mem dag) deps in
-      if deps = [] then key :: acc else acc
-    end dag []
-  in
-  let rec loop res =
-    match get_leaves dag with
-      | [] -> res
-      | leaves ->
-        List.iter (Hashtbl.remove dag) leaves;
-        loop (List.rev_append leaves res);
-  in
-  List.rev (loop [])
-;;
-
 (** find_top_modules *)
 let find_top_modules dir =
   let files = Array.to_list (Sys.readdir dir) in
@@ -51,7 +32,7 @@ let find_top_modules dir =
   let search_path = Ocaml_config.expand_includes dir in
   let table = Oebuild_dep.ocamldep ~slash:false ~verbose:false ~search_path (dir // "*.ml") in
   let files = ref files in
-  Hashtbl.iter begin fun filename deps ->
+  Hashtbl.iter begin fun filename (changed, deps) ->
     let mldeps = List.filter (fun x -> not (x ^^ ".cmi")) deps in
     let mldeps = List.map (fun x -> (Filename.chop_extension x) ^ ".ml") mldeps in
     let mldeps = List.filter ((<>) filename) mldeps in

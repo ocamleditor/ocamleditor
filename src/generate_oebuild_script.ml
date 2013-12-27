@@ -101,6 +101,7 @@ let create_script () =
       "../task";
       "../build_script_command";
       "oebuild_util";
+      "oebuild_table";
       "oebuild_dag";
       "oebuild_dep";
       "oebuild_dep_dag";

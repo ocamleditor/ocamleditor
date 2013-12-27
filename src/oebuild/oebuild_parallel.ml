@@ -50,8 +50,9 @@ module Dag = Oebuild_dag.Make(NODE)
 type t = (NODE.key, Dag.entry) Hashtbl.t
 
 type dag = {
-  graph : t;
-  mutex : Mutex.t;
+  graph     : t;
+  ocamldeps : (string, bool * string list) Hashtbl.t;
+  mutex     : Mutex.t;
 }
 
 (** print_results *)
@@ -74,11 +75,11 @@ let print_results errors messages =
 ;;
 
 (** create_dag *)
-let create_dag ?times ~cb_create_command ~cb_at_exit ~toplevel_modules () =
+let create_dag ?times ~cb_create_command ~cb_at_exit ~toplevel_modules ~verbose () =
   let open Dag in
-  match Dep_dag.create_dag ?times ~toplevel_modules () with
+  match Dep_dag.create_dag ?times ~toplevel_modules ~verbose () with
     | Dep_dag.Cycle cycle -> kprintf failwith "Cycle: %s" (String.concat "->" cycle)
-    | Dep_dag.Dag dag' ->
+    | Dep_dag.Dag (dag', ocamldeps) ->
       let dag = Hashtbl.create 17 in
       Hashtbl.iter begin fun filename deps ->
         let node = {
@@ -98,23 +99,30 @@ let create_dag ?times ~cb_create_command ~cb_at_exit ~toplevel_modules () =
         try
           let node = Hashtbl.find dag node in
           List.iter begin fun dep ->
-            let e = Hashtbl.find dag dep in
-            node.dependencies <- e :: node.dependencies;
+            try
+              let e = Hashtbl.find dag dep in
+              node.dependencies <- e :: node.dependencies;
+            with Not_found -> ()
           end deps;
         with Not_found -> assert false
       end dag';
       set_dependants dag;
-      { graph = dag; mutex = Mutex.create() }
+      { graph = dag; ocamldeps; mutex = Mutex.create() }
 ;;
 
+let job_counter = ref 1
+let job_mutex = Mutex.create ()
+
 (** create_process *)
-let create_process cb_create_command cb_at_exit dag leaf errors messages =
+let create_process ?(jobs=0) ~verbose cb_create_command cb_at_exit dag leaf errors messages =
   leaf.Dag.node.NODE.nd_processing <- true;
-  let filename = Oebuild_util.replace_extension leaf.Dag.node.NODE.nd_filename in
+  let filename = Oebuild_util.replace_extension_to_ml leaf.Dag.node.NODE.nd_filename in
   let command = cb_create_command filename in
   match command with
-    | Some command ->
-      Printf.printf "create_process: %s\n%!" command;
+    | Some command when jobs = 0 || !job_counter <= jobs ->
+      if verbose >= 4 then
+        Printf.printf "Oebuild_parallel.create_process [%d/%d]: %s\n%!" !job_counter jobs (*filename*) (*print_endline*) command
+      else if verbose >= 2 then print_endline command;
       let output = {
         command;
         filename;
@@ -129,25 +137,39 @@ let create_process cb_create_command cb_at_exit dag leaf errors messages =
         Mutex.lock dag.mutex;
         Dag.remove_leaf dag.graph leaf;
         Mutex.unlock dag.mutex;
+        (*if jobs > 0 then begin*)
+          Mutex.lock job_mutex;
+          decr job_counter;
+          Mutex.unlock job_mutex;
+        (*end;*)
         cb_at_exit output
       in
       let process_in stdin = Buffer.add_string output.out (input_line stdin) in
       let process_err stderr = Buffer.add_string output.err (input_line stderr) in
+      (*if jobs > 0 then begin*)
+        Mutex.lock job_mutex;
+        incr job_counter;
+        Mutex.unlock job_mutex;
+      (*end;*)
       Oebuild_util.exec ~verbose:false ~join:false ~at_exit ~process_in ~process_err command
-    | _ ->
-      Printf.printf "create_process: %30s (No command)\n%!" filename;
+    | None ->
+      if verbose >= 4 then
+        Printf.printf "Oebuild_parallel.create_process: %30s (No command)\n%!" filename;
       Mutex.lock dag.mutex;
       Dag.remove_leaf dag.graph leaf;
       Mutex.unlock dag.mutex;
       None
+    | _ ->
+      leaf.Dag.node.NODE.nd_processing <- false;
+      None
 ;;
 
 (** process_parallel *)
-let process_parallel dag =
+let process_parallel ?jobs ~verbose dag =
   let open NODE in
   let errors = ref [] in
   let messages = ref [] in
-  let process_time = Unix.gettimeofday () in
+  (*let process_time = Unix.gettimeofday () in*)
   let leaves = ref [] in
   begin
     try
@@ -157,7 +179,7 @@ let process_parallel dag =
       do
         List.iter begin fun leaf ->
           if not leaf.Dag.node.nd_processing
-          then (create_process
+          then (create_process ?jobs ~verbose
                   leaf.Dag.node.nd_create_command
                   leaf.Dag.node.nd_at_exit
                   dag leaf errors messages |> ignore)
@@ -173,9 +195,9 @@ let process_parallel dag =
   end;
   let errors = List.rev !errors in
   let messages = List.rev !messages in
-  let process_time = Unix.gettimeofday () -. process_time in
+  (*let process_time = Unix.gettimeofday () -. process_time in*)
   print_results errors messages;
-  process_time
+  (*process_time*)
 ;;
 
 

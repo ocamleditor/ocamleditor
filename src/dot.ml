@@ -58,7 +58,9 @@ let draw ~project ~filename ?dot_include_all ?dot_types ?packing ?on_ready_cb ()
   let basename      = Filename.basename filename in
   let label         = sprintf "Dependency graph for \xC2\xAB%s\xC2\xBB" basename in
   let prefix = Filename.chop_extension basename in
-  let dependencies = Oebuild_dep.find [filename] in
+  let dependencies =
+    Oebuild_dep.ocamldep_recursive [filename] |> Oebuild_dep.sort_dependencies |> List.map Oebuild_util.replace_extension_to_ml
+  in
   let dependants =
     let path = [Filename.dirname filename] in
     let modname = Miscellanea.modname_of_path filename in

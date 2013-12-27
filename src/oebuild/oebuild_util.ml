@@ -35,7 +35,7 @@ let redirect_stderr = if Sys.os_type = "Win32" then " 2>NUL" else " 2>/dev/null"
 (** crono *)
 let crono ?(label="Time") f x =
   let finally time =
-    Printf.fprintf stdout "%s: %f sec." label (Unix.gettimeofday() -. time);
+    Printf.fprintf stdout "[CRONO] %s: %f sec." label (Unix.gettimeofday() -. time);
     print_newline();
   in
   let time = Unix.gettimeofday() in
@@ -137,9 +137,71 @@ let replace_extension x =
   sprintf "%s.%s" (Filename.chop_extension x)
     (if x ^^ "cmi" then "mli" else if x ^^ "cmx" then "ml" else assert false);;*)
 
-(** replace_extension *)
-let replace_extension filename =
+(** replace_extension_to_ml *)
+let replace_extension_to_ml filename =
   if Filename.check_suffix filename ".cmx" then (Filename.chop_extension filename) ^ ".ml"
   else if Filename.check_suffix filename ".cmi" then (Filename.chop_extension filename) ^ ".mli"
   else filename
+;;
+
+(** get_effective_command *)
+let get_effective_command =
+  let re_verbose = Str.regexp " -verbose" in
+  fun ?(linkpkg=false) ocamlfind ->
+    try
+      let cmd = sprintf "%s%s -verbose %s" ocamlfind (if linkpkg then " -linkpkg" else "") redirect_stderr in
+      let lines = Cmd.exec_lines cmd in
+      let effective_compiler = List.find (fun line -> String.sub line 0 2 = "+ ") lines in
+      let effective_compiler = Str.string_after effective_compiler 2  in
+      let effective_compiler = Str.replace_first re_verbose "" effective_compiler in
+      effective_compiler
+    with Not_found -> ocamlfind
+;;
+
+(** parfold_entry *)
+type parfold_entry = {
+  pf_cmd         : string;
+  pf_out         : Buffer.t;
+  pf_err         : Buffer.t;
+  pf_process_in  : (in_channel -> unit);
+  pf_process_err : (in_channel -> unit);
+}
+
+(** parfold_command *)
+let parfold_command ~command ~args ?verbose () =
+  let finished = Condition.create() in
+  let mx_nargs = Mutex.create () in
+  let mx_finished = Mutex.create () in
+  let nargs = ref (List.length args) in
+  let write buf chan =
+    Buffer.add_string buf (input_line chan);
+    Buffer.add_char buf '\n';
+  in
+  let entries = List.map begin fun arg ->
+    let out = Buffer.create 10 in
+    let err = Buffer.create 10 in {
+      pf_cmd         = sprintf "%s %s" command arg;
+      pf_out         = out;
+      pf_err         = err;
+      pf_process_in  = write out;
+      pf_process_err = write err;
+    } end args in
+  let at_exit exit_code =
+    Mutex.lock mx_nargs;
+    decr nargs;
+    Mutex.unlock mx_nargs;
+    Mutex.lock mx_finished;
+    if !nargs = 0 then Condition.signal finished;
+    Mutex.unlock mx_finished;
+  in
+  List.iter begin fun entry ->
+    exec ?env:None ?verbose ~join:false ~at_exit
+        ~process_in:entry.pf_process_in
+        ~process_err:entry.pf_process_err
+        entry.pf_cmd |> ignore
+  end entries;
+  Mutex.lock mx_finished;
+  while !nargs > 0 do Condition.wait finished mx_finished done;
+  Mutex.unlock mx_finished;
+  entries
 ;;

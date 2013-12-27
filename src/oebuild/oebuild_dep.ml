@@ -22,8 +22,8 @@
 
 
 open Printf
-open Oebuild_util
 
+type ocamldeps = (string, bool * string list) Hashtbl.t
 exception Loop_found of string
 
 let re1 = Str.regexp " ?:\\( \\|$\\)"
@@ -32,127 +32,98 @@ let split_nl = Str.split (Str.regexp "\n")
 
 (** ocamldep_command *)
 let ocamldep_command ?pp ?(slash=true) ?(search_path="") () =
-  sprintf "%s%s %s -native -one-line %s "
+  sprintf "%s%s %s -native -one-line %s"
     (Ocaml_config.ocamldep())
     (match pp with Some pp when pp <> "" -> " -pp " ^ pp | _ -> "" )
     search_path
     (if slash then "-slash" else "");;
 
 (** ocamldep *)
-let ocamldep ?times ?pp ?(with_errors=true) ?(verbose=true) ?slash ?search_path filenames =
-  let redirect_stderr = if with_errors then "" else Oebuild_util.redirect_stderr in
-  let command = ocamldep_command ?pp ?slash ?search_path () in
-  let command = sprintf "%s %s %s" command filenames redirect_stderr in
-  if verbose then (printf "%s\n%!" command);
-  let text = Cmd.expand command in
-  let entries = split_nl text in
-  let table = Hashtbl.create 7 in
-  let replace =
-    match times with
-      | Some (times, opt) ->
-        fun table key data ->
-          let fn = Oebuild_util.replace_extension key in
-          let changed = Oebuild_table.update ~opt times fn in
-          if changed then Hashtbl.replace table key data
-      | _ -> Hashtbl.replace
-  in
-  List.iter begin fun entry ->
-    match Str.split re1 entry with
-      | key :: _ when key ^^ ".cmo" -> ()
-      | key :: [] -> replace table key []
-      | [key; deps] ->
-        let deps = Str.split re3 deps in
-        replace table key deps
-      | _ -> eprintf "%s\n%s\n%!" command entry; assert false
-  end entries;
+let ocamldep ?times ?pp ?(with_errors=true) ?(verbose=false) ?slash ?search_path filenames =
+  let table : ocamldeps = Hashtbl.create 7 in
+  if String.trim filenames <> "" then begin
+    let redirect_stderr = if with_errors then "" else Oebuild_util.redirect_stderr in
+    let cmd = ocamldep_command ?pp ?slash ?search_path () in
+    let cmd = sprintf "%s %s %s" cmd filenames redirect_stderr in
+    if verbose then (printf "%s\n%!" cmd);
+    let text = Cmd.expand cmd in
+    let entries = split_nl text in
+    let replace =
+      match times with
+        | Some (times, opt) ->
+          (* The resulting ocamldep-dag only contains files that need to be recompiled. *)
+          fun table key data ->
+            let ml = Oebuild_util.replace_extension_to_ml key in
+            let changed = Oebuild_table.update ~opt times ml in
+            Hashtbl.replace table key (changed, data)
+        | _ -> fun table key data ->
+          Hashtbl.replace table key (true, data)
+    in
+    let open! Oebuild_util in
+    List.iter begin fun entry ->
+      match Str.split re1 entry with
+        | key :: _ when key ^^ ".cmo" -> ()
+        | key :: [] -> replace table key []
+        | [key; deps] ->
+          let deps = Str.split re3 deps in
+          replace table key deps
+        | _ -> eprintf "%s\n%s\n%!" cmd entry; assert false
+    end entries;
+  end;
   table;;
 
-type parfold_entry = {
-  pf_cmd         : string;
-  pf_out         : Buffer.t;
-  pf_err         : Buffer.t;
-  pf_process_in  : (in_channel -> unit);
-  pf_process_err : (in_channel -> unit);
-}
+(** ocamldep_toplevels *)
+let ocamldep_toplevels ?times ?pp ?with_errors ?verbose ?slash ?(search_path="") toplevel_modules =
+  let search_path, filenames = List.fold_left begin fun (sp, fn) x ->
+      let dir = Filename.dirname x in
+      if dir = "." then sp, ("*.ml *.mli" :: fn)
+      else (" -I " ^ dir) :: sp, (sprintf "%s/*.ml %s/*.mli" dir dir) :: fn
+    end ([search_path], []) toplevel_modules in
+  let search_path = String.concat "" (Oebuild_util.remove_dupl search_path) in
+  let filenames = String.concat " " (Oebuild_util.remove_dupl filenames) in
+  ocamldep ?times ?pp ?with_errors ~search_path ?verbose ?slash filenames
 
-(** parfold_command *)
-let parfold_command ~command ~args ?verbose () =
-  let finished = Condition.create() in
-  let mx_nargs = Mutex.create () in
-  let mx_finished = Mutex.create () in
-  let nargs = ref (List.length args) in
-  let write buf chan =
-    Buffer.add_string buf (input_line chan);
-    Buffer.add_char buf '\n';
+(** ocamldep_recursive *)
+let ocamldep_recursive ?times ?pp ?(with_errors=true) ?(verbose=false) ?slash ?search_path toplevel_modules =
+  let rec loop ~toplevel_modules dag =
+    let filenames = String.concat " " toplevel_modules in
+    let ocamldeps = ocamldep ?times ?pp ~with_errors ~verbose ?slash ?search_path filenames in
+    let new_tops =
+      Hashtbl.fold begin fun key (changed, deps) acc ->
+        Hashtbl.add dag key (changed, deps);
+        if true || changed then begin
+          (*let d, n = List.partition (fun d -> Hashtbl.mem dag d) deps in
+            Printf.printf "OCAMLDEP_RECURSIVE: %-35s : %b, [%s], [%s]\n%!" key changed (String.concat ", " d) (String.concat ", " n);*)
+          List.rev_append deps acc
+        end else acc
+      end ocamldeps []
+    in
+    let new_tops = List.filter (fun tl -> not (Hashtbl.mem dag tl)) new_tops in
+    let new_tops = Oebuild_util.remove_dupl new_tops in
+    let new_tops = List.map Oebuild_util.replace_extension_to_ml new_tops in
+    if new_tops <> [] then loop ~toplevel_modules:new_tops dag
   in
-  let entries = List.map begin fun arg ->
-    let out = Buffer.create 10 in
-    let err = Buffer.create 10 in {
-      pf_cmd         = sprintf "%s %s" command arg;
-      pf_out         = out;
-      pf_err         = err;
-      pf_process_in  = write out;
-      pf_process_err = write err;
-    } end args in
-  let at_exit exit_code =
-    Mutex.lock mx_nargs;
-    decr nargs;
-    Mutex.unlock mx_nargs;
-    Mutex.lock mx_finished;
-    if !nargs = 0 then Condition.signal finished;
-    Mutex.unlock mx_finished;
+  let dag : ocamldeps = Hashtbl.create 17 in
+  loop ~toplevel_modules dag;
+  dag
+
+(** sort_dependencies *)
+let sort_dependencies (dag : ocamldeps) =
+  let dag = Hashtbl.copy dag in
+  let get_leaves dag =
+    Hashtbl.fold begin fun key (changed, deps) acc ->
+      let deps = List.filter (Hashtbl.mem dag) deps in
+      if deps = [] then key :: acc else acc
+    end dag []
   in
-  List.iter begin fun entry ->
-    Oebuild_util.exec ?env:None ?verbose ~join:false ~at_exit
-        ~process_in:entry.pf_process_in
-        ~process_err:entry.pf_process_err
-        entry.pf_cmd |> ignore
-  end entries;
-  Mutex.lock mx_finished;
-  while !nargs > 0 do Condition.wait finished mx_finished done;
-  Mutex.unlock mx_finished;
-  entries
-;;
-
-(** ocamldep_parfold *)
-let ocamldep_parfold ?times ?pp ?(with_errors=true) ?(verbose=true) ?slash ?search_path ~toplevel_modules () =
-  let redirect_stderr = if with_errors then "" else Oebuild_util.redirect_stderr in
-  let command = ocamldep_command ?pp ?slash ?search_path () in
-
-
-()
-
-
-(** find_dep *)
-let find_dep ?pp ?(with_errors=true) ?(echo=true) target =
-  let dir = Filename.dirname target in
-  let filenames =
-    (match dir with "." -> "*.mli" | _ -> dir ^ "/" ^ "*.mli *.mli") ^ " " ^
-      (match dir with "." -> "*.ml" | _ -> dir ^ "/" ^ "*.ml *.ml")
+  let rec loop res =
+    match get_leaves dag with
+      | [] -> res
+      | leaves ->
+        List.iter (Hashtbl.remove dag) leaves;
+        loop (List.rev_append leaves res);
   in
-  let search_path = Ocaml_config.expand_includes dir in
-  let table = ocamldep ?pp ~with_errors ~verbose:echo ~search_path filenames in
-  let target = (Filename.chop_extension target) ^ ".cmx" in
-  let anti_loop = ref [] in
-  let result = ref [] in
-  let rec find_chain target =
-    if (List.mem target !anti_loop) && (not (List.mem target !result))
-    then (raise (Loop_found (String.concat " " (List.map replace_extension (target :: !anti_loop)))));
-    anti_loop := target :: (List.filter ((<>) target) !anti_loop);
-    try
-      if not (List.mem target !result) then begin
-        match Hashtbl.find table target with
-          | [] -> result := target :: !result;
-          | deps ->
-            List.iter find_chain deps;
-            result := target :: !result;
-      end
-    with Not_found ->
-      (* This exception can be caused by syntax errors in the source files. *)
-      (kprintf failwith "Dep: %s" target)
-  in
-  find_chain target;
-  List.rev (List.map replace_extension !result)
+  List.rev (Oebuild_util.remove_dupl (loop []))
 ;;
 
 (** find_dependants *)
@@ -164,7 +135,7 @@ let find_dependants =
     (*let dir = Filename.dirname target in*)
     let dir = if dirname = Filename.current_dir_name then "" else (dirname ^ "/") in
     let cmd = sprintf "%s -modules -native %s*.ml %s*.mli%s"
-        (Ocaml_config.ocamldep()) dir dir redirect_stderr in
+        (Ocaml_config.ocamldep()) dir dir Oebuild_util.redirect_stderr in
     printf "%s (%s)\n%!" cmd modname;
     let ocamldep = Cmd.expand cmd in
     let entries = Str.split re1 ocamldep in
@@ -195,12 +166,51 @@ let find_dependants =
     in
     loop modname
 
+(** find_dependants *)
 let find_dependants ~path ~modname =
   let dependants = List.map (fun dirname -> find_dependants ~dirname ~modname) path in
   List.flatten dependants
 ;;
 
-(** find *)
+
+
+(** ========================================================================== *)
+
+
+
+(** find_dep (deprecated use Oebuild.ocamldep) *)
+let find_dep ?pp ?(with_errors=true) ?(echo=true) target =
+  let dir = Filename.dirname target in
+  let filenames =
+    (match dir with "." -> "*.mli" | _ -> dir ^ "/" ^ "*.mli *.mli") ^ " " ^
+      (match dir with "." -> "*.ml" | _ -> dir ^ "/" ^ "*.ml *.ml")
+  in
+  let search_path = Ocaml_config.expand_includes dir in
+  let table = ocamldep ?pp ~with_errors ~verbose:echo ~search_path filenames in
+  let target = (Filename.chop_extension target) ^ ".cmx" in
+  let anti_loop = ref [] in
+  let result = ref [] in
+  let rec find_chain target =
+    if (List.mem target !anti_loop) && (not (List.mem target !result))
+    then (raise (Loop_found (String.concat " " (List.map Oebuild_util.replace_extension_to_ml (target :: !anti_loop)))));
+    anti_loop := target :: (List.filter ((<>) target) !anti_loop);
+    try
+      if not (List.mem target !result) then begin
+        match Hashtbl.find table target with
+          | (_, []) -> result := target :: !result;
+          | (_, deps) ->
+            List.iter find_chain deps;
+            result := target :: !result;
+      end
+    with Not_found ->
+      (* This exception can be caused by syntax errors in the source files. *)
+      (kprintf failwith "Dep: %s" target)
+  in
+  find_chain target;
+  List.rev ((*List.map replace_extension_to_ml*) !result)
+;;
+
+(** find (deprecated use Oebuild.ocamldep) *)
 let find ?pp ?with_errors ?(echo=true) targets =
   let deps = List.map (find_dep ?pp ?with_errors ~echo) targets in
   let deps = List.flatten deps in

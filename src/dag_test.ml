@@ -46,49 +46,10 @@ type parfold_entry = {
   pf_process_err : (in_channel -> unit);
 }
 
-(** parcommand *)
-let parfold_command ~command ~args ?verbose () =
-  let finished = Condition.create() in
-  let mx_nargs = Mutex.create () in
-  let mx_finished = Mutex.create () in
-  let nargs = ref (List.length args) in
-  let write buf chan =
-    Buffer.add_string buf (input_line chan);
-    Buffer.add_char buf '\n';
-  in
-  let entries = List.map begin fun arg ->
-    let out = Buffer.create 10 in
-    let err = Buffer.create 10 in {
-      pf_cmd         = sprintf "%s %s" command arg;
-      pf_out         = out;
-      pf_err         = err;
-      pf_process_in  = write out;
-      pf_process_err = write err;
-    } end args in
-  let at_exit exit_code =
-    Mutex.lock mx_nargs;
-    decr nargs;
-    Mutex.unlock mx_nargs;
-    Mutex.lock mx_finished;
-    if !nargs = 0 then Condition.signal finished;
-    Mutex.unlock mx_finished;
-  in
-  List.iter begin fun entry ->
-    Oebuild_util.exec ?env:None ?verbose ~join:false ~at_exit
-        ~process_in:entry.pf_process_in
-        ~process_err:entry.pf_process_err
-        entry.pf_cmd |> ignore
-  end entries;
-  Mutex.lock mx_finished;
-  while !nargs > 0 do Condition.wait finished mx_finished done;
-  Mutex.unlock mx_finished;
-  (*entries*)
-;;
-
-let _ = Oebuild_util.crono Sys.command "ocamldep.opt *.ml"
+let _ = Oebuild_util.crono ~label:"Sys.command" Sys.command "ocamldep.opt *.ml"
 
 let _ =
-  Oebuild_util.crono ~label:"parfold_command" (parfold_command ~command:"ocamldep.opt" ~verbose:true ~args:[
+  Oebuild_util.crono ~label:"parfold_command" (fun () -> Oebuild_dep.parfold_command ~command:"ocamldep.opt" ~verbose:false ~args:[
       "plugin.ml";
       "oe_config.ml";
       "gtkThread2.ml";
@@ -218,7 +179,7 @@ let _ =
       "browser.ml";
       "ocamleditor_lib.ml";
       "ocamleditor.ml";
-    ]) ();;
+    ] () |> ignore; printf "\n%!") ();;
 
 
 (*(** Test *)

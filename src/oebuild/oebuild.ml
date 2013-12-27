@@ -75,7 +75,7 @@ let get_compiler_command ?(times : Table.t option) ~opt ~compiler ~cflags ~inclu
           | _ -> raise Not_found
       end
     with Not_found -> begin
-      let verbose_opt = if verbose >= 4 then " -verbose" else "" in
+      let verbose_opt = if verbose >= 5 then " -verbose" else "" in
       Some (sprintf "%s -c %s %s%s %s" compiler cflags includes verbose_opt filename)
     end
   end else None
@@ -110,7 +110,7 @@ let compile ?(times : Table.t option) ~opt ~compiler ~cflags ~includes ~filename
           | _ -> raise Not_found
       end
     with Not_found -> begin
-      let verbose_opt = if verbose >= 4 then "-verbose" else "" in
+      let verbose_opt = if verbose >= 5 then "-verbose" else "" in
       let cmd = (sprintf "%s -c %s %s %s %s" compiler cflags includes filename verbose_opt) in
       let exit_code =
         match process_err with
@@ -155,7 +155,7 @@ let link ~compilation ~compiler ~outkind ~lflags ~includes ~libs ~outname ~deps
       includes
       libs
       deps
-      (if verbose >= 3 then "-verbose" else "")
+      (if verbose >= 5 then "-verbose" else "")
   in
   match process_exit with
     | Some n -> n
@@ -266,8 +266,8 @@ let filter_inconsistent_assumptions_error ~compiler_output ~recompile ~toplevel_
           let dependants = Oebuild_dep.find_dependants ~path:(List.map Filename.dirname toplevel_modules) ~modname in
           let dependants = sort_dependencies ~deps dependants in
           let _ (*original_error*) = Buffer.contents compiler_output in
-          eprintf "Warning (oebuild): the following files make inconsistent assumptions over interface/implementation %s: %s\n%!"
-            modname (String.concat ", " dependants);
+          eprintf "Warning (oebuild): the following files make inconsistent assumptions over interface/implementation %s: [%s]\n%!"
+            modname (String.concat "; " dependants);
           List.iter begin fun filename ->
             Table.remove cache filename opt;
             let basename = Filename.chop_extension filename in
@@ -288,6 +288,7 @@ let filter_inconsistent_assumptions_error ~compiler_output ~recompile ~toplevel_
 
 (** serial_compile *)
 let serial_compile ~compilation ~times ~compiler ~cflags ~includes ~toplevel_modules ~deps ~verbose =
+  let crono = if verbose >= 3 then crono else fun ?label f x -> f x in
   let compilation_exit = ref 0 in
   begin
     try
@@ -318,42 +319,46 @@ let serial_compile ~compilation ~times ~compiler ~cflags ~includes ~toplevel_mod
           compile_exit
         end
       in
-      List.iter begin fun filename ->
+      crono ~label:"Serial compilation" (List.iter begin fun filename ->
         compilation_exit := try_compile filename;
         if !compilation_exit <> 0 then (raise Exit)
-      end deps;
+      end) deps;
     with Exit -> ()
   end;
   !compilation_exit
 
 (** parallel_compile *)
-let parallel_compile ~compilation ?times ~compiler ~cflags ~includes ~toplevel_modules ~verbose =
+let parallel_compile ~compilation ?times ~compiler ~cflags ~includes ~toplevel_modules ~verbose ?jobs () =
+  let crono = if verbose >= 3 then crono else fun ?label f x -> f x in
   let open Oebuild_parallel in
-  Printf.printf "*** parallel_compile ***\n%!" ;
   let opt = compilation = Native in
+  let may_update_times = match times with Some times -> fun filename -> Table.update ~opt times filename |> ignore | _ -> ignore in
   let cb_create_command filename =
-    Oebuild_util.may times (fun times -> Table.update ~opt times filename |> ignore);
+    may_update_times filename;
     get_compiler_command ?times ~opt ~compiler ~cflags ~includes ~filename ~verbose ()
   in
   let cb_at_exit out =
     may times begin fun times ->
       if out.exit_code = 0
       then Table.add times out.filename opt (Unix.gettimeofday())
-      else Table.remove times out.filename opt
+      else Table.remove times out.filename opt;
     end
   in
   let times = match times with Some t -> Some (t, opt) | _ -> None in
-  let dag = crono ~label:"create_dag" (fun () ->
-      Oebuild_parallel.create_dag ?times ~cb_create_command ~cb_at_exit ~toplevel_modules ()) ()
+  let dag = crono ~label:"Oebuild_parallel.create_dag (ocamldep+add+reduce)" (fun () ->
+      Oebuild_parallel.create_dag ?times ~cb_create_command ~cb_at_exit ~toplevel_modules ~verbose ()) ()
   in
-  let compile_time = Oebuild_parallel.process_parallel dag in
-  Printf.printf "Compile time: %f\n%!" compile_time;
-  0
+  crono ~label:"Parallel compilation" (Oebuild_parallel.process_parallel ?jobs ~verbose) dag;
+  let sorted_deps = Oebuild_dep.sort_dependencies dag.ocamldeps in
+  let deps_ml = List.map replace_extension_to_ml sorted_deps in
+  sorted_deps, deps_ml, 0
 
-  (** Building *)
+(** Build *)
 let build ~compilation ~package ~includes ~libs ~other_mods ~outkind ~compile_only
     ~thread ~vmthread ~annot ~bin_annot ~pp ?inline ~cflags ~lflags ~outname ~deps ~dontlinkdep (*~ms_paths*)
     ~toplevel_modules ?(jobs=0) ?(serial=false) ?(prof=false) ?(verbose=2) () =
+
+  let crono = if verbose >= 3 then crono else fun ?label f x -> f x in
 
   if verbose >= 1 then begin
     printf "\n%s %s" (string_of_compilation_type compilation) (string_of_output_type outkind);
@@ -371,7 +376,11 @@ let build ~compilation ~package ~includes ~libs ~other_mods ~outkind ~compile_on
                               printf "  ~inline ......... : %d\n" n | _ -> ());
     if cflags <> ""     then (printf "  ~cflags ......... : %s\n" cflags);
     if lflags <> ""     then (printf "  ~lflags ......... : %s\n" cflags);
-    if toplevel_modules <> [] then (printf "  ~toplevel_modules : %s\n" (String.concat "," toplevel_modules));
+    if toplevel_modules <> []
+                        then (printf "  ~toplevel_modules : %s\n" (String.concat "," toplevel_modules));
+    if serial           then (printf "  ~serial ......... : %b\n" serial)
+                        else (printf "  ~jobs ........... : %d\n" jobs);
+    printf "  ~verbose ........ : %d\n" verbose;
     if verbose >= 2 then (printf "\n");
     printf "%!";
   end;
@@ -415,19 +424,13 @@ let build ~compilation ~package ~includes ~libs ~other_mods ~outkind ~compile_on
         let thread = if thread then "-thread" else if vmthread then "-vmthread" else "" in
         let ocaml_c_opt = try Filename.chop_extension ocaml_c_opt with Invalid_argument "Filename.chop_extension" -> ocaml_c_opt in
         let ocamlfind = sprintf "ocamlfind %s -package %s %s" ocaml_c_opt package thread in
-        let get_effective_command ocamlfind =
-          try
-            let cmd = sprintf "%s -verbose" ocamlfind in
-            let lines = kprintf Cmd.exec_lines "%s %s" cmd Cmd.redirect_stderr in
-            let effective_compiler = List.find (fun line -> String.sub line 0 2 = "+ ") lines in
-            let effective_compiler = Str.string_after effective_compiler 2  in
-            let effective_compiler = Str.replace_first (Str.regexp " -verbose") "" effective_compiler in
-            effective_compiler
-          with Not_found -> ocamlfind
+        let compiler = crono ~label:"Oebuild, get_effective_command(compiler)" get_effective_command ocamlfind in
+        let linker =
+          if compile_only then "" else
+            let linkpkg = outkind <@ [Executable] in
+            if linkpkg then ocamlfind ^ " -linkpkg" else ocamlfind
+            (*crono ~label:"Oebuild, get_effective_command(linker)" (get_effective_command ~linkpkg) ocamlfind*)
         in
-        let compiler = get_effective_command ocamlfind in
-        let linkpkg = if outkind <@ [Executable] then "-linkpkg" else "" in
-        let linker = kprintf get_effective_command "%s %s" ocamlfind linkpkg in
         compiler, linker
       else ocaml_c_opt, ocaml_c_opt
     end
@@ -436,18 +439,20 @@ let build ~compilation ~package ~includes ~libs ~other_mods ~outkind ~compile_on
   let times = Table.read () in
   let build_exit =
     (** Compile *)
-    let compilation_exit =
+    let deps, deps_ml, compilation_exit =
       if serial
-      then serial_compile ~compilation ~times ~compiler ~cflags:!cflags ~includes:!includes ~toplevel_modules ~deps ~verbose
-      else parallel_compile ~compilation ~times ~compiler ~cflags:!cflags ~includes:!includes ~toplevel_modules ~verbose
+      then
+        let deps_ml = List.map replace_extension_to_ml deps in
+        deps, deps_ml, serial_compile ~compilation ~times ~compiler ~cflags:!cflags ~includes:!includes ~toplevel_modules ~deps:deps_ml ~verbose
+      else parallel_compile ~compilation ~times ~compiler ~cflags:!cflags ~includes:!includes ~toplevel_modules ~verbose ~jobs ()
     in
+    (*Printf.printf "        SORTED_DEPS: %s\n\n%!" (String.concat ", " deps);*)
     (** Link *)
     if compilation_exit = 0 then begin
       let opt = compilation = Native in
       let find_objs filenames =
-        let ext = if compilation = Native then "cmx" else "cmo" in
-        let filenames = List.filter (fun x -> x ^^ "ml") filenames in
-        List.map (fun x -> sprintf "%s.%s" (Filename.chop_extension x) ext) filenames
+        let objs = List.filter (fun x -> x ^^ ".cmx") filenames in
+        if opt then objs else List.map (fun x -> (Filename.chop_extension x) ^ ".cmo") objs
       in
       let mods = split_space other_mods in
       let mods = if compilation = Native then List.map (sprintf "%s.cmx") mods else List.map (sprintf "%s.cmo") mods in
@@ -457,15 +462,19 @@ let build ~compilation ~package ~includes ~libs ~other_mods ~outkind ~compile_on
         let rec try_link () =
           let recompile = ref [] in
           let link_exit =
-            link ~compilation ~compiler:linker ~outkind ~lflags:!lflags
+            crono ~label:"Linking phase" (link ~compilation ~compiler:linker ~outkind ~lflags:!lflags
               ~includes:!includes ~libs ~deps:obj_deps ~outname
-              ~process_err:(filter_inconsistent_assumptions_error ~compiler_output ~recompile ~toplevel_modules ~deps ~cache:times ~opt)
-              ~verbose ()
+              ~process_err:(filter_inconsistent_assumptions_error ~compiler_output ~recompile ~toplevel_modules ~deps:deps_ml ~cache:times ~opt)
+              ~verbose) ()
           in
           if List.length !recompile > 0 then begin
-            List.iter begin fun filename ->
-              ignore (compile ~times ~opt ~compiler ~cflags:!cflags ~includes:!includes ~filename ~verbose ())
-            end !recompile;
+            if serial then begin
+              crono ~label:"Serial compilation" (List.iter begin fun filename ->
+                  ignore (compile ~times ~opt ~compiler ~cflags:!cflags ~includes:!includes ~filename ~verbose ())
+                end) !recompile;
+            end else begin
+              parallel_compile ~compilation ~times ~compiler ~cflags:!cflags ~includes:!includes ~toplevel_modules ~verbose ~jobs () |> ignore
+            end;
             Buffer.clear compiler_output;
             try_link()
           end else begin

@@ -180,13 +180,13 @@ object (self)
   initializer
     (* Tree *)
     let row = model#append () in self#create "General" row (new pref_view);
-    let row = model#append () in self#create "Build" row (new pref_build);
     let row = model#append () in self#create ~idle:true "Fonts" row (new pref_fonts);
     let row as parent = model#append () in self#create "Editor" row (new pref_editor);
     let row = model#append ~parent () in self#create "Display" row (new pref_editor_display);
     let row = model#append ~parent () in self#create "Actions" row (new pref_editor_actions);
     let row = model#append ~parent () in self#create "Code Templates" row (new pref_templ);
     let row = model#append ~parent () in self#create "Color" row (new pref_color);
+    let row = model#append () in self#create "Build" row (new pref_build);
     if Sys.os_type = "Win32" then () else begin
       let row = model#append () in self#create ~idle:true "PDF Viewer" row (new pref_pdf_viewer);
     end;
@@ -854,17 +854,46 @@ end
 and pref_build title ?packing () =
   let vbox                    = GPack.vbox ~spacing ?packing () in
   let check_save_all_bef_comp = GButton.check_button ~label:"Save all files before building" ~packing:vbox#pack () in
-  let check_build_parallel    = GButton.check_button ~label:"Parallel Compilation" ~packing:vbox#pack () in
+  let box                     = GPack.vbox ~spacing:3 ~packing:vbox#pack () in
+  let check_build_parallel    = GButton.check_button ~label:"Enable parallel compilation" ~packing:box#pack () in
+  let align                    = GBin.alignment ~padding:(0, 0, 25, 0) ~packing:box#pack () in
+  let jbox                    = GPack.hbox ~spacing:8 ~packing:align#add () in
+  let _                       = GMisc.label ~text:"Max. number of parallel jobs (0 for unlimited):" ~packing:jbox#pack () in
+  let adjustment              = GData.adjustment ~lower:0.0 ~upper:1000. ~page_size:0. () in
+  let entry_jobs              = GEdit.spin_button ~adjustment ~numeric:true ~digits:0 ~value:0.0 ~packing:jbox#pack () in
+  let hbox                    = GPack.hbox ~spacing:8 ~packing:vbox#pack () in
+  let _                       = GMisc.label ~text:"Verbosity level:" ~packing:hbox#pack () in
+  let combo_verbose, _        = GEdit.combo_box_text ~strings:[
+      "0 - Silent";
+      "1 - Print build summary";
+      "2 - Print compiler and linker commands";
+      "3 - Print times";
+      "4 - Print detailed information about compilation process";
+      "5 - Pass -verbose to OCaml tools"
+    ] ~packing:hbox#pack () in
   object
   inherit page title vbox
 
+  initializer
+    check_build_parallel#connect#toggled ~callback:begin fun () ->
+      jbox#misc#set_sensitive check_build_parallel#active
+    end |> ignore;
+    jbox#misc#set_sensitive check_build_parallel#active;
+
   method write pref =
     pref.Preferences.pref_editor_save_all_bef_comp <- check_save_all_bef_comp#active;
-    pref.Preferences.pref_build_parallel <- check_build_parallel#active;
+    pref.Preferences.pref_build_verbosity <- combo_verbose#active;
+    pref.Preferences.pref_build_parallel <-
+      if check_build_parallel#active then Some (entry_jobs#value_as_int) else None;
 
   method read pref =
     check_save_all_bef_comp#set_active pref.Preferences.pref_editor_save_all_bef_comp;
-    check_build_parallel#set_active pref.Preferences.pref_build_parallel;
+    combo_verbose#set_active pref.Preferences.pref_build_verbosity;
+    match pref.Preferences.pref_build_parallel with
+      | None -> check_build_parallel#set_active false
+      | Some jobs ->
+        check_build_parallel#set_active true;
+        entry_jobs#set_value (float jobs);
 end
 
 (** pref_templ *)

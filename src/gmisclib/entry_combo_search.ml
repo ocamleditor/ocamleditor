@@ -39,7 +39,7 @@ class widget ?model ?width ?(popup_width=280) ?(popup_height=300) ?packing () =
   let _       = button#misc#set_can_focus true in
   let _       = button#misc#set_can_default false in
   let _       = button#set_focus_on_click false in
-  let popup   = new Window.popup ~widget:button () in
+  let popup   = new Window.popup ~widget:button#coerce () in
   let sw      = GBin.scrolled_window ~hpolicy:`AUTOMATIC ~vpolicy:`AUTOMATIC ~packing:popup#add () in
   let view    = GTree.view ~model ~packing:sw#add () in
   let _       =

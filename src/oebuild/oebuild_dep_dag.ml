@@ -25,7 +25,7 @@ open Printf
 
 type t = (string, string list) Hashtbl.t
 
-type dag_option = Dag of t | Cycle of string list
+type dag_option = Dag of t * Oebuild_dep.ocamldeps | Cycle of string list
 
 exception Cycle_exception of string list
 
@@ -98,7 +98,7 @@ let has_cycle ~ocamldeps ~toplevel_modules =
 (** find_toplevels *)
 let find_toplevels ocamldeps =
   let all_deps =
-    Hashtbl.fold begin fun key deps acc ->
+    Hashtbl.fold begin fun key (_, deps) acc ->
       Printf.printf "OCAMLDEPS: %-30s -> [%s]\n%!" key (String.concat ", " deps);
       List.rev_append deps acc
     end ocamldeps []
@@ -108,39 +108,76 @@ let find_toplevels ocamldeps =
       if List.mem key all_deps then acc else key :: acc
     end ocamldeps [];
   in
-  Printf.printf "toplevels: %s\n%!" (String.concat ", " toplevels);
+  Printf.printf "\nTOPLEVELS: %s\n\n%!" (String.concat ", " toplevels);
   toplevels
 ;;
 
 (** create_dag *)
-let create_dag ?times ~toplevel_modules () =
+let create_dag ?times ~toplevel_modules ~verbose () =
+  let crono = if verbose >= 3 then crono else fun ?label f x -> f x in
   let dirs = List.map Filename.dirname toplevel_modules in
   let dirs = List.filter ((<>) ".") dirs in
   let dirs = remove_dupl dirs in
   let search_path = List.map Ocaml_config.expand_includes dirs in
   let search_path = String.concat " " search_path in
-  let filenames = List.map (fun dir -> sprintf "%s/*.mli %s/*.ml" dir dir) dirs in
-  let filenames = (String.concat " " filenames) ^ " *.ml *.mli" in
-  let ocamldeps = crono ~label:"ocamldep" (Oebuild_dep.ocamldep ?times ~search_path) filenames in
+  (* TODO: Non eseguire ocmaldep su *.ml ma ricorsivamente sui toplevel_modules
+     perché alrimenti finiscono nel dag anche file sorgenti estranei al target
+     per cui si sta cercando di determinare il dag. *)
+  let ocamldeps =
+    let mode = (*`All*) `Recursive in
+    match mode with
+      | `All ->
+        let filenames = List.map (fun dir -> sprintf "%s/*.mli %s/*.ml" dir dir) dirs in
+        let filenames = (String.concat " " filenames) ^ " *.ml *.mli" in
+        crono ~label:"Oebuild_dep_dag.create_dag, ocamldep(`All)" (Oebuild_dep.ocamldep ?times ~search_path) filenames
+      | `Recursive ->
+        let ocamldeps = crono ~label:"Oebuild_dep_dag.create_dag, ocamldep(`Recursive)"
+          (Oebuild_dep.ocamldep_recursive ?times ~search_path ~verbose:false) toplevel_modules in
+        (*let unchanged = Hashtbl.fold begin fun key (changed, deps) acc ->
+            if changed then acc else key :: acc
+          end ocamldeps []
+        in
+        Printf.printf "OCAMLDEPS LENGTH: %d\n%!" (Hashtbl.length ocamldeps);
+        List.iter (Hashtbl.remove ocamldeps) unchanged;*)
+        ocamldeps
+  in
+  if verbose >= 4 then Printf.printf "OCAMLDEPS LENGTH: %d\n%!" (Hashtbl.length ocamldeps);
+  (* "ocamldeps" only contains depependencies that need to be recompiled
+     (there is no need to create an expensive dag containing up-to-date
+     dependencies). *)
   try
     let table = Hashtbl.create 17 in
     let rec add path node =
       if List.mem node path then raise (Cycle_exception (node :: path))
       else begin
-        let children = try Hashtbl.find ocamldeps node with Not_found -> [] in
-        Printf.printf "DAG: %-30s : [%s]\n%!" node (String.concat ", " children);
-        Hashtbl.replace table node children;
-        List.iter (add (node :: path)) children
+        let changed, children = try Hashtbl.find ocamldeps node with Not_found -> false, [] in
+        if not (Hashtbl.mem table node) then begin
+          if changed then Hashtbl.add table node children;
+          List.iter (add (node :: path)) children;
+        end
       end
     in
     let toplevel_modules_cmx =
       List.map (fun filename -> (Filename.chop_extension filename) ^ ".cmx") toplevel_modules
     in
     let need_find_tl = List.exists (fun tl -> not (Hashtbl.mem ocamldeps tl)) toplevel_modules_cmx in
-    let toplevel_modules_cmx = if need_find_tl then find_toplevels ocamldeps else toplevel_modules_cmx in
-    crono ~label:"add" (List.iter (add [])) toplevel_modules_cmx;
-    crono ~label:"reduce" reduce table;
-    Dag (table : t)
+    (* If one of the toplevel modules (of the project target) is not present
+       in the ocamldep-dag, incremental compilation can be performed but we need
+       to find which are the toplevel modules inside the set of dependencies. *)
+    let toplevel_modules_cmx =
+      if need_find_tl
+      then crono ~label:"Oebuild_dep_dag.create_dag, find_toplevels" find_toplevels ocamldeps
+      else toplevel_modules_cmx
+    in
+    crono ~label:"Oebuild_dep_dag.create_dag, add" (List.iter (add [])) toplevel_modules_cmx;
+    crono ~label:"Oebuild_dep_dag.create_dag, reduce" reduce table;
+    if verbose >= 4 then begin
+      Printf.printf "DAG: number of nodes = %d\n%!" (Hashtbl.length table);
+      Hashtbl.iter begin fun node children ->
+        Printf.printf "DAG: %-40s : [%s]\n%!" node (String.concat "; " children);
+      end table;
+    end;
+    Dag ((table : t), ocamldeps)
   with Cycle_exception cycle ->
     match cycle with
       | hd :: _ ->

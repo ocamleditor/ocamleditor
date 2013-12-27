@@ -93,12 +93,18 @@ module GeometryMemo = struct
 end
 
 (** popup *)
-class popup ?(position=(`SOUTH:[`NORTH | `SOUTH | `POINTER])) ?border_width ?(decorated=false) ~widget () =
-  let popup = GWindow.window(* ~kind:`POPUP*) ~type_hint:`UTILITY ~decorated ~focus_on_map:true ~modal:false ~deletable:true ~border_width:1 ~title:"" () in
+class popup ?(position=(`SOUTH:[`NORTH | `SOUTH | `POINTER])) ?border_width ?(decorated=false) ?(focus_on_map=true) ~widget () =
+  let popup = GWindow.window(* ~kind:`POPUP*) ~type_hint:`UTILITY ~decorated ~focus_on_map ~modal:false ~deletable:true ~border_width:1 ~title:"" () in
   let ebox = GBin.event_box ~packing:popup#add () in
   let vbox = GPack.vbox ?border_width ~packing:ebox#add () in
   (*let _ = popup#misc#modify_bg [`NORMAL, `COLOR (ebox#misc#style#bg `ACTIVE)] in *)
   let _ = popup#misc#modify_bg [`NORMAL, `COLOR (ebox#misc#style#base `ACTIVE)] in
+  let rec find_pos dir widget =
+    match widget#misc#parent with
+      | Some p  ->
+        (match dir with `X -> widget#misc#allocation.Gtk.x | `Y ->  widget#misc#allocation.Gtk.y) + find_pos dir p
+      | _ -> 0
+  in
 object (self)
   val mutable on_popdown = fun () -> ()
   initializer
@@ -124,12 +130,14 @@ object (self)
       | _ ->
         let x, y = widget#misc#toplevel#misc#pointer in
         let alloc = widget#misc#allocation in
+        let alloc_x = find_pos `X widget in
+        let alloc_y = find_pos `Y widget in
         let alloc_popup = popup#misc#allocation in
-        let x = x0 - x + alloc.Gtk.x in
+        let x = x0 - x + alloc_x in
         let y =
           if position = `SOUTH
-          then y0 - y + alloc.Gtk.y + alloc.Gtk.height
-          else y0 - y + alloc.Gtk.y - alloc_popup.Gtk.height
+          then y0 - y + alloc_y + alloc.Gtk.height
+          else y0 - y + alloc_y - alloc_popup.Gtk.height
         in
         let x, y =
           (if x + alloc_popup.Gtk.width > (Gdk.Screen.width()) then (Gdk.Screen.width() - alloc_popup.Gtk.width - 3) else x),
