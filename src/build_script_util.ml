@@ -167,7 +167,7 @@ let rec find_target_dependencies targets trg =
 (** Show *)
 let show = fun targets -> function num, (name, t) ->
   let files = Str.split (Str.regexp " +") t.toplevel_modules in
-  (*let deps = Dep.find ~pp:t.pp ~with_errors:true ~echo:false files in*)
+  (*let deps = Dep.find ~pp:t.pp ~ignore_stderr:false ~echo:false files in*)
   let b_deps = find_target_dependencies targets t in
   let b_deps = List.map begin fun tg ->
     let name, _ = List.find (fun (_, t) -> t.id = tg.id) targets in
@@ -223,7 +223,7 @@ let rec execute_target ~external_tasks ~targets:avail_targets ~command ?target_d
     let files = Str.split (Str.regexp " +") target.toplevel_modules in
     let deps () =
       let verbose = !Option.verbosity >= 4 in
-      Oebuild_dep.ocamldep_toplevels ~verbose ~pp:target.pp ~with_errors:true files |> Oebuild_dep.sort_dependencies
+      Oebuild_dep.ocamldep_toplevels ~verbose ~pp:target.pp ~ignore_stderr:false files |> Oebuild_dep.sort_dependencies
     in
     let etasks = List.map begin fun index ->
       let mktask = try List.assoc index external_tasks with Not_found -> assert false in

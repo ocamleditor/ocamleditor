@@ -1,3 +1,10 @@
+Version 1.11.0
+--------------
+
+  * Parallel compilation.
+
+  * Add option to control verbosity of messages displayed by the build system.
+
 Version 1.10.0
 --------------
 

@@ -39,10 +39,10 @@ let ocamldep_command ?pp ?(slash=true) ?(search_path="") () =
     (if slash then "-slash" else "");;
 
 (** ocamldep *)
-let ocamldep ?times ?pp ?(with_errors=true) ?(verbose=false) ?slash ?search_path filenames =
+let ocamldep ?times ?pp ?(ignore_stderr=false) ?(verbose=false) ?slash ?search_path filenames =
   let table : ocamldeps = Hashtbl.create 7 in
   if String.trim filenames <> "" then begin
-    let redirect_stderr = if with_errors then "" else Oebuild_util.redirect_stderr in
+    let redirect_stderr = if ignore_stderr then Oebuild_util.redirect_stderr_to_null else "" in
     let cmd = ocamldep_command ?pp ?slash ?search_path () in
     let cmd = sprintf "%s %s %s" cmd filenames redirect_stderr in
     if verbose then (printf "%s\n%!" cmd);
@@ -73,7 +73,7 @@ let ocamldep ?times ?pp ?(with_errors=true) ?(verbose=false) ?slash ?search_path
   table;;
 
 (** ocamldep_toplevels *)
-let ocamldep_toplevels ?times ?pp ?with_errors ?verbose ?slash ?(search_path="") toplevel_modules =
+let ocamldep_toplevels ?times ?pp ?ignore_stderr ?verbose ?slash ?(search_path="") toplevel_modules =
   let search_path, filenames = List.fold_left begin fun (sp, fn) x ->
       let dir = Filename.dirname x in
       if dir = "." then sp, ("*.ml *.mli" :: fn)
@@ -81,37 +81,33 @@ let ocamldep_toplevels ?times ?pp ?with_errors ?verbose ?slash ?(search_path="")
     end ([search_path], []) toplevel_modules in
   let search_path = String.concat "" (Oebuild_util.remove_dupl search_path) in
   let filenames = String.concat " " (Oebuild_util.remove_dupl filenames) in
-  ocamldep ?times ?pp ?with_errors ~search_path ?verbose ?slash filenames
+  ocamldep ?times ?pp ?ignore_stderr ~search_path ?verbose ?slash filenames
 
 (** ocamldep_recursive *)
-let ocamldep_recursive ?times ?pp ?(with_errors=true) ?(verbose=false) ?slash ?search_path toplevel_modules =
-  let rec loop ~toplevel_modules dag =
+let ocamldep_recursive ?times ?pp ?(ignore_stderr=false) ?(verbose=false) ?slash ?search_path toplevel_modules =
+  let dag : ocamldeps = Hashtbl.create 17 in
+  let rec loop ~toplevel_modules =
     let filenames = String.concat " " toplevel_modules in
-    let ocamldeps = ocamldep ?times ?pp ~with_errors ~verbose ?slash ?search_path filenames in
+    let ocamldeps = ocamldep ?times ?pp ~ignore_stderr ~verbose ?slash ?search_path filenames in
     let new_tops =
       Hashtbl.fold begin fun key (changed, deps) acc ->
         Hashtbl.add dag key (changed, deps);
-        if true || changed then begin
-          (*let d, n = List.partition (fun d -> Hashtbl.mem dag d) deps in
-            Printf.printf "OCAMLDEP_RECURSIVE: %-35s : %b, [%s], [%s]\n%!" key changed (String.concat ", " d) (String.concat ", " n);*)
-          List.rev_append deps acc
-        end else acc
+        List.rev_append deps acc
       end ocamldeps []
     in
     let new_tops = List.filter (fun tl -> not (Hashtbl.mem dag tl)) new_tops in
     let new_tops = Oebuild_util.remove_dupl new_tops in
     let new_tops = List.map Oebuild_util.replace_extension_to_ml new_tops in
-    if new_tops <> [] then loop ~toplevel_modules:new_tops dag
+    if new_tops <> [] then loop ~toplevel_modules:new_tops
   in
-  let dag : ocamldeps = Hashtbl.create 17 in
-  loop ~toplevel_modules dag;
+  loop ~toplevel_modules;
   dag
 
 (** sort_dependencies *)
 let sort_dependencies (dag : ocamldeps) =
   let dag = Hashtbl.copy dag in
   let get_leaves dag =
-    Hashtbl.fold begin fun key (changed, deps) acc ->
+    Hashtbl.fold begin fun key (_ (*changed*), deps) acc ->
       let deps = List.filter (Hashtbl.mem dag) deps in
       if deps = [] then key :: acc else acc
     end dag []
@@ -135,7 +131,7 @@ let find_dependants =
     (*let dir = Filename.dirname target in*)
     let dir = if dirname = Filename.current_dir_name then "" else (dirname ^ "/") in
     let cmd = sprintf "%s -modules -native %s*.ml %s*.mli%s"
-        (Ocaml_config.ocamldep()) dir dir Oebuild_util.redirect_stderr in
+        (Ocaml_config.ocamldep()) dir dir Oebuild_util.redirect_stderr_to_null in
     printf "%s (%s)\n%!" cmd modname;
     let ocamldep = Cmd.expand cmd in
     let entries = Str.split re1 ocamldep in
@@ -179,14 +175,14 @@ let find_dependants ~path ~modname =
 
 
 (** find_dep (deprecated use Oebuild.ocamldep) *)
-let find_dep ?pp ?(with_errors=true) ?(echo=true) target =
+let find_dep ?pp ?(ignore_stderr=false) ?(echo=true) target =
   let dir = Filename.dirname target in
   let filenames =
     (match dir with "." -> "*.mli" | _ -> dir ^ "/" ^ "*.mli *.mli") ^ " " ^
       (match dir with "." -> "*.ml" | _ -> dir ^ "/" ^ "*.ml *.ml")
   in
   let search_path = Ocaml_config.expand_includes dir in
-  let table = ocamldep ?pp ~with_errors ~verbose:echo ~search_path filenames in
+  let table = ocamldep ?pp ~ignore_stderr ~verbose:echo ~search_path filenames in
   let target = (Filename.chop_extension target) ^ ".cmx" in
   let anti_loop = ref [] in
   let result = ref [] in
@@ -211,8 +207,8 @@ let find_dep ?pp ?(with_errors=true) ?(echo=true) target =
 ;;
 
 (** find (deprecated use Oebuild.ocamldep) *)
-let find ?pp ?with_errors ?(echo=true) targets =
-  let deps = List.map (find_dep ?pp ?with_errors ~echo) targets in
+let find ?pp ?ignore_stderr ?(echo=true) targets =
+  let deps = List.map (find_dep ?pp ?ignore_stderr ~echo) targets in
   let deps = List.flatten deps in
   List.rev (List.fold_left begin fun acc x ->
       if not (List.mem x acc) then x :: acc else acc
@@ -220,9 +216,9 @@ let find ?pp ?with_errors ?(echo=true) targets =
 ;;
 
 (** ocamldep *)
-(*let ocamldep ?pp ?(with_errors=true) ?(verbose=true) target =
+(*let ocamldep ?pp ?(ignore_stderr=false) ?(verbose=true) target =
   let dir = Filename.dirname target in
-  let redirect_stderr = if with_errors then "" else (if Sys.os_type = "Win32" then " 2>NUL" else " 2>/dev/null") in
+  let redirect_stderr = if ignore_stderr then "" else (if Sys.os_type = "Win32" then " 2>NUL" else " 2>/dev/null") in
   let command = sprintf "%s%s %s -native -slash -one-line %s %s %s"
       (Ocaml_config.ocamldep())
       (match pp with Some pp when pp <> "" -> " -pp " ^ pp | _ -> "" )

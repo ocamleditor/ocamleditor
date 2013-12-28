@@ -66,7 +66,7 @@ let main () =
   let dep () =
     try
       let deps =
-        Oebuild_dep.ocamldep_toplevels ~pp:!pp ~with_errors:true !toplevel_modules
+        Oebuild_dep.ocamldep_toplevels ~pp:!pp ~ignore_stderr:false !toplevel_modules
         |> Oebuild_dep.sort_dependencies
       in
       printf "%s\n%!" (String.concat " " deps);
@@ -158,9 +158,9 @@ let main () =
     end;
     (** Clean *)
     if !is_clean || !is_distclean then begin
-      (*let deps = Oebuild_util.crono ~label:"Oebuild_dep.find" (Oebuild_dep.find ~pp:!pp ~with_errors:true) !toplevel_modules in*)
+      (*let deps = Oebuild_util.crono ~label:"Oebuild_dep.find" (Oebuild_dep.find ~pp:!pp ~ignore_stderr:false) !toplevel_modules in*)
       let deps =
-        Oebuild_dep.ocamldep_toplevels ~verbose:false ~pp:!pp ~with_errors:true !toplevel_modules
+        Oebuild_dep.ocamldep_toplevels ~verbose:false ~pp:!pp ~ignore_stderr:false !toplevel_modules
         |> Oebuild_dep.sort_dependencies
       in
       if !is_clean then (clean ~deps ());
@@ -180,7 +180,7 @@ let main () =
                     let deps =
                       if !nodep then !toplevel_modules
                       else if !serial
-                      then Miscellanea.crono ~label:"Oebuild_dep.find" (fun () -> Oebuild_dep.find ~pp:!pp ~with_errors:true !toplevel_modules) ()
+                      then Miscellanea.crono ~label:"Oebuild_dep.find" (fun () -> Oebuild_dep.find ~pp:!pp ~ignore_stderr:false !toplevel_modules) ()
                       else []
                     in
                     (build

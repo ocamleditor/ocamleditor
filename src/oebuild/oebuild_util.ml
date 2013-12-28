@@ -30,7 +30,7 @@ let (<@) = List.mem
 let is_win32, win32 = (Sys.os_type = "Win32"), (fun a b -> match Sys.os_type with "Win32" -> a | _ -> b)
 let may opt f = match opt with Some x -> f x | _ -> ()
 let re_spaces = Str.regexp " +"
-let redirect_stderr = if Sys.os_type = "Win32" then " 2>NUL" else " 2>/dev/null"
+let redirect_stderr_to_null = if Sys.os_type = "Win32" then " 2>NUL" else " 2>/dev/null"
 
 (** crono *)
 let crono ?(label="Time") f x =
@@ -149,7 +149,7 @@ let get_effective_command =
   let re_verbose = Str.regexp " -verbose" in
   fun ?(linkpkg=false) ocamlfind ->
     try
-      let cmd = sprintf "%s%s -verbose %s" ocamlfind (if linkpkg then " -linkpkg" else "") redirect_stderr in
+      let cmd = sprintf "%s%s -verbose %s" ocamlfind (if linkpkg then " -linkpkg" else "") redirect_stderr_to_null in
       let lines = Cmd.exec_lines cmd in
       let effective_compiler = List.find (fun line -> String.sub line 0 2 = "+ ") lines in
       let effective_compiler = Str.string_after effective_compiler 2  in
