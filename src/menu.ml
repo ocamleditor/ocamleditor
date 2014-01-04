@@ -198,7 +198,7 @@ let search ~browser ~group ~flags items =
   let menu = GMenu.menu ~packing:search_item#set_submenu () in
   (** Find and Replace *)
   let find_repl = GMenu.image_menu_item ~label:"Find and Replace" ~packing:menu#add () in
-  find_repl#set_image (GMisc.image ~stock:`FIND_AND_REPLACE ~icon_size:`MENU ())#coerce;
+  find_repl#set_image (GMisc.image ~pixbuf:Icons.find_replace (*~stock:`FIND_AND_REPLACE*) ~icon_size:`MENU ())#coerce;
   ignore (find_repl#connect#activate ~callback:(fun () ->
     Menu_search.find_replace ?find_all:None ?search_word_at_cursor:None editor));
   find_repl#add_accelerator ~group ~modi:[`CONTROL] GdkKeysyms._f ~flags;
@@ -223,7 +223,7 @@ let search ~browser ~group ~flags items =
   find_all#add_accelerator ~group ~modi:[`CONTROL; `SHIFT] GdkKeysyms._f ~flags;
   (** Search Incremental *)
   let i_search = GMenu.image_menu_item ~label:"Search Incremental" ~packing:menu#add () in
-  i_search#set_image (GMisc.image ~stock:`FIND ~icon_size:`MENU ())#coerce;
+  (*i_search#set_image (GMisc.image ~stock:`FIND ~icon_size:`MENU ())#coerce;*)
   ignore (i_search#connect#activate ~callback:editor#i_search);
   i_search#add_accelerator ~group ~modi:[`CONTROL] GdkKeysyms._e ~flags;
   (** Find/Replace in Path *)
@@ -238,7 +238,7 @@ let search ~browser ~group ~flags items =
   let _ = GMenu.separator_item ~packing:menu#add () in
   (** Go to Line *)
   let goto_line = GMenu.image_menu_item
-    ~image:(GMisc.image ~stock:`JUMP_TO ~icon_size:`MENU ())
+    (*~image:(GMisc.image ~stock:`JUMP_TO ~icon_size:`MENU ())*)
     ~label:"Go to Line..." ~packing:menu#add () in
   ignore (goto_line#connect#activate ~callback:(fun () ->
     editor#with_current_page (fun page -> page#ocaml_view#goto ())));

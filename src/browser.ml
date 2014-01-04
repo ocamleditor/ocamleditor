@@ -963,5 +963,6 @@ let browser = begin
     ~show:false
     ()
   in
-  new browser window;
+  Gtk_theme.set_theme ~context:window#misc#pango_context ();
+  new browser window
 end

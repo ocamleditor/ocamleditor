@@ -502,45 +502,49 @@ struct
       end;
     in
     let bgparagraph = Color.add_value ~sfact:0.0 default_bg_color 0.06 in
+    let tag_table = new GText.tag_table buffer#tag_table in
+    let create_tag id name props =
+      match tag_table#lookup name with
+        | Some tag -> id, new GText.tag tag
+        | _ -> id, buffer#create_tag ~name props;
+    in
     let tags = [
-      `BOLD,        buffer#create_tag [`WEIGHT `BOLD];
-      `ITALIC,      buffer#create_tag [`STYLE `ITALIC];
-      `LEFT,        buffer#create_tag [`JUSTIFICATION `LEFT];
-      `RIGHT,       buffer#create_tag [`JUSTIFICATION `RIGHT];
-      `CENTER,      buffer#create_tag [`JUSTIFICATION `CENTER];
-      `SANS,        buffer#create_tag [`FONT editor_font; `FOREGROUND "#5C6585"; (*`FAMILY "Sans"*)];
-      `SUPERSCRIPT, buffer#create_tag [`RISE (GPango.from_pixels 3); `SCALE `SMALL];
-      `SUBSCRIPT,   buffer#create_tag [`RISE (-(GPango.from_pixels 3)); `SCALE `SMALL];
-      `PARAGRAPH,   buffer#create_tag [`WEIGHT `BOLD; `PIXELS_ABOVE_LINES 3];
-      `SMALL,       buffer#create_tag [`SCALE `XX_SMALL];
-      `LARGE,       buffer#create_tag [`SCALE `X_LARGE];
-      `TT,          buffer#create_tag [`FONT editor_font; `FOREGROUND "#5C6585"];
-      `TTB,         buffer#create_tag [`FONT editor_font];
-      `TTF,         buffer#create_tag [`FAMILY editor_font_family; `SIZE_POINTS 24.0; `WEIGHT `BOLD(*; `FOREGROUND "#5C6585"*)];
-      `TYPE,        buffer#create_tag [`FONT editor_font; `PIXELS_ABOVE_LINES 4];
-      `TYPE_COMMENT, buffer#create_tag [`FONT odoc_font; `PIXELS_ABOVE_LINES 0; `INDENT (2 * indent)];
-      `TYPE2,       buffer#create_tag [`FONT editor_font; `BACKGROUND_FULL_HEIGHT true;
-                      `PIXELS_ABOVE_LINES 1; `PIXELS_BELOW_LINES 1; `PIXELS_INSIDE_WRAP 0;
-                      `INDENT 1];
-      `PARAM,       buffer#create_tag [`LEFT_MARGIN indent; `FONT editor_font; `PIXELS_BELOW_LINES 3; `FOREGROUND param_color; `WEIGHT `BOLD];
-      `PARAM_DESCR, buffer#create_tag [];
-      `LI,          buffer#create_tag [`INDENT indent];
-      `INDENT,      buffer#create_tag [`INDENT indent];
-      `LEFT_MARGIN,      buffer#create_tag [`LEFT_MARGIN indent];
-      `LINE_SPACING_SMALL,  buffer#create_tag [`SIZE_POINTS 0.5];
-      `LINE_SPACING_BIG,  buffer#create_tag [`SIZE_POINTS 8.];
-
-      `TITLE 9,     buffer#create_tag [`WEIGHT `BOLD; `SIZE_POINTS 13.0; `PIXELS_ABOVE_LINES 21; `PIXELS_BELOW_LINES 13; `FOREGROUND gray];
-      `TITLE 8,     buffer#create_tag [`WEIGHT `BOLD; `SIZE_POINTS 14.0; `PIXELS_ABOVE_LINES 21; `PIXELS_BELOW_LINES 13; `FOREGROUND gray];
-      `TITLE 7,     buffer#create_tag [`WEIGHT `BOLD; `SIZE_POINTS 15.0; `PIXELS_ABOVE_LINES 21; `PIXELS_BELOW_LINES 13; `FOREGROUND gray];
-      `TITLE 6,     buffer#create_tag [`WEIGHT `BOLD; `SIZE_POINTS 19.0; `PIXELS_ABOVE_LINES 13; `PIXELS_BELOW_LINES 13];
-
-      `TITLE 5,     buffer#create_tag [`WEIGHT `BOLD; `SIZE_POINTS 13.0; `PIXELS_ABOVE_LINES 13; `PIXELS_BELOW_LINES 8; `FOREGROUND gray];
-      `TITLE 4,     buffer#create_tag [`WEIGHT `BOLD; `SIZE_POINTS 13.5; `PIXELS_ABOVE_LINES 21; `PIXELS_BELOW_LINES 13; `FOREGROUND gray];
-      `TITLE 3,     buffer#create_tag [`WEIGHT `BOLD; `SIZE_POINTS 14.0; `PIXELS_ABOVE_LINES 21; `PIXELS_BELOW_LINES 13; `FOREGROUND gray];
-      `TITLE 2,     buffer#create_tag [`WEIGHT `BOLD; `SIZE_POINTS 15.0; `PIXELS_ABOVE_LINES 21; `PIXELS_BELOW_LINES 13; `FOREGROUND gray];
-      `TITLE 1,     buffer#create_tag [`WEIGHT `BOLD; `SIZE_POINTS 19.0; `PIXELS_ABOVE_LINES 13; `PIXELS_BELOW_LINES 13];
-      `TITLE 0,     buffer#create_tag [`WEIGHT `BOLD; `SIZE_POINTS 21.0; `PIXELS_ABOVE_LINES 13; `PIXELS_BELOW_LINES 13(*; `UNDERLINE `SINGLE*)];
+      create_tag `BOLD "bold"     [`FONT odoc_font; `WEIGHT `BOLD];
+      create_tag `ITALIC "italic" [`FONT odoc_font; `STYLE `ITALIC];
+      create_tag `LEFT "left"     [`JUSTIFICATION `LEFT];
+      create_tag `RIGHT "right"   [`JUSTIFICATION `RIGHT];
+      create_tag `CENTER "center" [`JUSTIFICATION `CENTER];
+      create_tag `SANS "sans"     [`FONT editor_font; `FOREGROUND "#5C6585"; (*`FAMILY "Sans"*)];
+      create_tag `SUPERSCRIPT "superscript"   [`RISE (GPango.from_pixels 3); `SCALE `SMALL];
+      create_tag `SUBSCRIPT "subscript"       [`RISE (-(GPango.from_pixels 3)); `SCALE `SMALL];
+      create_tag `PARAGRAPH "paragraph"       [`WEIGHT `BOLD; `PIXELS_ABOVE_LINES 3];
+      create_tag `SMALL "small"               [`SCALE `XX_SMALL];
+      create_tag `LARGE "large"               [`SCALE `X_LARGE];
+      create_tag `TT "tt"                     [`FONT editor_font; (*`FOREGROUND "#5C6585"*)];
+      create_tag `TTB "ttb"                   [`FONT editor_font];
+      create_tag `TTF "ttf"                   [`FAMILY editor_font_family; `SIZE_POINTS 24.0; `WEIGHT `BOLD(*; `FOREGROUND "#5C6585"*)];
+      create_tag `TYPE "type"                 [`FONT editor_font; `PIXELS_ABOVE_LINES 4];
+      create_tag `TYPE_COMMENT "type_comment" [`FONT odoc_font; `PIXELS_ABOVE_LINES 0; `INDENT (2 * indent)];
+      create_tag `TYPE2 "type2"   [`FONT editor_font; `BACKGROUND_FULL_HEIGHT true;
+                                    `PIXELS_ABOVE_LINES 1; `PIXELS_BELOW_LINES 1; `PIXELS_INSIDE_WRAP 0;
+                                    `INDENT 1];
+      create_tag `PARAM "param"   [`LEFT_MARGIN indent; `FONT editor_font; `PIXELS_BELOW_LINES 3; `FOREGROUND param_color; `WEIGHT `BOLD];
+      create_tag `PARAM_DESCR "param_descr" [];
+      create_tag `LI "li"                                 [`FONT odoc_font; `INDENT indent];
+      create_tag `INDENT "indent"                         [`INDENT indent];
+      create_tag `LEFT_MARGIN "left_margin"               [`LEFT_MARGIN indent];
+      create_tag `LINE_SPACING_SMALL "line_spacing_small" [`SIZE_POINTS 0.5];
+      create_tag `LINE_SPACING_BIG "line_spacing_big"     [`SIZE_POINTS 8.];
+      create_tag (`TITLE 9) "title9" [`WEIGHT `BOLD; `SIZE_POINTS 13.0; `PIXELS_ABOVE_LINES 21; `PIXELS_BELOW_LINES 13; `FOREGROUND gray];
+      create_tag (`TITLE 8) "title8" [`WEIGHT `BOLD; `SIZE_POINTS 14.0; `PIXELS_ABOVE_LINES 21; `PIXELS_BELOW_LINES 13; `FOREGROUND gray];
+      create_tag (`TITLE 7) "title7" [`WEIGHT `BOLD; `SIZE_POINTS 15.0; `PIXELS_ABOVE_LINES 21; `PIXELS_BELOW_LINES 13; `FOREGROUND gray];
+      create_tag (`TITLE 6) "title6" [`WEIGHT `BOLD; `SIZE_POINTS 19.0; `PIXELS_ABOVE_LINES 13; `PIXELS_BELOW_LINES 13];
+      create_tag (`TITLE 5) "title5" [`WEIGHT `BOLD; `SIZE_POINTS 13.0; `PIXELS_ABOVE_LINES 13; `PIXELS_BELOW_LINES 8; `FOREGROUND gray];
+      create_tag (`TITLE 4) "title4" [`WEIGHT `BOLD; `SIZE_POINTS 13.5; `PIXELS_ABOVE_LINES 21; `PIXELS_BELOW_LINES 13; `FOREGROUND gray];
+      create_tag (`TITLE 3) "title3" [`WEIGHT `BOLD; `SIZE_POINTS 14.0; `PIXELS_ABOVE_LINES 21; `PIXELS_BELOW_LINES 13; `FOREGROUND gray];
+      create_tag (`TITLE 2) "title2" [`WEIGHT `BOLD; `SIZE_POINTS 15.0; `PIXELS_ABOVE_LINES 21; `PIXELS_BELOW_LINES 13; `FOREGROUND gray];
+      create_tag (`TITLE 1) "title1" [`WEIGHT `BOLD; `SIZE_POINTS 19.0; `PIXELS_ABOVE_LINES 13; `PIXELS_BELOW_LINES 13];
+      create_tag (`TITLE 0) "title0" [`WEIGHT `BOLD; `SIZE_POINTS 21.0; `PIXELS_ABOVE_LINES 13; `PIXELS_BELOW_LINES 13(*; `UNDERLINE `SINGLE*)];
     ] in
     let ftag x = (*try*) List.assoc x tags (*with Not_found -> assert false*) in
     let (!!) = ftag in
@@ -573,12 +577,12 @@ struct
             when List.mem kind [Oe.Pvalue; Oe.Pfunc] ->
           insert_info elem.Value.val_info
         | Search.Res_module elem ->
-          buffer#insert ~tags:[!!`BOLD; !!`LARGE] "Module ";
-          buffer#insert ~tags:[!!`BOLD; !!`LARGE; !!`TTF] elem.Module.m_name;
+          (*buffer#insert ~tags:[!!`BOLD; !!`LARGE] "Module ";*)
+          buffer#insert ~tags:[!!`BOLD; !!`LARGE; !!`TTB] elem.Module.m_name;
           insert_info elem.Module.m_info
         | Search.Res_module_type elem ->
-          buffer#insert ~tags:[!!`BOLD; !!`LARGE] "Module type ";
-          buffer#insert ~tags:[!!`BOLD; !!`LARGE; !!`TTF] elem.Module.mt_name;
+          (*buffer#insert ~tags:[!!`BOLD; !!`LARGE] "Module type ";*)
+          buffer#insert ~tags:[!!`BOLD; !!`LARGE; !!`TTB] elem.Module.mt_name;
           insert_info elem.Module.mt_info
         | Search.Res_class elem ->
           insert_info elem.Class.cl_info

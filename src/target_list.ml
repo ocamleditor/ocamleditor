@@ -65,15 +65,6 @@ class view ~editor ~project ?packing () =
   let tooltips          = GData.tooltips () in
   (* Buttons *)
   let bbox              = GPack.hbox ~spacing:3 ~packing:vbox#pack () in
-  (*let b_add             = GButton.button ~packing:bbox#pack () in
-  let _                 = tooltips#set_tip ~text:"Create a new target" b_add#coerce in
-  let _                 = b_add#set_image (Icons.create Icons.target_24)#coerce in
-  let b_etask           = GButton.button ~packing:bbox#pack () in
-  let _                 = tooltips#set_tip ~text:"Add an external build task" b_etask#coerce in
-  let _                 = b_etask#set_image (Icons.create Icons.etask_24)#coerce in
-  let b_duplicate       = GButton.button ~packing:bbox#pack () in
-  let _                 = tooltips#set_tip ~text:"Duplicate" b_duplicate#coerce in
-  let _                 = b_duplicate#set_image (GMisc.image ~stock:`COPY ~icon_size:`BUTTON ())#coerce in*)
   let b_new             = Gmisclib.Button.button_menu ~packing:bbox#pack () in
   let _                 = b_new#set_image  (GMisc.image ~stock:`NEW ~icon_size:`BUTTON ())#coerce in
   let _                 = b_new#misc#set_tooltip_text "New..." in
@@ -113,9 +104,9 @@ object (self)
     b_new#set_menu_only ();
     ignore (b_new#connect#show_menu ~callback:begin fun (label, menu) ->
       label := None;
-      let item = GMenu.image_menu_item ~image:(GMisc.image ~pixbuf:Icons.target_16 ())#coerce ~label:"Create a new target" ~packing:menu#append () in
+      let item = GMenu.image_menu_item ~image:(GMisc.image ~pixbuf:Icons.target_16 ())#coerce ~label:"Create new target" ~packing:menu#append () in
       ignore (item#connect#activate ~callback:(fun () -> ignore (self#add_target ())));
-      let item = GMenu.image_menu_item ~image:(GMisc.image ~pixbuf:Icons.etask_16 ())#coerce ~label:"Add an external build task" ~packing:menu#append () in
+      let item = GMenu.image_menu_item ~image:(GMisc.image ~pixbuf:Icons.etask_16 ())#coerce ~label:"Add external build task" ~packing:menu#append () in
       ignore (item#connect#activate ~callback:self#add_external_task);
       let item = GMenu.image_menu_item ~image:(GMisc.image ~stock:`COPY ())#coerce ~label:"Duplicate" ~packing:menu#append () in
       ignore (item#connect#activate ~callback:self#duplicate);

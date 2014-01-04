@@ -35,14 +35,14 @@ type title = {
 let pixbuf_of_kind = function
   | Pvalue                  -> Icons.func
   | Pfunc                   -> Icons.func
-  | Pattribute              -> Icons.none_14
+  | Pattribute              -> Icons.empty_14
   | Pmethod                 -> Icons.met
   | Pmethod_private_virtual -> Icons.met_private_virtual
   | Pmethod_private         -> Icons.met_private
   | Pmethod_virtual         -> Icons.met_virtual
   | Ptype                   -> Icons.typ
-  | Plabel                  -> Icons.none_14
-  | Pconstructor            -> Icons.none_14 (*Icons.constructor*)
+  | Plabel                  -> Icons.empty_14
+  | Pconstructor            -> Icons.empty_14 (*Icons.constructor*)
   | Pexception              -> Icons.exc
   | Pmodule                 -> Icons.module_impl
   | Pmodtype                -> Icons.module_impl
@@ -51,8 +51,8 @@ let pixbuf_of_kind = function
   | Ptype_abstract          -> Icons.type_abstract
   | Ptype_variant           -> Icons.type_variant
   | Ptype_record            -> Icons.type_record
-  | Std_lib                 -> Icons.none_14
-  | Lib                     -> Icons.none_14
+  | Std_lib                 -> Icons.empty_14
+  | Lib                     -> Icons.empty_14
 ;;
 
 module Index = struct
@@ -87,8 +87,8 @@ let col_add_descr   = cols#add Gobject.Data.string
 let col_symbol_data = cols#add Gobject.Data.caml
 
 (** symbol_list *)
-class symbol_list ~kind ?model ?(index=Index.create ()) ?packing ?width ?height () =
-  let renderer        = GTree.cell_renderer_text [] in
+class symbol_list ~kind ?(is_completion=false) ?model ?(index=Index.create ()) ?packing ?width ?height () =
+  let renderer        = GTree.cell_renderer_text [`YPAD (match kind with `Search -> 5 | _ -> 0)] in
   let renderer_pixbuf = GTree.cell_renderer_pixbuf [] in
   let model           = match model with Some m -> m | _ -> GTree.list_store cols in
   let vc_icon         = GTree.view_column ~renderer:(renderer_pixbuf, ["pixbuf", col_icon]) ~title:"" () in
@@ -109,6 +109,7 @@ class symbol_list ~kind ?model ?(index=Index.create ()) ?packing ?width ?height 
   let _               = view#set_headers_visible false in
   let _               = vc_add_descr#set_visible false in
   let _               = view#set_search_column col_search.GTree.index in
+  (*let _               = view#misc#set_property "enable-grid-lines" (`INT 1) in*)
 
 object (self)
   inherit GObj.widget sw#as_widget
@@ -156,7 +157,13 @@ object (self)
     model#clear();
     Index.clear index;
     (** Fill model *)
-    let markup = sprintf "<span size='small' color='%s'>%s</span>\n%s" Oe_config.module_browser_secondary_title_color in
+    let markup =
+      match kind with
+        | `Search when not is_completion ->
+          sprintf "<span weight='bold' color='%s' bgcolor='#ffffff'>%s</span>\n%s" Oe_config.module_browser_secondary_title_color
+        | _ ->
+          sprintf "<span weight='bold' color='%s'>%s</span>\n%s" Oe_config.module_browser_secondary_title_color
+    in
     List.iter begin fun symbol ->
       let name = Symbol.get_name symbol in
       let symbol_path = Symbol.concat_value_path symbol in

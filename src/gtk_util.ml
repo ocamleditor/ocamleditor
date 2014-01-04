@@ -21,7 +21,6 @@
 *)
 
 
-let _ = Gtk_theme.set_theme()
 let _ = Gmisclib.Util.fade_window_enabled := Oe_config.fade_window_enabled
 
 let create_mark_name =
@@ -36,13 +35,24 @@ let esc_destroy_window window =
   end);;
 
 (** window *)
-let window widget ?parent ?(destroy_child=true) ?(fade=false) ?(focus=true) ?(escape=true) ?(show=true) ~x ~y () =
+let window widget
+    ?(type_hint=(if Sys.win32 then `UTILITY else `DIALOG))
+    ?(decorated=false)
+    ?parent
+    ?(destroy_child=true)
+    ?(fade=false)
+    ?(focus=true)
+    ?(escape=true)
+    ?wm_class
+    ?(show=true)
+    ~x ~y () =
   let window = GWindow.window
-    ~decorated:false
+    ~decorated
     ~border_width:1
     ~deletable:true
     ~focus_on_map:focus
-    ~type_hint:(if Sys.os_type = "Win32" then `UTILITY else `DIALOG)
+    ~type_hint
+    ?wm_class
     ~show:false ()
   in
   let ebox = GBin.event_box ~packing:window#add () in
@@ -58,6 +68,7 @@ let window widget ?parent ?(destroy_child=true) ?(fade=false) ?(focus=true) ?(es
   if escape then esc_destroy_window window;
   window#set_skip_pager_hint true;
   window#set_skip_taskbar_hint true;
+  window#set_urgency_hint false;
   Gaux.may parent ~f:(fun parent -> Gaux.may (GWindow.toplevel parent) ~f:(fun x -> window#set_transient_for x#as_window));
   window#set_accept_focus focus;
   if show then begin
@@ -118,9 +129,19 @@ let with_tag ~(buffer : GText.buffer) tag f =
 let increase_font_size ?weight ?(increment=3) widget =
   let fd = widget#misc#pango_context#font_description in
   let size = Pango.Font.get_size fd + increment * Pango.scale in
-  Pango.Font.modify fd ?weight ~size ();
-  widget#misc#modify_font fd;;
+  if size >= 0 then begin
+    Pango.Font.modify fd ?weight ~size ();
+    widget#misc#modify_font fd;
+  end;
+  fd;;
 
+(** try_font *)
+let try_font context family =
+  try
+    let fd = Printf.kprintf Pango.Font.from_string "%s 9" family in
+    let _ = Pango.Context.load_font context#as_context fd in
+    true
+  with Gpointer.Null -> false
 
 
 

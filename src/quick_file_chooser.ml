@@ -503,7 +503,7 @@ object (self)
             table_results <- table_visible;
             if is_filelist then (self#apply_pattern());
             self#display_summary ();
-            icon_progress#set_pixbuf Icons.none_14;
+            icon_progress#set_pixbuf Icons.empty_14;
             false
           end else true
         end;

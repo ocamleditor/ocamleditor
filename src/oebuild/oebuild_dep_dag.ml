@@ -114,7 +114,7 @@ let find_toplevels ocamldeps =
 
 (** create_dag *)
 let create_dag ?times ~toplevel_modules ~verbose () =
-  let crono = if verbose >= 3 then crono else fun ?label f x -> f x in
+  let crono = if verbose >= 4 then crono else fun ?label f x -> f x in
   let dirs = List.map Filename.dirname toplevel_modules in
   let dirs = List.filter ((<>) ".") dirs in
   let dirs = remove_dupl dirs in
@@ -126,19 +126,14 @@ let create_dag ?times ~toplevel_modules ~verbose () =
   let ocamldeps =
     let mode = (*`All*) `Recursive in
     match mode with
-      | `All ->
+      (*| `All ->
         let filenames = List.map (fun dir -> sprintf "%s/*.mli %s/*.ml" dir dir) dirs in
         let filenames = (String.concat " " filenames) ^ " *.ml *.mli" in
-        crono ~label:"Oebuild_dep_dag.create_dag, ocamldep(`All)" (Oebuild_dep.ocamldep ?times ~search_path) filenames
+        crono ~label:"Oebuild_dep_dag.create_dag, ocamldep(`All)" (Oebuild_dep.ocamldep ?times ~search_path) filenames*)
       | `Recursive ->
         let ocamldeps = crono ~label:"Oebuild_dep_dag.create_dag, ocamldep(`Recursive)"
-          (Oebuild_dep.ocamldep_recursive ?times ~search_path ~verbose:false) toplevel_modules in
-        (*let unchanged = Hashtbl.fold begin fun key (changed, deps) acc ->
-            if changed then acc else key :: acc
-          end ocamldeps []
+          (Oebuild_dep.ocamldep_recursive ?times ~search_path ~verbose:false) toplevel_modules
         in
-        Printf.printf "OCAMLDEPS LENGTH: %d\n%!" (Hashtbl.length ocamldeps);
-        List.iter (Hashtbl.remove ocamldeps) unchanged;*)
         ocamldeps
   in
   if verbose >= 4 then Printf.printf "OCAMLDEPS LENGTH: %d\n%!" (Hashtbl.length ocamldeps);

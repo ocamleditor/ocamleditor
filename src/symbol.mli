@@ -63,6 +63,7 @@ val filter_by_name :
   ?include_methods:bool ->
   ?include_modules:string list ->
   regexp:Str.regexp -> Oe.symbol list -> Oe.symbol list
+val filter_by_type : regexp:Str.regexp -> Oe.symbol list -> Oe.symbol list
 val filter_by_modulepath :
   ?update_cache:bool -> Oe.symbol_cache -> string list -> Oe.symbol list
 val find_parent :

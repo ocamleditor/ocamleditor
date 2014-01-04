@@ -95,9 +95,9 @@ class page ?file ~project ~scroll_offset ~offset ~editor () =
   let spinner                  = GMisc.image ~width:15 ~packing:sbox#pack () in
   let _                        = GMisc.separator `VERTICAL ~packing:sbox#pack () in
   let button_dotview           = create_small_toggle_button
-    ~pixbuf:Icons.graph_14
+    ~pixbuf:Icons.tree
     ~packing:sbbox#pack ()
-    ~show:(Oe_config.dot_version <> None)
+    ~show:(false (*Oe_config.dot_version <> None*))
   in
   (** Icons for font size and row spacing adjustment *)
   let button_font_incr = create_small_button
@@ -616,7 +616,7 @@ object (self)
     let activate_spinner (active : Activity.t list) =
       match active with
         | [] ->
-          spinner#set_pixbuf Icons.none_14;
+          spinner#set_pixbuf Icons.empty_14;
           spinner#misc#set_tooltip_text "";
         | msgs ->
           let msgs = snd (List.split msgs) in

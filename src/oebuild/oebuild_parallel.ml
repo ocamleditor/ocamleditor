@@ -56,21 +56,24 @@ type dag = {
 }
 
 (** print_results *)
-let print_results errors messages =
-  List.iter begin fun error ->
-    Printf.eprintf "%s --- (exit code: %d)%s\n%s\n----------------------------------------------------------------------\n"
-      error.command error.exit_code
-      (if Buffer.length error.out > 0 then "\n" ^ Buffer.contents error.out else "")
-      (Buffer.contents error.err);
-  end errors;
+let print_results err_outputs ok_outputs =
   flush_all();
-  List.iter begin fun message ->
-    if Buffer.length message.out > 0 || Buffer.length message.err > 0 then
-      Printf.printf "%s%s\n%s\n----------------------------------------------------------------------\n"
-        message.command
-        (if Buffer.length message.out > 0 then "\n" ^ Buffer.contents message.out else "")
-        (Buffer.contents message.err);
-  end messages;
+  (*let sep = "----------------------------------------------------------------------\n" in*)
+  let sep = "\n" in
+  List.iter begin fun process_output ->
+    let has_out = Buffer.length process_output.out > 0 in
+    let has_err = Buffer.length process_output.err > 0 in
+    if has_out then printf "%s\n%s\n%s%!" process_output.command (Buffer.contents process_output.out) sep;
+    if has_err then eprintf "%s\n%s\n%s%!" process_output.command (Buffer.contents process_output.err) sep;
+  end ok_outputs;
+  flush_all();
+  List.iter begin fun process_output ->
+    let has_out = Buffer.length process_output.out > 0 in
+    let has_err = Buffer.length process_output.err > 0 in
+    let cmd = sprintf "%s\n(exit code = %d)" process_output.command process_output.exit_code in
+    if has_out then printf "%s\n%s\n%s%!" cmd (Buffer.contents process_output.out) sep;
+    if has_err then eprintf "%s\n%s\n%s%!" cmd (Buffer.contents process_output.err) sep;
+  end err_outputs;
   flush_all()
 ;;
 
@@ -144,8 +147,14 @@ let create_process ?(jobs=0) ~verbose cb_create_command cb_at_exit dag leaf erro
         (*end;*)
         cb_at_exit output
       in
-      let process_in stdin = Buffer.add_string output.out (input_line stdin) in
-      let process_err stderr = Buffer.add_string output.err (input_line stderr) in
+      let process_in stdin =
+        Buffer.add_string output.out (input_line stdin);
+        Buffer.add_char output.out '\n';
+      in
+      let process_err stderr =
+        Buffer.add_string output.err (input_line stderr);
+        Buffer.add_char output.err '\n';
+      in
       (*if jobs > 0 then begin*)
         Mutex.lock job_mutex;
         incr job_counter;

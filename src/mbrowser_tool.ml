@@ -50,23 +50,37 @@ class widget ~project ?(is_completion=false) ?(enable_history=true) ?width ?heig
   let button_up           = GButton.tool_button ~stock:`GO_UP ~homogeneous:false ~packing:toolbar#insert () in
   let button_libraries    = GButton.tool_button ~label:"Libraries" ~homogeneous:false ~packing:toolbar#insert () in
   let button_modules      = GButton.tool_button ~label:"Modules" ~homogeneous:false ~packing:toolbar#insert () in
+  let _                   = GButton.separator_tool_item ~draw:true ~expand:false ~packing:toolbar#insert () in
   let item_find           = GButton.tool_item ~expand:false ~homogeneous:false ~packing:toolbar#insert () in
+  let radio_find_path     = GButton.radio_tool_button ~packing:toolbar#insert ~active:true () in
+  let radio_find_name     = GButton.radio_tool_button ~packing:toolbar#insert ~group:radio_find_path () in
+  let radio_find_type     = GButton.radio_tool_button ~packing:toolbar#insert ~group:radio_find_path () in
+  let _                   = radio_find_path#set_icon_widget (GMisc.image ~pixbuf:Icons.path_name ())#coerce in
+  let _                   = radio_find_name#set_icon_widget (GMisc.image ~pixbuf:Icons.simple_name ())#coerce in
+  let _                   = radio_find_type#set_icon_widget (GMisc.image ~pixbuf:Icons.typ ())#coerce in
+  let _                   = radio_find_path#misc#set_tooltip_text "Search by value path" in
+  let _                   = radio_find_name#misc#set_tooltip_text "Search by simple value name" in
+  let _                   = radio_find_type#misc#set_tooltip_text "Search by type" in
   let entry_find          = GEdit.entry ~width_chars:15 ~packing:item_find#add () in
-  let button_find         = GButton.tool_button ~stock:`FIND ~homogeneous:false ~packing:toolbar#insert () in
+  let button_find         = GButton.tool_button (*~stock:`FIND*) ~homogeneous:false ~packing:toolbar#insert () in
+  let _                   = button_find#set_icon_widget (GMisc.image ~pixbuf:Icons.find_16 ())#coerce in
   let _                   = GButton.separator_tool_item ~draw:sep_visible ~packing:toolbar#insert () in
   let button_add          = GButton.tool_button ~stock:`ADD ~homogeneous:false ~packing:toolbar#insert ~show:false () in
   let button_remove       = GButton.tool_button ~stock:`REMOVE ~homogeneous:false ~packing:toolbar#insert () in
   let _                   = GButton.separator_tool_item ~draw:sep_visible ~packing:toolbar#insert () in
-  let button_layout_both  = GButton.radio_tool_button ~label:"Both" ~homogeneous:false ~active:true ~packing:toolbar#insert () in
-  let _                   = button_layout_both#set_icon_widget (GMisc.image ~pixbuf:Icons.paned_right ~icon_size:`MENU ())#coerce in
-  let button_layout_slist = GButton.radio_tool_button ~label:"Symbol list" ~homogeneous:false ~group:button_layout_both ~packing:toolbar#insert () in
-  let _                   = button_layout_slist#set_icon_widget (GMisc.image ~pixbuf:Icons.paned_right_hide ~icon_size:`MENU ())#coerce in
-  let button_layout_odoc  = GButton.radio_tool_button ~label:"Documentation" ~homogeneous:false ~group:button_layout_both ~packing:toolbar#insert () in
-  let _                   = button_layout_odoc#set_icon_widget (GMisc.image ~pixbuf:Icons.paned_right_full ~icon_size:`MENU ())#coerce in
+  let button_incr_font    = GButton.tool_button ~label:"Increase Font Size" ~homogeneous:false ~packing:toolbar#insert () in
+  let _                   = button_incr_font#set_icon_widget (GMisc.image ~pixbuf:Icons.zoom_in_14 ~icon_size:`MENU ())#coerce in
+  let button_decr_font    = GButton.tool_button ~label:"Decrease Font Size" ~homogeneous:false ~packing:toolbar#insert () in
+  let _                   = button_decr_font#set_icon_widget (GMisc.image ~pixbuf:Icons.zoom_out_14 ~icon_size:`MENU ())#coerce in
+  let _                   = GButton.separator_tool_item ~draw:true ~expand:false ~packing:toolbar#insert () in
+  let button_layout_slist = GButton.toggle_tool_button ~label:"Symbol list" ~homogeneous:false ~active:false ~packing:toolbar#insert () in
+  let _                   = button_layout_slist#set_icon_widget (GMisc.image ~pixbuf:Icons.item_list ~icon_size:`MENU ())#coerce in
+  let button_layout_odoc  = GButton.toggle_tool_button ~label:"Documentation" ~homogeneous:false ~active:false ~packing:toolbar#insert () in
+  let _                   = button_layout_odoc#set_icon_widget (GMisc.image ~pixbuf:Icons.doc ~icon_size:`MENU ())#coerce in
   let _                   = GButton.separator_tool_item ~draw:true ~expand:false ~packing:toolbar#insert () in
   let button_detach       = GButton.tool_button ~label:"Detach" ~homogeneous:false ~packing:toolbar#insert () in
   let _                   = GMisc.image ~pixbuf:Icons.detach ~icon_size:`MENU ~packing:button_detach#set_icon_widget () in
-  let box_slist           = GPack.vbox ~packing:paned#add1 () in
+  let box_slist           = GPack.vbox ~packing:paned#add1 ~show:false () in
   let label_title         = GMisc.label ~markup:"" ~xalign:0.5 ~xpad:3 ~ypad:5 ~packing:box_slist#pack () in
   let stack_box           = GPack.hbox ~packing:box_slist#add () in
   let box_odoc            = GPack.vbox ~packing:paned#add2 ~spacing:3 ~show:false () in (* details box *)
@@ -75,6 +89,7 @@ class widget ~project ?(is_completion=false) ?(enable_history=true) ?width ?heig
   let odoc_view           = new Ocaml_text.view ~buffer:odoc_buffer () in
   let odoc_tag            = odoc_buffer#create_tag
                             ((`FONT Preferences.preferences#get.Preferences.pref_odoc_font) :: Oe_config.odoc_tag_properties) in
+  let _                   = odoc_buffer#create_tag ~name:"large" [`SCALE `X_LARGE] in
   let incremental_search  = new Incremental_search.incremental () in
   let pref                = {Preferences.preferences#get with Preferences.pref_code_folding_enabled=false} in
   let _ =
@@ -94,8 +109,8 @@ class widget ~project ?(is_completion=false) ?(enable_history=true) ?width ?heig
     odoc_view#set_pixels_inside_wrap 0;
     odoc_view#set_editable false;
     odoc_view#set_cursor_visible false;
-    odoc_view#set_left_margin Oe_config.odoc_margin;
-    odoc_view#set_right_margin Oe_config.odoc_margin;
+    odoc_view#set_left_margin (if is_completion then Oe_config.odoc_margin / 2 else Oe_config.odoc_margin);
+    odoc_view#set_right_margin (if is_completion then Oe_config.odoc_margin / 2 else Oe_config.odoc_margin);
     odoc_view#set_wrap_mode `WORD;
     odoc_view#misc#set_has_tooltip false;
     odoc_view#options#set_show_markers false;
@@ -110,7 +125,7 @@ class widget ~project ?(is_completion=false) ?(enable_history=true) ?width ?heig
   let _              = hyperlink#enable() in
 object (self)
   inherit GObj.widget ebox#as_widget
-  inherit Messages.page ~role:"module-browser" as super
+  inherit Messages.page ~role:"module-browser"
 
   val mutable search_results_length = 0
   val mutable widget_libraries = None
@@ -119,11 +134,16 @@ object (self)
   val mutable cache_widget_module = []
   val mutable tooltip_popup = None
   val mutable current_symbol = None
-  (*val mutable detached = None, Some messages*)
   val mutable radio_signals = []
   val tout_entry_find = Timeout.create ~delay:0.85 ()
   val switch_page = new switch_page ()
   val add_page = new add_page ()
+  val layout_toggled = new layout_toggled ()
+  val tag_table = new GText.tag_table odoc_view#as_gtext_view#buffer#tag_table
+  val mutable tags = []
+
+  method button_layout_slist = button_layout_slist
+  method button_layout_odoc = button_layout_odoc
 
   initializer
     self#set_is_completion is_completion;
@@ -132,6 +152,13 @@ object (self)
       odoc_view#misc#modify_font_by_name Preferences.preferences#get.Preferences.pref_base_font;
       odoc_tag#set_property (`FONT Preferences.preferences#get.Preferences.pref_odoc_font);
     end);
+    tag_table#connect#tag_added ~callback:(fun tag -> tags <- new GText.tag tag :: tags) |> ignore;
+    tag_table#connect#tag_removed ~callback:begin fun tag ->
+      let oid = (new GText.tag tag)#get_oid in
+      tags <- List.filter (fun t -> t#get_oid <> oid) tags;
+    end |> ignore;
+    button_incr_font#connect#clicked ~callback:(fun () -> self#change_font_size 1) |> ignore;
+    button_decr_font#connect#clicked ~callback:( fun () -> self#change_font_size (-1)) |> ignore;
     (*  *)
     self#init_toolbar();
     self#init_tooltips();
@@ -156,10 +183,39 @@ object (self)
     self#init_key_bindings();
     self#init_timeout_odoc();
     self#create_widget_modules ~push:false ();
-    self#set_layout (if is_completion then `slist else `both);
+    button_layout_slist#set_active true;
+    button_layout_odoc#set_active (not is_completion);
     Gmisclib.Idle.add entry_find#misc#grab_focus;
 
-  method button_layout_slist = button_layout_slist
+
+  method change_font_size increment =
+    let get_tag_fd (tag : GText.tag) =
+      Pango.Font.from_string (tag#get_property {
+          Gobject.name = "font";
+          conv         =
+            {Gobject.kind = `STRING;
+              proj         = (function `STRING (Some x) -> x | _ -> "");
+              inj          = (fun x -> `STRING (Some x))}})
+    in
+    let change_size fd =
+      let size = Pango.Font.get_size fd + increment * Pango.scale in
+      if size >= 0 then Pango.Font.modify fd ~size ();
+      size >= 0
+    in
+    let fd = odoc_view#misc#pango_context#font_description in
+    if change_size fd then odoc_view#misc#modify_font fd;
+    List.iter begin fun tag ->
+      let fd = get_tag_fd tag in
+      if change_size fd then tag#set_property (`FONT_DESC fd);
+    end (odoc_tag :: tags);
+    (*Stack.iter begin fun widget ->
+      let fd = widget#view#misc#pango_context#font_description in
+      if change_size fd then widget#view#misc#modify_font fd
+    end stack_back;
+    Stack.iter begin fun widget ->
+      let fd = widget#view#misc#pango_context#font_description in
+      if change_size fd then widget#view#misc#modify_font fd
+    end stack_forward;*)
 
   method init_hyperlinks () =
     let with_symbol_at_iter iter f =
@@ -197,10 +253,12 @@ object (self)
     ignore (button_up#connect#clicked ~callback:self#go_up);
     ignore (button_libraries#connect#clicked ~callback:self#go_home);
     ignore (button_modules#connect#clicked ~callback:self#create_widget_modules);
-    ignore (button_layout_both#connect#after#toggled ~callback:(fun () -> if button_layout_both#get_active then self#set_layout `both));
-    ignore (button_layout_slist#connect#after#toggled ~callback:(fun () -> if button_layout_slist#get_active then self#set_layout `slist));
-    ignore (button_layout_odoc#connect#after#toggled ~callback:(fun () -> if button_layout_odoc#get_active then self#set_layout `odoc));
+    ignore (button_layout_slist#connect#toggled ~callback:(fun () -> self#toggle_layout `slist));
+    ignore (button_layout_odoc#connect#toggled ~callback:(fun () -> self#toggle_layout `odoc));
     ignore (button_detach#connect#clicked ~callback:(fun () -> self#detach button_detach));
+    ignore (radio_find_path#connect#toggled ~callback:(fun () -> if radio_find_path#get_active then find_and_fill()));
+    ignore (radio_find_name#connect#toggled ~callback:(fun () -> if radio_find_name#get_active then find_and_fill()));
+    ignore (radio_find_type#connect#toggled ~callback:(fun () -> if radio_find_type#get_active then find_and_fill()));
     ignore (button_find#connect#clicked ~callback:find_and_fill);
     ignore (entry_find#connect#changed ~callback:self#find);
     ignore (button_remove#connect#clicked ~callback:begin fun () ->
@@ -308,7 +366,7 @@ object (self)
 	Gmisclib.Idle.add odoc_view#misc#grab_focus;
         true
       end else if key = GdkKeysyms._Left then begin
-        button_layout_slist#set_active true;
+        button_layout_odoc#set_active false;
         Gaux.may (self#get_current_page()) ~f:begin fun (w : symbol_list) ->
           match w#view#selection#get_selected_rows with
             | path :: _ ->
@@ -321,8 +379,7 @@ object (self)
         if List.for_all entry_find#misc#get_flag [`REALIZED; `VISIBLE] then (entry_find#misc#grab_focus());
         true
       end else if key = GdkKeysyms._F1 || (state = [`MOD1] && key = GdkKeysyms._Return) then begin
-        if button_layout_both#get_active then (button_layout_slist#set_active true)
-        else (button_layout_both#set_active true);
+        button_layout_odoc#set_active (not button_layout_odoc#get_active);
         true
       end else if box_odoc_visible && (*not is_completion &&*) state = [`CONTROL] && key = GdkKeysyms._e then begin
         odoc_buffer#place_cursor ~where:odoc_buffer#start_iter;
@@ -403,9 +460,15 @@ object (self)
         let text = match text with None -> entry_find#text | Some x -> x in
         entry_find#misc#set_property "secondary-icon-sensitive" (`BOOL (String.length text > 0));
         if String.length text > 0 then begin
-          let pat = sprintf ".*%s.*" (Str.quote text) in
+          let pat = (if radio_find_type#get_active then sprintf ".*[\t\r\n .]%s.*" else sprintf ".*%s.*") (Str.quote text) in
           let regexp = Str.regexp_case_fold pat in
-          let symbols = Symbol.filter_by_name ~regexp project.Prj.symbols.syt_table in
+          let symbols =
+            if radio_find_type#get_active
+            then
+              Symbol.filter_by_type ~regexp project.Prj.symbols.syt_table
+            else
+              Symbol.filter_by_name ~use_longidents:radio_find_path#get_active ~regexp project.Prj.symbols.syt_table
+          in
           self#create_widget_search_results ~symbols ~fill ()
         end;
       end ()
@@ -456,7 +519,7 @@ object (self)
 
   (** create_widget *)
   method private create_widget ~kind ?model ?index ?packing () =
-    let widget = new symbol_list ~kind ?model ?index ?width ?height ?packing () in
+    let widget = new symbol_list ~kind ~is_completion ?model ?index ?width ?height ?packing () in
     widget#view#set_enable_search true;
     widget#sw#set_shadow_type `IN;
     (* To avoid beep *)
@@ -591,7 +654,7 @@ object (self)
       wmods#vc_icon#set_visible false;
       wmods#vc_add_descr#set_visible true;
       wmods#set_title ~subtitle:"" "Index of Modules";
-      if button_layout_odoc#get_active then button_layout_both#set_active true;
+      (*if button_layout_odoc#get_active then button_layout_both#set_active true;*)
       if push then (self#push wmods);
     with Exit ->
       cache_widget_modules := List.filter (fun (id, _) -> id <> cache_id) !cache_widget_modules;
@@ -762,28 +825,37 @@ object (self)
       | path :: _ ->
         let row = widget#model#get_iter path in
         let symbol = widget#model#get ~row ~column:col_symbol_data in
+        let insert_odoc () =
+          let odoc_exists = self#insert_odoc ~project ~symbol () in
+          if not odoc_exists then begin
+            let m1 = odoc_buffer#create_mark (odoc_buffer#get_iter `INSERT) in
+            odoc_buffer#set_text symbol.sy_type;
+            let start = odoc_buffer#get_iter_at_mark (`MARK m1) in
+            let stop = odoc_buffer#get_iter `INSERT in
+            Alignment.align ~buffer:(odoc_buffer :> GText.buffer) ~start ~stop;
+            odoc_buffer#delete_mark (`MARK m1);
+            Lexical.tag odoc_view#buffer;
+          end
+        in
         begin
           match symbol.sy_kind with
             | Pmodule | Pmodtype | Pcltype ->
               odoc_buffer#set_text "";
+              insert_odoc();
             | Ptype | Ptype_abstract | Ptype_variant | Ptype_record ->
-              odoc_buffer#set_text "";
-              let odoc_exists = self#insert_odoc ~project ~symbol () in
-              if not odoc_exists then begin
-                let m1 = odoc_buffer#create_mark (odoc_buffer#get_iter `INSERT) in
-                odoc_buffer#set_text symbol.sy_type;
-                let start = odoc_buffer#get_iter_at_mark (`MARK m1) in
-                let stop = odoc_buffer#get_iter `INSERT in
-                Alignment.align ~buffer:(odoc_buffer :> GText.buffer) ~start ~stop;
-                odoc_buffer#delete_mark (`MARK m1);
-                Lexical.tag odoc_view#buffer;
-              end
+              odoc_buffer#set_text "\n";
+              odoc_buffer#insert ~tag_names:["large"] (Symbol.string_of_id (Symbol.get_parent_path symbol));
+              odoc_buffer#insert "\n\n";
+              (*Lexical.tag odoc_view#buffer;*)
+              insert_odoc();
   (*          | Pclass ->
               odoc_buffer#set_text symbol.sy_type;
               Lexical.tag odoc_view#buffer;
               self#insert_odoc ~project ~symbol ();*)
             | _ ->
-              odoc_buffer#set_text symbol.sy_type;
+              odoc_buffer#set_text "\n";
+              odoc_buffer#insert ~tag_names:["large"] (Symbol.string_of_id (Symbol.get_parent_path symbol));
+              odoc_buffer#insert ("\n\n" ^ symbol.sy_type);
               Lexical.tag odoc_view#buffer;
               ignore (self#insert_odoc ~project ~symbol ());
         end;
@@ -851,7 +923,7 @@ object (self)
   (** go_home *)
   method go_home () =
     while not (self#go_back()) do () done;
-    if button_layout_odoc#get_active then button_layout_both#set_active true;
+    (*if button_layout_odoc#get_active then button_layout_both#set_active true;*)
 
   (** go_up *)
   method go_up () =
@@ -960,16 +1032,23 @@ object (self)
       switch_page#call current;
     with Stack.Empty -> ()
 
-  method private set_layout = function
-    | `slist ->
-      box_odoc#misc#hide();
-      box_slist#misc#show();
-    | `odoc ->
-      box_slist#misc#hide();
-      box_odoc#misc#show();
-    | `both ->
-      box_slist#misc#show();
-      box_odoc#misc#show();
+  method private toggle_layout : [ `slist | `odoc ] -> unit = function pane ->
+    begin
+      match pane with
+        | `slist ->
+          if box_slist#misc#get_flag `VISIBLE then box_slist#misc#hide() else box_slist#misc#show();
+        | `odoc ->
+          if box_odoc#misc#get_flag `VISIBLE then box_odoc#misc#hide() else box_odoc#misc#show();
+    end;
+    if not (box_slist#misc#get_flag `VISIBLE) && not (box_odoc#misc#get_flag `VISIBLE) then
+      button_layout_slist#set_active true;
+    layout_toggled#call()
+
+  method layout : [ `slist | `odoc | `both ] =
+    if box_slist#misc#get_flag `VISIBLE && box_odoc#misc#get_flag `VISIBLE then `both
+    else if box_slist#misc#get_flag `VISIBLE then `slist
+    else if box_odoc#misc#get_flag `VISIBLE then `odoc
+    else assert false
 
   method private set_is_completion is_compl =
     if is_completion then begin
@@ -983,17 +1062,19 @@ object (self)
   method odoc_view = odoc_view
 
     (** connect *)
-  method connect = new widget_signals ~switch_page ~add_page
+  method connect = new widget_signals ~switch_page ~add_page ~layout_toggled
 end
 
 (** widget_signals *)
-and widget_signals ~switch_page ~add_page = object
-  inherit GUtil.ml_signals [switch_page#disconnect; add_page#disconnect]
+and widget_signals ~switch_page ~add_page ~layout_toggled = object
+  inherit GUtil.ml_signals [switch_page#disconnect; add_page#disconnect; layout_toggled#disconnect]
   method switch_page = switch_page#connect ~after
   method add_page = add_page#connect ~after
+  method layout_toggled = layout_toggled#connect ~after
 end
 and switch_page () = object inherit [symbol_list] GUtil.signal () end
 and add_page () = object inherit [symbol_list] GUtil.signal () end
+and layout_toggled () = object inherit [unit] GUtil.signal () end
 
 (*(** create *)
 let create_window ~project =

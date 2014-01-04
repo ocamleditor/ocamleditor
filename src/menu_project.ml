@@ -241,7 +241,7 @@ let project ~browser ~group ~flags items =
     end));
   (** Project Refresh *)
   let project_refresh = GMenu.image_menu_item ~label:"Refresh" ~packing:menu#add () in
-  project_refresh#set_image (GMisc.image ~stock:`REFRESH ~icon_size:`MENU ())#coerce;
+  project_refresh#set_image (GMisc.image ~pixbuf:Icons.refresh16(*~stock:`REFRESH*) ~icon_size:`MENU ())#coerce;
   ignore (project_refresh#connect#activate ~callback:browser#refresh);
   (** Project Clear Cache *)
   let project_clear_cache = GMenu.image_menu_item ~label:"Clear Cache" ~packing:menu#add () in

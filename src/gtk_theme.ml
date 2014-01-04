@@ -30,61 +30,80 @@ let avail_themes =
     | Some dir -> List.sort compare (Array.to_list (Sys.readdir dir))
     | _ -> []
 
-let set_theme ?theme () =
-  Gmisclib.Idle.add ~prio:100 begin fun () ->
-    begin
-      match Oe_config.themes_dir with
-        | Some _ ->
-          let theme = match theme with Some _ as x -> x | _ -> preferences#get.pref_general_theme in
-          Opt.may theme
-            (fun theme -> kprintf GtkMain.Rc.parse_string "gtk-theme-name = \"%s\"" theme);
-        | _ -> ()
-    end;
-    (** General *)
-    GtkMain.Rc.parse_string "
-gtk-button-images = 0
-gtk-font-name=\"Sans 8\"
-";
-    (** Style for the Structure Pane (Outline) *)
-    begin
-      match Oe_config.outline_alternating_row_colors with
-        | None -> ()
-        | Some x ->
-          let pref = Preferences.preferences#get in
-          let base_color = fst pref.Preferences.pref_bg_color in
-          kprintf GtkMain.Rc.parse_string "\
-style \"outline-treestyle\" {
-  GtkTreeView::even-row-color = \"%s\"
-  GtkTreeView::odd-row-color = \"%s\"
-}
-widget \"*.outline_treeview\" style \"outline-treestyle\"
-" base_color (Color.name (Color.set_value x (`NAME base_color)))
-    end;
-    (** Style for the Target List *)
-    begin
-      match Oe_config.targetlist_alternating_row_colors with
-        | None -> ()
-        | Some x ->
-          let pref = Preferences.preferences#get in
-          let base_color = fst pref.Preferences.pref_bg_color in
-          kprintf GtkMain.Rc.parse_string "\
-style \"targetlist-treestyle\" {
-  GtkTreeView::even-row-color = \"%s\"
-  GtkTreeView::odd-row-color = \"%s\"
-}
-widget \"*.targetlist_treeview\" style \"targetlist-treestyle\"
-" base_color (Color.name (Color.set_value x (`NAME base_color)))
-    end;
-    (** Small buttons *)
-    GtkMain.Rc.parse_string "
-style \"small-button\" {
-  GtkButton::child-displacement-x = 0
-  GtkButton::child-displacement-y = 0
-  GtkButton::inner-border = { 0, 0, 0, 0 }
-  xthickness = 0
-  ythickness = 0
-}
-widget \"*.smallbutton\" style \"small-button\"
-";
-  end;;
+(* Condensed font for the file list in the search results pane. None is default font. (`STRETCH `CONDENSED doesn't work) *)
+let find_text_output_font_condensed : string option ref = ref None
+let set_find_text_output_font_condensed context =
+  find_text_output_font_condensed :=
+    try Some (List.find (Gtk_util.try_font context) ["Arial"; "Helvetica"; "Sans"])
+    with Not_found -> None
+
+let set_theme ?theme ~context () =
+  let pref = Preferences.preferences#get in
+  let style_smallbutton, apply_smallbutton = "\
+      style \"small-button\" {
+        GtkButton::child-displacement-x = 0
+        GtkButton::child-displacement-y = 0
+        GtkButton::inner-border = { 0, 0, 0, 0 }
+        xthickness = 0
+        ythickness = 0
+      }", "widget \"*.smallbutton\" style \"small-button\""
+  in
+  let style_outline, apply_outline =
+    match Oe_config.outline_alternating_row_colors with
+      | None -> "", ""
+      | Some x ->
+        let base_color = fst pref.Preferences.pref_bg_color in
+        sprintf "
+          style \"outline-treestyle\" {
+            GtkTreeView::even-row-color = \"%s\"
+            GtkTreeView::odd-row-color = \"%s\"
+          }" base_color (Color.name (Color.set_value x (`NAME base_color))),
+        "widget \"*.outline_treeview\" style \"outline-treestyle\""
+  in
+  let style_targetlist, apply_targetlist =
+    match Oe_config.targetlist_alternating_row_colors with
+      | None -> "", ""
+      | Some x ->
+        let base_color = fst pref.Preferences.pref_bg_color in
+        sprintf "
+          style \"targetlist-treestyle\" {
+            GtkTreeView::even-row-color = \"%s\"
+            GtkTreeView::odd-row-color = \"%s\"
+          }" base_color (Color.name (Color.set_value x (`NAME base_color))),
+        "widget \"*.targetlist_treeview\" style \"targetlist-treestyle\""
+  in
+  let gtk_theme =
+    match Oe_config.themes_dir with
+      | Some _ ->
+        let theme = match theme with Some _ as x -> x | _ -> preferences#get.pref_general_theme in
+        Opt.map_default theme ""
+          (fun theme -> sprintf "gtk-theme-name = \"%s\"" theme);
+      | _ -> ""
+  in
+  let gtk_font_name =
+    match String.trim pref.pref_general_font with
+      | "" ->
+        begin
+          try
+            let family = List.find (Gtk_util.try_font context) ["Arial"; "Helvetica"; "Sans"] in
+            let font_name = sprintf "%s 9" family in
+            pref.Preferences.pref_general_font <- font_name;
+            Preferences.save();
+            sprintf "gtk-font-name = \"%s\"" font_name;
+          with Not_found -> ""
+        end;
+      | x -> sprintf "gtk-font-name = \"%s\"" x
+  in
+  let rc =
+    String.concat "\n" [
+      style_smallbutton; style_outline; style_targetlist;
+      apply_smallbutton; apply_outline; apply_targetlist;
+      "gtk-button-images = 0";
+      gtk_theme;
+      gtk_font_name;
+    ]
+  in
+  GtkMain.Rc.parse_string rc;
+  set_find_text_output_font_condensed context
+;;
 

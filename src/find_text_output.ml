@@ -60,9 +60,11 @@ class widget
   let button_remove     = GButton.tool_button ~stock:`REMOVE ~packing:toolbar#insert () in
   let _                 = button_remove#misc#set_tooltip_text "Remove entry" in
   let _                 = GButton.separator_tool_item ~packing:toolbar#insert () in
-  let button_restart    = GButton.tool_button ~stock:`REFRESH ~packing:toolbar#insert () in
+  let button_restart    = GButton.tool_button ~packing:toolbar#insert () in
+  let _                 = button_restart#set_icon_widget (GMisc.image ~pixbuf:Icons.refresh16 ())#coerce in
   let _                 = button_restart#misc#set_tooltip_text "Repeat current search" in
-  let button_new_search = GButton.tool_button ~stock:`FIND ~packing:toolbar#insert () in
+  let button_new_search = GButton.tool_button ~packing:toolbar#insert () in
+  let _                 = button_new_search#set_icon_widget (GMisc.image ~pixbuf:Icons.find_16 ())#coerce in
   let _                 = button_new_search#misc#set_tooltip_text "New search" in
   let _                 = GButton.separator_tool_item ~packing:toolbar#insert () in
   let button_detach     = GButton.tool_button ~label:"Detach" ~packing:toolbar#insert () in
@@ -88,7 +90,7 @@ class widget
   let model             = GTree.list_store cols in
   let view              = GTree.view ~model:model ~headers_clickable:true ~packing:lsw#add () in
   let _                 = view#misc#set_property "enable-grid-lines" (`INT 3) in
-  let _                 = Gaux.may Oe_config.find_text_output_font_condensed ~f:view#misc#modify_font_by_name in
+  let _                 = Gaux.may !Gtk_theme.find_text_output_font_condensed ~f:view#misc#modify_font_by_name in
   let renderer          = GTree.cell_renderer_text [(*`STRETCH `CONDENSED*)] in
   let vc_file           = GTree.view_column ~title:"File" ~renderer:(renderer, ["text", col_file]) () in
   let vc_hits           = GTree.view_column ~title:"Hits" ~renderer:(renderer, ["text", col_hits]) () in

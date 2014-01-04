@@ -48,7 +48,7 @@ class view ~target_list ~editor ~project ~page ?packing () =
   (* Buttons *)
   let bbox = GPack.button_box `HORIZONTAL (*~layout:`SPREAD*) ~packing:vbox#pack () in
   let b_add = GButton.button ~packing:bbox#add () in
-  let _ = b_add#misc#set_tooltip_text "Create a new run configuration" in
+  let _ = b_add#misc#set_tooltip_text "Create new run configuration" in
   let _ = b_add#set_image (GMisc.image ~stock:`NEW ~icon_size:`BUTTON ())#coerce in
   let b_remove = GButton.button ~packing:bbox#add () in
   let _ = b_remove#misc#set_tooltip_text "Delete selected run configurations" in

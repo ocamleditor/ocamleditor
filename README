@@ -115,17 +115,6 @@ INSTALLING Xml-Light WITH Findlib
 
 
 
-NOTES
-
-  * The most common application settings are accessible from the
-    Preferences window, however other options may be changed by editing
-    "oe_config.ml" before compiling.
-  * The program creates a folder named ".ocamleditor" in your HOME
-    directory with informations like preferences, recently opened
-    projects, etc.
-
-
-
 AUTHOR
 
   You can report bugs or give feedbacks by e-mail to

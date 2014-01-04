@@ -24,6 +24,7 @@ open Miscellanea
 
 type t = {
   mutable pref_general_theme                : string option;
+  mutable pref_general_font                 : string;
   mutable pref_timestamp                    : float;
   mutable pref_base_font                    : string;
   mutable pref_tab_pos                      : Gtk.Tags.position;
@@ -48,6 +49,8 @@ type t = {
   mutable pref_editor_current_line_border   : bool;
   mutable pref_compl_font                   : string;
   mutable pref_compl_greek                  : bool;
+  mutable pref_compl_decorated              : bool;
+  mutable pref_compl_opacity                : float option;
   mutable pref_output_font                  : string;
   mutable pref_output_bg                    : string;
   mutable pref_output_fg_stdin              : string;
@@ -181,6 +184,7 @@ let default_colors : text_properties list = [
 
 let create_defaults () = {
   pref_general_theme                = (match Oe_config.themes_dir with Some _ -> Some "MurrinaCandido" | _ -> None);
+  pref_general_font                 = "";
   pref_timestamp                    = (Unix.gettimeofday());
   pref_base_font                    = "monospace 9";
   pref_tab_pos                      = `TOP;
@@ -205,6 +209,8 @@ let create_defaults () = {
   pref_editor_current_line_border   = false;
   pref_compl_font                   = "Sans 8";
   pref_compl_greek                  = true;
+  pref_compl_decorated              = true;
+  pref_compl_opacity                = None;
   pref_output_font                  = "monospace 8";
   pref_output_bg                    = "#FFFFFF";
   pref_output_fg_stdin              = "#0000FF";
@@ -324,6 +330,7 @@ let to_xml pref =
   let xml =
     Xml.Element ("preferences", [], [
       Xml.Element ("pref_general_theme", [], [Xml.PCData (Opt.default pref.pref_general_theme "")]);
+      Xml.Element ("pref_general_font", [], [Xml.PCData pref.pref_general_font]);
       Xml.Element ("pref_base_font", [], [Xml.PCData pref.pref_base_font]);
       Xml.Element ("pref_check_updates", [], [Xml.PCData (string_of_bool pref.pref_check_updates)]);
       Xml.Element ("pref_tab_pos", [], [Xml.PCData (string_of_pos pref.pref_tab_pos)]);
@@ -367,6 +374,8 @@ let to_xml pref =
       Xml.Element ("pref_editor_current_line_border", [], [Xml.PCData (string_of_bool pref.pref_editor_current_line_border)]);
       Xml.Element ("pref_compl_font", [], [Xml.PCData pref.pref_compl_font]);
       Xml.Element ("pref_compl_greek", [], [Xml.PCData (string_of_bool pref.pref_compl_greek)]);
+      Xml.Element ("pref_compl_decorated", [], [Xml.PCData (string_of_bool pref.pref_compl_decorated)]);
+      Xml.Element ("pref_compl_opacity", [], [Xml.PCData (match pref.pref_compl_opacity with Some x -> string_of_float x | _ -> "")]);
       Xml.Element ("pref_output_font", [], [Xml.PCData pref.pref_output_font]);
       Xml.Element ("pref_output_bg", [], [Xml.PCData pref.pref_output_bg]);
       Xml.Element ("pref_output_fg_stdin", [], [Xml.PCData pref.pref_output_fg_stdin]);
@@ -443,6 +452,7 @@ let from_file filename =
     Xml.iter begin fun node ->
       match Xml.tag node with
         | "pref_general_theme" -> pref.pref_general_theme <- (if value node = "" then None else Some (value node))
+        | "pref_general_font" when value node <> "" -> pref.pref_general_font <- value node;
         | "pref_check_updates" -> pref.pref_check_updates <- bool_of_string (value node)
         | "pref_base_font" -> pref.pref_base_font <- value node
         | "pref_tab_pos" -> pref.pref_tab_pos <- pos_of_string (value node)
@@ -486,6 +496,8 @@ let from_file filename =
         | "pref_editor_current_line_border" -> pref.pref_editor_current_line_border <- (bool_of_string (value node));
         | "pref_compl_font" -> pref.pref_compl_font <- value node
         | "pref_compl_greek" -> pref.pref_compl_greek <- bool_of_string (value node)
+        | "pref_compl_decorated" -> pref.pref_compl_decorated <- bool_of_string (value node)
+        | "pref_compl_opacity" -> pref.pref_compl_opacity <- (match value node with "" -> None | n -> Some (float_of_string n))
         | "pref_output_font" -> pref.pref_output_font <- value node
         | "pref_output_bg" -> pref.pref_output_bg <- value node
         | "pref_output_fg_stdin" -> pref.pref_output_fg_stdin <- value node

@@ -535,30 +535,6 @@
       <restrictions></restrictions>
       <dependencies></dependencies>
     </target>
-    <target name="Test" default="false" id="21" sub_targets="">
-      <descr></descr>
-      <byt>true</byt>
-      <opt>false</opt>
-      <libs>common oebuildlib </libs>
-      <other_objects></other_objects>
-      <files>dag_test.ml</files>
-      <package>str,unix</package>
-      <includes>common oebuild</includes>
-      <thread>true</thread>
-      <vmthread>false</vmthread>
-      <pp></pp>
-      <inline></inline>
-      <nodep>false</nodep>
-      <dontlinkdep>false</dontlinkdep>
-      <cflags>-g</cflags>
-      <lflags>-g</lflags>
-      <target_type>Executable</target_type>
-      <outname>dag_test</outname>
-      <lib_install_path></lib_install_path>
-      <external_tasks/>
-      <restrictions></restrictions>
-      <dependencies></dependencies>
-    </target>
   </targets>
   <executables>
     <executable name="ocamleditor" default="true" target_id="0" id="0">
@@ -575,11 +551,6 @@
       <env replace="false">
         <var enabled="true">Path=D:\curl-7.29.0;C:\Program Files (x86)\Microsoft Visual Studio 9.0\Common7\IDE;C:\Program Files (x86)\Microsoft Visual Studio 9.0\VC\BIN;C:\Program Files (x86)\Microsoft Visual Studio 9.0\Common7\Tools;C:\Program Files (x86)\Microsoft Visual Studio 9.0\Common7\Tools\bin;C:\Windows\Microsoft.NET\Framework\;C:\Windows\Microsoft.NET\Framework\\Microsoft .NET Framework 3.5 (Pre-Release Version);C:\Windows\Microsoft.NET\Framework\v2.0.50727;C:\Program Files (x86)\Microsoft Visual Studio 9.0\VC\VCPackages;C:\Program Files\Microsoft SDKs\Windows\v7.0\bin;C:\Windows;C:\Windows\system32;C:\Windows\system32\Wbem;C:\Program Files (x86)\Haskell\bin;C:\Program Files (x86)\Haskell Platform\2012.4.0.0\lib\extralibs\bin;C:\Program Files (x86)\Haskell Platform\2012.4.0.0\bin;C:\Program Files\Common Files\Microsoft Shared\Windows Live;C:\Program Files (x86)\Common Files\Microsoft Shared\Windows Live;C:\Program Files (x86)\Microsoft Visual Studio 9.0\Common7\IDE;C:\Program Files (x86)\Microsoft Visual Studio 9.0\VC\BIN;C:\Program Files (x86)\Microsoft Visual Studio 9.0\Common7\Tools;C:\Program Files (x86)\Microsoft Visual Studio 9.0\Common7\Tools\bin;C:\Windows\Microsoft.NET\Framework\;C:\Windows\Microsoft.NET\Framework\\Microsoft .NET Framework 3.5 (Pre-Release Version);C:\Windows\Microsoft.NET\Framework\v2.0.50727;C:\Program Files (x86)\Microsoft Visual Studio 9.0\VC\VCPackages;C:\Program Files\Microsoft SDKs\Windows\v7.0\bin;C:\Windows\system32;C:\Windows;C:\Windows\System32\Wbem;C:\Windows\System32\WindowsPowerShell\v1.0\;C:\Program Files (x86)\flexdll;C:\Program Files (x86)\oasis\bin;C:\Tcl\bin;C:\GTK\bin;C:\pcre\bin;C:\ocaml\bin;C:\Program Files (x86)\UnxUtils\usr\local\wbin;D:\Borland\JBuilder2006\jdk1.5\bin;C:\Program Files (x86)\Windows Live\Shared;C:\Program Files\TortoiseSVN\bin;C:\Program Files (x86)\Haskell Platform\2012.4.0.0\mingw\bin;C:\Program Files (x86)\Graphviz 2.28\bin;C:\Users\f.tovagliari\AppData\Roaming\cabal\bin;C:\Program Files (x86)\IDM Computer Solutions\UltraEdit\;C:\Program Files\jEdit;C:\Program Files (x86)\PuTTY;C:\Program Files (x86)\Bitvise SSH Client;C:\Users\f.tovagliari\AppData\Roaming\cabal\bin;C:\Program Files (x86)\IDM Computer Solutions\UltraEdit\</var>
       </env>
-      <args/>
-    </executable>
-    <executable name="Test" default="false" target_id="21" id="2">
-      <build_task>&lt;COMPILE&gt;</build_task>
-      <env replace="false"/>
       <args/>
     </executable>
   </executables>
@@ -603,7 +574,6 @@
       <target target_id="19" show="false"/>
       <target target_id="20" show="false"/>
       <target target_id="13" show="false"/>
-      <target target_id="21" show="true"/>
     </targets>
     <args>
       <arg id="0" type="Bool" key="-record-backtrace" pass="-key value" command="build">

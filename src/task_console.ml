@@ -30,47 +30,55 @@ let re_error_line = Str.regexp_case_fold
 let re_assert_failure = Str.regexp ".*\\(Assert_failure(\"\\(.+\\)\", \\([0-9]+\\), \\([0-9]+\\))\\)"
 
 class view ~(editor : Editor.editor) ?(task_kind=(`OTHER : Task.kind)) ~task ?packing () =
-  let project = editor#project in
-  let vbox = GPack.vbox ?packing () in
-  let hbox = GPack.hbox ~packing:vbox#add () in
-  let tooltips = GData.tooltips () in
-  let toolbar = GButton.toolbar ~orientation:`VERTICAL ~style:`ICONS ~packing:hbox#pack () in
-  let _ = toolbar#set_icon_size `MENU in
-  let sw = GBin.scrolled_window ~shadow_type:`NONE ~hpolicy:`AUTOMATIC ~vpolicy:`AUTOMATIC
-    ~packing:hbox#add () in
-  let button_clear = GButton.tool_button ~packing:toolbar#insert () in
-  let _ = tooltips#set_tip ~text:"Clean Messages" button_clear#coerce in
-  let _ = button_clear#set_icon_widget (Icons.create Icons.clear_16)#coerce in
-  let button_wrap = GButton.toggle_tool_button ~packing:toolbar#insert () in
-  let _ = tooltips#set_tip ~text:"Word Wrap" button_wrap#coerce in
-  let _ = button_wrap#set_icon_widget (Icons.create Icons.wrap_lines_16)#coerce in
-  let _ = GButton.separator_tool_item ~packing:toolbar#insert () in
-  let button_stop = GButton.tool_button ~stock:`STOP ~packing:toolbar#insert () in
-  let _ = tooltips#set_tip ~text:"Kill Process" button_stop#coerce in
-  let button_run = GButton.tool_button ~packing:toolbar#insert () in
-  let _ = button_run#set_icon_widget begin match task_kind with
-    | `OTHER | `RUN ->
-      tooltips#set_tip ~text:"Start" button_run#coerce;
-      (Icons.create Icons.start_16);
-    | `CLEAN | `CLEANALL ->
-      tooltips#set_tip ~text:task.Task.et_name button_run#coerce;
-      (Icons.create Icons.clear_build_16);
-    | `ANNOT | `COMPILE ->
-      tooltips#set_tip ~text:task.Task.et_name button_run#coerce;
-      (Icons.create Icons.build_16);
-  end#coerce in
-  let _                 = GButton.separator_tool_item ~packing:toolbar#insert () in
+  let project           = editor#project in
+  let vbox              = GPack.vbox ?packing () in
+  let hbox              = GPack.hbox ~packing:vbox#add () in
+  let tooltips          = GData.tooltips () in
+  let toolbar           = GButton.toolbar ~orientation:`VERTICAL ~style:`ICONS ~packing:hbox#pack () in
+  let _                 = toolbar#set_icon_size `MENU in
+  let sw                = GBin.scrolled_window ~shadow_type:`NONE ~hpolicy:`AUTOMATIC ~vpolicy:`AUTOMATIC ~packing:hbox#add () in
   let button_detach     = GButton.tool_button ~label:"Detach" ~packing:toolbar#insert () in
   let _                 = button_detach#set_icon_widget (GMisc.image ~pixbuf:Icons.detach ())#coerce in
-  let view = GText.view ~editable:(task_kind = `RUN) ~cursor_visible:true ~packing:sw#add () in
-  let _ = view#set_right_margin 2 in
-  let _ = view#set_left_margin 2 in
-  let _ = button_wrap#connect#toggled ~callback:begin fun () ->
-    view#set_wrap_mode (if button_wrap#get_active then `WORD else `NONE)
-  end in
-  let _ = button_clear#connect#clicked ~callback:(fun () -> view#buffer#set_text "") in
-  let _ = button_wrap#set_active true in
-object (self)
+  let _                 = GButton.separator_tool_item ~packing:toolbar#insert () in
+  (*  *)
+  let button_stop       = GButton.tool_button ~stock:`STOP ~packing:toolbar#insert () in
+  let _                 = tooltips#set_tip ~text:"Kill Process" button_stop#coerce in
+  let button_run        = GButton.tool_button ~packing:toolbar#insert () in
+  let _                 = button_run#set_icon_widget begin match task_kind with
+      | `OTHER | `RUN ->
+        tooltips#set_tip ~text:"Start" button_run#coerce;
+        (Icons.create Icons.start_16);
+      | `CLEAN | `CLEANALL ->
+        tooltips#set_tip ~text:task.Task.et_name button_run#coerce;
+        (Icons.create Icons.clear_build_16);
+      | `ANNOT | `COMPILE ->
+        tooltips#set_tip ~text:task.Task.et_name button_run#coerce;
+        (Icons.create Icons.build_16);
+    end#coerce in
+  let _                 = GButton.separator_tool_item ~packing:toolbar#insert () in
+  (*  *)
+  let button_clear      = GButton.tool_button ~packing:toolbar#insert () in
+  let _                 = tooltips#set_tip ~text:"Clear Messages" button_clear#coerce in
+  let _                 = button_clear#set_icon_widget (Icons.create Icons.clear_16)#coerce in
+  let button_incr_font  = GButton.tool_button ~packing:toolbar#insert () in
+  let _                 = tooltips#set_tip ~text:"Increase Font Size" button_incr_font#coerce in
+  let _                 = button_incr_font#set_icon_widget (GMisc.image ~pixbuf:Icons.zoom_in_14 ~icon_size:`MENU ())#coerce in
+  let button_decr_font  = GButton.tool_button ~packing:toolbar#insert () in
+  let _                 = tooltips#set_tip ~text:"Decrease Font Size" button_decr_font#coerce in
+  let _                 = button_decr_font#set_icon_widget (GMisc.image ~pixbuf:Icons.zoom_out_14 ~icon_size:`MENU ())#coerce in
+  let button_wrap       = GButton.toggle_tool_button ~packing:toolbar#insert () in
+  let _                 = tooltips#set_tip ~text:"Word Wrap" button_wrap#coerce in
+  let _                 = button_wrap#set_icon_widget (Icons.create Icons.wrap_lines_16)#coerce in
+  (*  *)
+  let view              = GText.view ~editable:(task_kind = `RUN) ~cursor_visible:true ~packing:sw#add () in
+  let _                 = view#set_right_margin 2 in
+  let _                 = view#set_left_margin 2 in
+  let _                 = button_wrap#connect#toggled ~callback:begin fun () ->
+      view#set_wrap_mode (if button_wrap#get_active then `WORD else `NONE)
+    end in
+  let _                 = button_clear#connect#clicked ~callback:(fun () -> view#buffer#set_text "") in
+  let _                 = button_wrap#set_active true in
+  object (self)
   inherit GObj.widget vbox#as_widget
   inherit Messages.page ~role:"task-console" as super
 
@@ -230,62 +238,88 @@ object (self)
       let inchan, outchan, errchan = Process.channels proc in
       process_outchan <- Some outchan;
       (** Thread looping over the standard output of the process *)
-      let th_in = Thread.create (self#iter_chan begin fun ic ->
-        let line = input_line ic in
-        let line = if Glib.Utf8.validate line then line else Convert.to_utf8 line in
-        GtkThread2.async begin fun line ->
-          Mutex.lock m_write;
-          signal_enabled <- false;
-          view#buffer#insert ~iter:(self#buffer#get_iter `END) ~tag_names:["output"] (line ^ "\n");
-          view#scroll_to_mark `INSERT;
-          signal_enabled <- true;
-          Mutex.unlock m_write;
-        end line;
-      end) inchan in
+      let th_in =
+        Thread.create begin self#iter_chan
+            begin fun ic ->
+              let line = input_line ic in
+              let line = if Glib.Utf8.validate line then line else Convert.to_utf8 line in
+              GtkThread2.async begin fun line ->
+                Mutex.lock m_write;
+                signal_enabled <- false;
+                view#buffer#insert ~iter:(self#buffer#get_iter `END) ~tag_names:["output"] (line ^ "\n");
+                view#scroll_to_mark `INSERT;
+                signal_enabled <- true;
+                Mutex.unlock m_write;
+              end line;
+            end
+        end inchan
+      in
       (** Thread looping over the standard error of the process *)
-      let first_error_line = ref false in
-      let pending = ref None in
-      let th_err = Thread.create (self#iter_chan begin fun ic ->
-        let line = input_line ic in
-        let line = if Glib.Utf8.validate line then line else Convert.to_utf8 line in
-        let error_line = try Str.string_before line 6 = "Error:"
-          with Invalid_argument("String.sub") -> false in
-        let warning_line = try Str.string_before line 7 = "Warning"
-          with Invalid_argument("String.sub") -> false in
-        has_errors <- has_errors || error_line;
-        let tag = if warning_line then "warning" else "error" in
-        let location_line = Str.string_match re_error_line line 0 in
-        let location_line = location_line || (Str.string_match re_assert_failure line 0) in
-        GtkThread2.async begin fun line ->
-          Mutex.lock m_write;
-          signal_enabled <- false;
-          (** Links *)
-          if location_line then begin
-            let tag_location_name = sprintf "loc-%d" seq_tag_location in
-            let tag_location = view#buffer#create_tag ~name:tag_location_name [] in
-            tag_locations <- (tag_location#get_oid, (tag_location, line)) :: tag_locations;
-            seq_tag_location <- seq_tag_location + 1;
-            pending := Some (line, tag_location_name);
-            view#buffer#insert ~iter:(self#buffer#get_iter `END) ~tag_names:["error"; tag_location_name] (line ^ "\n");
-          end else begin
-            let _pt = match !pending with None -> []
-              | Some (_(*pl*), pt) ->
-                let start = (self#buffer#get_iter `END)#backward_line in
-                view#buffer#apply_tag_by_name tag ~start ~stop:(self#buffer#get_iter `END);
-                if not !first_error_line && tag = "error" then begin
-                  ignore (view#buffer#create_mark ~name:"first_error_line" start);
-                  first_error_line := true;
-                end;
-                (*pending := None;*)
-                [pt]
-            in
-            view#buffer#insert ~iter:(self#buffer#get_iter `END) ~tag_names:([tag] (*@ pt*)) (line ^ "\n");
-          end;
-          view#scroll_to_mark `INSERT;
-          signal_enabled <- true;
-          Mutex.unlock m_write;
-        end line;
-      end) errchan in
+      let is_before_first_error = ref true in
+      let pending_loc_line = ref None in
+      let check_first_error tag iter =
+        if !is_before_first_error && (tag = "error" || tag = "warning") then begin
+          ignore (view#buffer#create_mark ~name:"first_error_line" iter);
+          (*view#buffer#insert ~iter ("####\n");*)
+          is_before_first_error := false;
+        end;
+      in
+      let th_err =
+        Thread.create begin self#iter_chan
+            begin fun ic ->
+              let line = input_line ic in
+              let line = if Glib.Utf8.validate line then line else Convert.to_utf8 line in
+              let error_line = try Str.string_before line 6 = "Error:"
+                with Invalid_argument("String.sub") -> false in
+              let warning_line = try Str.string_before line 7 = "Warning"
+                with Invalid_argument("String.sub") -> false in
+              has_errors <- has_errors || error_line;
+              let tag = if warning_line then "warning" else "error" in
+              let is_location_line = Str.string_match re_error_line line 0 in
+              let is_location_line = is_location_line || (Str.string_match re_assert_failure line 0) in
+              GtkThread2.async begin fun line ->
+                Mutex.lock m_write;
+                signal_enabled <- false;
+                let stop = self#buffer#get_iter `END in
+                if is_location_line then begin
+                  (** Links *)
+                  let tag_location_name = sprintf "loc-%d" seq_tag_location in
+                  let tag_location = view#buffer#create_tag ~name:tag_location_name [] in
+                  tag_locations <- (tag_location#get_oid, (tag_location, line)) :: tag_locations;
+                  seq_tag_location <- seq_tag_location + 1;
+                  pending_loc_line := Some (line, tag_location_name, ref None);
+                  view#buffer#insert ~iter:stop ~tag_names:["error"; tag_location_name] (line ^ "\n");
+                end else begin
+                  let tag_names =
+                    match !pending_loc_line with
+                      | None -> [tag]
+                      | Some (_(*pl*), _, pending_tag) ->
+                        let tag, apply_pending =
+                          match !pending_tag with
+                            | Some t ->
+                              pending_tag := if String.trim line = "" then None else Some t;
+                              t, false
+                            | _ ->
+                              pending_tag := Some tag;
+                              tag, true
+                        in
+                        if apply_pending then begin
+                          let start = stop#backward_lines 1 in
+                          view#buffer#apply_tag_by_name tag ~start ~stop;
+                          check_first_error tag start;
+                        end;
+                        [tag]
+                  in
+                  check_first_error tag stop;
+                  view#buffer#insert ~iter:stop ~tag_names (line ^ "\n");
+              end;
+                view#scroll_to_mark `INSERT;
+                signal_enabled <- true;
+                Mutex.unlock m_write;
+              end line;
+            end
+        end errchan
+      in
       Thread.join th_in;
       Thread.join th_err;
       begin
@@ -297,6 +331,8 @@ object (self)
 
   initializer
     ignore (button_detach#connect#clicked ~callback:(fun () -> self#detach button_detach));
+    ignore (button_incr_font#connect#clicked ~callback:(fun () -> Gtk_util.increase_font_size ~increment:1 view |> ignore));
+    ignore (button_decr_font#connect#clicked ~callback:(fun () -> Gtk_util.increase_font_size ~increment:(-1) view |> ignore));
     ignore (Messages.vmessages#connect#remove_page ~callback:begin fun child ->
       if child#misc#get_oid = vbox#misc#get_oid then begin
         match process with None -> () | Some _ ->
@@ -429,7 +465,7 @@ let create ~editor task_kind task =
       match task_kind with
         | `RUN (*| `OTHER*) ->
           let box = GPack.hbox ~spacing:3 () in
-          let icon = (Icons.create Icons.start_16) in
+          let icon = (Icons.create Icons.start_10) in
           box#pack icon#coerce;
           let label = GMisc.label ~text:task.Task.et_name ~packing:box#pack () in
           box#coerce, Some begin fun active ->

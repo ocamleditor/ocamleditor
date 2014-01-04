@@ -89,11 +89,7 @@ let global_gutter_comments_enabled       = false
 let global_gutter_comments_color         = `NAME "#fa80a5"
 let global_gutter_comments_bgcolor       = `NAME "#fad0f5"
 let global_gutter_no_errors              = `NAME "#daedd0"
-let find_references_title_bgcolor        = "#000000"
-let find_references_title_fgcolor        = "#ffffff"
 let find_replace_history_max_length      = 75
-(* Condensed font for the file list in the search results pane. None is default font. (`STRETCH `CONDENSED doesn't work) *)
-let find_text_output_font_condensed      = Some (match Sys.os_type with "Win32" -> "Arial" | _ -> "Helvetica 9") (*None*)
 let find_text_output_border_color        = current_line_border_color(*fun _ _ -> `NAME "#707070"*) (* Current line border color of the find text output pane *)
 let find_text_output_highlight           = `DEFAULT, `DEFAULT (*`NAME "#ffff7e", `NONE*) (* Background and foreground colors to highlight occurrences where the pattern matches.
                                           (`NONE=do not change color; `DEFAULT=default color; `NAME=specific color)*)
@@ -107,7 +103,7 @@ let location_history_max_length          = 30 (* hint *)
 let location_history_max_edit            = 5
 let module_browser_max_results           = 150 (* Max. number of search results to display in the search_entry as you type *)
 let module_browser_secondary_title_color = "#877033"
-let completion_popup_default_dimensions  = 800, 400
+let completion_popup_default_dimensions  = 800, 300
 let odoc_tag_properties                  = [ (* These properties apply to ocamldoc comments only, not to the type descriptions. *)
                                           `PIXELS_INSIDE_WRAP 2;
                                           `PIXELS_BELOW_LINES 2;

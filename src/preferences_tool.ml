@@ -78,6 +78,7 @@ let spacing = 13
 let xalign = 0.0
 let col_spacings = 21
 let row_spacings = 5
+let indent = 25
 
 (** page *)
 class virtual page title (box : GPack.box) =
@@ -96,6 +97,7 @@ end
 (** preferences *)
 and preferences ~(editor : Editor.editor) () =
   let initial_gtk_theme = Preferences.preferences#get.Preferences.pref_general_theme in
+  let initial_compl_decorated = Preferences.preferences#get.Preferences.pref_compl_decorated in
   let window            = GWindow.window ~allow_shrink:false ~allow_grow:false ~resizable:true ~width:750
     ~type_hint:`DIALOG ~modal:true ~title:"Preferences" ~position:`CENTER ~icon:Icons.oe ~show:false () in
   let _ = Gmisclib.Window.GeometryMemo.add ~key:"dialog-preferences" ~window Preferences.geometry_memo in
@@ -140,10 +142,21 @@ object (self)
     begin
       match Preferences.preferences#get.Preferences.pref_general_theme with
         | Some theme as new_theme when new_theme <> None && new_theme <> initial_gtk_theme ->
-          Gtk_theme.set_theme ~theme ();
+          Gtk_theme.set_theme ~theme ~context:self#misc#pango_context ();
         | Some _ as new_theme when new_theme <> None && new_theme = initial_gtk_theme -> ()
         | _ -> self#reset_theme();
     end;
+    if initial_compl_decorated <> Preferences.preferences#get.Preferences.pref_compl_decorated then begin
+      let (cached_window, cached_widget) = List.assoc (Project.filename editor#project) !Mbrowser_compl.cache in
+      cached_widget#set_pin_status false;
+      cached_widget#hide();
+      cached_widget#destroy();
+      cached_window#destroy();
+      Mbrowser_compl.cache := List.remove_assoc (Project.filename editor#project) !Mbrowser_compl.cache;
+    end
+
+
+
 
   method ok () =
     self#write();
@@ -165,7 +178,7 @@ object (self)
       | _ -> ()
 
   method private reset_theme () =
-    Gtk_theme.set_theme ?theme:initial_gtk_theme ()
+    Gtk_theme.set_theme ?theme:initial_gtk_theme ~context:self#misc#pango_context ()
 
   method create ?(idle=false) title row  (page : string -> ?packing:(GObj.widget -> unit) -> unit -> page) =
     model#set ~row ~column title;
@@ -181,11 +194,12 @@ object (self)
     (* Tree *)
     let row = model#append () in self#create "General" row (new pref_view);
     let row = model#append () in self#create ~idle:true "Fonts" row (new pref_fonts);
+    let row = model#append () in self#create "Color" row (new pref_color);
     let row as parent = model#append () in self#create "Editor" row (new pref_editor);
     let row = model#append ~parent () in self#create "Display" row (new pref_editor_display);
     let row = model#append ~parent () in self#create "Actions" row (new pref_editor_actions);
+    let row = model#append ~parent () in self#create "Completion" row (new pref_editor_compl);
     let row = model#append ~parent () in self#create "Code Templates" row (new pref_templ);
-    let row = model#append ~parent () in self#create "Color" row (new pref_color);
     let row = model#append () in self#create "Build" row (new pref_build);
     if Sys.os_type = "Win32" then () else begin
       let row = model#append () in self#create ~idle:true "PDF Viewer" row (new pref_pdf_viewer);
@@ -283,7 +297,7 @@ object (self)
       | Some _ ->
         ignore (combo_theme#connect#changed ~callback:begin fun () ->
           let theme = self#get_theme_name() in
-          Gtk_theme.set_theme ?theme ()
+          Gtk_theme.set_theme ?theme ~context:self#misc#pango_context ()
         end);
       | _ -> ()
 
@@ -410,18 +424,53 @@ object
     (*check_save_all_bef_comp#set_active pref.Preferences.pref_editor_save_all_bef_comp*)
 end
 
+(** pref_editor_compl *)
+and pref_editor_compl title ?packing () =
+  let vbox            = GPack.vbox ~spacing ?packing () in
+  let check_decorated = GButton.check_button ~label:"Enable window decorations" ~packing:vbox#pack () in
+  let ovbox           = GPack.vbox ~spacing:5 ~packing:vbox#pack () in
+  let check_opacity   = GButton.check_button ~label:"Enable transparent window" ~packing:ovbox#pack () in
+  let align           = GBin.alignment ~xscale:0.38 ~xalign:0.0 ~padding:(0, 0, indent, 0) ~packing:ovbox#pack () in
+  let obox            = GPack.hbox ~spacing:5 ~packing:align#add () in
+  let adjustment      = GData.adjustment ~lower:0.0 ~upper:100.0 ~step_incr:10. ~page_incr:10. ~page_size:0.0 () in
+  let _               = GMisc.label ~text:"Opacity (%):" ~packing:obox#pack () in
+  let scale_opacity   = GRange.scale `HORIZONTAL ~digits:0 ~adjustment ~packing:obox#add () in
+  object
+  inherit page title vbox
+
+  initializer
+    scale_opacity#set_value_pos `RIGHT;
+    check_opacity#connect#toggled ~callback:begin fun () ->
+      obox#misc#set_sensitive check_opacity#active;
+    end |> ignore;
+    obox#misc#set_sensitive check_opacity#active;
+
+  method write pref =
+    pref.Preferences.pref_compl_decorated <- check_decorated#active;
+    pref.Preferences.pref_compl_opacity <- if check_opacity#active then Some (scale_opacity#adjustment#value /. 100.) else None;
+
+  method read pref =
+    check_decorated#set_active pref.Preferences.pref_compl_decorated;
+    check_opacity#set_active (pref.Preferences.pref_compl_opacity <> None);
+    match pref.Preferences.pref_compl_opacity with
+      | Some n -> scale_opacity#adjustment#set_value (n *. 100.)
+      | _ -> scale_opacity#adjustment#set_value 100.0
+end
+
 (** pref_fonts *)
 and pref_fonts title ?packing () =
   let vbox         = GPack.vbox ~spacing ?packing () in
   let notebook     = GPack.notebook ~packing:vbox#add () in
   let border_width = 5 in
   let preview_text = "abcdefghijk ABCDEFGHIJK òàùèéì → •" in
+  let font_app     = GMisc.font_selection ~preview_text ~border_width () in
   let font_editor  = GMisc.font_selection ~preview_text ~border_width () in
   let box_compl    = GPack.vbox ~border_width ~spacing:8 () in
   let font_compl   = GMisc.font_selection ~preview_text ~packing:box_compl#add () in
   let button_greek = GButton.check_button ~label:"Use greek letters in types" ~packing:box_compl#pack () in
   let font_other   = GMisc.font_selection ~preview_text ~border_width () in
   let font_odoc    = GMisc.font_selection ~preview_text ~border_width () in
+  let _            = notebook#append_page ~tab_label:(GMisc.label ~text:"Application" ())#coerce font_app#coerce in
   let _            = notebook#append_page ~tab_label:(GMisc.label ~text:"Editor" ())#coerce font_editor#coerce in
   let _            = notebook#append_page ~tab_label:(GMisc.label ~text:"Completion" ())#coerce box_compl#coerce in
   let _            = notebook#append_page ~tab_label:(GMisc.label ~text:"Output" ())#coerce font_other#coerce in
@@ -430,6 +479,7 @@ object
   inherit page title vbox
 
   method write pref =
+    pref.Preferences.pref_general_font <- font_app#font_name;
     pref.Preferences.pref_base_font <- font_editor#font_name;
     pref.Preferences.pref_compl_font <- font_compl#font_name;
     pref.Preferences.pref_output_font <- font_other#font_name;
@@ -437,6 +487,7 @@ object
     pref.Preferences.pref_compl_greek <- button_greek#active;
 
   method read pref =
+    font_app#set_font_name pref.Preferences.pref_general_font;
     font_editor#set_font_name pref.Preferences.pref_base_font;
     font_compl#set_font_name pref.Preferences.pref_compl_font;
     font_other#set_font_name pref.Preferences.pref_output_font;
@@ -503,7 +554,6 @@ end
 
 (** pref_editor_display *)
 and pref_editor_display title ?packing () =
-  let indent                       = 25 in
   let vbox                         = GPack.vbox ~spacing ?packing () in
   let align                        = create_align ~title:"Settings" ~vbox () in
   let box                          = GPack.vbox ~spacing:row_spacings ~packing:align#add () in
@@ -866,7 +916,7 @@ and pref_build title ?packing () =
   let combo_verbose, _        = GEdit.combo_box_text ~strings:[
       "0 - Silent";
       "1 - Print build summary";
-      "2 - Print compiler and linker commands";
+      "2 - Print compiler commands";
       "3 - Print times";
       "4 - Print detailed information about compilation process";
       "5 - Pass -verbose to OCaml tools"

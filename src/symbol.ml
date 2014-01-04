@@ -536,6 +536,13 @@ let filter_by_name
   result
 ;;
 
+(* filter_by_type *)
+let filter_by_type ~regexp symbols =
+  List.filter begin fun symbol ->
+      let start = try String.index symbol.sy_type ':' with Not_found -> 0 in
+      try Str.search_forward regexp symbol.sy_type start |> ignore; true with Not_found -> false
+    end symbols
+
 (*
  * Trova tutti i simboli che iniziano con value_path; nel caso di un modulo
  * restituisce anche i valori in esso contenuti.

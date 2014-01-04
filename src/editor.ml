@@ -595,7 +595,7 @@ object (self)
                     page#status_modified_icon#misc#set_tooltip_text "Modified";
                     image#set_pixbuf Icons.button_close_b
                   end else begin
-                    page#status_modified_icon#set_pixbuf Icons.none_14;
+                    page#status_modified_icon#set_pixbuf Icons.empty_14;
                     image#set_pixbuf Icons.button_close
                   end;
                   modified_changed#call();

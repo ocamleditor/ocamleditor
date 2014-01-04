@@ -36,7 +36,8 @@ class ['a] toolbar ~(messages : Messages.messages) ~(hmessages : Messages.messag
   let tool_close_file          = GButton.tool_button ~stock:`CLOSE ~label:"Close" () in
   let tool_undo                = GButton.tool_button ~stock:`UNDO ~label:"Undo" () in
   let tool_redo                = GButton.tool_button ~stock:`REDO ~label:"Redo" () in
-  let tool_find_repl           = GButton.tool_button ~stock:`FIND_AND_REPLACE ~label:"Find and Replace" () in
+  let tool_find_repl           = GButton.tool_button (*~stock:`FIND_AND_REPLACE*) ~label:"Find and Replace" () in
+  let _                        = tool_find_repl#set_icon_widget (GMisc.image  ~pixbuf:Icons.find_replace ())#coerce in
   let tool_item_find_entry     = GButton.tool_item ~homogeneous:false () in
   let tool_find                = GButton.tool_button ~label:"Find" () in
   let tool_messages            = GButton.toggle_tool_button ~active:messages#visible ~label:"Messages" (*~homogeneous:false*) () in
@@ -123,6 +124,7 @@ object (self)
     let _ = GButton.separator_tool_item ~packing:toolbar#insert () in
     toolbar#insert tool_messages;
     toolbar#insert tool_hmessages;
+    let _ = GButton.separator_tool_item ~packing:toolbar#insert () in
     toolbar#insert tool_eval;
     tool_eval#misc#set_tooltip_text "Eval in Toplevel";
     toolbar#insert tool_compile_file;

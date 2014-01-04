@@ -37,24 +37,41 @@ type compl =
 
 (** completion *)
 class completion ~project ?packing () =
+  let window_decorated = Preferences.preferences#get.Preferences.pref_compl_decorated in
   let vbox            = GPack.vbox ~spacing:0 ~border_width:2 ?packing () in
-  let tbox            = GPack.hbox ~spacing:5 ~border_width:0 ~packing:vbox#pack () in
-  let ebox_resize     = GBin.event_box ~packing:(tbox#pack ~fill:false ~expand:false) () in
+  let tbox            = GPack.hbox ~spacing:5 ~border_width:0 () in
+  let ebox_resize     = GBin.event_box ~packing:(tbox#pack ~fill:false ~expand:false) ~show:(not window_decorated) () in
   let _               = GMisc.image ~pixbuf:Icons.grip ~packing:ebox_resize#add () in
   let ebox_title      = GBin.event_box ~packing:tbox#add () in
-  let ebox_close      = GBin.event_box ~packing:tbox#pack () in
+  let ebox_doc        = GBin.event_box ~packing:tbox#pack () in
+  let ebox_font_incr  = GBin.event_box ~packing:tbox#pack () in
+  let ebox_font_decr  = GBin.event_box ~packing:tbox#pack () in
+  let ebox_pin        = GBin.event_box ~packing:tbox#pack () in
+  let ebox_close      = GBin.event_box ~packing:tbox#pack ~show:(not window_decorated) () in
   let _               = List.iter (fun x -> x#misc#set_property "visible-window" (`BOOL false))
-                        [ ebox_close; ebox_resize] in
+                        [ ebox_pin; ebox_resize; ebox_doc; ebox_font_incr; ebox_font_decr; ebox_close] in
+  let _               = ebox_pin#misc#set_tooltip_text "Toggle pin status" in
+  let _               = ebox_doc#misc#set_tooltip_markup "Show documentation pane (<tt><small>F1</small></tt>)" in
   let label_title     = GMisc.label ~markup:"" ~ypad:0 ~packing:ebox_title#add ~show:false () in
-  let _               = GMisc.separator `HORIZONTAL ~packing:vbox#pack () in
-  let _               = GMisc.image ~pixbuf:Icons.close ~packing:ebox_close#add () in
+  let _               = GMisc.image ~pixbuf:Icons.pin_off ~packing:ebox_pin#add () in
+  let _               = GMisc.image ~pixbuf:Icons.doc ~packing:ebox_doc#add () in
+  let _               = GMisc.image ~pixbuf:Icons.zoom_in_14 ~packing:ebox_font_incr#add () in
+  let _               = GMisc.image ~pixbuf:Icons.zoom_out_14 ~packing:ebox_font_decr#add () in
+  let _               = GMisc.image ~pixbuf:Icons.close ~icon_size:`MENU ~packing:ebox_close#add () in
   let statusbar_box   = GPack.hbox ~spacing:5 ~packing:(vbox#pack ~from:`END) () in
   let label_longid    = GMisc.label ~markup:"" ~ypad:0 ~xalign:0.0 ~packing:statusbar_box#add () in
   let _               = GMisc.separator `VERTICAL ~packing:statusbar_box#pack () in
   let label_search    = GMisc.label ~markup:"" ~ypad:0 ~xalign:0.0 ~width:50 ~packing:statusbar_box#pack () in
   let _               = GMisc.separator `VERTICAL ~packing:statusbar_box#pack () in
   let _               = GMisc.label ~markup:"<small>Press \"<tt>Ctrl+Return</tt>\" to insert the simple value name</small>" ~ypad:0 ~xalign:0.0 ~packing:statusbar_box#pack () in
+  let _               = GMisc.separator `VERTICAL ~packing:statusbar_box#pack ~show:window_decorated () in
   let _               = GMisc.separator `HORIZONTAL ~packing:(vbox#pack ~from:`END) () in
+  let _               = if window_decorated then statusbar_box#pack tbox#coerce
+    else begin
+      vbox#pack ~from:`START tbox#coerce;
+      GMisc.separator `HORIZONTAL ~packing:vbox#pack ~show:(not window_decorated) () |> ignore;
+    end
+  in
 object (self)
   inherit GObj.widget vbox#as_widget
 
@@ -65,8 +82,37 @@ object (self)
   val mutable search_string = ""
   val mutable current_page : Editor_page.page option = None
   val mutable current_window : GWindow.window option = None
+  val mutable pin_status = false
 
-  initializer self#init ()
+  initializer
+    let color = `NAME Preferences.preferences#get.Preferences.pref_bg_color_popup in
+    ebox_title#misc#modify_bg [`NORMAL, color];
+    let set_title = self#set_title "" in
+    ignore (widget#connect#switch_page ~callback:begin fun symbol_list ->
+      set_title symbol_list#title.title;
+      self#update_search_string (`set "");
+    end);
+    ignore (widget#connect#add_page ~callback:begin fun symbol_list ->
+      symbol_list#view#set_enable_search false;
+      symbol_list#view#set_search_column col_search.GTree.index;
+      self#connect_signals (Some symbol_list);
+      set_title symbol_list#title.title;
+      symbol_list#sw#set_shadow_type `NONE;
+      symbol_list#view#misc#modify_base [`NORMAL, `NAME Preferences.preferences#get.Preferences.pref_bg_color_popup];
+      symbol_list#renderer#set_properties [`CELL_BACKGROUND Preferences.preferences#get.Preferences.pref_bg_color_popup];
+      symbol_list#renderer_pixbuf#set_properties [`XPAD 3];
+      let bg = Preferences.preferences#get.Preferences.pref_bg_color_popup in
+      symbol_list#renderer_pixbuf#set_properties [`CELL_BACKGROUND bg];
+    end);
+    widget#connect#layout_toggled ~callback:self#update_button_states |> ignore;
+
+
+  method set_pin_status value =
+    pin_status <- value;
+    let pixbuf = if pin_status then Icons.pin_on else Icons.pin_off in
+    let image = GMisc.image ~pixbuf () in
+    ebox_pin#remove ebox_pin#child;
+    ebox_pin#add image#coerce;
 
   method private find ~(page : Editor_page.page) () =
     match self#get_word ~page () with
@@ -128,23 +174,33 @@ object (self)
       self#get_compl text;
     end
 
+  method private set_title t1 t2 =
+    if window_decorated then self#set_title_text (t1 ^ " " ^ t2)
+    else kprintf self#set_title_markup "%s <b><tt>%s</tt></b>" t1 t2
+
+  method private set_title_text text =
+    Opt.may current_window (fun w -> w#set_title text);
+
   method private set_title_markup markup =
     kprintf label_title#set_label
       "<span color=\"%s\" weight=\"normal\" underline=\"none\" font_size=\"x-large\">%s</span>"
       Preferences.preferences#get.Preferences.pref_fg_color_popup
       markup;
-      label_title#misc#show()
+    label_title#misc#show()
 
-  method private compl_root () = widget#create_widget_modules ()
+  method private compl_root () =
+    widget#create_widget_modules ();
+    kprintf self#set_title "" "";
 
   method private compl_id ~prefix ~page () =
     let f = widget#select_symbol_by_prefix ~prefix ~kind:[] in
     widget#find_compl ~include_methods:false ~prefix ~page ~f ();
+    kprintf self#set_title "" "";
 
   method private compl_module ~module_path ~prefix =
+    kprintf self#set_title "Module" (Symbol.string_of_id module_path);
     let f = widget#select_symbol_by_prefix ~module_path ~prefix ~kind:[] in
     widget#create_widget_module ~module_path ~f ~sort:true ();
-    kprintf self#set_title_markup "Module <b><tt>%s</tt></b>" (Symbol.string_of_id module_path);
 
   method private compl_class ~text ~page () =
     (*let re1 = Miscellanea.regexp "[a-zA-Z_0-9']$" in*)
@@ -159,8 +215,8 @@ object (self)
         let class_path = Longident.flatten (Longident.parse class_type) in
         let f = widget#select_symbol_by_prefix ~module_path:class_path ~prefix ~kind:[] in
         widget#create_widget_class ~class_path ~f ();
-        kprintf self#set_title_markup "Class <b><tt>%s</tt></b>" class_type
-      | _ -> ()
+        kprintf self#set_title "Class" class_type
+      | _ -> kprintf self#set_title "" "";
 
   method private apply_completion
       ~(page : Editor_page.page)
@@ -214,27 +270,6 @@ object (self)
         widget#select_symbol_by_prefix ~prefix:text ~kind:[] symbol_list;
         true;
       | Compl_none -> false
-
-  method private init () =
-    let color = `NAME Preferences.preferences#get.Preferences.pref_bg_color_popup in
-    ebox_title#misc#modify_bg [`NORMAL, color];
-    let set_title = kprintf self#set_title_markup "<b><tt>%s</tt></b>" in
-    ignore (widget#connect#switch_page ~callback:begin fun symbol_list ->
-      set_title symbol_list#title.title;
-      self#update_search_string (`set "");
-    end);
-    ignore (widget#connect#add_page ~callback:begin fun symbol_list ->
-      symbol_list#view#set_enable_search false;
-      symbol_list#view#set_search_column col_search.GTree.index;
-      self#connect_signals (Some symbol_list);
-      set_title symbol_list#title.title;
-      symbol_list#sw#set_shadow_type `NONE;
-      symbol_list#view#misc#modify_base [`NORMAL, `NAME Preferences.preferences#get.Preferences.pref_bg_color_popup];
-      symbol_list#renderer#set_properties [`CELL_BACKGROUND Preferences.preferences#get.Preferences.pref_bg_color_popup];
-      symbol_list#renderer_pixbuf#set_properties [`XPAD 3];
-      let bg = Preferences.preferences#get.Preferences.pref_bg_color_popup in
-      symbol_list#renderer_pixbuf#set_properties [`CELL_BACKGROUND bg];
-    end);
 
   method private activate_row ?(longid=true) ?(is_class=false) ~(symbol_list : symbol_list) () =
     self#with_current_page begin fun page ->
@@ -296,6 +331,8 @@ object (self)
           true
         end else if key = _BackSpace then begin
           assert false;
+        end else if key = _Escape then begin
+          false;
         end else begin
           let char = GdkEvent.Key.string ev in
           if char <> "" && Glib.Unichar.isprint (Glib.Utf8.first_char char) then begin
@@ -324,20 +361,28 @@ object (self)
       end);
     | _ -> ()
 
-  method private hide () =
-    ignore (widget#tooltip_destroy());
-    widget#clear();
-    self#with_current_page begin fun page ->
-      page#buffer#undo#end_block ();
-      if not widget#is_slist_visible then begin
-        widget#button_layout_slist#set_active true;
-        (*widget#toggle_details();*)
+  method hide () =
+    if pin_status then begin
+      Opt.may current_page begin fun p ->
+        Opt.may current_window (fun w -> w#set_opacity (match Preferences.preferences#get.Preferences.pref_compl_opacity with Some opa -> opa | _  -> 1.0));
+        (*Opt.may pref.Preferences.pref_compl_opacity (fun opa -> Opt.may current_window (fun w -> w#set_opacity opa));*)
+        Opt.may (GWindow.toplevel p#coerce) (fun w -> w#present());
+      end
+    end else begin
+      ignore (widget#tooltip_destroy());
+      widget#clear();
+      self#with_current_page begin fun page ->
+        page#buffer#undo#end_block ();
+        (*if not widget#is_slist_visible then begin
+          widget#button_layout_slist#set_active true;
+          (*widget#toggle_details();*)
+          end;*)
+        current_page <- None;
+        match current_window with
+          | Some w -> w#misc#hide();
+          | _ -> ()
       end;
-      current_page <- None;
-      match current_window with
-        | Some w -> w#misc#hide();
-        | _ -> ()
-    end;
+    end
 
   method present ?page () =
     let xy =
@@ -355,33 +400,80 @@ object (self)
         begin
           match xy with
             | Some (x, y) ->
-              if Sys.os_type = "Win32" then (window#present());
-              window#move ~x ~y;
-              let alloc = window#misc#allocation in
-              let x, y =
-                (if x + alloc.Gtk.width > (Gdk.Screen.width()) then (Gdk.Screen.width() - alloc.Gtk.width) else x),
-                (if y + alloc.Gtk.height > (Gdk.Screen.height()) then (Gdk.Screen.height() - alloc.Gtk.height) else y);
-              in
-              window#move ~x ~y;
+              if not pin_status then begin
+                if Sys.win32 then (window#show());
+                window#move ~x ~y;
+                let alloc = window#misc#allocation in
+                let x, y =
+                  (if x + alloc.Gtk.width > (Gdk.Screen.width()) then (Gdk.Screen.width() - alloc.Gtk.width) else x),
+                  (if y + alloc.Gtk.height > (Gdk.Screen.height()) then (Gdk.Screen.height() - alloc.Gtk.height) else y);
+                in
+                window#move ~x ~y;
+              end;
               window#present();
             | _ -> ()
         end;
         window
       | None ->
         let x, y = match xy with Some (x, y) -> x, y | _ -> 0,0 in
-        let window = Gtk_util.window self#coerce ~x ~y ~focus:true ~escape:false ~show:(xy <> None) () in
+        let window = Gtk_util.window self#coerce
+            ~decorated:window_decorated
+            ~type_hint:(if Sys.win32 then `UTILITY else `DIALOG)
+            ~wm_class:(About.program_name ^ "-completion")
+            ~x ~y ~focus:true ~escape:false ~show:(xy <> None) ()
+        in
+        window#set_icon (Some Icons.oe);
+        window#set_title "";
+        window#set_deletable true;
         current_window <- Some window;
         ignore (window#event#connect#focus_out ~callback:begin fun _ ->
           self#hide();
           true (* Prevent the event to be propagated to the Gtk_util.window
                   focus_out handler, which destroys the window. *)
         end);
-        ignore (window#event#connect#key_release ~callback:begin fun ev ->
+        ignore (window#event#connect#focus_in ~callback:begin fun _ ->
+            Gmisclib.Idle.add (fun () -> window#set_opacity 1.0);
+            false;
+        end);
+        ignore (window#event#connect#delete ~callback:begin fun _ ->
+            self#set_pin_status false;
+            self#hide();
+            true;
+        end);
+        ignore (window#event#connect#after#key_release ~callback:begin fun ev ->
           let key = GdkEvent.Key.keyval ev in
-          if key = GdkKeysyms._Escape then (self#hide(); true) else false
+          if key = GdkKeysyms._Escape then begin
+            self#hide();
+            true
+          end else false
         end);
         (** Window buttons *)
-        ignore (ebox_close#event#connect#button_press ~callback:(fun _ -> self#hide(); true));
+        ebox_pin#event#connect#button_release ~callback:begin fun _ ->
+          self#set_pin_status (not pin_status);
+          true
+        end |> ignore;
+        ebox_font_incr#event#connect#button_release ~callback:begin fun _ ->
+          widget#change_font_size 1;
+          true
+        end |> ignore;
+        ebox_font_decr#event#connect#button_release ~callback:begin fun _ ->
+          widget#change_font_size (-1);
+          true
+        end |> ignore;
+        ebox_doc#event#connect#button_release ~callback:begin fun _ ->
+          begin
+            match widget#layout with
+              | `odoc -> widget#button_layout_slist#set_active true;
+              | `slist -> widget#button_layout_odoc#set_active true;
+              | `both -> widget#button_layout_odoc#set_active false;
+          end;
+          true
+        end |> ignore;
+        ebox_close#event#connect#button_release ~callback:begin fun _ ->
+          self#set_pin_status false;
+          self#hide();
+          true;
+        end |> ignore;
         (** Window Move *)
         let motion = ref false in
         let xm0 = ref 0 in
@@ -451,7 +543,13 @@ object (self)
           window#move ~x ~y;
           true
         end);
+        self#update_button_states();
         window
+
+  method private update_button_states () =
+    ebox_font_incr#misc#set_sensitive widget#button_layout_odoc#get_active;
+    ebox_font_decr#misc#set_sensitive widget#button_layout_odoc#get_active;
+
 end
 
 

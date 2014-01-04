@@ -330,6 +330,7 @@ let serial_compile ~compilation ~times ~compiler ~cflags ~includes ~toplevel_mod
 (** parallel_compile *)
 let parallel_compile ~compilation ?times ~compiler ~cflags ~includes ~toplevel_modules ~verbose ?jobs () =
   let crono = if verbose >= 3 then crono else fun ?label f x -> f x in
+  let crono4 = if verbose >= 4 then crono else fun ?label f x -> f x in
   let open Oebuild_parallel in
   let opt = compilation = Native in
   let may_update_times = match times with Some times -> fun filename -> Table.update ~opt times filename |> ignore | _ -> ignore in
@@ -345,7 +346,7 @@ let parallel_compile ~compilation ?times ~compiler ~cflags ~includes ~toplevel_m
     end
   in
   let times = match times with Some t -> Some (t, opt) | _ -> None in
-  let dag = crono ~label:"Oebuild_parallel.create_dag (ocamldep+add+reduce)" (fun () ->
+  let dag = crono4 ~label:"Oebuild_parallel.create_dag (ocamldep+add+reduce)" (fun () ->
       Oebuild_parallel.create_dag ?times ~cb_create_command ~cb_at_exit ~toplevel_modules ~verbose ()) ()
   in
   crono ~label:"Parallel compilation" (Oebuild_parallel.process_parallel ?jobs ~verbose) dag;
@@ -359,6 +360,7 @@ let build ~compilation ~package ~includes ~libs ~other_mods ~outkind ~compile_on
     ~toplevel_modules ?(jobs=0) ?(serial=false) ?(prof=false) ?(verbose=2) () =
 
   let crono = if verbose >= 3 then crono else fun ?label f x -> f x in
+  let crono4 = if verbose >= 4 then crono else fun ?label f x -> f x in
 
   if verbose >= 1 then begin
     printf "\n%s %s" (string_of_compilation_type compilation) (string_of_output_type outkind);
@@ -424,7 +426,7 @@ let build ~compilation ~package ~includes ~libs ~other_mods ~outkind ~compile_on
         let thread = if thread then "-thread" else if vmthread then "-vmthread" else "" in
         let ocaml_c_opt = try Filename.chop_extension ocaml_c_opt with Invalid_argument "Filename.chop_extension" -> ocaml_c_opt in
         let ocamlfind = sprintf "ocamlfind %s -package %s %s" ocaml_c_opt package thread in
-        let compiler = crono ~label:"Oebuild, get_effective_command(compiler)" get_effective_command ocamlfind in
+        let compiler = crono4 ~label:"Oebuild, get_effective_command(compiler)" get_effective_command ocamlfind in
         let linker =
           if compile_only then "" else
             let linkpkg = outkind <@ [Executable] in
@@ -446,7 +448,7 @@ let build ~compilation ~package ~includes ~libs ~other_mods ~outkind ~compile_on
         deps, deps_ml, serial_compile ~compilation ~times ~compiler ~cflags:!cflags ~includes:!includes ~toplevel_modules ~deps:deps_ml ~verbose
       else parallel_compile ~compilation ~times ~compiler ~cflags:!cflags ~includes:!includes ~toplevel_modules ~verbose ~jobs ()
     in
-    (*Printf.printf "        SORTED_DEPS: %s\n\n%!" (String.concat ", " deps);*)
+    (*if verbose >= 4 then Printf.printf "SORTED DEPENDENCIES:\n[%s]\n\n%!" (String.concat "; " deps);*)
     (** Link *)
     if compilation_exit = 0 then begin
       let opt = compilation = Native in
@@ -456,7 +458,15 @@ let build ~compilation ~package ~includes ~libs ~other_mods ~outkind ~compile_on
       in
       let mods = split_space other_mods in
       let mods = if compilation = Native then List.map (sprintf "%s.cmx") mods else List.map (sprintf "%s.cmo") mods in
-      let obj_deps = if dontlinkdep then find_objs toplevel_modules else mods @ (find_objs deps) in
+      let obj_deps =
+        if dontlinkdep then
+          find_objs (List.map (fun ml ->
+              if ml ^^ ".ml"
+              then (Filename.chop_extension ml) ^ ".cmx"
+              else if ml ^^ ".mli" then (Filename.chop_extension ml) ^ ".cmi"
+              else ml) toplevel_modules)
+        else mods @ (find_objs deps)
+      in
       if compile_only then compilation_exit else begin
         let compiler_output = Buffer.create 100 in
         let rec try_link () =
