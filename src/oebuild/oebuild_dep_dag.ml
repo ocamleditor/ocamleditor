@@ -183,7 +183,7 @@ let create_dag ?times ~toplevel_modules ~verbose () =
             !found
           end (List.rev cycle)
         in
-        Cycle (List.rev cycle)
+        Cycle ((*List.rev*) cycle)
       | [] -> assert false
 ;;
 

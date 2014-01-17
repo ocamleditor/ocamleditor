@@ -22,15 +22,18 @@
 
 open Miscellanea
 
+let loaded = ref []
+
 (** load *)
 let load basename =
   let load filename =
     let filename = Dynlink.adapt_filename filename in
     Printf.printf "Plugin: %s... (file_exists=%b) %!" filename (Sys.file_exists filename);
-    if Sys.file_exists filename then begin
+    if not (List.mem filename !loaded) && Sys.file_exists filename then begin
       try
         Dynlink.allow_unsafe_modules true;
         Dynlink.loadfile filename;
+        loaded := filename :: !loaded;
         Printf.printf "Loaded\n%!";
         true
       with Dynlink.Error error -> begin

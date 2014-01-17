@@ -25,7 +25,8 @@ open Printf
 open Miscellanea
 
 (** mk_ocp_indent_command *)
-let mk_ocp_indent_command ?lines ?(config=Oe_config.ocp_indent_config) filename =
+let mk_ocp_indent_command ?lines ~pref filename =
+  let config = pref.Preferences.pref_editor_indent_config in
   let lines =
     match lines with
       | Some (n1, n2) -> sprintf " --lines %d-%d" n1 n2
@@ -51,6 +52,7 @@ let forward_non_blank iter =
 
 (** indent *)
 let indent ~view bounds =
+  let pref = Preferences.preferences#get in
   let buffer = view#tbuffer in
   let indent () =
     match buffer#save_buffer() with
@@ -64,7 +66,7 @@ let indent ~view bounds =
         let start, stop = if start#compare stop > 0 then stop, start else start, stop in
         let stop = if not (stop#equal start) then stop#backward_line#forward_to_line_end else stop in
         let lines = start#line + 1, stop#line + 1 in
-        let cmd = mk_ocp_indent_command ~lines filename in
+        let cmd = mk_ocp_indent_command ~lines ~pref filename in
         let lines = Cmd.exec_lines cmd in
         buffer#undo#begin_block ~name:"ocp-indent";
         buffer#block_signal_handlers();
@@ -103,7 +105,7 @@ let indent ~view bounds =
     let stop = if iter#ends_line then iter else iter#forward_to_line_end in
     let line = iter#get_text ~stop in
     if String.trim line = "" then
-      (if Oe_config.ocp_indent_empty_line = `INDENT then indent() else false)
+      (if pref.Preferences.pref_editor_indent_empty_line then indent() else false)
     else if ins#ends_line then false else indent ()
   end else indent ()
 

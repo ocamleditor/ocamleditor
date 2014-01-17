@@ -30,7 +30,7 @@ class buffer =
 fun ?project ?buffer ?file () ->
   let buffer = match buffer with None -> GText.buffer () | Some b -> b in
   let create_tmp_filename () = Filename.temp_file "buffer-" ".tmp", None in
-  let tmp_filename, project_tmp_path =
+(*  let tmp_filename, project_tmp_path =
     match project with
       | Some project ->
         begin
@@ -44,7 +44,7 @@ fun ?project ?buffer ?file () ->
             | _ -> create_tmp_filename ()
         end;
       | _ -> create_tmp_filename ()
-  in
+  in*)
 object (self)
   inherit GText.buffer buffer#as_buffer
 
@@ -53,16 +53,37 @@ object (self)
   val mutable tab_spaces = true
   val mutable signal_handlers = []
   val mutable tag_ocamldoc_paragraph : GText.tag option = None
-  val mutable tmp_filename = tmp_filename
-  val mutable project_tmp_path = project_tmp_path
+  val mutable tmp_filename = "" (*tmp_filename*)
+  val mutable project_tmp_path = None (*project_tmp_path*)
 
   initializer
+    self#reset_tmp_filename ();
     at_exit begin fun () ->
       match project with
         | None ->
           if Sys.file_exists tmp_filename then Sys.remove tmp_filename else ()
         | _ -> ()
     end
+
+  method reset_tmp_filename () =
+    let a, b =
+      match project with
+        | Some project ->
+          begin
+            match file with
+              | Some file ->
+                begin
+                  match Project.tmp_of_abs project file#filename with
+                    | None -> create_tmp_filename ()
+                    | (Some (tmp, relname) as temp) -> tmp // relname, temp
+                end;
+              | _ -> create_tmp_filename ()
+          end;
+        | _ -> create_tmp_filename ()
+    in
+    tmp_filename <- a;
+    project_tmp_path <- b
+
 
   method tag_ocamldoc_paragraph = tag_ocamldoc_paragraph
 

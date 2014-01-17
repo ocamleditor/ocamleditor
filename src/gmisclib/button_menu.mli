@@ -27,11 +27,13 @@ class button_menu :
   ?label:string ->
   ?relief:Gtk.Tags.relief_style ->
   ?stock:GtkStock.id ->
+  ?spacing:int ->
   ?packing:(GObj.widget -> unit) ->
   unit ->
   object
     method as_widget : Gtk.widget Gtk.obj
     method button : GButton.button
+    method button_menu : GButton.button
     method clear_menu_only : unit -> unit
     method coerce : GObj.widget
     method connect : signals
@@ -64,4 +66,4 @@ and signals :
 val create :
   ?label:string ->
   ?relief:Gtk.Tags.relief_style ->
-  ?stock:GtkStock.id -> ?packing:(GObj.widget -> unit) -> unit -> button_menu
+  ?stock:GtkStock.id -> ?spacing:int -> ?packing:(GObj.widget -> unit) -> unit -> button_menu

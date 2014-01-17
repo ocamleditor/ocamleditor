@@ -102,7 +102,9 @@ class file filename =
         backup_name
       end else ""
 
-    method rename newname = Sys.rename filename newname;
+    method rename newname =
+      Sys.rename filename newname;
+      filename <- newname
 
     method remove = if self#exists then Sys.remove filename
 

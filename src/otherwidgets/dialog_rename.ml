@@ -112,7 +112,7 @@ let window ~editor ~page () =
               end
             in
             ask_overwrite ~run ~overwrite ~filename window
-          end else (rename ~editor ~page ~filename (); window#destroy())
+          end else (rename ~editor ~page ~filename (); window#destroy());
         end;
       | _ -> window#destroy()
   in run()

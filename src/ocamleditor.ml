@@ -21,7 +21,74 @@
 *)
 
 
-let _ = Printexc.print Ocamleditor_lib.main ()
+(** fade_out *)
+let fade_out window =
+  (*GMain.Timeout.add ~ms:5 ~callback:begin fun () ->
+    let opa = max 0. (window#opacity -. 0.1) in
+      Printf.printf " = %f - %f\n%!" window#opacity opa;
+    if opa > 0. then begin
+      window#set_opacity opa;
+      true
+    end else begin
+      window#destroy();
+      false
+    end
+    end |> ignore*)
+  while window#opacity > 0. do
+    Thread.delay 0.02;
+    let opa = max 0. (window#opacity -. 0.1) in
+    if opa >= 0. then begin
+      window#set_opacity opa;
+    end
+  done;
+  window#destroy()
+
+(** main *)
+let main () = begin
+  let locale = GtkMain.Main.init ~setlocale:false () in
+  (*GtkMain.Main.disable_setlocale();*)
+  (*Unix.putenv "LANGUAGE" "C";*)
+  (*Unix.putenv "GTK_SETLOCALE" "0";*)
+  (*let locale = Glib.Main.setlocale `ALL (Some "C") in*)
+  let start splashscreen =
+    let browser = Browser.create () in
+    (* Before browser initialization *)
+    browser#connect#startup ~callback:begin fun () ->
+      Gaux.may splashscreen ~f:(fun w -> w#set_transient_for browser#window#as_window);
+      Sys.chdir (Filename.dirname Sys.executable_name);
+      Startup_info.print();
+      Plugin.load "dot_viewer_svg.cma" |> ignore;
+      Project_xml.init();
+      Gtk_theme.set_theme ~context:browser#window#misc#pango_context ();
+      browser#window#misc#connect#show ~callback:begin fun () ->
+        Gmisclib.Idle.add ~prio:300 begin fun () ->
+          Gaux.may splashscreen ~f:fade_out;
+          Gaux.may (browser#editor#get_page `ACTIVE) ~f:(fun page -> page#view#misc#grab_focus());
+        end
+      end |> ignore;
+    end |> ignore;
+    (* After browser initialization and before browser window is shown *)
+    browser#connect#after#startup ~callback:begin fun () ->
+      ()
+    end |> ignore;
+    (*  *)
+    browser#startup();
+    browser#window#present();
+  in
+  begin
+    match Browser.splashscreen() with
+      | None -> start None
+      | Some splashscreen ->
+        splashscreen#misc#connect#after#show ~callback:begin fun () ->
+          GMain.Timeout.add ~ms:100 ~callback:(fun () -> start (Some splashscreen); false) |> ignore;
+          (*Gmisclib.Idle.add ~prio:300 (fun () -> start (Some splashscreen));*)
+        end |> ignore;
+        splashscreen#present();
+  end;
+  GtkThread2.main ();
+end
+
+let _ = Printexc.print main ()
 
 
 

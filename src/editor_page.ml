@@ -254,6 +254,7 @@ object (self)
           self#update_statusbar();
         | None -> ()
     end;
+    buffer#reset_tmp_filename();
     file_changed#call file_obj
 
   method get_filename = match file with None -> "untitled.ml" | Some f -> f#filename
@@ -539,6 +540,39 @@ object (self)
             reset_button();
             Dialog.display_exn ~parent:self ~title:"Error creating dependency graph" ex
         end;
+
+  method cut () =
+    self#copy ();
+    self#delete ()
+
+  method copy () =
+    let clipboard = GData.clipboard Gdk.Atom.clipboard in
+    clipboard#set_text (buffer#selection_text ());
+
+  method delete () =
+    let start, stop = buffer#selection_bounds in
+    buffer#delete ~start ~stop
+
+  method paste () =
+    match (GData.clipboard (Gdk.Atom.clipboard))#text with
+      | None -> ()
+      | Some text ->
+        if view#editable then begin
+          GtkSignal.stop_emit();
+          ignore (buffer#delete_interactive ~start:(buffer#get_iter `INSERT) ~stop:(buffer#get_iter `SEL_BOUND) ());
+          buffer#insert text;
+          let iter = buffer#get_iter `INSERT in
+          if buffer#lexical_enabled then begin
+            Lexical.tag view#buffer
+              ~start:(iter#backward_chars (Glib.Utf8.length text))#backward_line
+              ~stop:iter#forward_line;
+          end;
+          buffer#remove_tag view#highlight_current_line_tag
+            ~start:(iter#backward_chars (Glib.Utf8.length text))#backward_line
+            ~stop:iter#forward_line;
+          view#draw_current_line_background ~force:true iter;
+          Gmisclib.Idle.add (fun () -> ignore (view#scroll_to_iter iter));
+        end
 
   initializer
     ignore (self#misc#connect#destroy ~callback:begin fun () ->

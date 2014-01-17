@@ -64,7 +64,10 @@ let print_results err_outputs ok_outputs =
     let has_out = Buffer.length process_output.out > 0 in
     let has_err = Buffer.length process_output.err > 0 in
     if has_out then printf "%s\n%s\n%s%!" process_output.command (Buffer.contents process_output.out) sep;
-    if has_err then eprintf "%s\n%s\n%s%!" process_output.command (Buffer.contents process_output.err) sep;
+    if has_err then begin
+      (*printf "-----\n%s\n-----\n%!" process_output.command;*)
+      eprintf "%s\n%s%!" (Buffer.contents process_output.err) sep;
+    end
   end ok_outputs;
   flush_all();
   List.iter begin fun process_output ->
@@ -72,7 +75,10 @@ let print_results err_outputs ok_outputs =
     let has_err = Buffer.length process_output.err > 0 in
     let cmd = sprintf "%s\n(exit code = %d)" process_output.command process_output.exit_code in
     if has_out then printf "%s\n%s\n%s%!" cmd (Buffer.contents process_output.out) sep;
-    if has_err then eprintf "%s\n%s\n%s%!" cmd (Buffer.contents process_output.err) sep;
+    if has_err then begin
+      (*printf "-----\n%s\n-----\n%!" cmd;*)
+      eprintf "%s\n%s%!" (Buffer.contents process_output.err) sep;
+    end;
   end err_outputs;
   flush_all()
 ;;

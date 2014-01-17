@@ -1,104 +1,68 @@
 Version 1.11.0
 --------------
-
-  * Parallel compilation.
-
-  * Add option to control verbosity of messages displayed by the build system.
+  * Support for parallel compilation.
+  * Combined menubar and toolbar when in full-screen mode.
+  * Add more options in Preferences.
 
 Version 1.10.0
 --------------
-
   * Changed dependencies: OCaml-4.01.0, Findlib-1.4.0, ocurl-0.6 (optional).
-
   * Ability to detach message panes in floating windows.
-
   * Add "Filter toplevel modules".
-
   * Add description field to targets.
-
   * More visual options for "Current line highlight", cursor aspect ratio,
     Structure Pane and Target List.
-
   * Various fixes.
-
 
 Version 1.9.0
 -------------
-
   * New dependency: ocurl-0.5.5 (optional).
-
   * Remote file editing via SFTP.
-
   * New "Target condition" to check whether a Findlib package is installed.
-
   * New target type "External tasks" to allow creating targets made only of
     external build tasks.
-
   * New option "-dontlinkdep" to allow plugins to be built without linking
     its (detected) module dependencies.
-
   * Fix redundant build of target dependencies.
-
   * Various other fixes.
-
 
 Version 1.8.0
 -------------
-
   * Upgrade to OCaml-4.00.0
-
   * New dependencies:
-
     - Findlib-1.3.3;
     - ocp-indent (optional);
     - Lablgtk.rsvg (optional);
     - Dot command (optional).
-
   * Project Properties dialog
-
     - Renamed "Build Configuration" to "Target" and renamed other features of
       the build system.
     - New buttons "Duplicate", "Move Up" and "Move Down" in the target list.
     - New tab "Direct (Target) Dependencies".
     - Support for using packages installed with Findlib.
-
   * Automated build script generation
-
     - Ability to specify custom command line arguments;
     - New commands "install", "uninstall" and "distclean";
     - Ability to hide targets;
     - Dependencies between targets and external build tasks.
-
   * Structure Pane revamped: now is based on ".cmt" files.
-
   * Inferred Types: now are based on ".cmt" files.
-
   * Find Definition/References
-
       - now based on ".cmt" files;
       - search results are displayed in a new widget;
       - new ability to search variant and exception constructors and
         record labels.
-
   * New "Find Used Components of Module", finds all used components of an
     opened module.
-
   * New "Module Dependencies Grpah Viewer", shows dependencies and dependants
     of a module.
-
   * New "Automatic indentation".
-
   * Completion: more accurate completion of local definitions.
-
   * More options in Preferences dialog.
-
   * Various other fixes.
-
-
 
 2012-07-27 Release 1.7.5
 ------------------------
-
   * Automatically highlight all occurrences of the currently selected word.
   * Changed project file extension from ".xml" to ".project".
   * Fix infinite loop in "Find in Path" in presence of symbolic links.
@@ -107,16 +71,12 @@ Version 1.8.0
   * Fix scroll issue with bookmarks and hyperlinks from "Find in Path" results.
   * Other minor bug fixes.
 
-
 2012-07-13 Release 1.7.4
 ------------------------
-
   * Minor bug fixes.
-
 
 2012-07-12 Release 1.7.3
 ------------------------
-
   * Upgrade to ocaml-3.12.1.
   * Project file splitted into two files, so as to keep separate local data.
   * Bookmarks are now local to the project.
@@ -126,16 +86,12 @@ Version 1.8.0
   * Fix minor usability issues in "Project properties" dialog.
   * Fix crash on Windows7.
 
-
 2012-05-03  Release 1.7.2
 -------------------------
-
   * Fix #1141, #1144, #1145.
-
 
 2012-04-23  Release 1.7.1
 -------------------------
-
   * Improved responsiveness of "Build configuration" window.
   * More compact XML project file (the new format is not compatible with
     previous versions of OCamlEditor).
@@ -147,7 +103,6 @@ Version 1.8.0
 
 2012-04-09  Release 1.7.0
 -------------------------
-
   * Module Browser: navigation around compiled modules; navigation hystory;
     hyperlinks; symbol search; documentation viewer.
   * Structure Pane.
@@ -172,7 +127,6 @@ Version 1.8.0
 
 2011-02-28  Release 1.6.1
 -------------------------
-
   * Show whitespace characters.
   * Ability for a project to select an OCaml compiler different from the
     system default.
@@ -186,7 +140,6 @@ Version 1.8.0
 
 2011-02-09  Release 1.6.0
 -------------------------
-
   * Code folding, delimiters are: begin...end, let...in, let...;;,
     do...done, struct...end, sig...end, object...end, [...], {...} and
     comments.
@@ -213,7 +166,6 @@ Version 1.8.0
 
 2010-10-06  Release 1.5.0
 -------------------------
-
   * Main toolbar.
   * New undo/redo.
   * Ability to display the types inferred by the compiler.
@@ -245,20 +197,17 @@ Version 1.8.0
 
 2010-08-31  Release 1.4.2
 -------------------------
-
   * Icon files relocated.
   * "ocaml build.ml" terminates with code 2 when build fails.
   * Installation script for Linux: "ocaml build.ml install".
 
 2010-08-07  Release 1.4.1
 -------------------------
-
   * Tab close buttons.
   * Fix #682.
 
 2010-06-28  Release 1.4
 -----------------------
-
   * External Build Tasks.
   * Each build configuration can be compiled with the bytecode compiler,
     native compiler or both.
@@ -275,7 +224,6 @@ Version 1.8.0
 
 2010-04-21  Release 1.3.1
 -------------------------
-
   * Bug fixes.
   * Libraries can be installed in the Standard Library directory (requires
     administrative permission).
@@ -285,7 +233,6 @@ Version 1.8.0
 
 2010-04-13  Release 1.3
 -----------------------
-
   * Linux port.
   * Character encoding support.
   * Improvements to the "Build configurations" tool (dependencies and user
@@ -294,7 +241,6 @@ Version 1.8.0
 
 2010-03-10  Release 1.2
 -----------------------
-
   * New dependency Xml-light.
   * XML format for project files with automatic conversion from old
     version.
@@ -314,10 +260,8 @@ Version 1.8.0
 
 2010-01-22  Release 1.1
 -----------------------
-
   * Bug fixes.
 
 2010-01-19  Release 1.0
 -----------------------
-
   * First public release

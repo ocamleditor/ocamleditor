@@ -47,8 +47,8 @@ let icon_pressed =
     "  .  "|];;
 
 
-class button_menu ?(label="") ?(relief=`NORMAL) ?stock ?packing () =
-  let box = GPack.hbox ~spacing:0 ?packing () in
+class button_menu ?(label="") ?(relief=`NORMAL) ?stock ?spacing ?packing () =
+  let box = GPack.hbox ?spacing ?packing () in
   let button = GButton.button ~relief ?stock ~packing:box#pack () in
   let button_menu = GButton.button ~relief ~packing:box#pack () in
   let _ = button#misc#set_name "gmisclib_button_menu_left" in
@@ -114,6 +114,7 @@ object (self)
   method connect = new signals ~clicked ~show_menu
 
   method button = button
+  method button_menu = button_menu
 
   method set_image x =
     image <- Some x;
@@ -139,9 +140,14 @@ object (self)
             box#pack image;
           | _ -> ()
       end;
-      let _ = GMisc.label ~text:button#label ~packing:box#add () in
-      let _ = GMisc.separator `VERTICAL ~packing:box#pack () in
-      box#pack (GMisc.arrow ~kind:`DOWN ())#coerce;
+      let label_widget = GMisc.label ~text:label ~packing:box#add () in
+      let draw_sep = try button#image |> ignore; true with Gpointer.Null -> false in
+      let draw_sep = draw_sep || String.trim label <> "" in
+      let _ = GMisc.separator `VERTICAL ~packing:box#pack ~show:draw_sep () in
+      let arrow = GMisc.arrow ~kind:`DOWN ~width:8 ~height:1 () in
+      box#pack arrow#coerce;
+      arrow#misc#modify_fg [`PRELIGHT, `BLACK];
+      label_widget#misc#modify_fg [`PRELIGHT, `BLACK];
       is_menu_only <- true;
     end;
 
@@ -168,13 +174,13 @@ object (self)
     box#misc#set_tooltip_text "";
     self#set_button_menu_child true;
     let time = GdkEvent.Button.time ev in
-
     let pos ~x ~y ~pushed_in =
       let bt = if button#misc#get_flag `VISIBLE then button else button_menu in
-      let x0, y0 = Gdk.Window.get_position bt#misc#window in
-      x0 + bt#misc#allocation.Gtk.x,
-      (y0 + bt#misc#allocation.Gtk.y + bt#misc#allocation.Gtk.height),
-      true
+      let xP, yP = Gdk.Window.get_pointer_location bt#misc#window in
+      let xA, yA = bt#misc#allocation.Gtk.x, bt#misc#allocation.Gtk.y in
+      let x' = x - xP + xA in
+      let y' = y - yP + yA + bt#misc#allocation.Gtk.height in
+      x', y', pushed_in
     in
     let menu = GMenu.menu () in
     gmenu <- Some menu;
@@ -198,6 +204,19 @@ object (self)
       Gaux.may tooltip_text ~f:box#misc#set_tooltip_text;
       tooltip_text <- None;
     end);
+    let cursor = Gdk.Cursor.create `ARROW in
+    menu#event#connect#motion_notify  ~callback:begin fun _ ->
+      Gdk.Window.set_cursor menu#misc#window cursor;
+      false;
+    end |> ignore;
+    button#event#connect#motion_notify  ~callback:begin fun _ ->
+      Gdk.Window.set_cursor button#misc#window cursor;
+      false;
+    end |> ignore;
+    button_menu#event#connect#motion_notify  ~callback:begin fun _ ->
+      Gdk.Window.set_cursor button_menu#misc#window cursor;
+      false;
+    end |> ignore;
     GtkMenu.Menu.popup_at menu#as_menu ~button:(GdkEvent.Button.button ev) ~time pos;
     button_menu#misc#set_state `ACTIVE;
     button_menu#set_relief `NORMAL;

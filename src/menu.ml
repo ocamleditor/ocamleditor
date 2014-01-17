@@ -35,6 +35,11 @@ let edit ~browser ~group ~flags
   let editor = browser#editor in
   let edit = GMenu.menu_item ~label:"Edit" () in
   let menu = GMenu.menu ~packing:edit#set_submenu () in
+  let cursor = Gdk.Cursor.create `ARROW in
+  menu#event#connect#motion_notify  ~callback:begin fun _ ->
+    Gdk.Window.set_cursor menu#misc#window cursor;
+    false;
+  end |> ignore;
   (** Undo *)
   let undo = GMenu.image_menu_item ~label:"Undo" ~packing:menu#add () in
   undo#set_image (GMisc.image ~stock:`UNDO ~icon_size:`MENU ())#coerce;
@@ -47,6 +52,25 @@ let edit ~browser ~group ~flags
   ignore (redo#connect#activate ~callback:(fun () -> editor#with_current_page (fun page -> page#redo())));
   redo#add_accelerator ~group ~modi:[`CONTROL; `SHIFT] GdkKeysyms._z ~flags;
   get_menu_item_redo := (fun () -> redo);
+  (** Cut & Paste... *)
+  let _ = GMenu.separator_item ~packing:menu#add () in
+  let cut = GMenu.image_menu_item ~label:"Cut" ~packing:menu#add () in
+  cut#add_accelerator ~group ~modi:[`CONTROL] GdkKeysyms._x ~flags;
+  ignore (cut#connect#activate ~callback:(fun () -> editor#with_current_page (fun page -> page#cut ())));
+  let copy = GMenu.image_menu_item ~label:"Copy" ~packing:menu#add () in
+  copy#add_accelerator ~group ~modi:[`CONTROL] GdkKeysyms._c ~flags;
+  ignore (copy#connect#activate ~callback:(fun () -> editor#with_current_page (fun page -> page#copy ())));
+  let paste = GMenu.image_menu_item ~label:"Paste" ~packing:menu#add () in
+  paste#add_accelerator ~group ~modi:[`CONTROL] GdkKeysyms._v ~flags;
+  ignore (paste#connect#activate ~callback:(fun () -> editor#with_current_page (fun page -> page#paste ())));
+  let delete = GMenu.image_menu_item ~label:"Delete" ~packing:menu#add () in
+  ignore (delete#connect#activate ~callback:(fun () -> editor#with_current_page (fun page -> page#delete ())));
+  let select_all = GMenu.image_menu_item ~label:"Select All" ~packing:menu#add () in
+  (*select_all#set_image (GMisc.image ~stock:`SELECT_ALL ~icon_size:`MENU ())#coerce;*)
+  ignore (select_all#connect#activate ~callback:(fun () ->
+    editor#with_current_page (fun page ->
+      ignore(page#buffer#select_range page#buffer#start_iter page#buffer#end_iter))));
+  select_all#add_accelerator ~group ~modi:[`CONTROL] GdkKeysyms._a ~flags;
   (** Select Word *)
   let _ = GMenu.separator_item ~packing:menu#add () in
   let select_word = GMenu.menu_item ~label:"Select Word" ~packing:menu#add () in
@@ -140,14 +164,6 @@ let edit ~browser ~group ~flags
   ignore (to_shell#connect#activate ~callback:(fun () ->
     editor#with_current_page (fun page -> page#ocaml_view#obuffer#send_to_shell ())));
   to_shell#add_accelerator ~group ~modi:[] GdkKeysyms._F8 ~flags;
-  let _ = GMenu.separator_item ~packing:menu#add () in
-  (** Select All *)
-  let select_all = GMenu.image_menu_item ~label:"Select All" ~packing:menu#add () in
-  select_all#set_image (GMisc.image ~stock:`SELECT_ALL ~icon_size:`MENU ())#coerce;
-  ignore (select_all#connect#activate ~callback:(fun () ->
-    editor#with_current_page (fun page ->
-      ignore(page#buffer#select_range page#buffer#start_iter page#buffer#end_iter))));
-  select_all#add_accelerator ~group ~modi:[`CONTROL] GdkKeysyms._a ~flags;
   (**  *)
   ignore (edit#misc#connect#state_changed ~callback:begin fun _ ->
     let has_current_page = editor#get_page `ACTIVE <> None in
@@ -156,6 +172,8 @@ let edit ~browser ~group ~flags
       redo#misc#set_sensitive false;
     end;
     List.iter (function Some i -> i#misc#set_sensitive has_current_page | _ -> ()) [
+      Some (cut :> GMenu.menu_item);
+      Some (paste :> GMenu.menu_item);
       Some (select_word :> GMenu.menu_item);
       Some (move_par_expr :> GMenu.menu_item);
       Some (select_par_expr :> GMenu.menu_item);
@@ -182,13 +200,13 @@ let edit ~browser ~group ~flags
         (to_shell :> GMenu.menu_item);
       ];
       List.iter (fun x -> x#misc#set_sensitive page#buffer#has_selection)
-        [toggle_case#coerce; increase_selection_indent#coerce];
+        [cut#coerce; copy#coerce; delete#coerce; toggle_case#coerce; increase_selection_indent#coerce];
       let has_tag_delim = page#view#current_matching_tag_bounds <> [] in
       move_par_expr#misc#set_sensitive has_tag_delim;
       select_par_expr#misc#set_sensitive has_tag_delim;
     end;
   end);
-  edit
+  edit, menu
 ;;
 
 (** search *)
@@ -196,6 +214,11 @@ let search ~browser ~group ~flags items =
   let editor = browser#editor in
   let search_item = GMenu.menu_item ~label:"Search" () in
   let menu = GMenu.menu ~packing:search_item#set_submenu () in
+  let cursor = Gdk.Cursor.create `ARROW in
+  menu#event#connect#motion_notify  ~callback:begin fun _ ->
+    Gdk.Window.set_cursor menu#misc#window cursor;
+    false;
+  end |> ignore;
   (** Find and Replace *)
   let find_repl = GMenu.image_menu_item ~label:"Find and Replace" ~packing:menu#add () in
   find_repl#set_image (GMisc.image ~pixbuf:Icons.find_replace (*~stock:`FIND_AND_REPLACE*) ~icon_size:`MENU ())#coerce;
@@ -309,7 +332,7 @@ let search ~browser ~group ~flags items =
     let has_current_page = editor#get_page `ACTIVE <> None in
     List.iter (fun i -> i#misc#set_sensitive has_current_page) items;
   end);
-  search_item
+  search_item, menu
 ;;
 
 (** view *)
@@ -322,6 +345,11 @@ let view ~browser ~group ~flags
   let editor = browser#editor in
   let view = GMenu.menu_item ~label:"View" () in
   let menu = GMenu.menu ~packing:view#set_submenu () in
+  let cursor = Gdk.Cursor.create `ARROW in
+  menu#event#connect#motion_notify  ~callback:begin fun _ ->
+    Gdk.Window.set_cursor menu#misc#window cursor;
+    false;
+  end |> ignore;
   let switch_viewer = GMenu.menu_item ~label:"Switch Viewer to \xC2\xABDependencies\xC2\xBB" ~packing:menu#add () in
   ignore (switch_viewer#connect#activate ~callback:begin fun () ->
     editor#with_current_page (fun page -> page#button_dep_graph#clicked ())
@@ -428,7 +456,7 @@ let view ~browser ~group ~flags
   editor
   end);
   (*  *)
-  view
+  view, menu
 ;;
 
 (** tools *)
@@ -436,9 +464,13 @@ let tools ~browser ~group ~flags items =
   let editor = browser#editor in
   let tools = GMenu.menu_item ~label:"Tools" () in
   let menu = GMenu.menu ~packing:tools#set_submenu () in
+  let cursor = Gdk.Cursor.create `ARROW in
+  menu#event#connect#motion_notify  ~callback:begin fun _ ->
+    Gdk.Window.set_cursor menu#misc#window cursor;
+    false;
+  end |> ignore;
   let preferences = GMenu.image_menu_item ~label:"Preferences" ~packing:menu#add () in
-  preferences#set_image (GMisc.image ~stock:`PREFERENCES ~icon_size:`MENU ())#coerce;
-  ignore (preferences#connect#activate ~callback:(fun () -> ignore (Preferences_tool.create ~editor ())));
+  preferences#connect#activate ~callback:(fun () -> Preferences_tool.create ~editor ()) |> ignore;
   let _ = GMenu.separator_item ~packing:menu#add () in
   let toplevel = GMenu.menu_item ~label:"OCaml Toplevel" ~packing:menu#add () in
   ignore (toplevel#connect#activate ~callback:browser#shell);
@@ -467,7 +499,7 @@ let tools ~browser ~group ~flags items =
   in
   callback();
   ignore (tools#misc#connect#state_changed ~callback);
-  tools
+  tools, menu
 ;;
 
 (** window *)
@@ -479,6 +511,11 @@ let window ~browser ~group ~flags
   let editor = browser#editor in
   let window = GMenu.menu_item ~label:"Window" () in
   let menu = items.window in
+  let cursor = Gdk.Cursor.create `ARROW in
+  menu#event#connect#motion_notify  ~callback:begin fun _ ->
+    Gdk.Window.set_cursor menu#misc#window cursor;
+    false;
+  end |> ignore;
   window#set_submenu menu;
   (** window_switch *)
   let window_switch = GMenu.menu_item ~label:"Switch..." ~packing:menu#append () in
@@ -533,7 +570,7 @@ let window ~browser ~group ~flags
       items.window_signal_locked <- false;
     end;
   end);
-  window
+  window, menu
 ;;
 
 (** help *)
@@ -541,6 +578,11 @@ let help ~browser ~group ~flags items =
   let editor = browser#editor in
   let help = GMenu.menu_item ~label:"Help" () in
   let menu = GMenu.menu ~packing:help#set_submenu () in
+  let cursor = Gdk.Cursor.create `ARROW in
+  menu#event#connect#motion_notify  ~callback:begin fun _ ->
+    Gdk.Window.set_cursor menu#misc#window cursor;
+    false;
+  end |> ignore;
   let key_assist = GMenu.menu_item ~label:"Key Assist" ~packing:menu#add () in
   ignore (key_assist#connect#activate ~callback:Key_assist.window);
   let _ = GMenu.separator_item ~packing:menu#add () in
@@ -556,7 +598,7 @@ let help ~browser ~group ~flags items =
   let _ = GMenu.separator_item ~packing:menu#add () in
   let about = GMenu.menu_item ~label:(sprintf "About %s..." About.program_name) ~packing:menu#add () in
   ignore (about#connect#activate ~callback:(Menu_help.about editor));
-  help
+  help, menu
 ;;
 
 (** create *)
@@ -575,6 +617,7 @@ let create ~browser ~group
     () =
   let flags = [`VISIBLE; `LOCKED] in
   let items = {
+    menus                         = [||];
     menu_items                    = [];
     file_rename                   = GMenu.menu_item ();
     file_recent_select            = GMenu.menu_item ~label:"Select File..." ();
@@ -583,7 +626,7 @@ let create ~browser ~group
     file_switch                   = GMenu.menu_item ~label:"Switch to Implementation/Interface" ();
     file_close                    = GMenu.image_menu_item ~stock:`CLOSE ();
     file_close_all                = GMenu.menu_item ();
-    file_revert                   = GMenu.image_menu_item ~stock:`REVERT_TO_SAVED ();
+    file_revert                   = GMenu.image_menu_item (*~stock:`REVERT_TO_SAVED*) ();
     file_delete                   = GMenu.image_menu_item ~stock:`DELETE ();
     window                        = GMenu.menu ();
     window_radio_group            = None;
@@ -594,20 +637,21 @@ let create ~browser ~group
     project_history               = [];
     project_history_signal_locked = false;
   } in
-  items.menu_items <- List.rev [
+  items.file_revert#set_image (GMisc.image ~pixbuf:Icons.revert_to_saved_16 ())#coerce;
+  items.menus <- [|
     Menu_file.file ~browser ~group ~flags items;
     edit ~browser ~group ~flags
       ~get_menu_item_undo
       ~get_menu_item_redo
       items;
     search ~browser ~group ~flags items;
-    view ~browser ~group ~flags
+    (view ~browser ~group ~flags
       ~menu_item_view_menubar
       ~menu_item_view_toolbar
       ~menu_item_view_tabbar
       ~menu_item_view_outline
       ~menu_item_view_messages
-      ~menu_item_view_hmessages items;
+      ~menu_item_view_hmessages items);
     Menu_project.project ~browser ~group ~flags items;
     tools ~browser ~group ~flags items;
     window ~browser ~group ~flags
@@ -616,7 +660,8 @@ let create ~browser ~group
       ~get_menu_item_nav_history_last
       items;
     help ~browser ~group ~flags items;
-  ];
+  |];
+  items.menu_items <- Array.to_list (Array.map (fun (x, _) -> x) items.menus);
   List.iter (fun i -> i#activate()) items.menu_items;
   items
 

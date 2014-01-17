@@ -37,28 +37,63 @@ let set_find_text_output_font_condensed context =
     try Some (List.find (Gtk_util.try_font context) ["Arial"; "Helvetica"; "Sans"])
     with Not_found -> None
 
+let get_style_outline pref =
+  let style_outline, apply_outline =
+    let base_color = pref.Preferences.pref_outline_color_nor_bg in
+    let even, odd =
+      match pref.pref_outline_color_alt_rows with
+        | None -> base_color, base_color
+        | Some x -> base_color, (Color.name (Color.set_value x (`NAME base_color)))
+    in
+    sprintf "
+          style \"outline-treestyle\" {
+            GtkTreeView::even-row-color = \"%s\"
+            GtkTreeView::odd-row-color = \"%s\"
+          }" even odd,
+    "widget \"*.outline_treeview\" style \"outline-treestyle\"";
+  in style_outline, apply_outline
+
 let set_theme ?theme ~context () =
   let pref = Preferences.preferences#get in
   let style_smallbutton, apply_smallbutton = "\
+      style \"oe_menubar\" {
+        ythickness = 0
+        GtkMenuBar::shadow-type = none
+        GtkMenuBar::internal-padding = 0
+      }
+      style \"menubar-button\" {
+        GtkButton::child-displacement-x = 1
+        GtkButton::child-displacement-y = 1
+        GtkButton::inner-border = { 3, 3, 2, 2 }
+        xthickness = 0
+        ythickness = 0
+      }
+      style \"menubar-button-arrow\" {
+        GtkButton::child-displacement-x = 1
+        GtkButton::child-displacement-y = 1
+        GtkButton::inner-border = { 3, 3, 2, 2 }
+        xthickness = 0
+        ythickness = 0
+      }
+      style \"window-button\" {
+        GtkButton::child-displacement-x = 0
+        GtkButton::child-displacement-y = 0
+        GtkButton::inner-border = { 5,5,0,0 }
+        xthickness = 0
+        ythickness = 0
+      }
       style \"small-button\" {
         GtkButton::child-displacement-x = 0
         GtkButton::child-displacement-y = 0
         GtkButton::inner-border = { 0, 0, 0, 0 }
         xthickness = 0
         ythickness = 0
-      }", "widget \"*.smallbutton\" style \"small-button\""
-  in
-  let style_outline, apply_outline =
-    match Oe_config.outline_alternating_row_colors with
-      | None -> "", ""
-      | Some x ->
-        let base_color = fst pref.Preferences.pref_bg_color in
-        sprintf "
-          style \"outline-treestyle\" {
-            GtkTreeView::even-row-color = \"%s\"
-            GtkTreeView::odd-row-color = \"%s\"
-          }" base_color (Color.name (Color.set_value x (`NAME base_color))),
-        "widget \"*.outline_treeview\" style \"outline-treestyle\""
+      }", "widget \"*.smallbutton\" style \"small-button\"
+widget \"*.menubar_button\" style \"menubar-button\"
+widget \"*.windowbutton\" style \"window-button\"
+widget \"*.menubar_button_arrow\" style \"menubar-button-arrow\"
+widget \"*.oe_menubar\" style:highest \"oe_menubar\"
+"
   in
   let style_targetlist, apply_targetlist =
     match Oe_config.targetlist_alternating_row_colors with
@@ -94,6 +129,7 @@ let set_theme ?theme ~context () =
         end;
       | x -> sprintf "gtk-font-name = \"%s\"" x
   in
+  let style_outline, apply_outline = get_style_outline pref in
   let rc =
     String.concat "\n" [
       style_smallbutton; style_outline; style_targetlist;

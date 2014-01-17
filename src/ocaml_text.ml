@@ -369,7 +369,7 @@ object (self)
       end else false
     end);
     ignore (self#event#connect#button_press ~callback:begin fun ev ->
-      if smart_click then begin
+      if GdkEvent.Button.button ev = 1 && smart_click then begin
         match GdkEvent.get_type ev with
           | `TWO_BUTTON_PRESS ->
             two_button_press := true;

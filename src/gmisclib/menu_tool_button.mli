@@ -26,12 +26,14 @@ class menu_tool_button :
   ?homogeneous:bool ->
   ?stock:GtkStock.id ->
   ?label:string ->
+  ?spacing:int ->
   ?packing:(GButton.tool_item_o -> unit) ->
   unit ->
   object
     method as_tool_item : GButton.tool_item
     method as_widget : Gtk.widget Gtk.obj
     method button : GButton.button
+    method button_menu : GButton.button
     method clear_menu_only : unit -> unit
     method coerce : GObj.widget
     method connect : Button_menu.signals
@@ -48,4 +50,5 @@ val create :
   ?homogeneous:bool ->
   ?stock:GtkStock.id ->
   ?label:string ->
+  ?spacing:int ->
   ?packing:(GButton.tool_item_o -> unit) -> unit -> menu_tool_button

@@ -21,6 +21,7 @@
 *)
 
 type t = {
+  mutable menus                         : (GMenu.menu_item * GMenu.menu) array;
   mutable menu_items                    : GMenu.menu_item list;
   file_rename                           : GMenu.menu_item;
   file_recent_select                    : GMenu.menu_item;

@@ -47,8 +47,6 @@ let ocamleditor_user_home =
 let dot_viewer : [`DEFAULT | `PDF]       = `DEFAULT
 let dot_attributes                      = " -Glabelloc=t -Gfontsize=26pt -Gfontname=\"Helvetica\" -Nfontsize=16pt -Nfontname=\"Helvetica\""
 let ocp_indent_tab_key_enabled           = true
-let ocp_indent_config                    = "with=2"
-let ocp_indent_empty_line : [`INDENT | `ALIGN] = `INDENT
 let autosave_enabled                     = true
 let autosave_interval                    = 5_000 (* milliseconds *)
 let autosave_keep_backup                 = 3. *. 24. *. 60. *. 60.  (* 3 days, in milliseconds *)
@@ -69,7 +67,6 @@ let current_line_border_color            = fun add bgcolor -> `NAME (add bgcolor
 let current_line_width                   = 1 (* Must be >= 1. Left margin is automatically increased by current_line_width *)
 let current_line_style                   = (*`ON_OFF_DASH*) `SOLID
 let current_line_join                    = (*`ROUND `MITER `BEVEL *) `BEVEL
-let cursor_aspect_ratio                  = 0.1  (*[0.0-1.0]*)
 let on_off_dashes                        = [1; 2]
 (* Gutter colors:
   `CALC factor    : Calculated according to the bg color of the text view.
@@ -109,12 +106,6 @@ let odoc_tag_properties                  = [ (* These properties apply to ocamld
                                           `PIXELS_BELOW_LINES 2;
                                           `WRAP_MODE `WORD]
 let odoc_margin                          = 30
-let outline_type_color                   = module_browser_secondary_title_color
-let outline_selection_bg_color           = "#1F80ED"
-let outline_selection_fg_color           = "#FFFFFF"
-let outline_active_bg_color              = "#B1C3D8"
-let outline_active_fg_color              = "#000000"
-let outline_alternating_row_colors       = Some 0.95 (* like the gutter *)
 let layout_find_references               = `VERTICAL
 let layout_find_module_browser           = `VERTICAL
 (* Path relative to the project home directory where to find custom templates. *)

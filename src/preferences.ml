@@ -25,6 +25,8 @@ open Miscellanea
 type t = {
   mutable pref_general_theme                : string option;
   mutable pref_general_font                 : string;
+  mutable pref_general_menubar_buttons      : int list;
+  mutable pref_general_splashscreen_enabled : bool;
   mutable pref_timestamp                    : float;
   mutable pref_base_font                    : string;
   mutable pref_tab_pos                      : Gtk.Tags.position;
@@ -47,6 +49,9 @@ type t = {
   mutable pref_editor_save_all_bef_comp     : bool;
   mutable pref_editor_dot_leaders           : bool;
   mutable pref_editor_current_line_border   : bool;
+  mutable pref_editor_indent_config         : string;
+  mutable pref_editor_indent_empty_line     : bool;
+  mutable pref_editor_cursor_aspect_ratio   : float;
   mutable pref_compl_font                   : string;
   mutable pref_compl_greek                  : bool;
   mutable pref_compl_decorated              : bool;
@@ -93,6 +98,14 @@ type t = {
   mutable pref_show_whitespace_chars        : bool;
   mutable pref_outline_show_types           : bool;
   mutable pref_outline_width                : int;
+  mutable pref_outline_color_types          : string;
+  mutable pref_outline_color_nor_bg         : string;
+  mutable pref_outline_color_nor_fg         : string;
+  mutable pref_outline_color_sel_bg         : string;
+  mutable pref_outline_color_sel_fg         : string;
+  mutable pref_outline_color_act_bg         : string;
+  mutable pref_outline_color_act_fg         : string;
+  mutable pref_outline_color_alt_rows       : float option;
   mutable pref_hmessages_width              : int;
   mutable pref_vmessages_height             : int;
   mutable pref_odoc_font                    : string;
@@ -185,6 +198,8 @@ let default_colors : text_properties list = [
 let create_defaults () = {
   pref_general_theme                = (match Oe_config.themes_dir with Some _ -> Some "MurrinaCandido" | _ -> None);
   pref_general_font                 = "";
+  pref_general_menubar_buttons      = [];
+  pref_general_splashscreen_enabled = true;
   pref_timestamp                    = (Unix.gettimeofday());
   pref_base_font                    = "monospace 9";
   pref_tab_pos                      = `TOP;
@@ -207,6 +222,9 @@ let create_defaults () = {
   pref_editor_save_all_bef_comp     = true;
   pref_editor_dot_leaders           = false;
   pref_editor_current_line_border   = false;
+  pref_editor_indent_config         = "";
+  pref_editor_indent_empty_line     = true;
+  pref_editor_cursor_aspect_ratio   = 0.1;
   pref_compl_font                   = "Sans 8";
   pref_compl_greek                  = true;
   pref_compl_decorated              = true;
@@ -242,7 +260,7 @@ let create_defaults () = {
   pref_max_view_2_tabbar            = true;
   pref_max_view_2_messages          = true;
   pref_max_view_2_fullscreen        = true;
-  pref_max_view_fullscreen          = false;
+  pref_max_view_fullscreen          = true;
   pref_ocamldoc_paragraph_bgcolor_1 = Some "#FAF7FA" (*"#F5F0FF"*);
   pref_ocamldoc_paragraph_bgcolor_2 = Some "#FAF7FA" (*"#F8F5FF"*);
   pref_code_folding_enabled         = true;
@@ -253,6 +271,14 @@ let create_defaults () = {
   pref_show_whitespace_chars        = false;
   pref_outline_show_types           = true;
   pref_outline_width                = 250;
+  pref_outline_color_types          = Oe_config.module_browser_secondary_title_color;
+  pref_outline_color_nor_bg         = "#ffffff";
+  pref_outline_color_nor_fg         = "#000000";
+  pref_outline_color_sel_bg         = "#1F80ED";
+  pref_outline_color_sel_fg         = "#FFFFFF";
+  pref_outline_color_act_bg         = "#B1C3D8";
+  pref_outline_color_act_fg         = "#000000";
+  pref_outline_color_alt_rows       = None; (*Some 0.95;*) (* like the gutter *)
   pref_hmessages_width              = 1000;
   pref_vmessages_height             = 300;
   pref_odoc_font                    = "Serif 9";
@@ -331,6 +357,9 @@ let to_xml pref =
     Xml.Element ("preferences", [], [
       Xml.Element ("pref_general_theme", [], [Xml.PCData (Opt.default pref.pref_general_theme "")]);
       Xml.Element ("pref_general_font", [], [Xml.PCData pref.pref_general_font]);
+      Xml.Element ("pref_general_menubar_buttons", [],
+                   [Xml.PCData (String.concat "," (List.map string_of_int pref.pref_general_menubar_buttons))]);
+      Xml.Element ("pref_general_splashscreen_enabled", [], [Xml.PCData (string_of_bool pref.pref_general_splashscreen_enabled)]);
       Xml.Element ("pref_base_font", [], [Xml.PCData pref.pref_base_font]);
       Xml.Element ("pref_check_updates", [], [Xml.PCData (string_of_bool pref.pref_check_updates)]);
       Xml.Element ("pref_tab_pos", [], [Xml.PCData (string_of_pos pref.pref_tab_pos)]);
@@ -372,6 +401,9 @@ let to_xml pref =
       Xml.Element ("pref_editor_save_all_bef_comp", [], [Xml.PCData (string_of_bool pref.pref_editor_save_all_bef_comp)]);
       Xml.Element ("pref_editor_dot_leaders", [], [Xml.PCData (string_of_bool pref.pref_editor_dot_leaders)]);
       Xml.Element ("pref_editor_current_line_border", [], [Xml.PCData (string_of_bool pref.pref_editor_current_line_border)]);
+      Xml.Element ("pref_editor_indent_config", [], [Xml.PCData pref.pref_editor_indent_config]);
+      Xml.Element ("pref_editor_indent_empty_line", [], [Xml.PCData (string_of_bool pref.pref_editor_indent_empty_line)]);
+      Xml.Element ("pref_editor_cursor_aspect_ratio", [], [Xml.PCData (string_of_float pref.pref_editor_cursor_aspect_ratio)]);
       Xml.Element ("pref_compl_font", [], [Xml.PCData pref.pref_compl_font]);
       Xml.Element ("pref_compl_greek", [], [Xml.PCData (string_of_bool pref.pref_compl_greek)]);
       Xml.Element ("pref_compl_decorated", [], [Xml.PCData (string_of_bool pref.pref_compl_decorated)]);
@@ -419,6 +451,14 @@ let to_xml pref =
       Xml.Element ("pref_show_whitespace_chars", [], [Xml.PCData (string_of_bool pref.pref_show_whitespace_chars)]);
       Xml.Element ("pref_outline_show_types", [], [Xml.PCData (string_of_bool pref.pref_outline_show_types)]);
       Xml.Element ("pref_outline_width", [], [Xml.PCData (string_of_int pref.pref_outline_width)]);
+      Xml.Element ("pref_outline_color_types", [], [Xml.PCData pref.pref_outline_color_types]);
+      Xml.Element ("pref_outline_color_nor_bg", [], [Xml.PCData pref.pref_outline_color_nor_bg]);
+      Xml.Element ("pref_outline_color_nor_fg", [], [Xml.PCData pref.pref_outline_color_nor_fg]);
+      Xml.Element ("pref_outline_color_sel_bg", [], [Xml.PCData pref.pref_outline_color_sel_bg]);
+      Xml.Element ("pref_outline_color_sel_fg", [], [Xml.PCData pref.pref_outline_color_sel_fg]);
+      Xml.Element ("pref_outline_color_act_bg", [], [Xml.PCData pref.pref_outline_color_act_bg]);
+      Xml.Element ("pref_outline_color_act_fg", [], [Xml.PCData pref.pref_outline_color_act_fg]);
+      Xml.Element ("pref_outline_color_alt_rows", [], [Xml.PCData (match pref.pref_outline_color_alt_rows with Some x -> string_of_float x | _ -> "")]);
       Xml.Element ("pref_hmessages_width", [], [Xml.PCData (string_of_int pref.pref_hmessages_width)]);
       Xml.Element ("pref_vmessages_height", [], [Xml.PCData (string_of_int pref.pref_vmessages_height)]);
       Xml.Element ("pref_odoc_font", [], [Xml.PCData (pref.pref_odoc_font)]);
@@ -453,6 +493,10 @@ let from_file filename =
       match Xml.tag node with
         | "pref_general_theme" -> pref.pref_general_theme <- (if value node = "" then None else Some (value node))
         | "pref_general_font" when value node <> "" -> pref.pref_general_font <- value node;
+        | "pref_general_menubar_buttons" ->
+          pref.pref_general_menubar_buttons <-
+            List.map int_of_string (Str.split (Miscellanea.regexp ",") (value node))
+        | "pref_general_splashscreen_enabled" -> pref.pref_general_splashscreen_enabled <- bool_of_string (value node)
         | "pref_check_updates" -> pref.pref_check_updates <- bool_of_string (value node)
         | "pref_base_font" -> pref.pref_base_font <- value node
         | "pref_tab_pos" -> pref.pref_tab_pos <- pos_of_string (value node)
@@ -494,6 +538,9 @@ let from_file filename =
         | "pref_editor_save_all_bef_comp" -> pref.pref_editor_save_all_bef_comp <- (bool_of_string (value node))
         | "pref_editor_dot_leaders" -> pref.pref_editor_dot_leaders <- (bool_of_string (value node))
         | "pref_editor_current_line_border" -> pref.pref_editor_current_line_border <- (bool_of_string (value node));
+        | "pref_editor_indent_config" -> pref.pref_editor_indent_config <- value node
+        | "pref_editor_indent_empty_line" -> pref.pref_editor_indent_empty_line <- bool_of_string (value node)
+        | "pref_editor_cursor_aspect_ratio" -> pref.pref_editor_cursor_aspect_ratio <- float_of_string (value node)
         | "pref_compl_font" -> pref.pref_compl_font <- value node
         | "pref_compl_greek" -> pref.pref_compl_greek <- bool_of_string (value node)
         | "pref_compl_decorated" -> pref.pref_compl_decorated <- bool_of_string (value node)
@@ -546,6 +593,14 @@ let from_file filename =
         | "pref_show_whitespace_chars" -> pref.pref_show_whitespace_chars <- bool_of_string (value node)
         | "pref_outline_show_types" -> pref.pref_outline_show_types <- bool_of_string (value node)
         | "pref_outline_width" -> pref.pref_outline_width <- int_of_string (value node)
+        | "pref_outline_color_types" -> pref.pref_outline_color_types <- value node
+        | "pref_outline_color_nor_bg" -> pref.pref_outline_color_nor_bg <- value node
+        | "pref_outline_color_nor_fg" -> pref.pref_outline_color_nor_fg <- value node
+        | "pref_outline_color_sel_bg" -> pref.pref_outline_color_sel_bg <- value node
+        | "pref_outline_color_sel_fg" -> pref.pref_outline_color_sel_fg <- value node
+        | "pref_outline_color_act_bg" -> pref.pref_outline_color_act_bg <- value node
+        | "pref_outline_color_act_fg" -> pref.pref_outline_color_act_fg <- value node
+        | "pref_outline_color_alt_rows" -> pref.pref_outline_color_alt_rows <- (match value node with "" -> None | x -> Some (float_of_string x))
         | "pref_hmessages_width" -> pref.pref_hmessages_width <- int_of_string (value node)
         | "pref_vmessages_height" -> pref.pref_vmessages_height <- int_of_string (value node)
         | "pref_odoc_font" -> pref.pref_odoc_font <- value node

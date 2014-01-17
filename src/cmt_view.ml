@@ -142,16 +142,22 @@ let string_of_type_expr te =
 
 (** empty *)
 let empty () =
+  let pref = Preferences.preferences#get in
   let vp = GBin.viewport () in
   let label = GMisc.label ~xalign:0.5 ~yalign:0. ~xpad:3 ~ypad:3
     ~text:"Structure is not available" ~packing:vp#add () in
-  vp#misc#modify_bg [`NORMAL, `NAME "#ffffff"];
-  label#misc#modify_fg [`NORMAL, `NAME "#d0d0d0"];
+  vp#misc#modify_bg [`NORMAL, `NAME pref.Preferences.pref_outline_color_nor_bg];
+  label#misc#modify_fg [
+    `NORMAL, `NAME pref.Preferences.pref_outline_color_nor_fg
+  ];
   vp#coerce;;
+
+let dummy_re = Str.regexp ""
 
 (** widget *)
 class widget ~editor ~page ?packing () =
-  let show_types             = Preferences.preferences#get.Preferences.pref_outline_show_types in
+  let pref                   = Preferences.preferences#get in
+  let show_types             = pref.Preferences.pref_outline_show_types in
   let vbox                   = GPack.vbox ?packing () in
   let toolbar                = GPack.hbox ~spacing:0 ~packing:vbox#pack ~show:true () in
   let button_refresh         = GButton.button ~relief:`NONE ~packing:toolbar#pack () in
@@ -184,7 +190,7 @@ class widget ~editor ~page ?packing () =
   let model_sort_name        = GTree.model_sort model in
   let model_sort_name_rev    = GTree.model_sort model in
   let sw                     = GBin.scrolled_window ~shadow_type:`IN ~hpolicy:`AUTOMATIC ~vpolicy:`AUTOMATIC ~packing:vbox#add () in
-  let view                   = GTree.view ~rules_hint:(Oe_config.outline_alternating_row_colors <> None) ~model:model_sort_default ~headers_visible:false ~packing:sw#add ~width:350 ~height:500 () in
+  let view                   = GTree.view ~model:model_sort_default ~headers_visible:false ~packing:sw#add ~width:350 ~height:500 () in
   let renderer_pixbuf        = GTree.cell_renderer_pixbuf [`YPAD 0; `XPAD 0] in
   let renderer_markup        = GTree.cell_renderer_text [`YPAD 0] in
   let vc                     = GTree.view_column () in
@@ -197,14 +203,6 @@ class widget ~editor ~page ?packing () =
   let _                      = view#append_column vc in
   let _                      = view#misc#set_name "outline_treeview" in
   let _                      = view#misc#set_property "enable-tree-lines" (`BOOL true) in
-  let _                      = view#misc#modify_font_by_name Preferences.preferences#get.Preferences.pref_compl_font in
-  let _                      = view#misc#modify_base [`SELECTED, `NAME Oe_config.outline_selection_bg_color; `ACTIVE, `NAME Oe_config.outline_active_bg_color] in
-  let _                      = view#misc#modify_text [`SELECTED, `NAME Oe_config.outline_selection_fg_color; `ACTIVE, `NAME Oe_config.outline_active_fg_color] in
-  let type_color             = Oe_config.outline_type_color in
-  let type_color_re          = Str.regexp_string type_color in
-  let type_color_sel         = Color.name_of_gdk (view#misc#style#fg `SELECTED) in
-  let type_color_sel_re      = Str.regexp_string type_color_sel in
-  let span_type_color        = " <span color='" ^ type_color ^ "'>: " in
   let label_tooltip          = ref (GMisc.label ~markup:" " ()) in
   let buffer : Ocaml_text.buffer = page#buffer in
 object (self)
@@ -221,8 +219,37 @@ object (self)
   val table_info = Hashtbl.create 17
   val mutable selected_path = None
   val mutable count = 0
+  val mutable type_color = ""
+  val mutable type_color_sel_re = dummy_re
+  val mutable type_color_re = dummy_re
+  val mutable type_color_sel = ""
+  val mutable span_type_color = ""
+
+  method update_preferences () =
+    let pref = Preferences.preferences#get in
+    view#misc#modify_font_by_name pref.Preferences.pref_compl_font;
+    view#misc#modify_base [
+      `NORMAL,   `NAME pref.Preferences.pref_outline_color_nor_bg;
+      `SELECTED, `NAME pref.Preferences.pref_outline_color_sel_bg;
+      `ACTIVE,   `NAME pref.Preferences.pref_outline_color_act_bg;
+    ];
+    view#misc#modify_text [
+      `NORMAL,   `NAME pref.Preferences.pref_outline_color_nor_fg;
+      `SELECTED, `NAME pref.Preferences.pref_outline_color_sel_fg;
+      `ACTIVE,   `NAME pref.Preferences.pref_outline_color_act_fg;
+    ];
+    type_color <- pref.Preferences.pref_outline_color_types;
+    type_color_re <- Str.regexp_string type_color;
+    type_color_sel <- Color.name_of_gdk (view#misc#style#fg `SELECTED);
+    type_color_sel_re <- Str.regexp_string type_color_sel;
+    span_type_color <- " <span color='" ^ type_color ^ "'>: ";
+    let style_outline, apply_outline = Gtk_theme.get_style_outline pref in
+    GtkMain.Rc.parse_string (style_outline ^ "\n" ^ apply_outline);
+    view#set_rules_hint (pref.Preferences.pref_outline_color_alt_rows <> None);
+    GtkBase.Widget.queue_draw view#as_widget;
 
   initializer
+    self#update_preferences();
     ignore (self#misc#connect#destroy ~callback:self#destroy_marks);
     (** Replace foreground color when row is selected *)
     let replace_color_in_markup (model : GTree.tree_store) invert path =
@@ -276,7 +303,7 @@ object (self)
       table_expanded_by_user <- List.remove_assoc (self#get_id_path row) table_expanded_by_user;
     end);
     ignore (view#misc#connect#realize ~callback:begin fun () ->
-      let show = Preferences.preferences#get.Preferences.pref_outline_show_types in
+      let show = pref.Preferences.pref_outline_show_types in
       if show <> button_show_types#active then button_show_types#clicked()
     end);
     (** Buttons *)
@@ -292,7 +319,7 @@ object (self)
           false
         with Not_found -> false
       end;
-      Preferences.preferences#get.Preferences.pref_outline_show_types <- button_show_types#active;
+      pref.Preferences.pref_outline_show_types <- button_show_types#active;
       (*Preferences.save();*)
     end);
     ignore (button_select_from_buf#connect#clicked ~callback:begin fun () ->
@@ -326,6 +353,9 @@ object (self)
         view#expand_row path
       end (table_expanded_by_default @ (List.map (fun (_, x) -> x) table_expanded_by_user));
     end);
+    Preferences.preferences#connect#changed ~callback:begin fun _ ->
+      self#update_preferences ()
+    end |> ignore;
 
   method view = view
 

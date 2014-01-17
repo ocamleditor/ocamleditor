@@ -66,28 +66,28 @@ class view ~editor ~project ?packing () =
   (* Buttons *)
   let bbox              = GPack.hbox ~spacing:3 ~packing:vbox#pack () in
   let b_new             = Gmisclib.Button.button_menu ~packing:bbox#pack () in
-  let _                 = b_new#set_image  (GMisc.image ~stock:`NEW ~icon_size:`BUTTON ())#coerce in
+  let _                 = b_new#set_image  (GMisc.image  ~pixbuf:Icons.new_file (*~stock:`NEW*) ~icon_size:`MENU ())#coerce in
   let _                 = b_new#misc#set_tooltip_text "New..." in
   let _                 = GMisc.label ~text:"" ~packing:bbox#add () in
   let b_remove          = GButton.button ~packing:bbox#pack () in
   let _                 = tooltips#set_tip ~text:"Delete selected items" b_remove#coerce in
-  let _                 = b_remove#set_image (GMisc.image ~stock:`DELETE ~icon_size:`BUTTON ())#coerce in
+  let _                 = b_remove#set_image (GMisc.image ~stock:`DELETE ~icon_size:`MENU ())#coerce in
   let b_up              = GButton.button ~packing:bbox#pack () in
   let _                 = tooltips#set_tip ~text:"Move Up" b_up#coerce in
-  let _                 = b_up#set_image (GMisc.image ~stock:`GO_UP ~icon_size:`BUTTON ())#coerce in
+  let _                 = b_up#set_image (GMisc.image ~stock:`GO_UP ~icon_size:`MENU ())#coerce in
   let b_down            = GButton.button ~packing:bbox#pack () in
   let _                 = tooltips#set_tip ~text:"Move Down" b_down#coerce in
-  let _                 = b_down#set_image (GMisc.image ~stock:`GO_DOWN ~icon_size:`BUTTON ())#coerce in
+  let _                 = b_down#set_image (GMisc.image ~stock:`GO_DOWN ~icon_size:`MENU ())#coerce in
   let _                 = GMisc.label ~text:"" ~packing:bbox#add () in
   let b_clean           = GButton.button ~packing:bbox#pack () in
   let _                 = tooltips#set_tip ~text:"Clean" b_clean#coerce in
-  let _                 = b_clean#set_image (Icons.create Icons.clear_build_24)#coerce in
+  let _                 = b_clean#set_image (Icons.create Icons.clear_build_16)#coerce in
   let b_compile         = GButton.button ~packing:bbox#pack () in
   let _                 = tooltips#set_tip ~text:"Build" b_compile#coerce in
-  let _                 = b_compile#set_image (Icons.create Icons.build_24)#coerce in
+  let _                 = b_compile#set_image (Icons.create Icons.build_16)#coerce in
   let b_run             = GButton.button ~packing:bbox#pack () in
   let _                 = tooltips#set_tip ~text:"Run external task/Install library" b_run#coerce in
-  let _                 = b_run#set_image (GMisc.image ~xalign:0.5 ~width:24 ~pixbuf:Icons.start_16 ())#coerce in
+  let _                 = b_run#set_image (GMisc.image ~xalign:0.5 (*~width:24*) ~pixbuf:Icons.start_16 ())#coerce in
 object (self)
   inherit GObj.widget vbox#as_widget
 

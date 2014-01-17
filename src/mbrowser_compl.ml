@@ -57,7 +57,7 @@ class completion ~project ?packing () =
   let _               = GMisc.image ~pixbuf:Icons.doc ~packing:ebox_doc#add () in
   let _               = GMisc.image ~pixbuf:Icons.zoom_in_14 ~packing:ebox_font_incr#add () in
   let _               = GMisc.image ~pixbuf:Icons.zoom_out_14 ~packing:ebox_font_decr#add () in
-  let _               = GMisc.image ~pixbuf:Icons.close ~icon_size:`MENU ~packing:ebox_close#add () in
+  let _               = GMisc.image ~pixbuf:Icons.close_window ~icon_size:`MENU ~packing:ebox_close#add () in
   let statusbar_box   = GPack.hbox ~spacing:5 ~packing:(vbox#pack ~from:`END) () in
   let label_longid    = GMisc.label ~markup:"" ~ypad:0 ~xalign:0.0 ~packing:statusbar_box#add () in
   let _               = GMisc.separator `VERTICAL ~packing:statusbar_box#pack () in
@@ -419,7 +419,7 @@ object (self)
         let window = Gtk_util.window self#coerce
             ~decorated:window_decorated
             ~type_hint:(if Sys.win32 then `UTILITY else `DIALOG)
-            ~wm_class:(About.program_name ^ "-completion")
+            ?wm_class:(if Sys.win32 then None else Some (About.program_name ^ "-completion"))
             ~x ~y ~focus:true ~escape:false ~show:(xy <> None) ()
         in
         window#set_icon (Some Icons.oe);

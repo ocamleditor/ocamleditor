@@ -461,27 +461,7 @@ object (self)
           if is_insert then Timeout.set tout_delim 0 (self#cb_tout_delim page)
         end);
         (** Paste clipboard *)
-        ignore (page#view#connect#paste_clipboard ~callback:begin fun () ->
-          match (GData.clipboard (Gdk.Atom.clipboard))#text with
-            | None -> ()
-            | Some text ->
-              if page#view#editable then begin
-                GtkSignal.stop_emit();
-                ignore (page#buffer#delete_interactive ~start:(page#buffer#get_iter `INSERT) ~stop:(page#buffer#get_iter `SEL_BOUND) ());
-                page#buffer#insert text;
-                let iter = page#buffer#get_iter `INSERT in
-                if page#buffer#lexical_enabled then begin
-                  Lexical.tag page#view#buffer
-                    ~start:(iter#backward_chars (Glib.Utf8.length text))#backward_line
-                    ~stop:iter#forward_line;
-                end;
-                page#buffer#remove_tag page#view#highlight_current_line_tag
-                  ~start:(iter#backward_chars (Glib.Utf8.length text))#backward_line
-                  ~stop:iter#forward_line;
-                page#view#draw_current_line_background ~force:true iter;
-                Gmisclib.Idle.add (fun () -> ignore (page#view#scroll_to_iter iter));
-              end
-        end);
+        ignore (page#view#connect#paste_clipboard ~callback:page#paste);
         (*  *)
         modified_changed#call();
         page#update_statusbar();
@@ -498,7 +478,7 @@ object (self)
       let item = GMenu.image_menu_item ~label:(sprintf "Close All Except \xC2\xAB%s\xC2\xBB" basename) ~packing:menu#add () in
       ignore (item#connect#activate ~callback:(fun () -> self#close_all ~except:page ()));
       let item = GMenu.image_menu_item ~label:(sprintf "Revert \xC2\xAB%s\xC2\xBB" basename) ~packing:menu#add () in
-      item#set_image (GMisc.image ~stock:`REVERT_TO_SAVED ~icon_size:`MENU ())#coerce;
+      item#set_image (GMisc.image ~pixbuf:Icons.revert_to_saved_16 (*~stock:`REVERT_TO_SAVED*) ~icon_size:`MENU ())#coerce;
       ignore (item#connect#activate ~callback:(fun () -> self#revert page));
       let _ = GMenu.separator_item ~packing:menu#add () in
       let item = GMenu.menu_item ~label:"Copy Full Path" ~packing:menu#add () in
@@ -528,7 +508,7 @@ object (self)
       end;
       let _ = GMenu.separator_item ~packing:menu#add () in
       let item = GMenu.image_menu_item ~label:"Save As..." ~packing:menu#add () in
-      item#set_image (GMisc.image ~stock:`SAVE_AS ~icon_size:`MENU ())#coerce;
+      item#set_image (GMisc.image ~pixbuf:Icons.revert_to_saved_16 (*~stock:`SAVE_AS*) ~icon_size:`MENU ())#coerce;
       ignore (item#connect#activate ~callback:(fun () -> self#dialog_save_as page));
       let item = GMenu.image_menu_item ~label:(sprintf "Rename \xC2\xAB%s\xC2\xBB" basename) ~packing:menu#add () in
       ignore (item#connect#activate ~callback:(fun () -> self#dialog_rename page));
@@ -649,7 +629,7 @@ object (self)
   method revert (page : Editor_page.page) = Gaux.may page#file ~f:begin fun _ ->
     if page#buffer#modified then ignore (Dialog.confirm
       ~title:"Revert File"
-      ~image:(GMisc.image ~stock:`REVERT_TO_SAVED ~icon_size:`DIALOG ())#coerce
+      ~image:(GMisc.image ~pixbuf:Icons.revert_to_saved_16 (*~stock:`REVERT_TO_SAVED*) ~icon_size:`DIALOG ())#coerce
       ~message:("File\n\""^page#get_filename^"\"\nmodified, revert?")
       ~yes:("Revert", fun () -> page#revert())
       ~no:("Do Not Revert", ignore) page)

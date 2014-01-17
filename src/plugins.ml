@@ -98,6 +98,6 @@ module type REMOTE = sig
       end
 end
 
-let remote : (module REMOTE) option ref = ref None
 
+let remote : (module REMOTE) option ref = ref None
 

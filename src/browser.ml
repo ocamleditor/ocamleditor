@@ -20,43 +20,91 @@
 
 *)
 
-open Project
 open Prj
-open GdkKeysyms
 open Printf
 open Miscellanea
 open GUtil
 open Oe
-open Menu_types
 
-class browser window =
-  let switch_project = new switch_project () in
-  let menubar_visibility_changed = new menubar_visibility_changed () in
-  let toolbar_visibility_changed = new toolbar_visibility_changed () in
-  let tabbar_visibility_changed = new tabbar_visibility_changed () in
-  let outline_visibility_changed = new outline_visibility_changed () in
-  let vmessages_visibility_changed = new vmessages_visibility_changed () in
-  let hvmessages_visibility_changed = new hvmessages_visibility_changed () in
-  let project_history_changed = new project_history_changed () in
+class browser () =
+  let window = GWindow.window
+    ~title:About.program_name
+    ~icon:Icons.oe
+    ~type_hint:`NORMAL
+    ~kind:`TOPLEVEL
+    ~position:`CENTER
+    ~focus_on_map:true
+    ~allow_shrink:true
+    ~show:false ()
+  in
+  (* signals *)
+  let startup                            = new startup () in
+  let switch_project                     = new switch_project () in
+  let menubar_visibility_changed         = new menubar_visibility_changed () in
+  let toolbar_visibility_changed         = new toolbar_visibility_changed () in
+  let tabbar_visibility_changed          = new tabbar_visibility_changed () in
+  let outline_visibility_changed         = new outline_visibility_changed () in
+  let vmessages_visibility_changed       = new vmessages_visibility_changed () in
+  let hvmessages_visibility_changed      = new hvmessages_visibility_changed () in
+  let project_history_changed            = new project_history_changed () in
+  (*  *)
+  let get_menu_item_nav_history_backward = ref (fun () -> failwith "get_menu_item_nav_history_backward") in
+  let get_menu_item_nav_history_forward  = ref (fun () -> failwith "get_menu_item_nav_history_forward") in
+  let get_menu_item_nav_history_last     = ref (fun () -> failwith "get_menu_item_nav_history_last") in
+  let get_menu_item_undo                 = ref (fun () -> failwith "get_menu_item_undo") in
+  let get_menu_item_redo                 = ref (fun () -> failwith "get_menu_item_redo") in
+  (* Packing *)
+  let editor = new Editor.editor () in
   let _ = window#add Messages.hpaned#coerce in
   let vbox = GPack.vbox ~packing:Messages.hpaned#add1 () in
-  let menubarbox = GPack.hbox ~spacing:13 ~packing:vbox#pack () in
-  let menubar = GMenu.menu_bar ~packing:menubarbox#add () in
-  (*let messages = Messages.vmessages in*)
-  let editor = new Editor.editor () in
+  let menubarbox = GPack.hbox ~spacing:0 ~packing:vbox#pack () in
+  (* Menubar icon displayed full-screen mode *)
+  let width, height = 32, 32 in
+  let pixbuf = GdkPixbuf.create ~width ~height ~has_alpha:true () in
+  let _ = GdkPixbuf.saturate_and_pixelate ~saturation:0.0 ~pixelate:true ~dest:pixbuf Icons.oe in
+  let window_title_menu_icon = GBin.event_box ~packing:menubarbox#pack ~show:false () in
+  let _ = GMisc.image ~pixbuf ~packing:window_title_menu_icon#add () in
+  let _ = window_title_menu_icon#misc#set_property "visible-window" (`BOOL false) in
+  (* Menubar *)
+  let menubar = GMenu.menu_bar ~border_width:0 ~packing:menubarbox#add () in
+  let cursor = Gdk.Cursor.create `ARROW in
+  let _ = menubar#event#connect#motion_notify  ~callback:begin fun _ ->
+      Gdk.Window.set_cursor menubar#misc#window cursor;
+      false;
+    end in
+  (* Standard Toolbar *)
   let toolbar = new Toolbar.toolbar ~messages:Messages.vmessages ~hmessages:Messages.hmessages ~editor () in
   let _ = vbox#pack toolbar#coerce in
   let paned = Messages.vpaned in
   let _ = vbox#add paned#coerce in
-  (*  *)
-  let accel_group = GtkData.AccelGroup.create () in
-(*  let _ = window#add_accel_group accel_group in*)
-  let get_menu_item_nav_history_backward = ref (fun () -> failwith "get_menu_item_nav_history_backward") in
-  let get_menu_item_nav_history_forward = ref (fun () -> failwith "get_menu_item_nav_history_forward") in
-  let get_menu_item_nav_history_last = ref (fun () -> failwith "get_menu_item_nav_history_last") in
-  let get_menu_item_undo = ref (fun () -> failwith "get_menu_item_undo") in
-  let get_menu_item_redo = ref (fun () -> failwith "get_menu_item_redo") in
-  let window_title_menu_label = GMisc.label ~markup:"" ~packing:menubarbox#pack ~show:false () in
+  (* Combined menubar/toolbar/window title *)
+  let toolbox = GPack.hbox ~packing:menubarbox#add ~show:false () in
+  let _ = GMisc.separator `VERTICAL ~packing:toolbox#pack () in
+
+  let hbox_menu_title = GPack.hbox ~packing:menubarbox#pack ~show:false () in
+  (*let _ = GMisc.separator `VERTICAL ~packing:hbox_menu_title#pack () in*)
+  let window_title_menu_label = GMisc.label ~selectable:false ~markup:"" ~xalign:1.0 ~xpad:5 ~packing:hbox_menu_title#pack () in
+  (*let _ = GMisc.separator `VERTICAL ~packing:hbox_menu_title#pack () in*)
+
+  let vbox_menu_buttons = GPack.vbox ~border_width:0 ~packing:menubarbox#pack ~show:false () in
+  let align = GBin.aspect_frame ~yalign:0.0 ~shadow_type:`NONE ~packing:vbox_menu_buttons#add () in
+  let hbox_menu_buttons = GPack.hbox ~border_width:0 ~spacing:0 ~packing:align#add () in
+
+  let button_menu_iconify = GButton.button ~relief:`NONE ~packing:hbox_menu_buttons#pack () in
+  let _ = GMisc.image ~pixbuf:Icons.minimize_window ~packing:button_menu_iconify#add () in
+  let _ = button_menu_iconify#misc#set_name "windowbutton" in
+  let _ = button_menu_iconify#set_focus_on_click false in
+
+  let button_menu_reset = GButton.button ~relief:`NONE ~packing:hbox_menu_buttons#pack () in
+  let _ = GMisc.image ~pixbuf:Icons.restore_window ~packing:button_menu_reset#add () in
+  let _ = button_menu_reset#misc#set_name "windowbutton" in
+  let _ = button_menu_reset#set_focus_on_click false in
+
+  let button_menu_exit = GButton.button ~relief:`NONE ~packing:hbox_menu_buttons#pack () in
+  let _ = GMisc.image ~pixbuf:Icons.close_window ~packing:button_menu_exit#add () in
+  let _ = button_menu_exit#misc#set_name "windowbutton" in
+  let _ = button_menu_exit#set_focus_on_click false in
+
 object (self)
   val mutable finalize = fun _ -> ()
   val mutable projects = []
@@ -77,7 +125,6 @@ object (self)
   val mutable pref_max_view_fullscreen = false
   val mutable max_height_prev_h = -1
   val mutable max_height_prev_y = -1
-  val mutable is_max_height = false
   val mutable is_fullscreen = false
   val mutable maximized_view_actions = [
     `NONE, (fun () -> {
@@ -103,6 +150,8 @@ object (self)
     })
   ];
 
+  method toolbar = toolbar
+
   method editor = editor
   (*method vmessages = Messages.vmessages
   method hmessages = Messages.hmessages*)
@@ -116,9 +165,15 @@ object (self)
 
   method refresh () = self#with_current_project Project.refresh
   method clear_cache () = self#with_current_project begin fun project ->
-    Project.clear_cache project;
+    Project.clear_cache project |> ignore;
     Symbol.Cache.reset ~project
  end
+
+  method project_clean () =
+    self#with_current_project (fun project ->
+        self#with_default_target (fun target ->
+            ignore (Task_console.exec ~editor:self#editor `CLEANALL target);
+            Project.clean_tmp project))
 
   method current_project = current_project
 
@@ -193,7 +248,7 @@ object (self)
     dialog#add_select_button_stock `OK `OK;
     dialog#add_button_stock `CANCEL `CANCEL;
     dialog#set_select_multiple false;
-    dialog#set_current_folder (Filename.dirname project_home);
+    dialog#set_current_folder (Filename.dirname project_home) |> ignore;
     match dialog#run () with
       | `OK ->
         List.iter begin fun filename ->
@@ -226,7 +281,7 @@ object (self)
                 window#set_modal false;
                 window#present();
               end
-            | window, widget, state ->
+            | window, widget, _state ->
               (*widget#reset();*)
               if show then begin
                 Gaux.may page_num ~f:widget#goto_page;
@@ -237,7 +292,7 @@ object (self)
         end;
       with Not_found ->
         let window, widget = Project_properties.create ~editor ?page_num ~show () in
-        (* Since "widget" (the "Project Properties" dialog) is cached,
+        (* "widget" (the "Project Properties" dialog) is cached, then
            browser#current_project and the project instance stored in the dialog can
            be different objects (i.e. after a project switch in the IDE).  *)
         ignore (widget#connect#project_changed ~callback:(fun proj -> current_project#set (Some proj)));
@@ -246,7 +301,7 @@ object (self)
           toolbar#update current_project#get;
           widget#reset();
         end);
-        ignore (window#event#connect#delete ~callback:begin fun ev ->
+        ignore (window#event#connect#delete ~callback:begin fun _ ->
           window#misc#hide();
           true
         end);
@@ -410,49 +465,35 @@ object (self)
         | `NONE when maximized_view_action = `FIRST -> reset_default();
         | `NONE when maximized_view_action = `SECOND -> reset_default();
         | `NONE when maximized_view_action = `NONE -> ()
+        | _ -> assert false
     end;
     editor#with_current_page (fun p -> p#view#misc#grab_focus())
 
   method set_fullscreen x =
-    if not is_max_height then begin
-      if x && (not is_fullscreen) then begin
-        pref_max_view_fullscreen <- Preferences.preferences#get.Preferences.pref_max_view_fullscreen;
-        if Preferences.preferences#get.Preferences.pref_max_view_fullscreen then begin
-          if Oe_config.is_win32 then (window#set_decorated false);
-          window#fullscreen();
-          window_title_menu_label#misc#show();
-        end else (window#maximize());
-      end else if (not x) && is_fullscreen then begin
-        if pref_max_view_fullscreen then begin
-          window#unfullscreen();
-          if Oe_config.is_win32 then (window#set_decorated true);
-          window_title_menu_label#misc#hide();
-        end else (window#unmaximize());
+    if x && (not is_fullscreen) then begin
+      pref_max_view_fullscreen <- Preferences.preferences#get.Preferences.pref_max_view_fullscreen;
+      let decorated = not Preferences.preferences#get.Preferences.pref_max_view_fullscreen in
+      window#set_decorated decorated;
+      window#maximize();
+      if not decorated then begin
+        window_title_menu_icon#misc#show();
+        vbox_menu_buttons#misc#show();
+        hbox_menu_title#misc#show();
       end;
-      is_fullscreen <- x;
-    end
-
-(*  method set_max_height x =
-    if x && (not is_max_height) then begin
-      window#set_decorated false;
-      let alloc = window#misc#allocation in
-      let x, y = Gdk.Window.get_position window#misc#window in
-      max_height_prev_y <- y;
-      max_height_prev_h <- alloc.Gtk.height;
-      window#move ~x ~y:0;
-      window#resize ~width:(alloc.Gtk.width) ~height:(Gdk.Screen.height ());
-    end else if (not x) && is_max_height then begin
-      if max_height_prev_y >= 0 then begin
-        let alloc = window#misc#allocation in
-        let x, y = Gdk.Window.get_position window#misc#window in
-        window#resize ~width:(alloc.Gtk.width) ~height:max_height_prev_h;
-        window#move ~x ~y:max_height_prev_y;
-        max_height_prev_y <- -1;
-        max_height_prev_h <- -1;
-        window#set_decorated true;
-      end
+      menubar#misc#set_name "oe_menubar";
+      menubarbox#set_child_packing ~expand:false ~fill:false menubar#coerce;
+      toolbox#misc#show();
+    end else if (not x) && is_fullscreen then begin
+      window_title_menu_icon#misc#hide();
+      hbox_menu_title#misc#hide();
+      vbox_menu_buttons#misc#hide();
+      menubar#misc#set_name "";
+      menubarbox#set_child_packing ~expand:true ~fill:true menubar#coerce;
+      toolbox#misc#hide();
+      window#unmaximize();
+      window#set_decorated true;
     end;
-    is_max_height <- x;*)
+    is_fullscreen <- x;
 
   method set_menu_item_nav_history_sensitive () =
     let back, forward, last = editor#location_history_is_empty () in
@@ -533,7 +574,7 @@ object (self)
       let task = Task.create ~name ~env:[] ~dir:"" ~cmd ~args () in
       `COMPILE, task
     end configs in
-    self#with_current_project (fun project -> ignore (Task_console.exec_sync ~editor [tasks]))
+    self#with_current_project (fun _ -> ignore (Task_console.exec_sync ~editor [tasks]))
 
   method annot_type () =
     editor#with_current_page begin fun page ->
@@ -636,16 +677,35 @@ object (self)
       editor#dialog_save_modified ~close:false ~callback:finalize pages
     with Messages.Cancel_process_termination -> (GtkSignal.stop_emit())
 
-   initializer
+  method startup = startup#call
+
+  method menu =
+    match menu with
+      | Some menu -> menu.Menu_types.menus
+      | _ -> assert false
+
+  method private init () =
+    window#event#connect#window_state ~callback:begin fun ev ->
+      match GdkEvent.WindowState.new_window_state ev with
+        | [`MAXIMIZED] when maximized_view_action <> `NONE && not window#decorated ->
+          Gmisclib.Idle.add ~prio:300 begin fun () ->
+            let alloc = window#misc#allocation in
+            window#resize ~width:alloc.Gtk.width ~height:(alloc.Gtk.height - 2);
+          end;
+          false
+        | _ -> false
+    end |> ignore;
+    let find_custom_button = Toolbox.populate ~browser:self ~packing:toolbox#pack in
     let _ = Editor.set_menu_item_nav_history_sensitive := self#set_menu_item_nav_history_sensitive in
     (** Menubar items *)
-    let open Menu_types in
+    let open! Menu_types in
     let menu_item_view_menubar = ref [] in
     let menu_item_view_toolbar = ref [] in
     let menu_item_view_tabbar = ref [] in
     let menu_item_view_outline = ref [] in
     let menu_item_view_messages = ref [] in
     let menu_item_view_hmessages = ref [] in
+    let accel_group = GtkData.AccelGroup.create () in
     let group = accel_group in
     let menu_items = Menu.create ~browser:self ~group
       ~get_menu_item_undo
@@ -659,7 +719,7 @@ object (self)
       ~menu_item_view_outline
       ~menu_item_view_messages ~menu_item_view_hmessages () in
     menu <- Some menu_items;
-    List.iter menubar#prepend menu_items.menu_items;
+    List.iter menubar#append menu_items.menu_items;
     (** Update Window menu with files added to the editor *)
     ignore (editor#connect#add_page ~callback:begin fun page ->
       begin
@@ -764,28 +824,28 @@ object (self)
         mi#set_active visible;
         mi#misc#handler_unblock sign;
       end !menu_item_view_menubar
-    end;
+    end |> ignore;
     self#connect#toolbar_visibility_changed ~callback:begin fun visible ->
       List.iter begin fun (mi, sign) ->
         mi#misc#handler_block sign;
         mi#set_active visible;
         mi#misc#handler_unblock sign;
       end !menu_item_view_toolbar
-    end;
+    end |> ignore;
     self#connect#tabbar_visibility_changed ~callback:begin fun visible ->
       List.iter begin fun (mi, sign) ->
         mi#misc#handler_block sign;
         mi#set_active visible;
         mi#misc#handler_unblock sign;
       end !menu_item_view_tabbar
-    end;
+    end |> ignore;
     self#connect#outline_visibility_changed ~callback:begin fun visible ->
       List.iter begin fun (mi, sign) ->
         mi#misc#handler_block sign;
         mi#set_active visible;
         mi#misc#handler_unblock sign;
       end !menu_item_view_outline
-    end;
+    end |> ignore;
     let update_view_vmessages_items visible =
       List.iter begin fun (mi, sign) ->
         toolbar#tool_messages_handler_block ();
@@ -796,8 +856,8 @@ object (self)
         toolbar#tool_messages_handler_unblock ();
       end !menu_item_view_messages
     in
-    Messages.vmessages#connect#visible_changed ~callback:update_view_vmessages_items;
-    self#connect#vmessages_visibility_changed ~callback:update_view_vmessages_items;
+    Messages.vmessages#connect#visible_changed ~callback:update_view_vmessages_items |> ignore;
+    self#connect#vmessages_visibility_changed ~callback:update_view_vmessages_items |> ignore;
     let update_view_hmessages_items visible =
       List.iter begin fun (mi, sign) ->
         toolbar#tool_hmessages_handler_block ();
@@ -808,15 +868,26 @@ object (self)
         toolbar#tool_hmessages_handler_unblock ();
       end !menu_item_view_hmessages
     in
-    Messages.hmessages#connect#visible_changed ~callback:update_view_hmessages_items;
-    self#connect#hvmessages_visibility_changed ~callback:update_view_hmessages_items;
+    Messages.hmessages#connect#visible_changed ~callback:update_view_hmessages_items |> ignore;
+    self#connect#hvmessages_visibility_changed ~callback:update_view_hmessages_items |> ignore;
 
     (** Editor *)
     paned#pack1 ~resize:true ~shrink:true editor#coerce;
     let update_toolbar_save () =
-      toolbar#tool_save_all#misc#set_sensitive (List.exists (fun p -> p#view#buffer#modified) editor#pages);
+      let exists_unsaved = List.exists (fun p -> p#view#buffer#modified) editor#pages in
+      toolbar#tool_save_all#misc#set_sensitive exists_unsaved;
       Gaux.may (editor#get_page `ACTIVE) ~f:begin fun page ->
         toolbar#tool_save#misc#set_sensitive page#buffer#modified;
+        let button = find_custom_button `SAVE in
+        Opt.may button begin fun button ->
+          button#misc#set_sensitive page#buffer#modified;
+          button#misc#set_state `NORMAL;
+        end;
+        let button = find_custom_button `SAVE_ALL in
+        Opt.may button begin fun button ->
+          button#misc#set_sensitive exists_unsaved;
+          button#misc#set_state `NORMAL;
+        end
       end;
     in
     let update_toolbar_undo () =
@@ -864,7 +935,6 @@ object (self)
     let roots = List.map Filename.dirname project_history.File_history.content in
     Quick_file_chooser.init ~roots ~filter:Dialog_find_file.filter;
     (** Geometry settings *)
-    let screen = window#screen in
     let height = ref 700 in
     let width = ref 1052 in
     let pos_x = ref None in
@@ -892,12 +962,14 @@ object (self)
     self#set_tabbar_visible !is_tabbar_visible;
     self#set_outline_visible !is_outline_visible;
     window#resize ~width:!width ~height:!height;
-    window#show();
     Gmisclib.Idle.add ~prio:300 begin fun () ->
       Messages.vmessages#set_position (Preferences.preferences#get.Preferences.pref_vmessages_height);
     end;
     Gmisclib.Idle.add ~prio:300 (fun () -> Messages.hmessages#set_position (Preferences.preferences#get.Preferences.pref_hmessages_width));
     ignore (window#event#connect#after#delete ~callback:(fun _ -> self#exit editor (); true));
+    button_menu_exit#connect#clicked ~callback:(fun () -> self#exit editor ()) |> ignore;
+    button_menu_reset#connect#clicked ~callback:(fun () -> self#set_maximized_view `NONE) |> ignore;
+    button_menu_iconify#connect#clicked ~callback:window#iconify |> ignore;
     (*  *)
     Ocaml_text.create_shell := self#shell;
     (* Load custom templates *)
@@ -906,35 +978,38 @@ object (self)
       with Templ.Error (msg, details) ->
         (Dialog.message ~title:"Warning" ~message:(sprintf "%s\n\n\"%s\"" msg details) `WARNING);
     end;
-    (* Focus on active text view *)
-    Gaux.may (editor#get_page `ACTIVE) ~f:(fun page -> page#view#misc#grab_focus());
     (*  *)
     self#set_geometry();
     window#add_accel_group accel_group;
 
-  method connect = new signals ~switch_project ~menubar_visibility_changed ~toolbar_visibility_changed
+  method connect = new signals ~startup ~switch_project ~menubar_visibility_changed ~toolbar_visibility_changed
     ~tabbar_visibility_changed ~outline_visibility_changed
     ~vmessages_visibility_changed ~hvmessages_visibility_changed
     ~project_history_changed
 
+  initializer
+    self#connect#startup ~callback:self#init |> ignore;
+
 end
 
-and switch_project () = object (self) inherit [unit] signal () as super end
-and menubar_visibility_changed () = object (self) inherit [bool] signal () as super end
-and toolbar_visibility_changed () = object (self) inherit [bool] signal () as super end
-and tabbar_visibility_changed () = object (self) inherit [bool] signal () as super end
-and outline_visibility_changed () = object (self) inherit [bool] signal () as super end
-and vmessages_visibility_changed () = object (self) inherit [bool] signal () as super end
-and hvmessages_visibility_changed () = object (self) inherit [bool] signal () as super end
-and project_history_changed () = object (self) inherit [File_history.t] signal () as super end
-and signals ~switch_project ~menubar_visibility_changed ~toolbar_visibility_changed
+and startup () = object inherit [unit] signal () end
+and switch_project () = object inherit [unit] signal () end
+and menubar_visibility_changed () = object inherit [bool] signal () end
+and toolbar_visibility_changed () = object inherit [bool] signal () end
+and tabbar_visibility_changed () = object inherit [bool] signal () end
+and outline_visibility_changed () = object inherit [bool] signal () end
+and vmessages_visibility_changed () = object inherit [bool] signal () end
+and hvmessages_visibility_changed () = object inherit [bool] signal () end
+and project_history_changed () = object inherit [File_history.t] signal () end
+and signals ~startup ~switch_project ~menubar_visibility_changed ~toolbar_visibility_changed
   ~tabbar_visibility_changed ~outline_visibility_changed
   ~vmessages_visibility_changed ~hvmessages_visibility_changed
   ~project_history_changed =
-object (self)
-  inherit ml_signals [switch_project#disconnect; menubar_visibility_changed#disconnect;
+object
+  inherit ml_signals [startup#disconnect; switch_project#disconnect; menubar_visibility_changed#disconnect;
     toolbar_visibility_changed#disconnect; tabbar_visibility_changed#disconnect;
     vmessages_visibility_changed#disconnect; project_history_changed#disconnect ]
+  method startup = startup#connect ~after
   method switch_project = switch_project#connect ~after
   method menubar_visibility_changed = menubar_visibility_changed#connect ~after
   method toolbar_visibility_changed = toolbar_visibility_changed#connect ~after
@@ -945,24 +1020,36 @@ object (self)
   method project_history_changed = project_history_changed#connect ~after
 end
 
-(** browser *)
-let browser = begin
-  Project_xml.init();
-  Sys.chdir (Filename.dirname Sys.executable_name);
-  (*GtkMain.Main.disable_setlocale();*)
-  (*Unix.putenv "LANGUAGE" "C";*)
-  (*Unix.putenv "GTK_SETLOCALE" "0";*)
-  (*let locale = Glib.Main.setlocale `ALL (Some "C") in*)
-  let locale = GtkMain.Main.init ~setlocale:false () in
-  let window = GWindow.window
-    ~title:About.program_name
-    ~icon:Icons.oe
-    ~type_hint:`NORMAL
-    ~kind:`TOPLEVEL
-    ~allow_shrink:true
-    ~show:false
-    ()
-  in
-  Gtk_theme.set_theme ~context:window#misc#pango_context ();
-  new browser window
-end
+let browser = ref None
+
+(** create *)
+let create () =
+  let widget = new browser () in
+  browser := Some widget;
+  widget
+
+(** splashscreen *)
+let splashscreen () =
+  let pref = Preferences.preferences#get in
+  if pref.Preferences.pref_general_splashscreen_enabled then begin
+    let decorated = false && Sys.win32 in
+    let pixbuf = GdkPixbuf.from_file (App_config.application_icons // "logo.png") in
+    let image = GMisc.image ~pixbuf () in
+    let window = GWindow.window
+        ~title:About.program_name
+        ~type_hint:(if Sys.win32 then `SPLASHSCREEN else `MENU)
+        ~position:`CENTER_ALWAYS
+        ~border_width:(if decorated then 0 else 1)
+        ~focus_on_map:true
+        ~decorated
+        ~resizable:false
+        ~urgency_hint:false
+        ~show:false ()
+    in
+    window#misc#modify_bg [`NORMAL, `NAME (if decorated then "#ffffff" else "#c0c0c0")];
+    window#add image#coerce;
+    window#set_skip_pager_hint true;
+    window#set_skip_taskbar_hint true;
+    Some window
+  end else None
+

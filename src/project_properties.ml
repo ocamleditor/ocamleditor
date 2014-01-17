@@ -194,10 +194,13 @@ class widget ~editor ?(callback=ignore) ~project ?page_num ?packing ?show () =
   let _ = button_help#connect#clicked ~callback:begin fun () ->
     let cmd = sprintf "\"%s\" --help" Oe_config.oebuild_command in
     let text = Cmd.expand ~trim:false cmd in
-    let window = GWindow.message_dialog ~title:cmd ~position:`CENTER ~message_type:`INFO
-      ~buttons:GWindow.Buttons.ok () in
+    let window = GWindow.dialog ~title:cmd ~position:`CENTER () in
+    window#add_button_stock `OK `OK;
+    window#set_border_width 5;
     let label = GMisc.label ~text ~packing:window#vbox#add () in
-    label#misc#modify_font_by_name "monospace";
+    let fd = Gtk_util.increase_font_size ~increment:(-2) label#coerce in
+    Pango.Font.set_family fd "monospace";
+    label#misc#modify_font fd;
     match window#run () with _ -> window#destroy()
   end in
 object (self)

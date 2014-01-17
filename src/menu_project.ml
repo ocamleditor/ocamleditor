@@ -204,12 +204,7 @@ let project ~browser ~group ~flags items =
   (** Clean Project *)
   let project_clean = GMenu.image_menu_item ~label:"Clean Project" ~packing:menu#add () in
   project_clean#add_accelerator ~group ~modi:[`CONTROL; `MOD1] GdkKeysyms._F9 ~flags;
-  ignore (project_clean#connect#activate ~callback:begin fun () ->
-    browser#with_current_project (fun project ->
-      browser#with_default_target (fun target ->
-        ignore (Task_console.exec ~editor `CLEANALL target);
-        Project.clean_tmp project));
-  end);
+  ignore (project_clean#connect#activate ~callback:browser#project_clean);
   let sep1 = GMenu.separator_item ~packing:menu#add () in
   (** Compile file *)
   let project_comp_file = GMenu.image_menu_item ~label:"Compile file" ~packing:menu#add () in
@@ -275,5 +270,5 @@ let project ~browser ~group ~flags items =
     ~group
     ~flags
     editor browser));
-  project
+  project, menu
 

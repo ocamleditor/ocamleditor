@@ -62,7 +62,7 @@ object (self)
         let row = model#append () in
         model#set ~row ~column:col_name (sprintf
           "<span size='small' color='%s'>%s</span>\n<span>%s</span>"
-            Oe_config.outline_type_color
+            Oe_config.module_browser_secondary_title_color
             (Glib.Markup.escape_text tg.name)
             (Glib.Markup.escape_text task.et_name));
         model#set ~row ~column:col_descr (sprintf "<tt>%s</tt>" (Glib.Markup.escape_text (self#string_of_task task)));

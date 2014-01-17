@@ -32,7 +32,7 @@ style \"s1\" {
   GtkTextView::cursor_aspect_ratio = %.1f
 }
 class \"GtkTextView\" style \"s1\"
-" Oe_config.cursor_aspect_ratio;
+" pref.Preferences.pref_editor_cursor_aspect_ratio;
   let above, below = pref.Preferences.pref_editor_pixels_lines in
   view#set_pixels_above_lines above;
   view#set_pixels_below_lines below;

@@ -21,10 +21,10 @@
 *)
 
 
-class menu_tool_button ~(toolbar:GButton.toolbar) ?homogeneous ?stock ?(label="") ?packing () =
+class menu_tool_button ~(toolbar:GButton.toolbar) ?homogeneous ?stock ?(label="") ?spacing ?packing () =
   let tool_item = GButton.tool_item ?homogeneous ?packing () in
 object
-  inherit Button_menu.button_menu ~label ?stock ~relief:`NONE ~packing:tool_item#add () as super
+  inherit Button_menu.button_menu ~label ?stock ~relief:`NONE ?spacing ~packing:tool_item#add () as super
 
   initializer
     if (toolbar#style = `ICONS || toolbar#style = `BOTH_HORIZ) && stock <> None then begin

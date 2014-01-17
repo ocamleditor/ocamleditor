@@ -161,7 +161,8 @@ let create ~editor ~page () =
       let y = int_of_float (GdkEvent.Button.y ev) in
       let x, y = page#view#window_to_buffer_coords ~tag:`TEXT ~x ~y in
       let where = page#view#get_iter_at_location ~x ~y in
-      page#buffer#place_cursor ~where;
+      let s1, s2 = page#view#buffer#selection_bounds in
+      if where#compare s1 <= 0 || where#compare s2 >= 0 then page#buffer#place_cursor ~where;
       if x < page#view#gutter.Gutter.size - page#view#gutter.Gutter.fold_size then begin
         (*  *)
       end else (ignore ((callback ev)));

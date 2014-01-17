@@ -36,7 +36,7 @@ let about editor () =
       ~copyright:About.copyright
       ~logo:Icons.logo
       (*~website:About.website*)
-      ~comments:(sprintf "Build %s" About.build_id)
+      ~comments:(sprintf "Build id: %s" About.build_id)
       ~license:"OCamlEditor is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
 the Free Software Foundation, either version 3 of the License, or
