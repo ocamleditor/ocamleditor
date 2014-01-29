@@ -214,9 +214,11 @@ let main () =
                   | Built_successfully, deps ->
                     begin
                       match !install_flag with
-                        | Some _ when not !serial -> failwith "-install is accepted only with -serial"
-                        | Some path -> install ~compilation ~outname ~outkind:!outkind ~deps ~path
-                                         ~ccomp_type:(Ocaml_config.can_compile_native ());
+                        (*| Some _ when not !serial -> failwith "-install is accepted only with -serial"*)
+                        | Some path ->
+                          serial := true;
+                          install ~compilation ~outname ~outkind:!outkind ~deps ~path
+                            ~ccomp_type:(Ocaml_config.can_compile_native ());
                         | _ -> ()
                     end;
                     last_outname := Some outname;

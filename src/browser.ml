@@ -1032,7 +1032,7 @@ let create () =
 let splashscreen () =
   let pref = Preferences.preferences#get in
   if pref.Preferences.pref_general_splashscreen_enabled then begin
-    let decorated = false && Sys.win32 in
+    let decorated = (*false && *)Sys.win32 in
     let pixbuf = GdkPixbuf.from_file (App_config.application_icons // "logo.png") in
     let image = GMisc.image ~pixbuf () in
     let window = GWindow.window
