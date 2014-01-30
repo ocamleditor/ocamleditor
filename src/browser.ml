@@ -83,7 +83,7 @@ class browser () =
 
   let hbox_menu_title = GPack.hbox ~packing:menubarbox#pack ~show:false () in
   (*let _ = GMisc.separator `VERTICAL ~packing:hbox_menu_title#pack () in*)
-  let window_title_menu_label = GMisc.label ~selectable:false ~markup:"" ~xalign:1.0 ~xpad:5 ~packing:hbox_menu_title#pack () in
+  let window_title_menu_label = GMisc.label (*~ellipsize:`MIDDLE ~width:300*) ~selectable:false ~markup:"" ~xalign:1.0 ~xpad:5 ~packing:hbox_menu_title#pack () in
   (*let _ = GMisc.separator `VERTICAL ~packing:hbox_menu_title#pack () in*)
 
   let vbox_menu_buttons = GPack.vbox ~border_width:0 ~packing:menubarbox#pack ~show:false () in
@@ -204,7 +204,7 @@ object (self)
     Sys.chdir (proj.root // Project.src);
     window#set_title (Convert.to_utf8 proj.name);
     (File_history.add project_history) filename;
-    (*crono ~label:"Symbol.Cache.load" (fun () ->*) Symbol.Cache.load ~project:proj;
+    Symbol.Cache.load ~project:proj;
     Annotation.preload ~project:proj;
     Gmisclib.Idle.add ~prio:300(*crono ~label:"Mbrowser_compl.create"*) (Mbrowser_compl.create ~project:proj);
     Autosave.recover ();
@@ -396,17 +396,17 @@ object (self)
       menubar_visible editor#show_tabs toolbar_visible outline_visible;
 
   method set_title ed =
-    let filename =
+    let filename, modified =
       match ed#get_page `ACTIVE with
-        | None -> ""
-        | Some page -> page#get_title
+        | None -> "", false
+        | Some page -> page#get_title, page#buffer#modified
     in
-    let text =
-      (Printf.sprintf "%s • %s"
-        (match self#current_project#get with Some p -> p.Prj.name | _ -> "")
-        filename
-      ) in
-    window_title_menu_label#set_label (sprintf "<b>%s</b>" text);
+    let projectname = match self#current_project#get with Some p -> p.Prj.name | _ -> "" in
+    let text = Printf.sprintf "%s • %s" projectname filename in
+    let color = if modified then "red" else "blue"  in
+    window_title_menu_label#set_label
+      (sprintf "<span weight='bold' size='large'>%s  •  </span><span size='large'>%s · </span><span weight='bold' size='large' color='%s'>%s</span>"
+         projectname (Filename.basename (Filename.dirname filename)) color (Filename.basename filename));
     window#set_title text
 
   method set_maximized_view (view : [ `FIRST | `NONE | `SECOND ]) =
@@ -875,19 +875,25 @@ object (self)
     paned#pack1 ~resize:true ~shrink:true editor#coerce;
     let update_toolbar_save () =
       let exists_unsaved = List.exists (fun p -> p#view#buffer#modified) editor#pages in
-      toolbar#tool_save_all#misc#set_sensitive exists_unsaved;
+      Gmisclib.Idle.add ~prio:300 (fun () -> toolbar#tool_save_all#misc#set_sensitive exists_unsaved);
       Gaux.may (editor#get_page `ACTIVE) ~f:begin fun page ->
-        toolbar#tool_save#misc#set_sensitive page#buffer#modified;
-        let button = find_custom_button `SAVE in
-        Opt.may button begin fun button ->
-          button#misc#set_sensitive page#buffer#modified;
-          button#misc#set_state `NORMAL;
+        Gmisclib.Idle.add ~prio:300 (fun () ->
+            toolbar#tool_save#misc#set_sensitive page#buffer#modified);
+        Gmisclib.Idle.add ~prio:300 begin fun () ->
+          let button = find_custom_button `SAVE in
+          Opt.may button begin fun button ->
+            button#misc#set_sensitive page#buffer#modified;
+            button#misc#set_state `NORMAL;
+          end;
         end;
-        let button = find_custom_button `SAVE_ALL in
-        Opt.may button begin fun button ->
-          button#misc#set_sensitive exists_unsaved;
-          button#misc#set_state `NORMAL;
-        end
+        Gmisclib.Idle.add ~prio:300 begin fun () ->
+          let button = find_custom_button `SAVE_ALL in
+          Opt.may button begin fun button ->
+            button#misc#set_sensitive exists_unsaved;
+            button#misc#set_state `NORMAL;
+          end;
+        end;
+        Gmisclib.Idle.add ~prio:300 (fun () -> self#set_title editor)
       end;
     in
     let update_toolbar_undo () =

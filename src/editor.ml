@@ -30,7 +30,7 @@ let set_menu_item_nav_history_sensitive = ref (fun () -> failwith "set_menu_item
 (** Editor *)
 class editor () =
   let hpaned = GPack.paned `HORIZONTAL () in
-  let notebook = GPack.notebook ~tab_border:0 ~show_border:false
+  let notebook = GPack.notebook ~tab_border:0 ~show_border:true
     ~packing:(hpaned#pack2 ~resize:true ~shrink:true) ~scrollable:true () in
   let _ = hpaned#set_position Preferences.preferences#get.Preferences.pref_outline_width in
   let incremental_search = new Incremental_search.incremental () in
@@ -576,6 +576,7 @@ object (self)
                     image#set_pixbuf Icons.button_close_b
                   end else begin
                     page#status_modified_icon#set_pixbuf Icons.empty_14;
+                    page#status_modified_icon#misc#set_tooltip_text "";
                     image#set_pixbuf Icons.button_close
                   end;
                   modified_changed#call();
