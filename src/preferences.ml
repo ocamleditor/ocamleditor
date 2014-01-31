@@ -288,7 +288,7 @@ let create_defaults () = {
   pref_remember_window_geometry     = true;
   pref_detach_message_panes_separately = false;
   pref_geometry_delayed             = false;
-  pref_build_parallel               = None;
+  pref_build_parallel               = Some 0;
   pref_build_verbosity              = 2;
 }
 
