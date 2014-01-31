@@ -99,12 +99,12 @@ class popup ?(position=(`SOUTH:[`NORTH | `SOUTH | `POINTER])) ?border_width ?(de
   let vbox = GPack.vbox ?border_width ~packing:ebox#add () in
   (*let _ = popup#misc#modify_bg [`NORMAL, `COLOR (ebox#misc#style#bg `ACTIVE)] in *)
   let _ = popup#misc#modify_bg [`NORMAL, `COLOR (ebox#misc#style#base `ACTIVE)] in
-  let rec find_pos dir widget =
+  (*let rec find_pos dir widget =
     match widget#misc#parent with
       | Some p  ->
         (match dir with `X -> widget#misc#allocation.Gtk.x | `Y ->  widget#misc#allocation.Gtk.y) + find_pos dir p
       | _ -> 0
-  in
+  in*)
 object (self)
   val mutable on_popdown = fun () -> ()
   initializer
@@ -124,20 +124,21 @@ object (self)
 
   method present () =
     popup#present();
-    let x0, y0 = Gdk.Window.get_pointer_location (Gdk.Window.root_parent ()) in
+    let xP0, yP0 = Gdk.Window.get_pointer_location (Gdk.Window.root_parent ()) in
     let x, y = match position with
-      | `POINTER -> x0, y0
+      | `POINTER -> xP0, yP0
       | _ ->
-        let x, y = widget#misc#toplevel#misc#pointer in
+        let xP, yP = Gdk.Window.get_pointer_location widget#misc#window in
+        let xW = xP0 - xP in
+        let yW = yP0 - yP in
         let alloc = widget#misc#allocation in
-        let alloc_x = find_pos `X widget in
-        let alloc_y = find_pos `Y widget in
         let alloc_popup = popup#misc#allocation in
-        let x = x0 - x + alloc_x in
+        let x = xW + alloc.Gtk.x in
+        let y = yW + alloc.Gtk.y in
         let y =
           if position = `SOUTH
-          then y0 - y + alloc_y + alloc.Gtk.height
-          else y0 - y + alloc_y - alloc_popup.Gtk.height
+          then y + alloc.Gtk.height
+          else y - alloc_popup.Gtk.height
         in
         let x, y =
           (if x + alloc_popup.Gtk.width > (Gdk.Screen.width()) then (Gdk.Screen.width() - alloc_popup.Gtk.width - 3) else x),
