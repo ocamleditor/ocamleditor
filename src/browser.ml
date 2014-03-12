@@ -63,8 +63,13 @@ class browser () =
   let pixbuf = GdkPixbuf.create ~width ~height ~has_alpha:true () in
   let _ = GdkPixbuf.saturate_and_pixelate ~saturation:0.0 ~pixelate:true ~dest:pixbuf Icons.oe in
   let window_title_menu_icon = GBin.event_box ~packing:menubarbox#pack ~show:false () in
-  let _ = GMisc.image ~pixbuf ~packing:window_title_menu_icon#add () in
+  let icon = GMisc.image ~pixbuf ~packing:window_title_menu_icon#add () in
   let _ = window_title_menu_icon#misc#set_property "visible-window" (`BOOL false) in
+  let _ = window_title_menu_icon#event#connect#leave_notify ~callback:begin fun _ ->
+      icon#set_pixbuf pixbuf;
+      false
+    end
+  in
   (* Menubar *)
   let menubar = GMenu.menu_bar ~border_width:0 ~packing:menubarbox#add () in
   let cursor = Gdk.Cursor.create `ARROW in
@@ -84,6 +89,7 @@ class browser () =
   let hbox_menu_title = GPack.hbox ~packing:menubarbox#pack ~show:false () in
   (*let _ = GMisc.separator `VERTICAL ~packing:hbox_menu_title#pack () in*)
   let window_title_menu_label = GMisc.label (*~ellipsize:`MIDDLE ~width:300*) ~selectable:false ~markup:"" ~xalign:1.0 ~xpad:5 ~packing:hbox_menu_title#pack () in
+  let _ = window_title_menu_label#misc#set_has_tooltip true in
   (*let _ = GMisc.separator `VERTICAL ~packing:hbox_menu_title#pack () in*)
 
   let vbox_menu_buttons = GPack.vbox ~border_width:0 ~packing:menubarbox#pack ~show:false () in
@@ -402,12 +408,27 @@ object (self)
         | Some page -> page#get_title, page#buffer#modified
     in
     let projectname = match self#current_project#get with Some p -> p.Prj.name | _ -> "" in
-    let text = Printf.sprintf "%s • %s" projectname filename in
-    let color = if modified then "red" else "blue"  in
-    window_title_menu_label#set_label
-      (sprintf "<span weight='bold' size='large'>%s  •  </span><span size='large'>%s · </span><span weight='bold' size='large' color='%s'>%s</span>"
-         projectname (Filename.basename (Filename.dirname filename)) color (Filename.basename filename));
-    window#set_title text
+    window#set_title (String.concat " • " [projectname; filename]);
+    if window_title_menu_label#misc#get_flag `VISIBLE then
+      match current_project#get with
+        | Some proj ->
+          begin
+            match proj.Prj.in_source_path filename with
+              | Some relname ->
+                let color = if modified then "red" else "blue"  in
+                let dir = Filename.dirname relname in
+                let dir = if dir = "." then "" else sprintf "<span size='large'>%s · </span>" dir in
+                window_title_menu_label#set_label
+                  (sprintf
+                     "<span weight='bold' size='large'>%s  •  </span><span size='large'>%s</span><span weight='bold' size='large' color='%s'>%s</span>"
+                     projectname dir color (Filename.basename relname));
+              | _ ->
+                window_title_menu_label#set_label
+                  (sprintf "<span weight='bold' size='large'>%s  •  </span>%s" projectname filename);
+          end;
+        | _ -> window_title_menu_label#set_label filename
+
+  val mutable busy = false
 
   method set_maximized_view (view : [ `FIRST | `NONE | `SECOND ]) =
     let mb = menubar_visible in

@@ -183,15 +183,15 @@ let oeproc_command =
     find_best ~param:"" commands
   else "unused"
 
-let get_version command =
+let get_version ?(ok_status=0) command =
   try
     let redirect_stderr = if Sys.os_type = "Win32" then "1>NUL 2>NUL" else "1>/dev/null 2>/dev/null" in
     let cmd = sprintf "%s %s" command redirect_stderr in
-    let status_not_found = if Sys.os_type = "Win32" then [1; 9009] else [127] in
+    let status_not_found = if Sys.win32 then [1; 9009] else [127] in
     let status = Sys.command cmd in
-    (*Printf.printf "%s -- %d\n%!" cmd status;*)
-    if status = 0 || not (List.mem status status_not_found) then
-      let redirect_stderr = if Sys.os_type = "Win32" then " 2>&1" else " 2>&1" in
+    (*Printf.printf "%s -- %d -- %b\n%!" cmd status (status = ok_status);*)
+    if status = ok_status || not (List.mem status status_not_found) then
+      let redirect_stderr = if Sys.win32 then " 2>&1" else " 2>&1" in
       let cmd = sprintf "%s %s" command redirect_stderr in
       (match kprintf Cmd.exec_lines "%s %s" cmd redirect_stderr with ver :: _ -> Some ver | _ -> None)
     else failwith cmd
@@ -201,6 +201,8 @@ let dot_version = get_version "dot -V"
 let ocp_indent_version = get_version "ocp-indent --version"
 let plink_version = get_version "plink -V" (* exits with status = 1 *)
 let xdg_open_version = get_version "xdg-open --version"
+let git_version = get_version ~ok_status:1 "git --version"
+
 
 (** GTK config *)
 (* Adjustments according to the GTK version *)

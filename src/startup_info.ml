@@ -48,6 +48,7 @@ let print () = if true || App_config.application_debug then begin
    ]) @ [
     "dot", (Opt.default Config.dot_version "<Not Found>");
     "ocp-indent", (Opt.default Config.ocp_indent_version "<Not Found>");
+    "git", (Opt.default Config.git_version "<Not Found>");
     "GTK Version", (sprintf "%d.%d.%d" a b c);
     "Locale", (Opt.default (App_config.get_locale ()) "<Not Found>");
     "Charset", (let x, charset = Glib.Convert.get_charset () in sprintf "%b, %s" x charset);
