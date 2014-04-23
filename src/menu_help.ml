@@ -57,7 +57,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>."
     label#misc#modify_fg [`NORMAL, `NAME color];
     label#misc#modify_font_by_name "Sans 7";
   in
-  let hbox = GPack.hbox ~packing:vbox#pack () in
+  let hbox = GPack.hbox ~packing:vbox#pack ~show:false () in
   (* Link website *)
   let link_button = GButton.button ~relief:`NONE ~packing:hbox#add () in
   let label = GMisc.label ~text:(sprintf "Visit the %s website" About.program_name) ~packing:link_button#add () in

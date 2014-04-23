@@ -23,7 +23,7 @@
 
 let program_name = "OCamlEditor"
 let version = "1.11.0"
-let copyright = "Copyright © 2010-2013 Francesco Tovagliari"
+let copyright = "Copyright © 2010-2014 Francesco Tovagliari"
 let website_address = "ocamleditor.forge.ocamlcore.org"
 let website = "http://" ^ website_address ^ "/"
 let project_page = "https://github.com/ftovagliari/ocamleditor"
