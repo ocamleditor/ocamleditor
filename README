@@ -99,6 +99,9 @@ DEVELOPMENT
 
 INSTALLING Xml-Light WITH Findlib
 
+  Since the Xml-Light distribution does not include a Findlib installer,
+  you can do it yourself by following these notes:
+
   META
     version="2.2"
     description="Minimal Xml parser and printer for OCaml."
