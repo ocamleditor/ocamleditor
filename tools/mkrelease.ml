@@ -1,7 +1,7 @@
 (*
 
   OCamlEditor
-  Copyright (C) 2010-2012 Francesco Tovagliari
+  Copyright (C) 2010-2014 Francesco Tovagliari
 
   This file is part of OCamlEditor.
 
@@ -27,28 +27,35 @@
 open Printf
 
 let mkrelease () =
+  let redirect_stdout = if Sys.win32 then " 1>NUL" else " 1>/dev/null" in
+  let redirect_stderr = if Sys.win32 then " 2>NUL" else " 2>/dev/null" in
   if is_win32 then begin
     pushd "..";
-    run "ocaml tools/prepare_build.ml -generate-oebuild-script";
-    run "ocaml build.ml distclean";
-    popd();
-    Sys.chdir "..";
+    kprintf run "ocaml build.ml -verbose 0 build oebuild oeproc";
+    kprintf run "ocaml tools/prepare_build.ml -generate-oebuild-script %s" redirect_stdout;
+    kprintf run "ocaml build.ml distclean %s" redirect_stdout;
     let name = Filename.basename (Sys.getcwd ()) in
     let version = match get_lines_from_file ~filename:"VERSION" [1] with (_, x) :: [] -> x | _ -> assert false in
-    let package = sprintf "%s-%s" name version in
-    Sys.chdir "..";
-    kprintf remove_file "%s.tar.gz" package;
-    kprintf run "mklink /d %s %s" package name;
-    kprintf run "tar --mode=755 -cf %s.tar %s/src %s/icons %s/tools" package package package package;
-    kprintf run "tar --mode=655 -rf %s.tar %s/README %s/NEWS %s/COPYING %s/%s.project %s/ocamleditor.nsi %s/build.ml %s/header %s/VERSION"
-      package package package package package name package package package package;
-    kprintf run "gzip -c %s.tar > %s.tar.gz" package package;
-    kprintf Sys.remove "%s.tar" package;
-    kprintf run "rmdir %s" package;
-    kprintf Sys.chdir "%s/src" name;
+    let package = if Str.last_chars name (String.length version) = version then name else sprintf "%s-%s" name version in
+    let path = Filename.temp_dir_name // package in
     pushd "..";
-    run "ocaml build.ml build ocamleditor";
-    popd()
+    let suffix = ".tar.gz" in
+    kprintf remove_file "%s%s" package suffix;
+    kprintf run "mkdir %s" path;
+    kprintf run "cp -r %s/src %s/icons %s/tools %s" name name name path;
+    kprintf run "cp %s/README %s/NEWS %s/COPYING %s/%s.project %s/ocamleditor.nsi %s/build.ml %s/header %s/VERSION %s"
+      name name name name name name name name name path;
+    let cwd = Sys.getcwd() in
+    pushd (Filename.dirname path);
+    kprintf run "tar -cf %s.tar %s" (cwd // package) package;
+    popd();
+    kprintf run "gzip -c %s.tar > %s%s" package package suffix;
+    kprintf Sys.remove "%s.tar" package;
+    kprintf run "%s %s" rmr path;
+    let outname = sprintf "%s%s\n%!" ((Sys.getcwd()) // package) suffix in
+    popd();
+    kprintf run "ocaml build.ml -verbose 0 build ocamleditor %s" redirect_stdout;
+    Printf.printf "\n%s\n%!" outname;
   end;;
 
 let _ = main ~default_target:mkrelease ~options:[] ()

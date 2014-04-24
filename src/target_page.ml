@@ -103,6 +103,7 @@ class view ~project ~target_list ?packing () =
     chooser#set_select_multiple true;
     chooser#add_filter filter_ml;
     chooser#set_filter filter_ml;
+    chooser#set_current_folder (Project.path_src project) |> ignore;
     create_button_filter_topmods chooser;
     match chooser#run () with
       | `OK ->
@@ -153,6 +154,7 @@ class view ~project ~target_list ?packing () =
     chooser#set_select_multiple false;
     chooser#add_filter filter_ml;
     chooser#set_filter filter_ml;
+    chooser#set_current_folder (Project.path_src project) |> ignore;
     create_button_filter_topmods chooser;
     match chooser#run () with
       | `OK ->

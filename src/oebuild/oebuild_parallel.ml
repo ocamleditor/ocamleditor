@@ -77,7 +77,7 @@ let print_results err_outputs ok_outputs =
     if has_out then printf "%s\n%s\n%s%!" cmd (Buffer.contents process_output.out) sep;
     if has_err then begin
       (*printf "-----\n%s\n-----\n%!" cmd;*)
-      eprintf "%s\n%s%!" (Buffer.contents process_output.err) sep;
+      if Buffer.length process_output.err > 0 then eprintf "%s\n%s%!" (Buffer.contents process_output.err) sep;
     end;
   end err_outputs;
   flush_all()

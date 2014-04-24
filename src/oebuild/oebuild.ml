@@ -488,7 +488,7 @@ let build ~compilation ~package ~includes ~libs ~other_mods ~outkind ~compile_on
             Buffer.clear compiler_output;
             try_link()
           end else begin
-            eprintf "%s\n%!" (Buffer.contents compiler_output);
+            if Buffer.length compiler_output > 0 then eprintf "%s\n%!" (Buffer.contents compiler_output);
             link_exit
           end
         in
