@@ -22,13 +22,13 @@
 
 
 open Project
-open Prj
 open Printf
 open Miscellanea
 open Oe
 
 (** write *)
 let write proj =
+  let open Prj in
   Xml.Element ("project", [], [
     Xml.Element ("ocaml_home", [], [Xml.PCData proj.ocaml_home]);
     Xml.Element ("ocamllib", [], [Xml.PCData
@@ -49,7 +49,8 @@ let write proj =
           "name", t.Target.name;
           "default", string_of_bool t.Target.default;
           "id", string_of_int t.Target.id;
-           "sub_targets", (String.concat "," (List.map (fun tg -> string_of_int tg.Target.id) t.Target.sub_targets)) ;
+          "sub_targets", (String.concat "," (List.map (fun tg -> string_of_int tg.Target.id) t.Target.sub_targets));
+          "is_fl_package", string_of_bool t.Target.is_fl_package;
           ], [
         Xml.Element ("descr", [], [Xml.PCData (t.Target.descr)]);
         Xml.Element ("byt", [], [Xml.PCData (string_of_bool t.Target.byt)]);
@@ -166,6 +167,7 @@ let fattrib node name f default =
 
 (** xml_bs_targets *)
 let xml_bs_targets proj node =
+  let open Prj in
   List.rev (Xml.fold begin fun acc target_node ->
     try
       {Build_script.
@@ -177,6 +179,7 @@ let xml_bs_targets proj node =
 
 (** xml_bs_args *)
 let xml_bs_args proj node =
+  let open Prj in
   let count_bsa_id = ref 0 in
   Xml.map begin fun arg ->
     let bsa_doc     = ref "" in
@@ -227,6 +230,7 @@ let xml_bs_args proj node =
 
 (** xml_commands *)
 let xml_commands proj node =
+  let open Prj in
   List.rev (Xml.fold begin fun acc target_node ->
     try
       {Build_script.
@@ -241,6 +245,7 @@ let xml_commands proj node =
 
 (** read *)
 let read filename =
+  let open Prj in
   let proj = create ~filename () in
   let parser = XmlParser.make () in
   let xml = XmlParser.parse parser (XmlParser.SFile filename) in
@@ -317,21 +322,22 @@ let read filename =
             let runtime_args = ref (false, "") in
             let create_default_runtime = ref false in
             target.id <- attrib tnode "id" int_of_string 0;
-            target.name <- attrib tnode "name" (fun x -> x) "";
+            target.Target.name <- attrib tnode "name" (fun x -> x) "";
             target.default <- attrib tnode "default" bool_of_string false;
             sub_targets := (target.id, List.map int_of_string (attrib tnode "sub_targets" (Str.split (Str.regexp "[;, ]+")) [])) :: !sub_targets;
+            target.is_fl_package <- attrib tnode "is_fl_package" bool_of_string false;
             Xml.iter begin fun tp ->
               match Xml.tag tp with
                 | "descr" -> target.descr <- value tp
                 | "id" -> target.id <- int_of_string (value tp) (* Backward compatibility with 1.7.0 *)
-                | "name" -> target.name <- value tp (* Backward compatibility with 1.7.0 *)
+                | "name" -> target.Target.name <- value tp (* Backward compatibility with 1.7.0 *)
                 | "default" -> target.default <- bool_of_string (value tp) (* Backward compatibility with 1.7.0 *)
                 | "byt" -> target.byt <- bool_of_string (value tp)
                 | "opt" -> target.opt <- bool_of_string (value tp)
                 | "libs" -> target.libs <- value tp
                 | "other_objects" -> target.other_objects <- value tp
                 | "mods" -> target.other_objects <- value tp (*  *)
-                | "files" -> target.files <- value tp
+                | "files" -> target.Target.files <- value tp
                 | "package" -> target.package <- value tp
                 | "includes" -> target.includes <- value tp
                 | "thread" -> target.thread <- bool_of_string (value tp)
@@ -393,7 +399,7 @@ let read filename =
               proj.executables <- {
                 Rconf.id    = (List.length proj.executables);
                 target_id   = target.id;
-                name        = target.name;
+                name        = target.Target.name;
                 default     = target.default;
                 build_task  = Target.task_of_string target !runtime_build_task;
                 env         = [!runtime_env];
@@ -436,6 +442,7 @@ let read filename =
 
 (** from_local_xml *)
 let from_local_xml proj =
+  let open Prj in
   let filename = Project.filename_local proj in
   let filename = if Sys.file_exists filename then filename else Project.mk_old_filename_local proj in
   if Sys.file_exists filename then begin

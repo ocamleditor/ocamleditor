@@ -53,9 +53,9 @@ let mkrelease () =
     kprintf Sys.remove "%s.tar" package;
     kprintf run "%s %s" rmr path;
     let outname = sprintf "%s%s\n%!" ((Sys.getcwd()) // package) suffix in
+    Printf.printf "\n%s\n%!" outname;
     popd();
     kprintf run "ocaml build.ml -verbose 0 build ocamleditor %s" redirect_stdout;
-    Printf.printf "\n%s\n%!" outname;
   end;;
 
 let _ = main ~default_target:mkrelease ~options:[] ()

@@ -227,8 +227,8 @@ object (self)
     version_entry#set_text project.version;
     home_entry#set_text project.root;
     ignore (chooser#set_current_folder (Filename.dirname project.root));
-    src_entry#set_text (project.root // Project.src);
-    bak_entry#set_text (project.root // Project.bak);
+    src_entry#set_text (project.root // Prj.default_dir_src);
+    bak_entry#set_text (project.root // Prj.default_dir_bak);
     doc_entry#set_text "";
     GtkThread2.async ocaml_home#reset ();
     check_autocomp_enabled#set_active project.autocomp_enabled;

@@ -38,11 +38,12 @@ class view ~project ~target_list ?packing () =
   let xalign = 0.0 in
   let indent = 21 in
   let mainbox = GPack.vbox ~spacing:8 ?packing () in
-  let table = GPack.table ~col_spacings:5 ~row_spacings:3 ~packing:mainbox#pack () in
+  let table = GPack.table ~homogeneous:false ~col_spacings:5 ~row_spacings:3 ~packing:mainbox#pack () in
   let _ = GMisc.label ~text:"Name:" ~xalign:0.0 ~packing:(table#attach ~top:0 ~left:0 ~expand:`NONE) () in
   let entry_name = GEdit.entry ~packing:(table#attach ~top:0 ~left:1 ~expand:`X) () in
+  let check_is_fl_package = GButton.check_button ~label:"Create Findlib package" ~packing:(table#attach ~top:0 ~left:2 ~expand:`NONE) ~show:false () in
   let _ = GMisc.label ~text:"Description:" ~xalign:0.0 ~packing:(table#attach ~top:1 ~left:0 ~expand:`NONE) () in
-  let entry_descr = GEdit.entry ~packing:(table#attach ~top:1 ~left:1 ~expand:`X) () in
+  let entry_descr = GEdit.entry ~packing:(table#attach ~top:1 ~left:1 ~expand:`X ~right:3) () in
   let nb = GPack.notebook ~packing:mainbox#add () in
 
   (** Target Tab *)
@@ -455,7 +456,9 @@ object (self)
         check_thread#misc#set_sensitive (not check_vmthread#active);
       end
     end in
-    ignore (self#connect#changed ~callback:(fun () -> page_changed <- true))
+    ignore (self#connect#changed ~callback:(fun () -> page_changed <- true));
+    ignore (check_is_fl_package#connect#toggled
+      ~callback:(self#update (fun target -> target.is_fl_package <- check_is_fl_package#active)));
 
   method changed = page_changed
   method set_changed x = page_changed <- x
@@ -481,6 +484,7 @@ object (self)
     widget_deps#set tg;
     entry_name#set_text tg.name;
     entry_descr#set_text tg.descr;
+    check_is_fl_package#set_active tg.is_fl_package;
     combo_comp#set_active (match tg.byt, tg.opt with
       | true, false -> 0
       | false, true -> 1

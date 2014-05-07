@@ -153,7 +153,7 @@ let find_dependants =
             let prefix = Filename.chop_extension filename in
             let prefix_mli = prefix ^ ".mli" in
             if List.mem_assoc prefix_mli entries then (dependants := prefix_mli :: !dependants;);
-            let mdep = String.capitalize prefix in
+            let mdep = String.capitalize (Filename.basename prefix) in
             ignore (loop mdep);
           end
         end

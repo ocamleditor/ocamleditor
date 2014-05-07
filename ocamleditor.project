@@ -10,7 +10,7 @@
   <version>1.12.0</version>
   <autocomp enabled="true" delay="0.764" cflags=""/>
   <targets>
-    <target name="common" default="false" id="4" sub_targets="">
+    <target name="common" default="false" id="4" sub_targets="" is_fl_package="false">
       <descr></descr>
       <byt>true</byt>
       <opt>true</opt>
@@ -34,7 +34,7 @@
       <restrictions></restrictions>
       <dependencies></dependencies>
     </target>
-    <target name="icons" default="false" id="10" sub_targets="">
+    <target name="icons" default="false" id="10" sub_targets="" is_fl_package="false">
       <descr></descr>
       <byt>true</byt>
       <opt>true</opt>
@@ -70,7 +70,7 @@
       <restrictions></restrictions>
       <dependencies></dependencies>
     </target>
-    <target name="oebuildlib" default="false" id="7" sub_targets="">
+    <target name="oebuildlib" default="false" id="7" sub_targets="" is_fl_package="false">
       <descr></descr>
       <byt>true</byt>
       <opt>true</opt>
@@ -94,7 +94,7 @@
       <restrictions></restrictions>
       <dependencies>4</dependencies>
     </target>
-    <target name="oebuild" default="false" id="5" sub_targets="">
+    <target name="oebuild" default="false" id="5" sub_targets="" is_fl_package="false">
       <descr></descr>
       <byt>true</byt>
       <opt>true</opt>
@@ -118,7 +118,7 @@
       <restrictions></restrictions>
       <dependencies>7</dependencies>
     </target>
-    <target name="oeproc" default="false" id="6" sub_targets="">
+    <target name="oeproc" default="false" id="6" sub_targets="" is_fl_package="false">
       <descr></descr>
       <byt>true</byt>
       <opt>true</opt>
@@ -142,7 +142,7 @@
       <restrictions>IS_WIN32</restrictions>
       <dependencies></dependencies>
     </target>
-    <target name="gmisclib" default="false" id="8" sub_targets="">
+    <target name="gmisclib" default="false" id="8" sub_targets="" is_fl_package="false">
       <descr>Miscellaneous widgets based on LablGtk2.</descr>
       <byt>true</byt>
       <opt>true</opt>
@@ -166,7 +166,7 @@
       <restrictions></restrictions>
       <dependencies></dependencies>
     </target>
-    <target name="otherwidgets" default="false" id="9" sub_targets="">
+    <target name="otherwidgets" default="false" id="9" sub_targets="" is_fl_package="false">
       <descr></descr>
       <byt>true</byt>
       <opt>true</opt>
@@ -190,7 +190,7 @@
       <restrictions></restrictions>
       <dependencies>8</dependencies>
     </target>
-    <target name="ocamleditor" default="false" id="12" sub_targets="">
+    <target name="ocamleditor" default="false" id="12" sub_targets="" is_fl_package="false">
       <descr></descr>
       <byt>false</byt>
       <opt>true</opt>
@@ -214,7 +214,7 @@
       <restrictions></restrictions>
       <dependencies>14,19,16</dependencies>
     </target>
-    <target name="ocamleditor-bytecode" default="true" id="0" sub_targets="">
+    <target name="ocamleditor-bytecode" default="true" id="0" sub_targets="" is_fl_package="false">
       <descr></descr>
       <byt>true</byt>
       <opt>false</opt>
@@ -238,7 +238,7 @@
       <restrictions></restrictions>
       <dependencies>4,10,7,5,6,8,9,20,17,18</dependencies>
     </target>
-    <target name="ocamleditor-msvc" default="false" id="15" sub_targets="">
+    <target name="ocamleditor-msvc" default="false" id="15" sub_targets="" is_fl_package="false">
       <descr></descr>
       <byt>false</byt>
       <opt>true</opt>
@@ -262,7 +262,7 @@
       <restrictions>IS_WIN32</restrictions>
       <dependencies>14,19,16</dependencies>
     </target>
-    <target name="ocamleditor-native" default="false" id="11" sub_targets="">
+    <target name="ocamleditor-native" default="false" id="11" sub_targets="" is_fl_package="false">
       <descr></descr>
       <byt>false</byt>
       <opt>true</opt>
@@ -286,7 +286,7 @@
       <restrictions></restrictions>
       <dependencies>14,19,16</dependencies>
     </target>
-    <target name="ocamleditor-lib" default="false" id="14" sub_targets="">
+    <target name="ocamleditor-lib" default="false" id="14" sub_targets="" is_fl_package="false">
       <descr></descr>
       <byt>false</byt>
       <opt>true</opt>
@@ -310,7 +310,7 @@
       <restrictions></restrictions>
       <dependencies>4,10,5,6,8,9,20</dependencies>
     </target>
-    <target name="plugin-remote-bytecode" default="false" id="17" sub_targets="">
+    <target name="plugin-remote-bytecode" default="false" id="17" sub_targets="" is_fl_package="false">
       <descr></descr>
       <byt>true</byt>
       <opt>false</opt>
@@ -334,7 +334,7 @@
       <restrictions>HAVE_FL_PKG(curl)</restrictions>
       <dependencies></dependencies>
     </target>
-    <target name="plugin-remote-native" default="false" id="16" sub_targets="">
+    <target name="plugin-remote-native" default="false" id="16" sub_targets="" is_fl_package="false">
       <descr></descr>
       <byt>false</byt>
       <opt>true</opt>
@@ -358,7 +358,7 @@
       <restrictions>HAVE_FL_PKG(curl)</restrictions>
       <dependencies></dependencies>
     </target>
-    <target name="plugin-dotviewer-byetcode" default="false" id="18" sub_targets="">
+    <target name="plugin-dotviewer-byetcode" default="false" id="18" sub_targets="" is_fl_package="false">
       <descr></descr>
       <byt>true</byt>
       <opt>false</opt>
@@ -382,7 +382,7 @@
       <restrictions>HAVE_FL_PKG(lablgtk2.rsvg)</restrictions>
       <dependencies></dependencies>
     </target>
-    <target name="plugin-dotviewer-native" default="false" id="19" sub_targets="">
+    <target name="plugin-dotviewer-native" default="false" id="19" sub_targets="" is_fl_package="false">
       <descr></descr>
       <byt>false</byt>
       <opt>true</opt>
@@ -406,7 +406,7 @@
       <restrictions>HAVE_FL_PKG(lablgtk2.rsvg)</restrictions>
       <dependencies></dependencies>
     </target>
-    <target name="prepare-build" default="false" id="20" sub_targets="">
+    <target name="prepare-build" default="false" id="20" sub_targets="" is_fl_package="false">
       <descr></descr>
       <byt>true</byt>
       <opt>false</opt>
@@ -442,7 +442,7 @@
       <restrictions></restrictions>
       <dependencies></dependencies>
     </target>
-    <target name="tools" default="false" id="13" sub_targets="">
+    <target name="tools" default="false" id="13" sub_targets="" is_fl_package="false">
       <descr></descr>
       <byt>true</byt>
       <opt>false</opt>
@@ -535,7 +535,7 @@
       <restrictions></restrictions>
       <dependencies></dependencies>
     </target>
-    <target name="plugin-test" default="false" id="21" sub_targets="">
+    <target name="plugin-test" default="false" id="21" sub_targets="" is_fl_package="false">
       <descr></descr>
       <byt>false</byt>
       <opt>true</opt>

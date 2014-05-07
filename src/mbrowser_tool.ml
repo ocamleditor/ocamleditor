@@ -546,7 +546,7 @@ object (self)
       let basename = Filename.basename path in
       let kind, basename, add_descr =
         match is_source_path_relaitve path with
-          | Some "" -> Lib, basename, Project.src
+          | Some "" -> Lib, basename, Prj.default_dir_src
           | Some x -> Lib, basename, x
           | _ ->
             begin
@@ -555,7 +555,7 @@ object (self)
                 | Some x -> Lib, basename, sprintf "+%s" x
                 | _ ->
                   Lib, basename,
-                  if Filename.is_implicit path then (Project.src ^ "/" ^ path) else path
+                  if Filename.is_implicit path then (Prj.default_dir_src ^ "/" ^ path) else path
             end
       in
       let row = wlibs#model#append () in

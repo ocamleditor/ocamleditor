@@ -34,21 +34,15 @@ let write_xml = ref (fun _ -> failwith "write_xml")
 let read_xml = ref (fun _ -> failwith "read_xml")
 let from_local_xml : (t -> unit) ref = ref (fun _ -> failwith "from_local_xml")
 
-let extension = ".project"
-let old_extension = ".xml"
-let src = "src"
-let bak = "bak"
-let tmp = ".tmp"
-
-let path_src p = p.root // src
-let path_bak p = p.root // bak
-let path_tmp p = p.root // tmp
+let path_src p = p.root // default_dir_src
+let path_bak p = p.root // default_dir_bak
+let path_tmp p = p.root // default_dir_tmp
 let path_cache p = p.root // ".cache"
 
 
 (** abs_of_tmp *)
 let abs_of_tmp proj filename =
-  match Miscellanea.filename_relative (".." // tmp) filename with
+  match Miscellanea.filename_relative (".." // default_dir_tmp) filename with
     | None -> filename
     | Some relname -> (path_src proj) // relname
 
@@ -104,8 +98,8 @@ let create ~filename () =
     autocomp_cflags    = "";
     autocomp_compiler  = "";
     search_path        = [];
-    in_source_path     = Miscellanea.filename_relative (root // src);
-    source_paths       = (try File_util.readtree (root // src) with Sys_error _ -> []);
+    in_source_path     = Miscellanea.filename_relative (root // default_dir_src);
+    source_paths       = (try File_util.readtree (root // default_dir_src) with Sys_error _ -> []);
     can_compile_native = true;
     symbols            = {
       Oe.syt_table = [];
@@ -145,7 +139,7 @@ let convert_from_utf8 proj text = match proj.encoding with
   | Some to_codeset -> Glib.Convert.convert ~from_codeset:"UTF-8" ~to_codeset text
 
 (** Returns the full filename of the project configuration file. *)
-let filename proj = Filename.concat proj.root (proj.name ^ extension)
+let filename proj = Filename.concat proj.root (proj.name ^ default_extension)
 let mk_old_filename filename = (Filename.chop_extension filename) ^ old_extension
 
 (** Returns the full filename of the project local configuration file. *)
@@ -179,11 +173,11 @@ let get_search_path_i_format proj =
 (** get_search_path_local *)
 let get_search_path_local proj =
   let paths = proj.search_path in
-  (proj.root // src) ::
+  (proj.root // default_dir_src) ::
   Xlist.filter_map begin fun path ->
     if path.[0] = '+' then None
     else if not (Filename.is_relative path) then None
-    else Some (proj.root // src // path)
+    else Some (proj.root // default_dir_src // path)
   end paths;;
 
 (** Returns the {i load path} of the project: includes and [src]. *)
@@ -195,7 +189,7 @@ let get_load_path proj =
     if inc.[0] = '+' then (Filename.concat ocamllib (String.sub inc 1 (String.length inc - 1)))
     else inc
   end includes in
-  ocamllib :: (List.filter ((<>) ocamllib) ((proj.root // src) :: paths))
+  ocamllib :: (List.filter ((<>) ocamllib) ((proj.root // default_dir_src) :: paths))
 
 (** [load_path proj where] adds to [where] the {i load path} of [proj].*)
 let load_path proj where = where := !where @ (get_load_path proj)
@@ -259,9 +253,9 @@ let save ?editor proj =
   let filename_local = filename_local proj in
   try
     if not (Sys.file_exists proj.root) then (Unix.mkdir proj.root 0o777);
-    if not (Sys.file_exists (proj.root // src)) then (Unix.mkdir (proj.root // src) 0o777);
-    if not (Sys.file_exists (proj.root // bak)) then (Unix.mkdir (proj.root // bak) 0o777);
-    if not (Sys.file_exists (proj.root // tmp)) then (Unix.mkdir (proj.root // tmp) 0o777);
+    if not (Sys.file_exists (proj.root // default_dir_src)) then (Unix.mkdir (proj.root // default_dir_src) 0o777);
+    if not (Sys.file_exists (proj.root // default_dir_bak)) then (Unix.mkdir (proj.root // default_dir_bak) 0o777);
+    if not (Sys.file_exists (proj.root // default_dir_tmp)) then (Unix.mkdir (proj.root // default_dir_tmp) 0o777);
     proj.modified <- false;
     unload_path proj Config.load_path;
     proj.open_files <- List.rev_map begin fun (file, (scroll_offset, offset)) ->
@@ -285,6 +279,8 @@ let save ?editor proj =
     proj.root <- root;
     proj.files <- files;
     load_path proj Config.load_path;
+    (* output tools *)
+    Project_tools.write proj;
   with Unix.Unix_error (err, _, _) -> print_endline (Unix.error_message err);;
 
 (** save_bookmarks *)
@@ -341,10 +337,10 @@ let load filename =
   (*  *)
   proj.root <- Filename.dirname filename;
   (*  *)
-  if not (Sys.file_exists (proj.root // tmp)) then (Unix.mkdir (proj.root // tmp) 0o777);
+  if not (Sys.file_exists (proj.root // default_dir_tmp)) then (Unix.mkdir (proj.root // default_dir_tmp) 0o777);
   (*  *)
   proj.open_files <- List.map begin fun (filename, scroll_offset, offset, active) ->
-    (if Filename.is_implicit filename then proj.root // src // filename else filename), scroll_offset, offset, active
+    (if Filename.is_implicit filename then proj.root // default_dir_src // filename else filename), scroll_offset, offset, active
   end proj.open_files;
   (*  *)
   proj.search_path <- get_search_path proj;
@@ -358,11 +354,11 @@ let load filename =
 
 (** backup_file *)
 let backup_file project (file : Editor_file.file) =
-  let src = (project.root // src) in
+  let src = (project.root // default_dir_src) in
   if starts_with src file#filename then begin
     let rel = match Miscellanea.filename_relative src file#filename with
       | None -> assert false | Some x -> Filename.dirname x in
-    let move_to = project.root // bak // rel in
+    let move_to = project.root // default_dir_bak // rel in
     ignore (file#backup ~move_to ())
   end else print_endline ("Cannot create backup copy of \""^(Filename.quote file#filename)^"\".")
 
@@ -409,8 +405,8 @@ let refresh proj =
   proj.author <- np.author;
   proj.description <- np.description;
   proj.version <- np.version;
-  proj.in_source_path <- Miscellanea.filename_relative (np.root // src);
-  proj.source_paths <- (try File_util.readtree (np.root // src) with Sys_error _ -> [])
+  proj.in_source_path <- Miscellanea.filename_relative (np.root // default_dir_src);
+  proj.source_paths <- (try File_util.readtree (np.root // default_dir_src) with Sys_error _ -> [])
 
 (** clear_cache *)
 let clear_cache proj =

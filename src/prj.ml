@@ -52,6 +52,13 @@ type t = {
   mutable bookmarks          : Oe.bookmark list;
 }
 
+let default_extension = ".project"
+let default_dir_src = "src"
+let default_dir_bak = "bak"
+let default_dir_tmp = ".tmp"
+let default_dir_tools = "tools"
+let old_extension = ".xml"
+
 let find_target proj id =
   List_opt.find (fun bc -> bc.Target.id = id) proj.targets;;
 

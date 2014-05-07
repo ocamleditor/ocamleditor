@@ -58,8 +58,9 @@ let draw ~project ~filename ?dot_include_all ?dot_types ?packing ?on_ready_cb ()
   let basename      = Filename.basename filename in
   let label         = sprintf "Dependency graph for \xC2\xAB%s\xC2\xBB" basename in
   let prefix = Filename.chop_extension basename in
+  let search_path = "-I " ^ String.concat " -I " (Project.get_search_path_local project) in
   let dependencies =
-    Oebuild_dep.ocamldep_recursive [filename] |> Oebuild_dep.sort_dependencies |> List.map Oebuild_util.replace_extension_to_ml
+    Oebuild_dep.ocamldep_recursive ~search_path [filename] |> Oebuild_dep.sort_dependencies |> List.map Oebuild_util.replace_extension_to_ml
   in
   let dependants =
     let path = [Filename.dirname filename] in
@@ -77,11 +78,12 @@ let draw ~project ~filename ?dot_include_all ?dot_types ?packing ?on_ready_cb ()
   Activity.add Activity.Other activity_name;
   ignore (Oebuild_util.exec ~verbose:App_config.application_debug ~join:false ~at_exit:begin fun _ ->
     let modname = Miscellanea.modname_of_path filename in
-    let re = kprintf Str.regexp "\"%s\" \\[.+" modname in
-    let re1 = Str.regexp "\\(\".*\"\\) \\[style=filled, color=darkturquoise\\];$" in
+    let re = kprintf Str.regexp "\"%s\" \\[.*color=\\(.+\\).*\\]" modname in
+    (*let re1 = Str.regexp "\\(\".*\"\\) \\[style=filled, color=darkturquoise\\];$" in*)
     map_file_lines dotfile begin fun ~lnum ~line ->
-      if Str.string_match re line 0 then (sprintf "\"%s\" [style=filled, color=black, fontcolor=white];\n" modname)
-      else if Str.string_match re1 line 0 then (sprintf "%s;\n" (Str.matched_group 1 line))
+      (*if Str.string_match re line 0 then (sprintf "\"%s\" [style=filled, color=black, fontcolor=white];\n" modname)*)
+      if Str.string_match re line 0 then (sprintf "\"%s\" [style=filled, color=black, fillcolor=%s, fontsize=28, shape=box];\n" modname (Str.matched_group 1 line))
+      (*else if Str.string_match re1 line 0 then (sprintf "%s;\n" (Str.matched_group 1 line))*)
       else line
     end;
     ignore (Oebuild_util.exec ~join:false ~verbose:App_config.application_debug ~at_exit:begin fun _ ->

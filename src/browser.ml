@@ -207,7 +207,7 @@ object (self)
     (*crono ~label:"close_all" *)editor#close_all ();
     editor#pack_outline (Cmt_view.empty());
     editor#set_project proj;
-    Sys.chdir (proj.root // Project.src);
+    Sys.chdir (proj.root // Prj.default_dir_src);
     window#set_title (Convert.to_utf8 proj.name);
     (File_history.add project_history) filename;
     Symbol.Cache.load ~project:proj;
@@ -243,8 +243,8 @@ object (self)
     let project_home =
       match self#current_project#get with Some p -> p.Prj.root | _ -> Oe_config.user_home
     in
-    let pat1 = "*"^Project.extension in
-    let pat2 = "*"^Project.old_extension in
+    let pat1 = "*"^Prj.default_extension in
+    let pat2 = "*"^Prj.old_extension in
     let dialog = GWindow.file_chooser_dialog ~action:`OPEN ~width:600 ~height:600
       ~title:"Open project..." ~icon:Icons.oe ~position:`CENTER ~show:false () in
     dialog#add_filter (GFile.filter
@@ -258,7 +258,7 @@ object (self)
     match dialog#run () with
       | `OK ->
         List.iter begin fun filename ->
-          let filename, save = if filename ^^ Project.old_extension then (Filename.chop_extension filename) ^ Project.extension, true else filename, false in
+          let filename, save = if filename ^^ Prj.old_extension then (Filename.chop_extension filename) ^ Prj.default_extension, true else filename, false in
           let proj = self#project_open filename in
           Quick_file_chooser.add_roots ~roots:[Filename.dirname filename] ~filter:Dialog_find_file.filter;
           if save then (Project.save ~editor proj);
@@ -333,7 +333,7 @@ object (self)
       if not (Sys.file_exists (Oe_config.user_home // name)) then name else (mkname (n + 1))
     in
     let name = mkname 0 in
-    let filename = Oe_config.user_home // name // (name^Project.extension) in
+    let filename = Oe_config.user_home // name // (name^Prj.default_extension) in
     let new_project = Project.create ~filename () in
     let window, widget =
       Project_properties.create ~show:true ~editor ~new_project ~callback:begin fun proj ->
@@ -830,7 +830,7 @@ object (self)
         else (load_current_proj (List.tl history))
     in
     File_history.read project_history;
-    project_history.File_history.content <- List.filter (fun x -> (x ^^ Project.extension)) project_history.File_history.content;
+    project_history.File_history.content <- List.filter (fun x -> (x ^^ Prj.default_extension)) project_history.File_history.content;
     project_history_changed#call project_history;
     load_current_proj project_history.File_history.content;
 

@@ -23,7 +23,7 @@
 open Printf
 open Miscellanea
 
-let re_tmp = Miscellanea.regexp (sprintf "File \"..[\\/]%s[\\/]" Project.tmp)
+let re_tmp = Miscellanea.regexp (sprintf "File \"..[\\/]%s[\\/]" Prj.default_dir_tmp)
 let (!!) = Filename.quote
 
 (** replace_output_file *)
@@ -53,9 +53,9 @@ let compile_buffer ~project ~editor ~page ?(join=false) () =
         let command = sprintf "%s %s -I ../%s %s ../%s/%s %s"
           project.Prj.autocomp_compiler
           project.Prj.autocomp_cflags
-          Project.tmp
+          Prj.default_dir_tmp
           (Project.get_search_path_i_format project)
-          Project.tmp
+          Prj.default_dir_tmp
           relpath
           ((*if App_config.application_debug then Cmd.redirect_stderr else*) "")
         in

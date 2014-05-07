@@ -72,7 +72,7 @@ let get_macros ~get_editor ~get_current_project () =
     in
     let macros = [
       "$(project_home)", project.root;
-      "$(project_source)", (project.root // Project.src);
+      "$(project_source)", (project.root // Prj.default_dir_src);
       "$(project_name)", project.name;
       "$(current_filename)", current_filename;
       "$(current_filename_dir)", (Filename.dirname current_filename);
