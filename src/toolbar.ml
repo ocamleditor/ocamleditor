@@ -54,6 +54,7 @@ class ['a] toolbar ~(messages : Messages.messages) ~(hmessages : Messages.messag
   let tool_eval                = GButton.tool_button ~label:"Toplevel" () in
   let _                        = tool_eval#set_icon_widget (GMisc.image ~pixbuf:Icons.toplevel ())#coerce in
   let tool_clean               = Gmisclib.Toolbar.menu_tool_button ~toolbar ~homogeneous:false () in
+  let tool_targets             = GButton.tool_button ~label:"Targets" () in
   let tool_compile_file        = GButton.tool_button ~label:"Compile File" () in
   let tool_compile             = Gmisclib.Toolbar.menu_tool_button ~toolbar ~homogeneous:false () in
   let tool_build               = Gmisclib.Toolbar.menu_tool_button ~toolbar ~homogeneous:false () in
@@ -93,6 +94,7 @@ object (self)
   method tool_find = tool_find
   method tool_eval = tool_eval
   method tool_compile_file = tool_compile_file
+  method tool_targets = tool_targets
   method tool_back = tool_back
   method tool_forward = tool_forward
   method tool_last_edit_loc = tool_last_edit_loc
@@ -213,6 +215,9 @@ object (self)
     tool_eval#misc#set_tooltip_text "Eval in Toplevel";
     toolbar#insert tool_compile_file;
     tool_compile_file#set_icon_widget (Icons.create Icons.compile_file_16)#coerce;
+    let _ = GButton.separator_tool_item ~packing:toolbar#insert () in
+    toolbar#insert tool_targets;
+    tool_targets#set_icon_widget (Icons.create Icons.target_16)#coerce;
     (** Clean, Compile, Build, Run *)
     let _ = GButton.separator_tool_item ~packing:toolbar#insert () in
     toolbar#insert tool_clean#as_tool_item;
@@ -287,6 +292,7 @@ object (self)
       end
     end);
     (** Targets *)
+    ignore (tool_targets#connect#clicked ~callback:(fun () -> browser#dialog_project_properties ?page_num:(Some 1) ?show:(Some true) ()));
     (* clean *)
     ignore (tool_clean#connect#clicked ~callback:(fun () -> self#clean_current browser));
     ignore (tool_clean#connect#show_menu ~callback:(self#clean_menu browser));
@@ -323,6 +329,7 @@ object (self)
     tool_find#misc#set_sensitive (current_project <> None && not editor_empty);
     tool_item_find_entry#misc#set_sensitive (current_project <> None && not editor_empty);
     (*  *)
+    tool_targets#misc#set_sensitive (current_project <> None);
     tool_clean#misc#set_sensitive (current_project <> None && dbf <> None);
     tool_compile#misc#set_sensitive (current_project <> None && dbf <> None);
     tool_build#misc#set_sensitive (current_project <> None && dbf <> None);

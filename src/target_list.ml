@@ -43,19 +43,21 @@ class view ~editor ~project ?packing () =
   let model             = GTree.tree_store cols in
   let renderer          = GTree.cell_renderer_text [`XPAD 5] in
   let renderer_pixbuf   = GTree.cell_renderer_pixbuf [] in
+  let renderer_pixbuf2  = GTree.cell_renderer_pixbuf [`VISIBLE false; `PIXBUF Icons.findlib; `XPAD 3;`XALIGN 0.0] in
   let renderer_default  = GTree.cell_renderer_toggle [`RADIO false; `ACTIVATABLE true; `WIDTH 50] in
   let vc                = GTree.view_column ~title:"Name" () in
   let _                 = vc#pack ~expand:false renderer_pixbuf in
   let _                 = vc#pack ~expand:true renderer in
+  let _                 = vc#pack ~expand:false renderer_pixbuf2 in
   let _                 = vc#add_attribute renderer "text" col_name in
-  let _                 = vc#set_min_width 220 in
-  let _                 = vc#set_max_width 220 in
+  let _                 = vc#set_min_width 300 in
+  let _                 = vc#set_max_width 300 in
   let vc_default        = GTree.view_column ~title:"Default" () in
   let _                 = vc_default#pack ~expand:true renderer_default in
   let _                 = vc_default#add_attribute renderer_default "active" col_default in
   let _                 = vc_default#set_sizing `FIXED in
   let sw                = GBin.scrolled_window ~shadow_type:`IN ~hpolicy:`AUTOMATIC ~vpolicy:`AUTOMATIC ~packing:vbox#add () in
-  let view              = GTree.view ~rules_hint:(Oe_config.targetlist_alternating_row_colors <> None) ~model:model ~headers_visible:false ~reorderable:true ~width:285 (*~height:385*) ~packing:sw#add () in
+  let view              = GTree.view ~rules_hint:(Oe_config.targetlist_alternating_row_colors <> None) ~model:model ~headers_visible:false ~reorderable:true ~width:350 (*~height:385*) ~packing:sw#add () in
   let _                 = view#misc#set_name "targetlist_treeview" in
   let _                 = view#misc#set_property "enable-tree-lines" (`BOOL true) in
   let _                 = view#append_column vc in
@@ -129,7 +131,7 @@ object (self)
     (* Show hide column "default" *)
     vc_default#set_cell_data_func renderer_default begin fun model row ->
       let id = model#get ~row ~column:col_data in
-      renderer_default#set_properties [`VISIBLE (match id with Target _ -> true | ETask _ -> false)]
+      renderer_default#set_properties [`VISIBLE (match id with Target tg -> (tg.target_type <> External) | ETask _ -> false)]
     end;
     ignore (view#drag#connect#drop ~callback:begin fun ctx ~x ~y ~time ->
         Opt.map_default (view#get_path_at_pos ~x ~y) false begin fun (path, _, _, _) ->
@@ -392,18 +394,20 @@ object (self)
         selection_changed#call (Some path);
         begin
           match self#get path with
-            | Target bc ->
+            | Target tg ->
               Gmisclib.Idle.add ~prio:300 (fun () ->
                 b_clean#misc#set_sensitive true;
                 b_compile#misc#set_sensitive true;
                 (*b_etask#misc#set_sensitive true;*)
-                b_run#misc#set_sensitive (bc.target_type <> Executable));
-            | ETask _ ->
+                b_run#misc#set_sensitive (tg.target_type <> Executable);
+                b_remove#misc#set_sensitive (not tg.readonly));
+            | ETask et ->
               Gmisclib.Idle.add ~prio:300 (fun () ->
                 b_clean#misc#set_sensitive false;
                 b_compile#misc#set_sensitive false;
                 (*b_etask#misc#set_sensitive true;*)
-                b_run#misc#set_sensitive true);
+                b_run#misc#set_sensitive true;
+                b_remove#misc#set_sensitive (not et.Task.et_readonly));
         end;
       | [] -> selection_changed#call None
 
@@ -436,12 +440,15 @@ object (self)
               `PIXBUF ((GMisc.image ())#misc#render_icon ~size:`MENU `DIALOG_WARNING);
               `XALIGN 0.0];
             let name = model#get ~row ~column:col_name in
-            let descr = if target.byt then ["Bytecode"] else [] in
-            let descr = descr @ (if target.opt then ["Native-code"] else []) in
-            let descr = String.concat ", " descr in
-            let descr = (string_of_target_type target.target_type) ^ " &#8226; " ^ descr in
+            let descr =
+              if target.target_type = External then "" else
+                let descr = if target.byt then ["Bytecode"] else [] in
+                let descr = descr @ (if target.opt then ["Native-code"] else []) in
+                let descr = String.concat ", " descr in
+                sprintf "\n<span weight='light' size='smaller' style='italic'>%s &#8226; %s</span>" (string_of_target_type target.target_type) descr
+            in
             renderer#set_properties [`MARKUP (sprintf
-              "<b>%s</b>\n<span weight='light' size='smaller' style='italic'>%s</span>" name descr)];
+              "<b>%s</b>%s" name descr)];
             if target.target_type = Executable then begin
               renderer_pixbuf#set_properties [`VISIBLE true; `PIXBUF Icons.start_16; `XALIGN 0.0]
             end else if target.target_type = Plugin then begin
@@ -449,21 +456,23 @@ object (self)
             end else if target.target_type = External then begin
               renderer_pixbuf#set_properties [`VISIBLE true; `PIXBUF Icons.etask_16; `XALIGN 0.0]
             end else begin
-              renderer_pixbuf#set_properties [`VISIBLE true; `PIXBUF Icons.library; `XALIGN 0.0]
-            end
+              renderer_pixbuf#set_properties [`VISIBLE true; `PIXBUF ((*if target.is_fl_package then Icons.findlib else*) Icons.library); `XALIGN 0.0]
+            end;
+            renderer_pixbuf2#set_properties [`VISIBLE target.is_fl_package];
           | ETask _ ->
-            renderer_pixbuf#set_properties [`VISIBLE true; `PIXBUF Icons.etask_16; `XALIGN 0.0]
+            renderer_pixbuf#set_properties [`VISIBLE true; `PIXBUF Icons.etask_16; `XALIGN 0.0];
+            renderer_pixbuf2#set_properties [`VISIBLE false];
         end
     with Not_found -> ()
 
   method reset () =
     model#clear();
-    ignore (self#append project.Prj.targets);
+    ignore (self#append project.Prj.targets)(*;
     self#with_current
       ~default:self#select_default_configuration
-      (fun path _ -> view#selection#select_path path);
+      (fun path _ -> view#selection#select_path path);*)
 
-  method with_current ?default f =
+  method with_current ?(default : (unit -> unit) option) f =
     match view#selection#get_selected_rows with
       | path :: [] -> f path (self#get path)
       | _ -> Gaux.may default ~f:(fun g -> g())

@@ -51,6 +51,7 @@ let write proj =
           "id", string_of_int t.Target.id;
           "sub_targets", (String.concat "," (List.map (fun tg -> string_of_int tg.Target.id) t.Target.sub_targets));
           "is_fl_package", string_of_bool t.Target.is_fl_package;
+          "readonly", string_of_bool t.Target.readonly;
           ], [
         Xml.Element ("descr", [], [Xml.PCData (t.Target.descr)]);
         Xml.Element ("byt", [], [Xml.PCData (string_of_bool t.Target.byt)]);
@@ -76,6 +77,7 @@ let write proj =
             Xml.Element ("task", ["name", task.Task.et_name], [
               Xml.Element ("always_run_in_project", [], [Xml.PCData (string_of_bool task.Task.et_always_run_in_project)]);
               Xml.Element ("always_run_in_script", [], [Xml.PCData (string_of_bool task.Task.et_always_run_in_script)]);
+              Xml.Element ("readonly", [], [Xml.PCData (string_of_bool task.Task.et_readonly)]);
               Xml.Element ("env", ["replace", string_of_bool task.Task.et_env_replace],
                 List.map (fun (e, v) -> Xml.Element ("var", ["enabled", string_of_bool e], [Xml.PCData v])) task.Task.et_env);
               Xml.Element ("dir", [], [Xml.PCData (task.Task.et_dir)]);
@@ -238,7 +240,7 @@ let xml_commands proj node =
         bsc_descr  = (attrib target_node "descr" (fun x -> x) "");
         bsc_target = (match fattrib target_node "target_id" (find_target_string proj) (fun _ -> None) with Some x -> x | _ -> raise Exit);
         bsc_task   = fattrib target_node "task_name"
-          (fun y -> match find_task proj y with Some x -> x | _ -> assert false) (fun _ -> raise Exit)
+          (fun y -> match find_task proj y with Some x -> x | _ -> raise Exit) (fun _ -> raise Exit)
       } :: acc
     with Exit -> acc
   end [] node);;
@@ -326,6 +328,7 @@ let read filename =
             target.default <- attrib tnode "default" bool_of_string false;
             sub_targets := (target.id, List.map int_of_string (attrib tnode "sub_targets" (Str.split (Str.regexp "[;, ]+")) [])) :: !sub_targets;
             target.is_fl_package <- attrib tnode "is_fl_package" bool_of_string false;
+            target.readonly <- attrib tnode "readonly" bool_of_string false;
             Xml.iter begin fun tp ->
               match Xml.tag tp with
                 | "descr" -> target.descr <- value tp
@@ -370,6 +373,7 @@ let read filename =
                           | "always_run" -> task.Task.et_always_run_in_project <- bool_of_string (value tp) (* Backward compatibility with 1.7.0 *)
                           | "always_run_in_project" -> task.Task.et_always_run_in_project <- bool_of_string (value tp)
                           | "always_run_in_script" -> task.Task.et_always_run_in_script <- bool_of_string (value tp)
+                          | "readonly" -> task.Task.et_readonly <- bool_of_string (value tp)
                           | "env" ->
                             task.Task.et_env <-
                               List.rev (Xml.fold (fun acc var ->

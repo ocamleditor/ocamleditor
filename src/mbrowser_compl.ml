@@ -105,6 +105,7 @@ object (self)
       symbol_list#renderer_pixbuf#set_properties [`CELL_BACKGROUND bg];
     end);
     widget#connect#layout_toggled ~callback:self#update_button_states |> ignore;
+    widget#button_layout_odoc#set_active true;
 
 
   method set_pin_status value =

@@ -27,7 +27,7 @@ open Task
 class view ?packing () =
   let changed = new changed () in
   let xalign = 0.0 in
-  let vbox = GPack.vbox ~spacing:8 ?packing () in
+  let vbox as etask_vbox = GPack.vbox ~spacing:8 ?packing () in
   let entry_name = GEdit.entry ~packing:vbox#pack () in
   let box = GPack.hbox ~spacing:5 ~packing:vbox#pack () in
   let check_always_project = GButton.check_button ~label:"Always run when building project" ~active:true ~packing:box#add () in
@@ -94,6 +94,7 @@ object (self)
     ignore (button_dir#connect#changed
       ~callback:(self#update (fun etask -> etask.Task.et_dir <- button_dir#text)));
 
+
   method set_task et =
     etask <- Some et;
     entry_name#set_text et.Task.et_name;
@@ -104,11 +105,13 @@ object (self)
     entry_env#set_entries et.Task.et_env;
     entry_env#set_replace et.Task.et_env_replace;
     button_dir#set_text et.Task.et_dir;
+    self#misc#set_sensitive (not et.Task.et_readonly);
     match et.Task.et_phase with
       | Some ph -> combo_phase#set_active (Miscellanea.Xlist.pos ph phases);
       | None -> combo_phase#set_active 0;
 
-  method private update update_func () = Gaux.may etask ~f:update_func;
+  method private update update_func () =
+    Gaux.may etask ~f:update_func;
 
   method entry_name = entry_name
 

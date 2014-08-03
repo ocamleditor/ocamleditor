@@ -146,7 +146,7 @@ class widget ~editor ?(callback=ignore) ~project ?page_num ?packing ?show () =
               set_title "External Build Task";
               Gmisclib.Idle.add (fun () -> etask_page#set_task et);
               Gmisclib.Idle.add begin fun () ->
-                if not (etask_page#misc#get_flag `SENSITIVE) then (etask_page#misc#set_sensitive true);
+(*                if not (etask_page#misc#get_flag `SENSITIVE) then (etask_page#misc#set_sensitive true);*)
                 if not (etask_page#misc#get_flag `VISIBLE) then begin
                   target_page#misc#hide ();
                   etask_page#misc#show ();
@@ -262,6 +262,7 @@ object (self)
       project_changed#call project;
       (*  *)
       target_page#set_changed false;
+      target_list#reset();
       (*  *)
       if project.autocomp_enabled then begin
         editor#with_current_page (fun p -> p#compile_buffer ?join:None ());

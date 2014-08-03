@@ -129,6 +129,7 @@ let print_external_tasks ochan project =
         kprintf print "  et_phase                 = %s;" (match et.et_phase with Some p -> "Some " ^ (Task.string_of_phase p) | _ -> "None");
         kprintf print "  et_always_run_in_project = %b;" et.et_always_run_in_project;
         kprintf print "  et_always_run_in_script  = %b;" et.et_always_run_in_script;
+        kprintf print "  et_readonly              = %b;" et.et_readonly;
         kprintf print "});";
         incr i;
         index

@@ -51,6 +51,7 @@ type t = {
   mutable dependencies     : int list; (* Build dependencies, id list *)
   mutable sub_targets      : t list; (* For use with Findlib sub-packages *)
   mutable is_fl_package    : bool;
+  mutable readonly         : bool;
 }
 and task = [ `NONE | `CLEAN | `COMPILE | `REBUILD | `ETASK of Task.t ]
 and target_type = Executable | Library | Plugin | Pack | External
@@ -126,6 +127,7 @@ let create ~id ~name = {
   dependencies       = [];
   sub_targets        = [];
   is_fl_package      = false;
+  readonly           = false;
 }
 
 (** find_dependencies *)

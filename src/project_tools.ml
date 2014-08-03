@@ -38,15 +38,15 @@ type meta = {
   mutable meta_subpackages    : meta list;
 }
 
-let default_fl_installer_basename = "fl_install.ml"
+let default_fl_installer_basename = "findlib.ml"
 
 let convert_target_type =
   function
-  | Target.Executable -> Oebuild.Executable
-  | Target.Library -> Oebuild.Library
-  | Target.Plugin -> Oebuild.Plugin
-  | Target.Pack -> Oebuild.Pack
-  | Target.External -> Oebuild.External
+    | Target.Executable -> Oebuild.Executable
+    | Target.Library -> Oebuild.Library
+    | Target.Plugin -> Oebuild.Plugin
+    | Target.Pack -> Oebuild.Pack
+    | Target.External -> Oebuild.External
 
 let create_meta proj ~parent tg =
   let archive compilation tg =
@@ -133,7 +133,7 @@ let generate_fl_installer proj outchan =
   fprintf outchan "  if Array.length Sys.argv < 2 then failwith \"Invalid parameters\";\n";
   fprintf outchan "  let cwd = Sys.getcwd() in\n";
   fprintf outchan "  Sys.chdir \"%s\";\n%!" Prj.default_dir_src;
-  fprintf outchan "  printf \"Current working directory: %%s\\n%%!\" (Sys.getcwd());\n";
+  (*  fprintf outchan "  printf \"Current working directory: %%s\\n%%!\" (Sys.getcwd());\n";*)
   fprintf outchan "  List.iter begin fun (name, defs, cmas) ->\n";
   fprintf outchan "    let arcs = String.concat \" \" (List.map (fun x -> (Filename.chop_extension x) ^ (if Sys.win32 then \".lib\" else \".a\")) (List.filter (fun x -> Filename.check_suffix x \".cmxa\") cmas)) in\n";
   fprintf outchan "    let cmis = \"\" in\n";
@@ -141,16 +141,22 @@ let generate_fl_installer proj outchan =
   fprintf outchan "    if Sys.file_exists \"META\" then failwith \"Cannot write META file: file exists\";\n";
   fprintf outchan "    let chan = open_out_bin \"META\" in\n";
   fprintf outchan "    try\n";
+  fprintf outchan "      let sudo = if Sys.win32 || List.mem Sys.argv.(1) [\"dry\"] then \"\" else \"sudo -E \" in\n";
+  fprintf outchan "      let cmd = ref [] in\n";
+  fprintf outchan "      if not (List.mem Sys.argv.(1) [\"install\"; \"uninstall\"; \"reinstall\"; \"dry\"]) then failwith \"Invalid parameters\";\n";
+
   fprintf outchan "      output_string chan defs;\n";
-  fprintf outchan "      let cmd =\n";
-  fprintf outchan "        if List.mem Sys.argv.(1) [\"-install\"; \"-reinstall\"] then \n";
-  fprintf outchan "          sprintf \"ocamlfind install %%s META %%s %%s %%s %%s\" name (String.concat \" \" cmas) arcs cmis mlis\n";
-  fprintf outchan "        else if List.mem Sys.argv.(1) [\"-uninstall\"] then \n";
-  fprintf outchan "          sprintf \"ocamlfind remove %%s\" name\n";
-  fprintf outchan "        else failwith \"Invalid parameters\"\n";
-  fprintf outchan "      in\n";
-  fprintf outchan "      printf \"%%s\\n%%!\" cmd;\n";
-  fprintf outchan "      let exit_code = Sys.command cmd in\n";
+  fprintf outchan "      if List.mem Sys.argv.(1) [\"uninstall\"; \"reinstall\"] then cmd := (sprintf \"%%socamlfind remove %%s\" sudo name) :: !cmd;\n";
+
+  fprintf outchan "      if List.mem Sys.argv.(1) [\"install\"; \"reinstall\"; \"dry\"] then \n";
+  fprintf outchan "        cmd := (sprintf \"%%socamlfind install %%s META %%s %%s %%s %%s\" sudo name (String.concat \" \" cmas) arcs cmis mlis) :: !cmd;\n";
+
+  fprintf outchan "      assert (!cmd <> []);\n";
+  fprintf outchan "      let cmd = String.concat \" && \" (List.rev !cmd) in\n";
+
+  fprintf outchan "      if List.mem Sys.argv.(1) [\"dry\"] then printf \"\\n##### META %%s #####\\n\\n%%s\\n# %%s\\n%%!\" name defs cmd;\n";
+
+  fprintf outchan "      let exit_code = if Sys.argv.(1) = \"dry\" then 0 else Sys.command cmd in\n";
   fprintf outchan "      if exit_code <> 0 then eprintf \"Error: command %%s exited with code %%d\\n%%!\" cmd exit_code;\n";
   fprintf outchan "      if Sys.file_exists \"META\" then (close_out_noerr chan; Sys.remove \"META\")\n";
   fprintf outchan "    with ex -> begin\n";
@@ -160,18 +166,47 @@ let generate_fl_installer proj outchan =
   fprintf outchan "  Sys.chdir cwd;\n";
   ()
 
+let findlib_target_name = "FINDLIB"
+
 let write proj =
   let has_fl_packages = List.exists (fun tg -> tg.Target.is_fl_package) proj.targets in
+  let dirname = proj.root // Prj.default_dir_tools in
+  let filename = dirname // default_fl_installer_basename in
+  let tools = List_opt.find (fun tg -> tg.Target.name = findlib_target_name && tg.target_type = Target.External) proj.targets in
+  let findlib_tools = [
+    Task.create ~name:"install" ~env:[] ~dir:".." ~cmd:"ocaml" ~args:[true, "tools/findlib.ml"; true, "install"] ~readonly:true ~run_in_script:false ();
+    Task.create ~name:"uninstall" ~env:[] ~dir:".." ~cmd:"ocaml" ~args:[true, "tools/findlib.ml"; true, "uninstall"] ~readonly:true ~run_in_script:false ();
+    Task.create ~name:"reinstall" ~env:[] ~dir:".." ~cmd:"ocaml" ~args:[true, "tools/findlib.ml"; true, "reinstall"] ~readonly:true ~run_in_script:false ();
+  ] in
+  let rm_findlib_tools tg =
+    tg.external_tasks <- List.filter (fun et -> not (List.exists (fun ft -> ft.Task.et_name = et.Task.et_name) findlib_tools)) tg.external_tasks;
+  in
   if has_fl_packages then begin
-    let dirname = proj.root // Prj.default_dir_tools in
     if not (Sys.file_exists dirname) then (Unix.mkdir dirname 0o777);
-    let filename = dirname // default_fl_installer_basename in
-    Printf.printf "--->%s -- %b\n%!" filename has_fl_packages;
     let outchan = open_out_bin filename in
     try
       generate_fl_installer proj outchan;
+      let tg =
+        match tools with
+          | None ->
+            let tg = Target.create ~id:(List.length proj.targets) ~name:findlib_target_name in
+            tg.target_type <- External;
+            tg.readonly <- true;
+            proj.targets <- proj.targets @ [tg];
+            tg
+          | Some tg -> tg
+      in
+      rm_findlib_tools tg;
+      tg.external_tasks <- tg.external_tasks @ findlib_tools;
       close_out_noerr outchan;
     with ex ->
       close_out_noerr outchan;
       raise ex
+  end else begin
+    if Sys.file_exists filename then Sys.remove filename;
+    match tools with
+      | Some tg ->
+        rm_findlib_tools tg;
+        if tg.external_tasks = [] then proj.targets <- List.filter (fun t -> t.id <> tg.id) proj.targets
+      | _ -> ()
   end

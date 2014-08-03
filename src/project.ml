@@ -271,6 +271,8 @@ let save ?editor proj =
     let files = proj.files in
     proj.root <- "";
     proj.files <- [];
+    (* output tools *)
+    Project_tools.write proj;
     (* output XML *)
     let xml = Xml.to_string_fmt (!write_xml proj) in
     output_xml filename xml;
@@ -279,8 +281,6 @@ let save ?editor proj =
     proj.root <- root;
     proj.files <- files;
     load_path proj Config.load_path;
-    (* output tools *)
-    Project_tools.write proj;
   with Unix.Unix_error (err, _, _) -> print_endline (Unix.error_message err);;
 
 (** save_bookmarks *)

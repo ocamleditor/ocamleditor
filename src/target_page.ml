@@ -41,13 +41,14 @@ class view ~project ~target_list ?packing () =
   let table = GPack.table ~homogeneous:false ~col_spacings:5 ~row_spacings:3 ~packing:mainbox#pack () in
   let _ = GMisc.label ~text:"Name:" ~xalign:0.0 ~packing:(table#attach ~top:0 ~left:0 ~expand:`NONE) () in
   let entry_name = GEdit.entry ~packing:(table#attach ~top:0 ~left:1 ~expand:`X) () in
-  let check_is_fl_package = GButton.check_button ~label:"Create Findlib package" ~packing:(table#attach ~top:0 ~left:2 ~expand:`NONE) ~show:false () in
+  let check_is_fl_package = GButton.check_button ~label:(sprintf "Generate \xC2\xAB%s\xC2\xBB tools" Project_tools.findlib_target_name)
+      ~packing:(table#attach ~top:0 ~left:2 ~expand:`NONE) ~show:true () in
   let _ = GMisc.label ~text:"Description:" ~xalign:0.0 ~packing:(table#attach ~top:1 ~left:0 ~expand:`NONE) () in
   let entry_descr = GEdit.entry ~packing:(table#attach ~top:1 ~left:1 ~expand:`X ~right:3) () in
   let nb = GPack.notebook ~packing:mainbox#add () in
 
   (** Target Tab *)
-  let vbox = GPack.vbox ~border_width:5 ~spacing:13 () in
+  let vbox as target_vbox = GPack.vbox ~border_width:5 ~spacing:13 () in
   let _ = nb#append_page ~tab_label:(GMisc.label ~text:"Target Type" ())#coerce vbox#coerce in
   (** Library *)
   (* Build a library with the specified toplevel modules *)
@@ -179,7 +180,7 @@ class view ~project ~target_list ?packing () =
   let entry_outname = GEdit.entry ~packing:box#add () in
 
   (** Build Settings Tab *)
-  let vbox = GPack.vbox ~width:640 ~border_width:5 ~spacing:13 () in
+  let vbox as build_settings_vbox = GPack.vbox ~width:640 ~border_width:5 ~spacing:13 () in
   let _ = nb#append_page ~tab_label:(GMisc.label ~text:"Build Settings" ())#coerce vbox#coerce in
 
   let box = GPack.hbox ~spacing:0 ~packing:vbox#pack () in
@@ -282,7 +283,7 @@ object (self)
       window#(*set_on_popdown*)connect#destroy begin fun () ->
         entry_package#misc#grab_focus ();
         entry_package#set_position (Glib.Utf8.length entry_package#text);
-      end;
+      end |> ignore;
       ignore (widget#connect#changed ~callback:begin fun _ ->
         entry_package#set_text (String.concat "," (widget#get_selected_packages()))
       end);
@@ -456,9 +457,14 @@ object (self)
         check_thread#misc#set_sensitive (not check_vmthread#active);
       end
     end in
-    ignore (self#connect#changed ~callback:(fun () -> page_changed <- true));
-    ignore (check_is_fl_package#connect#toggled
-      ~callback:(self#update (fun target -> target.is_fl_package <- check_is_fl_package#active)));
+    self#connect#changed ~callback:begin fun () ->
+      page_changed <- true;
+    end |> ignore;
+    check_is_fl_package#connect#toggled
+      ~callback:(self#update begin fun target ->
+          target.is_fl_package <- check_is_fl_package#active;
+          changed#call()
+        end) |> ignore;
 
   method changed = page_changed
   method set_changed x = page_changed <- x
@@ -472,9 +478,14 @@ object (self)
     entry_inline#misc#set_sensitive (target.opt && check_inline#active);
 
   method private update update_func () =
-    Gaux.may target ~f:begin fun bc ->
-      update_func bc;
-      Gmisclib.Idle.add ~prio:300 (fun () -> self#update_cmd_line bc);
+    Gaux.may target ~f:begin fun tg ->
+      update_func tg;
+      build_settings_vbox#misc#set_sensitive (tg.target_type <> External && not tg.readonly);
+      check_is_fl_package#misc#set_sensitive (tg.target_type <> External && not tg.readonly);
+      target_vbox#misc#set_sensitive (not tg.readonly);
+      entry_name#misc#set_sensitive (not tg.readonly);
+      (*entry_descr#misc#set_sensitive (not tg.readonly);*)
+      Gmisclib.Idle.add ~prio:300 (fun () -> self#update_cmd_line tg);
       (*changed#call()*)
     end;
 
