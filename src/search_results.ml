@@ -188,7 +188,7 @@ object (self)
     ignore (view_lines#connect#row_activated ~callback:self#row_line_activated);
     (* Search finished *)
     ignore (self#connect#search_finished ~callback:begin fun () ->
-      self#active#set false;
+      self#is_working#set false;
       self#present ();
     end);
     ignore (vbox#connect#destroy ~callback:self#destroy_marks);

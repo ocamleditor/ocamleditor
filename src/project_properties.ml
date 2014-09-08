@@ -132,9 +132,9 @@ class widget ~editor ?(callback=ignore) ~project ?page_num ?packing ?show () =
     | Some path ->
         begin
           match target_list#get path with
-            | Target_list.Target bc ->
+            | Target_list.Target tg ->
               set_title "Target";
-              Gmisclib.Idle.add (fun () -> target_page#set_target bc);
+              Gmisclib.Idle.add (fun () -> target_page#set_target tg);
               Gmisclib.Idle.add begin fun () ->
                 if not (target_page#misc#get_flag `SENSITIVE) then (target_page#misc#set_sensitive true);
                 if not (target_page#misc#get_flag `VISIBLE) then begin
@@ -257,12 +257,12 @@ object (self)
       end (rconf_list#get_rconfigs());
       project.search_path    <- get_search_path project;
       callback project;
-      Project.save ~editor project;
-      Project.refresh project;
-      project_changed#call project;
+      GtkThread.sync (Project.save ~editor) project;
+      GtkThread.async Project.refresh project;
+      GtkThread.sync project_changed#call project;
       (*  *)
-      target_page#set_changed false;
-      target_list#reset();
+      GtkThread.sync target_page#set_changed false;
+      Gmisclib.Idle.add target_list#reset;
       (*  *)
       if project.autocomp_enabled then begin
         editor#with_current_page (fun p -> p#compile_buffer ?join:None ());
@@ -315,15 +315,15 @@ object (self)
     set_paths();
     name_entry#misc#grab_focus();
     (* Buttons *)
-    ignore (button_apply#connect#clicked ~callback:self#save);
-    ignore (button_ok#connect#clicked ~callback:(fun () -> self#save(); button_close#clicked()));
+    ignore (button_apply#connect#clicked ~callback:(fun () -> Gmisclib.Idle.add self#save));
+    ignore (button_ok#connect#clicked ~callback:(fun () -> button_close#clicked(); self#save()));
     (* *)
     notebook#goto_page 0;
 (*    notebook#connect#switch_page ~callback:begin fun num ->
       if num = 2 && target_page#changed then (GtkSignal.stop_emit(); notebook#goto_page 1)
     end;*)
     ignore (target_page#connect#changed ~callback:begin fun () ->
-      GtkBase.Widget.queue_draw target_list#view#as_widget;
+      Gmisclib.Idle.add (fun () -> GtkBase.Widget.queue_draw target_list#view#as_widget);
     end);
     Gaux.may page_num ~f:notebook#goto_page;
 

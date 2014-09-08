@@ -27,29 +27,43 @@ open Miscellanea
 
 let mk_target_filenames project filenames =
   let filenames = Miscellanea.Xlist.filter_map project.Prj.in_source_path filenames in
-  if Oe_config.is_win32 then begin
+  if Sys.win32 then begin
     List.map begin fun filename ->
       Miscellanea.filename_unix_implicit filename
     end filenames
   end else filenames
 
+(*let default_icon =
+  let size = 48 in
+  let width, height = size, size in
+  let scaled = GdkPixbuf.create ~width ~height ~has_alpha:true () in
+  GdkPixbuf.scale ~dest:scaled ~width ~height Icons.logo;
+  let pixbuf = GdkPixbuf.create ~width ~height ~has_alpha:true () in
+  GdkPixbuf.saturate_and_pixelate ~saturation:0.0 ~pixelate:true ~dest:pixbuf scaled;
+  pixbuf*)
+
 class view ~project ~target_list ?packing () =
   let changed = new changed () in
   let xalign = 0.0 in
   let indent = 21 in
-  let mainbox = GPack.vbox ~spacing:8 ?packing () in
+  let mainbox = GPack.vbox ~spacing:13 ?packing () in
   let table = GPack.table ~homogeneous:false ~col_spacings:5 ~row_spacings:3 ~packing:mainbox#pack () in
-  let _ = GMisc.label ~text:"Name:" ~xalign:0.0 ~packing:(table#attach ~top:0 ~left:0 ~expand:`NONE) () in
-  let entry_name = GEdit.entry ~packing:(table#attach ~top:0 ~left:1 ~expand:`X) () in
-  let check_is_fl_package = GButton.check_button ~label:(sprintf "Generate \xC2\xAB%s\xC2\xBB tools" Project_tools.findlib_target_name)
-      ~packing:(table#attach ~top:0 ~left:2 ~expand:`NONE) ~show:true () in
-  let _ = GMisc.label ~text:"Description:" ~xalign:0.0 ~packing:(table#attach ~top:1 ~left:0 ~expand:`NONE) () in
-  let entry_descr = GEdit.entry ~packing:(table#attach ~top:1 ~left:1 ~expand:`X ~right:3) () in
+  let _ = GMisc.label ~text:"Name:" ~xalign:0.0 ~packing:(table#attach ~top:0 ~left:1 ~expand:`NONE) () in
+  let entry_name = GEdit.entry ~packing:(table#attach ~top:0 ~left:2 ~expand:`X) () in
+  let _ = GMisc.label ~text:"Description:" ~xalign:0.0 ~packing:(table#attach ~top:1 ~left:1 ~expand:`NONE) () in
+  let entry_descr = GEdit.entry ~packing:(table#attach ~top:1 ~left:2 ~expand:`X ~right:4) () in
   let nb = GPack.notebook ~packing:mainbox#add () in
 
   (** Target Tab *)
-  let vbox as target_vbox = GPack.vbox ~border_width:5 ~spacing:13 () in
+  let vbox as target_vbox = GPack.vbox ~border_width:8 ~spacing:13 () in
   let _ = nb#append_page ~tab_label:(GMisc.label ~text:"Target Type" ())#coerce vbox#coerce in
+
+  let box = GPack.hbox ~spacing:5 ~packing:vbox#pack () in
+  let _ = GMisc.label ~text:"Compilation: " ~xalign:0.0 ~packing:box#pack () in
+  let combo_comp, _ = GEdit.combo_box_text
+    ~strings:["Bytecode"; "Native-code"; "Bytecode and native"]
+    ~active:0 ~packing:box#add () in
+
   (** Library *)
   (* Build a library with the specified toplevel modules *)
   let mbox = GPack.vbox ~spacing:0 ~packing:(vbox#pack ~expand:false) () in
@@ -60,7 +74,7 @@ class view ~project ~target_list ?packing () =
   let align_lib = GBin.alignment ~padding:(0,0,indent,0) ~packing:mbox#add () in
   let lbox = GPack.vbox ~spacing:8 ~packing:align_lib#add () in
 
-  (** Output kind *)
+  (** Output Type *)
   let combo_kind, _ = GEdit.combo_box_text
     ~strings:["Library (-a)"; "Plugin (-shared)"; "Pack (-pack)"]
     (*~active:0*) ~packing:lbox#add () in
@@ -169,29 +183,29 @@ class view ~project ~target_list ?packing () =
         chooser#destroy()
       | _ -> chooser#destroy()
   end in
+  let win32_box = GBin.frame ~label:" Native MS Application " ~packing:box#pack () in
+  let box = GPack.hbox ~border_width:5 ~spacing:8 ~packing:win32_box#add () in
+  let label = GMisc.label ~text:"Subsystem: " ~packing:box#pack () in
+  let combo_subsystem, _ = GEdit.combo_box_text
+    ~strings:["Console"; "Windows"]
+    ~active:0 ~packing:box#pack () in
+  let align = GBin.alignment ~xscale:0.0 ~xalign:1.0 ~packing:box#add () in
+  let button_resource_file = GButton.button ~label:"Icons and Assembly Information..." ~packing:align#add () in
+
   (** Radio External *)
   let mbox = GPack.vbox ~spacing:0 ~packing:(vbox#pack ~expand:false) () in
   let radio_external = GButton.radio_button ~group:radio_archive#group ~packing:mbox#add () in
-  let label_radio_external = GMisc.label ~markup:"External tasks" () in
+  let label_radio_external = GMisc.label ~markup:"External tools" () in
   let _ = radio_external#add label_radio_external#coerce in
   (** Outname *)
   let box = GPack.vbox ~packing:(vbox#pack ~expand:false) () in
   let _ = GMisc.label ~markup:"Output file name <small><tt>(-o)</tt></small>" ~xalign ~packing:box#add () in
   let entry_outname = GEdit.entry ~packing:box#add () in
+  let check_dontaddopt = GButton.check_button ~label:"Do not add \".opt\" to the native executable file name" ~packing:box#pack () in
 
   (** Build Settings Tab *)
-  let vbox as build_settings_vbox = GPack.vbox ~width:640 ~border_width:5 ~spacing:13 () in
+  let vbox as build_settings_vbox = GPack.vbox ~width:640 ~border_width:8 ~spacing:13 () in
   let _ = nb#append_page ~tab_label:(GMisc.label ~text:"Build Settings" ())#coerce vbox#coerce in
-
-  let box = GPack.hbox ~spacing:0 ~packing:vbox#pack () in
-  let _ = GMisc.label ~text:"Compilation: " ~xalign:0.0 ~packing:box#pack () in
-  let combo_comp, _ = GEdit.combo_box_text
-    ~strings:["Bytecode"; "Native-code"; "Bytecode and native"]
-    ~active:0 ~packing:box#add () in
-
-  let check_inline = GButton.check_button ~label:"-inline: " ~packing:box#pack () in
-  let adjustment_inline = GData.adjustment ~lower:0.0 ~upper:1000. ~page_size:0.0 () in
-  let entry_inline = GEdit.spin_button ~adjustment:adjustment_inline ~rate:1.0 ~digits:0 ~numeric:true ~packing:box#pack () in
 
   let box = GPack.vbox ~packing:(vbox#pack ~expand:false) ~show:true () in
   let _ = GMisc.label ~markup:"Findlib packages <small><tt>(-package)</tt></small>" ~xalign ~packing:box#add () in
@@ -219,6 +233,11 @@ class view ~project ~target_list ?packing () =
   let _ = GMisc.label ~markup:"Preprocessor <small><tt>(-pp)</tt></small>" ~xalign ~packing:box#add () in
   let entry_pp = GEdit.entry ~packing:box#add () in
 
+  let box = GPack.hbox ~spacing:8 ~packing:vbox#pack () in
+  let check_inline = GButton.check_button ~label:"-inline:" ~packing:box#pack () in
+  let adjustment_inline = GData.adjustment ~lower:0.0 ~upper:1000. ~page_size:0.0 () in
+  let entry_inline = GEdit.spin_button ~adjustment:adjustment_inline ~rate:1.0 ~digits:0 ~numeric:true ~packing:box#pack () in
+
   let box = GPack.vbox ~packing:(vbox#pack ~expand:false) () in
   let _ = GMisc.label ~text:"Compiler flags" ~xalign ~packing:box#add () in
   let entry_cflags = GEdit.entry ~packing:box#add () in
@@ -239,14 +258,14 @@ class view ~project ~target_list ?packing () =
   end in
 
   (** Dependencies Tab *)
-  let vbox = GPack.vbox ~border_width:5 ~spacing:8 () in
+  let vbox = GPack.vbox ~border_width:8 ~spacing:13 () in
   let _ = nb#append_page ~tab_label:(GMisc.label ~text:"Target Dependencies" ())#coerce vbox#coerce in
   let widget_deps = Target_page_deps.create ~target_list ~packing:vbox#add () in
 
-  (** Restrictions Tab *)
-  let vbox = GPack.vbox ~width:550 ~border_width:5 ~spacing:8 () in
+  (** Conditions Tab *)
+  let vbox = GPack.vbox ~width:550 ~border_width:8 ~spacing:13 () in
   let _ = nb#append_page ~tab_label:(GMisc.label ~text:"Conditions" ())#coerce vbox#coerce in
-  let _ = GMisc.label ~xalign:0.0 ~line_wrap:true ~justify:`LEFT ~width:550
+  let _ = GMisc.label ~xalign:0.0 ~line_wrap:true ~justify:`LEFT ~width:600
     ~text:"Specify the conditions that determine whether commands on this target \
 should run. The selected conditions will be verified at \
 any attempt to perform a \"Clean\" or \"Build\" or any other external task, from \
@@ -266,6 +285,16 @@ both within the IDE and from the generated build script." ~packing:vbox#pack () 
   let check_cygwin = GButton.check_button ~label:"O.S. type is Cygwin" ~packing:cbox#pack () in
   let check_native = GButton.check_button ~label:"Native compilation is supported" ~packing:cbox#pack () in
 
+  (** Findlib Tab *)
+  let vbox = GPack.vbox ~border_width:8 ~spacing:13 () in
+  let _ = nb#append_page ~tab_label:(GMisc.label ~text:"Findlib" ())#coerce vbox#coerce in
+  let check_is_fl_package = GButton.check_button
+      ~label:(sprintf "Configure %s for current target" Project_tools.findlib_target_name) ~packing:vbox#pack ~show:true () in
+  let box = GPack.hbox ~border_width:0 ~packing:vbox#pack () in
+  let label = GMisc.label ~xalign:0.0 ~yalign:0.0 ~line_wrap:true ~width:600
+      ~text:(sprintf "\xC2\xAB%s\xC2\xBB is an automatically generated target containing external tools which allow you to manage Findlib packages generated from the project."
+               Project_tools.findlib_target_name)
+      ~packing:box#add ~show:false () in
   (*  *)
   let cmd_line = GEdit.entry ~editable:false () in
 object (self)
@@ -337,6 +366,7 @@ object (self)
         self#update begin fun target ->
           target.byt <- (combo_comp#active = 0 || combo_comp#active = 2);
           self#set_inline target;
+          check_dontaddopt#misc#set_sensitive (radio_executable#active && (combo_comp#active = 1 || combo_comp#active = 2));
         end ();
         changed#call()
       end);
@@ -344,6 +374,7 @@ object (self)
       ~callback:(self#update begin fun target ->
         target.opt <- (combo_comp#active = 1 || combo_comp#active = 2);
         self#set_inline target;
+        check_dontaddopt#misc#set_sensitive (radio_executable#active && (combo_comp#active = 1 || combo_comp#active = 2));
       end));
     let update_inline () =
       self#update begin fun target ->
@@ -400,16 +431,18 @@ object (self)
       else if radio_external#active then External
       else assert false;
     in
-    let set_sensitive () =
+    let set_sensitive_on_type_changed () =
       align_lib#misc#set_sensitive (not radio_executable#active && not radio_external#active);
       align_exec#misc#set_sensitive radio_executable#active;
       entry_outname#misc#set_sensitive (not radio_external#active);
       if radio_executable#active then (entry_main_module#misc#grab_focus())
       else if radio_archive#active then (button_lib_modules#misc#grab_focus());
+      combo_comp#misc#set_sensitive (radio_executable#active || radio_archive#active);
+      check_dontaddopt#misc#set_sensitive (radio_executable#active && (combo_comp#active = 1 || combo_comp#active = 2));
     in
     ignore (radio_archive#connect#after#toggled
         ~callback:(self#update begin fun target ->
-            set_sensitive();
+            set_sensitive_on_type_changed();
             if signals_enabled then begin
               target.target_type <- get_target_type();
               entry_lib_modules#set_text "";
@@ -420,7 +453,7 @@ object (self)
           target.target_type <- get_target_type())));
     ignore (radio_executable#connect#clicked ~callback:begin fun () ->
         self#update begin fun target ->
-          set_sensitive();
+          set_sensitive_on_type_changed();
           if signals_enabled then begin
             target.target_type <- get_target_type();
           end
@@ -428,7 +461,7 @@ object (self)
       end);
     ignore (radio_external#connect#toggled ~callback:begin
         self#update begin fun target ->
-          set_sensitive();
+          set_sensitive_on_type_changed();
           if signals_enabled then begin
             target.target_type <- get_target_type();
           end
@@ -457,14 +490,33 @@ object (self)
         check_thread#misc#set_sensitive (not check_vmthread#active);
       end
     end in
-    self#connect#changed ~callback:begin fun () ->
-      page_changed <- true;
-    end |> ignore;
     check_is_fl_package#connect#toggled
       ~callback:(self#update begin fun target ->
           target.is_fl_package <- check_is_fl_package#active;
           changed#call()
         end) |> ignore;
+    combo_subsystem#connect#changed ~callback:(self#update begin fun target ->
+        target.subsystem <- Some (if combo_subsystem#active = 1 then Windows else Console);
+      end) |> ignore;
+    check_dontaddopt#connect#toggled
+      ~callback:(self#update begin fun target ->
+          target.dontaddopt <- check_dontaddopt#active;
+          changed#call()
+        end) |> ignore;
+    button_resource_file#connect#clicked ~callback:(fun () ->
+        Gaux.may target ~f:begin fun target ->
+          let _, widget = Resource_file_widget.window ~project ~target () in
+          widget#connect#saved ~callback:begin fun rc ->
+            self#update begin fun target ->
+              target.resource_file <- Some rc;
+              changed#call ();
+            end ();
+          end
+        end) |> ignore;
+    (*  *)
+    self#connect#changed ~callback:begin fun () ->
+      page_changed <- true;
+    end |> ignore;
 
   method changed = page_changed
   method set_changed x = page_changed <- x
@@ -495,7 +547,6 @@ object (self)
     widget_deps#set tg;
     entry_name#set_text tg.name;
     entry_descr#set_text tg.descr;
-    check_is_fl_package#set_active tg.is_fl_package;
     combo_comp#set_active (match tg.byt, tg.opt with
       | true, false -> 0
       | false, true -> 1
@@ -570,9 +621,15 @@ object (self)
         | None -> ""
     end;
     check_fl_pkg#set_active (entry_fl_pkg#text <> ""); (*(List.exists (fun r -> Str.string_match Oebuild.re_fl_pkg_exist r 0) tg.restrictions)*)
+    check_is_fl_package#set_active tg.is_fl_package;
+    let win32_sensitive = true (*Sys.win32 && tg.opt && tg.target_type = Executable && Build_script_util.ccomp_type = Some "msvc"*) in
+    win32_box#misc#set_sensitive win32_sensitive;
+    combo_subsystem#set_active (match tg.subsystem with Some Windows -> 1 | Some Console | None -> 0);
+    check_dontaddopt#set_active tg.dontaddopt;
     (*  *)
     signals_enabled <- true;
     Gmisclib.Idle.add ~prio:300 (fun () -> self#update_cmd_line tg);
+    check_is_fl_package#set_label (sprintf "Add package \xC2\xAB%s\xC2\xBB to %s" tg.name Project_tools.findlib_target_name )
 
   method private update_cmd_line target =
     let cmd, args = create_cmd_line target in

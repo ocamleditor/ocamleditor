@@ -109,7 +109,9 @@ type t = {
   mutable pref_hmessages_width              : int;
   mutable pref_vmessages_height             : int;
   mutable pref_odoc_font                    : string;
-  mutable pref_pdf_viewer                   : string;
+  mutable pref_program_pdf_viewer           : string;
+  mutable pref_program_diff                 : string;
+  mutable pref_program_diff_graphical       : string;
   mutable pref_remember_window_geometry     : bool;
   mutable pref_detach_message_panes_separately : bool;
   mutable pref_geometry_delayed             : bool;
@@ -124,7 +126,7 @@ and text_properties =
   Pango.Tags.scale *
   (bool * GDraw.color)
 
-let pref_filename = Filename.concat Oe_config.ocamleditor_user_home "preferences.xml"
+let pref_filename = Filename.concat App_config.ocamleditor_user_home "preferences.xml"
 
 let default_tags = [
     "control";
@@ -190,7 +192,7 @@ let default_colors : text_properties list = [
   (`NAME "deeppink3"),    `NORMAL, `ITALIC, `NONE, `MEDIUM, (true,  `NAME "#FFFFFF");
   (`NAME "deeppink3"),    `NORMAL, `ITALIC, `NONE, `MEDIUM, (true,  `NAME "#FFFFFF");
   (`NAME "#FFFF00"),      `NORMAL, `NORMAL, `LOW,  `MEDIUM, (true,  `NAME "#FFFFFF");
-  (`NAME "#F9F9CA"),      `NORMAL, `NORMAL, `NONE, `MEDIUM, (true,  `NAME "#FFFFFF");(* #E8F2FF *) (* #F7F7D7 *)
+  (`NAME "#EBF9FF"),      `NORMAL, `NORMAL, `NONE, `MEDIUM, (true,  `NAME "#FFFFFF");(* #E8F2FF *) (* #F7F7D7 *) (*"#F9F9CA"*)
   (`NAME "#474747"),      `NORMAL, `ITALIC, `NONE, `MEDIUM, (true,  `NAME "#FFFFFF");
   (`NAME "#FFFFFF"),      `NORMAL, `NORMAL, `NONE, `MEDIUM, (false, `NAME "#1F80ED");
 ]
@@ -216,12 +218,12 @@ let create_defaults () = {
   pref_editor_wrap                  = false;
   pref_editor_trim_lines            = false;
   pref_editor_custom_templ_filename = "";
-  pref_editor_mark_occurrences      = true, "#FFFF54";
+  pref_editor_mark_occurrences      = true, "#00FF00";
   pref_editor_left_margin           = 1;
-  pref_editor_pixels_lines          = 0,1;
+  pref_editor_pixels_lines          = 0,2;
   pref_editor_save_all_bef_comp     = true;
   pref_editor_dot_leaders           = false;
-  pref_editor_current_line_border   = false;
+  pref_editor_current_line_border   = true;
   pref_editor_indent_config         = "";
   pref_editor_indent_empty_line     = true;
   pref_editor_cursor_aspect_ratio   = 0.1;
@@ -246,7 +248,7 @@ let create_defaults () = {
   pref_editor_indent_lines          = true;
   pref_editor_indent_lines_color_s  = "#d0d0d0";
   pref_editor_indent_lines_color_d  = "#a0a0a0";
-  pref_right_margin_visible         = false;
+  pref_right_margin_visible         = true;
   pref_right_margin                 = 80;
   pref_right_margin_color           = "#e0e0e0";
   pref_max_view_1_menubar           = true;
@@ -282,9 +284,13 @@ let create_defaults () = {
   pref_hmessages_width              = 1000;
   pref_vmessages_height             = 300;
   pref_odoc_font                    = "Serif 9";
-  pref_pdf_viewer                   =
+  pref_program_pdf_viewer                   =
     if Sys.os_type = "Win32" then ""
     else (match Oe_config.xdg_open_version with None -> "evince" | _ -> "xdg-open");
+  pref_program_diff                 = "diff";
+  pref_program_diff_graphical       =
+    if Sys.os_type = "Win32" then "%ProgramFiles%\\Meld\\meld\\meld.exe"
+    else "kompare";
   pref_remember_window_geometry     = true;
   pref_detach_message_panes_separately = false;
   pref_geometry_delayed             = false;
@@ -462,7 +468,9 @@ let to_xml pref =
       Xml.Element ("pref_hmessages_width", [], [Xml.PCData (string_of_int pref.pref_hmessages_width)]);
       Xml.Element ("pref_vmessages_height", [], [Xml.PCData (string_of_int pref.pref_vmessages_height)]);
       Xml.Element ("pref_odoc_font", [], [Xml.PCData (pref.pref_odoc_font)]);
-      Xml.Element ("pref_pdf_viewer", [], [Xml.PCData (pref.pref_pdf_viewer)]);
+      Xml.Element ("pref_program_pdf_viewer", [], [Xml.PCData (pref.pref_program_pdf_viewer)]);
+      Xml.Element ("pref_program_diff_graphical", [], [Xml.PCData (pref.pref_program_diff_graphical)]);
+      Xml.Element ("pref_program_diff", [], [Xml.PCData (pref.pref_program_diff)]);
       Xml.Element ("pref_remember_window_geometry", [], [Xml.PCData (string_of_bool pref.pref_remember_window_geometry)]);
       Xml.Element ("pref_detach_message_panes_separately", [], [Xml.PCData (string_of_bool pref.pref_detach_message_panes_separately)]);
       Xml.Element ("pref_geometry_delayed", [], [Xml.PCData (string_of_bool pref.pref_geometry_delayed)]);
@@ -604,7 +612,9 @@ let from_file filename =
         | "pref_hmessages_width" -> pref.pref_hmessages_width <- int_of_string (value node)
         | "pref_vmessages_height" -> pref.pref_vmessages_height <- int_of_string (value node)
         | "pref_odoc_font" -> pref.pref_odoc_font <- value node
-        | "pref_pdf_viewer" -> pref.pref_pdf_viewer <- value node
+        | "pref_pdf_viewer" | "pref_program_pdf_viewer" -> pref.pref_program_pdf_viewer <- value node
+        | "pref_program_diff" -> pref.pref_program_diff <- value node
+        | "pref_program_diff_graphical" -> pref.pref_program_diff_graphical <- value node
         | "pref_remember_window_geometry" -> pref.pref_remember_window_geometry <- bool_of_string (value node)
         | "pref_detach_message_panes_separately" -> pref.pref_detach_message_panes_separately <- bool_of_string (value node)
         | "pref_geometry_delayed" -> pref.pref_geometry_delayed <- bool_of_string (value node)

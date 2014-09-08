@@ -29,6 +29,7 @@ let main () =
   let enabled = ref true in
   let nodep = ref false in
   let dontlinkdep = ref false in
+  let dontaddopt = ref false in
   let toplevel_modules = ref [] in
   let outkind = ref Executable in
   let is_clean = ref false in
@@ -99,11 +100,12 @@ let main () =
       ("-vmthread",    Set vmthread,                    " Add -vmthread option to both cflags and lflags.");
       ("-annot",       Set annot,                       " Add -annot option to cflags.");
       ("-bin-annot",   Set bin_annot,                   " Add -bin-annot option to cflags.");
-      ("-pp",          Set_string pp,                   " Add -pp option to the compiler.");
-      ("-inline",      Int (fun x -> inline := Some x), " Add -inline option to the compiler.");
+      ("-pp",          Set_string pp,                   "\"<command>\" Add -pp option to the compiler.");
+      ("-inline",      Int (fun x -> inline := Some x), "<n> Add -inline option to the compiler.");
       ("-o",           Set_string output_name,          "\"<filename>\" Output file name. Extension {.cm[x]a | [.opt][.exe]}
                                  is automatically added to the resulting filename according
                                  to the -a and -opt options and the type of O.S.");
+      ("-dont-add-opt", Set dontaddopt,                 " Do not add \".opt\" to the native executable file name.");
       ("-run",         Unit (set_run_code Unspecified), " Run the resulting executable (native-code takes precedence) giving
                                  each argument after \"--\" on the command line
                                  (\"-run --\" for no arguments).");
@@ -151,8 +153,8 @@ let main () =
     (** print_output_name *)
     if !print_output_name then begin
       List.iter begin fun compilation ->
-        let outname = get_output_name ~compilation ~outkind:!outkind ~outname:!output_name ~toplevel_modules:!toplevel_modules in
-        match outname with Some outname -> printf "%s\n%!" outname | _ -> ();
+        let outname = get_output_name ~compilation ~outkind:!outkind ~outname:!output_name ~dontaddopt:!dontaddopt () in
+        printf "%s\n%!" outname
       end compilation;
       exit 0;
     end;
@@ -170,61 +172,57 @@ let main () =
       let last_outname = ref None in
       let outnames =
         List.map begin fun compilation ->
-          let outname = get_output_name ~compilation ~outkind:!outkind ~outname:!output_name ~toplevel_modules:!toplevel_modules in
-          match outname with
-            | Some outname ->
+          let outname = get_output_name ~compilation ~outkind:!outkind ~outname:!output_name ~dontaddopt:!dontaddopt () in
+          match
+            if !no_build then Built_successfully, []
+            else begin
+              let deps =
+                if !nodep then !toplevel_modules
+                else if !serial
+                then Miscellanea.crono ~label:"Oebuild_dep.find" (fun () -> Oebuild_dep.find ~pp:!pp ~ignore_stderr:false !toplevel_modules) ()
+                else []
+              in
+              (build
+                 ~compilation
+                 ~package:!package
+                 ~includes:!includes
+                 ~libs:!libs
+                 ~other_mods:!mods
+                 ~outkind:!outkind
+                 ~compile_only:!compile_only
+                 ~thread:!thread
+                 ~vmthread:!vmthread
+                 ~annot:!annot
+                 ~bin_annot:!bin_annot
+                 ~pp:!pp
+                 ?inline:!inline
+                 ~cflags:!cflags
+                 ~lflags:!lflags
+                 ~outname
+                 ~deps
+                 ~dontlinkdep:!dontlinkdep
+                 ~dontaddopt:!dontaddopt
+                 ~toplevel_modules:!toplevel_modules
+                 ~prof:!prof
+                 ~jobs:!jobs
+                 ~serial:!serial
+                 ~verbose:!verbose
+                 ()), deps
+            end
+          with
+            | Build_failed code, _ -> exit code (*(compilation, None)*)
+            | Built_successfully, deps ->
               begin
-                match
-                  if !no_build then Built_successfully, []
-                  else begin
-                    let deps =
-                      if !nodep then !toplevel_modules
-                      else if !serial
-                      then Miscellanea.crono ~label:"Oebuild_dep.find" (fun () -> Oebuild_dep.find ~pp:!pp ~ignore_stderr:false !toplevel_modules) ()
-                      else []
-                    in
-                    (build
-                       ~compilation
-                       ~package:!package
-                       ~includes:!includes
-                       ~libs:!libs
-                       ~other_mods:!mods
-                       ~outkind:!outkind
-                       ~compile_only:!compile_only
-                       ~thread:!thread
-                       ~vmthread:!vmthread
-                       ~annot:!annot
-                       ~bin_annot:!bin_annot
-                       ~pp:!pp
-                       ?inline:!inline
-                       ~cflags:!cflags
-                       ~lflags:!lflags
-                       ~outname
-                       ~deps
-                       ~dontlinkdep:!dontlinkdep
-                       ~toplevel_modules:!toplevel_modules
-                       ~prof:!prof
-                       ~jobs:!jobs
-                       ~serial:!serial
-                       ~verbose:!verbose
-                       ()), deps
-                  end
-                with
-                  | Build_failed code, _ -> exit code (*(compilation, None)*)
-                  | Built_successfully, deps ->
-                    begin
-                      match !install_flag with
-                        (*| Some _ when not !serial -> failwith "-install is accepted only with -serial"*)
-                        | Some path ->
-                          serial := true;
-                          install ~compilation ~outname ~outkind:!outkind ~deps ~path
-                            ~ccomp_type:(Ocaml_config.can_compile_native ());
-                        | _ -> ()
-                    end;
-                    last_outname := Some outname;
-                    (compilation, Some outname)
-              end
-            | _ -> (compilation, None)
+                match !install_flag with
+                  (*| Some _ when not !serial -> failwith "-install is accepted only with -serial"*)
+                  | Some path ->
+                    serial := true;
+                    install ~compilation ~outname ~outkind:!outkind ~deps ~path
+                      ~ccomp_type:(Ocaml_config.can_compile_native ());
+                  | _ -> ()
+              end;
+              last_outname := Some outname;
+              (compilation, Some outname)
         end compilation;
       in
       if !outkind = Executable then begin

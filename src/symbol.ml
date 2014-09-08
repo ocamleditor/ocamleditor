@@ -505,9 +505,10 @@ let filter_by_name
   let result =
     match use_longidents with
       | true ->
-        let matches = List.exists (fun part -> Str.string_match regexp part 0) in
+        (*let matches s = List.exists (fun part -> Str.string_match regexp part 0) in*)
         List.filter begin fun symbol ->
-          (include_methods || not (is_method symbol)) && matches symbol.sy_id
+          (*(include_methods || not (is_method symbol)) && matches symbol.sy_id*)
+          (include_methods || not (is_method symbol)) && (Str.string_match regexp (concat_value_path symbol) 0)
         end symbols
       | false ->
         List.filter begin fun symbol ->

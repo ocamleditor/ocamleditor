@@ -53,6 +53,7 @@ module Util =
     exception Mark_deleted
     let fade_window_enabled          = Gmisclib_util.fade_window_enabled
     let fade_window                  = Gmisclib_util.fade_window
+    let esc_destroy_window           = Gmisclib_util.esc_destroy_window
     let set_tag_paragraph_background = Gmisclib_util.set_tag_paragraph_background
     let get_iter_at_mark_safe        = Gmisclib_util.get_iter_at_mark_safe
     let get_iter_at_mark_opt         = Gmisclib_util.get_iter_at_mark_opt

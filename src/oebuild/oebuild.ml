@@ -91,6 +91,7 @@ let compile ?(times : Table.t option) ~opt ~compiler ~cflags ~includes ~filename
           | None -> Oebuild_util.command cmd
           | Some process_err ->
             begin
+              let process_err = Oebuild_util.iter_chan process_err in
               match exec ~process_err ~verbose:(verbose>=2) cmd with
                 | Some n -> n
                 | None -> -9998
@@ -147,6 +148,7 @@ let link ~compilation ~compiler ~outkind ~lflags ~includes ~libs ~outname ~deps
   in
   let deps = String.concat " " deps in
   let process_exit =
+    let process_err = match process_err with Some f -> Some (Oebuild_util.iter_chan f) | _ -> None in
     kprintf (exec (*command*) ?process_err ~verbose:(verbose>=2)) "%s %s %s -o %s %s %s %s %s"
       compiler
       (match outkind with Library -> "-a" | Plugin when opt -> "-shared" | Plugin -> "" | Pack -> "-pack" | Executable | External -> "")
@@ -163,30 +165,27 @@ let link ~compilation ~compiler ~outkind ~lflags ~includes ~libs ~outname ~deps
 ;;
 
 (** get_output_name *)
-let get_output_name ~compilation ~outkind ~outname ~toplevel_modules =
-  match toplevel_modules with
-    | [] -> None
-    | _ -> Some begin
-      let o_ext =
-        match outkind with
-          | Library when compilation = Native -> ".cmxa"
-          | Library -> ".cma"
-          | Executable when compilation = Native -> ".opt" ^ (win32 ".exe" "")
-          | Executable -> win32 ".exe" ""
-          | Plugin when compilation = Native -> ".cmxs"
-          | Plugin -> ".cma"
-          | Pack -> ".cmx"
-          | External -> ""
-      in
-      let name =
-        if outname = "" then begin
-          match (List.rev toplevel_modules) with
-            | last :: _ -> Filename.chop_extension last
-            | _ -> assert false
-        end else outname
-      in
-      name ^ o_ext
-    end
+let get_output_name ~compilation ~outkind ~outname ?(dontaddopt=false) () =
+    let o_ext =
+      match outkind with
+        | Library when compilation = Native -> ".cmxa"
+        | Library -> ".cma"
+        | Executable when compilation = Native && dontaddopt -> win32 ".exe" ""
+        | Executable when compilation = Native -> ".opt" ^ (win32 ".exe" "")
+        | Executable -> win32 ".exe" ""
+        | Plugin when compilation = Native -> ".cmxs"
+        | Plugin -> ".cma"
+        | Pack -> ".cmx"
+        | External -> ""
+    in
+    let name =
+      if outname = "" then "a" (*begin
+        match (List.rev toplevel_modules) with
+          | last :: _ -> Filename.chop_extension last
+          | _ -> assert false
+      end*) else outname
+    in
+    name ^ o_ext
 ;;
 
 (** install *)
@@ -221,7 +220,7 @@ let install ~compilation ~outkind ~outname ~deps ~path ~ccomp_type =
 (** run_output *)
 let run_output ~outname ~args =
   let args = List.rev args in
-  if is_win32 then begin
+  if Sys.win32 then begin
     let cmd = Str.global_replace (Str.regexp "/") "\\\\" outname in
     let args = String.concat " " args in
     ignore (kprintf command "%s %s" cmd args)
@@ -356,7 +355,7 @@ let parallel_compile ~compilation ?times ~compiler ~cflags ~includes ~toplevel_m
 
 (** Build *)
 let build ~compilation ~package ~includes ~libs ~other_mods ~outkind ~compile_only
-    ~thread ~vmthread ~annot ~bin_annot ~pp ?inline ~cflags ~lflags ~outname ~deps ~dontlinkdep (*~ms_paths*)
+    ~thread ~vmthread ~annot ~bin_annot ~pp ?inline ~cflags ~lflags ~outname ~deps ~dontlinkdep ~dontaddopt (*~ms_paths*)
     ~toplevel_modules ?(jobs=0) ?(serial=false) ?(prof=false) ?(verbose=2) () =
 
   let crono = if verbose >= 3 then crono else fun ?label f x -> f x in
@@ -366,6 +365,7 @@ let build ~compilation ~package ~includes ~libs ~other_mods ~outkind ~compile_on
     printf "\n%s %s" (string_of_compilation_type compilation) (string_of_output_type outkind);
     if outname <> ""    then (printf " %s\n" outname);
     if dontlinkdep      then (printf "  ~dontlinkdep\n");
+    if dontaddopt       then (printf "  ~dontaddopt\n");
     if compile_only     then (printf "  ~compile_only\n");
     if thread           then (printf "  ~thread\n");
     if vmthread         then (printf "  ~vmthread\n");
@@ -497,7 +497,26 @@ let build ~compilation ~package ~includes ~libs ~other_mods ~outkind ~compile_on
     end else compilation_exit
   in
   Table.write times;
-  if build_exit = 0 then Built_successfully else (Build_failed build_exit)
+  if build_exit = 0 && not compile_only then begin
+    if verbose >= 1 then begin
+      Printf.printf "\n%s %s\n%!" (string_of_compilation_type compilation) (string_of_output_type outkind);
+      let result =
+        [((Sys.getcwd()) // outname), (format_int (Unix.stat outname).Unix.st_size)]
+        @
+        match compilation with
+          | Native when outkind = Library ->
+            List.flatten (List.map begin fun ext ->
+              let filename = (Sys.getcwd()) // ((Filename.chop_extension outname) ^ ext) in
+              if Sys.file_exists filename then
+                [filename, (format_int (Unix.stat filename).Unix.st_size)]
+              else []
+            end [".lib"; ".a"])
+          | Bytecode | Unspecified | Native -> []
+      in
+      List.iter (Printf.printf "%s\n%!") (dot_leaders ~right_align:true ~postfix:" bytes" result);
+    end;
+    Built_successfully
+  end else (Build_failed build_exit)
 ;;
 
 (** clean *)

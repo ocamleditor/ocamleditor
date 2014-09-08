@@ -72,8 +72,8 @@ and result_line = {
 (** status *)
 let status =
   let status_filename =
-    let old_name = Oe_config.ocamleditor_user_home // "find_in_path.xml" in
-    let new_name = Oe_config.ocamleditor_user_home // "find_text.xml" in
+    let old_name = App_config.ocamleditor_user_home // "find_in_path.xml" in
+    let new_name = App_config.ocamleditor_user_home // "find_text.xml" in
     if Sys.file_exists old_name then (Sys.rename old_name new_name);
     new_name
   in {

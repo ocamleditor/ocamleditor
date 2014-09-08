@@ -75,6 +75,7 @@ Section "OCamlEditor (required)"
 	File "src\oebuild\oebuild.exe"   
 	File /NonFatal "src\oeproc\oeproc.opt.exe"   
 	File /NonFatal "src\oebuild\oebuild.opt.exe"   
+  File /NonFatal "src\ocamleditorw.exe"   
 
   SetOutPath $INSTDIR
   ; Put file there

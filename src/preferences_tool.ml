@@ -30,6 +30,7 @@ open Pref_color
 class preferences ~editor () =
   let initial_gtk_theme = Preferences.preferences#get.Preferences.pref_general_theme in
   let initial_compl_decorated = Preferences.preferences#get.Preferences.pref_compl_decorated in
+  let initial_general_font = Preferences.preferences#get.Preferences.pref_general_font in
   let window            = GWindow.window ~allow_shrink:false ~allow_grow:false ~resizable:true ~width:750
     ~type_hint:`DIALOG ~modal:true ~title:"Preferences" ~position:`CENTER ~icon:Icons.oe ~show:false () in
   let _ = Gmisclib.Window.GeometryMemo.add ~key:"dialog-preferences" ~window Preferences.geometry_memo in
@@ -75,7 +76,9 @@ object (self)
       match Preferences.preferences#get.Preferences.pref_general_theme with
         | Some theme as new_theme when new_theme <> None && new_theme <> initial_gtk_theme ->
           Gtk_theme.set_theme ~theme ~context:self#misc#pango_context ();
-        | Some _ as new_theme when new_theme <> None && new_theme = initial_gtk_theme -> ()
+        | Some theme as new_theme when new_theme <> None && new_theme = initial_gtk_theme ->
+          if initial_general_font <> Preferences.preferences#get.Preferences.pref_general_font then
+            Gtk_theme.set_theme ~theme ~context:self#misc#pango_context ();
         | _ -> self#reset_theme();
     end;
     if initial_compl_decorated <> Preferences.preferences#get.Preferences.pref_compl_decorated then begin
@@ -138,9 +141,7 @@ object (self)
     in
     let row = model#append ~parent () in self#create "Code Templates" row (new pref_templ);
     let row = model#append () in self#create "Build" row (new pref_build);
-    if Sys.os_type = "Win32" then () else begin
-      let row = model#append () in self#create ~idle:true "PDF Viewer" row (new pref_pdf_viewer);
-    end;
+    let row = model#append () in self#create ~idle:true "External Programs" row (new pref_program_pdf_viewer);
     view#expand_all();
     view#selection#set_mode `SINGLE;
     ignore (view#selection#connect#changed ~callback:begin fun () ->
@@ -357,40 +358,55 @@ object
     check_error_gutter#set_active (pref.Preferences.pref_err_gutter);
 end
 
-(** pref_pdf_viewer *)
-and pref_pdf_viewer title ?packing () =
+(** pref_program_pdf_viewer *)
+and pref_program_pdf_viewer title ?packing () =
   let vbox       = GPack.vbox ~spacing ?packing () in
   let align      = create_align ~vbox () in
   let box        = GPack.vbox ~spacing:1 ~packing:align#add () in
-  let label_text = "Select a PDF viewer" in
-  let _          = GMisc.label ~xalign:0.0
-    ~markup:(label_text ^ ":")
-    ~packing:box#pack ()
-  in
+  let label_text = "PDF viewer" in
+  let _          = GMisc.label ~xalign:0.0 ~markup:(label_text ^ ":") ~packing:box#pack () in
   let hbox       = GPack.hbox ~spacing:3 ~packing:box#pack () in
-  let entry      = GEdit.entry ~editable:true ~packing:hbox#add () in
-  let button     = GButton.button ~label:" ... " ~packing:hbox#pack () in
+  let entry_pdf  = GEdit.entry ~editable:true ~packing:hbox#add () in
+  let button_pdf = GButton.button ~label:" ... " ~packing:hbox#pack () in
+  let label_text = "Diff command" in
+  let _          = GMisc.label ~xalign:0.0 ~markup:(label_text ^ ":") ~packing:box#pack () in
+  let hbox       = GPack.hbox ~spacing:3 ~packing:box#pack () in
+  let entry_diff = GEdit.entry ~editable:true ~packing:hbox#add () in
+  let button_diff = GButton.button ~label:" ... " ~packing:hbox#pack () in
+  let label_text = "Graphical diff command" in
+  let _          = GMisc.label ~xalign:0.0 ~markup:(label_text ^ ":") ~packing:box#pack () in
+  let hbox       = GPack.hbox ~spacing:3 ~packing:box#pack () in
+  let entry_gdiff = GEdit.entry ~editable:true ~packing:hbox#add () in
+  let button_gdiff = GButton.button ~label:" ... " ~packing:hbox#pack () in
   let _          =
-    ignore (button#connect#clicked ~callback:begin fun () ->
-      let chooser    = GWindow.file_chooser_dialog ~action:`OPEN ~title:label_text
-        ~icon:Icons.oe ~position:`CENTER ~modal:true () in
-      (*chooser#set_filter (GFile.filter ~patterns:["*.cma"] ());*)
-      ignore (chooser#set_filename entry#text);
-      chooser#add_button_stock `OK `OK;
-      chooser#add_button_stock `CANCEL `CANCEL;
-      match chooser#run () with
-        | `OK ->
-          Gaux.may chooser#filename ~f:(fun name -> entry#set_text name);
-          chooser#destroy()
-        | _ -> chooser#destroy()
-    end)
+    let bind button entry =
+      button#connect#clicked ~callback:begin fun () ->
+        let chooser    = GWindow.file_chooser_dialog ~action:`OPEN ~title:label_text
+            ~icon:Icons.oe ~position:`CENTER ~modal:true () in
+        ignore (chooser#set_filename entry#text);
+        chooser#add_button_stock `OK `OK;
+        chooser#add_button_stock `CANCEL `CANCEL;
+        match chooser#run () with
+          | `OK ->
+            Gaux.may chooser#filename ~f:(fun name -> entry#set_text name);
+            chooser#destroy()
+          | _ -> chooser#destroy()
+      end |> ignore
+    in
+    bind button_pdf entry_pdf;
+    bind button_diff entry_diff;
+    bind button_gdiff entry_gdiff;
   in
 object
   inherit page title vbox
   method write pref =
-    pref.Preferences.pref_pdf_viewer <- entry#text;
+    pref.Preferences.pref_program_pdf_viewer <- entry_pdf#text;
+    pref.Preferences.pref_program_diff <- entry_diff#text;
+    pref.Preferences.pref_program_diff_graphical <- entry_gdiff#text;
   method read pref =
-    ignore (entry#set_text pref.Preferences.pref_pdf_viewer);
+    ignore (entry_pdf#set_text pref.Preferences.pref_program_pdf_viewer);
+    ignore (entry_diff#set_text pref.Preferences.pref_program_diff);
+    ignore (entry_gdiff#set_text pref.Preferences.pref_program_diff_graphical);
 end
 
 (** pref_build *)
@@ -401,13 +417,13 @@ and pref_build title ?packing () =
   let check_build_parallel    = GButton.check_button ~label:"Enable parallel compilation" ~packing:box#pack () in
   let align                    = GBin.alignment ~padding:(0, 0, 25, 0) ~packing:box#pack () in
   let jbox                    = GPack.hbox ~spacing:8 ~packing:align#add () in
-  let _                       = GMisc.label ~text:"Max. number of parallel jobs (0 for unlimited):" ~packing:jbox#pack () in
+  let _                       = GMisc.label ~text:"Max. number of processes (0 for unlimited):" ~packing:jbox#pack () in
   let adjustment              = GData.adjustment ~lower:0.0 ~upper:1000. ~page_size:0. () in
   let entry_jobs              = GEdit.spin_button ~adjustment ~numeric:true ~digits:0 ~value:0.0 ~packing:jbox#pack () in
   let hbox                    = GPack.hbox ~spacing:8 ~packing:vbox#pack () in
   let _                       = GMisc.label ~text:"Verbosity level:" ~packing:hbox#pack () in
   let combo_verbose, _        = GEdit.combo_box_text ~strings:[
-      "0 - Silent";
+      "0 - Quiet";
       "1 - Print build summary";
       "2 - Print compiler commands";
       "3 - Print times";

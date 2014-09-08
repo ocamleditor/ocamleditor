@@ -136,6 +136,8 @@ object (self)
   method ts_changed = ts_changed
   method kind : [ `Directory | `Library| `Module | `Class | `Search | `Index ] = kind
 
+  val mutable length = 0
+
   initializer
     view#misc#modify_font_by_name Preferences.preferences#get.Preferences.pref_compl_font;
     ignore (view#event#connect#key_press ~callback:begin fun ev ->
@@ -153,7 +155,10 @@ object (self)
       with Failure "hd" -> ()*)
     end);
 
+  method length = length
+
   method fill symbols =
+    length <- 0;
     model#clear();
     Index.clear index;
     (** Fill model *)
@@ -191,6 +196,7 @@ object (self)
       model#set ~row ~column:col_type_descr descr;
       let path = model#get_path row in
       Index.add index name path;
+      length <- length + 1;
     end symbols;
     Index.close index;
 

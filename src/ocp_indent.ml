@@ -55,7 +55,7 @@ let indent ~view bounds =
   let pref = Preferences.preferences#get in
   let buffer = view#tbuffer in
   let indent () =
-    match buffer#save_buffer() with
+    match buffer#save_buffer ?filename:None () with
       | filename, _ ->
         let start, stop =
           match bounds with

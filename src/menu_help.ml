@@ -24,19 +24,41 @@
 open Miscellanea
 open Printf
 
+(** system_properties *)
+let system_properties () =
+  let window = GWindow.window ~icon:Icons.oe ~title:"System Properties" ~position:`CENTER ~modal:true ~resizable:false ~show:false () in
+  let text = System_properties.to_string () in
+  let buffer = GText.buffer ~text () in
+  let vbox = GPack.vbox ~spacing:0 ~border_width:0 ~packing:window#add () in
+  let sw = GBin.scrolled_window ~hpolicy:`AUTOMATIC ~vpolicy:`AUTOMATIC ~packing:vbox#add () in
+  let view = GText.view ~buffer ~editable:false ~width:850 ~height:600 ~packing:sw#add () in
+  view#misc#modify_font_by_name (Preferences.preferences#get.Preferences.pref_base_font);
+  view#set_left_margin 8;
+  view#set_right_margin 8;
+  view#set_pixels_above_lines 2;
+  view#set_pixels_below_lines 2;
+  view#set_cursor_visible false;
+  let bbox = GPack.button_box `HORIZONTAL ~layout:`SPREAD ~border_width:8 ~packing:vbox#pack () in
+  let button_close = GButton.button ~stock:`CLOSE ~packing:bbox#pack () in
+  button_close#connect#clicked ~callback:window#destroy |> ignore;
+  Gmisclib.Util.esc_destroy_window window;
+  window#show();
+  window#set_position `CENTER_ALWAYS
+
+
+(** about *)
 let about editor () =
   let dialog = GWindow.about_dialog
       ~type_hint:(if Sys.os_type = "Win32" then `SPLASHSCREEN else `DIALOG)
       ~modal:true
-      ~width:300
+      ~width:310
       ~position:`CENTER
       ~icon:Icons.oe
       ~name:About.program_name
       ~version:About.version
       ~copyright:About.copyright
       ~logo:Icons.logo
-      (*~website:About.website*)
-      ~comments:(sprintf "Build id: %s" About.build_id)
+      (*~comments:(sprintf "Build id: %s" About.build_id)*)
       ~license:"OCamlEditor is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
 the Free Software Foundation, either version 3 of the License, or
@@ -124,3 +146,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>."
         end)
     end);
   match dialog#run() with _ -> dialog#destroy()
+
+
+
+
+

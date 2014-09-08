@@ -35,7 +35,8 @@ class virtual page ~role =
 object (self)
   val detached = new detached ()
   val mutable detached_window = None
-  val active = new GUtil.variable true
+  val is_working = new GUtil.variable true
+  val is_active = new GUtil.variable false
   val mutable parent : messages option = None
   val mutable close_tab_func = None
   val icon = new GUtil.variable None
@@ -50,7 +51,8 @@ object (self)
     match detached_window with
       | Some window -> window#present()
       | _ -> Gaux.may parent ~f:(fun messages -> messages#present self#coerce)
-  method active = active
+  method is_working = is_working
+  method is_active = is_active
   (*method virtual parent_changed : messages -> unit*)
   method parent_changed : messages -> unit = self#set_parent
   method virtual coerce : GObj.widget
@@ -102,11 +104,12 @@ object (self)
     end
 
   initializer
-    ignore (title#connect#changed ~callback:begin fun x ->
+    let callback x =
       match detached_window with
         | Some window -> window#set_title x
         | _ -> ()
-    end);
+    in
+    ignore (title#connect#changed ~callback);
     ignore (icon#connect#changed ~callback:begin fun x ->
       match detached_window with
         | Some window -> window#set_icon x
@@ -127,6 +130,7 @@ and detached () = object (self) inherit [bool] signal () end
 and messages ~(paned : GPack.paned) () =
   let notebook        = GPack.notebook ~scrollable:true ~tab_border:0 () in
   let remove_page     = new remove_page () in
+  let switch_page     = new switch_page () in
   let visible_changed = new visible_changed () in
 object (self)
   val mutable detached_window = None
@@ -136,6 +140,7 @@ object (self)
 
   val mutable visible = true;
   val mutable empty_page = None
+  val mutable current_page = None
 
   initializer
     paned#add2 notebook#coerce;
@@ -149,6 +154,36 @@ object (self)
     (*  *)
     notebook#drag#dest_set Messages_tab.targets ~actions:[`MOVE ];
     ignore (notebook#drag#connect#data_received ~callback:self#data_received);
+    notebook#connect#switch_page ~callback:begin fun num ->
+      Gaux.may current_page ~f:(fun page -> page#is_active#set false);
+      let page = notebook#get_nth_page num in
+      try
+        let _, page = Hashtbl.find table page#get_oid in
+        page#is_active#set true;
+        current_page <- Some page;
+        switch_page#call page;
+      with Not_found -> ()
+    end |> ignore;
+    self#misc#connect#map ~callback:begin fun _ ->
+      Gaux.may (GWindow.toplevel self#coerce) ~f:begin fun (w : GWindow.window) ->
+        w#event#connect#focus_in ~callback:begin fun _ ->
+          Gaux.may current_page ~f:(fun page -> page#is_active#set true);
+          false
+        end |> ignore;
+        w#event#connect#focus_out ~callback:begin fun _ ->
+          Gaux.may current_page ~f:(fun page -> page#is_active#set false);
+          false
+        end |> ignore;
+      end;
+    end |> ignore;
+    self#connect#visible_changed ~callback:begin fun visible ->
+      Gaux.may current_page ~f:(fun page -> page#is_active#set visible);
+    end |> ignore;
+    self#connect#switch_page ~callback:begin fun page ->
+      match detached_window with
+        | None -> ()
+        | Some window -> window#set_title page#title
+    end |> ignore;
 
   method detach (button_detach : GButton.tool_button) =
     match detached_window with
@@ -189,6 +224,7 @@ object (self)
         detached_window <- Some window;
         self#misc#reparent window#coerce;
         window#show();
+        Gaux.may current_page ~f:(fun page -> window#set_title page#title);
         (*detached#call true;*)
         button_detach#misc#set_sensitive true;
         button_detach#misc#set_state `NORMAL;
@@ -248,9 +284,12 @@ object (self)
 
   method append_page ~label_widget ?with_spinner (page : page) =
     let tab_label = new Messages_tab.widget ~label_widget ?with_spinner ~page () in
-    let _ = notebook#append_page ~tab_label:tab_label#coerce page#coerce in
     Hashtbl.add table page#misc#get_oid (label_widget, page);
-    ignore (page#misc#connect#destroy ~callback:(fun () -> Hashtbl.remove table page#misc#get_oid));
+    let _ = notebook#append_page ~tab_label:tab_label#coerce page#coerce in
+    ignore (page#misc#connect#destroy ~callback:begin fun () ->
+        remove_page#call page#coerce;
+        Hashtbl.remove table page#misc#get_oid;
+      end);
     page#set_parent (self :> messages);
     self#remove_empty_page();
 
@@ -261,6 +300,8 @@ object (self)
           | Some window -> if x then (window#present ()) else (window#misc#hide ());
           | _ -> if x then (paned#child2#misc#show ()) else (paned#child2#misc#hide ());
       end;
+      let h = paned#misc#allocation.Gtk.height in
+      if paned#position > (h - 30) then paned#set_position (h * 5 / 8);
       visible <- not visible;
     end;
     if visible && List.length notebook#children = 0 then begin
@@ -284,18 +325,20 @@ object (self)
       notebook#goto_page (notebook#page_num page);
     end
 
-  method connect = new signals ~remove_page ~visible_changed
+  method connect = new signals ~remove_page ~visible_changed ~switch_page
 end
 
-and signals ~remove_page ~visible_changed =
+and signals ~remove_page ~visible_changed ~switch_page =
 object (self)
-  inherit ml_signals [remove_page#disconnect; visible_changed#disconnect ]
+  inherit ml_signals [remove_page#disconnect; visible_changed#disconnect; switch_page#disconnect ]
   method remove_page = remove_page#connect ~after
   method visible_changed = visible_changed#connect ~after
+  method switch_page = switch_page#connect ~after
 end
 
 and remove_page () = object (self) inherit [GObj.widget] signal () end
 and visible_changed () = object (self) inherit [bool] signal () end
+and switch_page () = object (self) inherit [page] signal () end
 
 
 let vmessages = new messages ~paned:vpaned ()

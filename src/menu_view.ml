@@ -30,7 +30,7 @@ let get_switch_viewer_label page =
       | _ -> !Dot_viewer_plugin.device
   in
   match device with (module DEV : Dot_viewer_plugin.DEVICE) ->
-    if not DEV.have_embedded_viewer then "Show Dependency Graph"
+    if not DEV.have_embedded_viewer then "Dependency Graph"
     else begin
       match page with
         | Some page when page#button_dep_graph#active -> "Switch Viewer to \xC2\xABSource\xC2\xBB"
@@ -52,6 +52,7 @@ let update_labels
   ~toggle_word_wrap
   ~signal_toggle_wrod_wrap
   ~switch_viewer
+  ~rev_history
   editor =
   let page = editor#get_page `ACTIVE in
   let has_current_page = page <> None in
@@ -75,6 +76,7 @@ let update_labels
   toggle_word_wrap#misc#handler_unblock signal_toggle_wrod_wrap;
   toggle_word_wrap#misc#set_sensitive has_current_page;
   switch_viewer#misc#set_sensitive has_current_page;
+  rev_history#misc#set_sensitive has_current_page;
   let text = get_switch_viewer_label page in
   switch_viewer#misc#set_property "label" (`STRING (Some text));
   Opt.may page (fun page ->

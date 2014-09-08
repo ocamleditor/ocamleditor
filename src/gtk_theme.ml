@@ -34,7 +34,7 @@ let avail_themes =
 let find_text_output_font_condensed : string option ref = ref None
 let set_find_text_output_font_condensed context =
   find_text_output_font_condensed :=
-    try Some (List.find (Gtk_util.try_font context) ["Arial"; "Helvetica"; "Sans"])
+    try Some (List.find (Gtk_util.try_font context) [(*"Arial Narrow"; *)"Arial"; "Helvetica"; "Sans"])
     with Not_found -> None
 
 let get_style_outline pref =
@@ -120,8 +120,8 @@ widget \"*.oe_menubar\" style:highest \"oe_menubar\"
       | "" ->
         begin
           try
-            let family = List.find (Gtk_util.try_font context) ["Arial"; "Helvetica"; "Sans"] in
-            let font_name = sprintf "%s 9" family in
+            let family, size = List.find (fun (n, _) -> Gtk_util.try_font context n) ["Sans", 9] in  
+            let font_name = sprintf "%s %d" family size in
             pref.Preferences.pref_general_font <- font_name;
             Preferences.save();
             sprintf "gtk-font-name = \"%s\"" font_name;

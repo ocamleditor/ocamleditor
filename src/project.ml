@@ -267,12 +267,13 @@ let save ?editor proj =
           | Some rel -> filename_unix_implicit rel
       end, scroll_offset, offset, active
     end proj.files;
+    (* output tools *)
+    Project_tools.write proj;
+    (*  *)
     let root = proj.root in
     let files = proj.files in
     proj.root <- "";
     proj.files <- [];
-    (* output tools *)
-    Project_tools.write proj;
     (* output XML *)
     let xml = Xml.to_string_fmt (!write_xml proj) in
     output_xml filename xml;
@@ -423,5 +424,24 @@ let clear_cache proj =
   let cmd = sprintf "%s \"%s\"\\*" rmr (path_tmp proj) in
   Log.println `TRACE "%s\n%!" cmd;
   Sys.command cmd;;
+
+(*(** load_rc_icons *)
+let load_rc_icons proj =
+  Miscellanea.pushd (proj.root // Prj.default_dir_src);
+  let script = Filename.concat (Filename.concat ".." "tools") "rc_compile.ml" in
+  let cmd = sprintf "ocaml %s %S %S" script in
+  List.iter begin fun target ->
+    match target.Target.resource_file with
+      | None -> ()
+      | Some rc ->
+        List.iter begin fun (iconame, data) ->
+          let process_in ic =
+            try while true do Buffer.add_channel data ic 1024 done
+            with End_of_file -> ()
+          in
+          Oebuild_util.exec ~verbose:false ~join:false ~process_in (cmd target.Target.name iconame) |> ignore
+        end rc.Resource_file.rc_icons_data;
+  end proj.targets;
+  Miscellanea.popd();*)
 
 

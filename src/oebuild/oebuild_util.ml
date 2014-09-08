@@ -27,10 +27,53 @@ let (!$) = Filename.chop_extension
 let (//) = Filename.concat
 let (^^) = Filename.check_suffix
 let (<@) = List.mem
-let is_win32, win32 = (Sys.os_type = "Win32"), (fun a b -> match Sys.os_type with "Win32" -> a | _ -> b)
+let win32 = (fun a b -> match Sys.os_type with "Win32" -> a | _ -> b)
 let may opt f = match opt with Some x -> f x | _ -> ()
 let re_spaces = Str.regexp " +"
 let redirect_stderr_to_null = if Sys.os_type = "Win32" then " 2>NUL" else " 2>/dev/null"
+
+(** format_int *)
+let format_int n =
+  let n = string_of_int n in
+  let i = ref (String.length n - 3) in
+  let res = ref "" in
+  while !i >= 0 do
+    res := (if !i > 0 then "," else "") ^ (String.sub n !i 3) ^ !res;
+    i := !i - 3;
+  done;
+  (String.sub n 0 (!i + 3)) ^ !res;;
+
+(** lpad *)
+let lpad txt c width =
+  let result = (String.make width c) ^ txt in
+  String.sub result (String.length result - width) width;;
+
+(** rpad *)
+let rpad txt c width =
+  let result = txt ^ (String.make width c) in
+  String.sub result 0 width;;
+
+(** dot_leaders *)
+let dot_leaders ?(prefix="") ?(postfix="") ?(right_align=false) properties =
+  let prefix_length = String.length prefix in
+  let maxl =
+    List.fold_left begin fun maxl (x, _) ->
+      let len = prefix_length + String.length x in
+      max maxl len
+    end 0 properties
+  in
+  let lpad x =
+    if right_align then
+      let len =
+        List.fold_left begin fun maxr (_, y) ->
+          let len = String.length y in
+          max maxr len
+        end 0 properties
+      in lpad x ' ' len
+    else x
+  in
+  List.map (fun (n, v) -> Printf.sprintf "%s : %s%s" (rpad (prefix ^ n ^ " ") '.' maxl) (lpad v) postfix) properties
+;;
 
 (** crono *)
 let crono ?(label="Time") f x =
@@ -66,17 +109,20 @@ let command ?(echo=true) cmd =
   exit_code
 
 (** iter_chan *)
-let iter_chan chan f = try while true do f chan done with End_of_file -> ()
+let iter_chan (f : in_channel -> unit) chan = try while true do f chan done with End_of_file -> ()
 
 (** exec *)
 let exec ?(env=Unix.environment()) ?(verbose=true) ?(join=true) ?at_exit
-    ?(process_in=(fun chan -> print_endline (input_line chan)))
-    ?(process_err=(fun chan -> prerr_endline (input_line chan)))
+    ?(process_in=(iter_chan (fun chan -> print_endline (input_line chan))))
+    ?(process_err=(iter_chan (fun chan -> prerr_endline (input_line chan))))
     cmd =
+  let at_exit = match at_exit with None when not join -> Some ignore | _ -> at_exit in
   let cmd = Str.global_replace re_spaces " " cmd in
   if verbose then printf "%s\n%!" cmd;
   let exit_code = ref (-9998) in
   let (inchan, _, errchan) as channels = Unix.open_process_full cmd env in
+  set_binary_mode_in inchan true;
+  set_binary_mode_in errchan true;
   let close () =
     match Unix.close_process_full channels with
      	| Unix.WEXITED code -> code
@@ -84,12 +130,12 @@ let exec ?(env=Unix.environment()) ?(verbose=true) ?(join=true) ?at_exit
   in
   let thi =
     Thread.create begin fun () ->
-      iter_chan inchan process_in;
+      process_in inchan;
     end ()
   in
   let the =
     Thread.create begin fun () ->
-      iter_chan errchan process_err;
+      process_err errchan;
       Thread.join thi;
       begin
         match at_exit with
@@ -196,8 +242,8 @@ let parfold_command ~command ~args ?verbose () =
   in
   List.iter begin fun entry ->
     exec ?env:None ?verbose ~join:false ~at_exit
-        ~process_in:entry.pf_process_in
-        ~process_err:entry.pf_process_err
+        ~process_in:(iter_chan entry.pf_process_in)
+        ~process_err:(iter_chan entry.pf_process_err)
         entry.pf_cmd |> ignore
   end entries;
   Mutex.lock mx_finished;

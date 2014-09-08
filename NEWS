@@ -1,5 +1,20 @@
+Version 1.13.0
+--------------
+  * Use of different tab color for files that do not belong to the project
+    source path.
+  * Support to embed assembly informations in native MS applications.
+  * New executable `ocamleditor_launcher` can be used to open OCaml files from
+    an external file manager.
+  * Quickly view all current file changes on the left margin (requires `ocamldiff`
+    and `diff`).
+  * File revision history.
+  * Ability to show in the messages pane the documentation of the symbol under
+    the cursor (by pressing F7).
+  * Support for generating Findlib packages from project targets.
+
 Version 1.12.0
 --------------
+  * Various bug fixes.
 
 Version 1.11.0
 --------------

@@ -30,9 +30,9 @@ let keep_backup = Oe_config.autosave_keep_backup
 
 (** path *)
 let path =
-  let path = Oe_config.ocamleditor_user_home // "autosave" in
+  let path = App_config.ocamleditor_user_home // "autosave" in
   if not (Sys.file_exists path) then (Unix.mkdir path 509);
-  let path_bak = Oe_config.ocamleditor_user_home // "autosave" // "bak" in
+  let path_bak = App_config.ocamleditor_user_home // "autosave" // "bak" in
   if not (Sys.file_exists path_bak) then (Unix.mkdir path_bak 509);
   path
 

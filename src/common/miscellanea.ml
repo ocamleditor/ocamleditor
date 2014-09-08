@@ -362,6 +362,11 @@ let filename_split filename =
 filename_split "a/b";;
 filename_split "/a/b";;
 filename_split "C:\\a\\b";;
+filename_split "C:\\a/b";;
+filename_split "C:/a\\b";;
+Filename.dirname "C:\\a";;
+Filename.dirname "C:\\";;
+Filename.concat "C:\\" "a";;
 *)
 
 (** [filename_relative path dirname] returns the part of [path] relative to [dirname].

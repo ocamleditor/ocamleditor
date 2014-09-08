@@ -25,6 +25,14 @@ open Unix
 open Str
 open Printf
 
+(*#load "unix.cma"
+#load "str.cma"
+#directory "C:\\ocaml\\devel\\ocamleditor\\src\\common"
+#load "miscellanea.cmo"
+
+exact_match ~pat:(unix_regexp "*.{ml,mli,mll,mly,bat,cmd,txt,css,js}") "a.mli";;*)
+
+
 module Regexp =
 struct
 
@@ -43,6 +51,15 @@ struct
     if v = v' then v else fixpoint ~f v';;
 
   let unix_regexp s =
+    let re = ~! "\\*\\.{\\(.*\\)}" in
+    let s =
+      if Str.string_match re s 0 then begin
+        let elements = Str.split (!~ " *, *") (Str.matched_group 1 s) in
+        let elements = List.sort (fun x y -> compare y x) elements in
+        "*.{" ^ String.concat "," elements ^ "}"
+      end else s
+    in
+    let s = Str.global_replace ~!"\\." "[.]" s in
     let s = Str.global_replace ~!"\\*" ".*" s in
     let s = Str.global_replace ~!"\\?" ".?" s in
     let s =

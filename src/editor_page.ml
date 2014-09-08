@@ -189,8 +189,10 @@ class page ?file ~project ~scroll_offset ~offset ~editor () =
     end
   in
   (** Global gutter *)
-  let global_gutter            = GMisc.drawing_area ~width:9 ~packing:global_gutter_ebox#add
+  let global_gutter = GMisc.drawing_area ~width:Oe_config.global_gutter_size ~packing:global_gutter_ebox#add
     ~show:Preferences.preferences#get.Preferences.pref_show_global_gutter () in
+  let _ = global_gutter#misc#set_has_tooltip true in
+  let _ = global_gutter#event#add [`BUTTON_PRESS; `BUTTON_RELEASE] in
   (*  *)
   let _                        = List.iter begin fun lab ->
     lab#set_use_markup true
@@ -210,9 +212,10 @@ object (self)
   val mutable tab_widget : (GBin.alignment * GButton.button * GMisc.label) option = None
   val mutable resized = false
   val mutable changed_after_last_autosave = false
+  val mutable changed_after_last_diff = true
   val mutable load_complete = false
   val mutable annot_type = None
-  val error_indication = new Error_indication.error_indication ocaml_view vscrollbar (global_gutter, global_gutter_ebox)
+  val error_indication = new Error_indication.error_indication ocaml_view vscrollbar global_gutter
   val mutable outline = None
   val mutable dotview = None
   val mutable word_wrap = editor#word_wrap
@@ -221,17 +224,25 @@ object (self)
   val mutable signal_button_toggle_wrap = None
   val mutable signal_button_toggle_whitespace = None
   val mutable signal_button_dotview = None
+  val mutable global_gutter_tooltips : ((int * int * int * int) * (unit -> GObj.widget)) list = []
+
+  method global_gutter_tooltips = global_gutter_tooltips
+  method set_global_gutter_tooltips x = global_gutter_tooltips <- x
 
   method annot_type = annot_type
   method error_indication = error_indication
 
-  method global_gutter = global_gutter#coerce
+  method global_gutter = global_gutter
+  method vscrollbar = vscrollbar
 
   method outline = outline
   method set_outline x = outline <- x
 
   method changed_after_last_autosave = changed_after_last_autosave
   method set_changed_after_last_autosave x = changed_after_last_autosave <- x
+
+  method changed_after_last_diff = changed_after_last_diff
+  method set_changed_after_last_diff x = changed_after_last_diff <- x
 
   method private set_tag_annot_background () =
     Opt.may annot_type (fun annot_type ->
@@ -305,7 +316,8 @@ object (self)
     self#error_indication#set_flag_tooltip Preferences.preferences#get.Preferences.pref_err_tooltip;
     self#error_indication#set_flag_gutter Preferences.preferences#get.Preferences.pref_err_gutter;
     self#view#create_highlight_current_line_tag();
-    Gaux.may outline ~f:(fun outline -> outline#view#misc#modify_font_by_name Preferences.preferences#get.Preferences.pref_compl_font)
+    Gaux.may outline ~f:(fun outline -> outline#view#misc#modify_font_by_name Preferences.preferences#get.Preferences.pref_compl_font);
+    error_indication#set_phase ();
 
   method update_statusbar () =
     match self#file with
@@ -320,11 +332,13 @@ object (self)
                 let last_modified = sprintf "%4d-%d-%d %02d:%02d:%02d" (tm.Unix.tm_year + 1900)
                   (tm.Unix.tm_mon + 1) tm.Unix.tm_mday tm.Unix.tm_hour tm.Unix.tm_min tm.Unix.tm_sec
                 in
-                kprintf status_filename#misc#set_tooltip_markup "%s%s\nLast modified: %s\n%d bytes"
+                kprintf status_filename#misc#set_tooltip_markup "%s%s\nLast modified: %s\n%s bytes - %s lines - %s characters"
                   (if project.Prj.in_source_path file#filename <> None then "<b>" ^ project.Prj.name ^ "</b>\n" else "")
                   self#get_title
                   last_modified
-                  stat.Editor_file_type.size;
+                  (Text_util.format_int stat.Editor_file_type.size)
+                  (Text_util.format_int buffer#line_count)
+                  (Text_util.format_int buffer#char_count);
               | _ -> ()
           end;
         with _ -> ()
@@ -406,6 +420,7 @@ object (self)
                 | None ->
                   signal_buffer_changed <- Some (buffer#connect#changed ~callback:begin fun () ->
                     changed_after_last_autosave <- true;
+                    changed_after_last_diff <- true;
                     buffer#set_changed_timestamp (Unix.gettimeofday());
                     buffer#set_changed_after_last_autocomp true
                   end);
@@ -413,6 +428,7 @@ object (self)
             end;
             if not buffer#undo#is_enabled then (buffer#undo#enable());
             load_complete <- true;
+            buffer#save_buffer ~filename:buffer#orig_filename () |> ignore;
             (*  *)
             self#set_code_folding_enabled editor#code_folding_enabled#get; (* calls scan_folding_points, if enabled *)
             self#view#matching_delim ();
@@ -489,6 +505,16 @@ object (self)
     Gmisclib.Idle.add (fun () -> GtkBase.Widget.queue_draw text_view#as_widget);
 
   method button_dep_graph = button_dotview
+
+  method show_revision_history () =
+    let rev = Revisions.create ~page:self in
+    let hbox = GPack.hbox ~spacing:1 () in
+    let _ = GMisc.image ~pixbuf:Icons.history ~packing:hbox#pack () in
+    let label = GMisc.label ~text:(sprintf "\xC2\xAB%s\xC2\xBB history" (Filename.basename self#get_filename)) ~packing:hbox#pack () in
+    Messages.vmessages#append_page ~label_widget:hbox#coerce ~with_spinner:false rev;
+    rev#set_title label#text;
+    rev#present();
+    rev#set_icon None;
 
   method private show_dep_graph () =
     match dotview with
@@ -575,6 +601,13 @@ object (self)
         end
 
   initializer
+    global_gutter#misc#connect#query_tooltip ~callback:begin fun ~x ~y ~kbd tooltip ->
+      try
+        let _, f = List.find (fun ((x0, y0, w, h), _) -> x0 <= x && x <= x0 + w && y0 <= y && y <= y0 + h) global_gutter_tooltips in
+        GtkBase.Tooltip.set_custom tooltip (f())#as_widget;
+        true
+      with Not_found -> false
+    end |> ignore;
     ignore (self#misc#connect#destroy ~callback:begin fun () ->
       Opt.may file (fun f -> f#cleanup())
     end);

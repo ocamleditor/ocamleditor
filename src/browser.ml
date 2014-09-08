@@ -60,7 +60,7 @@ class browser () =
   let menubarbox = GPack.hbox ~spacing:0 ~packing:vbox#pack () in
   (* Menubar icon displayed full-screen mode *)
   let width, height = 32, 32 in
-  let pixbuf = GdkPixbuf.create ~width ~height ~has_alpha:true () in
+  let pixbuf = GdkPixbuf.create ~width ~height ~has_alpha:false () in
   let _ = GdkPixbuf.saturate_and_pixelate ~saturation:0.0 ~pixelate:true ~dest:pixbuf Icons.oe in
   let window_title_menu_icon = GBin.event_box ~packing:menubarbox#pack ~show:false () in
   let icon = GMisc.image ~pixbuf ~packing:window_title_menu_icon#add () in
@@ -220,6 +220,7 @@ object (self)
       with Templ.Error (msg, details) ->
         (Dialog.message ~title:"Warning" ~message:(sprintf "%s\n\n\"%s\"" msg details) `WARNING);
     end;
+    (*Project.load_rc_icons proj;*)
     switch_project#call();
     (* Load files *)
     let active_exists = ref false in
@@ -241,7 +242,7 @@ object (self)
 
   method dialog_project_open () =
     let project_home =
-      match self#current_project#get with Some p -> p.Prj.root | _ -> Oe_config.user_home
+      match self#current_project#get with Some p -> p.Prj.root | _ -> App_config.user_home
     in
     let pat1 = "*"^Prj.default_extension in
     let pat2 = "*"^Prj.old_extension in
@@ -330,10 +331,10 @@ object (self)
     let rec mkname n =
       if n = 100 then (failwith "dialog_project_new (mkname)");
       let name = sprintf "Untitled_%d" n in
-      if not (Sys.file_exists (Oe_config.user_home // name)) then name else (mkname (n + 1))
+      if not (Sys.file_exists (App_config.user_home // name)) then name else (mkname (n + 1))
     in
     let name = mkname 0 in
-    let filename = Oe_config.user_home // name // (name^Prj.default_extension) in
+    let filename = App_config.user_home // name // (name^Prj.default_extension) in
     let new_project = Project.create ~filename () in
     let window, widget =
       Project_properties.create ~show:true ~editor ~new_project ~callback:begin fun proj ->
@@ -417,7 +418,7 @@ object (self)
               | Some relname ->
                 let color = if modified then "red" else "blue"  in
                 let dir = Filename.dirname relname in
-                let dir = if dir = "." then "" else sprintf "<span size='large'>%s · </span>" dir in
+                let dir = if dir = "." then "" else sprintf "<span size='large'>%s/</span>" dir in
                 window_title_menu_label#set_label
                   (sprintf
                      "<span weight='bold' size='large'>%s  •  </span><span size='large'>%s</span><span weight='bold' size='large' color='%s'>%s</span>"
@@ -671,7 +672,7 @@ object (self)
       ignore(Messages.vmessages#remove_all_tabs());
       if maximized_view_action = `NONE then (self#set_geometry());
       (* Save geometry *)
-      let chan = open_out (Filename.concat Oe_config.ocamleditor_user_home "geometry") in
+      let chan = open_out (Filename.concat App_config.ocamleditor_user_home "geometry") in
       fprintf chan "%s" geometry;
       close_out_noerr chan;
       window#misc#hide();
@@ -972,7 +973,7 @@ object (self)
     let is_outline_visible = ref true in
     begin
       try
-        let chan = open_in (Filename.concat Oe_config.ocamleditor_user_home "geometry") in
+        let chan = open_in (Filename.concat App_config.ocamleditor_user_home "geometry") in
         width := int_of_string (input_line chan);
         height := int_of_string (input_line chan);
         pos_x := Some (int_of_string (input_line chan));
@@ -1008,6 +1009,40 @@ object (self)
     (*  *)
     self#set_geometry();
     window#add_accel_group accel_group;
+    (* Listen for launcher *)
+    let launcher_list = App_config.launcher_filename in
+    let id_timeout = ref None in
+    let check_launcher () =
+      if Sys.file_exists launcher_list then begin
+        let text = File_util.read launcher_list in
+        let filenames = Str.split (Miscellanea.regexp "\n") (Buffer.contents text) in
+        let filenames = List.map String.trim filenames in
+        let filenames = Miscellanea.Xlist.remove_dupl filenames in
+        List.iter begin fun filename ->
+          editor#open_file ~active:true ~scroll_offset:0 ~offset:0 filename |> ignore;
+        end filenames;
+        let mv = maximized_view_action in
+        window#set_modal true;
+        window#present();
+        if Sys.file_exists launcher_list then Sys.remove launcher_list;
+        window#set_modal false;
+        self#set_maximized_view mv;
+        self#set_maximized_view mv;
+      end;
+    in
+    window#event#connect#focus_out ~callback:begin fun _ ->
+      id_timeout := Some (GMain.Timeout.add ~ms:300 ~callback:begin fun () ->
+          check_launcher();
+          true
+        end);
+      false
+    end |> ignore;
+    window#event#connect#focus_in ~callback:begin fun _ ->
+      (match !id_timeout with Some id -> GMain.Timeout.remove id | _ -> ());
+      false
+    end |> ignore;
+    check_launcher()
+
 
   method connect = new signals ~startup ~switch_project ~menubar_visibility_changed ~toolbar_visibility_changed
     ~tabbar_visibility_changed ~outline_visibility_changed

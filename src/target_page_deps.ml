@@ -123,7 +123,7 @@ object (self)
         in
         Gmisclib.Window.GeometryMemo.add ~key:"dialog-target-deps" ~window Preferences.geometry_memo;
         Gaux.may (GWindow.toplevel hbox) ~f:(fun w -> window#set_transient_for w#as_window);
-        Gtk_util.esc_destroy_window window;
+        Gmisclib.Util.esc_destroy_window window;
         let vbox = GPack.vbox ~spacing:8 ~border_width:5 ~packing:window#add () in
         let bclist = new target_list ~packing:vbox#add () in
         let bbox = GPack.button_box `HORIZONTAL ~layout:`END ~spacing:8 ~packing:vbox#pack () in

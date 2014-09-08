@@ -90,6 +90,8 @@ class widget ~project ?(is_completion=false) ?(enable_history=true) ?width ?heig
   let odoc_tag            = odoc_buffer#create_tag
                             ((`FONT Preferences.preferences#get.Preferences.pref_odoc_font) :: Oe_config.odoc_tag_properties) in
   let _                   = odoc_buffer#create_tag ~name:"large" [`SCALE `X_LARGE] in
+  let _                   = odoc_buffer#create_tag ~name:"type2" Oe_doc.Printer.Properties.type2 in
+  let _                   = odoc_buffer#create_tag ~name:"line_spacing_small" [`SIZE_POINTS 4.] in
   let incremental_search  = new Incremental_search.incremental () in
   let pref                = {Preferences.preferences#get with Preferences.pref_code_folding_enabled=false} in
   let _ =
@@ -104,8 +106,8 @@ class widget ~project ?(is_completion=false) ?(enable_history=true) ?width ?heig
     odoc_buffer#init_tags ~tags:tag_names ~colors ();
     Preferences_apply.apply (odoc_view :> Text.view) pref;
     odoc_view#code_folding#set_enabled false;
-    odoc_view#set_pixels_above_lines 1;
-    odoc_view#set_pixels_below_lines 2;
+    odoc_view#set_pixels_above_lines 0;
+    odoc_view#set_pixels_below_lines 0;
     odoc_view#set_pixels_inside_wrap 0;
     odoc_view#set_editable false;
     odoc_view#set_cursor_visible false;
@@ -141,9 +143,13 @@ object (self)
   val layout_toggled = new layout_toggled ()
   val tag_table = new GText.tag_table odoc_view#as_gtext_view#buffer#tag_table
   val mutable tags = []
+  val mutable reuse = false
 
   method button_layout_slist = button_layout_slist
   method button_layout_odoc = button_layout_odoc
+  method entry_find = entry_find
+  method reuse = reuse
+  method set_reuse x = reuse <- x
 
   initializer
     self#set_is_completion is_completion;
@@ -185,8 +191,6 @@ object (self)
     self#create_widget_modules ~push:false ();
     button_layout_slist#set_active true;
     button_layout_odoc#set_active (not is_completion);
-    Gmisclib.Idle.add entry_find#misc#grab_focus;
-
 
   method change_font_size increment =
     let get_tag_fd (tag : GText.tag) =
@@ -247,7 +251,7 @@ object (self)
     end)
 
   method init_toolbar () =
-    let find_and_fill () = self#find ~fill:true () in
+    let find_and_fill () = self#find_async ~fill:true () in
     ignore (button_back#connect#clicked ~callback:(fun () -> ignore (self#go_back())));
     ignore (button_forward#connect#clicked ~callback:self#go_forward);
     ignore (button_up#connect#clicked ~callback:self#go_up);
@@ -260,7 +264,7 @@ object (self)
     ignore (radio_find_name#connect#toggled ~callback:(fun () -> if radio_find_name#get_active then find_and_fill()));
     ignore (radio_find_type#connect#toggled ~callback:(fun () -> if radio_find_type#get_active then find_and_fill()));
     ignore (button_find#connect#clicked ~callback:find_and_fill);
-    ignore (entry_find#connect#changed ~callback:self#find);
+    ignore (entry_find#connect#changed ~callback:self#find_async);
     ignore (button_remove#connect#clicked ~callback:begin fun () ->
       match widget_libraries with
         | None -> ()
@@ -333,17 +337,29 @@ object (self)
       if List.mem key [GdkKeysyms._Left] then true else false
     end)
 
+  val mutable is_onscreen = new GUtil.variable false
+  method is_onscreen = is_onscreen
+
   method private init_timeout_odoc () =
-    let id = GMain.Timeout.add ~ms:100 ~callback:begin fun () ->
-      begin
-        try
-          if vbox#misc#get_flag `REALIZED && box_odoc#misc#get_flag `VISIBLE
-          then (self#update_module_details ())
-        with ex -> Printf.eprintf "File \"module_browser_tool.ml\": %s\n%s\n%!" (Printexc.to_string ex) (Printexc.get_backtrace());
-      end;
-      true
-    end in
-    ignore (self#misc#connect#destroy ~callback:(fun () -> GMain.Timeout.remove id))
+    let need_timeout () = self#is_odoc_visible && self#is_slist_visible in
+    let id = ref None in
+    let create_timeout _ =
+      id := Some (GMain.Timeout.add ~ms:100 ~callback:begin fun () ->
+          let has_toplevel_focus = match GWindow.toplevel self#coerce with | Some w -> w#has_toplevel_focus | _ -> false in
+          if has_toplevel_focus && vbox#misc#get_flag `REALIZED && (need_timeout()) then begin
+            try self#update_module_details ()
+            with ex -> Printf.eprintf "File \"module_browser_tool.ml\": %s\n%s\n%!" (Printexc.to_string ex) (Printexc.get_backtrace());
+          end;
+          true
+        end);
+    in
+    self#as_page#is_active#connect#changed ~callback:is_onscreen#set |> ignore;
+    button_layout_odoc#connect#toggled ~callback:(fun () ->  is_onscreen#set (button_layout_slist#get_active && button_layout_odoc#get_active)) |> ignore;
+    button_layout_slist#connect#toggled ~callback:(fun () -> is_onscreen#set (button_layout_slist#get_active && button_layout_odoc#get_active)) |> ignore;
+    is_onscreen#connect#changed ~callback:begin fun x ->
+      if x && need_timeout() then create_timeout() else (Gaux.may !id ~f:GMain.Timeout.remove)
+    end |> ignore;
+    self#misc#connect#destroy ~callback:(fun () -> Gaux.may !id ~f:GMain.Timeout.remove) |> ignore;
 
   method private init_key_bindings () =
     ignore (ebox#event#connect#key_release ~callback:begin fun ev ->
@@ -360,7 +376,7 @@ object (self)
       end else if box_slist_visible && state = [`MOD1] && key = GdkKeysyms._Up then begin
         self#go_up();
         true
-      end else if key = GdkKeysyms._Right then begin
+      (*end else if key = GdkKeysyms._Right then begin
         button_layout_odoc#set_active true;
         self#update_module_details ~force:true ();
 	Gmisclib.Idle.add odoc_view#misc#grab_focus;
@@ -374,7 +390,7 @@ object (self)
               w#view#misc#grab_focus();
             | _ -> ()
         end;
-        true
+        true*)
       end else if key = GdkKeysyms._F3 then begin
         if List.for_all entry_find#misc#get_flag [`REALIZED; `VISIBLE] then (entry_find#misc#grab_focus());
         true
@@ -434,7 +450,7 @@ object (self)
     end else (self#tooltip_destroy())
 
   method get_current_page () =
-    try Some (Stack.top stack_back) with Stack.Empty -> None
+    try Some (Stack.top stack_back) with Stack.Empty -> (None : symbol_list option)
 
   (** get_current_symbol *)
   method get_current_symbol () =
@@ -453,29 +469,123 @@ object (self)
   method is_odoc_visible = box_odoc#misc#get_flag `VISIBLE
   method is_slist_visible = box_slist#misc#get_flag `VISIBLE
 
-  (** find *)
-  method find ?text ?(fill=false) () =
-    Timeout.set tout_entry_find 0 begin fun () ->
-      GtkThread.async begin fun () ->
-        let text = match text with None -> entry_find#text | Some x -> x in
-        entry_find#misc#set_property "secondary-icon-sensitive" (`BOOL (String.length text > 0));
-        if String.length text > 0 then begin
-          let pat = (if radio_find_type#get_active then sprintf ".*[\t\r\n .]%s.*" else sprintf ".*%s.*") (Str.quote text) in
-          let regexp = Str.regexp_case_fold pat in
-          let symbols =
-            if radio_find_type#get_active
-            then
-              Symbol.filter_by_type ~regexp project.Prj.symbols.syt_table
-            else
-              Symbol.filter_by_name ~use_longidents:radio_find_path#get_active ~regexp project.Prj.symbols.syt_table
-          in
-          self#create_widget_search_results ~symbols ~fill ()
+  (** default_select_func *)
+  method private default_select_func slist =
+    if slist#length = 1 && slist#view#misc#get_flag `VISIBLE then
+      Gaux.may slist#model#get_iter_first ~f:slist#view#selection#select_iter;
+
+  (** select_best_match *)
+  method private select_best_match text slist =
+    let select_path path =
+      Gmisclib.Idle.add begin fun () ->
+        if slist#view#misc#get_flag `VISIBLE then begin
+          (slist#view :> GTree.view)#scroll_to_cell ~align:(0.38, 0.0) path slist#vc_icon;
+          slist#view#set_cursor path slist#vc_icon;
+        end
+      end
+    in
+    let regexp = Str.regexp_string_case_fold text in
+    let found = ref None in
+    (slist#model :> GTree.model)#foreach begin fun path row ->
+      let symbol = slist#model#get ~row ~column:Mbrowser_slist.col_symbol_data in
+      let value_path = Symbol.concat_value_path symbol in
+      if Str.string_match regexp value_path 0 && Str.match_end () = String.length value_path then begin
+        found := Some path;
+        true
+      end else false
+    end;
+    match !found with
+      | Some path -> select_path path
+      | None ->
+        (slist#model :> GTree.model)#foreach begin fun path row ->
+          let symbol = slist#model#get ~row ~column:Mbrowser_slist.col_symbol_data in
+          if Str.string_match regexp (Symbol.get_name symbol) 0 then begin
+            found := Some path;
+            true
+          end else false
         end;
-      end ()
+        begin
+          match !found with
+            | Some path -> select_path path
+            | None -> self#default_select_func slist
+        end;
+
+  (** select_symbol_by_prefix *)
+  method select_symbol_by_prefix
+      ?module_path
+      ~prefix
+      ~kind
+      (widget : symbol_list) =
+    let found = ref false in
+    let paths = Index.find_all widget#index prefix in
+    let full_prefix, by_value_path =
+      match module_path with
+        | Some mp -> (String.concat "" (mp @ [prefix])), true
+        | _ -> prefix, false
+    in
+    let find re =
+      ignore(List_opt.find begin fun (path, _) ->
+        let row = widget#model#get_iter path in
+        let sym = widget#model#get ~row ~column:col_symbol_data in
+        let name = if by_value_path then String.concat "" sym.Oe.sy_id else Symbol.get_name sym in
+        found :=
+          if Str.string_match re name 0 && (kind = [] || List.mem sym.sy_kind kind) then begin
+            widget#view#selection#select_iter row;
+            Gmisclib.Idle.add begin fun () ->
+              if widget#view#misc#get_flag `VISIBLE then begin
+                widget#view#scroll_to_cell ~align:(0.38, 0.0) path widget#vc_icon;
+                widget#view#set_cursor path widget#vc_icon;
+              end;
+            end;
+            true;
+          end else false;
+          !found
+      end paths)
+    in
+    find (Str.regexp_string full_prefix);
+    if not !found then (find (Str.regexp_string_case_fold full_prefix));
+
+  (** find *)
+  method find ?(page : Editor_page.page option) ?text ?(fill=false) () =
+    let text = match text with None -> entry_find#text | Some x -> x in
+    entry_find#misc#set_property "secondary-icon-sensitive" (`BOOL (String.length text > 0));
+    if String.length text > 0 then begin
+      let pat = (if radio_find_type#get_active then sprintf ".*[\t\r\n .]%s.*" else sprintf ".*%s.*") (Str.quote text) in
+      let regexp = Str.regexp_case_fold pat in
+      let path = (Project.get_load_path project) in
+      let include_locals =
+        match page with
+          | Some page ->
+            Some (project, page#get_filename, (page#buffer#get_iter `INSERT)#offset)
+          | _ -> None
+      in
+      let symbols =
+        if radio_find_type#get_active
+        then
+          Symbol.filter_by_type ~regexp project.Prj.symbols.syt_table
+        else
+          Symbol.filter_by_name
+            ~use_longidents:radio_find_path#get_active
+            ~include_methods:true
+            ~include_modules:path
+            ?include_locals
+            ~regexp
+            project.Prj.symbols.syt_table
+      in
+      Gmisclib.Idle.add (fun () -> button_layout_slist#set_active (match symbols with [] | [_] -> false | _ -> true));
+      odoc_view#buffer#set_text "";
+      let f = self#select_best_match text in
+      self#create_widget_search_results ~symbols ~fill ~f ();
     end
 
+  (** find *)
+  method private find_async ?text ?(fill=false) () =
+    Timeout.set tout_entry_find 0 begin fun () ->
+      GtkThread.async (fun () -> self#find ?text ~fill ()) ()
+    end;
+
   (** find_compl *)
-  method find_compl ~prefix ~(page : Editor_page.page) ~include_methods ?(f=fun _ -> ()) () =
+  method find_compl ~prefix ~(page : Editor_page.page) ~include_methods ?(f=self#default_select_func) () =
     let path = Project.get_load_path project in
     (*let path = project.Project.ocamllib :: path in*)
     if String.length prefix > 0 then begin
@@ -537,12 +647,15 @@ object (self)
     let wlibs = self#create_widget ~kind:`Directory () in
     widget_libraries <- Some wlibs;
     let ocamllib = project.Prj.ocamllib in
-    let project_load_path = List.sort begin fun a b ->
-      if a = ocamllib then -1 else if b = ocamllib then 1 else compare a b
-    end (Project.get_load_path project) in
+    let project_load_path =
+      List.sort begin fun a b ->
+        if a = ocamllib then -1 else if b = ocamllib then 1 else compare a b
+      end (Project.get_load_path project)
+    in
     let is_source_path_relaitve = Miscellanea.filename_relative (Project.path_src project) in
     let is_ocamllib_relative = Miscellanea.filename_relative ocamllib in
     List.iter begin fun path ->
+      (*let path = List.fold_left (//) "" (List.map (fun x -> Str.replace_first (!~ ":/") ":\\\\" x) (Miscellanea.filename_split path)) in*)
       let basename = Filename.basename path in
       let kind, basename, add_descr =
         match is_source_path_relaitve path with
@@ -555,7 +668,7 @@ object (self)
                 | Some x -> Lib, basename, sprintf "+%s" x
                 | _ ->
                   Lib, basename,
-                  if Filename.is_implicit path then (Prj.default_dir_src ^ "/" ^ path) else path
+                  if Filename.is_implicit path then (Prj.default_dir_src ^ "/" ^ (*//*) path) else path
             end
       in
       let row = wlibs#model#append () in
@@ -576,7 +689,7 @@ object (self)
     wlibs#vc_add_descr#set_visible true;
     wlibs#view#selection#set_mode `MULTIPLE;
     wlibs#view#set_cursor (GTree.Path.create [0]) wlibs#vc_type_descr;
-    wlibs#view#misc#grab_focus();
+    (*wlibs#view#misc#grab_focus();*)
     wlibs#set_title ~subtitle:"" "Index of Libraries";
     self#push wlibs;
 
@@ -724,11 +837,11 @@ object (self)
     end ()
 
   (** create_widget_search_results *)
-  method private create_widget_search_results ~symbols ?(fill=false) ?(f=fun _ -> ()) () =
+  method private create_widget_search_results ~symbols ?(fill=false) ?(f=self#default_select_func) () =
     let symbols = List.sort (fun a b -> compare (Symbol.get_name a) (Symbol.get_name b)) symbols in
     search_results_length <- List.length symbols;
-    let widget =
-      match self#get_current_page() with
+    let widget : symbol_list =
+      match (self#get_current_page() : symbol_list option) with
         | Some current_page when current_page#is_search_output -> current_page
         | _ ->
           let widget = self#create_widget ~kind:`Search () in
@@ -755,12 +868,12 @@ object (self)
     widget#model#clear();
     Index.clear widget#index;
     if not is_completion then begin
-      entry_find#misc#grab_focus();
-      entry_find#set_position (Glib.Utf8.length entry_find#text);
+      (*if entry_find#text <> "" then entry_find#misc#grab_focus();
+      entry_find#set_position (Glib.Utf8.length entry_find#text);*)
     end else widget#view#misc#grab_focus();
     if fill || search_results_length <= Oe_config.module_browser_max_results then begin
       ignore (widget#fill symbols);
-      Gmisclib.Idle.add (fun () -> widget#view#scroll_to_point 0 0)
+      Gmisclib.Idle.add (fun () -> if widget#view#misc#get_flag `REALIZED then widget#view#scroll_to_point 0 0)
     end;
     f widget
 
@@ -799,7 +912,8 @@ object (self)
           odoc_buffer#unblock_signal_handlers ();
           Gdk.Window.set_cursor self#misc#window (Gdk.Cursor.create `ARROW);
           Gaux.may (odoc_view#get_window `TEXT) ~f:(fun w -> Gdk.Window.set_cursor w (Gdk.Cursor.create `ARROW));
-        | _ -> (odoc_buffer :> GText.buffer)#insert "Documentation is not available";
+        | _ -> kprintf (odoc_buffer :> GText.buffer)#insert "Documentation is not available (%s, %s, %s)"
+                 (Symbol.concat_value_path symbol) (symbol.sy_filename) (Symbol.get_module_name symbol);
     end
 
   (** update_class_details *)
@@ -845,7 +959,7 @@ object (self)
             | Ptype | Ptype_abstract | Ptype_variant | Ptype_record ->
               odoc_buffer#set_text "\n";
               odoc_buffer#insert ~tag_names:["large"] (Symbol.string_of_id (Symbol.get_parent_path symbol));
-              odoc_buffer#insert "\n\n";
+              odoc_buffer#insert "\n";
               (*Lexical.tag odoc_view#buffer;*)
               insert_odoc();
   (*          | Pclass ->
@@ -855,7 +969,8 @@ object (self)
             | _ ->
               odoc_buffer#set_text "\n";
               odoc_buffer#insert ~tag_names:["large"] (Symbol.string_of_id (Symbol.get_parent_path symbol));
-              odoc_buffer#insert ("\n\n" ^ symbol.sy_type);
+              odoc_buffer#insert ~tag_names:["line_spacing_small"] "\n ";
+              odoc_buffer#insert ~tag_names:["type2"] ("\n" ^ symbol.sy_type);
               Lexical.tag odoc_view#buffer;
               ignore (self#insert_odoc ~project ~symbol ());
         end;
@@ -928,7 +1043,7 @@ object (self)
   (** go_up *)
   method go_up () =
     match self#get_current_page() with
-      | Some current_page ->
+      | Some (current_page : symbol_list) ->
         begin
           match self#get_current_symbol () with
             | Some symbol' (* Symbol under the cursor *) ->
@@ -979,41 +1094,6 @@ object (self)
     self#create_widget_module ~lib_path ~module_path
       ~f:(self#select_symbol_by_prefix ~module_path:(Symbol.get_parent_path symbol) ~prefix:(Symbol.get_name symbol) ~kind) ();
 
-  (** select_symbol_by_prefix *)
-  method select_symbol_by_prefix
-      ?module_path
-      ~prefix
-      ~kind
-      (widget : symbol_list) =
-    let found = ref false in
-    let paths = Index.find_all widget#index prefix in
-    let full_prefix, by_value_path =
-      match module_path with
-        | Some mp -> (String.concat "" (mp @ [prefix])), true
-        | _ -> prefix, false
-    in
-    let find re =
-      ignore(List_opt.find begin fun (path, _) ->
-        let row = widget#model#get_iter path in
-        let sym = widget#model#get ~row ~column:col_symbol_data in
-        let name = if by_value_path then String.concat "" sym.Oe.sy_id else Symbol.get_name sym in
-        found :=
-          if Str.string_match re name 0 && (kind = [] || List.mem sym.sy_kind kind) then begin
-            widget#view#selection#select_iter row;
-            Gmisclib.Idle.add begin fun () ->
-              if widget#view#misc#get_flag `VISIBLE then begin
-                widget#view#scroll_to_cell ~align:(0.38, 0.0) path widget#vc_icon;
-                widget#view#set_cursor path widget#vc_icon;
-              end;
-            end;
-            true;
-          end else false;
-          !found
-      end paths)
-    in
-    find (Str.regexp_string full_prefix);
-    if not !found then (find (Str.regexp_string_case_fold full_prefix));
-
   (** show_current_page *)
   method private show_current_page () =
     (*odoc_view#buffer#set_text "";*)
@@ -1033,15 +1113,15 @@ object (self)
     with Stack.Empty -> ()
 
   method private toggle_layout : [ `slist | `odoc ] -> unit = function pane ->
+    let (!!) x = List.for_all x#misc#get_flag [`VISIBLE; `REALIZED] in
     begin
       match pane with
         | `slist ->
-          if box_slist#misc#get_flag `VISIBLE then box_slist#misc#hide() else box_slist#misc#show();
+          if !! box_slist then box_slist#misc#hide() else box_slist#misc#show();
         | `odoc ->
-          if box_odoc#misc#get_flag `VISIBLE then box_odoc#misc#hide() else box_odoc#misc#show();
+          if !! box_odoc then box_odoc#misc#hide() else box_odoc#misc#show();
     end;
-    if not (box_slist#misc#get_flag `VISIBLE) && not (box_odoc#misc#get_flag `VISIBLE) then
-      button_layout_slist#set_active true;
+    if not (!! box_slist) && not (!! box_odoc) then button_layout_slist#set_active true;
     layout_toggled#call()
 
   method layout : [ `slist | `odoc | `both ] =
@@ -1084,20 +1164,55 @@ let create_window ~project =
   window#show()
 ;;*)
 
-let append_to_messages ~project =
-  let widget = new widget ~project () in
-  messages#set_visible true;
-  let hbox = GPack.hbox ~spacing:1 () in
-  let icon = GMisc.image ~pixbuf:Icons.module_browser ~packing:hbox#pack () in
-  let label = GMisc.label ~text:title ~packing:hbox#add () in
-  let button = messages#append_page ~label_widget:hbox#coerce ~with_spinner:false widget#as_page in
-  widget#create_widget_libraries ();
-  widget#set_title title;
-  widget#set_icon (Some icon#pixbuf);
-  ignore (widget#connect#switch_page ~callback:begin fun w ->
-    label#set_text w#title.title;
-    widget#set_title w#title.title;
-    if widget#icon = None then widget#set_icon (Some icon#pixbuf);
-  end);
-  widget#present();
+let reusable_widget : widget option ref = ref None
+
+let append_to_messages ?page ?search_string ~project =
+  let create ?search_string () =
+    let widget = new widget ~project () in
+    messages#set_visible true;
+    let hbox = GPack.hbox ~spacing:1 () in
+    let icon = GMisc.image ~pixbuf:Icons.module_browser ~packing:hbox#pack () in
+    let label = GMisc.label ~text:title ~packing:hbox#add () in
+    widget#create_widget_libraries ();
+    begin
+      match search_string with
+        | Some text ->
+          widget#find ?page ~text ();
+          widget#entry_find#set_text "";
+        | _ -> ();
+    end;
+    let button = messages#append_page ~label_widget:hbox#coerce ~with_spinner:false widget#as_page in
+    widget#set_title title;
+    widget#set_icon (Some icon#pixbuf);
+    ignore (widget#connect#switch_page ~callback:begin fun w ->
+        label#set_text w#title.title;
+        widget#set_title w#title.title;
+        if widget#icon = None then widget#set_icon (Some icon#pixbuf);
+      end);
+    messages#connect#remove_page ~callback:begin fun page ->
+      match !reusable_widget with
+        | Some widget when widget#misc#get_oid = page#misc#get_oid ->
+          reusable_widget := None
+        | _ -> ()
+    end |> ignore;
+    widget
+  in
+  match search_string with
+    | Some text ->
+      begin
+        match !reusable_widget with
+          | Some widget ->
+            widget#find ?page ~text ();
+            widget#entry_find#set_text "";
+            widget#present();
+          | _ ->
+            let widget = create ~search_string:text () in
+            widget#present();
+            reusable_widget := Some widget;
+      end;
+    | _ ->
+      let widget = create () in
+      widget#present();
+      Gmisclib.Idle.add widget#entry_find#misc#grab_focus
+
 ;;

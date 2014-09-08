@@ -126,9 +126,10 @@ struct
 
   let pending_newline = ref false
 
-  let insert_newline ~(buffer : GText.buffer) =
-    let iter = buffer#get_iter `INSERT in
-    if iter#line_index > 0 then (buffer#insert "\n");;
+  let insert_newline ~(buffer : GText.buffer) ftag =
+    let (!!) = ftag in
+    (*let iter = buffer#get_iter `INSERT in
+    if iter#line_index > 0 then*) (buffer#insert ~tags:[!!`LINE_SPACING_SMALL] "\n");;
 
   let concat_raw_text text =
     let repl = if !pending_newline then (pending_newline := false; "") else "\n" in
@@ -137,19 +138,22 @@ struct
     let text = Str.global_replace (Miscellanea.regexp "\n[ *]+") " " text in
     text;;
 
-  let rec insert_text ?f buffer text ftag =
-    List.iter (insert_elem ?f buffer ftag) text
+  let rec insert_text ?concat buffer text ftag =
+    List.iter (insert_elem ?concat buffer ftag) text
 
-  and insert_elem ?(f=concat_raw_text) (buffer : GText.buffer) ftag =
+  and insert_elem ?(concat=concat_raw_text) (buffer : GText.buffer) ftag =
     let (!!) = ftag in
     function
       | Raw text ->
-        let text = f text in
-        buffer#insert text
+        let text = concat text in
+        if text.[0] = '\n' then begin
+          buffer#insert ~tags:[!!`LINE_SPACING_SMALL] "\n";
+          buffer#insert (Str.string_after text 1)
+        end else buffer#insert text;
       | Code text ->
         buffer#insert ~tags:[!!`TT] text
       | CodePre text ->
-        insert_newline ~buffer;
+        insert_newline ~buffer ftag;
         buffer#insert ~tags:[!!`SMALL] "\n";
         buffer#insert ~tags:[!!`TT;!!`LEFT_MARGIN] text;
         buffer#insert ~tags:[!!`SMALL] "\n";
@@ -170,14 +174,14 @@ struct
       | List elems ->
         let iter = buffer#get_iter `INSERT in
         let c = iter#get_text ~stop:iter#backward_char in
-        if c <> "\n" then insert_newline ~buffer;
+        if c <> "\n" then insert_newline ~buffer ftag;
         buffer#insert ~tags:[!!`SMALL] "\n";
         let i = ref 0 in
         List.iter begin fun text ->
           Gtk_util.with_tag !!`LI ~buffer begin fun () ->
             buffer#insert "• ";
             insert_text buffer text ftag;
-            (*if !i <> last then*) insert_newline ~buffer;
+            (*if !i <> last then*) insert_newline ~buffer ftag;
           end;
           incr i;
         end elems;
@@ -186,40 +190,40 @@ struct
       | Enum elems ->
         let iter = buffer#get_iter `INSERT in
         let c = iter#get_text ~stop:iter#backward_char in
-        if c <> "\n" then insert_newline ~buffer;
+        if c <> "\n" then insert_newline ~buffer ftag;
         buffer#insert ~tags:[!!`SMALL] "\n";
         let i = ref 0 in
         List.iter begin fun text ->
           Gtk_util.with_tag !!`LI ~buffer begin fun () ->
             buffer#insert (sprintf "%d. " (!i + 1));
             insert_text buffer text ftag;
-            insert_newline ~buffer;
+            insert_newline ~buffer ftag;
           end;
           incr i;
         end elems;
         buffer#insert ~tags:[!!`SMALL] "\n";
         pending_newline := true;
       | Newline ->
-        insert_newline ~buffer
+        insert_newline ~buffer ftag
       | Block text ->
-        insert_newline ~buffer;
+        insert_newline ~buffer ftag;
         insert_text buffer text ftag;
-        insert_newline ~buffer;
+        insert_newline ~buffer ftag;
       | Title (n, _(*opt_label*), text) ->
-        if not !pending_newline then (insert_newline ~buffer; pending_newline := false);
+        if not !pending_newline then (insert_newline ~buffer ftag; pending_newline := false);
         Gtk_util.with_tag !!(`TITLE n) ~buffer (fun () -> insert_text buffer text ftag);
-        insert_newline ~buffer;
+        insert_newline ~buffer ftag;
       | Latex text ->
         buffer#insert text;
       | Link (_(*refer*), text) ->
         Gtk_util.with_tag !!`TT ~buffer begin fun () ->
-          insert_text ~f buffer text ftag;
+          insert_text ~concat buffer text ftag;
         end
       (*| Target _ -> ()
       | Ref (text, _, _) ->*)
       | Target _ -> ()
       | Ref (text, _, _) ->
-        buffer#insert ~tags:[!!`SANS	] text;
+        buffer#insert ~tags:[!!`SANS] text;
       | Superscript text ->
         Gtk_util.with_tag !!`SUPERSCRIPT ~buffer (fun () -> insert_text buffer text ftag)
       | Subscript text ->
@@ -227,7 +231,7 @@ struct
       | Module_list mlist ->
         List.iter begin fun mo ->
           buffer#insert mo;
-          insert_newline ~buffer;
+          insert_newline ~buffer ftag;
         end mlist
       | Index_list ->
           buffer#insert "Index List";
@@ -238,16 +242,16 @@ struct
   module Info = struct
     let insert_params (!!) info (buffer : GText.buffer) =
       if info.i_params <> [] then begin
-        insert_newline ~buffer;
+        insert_newline ~buffer (!!);
         buffer#insert ~tags:[!!`PARAGRAPH] "Parameters ";
-        insert_newline ~buffer;
+        insert_newline ~buffer (!!);
         List.iter begin fun (param, text) ->
           buffer#insert ~tags:[!!`PARAM] param;
           if text <> [] then
             Gtk_util.with_tag !!`PARAM_DESCR ~buffer begin fun () ->
               buffer#insert " - ";
               insert_text buffer text (!!);
-              insert_newline ~buffer;
+              insert_newline ~buffer (!!);
             end;
         end info.i_params;
         let stop = buffer#get_iter `INSERT in
@@ -257,9 +261,9 @@ struct
     let insert_return_value (!!) info (buffer : GText.buffer) =
       match info.i_return_value with
         | Some text_elements ->
-          insert_newline ~buffer;
+          insert_newline ~buffer (!!);
           buffer#insert ~tags:[!!`PARAGRAPH] "Returns ";
-          insert_newline ~buffer;
+          insert_newline ~buffer (!!);
           Gtk_util.with_tag !!`LEFT_MARGIN ~buffer (fun () -> insert_text buffer text_elements (!!));
         | _ -> ();;
 
@@ -267,10 +271,10 @@ struct
       match info.i_raised_exceptions with
         | [] -> ()
         | _ ->
-          insert_newline ~buffer;
+          insert_newline ~buffer (!!);
           buffer#insert ~tags:[!!`PARAGRAPH] "Raises ";
           List.iter begin fun (name, text) ->
-            insert_newline ~buffer;
+            insert_newline ~buffer (!!);
             buffer#insert ~tags:[!!`LEFT_MARGIN; !!`TTB] name;
             Gtk_util.with_tag !!`LEFT_MARGIN ~buffer begin fun () ->
               buffer#insert " ";
@@ -281,27 +285,27 @@ struct
     let insert_deprecated (!!) info (buffer : GText.buffer) =
       match info.i_deprecated with
         | Some text_elements ->
-          insert_newline ~buffer;
+          insert_newline ~buffer (!!);
           buffer#insert ~tags:[!!`PARAGRAPH] "Deprecated ";
-          insert_newline ~buffer;
+          insert_newline ~buffer (!!);
           Gtk_util.with_tag !!`LEFT_MARGIN ~buffer (fun () -> insert_text buffer text_elements (!!));
         | _ -> ();;
 
     let insert_version (!!) info (buffer : GText.buffer) =
       match info.i_version with
         | Some text ->
-          insert_newline ~buffer;
+          insert_newline ~buffer (!!);
           buffer#insert ~tags:[!!`PARAGRAPH] "Version ";
-          insert_newline ~buffer;
+          insert_newline ~buffer (!!);
           Gtk_util.with_tag !!`LEFT_MARGIN ~buffer (fun () -> buffer#insert text);
         | _ -> ();;
 
     let insert_since (!!) info (buffer : GText.buffer) =
       match info.i_since with
         | Some text ->
-          insert_newline ~buffer;
+          insert_newline ~buffer (!!);
           buffer#insert ~tags:[!!`PARAGRAPH] "Since ";
-          insert_newline ~buffer;
+          insert_newline ~buffer (!!);
           Gtk_util.with_tag !!`LEFT_MARGIN ~buffer (fun () -> buffer#insert text);
         | _ -> ();;
 
@@ -309,9 +313,9 @@ struct
       match info.i_authors with
         | [] -> ()
         | _ ->
-          insert_newline ~buffer;
+          insert_newline ~buffer (!!);
           buffer#insert ~tags:[!!`PARAGRAPH] "Author(s) ";
-          insert_newline ~buffer;
+          insert_newline ~buffer (!!);
           let authors = String.concat ", " info.i_authors in
           Gtk_util.with_tag !!`LEFT_MARGIN ~buffer (fun () -> buffer#insert authors);;
 
@@ -319,11 +323,11 @@ struct
       match info.i_sees with
         | [] -> ()
         | _ ->
-          insert_newline ~buffer;
+          insert_newline ~buffer (!!);
           buffer#insert ~tags:[!!`PARAGRAPH] "See Also ";
-          insert_newline ~buffer;
+          insert_newline ~buffer (!!);
           List.iter begin fun (see_ref, text) ->
-            insert_newline ~buffer;
+            insert_newline ~buffer (!!);
             begin
               match see_ref with
                 | Odoc_info.See_url s ->
@@ -344,11 +348,11 @@ struct
       match info.i_custom with
         | [] -> ()
         | _ ->
-          insert_newline ~buffer;
+          insert_newline ~buffer (!!);
           buffer#insert ~tags:[!!`PARAGRAPH] " ";
-          insert_newline ~buffer;
+          insert_newline ~buffer (!!);
           List.iter begin fun (tag, text) ->
-            insert_newline ~buffer;
+            insert_newline ~buffer (!!);
             buffer#insert ~tags:[!!`BOLD] tag;
             if text <> [] then begin
               buffer#insert " - ";
@@ -359,7 +363,7 @@ struct
     let insert_desc ~newline_before (!!) info (buffer : GText.buffer) =
       match info.i_desc with
         | Some text_elements ->
-          if newline_before then (buffer#insert "\n\n");
+          if newline_before then (buffer#insert ~tags:[!!`LINE_SPACING_SMALL] "\n\n");
           insert_text buffer text_elements (!!);
         | _ -> if newline_before then (buffer#insert "\n\n");;
 
@@ -440,7 +444,7 @@ struct
             insert_type (Miscellanea.rpad code ' ' maxlength);
             match vc.Type.vc_text with
               | Some text -> insert_type_element_comment text
-              | _ -> insert_newline ~buffer
+              | _ -> insert_newline ~buffer (!!)
           end vcl
         | Type.Type_record rfl ->
           insert_type " = {\n";
@@ -472,7 +476,7 @@ struct
               (Miscellanea.rpad (!!! rf) ' ' maxlength_te);
             match rf.Type.rf_text with
               | Some text -> insert_type_element_comment text
-              | _ -> insert_newline ~buffer
+              | _ -> insert_newline ~buffer (!!)
           end rfl;
           insert_type "}";
     end;
@@ -480,6 +484,18 @@ struct
     buffer#delete_mark (`MARK m1);
     (*Info.insert_info (!!) buffer elem.Odoc_type.ty_info*)
 ;;
+
+
+module Properties =
+struct
+  let type2 =
+    let editor_font = Preferences.preferences#get.Preferences.pref_base_font in
+    [`FONT editor_font; `BACKGROUND_FULL_HEIGHT true;
+     `PIXELS_ABOVE_LINES 1; `PIXELS_BELOW_LINES 1; `PIXELS_INSIDE_WRAP 0;
+     `INDENT 1]
+
+  let line_spacing_small = [`SIZE_POINTS 0.5]
+end
 
   (** create_tags *)
   let create_tags ~(buffer : GText.buffer) =
@@ -525,15 +541,14 @@ struct
       create_tag `TTF "ttf"                   [`FAMILY editor_font_family; `SIZE_POINTS 24.0; `WEIGHT `BOLD(*; `FOREGROUND "#5C6585"*)];
       create_tag `TYPE "type"                 [`FONT editor_font; `PIXELS_ABOVE_LINES 4];
       create_tag `TYPE_COMMENT "type_comment" [`FONT odoc_font; `PIXELS_ABOVE_LINES 0; `INDENT (2 * indent)];
-      create_tag `TYPE2 "type2"   [`FONT editor_font; `BACKGROUND_FULL_HEIGHT true;
-                                    `PIXELS_ABOVE_LINES 1; `PIXELS_BELOW_LINES 1; `PIXELS_INSIDE_WRAP 0;
-                                    `INDENT 1];
+      create_tag `TYPE2 "type2"   Properties.type2;
       create_tag `PARAM "param"   [`LEFT_MARGIN indent; `FONT editor_font; `PIXELS_BELOW_LINES 3; `FOREGROUND param_color; `WEIGHT `BOLD];
       create_tag `PARAM_DESCR "param_descr" [];
       create_tag `LI "li"                                 [`FONT odoc_font; `INDENT indent];
       create_tag `INDENT "indent"                         [`INDENT indent];
       create_tag `LEFT_MARGIN "left_margin"               [`LEFT_MARGIN indent];
-      create_tag `LINE_SPACING_SMALL "line_spacing_small" [`SIZE_POINTS 0.5];
+      create_tag `LINE_SPACING_SMALL "line_spacing_small" Properties.line_spacing_small;
+      (*create_tag `LINE_SPACING_MEDIUM "line_spacing_medium" [`SIZE_POINTS 4.75];*)
       create_tag `LINE_SPACING_BIG "line_spacing_big"     [`SIZE_POINTS 8.];
       create_tag (`TITLE 9) "title9" [`WEIGHT `BOLD; `SIZE_POINTS 13.0; `PIXELS_ABOVE_LINES 21; `PIXELS_BELOW_LINES 13; `FOREGROUND gray];
       create_tag (`TITLE 8) "title8" [`WEIGHT `BOLD; `SIZE_POINTS 14.0; `PIXELS_ABOVE_LINES 21; `PIXELS_BELOW_LINES 13; `FOREGROUND gray];
@@ -574,7 +589,7 @@ struct
           insert_type ~buffer (!!) elem;
           Info.insert_info (!!) buffer elem.Odoc_type.ty_info;
         | Search.Res_value elem
-            when List.mem kind [Oe.Pvalue; Oe.Pfunc] ->
+          when List.mem kind [Oe.Pvalue; Oe.Pfunc] ->
           insert_info elem.Value.val_info
         | Search.Res_module elem ->
           (*buffer#insert ~tags:[!!`BOLD; !!`LARGE] "Module ";*)
@@ -596,11 +611,11 @@ struct
           insert_info elem.Value.met_value.Value.val_info
         | Search.Res_section (name, text) ->
           buffer#insert ~tags:[!!`ITALIC] name;
-          insert_newline ~buffer;
+          insert_newline ~buffer (!!);
           insert_text buffer text (!!);
         | _ -> ()
     end;
-    insert_newline ~buffer;;
+    insert_newline ~buffer (!!);;
 
   (** insert_full_module *)
   let insert_full_module ~(buffer : GText.buffer) ~colorize ~tag (odoc : Odoc_module.t_module) =
@@ -608,7 +623,7 @@ struct
     let (!!) = create_tags ~buffer in
     let marks = ref [] in
     let insert_elem descr f =
-      insert_newline ~buffer;
+      insert_newline ~buffer (!!);
       let m = buffer#create_mark (buffer#get_iter `INSERT) in
       marks := m :: !marks;
       f();
@@ -698,7 +713,7 @@ struct
       (*end ()*)
     end (Module.module_elements odoc);
     (*  *)
-    insert_newline ~buffer;
+    insert_newline ~buffer (!!);
     Gmisclib.Idle.add ~prio:300 begin fun () ->
       List.iter (fun m -> buffer#delete_mark (`MARK m)) !marks
     end

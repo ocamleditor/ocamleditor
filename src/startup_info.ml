@@ -24,7 +24,28 @@
 open Miscellanea
 open Printf
 
-module Config = Oe_config
+(** get_locale *)
+let get_locale () =
+  try
+    if Sys.win32 then begin
+      let lines = Cmd.exec_lines "reg query \"hkcu\\Control Panel\\International\" /v LocaleName" in
+      let lines = List.map String.trim lines in
+      let locale =
+        List.find (fun l -> Str.string_match (Str.regexp "LocaleName.+") l 0) lines
+      in
+      Str.string_match (Str.regexp ".*[\t ]\\([a-zA-Z-][a-zA-Z-][a-zA-Z-][a-zA-Z-][a-zA-Z-]\\)") locale 0 |> ignore;
+      Some (Str.matched_group 1 locale)
+    end else begin
+      let lines = Cmd.exec_lines "locale" in
+      let locale =
+        List.find (fun l -> Str.string_match (Str.regexp ".*=.+") l 0) lines
+      in
+      Str.string_match (Str.regexp ".*=\\(.*\\)") locale 0 |> ignore;
+      Some (Str.matched_group 1 locale)
+    end
+  with ex ->
+    Printf.eprintf "File \"miscellanea.ml\": %s\n%s\n%!" (Printexc.to_string ex) (Printexc.get_backtrace());
+    None
 
 (** print *)
 let print () = if true || App_config.application_debug then begin
@@ -36,26 +57,27 @@ let print () = if true || App_config.application_debug then begin
   Printf.printf "---------------------------------------------------------------\n%!" ;
   let properties = [
     "OCaml Version", ocaml_version;
-    "OCamlEditor User Home", Config.ocamleditor_user_home;
+    "OCamlEditor User Home", App_config.ocamleditor_user_home;
     "icons", App_config.application_icons;
     "plugins", App_config.application_plugins;
-    "oebuild", Config.oebuild_command;
+    "oebuild", Oe_config.oebuild_command;
   ] @
-  (if Config.is_win32 then [
-     "oeproc", Config.oeproc_command
+  (if Sys.win32 then [
+     "oeproc", Oe_config.oeproc_command
    ] else [
-     "xdg-open", (Opt.default Config.xdg_open_version "<Not Found>");
+     "xdg-open", (Opt.default Oe_config.xdg_open_version "<Not Found>");
    ]) @ [
-    "dot", (Opt.default Config.dot_version "<Not Found>");
-    "ocp-indent", (Opt.default Config.ocp_indent_version "<Not Found>");
-    "git", (Opt.default Config.git_version "<Not Found>");
+    "dot", (Opt.default Oe_config.dot_version "<Not Found>");
+    "ocp-indent", (Opt.default Oe_config.ocp_indent_version "<Not Found>");
+    "git", (Opt.default Oe_config.git_version "<Not Found>");
+    "rc", (Opt.default Oe_config.rc "<Not Found>");
+    "cvtres", (Opt.default Oe_config.cvtres "<Not Found>");
     "GTK Version", (sprintf "%d.%d.%d" a b c);
-    "Locale", (Opt.default (App_config.get_locale ()) "<Not Found>");
+    "Locale", (Opt.default (get_locale ()) "<Not Found>");
     "Charset", (let x, charset = Glib.Convert.get_charset () in sprintf "%b, %s" x charset);
     "Backtrace status", (sprintf "%b" (Printexc.backtrace_status ()));
   ] in
-  let maxlength = List.fold_left (fun cand (x, _) -> let len = String.length x in max cand len) 0 properties in
-  List.iter (fun (n, v) -> printf "%s : %s\n" (rpad (n ^ " ") '.' maxlength) v) properties;
+  List.iter (printf "%s\n") (Text_util.dot_leaders properties);
   Printf.printf "---------------------------------------------------------------\n%!" ;
   print_newline();
 end

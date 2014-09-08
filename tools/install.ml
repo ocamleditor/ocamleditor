@@ -74,6 +74,8 @@ You will need the free NSIS install system (http://nsis.sourceforge.net).";
     kprintf run "cp -v %s %s/ocamleditor%s" filename bin exe;
     let filename = if Sys.file_exists ("oebuild/oebuild.opt" ^ exe) then ("oebuild/oebuild.opt" ^ exe) else ("oebuild/oebuild" ^ exe) in
     kprintf run "cp -v %s %s" filename bin;
+    let filename = "ocamleditor_launch" ^ exe in
+    if Sys.file_exists filename then kprintf run "cp -v %s %s" filename bin;
   end;;
 
 let _ = main ~dir:"../src" ~default_target:install ~options:[

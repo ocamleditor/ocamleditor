@@ -44,6 +44,13 @@ let fade_window =
       ignore (GMain.Timeout.add ~ms:20 ~callback)
   end else (fun ?incr ?stop window -> window#set_opacity 1.0; window#show())
 
+(** esc_destroy_window *)
+let esc_destroy_window window =
+  ignore (window#event#connect#key_press ~callback:begin fun ev ->
+    let key = GdkEvent.Key.keyval ev in
+    if key = GdkKeysyms._Escape then (window#destroy(); true) else false
+  end);;
+
 (** idle_add_gen *)
 let idle_add_gen ?prio f = GMain.Idle.add ?prio begin fun () ->
   try f ()

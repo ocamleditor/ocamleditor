@@ -24,7 +24,7 @@ open Printf
 open Oe
 open Prj
 
-let bookmarks_filename = Filename.concat Oe_config.ocamleditor_user_home "bookmarks-1.5.0"
+let bookmarks_filename = Filename.concat App_config.ocamleditor_user_home "bookmarks-1.5.0"
 
 let limit = 1000
 

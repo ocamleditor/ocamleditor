@@ -32,12 +32,18 @@ let forward_non_blank iter =
   in
   f iter
 
-class error_indication (view : Ocaml_text.view) vscrollbar (global_gutter, global_gutter_ebox) =
+class error_indication (view : Ocaml_text.view) vscrollbar global_gutter =
   let buffer = view#tbuffer in
+  let tag_table = new GText.tag_table buffer#tag_table in
   let create_tags () =
     let ts = Unix.gettimeofday() in
     let tag_error = buffer#create_tag ~name:(sprintf "tag_error-%f" ts) [`LEFT_MARGIN view#left_margin] in
-    Gobject.Property.set tag_error#as_tag {Gobject.name="underline"; conv=Gobject.Data.int} 4;
+    begin
+      match Oe_config.error_underline_mode with
+        | `CUSTOM -> ()
+        | `GTK ->
+          Gobject.Property.set tag_error#as_tag {Gobject.name="underline"; conv=Gobject.Data.int} 4;
+    end;
     let tag_warning = buffer#create_tag ~name:(sprintf "tag_warning-%f" ts) [`LEFT_MARGIN view#left_margin] in
     let tag_warning_unused = buffer#create_tag ~name:(sprintf "tag_warning_unused-%f" ts) Oe_config.warning_unused_properties in
     tag_error, tag_warning, tag_warning_unused
@@ -64,9 +70,12 @@ object (self)
   val mutable tag_error = tag_error
   val mutable tag_warning = tag_warning
   val mutable tag_warning_unused = tag_warning_unused
+  val mutable phase = 2
 
   method enabled = enabled
   method set_enabled x = enabled <- x
+
+  method set_phase () = phase <- if view#pixels_below_lines <= 2 then 2 else 3
 
   method flag_underline = flag_underline
   method flag_tooltip = flag_tooltip
@@ -74,11 +83,13 @@ object (self)
   method set_flag_underline x =
     flag_underline <- x;
     self#remove_tag();
-    Gobject.Property.set tag_error#as_tag {Gobject.name="underline"; conv=Gobject.Data.int}
-      (if flag_underline then 4 else 0)
+    match Oe_config.error_underline_mode with
+      | `CUSTOM -> ()
+      | `GTK ->
+        Gobject.Property.set tag_error#as_tag {Gobject.name="underline"; conv=Gobject.Data.int}
+          (if flag_underline then 4 else 0)
 
   method create_tags () =
-    let tag_table = new GText.tag_table buffer#tag_table in
     tag_table#remove tag_error#as_tag;
     tag_table#remove tag_warning#as_tag;
     tag_table#remove tag_warning_unused#as_tag;
@@ -125,7 +136,7 @@ object (self)
         let line = error.Oe.er_line - 1 in
         let c1, c2 = error.Oe.er_characters in
         let iter = buffer#get_iter (`LINE line) in
-        let text = iter#get_text buffer#end_iter in
+        let text = iter#get_text ~stop:buffer#end_iter in
         let c1x = Convert.offset_to_pos text ~pos:0 ~off:c1 in
         let start = iter#set_line_index c1x in
         let stop = iter#forward_chars c2 in
@@ -280,15 +291,17 @@ object (self)
       table <- [];
       let drawable = new GDraw.drawable window in
       drawable#set_line_attributes ~width:1 ~style:`SOLID ~join:`ROUND ();
-      let width, height = drawable#size in
+      let width0, height = drawable#size in
+      let width = if !Plugins.diff = None then width0 else Oe_config.global_gutter_size in
+      let x0 = width0 - width in
       let alloc = vscrollbar#misc#allocation in
       (** Clean up *)
       drawable#set_foreground view#gutter.Gutter.bg_color;
-      drawable#rectangle ~filled:true ~x:0 ~y:0 ~width ~height ();
+      drawable#rectangle ~filled:true ~x:x0 ~y:0 ~width ~height ();
       (** Rectangles at the top and bottom *)
       drawable#set_foreground view#gutter.Gutter.fg_color;
-      drawable#rectangle ~filled:false ~x:0 ~y:0 ~width:(width - 1) ~height:(alloc.Gtk.width - 1) ();
-      drawable#rectangle ~filled:false ~x:0 ~y:(height - alloc.Gtk.width) ~width:(width - 1) ~height:(alloc.Gtk.width - 2) ();
+      drawable#rectangle ~filled:false ~x:x0 ~y:0 ~width:(width - 1) ~height:(alloc.Gtk.width - 1) ();
+      drawable#rectangle ~filled:false ~x:x0 ~y:(height - alloc.Gtk.width) ~width:(width - 1) ~height:(alloc.Gtk.width - 2) ();
       (** Rectangle at the top in different color *)
       let color = if self#has_errors#get then (Some Oe_config.error_underline_color)
         else if self#has_warnings#get then (Some Oe_config.warning_popup_border_color)
@@ -296,7 +309,7 @@ object (self)
       in
       Gaux.may color ~f:begin fun color ->
         drawable#set_foreground color;
-        drawable#rectangle ~filled:true ~x:1 ~y:1 ~width:(width - 2) ~height:(alloc.Gtk.width - 2) ();
+        drawable#rectangle ~filled:true ~x:(x0 + 1) ~y:1 ~width:(width - 2) ~height:(alloc.Gtk.width - 2) ();
       end;
       (** Draw markers *)
       let height = height - 2 * alloc.Gtk.width in
@@ -323,26 +336,39 @@ object (self)
               drawable#set_line_attributes ~width:1 ~style ();
               if filled then begin
                 drawable#set_foreground Oe_config.global_gutter_comments_bgcolor;
-                drawable#rectangle ~filled ~x:0 ~y:y1 ~width:(width - offset) ~height:(y2 - y1) ();
+                drawable#rectangle ~filled ~x:x0 ~y:y1 ~width:(width - offset) ~height:(y2 - y1) ();
               end;
               drawable#set_foreground Oe_config.global_gutter_comments_color;
-              drawable#rectangle (*~filled*) ~x:0 ~y:y1 ~width:(width - offset) ~height:(y2 - y1) ();
+              drawable#rectangle (*~filled*) ~x:x0 ~y:y1 ~width:(width - offset) ~height:(y2 - y1) ();
             end comments
           | _ -> assert false
       end;
       (** Draw a marker *)
-      let draw_marker start color =
+      let draw_marker start color is_unused =
+        let color =
+          if is_unused
+          then (`NAME Oe_config.warning_unused_color) else color
+        in
         drawable#set_foreground color;
         let line_start = float (buffer#get_iter_at_mark (`MARK start))#line in
         let y = int_of_float ((line_start /. line_count) *. height) in
         table <- (y + 1, start) :: table;
         let y = y + alloc.Gtk.width in
-        drawable#rectangle ~filled:true ~x:0 ~y ~width ~height:3 ();
+        if is_unused then begin
+          let lines = ref [] in
+          let h = 4 in
+          let i = ref 0 in
+          let n = width /  h in
+          while !i < n do
+            lines := (x0 + (!i+1) * h, y + h/2) :: (x0 + !i * h, y - h/2) :: !lines;
+            incr i; incr i;
+          done;
+          drawable#lines !lines
+        end else drawable#rectangle ~filled:true ~x:x0 ~y ~width ~height:3 ();
       in
       (** Warnings *)
       List.iter begin fun (start, _, warning) ->
-        draw_marker start (if is_warning_unused warning.Oe.er_level
-          then (`NAME Oe_config.warning_unused_color) else Oe_config.warning_popup_border_color);
+        draw_marker start Oe_config.warning_popup_border_color (is_warning_unused warning.Oe.er_level);
       end tag_warning_bounds;
       (** Mark Occurrences *)
       begin
@@ -363,17 +389,51 @@ object (self)
               let height = y2 - y1 in
               drawable#set_line_attributes ~width:1 ~style:`SOLID ();
               drawable#set_foreground bg;
-              drawable#rectangle ~filled:true ~x:0 ~y:y1 ~width ~height ();
+              drawable#rectangle ~filled:true ~x:x0 ~y:y1 ~width ~height ();
               drawable#set_foreground border;
-              drawable#rectangle ~filled:false ~x:0 ~y:y1 ~width ~height ();
+              drawable#rectangle ~filled:false ~x:x0 ~y:y1 ~width ~height ();
             end view#mark_occurrences_manager#table;
           | _ -> ()
       end;
       (** Errors *)
       List.iter begin fun (start, _, _) ->
-        draw_marker start Oe_config.error_underline_color;
+        draw_marker start Oe_config.error_underline_color false;
       end tag_error_bounds;
     with Gpointer.Null -> ()
+
+  method private draw_underline drawable top bottom x0 y0 offset = function
+    | (start, stop, error) when (not (is_warning_unused error.Oe.er_level)) ->
+      let start = ref (buffer#get_iter_at_mark (`MARK start)) in
+      let stop = buffer#get_iter_at_mark (`MARK stop) in
+      let stop = if bottom#compare stop < 0 then bottom else stop in
+      let phase2 = phase * 2 in
+      while !start#compare stop < 0 do
+        begin
+          try
+            if top#compare !start <= 0 && !start#chars_in_line > 1 then begin
+              start := forward_non_blank !start;
+              let iter =
+                if !start#ends_line then (raise Exit)
+                else
+                  let line_end = !start#forward_to_line_end in
+                  if stop#compare line_end <= 0 then stop else line_end
+              in
+              let ys, h = view#get_line_yrange !start in
+              let y = ys + h - y0 in
+              let x = ref (Gdk.Rectangle.x (view#get_iter_location !start) - x0) in
+              let x2 = Gdk.Rectangle.x (view#get_iter_location iter) - x0 in
+              let yu = y - phase in
+              let segments = ref [] in
+              while !x <= x2 do
+                segments := (!x + phase, y + offset) :: (!x, yu + offset) :: !segments; x := !x + phase2;
+              done;
+              drawable#lines !segments;
+            end;
+          with Exit | Invalid_argument("PointArray.new") -> ()
+        end;
+        start := !start#forward_line
+      done;
+    | _ -> ()
 
   method private expose ev =
     if flag_underline then begin
@@ -389,49 +449,28 @@ object (self)
           let bottom, _ = view#get_line_at_y (ya + (Gdk.Rectangle.height expose_area)) in
           (*  *)
           let drawable = new GDraw.drawable window in
+          drawable#set_line_attributes ~width:1 ~style:`SOLID ~join:`MITER ();
+          let f = self#draw_underline drawable top bottom x0 y0 in
           drawable#set_foreground Oe_config.warning_underline_color;
-          drawable#set_line_attributes ~width:1 ~style:`SOLID ();
-          List.iter begin function
-            | (start, stop, error) when (not (is_warning_unused error.Oe.er_level)) ->
-              let start = ref (buffer#get_iter_at_mark (`MARK start)) in
-              let stop = buffer#get_iter_at_mark (`MARK stop) in
-              let stop = if bottom#compare stop < 0 then bottom else stop in
-              while !start#compare stop < 0 do
-                begin
-                  try
-                    if top#compare !start <= 0 && !start#chars_in_line > 1 then begin
-                      start := forward_non_blank !start;
-                      let iter =
-                        if !start#ends_line then (raise Exit)
-                        else
-                          let line_end = !start#forward_to_line_end in
-                          if stop#compare line_end <= 0 then stop else line_end
-                      in
-                      let ys, h = view#get_line_yrange !start in
-                      let y = ys + h - y0 in
-                      let x = ref (Gdk.Rectangle.x (view#get_iter_location !start) - x0) in
-                      let x2 = Gdk.Rectangle.x (view#get_iter_location iter) - x0 in
-                      let yu = y - 2 in
-                      let segments = ref [] in
-                      while !x <= x2 do
-                        segments := (!x + 2, y) :: (!x, yu) :: !segments; x := !x + 4; (* 7 *)
-                        (*segments := (!x + 4, y) :: (!x + 3, y) :: (!x + 1, yu) :: (!x, yu) :: !segments; x := !x + 6 (* 8 *)*)
-                        (*segments := (!x + 8, y) :: (!x + 5, y) :: (!x + 2, yu) :: (!x, yu) :: !segments; x := !x + 11*)
-                      done;
-                      drawable#lines !segments;
-                    end;
-                  with Exit | Invalid_argument("PointArray.new") -> ()
-                end;
-                start := !start#forward_line
-              done;
-            | _ -> ()
-          end tag_warning_bounds;
+          List.iter (f 0) tag_warning_bounds;
+          drawable#set_foreground Oe_config.warning_underline_shadow;
+          List.iter (f 1) tag_warning_bounds;
+          begin
+            match Oe_config.error_underline_mode with
+              | `CUSTOM ->
+                drawable#set_foreground Oe_config.error_underline_color;
+                List.iter (f 0) tag_error_bounds;
+                drawable#set_foreground Oe_config.error_underline_shadow;
+                List.iter (f 1) tag_error_bounds;
+              | _ -> ()
+          end;
           Gdk.GC.set_fill drawable#gc `SOLID;
           false
         | _ -> false
     end else false
 
   initializer
+    self#set_phase();
     self#set_flag_underline flag_underline;
     (** Hide tooltip *)
     let unsticky _ = if sticky_popup then (self#hide_tooltip()); false in
@@ -448,41 +487,43 @@ object (self)
     (** Global_gutter: expose *)
     global_gutter#event#connect#expose ~callback:(fun _ -> (*Prf.crono Prf.prf_paint_global_gutter*) self#paint_global_gutter (); false);
     (** Global_gutter: button_press  *)
-    ignore (global_gutter_ebox#event#connect#button_press ~callback:begin fun ev ->
-      let alloc = vscrollbar#misc#allocation in
-      let y = GdkEvent.Button.y ev in
-      if y > float (alloc.Gtk.width) then begin
-        let window = global_gutter#misc#window in
-        let drawable = new GDraw.drawable window in
-        let width, height = drawable#size in
-        let height = float (height - 2 * alloc.Gtk.width) in
-        let y = y -. (float alloc.Gtk.width) in
-        let tooltip, iter =
-          try
-            let _, mark = List.find (fun (yy, _) -> let yy = float yy in yy -. 4. <= y && y <= yy +. 4.) (List.rev table) in
-            true, (buffer#get_iter_at_mark (`MARK mark))
-          with Not_found -> begin
-            let line_count = float buffer#line_count in
-            let line = int_of_float (y /. height *. line_count) in
-            false, buffer#get_iter (`LINE line);
-          end
-        in
-        view#scroll_lazy iter;
-        buffer#place_cursor iter;
-        if tooltip then begin
-          Gmisclib.Idle.add ~prio:300 (fun () -> self#tooltip ~sticky:true (`ITER iter));
+    global_gutter#event#connect#after#button_press ~callback:begin fun ev ->
+      if (GdkEvent.Button.button ev = 1 && GdkEvent.get_type ev = `BUTTON_PRESS) then begin
+        let alloc = vscrollbar#misc#allocation in
+        let y = GdkEvent.Button.y ev in
+        if y > float (alloc.Gtk.width) then begin
+          let window = global_gutter#misc#window in
+          let drawable = new GDraw.drawable window in
+          let width, height = drawable#size in
+          let height = float (height - 2 * alloc.Gtk.width) in
+          let y = y -. (float alloc.Gtk.width) in
+          let tooltip, iter =
+            try
+              let _, mark = List.find (fun (yy, _) -> let yy = float yy in yy -. 4. <= y && y <= yy +. 4.) (List.rev table) in
+              true, (buffer#get_iter_at_mark (`MARK mark))
+            with Not_found -> begin
+                let line_count = float buffer#line_count in
+                let line = int_of_float (y /. height *. line_count) in
+                false, buffer#get_iter (`LINE line);
+              end
+          in
+          view#scroll_lazy iter;
+          buffer#place_cursor iter;
+          if tooltip then begin
+            Gmisclib.Idle.add ~prio:300 (fun () -> self#tooltip ~sticky:true (`ITER iter));
+          end;
+        end else begin
+          let iter =
+            match self#first_error_or_warning with
+              | None -> buffer#start_iter
+              | Some (start, _, _) -> buffer#get_iter_at_mark (`MARK start)
+          in
+          view#scroll_lazy iter;
+          buffer#place_cursor iter;
         end;
-      end else begin
-        let iter =
-          match self#first_error_or_warning with
-            | None -> buffer#start_iter
-            | Some (start, _, _) -> buffer#get_iter_at_mark (`MARK start)
-        in
-        view#scroll_lazy iter;
-        buffer#place_cursor iter;
       end;
       false
-    end);
+    end |> ignore
 end
 
 

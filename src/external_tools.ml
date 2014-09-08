@@ -27,7 +27,7 @@ open Tree
 
 
 
-let filename = Filename.concat Oe_config.ocamleditor_user_home "externalTools.ocaml"
+let filename = Filename.concat App_config.ocamleditor_user_home "externalTools.ocaml"
 
 let write tools =
   let ochan = open_out_bin filename in
@@ -37,7 +37,7 @@ let rec read () =
   let ichan = open_in_gen [Open_binary; Open_creat] 0o777 filename in
   let tools = lazy (try input_value ichan with End_of_file -> []) @$ (lazy (close_in ichan)) in
   let tools = if tools = [] then begin
-    let tools = (if Oe_config.is_win32 then [
+    let tools = (if Sys.win32 then [
       ("1000", "Console", "start \"$(project_name)\" cmd /K cd \"$(project_source)\"");
       ("1001", "Explorer", "explorer \"$(project_source)\"");
       ("1002", "Open with Notepad", "notepad \"$(current_filename)\"");

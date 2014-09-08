@@ -226,7 +226,8 @@ class view ~(editor : Editor.editor) ?(task_kind=(`OTHER : Task.kind)) ~task ?pa
       kprintf (view#buffer#insert ~tag_names:["bold"; "output"]) "\nWorking directory: %s\n" task.Task.dir;
       kprintf (view#buffer#insert ~tag_names:["bold"; "output"]) "Command:\n%s\n" (Process.cmd_line proc);*)
       (*kprintf (view#buffer#insert ~tag_names:["bold"; "output"]) "%s\n" (Cmd.expand (project.Prj.autocomp_compiler ^ " -v"));*)
-      kprintf (view#buffer#insert ~tag_names:["bold"; "output"]) "%s\n" (Process.cmd_line proc);
+      let args = String.concat " " (List.map (fun (_ , x) -> x) (List.filter (fun (e, _) -> e) task.Task.et_args)) in
+      kprintf (view#buffer#insert ~tag_names:["bold"; "output"]) "%s %s\n" (Filename.quote task.Task.et_cmd) args;
       signal_enabled <- true;
       Mutex.unlock m_write;
       self#present ();
@@ -487,9 +488,9 @@ let create ~editor task_kind task =
     page#set_tab_label label;
     page#set_title task.Task.et_name;
     Gaux.may icon ~f:(fun icon -> page#set_icon (Some icon#pixbuf));
-    Messages.vmessages#append_page ~label_widget ~with_spinner:(task_kind <> `RUN) page#as_page;
+    if task.Task.et_visible then Messages.vmessages#append_page ~label_widget ~with_spinner:(task_kind <> `RUN) page#as_page;
     ignore (page#connect#working_status_changed ~callback:begin fun active ->
-      (match set_active_func with None -> page#active#set | Some f -> f) active
+      (match set_active_func with None -> page#is_working#set | Some f -> f) active
     end);
     ignore (page#misc#connect#destroy ~callback:(fun () -> views := List.remove_assoc console_id !views));
     views := (console_id, (page, page#vbox#coerce)) :: !views;
@@ -580,9 +581,9 @@ let exec ~editor ?use_thread ?(with_deps=false) task_kind target =
       List.iter begin fun target ->
         let compilation =
           (if target.byt then [Oebuild.Bytecode] else [])
-            @ (if target.opt && project.Prj.can_compile_native then [Oebuild.Native] else [])
+          @ (if target.opt && project.Prj.can_compile_native then [Oebuild.Native] else [])
         in
-        let files = Str.split (Str.regexp " +") target.files in
+        (*let files = Str.split (Str.regexp " +") target.files in*)
         let outname = target.outname in
         let outkind = match target.target_type with
           | Executable -> Oebuild.Executable
@@ -592,9 +593,8 @@ let exec ~editor ?use_thread ?(with_deps=false) task_kind target =
           | External -> Oebuild.External
         in
         List.iter begin fun compilation ->
-          match Oebuild.get_output_name ~compilation ~outkind ~outname ~toplevel_modules:files with
-            | Some outname -> Oebuild_util.remove_file ~verbose:false outname
-            | _ -> ()
+          let outname = Oebuild.get_output_name ~compilation ~outkind ~outname  ~dontaddopt:target.dontaddopt () in
+          Oebuild_util.remove_file ~verbose:false outname
         end compilation
       end project.Prj.targets;
     | `CLEAN -> exec_sync ~editor [tasks_clean ()];

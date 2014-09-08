@@ -109,7 +109,7 @@ let find_backward ~(start : GText.iter) ~(buffer : GText.buffer) ~regexp ~cancel
                   let stop_offset = Convert.offset_from_pos line ~pos:stop in
                   offsets := (start_offset, stop_offset) :: !offsets;
                   raise (Find_text.Found_step (!linenum - 1, start_offset, stop_offset));
-                  pos := start;
+                  (*pos := start;*)
                 end;
               done;
             with Not_found -> ()

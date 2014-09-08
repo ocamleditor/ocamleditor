@@ -350,11 +350,6 @@ let view ~browser ~group ~flags
     Gdk.Window.set_cursor menu#misc#window cursor;
     false;
   end |> ignore;
-  let switch_viewer = GMenu.menu_item ~label:"Switch Viewer to \xC2\xABDependencies\xC2\xBB" ~packing:menu#add () in
-  ignore (switch_viewer#connect#activate ~callback:begin fun () ->
-    editor#with_current_page (fun page -> page#button_dep_graph#clicked ())
-  end);
-  let _ = GMenu.separator_item ~packing:menu#add () in
   (*begin
     let item = GMenu.check_menu_item ~label:"Menubar" ~active:browser#menubar_visible ~packing:menu#add () in
     item#add_accelerator ~group ~modi:[`CONTROL; `MOD1] GdkKeysyms._n ~flags;
@@ -440,6 +435,19 @@ let view ~browser ~group ~flags
   let toggle_word_wrap = GMenu.check_menu_item ~label:"Toggle Word-Wrap" ~packing:menu#add () in
   let signal_toggle_wrod_wrap = toggle_word_wrap#connect#toggled
     ~callback:(Editor_menu.toggle_word_wrap_toggled ~editor) in
+  (**  *)
+  let _ = GMenu.separator_item ~packing:menu#add () in
+  let switch_viewer = GMenu.menu_item ~label:"Switch Viewer to \xC2\xABDependencies\xC2\xBB" ~packing:menu#add () in
+  ignore (switch_viewer#connect#activate ~callback:begin fun () ->
+    editor#with_current_page (fun page -> page#button_dep_graph#clicked ())
+  end);
+  let rev_history = GMenu.image_menu_item
+      ~image:(GMisc.image ~pixbuf:Icons.history ())#coerce
+      ~label:"Revision History" ~packing:menu#add () 
+  in
+  rev_history#connect#activate ~callback:begin fun () ->
+    editor#with_current_page (fun page -> page#show_revision_history ())
+  end |> ignore;
   (** Callback *)
   ignore (view#misc#connect#state_changed ~callback:begin fun _ ->
     Menu_view.update_labels
@@ -452,7 +460,7 @@ let view ~browser ~group ~flags
       ~signal_show_whitespace_chars
       ~toggle_word_wrap
       ~signal_toggle_wrod_wrap
-      ~switch_viewer
+      ~switch_viewer ~rev_history
   editor
   end);
   (*  *)
@@ -476,8 +484,14 @@ let tools ~browser ~group ~flags items =
   ignore (toplevel#connect#activate ~callback:browser#shell);
   let module_browser = GMenu.menu_item ~label:"Module Browser" ~packing:menu#add () in
   ignore (module_browser#connect#activate ~callback:(fun () ->
-    browser#with_current_project (fun project ->
-      Mbrowser_tool.append_to_messages ~project)));
+      browser#with_current_project (fun project ->
+          let page, search_string =
+            match editor#get_page `ACTIVE
+            with None -> None, None | Some page ->
+              let _ = page#buffer#select_ocaml_word ?pat:(Some Ocaml_word_bound.longid_sharp) () in
+              Some page, Some (page#buffer#selection_text());
+          in
+          Mbrowser_tool.append_to_messages ?page ?search_string ~project)));
   module_browser#add_accelerator ~group ~modi:[] GdkKeysyms._F7 ~flags;
   let dialog_external_tools = GMenu.menu_item ~label:"External Tools" ~packing:menu#add () in
   ignore (dialog_external_tools#connect#activate ~callback:browser#dialog_external_tools);
@@ -596,6 +610,8 @@ let help ~browser ~group ~flags items =
     ignore (crono#connect#activate ~callback:(Print_debug_info.print ~editor));
   (*end;*)
   let _ = GMenu.separator_item ~packing:menu#add () in
+  let system_properties = GMenu.menu_item ~label:"System Properties" ~packing:menu#add () in
+  ignore (system_properties#connect#activate ~callback:Menu_help.system_properties);
   let about = GMenu.menu_item ~label:(sprintf "About %s" About.program_name) ~packing:menu#add () in
   ignore (about#connect#activate ~callback:(Menu_help.about editor));
   help, menu
@@ -619,14 +635,14 @@ let create ~browser ~group
   let items = {
     menus                         = [||];
     menu_items                    = [];
-    file_rename                   = GMenu.menu_item ();
+    file_rename                   = GMenu.menu_item ~label:"Rename" ();
     file_recent_select            = GMenu.menu_item ~label:"Select File..." ();
     file_recent_clear             = GMenu.menu_item ~label:"Clear File History" ();
     file_recent_sep               = GMenu.separator_item ();
     file_switch                   = GMenu.menu_item ~label:"Switch to Implementation/Interface" ();
     file_close                    = GMenu.image_menu_item ~stock:`CLOSE ();
-    file_close_all                = GMenu.menu_item ();
-    file_revert                   = GMenu.image_menu_item (*~stock:`REVERT_TO_SAVED*) ();
+    file_close_all                = GMenu.menu_item ~label:"Close All" ();
+    file_revert                   = GMenu.image_menu_item ~label:"Revert" (*~stock:`REVERT_TO_SAVED*) ();
     file_delete                   = GMenu.image_menu_item ~stock:`DELETE ();
     window                        = GMenu.menu ();
     window_radio_group            = None;

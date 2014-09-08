@@ -216,7 +216,7 @@ let append_page ?project (messages : Messages.messages) =
   messages#append_page ~label_widget sh#as_page;
   sh#present ();
   sh#misc#connect#destroy ~callback:sh#quit;
-  sh#active#set false;
+  sh#is_working#set false;
   let ask ~cancel () = Dialog.process_still_active ~name:sh#title ~ok:sh#quit ~cancel () in
   sh#set_close_tab_func (fun () -> if sh#alive then (sh#quit()));
   ignore (messages#connect#remove_page ~callback:begin fun child ->

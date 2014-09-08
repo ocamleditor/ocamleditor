@@ -56,18 +56,19 @@ let main () = begin
     browser#connect#startup ~callback:begin fun () ->
       Gaux.may splashscreen ~f:(fun w -> w#set_transient_for browser#window#as_window);
       Sys.chdir (Filename.dirname Sys.executable_name);
-      Startup_info.print();
+      Printf.printf "%s\n%!" (System_properties.to_string());
       Plugin.load "dot_viewer_svg.cma" |> ignore;
       Project_xml.init();
       Gtk_theme.set_theme ~context:browser#window#misc#pango_context ();
       browser#window#misc#connect#show ~callback:begin fun () ->
         Gmisclib.Idle.add ~prio:300 begin fun () ->
+          Plugin.load "plugin_diff.cma" |> ignore; (* plugin_diff requires editor pages *)
           Gaux.may splashscreen ~f:fade_out;
           Gaux.may (browser#editor#get_page `ACTIVE) ~f:(fun page -> page#view#misc#grab_focus());
         end
       end |> ignore;
     end |> ignore;
-    (* After browser initialization and before browser window is shown *)
+    (* After browser initialization (after splashscreen) and before browser window is shown *)
     browser#connect#after#startup ~callback:begin fun () ->
       ()
     end |> ignore;

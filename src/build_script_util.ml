@@ -47,12 +47,14 @@ type target = {
   inline : int option;
   nodep : bool;
   dontlinkdep : bool;
+  dontaddopt : bool;
   library_install_dir : string;
   other_objects : string;
   external_tasks : int list;
   restrictions : string list;
   dependencies : int list;
   show : bool;
+  rc_filename : string option;
 }
 
 type target_map_entry = int * (string * target)
@@ -166,7 +168,7 @@ let rec find_target_dependencies targets trg =
 
 (** Show *)
 let show = fun targets -> function num, (name, t) ->
-  let files = Str.split (Str.regexp " +") t.toplevel_modules in
+  (*let files = Str.split (Str.regexp " +") t.toplevel_modules in*)
   (*let deps = Dep.find ~pp:t.pp ~ignore_stderr:false ~echo:false files in*)
   let b_deps = find_target_dependencies targets t in
   let b_deps = List.map begin fun tg ->
@@ -178,8 +180,7 @@ let show = fun targets -> function num, (name, t) ->
     (if t.compilation_native && ccomp_type <> None then [Native] else [])
   in
   let outname = List.map begin fun compilation ->
-    let oname = get_output_name ~compilation ~outkind:t.target_type ~outname:t.output_name ~toplevel_modules:files in
-    match oname with Some x -> x | _ -> ""
+      get_output_name ~compilation ~outkind:t.target_type ~outname:t.output_name ~dontaddopt:t.dontaddopt ()
   end compilation
   in
   let outkind = string_of_output_type t.target_type in
@@ -237,25 +238,21 @@ let rec execute_target ~external_tasks ~targets:avail_targets ~command ?target_d
         | External -> ()
         | Executable | Library | Pack | Plugin ->
           List.iter begin fun compilation ->
-              match get_output_name ~compilation ~outkind:target.target_type ~outname:target.output_name ~toplevel_modules:files with
-                | Some outname ->
-                  begin
-                    match command with
-                      | `Build ->
-                        build ~targets:avail_targets ~external_tasks ~etasks ~deps ~compilation
-                          ~outname ~files ?target_deps ~verbose:!Option.verbosity target
-                      | `Install_lib -> install_lib ~compilation ~outname ~external_tasks ~deps target
-                      | `Clean ->
-                        List.iter ETask.execute (ETask.filter etasks Before_clean);
-                        let deps = deps() in
-                        Oebuild.clean ~deps ();
-                        List.iter ETask.execute (ETask.filter etasks After_clean);
-                      | `Distclean ->
-                        if files <> [] then (Oebuild_util.remove_file ~verbose:false outname);
-                      | `Show | `Install | `Uninstall -> assert false
-                  end
-                | _ -> ()
-            end compilation
+            let outname = get_output_name ~compilation ~outkind:target.target_type ~outname:target.output_name ~dontaddopt:target.dontaddopt () in
+            match command with
+              | `Build ->
+                build ~targets:avail_targets ~external_tasks ~etasks ~deps ~compilation
+                  ~outname ~files ?target_deps ~verbose:!Option.verbosity target
+              | `Install_lib -> install_lib ~compilation ~outname ~external_tasks ~deps target
+              | `Clean ->
+                List.iter ETask.execute (ETask.filter etasks Before_clean);
+                let deps = deps() in
+                Oebuild.clean ~deps ();
+                List.iter ETask.execute (ETask.filter etasks After_clean);
+              | `Distclean ->
+                if files <> [] then (Oebuild_util.remove_file ~verbose:false outname);
+              | `Show | `Install | `Uninstall -> assert false
+          end compilation
     with Exit -> ()
   end else begin
     let target_name, _ =
@@ -287,11 +284,22 @@ and build ~targets:avail_targets ~external_tasks ~etasks ~deps ~compilation ~out
   if tasks_compile <> [] then List.iter ETask.execute (tasks_compile)
   else
     let crono = if !Option.verbosity >= 3 then Oebuild_util.crono else fun ?label f x -> f x in
+    let libs =
+      match target.rc_filename with
+        | Some rc_filename ->
+          let exit_code = Sys.command "where rc 2>&1 1>NUL" in
+          if exit_code <> 0 then target.required_libraries
+          else
+            let exit_code = Sys.command "where cvtres 2>&1 1>NUL" in
+            if exit_code <> 0 then target.required_libraries
+            else (Filename.basename (Filename.chop_extension rc_filename)) ^ ".obj " ^ target.required_libraries
+        | _ -> target.required_libraries
+    in
     match crono ~label:"Build time" (Oebuild.build
         ~compilation
         ~package:target.package
         ~includes:target.search_path
-        ~libs:target.required_libraries
+        ~libs
         ~other_mods:target.other_objects
         ~outkind:target.target_type
         ~compile_only:false
@@ -306,6 +314,7 @@ and build ~targets:avail_targets ~external_tasks ~etasks ~deps ~compilation ~out
         ~outname
         ~deps
         ~dontlinkdep:target.dontlinkdep
+        ~dontaddopt:target.dontaddopt
         ~verbose
         ~toplevel_modules:files) ()
     with

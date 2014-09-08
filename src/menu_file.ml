@@ -45,15 +45,36 @@ let file_recent_callback ~(file_recent_menu : GMenu.menu) editor =
 let get_file_switch_sensitive page =
   let name = page#get_filename in (name ^^ ".ml" || name ^^ ".mli")
 
-(** load_plugin_remote *)
-let load_plugin_remote editor menu_item =
-  ignore (Plugin.load "remote.cma");
-  Opt.may !Plugins.remote begin fun plugin ->
-    let module Remote = (val plugin) in
-    menu_item#misc#show();
-    ignore (menu_item#connect#activate ~callback:begin fun () ->
+let file ~browser ~group ~flags items =
+  let editor = browser#editor in
+  let file = GMenu.menu_item ~label:"File" () in
+  let menu = GMenu.menu ~packing:file#set_submenu () in
+  (** New Project *)
+  let new_project = GMenu.menu_item ~label:"New Project..." ~packing:menu#add () in
+  ignore (new_project#connect#activate ~callback:browser#dialog_project_new);
+  (** New file *)
+  let new_file = GMenu.image_menu_item ~image:(GMisc.image ~pixbuf:Icons.new_file (*~stock:`NEW*) ~icon_size:`MENU ())
+      ~label:"New File..." ~packing:menu#add () in
+  new_file#add_accelerator ~group ~modi:[`CONTROL] GdkKeysyms._n ~flags;
+  ignore (new_file#connect#activate ~callback:browser#dialog_file_new);
+  (** Open Project *)
+  let _ = GMenu.separator_item ~packing:menu#add () in
+  let project_open = GMenu.image_menu_item
+      ~label:"Open Project..." ~packing:menu#add () in
+  ignore (project_open#connect#activate ~callback:browser#dialog_project_open);
+  project_open#add_accelerator ~group ~modi:[`CONTROL;`SHIFT] GdkKeysyms._o ~flags;
+  (** Open File *)
+  let open_file = GMenu.image_menu_item ~image:(GMisc.image ~pixbuf:Icons.open_file (*~stock:`OPEN*) ~icon_size:`MENU ())
+      ~label:"Open File..." ~packing:menu#add () in
+  open_file#add_accelerator ~group ~modi:[`CONTROL] GdkKeysyms._o ~flags;
+  ignore (open_file#connect#activate ~callback:editor#dialog_file_open);
+  let open_remote = GMenu.image_menu_item ~label:"Open Remote File..." ~show:(Plugin.file_exists "remote.cma") ~packing:menu#add () in
+  ignore (open_remote#connect#activate ~callback:begin fun () ->
+      if !Plugins.remote = None then ignore (Plugin.load "remote.cma");
+      Opt.may !Plugins.remote begin fun plugin ->
+        let module Remote = (val plugin) in
         let title =
-          match menu_item#misc#get_property "label" with
+          match open_remote#misc#get_property "label" with
             | `STRING (Some x) -> x
             | _ -> ""
         in
@@ -84,33 +105,8 @@ let load_plugin_remote editor menu_item =
             window#destroy();
           end);
         window#show();
-      end);
-  end
-
-let file ~browser ~group ~flags items =
-  let editor = browser#editor in
-  let file = GMenu.menu_item ~label:"File" () in
-  let menu = GMenu.menu ~packing:file#set_submenu () in
-  (** New Project *)
-  let new_project = GMenu.menu_item ~label:"New Project..." ~packing:menu#add () in
-  ignore (new_project#connect#activate ~callback:browser#dialog_project_new);
-  (** New file *)
-  let new_file = GMenu.image_menu_item ~image:(GMisc.image ~pixbuf:Icons.new_file (*~stock:`NEW*) ~icon_size:`MENU ())
-      ~label:"New File..." ~packing:menu#add () in
-  new_file#add_accelerator ~group ~modi:[`CONTROL] GdkKeysyms._n ~flags;
-  ignore (new_file#connect#activate ~callback:browser#dialog_file_new);
-  (** Open Project *)
-  let _ = GMenu.separator_item ~packing:menu#add () in
-  let project_open = GMenu.image_menu_item
-      ~label:"Open Project..." ~packing:menu#add () in
-  ignore (project_open#connect#activate ~callback:browser#dialog_project_open);
-  project_open#add_accelerator ~group ~modi:[`CONTROL;`SHIFT] GdkKeysyms._o ~flags;
-  (** Open File *)
-  let open_file = GMenu.image_menu_item ~image:(GMisc.image ~pixbuf:Icons.open_file (*~stock:`OPEN*) ~icon_size:`MENU ())
-      ~label:"Open File..." ~packing:menu#add () in
-  open_file#add_accelerator ~group ~modi:[`CONTROL] GdkKeysyms._o ~flags;
-  ignore (open_file#connect#activate ~callback:editor#dialog_file_open);
-  let open_remote = GMenu.image_menu_item ~label:"Open Remote File..." ~show:false ~packing:menu#add () in
+      end
+    end);
   (** Recent Files... *)
   let file_recent = GMenu.menu_item ~label:"Recent Files" ~packing:menu#add () in
   let file_recent_menu = GMenu.menu ~packing:file_recent#set_submenu () in
@@ -187,7 +183,6 @@ let file ~browser ~group ~flags items =
   ignore (quit#connect#activate ~callback:(fun () -> browser#exit editor ()));
   (** callback *)
   ignore (file#misc#connect#state_changed ~callback:begin fun _ ->
-      if !Plugins.remote = None then (load_plugin_remote editor open_remote);
       let page = editor#get_page `ACTIVE in
       let has_current_page = page <> None in
       List.iter (fun i -> i#misc#set_sensitive has_current_page) [

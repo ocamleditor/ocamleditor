@@ -28,6 +28,12 @@ open Miscellanea
 
 type item = Target of Target.t | ETask of Task.t
 
+let cols              = new GTree.column_list
+let col_data          = cols#add Gobject.Data.caml
+let col_name          = cols#add Gobject.Data.string
+let col_default       = cols#add Gobject.Data.boolean
+let col_visible       = cols#add Gobject.Data.boolean
+
 (** view *)
 class view ~editor ~project ?packing () =
   (* "editor#project" is different from "project" when "project" is a new (i.e. you are in "New project" dialog window) *)
@@ -36,11 +42,9 @@ class view ~editor ~project ?packing () =
   let add_target        = new add_target () in
   let add_etask         = new add_etask () in
   let vbox              = GPack.vbox ~spacing:5 ?packing () in
-  let cols              = new GTree.column_list in
-  let col_data          = cols#add Gobject.Data.caml in
-  let col_name          = cols#add Gobject.Data.string in
-  let col_default       = cols#add Gobject.Data.boolean in
   let model             = GTree.tree_store cols in
+  let modelf            = (*GTree.model_filter*) model in
+  (*let _                 = modelf#set_visible_column col_visible in*)
   let renderer          = GTree.cell_renderer_text [`XPAD 5] in
   let renderer_pixbuf   = GTree.cell_renderer_pixbuf [] in
   let renderer_pixbuf2  = GTree.cell_renderer_pixbuf [`VISIBLE false; `PIXBUF Icons.findlib; `XPAD 3;`XALIGN 0.0] in
@@ -57,7 +61,7 @@ class view ~editor ~project ?packing () =
   let _                 = vc_default#add_attribute renderer_default "active" col_default in
   let _                 = vc_default#set_sizing `FIXED in
   let sw                = GBin.scrolled_window ~shadow_type:`IN ~hpolicy:`AUTOMATIC ~vpolicy:`AUTOMATIC ~packing:vbox#add () in
-  let view              = GTree.view ~rules_hint:(Oe_config.targetlist_alternating_row_colors <> None) ~model:model ~headers_visible:false ~reorderable:true ~width:350 (*~height:385*) ~packing:sw#add () in
+  let view              = GTree.view ~rules_hint:(Oe_config.targetlist_alternating_row_colors <> None) ~model:modelf ~headers_visible:false ~reorderable:true ~width:350 (*~height:385*) ~packing:sw#add () in
   let _                 = view#misc#set_name "targetlist_treeview" in
   let _                 = view#misc#set_property "enable-tree-lines" (`BOOL true) in
   let _                 = view#append_column vc in
@@ -92,6 +96,8 @@ class view ~editor ~project ?packing () =
   let _                 = b_run#set_image (GMisc.image ~xalign:0.5 (*~width:24*) ~pixbuf:Icons.start_16 ())#coerce in
 object (self)
   inherit GObj.widget vbox#as_widget
+  val mutable sign_row_collapsed = None
+  val mutable sign_row_expanded = None
 
   initializer
     self#reset();
@@ -131,22 +137,42 @@ object (self)
     (* Show hide column "default" *)
     vc_default#set_cell_data_func renderer_default begin fun model row ->
       let id = model#get ~row ~column:col_data in
-      renderer_default#set_properties [`VISIBLE (match id with Target tg -> (tg.target_type <> External) | ETask _ -> false)]
+      renderer_default#set_properties [`VISIBLE (match id with Target tg -> (tg.target_type <> External && tg.visible) | ETask _ -> false)]
     end;
-    ignore (view#drag#connect#drop ~callback:begin fun ctx ~x ~y ~time ->
+    view#drag#connect#drop ~callback:begin fun ctx ~x ~y ~time ->
+      let is_valid_source =
+        match view#selection#get_selected_rows with
+          | path :: [] ->
+            let row = model#get_iter path in
+            begin
+              match model#get ~row ~column:col_data with
+                | Target tg -> tg.visible && (not tg.readonly)
+                | ETask et -> et.et_visible && (not et.et_readonly)
+            end;
+          | _ -> true
+      in
+      if is_valid_source then begin
         Opt.map_default (view#get_path_at_pos ~x ~y) false begin fun (path, _, _, _) ->
           let row = model#get_iter path in
           match model#get ~row ~column:col_data with
-            | Target _ ->
+            | Target tg when tg.visible && not tg.readonly ->
               Gmisclib.Idle.add begin fun () ->
                 if model#iter_has_child row then (GTree.Path.down path);
                 view#expand_to_path path;
                 view#selection#select_path path;
               end;
               false
-            | ETask _ -> true (* true aborts drop *);
+            | Target _ | ETask _ -> true (* true aborts drop *);
         end
-      end);
+      end else true
+    end |> ignore;
+    let callback c row _ =
+      match model#get ~row ~column:col_data with
+        | Target tg -> tg.node_collapsed <- c;
+        | ETask _ -> ()
+    in
+    sign_row_expanded <- Some (view#connect#row_expanded ~callback:(callback false));
+    sign_row_collapsed <- Some (view#connect#row_collapsed ~callback:(callback true));
 
   method model = model
   method view = view
@@ -166,7 +192,6 @@ object (self)
           | ETask _ -> assert false (* External Tasks can not have children *);
       end;
     in
-    let open Target in
     model#foreach begin fun _ row ->
       begin
         try
@@ -197,7 +222,11 @@ object (self)
   method length = List.length (self#to_list())
 
   method private append ?parent targets =
-    let rows = List.map begin fun target ->
+    let count = ref 0 in
+    Gaux.may sign_row_collapsed ~f:view#misc#handler_block;
+    Gaux.may sign_row_expanded ~f:view#misc#handler_block;
+    let rows =
+      List.map begin fun target ->
         let exists = ref false in
         model#foreach begin fun _ row ->
           let item = model#get ~row ~column:col_data in
@@ -213,10 +242,15 @@ object (self)
             let target = {target with id = target.id} in
             target.external_tasks <- List.map (fun et ->
                 {et with Task.et_name = et.Task.et_name}) target.external_tasks;
+            target.resource_file <-
+              (match target.resource_file with None -> None | Some rc ->
+                Some {rc with Resource_file.rc_title = rc.Resource_file.rc_title});
             let row = model#append ?parent () in
+            incr count;
             model#set ~row ~column:col_data (Target target);
             model#set ~row ~column:col_name target.name;
             model#set ~row ~column:col_default target.default;
+            model#set ~row ~column:col_visible target.visible;
             let children = List.fold_right begin fun tg acc ->
                 try (List.find (fun t -> t.id = tg.id) project.Prj.targets) :: acc with Not_found -> acc
               end target.Target.sub_targets []
@@ -226,11 +260,14 @@ object (self)
               GtkThread2.sync (fun () -> ignore (self#append_task ~parent:row ~task)) ()
             end target.external_tasks;
             (*view#selection#select_iter row*)
+            if target.node_collapsed then view#collapse_row (model#get_path row);
             Some row
           end ()
         end else None
-      end targets in
-    view#expand_all();
+      end targets
+    in
+    Gaux.may sign_row_collapsed ~f:view#misc#handler_unblock;
+    Gaux.may sign_row_expanded ~f:view#misc#handler_unblock;
     Xlist.filter_map (fun x -> x) rows
 
   method private append_task ~parent ~task =
@@ -238,6 +275,7 @@ object (self)
     model#set ~row ~column:col_data (ETask task);
     model#set ~row ~column:col_name task.Task.et_name;
     model#set ~row ~column:col_default false;
+    model#set ~row ~column:col_visible task.Task.et_visible;
     view#expand_row (model#get_path parent);
     row
 
@@ -333,7 +371,8 @@ object (self)
   method private remove () =
     let delete () =
       try
-        let last_path_index = (GTree.Path.get_indices (List.hd view#selection#get_selected_rows)).(0) in
+        let path = List.hd view#selection#get_selected_rows in
+        let last_path_index = (GTree.Path.get_indices path).(0) in
         let paths = view#selection#get_selected_rows in
         List.iter begin fun path ->
           match self#get path with
@@ -350,8 +389,7 @@ object (self)
         let data_removed = List.map self#get paths in
         let rows = List.map model#get_iter paths in
         List.iter (fun row -> ignore (model#remove row)) rows;
-        let targets = self#to_list() in
-        let index = min last_path_index (List.length targets - 1) in
+        let index = min last_path_index (self#length - 1) in
         view#selection#select_path (GTree.Path.create [index]);
         removed#call data_removed;
       with Failure "hd" -> ()
@@ -396,10 +434,10 @@ object (self)
           match self#get path with
             | Target tg ->
               Gmisclib.Idle.add ~prio:300 (fun () ->
-                b_clean#misc#set_sensitive true;
-                b_compile#misc#set_sensitive true;
+                b_clean#misc#set_sensitive (tg.target_type <> External);
+                b_compile#misc#set_sensitive (tg.target_type <> External);
                 (*b_etask#misc#set_sensitive true;*)
-                b_run#misc#set_sensitive (tg.target_type <> Executable);
+                b_run#misc#set_sensitive (tg.target_type = Library);
                 b_remove#misc#set_sensitive (not tg.readonly));
             | ETask et ->
               Gmisclib.Idle.add ~prio:300 (fun () ->
@@ -447,8 +485,7 @@ object (self)
                 let descr = String.concat ", " descr in
                 sprintf "\n<span weight='light' size='smaller' style='italic'>%s &#8226; %s</span>" (string_of_target_type target.target_type) descr
             in
-            renderer#set_properties [`MARKUP (sprintf
-              "<b>%s</b>%s" name descr)];
+            renderer#set_properties [`MARKUP (if target.visible && not target.readonly then "<b>" ^ name ^ "</b>" ^ descr else "<b><i>" ^ name ^ "</i></b>" ^ descr)];
             if target.target_type = Executable then begin
               renderer_pixbuf#set_properties [`VISIBLE true; `PIXBUF Icons.start_16; `XALIGN 0.0]
             end else if target.target_type = Plugin then begin
@@ -459,18 +496,49 @@ object (self)
               renderer_pixbuf#set_properties [`VISIBLE true; `PIXBUF ((*if target.is_fl_package then Icons.findlib else*) Icons.library); `XALIGN 0.0]
             end;
             renderer_pixbuf2#set_properties [`VISIBLE target.is_fl_package];
-          | ETask _ ->
+          | ETask et ->
+            renderer#set_properties [`MARKUP (if et.et_visible && (not et.et_readonly) then et.et_name else "<i>" ^ et.et_name ^ "</i>")];
             renderer_pixbuf#set_properties [`VISIBLE true; `PIXBUF Icons.etask_16; `XALIGN 0.0];
             renderer_pixbuf2#set_properties [`VISIBLE false];
         end
     with Not_found -> ()
 
+  method find_item_by_name name =
+    let res = ref None in
+    model#foreach begin fun path row ->
+      if
+        match model#get ~row ~column:col_data with
+          | Target t -> t.name = name
+          | ETask t -> t.et_name = name
+      then (res := Some path; true) else false
+    end;
+    !res
+
   method reset () =
+    let selected = ref None in
+    self#with_current (fun _ item -> selected := Some item);
     model#clear();
-    ignore (self#append project.Prj.targets)(*;
-    self#with_current
-      ~default:self#select_default_configuration
-      (fun path _ -> view#selection#select_path path);*)
+    ignore (self#append project.Prj.targets);
+    Gmisclib.Idle.add begin fun () ->
+      try
+        begin
+          match !selected with
+            | Some (Target tg) ->
+              begin
+                match self#find_item_by_name tg.name with
+                  | Some path -> view#selection#select_path path
+                  | _ -> raise Exit
+              end
+            | Some (ETask et) ->
+              begin
+                match self#find_item_by_name et.et_name with
+                  | Some path -> view#selection#select_path path
+                  | _ -> raise Exit
+              end
+            | None -> raise Exit
+        end;
+      with Exit -> self#select_default_configuration ()
+    end
 
   method with_current ?(default : (unit -> unit) option) f =
     match view#selection#get_selected_rows with

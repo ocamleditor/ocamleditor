@@ -36,6 +36,7 @@ type t = {
   mutable et_always_run_in_project : bool;
   mutable et_always_run_in_script  : bool;
   mutable et_readonly              : bool;
+  mutable et_visible               : bool;
 }
 
 let string_of_phase = function
@@ -63,7 +64,8 @@ let phase_of_string = function
   | "After_compile" -> After_compile
   | _ -> failwith "phase_of_string"
 
-let create ~name ~env ?(env_replace=false) ~dir ~cmd ~args ?phase ?(run_in_project=false) ?(run_in_script=true) ?(readonly=false) () = {
+let create ~name ~env ?(env_replace=false) ~dir ~cmd ~args ?phase ?(run_in_project=false) ?(run_in_script=true)
+    ?(readonly=false) ?(visible=true) () = {
     et_name                  = name;
     et_env                   = env;
     et_env_replace           = env_replace;
@@ -74,6 +76,7 @@ let create ~name ~env ?(env_replace=false) ~dir ~cmd ~args ?phase ?(run_in_proje
     et_always_run_in_project = run_in_project;
     et_always_run_in_script  = run_in_script;
     et_readonly              = readonly;
+    et_visible               = visible;
   }
 
 (** handle *)

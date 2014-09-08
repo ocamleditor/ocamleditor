@@ -368,6 +368,7 @@ object (self)
         Opt.may current_window (fun w -> w#set_opacity (match Preferences.preferences#get.Preferences.pref_compl_opacity with Some opa -> opa | _  -> 1.0));
         (*Opt.may pref.Preferences.pref_compl_opacity (fun opa -> Opt.may current_window (fun w -> w#set_opacity opa));*)
         Opt.may (GWindow.toplevel p#coerce) (fun w -> w#present());
+        widget#is_onscreen#set true;
       end
     end else begin
       ignore (widget#tooltip_destroy());
@@ -379,6 +380,7 @@ object (self)
           (*widget#toggle_details();*)
           end;*)
         current_page <- None;
+        widget#is_onscreen#set false;
         match current_window with
           | Some w -> w#misc#hide();
           | _ -> ()
@@ -411,6 +413,7 @@ object (self)
                 in
                 window#move ~x ~y;
               end;
+              widget#is_onscreen#set true;
               window#present();
             | _ -> ()
         end;
@@ -545,6 +548,7 @@ object (self)
           true
         end);
         self#update_button_states();
+        widget#is_onscreen#set (xy <> None);
         window
 
   method private update_button_states () =

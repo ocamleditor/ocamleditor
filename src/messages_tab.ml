@@ -81,7 +81,7 @@ object (self)
     ebox#drag#connect#data_get ~callback:self#data_get;
     ebox#drag#connect#data_delete ~callback:self#data_delete;
     (*  *)
-    ignore (page#active#connect#changed ~callback:self#set_active);
+    ignore (page#is_working#connect#changed ~callback:self#set_active);
     (*  *)
     button#connect#after#clicked ~callback:page#destroy;
     button#set_image image#coerce;

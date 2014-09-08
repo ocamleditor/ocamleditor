@@ -137,7 +137,7 @@ let window ~project () =
     else if key = _Escape then (window#destroy(); true)
     else false
   end);*)
-  Gtk_util.esc_destroy_window window;
+  Gmisclib.Util.esc_destroy_window window;
   window#show();
   window;;
 

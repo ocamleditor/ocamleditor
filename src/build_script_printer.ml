@@ -57,12 +57,14 @@ let print_targets ochan targets external_tasks =
     kprintf print "  inline               = %s;" (match tg.inline with Some x -> sprintf "Some %d" x | _ -> "None");
     kprintf print "  nodep                = %b;" tg.nodep;
     kprintf print "  dontlinkdep          = %b;" tg.dontlinkdep;
+    kprintf print "  dontaddopt           = %b;" tg.dontaddopt;
     kprintf print "  library_install_dir  = %S; (\x2A Relative to the Standard Library Directory \x2A)" tg.lib_install_path;
     kprintf print "  other_objects        = %S;" tg.other_objects;
     kprintf print "  external_tasks       = [%s];" (String.concat "; " (List.map (fun (n(*, _*)) -> string_of_int n) (List.assoc tg external_tasks)));
     kprintf print "  restrictions         = [%s];" (String.concat "; " (List.map (sprintf "%S") tg.restrictions));
     kprintf print "  dependencies         = [%s];" (String.concat "; " (List.map (sprintf "%d") tg.dependencies));
     kprintf print "  show                 = %b;" bst_show;
+    kprintf print "  rc_filename          = %s;" (match tg.resource_file with None -> "None" | Some rc -> "Some \"" ^ (String.escaped rc.Resource_file.rc_filename) ^ "\"");
     kprintf print "};";
   end targets;
   output_string ochan "];;\n";;
@@ -130,6 +132,7 @@ let print_external_tasks ochan project =
         kprintf print "  et_always_run_in_project = %b;" et.et_always_run_in_project;
         kprintf print "  et_always_run_in_script  = %b;" et.et_always_run_in_script;
         kprintf print "  et_readonly              = %b;" et.et_readonly;
+        kprintf print "  et_visible               = %b;" et.et_visible;
         kprintf print "});";
         incr i;
         index

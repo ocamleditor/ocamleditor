@@ -54,16 +54,22 @@ object (self)
   val mutable signal_handlers = []
   val mutable tag_ocamldoc_paragraph : GText.tag option = None
   val mutable tmp_filename = "" (*tmp_filename*)
+  val mutable orig_filename = ""
   val mutable project_tmp_path = None (*project_tmp_path*)
 
   initializer
     self#reset_tmp_filename ();
+    orig_filename <- tmp_filename ^ ".orig";
     at_exit begin fun () ->
       match project with
         | None ->
-          if Sys.file_exists tmp_filename then Sys.remove tmp_filename else ()
+          if Sys.file_exists orig_filename then Sys.remove orig_filename;
+          if Sys.file_exists tmp_filename then Sys.remove tmp_filename
         | _ -> ()
     end
+
+  method tmp_filename = tmp_filename
+  method orig_filename = orig_filename
 
   method reset_tmp_filename () =
     let a, b =
@@ -172,19 +178,19 @@ object (self)
     undo#end_block ();
 
 
-  method save_buffer () =
+  method save_buffer ?(filename=tmp_filename) () =
     let text = buffer#get_text () in
-    let text =
-      Glib.Convert.convert_with_fallback ~fallback:"?"
+    let text = match project with Some project -> Project.convert_from_utf8 project text | _ -> text in
+      (*Glib.Convert.convert_with_fallback ~fallback:"?"
         ~from_codeset:"UTF-8" ~to_codeset:Oe_config.ocaml_codeset text
-    in
-    Miscellanea.mkdir_p (Filename.dirname tmp_filename);
-    let chan = open_out_bin tmp_filename in
+    in*)
+    Miscellanea.mkdir_p (Filename.dirname filename);
+    let chan = open_out_bin filename in
     begin
       try
         output_string chan text;
         close_out chan;
-        tmp_filename, project_tmp_path
+        filename, project_tmp_path
       with ex -> (close_out chan; raise ex)
     end;
 end
@@ -264,8 +270,10 @@ object (self)
   method highlight_current_line_tag = highlight_current_line_tag
 
   method scroll_lazy iter =
-    Gmisclib.Idle.add ~prio:300 (fun () ->
-      ignore (self#scroll_to_iter ~use_align:(self#scroll_to_iter iter) ~xalign:1.0 ~yalign:0.38 iter));
+    Gmisclib.Idle.add ~prio:300 begin fun () ->
+      self#scroll_to_iter ~use_align:(self#scroll_to_iter iter) ~xalign:1.0 ~yalign:0.38 iter |> ignore;
+      Gmisclib.Idle.add ~prio:300 (fun () -> GtkBase.Widget.queue_draw self#as_widget)
+    end;
 
   method scroll dir =
     let rect = self#visible_rect in
@@ -280,7 +288,8 @@ object (self)
         it#forward_line
     in
     ignore (self#scroll_to_iter it);
-    self#place_cursor_onscreen();
+    self#place_cursor_onscreen() |> ignore;
+    Gmisclib.Idle.add ~prio:300 (fun () -> GtkBase.Widget.queue_draw self#as_widget)
 
   method goto () = Dialog_goto.show ~view:self ()
 
@@ -301,6 +310,7 @@ object (self)
           (self#buffer#create_mark ~name:"delim_right_stop" stop)) :: current_matching_tag_bounds;
         self#buffer#apply_tag_by_name "tag_matching_delim" ~start ~stop;
         current_matching_tag_bounds_draw <- current_matching_tag_bounds;
+        GtkBase.Widget.queue_draw self#as_widget;
         delim
       | Some (_, lstop, rstart, _) (*as delim*) when lstop = rstart ->
         ignore (self#innermost_enclosing_delim text lstop);
@@ -872,6 +882,7 @@ object (self)
           (* Update gutter on vertical scroll changed *)
           ignore (v#connect#after#value_changed ~callback:begin fun () ->
             Gmisclib.Idle.add self#draw_gutter;
+            Gmisclib.Idle.add ~prio:300 (fun () -> GtkBase.Widget.queue_draw self#as_widget);
           end);
         | _ -> ()
     end);

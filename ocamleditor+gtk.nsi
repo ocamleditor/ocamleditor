@@ -17,6 +17,9 @@
 ;  along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 ;	!include "MUI2.nsh"
+;!include FontRegAdv.nsh
+;!include FontName.nsh
+
 Name "OCamlEditor"
 OutFile "OCamlEditor-1.13.0-Windows.exe"
 InstallDir $PROGRAMFILES\OCamlEditor
@@ -66,16 +69,16 @@ Page instfiles
 Section "OCamlEditor (required)"
   SetOutPath $INSTDIR\bin
   File "src\ocamleditor.bat"
-  File "src\ocamleditor_x86.bat"
   !system 'if exist src\ocamleditor.opt.exe ren src\ocamleditor.exe ocamleditor.tmp'
   !system 'if exist src\ocamleditor.opt.exe ren src\ocamleditor.opt.exe ocamleditor.exe'
   File "src\ocamleditor.exe" 
   !system 'if exist src\ocamleditor.tmp ren src\ocamleditor.exe ocamleditor.opt.exe'
   !system 'if exist src\ocamleditor.tmp ren src\ocamleditor.tmp ocamleditor.exe'
-	File "src\oeproc\oeproc.exe"   
-	File "src\oebuild\oebuild.exe"   
-	File /NonFatal "src\oeproc\oeproc.opt.exe"   
-	File /NonFatal "src\oebuild\oebuild.opt.exe"   
+  File "src\oeproc\oeproc.exe"   
+  File "src\oebuild\oebuild.exe"   
+  File /NonFatal "src\oeproc\oeproc.opt.exe"   
+  File /NonFatal "src\oebuild\oebuild.opt.exe"   
+  File /NonFatal "src\ocamleditorw.exe"   
 
   SetOutPath $INSTDIR
   RMDir /r "$INSTDIR\pixmaps"; Remove old directory
@@ -84,7 +87,7 @@ Section "OCamlEditor (required)"
   File /oname=COPIYNG.txt "COPYING"
 
   SetOutPath $INSTDIR\share\ocamleditor\icons
-	File "src\ocamleditor.ico" 
+  File "src\ocamleditor.ico" 
   SetOutPath $INSTDIR\share\ocamleditor\icons
 	File "icons\*.*"
   SetOutPath $INSTDIR\share\ocamleditor\plugins
@@ -115,21 +118,28 @@ Section "GTK2 Runtime Environment"
   File /r "${GTK_RUNTIME}\etc"
   File /r "${GTK_RUNTIME}\lib"
   SetOutPath $INSTDIR\bin
-  File /r "D:\curl-7.29.0\*.dll"
+  File /r "D:\curl-7.29.0\bin\*.dll"
   SetOutPath $INSTDIR\share\themes
   File /r "${GTK_RUNTIME}\share\themes\*"
 SectionEnd
 
-; Optional section (can be disabled by the user)
+;Section "Fonts"
+;  StrCpy $FONT_DIR $FONTS
+;  !insertmacro InstallTTF "fonts\cmunss.ttf"
+;  !insertmacro InstallTTF "fonts\cmunsx.ttf"
+;  !insertmacro InstallTTF "fonts\cmunsi.ttf"
+;  !insertmacro InstallTTF "fonts\cmunso.ttf"
+;SectionEnd
+
 Section "Start Menu Shortcuts"
 	SetShellVarContext All
 	StrCpy $1 $DESKTOP
   CreateDirectory "$SMPROGRAMS\OCamlEditor"
   SetOutPath $INSTDIR\bin
   CreateShortCut "$SMPROGRAMS\OCamlEditor\Uninstall.lnk" "$INSTDIR\uninstall.exe" "" "$INSTDIR\uninstall.exe" 0
-  CreateShortCut "$SMPROGRAMS\OCamlEditor\OCamlEditor.lnk" "$INSTDIR\bin\ocamleditor.bat" "" "$INSTDIR\share\ocamleditor\icons\ocamleditor.ico" 0 SW_SHOWMINIMIZED
-  CreateShortCut "$SMPROGRAMS\OCamlEditor\OCamlEditor_x86.lnk" "$INSTDIR\bin\ocamleditor_x86.bat" "" "$INSTDIR\share\ocamleditor\icons\ocamleditor.ico" 0 SW_SHOWMINIMIZED
-  CreateShortCut "$DESKTOP\OCamlEditor.lnk" "$INSTDIR\bin\ocamleditor.bat" "" "$INSTDIR\share\ocamleditor\icons\ocamleditor.ico" 0 SW_SHOWMINIMIZED 
+  CreateShortCut "$SMPROGRAMS\OCamlEditor\OCamlEditor.lnk" "$INSTDIR\bin\ocamleditor.bat" "" "$INSTDIR\bin\ocamleditor.exe" 0 SW_SHOWMINIMIZED
+  CreateShortCut "$SMPROGRAMS\OCamlEditor\OCamlEditor_x86.lnk" "$INSTDIR\bin\ocamleditor_x86.bat" "" "$INSTDIR\bin\ocamleditor.exe" 0 SW_SHOWMINIMIZED
+  CreateShortCut "$DESKTOP\OCamlEditor.lnk" "$INSTDIR\bin\ocamleditor.bat" "" "$INSTDIR\bin\ocamleditor.exe" 0 SW_SHOWMINIMIZED 
   
 SectionEnd
 

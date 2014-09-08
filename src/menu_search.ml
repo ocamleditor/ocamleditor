@@ -50,7 +50,7 @@ let find_replace
       with ex -> Printf.eprintf "File \"menu_search.ml\": %s\n%s\n%!" (Printexc.to_string ex) (Printexc.get_backtrace());
     end);
     ignore (page#connect#search_finished ~callback:begin fun () ->
-      page#active#set false;
+      page#is_working#set false;
       page#present();
     end);
     if not find_all then (dialog#show())

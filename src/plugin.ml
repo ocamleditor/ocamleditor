@@ -24,17 +24,22 @@ open Miscellanea
 
 let loaded = ref []
 
+let file_exists basename =
+  let filename = App_config.application_plugins // basename in
+  let filename = Dynlink.adapt_filename filename in
+  Sys.file_exists filename
+
 (** load *)
 let load basename =
   let load filename =
     let filename = Dynlink.adapt_filename filename in
-    Printf.printf "Plugin: %s... (file_exists=%b) %!" filename (Sys.file_exists filename);
+    if App_config.application_debug then Printf.printf "Plugin: %s... (file_exists=%b) %!" filename (Sys.file_exists filename);
     if not (List.mem filename !loaded) && Sys.file_exists filename then begin
       try
         Dynlink.allow_unsafe_modules true;
         Dynlink.loadfile filename;
         loaded := filename :: !loaded;
-        Printf.printf "Loaded\n%!";
+        if App_config.application_debug then Printf.printf "Loaded\n%!";
         true
       with Dynlink.Error error -> begin
         Printf.printf "Error loading plugin: %s\n%!" (Dynlink.error_message error);
@@ -45,7 +50,7 @@ let load basename =
         false
         end
     end else begin
-      Printf.printf "Not loaded\n%!" ;
+      if App_config.application_debug then Printf.printf "Not loaded\n%!" ;
       false
     end
   in

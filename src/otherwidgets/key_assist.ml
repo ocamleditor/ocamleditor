@@ -23,8 +23,6 @@
 let markup_right = "\
 <big><b>Module Browser</b> and <b>Completion Window</b></big>
 
-<tt><b>Right</b></tt>: Displays the type of the function under the cursor and its documentation, when available. Press <tt><b>Left</b></tt> to return to the preceding view.
-
 <tt><b>F1</b>, <b>Alt+Return</b></tt>: Shows/hides documentation pane.
 
 <tt><b>Alt+Left</b></tt>, <tt><b>Backspace</b></tt>: Goes back one step in the navigation history.
@@ -65,6 +63,7 @@ let window () =
   Gmisclib.Window.GeometryMemo.add ~key:"dialog-key-assist" ~window (!Otherwidgets_config.geometry_memo());
   window#set_skip_taskbar_hint true;
   window#set_skip_pager_hint true;
+  Gmisclib.Util.esc_destroy_window window;
   let vbox = GPack.vbox ~packing:window#add () in
   let box = GPack.vbox  ~border_width:13 ~spacing:21 ~packing:vbox#add () in
   (*let label = GMisc.label ~markup:"" ~xalign:0.0 ~yalign:0.0 ~packing:box#pack () in*)

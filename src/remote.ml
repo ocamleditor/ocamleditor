@@ -262,7 +262,7 @@ module Remote = struct
     let open_file = new open_file () in
     let vbox = GPack.vbox ~spacing:8 ?packing () in
     (* Read history *)
-    let history_filename = Oe_config.ocamleditor_user_home // "remote_history" in
+    let history_filename = App_config.ocamleditor_user_home // "remote_history" in
     let read_history () =
       if Sys.file_exists history_filename then begin
         let chan = open_in_gen [Open_binary; Open_rdonly] 0o600 history_filename in
@@ -313,7 +313,7 @@ module Remote = struct
     let button_clear_key = GButton.button ~packing:box#pack () in
     let _ = button_clear_key#set_image (GMisc.image ~stock:`CLEAR ~icon_size:`MENU ())#coerce in
     let _ = button_clear_key#connect#clicked ~callback:(fun () -> entry_key#unselect_all) in
-    let _ = entry_key#set_current_folder Oe_config.user_home in
+    let _ = entry_key#set_current_folder App_config.user_home in
 
     let hbox = GPack.vbox ~packing:vbox#pack () in
     let _ = GMisc.label ~text:"Public key file name" ~xalign:0.0 ~packing:hbox#pack () in
@@ -322,7 +322,7 @@ module Remote = struct
     let button_clear_pubkey = GButton.button ~packing:box#pack () in
     let _ = button_clear_pubkey#set_image (GMisc.image ~stock:`CLEAR ~icon_size:`MENU ())#coerce in
     let _ = button_clear_pubkey#connect#clicked ~callback:(fun () -> entry_pubkey#unselect_all) in
-    let _ = entry_pubkey#set_current_folder Oe_config.user_home in
+    let _ = entry_pubkey#set_current_folder App_config.user_home in
 
     let hbox = GPack.vbox ~packing:vbox#pack () in
     let _ = GMisc.label ~text:"Passphrase for the private key" ~xalign:0.0 ~packing:hbox#pack () in

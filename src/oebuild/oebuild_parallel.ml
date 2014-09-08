@@ -153,13 +153,13 @@ let create_process ?(jobs=0) ~verbose cb_create_command cb_at_exit dag leaf erro
         (*end;*)
         cb_at_exit output
       in
-      let process_in stdin =
-        Buffer.add_string output.out (input_line stdin);
-        Buffer.add_char output.out '\n';
+      let process_in = Oebuild_util.iter_chan (fun stdin ->
+          Buffer.add_string output.out (input_line stdin);
+          Buffer.add_char output.out '\n')
       in
-      let process_err stderr =
-        Buffer.add_string output.err (input_line stderr);
-        Buffer.add_char output.err '\n';
+      let process_err = Oebuild_util.iter_chan (fun stderr ->
+          Buffer.add_string output.err (input_line stderr);
+          Buffer.add_char output.err '\n')
       in
       (*if jobs > 0 then begin*)
         Mutex.lock job_mutex;

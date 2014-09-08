@@ -20,6 +20,7 @@
 
 *)
 
+
 (** Undo/Redo facilities for the {!GText.buffer} object. *)
 
 type action
@@ -35,6 +36,7 @@ type action
 class manager :
   buffer:GText.buffer ->
   object
+
     (** Begin a block of actions. All changes between this call and the call
         of [end_block] will be undone as a single action. *)
     method begin_block : name:string -> unit

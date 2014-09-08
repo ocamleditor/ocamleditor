@@ -30,129 +30,147 @@ open Oe
 let write proj =
   let open Prj in
   Xml.Element ("project", [], [
-    Xml.Element ("ocaml_home", [], [Xml.PCData proj.ocaml_home]);
-    Xml.Element ("ocamllib", [], [Xml.PCData
-      (if proj.ocamllib_from_env then proj.ocamllib else "")]);
-    Xml.Element ("encoding", [], [Xml.PCData (match proj.encoding with None -> "" | Some x -> x)]);
-    Xml.Element ("name", [], [Xml.PCData proj.name]);
-    Xml.Element ("author", [], [Xml.PCData proj.author]);
-    (*Xml.Element ("description", [], [Xml.PCData proj.description]);*)
-    Xml.Element ("description", [],
-      (List.map (fun x -> Xml.Element ("line", [], [Xml.PCData x])) (Miscellanea.split "\n" proj.description)));
-    Xml.Element ("version", [], [Xml.PCData proj.version]);
-    Xml.Element ("autocomp", [
-      "enabled", string_of_bool proj.autocomp_enabled;
-      "delay", string_of_float proj.autocomp_delay;
-      "cflags", proj.autocomp_cflags], []);
-    Xml.Element ("targets", [], List.map begin fun t ->
-      Xml.Element ("target", [
-          "name", t.Target.name;
-          "default", string_of_bool t.Target.default;
-          "id", string_of_int t.Target.id;
-          "sub_targets", (String.concat "," (List.map (fun tg -> string_of_int tg.Target.id) t.Target.sub_targets));
-          "is_fl_package", string_of_bool t.Target.is_fl_package;
-          "readonly", string_of_bool t.Target.readonly;
-          ], [
-        Xml.Element ("descr", [], [Xml.PCData (t.Target.descr)]);
-        Xml.Element ("byt", [], [Xml.PCData (string_of_bool t.Target.byt)]);
-        Xml.Element ("opt", [], [Xml.PCData (string_of_bool t.Target.opt)]);
-        Xml.Element ("libs", [], [Xml.PCData t.Target.libs]);
-        Xml.Element ("other_objects", [], [Xml.PCData t.Target.other_objects]);
-        Xml.Element ("files", [], [Xml.PCData t.Target.files]);
-        Xml.Element ("package", [], [Xml.PCData t.Target.package]);
-        Xml.Element ("includes", [], [Xml.PCData t.Target.includes]);
-        Xml.Element ("thread", [], [Xml.PCData (string_of_bool t.Target.thread)]);
-        Xml.Element ("vmthread", [], [Xml.PCData (string_of_bool t.Target.vmthread)]);
-        Xml.Element ("pp", [], [Xml.PCData t.Target.pp]);
-        Xml.Element ("inline", [], [Xml.PCData (match t.Target.inline with Some num -> string_of_int num | _ -> "")]);
-        Xml.Element ("nodep", [], [Xml.PCData (string_of_bool t.Target.nodep)]);
-        Xml.Element ("dontlinkdep", [], [Xml.PCData (string_of_bool t.Target.dontlinkdep)]);
-        Xml.Element ("cflags", [], [Xml.PCData t.Target.cflags]);
-        Xml.Element ("lflags", [], [Xml.PCData t.Target.lflags]);
-        Xml.Element ("target_type", [], [Xml.PCData (Target.string_of_target_type t.Target.target_type)]);
-        Xml.Element ("outname", [], [Xml.PCData t.Target.outname]);
-        Xml.Element ("lib_install_path", [], [Xml.PCData t.Target.lib_install_path]);
-        Xml.Element ("external_tasks", [],
-          List.map begin fun task ->
-            Xml.Element ("task", ["name", task.Task.et_name], [
-              Xml.Element ("always_run_in_project", [], [Xml.PCData (string_of_bool task.Task.et_always_run_in_project)]);
-              Xml.Element ("always_run_in_script", [], [Xml.PCData (string_of_bool task.Task.et_always_run_in_script)]);
-              Xml.Element ("readonly", [], [Xml.PCData (string_of_bool task.Task.et_readonly)]);
-              Xml.Element ("env", ["replace", string_of_bool task.Task.et_env_replace],
-                List.map (fun (e, v) -> Xml.Element ("var", ["enabled", string_of_bool e], [Xml.PCData v])) task.Task.et_env);
-              Xml.Element ("dir", [], [Xml.PCData (task.Task.et_dir)]);
-              Xml.Element ("cmd", [], [Xml.PCData (task.Task.et_cmd)]);
-              Xml.Element ("args", [],
-                List.map (fun (e, v) -> Xml.Element ("arg", ["enabled", string_of_bool e], [Xml.PCData v])) task.Task.et_args);
-              Xml.Element ("phase", [], [Xml.PCData
-                (match task.Task.et_phase with Some x -> Task.string_of_phase x | _ -> "")]);
-            ])
-          end t.Target.external_tasks);
-        Xml.Element ("restrictions", [], [Xml.PCData (String.concat "&" t.Target.restrictions)]);
-        Xml.Element ("dependencies", [], [Xml.PCData (String.concat "," (List.map string_of_int t.Target.dependencies))]);
-      ]) end proj.targets);
-    Xml.Element ("executables", [], List.map begin fun t ->
-      Xml.Element ("executable", [
-          "name", t.Rconf.name;
-          "default", string_of_bool t.Rconf.default;
-          "target_id", string_of_int t.Rconf.target_id;
-          "id", string_of_int t.Rconf.id], [
-        Xml.Element ("build_task", [], [Xml.PCData (Target.string_of_task t.Rconf.build_task)]);
-        Xml.Element ("env", ["replace", string_of_bool t.Rconf.env_replace],
-          List.map (fun (e, v) -> Xml.Element ("var", ["enabled", string_of_bool e], [Xml.PCData v])) t.Rconf.env
-        );
-        Xml.Element ("args", [],
-          List.map (fun (e, v) -> Xml.Element ("arg", ["enabled", string_of_bool e], [Xml.PCData v])) t.Rconf.args);
-      ])
-    end proj.executables);
-    Xml.Element ("build_script", ["filename", proj.build_script.Build_script.bs_filename],
-      let targets =
-        List.map begin fun target ->
+      Xml.Element ("ocaml_home", [], [Xml.PCData proj.ocaml_home]);
+      Xml.Element ("ocamllib", [], [Xml.PCData
+                                      (if proj.ocamllib_from_env then proj.ocamllib else "")]);
+      Xml.Element ("encoding", [], [Xml.PCData (match proj.encoding with None -> "" | Some x -> x)]);
+      Xml.Element ("name", [], [Xml.PCData proj.name]);
+      Xml.Element ("author", [], [Xml.PCData proj.author]);
+      (*Xml.Element ("description", [], [Xml.PCData proj.description]);*)
+      Xml.Element ("description", [],
+                   (List.map (fun x -> Xml.Element ("line", [], [Xml.PCData x])) (Miscellanea.split "\n" proj.description)));
+      Xml.Element ("version", [], [Xml.PCData proj.version]);
+      Xml.Element ("autocomp", [
+          "enabled", string_of_bool proj.autocomp_enabled;
+          "delay", string_of_float proj.autocomp_delay;
+          "cflags", proj.autocomp_cflags], []);
+      Xml.Element ("targets", [], List.map begin fun t ->
           Xml.Element ("target", [
-                "target_id", (string_of_int target.Build_script.bst_target.Target.id);
-                "show", (string_of_bool target.Build_script.bst_show);
-              ], [])
-        end proj.build_script.Build_script.bs_targets
-      in
-      let args =
-        List.map begin fun arg ->
-          Xml.Element ("arg", [
-            "id", (string_of_int arg.Build_script_args.bsa_id);
-            "type", (Build_script_args.string_of_type arg.Build_script_args.bsa_type);
-            "key", arg.Build_script_args.bsa_key;
-            "pass", (Build_script_args.string_of_pass arg.Build_script_args.bsa_pass);
-            "command", (Build_script_command.string_of_command arg.Build_script_args.bsa_cmd);
-          ], [
-            Xml.Element ("task",
-              (match arg.Build_script_args.bsa_task with Some (bc, et) -> [
-                "target_id", string_of_int bc.Target.id;
-                "task_name", et.Task.et_name;
-              ] | None -> []), []);
-            Xml.Element ("mode", [], [Xml.PCData
-              (match arg.Build_script_args.bsa_mode with `add -> Build_script_args.string_of_add | `replace x -> x)]);
-            Xml.Element ("default", [
-              "type", (match arg.Build_script_args.bsa_default with `flag _ -> "flag" | `bool _ -> "bool" | `string _ -> "string")
-            ], [Xml.PCData
-              (match arg.Build_script_args.bsa_default with `flag x -> string_of_bool x | `bool x -> string_of_bool x | `string x -> x)]);
-            Xml.Element ("doc", [], [Xml.PCData arg.Build_script_args.bsa_doc]);
-          ])
-        end proj.build_script.Build_script.bs_args
-      in
-      let commands =
-        List.map begin fun cmd ->
-          Xml.Element ("command", [
-            "name", (Build_script.string_of_command cmd.Build_script.bsc_name);
-            "descr", cmd.Build_script.bsc_descr;
-            "target_id", string_of_int cmd.Build_script.bsc_target.Target.id;
-            "task_name", (cmd.Build_script.bsc_task.Task.et_name);
-          ], [])
-        end proj.build_script.Build_script.bs_commands
-      in [
-        Xml.Element ("targets", [], targets);
-        Xml.Element ("args", [], args);
-        Xml.Element ("commands", [], commands);
-      ])
-  ]);;
+              "name", t.Target.name;
+              "default", string_of_bool t.Target.default;
+              "id", string_of_int t.Target.id;
+              "sub_targets", (String.concat "," (List.map (fun tg -> string_of_int tg.Target.id) t.Target.sub_targets));
+              "is_fl_package", string_of_bool t.Target.is_fl_package;
+              "subsystem", (match t.Target.subsystem with Some x -> Target.string_of_subsystem x | _ -> "");
+              "readonly", string_of_bool t.Target.readonly;
+              "visible", string_of_bool t.Target.visible;
+              "node_collapsed", string_of_bool t.Target.node_collapsed;
+            ], [
+               Xml.Element ("descr", [], [Xml.PCData (t.Target.descr)]);
+               Xml.Element ("byt", [], [Xml.PCData (string_of_bool t.Target.byt)]);
+               Xml.Element ("opt", [], [Xml.PCData (string_of_bool t.Target.opt)]);
+               Xml.Element ("libs", [], [Xml.PCData t.Target.libs]);
+               Xml.Element ("other_objects", [], [Xml.PCData t.Target.other_objects]);
+               Xml.Element ("files", [], [Xml.PCData t.Target.files]);
+               Xml.Element ("package", [], [Xml.PCData t.Target.package]);
+               Xml.Element ("includes", [], [Xml.PCData t.Target.includes]);
+               Xml.Element ("thread", [], [Xml.PCData (string_of_bool t.Target.thread)]);
+               Xml.Element ("vmthread", [], [Xml.PCData (string_of_bool t.Target.vmthread)]);
+               Xml.Element ("pp", [], [Xml.PCData t.Target.pp]);
+               Xml.Element ("inline", [], [Xml.PCData (match t.Target.inline with Some num -> string_of_int num | _ -> "")]);
+               Xml.Element ("nodep", [], [Xml.PCData (string_of_bool t.Target.nodep)]);
+               Xml.Element ("dontlinkdep", [], [Xml.PCData (string_of_bool t.Target.dontlinkdep)]);
+               Xml.Element ("dontaddopt", [], [Xml.PCData (string_of_bool t.Target.dontaddopt)]);
+               Xml.Element ("cflags", [], [Xml.PCData t.Target.cflags]);
+               Xml.Element ("lflags", [], [Xml.PCData t.Target.lflags]);
+               Xml.Element ("target_type", [], [Xml.PCData (Target.string_of_target_type t.Target.target_type)]);
+               Xml.Element ("outname", [], [Xml.PCData t.Target.outname]);
+               Xml.Element ("lib_install_path", [], [Xml.PCData t.Target.lib_install_path]);
+               Xml.Element ("external_tasks", [],
+                            List.map begin fun task ->
+                              Xml.Element ("task", ["name", task.Task.et_name], [
+                                  Xml.Element ("always_run_in_project", [], [Xml.PCData (string_of_bool task.Task.et_always_run_in_project)]);
+                                  Xml.Element ("always_run_in_script", [], [Xml.PCData (string_of_bool task.Task.et_always_run_in_script)]);
+                                  Xml.Element ("readonly", [], [Xml.PCData (string_of_bool task.Task.et_readonly)]);
+                                  Xml.Element ("visible", [], [Xml.PCData (string_of_bool task.Task.et_visible)]);
+                                  Xml.Element ("env", ["replace", string_of_bool task.Task.et_env_replace],
+                                               List.map (fun (e, v) -> Xml.Element ("var", ["enabled", string_of_bool e], [Xml.PCData v])) task.Task.et_env);
+                                  Xml.Element ("dir", [], [Xml.PCData (task.Task.et_dir)]);
+                                  Xml.Element ("cmd", [], [Xml.PCData (task.Task.et_cmd)]);
+                                  Xml.Element ("args", [],
+                                               List.map (fun (e, v) -> Xml.Element ("arg", ["enabled", string_of_bool e], [Xml.PCData v])) task.Task.et_args);
+                                  Xml.Element ("phase", [], [Xml.PCData
+                                                               (match task.Task.et_phase with Some x -> Task.string_of_phase x | _ -> "")]);
+                                ])
+                            end t.Target.external_tasks);
+               Xml.Element ("restrictions", [], [Xml.PCData (String.concat "&" t.Target.restrictions)]);
+               Xml.Element ("dependencies", [], [Xml.PCData (String.concat "," (List.map string_of_int t.Target.dependencies))]);
+             ] @ (match t.Target.resource_file with
+                 | None -> []
+                 | Some rc -> [
+                     Xml.Element ("resource_file", [],
+                                  let open Resource_file in [
+                                    Xml.Element ("filename", [], [Xml.PCData rc.rc_filename]);
+                                    Xml.Element ("title", [], [Xml.PCData rc.rc_title]);
+                                    Xml.Element ("company", [], [Xml.PCData rc.rc_company]);
+                                    Xml.Element ("product", [], [Xml.PCData rc.rc_product]);
+                                    Xml.Element ("copyright", [], [Xml.PCData rc.rc_copyright]);
+                                    Xml.Element ("file_version", [], [Xml.PCData (match rc.rc_file_version with a,b,c,d -> sprintf "%d.%d.%d.%d" a b c d)]);
+                                    Xml.Element ("icons", [], List.map (fun (fn(*, _*)) -> Xml.Element ("icon", [], [Xml.PCData fn])) rc.rc_icons(*_data*));
+                                  ])])
+            ) end proj.targets);
+      Xml.Element ("executables", [], List.map begin fun t ->
+          Xml.Element ("executable", [
+              "name", t.Rconf.name;
+              "default", string_of_bool t.Rconf.default;
+              "target_id", string_of_int t.Rconf.target_id;
+              "id", string_of_int t.Rconf.id], [
+                         Xml.Element ("build_task", [], [Xml.PCData (Target.string_of_task t.Rconf.build_task)]);
+                         Xml.Element ("env", ["replace", string_of_bool t.Rconf.env_replace],
+                                      List.map (fun (e, v) -> Xml.Element ("var", ["enabled", string_of_bool e], [Xml.PCData v])) t.Rconf.env
+                                     );
+                         Xml.Element ("args", [],
+                                      List.map (fun (e, v) -> Xml.Element ("arg", ["enabled", string_of_bool e], [Xml.PCData v])) t.Rconf.args);
+                       ])
+        end proj.executables);
+      Xml.Element ("build_script", ["filename", proj.build_script.Build_script.bs_filename],
+                   let targets =
+                     List.map begin fun target ->
+                       Xml.Element ("target", [
+                           "target_id", (string_of_int target.Build_script.bst_target.Target.id);
+                           "show", (string_of_bool target.Build_script.bst_show);
+                         ], [])
+                     end proj.build_script.Build_script.bs_targets
+                   in
+                   let args =
+                     List.map begin fun arg ->
+                       Xml.Element ("arg", [
+                           "id", (string_of_int arg.Build_script_args.bsa_id);
+                           "type", (Build_script_args.string_of_type arg.Build_script_args.bsa_type);
+                           "key", arg.Build_script_args.bsa_key;
+                           "pass", (Build_script_args.string_of_pass arg.Build_script_args.bsa_pass);
+                           "command", (Build_script_command.string_of_command arg.Build_script_args.bsa_cmd);
+                         ], [
+                                      Xml.Element ("task",
+                                                   (match arg.Build_script_args.bsa_task with Some (bc, et) -> [
+                                                        "target_id", string_of_int bc.Target.id;
+                                                        "task_name", et.Task.et_name;
+                                                      ] | None -> []), []);
+                                      Xml.Element ("mode", [], [Xml.PCData
+                                                                  (match arg.Build_script_args.bsa_mode with `add -> Build_script_args.string_of_add | `replace x -> x)]);
+                                      Xml.Element ("default", [
+                                          "type", (match arg.Build_script_args.bsa_default with `flag _ -> "flag" | `bool _ -> "bool" | `string _ -> "string")
+                                        ], [Xml.PCData
+                                              (match arg.Build_script_args.bsa_default with `flag x -> string_of_bool x | `bool x -> string_of_bool x | `string x -> x)]);
+                                      Xml.Element ("doc", [], [Xml.PCData arg.Build_script_args.bsa_doc]);
+                                    ])
+                     end proj.build_script.Build_script.bs_args
+                   in
+                   let commands =
+                     List.map begin fun cmd ->
+                       Xml.Element ("command", [
+                           "name", (Build_script.string_of_command cmd.Build_script.bsc_name);
+                           "descr", cmd.Build_script.bsc_descr;
+                           "target_id", string_of_int cmd.Build_script.bsc_target.Target.id;
+                           "task_name", (cmd.Build_script.bsc_task.Task.et_name);
+                         ], [])
+                     end proj.build_script.Build_script.bs_commands
+                   in [
+                     Xml.Element ("targets", [], targets);
+                     Xml.Element ("args", [], args);
+                     Xml.Element ("commands", [], commands);
+                   ])
+    ]);;
 
 let value xml =
   try String.concat "\n" (List.map Xml.pcdata (Xml.children xml)) with Xml.Not_element _ -> "";;
@@ -171,13 +189,13 @@ let fattrib node name f default =
 let xml_bs_targets proj node =
   let open Prj in
   List.rev (Xml.fold begin fun acc target_node ->
-    try
-      {Build_script.
-        bst_target         = (match fattrib target_node "target_id" (find_target_string proj) (fun _ -> None) with Some x -> x | _ -> raise Exit);
-        bst_show           = fattrib target_node "show" bool_of_string (fun () -> true);
-      } :: acc
-    with Exit -> acc
-  end [] node);;
+      try
+        {Build_script.
+          bst_target         = (match fattrib target_node "target_id" (find_target_string proj) (fun _ -> None) with Some x -> x | _ -> raise Exit);
+          bst_show           = fattrib target_node "show" bool_of_string (fun () -> true);
+        } :: acc
+      with Exit -> acc
+    end [] node);;
 
 (** xml_bs_args *)
 let xml_bs_args proj node =
@@ -234,16 +252,16 @@ let xml_bs_args proj node =
 let xml_commands proj node =
   let open Prj in
   List.rev (Xml.fold begin fun acc target_node ->
-    try
-      {Build_script.
-        bsc_name   = (fattrib target_node "name" Build_script.command_of_string (fun _ -> raise Exit));
-        bsc_descr  = (attrib target_node "descr" (fun x -> x) "");
-        bsc_target = (match fattrib target_node "target_id" (find_target_string proj) (fun _ -> None) with Some x -> x | _ -> raise Exit);
-        bsc_task   = fattrib target_node "task_name"
-          (fun y -> match find_task proj y with Some x -> x | _ -> raise Exit) (fun _ -> raise Exit)
-      } :: acc
-    with Exit -> acc
-  end [] node);;
+      try
+        {Build_script.
+          bsc_name   = (fattrib target_node "name" Build_script.command_of_string (fun _ -> raise Exit));
+          bsc_descr  = (attrib target_node "descr" (fun x -> x) "");
+          bsc_target = (match fattrib target_node "target_id" (find_target_string proj) (fun _ -> None) with Some x -> x | _ -> raise Exit);
+          bsc_task   = fattrib target_node "task_name"
+              (fun y -> match find_task proj y with Some x -> x | _ -> raise Exit) (fun _ -> raise Exit)
+        } :: acc
+      with Exit -> acc
+    end [] node);;
 
 (** read *)
 let read filename =
@@ -275,47 +293,47 @@ let read filename =
         proj.open_files <- List.rev files;
       | "executables" | "runtime" (* Backward compatibility with 1.7.5 *) ->
         let runtime = Xml.fold begin fun acc tnode ->
-          let config  = {
-            Rconf.id    = (attrib tnode "id" int_of_string 0);
-            target_id   = (try (attrib tnode "target_id" int_of_string 0) with Xml.No_attribute _ -> attrib tnode "id_build" int_of_string 0); (* Backward compatibility with 1.7.5 *)
-            name        = (attrib tnode "name" (fun x -> x) "");
-            default     = (attrib tnode "default" bool_of_string false);
-            build_task  = `NONE;
-            env         = [];
-            env_replace = false;
-            args        = []
-          } in
-          Xml.iter begin fun tp ->
-            match Xml.tag tp with
-              | "id" -> config.Rconf.id <- int_of_string (value tp) (* Backward compatibility with 1.7.0 *)
-              | "id_build" -> config.Rconf.target_id <- int_of_string (value tp) (* Backward compatibility with 1.7.0 *)
-              | "name" -> config.Rconf.name <- value tp; (* Backward compatibility with 1.7.0 *)
-              | "default" -> config.Rconf.default <- bool_of_string (value tp); (* Backward compatibility with 1.7.0 *)
-              | "build_task" ->
-                config.Rconf.build_task <- `NONE;
-                task_map := (config, (value tp)) :: !task_map
-              | "env" ->
-                config.Rconf.env <-
-                  List.rev (Xml.fold (fun acc var ->
-                    (attrib var "enabled" bool_of_string true, value var) :: acc) [] tp);
-                config.Rconf.env_replace <- (try bool_of_string (Xml.attrib tp "replace") with Xml.No_attribute _ -> false)
-              | "args" ->
-                begin
-                  try
-                    config.Rconf.args <-
-                      List.rev (Xml.fold (fun acc arg ->
-                        (attrib arg "enabled" bool_of_string true, value arg) :: acc) [] tp);
-                  with Xml.Not_element _ -> (config.Rconf.args <- [true, (value tp)])
-                end;
-              | _ -> ()
-          end tnode;
-          config :: acc
-        end [] node in
+            let config  = {
+              Rconf.id    = (attrib tnode "id" int_of_string 0);
+              target_id   = (try (attrib tnode "target_id" int_of_string 0) with Xml.No_attribute _ -> attrib tnode "id_build" int_of_string 0); (* Backward compatibility with 1.7.5 *)
+              name        = (attrib tnode "name" (fun x -> x) "");
+              default     = (attrib tnode "default" bool_of_string false);
+              build_task  = `NONE;
+              env         = [];
+              env_replace = false;
+              args        = []
+            } in
+            Xml.iter begin fun tp ->
+              match Xml.tag tp with
+                | "id" -> config.Rconf.id <- int_of_string (value tp) (* Backward compatibility with 1.7.0 *)
+                | "id_build" -> config.Rconf.target_id <- int_of_string (value tp) (* Backward compatibility with 1.7.0 *)
+                | "name" -> config.Rconf.name <- value tp; (* Backward compatibility with 1.7.0 *)
+                | "default" -> config.Rconf.default <- bool_of_string (value tp); (* Backward compatibility with 1.7.0 *)
+                | "build_task" ->
+                  config.Rconf.build_task <- `NONE;
+                  task_map := (config, (value tp)) :: !task_map
+                | "env" ->
+                  config.Rconf.env <-
+                    List.rev (Xml.fold (fun acc var ->
+                        (attrib var "enabled" bool_of_string true, value var) :: acc) [] tp);
+                  config.Rconf.env_replace <- (try bool_of_string (Xml.attrib tp "replace") with Xml.No_attribute _ -> false)
+                | "args" ->
+                  begin
+                    try
+                      config.Rconf.args <-
+                        List.rev (Xml.fold (fun acc arg ->
+                            (attrib arg "enabled" bool_of_string true, value arg) :: acc) [] tp);
+                    with Xml.Not_element _ -> (config.Rconf.args <- [true, (value tp)])
+                  end;
+                | _ -> ()
+            end tnode;
+            config :: acc
+          end [] node in
         proj.executables <- List.rev runtime;
       | "targets" | "build" (* Backward compatibility with 1.7.5 *) ->
-        let open Target in
         let i = ref 0 in
         let sub_targets = ref [] in
+        let open Target in
         let targets =
           Xml.fold begin fun acc tnode ->
             let target = Target.create ~id:0 ~name:(sprintf "Config_%d" !i) in
@@ -328,7 +346,10 @@ let read filename =
             target.default <- attrib tnode "default" bool_of_string false;
             sub_targets := (target.id, List.map int_of_string (attrib tnode "sub_targets" (Str.split (Str.regexp "[;, ]+")) [])) :: !sub_targets;
             target.is_fl_package <- attrib tnode "is_fl_package" bool_of_string false;
+            target.subsystem <- (try attrib tnode "subsystem" (fun x -> Some (Target.subsystem_of_string x)) None with Failure _ -> None);
             target.readonly <- attrib tnode "readonly" bool_of_string false;
+            target.visible <- attrib tnode "visible" bool_of_string true;
+            target.node_collapsed <- attrib tnode "node_collapsed" bool_of_string false;
             Xml.iter begin fun tp ->
               match Xml.tag tp with
                 | "descr" -> target.descr <- value tp
@@ -349,10 +370,11 @@ let read filename =
                 | "inline" -> target.inline <- (let x = value tp in if x = "" then None else Some (int_of_string x))
                 | "nodep" -> target.nodep <- bool_of_string (value tp)
                 | "dontlinkdep" -> target.dontlinkdep <- bool_of_string (value tp)
+                | "dontaddopt" -> target.dontaddopt <- bool_of_string (value tp)
                 | "cflags" -> target.cflags <- value tp
                 | "lflags" -> target.lflags <- value tp
                 | "is_library" -> target.target_type <- (if bool_of_string (value tp) then Target.Library else Target.Executable)
-                | "target_type" | "outkind" -> target.target_type <- Target.target_type_of_string (value tp)
+                | "target_type" | "outkind" -> target.target_type <- target_type_of_string (value tp)
                 | "outname" -> target.outname <- value tp
                 | "runtime_build_task" ->
                   runtime_build_task := (value tp);
@@ -362,6 +384,24 @@ let read filename =
                 | "runtime_args" | "run" ->
                   runtime_args := (attrib tp "enabed" bool_of_string true, value tp);
                 | "lib_install_path" -> target.lib_install_path <- value tp
+                | "resource_file" ->
+                  let rc = Resource_file.create () in
+                  Xml.iter begin fun nrc ->
+                    let open Resource_file in
+                    match Xml.tag nrc with
+                      | "filename" ->
+                        target.resource_file <- Some rc;
+                        rc.rc_filename <- value nrc
+                      | "title" -> rc.rc_title <- value nrc
+                      | "company" -> rc.rc_company <- value nrc
+                      | "product" -> rc.rc_product <- value nrc
+                      | "file_version" -> rc.rc_file_version <- (match Str.split (!~ "\\.") (value nrc) with
+                          | [a;b;c;d] -> int_of_string a, int_of_string b, int_of_string c, int_of_string d | _ -> assert false)
+                      | "copyright" -> rc.rc_copyright <- value nrc
+                      | "icons" ->
+                        rc.rc_icons(*_data*) <- List.rev (Xml.fold (fun acc name -> (value name(*, Buffer.create 1000*)) :: acc) [] nrc);
+                      | _ -> ()
+                  end tp;
                 | "external_tasks" ->
                   let external_tasks =
                     Xml.fold begin fun acc tnode ->
@@ -374,6 +414,7 @@ let read filename =
                           | "always_run_in_project" -> task.Task.et_always_run_in_project <- bool_of_string (value tp)
                           | "always_run_in_script" -> task.Task.et_always_run_in_script <- bool_of_string (value tp)
                           | "readonly" -> task.Task.et_readonly <- bool_of_string (value tp)
+                          | "visible" -> task.Task.et_visible <- bool_of_string (value tp)
                           | "env" ->
                             task.Task.et_env <-
                               List.rev (Xml.fold (fun acc var ->
@@ -386,7 +427,7 @@ let read filename =
                               List.rev (Xml.fold (fun acc arg ->
                                   (attrib arg "enabled" bool_of_string true, value arg) :: acc) [] tp);
                           | "phase" -> task.Task.et_phase <-
-                                         (match value tp with "" -> None | x -> Some (Task.phase_of_string x))
+                              (match value tp with "" -> None | x -> Some (Task.phase_of_string x))
                           | _ -> ()
                       end tnode;
                       task :: acc
@@ -423,11 +464,11 @@ let read filename =
       | "build_script" ->
         let filename = (attrib node "filename" (fun x -> x) "") in
         proj.build_script <- {Build_script.
-          bs_filename = filename;
-          bs_targets  = fold node "targets" (xml_bs_targets proj) [];
-          bs_args     = fold node "args" (xml_bs_args proj) [];
-          bs_commands = fold node "commands" (xml_commands proj) [];
-        }
+                               bs_filename = filename;
+                               bs_targets  = fold node "targets" (xml_bs_targets proj) [];
+                               bs_args     = fold node "args" (xml_bs_args proj) [];
+                               bs_commands = fold node "commands" (xml_commands proj) [];
+                             }
       | _ -> ()
   end xml;
   (* Patch build tasks connected to the runtime *)

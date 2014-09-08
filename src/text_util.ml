@@ -31,10 +31,12 @@ let string_width s =
 
 let blanks                 = [13;10;32;9]
 let not_blank c            = not (List.mem c blanks)
-let whitespace_middot      = (*"."*) "\xC2\xB7"
+let whitespace_middot      = (*"·" *)"\xC2\xB7"
+let one_dot_leader         = whitespace_middot
 let whitespace_tab         = "\xC2\xBB"
 let whitespace_crlf        = "\xC2\xA4\xC2\xB6"
 let whitespace_lf          = "\xC2\xB6"
+let dot_leaders            = Oebuild_util.dot_leaders
+let format_int             = Oebuild_util.format_int
 let create_middot_string   = Miscellanea.Memo.create (fun x ->
-  String.concat "" (Miscellanea.Xlist.list_full whitespace_middot x))
-
+  String.concat "" (Miscellanea.Xlist.list_full one_dot_leader x))

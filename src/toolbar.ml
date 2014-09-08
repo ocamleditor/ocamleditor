@@ -351,7 +351,7 @@ object (self)
         tool_forward#misc#set_sensitive (not forward);
         tool_last_edit_loc#misc#set_sensitive (not last);
       with _ -> ()
-    end
+    end;
 
   method connect = new signals ~tool_messages_clicked ~tool_hmessages_clicked
 end

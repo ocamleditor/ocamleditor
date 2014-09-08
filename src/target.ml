@@ -52,9 +52,15 @@ type t = {
   mutable sub_targets      : t list; (* For use with Findlib sub-packages *)
   mutable is_fl_package    : bool;
   mutable readonly         : bool;
+  mutable visible          : bool;
+  mutable subsystem        : subsystem option;
+  mutable dontaddopt       : bool;
+  mutable resource_file    : Resource_file.t option;
+  mutable node_collapsed   : bool;
 }
 and task = [ `NONE | `CLEAN | `COMPILE | `REBUILD | `ETASK of Task.t ]
 and target_type = Executable | Library | Plugin | Pack | External
+and subsystem = Console | Windows
 
 let default_runtime_build_task = `COMPILE
 
@@ -98,6 +104,15 @@ let target_type_of_string = function
   | "External" -> External
   | _ -> assert false
 
+let subsystem_of_string = function
+  | "Console" -> Console
+  | "Windows" -> Windows
+  | x -> kprintf failwith "subsystem_of_string: %S" x
+
+let string_of_subsystem = function
+  | Console -> "Console"
+  | Windows -> "Windows"
+
 (** create *)
 let create ~id ~name = {
   id                 = id;
@@ -128,11 +143,20 @@ let create ~id ~name = {
   sub_targets        = [];
   is_fl_package      = false;
   readonly           = false;
+  visible            = true;
+  subsystem          = None;
+  dontaddopt         = false;
+  resource_file      = None;
+  node_collapsed     = false;
 }
 
-(** find_dependencies *)
-let find_dependencies target =
+
+(** find_top_dependencies *)
+let find_top_dependencies target =
   Oebuild_dep.ocamldep_toplevels (Miscellanea.split " +" target.files) |> Oebuild_dep.sort_dependencies
+
+(** find_dependencies *)
+let find_dependencies = find_top_dependencies
 
 (** find_target_dependencies *)
 let rec find_target_dependencies targets trg =
@@ -151,6 +175,24 @@ let filter_external_tasks target phase =
     | _ -> None
   end target.external_tasks
 
+(** create_rc_filename *)
+let create_rc_filename target =
+  let exename = Oebuild.get_output_name
+      ~compilation:Oebuild.Native
+      ~outkind:Oebuild.Executable
+      ~outname:target.outname
+      ~dontaddopt:target.dontaddopt ()
+  in
+  let rcname = Filename.chop_extension exename in
+  Filename.concat (Filename.dirname rcname) ((Filename.basename rcname) ^ ".resource.rc")
+
+(** get_full_libs *)
+let get_full_libs target =
+    match target.resource_file with
+      | Some rc when Oe_config.rc <> None && Oe_config.cvtres <> None ->
+        (Filename.basename (Filename.chop_extension rc.Resource_file.rc_filename)) ^ ".obj " ^ target.libs
+      | _ -> target.libs
+
 (** create_cmd_line *)
 let create_cmd_line ?(flags=[]) ?(can_compile_native=true) target =
   let pref = Preferences.preferences#get in
@@ -163,11 +205,12 @@ let create_cmd_line ?(flags=[]) ?(can_compile_native=true) target =
     @ ["-bin-annot"]
     @ ["-verbose " ^ (string_of_int pref.Preferences.pref_build_verbosity)]
     @ (if target.pp <> "" then ["-pp"; quote target.pp] else [])
+    @ (match target.inline with Some n -> ["-inline"; string_of_int n] | _ -> [])
     @ (if target.cflags <> "" then ["-cflags"; (quote target.cflags)] else [])
     @ (if target.lflags <> "" then ["-lflags"; (quote (target.lflags))] else [])
     @ (if target.package <> "" then ["-package"; (quote (target.package))] else [])
     @ (if target.includes <> "" then ["-I"; (quote (target.includes))] else [])
-    @ (if target.libs <> "" then ["-l"; (quote (target.libs))] else [])
+    @ (if target.libs <> "" || target.resource_file <> None then ["-l"; (quote (get_full_libs target))] else [])
     @ (if target.other_objects <> "" then ["-m"; quote (target.other_objects)] else [])
     @ begin
         match target.target_type with
@@ -183,6 +226,7 @@ let create_cmd_line ?(flags=[]) ?(can_compile_native=true) target =
     @ (if target.vmthread then ["-vmthread"] else [])
     @ (if target.nodep then ["-no-dep"] else [])
     @ (if target.dontlinkdep then ["-dont-link-dep"] else [])
+    @ (if target.dontaddopt then ["-dont-add-opt"] else [])
     @ (if target.outname <> "" then ["-o"; quote (target.outname)] else [])
     @ flags
   in

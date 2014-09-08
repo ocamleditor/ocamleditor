@@ -24,24 +24,6 @@ open Miscellanea
 open Printf
 
 
-let is_win32 = Sys.os_type = "Win32"
-
-(** Directories *)
-let user_home =
-  try Sys.getenv "HOME" with Not_found ->
-    (try (Sys.getenv "HOMEDRIVE") // (Sys.getenv "HOMEPATH")
-    with Not_found -> failwith "Please set your HOME environment variable.")
-
-let ocamleditor_user_home =
-  let dirname =
-    if try ignore (Sys.getenv "OCAMLEDITOR_MINGW"); true with Not_found -> false then ".ocamleditor.mingw"
-    else if App_config.application_debug then ".ocamleditor.test"
-    else ".ocamleditor"
-  in
-  let ocamleditor_user_home = user_home // dirname in
-  if not (Sys.file_exists ocamleditor_user_home) then (Unix.mkdir ocamleditor_user_home 509);
-  ocamleditor_user_home
-
 (** Configuration Section =================================================== *)
 
 let dot_viewer : [`DEFAULT | `PDF]       = `DEFAULT
@@ -57,9 +39,12 @@ let matching_delim_border_color          = `NAME "#ff0000"
 let error_popup_bg_color                 = `NAME "#ffeef2"
 let error_popup_border_color             = `NAME "#ff6a99"
 let error_underline_color                = `NAME "#ff0000"
+let error_underline_shadow               = `NAME "#FFa0a0"
+let error_underline_mode                 = (`CUSTOM : [`GTK | `CUSTOM])
 let warning_popup_bg_color               = `NAME "#fff4e8"
-let warning_popup_border_color           = `NAME "#ffc56a"
+let warning_popup_border_color           = `NAME "#FFB33C" (*"#ffc56a"*)
 let warning_underline_color              = warning_popup_border_color
+let warning_underline_shadow             = `NAME "#FFE36C"
 let warning_unused_color                 = "#a0a0a0"
 let warning_unused_properties            = [`FOREGROUND warning_unused_color; `STYLE `ITALIC]
 let warning_tootip_enabled               = false
@@ -83,17 +68,23 @@ let code_folding_hightlight_gradient     = ["#f4f4f4"; "#f9f9f9"; "#fefefe"] (* 
 let code_folding_font                    = ref (Some "-*-*-medium-r-*-sans-10-*-*-*-*-*-*-*")
                                           (* Font for the "n lines" label in the fold line; it must be 10 pixels height. None for no label *)
 let global_gutter_comments_enabled       = false
+let global_gutter_size                   = 13
 let global_gutter_comments_color         = `NAME "#fa80a5"
 let global_gutter_comments_bgcolor       = `NAME "#fad0f5"
+let global_gutter_diff_color_add         = "#d0ffd0"
+let global_gutter_diff_color_del         = "#ffd0d0"
+let global_gutter_diff_color_change      = "#ffffd0"
+let global_gutter_diff_style             = (`COLOR false : [`BW | `COLOR of bool])
+let global_gutter_diff_tooltips          = true
 let global_gutter_no_errors              = `NAME "#daedd0"
 let find_replace_history_max_length      = 75
 let find_text_output_border_color        = current_line_border_color(*fun _ _ -> `NAME "#707070"*) (* Current line border color of the find text output pane *)
 let find_text_output_highlight           = `DEFAULT, `DEFAULT (*`NAME "#ffff7e", `NONE*) (* Background and foreground colors to highlight occurrences where the pattern matches.
                                           (`NONE=do not change color; `DEFAULT=default color; `NAME=specific color)*)
 let find_text_output_linenumber_fgcolor  = `FOREGROUND "#000000"
-let file_history_filename                = ocamleditor_user_home // "file_history"
+let file_history_filename                = App_config.ocamleditor_user_home // "file_history"
 let file_history_max_length              = 300
-let project_history_filename             = ocamleditor_user_home // "project_history"
+let project_history_filename             = App_config.ocamleditor_user_home // "project_history"
 let project_history_max_length           = 15
 let location_history_proximity           = 20 (* characters *)
 let location_history_max_length          = 30 (* hint *)
@@ -111,6 +102,9 @@ let layout_find_module_browser           = `VERTICAL
 (* Path relative to the project home directory where to find custom templates. *)
 let template_project_filename            = ".extensions" // "templates.cma"
 let targetlist_alternating_row_colors    = Some 0.95 (* like the gutter *)
+let editor_tab_color_alt_active          = `NAME "#a7a2ae"
+let editor_tab_color_alt_normal          = `NAME "#310080"
+
 
 (** End of Configuration Section ============================================ *)
 
@@ -159,7 +153,7 @@ let find_best ?(param="--help") prog =
 
 (** Commands *)
 let find_command name =
-  let basename = name ^ (if is_win32 then ".exe" else "") in
+  let basename = name ^ (if Sys.win32 then ".exe" else "") in
   let path = (!! Sys.executable_name) // basename in
   if Sys.file_exists path && not (Sys.is_directory path) then path
   else
@@ -175,7 +169,7 @@ let oebuild_command =
   find_best commands
 
 let oeproc_command =
-  if is_win32 then
+  if Sys.win32 then
     let commands = [
       find_command "oeproc.opt";
       find_command "oeproc";
@@ -193,7 +187,7 @@ let get_version ?(ok_status=0) command =
     if status = ok_status || not (List.mem status status_not_found) then
       let redirect_stderr = if Sys.win32 then " 2>&1" else " 2>&1" in
       let cmd = sprintf "%s %s" command redirect_stderr in
-      (match kprintf Cmd.exec_lines "%s %s" cmd redirect_stderr with ver :: _ -> Some ver | _ -> None)
+      (match Cmd.exec_lines cmd with ver :: _ -> Some ver | _ -> None)
     else failwith cmd
   with Failure _ -> None
 
@@ -202,6 +196,10 @@ let ocp_indent_version = get_version "ocp-indent --version"
 let plink_version = get_version "plink -V" (* exits with status = 1 *)
 let xdg_open_version = get_version "xdg-open --version"
 let git_version = get_version ~ok_status:1 "git --version"
+let ml = if Sys.win32 then get_version ~ok_status:0 "ml" else None
+let cl = if Sys.win32 then get_version ~ok_status:0 "cl" else None
+let rc = if Sys.win32 then get_version ~ok_status:1 "rc" else None
+let cvtres = if Sys.win32 then get_version ~ok_status:0 "cvtres" else None
 
 
 (** GTK config *)
@@ -225,9 +223,9 @@ let themes_dir =
 let _ = Ocaml_config.putenv_ocamllib None
 
 (** geometry_memo_filename *)
-let geometry_memo_filename = Filename.concat ocamleditor_user_home "geometry_memo.ocaml"
+let geometry_memo_filename = Filename.concat App_config.ocamleditor_user_home "geometry_memo.ocaml"
 let _ =
-  let old = Filename.concat ocamleditor_user_home "message_window_positions" in
+  let old = Filename.concat App_config.ocamleditor_user_home "message_window_positions" in
   if Sys.file_exists old then Sys.remove old
 
 

@@ -86,14 +86,18 @@ class file filename =
             end;
             path
         in
-        let name_match = Str.string_match (Str.regexp (self#basename ^ "\\.~\\([0-9]+\\)~$")) in
+        let name_match = Str.string_match (Miscellanea.regexp ((Filename.chop_extension self#basename) ^ "\\.~\\([0-9]+\\)~\\..+$")) in
         let backups = Xlist.filter_map begin fun n ->
             if name_match n 0 then
               Some (int_of_string (Str.matched_group 1 n))
             else None
           end (Array.to_list (Sys.readdir dir)) in
         let n = try Xlist.max backups + 1 with Not_found -> 1 in
-        let backup_name = filename ^ ".~" ^ (string_of_int n) ^ "~" in
+        let backup_name =
+          let pos = String.rindex filename '.' in
+          let ext = String.sub filename pos (String.length filename - pos) in
+          (Filename.chop_extension filename) ^ ".~" ^ (string_of_int n) ^ "~" ^ ext
+        in
         let backup_name = match move_to with
           | None -> backup_name
           | Some path -> Filename.concat path (Filename.basename backup_name)

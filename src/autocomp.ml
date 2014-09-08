@@ -46,7 +46,7 @@ let compile_buffer ~project ~editor ~page ?(join=false) () =
   Activity.add Activity.Compile_buffer activity_name;
   let filename = page#get_filename in
   try
-    match page#buffer#save_buffer() with
+    match page#buffer#save_buffer ?filename:None () with
       | _, None -> ()
       | _, Some (tmp, relpath) ->
         (* Compile *)
@@ -103,6 +103,7 @@ let compile_buffer ~project ~editor ~page ?(join=false) () =
           end;
           Activity.remove activity_name;
         in
+        let process_err = Oebuild_util.iter_chan process_err in
         let exit_code = Oebuild_util.exec ~verbose:App_config.application_debug ~join (*false*) ~at_exit ~process_err command in
         ()
     (*end ()*)

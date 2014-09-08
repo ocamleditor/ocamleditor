@@ -10,7 +10,7 @@
   <version>1.13.0</version>
   <autocomp enabled="true" delay="0.764" cflags=""/>
   <targets>
-    <target name="common" default="false" id="4" sub_targets="" is_fl_package="false">
+    <target name="common" default="false" id="4" sub_targets="" is_fl_package="false" subsystem="" readonly="false" visible="true" node_collapsed="false">
       <descr></descr>
       <byt>true</byt>
       <opt>true</opt>
@@ -25,6 +25,7 @@
       <inline></inline>
       <nodep>false</nodep>
       <dontlinkdep>false</dontlinkdep>
+      <dontaddopt>false</dontaddopt>
       <cflags>-g</cflags>
       <lflags>-g</lflags>
       <target_type>Library</target_type>
@@ -34,7 +35,7 @@
       <restrictions></restrictions>
       <dependencies></dependencies>
     </target>
-    <target name="icons" default="false" id="10" sub_targets="" is_fl_package="false">
+    <target name="icons" default="false" id="10" sub_targets="" is_fl_package="false" subsystem="" readonly="false" visible="true" node_collapsed="false">
       <descr></descr>
       <byt>true</byt>
       <opt>true</opt>
@@ -49,6 +50,7 @@
       <inline></inline>
       <nodep>false</nodep>
       <dontlinkdep>false</dontlinkdep>
+      <dontaddopt>false</dontaddopt>
       <cflags>-g</cflags>
       <lflags>-g</lflags>
       <target_type>Library</target_type>
@@ -58,6 +60,8 @@
         <task name="mkicons">
           <always_run_in_project>true</always_run_in_project>
           <always_run_in_script>true</always_run_in_script>
+          <readonly>false</readonly>
+          <visible>true</visible>
           <env replace="false"/>
           <dir>..</dir>
           <cmd>ocaml</cmd>
@@ -70,7 +74,7 @@
       <restrictions></restrictions>
       <dependencies></dependencies>
     </target>
-    <target name="oebuildlib" default="false" id="7" sub_targets="" is_fl_package="false">
+    <target name="oebuildlib" default="false" id="7" sub_targets="" is_fl_package="false" subsystem="" readonly="false" visible="true" node_collapsed="false">
       <descr></descr>
       <byt>true</byt>
       <opt>true</opt>
@@ -85,6 +89,7 @@
       <inline></inline>
       <nodep>false</nodep>
       <dontlinkdep>false</dontlinkdep>
+      <dontaddopt>false</dontaddopt>
       <cflags>-w y</cflags>
       <lflags></lflags>
       <target_type>Library</target_type>
@@ -94,7 +99,7 @@
       <restrictions></restrictions>
       <dependencies>4</dependencies>
     </target>
-    <target name="oebuild" default="false" id="5" sub_targets="" is_fl_package="false">
+    <target name="oebuild" default="false" id="5" sub_targets="" is_fl_package="false" subsystem="" readonly="false" visible="true" node_collapsed="false">
       <descr></descr>
       <byt>true</byt>
       <opt>true</opt>
@@ -109,6 +114,7 @@
       <inline></inline>
       <nodep>false</nodep>
       <dontlinkdep>false</dontlinkdep>
+      <dontaddopt>false</dontaddopt>
       <cflags>-w y</cflags>
       <lflags></lflags>
       <target_type>Executable</target_type>
@@ -118,7 +124,7 @@
       <restrictions></restrictions>
       <dependencies>7</dependencies>
     </target>
-    <target name="oeproc" default="false" id="6" sub_targets="" is_fl_package="false">
+    <target name="oeproc" default="false" id="6" sub_targets="" is_fl_package="false" subsystem="" readonly="false" visible="true" node_collapsed="false">
       <descr></descr>
       <byt>true</byt>
       <opt>true</opt>
@@ -133,6 +139,7 @@
       <inline></inline>
       <nodep>false</nodep>
       <dontlinkdep>false</dontlinkdep>
+      <dontaddopt>false</dontaddopt>
       <cflags>-w s</cflags>
       <lflags></lflags>
       <target_type>Executable</target_type>
@@ -142,7 +149,7 @@
       <restrictions>IS_WIN32</restrictions>
       <dependencies></dependencies>
     </target>
-    <target name="gmisclib" default="false" id="8" sub_targets="" is_fl_package="false">
+    <target name="gmisclib" default="false" id="8" sub_targets="" is_fl_package="true" subsystem="" readonly="false" visible="true" node_collapsed="false">
       <descr>Miscellaneous widgets based on LablGtk2.</descr>
       <byt>true</byt>
       <opt>true</opt>
@@ -157,6 +164,7 @@
       <inline></inline>
       <nodep>false</nodep>
       <dontlinkdep>false</dontlinkdep>
+      <dontaddopt>false</dontaddopt>
       <cflags>-g</cflags>
       <lflags>-g</lflags>
       <target_type>Library</target_type>
@@ -166,7 +174,7 @@
       <restrictions></restrictions>
       <dependencies></dependencies>
     </target>
-    <target name="otherwidgets" default="false" id="9" sub_targets="" is_fl_package="false">
+    <target name="otherwidgets" default="false" id="9" sub_targets="" is_fl_package="false" subsystem="" readonly="false" visible="true" node_collapsed="false">
       <descr></descr>
       <byt>true</byt>
       <opt>true</opt>
@@ -181,6 +189,7 @@
       <inline></inline>
       <nodep>false</nodep>
       <dontlinkdep>false</dontlinkdep>
+      <dontaddopt>false</dontaddopt>
       <cflags>-w sy -g</cflags>
       <lflags>-w sy -g</lflags>
       <target_type>Library</target_type>
@@ -190,7 +199,7 @@
       <restrictions></restrictions>
       <dependencies>8</dependencies>
     </target>
-    <target name="ocamleditor" default="false" id="12" sub_targets="" is_fl_package="false">
+    <target name="ocamleditor" default="false" id="12" sub_targets="" is_fl_package="false" subsystem="" readonly="false" visible="true" node_collapsed="false">
       <descr></descr>
       <byt>false</byt>
       <opt>true</opt>
@@ -205,6 +214,7 @@
       <inline>50</inline>
       <nodep>true</nodep>
       <dontlinkdep>false</dontlinkdep>
+      <dontaddopt>false</dontaddopt>
       <cflags>-w syxm -g</cflags>
       <lflags>-g</lflags>
       <target_type>Executable</target_type>
@@ -212,9 +222,9 @@
       <lib_install_path></lib_install_path>
       <external_tasks/>
       <restrictions></restrictions>
-      <dependencies>14,19,16</dependencies>
+      <dependencies>14,19,16,26</dependencies>
     </target>
-    <target name="ocamleditor-bytecode" default="true" id="0" sub_targets="" is_fl_package="false">
+    <target name="ocamleditor-bytecode" default="true" id="0" sub_targets="" is_fl_package="false" subsystem="Console" readonly="false" visible="true" node_collapsed="false">
       <descr></descr>
       <byt>true</byt>
       <opt>false</opt>
@@ -229,6 +239,7 @@
       <inline></inline>
       <nodep>false</nodep>
       <dontlinkdep>false</dontlinkdep>
+      <dontaddopt>false</dontaddopt>
       <cflags>-w syxm -g</cflags>
       <lflags>-g</lflags>
       <target_type>Executable</target_type>
@@ -236,13 +247,13 @@
       <lib_install_path></lib_install_path>
       <external_tasks/>
       <restrictions></restrictions>
-      <dependencies>4,10,7,5,6,8,9,20,17,18</dependencies>
+      <dependencies>4,10,7,5,6,8,9,20,17,18,25</dependencies>
     </target>
-    <target name="ocamleditor-msvc" default="false" id="15" sub_targets="" is_fl_package="false">
+    <target name="ocamleditor-msvc" default="false" id="15" sub_targets="" is_fl_package="false" subsystem="Console" readonly="false" visible="true" node_collapsed="true">
       <descr></descr>
       <byt>false</byt>
       <opt>true</opt>
-      <libs>resource.obj odoc_info gmisclib common icons otherwidgets oebuildlib ocamleditor_lib</libs>
+      <libs>odoc_info gmisclib common icons otherwidgets oebuildlib ocamleditor_lib</libs>
       <other_objects></other_objects>
       <files>ocamleditor.ml</files>
       <package>compiler-libs.common,dynlink,lablgtk2,str,unix,xml-light</package>
@@ -253,20 +264,47 @@
       <inline>50</inline>
       <nodep>true</nodep>
       <dontlinkdep>false</dontlinkdep>
+      <dontaddopt>false</dontaddopt>
       <cflags>-w syxm -g</cflags>
       <lflags>-g</lflags>
       <target_type>Executable</target_type>
       <outname>ocamleditor</outname>
       <lib_install_path></lib_install_path>
-      <external_tasks/>
+      <external_tasks>
+        <task name="RC_COMPILE">
+          <always_run_in_project>true</always_run_in_project>
+          <always_run_in_script>true</always_run_in_script>
+          <readonly>true</readonly>
+          <visible>false</visible>
+          <env replace="false"/>
+          <dir></dir>
+          <cmd>ocaml</cmd>
+          <args>
+            <arg enabled="true">../tools/rc_compile.ml</arg>
+            <arg enabled="true">&quot;ocamleditor-msvc&quot;</arg>
+          </args>
+          <phase>Before_compile</phase>
+        </task>
+      </external_tasks>
       <restrictions>IS_WIN32</restrictions>
-      <dependencies>14,19,16</dependencies>
+      <dependencies>14,19,16,26</dependencies>
+      <resource_file>
+        <filename>.\ocamleditor.opt.resource.rc</filename>
+        <title>OCamlEditor</title>
+        <company></company>
+        <product>OCamlEditor</product>
+        <copyright>© 2014 Francesco Tovagliari</copyright>
+        <file_version>1.13.0.0</file_version>
+        <icons>
+          <icon>ocamleditor.ico</icon>
+        </icons>
+      </resource_file>
     </target>
-    <target name="ocamleditor-native" default="false" id="11" sub_targets="" is_fl_package="false">
+    <target name="ocamleditor-native" default="false" id="11" sub_targets="" is_fl_package="false" subsystem="" readonly="false" visible="true" node_collapsed="false">
       <descr></descr>
       <byt>false</byt>
       <opt>true</opt>
-      <libs>odoc_info gmisclib common icons otherwidgets oebuildlib</libs>
+      <libs>odoc_info gmisclib common icons otherwidgets oebuildlib ocamleditor_lib</libs>
       <other_objects></other_objects>
       <files>ocamleditor.ml</files>
       <package>compiler-libs.common,dynlink,lablgtk2,str,unix,xml-light</package>
@@ -277,6 +315,7 @@
       <inline>50</inline>
       <nodep>false</nodep>
       <dontlinkdep>false</dontlinkdep>
+      <dontaddopt>false</dontaddopt>
       <cflags>-w syxm -g</cflags>
       <lflags>-g</lflags>
       <target_type>Executable</target_type>
@@ -284,9 +323,9 @@
       <lib_install_path></lib_install_path>
       <external_tasks/>
       <restrictions></restrictions>
-      <dependencies>14,19,16</dependencies>
+      <dependencies>14,19,16,26</dependencies>
     </target>
-    <target name="ocamleditor-lib" default="false" id="14" sub_targets="" is_fl_package="false">
+    <target name="ocamleditor-lib" default="false" id="14" sub_targets="" is_fl_package="false" subsystem="" readonly="false" visible="true" node_collapsed="false">
       <descr></descr>
       <byt>false</byt>
       <opt>true</opt>
@@ -301,6 +340,7 @@
       <inline>50</inline>
       <nodep>false</nodep>
       <dontlinkdep>false</dontlinkdep>
+      <dontaddopt>false</dontaddopt>
       <cflags>-w syxm -g</cflags>
       <lflags>-g</lflags>
       <target_type>Library</target_type>
@@ -308,9 +348,9 @@
       <lib_install_path></lib_install_path>
       <external_tasks/>
       <restrictions></restrictions>
-      <dependencies>4,10,5,6,8,9,20</dependencies>
+      <dependencies>4,10,5,6,8,9,20,22</dependencies>
     </target>
-    <target name="plugin-remote-bytecode" default="false" id="17" sub_targets="" is_fl_package="false">
+    <target name="plugin-remote-bytecode" default="false" id="17" sub_targets="" is_fl_package="false" subsystem="" readonly="false" visible="true" node_collapsed="false">
       <descr></descr>
       <byt>true</byt>
       <opt>false</opt>
@@ -325,6 +365,7 @@
       <inline></inline>
       <nodep>false</nodep>
       <dontlinkdep>true</dontlinkdep>
+      <dontaddopt>false</dontaddopt>
       <cflags>-g -w -10</cflags>
       <lflags>-g curl.cma</lflags>
       <target_type>Library</target_type>
@@ -334,7 +375,7 @@
       <restrictions>HAVE_FL_PKG(curl)</restrictions>
       <dependencies></dependencies>
     </target>
-    <target name="plugin-remote-native" default="false" id="16" sub_targets="" is_fl_package="false">
+    <target name="plugin-remote-native" default="false" id="16" sub_targets="" is_fl_package="false" subsystem="" readonly="false" visible="true" node_collapsed="false">
       <descr></descr>
       <byt>false</byt>
       <opt>true</opt>
@@ -349,6 +390,7 @@
       <inline></inline>
       <nodep>false</nodep>
       <dontlinkdep>true</dontlinkdep>
+      <dontaddopt>false</dontaddopt>
       <cflags>-g -w -10</cflags>
       <lflags>-g curl.cmxa</lflags>
       <target_type>Plugin</target_type>
@@ -358,21 +400,22 @@
       <restrictions>HAVE_FL_PKG(curl)</restrictions>
       <dependencies></dependencies>
     </target>
-    <target name="plugin-dotviewer-byetcode" default="false" id="18" sub_targets="" is_fl_package="false">
+    <target name="plugin-dotviewer-bytecode" default="false" id="18" sub_targets="" is_fl_package="false" subsystem="" readonly="false" visible="true" node_collapsed="false">
       <descr></descr>
       <byt>true</byt>
       <opt>false</opt>
-      <libs></libs>
+      <libs>gmisclib</libs>
       <other_objects></other_objects>
       <files>dot_viewer_svg.ml</files>
-      <package>lablgtk2.rsvg</package>
-      <includes>common gmisclib</includes>
+      <package>lablgtk2,xml-light</package>
+      <includes>common gmisclib otherwidgets</includes>
       <thread>true</thread>
       <vmthread>false</vmthread>
       <pp></pp>
       <inline></inline>
       <nodep>false</nodep>
       <dontlinkdep>true</dontlinkdep>
+      <dontaddopt>false</dontaddopt>
       <cflags>-w syxm -g</cflags>
       <lflags>-g lablrsvg.cma</lflags>
       <target_type>Library</target_type>
@@ -382,7 +425,7 @@
       <restrictions>HAVE_FL_PKG(lablgtk2.rsvg)</restrictions>
       <dependencies></dependencies>
     </target>
-    <target name="plugin-dotviewer-native" default="false" id="19" sub_targets="" is_fl_package="false">
+    <target name="plugin-dotviewer-native" default="false" id="19" sub_targets="" is_fl_package="false" subsystem="" readonly="false" visible="true" node_collapsed="false">
       <descr></descr>
       <byt>false</byt>
       <opt>true</opt>
@@ -397,7 +440,8 @@
       <inline></inline>
       <nodep>false</nodep>
       <dontlinkdep>true</dontlinkdep>
-      <cflags>-w syxm -g</cflags>
+      <dontaddopt>false</dontaddopt>
+      <cflags>-g -w syxm</cflags>
       <lflags>-g lablrsvg.cmxa</lflags>
       <target_type>Plugin</target_type>
       <outname>../plugins/dot_viewer_svg</outname>
@@ -406,7 +450,57 @@
       <restrictions>HAVE_FL_PKG(lablgtk2.rsvg)</restrictions>
       <dependencies></dependencies>
     </target>
-    <target name="prepare-build" default="false" id="20" sub_targets="" is_fl_package="false">
+    <target name="plugin-diff-bytecode" default="false" id="25" sub_targets="" is_fl_package="false" subsystem="" readonly="false" visible="true" node_collapsed="false">
+      <descr></descr>
+      <byt>true</byt>
+      <opt>false</opt>
+      <libs></libs>
+      <other_objects></other_objects>
+      <files>plugin_diff_gtext.ml plugin_diff.ml</files>
+      <package>compiler-libs.common,diff,lablgtk2,str,unix,xml-light</package>
+      <includes>common otherwidgets gmisclib oebuild +ocamldoc icons</includes>
+      <thread>true</thread>
+      <vmthread>false</vmthread>
+      <pp></pp>
+      <inline></inline>
+      <nodep>false</nodep>
+      <dontlinkdep>true</dontlinkdep>
+      <dontaddopt>false</dontaddopt>
+      <cflags>-g -w -26-10</cflags>
+      <lflags>-g odiff.cma</lflags>
+      <target_type>Library</target_type>
+      <outname>../plugins/plugin_diff</outname>
+      <lib_install_path></lib_install_path>
+      <external_tasks/>
+      <restrictions>HAVE_FL_PKG(diff)</restrictions>
+      <dependencies></dependencies>
+    </target>
+    <target name="plugin-diff-native" default="false" id="26" sub_targets="" is_fl_package="false" subsystem="" readonly="false" visible="true" node_collapsed="false">
+      <descr></descr>
+      <byt>false</byt>
+      <opt>true</opt>
+      <libs></libs>
+      <other_objects></other_objects>
+      <files>plugin_diff_gtext.ml plugin_diff.ml </files>
+      <package>compiler-libs,diff,lablgtk2,str,unix</package>
+      <includes>common otherwidgets gmisclib oebuild icons</includes>
+      <thread>true</thread>
+      <vmthread>false</vmthread>
+      <pp></pp>
+      <inline></inline>
+      <nodep>false</nodep>
+      <dontlinkdep>true</dontlinkdep>
+      <dontaddopt>false</dontaddopt>
+      <cflags>-g -w -26-10</cflags>
+      <lflags>-g odiff.cmxa</lflags>
+      <target_type>Plugin</target_type>
+      <outname>../plugins/plugin_diff</outname>
+      <lib_install_path></lib_install_path>
+      <external_tasks/>
+      <restrictions>HAVE_FL_PKG(diff)</restrictions>
+      <dependencies></dependencies>
+    </target>
+    <target name="prepare-build" default="false" id="20" sub_targets="" is_fl_package="false" subsystem="" readonly="false" visible="true" node_collapsed="true">
       <descr></descr>
       <byt>true</byt>
       <opt>false</opt>
@@ -421,6 +515,7 @@
       <inline></inline>
       <nodep>false</nodep>
       <dontlinkdep>false</dontlinkdep>
+      <dontaddopt>false</dontaddopt>
       <cflags></cflags>
       <lflags></lflags>
       <target_type>External</target_type>
@@ -430,6 +525,8 @@
         <task name="prepare-build">
           <always_run_in_project>true</always_run_in_project>
           <always_run_in_script>true</always_run_in_script>
+          <readonly>false</readonly>
+          <visible>true</visible>
           <env replace="false"/>
           <dir>..</dir>
           <cmd>ocaml</cmd>
@@ -442,7 +539,73 @@
       <restrictions></restrictions>
       <dependencies></dependencies>
     </target>
-    <target name="tools" default="false" id="13" sub_targets="" is_fl_package="false">
+    <target name="launcher" default="false" id="22" sub_targets="" is_fl_package="false" subsystem="Windows" readonly="false" visible="true" node_collapsed="true">
+      <descr>Utility to open OCaml files from the file manager</descr>
+      <byt>false</byt>
+      <opt>true</opt>
+      <libs>common</libs>
+      <other_objects></other_objects>
+      <files>ocamleditor_launcher.ml</files>
+      <package>unix</package>
+      <includes>common</includes>
+      <thread>false</thread>
+      <vmthread>false</vmthread>
+      <pp></pp>
+      <inline></inline>
+      <nodep>false</nodep>
+      <dontlinkdep>false</dontlinkdep>
+      <dontaddopt>true</dontaddopt>
+      <cflags>-compact</cflags>
+      <lflags>-compact</lflags>
+      <target_type>Executable</target_type>
+      <outname>ocamleditorw</outname>
+      <lib_install_path></lib_install_path>
+      <external_tasks>
+        <task name="RC_COMPILE">
+          <always_run_in_project>true</always_run_in_project>
+          <always_run_in_script>true</always_run_in_script>
+          <readonly>true</readonly>
+          <visible>false</visible>
+          <env replace="false"/>
+          <dir></dir>
+          <cmd>ocaml</cmd>
+          <args>
+            <arg enabled="true">../tools/rc_compile.ml</arg>
+            <arg enabled="true">&quot;launcher&quot;</arg>
+          </args>
+          <phase>Before_compile</phase>
+        </task>
+        <task name="SUBSYSTEM:WINDOWS">
+          <always_run_in_project>true</always_run_in_project>
+          <always_run_in_script>true</always_run_in_script>
+          <readonly>true</readonly>
+          <visible>false</visible>
+          <env replace="false"/>
+          <dir></dir>
+          <cmd>ocaml</cmd>
+          <args>
+            <arg enabled="true">../tools/editbin.ml</arg>
+            <arg enabled="true">ocamleditorw.exe</arg>
+          </args>
+          <phase>After_compile</phase>
+        </task>
+      </external_tasks>
+      <restrictions></restrictions>
+      <dependencies></dependencies>
+      <resource_file>
+        <filename>.\ocamleditor_launch.resource.rc</filename>
+        <title>OCamlEditor</title>
+        <company></company>
+        <product>OCamlEditor</product>
+        <copyright>© 2014 Francesco Tovagliari</copyright>
+        <file_version>1.13.0.0</file_version>
+        <icons>
+          <icon>ocamleditor2.ico</icon>
+          <icon>ocamleditor.ico</icon>
+        </icons>
+      </resource_file>
+    </target>
+    <target name="tools" default="false" id="13" sub_targets="" is_fl_package="false" subsystem="Console" readonly="false" visible="true" node_collapsed="false">
       <descr></descr>
       <byt>true</byt>
       <opt>false</opt>
@@ -457,6 +620,7 @@
       <inline></inline>
       <nodep>false</nodep>
       <dontlinkdep>false</dontlinkdep>
+      <dontaddopt>false</dontaddopt>
       <cflags></cflags>
       <lflags></lflags>
       <target_type>External</target_type>
@@ -466,6 +630,8 @@
         <task name="mkrelease">
           <always_run_in_project>false</always_run_in_project>
           <always_run_in_script>false</always_run_in_script>
+          <readonly>false</readonly>
+          <visible>true</visible>
           <env replace="false"/>
           <dir>..</dir>
           <cmd>ocaml</cmd>
@@ -477,6 +643,8 @@
         <task name="mkversion">
           <always_run_in_project>false</always_run_in_project>
           <always_run_in_script>false</always_run_in_script>
+          <readonly>false</readonly>
+          <visible>true</visible>
           <env replace="false"/>
           <dir>../tools</dir>
           <cmd>ocaml</cmd>
@@ -489,6 +657,8 @@
         <task name="generate_oebuild_script">
           <always_run_in_project>false</always_run_in_project>
           <always_run_in_script>false</always_run_in_script>
+          <readonly>false</readonly>
+          <visible>true</visible>
           <env replace="false"/>
           <dir>..</dir>
           <cmd>ocaml</cmd>
@@ -501,6 +671,8 @@
         <task name="Install OCamlEditor">
           <always_run_in_project>false</always_run_in_project>
           <always_run_in_script>false</always_run_in_script>
+          <readonly>false</readonly>
+          <visible>true</visible>
           <env replace="false"/>
           <dir>..</dir>
           <cmd>ocaml</cmd>
@@ -512,6 +684,8 @@
         <task name="Uninstall OCamlEditor">
           <always_run_in_project>false</always_run_in_project>
           <always_run_in_script>false</always_run_in_script>
+          <readonly>false</readonly>
+          <visible>true</visible>
           <env replace="false"/>
           <dir>..</dir>
           <cmd>ocaml</cmd>
@@ -523,6 +697,8 @@
         <task name="distclean">
           <always_run_in_project>false</always_run_in_project>
           <always_run_in_script>false</always_run_in_script>
+          <readonly>false</readonly>
+          <visible>true</visible>
           <env replace="false"/>
           <dir>..</dir>
           <cmd>ocaml</cmd>
@@ -535,33 +711,91 @@
       <restrictions></restrictions>
       <dependencies></dependencies>
     </target>
-    <target name="plugin-test" default="false" id="21" sub_targets="" is_fl_package="false">
+    <target name="FINDLIB-TOOLS" default="false" id="27" sub_targets="" is_fl_package="false" subsystem="" readonly="true" visible="true" node_collapsed="true">
       <descr></descr>
-      <byt>false</byt>
-      <opt>true</opt>
+      <byt>true</byt>
+      <opt>false</opt>
       <libs></libs>
       <other_objects></other_objects>
-      <files>test_plugin.ml</files>
-      <package>lablgtk2</package>
-      <includes>common icons otherwidgets gmisclib</includes>
-      <thread>true</thread>
+      <files></files>
+      <package></package>
+      <includes></includes>
+      <thread>false</thread>
       <vmthread>false</vmthread>
       <pp></pp>
       <inline></inline>
       <nodep>false</nodep>
-      <dontlinkdep>true</dontlinkdep>
+      <dontlinkdep>false</dontlinkdep>
+      <dontaddopt>false</dontaddopt>
       <cflags></cflags>
-      <lflags>-g </lflags>
-      <target_type>Plugin</target_type>
-      <outname>../plugins/test_plugin</outname>
+      <lflags></lflags>
+      <target_type>External</target_type>
+      <outname></outname>
       <lib_install_path></lib_install_path>
-      <external_tasks/>
+      <external_tasks>
+        <task name="install">
+          <always_run_in_project>false</always_run_in_project>
+          <always_run_in_script>false</always_run_in_script>
+          <readonly>true</readonly>
+          <visible>true</visible>
+          <env replace="false"/>
+          <dir>..</dir>
+          <cmd>ocaml</cmd>
+          <args>
+            <arg enabled="true">tools/findlib.ml</arg>
+            <arg enabled="true">install</arg>
+          </args>
+          <phase></phase>
+        </task>
+        <task name="uninstall">
+          <always_run_in_project>false</always_run_in_project>
+          <always_run_in_script>false</always_run_in_script>
+          <readonly>true</readonly>
+          <visible>true</visible>
+          <env replace="false"/>
+          <dir>..</dir>
+          <cmd>ocaml</cmd>
+          <args>
+            <arg enabled="true">tools/findlib.ml</arg>
+            <arg enabled="true">uninstall</arg>
+          </args>
+          <phase></phase>
+        </task>
+        <task name="reinstall">
+          <always_run_in_project>false</always_run_in_project>
+          <always_run_in_script>false</always_run_in_script>
+          <readonly>true</readonly>
+          <visible>true</visible>
+          <env replace="false"/>
+          <dir>..</dir>
+          <cmd>ocaml</cmd>
+          <args>
+            <arg enabled="true">tools/findlib.ml</arg>
+            <arg enabled="true">reinstall</arg>
+          </args>
+          <phase></phase>
+        </task>
+        <task name="print">
+          <always_run_in_project>false</always_run_in_project>
+          <always_run_in_script>false</always_run_in_script>
+          <readonly>true</readonly>
+          <visible>true</visible>
+          <env replace="false"/>
+          <dir>..</dir>
+          <cmd>ocaml</cmd>
+          <args>
+            <arg enabled="true">tools/findlib.ml</arg>
+            <arg enabled="true">print</arg>
+          </args>
+          <phase></phase>
+        </task>
+      </external_tasks>
       <restrictions></restrictions>
       <dependencies></dependencies>
     </target>
   </targets>
   <executables>
-    <executable name="ocamleditor" default="true" target_id="0" id="0">
+    <executable name="ocamleditor-bytecode" default="true" target_id="0" id="0">
       <build_task>&lt;COMPILE&gt;</build_task>
       <env replace="false">
         <var enabled="true">OCAMLEDITORPARAM=debug=2,record_backtrace=1</var>
@@ -590,15 +824,18 @@
       <target target_id="12" show="true"/>
       <target target_id="0" show="true"/>
       <target target_id="15" show="true"/>
-      <target target_id="11" show="false"/>
+      <target target_id="11" show="true"/>
       <target target_id="14" show="true"/>
-      <target target_id="17" show="false"/>
-      <target target_id="16" show="false"/>
-      <target target_id="18" show="false"/>
-      <target target_id="19" show="false"/>
+      <target target_id="17" show="true"/>
+      <target target_id="16" show="true"/>
+      <target target_id="18" show="true"/>
+      <target target_id="19" show="true"/>
+      <target target_id="25" show="true"/>
+      <target target_id="26" show="true"/>
       <target target_id="20" show="false"/>
+      <target target_id="22" show="true"/>
       <target target_id="13" show="false"/>
-      <target target_id="21" show="true"/>
+      <target target_id="27" show="false"/>
     </targets>
     <args>
       <arg id="0" type="Bool" key="-record-backtrace" pass="-key value" command="build">

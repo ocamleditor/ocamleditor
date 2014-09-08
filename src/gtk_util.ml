@@ -28,12 +28,6 @@ let create_mark_name =
     incr count;
     prefix ^ (string_of_int !count);;
 
-let esc_destroy_window window =
-  ignore (window#event#connect#key_press ~callback:begin fun ev ->
-    let key = GdkEvent.Key.keyval ev in
-    if key = GdkKeysyms._Escape then (window#destroy(); true) else false
-  end);;
-
 (** window *)
 let window widget
     ?(type_hint=(if Sys.win32 then `UTILITY else `DIALOG))
@@ -65,7 +59,7 @@ let window widget
     window#destroy();
     true
   end);
-  if escape then esc_destroy_window window;
+  if escape then Gmisclib.Util.esc_destroy_window window;
   window#set_skip_pager_hint true;
   window#set_skip_taskbar_hint true;
   window#set_urgency_hint false;
