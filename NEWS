@@ -3,7 +3,7 @@ Version 1.13.0
   * Use of different tab color for files that do not belong to the project
     source path.
   * Support to embed assembly informations in native MS applications.
-  * New executable `ocamleditor_launcher` can be used to open OCaml files from
+  * New executable `ocamleditorw` can be used to open OCaml files from
     an external file manager.
   * Quickly view all current file changes on the left margin (requires `ocamldiff`
     and `diff`).

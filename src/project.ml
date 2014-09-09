@@ -201,7 +201,7 @@ let unload_path proj where =
 
 (** output_xml *)
 let output_xml filename xml =
-  let xml = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<!-- OCamlEditor XML Project -->\n" ^ xml in
+  let xml = (sprintf "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<!-- %s-%s XML Project -->\n" About.program_name About.version) ^ xml in
   let outchan = open_out_bin filename in
   lazy (output_string outchan xml) /*finally*/ lazy (close_out outchan);;
 
