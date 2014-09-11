@@ -408,12 +408,12 @@ object (self)
         | None -> "", false
         | Some page -> page#get_title, page#buffer#modified
     in
-    let projectname = match self#current_project#get with Some p -> p.Prj.name | _ -> "" in
-    window#set_title (String.concat " • " [projectname; filename]);
-    if window_title_menu_label#misc#get_flag `VISIBLE then
-      match current_project#get with
-        | Some proj ->
-          begin
+    match current_project#get with
+      | Some proj ->
+        Git.with_status begin fun status ->
+          let projectname = proj.Prj.name in
+          window#set_title (String.concat "" [projectname; (Git.string_of_status status); " • "; filename]);
+          if window_title_menu_label#misc#get_flag `VISIBLE then begin
             match proj.Prj.in_source_path filename with
               | Some relname ->
                 let color = if modified then "red" else "blue"  in
@@ -421,13 +421,17 @@ object (self)
                 let dir = if dir = "." then "" else sprintf "<span size='large'>%s/</span>" dir in
                 window_title_menu_label#set_label
                   (sprintf
-                     "<span weight='bold' size='large'>%s  •  </span><span size='large'>%s</span><span weight='bold' size='large' color='%s'>%s</span>"
-                     projectname dir color (Filename.basename relname));
+                     "<span weight='bold' size='large'>%s<span size='smaller' weight='normal'>%s</span>  ·  </span><span size='large'>%s</span><span weight='bold' size='large' color='%s'>%s</span>"
+                     projectname (Git.string_of_status status) dir color (Filename.basename relname));
               | _ ->
                 window_title_menu_label#set_label
-                  (sprintf "<span weight='bold' size='large'>%s  •  </span>%s" projectname filename);
+                  (sprintf "<span weight='bold' size='large'>%s<span size='smaller' weight='normal'>%s</span>  ·  </span>%s" projectname (Git.string_of_status status) filename);
           end;
-        | _ -> window_title_menu_label#set_label filename
+        end
+      | _ ->
+        window#set_title filename;
+        if window_title_menu_label#misc#get_flag `VISIBLE then window_title_menu_label#set_label filename;
+
 
   val mutable busy = false
 
