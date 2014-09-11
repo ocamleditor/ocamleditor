@@ -289,7 +289,7 @@ let create_defaults () = {
     else (match Oe_config.xdg_open_version with None -> "evince" | _ -> "xdg-open");
   pref_program_diff                 = "diff";
   pref_program_diff_graphical       =
-    if Sys.os_type = "Win32" then "%ProgramFiles%\\Meld\\meld\\meld.exe"
+    if Sys.os_type = "Win32" then "%ProgramFiles%\\Diffuse\\diffusew.exe"
     else "kompare";
   pref_remember_window_geometry     = true;
   pref_detach_message_panes_separately = false;

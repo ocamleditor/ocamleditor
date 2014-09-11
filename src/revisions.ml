@@ -330,29 +330,32 @@ class widget ~page ?packing () =
       end;
 
     method private read_rev_history () =
-      let root = Filename.dirname (Project.path_src project) in
-      match Miscellanea.filename_relative root page#get_filename with
-        | Some rel ->
-          let sep = "\x1F" in
-          let rel = List.fold_left (fun acc x -> acc ^ "/" ^ x) Filename.parent_dir_name (Miscellanea.filename_split rel) in
-          let cmd = sprintf "git log --format=\"%%h%s%%an%s%%ai%s%%s\" --abbrev-commit %s" sep sep sep rel in
-          let re = Str.regexp_string sep in
-          let process_in =
-            Oebuild_util.iter_chan begin fun ic ->
-              let line = Str.split re (input_line ic) in
-              let row = model#append () in
-              match line with
-                | [rev; author; date; comment] ->
-                  model#set ~row ~column:col_rev rev;
-                  model#set ~row ~column:col_author author;
-                  model#set ~row ~column:col_date date;
-                  model#set ~row ~column:col_comment comment;
-                  model#set ~row ~column:col_filename (Command ((sprintf "git show %s:%s" rev rel), get_filename_extension ~dir_sep:"/" rel));
-                | _ -> ()
-            end
-          in
-          Oebuild_util.exec ~verbose:false ~join:false ~process_in ~process_err:ignore cmd |> ignore;
-        | _ -> ()
+      match Oe_config.git_version with
+        | None -> ()
+        | _ ->
+          let root = Filename.dirname (Project.path_src project) in
+          match Miscellanea.filename_relative root page#get_filename with
+            | Some rel ->
+              let sep = "\x1F" in
+              let rel = List.fold_left (fun acc x -> acc ^ "/" ^ x) Filename.parent_dir_name (Miscellanea.filename_split rel) in
+              let cmd = sprintf "git log --format=\"%%h%s%%an%s%%ai%s%%s\" --abbrev-commit %s" sep sep sep rel in
+              let re = Str.regexp_string sep in
+              let process_in =
+                Oebuild_util.iter_chan begin fun ic ->
+                  let line = Str.split re (input_line ic) in
+                  let row = model#append () in
+                  match line with
+                    | [rev; author; date; comment] ->
+                      model#set ~row ~column:col_rev rev;
+                      model#set ~row ~column:col_author author;
+                      model#set ~row ~column:col_date date;
+                      model#set ~row ~column:col_comment comment;
+                      model#set ~row ~column:col_filename (Command ((sprintf "git show %s:%s" rev rel), get_filename_extension ~dir_sep:"/" rel));
+                    | _ -> ()
+                end
+              in
+              Oebuild_util.exec ~verbose:false ~join:false ~process_in ~process_err:ignore cmd |> ignore;
+            | _ -> ()
 
     method private read_local_backups () =
       let src = Project.path_src project in
