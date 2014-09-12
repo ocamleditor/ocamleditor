@@ -85,8 +85,8 @@ object (self)
   val mutable pin_status = false
 
   initializer
-    let color = `NAME Preferences.preferences#get.Preferences.pref_bg_color_popup in
-    ebox_title#misc#modify_bg [`NORMAL, color];
+    (*let color = `NAME Preferences.preferences#get.Preferences.pref_bg_color_popup in
+    ebox_title#misc#modify_bg [`NORMAL, color];*)
     let set_title = self#set_title "" in
     ignore (widget#connect#switch_page ~callback:begin fun symbol_list ->
       set_title symbol_list#title.title;
@@ -98,11 +98,11 @@ object (self)
       self#connect_signals (Some symbol_list);
       set_title symbol_list#title.title;
       symbol_list#sw#set_shadow_type `NONE;
-      symbol_list#view#misc#modify_base [`NORMAL, `NAME Preferences.preferences#get.Preferences.pref_bg_color_popup];
-      symbol_list#renderer#set_properties [`CELL_BACKGROUND Preferences.preferences#get.Preferences.pref_bg_color_popup];
+      (*symbol_list#view#misc#modify_base [`NORMAL, `NAME Preferences.preferences#get.Preferences.pref_bg_color_popup];
+      symbol_list#renderer#set_properties [`CELL_BACKGROUND Preferences.preferences#get.Preferences.pref_bg_color_popup];*)
       symbol_list#renderer_pixbuf#set_properties [`XPAD 3];
-      let bg = Preferences.preferences#get.Preferences.pref_bg_color_popup in
-      symbol_list#renderer_pixbuf#set_properties [`CELL_BACKGROUND bg];
+      (*let bg = Preferences.preferences#get.Preferences.pref_bg_color_popup in
+      symbol_list#renderer_pixbuf#set_properties [`CELL_BACKGROUND bg];*)
     end);
     widget#connect#layout_toggled ~callback:self#update_button_states |> ignore;
     widget#button_layout_odoc#set_active true;
@@ -184,8 +184,8 @@ object (self)
 
   method private set_title_markup markup =
     kprintf label_title#set_label
-      "<span color=\"%s\" weight=\"normal\" underline=\"none\" font_size=\"x-large\">%s</span>"
-      Preferences.preferences#get.Preferences.pref_fg_color_popup
+      "<span weight=\"normal\" underline=\"none\" font_size=\"x-large\">%s</span>"
+      (*Preferences.preferences#get.Preferences.pref_fg_color_popup*)
       markup;
     label_title#misc#show()
 

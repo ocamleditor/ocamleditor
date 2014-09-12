@@ -91,7 +91,7 @@ class pref_color title ?packing () =
   let _                   = GMisc.label ~text:"Foreground color:" ~xalign ~packing:(table#attach ~top:1 ~left:0) () in
   let button_tag_bg_popup = GButton.color_button ~packing:(table#attach ~top:0 ~left:1 ~expand:`X) () in
   let button_tag_fg_popup = GButton.color_button ~packing:(table#attach ~top:1 ~left:1 ~expand:`X) () in
-  let _                   = notebook#append_page ~tab_label:(GMisc.label ~text:"Completion" ())#coerce color_compl#coerce in
+  let _                   = notebook#append_page ~tab_label:(GMisc.label ~text:"Inferred Types" ())#coerce color_compl#coerce in
   (* color_other *)
   let color_other         = GPack.vbox ~border_width () in
   let table               = GPack.table ~row_spacings ~col_spacings ~packing:color_other#pack () in
