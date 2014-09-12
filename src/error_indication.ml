@@ -137,9 +137,10 @@ object (self)
         let c1, c2 = error.Oe.er_characters in
         let iter = buffer#get_iter (`LINE line) in
         let text = iter#get_text ~stop:buffer#end_iter in
-        let c1x = Convert.offset_to_pos text ~pos:0 ~off:c1 in
-        let start = iter#set_line_index c1x in
-        let stop = iter#forward_chars c2 in
+        let c1o = Convert.offset_from_pos text ~pos:c1 in
+        let c2o = Convert.offset_from_pos text ~pos:c2 in
+        let start = iter#forward_chars c1o in
+        let stop = iter#forward_chars c2o in
         let tag = self#tag_of_error error in
         buffer#apply_tag tag ~start ~stop;
         let mark_start = buffer#create_mark(* ~name:(Gtk_util.create_mark_name "Error_indication.do_apply_tag1")*) start in

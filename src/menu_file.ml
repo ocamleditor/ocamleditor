@@ -152,7 +152,7 @@ let file ~browser ~group ~flags items =
   ignore (items.file_rename#connect#activate ~callback:begin fun () ->
       editor#with_current_page begin fun current_page ->
         editor#dialog_rename current_page;
-        browser#set_title browser#editor
+        browser#set_title ()
       end
     end);
   (** Close current *)

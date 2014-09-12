@@ -208,7 +208,7 @@ object (self)
     editor#pack_outline (Cmt_view.empty());
     editor#set_project proj;
     Sys.chdir (proj.root // Prj.default_dir_src);
-    window#set_title (Convert.to_utf8 proj.name);
+    self#set_title ();
     (File_history.add project_history) filename;
     Symbol.Cache.load ~project:proj;
     Annotation.preload ~project:proj;
@@ -402,9 +402,9 @@ object (self)
       (alloc.Gtk.width) (alloc.Gtk.height) (alloc.Gtk.x) (alloc.Gtk.y)
       menubar_visible editor#show_tabs toolbar_visible outline_visible;
 
-  method set_title ed =
+  method set_title () =
     let filename, modified =
-      match ed#get_page `ACTIVE with
+      match editor#get_page `ACTIVE with
         | None -> "", false
         | Some page -> page#get_title, page#buffer#modified
     in
@@ -777,7 +777,7 @@ object (self)
     ignore (editor#connect#remove_page ~callback:begin fun page ->
       self#with_current_project begin fun project ->
         Project.remove_file project page#get_filename;
-        window#set_title (Convert.to_utf8 project.name);
+        self#set_title ();
         Gaux.may menu ~f:begin fun menu ->
           try
             let item = List.assoc page#misc#get_oid menu.window_pages in
@@ -919,7 +919,7 @@ object (self)
             button#misc#set_state `NORMAL;
           end;
         end;
-        Gmisclib.Idle.add ~prio:300 (fun () -> self#set_title editor)
+        Gmisclib.Idle.add ~prio:300 self#set_title
       end;
     in
     let update_toolbar_undo () =
@@ -936,7 +936,7 @@ object (self)
       toolbar#update current_project#get;
       update_toolbar_save();
       update_toolbar_undo();
-      Gaux.may (editor#get_page `ACTIVE) ~f:(fun _ -> self#set_title editor);
+      Gaux.may (editor#get_page `ACTIVE) ~f:(fun _ -> self#set_title ());
       self#set_menu_item_nav_history_sensitive();
     in
     ignore (editor#connect#switch_page ~callback);
@@ -1042,6 +1042,7 @@ object (self)
       false
     end |> ignore;
     window#event#connect#focus_in ~callback:begin fun _ ->
+      self#set_title();
       (match !id_timeout with Some id -> GMain.Timeout.remove id | _ -> ());
       false
     end |> ignore;

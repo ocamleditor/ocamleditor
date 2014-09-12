@@ -206,7 +206,7 @@ class widget ~page ?packing () =
       Opt.may !Plugins.diff begin  fun plugin ->
         let module Plugin_diff = (val plugin) in
         match view#selection#get_selected_rows with
-          | path1 :: path2 :: [] ->
+          | path2 :: path1 :: [] ->
             let row1 = model#get_iter path1 in
             let filename1 = self#get_filename ~row:row1 in
             let row2 = model#get_iter path2 in
@@ -262,7 +262,7 @@ class widget ~page ?packing () =
 
     method private compare_ext () =
       match view#selection#get_selected_rows with
-        | path1 :: path2 :: [] ->
+        | path2 :: path1 :: [] ->
           let row = model#get_iter path1 in
           let filename1 = self#get_filename ~row in
           let row = model#get_iter path2 in

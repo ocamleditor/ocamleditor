@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- OCamlEditor-1.13.0 XML Project -->
+<!-- OCamlEditor-1.13.1 XML Project -->
 <project>
   <ocaml_home></ocaml_home>
   <ocamllib></ocamllib>
@@ -7,7 +7,7 @@
   <name>ocamleditor</name>
   <author>Francesco Tovagliari</author>
   <description/>
-  <version>1.13.0</version>
+  <version>1.13.1</version>
   <autocomp enabled="true" delay="0.764" cflags=""/>
   <targets>
     <target name="common" default="false" id="4" sub_targets="" is_fl_package="false" subsystem="" readonly="false" visible="true" node_collapsed="false">
@@ -199,7 +199,7 @@
       <restrictions></restrictions>
       <dependencies>8</dependencies>
     </target>
-    <target name="ocamleditor" default="false" id="12" sub_targets="" is_fl_package="false" subsystem="" readonly="false" visible="true" node_collapsed="false">
+    <target name="ocamleditor" default="false" id="12" sub_targets="" is_fl_package="false" subsystem="Console" readonly="false" visible="true" node_collapsed="false">
       <descr></descr>
       <byt>false</byt>
       <opt>true</opt>
@@ -593,12 +593,12 @@
       <restrictions></restrictions>
       <dependencies></dependencies>
       <resource_file>
-        <filename>.\ocamleditor_launch.resource.rc</filename>
+        <filename>.\ocamleditorw.resource.rc</filename>
         <title>OCamlEditor</title>
         <company></company>
         <product>OCamlEditor</product>
         <copyright>© 2014 Francesco Tovagliari</copyright>
-        <file_version>1.13.0.0</file_version>
+        <file_version>1.13.1.0</file_version>
         <icons>
           <icon>ocamleditor2.ico</icon>
           <icon>ocamleditor.ico</icon>
@@ -650,7 +650,7 @@
           <cmd>ocaml</cmd>
           <args>
             <arg enabled="true">mkversion.ml</arg>
-            <arg enabled="true">1.13.0</arg>
+            <arg enabled="true">1.13.1</arg>
           </args>
           <phase>Before_clean</phase>
         </task>
@@ -711,7 +711,7 @@
       <restrictions></restrictions>
       <dependencies></dependencies>
     </target>
-    <target name="FINDLIB-TOOLS" default="false" id="27" sub_targets="" is_fl_package="false" subsystem="" readonly="true" visible="true" node_collapsed="true">
+    <target name="FINDLIB-TOOLS" default="false" id="27" sub_targets="" is_fl_package="false" subsystem="" readonly="true" visible="true" node_collapsed="false">
       <descr></descr>
       <byt>true</byt>
       <opt>false</opt>
