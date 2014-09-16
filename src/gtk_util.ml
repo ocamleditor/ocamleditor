@@ -42,7 +42,7 @@ let window widget
     ~x ~y () =
   let window = GWindow.window
     ~decorated
-    ~border_width:1
+    ~border_width:2
     ~deletable:true
     ~focus_on_map:focus
     ~type_hint
@@ -51,7 +51,7 @@ let window widget
   in
   let ebox = GBin.event_box ~packing:window#add () in
   ebox#add widget;
-  let color = Color.set_value 0.62 (`COLOR (window#misc#style#base `NORMAL)) (*(`NAME Preferences.preferences#get.Preferences.pref_bg_color_popup)*) in
+  let color = Color.set_value 0.38 (`COLOR (window#misc#style#base `NORMAL)) (*(`NAME Preferences.preferences#get.Preferences.pref_bg_color_popup)*) in
   let _ = window#misc#modify_bg [`NORMAL, color] in
   (*let _ = ebox#misc#modify_bg [`NORMAL, `NAME Preferences.preferences#get.Preferences.pref_bg_color_popup] in*)
   ignore (window#event#connect#after#focus_out ~callback:begin fun _ ->

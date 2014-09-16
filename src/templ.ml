@@ -176,7 +176,7 @@ class widget ~project ~(view : Ocaml_text.view) ?packing ()=
   let col_name  = cols#add Gobject.Data.string in
   let col_descr  = cols#add Gobject.Data.string in
   let model = GTree.list_store cols in
-  let renderer = GTree.cell_renderer_text [`CELL_BACKGROUND Preferences.preferences#get.Preferences.pref_bg_color_popup] in
+  let renderer = GTree.cell_renderer_text [(*`CELL_BACKGROUND Preferences.preferences#get.Preferences.pref_bg_color_popup*)] in
   let vc_name = GTree.view_column ~renderer:(renderer, ["markup", col_name]) ~title:"Name" () in
   let vc_descr = GTree.view_column ~renderer:(renderer, ["markup", col_descr]) ~title:"Description" () in
   let sw = GBin.scrolled_window ~shadow_type:`NONE ~hpolicy:`AUTOMATIC ~vpolicy:`AUTOMATIC ~packing:vbox#add () in
@@ -187,7 +187,7 @@ class widget ~project ~(view : Ocaml_text.view) ?packing ()=
 object (self)
   inherit GObj.widget vbox#as_widget
   initializer
-    lview#misc#modify_base [`NORMAL, `NAME Preferences.preferences#get.Preferences.pref_bg_color_popup];
+    (*lview#misc#modify_base [`NORMAL, `NAME Preferences.preferences#get.Preferences.pref_bg_color_popup];*)
     List.iter begin fun (_, name, descr, templ) ->
       let row = model#append () in
       model#set ~row ~column:col_key name;
