@@ -22,12 +22,12 @@
 
 open Printf
 
-let is_debug = false && App_config.application_debug
-let host = if is_debug then "ocamleditor.forge.ocamlcore.org" else "raw.github.com"
+let is_debug = App_config.application_debug
+let host = "ocamleditor.forge.ocamlcore.org"
 (*"git.ocamlcore.org"*)
-let path = if is_debug then "/VERSION_TEST.txt" else "/ftovagliari/ocamleditor/master/VERSION"
+let path = if is_debug then "/VERSION_TEST.txt" else "/VERSION.txt"
 (*"/cgi-bin/gitweb.cgi?p=ocamleditor/ocamleditor.git;a=blob_plain;f=VERSION;hb=HEAD"*)
-let re = Str.regexp "^\\([0-9]+\\.[0-9]+\\(\\.[0-9]+\\)?\\)\r?$"
+let re = Str.regexp "^VERSION=\\([0-9]+\\.[0-9]+\\(\\.[0-9]+\\)?\\)\r?$"
 
 (** init_socket *)
 let init_socket addr port =
