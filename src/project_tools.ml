@@ -89,11 +89,12 @@ let create_meta proj ~parent tg =
   in
   let cmis =
     List.fold_left begin fun acc tg ->
-      let cmos = List.filter (fun x -> not (Filename.check_suffix x ".cmi")) (Target.find_dependencies tg) in
+      let cmos = (*List.filter (fun x -> not (Filename.check_suffix x ".cmi"))*) (Target.find_dependencies tg) in
       let cmis = List.map (fun x -> (Filename.chop_extension x) ^ ".cmi") cmos in
       cmis @ acc
     end [] (target_deps @ [tg]);
   in
+  let cmis = Miscellanea.Xlist.remove_dupl cmis in
   let mlis = List.filter (fun x -> Sys.file_exists ((Filename.chop_extension x) ^ ".mli")) cmis in
   let mlis = List.map (fun x -> (Filename.chop_extension x) ^ ".mli") mlis in
   {
