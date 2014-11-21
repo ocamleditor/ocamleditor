@@ -89,8 +89,8 @@ let create_meta proj ~parent tg =
   in
   let cmis =
     List.fold_left begin fun acc tg ->
-      let cmos = (*List.filter (fun x -> not (Filename.check_suffix x ".cmi"))*) (Target.find_dependencies tg) in
-      let cmis = List.map (fun x -> (Filename.chop_extension x) ^ ".cmi") cmos in
+      let cmoxs = (*List.filter (fun x -> not (Filename.check_suffix x ".cmi"))*) (Target.find_dependencies tg) in
+      let cmis = List.map (fun x -> (Filename.chop_extension x) ^ ".cmi") cmoxs in
       cmis @ acc
     end [] (target_deps @ [tg]);
   in
@@ -118,16 +118,17 @@ let rec generate_def buf level meta =
   bprintf buf "%srequires        = \"%s\"\n%!" indent meta.meta_requires;
   bprintf buf "%sarchive(byte)   = \"%s\"\n%!" indent (String.concat "," (List.map Filename.basename meta.meta_archive_byte));
   bprintf buf "%sarchive(native) = \"%s\"%!" indent (String.concat "," (List.map Filename.basename meta.meta_archive_native));
-  let archives =
-    List.fold_left begin fun acc sp ->
-      (generate_def buf (level + 1) sp).archives :: acc
-    end [] meta.meta_subpackages
+  let (sub_archives, sub_cmis, sub_mlis) =
+    List.fold_left begin fun (aa, ac, am) sp ->
+      let sub = generate_def buf (level + 1) sp in
+      sub.archives :: aa, sub.cmis :: ac, sub.mlis :: am
+    end ([], [], []) meta.meta_subpackages
   in
   if level > 0 then bprintf buf "\n%s)%!" (String.make ((level - 1) * 2) ' ');
   {
-    archives = meta.meta_archive_byte @ meta.meta_archive_native @ (List.flatten archives);
-    cmis     = meta.meta_cmis;
-    mlis     = meta.meta_mlis;
+    archives = meta.meta_archive_byte @ meta.meta_archive_native @ (List.flatten sub_archives);
+    cmis     = meta.meta_cmis @ (List.flatten sub_cmis);
+    mlis     = meta.meta_mlis @ (List.flatten sub_mlis);
   }
 
 let generate_meta outchan meta =
@@ -136,9 +137,9 @@ let generate_meta outchan meta =
   fprintf outchan "  (\x2A\x2A %s \x2A)\n  %S,\"\\\n%s\",\n  [\n    %s\n  ], [\n    %s\n  ], [\n    %s\n  ];\n%!"
     meta.meta_name meta.meta_name
     (Str.global_replace re_quote "\\\"" (Buffer.contents buf))
-    (String.concat ";\n    " (List.map (sprintf "%S") files.archives))
-    (String.concat ";\n    " (List.map (sprintf "%S") files.cmis))
-    (String.concat ";\n    " (List.map (sprintf "%S") files.mlis))
+    (String.concat ";\n    " (List.map (sprintf "%S") (List.sort compare (Miscellanea.Xlist.remove_dupl files.archives))))
+    (String.concat ";\n    " (List.map (sprintf "%S") (List.sort compare (Miscellanea.Xlist.remove_dupl files.cmis))))
+    (String.concat ";\n    " (List.map (sprintf "%S") (List.sort compare (Miscellanea.Xlist.remove_dupl files.mlis))))  
 
 let generate_fl_installer proj outchan =
   let processed = ref [] in

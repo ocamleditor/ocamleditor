@@ -711,7 +711,7 @@
       <restrictions></restrictions>
       <dependencies></dependencies>
     </target>
-    <target name="FINDLIB-TOOLS" default="false" id="27" sub_targets="" is_fl_package="false" subsystem="" readonly="true" visible="true" node_collapsed="false">
+    <target name="FINDLIB-TOOLS" default="false" id="27" sub_targets="" is_fl_package="false" subsystem="" readonly="true" visible="true" node_collapsed="true">
       <descr></descr>
       <byt>true</byt>
       <opt>false</opt>

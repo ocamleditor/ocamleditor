@@ -152,7 +152,7 @@ let external_tasks = [
     et_env_replace           = false;
     et_dir                   = "../tools";
     et_cmd                   = "ocaml";
-    et_args                  = [true,"mkversion.ml"; true,"1.13.0"];
+    et_args                  = [true,"mkversion.ml"; true,"1.13.1"];
     et_phase                 = Some Before_clean;
     et_always_run_in_project = false;
     et_always_run_in_script  = false;
@@ -907,7 +907,7 @@ let targets = [
     restrictions         = [];
     dependencies         = [];
     show                 = true;
-    rc_filename          = Some ".\\ocamleditor_launch.resource.rc";
+    rc_filename          = Some ".\\ocamleditorw.resource.rc";
   };
   
   (* 15 *)

@@ -156,7 +156,8 @@ let find_top_dependencies target =
   Oebuild_dep.ocamldep_toplevels (Miscellanea.split " +" target.files) |> Oebuild_dep.sort_dependencies
 
 (** find_dependencies *)
-let find_dependencies = find_top_dependencies
+let find_dependencies target =
+  Oebuild_dep.ocamldep_recursive (Miscellanea.split " +" target.files) |> Oebuild_dep.sort_dependencies
 
 (** find_target_dependencies *)
 let rec find_target_dependencies targets trg =

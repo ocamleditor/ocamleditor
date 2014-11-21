@@ -18,19 +18,9 @@ archive(native) = \"gmisclib.cmxa\"",
     "gmisclib.cma";
     "gmisclib.cmxa"
   ], [
-    "gmisclib/hyperlink.cmi";
-    "gmisclib/gmisclib_util.cmi";
-    "gmisclib/button_menu.cmi";
-    "gmisclib/entry_combo_search.cmi";
-    "gmisclib/undo.cmi";
-    "gmisclib/window.cmi";
-    "gmisclib/menu_tool_button.cmi";
     "gmisclib/gmisclib.cmi"
   ], [
-    "gmisclib/button_menu.mli";
-    "gmisclib/entry_combo_search.mli";
-    "gmisclib/undo.mli";
-    "gmisclib/menu_tool_button.mli"
+    
   ];
 ]
 

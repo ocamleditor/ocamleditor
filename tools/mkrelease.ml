@@ -28,7 +28,7 @@ open Printf
 
 let mkrelease () =
   let redirect_stdout = if Sys.win32 then " 1>NUL" else " 1>/dev/null" in
-  let redirect_stderr = if Sys.win32 then " 2>NUL" else " 2>/dev/null" in
+  (*let redirect_stderr = if Sys.win32 then " 2>NUL" else " 2>/dev/null" in*)
   if is_win32 then begin
     pushd "..";
     kprintf run "ocaml build.ml -verbose 0 build oebuild oeproc";
