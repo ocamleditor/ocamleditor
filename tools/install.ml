@@ -62,11 +62,11 @@ You will need the free NSIS install system (http://nsis.sourceforge.net).";
     let exe = if Sys.os_type = "Win32" then ".exe" else "" in
     let icons = sprintf "%s/share/ocamleditor/icons" !prefix in
     mkdir_p icons;
-    kprintf run "cp -vru ../icons/* %s" icons;
+    kprintf run "cp -vr ../icons/* %s" icons;
     if Sys.readdir "../plugins" <> [||] then begin
       let plugins = sprintf "%s/share/ocamleditor/plugins" !prefix in
       mkdir_p plugins;
-      kprintf run "cp -vru ../plugins/* %s" plugins
+      kprintf run "cp -vr ../plugins/* %s" plugins
     end;
     let bin = sprintf "%s/bin" !prefix in
     mkdir_p bin;
