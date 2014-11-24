@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- OCamlEditor-1.13.1 XML Project -->
+<!-- OCamlEditor-1.13.2 XML Project -->
 <project>
   <ocaml_home></ocaml_home>
   <ocamllib></ocamllib>
@@ -294,7 +294,7 @@
         <company></company>
         <product>OCamlEditor</product>
         <copyright>© 2014 Francesco Tovagliari</copyright>
-        <file_version>1.13.0.0</file_version>
+        <file_version>1.13.2.0</file_version>
         <icons>
           <icon>ocamleditor.ico</icon>
         </icons>
@@ -598,7 +598,7 @@
         <company></company>
         <product>OCamlEditor</product>
         <copyright>© 2014 Francesco Tovagliari</copyright>
-        <file_version>1.13.1.0</file_version>
+        <file_version>1.13.2.0</file_version>
         <icons>
           <icon>ocamleditor2.ico</icon>
           <icon>ocamleditor.ico</icon>
@@ -650,7 +650,7 @@
           <cmd>ocaml</cmd>
           <args>
             <arg enabled="true">mkversion.ml</arg>
-            <arg enabled="true">1.13.1</arg>
+            <arg enabled="true">1.13.2</arg>
           </args>
           <phase>Before_clean</phase>
         </task>
