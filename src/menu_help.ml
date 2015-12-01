@@ -27,7 +27,7 @@ open Printf
 (** system_properties *)
 let system_properties () =
   let window = GWindow.window ~icon:Icons.oe ~title:"System Properties" ~position:`CENTER ~modal:true ~resizable:false ~show:false () in
-  let text = System_properties.to_string () in
+  let text = Glib.Convert.locale_to_utf8 (System_properties.to_string ()) in
   let buffer = GText.buffer ~text () in
   let vbox = GPack.vbox ~spacing:0 ~border_width:0 ~packing:window#add () in
   let sw = GBin.scrolled_window ~hpolicy:`AUTOMATIC ~vpolicy:`AUTOMATIC ~packing:vbox#add () in

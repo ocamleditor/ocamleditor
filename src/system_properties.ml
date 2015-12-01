@@ -63,7 +63,7 @@ let to_string () =
   let ocaml_version = Str.global_replace
     (Str.regexp "\n") " - " (Str.global_replace (Str.regexp "\n$") "" (Cmd.expand "ocamlc -v")) in
   let a, b, c = GMain.Main.version in
-  Printf.bprintf buf "---------------------------------------------------------------\n%!" ;
+  Printf.bprintf buf "-------------------------------------------------------------------------------\n%!" ;
   let groups = [
     10, "ocaml";
     20, "ocamleditor";
@@ -81,8 +81,9 @@ let to_string () =
     20, "plugins", App_config.application_plugins;
     20, "oebuild", Oe_config.oebuild_command;
     20, "native_compilation", (match Ocaml_config.can_compile_native () with Some x -> "Yes (" ^ x ^ ")" | _ -> "No");
+    20, "OCAMLEDITOR_MINGW", (try Sys.getenv "OCAMLEDITOR_MINGW" with Not_found -> "<Not Found>");
   ] @
-  (if Sys.win32 then [
+  (if Sys.win32 && not App_config.is_mingw then [
      20, "oeproc", Oe_config.oeproc_command;
      30, "cl", (Opt.default Oe_config.cl "<Not Found>");
      30, "ml", (Opt.default Oe_config.ml "<Not Found>");
@@ -108,5 +109,5 @@ let to_string () =
   let properties = List.sort compare properties in
   let properties = List.map (fun (g, n, v) -> (List.assoc g groups) ^ "." ^ n, v) properties in
   List.iter (bprintf buf "%s\n") (Text_util.dot_leaders properties);
-  Printf.bprintf buf "---------------------------------------------------------------\n%!" ;
+  Printf.bprintf buf "-------------------------------------------------------------------------------\n%!" ;
   Buffer.contents buf

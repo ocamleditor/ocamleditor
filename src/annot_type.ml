@@ -187,11 +187,11 @@ object (self)
                     end;
                   | `ITER _ ->
                     let x, y = view#get_location_at_cursor () in
-                    popup#set_opacity 0.0;
+                    if not App_config.is_mingw then popup#set_opacity 0.0;
                     popup#move ~x ~y:(y + 2);
               end;
             | `TOP_RIGHT ->
-              popup#set_opacity 0.0;
+              if not App_config.is_mingw then popup#set_opacity 0.0;
               let x, y = view#get_location_top_right () in
               let y = y + 5 in
               popup#move ~x ~y;
@@ -200,6 +200,6 @@ object (self)
               popup#move ~x ~y;
         end;
         let incr = if Preferences.preferences#get.Preferences.pref_annot_type_tooltips_delay = 0 then 0.106 else 0.479 in
-        Gmisclib.Util.fade_window ~incr popup;
+        Gmisclib.Util.fade_window ~incr popup
 
 end

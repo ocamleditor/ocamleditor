@@ -421,7 +421,7 @@ object (self)
                 let dir = if dir = "." then "" else sprintf "<span size='large'>%s/</span>" dir in
                 window_title_menu_label#set_label
                   (sprintf
-                     "<span weight='bold' size='large'>%s<span size='smaller' weight='normal'>%s</span>  ·  </span><span size='large'>%s</span><span weight='bold' size='large' color='%s'>%s</span>"
+                     "<span weight='bold' size='large'>%s<span size='small' font_family='monospace' weight='normal'>%s</span>  ·  </span><span size='large'>%s</span><span weight='bold' size='large' color='%s'>%s</span>"
                      projectname (Git.string_of_status status) dir color (Filename.basename relname));
               | _ ->
                 window_title_menu_label#set_label

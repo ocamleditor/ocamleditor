@@ -42,7 +42,7 @@ let window widget
     ~x ~y () =
   let window = GWindow.window
     ~decorated
-    ~border_width:2
+    ~border_width:1
     ~deletable:true
     ~focus_on_map:focus
     ~type_hint
@@ -82,6 +82,7 @@ let window widget
 
 (** window_tooltip *)
 let window_tooltip widget ?parent ?(fade=false) ~x ~y () =
+  let fade = fade && !Gmisclib.Util.fade_window_enabled in
   let window = GWindow.window
     ~decorated:false
     ~kind:(if Sys.os_type = "Win32" then `POPUP else `TOPLEVEL)
@@ -102,7 +103,7 @@ let window_tooltip widget ?parent ?(fade=false) ~x ~y () =
   Gaux.may parent ~f:(fun parent -> Gaux.may (GWindow.toplevel parent) ~f:(fun x -> window#set_transient_for x#as_window));
   if fade then (window#set_opacity 0.0);
   window#move ~x ~y;
-  if fade then (Gmisclib.Util.fade_window window);
+  if fade then (Gmisclib.Util.fade_window window) else window#show();
   if Sys.os_type <> "Win32" then (window#present());
   let alloc = window#misc#allocation in
   let x, y =

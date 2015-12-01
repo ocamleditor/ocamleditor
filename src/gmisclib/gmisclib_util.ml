@@ -42,7 +42,7 @@ let fade_window =
       in
       ignore (callback());
       ignore (GMain.Timeout.add ~ms:20 ~callback)
-  end else (fun ?incr ?stop window -> window#set_opacity 1.0; window#show())
+  end else (fun ?incr ?stop window -> (* window#set_opacity 1.0;  *)window#show())
 
 (** esc_destroy_window *)
 let esc_destroy_window window =

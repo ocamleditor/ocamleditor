@@ -34,7 +34,7 @@ let autosave_interval                    = 5_000 (* milliseconds *)
 let autosave_keep_backup                 = 3. *. 24. *. 60. *. 60.  (* 3 days, in milliseconds *)
 let ocamldoc_paragraph_border_enabled    = true
 let ocamldoc_paragraph_bgcolor_enabled   = true
-let fade_window_enabled                  = true (* Fade effect for popup windows *)
+let fade_window_enabled                  = not App_config.is_mingw (* Fade effect for popup windows *)
 let matching_delim_border_color          = `NAME "#ff0000"
 let error_popup_bg_color                 = `NAME "#ffeef2"
 let error_popup_border_color             = `NAME "#ff6a99"
@@ -227,7 +227,6 @@ let geometry_memo_filename = Filename.concat App_config.ocamleditor_user_home "g
 let _ =
   let old = Filename.concat App_config.ocamleditor_user_home "message_window_positions" in
   if Sys.file_exists old then Sys.remove old
-
 
 
 

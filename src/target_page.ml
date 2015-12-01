@@ -190,7 +190,7 @@ class view ~project ~target_list ?packing () =
     ~strings:["Console"; "Windows"]
     ~active:0 ~packing:box#pack () in
   let align = GBin.alignment ~xscale:0.0 ~xalign:1.0 ~packing:box#add () in
-  let button_resource_file = GButton.button ~label:"Icons and Assembly Information..." ~packing:align#add () in
+  let button_resource_file = GButton.button ~label:((if App_config.is_mingw then "" else "Icons and ") ^ "Assembly Information...") ~packing:align#add () in
 
   (** Radio External *)
   let mbox = GPack.vbox ~spacing:0 ~packing:(vbox#pack ~expand:false) () in
@@ -296,7 +296,7 @@ both within the IDE and from the generated build script." ~packing:vbox#pack () 
                Project_tools.findlib_target_name)
       ~packing:box#add ~show:false () in
   (*  *)
-  let cmd_line = GEdit.entry ~editable:false () in
+  let cmd_line = GEdit.entry ~editable:false ~show:App_config.application_debug () in
 object (self)
   inherit GObj.widget mainbox#as_widget
   val mutable target = None

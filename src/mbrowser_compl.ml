@@ -435,10 +435,12 @@ object (self)
           true (* Prevent the event to be propagated to the Gtk_util.window
                   focus_out handler, which destroys the window. *)
         end);
-        ignore (window#event#connect#focus_in ~callback:begin fun _ ->
-            Gmisclib.Idle.add (fun () -> window#set_opacity 1.0);
-            false;
-        end);
+        if not App_config.is_mingw then begin
+          ignore (window#event#connect#focus_in ~callback:begin fun _ ->
+              Gmisclib.Idle.add (fun () -> window#set_opacity 1.0); 
+              false;
+          end);
+        end;
         ignore (window#event#connect#delete ~callback:begin fun _ ->
             self#set_pin_status false;
             self#hide();
