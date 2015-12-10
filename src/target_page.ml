@@ -276,7 +276,7 @@ both within the IDE and from the generated build script." ~packing:vbox#pack () 
   let check_win32 = GButton.check_button ~label:"O.S. type is Win32" ~packing:cbox#pack () in
   let check_cygwin = GButton.check_button ~label:"O.S. type is Cygwin" ~packing:cbox#pack () in
   let check_native = GButton.check_button ~label:"Native compilation is supported" ~packing:cbox#pack () in
-
+  (*  *)
   let flbox = GPack.hbox ~spacing:5 ~packing:cbox#pack () in
   let check_fl_pkg = GButton.check_button ~label:"The following Findlib packages are installed:" ~packing:flbox#pack () in
   let entry_fl_pkg = GEdit.entry ~packing:flbox#add () in
@@ -285,7 +285,7 @@ both within the IDE and from the generated build script." ~packing:vbox#pack () 
     if check_fl_pkg#active then entry_fl_pkg#misc#grab_focus()
   end; in
   let _ = entry_fl_pkg#misc#set_sensitive false in
-
+  (*  *)
   let envbox = GPack.hbox ~spacing:5 ~packing:cbox#pack () in
   let check_env = GButton.check_button ~packing:envbox#pack () in
   let _ = GMisc.label ~markup:"Check environment variable (<span face='monospace' size='small'>name=value</span>):" ~packing:check_env#add () in
@@ -295,9 +295,6 @@ both within the IDE and from the generated build script." ~packing:vbox#pack () 
     if check_env#active then entry_env#misc#grab_focus()
   end; in
   let _ = entry_env#misc#set_sensitive false in
-
-
-
 
   (** Findlib Tab *)
   let vbox = GPack.vbox ~border_width:8 ~spacing:13 () in
@@ -343,9 +340,16 @@ object (self)
         if packages <> "" then true, sprintf "FINDLIB(%s)" packages else false, ""
       end;
       check_env, begin fun () ->
-        match Str.split (Miscellanea.regexp " *= *") (String.trim entry_env#text) with
-          | name :: value :: [] -> true, sprintf "ENV(%s=%s)" name value
-          | _ -> false, ""
+        let text = String.trim entry_env#text in
+        if Str.string_match Oebuild.re_env_body text 0 then begin
+          let op = try if (Str.matched_group 3 text) = "=" then Some "=" else Some "<>" with Not_found -> None in
+          let name = Str.matched_group 2 text in
+          match op with
+            | Some op ->
+              let value = try Str.matched_group 4 text with Not_found -> "" in
+              true, sprintf "ENV(%s%s%s)" name op value
+            | None -> true, sprintf "ENV(%s)" name
+        end else false, ""
       end;
       check_unix, (fun () -> true, "IS_UNIX");
       check_win32, (fun () -> true, "IS_WIN32");
@@ -643,10 +647,7 @@ object (self)
     check_fl_pkg#set_active (entry_fl_pkg#text <> ""); (*(List.exists (fun r -> Str.string_match Oebuild.re_fl_pkg_exist r 0) tg.restrictions)*)
     entry_env#set_text begin
       match List_opt.find (fun res -> Str.string_match Oebuild.re_env res 0) tg.restrictions with
-        | Some res ->
-          let name = Str.matched_group 1 res in
-          let value = Str.matched_group 2 res in
-          sprintf "%s=%s" name value
+        | Some res -> Str.matched_group 1 res
         | None -> ""
     end;
     check_env#set_active (entry_env#text <> "");

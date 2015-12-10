@@ -555,7 +555,9 @@ let distclean () =
 ;;
 
 let re_fl_pkg_exist = Str.regexp "\\(HAVE_FL_PKG\\|FINDLIB\\)(\\([-A-Za-z0-9_., ]+\\))"
-let re_env = Str.regexp "ENV(\\([A-Za-z0-9_-]+\\)=\\(.*\\))"
+let s_env_body = "\\(\\([A-Za-z0-9_-]+\\)\\(=\\|<>\\|!=\\)\\(.*\\)\\)"
+let re_env_body = Str.regexp s_env_body
+let re_env = Str.regexp ("ENV(" ^ s_env_body ^ ")")
 let re_comma = Str.regexp " *, *"
 
 (** check_restrictions *)
@@ -568,10 +570,18 @@ let check_restrictions restr =
     | res when Str.string_match re_env res 0 ->
       begin
         try
-          let name = Str.matched_group 1 res in
-          let value = Str.matched_group 2 res in
-          Sys.getenv name = value
-        with Not_found -> false
+          let op, is_eq =
+            try if (Str.matched_group 3 res) = "=" then Some (=), true else Some (<>), false with Not_found -> None, false
+          in
+          let name = Str.matched_group 2 res in
+          begin
+            match op with
+              | Some op ->
+                let value = try Str.matched_group 4 res with Not_found -> "" in
+                (try op (Sys.getenv name) value with Not_found -> not is_eq)
+              | None -> (try Sys.getenv name |> ignore; true with Not_found -> false)
+          end;
+        with Not_found (* name *) -> false
       end;
     | res when Str.string_match re_fl_pkg_exist res 0 ->
       let packages = Str.matched_group 2 res in

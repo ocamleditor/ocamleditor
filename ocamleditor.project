@@ -500,7 +500,7 @@
       <restrictions>FINDLIB(diff)</restrictions>
       <dependencies></dependencies>
     </target>
-    <target name="prepare-build" default="false" id="20" sub_targets="" is_fl_package="false" subsystem="" readonly="false" visible="true" node_collapsed="true">
+    <target name="prepare-build" default="false" id="20" sub_targets="" is_fl_package="false" subsystem="Console" readonly="false" visible="true" node_collapsed="true">
       <descr></descr>
       <byt>true</byt>
       <opt>false</opt>
@@ -590,7 +590,7 @@
           <phase>After_compile</phase>
         </task>
       </external_tasks>
-      <restrictions>ENV(OCAMLEDITOR_MINGW=0)</restrictions>
+      <restrictions>ENV(OCAMLEDITOR_MINGW&lt;&gt;1)</restrictions>
       <dependencies></dependencies>
       <resource_file>
         <filename>.\ocamleditorw.resource.rc</filename>
