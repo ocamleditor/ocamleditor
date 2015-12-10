@@ -23,29 +23,25 @@
 
 (** fade_out *)
 let fade_out window =
-  begin
-    try 
-      Sys.getenv "OCAMLEDITOR_MINGW" |> ignore;
-      GMain.Timeout.add ~ms:5 ~callback:begin fun () ->
-        let opa = max 0. (window#opacity -. 0.1) in
-        if opa > 0. then begin
-          window#set_opacity opa;
-          true
-        end else begin
-          window#destroy();
-          false
-        end
-        end |> ignore;
-    with Not_found ->
-      begin
-        while window#opacity > 0. do
-          Thread.delay 0.02;
-          let opa = max 0. (window#opacity -. 0.1) in
-          if opa >= 0. then begin
-            window#set_opacity opa;
-          end
-        done; 
-      end;
+  if App_config.is_mingw then begin
+    GMain.Timeout.add ~ms:5 ~callback:begin fun () ->
+      let opa = max 0. (window#opacity -. 0.1) in
+      if opa > 0. then begin
+        window#set_opacity opa;
+        true
+      end else begin
+        window#destroy();
+        false
+      end
+    end |> ignore;
+  end else begin
+    while window#opacity > 0. do
+      Thread.delay 0.02;
+      let opa = max 0. (window#opacity -. 0.1) in
+      if opa >= 0. then begin
+        window#set_opacity opa;
+      end
+    done;
   end;
   window#destroy()
 
@@ -68,12 +64,12 @@ let main () = begin
       Gtk_theme.set_theme ~context:browser#window#misc#pango_context ();
       browser#window#misc#connect#show ~callback:begin fun () ->
         Gmisclib.Idle.add ~prio:300 begin fun () ->
-          Plugin.load "plugin_diff.cma" |> ignore; (* plugin_diff requires editor pages *)  
-          Gaux.may splashscreen ~f:fade_out; 
-          Gaux.may (browser#editor#get_page `ACTIVE) ~f:(fun page -> page#view#misc#grab_focus()); 
+          Plugin.load "plugin_diff.cma" |> ignore; (* plugin_diff requires editor pages *)
+          Gaux.may splashscreen ~f:fade_out;
+          Gaux.may (browser#editor#get_page `ACTIVE) ~f:(fun page -> page#view#misc#grab_focus());
 		  ()
         end
-      end |> ignore; 
+      end |> ignore;
     end |> ignore;
     (* After browser initialization (after splashscreen) and before browser window is shown *)
     browser#connect#after#startup ~callback:begin fun () ->

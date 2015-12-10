@@ -119,11 +119,12 @@ let main () =
       ("-when",        String check_restrictions,       "\"<c1&c2&...>\" Exit immediately if any condition specified here is not true.
                                  Recognized conditions are:
 
-                                   HAVE_FL_PKG(packages,...) : Findlib packages are installed
+                                   FINDLIB(packages,...)     : Findlib packages are installed
                                    IS_UNIX                   : O.S. type is Unix
                                    IS_WIN32                  : O.S. type is Win32
                                    IS_CYGWIN                 : O.S. type is Cygwin
-                                   HAVE_NATIVE               : Native compilation is supported\n");
+                                   ENV(name=value)           : Environment variable <name> is equal to <value>
+                                   NATIVE                    : Native compilation is supported\n");
       ("-output-name", Set print_output_name,           " (undocumented)");
       ("-msvc",        Set ms_paths,                    " (undocumented)");
       ("-no-build",    Set no_build,                    " (undocumented)");

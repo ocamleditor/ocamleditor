@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- OCamlEditor-1.13.2 XML Project -->
+<!-- OCamlEditor-1.13.3 XML Project -->
 <project>
   <ocaml_home></ocaml_home>
   <ocamllib></ocamllib>
@@ -222,7 +222,7 @@
       <lib_install_path></lib_install_path>
       <external_tasks/>
       <restrictions></restrictions>
-      <dependencies>14,19,16,26</dependencies>
+      <dependencies>14,19,16,26,22</dependencies>
     </target>
     <target name="ocamleditor-bytecode" default="true" id="0" sub_targets="" is_fl_package="false" subsystem="Console" readonly="false" visible="true" node_collapsed="false">
       <descr></descr>
@@ -287,7 +287,7 @@
         </task>
       </external_tasks>
       <restrictions>IS_WIN32</restrictions>
-      <dependencies>14,19,16,26</dependencies>
+      <dependencies>14,19,16,26,22</dependencies>
       <resource_file>
         <filename>.\ocamleditor.opt.resource.rc</filename>
         <title>OCamlEditor</title>
@@ -348,7 +348,7 @@
       <lib_install_path></lib_install_path>
       <external_tasks/>
       <restrictions></restrictions>
-      <dependencies>4,10,5,6,8,9,20,22</dependencies>
+      <dependencies>4,10,5,6,8,9,20</dependencies>
     </target>
     <target name="plugin-remote-bytecode" default="false" id="17" sub_targets="" is_fl_package="false" subsystem="" readonly="false" visible="true" node_collapsed="false">
       <descr></descr>
@@ -372,7 +372,7 @@
       <outname>../plugins/remote</outname>
       <lib_install_path></lib_install_path>
       <external_tasks/>
-      <restrictions>HAVE_FL_PKG(curl)</restrictions>
+      <restrictions>FINDLIB(curl)</restrictions>
       <dependencies></dependencies>
     </target>
     <target name="plugin-remote-native" default="false" id="16" sub_targets="" is_fl_package="false" subsystem="" readonly="false" visible="true" node_collapsed="false">
@@ -397,7 +397,7 @@
       <outname>../plugins/remote</outname>
       <lib_install_path></lib_install_path>
       <external_tasks/>
-      <restrictions>HAVE_FL_PKG(curl)</restrictions>
+      <restrictions>FINDLIB(curl)</restrictions>
       <dependencies></dependencies>
     </target>
     <target name="plugin-dotviewer-bytecode" default="false" id="18" sub_targets="" is_fl_package="false" subsystem="" readonly="false" visible="true" node_collapsed="false">
@@ -422,7 +422,7 @@
       <outname>../plugins/dot_viewer_svg</outname>
       <lib_install_path></lib_install_path>
       <external_tasks/>
-      <restrictions>HAVE_FL_PKG(lablgtk2.rsvg)</restrictions>
+      <restrictions>FINDLIB(lablgtk2.rsvg)</restrictions>
       <dependencies></dependencies>
     </target>
     <target name="plugin-dotviewer-native" default="false" id="19" sub_targets="" is_fl_package="false" subsystem="" readonly="false" visible="true" node_collapsed="false">
@@ -447,7 +447,7 @@
       <outname>../plugins/dot_viewer_svg</outname>
       <lib_install_path></lib_install_path>
       <external_tasks/>
-      <restrictions>HAVE_FL_PKG(lablgtk2.rsvg)</restrictions>
+      <restrictions>FINDLIB(lablgtk2.rsvg)</restrictions>
       <dependencies></dependencies>
     </target>
     <target name="plugin-diff-bytecode" default="false" id="25" sub_targets="" is_fl_package="false" subsystem="" readonly="false" visible="true" node_collapsed="false">
@@ -472,7 +472,7 @@
       <outname>../plugins/plugin_diff</outname>
       <lib_install_path></lib_install_path>
       <external_tasks/>
-      <restrictions>HAVE_FL_PKG(diff)</restrictions>
+      <restrictions>FINDLIB(diff)</restrictions>
       <dependencies></dependencies>
     </target>
     <target name="plugin-diff-native" default="false" id="26" sub_targets="" is_fl_package="false" subsystem="" readonly="false" visible="true" node_collapsed="false">
@@ -497,7 +497,7 @@
       <outname>../plugins/plugin_diff</outname>
       <lib_install_path></lib_install_path>
       <external_tasks/>
-      <restrictions>HAVE_FL_PKG(diff)</restrictions>
+      <restrictions>FINDLIB(diff)</restrictions>
       <dependencies></dependencies>
     </target>
     <target name="prepare-build" default="false" id="20" sub_targets="" is_fl_package="false" subsystem="" readonly="false" visible="true" node_collapsed="true">
@@ -590,7 +590,7 @@
           <phase>After_compile</phase>
         </task>
       </external_tasks>
-      <restrictions></restrictions>
+      <restrictions>ENV(OCAMLEDITOR_MINGW=0)</restrictions>
       <dependencies></dependencies>
       <resource_file>
         <filename>.\ocamleditorw.resource.rc</filename>
@@ -800,7 +800,6 @@
       <env replace="false">
         <var enabled="true">OCAMLEDITORPARAM=debug=2,record_backtrace=1</var>
         <var enabled="true">DEBUG_UNDO=0</var>
-        <var enabled="false">Path=D:\curl-7.29.0;C:\Program Files (x86)\Microsoft Visual Studio 9.0\Common7\IDE;C:\Program Files (x86)\Microsoft Visual Studio 9.0\VC\BIN;C:\Program Files (x86)\Microsoft Visual Studio 9.0\Common7\Tools;C:\Program Files (x86)\Microsoft Visual Studio 9.0\Common7\Tools\bin;C:\Windows\Microsoft.NET\Framework\;C:\Windows\Microsoft.NET\Framework\\Microsoft .NET Framework 3.5 (Pre-Release Version);C:\Windows\Microsoft.NET\Framework\v2.0.50727;C:\Program Files (x86)\Microsoft Visual Studio 9.0\VC\VCPackages;C:\Program Files\Microsoft SDKs\Windows\v7.0\bin;C:\Windows;C:\Windows\system32;C:\Windows\system32\Wbem;C:\Program Files (x86)\Haskell\bin;C:\Program Files (x86)\Haskell Platform\2012.4.0.0\lib\extralibs\bin;C:\Program Files (x86)\Haskell Platform\2012.4.0.0\bin;C:\Program Files\Common Files\Microsoft Shared\Windows Live;C:\Program Files (x86)\Common Files\Microsoft Shared\Windows Live;C:\Program Files (x86)\Microsoft Visual Studio 9.0\Common7\IDE;C:\Program Files (x86)\Microsoft Visual Studio 9.0\VC\BIN;C:\Program Files (x86)\Microsoft Visual Studio 9.0\Common7\Tools;C:\Program Files (x86)\Microsoft Visual Studio 9.0\Common7\Tools\bin;C:\Windows\Microsoft.NET\Framework\;C:\Windows\Microsoft.NET\Framework\\Microsoft .NET Framework 3.5 (Pre-Release Version);C:\Windows\Microsoft.NET\Framework\v2.0.50727;C:\Program Files (x86)\Microsoft Visual Studio 9.0\VC\VCPackages;C:\Program Files\Microsoft SDKs\Windows\v7.0\bin;C:\Windows\system32;C:\Windows;C:\Windows\System32\Wbem;C:\Windows\System32\WindowsPowerShell\v1.0\;C:\Program Files (x86)\flexdll;C:\Program Files (x86)\oasis\bin;C:\Tcl\bin;C:\GTK\bin;C:\pcre\bin;C:\ocaml\bin;C:\Program Files (x86)\UnxUtils\usr\local\wbin;D:\Borland\JBuilder2006\jdk1.5\bin;C:\Program Files (x86)\Windows Live\Shared;C:\Program Files\TortoiseSVN\bin;C:\Program Files (x86)\Haskell Platform\2012.4.0.0\mingw\bin;C:\Program Files (x86)\Graphviz 2.28\bin;C:\Users\f.tovagliari\AppData\Roaming\cabal\bin;C:\Program Files (x86)\IDM Computer Solutions\UltraEdit\;C:\Program Files\jEdit;C:\Program Files (x86)\PuTTY;C:\Program Files (x86)\Bitvise SSH Client;C:\Users\f.tovagliari\AppData\Roaming\cabal\bin;C:\Program Files (x86)\IDM Computer Solutions\UltraEdit\;D:\Git\cmd</var>
       </env>
       <args/>
     </executable>

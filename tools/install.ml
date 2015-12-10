@@ -30,12 +30,13 @@ let prefix   = ref "/usr/local"
 let ext      = if is_win32 then ".exe" else ""
 let gmisclib = ref false
 let nsis     = ref false
+let mingw    = ref (try ignore (Sys.getenv "OCAMLEDITOR_MINGW"); true with Not_found -> false)
 
 let install () =
   if !gmisclib then begin
     let libname = "gmisclib" in
     let cmas = ["../" ^ libname] in
-    let ar = String.concat " " (List.map (fun x -> x ^ (if Sys.os_type = "Win32" then ".lib" else ".a")) cmas) in
+    let ar = String.concat " " (List.map (fun x -> x ^ (if Sys.os_type = "Win32" && not !mingw then ".lib" else ".a")) cmas) in
     let find ext =
       let files = Array.to_list (Sys.readdir ".") in
       let files = List.filter (fun x -> Filename.check_suffix x ext) files in
@@ -74,6 +75,11 @@ You will need the free NSIS install system (http://nsis.sourceforge.net).";
     kprintf run "cp -v %s %s/ocamleditor%s" filename bin exe;
     let filename = if Sys.file_exists ("oebuild/oebuild.opt" ^ exe) then ("oebuild/oebuild.opt" ^ exe) else ("oebuild/oebuild" ^ exe) in
     kprintf run "cp -v %s %s" filename bin;
+    if Sys.win32 && !mingw then begin
+      let filename = if Sys.file_exists ("oeproc/oeproc.opt" ^ exe) then ("oeproc/oeproc.opt" ^ exe) else ("oeproc/oeproc" ^ exe) in
+      kprintf run "cp -v %s %s" filename bin;
+      kprintf run "cp -v ocamleditor-mingw.bat %s" bin;
+    end;
     let filename = "ocamleditor_launch" ^ exe in
     if Sys.file_exists filename then kprintf run "cp -v %s %s" filename bin;
   end;;

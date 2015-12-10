@@ -554,7 +554,8 @@ let distclean () =
   clean_dir cwd;
 ;;
 
-let re_fl_pkg_exist = Str.regexp "HAVE_FL_PKG(\\([-A-Za-z0-9_., ]+\\))"
+let re_fl_pkg_exist = Str.regexp "\\(HAVE_FL_PKG\\|FINDLIB\\)(\\([-A-Za-z0-9_., ]+\\))"
+let re_env = Str.regexp "ENV(\\([A-Za-z0-9_-]+\\)=\\(.*\\))"
 let re_comma = Str.regexp " *, *"
 
 (** check_restrictions *)
@@ -563,9 +564,17 @@ let check_restrictions restr =
     | "IS_UNIX" -> Sys.os_type = "Unix"
     | "IS_WIN32" -> Sys.os_type = "Win32"
     | "IS_CYGWIN" -> Sys.os_type = "Cygwin"
-    | "HAVE_NATIVE" | "HAS_NATIVE" -> Ocaml_config.can_compile_native () <> None (* should be cached *)
+    | "HAVE_NATIVE" | "HAS_NATIVE" | "NATIVE" -> Ocaml_config.can_compile_native () <> None (* should be cached *)
+    | res when Str.string_match re_env res 0 ->
+      begin
+        try
+          let name = Str.matched_group 1 res in
+          let value = Str.matched_group 2 res in
+          Sys.getenv name = value
+        with Not_found -> false
+      end;
     | res when Str.string_match re_fl_pkg_exist res 0 ->
-      let packages = Str.matched_group 1 res in
+      let packages = Str.matched_group 2 res in
       let packages = Str.split re_comma packages in
       let redirect_stderr = if Sys.os_type = "Win32" then " 1>NUL 2>NUL" else " 1>/dev/null 2>/dev/null" in
       packages = [] || List.for_all begin fun package ->

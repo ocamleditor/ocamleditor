@@ -272,6 +272,11 @@ any attempt to perform a \"Clean\" or \"Build\" or any other external task, from
 both within the IDE and from the generated build script." ~packing:vbox#pack () in
   let align = GBin.alignment ~padding:(0,0,indent,0) ~packing:vbox#add () in
   let cbox = GPack.vbox ~spacing:3 ~packing:align#add () in
+  let check_unix = GButton.check_button ~label:"O.S. type is Unix" ~packing:cbox#pack () in
+  let check_win32 = GButton.check_button ~label:"O.S. type is Win32" ~packing:cbox#pack () in
+  let check_cygwin = GButton.check_button ~label:"O.S. type is Cygwin" ~packing:cbox#pack () in
+  let check_native = GButton.check_button ~label:"Native compilation is supported" ~packing:cbox#pack () in
+
   let flbox = GPack.hbox ~spacing:5 ~packing:cbox#pack () in
   let check_fl_pkg = GButton.check_button ~label:"The following Findlib packages are installed:" ~packing:flbox#pack () in
   let entry_fl_pkg = GEdit.entry ~packing:flbox#add () in
@@ -280,10 +285,19 @@ both within the IDE and from the generated build script." ~packing:vbox#pack () 
     if check_fl_pkg#active then entry_fl_pkg#misc#grab_focus()
   end; in
   let _ = entry_fl_pkg#misc#set_sensitive false in
-  let check_unix = GButton.check_button ~label:"O.S. type is Unix" ~packing:cbox#pack () in
-  let check_win32 = GButton.check_button ~label:"O.S. type is Win32" ~packing:cbox#pack () in
-  let check_cygwin = GButton.check_button ~label:"O.S. type is Cygwin" ~packing:cbox#pack () in
-  let check_native = GButton.check_button ~label:"Native compilation is supported" ~packing:cbox#pack () in
+
+  let envbox = GPack.hbox ~spacing:5 ~packing:cbox#pack () in
+  let check_env = GButton.check_button ~packing:envbox#pack () in
+  let _ = GMisc.label ~markup:"Check environment variable (<span face='monospace' size='small'>name=value</span>):" ~packing:check_env#add () in
+  let entry_env = GEdit.entry ~packing:envbox#add () in
+  let _ = check_env#connect#toggled ~callback:begin fun () ->
+    entry_env#misc#set_sensitive check_env#active;
+    if check_env#active then entry_env#misc#grab_focus()
+  end; in
+  let _ = entry_env#misc#set_sensitive false in
+
+
+
 
   (** Findlib Tab *)
   let vbox = GPack.vbox ~border_width:8 ~spacing:13 () in
@@ -326,12 +340,17 @@ object (self)
     let checks = [
       check_fl_pkg, begin fun () ->
         let packages = String.trim entry_fl_pkg#text in
-        if packages <> "" then true, sprintf "HAVE_FL_PKG(%s)" packages else false, ""
+        if packages <> "" then true, sprintf "FINDLIB(%s)" packages else false, ""
+      end;
+      check_env, begin fun () ->
+        match Str.split (Miscellanea.regexp " *= *") (String.trim entry_env#text) with
+          | name :: value :: [] -> true, sprintf "ENV(%s=%s)" name value
+          | _ -> false, ""
       end;
       check_unix, (fun () -> true, "IS_UNIX");
       check_win32, (fun () -> true, "IS_WIN32");
       check_cygwin, (fun () -> true, "IS_CYGWIN");
-      check_native, (fun () -> true, "HAVE_NATIVE")
+      check_native, (fun () -> true, "NATIVE")
     ] in
     let update_restr () =
       self#update begin fun target ->
@@ -350,6 +369,7 @@ object (self)
       ignore (check#connect#toggled ~callback:update_restr);
     end checks;
     ignore (entry_fl_pkg#connect#changed ~callback:update_restr);
+    ignore (entry_env#connect#changed ~callback:update_restr);
     (*  *)
     ignore (entry_name#connect#changed
       ~callback:begin fun () ->
@@ -612,15 +632,25 @@ object (self)
     check_unix#set_active (List.mem "IS_UNIX" tg.restrictions);
     check_win32#set_active (List.mem "IS_WIN32" tg.restrictions);
     check_cygwin#set_active (List.mem "IS_CYGWIN" tg.restrictions);
-    check_native#set_active ((List.mem "HAVE_NATIVE" tg.restrictions) || (List.mem "HAS_NATIVE" tg.restrictions));
+    check_native#set_active (List.exists (fun x -> List.mem x tg.restrictions) ["HAVE_NATIVE"; "HAS_NATIVE"; "NATIVE"]);
     entry_fl_pkg#set_text begin
       match List_opt.find (fun res -> Str.string_match Oebuild.re_fl_pkg_exist res 0) tg.restrictions
       with
         | Some res ->
-          if Str.string_match Oebuild.re_fl_pkg_exist res 0 then Str.matched_group 1 res else ""
+          if Str.string_match Oebuild.re_fl_pkg_exist res 0 then Str.matched_group 2 res else ""
         | None -> ""
     end;
     check_fl_pkg#set_active (entry_fl_pkg#text <> ""); (*(List.exists (fun r -> Str.string_match Oebuild.re_fl_pkg_exist r 0) tg.restrictions)*)
+    entry_env#set_text begin
+      match List_opt.find (fun res -> Str.string_match Oebuild.re_env res 0) tg.restrictions with
+        | Some res ->
+          let name = Str.matched_group 1 res in
+          let value = Str.matched_group 2 res in
+          sprintf "%s=%s" name value
+        | None -> ""
+    end;
+    check_env#set_active (entry_env#text <> "");
+    (*  *)
     check_is_fl_package#set_active tg.is_fl_package;
     let win32_sensitive = true (*Sys.win32 && tg.opt && tg.target_type = Executable && Build_script_util.ccomp_type = Some "msvc"*) in
     win32_box#misc#set_sensitive win32_sensitive;

@@ -4,6 +4,8 @@
 
 *)
 
-let _ = if not Sys.win32 then exit 0
+let _ = if not Sys.win32 || is_mingw then exit 0
+
+let is_mingw = try ignore (Sys.getenv "OCAMLEDITOR_MINGW"); true with Not_found -> false
 
 let _ = Printf.kprintf Sys.command "editbin %S /subsystem:windows 2>&1 1>NUL" Sys.argv.(1)
