@@ -568,20 +568,26 @@ let check_restrictions restr =
     | "IS_CYGWIN" -> Sys.os_type = "Cygwin"
     | "HAVE_NATIVE" | "HAS_NATIVE" | "NATIVE" -> Ocaml_config.can_compile_native () <> None (* should be cached *)
     | res when Str.string_match re_env res 0 ->
+      (*
+         [1] ENV(NAME)        <=> NAME is defined
+         [2] ENV(NAME=VALUE)  <=> NAME is defined and is equal to VALUE
+         [3] ENV(NAME<>VALUE) <=> NAME is defined and is not equal to VALUE or NAME is not defined
+         [4] ENV()            <=> false
+      *)
       begin
         try
+          let name = Str.matched_group 2 res in
           let op, is_eq =
             try if (Str.matched_group 3 res) = "=" then Some (=), true else Some (<>), false with Not_found -> None, false
           in
-          let name = Str.matched_group 2 res in
           begin
             match op with
               | Some op ->
                 let value = try Str.matched_group 4 res with Not_found -> "" in
-                (try op (Sys.getenv name) value with Not_found -> not is_eq)
-              | None -> (try Sys.getenv name |> ignore; true with Not_found -> false)
+                (try op (Sys.getenv name) value (* [2] *) with Not_found (* name is not defined in the env. *) -> not is_eq) (* [3] *)
+              | None -> (try Sys.getenv name |> ignore; true with Not_found -> false) (* [1] *)
           end;
-        with Not_found (* name *) -> false
+        with Not_found (* name (matched_group) *) -> false (* [4] *)
       end;
     | res when Str.string_match re_fl_pkg_exist res 0 ->
       let packages = Str.matched_group 2 res in
