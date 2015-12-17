@@ -78,7 +78,9 @@ You will need the free NSIS install system (http://nsis.sourceforge.net).";
     if Sys.win32 && !mingw then begin
       let filename = if Sys.file_exists ("oeproc/oeproc.opt" ^ exe) then ("oeproc/oeproc.opt" ^ exe) else ("oeproc/oeproc" ^ exe) in
       kprintf run "cp -v %s %s" filename bin;
-      kprintf run "cp -v ocamleditor-mingw.bat %s" bin;
+      let basename = "ocamleditor-mingw.bat" in
+      kprintf run "cp -v % %s" basename bin;
+      Printf.printf "Please edit %s\\%s to match your system configuration.\n%!" bin basename;
     end;
     let filename = "ocamleditor_launch" ^ exe in
     if Sys.file_exists filename then kprintf run "cp -v %s %s" filename bin;
