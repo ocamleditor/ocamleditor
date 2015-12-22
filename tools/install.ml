@@ -60,6 +60,7 @@ let install () =
 To install OCamlEditor, please use the included ocamleditor.nsi script.
 You will need the free NSIS install system (http://nsis.sourceforge.net).";
   end else begin
+    if not (Sys.file_exists !prefix) then failwith ("Path " ^ !prefix ^ " doesn't exist");
     let exe, cpr, cp = if Sys.win32 then ".exe", "XCOPY /S/Y", "XCOPY /Y" else "", "cp -vr", "cp -v" in
     let icons = sprintf "%s/share/ocamleditor/icons" !prefix in
     mkdir_p icons;
