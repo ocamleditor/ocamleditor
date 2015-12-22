@@ -96,8 +96,8 @@ let create_script () =
       "../common/quote";
       "../common/argc";
       "../common/cmd";
-      "../common/app_config";
       "../common/ocaml_config";
+      "../common/app_config";
       "../common/cmd_line_args";
       "../task";
       "../build_script_command";

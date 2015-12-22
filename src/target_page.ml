@@ -190,7 +190,7 @@ class view ~project ~target_list ?packing () =
     ~strings:["Console"; "Windows"]
     ~active:0 ~packing:box#pack () in
   let align = GBin.alignment ~xscale:0.0 ~xalign:1.0 ~packing:box#add () in
-  let button_resource_file = GButton.button ~label:((if App_config.is_mingw then "" else "Icons and ") ^ "Assembly Information...") ~packing:align#add () in
+  let button_resource_file = GButton.button ~label:((if Ocaml_config.is_mingw then "" else "Icons and ") ^ "Assembly Information...") ~packing:align#add () in
 
   (** Radio External *)
   let mbox = GPack.vbox ~spacing:0 ~packing:(vbox#pack ~expand:false) () in
@@ -276,7 +276,7 @@ both within the IDE and from the generated build script." ~packing:vbox#pack () 
   let check_win32 = GButton.check_button ~label:"O.S. type is Win32" ~packing:cbox#pack () in
   let check_cygwin = GButton.check_button ~label:"O.S. type is Cygwin" ~packing:cbox#pack () in
   let check_native = GButton.check_button ~label:"Native compilation is supported" ~packing:cbox#pack () in
-  (*  *)
+  (* findib *)
   let flbox = GPack.hbox ~spacing:5 ~packing:cbox#pack () in
   let check_fl_pkg = GButton.check_button ~label:"The following Findlib packages are installed:" ~packing:flbox#pack () in
   let entry_fl_pkg = GEdit.entry ~packing:flbox#add () in
@@ -285,7 +285,7 @@ both within the IDE and from the generated build script." ~packing:vbox#pack () 
     if check_fl_pkg#active then entry_fl_pkg#misc#grab_focus()
   end; in
   let _ = entry_fl_pkg#misc#set_sensitive false in
-  (*  *)
+  (* environment *)
   let envbox = GPack.hbox ~spacing:5 ~packing:cbox#pack () in
   let check_env = GButton.check_button ~packing:envbox#pack () in
   let _ = GMisc.label ~markup:"Check environment variable (<span face='monospace' size='small'>name=value</span>):" ~packing:check_env#add () in
@@ -295,6 +295,16 @@ both within the IDE and from the generated build script." ~packing:vbox#pack () 
     if check_env#active then entry_env#misc#grab_focus()
   end; in
   let _ = entry_env#misc#set_sensitive false in
+  (* ocaml_config *)
+  let ocfgbox = GPack.hbox ~spacing:5 ~packing:cbox#pack () in
+  let check_ocfg = GButton.check_button ~packing:ocfgbox#pack () in
+  let _ = GMisc.label ~markup:"Check OCaml configuration property (<span face='monospace' size='small'>name=value</span>):" ~packing:check_ocfg#add () in
+  let entry_ocfg = GEdit.entry ~packing:ocfgbox#add () in
+  let _ = check_ocfg#connect#toggled ~callback:begin fun () ->
+    entry_ocfg#misc#set_sensitive check_ocfg#active;
+    if check_ocfg#active then entry_ocfg#misc#grab_focus()
+  end; in
+  let _ = entry_ocfg#misc#set_sensitive false in
 
   (** Findlib Tab *)
   let vbox = GPack.vbox ~border_width:8 ~spacing:13 () in
@@ -341,7 +351,7 @@ object (self)
       end;
       check_env, begin fun () ->
         let text = String.trim entry_env#text in
-        if Str.string_match Oebuild.re_env_body text 0 then begin
+        if Str.string_match Oebuild.re_prop_body text 0 then begin
           let op = try if (Str.matched_group 3 text) = "=" then Some "=" else Some "<>" with Not_found -> None in
           let name = Str.matched_group 2 text in
           match op with
@@ -349,6 +359,18 @@ object (self)
               let value = try Str.matched_group 4 text with Not_found -> "" in
               true, sprintf "ENV(%s%s%s)" name op value
             | None -> true, sprintf "ENV(%s)" name
+        end else false, ""
+      end;
+      check_ocfg, begin fun () ->
+        let text = String.trim entry_ocfg#text in
+        if Str.string_match Oebuild.re_prop_body text 0 then begin
+          let op = try if (Str.matched_group 3 text) = "=" then Some "=" else Some "<>" with Not_found -> None in
+          let name = Str.matched_group 2 text in
+          match op with
+            | Some op ->
+              let value = try Str.matched_group 4 text with Not_found -> "" in
+              true, sprintf "OCAML(%s%s%s)" name op value
+            | None -> true, sprintf "OCAML(%s)" name
         end else false, ""
       end;
       check_unix, (fun () -> true, "IS_UNIX");
@@ -374,6 +396,7 @@ object (self)
     end checks;
     ignore (entry_fl_pkg#connect#changed ~callback:update_restr);
     ignore (entry_env#connect#changed ~callback:update_restr);
+    ignore (entry_ocfg#connect#changed ~callback:update_restr);
     (*  *)
     ignore (entry_name#connect#changed
       ~callback:begin fun () ->
@@ -651,6 +674,12 @@ object (self)
         | None -> ""
     end;
     check_env#set_active (entry_env#text <> "");
+    entry_ocfg#set_text begin
+      match List_opt.find (fun res -> Str.string_match Oebuild.re_ocfg res 0) tg.restrictions with
+        | Some res -> Str.matched_group 1 res
+        | None -> ""
+    end;
+    check_ocfg#set_active (entry_ocfg#text <> "");
     (*  *)
     check_is_fl_package#set_active tg.is_fl_package;
     let win32_sensitive = true (*Sys.win32 && tg.opt && tg.target_type = Executable && Build_script_util.ccomp_type = Some "msvc"*) in

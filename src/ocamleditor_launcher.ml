@@ -42,7 +42,9 @@ let launch () =
   let cmd = "CD " ^  dir ^ " && CMD /K ocamleditor.bat" in (* rimane *)
   let cmd = "CD " ^  dir ^ " && ocamleditor.bat" in (* rimane *)*)
   let cmd =
-    if Sys.win32 then "START /D" ^ (Filename.quote dir) ^ " /B ocamleditor.bat"
+    if Sys.win32 then
+      if Ocaml_config.is_mingw then "START /D" ^ (Filename.quote dir) ^ " /B ocamleditor-mingw.bat"
+      else "START /D" ^ (Filename.quote dir) ^ " /B ocamleditor.bat"
     else Filename.concat dir "ocamleditor"
   in
   if Sys.win32 then Unix.open_process_in cmd |> Unix.close_process_in |> ignore

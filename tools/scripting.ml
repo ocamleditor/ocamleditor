@@ -26,16 +26,26 @@
 #use "../src/common/cmd.ml"
 #use "../src/common/miscellanea.ml"
 
-exception Script_error of int
+exception Script_error of string * int
 
 let (//) = Filename.concat
 let is_win32 = Sys.os_type = "Win32"
+let path_concat str =
+  List.fold_left Filename.concat "" (Str.split (Str.regexp "/") str);;
+let (!!) = path_concat
 
 (** run *)
 let run cmd =
   printf "%s\n%!" cmd;
   let exit_code = Sys.command cmd in
-  if exit_code <> 0 then (raise (Script_error exit_code))
+  if exit_code <> 0 then (raise (Script_error (cmd, exit_code)))
+
+(* sys_command *)
+let sys_command cmd =
+  let cmd = String.concat " " cmd in
+  printf "%s\n%!" cmd;
+  let exit_code = Sys.command cmd in
+  if exit_code <> 0 then (raise (Script_error (cmd, exit_code)))
 
 (** mkdir *)
 let mkdir d = printf "mkdir %s\n%!" d; Unix.mkdir d 0o755
@@ -95,6 +105,22 @@ let substitute ~filename ?(regexp=false) repl =
       | End_of_file -> finally()
       | ex -> finally(); raise ex
   end;;
+
+(** get_command_output *)
+let get_command_output command =
+  let ch = Unix.open_process_in command in
+  set_binary_mode_in ch false;
+  let output = ref [] in
+  try
+    while true do output := (input_line ch) :: !output done;
+    assert false
+  with End_of_file -> begin
+    ignore (Unix.close_process_in ch);
+    List.rev !output
+  end | e -> begin
+    ignore (Unix.close_process_in ch);
+    raise e
+  end
 
 (** Main *)
 open Arg

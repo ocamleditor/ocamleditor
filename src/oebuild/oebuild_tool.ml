@@ -124,6 +124,7 @@ let main () =
                                    IS_WIN32                  : O.S. type is Win32
                                    IS_CYGWIN                 : O.S. type is Cygwin
                                    ENV(name[{=|<>}value])    : Check environment variable
+                                   OCAML(name[{=|<>}value])  : Check OCaml configuration property
                                    NATIVE                    : Native compilation is supported\n");
       ("-output-name", Set print_output_name,           " (undocumented)");
       ("-msvc",        Set ms_paths,                    " (undocumented)");

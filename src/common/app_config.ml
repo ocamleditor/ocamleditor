@@ -54,8 +54,6 @@ Str.split (Str.regexp ",") ",OCAMLEDITORPARAM=debug=2,record_backtrace=1,";;
 Str.split (Str.regexp ",") ",OCAMLEDITORPARAM=debug=2,,record_backtrace=1,,";;
 *)
 
-let is_mingw = try ignore (Sys.getenv "OCAMLEDITOR_MINGW"); true with Not_found -> false
-
 let application_param =
   try
     List.fold_left begin fun acc x ->
@@ -76,7 +74,7 @@ let user_home =
 
 let ocamleditor_user_home =
   let dirname =
-    if is_mingw then ".ocamleditor.mingw"
+    if Ocaml_config.is_mingw then ".ocamleditor.mingw"
     else if application_debug then ".ocamleditor.test"
     else ".ocamleditor"
   in

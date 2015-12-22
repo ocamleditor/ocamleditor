@@ -25,6 +25,18 @@ open Printf
 
 let redirect_stderr = if Sys.os_type = "Win32" then " 2>NUL" else " 2>/dev/null"
 
+
+let read_ocaml_config () =
+  let conf = Printf.kprintf Cmd.exec_lines "ocamlc -config" in
+  let re = Str.regexp ": " in
+  List.map (fun l -> match Str.split re l with [n;v] -> n, v | [n] -> n, "" | _ -> assert false) conf
+
+let cache = read_ocaml_config()
+
+let get name = List.assoc name cache
+
+let is_mingw = try get "system" = "mingw" with Not_found -> false
+
 let putenv_ocamllib value =
   match Sys.os_type with
     | "Win32" ->
@@ -95,7 +107,7 @@ let can_compile_native ?ocaml_home () =
   match compiler with
     | Some compiler ->
       let cmd = sprintf "%s -o %s %s%s" compiler exename filename
-        (if App_config.application_debug then redirect_stderr else "")
+        ((*if App_config.application_debug then redirect_stderr else*) "")
       in
       result := (Sys.command cmd) = 0;
       if Sys.file_exists filename then (Sys.remove filename);

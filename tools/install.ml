@@ -30,13 +30,13 @@ let prefix   = ref "/usr/local"
 let ext      = if is_win32 then ".exe" else ""
 let gmisclib = ref false
 let nsis     = ref false
-let mingw    = ref (try ignore (Sys.getenv "OCAMLEDITOR_MINGW"); true with Not_found -> false)
+let is_mingw = List.exists ((=) "system: mingw") (get_command_output "ocamlc -config")
 
 let install () =
   if !gmisclib then begin
     let libname = "gmisclib" in
     let cmas = ["../" ^ libname] in
-    let ar = String.concat " " (List.map (fun x -> x ^ (if Sys.os_type = "Win32" && not !mingw then ".lib" else ".a")) cmas) in
+    let ar = String.concat " " (List.map (fun x -> x ^ (if Sys.os_type = "Win32" && not is_mingw then ".lib" else ".a")) cmas) in
     let find ext =
       let files = Array.to_list (Sys.readdir ".") in
       let files = List.filter (fun x -> Filename.check_suffix x ext) files in
@@ -60,30 +60,35 @@ let install () =
 To install OCamlEditor, please use the included ocamleditor.nsi script.
 You will need the free NSIS install system (http://nsis.sourceforge.net).";
   end else begin
-    let exe = if Sys.os_type = "Win32" then ".exe" else "" in
+    let exe, cpr, cp = if Sys.win32 then ".exe", "XCOPY /S/Y", "XCOPY /Y" else "", "cp -vr", "cp -v" in
     let icons = sprintf "%s/share/ocamleditor/icons" !prefix in
     mkdir_p icons;
-    kprintf run "cp -vr ../icons/* %s" icons;
+    sys_command [cpr; !!"../icons/*"; !!icons];
     if Sys.readdir "../plugins" <> [||] then begin
       let plugins = sprintf "%s/share/ocamleditor/plugins" !prefix in
       mkdir_p plugins;
-      kprintf run "cp -vr ../plugins/* %s" plugins
+      sys_command [cpr; !!"../plugins/*"; !!plugins]
     end;
     let bin = sprintf "%s/bin" !prefix in
     mkdir_p bin;
     let filename = if Sys.file_exists ("ocamleditor.opt" ^ exe) then ("ocamleditor.opt" ^ exe) else ("ocamleditor" ^ exe) in
-    kprintf run "cp -v %s %s/ocamleditor%s" filename bin exe;
+    if Sys.win32 then begin
+      let fn = !!(bin^"/ocamleditor"^exe) in
+      if Sys.file_exists fn then Sys.remove fn;
+      sys_command [cp; filename; !!bin];
+      Sys.rename (!!(bin^"/"^filename)) (!!(bin^"/ocamleditor"^exe))
+    end else (sys_command [cp; filename; !!(bin^"/ocamleditor"^exe)]);
     let filename = if Sys.file_exists ("oebuild/oebuild.opt" ^ exe) then ("oebuild/oebuild.opt" ^ exe) else ("oebuild/oebuild" ^ exe) in
-    kprintf run "cp -v %s %s" filename bin;
-    if Sys.win32 && !mingw then begin
+    sys_command [cp; !!filename; !!bin];
+    if Sys.win32 && is_mingw then begin
       let filename = if Sys.file_exists ("oeproc/oeproc.opt" ^ exe) then ("oeproc/oeproc.opt" ^ exe) else ("oeproc/oeproc" ^ exe) in
-      kprintf run "cp -v %s %s" filename bin;
+      sys_command [cp; !!filename; !!bin];
       let basename = "ocamleditor-mingw.bat" in
-      kprintf run "cp -v % %s" basename bin;
-      Printf.printf "Please edit %s\\%s to match your system configuration.\n%!" bin basename;
+      sys_command [cp; basename; !!bin];
+      Printf.eprintf "\n\n  Please edit\n\n      %s\\%s\n\n  to match your system configuration.\n\n%!" (!!bin) basename;
     end;
     let filename = "ocamleditor_launch" ^ exe in
-    if Sys.file_exists filename then kprintf run "cp -v %s %s" filename bin;
+    if Sys.file_exists filename then sys_command [cp; filename; !!bin];
   end;;
 
 let _ = main ~dir:"../src" ~default_target:install ~options:[

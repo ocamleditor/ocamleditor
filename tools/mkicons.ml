@@ -32,7 +32,7 @@ let mkicons () =
   let files = Array.to_list (Sys.readdir icons) in
   let files = List.filter (fun x -> Filename.check_suffix x ".png") files in
   let cat = if Sys.os_type = "Win32" then "TYPE" else "cat" in
-  ignore (kprintf run "%s %s > %s" cat (".."//"header") ("icons"//"icons.ml"));
+  sys_command [cat; (".."//"header"); ">"; ("icons"//"icons.ml")];
   let filename = "icons/icons.ml" in
   let ochan = open_out_gen [Open_append; Open_binary] 0o644 filename in
   try

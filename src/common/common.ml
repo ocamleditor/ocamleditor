@@ -23,7 +23,7 @@
 open Miscellanea
 open Quote
 open Cmd_line_args
-open Ocaml_config
+open App_config
 open File_util
 open List_opt
 open Argc

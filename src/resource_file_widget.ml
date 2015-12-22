@@ -60,7 +60,7 @@ class widget ~project ~target ?packing () =
   let entry_file_version_4 = GEdit.spin_button ~width:50 ~numeric:true ~digits:0 ~rate:1.0 ~adjustment ~packing:box_file_version#pack () in
   (*  *)
   let _ = incr i in
-  let vbox = GPack.vbox ~spacing:5 ~packing:(table#attach ~top:!i ~left:0 ~expand:`BOTH ~right:2) ~show:(not App_config.is_mingw) () in
+  let vbox = GPack.vbox ~spacing:5 ~packing:(table#attach ~top:!i ~left:0 ~expand:`BOTH ~right:2) ~show:(not Ocaml_config.is_mingw) () in
   let _ = GMisc.label ~text:"Icons:" ~xalign:0.0 ~packing:vbox#pack () in
   let hbox = GPack.hbox ~spacing:8 ~packing:vbox#add () in
   let sw = GBin.scrolled_window ~shadow_type:`IN ~hpolicy:`AUTOMATIC ~vpolicy:`AUTOMATIC ~packing:hbox#add () in
@@ -171,7 +171,7 @@ object (self)
   method save () = saved#call self#get
 
   method private load_icon_from_file iconame filename =
-    if not App_config.is_mingw && Sys.file_exists filename then begin
+    if not Ocaml_config.is_mingw && Sys.file_exists filename then begin
       let size = (Unix.stat filename).Unix.st_size in
       if size > 0 then begin
         let visual_size = 64 in

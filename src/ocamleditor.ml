@@ -23,7 +23,7 @@
 
 (** fade_out *)
 let fade_out window =
-  if App_config.is_mingw then begin
+  if Ocaml_config.is_mingw then begin
     GMain.Timeout.add ~ms:5 ~callback:begin fun () ->
       let opa = max 0. (window#opacity -. 0.1) in
       if opa > 0. then begin

@@ -555,10 +555,38 @@ let distclean () =
 ;;
 
 let re_fl_pkg_exist = Str.regexp "\\(HAVE_FL_PKG\\|FINDLIB\\)(\\([-A-Za-z0-9_., ]+\\))"
-let s_env_body = "\\(\\([A-Za-z0-9_-]+\\)\\(=\\|<>\\|!=\\)\\(.*\\)\\)"
-let re_env_body = Str.regexp s_env_body
-let re_env = Str.regexp ("ENV(" ^ s_env_body ^ ")")
+
+let s_prop_body = "\\(\\([A-Za-z0-9_-]+\\)\\(=\\|<>\\|!=\\|:\\)\\(.*\\)\\)"
+let re_prop_body = Str.regexp s_prop_body
+let re_env = Str.regexp ("ENV(" ^ s_prop_body ^ ")")
+let re_ocfg = Str.regexp ("OCAML(" ^ s_prop_body ^ ")")
+
 let re_comma = Str.regexp " *, *"
+
+let check_prop expr get =
+  (*
+     [1] ENV(NAME)        <=> NAME is defined
+     [2] ENV(NAME=VALUE)  <=> NAME is defined and is equal to VALUE
+     [3] ENV(NAME<>VALUE) <=> NAME is defined and is not equal to VALUE or NAME is not defined
+     [4] ENV()            <=> false
+  *)
+  try
+    let name = String.trim (Str.matched_group 2 expr) in
+    let op, is_eq =
+      try
+        let gr = Str.matched_group 3 expr in
+        if gr = "=" || gr = ":" then Some (=), true else Some (<>), false
+      with Not_found -> None, false
+    in
+    begin
+      match op with
+        | Some op ->
+          let value = try String.trim (Str.matched_group 4 expr) with Not_found -> "" in
+          (try op (get name) value (* [2] *) with Not_found (* name is not defined. *) -> not is_eq) (* [3] *)
+        | None -> (try get name |> ignore; true with Not_found -> false) (* [1] *)
+    end;
+  with Not_found (* name (matched_group) *) -> false (* [4] *)
+
 
 (** check_restrictions *)
 let check_restrictions restr =
@@ -567,28 +595,8 @@ let check_restrictions restr =
     | "IS_WIN32" -> Sys.os_type = "Win32"
     | "IS_CYGWIN" -> Sys.os_type = "Cygwin"
     | "HAVE_NATIVE" | "HAS_NATIVE" | "NATIVE" -> Ocaml_config.can_compile_native () <> None (* should be cached *)
-    | res when Str.string_match re_env res 0 ->
-      (*
-         [1] ENV(NAME)        <=> NAME is defined
-         [2] ENV(NAME=VALUE)  <=> NAME is defined and is equal to VALUE
-         [3] ENV(NAME<>VALUE) <=> NAME is defined and is not equal to VALUE or NAME is not defined
-         [4] ENV()            <=> false
-      *)
-      begin
-        try
-          let name = Str.matched_group 2 res in
-          let op, is_eq =
-            try if (Str.matched_group 3 res) = "=" then Some (=), true else Some (<>), false with Not_found -> None, false
-          in
-          begin
-            match op with
-              | Some op ->
-                let value = try Str.matched_group 4 res with Not_found -> "" in
-                (try op (Sys.getenv name) value (* [2] *) with Not_found (* name is not defined in the env. *) -> not is_eq) (* [3] *)
-              | None -> (try Sys.getenv name |> ignore; true with Not_found -> false) (* [1] *)
-          end;
-        with Not_found (* name (matched_group) *) -> false (* [4] *)
-      end;
+    | res when Str.string_match re_env res 0 -> check_prop res Sys.getenv
+    | res when Str.string_match re_ocfg res 0 -> check_prop res Ocaml_config.get
     | res when Str.string_match re_fl_pkg_exist res 0 ->
       let packages = Str.matched_group 2 res in
       let packages = Str.split re_comma packages in
