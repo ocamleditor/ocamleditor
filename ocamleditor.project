@@ -840,13 +840,13 @@
       <arg id="0" type="Bool" key="-record-backtrace" pass="-key value" command="build">
         <task/>
         <mode>&lt;ADD&gt;</mode>
-        <default type="bool">true</default>
+        <default type="bool" override="true">true</default>
         <doc>Turn recording of exception backtraces on or off</doc>
       </arg>
       <arg id="1" type="Flag" key="-use-modified-gtkThread" pass="-key" command="build">
         <task/>
         <mode>&lt;ADD&gt;</mode>
-        <default type="flag">false</default>
+        <default type="flag" override="true">false</default>
         <doc>Set this flag if you have Lablgtk-2.14.2 or earlier
                            and you want to use the included modified version of 
                            gtkThread.ml to reduce CPU consumption</doc>
@@ -854,32 +854,32 @@
       <arg id="2" type="String" key="-prefix" pass="-key value" command="install">
         <task target_id="13" task_name="Install OCamlEditor"/>
         <mode>&lt;ADD&gt;</mode>
-        <default type="string">/usr/local</default>
-        <doc>Installation prefix (Unix only)</doc>
+        <default type="string" override="false">/usr/local</default>
+        <doc>Installation prefix</doc>
       </arg>
       <arg id="3" type="Flag" key="-gmisclib" pass="-key" command="install">
         <task target_id="13" task_name="Install OCamlEditor"/>
         <mode>&lt;ADD&gt;</mode>
-        <default type="flag">false</default>
+        <default type="flag" override="true">false</default>
         <doc>Install the gmisclib library (miscellaneous widgets 
              based on LablGtk2)</doc>
       </arg>
       <arg id="4" type="Flag" key="-nsis" pass="-key" command="install">
         <task target_id="13" task_name="Install OCamlEditor"/>
         <mode>&lt;ADD&gt;</mode>
-        <default type="flag">false</default>
+        <default type="flag" override="true">false</default>
         <doc>Create a Win32 installer with NSIS</doc>
       </arg>
       <arg id="5" type="String" key="-prefix" pass="-key value" command="uninstall">
         <task target_id="13" task_name="Uninstall OCamlEditor"/>
         <mode>&lt;ADD&gt;</mode>
-        <default type="string">/usr/local</default>
-        <doc>Uninstallation prefix (Unix only)</doc>
+        <default type="string" override="false">/usr/local</default>
+        <doc>Uninstallation prefix</doc>
       </arg>
       <arg id="6" type="Flag" key="-ver-1.8.0" pass="-key" command="uninstall">
         <task target_id="13" task_name="Uninstall OCamlEditor"/>
         <mode>&lt;ADD&gt;</mode>
-        <default type="flag">false</default>
+        <default type="flag" override="true">false</default>
         <doc>Uninstall OCamlEditor ver. 1.8.0 or earlier</doc>
       </arg>
     </args>

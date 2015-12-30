@@ -222,6 +222,7 @@ let run_output ~outname ~args =
   let args = List.rev args in
   if Sys.win32 then begin
     let cmd = Str.global_replace (Str.regexp "/") "\\\\" outname in
+    let cmd = Filename.current_dir_name // cmd in
     let args = String.concat " " args in
     ignore (kprintf command "%s %s" cmd args)
   end else begin

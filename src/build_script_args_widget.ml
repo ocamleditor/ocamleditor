@@ -101,6 +101,7 @@ class widget ~project ?packing () =
   let col_opt_arg       = cols#add Gobject.Data.string in
   let col_opt_cmd       = cols#add Gobject.Data.string in
   let col_opt_pass      = cols#add Gobject.Data.string in
+  let col_opt_def_ovr   = cols#add Gobject.Data.boolean in
   let col_opt_def_flag  = cols#add Gobject.Data.boolean in
   let col_opt_def_value = cols#add Gobject.Data.string in
   let model             = GTree.list_store cols in
@@ -113,16 +114,20 @@ class widget ~project ?packing () =
   let rend_pass_flag    = GTree.cell_renderer_text [`EDITABLE false] in
   let rend_pass         = GTree.cell_renderer_combo [`EDITABLE true; `HAS_ENTRY false; `TEXT_COLUMN col_arg; `MODEL (Some model_pass#coerce)] in
   let rend_def_flag     = GTree.cell_renderer_toggle [`ACTIVATABLE true] in
+  let rend_def_ovr      = GTree.cell_renderer_toggle [`ACTIVATABLE true] in
   let rend_def_string   = GTree.cell_renderer_text [`XALIGN 0.5; `EDITABLE true] in
   let rend_def_bool     = GTree.cell_renderer_combo [`XALIGN 0.5; `EDITABLE true; `HAS_ENTRY false; `TEXT_COLUMN col_bool; `MODEL (Some model_bool#coerce)] in
   let vc_opt_type       = GTree.view_column ~renderer:(rend_type, ["text", col_opt_type]) ~title:"Type" () in
   let vc_opt_name       = GTree.view_column ~renderer:(rend_name, ["text", col_opt_key]) ~title:"Key" () in
   let vc_opt_doc        = GTree.view_column ~renderer:(rend_doc, ["text", col_opt_doc]) ~title:"Description" () in
+  let vc_opt_def_ovr    = GTree.view_column ~title:"Override\ndefault\nvalue" () in
   let vc_opt_def        = GTree.view_column ~title:"Default value" () in
+  let _                 = vc_opt_def_ovr#pack ~expand:true rend_def_ovr in
   let _                 = vc_opt_def#pack ~expand:true rend_def_flag in
   let _                 = vc_opt_def#pack ~expand:true rend_def_string in
   let _                 = vc_opt_def#pack ~expand:true rend_def_bool in
   let _                 = vc_opt_def#add_attribute rend_def_flag "active" col_opt_def_flag in
+  let _                 = vc_opt_def_ovr#add_attribute rend_def_ovr "active" col_opt_def_ovr in
   let _                 = vc_opt_def#add_attribute rend_def_string "text" col_opt_def_value in
   let _                 = vc_opt_def#add_attribute rend_def_bool "text" col_opt_def_value in
   let vc_opt_et_name    = GTree.view_column ~renderer:(rend_et_name, ["text", col_opt_et_name]) ~title:"For task..." () in
@@ -142,6 +147,7 @@ class widget ~project ?packing () =
   let _                 = view#append_column vc_opt_type in
   let _                 = view#append_column vc_opt_name in
   let _                 = view#append_column vc_opt_doc in
+  let _                 = view#append_column vc_opt_def_ovr in
   let _                 = view#append_column vc_opt_def in
   let _                 = view#append_column vc_opt_et_name in
   let _                 = view#append_column vc_opt_arg in
@@ -152,6 +158,7 @@ class widget ~project ?packing () =
   let _                 = vc_opt_doc#set_min_width 250 in
   let _                 = vc_opt_name#set_resizable true in
   let _                 = vc_opt_doc#set_resizable true in
+  let _                 = vc_opt_def_ovr#set_resizable true in
   let _                 = vc_opt_def#set_resizable true in
   let _                 = vc_opt_et_name#set_resizable true in
   let _                 = vc_opt_arg#set_resizable true in
@@ -226,6 +233,10 @@ object (self)
       let row = model#get_iter path in
       model#set ~row ~column:col_opt_def_flag (not (model#get ~row ~column:col_opt_def_flag));
     end);
+    ignore (rend_def_ovr#connect#toggled ~callback:begin fun path ->
+      let row = model#get_iter path in
+      model#set ~row ~column:col_opt_def_ovr (not (model#get ~row ~column:col_opt_def_ovr));
+    end);
     ignore (rend_def_bool#connect#edited ~callback:begin fun path text ->
       let row = model#get_iter path in
       model#set ~row ~column:col_opt_def_value text;
@@ -241,9 +252,10 @@ object (self)
     vc_opt_def#set_cell_data_func rend_def_flag begin fun _ row ->
       let is_flag = self#is_flag row in
       let is_bool = self#is_bool row in
-      rend_def_flag#set_properties [`ACTIVATABLE is_flag; `VISIBLE is_flag];
-      rend_def_string#set_properties [`EDITABLE (not is_flag && not is_bool); `VISIBLE (not is_flag && not is_bool)];
-      rend_def_bool#set_properties [`EDITABLE is_bool; `VISIBLE is_bool];
+      let is_ovr = model#get ~row ~column:col_opt_def_ovr in
+      rend_def_flag#set_properties [`ACTIVATABLE is_flag; `VISIBLE (is_ovr && is_flag)];
+      rend_def_string#set_properties [`EDITABLE (not is_flag && not is_bool); `VISIBLE (is_ovr && not is_flag && not is_bool)];
+      rend_def_bool#set_properties [`EDITABLE is_bool; `VISIBLE (is_ovr && is_bool)];
     end;
     vc_opt_pass#set_cell_data_func rend_pass_flag begin fun _ row ->
       let is_flag = self#is_flag row in
@@ -332,6 +344,7 @@ object (self)
   method set args =
     List.iter begin fun arg ->
       let row = model#append () in
+      model#set ~row ~column:col_opt_def_ovr arg.bsa_default_override;
       model#set ~row ~column:col_opt_type (string_of_type arg.bsa_type);
       model#set ~row ~column:col_opt_key arg.bsa_key;
       model#set ~row ~column:col_opt_doc arg.bsa_doc;
@@ -369,16 +382,17 @@ object (self)
             let arg = model#get ~row ~column:col_opt_arg in
             if arg = string_of_add then `add else (`replace arg)
           in
-          arguments := {
-            bsa_id      = !count;
-            bsa_type    = bsa_type;
-            bsa_key     = (model#get ~row ~column:col_opt_key);
-            bsa_doc     = (model#get ~row ~column:col_opt_doc);
-            bsa_default = bsa_default;
-            bsa_task    = bc_et;
-            bsa_mode    = bsa_mode;
-            bsa_pass    = (pass_of_string (model#get ~row ~column:col_opt_pass));
-            bsa_cmd     = (Build_script_command.command_of_string (model#get ~row ~column:col_opt_cmd))
+          arguments            := {
+            bsa_id               = !count;
+            bsa_type             = bsa_type;
+            bsa_key              = (model#get ~row ~column:col_opt_key);
+            bsa_doc              = (model#get ~row ~column:col_opt_doc);
+            bsa_default_override = (model#get ~row ~column:col_opt_def_ovr);
+            bsa_default          = bsa_default;
+            bsa_task             = bc_et;
+            bsa_mode             = bsa_mode;
+            bsa_pass             = (pass_of_string (model#get ~row ~column:col_opt_pass));
+            bsa_cmd              = (Build_script_command.command_of_string (model#get ~row ~column:col_opt_cmd))
           } :: !arguments;
           incr count;
           false

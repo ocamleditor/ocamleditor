@@ -22,15 +22,16 @@
 
 
 type t = {
-  bsa_id      : int;
-  bsa_type    : bsa_type;
-  bsa_key     : string;
-  bsa_doc     : string;
-  bsa_default : [ `flag of bool | `bool of bool | `string of string ];
-  bsa_task    : (Target.t * Task.t) option;
-  bsa_mode    : [`add | `replace of string];
-  bsa_cmd     : Build_script_command.t;
-  bsa_pass    : [ `key | `value | `key_value ];
+  bsa_id               : int;
+  bsa_type             : bsa_type;
+  bsa_key              : string;
+  bsa_doc              : string;
+  bsa_default_override : bool;
+  bsa_default          : [ `flag of bool | `bool of bool | `string of string ];
+  bsa_task             : (Target.t * Task.t) option;
+  bsa_mode             : [`add | `replace of string];
+  bsa_cmd              : Build_script_command.t;
+  bsa_pass             : [ `key | `value | `key_value ];
 }
 and bsa_type = Flag | Bool | String
 

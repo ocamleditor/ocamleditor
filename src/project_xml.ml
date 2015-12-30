@@ -149,7 +149,8 @@ let write proj =
                                       Xml.Element ("mode", [], [Xml.PCData
                                                                   (match arg.Build_script_args.bsa_mode with `add -> Build_script_args.string_of_add | `replace x -> x)]);
                                       Xml.Element ("default", [
-                                          "type", (match arg.Build_script_args.bsa_default with `flag _ -> "flag" | `bool _ -> "bool" | `string _ -> "string")
+                                          "type", (match arg.Build_script_args.bsa_default with `flag _ -> "flag" | `bool _ -> "bool" | `string _ -> "string");
+                                          "override", (string_of_bool arg.Build_script_args.bsa_default_override);
                                         ], [Xml.PCData
                                               (match arg.Build_script_args.bsa_default with `flag x -> string_of_bool x | `bool x -> string_of_bool x | `string x -> x)]);
                                       Xml.Element ("doc", [], [Xml.PCData arg.Build_script_args.bsa_doc]);
@@ -202,10 +203,11 @@ let xml_bs_args proj node =
   let open Prj in
   let count_bsa_id = ref 0 in
   Xml.map begin fun arg ->
-    let bsa_doc     = ref "" in
-    let bsa_mode    = ref `add in
-    let bsa_default = ref (`flag false) in
-    let bsa_task    = ref (None, None) in
+    let bsa_doc              = ref "" in
+    let bsa_mode             = ref `add in
+    let bsa_default_override = ref true in
+    let bsa_default          = ref (`flag false) in
+    let bsa_task             = ref (None, None) in
     Xml.iter begin fun tp ->
       match Xml.tag tp with
         | "doc" -> bsa_doc := value tp
@@ -216,6 +218,7 @@ let xml_bs_args proj node =
               | x -> `replace x
           end
         | "default" ->
+          bsa_default_override := attrib tp "override" bool_of_string !bsa_default_override;
           bsa_default := begin
             match fattrib tp "type" (fun x -> x) (fun () -> "string") with
               | "flag" -> `flag (bool_of_string (value tp))
@@ -232,19 +235,20 @@ let xml_bs_args proj node =
         | _ -> ()
     end arg;
     {Build_script_args.
-      bsa_id      = fattrib arg "id" int_of_string (fun () -> incr count_bsa_id; !count_bsa_id);
-      bsa_type    = fattrib arg "type" Build_script_args.type_of_string (fun _ -> Build_script_args.String);
-      bsa_key     = attrib arg "key" (fun x -> x) "";
-      bsa_doc     = !bsa_doc;
-      bsa_mode    = !bsa_mode;
-      bsa_default = !bsa_default;
-      bsa_task    = begin
+      bsa_id               = fattrib arg "id" int_of_string (fun () -> incr count_bsa_id; !count_bsa_id);
+      bsa_type             = fattrib arg "type" Build_script_args.type_of_string (fun _ -> Build_script_args.String);
+      bsa_key              = attrib arg "key" (fun x -> x) "";
+      bsa_doc              = !bsa_doc;
+      bsa_mode             = !bsa_mode;
+      bsa_default_override = !bsa_default_override;
+      bsa_default          = !bsa_default;
+      bsa_task             = begin
         match !bsa_task with
           | Some bc, Some et -> Some (bc, et)
           | _ -> None
       end;
-      bsa_pass    = fattrib arg "pass" Build_script_args.pass_of_string (fun _ -> `key_value);
-      bsa_cmd    = fattrib arg "command" Build_script_command.command_of_string (fun _ -> `Show);
+      bsa_pass             = fattrib arg "pass" Build_script_args.pass_of_string (fun _ -> `key_value);
+      bsa_cmd              = fattrib arg "command" Build_script_command.command_of_string (fun _ -> `Show);
     }
   end node;;
 

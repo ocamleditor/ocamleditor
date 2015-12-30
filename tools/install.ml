@@ -26,11 +26,18 @@
 
 open Printf
 
-let prefix   = ref "/usr/local"
+let ocaml_config = get_command_output "ocamlc -config"
 let ext      = if is_win32 then ".exe" else ""
 let gmisclib = ref false
 let nsis     = ref false
-let is_mingw = List.exists ((=) "system: mingw") (get_command_output "ocamlc -config")
+let is_mingw = List.exists ((=) "system: mingw") ocaml_config
+let prefix   = ref (
+    if is_mingw then begin
+      let re = Str.regexp ": " in
+      let conf = List.map (fun l -> match Str.split re l with [n;v] -> n, v | [n] -> n, "" | _ -> assert false) ocaml_config in
+      let lib = List.assoc "standard_library" conf in
+      Filename.dirname lib
+    end else "/usr/local")
 
 let install () =
   if !gmisclib then begin
@@ -93,7 +100,7 @@ You will need the free NSIS install system (http://nsis.sourceforge.net).";
   end;;
 
 let _ = main ~dir:"../src" ~default_target:install ~options:[
-  "-prefix",   Set_string prefix,   (sprintf " Installation prefix (Unix only, default is %s)" !prefix);
+  "-prefix",   Set_string prefix,   (sprintf " Installation prefix (default is %s)" !prefix);
   "-gmisclib", Set gmisclib,        (sprintf " Install gmisclib");
   "-nsis",     Set nsis,            (sprintf " Create a Win32 installer with NSIS");
 ] ()

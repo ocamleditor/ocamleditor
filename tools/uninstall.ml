@@ -26,7 +26,15 @@
 
 open Printf
 
-let prefix     = ref "/usr/local"
+let ocaml_config = get_command_output "ocamlc -config"
+let is_mingw = List.exists ((=) "system: mingw") ocaml_config
+let prefix   = ref (
+    if is_mingw then begin
+      let re = Str.regexp ": " in
+      let conf = List.map (fun l -> match Str.split re l with [n;v] -> n, v | [n] -> n, "" | _ -> assert false) ocaml_config in
+      let lib = List.assoc "standard_library" conf in
+      Filename.dirname lib
+    end else "/usr/local")
 let ver_1_8_0  = ref false
 let ext        = if is_win32 then ".exe" else ""
 
@@ -46,6 +54,6 @@ let uninstall () =
   end else prerr_endline "This script is not available under Windows";;
 
 let _ = main ~default_target:uninstall ~options:[
-  "-prefix", Set_string prefix, (sprintf " Installation prefix (Unix only, default is %s)" !prefix);
+  "-prefix", Set_string prefix, (sprintf " Installation prefix (default is %s)" !prefix);
   "-ver-1.8.0", Set ver_1_8_0,  (sprintf " Uninstall OCamlEditor version 1.8.0");
 ] ()

@@ -71,10 +71,8 @@ let print_targets ochan targets external_tasks =
 
 (** ident_of_arg *)
 let ident_of_arg =
-  let normalize_ident =
-    let re = Str.regexp "[-.]" in
-    Str.global_replace re "_"
-  in
+  let re = Str.regexp "[-.]" in
+  let normalize_ident = Str.global_replace re "_" in
   fun arg -> sprintf "arg_%d_%s" arg.bsa_id (normalize_ident (Str.string_after arg.bsa_key 1));;
 
 (** print_add_args *)
@@ -90,12 +88,13 @@ let print_add_args bc et args =
               in
               let arg =
                 match arg.bsa_pass with
-                  | `key -> sprintf "\n                                %s && !%s, \"%s\"" condition (ident_of_arg arg) arg.bsa_key
-                  | `value -> sprintf "\n                                %s, \"%s\"" condition (ident_of_arg arg)
-                  | `key_value when arg.bsa_type = Bool -> sprintf "\n                                %s, (sprintf \"%s %%b\" !%s)"
-                    condition arg.bsa_key (ident_of_arg arg)
-                  | `key_value -> sprintf "\n                                %s, (sprintf \"%s %%S\" !%s)"
-                    condition arg.bsa_key (ident_of_arg arg)
+                  | `key -> sprintf "\n                                %s && (!%s = Some true), \"%s\"" condition (ident_of_arg arg) arg.bsa_key
+                  | `value when arg.bsa_type = Bool -> sprintf "\n                                %s, (match !%s with Some x -> string_of_bool x | _ -> \"\")" condition (ident_of_arg arg)
+                  | `value -> sprintf "\n                                %s, (match !%s with Some x -> x | _ -> \"\")" condition (ident_of_arg arg)
+                  | `key_value when arg.bsa_type = Bool -> sprintf "\n                                %s, (match !%s with Some x -> sprintf \"%s %%b\" x | _ -> \"\")"
+                    condition (ident_of_arg arg) arg.bsa_key
+                  | `key_value -> sprintf "\n                                %s, (match !%s with Some x -> sprintf \"%s %%S\" x | _ -> \"\")"
+                    condition (ident_of_arg arg) arg.bsa_key
               in
               arg :: acc
             | `replace _ -> acc (* TODO:  *)
@@ -172,7 +171,7 @@ let print_cmd_line_args ochan project =
         | `bool x -> string_of_bool x
         | `string x -> sprintf "%S" x
     in
-    fprintf ochan "let %s = ref %s\n" (ident_of_arg arg) default;
+    fprintf ochan "let %s = ref %s\n" (ident_of_arg arg) (if arg.bsa_default_override then "(Some " ^ default ^ ")" else "None");
   end args;
   (*  *)
   let cargs = List.map (fun a -> a.bsa_cmd, a) args in
@@ -183,15 +182,21 @@ let print_cmd_line_args ochan project =
     List.iter begin fun arg ->
       let typ =
         match arg.bsa_type with
-          | Flag -> sprintf "Set %s" (ident_of_arg arg)
-          | Bool -> sprintf "Bool (fun x -> %s := x)" (ident_of_arg arg)
-          | String -> sprintf "Set_string %s" (ident_of_arg arg)
+          | Flag -> sprintf "Bool (fun x -> %s := Some x)" (ident_of_arg arg)
+          | Bool -> sprintf "Bool (fun x -> %s := Some x)" (ident_of_arg arg)
+          | String -> sprintf "String (fun x -> %s := Some x)" (ident_of_arg arg)
       in
       let default_value =
-        match arg.bsa_default with
-          | `flag _ -> sprintf "\" ^ (sprintf \"%%s\" (if !%s then \"Set\" else \"Not Set\")) ^ \"" (ident_of_arg arg)
-          | `bool _ -> sprintf "\" ^ (string_of_bool !%s) ^ \"" (ident_of_arg arg)
-          | `string _ -> sprintf "\" ^ !%s ^ \"" (ident_of_arg arg)
+        if arg.bsa_default_override then
+          match arg.bsa_default with
+            | `flag _ -> sprintf "\" ^ (match !%s with Some x -> sprintf \"%%s\" (if x then \"Set\" else \"Not Set\") | _ -> failwith \"build_script_printer (flag)\") ^ \"" (ident_of_arg arg)
+            | `bool _ -> sprintf "\" ^ (match !%s with Some x -> string_of_bool x | _ ->  failwith \"build_script_printer (bool)\") ^ \"" (ident_of_arg arg)
+            | `string _ -> sprintf "\" ^ (match !%s with Some x -> x | _ -> failwith \"build_script_printer (string)\") ^ \"" (ident_of_arg arg)
+        else begin
+          match arg.bsa_task with
+            | Some (_, task) -> sprintf "see \\\"%s %s\\\"" task.Task.et_cmd (String.concat " " (List.map (fun (c, x) -> if c then x else "") task.Task.et_args))
+            | _ -> "<unknown>"
+        end
       in
       fprintf ochan "    %S, %s,\n      (\" %s [default: %s]\");\n" arg.bsa_key typ (String.escaped arg.bsa_doc) default_value;
     end args;
