@@ -31,7 +31,7 @@ open Miscellanea
 class widget kind ~label ~project ?packing () =
   let vbox        = GPack.vbox ~spacing:13 ?packing () in
   let box         = GPack.vbox ~spacing:3 ~packing:vbox#pack () in
-  let _           = GMisc.label ~text:label ~xalign:0.0 ~packing:box#pack () in
+  let _           = GMisc.label ~markup:label ~xalign:0.0 ~packing:box#pack () in
   let cols        = new GTree.column_list in
   let col_pixbuf  = cols#add (Gobject.Data.gobject_by_name "GdkPixbuf") in
   let col_name    = cols#add Gobject.Data.string in

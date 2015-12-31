@@ -194,7 +194,7 @@ let print_cmd_line_args ochan project =
             | `string _ -> sprintf "\" ^ (match !%s with Some x -> x | _ -> failwith \"build_script_printer (string)\") ^ \"" (ident_of_arg arg)
         else begin
           match arg.bsa_task with
-            | Some (_, task) -> sprintf "see \\\"%s %s\\\"" task.Task.et_cmd (String.concat " " (List.map (fun (c, x) -> if c then x else "") task.Task.et_args))
+            | Some (_, task) -> sprintf "see \\\"%s %s -help\\\"" task.Task.et_cmd (String.concat " " (List.map (fun (c, x) -> if c then x else "") task.Task.et_args))
             | _ -> "<unknown>"
         end
       in
