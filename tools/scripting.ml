@@ -29,9 +29,10 @@
 exception Script_error of string * int
 
 let (//) = Filename.concat
-let is_win32 = Sys.os_type = "Win32"
+let is_win32 = Sys.os_type = "Win32" (* deprecated, use Sys.win32 *)
 let path_concat str =
-  List.fold_left Filename.concat "" (Str.split (Str.regexp "/") str);;
+  if Sys.win32 then List.fold_left Filename.concat "" (Str.split (Str.regexp "/") str)
+  else str;;
 let (!!) = path_concat
 
 (** run *)
