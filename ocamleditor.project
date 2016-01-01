@@ -7,7 +7,7 @@
   <name>ocamleditor</name>
   <author>Francesco Tovagliari</author>
   <description/>
-  <version>1.13.1</version>
+  <version>1.13.3</version>
   <autocomp enabled="true" delay="0.764" cflags=""/>
   <targets>
     <target name="common" default="false" id="4" sub_targets="" is_fl_package="false" subsystem="" readonly="false" visible="true" node_collapsed="false">
@@ -293,11 +293,9 @@
         <title>OCamlEditor</title>
         <company></company>
         <product>OCamlEditor</product>
-        <copyright>© 2014 Francesco Tovagliari</copyright>
-        <file_version>1.13.2.0</file_version>
-        <icons>
-          <icon>ocamleditor.ico</icon>
-        </icons>
+        <copyright>© 2016 Francesco Tovagliari</copyright>
+        <file_version>1.13.3.0</file_version>
+        <icons/>
       </resource_file>
     </target>
     <target name="ocamleditor-native" default="false" id="11" sub_targets="" is_fl_package="false" subsystem="" readonly="false" visible="true" node_collapsed="false">
@@ -597,12 +595,9 @@
         <title>OCamlEditor</title>
         <company></company>
         <product>OCamlEditor</product>
-        <copyright>© 2014 Francesco Tovagliari</copyright>
-        <file_version>1.13.2.0</file_version>
-        <icons>
-          <icon>ocamleditor2.ico</icon>
-          <icon>ocamleditor.ico</icon>
-        </icons>
+        <copyright>© 2016 Francesco Tovagliari</copyright>
+        <file_version>1.13.3.0</file_version>
+        <icons/>
       </resource_file>
     </target>
     <target name="tools" default="false" id="13" sub_targets="" is_fl_package="false" subsystem="Console" readonly="false" visible="true" node_collapsed="false">
