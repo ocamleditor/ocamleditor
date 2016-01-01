@@ -157,6 +157,10 @@ let edit ~browser ~group ~flags
   ignore (annot_type_tooltips#connect#toggled ~callback:(fun () ->
     browser#annot_type_set_tooltips annot_type_tooltips#active));
   annot_type_tooltips#add_accelerator ~group ~modi:[`MOD1] GdkKeysyms._F2 ~flags;
+  (** Show documentation *)
+  let show_doc_at_cursor = GMenu.image_menu_item ~label:"Show Documentation" ~packing:menu#add () in
+  show_doc_at_cursor#connect#activate ~callback:editor#show_doc_at_cursor |> ignore;
+  show_doc_at_cursor#add_accelerator ~group ~modi:[] GdkKeysyms._F7 ~flags;
   let _ = GMenu.separator_item ~packing:menu#add () in
   (** Eval in Toplevel *)
   let to_shell = GMenu.image_menu_item ~label:"Eval in Toplevel" ~packing:menu#add () in
@@ -443,7 +447,7 @@ let view ~browser ~group ~flags
   end);
   let rev_history = GMenu.image_menu_item
       ~image:(GMisc.image ~pixbuf:Icons.history ())#coerce
-      ~label:"Revision History" ~packing:menu#add () 
+      ~label:"Revision History" ~packing:menu#add ()
   in
   rev_history#connect#activate ~callback:begin fun () ->
     editor#with_current_page (fun page -> page#show_revision_history ())
@@ -485,14 +489,7 @@ let tools ~browser ~group ~flags items =
   let module_browser = GMenu.menu_item ~label:"Module Browser" ~packing:menu#add () in
   ignore (module_browser#connect#activate ~callback:(fun () ->
       browser#with_current_project (fun project ->
-          let page, search_string =
-            match editor#get_page `ACTIVE
-            with None -> None, None | Some page ->
-              let _ = page#buffer#select_ocaml_word ?pat:(Some Ocaml_word_bound.longid_sharp) () in
-              Some page, Some (page#buffer#selection_text());
-          in
-          Mbrowser_tool.append_to_messages ?page ?search_string ~project)));
-  module_browser#add_accelerator ~group ~modi:[] GdkKeysyms._F7 ~flags;
+          Mbrowser_tool.append_to_messages ?page:None ?search_string:None ~project)));
   let dialog_external_tools = GMenu.menu_item ~label:"External Tools" ~packing:menu#add () in
   ignore (dialog_external_tools#connect#activate ~callback:browser#dialog_external_tools);
   let _ = GMenu.separator_item ~packing:menu#add () in

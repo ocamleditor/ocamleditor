@@ -60,12 +60,17 @@ let create ~editor ~page () =
     gmenu#append (GMenu.separator_item ());
   end;
   (*  *)
-  let eval_in_toplevel = GMenu.image_menu_item ~label:"Eval in Toplevel" ~packing:gmenu#append () in
-  eval_in_toplevel#set_image (Icons.create Icons.toplevel)#coerce;
-  ignore (eval_in_toplevel#connect#activate ~callback:begin fun () ->
-    editor#with_current_page (fun page -> page#ocaml_view#obuffer#send_to_shell ());
-  end);
-  eval_in_toplevel#misc#set_sensitive (Menu_file.get_file_switch_sensitive page);
+  let show_doc_at_cursor = GMenu.image_menu_item ~label:"Show Documentation" ~packing:gmenu#append () in
+  show_doc_at_cursor#connect#activate ~callback:editor#show_doc_at_cursor |> ignore;
+  show_doc_at_cursor#misc#set_sensitive (Menu_file.get_file_switch_sensitive page);
+  let find_definition = GMenu.image_menu_item ~label:"Find Definition" ~packing:gmenu#append () in
+  find_definition#set_image (GMisc.image ~pixbuf:Icons.definition ())#coerce;
+  let find_references = GMenu.image_menu_item ~label:"Find References" ~packing:gmenu#append () in
+  find_references#set_image (GMisc.image ~pixbuf:Icons.references ())#coerce;
+  let find_used_components = GMenu.menu_item ~packing:gmenu#append () in
+  let label_find_used_components = GMisc.label ~xalign:0. ~markup:"" ~packing:find_used_components#add () in
+  (*  *)
+  gmenu#append (GMenu.separator_item ());
   let select_in_structure_pane = GMenu.image_menu_item ~label:"Select in Structure Pane" ~packing:gmenu#append () in
   select_in_structure_pane#set_image (GMisc.image ~pixbuf:Icons.select_in_structure ())#coerce;
   ignore (select_in_structure_pane#connect#activate ~callback:begin fun () ->
@@ -90,12 +95,14 @@ let create ~editor ~page () =
     end
   end);
   select_in_structure_pane#misc#set_sensitive (Menu_file.get_file_switch_sensitive page);
-  let find_definition = GMenu.image_menu_item ~label:"Find Definition" ~packing:gmenu#append () in
-  find_definition#set_image (GMisc.image ~pixbuf:Icons.definition ())#coerce;
-  let find_references = GMenu.image_menu_item ~label:"Find References" ~packing:gmenu#append () in
-  find_references#set_image (GMisc.image ~pixbuf:Icons.references ())#coerce;
-  let find_used_components = GMenu.menu_item ~packing:gmenu#append () in
-  let label_find_used_components = GMisc.label ~xalign:0. ~markup:"" ~packing:find_used_components#add () in
+  (*  *)
+  gmenu#append (GMenu.separator_item ());
+  let eval_in_toplevel = GMenu.image_menu_item ~label:"Eval in Toplevel" ~packing:gmenu#append () in
+  eval_in_toplevel#set_image (Icons.create Icons.toplevel)#coerce;
+  ignore (eval_in_toplevel#connect#activate ~callback:begin fun () ->
+    editor#with_current_page (fun page -> page#ocaml_view#obuffer#send_to_shell ());
+  end);
+  eval_in_toplevel#misc#set_sensitive (Menu_file.get_file_switch_sensitive page);
   gmenu#append (GMenu.separator_item ());
   (* Show Whitespace Characters and Toggle Word-Wrap*)
   let show_whitespace_characters = GMenu.check_menu_item ~label:"Show Whitespace Characters" ~packing:gmenu#append () in
