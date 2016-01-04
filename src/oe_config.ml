@@ -96,7 +96,7 @@ let odoc_tag_properties                  = [ (* These properties apply to ocamld
                                           `PIXELS_INSIDE_WRAP 2;
                                           `PIXELS_BELOW_LINES 2;
                                           `WRAP_MODE `WORD]
-let odoc_margin                          = 30
+let odoc_margin                          = 8
 let layout_find_references               = `VERTICAL
 let layout_find_module_browser           = `VERTICAL
 (* Path relative to the project home directory where to find custom templates. *)

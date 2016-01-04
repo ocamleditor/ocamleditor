@@ -156,11 +156,11 @@ let edit ~browser ~group ~flags
   in
   ignore (annot_type_tooltips#connect#toggled ~callback:(fun () ->
     browser#annot_type_set_tooltips annot_type_tooltips#active));
-  annot_type_tooltips#add_accelerator ~group ~modi:[`MOD1] GdkKeysyms._F2 ~flags;
+  annot_type_tooltips#add_accelerator ~group ~modi:[`CONTROL; `MOD1] GdkKeysyms._F2 ~flags;
   (** Show documentation *)
   let show_doc_at_cursor = GMenu.image_menu_item ~label:"Show Documentation" ~packing:menu#add () in
   show_doc_at_cursor#connect#activate ~callback:editor#show_doc_at_cursor |> ignore;
-  show_doc_at_cursor#add_accelerator ~group ~modi:[] GdkKeysyms._F7 ~flags;
+  show_doc_at_cursor#add_accelerator ~group ~modi:[`MOD1] GdkKeysyms._F1 ~flags;
   let _ = GMenu.separator_item ~packing:menu#add () in
   (** Eval in Toplevel *)
   let to_shell = GMenu.image_menu_item ~label:"Eval in Toplevel" ~packing:menu#add () in

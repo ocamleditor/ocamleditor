@@ -90,7 +90,7 @@ class widget ~project ?(is_completion=false) ?(enable_history=true) ?width ?heig
   let odoc_tag            = odoc_buffer#create_tag
                             ((`FONT Preferences.preferences#get.Preferences.pref_odoc_font) :: Oe_config.odoc_tag_properties) in
   let _                   = odoc_buffer#create_tag ~name:"large" [`SCALE `X_LARGE] in
-  let _                   = odoc_buffer#create_tag ~name:"type2" Oe_doc.Printer.Properties.type2 in
+  let tag_type2           = odoc_buffer#create_tag ~name:"type2" Oe_doc.Printer.Properties.type2 in
   let _                   = odoc_buffer#create_tag ~name:"line_spacing_small" [`SIZE_POINTS 4.] in
   let incremental_search  = new Incremental_search.incremental () in
   let pref                = {Preferences.preferences#get with Preferences.pref_code_folding_enabled=false} in
@@ -211,7 +211,7 @@ object (self)
     List.iter begin fun tag ->
       let fd = get_tag_fd tag in
       if change_size fd then tag#set_property (`FONT_DESC fd);
-    end (odoc_tag :: tags);
+    end (tag_type2 :: odoc_tag :: tags);
     (*Stack.iter begin fun widget ->
       let fd = widget#view#misc#pango_context#font_description in
       if change_size fd then widget#view#misc#modify_font fd
