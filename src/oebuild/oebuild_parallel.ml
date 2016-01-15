@@ -139,19 +139,22 @@ let create_process ?(jobs=0) ~verbose cb_create_command cb_at_exit dag leaf erro
         err        = Buffer.create 10;
         out        = Buffer.create 10
       } in
-      let at_exit exit_code =
-        output.exit_code <- exit_code;
-        if exit_code <> 0 then (errors := output :: !errors)
-        else messages := output :: !messages;
-        Mutex.lock dag.mutex;
-        Dag.remove_leaf dag.graph leaf;
-        Mutex.unlock dag.mutex;
-        (*if jobs > 0 then begin*)
+      let at_exit = function
+        | `STATUS (Unix.WEXITED exit_code) ->
+          output.exit_code <- exit_code;
+          if exit_code <> 0 then (errors := output :: !errors)
+          else messages := output :: !messages;
+          Mutex.lock dag.mutex;
+          Dag.remove_leaf dag.graph leaf;
+          Mutex.unlock dag.mutex;
+          (*if jobs > 0 then begin*)
           Mutex.lock job_mutex;
           decr job_counter;
           Mutex.unlock job_mutex;
-        (*end;*)
-        cb_at_exit output
+          (*end;*)
+          cb_at_exit output
+        | `STATUS (Unix.WSIGNALED _) | `STATUS (Unix.WSTOPPED _) -> assert false
+        | `ERROR (code, msg) -> kprintf failwith "%s (%d)" msg code
       in
       let process_in = Spawn.iter_chan (fun stdin ->
           Buffer.add_string output.out (input_line stdin);
@@ -173,10 +176,8 @@ let create_process ?(jobs=0) ~verbose cb_create_command cb_at_exit dag leaf erro
       Mutex.lock dag.mutex;
       Dag.remove_leaf dag.graph leaf;
       Mutex.unlock dag.mutex;
-      None
     | _ ->
       leaf.Dag.node.NODE.nd_processing <- false;
-      None
 ;;
 
 (** process_parallel *)

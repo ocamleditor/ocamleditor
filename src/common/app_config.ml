@@ -21,6 +21,8 @@
 *)
 
 
+open Printf
+
 let (//) = Filename.concat
 let (!!) = Filename.dirname
 
@@ -70,7 +72,7 @@ let application_debug = try (List.assoc "debug" application_param) = "2" with No
 let user_home =
   try Sys.getenv "HOME" with Not_found ->
     (try (Sys.getenv "HOMEDRIVE") // (Sys.getenv "HOMEPATH")
-    with Not_found -> failwith "Please set your HOME environment variable.")
+     with Not_found -> failwith "Please set your HOME environment variable.")
 
 let ocamleditor_user_home =
   let dirname =
@@ -99,4 +101,46 @@ let application_icons = get_application_dir "icons"
 
 let application_plugins = get_application_dir "plugins"
 
-
+let get_oeproc_command, get_oebuild_command =
+  let find_best ?(param="--help") prog =
+    let redirect_stderr = if Sys.os_type = "Win32" then " 2>NUL" else " 2>/dev/null" in
+    try
+      List.find begin fun comp ->
+        let ok =
+          try
+            let cmd = sprintf "%s %s%s" (Filename.quote comp) param redirect_stderr in
+            if application_debug then (printf "Checking for %s... %!" cmd);
+            Shell.get_command_output cmd |> ignore;
+            true
+          with _ -> false
+        in
+        if application_debug then (printf "%b\n%!" ok);
+        ok
+      end prog
+    with Not_found ->
+      kprintf failwith "Cannot find: %s" (String.concat ", " prog)
+  in
+  let find_command name =
+    let basename = name ^ (if Sys.win32 then ".exe" else "") in
+    let path = (!! Sys.executable_name) // basename in
+    if Sys.file_exists path && not (Sys.is_directory path) then path
+    else
+      let path = (!! Sys.executable_name) // name // basename in
+      if Sys.file_exists path then path
+      else basename
+  in
+  begin fun () ->
+    if Sys.win32 then
+      let commands = [
+        find_command "oeproc.opt";
+        find_command "oeproc";
+      ] in
+      find_best ~param:"" commands
+    else "unused"
+  end, begin fun () ->
+    let commands = [
+      find_command "oebuild.opt";
+      find_command "oebuild";
+    ] in
+    find_best commands
+  end

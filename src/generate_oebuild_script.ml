@@ -79,7 +79,7 @@ module Util = struct
     let cmd = sprintf "ocaml %s" filename in
     Printf.printf "Testing %s...\n  %s\n%!" filename cmd;
     let exit_code = Sys.command cmd in
-    if exit_code > 0 then failwith "Test failed"
+    if exit_code > 0 then failwith "Test failed" else Printf.printf "OK\n%!" ;
 end
 
 let create_script () =
@@ -95,9 +95,9 @@ let create_script () =
     let modules = [
       "../common/argc";
       "../common/shell";
-      "../common/spawn";
       "../common/ocaml_config";
       "../common/app_config";
+      "../common/spawn";
       "../task";
       "../build_script_command";
       "oebuild_util";

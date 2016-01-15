@@ -133,24 +133,6 @@ let _ =
         end
       end;;
 
-let find_best ?(param="--help") prog =
-  let redirect_stderr = if Sys.os_type = "Win32" then " 2>NUL" else " 2>/dev/null" in
-  try
-    List.find begin fun comp ->
-      let ok =
-        try
-          let cmd = sprintf "%s %s%s" (Filename.quote comp) param redirect_stderr in
-          if App_config.application_debug then (printf "Checking for %s... %!" cmd);
-          Shell.get_command_output cmd |> ignore;
-          true
-        with _ -> false
-      in
-      if App_config.application_debug then (printf "%b\n%!" ok);
-      ok
-    end prog
-  with Not_found ->
-    kprintf failwith "Cannot find: %s" (String.concat ", " prog)
-
 (** Commands *)
 let find_command name =
   let basename = name ^ (if Sys.win32 then ".exe" else "") in
@@ -161,21 +143,9 @@ let find_command name =
     if Sys.file_exists path then path
     else basename
 
-let oebuild_command =
-  let commands = [
-    find_command "oebuild.opt";
-    find_command "oebuild";
-  ] in
-  find_best commands
+let oebuild_command = App_config.get_oebuild_command ()
 
-let oeproc_command =
-  if Sys.win32 then
-    let commands = [
-      find_command "oeproc.opt";
-      find_command "oeproc";
-    ] in
-    find_best ~param:"" commands
-  else "unused"
+let oeproc_command = !Spawn.Parallel_process.oeproc_command
 
 let get_version ?(ok_status=0) command =
   try

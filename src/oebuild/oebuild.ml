@@ -93,8 +93,9 @@ let compile ?(times : Table.t option) ~opt ~compiler ~cflags ~includes ~filename
             begin
               let process_err = Spawn.iter_chan process_err in
               match Spawn.sync ~process_err ~verbose:(verbose>=2) cmd with
-                | Some n -> n
-                | None -> -9998
+                | `STATUS (Unix.WEXITED n) -> n
+                | `STATUS (Unix.WSIGNALED _) | `STATUS (Unix.WSTOPPED _) -> -9998
+                | `ERROR _ -> -99981
             end;
       in
       may times (fun times -> Table.add times filename opt (Unix.gettimeofday()));
@@ -160,8 +161,9 @@ let link ~compilation ~compiler ~outkind ~lflags ~includes ~libs ~outname ~deps
       (if verbose >= 5 then "-verbose" else "")
   in
   match process_exit with
-    | Some n -> n
-    | None -> -9997
+    | `STATUS (Unix.WEXITED n) -> n
+    | `STATUS (Unix.WSIGNALED _) | `STATUS (Unix.WSTOPPED _) -> -9997
+    | `ERROR _ -> -99971
 ;;
 
 (** get_output_name *)

@@ -104,8 +104,10 @@ let compile_buffer ~project ~editor ~page ?(join=false) () =
           Activity.remove activity_name;
         in
         let process_err = Spawn.iter_chan process_err in
-        let exit_code = Spawn.exec ~verbose:App_config.application_debug ~sync:join (*false*) ~at_exit ~process_err command in
-        ()
+        if join then
+          Spawn.sync ~verbose:App_config.application_debug ~at_exit ~process_err command |> ignore
+        else
+          Spawn.async ~verbose:App_config.application_debug ~at_exit ~process_err command |> ignore
     (*end ()*)
   with ex -> begin
     eprintf "%s\n%s\n%!" (Printexc.to_string ex) (Printexc.get_backtrace ());

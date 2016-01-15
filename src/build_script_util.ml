@@ -131,11 +131,11 @@ module ETask = struct
     let cmd = sprintf "%s %s" prog (String.concat " " args) in
     let old_dir = Sys.getcwd () in
     Sys.chdir dir;
-    let exit_code = Spawn.exec ~env cmd in
+    let exit_code = Spawn.sync ~env cmd in
     Sys.chdir old_dir;
     match exit_code with
-      | Some 0 -> ()
-      | _ -> raise Error
+      | `STATUS (Unix.WEXITED 0) -> ()
+      | `STATUS (Unix.WEXITED _) | `STATUS (Unix.WSIGNALED _) | `STATUS (Unix.WSTOPPED _) | `ERROR _ -> raise Error
   end
 end
 

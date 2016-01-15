@@ -103,19 +103,23 @@ object (self)
     match help_buttons with
       | (b0, _) :: bb ->
         let filename = Filename.temp_file "build" ".tmp" in
-        let mkcallback name () =
-          spinner#misc#show();
-          self#save ~tmp:filename ~filename:entry_filename#text ();
-          let cmd = sprintf "ocaml %s %s -help" filename name in
-          let text = ref "" in
-          let process_in = Spawn.iter_chan (fun ic -> text := !text ^ (input_line ic) ^ "\n") in
-          Spawn.async cmd ~verbose:false ~process_in ~at_exit:begin fun _ ->
-            if !text <> help#buffer#get_text () then GtkThread.sync help#buffer#set_text !text;
-            Gmisclib.Idle.add ~prio:300 spinner#misc#hide;
-          end |> ignore;
+        let mkcallback name butt () =
+          if butt#active then begin
+            spinner#misc#show();
+            self#save ~tmp:filename ~filename:entry_filename#text ();
+            let cmd = sprintf "ocaml %s %s -help" filename name in
+            let text = ref "" in
+            let process_in = Spawn.iter_chan (fun ic -> text := !text ^ (input_line ic) ^ "\n") in
+            Spawn.async cmd ~verbose:false ~process_in ~at_exit:begin function
+              | `ERROR (_, m) -> Printf.eprintf "%s\n%!" m;
+              | `STATUS _ ->
+                if !text <> help#buffer#get_text () then GtkThread.sync help#buffer#set_text !text;
+                Gmisclib.Idle.add ~prio:300 spinner#misc#hide;
+            end |> ignore;
+          end
         in
-        b0#connect#clicked ~callback:(mkcallback "") |> ignore;
-        List.iter (fun (b, name) -> b#connect#clicked ~callback:(mkcallback name) |> ignore) bb;
+        b0#connect#clicked ~callback:(mkcallback "" b0) |> ignore;
+        List.iter (fun (b, name) -> b#connect#clicked ~callback:(mkcallback name b) |> ignore) bb;
         self#misc#connect#destroy ~callback:(fun () -> if Sys.file_exists filename then Sys.remove filename) |> ignore;
         notebook#connect#switch_page ~callback:begin fun page ->
           if page = 3 then begin

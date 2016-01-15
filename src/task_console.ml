@@ -137,7 +137,7 @@ class view ~(editor : Editor.editor) ?(task_kind=(`OTHER : Task.kind)) ~task ?pa
 
   method stop () =
     match process with None -> () | Some proc ->
-      Process.kill proc;
+      Spawn.Parallel_process.kill proc;
       killed <- true;
       self#close()
 
@@ -236,7 +236,7 @@ class view ~(editor : Editor.editor) ?(task_kind=(`OTHER : Task.kind)) ~task ?pa
     start_proc();
     process <- Some proc;
     try
-      let inchan, outchan, errchan = Process.channels proc in
+      let inchan, outchan, errchan = Spawn.Parallel_process.channels proc in
       process_outchan <- Some outchan;
       (** Thread looping over the standard output of the process *)
       let th_in =
@@ -324,11 +324,11 @@ class view ~(editor : Editor.editor) ?(task_kind=(`OTHER : Task.kind)) ~task ?pa
       Thread.join th_in;
       Thread.join th_err;
       begin
-        try ignore (Process.close proc);
+        try ignore (Spawn.Parallel_process.close proc);
         with ex -> (printf "%s\n%!" (Printexc.to_string ex))
       end;
       finally()
-    with Process.Not_started -> (finally())
+    with Spawn.Parallel_process.Not_started -> (finally())
 
   initializer
     ignore (button_detach#connect#clicked ~callback:(fun () -> self#detach button_detach));

@@ -24,7 +24,7 @@
 (** create *)
 let create task =
   Task.handle begin fun ~env ~dir ~prog ~args ->
-    let proc = Process.create ~env ~prog ~args () in (* 2>&1 *)
+    let proc = Spawn.Parallel_process.create ~env ~prog ~args () in (* 2>&1 *)
     proc, fun () ->
       let cwd =
         if task.Task.et_dir <> "" then
@@ -33,6 +33,6 @@ let create task =
           Some old
         else None
       in
-      Process.start proc;
+      Spawn.Parallel_process.start proc;
       match cwd with Some old -> Sys.chdir old | _ -> ()
   end task;;
