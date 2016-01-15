@@ -198,7 +198,7 @@ let get_full_libs target =
 let create_cmd_line ?(flags=[]) ?(can_compile_native=true) target =
   let pref = Preferences.preferences#get in
   let quote = Filename.quote in
-  let files = Cmd_line_args.parse target.files in
+  let files = Shell.parse_args target.files in
   let serial_jobs = match pref.Preferences.pref_build_parallel with None -> ["-serial"] | Some n -> ["-jobs " ^ string_of_int n] in
   let args =
     files

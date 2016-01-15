@@ -91,8 +91,8 @@ let compile ?(times : Table.t option) ~opt ~compiler ~cflags ~includes ~filename
           | None -> Oebuild_util.command cmd
           | Some process_err ->
             begin
-              let process_err = Oebuild_util.iter_chan process_err in
-              match exec ~process_err ~verbose:(verbose>=2) cmd with
+              let process_err = Spawn.iter_chan process_err in
+              match Spawn.sync ~process_err ~verbose:(verbose>=2) cmd with
                 | Some n -> n
                 | None -> -9998
             end;
@@ -148,8 +148,8 @@ let link ~compilation ~compiler ~outkind ~lflags ~includes ~libs ~outname ~deps
   in
   let deps = String.concat " " deps in
   let process_exit =
-    let process_err = match process_err with Some f -> Some (Oebuild_util.iter_chan f) | _ -> None in
-    kprintf (exec (*command*) ?process_err ~verbose:(verbose>=2)) "%s %s %s -o %s %s %s %s %s"
+    let process_err = match process_err with Some f -> Some (Spawn.iter_chan f) | _ -> None in
+    kprintf (Spawn.sync (*command*) ?process_err ~verbose:(verbose>=2)) "%s %s %s -o %s %s %s %s %s"
       compiler
       (match outkind with Library -> "-a" | Plugin when opt -> "-shared" | Plugin -> "" | Pack -> "-pack" | Executable | External -> "")
       lflags

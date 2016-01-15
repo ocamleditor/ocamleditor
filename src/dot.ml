@@ -40,7 +40,7 @@ let mk_ocamldoc_cmd ~project ?(dot_include_all=false) ?(dot_reduce=true) ?(dot_t
     (if dot_types then " -dot-types" else "")
     outfile
     (String.concat " " sourcefiles)
-    Cmd.redirect_stderr;;
+    Shell.redirect_stderr;;
 
 (** mk_dot_cmd *)
 let mk_dot_cmd ~outlang ~outfile ?(label="") ?(rotate=0.) filename =
@@ -76,7 +76,7 @@ let draw ~project ~filename ?dot_include_all ?dot_types ?packing ?on_ready_cb ()
   let viewer        = Device.create ?packing () in
   let activity_name = "Generating module dependency graph, please wait..." in
   Activity.add Activity.Other activity_name;
-  ignore (Oebuild_util.exec ~verbose:App_config.application_debug ~join:false ~at_exit:begin fun _ ->
+  ignore (Spawn.async ~verbose:App_config.application_debug ~at_exit:begin fun _ ->
     let modname = Miscellanea.modname_of_path filename in
     let re = kprintf Str.regexp "\"%s\" \\[.*color=\\(.+\\).*\\]" modname in
     (*let re1 = Str.regexp "\\(\".*\"\\) \\[style=filled, color=darkturquoise\\];$" in*)
@@ -86,7 +86,7 @@ let draw ~project ~filename ?dot_include_all ?dot_types ?packing ?on_ready_cb ()
       (*else if Str.string_match re1 line 0 then (sprintf "%s;\n" (Str.matched_group 1 line))*)
       else line
     end;
-    ignore (Oebuild_util.exec ~join:false ~verbose:App_config.application_debug ~at_exit:begin fun _ ->
+    ignore (Spawn.async ~verbose:App_config.application_debug ~at_exit:begin fun _ ->
       if Sys.file_exists dotfile then (Sys.remove dotfile);
       Device.draw ~filename:outfile viewer;
       Activity.remove activity_name;

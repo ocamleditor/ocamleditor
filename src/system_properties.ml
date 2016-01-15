@@ -28,7 +28,7 @@ open Printf
 let get_locale () =
   try
     if Sys.win32 then begin
-      let lines = Cmd.get_output "reg query \"hkcu\\Control Panel\\International\" /v LocaleName" in
+      let lines = Shell.get_command_output "reg query \"hkcu\\Control Panel\\International\" /v LocaleName" in
       let lines = List.map String.trim lines in
       let locale =
         List.find (fun l -> Str.string_match (Str.regexp "LocaleName.+") l 0) lines
@@ -36,7 +36,7 @@ let get_locale () =
       Str.string_match (Str.regexp ".*[\t ]\\([a-zA-Z-][a-zA-Z-][a-zA-Z-][a-zA-Z-][a-zA-Z-]\\)") locale 0 |> ignore;
       Some (Str.matched_group 1 locale)
     end else begin
-      let lines = Cmd.get_output "locale" in
+      let lines = Shell.get_command_output "locale" in
       let locale =
         List.find (fun l -> Str.string_match (Str.regexp ".*=.+") l 0) lines
       in
@@ -49,8 +49,8 @@ let get_locale () =
 
 (** findlib_package_exists *)
 let findlib_package_exists packagename =
-  let cmd = sprintf "ocamlfind query -format %%v %s %s" packagename Cmd.redirect_stderr in
-  match Cmd.get_output cmd with
+  let cmd = sprintf "ocamlfind query -format %%v %s %s" packagename Shell.redirect_stderr in
+  match Shell.get_command_output cmd with
     | line :: _ when line = "" -> Some "OK"
     | line :: _ -> Some line
     | _ -> None

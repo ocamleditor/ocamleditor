@@ -28,7 +28,7 @@ let glib_is_utf8, glib_charset = Glib.Convert.get_charset()
 let locale_is_utf8, locale_charset =
   if true || Sys.os_type = "Win32" then glib_is_utf8, glib_charset else begin
     let charset =
-      match Cmd.get_output "locale -c LC_CTYPE | head -6 | tail -1" with
+      match Shell.get_command_output "locale -c LC_CTYPE | head -6 | tail -1" with
         | line :: _ -> line
         | _ -> ""
     in

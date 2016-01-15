@@ -44,14 +44,14 @@ struct
             let search_path = Project.get_search_path_i_format project in
             let cmd = sprintf "%s -dump %s %s %s %s%s"
               (Ocaml_config.ocamldoc())
-              (Quote.arg out_filename)
+              (Shell.quote_arg out_filename)
               (" -I +threads")
               (*(if project.Project.thread then " -thread" else if project.Project.vmthread then " -vmthread" else "")*)
               search_path
-              (Quote.arg file)
-              (if App_config.application_debug then Cmd.redirect_stderr else "")
+              (Shell.quote_arg file)
+              (if App_config.application_debug then Shell.redirect_stderr else "")
             in
-            ignore (Oebuild_util.exec ~verbose:App_config.application_debug ~join:true cmd);
+            ignore (Spawn.sync ~verbose:App_config.application_debug cmd);
             Some out_filename
           | _ -> None
       end;

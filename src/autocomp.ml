@@ -57,7 +57,7 @@ let compile_buffer ~project ~editor ~page ?(join=false) () =
           (Project.get_search_path_i_format project)
           Prj.default_dir_tmp
           relpath
-          ((*if App_config.application_debug then Cmd.redirect_stderr else*) "")
+          ((*if App_config.application_debug then Shell.redirect_stderr else*) "")
         in
         let compiler_output = Buffer.create 101 in
         let process_err stderr =
@@ -103,8 +103,8 @@ let compile_buffer ~project ~editor ~page ?(join=false) () =
           end;
           Activity.remove activity_name;
         in
-        let process_err = Oebuild_util.iter_chan process_err in
-        let exit_code = Oebuild_util.exec ~verbose:App_config.application_debug ~join (*false*) ~at_exit ~process_err command in
+        let process_err = Spawn.iter_chan process_err in
+        let exit_code = Spawn.exec ~verbose:App_config.application_debug ~sync:join (*false*) ~at_exit ~process_err command in
         ()
     (*end ()*)
   with ex -> begin

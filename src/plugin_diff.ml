@@ -246,7 +246,7 @@ module Diff = struct
         try diffs := Odiff.from_channel ic
         with ex -> Printf.eprintf "File \"plugin_diff.ml\": %s\n%s\n%!" (Printexc.to_string ex) (Printexc.get_backtrace());
       in
-      Oebuild_util.exec cmd ~verbose:false ~join:false
+      Spawn.async cmd ~verbose:false
         ~process_in
         ~process_err:ignore
         ~at_exit:begin fun _ ->

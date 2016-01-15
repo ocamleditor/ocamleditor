@@ -153,11 +153,11 @@ let create_process ?(jobs=0) ~verbose cb_create_command cb_at_exit dag leaf erro
         (*end;*)
         cb_at_exit output
       in
-      let process_in = Oebuild_util.iter_chan (fun stdin ->
+      let process_in = Spawn.iter_chan (fun stdin ->
           Buffer.add_string output.out (input_line stdin);
           Buffer.add_char output.out '\n')
       in
-      let process_err = Oebuild_util.iter_chan (fun stderr ->
+      let process_err = Spawn.iter_chan (fun stderr ->
           Buffer.add_string output.err (input_line stderr);
           Buffer.add_char output.err '\n')
       in
@@ -166,7 +166,7 @@ let create_process ?(jobs=0) ~verbose cb_create_command cb_at_exit dag leaf erro
         incr job_counter;
         Mutex.unlock job_mutex;
       (*end;*)
-      Oebuild_util.exec ~verbose:false ~join:false ~at_exit ~process_in ~process_err command
+      Spawn.async ~verbose:false ~at_exit ~process_in ~process_err command
     | None ->
       if verbose >= 4 then
         Printf.printf "Oebuild_parallel.create_process: %30s (No command)\n%!" filename;

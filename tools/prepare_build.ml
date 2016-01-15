@@ -33,7 +33,7 @@ let record_backtrace = ref true
 let exe = if is_win32 then ".exe" else ""
 
 let generate_oebuild_script () =
-  run "ocaml -I common str.cma unix.cma common.cma generate_oebuild_script.ml";;
+  run "ocaml -I common str.cma unix.cma miscellanea.cmo file_util.cmo generate_oebuild_script.ml";;
 
 let prepare_build () =
   if Sys.ocaml_version < required_ocaml_version then begin

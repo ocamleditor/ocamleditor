@@ -21,11 +21,37 @@
 *)
 
 
+let redirect_stderr = if Sys.win32 then " 2>NUL" else " 2>/dev/null"
+
+(** get_command_output *)
+let get_command_output command =
+  let ch = Unix.open_process_in command in
+  set_binary_mode_in ch false;
+  let output = ref [] in
+  try
+    while true do output := (input_line ch) :: !output done;
+    assert false
+  with End_of_file -> begin
+    ignore (Unix.close_process_in ch);
+    List.rev !output
+  end | e -> begin
+    ignore (Unix.close_process_in ch);
+    raise e
+  end
+
+(** quote_path *)
+let quote_path = if Sys.os_type = "Win32" then (fun x -> Filename.quote (Filename.quote x))
+  else (fun x -> x)
+
+(** quote_arg *)
+let quote_arg = if Sys.os_type = "Win32" then (fun x -> Filename.quote x)
+  else (fun x -> x)
+
 type state = StartArg | InUnquotedArg | InQuotedArg | InQuotedArgAfterQuote;;
 
-let format = String.concat " ";;
+let format_args = String.concat " ";;
 
-let parse line =
+let parse_args line =
   let args = ref [] in
   let buf = Buffer.create 10 in
   let state = ref StartArg in
@@ -65,8 +91,6 @@ let parse line =
   end line;
   if Buffer.length buf > 0 then (start_arg ());
   List.rev !args;;
-
-
 
 (*
 

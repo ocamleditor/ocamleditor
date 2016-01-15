@@ -268,7 +268,7 @@ class widget ~page ?packing () =
           let row = model#get_iter path2 in
           let filename2 = self#get_filename ~row in
           let cmd = mk_diff_cmd (Filename.quote filename1) (Filename.quote filename2) in
-          Oebuild_util.exec ~verbose:false ~join:false cmd |> ignore
+          Spawn.async ~verbose:false cmd |> ignore
         | _ -> ()
 
     method private get_filename ~row =
@@ -341,7 +341,7 @@ class widget ~page ?packing () =
               let cmd = sprintf "git log --format=\"%%h%s%%an%s%%ai%s%%s\" --abbrev-commit %s" sep sep sep rel in
               let re = Str.regexp_string sep in
               let process_in =
-                Oebuild_util.iter_chan begin fun ic ->
+                Spawn.iter_chan begin fun ic ->
                   let line = Str.split re (input_line ic) in
                   let row = model#append () in
                   match line with
@@ -354,7 +354,7 @@ class widget ~page ?packing () =
                     | _ -> ()
                 end
               in
-              Oebuild_util.exec ~verbose:false ~join:false ~process_in ~process_err:ignore cmd |> ignore;
+              Spawn.async ~verbose:false ~process_in ~process_err:ignore cmd |> ignore;
             | _ -> ()
 
     method private read_local_backups () =

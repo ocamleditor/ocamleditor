@@ -33,7 +33,7 @@ open Printf
     let diff = Preferences.preferences#get.Preferences.pref_program_diff in
     let cmd = diff ^ " --binary " ^ (Filename.quote filename1) ^ " " ^ (Filename.quote filename2) in
     Printf.printf "%s\n%!" cmd;
-    Oebuild_util.exec cmd ~verbose:false ~join:false
+    Spawn.async cmd ~verbose:false
       ~process_in
       ~process_err:ignore
       ~at_exit:begin fun _ ->

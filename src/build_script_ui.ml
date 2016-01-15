@@ -108,8 +108,8 @@ object (self)
           self#save ~tmp:filename ~filename:entry_filename#text ();
           let cmd = sprintf "ocaml %s %s -help" filename name in
           let text = ref "" in
-          let process_in = Oebuild_util.iter_chan (fun ic -> text := !text ^ (input_line ic) ^ "\n") in
-          Oebuild_util.exec cmd ~verbose:false ~process_in ~join:false ~at_exit:begin fun _ ->
+          let process_in = Spawn.iter_chan (fun ic -> text := !text ^ (input_line ic) ^ "\n") in
+          Spawn.async cmd ~verbose:false ~process_in ~at_exit:begin fun _ ->
             if !text <> help#buffer#get_text () then GtkThread.sync help#buffer#set_text !text;
             Gmisclib.Idle.add ~prio:300 spinner#misc#hide;
           end |> ignore;

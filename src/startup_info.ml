@@ -28,7 +28,7 @@ open Printf
 let get_locale () =
   try
     if Sys.win32 then begin
-      let lines = Cmd.get_output "reg query \"hkcu\\Control Panel\\International\" /v LocaleName" in
+      let lines = Shell.get_command_output "reg query \"hkcu\\Control Panel\\International\" /v LocaleName" in
       let lines = List.map String.trim lines in
       let locale =
         List.find (fun l -> Str.string_match (Str.regexp "LocaleName.+") l 0) lines
@@ -36,7 +36,7 @@ let get_locale () =
       Str.string_match (Str.regexp ".*[\t ]\\([a-zA-Z-][a-zA-Z-][a-zA-Z-][a-zA-Z-][a-zA-Z-]\\)") locale 0 |> ignore;
       Some (Str.matched_group 1 locale)
     end else begin
-      let lines = Cmd.get_output "locale" in
+      let lines = Shell.get_command_output "locale" in
       let locale =
         List.find (fun l -> Str.string_match (Str.regexp ".*=.+") l 0) lines
       in
@@ -52,7 +52,7 @@ let print () = if true || App_config.application_debug then begin
   let copyright = Str.replace_first (Str.regexp_string "©") "(c)" About.copyright in
   Printf.printf "\n%s %s\n\n%!" About.program_name About.version (*copyright*);
   let ocaml_version = Str.global_replace
-    (Str.regexp "\n") " - " (Str.global_replace (Str.regexp "\n$") "" (String.concat "\n" (Cmd.get_output "ocamlc -v"))) in
+    (Str.regexp "\n") " - " (Str.global_replace (Str.regexp "\n$") "" (String.concat "\n" (Shell.get_command_output "ocamlc -v"))) in
   let a, b, c = GMain.Main.version in
   Printf.printf "---------------------------------------------------------------\n%!" ;
   let properties = [

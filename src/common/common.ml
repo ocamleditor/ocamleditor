@@ -21,8 +21,8 @@
 *)
 
 open Miscellanea
-open Quote
-open Cmd_line_args
+open Shell
+open Spawn
 open App_config
 open File_util
 open List_opt

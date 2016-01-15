@@ -141,7 +141,7 @@ let find_best ?(param="--help") prog =
         try
           let cmd = sprintf "%s %s%s" (Filename.quote comp) param redirect_stderr in
           if App_config.application_debug then (printf "Checking for %s... %!" cmd);
-          Cmd.get_output cmd |> ignore;
+          Shell.get_command_output cmd |> ignore;
           true
         with _ -> false
       in
@@ -187,7 +187,7 @@ let get_version ?(ok_status=0) command =
     if status = ok_status || not (List.mem status status_not_found) then
       let redirect_stderr = if Sys.win32 then " 2>&1" else " 2>&1" in
       let cmd = sprintf "%s %s" command redirect_stderr in
-      (match Cmd.get_output cmd with ver :: _ -> Some ver | _ -> None)
+      (match Shell.get_command_output cmd with ver :: _ -> Some ver | _ -> None)
     else failwith cmd
   with Failure _ -> None
 

@@ -92,5 +92,5 @@ let handle f task =
   let prog = task.et_cmd in
   let dir = if task.et_dir <> "" then task.et_dir else (Sys.getcwd ()) in
   let args = List.filter (fun (e, _) -> e) task.et_args in
-  let args = List.flatten (List.map (fun (_, v) -> Cmd_line_args.parse v) args) in
+  let args = List.flatten (List.map (fun (_, v) -> Shell.parse_args v) args) in
   f ~env ~dir ~prog ~args;;

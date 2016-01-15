@@ -38,7 +38,7 @@ let with_status f =
       let status = { added = 0; modified = 0; deleted = 0 } in
       let process_in =
         let re = Str.regexp "\\([ MADRCU?!]\\)\\([ MDU?!]\\) +\\(.*\\)?" in
-        Oebuild_util.iter_chan begin fun ic ->
+        Spawn.iter_chan begin fun ic ->
           let line = input_line ic in
           if Str.string_match re line 0 then begin
             let y = Str.matched_group 2 line in
@@ -54,12 +54,12 @@ let with_status f =
       in
       let has_errors = ref false in
       let process_err =
-        Oebuild_util.iter_chan begin fun ic ->
+        Spawn.iter_chan begin fun ic ->
           let _ = input_line ic in
           has_errors := true;
         end
       in
-      Oebuild_util.exec ~verbose:false ~join:false ~process_in ~process_err
+      Spawn.async ~verbose:false ~process_in ~process_err
         ~at_exit:begin fun _ ->
           if !has_errors then GtkThread.async f None
           else GtkThread.async f (Some status)

@@ -456,7 +456,7 @@ let create ~editor task_kind task =
   let console_id = sprintf "%s %s %s"
     task.Task.et_name
     task.Task.et_cmd
-    (String.concat " " (List.flatten (Xlist.filter_map (fun (e, v) -> if e then Some (Cmd_line_args.parse v) else None) task.Task.et_args))) in
+    (String.concat " " (List.flatten (Xlist.filter_map (fun (e, v) -> if e then Some (Shell.parse_args v) else None) task.Task.et_args))) in
   try
     let (console, _) = List.assoc console_id !views in
     console#set_task task;
@@ -626,7 +626,7 @@ let exec ~editor ?use_thread ?(with_deps=false) task_kind target =
             ~dir:""
             ~cmd:oebuild
             ~args:(args @ ([true, "-no-build"; true, "-run"; true, "--"] @
-              ((*List.map Quote.arg*) (List.filter (fun (e, _) -> e) rc.Rconf.args)))) ();
+              ((*List.map Shell.quote_arg*) (List.filter (fun (e, _) -> e) rc.Rconf.args)))) ();
         ]] in
         let rec f () = ignore (exec_sync ~run_cb:f ~editor tasks) in
         f();

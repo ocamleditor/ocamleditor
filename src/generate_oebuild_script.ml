@@ -93,12 +93,11 @@ let create_script () =
     output_string ochan "#load \"threads.cma\"\n";
     output_string ochan "let split re = Str.split (Str.regexp re)\n";
     let modules = [
-      "../common/quote";
       "../common/argc";
-      "../common/cmd";
+      "../common/shell";
+      "../common/spawn";
       "../common/ocaml_config";
       "../common/app_config";
-      "../common/cmd_line_args";
       "../task";
       "../build_script_command";
       "oebuild_util";

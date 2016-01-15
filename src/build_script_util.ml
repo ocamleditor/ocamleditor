@@ -95,8 +95,8 @@ let create_target_func ?tg targets =
 let ccomp_type = Ocaml_config.can_compile_native ()
 
 let system_config () =
-  let ocaml_version = match Cmd.get_output "ocamlc -v" with x :: _ -> x | _ -> "" in
-  let std_lib = match Cmd.get_output "ocamlc -where" with x :: _ -> x | _ -> "" in
+  let ocaml_version = match Shell.get_command_output "ocamlc -v" with x :: _ -> x | _ -> "" in
+  let std_lib = match Shell.get_command_output "ocamlc -where" with x :: _ -> x | _ -> "" in
   let properties = [
     "OCaml", ocaml_version;
     "Standard library directory", std_lib;
@@ -131,7 +131,7 @@ module ETask = struct
     let cmd = sprintf "%s %s" prog (String.concat " " args) in
     let old_dir = Sys.getcwd () in
     Sys.chdir dir;
-    let exit_code = Oebuild_util.exec ~env cmd in
+    let exit_code = Spawn.exec ~env cmd in
     Sys.chdir old_dir;
     match exit_code with
       | Some 0 -> ()

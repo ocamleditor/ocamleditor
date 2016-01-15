@@ -166,9 +166,9 @@ let cmd_line proc = proc.cmd_line
 
 (** create *)
 let create ?(at_exit=ignore) ?(env=Unix.environment()) ~prog ?(args=[]) () =
-  let args = List.map Quote.arg args in
+  let args = List.map Shell.quote_arg args in
   let arg_string = String.concat " " args in
-  let cmd_line = (Quote.path prog) ^ " " ^ arg_string in
+  let cmd_line = (Shell.quote_path prog) ^ " " ^ arg_string in
   {
     env      = env;
     prog     = prog;

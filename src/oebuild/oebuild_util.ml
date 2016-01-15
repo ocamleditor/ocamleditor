@@ -108,50 +108,6 @@ let command ?(echo=true) cmd =
   Pervasives.flush stdout;
   exit_code
 
-(** iter_chan *)
-let iter_chan (f : in_channel -> unit) chan = try while true do f chan done with End_of_file -> ()
-
-(** exec *)
-let exec ?(env=Unix.environment()) ?(verbose=true) ?(join=true) ?at_exit
-    ?(process_in=(iter_chan (fun chan -> print_endline (input_line chan))))
-    ?(process_err=(iter_chan (fun chan -> prerr_endline (input_line chan))))
-    cmd =
-  let at_exit = match at_exit with None when not join -> Some ignore | _ -> at_exit in
-  let cmd = Str.global_replace re_spaces " " cmd in
-  if verbose then printf "%s\n%!" cmd;
-  let exit_code = ref (-9998) in
-  let (inchan, _, errchan) as channels = Unix.open_process_full cmd env in
-  set_binary_mode_in inchan true;
-  set_binary_mode_in errchan true;
-  let close () =
-    match Unix.close_process_full channels with
-     	| Unix.WEXITED code -> code
-     	| _ -> (-9997)
-  in
-  let thi =
-    Thread.create begin fun () ->
-      process_in inchan;
-    end ()
-  in
-  let the =
-    Thread.create begin fun () ->
-      process_err errchan;
-      Thread.join thi;
-      begin
-        match at_exit with
-          | None -> ()
-          | Some f ->
-            exit_code := close();
-            f !exit_code
-      end;
-    end ()
-  in
-  if join then begin
-    Thread.join thi;
-    Thread.join the;
-  end;
-  if at_exit = None then Some (close()) else None;;
-
 (** Remove files with wildcards *)
 let rm = win32 "DEL /F /Q" "rm -f"
 
@@ -196,7 +152,7 @@ let get_effective_command =
   fun ?(linkpkg=false) ocamlfind ->
     try
       let cmd = sprintf "%s%s -verbose %s" ocamlfind (if linkpkg then " -linkpkg" else "") redirect_stderr_to_null in
-      let lines = Cmd.get_output cmd in
+      let lines = Shell.get_command_output cmd in
       let effective_compiler = List.find (fun line -> String.sub line 0 2 = "+ ") lines in
       let effective_compiler = Str.string_after effective_compiler 2  in
       let effective_compiler = Str.replace_first re_verbose "" effective_compiler in
@@ -241,9 +197,9 @@ let parfold_command ~command ~args ?verbose () =
     Mutex.unlock mx_finished;
   in
   List.iter begin fun entry ->
-    exec ?env:None ?verbose ~join:false ~at_exit
-        ~process_in:(iter_chan entry.pf_process_in)
-        ~process_err:(iter_chan entry.pf_process_err)
+    Spawn.async ?env:None ?verbose ~at_exit
+        ~process_in:(Spawn.iter_chan entry.pf_process_in)
+        ~process_err:(Spawn.iter_chan entry.pf_process_err)
         entry.pf_cmd |> ignore
   end entries;
   Mutex.lock mx_finished;
