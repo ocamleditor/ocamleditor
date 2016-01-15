@@ -23,6 +23,8 @@
 
 open Printf
 
+type exit_status = [ `STATUS of Unix.process_status | `ERROR of int * string ]
+
 module Parallel_process = struct
 
   exception Not_started
@@ -40,8 +42,6 @@ module Parallel_process = struct
     mutable started  : bool;
     mutable verbose  : bool;
   }
-
-  type exit = [ `STATUS of Unix.process_status | `ERROR of int * string ]
 
   let oeproc_command = ref (App_config.get_oeproc_command ())
 
@@ -200,7 +200,7 @@ module Parallel_process = struct
 
 end
 
-type t = Status of Unix.process_status | Async of int * (unit -> Parallel_process.exit) | Error of int * string
+type exit = Status of Unix.process_status | Async of int * (unit -> exit_status) | Error of int * string
 
 (** iter_chan *)
 let iter_chan (f : in_channel -> unit) chan = try while true do f chan done with End_of_file -> ()
@@ -209,9 +209,9 @@ let iter_chan (f : in_channel -> unit) chan = try while true do f chan done with
 let exec
     ?(mode=(`SYNC : [`SYNC | `ASYNC | `ASYNC_KILL]))
     ?env
-    ?(at_exit=(ignore : (Parallel_process.exit -> unit)))
-    ?process_out
+    ?(at_exit=(ignore : (exit_status -> unit)))
     ?process_in
+    ?process_out
     ?process_err
     ?(verbose=false)
     command_line =
@@ -308,21 +308,21 @@ let exec
       end;;
 
 (** sync *)
-let sync ?env ?at_exit ?process_in ?process_err ?process_out ?verbose command_line =
-  match exec ~mode:`SYNC ?env ?at_exit ?process_in ?process_err ?process_out ?verbose command_line with
+let sync ?env ?at_exit ?process_in ?process_out ?process_err ?verbose command_line =
+  match exec ~mode:`SYNC ?env ?at_exit ?process_in ?process_out ?process_err ?verbose command_line with
     | Some (Error (code, msg)) -> `ERROR (code, msg)
-    | Some (Status x) -> `STATUS x
+    | Some (Status x) -> ((`STATUS x) : exit_status)
     | Some (Async _) | None -> failwith "Spawn.sync"
 
 (** async *)
-let async ?env ?at_exit ?process_in ?process_err ?process_out ?verbose command_line =
-  match exec ~mode:`ASYNC ?env ?at_exit ?process_in ?process_err ?process_out ?verbose command_line with
+let async ?env ?at_exit ?process_in ?process_out ?process_err ?verbose command_line =
+  match exec ~mode:`ASYNC ?env ?at_exit ?process_in ?process_out ?process_err ?verbose command_line with
     | None -> ()
     | Some (Status _) | Some (Error _) | Some (Async _) -> failwith "Spawn.async"
 
 (** async_k *)
-let async_k ?env ?at_exit ?process_in ?process_err ?process_out ?verbose command_line =
-  match exec ~mode:`ASYNC_KILL ?env ?at_exit ?process_in ?process_err ?process_out ?verbose command_line with
+let async_k ?env ?at_exit ?process_in ?process_out ?process_err ?verbose command_line =
+  match exec ~mode:`ASYNC_KILL ?env ?at_exit ?process_in ?process_out ?process_err ?verbose command_line with
     | Some (Error (code, msg)) -> kprintf failwith "Spawn.async_k (%d, %s)" code msg
     | Some (Async (pid, kill_f)) -> pid, kill_f
     | Some (Status _) | None -> failwith "Spawn.async_k"
@@ -379,7 +379,7 @@ module Parfold = struct
 end
 
 
-(*#directory "common";;
+#directory "common";;
 #directory "+threads";;
 #load "unix.cma";;
 #load "str.cma";;
@@ -389,16 +389,17 @@ open Printf
 open Spawn
 
 let process_out outchan =
-  Thread.delay 3.;
-  output_string outchan "[\"tell\",\"source\",\"let f x = x;;\"]";
+  output_string outchan "[\"tell\",\"file\",\"C:/OCPWin32/develop/ocamleditor-mingw/src/common/shell.ml\"]";
+  output_string outchan "[\"type\",\"enclosing\", \"at\",{\"line\":43,\"col\":54}]";
+  output_string outchan "[\"case\",\"analysis\", \"from\",{\"line\":59,\"col\":13}, \"to\",{\"line\":59,\"col\":21}]";
   flush outchan;
-  Thread.delay 3.;
+  Thread.delay 1.;
   output_string outchan "[\"dump\",\"env\"]";
   flush outchan;;
 
 let pid, kill = Spawn.async_k ~process_out "C:\\OCPWin32\\bin\\ocamlmerlin.exe";;
 
-kill ();;*)
+kill ();;
 
 
 

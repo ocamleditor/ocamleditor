@@ -35,7 +35,6 @@ open Printf
     Printf.printf "%s\n%!" cmd;
     Spawn.async cmd ~verbose:false
       ~process_in
-      ~process_err:ignore
       ~at_exit:begin fun _ ->
         let tag_del = buffer#create_tag ~name:"tag_diff_del" [] in
         Gmisclib.Util.set_tag_paragraph_background tag_del Oe_config.global_gutter_diff_color_del;

@@ -354,7 +354,7 @@ class widget ~page ?packing () =
                     | _ -> ()
                 end
               in
-              Spawn.async ~verbose:false ~process_in ~process_err:ignore cmd |> ignore;
+              Spawn.async ~verbose:false ~process_in cmd |> ignore;
             | _ -> ()
 
     method private read_local_backups () =

@@ -248,7 +248,6 @@ module Diff = struct
       in
       Spawn.async cmd ~verbose:false
         ~process_in
-        ~process_err:ignore
         ~at_exit:begin fun _ ->
           Hashtbl.replace cache page#get_oid !diffs;
           match !diffs with [] -> () | diffs ->
