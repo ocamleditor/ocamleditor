@@ -67,7 +67,15 @@ class ocaml_shell ?project () =
   let _ = tooltips#set_tip ~text:"Rename Toplevel Window" b_rename#coerce in
   (*  *)
   let prog = Ocaml_config.ocaml() in
-  let sh = new Shell.ocaml ~prog ~env:(Unix.environment()) ~args:[] ~packing:sw#add () in
+  let sh =
+    object
+      inherit Shell_view.widget ~prog ~env:(Unix.environment()) ~args:[] ~packing:sw#add ()
+      method! private lex ~start ~stop =
+        if start#compare stop < 0 then Lexical.tag buffer ~start ~stop
+      initializer
+        Lexical.init_tags buffer;
+    end
+  in
   let _ = Ocaml_text.shells := sh :: !Ocaml_text.shells in
 object (self)
   inherit GObj.widget vbox#as_widget

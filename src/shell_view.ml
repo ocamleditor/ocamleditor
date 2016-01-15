@@ -23,13 +23,11 @@ class ['a] history () = object
     List.nth history ((l + count - 1) mod l)
 end
 
-(* The shell class. Now encapsulated *)
-
 let protect f x = try f x with _ -> ();;
 
 let count = ref 0
 
-class shell ~prog ~(env : string array) ~(args : string list) ?packing ?show () =
+class widget ~prog ~(env : string array) ~(args : string list) ?packing ?show () =
   let view = GText.view ~cursor_visible:false ~editable:false ?packing ?show () in
   let buf = view#buffer in
   let process = Process.create ~env ~prog ~args () in
@@ -200,16 +198,5 @@ object (self)
 
 end
 
-
-
-
-class ocaml ~prog ~env ~args ?packing ?show () =
-object (self)
-  inherit shell ~prog ~env ~args ?packing ?show ()
-  method private lex ~start ~stop =
-    if start#compare stop < 0 then Lexical.tag buffer ~start ~stop
-  initializer
-    Lexical.init_tags buffer;
-end
 
 

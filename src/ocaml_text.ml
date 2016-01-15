@@ -41,7 +41,7 @@ object (self)
       | _ -> false
   end)
   val mutable lexical_tags = []
-  val mutable shell : Shell.shell option = None
+  val mutable shell : Shell_view.widget option = None
   val mutable select_word_state = []
   val mutable select_word_state_init = None
   val mutable changed_timestamp = 0.0
