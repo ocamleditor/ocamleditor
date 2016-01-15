@@ -221,13 +221,15 @@ let append_page ?project (messages : Messages.messages) =
     end;
     hbox#coerce
   in
+  sh#set_close_tab_func begin fun () ->
+    if sh#alive then Dialog.process_still_active ~name:sh#title ~ok:sh#quit ~cancel:GtkSignal.stop_emit ()
+  end;
+  ignore (messages#connect#remove_page ~callback:begin fun child ->
+      if sh#alive && child#misc#get_oid = sh#misc#get_oid then
+        (Dialog.process_still_active ~name:sh#title ~ok:sh#quit ~cancel:(fun () -> raise Messages.Cancel_process_termination) ())
+    end);
   messages#append_page ~label_widget sh#as_page;
   sh#present ();
   sh#misc#connect#destroy ~callback:sh#quit;
   sh#is_working#set false;
-  let ask ~cancel () = Dialog.process_still_active ~name:sh#title ~ok:sh#quit ~cancel () in
-  sh#set_close_tab_func (fun () -> if sh#alive then (sh#quit()));
-  ignore (messages#connect#remove_page ~callback:begin fun child ->
-    if sh#alive && child#misc#get_oid = sh#misc#get_oid then
-      (ask ~cancel:(fun () -> raise Messages.Cancel_process_termination)())
-  end);;
+  ;;

@@ -291,6 +291,7 @@ object (self)
         Hashtbl.remove table page#misc#get_oid;
       end);
     page#set_parent (self :> messages);
+    page#set_button tab_label#button;
     self#remove_empty_page();
 
   method set_visible x =
