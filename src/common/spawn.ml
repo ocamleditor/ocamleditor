@@ -379,7 +379,7 @@ module Parfold = struct
 end
 
 
-#directory "common";;
+(*#directory "common";;
 #directory "+threads";;
 #load "unix.cma";;
 #load "str.cma";;
@@ -400,6 +400,6 @@ let process_out outchan =
 let pid, kill = Spawn.async_k ~process_out "C:\\OCPWin32\\bin\\ocamlmerlin.exe";;
 
 kill ();;
-
+*)
 
 
