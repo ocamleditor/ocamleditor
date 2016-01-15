@@ -208,84 +208,121 @@ let iter_chan (f : in_channel -> unit) chan = try while true do f chan done with
 (** exec *)
 let exec
     ?(mode=(`SYNC : [`SYNC | `ASYNC | `ASYNC_KILL]))
-    ?(env=Unix.environment())
+    ?env
     ?(at_exit=(ignore : (Parallel_process.exit -> unit)))
     ?process_out
-    ?(process_in=(iter_chan (fun chan -> print_endline (input_line chan))))
-    ?(process_err=(iter_chan (fun chan -> prerr_endline (input_line chan))))
+    ?process_in
+    ?process_err
     ?(verbose=false)
     command_line =
   if verbose then printf "%s\n%!" command_line;
-  let killable_proc, (inchan, outchan, errchan as channels) =
-    match mode with
-      | `ASYNC_KILL ->
-        let proc = Parallel_process.create ~env ~prog:"" ~verbose () in
-        proc.Parallel_process.cmd_line <- command_line;
-        Parallel_process.start proc;
-        (Some proc), (Parallel_process.channels proc)
-      | `ASYNC | `SYNC -> None, Unix.open_process_full command_line env
-  in
-  set_binary_mode_in inchan true;
-  set_binary_mode_in errchan true;
-  let close () =
-    match killable_proc with
-      | Some proc -> Parallel_process.close proc;
-      | _ -> `STATUS (Unix.close_process_full channels)
-  in
-  let tho = match process_out with Some f -> Some (Thread.create f outchan) | _ -> None in
-  let thi = Thread.create process_in inchan in
-  let the =
-    Thread.create begin fun () ->
-      process_err errchan;
-      Thread.join thi;
-      (match tho with Some t -> Thread.join t | _ -> ());
+  match mode with
+    | `SYNC when process_out = None && process_in = None && process_err = None && (env = None || env = Some (Unix.environment())) ->
+      let n = Sys.command command_line in
+      Some (Status (Unix.WEXITED n))
+    | `SYNC | `ASYNC when process_out = None && process_err = None && (env = None || env = Some (Unix.environment())) ->
+      let inchan = Unix.open_process_in command_line in
+      set_binary_mode_in inchan true;
+      let close () = `STATUS (Unix.close_process_in inchan) in
+      let thi =
+        Thread.create begin fun () ->
+          (match process_in with Some f -> f inchan | _ -> ());
+          begin
+            match mode with
+              | `ASYNC ->
+                let exit_code = close() in
+                at_exit exit_code
+              | `SYNC | `ASYNC_KILL -> ()
+          end;
+        end ()
+      in
       begin
         match mode with
-          | `ASYNC | `ASYNC_KILL ->
+          | `SYNC ->
+            Thread.join thi;
             let exit_code = close() in
-            at_exit exit_code
-          | `SYNC -> ()
-      end;
-    end ()
-  in
-  begin
-    match mode with
-      | `SYNC ->
-        Thread.join the;
-        Thread.join thi;
-        (match tho with Some t -> Thread.join t | _ -> ());
-        let exit_code = close() in
-        at_exit exit_code;
-        begin
-          match exit_code with
-            | `STATUS x -> Some (Status x)
-            | `ERROR (a, b) -> Some (Error (a, b))
-        end;
-      | `ASYNC -> None
-      | `ASYNC_KILL ->
-        begin
-          match killable_proc with
-            | Some proc -> Some (Async (Parallel_process.getpid proc, (fun () -> Parallel_process.kill proc)))
-            | _ -> Some (Error (-90, ""))
-        end;
-  end;;
+            at_exit exit_code;
+            begin
+              match exit_code with
+                | `STATUS x -> Some (Status x)
+                | `ERROR (a, b) -> Some (Error (a, b))
+            end;
+          | `ASYNC | `ASYNC_KILL -> None
+      end
+    | _ ->
+      let killable_proc, (inchan, outchan, errchan as channels) =
+        match mode with
+          | `ASYNC_KILL ->
+            let proc = Parallel_process.create ?env ~prog:"" ~verbose () in
+            proc.Parallel_process.cmd_line <- command_line;
+            Parallel_process.start proc;
+            (Some proc), (Parallel_process.channels proc)
+          | `ASYNC | `SYNC ->
+            None, Unix.open_process_full command_line (match env with Some e -> e | _ -> Unix.environment())
+      in
+      set_binary_mode_in inchan true;
+      set_binary_mode_in errchan true;
+      let close () =
+        match killable_proc with
+          | Some proc -> Parallel_process.close proc;
+          | _ -> `STATUS (Unix.close_process_full channels)
+      in
+      let process_in = match process_in with Some f -> f | _ -> iter_chan (fun chan -> print_endline (input_line chan)) in
+      let process_err = match process_err with Some f -> f | _ -> iter_chan (fun chan -> prerr_endline (input_line chan)) in
+      let tho = match process_out with Some f -> Some (Thread.create f outchan) | _ -> None in
+      let thi = Thread.create process_in inchan in
+      let the =
+        Thread.create begin fun () ->
+          process_err errchan;
+          Thread.join thi;
+          (match tho with Some t -> Thread.join t | _ -> ());
+          begin
+            match mode with
+              | `ASYNC | `ASYNC_KILL ->
+                let exit_code = close() in
+                at_exit exit_code
+              | `SYNC -> ()
+          end;
+        end ()
+      in
+      begin
+        match mode with
+          | `SYNC ->
+            Thread.join the;
+            Thread.join thi;
+            (match tho with Some t -> Thread.join t | _ -> ());
+            let exit_code = close() in
+            at_exit exit_code;
+            begin
+              match exit_code with
+                | `STATUS x -> Some (Status x)
+                | `ERROR (a, b) -> Some (Error (a, b))
+            end;
+          | `ASYNC -> None
+          | `ASYNC_KILL ->
+            begin
+              match killable_proc with
+                | Some proc -> Some (Async (Parallel_process.getpid proc, (fun () -> Parallel_process.kill proc)))
+                | _ -> Some (Error (-90, ""))
+            end;
+      end;;
 
 (** sync *)
-let sync ?env ?at_exit ?process_in ?process_err ?verbose command_line =
-  match exec ~mode:`SYNC ?env ?at_exit ?process_in ?process_err ?verbose command_line with
+let sync ?env ?at_exit ?process_in ?process_err ?process_out ?verbose command_line =
+  match exec ~mode:`SYNC ?env ?at_exit ?process_in ?process_err ?process_out ?verbose command_line with
     | Some (Error (code, msg)) -> `ERROR (code, msg)
     | Some (Status x) -> `STATUS x
     | Some (Async _) | None -> failwith "Spawn.sync"
 
 (** async *)
-let async ?env ?at_exit ?process_in ?process_err ?verbose command_line =
-  match exec ~mode:`ASYNC ?env ?at_exit ?process_in ?process_err ?verbose command_line with
+let async ?env ?at_exit ?process_in ?process_err ?process_out ?verbose command_line =
+  match exec ~mode:`ASYNC ?env ?at_exit ?process_in ?process_err ?process_out ?verbose command_line with
     | None -> ()
     | Some (Status _) | Some (Error _) | Some (Async _) -> failwith "Spawn.async"
 
 (** async_k *)
-let async_k ?env ?at_exit ?process_in ?process_err ?verbose command_line =
-  match exec ~mode:`ASYNC_KILL ?env ?at_exit ?process_in ?process_err ?verbose command_line with
+let async_k ?env ?at_exit ?process_in ?process_err ?process_out ?verbose command_line =
+  match exec ~mode:`ASYNC_KILL ?env ?at_exit ?process_in ?process_err ?process_out ?verbose command_line with
     | Some (Error (code, msg)) -> kprintf failwith "Spawn.async_k (%d, %s)" code msg
     | Some (Async (pid, kill_f)) -> pid, kill_f
     | Some (Status _) | None -> failwith "Spawn.async_k"
@@ -341,8 +378,8 @@ module Parfold = struct
 
 end
 
-(*
-#directory "common";;
+
+(*#directory "common";;
 #directory "+threads";;
 #load "unix.cma";;
 #load "str.cma";;
@@ -351,12 +388,17 @@ end
 open Printf
 open Spawn
 
-let pid, kill = Spawn.async_k "C:\\ocaml\\devel\\ocamleditor\\src\\ocamleditor.opt.exe";;
-let pid, kill = Spawn.async_k "C:\\OCPWin32\\bin\\ocamlmerlin.exe";;
+let process_out outchan =
+  Thread.delay 3.;
+  output_string outchan "[\"tell\",\"source\",\"let f x = x;;\"]";
+  flush outchan;
+  Thread.delay 3.;
+  output_string outchan "[\"dump\",\"env\"]";
+  flush outchan;;
 
-kill ();;
-*)
+let pid, kill = Spawn.async_k ~process_out "C:\\OCPWin32\\bin\\ocamlmerlin.exe";;
 
+kill ();;*)
 
 
 
