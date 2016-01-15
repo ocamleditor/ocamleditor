@@ -47,7 +47,7 @@ let putenv_ocamllib value =
 let find_best_compiler compilers =
   try
     Some (List.find begin fun comp ->
-      try ignore (kprintf Cmd.expand "%s -version%s" comp redirect_stderr); true with _ -> false
+      try kprintf Cmd.get_output "%s -version%s" comp redirect_stderr |> ignore; true with _ -> false
     end compilers)
   with Not_found -> None;;
 
@@ -80,12 +80,12 @@ let ocamlopt () = find_tool `BEST_OCAMLOPT (get_home ())
 let ocamldep () = match find_tool `BEST_OCAMLDEP (get_home ()) with Some x -> x | _ -> failwith "Cannot find 'ocamldep'"
 let ocamldoc () = match find_tool `BEST_OCAMLDOC (get_home ()) with Some x -> x | _ -> failwith "Cannot find 'ocamldoc'"
 let ocaml ()    = match find_tool `OCAML (get_home ()) with Some x -> x | _ -> failwith "Cannot find 'ocaml'"
-let ocamllib () = Cmd.expand ~first_line:true ((ocamlc()) ^ " -where")
+let ocamllib () = match Cmd.get_output ((ocamlc()) ^ " -where") with x :: _ -> x | _ -> ""
 
 (** OCaml Version *)
 
 let ocaml_version ?(compiler=ocamlc()) () =
-  Cmd.expand (compiler ^ " -v " ^ redirect_stderr)
+  String.concat "\n" (Cmd.get_output (compiler ^ " -v " ^ redirect_stderr))
 
 (** can_compile_native *)
 let can_compile_native ?ocaml_home () =
@@ -125,7 +125,7 @@ let can_compile_native ?ocaml_home () =
         if Sys.file_exists manifest then (Sys.remove manifest);
       end;
       if !result then begin
-        let conf = kprintf Cmd.expand "%s -config" compiler in
+        let conf = String.concat "\n" (kprintf Cmd.get_output "%s -config" compiler) in
         let re = Str.regexp "ccomp_type: \\(.*\\)\n" in
         if Str.search_forward re conf 0 >= 0 then begin
           Some (Str.matched_group 1 conf)

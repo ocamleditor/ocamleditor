@@ -52,7 +52,7 @@ let print () = if true || App_config.application_debug then begin
   let copyright = Str.replace_first (Str.regexp_string "©") "(c)" About.copyright in
   Printf.printf "\n%s %s\n\n%!" About.program_name About.version (*copyright*);
   let ocaml_version = Str.global_replace
-    (Str.regexp "\n") " - " (Str.global_replace (Str.regexp "\n$") "" (Cmd.expand "ocamlc -v")) in
+    (Str.regexp "\n") " - " (Str.global_replace (Str.regexp "\n$") "" (String.concat "\n" (Cmd.get_output "ocamlc -v"))) in
   let a, b, c = GMain.Main.version in
   Printf.printf "---------------------------------------------------------------\n%!" ;
   let properties = [

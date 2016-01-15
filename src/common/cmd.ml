@@ -21,44 +21,6 @@
 *)
 
 
-open Printf
-
-let expand =
-  let trimfunc =
-     let replace = Str.global_replace (Str.regexp "\\(^[ \t\r\n]+\\)\\|\\([ \t\r\n]+$\\)") in
-     fun str -> replace "" str
-  in fun ?(trim=true) ?(first_line=false) ?filter command ->
-    let ichan = Unix.open_process_in command in
-    let finally () = ignore (Unix.close_process_in ichan) in
-    let data = Buffer.create 100 in
-    begin
-      try
-        let get_line ichan = if trim then trimfunc (input_line ichan) else input_line ichan in
-        while true do
-          let line = get_line ichan in
-          if first_line && String.length line = 0 then begin
-          end else if first_line then begin
-            Buffer.add_string data line;
-            raise End_of_file
-          end else begin
-            match filter with
-              | None ->
-                Buffer.add_string data line;
-                Buffer.add_char data '\n'
-              | Some f when (f line) ->
-                Buffer.add_string data line;
-                Buffer.add_char data '\n'
-              | _ -> ()
-          end
-        done
-      with
-        | End_of_file -> ()
-        | ex -> (finally(); raise ex)
-    end;
-    finally();
-    if Buffer.length data = 0 then (kprintf failwith "Cmd.expand: %s" command);
-    Buffer.contents data;;
-
 (** redirect_stderr *)
 let redirect_stderr = if Sys.os_type = "Win32" then " 2>NUL" else " 2>/dev/null"
 

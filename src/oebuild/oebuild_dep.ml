@@ -46,7 +46,7 @@ let ocamldep ?times ?pp ?(ignore_stderr=false) ?(verbose=false) ?slash ?search_p
     let cmd = ocamldep_command ?pp ?slash ?search_path () in
     let cmd = sprintf "%s %s %s" cmd filenames redirect_stderr in
     if verbose then (printf "%s\n%!" cmd);
-    let text = Cmd.expand cmd in
+    let text = String.concat "\n" (Cmd.get_output cmd) in
     let entries = split_nl text in
     let replace =
       match times with
@@ -133,7 +133,7 @@ let find_dependants =
     let cmd = sprintf "%s -modules -native %s*.ml %s*.mli%s"
         (Ocaml_config.ocamldep()) dir dir Oebuild_util.redirect_stderr_to_null in
     printf "%s (%s)\n%!" cmd modname;
-    let ocamldep = Cmd.expand cmd in
+    let ocamldep = String.concat "\n" (Cmd.get_output cmd) in
     let entries = Str.split re1 ocamldep in
     let entries =
       List.map begin fun entry ->

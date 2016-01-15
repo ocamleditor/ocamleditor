@@ -141,7 +141,7 @@ let find_best ?(param="--help") prog =
         try
           let cmd = sprintf "%s %s%s" (Filename.quote comp) param redirect_stderr in
           if App_config.application_debug then (printf "Checking for %s... %!" cmd);
-          ignore (Cmd.expand ~first_line:true cmd);
+          Cmd.get_output cmd |> ignore;
           true
         with _ -> false
       in

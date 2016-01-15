@@ -95,8 +95,8 @@ let create_target_func ?tg targets =
 let ccomp_type = Ocaml_config.can_compile_native ()
 
 let system_config () =
-  let ocaml_version = Cmd.expand ~first_line:true "ocamlc -v" in
-  let std_lib = Cmd.expand ~first_line:true "ocamlc -where" in
+  let ocaml_version = match Cmd.get_output "ocamlc -v" with x :: _ -> x | _ -> "" in
+  let std_lib = match Cmd.get_output "ocamlc -where" with x :: _ -> x | _ -> "" in
   let properties = [
     "OCaml", ocaml_version;
     "Standard library directory", std_lib;

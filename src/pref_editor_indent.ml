@@ -58,7 +58,8 @@ class pref_editor_indent title ?packing () =
     view_help#misc#modify_font_by_name pref.Preferences.pref_base_font;
     view_help#set_cursor_visible false;
     try
-      let help = kprintf Cmd.expand "ocp-indent --help=plain %s" Cmd.redirect_stderr in
+      let help = kprintf Cmd.get_output "ocp-indent --help=plain %s" Cmd.redirect_stderr in
+      let help = String.concat "\n" help in
       let help = if Glib.Utf8.validate help then help else Glib.Convert.locale_to_utf8 help in
       buffer_help#set_text help;
     with Glib.Convert.Error _ -> ()

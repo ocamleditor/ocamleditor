@@ -193,7 +193,7 @@ class widget ~editor ?(callback=ignore) ~project ?page_num ?packing ?show () =
   let _ = target_list#misc#connect#unmap ~callback:(fun () -> button_help#misc#set_sensitive false) in
   let _ = button_help#connect#clicked ~callback:begin fun () ->
     let cmd = sprintf "\"%s\" --help" Oe_config.oebuild_command in
-    let text = Cmd.expand ~trim:false cmd in
+    let text = String.concat "\n" (Cmd.get_output cmd) in
     let window = GWindow.dialog ~title:cmd ~position:`CENTER () in
     window#add_button_stock `OK `OK;
     window#set_border_width 5;
