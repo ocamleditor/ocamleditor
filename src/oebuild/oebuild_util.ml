@@ -196,7 +196,7 @@ let get_effective_command =
   fun ?(linkpkg=false) ocamlfind ->
     try
       let cmd = sprintf "%s%s -verbose %s" ocamlfind (if linkpkg then " -linkpkg" else "") redirect_stderr_to_null in
-      let lines = Cmd.exec_lines cmd in
+      let lines = Cmd.get_output cmd in
       let effective_compiler = List.find (fun line -> String.sub line 0 2 = "+ ") lines in
       let effective_compiler = Str.string_after effective_compiler 2  in
       let effective_compiler = Str.replace_first re_verbose "" effective_compiler in

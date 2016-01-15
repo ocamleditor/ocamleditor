@@ -86,7 +86,7 @@ object (self)
     view#set_model (if x then Some modelf#coerce else Some model#coerce)
 
   method load () =
-    let lines = Cmd.exec_lines "ocamlfind list -describe" in
+    let lines = Cmd.get_output "ocamlfind list -describe" in
     let lines = List.fold_left begin fun (name_descr, acc) line ->
       match name_descr with
         | None ->

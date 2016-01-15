@@ -187,7 +187,7 @@ let get_version ?(ok_status=0) command =
     if status = ok_status || not (List.mem status status_not_found) then
       let redirect_stderr = if Sys.win32 then " 2>&1" else " 2>&1" in
       let cmd = sprintf "%s %s" command redirect_stderr in
-      (match Cmd.exec_lines cmd with ver :: _ -> Some ver | _ -> None)
+      (match Cmd.get_output cmd with ver :: _ -> Some ver | _ -> None)
     else failwith cmd
   with Failure _ -> None
 

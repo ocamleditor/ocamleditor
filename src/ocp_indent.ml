@@ -67,7 +67,7 @@ let indent ~view bounds =
         let stop = if not (stop#equal start) then stop#backward_line#forward_to_line_end else stop in
         let lines = start#line + 1, stop#line + 1 in
         let cmd = mk_ocp_indent_command ~lines ~pref filename in
-        let lines = Cmd.exec_lines cmd in
+        let lines = Cmd.get_output cmd in
         buffer#undo#begin_block ~name:"ocp-indent";
         buffer#block_signal_handlers();
         let start_line = start#line in

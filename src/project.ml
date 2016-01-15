@@ -160,7 +160,7 @@ let get_search_path proj =
   let package = Str.split (Miscellanea.regexp ",") package in
   let package = List.filter ((<>) "") package in
   let package = List.flatten (List.map begin fun package ->
-    kprintf Cmd.exec_lines "ocamlfind query %s -r %s" package Cmd.redirect_stderr
+    kprintf Cmd.get_output "ocamlfind query %s -r %s" package Cmd.redirect_stderr
   end (Xlist.remove_dupl package)) in
   let package = Xlist.remove_dupl (List.filter ((<>) "") package) in
   let includes = Xlist.remove_dupl (get_includes proj) in

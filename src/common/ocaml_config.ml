@@ -27,7 +27,7 @@ let redirect_stderr = if Sys.os_type = "Win32" then " 2>NUL" else " 2>/dev/null"
 
 
 let read_ocaml_config () =
-  let conf = Printf.kprintf Cmd.exec_lines "ocamlc -config" in
+  let conf = Printf.kprintf Cmd.get_output "ocamlc -config" in
   let re = Str.regexp ": " in
   List.map (fun l -> match Str.split re l with [n;v] -> n, v | [n] -> n, "" | _ -> assert false) conf
 
