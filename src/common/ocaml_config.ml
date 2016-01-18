@@ -47,7 +47,10 @@ let putenv_ocamllib value =
 let find_best_compiler compilers =
   try
     Some (List.find begin fun comp ->
-      try kprintf Shell.get_command_output "%s -version%s" comp redirect_stderr |> ignore; true with _ -> false
+      try
+        let output = kprintf Shell.get_command_output "%s -version%s" comp redirect_stderr in
+        output <> []
+      with _ -> false
     end compilers)
   with Not_found -> None;;
 
