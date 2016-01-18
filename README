@@ -28,7 +28,7 @@ COPYRIGHT
 DEPENDENCIES
 
   * OCaml-4.01.0;
-  * Lablgtk-2.16.0 (installed with Findlib);
+  * Lablgtk-2.18.0 (installed with Findlib);
   * Xml-light (installed with Findlib);
   * Findlib-1.4.0;
   * (optional) ocp-indent;
