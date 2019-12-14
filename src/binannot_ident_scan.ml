@@ -49,11 +49,11 @@ let rec iter_pattern f {pat_desc; pat_loc; pat_type; pat_extra; _} =
         ident_kind       = Def {def_name=loc.txt; def_loc=name_loc; def_scope=none};
         ident_loc        = Location.mkloc (Ident.name id) name_loc;
       } :: (fp pat)
-    | Tpat_construct (loc, cd, pl, _) ->
+    | Tpat_construct (loc, cd, pl) ->
       let type_expr = lid_of_type_expr cd.Types.cstr_res in
       let path, is_qualified =
         match cd.Types.cstr_tag with
-          | Types.Cstr_exception (p, _) ->
+          | Types.Cstr_extension (p, _) ->
             let path = Longident.parse (Path.name p) in
             path, Longident.qualified path
           | Types.Cstr_constant _ | Types.Cstr_block _ ->
@@ -71,14 +71,14 @@ let rec iter_pattern f {pat_desc; pat_loc; pat_type; pat_extra; _} =
     | Tpat_variant (_, pat, _) ->
       Opt.map_default pat [] (fun pat -> fp pat)
     | Tpat_record (ll, _) ->
-      List.flatten (List.fold_left begin fun acc (loc, ld, pat) ->
+      List.flatten (List.fold_left begin fun acc ({ txt; loc }, ld, pat) ->
         let type_expr = lid_of_type_expr ld.Types.lbl_res in
         let ident_kind = if Longident.qualified type_expr then Ext_ref else Int_ref none in
         let path = Longident.of_type_expr type_expr ld.Types.lbl_name in
         let ident = {
           ident_kind;
           ident_fname = "";
-          ident_loc   = Location.mkloc (Odoc_misc.string_of_longident path) loc.loc;
+          ident_loc   = Location.mkloc (Odoc_misc.string_of_longident path) loc;
         } in
         f ident;
         (fp pat) :: acc
@@ -106,6 +106,7 @@ and iter_expression f {exp_desc; exp_loc; exp_type; exp_extra; _} =
   let fp = iter_pattern f in
   let fpe expr pe =
     List.iter begin fun (p, e) ->
+      let [@warning "-4"] _ = "Disable fragile pattern matching warning" in
       List.iter begin function
         | {ident_kind = Def d; _} as i ->
           d.def_scope <- expr.exp_loc;
@@ -115,7 +116,20 @@ and iter_expression f {exp_desc; exp_loc; exp_type; exp_extra; _} =
       fe e;
     end pe
   in
-  List.iter begin fun (exp, loc') ->
+  let fvb expr vbl =
+    List.iter begin fun { vb_pat = p; vb_expr = e; _ } ->
+      let [@warning "-4"] _ = "Disable fragile pattern matching warning" in
+      List.iter begin function
+        | {ident_kind = Def d; _} as i ->
+          d.def_scope <- expr.exp_loc;
+          f i
+        | i -> f i
+      end (fp p);
+      fe e;
+    end vbl
+  in
+  List.iter begin fun (exp, loc', _) ->
+    let [@warning "-4"] _ = "Disable fragile pattern matching warning" in
     match exp with
       | Texp_open (_, path, loc, _) ->
         f {
@@ -138,8 +152,8 @@ and iter_expression f {exp_desc; exp_loc; exp_type; exp_extra; _} =
         ident_loc        = Location.mkloc (Path.name id) loc.loc;
       } in
       f ident;
-    | Texp_let (_, pe, expr) ->
-      fpe expr pe;
+    | Texp_let (_, vbl, expr) ->
+      fvb expr vbl;
       fe expr;
     | Texp_function (label, pe, _) ->
       List.iter begin fun (p, e) ->
@@ -163,12 +177,13 @@ and iter_expression f {exp_desc; exp_loc; exp_type; exp_extra; _} =
         List.iter f defs;
         fe e;
       end pe
-    | Texp_match (expr, pe, _) ->
+    | Texp_match (expr, cl, el, _) ->
       fe expr;
-      List.iter begin fun (p, e) ->
+      List.iter begin fun { c_lhs = p; c_guard = oe; c_rhs = e } ->
         List.iter (fun d -> d.ident_kind <- Def {def_name=""; def_loc=none; def_scope=e.exp_loc}; f d) (fp p);
         fe e;
-      end pe
+        Opt.may oe f
+      end (cl @ el)
     | Texp_apply (expr, pe) ->
       fe expr;
       List.iter (fun (_, e, _) -> Opt.may e fe) pe;
@@ -179,11 +194,11 @@ and iter_expression f {exp_desc; exp_loc; exp_type; exp_extra; _} =
         fe e;
       end pe
     | Texp_tuple el -> List.iter fe el
-    | Texp_construct (loc, cd, el, _) ->
+    | Texp_construct (loc, cd, el) ->
       let type_expr = lid_of_type_expr cd.Types.cstr_res in
       let path, is_qualified =
         match cd.Types.cstr_tag with
-          | Types.Cstr_exception (p, _) ->
+          | Types.Cstr_extension (p, _) ->
             let path = Longident.parse (Path.name p) in
             path, Longident.qualified path
           | Types.Cstr_constant _ | Types.Cstr_block _ ->
@@ -242,7 +257,6 @@ and iter_expression f {exp_desc; exp_loc; exp_type; exp_extra; _} =
     | Texp_sequence (e1, e2) -> fe e1; fe e2
     | Texp_while (e1, e2) -> fe e1; fe e2
     | Texp_for (_, _, e1, e2, _, e3) -> fe e1; fe e2; fe e3
-    | Texp_when (e1, e2) -> fe e1; fe e2
     | Texp_send (e1, meth, e2) ->
      (* let name = match meth with Tmeth_name x -> "(M) " ^ x | Tmeth_val id -> "(V) " ^ (Ident.name id) in
       Log.println `TRACE "Texp_send: %s %s [%s]"
@@ -263,7 +277,6 @@ and iter_expression f {exp_desc; exp_loc; exp_type; exp_extra; _} =
       iter_module_expr f mod_expr;
       fe expr;
     | Texp_assert expr -> fe expr
-    | Texp_assertfalse -> ()
     | Texp_lazy expr -> fe expr
     | Texp_object (cl_str, _) -> iter_class_structure f cl_str
     | Texp_pack mod_expr -> iter_module_expr f mod_expr
@@ -601,7 +614,7 @@ let scan ~project ~filename ?compile_buffer () =
           let size = (Unix.stat (cmt.cmt_builddir // cmt_sourcefile)).Unix.st_size + 1 in
           let entry = {
             timestamp;
-            locations   = Array.create size None;
+            locations   = Array.make size None;
             int_refs    = Hashtbl.create 7;
             ext_refs    = Hashtbl.create 7;
             definitions = [];

@@ -57,7 +57,7 @@ let pixbuf_of_kind = function
 
 module Index = struct
   let len = 256
-  let create () = Array.create len []
+  let create () = Array.make len []
   let clear ind = for i = 0 to len - 1 do Array.unsafe_set ind i [] done
 
   let add ind name path =

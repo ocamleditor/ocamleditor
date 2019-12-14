@@ -27,7 +27,7 @@ module Make (C : COMMAND) = struct
 
   let help_of_commands =
     let help_of_command maxlength cmd =
-      let spec , descr, _ = List.assoc cmd cmd_map in
+      let _ , descr, _ = List.assoc cmd cmd_map in
       (sprintf "  %s  %s" (rpad (C.string_of_command cmd) ' ' maxlength) descr)
     in
     let maxlength = List.fold_left (fun cand x -> max cand (String.length (C.string_of_command x))) 0 commands in
@@ -77,7 +77,7 @@ module Make (C : COMMAND) = struct
     with
       | Command_found ->
         let len = Array.length args - !Arg.current in
-        let command_args = Array.create len "" in
+        let command_args = Array.make len "" in
         Array.blit args !Arg.current command_args 0 len;
         let parse_anon = with_command (fun cmd -> C.anon_fun cmd) in
         begin
@@ -98,7 +98,7 @@ module Make (C : COMMAND) = struct
                 raise (Help_Command  (cmd, (cmd_specs, cmd_descr, cmd_usage), help_string ()))
               end
             | Arg.Bad msg as ex ->
-              with_command begin fun cmd ->
+              with_command begin fun _cmd ->
                 try
                   let first_line = String.sub msg 0 (String.index msg '\n') in
                   raise (Arg.Bad (sprintf "%s\n%s"

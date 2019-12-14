@@ -64,16 +64,16 @@ let main () =
     with End_of_file -> ()
   end;
   ignore (Unix.close_process_in inchan);
-  printf "%s\n%!" !pid;	
+  printf "%s\n%!" !pid;
   let len = Array.length Sys.argv - 1 in
-  let cmd = Array.create len "" in
+  let cmd = Array.make len "" in
   Array.blit Sys.argv 1 cmd 0 len;
   let cmd = Array.to_list cmd in
   let cmd = String.concat " " cmd in
   ignore begin
     Thread.create begin fun () ->
       try
-        let inchan, outchan = Unix.open_connection addr_inet in
+        let inchan, _ = Unix.open_connection addr_inet in
         Unix.shutdown_connection inchan;
       with Unix.Unix_error (e, _, _) -> begin
         Printf.printf "connection: %s\n%!" (Unix.error_message e)

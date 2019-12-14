@@ -43,7 +43,7 @@ let file_recent_callback ~(file_recent_menu : GMenu.menu) editor =
   with Exit -> ()
 
 let get_file_switch_sensitive page =
-  let name = page#get_filename in (name ^^ ".ml" || name ^^ ".mli")
+  let name = page#get_filename in (name ^^^ ".ml" || name ^^^ ".mli")
 
 let file ~browser ~group ~flags items =
   let editor = browser#editor in

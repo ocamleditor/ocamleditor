@@ -51,7 +51,7 @@ object (self)
   method private position = buffer#get_iter `INSERT
   method private input_start = buffer#get_iter (input_start :> GText.position)
   method private set_input_start () =
-    buffer#move_mark input_start self#position;
+    buffer#move_mark input_start ~where:self#position;
 
   method textview = view
   method alive = alive
@@ -83,16 +83,16 @@ object (self)
 
   method private read ~fd ~len =
     try
-      let buf = String.create len in
+      let buf = Bytes.create len in
       let len = Unix.read ~buf ~pos:0 ~len fd in
       if len > 0 then begin
-	buffer#place_cursor buffer#end_iter;
+	buffer#place_cursor ~where:buffer#end_iter;
         let txt = String.sub buf ~pos:0 ~len in
 	self#insert txt;
 	self#set_input_start ();
       end;
       len
-    with Unix.Unix_error (e, s1, s2) -> 0
+    with Unix.Unix_error _ -> 0
 
   method history_object = h
 
@@ -109,7 +109,7 @@ object (self)
 	reading <- true;
 	self#set_input_start ();
       end;
-      buffer#place_cursor buffer#end_iter;
+      buffer#place_cursor ~where:buffer#end_iter;
       self#insert (if dir = `previous then h#previous else h#next);
       view#misc#grab_focus()
     end
@@ -133,12 +133,12 @@ object (self)
             if it1#starts_line then it2
             else search it1
       in
-      buffer#move_mark input_start (search self#position)
+      buffer#move_mark input_start ~where:(search self#position)
     end;
     let stop = self#position#forward_to_line_end in
-    buffer#place_cursor stop;
+    buffer#place_cursor ~where:stop;
     let s = buffer#get_text ~start:(self#input_start) ~stop () in
-    buffer#place_cursor buffer#end_iter;
+    buffer#place_cursor ~where:buffer#end_iter;
     self#send s;
     self#send "\n"
 
@@ -149,7 +149,7 @@ object (self)
     end
 
   initializer
-    buffer#place_cursor buffer#end_iter;
+    buffer#place_cursor ~where:buffer#end_iter;
     let txt = "(Press F8 in the editor to evaluate expressions here)\n\n" in
     self#insert txt;
     self#set_input_start ();
@@ -165,7 +165,7 @@ object (self)
         else *)if key = _Up && state = [`CONTROL] then (self#history `next; true)
         else if key = _Down && state = [`CONTROL] then (self#history `previous; true)
 	else true(*(self#keypress (GdkEvent.Key.string ev); false)*);
-      end;
+      end |> ignore;
     buffer#connect#after#insert_text ~callback:
       begin fun it s ->
         try
@@ -173,28 +173,28 @@ object (self)
           self#lex ~start:(start#set_line_index 0) ~stop:it#forward_to_line_end;
           view#scroll_mark_onscreen `INSERT;
         with Gpointer.Null -> ()
-      end;
+      end |> ignore;
     buffer#connect#after#delete_range ~callback:
       begin fun ~start ~stop ->
         let start = start#set_line_index 0
         and stop = start#forward_to_line_end in
         self#lex ~start ~stop
-      end;
+      end |> ignore;
     view#event#connect#button_press ~callback:
       begin fun ev ->
 	if GdkEvent.Button.button ev = 2 then self#paste ();
 	false
-      end;
+      end |> ignore;
 (*    view#event#connect#button_press ~callback:(fun _ -> true);*)
-    view#connect#destroy ~callback:self#kill;
+    view#connect#destroy ~callback:self#kill |> ignore;
 
-    ignore (List.map begin fun fd ->
+    ignore (List.map ~f:begin fun fd ->
       Thread.create begin fun () ->
         while alive do
-          self#read ~fd ~len:1024
+          ignore @@ self#read ~fd ~len:1024
         done
       end ();
-    end (List.map Unix.descr_of_in_channel [errchan; inchan]));
+    end (List.map ~f:Unix.descr_of_in_channel [errchan; inchan]));
 
 end
 

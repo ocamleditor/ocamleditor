@@ -61,7 +61,7 @@ let update_labels
       | None -> false
       | Some page ->
        let name = page#get_filename in
-       name ^^ ".ml" || name ^^ ".mli"
+       name ^^^ ".ml" || name ^^^ ".mli"
   in
   code_folding#misc#set_sensitive is_ml;
   select_in_outline#misc#set_sensitive is_ml;

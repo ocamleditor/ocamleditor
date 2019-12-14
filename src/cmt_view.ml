@@ -790,7 +790,7 @@ object (self)
       | Texp_function (_, pel, _) ->
         List.iter (fun pe -> ignore (self#append_pattern ?parent pe)) pel
       | Texp_let (_, pes, expr) ->
-        List.iter (fun pe -> ignore (self#append_pattern ?parent pe)) pes
+        List.iter (fun { vb_pat; vb_expr; _ } -> ignore (self#append_pattern ?parent (vb_pat, vb_expr))) pes
       | Texp_apply (expr, el) -> self#append_expression ?parent expr
       | Texp_sequence _ -> ignore (self#append ?parent "Texp_sequence" "")
       | _ -> ignore (self#append ?parent "x" "")

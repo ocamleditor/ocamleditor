@@ -99,9 +99,7 @@ let string_of_kind = function
   | Open _ -> "Open"
 
 let string_of_loc loc =
-  let filename, a, b = Location.get_pos_info loc.loc_start in
-  let _, c, d = Location.get_pos_info loc.loc_end in
-  (*sprintf "%s, %d:%d(%d) -- %d:%d(%d)" filename a b (loc.loc_start.pos_cnum) c d (loc.loc_end.pos_cnum);;*)
+  let filename, _, _ = Location.get_pos_info loc.loc_start in
   sprintf "%s:%d--%d" filename (loc.loc_start.pos_cnum) (loc.loc_end.pos_cnum);;
 
 let linechar_of_loc loc =
@@ -122,7 +120,7 @@ let (<==<) loc offset = loc.loc_start.pos_cnum <= offset && (offset <= loc.loc_e
 let read_cmt ~project ~filename:source ?(timestamp=0.) ?compile_buffer () =
   try
     let result =
-      let ext = if source ^^ ".ml" then Some ".cmt" else if source ^^ ".mli" then Some ".cmti" else None in
+      let ext = if source ^^^ ".ml" then Some ".cmt" else if source ^^^ ".mli" then Some ".cmti" else None in
       match ext with
         | Some ext ->
           Opt.map_default (Project.tmp_of_abs project source) None begin fun (tmp, relname) ->

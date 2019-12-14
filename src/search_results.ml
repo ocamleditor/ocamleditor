@@ -20,10 +20,7 @@
 
 *)
 
-open Printf
-open GdkKeysyms
 open GUtil
-open Gobject
 open Miscellanea
 open Location
 open Lexing
@@ -45,7 +42,7 @@ let count_locations {locations; _} =
     | Mark locs -> List.length locs
 
 let ranges_of_locations = function
-  | Offset locs -> List.map (fun (_, loc) -> Lexical_markup.Range.range_of_loc loc.loc) locs
+  | Offset locs -> List.map (fun (_, { txt = _; loc; }  ) -> Lexical_markup.Range.range_of_loc loc) locs
   | Mark marks -> List.map begin fun (_, buffer, m1, m2) ->
     let start = (buffer#get_iter (`MARK m1))#line_index in
     let stop = (buffer#get_iter (`MARK m2))#line_index in
@@ -282,7 +279,7 @@ object (self)
       let lines =
         match locations with
           | Offset locs ->
-            let line_nums = List.map (fun (_, loc) -> loc.loc.loc_start.pos_lnum) locs in
+            let line_nums = List.map (fun (_, { txt; loc }) -> loc.loc_start.pos_lnum) locs in
             Miscellanea.get_lines_from_file ~filename:real_filename line_nums
           | Mark locs ->
             List.sort (fun (n1, _) (n2, _) -> compare n1 n2)
@@ -299,7 +296,7 @@ object (self)
       List.map begin fun (lnum, line) ->
         let line_locs =
           match locations with
-            | Offset locs -> Offset (List.filter (fun (_, loc) -> lnum = loc.loc.loc_start.pos_lnum) locs)
+            | Offset locs -> Offset (List.filter (fun (_, { txt; loc }) -> lnum = loc.loc_start.pos_lnum) locs)
             | Mark locs -> Mark (List.filter begin fun (_, buffer, mark_start, _) ->
               let iter = buffer#get_iter (`MARK mark_start) in
               lnum = iter#line + 1
@@ -378,10 +375,10 @@ object (self)
       | (Mark _) as x -> x
       | Offset locs ->
         Mark begin
-          List.map begin fun (pixbuf, loc) ->
-            if loc.loc <> Location.none && loc.loc.loc_start.pos_cnum >= 0 && loc.loc.loc_end.pos_cnum >= 0 then begin
-              let start = buffer#get_iter (`OFFSET loc.loc.loc_start.pos_cnum) in
-              let stop = buffer#get_iter (`OFFSET loc.loc.loc_end.pos_cnum) in
+          List.map begin fun (pixbuf, { txt = _; loc }) ->
+            if loc <> Location.none && loc.loc_start.pos_cnum >= 0 && loc.loc_end.pos_cnum >= 0 then begin
+              let start = buffer#get_iter (`OFFSET loc.loc_start.pos_cnum) in
+              let stop = buffer#get_iter (`OFFSET loc.loc_end.pos_cnum) in
               let mark_start = buffer#create_mark start in
               let mark_stop = buffer#create_mark stop in
               pixbuf, buffer, mark_start, mark_stop

@@ -22,7 +22,6 @@
 
 open Lexing
 open Parser
-open Printf
 
 type result = {
   lexeme : string;
@@ -74,7 +73,8 @@ let scan ?(utf8=true) ?(ignore_lexer_error=true) text f =
 (** Moduli aperti con "open" nel testo. *)
 let paths_opened text =
   let paths = ref [] in
-  analyse text begin fun ~token ~lexeme ~start ~length ~lexbuf ->
+  analyse text begin fun ~token ~lexeme:_ ~start:_ ~length:_ ~lexbuf ->
+    let [@warning "-4"] _ = "Disable this pattern is fragile warning" in
     match token with
       | OPEN ->
         let path = ref "" in
@@ -96,9 +96,10 @@ let paths_opened text =
 (** Tutte le stringhe. *)
 let strings text =
   let strings = ref [] in
-  analyse text begin fun ~token ~lexeme ~start ~length ~lexbuf ->
+  analyse text begin fun ~token ~lexeme:_ ~start ~length ~lexbuf:_ ->
+    let [@warning "-4"] _ = "Disable this pattern is fragile warning" in
     match token with
-      | STRING s ->
+      | STRING (s, _) ->
         strings := {lexeme = s; start = start; length = length} :: !strings;
         None
       | _ -> None
@@ -108,9 +109,10 @@ let strings text =
 (** in_string *)
 let in_string ?(utf8=true) text =
   let strings = ref [] in
-  analyse ~utf8 text begin fun ~token ~lexeme ~start ~length ~lexbuf ->
+  analyse ~utf8 text begin fun ~token ~lexeme:_ ~start ~length ~lexbuf:_ ->
+    let [@warning "-4"] _ = "Disable this pattern is fragile warning" in
     match token with
-      | STRING s ->
+      | STRING _ ->
         strings := (start, start + length) :: !strings;
         None
       | _ -> None

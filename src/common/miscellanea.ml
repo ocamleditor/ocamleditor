@@ -26,11 +26,12 @@ open Printf
 let (//) = Filename.concat
 let (!!) = Filename.dirname
 let (!$) = Filename.quote
-let (^^) = Filename.check_suffix
+let (^^^) = Filename.check_suffix
 let (|-) f g x = g (f x)
 
+
+(** try ... finally ... *)
 let finally = fun f1 f2 ->
-  (** try ... finally ... *)
   try
     let result = Lazy.force f1 in
     Lazy.force f2;
@@ -98,13 +99,13 @@ module Xlist =
     let rev_tl ll =
       let rec f acc = function
         | [] -> invalid_arg "Empty List"
-        | h :: [] -> []
+        | _ :: [] -> []
         | h :: t -> h :: acc @ (f acc t)
       in f [] ll;;
 
     let list_full x n =
       let seq = ref [] in
-      for i = 1 to n do seq := x :: !seq done;
+      for _ = 1 to n do seq := x :: !seq done;
       !seq;;
 
     let group_assoc ll =

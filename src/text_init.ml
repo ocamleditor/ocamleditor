@@ -33,7 +33,7 @@ let key_press view =
       | [] ->
         if key = _Tab then begin
           let ocp_indent_applied =
-            (match view#tbuffer#file with Some file when not (file#filename ^^ ".ml") && not (file#filename ^^ ".ml") -> false | _ -> true) &&
+            (match view#tbuffer#file with Some file when not (file#filename ^^^ ".ml") && not (file#filename ^^^ ".ml") -> false | _ -> true) &&
             if Oe_config.ocp_indent_tab_key_enabled && Oe_config.ocp_indent_version <> None
             then (Ocp_indent.indent ~view `SELECTION) else false
           in

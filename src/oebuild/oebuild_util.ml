@@ -113,7 +113,7 @@ let rm = win32 "DEL /F /Q" "rm -f"
 
 (** Copy file *)
 let copy_file ic oc =
-  let buff = String.create 0x1000 in
+  let buff = Bytes.create 0x1000 in
   let rec copy () =
     let n = input ic buff 0 0x1000 in
     if n = 0 then () else (output oc buff 0 n; copy())
@@ -127,7 +127,7 @@ let cp ?(echo=true) src dst =
   try copy_file ic oc; finally() with ex -> (finally(); raise ex)
 
 (** mkdir *)
-let rec mkdir_p ?(echo=true) d =
+let rec mkdir_p d =
   if not (Sys.file_exists d) then begin
     mkdir_p (Filename.dirname d);
     printf "mkdir -p %s\n%!" d;
