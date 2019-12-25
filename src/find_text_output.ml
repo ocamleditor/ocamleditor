@@ -23,7 +23,6 @@
 open Printf
 open GdkKeysyms
 open GUtil
-open Gobject
 open Find_text
 open Miscellanea
 
@@ -725,7 +724,7 @@ class widget
       let get_text filename = Buffer.contents (File_util.read filename) in
       let get_text = Miscellanea.Memo.create get_text in
       let get_comments filename =
-        if List.exists ((^^) filename) [".ml"; ".mli"; ".mll"; ".mly"] then
+        if List.exists ((^^^) filename) [".ml"; ".mli"; ".mll"; ".mly"] then
           let text = get_text filename in
           let comments = match Comments.scan_utf8 text with Comments.Utf8 x -> x | _ -> assert false in
           let comments = List.map (fun (a, b, _, odoc) ->
@@ -744,7 +743,7 @@ class widget
           let file = model#get ~row ~column:col_file in
           let path = model#get ~row ~column:col_path in
           let filename = path // file in
-          tbuf#set_lexical_enabled (filename ^^ ".ml" || filename ^^ ".mli" || filename ^^ ".mll" || filename ^^ ".mly");
+          tbuf#set_lexical_enabled (filename ^^^ ".ml" || filename ^^^ ".mli" || filename ^^^ ".mll" || filename ^^^ ".mly");
           match List_opt.find (fun {filename=fn; _} -> fn = filename) results with
             | None -> () (* TODO: Under Windows sometimes I get filenames separated by "backslash" instead of "/" in results. *)
             | Some res ->

@@ -19,7 +19,7 @@
   along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 *)
-
+[@@@warning "-48"]
 
 (** A widget used to choose from a list of items, like GtkComboBox,
     which allows you to select an item by searching as you type. *)

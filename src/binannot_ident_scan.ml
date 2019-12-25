@@ -20,8 +20,6 @@
 
 *)
 
-
-open Printf
 open Miscellanea
 open Cmt_format
 open Typedtree
@@ -37,7 +35,7 @@ exception Found of ident
 type ext_def = Project_def of ident | Project_file of ident | Library_def | No_def
 
 (** iter_pattern *)
-let rec iter_pattern f {pat_desc; pat_loc; pat_type; pat_extra; _} =
+let rec iter_pattern f {pat_desc; pat_loc; _} =
   let fp = iter_pattern f in
   match pat_desc with
     | Tpat_tuple pl ->
@@ -71,7 +69,7 @@ let rec iter_pattern f {pat_desc; pat_loc; pat_type; pat_extra; _} =
     | Tpat_variant (_, pat, _) ->
       Opt.map_default pat [] (fun pat -> fp pat)
     | Tpat_record (ll, _) ->
-      List.flatten (List.fold_left begin fun acc ({ txt; loc }, ld, pat) ->
+      List.flatten (List.fold_left begin fun acc ({ txt = _; loc }, ld, pat) ->
         let type_expr = lid_of_type_expr ld.Types.lbl_res in
         let ident_kind = if Longident.qualified type_expr then Ext_ref else Int_ref none in
         let path = Longident.of_type_expr type_expr ld.Types.lbl_name in
@@ -101,10 +99,11 @@ let rec iter_pattern f {pat_desc; pat_loc; pat_type; pat_extra; _} =
       }]
 
 (** iter_expression *)
-and iter_expression f {exp_desc; exp_loc; exp_type; exp_extra; _} =
+and iter_expression f {exp_desc; exp_extra; _} =
   let fe = iter_expression f in
   let fp = iter_pattern f in
-  let fpe expr pe =
+  (* Removed in 4.02.0 *)
+  (*let fpe expr pe =
     List.iter begin fun (p, e) ->
       let [@warning "-4"] _ = "Disable fragile pattern matching warning" in
       List.iter begin function
@@ -115,7 +114,7 @@ and iter_expression f {exp_desc; exp_loc; exp_type; exp_extra; _} =
       end (fp p);
       fe e;
     end pe
-  in
+  in*)
   let fvb expr vbl =
     List.iter begin fun { vb_pat = p; vb_expr = e; _ } ->
       let [@warning "-4"] _ = "Disable fragile pattern matching warning" in
@@ -156,15 +155,16 @@ and iter_expression f {exp_desc; exp_loc; exp_type; exp_extra; _} =
       fvb expr vbl;
       fe expr;
     | Texp_function (label, pe, _) ->
-      List.iter begin fun (p, e) ->
+      List.iter begin fun { c_lhs = p; c_guard = oe; c_rhs = e } ->
         let defs =
+          let [@warning "-4"] _ = "Disable this pattern is fragile warning" in
           (List.map begin function
             | {ident_kind=Def d; _} as i ->
               d.def_scope <- e.exp_loc;
               i
             | i -> i
           end (fp p)) @
-          (List.map begin fun (pe, pe_loc) ->
+          (List.map begin fun (_, pe_loc, _) ->
             let def_loc =
               {pe_loc with loc_end = {pe_loc.loc_start with pos_cnum = pe_loc.loc_start.pos_cnum + String.length label}}
             in {
@@ -175,22 +175,24 @@ and iter_expression f {exp_desc; exp_loc; exp_type; exp_extra; _} =
           end p.pat_extra)
         in
         List.iter f defs;
+        Opt.may oe fe;
         fe e;
       end pe
     | Texp_match (expr, cl, el, _) ->
       fe expr;
       List.iter begin fun { c_lhs = p; c_guard = oe; c_rhs = e } ->
         List.iter (fun d -> d.ident_kind <- Def {def_name=""; def_loc=none; def_scope=e.exp_loc}; f d) (fp p);
+        Opt.may oe fe;
         fe e;
-        Opt.may oe f
       end (cl @ el)
     | Texp_apply (expr, pe) ->
       fe expr;
       List.iter (fun (_, e, _) -> Opt.may e fe) pe;
     | Texp_try (expr, pe) ->
       fe expr;
-      List.iter begin fun (p, e) ->
+      List.iter begin fun { c_lhs = p; c_guard = oe; c_rhs = e }  ->
         List.iter (fun d -> d.ident_kind <- Def {def_name=""; def_loc=none; def_scope=e.exp_loc}; f d) (fp p);
+        Opt.may oe fe;
         fe e;
       end pe
     | Texp_tuple el -> List.iter fe el
@@ -216,14 +218,14 @@ and iter_expression f {exp_desc; exp_loc; exp_type; exp_extra; _} =
     | Texp_variant (_, expr) ->
       Opt.may expr fe
     | Texp_record (ll, expr) ->
-      List.iter begin fun (loc, ld, e) ->
+      List.iter begin fun ({ txt = _; loc }, ld, e) ->
         let type_expr = lid_of_type_expr ld.Types.lbl_res in
         let ident_kind = if Longident.qualified type_expr then Ext_ref else Int_ref none in
         let path = Longident.of_type_expr type_expr ld.Types.lbl_name in
         let ident = {
           ident_kind;
           ident_fname = "";
-          ident_loc   = Location.mkloc (Odoc_misc.string_of_longident path) loc.Location.loc;
+          ident_loc   = Location.mkloc (Odoc_misc.string_of_longident path) loc;
         } in
         f ident;
         fe e
@@ -236,7 +238,7 @@ and iter_expression f {exp_desc; exp_loc; exp_type; exp_extra; _} =
       let ident = {
         ident_kind;
         ident_fname = "";
-        ident_loc   = Location.mkloc (Odoc_misc.string_of_longident path) loc.Location.loc;
+        ident_loc   = Location.mkloc (Odoc_misc.string_of_longident path) loc.loc;
       } in
       f ident;
       fe expr
@@ -257,14 +259,14 @@ and iter_expression f {exp_desc; exp_loc; exp_type; exp_extra; _} =
     | Texp_sequence (e1, e2) -> fe e1; fe e2
     | Texp_while (e1, e2) -> fe e1; fe e2
     | Texp_for (_, _, e1, e2, _, e3) -> fe e1; fe e2; fe e3
-    | Texp_send (e1, meth, e2) ->
+    | Texp_send (e1, _meth, e2) ->
      (* let name = match meth with Tmeth_name x -> "(M) " ^ x | Tmeth_val id -> "(V) " ^ (Ident.name id) in
       Log.println `TRACE "Texp_send: %s %s [%s]"
         name (string_of_loc e1.exp_loc) (match e2 with Some e -> string_of_loc e.exp_loc | _ -> "");*)
       fe e1;
       Opt.may e2 fe
-    | Texp_new (_, _, class_decl) -> ()
-    | Texp_instvar (p, path, loc) -> ()
+    | Texp_new (_, _, _class_decl) -> ()
+    | Texp_instvar (_p, _path, _loc) -> ()
       (*Log.println `TRACE "Texp_instvar: (%s)%s %s" (Path.name p) (Path.name path) (string_of_loc loc.loc);*)
     | Texp_setinstvar (_, _, _, expr) -> fe expr
     | Texp_override (_, ll) -> List.iter (fun (_, _, e) -> fe e) ll
@@ -287,6 +289,7 @@ and iter_module_expr f {mod_desc; mod_loc; _} =
   match mod_desc with
     | Tmod_structure {str_items; _} ->
       let annots = List.fold_left (fun acc item -> (iter_structure_item f item) @ acc) [] str_items in
+      let [@warning "-4"] _ = "Disable fragile pattern warning" in
       List.iter begin function
         | {ident_kind = Open loc; _} as annot -> annot.ident_kind <- Open {loc with loc_end = mod_loc.loc_end}
         | _ -> ()
@@ -303,44 +306,46 @@ and iter_module_expr f {mod_desc; mod_loc; _} =
 and iter_module_type f {mty_desc; mty_loc; _} =
   match mty_desc with
     | Tmty_ident _ -> ()
+    | Tmty_alias _ -> ()
     | Tmty_signature sign ->
       let annots = List.fold_left (fun acc item -> (iter_signature_item f item) @ acc) [] sign.sig_items in
+      let [@warning "-4"] _ = "Disable fragile pattern warning" in
       List.iter begin function
         | {ident_kind = Open loc; _} as annot -> annot.ident_kind <- Open {loc with loc_end = mty_loc.loc_end}
         | _ -> ()
       end annots;
     | Tmty_functor (_, _, mt1, mt2) ->
-      iter_module_type f mt1;
+      Opt.may mt1 (iter_module_type f);
       iter_module_type f mt2;
     | Tmty_with (mt, ll) ->
       iter_module_type f mt;
-      List.iter (fun (_, loc, wc) -> iter_with_constraint f wc) ll
+      List.iter (fun (_, _, wc) -> iter_with_constraint f wc) ll
     | Tmty_typeof me -> iter_module_expr f me
 
 (** iter_signature_item *)
-and iter_signature_item f {sig_desc; sig_loc; _} =
+and iter_signature_item f {sig_desc; _} =
   let fmt = iter_module_type f in
   match sig_desc with
-    | Tsig_value (_, _, vd) ->
-      iter_value_description f vd;
+    | Tsig_value vdesc ->
+      iter_value_description f vdesc;
       []
     | Tsig_type ll ->
-      List.iter (fun (_, _, td) -> iter_type_declaration f td) ll;
+      List.iter (fun td -> iter_type_declaration f td) ll;
       []
-    | Tsig_exception (_, _, ed) ->
-      iter_exception_declaration f ed;
+    | Tsig_exception ecstr ->
+      iter_extension_constructor f ecstr;
       []
-    | Tsig_module (_, _, mt) ->
-      iter_module_type f mt;
+    | Tsig_module mdecl ->
+      iter_module_type f mdecl.md_type;
       []
     | Tsig_recmodule ll ->
-      List.iter (fun (_, _, mt) -> fmt mt) ll;
+      List.iter (fun mdecl -> fmt mdecl.md_type) ll;
       []
-    | Tsig_modtype (_, _, Tmodtype_abstract) -> []
-    | Tsig_modtype (_, _, Tmodtype_manifest mt) ->
-      fmt mt;
+    | Tsig_modtype mtdecl ->
+      Opt.may mtdecl.mtd_type fmt;
       []
-    | Tsig_open (_, path, loc) ->
+    | Tsig_open odesc ->
+      let { open_path = path; open_txt = loc; _ } = odesc in
       let annot = {
         ident_kind  = Open {loc_start = loc.loc.loc_end; loc_end = dummy_pos; loc_ghost=false};
         ident_fname = "";
@@ -348,14 +353,17 @@ and iter_signature_item f {sig_desc; sig_loc; _} =
       } in
       f annot;
       [annot]
-    | Tsig_include (mt, sign) ->
-      fmt mt;
+    | Tsig_include idecl ->
+      fmt idecl.incl_mod;
       []
-    | Tsig_class ll -> []
-    | Tsig_class_type ll -> []
+    | Tsig_class _ -> []
+    | Tsig_class_type _ -> []
+    (* Added in 4.02.0 -- TODO *)
+    | Tsig_typext _ -> []
+    | Tsig_attribute _ -> []
 
 (** iter_value_description *)
-and iter_value_description f {val_desc; val_loc; _} = iter_core_type f val_desc
+and iter_value_description f {val_desc; _} = iter_core_type f val_desc
 
 (** iter_with_constraint *)
 and iter_with_constraint f = function
@@ -368,27 +376,29 @@ and iter_with_constraint f = function
 and iter_core_type f ?loc {ctyp_desc; ctyp_type; ctyp_loc; _} = ()
 
 (** iter_class_field *)
-and iter_class_field f {cf_desc; cf_loc} =
+and iter_class_field f {cf_desc; _} =
   match cf_desc with
-    | Tcf_val (name, _, _, _, Tcfk_virtual core_type, _) -> iter_core_type f core_type
-    | Tcf_val (name, loc, _, _, Tcfk_concrete expr, _) ->
+    | Tcf_val (_, _, _, Tcfk_virtual core_type, _) -> iter_core_type f core_type
+    | Tcf_val (_, _, _, Tcfk_concrete (_, expr), _) ->
       (*Log.println `TRACE "Tcf_val: %s %s" name (string_of_loc loc.loc);*)
       ignore (iter_expression f expr)
-    | Tcf_meth (_, loc, _, Tcfk_virtual core_type, _) -> iter_core_type f (*~loc:loc.loc*) core_type
-    | Tcf_meth (name, loc, _, Tcfk_concrete expr, _) ->
+    | Tcf_method (_, _, Tcfk_virtual core_type) -> iter_core_type f (*~loc:loc.loc*) core_type
+    | Tcf_method (_, _, Tcfk_concrete (_, expr)) ->
       (*Log.println `TRACE "Tcf_meth: %s %s" name (string_of_loc loc.loc);*)
       ignore (iter_expression f (*~loc:loc.loc*) expr)
-    | Tcf_constr (ct1, ct2) ->
+    | Tcf_constraint (ct1, ct2) ->
       iter_core_type f ct1;
       iter_core_type f ct2;
-    | Tcf_init expr -> ignore (iter_expression f expr)
-    | Tcf_inher (_, class_expr, _, _, _) -> iter_class_expr f class_expr
+    | Tcf_initializer expr -> ignore (iter_expression f expr)
+    | Tcf_inherit (_, class_expr, _, _, _) -> iter_class_expr f class_expr
+    (* Added in 4.02.0 - TODO *)
+    | Tcf_attribute _ -> ()
 
 (** iter_class_structure *)
 and iter_class_structure f {cstr_fields; _} = List.iter (iter_class_field f) cstr_fields
 
 (** iter_class_expr *)
-and iter_class_expr f {cl_desc; cl_loc; _} =
+and iter_class_expr f {cl_desc; _} =
   match cl_desc with
     | Tcl_ident (_, _, core_type) -> List.iter (iter_core_type f) core_type
     | Tcl_structure str -> iter_class_structure f str
@@ -400,8 +410,8 @@ and iter_class_expr f {cl_desc; cl_loc; _} =
     | Tcl_apply (expr, ll) ->
       iter_class_expr f expr;
       List.iter (function (_, Some expr, _) -> ignore (iter_expression f expr) | _ -> ()) ll;
-    | Tcl_let (_, ll, ll2, c_expr) ->
-      List.iter begin fun (p, e) ->
+    | Tcl_let (_, ll, _, c_expr) ->
+      List.iter begin fun { vb_pat = p; vb_expr = e; _ } ->
         let defs = iter_pattern f p in
         List.iter (fun d -> d.ident_kind <- Def {def_name=""; def_loc=none; def_scope=c_expr.cl_loc}; f d) defs;
         iter_expression f e;
@@ -412,35 +422,36 @@ and iter_class_expr f {cl_desc; cl_loc; _} =
       Opt.may clt (iter_class_type f)
 
 (** iter_class_type *)
-and iter_class_type f {cltyp_desc; cltyp_loc; _} =
+and iter_class_type f {cltyp_desc; _} =
   match cltyp_desc with
     | Tcty_constr (_, _, ct) -> List.iter (iter_core_type f) ct
     | Tcty_signature sign -> iter_class_signature f sign
-    | Tcty_fun (_, ct, clt) ->
+    | Tcty_arrow (_, ct, clt) ->
       iter_core_type f ct;
       iter_class_type f clt
 
 (** iter_class_type_field *)
-and iter_class_type_field f {ctf_desc; ctf_loc; _} =
+and iter_class_type_field f {ctf_desc; _} =
   match ctf_desc with
-    | Tctf_inher clt -> iter_class_type f clt
+    | Tctf_inherit clt -> iter_class_type f clt
     | Tctf_val (_, _, _, ct) -> iter_core_type f ct
-    | Tctf_virt (_, _, ct) -> iter_core_type f ct
-    | Tctf_meth (_, _, ct) -> iter_core_type f ct
-    | Tctf_cstr (ct1, ct2) ->
+    | Tctf_method (_, _, _, ct) -> iter_core_type f ct
+    | Tctf_constraint (ct1, ct2) ->
       iter_core_type f ct1;
       iter_core_type f ct2;
+    (* Added in 4.02.0 - TODO *)
+    | Tctf_attribute _ -> ()
 
 (** iter_class_signature *)
 and iter_class_signature f {csig_fields; _} = List.iter (iter_class_type_field f) csig_fields
 
 (** iter_type_declaration *)
-and iter_type_declaration f {typ_kind; typ_manifest; typ_cstrs; typ_loc; _} =
+and iter_type_declaration f {typ_kind; typ_manifest; typ_cstrs; _} =
   begin
     match typ_kind with
       | Ttype_abstract -> ()
       | Ttype_variant ll ->
-        List.iter begin fun (_, loc, ct, _(* Scope inside the definition *)) ->
+        List.iter begin fun { cd_name = loc; cd_args = ct; _ } ->
           let ident_kind = Def_constr {def_name=loc.txt; def_loc=loc.loc; def_scope=none} in
           f {
             ident_kind;
@@ -450,7 +461,7 @@ and iter_type_declaration f {typ_kind; typ_manifest; typ_cstrs; typ_loc; _} =
           List.iter (iter_core_type f) ct
         end ll
       | Ttype_record ll ->
-        List.iter begin fun (_, loc, _, ct, _) ->
+        List.iter begin fun { ld_name = loc; ld_type = ct; _ } ->
           let ident_kind = Def_constr {def_name=loc.txt; def_loc=loc.loc; def_scope=none} in
           f {
             ident_kind;
@@ -459,6 +470,8 @@ and iter_type_declaration f {typ_kind; typ_manifest; typ_cstrs; typ_loc; _} =
           };
           iter_core_type f ct
         end ll
+      (* Added in 4.02.0 - TODO *)
+      | Ttype_open -> ()
   end;
   List.iter begin fun (ct1, ct2, _) ->
     iter_core_type f ct1;
@@ -466,19 +479,20 @@ and iter_type_declaration f {typ_kind; typ_manifest; typ_cstrs; typ_loc; _} =
   end typ_cstrs;
   Opt.may typ_manifest (iter_core_type f);
 
-(** iter_exception_declaration *)
-and iter_exception_declaration f {exn_params; exn_exn; exn_loc} =
-  List.iter (iter_core_type f) exn_params
+(** iter_extension_constructor *)
+and iter_extension_constructor f { ext_loc; ext_kind; _ }  =
+  (*List.iter (iter_core_type f) ext_type_params*)
+  ()
 
 (** iter_structure_item *)
 and iter_structure_item f {str_desc; str_loc; _} =
   match str_desc with
-    | Tstr_eval expr ->
+    | Tstr_eval (expr, _) ->
       ignore (iter_expression f expr);
       []
     | Tstr_value (_, pe) ->
       let defs =
-        List.rev (List.fold_left begin fun acc (pat, expr) ->
+        List.rev (List.fold_left begin fun acc { vb_pat = pat; vb_expr = expr; _ } ->
           let defs = iter_pattern f pat in
           ignore (iter_expression f expr);
           defs @ acc
@@ -488,34 +502,37 @@ and iter_structure_item f {str_desc; str_loc; _} =
         Def {def_name=""; def_loc=none; def_scope={str_loc with loc_start = str_loc.loc_end; loc_end = Lexing.dummy_pos}}) defs;
       List.iter f defs;
       []
-    | Tstr_open (_, path, loc) ->
+    | Tstr_open odesc ->
+      let { open_path = path; open_loc = loc; _ } = odesc in
       let annot = {
-        ident_kind  = Open {loc_start = loc.loc.loc_end; loc_end = dummy_pos; loc_ghost=false};
+        ident_kind  = Open {loc_start = loc.loc_end; loc_end = dummy_pos; loc_ghost=false};
         ident_fname = "";
-        ident_loc   = Location.mkloc (Path.name path) loc.loc;
+        ident_loc   = Location.mkloc (Path.name path) loc;
       } in
       f annot;
       [annot]
-    | Tstr_include (module_expr, _) -> []
+    | Tstr_include _ -> []
     | Tstr_class ll -> List.iter (fun (cd, _, _) ->
       iter_class_expr f cd.ci_expr) ll;
       []
     | Tstr_class_type ll -> List.iter (fun (_, _, cd) ->
       iter_class_type f cd.ci_expr) ll;
       []
-    | Tstr_type ll -> List.iter (fun (_, _, td) ->
+    | Tstr_type ll -> List.iter (fun td ->
       iter_type_declaration f td) ll;
       []
-    | Tstr_exception (ident, loc, ed) ->
+    | Tstr_exception extconstr ->
+      let { ext_name = loc; ext_type = et; _ }  = extconstr in
       let ident_kind = Def_constr {def_name=loc.txt; def_loc=loc.loc; def_scope=none} in
       f {
         ident_kind;
         ident_fname = "";
         ident_loc   = loc;
       };
-      iter_exception_declaration f ed;
+      iter_extension_constructor f extconstr;
       []
-    | Tstr_module (_, loc, me) ->
+    | Tstr_module mbind ->
+      let { mb_name = loc; mb_expr = me; _ } = mbind in
       f {
         ident_kind  = Def_module {def_name=loc.txt; def_loc=loc.loc; def_scope=me.mod_loc};
         ident_fname = "";
@@ -523,29 +540,39 @@ and iter_structure_item f {str_desc; str_loc; _} =
       };
       iter_module_expr f me;
       []
-    | Tstr_modtype (_, loc, mt) ->
-      f {
-        ident_kind  = Def_module {def_name=loc.txt; def_loc=loc.loc; def_scope=mt.mty_loc};
-        ident_fname = "";
-        ident_loc   = loc;
-      };
-      iter_module_type f mt;
+    | Tstr_modtype mtdecl ->
+      let { mtd_name = loc; mtd_type = mto; _ } = mtdecl in
+      begin match mto with
+        | Some mt ->
+          f {
+            ident_kind  = Def_module {def_name=loc.txt; def_loc=loc.loc; def_scope=loc.loc; };
+            ident_fname = "";
+            ident_loc   = loc;
+          };
+          iter_module_type f mt;
+        | None -> ()
+      end;
       []
     | Tstr_recmodule ll ->
-      List.iter begin fun (_, loc, mt, me) ->
+      List.iter begin fun (*(_, loc, mt, me)*) { mb_name = loc; mb_expr = me; _ } ->
         f {
           ident_kind  = Def_module {def_name=loc.txt; def_loc=loc.loc; def_scope=me.mod_loc};
           ident_fname = "";
           ident_loc   = loc;
         };
-        iter_module_type f mt;
+        (*iter_module_type f mt;*)
         iter_module_expr f me;
       end ll;
       []
-    | Tstr_exn_rebind _ -> []
-    | Tstr_primitive (_, _, vd) ->
-      iter_value_description f vd;
+    (* Removed in 4.02.0 *)
+    (*| Tstr_exn_rebind _ -> []*)
+    | Tstr_primitive vdecl ->
+      iter_value_description f vdecl;
       []
+    (* Added in 4.02.0 *)
+    | Tstr_typext _ -> []
+    | Tstr_attribute _ -> []
+
 ;;
 
 (** register *)
@@ -622,6 +649,7 @@ let scan ~project ~filename ?compile_buffer () =
           Hashtbl.replace table_idents filename entry;
           let f = register filename entry in
           begin
+            let [@warning "-4"] _ = "Disable this pattern matching is fragile warning" in
             match cmt.cmt_annots with
               | Implementation {str_items; _} ->
                 List.iter (fun item -> ignore (iter_structure_item f item)) str_items;
@@ -639,7 +667,7 @@ let scan ~project ~filename ?compile_buffer () =
 
 (** scan_project_files *)
 let scan_project_files ~project ?(sort=true) f =
-  let src_files = File_util.readdirs ~links:false (Some (fun x -> x ^^ ".ml")) (project.Prj.root // Prj.default_dir_src) in
+  let src_files = File_util.readdirs ~links:false (Some (fun x -> x ^^^ ".ml")) (project.Prj.root // Prj.default_dir_src) in
   let src_files = if sort then List.sort compare src_files else src_files in
   List.fold_left begin fun acc filename ->
     scan ~project ~filename ();

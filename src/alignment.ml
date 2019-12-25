@@ -20,8 +20,6 @@
 
 *)
 
-open Printf
-
 (** iter *)
 (*let re_align = Str.regexp_case_fold "^[\t ]*\\(\\(let\\)\\|\\(mutable\\)\\)?[\t ]*\\([a-z_0-9']+\\)[\t ]*\\([:=]+\\).*";;
    let iter ~(start : GText.iter) ~stop f =
@@ -69,7 +67,7 @@ let iter ~(start : GText.iter) ~stop f =
 (** collapse *)
 let collapse ~(buffer : GText.buffer) ~start ~stop =
   let ranges = ref [] in
-  iter start stop begin fun _ _ b c _ ->
+  iter ~start ~stop begin fun _ _ b c _ ->
     ranges := (b#line, b#line_index, c#line, c#line_index - 1) :: !ranges;
   end;
   List.iter begin fun (a, b, c, d) ->
@@ -83,17 +81,17 @@ let align ~(buffer : GText.buffer) ~start ~stop =
   let top = start#set_line_index 0 in
   let bottom = stop#set_line_index 0 in
   let max_width = ref 0 in
-  iter top bottom begin fun prefix a b c d ->
+  iter ~start:top ~stop:bottom begin fun prefix a _ c _ ->
     let width = c#line_index - a#line_index + prefix in
     if width > !max_width then (max_width := width)
   end;
   let inserts = ref [] in
-  iter top bottom begin fun prefix a b c d ->
+  iter ~start:top ~stop:bottom begin fun prefix a _ c _ ->
     let width = c#line_index - a#line_index + prefix in
     if !max_width > width then
       (inserts := (c#line, c#line_index, (mk_spaces (!max_width - width))) :: !inserts)
   end;
-  if !inserts = [] then (collapse buffer top bottom) else begin
+  if !inserts = [] then (collapse ~buffer ~start:top ~stop:bottom) else begin
     List.iter begin fun (line, index, spaces) ->
       buffer#insert ~iter:(buffer#get_iter (`LINECHAR (line, index))) spaces
     end !inserts;
@@ -152,7 +150,7 @@ let indent ~buffer ?(decrease=false) () =
           let stop = if buffer#has_selection && i2#line_offset = 0 then stop - 1 else stop in
           for line = start to stop do
             let start = tbuffer#get_iter_at_char 0 ~line in
-            for j = 1 to buffer#tab_width do
+            for _ = 1 to buffer#tab_width do
               let c = start#char in
               if c = 32 || c = 9 then tbuffer#delete ~start ~stop:start#forward_char;
             done;

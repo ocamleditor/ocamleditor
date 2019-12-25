@@ -19,17 +19,15 @@
   along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 *)
-
+[@@@warning "-48"]
 
 open Printf
 open GUtil
-open Miscellanea
 open Cmt_format
 open Location
 open Typedtree
 open Asttypes
 open Types
-open Binannot_type
 
 module Log = Common.Log.Make(struct let prefix = "Cmt_view" end)
 let _ = Log.set_verbosity `DEBUG
@@ -56,6 +54,7 @@ type kind =
   | Type_abstract
   | Type_variant
   | Type_record
+  | Type_open
   | Module
   | Module_functor
   | Module_type
@@ -86,6 +85,7 @@ let pixbuf_of_kind = function
   | Type_abstract -> Some Icons.type_abstract
   | Type_variant -> Some Icons.type_variant
   | Type_record -> Some Icons.type_record
+  | Type_open -> None
   | Class -> Some Icons.classe
   | Class_virtual -> Some Icons.class_virtual
   | Class_type -> Some Icons.class_type
@@ -121,14 +121,14 @@ let col_default_sort   = cols#add Gobject.Data.int
 
 let string_rev str =
   let len = String.length str in
-  let rts = Alignment.mk_spaces len in
-  for i = 0 to len - 1 do rts.[len - i - 1] <- str.[i] done;
-  rts;;
+  Bytes.init len (fun i -> str.[len - i - 1])
+  |> Bytes.to_string
 
 let string_rev = Miscellanea.Memo.create string_rev;;
 
 let is_function type_expr =
   let rec f t =
+    let [@warning "-4"] _ = "Disable this pattern matching is fragile warning" in
     match t.Types.desc with
       | Types.Tarrow _ -> true
       | Types.Tlink t -> f t
@@ -136,6 +136,7 @@ let is_function type_expr =
   in f type_expr;;
 
 let string_of_type_expr te =
+  let [@warning "-4"] _ = "Disable this pattern matching is fragile warning" in
   match te.desc with
     | Tarrow (_, _, t2, _) -> Odoc_info.string_of_type_expr t2
     | _ -> Odoc_info.string_of_type_expr te;;
@@ -251,7 +252,7 @@ object (self)
   initializer
     self#update_preferences();
     ignore (self#misc#connect#destroy ~callback:self#destroy_marks);
-    (** Replace foreground color when row is selected *)
+    (* Replace foreground color when row is selected *)
     let replace_color_in_markup (model : GTree.tree_store) invert path =
       let row = model#get_iter path in
       let markup = model#get ~row ~column:col_markup in
@@ -272,10 +273,10 @@ object (self)
           last_selected_path <- Some path;
         | _ -> ()
     end);
-    (** Tooltips *)
+    (* Tooltips *)
     view#misc#set_has_tooltip true;
     ignore (view#misc#connect#query_tooltip ~callback:self#create_tooltip);
-    (** Events *)
+    (* Events *)
     signal_selection_changed <- Some (view#selection#connect#after#changed ~callback:begin fun () ->
       self#select_name_in_buffer();
       match view#selection#get_selected_rows with
@@ -306,7 +307,7 @@ object (self)
       let show = pref.Preferences.pref_outline_show_types in
       if show <> button_show_types#active then button_show_types#clicked()
     end);
-    (** Buttons *)
+    (* Buttons *)
     ignore (button_refresh#connect#clicked ~callback:self#load);
     ignore (button_select_buf#connect#clicked ~callback:self#select_in_buffer);
     ignore (button_show_types#connect#toggled ~callback:begin fun () ->
@@ -431,12 +432,13 @@ object (self)
         let child_path = smodel#convert_path_to_child_path path in
         try
           let info = Hashtbl.find table_info child_path in
-          Gaux.may info.location ~f:begin fun loc ->
+          Gaux.may info.location ~f:begin fun _ ->
             match info.mark with
               | Some mark when not (GtkText.Mark.get_deleted mark) ->
                 let start = buffer#get_iter_at_mark (`MARK mark) in
                 let row = model#get_iter child_path in
                 let name = model#get ~row ~column:col_name in
+                let [@warning "-4"] _ = "Disable this pattern matching is fragile warning" in
                 let length = match info.kind with
                   | Some Class_let_bindings -> 0
                   | _ -> Glib.Utf8.length name in
@@ -532,7 +534,7 @@ object (self)
       List.iter self#append_sig_item sign.sig_items;
     | Partial_interface part_intf ->
       let row = model#append () in
-      model#set ~row ~column:col_markup "Partial_iterface"
+      model#set ~row ~column:col_markup "Partial_interface"
     | Packed _ ->
       let row = model#append () in
       model#set ~row ~column:col_markup "Packed"
@@ -622,19 +624,21 @@ object (self)
 
   method private append_struct_item ?parent item =
     match item.str_desc with
-      | Tstr_eval expr ->
+      | Tstr_eval (expr, _) ->
         let loc = {item.str_loc with loc_end = item.str_loc.loc_start} in
         ignore (self#append ?parent ~loc ~loc_body:expr.exp_loc "_" "")
       | Tstr_value (_, pe) ->
-        List.iter (fun x -> ignore (self#append_pattern ?parent x)) pe
+        List.iter (fun { vb_pat = p; vb_expr = e; _ } -> ignore (self#append_pattern ?parent (p, e))) pe
       | Tstr_class classes -> List.iter (self#append_class ?parent) classes
       | Tstr_class_type classes -> List.iter (fun (_, loc, decl) -> self#append_class_type ?parent ~loc decl) classes
       | Tstr_type decls -> List.iter (self#append_type ?parent) decls
-      | Tstr_exception (_, loc, decl) ->
-        let exn_params = self#string_of_core_types decl.exn_params in
+      | Tstr_exception (*(_, loc, decl)*) { ext_name = loc; ext_kind; _ } ->
+        let core_types = (match ext_kind with Text_decl (core_types, _) -> core_types | Text_rebind _ -> []) in
+        let exn_params = self#string_of_core_types core_types in
         ignore (self#append ?parent ~kind:Exception ~loc:loc.loc loc.txt exn_params)
-      | Tstr_module (_, loc, module_expr) ->
+      | Tstr_module { mb_name = loc; mb_expr = module_expr; _ }  ->
         let kind =
+          let [@warning "-4"] _ = "Disable this pattern matching is fragile warning" in
           match module_expr.mod_desc with
             | Tmod_functor _ -> Module_functor
             | _ -> Module
@@ -647,10 +651,12 @@ object (self)
             | _ -> f()
         end;
         self#add_table_expanded_by_default parent_mod;
-      | Tstr_modtype (_, loc, mt) ->
+      | Tstr_modtype (*(_, loc, mt)*) { mtd_name = loc; Typedtree.mtd_type = Some mt; _ } ->
         let parent = self#append ?parent ~kind:Module_type ~loc:loc.loc loc.txt "" in
         model#set ~row:parent ~column:col_lazy [fun () -> ignore (self#append_module_type ~parent mt.mty_desc)];
-      | Tstr_include (me, sign) ->
+      (* Since 4.02.0 -- TODO *)
+      | Tstr_modtype { Typedtree.mtd_type = None; _ } -> ()
+      | Tstr_include { Typedtree.incl_mod = me; incl_type = sign; _ } ->
         let parent = self#append_module ?parent ~kind:Module_include me.mod_desc in
         let f () = List.iter (fun sign -> ignore (self#append_signature_item ?parent sign)) sign in
         begin
@@ -660,20 +666,26 @@ object (self)
         end;
       | Tstr_recmodule _ -> ()
       | Tstr_open _
-      | Tstr_exn_rebind _ | Tstr_primitive _ -> ()
+      | Tstr_primitive _ -> ()
+      (* Since 4.02.0 *)
+      | Tstr_typext _ -> ()
+      | Tstr_attribute _ -> ()
+
 
   method private append_sig_item ?parent item =
     match item.sig_desc with
-      | Tsig_value (_, loc, desc) ->
+      | Tsig_value { Typedtree.val_name; val_loc; val_desc; _ } ->
         Odoc_info.reset_type_names();
-        let typ = string_of_type_expr desc.val_desc.ctyp_type in
-        ignore (self#append ?parent ~kind:Function ~loc:loc.loc ~loc_body:desc.val_desc.ctyp_loc loc.txt typ);
+        let typ = string_of_type_expr val_desc.ctyp_type in
+        ignore (self#append ?parent ~kind:Function ~loc:val_loc ~loc_body:val_desc.ctyp_loc val_name.txt typ);
       | Tsig_type decls -> List.iter (self#append_type ?parent) decls
-      | Tsig_exception (_, loc, decl) ->
-        let exn_params = self#string_of_core_types decl.exn_params in
+      | Tsig_exception { Typedtree.ext_kind; ext_name = loc; _ } ->
+        let core_types = (match ext_kind with Text_decl (core_types, _) -> core_types | Text_rebind _ -> []) in
+        let exn_params = self#string_of_core_types core_types in
         ignore (self#append ?parent ~kind:Exception ~loc:loc.loc loc.txt exn_params)
-      | Tsig_module (_, loc, mty) ->
+      | Tsig_module { Typedtree.md_type = mty; md_name = loc; _ } ->
         let kind =
+          let [@warning "-4"] _ = "Disable this pattern matching is fragile warning" in
           match mty.mty_desc with
             | Tmty_functor _ -> Module_functor
             | _ -> Module
@@ -687,21 +699,24 @@ object (self)
         end;
         self#add_table_expanded_by_default parent_mod;
       | Tsig_recmodule _ -> ignore (self#append ?parent "Tsig_recmodule" "")
-      | Tsig_modtype (_, loc, modtype_decl) ->
+      | Tsig_modtype { Typedtree.mtd_name = loc; mtd_type = modtype_decl; _ } ->
         let parent = self#append ?parent ~kind:Module_type ~loc:loc.loc loc.txt "" in
         let f () =
           match modtype_decl with
-            | Tmodtype_abstract -> ()
-            | Tmodtype_manifest mt -> ignore (self#append_module_type ~parent mt.mty_desc)
+            | None -> ()
+            | Some mt -> ignore (self#append_module_type ~parent mt.mty_desc)
         in
         model#set ~row:parent ~column:col_lazy [f];
       | Tsig_open _ -> ()
-      | Tsig_include (mt, sign) ->
-        ignore (self#append_module_type ?parent ~kind:Module_include mt.mty_desc);
+      | Tsig_include idecl ->
+        ignore (self#append_module_type ?parent ~kind:Module_include idecl.incl_mod.mty_desc);
       | Tsig_class classes ->
         List.iter (fun clty -> self#append_class_type ?parent ~loc:clty.ci_id_name clty) classes;
       | Tsig_class_type decls ->
         List.iter (fun info -> self#append_class_type ?parent ~loc:info.ci_id_name info) decls;
+      (* Since 4.02.0 *)
+      | Tsig_typext _ -> ()
+      | Tsig_attribute _ -> ()
 
   method private append_module ?parent ?kind mod_desc =
     match mod_desc with
@@ -723,11 +738,12 @@ object (self)
       | Tmod_constraint _ -> Some (self#append ?parent "Tmod_constraint" "")
       | Tmod_unpack _ -> Some (self#append ?parent "Tmod_unpack" "")
 
-  method private append_signature_item ?parent ?kind = function
+  method private append_signature_item ?parent ?kind =
+    function
     | Sig_value (id, vd) -> Some (self#append ?parent ~kind:Simple (Ident.name id) (string_of_type_expr vd.val_type))
     | Sig_type (id, td, _) -> Some (self#append ?parent (*~kind:Type*) (Ident.name id) "")
-    | Sig_exception (id, ed) -> Some (self#append ?parent ~kind:Exception (Ident.name id) "")
-    | Sig_module (id, mt, _) -> self#append_mty ?parent ~kind:Module_type mt
+    | Sig_typext (id, ed, _) -> Some (self#append ?parent ~kind:Exception (Ident.name id) "")
+    | Sig_module (id, mdecl, _) -> self#append_mty ?parent ~kind:Module_type mdecl.md_type
     | Sig_modtype (id, md) -> Some (self#append ?parent "Sig_modtype" "")
     | Sig_class (id, cd, _) -> Some (self#append ?parent "Sig_class" "")
     | Sig_class_type (id, ctd, _) -> Some (self#append ?parent "Sig_class_type" "")
@@ -741,6 +757,8 @@ object (self)
       | Mty_functor (id, _, m2) ->
         self#append_mty ?parent ?kind m2
         (*ignore (self#append ?parent (Ident.name id) "")*)
+      (* Since 4.02.0 - TODO *)
+      | Mty_alias _ -> None
 
   method private append_module_type ?parent ?kind mod_desc =
     match mod_desc with
@@ -753,23 +771,30 @@ object (self)
         None
       | Tmty_with _ -> Some (self#append ?parent "Tmty_with" "")
       | Tmty_typeof me -> self#append_module ?parent me.mod_desc
+      (* Since 4.02.0 -- TODO *)
+      | Tmty_alias _ -> None
 
-  method private append_type ?parent (_, loc, decl) =
-    let kind =
+  method private append_type ?parent decl =
+    let loc = decl.typ_name in
+    let kind : kind =
       match decl.typ_kind with
         | Ttype_abstract -> Type_abstract
         | Ttype_variant _ -> Type_variant
         | Ttype_record _ -> Type_record
+        | Ttype_open -> Type_open
     in
     let typ =
       match decl.typ_kind with
         | Ttype_abstract -> self#string_of_type_abstract decl
         | Ttype_variant decls -> self#string_of_type_variant decls
         | Ttype_record decls -> self#string_of_type_record decls
+        (* Since 4.02.0 *)
+        | Ttype_open -> "TODO: Type open"
     in
     ignore (self#append ?parent ~kind ~loc:loc.loc ~loc_body:decl.typ_loc loc.txt typ)
 
   method private append_pattern ?parent (pat, expr) =
+    let [@warning "-4"] _ = "Disabel this pattern matching is fragile warning" in
     match pat.pat_desc with
       | Tpat_var (_, loc) ->
         let kind = if is_function pat.pat_type then Function else Simple in
@@ -785,12 +810,13 @@ object (self)
       | Tpat_lazy*) _ -> None (*Some (self#append ?parent "append_pattern" "")*)
 
   method private append_expression ?parent exp =
+    let [@warning "-4"] _ = "Disable this pattern is fragile warning" in
     match exp.exp_desc with
       | Texp_ident (_, lid, _) -> ignore (self#append ?parent (Longident.last lid.txt) "")
       | Texp_function (_, pel, _) ->
-        List.iter (fun pe -> ignore (self#append_pattern ?parent pe)) pel
+        List.iter (fun { c_lhs = p; c_rhs = e; _ } -> ignore (self#append_pattern ?parent (p, e))) pel
       | Texp_let (_, pes, expr) ->
-        List.iter (fun { vb_pat; vb_expr; _ } -> ignore (self#append_pattern ?parent (vb_pat, vb_expr))) pes
+        List.iter (fun { vb_pat = p; vb_expr = e; _ } -> ignore (self#append_pattern ?parent (p, e))) pes
       | Texp_apply (expr, el) -> self#append_expression ?parent expr
       | Texp_sequence _ -> ignore (self#append ?parent "Texp_sequence" "")
       | _ -> ignore (self#append ?parent "x" "")
@@ -822,7 +848,7 @@ object (self)
     | Tcl_structure str ->
       List.map begin fun fi ->
         match fi.cf_desc with
-          | Tcf_inher (_, cl_expr, id, inherited_fields, inherited_methods) ->
+          | Tcf_inherit (_, cl_expr, id, inherited_fields, inherited_methods) ->
             let parent = self#append_class_item ?let_bindings_parent ~expand_lets ?count_meth ?parent cl_expr.cl_desc in
             Gaux.may parent ~f:begin fun parent ->
               let f () = List.iter (fun (x, _) -> ignore (self#append ~kind:Method_inherited ~parent x "")) inherited_methods in
@@ -837,37 +863,41 @@ object (self)
               end
             end;
             parent
-          | Tcf_init expr ->
+          | Tcf_initializer expr ->
             let loc = {fi.cf_loc with loc_end = fi.cf_loc.loc_start} in
             let parent = self#append ~kind:Initializer ~loc ~loc_body:fi.cf_loc ?parent "initializer" "" in
             Some parent;
-          | Tcf_val (_, loc, mutable_flag, _, kind, _) ->
+          | Tcf_val (loc, mutable_flag, _, kind, _) ->
             let typ, kind = match kind with
               | Tcfk_virtual ct when mutable_flag = Mutable ->
                 string_of_type_expr ct.ctyp_type, Attribute_mutable_virtual
               | Tcfk_virtual ct  ->
                 string_of_type_expr ct.ctyp_type, Attribute_virtual
-              | Tcfk_concrete te when mutable_flag = Mutable ->
+              (* Since 4.02.0 -- TODO handle _override *)
+              | Tcfk_concrete (_override, te) when mutable_flag = Mutable ->
                 string_of_type_expr te.exp_type, Attribute_mutable
-              | Tcfk_concrete te ->
+              | Tcfk_concrete (_override, te) ->
                 string_of_type_expr te.exp_type, Attribute
             in
             Some (self#append ?parent ~kind ~loc:loc.loc loc.txt typ);
-          | Tcf_meth (_, loc, private_flag, kind, _) ->
+          | Tcf_method (loc, private_flag, kind) ->
             let kind, typ, loc_body = match kind with
               | Tcfk_virtual ct when private_flag = Private ->
                 Method_private_virtual, string_of_type_expr ct.ctyp_type, ct.ctyp_loc
               | Tcfk_virtual ct ->
                 Method_virtual, string_of_type_expr ct.ctyp_type, ct.ctyp_loc
-              | Tcfk_concrete te when private_flag = Private ->
+              (* Since 4.02.0 -- TODO handle _override *)
+              | Tcfk_concrete (_override, te) when private_flag = Private ->
                 Method_private, string_of_type_expr te.exp_type, te.exp_loc
-              | Tcfk_concrete te ->
+              | Tcfk_concrete (_override, te) ->
                 Method, string_of_type_expr te.exp_type, te.exp_loc
             in
             Gaux.may count_meth ~f:incr;
             Some (self#append ?parent ~kind ~loc:loc.loc ~loc_body:loc_body loc.txt typ);
-          | Tcf_constr (ct1, _) -> Some (self#append ?parent ~loc:ct1.ctyp_loc (sprintf "Tcf_constr") "");
-      end str.cstr_fields;
+          | Tcf_constraint (ct1, _) -> Some (self#append ?parent ~loc:ct1.ctyp_loc (sprintf "Tcf_constr") "");
+          (* Added in 4.02.3 - TODO *)
+          | Tcf_attribute _ -> None
+      end str.cstr_fields |> ignore;
       parent
     | Tcl_fun (_, _, _, cl_expr, _) ->
       self#append_class_item ?let_bindings_parent ~expand_lets ?count_meth ?parent cl_expr.cl_desc;
@@ -878,8 +908,8 @@ object (self)
     | Tcl_let (_, lets, _, desc) ->
       Gaux.may let_bindings_parent ~f:begin fun row ->
         let f () =
-          List.iteri begin fun i pe ->
-            ignore (self#append_pattern ~parent:row pe);
+          List.iteri begin fun i { vb_pat = p; vb_expr = e; _ } ->
+            ignore (self#append_pattern ~parent:row (p, e));
             if i = 0 && expand_lets then begin
               let path = model#get_path row in
               self#add_table_expanded_by_default row;
@@ -907,7 +937,7 @@ object (self)
     | Tcty_signature sign ->
       List.iter begin fun field ->
         match field.ctf_desc with
-          | Tctf_inher _ -> ignore (self#append ?parent (sprintf "Tctf_inher") "")
+          | Tctf_inherit _ -> ignore (self#append ?parent (sprintf "Tctf_inher") "")
           | Tctf_val (id, mutable_flag, virtual_flag, ct) ->
             let kind = match mutable_flag, virtual_flag with
               | Mutable, Virtual -> Attribute_mutable_virtual
@@ -918,15 +948,17 @@ object (self)
             let typ = string_of_type_expr ct.ctyp_type in
             let loc = field.ctf_loc in (* This location is not correct  *)
             ignore(self#append ?parent ~kind ~loc ~loc_body:ct.ctyp_loc id typ);
-          | Tctf_virt _ -> ignore (self#append ?parent (sprintf "Tctf_virt") "")
-          | Tctf_meth (id, private_flag, ct) ->
+          | Tctf_method (id, private_flag, virtual_flag, ct) ->
             Gaux.may count_meth ~f:incr;
+            let [@warning "-4"] _ = "Disable this pattern matching is fragile warning" in
             let kind = match private_flag with Private -> Method_private | _ -> Method in
             let loc = field.ctf_loc in (* This location is not correct  *)
             ignore (self#append ?parent ~kind ~loc ~loc_body:ct.ctyp_loc id (string_of_type_expr ct.ctyp_type))
-          | Tctf_cstr _ -> ignore (self#append ?parent (sprintf "Tctf_cstr") "")
+          | Tctf_constraint _ -> ignore (self#append ?parent (sprintf "Tctf_cstr") "")
+          (* Added in 4.02.0 - TODO *)
+          | Tctf_attribute _ -> ()
       end (List.rev sign.csig_fields)
-    | Tcty_fun (_, _, class_type) -> ignore (self#append_class_type_item ?parent class_type.cltyp_desc)
+    | Tcty_arrow (_, _, class_type) -> ignore (self#append_class_type_item ?parent class_type.cltyp_desc)
 
   method private string_of_type_abstract decl =
     match decl.typ_manifest with
@@ -936,14 +968,14 @@ object (self)
   method private string_of_type_record decls =
     Odoc_info.reset_type_names();
     String.concat "" ["{ \n  ";
-      String.concat ";\n  " (List.map begin fun (_, loc, _is_mutable, ct, _) ->
+      String.concat ";\n  " (List.map begin fun { Typedtree.ld_name = loc; ld_type = ct; _ } ->
         loc.txt ^ ": " ^ string_of_type_expr ct.ctyp_type
       end decls);
       " \n}"]
 
   method private string_of_type_variant decls =
     Odoc_info.reset_type_names();
-    "   " ^ (String.concat "\n | " (List.map begin fun (_, loc, types, _) ->
+    "   " ^ (String.concat "\n | " (List.map begin fun { Typedtree.cd_name = loc; cd_args = types; _ } ->
       loc.txt ^
         let ts = self#string_of_core_types types in
         if ts = "" then "" else (" of " ^ ts)

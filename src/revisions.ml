@@ -53,7 +53,7 @@ let get_filename_extension ~dir_sep filename =
   if pos < pos_sep then "" else String.sub filename pos (len - pos)
 
 let is_ocaml_filename filename =
-  filename ^^ ".ml" || filename ^^ ".mli" || filename ^^ ".mll" || filename ^^ ".mly"
+  filename ^^^ ".ml" || filename ^^^ ".mli" || filename ^^^ ".mll" || filename ^^^ ".mly"
 
 
 (** ocamlview *)

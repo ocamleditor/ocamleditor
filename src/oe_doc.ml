@@ -411,9 +411,10 @@ struct
       insert_type (Odoc_info.Name.simple elem.Type.ty_name);
       match elem.Type.ty_kind with
         | Type.Type_abstract ->
+          let [@warning "-4"] _ = "Disable this pattern matching is fragile warning" in
           begin
             match elem.Type.ty_manifest with
-              | Some te ->
+              | Some (Odoc_type.Other te) ->
                 Odoc_info.reset_type_names();
                 insert_type " = ";
                 insert_type (Odoc_info.string_of_type_expr te)
@@ -443,7 +444,7 @@ struct
             end in
             insert_type (Miscellanea.rpad code ' ' maxlength);
             match vc.Type.vc_text with
-              | Some text -> insert_type_element_comment text
+              | Some { i_desc = Some text; _ } -> insert_type_element_comment text
               | _ -> insert_newline ~buffer (!!)
           end vcl
         | Type.Type_record rfl ->
@@ -475,10 +476,12 @@ struct
             buffer#insert ~tags:[!!`TYPE; !!`INDENT]
               (Miscellanea.rpad (!!! rf) ' ' maxlength_te);
             match rf.Type.rf_text with
-              | Some text -> insert_type_element_comment text
+              | Some { i_desc = Some text; _ } -> insert_type_element_comment text
               | _ -> insert_newline ~buffer (!!)
           end rfl;
           insert_type "}";
+        (* since 4.02.0  TODO *)
+        | Type.Type_open -> ()
     end;
     Lexical.tag buffer ~start:(buffer#get_iter_at_mark (`MARK m1)) ~stop:(buffer#get_iter `INSERT);
     buffer#delete_mark (`MARK m1);
@@ -582,6 +585,7 @@ end
   let insert ~(buffer : GText.buffer) ~kind elem =
     let (!!) = create_tags ~buffer in
     let insert_info = Info.insert_info (!!) buffer in
+    let [@warning "-4"] _ = "Disable this pattern matching is fragile warning" in
     begin
       match elem with
         | Search.Res_type elem
@@ -711,6 +715,8 @@ end
                 fix_ocamldoc := None;
               | _ -> with_tag_odoc (fun () -> insert_text buffer elem (!!)));
       (*end ()*)
+          (* Since 4.02.0 -- TODO *)
+          | Module.Element_type_extension _ -> ()
     end (Module.module_elements odoc);
     (*  *)
     insert_newline ~buffer (!!);

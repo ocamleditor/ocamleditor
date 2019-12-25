@@ -26,14 +26,14 @@ open Miscellanea
 let filter =
   let names = List.map (!~~) ["README"; "INSTALL"; "NEWS"; "BUGS"; "CONTRIB"; "Makefile"; "TODO"; "AUTHORS"; "ChangeLog"; "META"] in
   fun filename ->
-    filename ^^ ".ml"  ||
-    filename ^^ ".mli" ||
-    filename ^^ ".mll" ||
-    filename ^^ ".mly" ||
-    filename ^^ ".bat" ||
-    filename ^^ ".cmd" ||
-    filename ^^ ".txt" ||
-    filename ^^ ".sh"  ||
+    filename ^^^ ".ml"  ||
+    filename ^^^ ".mli" ||
+    filename ^^^ ".mll" ||
+    filename ^^^ ".mly" ||
+    filename ^^^ ".bat" ||
+    filename ^^^ ".cmd" ||
+    filename ^^^ ".txt" ||
+    filename ^^^ ".sh"  ||
     let len = String.length filename in
     List.exists begin fun re ->
       try ignore (Str.search_backward re filename len); true

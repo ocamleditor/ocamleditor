@@ -39,6 +39,7 @@ let get_module_name symbol =
   match symbol.sy_id with x :: _ -> x | _ -> assert false
 
 let is_method symbol =
+  let [@warning "-4"] _ = "Disable this pattern matching is fragile warning" in
   match symbol.sy_kind with
     | Pmethod | Pmethod_private | Pmethod_virtual | Pmethod_private_virtual -> true
     | _ -> false
@@ -73,7 +74,7 @@ module Modules = struct
       List.filter begin fun x ->
         (len = 0 || String.length x >= len) &&
         (String.lowercase (Str.first_chars x len)) = filter (* TODO: improve *)
-        && x ^^ ".cmi"
+        && x ^^^ ".cmi"
       end filenames
     in
     (* Convert filename to module name *)
@@ -120,7 +121,9 @@ module Signature = struct
   let kind_of_typekind = function
     | Type_variant _ -> Ptype_variant
     | Type_abstract -> Ptype_abstract
-    | Type_record _ -> Ptype_record;;
+    | Type_record _ -> Ptype_record
+    (* Since 4.02.0 - TODO ?? *)
+    | Type_open -> Ptype
 
   let find_path modlid =
     Misc.find_in_path_uncap !Config.load_path (modlid^(".cmi"))
@@ -140,6 +143,7 @@ module Signature = struct
       cty_path   = cty_path; _
     } ->*)
       begin
+        let [@warning "-4"] _ = "Disabel this pattern matching is fragile warning" in
         match Printtyp.tree_of_class_declaration id cd Types.Trec_first with
           | Osig_class (_(*vir_flag*), _(*name*), _(*params*), clt, _(*rs*)) ->
             let rec parse_class_type = function
@@ -160,7 +164,7 @@ module Signature = struct
                   | _ -> None
                   (*| Ocsg_value (name, virt, priv, ty) -> None | Ocsg_constraint (t1, t2) -> None*)
                 end csil
-              | Octy_fun (_, _, clt) -> parse_class_type clt
+              | Octy_arrow (_, _, clt) -> parse_class_type clt
               | _ -> []
             in parse_class_type clt
           | _ -> []
@@ -176,6 +180,8 @@ module Signature = struct
       let symbols = List.map (fun it -> {it with sy_id = parent_longid @ (List.tl it.sy_id)}) symbols in
       symbols
     | Mty_functor (_(*ident*), _(*md*), mc) -> read_module_type ~filename ~parent_longid mc
+    (* Added in 4.02.0 *)
+    | Mty_alias _  -> []
 
   and read' (sign, filename, modlid) =
     let buf = Buffer.create 1024 in
@@ -206,6 +212,7 @@ module Signature = struct
               let kind = kind_of_typekind type_declaration.type_kind in
               (print kind id (Printtyp.type_declaration id formatter) type_declaration) :: acc
             | Some te ->
+              let [@warning "-4"] _ = "Disabel this pattern matching is fragile warning" in
               begin match te.desc with
                 | Tobject _(*(te, me)*) -> acc (* Niente definizione dei tipi oggetto *)
                 | _ ->
@@ -215,9 +222,11 @@ module Signature = struct
           end
         in
         (* Costruttori di tipi varianti *)
+        let [@warning "-4"] _ = "Disable this pattern matching is fragile warning" in
         begin match type_declaration.type_kind with
           | Type_variant cc ->
-            List.fold_left begin fun acc (ident, tel, _(* TODO: Types.type_expr option *)) ->
+            List.fold_left begin fun acc (*(ident, tel, _(* TODO: Types.type_expr option *))*)
+                                     { cd_id = ident; cd_args = tel; _ } ->
               let n = Ident.name ident in
               let symbol =
                 if List.length tel = 0 then
@@ -247,13 +256,13 @@ module Signature = struct
             end acc cc
           | _ -> acc
         end
-      | Sig_exception (id, exception_declaration) ->
-        (print Pexception id (Printtyp.exception_declaration id formatter)
-          exception_declaration) :: acc;
-      | Sig_module (id, module_type, _) ->
+      | Sig_typext (id, extension_constructor, _status) ->
+        (print Pexception id (Printtyp.extension_constructor id formatter)
+          extension_constructor) :: acc;
+      | Sig_module (id, module_declaration, _) ->
         let module_item = print Pmodule id (Printtyp.ident formatter) id in
         let module_items = read_module_type
-          ~filename  ~parent_longid:module_item.sy_id module_type
+          ~filename  ~parent_longid:module_item.sy_id module_declaration.md_type
         in
         module_item :: module_items @ acc;
       | Sig_modtype (id, _) ->
@@ -275,6 +284,7 @@ module Signature = struct
       read' (sign, filename, modlid)
     with
       | (Env.Error e as exc) ->
+        let [@warning "-4"] _ = "Disabel this pattern matching is fragile warning" in
         begin
           match e with
             | Env.Inconsistent_import _ ->

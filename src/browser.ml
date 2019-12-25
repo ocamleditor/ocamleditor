@@ -259,7 +259,7 @@ object (self)
     match dialog#run () with
       | `OK ->
         List.iter begin fun filename ->
-          let filename, save = if filename ^^ Prj.old_extension then (Filename.chop_extension filename) ^ Prj.default_extension, true else filename, false in
+          let filename, save = if filename ^^^ Prj.old_extension then (Filename.chop_extension filename) ^ Prj.default_extension, true else filename, false in
           let proj = self#project_open filename in
           Quick_file_chooser.add_roots ~roots:[Filename.dirname filename] ~filter:Dialog_find_file.filter;
           if save then (Project.save ~editor proj);
@@ -794,7 +794,7 @@ object (self)
         let basename = Filename.basename page#get_filename in
         kprintf (Menu.set_label menu.file_rename) "Rename \xC2\xAB%s\xC2\xBB" basename;
         menu.file_switch#misc#set_sensitive
-          ((basename ^^ ".ml") || (basename ^^ ".mli"));
+          ((basename ^^^ ".ml") || (basename ^^^ ".mli"));
         kprintf (Menu.set_label menu.file_close) "Close \xC2\xAB%s\xC2\xBB" basename;
         kprintf (Menu.set_label menu.file_close_all) "Close All Except \xC2\xAB%s\xC2\xBB" basename;
         kprintf (Menu.set_label menu.file_revert) "Revert to Saved \xC2\xAB%s\xC2\xBB" basename;
@@ -835,7 +835,7 @@ object (self)
         else (load_current_proj (List.tl history))
     in
     File_history.read project_history;
-    project_history.File_history.content <- List.filter (fun x -> (x ^^ Prj.default_extension)) project_history.File_history.content;
+    project_history.File_history.content <- List.filter (fun x -> (x ^^^ Prj.default_extension)) project_history.File_history.content;
     project_history_changed#call project_history;
     load_current_proj project_history.File_history.content;
 

@@ -170,10 +170,10 @@ class editor () =
 
     method switch_mli_ml (page : Editor_page.page) =
       let filename = page#get_filename in
-      if filename ^^ ".ml" then begin
+      if filename ^^^ ".ml" then begin
         let mli = (Filename.chop_extension filename) ^ ".mli" in
         self#load_mli page#project mli
-      end else if filename ^^ ".mli" then begin
+      end else if filename ^^^ ".mli" then begin
         let ml = (Filename.chop_extension filename) ^ ".ml" in
         ignore (self#open_file ~active:true ~scroll_offset:0 ~offset:0 ml)
       end

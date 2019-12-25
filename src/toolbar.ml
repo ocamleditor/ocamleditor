@@ -336,7 +336,7 @@ object (self)
     tool_run#misc#set_sensitive (current_project <> None && dbf <> None);
     editor#with_current_page begin fun p ->
       let name = Filename.basename p#get_filename in
-      if name ^^ ".ml" || name ^^ ".mli" then begin
+      if name ^^^ ".ml" || name ^^^ ".mli" then begin
         kprintf tool_compile_file#misc#set_tooltip_text "Compile \xC2\xAB%s\xC2\xBB" name;
         tool_compile_file#misc#set_sensitive true
       end else begin
