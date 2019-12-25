@@ -156,7 +156,7 @@ let empty () =
 let dummy_re = Str.regexp ""
 
 (** widget *)
-class widget ~editor ~page ?packing () =
+class widget ~editor:_ ~page ?packing () =
   let pref                   = Preferences.preferences#get in
   let show_types             = pref.Preferences.pref_outline_show_types in
   let vbox                   = GPack.vbox ?packing () in
@@ -513,7 +513,7 @@ object (self)
   method private parse = function
     | Implementation impl ->
       List.iter self#append_struct_item impl.str_items
-    | Partial_implementation impl ->
+    | Partial_implementation _ ->
       (*Array.iter begin function
         | Partial_structure impl -> List.iter self#append_struct_item impl.str_items
         | Partial_structure_item impl -> self#append_struct_item impl
@@ -532,7 +532,7 @@ object (self)
       (*end impl;*)
     | Interface sign ->
       List.iter self#append_sig_item sign.sig_items;
-    | Partial_interface part_intf ->
+    | Partial_interface _ ->
       let row = model#append () in
       model#set ~row ~column:col_markup "Partial_interface"
     | Packed _ ->
@@ -541,6 +541,7 @@ object (self)
 
   method private create_markup ?kind name typ =
     let markup_name =
+      let [@warning "-4"] _ = "Disable this pattern matching is fragile warning" in
       match kind with
         | Some Class | Some Class_virtual | Some Class_type | Some Module | Some Module_functor | Some Module_include ->
           "<b>" ^ (Glib.Markup.escape_text name) ^ "</b>"
@@ -720,7 +721,7 @@ object (self)
 
   method private append_module ?parent ?kind mod_desc =
     match mod_desc with
-      | Tmod_functor (_, floc, mtype, mexpr) ->
+      | Tmod_functor (_, _, _, mexpr) ->
         self#append_module ?parent mexpr.mod_desc
       | Tmod_structure str ->
         List.iter (self#append_struct_item ?parent) str.str_items;
@@ -738,15 +739,15 @@ object (self)
       | Tmod_constraint _ -> Some (self#append ?parent "Tmod_constraint" "")
       | Tmod_unpack _ -> Some (self#append ?parent "Tmod_unpack" "")
 
-  method private append_signature_item ?parent ?kind =
+  method private append_signature_item ?parent ?kind:_ =
     function
     | Sig_value (id, vd) -> Some (self#append ?parent ~kind:Simple (Ident.name id) (string_of_type_expr vd.val_type))
-    | Sig_type (id, td, _) -> Some (self#append ?parent (*~kind:Type*) (Ident.name id) "")
-    | Sig_typext (id, ed, _) -> Some (self#append ?parent ~kind:Exception (Ident.name id) "")
-    | Sig_module (id, mdecl, _) -> self#append_mty ?parent ~kind:Module_type mdecl.md_type
-    | Sig_modtype (id, md) -> Some (self#append ?parent "Sig_modtype" "")
-    | Sig_class (id, cd, _) -> Some (self#append ?parent "Sig_class" "")
-    | Sig_class_type (id, ctd, _) -> Some (self#append ?parent "Sig_class_type" "")
+    | Sig_type (id, _, _) -> Some (self#append ?parent (*~kind:Type*) (Ident.name id) "")
+    | Sig_typext (id, _, _) -> Some (self#append ?parent ~kind:Exception (Ident.name id) "")
+    | Sig_module (_, mdecl, _) -> self#append_mty ?parent ~kind:Module_type mdecl.md_type
+    | Sig_modtype (_, _) -> Some (self#append ?parent "Sig_modtype" "")
+    | Sig_class (_, _, _) -> Some (self#append ?parent "Sig_class" "")
+    | Sig_class_type (_, _, _) -> Some (self#append ?parent "Sig_class_type" "")
 
   method private append_mty ?parent ?kind mod_type =
     match mod_type with
@@ -754,15 +755,15 @@ object (self)
       | Mty_signature sign_items ->
         List.iter (fun x -> ignore (self#append_signature_item ?parent ?kind x)) sign_items;
         None
-      | Mty_functor (id, _, m2) ->
+      | Mty_functor (_, _, m2) ->
         self#append_mty ?parent ?kind m2
         (*ignore (self#append ?parent (Ident.name id) "")*)
       (* Since 4.02.0 - TODO *)
       | Mty_alias _ -> None
 
-  method private append_module_type ?parent ?kind mod_desc =
+  method private append_module_type ?parent ?kind:_ mod_desc =
     match mod_desc with
-      | Tmty_functor (_, floc, mtype, mexpr) ->
+      | Tmty_functor (_, _, _, mexpr) ->
         self#append_module_type ?parent mexpr.mty_desc
       | Tmty_ident (path, loc) ->
         Some (self#append ?parent ~kind:Module_include ~loc:loc.loc (Path.name path) "")
@@ -815,9 +816,9 @@ object (self)
       | Texp_ident (_, lid, _) -> ignore (self#append ?parent (Longident.last lid.txt) "")
       | Texp_function (_, pel, _) ->
         List.iter (fun { c_lhs = p; c_rhs = e; _ } -> ignore (self#append_pattern ?parent (p, e))) pel
-      | Texp_let (_, pes, expr) ->
+      | Texp_let (_, pes, _) ->
         List.iter (fun { vb_pat = p; vb_expr = e; _ } -> ignore (self#append_pattern ?parent (p, e))) pes
-      | Texp_apply (expr, el) -> self#append_expression ?parent expr
+      | Texp_apply (expr, _) -> self#append_expression ?parent expr
       | Texp_sequence _ -> ignore (self#append ?parent "Texp_sequence" "")
       | _ -> ignore (self#append ?parent "x" "")
 
@@ -848,7 +849,7 @@ object (self)
     | Tcl_structure str ->
       List.map begin fun fi ->
         match fi.cf_desc with
-          | Tcf_inherit (_, cl_expr, id, inherited_fields, inherited_methods) ->
+          | Tcf_inherit (_, cl_expr, _, _, inherited_methods) ->
             let parent = self#append_class_item ?let_bindings_parent ~expand_lets ?count_meth ?parent cl_expr.cl_desc in
             Gaux.may parent ~f:begin fun parent ->
               let f () = List.iter (fun (x, _) -> ignore (self#append ~kind:Method_inherited ~parent x "")) inherited_methods in
@@ -863,7 +864,7 @@ object (self)
               end
             end;
             parent
-          | Tcf_initializer expr ->
+          | Tcf_initializer _ ->
             let loc = {fi.cf_loc with loc_end = fi.cf_loc.loc_start} in
             let parent = self#append ~kind:Initializer ~loc ~loc_body:fi.cf_loc ?parent "initializer" "" in
             Some parent;
@@ -948,7 +949,7 @@ object (self)
             let typ = string_of_type_expr ct.ctyp_type in
             let loc = field.ctf_loc in (* This location is not correct  *)
             ignore(self#append ?parent ~kind ~loc ~loc_body:ct.ctyp_loc id typ);
-          | Tctf_method (id, private_flag, virtual_flag, ct) ->
+          | Tctf_method (id, private_flag, _, ct) ->
             Gaux.may count_meth ~f:incr;
             let [@warning "-4"] _ = "Disable this pattern matching is fragile warning" in
             let kind = match private_flag with Private -> Method_private | _ -> Method in

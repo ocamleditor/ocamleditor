@@ -226,13 +226,15 @@ module Signature = struct
         begin match type_declaration.type_kind with
           | Type_variant cc ->
             List.fold_left begin fun acc (*(ident, tel, _(* TODO: Types.type_expr option *))*)
-                                     { cd_id = ident; cd_args = tel; _ } ->
+                                     { cd_id = ident; cd_args = tel; cd_res = teo; _ } ->
               let n = Ident.name ident in
+              let print_type_expr = print Pconstructor ident (Printtyp.type_expr formatter) in
+              let is_gadt = match teo with Some _ -> true | None -> false in
               let symbol =
                 if List.length tel = 0 then
                   print Pconstructor ident ignore ()
                 else begin
-                  let items = List.map (print Pconstructor ident (Printtyp.type_expr formatter)) tel in
+                  let items = List.map print_type_expr tel in
                   ListLabels.fold_left
                     ~f:begin fun acc it -> {
                       sy_id        = acc.sy_id;
@@ -250,8 +252,9 @@ module Signature = struct
                 end
               in
               let d = replace_first ["^ \\* ", ""] symbol.sy_type in
-              let d = n^(if String.length d > 0 then " of "^d else "") in
-              let d = d ^ " : " ^ (Ident.name id) in
+              let d = n^(if String.length d > 0 then (if is_gadt then " : " else " of ")^d else "") in
+              let d = match teo with Some te -> d ^ " -> " ^ (print_type_expr te).sy_type | None -> d in
+              let d = if is_gadt then d else d ^ " : " ^ (Ident.name id) in
               {symbol with sy_type=d} :: acc
             end acc cc
           | _ -> acc
