@@ -252,9 +252,9 @@ module Signature = struct
                 end
               in
               let d = replace_first ["^ \\* ", ""] symbol.sy_type in
-              let d = n^(if String.length d > 0 then (if is_gadt then " : " else " of ")^d else "") in
-              let d = match teo with Some te -> d ^ " -> " ^ (print_type_expr te).sy_type | None -> d in
-              let d = if is_gadt then d else d ^ " : " ^ (Ident.name id) in
+              let is_bare = String.length d = 0 in
+              let d = n ^ (if is_gadt then " : " else (if is_bare then "" else " of ")) ^ d in
+              let d = match teo with Some te -> d ^ (if is_bare then "" else " -> ") ^ (print_type_expr te).sy_type | None -> d in
               {symbol with sy_type=d} :: acc
             end acc cc
           | _ -> acc

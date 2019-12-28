@@ -976,10 +976,15 @@ object (self)
 
   method private string_of_type_variant decls =
     Odoc_info.reset_type_names();
-    "   " ^ (String.concat "\n | " (List.map begin fun { Typedtree.cd_name = loc; cd_args = types; _ } ->
+    "   " ^ (String.concat "\n | " (List.map begin fun { Typedtree.cd_name = loc; cd_args = types; cd_res; _ } ->
       loc.txt ^
         let ts = self#string_of_core_types types in
-        if ts = "" then "" else (" of " ^ ts)
+        let te = match cd_res with Some te -> string_of_type_expr te.ctyp_type | None -> "" in
+        match ts, te with
+        | "", "" -> ""
+        | _, ""  -> " of " ^ ts
+        | "", _  -> " : " ^ te
+        | _, _   -> " : " ^ ts ^ " -> " ^ te
     end decls))
 
   method private string_of_core_types ctl =
