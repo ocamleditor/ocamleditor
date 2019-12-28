@@ -19,7 +19,7 @@
   along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 *)
-
+[@@@warning "-48"]
 
 open Printf
 open Miscellanea
@@ -66,7 +66,7 @@ class ocaml_shell ?project () =
   let _ = tooltips#set_tip ~text:"Kill process" b_kill#coerce in
   let _ = tooltips#set_tip ~text:"Rename Toplevel Window" b_rename#coerce in
   (*  *)
-  let prog = Ocaml_config.ocaml() in
+  let prog = Ocaml_config.ocaml_noinit () in
   let sh =
     object
       inherit Shell_view.widget ~prog ~env:(Unix.environment()) ~args:[] ~packing:sw#add ()
