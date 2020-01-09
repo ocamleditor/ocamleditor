@@ -85,7 +85,7 @@ let pixbuf_of_kind = function
   | Type_abstract -> Some Icons.type_abstract
   | Type_variant -> Some Icons.type_variant
   | Type_record -> Some Icons.type_record
-  | Type_open -> None
+  | Type_open -> Some Icons.type_variant
   | Class -> Some Icons.classe
   | Class_virtual -> Some Icons.class_virtual
   | Class_type -> Some Icons.class_type
@@ -669,7 +669,8 @@ object (self)
       | Tstr_open _
       | Tstr_primitive _ -> ()
       (* Since 4.02.0 *)
-      | Tstr_typext _ -> ()
+      | Tstr_typext { Typedtree.tyext_txt = txt; tyext_constructors = constructors; _ } -> 
+        self#append_type_extension ?parent ~kind:Type_open txt constructors
       | Tstr_attribute _ -> ()
 
 
@@ -790,9 +791,21 @@ object (self)
         | Ttype_variant decls -> self#string_of_type_variant decls
         | Ttype_record decls -> self#string_of_type_record decls
         (* Since 4.02.0 *)
-        | Ttype_open -> "TODO: Type open"
+        | Ttype_open -> ".."
     in
     ignore (self#append ?parent ~kind ~loc:loc.loc ~loc_body:decl.typ_loc loc.txt typ)
+
+  method private append_type_extension ?parent ~kind { txt; loc } constructors = 
+    let typs ext_kind = match ext_kind with
+      | Text_decl (ctl, cto) -> 
+        let args = self#string_of_core_types ctl in
+        let res = self#string_of_core_type_opt cto in
+        self#repr_of_gadt_type args res
+      | Text_rebind _ -> " <rebind> "
+    in    
+    let name_and_types = List.map (fun { Typedtree.ext_name = { txt; _ }; ext_kind; _ } -> txt ^ (typs ext_kind)) constructors in
+    let repr = "+ " ^ String.concat " | " name_and_types in
+    ignore (self#append ?parent ~kind ~loc (Longident.last txt) repr)
 
   method private append_pattern ?parent (pat, expr) =
     let [@warning "-4"] _ = "Disabel this pattern matching is fragile warning" in
@@ -976,19 +989,26 @@ object (self)
 
   method private string_of_type_variant decls =
     Odoc_info.reset_type_names();
-    "   " ^ (String.concat "\n | " (List.map begin fun { Typedtree.cd_name = loc; cd_args = types; cd_res; _ } ->
-      loc.txt ^
-        let ts = self#string_of_core_types types in
-        let te = match cd_res with Some te -> string_of_type_expr te.ctyp_type | None -> "" in
-        match ts, te with
-        | "", "" -> ""
-        | _, ""  -> " of " ^ ts
-        | "", _  -> " : " ^ te
-        | _, _   -> " : " ^ ts ^ " -> " ^ te
+    "   " ^ (String.concat "\n | " (List.map begin fun { Typedtree.cd_name; cd_args; cd_res; _ } ->
+      cd_name.txt ^
+        let ts = self#string_of_core_types cd_args in
+        let te = self#string_of_core_type_opt cd_res in
+        self#repr_of_gadt_type ts te
     end decls))
 
   method private string_of_core_types ctl =
     String.concat " * " (List.map (fun ct -> string_of_type_expr ct.ctyp_type) ctl)
+
+  method private string_of_core_type_opt = function
+    | Some te -> string_of_type_expr te.ctyp_type
+    | None -> ""
+
+  method private repr_of_gadt_type type_args type_result =
+    match type_args, type_result with
+    | "", "" -> ""
+    | _, ""  -> " of " ^ type_args
+    | "", _  -> " : " ^ type_result
+    | _, _   -> " : " ^ type_args ^ " -> " ^ type_result
 
   method private add_table_expanded_by_user id path =
     table_expanded_by_user <- (id, path) :: (List.remove_assoc id table_expanded_by_user)
