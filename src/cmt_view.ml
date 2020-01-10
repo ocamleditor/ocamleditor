@@ -141,6 +141,9 @@ let string_of_type_expr te =
     | Tarrow (_, _, t2, _) -> Odoc_info.string_of_type_expr t2
     | _ -> Odoc_info.string_of_type_expr te;;
 
+let string_of_longident t
+  = String.concat "." @@ Longident.flatten t
+
 (** empty *)
 let empty () =
   let pref = Preferences.preferences#get in
@@ -727,7 +730,7 @@ object (self)
       | Tmod_structure str ->
         List.iter (self#append_struct_item ?parent) str.str_items;
         None
-      | Tmod_ident (_, loc) -> Some (self#append ?parent ?kind ~loc:loc.loc (String.concat "." (Longident.flatten loc.txt)) "")
+      | Tmod_ident (_, loc) -> Some (self#append ?parent ?kind ~loc:loc.loc (string_of_longident loc.txt) "")
       | Tmod_apply (me1, me2, _) ->
         let p1 = self#append_module ?parent ~kind:Module_functor me1.mod_desc in
         let f () =
@@ -801,11 +804,11 @@ object (self)
         let args = self#string_of_core_types ctl in
         let res = self#string_of_core_type_opt cto in
         self#repr_of_gadt_type args res
-      | Text_rebind _ -> " <rebind> "
+      | Text_rebind (_, { Asttypes.txt; _ }) -> " as " ^ (string_of_longident txt)
     in    
     let name_and_types = List.map (fun { Typedtree.ext_name = { txt; _ }; ext_kind; _ } -> txt ^ (typs ext_kind)) constructors in
     let repr = "+ " ^ String.concat " | " name_and_types in
-    ignore (self#append ?parent ~kind ~loc (Longident.last txt) repr)
+    ignore (self#append ?parent ~kind ~loc (string_of_longident txt) repr)
 
   method private append_pattern ?parent (pat, expr) =
     let [@warning "-4"] _ = "Disabel this pattern matching is fragile warning" in
@@ -916,7 +919,7 @@ object (self)
     | Tcl_fun (_, _, _, cl_expr, _) ->
       self#append_class_item ?let_bindings_parent ~expand_lets ?count_meth ?parent cl_expr.cl_desc;
     | Tcl_ident (_, lid, _) ->
-      Some (self#append ?parent ~kind:Class_inherit ~loc:lid.loc (String.concat "." (Longident.flatten lid.txt)) "");
+      Some (self#append ?parent ~kind:Class_inherit ~loc:lid.loc (string_of_longident lid.txt) "");
     | Tcl_apply (cl_expr, _) ->
       self#append_class_item ?let_bindings_parent ~expand_lets ?count_meth ?parent cl_expr.cl_desc;
     | Tcl_let (_, lets, _, desc) ->
