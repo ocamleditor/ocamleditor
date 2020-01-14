@@ -392,7 +392,7 @@ let filename_unix_implicit filename =
 
 (** modname_of_path *)
 let modname_of_path path =
-  String.capitalize (Filename.chop_extension (Filename.basename path))
+  String.capitalize_ascii (Filename.chop_extension (Filename.basename path))
 
 (** open_url *)
 let open_url url =

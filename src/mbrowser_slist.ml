@@ -62,13 +62,13 @@ module Index = struct
 
   let add ind name path =
     if String.length name > 0 then
-      let i = Char.code (Char.lowercase name.[0]) in
+      let i = Char.code (Char.lowercase_ascii name.[0]) in
       Array.unsafe_set ind i
         ((*List.sort (fun (_, a) (_, b) -> compare a b)*) ((path, name) :: (Array.unsafe_get ind i)))
 
   let find_all ind name =
     if String.length name > 0 then
-      let i = Char.code (Char.lowercase name.[0]) in
+      let i = Char.code (Char.lowercase_ascii name.[0]) in
       Array.unsafe_get ind i
     else []
 
@@ -161,7 +161,7 @@ object (self)
     length <- 0;
     model#clear();
     Index.clear index;
-    (** Fill model *)
+    (* Fill model *)
     let markup =
       match kind with
         | `Search when not is_completion ->

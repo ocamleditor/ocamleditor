@@ -544,8 +544,7 @@ object (self)
 
   method private create_markup ?kind name typ =
     let markup_name =
-      let [@warning "-4"] _ = "Disable this pattern matching is fragile warning" in
-      match kind with
+      match [@warning "-4"] kind with
         | Some Class | Some Class_virtual | Some Class_type | Some Module | Some Module_functor | Some Module_include ->
           "<b>" ^ (Glib.Markup.escape_text name) ^ "</b>"
         | Some Initializer | Some Class_let_bindings | Some Method_inherited -> "<i>" ^ (Glib.Markup.escape_text name) ^ "</i>"
@@ -635,15 +634,17 @@ object (self)
         List.iter (fun { vb_pat = p; vb_expr = e; _ } -> ignore (self#append_pattern ?parent (p, e))) pe
       | Tstr_class classes -> List.iter (self#append_class ?parent) classes
       | Tstr_class_type classes -> List.iter (fun (_, loc, decl) -> self#append_class_type ?parent ~loc decl) classes
-      | Tstr_type decls -> List.iter (self#append_type ?parent) decls
-      | Tstr_exception (*(_, loc, decl)*) { ext_name = loc; ext_kind; _ } ->
-        let core_types = (match ext_kind with Text_decl (core_types, _) -> core_types | Text_rebind _ -> []) in
-        let exn_params = self#string_of_core_types core_types in
-        ignore (self#append ?parent ~kind:Exception ~loc:loc.loc loc.txt exn_params)
+      | Tstr_type (_, decls) -> List.iter (self#append_type ?parent) decls
+      | Tstr_exception { ext_name = loc; ext_kind; _ } ->
+        let core_types = ( match ext_kind with 
+            | Text_decl (Typedtree.Cstr_tuple core_types, _) -> self#string_of_core_types core_types 
+            | Text_decl (Typedtree.Cstr_record _, _) -> " TODO {inline record} "  
+            | Text_rebind _ -> "" ) 
+        in
+        ignore (self#append ?parent ~kind:Exception ~loc:loc.loc loc.txt core_types)
       | Tstr_module { mb_name = loc; mb_expr = module_expr; _ }  ->
         let kind =
-          let [@warning "-4"] _ = "Disable this pattern matching is fragile warning" in
-          match module_expr.mod_desc with
+          match [@warning "-4"] module_expr.mod_desc with
             | Tmod_functor _ -> Module_functor
             | _ -> Module
         in
@@ -683,15 +684,18 @@ object (self)
         Odoc_info.reset_type_names();
         let typ = string_of_type_expr val_desc.ctyp_type in
         ignore (self#append ?parent ~kind:Function ~loc:val_loc ~loc_body:val_desc.ctyp_loc val_name.txt typ);
-      | Tsig_type decls -> List.iter (self#append_type ?parent) decls
+      | Tsig_type (_, decls) -> List.iter (self#append_type ?parent) decls
       | Tsig_exception { Typedtree.ext_kind; ext_name = loc; _ } ->
-        let core_types = (match ext_kind with Text_decl (core_types, _) -> core_types | Text_rebind _ -> []) in
-        let exn_params = self#string_of_core_types core_types in
-        ignore (self#append ?parent ~kind:Exception ~loc:loc.loc loc.txt exn_params)
+        let core_types = ( match ext_kind with 
+            | Text_decl (Typedtree.Cstr_tuple core_types, _) -> self#string_of_core_types core_types 
+            | Text_decl (Typedtree.Cstr_record _, _) -> " TODO {inline record} "  
+            | Text_rebind _ -> "" ) 
+        in
+        ignore (self#append ?parent ~kind:Exception ~loc:loc.loc loc.txt core_types)
       | Tsig_module { Typedtree.md_type = mty; md_name = loc; _ } ->
         let kind =
           let [@warning "-4"] _ = "Disable this pattern matching is fragile warning" in
-          match mty.mty_desc with
+          match [@warning "-4"] mty.mty_desc with
             | Tmty_functor _ -> Module_functor
             | _ -> Module
         in
@@ -800,19 +804,20 @@ object (self)
 
   method private append_type_extension ?parent ~kind { txt; loc } constructors = 
     let typs ext_kind = match ext_kind with
-      | Text_decl (ctl, cto) -> 
+      | Text_decl (Typedtree.Cstr_tuple ctl, cto) -> 
         let args = self#string_of_core_types ctl in
         let res = self#string_of_core_type_opt cto in
         self#repr_of_gadt_type args res
-      | Text_rebind (_, { Asttypes.txt; _ }) -> " as " ^ (string_of_longident txt)
+      | Text_decl (Typedtree.Cstr_record _, cto) ->
+        " TODO {inline records} "
+      | Text_rebind (_, { Asttypes.txt; _ }) -> " = " ^ (string_of_longident txt)
     in    
     let name_and_types = List.map (fun { Typedtree.ext_name = { txt; _ }; ext_kind; _ } -> txt ^ (typs ext_kind)) constructors in
     let repr = "+ " ^ String.concat " | " name_and_types in
     ignore (self#append ?parent ~kind ~loc (string_of_longident txt) repr)
 
   method private append_pattern ?parent (pat, expr) =
-    let [@warning "-4"] _ = "Disabel this pattern matching is fragile warning" in
-    match pat.pat_desc with
+    match [@warning "-4"] pat.pat_desc with
       | Tpat_var (_, loc) ->
         let kind = if is_function pat.pat_type then Function else Simple in
         Odoc_info.reset_type_names();
@@ -827,8 +832,7 @@ object (self)
       | Tpat_lazy*) _ -> None (*Some (self#append ?parent "append_pattern" "")*)
 
   method private append_expression ?parent exp =
-    let [@warning "-4"] _ = "Disable this pattern is fragile warning" in
-    match exp.exp_desc with
+    match [@warning "-4"] exp.exp_desc with
       | Texp_ident (_, lid, _) -> ignore (self#append ?parent (Longident.last lid.txt) "")
       | Texp_function (_, pel, _) ->
         List.iter (fun { c_lhs = p; c_rhs = e; _ } -> ignore (self#append_pattern ?parent (p, e))) pel
@@ -838,7 +842,7 @@ object (self)
       | Texp_sequence _ -> ignore (self#append ?parent "Texp_sequence" "")
       | _ -> ignore (self#append ?parent "x" "")
 
-  method private append_class ?parent (infos, _, _) =
+  method private append_class ?parent (infos, _) =
     let kind = if infos.ci_virt = Asttypes.Virtual then Class_virtual else Class in
     let parent = self#append ~kind ?parent ~loc:infos.ci_id_name.loc infos.ci_id_name.txt "" in
     let loc = {infos.ci_expr.cl_loc with loc_end = infos.ci_expr.cl_loc.loc_start} in
@@ -994,10 +998,14 @@ object (self)
     Odoc_info.reset_type_names();
     "   " ^ (String.concat "\n | " (List.map begin fun { Typedtree.cd_name; cd_args; cd_res; _ } ->
       cd_name.txt ^
-        let ts = self#string_of_core_types cd_args in
+        let ts = self#string_of_constructor_arguments cd_args in
         let te = self#string_of_core_type_opt cd_res in
         self#repr_of_gadt_type ts te
     end decls))
+
+  method private string_of_constructor_arguments = function
+    | Typedtree.Cstr_tuple core_types -> self#string_of_core_types core_types
+    | Typedtree.Cstr_record _fields -> " TOOD {inline records} "
 
   method private string_of_core_types ctl =
     String.concat " * " (List.map (fun ct -> string_of_type_expr ct.ctyp_type) ctl)

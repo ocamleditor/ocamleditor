@@ -28,12 +28,12 @@ open Oebuild_util
 let find_top_modules dir =
   let files = Array.to_list (Sys.readdir dir) in
   let files = List.map (fun x -> dir // x) files in
-  let files = List.filter (fun x -> x ^^ ".ml" && not (Sys.is_directory x)) files in
+  let files = List.filter (fun x -> x ^^^ ".ml" && not (Sys.is_directory x)) files in
   let search_path = Ocaml_config.expand_includes dir in
   let table = Oebuild_dep.ocamldep ~slash:false ~verbose:false ~search_path (dir // "*.ml") in
   let files = ref files in
   Hashtbl.iter begin fun filename (changed, deps) ->
-    let mldeps = List.filter (fun x -> not (x ^^ ".cmi")) deps in
+    let mldeps = List.filter (fun x -> not (x ^^^ ".cmi")) deps in
     let mldeps = List.map (fun x -> (Filename.chop_extension x) ^ ".ml") mldeps in
     let mldeps = List.filter ((<>) filename) mldeps in
     let mldeps = List.map (fun x -> if Filename.is_implicit x then dir // x else x) mldeps in

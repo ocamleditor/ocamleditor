@@ -25,7 +25,7 @@ open Printf
 
 let (!$) = Filename.chop_extension
 let (//) = Filename.concat
-let (^^) = Filename.check_suffix
+let (^^^) = Filename.check_suffix
 let (<@) = List.mem
 let win32 = (fun a b -> match Sys.os_type with "Win32" -> a | _ -> b)
 let may opt f = match opt with Some x -> f x | _ -> ()

@@ -160,7 +160,7 @@ let read_cmt ~project ~filename:source ?(timestamp=0.) ?compile_buffer () =
 ;;
 
 (** print_ident *)
-let print_ident ?filter {ident_kind; ident_loc; _} =
+let print_ident ?filter { ident_kind; ident_loc; _ } =
   let loc' =
     match ident_kind with
       | Def loc -> "scope: " ^ (string_of_loc loc.def_scope)
@@ -175,7 +175,7 @@ let print_ident ?filter {ident_kind; ident_loc; _} =
     | Some x when x <> txt -> ()
     | _ ->
       printf "%-11s: %-30s (use: %-12s) (%-19s) %s\n%!"
-        (String.uppercase (string_of_kind ident_kind))
+        (String.uppercase_ascii (string_of_kind ident_kind))
         ident_loc.txt
         (string_of_loc loc)
         loc'

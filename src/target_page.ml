@@ -651,7 +651,7 @@ object (self)
       try
         let filename = List.hd filename in
         entry_main_module#set_text filename;
-      with Failure "hd" -> (ignore (entry_main_module#set_text ""))
+      with Failure _ -> (ignore (entry_main_module#set_text ""))
     end;
     check_nodep#set_active tg.nodep;
     check_dontlinkdep#set_active tg.dontlinkdep;

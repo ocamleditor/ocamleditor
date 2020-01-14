@@ -19,6 +19,7 @@
   along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 *)
+[@@@warning "-48"]
 
 open Printf
 open Miscellanea
@@ -83,7 +84,7 @@ let create_model ~source ~name =
   } in
   begin
     match source with
-      | `path (roots, _) -> models := (name, model) :: !models;
+      | `path _ -> models := (name, model) :: !models;
       | _ -> ()
   end;
   model;;
@@ -119,7 +120,7 @@ class widget ~source ~name ?filter ?packing () =
   in
   let model_filter      = GTree.model_filter model.model in
   let _                 = model_filter#set_visible_column col_visible in
-  (** View *)
+  (* View *)
   let renderer          = GTree.cell_renderer_text [] in
   let renderer_basename = GTree.cell_renderer_text [] in
   let renderer_pixbuf   = GTree.cell_renderer_pixbuf [] in
@@ -314,7 +315,7 @@ object (self)
   method private search_by_index () =
     (*crono ~label:"search_by_index" begin fun () ->*)
       let len = String.length entry#text in
-      let pattern = String.lowercase entry#text in
+      let pattern = String.lowercase_ascii entry#text in
       let c0 = String.unsafe_get pattern 0 in
       let dirty, results =
         match c0 with
@@ -444,7 +445,7 @@ object (self)
       model.model#set ~row ~column:col_visible is_visible;
       if is_visible then (table_visible <- path :: table_visible);
       (* Create indexes *)
-      let low_basename = String.lowercase basename in
+      let low_basename = String.lowercase_ascii basename in
       let len = String.length low_basename in
       Hashtbl.add model.index_0 low_basename.[0] path;
       if len > 1 then Hashtbl.add model.index_1 low_basename.[1] path;

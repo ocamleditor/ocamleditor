@@ -39,8 +39,7 @@ let get_module_name symbol =
   match symbol.sy_id with x :: _ -> x | _ -> assert false
 
 let is_method symbol =
-  let [@warning "-4"] _ = "Disable this pattern matching is fragile warning" in
-  match symbol.sy_kind with
+  match [@warning "-4"] symbol.sy_kind with
     | Pmethod | Pmethod_private | Pmethod_virtual | Pmethod_private_virtual -> true
     | _ -> false
 
@@ -67,19 +66,19 @@ module Modules = struct
 
   let read' (filter, path) =
     let len = String.length filter in
-    let filter = String.lowercase filter in
+    let filter = String.lowercase_ascii filter in
     (* Read .cmi files from path *)
     let filenames = Array.to_list (try Sys.readdir path with (Sys_error _) -> [||]) in
     let module_files =
       List.filter begin fun x ->
         (len = 0 || String.length x >= len) &&
-        (String.lowercase (Str.first_chars x len)) = filter (* TODO: improve *)
+        (String.lowercase_ascii (Str.first_chars x len)) = filter (* TODO: improve *)
         && x ^^^ ".cmi"
       end filenames
     in
     (* Convert filename to module name *)
     let module_names =
-      List.map (fun basename -> String.capitalize (Filename.chop_suffix basename ".cmi"), path // basename) module_files
+      List.map (fun basename -> String.capitalize_ascii (Filename.chop_suffix basename ".cmi"), path // basename) module_files
     in (module_names, Unix.gettimeofday ())
   ;;
 
@@ -212,9 +211,8 @@ module Signature = struct
               let kind = kind_of_typekind type_declaration.type_kind in
               (print kind id (Printtyp.type_declaration id formatter) type_declaration) :: acc
             | Some te ->
-              let [@warning "-4"] _ = "Disabel this pattern matching is fragile warning" in
-              begin match te.desc with
-                | Tobject _(*(te, me)*) -> acc (* Niente definizione dei tipi oggetto *)
+              begin [@warning "-4"] match te.desc with
+                | Tobject _ -> acc (* Niente definizione dei tipi oggetto *)
                 | _ ->
                   let kind = kind_of_typekind type_declaration.type_kind in
                   (print kind id (Printtyp.type_declaration id formatter) type_declaration) :: acc
@@ -222,14 +220,15 @@ module Signature = struct
           end
         in
         (* Costruttori di tipi varianti *)
-        let [@warning "-4"] _ = "Disable this pattern matching is fragile warning" in
         begin match type_declaration.type_kind with
           | Type_variant cc ->
-            List.fold_left begin fun acc (*(ident, tel, _(* TODO: Types.type_expr option *))*)
+            List.fold_left begin fun acc 
                                      { cd_id = ident; cd_args = tel; cd_res = teo; _ } ->
               let n = Ident.name ident in
               let print_type_expr = print Pconstructor ident (Printtyp.type_expr formatter) in
               let is_gadt = match teo with Some _ -> true | None -> false in
+              (* UGLY HACK *)
+              let tel = match tel with Cstr_tuple ct -> ct | Cstr_record _ -> [] in
               let symbol =
                 if List.length tel = 0 then
                   print Pconstructor ident ignore ()
@@ -386,7 +385,7 @@ module Cache = struct
               end
             end;
           with Exit -> begin
-            let basename = (String.uncapitalize modlid) ^ ".cmi" in
+            let basename = (String.uncapitalize_ascii modlid) ^ ".cmi" in
             let remove = ref [] in
             Hashtbl.iter begin fun filename _ ->
               if Filename.basename filename = basename then (remove := filename :: !remove);

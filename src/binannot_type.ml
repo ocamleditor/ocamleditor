@@ -37,6 +37,11 @@ exception Found of t
 module Log = Common.Log.Make(struct let prefix = "Binannot_type" end)
 let _ = Log.set_verbosity `ERROR
 
+let arg_label_to_string = function
+  | Asttypes.Nolabel -> ""
+  | Asttypes.Labelled s -> s
+  | Asttypes.Optional s -> s
+
 (** find_pattern *)
 let rec find_pattern f offset ?(opt=false, false) {pat_desc; pat_loc; pat_type; pat_extra; _} =
   if pat_loc <== offset then begin
@@ -106,7 +111,7 @@ and find_expression f offset ?(opt=false,false) ?loc {exp_desc; exp_loc; exp_typ
           fe ~opt:(false, false) expr
         | Texp_function (lab, pe, _) ->
           Log.println `DEBUG "Texp_function: %s (pe=%d) (exp_extra=%d) (%s)"
-            lab (List.length pe) (List.length exp_extra) (string_of_loc exp_loc);
+            (arg_label_to_string lab) (List.length pe) (List.length exp_extra) (string_of_loc exp_loc);
           List.fold_left begin fun opt { c_lhs = p; c_guard = oe; c_rhs = e } ->
             fp p |> ignore;
             let opt = match oe with Some e' -> fe ~opt e' | None -> opt in
@@ -127,7 +132,7 @@ and find_expression f offset ?(opt=false,false) ?loc {exp_desc; exp_loc; exp_typ
         | Texp_apply (e, ll) ->
           Log.println `DEBUG "Texp_apply: " ;
           let opt = fe ~opt e in
-          List.fold_left (fun opt (_, e, _) -> Opt.map_default e opt (fun e -> fe ~opt e)) opt ll
+          List.fold_left (fun opt (_, e) -> Opt.map_default e opt (fun e -> fe ~opt e)) opt ll
         | Texp_try (expr, ll) ->
           let opt = fe expr in
           List.fold_left begin fun opt { c_lhs = p; c_guard = oe; c_rhs = e } ->
@@ -194,6 +199,13 @@ and find_expression f offset ?(opt=false,false) ?loc {exp_desc; exp_loc; exp_typ
         | Texp_constant _ ->
           Log.println `DEBUG "Texp_constant" ;
           opt
+        (* Since 4.03 *)
+        | Texp_unreachable ->
+          Log.println `DEBUG "Texp_unreachable" ;
+          opt
+        | Texp_extension_constructor (loc, id) ->
+          Log.println `DEBUG "Texp_ident: %s %s (%s)" (Longident.last loc.txt) (string_of_loc loc.loc) (Path.name id);
+          Path.name id = "*opt*", Path.name id = "*sth*"
     in
     if not opt && not sth then begin
        Log.println `DEBUG "find_expression: %s (%b,%b)" (string_of_loc exp_loc) opt sth;
@@ -240,7 +252,7 @@ and find_signature_item f offset {sig_desc; sig_loc; _} =
     let fmt = find_module_type f offset in
     match sig_desc with
       | Tsig_value vdesc -> find_value_description f offset vdesc
-      | Tsig_type ll -> List.iter (fun td -> find_type_declaration f offset td) ll
+      | Tsig_type (_, ll) -> List.iter (fun td -> find_type_declaration f offset td) ll
       | Tsig_exception econstr -> find_extension_constructor f offset econstr
       | Tsig_module mdecl -> find_module_type f offset mdecl.md_type
       | Tsig_recmodule ll -> List.iter (fun mdecl -> fmt mdecl.md_type) ll
@@ -304,7 +316,7 @@ and find_class_expr f offset {cl_desc; cl_loc; _} =
         find_class_expr f offset expr
       | Tcl_apply (expr, ll) ->
         find_class_expr f offset expr;
-        List.iter (function (_, Some expr, _) -> ignore (find_expression f offset expr) | _ -> ()) ll;
+        List.iter (function (_, Some expr) -> ignore (find_expression f offset expr) | _ -> ()) ll;
       | Tcl_let (_, ll, ll2, expr) ->
         List.iter begin fun { vb_pat = pat; vb_expr = expr; _ } ->
           find_pattern f offset pat |> ignore;
@@ -353,8 +365,10 @@ and find_type_declaration f offset {typ_kind; typ_manifest; typ_cstrs; typ_loc; 
       match typ_kind with
         | Ttype_abstract -> ()
         | Ttype_variant ll ->
-          List.iter begin fun { cd_args = ct; _ } ->
-            List.iter (find_core_type f offset ?loc:None) ct
+         List.iter begin fun { cd_args; _ } ->
+            match cd_args with
+            | Cstr_tuple ct -> List.iter (find_core_type f offset) ct
+            | Cstr_record ll -> List.iter (fun { ld_type = ct; _ } -> find_core_type f offset ct) ll
           end ll
         | Ttype_record ll ->
           List.iter (fun { ld_type = ct; _ } -> find_core_type f offset ct) ll
@@ -371,10 +385,15 @@ and find_type_declaration f offset {typ_kind; typ_manifest; typ_cstrs; typ_loc; 
 and find_extension_constructor f offset { ext_loc; ext_kind; _ } =
   if ext_loc <== offset then begin
     match ext_kind with
-    | Text_decl (core_types, core_type_option) ->
-      List.iter (find_core_type f offset ?loc:None) core_types;
+    | Text_decl (arguments, core_type_option) ->
+      begin match arguments with
+        | Cstr_tuple core_types ->
+          List.iter (find_core_type f offset ?loc:None) core_types;
+        | Cstr_record label_declarations ->
+          List.iter (fun ld -> find_core_type f offset ld.ld_type) label_declarations
+      end;
       Opt.may core_type_option (find_core_type f offset ?loc:None)
-
+        (* TODO *)
     | Text_rebind (_, _) -> ()
   end
 
@@ -390,9 +409,9 @@ and find_structure_item f offset {str_desc; str_loc; _} =
         end pe
       | Tstr_open odesc -> f str_loc (Odoc_misc.string_of_longident odesc.open_txt.txt)
       | Tstr_include idesc -> find_module_expr f offset idesc.incl_mod
-      | Tstr_class ll -> List.iter (fun (cd, _, _) -> find_class_expr f offset cd.ci_expr) ll
+      | Tstr_class ll -> List.iter (fun (cd, _) -> find_class_expr f offset cd.ci_expr) ll
       | Tstr_class_type ll -> List.iter (fun (_, _, cd) -> find_class_type f offset cd.ci_expr) ll
-      | Tstr_type ll -> List.iter (fun td -> find_type_declaration f offset td) ll
+      | Tstr_type (_, ll) -> List.iter (fun td -> find_type_declaration f offset td) ll
       | Tstr_exception econstr -> find_extension_constructor f offset econstr
       | Tstr_module mdecl -> find_module_expr f offset mdecl.mb_expr
       | Tstr_modtype mtdecl -> Opt.may mtdecl.mtd_type (find_module_type f offset)
@@ -434,9 +453,8 @@ let find_by_offset ~project ~filename ~offset ?compile_buffer () =
         in
         try
           Odoc_info.reset_type_names();
-          let [@warning "-4"] _ = "Disable fragile pattern matching warning" in
           begin
-            match cmt.cmt_annots with
+            match [@warning "-4"] cmt.cmt_annots with
               | Implementation {str_items; _} -> List.iter (find_structure_item f offset) str_items
               | Partial_implementation parts -> Array.iter (find_part_impl f offset) parts
               | _ -> ()

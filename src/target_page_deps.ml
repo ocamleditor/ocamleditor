@@ -19,7 +19,7 @@
   along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 *)
-
+[@@@warning "-48"]
 
 open GUtil
 
@@ -91,7 +91,7 @@ object (self)
         let id = (model#get ~row ~column:col_bc).Target.id in
         result := id :: !result;
         false
-      with Failure("Gobject.get_caml") -> false;
+      with Failure _ -> false;
     end;
     List.rev !result;
 

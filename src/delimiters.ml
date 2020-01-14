@@ -44,7 +44,7 @@ let rec is_delimiter ?(utf8=true) text pos =
       end;
     with Lexer.Error _ (*as ex*) -> begin
       result := is_delimiter ~utf8 (String.sub text 1 (String.length text - 1)) (max (pos - 1) 0)
-    end | Sys_error("_none_: No such file or directory") -> ()
+    end | Sys_error _ -> ()
   end;
   !result
 
@@ -215,7 +215,7 @@ let rec scan_folding_points =
         | Lexer.Error (Lexer.Unterminated_string_in_comment _, _) -> ()
         | Lexer.Error _ as ex -> ()
           (*Printf.eprintf "File \"delimiters.ml\": %s\n%s\n%!" (Printexc.to_string ex) (Printexc.get_backtrace());*)
-        | Sys_error("_none_: No such file or directory") -> begin
+        | Sys_error _ -> begin
           let pos = (Str.search_forward re_end_comment text 0) + 2 in
           let d, p = scan_folding_points (Str.string_after text pos) in
           delim := d;
@@ -282,7 +282,7 @@ let scan text =
       | Lexer.Error _ as ex -> begin
           printf "Delimiters.scan: %s\n%!" (Printexc.to_string ex)
         end
-      | Sys_error("_none_: No such file or directory") -> ()
+      | Sys_error _ -> ()
   end;
   (*List.rev*) !delim;;
 

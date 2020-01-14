@@ -240,7 +240,7 @@ and next nh =
 
 (** current_location *)
 and current_location nh =
-  try Some (List.nth nh.history nh.current) with Failure "nth" -> None
+  try Some (List.nth nh.history nh.current) with Failure _ -> None
 
 (** clear *)
 let clear nh =

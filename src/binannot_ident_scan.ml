@@ -113,6 +113,13 @@ and iter_expression f {exp_desc; exp_extra; _} =
       fe vb_expr;
     end vbl
   in
+  let arg_label_to_string arg_label =
+    let open Asttypes in
+    match arg_label with
+    | Nolabel -> ""
+    | Labelled s -> s
+    | Optional s -> s
+  in
   List.iter begin fun (exp, loc', _) ->
     match exp with
       | Texp_open (_, path, { Asttypes.loc; _ }, _) ->
@@ -152,6 +159,7 @@ and iter_expression f {exp_desc; exp_extra; _} =
             | i -> i
           end (fp c_lhs)) @
           (List.map begin fun (_, pe_loc, _) ->
+            let label = arg_label_to_string label in
             let def_loc =
               {pe_loc with loc_end = {pe_loc.loc_start with pos_cnum = pe_loc.loc_start.pos_cnum + String.length label}}
             in {
@@ -174,7 +182,7 @@ and iter_expression f {exp_desc; exp_extra; _} =
       end (cl @ el)
     | Texp_apply (expr, pe) ->
       fe expr;
-      List.iter (fun (_, e, _) -> Opt.may e fe) pe;
+      List.iter (fun (_, e) -> Opt.may e fe) pe;
     | Texp_try (expr, pe) ->
       fe expr;
       List.iter begin fun { c_lhs = p; c_guard = oe; c_rhs = e }  ->
@@ -271,6 +279,9 @@ and iter_expression f {exp_desc; exp_extra; _} =
     | Texp_object (cl_str, _) -> iter_class_structure f cl_str
     | Texp_pack mod_expr -> iter_module_expr f mod_expr
     | Texp_constant _ -> ()
+    (* Since 4.03 *)
+    | Texp_unreachable -> ()
+    | Texp_extension_constructor (_, _) -> () (*TODO*)
 
 (** iter_module_expr *)
 and iter_module_expr f {mod_desc; mod_loc; _} =
@@ -316,7 +327,7 @@ and iter_signature_item f {sig_desc; _} =
     | Tsig_value vdesc ->
       iter_value_description f vdesc;
       []
-    | Tsig_type ll ->
+    | Tsig_type (_, ll) ->
       List.iter (fun td -> iter_type_declaration f td) ll;
       []
     | Tsig_exception ecstr ->
@@ -398,7 +409,7 @@ and iter_class_expr f {cl_desc; _} =
       iter_class_expr f expr
     | Tcl_apply (expr, ll) ->
       iter_class_expr f expr;
-      List.iter (function (_, Some expr, _) -> ignore (iter_expression f expr) | _ -> ()) ll;
+      List.iter (function (_, Some expr) -> ignore (iter_expression f expr) | _ -> ()) ll;
     | Tcl_let (_, ll, _, c_expr) ->
       List.iter begin fun { vb_pat = p; vb_expr = e; _ } ->
         let defs = iter_pattern f p in
@@ -440,15 +451,24 @@ and iter_type_declaration f {typ_kind; typ_manifest; typ_cstrs; _} =
     match typ_kind with
       | Ttype_abstract -> ()
       | Ttype_variant ll ->
-        List.iter begin fun { cd_name; cd_args; _ } ->
-          let { Asttypes.txt; loc } = cd_name in
-          let ident_kind = Def_constr {def_name=txt; def_loc=loc; def_scope=none} in
+        List.iter begin fun { cd_name = { txt; loc }; cd_args; _ } ->
+          let ident_kind = Def_constr { def_name = txt; def_loc = loc; def_scope = none } in
           f {
             ident_kind;
             ident_fname = "";
-            ident_loc   = cd_name;
+            ident_loc   = { txt; loc };
           };
-          List.iter (iter_core_type ?loc:None f) cd_args
+          match cd_args with
+          | Cstr_tuple ct  -> List.iter (iter_core_type f) ct
+          | Cstr_record ll -> List.iter begin fun { ld_name = loc; ld_type = ct; _ } ->
+              let ident_kind = Def_constr {def_name=loc.txt; def_loc=loc.loc; def_scope=none} in
+              f {
+                ident_kind;
+                ident_fname = "";
+                ident_loc   = loc;
+              };
+              iter_core_type f ct
+            end ll
         end ll
       | Ttype_record ll ->
         List.iter begin fun { ld_name; ld_type; _ } ->
@@ -473,13 +493,18 @@ and iter_type_declaration f {typ_kind; typ_manifest; typ_cstrs; _} =
 (** iter_extension_constructor - Added in 4.02 *)
 and iter_extension_constructor f { ext_name; ext_kind; _ }  =
   match ext_kind with
-  | Text_decl (core_types, core_type_opt) ->
+  | Text_decl (arguments, core_type_opt) ->
     let { Asttypes.txt; loc } = ext_name in
     let ident_kind = Def_constr { def_name = txt; def_loc = loc; def_scope = none } in
     f { ident_kind;
         ident_fname = "";
         ident_loc = ext_name };
-    List.iter (iter_core_type ?loc:None f) core_types;
+    begin match arguments with
+      | Cstr_tuple core_types ->
+        List.iter (iter_core_type ?loc:None f) core_types
+      | Cstr_record label_declarations ->
+        List.iter (fun ld -> iter_core_type f ld.ld_type) label_declarations  
+      end;
     Opt.may core_type_opt (iter_core_type ?loc:None f)
       (*TODO*)
   | Text_rebind (_path, _id ) -> ()
@@ -512,13 +537,13 @@ and iter_structure_item f {str_desc; str_loc; _} =
       f annot;
       [annot]
     | Tstr_include _ -> []
-    | Tstr_class ll -> List.iter (fun (cd, _, _) ->
+    | Tstr_class ll -> List.iter (fun (cd, _) ->
       iter_class_expr f cd.ci_expr) ll;
       []
     | Tstr_class_type ll -> List.iter (fun (_, _, cd) ->
       iter_class_type f cd.ci_expr) ll;
       []
-    | Tstr_type ll -> List.iter (fun td ->
+    | Tstr_type (_, ll) -> List.iter (fun td ->
       iter_type_declaration f td) ll;
       []
     | Tstr_exception extconstr ->
@@ -558,8 +583,6 @@ and iter_structure_item f {str_desc; str_loc; _} =
         iter_module_expr f mb_expr;
       end ll;
       []
-    (* Removed in 4.02.0 *)
-    (*| Tstr_exn_rebind _ -> []*)
     | Tstr_primitive vdecl ->
       iter_value_description f vdecl;
       []
