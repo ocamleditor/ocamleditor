@@ -160,7 +160,7 @@ let read_cmt ~project ~filename:source ?(timestamp=0.) ?compile_buffer () =
 ;;
 
 (** print_ident *)
-let print_ident ?filter {ident_kind; ident_loc; _} =
+let print_ident ?filter { ident_kind; ident_loc; _ } =
   let loc' =
     match ident_kind with
       | Def loc -> "scope: " ^ (string_of_loc loc.def_scope)

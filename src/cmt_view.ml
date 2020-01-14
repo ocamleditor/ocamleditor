@@ -1088,6 +1088,3 @@ let window ~editor ~page () =
   end);
   window#present();
   widget, window;;
-
-
-

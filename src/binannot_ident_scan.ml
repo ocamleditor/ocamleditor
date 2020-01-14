@@ -476,7 +476,7 @@ and iter_type_declaration f {typ_kind; typ_manifest; typ_cstrs; _} =
               };
               iter_core_type f ct
             end ll
-        end ll
+       end ll
       | Ttype_record ll ->
         List.iter begin fun { ld_name; ld_type; _ } ->
           let { Asttypes.txt; loc } = ld_name in
