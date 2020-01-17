@@ -420,11 +420,11 @@ class editor () =
 
     method load_page ?(scroll=true) (page : Editor_page.page) =
       if not page#load_complete then begin
-        (** Load page *)
+        (* Load page *)
         ignore (page#load ~scroll ());
         page#view#options#set_show_whitespace_chars show_whitespace_chars;
         page#view#options#set_word_wrap word_wrap;
-        (** Insert_text and Delete range *)
+        (* Insert_text and Delete range *)
         let buffer = page#buffer in
         let gtext_buffer = buffer#as_gtext_buffer in
         let view = page#view in
@@ -445,7 +445,7 @@ class editor () =
         in
         buffer#add_signal_handler (buffer#connect#insert_text ~callback);
         buffer#add_signal_handler (buffer#connect#after#delete_range ~callback:(fun ~start ~stop -> callback start ()));
-        (** Mark Set *)
+        (* Mark Set *)
         buffer#add_signal_handler (buffer#connect#after#mark_set ~callback:begin fun _ mark ->
             let is_insert = match GtkText.Mark.get_name mark with Some "insert" -> true | _ -> false in
             if buffer#has_selection then begin
@@ -460,7 +460,7 @@ class editor () =
             end;
             if is_insert then Timeout.set tout_delim 0 (self#cb_tout_delim page)
           end);
-        (** Paste clipboard *)
+        (* Paste clipboard *)
         ignore (page#view#connect#paste_clipboard ~callback:page#paste);
         (*  *)
         modified_changed#call();
@@ -563,7 +563,7 @@ class editor () =
                     let file = Editor_file.create ?remote filename in
                     let page = new Editor_page.page ~file ~project ~scroll_offset ~offset ~editor:self () in
                     ignore (page#connect#file_changed ~callback:(fun _ -> switch_page#call page));
-                    (** Tab Label with close button *)
+                    (* Tab Label with close button *)
                     let button_close = GButton.button ~relief:`NONE () in
                     let image = Icons.create Icons.button_close in
                     ignore (button_close#event#connect#enter_notify ~callback:begin fun _ ->
@@ -586,7 +586,7 @@ class editor () =
                         end;
                         modified_changed#call();
                       end);
-                    (** Annot type tooltips *)
+                    (* Annot type tooltips *)
                     page#view#misc#set_has_tooltip true;
                     ignore (page#view#misc#connect#query_tooltip ~callback:(self#callback_query_tooltip page));
                     ignore (page#buffer#undo#connect#after#redo ~callback:(fun ~name -> changed#call()));
@@ -594,7 +594,7 @@ class editor () =
                     ignore (page#buffer#undo#connect#can_redo_changed ~callback:(fun _ -> changed#call()));
                     ignore (page#buffer#undo#connect#can_undo_changed ~callback:(fun _ -> changed#call()));
                     ignore (page#buffer#connect#after#changed ~callback:changed#call);
-                    (** Tab menu *)
+                    (* Tab menu *)
                     let is_in_src_path = project.Prj.in_source_path filename <> None in
                     let ebox = GBin.event_box () in
                     ebox#misc#set_property "visible-window" (`BOOL (not is_in_src_path));
@@ -605,7 +605,7 @@ class editor () =
                           true
                         end else false
                       end);
-                    (** Tab close button *)
+                    (* Tab close button *)
                     let align = GBin.alignment ~packing:ebox#add () in
                     button_close#set_image image#coerce;
                     ignore (button_close#connect#clicked ~callback:(fun () -> ignore (self#dialog_confirm_close page)));
@@ -616,7 +616,7 @@ class editor () =
                       lab#misc#modify_fg [`NORMAL, `NAME "#ffffff"; `ACTIVE, `NAME "#000000"];
                     end;
                     page#set_tab_widget (align, button_close, lab);
-                    (** Append tab *)
+                    (* Append tab *)
                     let _ = notebook#append_page ~tab_label:ebox#coerce page#coerce in
                     notebook#set_tab_reorderable page#coerce true;
                     self#set_tab_pos ~page Preferences.preferences#get.Preferences.pref_tab_pos;
@@ -772,7 +772,7 @@ class editor () =
     method disconnect = signals#disconnect
 
     method private add_timeouts () =
-      (** Auto-compilation *)
+      (* Auto-compilation *)
       let id_timeout_autocomp = ref None in
       let create_timeout_autocomp () =
         match !id_timeout_autocomp with
@@ -792,7 +792,7 @@ class editor () =
               end)
           | _ -> ()
       in
-      (** Autosave *)
+      (* Autosave *)
       let id_timeout_autosave = ref None in
       let create_timeout_autosave () =
         match !id_timeout_autosave with
@@ -812,7 +812,7 @@ class editor () =
             end
           | _ -> ()
       in
-      (** highlight matching delimiters *)
+      (* highlight matching delimiters *)
       let last_cursor_offset = ref 0 in
       let id_timeout_delim = ref None in
       let create_timeout_delim () =
@@ -832,7 +832,7 @@ class editor () =
               end)
           | _ -> ()
       in
-      (**  *)
+      (*  *)
       self#misc#connect#map ~callback:begin fun _ ->
         Gaux.may (GWindow.toplevel self#coerce) ~f:begin fun (w : GWindow.window) ->
           w#event#connect#focus_in ~callback:begin fun _ ->
@@ -865,30 +865,30 @@ class editor () =
 
     initializer
       File_history.read file_history;
-      (**  *)
+      (*  *)
       ignore (Preferences.preferences#connect#changed ~callback:(fun _ -> self#redisplay_views()));
-      (**  *)
+      (*  *)
       code_folding_enabled#set Preferences.preferences#get.pref_code_folding_enabled;
       ignore (code_folding_enabled#connect#changed ~callback:begin fun enabled ->
           List.iter (fun p -> p#set_code_folding_enabled enabled) (pages @ (snd (List.split pages_cache)))
         end);
-      (** i_search expands the fold where text is found *)
+      (* i_search expands the fold where text is found *)
       ignore (incremental_search#connect#found ~callback:begin fun view ->
           match self#get_page (`VIEW view) with
             | Some page -> page#ocaml_view#code_folding#expand_current ()
             | _ -> ()
         end);
-      (**  *)
+      (*  *)
       ignore (show_global_gutter#connect#changed ~callback:begin fun enabled ->
           List.iter (fun p -> if enabled then p#global_gutter#misc#show()
                       else p#global_gutter#misc#hide()) (pages @ (snd (List.split pages_cache)))
         end);
       show_global_gutter#set Preferences.preferences#get.pref_show_global_gutter;
-      (**  *)
+      (*  *)
       self#add_timeouts();
       ignore (Timeout.start tout_delim);
       ignore (Timeout.start tout_fast);
-      (** Switch page: update the statusbar and remove annot tag *)
+      (* Switch page: update the statusbar and remove annot tag *)
       ignore (notebook#connect#after#switch_page ~callback:begin fun _ ->
           (* Clean up type annotation tag and error indications *)
           List.iter (fun page -> Opt.may page#annot_type (fun x -> x#remove_tag ())) pages;
@@ -909,7 +909,7 @@ class editor () =
               | _ -> self#pack_outline (Cmt_view.empty())
           end
         end);
-      (** Record last active page *)
+      (* Record last active page *)
       let rec get_history project =
         match List_opt.assoc project.Prj.name history_switch_page with
           | Some x -> x
@@ -928,7 +928,7 @@ class editor () =
             replace_history project (last_page :: hist);
           end;
         end);
-      (** Remove Page: editor goes to the last active page *)
+      (* Remove Page: editor goes to the last active page *)
       ignore (self#connect#remove_page ~callback:begin fun removed ->
           match self#get_page `ACTIVE with
             | Some cur when not history_switch_page_locked && cur#get_oid = removed#get_oid ->
@@ -951,7 +951,7 @@ class editor () =
               find_page()
             | _ -> ()
         end);
-      (** Replace marks with offsets in location history *)
+      (* Replace marks with offsets in location history *)
       ignore (self#connect#remove_page ~callback:begin fun page ->
           Location_history.iter location_history ~f:begin function
             | loc when loc.Location_history.filename = page#get_filename ->

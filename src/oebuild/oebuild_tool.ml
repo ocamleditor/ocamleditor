@@ -149,10 +149,10 @@ let main () =
       exit 0;
     end;
     if not !enabled then (exit 0);
-    (** Compilation mode *)
+    (* Compilation mode *)
     let compilation = if !compilation = [] then [Bytecode] else !compilation in
     let compilation = List.sort Pervasives.compare compilation in
-    (** print_output_name *)
+    (* print_output_name *)
     if !print_output_name then begin
       List.iter begin fun compilation ->
         let outname = get_output_name ~compilation ~outkind:!outkind ~outname:!output_name ~dontaddopt:!dontaddopt () in
@@ -160,7 +160,7 @@ let main () =
       end compilation;
       exit 0;
     end;
-    (** Clean *)
+    (* Clean *)
     if !is_clean || !is_distclean then begin
       (*let deps = Oebuild_util.crono ~label:"Oebuild_dep.find" (Oebuild_dep.find ~pp:!pp ~ignore_stderr:false) !toplevel_modules in*)
       let deps =
@@ -170,7 +170,7 @@ let main () =
       if !is_clean then (clean ~deps ());
       if !is_distclean then (distclean ());
     end else begin
-      (** Build, install and run *)
+      (* Build, install and run *)
       let last_outname = ref None in
       let outnames =
         List.map begin fun compilation ->
