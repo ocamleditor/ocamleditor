@@ -427,17 +427,13 @@ struct
                 let te = Odoc_info.string_of_type_expr core_type in
                 Str.global_replace (Str.regexp_string ((Name.father elem.Type.ty_name) ^ ".")) "" te
               end core_types
-            (* TODO: the record need more than just the types *)
-            | { Odoc_type.vc_args = Odoc_type.Cstr_record record_fields; _ } ->
-              `Record, List.map begin fun { Odoc_type.rf_type = core_type; _ } ->
-                Odoc_info.reset_type_names ();
-                let te = Odoc_info.string_of_type_expr core_type in
-                Str.global_replace (Str.regexp_string ((Name.father elem.Type.ty_name) ^ ".")) "" te
-              end record_fields
+            | { Odoc_type.vc_args = Odoc_type.Cstr_record fields; _ } ->
+             	Odoc_info.reset_type_names ();
+              `Record, [Odoc_info.string_of_record fields] (* ??? More *)
           in
           insert_type " = \n";
           let maxlength = List.fold_left begin fun acc vc ->
-            let kind, args = !!! vc in
+            let _, args = !!! vc in
             let args = String.concat " * " args in
             let len = String.length vc.Type.vc_name + String.length args + 4 in
             max acc len
