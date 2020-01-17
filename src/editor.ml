@@ -159,7 +159,7 @@ class editor () =
           List_opt.find (fun p ->
               p#get_oid = (notebook#get_nth_page notebook#current_page)#get_oid) pages
         | `FILENAME filename ->
-          let uncapitalize = if Sys.os_type = "Win32" then String.uncapitalize else (fun x -> x) in
+          let uncapitalize = if Sys.os_type = "Win32" then String.uncapitalize_ascii else (fun x -> x) in
           let filename = uncapitalize filename in
           List_opt.find (fun p ->
               match p#file with None -> false | Some f -> uncapitalize f#filename = filename) pages

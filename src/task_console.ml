@@ -271,9 +271,9 @@ class view ~(editor : Editor.editor) ?(task_kind=(`OTHER : Task.kind)) ~task ?pa
               let line = input_line ic in
               let line = if Glib.Utf8.validate line then line else Convert.to_utf8 line in
               let error_line = try Str.string_before line 6 = "Error:"
-                with Invalid_argument("String.sub") -> false in
+                with Invalid_argument _ -> false in
               let warning_line = try Str.string_before line 7 = "Warning"
-                with Invalid_argument("String.sub") -> false in
+                with Invalid_argument _ -> false in
               has_errors <- has_errors || error_line;
               let tag = if warning_line then "warning" else "error" in
               let is_location_line = Str.string_match re_error_line line 0 in
@@ -283,7 +283,7 @@ class view ~(editor : Editor.editor) ?(task_kind=(`OTHER : Task.kind)) ~task ?pa
                 signal_enabled <- false;
                 let stop = self#buffer#get_iter `END in
                 if is_location_line then begin
-                  (** Links *)
+                  (* Links *)
                   let tag_location_name = sprintf "loc-%d" seq_tag_location in
                   let tag_location = view#buffer#create_tag ~name:tag_location_name [] in
                   tag_locations <- (tag_location#get_oid, (tag_location, line)) :: tag_locations;
@@ -374,7 +374,7 @@ class view ~(editor : Editor.editor) ?(task_kind=(`OTHER : Task.kind)) ~task ?pa
           let start = int_of_string (Str.matched_group (group + 2) !line) in  (* 4 *)
           let len = (* Length from the start of line *)
             try int_of_string (Str.matched_group (group + 3) !line)
-            with Invalid_argument "Str.matched_group" -> start
+            with Invalid_argument _ -> start
           in
           let parent = project.Prj.root // Prj.default_dir_src in
           let filename = List.fold_left (fun acc x -> acc // x) parent (Miscellanea.filename_split basename) in

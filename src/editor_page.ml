@@ -37,7 +37,7 @@ let shortname filename =
   let basename = Filename.basename filename in
   if Preferences.preferences#get.Preferences.pref_tab_label_type = 1 then begin
     try Filename.chop_extension basename
-    with Invalid_argument("Filename.chop_extension") -> basename
+    with Invalid_argument _ -> basename
   end else basename
 
 let markup_label filename =

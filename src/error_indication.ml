@@ -21,7 +21,6 @@
 *)
 
 open Printf
-open Miscellanea
 
 let forward_non_blank iter =
   let rec f it =
@@ -430,7 +429,7 @@ object (self)
               done;
               drawable#lines !segments;
             end;
-          with Exit | Invalid_argument("PointArray.new") -> ()
+          with Exit | Invalid_argument _ -> ()
         end;
         start := !start#forward_line
       done;

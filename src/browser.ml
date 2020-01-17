@@ -814,7 +814,7 @@ object (self)
         end;
         let project_names = List.map (fun x -> x, Filename.chop_extension (Filename.basename x)) history.File_history.content in
         let project_names = List.sort (fun (_, x1) (_, x2) ->
-          compare (String.lowercase x1) (String.lowercase x2)) project_names in
+          compare (String.lowercase_ascii x1) (String.lowercase_ascii x2)) project_names in
         List.iter begin fun (filename, label) ->
           Gmisclib.Idle.add ~prio:600 begin fun () ->
             let item = GMenu.check_menu_item ~label ~packing:menu.project#add () in

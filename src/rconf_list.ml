@@ -176,7 +176,7 @@ object (self)
           let rconfigs = self#to_list() in
           let index = min last_path_index (List.length rconfigs - 1) in
           view#selection#select_path (GTree.Path.create [index])
-        with Failure "hd" -> ()
+        with Failure _ -> ()
       end);
       (** b_run#connect#clicked*)
       ignore (b_run#connect#clicked ~callback:begin fun () ->

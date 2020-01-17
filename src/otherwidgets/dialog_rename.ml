@@ -86,8 +86,8 @@ let window ~editor ~page () =
                    given new filename. *)
                 let text = buffer#get_text () in
                 (* Close the editor page to avoid problems with the filename case insensitiveness *)
-                let lc_filename = String.lowercase filename in
-                List_opt.may_find (fun p -> String.lowercase p#get_filename = lc_filename)
+                let lc_filename = String.lowercase_ascii filename in
+                List_opt.may_find (fun p -> String.lowercase_ascii p#get_filename = lc_filename)
                   editor#pages editor#close ();
                 (* Remove target file *)
                 Sys.remove filename;

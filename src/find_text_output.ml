@@ -832,7 +832,7 @@ class widget
               end lines_involved;
               tbuf#place_cursor ~where:tbuf#start_iter;
               current_line_selected <- None;
-        with Failure "hd" -> ()
+        with Failure _ -> ()
         end);
       ignore (view#connect#after#row_activated ~callback:begin fun path iter ->
           ignore (self#select_line (tbuf#get_iter `SEL_BOUND));

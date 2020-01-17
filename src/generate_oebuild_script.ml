@@ -113,7 +113,7 @@ let create_script () =
       let buf = Util.replace_header (File_util.read (name ^ ".ml")) in
       let buf = Util.join_lines buf in
       let name = Filename.basename name in
-      fprintf ochan "module %s = struct " (String.capitalize name);
+      fprintf ochan "module %s = struct " (String.capitalize_ascii name);
       output_string ochan buf;
       output_string ochan "end\n";
     end modules;

@@ -243,7 +243,7 @@ let find_used_components ~project ~filename ~offset ?compile_buffer () =
                     let dirname =
                       try
                         String.concat "." (List.rev (List.tl (List.rev (Longident.flatten (Longident.parse u.ident_loc.txt)))))
-                      with Failure "tl" -> assert false
+                      with Failure _ -> assert false
                     in
                     dirname = ident.ident_loc.txt
                   | _ -> false

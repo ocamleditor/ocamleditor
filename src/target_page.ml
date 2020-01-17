@@ -178,7 +178,7 @@ class view ~project ~target_list ?packing () =
           try
             let filename = List.hd (mk_target_filenames project chooser#get_filenames) in
             entry_main_module#set_text filename;
-          with Failure "hd" -> ()
+          with Failure _ -> ()
         end;
         chooser#destroy()
       | _ -> chooser#destroy()
