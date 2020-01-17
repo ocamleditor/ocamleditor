@@ -636,10 +636,10 @@ object (self)
       | Tstr_class_type classes -> List.iter (fun (_, loc, decl) -> self#append_class_type ?parent ~loc decl) classes
       | Tstr_type (_, decls) -> List.iter (self#append_type ?parent) decls
       | Tstr_exception { ext_name = loc; ext_kind; _ } ->
-        let core_types = ( match ext_kind with 
-            | Text_decl (Typedtree.Cstr_tuple core_types, _) -> self#string_of_core_types core_types 
-            | Text_decl (Typedtree.Cstr_record _, _) -> " TODO {inline record} "  
-            | Text_rebind _ -> "" ) 
+        let core_types = ( match ext_kind with
+            | Text_decl (Typedtree.Cstr_tuple core_types, _) -> self#string_of_core_types core_types
+            | Text_decl (Typedtree.Cstr_record fields, _) ->  self#string_of_type_record fields
+            | Text_rebind _ -> "" )
         in
         ignore (self#append ?parent ~kind:Exception ~loc:loc.loc loc.txt core_types)
       | Tstr_module { mb_name = loc; mb_expr = module_expr; _ }  ->
@@ -673,7 +673,7 @@ object (self)
       | Tstr_open _
       | Tstr_primitive _ -> ()
       (* Since 4.02.0 *)
-      | Tstr_typext { Typedtree.tyext_txt = txt; tyext_constructors = constructors; _ } -> 
+      | Tstr_typext { Typedtree.tyext_txt = txt; tyext_constructors = constructors; _ } ->
         self#append_type_extension ?parent ~kind:Type_open txt constructors
       | Tstr_attribute _ -> ()
 
@@ -686,10 +686,10 @@ object (self)
         ignore (self#append ?parent ~kind:Function ~loc:val_loc ~loc_body:val_desc.ctyp_loc val_name.txt typ);
       | Tsig_type (_, decls) -> List.iter (self#append_type ?parent) decls
       | Tsig_exception { Typedtree.ext_kind; ext_name = loc; _ } ->
-        let core_types = ( match ext_kind with 
-            | Text_decl (Typedtree.Cstr_tuple core_types, _) -> self#string_of_core_types core_types 
-            | Text_decl (Typedtree.Cstr_record _, _) -> " TODO {inline record} "  
-            | Text_rebind _ -> "" ) 
+        let core_types = ( match ext_kind with
+            | Text_decl (Typedtree.Cstr_tuple core_types, _) -> self#string_of_core_types core_types
+            | Text_decl (Typedtree.Cstr_record fields, _) -> self#string_of_type_record fields
+            | Text_rebind _ -> "" )
         in
         ignore (self#append ?parent ~kind:Exception ~loc:loc.loc loc.txt core_types)
       | Tsig_module { Typedtree.md_type = mty; md_name = loc; _ } ->
@@ -802,16 +802,18 @@ object (self)
     in
     ignore (self#append ?parent ~kind ~loc:loc.loc ~loc_body:decl.typ_loc loc.txt typ)
 
-  method private append_type_extension ?parent ~kind { txt; loc } constructors = 
+  method private append_type_extension ?parent ~kind { txt; loc } constructors =
     let typs ext_kind = match ext_kind with
-      | Text_decl (Typedtree.Cstr_tuple ctl, cto) -> 
+      | Text_decl (Typedtree.Cstr_tuple ctl, cto) ->
         let args = self#string_of_core_types ctl in
         let res = self#string_of_core_type_opt cto in
         self#repr_of_gadt_type args res
-      | Text_decl (Typedtree.Cstr_record _, cto) ->
-        " TODO {inline records} "
+      | Text_decl (Typedtree.Cstr_record fields, cto) ->
+        let args = self#string_of_type_record fields in
+        let res = self#string_of_core_type_opt cto in
+        self#repr_of_gadt_type args res
       | Text_rebind (_, { Asttypes.txt; _ }) -> " = " ^ (string_of_longident txt)
-    in    
+    in
     let name_and_types = List.map (fun { Typedtree.ext_name = { txt; _ }; ext_kind; _ } -> txt ^ (typs ext_kind)) constructors in
     let repr = "+ " ^ String.concat " | " name_and_types in
     ignore (self#append ?parent ~kind ~loc (string_of_longident txt) repr)
@@ -1005,7 +1007,7 @@ object (self)
 
   method private string_of_constructor_arguments = function
     | Typedtree.Cstr_tuple core_types -> self#string_of_core_types core_types
-    | Typedtree.Cstr_record _fields -> " TOOD {inline records} "
+    | Typedtree.Cstr_record fields -> self#string_of_type_record fields
 
   method private string_of_core_types ctl =
     String.concat " * " (List.map (fun ct -> string_of_type_expr ct.ctyp_type) ctl)

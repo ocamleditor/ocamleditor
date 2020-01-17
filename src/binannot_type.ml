@@ -204,7 +204,7 @@ and find_expression f offset ?(opt=false,false) ?loc {exp_desc; exp_loc; exp_typ
           Log.println `DEBUG "Texp_unreachable" ;
           opt
         | Texp_extension_constructor (loc, id) ->
-          Log.println `DEBUG "Texp_ident: %s %s (%s)" (Longident.last loc.txt) (string_of_loc loc.loc) (Path.name id);
+          Log.println `DEBUG "Texp_extension_constructor: %s %s (%s)" (Longident.last loc.txt) (string_of_loc loc.loc) (Path.name id);
           Path.name id = "*opt*", Path.name id = "*sth*"
     in
     if not opt && not sth then begin

@@ -427,17 +427,13 @@ struct
                 let te = Odoc_info.string_of_type_expr core_type in
                 Str.global_replace (Str.regexp_string ((Name.father elem.Type.ty_name) ^ ".")) "" te
               end core_types
-            (* TODO: the record need more than just the types *)    
-            | { Odoc_type.vc_args = Odoc_type.Cstr_record record_fields; _ } ->
-              `Record, List.map begin fun { Odoc_type.rf_type = core_type; _ } ->
-                Odoc_info.reset_type_names ();
-                let te = Odoc_info.string_of_type_expr core_type in
-                Str.global_replace (Str.regexp_string ((Name.father elem.Type.ty_name) ^ ".")) "" te  
-              end record_fields
+            | { Odoc_type.vc_args = Odoc_type.Cstr_record fields; _ } ->
+             	Odoc_info.reset_type_names ();
+              `Record, [Odoc_info.string_of_record fields] (* ??? More *)
           in
           insert_type " = \n";
           let maxlength = List.fold_left begin fun acc vc ->
-            let kind, args = !!! vc in
+            let _, args = !!! vc in
             let args = String.concat " * " args in
             let len = String.length vc.Type.vc_name + String.length args + 4 in
             max acc len
@@ -445,14 +441,11 @@ struct
           List.iter begin fun vc ->
             buffer#insert ~tags:[!!`TYPE; !!`INDENT] "  | ";
             let code = vc.Type.vc_name ^ begin
-                let kind, args = !!! vc in 
+                let kind, args = !!! vc in
                 if kind = `Tuple then
                   if args = [] then "" else " of " ^ String.concat " * " args
                 else
-                  " of { " ^ String.concat " * " args ^ " }" 
-              (*if vc.Type.vc_args <> [] then begin
-                " of " ^ (let args = !!! vc in String.concat " * " args)
-              end else "";*)
+                  " of { " ^ String.concat " * " args ^ " }"
             end in
             insert_type (Miscellanea.rpad code ' ' maxlength);
             match vc.Type.vc_text with
@@ -715,15 +708,8 @@ end
                 ; Odoc_info.reset_type_names ()
                 ; buffer#insert ~tags:tag_type2 (Odoc_info.string_of_type_list " * " core_types)
                 )
-              | Odoc_type.Cstr_record _ -> 
-                buffer#insert ~tags:tag_type2 " TODO {inline records} "          
-              (*if elem.Exception.ex_args <> [] then begin
-                buffer#insert ~tags:tag_type2 " of ";
-                Odoc_info.reset_type_names();
-                let args = List.map Odoc_info.string_of_type_expr elem.Exception.ex_args in
-                let args = List.map (fun x -> Str.global_replace (!~~ ((Name.father elem.Exception.ex_name) ^ ".")) "" x) args in
-                buffer#insert ~tags:tag_type2 (String.concat " * " args);
-              end;*)
+              | Odoc_type.Cstr_record fields ->
+                buffer#insert ~tags:tag_type2 (Odoc_info.string_of_record fields) (* ??? More *)
             end;
           | Module.Element_type elem ->
             insert_elem (`Info elem.Odoc_type.ty_info) begin fun () ->
