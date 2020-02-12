@@ -47,29 +47,29 @@ let rec iter_pattern f {pat_desc; pat_loc; _} =
         ident_kind       = Def {def_name=loc.txt; def_loc=name_loc; def_scope=none};
         ident_loc        = Location.mkloc (Ident.name id) name_loc;
       } :: (fp pat)
-    | Tpat_construct (loc, cd, pl) ->
-      let type_expr = lid_of_type_expr cd.Types.cstr_res in
+    | Tpat_construct ({ Asttypes.loc; _ }, { Types.cstr_name; cstr_res; cstr_tag; _ }, pl) ->
+      let type_expr = lid_of_type_expr cstr_res in
       let path, is_qualified =
-        match cd.Types.cstr_tag with
+        match cstr_tag with
           | Types.Cstr_extension (p, _) ->
             let path = Longident.parse (Path.name p) in
             path, Longident.qualified path
           | Types.Cstr_constant _ | Types.Cstr_block _ ->
-            Longident.of_type_expr type_expr cd.Types.cstr_name,
+            Longident.of_type_expr type_expr cstr_name,
             Longident.qualified type_expr
       in
       let ident_kind = if is_qualified then Ext_ref else Int_ref none in
       let ident = {
         ident_kind;
         ident_fname = "";
-        ident_loc   = Location.mkloc (Odoc_misc.string_of_longident path) loc.loc;
+        ident_loc   = Location.mkloc (Odoc_misc.string_of_longident path) loc;
       } in
       f ident;
       List.flatten (List.fold_left (fun acc pat -> (fp pat) :: acc) [] pl)
     | Tpat_variant (_, pat, _) ->
       Opt.map_default pat [] (fun pat -> fp pat)
     | Tpat_record (ll, _) ->
-      List.flatten (List.fold_left begin fun acc ({ txt = _; loc }, ld, pat) ->
+      List.flatten (List.fold_left begin fun acc ({ Asttypes.loc; _ }, ld, pat) ->
         let type_expr = lid_of_type_expr ld.Types.lbl_res in
         let ident_kind = if Longident.qualified type_expr then Ext_ref else Int_ref none in
         let path = Longident.of_type_expr type_expr ld.Types.lbl_name in
@@ -91,55 +91,43 @@ let rec iter_pattern f {pat_desc; pat_loc; _} =
       []
     | Tpat_any ->
       []
-    | Tpat_var (id, loc) ->
+    | Tpat_var (id, { Asttypes.txt; loc }) ->
       [{
         ident_fname      = "";
-        ident_kind       = Def {def_name=loc.txt; def_loc=loc.loc; def_scope=none};
-        ident_loc        = Location.mkloc (Ident.name id) loc.loc;
+        ident_kind       = Def { def_name=txt; def_loc=loc; def_scope=none };
+        ident_loc        = Location.mkloc (Ident.name id) loc;
       }]
 
 (** iter_expression *)
 and iter_expression f {exp_desc; exp_extra; _} =
   let fe = iter_expression f in
   let fp = iter_pattern f in
-  (* Removed in 4.02.0 *)
-  (*let fpe expr pe =
-    List.iter begin fun (p, e) ->
-      let [@warning "-4"] _ = "Disable fragile pattern matching warning" in
-      List.iter begin function
-        | {ident_kind = Def d; _} as i ->
-          d.def_scope <- expr.exp_loc;
-          f i
-        | i -> f i
-      end (fp p);
-      fe e;
-    end pe
-  in*)
   let fvb expr vbl =
-    List.iter begin fun { vb_pat = p; vb_expr = e; _ } ->
-      let [@warning "-4"] _ = "Disable fragile pattern matching warning" in
-      List.iter begin function
+    List.iter begin fun { vb_pat; vb_expr; _ } ->
+      List.iter begin function [@warning "-4"]
         | {ident_kind = Def d; _} as i ->
           d.def_scope <- expr.exp_loc;
           f i
         | i -> f i
-      end (fp p);
-      fe e;
+      end (fp vb_pat);
+      fe vb_expr;
     end vbl
   in
   List.iter begin fun (exp, loc', _) ->
-    let [@warning "-4"] _ = "Disable fragile pattern matching warning" in
     match exp with
-      | Texp_open (_, path, loc, _) ->
+      | Texp_open (_, path, { Asttypes.loc; _ }, _) ->
         f {
           ident_kind  = Open loc';
           ident_fname = "";
-          ident_loc   = Location.mkloc (Path.name path) loc.loc;
+          ident_loc   = Location.mkloc (Path.name path) loc;
         };
-      | _ -> ()
+      | Texp_constraint _
+      | Texp_coerce _
+      | Texp_poly _
+      | Texp_newtype _ -> ()
   end exp_extra;
   match exp_desc with
-    | Texp_ident (id, loc, vd) ->
+    | Texp_ident (id, { Asttypes.loc; _ }, vd) ->
       let ident_kind =
         if Ident.name (Path.head id) = Path.last id
         then Int_ref (*none*) vd.Types.val_loc (* In caso di alias val_loc si riferisce all'intero binding e non solo al nome *)
@@ -148,35 +136,34 @@ and iter_expression f {exp_desc; exp_extra; _} =
       let ident = {
         ident_fname      = "";
         ident_kind;
-        ident_loc        = Location.mkloc (Path.name id) loc.loc;
+        ident_loc        = Location.mkloc (Path.name id) loc;
       } in
       f ident;
     | Texp_let (_, vbl, expr) ->
       fvb expr vbl;
       fe expr;
     | Texp_function (label, pe, _) ->
-      List.iter begin fun { c_lhs = p; c_guard = oe; c_rhs = e } ->
+      List.iter begin fun { c_lhs; c_guard; c_rhs } ->
         let defs =
-          let [@warning "-4"] _ = "Disable this pattern is fragile warning" in
-          (List.map begin function
+          (List.map begin function [@warning "-4"]
             | {ident_kind=Def d; _} as i ->
-              d.def_scope <- e.exp_loc;
+              d.def_scope <- c_rhs.exp_loc;
               i
             | i -> i
-          end (fp p)) @
+          end (fp c_lhs)) @
           (List.map begin fun (_, pe_loc, _) ->
             let def_loc =
               {pe_loc with loc_end = {pe_loc.loc_start with pos_cnum = pe_loc.loc_start.pos_cnum + String.length label}}
             in {
               ident_fname      = "";
-              ident_kind       = Def {def_name=""; def_loc=none; def_scope=e.exp_loc};
+              ident_kind       = Def {def_name=""; def_loc=none; def_scope=c_rhs.exp_loc};
               ident_loc        = Location.mkloc label def_loc
             }
-          end p.pat_extra)
+          end c_lhs.pat_extra)
         in
         List.iter f defs;
-        Opt.may oe fe;
-        fe e;
+        Opt.may c_guard fe;
+        fe c_rhs;
       end pe
     | Texp_match (expr, cl, el, _) ->
       fe expr;
@@ -196,7 +183,7 @@ and iter_expression f {exp_desc; exp_extra; _} =
         fe e;
       end pe
     | Texp_tuple el -> List.iter fe el
-    | Texp_construct (loc, cd, el) ->
+    | Texp_construct ({ Asttypes.loc; _ }, cd, el) ->
       let type_expr = lid_of_type_expr cd.Types.cstr_res in
       let path, is_qualified =
         match cd.Types.cstr_tag with
@@ -211,14 +198,14 @@ and iter_expression f {exp_desc; exp_extra; _} =
       let ident = {
         ident_kind;
         ident_fname = "";
-        ident_loc   = Location.mkloc (Odoc_misc.string_of_longident path) loc.Location.loc;
+        ident_loc   = Location.mkloc (Odoc_misc.string_of_longident path) loc;
       } in
       f ident;
       List.iter fe el
     | Texp_variant (_, expr) ->
       Opt.may expr fe
     | Texp_record (ll, expr) ->
-      List.iter begin fun ({ txt = _; loc }, ld, e) ->
+      List.iter begin fun ({ Asttypes.loc; _ }, ld, e) ->
         let type_expr = lid_of_type_expr ld.Types.lbl_res in
         let ident_kind = if Longident.qualified type_expr then Ext_ref else Int_ref none in
         let path = Longident.of_type_expr type_expr ld.Types.lbl_name in
@@ -231,25 +218,25 @@ and iter_expression f {exp_desc; exp_extra; _} =
         fe e
       end ll;
       Opt.may expr fe
-    | Texp_field (expr, loc, ld) ->
+    | Texp_field (expr, { Asttypes.loc; _ }, ld) ->
       let type_expr = lid_of_type_expr ld.Types.lbl_res in
       let ident_kind = if Longident.qualified type_expr then Ext_ref else Int_ref none in
       let path = Longident.of_type_expr type_expr ld.Types.lbl_name in
       let ident = {
         ident_kind;
         ident_fname = "";
-        ident_loc   = Location.mkloc (Odoc_misc.string_of_longident path) loc.loc;
+        ident_loc   = Location.mkloc (Odoc_misc.string_of_longident path) loc;
       } in
       f ident;
       fe expr
-    | Texp_setfield (e1, loc, ld, e2) ->
+    | Texp_setfield (e1, { Asttypes.loc; _ }, ld, e2) ->
       let type_expr = lid_of_type_expr ld.Types.lbl_res in
       let ident_kind = if Longident.qualified type_expr then Ext_ref else Int_ref none in
       let path = Longident.of_type_expr type_expr ld.Types.lbl_name in
       let ident = {
         ident_kind;
         ident_fname = "";
-        ident_loc   = Location.mkloc (Odoc_misc.string_of_longident path) loc.Location.loc;
+        ident_loc   = Location.mkloc (Odoc_misc.string_of_longident path) loc;
       } in
       f ident;
       fe e1;
@@ -270,11 +257,12 @@ and iter_expression f {exp_desc; exp_extra; _} =
       (*Log.println `TRACE "Texp_instvar: (%s)%s %s" (Path.name p) (Path.name path) (string_of_loc loc.loc);*)
     | Texp_setinstvar (_, _, _, expr) -> fe expr
     | Texp_override (_, ll) -> List.iter (fun (_, _, e) -> fe e) ll
-    | Texp_letmodule (_, loc, mod_expr, expr) ->
+    | Texp_letmodule (_, mod_name, mod_expr, expr) ->
+      let { Asttypes.txt; loc } = mod_name in
       f {
-        ident_kind  = Def_module {def_name=loc.txt; def_loc=loc.loc; def_scope=mod_expr.mod_loc};
+        ident_kind  = Def_module {def_name=txt; def_loc=loc; def_scope=mod_expr.mod_loc};
         ident_fname = "";
-        ident_loc   = loc;
+        ident_loc   = mod_name;
       };
       iter_module_expr f mod_expr;
       fe expr;
@@ -289,8 +277,7 @@ and iter_module_expr f {mod_desc; mod_loc; _} =
   match mod_desc with
     | Tmod_structure {str_items; _} ->
       let annots = List.fold_left (fun acc item -> (iter_structure_item f item) @ acc) [] str_items in
-      let [@warning "-4"] _ = "Disable fragile pattern warning" in
-      List.iter begin function
+      List.iter begin function [@warning "-4"]
         | {ident_kind = Open loc; _} as annot -> annot.ident_kind <- Open {loc with loc_end = mod_loc.loc_end}
         | _ -> ()
       end annots;
@@ -344,12 +331,12 @@ and iter_signature_item f {sig_desc; _} =
     | Tsig_modtype mtdecl ->
       Opt.may mtdecl.mtd_type fmt;
       []
-    | Tsig_open odesc ->
-      let { open_path = path; open_txt = loc; _ } = odesc in
+    | Tsig_open { open_path; open_txt; _ } ->
+      let { Asttypes.loc; _ } = open_txt in
       let annot = {
-        ident_kind  = Open {loc_start = loc.loc.loc_end; loc_end = dummy_pos; loc_ghost=false};
+        ident_kind  = Open {loc_start = loc.loc_end; loc_end = dummy_pos; loc_ghost=false};
         ident_fname = "";
-        ident_loc   = Location.mkloc (Path.name path) loc.loc;
+        ident_loc   = Location.mkloc (Path.name open_path) loc;
       } in
       f annot;
       [annot]
@@ -359,7 +346,9 @@ and iter_signature_item f {sig_desc; _} =
     | Tsig_class _ -> []
     | Tsig_class_type _ -> []
     (* Added in 4.02.0 -- TODO *)
-    | Tsig_typext _ -> []
+    | Tsig_typext { tyext_constructors; _ } ->
+      List.iter (iter_extension_constructor f) tyext_constructors;
+      []
     | Tsig_attribute _ -> []
 
 (** iter_value_description *)
@@ -373,7 +362,7 @@ and iter_with_constraint f = function
   | Twith_modsubst _ -> ()
 
 (** iter_core_type *)
-and iter_core_type f ?loc {ctyp_desc; ctyp_type; ctyp_loc; _} = ()
+and iter_core_type _f ?loc:_ {ctyp_desc = _; _} = ()
 
 (** iter_class_field *)
 and iter_class_field f {cf_desc; _} =
@@ -391,7 +380,7 @@ and iter_class_field f {cf_desc; _} =
       iter_core_type f ct2;
     | Tcf_initializer expr -> ignore (iter_expression f expr)
     | Tcf_inherit (_, class_expr, _, _, _) -> iter_class_expr f class_expr
-    (* Added in 4.02.0 - TODO *)
+    (* Added in 4.02.0 *)
     | Tcf_attribute _ -> ()
 
 (** iter_class_structure *)
@@ -400,7 +389,7 @@ and iter_class_structure f {cstr_fields; _} = List.iter (iter_class_field f) cst
 (** iter_class_expr *)
 and iter_class_expr f {cl_desc; _} =
   match cl_desc with
-    | Tcl_ident (_, _, core_type) -> List.iter (iter_core_type f) core_type
+    | Tcl_ident (_, _, core_type) -> List.iter (iter_core_type ?loc:None f) core_type
     | Tcl_structure str -> iter_class_structure f str
     | Tcl_fun (_, pat, _, expr, _) ->
       let defs = iter_pattern f pat in
@@ -424,7 +413,7 @@ and iter_class_expr f {cl_desc; _} =
 (** iter_class_type *)
 and iter_class_type f {cltyp_desc; _} =
   match cltyp_desc with
-    | Tcty_constr (_, _, ct) -> List.iter (iter_core_type f) ct
+    | Tcty_constr (_, _, ct) -> List.iter (iter_core_type ?loc:None f) ct
     | Tcty_signature sign -> iter_class_signature f sign
     | Tcty_arrow (_, ct, clt) ->
       iter_core_type f ct;
@@ -451,38 +440,49 @@ and iter_type_declaration f {typ_kind; typ_manifest; typ_cstrs; _} =
     match typ_kind with
       | Ttype_abstract -> ()
       | Ttype_variant ll ->
-        List.iter begin fun { cd_name = loc; cd_args = ct; _ } ->
-          let ident_kind = Def_constr {def_name=loc.txt; def_loc=loc.loc; def_scope=none} in
+        List.iter begin fun { cd_name; cd_args; _ } ->
+          let { Asttypes.txt; loc } = cd_name in
+          let ident_kind = Def_constr {def_name=txt; def_loc=loc; def_scope=none} in
           f {
             ident_kind;
             ident_fname = "";
-            ident_loc   = loc;
+            ident_loc   = cd_name;
           };
-          List.iter (iter_core_type f) ct
+          List.iter (iter_core_type ?loc:None f) cd_args
         end ll
       | Ttype_record ll ->
-        List.iter begin fun { ld_name = loc; ld_type = ct; _ } ->
-          let ident_kind = Def_constr {def_name=loc.txt; def_loc=loc.loc; def_scope=none} in
+        List.iter begin fun { ld_name; ld_type; _ } ->
+          let { Asttypes.txt; loc } = ld_name in
+          let ident_kind = Def_constr { def_name = txt; def_loc = loc; def_scope = none } in
           f {
             ident_kind;
             ident_fname = "";
-            ident_loc   = loc;
+            ident_loc   = ld_name;
           };
-          iter_core_type f ct
+          iter_core_type f ld_type
         end ll
-      (* Added in 4.02.0 - TODO *)
+      (* Added in 4.02.0 *)
       | Ttype_open -> ()
   end;
   List.iter begin fun (ct1, ct2, _) ->
     iter_core_type f ct1;
     iter_core_type f ct2;
   end typ_cstrs;
-  Opt.may typ_manifest (iter_core_type f);
+  Opt.may typ_manifest (iter_core_type ?loc:None f);
 
-(** iter_extension_constructor *)
-and iter_extension_constructor f { ext_loc; ext_kind; _ }  =
-  (*List.iter (iter_core_type f) ext_type_params*)
-  ()
+(** iter_extension_constructor - Added in 4.02 *)
+and iter_extension_constructor f { ext_name; ext_kind; _ }  =
+  match ext_kind with
+  | Text_decl (core_types, core_type_opt) ->
+    let { Asttypes.txt; loc } = ext_name in
+    let ident_kind = Def_constr { def_name = txt; def_loc = loc; def_scope = none } in
+    f { ident_kind;
+        ident_fname = "";
+        ident_loc = ext_name };
+    List.iter (iter_core_type ?loc:None f) core_types;
+    Opt.may core_type_opt (iter_core_type ?loc:None f)
+      (*TODO*)
+  | Text_rebind (_path, _id ) -> ()
 
 (** iter_structure_item *)
 and iter_structure_item f {str_desc; str_loc; _} =
@@ -492,9 +492,9 @@ and iter_structure_item f {str_desc; str_loc; _} =
       []
     | Tstr_value (_, pe) ->
       let defs =
-        List.rev (List.fold_left begin fun acc { vb_pat = pat; vb_expr = expr; _ } ->
-          let defs = iter_pattern f pat in
-          ignore (iter_expression f expr);
+        List.rev (List.fold_left begin fun acc { vb_pat; vb_expr; _ } ->
+          let defs = iter_pattern f vb_pat in
+          ignore (iter_expression f vb_expr);
           defs @ acc
         end [] pe)
       in
@@ -522,46 +522,40 @@ and iter_structure_item f {str_desc; str_loc; _} =
       iter_type_declaration f td) ll;
       []
     | Tstr_exception extconstr ->
-      let { ext_name = loc; ext_type = et; _ }  = extconstr in
-      let ident_kind = Def_constr {def_name=loc.txt; def_loc=loc.loc; def_scope=none} in
-      f {
-        ident_kind;
-        ident_fname = "";
-        ident_loc   = loc;
-      };
       iter_extension_constructor f extconstr;
       []
-    | Tstr_module mbind ->
-      let { mb_name = loc; mb_expr = me; _ } = mbind in
+    | Tstr_module { mb_name; mb_expr; _ } ->
+      let { Asttypes.txt; loc } = mb_name in
       f {
-        ident_kind  = Def_module {def_name=loc.txt; def_loc=loc.loc; def_scope=me.mod_loc};
+        ident_kind  = Def_module { def_name = txt; def_loc = loc; def_scope = mb_expr.mod_loc };
         ident_fname = "";
-        ident_loc   = loc;
+        ident_loc   = mb_name;
       };
-      iter_module_expr f me;
+      iter_module_expr f mb_expr;
       []
-    | Tstr_modtype mtdecl ->
-      let { mtd_name = loc; mtd_type = mto; _ } = mtdecl in
-      begin match mto with
+    | Tstr_modtype { mtd_name; mtd_type; _ } ->
+      let { Asttypes.txt; loc } = mtd_name in
+      begin match mtd_type with
         | Some mt ->
           f {
-            ident_kind  = Def_module {def_name=loc.txt; def_loc=loc.loc; def_scope=loc.loc; };
+            ident_kind  = Def_module { def_name = txt; def_loc = loc; def_scope = loc; };
             ident_fname = "";
-            ident_loc   = loc;
+            ident_loc   = mtd_name;
           };
           iter_module_type f mt;
         | None -> ()
       end;
       []
     | Tstr_recmodule ll ->
-      List.iter begin fun (*(_, loc, mt, me)*) { mb_name = loc; mb_expr = me; _ } ->
+      List.iter begin fun { mb_name; mb_expr; _ } ->
+        let { Asttypes.txt; loc } = mb_name in
         f {
-          ident_kind  = Def_module {def_name=loc.txt; def_loc=loc.loc; def_scope=me.mod_loc};
+          ident_kind  = Def_module { def_name = txt; def_loc = loc; def_scope = mb_expr.mod_loc };
           ident_fname = "";
-          ident_loc   = loc;
+          ident_loc   = mb_name;
         };
         (*iter_module_type f mt;*)
-        iter_module_expr f me;
+        iter_module_expr f mb_expr;
       end ll;
       []
     (* Removed in 4.02.0 *)
@@ -570,17 +564,20 @@ and iter_structure_item f {str_desc; str_loc; _} =
       iter_value_description f vdecl;
       []
     (* Added in 4.02.0 *)
-    | Tstr_typext _ -> []
+    | Tstr_typext { tyext_constructors; _ } ->
+      List.iter (iter_extension_constructor f) tyext_constructors;
+      []
     | Tstr_attribute _ -> []
 
 ;;
 
 (** register *)
 let register filename entry ({ident_loc; ident_kind; _} as ident) =
-  if ident_loc.loc <> Location.none then begin
+  let { Asttypes.loc; _ } = ident_loc in
+  if loc <> Location.none then begin
     ident.ident_fname <- filename;
-    let start = ident_loc.loc.loc_start.pos_cnum in
-    let stop = ident_loc.loc.loc_end.pos_cnum in
+    let start = loc.loc_start.pos_cnum in
+    let stop  = loc.loc_end.pos_cnum in
     for i = start to stop do entry.locations.(i) <- Some ident done;
     match ident_kind with
       | Int_ref x when x = none ->
@@ -615,7 +612,7 @@ let register filename entry ({ident_loc; ident_kind; _} as ident) =
         end;
       | (Def def | Def_constr def | Def_module def) as ident_def ->
         if def.def_name = "" then (def.def_name <- ident_loc.txt);
-        if def.def_loc = Location.none then def.def_loc <- ident_loc.loc;
+        if def.def_loc = Location.none then def.def_loc <- loc;
         begin
           match ident_def with
             | Def_module def ->
@@ -649,8 +646,7 @@ let scan ~project ~filename ?compile_buffer () =
           Hashtbl.replace table_idents filename entry;
           let f = register filename entry in
           begin
-            let [@warning "-4"] _ = "Disable this pattern matching is fragile warning" in
-            match cmt.cmt_annots with
+            match [@warning "-4"] cmt.cmt_annots with
               | Implementation {str_items; _} ->
                 List.iter (fun item -> ignore (iter_structure_item f item)) str_items;
               (*| Partial_implementation parts -> Array.iter (fold_part_impl f) parts*)
