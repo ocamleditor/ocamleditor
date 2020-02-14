@@ -170,15 +170,16 @@ let print_ident ?filter {ident_kind; ident_loc; _} =
       | Ext_ref -> "---"
       | Open scope -> "scope: " ^ (string_of_loc scope)
   in
+  let { Asttypes.txt; loc } = ident_loc in
   match filter with
-    | Some x when x <> ident_loc.txt -> ()
+    | Some x when x <> txt -> ()
     | _ ->
       printf "%-11s: %-30s (use: %-12s) (%-19s) %s\n%!"
         (String.uppercase (string_of_kind ident_kind))
         ident_loc.txt
-        (string_of_loc ident_loc.loc)
+        (string_of_loc loc)
         loc'
-        ident_loc.loc.loc_start.pos_fname;
+        loc.loc_start.pos_fname;
 ;;
 
 

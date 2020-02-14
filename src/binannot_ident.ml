@@ -86,8 +86,9 @@ let find_external_definition ~project ~ext_ref =
 (** find_project_external_references *)
 let find_project_external_references =
   let find_project_external_references' project def =
-    let def_modname = modname_of_path def.ident_loc.loc.loc_start.pos_fname in
-    scan_project_files ~project begin fun acc filename entry ->
+    let { Asttypes.loc; _ } = def.ident_loc in
+    let def_modname = modname_of_path loc.loc_start.pos_fname in
+    scan_project_files ~project begin fun acc _filename entry ->
       try
         let mod_refs = Hashtbl.find_all entry.ext_refs def_modname in
         let filtered =
@@ -112,7 +113,7 @@ let find_external_references ~project ~ext_ref:{ident_kind; ident_loc; _} =
   match ident_kind with
     | Ext_ref | Open _ ->
       let lid = Longident.flatten (Longident.parse ident_loc.txt) in
-      scan_project_files ~project begin fun acc filename entry ->
+      scan_project_files ~project begin fun acc _filename entry ->
         match lid with
           | mod_name :: _ :: _ | mod_name :: [] ->
             let all_refs = Hashtbl.find_all entry.ext_refs mod_name in
@@ -125,13 +126,14 @@ let find_external_references ~project ~ext_ref:{ident_kind; ident_loc; _} =
 
 (** find_definition_and_references' *)
 let find_definition_and_references' ~project ~entry ~ident =
+  let { Asttypes.loc; _ } = ident.ident_loc in
   match ident.ident_kind with
     | Def _ | Def_constr _ -> (* Cursor offset is on a Def *)
-      let int_refs = Hashtbl.find_all entry.int_refs ident.ident_loc.loc in
+      let int_refs = Hashtbl.find_all entry.int_refs loc in
       let ext_refs = find_project_external_references ~project ~def:ident in
       {bai_def = Some ident; bai_refs = int_refs @ ext_refs}
     | Def_module def ->
-      let int_refs = Hashtbl.find_all entry.int_refs ident.ident_loc.loc in
+      let int_refs = Hashtbl.find_all entry.int_refs loc in
       let mod_refs =
         find_external_references ~project
           ~ext_ref:{ident_kind=Open none; ident_loc=mkloc def.def_name def.def_loc; ident_fname=""}
@@ -146,8 +148,9 @@ let find_definition_and_references' ~project ~entry ~ident =
       begin
         match find_external_definition ~project ~ext_ref:ident with
           | Project_def def ->
+            let { Asttypes.loc; _ } = def.ident_loc in
             let entry_def = try Some (Hashtbl.find table_idents def.ident_fname) with Not_found -> None in
-            let int_refs = Opt.map_default entry_def [] (fun e -> Hashtbl.find_all e.int_refs def.ident_loc.loc) in
+            let int_refs = Opt.map_default entry_def [] (fun e -> Hashtbl.find_all e.int_refs loc) in
             let ext_refs =
               if ext = Ext_ref
               then find_project_external_references ~project ~def
@@ -228,14 +231,15 @@ let find_used_components ~project ~filename ~offset ?compile_buffer () =
     Opt.map_default ident None begin fun ident ->
       match ident.ident_kind with
         | Open scope ->
-          let longid = Longident.parse ident.ident_loc.txt in
+          let { Asttypes.txt; _ } = ident.ident_loc in
+          let longid = Longident.parse txt in
           begin
             match Longident.flatten longid with
               | modname :: _ ->
                 let uses = Hashtbl.find_all entry.ext_refs modname in
-                let uses = List.filter begin function
+                let uses = List.filter begin function [@warning "-4"]
                   | {ident_kind = Open _; _} -> false
-                  | u when scope <==< u.ident_loc.loc.loc_start.pos_cnum ->
+                  | u when scope <==< u.ident_loc.Asttypes.loc.loc_start.pos_cnum ->
                     let dirname =
                       try
                         String.concat "." (List.rev (List.tl (List.rev (Longident.flatten (Longident.parse u.ident_loc.txt)))))

@@ -49,8 +49,8 @@ let rec find_pattern f offset ?(opt=false, false) {pat_desc; pat_loc; pat_type; 
         | Tpat_alias (pat, _, _) ->
           Log.println `DEBUG "Tpat_alias" ;
           fp ~opt pat
-        | Tpat_construct (loc, _, pl) ->
-          Log.println `DEBUG "Tpat_construct (%s) (%s) (%d)" (Longident.last loc.txt) (string_of_loc loc.loc) (List.length pl);
+        | Tpat_construct ({ Asttypes.txt; loc }, _, pl) ->
+          Log.println `DEBUG "Tpat_construct (%s) (%s) (%d)" (Longident.last txt) (string_of_loc loc) (List.length pl);
           List.fold_left (fun opt pat -> fp ~opt pat) opt pl
         | Tpat_variant (lab, pat, _) ->
           Log.println `DEBUG "Tpat_variant (%s)" lab;
@@ -73,9 +73,9 @@ let rec find_pattern f offset ?(opt=false, false) {pat_desc; pat_loc; pat_type; 
         | Tpat_any ->
           Log.println `DEBUG "Tpat_any" ;
           opt
-        | Tpat_var (id, loc) ->
+        | Tpat_var (id, { Asttypes.txt; loc  }) ->
           Log.println `DEBUG "Tpat_var: %s (pat_extra=%d) (loc=%s; %s)"
-            (Ident.name id) (List.length pat_extra) (string_of_loc loc.loc) (loc.txt);
+            (Ident.name id) (List.length pat_extra) (string_of_loc loc) txt;
           (Ident.name id) = "*opt*", (Ident.name id) = "*sth*"
     in
     if not opt && not sth then begin
@@ -94,8 +94,8 @@ and find_expression f offset ?(opt=false,false) ?loc {exp_desc; exp_loc; exp_typ
       let fe = find_expression f offset in
       let fp = find_pattern f offset in
       match exp_desc with
-        | Texp_ident (id, loc, _) ->
-          Log.println `DEBUG "Texp_ident: %s %s (%s)" (Longident.last loc.txt) (string_of_loc loc.loc) (Path.name id);
+        | Texp_ident (id, { Asttypes.txt; loc }, _) ->
+          Log.println `DEBUG "Texp_ident: %s %s (%s)" (Longident.last txt) (string_of_loc loc) (Path.name id);
           Path.name id = "*opt*", Path.name id = "*sth*"
         | Texp_let (_, pe, expr) ->
           Log.println `DEBUG "Texp_let " ;
@@ -230,7 +230,7 @@ and find_module_type f offset {mty_desc; mty_loc; _} =
         find_module_type f offset mt2;
       | Tmty_with (mt, ll) ->
         find_module_type f offset mt;
-        List.iter (fun (_, { txt = _; loc }, wc) -> if loc <== offset then find_with_constraint f offset wc) ll
+        List.iter (fun (_, { Asttypes.loc; _ }, wc) -> if loc <== offset then find_with_constraint f offset wc) ll
       | Tmty_typeof me -> find_module_expr f offset me
   end
 
@@ -296,7 +296,7 @@ and find_class_structure f offset {cstr_fields; _} =
 and find_class_expr f offset {cl_desc; cl_loc; _} =
   if cl_loc <== offset then begin
     match cl_desc with
-      | Tcl_ident (_, _, core_type) -> List.iter (find_core_type f offset) core_type
+      | Tcl_ident (_, _, core_type) -> List.iter (find_core_type f offset ?loc:None) core_type
       | Tcl_structure str -> find_class_structure f offset str
       | Tcl_fun (_, pat, ll, expr, _) ->
         find_pattern f offset pat |> ignore;
@@ -321,7 +321,7 @@ and find_class_expr f offset {cl_desc; cl_loc; _} =
 and find_class_type f offset {cltyp_desc; cltyp_loc; _} =
   if cltyp_loc <== offset then begin
     match cltyp_desc with
-      | Tcty_constr (_, _, ct) -> List.iter (find_core_type f offset) ct
+      | Tcty_constr (_, _, ct) -> List.iter (find_core_type f offset ?loc:None) ct
       | Tcty_signature sign -> find_class_signature f offset sign
       | Tcty_arrow (_, ct, clt) ->
         find_core_type f offset ct;
@@ -354,29 +354,28 @@ and find_type_declaration f offset {typ_kind; typ_manifest; typ_cstrs; typ_loc; 
         | Ttype_abstract -> ()
         | Ttype_variant ll ->
           List.iter begin fun { cd_args = ct; _ } ->
-            List.iter (find_core_type f offset) ct
+            List.iter (find_core_type f offset ?loc:None) ct
           end ll
         | Ttype_record ll ->
           List.iter (fun { ld_type = ct; _ } -> find_core_type f offset ct) ll
-        (* Added in 4.02.0 - TODO *)
+        (* Added in 4.02.0 *)
         | Ttype_open -> ()
     end;
     List.iter begin fun (ct1, ct2, _) ->
       find_core_type f offset ct1;
       find_core_type f offset ct2;
     end typ_cstrs;
-    Opt.may typ_manifest (find_core_type f offset);
+    Opt.may typ_manifest (find_core_type f offset ?loc:None);
   end
-
-(** find_exception_declaration *)
-(*and find_exception_declaration f offset {exn_params; exn_exn; exn_loc; _} =
-  if exn_loc <== offset then begin
-    List.iter (find_core_type f offset) exn_params
-  end*)
 
 and find_extension_constructor f offset { ext_loc; ext_kind; _ } =
   if ext_loc <== offset then begin
-    (* TODO *)
+    match ext_kind with
+    | Text_decl (core_types, core_type_option) ->
+      List.iter (find_core_type f offset ?loc:None) core_types;
+      Opt.may core_type_option (find_core_type f offset ?loc:None)
+
+    | Text_rebind (_, _) -> ()
   end
 
 (** find_structure_item *)
@@ -408,7 +407,9 @@ and find_structure_item f offset {str_desc; str_loc; _} =
       | Tstr_primitive vdecl -> find_value_description f offset vdecl
       (* Added in 4.02.0 *)
       | Tstr_attribute _ -> Log.println `DEBUG "Tstr_attribute"
-      | Tstr_typext _ -> Log.println `DEBUG "Tstr_typext"
+      | Tstr_typext { tyext_params; tyext_constructors; _ } ->
+        List.iter (fun (ct, _) -> find_core_type f offset ct) tyext_params;
+        List.iter (find_extension_constructor f offset) tyext_constructors
 ;;
 
 (** find_part_impl *)
