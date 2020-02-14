@@ -59,7 +59,7 @@ object (self)
   method set_lexical_enabled x = lexical_enabled <- x
   method lexical_enabled = lexical_enabled
 
-  method indent ?decrease () =
+  method! indent ?decrease () =
     let old = lexical_enabled in
     self#set_lexical_enabled false;
     super#indent ?decrease ();
@@ -225,7 +225,7 @@ object (self)
   method tag_table_lexical : (GText.tag option) list = lexical_tags
 
   initializer
-    (** Lexical *)
+    (* Lexical *)
     (*let ocamldoc_paragraph_enabled =
       match file with
         | Some file when file#name ^^ ".ml" -> Oe_config.ocamldoc_paragraph_bgcolor_enabled
@@ -344,7 +344,7 @@ object (self)
 
   method code_folding = match code_folding with Some m -> m | _ -> assert false
 
-  method scroll_lazy iter =
+  method! scroll_lazy iter =
     super#scroll_lazy iter;
     if (self#code_folding#is_folded iter) <> None then begin
       self#code_folding#expand iter;
@@ -355,7 +355,7 @@ object (self)
     code_folding <- Some cf;
     cf#set_fold_line_color options#text_color;
     self#create_highlight_current_line_tag(); (* recreate current line tag after code folding highlight to draw it above *)
-    (** Double-click selects OCaml identifiers; click on a selected range
+    (* Double-click selects OCaml identifiers; click on a selected range
       reduces the selection to part of the identifier. *)
     let two_button_press = ref false in
     ignore (self#event#connect#button_release ~callback:begin fun ev ->
