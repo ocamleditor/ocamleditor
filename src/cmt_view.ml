@@ -26,8 +26,8 @@ open GUtil
 open Cmt_format
 open Location
 open Typedtree
-open Asttypes
-open Types
+open! Asttypes
+open! Types
 
 module Log = Common.Log.Make(struct let prefix = "Cmt_view" end)
 let _ = Log.set_verbosity `DEBUG
@@ -128,16 +128,14 @@ let string_rev = Miscellanea.Memo.create string_rev;;
 
 let is_function type_expr =
   let rec f t =
-    let [@warning "-4"] _ = "Disable this pattern matching is fragile warning" in
-    match t.Types.desc with
+    match [@warning "-4"] t.Types.desc with
       | Types.Tarrow _ -> true
       | Types.Tlink t -> f t
       | _ -> false
   in f type_expr;;
 
 let string_of_type_expr te =
-  let [@warning "-4"] _ = "Disable this pattern matching is fragile warning" in
-  match te.desc with
+  match [@warning "-4"] te.desc with
     | Tarrow (_, _, t2, _) -> Odoc_info.string_of_type_expr t2
     | _ -> Odoc_info.string_of_type_expr te;;
 
@@ -441,8 +439,7 @@ object (self)
                 let start = buffer#get_iter_at_mark (`MARK mark) in
                 let row = model#get_iter child_path in
                 let name = model#get ~row ~column:col_name in
-                let [@warning "-4"] _ = "Disable this pattern matching is fragile warning" in
-                let length = match info.kind with
+                let length = match [@warning "-4"] info.kind with
                   | Some Class_let_bindings -> 0
                   | _ -> Glib.Utf8.length name in
                 let stop = start#forward_chars length in
@@ -973,8 +970,7 @@ object (self)
             ignore(self#append ?parent ~kind ~loc ~loc_body:ct.ctyp_loc id typ);
           | Tctf_method (id, private_flag, _, ct) ->
             Gaux.may count_meth ~f:incr;
-            let [@warning "-4"] _ = "Disable this pattern matching is fragile warning" in
-            let kind = match private_flag with Private -> Method_private | _ -> Method in
+            let kind = match [@warning "-4"] private_flag with Private -> Method_private | _ -> Method in
             let loc = field.ctf_loc in (* This location is not correct  *)
             ignore (self#append ?parent ~kind ~loc ~loc_body:ct.ctyp_loc id (string_of_type_expr ct.ctyp_type))
           | Tctf_constraint _ -> ignore (self#append ?parent (sprintf "Tctf_cstr") "")

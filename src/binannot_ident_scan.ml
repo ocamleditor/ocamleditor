@@ -281,7 +281,13 @@ and iter_expression f {exp_desc; exp_extra; _} =
     | Texp_constant _ -> ()
     (* Since 4.03 *)
     | Texp_unreachable -> ()
-    | Texp_extension_constructor (_, _) -> () (*TODO*)
+    (* type t = ..;; type t += I of int;; [%extension_constructor I] *)
+    | Texp_extension_constructor ({ Asttypes.txt; loc }, _) ->
+      let ident_kind = if Longident.qualified txt then Ext_ref else Int_ref none in
+      f { ident_kind
+        ; ident_fname = ""
+        ; ident_loc = Location.mkloc (Odoc_misc.string_of_longident txt) loc
+        }
 
 (** iter_module_expr *)
 and iter_module_expr f {mod_desc; mod_loc; _} =
@@ -307,8 +313,7 @@ and iter_module_type f {mty_desc; mty_loc; _} =
     | Tmty_alias _ -> ()
     | Tmty_signature sign ->
       let annots = List.fold_left (fun acc item -> (iter_signature_item f item) @ acc) [] sign.sig_items in
-      let [@warning "-4"] _ = "Disable fragile pattern warning" in
-      List.iter begin function
+      List.iter begin function [@warning "-4"]
         | {ident_kind = Open loc; _} as annot -> annot.ident_kind <- Open {loc with loc_end = mty_loc.loc_end}
         | _ -> ()
       end annots;
@@ -451,21 +456,23 @@ and iter_type_declaration f {typ_kind; typ_manifest; typ_cstrs; _} =
     match typ_kind with
       | Ttype_abstract -> ()
       | Ttype_variant ll ->
-        List.iter begin fun { cd_name = { txt; loc }; cd_args; _ } ->
+        List.iter begin fun { cd_name; cd_args; _ } ->
+          let { Asttypes.txt; loc } = cd_name in
           let ident_kind = Def_constr { def_name = txt; def_loc = loc; def_scope = none } in
           f {
             ident_kind;
             ident_fname = "";
-            ident_loc   = { txt; loc };
+            ident_loc   = cd_name;
           };
           match cd_args with
-          | Cstr_tuple ct  -> List.iter (iter_core_type f) ct
-          | Cstr_record ll -> List.iter begin fun { ld_name = loc; ld_type = ct; _ } ->
-              let ident_kind = Def_constr {def_name=loc.txt; def_loc=loc.loc; def_scope=none} in
+          | Cstr_tuple ct  -> List.iter (iter_core_type ?loc:None f) ct
+          | Cstr_record ll -> List.iter begin fun { ld_name; ld_type = ct; _ } ->
+              let { Asttypes.loc; txt } = ld_name in
+              let ident_kind = Def_constr { def_name = txt; def_loc = loc; def_scope = none } in
               f {
                 ident_kind;
                 ident_fname = "";
-                ident_loc   = loc;
+                ident_loc   = ld_name;
               };
               iter_core_type f ct
             end ll
@@ -503,7 +510,7 @@ and iter_extension_constructor f { ext_name; ext_kind; _ }  =
       | Cstr_tuple core_types ->
         List.iter (iter_core_type ?loc:None f) core_types
       | Cstr_record label_declarations ->
-        List.iter (fun ld -> iter_core_type f ld.ld_type) label_declarations  
+        List.iter (fun ld -> iter_core_type f ld.ld_type) label_declarations
       end;
     Opt.may core_type_opt (iter_core_type ?loc:None f)
       (*TODO*)

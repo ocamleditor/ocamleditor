@@ -203,8 +203,8 @@ and find_expression f offset ?(opt=false,false) ?loc {exp_desc; exp_loc; exp_typ
         | Texp_unreachable ->
           Log.println `DEBUG "Texp_unreachable" ;
           opt
-        | Texp_extension_constructor (loc, id) ->
-          Log.println `DEBUG "Texp_extension_constructor: %s %s (%s)" (Longident.last loc.txt) (string_of_loc loc.loc) (Path.name id);
+        | Texp_extension_constructor ({ Asttypes.txt; loc }, id) ->
+          Log.println `DEBUG "Texp_extension_constructor: %s %s (%s)" (Longident.last txt) (string_of_loc loc) (Path.name id);
           Path.name id = "*opt*", Path.name id = "*sth*"
     in
     if not opt && not sth then begin
@@ -367,7 +367,7 @@ and find_type_declaration f offset {typ_kind; typ_manifest; typ_cstrs; typ_loc; 
         | Ttype_variant ll ->
          List.iter begin fun { cd_args; _ } ->
             match cd_args with
-            | Cstr_tuple ct -> List.iter (find_core_type f offset) ct
+            | Cstr_tuple ct -> List.iter (find_core_type ?loc:None f offset) ct
             | Cstr_record ll -> List.iter (fun { ld_type = ct; _ } -> find_core_type f offset ct) ll
           end ll
         | Ttype_record ll ->
