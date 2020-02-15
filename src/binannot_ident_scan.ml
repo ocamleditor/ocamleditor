@@ -54,7 +54,9 @@ let rec iter_pattern f {pat_desc; pat_loc; _} =
           | Types.Cstr_extension (p, _) ->
             let path = Longident.parse (Path.name p) in
             path, Longident.qualified path
-          | Types.Cstr_constant _ | Types.Cstr_block _ ->
+          | Types.Cstr_constant _
+          | Types.Cstr_block _
+          | Types.Cstr_unboxed ->
             Longident.of_type_expr type_expr cstr_name,
             Longident.qualified type_expr
       in
@@ -149,6 +151,9 @@ and iter_expression f {exp_desc; exp_extra; _} =
     | Texp_let (_, vbl, expr) ->
       fvb expr vbl;
       fe expr;
+    | Texp_letexception (extension_constructor, expr) ->
+      iter_extension_constructor f extension_constructor;
+      fe expr
     | Texp_function (label, pe, _) ->
       List.iter begin fun { c_lhs; c_guard; c_rhs } ->
         let defs =
@@ -198,7 +203,9 @@ and iter_expression f {exp_desc; exp_extra; _} =
           | Types.Cstr_extension (p, _) ->
             let path = Longident.parse (Path.name p) in
             path, Longident.qualified path
-          | Types.Cstr_constant _ | Types.Cstr_block _ ->
+          | Types.Cstr_constant _
+          | Types.Cstr_block _
+          | Types.Cstr_unboxed ->
             Longident.of_type_expr type_expr cd.Types.cstr_name,
             Longident.qualified type_expr
       in
@@ -212,20 +219,24 @@ and iter_expression f {exp_desc; exp_extra; _} =
       List.iter fe el
     | Texp_variant (_, expr) ->
       Opt.may expr fe
-    | Texp_record (ll, expr) ->
-      List.iter begin fun ({ Asttypes.loc; _ }, ld, e) ->
-        let type_expr = lid_of_type_expr ld.Types.lbl_res in
+    (*| Texp_record (ll, expr) ->*)
+    | Texp_record { fields; extended_expression; _ } ->
+      Array.iter begin fun (label_description, record_label_definition) ->
+        let { Types.lbl_name; lbl_res; lbl_loc; _ } = label_description in
+        let type_expr = lid_of_type_expr lbl_res in
         let ident_kind = if Longident.qualified type_expr then Ext_ref else Int_ref none in
-        let path = Longident.of_type_expr type_expr ld.Types.lbl_name in
+        let path = Longident.of_type_expr type_expr lbl_name in
         let ident = {
           ident_kind;
           ident_fname = "";
-          ident_loc   = Location.mkloc (Odoc_misc.string_of_longident path) loc;
+          ident_loc   = Location.mkloc (Odoc_misc.string_of_longident path) lbl_loc;
         } in
         f ident;
-        fe e
-      end ll;
-      Opt.may expr fe
+        match record_label_definition with
+        | Kept _ -> ()
+        | Overridden (_, expr) -> fe expr
+      end fields;
+      Opt.may extended_expression fe
     | Texp_field (expr, { Asttypes.loc; _ }, ld) ->
       let type_expr = lid_of_type_expr ld.Types.lbl_res in
       let ident_kind = if Longident.qualified type_expr then Ext_ref else Int_ref none in

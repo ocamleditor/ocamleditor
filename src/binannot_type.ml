@@ -109,6 +109,10 @@ and find_expression f offset ?(opt=false,false) ?loc {exp_desc; exp_loc; exp_typ
             fe ~opt e
           end opt pe);
           fe ~opt:(false, false) expr
+        (* Added in 4.04 *)
+        | Texp_letexception (extension_constructor, expr) ->
+           find_extension_constructor f offset extension_constructor;
+           fe ~opt expr
         | Texp_function (lab, pe, _) ->
           Log.println `DEBUG "Texp_function: %s (pe=%d) (exp_extra=%d) (%s)"
             (arg_label_to_string lab) (List.length pe) (List.length exp_extra) (string_of_loc exp_loc);
@@ -148,9 +152,13 @@ and find_expression f offset ?(opt=false,false) ?loc {exp_desc; exp_loc; exp_typ
           List.fold_left (fun opt e -> fe ~opt e) opt ll
         | Texp_variant (_, expr) ->
           Opt.map_default expr opt (fun e -> fe ~opt e)
-        | Texp_record (ll, expr) ->
-          let opt = List.fold_left (fun opt (_, _, e) -> fe ~opt e) opt ll in
-          Opt.map_default expr opt (fun e -> fe ~opt e)
+        | Texp_record { fields; extended_expression; _ } ->
+          let fold_field opt (_, f)  = match f with
+            | Kept _ -> opt
+            | Overridden (_, e) -> fe ~opt e
+          in
+          let opt = Array.fold_left fold_field opt fields in
+          Opt.map_default extended_expression opt (fun e -> fe ~opt e)
         | Texp_field (expr, _, _) ->
           fe ~opt expr
         | Texp_setfield (e1, _, _, e2) ->

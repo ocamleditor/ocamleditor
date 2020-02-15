@@ -141,7 +141,7 @@ object (self)
         let [@warning "-4"] _ = "Disable this pattern matching is fragile warning" in
         match token with
         | CLASS | EXTERNAL | EXCEPTION | FUNCTOR
-        | LET | MODULE | OPEN | TYPE | VAL | SHARP when bol ->
+        | LET | MODULE | OPEN | TYPE | VAL | HASH when bol ->
           if !block_start = [] then
             if !after then pend := pos else start := pos
           else block_start := pos :: List.tl !block_start
