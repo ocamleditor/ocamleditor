@@ -19,7 +19,7 @@
   along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 *)
-
+[@@@warning "-48"]
 
 open Prj
 open Target
@@ -67,7 +67,7 @@ let model_cmd_fill values =
 let _ = model_cmd_fill Build_script_command.commands;;
 
 let taskname_of_task = function
-  | Some (bc, et) -> sprintf "%s\n%s" bc.name et.et_name
+  | Some ({ Target.name; _ }, { Task.et_name; _ }) -> sprintf "%s\n%s" name et_name
   | _ -> ""
 
 class widget ~project ?packing () =

@@ -76,15 +76,11 @@ module Longident = struct
     | Ldot _ -> true
     | Lapply _ -> true
 
-  let mod_path = function
-    | Lident _ -> None
-    | Ldot (x, _) -> Some x
-    | Lapply (x, _) -> Some x
-
   let of_type_expr typ name =
-    match mod_path typ with
-      | Some path -> Ldot (path, name)
-      | _ -> Longident.Lident name
+    match typ with
+    | Ldot (path, _) -> Ldot (path, name)
+    | Lapply (path, _) -> Ldot (path, name)
+    | Lident _ -> Longident.Lident name
 
 end
 

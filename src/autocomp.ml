@@ -83,7 +83,7 @@ let compile_buffer ~project ~editor ~page ?(join=false) () =
           end;*)
           let errors = Error.parse_string (Buffer.contents compiler_output) in
           GtkThread2.async page#error_indication#apply_tag errors;
-          (** Outline *)
+          (* Outline *)
           let no_errors = errors.Oe.er_errors = [] in
           if editor#show_outline then begin
             Gmisclib.Idle.add ~prio:100 begin fun () ->

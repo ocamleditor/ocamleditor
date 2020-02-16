@@ -19,9 +19,8 @@
   along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 *)
+[@@@warning "-48"]
 
-
-open Prj
 open Build_script
 open Task
 open Target

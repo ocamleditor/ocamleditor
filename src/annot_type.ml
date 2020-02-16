@@ -179,7 +179,7 @@ object (self)
                   | `XY _ ->
                     begin
                       match view#get_window `WIDGET with
-                        | Some window ->
+                        | Some _window ->
                           let pX, pY = Gdk.Window.get_pointer_location (Gdk.Window.root_parent ()) in
                           popup#move ~x:pX ~y:(pY + 10);
                           popup#present();
