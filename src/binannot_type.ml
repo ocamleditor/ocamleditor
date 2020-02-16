@@ -113,14 +113,14 @@ and find_expression f offset ?(opt=false,false) ?loc {exp_desc; exp_loc; exp_typ
         | Texp_letexception (extension_constructor, expr) ->
            find_extension_constructor f offset extension_constructor;
            fe ~opt expr
-        | Texp_function (lab, pe, _) ->
+        | Texp_function { arg_label; cases; _ } ->
           Log.println `DEBUG "Texp_function: %s (pe=%d) (exp_extra=%d) (%s)"
-            (arg_label_to_string lab) (List.length pe) (List.length exp_extra) (string_of_loc exp_loc);
+            (arg_label_to_string arg_label) (List.length cases) (List.length exp_extra) (string_of_loc exp_loc);
           List.fold_left begin fun opt { c_lhs = p; c_guard = oe; c_rhs = e } ->
             fp p |> ignore;
             let opt = match oe with Some e' -> fe ~opt e' | None -> opt in
             fe ~opt e;
-          end opt pe;
+          end opt cases;
         | Texp_match (expr, cl, el, _) ->
           Log.println `DEBUG "Texp_match: " ;
           let opt = fe ~opt expr in

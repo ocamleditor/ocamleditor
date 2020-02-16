@@ -833,8 +833,8 @@ object (self)
   method private append_expression ?parent exp =
     match [@warning "-4"] exp.exp_desc with
       | Texp_ident (_, lid, _) -> ignore (self#append ?parent (Longident.last lid.txt) "")
-      | Texp_function (_, pel, _) ->
-        List.iter (fun { c_lhs = p; c_rhs = e; _ } -> ignore (self#append_pattern ?parent (p, e))) pel
+      | Texp_function { cases; _ } ->
+        List.iter (fun { c_lhs = p; c_rhs = e; _ } -> ignore (self#append_pattern ?parent (p, e))) cases
       | Texp_let (_, pes, _) ->
         List.iter (fun { vb_pat = p; vb_expr = e; _ } -> ignore (self#append_pattern ?parent (p, e))) pes
       | Texp_apply (expr, _) -> self#append_expression ?parent expr

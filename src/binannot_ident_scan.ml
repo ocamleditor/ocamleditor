@@ -154,30 +154,31 @@ and iter_expression f {exp_desc; exp_extra; _} =
     | Texp_letexception (extension_constructor, expr) ->
       iter_extension_constructor f extension_constructor;
       fe expr
-    | Texp_function (label, pe, _) ->
-      List.iter begin fun { c_lhs; c_guard; c_rhs } ->
-        let defs =
-          (List.map begin function [@warning "-4"]
-            | {ident_kind=Def d; _} as i ->
-              d.def_scope <- c_rhs.exp_loc;
-              i
-            | i -> i
-          end (fp c_lhs)) @
-          (List.map begin fun (_, pe_loc, _) ->
-            let label = arg_label_to_string label in
-            let def_loc =
-              {pe_loc with loc_end = {pe_loc.loc_start with pos_cnum = pe_loc.loc_start.pos_cnum + String.length label}}
-            in {
-              ident_fname      = "";
-              ident_kind       = Def {def_name=""; def_loc=none; def_scope=c_rhs.exp_loc};
-              ident_loc        = Location.mkloc label def_loc
-            }
-          end c_lhs.pat_extra)
-        in
-        List.iter f defs;
-        Opt.may c_guard fe;
-        fe c_rhs;
-      end pe
+    | Texp_function { arg_label; cases; _ } ->
+      List.iter
+        begin fun { c_lhs; c_guard; c_rhs } ->
+           let defs =
+             (List.map begin function [@warning "-4"]
+                                    | {ident_kind=Def d; _} as i ->
+                 d.def_scope <- c_rhs.exp_loc;
+                 i
+                                    | i -> i
+               end (fp c_lhs)) @
+             (List.map begin fun (_, pe_loc, _) ->
+                 let label = arg_label_to_string arg_label in
+                 let def_loc =
+                   {pe_loc with loc_end = {pe_loc.loc_start with pos_cnum = pe_loc.loc_start.pos_cnum + String.length label}}
+                 in {
+                   ident_fname      = "";
+                   ident_kind       = Def {def_name=""; def_loc=none; def_scope=c_rhs.exp_loc};
+                   ident_loc        = Location.mkloc label def_loc
+                 }
+               end c_lhs.pat_extra)
+           in
+           List.iter f defs;
+           Opt.may c_guard fe;
+           fe c_rhs;
+        end cases;
     | Texp_match (expr, cl, el, _) ->
       fe expr;
       List.iter begin fun { c_lhs = p; c_guard = oe; c_rhs = e } ->
