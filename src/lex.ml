@@ -44,7 +44,7 @@ let analyse ?(utf8=true) ?pend ?(error=ignore) text f =
         let start = Lexing.lexeme_start lexbuf in
         let stop = Lexing.lexeme_end lexbuf in
         let length = stop - start in
-        let lexeme = String.sub lexbuf.lex_buffer start length in
+        let lexeme = Bytes.sub_string lexbuf.lex_buffer start length in
         pend := f ~token ~lexeme ~start ~length ~lexbuf;
     done
   with
@@ -74,8 +74,7 @@ let scan ?(utf8=true) ?(ignore_lexer_error=true) text f =
 let paths_opened text =
   let paths = ref [] in
   analyse text begin fun ~token ~lexeme:_ ~start:_ ~length:_ ~lexbuf ->
-    let [@warning "-4"] _ = "Disable this pattern is fragile warning" in
-    match token with
+    match [@warning "-4"] token with
       | OPEN ->
         let path = ref "" in
         let next_token = ref token in
@@ -97,8 +96,7 @@ let paths_opened text =
 let strings text =
   let strings = ref [] in
   analyse text begin fun ~token ~lexeme:_ ~start ~length ~lexbuf:_ ->
-    let [@warning "-4"] _ = "Disable this pattern is fragile warning" in
-    match token with
+    match [@warning "-4"] token with
       | STRING (s, _) ->
         strings := {lexeme = s; start = start; length = length} :: !strings;
         None
@@ -110,8 +108,7 @@ let strings text =
 let in_string ?(utf8=true) text =
   let strings = ref [] in
   analyse ~utf8 text begin fun ~token ~lexeme:_ ~start ~length ~lexbuf:_ ->
-    let [@warning "-4"] _ = "Disable this pattern is fragile warning" in
-    match token with
+    match [@warning "-4"] token with
       | STRING _ ->
         strings := (start, start + length) :: !strings;
         None

@@ -87,7 +87,7 @@ object (self)
       let len = Unix.read ~buf ~pos:0 ~len fd in
       if len > 0 then begin
 	buffer#place_cursor ~where:buffer#end_iter;
-        let txt = String.sub buf ~pos:0 ~len in
+        let txt = Bytes.sub_string buf ~pos:0 ~len in
 	self#insert txt;
 	self#set_input_start ();
       end;
@@ -114,7 +114,7 @@ object (self)
       view#misc#grab_focus()
     end
 
-  method private lex ~start ~stop = ()
+  method private lex ~start:_ ~stop:_ = ()
 
   method insert text = buffer#insert text
 
@@ -175,7 +175,7 @@ object (self)
         with Gpointer.Null -> ()
       end |> ignore;
     buffer#connect#after#delete_range ~callback:
-      begin fun ~start ~stop ->
+      begin fun ~start ~stop:_ ->
         let start = start#set_line_index 0
         and stop = start#forward_to_line_end in
         self#lex ~start ~stop
