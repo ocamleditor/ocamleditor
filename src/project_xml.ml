@@ -275,9 +275,6 @@ let read filename =
   let xml = XmlParser.parse parser (XmlParser.SFile filename) in
   let get_offset xml = try int_of_string (Xml.attrib xml "offset") with Xml.No_attribute _ -> 0 in
   let get_active xml = try bool_of_string (Xml.attrib xml "active") with Xml.No_attribute _ -> false in
-  let values node =
-    List.rev (Xml.fold (fun acc x -> (value x) :: acc) [] node)
-  in
   let task_map = ref [] in
   Xml.iter begin fun node ->
     match Xml.tag node with

@@ -109,7 +109,7 @@ object (self)
   val mutable on_popdown = fun () -> ()
   initializer
     popup#set_destroy_with_parent true;
-    ignore (popup#event#connect#after#focus_out ~callback:begin fun ev ->
+    ignore (popup#event#connect#after#focus_out ~callback:begin fun _ ->
       self#popdown();
       false
     end);

@@ -236,7 +236,7 @@ let save ?editor proj =
   let active_filename =
     match editor with None -> ""
       | Some editor ->
-        proj.files <- List.map begin fun (file, (scroll_offset, offset)) ->
+        proj.files <- List.map begin fun (file, (_scroll_offset, _offset)) ->
           file,
           match editor#get_page (`FILENAME file#filename) with
             | None -> 0, 0

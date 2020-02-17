@@ -63,17 +63,17 @@ class checklist ?packing elements =
         let row = model#get_iter path in
         let b = model#get ~row ~column:check in
         model#set ~row ~column:check (not b);
-      end;
+      end |> ignore;
       List.iter begin fun (v, n) ->
         let row = model#append () in
         model#set ~row ~column:check v;
         model#set ~row ~column:name n;
       end elements;
-      treeview#append_column (GTree.view_column ~renderer:(renderer_toggle, ["active", check]) ());
-      treeview#append_column (GTree.view_column ~renderer:(renderer_text, ["text", name]) ());
+      treeview#append_column (GTree.view_column ~renderer:(renderer_toggle, ["active", check]) ()) |> ignore;
+      treeview#append_column (GTree.view_column ~renderer:(renderer_text, ["text", name]) ()) |> ignore;
       treeview#set_headers_visible false;
 
-      all#connect#clicked ~callback:(fun () -> self#iter_set (fun c n -> (true, n)));
-      none#connect#clicked ~callback:(fun () -> self#iter_set (fun c n -> (false, n)));
+      all#connect#clicked ~callback:(fun () -> self#iter_set (fun _ n -> (true, n))) |> ignore;
+      none#connect#clicked ~callback:(fun () -> self#iter_set (fun _ n -> (false, n))) |> ignore;
       ()
   end

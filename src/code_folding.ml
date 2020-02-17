@@ -412,7 +412,7 @@ object (self)
             self#fold_offsets o1 o2;
             true
           | Region -> false
-          | _ -> true
+          | Out -> true
       end;
     with Exit -> true
 
@@ -525,7 +525,8 @@ object (self)
                   | Some m when m = mark -> ()
                   | _ -> self#highlight_remove ~window ();
               end;
-            | _ -> self#highlight_remove ~window ()
+            | Region
+            | Out -> self#highlight_remove ~window ()
         end
       | _ -> ()
 
@@ -588,7 +589,7 @@ object (self)
           | _ -> false
       end else false
     end);
-    ignore (view#misc#connect#query_tooltip ~callback:begin fun ~x ~y ~kbd _ ->
+    ignore (view#misc#connect#query_tooltip ~callback:begin fun ~x ~y ~kbd:_ _ ->
       if enabled then (self#highlight x y);
       false
     end);

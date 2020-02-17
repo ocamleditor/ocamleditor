@@ -47,7 +47,7 @@ let fade_out window =
 
 (** main *)
 let main () = begin
-  let locale = GtkMain.Main.init ~setlocale:false () in
+  let _locale = GtkMain.Main.init ~setlocale:false () in
   (*GtkMain.Main.disable_setlocale();*)
   (*Unix.putenv "LANGUAGE" "C";*)
   (*Unix.putenv "GTK_SETLOCALE" "0";*)

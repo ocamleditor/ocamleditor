@@ -20,10 +20,6 @@
 
 *)
 
-
-open Miscellanea
-open Printf
-
 (*let rec create_filename project n =
   if n = 1000 then (failwith "Browser#dialog_file_new (mkname)");
   let name = Filename.concat (project.Project.root // Project.src)

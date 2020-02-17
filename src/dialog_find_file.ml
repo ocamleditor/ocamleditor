@@ -19,6 +19,7 @@
   along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 *)
+[@@@warning "-48"]
 
 open Printf
 open Miscellanea
@@ -52,7 +53,7 @@ let create ?(all=true) ~(editor : Editor.editor) ~roots () =
   let _                    = window#set_skip_taskbar_hint true in
   let _                    = window#set_skip_pager_hint true in
   let vbox                 = GPack.vbox ~spacing:5 ~packing:window#add () in
-  (** Quick file chooser *)
+  (* Quick file chooser *)
   let source               =
     if all then begin
       kprintf window#set_title "%s" title;
@@ -61,7 +62,7 @@ let create ?(all=true) ~(editor : Editor.editor) ~roots () =
   in
   let quick_file_chooser   = new Quick_file_chooser.widget ~source ~name:"" ~filter ~packing:vbox#add () in
   let _                    = GMisc.label ~xalign:0.0 ~width:600 ~line_wrap:true ~markup:help ~packing:vbox#pack () in
-  (** Buttons *)
+  (* Buttons *)
   let bbox                 = GPack.button_box `HORIZONTAL ~layout:`END ~border_width:8 ~spacing:8
                              ~packing:(vbox#pack ~expand:false) () in
   let button_close         = GButton.button ~label:"Close Files" ~packing:bbox#add () in
@@ -74,7 +75,7 @@ let create ?(all=true) ~(editor : Editor.editor) ~roots () =
   let button_clear_history = GButton.button ~label:"Clear File History" ~packing:bbox#add () in
   let _                    = button_clear_history#set_focus_on_click false in
   bbox#set_child_secondary button_clear_history#coerce true;
-  (** Actions *)
+  (* Actions *)
   ignore (button_clear_history#connect#clicked ~callback:begin fun () ->
     File_history.clear editor#file_history;
   end);
@@ -87,7 +88,7 @@ let create ?(all=true) ~(editor : Editor.editor) ~roots () =
     quick_file_chooser#activate();
   end);
   ignore (button_close#connect#clicked ~callback:begin fun () ->
-    quick_file_chooser#activate ~f:begin fun ~filename ~has_cursor ->
+    quick_file_chooser#activate ~f:begin fun ~filename ~has_cursor:_ ->
       Gaux.may (editor#get_page (`FILENAME filename)) ~f:editor#dialog_confirm_close;
       `clear
     end ();
@@ -115,8 +116,7 @@ let create ?(all=true) ~(editor : Editor.editor) ~roots () =
   in
   begin
     match quick_file_chooser#source with
-      | `path (hd :: roots, _) ->
-        let project = editor#project in
+      | `path (hd :: _, _) ->
         let is_relative =  Miscellanea.filename_relative hd in
         let len = String.length hd in
         quick_file_chooser#set_cell_data_func begin fun model row ->
@@ -127,7 +127,7 @@ let create ?(all=true) ~(editor : Editor.editor) ~roots () =
         end
       | _ -> ()
   end;
-  (** Update icons *)
+  (* Update icons *)
   let icon_func ~filename =
     let opened, changed =
       begin
@@ -154,7 +154,7 @@ let create ?(all=true) ~(editor : Editor.editor) ~roots () =
       end ();
     end filenames;
   in
-  (** Escape *)
+  (* Escape *)
   ignore (window#event#connect#key_press ~callback:begin fun ev ->
     let state = GdkEvent.Key.state ev in
     let key = GdkEvent.Key.keyval ev in
@@ -179,7 +179,7 @@ let create ?(all=true) ~(editor : Editor.editor) ~roots () =
       true
     end else false
   end);
-  (** Present *)
+  (* Present *)
   window#present();
   quick_file_chooser#update_model();
   update_icons ();
