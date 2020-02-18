@@ -437,6 +437,9 @@ and iter_class_expr f {cl_desc; _} =
     | Tcl_constraint (cle, clt, _, _, _) ->
       iter_class_expr f cle;
       Opt.may clt (iter_class_type f)
+    (* added in 4.06 *)
+    | Tcl_open (_, _, _, _, c_expr) ->
+      iter_class_expr f c_expr
 
 (** iter_class_type *)
 and iter_class_type f {cltyp_desc; _} =
@@ -446,6 +449,9 @@ and iter_class_type f {cltyp_desc; _} =
     | Tcty_arrow (_, ct, clt) ->
       iter_core_type f ct;
       iter_class_type f clt
+    (* Added in 4.06 *)
+    | Tcty_open (_, _, _, _, class_type) ->
+      iter_class_type f class_type
 
 (** iter_class_type_field *)
 and iter_class_type_field f {ctf_desc; _} =

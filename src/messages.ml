@@ -308,11 +308,7 @@ object (self)
     if visible && List.length notebook#children = 0 then begin
       let page =
         let label = GMisc.label ~text:"No messages" () in
-        object
-          inherit page ~role:"<no-messages>"
-          inherit GObj.widget label#as_widget
-          (*method parent_changed _ = ()*)
-        end
+        new no_messages ~label
       in
       notebook#set_show_tabs false;
       ignore (self#append_page ~with_spinner:false ~label_widget:(GMisc.label())#coerce page#as_page);
@@ -329,18 +325,24 @@ object (self)
   method connect = new signals ~remove_page ~visible_changed ~switch_page
 end
 
+and no_messages ~label =
+object
+  inherit page ~role:"<no-messages>"
+  inherit GObj.widget label#as_widget
+end
+
+
 and signals ~remove_page ~visible_changed ~switch_page =
-object (self)
+object
   inherit ml_signals [remove_page#disconnect; visible_changed#disconnect; switch_page#disconnect ]
   method remove_page = remove_page#connect ~after
   method visible_changed = visible_changed#connect ~after
   method switch_page = switch_page#connect ~after
 end
 
-and remove_page () = object (self) inherit [GObj.widget] signal () end
-and visible_changed () = object (self) inherit [bool] signal () end
-and switch_page () = object (self) inherit [page] signal () end
-
+and remove_page () = object inherit [GObj.widget] signal () end
+and visible_changed () = object inherit [bool] signal () end
+and switch_page () = object inherit [page] signal () end
 
 let vmessages = new messages ~paned:vpaned ()
 let hmessages = new messages ~paned:hpaned ()

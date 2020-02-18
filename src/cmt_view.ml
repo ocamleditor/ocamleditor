@@ -945,6 +945,9 @@ object (self)
       self#append_class_item ?let_bindings_parent ~expand_lets ?count_meth ?parent desc.cl_desc;
     | Tcl_constraint (cl_expr, _, _, _, _) ->
       self#append_class_item ?let_bindings_parent ~expand_lets ?count_meth ?parent cl_expr.cl_desc;
+    (* Added in 4.06 *)
+    | Tcl_open (_, _, _, _, cl_expr) ->
+      self#append_class_item ?let_bindings_parent ~expand_lets ?count_meth ?parent cl_expr.cl_desc
 
   method private append_class_type ?parent ~loc infos =
     let parent = self#append ~kind:Class_type ?parent ~loc:loc.loc loc.txt "" in
@@ -978,6 +981,8 @@ object (self)
           | Tctf_attribute _ -> ()
       end (List.rev sign.csig_fields)
     | Tcty_arrow (_, _, class_type) -> ignore (self#append_class_type_item ?parent class_type.cltyp_desc)
+    (* Added in 4.06 *)
+    | Tcty_open (_, _, _, _, class_type) -> ignore (self#append_class_type_item ?parent class_type.cltyp_desc)
 
   method private string_of_type_abstract decl =
     match decl.typ_manifest with

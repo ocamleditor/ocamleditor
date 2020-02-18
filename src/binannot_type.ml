@@ -335,6 +335,9 @@ and find_class_expr f offset {cl_desc; cl_loc; _} =
       | Tcl_constraint (cle, clt, _, _, _) ->
         find_class_expr f offset cle;
         Opt.may clt (find_class_type f offset)
+      (* Added in 4.06 *)
+      | Tcl_open (_, _, _, _, class_expr) ->
+        find_class_expr f offset class_expr
   end
 
 (** find_class_type *)
@@ -346,6 +349,9 @@ and find_class_type f offset {cltyp_desc; cltyp_loc; _} =
       | Tcty_arrow (_, ct, clt) ->
         find_core_type f offset ct;
         find_class_type f offset clt
+      (* Added in 4.06 *)
+      | Tcty_open (_, _, _, _, class_type) ->
+        find_class_type f offset class_type
   end
 
 (** find_class_type_field *)
