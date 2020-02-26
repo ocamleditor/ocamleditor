@@ -632,7 +632,8 @@ object (self)
       | Tstr_class classes -> List.iter (self#append_class ?parent) classes
       | Tstr_class_type classes -> List.iter (fun (_, loc, decl) -> self#append_class_type ?parent ~loc decl) classes
       | Tstr_type (_, decls) -> List.iter (self#append_type ?parent) decls
-      | Tstr_exception { ext_name = loc; ext_kind; _ } ->
+      | Tstr_exception { tyexn_constructor; _ } ->
+        let { ext_name = loc; ext_kind; _ } = tyexn_constructor in
         let core_types = ( match ext_kind with
             | Text_decl (Typedtree.Cstr_tuple core_types, _) -> self#string_of_core_types core_types
             | Text_decl (Typedtree.Cstr_record fields, _) ->  self#string_of_type_record fields
@@ -682,13 +683,15 @@ object (self)
         let typ = string_of_type_expr val_desc.ctyp_type in
         ignore (self#append ?parent ~kind:Function ~loc:val_loc ~loc_body:val_desc.ctyp_loc val_name.txt typ);
       | Tsig_type (_, decls) -> List.iter (self#append_type ?parent) decls
-      | Tsig_exception { Typedtree.ext_kind; ext_name = loc; _ } ->
+      (*| Tsig_exception { Typedtree.ext_kind; ext_name = loc; _ } ->
         let core_types = ( match ext_kind with
             | Text_decl (Typedtree.Cstr_tuple core_types, _) -> self#string_of_core_types core_types
             | Text_decl (Typedtree.Cstr_record fields, _) -> self#string_of_type_record fields
             | Text_rebind _ -> "" )
         in
-        ignore (self#append ?parent ~kind:Exception ~loc:loc.loc loc.txt core_types)
+        ignore (self#append ?parent ~kind:Exception ~loc:loc.loc loc.txt core_types)*)
+      (* Changed in 4.08 TODO *)
+      | Tsig_exception _exc -> ()
       | Tsig_module { Typedtree.md_type = mty; md_name = loc; _ } ->
         let kind =
           let [@warning "-4"] _ = "Disable this pattern matching is fragile warning" in
@@ -723,6 +726,9 @@ object (self)
       (* Since 4.02.0 *)
       | Tsig_typext _ -> ()
       | Tsig_attribute _ -> ()
+      (* Since 4.08.0 *)
+      | Tsig_typesubst _ -> ()
+      | Tsig_modsubst _ -> ()
 
   method private append_module ?parent ?kind mod_desc =
     match mod_desc with
@@ -744,15 +750,16 @@ object (self)
       | Tmod_constraint _ -> Some (self#append ?parent "Tmod_constraint" "")
       | Tmod_unpack _ -> Some (self#append ?parent "Tmod_unpack" "")
 
+  (* TODO: Handle visibiliy added in 4.08 *)
   method private append_signature_item ?parent ?kind:_ =
     function
-    | Sig_value (id, vd) -> Some (self#append ?parent ~kind:Simple (Ident.name id) (string_of_type_expr vd.val_type))
-    | Sig_type (id, _, _) -> Some (self#append ?parent (*~kind:Type*) (Ident.name id) "")
-    | Sig_typext (id, _, _) -> Some (self#append ?parent ~kind:Exception (Ident.name id) "")
-    | Sig_module (_, mdecl, _) -> self#append_mty ?parent ~kind:Module_type mdecl.md_type
-    | Sig_modtype (_, _) -> Some (self#append ?parent "Sig_modtype" "")
-    | Sig_class (_, _, _) -> Some (self#append ?parent "Sig_class" "")
-    | Sig_class_type (_, _, _) -> Some (self#append ?parent "Sig_class_type" "")
+    | Sig_value (id, vd, _) -> Some (self#append ?parent ~kind:Simple (Ident.name id) (string_of_type_expr vd.val_type))
+    | Sig_type (id, _, _, _) -> Some (self#append ?parent (*~kind:Type*) (Ident.name id) "")
+    | Sig_typext (id, _, _, _) -> Some (self#append ?parent ~kind:Exception (Ident.name id) "")
+    | Sig_module (_, _, mdecl, _, _) -> self#append_mty ?parent ~kind:Module_type mdecl.md_type
+    | Sig_modtype (_, _, _) -> Some (self#append ?parent "Sig_modtype" "")
+    | Sig_class (_, _, _, _) -> Some (self#append ?parent "Sig_class" "")
+    | Sig_class_type (_, _, _, _) -> Some (self#append ?parent "Sig_class_type" "")
 
   method private append_mty ?parent ?kind mod_type =
     match mod_type with
@@ -946,7 +953,7 @@ object (self)
     | Tcl_constraint (cl_expr, _, _, _, _) ->
       self#append_class_item ?let_bindings_parent ~expand_lets ?count_meth ?parent cl_expr.cl_desc;
     (* Added in 4.06 *)
-    | Tcl_open (_, _, _, _, cl_expr) ->
+    | Tcl_open (_, cl_expr) ->
       self#append_class_item ?let_bindings_parent ~expand_lets ?count_meth ?parent cl_expr.cl_desc
 
   method private append_class_type ?parent ~loc infos =
@@ -982,7 +989,7 @@ object (self)
       end (List.rev sign.csig_fields)
     | Tcty_arrow (_, _, class_type) -> ignore (self#append_class_type_item ?parent class_type.cltyp_desc)
     (* Added in 4.06 *)
-    | Tcty_open (_, _, _, _, class_type) -> ignore (self#append_class_type_item ?parent class_type.cltyp_desc)
+    | Tcty_open (_, class_type) -> ignore (self#append_class_type_item ?parent class_type.cltyp_desc)
 
   method private string_of_type_abstract decl =
     match decl.typ_manifest with
@@ -1036,14 +1043,14 @@ object (self)
   method private compare_default model i1 i2 =
     let o1 = model#get ~row:i1 ~column:col_default_sort in
     let o2 = model#get ~row:i2 ~column:col_default_sort in
-    Pervasives.compare o1 o2
+    Stdlib.compare o1 o2
 
   method private compare_name_rev model i1 i2 =
     let name1 = model#get ~row:i1 ~column:col_name in
     let name2 = model#get ~row:i2 ~column:col_name in
     let name1 = string_rev name1 in
     let name2 = string_rev name2 in
-    Pervasives.compare name1 name2
+    Stdlib.compare name1 name2
 
   method private force_lazy row =
     let result = ref false in

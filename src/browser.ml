@@ -195,7 +195,7 @@ object (self)
       Project.save ~editor project;
       self#project_write_history();
       Symbol.Cache.save ~project;
-      Project.unload_path project Config.load_path;
+      Project.unload_path project;
       List.iter (fun p -> Autosave.delete ~filename:p#get_filename ()) editor#pages;
     end
 
@@ -203,7 +203,7 @@ object (self)
     self#project_close();
     let proj = Project.load filename in
     current_project#set (Some proj);
-    Project.load_path proj Config.load_path;
+    Project.load_path proj;
     editor#set_history_switch_page_locked true;
     (*crono ~label:"close_all" *)editor#close_all ();
     editor#pack_outline (Cmt_view.empty());
@@ -697,7 +697,7 @@ object (self)
         (*  *)
         finalize();
         GMain.Main.quit();
-        Pervasives.exit 0
+        Stdlib.exit 0
       in
       let pages = List.filter (fun p -> p#buffer#modified) editor#pages in
       let pages = List.map (fun x -> true, x) pages in

@@ -151,7 +151,7 @@ let main () =
     if not !enabled then (exit 0);
     (* Compilation mode *)
     let compilation = if !compilation = [] then [Bytecode] else !compilation in
-    let compilation = List.sort Pervasives.compare compilation in
+    let compilation = List.sort Stdlib.compare compilation in
     (* print_output_name *)
     if !print_output_name then begin
       List.iter begin fun compilation ->

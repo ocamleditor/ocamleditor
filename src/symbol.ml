@@ -125,7 +125,7 @@ module Signature = struct
     | Type_open -> Ptype
 
   let find_path modlid =
-    Misc.find_in_path_uncap !Config.load_path (modlid^(".cmi"))
+    Misc.find_in_path_uncap (Load_path.get_paths ()) (modlid^(".cmi"))
 
   let read_class_declaration ~filename ~parent_id ~id cd =
     let buf = Buffer.create 1024 in
@@ -202,9 +202,9 @@ module Signature = struct
       }
     in
     List.fold_left begin function acc -> function
-      | Sig_value (id, value_description) ->
+      | Sig_value (id, value_description, _visibility) ->
         (print Pvalue id (Printtyp.value_description id formatter) value_description) :: acc;
-      | Sig_type (id, type_declaration, _) ->
+      | Sig_type (id, type_declaration, _, _visibility) ->
         let acc =
           begin match type_declaration.type_manifest with
             | None ->
@@ -258,25 +258,25 @@ module Signature = struct
             end acc cc
           | _ -> acc
         end
-      | Sig_typext (id, extension_constructor, _status) ->
+      | Sig_typext (id, extension_constructor, _status, _visibility) ->
         (print Pexception id (Printtyp.extension_constructor id formatter)
           extension_constructor) :: acc;
-      | Sig_module (id, module_declaration, _) ->
+      | Sig_module (id, _presence, module_declaration, _, _visibility) ->
         let module_item = print Pmodule id (Printtyp.ident formatter) id in
         let module_items = read_module_type
           ~filename  ~parent_longid:module_item.sy_id module_declaration.md_type
         in
         module_item :: module_items @ acc;
-      | Sig_modtype (id, _) ->
+      | Sig_modtype (id, _, _visibility) ->
         (print Pmodtype id (Printtyp.ident formatter) id) :: acc;
-      | Sig_class (id, class_declaration, _) ->
+      | Sig_class (id, class_declaration, _, _visibility) ->
         begin
           let class_item = print Pclass id (Printtyp.class_declaration id formatter) class_declaration in
           let class_items = read_class_declaration
             ~filename ~parent_id:class_item.sy_id ~id class_declaration in
           class_item :: class_items @ acc;
         end
-      | Sig_class_type _(*(id, cltype_declaration, _)*) -> acc
+      | Sig_class_type _(*(id, cltype_declaration, _, _visibility)*) -> acc
     end [] sign
   ;;
 

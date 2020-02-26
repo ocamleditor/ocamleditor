@@ -82,6 +82,10 @@ let rec find_pattern f offset ?(opt=false, false) {pat_desc; pat_loc; pat_type; 
           Log.println `DEBUG "Tpat_var: %s (pat_extra=%d) (loc=%s; %s)"
             (Ident.name id) (List.length pat_extra) (string_of_loc loc) txt;
           (Ident.name id) = "*opt*", (Ident.name id) = "*sth*"
+        (* From 4.08 TODO: *)
+        | Tpat_exception _ ->
+          Log.println `DEBUG "Tpat_exception";
+          opt
     in
     if not opt && not sth then begin
        Log.println `DEBUG "find_pattern: %s (pat_extra=%d) (%b,%b)"
@@ -121,7 +125,7 @@ and find_expression f offset ?(opt=false,false) ?loc {exp_desc; exp_loc; exp_typ
             let opt = match oe with Some e' -> fe ~opt e' | None -> opt in
             fe ~opt e;
           end opt cases;
-        | Texp_match (expr, cl, el, _) ->
+        | Texp_match (expr, cl, _) ->
           Log.println `DEBUG "Texp_match: " ;
           let opt = fe ~opt expr in
           let o1, _ = opt in
@@ -130,7 +134,7 @@ and find_expression f offset ?(opt=false,false) ?loc {exp_desc; exp_loc; exp_typ
               if not o1 then (ignore (fp p));
               let opt = match oe with Some e' -> fe ~opt e' | None -> opt in
               fe ~opt e;
-            end opt (cl @ el)
+            end opt cl
           in
           opt
         | Texp_apply (e, ll) ->
@@ -191,7 +195,7 @@ and find_expression f offset ?(opt=false,false) ?loc {exp_desc; exp_loc; exp_typ
           fe ~opt expr
         | Texp_override (_, ll) ->
           List.fold_left (fun opt (_, _, e) -> fe ~opt e) opt ll;
-        | Texp_letmodule (_, _, mod_expr, expr) ->
+        | Texp_letmodule (_, _, _, mod_expr, expr) ->
           find_module_expr f offset mod_expr;
           fe ~opt expr
         | Texp_assert expr ->
@@ -214,6 +218,13 @@ and find_expression f offset ?(opt=false,false) ?loc {exp_desc; exp_loc; exp_typ
         | Texp_extension_constructor ({ Asttypes.txt; loc }, id) ->
           Log.println `DEBUG "Texp_extension_constructor: %s %s (%s)" (Longident.last txt) (string_of_loc loc) (Path.name id);
           Path.name id = "*opt*", Path.name id = "*sth*"
+        (* Since 4.08 TODO: *)
+        | Texp_letop _ ->
+          Log.println `DEBUG "Texp_letop";
+          opt;
+        | Texp_open _ ->
+          Log.println `DEBUG "Texp_open";
+          opt
     in
     if not opt && not sth then begin
        Log.println `DEBUG "find_expression: %s (%b,%b)" (string_of_loc exp_loc) opt sth;
@@ -261,7 +272,7 @@ and find_signature_item f offset {sig_desc; sig_loc; _} =
     match sig_desc with
       | Tsig_value vdesc -> find_value_description f offset vdesc
       | Tsig_type (_, ll) -> List.iter (fun td -> find_type_declaration f offset td) ll
-      | Tsig_exception econstr -> find_extension_constructor f offset econstr
+      | Tsig_exception { tyexn_constructor; _ } -> find_extension_constructor f offset tyexn_constructor
       | Tsig_module mdecl -> find_module_type f offset mdecl.md_type
       | Tsig_recmodule ll -> List.iter (fun mdecl -> fmt mdecl.md_type) ll
       | Tsig_modtype mtdecl -> Opt.may mtdecl.mtd_type fmt
@@ -271,6 +282,8 @@ and find_signature_item f offset {sig_desc; sig_loc; _} =
       | Tsig_class_type _ -> Log.println `DEBUG "Tsig_class_type"
       | Tsig_typext _ -> Log.println `DEBUG "Tsig_typext"
       | Tsig_attribute _ -> Log.println `DEBUG "Tsig_attribute"
+      | Tsig_typesubst _ -> Log.println `DEBUG "Tsig_typesubst"
+      | Tsig_modsubst _  -> Log.println `DEBUG "Tsig_modsubst"
   end
 
 (** find_value_description *)
@@ -320,7 +333,7 @@ and find_class_expr f offset {cl_desc; cl_loc; _} =
       | Tcl_structure str -> find_class_structure f offset str
       | Tcl_fun (_, pat, ll, expr, _) ->
         find_pattern f offset pat |> ignore;
-        List.iter (fun (_, _, expr) -> ignore (find_expression f offset expr)) ll;
+        List.iter (fun (_, expr) -> ignore (find_expression f offset expr)) ll;
         find_class_expr f offset expr
       | Tcl_apply (expr, ll) ->
         find_class_expr f offset expr;
@@ -330,13 +343,13 @@ and find_class_expr f offset {cl_desc; cl_loc; _} =
           find_pattern f offset pat |> ignore;
           find_expression f offset expr |> ignore;
         end ll;
-        List.iter (fun (_, _, expr) -> ignore (find_expression f offset expr)) ll2;
+        List.iter (fun (_, expr) -> ignore (find_expression f offset expr)) ll2;
         find_class_expr f offset expr;
       | Tcl_constraint (cle, clt, _, _, _) ->
         find_class_expr f offset cle;
         Opt.may clt (find_class_type f offset)
       (* Added in 4.06 *)
-      | Tcl_open (_, _, _, _, class_expr) ->
+      | Tcl_open (_, class_expr) ->
         find_class_expr f offset class_expr
   end
 
@@ -350,7 +363,7 @@ and find_class_type f offset {cltyp_desc; cltyp_loc; _} =
         find_core_type f offset ct;
         find_class_type f offset clt
       (* Added in 4.06 *)
-      | Tcty_open (_, _, _, _, class_type) ->
+      | Tcty_open (_, class_type) ->
         find_class_type f offset class_type
   end
 
@@ -421,12 +434,14 @@ and find_structure_item f offset {str_desc; str_loc; _} =
           find_pattern f offset pat |> ignore;
           ignore (find_expression f offset expr);
         end pe
-      | Tstr_open odesc -> f str_loc (Odoc_misc.string_of_longident odesc.open_txt.txt)
+      (*| Tstr_open odesc -> f str_loc (Odoc_misc.string_of_longident odesc.open_txt.txt)*)
+      (* Changed in 4.08 TODO: *)
+      | Tstr_open _odecl -> ()
       | Tstr_include idesc -> find_module_expr f offset idesc.incl_mod
       | Tstr_class ll -> List.iter (fun (cd, _) -> find_class_expr f offset cd.ci_expr) ll
       | Tstr_class_type ll -> List.iter (fun (_, _, cd) -> find_class_type f offset cd.ci_expr) ll
       | Tstr_type (_, ll) -> List.iter (fun td -> find_type_declaration f offset td) ll
-      | Tstr_exception econstr -> find_extension_constructor f offset econstr
+      | Tstr_exception { tyexn_constructor; _ } -> find_extension_constructor f offset tyexn_constructor
       | Tstr_module mdecl -> find_module_expr f offset mdecl.mb_expr
       | Tstr_modtype mtdecl -> Opt.may mtdecl.mtd_type (find_module_type f offset)
       | Tstr_recmodule ll ->

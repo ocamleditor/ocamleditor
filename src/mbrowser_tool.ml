@@ -697,7 +697,7 @@ object (self)
   method private create_widget_library ~lib_path ?(f=fun _ -> ()) () =
     let wlib = self#create_widget ~kind:`Library () in
     let entries = Symbol.Modules.read ~path:[lib_path] () in
-    let entries = List.sort Pervasives.compare entries in
+    let entries = List.sort Stdlib.compare entries in
     ignore (wlib#view#connect#row_activated ~callback:begin fun path _ ->
       let row = wlib#model#get_iter path in
       let symbol = wlib#model#get ~row ~column:col_symbol_data in
@@ -728,10 +728,10 @@ object (self)
   method create_widget_modules ?(push=true) () =
     let cache_id = Project.filename project in
     try
-      let project_load_path = List.sort Pervasives.compare (Project.get_load_path project) in
+      let project_load_path = List.sort Stdlib.compare (Project.get_load_path project) in
       let path = (*project.Project.ocamllib ::*) project_load_path in
       let entries = Symbol.Modules.read ~path () in
-      let entries = List.sort Pervasives.compare entries in
+      let entries = List.sort Stdlib.compare entries in
       let model =
         try
           let (model : GTree.list_store), prev_entries =

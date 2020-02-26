@@ -99,6 +99,8 @@ let rec iter_pattern f {pat_desc; pat_loc; _} =
         ident_kind       = Def { def_name=txt; def_loc=loc; def_scope=none };
         ident_loc        = Location.mkloc (Ident.name id) loc;
       }]
+    (* Since 4.08 *)
+    | Tpat_exception _ -> []
 
 (** iter_expression *)
 and iter_expression f {exp_desc; exp_extra; _} =
@@ -124,12 +126,13 @@ and iter_expression f {exp_desc; exp_extra; _} =
   in
   List.iter begin fun (exp, loc', _) ->
     match exp with
-      | Texp_open (_, path, { Asttypes.loc; _ }, _) ->
+      (* Remomed in 4.08 *)
+      (*| Texp_open (_, path, { Asttypes.loc; _ }, _) ->
         f {
           ident_kind  = Open loc';
           ident_fname = "";
           ident_loc   = Location.mkloc (Path.name path) loc;
-        };
+        };*)
       | Texp_constraint _
       | Texp_coerce _
       | Texp_poly _
@@ -179,13 +182,13 @@ and iter_expression f {exp_desc; exp_extra; _} =
            Opt.may c_guard fe;
            fe c_rhs;
         end cases;
-    | Texp_match (expr, cl, el, _) ->
+    | Texp_match (expr, cl, _) ->
       fe expr;
       List.iter begin fun { c_lhs = p; c_guard = oe; c_rhs = e } ->
         List.iter (fun d -> d.ident_kind <- Def {def_name=""; def_loc=none; def_scope=e.exp_loc}; f d) (fp p);
         Opt.may oe fe;
         fe e;
-      end (cl @ el)
+      end cl
     | Texp_apply (expr, pe) ->
       fe expr;
       List.iter (fun (_, e) -> Opt.may e fe) pe;
@@ -220,7 +223,6 @@ and iter_expression f {exp_desc; exp_extra; _} =
       List.iter fe el
     | Texp_variant (_, expr) ->
       Opt.may expr fe
-    (*| Texp_record (ll, expr) ->*)
     | Texp_record { fields; extended_expression; _ } ->
       Array.iter begin fun (label_description, record_label_definition) ->
         let { Types.lbl_name; lbl_res; lbl_loc; _ } = label_description in
@@ -277,7 +279,7 @@ and iter_expression f {exp_desc; exp_extra; _} =
       (*Log.println `TRACE "Texp_instvar: (%s)%s %s" (Path.name p) (Path.name path) (string_of_loc loc.loc);*)
     | Texp_setinstvar (_, _, _, expr) -> fe expr
     | Texp_override (_, ll) -> List.iter (fun (_, _, e) -> fe e) ll
-    | Texp_letmodule (_, mod_name, mod_expr, expr) ->
+    | Texp_letmodule (_, mod_name, _, mod_expr, expr) ->
       let { Asttypes.txt; loc } = mod_name in
       f {
         ident_kind  = Def_module {def_name=txt; def_loc=loc; def_scope=mod_expr.mod_loc};
@@ -300,6 +302,9 @@ and iter_expression f {exp_desc; exp_extra; _} =
         ; ident_fname = ""
         ; ident_loc = Location.mkloc (Odoc_misc.string_of_longident txt) loc
         }
+    (* Since 4.08 TODO: *)
+    | Texp_letop _ -> ()
+    | Texp_open _ -> ()
 
 (** iter_module_expr *)
 and iter_module_expr f {mod_desc; mod_loc; _} =
@@ -347,8 +352,8 @@ and iter_signature_item f {sig_desc; _} =
     | Tsig_type (_, ll) ->
       List.iter (fun td -> iter_type_declaration f td) ll;
       []
-    | Tsig_exception ecstr ->
-      iter_extension_constructor f ecstr;
+    | Tsig_exception { tyexn_constructor; _ } ->
+      iter_extension_constructor f tyexn_constructor;
       []
     | Tsig_module mdecl ->
       iter_module_type f mdecl.md_type;
@@ -359,7 +364,18 @@ and iter_signature_item f {sig_desc; _} =
     | Tsig_modtype mtdecl ->
       Opt.may mtdecl.mtd_type fmt;
       []
-    | Tsig_open { open_path; open_txt; _ } ->
+    (*| Tsig_open { open_path; open_txt; _ } ->
+      let { Asttypes.loc; _ } = open_txt in
+      let annot = {
+        ident_kind  = Open {loc_start = loc.loc_end; loc_end = dummy_pos; loc_ghost=false};
+        ident_fname = "";
+        ident_loc   = Location.mkloc (Path.name open_path) loc;
+      } in
+      f annot;
+      [annot]*)
+    (* Since 4.08 TODO: Check correctness *)
+    | Tsig_open { open_expr; _ } ->
+      let (open_path, open_txt) = open_expr in
       let { Asttypes.loc; _ } = open_txt in
       let annot = {
         ident_kind  = Open {loc_start = loc.loc_end; loc_end = dummy_pos; loc_ghost=false};
@@ -368,6 +384,7 @@ and iter_signature_item f {sig_desc; _} =
       } in
       f annot;
       [annot]
+
     | Tsig_include idecl ->
       fmt idecl.incl_mod;
       []
@@ -378,6 +395,9 @@ and iter_signature_item f {sig_desc; _} =
       List.iter (iter_extension_constructor f) tyext_constructors;
       []
     | Tsig_attribute _ -> []
+    (* From 4.08 TODO: *)
+    | Tsig_typesubst _ -> []
+    | Tsig_modsubst _ -> []
 
 (** iter_value_description *)
 and iter_value_description f {val_desc; _} = iter_core_type f val_desc
@@ -438,7 +458,7 @@ and iter_class_expr f {cl_desc; _} =
       iter_class_expr f cle;
       Opt.may clt (iter_class_type f)
     (* added in 4.06 *)
-    | Tcl_open (_, _, _, _, c_expr) ->
+    | Tcl_open (_, c_expr) ->
       iter_class_expr f c_expr
 
 (** iter_class_type *)
@@ -450,7 +470,7 @@ and iter_class_type f {cltyp_desc; _} =
       iter_core_type f ct;
       iter_class_type f clt
     (* Added in 4.06 *)
-    | Tcty_open (_, _, _, _, class_type) ->
+    | Tcty_open (_, class_type) ->
       iter_class_type f class_type
 
 (** iter_class_type_field *)
@@ -552,15 +572,17 @@ and iter_structure_item f {str_desc; str_loc; _} =
         Def {def_name=""; def_loc=none; def_scope={str_loc with loc_start = str_loc.loc_end; loc_end = Lexing.dummy_pos}}) defs;
       List.iter f defs;
       []
-    | Tstr_open odesc ->
-      let { open_path = path; open_loc = loc; _ } = odesc in
+    | Tstr_open open_declaration ->
+      (*let { open_path = path; open_loc = loc; _ } = odesc in
       let annot = {
         ident_kind  = Open {loc_start = loc.loc_end; loc_end = dummy_pos; loc_ghost=false};
         ident_fname = "";
         ident_loc   = Location.mkloc (Path.name path) loc;
       } in
       f annot;
-      [annot]
+      [annot]*)
+    (* Changed in 4.08 TODO *)
+      []
     | Tstr_include _ -> []
     | Tstr_class ll -> List.iter (fun (cd, _) ->
       iter_class_expr f cd.ci_expr) ll;
@@ -571,8 +593,8 @@ and iter_structure_item f {str_desc; str_loc; _} =
     | Tstr_type (_, ll) -> List.iter (fun td ->
       iter_type_declaration f td) ll;
       []
-    | Tstr_exception extconstr ->
-      iter_extension_constructor f extconstr;
+    | Tstr_exception { tyexn_constructor; _ } ->
+      iter_extension_constructor f tyexn_constructor;
       []
     | Tstr_module { mb_name; mb_expr; _ } ->
       let { Asttypes.txt; loc } = mb_name in

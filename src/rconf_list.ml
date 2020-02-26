@@ -153,7 +153,7 @@ object (self)
         let targets = List.sort (fun bc1 bc2 ->
           if bc1.Target.default then (-1)
           else if bc2.Target.default then 1
-          else (Pervasives.compare bc1.Target.id bc2.Target.id)) targets in
+          else (Stdlib.compare bc1.Target.id bc2.Target.id)) targets in
         match targets with
           | bc :: _ ->
             let rc = Rconf.create ~name ~id ~target_id:bc.Target.id in

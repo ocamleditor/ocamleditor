@@ -84,7 +84,7 @@ let substitute ~filename ?(regexp=false) repl =
   let perm = (Unix.stat filename).Unix.st_perm in
   let ichan = open_in_bin filename in
   let tmp, ochan = Filename.open_temp_file (Filename.basename filename) "" in
-  Pervasives.set_binary_mode_out ochan true;
+  Stdlib.set_binary_mode_out ochan true;
   let finally () =
     close_in_noerr ichan;
     close_out_noerr ochan;

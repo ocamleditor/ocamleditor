@@ -295,7 +295,7 @@ object (self)
     end [] parts;
 
   method private intersect results =
-    let results = List.sort (fun (_, l1, _) (_, l2, _) -> Pervasives.compare l1 l2) results in
+    let results = List.sort (fun (_, l1, _) (_, l2, _) -> Stdlib.compare l1 l2) results in
     (*Printf.printf "results=[%s]\n%!"
       (String.concat "; " (List.map (fun (t, _, r) -> sprintf "%s=%d" t (List.length r)) results));*)
     match results with

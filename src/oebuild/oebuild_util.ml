@@ -104,8 +104,8 @@ let command ?(echo=true) cmd =
   let cmd = Str.global_replace re_spaces " " cmd in
   if echo then (printf "%s\n%!" cmd);
   let exit_code = Sys.command cmd in
-  Pervasives.flush stderr;
-  Pervasives.flush stdout;
+  Stdlib.flush stderr;
+  Stdlib.flush stdout;
   exit_code
 
 (** Remove files with wildcards *)

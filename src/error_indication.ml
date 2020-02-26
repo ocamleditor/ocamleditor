@@ -130,7 +130,7 @@ object (self)
   method private do_apply_tag messages kind =
     (*Prf.crono Prf.prf_error_indication_appy_tag begin fun () ->*)
       let tview = (view :> Text.view) in
-      let messages = List.sort (fun e1 e2 -> Pervasives.compare e1.Oe.er_line e2.Oe.er_line) messages in
+      let messages = List.sort (fun e1 e2 -> Stdlib.compare e1.Oe.er_line e2.Oe.er_line) messages in
       List.map begin fun error ->
         let line = error.Oe.er_line - 1 in
         let c1, c2 = error.Oe.er_characters in
