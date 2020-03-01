@@ -395,9 +395,14 @@ and iter_signature_item f {sig_desc; _} =
       List.iter (iter_extension_constructor f) tyext_constructors;
       []
     | Tsig_attribute _ -> []
+    (* From 4.08 *)
+    | Tsig_typesubst ll ->
+      List.iter (fun td -> iter_type_declaration f td) ll;
+      []
     (* From 4.08 TODO: *)
-    | Tsig_typesubst _ -> []
-    | Tsig_modsubst _ -> []
+    | Tsig_modsubst mod_subst ->
+      iter_module_substitution mod_subst;
+      []
 
 (** iter_value_description *)
 and iter_value_description f {val_desc; _} = iter_core_type f val_desc
@@ -555,6 +560,9 @@ and iter_extension_constructor f { ext_name; ext_kind; _ }  =
     Opt.may core_type_opt (iter_core_type ?loc:None f)
       (*TODO*)
   | Text_rebind (_path, _id ) -> ()
+
+(** iter_module_substitution - Added in 4.08 TODO: ? *)
+and iter_module_substitution { ms_name; ms_loc; _ } = ()
 
 (** iter_structure_item *)
 and iter_structure_item f {str_desc; str_loc; _} =
