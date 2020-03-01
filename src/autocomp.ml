@@ -50,7 +50,7 @@ let compile_buffer ~project ~editor ~page ?(join=false) () =
       | _, None -> ()
       | _, Some (tmp, relpath) ->
         (* Compile *)
-        let command = sprintf "%s %s -I ../%s %s ../%s/%s %s"
+        let command = sprintf "%s %s -error-style short -I ../%s %s ../%s/%s %s"
           project.Prj.autocomp_compiler
           project.Prj.autocomp_cflags
           Prj.default_dir_tmp
