@@ -100,7 +100,7 @@ let rec iter_pattern f {pat_desc; pat_loc; _} =
         ident_loc        = Location.mkloc (Ident.name id) loc;
       }]
     (* Since 4.08 *)
-    | Tpat_exception _ -> []
+    | Tpat_exception pat -> fp pat
 
 (** iter_expression *)
 and iter_expression f {exp_desc; exp_extra; _} =
@@ -439,18 +439,20 @@ and iter_class_expr f {cl_desc; _} =
   match cl_desc with
     | Tcl_ident (_, _, core_type) -> List.iter (iter_core_type ?loc:None f) core_type
     | Tcl_structure str -> iter_class_structure f str
-    | Tcl_fun (_, pat, _, expr, _) ->
+    | Tcl_fun (_, pat, _ll, expr, _) ->
       let defs = iter_pattern f pat in
       List.iter (fun d -> d.ident_kind <- Def {def_name=""; def_loc=none; def_scope=expr.cl_loc}; f d) defs;
-      (*List.iter (fun (_, loc, expr) -> (*ignore (iter_expression f expr*)) ll;*)
+      (* TODO: Why ?  Same question for Tcl_let *)
+      (*List.iter (fun (_, expr) -> (ignore (iter_expression f expr)) _ll;*)
       iter_class_expr f expr
     | Tcl_apply (expr, ll) ->
       iter_class_expr f expr;
       List.iter (function (_, Some expr) -> ignore (iter_expression f expr) | _ -> ()) ll;
-    | Tcl_let (_, ll, _, c_expr) ->
+    | Tcl_let (_, ll, _ll2, c_expr) ->
       List.iter begin fun { vb_pat = p; vb_expr = e; _ } ->
         let defs = iter_pattern f p in
         List.iter (fun d -> d.ident_kind <- Def {def_name=""; def_loc=none; def_scope=c_expr.cl_loc}; f d) defs;
+        (*List.iter (fun (_, expr) -> ignore (iter_expression f expr)) _ll2;*)
         iter_expression f e;
       end ll;
       iter_class_expr f c_expr;
