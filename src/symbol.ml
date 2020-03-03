@@ -285,17 +285,16 @@ module Signature = struct
       let sign = Env.read_signature modlid filename in
       read' (sign, filename, modlid)
     with
-      | (Env.Error e as exc) ->
-        let [@warning "-4"] _ = "Disabel this pattern matching is fragile warning" in
+      | (Persistent_env.Error e as exc) ->
         begin
           match e with
-            | Env.Inconsistent_import _ ->
+            | Persistent_env.Inconsistent_import _ ->
               Env.reset_cache();
               read'' ((*None, *)filename, modlid)
-            | Env.Illegal_renaming _ -> raise Not_found
+            | Persistent_env.Illegal_renaming _ -> raise Not_found
             | _ ->
               Printf.eprintf "File \"symbol.ml\": %s\n%s\n%!" (Printexc.to_string exc) (Printexc.get_backtrace());
-              Env.report_error Format.err_formatter e;
+              Persistent_env.report_error Format.err_formatter e;
               flush stderr;
               []
         end
