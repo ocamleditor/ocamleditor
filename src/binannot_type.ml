@@ -239,7 +239,7 @@ and find_module_expr f offset {mod_desc; mod_loc; _} =
     begin
       match mod_desc with
         | Tmod_structure {str_items; _} -> List.iter (find_structure_item f offset) str_items
-        | Tmod_functor (_, _, _, mod_expr) -> find_module_expr f offset mod_expr
+        | Tmod_functor ( _, mod_expr) -> find_module_expr f offset mod_expr
         | Tmod_apply (me1, me2, _) ->
           find_module_expr f offset me1;
           find_module_expr f offset me2;
@@ -256,9 +256,11 @@ and find_module_type f offset {mty_desc; mty_loc; _} =
       | Tmty_ident _ -> Log.println `DEBUG "Tmty_ident";
       | Tmty_alias _ -> Log.println `DEBUG "Tmty_alias";
       | Tmty_signature sign -> List.iter (find_signature_item f offset) sign.sig_items
-      | Tmty_functor (_, _, mt1, mt2) ->
-        Opt.may mt1 (find_module_type f offset);
-        find_module_type f offset mt2;
+      | Tmty_functor (Unit, mt) ->
+                      find_module_type f offset mt;
+      | Tmty_functor (Named (_, _, mt1), mt2) ->
+                      find_module_type f offset mt1;
+                      find_module_type f offset mt2
       | Tmty_with (mt, ll) ->
         find_module_type f offset mt;
         List.iter (fun (_, { Asttypes.loc; _ }, wc) -> if loc <== offset then find_with_constraint f offset wc) ll

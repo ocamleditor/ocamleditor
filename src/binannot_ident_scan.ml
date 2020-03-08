@@ -280,12 +280,15 @@ and iter_expression f {exp_desc; exp_extra; _} =
     | Texp_setinstvar (_, _, _, expr) -> fe expr
     | Texp_override (_, ll) -> List.iter (fun (_, _, e) -> fe e) ll
     | Texp_letmodule (_, mod_name, _, mod_expr, expr) ->
-      let { Asttypes.txt; loc } = mod_name in
-      f {
-        ident_kind  = Def_module {def_name=txt; def_loc=loc; def_scope=mod_expr.mod_loc};
+      begin match mod_name with
+        | { Asttypes.txt = Some name; loc } -> 
+        f {
+                ident_kind  = Def_module { def_name = name; def_loc = loc; def_scope = mod_expr.mod_loc };
         ident_fname = "";
-        ident_loc   = mod_name;
-      };
+        ident_loc   = { Asttypes.txt = name; loc };
+      }
+      | { Asttypes.txt = None; _ } -> ()
+      end;
       iter_module_expr f mod_expr;
       fe expr;
     | Texp_assert expr -> fe expr
@@ -315,7 +318,7 @@ and iter_module_expr f {mod_desc; mod_loc; _} =
         | {ident_kind = Open loc; _} as annot -> annot.ident_kind <- Open {loc with loc_end = mod_loc.loc_end}
         | _ -> ()
       end annots;
-    | Tmod_functor (_, _, _, mod_expr) -> iter_module_expr f mod_expr
+    | Tmod_functor (_, mod_expr) -> iter_module_expr f mod_expr
     | Tmod_apply (me1, me2, _) ->
       iter_module_expr f me1;
       iter_module_expr f me2;
@@ -334,9 +337,11 @@ and iter_module_type f {mty_desc; mty_loc; _} =
         | {ident_kind = Open loc; _} as annot -> annot.ident_kind <- Open {loc with loc_end = mty_loc.loc_end}
         | _ -> ()
       end annots;
-    | Tmty_functor (_, _, mt1, mt2) ->
-      Opt.may mt1 (iter_module_type f);
-      iter_module_type f mt2;
+    | Tmty_functor (Unit, mt) ->
+      iter_module_type f mt
+    | Tmty_functor (Named (_, _, mt1), mt2) ->
+                    iter_module_type f mt1;
+                    iter_module_type f mt2; 
     | Tmty_with (mt, ll) ->
       iter_module_type f mt;
       List.iter (fun (_, _, wc) -> iter_with_constraint f wc) ll
@@ -608,11 +613,15 @@ and iter_structure_item f {str_desc; str_loc; _} =
       []
     | Tstr_module { mb_name; mb_expr; _ } ->
       let { Asttypes.txt; loc } = mb_name in
+      begin match txt with 
+      | Some name ->
       f {
-        ident_kind  = Def_module { def_name = txt; def_loc = loc; def_scope = mb_expr.mod_loc };
+        ident_kind  = Def_module { def_name = name; def_loc = loc; def_scope = mb_expr.mod_loc };
         ident_fname = "";
-        ident_loc   = mb_name;
-      };
+        ident_loc   = { Asttypes.txt = name; loc };
+      }
+      | None -> ()
+      end;
       iter_module_expr f mb_expr;
       []
     | Tstr_modtype { mtd_name; mtd_type; _ } ->
@@ -631,11 +640,15 @@ and iter_structure_item f {str_desc; str_loc; _} =
     | Tstr_recmodule ll ->
       List.iter begin fun { mb_name; mb_expr; _ } ->
         let { Asttypes.txt; loc } = mb_name in
+        begin match txt with
+        | Some name ->
         f {
-          ident_kind  = Def_module { def_name = txt; def_loc = loc; def_scope = mb_expr.mod_loc };
+          ident_kind  = Def_module { def_name = name; def_loc = loc; def_scope = mb_expr.mod_loc };
           ident_fname = "";
-          ident_loc   = mb_name;
-        };
+          ident_loc   = { Asttypes.txt = name; loc };
+        }
+        | None -> ()
+        end;
         (*iter_module_type f mt;*)
         iter_module_expr f mb_expr;
       end ll;

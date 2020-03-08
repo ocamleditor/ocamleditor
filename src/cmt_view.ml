@@ -646,7 +646,8 @@ object (self)
             | Tmod_functor _ -> Module_functor
             | _ -> Module
         in
-        let parent_mod = self#append ?parent ~kind ~loc:loc.loc loc.txt "" in
+        let txt = Option.value loc.txt ~default:"_" in
+        let parent_mod = self#append ?parent ~kind ~loc:loc.loc txt "" in
         let f () = ignore (self#append_module ~parent:parent_mod module_expr.mod_desc) in
         begin
           match parent with
@@ -699,7 +700,8 @@ object (self)
             | Tmty_functor _ -> Module_functor
             | _ -> Module
         in
-        let parent_mod = self#append ?parent ~kind ~loc:loc.loc loc.txt "" in
+        let txt = Option.value loc.txt ~default:"_" in
+        let parent_mod = self#append ?parent ~kind ~loc:loc.loc txt "" in
         let f () = ignore (self#append_module_type ~parent:parent_mod mty.mty_desc) in
         begin
           match parent with
@@ -732,7 +734,7 @@ object (self)
 
   method private append_module ?parent ?kind mod_desc =
     match mod_desc with
-      | Tmod_functor (_, _, _, mexpr) ->
+      | Tmod_functor (_, mexpr) ->
         self#append_module ?parent mexpr.mod_desc
       | Tmod_structure str ->
         List.iter (self#append_struct_item ?parent) str.str_items;
@@ -767,7 +769,7 @@ object (self)
       | Mty_signature sign_items ->
         List.iter (fun x -> ignore (self#append_signature_item ?parent ?kind x)) sign_items;
         None
-      | Mty_functor (_, _, m2) ->
+      | Mty_functor (_, m2) ->
         self#append_mty ?parent ?kind m2
         (*ignore (self#append ?parent (Ident.name id) "")*)
       (* Since 4.02.0 - TODO *)
@@ -775,7 +777,7 @@ object (self)
 
   method private append_module_type ?parent ?kind:_ mod_desc =
     match mod_desc with
-      | Tmty_functor (_, _, _, mexpr) ->
+      | Tmty_functor (_, mexpr) ->
         self#append_module_type ?parent mexpr.mty_desc
       | Tmty_ident (path, loc) ->
         Some (self#append ?parent ~kind:Module_include ~loc:loc.loc (Path.name path) "")

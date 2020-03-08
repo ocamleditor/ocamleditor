@@ -178,7 +178,7 @@ module Signature = struct
       let symbols = read' (signature, filename, modlid) in
       let symbols = List.map (fun it -> {it with sy_id = parent_longid @ (List.tl it.sy_id)}) symbols in
       symbols
-    | Mty_functor (_(*ident*), _(*md*), mc) -> read_module_type ~filename ~parent_longid mc
+    | Mty_functor ( _, mc) -> read_module_type ~filename ~parent_longid mc
     (* Added in 4.02.0 *)
     | Mty_alias _  -> []
 
