@@ -22,6 +22,7 @@
 
 
 #cd "tools"
+#directory "."
 #use "scripting.ml"
 
 open Printf
