@@ -13,7 +13,7 @@ module App_config = struct open Printf let (//) = Filename.concat let (!!) = Fil
 module Spawn = struct open Printf type exit_status = [ `STATUS of Unix.process_status | `ERROR of int * string ] module Parallel_process = struct exception Not_started type t = { prog             : string; args             : string list; env              : string array; mutable cmd_line : string; mutable at_exit  : (unit -> unit); mutable pid      : int option; mutable channels : (in_channel * out_channel * in_channel) option; mutex            : Mutex.t; cond             : Condition.t; mutable started  : bool; mutable verbose  : bool; } let oeproc_command = ref (App_config.get_oeproc_command ())  let channels p = if not p.started then (raise Not_started); Mutex.lock p.mutex; while p.channels = None do Condition.wait p.cond p.mutex done; let cc = match p.channels with None -> assert false | Some cc -> cc in Mutex.unlock p.mutex; cc let open_proc_full cmd env input output error toclose = match Unix.fork() with 0 -> Unix.dup2 input Unix.stdin; Unix.close input; Unix.dup2 output Unix.stdout; Unix.close output; Unix.dup2 error Unix.stderr; Unix.close error; List.iter Unix.close toclose; begin try Unix.execve "/bin/sh" [| "/bin/sh"; "-c"; cmd |] env with _ -> exit 127 end; | id -> id  let open_process_full cmd env = let (in_read, in_write) = Unix.pipe() in let (out_read, out_write) = Unix.pipe() in let (err_read, err_write) = Unix.pipe() in let inchan = Unix.in_channel_of_descr in_read in let outchan = Unix.out_channel_of_descr out_write in let errchan = Unix.in_channel_of_descr err_read in let pid = open_proc_full cmd env out_read in_write err_write [in_read; out_write; err_read] in Unix.close out_read; Unix.close in_write; Unix.close err_write; pid, (inchan, outchan, errchan) let rec waitpid_non_intr pid = try Unix.waitpid [] pid with Unix.Unix_error (Unix.EINTR, _, _) -> waitpid_non_intr pid  let close proc = try let (inchan, outchan, errchan) as chans = channels proc in match Sys.os_type with | "Win32" -> `STATUS (Unix.close_process_full chans) | _ -> close_in inchan; (try close_out outchan with Sys_error _ -> ()); close_in errchan; begin match proc.pid with | Some pid -> let _, status = waitpid_non_intr pid in `STATUS status | _ -> `ERROR (-3, "No souch process (close)") end with Not_started -> `ERROR (-2, "Not started")  let kill p = channels p |> ignore; match p.pid with | Some pid -> let status = match Sys.os_type with | "Win32" -> let redirect = if p.verbose then " 2>NUL 1>NUL" else "" in let taskkill = sprintf "TASKKILL /F /T /PID %d%s" pid redirect in let exit_code = Sys.command taskkill in if p.verbose then printf "%s (%d)\n%!" taskkill exit_code; Unix.WSIGNALED exit_code | _ -> if p.verbose then printf "kill %d\n%!" pid; Unix.kill pid Sys.sigkill;  let _, status = Unix.waitpid [Unix.WNOHANG; Unix.WUNTRACED] pid in status in p.pid <- None; `STATUS status | _ -> `ERROR (-4, "No souch process (kill)")  let start p = if p.channels = None then begin p.started <- true; match Sys.os_type with | "Win32" -> Mutex.lock p.mutex; let cmd = (sprintf "\"\"%s\" %s\"" !oeproc_command p.cmd_line) in let (inchan, outchan, errchan) as channels = Unix.open_process_full cmd p.env in begin try set_binary_mode_in inchan false; let pid = input_line inchan in p.pid <- Some (int_of_string pid); set_binary_mode_in inchan true; p.channels <- Some channels; Condition.broadcast p.cond; with | End_of_file -> if p.pid = None then (eprintf "Process: End_of_file, PID = None\n%!"); Condition.broadcast p.cond; | ex -> begin eprintf "Process: %s%s\n%!" (if p.pid = None then "PID = None\n" else "") (Printexc.to_string ex); ignore (Unix.close_process_full channels); Condition.broadcast p.cond; end; end; Mutex.unlock p.mutex; if p.verbose then printf "(%d) %s\n%!" (match p.pid with Some pid -> pid | _ -> 0) p.cmd_line; if p.pid = None then (p.started <- false) | _ -> Mutex.lock p.mutex; let pid, (inchan, outchan, errchan)                 = open_process_full p.cmd_line p.env in p.channels <- Some (inchan, outchan, errchan); p.pid <- Some pid; Condition.broadcast p.cond; Mutex.unlock p.mutex; if p.verbose then printf "(%d) %s\n%!" (match p.pid with Some pid -> pid | _ -> assert false) p.cmd_line; end  let getpid p = ignore (channels p); match p.pid with Some pid -> pid | _ -> failwith "Process.getpid"  let cmd_line proc = proc.cmd_line  let create ?(verbose=true) ?(at_exit=ignore) ?(env=Unix.environment()) ~prog ?(args=[]) () = let args = List.map Shell.quote_arg args in let arg_string = String.concat " " args in let cmd_line = (Shell.quote_path prog) ^ " " ^ arg_string in { env      = env; prog     = prog; args     = args; cmd_line = cmd_line; pid      = None; channels = None; mutex    = Mutex.create(); cond     = Condition.create(); at_exit  = at_exit; started  = false; verbose; } end type exit = Status of Unix.process_status | Async of int * (unit -> exit_status) | Error of int * string  let iter_chan (f : in_channel -> unit) chan = try while true do f chan done with End_of_file -> ()  let exec ?(mode=(`SYNC : [`SYNC | `ASYNC | `ASYNC_KILL])) ?env ?(at_exit=(ignore : (exit_status -> unit))) ?process_in ?process_out ?process_err ?(verbose=false) command_line = if verbose then printf "%s\n%!" command_line; match mode with | `SYNC when process_out = None && process_in = None && process_err = None && (env = None || env = Some (Unix.environment())) -> let n = Sys.command command_line in Some (Status (Unix.WEXITED n)) | `SYNC | `ASYNC when process_out = None && process_err = None && (env = None || env = Some (Unix.environment())) -> let inchan = Unix.open_process_in command_line in set_binary_mode_in inchan true; let close () = `STATUS (Unix.close_process_in inchan) in let thi = Thread.create begin fun () -> (match process_in with Some f -> f inchan | _ -> ()); begin match mode with | `ASYNC -> let exit_code = close() in at_exit exit_code | `SYNC | `ASYNC_KILL -> () end; end () in begin match mode with | `SYNC -> Thread.join thi; let exit_code = close() in at_exit exit_code; begin match exit_code with | `STATUS x -> Some (Status x) | `ERROR (a, b) -> Some (Error (a, b)) end; | `ASYNC | `ASYNC_KILL -> None end | _ -> let killable_proc, (inchan, outchan, errchan as channels) = match mode with | `ASYNC_KILL -> let proc = Parallel_process.create ?env ~prog:"" ~verbose () in proc.Parallel_process.cmd_line <- command_line; Parallel_process.start proc; (Some proc), (Parallel_process.channels proc) | `ASYNC | `SYNC -> None, Unix.open_process_full command_line (match env with Some e -> e | _ -> Unix.environment()) in set_binary_mode_in inchan true; set_binary_mode_in errchan true; let close () = match killable_proc with | Some proc -> Parallel_process.close proc; | _ -> `STATUS (Unix.close_process_full channels) in let process_in = match process_in with Some f -> f | _ -> iter_chan (fun chan -> print_endline (input_line chan)) in let process_err = match process_err with Some f -> f | _ -> iter_chan (fun chan -> prerr_endline (input_line chan)) in let tho = match process_out with Some f -> Some (Thread.create f outchan) | _ -> None in let thi = Thread.create process_in inchan in let the = Thread.create begin fun () -> process_err errchan; Thread.join thi; (match tho with Some t -> Thread.join t | _ -> ()); begin match mode with | `ASYNC | `ASYNC_KILL -> let exit_code = close() in at_exit exit_code | `SYNC -> () end; end () in begin match mode with | `SYNC -> Thread.join the; Thread.join thi; (match tho with Some t -> Thread.join t | _ -> ()); let exit_code = close() in at_exit exit_code; begin match exit_code with | `STATUS x -> Some (Status x) | `ERROR (a, b) -> Some (Error (a, b)) end; | `ASYNC -> None | `ASYNC_KILL -> begin match killable_proc with | Some proc -> Some (Async (Parallel_process.getpid proc, (fun () -> Parallel_process.kill proc))) | _ -> Some (Error (-90, "")) end; end;;  let sync ?env ?at_exit ?process_in ?process_out ?process_err ?verbose command_line = match exec ~mode:`SYNC ?env ?at_exit ?process_in ?process_out ?process_err ?verbose command_line with | Some (Error (code, msg)) -> `ERROR (code, msg) | Some (Status x) -> ((`STATUS x) : exit_status) | Some (Async _) | None -> failwith "Spawn.sync"  let async ?env ?at_exit ?process_in ?process_out ?process_err ?verbose command_line = match exec ~mode:`ASYNC ?env ?at_exit ?process_in ?process_out ?process_err ?verbose command_line with | None -> () | Some (Status _) | Some (Error _) | Some (Async _) -> failwith "Spawn.async"  let async_k ?env ?at_exit ?process_in ?process_out ?process_err ?verbose command_line = match exec ~mode:`ASYNC_KILL ?env ?at_exit ?process_in ?process_out ?process_err ?verbose command_line with | Some (Error (code, msg)) -> kprintf failwith "Spawn.async_k (%d, %s)" code msg | Some (Async (pid, kill_f)) -> pid, kill_f | Some (Status _) | None -> failwith "Spawn.async_k" module Parfold = struct  type entry = { pf_cmd         : string; pf_out         : Buffer.t; pf_err         : Buffer.t; pf_process_in  : (in_channel -> unit); pf_process_err : (in_channel -> unit); }  let command ~command ~args ?verbose () = let finished = Condition.create() in let mx_nargs = Mutex.create () in let mx_finished = Mutex.create () in let nargs = ref (List.length args) in let write buf chan = Buffer.add_string buf (input_line chan); Buffer.add_char buf '\n'; in let entries = List.map begin fun arg -> let out = Buffer.create 10 in let err = Buffer.create 10 in { pf_cmd         = sprintf "%s %s" command arg; pf_out         = out; pf_err         = err; pf_process_in  = write out; pf_process_err = write err; } end args in let at_exit _ = Mutex.lock mx_nargs; decr nargs; Mutex.unlock mx_nargs; Mutex.lock mx_finished; if !nargs = 0 then Condition.signal finished; Mutex.unlock mx_finished; in List.iter begin fun entry -> async ?env:None ?verbose ~at_exit ~process_in:(iter_chan entry.pf_process_in) ~process_err:(iter_chan entry.pf_process_err) entry.pf_cmd end entries; Mutex.lock mx_finished; while !nargs > 0 do Condition.wait finished mx_finished done; Mutex.unlock mx_finished; entries;; end  end
 module Task = struct type kind = [ `CLEAN | `CLEANALL | `ANNOT | `COMPILE | `RUN | `OTHER] type phase = Before_clean | Clean | After_clean | Before_compile | Compile | After_compile type t = { mutable et_name                  : string; mutable et_env                   : (bool * string) list; mutable et_env_replace           : bool;                                mutable et_dir                   : string;                                                                                            mutable et_cmd                   : string; mutable et_args                  : (bool * string) list; mutable et_phase                 : phase option; mutable et_always_run_in_project : bool; mutable et_always_run_in_script  : bool; mutable et_readonly              : bool; mutable et_visible               : bool; } let string_of_phase = function | Before_clean -> "Before_clean" | Clean -> "Clean" | After_clean -> "After_clean" | Before_compile -> "Before_compile" | Compile -> "Compile" | After_compile -> "After_compile" let descr_of_phase = function | Before_clean -> "Pre-clean" | Clean -> "Clean" | After_clean -> "Post-clean" | Before_compile -> "Pre-build" | Compile -> "Build" | After_compile -> "Post-build" let phase_of_string = function | "Before_clean" -> Before_clean | "Clean" -> Clean | "After_clean" -> After_clean | "Before_compile" -> Before_compile | "Compile" -> Compile | "After_compile" -> After_compile | _ -> failwith "phase_of_string" let create ~name ~env ?(env_replace=false) ~dir ~cmd ~args ?phase ?(run_in_project=false) ?(run_in_script=true) ?(readonly=false) ?(visible=true) () = { et_name                  = name; et_env                   = env; et_env_replace           = env_replace; et_dir                   = dir; et_cmd                   = cmd; et_args                  = args; et_phase                 = phase; et_always_run_in_project = run_in_project; et_always_run_in_script  = run_in_script; et_readonly              = readonly; et_visible               = visible; }  let handle f task = let tenv = Array.of_list task.et_env in let env = if task.et_env_replace then Array.concat [                        tenv] else (Array.concat [tenv                       ; (Array.map (fun e -> true, e) (Unix.environment()))]) in let env = List.filter (fun (e, _) -> e) (Array.to_list env) in let env = Array.of_list (List.map (fun (_, v) -> v) env) in let prog = task.et_cmd in let dir = if task.et_dir <> "" then task.et_dir else (Sys.getcwd ()) in let args = List.filter (fun (e, _) -> e) task.et_args in let args = List.flatten (List.map (fun (_, v) -> Shell.parse_args v) args) in f ~env ~dir ~prog ~args;; end
 module Build_script_command = struct open Printf type t = [`Show | `Build | `Install | `Uninstall | `Install_lib | `Clean | `Distclean] let commands = [`Show; `Build; `Install; `Uninstall; `Install_lib; `Clean; `Distclean] exception Unrecognized_command of string let string_of_command = function | `Show -> "show" | `Build -> "build" | `Install -> "install" | `Uninstall -> "uninstall" | `Install_lib -> "install-lib" | `Clean -> "clean" | `Distclean -> "distclean" let command_of_string = function | "show" -> `Show | "build" -> `Build | "install" -> `Install | "uninstall" -> `Uninstall | "install-lib" -> `Install_lib | "clean" -> `Clean | "distclean" -> `Distclean | x -> raise (Unrecognized_command (sprintf "`%s' is not a recognized command." x));; let code_of_command = function | `Show -> "`Show" | `Build -> "`Build" | `Install -> "`Install" | `Uninstall -> "`Uninstall" | `Install_lib -> "`Install_lib" | `Clean -> "`Clean" | `Distclean -> "`Distclean" end
-module Oebuild_util = struct open Printf let (!$) = Filename.chop_extension let (//) = Filename.concat let (^^^) = Filename.check_suffix let (<@) = List.mem let win32 = (fun a b -> match Sys.os_type with "Win32" -> a | _ -> b) let may opt f = match opt with Some x -> f x | _ -> () let re_spaces = Str.regexp " +" let redirect_stderr_to_null = if Sys.os_type = "Win32" then " 2>NUL" else " 2>/dev/null"  let format_int n = let n = string_of_int n in let i = ref (String.length n - 3) in let res = ref "" in while !i >= 0 do res := (if !i > 0 then "," else "") ^ (String.sub n !i 3) ^ !res; i := !i - 3; done; (String.sub n 0 (!i + 3)) ^ !res;;  let lpad txt c width = let result = (String.make width c) ^ txt in String.sub result (String.length result - width) width;;  let rpad txt c width = let result = txt ^ (String.make width c) in String.sub result 0 width;;  let dot_leaders ?(prefix="") ?(postfix="") ?(right_align=false) properties = let prefix_length = String.length prefix in let maxl = List.fold_left begin fun maxl (x, _) -> let len = prefix_length + String.length x in max maxl len end 0 properties in let lpad x = if right_align then let len = List.fold_left begin fun maxr (_, y) -> let len = String.length y in max maxr len end 0 properties in lpad x ' ' len else x in List.map (fun (n, v) -> Printf.sprintf "%s : %s%s" (rpad (prefix ^ n ^ " ") '.' maxl) (lpad v) postfix) properties ;;  let crono ?(label="Time") f x = let finally time = Printf.fprintf stdout "[CRONO] %s: %f sec." label (Unix.gettimeofday() -. time); print_newline(); in let time = Unix.gettimeofday() in let result = try f x with e -> begin finally time; raise e end in finally time; result  let remove_dupl l = List.rev (List.fold_left (fun acc y -> if List.mem y acc then acc else y :: acc) [] l)  let remove_file ?(verbose=false) filename = try if Sys.file_exists filename then (Sys.remove filename; if verbose then print_endline filename) with Sys_error ex -> eprintf "%s\n%!" ex  let command ?(echo=true) cmd = let cmd = Str.global_replace re_spaces " " cmd in if echo then (printf "%s\n%!" cmd); let exit_code = Sys.command cmd in Pervasives.flush stderr; Pervasives.flush stdout; exit_code  let rm = win32 "DEL /F /Q" "rm -f"  let copy_file ic oc = let buff = Bytes.create 0x1000 in let rec copy () = let n = input ic buff 0 0x1000 in if n = 0 then () else (output oc buff 0 n; copy()) in copy() let cp ?(echo=true) src dst = let ic = open_in_bin src in let oc = open_out_bin dst in if echo then (printf "%s -> %s\n%!" src dst); let finally () = close_out oc; close_in ic in try copy_file ic oc; finally() with ex -> (finally(); raise ex)  let rec mkdir_p d = if not (Sys.file_exists d) then begin mkdir_p (Filename.dirname d); printf "mkdir -p %s\n%!" d; (Unix.mkdir d 0o755) end   let replace_extension_to_ml filename = if Filename.check_suffix filename ".cmx" then (Filename.chop_extension filename) ^ ".ml" else if Filename.check_suffix filename ".cmi" then (Filename.chop_extension filename) ^ ".mli" else filename ;;  let get_effective_command = let re_verbose = Str.regexp " -verbose" in fun ?(linkpkg=false) ocamlfind -> try let cmd = sprintf "%s%s -verbose %s" ocamlfind (if linkpkg then " -linkpkg" else "") redirect_stderr_to_null in let lines = Shell.get_command_output cmd in let effective_compiler = List.find (fun line -> String.sub line 0 2 = "+ ") lines in let effective_compiler = Str.string_after effective_compiler 2  in let effective_compiler = Str.replace_first re_verbose "" effective_compiler in effective_compiler with Not_found -> ocamlfind ;; end
+module Oebuild_util = struct open Printf let (!$) = Filename.chop_extension let (//) = Filename.concat let (^^^) = Filename.check_suffix let (<@) = List.mem let win32 = (fun a b -> match Sys.os_type with "Win32" -> a | _ -> b) let may opt f = match opt with Some x -> f x | _ -> () let re_spaces = Str.regexp " +" let redirect_stderr_to_null = if Sys.os_type = "Win32" then " 2>NUL" else " 2>/dev/null"  let format_int n = let n = string_of_int n in let i = ref (String.length n - 3) in let res = ref "" in while !i >= 0 do res := (if !i > 0 then "," else "") ^ (String.sub n !i 3) ^ !res; i := !i - 3; done; (String.sub n 0 (!i + 3)) ^ !res;;  let lpad txt c width = let result = (String.make width c) ^ txt in String.sub result (String.length result - width) width;;  let rpad txt c width = let result = txt ^ (String.make width c) in String.sub result 0 width;;  let dot_leaders ?(prefix="") ?(postfix="") ?(right_align=false) properties = let prefix_length = String.length prefix in let maxl = List.fold_left begin fun maxl (x, _) -> let len = prefix_length + String.length x in max maxl len end 0 properties in let lpad x = if right_align then let len = List.fold_left begin fun maxr (_, y) -> let len = String.length y in max maxr len end 0 properties in lpad x ' ' len else x in List.map (fun (n, v) -> Printf.sprintf "%s : %s%s" (rpad (prefix ^ n ^ " ") '.' maxl) (lpad v) postfix) properties ;;  let crono ?(label="Time") f x = let finally time = Printf.fprintf stdout "[CRONO] %s: %f sec." label (Unix.gettimeofday() -. time); print_newline(); in let time = Unix.gettimeofday() in let result = try f x with e -> begin finally time; raise e end in finally time; result  let remove_dupl l = List.rev (List.fold_left (fun acc y -> if List.mem y acc then acc else y :: acc) [] l)  let remove_file ?(verbose=false) filename = try if Sys.file_exists filename then (Sys.remove filename; if verbose then print_endline filename) with Sys_error ex -> eprintf "%s\n%!" ex  let command ?(echo=true) cmd = let cmd = Str.global_replace re_spaces " " cmd in if echo then (printf "%s\n%!" cmd); let exit_code = Sys.command cmd in Stdlib.flush stderr; Stdlib.flush stdout; exit_code  let rm = win32 "DEL /F /Q" "rm -f"  let copy_file ic oc = let buff = Bytes.create 0x1000 in let rec copy () = let n = input ic buff 0 0x1000 in if n = 0 then () else (output oc buff 0 n; copy()) in copy() let cp ?(echo=true) src dst = let ic = open_in_bin src in let oc = open_out_bin dst in if echo then (printf "%s -> %s\n%!" src dst); let finally () = close_out oc; close_in ic in try copy_file ic oc; finally() with ex -> (finally(); raise ex)  let rec mkdir_p d = if not (Sys.file_exists d) then begin mkdir_p (Filename.dirname d); printf "mkdir -p %s\n%!" d; (Unix.mkdir d 0o755) end   let replace_extension_to_ml filename = if Filename.check_suffix filename ".cmx" then (Filename.chop_extension filename) ^ ".ml" else if Filename.check_suffix filename ".cmi" then (Filename.chop_extension filename) ^ ".mli" else filename ;;  let get_effective_command = let re_verbose = Str.regexp " -verbose" in fun ?(linkpkg=false) ocamlfind -> try let cmd = sprintf "%s%s -verbose %s" ocamlfind (if linkpkg then " -linkpkg" else "") redirect_stderr_to_null in let lines = Shell.get_command_output cmd in let effective_compiler = List.find (fun line -> String.sub line 0 2 = "+ ") lines in let effective_compiler = Str.string_after effective_compiler 2  in let effective_compiler = Str.replace_first re_verbose "" effective_compiler in effective_compiler with Not_found -> ocamlfind ;; end
 module Oebuild_table = struct open Printf  type t = (string, float) Hashtbl.t let oebuild_times_filename = ".oebuild" let (^^) filename opt = filename ^ (if opt then ".opt" else ".byt") let find (table : t) filename opt = Hashtbl.find table (filename ^^ opt) let add (table : t) filename opt = Hashtbl.add table (filename ^^ opt) let remove (table : t) filename opt = Hashtbl.remove table (filename ^^ opt)  let read () = if not (Sys.file_exists oebuild_times_filename) then begin let ochan = open_out_bin oebuild_times_filename in Marshal.to_channel ochan (Hashtbl.create 7) []; close_out ochan end; let ichan = open_in_bin oebuild_times_filename in let times = Marshal.from_channel ichan in close_in ichan; (times : t)  let write (times : t) = if Hashtbl.length times > 0 then begin let ochan = open_out_bin oebuild_times_filename in Marshal.to_channel ochan times []; close_out ochan end  let update = let get_last_compiled_time ~opt cache filename = try let time = find cache filename opt in let ext = if opt then "cmx" else "cmo" in let cm = sprintf "%s.%s" (Filename.chop_extension filename) ext in if Sys.file_exists cm then time else begin remove cache filename opt; raise Not_found end with Not_found -> 0.0 in fun ~opt (cache : t) filename -> let ctime = get_last_compiled_time ~opt cache filename in if ctime > 0.0 && ((Unix.stat filename).Unix.st_mtime) >= ctime then begin remove cache filename opt; true end else ctime = 0.0 ;; end
 module Oebuild_dag = struct open Printf module type ENTRY = sig type key type t val equal : t -> t -> bool val hash : t -> int val to_string : t -> string end module Make (Entry : ENTRY) = struct type t = (Entry.key, entry) Hashtbl.t and entry = { key                  : Entry.key; node                 : Entry.t; mutable dependants   : entry list; mutable dependencies : entry list; } let length = Hashtbl.length let set_dependants (dag : t) = Hashtbl.iter begin fun _ entry -> List.iter begin fun node -> node.dependants <- entry :: node.dependants end entry.dependencies end dag let get_leaves : t -> entry list = fun dag -> Hashtbl.fold begin fun _ entry acc -> if entry.dependencies = [] then entry :: acc else acc end dag [];; let remove_leaf : t -> entry -> unit = fun dag leaf -> if Hashtbl.mem dag leaf.key then if leaf.dependencies <> [] then failwith "Not a leaf" else begin Hashtbl.iter begin fun _ entry -> entry.dependencies <- List.filter (fun d -> d.key <> leaf.key) entry.dependencies; end dag; Hashtbl.remove dag leaf.key; end;; end end
 module Oebuild_dep = struct open Printf type ocamldeps = (string, bool * string list) Hashtbl.t exception Loop_found of string let re1 = Str.regexp " ?:\\( \\|$\\)" let re3 = Str.regexp " " let split_nl = Str.split (Str.regexp "\n")  let ocamldep_command ?pp ?(slash=true) ?(search_path="") () = sprintf "%s%s %s -native -one-line %s" (Ocaml_config.ocamldep()) (match pp with Some pp when pp <> "" -> " -pp " ^ pp | _ -> "" ) search_path (if slash then "-slash" else "");;  let ocamldep ?times ?pp ?(ignore_stderr=false) ?(verbose=false) ?slash ?search_path filenames = let table : ocamldeps = Hashtbl.create 7 in if String.trim filenames <> "" then begin let redirect_stderr = if ignore_stderr then Oebuild_util.redirect_stderr_to_null else "" in let cmd = ocamldep_command ?pp ?slash ?search_path () in let cmd = sprintf "%s %s %s" cmd filenames redirect_stderr in if verbose then (printf "%s\n%!" cmd); let text = String.concat "\n" (Shell.get_command_output cmd) in let entries = split_nl text in let replace = match times with | Some (times, opt) ->  fun table key data -> let ml = Oebuild_util.replace_extension_to_ml key in let changed = Oebuild_table.update ~opt times ml in Hashtbl.replace table key (changed, data) | _ -> fun table key data -> Hashtbl.replace table key (true, data) in let open! Oebuild_util in List.iter begin fun entry -> match Str.split re1 entry with | key :: _ when key ^^^ ".cmo" -> () | key :: [] -> replace table key [] | [key; deps] -> let deps = Str.split re3 deps in replace table key deps | _ -> eprintf "%s\n%s\n%!" cmd entry; assert false end entries; end; table;;  let ocamldep_toplevels ?times ?pp ?ignore_stderr ?verbose ?slash ?(search_path="") toplevel_modules = let search_path, filenames = List.fold_left begin fun (sp, fn) x -> let dir = Filename.dirname x in if dir = "." then sp, ("*.ml *.mli" :: fn) else (" -I " ^ dir) :: sp, (sprintf "%s/*.ml %s/*.mli" dir dir) :: fn end ([search_path], []) toplevel_modules in let search_path = String.concat "" (Oebuild_util.remove_dupl search_path) in let filenames = String.concat " " (Oebuild_util.remove_dupl filenames) in ocamldep ?times ?pp ?ignore_stderr ~search_path ?verbose ?slash filenames  let ocamldep_recursive ?times ?pp ?(ignore_stderr=false) ?(verbose=false) ?slash ?search_path toplevel_modules = let dag : ocamldeps = Hashtbl.create 17 in let rec loop ~toplevel_modules = let filenames = String.concat " " toplevel_modules in let ocamldeps = ocamldep ?times ?pp ~ignore_stderr ~verbose ?slash ?search_path filenames in let new_tops = Hashtbl.fold begin fun key (changed, deps) acc -> Hashtbl.add dag key (changed, deps); List.rev_append deps acc end ocamldeps [] in let new_tops = List.filter (fun tl -> not (Hashtbl.mem dag tl)) new_tops in let new_tops = Oebuild_util.remove_dupl new_tops in let new_tops = List.map Oebuild_util.replace_extension_to_ml new_tops in if new_tops <> [] then loop ~toplevel_modules:new_tops in loop ~toplevel_modules; dag  let sort_dependencies (dag : ocamldeps) = let dag = Hashtbl.copy dag in let get_leaves dag = Hashtbl.fold begin fun key (_            , deps) acc -> let deps = List.filter (Hashtbl.mem dag) deps in if deps = [] then key :: acc else acc end dag [] in let rec loop res = match get_leaves dag with | [] -> res | leaves -> List.iter (Hashtbl.remove dag) leaves; loop (List.rev_append leaves res); in List.rev (Oebuild_util.remove_dupl (loop [])) ;;  let find_dependants = let re = Str.regexp "\\(.+\\.mli?\\) ?: ?\\(.*\\)" in let re1 = Str.regexp "\r?\n" in let re2 = Str.regexp " " in fun ~dirname ~modname ->  let dir = if dirname = Filename.current_dir_name then "" else (dirname ^ "/") in let cmd = sprintf "%s -modules -native %s*.ml %s*.mli%s" (Ocaml_config.ocamldep()) dir dir Oebuild_util.redirect_stderr_to_null in printf "%s (%s)\n%!" cmd modname; let ocamldep = String.concat "\n" (Shell.get_command_output cmd) in let entries = Str.split re1 ocamldep in let entries = List.map begin fun entry -> if Str.string_match re entry 0 then begin let filename = Str.matched_group 1 entry in let modules = Str.matched_group 2 entry in (filename, (Str.split re2 modules)) end else (assert false) end entries in let dependants = ref [] in let rec loop modname = List.iter begin fun (filename, modules) -> if List.mem modname modules then begin if not (List.mem filename !dependants) then begin dependants := filename :: !dependants; let prefix = Filename.chop_extension filename in let prefix_mli = prefix ^ ".mli" in if List.mem_assoc prefix_mli entries then (dependants := prefix_mli :: !dependants;); let mdep = String.capitalize_ascii (Filename.basename prefix) in ignore (loop mdep); end end end entries; !dependants in loop modname  let find_dependants ~path ~modname = let dependants = List.map (fun dirname -> find_dependants ~dirname ~modname) path in List.flatten dependants ;;   let find_dep ?pp ?(ignore_stderr=false) ?(echo=true) target = let dir = Filename.dirname target in let filenames = (match dir with "." -> "*.mli" | _ -> dir ^ "/" ^ "*.mli *.mli") ^ " " ^ (match dir with "." -> "*.ml" | _ -> dir ^ "/" ^ "*.ml *.ml") in let search_path = Ocaml_config.expand_includes dir in let table = ocamldep ?pp ~ignore_stderr ~verbose:echo ~search_path filenames in let target = (Filename.chop_extension target) ^ ".cmx" in let anti_loop = ref [] in let result = ref [] in let rec find_chain target = if (List.mem target !anti_loop) && (not (List.mem target !result)) then (raise (Loop_found (String.concat " " (List.map Oebuild_util.replace_extension_to_ml (target :: !anti_loop))))); anti_loop := target :: (List.filter ((<>) target) !anti_loop); try if not (List.mem target !result) then begin match Hashtbl.find table target with | (_, []) -> result := target :: !result; | (_, deps) -> List.iter find_chain deps; result := target :: !result; end with Not_found ->  (kprintf failwith "Dep: %s" target) in find_chain target; List.rev (                                     !result) ;;  let find ?pp ?ignore_stderr ?(echo=true) targets = let deps = List.map (find_dep ?pp ?ignore_stderr ~echo) targets in let deps = List.flatten deps in List.rev (List.fold_left begin fun acc x -> if not (List.mem x acc) then x :: acc else acc end [] deps) ;;   end
@@ -289,10 +289,10 @@ let general_commands = [
 
 let targets = [
   
-  (* 1 *)
+  (* 0 *)
   "common", {
     descr                = "";
-    num                  = 1;
+    num                  = 0;
     id                   = 4;
     output_name          = "common/common";
     target_type          = Library;
@@ -316,14 +316,14 @@ let targets = [
     external_tasks       = [];
     restrictions         = [];
     dependencies         = [];
-    show                 = true;
+    show                 = false;
     rc_filename          = None;
   };
   
-  (* 2 *)
+  (* 0 *)
   "icons", {
     descr                = "";
-    num                  = 2;
+    num                  = 0;
     id                   = 10;
     output_name          = "icons/icons";
     target_type          = Library;
@@ -347,14 +347,14 @@ let targets = [
     external_tasks       = [0];
     restrictions         = [];
     dependencies         = [];
-    show                 = true;
+    show                 = false;
     rc_filename          = None;
   };
   
-  (* 3 *)
+  (* 0 *)
   "oebuildlib", {
     descr                = "";
-    num                  = 3;
+    num                  = 0;
     id                   = 7;
     output_name          = "oebuildlib";
     target_type          = Library;
@@ -378,14 +378,14 @@ let targets = [
     external_tasks       = [];
     restrictions         = [];
     dependencies         = [4];
-    show                 = true;
+    show                 = false;
     rc_filename          = None;
   };
   
-  (* 4 *)
+  (* 1 *)
   "oebuild", {
     descr                = "";
-    num                  = 4;
+    num                  = 1;
     id                   = 5;
     output_name          = "oebuild/oebuild";
     target_type          = Executable;
@@ -413,10 +413,10 @@ let targets = [
     rc_filename          = None;
   };
   
-  (* 5 *)
+  (* 2 *)
   "oeproc", {
     descr                = "";
-    num                  = 5;
+    num                  = 2;
     id                   = 6;
     output_name          = "oeproc/oeproc";
     target_type          = Executable;
@@ -444,10 +444,10 @@ let targets = [
     rc_filename          = None;
   };
   
-  (* 6 *)
+  (* 3 *)
   "gmisclib", {
     descr                = "Miscellaneous widgets based on LablGtk2.";
-    num                  = 6;
+    num                  = 3;
     id                   = 8;
     output_name          = "gmisclib";
     target_type          = Library;
@@ -475,10 +475,10 @@ let targets = [
     rc_filename          = None;
   };
   
-  (* 7 *)
+  (* 3 *)
   "otherwidgets", {
     descr                = "";
-    num                  = 7;
+    num                  = 0;
     id                   = 9;
     output_name          = "otherwidgets";
     target_type          = Library;
@@ -502,14 +502,14 @@ let targets = [
     external_tasks       = [];
     restrictions         = [];
     dependencies         = [8];
-    show                 = true;
+    show                 = false;
     rc_filename          = None;
   };
   
-  (* 8 *)
+  (* 4 *)
   "ocamleditor", {
     descr                = "";
-    num                  = 8;
+    num                  = 4;
     id                   = 12;
     output_name          = "ocamleditor";
     target_type          = Executable;
@@ -537,10 +537,10 @@ let targets = [
     rc_filename          = None;
   };
   
-  (* 9 *)
+  (* 5 *)
   "ocamleditor-bytecode", {
     descr                = "";
-    num                  = 9;
+    num                  = 5;
     id                   = 0;
     output_name          = "ocamleditor";
     target_type          = Executable;
@@ -568,10 +568,10 @@ let targets = [
     rc_filename          = None;
   };
   
-  (* 10 *)
+  (* 6 *)
   "ocamleditor-msvc", {
     descr                = "";
-    num                  = 10;
+    num                  = 6;
     id                   = 15;
     output_name          = "ocamleditor";
     target_type          = Executable;
@@ -599,10 +599,10 @@ let targets = [
     rc_filename          = Some ".\\ocamleditor.opt.resource.rc";
   };
   
-  (* 11 *)
+  (* 7 *)
   "ocamleditor-native", {
     descr                = "";
-    num                  = 11;
+    num                  = 7;
     id                   = 11;
     output_name          = "ocamleditor";
     target_type          = Executable;
@@ -630,10 +630,10 @@ let targets = [
     rc_filename          = None;
   };
   
-  (* 12 *)
+  (* 8 *)
   "ocamleditor-lib", {
     descr                = "";
-    num                  = 12;
+    num                  = 8;
     id                   = 14;
     output_name          = "ocamleditor_lib";
     target_type          = Library;
@@ -661,10 +661,10 @@ let targets = [
     rc_filename          = None;
   };
   
-  (* 13 *)
+  (* 9 *)
   "plugin-remote-bytecode", {
     descr                = "";
-    num                  = 13;
+    num                  = 9;
     id                   = 17;
     output_name          = "../plugins/remote";
     target_type          = Library;
@@ -692,10 +692,10 @@ let targets = [
     rc_filename          = None;
   };
   
-  (* 14 *)
+  (* 10 *)
   "plugin-remote-native", {
     descr                = "";
-    num                  = 14;
+    num                  = 10;
     id                   = 16;
     output_name          = "../plugins/remote";
     target_type          = Plugin;
@@ -723,10 +723,10 @@ let targets = [
     rc_filename          = None;
   };
   
-  (* 15 *)
+  (* 11 *)
   "plugin-dotviewer-bytecode", {
     descr                = "";
-    num                  = 15;
+    num                  = 11;
     id                   = 18;
     output_name          = "../plugins/dot_viewer_svg";
     target_type          = Library;
@@ -754,10 +754,10 @@ let targets = [
     rc_filename          = None;
   };
   
-  (* 16 *)
+  (* 12 *)
   "plugin-dotviewer-native", {
     descr                = "";
-    num                  = 16;
+    num                  = 12;
     id                   = 19;
     output_name          = "../plugins/dot_viewer_svg";
     target_type          = Plugin;
@@ -785,10 +785,10 @@ let targets = [
     rc_filename          = None;
   };
   
-  (* 17 *)
+  (* 13 *)
   "plugin-diff-bytecode", {
     descr                = "";
-    num                  = 17;
+    num                  = 13;
     id                   = 25;
     output_name          = "../plugins/plugin_diff";
     target_type          = Library;
@@ -816,10 +816,10 @@ let targets = [
     rc_filename          = None;
   };
   
-  (* 18 *)
+  (* 14 *)
   "plugin-diff-native", {
     descr                = "";
-    num                  = 18;
+    num                  = 14;
     id                   = 26;
     output_name          = "../plugins/plugin_diff";
     target_type          = Plugin;
@@ -847,10 +847,10 @@ let targets = [
     rc_filename          = None;
   };
   
-  (* 19 *)
+  (* 14 *)
   "prepare-build", {
     descr                = "";
-    num                  = 19;
+    num                  = 0;
     id                   = 20;
     output_name          = "";
     target_type          = External;
@@ -874,14 +874,14 @@ let targets = [
     external_tasks       = [2];
     restrictions         = [];
     dependencies         = [];
-    show                 = true;
+    show                 = false;
     rc_filename          = None;
   };
   
-  (* 20 *)
+  (* 15 *)
   "launcher", {
     descr                = "Utility to open OCaml files from the file manager";
-    num                  = 20;
+    num                  = 15;
     id                   = 22;
     output_name          = "ocamleditorw";
     target_type          = Executable;
@@ -909,10 +909,10 @@ let targets = [
     rc_filename          = Some ".\\ocamleditorw.resource.rc";
   };
   
-  (* 21 *)
+  (* 15 *)
   "tools", {
     descr                = "";
-    num                  = 21;
+    num                  = 0;
     id                   = 13;
     output_name          = "";
     target_type          = External;
@@ -936,14 +936,14 @@ let targets = [
     external_tasks       = [5; 6; 7; 8; 9; 10];
     restrictions         = [];
     dependencies         = [];
-    show                 = true;
+    show                 = false;
     rc_filename          = None;
   };
   
-  (* 22 *)
+  (* 15 *)
   "FINDLIB-TOOLS", {
     descr                = "";
-    num                  = 22;
+    num                  = 0;
     id                   = 27;
     output_name          = "";
     target_type          = External;
@@ -967,7 +967,7 @@ let targets = [
     external_tasks       = [11; 12; 13; 14];
     restrictions         = [];
     dependencies         = [];
-    show                 = true;
+    show                 = false;
     rc_filename          = None;
   };
 ];;

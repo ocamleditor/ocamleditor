@@ -583,7 +583,7 @@
           <cmd>ocaml</cmd>
           <args>
             <arg enabled="true">../tools/editbin.ml</arg>
-            <arg enabled="true">ocamleditorw.exe</arg>
+            <arg enabled="true">ocamleditorw</arg>
           </args>
           <phase>After_compile</phase>
         </task>
