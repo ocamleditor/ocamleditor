@@ -105,7 +105,7 @@ and error_level =
 and error_message = {
   er_filename                 : string;
   er_level                    : error_level;
-  er_line                     : int;
+  er_lines                     : int * int;
   er_characters               : int * int;
   er_location                 : string;
   er_message                  : string;

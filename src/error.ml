@@ -21,7 +21,6 @@
 *)
 
 open Printf
-open Miscellanea
 
 let empty = {Oe.er_warnings = []; er_errors = []}
 

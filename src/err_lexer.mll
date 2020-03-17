@@ -42,12 +42,18 @@ let warning_num_of_letter = function
   | _ -> 0
 }
 
-let lf = "\x0A"
+let lf = '\x0A'
 let sp = '\x20'
 
 rule token = parse
   | ("File" sp '"' ([^'"']+ as filename) "\", line " (['0'-'9']+ as line) ", characters " (['0'-'9']+ as a) '-' (['0'-'9']+ as b) ':' lf) as loc
-    {LOCATION (loc, filename, (int_of_string line), (int_of_string a), (int_of_string b))}
+    {LOCATION (loc, filename, (int_of_string line), (int_of_string line), (int_of_string a), (int_of_string b))}
+
+  | ("File" sp '"' ([^'"']+ as filename) "\", lines " (['0'-'9']+ as line0) '-' (['0'-'9']+ as line1) ", characters " (['0'-'9']+ as a) '-' (['0'-'9']+ as b) ':' lf) as loc
+    {LOCATION (loc, filename, (int_of_string line0), (int_of_string line1), (int_of_string a), (int_of_string b))}
+
+  | ("File" sp '"' ([^'"']+ as filename) "\", line " (['0'-'9']+ as line) ':' lf) as loc
+    {LOCATION (loc, filename, (int_of_string line), (int_of_string line), 0, 0)}
 
   | "Warning" (sp ((['0'-'9']+) as wtype))? ':' sp
     { WARNING (match wtype with None -> 0 | Some x -> int_of_string x)}

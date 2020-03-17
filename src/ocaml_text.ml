@@ -138,7 +138,6 @@ object (self)
           block_start := anon;
           if real <> [] then start := (match real with x :: _ -> x | _ -> assert false);
         end;
-        let [@warning "-4"] _ = "Disable this pattern matching is fragile warning" in
         match token with
         | CLASS | EXTERNAL | EXCEPTION | FUNCTOR
         | LET | MODULE | OPEN | TYPE | VAL | HASH when bol ->

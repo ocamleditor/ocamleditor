@@ -27,7 +27,7 @@ let re_inconsistent_assumptions = Str.regexp
   ".*make[ \t\r\n]+inconsistent[ \t\r\n]+assumptions[ \t\r\n]+over[ \t\r\n]+\\(interface\\|implementation\\)[ \t\r\n]+\\([^ \t\r\n]+\\)[ \t\r\n]*"
 %}
 
-%token <string * string * int * int *int> LOCATION
+%token <string * string * int * int * int *int> LOCATION
 %token <string> LINE_OF_MESSAGE
 %token EOF ERROR
 %token <int> WARNING
@@ -52,9 +52,9 @@ message:
           end else None
         | _ -> None
     in
-    let loc, filename, line, c1, c2 = $1 in {
+    let loc, filename, line0, line1, c1, c2 = $1 in {
       er_filename = filename;
-      er_line = line;
+      er_lines = (line0, line1);
       er_characters = (c1, c2);
       er_level = $2;
       er_location = loc;
