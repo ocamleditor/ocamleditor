@@ -29,6 +29,7 @@ let re_inconsistent_assumptions = Str.regexp
 
 %token <string * string * int * int * int *int> LOCATION
 %token <string> LINE_OF_MESSAGE
+%token <string> ALERT
 %token EOF ERROR
 %token <int> WARNING
 
@@ -58,7 +59,13 @@ message:
       er_characters = (c1, c2);
       er_level = $2;
       er_location = loc;
-      er_message = ((match $2 with Error -> "Error: " | Warning x -> sprintf "Warning %d: " x) ^ message_text);
+      er_message = (
+      (
+        match $2 with 
+        | Error -> "Error: " 
+        | Warning x -> sprintf "Warning %d: " x
+        | Alert s -> "Alert " ^ s ^ ": "
+      ) ^ message_text);
       er_inconsistent_assumptions = inconsistent_assumptions;
     }}
 ;
@@ -68,6 +75,7 @@ line_of_message:
 ;
 level:
   | WARNING { Warning $1 }
+  | ALERT { Alert $1 }
   | ERROR   { Error }
 ;
 

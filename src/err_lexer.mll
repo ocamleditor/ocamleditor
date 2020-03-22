@@ -61,6 +61,8 @@ rule token = parse
   | "Warning" (sp ((['A'-'Z']) as wtype))? ':' sp
     { WARNING (match wtype with None -> 0 | Some x -> warning_num_of_letter x)}
 
+  | "Alert" sp (([^':']+) as msg) ':' sp { ALERT msg }
+
   | "Error:" sp { ERROR }
 
   | eof { EOF }

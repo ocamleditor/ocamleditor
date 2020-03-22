@@ -100,6 +100,7 @@ type error = {
 
 and error_level =
   | Warning of int
+  | Alert of string
   | Error
 
 and error_message = {
