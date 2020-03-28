@@ -49,7 +49,7 @@ and t_elem =
 
 and spec = scope * string * string * t
 
-let sort = List.sort (fun (_, x1, _, _) (_, x2, _, _) -> Pervasives.compare x1 x2);;
+let sort = List.sort (fun (_, x1, _, _) (_, x2, _, _) -> Stdlib.compare x1 x2);;
 
 let blanks = [13;10;32;9]
 let is_blank c = List.mem c blanks

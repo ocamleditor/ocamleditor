@@ -21,7 +21,6 @@
 *)
 
 open Printf
-open Miscellanea
 open Find_text
 
 (** create *)
@@ -158,7 +157,7 @@ let create ~project ~editor ?(buffer : GText.buffer option) ?widget
       | Only_open_files -> radio_only_open_files#set_active true; callback();
       | Specified path -> radio_specified_path#set_active true; callback()
   end;
-  (** Button box *)
+  (* Button box *)
   let bbox = GPack.button_box ~spacing:5 `VERTICAL ~layout:`START ~packing:(hbox#pack ~expand:false) () in
   let button_find = GButton.button ~label:"Find" ~packing:bbox#add () in
   let button_find_all = GButton.button ~label:"Find All" ~packing:bbox#add ~show:(buffer <> None) () in
@@ -171,9 +170,9 @@ let create ~project ~editor ?(buffer : GText.buffer option) ?widget
       entry_find#entry#set_text (status.h_find.model#get
         ~row:(status.h_find.model#get_iter (GTree.Path.create [0]))
         ~column:status.h_find.column);
-    with Failure "GtkTree.TreeModel.get_iter" -> ()
+    with Failure _ -> ()
   end;
-  (** Default values in entries *)
+  (* Default values in entries *)
   let text =
     if search_word_at_cursor then begin
       match editor#get_page `ACTIVE
@@ -214,7 +213,7 @@ let create ~project ~editor ?(buffer : GText.buffer option) ?widget
     else false
   end);
   callback();
-  (**  *)
+  (*  *)
   let widget = match widget with
     | None -> new Find_text_output.widget ~dialog ?buffer ~editor ()
     | Some x -> x

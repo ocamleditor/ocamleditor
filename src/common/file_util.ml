@@ -97,7 +97,7 @@ let get_files_in_directory path =
 let get_directories_and_files ?(directories_first=false) path =
   let entries = Array.to_list (Sys.readdir path) in
   if directories_first then
-    List.sort (fun e1 e2 -> if is_directory (Filename.concat path e1) then -1 else 0) entries
+    List.sort (fun e1 _ -> if is_directory (Filename.concat path e1) then -1 else 0) entries
   else entries;;
 
 let ls ~dir ~pattern =
@@ -129,7 +129,7 @@ let write filename text =
 
 (** Copy file *)
 let copy_file ic oc =
-  let buff = String.create 0x1000 in
+  let buff = Bytes.create 0x1000 in
   let rec copy () =
     let n = input ic buff 0 0x1000 in
     if n = 0 then () else (output oc buff 0 n; copy())

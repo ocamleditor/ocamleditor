@@ -100,12 +100,13 @@ type error = {
 
 and error_level =
   | Warning of int
+  | Alert of string
   | Error
 
 and error_message = {
   er_filename                 : string;
   er_level                    : error_level;
-  er_line                     : int;
+  er_lines                     : int * int;
   er_characters               : int * int;
   er_location                 : string;
   er_message                  : string;

@@ -20,9 +20,6 @@
 
 *)
 
-open Printf
-open Oe_config
-
 let glib_is_utf8, glib_charset = Glib.Convert.get_charset()
 
 let locale_is_utf8, locale_charset =

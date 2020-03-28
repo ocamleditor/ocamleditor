@@ -21,7 +21,6 @@
 *)
 
 open Printf
-open Miscellanea
 
 let forward_non_blank iter =
   let rec f it =
@@ -49,7 +48,7 @@ class error_indication (view : Ocaml_text.view) vscrollbar global_gutter =
     tag_error, tag_warning, tag_warning_unused
   in
   let tag_error, tag_warning, tag_warning_unused = create_tags () in
-  let is_warning_unused = function
+  let is_warning_unused = function [@warning "-4"]
     | Oe.Warning 20 | Oe.Warning 26 | Oe.Warning 27 -> true
     | _ -> false
   in
@@ -99,7 +98,7 @@ object (self)
     tag_warning_unused <- tg_warning_unused
 
   method tag_of_error error =
-    match error.Oe.er_level with
+    match [@warning "-4"] error.Oe.er_level with
       | Oe.Error -> tag_error
       | Oe.Warning 20 | Oe.Warning 26 | Oe.Warning 27 -> tag_warning_unused
       | _ -> tag_warning
@@ -122,7 +121,7 @@ object (self)
     let iter = buffer#get_iter_at_mark (`MARK mark) in
     buffer#block_signal_handlers ();
     (* Protect the tooltip from the mark_set signal emission of place_cursor which otherwise destroys it *)
-    buffer#place_cursor iter;
+    buffer#place_cursor ~where:iter;
     view#draw_current_line_background ~force:true iter;
     buffer#unblock_signal_handlers ();
     Gmisclib.Idle.add ~prio:300 (fun () -> self#tooltip ~sticky:true ~need_focus:false (`ITER iter));
@@ -131,16 +130,22 @@ object (self)
   method private do_apply_tag messages kind =
     (*Prf.crono Prf.prf_error_indication_appy_tag begin fun () ->*)
       let tview = (view :> Text.view) in
-      let messages = List.sort (fun e1 e2 -> Pervasives.compare e1.Oe.er_line e2.Oe.er_line) messages in
+      let messages = List.sort (fun e1 e2 -> Stdlib.compare e1.Oe.er_lines e2.Oe.er_lines) messages in
       List.map begin fun error ->
-        let line = error.Oe.er_line - 1 in
+        let l1, l2 = error.Oe.er_lines in
+        let l1, l2 = l1 - 1, l2 - 1 in
         let c1, c2 = error.Oe.er_characters in
-        let iter = buffer#get_iter (`LINE line) in
+
+        let iter = buffer#get_iter (`LINE l1) in
         let text = iter#get_text ~stop:buffer#end_iter in
-        let c1o = Convert.offset_from_pos text ~pos:c1 in
-        let c2o = Convert.offset_from_pos text ~pos:c2 in
-        let start = iter#forward_chars c1o in
-        let stop = iter#forward_chars c2o in
+        let offset = Convert.offset_from_pos text ~pos:c1 in
+        let start = iter#forward_chars offset in
+
+        let iter = buffer#get_iter (`LINE l2) in
+        let text = iter#get_text ~stop:buffer#end_iter in
+        let offset = Convert.offset_from_pos text ~pos:c2 in
+        let stop = iter#forward_chars offset in
+
         let tag = self#tag_of_error error in
         buffer#apply_tag tag ~start ~stop;
         let mark_start = buffer#create_mark(* ~name:(Gtk_util.create_mark_name "Error_indication.do_apply_tag1")*) start in
@@ -214,9 +219,9 @@ object (self)
 
   method private find_message iter tags =
     try
-      List.find (fun (start, stop, error) -> iter#equal (buffer#get_iter_at_mark (`MARK start))) tags
+      List.find (fun (start, _stop, _error) -> iter#equal (buffer#get_iter_at_mark (`MARK start))) tags
     with Not_found -> begin
-      List.find begin fun (start, stop, error) ->
+      List.find begin fun (start, stop, _error) ->
         iter#in_range ~start:(buffer#get_iter_at_mark (`MARK start)) ~stop:(buffer#get_iter_at_mark (`MARK stop))
       end tags
     end
@@ -226,8 +231,8 @@ object (self)
       let iter = match location with `XY (x, y) -> view#get_iter_at_location ~x ~y | `ITER it -> it in
       if not iter#ends_line then begin
         try
-          (** When the tooltip is already shown, do nothing *)
-          ignore (List.find begin fun (start, stop, popup) ->
+          (* When the tooltip is already shown, do nothing *)
+          ignore (List.find begin fun (start, stop, _popup) ->
             try
               let start = buffer#get_iter_at_mark (`MARK start) in
               let stop = buffer#get_iter_at_mark (`MARK stop) in
@@ -238,7 +243,7 @@ object (self)
         with Not_found -> begin
           try
             (*Prf.crono Prf.prf_error_indication_tooltip begin fun () ->*)
-              (** Find message by iter *)
+              (* Find message by iter *)
               let (start, stop, error), border_color, bg_color =
                 try
                   (self#find_message iter tag_error_bounds),
@@ -249,7 +254,7 @@ object (self)
                     Oe_config.warning_popup_border_color, Oe_config.warning_popup_bg_color
                 end
               in
-              (** Create popup *)
+              (* Create popup *)
               self#hide_tooltip();
               let popup = GWindow.window ~kind:`POPUP ~type_hint:`MENU ~decorated:false ~focus_on_map:false ~border_width:1 ~show:false () in
               tag_popup <- (start, stop, popup) :: tag_popup;
@@ -264,7 +269,7 @@ object (self)
                 (Print_type.markup3 error_message) in
               let label = GMisc.label ~markup ~xpad:5 ~ypad:5 ~packing:ebox#add () in
               label#misc#modify_font_by_name Preferences.preferences#get.Preferences.pref_compl_font;
-              (** Positioning *)
+              (* Positioning *)
               begin
                 popup#move ~x:(-1000) ~y:(-1000);
                 match location with
@@ -296,14 +301,14 @@ object (self)
       let width = if !Plugins.diff = None then width0 else Oe_config.global_gutter_size in
       let x0 = width0 - width in
       let alloc = vscrollbar#misc#allocation in
-      (** Clean up *)
+      (* Clean up *)
       drawable#set_foreground view#gutter.Gutter.bg_color;
       drawable#rectangle ~filled:true ~x:x0 ~y:0 ~width ~height ();
-      (** Rectangles at the top and bottom *)
+      (* Rectangles at the top and bottom *)
       drawable#set_foreground view#gutter.Gutter.fg_color;
       drawable#rectangle ~filled:false ~x:x0 ~y:0 ~width:(width - 1) ~height:(alloc.Gtk.width - 1) ();
       drawable#rectangle ~filled:false ~x:x0 ~y:(height - alloc.Gtk.width) ~width:(width - 1) ~height:(alloc.Gtk.width - 2) ();
-      (** Rectangle at the top in different color *)
+      (* Rectangle at the top in different color *)
       let color = if self#has_errors#get then (Some Oe_config.error_underline_color)
         else if self#has_warnings#get then (Some Oe_config.warning_popup_border_color)
         else None (*(Some Oe_config.global_gutter_no_errors)*)
@@ -312,14 +317,14 @@ object (self)
         drawable#set_foreground color;
         drawable#rectangle ~filled:true ~x:(x0 + 1) ~y:1 ~width:(width - 2) ~height:(alloc.Gtk.width - 2) ();
       end;
-      (** Draw markers *)
+      (* Draw markers *)
       let height = height - 2 * alloc.Gtk.width in
       let line_count = float buffer#line_count in
       let height = float height in
       (*let width = width - 1 in*)
-      (** Comments *)
+      (* Comments *)
       if Oe_config.global_gutter_comments_enabled && tag_error_bounds = [] && view#mark_occurrences_manager#table = [] then begin
-        match Comments.scan_utf8 (buffer#get_text ()) with
+        match [@warning "-4"] Comments.scan_utf8 (buffer#get_text ()) with
           | Comments.Utf8 comments ->
             Gdk.GC.set_dashes drawable#gc ~offset:0 [1; 1];
             List.iter begin fun (start, stop, _, odoc) ->
@@ -344,7 +349,7 @@ object (self)
             end comments
           | _ -> assert false
       end;
-      (** Draw a marker *)
+      (* Draw a marker *)
       let draw_marker start color is_unused =
         let color =
           if is_unused
@@ -367,11 +372,11 @@ object (self)
           drawable#lines !lines
         end else drawable#rectangle ~filled:true ~x:x0 ~y ~width ~height:3 ();
       in
-      (** Warnings *)
+      (* Warnings *)
       List.iter begin fun (start, _, warning) ->
         draw_marker start Oe_config.warning_popup_border_color (is_warning_unused warning.Oe.er_level);
       end tag_warning_bounds;
-      (** Mark Occurrences *)
+      (* Mark Occurrences *)
       begin
         match Preferences.preferences#get.Preferences.pref_editor_mark_occurrences with
           | true, color ->
@@ -396,7 +401,7 @@ object (self)
             end view#mark_occurrences_manager#table;
           | _ -> ()
       end;
-      (** Errors *)
+      (* Errors *)
       List.iter begin fun (start, _, _) ->
         draw_marker start Oe_config.error_underline_color false;
       end tag_error_bounds;
@@ -430,7 +435,7 @@ object (self)
               done;
               drawable#lines !segments;
             end;
-          with Exit | Invalid_argument("PointArray.new") -> ()
+          with Exit | Invalid_argument _ -> ()
         end;
         start := !start#forward_line
       done;
@@ -473,21 +478,21 @@ object (self)
   initializer
     self#set_phase();
     self#set_flag_underline flag_underline;
-    (** Hide tooltip *)
+    (* Hide tooltip *)
     let unsticky _ = if sticky_popup then (self#hide_tooltip()); false in
-    view#event#connect#focus_out ~callback:unsticky;
-    view#event#connect#button_press ~callback:unsticky;
-    view#event#connect#leave_notify ~callback:unsticky;
-    (** View: on expose draw underline for warnings *)
+    ignore (view#event#connect#focus_out ~callback:unsticky : GtkSignal.id);
+    ignore (view#event#connect#button_press ~callback:unsticky : GtkSignal.id);
+    ignore (view#event#connect#leave_notify ~callback:unsticky : GtkSignal.id);
+    (* View: on expose draw underline for warnings *)
     let signal_expose =
       ref (view#event#connect#after#expose ~callback:(fun ev -> (*Prf.crono Prf.prf_error_indication_view_expose*)self#expose ev))
     in
     ignore (vscrollbar#connect#value_changed ~callback:(fun () -> view#misc#handler_block !signal_expose));
     ignore (vscrollbar#connect#after#value_changed ~callback:(fun () ->
         Gmisclib.Idle.add ~prio:300 (fun () -> view#misc#handler_unblock !signal_expose)));
-    (** Global_gutter: expose *)
+    (* Global_gutter: expose *)
     global_gutter#event#connect#expose ~callback:(fun _ -> (*Prf.crono Prf.prf_paint_global_gutter*) self#paint_global_gutter (); false);
-    (** Global_gutter: button_press  *)
+    (* Global_gutter: button_press  *)
     global_gutter#event#connect#after#button_press ~callback:begin fun ev ->
       if (GdkEvent.Button.button ev = 1 && GdkEvent.get_type ev = `BUTTON_PRESS) then begin
         let alloc = vscrollbar#misc#allocation in
@@ -495,7 +500,7 @@ object (self)
         if y > float (alloc.Gtk.width) then begin
           let window = global_gutter#misc#window in
           let drawable = new GDraw.drawable window in
-          let width, height = drawable#size in
+          let _, height = drawable#size in
           let height = float (height - 2 * alloc.Gtk.width) in
           let y = y -. (float alloc.Gtk.width) in
           let tooltip, iter =
@@ -509,7 +514,7 @@ object (self)
               end
           in
           view#scroll_lazy iter;
-          buffer#place_cursor iter;
+          buffer#place_cursor ~where:iter;
           if tooltip then begin
             Gmisclib.Idle.add ~prio:300 (fun () -> self#tooltip ~sticky:true (`ITER iter));
           end;
@@ -520,7 +525,7 @@ object (self)
               | Some (start, _, _) -> buffer#get_iter_at_mark (`MARK start)
           in
           view#scroll_lazy iter;
-          buffer#place_cursor iter;
+          buffer#place_cursor ~where:iter;
         end;
       end;
       false

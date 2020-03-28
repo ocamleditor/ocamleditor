@@ -52,7 +52,7 @@ object (self)
     end);
     ignore (button_remove#connect#clicked ~callback:entry_list#remove_selected);
     ignore (button_select#connect#clicked ~callback:begin fun () ->
-      let env = List.sort Pervasives.compare (Array.to_list (Unix.environment ())) in
+      let env = List.sort Stdlib.compare (Array.to_list (Unix.environment ())) in
       let env = List.map (fun x -> false, x) env in
       let window = GWindow.window ~modal:true ~title:"Select Environment Variables" ~width:640 ~height:400 ~position:`CENTER () in
       Gmisclib.Window.GeometryMemo.add ~key:"dialog-select-environment-variables" ~window Preferences.geometry_memo;

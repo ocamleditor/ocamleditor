@@ -108,7 +108,7 @@ object (self)
       changed#call();
       ignore(self#append_empty());
       view#set_cursor next vc_value;
-    with Failure("GtkTree.TreeModel.get_iter") -> ()
+    with Failure _ -> ()
 
   initializer
     let is_last path =

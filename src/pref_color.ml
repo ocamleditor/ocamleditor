@@ -149,7 +149,7 @@ object (self)
   method read pref =
     button_tag_bg_popup#set_color (GDraw.color (`NAME pref.Preferences.pref_bg_color_popup));
     button_tag_fg_popup#set_color (GDraw.color (`NAME pref.Preferences.pref_fg_color_popup));
-    tags <- List.sort Pervasives.compare pref.Preferences.pref_tags;
+    tags <- List.sort Stdlib.compare pref.Preferences.pref_tags;
     button_default_bg#set_color (GDraw.color (`NAME (fst pref.Preferences.pref_bg_color)));
     tag_model#clear();
     List.iter begin fun tag ->

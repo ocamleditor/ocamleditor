@@ -20,9 +20,7 @@
 
 *)
 
-open Printf
 open Oe
-open Prj
 
 let bookmarks_filename = Filename.concat App_config.ocamleditor_user_home "bookmarks-1.5.0"
 
@@ -53,7 +51,7 @@ let rec remove bm =
               | Some buffer ->
                 GtkText.Buffer.delete_mark buffer mark;
           end
-        | _ -> ()
+        | Offset _ -> ()
     end;
     bm.bm_loc <- (Offset 0);
   with Not_found -> ()
@@ -86,7 +84,7 @@ let mark_to_offset bm =
                 | None -> assert false
                 | Some buffer -> GtkText.Buffer.delete_mark buffer m;
             end
-          | _ -> assert false
+          | Offset _ -> assert false
       end;
       bm.bm_loc <- loc;
       -1

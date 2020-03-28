@@ -19,6 +19,7 @@
   along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 *)
+[@@@warning "-48"]
 
 open Prj
 open Printf
@@ -194,7 +195,7 @@ object (self)
       Project.save ~editor project;
       self#project_write_history();
       Symbol.Cache.save ~project;
-      Project.unload_path project Config.load_path;
+      Project.unload_path project;
       List.iter (fun p -> Autosave.delete ~filename:p#get_filename ()) editor#pages;
     end
 
@@ -202,7 +203,7 @@ object (self)
     self#project_close();
     let proj = Project.load filename in
     current_project#set (Some proj);
-    Project.load_path proj Config.load_path;
+    Project.load_path proj;
     editor#set_history_switch_page_locked true;
     (*crono ~label:"close_all" *)editor#close_all ();
     editor#pack_outline (Cmt_view.empty());
@@ -259,7 +260,7 @@ object (self)
     match dialog#run () with
       | `OK ->
         List.iter begin fun filename ->
-          let filename, save = if filename ^^ Prj.old_extension then (Filename.chop_extension filename) ^ Prj.default_extension, true else filename, false in
+          let filename, save = if filename ^^^ Prj.old_extension then (Filename.chop_extension filename) ^ Prj.default_extension, true else filename, false in
           let proj = self#project_open filename in
           Quick_file_chooser.add_roots ~roots:[Filename.dirname filename] ~filter:Dialog_find_file.filter;
           if save then (Project.save ~editor proj);
@@ -696,7 +697,7 @@ object (self)
         (*  *)
         finalize();
         GMain.Main.quit();
-        Pervasives.exit 0
+        Stdlib.exit 0
       in
       let pages = List.filter (fun p -> p#buffer#modified) editor#pages in
       let pages = List.map (fun x -> true, x) pages in
@@ -723,7 +724,7 @@ object (self)
     end |> ignore;
     let find_custom_button = Toolbox.populate ~browser:self ~packing:toolbox#pack in
     let _ = Editor.set_menu_item_nav_history_sensitive := self#set_menu_item_nav_history_sensitive in
-    (** Menubar items *)
+    (* Menubar items *)
     let open! Menu_types in
     let menu_item_view_menubar = ref [] in
     let menu_item_view_toolbar = ref [] in
@@ -746,7 +747,7 @@ object (self)
       ~menu_item_view_messages ~menu_item_view_hmessages () in
     menu <- Some menu_items;
     List.iter menubar#append menu_items.menu_items;
-    (** Update Window menu with files added to the editor *)
+    (* Update Window menu with files added to the editor *)
     ignore (editor#connect#add_page ~callback:begin fun page ->
       begin
         match page#file with None -> () | Some file ->
@@ -773,7 +774,7 @@ object (self)
         menu.window_radio_group <- Some item#group;
       end;
     end);
-    (** Update Window menu with files removed from the editor *)
+    (* Update Window menu with files removed from the editor *)
     ignore (editor#connect#remove_page ~callback:begin fun page ->
       self#with_current_project begin fun project ->
         Project.remove_file project page#get_filename;
@@ -788,13 +789,13 @@ object (self)
         end;
       end
     end);
-    (**  *)
+    (*  *)
     ignore (editor#connect#switch_page ~callback:begin fun page ->
       Gaux.may menu ~f:begin fun menu ->
         let basename = Filename.basename page#get_filename in
         kprintf (Menu.set_label menu.file_rename) "Rename \xC2\xAB%s\xC2\xBB" basename;
         menu.file_switch#misc#set_sensitive
-          ((basename ^^ ".ml") || (basename ^^ ".mli"));
+          ((basename ^^^ ".ml") || (basename ^^^ ".mli"));
         kprintf (Menu.set_label menu.file_close) "Close \xC2\xAB%s\xC2\xBB" basename;
         kprintf (Menu.set_label menu.file_close_all) "Close All Except \xC2\xAB%s\xC2\xBB" basename;
         kprintf (Menu.set_label menu.file_revert) "Revert to Saved \xC2\xAB%s\xC2\xBB" basename;
@@ -804,7 +805,7 @@ object (self)
           | _ -> ()
       end;
     end);
-    (** Update Project menu with project history *)
+    (* Update Project menu with project history *)
     ignore (self#connect#project_history_changed ~callback:begin fun history ->
       Gaux.may menu ~f:begin fun menu ->
         Gmisclib.Idle.add ~prio:600 begin fun () ->
@@ -813,7 +814,7 @@ object (self)
         end;
         let project_names = List.map (fun x -> x, Filename.chop_extension (Filename.basename x)) history.File_history.content in
         let project_names = List.sort (fun (_, x1) (_, x2) ->
-          compare (String.lowercase x1) (String.lowercase x2)) project_names in
+          compare (String.lowercase_ascii x1) (String.lowercase_ascii x2)) project_names in
         List.iter begin fun (filename, label) ->
           Gmisclib.Idle.add ~prio:600 begin fun () ->
             let item = GMenu.check_menu_item ~label ~packing:menu.project#add () in
@@ -828,21 +829,21 @@ object (self)
 
     Editor_menu.menu_item_view_menubar := (fun () -> menu_item_view_menubar);
 
-    (** Load current project *)
+    (* Load current project *)
     let rec load_current_proj history =
       match history with [] -> () | filename :: _ ->
         if Sys.file_exists filename then (ignore (self#project_open filename))
         else (load_current_proj (List.tl history))
     in
     File_history.read project_history;
-    project_history.File_history.content <- List.filter (fun x -> (x ^^ Prj.default_extension)) project_history.File_history.content;
+    project_history.File_history.content <- List.filter (fun x -> (x ^^^ Prj.default_extension)) project_history.File_history.content;
     project_history_changed#call project_history;
     load_current_proj project_history.File_history.content;
 
-    (** Toolbar signals *)
+    (* Toolbar signals *)
     toolbar#bind_signals self;
 
-    (**  *)
+    (*  *)
     self#set_menu_item_nav_history_sensitive();
     self#connect#menubar_visibility_changed ~callback:begin fun visible ->
       List.iter begin fun (mi, sign) ->
@@ -897,7 +898,7 @@ object (self)
     Messages.hmessages#connect#visible_changed ~callback:update_view_hmessages_items |> ignore;
     self#connect#hvmessages_visibility_changed ~callback:update_view_hmessages_items |> ignore;
 
-    (** Editor *)
+    (* Editor *)
     paned#pack1 ~resize:true ~shrink:true editor#coerce;
     let update_toolbar_save () =
       let exists_unsaved = List.exists (fun p -> p#view#buffer#modified) editor#pages in
@@ -966,7 +967,7 @@ object (self)
     (* Initialize Quick_file_chooser *)
     let roots = List.map Filename.dirname project_history.File_history.content in
     Quick_file_chooser.init ~roots ~filter:Dialog_find_file.filter;
-    (** Geometry settings *)
+    (* Geometry settings *)
     let height = ref 700 in
     let width = ref 1052 in
     let pos_x = ref None in

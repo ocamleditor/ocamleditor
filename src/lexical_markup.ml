@@ -41,7 +41,7 @@ module Range = struct
       else None
     else range_intersection r2 r1;;
 
-  let (^^) = range_intersection
+  let (^^^) = range_intersection
 end
 
 open Range
@@ -151,7 +151,7 @@ let parse pref =
             | INFIXOP3 _
             | INFIXOP4 _
             | PREFIXOP _
-            | SHARP
+            | HASH
                 -> "infix"
             | LABEL _
             | OPTLABEL _
@@ -203,7 +203,7 @@ let parse pref =
           close_pending();
           (*  *)
           let add with_span =
-            match List.fold_left (fun acc h -> match h ^^ range with None -> acc | x -> x) None highlights with
+            match List.fold_left (fun acc h -> match h ^^^ range with None -> acc | x -> x) None highlights with
               | Some (a, b) when a < b ->
                 if with_span then begin
                   if a = lstart && b = lstop then begin

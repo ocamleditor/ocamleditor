@@ -153,7 +153,7 @@ object (self)
         let targets = List.sort (fun bc1 bc2 ->
           if bc1.Target.default then (-1)
           else if bc2.Target.default then 1
-          else (Pervasives.compare bc1.Target.id bc2.Target.id)) targets in
+          else (Stdlib.compare bc1.Target.id bc2.Target.id)) targets in
         match targets with
           | bc :: _ ->
             let rc = Rconf.create ~name ~id ~target_id:bc.Target.id in
@@ -176,7 +176,7 @@ object (self)
           let rconfigs = self#to_list() in
           let index = min last_path_index (List.length rconfigs - 1) in
           view#selection#select_path (GTree.Path.create [index])
-        with Failure "hd" -> ()
+        with Failure _ -> ()
       end);
       (** b_run#connect#clicked*)
       ignore (b_run#connect#clicked ~callback:begin fun () ->

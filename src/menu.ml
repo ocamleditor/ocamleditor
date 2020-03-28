@@ -195,7 +195,7 @@ let edit ~browser ~group ~flags
     ];
     editor#with_current_page begin fun page ->
       let name = page#get_filename in
-      let sensitive = name ^^ ".ml" || name ^^ ".mli" in
+      let sensitive = name ^^^ ".ml" || name ^^^ ".mli" in
       List.iter (fun i -> i#misc#set_sensitive sensitive) [
         (comment :> GMenu.menu_item);
         (templates :> GMenu.menu_item);

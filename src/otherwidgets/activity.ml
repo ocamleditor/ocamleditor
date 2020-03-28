@@ -19,7 +19,7 @@
   along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 *)
-
+[@@@warning "-48"]
 
 type kind = Annot | Symbol | Outline | Task | Compile_buffer | Other
 

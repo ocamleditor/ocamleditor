@@ -25,7 +25,7 @@ open Printf
 
 let (!$) = Filename.chop_extension
 let (//) = Filename.concat
-let (^^) = Filename.check_suffix
+let (^^^) = Filename.check_suffix
 let (<@) = List.mem
 let win32 = (fun a b -> match Sys.os_type with "Win32" -> a | _ -> b)
 let may opt f = match opt with Some x -> f x | _ -> ()
@@ -104,8 +104,8 @@ let command ?(echo=true) cmd =
   let cmd = Str.global_replace re_spaces " " cmd in
   if echo then (printf "%s\n%!" cmd);
   let exit_code = Sys.command cmd in
-  Pervasives.flush stderr;
-  Pervasives.flush stdout;
+  Stdlib.flush stderr;
+  Stdlib.flush stdout;
   exit_code
 
 (** Remove files with wildcards *)
@@ -113,7 +113,7 @@ let rm = win32 "DEL /F /Q" "rm -f"
 
 (** Copy file *)
 let copy_file ic oc =
-  let buff = String.create 0x1000 in
+  let buff = Bytes.create 0x1000 in
   let rec copy () =
     let n = input ic buff 0 0x1000 in
     if n = 0 then () else (output oc buff 0 n; copy())
@@ -127,7 +127,7 @@ let cp ?(echo=true) src dst =
   try copy_file ic oc; finally() with ex -> (finally(); raise ex)
 
 (** mkdir *)
-let rec mkdir_p ?(echo=true) d =
+let rec mkdir_p d =
   if not (Sys.file_exists d) then begin
     mkdir_p (Filename.dirname d);
     printf "mkdir -p %s\n%!" d;

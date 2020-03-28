@@ -37,12 +37,12 @@ let shortname filename =
   let basename = Filename.basename filename in
   if Preferences.preferences#get.Preferences.pref_tab_label_type = 1 then begin
     try Filename.chop_extension basename
-    with Invalid_argument("Filename.chop_extension") -> basename
+    with Invalid_argument _ -> basename
   end else basename
 
 let markup_label filename =
   let shortname = shortname filename in
-  if filename ^^ ".mli" then "<i>"^shortname^"</i>" else shortname
+  if filename ^^^ ".mli" then "<i>"^shortname^"</i>" else shortname
 
 let create_small_button ?button ?tooltip ~pixbuf ?callback ?packing ?show () =
   let button =
@@ -292,7 +292,7 @@ object (self)
 
   method set_code_folding_enabled x =
     let is_ml = match file with None -> false | Some file ->
-      file#basename ^^ ".ml" || file#basename ^^ ".mli" in
+      file#basename ^^^ ".ml" || file#basename ^^^ ".mli" in
     ocaml_view#code_folding#set_enabled (x && is_ml);
 
   method redisplay () =
@@ -470,7 +470,7 @@ object (self)
     let filename = self#get_filename in
     if project.Prj.autocomp_enabled
     && ((project.Prj.in_source_path filename) <> None)
-    && (filename ^^ ".ml" || filename ^^ ".mli") then begin
+    && (filename ^^^ ".ml" || filename ^^^ ".mli") then begin
       buffer#set_changed_after_last_autocomp false;
       Autocomp.compile_buffer ~project ~editor ~page:self ?join ();
     end else begin

@@ -1,4 +1,8 @@
-
+  This is a friendly fork, which for the moment is mostly updates to reflect
+  the changes in OCaml from 4.01 to 4.10. The original README follows after
+  this paragraph. It is mostly accurate except for the OCaml version. The
+  required on is 4.10. It was only tested under Linux with opam installed
+  dependencies.
 
                                   OCamlEditor
 

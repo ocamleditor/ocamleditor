@@ -427,7 +427,7 @@ let build ~compilation ~package ~includes ~libs ~other_mods ~outkind ~compile_on
       let use_findlib = package <> "" in
       if use_findlib then
         let thread = if thread then "-thread" else if vmthread then "-vmthread" else "" in
-        let ocaml_c_opt = try Filename.chop_extension ocaml_c_opt with Invalid_argument "Filename.chop_extension" -> ocaml_c_opt in
+        let ocaml_c_opt = try Filename.chop_extension ocaml_c_opt with Invalid_argument _ -> ocaml_c_opt in
         let ocamlfind = sprintf "ocamlfind %s -package %s %s" ocaml_c_opt package thread in
         let compiler = crono4 ~label:"Oebuild, get_effective_command(compiler)" get_effective_command ocamlfind in
         let linker =
@@ -443,7 +443,7 @@ let build ~compilation ~package ~includes ~libs ~other_mods ~outkind ~compile_on
   (*  *)
   let times = Table.read () in
   let build_exit =
-    (** Compile *)
+    (* Compile *)
     let deps, deps_ml, compilation_exit =
       if serial
       then
@@ -452,11 +452,11 @@ let build ~compilation ~package ~includes ~libs ~other_mods ~outkind ~compile_on
       else parallel_compile ~compilation ~times ~compiler ~cflags:!cflags ~includes:!includes ~toplevel_modules ~verbose ~jobs ()
     in
     (*if verbose >= 4 then Printf.printf "SORTED DEPENDENCIES:\n[%s]\n\n%!" (String.concat "; " deps);*)
-    (** Link *)
+    (* Link *)
     if compilation_exit = 0 then begin
       let opt = compilation = Native in
       let find_objs filenames =
-        let objs = List.filter (fun x -> x ^^ ".cmx") filenames in
+        let objs = List.filter (fun x -> x ^^^ ".cmx") filenames in
         if opt then objs else List.map (fun x -> (Filename.chop_extension x) ^ ".cmo") objs
       in
       let mods = split_space other_mods in
@@ -464,9 +464,9 @@ let build ~compilation ~package ~includes ~libs ~other_mods ~outkind ~compile_on
       let obj_deps =
         if dontlinkdep then
           find_objs (List.map (fun ml ->
-              if ml ^^ ".ml"
+              if ml ^^^ ".ml"
               then (Filename.chop_extension ml) ^ ".cmx"
-              else if ml ^^ ".mli" then (Filename.chop_extension ml) ^ ".cmi"
+              else if ml ^^^ ".mli" then (Filename.chop_extension ml) ^ ".cmi"
               else ml) toplevel_modules)
         else mods @ (find_objs deps)
       in
@@ -540,7 +540,7 @@ let clean ~deps () =
 (** distclean - doesn't remove executables *)
 let distclean () =
   let cwd = Sys.getcwd() in
-  let exists_suffix sufs name = List.exists (fun suf -> name ^^ suf) sufs in
+  let exists_suffix sufs name = List.exists (fun suf -> name ^^^ suf) sufs in
   let rec clean_dir dir =
     if not ((Unix.lstat dir).Unix.st_kind = Unix.S_LNK) then begin
       let files = Sys.readdir dir in

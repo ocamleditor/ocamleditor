@@ -20,9 +20,9 @@
 
 *)
 
-open Printf
 open GUtil
 
+(** TODO: Investigate the use of GADT for type action, to reduce the use of `assert false` *)
 type action =
   | Insert      of action_insert
   | Delete      of action_delete
@@ -58,13 +58,13 @@ object (self)
   val mutable pending_action : action option = None;
   val mutable enabled = false
   val mutable sign_insert = buffer#connect#insert_text ~callback:(fun _ _ -> ())
-  val mutable sign_delete = buffer#connect#delete_range ~callback:(fun ~start ~stop -> ())
+  val mutable sign_delete = buffer#connect#delete_range ~callback:(fun ~start:_ ~stop:_ -> ())
 
   initializer
     GtkSignal.disconnect text_buffer sign_insert;
     GtkSignal.disconnect text_buffer sign_delete;
 
-    (** Clear the redo stack at the beginning of a user action *)
+    (* Clear the redo stack at the beginning of a user action *)
     ignore (buffer#connect#begin_user_action ~callback:begin fun () ->
       if enabled then begin
         current_stack <- undos;
@@ -73,12 +73,12 @@ object (self)
       end
     end);
 
-    (** Before insert *)
+    (* Before insert *)
     sign_insert <- buffer#connect#insert_text ~callback:begin fun start text ->
       let length = Glib.Utf8.length text in
       try
         let insert_action =
-          match pending_action with
+          match [@warning "-4"] pending_action with
             | Some ((Insert a) as pending) when start#equal (buffer#get_iter (`OFFSET a.pos)) ->
               if length > 1 || text = "\n" then begin
                 self#push pending (a.pos, a.pos);
@@ -104,10 +104,10 @@ object (self)
       with Exit -> ()
     end;
 
-    (** Before delete *)
+    (* Before delete *)
     sign_delete <- buffer#connect#delete_range ~callback:begin fun ~start ~stop ->
       let delete_action =
-        match pending_action with
+        match [@warning "-4"] pending_action with
           | Some ((Insert a) as pending) ->
             self#push pending (a.pos, a.pos);
             {text=""; where=start#offset; bounds=(0,0); prev=start#offset}
@@ -127,18 +127,18 @@ object (self)
       if current_stack == undos then (can_undo_changed#call self#can_undo) else (can_redo_changed#call self#can_redo);
       let b1, b2 = buffer#selection_bounds in
       if b1#equal start && b2#equal stop then begin
-        (** Selected text *)
+        (* Selected text *)
         let text = buffer#get_text ~start ~stop () in
         let length = Glib.Utf8.length text in
         delete_action.text <- text;
         delete_action.bounds <- (length, 0);
         self#push (Delete delete_action) (start#offset, start#offset);
       end else if (start#equal (buffer#get_iter `INSERT)) then begin
-        (** Del *)
+        (* Del *)
         delete_action.text <- delete_action.text ^ (buffer#get_text ~start ~stop ());
         delete_action.bounds <- (let b = fst delete_action.bounds in (b, b));
       end else begin
-        (** Backspace *)
+        (* Backspace *)
         let text = buffer#get_text ~start ~stop () in
         let length = Glib.Utf8.length text in
         delete_action.text <- text ^ delete_action.text;
@@ -149,11 +149,11 @@ object (self)
       end;
     end;
 
-    (** The Undo and Redo signals *)
-    ignore (self#connect#undo ~callback:(fun ~name -> self#pop undos));
-    ignore (self#connect#redo ~callback:(fun ~name -> self#pop redos));
+    (* The Undo and Redo signals *)
+    ignore (self#connect#undo ~callback:(fun ~name:_ -> self#pop undos));
+    ignore (self#connect#redo ~callback:(fun ~name:_ -> self#pop redos));
 
-    (** Undo initially disabled *)
+    (* Undo initially disabled *)
     self#disable();
 
   method private push pending (b1, b2) =
@@ -162,7 +162,7 @@ object (self)
     if current_stack == undos then (can_undo_changed#call self#can_undo) else (can_redo_changed#call self#can_redo);
 
   method private push_pending_action () =
-    match pending_action with
+    match [@warning "-4"] pending_action with
       | None -> ()
       | Some ((Insert a) as pending) -> self#push pending (a.pos, a.pos)
       | Some ((Delete a) as pending) -> self#push pending (a.where, a.where)
@@ -230,7 +230,7 @@ object (self)
         let ins = (buffer#get_iter `INSERT) in
         let sel = (buffer#get_iter `SEL_BOUND) in
         let block_name, b1, b2 =
-          match Stack.top stack with (* Cannot raise Stack.Empty *)
+          match [@warning "-4"] Stack.top stack with (* Cannot raise Stack.Empty *)
             | (Begin_block name), b1, b2 -> name, b1, b2
             | (End_block name), b1, b2 -> name, b1, b2
             | _, b1, b2 -> "", b1, b2
@@ -258,7 +258,7 @@ object (self)
     if enabled && current_block_name <> "" then
       self#push_pending_action();
       begin
-        match Stack.top current_stack with
+        match [@warning "-4"] Stack.top current_stack with
           | (Begin_block name), _, _ when name = current_block_name ->
             ignore (Stack.pop current_stack) (* remove empty blocks from the stack *)
           | _ ->
@@ -294,10 +294,10 @@ object (self)
   method is_enabled = enabled
 
   method can_undo = (not (Stack.is_empty undos))
-    || (match pending_action with Some e when current_stack == undos -> true | _ -> false)
+    || (match pending_action with Some _ when current_stack == undos -> true | _ -> false)
 
   method can_redo = (not (Stack.is_empty redos))
-    || (match pending_action with Some e when current_stack == redos -> true | _ -> false)
+    || (match pending_action with Some _ when current_stack == redos -> true | _ -> false)
 
   method redo () = self#revert redos
   method undo () = self#revert undos
@@ -308,7 +308,7 @@ object (self)
 end
 
 and manager_signals ~undo ~redo ~can_undo_changed ~can_redo_changed =
-object (self)
+object
   inherit ml_signals [ undo#disconnect; redo#disconnect; can_undo_changed#disconnect; can_redo_changed#disconnect ]
   method can_undo_changed ~callback = can_undo_changed#connect ~after ~callback
   method can_redo_changed ~callback = can_redo_changed#connect ~after ~callback

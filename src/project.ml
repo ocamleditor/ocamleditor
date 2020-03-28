@@ -191,13 +191,11 @@ let get_load_path proj =
   end includes in
   ocamllib :: (List.filter ((<>) ocamllib) ((proj.root // default_dir_src) :: paths))
 
-(** [load_path proj where] adds to [where] the {i load path} of [proj].*)
-let load_path proj where = where := !where @ (get_load_path proj)
+(** [load_path proj] adds to module [Load_path] the {i load path} of [proj].*)
+let load_path proj = List.iter Load_path.add_dir (get_load_path proj)
 
-(** [unload_path proj where] removes from [where] the {i load path} of [proj].*)
-let unload_path proj where =
-  let path = get_load_path proj in
-  where := List.filter (fun w -> not (List.mem w path)) !where
+(** [unload_path proj] removes from [Load_path] the {i load path} of [proj].*)
+let unload_path proj = List.iter Load_path.remove_dir (get_load_path proj)
 
 (** output_xml *)
 let output_xml filename xml =
@@ -236,7 +234,7 @@ let save ?editor proj =
   let active_filename =
     match editor with None -> ""
       | Some editor ->
-        proj.files <- List.map begin fun (file, (scroll_offset, offset)) ->
+        proj.files <- List.map begin fun (file, (_scroll_offset, _offset)) ->
           file,
           match editor#get_page (`FILENAME file#filename) with
             | None -> 0, 0
@@ -257,7 +255,7 @@ let save ?editor proj =
     if not (Sys.file_exists (proj.root // default_dir_bak)) then (Unix.mkdir (proj.root // default_dir_bak) 0o777);
     if not (Sys.file_exists (proj.root // default_dir_tmp)) then (Unix.mkdir (proj.root // default_dir_tmp) 0o777);
     proj.modified <- false;
-    unload_path proj Config.load_path;
+    unload_path proj;
     proj.open_files <- List.rev_map begin fun (file, (scroll_offset, offset)) ->
       let active = active_filename = file#filename in
       begin
@@ -281,7 +279,7 @@ let save ?editor proj =
     (* restore non persistent values *)
     proj.root <- root;
     proj.files <- files;
-    load_path proj Config.load_path;
+    load_path proj;
   with Unix.Unix_error (err, _, _) -> print_endline (Unix.error_message err);;
 
 (** save_bookmarks *)

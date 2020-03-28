@@ -23,8 +23,6 @@
 
 open Prj
 open Build_script
-open Task
-open Target
 
 class widget ~project ?packing () =
   (* Model for install task *)

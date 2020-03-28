@@ -19,6 +19,7 @@
   along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 *)
+[@@@warning "-48"]
 
 let icon_normal =
   GdkPixbuf.from_xpm_data [|

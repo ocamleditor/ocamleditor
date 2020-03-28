@@ -61,12 +61,13 @@ module Util = struct
   let join_lines =
     let re = Str.regexp "[\r\n]+ *" in
     fun buf ->
-      let comments = Comments.scan buf in
+      (* TODO: find something less ugly than this use of Bytes.(..) *)
+      let comments = Comments.scan Bytes.(to_string buf) in
       List.iter begin fun (b, e, _) ->
         let len = e - b in
         String.blit (String.make len ' ') 0 buf b len
       end comments;
-      let buf = Str.global_replace re " " buf in
+      let buf = Str.global_replace re " " Bytes.(to_string buf) in
       buf;;
 
   let header = ref ""
@@ -111,9 +112,9 @@ let create_script () =
     ] in
     List.iter begin fun name ->
       let buf = Util.replace_header (File_util.read (name ^ ".ml")) in
-      let buf = Util.join_lines buf in
+      let buf = Util.join_lines Bytes.(of_string buf) in
       let name = Filename.basename name in
-      fprintf ochan "module %s = struct " (String.capitalize name);
+      fprintf ochan "module %s = struct " (String.capitalize_ascii name);
       output_string ochan buf;
       output_string ochan "end\n";
     end modules;

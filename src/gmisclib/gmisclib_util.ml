@@ -20,7 +20,6 @@
 
 *)
 
-
 open Printf
 
 exception Mark_deleted
@@ -40,9 +39,9 @@ let fade_window =
         opa := !opa +. incr;
         !opa <= stop;
       in
-      ignore (callback());
-      ignore (GMain.Timeout.add ~ms:20 ~callback)
-  end else (fun ?incr ?stop window -> (* window#set_opacity 1.0;  *)window#show())
+      ignore (callback() : bool);
+      ignore (GMain.Timeout.add ~ms:20 ~callback : GMain.Timeout.id)
+  end else (fun ?incr:_ ?stop:_ window -> window#show())
 
 (** esc_destroy_window *)
 let esc_destroy_window window =

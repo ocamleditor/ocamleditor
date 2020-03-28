@@ -63,7 +63,7 @@ let state_changed_callback
   end;
   editor#with_current_page begin fun page ->
     let name = Filename.basename page#get_filename in
-    if name ^^ ".ml" || name ^^ ".mli" then begin
+    if name ^^^ ".ml" || name ^^^ ".mli" then begin
       kprintf (set_label project_comp_file) "Compile \xC2\xAB%s\xC2\xBB" name;
       project_comp_file#misc#set_sensitive true
     end else begin

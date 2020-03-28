@@ -74,8 +74,8 @@ let window ~editor ~page () =
                    we delete the target file and close the editor page of
                    the target file *)
                 Sys.remove filename;
-                let lc_filename = String.lowercase filename in
-                List_opt.may_find (fun p -> String.lowercase p#get_filename = lc_filename)
+                let lc_filename = String.lowercase_ascii filename in
+                List_opt.may_find (fun p -> String.lowercase_ascii p#get_filename = lc_filename)
                   editor#pages editor#close ();
               end;
               create_file()

@@ -21,13 +21,15 @@
 *)
 
 open GUtil
-open Printf
 
 (** signals *)
-class hover () = object (self) inherit [(GText.iter * GText.iter) option ref * GText.iter] signal () as super end
-and activate () = object (self) inherit [GText.iter] signal () as super end
-and signals ~hover ~activate =
-object (self)
+class hover () = object
+  inherit [(GText.iter * GText.iter) option ref * GText.iter] signal ()
+end
+and activate () = object
+  inherit [GText.iter] signal ()
+end
+and signals ~hover ~activate = object
   inherit ml_signals [hover#disconnect; activate#disconnect; ]
   method hover = hover#connect ~after
   method activate = activate#connect ~after
@@ -73,7 +75,7 @@ object (self)
       end else (self#remove_hover ());
       false
     end);
-    ignore(view#event#connect#after#leave_notify ~callback:begin fun ev ->
+    ignore(view#event#connect#after#leave_notify ~callback:begin fun _ev ->
       self#remove_hover (); false
     end);
     ignore(view#buffer#connect#changed ~callback:begin fun () ->

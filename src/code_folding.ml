@@ -121,7 +121,7 @@ object (self)
             end fp in
             (* Join folding points to comments *)
             let comments = List.map (fun (a, b, _) -> (a, Some b)) comments in
-            let fp = List.sort (fun (a, _) (b, _) -> Pervasives.compare a b) (fp @ comments) in
+            let fp = List.sort (fun (a, _) (b, _) -> Stdlib.compare a b) (fp @ comments) in
             folding_points <- fp;
             (*List.iter (fun (x, y) -> Printf.printf "%d - %d -- %d - %d (%d, %d, %d)\n%!"
               x (match y with Some x -> x | _ -> -1)
@@ -412,7 +412,7 @@ object (self)
             self#fold_offsets o1 o2;
             true
           | Region -> false
-          | _ -> true
+          | Out -> true
       end;
     with Exit -> true
 
@@ -442,7 +442,7 @@ object (self)
       | (a, Some b) -> a <= i && i <= b
       | _ -> false
     end folding_points in
-    let points = List.sort (fun (a1, _) (a2, _) -> Pervasives.compare a2 a1) points in
+    let points = List.sort (fun (a1, _) (a2, _) -> Stdlib.compare a2 a1) points in
     match points with
       | (o1, Some o2) :: _ -> self#fold_offsets o1 o2
       | _ -> ()
@@ -525,7 +525,8 @@ object (self)
                   | Some m when m = mark -> ()
                   | _ -> self#highlight_remove ~window ();
               end;
-            | _ -> self#highlight_remove ~window ()
+            | Region
+            | Out -> self#highlight_remove ~window ()
         end
       | _ -> ()
 
@@ -588,7 +589,7 @@ object (self)
           | _ -> false
       end else false
     end);
-    ignore (view#misc#connect#query_tooltip ~callback:begin fun ~x ~y ~kbd _ ->
+    ignore (view#misc#connect#query_tooltip ~callback:begin fun ~x ~y ~kbd:_ _ ->
       if enabled then (self#highlight x y);
       false
     end);

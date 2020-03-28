@@ -76,15 +76,11 @@ module Longident = struct
     | Ldot _ -> true
     | Lapply _ -> true
 
-  let mod_path = function
-    | Lident _ -> None
-    | Ldot (x, _) -> Some x
-    | Lapply (x, _) -> Some x
-
   let of_type_expr typ name =
-    match mod_path typ with
-      | Some path -> Ldot (path, name)
-      | _ -> Longident.Lident name
+    match typ with
+    | Ldot (path, _) -> Ldot (path, name)
+    | Lapply (path, _) -> Ldot (path, name)
+    | Lident _ -> Longident.Lident name
 
 end
 
@@ -99,9 +95,7 @@ let string_of_kind = function
   | Open _ -> "Open"
 
 let string_of_loc loc =
-  let filename, a, b = Location.get_pos_info loc.loc_start in
-  let _, c, d = Location.get_pos_info loc.loc_end in
-  (*sprintf "%s, %d:%d(%d) -- %d:%d(%d)" filename a b (loc.loc_start.pos_cnum) c d (loc.loc_end.pos_cnum);;*)
+  let filename, _, _ = Location.get_pos_info loc.loc_start in
   sprintf "%s:%d--%d" filename (loc.loc_start.pos_cnum) (loc.loc_end.pos_cnum);;
 
 let linechar_of_loc loc =
@@ -122,7 +116,7 @@ let (<==<) loc offset = loc.loc_start.pos_cnum <= offset && (offset <= loc.loc_e
 let read_cmt ~project ~filename:source ?(timestamp=0.) ?compile_buffer () =
   try
     let result =
-      let ext = if source ^^ ".ml" then Some ".cmt" else if source ^^ ".mli" then Some ".cmti" else None in
+      let ext = if source ^^^ ".ml" then Some ".cmt" else if source ^^^ ".mli" then Some ".cmti" else None in
       match ext with
         | Some ext ->
           Opt.map_default (Project.tmp_of_abs project source) None begin fun (tmp, relname) ->
@@ -172,15 +166,16 @@ let print_ident ?filter {ident_kind; ident_loc; _} =
       | Ext_ref -> "---"
       | Open scope -> "scope: " ^ (string_of_loc scope)
   in
+  let { Asttypes.txt; loc } = ident_loc in
   match filter with
-    | Some x when x <> ident_loc.txt -> ()
+    | Some x when x <> txt -> ()
     | _ ->
       printf "%-11s: %-30s (use: %-12s) (%-19s) %s\n%!"
-        (String.uppercase (string_of_kind ident_kind))
+        (String.uppercase_ascii (string_of_kind ident_kind))
         ident_loc.txt
-        (string_of_loc ident_loc.loc)
+        (string_of_loc loc)
         loc'
-        ident_loc.loc.loc_start.pos_fname;
+        loc.loc_start.pos_fname;
 ;;
 
 

@@ -55,7 +55,7 @@ struct
             Some out_filename
           | _ -> None
       end;
-    with Invalid_argument("Filename.chop_extension") -> None;;
+    with Invalid_argument _ -> None;;
 
   (*(** read *)
   let read (project, filename) =
@@ -412,24 +412,28 @@ struct
       match elem.Type.ty_kind with
         | Type.Type_abstract ->
           begin
-            match elem.Type.ty_manifest with
-              | Some te ->
+            match [@warning "-4"] elem.Type.ty_manifest with
+              | Some (Odoc_type.Other te) ->
                 Odoc_info.reset_type_names();
                 insert_type " = ";
                 insert_type (Odoc_info.string_of_type_expr te)
               | _ -> ()
           end;
         | Type.Type_variant vcl ->
-          let (!!!) vc =
-            List.map begin fun arg ->
-              Odoc_info.reset_type_names();
-              let te = Odoc_info.string_of_type_expr arg in
-              Str.global_replace (Str.regexp_string ((Name.father elem.Type.ty_name) ^ ".")) "" te
-            end vc.Type.vc_args
+          let (!!!) = function
+            | { Odoc_type.vc_args = Odoc_type.Cstr_tuple core_types; _ } ->
+              `Tuple, List.map begin fun core_type ->
+                Odoc_info.reset_type_names ();
+                let te = Odoc_info.string_of_type_expr core_type in
+                Str.global_replace (Str.regexp_string ((Name.father elem.Type.ty_name) ^ ".")) "" te
+              end core_types
+            | { Odoc_type.vc_args = Odoc_type.Cstr_record fields; _ } ->
+             	Odoc_info.reset_type_names ();
+              `Record, [Odoc_info.string_of_record fields] (* ??? More *)
           in
           insert_type " = \n";
           let maxlength = List.fold_left begin fun acc vc ->
-            let args = !!! vc in
+            let _, args = !!! vc in
             let args = String.concat " * " args in
             let len = String.length vc.Type.vc_name + String.length args + 4 in
             max acc len
@@ -437,13 +441,15 @@ struct
           List.iter begin fun vc ->
             buffer#insert ~tags:[!!`TYPE; !!`INDENT] "  | ";
             let code = vc.Type.vc_name ^ begin
-              if vc.Type.vc_args <> [] then begin
-                " of " ^ (let args = !!! vc in String.concat " * " args)
-              end else "";
+                let kind, args = !!! vc in
+                if kind = `Tuple then
+                  if args = [] then "" else " of " ^ String.concat " * " args
+                else
+                  " of { " ^ String.concat " * " args ^ " }"
             end in
             insert_type (Miscellanea.rpad code ' ' maxlength);
             match vc.Type.vc_text with
-              | Some text -> insert_type_element_comment text
+              | Some { i_desc = Some text; _ } -> insert_type_element_comment text
               | _ -> insert_newline ~buffer (!!)
           end vcl
         | Type.Type_record rfl ->
@@ -475,10 +481,12 @@ struct
             buffer#insert ~tags:[!!`TYPE; !!`INDENT]
               (Miscellanea.rpad (!!! rf) ' ' maxlength_te);
             match rf.Type.rf_text with
-              | Some text -> insert_type_element_comment text
+              | Some { i_desc = Some text; _ } -> insert_type_element_comment text
               | _ -> insert_newline ~buffer (!!)
           end rfl;
           insert_type "}";
+        (* since 4.02.0  TODO *)
+        | Type.Type_open -> ()
     end;
     Lexical.tag buffer ~start:(buffer#get_iter_at_mark (`MARK m1)) ~stop:(buffer#get_iter `INSERT);
     buffer#delete_mark (`MARK m1);
@@ -582,6 +590,7 @@ end
   let insert ~(buffer : GText.buffer) ~kind elem =
     let (!!) = create_tags ~buffer in
     let insert_info = Info.insert_info (!!) buffer in
+    let [@warning "-4"] _ = "Disable this pattern matching is fragile warning" in
     begin
       match elem with
         | Search.Res_type elem
@@ -692,13 +701,15 @@ end
             insert_elem (`Info elem.Exception.ex_info) begin fun () ->
               buffer#insert ~tags:tag_type2 "exception ";
               buffer#insert ~tags:tag_type2 (get_relative elem.Exception.ex_name);
-              if elem.Exception.ex_args <> [] then begin
-                buffer#insert ~tags:tag_type2 " of ";
-                Odoc_info.reset_type_names();
-                let args = List.map Odoc_info.string_of_type_expr elem.Exception.ex_args in
-                let args = List.map (fun x -> Str.global_replace (!~~ ((Name.father elem.Exception.ex_name) ^ ".")) "" x) args in
-                buffer#insert ~tags:tag_type2 (String.concat " * " args);
-              end;
+              match elem.Exception.ex_args with
+              | Odoc_type.Cstr_tuple [] -> ()
+              | Odoc_type.Cstr_tuple core_types ->
+                ( buffer#insert ~tags:tag_type2 " of "
+                ; Odoc_info.reset_type_names ()
+                ; buffer#insert ~tags:tag_type2 (Odoc_info.string_of_type_list " * " core_types)
+                )
+              | Odoc_type.Cstr_record fields ->
+                buffer#insert ~tags:tag_type2 (Odoc_info.string_of_record fields) (* ??? More *)
             end;
           | Module.Element_type elem ->
             insert_elem (`Info elem.Odoc_type.ty_info) begin fun () ->
@@ -711,6 +722,8 @@ end
                 fix_ocamldoc := None;
               | _ -> with_tag_odoc (fun () -> insert_text buffer elem (!!)));
       (*end ()*)
+          (* Since 4.02.0 -- TODO *)
+          | Module.Element_type_extension _ -> ()
     end (Module.module_elements odoc);
     (*  *)
     insert_newline ~buffer (!!);
@@ -719,12 +732,3 @@ end
     end
   ;;
 end
-
-
-
-
-
-
-
-
-

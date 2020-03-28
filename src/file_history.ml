@@ -52,7 +52,7 @@ let read h =
       begin
         try
           while true do
-            let elem = Pervasives.input_line ichan in
+            let elem = Stdlib.input_line ichan in
             if Sys.file_exists elem then (h.content <- elem :: h.content)
           done;
         with End_of_file -> ()

@@ -20,7 +20,6 @@
 
 *)
 
-open Printf
 open Miscellanea
 
 (*let table = Hashtbl.create 17
@@ -162,7 +161,7 @@ let preload ~project =
     GtkThread2.async (Activity.add Activity.Annot) name;
     try
       let src_path = Project.path_src project in
-      let files = File_util.readdirs (*~links:false*) (Some (fun x -> x ^^ ".ml")) src_path in
+      let files = File_util.readdirs (*~links:false*) (Some (fun x -> x ^^^ ".ml")) src_path in
       (*List.iter (fun filename -> ignore (find ~filename ())) files;*)
       List.iter (fun filename -> Binannot_ident_scan.scan ~project ~filename ()) files;
       finally()

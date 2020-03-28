@@ -1,3 +1,4 @@
+[@@@warning "-48"]
 open GdkKeysyms
 
 let show ~view () =
@@ -42,8 +43,8 @@ let show ~view () =
           w#destroy();
         with e -> Dialog.display_exn ~parent:view e
       in
-      button_ok#connect#clicked ~callback:(fun () -> callback(); w#destroy());
-      button_cancel#connect#clicked ~callback:w#destroy;
+      button_ok#connect#clicked ~callback:(fun () -> callback(); w#destroy()) |> ignore;
+      button_cancel#connect#clicked ~callback:w#destroy |> ignore;
       w#event#connect#key_press ~callback:begin fun ev ->
         let key = GdkEvent.Key.keyval ev in
         if key = _Return then begin
@@ -53,7 +54,7 @@ let show ~view () =
           w#destroy();
           true
         end else false;
-      end;
+      end |> ignore;
       line#misc#grab_focus();
       Gaux.may ~f:(fun x -> w#set_transient_for x#as_window) (GWindow.toplevel view);
       w#present()

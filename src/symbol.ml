@@ -39,7 +39,7 @@ let get_module_name symbol =
   match symbol.sy_id with x :: _ -> x | _ -> assert false
 
 let is_method symbol =
-  match symbol.sy_kind with
+  match [@warning "-4"] symbol.sy_kind with
     | Pmethod | Pmethod_private | Pmethod_virtual | Pmethod_private_virtual -> true
     | _ -> false
 
@@ -66,19 +66,19 @@ module Modules = struct
 
   let read' (filter, path) =
     let len = String.length filter in
-    let filter = String.lowercase filter in
+    let filter = String.lowercase_ascii filter in
     (* Read .cmi files from path *)
     let filenames = Array.to_list (try Sys.readdir path with (Sys_error _) -> [||]) in
     let module_files =
       List.filter begin fun x ->
         (len = 0 || String.length x >= len) &&
-        (String.lowercase (Str.first_chars x len)) = filter (* TODO: improve *)
-        && x ^^ ".cmi"
+        (String.lowercase_ascii (Str.first_chars x len)) = filter (* TODO: improve *)
+        && x ^^^ ".cmi"
       end filenames
     in
     (* Convert filename to module name *)
     let module_names =
-      List.map (fun basename -> String.capitalize (Filename.chop_suffix basename ".cmi"), path // basename) module_files
+      List.map (fun basename -> String.capitalize_ascii (Filename.chop_suffix basename ".cmi"), path // basename) module_files
     in (module_names, Unix.gettimeofday ())
   ;;
 
@@ -120,10 +120,12 @@ module Signature = struct
   let kind_of_typekind = function
     | Type_variant _ -> Ptype_variant
     | Type_abstract -> Ptype_abstract
-    | Type_record _ -> Ptype_record;;
+    | Type_record _ -> Ptype_record
+    (* Since 4.02.0 - TODO ?? *)
+    | Type_open -> Ptype
 
   let find_path modlid =
-    Misc.find_in_path_uncap !Config.load_path (modlid^(".cmi"))
+    Misc.find_in_path_uncap (Load_path.get_paths ()) (modlid^(".cmi"))
 
   let read_class_declaration ~filename ~parent_id ~id cd =
     let buf = Buffer.create 1024 in
@@ -140,6 +142,7 @@ module Signature = struct
       cty_path   = cty_path; _
     } ->*)
       begin
+        let [@warning "-4"] _ = "Disabel this pattern matching is fragile warning" in
         match Printtyp.tree_of_class_declaration id cd Types.Trec_first with
           | Osig_class (_(*vir_flag*), _(*name*), _(*params*), clt, _(*rs*)) ->
             let rec parse_class_type = function
@@ -160,7 +163,7 @@ module Signature = struct
                   | _ -> None
                   (*| Ocsg_value (name, virt, priv, ty) -> None | Ocsg_constraint (t1, t2) -> None*)
                 end csil
-              | Octy_fun (_, _, clt) -> parse_class_type clt
+              | Octy_arrow (_, _, clt) -> parse_class_type clt
               | _ -> []
             in parse_class_type clt
           | _ -> []
@@ -175,7 +178,9 @@ module Signature = struct
       let symbols = read' (signature, filename, modlid) in
       let symbols = List.map (fun it -> {it with sy_id = parent_longid @ (List.tl it.sy_id)}) symbols in
       symbols
-    | Mty_functor (_(*ident*), _(*md*), mc) -> read_module_type ~filename ~parent_longid mc
+    | Mty_functor ( _, mc) -> read_module_type ~filename ~parent_longid mc
+    (* Added in 4.02.0 *)
+    | Mty_alias _  -> []
 
   and read' (sign, filename, modlid) =
     let buf = Buffer.create 1024 in
@@ -197,17 +202,17 @@ module Signature = struct
       }
     in
     List.fold_left begin function acc -> function
-      | Sig_value (id, value_description) ->
+      | Sig_value (id, value_description, _visibility) ->
         (print Pvalue id (Printtyp.value_description id formatter) value_description) :: acc;
-      | Sig_type (id, type_declaration, _) ->
+      | Sig_type (id, type_declaration, _, _visibility) ->
         let acc =
           begin match type_declaration.type_manifest with
             | None ->
               let kind = kind_of_typekind type_declaration.type_kind in
               (print kind id (Printtyp.type_declaration id formatter) type_declaration) :: acc
             | Some te ->
-              begin match te.desc with
-                | Tobject _(*(te, me)*) -> acc (* Niente definizione dei tipi oggetto *)
+              begin [@warning "-4"] match te.desc with
+                | Tobject _ -> acc (* Niente definizione dei tipi oggetto *)
                 | _ ->
                   let kind = kind_of_typekind type_declaration.type_kind in
                   (print kind id (Printtyp.type_declaration id formatter) type_declaration) :: acc
@@ -217,13 +222,18 @@ module Signature = struct
         (* Costruttori di tipi varianti *)
         begin match type_declaration.type_kind with
           | Type_variant cc ->
-            List.fold_left begin fun acc (ident, tel, _(* TODO: Types.type_expr option *)) ->
+            List.fold_left begin fun acc
+                                     { cd_id = ident; cd_args = tel; cd_res = teo; _ } ->
               let n = Ident.name ident in
+              let print_type_expr = print Pconstructor ident (Printtyp.type_expr formatter) in
+              let is_gadt = match teo with Some _ -> true | None -> false in
+              (* UGLY HACK *)
+              let tel = match tel with Cstr_tuple ct -> ct | Cstr_record _ -> [] in
               let symbol =
                 if List.length tel = 0 then
                   print Pconstructor ident ignore ()
                 else begin
-                  let items = List.map (print Pconstructor ident (Printtyp.type_expr formatter)) tel in
+                  let items = List.map print_type_expr tel in
                   ListLabels.fold_left
                     ~f:begin fun acc it -> {
                       sy_id        = acc.sy_id;
@@ -241,31 +251,32 @@ module Signature = struct
                 end
               in
               let d = replace_first ["^ \\* ", ""] symbol.sy_type in
-              let d = n^(if String.length d > 0 then " of "^d else "") in
-              let d = d ^ " : " ^ (Ident.name id) in
+              let is_bare = String.length d = 0 in
+              let d = n ^ (if is_gadt then " : " else (if is_bare then "" else " of ")) ^ d in
+              let d = match teo with Some te -> d ^ (if is_bare then "" else " -> ") ^ (print_type_expr te).sy_type | None -> d in
               {symbol with sy_type=d} :: acc
             end acc cc
           | _ -> acc
         end
-      | Sig_exception (id, exception_declaration) ->
-        (print Pexception id (Printtyp.exception_declaration id formatter)
-          exception_declaration) :: acc;
-      | Sig_module (id, module_type, _) ->
+      | Sig_typext (id, extension_constructor, _status, _visibility) ->
+        (print Pexception id (Printtyp.extension_constructor id formatter)
+          extension_constructor) :: acc;
+      | Sig_module (id, _presence, module_declaration, _, _visibility) ->
         let module_item = print Pmodule id (Printtyp.ident formatter) id in
         let module_items = read_module_type
-          ~filename  ~parent_longid:module_item.sy_id module_type
+          ~filename  ~parent_longid:module_item.sy_id module_declaration.md_type
         in
         module_item :: module_items @ acc;
-      | Sig_modtype (id, _) ->
+      | Sig_modtype (id, _, _visibility) ->
         (print Pmodtype id (Printtyp.ident formatter) id) :: acc;
-      | Sig_class (id, class_declaration, _) ->
+      | Sig_class (id, class_declaration, _, _visibility) ->
         begin
           let class_item = print Pclass id (Printtyp.class_declaration id formatter) class_declaration in
           let class_items = read_class_declaration
             ~filename ~parent_id:class_item.sy_id ~id class_declaration in
           class_item :: class_items @ acc;
         end
-      | Sig_class_type _(*(id, cltype_declaration, _)*) -> acc
+      | Sig_class_type _(*(id, cltype_declaration, _, _visibility)*) -> acc
     end [] sign
   ;;
 
@@ -274,16 +285,16 @@ module Signature = struct
       let sign = Env.read_signature modlid filename in
       read' (sign, filename, modlid)
     with
-      | (Env.Error e as exc) ->
+      | (Persistent_env.Error e as exc) ->
         begin
           match e with
-            | Env.Inconsistent_import _ ->
+            | Persistent_env.Inconsistent_import _ ->
               Env.reset_cache();
               read'' ((*None, *)filename, modlid)
-            | Env.Illegal_renaming _ -> raise Not_found
+            | Persistent_env.Illegal_renaming _ -> raise Not_found
             | _ ->
               Printf.eprintf "File \"symbol.ml\": %s\n%s\n%!" (Printexc.to_string exc) (Printexc.get_backtrace());
-              Env.report_error Format.err_formatter e;
+              Persistent_env.report_error Format.err_formatter e;
               flush stderr;
               []
         end
@@ -373,7 +384,7 @@ module Cache = struct
               end
             end;
           with Exit -> begin
-            let basename = (String.uncapitalize modlid) ^ ".cmi" in
+            let basename = (String.uncapitalize_ascii modlid) ^ ".cmi" in
             let remove = ref [] in
             Hashtbl.iter begin fun filename _ ->
               if Filename.basename filename = basename then (remove := filename :: !remove);

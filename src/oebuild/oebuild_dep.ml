@@ -62,7 +62,7 @@ let ocamldep ?times ?pp ?(ignore_stderr=false) ?(verbose=false) ?slash ?search_p
     let open! Oebuild_util in
     List.iter begin fun entry ->
       match Str.split re1 entry with
-        | key :: _ when key ^^ ".cmo" -> ()
+        | key :: _ when key ^^^ ".cmo" -> ()
         | key :: [] -> replace table key []
         | [key; deps] ->
           let deps = Str.split re3 deps in
@@ -153,7 +153,7 @@ let find_dependants =
             let prefix = Filename.chop_extension filename in
             let prefix_mli = prefix ^ ".mli" in
             if List.mem_assoc prefix_mli entries then (dependants := prefix_mli :: !dependants;);
-            let mdep = String.capitalize (Filename.basename prefix) in
+            let mdep = String.capitalize_ascii (Filename.basename prefix) in
             ignore (loop mdep);
           end
         end
@@ -233,7 +233,7 @@ let find ?pp ?ignore_stderr ?(echo=true) targets =
   let entries = split_nl ocamldep in
   List.iter begin fun entry ->
     match Str.split re1 entry with
-      | key :: _ when key ^^ ".cmo" -> ()
+      | key :: _ when key  ".cmo" -> ()
       | key :: [] -> Hashtbl.replace table key []
       | [key; deps] ->
         let deps = Str.split re3 deps in

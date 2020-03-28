@@ -91,7 +91,7 @@ end) (*: S*) = struct
 
     let log_formatter =
       Format.make_formatter
-        (fun buf start len -> output X.channel buf start len)
+        (fun buf start len -> output_substring X.channel buf start len)
         (fun () -> flush X.channel)
 
     let print level f =

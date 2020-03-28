@@ -21,7 +21,6 @@
 *)
 
 open Printf
-open Miscellanea
 
 let empty = {Oe.er_warnings = []; er_errors = []}
 
@@ -37,7 +36,7 @@ let parse_string buf =
     let messages = Err_parser.compiler_output Err_lexer.token lexbuf in
     create messages
   with Parsing.Parse_error ->
-    eprintf "%S\n%!" buf;
+    eprintf "Error: %S\n%!" buf;
     empty
 
 let parse chan =

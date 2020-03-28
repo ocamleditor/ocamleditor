@@ -392,7 +392,7 @@ object (self)
         let index = min last_path_index (self#length - 1) in
         view#selection#select_path (GTree.Path.create [index]);
         removed#call data_removed;
-      with Failure "hd" -> ()
+      with Failure _ -> ()
     in
     ignore (Dialog.confirm ~title:"Remove from targets"
       ~message:(sprintf "Are you sure you want to remove the selected items from target list?" )

@@ -19,6 +19,7 @@
   along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 *)
+[@@@warning "-48"]
 
 
 open Printf
@@ -76,7 +77,6 @@ class widget ~project ~target ?packing () =
   let _ = bbox#set_child_secondary button_up#coerce true in
   let _ = bbox#set_child_secondary button_down#coerce true in
 
-  (**  *)
 object (self)
   inherit GObj.widget table#as_widget
 
@@ -119,7 +119,7 @@ object (self)
             try
               GTree.Path.next path;
               model#move_after ~iter:reference#iter ~pos:(model#get_iter path) |> ignore
-            with Failure "GtkTree.TreeModel.get_iter" -> ()
+            with Failure _ -> ()
       in
       List.iter (fun r -> move (model#get_path r#iter) r) rr;
       icon_changed#call();
