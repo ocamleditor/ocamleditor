@@ -135,7 +135,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>."
       end
   in
   ignore (dialog#misc#connect#show ~callback:begin fun () ->
-      let count = ref 0in
+      let count = ref 0 in
       ignore (GMain.Timeout.add ~ms:600 ~callback:begin fun () ->
           if !count = 1 then begin
             icon#misc#show();
