@@ -192,9 +192,9 @@ let default_colors : text_properties list = [
   (`NAME "deeppink3"),    `NORMAL, `ITALIC, `NONE, `MEDIUM, (true,  `NAME "#FFFFFF");
   (`NAME "deeppink3"),    `NORMAL, `ITALIC, `NONE, `MEDIUM, (true,  `NAME "#FFFFFF");
   (`NAME "#FFFF00"),      `NORMAL, `NORMAL, `LOW,  `MEDIUM, (true,  `NAME "#FFFFFF");
-  (`NAME "#EBF9FF"),      `NORMAL, `NORMAL, `NONE, `MEDIUM, (true,  `NAME "#FFFFFF");(* #E8F2FF *) (* #F7F7D7 *) (*"#F9F9CA"*)
+  (`NAME "#C3FF96"),      `NORMAL, `NORMAL, `NONE, `MEDIUM, (true,  `NAME "#FFFFFF");(* #E8F2FF *) (* #F7F7D7 *) (*"#F9F9CA"*) (* #EBF9FF *)
   (`NAME "#474747"),      `NORMAL, `ITALIC, `NONE, `MEDIUM, (true,  `NAME "#FFFFFF");
-  (`NAME "#FFFFFF"),      `NORMAL, `NORMAL, `NONE, `MEDIUM, (false, `NAME "#1F80ED");
+  (`NAME "#FFFFFF"),      `NORMAL, `NORMAL, `NONE, `MEDIUM, (false, `NAME "#128C4C"); (* #1F80ED *)
 ]
 
 let create_defaults () = {
@@ -209,7 +209,7 @@ let create_defaults () = {
   pref_tab_vertical_text            = false;
   pref_tab_label_type               = 1;
   pref_bg_color                     = ("#ffffff", false);
-  pref_bg_color_popup               = "#EDE1B4";  (* f1edbd F0F4FF #F7F7F7 #E8ECFF #EAEAFF #F0F4FF *)
+  pref_bg_color_popup               = "#FFE375";  (* #EDE1B4 #f1edbd F0F4FF #F7F7F7 #E8ECFF #EAEAFF #F0F4FF *)
   pref_fg_color_popup               = "#000000";
   pref_tags                         = List.combine default_tags default_colors;
   pref_editor_tab_width             = 2;

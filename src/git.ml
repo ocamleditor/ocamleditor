@@ -91,8 +91,8 @@ let with_diff_stat f =
           let line = String.trim (input_line ic) in
           match Str.split (Miscellanea.regexp "\t") line with
             | [ins; del; fn] ->
-              let ins = try int_of_string ins with Failure "int_of_string" -> 0 in
-              let del = try int_of_string del with Failure "int_of_string" -> 0 in
+              let ins = try int_of_string ins with Failure _ -> 0 in
+              let del = try int_of_string del with Failure _ -> 0 in
               diffs := (ins, del, fn) :: !diffs;
             | _ -> ()
         end
