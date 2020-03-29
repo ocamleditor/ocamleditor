@@ -61,6 +61,12 @@ let convert_target_type =
 
 let preamble = "\
 #load \"unix.cma\"
+#load \"str.cma\"
+open Printf
+
+let unquote =
+  let re = Str.regexp \"^\\\"\\\\(.*\\\\)\\\"$\" in
+  fun x -> if Str.string_match re x 0 then Str.matched_group 1 x else x
 
 let get_command_output command =
   let ch = Unix.open_process_in command in
@@ -419,7 +425,7 @@ let write_resource_file proj =
       fprintf outchan "  let exit_code = Sys.command \"where cvtres 1>NUL\" in\n";
       fprintf outchan "  if exit_code <> 0 then failwith \"Cannot find 'cvtres' command.\";\n";
       (*  *)
-      fprintf outchan "  let rcname, rc = List.assoc Sys.argv.(1) resources in\n";
+      fprintf outchan "  let rcname, rc = try List.assoc Sys.argv.(1) resources with Not_found -> (try List.assoc (unquote Sys.argv.(1)) resources with Not_found -> kprintf failwith \"rc_compile.ml: resource name %%s not found\" Sys.argv.(1)) in\n";
       fprintf outchan "  let outchan = open_out_bin rcname in\n";
       fprintf outchan "  output_string outchan rc;\n";
       fprintf outchan "  close_out_noerr outchan;\n";
