@@ -31,6 +31,14 @@ let name_of_gdk color =
 
 let rgb f name = try Scanf.sscanf name "#%2x%2x%2x" f with _ -> Scanf.sscanf name "#%1x%1x%1x" f;;
 
+let rgb_of_gdk color =
+  let r, g, b = (Gdk.Color.red color, Gdk.Color.green color, Gdk.Color.blue color) in
+  let r, g, b =
+    truncate ((float r) /. 65535. *. 255.),
+    truncate ((float g) /. 65535. *. 255.),
+    truncate ((float b) /. 65535. *. 255.) in
+  r, g, b
+
 let hsv_of_name r g b f =
   let r = (float r) /. 255. in
   let g = (float g) /. 255. in

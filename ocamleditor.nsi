@@ -71,9 +71,7 @@ Section "OCamlEditor (required)"
   File "src\ocamleditor.exe" 
   !system 'if exist src\ocamleditor.tmp ren src\ocamleditor.exe ocamleditor.opt.exe'
   !system 'if exist src\ocamleditor.tmp ren src\ocamleditor.tmp ocamleditor.exe'
-	File "src\oeproc\oeproc.exe"   
 	File "src\oebuild\oebuild.exe"   
-	File /NonFatal "src\oeproc\oeproc.opt.exe"   
 	File /NonFatal "src\oebuild\oebuild.opt.exe"   
   File /NonFatal "src\ocamleditorw.exe"   
 

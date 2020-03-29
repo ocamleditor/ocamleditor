@@ -90,7 +90,7 @@ class widget
   let view              = GTree.view ~model:model ~headers_clickable:true ~packing:lsw#add () in
   let _                 = view#misc#set_property "enable-grid-lines" (`INT 3) in
   let _                 = Gaux.may !Gtk_theme.find_text_output_font_condensed ~f:view#misc#modify_font_by_name in
-  let renderer          = GTree.cell_renderer_text [(*`STRETCH `CONDENSED*)] in
+  let renderer          = GTree.cell_renderer_text [(*`STRETCH `CONDENSED*) `YPAD 0] in
   let vc_file           = GTree.view_column ~title:"File" ~renderer:(renderer, ["text", col_file]) () in
   let vc_hits           = GTree.view_column ~title:"Hits" ~renderer:(renderer, ["text", col_hits]) () in
   let vc_path           = GTree.view_column ~title:"Directory" ~renderer:(renderer, ["text", col_path]) () in

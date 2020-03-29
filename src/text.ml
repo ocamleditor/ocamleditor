@@ -642,7 +642,7 @@ object (self)
                             match Project.find_bookmark project filename buffer#as_gtext_buffer !iter with
                               | Some bm when bm.Oe.bm_num >= Bookmark.limit ->
                                 drawable#set_line_attributes ~width:2 ~style:`SOLID ();
-                                drawable#set_foreground options#text_color;
+                                drawable#set_foreground options#indent_lines_color_dashed (*options#text_color*);
                                 let y, h = view#get_line_yrange !iter in
                                 let y = y - y0 + h in
                                 drawable#line ~x:0 ~y ~x:w0 ~y;

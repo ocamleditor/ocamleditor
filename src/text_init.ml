@@ -27,9 +27,9 @@ open Miscellanea
 (** key_press *)
 let key_press view =
   ignore (view#event#connect#key_press ~callback:begin fun ev ->
-    let state = GdkEvent.Key.state ev in
-    let key = GdkEvent.Key.keyval ev in
-    match state with
+      let state = GdkEvent.Key.state ev in
+      let key = GdkEvent.Key.keyval ev in
+      match state with
       | [] ->
         if key = _Tab then begin
           let ocp_indent_applied =
@@ -69,51 +69,54 @@ let key_press view =
           view#draw_current_line_background ?force:(Some true) (view#buffer#get_iter `INSERT);
           true
         end else false
-  end);;
+    end);;
 
 (** realize *)
 let realize view =
   let self = view in
-  ignore (self#misc#connect#after#realize ~callback:begin fun () ->
-    (match self#gutter.Gutter.bg_color with
-      | `WHITE -> self#gutter.Gutter.bg_color <-
-          (match Oe_config.gutter_bg_color with
-            | `CALC x -> Color.set_value x (`COLOR (self#misc#style#base `NORMAL))
-            | `THEME -> `COLOR (self#misc#style#bg `PRELIGHT)
-            | (`NAME _) as color-> color)
-      | _ -> ());
-    (match self#gutter.Gutter.fg_color with
-      | `WHITE -> self#gutter.Gutter.fg_color <-
-          (match Oe_config.gutter_fg_color with
-            | `CALC x -> Color.set_value x (`COLOR (self#misc#style#base `NORMAL))
-            | `THEME -> (Color.set_value 0.98 (`COLOR (self#misc#style#dark `NORMAL)))
-            | (`NAME _) as color -> color)
-      | _ -> ());
-    (match self#gutter.Gutter.border_color with
-      | `WHITE -> self#gutter.Gutter.border_color <-
-          (match Oe_config.gutter_border_color with
-            | `CALC x -> Color.set_value x (`COLOR (self#misc#style#base `NORMAL))
-            | `THEME -> Color.set_value 0.95 (`COLOR (self#misc#style#bg `INSENSITIVE))
-            | (`NAME _) as color -> color)
-      | _ -> ());
-    (match self#gutter.Gutter.marker_color with
-      | `WHITE -> self#gutter.Gutter.marker_color <-
-        (match Oe_config.gutter_marker_color with
-            | `CALC x -> Color.set_value x (`COLOR (self#misc#style#base `NORMAL))
-            | `THEME -> `COLOR (self#misc#style#dark `NORMAL)
-            | (`NAME _) as color -> color)
-      | _ -> ());
-    (* Change the bg color of the gutter on screen *)
-    view#misc#modify_bg [`NORMAL, self#gutter.Gutter.bg_color];
-    self#set_realized true;
-  end);;
+  if not self#realized then begin
+    ignore (self#misc#connect#after#realize ~callback:begin fun () ->
+        (match self#gutter.Gutter.bg_color with
+         | `WHITE -> self#gutter.Gutter.bg_color <-
+             (match Oe_config.gutter_bg_color with
+              | `CALC x -> Color.set_value x (`COLOR (self#misc#style#base `NORMAL))
+              | `THEME -> `COLOR (self#misc#style#bg `PRELIGHT)
+              | (`NAME _) as color-> color)
+         | _ -> ());
+        (match self#gutter.Gutter.fg_color with
+         | `WHITE -> self#gutter.Gutter.fg_color <-
+             (match Oe_config.gutter_fg_color with
+              | `CALC x -> Color.set_value x (`COLOR (self#misc#style#base `NORMAL))
+              | `THEME -> (Color.set_value 0.98 (`COLOR (self#misc#style#dark `NORMAL)))
+              | (`NAME _) as color -> color)
+         | _ -> ());
+        (match self#gutter.Gutter.border_color with
+         | `WHITE -> self#gutter.Gutter.border_color <-
+             (match Oe_config.gutter_border_color with
+              | `CALC x -> Color.set_value x (`COLOR (self#misc#style#base `NORMAL))
+              | `THEME -> Color.set_value 0.95 (`COLOR (self#misc#style#bg `INSENSITIVE))
+              | (`NAME _) as color -> color)
+         | _ -> ());
+        (match self#gutter.Gutter.marker_color with
+         | `WHITE -> self#gutter.Gutter.marker_color <-
+             (match Oe_config.gutter_marker_color with
+              | `CALC x -> Color.set_value x (`COLOR (self#misc#style#base `NORMAL))
+              | `THEME -> `COLOR (self#misc#style#dark `NORMAL)
+              | (`NAME _) as color -> color)
+         | _ -> ());
+        (* Change the bg color of the gutter on screen *)
+        view#misc#modify_bg [`NORMAL, self#gutter.Gutter.bg_color];
+        self#set_realized true
+      end)
+  end 
+;;
 
 (** select_lines_from_gutter *)
 let select_lines_from_gutter view =
   let self = view in
   ignore (self#event#connect#after#button_press ~callback:begin fun ev ->
-    let window = GdkEvent.get_window ev in
-    match self#get_window `LEFT with
+      let window = GdkEvent.get_window ev in
+      match self#get_window `LEFT with
       | Some w when (Gobject.get_oid w) = (Gobject.get_oid window) ->
         let y0 = Gdk.Rectangle.y self#visible_rect in
         let y = GdkEvent.Button.y ev in
@@ -122,10 +125,10 @@ let select_lines_from_gutter view =
         (*buffer#select_range start start#forward_line;*)
         false
       | _ -> false
-  end);
+    end);
   ignore (self#event#connect#after#motion_notify ~callback:begin fun ev ->
-    let window = GdkEvent.get_window ev in
-    match self#get_window `LEFT with
+      let window = GdkEvent.get_window ev in
+      match self#get_window `LEFT with
       | Some w when (Gobject.get_oid w) = (Gobject.get_oid window) ->
         let y0 = Gdk.Rectangle.y self#visible_rect in
         let y = GdkEvent.Motion.y ev in
@@ -136,12 +139,12 @@ let select_lines_from_gutter view =
         end;
         true
       | _ -> false
-  end);
+    end);
   ignore (self#event#connect#after#button_release ~callback:begin fun ev ->
-    let window = GdkEvent.get_window ev in
-    match self#get_window `LEFT with
+      let window = GdkEvent.get_window ev in
+      match self#get_window `LEFT with
       | Some w when (Gobject.get_oid w) = (Gobject.get_oid window) ->
         view#gutter.Gutter.start_selection <- None;
         false
       | _ -> false
-  end);;
+    end);;

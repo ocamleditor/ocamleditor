@@ -123,10 +123,12 @@ let with_tag ~(buffer : GText.buffer) tag f =
 (** increase_font_size *)
 let increase_font_size ?weight ?(increment=3) widget =
   let fd = widget#misc#pango_context#font_description in
-  let size = Pango.Font.get_size fd + increment * Pango.scale in
-  if size >= 0 then begin
-    Pango.Font.modify fd ?weight ~size ();
-    widget#misc#modify_font fd;
+  if increment <> 0 then begin
+    let size = Pango.Font.get_size fd + increment * Pango.scale in
+    if size >= 0 then begin
+      Pango.Font.modify fd ?weight ~size ();
+      widget#misc#modify_font fd;
+    end;
   end;
   fd;;
 

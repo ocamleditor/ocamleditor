@@ -187,7 +187,7 @@ object (self)
                     end;
                   | `ITER _ ->
                     let x, y = view#get_location_at_cursor () in
-                    if not Ocaml_config.is_mingw then popup#set_opacity 0.0;
+                    (*if not Ocaml_config.is_mingw then popup#set_opacity 0.0;*)
                     popup#move ~x ~y:(y + 2);
               end;
             | `TOP_RIGHT ->

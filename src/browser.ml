@@ -87,11 +87,10 @@ class browser () =
   let toolbox = GPack.hbox ~packing:menubarbox#add ~show:false () in
   let _ = GMisc.separator `VERTICAL ~packing:toolbox#pack () in
 
-  let hbox_menu_title = GPack.hbox ~packing:menubarbox#pack ~show:false () in
-  (*let _ = GMisc.separator `VERTICAL ~packing:hbox_menu_title#pack () in*)
-  let window_title_menu_label = GMisc.label (*~ellipsize:`MIDDLE ~width:300*) ~selectable:false ~markup:"" ~xalign:1.0 ~xpad:5 ~packing:hbox_menu_title#pack () in
-  let _ = window_title_menu_label#misc#set_has_tooltip true in
-  (*let _ = GMisc.separator `VERTICAL ~packing:hbox_menu_title#pack () in*)
+  let hbox_menu_title = GBin.event_box ~packing:menubarbox#pack ~show:false () in
+  let _ = hbox_menu_title#misc#set_property "visible-window" (`BOOL false) in
+  let window_title_menu_label = GMisc.label (*~ellipsize:`MIDDLE ~width:300*) ~selectable:false ~markup:"" ~xalign:1.0 ~xpad:5 ~packing:hbox_menu_title#add () in
+  let _ = Git.install_popup hbox_menu_title in
 
   let vbox_menu_buttons = GPack.vbox ~border_width:0 ~packing:menubarbox#pack ~show:false () in
   let align = GBin.aspect_frame ~yalign:0.0 ~shadow_type:`NONE ~packing:vbox_menu_buttons#add () in
