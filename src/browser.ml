@@ -209,7 +209,7 @@ object (self)
     editor#pack_outline (Cmt_view.empty());
     editor#set_project proj;
     Sys.chdir (proj.root // Prj.default_dir_src);
-    self#set_title ();
+    Gmisclib.Idle.add ~prio:100 (self#set_title ~force_status:true);
     (File_history.add project_history) filename;
     Symbol.Cache.load ~project:proj;
     Annotation.preload ~project:proj;
@@ -403,7 +403,26 @@ object (self)
       (alloc.Gtk.width) (alloc.Gtk.height) (alloc.Gtk.x) (alloc.Gtk.y)
       menubar_visible editor#show_tabs toolbar_visible outline_visible;
 
-  method set_title () =
+  method update_window_title ?status proj filename modified =
+    if window_title_menu_label#misc#get_flag `VISIBLE then begin
+      let status = match status with Some x -> Git.string_of_status x | _ -> "" in
+        match proj.Prj.in_source_path filename with
+          | Some relname ->
+            let color = if modified then "red" else "blue"  in
+            let dir = Filename.dirname relname in
+            let dir = if dir = "." then "" else sprintf "<span size='large'>%s/</span>" dir in
+            window_title_menu_label#set_label
+              (sprintf
+                 "<span weight='bold' size='large'>%s<span size='small' font_family='monospace' weight='normal'>%s</span>  ·  </span><span size='large'>%s</span><span weight='bold' size='large' color='%s'>%s</span>"
+                 proj.Prj.name status dir color (Filename.basename relname));
+          | _ ->
+            window_title_menu_label#set_label 
+              (sprintf 
+                "<span weight='bold' size='large'>%s<span size='smaller' weight='normal'>%s</span>  ·  </span>%s" 
+                proj.Prj.name status filename);
+    end
+
+  method set_title ?(force_status=false) () =
     let filename, modified =
       match editor#get_page `ACTIVE with
         | None -> "", false
@@ -411,28 +430,15 @@ object (self)
     in
     match current_project#get with
       | Some proj ->
-        Git.with_status begin fun status ->
+        self#update_window_title proj filename modified;
+        Git.with_status ~force:force_status begin fun status ->
           let projectname = proj.Prj.name in
           window#set_title (String.concat "" [projectname; (Git.string_of_status status); "  "; filename]);
-          if window_title_menu_label#misc#get_flag `VISIBLE then begin
-            match proj.Prj.in_source_path filename with
-              | Some relname ->
-                let color = if modified then "red" else "blue"  in
-                let dir = Filename.dirname relname in
-                let dir = if dir = "." then "" else sprintf "<span size='large'>%s/</span>" dir in
-                window_title_menu_label#set_label
-                  (sprintf
-                     "<span weight='bold' size='large'>%s<span size='small' font_family='monospace' weight='normal'>%s</span>  ·  </span><span size='large'>%s</span><span weight='bold' size='large' color='%s'>%s</span>"
-                     projectname (Git.string_of_status status) dir color (Filename.basename relname));
-              | _ ->
-                window_title_menu_label#set_label
-                  (sprintf "<span weight='bold' size='large'>%s<span size='smaller' weight='normal'>%s</span>  ·  </span>%s" projectname (Git.string_of_status status) filename);
-          end;
-        end
+          self#update_window_title ~status proj filename modified;
+        end;
       | _ ->
         window#set_title filename;
         if window_title_menu_label#misc#get_flag `VISIBLE then window_title_menu_label#set_label filename;
-
 
   val mutable busy = false
 

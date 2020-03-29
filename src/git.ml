@@ -33,12 +33,12 @@ let string_of_status status = match status with Some s -> sprintf " [+%d ~%d -%d
 
 let with_status =
   let last_check = ref 0.0 in
-  fun  f ->
+  fun ?(force=false) f ->
     match Oe_config.git_version with
       | None -> f None
       | _ ->
         let now = Unix.gettimeofday() in
-        if now -. !last_check > 3.0 then begin
+        if force || now -. !last_check > 3.0 then begin
           last_check := now;
           let status = { added = 0; modified = 0; deleted = 0 } in
           let process_in =
