@@ -430,7 +430,6 @@ object (self)
     in
     match current_project#get with
       | Some proj ->
-        self#update_window_title proj filename modified;
         Git.with_status ~force:force_status begin fun status ->
           let projectname = proj.Prj.name in
           window#set_title (String.concat "" [projectname; (Git.string_of_status status); "  "; filename]);

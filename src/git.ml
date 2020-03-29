@@ -33,6 +33,7 @@ let string_of_status status = match status with Some s -> sprintf " [+%d ~%d -%d
 
 let with_status =
   let last_check = ref 0.0 in
+  let last_status = ref None in
   fun ?(force=false) f ->
     match Oe_config.git_version with
       | None -> f None
@@ -65,9 +66,10 @@ let with_status =
             end
           in
           Spawn.async ~process_in ~process_err
+            last_status := if !has_errors then None else Some status;
             ~at_exit:begin fun _ ->
               if !has_errors then GtkThread.async f None
-              else GtkThread.async f (Some status)
+              else GtkThread.async f !last_status
             end "git" [|"status"; "--porcelain"|] |> ignore;
           last_check := now
-        end
+        end else GtkThread.async f !last_status
