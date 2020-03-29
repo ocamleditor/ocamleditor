@@ -20,48 +20,63 @@
 
 *)
 
+type status =
+  { mutable added : int
+  ; mutable modified : int
+  ; mutable deleted : int
+  }
 
-open Printf
+module Log = Common.Log.Make (struct
+  let prefix = "Git"
+end)
 
-type status = {
-  mutable added    : int;
-  mutable modified : int;
-  mutable deleted  : int
-}
+let _ = Log.set_verbosity `ERROR
 
-let string_of_status status = match status with Some s -> sprintf " [+%d ~%d -%d]" s.added s.modified s.deleted | _ -> ""
+let string_of_status status =
+  match status with
+  | Some s ->
+      Printf.sprintf " [+%d ~%d -%d]" s.added s.modified s.deleted
+  | _ ->
+      ""
+
 
 let with_status f =
   match Oe_config.git_version with
-    | None -> f None
-    | _ ->
+  | None ->
+      f None
+  | _ ->
       let status = { added = 0; modified = 0; deleted = 0 } in
       let process_in =
         let re = Str.regexp "\\([ MADRCU?!]\\)\\([ MDU?!]\\) +\\(.*\\)?" in
-        Spawn.iter_chan begin fun ic ->
-          let line = input_line ic in
-          if Str.string_match re line 0 then begin
-            let y = Str.matched_group 2 line in
-            begin
-              match y with
-                | "M" -> status.modified <- status.modified + 1
-                | "?" -> status.added <- status.added + 1
-                | "D" -> status.deleted <- status.deleted + 1
-                | _ -> assert false
-            end;
-          end;
-        end
+        Spawn.iter_chan (fun ic ->
+            let line = input_line ic in
+            if Str.string_match re line 0
+            then
+              let x = Str.matched_group 1 line in
+              let y = Str.matched_group 2 line in
+              match (x, y) with
+              | _, "M" | "M", _ ->
+                  status.modified <- status.modified + 1
+              | "?", _ ->
+                  status.added <- status.added + 1
+              | "D", _ ->
+                  status.deleted <- status.deleted + 1
+              | _ ->
+                  Log.println `ERROR "Unparseable git message: %s%s" x y)
       in
       let has_errors = ref false in
       let process_err =
-        Spawn.iter_chan begin fun ic ->
-          let _ = input_line ic in
-          has_errors := true;
-        end
+        Spawn.iter_chan (fun ic ->
+            let _ = input_line ic in
+            has_errors := true)
       in
-      Spawn.async ~verbose:false ~process_in ~process_err
-        ~at_exit:begin fun _ ->
-          if !has_errors then GtkThread.async f None
-          else GtkThread.async f (Some status)
-        end "git status --porcelain" |> ignore
-
+      Spawn.async
+        ~verbose:false
+        ~process_in
+        ~process_err
+        ~at_exit:(fun _ ->
+          if !has_errors
+          then GtkThread.async f None
+          else GtkThread.async f (Some status))
+        "git status --porcelain=1"
+      |> ignore
