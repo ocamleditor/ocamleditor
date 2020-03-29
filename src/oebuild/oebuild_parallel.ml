@@ -84,13 +84,13 @@ let print_results err_outputs ok_outputs =
 ;;
 
 (** create_dag *)
-let create_dag ?times ~cb_create_command ~cb_at_exit ~toplevel_modules ~verbose () =
+let create_dag ?times ?pp ~cb_create_command ~cb_at_exit ~toplevel_modules ~verbose () =
   let open Dag in
-  match Dep_dag.create_dag ?times ~toplevel_modules ~verbose () with
+  match Dep_dag.create_dag ?times ?pp ~toplevel_modules ~verbose () with
     | Dep_dag.Cycle cycle -> kprintf failwith "Cycle: %s" (String.concat "->" cycle)
     | Dep_dag.Dag (dag', ocamldeps) ->
       let dag = Hashtbl.create 17 in
-      Hashtbl.iter begin fun filename deps ->
+      Hashtbl.iter begin fun filename _deps ->
         let node = {
           NODE.nd_create_command = cb_create_command;
           nd_at_exit        = cb_at_exit;

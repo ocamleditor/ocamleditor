@@ -330,7 +330,7 @@ let serial_compile ~compilation ~times ~compiler ~cflags ~includes ~toplevel_mod
   !compilation_exit
 
 (** parallel_compile *)
-let parallel_compile ~compilation ?times ~compiler ~cflags ~includes ~toplevel_modules ~verbose ?jobs () =
+let parallel_compile ~compilation ?times ?pp ~compiler ~cflags ~includes ~toplevel_modules ~verbose ?jobs () =
   let crono = if verbose >= 3 then crono else fun ?label f x -> f x in
   let crono4 = if verbose >= 4 then crono else fun ?label f x -> f x in
   let open Oebuild_parallel in
@@ -349,7 +349,7 @@ let parallel_compile ~compilation ?times ~compiler ~cflags ~includes ~toplevel_m
   in
   let times = match times with Some t -> Some (t, opt) | _ -> None in
   let dag = crono4 ~label:"Oebuild_parallel.create_dag (ocamldep+add+reduce)" (fun () ->
-      Oebuild_parallel.create_dag ?times ~cb_create_command ~cb_at_exit ~toplevel_modules ~verbose ()) ()
+      Oebuild_parallel.create_dag ?times ?pp ~cb_create_command ~cb_at_exit ~toplevel_modules ~verbose ()) ()
   in
   crono ~label:"Parallel compilation" (Oebuild_parallel.process_parallel ?jobs ~verbose) dag;
   let sorted_deps = Oebuild_dep.sort_dependencies dag.ocamldeps in
@@ -405,6 +405,7 @@ let build ~compilation ~package ~includes ~libs ~other_mods ~outkind ~compile_on
   if annot then (cflags := !cflags ^ " -annot");
   if bin_annot then (cflags := !cflags ^ " -bin-annot");
   if pp <> "" then (cflags := !cflags ^ " -pp " ^ pp);
+  let pp = if pp <> "" then Some pp else None in
   (* inline *)
   begin
     match inline with
@@ -449,7 +450,7 @@ let build ~compilation ~package ~includes ~libs ~other_mods ~outkind ~compile_on
       then
         let deps_ml = List.map replace_extension_to_ml deps in
         deps, deps_ml, serial_compile ~compilation ~times ~compiler ~cflags:!cflags ~includes:!includes ~toplevel_modules ~deps:deps_ml ~verbose
-      else parallel_compile ~compilation ~times ~compiler ~cflags:!cflags ~includes:!includes ~toplevel_modules ~verbose ~jobs ()
+      else parallel_compile ~compilation ~times ?pp ~compiler ~cflags:!cflags ~includes:!includes ~toplevel_modules ~verbose ~jobs ()
     in
     (*if verbose >= 4 then Printf.printf "SORTED DEPENDENCIES:\n[%s]\n\n%!" (String.concat "; " deps);*)
     (* Link *)
