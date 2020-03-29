@@ -116,6 +116,7 @@ object (self)
   val mutable finalize = fun _ -> ()
   val mutable projects = []
   val mutable current_project = new GUtil.variable None
+  val mutable git_status_enabled = true
   val mutable menubar_visible = true;
   val mutable toolbar_visible = true;
   val mutable tabbar_visible = true;
@@ -200,6 +201,7 @@ object (self)
     end
 
   method project_open filename =
+    git_status_enabled <- false;
     self#project_close();
     let proj = Project.load filename in
     current_project#set (Some proj);
@@ -238,6 +240,7 @@ object (self)
     editor#set_history_switch_page_locked false;
     proj.open_files <- [];
     proj.modified <- false;
+    GMain.Timeout.add ~ms:3000 ~callback:(fun () -> git_status_enabled <- true; false) |> ignore; (* TODO *)
     proj
 
 
@@ -411,24 +414,25 @@ object (self)
     in
     match current_project#get with
       | Some proj ->
-        Git.with_status begin fun status ->
-          let projectname = proj.Prj.name in
-          window#set_title (String.concat "" [projectname; (Git.string_of_status status); " • "; filename]);
-          if window_title_menu_label#misc#get_flag `VISIBLE then begin
-            match proj.Prj.in_source_path filename with
-              | Some relname ->
-                let color = if modified then "red" else "blue"  in
-                let dir = Filename.dirname relname in
-                let dir = if dir = "." then "" else sprintf "<span size='large'>%s/</span>" dir in
-                window_title_menu_label#set_label
-                  (sprintf
-                     "<span weight='bold' size='large'>%s<span size='small' font_family='monospace' weight='normal'>%s</span>  ·  </span><span size='large'>%s</span><span weight='bold' size='large' color='%s'>%s</span>"
-                     projectname (Git.string_of_status status) dir color (Filename.basename relname));
-              | _ ->
-                window_title_menu_label#set_label
-                  (sprintf "<span weight='bold' size='large'>%s<span size='smaller' weight='normal'>%s</span>  ·  </span>%s" projectname (Git.string_of_status status) filename);
-          end;
-        end
+        if git_status_enabled then
+          Git.with_status begin fun status ->
+            let projectname = proj.Prj.name in
+            window#set_title (String.concat "" [projectname; (Git.string_of_status status); "  "; filename]);
+            if window_title_menu_label#misc#get_flag `VISIBLE then begin
+              match proj.Prj.in_source_path filename with
+                | Some relname ->
+                  let color = if modified then "red" else "blue"  in
+                  let dir = Filename.dirname relname in
+                  let dir = if dir = "." then "" else sprintf "<span size='large'>%s/</span>" dir in
+                  window_title_menu_label#set_label
+                    (sprintf
+                       "<span weight='bold' size='large'>%s<span size='small' font_family='monospace' weight='normal'>%s</span>  ·  </span><span size='large'>%s</span><span weight='bold' size='large' color='%s'>%s</span>"
+                       projectname (Git.string_of_status status) dir color (Filename.basename relname));
+                | _ ->
+                  window_title_menu_label#set_label
+                    (sprintf "<span weight='bold' size='large'>%s<span size='smaller' weight='normal'>%s</span>  ·  </span>%s" projectname (Git.string_of_status status) filename);
+            end;
+          end
       | _ ->
         window#set_title filename;
         if window_title_menu_label#misc#get_flag `VISIBLE then window_title_menu_label#set_label filename;

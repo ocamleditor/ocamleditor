@@ -21,10 +21,21 @@
 *)
 
 
-(** create *)
-let create task =
-  Task.handle begin fun ~env ~dir ~prog ~args ->
-    let wd = if task.Task.et_dir = "" then None else Some task.Task.et_dir in
-    let proc = Spawn.create_process ?wd ~env prog (Array.of_list args) (* 2>&1 *) in
-    proc, (String.concat " " (prog :: args))
-  end task;;
+open Printf
+
+#load "unix.cma"
+#cd "src"
+#use "../tools/scripting.ml"
+#cd "common"
+
+let is_mingw = List.exists ((=) "system: mingw") (get_command_output "ocamlc -config")
+
+let compile () =
+  let filename = if Sys.win32 then "terminate_process" else "terminate_process_unix" in
+  sys_command ["ocamlc"; filename ^ ".c" ];
+  let ext = if Sys.win32 && not is_mingw then "obj" else "o" in
+  sys_command ["ocamlmklib"; (sprintf "%s.%s" filename ext); "process_termination.ml"; "-o process_termination"];
+;;
+
+let _ = main ~default_target:compile ~options:[] ()
+

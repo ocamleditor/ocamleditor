@@ -43,6 +43,12 @@ let format_int n =
   done;
   (String.sub n 0 (!i + 3)) ^ !res;;
 
+let unquote =
+  let re = Str.regexp "^\"\\(.*\\)\"$" in
+  fun x -> if Str.string_match re x 0 then Str.matched_group 1 x else x
+
+let split_space = Str.split re_spaces
+
 (** lpad *)
 let lpad txt c width =
   let result = (String.make width c) ^ txt in
@@ -101,7 +107,6 @@ let remove_file ?(verbose=false) filename =
 
 (** command *)
 let command ?(echo=true) cmd =
-  let cmd = Str.global_replace re_spaces " " cmd in
   if echo then (printf "%s\n%!" cmd);
   let exit_code = Sys.command cmd in
   Stdlib.flush stderr;
@@ -146,6 +151,12 @@ let replace_extension_to_ml filename =
   else filename
 ;;
 
+(** split_prog_args *)
+let split_prog_args x =
+  match split_space x with
+    | h :: t -> h, Array.of_list t
+    | _ -> assert false
+
 (** get_effective_command *)
 let get_effective_command =
   let re_verbose = Str.regexp " -verbose" in
@@ -156,7 +167,8 @@ let get_effective_command =
       let effective_compiler = List.find (fun line -> String.sub line 0 2 = "+ ") lines in
       let effective_compiler = Str.string_after effective_compiler 2  in
       let effective_compiler = Str.replace_first re_verbose "" effective_compiler in
-      effective_compiler
-    with Not_found -> ocamlfind
+      let a, b = split_prog_args effective_compiler in
+      (if Sys.win32 then a ^ ".exe" else a), b
+    with Not_found -> split_prog_args ocamlfind
 ;;
 

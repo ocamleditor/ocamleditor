@@ -137,7 +137,7 @@ class view ~(editor : Editor.editor) ?(task_kind=(`OTHER : Task.kind)) ~task ?pa
 
   method stop () =
     match process with None -> () | Some proc ->
-      Spawn.Parallel_process.kill proc;
+      let exit_value = Process_termination.kill proc.Spawn.pid in
       killed <- true;
       self#close()
 
@@ -210,8 +210,8 @@ class view ~(editor : Editor.editor) ?(task_kind=(`OTHER : Task.kind)) ~task ?pa
       tag_locations <- [];
       view#buffer#remove_all_tags ~start:(view#buffer#get_iter `START) ~stop:(view#buffer#get_iter `END);
     end ();
-    (** Process instantiation *)
-    let proc, start_proc = Task_process.create task in
+    (** Process start *)
+    let proc, cmd_line = Task_process.create task in
     (** Print command line *)
     GtkThread2.async begin fun () ->
       self#view#set_editable true;
@@ -232,11 +232,11 @@ class view ~(editor : Editor.editor) ?(task_kind=(`OTHER : Task.kind)) ~task ?pa
       Mutex.unlock m_write;
       self#present ();
     end ();
-    (** Process start *)
-    start_proc();
     process <- Some proc;
-    try
-      let inchan, outchan, errchan = Spawn.Parallel_process.channels proc in
+    (*try*)
+      let inchan = proc.Spawn.inchan in
+      let outchan = proc.Spawn.outchan in
+      let errchan = proc.Spawn.errchan in
       process_outchan <- Some outchan;
       (** Thread looping over the standard output of the process *)
       let th_in =
@@ -323,12 +323,12 @@ class view ~(editor : Editor.editor) ?(task_kind=(`OTHER : Task.kind)) ~task ?pa
       in
       Thread.join th_in;
       Thread.join th_err;
-      begin
+      (*begin
         try ignore (Spawn.Parallel_process.close proc);
         with ex -> (printf "%s\n%!" (Printexc.to_string ex))
-      end;
+      end;*)
       finally()
-    with Spawn.Parallel_process.Not_started -> (finally())
+    (*with Spawn.Parallel_process.Not_started -> (finally())*)
 
   initializer
     ignore (button_detach#connect#clicked ~callback:(fun () -> self#detach button_detach));
@@ -606,7 +606,15 @@ let exec ~editor ?use_thread ?(with_deps=false) task_kind target =
       exec_sync ~editor ~at_exit (tasks_compile ~flags:["-c"] ~name:compile_name ~build_deps ~can_compile_native target);
     | `RCONF rc ->
       if Oebuild.check_restrictions target.restrictions then
-        let oebuild, args = Target.create_cmd_line target in
+        let compilation = if target.Target.opt then Oebuild.Native else Oebuild.Bytecode in
+        let outkind = match target.target_type with
+          | Executable -> Oebuild.Executable
+          | Library -> Oebuild.Library
+          | Plugin -> Oebuild.Plugin
+          | Pack -> Oebuild.Pack
+          | External -> Oebuild.External
+        in
+        let outname = Oebuild.get_output_name ~compilation ~outkind ~outname:target.outname ~dontaddopt:target.dontaddopt () in
         let name = rc.Rconf.name in
         let prior_tasks =
           match rc.Rconf.build_task with
@@ -624,9 +632,8 @@ let exec ~editor ?use_thread ?(with_deps=false) task_kind target =
             ~env:rc.Rconf.env
             ~env_replace:rc.Rconf.env_replace
             ~dir:""
-            ~cmd:oebuild
-            ~args:(args @ ([true, "-no-build"; true, "-run"; true, "--"] @
-              ((*List.map Shell.quote_arg*) (List.filter (fun (e, _) -> e) rc.Rconf.args)))) ();
+            ~cmd:(Filename.current_dir_name // outname)
+            ~args:(List.filter (fun (e, _) -> e) rc.Rconf.args) ();
         ]] in
         let rec f () = ignore (exec_sync ~run_cb:f ~editor tasks) in
         f();

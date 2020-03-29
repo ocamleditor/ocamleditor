@@ -50,14 +50,15 @@ let compile_buffer ~project ~editor ~page ?(join=false) () =
       | _, None -> ()
       | _, Some (tmp, relpath) ->
         (* Compile *)
-        let command = sprintf "%s %s -error-style short -I ../%s %s ../%s/%s %s"
-          project.Prj.autocomp_compiler
-          project.Prj.autocomp_cflags
-          Prj.default_dir_tmp
-          (Project.get_search_path_i_format project)
-          Prj.default_dir_tmp
-          relpath
-          ((*if App_config.application_debug then Shell.redirect_stderr else*) "")
+        let args =
+          let tmp = "../" ^ Prj.default_dir_tmp in
+          Array.concat [
+            project.Prj.autocomp_dflags;
+            (Array.of_list (Miscellanea.split " +" project.Prj.autocomp_cflags));
+            [| "-error-style short"; "-I"; tmp |];
+            (Array.of_list (Miscellanea.split " +" (Project.get_search_path_i_format project)));
+            [|tmp ^ "/" ^ relpath|];
+          ]
         in
         let compiler_output = Buffer.create 101 in
         let process_err stderr =
@@ -103,11 +104,11 @@ let compile_buffer ~project ~editor ~page ?(join=false) () =
           end;
           Activity.remove activity_name;
         in
-        let process_err = Spawn.iter_chan process_err in
+        let process_err = Spawn.loop process_err in
         if join then
-          Spawn.sync ~verbose:App_config.application_debug ~at_exit ~process_err command |> ignore
+          Spawn.sync ~at_exit ~process_err project.Prj.autocomp_compiler args |> ignore
         else
-          Spawn.async ~verbose:App_config.application_debug ~at_exit ~process_err command |> ignore
+          Spawn.async ~at_exit ~process_err project.Prj.autocomp_compiler args |> ignore
     (*end ()*)
   with ex -> begin
     eprintf "%s\n%s\n%!" (Printexc.to_string ex) (Printexc.get_backtrace ());

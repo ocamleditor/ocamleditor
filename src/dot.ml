@@ -32,20 +32,34 @@ let ocamldoc = Ocaml_config.ocamldoc ()
 (** mk_ocamldoc_cmd *)
 let mk_ocamldoc_cmd ~project ?(dot_include_all=false) ?(dot_reduce=true) ?(dot_types=false) ~outfile sourcefiles =
   let search_path = Project.get_search_path_i_format project in
-  sprintf "%s -dot -I +threads %s%s%s%s -o %s %s %s"
-    ocamldoc
-    search_path
-    (if dot_include_all then " -dot-include-all" else "")
-    (if dot_reduce then " -dot-reduce" else "")
-    (if dot_types then " -dot-types" else "")
-    outfile
-    (String.concat " " sourcefiles)
-    Shell.redirect_stderr;;
+  ocamldoc, Array.concat [
+    [| "-dot";
+       "-I";
+       "+threads";
+    |];
+    (Array.of_list (Miscellanea.split " +" search_path));
+    [|
+      (if dot_include_all then "-dot-include-all" else "");
+      (if dot_reduce then "-dot-reduce" else "");
+      (if dot_types then "-dot-types" else "");
+      "-o";
+      outfile
+    |];
+    (Array.of_list sourcefiles);
+  ];;
 
 (** mk_dot_cmd *)
 let mk_dot_cmd ~outlang ~outfile ?(label="") ?(rotate=0.) filename =
-  sprintf "dot -T%s -o %s -Glabel=\"%s\" -Grotate=%.2f %s %s"
-    outlang outfile label rotate Oe_config.dot_attributes filename;;
+  "dot", [|
+    ("-T" ^ outlang);
+    "-o";
+    outfile;
+    "-Glabel=\"" ^ label ^ "\"";
+    (sprintf "-Grotate=%.2f" rotate);
+    Oe_config.dot_attributes;
+    filename
+  |]
+;;
 
 (** draw *)
 let draw ~project ~filename ?dot_include_all ?dot_types ?packing ?on_ready_cb () =
@@ -71,12 +85,12 @@ let draw ~project ~filename ?dot_include_all ?dot_types ?packing ?on_ready_cb ()
   let dotfile       = Filename.temp_file prefix ".dot" in
   let outfile       = dotfile ^ "." ^ outlang in
   (*  *)
-  let ocamldoc_cmd  = mk_ocamldoc_cmd ?dot_include_all ?dot_types ~project ~outfile:dotfile sourcefiles in
-  let dot_cmd       = mk_dot_cmd ~outlang ~outfile ~label dotfile in
+  let ocamldoc_cmd, oargs  = mk_ocamldoc_cmd ?dot_include_all ?dot_types ~project ~outfile:dotfile sourcefiles in
+  let dot_cmd, dargs       = mk_dot_cmd ~outlang ~outfile ~label dotfile in
   let viewer        = Device.create ?packing () in
   let activity_name = "Generating module dependency graph, please wait..." in
   Activity.add Activity.Other activity_name;
-  ignore (Spawn.async ~verbose:App_config.application_debug ~at_exit:begin fun _ ->
+  Spawn.async ~at_exit:begin fun _ ->
     let modname = Miscellanea.modname_of_path filename in
     let re = kprintf Str.regexp "\"%s\" \\[.*color=\\(.+\\).*\\]" modname in
     (*let re1 = Str.regexp "\\(\".*\"\\) \\[style=filled, color=darkturquoise\\];$" in*)
@@ -86,11 +100,11 @@ let draw ~project ~filename ?dot_include_all ?dot_types ?packing ?on_ready_cb ()
       (*else if Str.string_match re1 line 0 then (sprintf "%s;\n" (Str.matched_group 1 line))*)
       else line
     end;
-    ignore (Spawn.async ~verbose:App_config.application_debug ~at_exit:begin fun _ ->
+    Spawn.async ~at_exit:begin fun _ ->
       if Sys.file_exists dotfile then (Sys.remove dotfile);
       Device.draw ~filename:outfile viewer;
       Activity.remove activity_name;
       Gaux.may on_ready_cb ~f:(fun cb -> cb viewer);
-    end dot_cmd);
-  end ocamldoc_cmd);
+    end dot_cmd dargs |> ignore;
+  end ocamldoc_cmd oargs |> ignore;
   viewer;;

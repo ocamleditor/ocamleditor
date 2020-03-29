@@ -30,15 +30,16 @@ let count = ref 0
 class widget ~prog ~(env : string array) ~(args : string list) ?packing ?show () =
   let view = GText.view ~cursor_visible:false ~editable:false ?packing ?show () in
   let buf = view#buffer in
-  let process = Spawn.Parallel_process.create ~env ~prog ~args () in
-  let _ = Spawn.Parallel_process.start process in
-  let inchan, outchan, errchan = Spawn.Parallel_process.channels process in
+  let process = Spawn.create_process ~env prog (Array.of_list args) in
+  let inchan = process.Spawn.inchan in
+  let outchan = process.Spawn.outchan in
+  let errchan = process.Spawn.errchan in
 object (self)
   inherit GObj.widget view#as_widget
   val buffer = buf
   val view = view
   val mutable name = incr count; "Shell "^(string_of_int !count)
-  val mutable pid = Spawn.Parallel_process.getpid process
+  val mutable pid = process.Spawn.pid
   val mutable h = new history ()
   val mutable alive = true
   val mutable reading = false
@@ -66,7 +67,7 @@ object (self)
   method kill () =
     alive <- false;
     view#misc#set_sensitive false;
-    Spawn.Parallel_process.kill process |> ignore;
+    Process_termination.kill process.Spawn.pid |> ignore
 
   method interrupt () = ()
 (*    if alive then try

@@ -84,7 +84,6 @@ let to_string () =
     20, "native_compilation", (match Ocaml_config.can_compile_native () with Some x -> "Yes (" ^ x ^ ")" | _ -> "No");
   ] @
   (if Sys.win32 && not Ocaml_config.is_mingw then [
-     20, "oeproc", Oe_config.oeproc_command;
      30, "cl", (Opt.default Oe_config.cl "<Not Found>");
      30, "ml", (Opt.default Oe_config.ml "<Not Found>");
      30, "VSINSTALLDIR", (try Sys.getenv "VSINSTALLDIR" with Not_found -> "<Not Found>");

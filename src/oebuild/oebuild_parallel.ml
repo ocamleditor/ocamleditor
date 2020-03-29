@@ -26,6 +26,7 @@ module Dep_dag = Oebuild_dep_dag
 
 type process_output = {
   command           : string;
+  args              : string array;
   filename          : string;
   mutable exit_code : int;
   mutable err       : Buffer.t;
@@ -35,7 +36,7 @@ type process_output = {
 module NODE = struct
   type key = string
   type t = {
-    nd_create_command     : (string -> string option);
+    nd_create_command     : (string -> (string * string array) option);
     nd_at_exit            : (process_output -> unit);
     nd_filename           : string;
     mutable nd_processing : bool;
@@ -63,7 +64,10 @@ let print_results err_outputs ok_outputs =
   List.iter begin fun process_output ->
     let has_out = Buffer.length process_output.out > 0 in
     let has_err = Buffer.length process_output.err > 0 in
-    if has_out then printf "%s\n%s\n%s%!" process_output.command (Buffer.contents process_output.out) sep;
+    if has_out then printf "%s %s\n%s\n%s%!"
+        process_output.command
+        (String.concat " " (Array.to_list process_output.args))
+        (Buffer.contents process_output.out) sep;
     if has_err then begin
       (*printf "-----\n%s\n-----\n%!" process_output.command;*)
       eprintf "%s\n%s%!" (Buffer.contents process_output.err) sep;
@@ -73,7 +77,8 @@ let print_results err_outputs ok_outputs =
   List.iter begin fun process_output ->
     let has_out = Buffer.length process_output.out > 0 in
     let has_err = Buffer.length process_output.err > 0 in
-    let cmd = sprintf "%s\n(exit code = %d)" process_output.command process_output.exit_code in
+    (*let cmd = sprintf "%s\n(exit code = %d)" process_output.command process_output.exit_code in*)
+    let cmd = process_output.command ^ " " ^ (String.concat " " (Array.to_list process_output.args)) in
     if has_out then printf "%s\n%s\n%s%!" cmd (Buffer.contents process_output.out) sep;
     if has_err then begin
       (*printf "-----\n%s\n-----\n%!" cmd;*)
@@ -126,23 +131,24 @@ let job_mutex = Mutex.create ()
 let create_process ?(jobs=0) ~verbose cb_create_command cb_at_exit dag leaf errors messages =
   leaf.Dag.node.NODE.nd_processing <- true;
   let filename = Oebuild_util.replace_extension_to_ml leaf.Dag.node.NODE.nd_filename in
-  let command = cb_create_command filename in
-  match command with
-    | Some command when jobs = 0 || !job_counter <= jobs ->
+  match cb_create_command filename with
+    | Some (command, args) when jobs = 0 || !job_counter <= jobs ->
       if verbose >= 4 then
-        Printf.printf "Oebuild_parallel.create_process [%d/%d]: %s\n%!" !job_counter jobs (*filename*) (*print_endline*) command
-      else if verbose >= 2 then print_endline command;
+        Printf.printf "Oebuild_parallel.create_process [%d/%d]: %s %s\n%!" !job_counter jobs (*filename*) (*print_endline*)
+          command (String.concat " " (Array.to_list args))
+      else if verbose >= 2 then print_endline (String.concat " " (command :: (Array.to_list args)));
       let output = {
         command;
+        args;
         filename;
         exit_code  = 0;
         err        = Buffer.create 10;
         out        = Buffer.create 10
       } in
       let at_exit = function
-        | `STATUS (Unix.WEXITED exit_code) ->
-          output.exit_code <- exit_code;
-          if exit_code <> 0 then (errors := output :: !errors)
+        | None ->
+          (*output.exit_code <- exit_code;*)
+          if Buffer.length output.err > 0 then (errors := output :: !errors)
           else messages := output :: !messages;
           Mutex.lock dag.mutex;
           Dag.remove_leaf dag.graph leaf;
@@ -153,14 +159,13 @@ let create_process ?(jobs=0) ~verbose cb_create_command cb_at_exit dag leaf erro
           Mutex.unlock job_mutex;
           (*end;*)
           cb_at_exit output
-        | `STATUS (Unix.WSIGNALED _) | `STATUS (Unix.WSTOPPED _) -> assert false
-        | `ERROR (code, msg) -> kprintf failwith "%s (%d)" msg code
+        | Some ex -> Printf.eprintf "File \"oebuild_parallel.ml\": %s\n%s\n%!" (Printexc.to_string ex) (Printexc.get_backtrace());
       in
-      let process_in = Spawn.iter_chan (fun stdin ->
+      let process_in = Spawn.loop (fun stdin ->
           Buffer.add_string output.out (input_line stdin);
           Buffer.add_char output.out '\n')
       in
-      let process_err = Spawn.iter_chan (fun stderr ->
+      let process_err = Spawn.loop (fun stderr ->
           Buffer.add_string output.err (input_line stderr);
           Buffer.add_char output.err '\n')
       in
@@ -169,7 +174,11 @@ let create_process ?(jobs=0) ~verbose cb_create_command cb_at_exit dag leaf erro
         incr job_counter;
         Mutex.unlock job_mutex;
       (*end;*)
-      Spawn.async ~verbose:false ~at_exit ~process_in ~process_err command
+        begin
+          match Spawn.async ~at_exit ~process_in ~process_err command args
+          with `ERROR ex -> ()
+             | `PID _ -> ()
+        end;
     | None ->
       if verbose >= 4 then
         Printf.printf "Oebuild_parallel.create_process: %30s (No command)\n%!" filename;

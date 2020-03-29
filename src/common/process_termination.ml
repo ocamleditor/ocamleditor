@@ -21,10 +21,6 @@
 *)
 
 
-(** create *)
-let create task =
-  Task.handle begin fun ~env ~dir ~prog ~args ->
-    let wd = if task.Task.et_dir = "" then None else Some task.Task.et_dir in
-    let proc = Spawn.create_process ?wd ~env prog (Array.of_list args) (* 2>&1 *) in
-    proc, (String.concat " " (prog :: args))
-  end task;;
+external win_terminate_process: int -> bool = "o_terminate_process"
+
+let kill pid = if Sys.win32 then win_terminate_process pid |> ignore else Unix.kill pid 9

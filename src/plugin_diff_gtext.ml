@@ -31,15 +31,16 @@ open Printf
       with ex -> Printf.eprintf "File \"plugin_diff.ml\": %s\n%s\n%!" (Printexc.to_string ex) (Printexc.get_backtrace());
     in
     let diff = Preferences.preferences#get.Preferences.pref_program_diff in
-    let cmd = diff ^ " --binary " ^ (Filename.quote filename1) ^ " " ^ (Filename.quote filename2) in
-    Printf.printf "%s\n%!" cmd;
-    Spawn.async cmd ~verbose:false
+    let args = [| "--binary"; filename1; filename2 |] in
+    let color_add = Color.add_value Oe_config.global_gutter_diff_color_add (-0.3) in
+    let color_del = Color.add_value Oe_config.global_gutter_diff_color_del (-0.5) in
+    Spawn.async diff args
       ~process_in
       ~at_exit:begin fun _ ->
         let tag_del = buffer#create_tag ~name:"tag_diff_del" [] in
-        Gmisclib.Util.set_tag_paragraph_background tag_del Oe_config.global_gutter_diff_color_del;
+        Gmisclib.Util.set_tag_paragraph_background tag_del color_del;
         let tag_add = buffer#create_tag ~name:"tag_diff_add" [] in
-        Gmisclib.Util.set_tag_paragraph_background tag_add Oe_config.global_gutter_diff_color_add;
+        Gmisclib.Util.set_tag_paragraph_background tag_add color_add;
         let open Odiff in
         let insert_lines prefix l1 text =
           let lines = Str.split (Str.regexp "\n") text in

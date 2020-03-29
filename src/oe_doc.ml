@@ -42,16 +42,20 @@ struct
           | Some file ->
             let out_filename = Filename.temp_file (Filename.basename (Filename.chop_extension filename)) ".tmp" in
             let search_path = Project.get_search_path_i_format project in
-            let cmd = sprintf "%s -dump %s %s %s %s%s"
-              (Ocaml_config.ocamldoc())
-              (Shell.quote_arg out_filename)
-              (" -I +threads")
-              (*(if project.Project.thread then " -thread" else if project.Project.vmthread then " -vmthread" else "")*)
-              search_path
-              (Shell.quote_arg file)
-              (if App_config.application_debug then Shell.redirect_stderr else "")
+            let args =
+              Array.concat [
+                [|
+                  "-dump";
+                  ((*Shell.quote_arg *)out_filename);
+                  "-I"; "+threads";
+                |];
+                (Array.of_list (Miscellanea.split " +" search_path));
+                [|
+                  (*Shell.quote_arg*) file;
+                |]
+              ]
             in
-            ignore (Spawn.sync ~verbose:App_config.application_debug cmd);
+            ignore (Spawn.sync (*~process_in:Spawn.redirect_to_stdout ~process_err:Spawn.redirect_to_stderr*) (Ocaml_config.ocamldoc()) args);
             Some out_filename
           | _ -> None
       end;

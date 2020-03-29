@@ -31,7 +31,21 @@
       <target_type>Library</target_type>
       <outname>common/common</outname>
       <lib_install_path></lib_install_path>
-      <external_tasks/>
+      <external_tasks>
+        <task name="comp_process_termination">
+          <always_run_in_project>true</always_run_in_project>
+          <always_run_in_script>true</always_run_in_script>
+          <readonly>false</readonly>
+          <visible>true</visible>
+          <env replace="false"/>
+          <dir>..</dir>
+          <cmd>ocaml</cmd>
+          <args>
+            <arg enabled="true">tools/comp_process_termination.ml</arg>
+          </args>
+          <phase>Before_compile</phase>
+        </task>
+      </external_tasks>
       <restrictions></restrictions>
       <dependencies></dependencies>
     </target>
@@ -124,31 +138,6 @@
       <restrictions></restrictions>
       <dependencies>7</dependencies>
     </target>
-    <target name="oeproc" default="false" id="6" sub_targets="" is_fl_package="false" subsystem="" readonly="false" visible="true" node_collapsed="false">
-      <descr></descr>
-      <byt>true</byt>
-      <opt>true</opt>
-      <libs></libs>
-      <other_objects></other_objects>
-      <files>oeproc/oeproc.ml</files>
-      <package>unix,str</package>
-      <includes>common oeproc</includes>
-      <thread>true</thread>
-      <vmthread>false</vmthread>
-      <pp></pp>
-      <inline></inline>
-      <nodep>false</nodep>
-      <dontlinkdep>false</dontlinkdep>
-      <dontaddopt>false</dontaddopt>
-      <cflags>-w s</cflags>
-      <lflags></lflags>
-      <target_type>Executable</target_type>
-      <outname>oeproc/oeproc</outname>
-      <lib_install_path></lib_install_path>
-      <external_tasks/>
-      <restrictions>IS_WIN32</restrictions>
-      <dependencies></dependencies>
-    </target>
     <target name="gmisclib" default="false" id="8" sub_targets="" is_fl_package="true" subsystem="" readonly="false" visible="true" node_collapsed="false">
       <descr>Miscellaneous widgets based on LablGtk2.</descr>
       <byt>true</byt>
@@ -203,7 +192,7 @@
       <descr></descr>
       <byt>false</byt>
       <opt>true</opt>
-      <libs>odoc_info gmisclib common icons otherwidgets oebuildlib ocamleditor_lib</libs>
+      <libs>process_termination odoc_info gmisclib common icons otherwidgets oebuildlib ocamleditor_lib</libs>
       <other_objects></other_objects>
       <files>ocamleditor.ml</files>
       <package>compiler-libs.common,dynlink,lablgtk2,str,unix,xml-light</package>
@@ -224,11 +213,11 @@
       <restrictions></restrictions>
       <dependencies>14,19,16,26,22</dependencies>
     </target>
-    <target name="ocamleditor-bytecode" default="true" id="0" sub_targets="" is_fl_package="false" subsystem="Console" readonly="false" visible="true" node_collapsed="false">
+    <target name="ocamleditor-bytecode" default="false" id="0" sub_targets="" is_fl_package="false" subsystem="Console" readonly="false" visible="true" node_collapsed="false">
       <descr></descr>
       <byt>true</byt>
       <opt>false</opt>
-      <libs>odoc_info gmisclib common icons otherwidgets oebuildlib</libs>
+      <libs>process_termination odoc_info gmisclib common icons otherwidgets oebuildlib</libs>
       <other_objects></other_objects>
       <files>ocamleditor.ml</files>
       <package>compiler-libs.common,dynlink,lablgtk2,str,unix,xml-light</package>
@@ -241,7 +230,7 @@
       <dontlinkdep>false</dontlinkdep>
       <dontaddopt>false</dontaddopt>
       <cflags>-w syxm -g</cflags>
-      <lflags>-g</lflags>
+      <lflags>-g -dllpath common</lflags>
       <target_type>Executable</target_type>
       <outname>ocamleditor</outname>
       <lib_install_path></lib_install_path>
@@ -249,11 +238,11 @@
       <restrictions></restrictions>
       <dependencies>4,10,7,5,6,8,9,20,17,18,25</dependencies>
     </target>
-    <target name="ocamleditor-msvc" default="false" id="15" sub_targets="" is_fl_package="false" subsystem="Console" readonly="false" visible="true" node_collapsed="true">
+    <target name="ocamleditor-msvc" default="false" id="15" sub_targets="" is_fl_package="false" subsystem="Console" readonly="false" visible="true" node_collapsed="false">
       <descr></descr>
       <byt>false</byt>
       <opt>true</opt>
-      <libs>odoc_info gmisclib common icons otherwidgets oebuildlib ocamleditor_lib</libs>
+      <libs>process_termination odoc_info gmisclib common icons otherwidgets oebuildlib ocamleditor_lib</libs>
       <other_objects></other_objects>
       <files>ocamleditor.ml</files>
       <package>compiler-libs.common,dynlink,lablgtk2,str,unix,xml-light</package>
@@ -298,11 +287,11 @@
         <icons/>
       </resource_file>
     </target>
-    <target name="ocamleditor-native" default="false" id="11" sub_targets="" is_fl_package="false" subsystem="" readonly="false" visible="true" node_collapsed="false">
+    <target name="ocamleditor-native" default="true" id="11" sub_targets="" is_fl_package="false" subsystem="" readonly="false" visible="true" node_collapsed="false">
       <descr></descr>
       <byt>false</byt>
       <opt>true</opt>
-      <libs>odoc_info gmisclib common icons otherwidgets oebuildlib ocamleditor_lib</libs>
+      <libs>process_termination odoc_info gmisclib common icons otherwidgets oebuildlib ocamleditor_lib</libs>
       <other_objects></other_objects>
       <files>ocamleditor.ml</files>
       <package>compiler-libs.common,dynlink,lablgtk2,str,unix,xml-light</package>
@@ -498,7 +487,7 @@
       <restrictions>FINDLIB(diff)</restrictions>
       <dependencies></dependencies>
     </target>
-    <target name="prepare-build" default="false" id="20" sub_targets="" is_fl_package="false" subsystem="Console" readonly="false" visible="true" node_collapsed="true">
+    <target name="prepare-build" default="false" id="20" sub_targets="" is_fl_package="false" subsystem="Console" readonly="false" visible="true" node_collapsed="false">
       <descr></descr>
       <byt>true</byt>
       <opt>false</opt>
@@ -537,7 +526,7 @@
       <restrictions></restrictions>
       <dependencies></dependencies>
     </target>
-    <target name="launcher" default="false" id="22" sub_targets="" is_fl_package="false" subsystem="Windows" readonly="false" visible="true" node_collapsed="true">
+    <target name="launcher" default="false" id="22" sub_targets="" is_fl_package="false" subsystem="Windows" readonly="false" visible="true" node_collapsed="false">
       <descr>Utility to open OCaml files from the file manager</descr>
       <byt>false</byt>
       <opt>true</opt>
@@ -596,7 +585,7 @@
         <company></company>
         <product>OCamlEditor</product>
         <copyright>© 2016 Francesco Tovagliari</copyright>
-        <file_version>1.13.3.0</file_version>
+        <file_version>1.13.4.0</file_version>
         <icons/>
       </resource_file>
     </target>
@@ -790,7 +779,7 @@
     </target>
   </targets>
   <executables>
-    <executable name="ocamleditor-bytecode" default="true" target_id="0" id="0">
+    <executable name="ocamleditor-bytecode" default="false" target_id="0" id="0">
       <build_task>&lt;COMPILE&gt;</build_task>
       <env replace="false">
         <var enabled="true">OCAMLEDITORPARAM=debug=2,record_backtrace=1</var>
@@ -798,7 +787,7 @@
       </env>
       <args/>
     </executable>
-    <executable name="ocamleditor-native" default="false" target_id="11" id="1">
+    <executable name="ocamleditor-native" default="true" target_id="11" id="1">
       <build_task>&lt;COMPILE&gt;</build_task>
       <env replace="false">
         <var enabled="false">Path=D:\curl-7.29.0;C:\Program Files (x86)\Microsoft Visual Studio 9.0\Common7\IDE;C:\Program Files (x86)\Microsoft Visual Studio 9.0\VC\BIN;C:\Program Files (x86)\Microsoft Visual Studio 9.0\Common7\Tools;C:\Program Files (x86)\Microsoft Visual Studio 9.0\Common7\Tools\bin;C:\Windows\Microsoft.NET\Framework\;C:\Windows\Microsoft.NET\Framework\\Microsoft .NET Framework 3.5 (Pre-Release Version);C:\Windows\Microsoft.NET\Framework\v2.0.50727;C:\Program Files (x86)\Microsoft Visual Studio 9.0\VC\VCPackages;C:\Program Files\Microsoft SDKs\Windows\v7.0\bin;C:\Windows;C:\Windows\system32;C:\Windows\system32\Wbem;C:\Program Files (x86)\Haskell\bin;C:\Program Files (x86)\Haskell Platform\2012.4.0.0\lib\extralibs\bin;C:\Program Files (x86)\Haskell Platform\2012.4.0.0\bin;C:\Program Files\Common Files\Microsoft Shared\Windows Live;C:\Program Files (x86)\Common Files\Microsoft Shared\Windows Live;C:\Program Files (x86)\Microsoft Visual Studio 9.0\Common7\IDE;C:\Program Files (x86)\Microsoft Visual Studio 9.0\VC\BIN;C:\Program Files (x86)\Microsoft Visual Studio 9.0\Common7\Tools;C:\Program Files (x86)\Microsoft Visual Studio 9.0\Common7\Tools\bin;C:\Windows\Microsoft.NET\Framework\;C:\Windows\Microsoft.NET\Framework\\Microsoft .NET Framework 3.5 (Pre-Release Version);C:\Windows\Microsoft.NET\Framework\v2.0.50727;C:\Program Files (x86)\Microsoft Visual Studio 9.0\VC\VCPackages;C:\Program Files\Microsoft SDKs\Windows\v7.0\bin;C:\Windows\system32;C:\Windows;C:\Windows\System32\Wbem;C:\Windows\System32\WindowsPowerShell\v1.0\;C:\Program Files (x86)\flexdll;C:\Program Files (x86)\oasis\bin;C:\Tcl\bin;C:\GTK\bin;C:\pcre\bin;C:\ocaml\bin;C:\Program Files (x86)\UnxUtils\usr\local\wbin;D:\Borland\JBuilder2006\jdk1.5\bin;C:\Program Files (x86)\Windows Live\Shared;C:\Program Files\TortoiseSVN\bin;C:\Program Files (x86)\Haskell Platform\2012.4.0.0\mingw\bin;C:\Program Files (x86)\Graphviz 2.28\bin;C:\Users\f.tovagliari\AppData\Roaming\cabal\bin;C:\Program Files (x86)\IDM Computer Solutions\UltraEdit\;C:\Program Files\jEdit;C:\Program Files (x86)\PuTTY;C:\Program Files (x86)\Bitvise SSH Client;C:\Users\f.tovagliari\AppData\Roaming\cabal\bin;C:\Program Files (x86)\IDM Computer Solutions\UltraEdit\</var>
@@ -812,7 +801,6 @@
       <target target_id="10" show="false"/>
       <target target_id="7" show="false"/>
       <target target_id="5" show="true"/>
-      <target target_id="6" show="true"/>
       <target target_id="8" show="true"/>
       <target target_id="9" show="false"/>
       <target target_id="12" show="true"/>

@@ -40,7 +40,7 @@ let rec read () =
     let tools = (if Sys.win32 then [
       ("1000", "Console", "start \"$(project_name)\" cmd /K cd \"$(project_source)\"");
       ("1001", "Explorer", "explorer \"$(project_source)\"");
-      ("1002", "Open with Notepad", "notepad \"$(current_filename)\"");
+      ("1002", "Open with Notepad", "start notepad \"$(current_filename)\"");
       ("1003", "Open containing folder", "explorer \"$(current_filename_dir)\"");
     ] else []) @ [
       ("2002", "OCamlBrowser", "ocamlbrowser -I \"$(project_source)\"")

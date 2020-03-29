@@ -107,15 +107,14 @@ object (self)
           if butt#active then begin
             spinner#misc#show();
             self#save ~tmp:filename ~filename:entry_filename#text ();
-            let cmd = sprintf "ocaml %s %s -help" filename name in
             let text = ref "" in
-            let process_in = Spawn.iter_chan (fun ic -> text := !text ^ (input_line ic) ^ "\n") in
-            Spawn.async cmd ~verbose:false ~process_in ~at_exit:begin function
-              | `ERROR (_, m) -> Printf.eprintf "%s\n%!" m;
-              | `STATUS _ ->
+            let process_in = Spawn.loop (fun ic -> text := !text ^ (input_line ic) ^ "\n") in
+            Spawn.async ~process_in ~at_exit:begin function
+              | Some ex -> Printf.eprintf "File \"build_script_ui.ml\": %s\n%s\n%!" (Printexc.to_string ex) (Printexc.get_backtrace())
+              | _ ->
                 if !text <> help#buffer#get_text () then GtkThread.sync help#buffer#set_text !text;
                 Gmisclib.Idle.add ~prio:300 spinner#misc#hide;
-            end |> ignore;
+            end "ocaml" [| filename; name; "-help" |] |> ignore;
           end
         in
         b0#connect#clicked ~callback:(mkcallback "" b0) |> ignore;

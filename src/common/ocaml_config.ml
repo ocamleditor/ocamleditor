@@ -64,6 +64,7 @@ let find_tool which path =
       | `OCAMLC -> ["ocamlc"]
       | `OCAML -> ["ocaml"]
   in
+  let commands = if Sys.win32 then List.map (fun c -> if Filename.check_suffix c ".opt" then c ^ ".exe" else c) commands else commands in
   let quote    = if path <> "" && Sys.os_type = "Win32" && String.contains path ' ' then Filename.quote else (fun x -> x) in
   let path     = if path <> "" then Filename.concat path "bin" else "" in
   find_best_compiler (List.map quote (List.map (Filename.concat path) commands))

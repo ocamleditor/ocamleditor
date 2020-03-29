@@ -90,8 +90,6 @@ You will need the free NSIS install system (http://nsis.sourceforge.net).";
     let filename = if Sys.file_exists ("oebuild/oebuild.opt" ^ exe) then ("oebuild/oebuild.opt" ^ exe) else ("oebuild/oebuild" ^ exe) in
     sys_command [cp; !!filename; !!bin];
     if Sys.win32 && is_mingw then begin
-      let filename = if Sys.file_exists ("oeproc/oeproc.opt" ^ exe) then ("oeproc/oeproc.opt" ^ exe) else ("oeproc/oeproc" ^ exe) in
-      sys_command [cp; !!filename; !!bin];
       let basename = "ocamleditor-mingw.bat" in
       sys_command [cp; basename; !!bin];
       Printf.eprintf "\n\n  Please edit\n\n      %s\\%s\n\n  to match your system configuration.\n\n%!" (!!bin) basename;

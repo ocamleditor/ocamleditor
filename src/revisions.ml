@@ -90,7 +90,7 @@ class ocamlview ~colorize ?packing () =
 (** widget *)
 class widget ~page ?packing () =
   let diff_cmd       = Preferences.preferences#get.Preferences.pref_program_diff_graphical  in
-  let mk_diff_cmd    = if Sys.win32 then sprintf "\"%s %s %s\"" (Filename.quote diff_cmd) else sprintf "%s %s %s" diff_cmd in
+  let mk_diff_cmd    = if Sys.win32 && not Ocaml_config.is_mingw then Filename.quote diff_cmd else diff_cmd in
   let project        = page#project in
   let mbox           = GPack.vbox ~spacing:0 ?packing () in
   let toolbar        = GButton.toolbar ~style:`ICONS ~orientation:`HORIZONTAL ~packing:(mbox#pack ~from:`END) () in
@@ -116,7 +116,7 @@ class widget ~page ?packing () =
   let label_message  = GMisc.label ~markup:(sprintf "<b>%s</b>" page#get_filename) ~xalign:0.0 ~yalign:0.5 ~xpad:8 ~packing:item_message#add () in
   let pane           = GPack.paned `HORIZONTAL ~packing:mbox#add () in
   (*  *)
-  let rend_text      = GTree.cell_renderer_text [`SCALE `SMALL] in
+  let rend_text      = GTree.cell_renderer_text [`SCALE `SMALL; `YPAD 0] in
   let vc_rev         = GTree.view_column ~title:"Revision" ~renderer:(rend_text, ["text", col_rev]) () in
   let vc_date        = GTree.view_column ~title:"Date" ~renderer:(rend_text, ["text", col_date]) () in
   let vc_comment     = GTree.view_column ~title:"Comment" ~renderer:(rend_text, ["text", col_comment]) () in
@@ -137,7 +137,7 @@ class widget ~page ?packing () =
   let _              = vc_author#set_sort_column_id col_author.GTree.index in
   let _              = vc_date#set_sort_indicator true in
   (*  *)
-  let _              = view#set_enable_grid_lines `BOTH in
+  let _              = view#misc#set_property "enable-grid-lines" (`INT 3) in
   object (self)
     inherit GObj.widget mbox#as_widget
     inherit Messages.page ~role:"history"
@@ -267,8 +267,7 @@ class widget ~page ?packing () =
           let filename1 = self#get_filename ~row in
           let row = model#get_iter path2 in
           let filename2 = self#get_filename ~row in
-          let cmd = mk_diff_cmd (Filename.quote filename1) (Filename.quote filename2) in
-          Spawn.async ~verbose:false cmd |> ignore
+          Spawn.async mk_diff_cmd [| filename1; filename2 |] |> ignore
         | _ -> ()
 
     method private get_filename ~row =
@@ -279,7 +278,7 @@ class widget ~page ?packing () =
     method private create_tmp_rev_file cmd ext =
       let tmp = Filename.temp_file "ocamleditor" ext in
       let cmd = sprintf "%s > %s" cmd tmp in
-      Sys.command cmd |> ignore;
+      let exit_code = Sys.command cmd in
       temp_files <- tmp :: temp_files;
       tmp
 
@@ -338,10 +337,15 @@ class widget ~page ?packing () =
             | Some rel ->
               let sep = "\x1F" in
               let rel = List.fold_left (fun acc x -> acc ^ "/" ^ x) Filename.parent_dir_name (Miscellanea.filename_split rel) in
-              let cmd = sprintf "git log --format=\"%%h%s%%an%s%%ai%s%%s\" --abbrev-commit %s" sep sep sep rel in
+              let args = [|
+                "log";
+                (sprintf "--format=%%h%s%%an%s%%ai%s%%s" sep sep sep);
+                "--abbrev-commit";
+                rel
+              |] in
               let re = Str.regexp_string sep in
               let process_in =
-                Spawn.iter_chan begin fun ic ->
+                Spawn.loop begin fun ic ->
                   let line = Str.split re (input_line ic) in
                   let row = model#append () in
                   match line with
@@ -354,7 +358,7 @@ class widget ~page ?packing () =
                     | _ -> ()
                 end
               in
-              Spawn.async ~verbose:false ~process_in cmd |> ignore;
+              Spawn.async ~process_in "git" args |> ignore;
             | _ -> ()
 
     method private read_local_backups () =

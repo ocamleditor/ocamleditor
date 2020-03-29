@@ -128,14 +128,14 @@ module ETask = struct
     end tasks;;
 
   let execute = Task.handle begin fun ~env ~dir ~prog ~args ->
-    let cmd = sprintf "%s %s" prog (String.concat " " args) in
-    let old_dir = Sys.getcwd () in
-    Sys.chdir dir;
-    let exit_code = Spawn.sync ~env cmd in
-    Sys.chdir old_dir;
+    let exit_code = Spawn.sync
+        ~process_in:Spawn.redirect_to_stdout
+        ~process_err:Spawn.redirect_to_stderr
+        ~working_directory:dir ~env prog (Array.of_list args) 
+    in
     match exit_code with
-      | `STATUS (Unix.WEXITED 0) -> ()
-      | `STATUS (Unix.WEXITED _) | `STATUS (Unix.WSIGNALED _) | `STATUS (Unix.WSTOPPED _) | `ERROR _ -> raise Error
+      | None -> ()
+      | Some _ -> raise Error
   end
 end
 

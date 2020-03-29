@@ -27,7 +27,7 @@ open Printf
 (** Configuration Section =================================================== *)
 
 let dot_viewer : [`DEFAULT | `PDF]       = `DEFAULT
-let dot_attributes                      = " -Glabelloc=t -Gfontsize=26pt -Gfontname=\"Helvetica\" -Nfontsize=16pt -Nfontname=\"Helvetica\""
+let dot_attributes                       = " -Glabelloc=t -Gfontsize=26pt -Gfontname=\"Helvetica\" -Nfontsize=16pt -Nfontname=\"Helvetica\""
 let ocp_indent_tab_key_enabled           = true
 let autosave_enabled                     = true
 let autosave_interval                    = 5_000 (* milliseconds *)
@@ -48,7 +48,7 @@ let warning_underline_shadow             = `NAME "#FFE36C"
 let warning_unused_color                 = "#a0a0a0"
 let warning_unused_properties            = [`FOREGROUND warning_unused_color; `STYLE `ITALIC]
 let warning_tootip_enabled               = false
-let current_line_border_color            = fun add bgcolor -> `NAME (add bgcolor 0.2)
+let current_line_border_color            = fun add bgcolor -> `NAME (add bgcolor 0.3)
 let current_line_width                   = 1 (* Must be >= 1. Left margin is automatically increased by current_line_width *)
 let current_line_style                   = (*`ON_OFF_DASH*) `SOLID
 let current_line_join                    = (*`ROUND `MITER `BEVEL *) `BEVEL
@@ -61,9 +61,9 @@ let on_off_dashes                        = [1; 3]
 let gutter_bg_color                      = (*`THEME*) (*`CALC 0.93*) `CALC 0.97
 let gutter_fg_color                      = (*`THEME*) `CALC 0.50 (*`NAME "#6070ff"*)
 let gutter_border_color                  = (*`THEME*) (*`CALC 0.875*) `CALC 0.97
-let gutter_marker_color                  = (*`THEME*) `CALC 0.50
+let gutter_marker_color                  = (*`THEME*) `CALC 0.40
 let code_folding_scope_color             = `NAME "#e5e5e5" (* disabled *)
-let code_folding_highlight_color         = "#eef5f5"
+let code_folding_highlight_color         = "#d0d0d0"
 let code_folding_hightlight_gradient     = ["#f4f4f4"; "#f9f9f9"; "#fefefe"] (* [] for no gradient *)
 let code_folding_font                    = ref (Some "-*-*-medium-r-*-sans-10-*-*-*-*-*-*-*")
                                           (* Font for the "n lines" label in the fold line; it must be 10 pixels height. None for no label *)
@@ -71,8 +71,8 @@ let global_gutter_comments_enabled       = false
 let global_gutter_size                   = 13
 let global_gutter_comments_color         = `NAME "#fa80a5"
 let global_gutter_comments_bgcolor       = `NAME "#fad0f5"
-let global_gutter_diff_color_add         = "#d0ffd0"
-let global_gutter_diff_color_del         = "#ffd0d0"
+let global_gutter_diff_color_add         = "#60b060" (*"#d0ffd0"  *)
+let global_gutter_diff_color_del         = "#ff6060" (*"#ffd0d0"*)
 let global_gutter_diff_color_change      = "#ffffd0"
 let global_gutter_diff_style             = (`COLOR false : [`BW | `COLOR of bool])
 let global_gutter_diff_tooltips          = true
@@ -144,8 +144,6 @@ let find_command name =
     else basename
 
 let oebuild_command = App_config.get_oebuild_command ()
-
-let oeproc_command = !Spawn.Parallel_process.oeproc_command
 
 let get_version ?(ok_status=0) command =
   try
