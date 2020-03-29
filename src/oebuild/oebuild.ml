@@ -101,33 +101,6 @@ let compile ?(times : Table.t option) ~opt ~compiler ~cflags ~includes ~filename
       may times (fun times -> Table.add times filename opt (Unix.gettimeofday()));
       exit_code
     | _ -> 0
-(* OLD VERSION
-let compile ?(times : Table.t option) ~opt ~compiler ~cflags ~includes ~filename
-    ?(process_err : process_err_func option) ~verbose () =
-  if Sys.file_exists filename then begin
-    try
-      begin
-        match times with
-          | Some times -> ignore (Table.find times filename opt); 0 (* exit code *)
-          | _ -> raise Not_found
-      end
-    with Not_found -> begin
-      let verbose_opt = if verbose >= 5 then "-verbose" else "" in
-      let cmd = (sprintf "%s -c %s %s %s %s" compiler cflags includes filename verbose_opt) in
-      let exit_code =
-        match process_err with
-          | None -> command cmd
-          | Some process_err ->
-            begin
-              match exec ~process_err ~verbose:(verbose>=2) cmd with
-                | Some n -> n
-                | None -> -9998
-            end;
-      in
-      may times (fun times -> Table.add times filename opt (Unix.gettimeofday()));
-      exit_code
-    end
-  end else 0*)
 
 (** link *)
 let link ~compilation ~compiler ~outkind ~lflags ~includes ~libs ~outname ~deps
@@ -181,11 +154,7 @@ let get_output_name ~compilation ~outkind ~outname ?(dontaddopt=false) () =
         | External -> ""
     in
     let name =
-      if outname = "" then "a" (*begin
-        match (List.rev toplevel_modules) with
-          | last :: _ -> Filename.chop_extension last
-          | _ -> assert false
-      end*) else outname
+      if outname = "" then "a" else outname
     in
     name ^ o_ext
 ;;
