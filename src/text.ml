@@ -702,7 +702,8 @@ object (self)
                     let x2 = approx_char_width * (stop#line_index - 1) + offset in
                     let y, h = self#get_line_yrange start in
                     let y = y - y0 + h - 3 (*(min 3 (h / 5))*) in
-                    Gdk.GC.set_dashes drawable#gc ~offset:(x2 - 6 (*- x1*)) [1; approx_char_width - 1];
+                    (*Gdk.GC.set_dashes drawable#gc ~offset:(x2 - 6 (*- x1*)) [1; approx_char_width - 1];*)
+                    Gdk.GC.set_dashes drawable#gc ~offset:(x2 - approx_char_width - 2) [1; approx_char_width - 1];
                     drawable#line ~x:x1 ~y ~x:x2 ~y;
                   end
                 end

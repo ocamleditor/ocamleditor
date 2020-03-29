@@ -333,8 +333,19 @@ class manager ~(view : Text.view) =
               match ym2 with
               | Some ym2 ->
                 let xm = xm - 2 in
-                let ym2 = ym2 - (match cont with `Contiguous -> 8 | `Collapsed -> 18 | _ -> 3) in
-                drawable#segments [((xm, (ym2 - 3)), (xm, ym2)); ((xm, ym2), ((xm + dx), ym2))];
+                begin
+                  match cont with
+                  | `Contiguous when use_triangles ->
+                    let ym2 = ym2 - 8 in
+                    drawable#segments [((xm, (ym2 - 3)), (xm, ym2)); ((xm, ym2), ((xm + dx), ym2))];
+                  | `Contiguous -> ()
+                  | `Collapsed ->
+                    let ym2 = ym2 - 18 in
+                    drawable#segments [((xm, (ym2 - 3)), (xm, ym2)); ((xm, ym2), ((xm + dx), ym2))];
+                  | _ ->
+                    let ym2 = ym2 + dx in
+                    drawable#segments [((xm, (ym2 - 3)), (xm, ym2)); ((xm, ym2), ((xm + dx), ym2))];
+                end;
               | _ -> ()
             end;
           end !ms;

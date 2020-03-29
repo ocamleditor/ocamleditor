@@ -35,10 +35,20 @@ let scan_indent view (start : GText.iter) (stop : GText.iter) =
   done;
   !data;;
 
+let use_glow = false
+let style = if use_glow then `ON_OFF_DASH else `SOLID
+let width = 2
+let color_hl_fg = `NAME "#000000"
+let color_hl_bg = `NAME "#e0f0ff"
+let color_hl_bg1 = `NAME "#fff0e0"
+
 (** draw_indent_lines *)
 let draw_indent_lines view (drawable : GDraw.drawable) start stop y0 =
   let left_margin = view#left_margin + 1 in (* +1 per evitare di coprire la linea del cursore *)
   let buffer = view#tbuffer in
+  let current_iter : GText.iter = buffer#get_iter `INSERT in
+  let y_current_line, _ = view#get_line_yrange current_iter#forward_line in
+  let y_current_line = y_current_line - y0 in
   let indents = scan_indent view start stop in
   let count = ref buffer#line_count in
   let prev = ref 0 in
@@ -50,7 +60,7 @@ let draw_indent_lines view (drawable : GDraw.drawable) start stop y0 =
           match !segs with
             | (y3, y4) :: tl when y2 = y3 ->
               segs := (y1, y4) :: tl;
-            | _ -> segs := (y1, y2) :: !segs;
+            | seg -> segs := (y1, y2) :: seg;
         end
       | _ -> (ll := (x, ref [y1, y2]) :: !ll)
   in
@@ -80,25 +90,73 @@ let draw_indent_lines view (drawable : GDraw.drawable) start stop y0 =
   end indents;
   (*hline := !hline * 2;*)
   (* Draw lines *)
-  let lines1, lines2 = List.partition (fun (x, _) -> (x - left_margin) mod (2 * buffer#tab_width * view#approx_char_width) = 0) !lines in
-  drawable#set_foreground view#options#indent_lines_color_solid;
-  drawable#set_line_attributes ~width:1 ~style:`SOLID ();
-  List.iter begin fun (x, xlines) ->
-    List.iter begin fun (y1, y2) ->
-      if y2 - y1 > !hline then (drawable#line ~x ~y:y1 ~x ~y:y2)
-    end !xlines
-  end lines2;
+  let current_block = ref true in
+  let mm = 2 * buffer#tab_width * view#approx_char_width in
+
+  let draw_highlight x y1 y2 =
+    if use_glow then begin
+      drawable#set_foreground color_hl_bg;
+      drawable#set_line_attributes ~width:3 ~style:`SOLID ();
+      drawable#line ~x ~y:y1 ~x ~y:y2;
+    end;
+    drawable#set_foreground color_hl_fg;
+    drawable#set_line_attributes ~width ~style ();
+    current_block := false;
+  in
   Gdk.GC.set_dashes drawable#gc ~offset:1 Oe_config.on_off_dashes;
-  let color_dashed = view#options#indent_lines_color_dashed in
   List.iter begin fun (x, xlines) ->
     List.iter begin fun (y1, y2) ->
       if y2 - y1 > !hline then begin
-        drawable#set_foreground view#options#base_color;
-        drawable#set_line_attributes ~width:1 ~style:`SOLID ();
-        drawable#line ~x ~y:y1 ~x ~y:y2;
-        drawable#set_foreground color_dashed;
-        drawable#set_line_attributes ~width:1 ~style:`ON_OFF_DASH ();
+        if (x - left_margin) mod mm = 0 then begin
+          if !current_block && y1 <= y_current_line && y_current_line <= y2 then begin
+            draw_highlight x y1 y2;
+          end else begin
+            if use_glow then begin
+              drawable#set_foreground color_hl_bg1(*view#options#base_color*);
+              drawable#set_line_attributes ~width:3 ~style:`SOLID ();
+              drawable#line ~x ~y:y1 ~x ~y:y2;
+            end;
+            drawable#set_foreground view#options#indent_lines_color_dashed;
+            drawable#set_line_attributes ~width ~style ();
+          end;
+          drawable#line ~x ~y:y1 ~x ~y:y2;
+        end else begin
+          if y2 - y1 > !hline then begin
+            if !current_block && y1 <= y_current_line && y_current_line <= y2 then begin
+              draw_highlight x y1 y2;
+            end else begin
+              if use_glow then begin
+                drawable#set_foreground color_hl_bg1(*view#options#base_color*);
+                drawable#set_line_attributes ~width:3 ~style:`SOLID ();
+                drawable#line ~x ~y:y1 ~x ~y:y2;
+              end;
+              drawable#set_foreground view#options#indent_lines_color_solid;
+              drawable#set_line_attributes ~width ~style:`SOLID ();
+            end;
+            drawable#line ~x ~y:y1 ~x ~y:y2;
+          end;
+        end
+      end
+    end !xlines
+  end !lines;
+
+(*  Gdk.GC.set_dashes drawable#gc ~offset:1 [1; 5];
+  List.iter begin fun (x, xlines) ->
+    List.iter begin fun (y1, y2) ->
+      if y2 - y1 > !hline then begin
+        if !first && y1 <= cly && cly <= y2 then begin
+          drawable#set_foreground (`NAME "#ff0000");
+          drawable#set_line_attributes ~width:2 ~style:`SOLID ();
+          first := false;
+        end else begin
+          drawable#set_foreground view#options#base_color;
+          drawable#set_line_attributes ~width:2 ~style:`SOLID ();
+          drawable#line ~x ~y:y1 ~x ~y:y2;
+          drawable#set_foreground view#options#indent_lines_color_solid;
+          drawable#set_line_attributes ~width:1 ~style:`ON_OFF_DASH ();
+        end;
         drawable#line ~x ~y:y1 ~x ~y:y2
       end
     end !xlines
-  end lines1;
+  end lines2;*)
+
