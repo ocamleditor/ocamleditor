@@ -230,7 +230,7 @@
       <dontlinkdep>false</dontlinkdep>
       <dontaddopt>false</dontaddopt>
       <cflags>-w syxm -g</cflags>
-      <lflags>-g -dllpath common</lflags>
+      <lflags>-g</lflags>
       <target_type>Executable</target_type>
       <outname>ocamleditor</outname>
       <lib_install_path></lib_install_path>

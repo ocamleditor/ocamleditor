@@ -199,12 +199,16 @@ let create_cmd_line ?(flags=[]) ?(can_compile_native=true) target =
   let pref = Preferences.preferences#get in
   let quote = Filename.quote in
   let files = Shell.parse_args target.files in
-  let serial_jobs = match pref.Preferences.pref_build_parallel with None -> ["-serial"] | Some n -> ["-jobs " ^ string_of_int n] in
+  let serial_jobs = 
+    match pref.Preferences.pref_build_parallel with 
+      | None -> ["-serial"] 
+      | Some n -> ["-jobs"; string_of_int n] 
+  in
   let args =
     files
     @ serial_jobs
     @ ["-bin-annot"]
-    @ ["-verbose " ^ (string_of_int pref.Preferences.pref_build_verbosity)]
+    @ ["-verbose"; (string_of_int pref.Preferences.pref_build_verbosity)]
     @ (if target.pp <> "" then ["-pp"; quote target.pp] else [])
     @ (match target.inline with Some n -> ["-inline"; string_of_int n] | _ -> [])
     @ (if target.cflags <> "" then ["-cflags"; (quote target.cflags)] else [])
