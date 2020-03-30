@@ -93,7 +93,7 @@ let print_add_args bc et args =
                   | `value -> sprintf "\n                                %s, (match !%s with Some x -> x | _ -> \"\")" condition (ident_of_arg arg)
                   | `key_value when arg.bsa_type = Bool -> sprintf "\n                                %s, (match !%s with Some x -> sprintf \"%s %%b\" x | _ -> \"\")"
                     condition (ident_of_arg arg) arg.bsa_key
-                  | `key_value -> sprintf "\n                                %s, (match !%s with Some x -> sprintf \"%s %%S\" x | _ -> \"\")"
+                  | `key_value -> sprintf "\n                                %s, (match !%s with Some x -> sprintf \"%s %%s\" x | _ -> \"\")"
                     condition (ident_of_arg arg) arg.bsa_key
               in
               arg :: acc

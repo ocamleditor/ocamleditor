@@ -196,7 +196,7 @@ let external_tasks = [
     et_args                  = [true,"tools/install.ml"; 
                                 command = `Install && (!arg_4_nsis = Some true), "-nsis"; 
                                 command = `Install && (!arg_3_gmisclib = Some true), "-gmisclib"; 
-                                command = `Install, (match !arg_2_prefix with Some x -> sprintf "-prefix %S" x | _ -> "")];
+                                command = `Install, (match !arg_2_prefix with Some x -> sprintf "-prefix %s" x | _ -> "")];
     et_phase                 = Some Before_clean;
     et_always_run_in_project = false;
     et_always_run_in_script  = false;
@@ -212,7 +212,7 @@ let external_tasks = [
     et_cmd                   = "ocaml";
     et_args                  = [true,"tools/uninstall.ml"; 
                                 command = `Uninstall && (!arg_6_ver_1_8_0 = Some true), "-ver-1.8.0"; 
-                                command = `Uninstall, (match !arg_5_prefix with Some x -> sprintf "-prefix %S" x | _ -> "")];
+                                command = `Uninstall, (match !arg_5_prefix with Some x -> sprintf "-prefix %s" x | _ -> "")];
     et_phase                 = Some Before_clean;
     et_always_run_in_project = false;
     et_always_run_in_script  = false;
