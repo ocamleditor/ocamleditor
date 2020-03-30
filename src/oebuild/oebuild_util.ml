@@ -44,7 +44,7 @@ let format_int n =
   (String.sub n 0 (!i + 3)) ^ !res;;
 
 let unquote =
-  let re = Str.regexp "^\"\\(.*\\)\"$" in
+  let re = Str.regexp "^['\"]\\(.*\\)['\"]$" in
   fun x -> if Str.string_match re x 0 then Str.matched_group 1 x else x
 
 let split_space = Str.split re_spaces
