@@ -55,7 +55,7 @@ let compile_buffer ~project ~editor ~page ?(join=false) () =
           Array.concat [
             project.Prj.autocomp_dflags;
             (Array.of_list (Miscellanea.split " +" project.Prj.autocomp_cflags));
-            [| "-error-style short"; "-I"; tmp |];
+            [| "-error-style"; "short"; "-I"; tmp |];
             (Array.of_list (Miscellanea.split " +" (Project.get_search_path_i_format project)));
             [|tmp ^ "/" ^ relpath|];
           ]

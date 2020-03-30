@@ -372,7 +372,11 @@ class widget ~page ?packing () =
           let re = (Str.quote prefix) ^ "\\.\\(~[0-9]+~\\)" ^ (Str.quote suffix) in
           let re = Str.regexp re in
           let dirname = bak // Filename.dirname rel in
-          let files = Array.to_list (Sys.readdir dirname) in
+          let files = 
+            if Sys.file_exists dirname then 
+              Array.to_list (Sys.readdir dirname) 
+            else []
+          in
           let basenames = Miscellanea.Xlist.filter_map begin fun basename ->
               if Str.string_match re basename 0 then Some (basename, (Str.matched_group 1 basename))
               else None
