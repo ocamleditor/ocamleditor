@@ -214,31 +214,3 @@ let find ?pp ?ignore_stderr ?(echo=true) targets =
       if not (List.mem x acc) then x :: acc else acc
     end [] deps)
 ;;
-
-(** ocamldep *)
-(*let ocamldep ?pp ?(ignore_stderr=false) ?(verbose=true) target =
-  let dir = Filename.dirname target in
-  let redirect_stderr = if ignore_stderr then "" else (if Sys.os_type = "Win32" then " 2>NUL" else " 2>/dev/null") in
-  let command = sprintf "%s%s %s -native -slash -one-line %s %s %s"
-      (Ocaml_config.ocamldep())
-      (match pp with Some pp when pp <> "" -> " -pp " ^ pp | _ -> "" )
-      (Ocaml_config.expand_includes dir)
-      (match dir with "." -> "*.mli" | _ -> dir ^ "/" ^ "*.mli *.mli")
-      (match dir with "." -> "*.ml" | _ -> dir ^ "/" ^ "*.ml *.ml")
-      redirect_stderr
-  in
-  if verbose then (printf "%s\n%!" command);
-  let ocamldep = Shell.expand command in
-  let table = Hashtbl.create 7 in
-  let entries = split_nl ocamldep in
-  List.iter begin fun entry ->
-    match Str.split re1 entry with
-      | key :: _ when key  ".cmo" -> ()
-      | key :: [] -> Hashtbl.replace table key []
-      | [key; deps] ->
-        let deps = Str.split re3 deps in
-        Hashtbl.replace table key deps
-      | _ -> eprintf "%s\n%s\n%!" command entry; assert false
-  end entries;
-  (table : dag);;*)
-
