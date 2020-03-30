@@ -5,6 +5,12 @@
 *)
 
 #load "unix.cma"
+#load "str.cma"
+open Printf
+
+let unquote =
+  let re = Str.regexp "^\"\\(.*\\)\"$" in
+  fun x -> if Str.string_match re x 0 then Str.matched_group 1 x else x
 
 let get_command_output command =
   let ch = Unix.open_process_in command in

@@ -5,6 +5,12 @@
 *)
 
 #load "unix.cma"
+#load "str.cma"
+open Printf
+
+let unquote =
+  let re = Str.regexp "^\"\\(.*\\)\"$" in
+  fun x -> if Str.string_match re x 0 then Str.matched_group 1 x else x
 
 let get_command_output command =
   let ch = Unix.open_process_in command in
@@ -39,7 +45,7 @@ let _ =
   if exit_code <> 0 then failwith "Cannot find 'rc' command.";
   let exit_code = Sys.command "where cvtres 1>NUL" in
   if exit_code <> 0 then failwith "Cannot find 'cvtres' command.";
-  let rcname, rc = List.assoc Sys.argv.(1) resources in
+  let rcname, rc = try List.assoc Sys.argv.(1) resources with Not_found -> (try List.assoc (unquote Sys.argv.(1)) resources with Not_found -> kprintf failwith "rc_compile.ml: resource name %s not found" Sys.argv.(1)) in
   let outchan = open_out_bin rcname in
   output_string outchan rc;
   close_out_noerr outchan;
