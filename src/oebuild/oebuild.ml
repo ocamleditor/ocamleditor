@@ -75,16 +75,9 @@ let get_compiler_command ?(times : Table.t option) ~opt ~compiler ~cflags ~inclu
           | _ -> raise Not_found
       end
     with Not_found -> begin
-        let verbose_opt = if verbose >= 5 then "-verbose" else "" in
-        let compiler, args = compiler in
-        Some (compiler, Array.concat [
-            [| "-c"; |] ;
-            args;
-            (Array.of_list (Str.split re_spaces cflags));
-            (Array.of_list (Str.split re_spaces includes));
-            [| verbose_opt; filename |]
-          ])
-      end
+      let verbose_opt = if verbose >= 5 then " -verbose" else "" in
+      Some (sprintf "%s -c %s %s%s %s" compiler cflags includes verbose_opt filename)
+    end
   end else None
 
 (** compile *)
@@ -92,50 +85,22 @@ let compile ?(times : Table.t option) ~opt ~compiler ~cflags ~includes ~filename
     ?(process_err : process_err_func option) ~verbose () =
   let command = get_compiler_command ?times ~opt ~compiler ~cflags ~includes ~filename ~verbose () in
   match command with
-    | Some (cmd, args) ->
+    | Some cmd ->
       let exit_code =
-        let cmd_line = String.concat " " (cmd :: (Array.to_list args)) in
         match process_err with
-          | None -> Oebuild_util.command ~echo:(verbose >= 2) cmd_line
+          | None -> Oebuild_util.command cmd
           | Some process_err ->
             begin
-              let process_err = Spawn.loop process_err in
-              if verbose >= 2 then print_endline cmd_line;
-              match Spawn.sync ~process_err cmd args with
-                | None -> 0
-                | Some _ -> -99981
+              let process_err = Spawn.iter_chan process_err in
+              match Spawn.sync ~process_err ~verbose:(verbose>=2) cmd with
+                | `STATUS (Unix.WEXITED n) -> n
+                | `STATUS (Unix.WSIGNALED _) | `STATUS (Unix.WSTOPPED _) -> -9998
+                | `ERROR _ -> -99981
             end;
       in
       may times (fun times -> Table.add times filename opt (Unix.gettimeofday()));
       exit_code
     | _ -> 0
-(* OLD VERSION
-let compile ?(times : Table.t option) ~opt ~compiler ~cflags ~includes ~filename
-    ?(process_err : process_err_func option) ~verbose () =
-  if Sys.file_exists filename then begin
-    try
-      begin
-        match times with
-          | Some times -> ignore (Table.find times filename opt); 0 (* exit code *)
-          | _ -> raise Not_found
-      end
-    with Not_found -> begin
-      let verbose_opt = if verbose >= 5 then "-verbose" else "" in
-      let cmd = (sprintf "%s -c %s %s %s %s" compiler cflags includes filename verbose_opt) in
-      let exit_code =
-        match process_err with
-          | None -> command cmd
-          | Some process_err ->
-            begin
-              match exec ~process_err ~verbose:(verbose>=2) cmd with
-                | Some n -> n
-                | None -> -9998
-            end;
-      in
-      may times (fun times -> Table.add times filename opt (Unix.gettimeofday()));
-      exit_code
-    end
-  end else 0*)
 
 (** link *)
 let link ~compilation ~compiler ~outkind ~lflags ~includes ~libs ~outname ~deps
@@ -157,27 +122,21 @@ let link ~compilation ~compiler ~outkind ~lflags ~includes ~libs ~outname ~deps
   in
   let deps = String.concat " " deps in
   let process_exit =
-    let process_err = match process_err with Some f -> Some (Spawn.loop f) | _ -> None in
-    let command, args = compiler in
-    let args = Array.concat [
-        args; (* Must be the first because starts with the first arg. of ocamlfind *)
-        [|
-          if verbose >= 5 then "-verbose" else "";
-          (match outkind with Library -> "-a" | Plugin when opt -> "-shared" | Plugin -> "" | Pack -> "-pack" | Executable | External -> "");
-          "-o";
-          outname
-        |];
-        (Array.of_list (split_space lflags));
-        (Array.of_list (split_space includes));
-        (Array.of_list (split_space libs));
-        (Array.of_list (split_space deps));
-      ] in
-    if verbose >= 2 then print_endline (String.concat " " (command :: (Array.to_list args)));
-    Spawn.sync ?process_err command args
+    let process_err = match process_err with Some f -> Some (Spawn.iter_chan f) | _ -> None in
+    kprintf (Spawn.sync (*command*) ?process_err ~verbose:(verbose>=2)) "%s %s %s -o %s %s %s %s %s"
+      compiler
+      (match outkind with Library -> "-a" | Plugin when opt -> "-shared" | Plugin -> "" | Pack -> "-pack" | Executable | External -> "")
+      lflags
+      outname
+      includes
+      libs
+      deps
+      (if verbose >= 5 then "-verbose" else "")
   in
   match process_exit with
-    | None -> 0
-    | Some ex -> -9997
+    | `STATUS (Unix.WEXITED n) -> n
+    | `STATUS (Unix.WSIGNALED _) | `STATUS (Unix.WSTOPPED _) -> -9997
+    | `ERROR _ -> -99971
 ;;
 
 (** get_output_name *)
@@ -195,11 +154,7 @@ let get_output_name ~compilation ~outkind ~outname ?(dontaddopt=false) () =
         | External -> ""
     in
     let name =
-      if outname = "" then "a" (*begin
-        match (List.rev toplevel_modules) with
-          | last :: _ -> Filename.chop_extension last
-          | _ -> assert false
-      end*) else unquote outname
+      if outname = "" then "a" else outname
     in
     name ^ o_ext
 ;;
@@ -239,18 +194,8 @@ let run_output ~outname ~args =
   if Sys.win32 then begin
     let cmd = Str.global_replace (Str.regexp "/") "\\\\" outname in
     let cmd = Filename.current_dir_name // cmd in
-
-    (*let args = cmd :: args in
-    let args = Array.of_list args in
-    Unix.execv cmd args*)
-
-    (*let args = String.concat " " args in
-    ignore (kprintf command "%s %s" cmd args)*)
-
-    Spawn.sync
-      ~process_in:Spawn.redirect_to_stdout ~process_err:Spawn.redirect_to_stderr
-      cmd (Array.of_list args) |> ignore
-
+    let args = String.concat " " args in
+    ignore (kprintf command "%s %s" cmd args)
   end else begin
     let cmd = Filename.current_dir_name // outname in
     (* From the execv manpage:
@@ -354,7 +299,7 @@ let serial_compile ~compilation ~times ~compiler ~cflags ~includes ~toplevel_mod
   !compilation_exit
 
 (** parallel_compile *)
-let parallel_compile ~compilation ?times ~compiler ~cflags ~includes ~toplevel_modules ~verbose ?jobs () =
+let parallel_compile ~compilation ?times ?pp ~compiler ~cflags ~includes ~toplevel_modules ~verbose ?jobs () =
   let crono = if verbose >= 3 then crono else fun ?label f x -> f x in
   let crono4 = if verbose >= 4 then crono else fun ?label f x -> f x in
   let open Oebuild_parallel in
@@ -373,7 +318,7 @@ let parallel_compile ~compilation ?times ~compiler ~cflags ~includes ~toplevel_m
   in
   let times = match times with Some t -> Some (t, opt) | _ -> None in
   let dag = crono4 ~label:"Oebuild_parallel.create_dag (ocamldep+add+reduce)" (fun () ->
-      Oebuild_parallel.create_dag ?times ~cb_create_command ~cb_at_exit ~toplevel_modules ~verbose ()) ()
+      Oebuild_parallel.create_dag ?times ?pp ~cb_create_command ~cb_at_exit ~toplevel_modules ~verbose ()) ()
   in
   crono ~label:"Parallel compilation" (Oebuild_parallel.process_parallel ?jobs ~verbose) dag;
   let sorted_deps = Oebuild_dep.sort_dependencies dag.ocamldeps in
@@ -387,11 +332,6 @@ let build ~compilation ~package ~includes ~libs ~other_mods ~outkind ~compile_on
 
   let crono = if verbose >= 3 then crono else fun ?label f x -> f x in
   let crono4 = if verbose >= 4 then crono else fun ?label f x -> f x in
-  let libs = unquote libs in
-  let cflags = unquote cflags in
-  let lflags = unquote lflags in
-  let includes = unquote includes in
-  let package = unquote package in
 
   if verbose >= 1 then begin
     printf "\n%s %s" (string_of_compilation_type compilation) (string_of_output_type outkind);
@@ -418,6 +358,8 @@ let build ~compilation ~package ~includes ~libs ~other_mods ~outkind ~compile_on
     if verbose >= 2 then (printf "\n");
     printf "%!";
   end;
+
+  let split_space = Str.split re_spaces in
   (* includes *)
   let includes = ref includes in
   includes := Ocaml_config.expand_includes !includes;
@@ -432,6 +374,7 @@ let build ~compilation ~package ~includes ~libs ~other_mods ~outkind ~compile_on
   if annot then (cflags := !cflags ^ " -annot");
   if bin_annot then (cflags := !cflags ^ " -bin-annot");
   if pp <> "" then (cflags := !cflags ^ " -pp " ^ pp);
+  let pp = if pp <> "" then Some pp else None in
   (* inline *)
   begin
     match inline with
@@ -444,7 +387,7 @@ let build ~compilation ~package ~includes ~libs ~other_mods ~outkind ~compile_on
   (* Get compiler and linker names *)
   let package = check_package_list package in
   let compiler, linker =
-    if prof then ("ocamlcp", [|"-p"; "a"|]), ("ocamlcp", [|"-p"; "a"|])
+    if prof then "ocamlcp -p a", "ocamlcp -p a"
     else begin
       let ocaml_c_opt =
         if compilation = Native then
@@ -456,16 +399,15 @@ let build ~compilation ~package ~includes ~libs ~other_mods ~outkind ~compile_on
         let thread = if thread then "-thread" else if vmthread then "-vmthread" else "" in
         let ocaml_c_opt = try Filename.chop_extension ocaml_c_opt with Invalid_argument _ -> ocaml_c_opt in
         let ocamlfind = sprintf "ocamlfind %s -package %s %s" ocaml_c_opt package thread in
-        let compiler_args = crono4 ~label:"Oebuild, get_effective_command(compiler)" get_effective_command ocamlfind in
-        let linker_args =
-          if compile_only then "", [||] else
+        let compiler = crono4 ~label:"Oebuild, get_effective_command(compiler)" get_effective_command ocamlfind in
+        let linker =
+          if compile_only then "" else
             let linkpkg = outkind <@ [Executable] in
-            let cmd = if linkpkg then ocamlfind ^ " -linkpkg" else ocamlfind in
-            split_prog_args cmd
+            if linkpkg then ocamlfind ^ " -linkpkg" else ocamlfind
             (*crono ~label:"Oebuild, get_effective_command(linker)" (get_effective_command ~linkpkg) ocamlfind*)
         in
-        compiler_args, linker_args
-      else split_prog_args ocaml_c_opt, split_prog_args ocaml_c_opt
+        compiler, linker
+      else ocaml_c_opt, ocaml_c_opt
     end
   in
   (*  *)
@@ -477,7 +419,7 @@ let build ~compilation ~package ~includes ~libs ~other_mods ~outkind ~compile_on
       then
         let deps_ml = List.map replace_extension_to_ml deps in
         deps, deps_ml, serial_compile ~compilation ~times ~compiler ~cflags:!cflags ~includes:!includes ~toplevel_modules ~deps:deps_ml ~verbose
-      else parallel_compile ~compilation ~times ~compiler ~cflags:!cflags ~includes:!includes ~toplevel_modules ~verbose ~jobs ()
+      else parallel_compile ~compilation ~times ?pp ~compiler ~cflags:!cflags ~includes:!includes ~toplevel_modules ~verbose ~jobs ()
     in
     (*if verbose >= 4 then Printf.printf "SORTED DEPENDENCIES:\n[%s]\n\n%!" (String.concat "; " deps);*)
     (* Link *)
@@ -552,7 +494,7 @@ let build ~compilation ~package ~includes ~libs ~other_mods ~outkind ~compile_on
 
 (** clean *)
 let obj_extensions = [".cmi"; ".cmo"; ".cmx"; ".o"; ".obj"; ".annot"; ".cmt"; ".cmti"]
-let lib_extensions = [".cma"; ".cmxa"; ".lib"; ".a"; ".dll"]
+let lib_extensions = [".cma"; ".cmxa"; ".lib"; ".a"]
 
 let clean ~deps () =
   let files = List.map begin fun name ->

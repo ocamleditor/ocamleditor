@@ -113,7 +113,7 @@ let find_toplevels ocamldeps =
 ;;
 
 (** create_dag *)
-let create_dag ?times ~toplevel_modules ~verbose () =
+let create_dag ?times ?pp ~toplevel_modules ~verbose () =
   let crono = if verbose >= 4 then crono else fun ?label f x -> f x in
   let dirs = List.map Filename.dirname toplevel_modules in
   let dirs = List.filter ((<>) ".") dirs in
@@ -132,7 +132,7 @@ let create_dag ?times ~toplevel_modules ~verbose () =
         crono ~label:"Oebuild_dep_dag.create_dag, ocamldep(`All)" (Oebuild_dep.ocamldep ?times ~search_path) filenames*)
       | `Recursive ->
         let ocamldeps = crono ~label:"Oebuild_dep_dag.create_dag, ocamldep(`Recursive)"
-          (Oebuild_dep.ocamldep_recursive ?times ~search_path ~verbose:false) toplevel_modules
+          (Oebuild_dep.ocamldep_recursive ?times ~search_path ?pp ~verbose:false) toplevel_modules
         in
         ocamldeps
   in
