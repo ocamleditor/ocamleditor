@@ -180,7 +180,7 @@ object (self)
     else kprintf self#set_title_markup "%s <b><tt>%s</tt></b>" t1 t2
 
   method private set_title_text text =
-    Opt.may current_window (fun w -> w#set_title text);
+    Option.iter (fun w -> w#set_title text) current_window;
 
   method private set_title_markup markup =
     kprintf label_title#set_label
@@ -364,12 +364,17 @@ object (self)
 
   method hide () =
     if pin_status then begin
-      Opt.may current_page begin fun p ->
-        Opt.may current_window (fun w -> w#set_opacity (match Preferences.preferences#get.Preferences.pref_compl_opacity with Some opa -> opa | _  -> 1.0));
+      Option.iter begin fun p ->
+        Option.iter 
+          (fun w -> w#set_opacity 
+              (match Preferences.preferences#get.Preferences.pref_compl_opacity with 
+               | Some opa -> opa 
+               | _  -> 1.0)) 
+          current_window;
         (*Opt.may pref.Preferences.pref_compl_opacity (fun opa -> Opt.may current_window (fun w -> w#set_opacity opa));*)
-        Opt.may (GWindow.toplevel p#coerce) (fun w -> w#present());
+        Option.iter (fun w -> w#present()) (GWindow.toplevel p#coerce);
         widget#is_onscreen#set true;
-      end
+      end current_page
     end else begin
       ignore (widget#tooltip_destroy());
       widget#clear();

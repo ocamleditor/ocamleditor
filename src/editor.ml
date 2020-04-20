@@ -494,7 +494,7 @@ class editor () =
               | _ when Oe_config.xdg_open_version <> None -> Some (sprintf "xdg-open %s" (Filename.quote (Filename.dirname filename)))
               | _ -> None
           in
-          Opt.may cmd (fun cmd -> ignore (Thread.create (fun () -> ignore (Sys.command cmd)) ()))
+          Option.iter (fun cmd -> ignore (Thread.create (fun () -> ignore (Sys.command cmd)) ())) cmd
         end);
       let _ = GMenu.separator_item ~packing:menu#add () in
       let item = GMenu.image_menu_item ~label:"Switch to Implementation/Interface" ~packing:menu#add () in
@@ -653,19 +653,23 @@ class editor () =
     method dialog_save_as page =
       match page#file with
         | Some file when file#remote <> None ->
-          Opt.may !Plugins.remote begin fun plugin ->
-            let module Remote = (val plugin) in
-            Remote.dialog_save_as ~editor:self ~page ()
-          end
+          Option.iter
+            begin fun (plugin : (module Plugins.REMOTE)) ->
+              let module Remote = (val plugin) in
+              Remote.dialog_save_as ~editor:self ~page ()
+            end
+            !Plugins.remote
         | _ -> Dialog_save_as.window ~editor:self ~page ()
 
     method dialog_rename page =
       match page#file with
         | Some file when file#remote <> None ->
-          Opt.may !Plugins.remote begin fun plugin ->
-            let module Remote = (val plugin) in
-            Remote.dialog_rename ~editor:self ~page ()
-          end
+          Option.iter
+            begin fun (plugin : (module Plugins.REMOTE)) ->
+              let module Remote = (val plugin) in
+              Remote.dialog_rename ~editor:self ~page ()
+            end
+            !Plugins.remote
         | _ -> Dialog_rename.window ~editor:self ~page ()
 
     method save (page : Editor_page.page) =
@@ -763,7 +767,7 @@ class editor () =
 
     method private cb_tout_delim page () =
       page#view#matching_delim ();
-      Opt.may page#annot_type (fun x -> x#remove_tag());
+      Option.iter (fun x -> x#remove_tag ()) page#annot_type;
       page#error_indication#hide_tooltip();
 
     val signals = new signals hpaned#as_widget ~add_page ~switch_page ~remove_page ~changed ~modified_changed
@@ -891,7 +895,7 @@ class editor () =
       (* Switch page: update the statusbar and remove annot tag *)
       ignore (notebook#connect#after#switch_page ~callback:begin fun _ ->
           (* Clean up type annotation tag and error indications *)
-          List.iter (fun page -> Opt.may page#annot_type (fun x -> x#remove_tag ())) pages;
+          List.iter (fun page -> Option.iter (fun x -> x#remove_tag ()) page#annot_type) pages;
           (* Current page *)
           self#with_current_page begin fun page ->
             if not page#load_complete && not history_switch_page_locked then (self#load_page page);

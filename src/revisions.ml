@@ -203,7 +203,7 @@ class widget ~page ?packing () =
         | _ -> ()
 
     method private view_diff () =
-      Opt.may !Plugins.diff begin  fun plugin ->
+      Option.iter begin  fun (plugin : (module Plugins.DIFF)) ->
         let module Plugin_diff = (val plugin) in
         match view#selection#get_selected_rows with
           | path2 :: path1 :: [] ->
@@ -229,7 +229,7 @@ class widget ~page ?packing () =
             oview <- Some ocamlview;
             ocamlview#view#misc#connect#destroy ~callback:(fun () -> oview <- None) |> ignore;
           | _ -> ()
-      end
+      end !Plugins.diff
 
     method private create_rev_indicator ?label ~row ~packing () =
       let rbox = GPack.hbox ~spacing:0 ~packing () in

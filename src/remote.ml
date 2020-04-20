@@ -358,7 +358,7 @@ module Remote = struct
             model_user_host#clear();
           end);
         ignore (self#misc#connect#destroy ~callback:begin fun _ ->
-            Opt.may remote_file (fun f -> f#cleanup())
+            Option.iter (fun f -> f#cleanup()) remote_file
           end);
         List.iter begin fun text ->
           let row = model_user_host#append () in

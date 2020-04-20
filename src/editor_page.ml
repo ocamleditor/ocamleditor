@@ -245,8 +245,8 @@ object (self)
   method set_changed_after_last_diff x = changed_after_last_diff <- x
 
   method private set_tag_annot_background () =
-    Opt.may annot_type (fun annot_type ->
-      annot_type#tag#set_property (`BACKGROUND Preferences.preferences#get.Preferences.pref_bg_color_popup));
+    Option.iter (fun annot_type ->
+      annot_type#tag#set_property (`BACKGROUND Preferences.preferences#get.Preferences.pref_bg_color_popup)) annot_type;
 
   method read_only = read_only
   method set_read_only ro =
@@ -480,7 +480,7 @@ object (self)
 
   method tooltip ?(typ=false) ((*(x, y) as*) location) =
     let location = `XY location in
-    if typ then (Opt.may annot_type (fun at -> at#tooltip location));
+    if typ then (Option.iter (fun at -> at#tooltip location) annot_type);
     if Preferences.preferences#get.Preferences.pref_err_tooltip
     then (error_indication#tooltip location)
 
@@ -539,7 +539,7 @@ object (self)
             Opt.may_default (editor#project.Prj.in_source_path self#get_filename) begin fun filename ->
               let filename = String.concat "/" (Miscellanea.filename_split filename) in
               let on_ready_cb viewer =
-                Opt.may viewer begin fun viewer ->
+                Option.iter begin fun viewer ->
                   if button_dotview#active then begin
                     textbox#misc#hide();
                     vbox#reorder_child viewer#coerce ~pos:0;
@@ -552,7 +552,7 @@ object (self)
                     status_pos_box#misc#hide();
                     sep_status_pos_box#misc#hide();
                   end
-                end
+                end viewer
               in
               match Dot.draw ~project:editor#project ~filename ~packing:vbox#add ~on_ready_cb () with
                 | None -> reset_button() | _ -> ();
@@ -609,7 +609,7 @@ object (self)
       with Not_found -> false
     end |> ignore;
     ignore (self#misc#connect#destroy ~callback:begin fun () ->
-      Opt.may file (fun f -> f#cleanup())
+      Option.iter (fun f -> f#cleanup()) file
     end);
     annot_type <- Some (new Annot_type.annot_type ~page:self);
     (**  *)
@@ -646,9 +646,9 @@ object (self)
       false
     end);
     (** Clean up type annotation tag *)
-    ignore (text_view#event#connect#scroll ~callback:(fun _ -> Opt.may annot_type (fun at -> at#remove_tag()); error_indication#hide_tooltip(); false));
-    ignore (text_view#event#connect#leave_notify ~callback:(fun _ -> Opt.may annot_type (fun at -> at#remove_tag()); error_indication#hide_tooltip(); false));
-    ignore (text_view#event#connect#focus_out ~callback:(fun _ -> Opt.may annot_type (fun at -> at#remove_tag()); error_indication#hide_tooltip(); false));
+    ignore (text_view#event#connect#scroll ~callback:(fun _ -> Option.iter (fun at -> at#remove_tag()) annot_type; error_indication#hide_tooltip(); false));
+    ignore (text_view#event#connect#leave_notify ~callback:(fun _ -> Option.iter (fun at -> at#remove_tag()) annot_type; error_indication#hide_tooltip(); false));
+    ignore (text_view#event#connect#focus_out ~callback:(fun _ -> Option.iter (fun at -> at#remove_tag()) annot_type; error_indication#hide_tooltip(); false));
     (** Horizontal scrollbar appears/disappears according to the window size *)
     ignore (sw#misc#connect#size_allocate ~callback:begin fun _ ->
       let alloc = sw#misc#allocation in

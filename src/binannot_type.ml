@@ -277,7 +277,7 @@ and find_signature_item f offset {sig_desc; sig_loc; _} =
       | Tsig_exception { tyexn_constructor; _ } -> find_extension_constructor f offset tyexn_constructor
       | Tsig_module mdecl -> find_module_type f offset mdecl.md_type
       | Tsig_recmodule ll -> List.iter (fun mdecl -> fmt mdecl.md_type) ll
-      | Tsig_modtype mtdecl -> Opt.may mtdecl.mtd_type fmt
+      | Tsig_modtype mtdecl -> Option.iter fmt mtdecl.mtd_type
       | Tsig_open _ -> ()
       | Tsig_include idecl -> fmt idecl.incl_mod;
       | Tsig_class _ -> Log.println `DEBUG "Tsig_class";
@@ -349,7 +349,7 @@ and find_class_expr f offset {cl_desc; cl_loc; _} =
         find_class_expr f offset expr;
       | Tcl_constraint (cle, clt, _, _, _) ->
         find_class_expr f offset cle;
-        Opt.may clt (find_class_type f offset)
+        Option.iter (find_class_type f offset) clt
       (* Added in 4.06 *)
       | Tcl_open (_, class_expr) ->
         find_class_expr f offset class_expr
@@ -408,7 +408,7 @@ and find_type_declaration f offset {typ_kind; typ_manifest; typ_cstrs; typ_loc; 
       find_core_type f offset ct1;
       find_core_type f offset ct2;
     end typ_cstrs;
-    Opt.may typ_manifest (find_core_type f offset ?loc:None);
+    Option.iter (find_core_type f offset ?loc:None) typ_manifest;
   end
 
 and find_extension_constructor f offset { ext_loc; ext_kind; _ } =
@@ -421,7 +421,7 @@ and find_extension_constructor f offset { ext_loc; ext_kind; _ } =
         | Cstr_record label_declarations ->
           List.iter (fun ld -> find_core_type f offset ld.ld_type) label_declarations
       end;
-      Opt.may core_type_option (find_core_type f offset ?loc:None)
+      Option.iter (find_core_type f offset ?loc:None) core_type_option
         (* TODO *)
     | Text_rebind (_, _) -> ()
   end
@@ -445,7 +445,7 @@ and find_structure_item f offset {str_desc; str_loc; _} =
       | Tstr_type (_, ll) -> List.iter (fun td -> find_type_declaration f offset td) ll
       | Tstr_exception { tyexn_constructor; _ } -> find_extension_constructor f offset tyexn_constructor
       | Tstr_module mdecl -> find_module_expr f offset mdecl.mb_expr
-      | Tstr_modtype mtdecl -> Opt.may mtdecl.mtd_type (find_module_type f offset)
+      | Tstr_modtype mtdecl -> Option.iter (find_module_type f offset) mtdecl.mtd_type
       | Tstr_recmodule ll ->
         List.iter begin fun { mb_expr = me; _ } ->
           (* Removed in 4.02.0 *)

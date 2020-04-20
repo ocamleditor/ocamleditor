@@ -186,11 +186,11 @@ object (self)
   method get_targets () =
     let targets = ref [] in
     let with_parent row f =
-      Opt.may (model#iter_parent row) begin fun row ->
+      Option.iter begin fun row ->
         match model#get ~row ~column:col_data with
           | Target parent -> f parent
           | ETask _ -> assert false (* External Tasks can not have children *);
-      end;
+      end (model#iter_parent row);
     in
     model#foreach begin fun _ row ->
       begin
