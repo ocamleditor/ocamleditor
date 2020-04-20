@@ -268,7 +268,7 @@ object (self)
     in
     Gaux.may sign_row_collapsed ~f:view#misc#handler_unblock;
     Gaux.may sign_row_expanded ~f:view#misc#handler_unblock;
-    Xlist.filter_map (fun x -> x) rows
+    List.filter_map (fun x -> x) rows
 
   method private append_task ~parent ~task =
     let row = model#append ~parent () in
@@ -290,7 +290,7 @@ object (self)
     end;
 
   method private create_id () =
-    let targets = Miscellanea.Xlist.filter_map (function Target x -> Some x | ETask _ -> None) (self#to_list()) in
+    let targets = List.filter_map (function Target x -> Some x | ETask _ -> None) (self#to_list()) in
     (List.fold_left (fun acc t -> max acc t.id) (-1) targets) + 1
 
   method add_target () =

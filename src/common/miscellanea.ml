@@ -72,18 +72,6 @@ module Xlist =
     let remove_dupl l = (* slow *)
       List.rev (List.fold_left (fun acc y -> if List.mem y acc then acc else y :: acc) [] l)
 
-    let filter_map p =
-      let rec find accu = function
-      | [] -> List.rev accu
-      | x :: l ->
-        find begin
-          match p x with
-            | None -> accu
-            | Some m -> (m :: accu)
-        end l
-      in
-      find [];;
-
     let max l =
       let rec find cand = function
       | [] -> cand
@@ -123,7 +111,7 @@ module Opt = struct
   let default opt def = match opt with Some x -> x   | _ -> def
 
   let exn exn x = match x with Some x -> x | _ -> raise exn
-  let filter l = Xlist.filter_map (fun x -> x) l
+  let filter l = List.filter_map (fun x -> x) l
 end
 
 

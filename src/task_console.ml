@@ -456,7 +456,7 @@ let create ~editor task_kind task =
   let console_id = sprintf "%s %s %s"
     task.Task.et_name
     task.Task.et_cmd
-    (String.concat " " (List.flatten (Xlist.filter_map (fun (e, v) -> if e then Some (Shell.parse_args v) else None) task.Task.et_args))) in
+    (String.concat " " (List.flatten (List.filter_map (fun (e, v) -> if e then Some (Shell.parse_args v) else None) task.Task.et_args))) in
   try
     let (console, _) = List.assoc console_id !views in
     console#set_task task;

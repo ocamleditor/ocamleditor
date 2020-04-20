@@ -147,7 +147,7 @@ module Signature = struct
           | Osig_class (_(*vir_flag*), _(*name*), _(*params*), clt, _(*rs*)) ->
             let rec parse_class_type = function
               | Octy_signature (_(*self_ty*), csil) ->
-                Miscellanea.Xlist.filter_map begin function
+                List.filter_map begin function
                   | Ocsg_method (name, priv, virt, ty) ->
                     Some {
                       sy_id           = parent_id @ [name];
@@ -530,7 +530,7 @@ let filter_by_name
     match include_modules with
       | Some path ->
         let modules = Modules.read ~path () in
-        let modules = Miscellanea.Xlist.filter_map begin fun (m, filename) ->
+        let modules = List.filter_map begin fun (m, filename) ->
           if Str.string_match regexp m 0
           then Some {sy_id=[m]; sy_kind=Pmodule; sy_type=m; sy_filename=filename; sy_local=false}
           else None;

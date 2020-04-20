@@ -368,7 +368,7 @@ object (self)
       try
         let bms = List.filter (fun bm -> bm.Oe.bm_filename = file#filename) project.Prj.bookmarks in
         List.iter Bookmark.mark_to_offset bms;
-        Xlist.filter_map (fun bm -> bm.Oe.bm_marker) bms
+        List.filter_map (fun bm -> bm.Oe.bm_marker) bms
       with Not_found -> []
     in
     Gutter.destroy_markers view#gutter old_markers;

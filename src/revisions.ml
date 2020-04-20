@@ -369,7 +369,7 @@ class widget ~page ?packing () =
           let re = Str.regexp re in
           let dirname = bak // Filename.dirname rel in
           let files = Array.to_list (Sys.readdir dirname) in
-          let basenames = Miscellanea.Xlist.filter_map begin fun basename ->
+          let basenames = List.filter_map begin fun basename ->
               if Str.string_match re basename 0 then Some (basename, (Str.matched_group 1 basename))
               else None
             end files

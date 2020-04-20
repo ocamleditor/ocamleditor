@@ -232,7 +232,7 @@ object (self)
     in*)
     self#init_tags ();
     let tag_table = new GText.tag_table self#tag_table in
-    lexical_tags <- List.map (fun x -> Some x) (Miscellanea.Xlist.filter_map begin fun n ->
+    lexical_tags <- List.map (fun x -> Some x) (List.filter_map begin fun n ->
     match tag_table#lookup n with
         | Some t -> Some (new GText.tag t)
         | _ -> None

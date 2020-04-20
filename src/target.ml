@@ -169,7 +169,7 @@ let rec find_target_dependencies targets trg =
 
 (** filter_external_tasks *)
 let filter_external_tasks target phase =
-  Miscellanea.Xlist.filter_map begin fun task ->
+  List.filter_map begin fun task ->
     match task.Task.et_phase with
     | Some ph ->
       if task.Task.et_always_run_in_project && phase = ph then Some (`OTHER, task) else None

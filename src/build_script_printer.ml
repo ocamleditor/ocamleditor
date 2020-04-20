@@ -113,7 +113,7 @@ let print_external_tasks ochan project =
   let ets = List.map begin fun {bst_target=tg; _} ->
     let ets =
       List.map begin fun et ->
-        let base_args = Xlist.filter_map (fun (x, y) -> if x then Some y else None) et.et_args in
+        let base_args = List.filter_map (fun (x, y) -> if x then Some y else None) et.et_args in
         let base_args = List.map (sprintf "true,%S") base_args in
         let custom_args = print_add_args tg et args in
         let args = base_args @ custom_args in
@@ -122,7 +122,7 @@ let print_external_tasks ochan project =
         kprintf print "  et_name                  = %S;" et.et_name;
         kprintf print "  et_env                   = [%s];"
           (String.concat ";" (List.map (sprintf "%S")
-            (Xlist.filter_map (fun (x, y) -> if x then Some y else None) et.et_env)));
+            (List.filter_map (fun (x, y) -> if x then Some y else None) et.et_env)));
         kprintf print "  et_env_replace           = %b;" et.et_env_replace;
         kprintf print "  et_dir                   = %S;" et.et_dir;
         kprintf print "  et_cmd                   = %S;" et.et_cmd;
