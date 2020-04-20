@@ -40,9 +40,6 @@ let (@$) = finally
 
 let ( /* ) x f = f x and ( */ ) f x = f x;;
 
-let rec fixpoint f v =
-  let v' = f v in
-  if v = v' then v else fixpoint f v'
 
 (** crono *)
 let crono ?(label="Time") f x =
