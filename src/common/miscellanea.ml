@@ -82,11 +82,6 @@ module Xlist =
         | h :: t -> h :: acc @ (f acc t)
       in f [] ll;;
 
-    let list_full x n =
-      let seq = ref [] in
-      for _ = 1 to n do seq := x :: !seq done;
-      !seq;;
-
     let group_assoc ll =
       let groups =
         List.fold_left begin fun groups (k, v) ->
