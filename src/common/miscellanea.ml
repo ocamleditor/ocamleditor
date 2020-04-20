@@ -27,8 +27,6 @@ let (//) = Filename.concat
 let (!!) = Filename.dirname
 let (!$) = Filename.quote
 let (^^^) = Filename.check_suffix
-let (|-) f g x = g (f x)
-
 
 (** try ... finally ... *)
 let finally = fun f1 f2 ->
@@ -64,10 +62,6 @@ let crono ?(label="Time") f x =
 
 module Xlist =
   struct
-    let rec rev_assoc x = function
-      | [] -> raise Not_found
-      | (a,b)::l -> if b = x then a else rev_assoc x l
-
     let pos x l =
       let rec f l n =
         match l with
