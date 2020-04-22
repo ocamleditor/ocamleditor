@@ -518,25 +518,26 @@ object (self)
 
   method private show_dep_graph () =
     match dotview with
-      | Some widget ->
-        widget#destroy();
-        dotview <- None;
-        textbox#misc#show();
-        List.iter (fun b -> b#misc#set_sensitive true)
-          [button_font_incr; button_font_decr; button_rowspacing_incr; button_rowspacing_decr; button_h_prev; button_h_next; button_h_last];
-        List.iter (fun b -> b#misc#set_sensitive true) [button_toggle_wrap; button_toggle_whitespace];
-        hscrollbar#misc#show();
-        status_pos_box#misc#show();
-        sep_status_pos_box#misc#show();
-      | None ->
-        begin
-          let reset_button () =
-            Gaux.may signal_button_dotview ~f:button_dotview#misc#handler_block;
-            button_dotview#set_active false;
-            Gaux.may signal_button_dotview ~f:button_dotview#misc#handler_unblock;
-          in
-          try
-            Opt.may_default (editor#project.Prj.in_source_path self#get_filename) begin fun filename ->
+    | Some widget ->
+      widget#destroy();
+      dotview <- None;
+      textbox#misc#show();
+      List.iter (fun b -> b#misc#set_sensitive true)
+        [button_font_incr; button_font_decr; button_rowspacing_incr; button_rowspacing_decr; button_h_prev; button_h_next; button_h_last];
+      List.iter (fun b -> b#misc#set_sensitive true) [button_toggle_wrap; button_toggle_whitespace];
+      hscrollbar#misc#show();
+      status_pos_box#misc#show();
+      sep_status_pos_box#misc#show();
+    | None ->
+      begin
+        let reset_button () =
+          Gaux.may signal_button_dotview ~f:button_dotview#misc#handler_block;
+          button_dotview#set_active false;
+          Gaux.may signal_button_dotview ~f:button_dotview#misc#handler_unblock;
+        in
+        try
+          begin match editor#project.Prj.in_source_path self#get_filename with
+            | Some filename ->
               let filename = String.concat "/" (Miscellanea.filename_split filename) in
               let on_ready_cb viewer =
                 Option.iter begin fun viewer ->
@@ -546,7 +547,7 @@ object (self)
                     dotview <- Some viewer;
                     List.iter (fun b -> b#misc#set_sensitive false)
                       [button_font_incr; button_font_decr; button_rowspacing_incr; button_rowspacing_decr;
-                      button_h_prev; button_h_next; button_h_last];
+                       button_h_prev; button_h_next; button_h_last];
                     List.iter (fun b -> b#misc#set_sensitive false) [button_toggle_wrap; button_toggle_whitespace];
                     hscrollbar#misc#hide();
                     status_pos_box#misc#hide();
@@ -554,18 +555,21 @@ object (self)
                   end
                 end viewer
               in
-              match Dot.draw ~project:editor#project ~filename ~packing:vbox#add ~on_ready_cb () with
-                | None -> reset_button() | _ -> ();
-            end begin fun () ->
+              begin match Dot.draw ~project:editor#project ~filename ~packing:vbox#add ~on_ready_cb () with
+                | None -> reset_button()
+                | _ -> ();
+              end
+
+            | None ->
               let title = "Could not show dependency graph" in
               let message = sprintf "%s for file: \n\n%s" title self#get_filename in
               Dialog.message ~title ~message `INFO;
               reset_button ()
-            end ()
-          with ex ->
-            reset_button();
-            Dialog.display_exn ~parent:self ~title:"Error creating dependency graph" ex
-        end;
+          end
+        with ex ->
+          reset_button();
+          Dialog.display_exn ~parent:self ~title:"Error creating dependency graph" ex
+      end
 
   method cut () =
     self#copy ();
