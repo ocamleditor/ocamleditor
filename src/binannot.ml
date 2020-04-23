@@ -119,17 +119,11 @@ let read_cmt ~project ~filename:source ?(timestamp=0.) ?compile_buffer () =
       let ext = if source ^^^ ".ml" then Some ".cmt" else if source ^^^ ".mli" then Some ".cmti" else None in
       match ext with
         | Some ext ->
-          Opt.map_default (Project.tmp_of_abs project source) None begin fun (tmp, relname) ->
+          Option.fold (Project.tmp_of_abs project source) ~none:None ~some:(fun (tmp, relname) ->
             let source_tmp = tmp // relname in
             let source_avail =
               if Sys.file_exists source_tmp then source_tmp
-              else begin
-                match compile_buffer with
-                  | Some f ->
-                    f();
-                    source_tmp
-                  | None -> source
-              end
+              else Option.fold compile_buffer ~none:source ~some:(fun f -> f (); source_tmp)
             in
             let cmt = (Filename.chop_extension source_avail) ^ ext in
             let mtime_cmt = (Unix.stat cmt).Unix.st_mtime in
@@ -138,8 +132,8 @@ let read_cmt ~project ~filename:source ?(timestamp=0.) ?compile_buffer () =
               if mtime_cmt >= mtime_src then begin
                 Some (source, mtime_cmt, Cmt_format.read_cmt cmt)
               end else None
-            end;
-          end;
+            end
+          )
         | _ -> None (*kprintf invalid_arg "Binannot.read_cmt \"%s\"" source*)
       in
       result

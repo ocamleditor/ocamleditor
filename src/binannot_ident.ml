@@ -142,7 +142,7 @@ let find_definition_and_references' ~project ~entry ~ident =
     | Int_ref def -> (* Cursor offset is on an Int_ref *)
       let bai_def = entry.locations.(def.loc_start.pos_cnum) in
       let int_refs = Hashtbl.find_all entry.int_refs def in
-      let ext_refs = Opt.map_default bai_def [] (fun def -> find_project_external_references ~project ~def) in
+      let ext_refs = Option.fold ~none:[] ~some:(fun def -> find_project_external_references ~project ~def) bai_def in
       {bai_def; bai_refs = int_refs @ ext_refs}
     | (Ext_ref | Open _) as ext -> (* Cursor offset is on an Ext_ref *)
       begin
@@ -150,7 +150,7 @@ let find_definition_and_references' ~project ~entry ~ident =
           | Project_def def ->
             let { Asttypes.loc; _ } = def.ident_loc in
             let entry_def = try Some (Hashtbl.find table_idents def.ident_fname) with Not_found -> None in
-            let int_refs = Opt.map_default entry_def [] (fun e -> Hashtbl.find_all e.int_refs loc) in
+            let int_refs = Option.fold ~none:[] ~some:(fun e -> Hashtbl.find_all e.int_refs loc) entry_def in
             let ext_refs =
               if ext = Ext_ref
               then find_project_external_references ~project ~def
@@ -194,9 +194,8 @@ let find_definition_and_references ~project ~filename ~offset ?compile_buffer ()
   try
     let entry = Hashtbl.find table_idents filename in
     let ident = find_ident ~project ~filename ~offset ?compile_buffer () in
-    Opt.map_default ident None begin fun ident ->
-      Some (find_definition_and_references' ~project ~entry ~ident)
-    end;
+    Option.fold ~none:None ~some:(fun ident ->
+      Some (find_definition_and_references' ~project ~entry ~ident)) ident;
   with Not_found -> None
 ;;
 
@@ -206,7 +205,7 @@ let find_definition ~project ~filename ~offset ?compile_buffer () =
   try
     let entry = Hashtbl.find table_idents filename in
     let ident = entry.locations.(offset) in
-    Opt.map_default ident None begin fun ident ->
+    Option.fold ~none:None ~some:(fun ident ->
       match ident.ident_kind with
         | Def _ | Def_constr _ | Def_module _ -> Some ident
         | Int_ref def -> entry.locations.(def.loc_start.pos_cnum)
@@ -217,8 +216,7 @@ let find_definition ~project ~filename ~offset ?compile_buffer () =
               | Project_file x -> Some x
               | Library_def -> None
               | No_def -> None
-          end
-    end;
+          end) ident;
   with Not_found -> None
 ;;
 
@@ -228,7 +226,7 @@ let find_used_components ~project ~filename ~offset ?compile_buffer () =
   try
     let entry = Hashtbl.find table_idents filename in
     let ident = entry.locations.(offset) in
-    Opt.map_default ident None begin fun ident ->
+    Option.fold ident ~none:None ~some:begin fun ident ->
       match ident.ident_kind with
         | Open scope ->
           let { Asttypes.txt; _ } = ident.ident_loc in

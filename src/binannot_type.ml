@@ -59,7 +59,7 @@ let rec find_pattern f offset ?(opt=false, false) {pat_desc; pat_loc; pat_type; 
           List.fold_left (fun opt pat -> fp ~opt pat) opt pl
         | Tpat_variant (lab, pat, _) ->
           Log.println `DEBUG "Tpat_variant (%s)" lab;
-          Opt.map_default pat opt (fun pat -> fp ~opt pat)
+          Option.fold ~none:opt ~some:(fun pat -> fp ~opt pat) pat
         | Tpat_record (ll, _) ->
           Log.println `DEBUG "Tpat_record ";
           List.fold_left (fun opt (_, _, pat) -> fp ~opt pat) opt ll
@@ -140,7 +140,7 @@ and find_expression f offset ?(opt=false,false) ?loc {exp_desc; exp_loc; exp_typ
         | Texp_apply (e, ll) ->
           Log.println `DEBUG "Texp_apply: " ;
           let opt = fe ~opt e in
-          List.fold_left (fun opt (_, e) -> Opt.map_default e opt (fun e -> fe ~opt e)) opt ll
+          List.fold_left (fun opt (_, e) -> Option.fold ~none:opt ~some:(fun e -> fe ~opt e) e) opt ll
         | Texp_try (expr, ll) ->
           let opt = fe expr in
           List.fold_left begin fun opt { c_lhs = p; c_guard = oe; c_rhs = e } ->
@@ -155,14 +155,14 @@ and find_expression f offset ?(opt=false,false) ?loc {exp_desc; exp_loc; exp_typ
           Log.println `DEBUG "Texp_construct: " ;
           List.fold_left (fun opt e -> fe ~opt e) opt ll
         | Texp_variant (_, expr) ->
-          Opt.map_default expr opt (fun e -> fe ~opt e)
+          Option.fold ~none:opt ~some:(fun e -> fe ~opt e) expr
         | Texp_record { fields; extended_expression; _ } ->
           let fold_field opt (_, f)  = match f with
             | Kept _ -> opt
             | Overridden (_, e) -> fe ~opt e
           in
           let opt = Array.fold_left fold_field opt fields in
-          Opt.map_default extended_expression opt (fun e -> fe ~opt e)
+          Option.fold ~none:opt ~some:(fun e -> fe ~opt e) extended_expression
         | Texp_field (expr, _, _) ->
           fe ~opt expr
         | Texp_setfield (e1, _, _, e2) ->
@@ -173,7 +173,7 @@ and find_expression f offset ?(opt=false,false) ?loc {exp_desc; exp_loc; exp_typ
         | Texp_ifthenelse (e1, e2, e3) ->
           let opt = fe ~opt e1 in
           let opt = fe ~opt e2 in
-          Opt.map_default e3 opt (fun e -> fe ~opt e)
+          Option.fold ~none:opt ~some:(fun e -> fe ~opt e) e3
         | Texp_sequence (e1, e2) ->
           let opt = fe ~opt e1 in
           fe ~opt e2
@@ -186,7 +186,7 @@ and find_expression f offset ?(opt=false,false) ?loc {exp_desc; exp_loc; exp_typ
           fe ~opt e3
         | Texp_send (e1, _, e2) ->
           let opt = fe e1 in
-          Opt.map_default e2 opt (fun e -> fe ~opt e)
+          Option.fold ~none:opt ~some:(fun e -> fe ~opt e) e2
         | Texp_new (_, _, _) ->
           Log.println `DEBUG "Texp_new" ;
           opt

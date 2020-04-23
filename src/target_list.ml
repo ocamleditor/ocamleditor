@@ -152,7 +152,7 @@ object (self)
           | _ -> true
       in
       if is_valid_source then begin
-        Opt.map_default (view#get_path_at_pos ~x ~y) false begin fun (path, _, _, _) ->
+        Option.fold (view#get_path_at_pos ~x ~y) ~none:false ~some:(fun (path, _, _, _) ->
           let row = model#get_iter path in
           match model#get ~row ~column:col_data with
             | Target tg when tg.visible && not tg.readonly ->
@@ -163,7 +163,7 @@ object (self)
               end;
               false
             | Target _ | ETask _ -> true (* true aborts drop *);
-        end
+        )
       end else true
     end |> ignore;
     let callback c row _ =

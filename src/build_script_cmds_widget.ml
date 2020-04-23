@@ -93,15 +93,19 @@ object (self)
 
   method get : unit -> Build_script.command option = fun () ->
     try
-      Opt.map_default combo#active_iter None begin fun row ->
-        Opt.map_default (model#get ~row ~column:col_task) None begin fun (target_id, task_name) -> Some {
-            bsc_name   = kind;
-            bsc_descr  = task_name;
-            bsc_target = Opt.exn Exit (Prj.find_target project target_id);
-            bsc_task   = Opt.exn Exit (Prj.find_task project task_name);
-          }
-        end
-      end
+      Option.fold combo#active_iter
+        ~none:None
+        ~some:(fun row ->
+            Option.fold (model#get ~row ~column:col_task)
+              ~none:None
+              ~some:(fun (target_id, task_name) -> Some {
+                  bsc_name   = kind;
+                  bsc_descr  = task_name;
+                  bsc_target = Opt.exn Exit (Prj.find_target project target_id);
+                  bsc_task   = Opt.exn Exit (Prj.find_task project task_name);
+                }
+            )
+      )
     with Exit -> None
 end
 

@@ -69,7 +69,7 @@ let rec iter_pattern f {pat_desc; pat_loc; _} =
       f ident;
       List.flatten (List.fold_left (fun acc pat -> (fp pat) :: acc) [] pl)
     | Tpat_variant (_, pat, _) ->
-      Opt.map_default pat [] (fun pat -> fp pat)
+      Option.fold ~none:[] ~some:(fun pat -> fp pat) pat
     | Tpat_record (ll, _) ->
       List.flatten (List.fold_left begin fun acc ({ Asttypes.loc; _ }, ld, pat) ->
         let type_expr = lid_of_type_expr ld.Types.lbl_res in
