@@ -21,10 +21,8 @@
 *)
 
 
-open Miscellanea
 open Cmt_format
 open Typedtree
-open Location
 open Binannot
 
 type t = {
@@ -97,7 +95,7 @@ let rec find_pattern f offset ?(opt=false, false) {pat_desc; pat_loc; pat_type; 
 
 (** find_expression *)
 and find_expression f offset ?(opt=false,false) ?loc {exp_desc; exp_loc; exp_type; exp_extra; _} =
-  let loc = Opt.default loc exp_loc in
+  let loc = Option.value loc ~default:exp_loc in
   if loc <== offset then begin
     let (opt, sth) as result =
       let fe = find_expression f offset in
@@ -301,7 +299,7 @@ and find_with_constraint f offset = function
 
 (** find_core_type *)
 and find_core_type f offset ?loc {ctyp_type; ctyp_loc; _} =
-  let loc = Opt.default loc ctyp_loc in
+  let loc = Option.value loc ~default:ctyp_loc in
   if loc <== offset then begin
     f loc (string_of_type_expr ctyp_type)
   end

@@ -209,7 +209,7 @@ object (self)
     let iter = ins#backward_find_char (fun x -> Glib.Utf8.from_unichar x = "#") in
     let prefix = page#buffer#get_text ~start:iter#forward_char ~stop:ins () in
     let typ = Binannot_type.find ~page ~iter:iter#backward_char () in
-    let class_type = Opt.map typ (fun x -> x.Binannot_type.ba_type) in
+    let class_type = Option.map (fun x -> x.Binannot_type.ba_type) typ in
     match class_type with
       | Some class_type ->
         Log.println `TRACE "class_type = %s\n%!" class_type;

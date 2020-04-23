@@ -96,7 +96,6 @@ module Xlist =
   end
 
 module Opt = struct
-  let default opt def = match opt with Some x -> x   | _ -> def
 
   let exn exn x = match x with Some x -> x | _ -> raise exn
   let filter l = List.filter_map (fun x -> x) l

@@ -24,7 +24,6 @@ open Printf
 open Target
 open Task
 open GUtil
-open Miscellanea
 
 type item = Target of Target.t | ETask of Task.t
 

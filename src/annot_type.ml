@@ -21,7 +21,6 @@
 *)
 
 open Printf
-open Miscellanea
 
 type source_point = [`ITER of GText.iter | `XY of (int * int)]
 

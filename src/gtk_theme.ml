@@ -22,7 +22,6 @@
 
 
 open Printf
-open Miscellanea
 open Preferences
 
 let avail_themes =
@@ -108,19 +107,21 @@ widget \"*.oe_menubar\" style:highest \"oe_menubar\"
         "widget \"*.targetlist_treeview\" style \"targetlist-treestyle\""
   in
   let gtk_theme =
-    match Oe_config.themes_dir with
-      | Some _ ->
-        let theme = match theme with Some _ as x -> x | _ -> preferences#get.pref_general_theme in
-        Opt.map_default theme ""
-          (fun theme -> sprintf "gtk-theme-name = \"%s\"" theme);
-      | _ -> ""
+    Option.fold Oe_config.themes_dir
+      ~none:""
+      ~some:(fun _ ->
+          let theme = match theme with Some _ as x -> x | _ -> preferences#get.pref_general_theme in
+          Option.fold theme
+            ~none:""
+            ~some:(fun theme -> sprintf "gtk-theme-name = \"%s\"" theme)
+        )
   in
   let gtk_font_name =
     match String.trim pref.pref_general_font with
       | "" ->
         begin
           try
-            let family, size = List.find (fun (n, _) -> Gtk_util.try_font context n) ["Sans", 9] in  
+            let family, size = List.find (fun (n, _) -> Gtk_util.try_font context n) ["Sans", 9] in
             let font_name = sprintf "%s %d" family size in
             pref.Preferences.pref_general_font <- font_name;
             Preferences.save();
