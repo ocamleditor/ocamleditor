@@ -140,7 +140,7 @@ object (self)
       bs_filename = Filename.basename filename;
       bs_targets  = widget_trg#get();
       bs_args     = widget_args#get();
-      bs_commands = (Opt.filter [cmd_distclean#get(); cmd_install#get(); cmd_uninstall#get()]);
+      bs_commands = List.filter_map Fun.id [cmd_distclean#get(); cmd_install#get(); cmd_uninstall#get()];
     };
     GtkThread.sync (Build_script_printer.print ~project ~filename:(match tmp with Some x -> x | _ -> filename)) ();
     Gmisclib.Idle.add ~prio:300 (fun () -> Project.save project)

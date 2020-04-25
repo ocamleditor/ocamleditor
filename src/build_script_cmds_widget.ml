@@ -25,7 +25,7 @@ open Build_script
 open Task
 open Target
 open Printf
-open Miscellanea
+open Option_syntax
 
 class widget kind ~label ~project ?packing () =
   let vbox        = GPack.vbox ~spacing:13 ?packing () in
@@ -92,21 +92,15 @@ object (self)
     match combo#active_iter with None -> combo#set_active 0 | _ -> ()
 
   method get : unit -> Build_script.command option = fun () ->
-    try
-      Option.fold combo#active_iter
-        ~none:None
-        ~some:(fun row ->
-            Option.fold (model#get ~row ~column:col_task)
-              ~none:None
-              ~some:(fun (target_id, task_name) -> Some {
-                  bsc_name   = kind;
-                  bsc_descr  = task_name;
-                  bsc_target = Opt.exn Exit (Prj.find_target project target_id);
-                  bsc_task   = Opt.exn Exit (Prj.find_task project task_name);
-                }
-            )
-      )
-    with Exit -> None
+    let+ row = combo#active_iter in
+    let+ (target_id, task_name) = model#get  ~row ~column:col_task in
+    let+ bsc_target = Prj.find_target project target_id in
+    let+ bsc_task = Prj.find_task project task_name in
+    Some { bsc_name = kind
+         ; bsc_descr = task_name
+         ; bsc_target
+         ; bsc_task
+         }
 end
 
 

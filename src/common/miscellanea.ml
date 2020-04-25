@@ -95,14 +95,6 @@ module Xlist =
       List.map (fun (k, group) -> (k, List.rev !group)) groups;;
   end
 
-module Opt = struct
-
-  let exn exn x = match x with Some x -> x | _ -> raise exn
-  let filter l = List.filter_map (fun x -> x) l
-end
-
-
-
 (** {6 Memoization} *)
 
 module Memo =
