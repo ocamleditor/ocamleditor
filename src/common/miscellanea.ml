@@ -27,8 +27,6 @@ let (//) = Filename.concat
 let (!!) = Filename.dirname
 let (!$) = Filename.quote
 let (^^^) = Filename.check_suffix
-let (|-) f g x = g (f x)
-
 
 (** try ... finally ... *)
 let finally = fun f1 f2 ->
@@ -42,9 +40,6 @@ let (@$) = finally
 
 let ( /* ) x f = f x and ( */ ) f x = f x;;
 
-let rec fixpoint f v =
-  let v' = f v in
-  if v = v' then v else fixpoint f v'
 
 (** crono *)
 let crono ?(label="Time") f x =
@@ -64,10 +59,6 @@ let crono ?(label="Time") f x =
 
 module Xlist =
   struct
-    let rec rev_assoc x = function
-      | [] -> raise Not_found
-      | (a,b)::l -> if b = x then a else rev_assoc x l
-
     let pos x l =
       let rec f l n =
         match l with
@@ -77,18 +68,6 @@ module Xlist =
 
     let remove_dupl l = (* slow *)
       List.rev (List.fold_left (fun acc y -> if List.mem y acc then acc else y :: acc) [] l)
-
-    let filter_map p =
-      let rec find accu = function
-      | [] -> List.rev accu
-      | x :: l ->
-        find begin
-          match p x with
-            | None -> accu
-            | Some m -> (m :: accu)
-        end l
-      in
-      find [];;
 
     let max l =
       let rec find cand = function
@@ -103,11 +82,6 @@ module Xlist =
         | h :: t -> h :: acc @ (f acc t)
       in f [] ll;;
 
-    let list_full x n =
-      let seq = ref [] in
-      for _ = 1 to n do seq := x :: !seq done;
-      !seq;;
-
     let group_assoc ll =
       let groups =
         List.fold_left begin fun groups (k, v) ->
@@ -120,19 +94,6 @@ module Xlist =
       in
       List.map (fun (k, group) -> (k, List.rev !group)) groups;;
   end
-
-module Opt = struct
-  let may opt f = match opt with Some x -> f x | _ -> ()
-  let may_default opt f g y = match opt with Some x -> f x | _ -> g y
-  let map opt f = match opt with Some x -> Some (f x) | _ -> None
-  let map_default opt default f = match opt with Some x -> f x | _ -> default
-  let default opt def = match opt with Some x -> x   | _ -> def
-
-  let exn exn x = match x with Some x -> x | _ -> raise exn
-  let filter l = Xlist.filter_map (fun x -> x) l
-end
-
-
 
 (** {6 Memoization} *)
 

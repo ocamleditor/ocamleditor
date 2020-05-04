@@ -65,15 +65,15 @@ let print () = if true || App_config.application_debug then begin
   (if Sys.win32 then [
      "oeproc", Oe_config.oeproc_command
    ] else [
-     "xdg-open", (Opt.default Oe_config.xdg_open_version "<Not Found>");
+     "xdg-open", (Option.value Oe_config.xdg_open_version ~default:"<Not Found>");
    ]) @ [
-    "dot", (Opt.default Oe_config.dot_version "<Not Found>");
-    "ocp-indent", (Opt.default Oe_config.ocp_indent_version "<Not Found>");
-    "git", (Opt.default Oe_config.git_version "<Not Found>");
-    "rc", (Opt.default Oe_config.rc "<Not Found>");
-    "cvtres", (Opt.default Oe_config.cvtres "<Not Found>");
+    "dot", (Option.value Oe_config.dot_version ~default:"<Not Found>");
+    "ocp-indent", (Option.value Oe_config.ocp_indent_version ~default:"<Not Found>");
+    "git", (Option.value Oe_config.git_version ~default:"<Not Found>");
+    "rc", (Option.value Oe_config.rc ~default:"<Not Found>");
+    "cvtres", (Option.value Oe_config.cvtres ~default:"<Not Found>");
     "GTK Version", (sprintf "%d.%d.%d" a b c);
-    "Locale", (Opt.default (get_locale ()) "<Not Found>");
+    "Locale", (Option.value (get_locale ()) ~default:"<Not Found>");
     "Charset", (let x, charset = Glib.Convert.get_charset () in sprintf "%b, %s" x charset);
     "Backtrace status", (sprintf "%b" (Printexc.backtrace_status ()));
   ] in

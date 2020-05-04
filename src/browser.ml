@@ -611,27 +611,29 @@ object (self)
     editor#with_current_page begin fun page ->
       try
         let iter = `ITER (page#buffer#get_iter `INSERT) in
-        Opt.may page#annot_type (fun at -> at#popup (*~position:`TOP_RIGHT*) iter ());
+        (*Opt.may page#annot_type (fun (at : Annot_type.annot_type) -> at#popup (*~position:`TOP_RIGHT*) iter ());*)
+        Option.iter (fun at ->  at#popup iter () : Annot_type.annot_type -> unit) page#annot_type;
         if Preferences.preferences#get.Preferences.pref_err_tooltip then (page#error_indication#tooltip ~sticky:true iter);
       with ex -> Printf.eprintf "File \"browser.ml\": %s\n%s\n%!" (Printexc.to_string ex) (Printexc.get_backtrace());
     end
 
   method annot_type_copy () =
     editor#with_current_page begin fun page ->
-      Opt.may page#annot_type begin fun annot_type ->
+      Option.iter begin fun (annot_type : Annot_type.annot_type) ->
         match annot_type#get_type (`ITER (page#buffer#get_iter `INSERT)) with
-          | Some {Annot_type.at_type; _} ->
-            self#annot_type();
-            let clipboard = GData.clipboard Gdk.Atom.clipboard in
-            clipboard#set_text at_type;
-          | _ -> ()
-      end
+        | Some {Annot_type.at_type; _} ->
+          self#annot_type();
+          let clipboard = GData.clipboard Gdk.Atom.clipboard in
+          clipboard#set_text at_type
+        | None -> ()
+      end page#annot_type
     end
 
   method annot_type_set_tooltips x =
     Preferences.preferences#get.Preferences.pref_annot_type_tooltips_enabled <- x;
     Preferences.save();
-    editor#with_current_page (fun page -> Opt.may page#annot_type (fun x -> x#remove_tag()))
+    editor#with_current_page
+      (fun page -> Option.iter (fun obj -> obj#remove_tag ()) page#annot_type)
 
   method create_menu_history dir ~menu =
     let history = match dir with
@@ -912,17 +914,21 @@ object (self)
             toolbar#tool_save#misc#set_sensitive page#buffer#modified);
         Gmisclib.Idle.add ~prio:300 begin fun () ->
           let button = find_custom_button `SAVE in
-          Opt.may button begin fun button ->
-            button#misc#set_sensitive page#buffer#modified;
-            button#misc#set_state `NORMAL;
-          end;
+          Option.iter
+            begin fun button ->
+              button#misc#set_sensitive page#buffer#modified;
+              button#misc#set_state `NORMAL
+            end
+            button
         end;
         Gmisclib.Idle.add ~prio:300 begin fun () ->
           let button = find_custom_button `SAVE_ALL in
-          Opt.may button begin fun button ->
-            button#misc#set_sensitive exists_unsaved;
-            button#misc#set_state `NORMAL;
-          end;
+          Option.iter
+            begin fun button ->
+              button#misc#set_sensitive exists_unsaved;
+              button#misc#set_state `NORMAL
+            end
+            button
         end;
         Gmisclib.Idle.add ~prio:300 self#set_title
       end;

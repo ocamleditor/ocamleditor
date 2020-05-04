@@ -20,19 +20,28 @@
 
 *)
 
-
 open Printf
 
-type status = {
-  mutable added    : int;
-  mutable modified : int;
-  mutable deleted  : int
-}
+type status =
+  { mutable added : int
+  ; mutable modified : int
+  ; mutable deleted : int
+  }
 
-let string_of_status status = match status with Some s -> sprintf " [+%d ~%d -%d]" s.added s.modified s.deleted | _ -> ""
+module Log = Common.Log.Make (struct
+  let prefix = "Git"
+end)
+
+let _ = Log.set_verbosity `ERROR
+
+let string_of_status status =
+  match status with
+  | Some s ->
+      Printf.sprintf " [+%d ~%d -%d]" s.added s.modified s.deleted
+  | _ ->
+      ""
+
 let re_status = Str.regexp "\\([ MADRCU?!]\\)\\([ MDU?!]\\) +\\(.*\\)?"
-let re_plus = Str.regexp "\\++"
-let re_minus = Str.regexp "-+"
 
 (** with_status *)
 let with_status =
@@ -40,7 +49,8 @@ let with_status =
   let last_status = ref None in
   fun ?(force=false) f ->
     match Oe_config.git_version with
-      | None -> f None
+      | None -> 
+        f None
       | _ ->
         let now = Unix.gettimeofday() in
         if force || now -. !last_check > 3.0 then begin
@@ -50,13 +60,18 @@ let with_status =
             Spawn.loop begin fun ic ->
               let line = input_line ic in
               if Str.string_match re_status line 0 then begin
+                let x = Str.matched_group 1 line in
                 let y = Str.matched_group 2 line in
                 begin
-                  match y with
-                    | "M" -> status.modified <- status.modified + 1
-                    | "?" -> status.added <- status.added + 1
-                    | "D" -> status.deleted <- status.deleted + 1
-                    | _ -> ()
+                  match (x, y) with
+                    | _, "M" | "M", _ -> 
+                      status.modified <- status.modified + 1
+                    | "?", _ -> 
+                      status.added <- status.added + 1
+                    | "D", _ -> 
+                      status.deleted <- status.deleted + 1
+                    | _ -> 
+                      Log.println `ERROR "Unparseable git message: %s%s" x y
                 end;
               end;
             end
@@ -68,12 +83,14 @@ let with_status =
               has_errors := true;
             end
           in
-          Spawn.async ~process_in ~process_err
+          Spawn.async 
+            ~process_in 
+            ~process_err
             ~at_exit:begin fun _ ->
               last_status := if !has_errors then None else Some status;
               if !has_errors then GtkThread.async f None
               else GtkThread.async f !last_status
-            end "git" [|"status"; "--porcelain"|] |> ignore;
+            end "git" [|"status"; "--porcelain=1"|] |> ignore;
           last_check := now
         end else GtkThread.async f !last_status
 
@@ -94,7 +111,8 @@ let with_diff_stat f =
               let ins = try int_of_string ins with Failure _ -> 0 in
               let del = try int_of_string del with Failure _ -> 0 in
               diffs := (ins, del, fn) :: !diffs;
-            | _ -> ()
+            | _ -> 
+              Log.println `ERROR "Unparseable git message: %s" line
         end
       in
       let display diffs =

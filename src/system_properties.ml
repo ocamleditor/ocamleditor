@@ -21,7 +21,6 @@
 *)
 
 
-open Miscellanea
 open Printf
 
 (** get_locale *)
@@ -84,24 +83,24 @@ let to_string () =
     20, "native_compilation", (match Ocaml_config.can_compile_native () with Some x -> "Yes (" ^ x ^ ")" | _ -> "No");
   ] @
   (if Sys.win32 && not Ocaml_config.is_mingw then [
-     30, "cl", (Opt.default Oe_config.cl "<Not Found>");
-     30, "ml", (Opt.default Oe_config.ml "<Not Found>");
+     30, "cl", (Option.value Oe_config.cl ~default:"<Not Found>");
+     30, "ml", (Option.value Oe_config.ml ~default:"<Not Found>");
      30, "VSINSTALLDIR", (try Sys.getenv "VSINSTALLDIR" with Not_found -> "<Not Found>");
-     30, "rc", (Opt.default Oe_config.rc "<Not Found>");
-     30, "cvtres", (Opt.default Oe_config.cvtres "<Not Found>");
+     30, "rc", (Option.value Oe_config.rc ~default:"<Not Found>");
+     30, "cvtres", (Option.value Oe_config.cvtres ~default:"<Not Found>");
    ] else [
-     70, "xdg-open", (Opt.default Oe_config.xdg_open_version "<Not Found>");
+     70, "xdg-open", (Option.value Oe_config.xdg_open_version ~default:"<Not Found>");
    ]) @ [
-    70, "dot", (Opt.default Oe_config.dot_version "<Not Found>");
-    70, "ocp-indent", (Opt.default Oe_config.ocp_indent_version "<Not Found>");
-    50, "findlib", (Opt.default (findlib_package_exists "findlib") "<Not Found>");
-    50, "lablgtk2", (Opt.default (findlib_package_exists "lablgtk2") "<Not Found>");
-    50, "diff", (Opt.default (findlib_package_exists "diff") "<Not Found>");
-    50, "lablgtk2.rsvg", (Opt.default (findlib_package_exists "lablgtk2.rsvg") "<Not Found>");
-    50, "curl", (Opt.default (findlib_package_exists "curl") "<Not Found>");
-    70, "git", (Opt.default Oe_config.git_version "<Not Found>");
+    70, "dot", (Option.value Oe_config.dot_version ~default:"<Not Found>");
+    70, "ocp-indent", (Option.value Oe_config.ocp_indent_version ~default:"<Not Found>");
+    50, "findlib", (Option.value (findlib_package_exists "findlib") ~default:"<Not Found>");
+    50, "lablgtk2", (Option.value (findlib_package_exists "lablgtk2") ~default:"<Not Found>");
+    50, "diff", (Option.value (findlib_package_exists "diff") ~default:"<Not Found>");
+    50, "lablgtk2.rsvg", (Option.value (findlib_package_exists "lablgtk2.rsvg") ~default:"<Not Found>");
+    50, "curl", (Option.value (findlib_package_exists "curl") ~default:"<Not Found>");
+    70, "git", (Option.value Oe_config.git_version ~default:"<Not Found>");
     40, "version", (sprintf "%d.%d.%d" a b c);
-    60, "locale", (Opt.default (get_locale ()) "<Not Found>");
+    60, "locale", (Option.value (get_locale ()) ~default:"<Not Found>");
     60, "charset", (let x, charset = Glib.Convert.get_charset () in sprintf "%b, %s" x charset);
     20, "backtrace_status", (sprintf "%b" (Printexc.backtrace_status ()));
   ] in

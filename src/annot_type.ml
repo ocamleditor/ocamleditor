@@ -21,7 +21,6 @@
 *)
 
 open Printf
-open Miscellanea
 
 type source_point = [`ITER of GText.iter | `XY of (int * int)]
 
@@ -67,7 +66,7 @@ object (self)
         end
         then None else (Some iter)
       in
-      Opt.map_default iter None self#get_annot_at_iter;
+      Option.fold iter ~none:None ~some:self#get_annot_at_iter
     end else None
 
   method get_type position =

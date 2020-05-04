@@ -28,6 +28,7 @@ open App_config
 open File_util
 open List_opt
 open Argc
+open Option_syntax
 
 module Log = Log.Make(struct
   let channel = stderr

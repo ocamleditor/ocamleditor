@@ -364,7 +364,7 @@ let write_resource_file proj =
             end
           end rc.rc_icons;
         in
-        let new_iconames = Miscellanea.Xlist.filter_map (fun x -> x) new_iconames in
+        let new_iconames = List.filter_map (fun x -> x) new_iconames in
         rc.rc_icons <- new_iconames;
         (* Print resource script *)
         let i = ref 0 in

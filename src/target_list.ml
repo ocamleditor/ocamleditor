@@ -24,7 +24,6 @@ open Printf
 open Target
 open Task
 open GUtil
-open Miscellanea
 
 type item = Target of Target.t | ETask of Task.t
 
@@ -152,7 +151,7 @@ object (self)
           | _ -> true
       in
       if is_valid_source then begin
-        Opt.map_default (view#get_path_at_pos ~x ~y) false begin fun (path, _, _, _) ->
+        Option.fold (view#get_path_at_pos ~x ~y) ~none:false ~some:(fun (path, _, _, _) ->
           let row = model#get_iter path in
           match model#get ~row ~column:col_data with
             | Target tg when tg.visible && not tg.readonly ->
@@ -163,7 +162,7 @@ object (self)
               end;
               false
             | Target _ | ETask _ -> true (* true aborts drop *);
-        end
+        )
       end else true
     end |> ignore;
     let callback c row _ =
@@ -186,11 +185,11 @@ object (self)
   method get_targets () =
     let targets = ref [] in
     let with_parent row f =
-      Opt.may (model#iter_parent row) begin fun row ->
+      Option.iter begin fun row ->
         match model#get ~row ~column:col_data with
           | Target parent -> f parent
           | ETask _ -> assert false (* External Tasks can not have children *);
-      end;
+      end (model#iter_parent row);
     in
     model#foreach begin fun _ row ->
       begin
@@ -268,7 +267,7 @@ object (self)
     in
     Gaux.may sign_row_collapsed ~f:view#misc#handler_unblock;
     Gaux.may sign_row_expanded ~f:view#misc#handler_unblock;
-    Xlist.filter_map (fun x -> x) rows
+    List.filter_map (fun x -> x) rows
 
   method private append_task ~parent ~task =
     let row = model#append ~parent () in
@@ -290,7 +289,7 @@ object (self)
     end;
 
   method private create_id () =
-    let targets = Miscellanea.Xlist.filter_map (function Target x -> Some x | ETask _ -> None) (self#to_list()) in
+    let targets = List.filter_map (function Target x -> Some x | ETask _ -> None) (self#to_list()) in
     (List.fold_left (fun acc t -> max acc t.id) (-1) targets) + 1
 
   method add_target () =

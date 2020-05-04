@@ -21,10 +21,8 @@
 *)
 
 
-open Miscellanea
 open Cmt_format
 open Typedtree
-open Location
 open Binannot
 
 type t = {
@@ -59,7 +57,7 @@ let rec find_pattern f offset ?(opt=false, false) {pat_desc; pat_loc; pat_type; 
           List.fold_left (fun opt pat -> fp ~opt pat) opt pl
         | Tpat_variant (lab, pat, _) ->
           Log.println `DEBUG "Tpat_variant (%s)" lab;
-          Opt.map_default pat opt (fun pat -> fp ~opt pat)
+          Option.fold ~none:opt ~some:(fun pat -> fp ~opt pat) pat
         | Tpat_record (ll, _) ->
           Log.println `DEBUG "Tpat_record ";
           List.fold_left (fun opt (_, _, pat) -> fp ~opt pat) opt ll
@@ -97,7 +95,7 @@ let rec find_pattern f offset ?(opt=false, false) {pat_desc; pat_loc; pat_type; 
 
 (** find_expression *)
 and find_expression f offset ?(opt=false,false) ?loc {exp_desc; exp_loc; exp_type; exp_extra; _} =
-  let loc = Opt.default loc exp_loc in
+  let loc = Option.value loc ~default:exp_loc in
   if loc <== offset then begin
     let (opt, sth) as result =
       let fe = find_expression f offset in
@@ -140,7 +138,7 @@ and find_expression f offset ?(opt=false,false) ?loc {exp_desc; exp_loc; exp_typ
         | Texp_apply (e, ll) ->
           Log.println `DEBUG "Texp_apply: " ;
           let opt = fe ~opt e in
-          List.fold_left (fun opt (_, e) -> Opt.map_default e opt (fun e -> fe ~opt e)) opt ll
+          List.fold_left (fun opt (_, e) -> Option.fold ~none:opt ~some:(fun e -> fe ~opt e) e) opt ll
         | Texp_try (expr, ll) ->
           let opt = fe expr in
           List.fold_left begin fun opt { c_lhs = p; c_guard = oe; c_rhs = e } ->
@@ -155,14 +153,14 @@ and find_expression f offset ?(opt=false,false) ?loc {exp_desc; exp_loc; exp_typ
           Log.println `DEBUG "Texp_construct: " ;
           List.fold_left (fun opt e -> fe ~opt e) opt ll
         | Texp_variant (_, expr) ->
-          Opt.map_default expr opt (fun e -> fe ~opt e)
+          Option.fold ~none:opt ~some:(fun e -> fe ~opt e) expr
         | Texp_record { fields; extended_expression; _ } ->
           let fold_field opt (_, f)  = match f with
             | Kept _ -> opt
             | Overridden (_, e) -> fe ~opt e
           in
           let opt = Array.fold_left fold_field opt fields in
-          Opt.map_default extended_expression opt (fun e -> fe ~opt e)
+          Option.fold ~none:opt ~some:(fun e -> fe ~opt e) extended_expression
         | Texp_field (expr, _, _) ->
           fe ~opt expr
         | Texp_setfield (e1, _, _, e2) ->
@@ -173,7 +171,7 @@ and find_expression f offset ?(opt=false,false) ?loc {exp_desc; exp_loc; exp_typ
         | Texp_ifthenelse (e1, e2, e3) ->
           let opt = fe ~opt e1 in
           let opt = fe ~opt e2 in
-          Opt.map_default e3 opt (fun e -> fe ~opt e)
+          Option.fold ~none:opt ~some:(fun e -> fe ~opt e) e3
         | Texp_sequence (e1, e2) ->
           let opt = fe ~opt e1 in
           fe ~opt e2
@@ -186,7 +184,7 @@ and find_expression f offset ?(opt=false,false) ?loc {exp_desc; exp_loc; exp_typ
           fe ~opt e3
         | Texp_send (e1, _, e2) ->
           let opt = fe e1 in
-          Opt.map_default e2 opt (fun e -> fe ~opt e)
+          Option.fold ~none:opt ~some:(fun e -> fe ~opt e) e2
         | Texp_new (_, _, _) ->
           Log.println `DEBUG "Texp_new" ;
           opt
@@ -277,7 +275,7 @@ and find_signature_item f offset {sig_desc; sig_loc; _} =
       | Tsig_exception { tyexn_constructor; _ } -> find_extension_constructor f offset tyexn_constructor
       | Tsig_module mdecl -> find_module_type f offset mdecl.md_type
       | Tsig_recmodule ll -> List.iter (fun mdecl -> fmt mdecl.md_type) ll
-      | Tsig_modtype mtdecl -> Opt.may mtdecl.mtd_type fmt
+      | Tsig_modtype mtdecl -> Option.iter fmt mtdecl.mtd_type
       | Tsig_open _ -> ()
       | Tsig_include idecl -> fmt idecl.incl_mod;
       | Tsig_class _ -> Log.println `DEBUG "Tsig_class";
@@ -301,7 +299,7 @@ and find_with_constraint f offset = function
 
 (** find_core_type *)
 and find_core_type f offset ?loc {ctyp_type; ctyp_loc; _} =
-  let loc = Opt.default loc ctyp_loc in
+  let loc = Option.value loc ~default:ctyp_loc in
   if loc <== offset then begin
     f loc (string_of_type_expr ctyp_type)
   end
@@ -349,7 +347,7 @@ and find_class_expr f offset {cl_desc; cl_loc; _} =
         find_class_expr f offset expr;
       | Tcl_constraint (cle, clt, _, _, _) ->
         find_class_expr f offset cle;
-        Opt.may clt (find_class_type f offset)
+        Option.iter (find_class_type f offset) clt
       (* Added in 4.06 *)
       | Tcl_open (_, class_expr) ->
         find_class_expr f offset class_expr
@@ -408,7 +406,7 @@ and find_type_declaration f offset {typ_kind; typ_manifest; typ_cstrs; typ_loc; 
       find_core_type f offset ct1;
       find_core_type f offset ct2;
     end typ_cstrs;
-    Opt.may typ_manifest (find_core_type f offset ?loc:None);
+    Option.iter (find_core_type f offset ?loc:None) typ_manifest;
   end
 
 and find_extension_constructor f offset { ext_loc; ext_kind; _ } =
@@ -421,7 +419,7 @@ and find_extension_constructor f offset { ext_loc; ext_kind; _ } =
         | Cstr_record label_declarations ->
           List.iter (fun ld -> find_core_type f offset ld.ld_type) label_declarations
       end;
-      Opt.may core_type_option (find_core_type f offset ?loc:None)
+      Option.iter (find_core_type f offset ?loc:None) core_type_option
         (* TODO *)
     | Text_rebind (_, _) -> ()
   end
@@ -445,7 +443,7 @@ and find_structure_item f offset {str_desc; str_loc; _} =
       | Tstr_type (_, ll) -> List.iter (fun td -> find_type_declaration f offset td) ll
       | Tstr_exception { tyexn_constructor; _ } -> find_extension_constructor f offset tyexn_constructor
       | Tstr_module mdecl -> find_module_expr f offset mdecl.mb_expr
-      | Tstr_modtype mtdecl -> Opt.may mtdecl.mtd_type (find_module_type f offset)
+      | Tstr_modtype mtdecl -> Option.iter (find_module_type f offset) mtdecl.mtd_type
       | Tstr_recmodule ll ->
         List.iter begin fun { mb_expr = me; _ } ->
           (* Removed in 4.02.0 *)

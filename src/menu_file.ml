@@ -71,7 +71,7 @@ let file ~browser ~group ~flags items =
   let open_remote = GMenu.image_menu_item ~label:"Open Remote File..." ~show:(Plugin.file_exists "remote.cma") ~packing:menu#add () in
   ignore (open_remote#connect#activate ~callback:begin fun () ->
       if !Plugins.remote = None then ignore (Plugin.load "remote.cma");
-      Opt.may !Plugins.remote begin fun plugin ->
+      Option.iter begin fun (plugin : (module Plugins.REMOTE)) ->
         let module Remote = (val plugin) in
         let title =
           match open_remote#misc#get_property "label" with
@@ -105,9 +105,10 @@ let file ~browser ~group ~flags items =
             window#destroy();
           end);
         window#show();
-      end
+      end !Plugins.remote
     end);
-  (** Recent Files... *)
+
+  (* Recent Files... *)
   let file_recent = GMenu.menu_item ~label:"Recent Files" ~packing:menu#add () in
   let file_recent_menu = GMenu.menu ~packing:file_recent#set_submenu () in
   (* file_recent_select *)
@@ -196,7 +197,7 @@ let file ~browser ~group ~flags items =
         (items.file_revert :> GMenu.menu_item);
         (items.file_delete :> GMenu.menu_item);
       ];
-      Opt.may page (fun page -> items.file_switch#misc#set_sensitive (get_file_switch_sensitive page));
+      Option.iter (fun page -> items.file_switch#misc#set_sensitive (get_file_switch_sensitive page)) page;
       let has_current_project = browser#current_project#get <> None in
       new_file#misc#set_sensitive has_current_project;
     end);
