@@ -87,7 +87,7 @@ class file filename =
             path
         in
         let name_match = Str.string_match (Miscellanea.regexp ((Filename.chop_extension self#basename) ^ "\\.~\\([0-9]+\\)~\\..+$")) in
-        let backups = Xlist.filter_map begin fun n ->
+        let backups = List.filter_map begin fun n ->
             if name_match n 0 then
               Some (int_of_string (Str.matched_group 1 n))
             else None

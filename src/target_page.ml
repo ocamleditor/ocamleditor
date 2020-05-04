@@ -26,7 +26,7 @@ open GUtil
 open Miscellanea
 
 let mk_target_filenames project filenames =
-  let filenames = Miscellanea.Xlist.filter_map project.Prj.in_source_path filenames in
+  let filenames = List.filter_map project.Prj.in_source_path filenames in
   if Sys.win32 then begin
     List.map begin fun filename ->
       Miscellanea.filename_unix_implicit filename
@@ -693,7 +693,7 @@ object (self)
 
   method private update_cmd_line target =
     let cmd, args = create_cmd_line target in
-    let args = Xlist.filter_map (fun (e, a) -> if e then Some a else None) args in
+    let args = List.filter_map (fun (e, a) -> if e then Some a else None) args in
     let cmd = sprintf "%s %s" cmd (String.concat " " args) in
     cmd_line#set_text cmd
 

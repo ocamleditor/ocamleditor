@@ -98,7 +98,7 @@ end) (*: S*) = struct
       if level <> `OFF && level >= !verbosity then begin
         if X.print_timestamp then (Printf.fprintf X.channel "%s " (timestamp()));
         Printf.fprintf X.channel "[%s] " (string_of_verbosity level);
-        Opt.may prefix (Printf.fprintf X.channel "%s");
+        Option.iter (Printf.fprintf X.channel "%s") prefix;
         Printf.kfprintf flush X.channel f
       end else Printf.ifprintf X.channel f
 
@@ -106,7 +106,7 @@ end) (*: S*) = struct
       if level <> `OFF && level >= !verbosity then begin
         if X.print_timestamp then (Printf.fprintf X.channel "%s " (timestamp()));
         Printf.fprintf X.channel "[%s] " (string_of_verbosity level);
-        Opt.may prefix (fprintf X.channel "%s");
+        Option.iter (fprintf X.channel "%s") prefix;
         Printf.kfprintf (function c -> Printf.fprintf c "\n%!") X.channel f
       end else Printf.ifprintf X.channel f
 
@@ -114,7 +114,7 @@ end) (*: S*) = struct
       if level <> `OFF && level >= !verbosity then begin
         if X.print_timestamp then (Printf.kprintf (Format.pp_print_string log_formatter) "%s " (timestamp()));
         Printf.kprintf (Format.pp_print_string log_formatter) "[%s] " (string_of_verbosity level);
-        Opt.may prefix (Format.pp_print_string log_formatter);
+        Option.iter (Format.pp_print_string log_formatter) prefix;
         Format.kfprintf (fun fmt -> Format.pp_print_flush fmt ()) log_formatter f
       end else Format.ifprintf Format.err_formatter f
 
@@ -122,7 +122,7 @@ end) (*: S*) = struct
       if level <> `OFF && level >= !verbosity then begin
         if X.print_timestamp then (Printf.kprintf (Format.pp_print_string log_formatter) "%s " (timestamp()));
         Printf.kprintf (Format.pp_print_string log_formatter) "[%s] " (string_of_verbosity level);
-        Opt.may prefix (Format.pp_print_string log_formatter);
+        Option.iter (Format.pp_print_string log_formatter) prefix;
         Format.kfprintf (fun fmt -> Format.pp_print_newline fmt (); Format.pp_print_flush fmt ())
           log_formatter f
       end else Format.ifprintf Format.err_formatter f

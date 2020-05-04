@@ -897,7 +897,7 @@ object (self)
         mark := Some (buffer#create_mark(* ~name:(Gtk_util.create_mark_name "Text.initializer")*) (buffer#get_iter `INSERT))
       end,
       begin fun ~name ->
-        Opt.may !old_mark_occurrences self#options#set_mark_occurrences;
+        Option.iter self#options#set_mark_occurrences !old_mark_occurrences;
         match !mark with
           | Some m ->
             let iter = ref (buffer#get_iter_at_mark (`MARK m)) in

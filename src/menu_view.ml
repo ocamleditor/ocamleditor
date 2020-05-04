@@ -79,8 +79,8 @@ let update_labels
   rev_history#misc#set_sensitive has_current_page;
   let text = get_switch_viewer_label page in
   switch_viewer#misc#set_property "label" (`STRING (Some text));
-  Opt.may page (fun page ->
-    switch_viewer#misc#set_sensitive (get_switch_view_sensitive editor#project page));;
+  Option.iter (fun page ->
+    switch_viewer#misc#set_sensitive (get_switch_view_sensitive editor#project page)) page;;
 
 let toggle_code_folding ~enable_code_folding editor =
   editor#code_folding_enabled#set enable_code_folding#active;

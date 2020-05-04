@@ -108,8 +108,9 @@ object (self)
     try Some (List.nth Gtk_theme.avail_themes combo_theme#active) with Invalid_argument _ -> None
 
   method write pref =
-    Opt.may Oe_config.themes_dir (fun _ ->
-      pref.Preferences.pref_general_theme <- self#get_theme_name());
+    Option.iter
+      (fun _ -> pref.Preferences.pref_general_theme <- self#get_theme_name())
+      Oe_config.themes_dir;
     pref.Preferences.pref_general_splashscreen_enabled <- check_splash#active;
     pref.Preferences.pref_tab_pos <- (match combo_orient#active
       with 0 -> `TOP | 1 | 5 -> `RIGHT | 2 -> `BOTTOM | 3 | 4 -> `LEFT | _ -> assert false);
@@ -135,9 +136,12 @@ object (self)
     Gmisclib.Window.GeometryMemo.set_delayed Preferences.geometry_memo pref.Preferences.pref_geometry_delayed;*)
 
   method read pref =
-    Opt.may Oe_config.themes_dir (fun _ ->
-      combo_theme#set_active (match pref.Preferences.pref_general_theme with
-        | Some name -> (try Xlist.pos name Gtk_theme.avail_themes with Not_found -> -1) | _ -> -1));
+    Option.iter
+      (fun _ -> combo_theme#set_active (
+           match pref.Preferences.pref_general_theme with
+           | Some name -> (try Xlist.pos name Gtk_theme.avail_themes with Not_found -> -1) 
+           | _ -> -1))
+      Oe_config.themes_dir;
     check_splash#set_active pref.Preferences.pref_general_splashscreen_enabled;
     combo_orient#set_active (match pref.Preferences.pref_tab_pos, pref.Preferences.pref_tab_vertical_text with
       | `TOP, _ -> 0 | `RIGHT, false -> 1 | `BOTTOM, _ -> 2 | `LEFT, false -> 3

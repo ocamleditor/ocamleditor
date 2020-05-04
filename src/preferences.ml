@@ -361,7 +361,7 @@ let color_of_string name = `NAME name
 let to_xml pref =
   let xml =
     Xml.Element ("preferences", [], [
-      Xml.Element ("pref_general_theme", [], [Xml.PCData (Opt.default pref.pref_general_theme "")]);
+      Xml.Element ("pref_general_theme", [], [Xml.PCData (Option.value pref.pref_general_theme ~default:"")]);
       Xml.Element ("pref_general_font", [], [Xml.PCData pref.pref_general_font]);
       Xml.Element ("pref_general_menubar_buttons", [],
                    [Xml.PCData (String.concat "," (List.map string_of_int pref.pref_general_menubar_buttons))]);
@@ -474,7 +474,7 @@ let to_xml pref =
       Xml.Element ("pref_remember_window_geometry", [], [Xml.PCData (string_of_bool pref.pref_remember_window_geometry)]);
       Xml.Element ("pref_detach_message_panes_separately", [], [Xml.PCData (string_of_bool pref.pref_detach_message_panes_separately)]);
       Xml.Element ("pref_geometry_delayed", [], [Xml.PCData (string_of_bool pref.pref_geometry_delayed)]);
-      Xml.Element ("pref_build_parallel", [], [Xml.PCData (Opt.map_default pref.pref_build_parallel "" string_of_int)]);
+      Xml.Element ("pref_build_parallel", [], [Xml.PCData (Option.fold ~none:"" ~some:string_of_int pref.pref_build_parallel)]);
       Xml.Element ("pref_build_verbosity", [], [Xml.PCData (string_of_int pref.pref_build_verbosity)]);
 
     ])

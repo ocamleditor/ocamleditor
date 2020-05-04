@@ -245,8 +245,8 @@ object (self)
   method set_changed_after_last_diff x = changed_after_last_diff <- x
 
   method private set_tag_annot_background () =
-    Opt.may annot_type (fun annot_type ->
-      annot_type#tag#set_property (`BACKGROUND Preferences.preferences#get.Preferences.pref_bg_color_popup));
+    Option.iter (fun annot_type ->
+      annot_type#tag#set_property (`BACKGROUND Preferences.preferences#get.Preferences.pref_bg_color_popup)) annot_type;
 
   method read_only = read_only
   method set_read_only ro =
@@ -368,7 +368,7 @@ object (self)
       try
         let bms = List.filter (fun bm -> bm.Oe.bm_filename = file#filename) project.Prj.bookmarks in
         List.iter Bookmark.mark_to_offset bms;
-        Xlist.filter_map (fun bm -> bm.Oe.bm_marker) bms
+        List.filter_map (fun bm -> bm.Oe.bm_marker) bms
       with Not_found -> []
     in
     Gutter.destroy_markers view#gutter old_markers;
@@ -480,7 +480,7 @@ object (self)
 
   method tooltip ?(typ=false) ((*(x, y) as*) location) =
     let location = `XY location in
-    if typ then (Opt.may annot_type (fun at -> at#tooltip location));
+    if typ then (Option.iter (fun at -> at#tooltip location) annot_type);
     if Preferences.preferences#get.Preferences.pref_err_tooltip
     then (error_indication#tooltip location)
 
@@ -518,54 +518,58 @@ object (self)
 
   method private show_dep_graph () =
     match dotview with
-      | Some widget ->
-        widget#destroy();
-        dotview <- None;
-        textbox#misc#show();
-        List.iter (fun b -> b#misc#set_sensitive true)
-          [button_font_incr; button_font_decr; button_rowspacing_incr; button_rowspacing_decr; button_h_prev; button_h_next; button_h_last];
-        List.iter (fun b -> b#misc#set_sensitive true) [button_toggle_wrap; button_toggle_whitespace];
-        hscrollbar#misc#show();
-        status_pos_box#misc#show();
-        sep_status_pos_box#misc#show();
-      | None ->
-        begin
-          let reset_button () =
-            Gaux.may signal_button_dotview ~f:button_dotview#misc#handler_block;
-            button_dotview#set_active false;
-            Gaux.may signal_button_dotview ~f:button_dotview#misc#handler_unblock;
-          in
-          try
-            Opt.may_default (editor#project.Prj.in_source_path self#get_filename) begin fun filename ->
+    | Some widget ->
+      widget#destroy();
+      dotview <- None;
+      textbox#misc#show();
+      List.iter (fun b -> b#misc#set_sensitive true)
+        [button_font_incr; button_font_decr; button_rowspacing_incr; button_rowspacing_decr; button_h_prev; button_h_next; button_h_last];
+      List.iter (fun b -> b#misc#set_sensitive true) [button_toggle_wrap; button_toggle_whitespace];
+      hscrollbar#misc#show();
+      status_pos_box#misc#show();
+      sep_status_pos_box#misc#show();
+    | None ->
+      begin
+        let reset_button () =
+          Gaux.may signal_button_dotview ~f:button_dotview#misc#handler_block;
+          button_dotview#set_active false;
+          Gaux.may signal_button_dotview ~f:button_dotview#misc#handler_unblock;
+        in
+        try
+          begin match editor#project.Prj.in_source_path self#get_filename with
+            | Some filename ->
               let filename = String.concat "/" (Miscellanea.filename_split filename) in
               let on_ready_cb viewer =
-                Opt.may viewer begin fun viewer ->
+                Option.iter begin fun viewer ->
                   if button_dotview#active then begin
                     textbox#misc#hide();
                     vbox#reorder_child viewer#coerce ~pos:0;
                     dotview <- Some viewer;
                     List.iter (fun b -> b#misc#set_sensitive false)
                       [button_font_incr; button_font_decr; button_rowspacing_incr; button_rowspacing_decr;
-                      button_h_prev; button_h_next; button_h_last];
+                       button_h_prev; button_h_next; button_h_last];
                     List.iter (fun b -> b#misc#set_sensitive false) [button_toggle_wrap; button_toggle_whitespace];
                     hscrollbar#misc#hide();
                     status_pos_box#misc#hide();
                     sep_status_pos_box#misc#hide();
                   end
-                end
+                end viewer
               in
-              match Dot.draw ~project:editor#project ~filename ~packing:vbox#add ~on_ready_cb () with
-                | None -> reset_button() | _ -> ();
-            end begin fun () ->
+              begin match Dot.draw ~project:editor#project ~filename ~packing:vbox#add ~on_ready_cb () with
+                | None -> reset_button()
+                | _ -> ();
+              end
+
+            | None ->
               let title = "Could not show dependency graph" in
               let message = sprintf "%s for file: \n\n%s" title self#get_filename in
               Dialog.message ~title ~message `INFO;
               reset_button ()
-            end ()
-          with ex ->
-            reset_button();
-            Dialog.display_exn ~parent:self ~title:"Error creating dependency graph" ex
-        end;
+          end
+        with ex ->
+          reset_button();
+          Dialog.display_exn ~parent:self ~title:"Error creating dependency graph" ex
+      end
 
   method cut () =
     self#copy ();
@@ -609,7 +613,7 @@ object (self)
       with Not_found -> false
     end |> ignore;
     ignore (self#misc#connect#destroy ~callback:begin fun () ->
-      Opt.may file (fun f -> f#cleanup())
+      Option.iter (fun f -> f#cleanup()) file
     end);
     annot_type <- Some (new Annot_type.annot_type ~page:self);
     (**  *)
@@ -646,9 +650,9 @@ object (self)
       false
     end);
     (** Clean up type annotation tag *)
-    ignore (text_view#event#connect#scroll ~callback:(fun _ -> Opt.may annot_type (fun at -> at#remove_tag()); error_indication#hide_tooltip(); false));
-    ignore (text_view#event#connect#leave_notify ~callback:(fun _ -> Opt.may annot_type (fun at -> at#remove_tag()); error_indication#hide_tooltip(); false));
-    ignore (text_view#event#connect#focus_out ~callback:(fun _ -> Opt.may annot_type (fun at -> at#remove_tag()); error_indication#hide_tooltip(); false));
+    ignore (text_view#event#connect#scroll ~callback:(fun _ -> Option.iter (fun at -> at#remove_tag()) annot_type; error_indication#hide_tooltip(); false));
+    ignore (text_view#event#connect#leave_notify ~callback:(fun _ -> Option.iter (fun at -> at#remove_tag()) annot_type; error_indication#hide_tooltip(); false));
+    ignore (text_view#event#connect#focus_out ~callback:(fun _ -> Option.iter (fun at -> at#remove_tag()) annot_type; error_indication#hide_tooltip(); false));
     (** Horizontal scrollbar appears/disappears according to the window size *)
     ignore (sw#misc#connect#size_allocate ~callback:begin fun _ ->
       let alloc = sw#misc#allocation in

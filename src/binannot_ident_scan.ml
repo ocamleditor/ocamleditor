@@ -69,7 +69,7 @@ let rec iter_pattern f {pat_desc; pat_loc; _} =
       f ident;
       List.flatten (List.fold_left (fun acc pat -> (fp pat) :: acc) [] pl)
     | Tpat_variant (_, pat, _) ->
-      Opt.map_default pat [] (fun pat -> fp pat)
+      Option.fold ~none:[] ~some:(fun pat -> fp pat) pat
     | Tpat_record (ll, _) ->
       List.flatten (List.fold_left begin fun acc ({ Asttypes.loc; _ }, ld, pat) ->
         let type_expr = lid_of_type_expr ld.Types.lbl_res in
@@ -179,24 +179,24 @@ and iter_expression f {exp_desc; exp_extra; _} =
                end c_lhs.pat_extra)
            in
            List.iter f defs;
-           Opt.may c_guard fe;
+           Option.iter fe c_guard;
            fe c_rhs;
         end cases;
     | Texp_match (expr, cl, _) ->
       fe expr;
       List.iter begin fun { c_lhs = p; c_guard = oe; c_rhs = e } ->
         List.iter (fun d -> d.ident_kind <- Def {def_name=""; def_loc=none; def_scope=e.exp_loc}; f d) (fp p);
-        Opt.may oe fe;
+        Option.iter fe oe;
         fe e;
       end cl
     | Texp_apply (expr, pe) ->
       fe expr;
-      List.iter (fun (_, e) -> Opt.may e fe) pe;
+      List.iter (fun (_, e) -> Option.iter fe e) pe;
     | Texp_try (expr, pe) ->
       fe expr;
       List.iter begin fun { c_lhs = p; c_guard = oe; c_rhs = e }  ->
         List.iter (fun d -> d.ident_kind <- Def {def_name=""; def_loc=none; def_scope=e.exp_loc}; f d) (fp p);
-        Opt.may oe fe;
+        Option.iter fe oe;
         fe e;
       end pe
     | Texp_tuple el -> List.iter fe el
@@ -222,7 +222,7 @@ and iter_expression f {exp_desc; exp_extra; _} =
       f ident;
       List.iter fe el
     | Texp_variant (_, expr) ->
-      Opt.may expr fe
+      Option.iter fe expr
     | Texp_record { fields; extended_expression; _ } ->
       Array.iter begin fun (label_description, record_label_definition) ->
         let { Types.lbl_name; lbl_res; lbl_loc; _ } = label_description in
@@ -239,7 +239,7 @@ and iter_expression f {exp_desc; exp_extra; _} =
         | Kept _ -> ()
         | Overridden (_, expr) -> fe expr
       end fields;
-      Opt.may extended_expression fe
+      Option.iter fe extended_expression
     | Texp_field (expr, { Asttypes.loc; _ }, ld) ->
       let type_expr = lid_of_type_expr ld.Types.lbl_res in
       let ident_kind = if Longident.qualified type_expr then Ext_ref else Int_ref none in
@@ -264,7 +264,7 @@ and iter_expression f {exp_desc; exp_extra; _} =
       fe e1;
       fe e2
     | Texp_array el -> List.iter fe el
-    | Texp_ifthenelse (e1, e2, e3) -> fe e1; fe e2; Opt.may e3 fe
+    | Texp_ifthenelse (e1, e2, e3) -> fe e1; fe e2; Option.iter fe e3
     | Texp_sequence (e1, e2) -> fe e1; fe e2
     | Texp_while (e1, e2) -> fe e1; fe e2
     | Texp_for (_, _, e1, e2, _, e3) -> fe e1; fe e2; fe e3
@@ -273,7 +273,7 @@ and iter_expression f {exp_desc; exp_extra; _} =
       Log.println `TRACE "Texp_send: %s %s [%s]"
         name (string_of_loc e1.exp_loc) (match e2 with Some e -> string_of_loc e.exp_loc | _ -> "");*)
       fe e1;
-      Opt.may e2 fe
+      Option.iter fe e2
     | Texp_new (_, _, _class_decl) -> ()
     | Texp_instvar (_p, _path, _loc) -> ()
       (*Log.println `TRACE "Texp_instvar: (%s)%s %s" (Path.name p) (Path.name path) (string_of_loc loc.loc);*)
@@ -367,7 +367,7 @@ and iter_signature_item f {sig_desc; _} =
       List.iter (fun mdecl -> fmt mdecl.md_type) ll;
       []
     | Tsig_modtype mtdecl ->
-      Opt.may mtdecl.mtd_type fmt;
+      Option.iter fmt mtdecl.mtd_type;
       []
     (*| Tsig_open { open_path; open_txt; _ } ->
       let { Asttypes.loc; _ } = open_txt in
@@ -468,7 +468,7 @@ and iter_class_expr f {cl_desc; _} =
       iter_class_expr f c_expr;
     | Tcl_constraint (cle, clt, _, _, _) ->
       iter_class_expr f cle;
-      Opt.may clt (iter_class_type f)
+      Option.iter (iter_class_type f) clt
     (* added in 4.06 *)
     | Tcl_open (_, c_expr) ->
       iter_class_expr f c_expr
@@ -545,7 +545,7 @@ and iter_type_declaration f {typ_kind; typ_manifest; typ_cstrs; _} =
     iter_core_type f ct1;
     iter_core_type f ct2;
   end typ_cstrs;
-  Opt.may typ_manifest (iter_core_type ?loc:None f);
+  Option.iter (iter_core_type ?loc:None f) typ_manifest;
 
 (** iter_extension_constructor - Added in 4.02 *)
 and iter_extension_constructor f { ext_name; ext_kind; _ }  =
@@ -562,7 +562,7 @@ and iter_extension_constructor f { ext_name; ext_kind; _ }  =
       | Cstr_record label_declarations ->
         List.iter (fun ld -> iter_core_type f ld.ld_type) label_declarations
       end;
-    Opt.may core_type_opt (iter_core_type ?loc:None f)
+    Option.iter (iter_core_type ?loc:None f) core_type_opt
       (*TODO*)
   | Text_rebind (_path, _id ) -> ()
 

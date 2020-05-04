@@ -175,7 +175,7 @@ let get_search_path_i_format proj =
 let get_search_path_local proj =
   let paths = proj.search_path in
   (proj.root // default_dir_src) ::
-  Xlist.filter_map begin fun path ->
+  List.filter_map begin fun path ->
     if path.[0] = '+' then None
     else if not (Filename.is_relative path) then None
     else Some (proj.root // default_dir_src // path)
