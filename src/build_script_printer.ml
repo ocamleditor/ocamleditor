@@ -88,19 +88,31 @@ let print_add_args bc et args =
               in
               let arg =
                 match arg.bsa_pass with
-                  | `key -> sprintf "\n                                %s && (!%s = Some true), \"%s\"" condition (ident_of_arg arg) arg.bsa_key
-                  | `value when arg.bsa_type = Bool -> sprintf "\n                                %s, (match !%s with Some x -> string_of_bool x | _ -> \"\")" condition (ident_of_arg arg)
-                  | `value -> sprintf "\n                                %s, (match !%s with Some x -> x | _ -> \"\")" condition (ident_of_arg arg)
-                  | `key_value when arg.bsa_type = Bool -> sprintf "\n                                %s, (match !%s with Some x -> sprintf \"%s %%b\" x | _ -> \"\")"
-                    condition (ident_of_arg arg) arg.bsa_key
-                  | `key_value -> sprintf "\n                                %s, (match !%s with Some x -> sprintf \"%s %%s\" x | _ -> \"\")"
-                    condition (ident_of_arg arg) arg.bsa_key
+                  | `key -> 
+                    [ sprintf "\n                                %s && (!%s = Some true), \"%s\"" condition (ident_of_arg arg) arg.bsa_key ]
+                  | `value when arg.bsa_type = Bool -> 
+                    [ sprintf "\n                                %s, (match !%s with Some x -> string_of_bool x | _ -> \"\")" condition (ident_of_arg arg) ]
+                  | `value -> 
+                    [ sprintf "\n                                %s, (match !%s with Some x -> x | _ -> \"\")" condition (ident_of_arg arg) ]
+                  | `key_value when arg.bsa_type = Bool -> 
+                    [ sprintf "\n                                %s, (match !%s with Some _ -> \"%s\" | _ -> \"\")" 
+                        condition (ident_of_arg arg) arg.bsa_key;
+                      sprintf "\n                                %s, (match !%s with Some x -> sprintf \"%%b\" x | _ -> \"\")" 
+                        condition (ident_of_arg arg)
+                    ]
+                  | `key_value -> 
+                    [
+                      sprintf "\n                                %s, (match !%s with Some _ -> \"%s\" | _ -> \"\")"
+                        condition (ident_of_arg arg) arg.bsa_key;
+                      sprintf "\n                                %s, (match !%s with Some x -> sprintf \"%%s\" x | _ -> \"\")"
+                        condition (ident_of_arg arg)
+                    ] 
               in
               arg :: acc
             | `replace _ -> acc (* TODO:  *)
         else acc
       | _ -> acc
-  end [] args;;
+  end [] args |> List.flatten;;
 
 (** print_external_tasks *)
 let print_external_tasks ochan project =
