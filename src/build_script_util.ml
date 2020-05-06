@@ -286,7 +286,7 @@ and build ~targets:avail_targets ~external_tasks ~etasks ~deps ~compilation ~out
     let crono = if !Option.verbosity >= 3 then Oebuild_util.crono else fun ?label f x -> f x in
     let libs =
       match target.rc_filename with
-        | Some rc_filename ->
+        | Some rc_filename when Sys.win32 ->
           let exit_code = Sys.command "where rc 2>&1 1>NUL" in
           if exit_code <> 0 then target.required_libraries
           else
