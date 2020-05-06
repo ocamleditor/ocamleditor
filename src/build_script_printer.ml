@@ -216,12 +216,59 @@ let print_cmd_line_args ochan project =
   end groups;
   fprintf ochan "]\n";;
 
+module Minification = struct
+  module Comments = struct
+    let pat = regexp "\\((\\*\\)\\|\\(\\*)\\)"
+    let lineend = regexp "$"
+    let search_f_pat = Str.search_forward pat
+    let scan_locale txt =
+      (* Non vengono considerate le stringhe *)
+      let rec f acc pos start =
+        begin
+          try
+            let p = search_f_pat txt pos in
+            begin
+              try
+                ignore (Str.matched_group 1 txt);
+                f acc (p + 2) (p :: start);
+              with Not_found -> begin
+                  ignore (Str.matched_group 2 txt);
+                  (match start with
+                    | [] -> f acc (p + 2) []
+                    | [start] -> f ((start, (p + 2), (txt.[start + 2] = '*')) :: acc) (p + 2) []
+                    | _::prev -> f acc (p + 2) prev)
+                end
+            end
+          with Not_found -> acc
+        end
+      in
+      List.rev (f [] 0 [])
+    let scan txt = scan_locale txt
+  end
+
+  let minify =
+    let re = Str.regexp "[\r\n]+ *" in
+    fun buf ->          
+      (* TODO: find something less ugly than this use of Bytes.(..) *)
+      let b_buf = Bytes.of_string buf in
+      buf
+      |> Comments.scan 
+      |> List.iter begin fun (b, e, _) ->
+        let len = e - b in
+        String.blit (String.make len ' ') 0 b_buf b len
+      end;
+      Str.global_replace re " " Bytes.(to_string b_buf);;
+
+end
+
 (** print *)
-let print ~project ~filename () =
+let print ~project ~filename ~minify () =
   let ochan = open_out_bin filename in
   let finally () = close_out_noerr ochan in
   try
-    output_string ochan Oebuild_script.code;
+    Oebuild_script.code 
+    |> (if minify then Minification.minify else Fun.id)
+    |> output_string ochan;
     output_string ochan "open Arg\n";
     output_string ochan "open Task\n";
     output_string ochan "open Printf\n";

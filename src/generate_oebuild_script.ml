@@ -26,50 +26,7 @@ open Printf
 
 let filename = "oebuild_script.ml"
 
-module Comments = struct
-  let pat = regexp "\\((\\*\\)\\|\\(\\*)\\)"
-  let lineend = regexp "$"
-  let search_f_pat = Str.search_forward pat
-
-  let scan_locale txt =
-    (* Non vengono considerate le stringhe *)
-    let rec f acc pos start =
-      begin
-        try
-          let p = search_f_pat txt pos in
-          begin
-            try
-              ignore (Str.matched_group 1 txt);
-              f acc (p + 2) (p :: start);
-            with Not_found -> begin
-              ignore (Str.matched_group 2 txt);
-              (match start with
-                | [] -> f acc (p + 2) []
-                | [start] -> f ((start, (p + 2), (txt.[start + 2] = '*')) :: acc) (p + 2) []
-                | _::prev -> f acc (p + 2) prev)
-            end
-          end
-        with Not_found -> acc
-      end
-    in
-   List.rev (f [] 0 [])
-
-  let scan txt = scan_locale txt
-end
-
 module Util = struct
-  let join_lines =
-    let re = Str.regexp "[\r\n]+ *" in
-    fun buf ->
-      (* TODO: find something less ugly than this use of Bytes.(..) *)
-      let comments = Comments.scan Bytes.(to_string buf) in
-      List.iter begin fun (b, e, _) ->
-        let len = e - b in
-        String.blit (String.make len ' ') 0 buf b len
-      end comments;
-      let buf = Str.global_replace re " " Bytes.(to_string buf) in
-      buf;;
-
   let header = ref ""
 
   let replace_header buf =
@@ -112,7 +69,6 @@ let create_script () =
     ] in
     List.iter begin fun name ->
       let buf = Util.replace_header (File_util.read (name ^ ".ml")) in
-      let buf = Util.join_lines Bytes.(of_string buf) in
       let name = Filename.basename name in
       fprintf ochan "module %s = struct " (String.capitalize_ascii name);
       output_string ochan buf;

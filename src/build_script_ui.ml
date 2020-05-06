@@ -141,7 +141,7 @@ object (self)
       bs_args     = widget_args#get();
       bs_commands = List.filter_map Fun.id [cmd_distclean#get(); cmd_install#get(); cmd_uninstall#get()];
     };
-    GtkThread.sync (Build_script_printer.print ~project ~filename:(match tmp with Some x -> x | _ -> filename)) ();
+    GtkThread.sync (Build_script_printer.print ~minify:false ~project ~filename:(match tmp with Some x -> x | _ -> filename)) ();
     Gmisclib.Idle.add ~prio:300 (fun () -> Project.save project)
 
   method apply () =
