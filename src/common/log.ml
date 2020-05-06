@@ -21,7 +21,6 @@
 *)
 
 
-open Miscellanea
 open Printf
 
 type verbosity = [

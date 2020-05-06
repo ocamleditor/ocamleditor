@@ -79,6 +79,16 @@ let create ~name ~env ?(env_replace=false) ~dir ~cmd ~args ?phase ?(run_in_proje
     et_visible               = visible;
   }
 
+module LogBuilder = Log.Make(struct
+    let channel = stderr
+    let verbosity = `ERROR
+    let print_timestamp = false
+  end)
+
+module Log = LogBuilder.Make(struct
+    let prefix = "Task"
+  end)
+
 (** handle *)
 let handle f task =
   let tenv = Array.of_list task.et_env in
@@ -96,4 +106,5 @@ let handle f task =
     |> List.filter (fun (e, _) -> e)
     |> List.map (fun (_, x) -> x)
   in
+  args |> String.concat ";" |> Log.println `DEBUG "%s %s\n%!" prog;
   f ~env ~dir ~prog ~args;;

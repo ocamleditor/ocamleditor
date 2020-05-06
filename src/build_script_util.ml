@@ -25,7 +25,6 @@ open Arg
 open Printf
 open Oebuild
 open Oebuild_util
-open Task
 
 type target = {
   descr : string;
@@ -118,10 +117,11 @@ end
 
 (** ETask *)
 module ETask = struct
+
   let filter tasks phase =
     List.filter begin fun task ->
-      if task.et_always_run_in_script then
-        match task.et_phase with
+      if task.Task.et_always_run_in_script then
+        match task.Task.et_phase with
           | Some ph -> ph = phase
           | _ -> false
       else false
@@ -378,6 +378,7 @@ let main ~cmd_line_args ~external_tasks ~general_commands ~targets:avail_targets
 
     (** execute *)
     let execute command =
+      (if !Option.verbosity >= 5 then `DEBUG else `WARN) |>Task.Log.set_verbosity;
       pushd !Option.change_dir;
       let targets = List.rev !targets_selected in
       try
