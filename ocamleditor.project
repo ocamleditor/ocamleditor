@@ -469,7 +469,7 @@
       <libs></libs>
       <other_objects></other_objects>
       <files>plugin_diff_gtext.ml plugin_diff.ml </files>
-      <package>compiler-libs,diff,lablgtk2,str,unix</package>
+      <package>compiler-libs,diff,lablgtk2,str,unix,xml-light</package>
       <includes>common otherwidgets gmisclib oebuild icons</includes>
       <thread>true</thread>
       <vmthread>false</vmthread>
