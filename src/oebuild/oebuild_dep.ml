@@ -38,26 +38,36 @@ let ocamldep_command ?pp ?(slash=true) ?(search_path="") () =
     search_path
     (if slash then "-slash" else "");;
 
+(** Run ocamldep on one or more filenames given as single string separated by space.
+    Return a list of strings, one for each filename in the following format
+
+    "<target> : <dep1> <dep2> .."
+*)
+let run_ocamldep_on ~ignore_stderr ~verbose ?pp ?slash ?search_path filenames =
+  let redirect_stderr = if ignore_stderr then Oebuild_util.redirect_stderr_to_null else "" in
+  let cmd = ocamldep_command ?pp ?slash ?search_path () in
+  let cmd = sprintf "%s %s %s" cmd filenames redirect_stderr in
+
+  if verbose then (printf "%s\n%!" cmd);
+  Shell.get_command_output cmd
+
 (** ocamldep *)
 let ocamldep ?times ?pp ?(ignore_stderr=false) ?(verbose=false) ?slash ?search_path filenames =
   let table : ocamldeps = Hashtbl.create 7 in
   if String.trim filenames <> "" then begin
-    let redirect_stderr = if ignore_stderr then Oebuild_util.redirect_stderr_to_null else "" in
-    let cmd = ocamldep_command ?pp ?slash ?search_path () in
-    let cmd = sprintf "%s %s %s" cmd filenames redirect_stderr in
-    if verbose then (printf "%s\n%!" cmd);
-    let text = String.concat "\n" (Shell.get_command_output cmd) in
-    let entries = split_nl text in
+    let entries = run_ocamldep_on ~ignore_stderr ~verbose ?pp ?slash ?search_path filenames in
+
     let replace =
       match times with
         | Some (times, opt) ->
           (* The resulting ocamldep-dag only contains files that need to be recompiled. *)
-          fun table key data ->
-            let ml = Oebuild_util.replace_extension_to_ml key in
+          fun table target dependencies ->
+            let ml = Oebuild_util.replace_extension_to_ml target in
             let changed = Oebuild_table.update ~opt times ml in
-            Hashtbl.replace table key (changed, data)
-        | _ -> fun table key data ->
-          Hashtbl.replace table key (true, data)
+            (* changed is true is source file is newer than object file *)
+            Hashtbl.replace table target (changed, dependencies)
+        | _ -> fun table target dependencies ->
+          Hashtbl.replace table target (true, dependencies)
     in
     let open! Oebuild_util in
     List.iter begin fun entry ->
@@ -66,8 +76,8 @@ let ocamldep ?times ?pp ?(ignore_stderr=false) ?(verbose=false) ?slash ?search_p
         | key :: [] -> replace table key []
         | [key; deps] ->
           let deps = Str.split re3 deps in
-          replace table key deps
-        | _ -> eprintf "%s\n%s\n%!" cmd entry; assert false
+          replace table key deps;
+        | _ -> eprintf "%s\n%s\n%!" filenames entry; assert false
     end entries;
   end;
   table;;
@@ -82,6 +92,18 @@ let ocamldep_toplevels ?times ?pp ?ignore_stderr ?verbose ?slash ?(search_path="
   let search_path = String.concat "" (Oebuild_util.remove_dupl search_path) in
   let filenames = String.concat " " (Oebuild_util.remove_dupl filenames) in
   ocamldep ?times ?pp ?ignore_stderr ~search_path ?verbose ?slash filenames
+
+(** if a target dependency is marked as changed mark the target is marked as changed as well *)
+let update_dependants dag =
+  let dependency_changed target dag = match Hashtbl.find dag target with
+    | _, deps -> List.fold_left (fun acc dep -> acc || Hashtbl.find dag dep |> fst) false deps
+    | exception Not_found -> false
+  in
+  Hashtbl.filter_map_inplace (
+    (fun target (changed, deps) ->
+       let changed = changed || dependency_changed target dag in
+       Some (changed, deps)))
+    dag
 
 (** ocamldep_recursive *)
 let ocamldep_recursive ?times ?pp ?(ignore_stderr=false) ?(verbose=false) ?slash ?search_path toplevel_modules =
@@ -101,6 +123,7 @@ let ocamldep_recursive ?times ?pp ?(ignore_stderr=false) ?(verbose=false) ?slash
     if new_tops <> [] then loop ~toplevel_modules:new_tops
   in
   loop ~toplevel_modules;
+  update_dependants dag;
   dag
 
 (** sort_dependencies *)

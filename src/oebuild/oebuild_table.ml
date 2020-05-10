@@ -23,6 +23,8 @@
 
 open Printf
 
+let dummy_crc = String.make 32 '0'
+
 (* <filename.[opt|byt], last-compiled> *)
 type t = (string, float) Hashtbl.t
 

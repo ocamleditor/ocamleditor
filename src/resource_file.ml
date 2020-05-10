@@ -22,7 +22,6 @@
 
 
 open Printf
-open Miscellanea
 
 type t = {
   mutable rc_filename     : string;

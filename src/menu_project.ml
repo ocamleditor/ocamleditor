@@ -153,7 +153,8 @@ let project ~browser ~group ~flags items =
     false
   end);
   project#set_submenu menu;
-  (** Clean default target *)
+
+  (* Clean default target *)
   let project_clean_default_target = GMenu.image_menu_item ~label:"Clean" ~packing:menu#add () in
   project_clean_default_target#set_image (Icons.create Icons.clear_build_16)#coerce;
   project_clean_default_target#add_accelerator ~group ~modi:[`CONTROL] GdkKeysyms._F9 ~flags;
@@ -162,7 +163,8 @@ let project ~browser ~group ~flags items =
       browser#with_default_target (fun target ->
         ignore (Task_console.exec ~editor `CLEAN target)))
   end);
-  (** Compile *)
+
+  (* Compile *)
   let project_compile_only = GMenu.image_menu_item ~label:"Compile" ~packing:menu#add () in
   project_compile_only#set_image (Icons.create Icons.compile_all_16)#coerce;
   project_compile_only#add_accelerator ~group ~modi:[`CONTROL] GdkKeysyms._F10 ~flags;
@@ -171,7 +173,8 @@ let project ~browser ~group ~flags items =
       browser#with_default_target (fun target ->
         ignore (Task_console.exec ~editor `COMPILE_ONLY target)))
   end);
-  (** Build *)
+
+  (* Build *)
   let project_build = GMenu.image_menu_item ~label:"Build" ~packing:menu#add () in
   project_build#set_image (Icons.create Icons.build_16)#coerce;
   ignore (project_build#connect#activate ~callback:begin fun () ->
@@ -179,7 +182,8 @@ let project ~browser ~group ~flags items =
       browser#with_default_target (fun target ->
         ignore (Task_console.exec ~editor `COMPILE target)))
   end);
-  (** Run current *)
+
+  (* Run current *)
   let project_run = GMenu.image_menu_item ~label:"Run" ~packing:menu#add () in
   project_run#set_image (Icons.create Icons.start_16)#coerce;
   project_run#add_accelerator ~group ~modi:[`CONTROL] GdkKeysyms._F11 ~flags;
@@ -189,24 +193,30 @@ let project ~browser ~group ~flags items =
         let bc = List.find (fun b -> b.Target.id = rc.Rconf.target_id) project.Prj.targets in
         ignore (Task_console.exec ~editor (`RCONF rc) bc)))
   end);
-  (** Clean... *)
+
+  (* Clean... *)
   let clean_item = GMenu.image_menu_item ~label:"Clean..." ~packing:menu#add () in
   let clean_menu = GMenu.menu ~packing:clean_item#set_submenu () in
-  (** Build... *)
+
+  (* Build... *)
   let build_item = GMenu.image_menu_item ~label:"Build..." ~packing:(menu#insert ~pos:5) () in
   let build_menu = GMenu.menu ~packing:build_item#set_submenu () in
-  (** Build with dependencies... *)
+
+  (* Build with dependencies... *)
   let build_dep_item = GMenu.image_menu_item ~label:"Build with dependencies..." ~packing:(menu#insert ~pos:6) () in
   let build_dep_menu = GMenu.menu ~packing:build_dep_item#set_submenu () in
-  (** Run... *)
+
+  (* Run... *)
   let run_item = GMenu.image_menu_item ~label:"Run..." ~packing:menu#add () in
   let run_menu = GMenu.menu ~packing:run_item#set_submenu () in
-  (** Clean Project *)
+
+  (* Clean Project *)
   let project_clean = GMenu.image_menu_item ~label:"Clean Project" ~packing:menu#add () in
   project_clean#add_accelerator ~group ~modi:[`CONTROL; `MOD1] GdkKeysyms._F9 ~flags;
   ignore (project_clean#connect#activate ~callback:browser#project_clean);
   let sep1 = GMenu.separator_item ~packing:menu#add () in
-  (** Compile file *)
+
+  (* Compile file *)
   let project_comp_file = GMenu.image_menu_item ~label:"Compile file" ~packing:menu#add () in
   project_comp_file#set_image (GMisc.image ~pixbuf:Icons.compile_file_16 ())#coerce;
   ignore (project_comp_file#connect#activate ~callback:begin fun () ->
@@ -216,34 +226,39 @@ let project ~browser ~group ~flags items =
     end
   end);
   let sep2 = GMenu.separator_item ~packing:menu#add () in
-  (** Project Properties *)
+
+  (* Project Properties *)
   let dialog_project_properties = GMenu.image_menu_item ~label:"Properties" ~packing:menu#add () in
   dialog_project_properties#set_image (GMisc.image ~stock:`PROPERTIES ~icon_size:`MENU ())#coerce;
   ignore (dialog_project_properties#connect#activate ~callback:(fun () ->
     browser#dialog_project_properties ?page_num:(Some 0) ?show:(Some true) ()));
   dialog_project_properties#add_accelerator ~group ~modi:[`CONTROL; `SHIFT] GdkKeysyms._P ~flags;
-  (** Targets *)
+
+  (* Targets *)
   let project_targets = GMenu.image_menu_item ~image:(Icons.create Icons.target_16)#coerce ~label:"Targets" ~packing:menu#add () in
   ignore (project_targets#connect#activate ~callback:(fun () ->
     browser#dialog_project_properties ?page_num:(Some 1) ?show:(Some true) ()));
   project_targets#add_accelerator ~group ~modi:[] GdkKeysyms._F12 ~flags;
-  (** Generate build script *)
+
+  (* Generate build script *)
   let project_script = GMenu.image_menu_item ~label:"Generate Build Script" ~packing:menu#add () in
   ignore (project_script#connect#activate ~callback:(fun () ->
     browser#with_current_project begin fun project ->
       let dialog = Build_script_ui.window ~project () in
       Gaux.may (GWindow.toplevel editor) ~f:(fun w -> dialog#set_transient_for w#as_window);
     end));
-  (** Project Refresh *)
+
+  (* Project Refresh *)
   let project_refresh = GMenu.image_menu_item ~label:"Refresh" ~packing:menu#add () in
   project_refresh#set_image (GMisc.image ~pixbuf:Icons.refresh16(*~stock:`REFRESH*) ~icon_size:`MENU ())#coerce;
   ignore (project_refresh#connect#activate ~callback:browser#refresh);
-  (** Project Clear Cache *)
+
+  (* Project Clear Cache *)
   let project_clear_cache = GMenu.image_menu_item ~label:"Clear Cache" ~packing:menu#add () in
   ignore (project_clear_cache#connect#activate ~callback:browser#clear_cache);
-  (*  *)
+
   let sep3 = GMenu.separator_item ~packing:menu#add () in
-  (** Callback *)
+  (* Callback *)
   ignore (project#misc#connect#state_changed ~callback:(fun _ -> state_changed_callback
     ~project_clean_default_target
     ~project_compile_only
