@@ -275,8 +275,6 @@ let parallel_compile ~compilation ?times ?pp ~compiler ~cflags ~includes ~toplev
   let opt = compilation = Native in
 
   let cb_create_command filename =
-    ignore @@ Option.map (fun times -> Table.update ~opt times filename) times;
-    (* I wonder why are we doing this ^^^ *)
     get_compiler_command ~opt ~compiler ~cflags ~includes ~filename ~verbose ()
   in
 

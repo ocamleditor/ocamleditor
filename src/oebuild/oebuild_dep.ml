@@ -93,17 +93,30 @@ let ocamldep_toplevels ?times ?pp ?ignore_stderr ?verbose ?slash ?(search_path="
   let filenames = String.concat " " (Oebuild_util.remove_dupl filenames) in
   ocamldep ?times ?pp ?ignore_stderr ~search_path ?verbose ?slash filenames
 
-(** if a target dependency is marked as changed mark the target is marked as changed as well *)
+(** if a target dependency is marked as changed mark the target as changed as well
+    and return the number of updates
+
+    Also remove the target from the build cache so that it get compiled anew.
+*)
 let update_dependants dag =
   let dependency_changed target dag = match Hashtbl.find dag target with
     | _, deps -> List.fold_left (fun acc dep -> acc || Hashtbl.find dag dep |> fst) false deps
     | exception Not_found -> false
   in
+  let counter = ref 0 in
   Hashtbl.filter_map_inplace (
     (fun target (changed, deps) ->
-       let changed = changed || dependency_changed target dag in
-       Some (changed, deps)))
-    dag
+       if changed then
+         Some (changed, deps)
+       else
+       if dependency_changed target dag then begin
+         incr counter;
+         Some (true, deps)
+       end
+       else
+         Some (false, deps)))
+    dag;
+  !counter
 
 (** ocamldep_recursive *)
 let ocamldep_recursive ?times ?pp ?(ignore_stderr=false) ?(verbose=false) ?slash ?search_path toplevel_modules =
@@ -123,7 +136,7 @@ let ocamldep_recursive ?times ?pp ?(ignore_stderr=false) ?(verbose=false) ?slash
     if new_tops <> [] then loop ~toplevel_modules:new_tops
   in
   loop ~toplevel_modules;
-  update_dependants dag;
+  while update_dependants dag > 0 do () done;
   dag
 
 (** sort_dependencies *)
