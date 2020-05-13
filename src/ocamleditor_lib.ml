@@ -25,11 +25,4 @@ open Browser
 
 module Config = Oe_config
 module About = About
-
-
-
-
-
-
-
-
+module Projext_xml = Project_xml

@@ -87,7 +87,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.|}
   link_button#set_focus_on_click false;
   ignore (link_button#connect#clicked ~callback:(fun () ->
       kprintf open_url "%s?%s-%s-%s"
-        About.website Sys.os_type About.version About.build_id));
+        About.website Sys.os_type About.version !About.build_id));
   (* Report a bug *)
   let link_button = GButton.button ~relief:`NONE ~packing:hbox#add () in
   let label = GMisc.label ~text:"Report an issue" ~packing:link_button#add () in

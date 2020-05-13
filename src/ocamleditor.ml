@@ -47,6 +47,7 @@ let fade_out window =
 
 (** main *)
 let main () = begin
+  let _ = About.build_id := Build_id.timestamp in
   let _locale = GtkMain.Main.init ~setlocale:false () in
   (*GtkMain.Main.disable_setlocale();*)
   (*Unix.putenv "LANGUAGE" "C";*)
