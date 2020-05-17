@@ -213,7 +213,7 @@
       <restrictions></restrictions>
       <dependencies>14,19,16,26,22</dependencies>
     </target>
-    <target name="ocamleditor-bytecode" default="true" id="0" sub_targets="" is_fl_package="false" subsystem="Console" readonly="false" visible="true" node_collapsed="false">
+    <target name="ocamleditor-bytecode" default="false" id="0" sub_targets="" is_fl_package="false" subsystem="Console" readonly="false" visible="true" node_collapsed="false">
       <descr></descr>
       <byt>true</byt>
       <opt>false</opt>
@@ -287,7 +287,7 @@
         <icons/>
       </resource_file>
     </target>
-    <target name="ocamleditor-native" default="false" id="11" sub_targets="" is_fl_package="false" subsystem="" readonly="false" visible="true" node_collapsed="false">
+    <target name="ocamleditor-native" default="true" id="11" sub_targets="" is_fl_package="false" subsystem="" readonly="false" visible="true" node_collapsed="false">
       <descr></descr>
       <byt>false</byt>
       <opt>true</opt>

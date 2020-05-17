@@ -56,6 +56,7 @@ class button_menu ?(label="") ?(relief=`NORMAL) ?stock ?spacing ?packing () =
   let _ = button_menu#misc#set_name "gmisclib_button_menu_right" in
   let clicked = new clicked () in
   let show_menu = new show_menu () in
+  let label_widget = GMisc.label ~text:label () in
 (*  let _ = GtkMain.Rc.parse_string "
 style \"gmisclib_button_menu_left\" {
   GtkButton::inner-border = { 0, 0, 0, 0 }
@@ -121,6 +122,9 @@ object (self)
     image <- Some x;
     button#set_image x
 
+  method set_label x =
+    label_widget#set_text x
+
   method private set_button_menu_child pressed =
     if not is_menu_only then (button_menu#set_image (if pressed then image_pressed else image_normal))
 
@@ -141,7 +145,7 @@ object (self)
             box#pack image;
           | _ -> ()
       end;
-      let label_widget = GMisc.label ~text:label ~packing:box#add () in
+      box#add label_widget#coerce;
       let draw_sep = try button#image |> ignore; true with Gpointer.Null -> false in
       let draw_sep = draw_sep || String.trim label <> "" in
       let _ = GMisc.separator `VERTICAL ~packing:box#pack ~show:draw_sep () in

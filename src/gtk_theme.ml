@@ -55,11 +55,6 @@ let get_style_outline pref =
 let set_theme ?theme ~context () =
   let pref = Preferences.preferences#get in
   let style_smallbutton, apply_smallbutton = "\
-      style \"oe_menubar\" {
-        ythickness = 0
-        GtkMenuBar::shadow-type = none
-        GtkMenuBar::internal-padding = 0
-      }
       style \"menubar-button\" {
         GtkButton::child-displacement-x = 1
         GtkButton::child-displacement-y = 1
@@ -77,7 +72,7 @@ let set_theme ?theme ~context () =
       style \"window-button\" {
         GtkButton::child-displacement-x = 0
         GtkButton::child-displacement-y = 0
-        GtkButton::inner-border = { 5,5,0,0 }
+        GtkButton::inner-border = { 6,6,6,6 }
         xthickness = 0
         ythickness = 0
       }
@@ -96,7 +91,6 @@ style \"oe-tooltip\"
 widget \"*.menubar_button\" style \"menubar-button\"
 widget \"*.windowbutton\" style \"window-button\"
 widget \"*.menubar_button_arrow\" style \"menubar-button-arrow\"
-widget \"*.oe_menubar\" style:highest \"oe_menubar\"
 widget \"gtk-tooltip*\" style \"oe-tooltip\"
 "
   in

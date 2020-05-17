@@ -42,6 +42,7 @@ class menu_tool_button :
     method get_oid : int
     method misc : GObj.misc_ops
     method set_image : GObj.widget -> unit
+    method set_label : string -> unit
     method set_menu_only : unit -> unit
   end
 

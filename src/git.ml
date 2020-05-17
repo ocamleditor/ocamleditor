@@ -23,79 +23,134 @@
 open Printf
 
 type status =
-  { mutable added : int
+  { mutable branch : string
+  ; mutable ahead : int
+  ; mutable added : int
   ; mutable modified : int
   ; mutable deleted : int
+  ; mutable renamed : int
+  ; mutable copied : int
+  ; mutable untracked : int
+  ; mutable ignored : int
   }
 
 module Log = Common.Log.Make (struct
-  let prefix = "Git"
-end)
+    let prefix = "Git"
+  end)
 
-let _ = Log.set_verbosity `ERROR
+let _ = Log.set_verbosity `DEBUG
 
-let string_of_status status =
-  match status with
-  | Some s ->
-      Printf.sprintf " [+%d ~%d -%d]" s.added s.modified s.deleted
-  | _ ->
-      ""
+let markup_of_status s =
+  [
+    s.modified, Printf.sprintf "<span font_family='monospace' color='orange' weight='bold' size='large'>~</span>%d" s.modified;
+    (s.added + s.untracked), Printf.sprintf "<span font_family='monospace' color='green' weight='bold' size='large'>+</span>%d" (s.added + s.untracked);
+    s.deleted, Printf.sprintf "<span font_family='monospace' color='red' weight='bold' size='large'>-</span>%d" s.deleted;
+  ] 
+  |> List.filter_map (fun (n, s) -> if n > 0 then Some s else None) 
+  |> String.concat " "
 
-let re_status = Str.regexp "\\([ MADRCU?!]\\)\\([ MDU?!]\\) +\\(.*\\)?"
+let re_status = Str.regexp "\\([ MADRCU?!]\\)\\([ MADRCU?!]\\) +\\(.*\\)?"
+let re_status_branch = Str.regexp "## \\(.*\\)\\.\\.\\.\\([^ ]*\\)\\( \\[ahead \\([0-9]+\\)\\]\\)?";;
 
-(** with_status *)
-let with_status =
-  let last_check = ref 0.0 in
-  let last_status = ref None in
-  fun ?(force=false) f ->
-    match Oe_config.git_version with
-      | None -> 
-        f None
-      | _ ->
-        let now = Unix.gettimeofday() in
-        if force || now -. !last_check > 3.0 then begin
-          last_check := now;
-          let status = { added = 0; modified = 0; deleted = 0 } in
-          let process_in =
-            Spawn.loop begin fun ic ->
-              let line = input_line ic in
-              if Str.string_match re_status line 0 then begin
-                let x = Str.matched_group 1 line in
-                let y = Str.matched_group 2 line in
-                begin
-                  match (x, y) with
-                    | _, "M" | "M", _ -> 
-                      status.modified <- status.modified + 1
-                    | "?", _ -> 
-                      status.added <- status.added + 1
-                    | "D", _ -> 
-                      status.deleted <- status.deleted + 1
-                    | _ -> 
-                      Log.println `ERROR "Unparseable git message: %s%s" x y
-                end;
+(** status *)
+let status f =
+  match Oe_config.git_version with
+    | None -> 
+      f None
+    | _ ->
+      let status = 
+        { 
+          branch = ""; 
+          ahead = 0; 
+          added = 0; 
+          modified = 0; 
+          deleted = 0; 
+          renamed = 0; 
+          copied = 0; 
+          untracked = 0; 
+          ignored = 0 
+        } 
+      in
+      let process_in =
+        Spawn.loop begin fun ic ->
+          let line = input_line ic in
+          try
+            if Str.string_match re_status_branch line 0 then begin
+              let branch = Str.matched_group 1 line in
+              let ahead = try Str.matched_group 4 line |> int_of_string with Not_found -> 0 in
+              status.branch <- branch; 
+              status.ahead <- ahead;
+            end else if Str.string_match re_status line 0 then begin
+              let x = Str.matched_group 1 line in
+              let y = Str.matched_group 2 line in
+              begin
+                match (x, y) with
+                  | "M", _ | _, "M" -> 
+                    status.modified <- status.modified + 1
+                  | "A", _ | _, "A" -> 
+                    status.added <- status.added + 1
+                  | "D", _ | _, "D" -> 
+                    status.deleted <- status.deleted + 1
+                  | "R", _ | _, "R" -> 
+                    status.renamed <- status.renamed + 1
+                  | "C", _ | _, "C" -> 
+                    status.copied <- status.copied + 1
+                  | "?", _ -> 
+                    status.untracked <- status.untracked + 1
+                  | "!", _ -> 
+                    status.ignored <- status.ignored + 1
+                  | _ -> 
+                    Log.println `ERROR "Unparseable git message: \"%s\"" line
               end;
-            end
-          in
-          let has_errors = ref false in
-          let process_err =
-            Spawn.loop begin fun ic ->
-              let _ = input_line ic in
-              has_errors := true;
-            end
-          in
-          Spawn.async 
-            ~process_in 
-            ~process_err
-            ~at_exit:begin fun _ ->
-              last_status := if !has_errors then None else Some status;
-              if !has_errors then GtkThread.async f None
-              else GtkThread.async f !last_status
-            end "git" [|"status"; "--porcelain=1"|] |> ignore;
-          last_check := now
-        end else GtkThread.async f !last_status
+            end;
+          with ex -> 
+            Log.println `ERROR "Unparseable git message: \"%s\"\n" line ;
+            Printf.eprintf "File \"git.ml\": %s\n%s\n%!" (Printexc.to_string ex) (Printexc.get_backtrace());
+        end
+      in
+      let has_errors = ref false in
+      let process_err =
+        Spawn.loop begin fun ic ->
+          let _ = input_line ic in
+          has_errors := true;
+        end
+      in
+      let program, args = "git", [|"status"; "-b"; "--porcelain=v1"|] in
+      Log.println `DEBUG "%s %s" program (args |> Array.to_list |> String.concat " ");
+      Spawn.async 
+        ~process_in 
+        ~process_err
+        ~at_exit:begin fun _ ->
+          if !has_errors then GtkThread.async f None
+          else GtkThread.async f (Some status)
+        end program args |> ignore
 
-(** with_diff_stat *)
-let with_diff_stat f =
+(** toplevel *)
+let toplevel callback =
+  match Oe_config.git_version with
+    | None -> callback None
+    | _ ->
+      let toplevel = ref "" in
+      let has_errors = ref false in
+      let process_in = Spawn.loop (fun ic -> toplevel := input_line ic) in
+      let process_err =
+        Spawn.loop begin fun ic ->
+          input_line ic |> ignore;
+          has_errors := true;
+        end
+      in
+      let program, args = "git", [|"rev-parse"; "--show-toplevel"|] in
+      Log.println `DEBUG "%s %s" program (args |> Array.to_list |> String.concat " ");
+      Spawn.async 
+        ~process_in 
+        ~process_err
+        ~at_exit:begin fun _ ->
+          if !has_errors then GtkThread.async callback None
+          else GtkThread.async callback (Some !toplevel)
+        end program args |> ignore
+
+(** diff_stat *)
+let diff_stat f =
   let fact = -0.0 in
   let color_add = Color.add_value Oe_config.global_gutter_diff_color_add fact in
   let color_del = Color.add_value Oe_config.global_gutter_diff_color_del fact in
@@ -112,9 +167,9 @@ let with_diff_stat f =
               let del = try int_of_string del with Failure _ -> 0 in
               diffs := (ins, del, fn) :: !diffs;
             | _ -> 
-              Log.println `ERROR "Unparseable git message: %s" line
+              Log.println `ERROR "Unparseable git message: \"%s\"" line
         end
-      in
+      in 
       let display diffs =
         let diffs = List.rev diffs in
         let ti, td, tc, mx = List.fold_left (fun (si, sd, sc, mx) (i, d, _) -> (si + i), (sd + d), (sc + i + d), (max mx (i+d))) (0, 0, 0, 0) diffs in
@@ -162,9 +217,11 @@ let with_diff_stat f =
           has_errors := true;
         end
       in
+      let program, args = "git", [| "diff"; "--numstat"; "--color=never" |] in
+      Log.println `DEBUG "%s %s" program (args |> Array.to_list |> String.concat " ");
       Spawn.async ~process_in ~process_err
         ~at_exit:(fun _ -> if not !has_errors then GtkThread.async display !diffs)
-        "git" [| "diff"; "--numstat"; "--color=never" |] |> ignore
+        program args |> ignore
 
 let popup_window = ref None
 
@@ -176,7 +233,7 @@ let destroy popup =
 (** show_diff_stat *)
 let show_diff_stat alloc widget =
   let popup = GWindow.window
-    (*~kind:`POPUP ~type_hint:`MENU*) ?position:(match alloc with None -> Some `CENTER | _ -> None)
+      (*~kind:`POPUP ~type_hint:`MENU*) ?position:(match alloc with None -> Some `CENTER | _ -> None)
       ~decorated:false ~focus_on_map:true ~border_width:1 ~show:false () in
   popup_window := Some popup;
   popup#misc#set_can_focus true;
@@ -213,7 +270,7 @@ let install_popup (ebox : GBin.event_box) =
   ebox#event#connect#button_press ~callback:begin fun ev ->
     match !popup_window with
       | None when GdkEvent.Button.button ev = 1 ->
-        with_diff_stat (show_diff_stat None (*(Some ebox#misc#allocation)*));
+        diff_stat (show_diff_stat None (*(Some ebox#misc#allocation)*));
         true
       | _ -> true
   end |> ignore

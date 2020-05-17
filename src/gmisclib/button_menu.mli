@@ -42,6 +42,7 @@ class button_menu :
     method get_oid : int
     method misc : GObj.misc_ops
     method set_image : GObj.widget -> unit
+    method set_label : string -> unit
 
     (** Set this flag if you want to make the main button to show the menu when cliked. *)
     method set_menu_only : unit -> unit

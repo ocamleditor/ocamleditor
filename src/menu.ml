@@ -456,7 +456,7 @@ let view ~browser ~group ~flags
       ~label:"Show statistics (Git)" ~packing:menu#add ()
   in
   git_diff#connect#activate ~callback:begin fun () ->
-    Git.with_diff_stat (Git.show_diff_stat None)
+    Git.diff_stat (Git.show_diff_stat None)
   end |> ignore;
   (** Callback *)
   ignore (view#misc#connect#state_changed ~callback:begin fun _ ->

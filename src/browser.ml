@@ -58,11 +58,13 @@ class browser () =
   let editor = new Editor.editor () in
   let _ = window#add Messages.hpaned#coerce in
   let vbox = GPack.vbox ~packing:Messages.hpaned#add1 () in
-  let menubarbox = GPack.hbox ~spacing:0 ~packing:vbox#pack () in
+  let menubarbox = GPack.hbox ~spacing:5 ~packing:vbox#pack () in
   (* Menubar icon displayed full-screen mode *)
   let width, height = 32, 32 in
+  let scaled = GdkPixbuf.create ~width ~height ~has_alpha:false () in
+  let _ = GdkPixbuf.scale ~dest:scaled ~width ~height Icons.oe in
   let pixbuf = GdkPixbuf.create ~width ~height ~has_alpha:false () in
-  let _ = GdkPixbuf.saturate_and_pixelate ~saturation:0.0 ~pixelate:true ~dest:pixbuf Icons.oe in
+  let _ = GdkPixbuf.saturate_and_pixelate ~saturation:0.0 ~pixelate:true ~dest:pixbuf scaled in
   let window_title_menu_icon = GBin.event_box ~packing:menubarbox#pack ~show:false () in
   let icon = GMisc.image ~pixbuf ~packing:window_title_menu_icon#add () in
   let _ = window_title_menu_icon#misc#set_property "visible-window" (`BOOL false) in
@@ -83,15 +85,34 @@ class browser () =
   let _ = vbox#pack toolbar#coerce in
   let paned = Messages.vpaned in
   let _ = vbox#add paned#coerce in
-  (* Combined menubar/toolbar/window title *)
-  let toolbox = GPack.hbox ~packing:menubarbox#add ~show:false () in
+  let toolbox = GPack.hbox ~spacing:5 ~packing:menubarbox#add ~show:false () in
   let _ = GMisc.separator `VERTICAL ~packing:toolbox#pack () in
-
-  let hbox_menu_title = GBin.event_box ~packing:menubarbox#pack ~show:false () in
-  let _ = hbox_menu_title#misc#set_property "visible-window" (`BOOL false) in
-  let window_title_menu_label = GMisc.label (*~ellipsize:`MIDDLE ~width:300*) ~selectable:false ~markup:"" ~xalign:1.0 ~xpad:5 ~packing:hbox_menu_title#add () in
-  let _ = Git.install_popup hbox_menu_title in
-
+  (*  *)
+  let ebox_project_name = GBin.event_box ~packing:(menubarbox#pack ~expand:false) () in
+  let label_project_name = GMisc.label ~markup:"" ~xpad:5 ~packing:ebox_project_name#add () in
+  let _ = 
+    ebox_project_name#misc#modify_bg [`NORMAL, `COLOR (ebox_project_name#misc#style#base `PRELIGHT)];
+  in
+  (* Git bar *)
+  let gitbox = GPack.hbox ~spacing:8 ~packing:(menubarbox#pack ~expand:false) () in
+  let button_gitunpushed = GButton.button ~relief:`NONE ~packing:gitbox#add () in
+  let _ = button_gitunpushed#set_image (GMisc.image ~pixbuf:Icons.arrow_up ())#coerce in
+  let button_gitpending = GButton.button ~relief:`NONE ~packing:gitbox#add () in
+  let _ = 
+    button_gitpending#set_image (GMisc.image ~pixbuf:Icons.edit ())#coerce;
+    button_gitpending#connect#clicked ~callback:begin fun () ->
+      Git.diff_stat (Git.show_diff_stat None);
+    end 
+  in
+  let button_gitpath = GButton.button ~relief:`NONE ~packing:gitbox#add () in
+  let _ = button_gitpath#set_image (GMisc.image ~pixbuf:Icons.git ())#coerce in
+  let button_gitbranch = GButton.button ~label:"" ~relief:`NONE ~packing:gitbox#add () in
+  (*let button_gitbranch = Gmisclib.Button.button_menu ~label:"" ~relief:`NONE ~packing:gitbox#add () in*)
+  let _ = 
+    button_gitbranch#set_image (GMisc.image ~pixbuf:Icons.branch ())#coerce;
+(*    button_gitbranch#set_menu_only();*)
+  in
+  (*  *)
   let vbox_menu_buttons = GPack.vbox ~border_width:0 ~packing:menubarbox#pack ~show:false () in
   let align = GBin.aspect_frame ~yalign:0.0 ~shadow_type:`NONE ~packing:vbox_menu_buttons#add () in
   let hbox_menu_buttons = GPack.hbox ~border_width:0 ~spacing:0 ~packing:align#add () in
@@ -110,6 +131,7 @@ class browser () =
   let _ = GMisc.image ~pixbuf:Icons.close_window ~packing:button_menu_exit#add () in
   let _ = button_menu_exit#misc#set_name "windowbutton" in
   let _ = button_menu_exit#set_focus_on_click false in
+  let tout_low_prio = Timeout.create ~delay:0.75 () in
 
 object (self)
   val mutable finalize = fun _ -> ()
@@ -208,7 +230,7 @@ object (self)
     editor#pack_outline (Cmt_view.empty());
     editor#set_project proj;
     Sys.chdir (proj.root // Prj.default_dir_src);
-    Gmisclib.Idle.add ~prio:100 (self#set_title ~force_status:true);
+    Gmisclib.Idle.add ~prio:300 self#set_title;
     (File_history.add project_history) filename;
     Symbol.Cache.load ~project:proj;
     Annotation.preload ~project:proj;
@@ -237,6 +259,7 @@ object (self)
     editor#set_history_switch_page_locked false;
     proj.open_files <- [];
     proj.modified <- false;
+    self#update_git_status();
     proj
 
 
@@ -402,26 +425,42 @@ object (self)
       (alloc.Gtk.width) (alloc.Gtk.height) (alloc.Gtk.x) (alloc.Gtk.y)
       menubar_visible editor#show_tabs toolbar_visible outline_visible;
 
-  method update_window_title ?status proj filename modified =
-    if window_title_menu_label#misc#get_flag `VISIBLE then begin
-      let status = match status with Some x -> Git.string_of_status x | _ -> "" in
-        match proj.Prj.in_source_path filename with
-          | Some relname ->
-            let color = if modified then "red" else "blue"  in
-            let dir = Filename.dirname relname in
-            let dir = if dir = "." then "" else sprintf "<span size='large'>%s/</span>" dir in
-            window_title_menu_label#set_label
-              (sprintf
-                 "<span weight='bold' size='large'>%s<span size='small' font_family='monospace' weight='normal'>%s</span>  ·  </span><span size='large'>%s</span><span weight='bold' size='large' color='%s'>%s</span>"
-                 proj.Prj.name status dir color (Filename.basename relname));
-          | _ ->
-            window_title_menu_label#set_label 
-              (sprintf 
-                "<span weight='bold' size='large'>%s<span size='smaller' weight='normal'>%s</span>  ·  </span>%s" 
-                proj.Prj.name status filename);
+  method update_git_status () =
+    Timeout.set tout_low_prio 0 begin fun () ->
+      let with_project f =
+        match current_project#get with
+          | Some proj -> f proj
+          | _ -> ()
+      in
+      with_project begin fun proj -> 
+        kprintf label_project_name#set_label "<b>%s</b>" proj.Prj.name;
+        label_project_name#misc#set_tooltip_text (Project.filename proj);
+      end;
+      Git.toplevel begin function 
+        | Some toplevel ->
+          toplevel |> Filename.basename |> button_gitpath#set_label;
+          toplevel |> Filename.dirname |> button_gitpath#misc#set_tooltip_text;
+        | _ -> 
+          button_gitpath#set_label "";
+          button_gitpath#misc#set_tooltip_text "";
+      end;
+      Git.status begin function
+        | Some s ->
+          gitbox#misc#show();
+          button_gitbranch#set_label s.Git.branch;
+          let changes = 
+            s.Git.added + s.Git.modified + s.Git.deleted + s.Git.renamed + s.Git.copied + s.Git.untracked + s.Git.ignored
+          in
+          changes |> sprintf "%3d" |> button_gitpending#set_label;
+          Git.markup_of_status s |> button_gitpending#misc#set_tooltip_markup;
+          s.Git.ahead |> sprintf "%3d" |> button_gitunpushed#set_label;
+          s.Git.ahead |> sprintf "%d unpushed commits" |> button_gitunpushed#misc#set_tooltip_markup;
+        | _ -> 
+          gitbox#misc#hide();
+      end;
     end
 
-  method set_title ?(force_status=false) () =
+  method set_title () =
     let filename, modified =
       match editor#get_page `ACTIVE with
         | None -> "", false
@@ -429,14 +468,12 @@ object (self)
     in
     match current_project#get with
       | Some proj ->
-        Git.with_status ~force:force_status begin fun status ->
-          let projectname = proj.Prj.name in
-          window#set_title (String.concat "" [projectname; (Git.string_of_status status); "  "; filename]);
-          self#update_window_title ~status proj filename modified;
-        end;
+        let projectname = proj.Prj.name in
+        [projectname; " - "; filename]
+        |> String.concat ""
+        |> window#set_title;
       | _ ->
         window#set_title filename;
-        if window_title_menu_label#misc#get_flag `VISIBLE then window_title_menu_label#set_label filename;
 
   val mutable busy = false
 
@@ -509,21 +546,18 @@ object (self)
       if not decorated then begin
         window_title_menu_icon#misc#show();
         vbox_menu_buttons#misc#show();
-        hbox_menu_title#misc#show();
       end;
-      menubar#misc#set_name "oe_menubar";
       menubarbox#set_child_packing ~expand:false ~fill:false menubar#coerce;
       toolbox#misc#show();
     end else if (not x) && is_fullscreen then begin
       window_title_menu_icon#misc#hide();
-      hbox_menu_title#misc#hide();
       vbox_menu_buttons#misc#hide();
-      menubar#misc#set_name "";
       menubarbox#set_child_packing ~expand:true ~fill:true menubar#coerce;
       toolbox#misc#hide();
       window#unmaximize();
       window#set_decorated true;
     end;
+    self#set_title ();
     is_fullscreen <- x;
 
   method set_menu_item_nav_history_sensitive () =
@@ -930,7 +964,7 @@ object (self)
             end
             button
         end;
-        Gmisclib.Idle.add ~prio:300 self#set_title
+        Gmisclib.Idle.add ~prio:300 self#set_title;
       end;
     in
     let update_toolbar_undo () =
@@ -954,7 +988,8 @@ object (self)
     ignore (editor#connect#remove_page ~callback);
     ignore (editor#connect#add_page ~callback);
     ignore (editor#connect#after#changed ~callback:update_toolbar_undo);
-    ignore (editor#connect#after#modified_changed ~callback:update_toolbar_save);
+    editor#connect#after#modified_changed ~callback:update_toolbar_save |> ignore;
+    editor#connect#file_saved ~callback:(fun _ -> self#update_git_status()) |> ignore;
     ignore (editor#connect#file_history_changed ~callback:begin fun fh ->
       Gaux.may menu ~f:begin fun menu ->
         let f =
@@ -1046,6 +1081,7 @@ object (self)
       end;
     in
     window#event#connect#focus_out ~callback:begin fun _ ->
+      Timeout.destroy tout_low_prio;
       id_timeout := Some (GMain.Timeout.add ~ms:300 ~callback:begin fun () ->
           check_launcher();
           true
@@ -1054,11 +1090,12 @@ object (self)
     end |> ignore;
     window#event#connect#focus_in ~callback:begin fun _ ->
       self#set_title();
+      self#update_git_status();
+      Timeout.start tout_low_prio;
       (match !id_timeout with Some id -> GMain.Timeout.remove id | _ -> ());
       false
     end |> ignore;
     check_launcher()
-
 
   method connect = new signals ~startup ~switch_project ~menubar_visibility_changed ~toolbar_visibility_changed
     ~tabbar_visibility_changed ~outline_visibility_changed

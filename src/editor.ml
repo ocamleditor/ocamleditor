@@ -39,6 +39,7 @@ class editor () =
   let modified_changed = new modified_changed () in
   let file_history_changed = new file_history_changed () in
   let outline_visibility_changed = new outline_visibility_changed () in
+  let file_saved = new file_saved () in
   let changed = new changed () in
   let add_page = new add_page () in
   object (self)
@@ -677,6 +678,7 @@ class editor () =
       if Preferences.preferences#get.Preferences.pref_editor_trim_lines
       then (page#buffer#trim_lines());
       page#save();
+      file_saved#call page#get_filename;
       (*    with Not_found -> ()*)
 
     method dialog_confirm_close = Editor_dialog.confirm_close ~editor:self
@@ -771,7 +773,7 @@ class editor () =
       page#error_indication#hide_tooltip();
 
     val signals = new signals hpaned#as_widget ~add_page ~switch_page ~remove_page ~changed ~modified_changed
-      ~file_history_changed ~outline_visibility_changed
+      ~file_history_changed ~outline_visibility_changed ~file_saved
     method connect = signals
     method disconnect = signals#disconnect
 
@@ -986,9 +988,10 @@ and changed () = object inherit [unit] signal () end
 and add_page () = object inherit [Editor_page.page] signal () end
 and file_history_changed () = object inherit [File_history.t] signal () end
 and outline_visibility_changed () = object inherit [bool] signal () end
+and file_saved () = object inherit [string] signal () end
 
 and signals hpaned ~add_page ~switch_page ~remove_page ~changed ~modified_changed
-    ~file_history_changed ~outline_visibility_changed =
+    ~file_history_changed ~outline_visibility_changed ~file_saved =
   object
     inherit GObj.widget_signals_impl hpaned
     inherit add_ml_signals hpaned [switch_page#disconnect;
@@ -1001,5 +1004,6 @@ and signals hpaned ~add_page ~switch_page ~remove_page ~changed ~modified_change
     method add_page = add_page#connect ~after
     method file_history_changed = file_history_changed#connect ~after
     method outline_visibility_changed = outline_visibility_changed#connect ~after
+    method file_saved = file_saved#connect ~after
   end
 
