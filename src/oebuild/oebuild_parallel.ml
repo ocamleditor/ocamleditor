@@ -46,6 +46,13 @@ module NODE = struct
   let to_string x = x.nd_filename
 end
 
+type node = NODE.t = {
+    nd_create_command     : (string -> (string * string array) option);
+    nd_at_exit            : (process_output -> unit);
+    nd_filename           : string;
+    mutable nd_processing : bool;
+  }
+
 module Dag = Oebuild_dag.Make(NODE)
 
 type t = (NODE.key, Dag.entry) Hashtbl.t
@@ -90,20 +97,19 @@ let print_results err_outputs ok_outputs =
 
 (** create_dag *)
 let create_dag ?times ?pp ~cb_create_command ~cb_at_exit ~toplevel_modules ~verbose () =
-  let open Dag in
   match Dep_dag.create_dag ?times ?pp ~toplevel_modules ~verbose () with
     | Dep_dag.Cycle cycle -> kprintf failwith "Cycle: %s" (String.concat "->" cycle)
     | Dep_dag.Dag (dag', ocamldeps) ->
       let dag = Hashtbl.create 17 in
       Hashtbl.iter begin fun filename _deps ->
         let node = {
-          NODE.nd_create_command = cb_create_command;
+          nd_create_command = cb_create_command;
           nd_at_exit        = cb_at_exit;
           nd_filename       = filename;
           nd_processing     = false
         } in
         Hashtbl.add dag filename {
-          key          = filename;
+          Dag.key      = filename;
           node         = node;
           dependencies = [];
           dependants   = []
@@ -120,7 +126,7 @@ let create_dag ?times ?pp ~cb_create_command ~cb_at_exit ~toplevel_modules ~verb
           end deps;
         with Not_found -> assert false
       end dag';
-      set_dependants dag;
+      Dag.set_dependants dag;
       { graph = dag; ocamldeps; mutex = Mutex.create() }
 ;;
 
@@ -194,7 +200,6 @@ let process_parallel ?jobs ~verbose dag =
   let open NODE in
   let errors = ref [] in
   let messages = ref [] in
-  (*let process_time = Unix.gettimeofday () in*)
   let leaves = ref [] in
   begin
     try
@@ -220,9 +225,7 @@ let process_parallel ?jobs ~verbose dag =
   end;
   let errors = List.rev !errors in
   let messages = List.rev !messages in
-  (*let process_time = Unix.gettimeofday () -. process_time in*)
   print_results errors messages;
-  (*process_time*)
 ;;
 
 

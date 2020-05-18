@@ -21,8 +21,6 @@
 *)
 
 
-open Printf
-
 module type ENTRY = sig
   type key
   type t

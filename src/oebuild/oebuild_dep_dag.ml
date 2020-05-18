@@ -80,21 +80,6 @@ let dot_of_dag (dag : t) =
   Buffer.add_string buf "}\n";
   Buffer.contents buf;;
 
-(*(** has_cycle *)
-let has_cycle ~ocamldeps ~toplevel_modules =
-  (*try*)
-    let rec find path node =
-      if List.mem node path then raise (Cycle_exception (List.rev (node :: path)))
-      else begin
-        let children = try Hashtbl.find ocamldeps node with Not_found -> [] in
-        List.iter (find (node :: path)) children
-      end
-    in
-    List.iter (find []) toplevel_modules;
-    (*None
-  with Cycle_exception cycle -> Some cycle*)
-;;*)
-
 (** find_toplevels *)
 let find_toplevels ocamldeps =
   let all_deps =
@@ -114,29 +99,18 @@ let find_toplevels ocamldeps =
 
 (** create_dag *)
 let create_dag ?times ?pp ~toplevel_modules ~verbose () =
-  let crono = if verbose >= 4 then crono else fun ?label f x -> f x in
+  let crono = if verbose >= 4 then crono else fun ?label:_ f x -> f x in
+
   let dirs = List.map Filename.dirname toplevel_modules in
   let dirs = List.filter ((<>) ".") dirs in
   let dirs = remove_dupl dirs in
+
   let search_path = List.map Ocaml_config.expand_includes dirs in
   let search_path = String.concat " " search_path in
-  (* TODO: Non eseguire ocmaldep su *.ml ma ricorsivamente sui toplevel_modules
-     perché alrimenti finiscono nel dag anche file sorgenti estranei al target
-     per cui si sta cercando di determinare il dag. *)
-  let ocamldeps =
-    let mode = (*`All*) `Recursive in
-    match mode with
-      (*| `All ->
-        let filenames = List.map (fun dir -> sprintf "%s/*.mli %s/*.ml" dir dir) dirs in
-        let filenames = (String.concat " " filenames) ^ " *.ml *.mli" in
-        crono ~label:"Oebuild_dep_dag.create_dag, ocamldep(`All)" (Oebuild_dep.ocamldep ?times ~search_path) filenames*)
-      | `Recursive ->
-        let ocamldeps = crono ~label:"Oebuild_dep_dag.create_dag, ocamldep(`Recursive)"
-          (Oebuild_dep.ocamldep_recursive ?times ~search_path ?pp ~verbose:false) toplevel_modules
-        in
-        ocamldeps
-  in
+
+  let ocamldeps = Oebuild_dep.ocamldep_recursive ?times ~search_path ?pp ~verbose:false toplevel_modules in
   if verbose >= 4 then Printf.printf "OCAMLDEPS LENGTH: %d\n%!" (Hashtbl.length ocamldeps);
+
   (* "ocamldeps" only contains depependencies that need to be recompiled
      (there is no need to create an expensive dag containing up-to-date
      dependencies). *)

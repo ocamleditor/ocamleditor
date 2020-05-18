@@ -29,4 +29,4 @@ let website = "http://" ^ website_address ^ "/"
 let project_page = "https://github.com/ftovagliari/ocamleditor"
 let issues = "https://github.com/ftovagliari/ocamleditor/issues"
 let releases = "https://github.com/ftovagliari/ocamleditor/releases"
-let build_id = Build_id.timestamp
+let build_id = ref ""

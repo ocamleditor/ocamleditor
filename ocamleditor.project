@@ -391,11 +391,11 @@
       <descr></descr>
       <byt>true</byt>
       <opt>false</opt>
-      <libs>gmisclib</libs>
+      <libs></libs>
       <other_objects></other_objects>
       <files>dot_viewer_svg.ml</files>
-      <package>lablgtk2,xml-light</package>
-      <includes>common gmisclib otherwidgets</includes>
+      <package>lablgtk2.rsvg,xml-light</package>
+      <includes>common gmisclib</includes>
       <thread>true</thread>
       <vmthread>false</vmthread>
       <pp></pp>
@@ -419,7 +419,7 @@
       <libs></libs>
       <other_objects></other_objects>
       <files>dot_viewer_svg.ml</files>
-      <package>lablgtk2.rsvg</package>
+      <package>lablgtk2.rsvg,xml-light</package>
       <includes>common gmisclib</includes>
       <thread>true</thread>
       <vmthread>false</vmthread>
@@ -469,7 +469,7 @@
       <libs></libs>
       <other_objects></other_objects>
       <files>plugin_diff_gtext.ml plugin_diff.ml </files>
-      <package>compiler-libs,diff,lablgtk2,str,unix</package>
+      <package>compiler-libs.common,diff,lablgtk2,str,unix,xml-light</package>
       <includes>common otherwidgets gmisclib oebuild icons</includes>
       <thread>true</thread>
       <vmthread>false</vmthread>

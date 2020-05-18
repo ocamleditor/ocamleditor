@@ -38,6 +38,7 @@ let path_src p = p.root // default_dir_src
 let path_bak p = p.root // default_dir_bak
 let path_tmp p = p.root // default_dir_tmp
 let path_cache p = p.root // ".cache"
+let path_dot_oebuild p = p.root // default_dir_src // ".oebuild"
 
 
 (** abs_of_tmp *)
@@ -410,6 +411,12 @@ let refresh proj =
 
 (** clear_cache *)
 let clear_cache proj =
+  (* Remove the compile timestamps cache *)
+  let dot_oebuild = path_dot_oebuild proj in
+  if Sys.file_exists dot_oebuild then begin
+    Sys.remove dot_oebuild;
+    printf "File removed %s...\n%!" dot_oebuild;
+  end;
   let rmr = if Sys.os_type = "Win32" then "DEL /F /Q /S" else "rm -fr" in
   let dir = path_cache proj in
   let files = Sys.readdir dir in
