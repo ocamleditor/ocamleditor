@@ -28,7 +28,6 @@ let (//) = Filename.concat
 let (^^^) = Filename.check_suffix
 let (<@) = List.mem
 let win32 = (fun a b -> match Sys.os_type with "Win32" -> a | _ -> b)
-let may opt f = match opt with Some x -> f x | _ -> ()
 let re_spaces = Str.regexp " +"
 let redirect_stderr_to_null = if Sys.os_type = "Win32" then " 2>NUL" else " 2>/dev/null"
 
@@ -138,11 +137,6 @@ let rec mkdir_p d =
     printf "mkdir -p %s\n%!" d;
     (Unix.mkdir d 0o755)
   end
-
-(*(** replace_extension *)
-let replace_extension x =
-  sprintf "%s.%s" (Filename.chop_extension x)
-    (if x ^^ "cmi" then "mli" else if x ^^ "cmx" then "ml" else assert false);;*)
 
 (** replace_extension_to_ml *)
 let replace_extension_to_ml filename =

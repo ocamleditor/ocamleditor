@@ -23,6 +23,8 @@
 
 open Printf
 
+let dummy_crc = String.make 32 '0'
+
 (* <filename.[opt|byt], last-compiled> *)
 type t = (string, float) Hashtbl.t
 
@@ -31,7 +33,7 @@ let oebuild_times_filename = ".oebuild"
 let (^^) filename opt = filename ^ (if opt then ".opt" else ".byt")
 
 let find (table : t) filename opt = Hashtbl.find table (filename ^^ opt)
-let add (table : t) filename opt = Hashtbl.add table (filename ^^ opt)
+let add (table : t) filename opt = Hashtbl.replace table (filename ^^ opt)
 let remove (table : t) filename opt = Hashtbl.remove table (filename ^^ opt)
 
 (** read *)
