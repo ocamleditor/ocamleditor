@@ -58,7 +58,7 @@ class browser () =
   let editor = new Editor.editor () in
   let _ = window#add Messages.hpaned#coerce in
   let vbox = GPack.vbox ~packing:Messages.hpaned#add1 () in
-  let menubarbox = GPack.hbox ~spacing:5 ~packing:vbox#pack () in
+  let menubarbox = GPack.hbox ~spacing:0 ~packing:vbox#pack () in
   (* Menubar icon displayed full-screen mode *)
   let width, height = 32, 32 in
   let scaled = GdkPixbuf.create ~width ~height ~has_alpha:false () in
@@ -85,7 +85,7 @@ class browser () =
   let _ = vbox#pack toolbar#coerce in
   let paned = Messages.vpaned in
   let _ = vbox#add paned#coerce in
-  let toolbox = GPack.hbox ~spacing:5 ~packing:menubarbox#add ~show:false () in
+  let toolbox = GPack.hbox ~packing:menubarbox#add ~show:false () in
   let _ = GMisc.separator `VERTICAL ~packing:toolbox#pack () in
   (*  *)
   let ebox_project_name = GBin.event_box ~packing:(menubarbox#pack ~expand:false) () in
@@ -547,11 +547,13 @@ object (self)
         window_title_menu_icon#misc#show();
         vbox_menu_buttons#misc#show();
       end;
+      menubar#misc#set_name "oe_menubar";
       menubarbox#set_child_packing ~expand:false ~fill:false menubar#coerce;
       toolbox#misc#show();
     end else if (not x) && is_fullscreen then begin
       window_title_menu_icon#misc#hide();
       vbox_menu_buttons#misc#hide();
+      menubar#misc#set_name "";
       menubarbox#set_child_packing ~expand:true ~fill:true menubar#coerce;
       toolbox#misc#hide();
       window#unmaximize();
