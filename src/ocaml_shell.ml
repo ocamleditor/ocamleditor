@@ -66,10 +66,11 @@ class ocaml_shell ?project () =
   let _ = tooltips#set_tip ~text:"Kill process" b_kill#coerce in
   let _ = tooltips#set_tip ~text:"Rename Toplevel Window" b_rename#coerce in
   (*  *)
-  let prog = Ocaml_config.ocaml_noinit () in
+  let prog = Ocaml_config.ocaml () in
+  let args = ["-noinit"] in
   let sh =
     object
-      inherit Shell_view.widget ~prog ~env:(Unix.environment()) ~args:[] ~packing:sw#add ()
+      inherit Shell_view.widget ~prog ~env:(Unix.environment()) ~args ~packing:sw#add ()
       method! private lex ~start ~stop =
         if start#compare stop < 0 then Lexical.tag buffer ~start ~stop
       initializer

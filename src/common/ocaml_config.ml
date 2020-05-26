@@ -85,7 +85,6 @@ let ocamldep () = match find_tool `BEST_OCAMLDEP (get_home ()) with Some x -> x 
 let ocamldoc () = match find_tool `BEST_OCAMLDOC (get_home ()) with Some x -> x | _ -> failwith "Cannot find 'ocamldoc'"
 let ocaml ()    = match find_tool `OCAML (get_home ()) with Some x -> x | _ -> failwith "Cannot find 'ocaml'"
 let ocamllib () = match Shell.get_command_output ((ocamlc()) ^ " -where") with x :: _ -> x | _ -> ""
-let ocaml_noinit () = ocaml () ^ " -noinit"
 
 (** OCaml Version *)
 
