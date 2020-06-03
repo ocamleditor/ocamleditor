@@ -478,7 +478,7 @@
       <nodep>false</nodep>
       <dontlinkdep>true</dontlinkdep>
       <dontaddopt>false</dontaddopt>
-      <cflags>-g -w -26-10</cflags>
+      <cflags>-g -w -26-10-58</cflags>
       <lflags>-g odiff.cmxa</lflags>
       <target_type>Plugin</target_type>
       <outname>../plugins/plugin_diff</outname>

@@ -1652,7 +1652,22 @@ let create_process ?(jobs=0) ~verbose cb_create_command cb_at_exit dag leaf erro
       let at_exit = function
         | None ->
           (*output.exit_code <- exit_code;*)
-          if Buffer.length output.err > 0 then (errors := output :: !errors)
+          if Buffer.length output.err > 0 then
+            (* Wait, wait, what is happening here?
+
+               We use a heuristic to check if compilation succeeded or failed.
+               If the is some output to stderr, we assume the that compilation
+               failed.
+               But with if -verbose level is 5 the -verbose option is passed to
+               OCaml compilers and those output some additional info to stderr
+               prefixing it with '+'
+
+               Probably better not to use -verbose level 5 unless you know what
+               you're doing or are to help with debugging.
+            *)
+            let err = Buffer.contents output.err |> String.trim in
+            if err.[0] <> '+' then (errors := output :: !errors)
+            else messages := output :: !messages
           else messages := output :: !messages;
           Mutex.lock dag.mutex;
           Dag.remove_leaf dag.graph leaf;
@@ -3497,7 +3512,7 @@ let targets = [
     package              = "compiler-libs.common,diff,lablgtk2,str,unix,xml-light";
     search_path          = "common otherwidgets gmisclib oebuild icons"; (* -I *)
     required_libraries   = "";
-    compiler_flags       = "-g -w -26-10";
+    compiler_flags       = "-g -w -26-10-58";
     linker_flags         = "-g odiff.cmxa";
     thread               = true;
     vmthread             = false;
