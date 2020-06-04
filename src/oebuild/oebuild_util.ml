@@ -48,8 +48,8 @@ let unquote =
 (** We have a similar function Shell.parse_args, but..
 
     It preserves the quoutes around the arguments which is OK, if you are going
-    to use [system], where the shell will remove the quote but not OK at all
-    if [create_process} is used.
+    to use [system], where the shell will remove the quotes but not OK at all
+    if [create_process] is used.
 
     Examples of use:
     split_args {|x y|} -> ["x"; "y"]

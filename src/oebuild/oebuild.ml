@@ -114,9 +114,9 @@ let link ~compilation ~compiler ~outkind ~lflags ~includes ~libs ~outname ~deps
     ~verbose () =
   let opt = compilation = Native && ocamlopt <> None in
   let libs =
-    if (*opt &&*) outkind <> Executable then "" else
+    if (*opt &&*) outkind <> Executable then [] else
       let ext = if opt then "cmxa" else "cma" in
-      let libs = List.map begin fun x ->
+      List.map begin fun x ->
         if Filename.check_suffix x ".o" then begin
           let x = Filename.chop_extension x in
           let ext = if opt then "cmx" else "cmo" in
@@ -124,26 +124,24 @@ let link ~compilation ~compiler ~outkind ~lflags ~includes ~libs ~outname ~deps
         end else if Filename.check_suffix x ".obj" then begin
           sprintf "%s" x
         end else (sprintf "%s.%s" x ext)
-      end libs in
-      String.concat " " libs
+      end libs
   in
-  let deps = String.concat " " deps in
   let process_exit =
     let command, args = compiler in
     let args = Array.concat [
         args; (* Must be the first because starts with the first arg. of ocamlfind *)
         if verbose >= 5 then [| "-verbose" |] else [| |];
         (match outkind with
-         | Library         -> [| "-a" |]
-         | Plugin when opt -> [| "-shared" |]
-         | Plugin          -> [| |]
-         | Pack            -> [| |]
+         | Library         -> [| "-a"; "-o"; outname |]
+         | Plugin when opt -> [| "-shared"; "-o"; outname |]
+         | Plugin
+         | Pack
          | Executable
-         | External        -> [| "-o" |]);
+         | External        -> [| "-o"; outname|]);
         (Array.of_list (split_args lflags));
         (Array.of_list (split_args includes));
-        (Array.of_list (split_args libs));
-        (Array.of_list (split_args deps));
+        (Array.of_list libs);
+        (Array.of_list deps);
       ] in
     if verbose >= 2 then print_endline (String.concat "^" (command :: (Array.to_list args)));
     Spawn.sync command args
