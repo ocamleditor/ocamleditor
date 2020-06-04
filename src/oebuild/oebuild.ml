@@ -132,12 +132,14 @@ let link ~compilation ~compiler ~outkind ~lflags ~includes ~libs ~outname ~deps
     let command, args = compiler in
     let args = Array.concat [
         args; (* Must be the first because starts with the first arg. of ocamlfind *)
-        [|
-          if verbose >= 5 then "-verbose" else "";
-          (match outkind with Library -> "-a" | Plugin when opt -> "-shared" | Plugin -> "" | Pack -> "-pack" | Executable | External -> "");
-          "-o";
-          outname
-        |];
+        if verbose >= 5 then [| "-verbose" |] else [| |];
+        (match outkind with
+         | Library         -> [| "-a" |]
+         | Plugin when opt -> [| "-shared" |]
+         | Plugin          -> [| |]
+         | Pack            -> [| |]
+         | Executable
+         | External        -> [| "-o" |]);
         (Array.of_list (split_args lflags));
         (Array.of_list (split_args includes));
         (Array.of_list (split_args libs));
