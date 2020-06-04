@@ -23,7 +23,46 @@
 let re_tmp = Miscellanea.regexp (Printf.sprintf "File \"..[\\/]%s[\\/]" Prj.default_dir_tmp)
 let (!!) = Filename.quote
 
-(** compile_buffer *)
+let cached_ppx_flags = Hashtbl.create 21
+
+(** Returns the ppx flags for a package. The results are cached to save some
+    ocamfind invocations.
+*)
+let ppx_flags_package pkg =
+  match Hashtbl.find cached_ppx_flags pkg with
+  | flags -> flags
+  | exception Not_found ->
+    let flags = Shell.get_command_output (Printf.sprintf "ocamlfind printppx %s" pkg) in
+    let ()    = Hashtbl.replace cached_ppx_flags pkg flags in
+    flags
+
+(** Gets the ppx flags for the packages used in current project to be used for
+    auto-compilation.
+
+    The order of ppx invokations is not specified, and may vary from run to run.
+    Also if target A uses a ppx rewriter but targets B and C do not, the ppx
+    rewriter will be used even for files that do not need it.
+
+    It can get more tricky when different targets use different rewriters,
+    since all will be used. This can present a problem, especially, if the ppx
+    syntaxes overlap.
+
+    Such use case is not currently supported.
+*)
+let ppx_flags project =
+  let packages = List.concat_map (fun t -> String.split_on_char ',' t.Target.package) project.Prj.targets in
+  let packages = List.fold_left (fun acc p -> Hashtbl.replace acc p true; acc) (Hashtbl.create 12) packages in
+  let packages = Hashtbl.fold (fun p _ acc -> p :: acc) packages [] in
+  let outputs  = List.concat_map ppx_flags_package packages in
+  let flags    = List.concat_map Oebuild_util.split_args outputs in
+  Array.of_list flags
+
+
+(** Compile the current buffer using the flags from all project targets.
+
+    More specifically, `include` and `ppx` flags from all targets are included,
+    as well extra debug flags.
+*)
 let compile_buffer ~project ~editor ~page ?(join=false) () =
   let activity_name = "Compiling " ^ page#get_filename ^ "..." in
   Activity.add Activity.Compile_buffer activity_name;
@@ -37,6 +76,7 @@ let compile_buffer ~project ~editor ~page ?(join=false) () =
           Array.concat [
             project.Prj.autocomp_dflags;
             (Array.of_list (Miscellanea.split " +" project.Prj.autocomp_cflags));
+            (ppx_flags project);
             [| "-error-style"; "short"; "-I"; tmp |];
             (Array.of_list (Miscellanea.split " +" (Project.get_search_path_i_format project)));
             [|tmp ^ "/" ^ relpath|];
