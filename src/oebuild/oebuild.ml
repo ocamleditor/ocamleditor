@@ -84,14 +84,13 @@ let get_compiler_command ?(times : Table.t option) ~opt ~compiler ~cflags ~inclu
           | _ -> raise Not_found
       end
     with Not_found -> begin
-        let verbose_opt = if verbose >= 5 then "-verbose" else "" in
         let compiler, args = compiler in
         Some (compiler, Array.concat [
             [| "-c"; |] ;
             args;
-            (Array.of_list (Str.split re_spaces cflags));
-            (Array.of_list (Str.split re_spaces includes));
-            [| verbose_opt; filename |]
+            (Array.of_list (split_args cflags));
+            (Array.of_list (split_args includes));
+            if verbose >= 5 then [| "-verbose"; filename |] else [| filename |]
           ])
       end
   end else None
@@ -139,12 +138,12 @@ let link ~compilation ~compiler ~outkind ~lflags ~includes ~libs ~outname ~deps
           "-o";
           outname
         |];
-        (Array.of_list (split_space lflags));
-        (Array.of_list (split_space includes));
-        (Array.of_list (split_space libs));
-        (Array.of_list (split_space deps));
+        (Array.of_list (split_args lflags));
+        (Array.of_list (split_args includes));
+        (Array.of_list (split_args libs));
+        (Array.of_list (split_args deps));
       ] in
-    if verbose >= 2 then print_endline (String.concat " " (command :: (Array.to_list args)));
+    if verbose >= 2 then print_endline (String.concat "^" (command :: (Array.to_list args)));
     Spawn.sync command args
   in
   match process_exit with
@@ -338,7 +337,7 @@ let build ~compilation ~package ~includes ~libs ~other_mods ~outkind ~compile_on
   let includes = ref includes in
   includes := Ocaml_config.expand_includes !includes;
   (* libs *)
-  let libs = split_space libs in
+  let libs = split_args libs in
   (* flags *)
   let cflags = ref cflags in
   let lflags = ref lflags in
@@ -414,7 +413,7 @@ let build ~compilation ~package ~includes ~libs ~other_mods ~outkind ~compile_on
         let objs = List.filter (fun x -> x ^^^ ".cmx") filenames in
         if opt then objs else List.map (fun x -> (Filename.chop_extension x) ^ ".cmo") objs
       in
-      let mods = split_space other_mods in
+      let mods = split_args other_mods in
       let mods = if compilation = Native then List.map (sprintf "%s.cmx") mods else List.map (sprintf "%s.cmo") mods in
       let obj_deps =
         if dontlinkdep then
