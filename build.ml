@@ -1901,7 +1901,7 @@ let link ~compilation ~compiler ~outkind ~lflags ~includes ~libs ~outname ~deps
         (Array.of_list libs);
         (Array.of_list deps);
       ] in
-    if verbose >= 2 then print_endline (String.concat "^" (command :: (Array.to_list args)));
+    if verbose >= 2 then print_endline (String.concat " " (command :: (Array.to_list args)));
     Spawn.sync command args
   in
   match process_exit with
