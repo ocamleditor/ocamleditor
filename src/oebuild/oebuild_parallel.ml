@@ -137,6 +137,7 @@ let job_mutex = Mutex.create ()
 let create_process ?(jobs=0) ~verbose cb_create_command cb_at_exit dag leaf errors messages =
   leaf.Dag.node.NODE.nd_processing <- true;
   let filename = Oebuild_util.replace_extension_to_ml leaf.Dag.node.NODE.nd_filename in
+  let process_id = ref 0 in
   match cb_create_command filename with
     | Some (command, args) when jobs = 0 || !job_counter <= jobs ->
       if verbose >= 4 then
@@ -153,24 +154,14 @@ let create_process ?(jobs=0) ~verbose cb_create_command cb_at_exit dag leaf erro
       } in
       let at_exit = function
         | None ->
-          (*output.exit_code <- exit_code;*)
-          if Buffer.length output.err > 0 then
-            (* Wait, wait, what is happening here?
-
-               We use a heuristic to check if compilation succeeded or failed.
-               If the is some output to stderr, we assume the that compilation
-               failed.
-               But with if -verbose level is 5 the -verbose option is passed to
-               OCaml compilers and those output some additional info to stderr
-               prefixing it with '+'
-
-               Probably better not to use -verbose level 5 unless you know what
-               you're doing or are to help with debugging.
-            *)
-            let err = Buffer.contents output.err |> String.trim in
-            if err.[0] <> '+' then (errors := output :: !errors)
-            else messages := output :: !messages
-          else messages := output :: !messages;
+          begin match Unix.waitpid [] !process_id with
+            | _, Unix.WEXITED 0 ->
+              output.exit_code <- 0;
+              messages := output :: !messages
+            | _, _              ->
+              output.exit_code <- 1; (* I do not need the exact exit code right now *)
+              errors := output :: !errors
+          end;
           Mutex.lock dag.mutex;
           Dag.remove_leaf dag.graph leaf;
           Mutex.unlock dag.mutex;
@@ -198,7 +189,7 @@ let create_process ?(jobs=0) ~verbose cb_create_command cb_at_exit dag leaf erro
         begin
           match Spawn.async ~at_exit ~process_in ~process_err command args
           with `ERROR ex -> ()
-             | `PID _ -> ()
+             | `PID n -> process_id := n
         end;
     | None ->
       if verbose >= 4 then

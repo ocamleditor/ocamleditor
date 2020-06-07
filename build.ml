@@ -844,7 +844,6 @@ let (//) = Filename.concat
 let (^^^) = Filename.check_suffix
 let (<@) = List.mem
 let win32 = (fun a b -> match Sys.os_type with "Win32" -> a | _ -> b)
-let re_spaces = Str.regexp " +"
 let redirect_stderr_to_null = if Sys.os_type = "Win32" then " 2>NUL" else " 2>/dev/null"
 
 (** format_int *)
@@ -862,7 +861,42 @@ let unquote =
   let re = Str.regexp "^['\"]\\(.*\\)['\"]$" in
   fun x -> if Str.string_match re x 0 then Str.matched_group 1 x else x
 
-let split_space = Str.split re_spaces
+(** We have a similar function Shell.parse_args, but..
+
+    It preserves the quoutes around the arguments which is OK, if you are going
+    to use [system], where the shell will remove the quotes but not OK at all
+    if [create_process] is used.
+
+    Examples of use:
+    split_args {|x y|} -> ["x"; "y"]
+    split_args {|x "foo -bar"|] -> ["x"; "foo -bar"]
+    split_args {|    x     |} -> ["x"]
+*)
+let split_args str =
+  let append_buf args buf =
+    if Buffer.length buf > 0 then
+      let args = Buffer.contents buf :: args in
+      let ()   = Buffer.clear buf in
+      args
+    else args
+  in
+  let rec loop ~args ~buf ~state i =
+    if i < String.length str then
+      begin
+        match str.[i], state with
+        | ' ', `No_arg     -> loop ~args ~buf ~state:`No_arg (i + 1)
+        | ' ', `Arg        -> loop ~args:(append_buf args buf) ~buf ~state:`No_arg (i + 1)
+        | '"', `No_arg     -> loop ~args ~buf ~state:`Quoted_arg (i + 1)
+        | '"', `Quoted_arg -> loop ~args:(append_buf args buf) ~buf ~state:`No_arg (i + 1)
+        | c, `No_arg       -> Buffer.add_char buf c; loop ~args ~buf ~state:`Arg (i + 1)
+        | c, `Arg          -> Buffer.add_char buf c; loop ~args ~buf ~state:`Arg (i + 1)
+        | c, `Quoted_arg   -> Buffer.add_char buf c; loop ~args ~buf ~state:`Quoted_arg (i + 1)
+      end
+    else
+      let args = append_buf args buf in
+      List.rev args
+  in
+  loop ~args:[] ~buf:(Buffer.create 32) ~state:`No_arg 0
 
 (** lpad *)
 let lpad txt c width =
@@ -963,7 +997,7 @@ let replace_extension_to_ml filename =
 
 (** split_prog_args *)
 let split_prog_args x =
-  match split_space x with
+  match split_args x with
     | h :: t -> h, Array.of_list t
     | _ -> assert false
 
@@ -1635,6 +1669,7 @@ let job_mutex = Mutex.create ()
 let create_process ?(jobs=0) ~verbose cb_create_command cb_at_exit dag leaf errors messages =
   leaf.Dag.node.NODE.nd_processing <- true;
   let filename = Oebuild_util.replace_extension_to_ml leaf.Dag.node.NODE.nd_filename in
+  let process_id = ref 0 in
   match cb_create_command filename with
     | Some (command, args) when jobs = 0 || !job_counter <= jobs ->
       if verbose >= 4 then
@@ -1651,9 +1686,14 @@ let create_process ?(jobs=0) ~verbose cb_create_command cb_at_exit dag leaf erro
       } in
       let at_exit = function
         | None ->
-          (*output.exit_code <- exit_code;*)
-          if Buffer.length output.err > 0 then (errors := output :: !errors)
-          else messages := output :: !messages;
+          begin match Unix.waitpid [] !process_id with
+            | _, Unix.WEXITED 0 ->
+              output.exit_code <- 0;
+              messages := output :: !messages
+            | _, _              ->
+              output.exit_code <- 1; (* I do not need the exact exit code right now *)
+              errors := output :: !errors
+          end;
           Mutex.lock dag.mutex;
           Dag.remove_leaf dag.graph leaf;
           Mutex.unlock dag.mutex;
@@ -1681,7 +1721,7 @@ let create_process ?(jobs=0) ~verbose cb_create_command cb_at_exit dag leaf erro
         begin
           match Spawn.async ~at_exit ~process_in ~process_err command args
           with `ERROR ex -> ()
-             | `PID _ -> ()
+             | `PID n -> process_id := n
         end;
     | None ->
       if verbose >= 4 then
@@ -1793,14 +1833,13 @@ let get_compiler_command ?(times : Table.t option) ~opt ~compiler ~cflags ~inclu
           | _ -> raise Not_found
       end
     with Not_found -> begin
-        let verbose_opt = if verbose >= 5 then "-verbose" else "" in
         let compiler, args = compiler in
         Some (compiler, Array.concat [
             [| "-c"; |] ;
             args;
-            (Array.of_list (Str.split re_spaces cflags));
-            (Array.of_list (Str.split re_spaces includes));
-            [| verbose_opt; filename |]
+            (Array.of_list (split_args cflags));
+            (Array.of_list (split_args includes));
+            if verbose >= 5 then [| "-verbose"; filename |] else [| filename |]
           ])
       end
   end else None
@@ -1824,9 +1863,9 @@ let link ~compilation ~compiler ~outkind ~lflags ~includes ~libs ~outname ~deps
     ~verbose () =
   let opt = compilation = Native && ocamlopt <> None in
   let libs =
-    if (*opt &&*) outkind <> Executable then "" else
+    if (*opt &&*) outkind <> Executable then [] else
       let ext = if opt then "cmxa" else "cma" in
-      let libs = List.map begin fun x ->
+      List.map begin fun x ->
         if Filename.check_suffix x ".o" then begin
           let x = Filename.chop_extension x in
           let ext = if opt then "cmx" else "cmo" in
@@ -1834,24 +1873,24 @@ let link ~compilation ~compiler ~outkind ~lflags ~includes ~libs ~outname ~deps
         end else if Filename.check_suffix x ".obj" then begin
           sprintf "%s" x
         end else (sprintf "%s.%s" x ext)
-      end libs in
-      String.concat " " libs
+      end libs
   in
-  let deps = String.concat " " deps in
   let process_exit =
     let command, args = compiler in
     let args = Array.concat [
         args; (* Must be the first because starts with the first arg. of ocamlfind *)
-        [|
-          if verbose >= 5 then "-verbose" else "";
-          (match outkind with Library -> "-a" | Plugin when opt -> "-shared" | Plugin -> "" | Pack -> "-pack" | Executable | External -> "");
-          "-o";
-          outname
-        |];
-        (Array.of_list (split_space lflags));
-        (Array.of_list (split_space includes));
-        (Array.of_list (split_space libs));
-        (Array.of_list (split_space deps));
+        if verbose >= 5 then [| "-verbose" |] else [| |];
+        (match outkind with
+         | Library         -> [| "-a"; "-o"; outname |]
+         | Plugin when opt -> [| "-shared"; "-o"; outname |]
+         | Plugin
+         | Pack
+         | Executable
+         | External        -> [| "-o"; outname|]);
+        (Array.of_list (split_args lflags));
+        (Array.of_list (split_args includes));
+        (Array.of_list libs);
+        (Array.of_list deps);
       ] in
     if verbose >= 2 then print_endline (String.concat " " (command :: (Array.to_list args)));
     Spawn.sync command args
@@ -2047,7 +2086,7 @@ let build ~compilation ~package ~includes ~libs ~other_mods ~outkind ~compile_on
   let includes = ref includes in
   includes := Ocaml_config.expand_includes !includes;
   (* libs *)
-  let libs = split_space libs in
+  let libs = split_args libs in
   (* flags *)
   let cflags = ref cflags in
   let lflags = ref lflags in
@@ -2123,7 +2162,7 @@ let build ~compilation ~package ~includes ~libs ~other_mods ~outkind ~compile_on
         let objs = List.filter (fun x -> x ^^^ ".cmx") filenames in
         if opt then objs else List.map (fun x -> (Filename.chop_extension x) ^ ".cmo") objs
       in
-      let mods = split_space other_mods in
+      let mods = split_args other_mods in
       let mods = if compilation = Native then List.map (sprintf "%s.cmx") mods else List.map (sprintf "%s.cmo") mods in
       let obj_deps =
         if dontlinkdep then
@@ -3497,7 +3536,7 @@ let targets = [
     package              = "compiler-libs.common,diff,lablgtk2,str,unix,xml-light";
     search_path          = "common otherwidgets gmisclib oebuild icons"; (* -I *)
     required_libraries   = "";
-    compiler_flags       = "-g -w -26-10";
+    compiler_flags       = "-g -w -26-10-58";
     linker_flags         = "-g odiff.cmxa";
     thread               = true;
     vmthread             = false;
