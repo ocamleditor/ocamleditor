@@ -75,9 +75,18 @@ let status f =
         Spawn.loop begin fun ic ->
           let line = input_line ic in
           try
-            if Str.string_match re_status_branch line 0 then begin
-              let branch = Str.matched_group 1 line in
-              let ahead = try Str.matched_group 4 line |> int_of_string with Not_found -> 0 in
+            if Str.first_chars line 3 = "## " then begin
+              let stop = 
+                match String.index_opt line '.' with
+                  | Some i -> i
+                  | _ -> String.length line
+              in
+              let branch = String.sub line 3 (stop - 3) in
+              let ahead = 
+                if Str.string_match re_status_branch line 0 then begin
+                  try Str.matched_group 4 line |> int_of_string with Not_found -> 0 
+                end else 0
+              in
               status.branch <- branch; 
               status.ahead <- ahead;
             end else if Str.string_match re_status line 0 then begin
