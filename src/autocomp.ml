@@ -80,6 +80,22 @@ let include_flags project =
   in
   Array.of_list include_flags
 
+(** Replaces the build [.cmi] file with the auto-compilation generated [.cmi]
+    file
+
+    TODO: Only replace when there interface changed.
+*)
+let replace_cmi_file ~project tmp relpath =
+    let filename = relpath ^ ".cmi" in
+    let tmp_filename = tmp // filename in
+    if Sys.file_exists tmp_filename then begin
+      let src_filename = Project.path_src project // filename in
+      try
+        if Sys.file_exists src_filename then Sys.remove src_filename;
+        Sys.rename tmp_filename src_filename
+      with Sys_error _ as ex ->
+        Printf.eprintf "File \"autocomp.ml\": %s\n%s\n%!" (Printexc.to_string ex) (Printexc.get_backtrace());
+  end
 
 (** Compile the current buffer using the flags from all project targets.
 
@@ -113,6 +129,9 @@ let compile_buffer ~project ~editor ~page ?(join=false) () =
           Buffer.add_char compiler_output '\n';
         in
         let at_exit _ =
+          let modname = Filename.chop_extension relpath in
+          replace_cmi_file ~project working_directory modname;
+
           let errors = Error.parse_string (Buffer.contents compiler_output) in
           GtkThread2.async page#error_indication#apply_tag errors;
           (* Outline *)
