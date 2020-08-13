@@ -152,7 +152,7 @@ object (self)
   method private get_compl text =
     let re = Miscellanea.regexp "[a-zA-Z_0-9'.#]+$" in
     if Str.string_match re text 0 then begin
-      let value_path = Symbol.split_value_path text in
+      let value_path = Symbols.split_value_path text in
       begin
         match List.rev value_path with
           | hd :: [] when String.contains hd '#' ->
@@ -199,7 +199,7 @@ object (self)
     kprintf self#set_title "" "";
 
   method private compl_module ~module_path ~prefix =
-    kprintf self#set_title "Module" (Symbol.string_of_id module_path);
+    kprintf self#set_title "Module" (Symbols.string_of_id module_path);
     let f = widget#select_symbol_by_prefix ~module_path ~prefix ~kind:[] in
     widget#create_widget_module ~module_path ~f ~sort:true ();
 
@@ -227,7 +227,7 @@ object (self)
     (*let paths_opened = Lex.paths_opened (page#buffer#get_text ()) in*)
     let row = symbol_list#model#get_iter path in
     let symbol = symbol_list#model#get ~row ~column:col_symbol_data in
-    let id = if longid then Symbol.concat_value_path symbol else symbol_list#model#get ~row ~column:col_search in
+    let id = if longid then Symbols.concat_value_path symbol else symbol_list#model#get ~row ~column:col_search in
     let re_id = !~ "[a-zA-Z_0-9']$" in
     let re_longid = !~ "[a-zA-Z_0-9'.]$" in
     let start_iter = page#buffer#start_iter in
@@ -281,7 +281,7 @@ object (self)
             let row = symbol_list#model#get_iter path in
             let symbol = symbol_list#model#get ~row ~column:col_symbol_data in
             begin
-              let longid = if symbol.Oe.sy_local then false else longid && (Symbol.get_module_name symbol <> "Pervasives") in
+              let longid = if symbol.Oe.sy_local then false else longid && (Symbols.get_module_name symbol <> "Pervasives") in
               match symbol.Oe.sy_kind with
                 | Oe.Pmodule | Oe.Pmodtype | Oe.Pclass | Oe.Pcltype when not longid ->
                   self#apply_completion ~page ~symbol_list ~longid ~path;
@@ -358,7 +358,7 @@ object (self)
           | path :: _ ->
             let row = symbol_list#model#get_iter path in
             let symbol = symbol_list#model#get ~row ~column:col_symbol_data in
-            kprintf label_longid#set_label "<tt>%s</tt>" (Glib.Markup.escape_text (Symbol.concat_value_path symbol))
+            kprintf label_longid#set_label "<tt>%s</tt>" (Glib.Markup.escape_text (Symbols.concat_value_path symbol))
       end);
     | _ -> ()
 

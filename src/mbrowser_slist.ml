@@ -170,8 +170,8 @@ object (self)
           sprintf "<span weight='bold' color='%s'>%s</span>\n%s" Oe_config.module_browser_secondary_title_color
     in
     List.iter begin fun symbol ->
-      let name = Symbol.get_name symbol in
-      let symbol_path = Symbol.concat_value_path symbol in
+      let name = Symbols.get_name symbol in
+      let symbol_path = Symbols.concat_value_path symbol in
       let row = model#append () in
       model#set ~row ~column:col_symbol_data symbol;
       model#set ~row ~column:col_icon (pixbuf_of_kind symbol.sy_kind);

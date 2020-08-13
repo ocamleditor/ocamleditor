@@ -229,7 +229,7 @@ object (self)
             | Some current ->
               let start, stop = self#get_word_bounds iter in
               let text = odoc_buffer#get_text ~start ~stop () in
-              let root = Symbol.get_parent_path current in
+              let root = Symbols.get_parent_path current in
               let symbol = self#find_symbol ~root text in
               f start stop symbol
             | _ -> ()
@@ -428,11 +428,11 @@ object (self)
           let start, stop = self#get_word_bounds iter in
           let text = odoc_buffer#get_text ~start ~stop () in
           begin
-            match self#find_symbol ~root:(Symbol.get_parent_path symbol) text with
+            match self#find_symbol ~root:(Symbols.get_parent_path symbol) text with
               | Some symbol ->
                 begin
                   let markup = sprintf "<big>%s</big>\n\n<tt>%s</tt>"
-                    (Print_type.markup2 (Symbol.string_of_id symbol.sy_id))
+                    (Print_type.markup2 (Symbols.string_of_id symbol.sy_id))
                     (Print_type.markup2 symbol.sy_type)
                   in
                   let label = GMisc.label ~xpad:5 ~ypad:5 ~markup () in
@@ -488,7 +488,7 @@ object (self)
     let found = ref None in
     (slist#model :> GTree.model)#foreach begin fun path row ->
       let symbol = slist#model#get ~row ~column:Mbrowser_slist.col_symbol_data in
-      let value_path = Symbol.concat_value_path symbol in
+      let value_path = Symbols.concat_value_path symbol in
       if Str.string_match regexp value_path 0 && Str.match_end () = String.length value_path then begin
         found := Some path;
         true
@@ -499,7 +499,7 @@ object (self)
       | None ->
         (slist#model :> GTree.model)#foreach begin fun path row ->
           let symbol = slist#model#get ~row ~column:Mbrowser_slist.col_symbol_data in
-          if Str.string_match regexp (Symbol.get_name symbol) 0 then begin
+          if Str.string_match regexp (Symbols.get_name symbol) 0 then begin
             found := Some path;
             true
           end else false
@@ -527,7 +527,7 @@ object (self)
       ignore(List_opt.find begin fun (path, _) ->
         let row = widget#model#get_iter path in
         let sym = widget#model#get ~row ~column:col_symbol_data in
-        let name = if by_value_path then String.concat "" sym.Oe.sy_id else Symbol.get_name sym in
+        let name = if by_value_path then String.concat "" sym.Oe.sy_id else Symbols.get_name sym in
         found :=
           if Str.string_match re name 0 && (kind = [] || List.mem sym.sy_kind kind) then begin
             widget#view#selection#select_iter row;
@@ -562,9 +562,9 @@ object (self)
       let symbols =
         if radio_find_type#get_active
         then
-          Symbol.filter_by_type ~regexp project.Prj.symbols.syt_table
+          Symbols.filter_by_type ~regexp project.Prj.symbols.syt_table
         else
-          Symbol.filter_by_name
+          Symbols.filter_by_name
             ~use_longidents:radio_find_path#get_active
             ~include_methods:true
             ~include_modules:path
@@ -591,7 +591,7 @@ object (self)
     if String.length prefix > 0 then begin
       let regexp = Str.regexp_string_case_fold prefix in
       let offset = (page#buffer#get_iter `INSERT)#offset in
-      let symbols = Symbol.filter_by_name
+      let symbols = Symbols.filter_by_name
         ~use_longidents:false
         ~include_methods
         ~include_modules:path
@@ -605,12 +605,12 @@ object (self)
   (** find_symbol *)
   method private find_symbol ?(root=[]) text =
     let ident = Longident.flatten (Longident.parse text) in
-    match Symbol.find_by_modulepath ~kind:type_kinds project.Prj.symbols ident with
+    match Symbols.find_by_modulepath ~kind:type_kinds project.Prj.symbols ident with
       | None ->
         (* If the symbol is relative, search recursively in the parent module *)
         let rec find ?(root=[]) text =
           let absolute_ident = root @ ident in
-          match Symbol.find_by_modulepath ~kind:type_kinds project.Prj.symbols absolute_ident with
+          match Symbols.find_by_modulepath ~kind:type_kinds project.Prj.symbols absolute_ident with
             | None ->
               if root = [] then None else begin
                 let root = (*try*) Xlist.rev_tl root (*with Invalid_argument "Empty List" -> []*) in
@@ -622,7 +622,7 @@ object (self)
           match find ~root text with
             | None ->
               let pervasives_ident = "Pervasives" :: ident in
-              Symbol.find_by_modulepath project.Prj.symbols pervasives_ident
+              Symbols.find_by_modulepath project.Prj.symbols pervasives_ident
             | symbol -> symbol
         end;
       | symbol -> symbol
@@ -696,12 +696,12 @@ object (self)
   (** create_widget_library *)
   method private create_widget_library ~lib_path ?(f=fun _ -> ()) () =
     let wlib = self#create_widget ~kind:`Library () in
-    let entries = Symbol.Modules.read ~path:[lib_path] () in
+    let entries = Symbols.Modules.read ~path:[lib_path] () in
     let entries = List.sort Stdlib.compare entries in
     ignore (wlib#view#connect#row_activated ~callback:begin fun path _ ->
       let row = wlib#model#get_iter path in
       let symbol = wlib#model#get ~row ~column:col_symbol_data in
-      let module_name = Symbol.get_module_name symbol in
+      let module_name = Symbols.get_module_name symbol in
       self#create_widget_module ~lib_path ~module_path:[module_name] ();
     end);
     Index.clear wlib#index;
@@ -730,7 +730,7 @@ object (self)
     try
       let project_load_path = List.sort Stdlib.compare (Project.get_load_path project) in
       let path = (*project.Project.ocamllib ::*) project_load_path in
-      let entries = Symbol.Modules.read ~path () in
+      let entries = Symbols.Modules.read ~path () in
       let entries = List.sort Stdlib.compare entries in
       let model =
         try
@@ -761,7 +761,7 @@ object (self)
       ignore (wmods#view#connect#row_activated ~callback:begin fun path _ ->
         let row = wmods#model#get_iter path in
         let symbol = wmods#model#get ~row ~column:col_symbol_data in
-        let module_name = Symbol.get_module_name symbol in
+        let module_name = Symbols.get_module_name symbol in
         self#create_widget_module ~lib_path:symbol.sy_filename ~module_path:[module_name] ()
       end);
       wmods#vc_icon#set_visible false;
@@ -777,7 +777,7 @@ object (self)
   method create_widget_module ~module_path ?(lib_path="") ?(sort=false) ?(f=fun _ -> ()) () =
     let module_path_str = String.concat "." module_path in
     Activity.wrap Activity.Symbol begin fun () ->
-      let cache_changed = Symbol.Cache.update ~cache:project.Prj.symbols ~value_path:module_path () in
+      let cache_changed = Symbols.Cache.update ~cache:project.Prj.symbols ~value_path:module_path () in
       let widget =
         try
           if cache_changed then (raise Not_found);
@@ -785,7 +785,7 @@ object (self)
           self#create_widget ~kind:`Module ~model ~index ()
         with Not_found ->
           let len = List.length module_path + 1 in
-          let entries = Symbol.filter_by_modulepath ~update_cache:false project.Prj.symbols module_path in
+          let entries = Symbols.filter_by_modulepath ~update_cache:false project.Prj.symbols module_path in
           let entries = List.filter begin fun s ->
             s.sy_id <> module_path && List.length s.sy_id = len
           end entries in
@@ -822,7 +822,7 @@ object (self)
   method create_widget_class ~class_path ?(lib_path="") ?(f=fun _ -> ()) () =
     Activity.wrap Activity.Symbol begin fun () ->
       let widget = self#create_widget ~kind:`Class () in
-      let entries = Symbol.filter_methods project.Prj.symbols class_path in
+      let entries = Symbols.filter_methods project.Prj.symbols class_path in
       let entries = List.filter (fun s -> s.sy_id <> class_path) entries in
       let entries = List.sort (fun a b -> compare a.sy_id b.sy_id) entries in
       widget#fill entries;
@@ -838,7 +838,7 @@ object (self)
 
   (** create_widget_search_results *)
   method private create_widget_search_results ~symbols ?(fill=false) ?(f=self#default_select_func) () =
-    let symbols = List.sort (fun a b -> compare (Symbol.get_name a) (Symbol.get_name b)) symbols in
+    let symbols = List.sort (fun a b -> compare (Symbols.get_name a) (Symbols.get_name b)) symbols in
     search_results_length <- List.length symbols;
     let widget : symbol_list =
       match (self#get_current_page() : symbol_list option) with
@@ -913,7 +913,7 @@ object (self)
           Gdk.Window.set_cursor self#misc#window (Gdk.Cursor.create `ARROW);
           Gaux.may (odoc_view#get_window `TEXT) ~f:(fun w -> Gdk.Window.set_cursor w (Gdk.Cursor.create `ARROW));
         | _ -> kprintf (odoc_buffer :> GText.buffer)#insert "Documentation is not available (%s, %s, %s)"
-                 (Symbol.concat_value_path symbol) (symbol.sy_filename) (Symbol.get_module_name symbol);
+                 (Symbols.concat_value_path symbol) (symbol.sy_filename) (Symbols.get_module_name symbol);
     end
 
   (** update_class_details *)
@@ -958,7 +958,7 @@ object (self)
               insert_odoc();
             | Ptype | Ptype_abstract | Ptype_variant | Ptype_record ->
               odoc_buffer#set_text "\n";
-              odoc_buffer#insert ~tag_names:["large"] (Symbol.string_of_id (Symbol.get_parent_path symbol));
+              odoc_buffer#insert ~tag_names:["large"] (Symbols.string_of_id (Symbols.get_parent_path symbol));
               odoc_buffer#insert "\n";
               (*Lexical.tag odoc_view#buffer;*)
               insert_odoc();
@@ -968,7 +968,7 @@ object (self)
               self#insert_odoc ~project ~symbol ();*)
             | _ ->
               odoc_buffer#set_text "\n";
-              odoc_buffer#insert ~tag_names:["large"] (Symbol.string_of_id (Symbol.get_parent_path symbol));
+              odoc_buffer#insert ~tag_names:["large"] (Symbols.string_of_id (Symbols.get_parent_path symbol));
               odoc_buffer#insert ~tag_names:["line_spacing_small"] "\n ";
               odoc_buffer#insert ~tag_names:["type2"] ("\n" ^ symbol.sy_type);
               Lexical.tag odoc_view#buffer;
@@ -1050,8 +1050,8 @@ object (self)
               let lib_path = Filename.dirname symbol'.sy_filename in
               let go child symbol =
                 let kind = [Pmodule] in
-                let module_path = Symbol.get_parent_path child in
-                let prefix = Symbol.get_name child in
+                let module_path = Symbols.get_parent_path child in
+                let prefix = Symbols.get_name child in
                 let f = self#select_symbol_by_prefix ~module_path ~prefix ~kind in
                 match symbol.sy_kind with
                   | Pmodule -> self#create_widget_module ~lib_path ~module_path:symbol.sy_id ~f ()
@@ -1062,22 +1062,22 @@ object (self)
               in
               let go_parent_lib symbol =
                 let lib_path = Filename.dirname symbol.sy_filename in
-                let module_path = Symbol.get_parent_path symbol in
+                let module_path = Symbols.get_parent_path symbol in
                 let prefix = String.concat "." module_path in
                 let f = self#select_symbol_by_prefix ~prefix ~kind:[] in
                 if prefix = "" then self#create_widget_libraries ()
                 else self#create_widget_library ~lib_path ~f ()
               in
               begin
-                match Symbol.find_parent project.Prj.symbols symbol' with
+                match Symbols.find_parent project.Prj.symbols symbol' with
                   | Some parent when current_page#is_search_output -> go symbol' parent;
                   | Some parent ->
                     begin
-                      match Symbol.find_parent project.Prj.symbols parent with
+                      match Symbols.find_parent project.Prj.symbols parent with
                         | Some p_parent -> go parent p_parent;
                         | _ ->
-                          let parent_path = Symbol.get_parent_path parent in
-                          let prefix = Symbol.get_name parent in
+                          let parent_path = Symbols.get_parent_path parent in
+                          let prefix = Symbols.get_name parent in
                           let f = self#select_symbol_by_prefix ~module_path:parent_path ~prefix ~kind:[Pmodule] in
                           self#create_widget_module ~lib_path ~module_path:parent_path ~f ()
                     end;
@@ -1090,9 +1090,9 @@ object (self)
   (** go_to_symbol *)
   method go_to_symbol ?(kind=type_kinds) symbol =
     let lib_path = Filename.dirname symbol.sy_filename in
-    let module_path = Symbol.get_parent_path symbol in
+    let module_path = Symbols.get_parent_path symbol in
     self#create_widget_module ~lib_path ~module_path
-      ~f:(self#select_symbol_by_prefix ~module_path:(Symbol.get_parent_path symbol) ~prefix:(Symbol.get_name symbol) ~kind) ();
+      ~f:(self#select_symbol_by_prefix ~module_path:(Symbols.get_parent_path symbol) ~prefix:(Symbols.get_name symbol) ~kind) ();
 
   (** show_current_page *)
   method private show_current_page () =
