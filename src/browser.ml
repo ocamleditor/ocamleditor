@@ -19,7 +19,6 @@
   along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 *)
-[@@@warning "-48"]
 
 open Prj
 open Printf
@@ -194,7 +193,7 @@ object (self)
   method refresh () = self#with_current_project Project.refresh
   method clear_cache () = self#with_current_project begin fun project ->
     Project.clear_cache project |> ignore;
-    Symbol.Cache.reset ~project
+    Symbols.Cache.reset ~project
  end
 
   method project_clean () =
@@ -215,7 +214,7 @@ object (self)
     self#with_current_project begin fun project ->
       Project.save ~editor project;
       self#project_write_history();
-      Symbol.Cache.save ~project;
+      Symbols.Cache.save ~project;
       Project.unload_path project;
       List.iter (fun p -> Autosave.delete ~filename:p#get_filename ()) editor#pages;
     end
@@ -232,7 +231,7 @@ object (self)
     Sys.chdir (proj.root // Prj.default_dir_src);
     Gmisclib.Idle.add ~prio:300 self#set_title;
     (File_history.add project_history) filename;
-    Symbol.Cache.load ~project:proj;
+    Symbols.Cache.load ~project:proj;
     Annotation.preload ~project:proj;
     Gmisclib.Idle.add ~prio:300(*crono ~label:"Mbrowser_compl.create"*) (Mbrowser_compl.create ~project:proj);
     Autosave.recover ();
@@ -729,7 +728,7 @@ object (self)
         begin
           try self#with_current_project begin fun project ->
             Project.save ~editor project;
-            Symbol.Cache.save ~project;
+            Symbols.Cache.save ~project;
           end with Gpointer.Null -> ();
         end;
         (* Save project and file history *)

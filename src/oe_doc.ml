@@ -112,7 +112,7 @@ struct
 
   (** find_name *)
   let find_name ~project ~symbol =
-    let value_path = Symbol.concat_value_path symbol in
+    let value_path = Symbols.concat_value_path symbol in
     let module_list = read ~project ~symbol in
     let re = kprintf Str.regexp "%s$" (Str.quote value_path) in
     Odoc_info.Search.search_by_name module_list re;;
@@ -120,7 +120,7 @@ struct
   (** find_module *)
   let find_module ~project ~symbol =
     let module_list = read ~project ~symbol in
-    let module_name = Symbol.get_module_name symbol in
+    let module_name = Symbols.get_module_name symbol in
     List_opt.find (fun m -> m.Odoc_info.Module.m_name = module_name) module_list
 
 end
