@@ -35,8 +35,12 @@ exception Found of ident
 type ext_def = Project_def of ident | Project_file of ident | Library_def | No_def
 
 (** iter_pattern *)
-let rec iter_pattern f {pat_desc; pat_loc; _} =
-  let fp = iter_pattern f in
+let rec iter_pattern 
+  : type k. (ident -> unit) -> k general_pattern -> ident list 
+  = fun f { pat_desc; pat_loc; _ } ->
+  let fp
+    : type k. k general_pattern -> ident list 
+    = fun pat -> iter_pattern f pat in
   match pat_desc with
     | Tpat_tuple pl ->
       List.flatten (List.fold_left (fun acc pat -> (fp pat) :: acc) [] pl)
@@ -86,7 +90,7 @@ let rec iter_pattern f {pat_desc; pat_loc; _} =
     | Tpat_array pl ->
       List.flatten (List.fold_left (fun acc pat -> (fp pat) :: acc) [] pl)
     | Tpat_or (pat1, pat2, _) ->
-      List.flatten (List.fold_left (fun acc pat -> (fp pat) :: acc) [] [pat1; pat2])
+      List.flatten (List.fold_left (fun acc (type k) (pat : k general_pattern) -> (fp pat) :: acc) [] [pat1; pat2])
     | Tpat_lazy pat ->
       fp pat
     | Tpat_constant _ ->
@@ -101,11 +105,13 @@ let rec iter_pattern f {pat_desc; pat_loc; _} =
       }]
     (* Since 4.08 *)
     | Tpat_exception pat -> fp pat
+    (* Since 4.11 *)
+    | Tpat_value _ -> []
 
 (** iter_expression *)
 and iter_expression f {exp_desc; exp_extra; _} =
   let fe = iter_expression f in
-  let fp = iter_pattern f in
+  let fp : type k. k general_pattern -> ident list = fun pat -> iter_pattern f pat in
   let fvb expr vbl =
     List.iter begin fun { vb_pat; vb_expr; _ } ->
       List.iter begin function [@warning "-4"]
