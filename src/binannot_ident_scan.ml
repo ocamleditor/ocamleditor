@@ -25,7 +25,7 @@ open Cmt_format
 open Typedtree
 open Location
 open Lexing
-open Binannot
+open! Binannot
 
 module Log = Common.Log.Make(struct let prefix = "Binannot_ident" end)
 let _ = Log.set_verbosity `TRACE
@@ -38,19 +38,16 @@ type ext_def = Project_def of ident | Project_file of ident | Library_def | No_d
 let rec iter_pattern 
   : type k. (ident -> unit) -> k general_pattern -> ident list 
   = fun f { pat_desc; pat_loc; _ } ->
-  let fp
-    : type k. k general_pattern -> ident list 
-    = fun pat -> iter_pattern f pat in
   match pat_desc with
     | Tpat_tuple pl ->
-      List.flatten (List.fold_left (fun acc pat -> (fp pat) :: acc) [] pl)
+      List.flatten (List.fold_left (fun acc pat -> (iter_pattern f pat) :: acc) [] pl)
     | Tpat_alias (pat, id, loc) ->
       let name_loc = pat_loc(*loc.loc*) in
       {
         ident_fname      = "";
         ident_kind       = Def {def_name=loc.txt; def_loc=name_loc; def_scope=none};
         ident_loc        = Location.mkloc (Ident.name id) name_loc;
-      } :: (fp pat)
+      } :: (iter_pattern f pat)
     | Tpat_construct ({ Asttypes.loc; _ }, { Types.cstr_name; cstr_res; cstr_tag; _ }, pl) ->
       let type_expr = lid_of_type_expr cstr_res in
       let path, is_qualified =
@@ -71,9 +68,9 @@ let rec iter_pattern
         ident_loc   = Location.mkloc (Odoc_misc.string_of_longident path) loc;
       } in
       f ident;
-      List.flatten (List.fold_left (fun acc pat -> (fp pat) :: acc) [] pl)
+      List.flatten (List.fold_left (fun acc pat -> (iter_pattern f pat) :: acc) [] pl)
     | Tpat_variant (_, pat, _) ->
-      Option.fold ~none:[] ~some:(fun pat -> fp pat) pat
+      Option.fold ~none:[] ~some:(fun pat -> iter_pattern f pat) pat
     | Tpat_record (ll, _) ->
       List.flatten (List.fold_left begin fun acc ({ Asttypes.loc; _ }, ld, pat) ->
         let type_expr = lid_of_type_expr ld.Types.lbl_res in
@@ -85,14 +82,15 @@ let rec iter_pattern
           ident_loc   = Location.mkloc (Odoc_misc.string_of_longident path) loc;
         } in
         f ident;
-        (fp pat) :: acc
+        (iter_pattern f pat) :: acc
       end [] ll)
     | Tpat_array pl ->
-      List.flatten (List.fold_left (fun acc pat -> (fp pat) :: acc) [] pl)
+      List.flatten (List.fold_left (fun acc pat -> (iter_pattern f pat) :: acc) [] pl)
     | Tpat_or (pat1, pat2, _) ->
-      List.flatten (List.fold_left (fun acc (type k) (pat : k general_pattern) -> (fp pat) :: acc) [] [pat1; pat2])
+      List.flatten (List.fold_left (fun acc (type k) (pat : k general_pattern)
+                                     -> (iter_pattern f pat) :: acc) [] [pat1; pat2])
     | Tpat_lazy pat ->
-      fp pat
+      iter_pattern f pat
     | Tpat_constant _ ->
       []
     | Tpat_any ->
@@ -104,14 +102,13 @@ let rec iter_pattern
         ident_loc        = Location.mkloc (Ident.name id) loc;
       }]
     (* Since 4.08 *)
-    | Tpat_exception pat -> fp pat
+    | Tpat_exception pat -> iter_pattern f pat
     (* Since 4.11 *)
     | Tpat_value _ -> []
 
 (** iter_expression *)
 and iter_expression f {exp_desc; exp_extra; _} =
   let fe = iter_expression f in
-  let fp : type k. k general_pattern -> ident list = fun pat -> iter_pattern f pat in
   let fvb expr vbl =
     List.iter begin fun { vb_pat; vb_expr; _ } ->
       List.iter begin function [@warning "-4"]
@@ -119,7 +116,7 @@ and iter_expression f {exp_desc; exp_extra; _} =
           d.def_scope <- expr.exp_loc;
           f i
         | i -> f i
-      end (fp vb_pat);
+      end (iter_pattern f vb_pat);
       fe vb_expr;
     end vbl
   in
@@ -172,7 +169,7 @@ and iter_expression f {exp_desc; exp_extra; _} =
                  d.def_scope <- c_rhs.exp_loc;
                  i
                                     | i -> i
-               end (fp c_lhs)) @
+               end (iter_pattern f c_lhs)) @
              (List.map begin fun (_, pe_loc, _) ->
                  let label = arg_label_to_string arg_label in
                  let def_loc =
@@ -191,7 +188,8 @@ and iter_expression f {exp_desc; exp_extra; _} =
     | Texp_match (expr, cl, _) ->
       fe expr;
       List.iter begin fun { c_lhs = p; c_guard = oe; c_rhs = e } ->
-        List.iter (fun d -> d.ident_kind <- Def {def_name=""; def_loc=none; def_scope=e.exp_loc}; f d) (fp p);
+        List.iter (fun d -> d.ident_kind <- Def {def_name=""; def_loc=none; def_scope=e.exp_loc}; f d) 
+          (iter_pattern f p);
         Option.iter fe oe;
         fe e;
       end cl
@@ -201,7 +199,8 @@ and iter_expression f {exp_desc; exp_extra; _} =
     | Texp_try (expr, pe) ->
       fe expr;
       List.iter begin fun { c_lhs = p; c_guard = oe; c_rhs = e }  ->
-        List.iter (fun d -> d.ident_kind <- Def {def_name=""; def_loc=none; def_scope=e.exp_loc}; f d) (fp p);
+        List.iter (fun d -> d.ident_kind <- Def {def_name=""; def_loc=none; def_scope=e.exp_loc}; f d) 
+          (iter_pattern f p);
         Option.iter fe oe;
         fe e;
       end pe

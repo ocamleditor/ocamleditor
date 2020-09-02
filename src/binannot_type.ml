@@ -23,7 +23,7 @@
 
 open Cmt_format
 open Typedtree
-open Binannot
+open! Binannot
 
 type t = {
   ba_loc  : Location.t;
@@ -41,35 +41,36 @@ let arg_label_to_string = function
   | Asttypes.Optional s -> s
 
 (** find_pattern *)
-let rec find_pattern f offset ?(opt=false, false) {pat_desc; pat_loc; pat_type; pat_extra; _} =
+let rec find_pattern
+  : type k. _ -> _ -> ?opt:_ -> k general_pattern -> (bool * bool)
+  = fun f offset ?(opt=false, false) {pat_desc; pat_loc; pat_type; pat_extra; _} ->
   if pat_loc <== offset then begin
-    let fp = find_pattern f offset in
     let (opt, sth) as result =
       match pat_desc with
         | Tpat_tuple pl ->
           Log.println `DEBUG "Tpat_tuple";
-          List.fold_left (fun opt pat -> fp ~opt pat) opt pl
+          List.fold_left (fun opt pat -> find_pattern f offset ~opt pat) opt pl
         | Tpat_alias (pat, _, _) ->
           Log.println `DEBUG "Tpat_alias" ;
-          fp ~opt pat
+          find_pattern f offset ~opt pat
         | Tpat_construct ({ Asttypes.txt; loc }, _, pl) ->
           Log.println `DEBUG "Tpat_construct (%s) (%s) (%d)" (Longident.last txt) (string_of_loc loc) (List.length pl);
-          List.fold_left (fun opt pat -> fp ~opt pat) opt pl
+          List.fold_left (fun opt pat -> find_pattern f offset ~opt pat) opt pl
         | Tpat_variant (lab, pat, _) ->
           Log.println `DEBUG "Tpat_variant (%s)" lab;
-          Option.fold ~none:opt ~some:(fun pat -> fp ~opt pat) pat
+          Option.fold ~none:opt ~some:(fun pat -> find_pattern f offset ~opt pat) pat
         | Tpat_record (ll, _) ->
           Log.println `DEBUG "Tpat_record ";
-          List.fold_left (fun opt (_, _, pat) -> fp ~opt pat) opt ll
+          List.fold_left (fun opt (_, _, pat) -> find_pattern f offset ~opt pat) opt ll
         | Tpat_array pl ->
           Log.println `DEBUG "Tpat_array ";
-          List.fold_left (fun opt pat -> fp ~opt pat) opt pl
+          List.fold_left (fun opt pat -> find_pattern f offset ~opt pat) opt pl
         | Tpat_or (pat1, pat2, _) ->
           Log.println `DEBUG "Tpat_or ";
-          List.fold_left (fun opt pat -> fp ~opt pat) opt [pat1; pat2]
+          List.fold_left (fun opt pat -> find_pattern f offset ~opt pat) opt [pat1; pat2]
         | Tpat_lazy pat ->
           Log.println `DEBUG "Tpat_lazy ";
-          fp ~opt pat
+          find_pattern f offset ~opt pat
         | Tpat_constant _ ->
           Log.println `DEBUG "Tpat_constant" ;
           opt
@@ -83,6 +84,10 @@ let rec find_pattern f offset ?(opt=false, false) {pat_desc; pat_loc; pat_type; 
         (* From 4.08 TODO: *)
         | Tpat_exception _ ->
           Log.println `DEBUG "Tpat_exception";
+          opt
+        (* From 4.11 TODO: *)
+        | Tpat_value _ ->
+          Log.println `DEBUG "Tpat_value";
           opt
     in
     if not opt && not sth then begin
@@ -128,8 +133,8 @@ and find_expression f offset ?(opt=false,false) ?loc {exp_desc; exp_loc; exp_typ
           let opt = fe ~opt expr in
           let o1, _ = opt in
           let opt =
-            List.fold_left begin fun opt { c_lhs = p; c_guard = oe; c_rhs = e } ->
-              if not o1 then (ignore (fp p));
+            List.fold_left begin fun opt (type k) ({ c_lhs = p; c_guard = oe; c_rhs = e } : k case) ->
+              if not o1 then (ignore (find_pattern f offset p));
               let opt = match oe with Some e' -> fe ~opt e' | None -> opt in
               fe ~opt e;
             end opt cl
@@ -465,7 +470,7 @@ let find_part_impl f offset = function
   | Partial_structure {str_items; _} -> List.iter (find_structure_item f offset) str_items
   | Partial_structure_item item -> find_structure_item f offset item
   | Partial_expression expr -> ignore (find_expression f offset expr)
-  | Partial_pattern pat -> ignore (find_pattern f offset pat)
+  | Partial_pattern (_, pat) -> ignore (find_pattern f offset pat)
   | Partial_class_expr cl_expr -> ignore (find_class_expr f offset cl_expr)
   | Partial_signature sigs ->List.iter (find_signature_item f offset) sigs.sig_items
   | Partial_signature_item sig_item -> find_signature_item f offset sig_item
@@ -498,23 +503,3 @@ let find ~page ?iter () =
   let compile_buffer () = page#compile_buffer ?join:(Some true) () in
   let iter = match iter with Some it -> it | _ -> page#buffer#get_iter `INSERT in
   find_by_offset ~project:page#project ~filename:page#get_filename ~offset:iter#offset ~compile_buffer ()
-(*  match Binannot.read_cmt ~project:page#project ~filename:page#get_filename ~compile_buffer () with
-    | Some (filename, _, cmt) ->
-      begin
-        let offset = iter#offset in
-        let f ba_loc ba_type =
-          Log.println `TRACE "%d; %s : %s" offset (string_of_loc ba_loc) ba_type;
-          raise (Found {ba_loc; ba_type});
-        in
-        try
-          Odoc_info.reset_type_names();
-          begin
-            match cmt.cmt_annots with
-              | Implementation {str_items; _} -> List.iter (find_structure_item f offset) str_items
-              | Partial_implementation parts -> Array.iter (find_part_impl f offset) parts
-              | _ -> ()
-          end;
-          None
-        with Found ba -> Some ba
-      end;
-    | _ -> None*)
