@@ -87,7 +87,7 @@ let rec iter_pattern
     | Tpat_array pl ->
       List.flatten (List.fold_left (fun acc pat -> (iter_pattern f pat) :: acc) [] pl)
     | Tpat_or (pat1, pat2, _) ->
-      List.flatten (List.fold_left (fun acc (type k) (pat : k general_pattern)
+      List.flatten (List.fold_left (fun acc (type k) (pat : k general_pattern) 
                                      -> (iter_pattern f pat) :: acc) [] [pat1; pat2])
     | Tpat_lazy pat ->
       iter_pattern f pat
@@ -108,7 +108,6 @@ let rec iter_pattern
 
 (** iter_expression *)
 and iter_expression f {exp_desc; exp_extra; _} =
-  let fe = iter_expression f in
   let fvb expr vbl =
     List.iter begin fun { vb_pat; vb_expr; _ } ->
       List.iter begin function [@warning "-4"]
@@ -117,7 +116,7 @@ and iter_expression f {exp_desc; exp_extra; _} =
           f i
         | i -> f i
       end (iter_pattern f vb_pat);
-      fe vb_expr;
+      iter_expression f vb_expr;
     end vbl
   in
   let arg_label_to_string arg_label =
@@ -156,10 +155,10 @@ and iter_expression f {exp_desc; exp_extra; _} =
       f ident;
     | Texp_let (_, vbl, expr) ->
       fvb expr vbl;
-      fe expr;
+      iter_expression f expr;
     | Texp_letexception (extension_constructor, expr) ->
       iter_extension_constructor f extension_constructor;
-      fe expr
+      iter_expression f expr
     | Texp_function { arg_label; cases; _ } ->
       List.iter
         begin fun { c_lhs; c_guard; c_rhs } ->
@@ -182,29 +181,29 @@ and iter_expression f {exp_desc; exp_extra; _} =
                end c_lhs.pat_extra)
            in
            List.iter f defs;
-           Option.iter fe c_guard;
-           fe c_rhs;
+           Option.iter (iter_expression f) c_guard;
+           iter_expression f c_rhs;
         end cases;
     | Texp_match (expr, cl, _) ->
-      fe expr;
+      iter_expression f expr;
       List.iter begin fun { c_lhs = p; c_guard = oe; c_rhs = e } ->
         List.iter (fun d -> d.ident_kind <- Def {def_name=""; def_loc=none; def_scope=e.exp_loc}; f d) 
           (iter_pattern f p);
-        Option.iter fe oe;
-        fe e;
+        Option.iter (iter_expression f) oe;
+        iter_expression f e;
       end cl
     | Texp_apply (expr, pe) ->
-      fe expr;
-      List.iter (fun (_, e) -> Option.iter fe e) pe;
+      iter_expression f expr;
+      List.iter (fun (_, e) -> Option.iter (iter_expression f) e) pe;
     | Texp_try (expr, pe) ->
-      fe expr;
+      (iter_expression f) expr;
       List.iter begin fun { c_lhs = p; c_guard = oe; c_rhs = e }  ->
         List.iter (fun d -> d.ident_kind <- Def {def_name=""; def_loc=none; def_scope=e.exp_loc}; f d) 
           (iter_pattern f p);
-        Option.iter fe oe;
-        fe e;
+        Option.iter (iter_expression f) oe;
+        iter_expression f e;
       end pe
-    | Texp_tuple el -> List.iter fe el
+    | Texp_tuple el -> List.iter (iter_expression f) el
     | Texp_construct ({ Asttypes.loc; _ }, cd, el) ->
       let type_expr = lid_of_type_expr cd.Types.cstr_res in
       let path, is_qualified =
@@ -225,9 +224,9 @@ and iter_expression f {exp_desc; exp_extra; _} =
         ident_loc   = Location.mkloc (Odoc_misc.string_of_longident path) loc;
       } in
       f ident;
-      List.iter fe el
+      List.iter (iter_expression f) el
     | Texp_variant (_, expr) ->
-      Option.iter fe expr
+      Option.iter (iter_expression f) expr
     | Texp_record { fields; extended_expression; _ } ->
       Array.iter begin fun (label_description, record_label_definition) ->
         let { Types.lbl_name; lbl_res; lbl_loc; _ } = label_description in
@@ -242,9 +241,9 @@ and iter_expression f {exp_desc; exp_extra; _} =
         f ident;
         match record_label_definition with
         | Kept _ -> ()
-        | Overridden (_, expr) -> fe expr
+        | Overridden (_, expr) -> iter_expression f expr
       end fields;
-      Option.iter fe extended_expression
+      Option.iter (iter_expression f) extended_expression
     | Texp_field (expr, { Asttypes.loc; _ }, ld) ->
       let type_expr = lid_of_type_expr ld.Types.lbl_res in
       let ident_kind = if Longident.qualified type_expr then Ext_ref else Int_ref none in
@@ -255,7 +254,7 @@ and iter_expression f {exp_desc; exp_extra; _} =
         ident_loc   = Location.mkloc (Odoc_misc.string_of_longident path) loc;
       } in
       f ident;
-      fe expr
+      iter_expression f expr
     | Texp_setfield (e1, { Asttypes.loc; _ }, ld, e2) ->
       let type_expr = lid_of_type_expr ld.Types.lbl_res in
       let ident_kind = if Longident.qualified type_expr then Ext_ref else Int_ref none in
@@ -266,24 +265,27 @@ and iter_expression f {exp_desc; exp_extra; _} =
         ident_loc   = Location.mkloc (Odoc_misc.string_of_longident path) loc;
       } in
       f ident;
-      fe e1;
-      fe e2
-    | Texp_array el -> List.iter fe el
-    | Texp_ifthenelse (e1, e2, e3) -> fe e1; fe e2; Option.iter fe e3
-    | Texp_sequence (e1, e2) -> fe e1; fe e2
-    | Texp_while (e1, e2) -> fe e1; fe e2
-    | Texp_for (_, _, e1, e2, _, e3) -> fe e1; fe e2; fe e3
+      iter_expression f e1;
+      iter_expression f e2
+    | Texp_array el -> List.iter (iter_expression f) el
+    | Texp_ifthenelse (e1, e2, e3) ->
+      iter_expression f e1;
+      iter_expression f e2;
+      Option.iter (iter_expression f) e3
+    | Texp_sequence (e1, e2) -> iter_expression f e1; iter_expression f e2
+    | Texp_while (e1, e2) -> iter_expression f e1; iter_expression f e2
+    | Texp_for (_, _, e1, e2, _, e3) -> iter_expression f e1; iter_expression f e2; iter_expression f e3
     | Texp_send (e1, _meth, e2) ->
      (* let name = match meth with Tmeth_name x -> "(M) " ^ x | Tmeth_val id -> "(V) " ^ (Ident.name id) in
       Log.println `TRACE "Texp_send: %s %s [%s]"
         name (string_of_loc e1.exp_loc) (match e2 with Some e -> string_of_loc e.exp_loc | _ -> "");*)
-      fe e1;
-      Option.iter fe e2
+      iter_expression f e1;
+      Option.iter (iter_expression f) e2
     | Texp_new (_, _, _class_decl) -> ()
     | Texp_instvar (_p, _path, _loc) -> ()
       (*Log.println `TRACE "Texp_instvar: (%s)%s %s" (Path.name p) (Path.name path) (string_of_loc loc.loc);*)
-    | Texp_setinstvar (_, _, _, expr) -> fe expr
-    | Texp_override (_, ll) -> List.iter (fun (_, _, e) -> fe e) ll
+    | Texp_setinstvar (_, _, _, expr) -> iter_expression f expr
+    | Texp_override (_, ll) -> List.iter (fun (_, _, e) -> iter_expression f e) ll
     | Texp_letmodule (_, mod_name, _, mod_expr, expr) ->
       begin match mod_name with
         | { Asttypes.txt = Some name; loc } -> 
@@ -295,9 +297,9 @@ and iter_expression f {exp_desc; exp_extra; _} =
       | { Asttypes.txt = None; _ } -> ()
       end;
       iter_module_expr f mod_expr;
-      fe expr;
-    | Texp_assert expr -> fe expr
-    | Texp_lazy expr -> fe expr
+      iter_expression f expr;
+    | Texp_assert expr -> iter_expression f expr
+    | Texp_lazy expr -> iter_expression f expr
     | Texp_object (cl_str, _) -> iter_class_structure f cl_str
     | Texp_pack mod_expr -> iter_module_expr f mod_expr
     | Texp_constant _ -> ()
