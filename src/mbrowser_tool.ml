@@ -604,11 +604,11 @@ object (self)
 
   (** find_symbol *)
   method private find_symbol ?(root=[]) text =
-    let ident = Longident.flatten (Longident.parse text) in
+    let ident = Longident.flatten (Parse.longident @@ Lexing.from_string text) in
     match Symbols.find_by_modulepath ~kind:type_kinds project.Prj.symbols ident with
       | None ->
         (* If the symbol is relative, search recursively in the parent module *)
-        let rec find ?(root=[]) text =
+        let find ?(root=[]) text =
           let absolute_ident = root @ ident in
           match Symbols.find_by_modulepath ~kind:type_kinds project.Prj.symbols absolute_ident with
             | None ->

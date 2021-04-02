@@ -84,6 +84,8 @@ module Longident = struct
 
 end
 
+let longident_parse repr = Parse.longident @@ Lexing.from_string repr
+
 let table_idents : (string, entry) Hashtbl.t = Hashtbl.create 7 (* source filename, entry *)
 
 let string_of_kind = function
@@ -107,7 +109,7 @@ let cnum_of_loc loc =
   loc.loc_start.pos_fname, loc.loc_start.pos_cnum, loc.loc_end.pos_cnum
 
 let string_of_type_expr te = Odoc_info.string_of_type_expr te;;
-let lid_of_type_expr te = Longident.parse (string_of_type_expr te)
+let lid_of_type_expr te = longident_parse (string_of_type_expr te)
 
 let (<==) loc offset = loc.loc_start.pos_cnum <= offset && offset <= loc.loc_end.pos_cnum
 let (<==<) loc offset = loc.loc_start.pos_cnum <= offset && (offset <= loc.loc_end.pos_cnum || loc.loc_end.pos_cnum = -1)

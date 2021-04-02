@@ -213,7 +213,7 @@ object (self)
     match class_type with
       | Some class_type ->
         Log.println `TRACE "class_type = %s\n%!" class_type;
-        let class_path = Longident.flatten (Longident.parse class_type) in
+        let class_path = Longident.flatten (Parse.longident @@ Lexing.from_string class_type) in
         let f = widget#select_symbol_by_prefix ~module_path:class_path ~prefix ~kind:[] in
         widget#create_widget_class ~class_path ~f ();
         kprintf self#set_title "Class" class_type
@@ -365,11 +365,11 @@ object (self)
   method hide () =
     if pin_status then begin
       Option.iter begin fun p ->
-        Option.iter 
-          (fun w -> w#set_opacity 
-              (match Preferences.preferences#get.Preferences.pref_compl_opacity with 
-               | Some opa -> opa 
-               | _  -> 1.0)) 
+        Option.iter
+          (fun w -> w#set_opacity
+              (match Preferences.preferences#get.Preferences.pref_compl_opacity with
+               | Some opa -> opa
+               | _  -> 1.0))
           current_window;
         (*Opt.may pref.Preferences.pref_compl_opacity (fun opa -> Opt.may current_window (fun w -> w#set_opacity opa));*)
         Option.iter (fun w -> w#present()) (GWindow.toplevel p#coerce);

@@ -34,7 +34,7 @@ type search_result = {
 
 (** find_external_definition *)
 let find_external_definition ~project ~ext_ref =
-  let longid = Longident.parse ext_ref.ident_loc.txt in
+  let longid = longident_parse ext_ref.ident_loc.txt in
   match Longident.flatten longid with
     | name :: _ :: _ | name :: [] ->
       let ext_name = Longident.last longid in
@@ -93,7 +93,7 @@ let find_project_external_references =
         let mod_refs = Hashtbl.find_all entry.ext_refs def_modname in
         let filtered =
           List.filter begin fun {ident_loc; _} ->
-            (Longident.last (Longident.parse ident_loc.txt)) = def.ident_loc.txt
+            (Longident.last (longident_parse ident_loc.txt)) = def.ident_loc.txt
           end mod_refs
         in
         acc @ filtered
@@ -112,7 +112,7 @@ let find_project_external_references =
 let find_external_references ~project ~ext_ref:{ident_kind; ident_loc; _} =
   match ident_kind with
     | Ext_ref | Open _ ->
-      let lid = Longident.flatten (Longident.parse ident_loc.txt) in
+      let lid = Longident.flatten (longident_parse ident_loc.txt) in
       scan_project_files ~project begin fun acc _filename entry ->
         match lid with
           | mod_name :: _ :: _ | mod_name :: [] ->
@@ -230,7 +230,7 @@ let find_used_components ~project ~filename ~offset ?compile_buffer () =
       match ident.ident_kind with
         | Open scope ->
           let { Asttypes.txt; _ } = ident.ident_loc in
-          let longid = Longident.parse txt in
+          let longid = longident_parse txt in
           begin
             match Longident.flatten longid with
               | modname :: _ ->
@@ -240,7 +240,7 @@ let find_used_components ~project ~filename ~offset ?compile_buffer () =
                   | u when scope <==< u.ident_loc.Asttypes.loc.loc_start.pos_cnum ->
                     let dirname =
                       try
-                        String.concat "." (List.rev (List.tl (List.rev (Longident.flatten (Longident.parse u.ident_loc.txt)))))
+                        String.concat "." (List.rev (List.tl (List.rev (Longident.flatten (longident_parse u.ident_loc.txt)))))
                       with Failure _ -> assert false
                     in
                     dirname = ident.ident_loc.txt

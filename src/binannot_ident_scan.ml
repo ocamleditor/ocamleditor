@@ -35,8 +35,8 @@ exception Found of ident
 type ext_def = Project_def of ident | Project_file of ident | Library_def | No_def
 
 (** iter_pattern *)
-let rec iter_pattern 
-  : type k. (ident -> unit) -> k general_pattern -> ident list 
+let rec iter_pattern
+  : type k. (ident -> unit) -> k general_pattern -> ident list
   = fun f { pat_desc; pat_loc; _ } ->
   match pat_desc with
     | Tpat_tuple pl ->
@@ -53,7 +53,7 @@ let rec iter_pattern
       let path, is_qualified =
         match cstr_tag with
           | Types.Cstr_extension (p, _) ->
-            let path = Longident.parse (Path.name p) in
+            let path = longident_parse (Path.name p) in
             path, Longident.qualified path
           | Types.Cstr_constant _
           | Types.Cstr_block _
@@ -87,7 +87,7 @@ let rec iter_pattern
     | Tpat_array pl ->
       List.flatten (List.fold_left (fun acc pat -> (iter_pattern f pat) :: acc) [] pl)
     | Tpat_or (pat1, pat2, _) ->
-      List.flatten (List.fold_left (fun acc (type k) (pat : k general_pattern) 
+      List.flatten (List.fold_left (fun acc (type k) (pat : k general_pattern)
                                      -> (iter_pattern f pat) :: acc) [] [pat1; pat2])
     | Tpat_lazy pat ->
       iter_pattern f pat
@@ -187,7 +187,7 @@ and iter_expression f {exp_desc; exp_extra; _} =
     | Texp_match (expr, cl, _) ->
       iter_expression f expr;
       List.iter begin fun { c_lhs = p; c_guard = oe; c_rhs = e } ->
-        List.iter (fun d -> d.ident_kind <- Def {def_name=""; def_loc=none; def_scope=e.exp_loc}; f d) 
+        List.iter (fun d -> d.ident_kind <- Def {def_name=""; def_loc=none; def_scope=e.exp_loc}; f d)
           (iter_pattern f p);
         Option.iter (iter_expression f) oe;
         iter_expression f e;
@@ -198,7 +198,7 @@ and iter_expression f {exp_desc; exp_extra; _} =
     | Texp_try (expr, pe) ->
       (iter_expression f) expr;
       List.iter begin fun { c_lhs = p; c_guard = oe; c_rhs = e }  ->
-        List.iter (fun d -> d.ident_kind <- Def {def_name=""; def_loc=none; def_scope=e.exp_loc}; f d) 
+        List.iter (fun d -> d.ident_kind <- Def {def_name=""; def_loc=none; def_scope=e.exp_loc}; f d)
           (iter_pattern f p);
         Option.iter (iter_expression f) oe;
         iter_expression f e;
@@ -209,7 +209,7 @@ and iter_expression f {exp_desc; exp_extra; _} =
       let path, is_qualified =
         match cd.Types.cstr_tag with
           | Types.Cstr_extension (p, _) ->
-            let path = Longident.parse (Path.name p) in
+            let path = longident_parse (Path.name p) in
             path, Longident.qualified path
           | Types.Cstr_constant _
           | Types.Cstr_block _
@@ -288,7 +288,7 @@ and iter_expression f {exp_desc; exp_extra; _} =
     | Texp_override (_, ll) -> List.iter (fun (_, _, e) -> iter_expression f e) ll
     | Texp_letmodule (_, mod_name, _, mod_expr, expr) ->
       begin match mod_name with
-        | { Asttypes.txt = Some name; loc } -> 
+        | { Asttypes.txt = Some name; loc } ->
         f {
                 ident_kind  = Def_module { def_name = name; def_loc = loc; def_scope = mod_expr.mod_loc };
         ident_fname = "";
@@ -348,7 +348,7 @@ and iter_module_type f {mty_desc; mty_loc; _} =
       iter_module_type f mt
     | Tmty_functor (Named (_, _, mt1), mt2) ->
                     iter_module_type f mt1;
-                    iter_module_type f mt2; 
+                    iter_module_type f mt2;
     | Tmty_with (mt, ll) ->
       iter_module_type f mt;
       List.iter (fun (_, _, wc) -> iter_with_constraint f wc) ll
@@ -620,7 +620,7 @@ and iter_structure_item f {str_desc; str_loc; _} =
       []
     | Tstr_module { mb_name; mb_expr; _ } ->
       let { Asttypes.txt; loc } = mb_name in
-      begin match txt with 
+      begin match txt with
       | Some name ->
       f {
         ident_kind  = Def_module { def_name = name; def_loc = loc; def_scope = mb_expr.mod_loc };
@@ -706,7 +706,7 @@ let register filename entry ({ident_loc; ident_kind; _} as ident) =
         end*)
       | Ext_ref | Open _ ->
         begin
-          match Longident.flatten (Longident.parse ident.ident_loc.txt) with
+          match Longident.flatten (longident_parse ident.ident_loc.txt) with
             | modname :: _ -> Hashtbl.add entry.ext_refs modname ident
             | _ -> ()
         end;
