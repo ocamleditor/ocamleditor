@@ -23,12 +23,62 @@
 open Miscellanea
 open Cmt_format
 open Typedtree
-open Location
-open Lexing
-open! Binannot
 
 module Log = Common.Log.Make(struct let prefix = "Binannot_ident" end)
 let _ = Log.set_verbosity `TRACE
+
+(** [Lexing.postion] copy *)
+type position = Lexing.position = {
+  pos_fname : string;
+  pos_lnum  : int;
+  pos_bol   : int;
+  pos_cnum  : int;
+}
+
+(** [Location.t] copy *)
+type location = Location.t = {
+  loc_start : position;
+  loc_end   : position;
+  loc_ghost : bool;
+}
+
+(** ['a Location.loc] copy *)
+type 'a loc = 'a Location.loc = {
+  txt : 'a;
+  loc : location;
+}
+
+(** [Binannot.definiton] copy *)
+type definition = Binannot.definition = {
+  mutable def_name  : string;
+  mutable def_loc   : location;
+  mutable def_scope : location;
+}
+
+(** [Binannot.ident_kind] copy *)
+type ident_kind = Binannot.ident_kind =
+  | Def of definition
+  | Def_constr of definition
+  | Def_module of definition
+  | Int_ref of location
+  | Ext_ref
+  | Open of location
+
+(** [Binannot.ident] copy *)
+type ident = Binannot.ident = {
+  mutable ident_fname : string;
+  mutable ident_kind  : ident_kind;
+  ident_loc           : string loc;
+}
+
+(** [Binannot.entry] copy *)
+type entry = Binannot.entry = {
+  timestamp           : float;
+  locations           : ident option array;
+  int_refs            : (location, ident) Hashtbl.t;
+  ext_refs            : (string, ident) Hashtbl.t;
+  mutable definitions : definition list;
+}
 
 exception Found of ident
 
@@ -42,26 +92,26 @@ let rec iter_pattern
     | Tpat_tuple pl ->
       List.flatten (List.fold_left (fun acc pat -> (iter_pattern f pat) :: acc) [] pl)
     | Tpat_alias (pat, id, loc) ->
-      let name_loc = pat_loc(*loc.loc*) in
+      let name_loc = pat_loc in
       {
         ident_fname      = "";
-        ident_kind       = Def {def_name=loc.txt; def_loc=name_loc; def_scope=none};
+        ident_kind       = Def {def_name=loc.txt; def_loc=name_loc; def_scope=Location.none};
         ident_loc        = Location.mkloc (Ident.name id) name_loc;
       } :: (iter_pattern f pat)
     | Tpat_construct ({ Asttypes.loc; _ }, { Types.cstr_name; cstr_res; cstr_tag; _ }, pl) ->
-      let type_expr = lid_of_type_expr cstr_res in
+      let type_expr = Binannot.lid_of_type_expr cstr_res in
       let path, is_qualified =
         match cstr_tag with
           | Types.Cstr_extension (p, _) ->
-            let path = longident_parse (Path.name p) in
-            path, Longident.qualified path
+            let path = Binannot.longident_parse (Path.name p) in
+            path, Binannot.Longident.qualified path
           | Types.Cstr_constant _
           | Types.Cstr_block _
           | Types.Cstr_unboxed ->
-            Longident.of_type_expr type_expr cstr_name,
-            Longident.qualified type_expr
+            Binannot.Longident.of_type_expr type_expr cstr_name,
+            Binannot.Longident.qualified type_expr
       in
-      let ident_kind = if is_qualified then Ext_ref else Int_ref none in
+      let ident_kind = if is_qualified then Ext_ref else Int_ref Location.none in
       let ident = {
         ident_kind;
         ident_fname = "";
@@ -73,9 +123,9 @@ let rec iter_pattern
       Option.fold ~none:[] ~some:(fun pat -> iter_pattern f pat) pat
     | Tpat_record (ll, _) ->
       List.flatten (List.fold_left begin fun acc ({ Asttypes.loc; _ }, ld, pat) ->
-        let type_expr = lid_of_type_expr ld.Types.lbl_res in
-        let ident_kind = if Longident.qualified type_expr then Ext_ref else Int_ref none in
-        let path = Longident.of_type_expr type_expr ld.Types.lbl_name in
+        let type_expr = Binannot.lid_of_type_expr ld.Types.lbl_res in
+        let ident_kind = if Binannot.Longident.qualified type_expr then Ext_ref else Int_ref Location.none in
+        let path = Binannot.Longident.of_type_expr type_expr ld.Types.lbl_name in
         let ident = {
           ident_kind;
           ident_fname = "";
@@ -98,7 +148,7 @@ let rec iter_pattern
     | Tpat_var (id, { Asttypes.txt; loc }) ->
       [{
         ident_fname      = "";
-        ident_kind       = Def { def_name=txt; def_loc=loc; def_scope=none };
+        ident_kind       = Def { def_name=txt; def_loc=loc; def_scope=Location.none };
         ident_loc        = Location.mkloc (Ident.name id) loc;
       }]
     (* Since 4.08 *)
@@ -126,7 +176,7 @@ and iter_expression f {exp_desc; exp_extra; _} =
     | Labelled s -> s
     | Optional s -> s
   in
-  List.iter begin fun (exp, loc', _) ->
+  List.iter begin fun (exp, _, _) ->
     match exp with
       (* Remomed in 4.08 *)
       (*| Texp_open (_, path, { Asttypes.loc; _ }, _) ->
@@ -175,7 +225,7 @@ and iter_expression f {exp_desc; exp_extra; _} =
                    {pe_loc with loc_end = {pe_loc.loc_start with pos_cnum = pe_loc.loc_start.pos_cnum + String.length label}}
                  in {
                    ident_fname      = "";
-                   ident_kind       = Def {def_name=""; def_loc=none; def_scope=c_rhs.exp_loc};
+                   ident_kind       = Def {def_name=""; def_loc=Location.none; def_scope=c_rhs.exp_loc};
                    ident_loc        = Location.mkloc label def_loc
                  }
                end c_lhs.pat_extra)
@@ -187,7 +237,7 @@ and iter_expression f {exp_desc; exp_extra; _} =
     | Texp_match (expr, cl, _) ->
       iter_expression f expr;
       List.iter begin fun { c_lhs = p; c_guard = oe; c_rhs = e } ->
-        List.iter (fun d -> d.ident_kind <- Def {def_name=""; def_loc=none; def_scope=e.exp_loc}; f d)
+        List.iter (fun d -> d.ident_kind <- Def {def_name=""; def_loc=Location.none; def_scope=e.exp_loc}; f d)
           (iter_pattern f p);
         Option.iter (iter_expression f) oe;
         iter_expression f e;
@@ -198,26 +248,26 @@ and iter_expression f {exp_desc; exp_extra; _} =
     | Texp_try (expr, pe) ->
       (iter_expression f) expr;
       List.iter begin fun { c_lhs = p; c_guard = oe; c_rhs = e }  ->
-        List.iter (fun d -> d.ident_kind <- Def {def_name=""; def_loc=none; def_scope=e.exp_loc}; f d)
+        List.iter (fun d -> d.ident_kind <- Def {def_name=""; def_loc=Location.none; def_scope=e.exp_loc}; f d)
           (iter_pattern f p);
         Option.iter (iter_expression f) oe;
         iter_expression f e;
       end pe
     | Texp_tuple el -> List.iter (iter_expression f) el
     | Texp_construct ({ Asttypes.loc; _ }, cd, el) ->
-      let type_expr = lid_of_type_expr cd.Types.cstr_res in
+      let type_expr = Binannot.lid_of_type_expr cd.Types.cstr_res in
       let path, is_qualified =
         match cd.Types.cstr_tag with
           | Types.Cstr_extension (p, _) ->
-            let path = longident_parse (Path.name p) in
-            path, Longident.qualified path
+            let path = Binannot.longident_parse (Path.name p) in
+            path, Binannot.Longident.qualified path
           | Types.Cstr_constant _
           | Types.Cstr_block _
           | Types.Cstr_unboxed ->
-            Longident.of_type_expr type_expr cd.Types.cstr_name,
-            Longident.qualified type_expr
+            Binannot.Longident.of_type_expr type_expr cd.Types.cstr_name,
+            Binannot.Longident.qualified type_expr
       in
-      let ident_kind = if is_qualified then Ext_ref else Int_ref none in
+      let ident_kind = if is_qualified then Ext_ref else Int_ref Location.none in
       let ident = {
         ident_kind;
         ident_fname = "";
@@ -230,9 +280,9 @@ and iter_expression f {exp_desc; exp_extra; _} =
     | Texp_record { fields; extended_expression; _ } ->
       Array.iter begin fun (label_description, record_label_definition) ->
         let { Types.lbl_name; lbl_res; lbl_loc; _ } = label_description in
-        let type_expr = lid_of_type_expr lbl_res in
-        let ident_kind = if Longident.qualified type_expr then Ext_ref else Int_ref none in
-        let path = Longident.of_type_expr type_expr lbl_name in
+        let type_expr = Binannot.lid_of_type_expr lbl_res in
+        let ident_kind = if Binannot.Longident.qualified type_expr then Ext_ref else Int_ref Location.none in
+        let path = Binannot.Longident.of_type_expr type_expr lbl_name in
         let ident = {
           ident_kind;
           ident_fname = "";
@@ -245,9 +295,9 @@ and iter_expression f {exp_desc; exp_extra; _} =
       end fields;
       Option.iter (iter_expression f) extended_expression
     | Texp_field (expr, { Asttypes.loc; _ }, ld) ->
-      let type_expr = lid_of_type_expr ld.Types.lbl_res in
-      let ident_kind = if Longident.qualified type_expr then Ext_ref else Int_ref none in
-      let path = Longident.of_type_expr type_expr ld.Types.lbl_name in
+      let type_expr = Binannot.lid_of_type_expr ld.Types.lbl_res in
+      let ident_kind = if Binannot.Longident.qualified type_expr then Ext_ref else Int_ref Location.none in
+      let path = Binannot.Longident.of_type_expr type_expr ld.Types.lbl_name in
       let ident = {
         ident_kind;
         ident_fname = "";
@@ -256,9 +306,9 @@ and iter_expression f {exp_desc; exp_extra; _} =
       f ident;
       iter_expression f expr
     | Texp_setfield (e1, { Asttypes.loc; _ }, ld, e2) ->
-      let type_expr = lid_of_type_expr ld.Types.lbl_res in
-      let ident_kind = if Longident.qualified type_expr then Ext_ref else Int_ref none in
-      let path = Longident.of_type_expr type_expr ld.Types.lbl_name in
+      let type_expr = Binannot.lid_of_type_expr ld.Types.lbl_res in
+      let ident_kind = if Binannot.Longident.qualified type_expr then Ext_ref else Int_ref Location.none in
+      let path = Binannot.Longident.of_type_expr type_expr ld.Types.lbl_name in
       let ident = {
         ident_kind;
         ident_fname = "";
@@ -307,7 +357,7 @@ and iter_expression f {exp_desc; exp_extra; _} =
     | Texp_unreachable -> ()
     (* type t = ..;; type t += I of int;; [%extension_constructor I] *)
     | Texp_extension_constructor ({ Asttypes.txt; loc }, _) ->
-      let ident_kind = if Longident.qualified txt then Ext_ref else Int_ref none in
+      let ident_kind = if Binannot.Longident.qualified txt then Ext_ref else Int_ref Location.none in
       f { ident_kind
         ; ident_fname = ""
         ; ident_loc = Location.mkloc (Odoc_misc.string_of_longident txt) loc
@@ -390,7 +440,7 @@ and iter_signature_item f {sig_desc; _} =
       let (open_path, open_txt) = open_expr in
       let { Asttypes.loc; _ } = open_txt in
       let annot = {
-        ident_kind  = Open {loc_start = loc.loc_end; loc_end = dummy_pos; loc_ghost=false};
+        ident_kind  = Open {loc_start = loc.loc_end; loc_end = Lexing.dummy_pos; loc_ghost=false};
         ident_fname = "";
         ident_loc   = Location.mkloc (Path.name open_path) loc;
       } in
@@ -458,7 +508,7 @@ and iter_class_expr f {cl_desc; _} =
     | Tcl_structure str -> iter_class_structure f str
     | Tcl_fun (_, pat, _ll, expr, _) ->
       let defs = iter_pattern f pat in
-      List.iter (fun d -> d.ident_kind <- Def {def_name=""; def_loc=none; def_scope=expr.cl_loc}; f d) defs;
+      List.iter (fun d -> d.ident_kind <- Def {def_name=""; def_loc=Location.none; def_scope=expr.cl_loc}; f d) defs;
       (* TODO: Why ?  Same question for Tcl_let *)
       (*List.iter (fun (_, expr) -> (ignore (iter_expression f expr)) _ll;*)
       iter_class_expr f expr
@@ -468,7 +518,7 @@ and iter_class_expr f {cl_desc; _} =
     | Tcl_let (_, ll, _ll2, c_expr) ->
       List.iter begin fun { vb_pat = p; vb_expr = e; _ } ->
         let defs = iter_pattern f p in
-        List.iter (fun d -> d.ident_kind <- Def {def_name=""; def_loc=none; def_scope=c_expr.cl_loc}; f d) defs;
+        List.iter (fun d -> d.ident_kind <- Def {def_name=""; def_loc=Location.none; def_scope=c_expr.cl_loc}; f d) defs;
         (*List.iter (fun (_, expr) -> ignore (iter_expression f expr)) _ll2;*)
         iter_expression f e;
       end ll;
@@ -515,7 +565,7 @@ and iter_type_declaration f {typ_kind; typ_manifest; typ_cstrs; _} =
       | Ttype_variant ll ->
         List.iter begin fun { cd_name; cd_args; _ } ->
           let { Asttypes.txt; loc } = cd_name in
-          let ident_kind = Def_constr { def_name = txt; def_loc = loc; def_scope = none } in
+          let ident_kind = Def_constr { def_name = txt; def_loc = loc; def_scope = Location.none } in
           f {
             ident_kind;
             ident_fname = "";
@@ -525,7 +575,7 @@ and iter_type_declaration f {typ_kind; typ_manifest; typ_cstrs; _} =
           | Cstr_tuple ct  -> List.iter (iter_core_type ?loc:None f) ct
           | Cstr_record ll -> List.iter begin fun { ld_name; ld_type = ct; _ } ->
               let { Asttypes.loc; txt } = ld_name in
-              let ident_kind = Def_constr { def_name = txt; def_loc = loc; def_scope = none } in
+              let ident_kind = Def_constr { def_name = txt; def_loc = loc; def_scope = Location.none } in
               f {
                 ident_kind;
                 ident_fname = "";
@@ -537,7 +587,7 @@ and iter_type_declaration f {typ_kind; typ_manifest; typ_cstrs; _} =
       | Ttype_record ll ->
         List.iter begin fun { ld_name; ld_type; _ } ->
           let { Asttypes.txt; loc } = ld_name in
-          let ident_kind = Def_constr { def_name = txt; def_loc = loc; def_scope = none } in
+          let ident_kind = Def_constr { def_name = txt; def_loc = loc; def_scope = Location.none } in
           f {
             ident_kind;
             ident_fname = "";
@@ -559,7 +609,7 @@ and iter_extension_constructor f { ext_name; ext_kind; _ }  =
   match ext_kind with
   | Text_decl (arguments, core_type_opt) ->
     let { Asttypes.txt; loc } = ext_name in
-    let ident_kind = Def_constr { def_name = txt; def_loc = loc; def_scope = none } in
+    let ident_kind = Def_constr { def_name = txt; def_loc = loc; def_scope = Location.none } in
     f { ident_kind;
         ident_fname = "";
         ident_loc = ext_name };
@@ -591,7 +641,7 @@ and iter_structure_item f {str_desc; str_loc; _} =
         end [] pe)
       in
       List.iter (fun d -> d.ident_kind <-
-        Def {def_name=""; def_loc=none; def_scope={str_loc with loc_start = str_loc.loc_end; loc_end = Lexing.dummy_pos}}) defs;
+        Def {def_name=""; def_loc=Location.none; def_scope={str_loc with loc_start = str_loc.loc_end; loc_end = Lexing.dummy_pos}}) defs;
       List.iter f defs;
       []
     | Tstr_open open_declaration ->
@@ -673,6 +723,7 @@ and iter_structure_item f {str_desc; str_loc; _} =
 
 (** register *)
 let register filename entry ({ident_loc; ident_kind; _} as ident) =
+  let ( <== ) = Binannot.( <== ) in
   let { Asttypes.loc; _ } = ident_loc in
   if loc <> Location.none then begin
     ident.ident_fname <- filename;
@@ -680,10 +731,10 @@ let register filename entry ({ident_loc; ident_kind; _} as ident) =
     let stop  = loc.loc_end.pos_cnum in
     for i = start to stop do entry.locations.(i) <- Some ident done;
     match ident_kind with
-      | Int_ref x when x = none ->
+      | Int_ref x when x = Location.none ->
         begin
           match List_opt.find begin fun {def_name; def_scope; _} ->
-            def_name = ident.ident_loc.txt  && (def_scope <== start || def_scope = none)
+            def_name = ident.ident_loc.txt  && (def_scope <== start || def_scope = Location.none)
           end entry.definitions with
             | Some def ->
               ident.ident_kind <- (Int_ref def.def_loc);
@@ -706,7 +757,7 @@ let register filename entry ({ident_loc; ident_kind; _} as ident) =
         end*)
       | Ext_ref | Open _ ->
         begin
-          match Longident.flatten (longident_parse ident.ident_loc.txt) with
+          match Longident.flatten (Binannot.longident_parse ident.ident_loc.txt) with
             | modname :: _ -> Hashtbl.add entry.ext_refs modname ident
             | _ -> ()
         end;
@@ -732,7 +783,7 @@ let scan ~project ~filename ?compile_buffer () =
   Mutex.lock critical_scan;
   try
     begin
-      let timestamp = try (Hashtbl.find table_idents filename).timestamp with Not_found -> 0. in
+      let timestamp = try (Hashtbl.find Binannot.table_idents filename).timestamp with Not_found -> 0. in
       match Binannot.read_cmt ~project ~filename ~timestamp ?compile_buffer () with
         | Some (filename, timestamp, ({cmt_sourcefile = Some cmt_sourcefile; _} as cmt)) ->
           let size = (Unix.stat (cmt.cmt_builddir // cmt_sourcefile)).Unix.st_size + 1 in
@@ -743,13 +794,12 @@ let scan ~project ~filename ?compile_buffer () =
             ext_refs    = Hashtbl.create 7;
             definitions = [];
           } in
-          Hashtbl.replace table_idents filename entry;
+          Hashtbl.replace Binannot.table_idents filename entry;
           let f = register filename entry in
           begin
             match [@warning "-4"] cmt.cmt_annots with
               | Implementation {str_items; _} ->
                 List.iter (fun item -> ignore (iter_structure_item f item)) str_items;
-              (*| Partial_implementation parts -> Array.iter (fold_part_impl f) parts*)
               | _ -> ()
           end
         | _ -> ()
@@ -768,7 +818,7 @@ let scan_project_files ~project ?(sort=true) f =
   List.fold_left begin fun acc filename ->
     scan ~project ~filename ();
     try
-      let entry = Hashtbl.find table_idents filename in
+      let entry = Hashtbl.find Binannot.table_idents filename in
       f acc filename entry
     with Not_found -> acc
   end [] src_files

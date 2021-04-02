@@ -20,41 +20,56 @@
 
 *)
 
-open Printf
-open Location
-open Lexing
 open Miscellanea
-
 
 module Log = Common.Log.Make(struct let prefix = "Binannot" end)
 let _ = Log.set_verbosity `ERROR
 
-type name = string
+(** [Lexing.postion] copy *)
+type position = Lexing.position = {
+  pos_fname : string;
+  pos_lnum  : int;
+  pos_bol   : int;
+  pos_cnum  : int;
+}
+
+(** [Location.t] copy *)
+type location = Location.t = {
+  loc_start : position;
+  loc_end   : position;
+  loc_ghost : bool;
+}
+
+(** ['a Location.loc] copy *)
+type 'a loc = 'a Location.loc = {
+  txt : 'a;
+  loc : location;
+}
 
 type definition = {
   mutable def_name  : string;
-  mutable def_loc   : Location.t;
-  mutable def_scope : Location.t
+  mutable def_loc   : location;
+  mutable def_scope : location;
 }
 
 type ident_kind =
   | Def of definition
   | Def_constr of definition
   | Def_module of definition
-  | Int_ref of Location.t (* Location of its defintion *)
+  | Int_ref of location (* Location of its defintion *)
   | Ext_ref
-  | Open of Location.t (* Scope *)
+  | Open of location (* Scope *)
 
 type ident = {
   mutable ident_fname : string; (* Filename *)
   mutable ident_kind  : ident_kind;
-  ident_loc           : name Location.loc; (* Name of the ident and location *)
+  ident_loc           : string loc; (* Name of the ident and location *)
 }
 
 type entry = { (* An entry collects all ident annotations of a source file. *)
   timestamp           : float; (* mtime of the cmt file read *)
   locations           : ident option array; (* Map from file offsets to idents *)
-  int_refs            : (Location.t, ident) Hashtbl.t; (* Map from def's locations to all its internal refs. *)
+  int_refs            : (location, ident) Hashtbl.t; (* Map from def's locations to all its internal refs. *)
   ext_refs            : (string, ident) Hashtbl.t; (* Map from module names (compilation units) to all external references *)
   mutable definitions : definition list; (* List of all definitions in the file *)
 }
@@ -98,7 +113,7 @@ let string_of_kind = function
 
 let string_of_loc loc =
   let filename, _, _ = Location.get_pos_info loc.loc_start in
-  sprintf "%s:%d--%d" filename (loc.loc_start.pos_cnum) (loc.loc_end.pos_cnum);;
+  Format.sprintf "%s:%d--%d" filename (loc.loc_start.pos_cnum) (loc.loc_end.pos_cnum);;
 
 let linechar_of_loc loc =
   let _, a, b = Location.get_pos_info loc.loc_start in
@@ -166,7 +181,7 @@ let print_ident ?filter {ident_kind; ident_loc; _} =
   match filter with
     | Some x when x <> txt -> ()
     | _ ->
-      printf "%-11s: %-30s (use: %-12s) (%-19s) %s\n%!"
+      Format.printf "%-11s: %-30s (use: %-12s) (%-19s) %s\n%!"
         (String.uppercase_ascii (string_of_kind ident_kind))
         ident_loc.txt
         (string_of_loc loc)

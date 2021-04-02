@@ -23,10 +23,30 @@
 
 open Cmt_format
 open Typedtree
-open! Binannot
+
+(** [Lexing.postion] copy *)
+type position = Lexing.position = {
+  pos_fname : string;
+  pos_lnum  : int;
+  pos_bol   : int;
+  pos_cnum  : int;
+}
+
+(** [Location.t] copy *)
+type location = Location.t = {
+  loc_start : position;
+  loc_end   : position;
+  loc_ghost : bool;
+}
+
+(** ['a Location.loc] copy *)
+type 'a loc = 'a Location.loc = {
+  txt : 'a;
+  loc : location;
+}
 
 type t = {
-  ba_loc  : Location.t;
+  ba_loc  : location;
   ba_type : string;
 }
 
@@ -39,6 +59,8 @@ let arg_label_to_string = function
   | Asttypes.Nolabel -> ""
   | Asttypes.Labelled s -> s
   | Asttypes.Optional s -> s
+
+let ( <== ) = Binannot.( <== )
 
 (** find_pattern *)
 let rec find_pattern
@@ -54,7 +76,7 @@ let rec find_pattern
           Log.println `DEBUG "Tpat_alias" ;
           find_pattern f offset ~opt pat
         | Tpat_construct ({ Asttypes.txt; loc }, _, pl) ->
-          Log.println `DEBUG "Tpat_construct (%s) (%s) (%d)" (Longident.last txt) (string_of_loc loc) (List.length pl);
+          Log.println `DEBUG "Tpat_construct (%s) (%s) (%d)" (Longident.last txt) (Binannot.string_of_loc loc) (List.length pl);
           List.fold_left (fun opt pat -> find_pattern f offset ~opt pat) opt pl
         | Tpat_variant (lab, pat, _) ->
           Log.println `DEBUG "Tpat_variant (%s)" lab;
@@ -79,7 +101,7 @@ let rec find_pattern
           opt
         | Tpat_var (id, { Asttypes.txt; loc  }) ->
           Log.println `DEBUG "Tpat_var: %s (pat_extra=%d) (loc=%s; %s)"
-            (Ident.name id) (List.length pat_extra) (string_of_loc loc) txt;
+            (Ident.name id) (List.length pat_extra) (Binannot.string_of_loc loc) txt;
           (Ident.name id) = "*opt*", (Ident.name id) = "*sth*"
         (* From 4.08 TODO: *)
         | Tpat_exception _ ->
@@ -92,8 +114,8 @@ let rec find_pattern
     in
     if not opt && not sth then begin
        Log.println `DEBUG "find_pattern: %s (pat_extra=%d) (%b,%b)"
-         (string_of_loc pat_loc) (List.length pat_extra) opt sth;
-       f pat_loc (string_of_type_expr pat_type)
+         (Binannot.string_of_loc pat_loc) (List.length pat_extra) opt sth;
+       f pat_loc (Binannot.string_of_type_expr pat_type)
     end;
     result
   end else opt
@@ -107,7 +129,7 @@ and find_expression f offset ?(opt=false,false) ?loc {exp_desc; exp_loc; exp_typ
       let fp = find_pattern f offset in
       match exp_desc with
         | Texp_ident (id, { Asttypes.txt; loc }, _) ->
-          Log.println `DEBUG "Texp_ident: %s %s (%s)" (Longident.last txt) (string_of_loc loc) (Path.name id);
+          Log.println `DEBUG "Texp_ident: %s %s (%s)" (Longident.last txt) (Binannot.string_of_loc loc) (Path.name id);
           Path.name id = "*opt*", Path.name id = "*sth*"
         | Texp_let (_, pe, expr) ->
           Log.println `DEBUG "Texp_let " ;
@@ -122,7 +144,7 @@ and find_expression f offset ?(opt=false,false) ?loc {exp_desc; exp_loc; exp_typ
            fe ~opt expr
         | Texp_function { arg_label; cases; _ } ->
           Log.println `DEBUG "Texp_function: %s (pe=%d) (exp_extra=%d) (%s)"
-            (arg_label_to_string arg_label) (List.length cases) (List.length exp_extra) (string_of_loc exp_loc);
+            (arg_label_to_string arg_label) (List.length cases) (List.length exp_extra) (Binannot.string_of_loc exp_loc);
           List.fold_left begin fun opt { c_lhs = p; c_guard = oe; c_rhs = e } ->
             fp p |> ignore;
             let opt = match oe with Some e' -> fe ~opt e' | None -> opt in
@@ -219,7 +241,7 @@ and find_expression f offset ?(opt=false,false) ?loc {exp_desc; exp_loc; exp_typ
           Log.println `DEBUG "Texp_unreachable" ;
           opt
         | Texp_extension_constructor ({ Asttypes.txt; loc }, id) ->
-          Log.println `DEBUG "Texp_extension_constructor: %s %s (%s)" (Longident.last txt) (string_of_loc loc) (Path.name id);
+          Log.println `DEBUG "Texp_extension_constructor: %s %s (%s)" (Longident.last txt) (Binannot.string_of_loc loc) (Path.name id);
           Path.name id = "*opt*", Path.name id = "*sth*"
         (* Since 4.08 TODO: *)
         | Texp_letop _ ->
@@ -230,8 +252,8 @@ and find_expression f offset ?(opt=false,false) ?loc {exp_desc; exp_loc; exp_typ
           opt
     in
     if not opt && not sth then begin
-       Log.println `DEBUG "find_expression: %s (%b,%b)" (string_of_loc exp_loc) opt sth;
-      f loc (string_of_type_expr exp_type);
+       Log.println `DEBUG "find_expression: %s (%b,%b)" (Binannot.string_of_loc exp_loc) opt sth;
+      f loc (Binannot.string_of_type_expr exp_type);
       result
     end else if sth then opt, false else result
   end else opt
@@ -306,7 +328,7 @@ and find_with_constraint f offset = function
 and find_core_type f offset ?loc {ctyp_type; ctyp_loc; _} =
   let loc = Option.value loc ~default:ctyp_loc in
   if loc <== offset then begin
-    f loc (string_of_type_expr ctyp_type)
+    f loc (Binannot.string_of_type_expr ctyp_type)
   end
 
 (** find_class_field *)
@@ -482,7 +504,7 @@ let find_by_offset ~project ~filename ~offset ?compile_buffer () =
     | Some (_, _, cmt) ->
       begin
         let f ba_loc ba_type =
-          Log.println `TRACE "%d; %s : %s" offset (string_of_loc ba_loc) ba_type;
+          Log.println `TRACE "%d; %s : %s" offset (Binannot.string_of_loc ba_loc) ba_type;
           raise (Found {ba_loc; ba_type});
         in
         try
