@@ -52,7 +52,7 @@ let concat_value_path symbol =
     in f "" symbol.sy_id
   end else*) (String.concat "." symbol.sy_id)
 
-let split_value_path id = Longident.flatten (Longident.parse id)
+let split_value_path id = Longident.flatten (Parse.longident @@ Lexing.from_string id)
 
 let string_of_id = String.concat "."
 

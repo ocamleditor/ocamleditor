@@ -97,7 +97,7 @@ let strings text =
   let strings = ref [] in
   analyse text begin fun ~token ~lexeme:_ ~start ~length ~lexbuf:_ ->
     match [@warning "-4"] token with
-      | STRING (s, _) ->
+      | STRING (s, _, _) ->
         strings := {lexeme = s; start = start; length = length} :: !strings;
         None
       | _ -> None
