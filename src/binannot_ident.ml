@@ -88,6 +88,9 @@ type search_result = {
   bai_refs : ident list;
 }
 
+
+module Log = Common.Log.Make(struct let prefix = "Binannot_ident" end)
+
 (** find_external_definition *)
 let find_external_definition ~project ~ext_ref =
   let longid = Binannot.longident_parse ext_ref.ident_loc.txt in
@@ -260,18 +263,22 @@ let find_definition ~project ~filename ~offset ?compile_buffer () =
   Binannot_ident_scan.scan ~project ~filename ?compile_buffer ();
   try
     let entry = Hashtbl.find Binannot.table_idents filename in
-    let ident = entry.locations.(offset) in
+    let ident = try entry.locations.(offset)
+      with Invalid_argument _ ->
+       	Log.println `ERROR "Invalid offset %d for %s" offset filename;
+       	None
+    in
     Option.fold ~none:None ~some:(fun ident ->
-      match ident.ident_kind with
+        match ident.ident_kind with
         | Def _ | Def_constr _ | Def_module _ -> Some ident
         | Int_ref def -> entry.locations.(def.loc_start.pos_cnum)
         | Ext_ref | Open _ ->
           begin
             match find_external_definition ~project ~ext_ref:ident with
-              | Project_def def -> Some def
-              | Project_file x -> Some x
-              | Library_def -> None
-              | No_def -> None
+            | Project_def def -> Some def
+            | Project_file x -> Some x
+            | Library_def -> None
+            | No_def -> None
           end) ident;
   with Not_found -> None
 ;;

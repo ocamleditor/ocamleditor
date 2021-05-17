@@ -99,7 +99,60 @@ module Longident = struct
 
 end
 
-let longident_parse repr = Parse.longident @@ Lexing.from_string repr
+(** [location] formatter *)
+let pp_loc ppf loc =
+  if loc = Location.none then
+    Format.fprintf ppf "_none_"
+  else
+    let { loc_start; loc_end; _ } = loc in
+    let line  = loc_start.pos_lnum in
+    let start = loc_start.pos_cnum - loc_start.pos_bol in
+    let stop  = loc_end.pos_cnum - loc_end.pos_bol in
+    if loc_end.pos_lnum  = line then
+      Format.fprintf ppf "%s: %d[%d+%d]"
+        loc_start.pos_fname line start (stop - start)
+    else
+      Format.fprintf ppf "%s: %d[%d]..%d[%d]"
+        loc_start.pos_fname line start loc_end.pos_lnum stop
+
+(** [location] alternative formatter without the file name *)
+let pp_short_loc ppf loc =
+  if loc = Location.none then
+    Format.fprintf ppf "_none_"
+  else
+    let { loc_start; loc_end; _ } = loc in
+    let line  = loc_start.pos_lnum in
+    let start = loc_start.pos_cnum - loc_start.pos_bol in
+    let stop  = loc_end.pos_cnum - loc_end.pos_bol in
+    if loc_end.pos_lnum = line then
+      Format.fprintf ppf "%d[%d+%d]" line start (stop - start)
+    else
+      Format.fprintf ppf "%d[%d]..%d[%d]" line start loc_end.pos_lnum stop
+
+
+(** [definition] formatter *)
+let pp_definition ppf { def_name; def_loc; def_scope } =
+  Format.fprintf ppf "%s: %a, scope:%a" def_name
+    pp_short_loc def_loc pp_loc def_scope
+
+(** [ident] formatter *)
+let pp_ident ppf { ident_kind; ident_loc; _ } =
+  match ident_kind with
+  | Def def        -> Format.fprintf ppf "var %a, start %d" pp_definition def def.def_loc.loc_start.pos_cnum
+  | Def_constr def -> Format.fprintf ppf "ctr %a, start %d" pp_definition def def.def_loc.loc_start.pos_cnum
+  | Def_module def -> Format.fprintf ppf "mod %a, start %d" pp_definition def def.def_loc.loc_start.pos_cnum
+  | Int_ref loc    -> Format.fprintf ppf "ref %s:%a defined at: %a"
+                        ident_loc.txt pp_short_loc ident_loc.loc pp_loc loc
+  | Ext_ref        -> Format.fprintf ppf "ext %s:%a" ident_loc.txt
+                        pp_short_loc ident_loc.loc
+  | Open loc       -> Format.fprintf ppf "opn %a" pp_loc loc
+
+let longident_parse repr = try
+    Longident.parse repr
+  with ex ->
+    (* Just a stopgap measure. The plan is to get rid of [Longident.parse] altogether *)
+    Log.println `ERROR " !! unable to parse Longident.t from: %s" repr;
+    raise ex
 
 let table_idents : (string, entry) Hashtbl.t = Hashtbl.create 7 (* source filename, entry *)
 
@@ -177,7 +230,7 @@ let print_ident ?filter {ident_kind; ident_loc; _} =
       | Ext_ref -> "---"
       | Open scope -> "scope: " ^ (string_of_loc scope)
   in
-  let { Asttypes.txt; loc } = ident_loc in
+  let { txt; loc } = ident_loc in
   match filter with
     | Some x when x <> txt -> ()
     | _ ->

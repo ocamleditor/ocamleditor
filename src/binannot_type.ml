@@ -39,7 +39,7 @@ type location = Location.t = {
   loc_ghost : bool;
 }
 
-(** ['a Location.loc] copy *)
+(** ['a Location.loc] & ['a Asttypes.loc] copy *)
 type 'a loc = 'a Location.loc = {
   txt : 'a;
   loc : location;
@@ -75,7 +75,7 @@ let rec find_pattern
         | Tpat_alias (pat, _, _) ->
           Log.println `DEBUG "Tpat_alias" ;
           find_pattern f offset ~opt pat
-        | Tpat_construct ({ Asttypes.txt; loc }, _, pl) ->
+        | Tpat_construct ({ txt; loc }, _, pl) ->
           Log.println `DEBUG "Tpat_construct (%s) (%s) (%d)" (Longident.last txt) (Binannot.string_of_loc loc) (List.length pl);
           List.fold_left (fun opt pat -> find_pattern f offset ~opt pat) opt pl
         | Tpat_variant (lab, pat, _) ->
@@ -99,7 +99,7 @@ let rec find_pattern
         | Tpat_any ->
           Log.println `DEBUG "Tpat_any" ;
           opt
-        | Tpat_var (id, { Asttypes.txt; loc  }) ->
+        | Tpat_var (id, { txt; loc  }) ->
           Log.println `DEBUG "Tpat_var: %s (pat_extra=%d) (loc=%s; %s)"
             (Ident.name id) (List.length pat_extra) (Binannot.string_of_loc loc) txt;
           (Ident.name id) = "*opt*", (Ident.name id) = "*sth*"
@@ -128,7 +128,7 @@ and find_expression f offset ?(opt=false,false) ?loc {exp_desc; exp_loc; exp_typ
       let fe = find_expression f offset in
       let fp = find_pattern f offset in
       match exp_desc with
-        | Texp_ident (id, { Asttypes.txt; loc }, _) ->
+        | Texp_ident (id, { txt; loc }, _) ->
           Log.println `DEBUG "Texp_ident: %s %s (%s)" (Longident.last txt) (Binannot.string_of_loc loc) (Path.name id);
           Path.name id = "*opt*", Path.name id = "*sth*"
         | Texp_let (_, pe, expr) ->
@@ -240,7 +240,7 @@ and find_expression f offset ?(opt=false,false) ?loc {exp_desc; exp_loc; exp_typ
         | Texp_unreachable ->
           Log.println `DEBUG "Texp_unreachable" ;
           opt
-        | Texp_extension_constructor ({ Asttypes.txt; loc }, id) ->
+        | Texp_extension_constructor ({ txt; loc }, id) ->
           Log.println `DEBUG "Texp_extension_constructor: %s %s (%s)" (Longident.last txt) (Binannot.string_of_loc loc) (Path.name id);
           Path.name id = "*opt*", Path.name id = "*sth*"
         (* Since 4.08 TODO: *)
