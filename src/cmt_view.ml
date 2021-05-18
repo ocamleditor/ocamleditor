@@ -19,7 +19,6 @@
   along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 *)
-[@@@warning "-48"]
 
 open Printf
 open GUtil

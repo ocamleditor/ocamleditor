@@ -41,3 +41,5 @@ fonts
 *.so
 
 src/ocamleditorw
+.ocamlinit
+
