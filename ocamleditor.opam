@@ -19,7 +19,7 @@ install: [["ocaml" "tools/install.ml" "-prefix" prefix]]
 remove: [["ocaml" "tools/uninstall.ml" "-prefix" prefix]]
 
 depends: [
-  "ocaml" {>= "4.11" & < "4.12"}
+  "ocaml" {>= "4.11" & < "4.13"}
   "ocaml-compiler-libs"
   "ocamlfind" {>= "1.4.0"}
   "lablgtk" {>= "2.18.0"}
