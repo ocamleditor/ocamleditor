@@ -55,7 +55,7 @@ rule token = parse
   | ("File" sp '"' ([^'"']+ as filename) "\", line " (['0'-'9']+ as line) ':' lf) as loc
     {LOCATION (loc, filename, (int_of_string line), (int_of_string line), 0, 0)}
 
-  | "Warning" (sp ((['0'-'9']+) as wtype))? ':' sp
+  | "Warning" (sp ((['0'-'9']+) as wtype))? sp '[' (['a'-'z']|'-')+ ']' ':' sp
     { WARNING (match wtype with None -> 0 | Some x -> int_of_string x)}
 
   | "Warning" (sp ((['A'-'Z']) as wtype))? ':' sp
