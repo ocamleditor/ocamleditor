@@ -75,10 +75,6 @@ rule token = parse
 and line_of_message buffer = parse
   | eof                           { LINE_OF_MESSAGE (Buffer.contents buffer) }
   | lf                            { LINE_OF_MESSAGE (Buffer.contents buffer) }
-  | sp                            {
-      Buffer.add_string buffer (Lexing.lexeme lexbuf);
-      line_of_message buffer lexbuf
-    }
   | _                             {
       Buffer.add_string buffer (Lexing.lexeme lexbuf);
       line_of_message buffer lexbuf
