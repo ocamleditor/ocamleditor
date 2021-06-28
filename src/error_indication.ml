@@ -49,7 +49,7 @@ class error_indication (view : Ocaml_text.view) vscrollbar global_gutter =
   in
   let tag_error, tag_warning, tag_warning_unused = create_tags () in
   let is_warning_unused = function [@warning "-4"]
-    | Oe.Warning 20 | Oe.Warning 26 | Oe.Warning 27 -> true
+    | Oe.Warning (20, _) | Oe.Warning (26, _) | Oe.Warning (27, _) -> true
     | _ -> false
   in
 object (self)
@@ -100,7 +100,7 @@ object (self)
   method tag_of_error error =
     match [@warning "-4"] error.Oe.er_level with
       | Oe.Error -> tag_error
-      | Oe.Warning 20 | Oe.Warning 26 | Oe.Warning 27 -> tag_warning_unused
+      | Oe.Warning (20, _) | Oe.Warning (26, _) | Oe.Warning (27, _) -> tag_warning_unused
       | _ -> tag_warning
 
   method set_flag_tooltip x = flag_tooltip <- x

@@ -29,7 +29,7 @@ open Oe
 %token <string> LINE_OF_MESSAGE
 %token <string> ALERT
 %token EOF ERROR
-%token <int> WARNING
+%token <int * string option> WARNING
 
 %start compiler_output
 %type <Oe.error_message list> compiler_output
@@ -51,7 +51,8 @@ message:
       (
         match $2 with 
         | Error -> "Error: "
-        | Warning x -> sprintf "Warning %d: " x
+        | Warning (num, None) -> sprintf "Warning %d: " num (* before 4.12 *)
+        | Warning (num, Some name) -> sprintf "Warning [%s] %d: " name num
         | Alert s -> "Alert " ^ s ^ ": "
       ) ^ message_text);
     }
@@ -73,7 +74,7 @@ line_of_message:
   | LINE_OF_MESSAGE line_of_message { $1 :: $2}
 ;
 level:
-  | WARNING { Warning $1 }
+  | WARNING { let n, so = $1 in Warning (n, so) }
   | ALERT { Alert $1 }
   | ERROR   { Error }
 ;
