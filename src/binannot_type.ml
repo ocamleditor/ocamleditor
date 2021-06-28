@@ -63,8 +63,8 @@ let _ = Log.set_verbosity `ERROR
 let expr_loc expr =
   let { exp_loc; exp_extra; _ } = expr in
   match exp_extra with
-  | [ Texp_constraint _, _, _; Texp_coerce (_, target), _, _ ]
-  | [ Texp_coerce (_, target), _, _ ] -> { exp_loc with loc_end = target.ctyp_loc.loc_end }
+  | (Texp_constraint _, _, _) :: (Texp_coerce (_, target), _, _) :: _
+  | (Texp_coerce (_, target), _, _) :: _ -> { exp_loc with loc_end = target.ctyp_loc.loc_end }
   | _ -> exp_loc
 
 (** [lookup offset] will return a [Tast_iterator.iterator] which will traverse 
