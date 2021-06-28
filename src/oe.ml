@@ -110,7 +110,6 @@ and error_message = {
   er_characters               : int * int;
   er_location                 : string;
   er_message                  : string;
-  er_inconsistent_assumptions : string option;
 }
 
 
