@@ -15,11 +15,10 @@ homepage: "https://github.com/vrotaru/ocamleditor"
 bug-reports: "https://github.com/vrotaru/ocamleditor/issues"
 
 build: [["ocaml" "build.ml" "ocamleditor"]]
-install: [["ocaml" "tools/install.ml" "-prefix" prefix]]
-remove: [["ocaml" "tools/uninstall.ml" "-prefix" prefix]]
+install: [["ocaml" "install.ml" "-prefix" prefix]]
 
 depends: [
-  "ocaml" {>= "4.11" & < "4.12"}
+  "ocaml" {>= "4.11" & < "4.13"}
   "ocaml-compiler-libs"
   "ocamlfind" {>= "1.4.0"}
   "lablgtk" {>= "2.18.0"}

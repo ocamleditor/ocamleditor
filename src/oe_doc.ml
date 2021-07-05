@@ -22,8 +22,21 @@
 
 
 open Printf
-open Miscellanea
 open Odoc_info
+
+let strip_prefix = Miscellanea.strip_prefix
+
+let strip_stdlib_prefix filename =
+  let dirname = Filename.dirname filename in
+  let basename = Filename.basename filename in
+  let basename = strip_prefix "stdlib__" basename in
+  Filename.concat dirname basename
+
+let stdlib_preprocessor dir =
+  if dir = Ocaml_config.ocamllib () then
+   [| "-pp"; App_config.get_stdlib_pp_command; |]
+  else
+   [||]
 
 module Database =
 struct
@@ -31,9 +44,10 @@ struct
   let ocamldoc_command ~project ~filename () =
     try
       let file =
-        let mli = sprintf "%s.mli" (Filename.chop_extension filename) in
+	let basename = strip_stdlib_prefix @@ Filename.chop_extension filename in
+        let mli = sprintf "%s.mli" basename in
         if Sys.file_exists mli then Some mli else
-          let ml = sprintf "%s.ml" (Filename.chop_extension filename) in
+          let ml = sprintf "%s.ml" basename in
           if Sys.file_exists ml then Some ml else
           None
       in
@@ -44,49 +58,23 @@ struct
             let search_path = Project.get_search_path_i_format project in
             let args =
               Array.concat [
+                (stdlib_preprocessor @@ Filename.dirname filename);
                 [|
                   "-dump";
-                  ((*Shell.quote_arg *)out_filename);
+                  out_filename;		
                   "-I"; "+threads";
                 |];
                 (Array.of_list (Miscellanea.split " +" search_path));
                 [|
-                  (*Shell.quote_arg*) file;
+                  file;
                 |]
               ]
             in
-            ignore (Spawn.sync (*~process_in:Spawn.redirect_to_stdout ~process_err:Spawn.redirect_to_stderr*) (Ocaml_config.ocamldoc()) args);
+            ignore (Spawn.sync (Ocaml_config.ocamldoc()) args);
             Some out_filename
           | _ -> None
       end;
     with Invalid_argument _ -> None;;
-
-  (*(** read *)
-  let read (project, filename) =
-    let odoc = ocamldoc ~project ~filename () in
-    let time = Unix.gettimeofday () in
-    match odoc with
-      | Some filename ->
-        let module_list = Odoc_info.load_modules filename in
-        let elements = Odoc_info.Search.search_by_name module_list (Miscellanea.regexp "") in
-        let i = ref (-1) in
-        let elements = List.map begin fun res ->
-          incr i;
-          match res with
-            | Search.Res_type elem -> (!i, elem.Type.ty_name, Some Oe.Ptype), res
-            | Search.Res_value elem -> (!i, elem.Value.val_name, Some Oe.Pvalue), res
-            | Search.Res_module elem -> (!i, elem.Module.m_name, Some Oe.Pmodule), res
-            | Search.Res_module_type elem -> (!i, elem.Module.mt_name, Some Oe.Pmodtype), res
-            | Search.Res_class elem -> (!i, elem.Class.cl_name, Some Oe.Pclass), res
-            | Search.Res_class_type elem -> (!i, elem.Class.clt_name, Some Oe.Pcltype), res
-            | Search.Res_exception elem -> (!i, elem.Exception.ex_name, Some Oe.Pexception), res
-            | Search.Res_attribute elem -> (!i, elem.Value.att_value.Value.val_name, Some Oe.Pattribute), res
-            | Search.Res_method elem -> (!i, elem.Value.met_value.Value.val_name, Some Oe.Pmethod), res
-            | Search.Res_section (name, text) -> (!i, name, None), res
-        end elements in
-        if Sys.file_exists filename then (Sys.remove filename);
-        elements, time
-      | _ -> [], time;;*)
 
   let read' (project, filename) =
     let odoc = ocamldoc_command ~project ~filename () in
@@ -121,7 +109,8 @@ struct
   let find_module ~project ~symbol =
     let module_list = read ~project ~symbol in
     let module_name = Symbols.get_module_name symbol in
-    List_opt.find (fun m -> m.Odoc_info.Module.m_name = module_name) module_list
+    
+    List.find_opt (fun m -> m.Odoc_info.Module.m_name = module_name) module_list
 
 end
 
@@ -132,8 +121,7 @@ struct
 
   let insert_newline ~(buffer : GText.buffer) ftag =
     let (!!) = ftag in
-    (*let iter = buffer#get_iter `INSERT in
-    if iter#line_index > 0 then*) (buffer#insert ~tags:[!!`LINE_SPACING_SMALL] "\n");;
+	buffer#insert ~tags:[!!`LINE_SPACING_SMALL] "\n";;
 
   let concat_raw_text text =
     let repl = if !pending_newline then (pending_newline := false; "") else "\n" in
@@ -392,11 +380,6 @@ struct
     let insert_type = buffer#insert ~tags:[!!`TYPE] in
     let m1 = buffer#create_mark (buffer#get_iter `INSERT) in
     begin
-      (*let info = match elem.Type.ty_info with Some x -> Odoc_info.string_of_info x | _ -> "" in
-      let re = kprintf Str.regexp "[\r\n]*%s[\r\n]*" (Str.quote info) in
-      let typ = Odoc_info.string_of_type elem in
-      let typ = Str.global_replace re "" typ in
-      buffer#insert typ;*)
       let insert_type_element_comment text =
         Gtk_util.with_tag !!`TYPE_COMMENT ~buffer begin fun () ->
           buffer#insert " (\x2A ";
@@ -494,7 +477,6 @@ struct
     end;
     Lexical.tag buffer ~start:(buffer#get_iter_at_mark (`MARK m1)) ~stop:(buffer#get_iter `INSERT);
     buffer#delete_mark (`MARK m1);
-    (*Info.insert_info (!!) buffer elem.Odoc_type.ty_info*)
 ;;
 
 
@@ -522,10 +504,10 @@ end
     let default_bg_color =
       if snd Preferences.preferences#get.Preferences.pref_bg_color then begin
         (* "Use theme color" option removed *)
-        let color = (*`NAME*) (fst ((Preferences.create_defaults()).Preferences.pref_bg_color)) in
+        let color = fst ((Preferences.create_defaults()).Preferences.pref_bg_color) in
         color;
       end else begin
-        let color = (*`NAME*) (fst Preferences.preferences#get.Preferences.pref_bg_color) in
+        let color = fst Preferences.preferences#get.Preferences.pref_bg_color in
         color;
       end;
     in
@@ -573,7 +555,7 @@ end
       create_tag (`TITLE 1) "title1" [`WEIGHT `BOLD; `SIZE_POINTS 19.0; `PIXELS_ABOVE_LINES 13; `PIXELS_BELOW_LINES 13];
       create_tag (`TITLE 0) "title0" [`WEIGHT `BOLD; `SIZE_POINTS 21.0; `PIXELS_ABOVE_LINES 13; `PIXELS_BELOW_LINES 13(*; `UNDERLINE `SINGLE*)];
     ] in
-    let ftag x = (*try*) List.assoc x tags (*with Not_found -> assert false*) in
+    let ftag x = List.assoc x tags in
     let (!!) = ftag in
     List.iter set_acc_margin [!!`PARAM; !!`PARAM_DESCR; !!`LI; !!`LEFT_MARGIN; !!`TYPE; !!`TYPE_COMMENT; !!`TYPE2];
     List.iter (fun t -> Gmisclib.Util.set_tag_paragraph_background t bgparagraph) [!!`TYPE2];
@@ -594,7 +576,6 @@ end
   let insert ~(buffer : GText.buffer) ~kind elem =
     let (!!) = create_tags ~buffer in
     let insert_info = Info.insert_info (!!) buffer in
-    let [@warning "-4"] _ = "Disable this pattern matching is fragile warning" in
     begin
       match elem with
         | Search.Res_type elem
@@ -657,7 +638,6 @@ end
     (* Title and module description *)
     let fix_ocamldoc = ref (Gaux.may_map ~f:(fun x -> String.trim (Odoc_info.string_of_info x)) odoc.Module.m_info) in
     with_tag_odoc begin fun () ->
-      (*buffer#insert ~tags:[!!(`TITLE 0)] "Module ";*)
       buffer#insert ~tags:[!!(`TITLE 0); !!`TTF] odoc.Module.m_name;
       Info.insert_info ~newline_before:true (!!) buffer odoc.Module.m_info;
       buffer#insert "\n\n";
@@ -666,7 +646,6 @@ end
     let tag_type2 = [!!`TYPE2] in
     List.iter begin fun me ->
       let get_relative = Name.get_relative odoc.Module.m_name in
-      (*GtkThread2.sync begin fun () ->*)
         match me with
           | Module.Element_module elem ->
             insert_elem (`Info elem.Module.m_info) begin fun () ->
@@ -725,11 +704,10 @@ end
               | Some text when String.trim (Odoc_info.string_of_text elem) = text ->
                 fix_ocamldoc := None;
               | _ -> with_tag_odoc (fun () -> insert_text buffer elem (!!)));
-      (*end ()*)
           (* Since 4.02.0 -- TODO *)
           | Module.Element_type_extension _ -> ()
     end (Module.module_elements odoc);
-    (*  *)
+
     insert_newline ~buffer (!!);
     Gmisclib.Idle.add ~prio:300 begin fun () ->
       List.iter (fun m -> buffer#delete_mark (`MARK m)) !marks

@@ -48,11 +48,9 @@ let fade_out window =
 (** main *)
 let main () = begin
   let _ = About.build_id := Build_id.timestamp in
+  let _ = About.git_hash := Build_id.git_hash in
   let _locale = GtkMain.Main.init ~setlocale:false () in
-  (*GtkMain.Main.disable_setlocale();*)
-  (*Unix.putenv "LANGUAGE" "C";*)
-  (*Unix.putenv "GTK_SETLOCALE" "0";*)
-  (*let locale = Glib.Main.setlocale `ALL (Some "C") in*)
+
   let start splashscreen =
     let browser = Browser.create () in
     (* Before browser initialization *)
@@ -94,27 +92,3 @@ let main () = begin
 end
 
 let _ = Printexc.print main ()
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

@@ -59,11 +59,11 @@ Str.split (Str.regexp ",") ",OCAMLEDITORPARAM=debug=2,,record_backtrace=1,,";;
 let application_param =
   try
     List.fold_left begin fun acc x ->
-      match (*Str.split (Str.regexp "=")*) split '=' x with
-        | n :: v :: [] -> (n, v) :: acc
-        | n :: [] -> (n, "") :: acc
-        | _ -> acc
-    end [] ((*Str.split (Str.regexp ",") *) split ',' (Sys.getenv "OCAMLEDITORPARAM"))
+      match split '=' x with
+      | n :: v :: [] -> (n, v) :: acc
+      | n :: [] -> (n, "") :: acc
+      | _ -> acc
+    end [] (split ',' (Sys.getenv "OCAMLEDITORPARAM"))
   with Not_found -> [];;
 
 let application_debug = try (List.assoc "debug" application_param) = "2" with Not_found -> false;;
@@ -77,10 +77,10 @@ let user_home =
 let ocamleditor_user_home =
   let dirname =
     match Ocaml_config.is_mingw with
-      | true when application_debug -> ".ocamleditor.mingw"
-      | true -> ".ocamleditor.test.mingw"
-      | false when application_debug -> ".ocamleditor.test"
-      | false -> ".ocamleditor"
+    | true when application_debug -> ".ocamleditor.mingw"
+    | true -> ".ocamleditor.test.mingw"
+    | false when application_debug -> ".ocamleditor.test"
+    | false -> ".ocamleditor"
   in
   let ocamleditor_user_home = user_home // dirname in
   if not (Sys.file_exists ocamleditor_user_home) then (Unix.mkdir ocamleditor_user_home 509);
@@ -103,38 +103,41 @@ let application_icons = get_application_dir "icons"
 
 let application_plugins = get_application_dir "plugins"
 
-let get_oebuild_command =
-  let find_best ?(param="--help") prog =
-    let redirect_stderr = if Sys.os_type = "Win32" then " 2>NUL" else " 2>/dev/null" in
-    try
-      List.find begin fun comp ->
-        let ok =
-          try
-            let cmd = sprintf "%s %s%s" (Filename.quote comp) param redirect_stderr in
-            if application_debug then (printf "Checking for %s... %!" cmd);
-            Shell.get_command_output cmd |> ignore;
-            true
-          with _ -> false
-        in
-        if application_debug then (printf "%b\n%!" ok);
-        ok
-      end prog
-    with Not_found ->
-      kprintf failwith "Cannot find: %s" (String.concat ", " prog)
-  in
-  let find_command name =
-    let basename = name ^ (if Sys.win32 then ".exe" else "") in
-    let path = (!! Sys.executable_name) // basename in
-    if Sys.file_exists path && not (Sys.is_directory path) then path
-    else
-      let path = (!! Sys.executable_name) // (if Filename.check_suffix name ".opt" then Filename.chop_extension name else name) // basename in
-      if Sys.file_exists path then path
-      else basename
-  in
-  begin fun () ->
-    let commands = [
-      find_command "oebuild.opt";
-      find_command "oebuild";
-    ] in
-    find_best commands
-  end
+let find_best ?(param="--help") prog =
+  let redirect_stderr = if Sys.os_type = "Win32" then " 2>NUL" else " 2>/dev/null" in
+  try
+    List.find begin fun comp ->
+      let ok =
+        try
+          let cmd = sprintf "%s %s%s" (Filename.quote comp) param redirect_stderr in
+          if application_debug then (printf "Checking for %s... %!" cmd);
+          Shell.get_command_output cmd |> ignore;
+          true
+        with _ -> false
+      in
+      if application_debug then (printf "%b\n%!" ok);
+      ok
+    end prog
+  with Not_found ->
+    kprintf failwith "Cannot find: %s" (String.concat ", " prog)
+
+let find_command name =
+  let basename = name ^ (if Sys.win32 then ".exe" else "") in
+  let path = (!! Sys.executable_name) // basename in
+  if Sys.file_exists path && not (Sys.is_directory path) then path
+  else
+    let path = (!! Sys.executable_name) // (if Filename.check_suffix name ".opt" then Filename.chop_extension name else name) // basename in
+    if Sys.file_exists path then path
+    else basename
+
+let get_oebuild_command () =
+  find_best [
+    find_command "oebuild.opt";
+    find_command "oebuild";
+  ]
+
+let get_stdlib_pp_command =
+  find_best [
+    find_command "stdlib_pp.opt";
+    find_command "stdlib_pp"
+  ]

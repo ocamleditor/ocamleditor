@@ -30,3 +30,5 @@ let project_page = "https://github.com/ftovagliari/ocamleditor"
 let issues = "https://github.com/ftovagliari/ocamleditor/issues"
 let releases = "https://github.com/ftovagliari/ocamleditor/releases"
 let build_id = ref ""
+let git_hash = ref ""
+

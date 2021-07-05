@@ -26,6 +26,9 @@ splash*.*
 *.project.local
 src/oebuild/oebuild
 src/oebuild/oebuild.opt
+src/stdlib_pp/stdlib_pp
+src/stdlib_pp/stdlib_pp.opt
+src/stdlib_pp/stdlib_pp.ml
 src/ocamleditor
 src/ocamleditor.opt
 src/gtkThread2.ml
