@@ -43,6 +43,7 @@ let prepare_build () =
     if not (Sys.file_exists "../plugins") then (mkdir "../plugins");
     run "ocamllex err_lexer.mll";
     run "ocamlyacc err_parser.mly";
+    run "ocamllex stdlib_pp/stdlib_pp.mll";
     if not is_win32 then begin
       (* Disabled because on Windows it changes the file permissions of oe_config.ml
          forcing it to be recompiled for plugins.*)
@@ -53,8 +54,8 @@ let prepare_build () =
     (try generate_oebuild_script() with Failure msg -> raise (Script_error ("generate_oebuild_script()", 2)));
     (*  *)
     let chan = open_out_bin "../src/build_id.ml" in
-    kprintf (output_string chan) "let timestamp = \"%f\"" (Unix.gettimeofday ());
-    kprintf (output_string chan) "\nlet git_hash = %S" (get_command_output "git rev-parse HEAD" |> List.hd);
+    kprintf (output_string chan) "let timestamp = \"%f\"\n" (Unix.gettimeofday ());
+    kprintf (output_string chan) "let git_hash = %S\n" (get_command_output "git rev-parse HEAD" |> List.hd);
     close_out_noerr chan;
     (*  *)
     print_newline()
