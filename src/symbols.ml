@@ -27,6 +27,8 @@ open Oe
 open Miscellanea
 open Printf
 
+let strip_prefix = Miscellanea.strip_prefix
+
 let get_parent_path symbol =
   match List.rev symbol.sy_id with
     | _ :: tl -> List.rev tl
@@ -43,19 +45,15 @@ let is_method symbol =
     | Pmethod | Pmethod_private | Pmethod_virtual | Pmethod_private_virtual -> true
     | _ -> false
 
-let concat_value_path symbol =
-  (*if is_method symbol then begin
-    let rec f acc = function
-      | [] -> acc
-      | a :: b :: [] -> acc ^ "." ^ a ^ "#" ^ b
-      | a :: tl -> f (acc ^ a) tl
-    in f "" symbol.sy_id
-  end else*) (String.concat "." symbol.sy_id)
+let concat_value_path symbol = String.concat "." symbol.sy_id
 
 let split_value_path id = Longident.flatten (Parse.longident @@ Lexing.from_string id)
 
 let string_of_id = String.concat "."
 
+let module_name_of_cmi filename = 
+  let basename = strip_prefix "stdlib__" @@ Filename.chop_suffix filename ".cmi" in
+  String.capitalize_ascii basename
 
 module Modules = struct
   type t = {
@@ -76,9 +74,11 @@ module Modules = struct
         && x ^^^ ".cmi"
       end filenames
     in
+    (* hack to avoid having 2 [Bigarray] modules in [Stdlib] needed as for 4.12.0 *)
+    let module_files = List.filter (fun filename -> Filename.basename filename <> "bigarray.cmi") module_files in
     (* Convert filename to module name *)
     let module_names =
-      List.map (fun basename -> String.capitalize_ascii (Filename.chop_suffix basename ".cmi"), path // basename) module_files
+      List.map (fun basename -> module_name_of_cmi basename, path // basename) module_files
     in (module_names, Unix.gettimeofday ())
   ;;
 
@@ -95,7 +95,6 @@ module Modules = struct
 
   let get_descr ~project =
     let path = Project.get_load_path project in
-    (*let path = project.Project.ocamllib :: path in*)
     let module_names = read ~path () in
     List.map begin fun (name, filename) ->
       let descr =
@@ -136,13 +135,7 @@ module Signature = struct
       Format.pp_print_flush formatter ();
       (Buffer.contents buf)
     in
-    (*match cd with {
-      cty_params = cty_params;
-      cty_type   = cty_type;
-      cty_path   = cty_path; _
-    } ->*)
       begin
-        let [@warning "-4"] _ = "Disabel this pattern matching is fragile warning" in
         match Printtyp.tree_of_class_declaration id cd Types.Trec_first with
           | Osig_class (_(*vir_flag*), _(*name*), _(*params*), clt, _(*rs*)) ->
             let rec parse_class_type = function
@@ -161,7 +154,6 @@ module Signature = struct
                       sy_local        = false;
                     }
                   | _ -> None
-                  (*| Ocsg_value (name, virt, priv, ty) -> None | Ocsg_constraint (t1, t2) -> None*)
                 end csil
               | Octy_arrow (_, _, clt) -> parse_class_type clt
               | _ -> []

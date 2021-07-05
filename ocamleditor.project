@@ -138,6 +138,31 @@
       <restrictions></restrictions>
       <dependencies>7</dependencies>
     </target>
+    <target name="stdlib_pp" default="false" id="28" sub_targets="" is_fl_package="false" subsystem="" readonly="false" visible="true" node_collapsed="false">
+      <descr></descr>
+      <byt>true</byt>
+      <opt>true</opt>
+      <libs></libs>
+      <other_objects></other_objects>
+      <files>stdlib_pp/stdlib_pp.ml</files>
+      <package></package>
+      <includes></includes>
+      <thread>false</thread>
+      <vmthread>false</vmthread>
+      <pp></pp>
+      <inline></inline>
+      <nodep>false</nodep>
+      <dontlinkdep>false</dontlinkdep>
+      <dontaddopt>false</dontaddopt>
+      <cflags></cflags>
+      <lflags></lflags>
+      <target_type>Executable</target_type>
+      <outname>stdlib_pp/stdlib_pp</outname>
+      <lib_install_path></lib_install_path>
+      <external_tasks/>
+      <restrictions></restrictions>
+      <dependencies></dependencies>
+    </target>
     <target name="gmisclib" default="false" id="8" sub_targets="" is_fl_package="true" subsystem="" readonly="false" visible="true" node_collapsed="false">
       <descr>Miscellaneous widgets based on LablGtk2.</descr>
       <byt>true</byt>
@@ -236,7 +261,7 @@
       <lib_install_path></lib_install_path>
       <external_tasks/>
       <restrictions></restrictions>
-      <dependencies>4,10,7,5,6,8,9,20,17,18,25</dependencies>
+      <dependencies>4,10,7,5,28,8,9,20,17,18,25</dependencies>
     </target>
     <target name="ocamleditor-msvc" default="false" id="15" sub_targets="" is_fl_package="false" subsystem="Console" readonly="false" visible="true" node_collapsed="false">
       <descr></descr>
@@ -335,7 +360,7 @@
       <lib_install_path></lib_install_path>
       <external_tasks/>
       <restrictions></restrictions>
-      <dependencies>4,10,5,6,8,9,20</dependencies>
+      <dependencies>4,10,5,28,8,9,20</dependencies>
     </target>
     <target name="plugin-remote-bytecode" default="false" id="17" sub_targets="" is_fl_package="false" subsystem="" readonly="false" visible="true" node_collapsed="false">
       <descr></descr>
@@ -801,6 +826,7 @@
       <target target_id="10" show="false"/>
       <target target_id="7" show="false"/>
       <target target_id="5" show="true"/>
+      <target target_id="28" show="true"/>
       <target target_id="8" show="true"/>
       <target target_id="9" show="false"/>
       <target target_id="12" show="true"/>
