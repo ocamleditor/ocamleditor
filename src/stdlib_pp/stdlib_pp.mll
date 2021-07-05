@@ -10,6 +10,15 @@ rule add_stdlib_prefix = parse
 
 {
 let main () =
+  (* This is mostly needed to detect the utiliity from the editor. [stdlib_pp] 
+     with no arguments will just hang. Not good.
+  *)
+  if Array.length Sys.argv > 1 && Sys.argv.(1) = "--help" then
+  begin
+    Format.printf "Usage: %s [filename]\n" @@ Filename.basename Sys.executable_name;
+    exit 0
+  end;
+
   let ch =
     if Array.length Sys.argv > 1 then
       let filename = Sys.argv.(1) in
