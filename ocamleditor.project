@@ -146,11 +146,11 @@
       <other_objects></other_objects>
       <files>stdlib_pp/stdlib_pp.ml</files>
       <package></package>
-      <includes></includes>
+      <includes>stdlib_pp</includes>
       <thread>false</thread>
       <vmthread>false</vmthread>
       <pp></pp>
-      <inline></inline>
+      <inline>20</inline>
       <nodep>false</nodep>
       <dontlinkdep>false</dontlinkdep>
       <dontaddopt>false</dontaddopt>
@@ -161,7 +161,7 @@
       <lib_install_path></lib_install_path>
       <external_tasks/>
       <restrictions></restrictions>
-      <dependencies></dependencies>
+      <dependencies>20</dependencies>
     </target>
     <target name="gmisclib" default="false" id="8" sub_targets="" is_fl_package="true" subsystem="" readonly="false" visible="true" node_collapsed="false">
       <descr>Miscellaneous widgets based on LablGtk2.</descr>
