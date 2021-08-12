@@ -143,11 +143,11 @@ module Signature = struct
       Format.pp_print_flush formatter ();
       (Buffer.contents buf)
     in
-    begin
-      match Printtyp.tree_of_class_declaration id cd Types.Trec_first with
-      | Osig_class (_, _, _, clt, _) ->
-          let rec parse_class_type = function
-            | Octy_signature (_, csil) ->
+      begin
+        match Printtyp.tree_of_class_declaration id cd Types.Trec_first with
+          | Osig_class (_(*vir_flag*), _(*name*), _(*params*), clt, _(*rs*)) ->
+            let rec parse_class_type = function
+              | Octy_signature (_(*self_ty*), csil) ->
                 List.filter_map begin function
                 | Ocsg_method (name, priv, virt, ty) ->
                     Some {
@@ -163,16 +163,16 @@ module Signature = struct
                     }
                 | _ -> None
                 end csil
-            | Octy_arrow (_, _, clt) -> parse_class_type clt
-            | _ -> []
-          in parse_class_type clt
-      | _ -> []
-    end [@warning "-fragile-match"]
+              | Octy_arrow (_, _, clt) -> parse_class_type clt
+              | _ -> []
+            in parse_class_type clt
+          | _ -> []
+      end
   ;;
 
   let rec read_module_type ~filename ~parent_longid = function
-    | Mty_ident _-> (* TODO: parse_module_type, Tmty_ident *)
-        []
+    | Mty_ident _(*path*) -> (* TODO: parse_module_type, Tmty_ident *)
+      []
     | Mty_signature signature ->
         let modlid = match parent_longid with x :: _ -> x | _ -> "" in
         let symbols = read' (signature, filename, modlid) in
@@ -211,37 +211,37 @@ module Signature = struct
                 let kind = kind_of_typekind type_declaration.type_kind in
                 (print kind id (Printtyp.type_declaration id formatter) type_declaration) :: acc
             | Some te ->
-                begin match Types.get_desc te with
+              begin [@warning "-4"] match Types.get_desc te with
                 | Tobject _ -> acc (* Niente definizione dei tipi oggetto *)
                 | _ ->
-                    let kind = kind_of_typekind type_declaration.type_kind in
-                    (print kind id (Printtyp.type_declaration id formatter) type_declaration) :: acc
-                end [@warning "-fragile-match"]
-            end
-          in
-          (* Costruttori di tipi varianti *)
-          begin match type_declaration.type_kind with
+                  let kind = kind_of_typekind type_declaration.type_kind in
+                  (print kind id (Printtyp.type_declaration id formatter) type_declaration) :: acc
+              end
+          end
+        in
+        (* Costruttori di tipi varianti *)
+        begin match type_declaration.type_kind with
           | Type_variant (cc, _) ->
-              List.fold_left begin fun acc
-                { cd_id = ident; cd_args = tel; cd_res = teo; _ } ->
-                let n = Ident.name ident in
-                let print_type_expr = print Pconstructor ident (Printtyp.type_expr formatter) in
-                let is_gadt = match teo with Some _ -> true | None -> false in
-                (* UGLY HACK *)
-                let tel = match tel with Cstr_tuple ct -> ct | Cstr_record _ -> [] in
-                let symbol =
-                  if List.length tel = 0 then
-                    print Pconstructor ident ignore ()
-                  else begin
-                    let items = List.map print_type_expr tel in
-                    ListLabels.fold_left
-                      ~f:begin fun acc it -> {
-                          sy_id        = acc.sy_id;
-                          sy_type      = acc.sy_type^" * "^it.sy_type;
-                          sy_kind      = acc.sy_kind;
-                          sy_filename  = filename;
-                          sy_local     = false;
-                        } end ~init:{
+            List.fold_left begin fun acc
+                                     { cd_id = ident; cd_args = tel; cd_res = teo; _ } ->
+              let n = Ident.name ident in
+              let print_type_expr = print Pconstructor ident (Printtyp.type_expr formatter) in
+              let is_gadt = match teo with Some _ -> true | None -> false in
+              (* UGLY HACK *)
+              let tel = match tel with Cstr_tuple ct -> ct | Cstr_record _ -> [] in
+              let symbol =
+                if List.length tel = 0 then
+                  print Pconstructor ident ignore ()
+                else begin
+                  let items = List.map print_type_expr tel in
+                  ListLabels.fold_left
+                    ~f:begin fun acc it -> {
+                      sy_id        = acc.sy_id;
+                      sy_type      = acc.sy_type^" * "^it.sy_type;
+                      sy_kind      = acc.sy_kind;
+                      sy_filename  = filename;
+                      sy_local     = false;
+                    } end ~init:{
                       sy_id        = [modlid; n];
                       sy_type      = "";
                       sy_kind      = Pconstructor;
@@ -257,8 +257,7 @@ module Signature = struct
                 {symbol with sy_type=d} :: acc
               end acc cc
           | _ -> acc
-          end [@warning "-fragile-match"]
-
+        end
       | Sig_typext (id, extension_constructor, _status, _visibility) ->
           (print Pexception id (Printtyp.extension_constructor id formatter)
              extension_constructor) :: acc;
@@ -271,13 +270,13 @@ module Signature = struct
       | Sig_modtype (id, _, _visibility) ->
           (print Pmodtype id (Printtyp.ident formatter) id) :: acc;
       | Sig_class (id, class_declaration, _, _visibility) ->
-          begin
-            let class_item = print Pclass id (Printtyp.class_declaration id formatter) class_declaration in
-            let class_items = read_class_declaration
-                ~filename ~parent_id:class_item.sy_id ~id class_declaration in
-            class_item :: class_items @ acc;
-          end
-      | Sig_class_type _ -> acc
+        begin
+          let class_item = print Pclass id (Printtyp.class_declaration id formatter) class_declaration in
+          let class_items = read_class_declaration
+            ~filename ~parent_id:class_item.sy_id ~id class_declaration in
+          class_item :: class_items @ acc;
+        end
+      | Sig_class_type _(*(id, cltype_declaration, _, _visibility)*) -> acc
     end [] sign
   ;;
 
@@ -301,9 +300,9 @@ module Signature = struct
               Persistent_env.report_error Format.err_formatter e;
               flush stderr;
               []
-        end [@warning "-fragile-match"]
-    | Not_found | Sys_error _ -> []
-    | Cmi_format.Error (Cmi_format.Not_an_interface msg) ->
+        end
+      | Not_found | Sys_error _ -> []
+      | Cmi_format.Error (Cmi_format.Not_an_interface msg) ->
         eprintf "Not_an_interface: %s\n" msg; []
     | Cmi_format.Error (Cmi_format.Wrong_version_interface (a, b)) ->
         eprintf "Wrong_version_interface: %s, %s\n" a b; []
