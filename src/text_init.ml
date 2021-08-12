@@ -34,7 +34,7 @@ let key_press view =
         if key = _Tab then begin
           let ocp_indent_applied =
             (match view#tbuffer#file with Some file when not (file#filename ^^^ ".ml") && not (file#filename ^^^ ".ml") -> false | _ -> true) &&
-            if Oe_config.ocp_indent_tab_key_enabled && Oe_config.ocp_indent_version <> None
+            if Oe_config.ocp_indent_tab_key_enabled
             then (Ocp_indent.indent ~view `SELECTION) else false
           in
           if not ocp_indent_applied then begin
@@ -108,7 +108,7 @@ let realize view =
         view#misc#modify_bg [`NORMAL, self#gutter.Gutter.bg_color];
         self#set_realized true
       end)
-  end 
+  end
 ;;
 
 (** select_lines_from_gutter *)

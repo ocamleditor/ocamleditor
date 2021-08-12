@@ -62,7 +62,7 @@ let edit ~browser ~group ~flags
   ignore (redo#connect#activate ~callback:(fun () -> editor#with_current_page (fun page -> page#redo())));
   redo#add_accelerator ~group ~modi:[`CONTROL; `SHIFT] GdkKeysyms._z ~flags;
   get_menu_item_redo := (fun () -> redo);
-  (** Cut & Paste... *)
+  (* Cut & Paste... *)
   let _ = GMenu.separator_item ~packing:menu#add () in
   let cut = image_menu_item ~label:"Cut" ~packing:menu#add () in
   cut#add_accelerator ~group ~modi:[`CONTROL] GdkKeysyms._x ~flags;
@@ -81,33 +81,33 @@ let edit ~browser ~group ~flags
     editor#with_current_page (fun page ->
       ignore(page#buffer#select_range page#buffer#start_iter page#buffer#end_iter))));
   select_all#add_accelerator ~group ~modi:[`CONTROL] GdkKeysyms._a ~flags;
-  (** Select Word *)
+  (* Select Word *)
   let _ = GMenu.separator_item ~packing:menu#add () in
   let select_word = GMenu.menu_item ~label:"Select Word" ~packing:menu#add () in
   ignore (select_word#connect#activate ~callback:(fun () ->
     editor#with_current_page (fun page ->
       ignore (page#ocaml_view#obuffer#select_ocaml_word ?pat:None ()))));
   select_word#add_accelerator ~group ~modi:[`CONTROL] GdkKeysyms._w ~flags;
-  (** Move to Matching Delimiter *)
+  (* Move to Matching Delimiter *)
   let move_par_expr = GMenu.menu_item ~label:"Move to Matching Delimiter" ~packing:menu#add () in
   ignore (move_par_expr#connect#activate ~callback:(fun () ->
     editor#with_current_page (fun page -> page#view#matching_delim_goto ?select:None ?strict:None ())));
   move_par_expr#add_accelerator ~group ~modi:[`CONTROL;] GdkKeysyms._d ~flags;
-  (** Select to Matching Delimiter *)
+  (* Select to Matching Delimiter *)
   let select_par_expr = GMenu.menu_item ~label:"Select to Matching Delimiter" ~packing:menu#add () in
   ignore (select_par_expr#connect#activate ~callback:(fun () ->
     editor#with_current_page (fun page ->
       ignore (page#view#matching_delim_goto ?select:(Some true) ?strict:None ()))));
   select_par_expr#add_accelerator ~group ~modi:[`CONTROL;`SHIFT] GdkKeysyms._d ~flags;
-  (** Comment/Uncomment *)
+  (* Comment/Uncomment *)
   let comment = GMenu.menu_item ~label:"Comment Block" ~packing:menu#add () in
   ignore (comment#connect#activate ~callback:(fun () ->
     editor#with_current_page (fun page -> ignore (page#ocaml_view#toggle_comment ()))));
   comment#add_accelerator ~group ~modi:[`CONTROL] GdkKeysyms._q ~flags;
-  (** Change To Uppercase/Lowercase *)
+  (* Change To Uppercase/Lowercase *)
   let toggle_case = GMenu.menu_item ~label:"Convert To Uppercase/Lowercase" ~packing:menu#add () in
   ignore (toggle_case#connect#activate ~callback:(fun () ->
-    editor#with_current_page (fun page -> page#buffer#toggle_case ())));
+      editor#with_current_page (fun page -> page#buffer#toggle_case ())));
   toggle_case#add_accelerator ~group ~modi:[`CONTROL] GdkKeysyms._u ~flags;
   (** Increase Selection Indent *)
   let increase_selection_indent = image_menu_item ~label:"Increase Selection Indent" ~stock:`INDENT ~packing:menu#add () in
@@ -119,10 +119,9 @@ let edit ~browser ~group ~flags
   ignore (decrease_selection_indent#connect#activate ~callback:(fun () ->
     editor#with_current_page (fun page -> page#buffer#indent ?decrease:(Some true) ())));
   decrease_selection_indent#add_accelerator ~group ~modi:[`SHIFT] GdkKeysyms._Tab ~flags;
-  (** Indent Selection (ocp-indent) *)
+  (* Indent Selection (ocp-indent) *)
   let indent_selection = ref None in
   let indent_all = ref None in
-  if Oe_config.ocp_indent_version <> None then begin
     let item = image_menu_item ~label:"Indent Line/Selection" ~packing:menu#add () in
     let ocp_indent bounds page = ignore (Ocp_indent.indent ~view:page#view bounds) in
     indent_selection := Some item;
@@ -133,14 +132,13 @@ let edit ~browser ~group ~flags
     indent_all := Some item;
     (*item#set_image (GMisc.image ~stock:`INDENT ~icon_size:`MENU ())#coerce;*)
     ignore (item#connect#activate ~callback:(fun () -> editor#with_current_page (ocp_indent `ALL)));
-  end;
   (** Templates *)
   let templates = GMenu.menu_item ~label:"Templates..." ~packing:menu#add () in
   ignore (templates#connect#activate ~callback:(fun () ->
     browser#with_current_project (fun project ->
       editor#with_current_page (fun page -> Templ.popup project page#ocaml_view))));
   templates#add_accelerator ~group ~modi:[`CONTROL] GdkKeysyms._j ~flags;
-  (** Completion *)
+  (* Completion *)
   let complet = GMenu.menu_item ~label:"Completion" ~packing:menu#add () in
   ignore (complet#connect#activate ~callback:begin fun () ->
     browser#with_current_project begin fun project ->

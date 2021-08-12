@@ -92,7 +92,6 @@ let to_string () =
      70, "xdg-open", (Option.value Oe_config.xdg_open_version ~default:"<Not Found>");
    ]) @ [
     70, "dot", (Option.value Oe_config.dot_version ~default:"<Not Found>");
-    70, "ocp-indent", (Option.value Oe_config.ocp_indent_version ~default:"<Not Found>");
     50, "findlib", (Option.value (findlib_package_exists "findlib") ~default:"<Not Found>");
     50, "lablgtk2", (Option.value (findlib_package_exists "lablgtk2") ~default:"<Not Found>");
     50, "diff", (Option.value (findlib_package_exists "diff") ~default:"<Not Found>");
