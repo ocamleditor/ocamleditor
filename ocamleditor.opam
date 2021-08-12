@@ -22,10 +22,10 @@ depends: [
   "ocaml-compiler-libs"
   "ocamlfind" {>= "1.4.0"}
   "lablgtk" {>= "2.18.0"}
+  "ocp-indent" { >= "1.8.0" } 
   "xml-light" {>= "2.2"}
 ]
 depopts: [
-  "ocp-indent"
   "ocurl"
   "ocamldiff"
 ]

@@ -20,9 +20,6 @@
 
 *)
 
-
-open Printf
-open Miscellanea
 open Pref_page
 open Pref_color
 
@@ -132,13 +129,7 @@ object (self)
     let row = model#append ~parent () in self#create "Display" row (new Pref_editor_display.pref_editor_display);
     let row = model#append ~parent () in self#create "Actions" row (new pref_editor_actions);
     let row = model#append ~parent () in self#create "Completion" row (new pref_editor_compl);
-    let _ =
-      match Oe_config.ocp_indent_version with
-        | None -> ()
-        | _ ->
-          let row = model#append ~parent () in
-          self#create "Indentation" row (new Pref_editor_indent.pref_editor_indent);
-    in
+    let row = model#append ~parent () in self#create "Indentation" row (new Pref_editor_indent.pref_editor_indent);
     let row = model#append ~parent () in self#create "Code Templates" row (new pref_templ);
     let row = model#append () in self#create "Build" row (new pref_build);
     let row = model#append () in self#create ~idle:true "External Programs" row (new pref_program_pdf_viewer);
@@ -314,7 +305,7 @@ and pref_editor title ?packing () =
   let check_tab_spaces      = GButton.check_button ~label:"Use spaces instead of tabs" ~packing:tbox#add () in
   let _                     = check_tab_spaces#misc#set_sensitive false in
   let check_wrap            = GButton.check_button ~label:"Wrap text, breaking lines between words" ~packing:box#pack () in
-  (** Line spacing *)
+  (* Line spacing *)
   let align                 = create_align ~title:"Spacing" ~vbox () in
   let box                   = GPack.table ~row_spacings ~col_spacings ~packing:align#add () in
   let _                     = GMisc.label ~text:"Left margin (pixels):" ~xalign:0. ~packing:(box#attach ~top:0 ~left:0) () in
@@ -326,7 +317,7 @@ and pref_editor title ?packing () =
   let _                     = GMisc.label ~text:"Pixels below lines:" ~xalign:0. ~packing:(box#attach ~top:2 ~left:0) () in
   let adjustment            = GData.adjustment ~page_size:0.0 () in
   let entry_pixels_below    = GEdit.spin_button ~adjustment ~rate:1.0 ~digits:0 ~numeric:true ~packing:(box#attach ~top:2 ~left:1) () in
-  (** Error indication *)
+  (* Error indication *)
   let align                 = create_align ~title:"Error Indication" ~vbox () in
   let box                   = GPack.table ~row_spacings ~col_spacings ~packing:align#add () in
   let check_error_underline = GButton.check_button ~label:"Underline errors" ~packing:(box#attach ~top:0 ~left:0) () in

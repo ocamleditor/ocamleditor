@@ -52,13 +52,12 @@ let create ~editor ~page () =
   let select_all = GMenu.image_menu_item ~stock:`SELECT_ALL ~packing:gmenu#append () in
   gmenu#append (GMenu.separator_item ());
   (*  *)
-  if Oe_config.ocp_indent_version <> None then begin
     let indent_all = GMenu.image_menu_item ~label:"Indent All" ~packing:gmenu#append () in
     ignore (indent_all#connect#activate ~callback:begin fun () ->
-      editor#with_current_page (fun page -> ignore (Ocp_indent.indent ~view:page#view `ALL));
-    end);
+        editor#with_current_page (fun page -> ignore (Ocp_indent.indent ~view:page#view `ALL));
+      end);
     gmenu#append (GMenu.separator_item ());
-  end;
+  
   (*  *)
   let show_doc_at_cursor = GMenu.image_menu_item ~label:"Show Documentation" ~packing:gmenu#append () in
   show_doc_at_cursor#connect#activate ~callback:editor#show_doc_at_cursor |> ignore;
