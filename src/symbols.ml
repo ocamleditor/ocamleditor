@@ -27,6 +27,7 @@ open Oe
 open Miscellanea
 open Printf
 
+let ocaml_stdlib = Ocaml_config.ocamllib ()
 let strip_prefix = Miscellanea.strip_prefix
 
 let get_parent_path symbol =
@@ -124,7 +125,14 @@ module Signature = struct
     | Type_open -> Ptype
 
   let find_path modlid =
-    Misc.find_in_path_uncap (Load_path.get_paths ()) (modlid^(".cmi"))
+    try
+      Misc.find_in_path_uncap (Load_path.get_paths ()) (modlid^(".cmi"))
+    with Not_found ->
+      (* Stdlib workaround, since Arg is compiled to stdlib__arg.cmi, and so on *)
+      let basename = "stdlib__" ^ String.uncapitalize_ascii modlid ^ ".cmi" in
+      let filename = Filename.concat ocaml_stdlib basename in
+      if Sys.file_exists filename then filename
+      else raise Not_found
 
   let read_class_declaration ~filename ~parent_id ~id cd =
     let buf = Buffer.create 1024 in
@@ -273,18 +281,21 @@ module Signature = struct
     end [] sign
   ;;
 
-  let rec read'' (filename, modlid) =
+  let rec read'' ?(reset = false) (filename, modlid) =
     try
-      let sign = Env.read_signature modlid filename in
+      (* Stdlib workaround, since Arg is compiled to stdlib__arg.cmi, and so on *)
+      let basename = Filename.basename filename in
+      let compiled_modlid = Filename.chop_suffix basename ".cmi" |> String.capitalize_ascii in
+      let sign = Env.read_signature compiled_modlid filename in
+
       read' (sign, filename, modlid)
     with
       | (Persistent_env.Error e as exc) ->
         begin
-          match e with
-            | Persistent_env.Inconsistent_import _ ->
+          match e, reset with
+            | Persistent_env.Inconsistent_import _, false ->
               Env.reset_cache();
-              read'' ((*None, *)filename, modlid)
-            | Persistent_env.Illegal_renaming _ -> raise Not_found
+              read'' ~reset: true (filename, modlid)
             | _ ->
               Printf.eprintf "File \"symbol.ml\": %s\n%s\n%!" (Printexc.to_string exc) (Printexc.get_backtrace());
               Persistent_env.report_error Format.err_formatter e;
