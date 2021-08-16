@@ -42,6 +42,7 @@ type t = {
   mutable pref_editor_bak                   : bool;
   mutable pref_editor_wrap                  : bool;
   mutable pref_editor_trim_lines            : bool;
+  mutable pref_editor_format_on_save        : bool;
   mutable pref_editor_custom_templ_filename : string;
   mutable pref_editor_mark_occurrences      : bool * string;
   mutable pref_editor_left_margin           : int;
@@ -217,6 +218,7 @@ let create_defaults () = {
   pref_editor_bak                   = true;
   pref_editor_wrap                  = false;
   pref_editor_trim_lines            = false;
+  pref_editor_format_on_save        = false;
   pref_editor_custom_templ_filename = "";
   pref_editor_mark_occurrences      = true, "#00FF00";
   pref_editor_left_margin           = 1;
@@ -393,6 +395,7 @@ let to_xml pref =
       Xml.Element ("pref_editor_tab_spaces", [], [Xml.PCData (string_of_bool pref.pref_editor_tab_spaces)]);
       Xml.Element ("pref_editor_wrap", [], [Xml.PCData (string_of_bool pref.pref_editor_wrap)]);
       Xml.Element ("pref_editor_trim_lines", [], [Xml.PCData (string_of_bool pref.pref_editor_trim_lines)]);
+      Xml.Element ("pref_editor_format_on_save", [], [Xml.PCData (string_of_bool pref.pref_editor_format_on_save)]);
       Xml.Element ("pref_editor_bak", [], [Xml.PCData (string_of_bool pref.pref_editor_bak)]);
       begin
         let enabled, color = pref.pref_editor_mark_occurrences in
@@ -538,6 +541,7 @@ let from_file filename =
         | "pref_editor_tab_spaces" -> pref.pref_editor_tab_spaces <- bool_of_string (value node)
         | "pref_editor_wrap" -> pref.pref_editor_wrap <- bool_of_string (value node)
         | "pref_editor_trim_lines" -> pref.pref_editor_trim_lines <- bool_of_string (value node)
+        | "pref_editor_format_on_save" -> pref.pref_editor_format_on_save <- bool_of_string (value node)
         | "pref_editor_bak" -> pref.pref_editor_bak <- bool_of_string (value node)
         | "pref_editor_custom_templ_filename" -> pref.pref_editor_custom_templ_filename <- value node
         | "pref_editor_mark_occurrences" -> pref.pref_editor_mark_occurrences <- ((bool_of_string (Xml.attrib node "enabled")), value node)
