@@ -188,6 +188,7 @@ and pref_editor_actions title ?packing () =
   (*let check_save_all_bef_comp     = GButton.check_button ~label:"Save all before compiling" ~packing:box#pack () in*)
   let check_bak                   = GButton.check_button ~label:"Create a backup copy of files before saving" ~packing:box#pack () in
   let check_trim                  = GButton.check_button ~label:"Strip trailing whitespace" ~packing:box#pack () in
+  let check_autoformat            = GButton.check_button ~label:"Auto-format on save" ~packing:box#pack () in
   (* Searching *)
   let align                       = create_align ~title:"Searching" ~vbox () in
   let box                         = GPack.vbox ~spacing:row_spacings ~packing:align#add () in
@@ -201,6 +202,7 @@ object
   method write pref =
     pref.Preferences.pref_editor_bak <- check_bak#active;
     pref.Preferences.pref_editor_trim_lines <- check_trim#active;
+    pref.Preferences.pref_editor_format_on_save <- check_autoformat#active;
     pref.Preferences.pref_smart_keys_home <- combo_home#active;
     pref.Preferences.pref_smart_keys_end <- combo_end#active;
 (*    pref.Preferences.pref_annot_type_tooltips_enabled <- check_annot_type_enabled#active;
@@ -212,6 +214,7 @@ object
   method read pref =
     check_bak#set_active pref.Preferences.pref_editor_bak;
     check_trim#set_active pref.Preferences.pref_editor_trim_lines;
+    check_autoformat#set_active pref.Preferences.pref_editor_format_on_save;
     combo_home#set_active pref.Preferences.pref_smart_keys_home;
     combo_end#set_active pref.Preferences.pref_smart_keys_end;
 (*    check_annot_type_enabled#set_active pref.Preferences.pref_annot_type_tooltips_enabled;

@@ -445,7 +445,7 @@ class editor () =
           self#location_history_add ~page ~iter ~kind:`EDIT ();
         in
         buffer#add_signal_handler (buffer#connect#insert_text ~callback);
-        buffer#add_signal_handler (buffer#connect#after#delete_range ~callback:(fun ~start ~stop -> callback start ()));
+        buffer#add_signal_handler (buffer#connect#after#delete_range ~callback:(fun ~start ~stop -> callback start stop));
         (* Mark Set *)
         buffer#add_signal_handler (buffer#connect#after#mark_set ~callback:begin fun _ mark ->
             let is_insert = match GtkText.Mark.get_name mark with Some "insert" -> true | _ -> false in
@@ -674,12 +674,13 @@ class editor () =
         | _ -> Dialog_rename.window ~editor:self ~page ()
 
     method save (page : Editor_page.page) =
-      (*    try*)
-      if Preferences.preferences#get.Preferences.pref_editor_trim_lines
-      then (page#buffer#trim_lines());
+      let pref = Preferences.preferences#get in
+      if pref.pref_editor_trim_lines
+      then page#buffer#trim_lines ();
+      if pref.pref_editor_format_on_save
+      then ignore @@ Ocp_indent.indent ~view:page#view `ALL;
       page#save();
       file_saved#call page#get_filename;
-      (*    with Not_found -> ()*)
 
     method dialog_confirm_close = Editor_dialog.confirm_close ~editor:self
 
