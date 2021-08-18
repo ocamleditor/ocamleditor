@@ -1,6 +1,6 @@
 opam-version: "2.0"
 name: "ocamleditor"
-version: "1.1.34~preview.4.11"
+version: "1.14.0"
 
 synopsis:
   "OCamlEditor is a GTK+ source code editor and build tool for OCaml"
@@ -22,7 +22,7 @@ depends: [
   "ocaml-compiler-libs"
   "ocamlfind" {>= "1.4.0"}
   "lablgtk" {>= "2.18.0"}
-  "ocp-indent" { >= "1.8.0" } 
+  "ocp-indent" { >= "1.8.0" }
   "xml-light" {>= "2.2"}
 ]
 depopts: [

@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- OCamlEditor-1.13.4 XML Project -->
+<!-- OCamlEditor-1.14.0 XML Project -->
 <project>
   <ocaml_home></ocaml_home>
   <ocamllib></ocamllib>
@@ -659,7 +659,7 @@
           <cmd>ocaml</cmd>
           <args>
             <arg enabled="true">mkversion.ml</arg>
-            <arg enabled="true">1.13.4</arg>
+            <arg enabled="true">1.14.0</arg>
           </args>
           <phase>Before_clean</phase>
         </task>
