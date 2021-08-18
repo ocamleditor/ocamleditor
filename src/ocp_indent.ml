@@ -19,18 +19,38 @@
   along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 *)
+open Option_syntax
 
-let indent_config ~pref =
-  let editor_config = Preferences.(pref.pref_editor_indent_config) in
-  match String.trim editor_config with
-  | "" -> IndentConfig.default
-  | config  -> IndentConfig.(update_from_string default config)
+let ( // ) = Filename.concat
+
+let file_exists files =
+  let exception File_found of string in
+  try
+    List.iter (fun file -> if Sys.file_exists file then raise (File_found file)) files;
+    None
+  with File_found file -> Some file
+
+let find_ocp_indent_config project =
+  let root = Prj.(project.root) in
+  let+ config_file = file_exists [ root // "src" // ".ocp-indent"; root // ".ocp-indent" ] in
+  try
+    Some (Printexc.print File_util.read config_file |> Buffer.contents)
+  with _ -> None
+
+let indent_config ~project ~pref =
+  match find_ocp_indent_config project with
+  | Some file_config -> IndentConfig.(update_from_string default file_config)
+  | None ->
+    let config = Preferences.(pref.pref_editor_indent_config) in
+    match String.trim config with
+    | "" -> IndentConfig.default
+  | editor_config  -> IndentConfig.(update_from_string default editor_config)
 
 let collect (n : int) offsets = n :: offsets
 
-let output ~pref start stop = IndentPrinter.{
+let output ~project ~pref start stop = IndentPrinter.{
     debug = false;
-    config = indent_config ~pref;
+    config = indent_config ~project ~pref;
     in_lines = (fun n -> n >= start && n <= stop);
     indent_empty = false;
     adaptive = false;
@@ -53,7 +73,7 @@ let contents (buffer : GText.buffer) =
   buffer#get_text ~start ~stop ()
 
 (** indent *)
-let indent ~view bounds =
+let indent ~project ~view bounds =
   let pref = Preferences.preferences#get in
   let buffer = view#tbuffer in
   let indent () =
@@ -69,7 +89,7 @@ let indent ~view bounds =
 
     let contents = contents buffer#as_gtext_buffer in
     let ns = Nstream.of_string contents in
-    let offsets = IndentPrinter.proceed (output ~pref start_line stop_line) ns IndentBlock.empty [] in
+    let offsets = IndentPrinter.proceed (output ~project ~pref start_line stop_line) ns IndentBlock.empty [] in
     let lines = List.rev offsets in
 
     buffer#undo#begin_block ~name:"ocp-indent";

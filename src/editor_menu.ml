@@ -54,10 +54,10 @@ let create ~editor ~page () =
   (*  *)
     let indent_all = GMenu.image_menu_item ~label:"Indent All" ~packing:gmenu#append () in
     ignore (indent_all#connect#activate ~callback:begin fun () ->
-        editor#with_current_page (fun page -> ignore (Ocp_indent.indent ~view:page#view `ALL));
+        editor#with_current_page (fun page -> ignore (Ocp_indent.indent ~project: editor#project ~view:page#view `ALL));
       end);
     gmenu#append (GMenu.separator_item ());
-  
+
   (*  *)
   let show_doc_at_cursor = GMenu.image_menu_item ~label:"Show Documentation" ~packing:gmenu#append () in
   show_doc_at_cursor#connect#activate ~callback:editor#show_doc_at_cursor |> ignore;

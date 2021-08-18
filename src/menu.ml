@@ -115,7 +115,7 @@ let edit ~browser ~group ~flags
   let indent_selection = ref None in
   let indent_all = ref None in
   let item = GMenu.image_menu_item ~label:"Indent Line/Selection" ~packing:menu#add () in
-  let ocp_indent bounds page = ignore (Ocp_indent.indent ~view:page#view bounds) in
+  let ocp_indent bounds page = ignore (Ocp_indent.indent ~project: editor#project ~view:page#view bounds) in
   indent_selection := Some item;
   (*item#set_image (GMisc.image ~stock:`INDENT ~icon_size:`MENU ())#coerce;*)
   ignore (item#connect#activate ~callback:(fun () -> editor#with_current_page (ocp_indent `SELECTION)));
