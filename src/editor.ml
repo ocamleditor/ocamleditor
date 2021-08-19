@@ -686,7 +686,7 @@ class editor () =
       if pref.pref_editor_trim_lines
       then page#buffer#trim_lines ();
       if pref.pref_editor_format_on_save
-      then ignore @@ Ocp_indent.indent ~view:page#view `ALL;
+      then ignore @@ Ocp_indent.indent ~project: self#project ~view:page#view `ALL;
       page#save();
       file_saved#call page#get_filename;
 
