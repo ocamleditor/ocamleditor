@@ -125,6 +125,8 @@ make some aspects of the syntax more obvious for beginners, and
 `JaneStreet'.
 |}
 
+let ocp_indent_options_markup = "<b>ocp-indent --config</b> <i>(*Will be ignored if the project contains an .ocp-indent file*)</i>"
+
 (** pref_editor_indent *)
 class pref_editor_indent title ?packing () =
   let vbox        = GPack.vbox ~spacing ?packing () in
@@ -134,7 +136,7 @@ class pref_editor_indent title ?packing () =
       "Indent according to formatting options"; "Indent to match preceding line";
     ] ~packing:box#add () in
   let box         = GPack.vbox ~spacing:2 ~packing:vbox#pack () in
-  let _           = GMisc.label ~markup:"ocp-indent --config" ~xalign:0.0 ~packing:box#pack () in
+  let _           = GMisc.label ~markup: ocp_indent_options_markup ~xalign:0.0 ~packing:box#pack () in
   let box         = GPack.vbox ~spacing:5 ~packing:box#add () in
   let buffer      = GText.buffer () in
   let sw          = GBin.scrolled_window ~hpolicy:`AUTOMATIC ~vpolicy:`AUTOMATIC ~shadow_type:`IN ~packing:box#add () in
@@ -151,7 +153,6 @@ class pref_editor_indent title ?packing () =
     view_help#set_left_margin 2;
     view_help#set_right_margin 2;
     view_help#set_editable false;
-(*    view_help#misc#modify_base *)
     view#set_wrap_mode `WORD;
     view_help#set_wrap_mode `WORD;
     let pref = Preferences.preferences#get in
