@@ -19,18 +19,40 @@
   along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 *)
+open Option_syntax
 
-let indent_config ~pref =
-  let editor_config = Preferences.(pref.pref_editor_indent_config) in
-  match String.trim editor_config with
-  | "" -> IndentConfig.default
-  | config  -> IndentConfig.(update_from_string default config)
+let ( // ) = Filename.concat
+
+let file_exists files =
+  let exception File_found of string in
+  try
+    List.iter (fun file -> if Sys.file_exists file then raise (File_found file)) files;
+    None
+  with File_found file -> Some file
+
+let find_ocp_indent_config' project =
+  let root = Prj.(project.root) in
+  let+ config_file = file_exists [ root // "src" // ".ocp-indent"; root // ".ocp-indent" ] in
+  try
+    Some (Printexc.print File_util.read config_file |> Buffer.contents)
+  with _ -> None
+
+let find_ocp_indent_config = Miscellanea.Memo.fast ~f:find_ocp_indent_config'
+
+let indent_config ~project ~pref =
+  match find_ocp_indent_config project with
+  | Some file_config -> IndentConfig.(update_from_string default file_config)
+  | None ->
+      let config = Preferences.(pref.pref_editor_indent_config) in
+      match String.trim config with
+    | "" -> IndentConfig.default
+      | editor_config  -> IndentConfig.(update_from_string default editor_config)
 
 let collect (n : int) offsets = n :: offsets
 
-let output ~pref start stop = IndentPrinter.{
+let output ~project ~pref start stop = IndentPrinter.{
     debug = false;
-    config = indent_config ~pref;
+    config = indent_config ~project ~pref;
     in_lines = (fun n -> n >= start && n <= stop);
     indent_empty = false;
     adaptive = false;
@@ -48,12 +70,19 @@ let forward_non_blank iter =
   in
   f iter, !is_dirty
 
+let ensure_last_newline (buffer : GText.buffer) =
+  if buffer#end_iter#line_offset > 0 then begin
+    let insert_mark = buffer#create_mark @@ buffer#get_iter_at_mark `INSERT in
+    buffer#insert ~iter: buffer#end_iter "\n";
+    buffer#place_cursor ~where: (buffer#get_iter_at_mark @@ `MARK insert_mark)
+  end
+
 let contents (buffer : GText.buffer) =
   let start, stop = buffer#start_iter, buffer#end_iter in
   buffer#get_text ~start ~stop ()
 
 (** indent *)
-let indent ~view bounds =
+let indent ~project ~view bounds =
   let pref = Preferences.preferences#get in
   let buffer = view#tbuffer in
   let indent () =
@@ -61,7 +90,8 @@ let indent ~view bounds =
       match bounds with
       | `SELECTION -> buffer#selection_bounds
       | `BOUNDS iters -> iters
-      | `ALL -> buffer#start_iter, buffer#end_iter
+      | `ALL -> ensure_last_newline buffer#as_gtext_buffer;
+         	buffer#start_iter, buffer#end_iter
     in
     let start, stop = if start#compare stop > 0 then stop, start else start, stop in
     let stop = if not (stop#equal start) then stop#backward_line#forward_to_line_end else stop in
@@ -69,7 +99,7 @@ let indent ~view bounds =
 
     let contents = contents buffer#as_gtext_buffer in
     let ns = Nstream.of_string contents in
-    let offsets = IndentPrinter.proceed (output ~pref start_line stop_line) ns IndentBlock.empty [] in
+    let offsets = IndentPrinter.proceed (output ~project ~pref start_line stop_line) ns IndentBlock.empty [] in
     let lines = List.rev offsets in
 
     buffer#undo#begin_block ~name:"ocp-indent";
@@ -111,12 +141,3 @@ let indent ~view bounds =
       (if pref.Preferences.pref_editor_indent_empty_line then indent() else false)
     else if ins#ends_line then false else indent ()
   end else indent ()
-
-
-
-
-
-
-
-
-
