@@ -123,7 +123,7 @@ let edit ~browser ~group ~flags
   let item = GMenu.image_menu_item ~label:"Indent All" ~packing:menu#add () in
   indent_all := Some item;
   (*item#set_image (GMisc.image ~stock:`INDENT ~icon_size:`MENU ())#coerce;*)
-  item#add_accelerator ~group ~modi:[`CONTROL; `SHIFT] GdkKeysyms._I ~flags;
+  item#add_accelerator ~group ~modi:[`CONTROL; `SHIFT] GdkKeysyms._f ~flags;
   ignore (item#connect#activate ~callback:(fun () -> editor#with_current_page (ocp_indent `ALL)));
 
   (* Templates *)
