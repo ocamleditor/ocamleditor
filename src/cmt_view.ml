@@ -680,7 +680,7 @@ object (self)
     match item.sig_desc with
       | Tsig_value { Typedtree.val_name; val_loc; val_desc; _ } ->
         Odoc_info.reset_type_names();
-        let typ = string_of_type_expr val_desc.ctyp_type in
+        let typ = Odoc_info.string_of_type_expr val_desc.ctyp_type in
         ignore (self#append ?parent ~kind:Function ~loc:val_loc ~loc_body:val_desc.ctyp_loc val_name.txt typ);
       | Tsig_type (_, decls) -> List.iter (self#append_type ?parent) decls
       (*| Tsig_exception { Typedtree.ext_kind; ext_name = loc; _ } ->

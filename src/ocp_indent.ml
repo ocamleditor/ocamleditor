@@ -19,25 +19,43 @@
   along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 *)
+open Option_syntax
 
+let ( // ) = Filename.concat
 
-open Printf
-open Miscellanea
+let file_exists files =
+  let exception File_found of string in
+  try
+    List.iter (fun file -> if Sys.file_exists file then raise (File_found file)) files;
+    None
+  with File_found file -> Some file
 
-(** mk_ocp_indent_command *)
-let mk_ocp_indent_command ?lines ~pref filename =
-  let config = pref.Preferences.pref_editor_indent_config in
-  let lines =
-    match lines with
-      | Some (n1, n2) -> sprintf " --lines %d-%d" n1 n2
-      | _ -> ""
-  in
-  let config =
+let find_ocp_indent_config project =
+  let root = Prj.(project.root) in
+  let+ config_file = file_exists [ root // "src" // ".ocp-indent"; root // ".ocp-indent" ] in
+  try
+    Some (Printexc.print File_util.read config_file |> Buffer.contents)
+  with _ -> None
+
+let indent_config ~project ~pref =
+  match find_ocp_indent_config project with
+  | Some file_config -> IndentConfig.(update_from_string default file_config)
+  | None ->
+    let config = Preferences.(pref.pref_editor_indent_config) in
     match String.trim config with
-      | "" -> ""
-      | c -> " -c " ^ c
-  in
-  sprintf "ocp-indent --numeric%s%s %s" lines config filename;;
+    | "" -> IndentConfig.default
+  | editor_config  -> IndentConfig.(update_from_string default editor_config)
+
+let collect (n : int) offsets = n :: offsets
+
+let output ~project ~pref start stop = IndentPrinter.{
+    debug = false;
+    config = indent_config ~project ~pref;
+    in_lines = (fun n -> n >= start && n <= stop);
+    indent_empty = false;
+    adaptive = false;
+    kind = Numeric collect
+  }
 
 (** forward_non_blank *)
 let forward_non_blank iter =
@@ -50,54 +68,59 @@ let forward_non_blank iter =
   in
   f iter, !is_dirty
 
+let contents (buffer : GText.buffer) =
+  let start, stop = buffer#start_iter, buffer#end_iter in
+  buffer#get_text ~start ~stop ()
+
 (** indent *)
-let indent ~view bounds =
+let indent ~project ~view bounds =
   let pref = Preferences.preferences#get in
   let buffer = view#tbuffer in
   let indent () =
-    match buffer#save_buffer ?filename:None () with
-      | filename, _ ->
-        let start, stop =
-          match bounds with
-            | `SELECTION -> buffer#selection_bounds
-            | `BOUNDS iters -> iters
-            | `ALL -> buffer#start_iter, buffer#end_iter
-        in
-        let start, stop = if start#compare stop > 0 then stop, start else start, stop in
-        let stop = if not (stop#equal start) then stop#backward_line#forward_to_line_end else stop in
-        let lines = start#line + 1, stop#line + 1 in
-        let cmd = mk_ocp_indent_command ~lines ~pref filename in
-        let lines = Shell.get_command_output cmd in
-        buffer#undo#begin_block ~name:"ocp-indent";
-        buffer#block_signal_handlers();
-        let start_line = start#line in
-        let start_line_index = start#line_index in
-        List.iteri begin fun i spaces ->
-          let spaces = int_of_string spaces in
-          let start = buffer#get_iter (`LINE (start_line + i)) in
-          let stop, is_dirty = forward_non_blank start in
-          let existing = stop#line_index - start#line_index in
-          if existing < spaces && not is_dirty then begin
-            let start = buffer#get_iter (`LINE (start_line + i)) in
-            buffer#insert ?iter:(Some start) ?tag_names:None ?tags:None (Alignment.mk_spaces (spaces - existing));
-          end else if existing > spaces && not is_dirty then begin
-            buffer#delete ~start ~stop:(start#set_line_index (existing - spaces));
-          end else if (*existing <> spaces ||*) is_dirty then begin
-            buffer#delete ~start ~stop;
-            let start = buffer#get_iter (`LINE (start_line + i)) in
-            buffer#insert ?iter:(Some start) ?tag_names:None ?tags:None (Alignment.mk_spaces spaces);
-          end
-        end lines;
-        (*  *)
-        if bounds = `SELECTION && buffer#has_selection then begin
-          let m = if (buffer#get_iter `INSERT)#compare (buffer#get_iter `SEL_BOUND) < 0
-            then `INSERT else `SEL_BOUND in
-          buffer#move_mark m ~where:(buffer#get_iter_at_char ?line:(Some start_line) start_line_index);
-        end;
-        buffer#unblock_signal_handlers();
-        buffer#undo#end_block ();
-        view#draw_current_line_background ?force:(Some true) (buffer#get_iter `INSERT);
-        true
+    let start, stop =
+      match bounds with
+      | `SELECTION -> buffer#selection_bounds
+      | `BOUNDS iters -> iters
+      | `ALL -> buffer#start_iter, buffer#end_iter
+    in
+    let start, stop = if start#compare stop > 0 then stop, start else start, stop in
+    let stop = if not (stop#equal start) then stop#backward_line#forward_to_line_end else stop in
+    let start_line, stop_line = start#line + 1, stop#line + 1 in
+
+    let contents = contents buffer#as_gtext_buffer in
+    let ns = Nstream.of_string contents in
+    let offsets = IndentPrinter.proceed (output ~project ~pref start_line stop_line) ns IndentBlock.empty [] in
+    let lines = List.rev offsets in
+
+    buffer#undo#begin_block ~name:"ocp-indent";
+    buffer#block_signal_handlers();
+    let start_line = start#line in
+    let start_line_index = start#line_index in
+    List.iteri begin fun i spaces ->
+      let start = buffer#get_iter (`LINE (start_line + i)) in
+      let stop, is_dirty = forward_non_blank start in
+      let existing = stop#line_index - start#line_index in
+      if existing < spaces && not is_dirty then begin
+        let start = buffer#get_iter (`LINE (start_line + i)) in
+        buffer#insert ?iter:(Some start) ?tag_names:None ?tags:None (Alignment.mk_spaces (spaces - existing));
+      end else if existing > spaces && not is_dirty then begin
+        buffer#delete ~start ~stop:(start#set_line_index (existing - spaces));
+      end else if (*existing <> spaces ||*) is_dirty then begin
+        buffer#delete ~start ~stop;
+        let start = buffer#get_iter (`LINE (start_line + i)) in
+        buffer#insert ?iter:(Some start) ?tag_names:None ?tags:None (Alignment.mk_spaces spaces);
+      end
+    end lines;
+
+    if bounds = `SELECTION && buffer#has_selection then begin
+      let m = if (buffer#get_iter `INSERT)#compare (buffer#get_iter `SEL_BOUND) < 0
+        then `INSERT else `SEL_BOUND in
+      buffer#move_mark m ~where:(buffer#get_iter_at_char ?line:(Some start_line) start_line_index);
+    end;
+    buffer#unblock_signal_handlers();
+    buffer#undo#end_block ();
+    view#draw_current_line_background ?force:(Some true) (buffer#get_iter `INSERT);
+    true
   in
   if bounds = `SELECTION && not buffer#has_selection then begin
     let ins = buffer#get_iter `INSERT in

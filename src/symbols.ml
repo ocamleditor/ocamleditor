@@ -27,6 +27,7 @@ open Oe
 open Miscellanea
 open Printf
 
+let ocaml_stdlib = Ocaml_config.ocamllib ()
 let strip_prefix = Miscellanea.strip_prefix
 
 let get_parent_path symbol =
@@ -51,7 +52,7 @@ let split_value_path id = Longident.flatten (Parse.longident @@ Lexing.from_stri
 
 let string_of_id = String.concat "."
 
-let module_name_of_cmi filename = 
+let module_name_of_cmi filename =
   let basename = strip_prefix "stdlib__" @@ Filename.chop_suffix filename ".cmi" in
   String.capitalize_ascii basename
 
@@ -124,7 +125,14 @@ module Signature = struct
     | Type_open -> Ptype
 
   let find_path modlid =
-    Misc.find_in_path_uncap (Load_path.get_paths ()) (modlid^(".cmi"))
+    try
+      Misc.find_in_path_uncap (Load_path.get_paths ()) (modlid^(".cmi"))
+    with Not_found ->
+      (* Stdlib workaround, since Arg is compiled to stdlib__arg.cmi, and so on *)
+      let basename = "stdlib__" ^ String.uncapitalize_ascii modlid ^ ".cmi" in
+      let filename = Filename.concat ocaml_stdlib basename in
+      if Sys.file_exists filename then filename
+      else raise Not_found
 
   let read_class_declaration ~filename ~parent_id ~id cd =
     let buf = Buffer.create 1024 in
@@ -137,9 +145,9 @@ module Signature = struct
     in
       begin
         match Printtyp.tree_of_class_declaration id cd Types.Trec_first with
-          | Osig_class (_(*vir_flag*), _(*name*), _(*params*), clt, _(*rs*)) ->
+          | Osig_class (_, _, _, clt, _) ->
             let rec parse_class_type = function
-              | Octy_signature (_(*self_ty*), csil) ->
+              | Octy_signature (_, csil) ->
                 List.filter_map begin function
                   | Ocsg_method (name, priv, virt, ty) ->
                     Some {
@@ -159,11 +167,11 @@ module Signature = struct
               | _ -> []
             in parse_class_type clt
           | _ -> []
-      end
+      end [@warning "-fragile-match"]
   ;;
 
   let rec read_module_type ~filename ~parent_longid = function
-    | Mty_ident _(*path*) -> (* TODO: parse_module_type, Tmty_ident *)
+    | Mty_ident _-> (* TODO: parse_module_type, Tmty_ident *)
       []
     | Mty_signature signature ->
       let modlid = match parent_longid with x :: _ -> x | _ -> "" in
@@ -203,12 +211,12 @@ module Signature = struct
               let kind = kind_of_typekind type_declaration.type_kind in
               (print kind id (Printtyp.type_declaration id formatter) type_declaration) :: acc
             | Some te ->
-              begin [@warning "-4"] match te.desc with
+              begin match te.desc with
                 | Tobject _ -> acc (* Niente definizione dei tipi oggetto *)
                 | _ ->
                   let kind = kind_of_typekind type_declaration.type_kind in
                   (print kind id (Printtyp.type_declaration id formatter) type_declaration) :: acc
-              end
+              end [@warning "-fragile-match"]
           end
         in
         (* Costruttori di tipi varianti *)
@@ -249,7 +257,8 @@ module Signature = struct
               {symbol with sy_type=d} :: acc
             end acc cc
           | _ -> acc
-        end
+        end [@warning "-fragile-match"]
+
       | Sig_typext (id, extension_constructor, _status, _visibility) ->
         (print Pexception id (Printtyp.extension_constructor id formatter)
           extension_constructor) :: acc;
@@ -268,28 +277,31 @@ module Signature = struct
             ~filename ~parent_id:class_item.sy_id ~id class_declaration in
           class_item :: class_items @ acc;
         end
-      | Sig_class_type _(*(id, cltype_declaration, _, _visibility)*) -> acc
+      | Sig_class_type _ -> acc
     end [] sign
   ;;
 
-  let rec read'' (filename, modlid) =
+  let rec read'' ?(reset = false) (filename, modlid) =
     try
-      let sign = Env.read_signature modlid filename in
+      (* Stdlib workaround, since Arg is compiled to stdlib__arg.cmi, and so on *)
+      let basename = Filename.basename filename in
+      let compiled_modlid = Filename.chop_suffix basename ".cmi" |> String.capitalize_ascii in
+      let sign = Env.read_signature compiled_modlid filename in
+
       read' (sign, filename, modlid)
     with
       | (Persistent_env.Error e as exc) ->
         begin
-          match e with
-            | Persistent_env.Inconsistent_import _ ->
+          match e, reset with
+            | Persistent_env.Inconsistent_import _, false ->
               Env.reset_cache();
-              read'' ((*None, *)filename, modlid)
-            | Persistent_env.Illegal_renaming _ -> raise Not_found
+              read'' ~reset: true (filename, modlid)
             | _ ->
               Printf.eprintf "File \"symbol.ml\": %s\n%s\n%!" (Printexc.to_string exc) (Printexc.get_backtrace());
               Persistent_env.report_error Format.err_formatter e;
               flush stderr;
               []
-        end
+        end [@warning "-fragile-match"]
       | Not_found | Sys_error _ -> []
       | Cmi_format.Error (Cmi_format.Not_an_interface msg) ->
         eprintf "Not_an_interface: %s\n" msg; []
@@ -430,8 +442,6 @@ let find_parent (cache : symbol_cache) ?(update_cache=false) symbol =
 
 (* find_local_defs *)
 let find_local_defs ~regexp ~(project : Prj.t) ~filename ~offset =
-  let open Location in
-  let open Lexing in
   let open Binannot in
   match Binannot_ident.find_local_definitions ~project ~filename () with
     | Some local_defs ->

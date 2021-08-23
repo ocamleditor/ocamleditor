@@ -138,7 +138,7 @@ struct
     function
       | Raw text ->
         let text = concat text in
-        if text.[0] = '\n' then begin
+        if String.length text > 0 && text.[0] = '\n' then begin
           buffer#insert ~tags:[!!`LINE_SPACING_SMALL] "\n";
           buffer#insert (Str.string_after text 1)
         end else buffer#insert text;
@@ -586,11 +586,9 @@ end
           when List.mem kind [Oe.Pvalue; Oe.Pfunc] ->
           insert_info elem.Value.val_info
         | Search.Res_module elem ->
-          (*buffer#insert ~tags:[!!`BOLD; !!`LARGE] "Module ";*)
           buffer#insert ~tags:[!!`BOLD; !!`LARGE; !!`TTB] elem.Module.m_name;
           insert_info elem.Module.m_info
         | Search.Res_module_type elem ->
-          (*buffer#insert ~tags:[!!`BOLD; !!`LARGE] "Module type ";*)
           buffer#insert ~tags:[!!`BOLD; !!`LARGE; !!`TTB] elem.Module.mt_name;
           insert_info elem.Module.mt_info
         | Search.Res_class elem ->
@@ -607,7 +605,12 @@ end
           buffer#insert ~tags:[!!`ITALIC] name;
           insert_newline ~buffer (!!);
           insert_text buffer text (!!);
-        | _ -> ()
+        (*TODO*)
+        | Search.Res_value value -> ignore value
+        | Search.Res_type typ -> ignore typ
+        | Search.Res_extension ext -> ignore ext
+        | Search.Res_recfield (f, t) -> ignore f; ignore t
+        | Search.Res_const (g, h) -> ignore g; ignore h
     end;
     insert_newline ~buffer (!!);;
 
@@ -642,7 +645,7 @@ end
       Info.insert_info ~newline_before:true (!!) buffer odoc.Module.m_info;
       buffer#insert "\n\n";
     end;
-    (*  *)
+
     let tag_type2 = [!!`TYPE2] in
     List.iter begin fun me ->
       let get_relative = Name.get_relative odoc.Module.m_name in

@@ -22,7 +22,110 @@
 
 
 open Pref_page
-open Printf
+
+(** An excerpt from the [ocp-indent --help] output, relevant for setting the
+    configuration string.
+
+    I may revert to using the output of [ocp-indent --help] to stay up to date,
+    but I need to figure how to remove the parts which are not relevant.
+*)
+let ocp_indent_help = {|A configuration definition is a list of bindings in the form
+NAME=VALUE or of PRESET, separated by commas or newlines
+
+Syntax: [PRESET,]VAR=VALUE[,VAR=VALUE...]
+base=INT (default=2)
+    Indentation used when none of the following options applies.
+        let foo =
+        ..bar
+type=INT (default=2)
+    Indentation for type definitions.
+        type t =
+        ..int
+in=INT (default=0)
+    Indentation after `let ... in', unless followed by another `let'.
+        let foo = () in
+        ..bar
+with=INT (default=0)
+    Indentation after `match ... with', `try ... with' or `function'.
+        match foo with
+        ..| _ -> bar
+match_clause=INT (default=2)
+    Indentation for clauses inside a pattern-match (after arrows).
+        match foo with
+        | _ ->
+        ..bar
+ppx_stritem_ext=INT (default=2)
+    Indentation for items inside a [%%id ... ] extension node).
+        [%% id.id
+        ..let x = 3 ]
+max_indent=<INT|none> (default=4)
+    When nesting expressions on the same line, their indentations are
+    stacked in some cases so that they remain correct if you close
+    them one per line. However, this can lead to large indentations in
+    complex code, so this parameter sets a maximum indentation. Note
+    that it only affects indentation after function arrows and opening
+    parens at the ends of lines.
+        let f = g (h (i (fun x ->
+        ....x)
+          )
+        )
+strict_with=<always|never|auto> (default=never)
+    If `never', match bars are indented, superseding `with', whenever
+    `match with' doesn't start its line. If `auto', there are
+    exceptions for constructs like `begin match with'. If `always',
+    `with' is always strictly respected, and additionally applies to
+    variant types definition, for consistency.
+    Example with `strict_with=never,with=0':
+        begin match foo with
+        ..| _ -> bar
+        end
+strict_else=<always|never|auto> (default=always)
+    If `always', indent after the `else' keyword normally, like after
+    `then'. If `auto', indent after `else' unless in a few
+    "unclosable" cases (`let .... in', `match', etc.). If `never', the
+    `else' keyword won't indent when followed by a newline.
+    Example with `strict_else=auto':
+        if cond then
+          foo
+        else
+        let x = bar in
+        baz
+strict_comments=BOOL (default=false)
+    In-comment indentation is normally preserved, as long as it
+    respects the left margin or the comments starts with a newline.
+    Setting this to `true' forces alignment within comments. Lines
+    starting with `*' are always aligned
+align_ops=BOOL (default=true)
+    Toggles preference of column-alignment over line indentation for
+    most of the common operators and after mid-line opening
+    parentheses.
+    Example with `align_ops=true':
+        let f x = x
+                  + y
+ 
+    Example with `align_ops=false':
+        let f x = x
+          + y
+align_params=<always|never|auto> (default=auto)
+    If `never', function parameters are indented one level from the
+    line of the function. If `always', they are aligned from the
+    column of the function. if `auto', alignment is chosen over
+    indentation in a few cases, e.g. after match arrows
+    Example with `align_params=never':
+        match foo with
+        | _ -> some_fun
+          ..parameter
+ 
+    Example with `align_params=always' or `auto':
+        match foo with
+        | _ -> some_fun
+               ..parameter
+Available presets are `normal', the default, `apprentice' which may
+make some aspects of the syntax more obvious for beginners, and
+`JaneStreet'.
+|}
+
+let ocp_indent_options_markup = "<b>ocp-indent --config</b> <i>(*Will be ignored if the project contains an .ocp-indent file*)</i>"
 
 (** pref_editor_indent *)
 class pref_editor_indent title ?packing () =
@@ -33,7 +136,7 @@ class pref_editor_indent title ?packing () =
       "Indent according to formatting options"; "Indent to match preceding line";
     ] ~packing:box#add () in
   let box         = GPack.vbox ~spacing:2 ~packing:vbox#pack () in
-  let _           = GMisc.label ~markup:"ocp-indent --config" ~xalign:0.0 ~packing:box#pack () in
+  let _           = GMisc.label ~markup: ocp_indent_options_markup ~xalign:0.0 ~packing:box#pack () in
   let box         = GPack.vbox ~spacing:5 ~packing:box#add () in
   let buffer      = GText.buffer () in
   let sw          = GBin.scrolled_window ~hpolicy:`AUTOMATIC ~vpolicy:`AUTOMATIC ~shadow_type:`IN ~packing:box#add () in
@@ -50,7 +153,6 @@ class pref_editor_indent title ?packing () =
     view_help#set_left_margin 2;
     view_help#set_right_margin 2;
     view_help#set_editable false;
-(*    view_help#misc#modify_base *)
     view#set_wrap_mode `WORD;
     view_help#set_wrap_mode `WORD;
     let pref = Preferences.preferences#get in
@@ -58,10 +160,7 @@ class pref_editor_indent title ?packing () =
     view_help#misc#modify_font_by_name pref.Preferences.pref_base_font;
     view_help#set_cursor_visible false;
     try
-      let help = kprintf Shell.get_command_output "ocp-indent --help=plain %s" Shell.redirect_stderr in
-      let help = String.concat "\n" help in
-      let help = if Glib.Utf8.validate help then help else Glib.Convert.locale_to_utf8 help in
-      buffer_help#set_text help;
+      buffer_help#set_text ocp_indent_help;
     with Glib.Convert.Error _ -> ()
 
   method write pref =

@@ -32,23 +32,9 @@ let open_dump = function Dump (m, a) ->
   else raise Bad_magic_number;;
 
 (** Symbol cache *)
-type symbol = {
-  sy_id                       : string list; (* Value path, head is root *)
-  sy_kind                     : symbol_kind;
-  sy_type                     : string;
-  sy_filename                 : string;
-  sy_local                    : bool;
-}
 
-and symbol_cache = {
-  mutable syt_table           : symbol list;
-  mutable syt_ts              : (string, float) Hashtbl.t; (* filename * last read *)
-  mutable syt_odoc            : (Odoc_info.Name.t * symbol_kind option, Odoc_info.Search.result_element) Hashtbl.t; (* value_path * markup *)
-  syt_critical                : Mutex.t;
-}
-
-and symbol_kind =
-    Pvalue
+type symbol_kind =
+  | Pvalue
   | Pfunc
   | Pattribute
   | Pmethod | Pmethod_private | Pmethod_virtual | Pmethod_private_virtual
@@ -63,6 +49,22 @@ and symbol_kind =
   | Ptype_abstract | Ptype_variant | Ptype_record
   | Std_lib
   | Lib
+
+type symbol = {
+  sy_id                       : string list; (* Value path, head is root *)
+  sy_kind                     : symbol_kind;
+  sy_type                     : string;
+  sy_filename                 : string;
+  sy_local                    : bool;
+}
+
+type symbol_cache = {
+  mutable syt_table           : symbol list;
+  mutable syt_ts              : (string, float) Hashtbl.t; (* filename * last read *)
+  mutable syt_odoc            : (Odoc_info.Name.t * symbol_kind option, Odoc_info.Search.result_element) Hashtbl.t; (* value_path * markup *)
+  syt_critical                : Mutex.t;
+}
+
 
 (** Annot *)
 type annot = {

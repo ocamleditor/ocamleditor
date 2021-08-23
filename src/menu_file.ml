@@ -49,21 +49,21 @@ let file ~browser ~group ~flags items =
   let editor = browser#editor in
   let file = GMenu.menu_item ~label:"File" () in
   let menu = GMenu.menu ~packing:file#set_submenu () in
-  (** New Project *)
+  (* New Project *)
   let new_project = GMenu.menu_item ~label:"New Project..." ~packing:menu#add () in
   ignore (new_project#connect#activate ~callback:browser#dialog_project_new);
-  (** New file *)
+  (* New file *)
   let new_file = GMenu.image_menu_item ~image:(GMisc.image ~pixbuf:Icons.new_file (*~stock:`NEW*) ~icon_size:`MENU ())
       ~label:"New File..." ~packing:menu#add () in
   new_file#add_accelerator ~group ~modi:[`CONTROL] GdkKeysyms._n ~flags;
   ignore (new_file#connect#activate ~callback:browser#dialog_file_new);
-  (** Open Project *)
+  (* Open Project *)
   let _ = GMenu.separator_item ~packing:menu#add () in
   let project_open = GMenu.image_menu_item
       ~label:"Open Project..." ~packing:menu#add () in
   ignore (project_open#connect#activate ~callback:browser#dialog_project_open);
   project_open#add_accelerator ~group ~modi:[`CONTROL;`SHIFT] GdkKeysyms._o ~flags;
-  (** Open File *)
+  (* Open File *)
   let open_file = GMenu.image_menu_item ~image:(GMisc.image ~pixbuf:Icons.open_file (*~stock:`OPEN*) ~icon_size:`MENU ())
       ~label:"Open File..." ~packing:menu#add () in
   open_file#add_accelerator ~group ~modi:[`CONTROL] GdkKeysyms._o ~flags;
@@ -123,11 +123,11 @@ let file ~browser ~group ~flags items =
   file_recent_menu#add items.file_recent_sep;
   file_recent_menu#add items.file_recent_clear;
   ignore (items.file_recent_clear#connect#activate ~callback:editor#file_history_clear);
-  (** Switch Implementation/Interface *)
+  (* Switch Implementation/Interface *)
   menu#add items.file_switch;
   ignore (items.file_switch#connect#activate ~callback:(fun () -> editor#with_current_page editor#switch_mli_ml));
   items.file_switch#add_accelerator ~group ~modi:[`CONTROL; `SHIFT] GdkKeysyms._I ~flags;
-  (** Save *)
+  (* Save *)
   let _ = GMenu.separator_item ~packing:menu#add () in
   let save_file = GMenu.image_menu_item ~label:"Save" ~packing:menu#add () in
   save_file#set_image (GMisc.image ~pixbuf:Icons.save_16 ())#coerce;
@@ -135,7 +135,7 @@ let file ~browser ~group ~flags items =
   ignore (save_file#connect#activate ~callback:begin fun () ->
       Gaux.may ~f:editor#save (editor#get_page `ACTIVE)
     end);
-  (** Save as.. *)
+  (* Save as.. *)
   let save_as = GMenu.image_menu_item
       ~image:(GMisc.image ~pixbuf:Icons.save_as_16 ())
       ~label:"Save As..." ~packing:menu#add () in
@@ -143,12 +143,12 @@ let file ~browser ~group ~flags items =
   ignore (save_as#connect#activate ~callback:begin fun () ->
       Gaux.may ~f:editor#dialog_save_as (editor#get_page `ACTIVE)
     end);
-  (** Save All *)
+  (* Save All *)
   let save_all = GMenu.image_menu_item ~label:"Save All" ~packing:menu#add () in
   save_all#add_accelerator ~group ~modi:[`CONTROL; `SHIFT] GdkKeysyms._a ~flags;
   ignore (save_all#connect#activate ~callback:browser#save_all);
   save_all#set_image (GMisc.image ~pixbuf:Icons.save_all_16 ())#coerce;
-  (** Rename *)
+  (* Rename *)
   menu#add items.file_rename;
   ignore (items.file_rename#connect#activate ~callback:begin fun () ->
       editor#with_current_page begin fun current_page ->
@@ -156,33 +156,33 @@ let file ~browser ~group ~flags items =
         browser#set_title ()
       end
     end);
-  (** Close current *)
+  (* Close current *)
   let _ = GMenu.separator_item ~packing:menu#add () in
   menu#add (items.file_close :> GMenu.menu_item);
   items.file_close#add_accelerator ~group ~modi:[`CONTROL] GdkKeysyms._F4 ~flags;
   ignore (items.file_close#connect#activate ~callback:begin fun () ->
       editor#with_current_page (fun p -> ignore (editor#dialog_confirm_close p))
     end);
-  (** Close all except current *)
+  (* Close all except current *)
   menu#add items.file_close_all;
   ignore (items.file_close_all#connect#activate ~callback:begin fun () ->
       editor#with_current_page (fun p -> editor#close_all ?except:(Some p) ())
     end);
-  (** Revert current *)
+  (* Revert current *)
   menu#add (items.file_revert :> GMenu.menu_item);
   ignore (items.file_revert#connect#activate ~callback:begin fun () ->
       editor#with_current_page editor#revert
     end);
-  (** Delete current *)
+  (* Delete current *)
   let _ = GMenu.separator_item ~packing:menu#add () in
   menu#add (items.file_delete :> GMenu.menu_item);
   ignore (items.file_delete#connect#activate ~callback:editor#dialog_delete_current);
-  (** Exit *)
+  (* Exit *)
   let _ = GMenu.separator_item ~packing:menu#add () in
   let quit = GMenu.image_menu_item ~label:"Exit" ~packing:menu#add () in
   quit#set_image (GMisc.image ~pixbuf:Icons.close_window (*~stock:`QUIT*) ~icon_size:`MENU ())#coerce;
   ignore (quit#connect#activate ~callback:(fun () -> browser#exit editor ()));
-  (** callback *)
+  (* callback *)
   ignore (file#misc#connect#state_changed ~callback:begin fun _ ->
       let page = editor#get_page `ACTIVE in
       let has_current_page = page <> None in

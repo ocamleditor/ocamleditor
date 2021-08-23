@@ -160,7 +160,6 @@ let get_version ?(ok_status=0) command =
   with Failure _ -> None
 
 let dot_version = get_version "dot -V"
-let ocp_indent_version = get_version "ocp-indent --version"
 let plink_version = get_version "plink -V" (* exits with status = 1 *)
 let xdg_open_version = get_version "xdg-open --version"
 let git_version = get_version ~ok_status:1 "git --version"
