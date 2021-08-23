@@ -26,11 +26,11 @@ open Str
 open Printf
 
 (*#load "unix.cma"
-#load "str.cma"
-#directory "C:\\ocaml\\devel\\ocamleditor\\src\\common"
-#load "miscellanea.cmo"
+  #load "str.cma"
+  #directory "C:\\ocaml\\devel\\ocamleditor\\src\\common"
+  #load "miscellanea.cmo"
 
-exact_match ~pat:(unix_regexp "*.{ml,mli,mll,mly,bat,cmd,txt,css,js}") "a.mli";;*)
+  exact_match ~pat:(unix_regexp "*.{ml,mli,mll,mly,bat,cmd,txt,css,js}") "a.mli";;*)
 
 
 module Regexp =

@@ -55,9 +55,9 @@ let re_status_branch = Str.regexp "## \\(.*\\)\\.\\.\\.\\([^ ]*\\)\\( \\[ahead \
 (** status *)
 let status f =
   match Oe_config.git_version with
-    | None -> 
+  | None -> 
       f None
-    | _ ->
+  | _ ->
       let status = 
         { 
           branch = ""; 
@@ -78,8 +78,8 @@ let status f =
             if Str.first_chars line 3 = "## " then begin
               let stop = 
                 match String.index_opt line '.' with
-                  | Some i -> i
-                  | _ -> String.length line
+                | Some i -> i
+                | _ -> String.length line
               in
               let branch = String.sub line 3 (stop - 3) in
               let ahead = 
@@ -94,21 +94,21 @@ let status f =
               let y = Str.matched_group 2 line in
               begin
                 match (x, y) with
-                  | "M", _ | _, "M" -> 
+                | "M", _ | _, "M" -> 
                     status.modified <- status.modified + 1
-                  | "A", _ | _, "A" -> 
+                | "A", _ | _, "A" -> 
                     status.added <- status.added + 1
-                  | "D", _ | _, "D" -> 
+                | "D", _ | _, "D" -> 
                     status.deleted <- status.deleted + 1
-                  | "R", _ | _, "R" -> 
+                | "R", _ | _, "R" -> 
                     status.renamed <- status.renamed + 1
-                  | "C", _ | _, "C" -> 
+                | "C", _ | _, "C" -> 
                     status.copied <- status.copied + 1
-                  | "?", _ -> 
+                | "?", _ -> 
                     status.untracked <- status.untracked + 1
-                  | "!", _ -> 
+                | "!", _ -> 
                     status.ignored <- status.ignored + 1
-                  | _ -> 
+                | _ -> 
                     Log.println `ERROR "Unparseable git message: \"%s\"" line
               end;
             end;
@@ -137,8 +137,8 @@ let status f =
 (** toplevel *)
 let toplevel callback =
   match Oe_config.git_version with
-    | None -> callback None
-    | _ ->
+  | None -> callback None
+  | _ ->
       let toplevel = ref "" in
       let has_errors = ref false in
       let process_in = Spawn.loop (fun ic -> toplevel := input_line ic) in
@@ -164,18 +164,18 @@ let diff_stat f =
   let color_add = Color.add_value Oe_config.global_gutter_diff_color_add fact in
   let color_del = Color.add_value Oe_config.global_gutter_diff_color_del fact in
   match Oe_config.git_version with
-    | None -> ()
-    | _ ->
+  | None -> ()
+  | _ ->
       let diffs = ref [] in
       let process_in =
         Spawn.loop begin fun ic ->
           let line = String.trim (input_line ic) in
           match Str.split (Miscellanea.regexp "\t") line with
-            | [ins; del; fn] ->
+          | [ins; del; fn] ->
               let ins = try int_of_string ins with Failure _ -> 0 in
               let del = try int_of_string del with Failure _ -> 0 in
               diffs := (ins, del, fn) :: !diffs;
-            | _ -> 
+          | _ -> 
               Log.println `ERROR "Unparseable git message: \"%s\"" line
         end
       in 
@@ -257,11 +257,11 @@ let show_diff_stat alloc widget =
   lbox#add widget;
   begin
     match alloc with
-      | Some alloc ->
+    | Some alloc ->
         popup#move ~x:(-1000) ~y:(-1000);
         popup#show();
         popup#move ~x:(alloc.Gtk.x + alloc.Gtk.width - popup#misc#allocation.Gtk.width) ~y:(alloc.Gtk.y + alloc.Gtk.height + 8);
-      | _ -> popup#show();
+    | _ -> popup#show();
   end;
   let incr = if Preferences.preferences#get.Preferences.pref_annot_type_tooltips_delay = 0 then 0.106 else 0.479 in
   Gmisclib.Util.fade_window ~incr popup
@@ -278,10 +278,10 @@ let install_popup (ebox : GBin.event_box) =
   end |> ignore;
   ebox#event#connect#button_press ~callback:begin fun ev ->
     match !popup_window with
-      | None when GdkEvent.Button.button ev = 1 ->
+    | None when GdkEvent.Button.button ev = 1 ->
         diff_stat (show_diff_stat None (*(Some ebox#misc#allocation)*));
         true
-      | _ -> true
+    | _ -> true
   end |> ignore
 
 

@@ -41,36 +41,36 @@ let scan_locale txt =
             ignore (matched_group 1 txt);
             f acc (p + 2) (p :: start);
           with Not_found -> begin
-            ignore (matched_group 2 txt);
-            (match start with
-              | [] -> f acc (p + 2) []
-              | [start] -> f ((start, (p + 2), (txt.[start + 2] = '*')) :: acc) (p + 2) []
-              | _::prev -> f acc (p + 2) prev)
-          end
+              ignore (matched_group 2 txt);
+              (match start with
+               | [] -> f acc (p + 2) []
+               | [start] -> f ((start, (p + 2), (txt.[start + 2] = '*')) :: acc) (p + 2) []
+               | _::prev -> f acc (p + 2) prev)
+            end
         end
       with Not_found -> acc
     end
   in
- List.rev (f [] 0 [])
+  List.rev (f [] 0 [])
 
 let scan txt = Locale (scan_locale txt)
 
 let scan_utf8 txt =
   match scan txt with
-    | Locale comments -> Utf8 (List.map
-      begin fun (x, y, ocamldoc) ->
-        let c = String.sub txt x (y - x) in
-        x, y, String.length c - String.length
-          (Glib.Convert.convert_with_fallback ~fallback:"?" ~from_codeset:"UTF-8" ~to_codeset:Oe_config.ocaml_codeset c), ocamldoc
-      end comments)
-    | (Utf8 _) as res -> res
+  | Locale comments -> Utf8 (List.map
+                               begin fun (x, y, ocamldoc) ->
+                                 let c = String.sub txt x (y - x) in
+                                 x, y, String.length c - String.length
+                                         (Glib.Convert.convert_with_fallback ~fallback:"?" ~from_codeset:"UTF-8" ~to_codeset:Oe_config.ocaml_codeset c), ocamldoc
+                               end comments)
+  | (Utf8 _) as res -> res
 
 let enclosing comments pos =
   let rec f = function
     | [] -> None
     | (start, stop, _) :: rest ->
-      if start < pos && pos < stop then Some (start, stop)
-      else f rest
+        if start < pos && pos < stop then Some (start, stop)
+        else f rest
   in
   f (match comments with Locale x -> x | Utf8 x -> List.map (fun (x, y, _, od) -> x, y, od) x)
 
@@ -79,30 +79,30 @@ let nearest comments pos =
     | [] -> None
     | (b, e, _) :: [] -> Some (b, e)
     | (b1, e1, _) :: (((b2, e2, _) :: _) as next) ->
-      if (pos <= b1) || (b1 <= pos && pos < e1) then Some (b1, e1)
-      else if e1 <= pos && pos < b2 then
-        if pos - e1 < b2 - pos then Some (b1, e1)
-        else if pos - e1 >= b2 - pos then Some (b2, e2)
-        else None
-      else f next
+        if (pos <= b1) || (b1 <= pos && pos < e1) then Some (b1, e1)
+        else if e1 <= pos && pos < b2 then
+          if pos - e1 < b2 - pos then Some (b1, e1)
+          else if pos - e1 >= b2 - pos then Some (b2, e2)
+          else None
+        else f next
   in
   f (match comments with Locale x -> x | Utf8 x -> List.map (fun (x, y, _, od) -> x, y, od) x)
 
 let partition comments pos =
   let pos = ref pos in
   match comments with
-    | Utf8 comments ->
+  | Utf8 comments ->
       let a, b = List.partition
-        begin
-          fun (_, y, e, _) -> if y <= !pos + e then (pos := !pos + e; true) else false
-        end comments in
+          begin
+            fun (_, y, e, _) -> if y <= !pos + e then (pos := !pos + e; true) else false
+          end comments in
       Utf8 a, Utf8 b, !pos
-    | Locale [] -> (Utf8 []), (Utf8 []), !pos
-    | Locale comments ->
+  | Locale [] -> (Utf8 []), (Utf8 []), !pos
+  | Locale comments ->
       let a, b = List.partition
-        begin
-          fun (_, y, _) -> if y <= !pos then true else false
-        end comments in
+          begin
+            fun (_, y, _) -> if y <= !pos then true else false
+          end comments in
       Locale a, Locale b, !pos
 
 
@@ -122,13 +122,13 @@ let enclosing_comment2 text pos =
                   ignore (matched_group 2 text);
                   Some (start, stop + 2) (* start - stop *)
                 with Not_found -> Some (start,
-                  (try search_forward lineend text pos with Not_found -> String.length text)
-                )  (* start - start *)
+                                        (try search_forward lineend text pos with Not_found -> String.length text)
+                                       )  (* start - start *)
               end;
             with Not_found ->
               Some (start,
-                (try search_forward lineend text pos with Not_found -> String.length text)
-              ) (* start - lineend | textend *)
+                    (try search_forward lineend text pos with Not_found -> String.length text)
+                   ) (* start - lineend | textend *)
           end
         with Not_found -> None (* stop - ? *)
       end;

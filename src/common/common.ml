@@ -31,8 +31,8 @@ open Argc
 open Option_syntax
 
 module Log = Log.Make(struct
-  let channel = stderr
-  let verbosity = `DEBUG
-  let print_timestamp = false
-end)
+    let channel = stderr
+    let verbosity = `DEBUG
+    let print_timestamp = false
+  end)
 

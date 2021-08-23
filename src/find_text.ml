@@ -89,20 +89,20 @@ let status =
     current_regexp  = None;
     h_find          =
       (let cols = new GTree.column_list in
-      let column      = cols#add Gobject.Data.string in
-      {model = GTree.list_store cols; column = column});
+       let column      = cols#add Gobject.Data.string in
+       {model = GTree.list_store cols; column = column});
     h_repl          =
       (let cols = new GTree.column_list in
-      let column      = cols#add Gobject.Data.string in
-      {model = GTree.list_store cols; column = column});
+       let column      = cols#add Gobject.Data.string in
+       {model = GTree.list_store cols; column = column});
     h_path          =
       (let cols = new GTree.column_list in
-      let column      = cols#add Gobject.Data.string in
-      {model = GTree.list_store cols; column = column});
+       let column      = cols#add Gobject.Data.string in
+       {model = GTree.list_store cols; column = column});
     h_pattern       =
       (let cols = new GTree.column_list in
-      let column      = cols#add Gobject.Data.string in
-      {model = GTree.list_store cols; column = column});
+       let column      = cols#add Gobject.Data.string in
+       {model = GTree.list_store cols; column = column});
   }
 
 (** write_status *)
@@ -113,7 +113,7 @@ let write_status () =
     model#foreach begin fun _ row ->
       let txt = model#get ~row ~column in
       if (List.length !hist <= Oe_config.find_replace_history_max_length)
-        && not (List.mem txt !hist) then (hist := txt :: !hist);
+      && not (List.mem txt !hist) then (hist := txt :: !hist);
       false
     end;
     let hist = List.rev !hist in
@@ -123,27 +123,27 @@ let write_status () =
   in
   let xml =
     Xml.Element ("find_text", [
-      "check_regexp", (string_of_bool status.use_regexp);
-      "check_case", (string_of_bool status.case_sensitive);
-      "check_rec", (string_of_bool status.recursive);
-      "check_pat", (string_of_bool (status.pattern <> None));
-      "radio_path", (string_of_bool (match status.path with Specified _ -> true | _ -> false));
-      "radio_src", (string_of_bool (status.path = Project_source));
-      "radio_only_open_files", (string_of_bool (status.path = Only_open_files));
-    ], [
-      Xml.Element ("history_find", [], List.map (fun x -> Xml.Element ("element", [], [Xml.PCData x]))
-        (get_history status.text_find#get status.h_find.model status.h_find.column));
-      Xml.Element ("history_repl", [], List.map (fun x -> Xml.Element ("element", [], [Xml.PCData x]))
-        (get_history status.text_repl status.h_repl.model status.h_repl.column));
-      Xml.Element ("history_path", [], List.map (fun x -> Xml.Element ("element", [], [Xml.PCData x]))
-        (get_history
-          (match status.path with Project_source -> "" | Specified x -> x | Only_open_files -> "")
-            status.h_path.model status.h_path.column));
-      Xml.Element ("history_pattern", [], List.map (fun x -> Xml.Element ("element", [], [Xml.PCData x]))
-        (get_history
-          (match status.pattern with None -> "" | Some x -> x)
-            status.h_pattern.model status.h_pattern.column));
-    ])
+        "check_regexp", (string_of_bool status.use_regexp);
+        "check_case", (string_of_bool status.case_sensitive);
+        "check_rec", (string_of_bool status.recursive);
+        "check_pat", (string_of_bool (status.pattern <> None));
+        "radio_path", (string_of_bool (match status.path with Specified _ -> true | _ -> false));
+        "radio_src", (string_of_bool (status.path = Project_source));
+        "radio_only_open_files", (string_of_bool (status.path = Only_open_files));
+      ], [
+                   Xml.Element ("history_find", [], List.map (fun x -> Xml.Element ("element", [], [Xml.PCData x]))
+                                  (get_history status.text_find#get status.h_find.model status.h_find.column));
+                   Xml.Element ("history_repl", [], List.map (fun x -> Xml.Element ("element", [], [Xml.PCData x]))
+                                  (get_history status.text_repl status.h_repl.model status.h_repl.column));
+                   Xml.Element ("history_path", [], List.map (fun x -> Xml.Element ("element", [], [Xml.PCData x]))
+                                  (get_history
+                                     (match status.path with Project_source -> "" | Specified x -> x | Only_open_files -> "")
+                                     status.h_path.model status.h_path.column));
+                   Xml.Element ("history_pattern", [], List.map (fun x -> Xml.Element ("element", [], [Xml.PCData x]))
+                                  (get_history
+                                     (match status.pattern with None -> "" | Some x -> x)
+                                     status.h_pattern.model status.h_pattern.column));
+                 ])
   in
   let ochan = open_out status.status_filename in
   lazy (output_string ochan ("<!-- OCamlEditor XML Find-Text History -->\n" ^ (Xml.to_string_fmt xml)))
@@ -165,34 +165,34 @@ let read_status () =
       else assert false;
     let value xml =
       match Xml.children xml with
-        | [] -> ""
-        | x :: [] -> Xml.pcdata x
-        | _ -> assert false
+      | [] -> ""
+      | x :: [] -> Xml.pcdata x
+      | _ -> assert false
     in
     Xml.iter begin fun node ->
       match Xml.tag node with
-        | "history_find" when (List.length (Xml.children node) > 0) -> List.iter begin fun x ->
-            let row = status.h_find.model#append () in
-            status.h_find.model#set ~row ~column:status.h_find.column (value x)
-          end (Xml.children node);
-        | "history_repl" when (List.length (Xml.children node) > 0) ->
+      | "history_find" when (List.length (Xml.children node) > 0) -> List.iter begin fun x ->
+          let row = status.h_find.model#append () in
+          status.h_find.model#set ~row ~column:status.h_find.column (value x)
+        end (Xml.children node);
+      | "history_repl" when (List.length (Xml.children node) > 0) ->
           List.iter begin fun x ->
             let row = status.h_repl.model#append () in
             status.h_repl.model#set ~row ~column:status.h_repl.column (value x)
           end (Xml.children node);
-        | "history_path" when (List.length (Xml.children node) > 0) -> List.iter begin fun x ->
-            let row = status.h_path.model#append () in
-            status.h_path.model#set ~row ~column:status.h_path.column (value x)
-          end (Xml.children node);
-        | "history_pattern" when (List.length (Xml.children node) > 0) -> List.iter begin fun x ->
-            let row = status.h_pattern.model#append () in
-            status.h_pattern.model#set ~row ~column:status.h_pattern.column (value x)
-          end (Xml.children node);
-        | _ -> ()
+      | "history_path" when (List.length (Xml.children node) > 0) -> List.iter begin fun x ->
+          let row = status.h_path.model#append () in
+          status.h_path.model#set ~row ~column:status.h_path.column (value x)
+        end (Xml.children node);
+      | "history_pattern" when (List.length (Xml.children node) > 0) -> List.iter begin fun x ->
+          let row = status.h_pattern.model#append () in
+          status.h_pattern.model#set ~row ~column:status.h_pattern.column (value x)
+        end (Xml.children node);
+      | _ -> ()
     end xml
   with
-    | Xml.File_not_found _ -> ()
-    | Xml.Error _ -> begin
+  | Xml.File_not_found _ -> ()
+  | Xml.Error _ -> begin
       if Sys.file_exists status.status_filename then (Sys.remove status.status_filename)
     end
 
@@ -200,10 +200,10 @@ let read_status () =
 let create_regexp ~project ?(use_regexp=status.use_regexp) ?(case_sensitive=status.case_sensitive) ~text () =
   let f =
     match use_regexp, case_sensitive with
-      | true, true -> Str.regexp
-      | true, false -> Str.regexp_case_fold
-      | false, true -> Str.regexp_string
-      | false, false -> Str.regexp_string_case_fold
+    | true, true -> Str.regexp
+    | true, false -> Str.regexp_case_fold
+    | false, true -> Str.regexp_string
+    | false, false -> Str.regexp_string_case_fold
   in
   f (Project.convert_from_utf8 project text)
 
@@ -227,10 +227,10 @@ let update_status
   status.pattern <- pattern;
   status.path <- path;
   let regexp = create_regexp
-    ~project
-    ~use_regexp:status.use_regexp
-    ~case_sensitive:status.case_sensitive
-    ~text:status.text_find#get ()
+      ~project
+      ~use_regexp:status.use_regexp
+      ~case_sensitive:status.case_sensitive
+      ~text:status.text_find#get ()
   in
   status.current_regexp <- Some regexp;
   write_status()

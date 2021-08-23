@@ -28,9 +28,9 @@
 
 let show ~editor () =
   let window = GWindow.file_chooser_dialog
-    ~action:`SAVE ~icon:Icons.oe
-    ~title:"New File..."
-    ~position:`CENTER ~modal:true ~show:false ()
+      ~action:`SAVE ~icon:Icons.oe
+      ~title:"New File..."
+      ~position:`CENTER ~modal:true ~show:false ()
   in
   window#set_select_multiple false;
   window#add_select_button_stock `OK `OK;
@@ -41,7 +41,7 @@ let show ~editor () =
   ignore (window#set_current_name (Filename.basename default_filename));
   let rec run () =
     match window#run () with
-      | `OK ->
+    | `OK ->
         Gaux.may window#filename ~f:begin fun filename ->
           if Sys.file_exists filename then begin
             Dialog.info ~title:"Error" ~message_type:`ERROR ~message:"File already exists." window;
@@ -50,15 +50,15 @@ let show ~editor () =
             let chan = open_out_gen [Open_creat; Open_excl; Open_text] 0o664 filename in
             close_out chan;
             match editor#open_file ~active:false ~scroll_offset:0 ~offset:0 ?remote:None filename with
-              | Some page ->
+            | Some page ->
                 editor#load_page ?scroll:None page;
                 editor#goto_view page#view;
                 window#destroy()
-              | _ ->
+            | _ ->
                 Dialog.info ~title:"Error" ~message_type:`ERROR ~message:"" window;
           end
         end;
-      | _ -> window#destroy()
+    | _ -> window#destroy()
   in run()
 
 

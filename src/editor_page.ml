@@ -240,9 +240,9 @@ class page ?file ~project ~scroll_offset ~offset ~editor () =
       begin
         match file_obj with
         | Some file_obj ->
-          let _, _, label = self#tab_widget in
-          label#set_text (shortname file_obj#filename);
-          self#update_statusbar();
+            let _, _, label = self#tab_widget in
+            label#set_text (shortname file_obj#filename);
+            self#update_statusbar();
         | None -> ()
       end;
       buffer#reset_tmp_filename();
@@ -252,11 +252,11 @@ class page ?file ~project ~scroll_offset ~offset ~editor () =
     method get_title =
       match file with
       | Some file ->
-        begin
-          match file#remote with
-          | None -> file#filename
-          | Some rmt -> sprintf "%s@%s%s" rmt.Editor_file_type.user rmt.Editor_file_type.host file#filename
-        end;
+          begin
+            match file#remote with
+            | None -> file#filename
+            | Some rmt -> sprintf "%s@%s%s" rmt.Editor_file_type.user rmt.Editor_file_type.host file#filename
+          end;
       | _ -> ""
     method view = view
     method ocaml_view = ocaml_view
@@ -303,25 +303,25 @@ class page ?file ~project ~scroll_offset ~offset ~editor () =
       match self#file with
       | None -> ()
       | Some file ->
-        try
-          status_filename#set_label self#get_title;
-          begin
-            match file#stat() with
-            | Some stat ->
-              let tm = Unix.localtime (stat.Editor_file_type.mtime) in
-              let last_modified = sprintf "%4d-%d-%d %02d:%02d:%02d" (tm.Unix.tm_year + 1900)
-                  (tm.Unix.tm_mon + 1) tm.Unix.tm_mday tm.Unix.tm_hour tm.Unix.tm_min tm.Unix.tm_sec
-              in
-              kprintf status_filename#misc#set_tooltip_markup "%s%s\nLast modified: %s\n%s bytes - %s lines - %s characters"
-                (if project.Prj.in_source_path file#filename <> None then "<b>" ^ project.Prj.name ^ "</b>\n" else "")
-                self#get_title
-                last_modified
-                (Text_util.format_int stat.Editor_file_type.size)
-                (Text_util.format_int buffer#line_count)
-                (Text_util.format_int buffer#char_count);
-            | _ -> ()
-          end;
-        with _ -> ()
+          try
+            status_filename#set_label self#get_title;
+            begin
+              match file#stat() with
+              | Some stat ->
+                  let tm = Unix.localtime (stat.Editor_file_type.mtime) in
+                  let last_modified = sprintf "%4d-%d-%d %02d:%02d:%02d" (tm.Unix.tm_year + 1900)
+                      (tm.Unix.tm_mon + 1) tm.Unix.tm_mday tm.Unix.tm_hour tm.Unix.tm_min tm.Unix.tm_sec
+                  in
+                  kprintf status_filename#misc#set_tooltip_markup "%s%s\nLast modified: %s\n%s bytes - %s lines - %s characters"
+                    (if project.Prj.in_source_path file#filename <> None then "<b>" ^ project.Prj.name ^ "</b>\n" else "")
+                    self#get_title
+                    last_modified
+                    (Text_util.format_int stat.Editor_file_type.size)
+                    (Text_util.format_int buffer#line_count)
+                    (Text_util.format_int buffer#char_count);
+              | _ -> ()
+            end;
+          with _ -> ()
 
     method backup () = Gaux.may file ~f:begin fun (file : Editor_file.file) ->
         Project.backup_file project file
@@ -377,74 +377,74 @@ class page ?file ~project ~scroll_offset ~offset ~editor () =
       match file with
       | None -> false
       | Some file ->
-        begin
-          try
-            self#set_code_folding_enabled false;
-            buffer#insert (Project.convert_to_utf8 project file#read);
-            (* Initial cursor position *)
-            if scroll then begin
-              Gmisclib.Idle.add begin fun () ->
-                let where = buffer#get_iter (`OFFSET offset) in
-                buffer#place_cursor ~where;
-                let where = buffer#get_iter (`OFFSET scroll_offset) in
-                Gmisclib.Idle.add ~prio:300 begin fun () ->
-                  ignore (self#view#scroll_to_iter ~use_align:(self#view#scroll_to_iter where) ~xalign:1.0 where);
-                end
+          begin
+            try
+              self#set_code_folding_enabled false;
+              buffer#insert (Project.convert_to_utf8 project file#read);
+              (* Initial cursor position *)
+              if scroll then begin
+                Gmisclib.Idle.add begin fun () ->
+                  let where = buffer#get_iter (`OFFSET offset) in
+                  buffer#place_cursor ~where;
+                  let where = buffer#get_iter (`OFFSET scroll_offset) in
+                  Gmisclib.Idle.add ~prio:300 begin fun () ->
+                    ignore (self#view#scroll_to_iter ~use_align:(self#view#scroll_to_iter where) ~xalign:1.0 where);
+                  end
+                end;
               end;
-            end;
-            (* Colorize *)
-            if buffer#lexical_enabled then (Lexical.tag self#view#buffer);
-            buffer#set_modified false;
-            begin
-              match signal_buffer_changed with
-              | None ->
-                signal_buffer_changed <- Some (buffer#connect#changed ~callback:begin fun () ->
-                    changed_after_last_autosave <- true;
-                    changed_after_last_diff <- true;
-                    buffer#set_changed_timestamp (Unix.gettimeofday());
-                    buffer#set_changed_after_last_autocomp true
-                  end);
-              | _ -> ()
-            end;
-            if not buffer#undo#is_enabled then (buffer#undo#enable());
-            load_complete <- true;
-            buffer#save_buffer ~filename:buffer#orig_filename () |> ignore;
-            (*  *)
-            self#set_code_folding_enabled editor#code_folding_enabled#get; (* calls scan_folding_points, if enabled *)
-            self#view#matching_delim ();
-            Gmisclib.Idle.add ~prio:300 (fun () -> self#compile_buffer ?join:None ());
-            (* Bookmarks: offsets to marks *)
-            let redraw = ref false in
-            List.iter begin fun bm ->
-              if bm.Oe.bm_filename = file#filename then
-                let mark = (Bookmark.offset_to_mark (self#buffer :> GText.buffer) bm) in
-                let callback =
-                  if bm.Oe.bm_num >= Bookmark.limit then Some (fun _ ->
-                      editor#bookmark_remove ~num:bm.Oe.bm_num;
-                      redraw := true;
-                      true)
-                  else None
+              (* Colorize *)
+              if buffer#lexical_enabled then (Lexical.tag self#view#buffer);
+              buffer#set_modified false;
+              begin
+                match signal_buffer_changed with
+                | None ->
+                    signal_buffer_changed <- Some (buffer#connect#changed ~callback:begin fun () ->
+                        changed_after_last_autosave <- true;
+                        changed_after_last_diff <- true;
+                        buffer#set_changed_timestamp (Unix.gettimeofday());
+                        buffer#set_changed_after_last_autocomp true
+                      end);
+                | _ -> ()
+              end;
+              if not buffer#undo#is_enabled then (buffer#undo#enable());
+              load_complete <- true;
+              buffer#save_buffer ~filename:buffer#orig_filename () |> ignore;
+              (*  *)
+              self#set_code_folding_enabled editor#code_folding_enabled#get; (* calls scan_folding_points, if enabled *)
+              self#view#matching_delim ();
+              Gmisclib.Idle.add ~prio:300 (fun () -> self#compile_buffer ?join:None ());
+              (* Bookmarks: offsets to marks *)
+              let redraw = ref false in
+              List.iter begin fun bm ->
+                if bm.Oe.bm_filename = file#filename then
+                  let mark = (Bookmark.offset_to_mark (self#buffer :> GText.buffer) bm) in
+                  let callback =
+                    if bm.Oe.bm_num >= Bookmark.limit then Some (fun _ ->
+                        editor#bookmark_remove ~num:bm.Oe.bm_num;
+                        redraw := true;
+                        true)
+                    else None
+                  in
+                  let marker = Gutter.create_marker ~mark ?pixbuf:(Bookmark.icon bm.Oe.bm_num) ?callback () in
+                  bm.Oe.bm_marker <- Some marker;
+                  view#gutter.Gutter.markers <- marker :: view#gutter.Gutter.markers
+              end project.Prj.bookmarks;
+              Project.save_bookmarks project;
+              if !redraw then (GtkBase.Widget.queue_draw text_view#as_widget);
+              true
+            with Glib.Convert.Error (_, message) -> begin
+                let message = if project.Prj.encoding <> Some "UTF-8" then (kprintf Convert.to_utf8
+                                                                              "Cannot convert file\n\n%s\n\nfrom %s codeset to UTF-8.\n\n%s"
+                                                                              file#filename
+                                                                              (match project.Prj.encoding with None -> "Default" | Some x -> x)
+                                                                              message) else message
                 in
-                let marker = Gutter.create_marker ~mark ?pixbuf:(Bookmark.icon bm.Oe.bm_num) ?callback () in
-                bm.Oe.bm_marker <- Some marker;
-                view#gutter.Gutter.markers <- marker :: view#gutter.Gutter.markers
-            end project.Prj.bookmarks;
-            Project.save_bookmarks project;
-            if !redraw then (GtkBase.Widget.queue_draw text_view#as_widget);
-            true
-          with Glib.Convert.Error (_, message) -> begin
-              let message = if project.Prj.encoding <> Some "UTF-8" then (kprintf Convert.to_utf8
-                                                                            "Cannot convert file\n\n%s\n\nfrom %s codeset to UTF-8.\n\n%s"
-                                                                            file#filename
-                                                                            (match project.Prj.encoding with None -> "Default" | Some x -> x)
-                                                                            message) else message
-              in
-              let dialog = GWindow.message_dialog ~title:"Text file contains invalid characters."
-                  ~message_type:`ERROR ~message ~buttons:GWindow.Buttons.ok () in
-              (match dialog#run () with _ -> dialog#destroy())
-            end;
-            false;
-        end
+                let dialog = GWindow.message_dialog ~title:"Text file contains invalid characters."
+                    ~message_type:`ERROR ~message ~buttons:GWindow.Buttons.ok () in
+                (match dialog#run () with _ -> dialog#destroy())
+              end;
+              false;
+          end
 
     method compile_buffer ?join () =
       let filename = self#get_filename in
@@ -499,55 +499,55 @@ class page ?file ~project ~scroll_offset ~offset ~editor () =
     method private show_dep_graph () =
       match dotview with
       | Some widget ->
-        widget#destroy();
-        dotview <- None;
-        textbox#misc#show();
-        List.iter (fun b -> b#misc#set_sensitive true)
-          [button_font_incr; button_font_decr; button_rowspacing_incr; button_rowspacing_decr; button_h_prev; button_h_next; button_h_last];
-        List.iter (fun b -> b#misc#set_sensitive true) [button_toggle_wrap; button_toggle_whitespace];
-        status_pos_box#misc#show();
-        sep_status_pos_box#misc#show();
+          widget#destroy();
+          dotview <- None;
+          textbox#misc#show();
+          List.iter (fun b -> b#misc#set_sensitive true)
+            [button_font_incr; button_font_decr; button_rowspacing_incr; button_rowspacing_decr; button_h_prev; button_h_next; button_h_last];
+          List.iter (fun b -> b#misc#set_sensitive true) [button_toggle_wrap; button_toggle_whitespace];
+          status_pos_box#misc#show();
+          sep_status_pos_box#misc#show();
       | None ->
-        begin
-          let reset_button () =
-            Gaux.may signal_button_dotview ~f:button_dotview#misc#handler_block;
-            button_dotview#set_active false;
-            Gaux.may signal_button_dotview ~f:button_dotview#misc#handler_unblock;
-          in
-          try
-            begin match editor#project.Prj.in_source_path self#get_filename with
+          begin
+            let reset_button () =
+              Gaux.may signal_button_dotview ~f:button_dotview#misc#handler_block;
+              button_dotview#set_active false;
+              Gaux.may signal_button_dotview ~f:button_dotview#misc#handler_unblock;
+            in
+            try
+              begin match editor#project.Prj.in_source_path self#get_filename with
               | Some filename ->
-                let filename = String.concat "/" (Miscellanea.filename_split filename) in
-                let on_ready_cb viewer =
-                  Option.iter begin fun viewer ->
-                    if button_dotview#active then begin
-                      textbox#misc#hide();
-                      vbox#reorder_child viewer#coerce ~pos:0;
-                      dotview <- Some viewer;
-                      List.iter (fun b -> b#misc#set_sensitive false)
-                        [button_font_incr; button_font_decr; button_rowspacing_incr; button_rowspacing_decr;
-                         button_h_prev; button_h_next; button_h_last];
-                      List.iter (fun b -> b#misc#set_sensitive false) [button_toggle_wrap; button_toggle_whitespace];
-                      status_pos_box#misc#hide();
-                      sep_status_pos_box#misc#hide();
-                    end
-                  end viewer
-                in
-                begin match Dot.draw ~project:editor#project ~filename ~packing:vbox#add ~on_ready_cb () with
+                  let filename = String.concat "/" (Miscellanea.filename_split filename) in
+                  let on_ready_cb viewer =
+                    Option.iter begin fun viewer ->
+                      if button_dotview#active then begin
+                        textbox#misc#hide();
+                        vbox#reorder_child viewer#coerce ~pos:0;
+                        dotview <- Some viewer;
+                        List.iter (fun b -> b#misc#set_sensitive false)
+                          [button_font_incr; button_font_decr; button_rowspacing_incr; button_rowspacing_decr;
+                           button_h_prev; button_h_next; button_h_last];
+                        List.iter (fun b -> b#misc#set_sensitive false) [button_toggle_wrap; button_toggle_whitespace];
+                        status_pos_box#misc#hide();
+                        sep_status_pos_box#misc#hide();
+                      end
+                    end viewer
+                  in
+                  begin match Dot.draw ~project:editor#project ~filename ~packing:vbox#add ~on_ready_cb () with
                   | None -> reset_button()
                   | _ -> ();
-                end
+                  end
 
               | None ->
-                let title = "Could not show dependency graph" in
-                let message = sprintf "%s for file: \n\n%s" title self#get_filename in
-                Dialog.message ~title ~message `INFO;
-                reset_button ()
-            end
-          with ex ->
-            reset_button();
-            Dialog.display_exn ~parent:self ~title:"Error creating dependency graph" ex
-        end
+                  let title = "Could not show dependency graph" in
+                  let message = sprintf "%s for file: \n\n%s" title self#get_filename in
+                  Dialog.message ~title ~message `INFO;
+                  reset_button ()
+              end
+            with ex ->
+              reset_button();
+              Dialog.display_exn ~parent:self ~title:"Error creating dependency graph" ex
+          end
 
     method cut () =
       self#copy ();
@@ -565,22 +565,22 @@ class page ?file ~project ~scroll_offset ~offset ~editor () =
       match (GData.clipboard (Gdk.Atom.clipboard))#text with
       | None -> ()
       | Some text ->
-        if view#editable then begin
-          GtkSignal.stop_emit();
-          ignore (buffer#delete_interactive ~start:(buffer#get_iter `INSERT) ~stop:(buffer#get_iter `SEL_BOUND) ());
-          buffer#insert text;
-          let iter = buffer#get_iter `INSERT in
-          if buffer#lexical_enabled then begin
-            Lexical.tag view#buffer
+          if view#editable then begin
+            GtkSignal.stop_emit();
+            ignore (buffer#delete_interactive ~start:(buffer#get_iter `INSERT) ~stop:(buffer#get_iter `SEL_BOUND) ());
+            buffer#insert text;
+            let iter = buffer#get_iter `INSERT in
+            if buffer#lexical_enabled then begin
+              Lexical.tag view#buffer
+                ~start:(iter#backward_chars (Glib.Utf8.length text))#backward_line
+                ~stop:iter#forward_line;
+            end;
+            buffer#remove_tag view#highlight_current_line_tag
               ~start:(iter#backward_chars (Glib.Utf8.length text))#backward_line
               ~stop:iter#forward_line;
-          end;
-          buffer#remove_tag view#highlight_current_line_tag
-            ~start:(iter#backward_chars (Glib.Utf8.length text))#backward_line
-            ~stop:iter#forward_line;
-          view#draw_current_line_background ~force:true iter;
-          Gmisclib.Idle.add (fun () -> ignore (view#scroll_to_iter iter));
-        end
+            view#draw_current_line_background ~force:true iter;
+            Gmisclib.Idle.add (fun () -> ignore (view#scroll_to_iter iter));
+          end
 
     initializer
       global_gutter#misc#connect#query_tooltip ~callback:begin fun ~x ~y ~kbd tooltip ->
@@ -645,17 +645,17 @@ class page ?file ~project ~scroll_offset ~offset ~editor () =
             match editor#get_definition iter with
             | None -> ()
             | Some _ ->
-              match
-                Binannot_ident.find_ident
-                  ~project ~filename:self#get_filename ~offset:iter#offset
-                  ~compile_buffer:(fun () -> self#compile_buffer ?join:(Some true)) ()
-              with
-              | Some ident_at_iter ->
-                let _, start, stop = Binannot.cnum_of_loc ident_at_iter.Binannot.ident_loc.Location.loc in
-                let start = buffer#get_iter (`OFFSET start) in
-                let stop = buffer#get_iter (`OFFSET stop) in
-                bounds := Some (start, stop)
-              | _ -> ()
+                match
+                  Binannot_ident.find_ident
+                    ~project ~filename:self#get_filename ~offset:iter#offset
+                    ~compile_buffer:(fun () -> self#compile_buffer ?join:(Some true)) ()
+                with
+                | Some ident_at_iter ->
+                    let _, start, stop = Binannot.cnum_of_loc ident_at_iter.Binannot.ident_loc.Location.loc in
+                    let start = buffer#get_iter (`OFFSET start) in
+                    let stop = buffer#get_iter (`OFFSET stop) in
+                    bounds := Some (start, stop)
+                | _ -> ()
           end
         end);
       ignore (self#view#hyperlink#connect#activate ~callback:begin fun iter ->
@@ -665,12 +665,12 @@ class page ?file ~project ~scroll_offset ~offset ~editor () =
       let activate_spinner (active : Activity.t list) =
         match active with
         | [] ->
-          spinner#set_pixbuf Icons.empty_14;
-          spinner#misc#set_tooltip_text "";
+            spinner#set_pixbuf Icons.empty_14;
+            spinner#misc#set_tooltip_text "";
         | msgs ->
-          let msgs = snd (List.split msgs) in
-          spinner#set_file (App_config.application_icons // "spinner.gif");
-          spinner#misc#set_tooltip_text (String.concat "\n" (List.rev msgs));
+            let msgs = snd (List.split msgs) in
+            spinner#set_file (App_config.application_icons // "spinner.gif");
+            spinner#misc#set_tooltip_text (String.concat "\n" (List.rev msgs));
       in
       ignore (Activity.table#connect#changed ~callback:activate_spinner);
       activate_spinner Activity.table#get;
@@ -686,42 +686,42 @@ class page ?file ~project ~scroll_offset ~offset ~editor () =
           let window = GdkEvent.get_window ev in
           match text_view#get_window `LEFT with
           | Some w when (Gobject.get_oid w) = (Gobject.get_oid window) ->
-            let y0 = Gdk.Rectangle.y text_view#visible_rect in
-            let y = GdkEvent.Button.y ev in
-            let where = fst (text_view#get_line_at_y ((int_of_float y) + y0)) in
-            start_selection := Some where;
-            false
+              let y0 = Gdk.Rectangle.y text_view#visible_rect in
+              let y = GdkEvent.Button.y ev in
+              let where = fst (text_view#get_line_at_y ((int_of_float y) + y0)) in
+              start_selection := Some where;
+              false
           | _ -> false
         end in
       let _ = text_view#event#connect#after#button_release ~callback:begin fun ev ->
           let window = GdkEvent.get_window ev in
           match text_view#get_window `LEFT with
           | Some w when (Gobject.get_oid w) = (Gobject.get_oid window) ->
-            let y0 = Gdk.Rectangle.y text_view#visible_rect in
-            let y = GdkEvent.Button.y ev in
-            let where = fst (text_view#get_line_at_y ((int_of_float y) + y0)) in
-            begin
-              match !start_selection with
-              | Some started when started#equal where ->
-                begin
-                  match Project.find_bookmark project self#get_filename buffer#as_gtext_buffer where with
-                  | Some bm when bm.Oe.bm_num >= Bookmark.limit ->
-                    editor#bookmark_remove ~num:bm.Oe.bm_num;
-                    GtkBase.Widget.queue_draw text_view#as_widget;
-                  | _ ->
-                    let num = Project.get_actual_maximum_bookmark project in
-                    let num = if num >= Bookmark.limit then num + 1 else Bookmark.limit in
-                    let callback (_ : Gtk.text_mark) =
-                      editor#bookmark_remove ~num;
-                      GtkBase.Widget.queue_draw text_view#as_widget;
-                      true
-                    in
-                    editor#bookmark_create ~num ?where:(Some where) ?callback:(Some callback) ();
-                end;
-              | _ -> ()
-            end;
-            start_selection := None;
-            false
+              let y0 = Gdk.Rectangle.y text_view#visible_rect in
+              let y = GdkEvent.Button.y ev in
+              let where = fst (text_view#get_line_at_y ((int_of_float y) + y0)) in
+              begin
+                match !start_selection with
+                | Some started when started#equal where ->
+                    begin
+                      match Project.find_bookmark project self#get_filename buffer#as_gtext_buffer where with
+                      | Some bm when bm.Oe.bm_num >= Bookmark.limit ->
+                          editor#bookmark_remove ~num:bm.Oe.bm_num;
+                          GtkBase.Widget.queue_draw text_view#as_widget;
+                      | _ ->
+                          let num = Project.get_actual_maximum_bookmark project in
+                          let num = if num >= Bookmark.limit then num + 1 else Bookmark.limit in
+                          let callback (_ : Gtk.text_mark) =
+                            editor#bookmark_remove ~num;
+                            GtkBase.Widget.queue_draw text_view#as_widget;
+                            true
+                          in
+                          editor#bookmark_create ~num ?where:(Some where) ?callback:(Some callback) ();
+                    end;
+                | _ -> ()
+              end;
+              start_selection := None;
+              false
           | _ -> false
         end in
       (**  *)

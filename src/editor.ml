@@ -29,11 +29,11 @@ let image_menu_item ~label ?(pixbuf=Icons.empty_8) ?stock ?(icon_size=`MENU) ?(s
   let menu_item = GMenu.menu_item ~packing ~show () in
   let hbox = GPack.hbox ~border_width: 6 ~packing: menu_item#add () in
   let _image = 
-		if Option.is_none stock then
-		 GMisc.image ~pixbuf ~icon_size ~packing: hbox#add () 
-	else
-	GMisc.image ?stock ~packing: hbox#add ()
-in
+    if Option.is_none stock then
+      GMisc.image ~pixbuf ~icon_size ~packing: hbox#add () 
+    else
+      GMisc.image ?stock ~packing: hbox#add ()
+  in
   let _label = GMisc.label ~text: label ~packing: hbox#add () in
   menu_item
 ;;
@@ -106,11 +106,11 @@ class editor () =
       try
         self#with_current_page begin fun page ->
           match page#outline with
-            | Some ol when show -> self#pack_outline ol#coerce;
-            | Some ol ->
+          | Some ol when show -> self#pack_outline ol#coerce;
+          | Some ol ->
               ol#destroy();
               page#set_outline None;
-            | _ ->
+          | _ ->
               (try hpaned#remove hpaned#child1 with Gpointer.Null -> ());
               if show then (page#compile_buffer ?join:None());
         end;
@@ -161,24 +161,24 @@ class editor () =
 
     method goto_view v =
       match self#get_page (`VIEW v) with
-        | None -> ()
-        | Some page ->
+      | None -> ()
+      | Some page ->
           if not page#load_complete then (self#load_page page);
           notebook#goto_page (notebook#page_num page#coerce);
 
     method get_page :
       [`ACTIVE | `FILENAME of string | `NUM of int | `VIEW of Text.view] -> Editor_page.page option =
       function
-        | `ACTIVE ->
+      | `ACTIVE ->
           List_opt.find (fun p ->
               p#get_oid = (notebook#get_nth_page notebook#current_page)#get_oid) pages
-        | `FILENAME filename ->
+      | `FILENAME filename ->
           let uncapitalize = if Sys.os_type = "Win32" then String.uncapitalize_ascii else (fun x -> x) in
           let filename = uncapitalize filename in
           List_opt.find (fun p ->
               match p#file with None -> false | Some f -> uncapitalize f#filename = filename) pages
-        | `NUM n -> List_opt.find (fun p -> p#get_oid = (notebook#get_nth_page n)#get_oid) pages
-        | `VIEW v -> List_opt.find (fun p -> p#view#get_oid = v#get_oid) pages
+      | `NUM n -> List_opt.find (fun p -> p#get_oid = (notebook#get_nth_page n)#get_oid) pages
+      | `VIEW v -> List_opt.find (fun p -> p#view#get_oid = v#get_oid) pages
 
     method dialog_file_open () = Editor_dialog.file_open ~editor:self ()
 
@@ -223,16 +223,16 @@ class editor () =
       let filename = location.Location_history.filename in
       if Sys.file_exists filename then begin
         match self#get_page (`FILENAME filename) with
-          | None ->
+        | None ->
             ignore (self#open_file ~active:true ~scroll_offset:0 ~offset:0 filename);
             self#location_history_goto location
-          | Some page ->
+        | Some page ->
             let view = (page#view :> Text.view) in
             self#goto_view view;
             let where =
               match location.Location_history.mark with
-                | Some mark -> page#buffer#get_iter_at_mark (`MARK mark)
-                | None ->
+              | Some mark -> page#buffer#get_iter_at_mark (`MARK mark)
+              | None ->
                   let offset = location.Location_history.offset in
                   (* Now that the page is loaded, marks are used in place of offsets. *)
                   location.Location_history.mark <-
@@ -276,22 +276,22 @@ class editor () =
       try
         let bm = List.find (fun bm -> bm.Oe.bm_num = num) project.Prj.bookmarks in
         match self#get_page (`FILENAME bm.Oe.bm_filename) with
-          | None when Sys.file_exists bm.Oe.bm_filename ->
+        | None when Sys.file_exists bm.Oe.bm_filename ->
             let _ = self#open_file ~active:true ~scroll_offset:0 ~offset:0 bm.Oe.bm_filename in
             self#bookmark_goto ~num
-          | None ->
+        | None ->
             Dialog.info ~title:"File does not exist" ~message_type:`INFO
               ~message:(sprintf "File \xC2\xAB%s\xC2\xBB does not exist." bm.Oe.bm_filename) self;
             self#bookmark_remove ~num
-          | Some page ->
+        | Some page ->
             if not page#view#realized then (self#goto_view page#view);
             Gmisclib.Idle.add ~prio:300 begin fun () ->
               ignore (Bookmark.apply bm begin function
-                  | `OFFSET _ ->
+                | `OFFSET _ ->
                     let _ = Bookmark.offset_to_mark (page#buffer :> GText.buffer) bm in
                     self#bookmark_goto ~num;
                     -1
-                  | `ITER it ->
+                | `ITER it ->
                     let where = new GText.iter it in
                     page#view#scroll_lazy where;
                     page#buffer#place_cursor ~where;
@@ -305,7 +305,7 @@ class editor () =
 
     method get_definition (iter : GText.iter) =
       match self#get_page `ACTIVE with
-        | Some page ->
+      | Some page ->
           let project = self#project in
           let filename = page#get_filename in
           let offset = iter#offset in
@@ -314,7 +314,7 @@ class editor () =
             ~filename
             ~offset
             ~compile_buffer:(fun () -> page#compile_buffer ?join:(Some true))  ()
-        | _ -> None
+      | _ -> None
 
     method scroll_to_definition ~page ~iter =
       Gaux.may (self#get_definition iter) ~f:begin fun ident ->
@@ -327,7 +327,7 @@ class editor () =
       let open Lexing in
       let filename = ident.Binannot.ident_fname in
       match self#get_page (`FILENAME filename) with
-        | Some page ->
+      | Some page ->
           if not page#load_complete then (self#load_page ~scroll:false page);
           let loc = ident.Binannot.ident_loc in
           let buffer = page#buffer in
@@ -350,7 +350,7 @@ class editor () =
             self#location_history_add ~page ~iter ~kind:(`BROWSE : Location_history.kind) ();
             Gmisclib.Idle.add page#view#misc#grab_focus
           end
-        | _ ->
+      | _ ->
           ignore (self#open_file ~active:false ~scroll_offset:0 ~offset:0 filename);
           self#goto_ident ident
 
@@ -371,32 +371,32 @@ class editor () =
         label#set_angle angle;
         let tbox = match pos with
           | `RIGHT when preferences#get.pref_tab_vertical_text ->
-            let tbox = GPack.vbox () in
-            if button#misc#parent <> None then (button#misc#reparent tbox#coerce) else (tbox#pack button#coerce);
-            if label#misc#parent <> None then (label#misc#reparent tbox#coerce) else (tbox#pack label#coerce);
-            List.iter (fun child -> child#destroy()) align#children;
-            align#add tbox#coerce;
-            label#set_xalign 0.5;
-            label#set_yalign 0.0;
-            tbox
+              let tbox = GPack.vbox () in
+              if button#misc#parent <> None then (button#misc#reparent tbox#coerce) else (tbox#pack button#coerce);
+              if label#misc#parent <> None then (label#misc#reparent tbox#coerce) else (tbox#pack label#coerce);
+              List.iter (fun child -> child#destroy()) align#children;
+              align#add tbox#coerce;
+              label#set_xalign 0.5;
+              label#set_yalign 0.0;
+              tbox
           | `LEFT when preferences#get.pref_tab_vertical_text ->
-            let tbox = GPack.vbox () in
-            if button#misc#parent <> None then (button#misc#reparent tbox#coerce) else (tbox#pack button#coerce);
-            if label#misc#parent <> None then (label#misc#reparent tbox#coerce) else (tbox#pack label#coerce);
-            List.iter (fun child -> child#destroy()) align#children;
-            align#add tbox#coerce;
-            label#set_xalign 0.5;
-            label#set_yalign 1.0;
-            tbox
+              let tbox = GPack.vbox () in
+              if button#misc#parent <> None then (button#misc#reparent tbox#coerce) else (tbox#pack button#coerce);
+              if label#misc#parent <> None then (label#misc#reparent tbox#coerce) else (tbox#pack label#coerce);
+              List.iter (fun child -> child#destroy()) align#children;
+              align#add tbox#coerce;
+              label#set_xalign 0.5;
+              label#set_yalign 1.0;
+              tbox
           | _ ->
-            let tbox = GPack.hbox () in
-            if button#misc#parent <> None then (button#misc#reparent tbox#coerce) else (tbox#pack button#coerce);
-            if label#misc#parent <> None then (label#misc#reparent tbox#coerce) else (tbox#pack label#coerce);
-            List.iter (fun child -> child#destroy()) align#children;
-            align#add tbox#coerce;
-            label#set_xalign 0.0;
-            label#set_yalign 0.5;
-            tbox
+              let tbox = GPack.hbox () in
+              if button#misc#parent <> None then (button#misc#reparent tbox#coerce) else (tbox#pack button#coerce);
+              if label#misc#parent <> None then (label#misc#reparent tbox#coerce) else (tbox#pack label#coerce);
+              List.iter (fun child -> child#destroy()) align#children;
+              align#add tbox#coerce;
+              label#set_xalign 0.0;
+              label#set_yalign 0.5;
+              tbox
         in
         tbox#set_child_packing ~expand:false ~fill:false button#coerce;
         tbox#set_child_packing ~expand:false ~fill:false label#coerce;
@@ -502,9 +502,9 @@ class editor () =
       ignore (item#connect#activate ~callback:begin fun () ->
           let cmd =
             match Sys.os_type with
-              | "Win32" | "Win64" -> Some (sprintf "explorer /select,\"%s\"" filename)
-              | _ when Oe_config.xdg_open_version <> None -> Some (sprintf "xdg-open %s" (Filename.quote (Filename.dirname filename)))
-              | _ -> None
+            | "Win32" | "Win64" -> Some (sprintf "explorer /select,\"%s\"" filename)
+            | _ when Oe_config.xdg_open_version <> None -> Some (sprintf "xdg-open %s" (Filename.quote (Filename.dirname filename)))
+            | _ -> None
           in
           Option.iter (fun cmd -> ignore (Thread.create (fun () -> ignore (Sys.command cmd)) ())) cmd
         end);
@@ -661,25 +661,25 @@ class editor () =
 
     method dialog_save_as page =
       match page#file with
-        | Some file when file#remote <> None ->
+      | Some file when file#remote <> None ->
           Option.iter
             begin fun (plugin : (module Plugins.REMOTE)) ->
               let module Remote = (val plugin) in
               Remote.dialog_save_as ~editor:self ~page ()
             end
             !Plugins.remote
-        | _ -> Dialog_save_as.window ~editor:self ~page ()
+      | _ -> Dialog_save_as.window ~editor:self ~page ()
 
     method dialog_rename page =
       match page#file with
-        | Some file when file#remote <> None ->
+      | Some file when file#remote <> None ->
           Option.iter
             begin fun (plugin : (module Plugins.REMOTE)) ->
               let module Remote = (val plugin) in
               Remote.dialog_rename ~editor:self ~page ()
             end
             !Plugins.remote
-        | _ -> Dialog_rename.window ~editor:self ~page ()
+      | _ -> Dialog_rename.window ~editor:self ~page ()
 
     method save (page : Editor_page.page) =
       let pref = Preferences.preferences#get in
@@ -697,7 +697,7 @@ class editor () =
     method dialog_delete_current () =
       self#with_current_page begin fun page ->
         match page#file with
-          | Some file ->
+        | Some file ->
             let message = GWindow.message_dialog
                 ~title:"Delete file?"
                 ~message:("Delete file\n\n"^page#get_title^"?")
@@ -709,10 +709,10 @@ class editor () =
                 ~buttons:GWindow.Buttons.yes_no () in
             Gaux.may (GWindow.toplevel self) ~f:(fun x -> message#set_transient_for x#as_window);
             (match message#run() with
-              | `YES -> self#delete_page page
-              | _ -> ());
+             | `YES -> self#delete_page page
+             | _ -> ());
             message#destroy();
-          | _ -> ()
+        | _ -> ()
       end
 
     method delete_page page =
@@ -743,8 +743,8 @@ class editor () =
       (* Location history and autosave *)
       begin
         match page#file with
-          | None -> ()
-          | Some file ->
+        | None -> ()
+        | Some file ->
             pages_cache <- (file#filename, page) :: pages_cache;
             page#misc#hide();
             (* File history *)
@@ -791,7 +791,7 @@ class editor () =
       let id_timeout_autocomp = ref None in
       let create_timeout_autocomp () =
         match !id_timeout_autocomp with
-          | None ->
+        | None ->
             id_timeout_autocomp := Some (GMain.Timeout.add ~ms:500 ~callback:begin fun () ->
                 if project.Prj.autocomp_enabled then begin
                   try
@@ -805,13 +805,13 @@ class editor () =
                 end;
                 true
               end)
-          | _ -> ()
+        | _ -> ()
       in
       (* Autosave *)
       let id_timeout_autosave = ref None in
       let create_timeout_autosave () =
         match !id_timeout_autosave with
-          | None ->
+        | None ->
             if Oe_config.autosave_enabled then begin
               id_timeout_autosave := Some (GMain.Timeout.add ~ms:Autosave.interval ~callback:begin fun () ->
                   (*Prf.crono Prf.prf_autosave*) (List.iter begin fun page ->
@@ -825,14 +825,14 @@ class editor () =
                   true
                 end)
             end
-          | _ -> ()
+        | _ -> ()
       in
       (* highlight matching delimiters *)
       let last_cursor_offset = ref 0 in
       let id_timeout_delim = ref None in
       let create_timeout_delim () =
         match !id_timeout_delim with
-          | None ->
+        | None ->
             id_timeout_delim := Some (GMain.Timeout.add ~ms:1500 ~callback:begin fun () ->
                 self#with_current_page begin fun page ->
                   if page#view#has_focus then begin
@@ -845,7 +845,7 @@ class editor () =
                 end;
                 true
               end)
-          | _ -> ()
+        | _ -> ()
       in
       (*  *)
       self#misc#connect#map ~callback:begin fun _ ->
@@ -890,8 +890,8 @@ class editor () =
       (* i_search expands the fold where text is found *)
       ignore (incremental_search#connect#found ~callback:begin fun view ->
           match self#get_page (`VIEW view) with
-            | Some page -> page#ocaml_view#code_folding#expand_current ()
-            | _ -> ()
+          | Some page -> page#ocaml_view#code_folding#expand_current ()
+          | _ -> ()
         end);
       (*  *)
       ignore (show_global_gutter#connect#changed ~callback:begin fun enabled ->
@@ -919,16 +919,16 @@ class editor () =
       ignore (self#connect#switch_page ~callback:begin fun _ ->
           self#with_current_page begin fun page ->
             match page#outline with
-              | Some outline when self#show_outline (*&& outline#get_oid <> hpaned#child1#get_oid*) ->
+            | Some outline when self#show_outline (*&& outline#get_oid <> hpaned#child1#get_oid*) ->
                 self#pack_outline outline#coerce
-              | _ -> self#pack_outline (Cmt_view.empty())
+            | _ -> self#pack_outline (Cmt_view.empty())
           end
         end);
       (* Record last active page *)
       let rec get_history project =
         match List_opt.assoc project.Prj.name history_switch_page with
-          | Some x -> x
-          | _ ->
+        | Some x -> x
+        | _ ->
             history_switch_page <- (project.Prj.name, []) :: history_switch_page;
             get_history project
       in
@@ -946,45 +946,45 @@ class editor () =
       (* Remove Page: editor goes to the last active page *)
       ignore (self#connect#remove_page ~callback:begin fun removed ->
           match self#get_page `ACTIVE with
-            | Some cur when not history_switch_page_locked && cur#get_oid = removed#get_oid ->
+          | Some cur when not history_switch_page_locked && cur#get_oid = removed#get_oid ->
               let rec find_page () =
                 let history = get_history project in
                 match history with
-                  | last :: tl ->
+                | last :: tl ->
                     begin
                       let finally () = replace_history project tl in
                       begin
                         match List_opt.find (fun p -> p#misc#get_oid = last#misc#get_oid) pages with
-                          | None -> finally(); find_page()
-                          | _ ->
+                        | None -> finally(); find_page()
+                        | _ ->
                             notebook#goto_page (notebook#page_num last);
                             finally()
                       end;
                     end;
-                  | _ -> ()
+                | _ -> ()
               in
               find_page()
-            | _ -> ()
+          | _ -> ()
         end);
       (* Replace marks with offsets in location history *)
       ignore (self#connect#remove_page ~callback:begin fun page ->
           Location_history.iter location_history ~f:begin function
-            | loc when loc.Location_history.filename = page#get_filename ->
+          | loc when loc.Location_history.filename = page#get_filename ->
               if not page#buffer#modified (* i.e. saved *) then begin
                 match loc.Location_history.mark with
-                  | Some mark when (not (GtkText.Mark.get_deleted mark)) ->
+                | Some mark when (not (GtkText.Mark.get_deleted mark)) ->
                     let iter = page#buffer#get_iter_at_mark (`MARK mark) in
                     loc.Location_history.offset <- iter#offset;
                     loc.Location_history.mark <- None;
-                  | Some _ -> loc.Location_history.mark <- None;
-                  | _ -> ()
+                | Some _ -> loc.Location_history.mark <- None;
+                | _ -> ()
               end else begin
                 (* If the buffer is not saved, location is unmeaningful; it only
                    records the file name. *)
                 loc.Location_history.mark <- None;
                 loc.Location_history.offset <- 0;
               end
-            | _ -> ()
+          | _ -> ()
           end
         end);
   end

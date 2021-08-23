@@ -54,10 +54,10 @@ let current_line_style                   = (*`ON_OFF_DASH*) `SOLID
 let current_line_join                    = (*`ROUND `MITER `BEVEL *) `BEVEL
 let on_off_dashes                        = [1; 3]
 (* Gutter colors:
-  `CALC factor    : Calculated according to the bg color of the text view.
+   `CALC factor    : Calculated according to the bg color of the text view.
                     [darker] 0.5 <= factor <= 1.0 [same as text view]
-  `THEME          : Based on the GTK theme.
-  `NAME "#ffffff" : Specific color. *)
+   `THEME          : Based on the GTK theme.
+   `NAME "#ffffff" : Specific color. *)
 let gutter_bg_color                      = (*`THEME*) (*`CALC 0.93*) `CALC 0.97
 let gutter_fg_color                      = (*`THEME*) `CALC 0.50 (*`NAME "#6070ff"*)
 let gutter_border_color                  = (*`THEME*) (*`CALC 0.875*) `CALC 0.97
@@ -66,7 +66,7 @@ let code_folding_scope_color             = `NAME "#e5e5e5" (* disabled *)
 let code_folding_highlight_color         = "#d0d0d0"
 let code_folding_hightlight_gradient     = ["#f4f4f4"; "#f9f9f9"; "#fefefe"] (* [] for no gradient *)
 let code_folding_font                    = ref (Some "Monospace 10")
-                                          (* Font for the "n lines" label in the fold line; it must be 10 pixels height. None for no label *)
+(* Font for the "n lines" label in the fold line; it must be 10 pixels height. None for no label *)
 let global_gutter_comments_enabled       = false
 let global_gutter_size                   = 13
 let global_gutter_comments_color         = `NAME "#fa80a5"
@@ -80,7 +80,7 @@ let global_gutter_no_errors              = `NAME "#daedd0"
 let find_replace_history_max_length      = 75
 let find_text_output_border_color        = current_line_border_color(*fun _ _ -> `NAME "#707070"*) (* Current line border color of the find text output pane *)
 let find_text_output_highlight           = `DEFAULT, `DEFAULT (*`NAME "#ffff7e", `NONE*) (* Background and foreground colors to highlight occurrences where the pattern matches.
-                                          (`NONE=do not change color; `DEFAULT=default color; `NAME=specific color)*)
+                                                                                            (`NONE=do not change color; `DEFAULT=default color; `NAME=specific color)*)
 let find_text_output_linenumber_fgcolor  = `FOREGROUND "#000000"
 let file_history_filename                = App_config.ocamleditor_user_home // "file_history"
 let file_history_max_length              = 300
@@ -93,9 +93,9 @@ let module_browser_max_results           = 150 (* Max. number of search results 
 let module_browser_secondary_title_color = "#877033"
 let completion_popup_default_dimensions  = 900, 350
 let odoc_tag_properties                  = [ (* These properties apply to ocamldoc comments only, not to the type descriptions. *)
-                                          `PIXELS_INSIDE_WRAP 2;
-                                          `PIXELS_BELOW_LINES 2;
-                                          `WRAP_MODE `WORD]
+  `PIXELS_INSIDE_WRAP 2;
+  `PIXELS_BELOW_LINES 2;
+  `WRAP_MODE `WORD]
 let odoc_margin                          = 8
 let layout_find_references               = `VERTICAL
 let layout_find_module_browser           = `VERTICAL
@@ -123,14 +123,14 @@ let getenv_ocamllib = try Some (Sys.getenv "OCAMLLIB") with Not_found -> None
 let _ =
   (* Check whether "code_folding_font" can be loaded. *)
   match !code_folding_font with
-    | None -> ()
-    | Some fontset ->
+  | None -> ()
+  | Some fontset ->
       begin
         try ignore (GPango.font_description_from_string fontset)
         with Gpointer.Null -> begin
-          eprintf "Warning: could not load fontset \"%s\".\n%!" fontset;
-          code_folding_font := None
-        end
+            eprintf "Warning: could not load fontset \"%s\".\n%!" fontset;
+            code_folding_font := None
+          end
       end;;
 
 (** Commands *)
@@ -174,13 +174,13 @@ let cvtres = if Sys.win32 then get_version ~ok_status:0 "cvtres" else None
 let gtk_major, gtk_minor, _ = GMain.Main.version
 let current_line_border_adjust, dash_style, dash_style_offset =
   match gtk_major, gtk_minor with
-    | 2, 14 -> 0, `ON_OFF_DASH, None
-    | 2, 16 -> 0, `DOUBLE_DASH, None
-    | 2, 20 -> 1, `ON_OFF_DASH, (Some 2)
-    | 2, 22 -> 2, `DOUBLE_DASH, None
-    | 2, 24 when Sys.os_type = "Win32" -> 1, `DOUBLE_DASH, None
-    | 2, 24 -> 1, `ON_OFF_DASH, (Some 2)
-    | _     -> 1, `DOUBLE_DASH, None
+  | 2, 14 -> 0, `ON_OFF_DASH, None
+  | 2, 16 -> 0, `DOUBLE_DASH, None
+  | 2, 20 -> 1, `ON_OFF_DASH, (Some 2)
+  | 2, 22 -> 2, `DOUBLE_DASH, None
+  | 2, 24 when Sys.os_type = "Win32" -> 1, `DOUBLE_DASH, None
+  | 2, 24 -> 1, `ON_OFF_DASH, (Some 2)
+  | _     -> 1, `DOUBLE_DASH, None
 
 let themes_dir =
   let themes = (!! (!! Sys.executable_name)) // "share" // "themes" in

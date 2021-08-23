@@ -70,7 +70,7 @@ class \"GtkTextView\" style \"s1\"
   if pref.Preferences.pref_highlight_current_line then begin
     view#options#set_highlight_current_line
       (Some (match (List.assoc "highlight_current_line" pref.Preferences.pref_tags)
-        with ((`NAME c), _, _, _, _, _) -> c | _ -> assert false));
+             with ((`NAME c), _, _, _, _, _) -> c | _ -> assert false));
   end else (view#options#set_highlight_current_line None);
   view#tbuffer#set_tab_width pref.Preferences.pref_editor_tab_width;
   view#tbuffer#set_tab_spaces pref.Preferences.pref_editor_tab_spaces;
@@ -78,14 +78,14 @@ class \"GtkTextView\" style \"s1\"
   view#options#set_smart_end (pref.Preferences.pref_smart_keys_end = 1);
   if pref.Preferences.pref_right_margin_visible then begin
     view#options#set_visible_right_margin (Some
-      (pref.Preferences.pref_right_margin, `NAME pref.Preferences.pref_right_margin_color))
+                                             (pref.Preferences.pref_right_margin, `NAME pref.Preferences.pref_right_margin_color))
   end else (view#options#set_visible_right_margin None);
   match List_opt.assoc "selection" pref.Preferences.pref_tags with
-    | Some (fg_color, _, _, _, _, (bg_default, bg_color)) ->
+  | Some (fg_color, _, _, _, _, (bg_default, bg_color)) ->
       let bg_color = if bg_default then view#options#text_color else bg_color in
       view#misc#modify_base [`SELECTED, bg_color; `ACTIVE, bg_color];
       let fg_color = if bg_default then `NAME default_bg_color else fg_color in
       view#misc#modify_text [`SELECTED, fg_color; `ACTIVE, fg_color];
-    | _ -> assert false
+  | _ -> assert false
 
 

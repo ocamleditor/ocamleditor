@@ -122,7 +122,7 @@ class widget
       ignore (button_detach#connect#clicked ~callback:(fun () -> self#detach button_detach));
       ignore (self#connect_detach#detached ~callback:begin fun _ ->
           Gaux.may (preview#get_window `TEXT) ~f:(fun w -> Gdk.Window.set_cursor w (Gdk.Cursor.create `ARROW))
-      end);
+        end);
       ignore (view#append_column vc_file);
       ignore (view#append_column vc_hits);
       ignore (view#append_column vc_path);
@@ -143,24 +143,24 @@ class widget
       preview#set_border_window_size `LEFT 0;
       ignore (preview#buffer#connect#after#mark_set ~callback:begin fun iter mark ->
           match GtkText.Mark.get_name mark with
-            | Some "insert" ->
+          | Some "insert" ->
               if preview#buffer#has_selection then begin
                 GtkSignal.stop_emit();
                 preview#buffer#place_cursor (preview#buffer#get_iter `SEL_BOUND)
               end
-            | _ -> ()
+          | _ -> ()
         end);
       let bgcolor =
         match fst Oe_config.find_text_output_highlight with
-          | `DEFAULT -> [`BACKGROUND_GDK (preview#misc#style#bg `ACTIVE)]
-          | `NAME name -> [`BACKGROUND name]
-          | `NONE -> []
+        | `DEFAULT -> [`BACKGROUND_GDK (preview#misc#style#bg `ACTIVE)]
+        | `NAME name -> [`BACKGROUND name]
+        | `NONE -> []
       in
       let fgcolor =
         match snd Oe_config.find_text_output_highlight with
-          | `DEFAULT -> [`FOREGROUND_GDK (preview#misc#style#fg `ACTIVE)]
-          | `NAME name -> [`FOREGROUND name]
-          | `NONE -> []
+        | `DEFAULT -> [`FOREGROUND_GDK (preview#misc#style#fg `ACTIVE)]
+        | `NAME name -> [`FOREGROUND name]
+        | `NONE -> []
       in
       let _ = tbuf#create_tag ~name:"find_text_result_hit" (bgcolor @ fgcolor) in
       let _ = tbuf#create_tag ~name:"find_text_result_linenum"
@@ -187,19 +187,19 @@ class widget
           try
             begin
               match GtkTree.TreeView.Tooltip.get_context view#as_tree_view ~x ~y ~kbd with
-                | (x, y, Some (_, _, row)) ->
+              | (x, y, Some (_, _, row)) ->
                   begin
                     match view#get_path_at_pos ~x ~y with
-                      | Some (tpath, _, _, _) ->
+                    | Some (tpath, _, _, _) ->
                         let filename =
                           (model#get ~row ~column:col_path) // (model#get ~row ~column:col_file)
                         in
                         GtkBase.Tooltip.set_text tooltip filename;
                         GtkTree.TreeView.Tooltip.set_row view#as_tree_view tooltip tpath;
                         true
-                      | _ -> false
+                    | _ -> false
                   end
-                | _ -> false
+              | _ -> false
             end
           with Not_found | Gpointer.Null -> false
         end);
@@ -231,8 +231,8 @@ class widget
     method prev_file () =
       let path = match view#selection#get_selected_rows with
         | path :: _ ->
-          ignore (GTree.Path.prev path);
-          path
+            ignore (GTree.Path.prev path);
+            path
         | _ -> GTree.Path.create [List.length results - 1]
       in
       view#selection#select_path path;
@@ -241,8 +241,8 @@ class widget
     method next_file () =
       let path = match view#selection#get_selected_rows with
         | path :: _ ->
-          GTree.Path.next path;
-          path
+            GTree.Path.next path;
+            path
         | _ -> GTree.Path.create [0]
       in
       view#selection#select_path path;
@@ -265,7 +265,7 @@ class widget
 
     method remove_entry () =
       match view#selection#get_selected_rows with
-        | path :: _ ->
+      | path :: _ ->
           let next =
             if GTree.Path.to_string path = GTree.Path.to_string (GTree.Path.create [n_rows - 1])
             then let next = GTree.Path.copy path in ignore ((GTree.Path.prev next)); next
@@ -275,7 +275,7 @@ class widget
           n_rows <- n_rows - 1;
           view#selection#select_path next;
           view#scroll_to_cell ~align:(0.5, 0.0) next vc_file;
-        | _ -> ()
+      | _ -> ()
 
     (** restart *)
     method restart () = ignore (Thread.create (fun () -> self#find ?all:find_all ()) ())
@@ -303,15 +303,15 @@ class widget
               GtkThread2.sync search_started#call ();
               begin
                 match buffer with
-                  | None ->
+                | None ->
                     (* Search  *)
                     self#find_in_path (*begin
                                         match *)self#options.path(* with
-                                                  | Project_source -> Project.path_src project
-                                                  | Specified path -> path
-                                                  | Only_open_files -> assert false
-                                                  end*)
-                  | Some buffer ->
+                                                                    | Project_source -> Project.path_src project
+                                                                    | Specified path -> path
+                                                                    | Only_open_files -> assert false
+                                                                    end*)
+                | Some buffer ->
                     (* Search  *)
                     self#find_in_buffer buffer;
               end;
@@ -342,14 +342,14 @@ class widget
           if hits = 0 then label_message#set_text "No matches found"
           else match buffer with
             | None ->
-              let n_res = List.length results in
-              kprintf label_message#set_text "%d hit%s in %d file%s%s"
-                hits (if hits = 1 then "" else "s") n_res (if n_res = 1 then "" else "s")
-                (if n_res > 1 then sprintf " (%d %s)" count_dirs
-                     (if count_dirs = 1 then "directory" else "directories") else "");
+                let n_res = List.length results in
+                kprintf label_message#set_text "%d hit%s in %d file%s%s"
+                  hits (if hits = 1 then "" else "s") n_res (if n_res = 1 then "" else "s")
+                  (if n_res > 1 then sprintf " (%d %s)" count_dirs
+                       (if count_dirs = 1 then "directory" else "directories") else "");
             | _ ->
-              let bufname = match editor#get_page `ACTIVE with Some p -> p#get_filename | _ -> assert false in
-              kprintf label_message#set_text "%d hits in \xC2\xAB%s\xC2\xBB" hits (Filename.basename bufname)
+                let bufname = match editor#get_page `ACTIVE with Some p -> p#get_filename | _ -> assert false in
+                kprintf label_message#set_text "%d hits in \xC2\xAB%s\xC2\xBB" hits (Filename.basename bufname)
         end ()
       end
 
@@ -357,14 +357,14 @@ class widget
     method private find_in_buffer buffer =
       let start, stop =
         match selected_text_bounds with
-          | None -> None, None
-          | Some (start, stop) -> (Some start), (Some stop)
+        | None -> None, None
+        | Some (start, stop) -> (Some start), (Some stop)
       in
       match Find_text_in_buffer.find_forward ?start ?stop ~all:true ~buffer
-          ~regexp:(match self#options.current_regexp with Some x -> x | _ -> assert false)
-          ~canceled:(fun () -> self#canceled) () with
-        | None -> ()
-        | Some lines_involved ->
+              ~regexp:(match self#options.current_regexp with Some x -> x | _ -> assert false)
+              ~canceled:(fun () -> self#canceled) () with
+      | None -> ()
+      | Some lines_involved ->
           let filename = match editor#get_page `ACTIVE with Some p -> p#get_filename | _ -> assert false in
           results <- {filename = filename; lines = lines_involved} :: results;
           hits <- List.fold_left (fun acc res -> acc + (List.fold_left (fun acc l ->
@@ -409,13 +409,13 @@ class widget
               end;
               if List.length !offsets > 0 then begin
                 lines_involved := {line = line; linenum = !linenum; bol = !bol; offsets = (List.rev !offsets); marks = []} ::
-                                    !lines_involved;
+                                  !lines_involved;
               end;
               bol := !bol + (String.length real_line + 1);
             done
           with
-            | End_of_file -> ()
-            | Canceled as ex -> (finally (); raise ex)
+          | End_of_file -> ()
+          | Canceled as ex -> (finally (); raise ex)
         end;
         finally()
       end
@@ -423,18 +423,18 @@ class widget
     (** find_in_path *)
     method private find_in_path = function
       | Project_source ->
-        self#find_in_path'
-          ~recursive:self#options.recursive
-          ?pattern:(Gaux.may_map self#options.pattern ~f:File_util.Regexp.unix_regexp)
-          [Project.path_src project]
+          self#find_in_path'
+            ~recursive:self#options.recursive
+            ?pattern:(Gaux.may_map self#options.pattern ~f:File_util.Regexp.unix_regexp)
+            [Project.path_src project]
       | Specified spec_path ->
-        self#find_in_path'
-          ~recursive:self#options.recursive
-          ?pattern:(Gaux.may_map self#options.pattern ~f:File_util.Regexp.unix_regexp)
-          [spec_path]
+          self#find_in_path'
+            ~recursive:self#options.recursive
+            ?pattern:(Gaux.may_map self#options.pattern ~f:File_util.Regexp.unix_regexp)
+            [spec_path]
       | Only_open_files ->
-        List.iter (fun page (*: Editor_page.page)*) ->
-            self#find_in_file page#get_filename) editor#pages
+          List.iter (fun page (*: Editor_page.page)*) ->
+              self#find_in_file page#get_filename) editor#pages
 
     method private find_in_path' ?recursive ?pattern paths =
       List.iter begin fun path ->
@@ -443,15 +443,15 @@ class widget
         let dirs, files = List.partition (fun x ->  Sys.file_exists x && Sys.is_directory x) entries in
         let files =
           match pattern with
-            | Some pat -> List.filter (File_util.Regexp.exact_match ~pat) files
-            | _ -> files
+          | Some pat -> List.filter (File_util.Regexp.exact_match ~pat) files
+          | _ -> files
         in
         let old_hits = hits in
         List.iter self#find_in_file files;
         if hits > old_hits then (count_dirs <- count_dirs + 1);
         match recursive with
-          | Some true when dirs <> [] -> self#find_in_path' ?recursive ?pattern dirs;
-          | _ -> ()
+        | Some true when dirs <> [] -> self#find_in_path' ?recursive ?pattern dirs;
+        | _ -> ()
       end paths
 
     (** replace *)
@@ -489,16 +489,16 @@ class widget
           let pagefile = `FILENAME filename in
           let page = match editor#get_page pagefile with
             | None ->
-              ignore (editor#open_file ~active:false ~scroll_offset:0 ~offset:0 ?remote:None filename);
-              begin
-                match editor#get_page pagefile with
+                ignore (editor#open_file ~active:false ~scroll_offset:0 ~offset:0 ?remote:None filename);
+                begin
+                  match editor#get_page pagefile with
                   | None -> assert false
                   | Some page -> page
-              end
+                end
             | Some page ->
-              (*if not page#load_complete then (ignore (page#load()));*)
-              if not page#load_complete then (editor#load_page ?scroll:(Some false) page);
-              page
+                (*if not page#load_complete then (ignore (page#load()));*)
+                if not page#load_complete then (editor#load_page ?scroll:(Some false) page);
+                page
           in
           let old_error_indication_enabled = page#error_indication#enabled in
           let old_mark_occurrences = page#view#options#mark_occurrences in
@@ -510,10 +510,10 @@ class widget
           self#place_marks res;
           let path =
             match view#selection#get_selected_rows with
-              | path :: _ ->
+            | path :: _ ->
                 GTree.Path.next path;
                 path
-              | _ -> (GTree.Path.create [0])
+            | _ -> (GTree.Path.create [0])
           in
           if not !replace_all && !replace_file = "" then begin
             view#selection#select_path path;
@@ -561,12 +561,12 @@ class widget
                     if not !replace_all && !replace_file = "" then begin
                       page#view#scroll_lazy (page#view#buffer#get_iter_at_mark (`NAME m1));
                       match dialog_confirm_replace#run () with
-                        | `SKIP -> ();
-                        | `SKIP_FILE -> raise Skip_file;
-                        | `REPLACE -> replace m1 m2;
-                        | `REPLACE_FILE -> replace_file := filename; replace m1 m2;
-                        | `REPLACE_ALL -> replace_all := true;
-                        | _ -> raise Exit;
+                      | `SKIP -> ();
+                      | `SKIP_FILE -> raise Skip_file;
+                      | `REPLACE -> replace m1 m2;
+                      | `REPLACE_FILE -> replace_file := filename; replace m1 m2;
+                      | `REPLACE_ALL -> replace_all := true;
+                      | _ -> raise Exit;
                     end;
                     if !replace_all || !replace_file = filename then (replace m1 m2);
                   end marks
@@ -589,8 +589,8 @@ class widget
       try
         let page =
           match editor#get_page (`FILENAME res.filename) with
-            | None -> raise Not_found
-            | Some page ->
+          | None -> raise Not_found
+          | Some page ->
               (*if not page#load_complete then (ignore (page#load()));*)
               if not page#load_complete then (editor#load_page ?scroll:(Some false) page);
               page
@@ -598,7 +598,7 @@ class widget
         (*let max_ln = List.fold_left (fun acc {linenum=x} -> max x acc) 0 res.lines in
           if page#buffer#line_count < max_ln then (raise (Buffer_changed (page#buffer#line_count - max_ln, "", "")));*)
         List.iter begin function
-          | ({line=line; linenum=ln; offsets=offsets; marks=marks} as result_line) when marks = [] ->
+        | ({line=line; linenum=ln; offsets=offsets; marks=marks} as result_line) when marks = [] ->
             begin
               let ln = ln - 1 in
               List.iter begin fun (start, stop) ->
@@ -615,22 +615,22 @@ class widget
                 end else (raise (Buffer_changed ((ln + 1), bline, line)))
               end offsets;
             end
-          | _ -> ()
+        | _ -> ()
         end res.lines
       with
-        | Not_found -> begin
-            let sigid = editor#connect#add_page ~callback:begin fun page ->
-                if page#get_filename = res.filename then (self#place_marks res)
-              end in
-            sigids <- sigid :: sigids
-          end
-        | Buffer_changed (n, bline, line) (*as ex*) -> begin
-            if selected_text_bounds = None then begin
-              fprintf stderr "Find_text_output: exception Buffer_changed\nFile %s: at line %d found %S, expected %S\n%!"
-                res.filename n bline line;
-            end;
-            self#set_insensitive()
-          end
+      | Not_found -> begin
+          let sigid = editor#connect#add_page ~callback:begin fun page ->
+              if page#get_filename = res.filename then (self#place_marks res)
+            end in
+          sigids <- sigid :: sigids
+        end
+      | Buffer_changed (n, bline, line) (*as ex*) -> begin
+          if selected_text_bounds = None then begin
+            fprintf stderr "Find_text_output: exception Buffer_changed\nFile %s: at line %d found %S, expected %S\n%!"
+              res.filename n bline line;
+          end;
+          self#set_insensitive()
+        end
 
     (** select_line *)
     method private select_line iter =
@@ -649,8 +649,8 @@ class widget
     method private get_selected_result () =
       let path =
         match view#selection#get_selected_rows with
-          | x :: _ -> x
-          | _ ->
+        | x :: _ -> x
+        | _ ->
             let first = GTree.Path.create [0] in
             view#selection#select_path first;
             first
@@ -681,21 +681,21 @@ class widget
         in
         self#place_marks res;
         Gmisclib.Idle.add ~prio:300 (fun () -> begin
-                                        match List.nth lines_involved iter#line with
-                                          | {marks = ((mark_start, mark_stop) :: _); _} ->
-                                            begin
-                                              try
-                                                let where = page#buffer#get_iter_at_mark (`NAME mark_start) in
-                                                page#buffer#select_range where (page#buffer#get_iter_at_mark (`NAME mark_stop));
-                                                page#view#scroll_lazy where;
-                                                if grab_focus then (page#view#misc#grab_focus()) else (preview#misc#grab_focus())
-                                              with GText.No_such_mark _ -> begin
-                                                  List.iter (fun x -> x.marks <- []) res.lines;
-                                                  self#activate ~grab_focus iter;
-                                                end
-                                            end;
-                                          | _ -> ()
-                                      end)
+              match List.nth lines_involved iter#line with
+              | {marks = ((mark_start, mark_stop) :: _); _} ->
+                  begin
+                    try
+                      let where = page#buffer#get_iter_at_mark (`NAME mark_start) in
+                      page#buffer#select_range where (page#buffer#get_iter_at_mark (`NAME mark_stop));
+                      page#view#scroll_lazy where;
+                      if grab_focus then (page#view#misc#grab_focus()) else (preview#misc#grab_focus())
+                    with GText.No_such_mark _ -> begin
+                        List.iter (fun x -> x.marks <- []) res.lines;
+                        self#activate ~grab_focus iter;
+                      end
+                  end;
+              | _ -> ()
+            end)
       with Not_found -> (if App_config.application_debug then assert false)
 
     (** display *)
@@ -737,102 +737,102 @@ class widget
       let get_comments = Miscellanea.Memo.create get_comments in
       Gaux.may sigid_changed ~f:(fun id -> view#selection#misc#disconnect id);
       sigid_changed <- Some (view#selection#connect#after#changed ~callback:begin fun () ->
-        try
-          let path = List.hd view#selection#get_selected_rows in
-          let row = model#get_iter path in
-          let file = model#get ~row ~column:col_file in
-          let path = model#get ~row ~column:col_path in
-          let filename = path // file in
-          tbuf#set_lexical_enabled (filename ^^^ ".ml" || filename ^^^ ".mli" || filename ^^^ ".mll" || filename ^^^ ".mly");
-          match List_opt.find (fun {filename=fn; _} -> fn = filename) results with
+          try
+            let path = List.hd view#selection#get_selected_rows in
+            let row = model#get_iter path in
+            let file = model#get ~row ~column:col_file in
+            let path = model#get ~row ~column:col_path in
+            let filename = path // file in
+            tbuf#set_lexical_enabled (filename ^^^ ".ml" || filename ^^^ ".mli" || filename ^^^ ".mll" || filename ^^^ ".mly");
+            match List_opt.find (fun {filename=fn; _} -> fn = filename) results with
             | None -> () (* TODO: Under Windows sometimes I get filenames separated by "backslash" instead of "/" in results. *)
             | Some res ->
-              let lines_involved = res.lines in
-              tbuf#delete ~start:tbuf#start_iter ~stop:tbuf#end_iter;
-              let i = ref 0 in
-              let maxlinenum = List.fold_left (fun acc {linenum=x} -> max acc x) 0 lines_involved in
-              let maxlinenum_length = String.length (string_of_int maxlinenum) in
-              let comments, strings = get_comments filename in
-              (* Display lines *)
-              List.iter begin fun {line=line0; linenum=linenum; bol=bol; offsets=hits} ->
-                begin
-                  try
-                    let utf8_line_length = Glib.Utf8.length line0 in
-                    let scarto = 0 in
-                    let disaply_line = sprintf "%s: %s"
-                        (Miscellanea.lpad (string_of_int linenum) ' ' maxlinenum_length) line0 in
-                    tbuf#insert (disaply_line ^ (if !i = List.length lines_involved - 1 then "" else "\n"));
-                    let iter = tbuf#get_iter `INSERT in
-                    if tbuf#lexical_enabled then begin
-                      let eol = bol + utf8_line_length in
-                      let start = iter#backward_char#backward_chars utf8_line_length in
-                      let stop = iter#forward_line in
-                      let is_line_not_colorized = ref true in
-                      begin
-                        try
-                          List.iter begin fun (bc, ec, odoc) ->
-                            let comment = if odoc then "ocamldoc" else "comment" in
-                            if bc <= bol && eol <= ec then begin
-                              tbuf#apply_tag_by_name comment ~start ~stop;
-                              raise Exit
-                            end else if bol <= bc && bc <= eol && eol <= ec then begin (* |----|=====| *)
-                              let len = bc - bol in
-                              let i = start#forward_chars len in
-                              Lexical.tag (tbuf :> GText.buffer) ~start ~stop:i;
-                              tbuf#apply_tag_by_name comment ~start:i ~stop:stop#forward_line;
-                              raise Exit
-                            end else if bc < bol && bol < ec && ec < eol then begin (* |=====|----| *)
-                              let i = start#forward_chars (ec - bol) in
-                              tbuf#apply_tag_by_name comment ~start ~stop:i;
-                              Lexical.tag (tbuf :> GText.buffer) ~start:i ~stop:i#forward_to_line_end;
-                              raise Exit;
-                            end
-                          end comments;
-                        with Exit -> is_line_not_colorized := false;
-                      end;
-                      if !is_line_not_colorized then begin
+                let lines_involved = res.lines in
+                tbuf#delete ~start:tbuf#start_iter ~stop:tbuf#end_iter;
+                let i = ref 0 in
+                let maxlinenum = List.fold_left (fun acc {linenum=x} -> max acc x) 0 lines_involved in
+                let maxlinenum_length = String.length (string_of_int maxlinenum) in
+                let comments, strings = get_comments filename in
+                (* Display lines *)
+                List.iter begin fun {line=line0; linenum=linenum; bol=bol; offsets=hits} ->
+                  begin
+                    try
+                      let utf8_line_length = Glib.Utf8.length line0 in
+                      let scarto = 0 in
+                      let disaply_line = sprintf "%s: %s"
+                          (Miscellanea.lpad (string_of_int linenum) ' ' maxlinenum_length) line0 in
+                      tbuf#insert (disaply_line ^ (if !i = List.length lines_involved - 1 then "" else "\n"));
+                      let iter = tbuf#get_iter `INSERT in
+                      if tbuf#lexical_enabled then begin
+                        let eol = bol + utf8_line_length in
+                        let start = iter#backward_char#backward_chars utf8_line_length in
+                        let stop = iter#forward_line in
+                        let is_line_not_colorized = ref true in
                         begin
                           try
-                            List.iter begin fun {Lex.lexeme=lxm; start=bs; length=len} ->
-                              let es = bs + (Glib.Utf8.length lxm) + 2 in
-                              if bs <= bol && eol <= es then begin
-                                tbuf#apply_tag_by_name "char" ~start ~stop:start#forward_line;
+                            List.iter begin fun (bc, ec, odoc) ->
+                              let comment = if odoc then "ocamldoc" else "comment" in
+                              if bc <= bol && eol <= ec then begin
+                                tbuf#apply_tag_by_name comment ~start ~stop;
                                 raise Exit
-                              end else if bol < bs && bs < eol && eol < es then begin (* |----|=====| *)
-                                let i = start#forward_chars (bs - bol) in
+                              end else if bol <= bc && bc <= eol && eol <= ec then begin (* |----|=====| *)
+                                let len = bc - bol in
+                                let i = start#forward_chars len in
                                 Lexical.tag (tbuf :> GText.buffer) ~start ~stop:i;
-                                tbuf#apply_tag_by_name "char" ~start:i ~stop:iter#forward_line;
+                                tbuf#apply_tag_by_name comment ~start:i ~stop:stop#forward_line;
                                 raise Exit
-                              end else if bs < bol && bol < es && es < eol then begin (* |=====|----| *)
-                                let i = start#forward_chars (bs + len - bol) in
-                                tbuf#apply_tag_by_name "char" ~start ~stop:i;
+                              end else if bc < bol && bol < ec && ec < eol then begin (* |=====|----| *)
+                                let i = start#forward_chars (ec - bol) in
+                                tbuf#apply_tag_by_name comment ~start ~stop:i;
                                 Lexical.tag (tbuf :> GText.buffer) ~start:i ~stop:i#forward_to_line_end;
-                                raise Exit
+                                raise Exit;
                               end
-                            end strings;
+                            end comments;
                           with Exit -> is_line_not_colorized := false;
                         end;
-                        if !is_line_not_colorized then
-                          (Lexical.tag (tbuf :> GText.buffer) ~start ~stop:start#forward_to_line_end);
+                        if !is_line_not_colorized then begin
+                          begin
+                            try
+                              List.iter begin fun {Lex.lexeme=lxm; start=bs; length=len} ->
+                                let es = bs + (Glib.Utf8.length lxm) + 2 in
+                                if bs <= bol && eol <= es then begin
+                                  tbuf#apply_tag_by_name "char" ~start ~stop:start#forward_line;
+                                  raise Exit
+                                end else if bol < bs && bs < eol && eol < es then begin (* |----|=====| *)
+                                  let i = start#forward_chars (bs - bol) in
+                                  Lexical.tag (tbuf :> GText.buffer) ~start ~stop:i;
+                                  tbuf#apply_tag_by_name "char" ~start:i ~stop:iter#forward_line;
+                                  raise Exit
+                                end else if bs < bol && bol < es && es < eol then begin (* |=====|----| *)
+                                  let i = start#forward_chars (bs + len - bol) in
+                                  tbuf#apply_tag_by_name "char" ~start ~stop:i;
+                                  Lexical.tag (tbuf :> GText.buffer) ~start:i ~stop:i#forward_to_line_end;
+                                  raise Exit
+                                end
+                              end strings;
+                            with Exit -> is_line_not_colorized := false;
+                          end;
+                          if !is_line_not_colorized then
+                            (Lexical.tag (tbuf :> GText.buffer) ~start ~stop:start#forward_to_line_end);
+                        end;
                       end;
-                    end;
-                    tbuf#apply_tag_by_name "find_text_result_linenum"
-                      ~start:(tbuf#get_iter (`LINECHAR (!i, 0)))
-                      ~stop:(tbuf#get_iter (`LINECHAR (!i, maxlinenum_length + 2)));
-                    List.iter begin fun (start, stop) ->
-                      let start = start + maxlinenum_length + 2 - scarto in
-                      let stop = stop + maxlinenum_length + 2 - scarto in
-                      tbuf#apply_tag_by_name "find_text_result_hit"
-                        ~start:(tbuf#get_iter (`LINECHAR (!i, start)))
-                        ~stop:(tbuf#get_iter (`LINECHAR (!i, stop)));
-                    end hits;
-                  with Glib.Convert.Error (Glib.Convert.ILLEGAL_SEQUENCE, _) -> ()
-                end;
-                incr i
-              end lines_involved;
-              tbuf#place_cursor ~where:tbuf#start_iter;
-              current_line_selected <- None;
-        with Failure _ -> ()
+                      tbuf#apply_tag_by_name "find_text_result_linenum"
+                        ~start:(tbuf#get_iter (`LINECHAR (!i, 0)))
+                        ~stop:(tbuf#get_iter (`LINECHAR (!i, maxlinenum_length + 2)));
+                      List.iter begin fun (start, stop) ->
+                        let start = start + maxlinenum_length + 2 - scarto in
+                        let stop = stop + maxlinenum_length + 2 - scarto in
+                        tbuf#apply_tag_by_name "find_text_result_hit"
+                          ~start:(tbuf#get_iter (`LINECHAR (!i, start)))
+                          ~stop:(tbuf#get_iter (`LINECHAR (!i, stop)));
+                      end hits;
+                    with Glib.Convert.Error (Glib.Convert.ILLEGAL_SEQUENCE, _) -> ()
+                  end;
+                  incr i
+                end lines_involved;
+                tbuf#place_cursor ~where:tbuf#start_iter;
+                current_line_selected <- None;
+          with Failure _ -> ()
         end);
       ignore (view#connect#after#row_activated ~callback:begin fun path iter ->
           ignore (self#select_line (tbuf#get_iter `SEL_BOUND));
@@ -862,25 +862,25 @@ class widget
       ignore (preview#event#connect#button_release ~callback:begin fun ev ->
           let iter = get_iter ev in
           match GdkEvent.get_type ev with
-            | `BUTTON_RELEASE when !two_button_press ->
+          | `BUTTON_RELEASE when !two_button_press ->
               two_button_press := false;
               self#select_line iter;
               self#activate ~grab_focus:true iter;
               preview#buffer#place_cursor ~where:(iter#set_line_index 0);
               false
-            | _ -> false
+          | _ -> false
         end);
       ignore (preview#event#connect#button_press ~callback:begin fun ev ->
           let iter = get_iter ev in
           match GdkEvent.get_type ev with
-            | `TWO_BUTTON_PRESS ->
+          | `TWO_BUTTON_PRESS ->
               two_button_press := true;
               true
-            | `BUTTON_PRESS ->
+          | `BUTTON_PRESS ->
               self#select_line iter;
               self#activate ~grab_focus:false iter;
               false
-            | _ -> false
+          | _ -> false
         end);
       ignore (preview#event#connect#key_press ~callback:begin fun ev ->
           let key = GdkEvent.Key.keyval ev in

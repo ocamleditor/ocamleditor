@@ -122,9 +122,9 @@ let crono ?(label="Time") f x =
   in
   let time = Unix.gettimeofday() in
   let result = try f x with e -> begin
-    finally time;
-    raise e
-  end in
+      finally time;
+      raise e
+    end in
   finally time;
   result
 
@@ -182,8 +182,8 @@ let replace_extension_to_ml filename =
 (** split_prog_args *)
 let split_prog_args x =
   match split_args x with
-    | h :: t -> h, Array.of_list t
-    | _ -> assert false
+  | h :: t -> h, Array.of_list t
+  | _ -> assert false
 
 (** get_effective_command *)
 let get_effective_command =

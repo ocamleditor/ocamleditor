@@ -34,12 +34,12 @@ let remove msg = table#set (List.filter (fun (_, m) -> m <> msg) table#get)
 (** Activity Monitor *)
 let monitor ~message ~monitor ~f () =
   let window    = GWindow.window
-    ~icon:Icons.oe
-    ~title:"Activity Monitor"
-    ~modal:true
-    ~type_hint:`UTILITY
-    ~position:`CENTER
-    ~show:false ()
+      ~icon:Icons.oe
+      ~title:"Activity Monitor"
+      ~modal:true
+      ~type_hint:`UTILITY
+      ~position:`CENTER
+      ~show:false ()
   in
   Gmisclib.Window.GeometryMemo.add (!Otherwidgets_config.geometry_memo()) ~key:"dialog-activity-monitor" ~window;
   window#set_skip_pager_hint true;
@@ -51,20 +51,20 @@ let monitor ~message ~monitor ~f () =
   let label     = GMisc.label ~text:message ~width:250 ~xalign:0.0 ~yalign:0.5 ~packing:hbox#pack () in
   let button_ok = GButton.button ~label:"Background" ~packing:hbox#pack () in
   let id        = GMain.Timeout.add ~ms:100 ~callback:begin fun () ->
-    let msg = monitor () in
-    begin
-      match msg with
+      let msg = monitor () in
+      begin
+        match msg with
         | None ->
-          ignore(f());
-          window#destroy();
+            ignore(f());
+            window#destroy();
         | Some msg -> label#set_text msg
-    end;
-    msg <> None
-  end in
+      end;
+      msg <> None
+    end in
   ignore (button_ok#connect#clicked ~callback:begin fun () ->
-    GMain.Timeout.remove id;
-    window#destroy();
-  end);
+      GMain.Timeout.remove id;
+      window#destroy();
+    end);
   window#show()
 ;;
 

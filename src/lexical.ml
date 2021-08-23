@@ -1,4 +1,4 @@
-  (* $Id: lexical.ml,v 1.14.2.1 2003/03/13 11:47:20 garrigue Exp $ *)
+(* $Id: lexical.ml,v 1.14.2.1 2003/03/13 11:47:20 garrigue Exp $ *)
 
 open Parser
 open Str
@@ -23,8 +23,8 @@ let init_tags ?(tags=(!tags)) ?(colors=(!colors))
       if tagname <> "highlight_current_line" then begin
         begin
           match table#lookup tagname with
-            | None -> ()
-            | Some t -> table#remove t
+          | None -> ()
+          | Some t -> table#remove t
         end;
         let properties = [`FOREGROUND_GDK (GDraw.color col); `WEIGHT weight; `STYLE style; `UNDERLINE undline; `SCALE scale] in
         let properties = if bg_default then properties else (`BACKGROUND_GDK (GDraw.color bg_color)) :: properties in
@@ -37,7 +37,7 @@ let init_tags ?(tags=(!tags)) ?(colors=(!colors))
           end;
           Gaux.may (table#lookup "ocamldoc-paragraph") ~f:table#remove;
           let tag = tb#create_tag ~name:"ocamldoc-paragraph"
-            [`FOREGROUND_GDK (GDraw.color col); `WEIGHT weight; `STYLE style; `UNDERLINE undline; `PIXELS_BELOW_LINES 1; `PIXELS_ABOVE_LINES 1] in
+              [`FOREGROUND_GDK (GDraw.color col); `WEIGHT weight; `STYLE style; `UNDERLINE undline; `PIXELS_BELOW_LINES 1; `PIXELS_ABOVE_LINES 1] in
           if ocamldoc_paragraph_enabled then begin
             Gaux.may ocamldoc_paragraph_bgcolor_1 ~f:begin fun bg1 ->
               Gmisclib.Util.set_tag_paragraph_background tag bg1;
@@ -46,10 +46,10 @@ let init_tags ?(tags=(!tags)) ?(colors=(!colors))
         end
       end
     end tags colors;;
-  (*begin
-    match table#lookup "error" with
-      | None -> ()
-      | Some t -> table#remove t
+(*begin
+  match table#lookup "error" with
+    | None -> ()
+    | Some t -> table#remove t
   end;
   ignore(tb#create_tag ~name:"error" [`FOREGROUND "red"; `WEIGHT `BOLD])*)
 
@@ -58,17 +58,17 @@ let line_starts s =
   let len = String.length s in
   let rec next_line ~accu pos =
     if pos >= len then accu else
-    let res = try 1 + String.index_from s pos '\n' with Not_found -> 0 in
-    if res = 0 then accu else
-    next_line ~accu:(res :: accu) res
+      let res = try 1 + String.index_from s pos '\n' with Not_found -> 0 in
+      if res = 0 then accu else
+        next_line ~accu:(res :: accu) res
   in
   next_line ~accu:[0] 0
 
 let rec line_offset ~lines pos =
   match lines with [] -> invalid_arg "Lexical.line_offset"
-  | last :: prev ->
-      if pos >= last then (List.length prev, pos - last)
-      else line_offset ~lines:prev pos
+                 | last :: prev ->
+                     if pos >= last then (List.length prev, pos - last)
+                     else line_offset ~lines:prev pos
 
 let tpos ~(start : GText.iter) ~lines pos =
   let l, c = line_offset ~lines pos in
@@ -101,11 +101,11 @@ let tag ?start ?stop (tb : GText.buffer) =
   let start = match Comments.enclosing global_comments start#offset with
     | None -> start
     | Some (x, y) ->
-      tb#get_iter_at_char x in
+        tb#get_iter_at_char x in
   let stop = match Comments.enclosing global_comments stop#offset with
     | None -> stop
     | Some (x, y) ->
-      tb#get_iter_at_char y in
+        tb#get_iter_at_char y in
   (*  *)
   let u_text = tb#get_text ~start ~stop () in
   let lines = line_starts u_text in
@@ -120,8 +120,8 @@ let tag ?start ?stop (tb : GText.buffer) =
   let in_record = ref false in
   let in_record_label = ref false in
   List.iter begin function
-    | tagname when tagname <> "highlight_current_line" -> tb#remove_tag_by_name tagname ~start ~stop
-    | _ -> ()
+  | tagname when tagname <> "highlight_current_line" -> tb#remove_tag_by_name tagname ~start ~stop
+  | _ -> ()
   end !tags;
   try
     while true do
@@ -163,7 +163,7 @@ let tag ?start ?stop (tb : GText.buffer) =
           | WHEN
           | WHILE
           | WITH
-              -> "control"
+            -> "control"
           | AND
           | AS
           | BAR
@@ -184,7 +184,7 @@ let tag ?start ?stop (tb : GText.buffer) =
           | TYPE
           | VAL
           | VIRTUAL
-              -> "define"
+            -> "define"
           | IN | INITIALIZER | NEW | OF -> "define"
           | BEGIN
           | END
@@ -193,10 +193,10 @@ let tag ?start ?stop (tb : GText.buffer) =
           | OPEN
           | SIG
           | STRUCT
-              -> "structure"
+            -> "structure"
           | CHAR _
           | STRING _
-              -> "char"
+            -> "char"
           (*| BACKQUOTE*)
           | INFIXOP0 _
           | INFIXOP1 _
@@ -205,28 +205,28 @@ let tag ?start ?stop (tb : GText.buffer) =
           | INFIXOP4 _
           | PREFIXOP _
           | HASH
-              -> "infix"
+            -> "infix"
           | LABEL _
           | OPTLABEL _
           | QUESTION
           | TILDE
-              -> "label"
+            -> "label"
           | UIDENT _ | BACKQUOTE -> "uident"
           | LIDENT _ ->
               begin match !last with
-                | _, (QUESTION | TILDE), _, _ -> "label"
-                | _, BACKQUOTE, _, _ -> "number"
-                (* TODO:  *)
-                | _, LBRACE, _, _ when !in_record -> "record_label"
-                | _, MUTABLE, _, _ when !in_record -> "record_label"
-                | _, WITH, _, _ when !in_record -> "record_label"
-                | _, SEMI, _, _ when !in_record -> "record_label"
-                | _, DOT, _, _ when !in_record && !in_record_label -> "record_label"
-                | _, LPAREN, _, _ ->
+              | _, (QUESTION | TILDE), _, _ -> "label"
+              | _, BACKQUOTE, _, _ -> "number"
+              (* TODO:  *)
+              | _, LBRACE, _, _ when !in_record -> "record_label"
+              | _, MUTABLE, _, _ when !in_record -> "record_label"
+              | _, WITH, _, _ when !in_record -> "record_label"
+              | _, SEMI, _, _ when !in_record -> "record_label"
+              | _, DOT, _, _ when !in_record && !in_record_label -> "record_label"
+              | _, LPAREN, _, _ ->
                   (match !last_but_one with
-                    | _, (QUESTION | TILDE), _, _ -> "label"
-                    | _ -> (if lexeme = "failwith" || lexeme = "raise" || lexeme = "invalid_arg" then "custom" else "lident"))
-                | last ->
+                   | _, (QUESTION | TILDE), _, _ -> "label"
+                   | _ -> (if lexeme = "failwith" || lexeme = "raise" || lexeme = "invalid_arg" then "custom" else "lident"))
+              | last ->
                   (if lexeme = "failwith" || lexeme = "raise" || lexeme = "invalid_arg" then "custom" else tag_lident last)
               end
           | COLON ->
@@ -258,13 +258,13 @@ let tag ?start ?stop (tb : GText.buffer) =
       with Lexer.Error _ -> ()
     done;
   with
-    | End_of_file ->
+  | End_of_file ->
       (* comments *)
       List.iter begin fun (b, e, _, ocamldoc) ->
         if not ocamldoc then begin
           let ms = Miscellanea.Search.all multi_space begin fun ~pos ~matched_string:mat ->
-            Miscellanea.Search.Append (pos, pos + String.length mat, mat)
-          end (String.sub u_text b (e - b)) in
+              Miscellanea.Search.Append (pos, pos + String.length mat, mat)
+            end (String.sub u_text b (e - b)) in
           let (*b = b and*) e = e - 2 in
           let tag = "comment" in
           tb#apply_tag_by_name tag ~start:(tpos b) ~stop:(tpos e);
@@ -287,8 +287,8 @@ let tag ?start ?stop (tb : GText.buffer) =
           tb#apply_tag_by_name tag ~start ~stop;
         end
       end (match global_comments with Comments.Locale x -> x | _ -> failwith "Lexical: Comments.Utf8")
-    | (Lexer.Error (error, _)) as ex -> ()
-    | ex -> (printf "Lexical: %s\n%!" (Printexc.to_string ex))
+  | (Lexer.Error (error, _)) as ex -> ()
+  | ex -> (printf "Lexical: %s\n%!" (Printexc.to_string ex))
 
 
 

@@ -32,12 +32,12 @@ let get_command_output command =
     while true do output := (input_line ch) :: !output done;
     assert false
   with End_of_file -> begin
-    ignore (Unix.close_process_in ch);
-    List.rev !output
-  end | e -> begin
-    ignore (Unix.close_process_in ch);
-    raise e
-  end
+      ignore (Unix.close_process_in ch);
+      List.rev !output
+    end | e -> begin
+      ignore (Unix.close_process_in ch);
+      raise e
+    end
 
 (** quote_path *)
 let quote_path = if Sys.os_type = "Win32" then (fun x -> Filename.quote (Filename.quote x))
@@ -61,33 +61,33 @@ let parse_args line =
     Buffer.clear buf;
   in
   String.iter begin function
-    | (' ' as ch) when !state = InQuotedArg -> Buffer.add_char buf ch
-    | ' ' when !state = StartArg -> ()
-    | ' ' when !state = InUnquotedArg -> start_arg ();
-    | ' ' -> start_arg ()
-    | ('"' as ch) when !state = StartArg ->
+  | (' ' as ch) when !state = InQuotedArg -> Buffer.add_char buf ch
+  | ' ' when !state = StartArg -> ()
+  | ' ' when !state = InUnquotedArg -> start_arg ();
+  | ' ' -> start_arg ()
+  | ('"' as ch) when !state = StartArg ->
       state := InQuotedArg;
       Buffer.add_char buf ch
-    | ('"' as ch) when !state = InQuotedArg ->
+  | ('"' as ch) when !state = InQuotedArg ->
       Buffer.add_char buf ch;
       start_arg ();
-    | ('"' as ch) when !state = InQuotedArgAfterQuote ->
+  | ('"' as ch) when !state = InQuotedArgAfterQuote ->
       Buffer.add_char buf ch;
       state := InQuotedArg;
-    | ('"' as ch) when !state = InUnquotedArg ->
+  | ('"' as ch) when !state = InUnquotedArg ->
       start_arg ();
       Buffer.add_char buf ch;
       state := InQuotedArg;
-    | ('\\' as ch) when !state = InQuotedArg ->
+  | ('\\' as ch) when !state = InQuotedArg ->
       state := InQuotedArgAfterQuote;
       Buffer.add_char buf ch
-    | ch when !state = InQuotedArgAfterQuote ->
+  | ch when !state = InQuotedArgAfterQuote ->
       state := InQuotedArg;
       Buffer.add_char buf ch;
-    | ch when !state = StartArg ->
+  | ch when !state = StartArg ->
       state := InUnquotedArg;
       Buffer.add_char buf ch;
-    | ch -> Buffer.add_char buf ch;
+  | ch -> Buffer.add_char buf ch;
   end line;
   if Buffer.length buf > 0 then (start_arg ());
   List.rev !args;;

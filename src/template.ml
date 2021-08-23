@@ -68,8 +68,8 @@ open a specific project, you can copy the library in:
 <tt>  %s</tt>
 
 " About.program_name
-  About.program_name
-  About.program_name
-  (Filename.concat "<i>&lt;your-project-root&gt;</i>" Oe_config.template_project_filename);;
+    About.program_name
+    About.program_name
+    (Filename.concat "<i>&lt;your-project-root&gt;</i>" Oe_config.template_project_filename);;
 
 

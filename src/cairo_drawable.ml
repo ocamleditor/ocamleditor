@@ -28,7 +28,7 @@ let rec lines_ drawable = function
 let rec segments drawable = function
   | [] -> ()
   | ((x1, y1), (x2, y2)) :: more ->
-    line drawable x1 y1 x2 y2; segments drawable more
+      line drawable x1 y1 x2 y2; segments drawable more
 
 let rectangle drawable ~x ~y ~width ~height ?(filled = false) () =
   Cairo.move_to drawable (f x) (f y);
@@ -84,4 +84,4 @@ let polygon drawable ?(filled = false) points =
   | [] -> assert false
   | pt :: more -> path drawable pt more;
 
-    if filled then Cairo.fill drawable else Cairo.stroke drawable
+      if filled then Cairo.fill drawable else Cairo.stroke drawable

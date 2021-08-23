@@ -60,46 +60,46 @@ class widget ~page ?label_widget ?(with_spinner=true) ?packing () =
       end;
     else (fun _ -> ())
   in
-object (self)
-  inherit GObj.widget ebox#as_widget
-  inherit drag_handler
+  object (self)
+    inherit GObj.widget ebox#as_widget
+    inherit drag_handler
 
-  initializer self#init ()
-  method hbox = hbox
-  method button = button
+    initializer self#init ()
+    method hbox = hbox
+    method button = button
 
-  method set_active = set_active
+    method set_active = set_active
 
-  method private data_get _ sel ~info ~time =
-    if info = 0 then (kprintf sel#return "%d" page#misc#get_oid)
+    method private data_get _ sel ~info ~time =
+      if info = 0 then (kprintf sel#return "%d" page#misc#get_oid)
 
-  method private data_delete _ = ()
+    method private data_delete _ = ()
 
-  method private init () =
-    ebox#drag#source_set targets ~modi:[`BUTTON1 ] ~actions:[`MOVE ];
-    (*ebox#drag#source_set_icon drag_icon;*)
-    ebox#drag#connect#data_get ~callback:self#data_get;
-    ebox#drag#connect#data_delete ~callback:self#data_delete;
-    (*  *)
-    ignore (page#is_working#connect#changed ~callback:self#set_active);
-    (*  *)
-    button#connect#after#clicked ~callback:page#destroy;
-    button#set_image image#coerce;
-    button#misc#set_can_focus false;
-    button#misc#set_can_default false;
-    button#set_image image#coerce;
-    ignore (button#event#connect#enter_notify ~callback:begin fun _ ->
-      image#set_pixbuf Icons.button_close_hi_8;
-      false
-    end);
-    ignore (button#event#connect#leave_notify ~callback:begin fun _ ->
-      image#set_pixbuf Icons.button_close_8;
-      false
-    end);
-    if with_spinner then (hbox#pack spinner#coerce) else (hbox#pack button#coerce);
-    page#set_button button;
-    Gaux.may label_widget ~f:hbox#pack;
-end
+    method private init () =
+      ebox#drag#source_set targets ~modi:[`BUTTON1 ] ~actions:[`MOVE ];
+      (*ebox#drag#source_set_icon drag_icon;*)
+      ebox#drag#connect#data_get ~callback:self#data_get;
+      ebox#drag#connect#data_delete ~callback:self#data_delete;
+      (*  *)
+      ignore (page#is_working#connect#changed ~callback:self#set_active);
+      (*  *)
+      button#connect#after#clicked ~callback:page#destroy;
+      button#set_image image#coerce;
+      button#misc#set_can_focus false;
+      button#misc#set_can_default false;
+      button#set_image image#coerce;
+      ignore (button#event#connect#enter_notify ~callback:begin fun _ ->
+          image#set_pixbuf Icons.button_close_hi_8;
+          false
+        end);
+      ignore (button#event#connect#leave_notify ~callback:begin fun _ ->
+          image#set_pixbuf Icons.button_close_8;
+          false
+        end);
+      if with_spinner then (hbox#pack spinner#coerce) else (hbox#pack button#coerce);
+      page#set_button button;
+      Gaux.may label_widget ~f:hbox#pack;
+  end
 
 
 

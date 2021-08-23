@@ -42,12 +42,12 @@ let load basename =
         if App_config.application_debug then Printf.printf "Loaded\n%!";
         true
       with Dynlink.Error error -> begin
-        Printf.printf "Error loading plugin: %s\n%!" (Dynlink.error_message error);
-        (*        Dialog.message
-                  ~title:"Error while loading plugin"
-                  ~message:(sprintf "%s" (Dynlink.error_message error))
-                  `ERROR*)
-        false
+          Printf.printf "Error loading plugin: %s\n%!" (Dynlink.error_message error);
+          (*        Dialog.message
+                    ~title:"Error while loading plugin"
+                    ~message:(sprintf "%s" (Dynlink.error_message error))
+                    `ERROR*)
+          false
         end
     end else begin
       if App_config.application_debug then Printf.printf "Not loaded\n%!" ;

@@ -24,10 +24,10 @@ let image_menu_item ~label ?(pixbuf=Icons.empty_8) ?stock ?(show=true) ~packing 
   let menu_item = GMenu.menu_item ~packing ~show () in
   let hbox = GPack.hbox ~border_width: 6 ~packing: menu_item#add () in
   let _image = 
-  		if Option.is_none stock then
-   		 GMisc.image ~pixbuf ~icon_size: `MENU ~packing: hbox#add () 
-   	else
-     	GMisc.image ?stock ~packing: hbox#add ()
+    if Option.is_none stock then
+      GMisc.image ~pixbuf ~icon_size: `MENU ~packing: hbox#add () 
+    else
+      GMisc.image ?stock ~packing: hbox#add ()
   in
   let _label = GMisc.label ~text: label ~packing: hbox#add () in
   menu_item
@@ -93,7 +93,7 @@ let create ~editor ~page () =
             end;
             match page#outline with
             | Some ol ->
-              ignore (ol#select_from_buffer ?align:None (page#buffer#get_mark `INSERT))
+                ignore (ol#select_from_buffer ?align:None (page#buffer#get_mark `INSERT))
             | _ -> ()
           end else begin
             sigid := Some (editor#connect#outline_visibility_changed

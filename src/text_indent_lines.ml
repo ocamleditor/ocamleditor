@@ -57,12 +57,12 @@ let draw_indent_lines view (drawable : Gdk.cairo) start stop y0 =
   let add_segment ll x y1 y2 =
     match List_opt.assoc x !ll with
     | Some segs ->
-      begin
-        match !segs with
-        | (y3, y4) :: tl when y2 = y3 ->
-          segs := (y1, y4) :: tl;
-        | seg -> segs := (y1, y2) :: seg;
-      end
+        begin
+          match !segs with
+          | (y3, y4) :: tl when y2 = y3 ->
+              segs := (y1, y4) :: tl;
+          | seg -> segs := (y1, y2) :: seg;
+        end
     | _ -> (ll := (x, ref [y1, y2]) :: !ll)
   in
   let hline = ref 0 in

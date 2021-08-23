@@ -32,8 +32,8 @@ exception Cycle_exception of string list
 (** array_exists *)
 let array_exists from p a =
   try for i = from to Array.length a - 1 do
-    if p a.(i) then raise Exit
-  done; false with Exit -> true
+      if p a.(i) then raise Exit
+    done; false with Exit -> true
 
 (** reduce *)
 let reduce : t -> unit = function table ->
@@ -148,16 +148,16 @@ let create_dag ?times ?pp ~toplevel_modules ~verbose () =
     end;
     Dag ((table : t), ocamldeps)
   with Cycle_exception cycle ->
-    match cycle with
-      | hd :: _ ->
-        let cycle =
-          let found = ref false in
-          List.filter begin fun x ->
-            found := !found || x = hd;
-            !found
-          end (List.rev cycle)
-        in
-        Cycle ((*List.rev*) cycle)
-      | [] -> assert false
+  match cycle with
+  | hd :: _ ->
+      let cycle =
+        let found = ref false in
+        List.filter begin fun x ->
+          found := !found || x = hd;
+          !found
+        end (List.rev cycle)
+      in
+      Cycle ((*List.rev*) cycle)
+  | [] -> assert false
 ;;
 

@@ -51,8 +51,8 @@ class buffer =
         at_exit begin fun () ->
           match project with
           | None ->
-            if Sys.file_exists orig_filename then Sys.remove orig_filename;
-            if Sys.file_exists tmp_filename then Sys.remove tmp_filename
+              if Sys.file_exists orig_filename then Sys.remove orig_filename;
+              if Sys.file_exists tmp_filename then Sys.remove tmp_filename
           | _ -> ()
         end
 
@@ -63,16 +63,16 @@ class buffer =
         let a, b =
           match project with
           | Some project ->
-            begin
-              match file with
-              | Some file ->
-                begin
-                  match Project.tmp_of_abs project file#filename with
-                  | None -> create_tmp_filename ()
-                  | (Some (tmp, relname) as temp) -> tmp // relname, temp
-                end;
-              | _ -> create_tmp_filename ()
-            end;
+              begin
+                match file with
+                | Some file ->
+                    begin
+                      match Project.tmp_of_abs project file#filename with
+                      | None -> create_tmp_filename ()
+                      | (Some (tmp, relname) as temp) -> tmp // relname, temp
+                    end;
+                | _ -> create_tmp_filename ()
+              end;
           | _ -> create_tmp_filename ()
         in
         tmp_filename <- a;
@@ -262,13 +262,13 @@ and view ?project ?buffer () =
       let rect = self#visible_rect in
       let it = match dir with
         | `UP ->
-          let y = Gdk.Rectangle.y rect in
-          let it, _ = self#get_line_at_y y in
-          it#backward_lines 2;
+            let y = Gdk.Rectangle.y rect in
+            let it, _ = self#get_line_at_y y in
+            it#backward_lines 2;
         | `DOWN ->
-          let y = Gdk.Rectangle.y rect + Gdk.Rectangle.height rect + 2 in (* 2 = pixels below ocamldoc paragraphs *)
-          let it, _ = self#get_line_at_y y in
-          it#forward_line
+            let y = Gdk.Rectangle.y rect + Gdk.Rectangle.height rect + 2 in (* 2 = pixels below ocamldoc paragraphs *)
+            let it, _ = self#get_line_at_y y in
+            it#forward_line
       in
       ignore (self#scroll_to_iter it);
       self#place_cursor_onscreen() |> ignore;
@@ -280,24 +280,24 @@ and view ?project ?buffer () =
       match Delimiters.find_match ~utf8:false text offset with
       | None -> None
       | Some (lstart, lstop, rstart, rstop) as delim when lstop <> rstart ->
-        let start = self#buffer#get_iter (`OFFSET lstart) in
-        let stop = self#buffer#get_iter (`OFFSET lstop) in
-        current_matching_tag_bounds <-
-          ((self#buffer#create_mark ~name:"delim_left_start" start),
-           (self#buffer#create_mark ~name:"delim_left_stop" stop)) :: [];
-        self#buffer#apply_tag_by_name "tag_matching_delim" ~start ~stop;
-        let start = self#buffer#get_iter (`OFFSET rstart) in
-        let stop = self#buffer#get_iter (`OFFSET rstop) in
-        current_matching_tag_bounds <-
-          ((self#buffer#create_mark ~name:"delim_right_start" start),
-           (self#buffer#create_mark ~name:"delim_right_stop" stop)) :: current_matching_tag_bounds;
-        self#buffer#apply_tag_by_name "tag_matching_delim" ~start ~stop;
-        current_matching_tag_bounds_draw <- current_matching_tag_bounds;
-        GtkBase.Widget.queue_draw self#as_widget;
-        delim
+          let start = self#buffer#get_iter (`OFFSET lstart) in
+          let stop = self#buffer#get_iter (`OFFSET lstop) in
+          current_matching_tag_bounds <-
+            ((self#buffer#create_mark ~name:"delim_left_start" start),
+             (self#buffer#create_mark ~name:"delim_left_stop" stop)) :: [];
+          self#buffer#apply_tag_by_name "tag_matching_delim" ~start ~stop;
+          let start = self#buffer#get_iter (`OFFSET rstart) in
+          let stop = self#buffer#get_iter (`OFFSET rstop) in
+          current_matching_tag_bounds <-
+            ((self#buffer#create_mark ~name:"delim_right_start" start),
+             (self#buffer#create_mark ~name:"delim_right_stop" stop)) :: current_matching_tag_bounds;
+          self#buffer#apply_tag_by_name "tag_matching_delim" ~start ~stop;
+          current_matching_tag_bounds_draw <- current_matching_tag_bounds;
+          GtkBase.Widget.queue_draw self#as_widget;
+          delim
       | Some (_, lstop, rstart, _) (*as delim*) when lstop = rstart ->
-        ignore (self#innermost_enclosing_delim text lstop);
-        None
+          ignore (self#innermost_enclosing_delim text lstop);
+          None
       | _ -> None
 
     method matching_delim_remove_tag () =
@@ -333,8 +333,8 @@ and view ?project ?buffer () =
     method matching_delim_goto ?(select=false) ?(strict=true) () =
       match self#buffer#selection_bounds with
       | b1, b2 when (not (b1#equal b2)) ->
-        self#buffer#place_cursor ~where:b1;
-        self#matching_delim_goto ~select ~strict:false ()
+          self#buffer#place_cursor ~where:b1;
+          self#matching_delim_goto ~select ~strict:false ()
       (*let b1 = if List.mem b1#char blanks then
         b1#forward_find_char not_blank else b1 in
         let b2 = if List.mem b2#char blanks then
@@ -343,37 +343,37 @@ and view ?project ?buffer () =
       | _ -> begin
           match current_matching_tag_bounds with
           | [(rstart, rstop); (lstart, lstop)] ->
-            let ins = self#buffer#get_iter `INSERT in
-            let right_start = self#buffer#get_iter_at_mark (`MARK rstart) in
-            let left_stop = self#buffer#get_iter_at_mark (`MARK lstop) in
-            if select then begin
-              let start =
-                if strict then begin
-                  let start = left_stop#forward_find_char not_blank in
-                  let start = start#set_line_index 0 in
-                  if start#compare left_stop <= 0 then left_stop else start
-                end else (self#buffer#get_iter_at_mark (`MARK lstart))
-              in
-              let stop =
-                if strict then begin
-                  let stop = right_start#backward_find_char not_blank in
-                  let stop = stop#forward_line in
-                  if stop#compare right_start <= 0 then stop else right_start
-                end else (self#buffer#get_iter_at_mark (`MARK rstop))
-              in
-              self#buffer#select_range start stop;
-            end else begin
-              (*let right_stop = Gtk_util.get_iter_mark self#buffer rstop in
-                let left_start = Gtk_util.get_iter_mark self#buffer lstart in*)
-              let right_start, left_stop = if right_start#compare left_stop <= 0
-                then (right_start, left_stop) else (left_stop, right_start) in
-              let left_is_nearest = abs (ins#offset - right_start#offset) > abs (ins#offset - left_stop#offset)
-              in
-              if left_is_nearest
-              then (self#buffer#place_cursor ~where:right_start)
-              else (self#buffer#place_cursor ~where:left_stop);
-              ignore (self#scroll_to_mark `INSERT);
-            end
+              let ins = self#buffer#get_iter `INSERT in
+              let right_start = self#buffer#get_iter_at_mark (`MARK rstart) in
+              let left_stop = self#buffer#get_iter_at_mark (`MARK lstop) in
+              if select then begin
+                let start =
+                  if strict then begin
+                    let start = left_stop#forward_find_char not_blank in
+                    let start = start#set_line_index 0 in
+                    if start#compare left_stop <= 0 then left_stop else start
+                  end else (self#buffer#get_iter_at_mark (`MARK lstart))
+                in
+                let stop =
+                  if strict then begin
+                    let stop = right_start#backward_find_char not_blank in
+                    let stop = stop#forward_line in
+                    if stop#compare right_start <= 0 then stop else right_start
+                  end else (self#buffer#get_iter_at_mark (`MARK rstop))
+                in
+                self#buffer#select_range start stop;
+              end else begin
+                (*let right_stop = Gtk_util.get_iter_mark self#buffer rstop in
+                  let left_start = Gtk_util.get_iter_mark self#buffer lstart in*)
+                let right_start, left_stop = if right_start#compare left_stop <= 0
+                  then (right_start, left_stop) else (left_stop, right_start) in
+                let left_is_nearest = abs (ins#offset - right_start#offset) > abs (ins#offset - left_stop#offset)
+                in
+                if left_is_nearest
+                then (self#buffer#place_cursor ~where:right_start)
+                else (self#buffer#place_cursor ~where:left_stop);
+                ignore (self#scroll_to_mark `INSERT);
+              end
           | _ -> ()
         end
 
@@ -381,9 +381,9 @@ and view ?project ?buffer () =
       (*Prf.crono Prf.innermost_enclosing_delim (fun () ->*)
       match Delimiters.find_innermost_enclosing_delim ~utf8:false text offset with
       | ((start, stop) :: _) (*as stack*)  ->
-        if stop = offset
-        then (self#innermost_enclosing_delim text start)
-        else (self#matching_delim_apply_tag text start);
+          if stop = offset
+          then (self#innermost_enclosing_delim text start)
+          else (self#matching_delim_apply_tag text start);
       | _ -> None (* ) () *)
 
     method current_matching_tag_bounds = current_matching_tag_bounds
@@ -471,11 +471,11 @@ and view ?project ?buffer () =
     method private gutter_icons_same_pos child x y ym =
       match List_opt.assoc ym gutter_icons with
       | Some other ->
-        if child#misc#parent <> None && other#misc#parent <> None && other#misc#get_oid <> child#misc#get_oid then begin
-          let offset = (gutter.Gutter.size - gutter.Gutter.fold_size) / 4 in
-          self#move_child ~child:other ~x:(x - offset) ~y;
-          self#move_child ~child ~x:(x + offset) ~y
-        end
+          if child#misc#parent <> None && other#misc#parent <> None && other#misc#get_oid <> child#misc#get_oid then begin
+            let offset = (gutter.Gutter.size - gutter.Gutter.fold_size) / 4 in
+            self#move_child ~child:other ~x:(x - offset) ~y;
+            self#move_child ~child ~x:(x + offset) ~y
+          end
       | _ -> ()
 
     method draw_gutter () = (* 0.008 *)
@@ -517,47 +517,47 @@ and view ?project ?buffer () =
         List.iter begin fun mark ->
           match mark.Gutter.icon_pixbuf with
           | Some pixbuf ->
-            begin
-              match buffer#get_iter_at_mark_opt (`MARK mark.Gutter.mark) with
-              | Some mark_iter ->
-                let ym, h = self#get_line_yrange mark_iter in
-                let y = ym - y0 in
-                if false then
-                  Line_num_labl.hide (y + self#pixels_above_lines) line_num_labl;
-                let y = y + (h - Gutter.icon_size) / 2 in
-                let child = match mark.Gutter.icon_obj with
-                  | None ->
-                    let ebox = GBin.event_box () in
-                    ebox#misc#set_property "visible-window" (`BOOL false);
-                    let icon = GMisc.image ~pixbuf () in
-                    ebox#add icon#coerce;
-                    Gaux.may mark.Gutter.callback ~f:begin fun callback ->
-                      ignore (ebox#event#connect#enter_notify ~callback:begin fun ev ->
-                          let window = GdkEvent.get_window ev in
-                          Gdk.Window.set_cursor window (Gdk.Cursor.create `HAND1);
-                          true
-                        end);
-                      ignore (ebox#event#connect#leave_notify ~callback:begin fun ev ->
-                          let window = GdkEvent.get_window ev in
-                          Gdk.Window.set_cursor window (Gdk.Cursor.create `ARROW);
-                          true
-                        end);
-                      ebox#event#connect#button_press ~callback:begin fun _ ->
-                        self#misc#grab_focus();
-                        callback mark.Gutter.mark
-                      end
-                    end;
-                    let child = ebox#coerce in
-                    ignore (child#misc#connect#destroy ~callback:(fun () -> gutter_icons <- List.remove_assoc ym gutter_icons));
-                    self#add_child_in_window ~child ~which_window:`LEFT ~x ~y;
-                    mark.Gutter.icon_obj <- Some child;
-                    gutter_icons <- (ym, child) :: gutter_icons;
-                    child
-                  | Some child -> self#move_child ~child ~x ~y; child
-                in
-                self#gutter_icons_same_pos child x y ym;
-              | _ -> ()
-            end;
+              begin
+                match buffer#get_iter_at_mark_opt (`MARK mark.Gutter.mark) with
+                | Some mark_iter ->
+                    let ym, h = self#get_line_yrange mark_iter in
+                    let y = ym - y0 in
+                    if false then
+                      Line_num_labl.hide (y + self#pixels_above_lines) line_num_labl;
+                    let y = y + (h - Gutter.icon_size) / 2 in
+                    let child = match mark.Gutter.icon_obj with
+                      | None ->
+                          let ebox = GBin.event_box () in
+                          ebox#misc#set_property "visible-window" (`BOOL false);
+                          let icon = GMisc.image ~pixbuf () in
+                          ebox#add icon#coerce;
+                          Gaux.may mark.Gutter.callback ~f:begin fun callback ->
+                            ignore (ebox#event#connect#enter_notify ~callback:begin fun ev ->
+                                let window = GdkEvent.get_window ev in
+                                Gdk.Window.set_cursor window (Gdk.Cursor.create `HAND1);
+                                true
+                              end);
+                            ignore (ebox#event#connect#leave_notify ~callback:begin fun ev ->
+                                let window = GdkEvent.get_window ev in
+                                Gdk.Window.set_cursor window (Gdk.Cursor.create `ARROW);
+                                true
+                              end);
+                            ebox#event#connect#button_press ~callback:begin fun _ ->
+                              self#misc#grab_focus();
+                              callback mark.Gutter.mark
+                            end
+                          end;
+                          let child = ebox#coerce in
+                          ignore (child#misc#connect#destroy ~callback:(fun () -> gutter_icons <- List.remove_assoc ym gutter_icons));
+                          self#add_child_in_window ~child ~which_window:`LEFT ~x ~y;
+                          mark.Gutter.icon_obj <- Some child;
+                          gutter_icons <- (ym, child) :: gutter_icons;
+                          child
+                      | Some child -> self#move_child ~child ~x ~y; child
+                    in
+                    self#gutter_icons_same_pos child x y ym;
+                | _ -> ()
+              end;
           | _ -> ()
         end gutter.Gutter.markers;
         (*end ()*)
@@ -569,211 +569,211 @@ and view ?project ?buffer () =
         begin
           match self#get_window `TEXT with
           | Some window ->
-            let vrect       = self#visible_rect in
-            let h0          = Gdk.Rectangle.height vrect in
-            let w0          = Gdk.Rectangle.width vrect in
-            let y0          = Gdk.Rectangle.y vrect in
-            let start, _    = self#get_line_at_y y0 in
-            let stop, _     = self#get_line_at_y (y0 + h0) in
-            visible_height#set h0;
-            (* Expose area *)
+              let vrect       = self#visible_rect in
+              let h0          = Gdk.Rectangle.height vrect in
+              let w0          = Gdk.Rectangle.width vrect in
+              let y0          = Gdk.Rectangle.y vrect in
+              let start, _    = self#get_line_at_y y0 in
+              let stop, _     = self#get_line_at_y (y0 + h0) in
+              visible_height#set h0;
+              (* Expose area *)
             (*
             let expose_area = GdkEvent.Expose.area ev in
             let expose_y    = y0 + Gdk.Rectangle.y expose_area in
             let expose_top, _ = self#get_line_at_y expose_y in
             let expose_bottom, _ = self#get_line_at_y (expose_y + (Gdk.Rectangle.height expose_area)) in
             *)
-            let expose_y = y0 in
-            let expose_top, _ = self#get_line_at_y expose_y in
-            let expose_bottom, _ = self#get_line_at_y (expose_y + h0) in
-            (*  *)
-            let adjust      = Oe_config.current_line_border_adjust in
-            let hadjust     = int_of_float self#hadjustment#value - self#left_margin in
-            let drawable    = GDraw.Cairo.create window in
-            let { Cairo.x; y; w; h } = Cairo.clip_extents drawable in
-            (* Indentation guidelines *)
-            if options#show_indent_lines && not options#show_whitespace_chars
-            then (Text_indent_lines.draw_indent_lines self drawable) start stop y0;
-            (* Gutter border *)
-            begin
-              match self#get_window `LEFT with
-              | Some window ->
-                let drawable = GDraw.Cairo.create window in
-                let { Cairo.x; y; w; h } = Cairo.clip_extents drawable in
-                set_line_attributes drawable ~width:2 ~style:`SOLID ();
-                set_foreground drawable gutter.Gutter.border_color;
-                line drawable (gutter.Gutter.size - 1) 0 (gutter.Gutter.size - 1) h0;
-                if gutter.Gutter.fold_size > 0 then
-                  line drawable (gutter.Gutter.size - 2 - gutter.Gutter.fold_size) 0 (gutter.Gutter.size - 2 - gutter.Gutter.fold_size) h0;
-              | _ -> ()
-            end;
-            (* Right margin line *)
-            begin
-              match options#visible_right_margin with
-              | Some (column, color) ->
-                let x = approx_char_width * column - hadjust - 1 in (* -1 per evitare sovrapposizione col cursore *)
-                set_line_attributes drawable ~width:4 ~style:`SOLID ();
-                set_foreground drawable color;
-                line drawable x 0 x h0;
-              | _ -> ()
-            end;
-            (* ocamldoc_paragraph_bgcolor_enabled *)
-            if Oe_config.ocamldoc_paragraph_border_enabled
-            then (self#draw_paragraph_border drawable start stop y0 w0);
-            (* Special bookmarks *)
-            let iter = ref (expose_top#set_line_index 0) in
-            begin
-              match project with
-              | Some project ->
-                begin
-                  match buffer#file with
-                  | Some file ->
-                    let filename = file#filename in
-                    while !iter#compare expose_bottom < 0 do
-                      begin
-                        match Project.find_bookmark project filename buffer#as_gtext_buffer !iter with
-                        | Some bm when bm.Oe.bm_num >= Bookmark.limit ->
-                          set_line_attributes drawable ~width:2 ~style:`SOLID ();
-                          set_foreground drawable options#indent_lines_color_dashed (*options#text_color*);
-                          let y, h = view#get_line_yrange !iter in
-                          let y = y - y0 + h in
-                          line drawable 0 y w0 y;
-                        | _ -> ()
-                      end;
-                      iter := !iter#forward_line;
-                    done;
-                  | _ -> ()
-                end;
-              | _ -> ()
-            end;
-            (* Whitespace characters *)
-            if options#show_whitespace_chars then begin
-              let iter        = ref expose_top in
-              let pango       = self#misc#pango_context in
-              let layout      = pango#create_layout in
-              let draw _iter text =
-                layout#set_text text;
-                set_foreground drawable options#indent_lines_color_solid;
-                Cairo_pango.show_layout drawable layout#as_layout;
-                (*drawable#put_layout ~x ~y ~fore:options#base_color layout;
-                  drawable#put_layout ~x ~y ~fore:options#indent_lines_color_solid layout;*)
-              in
-              while !iter#compare expose_bottom < 0 do
-                let line_num = !iter#line in
-                while !iter#line = line_num do
-                  let char = !iter#char in
-                  begin
-                    match char with
-                    | 32 ->
-                      let start = !iter in
-                      let pos = start#line_index in
-                      iter := !iter#forward_find_char not_blank;
-                      draw start (create_middot_string (!iter#line_index - pos));
-                    | 13 -> draw !iter whitespace_crlf
-                    | 9 -> draw !iter whitespace_tab
-                    | _ when !iter#ends_line -> draw !iter whitespace_lf
-                    | _ -> ()
-                  end;
-                  iter := !iter#forward_char
-                done;
-              done
-            end;
-            (* Dot leaders *)
-            if options#show_dot_leaders && not options#show_whitespace_chars then begin
-              (*Prf.crono Prf.prf_draw_dot_leaders begin fun () ->*)
-              (*Gdk.GC.set_fill drawable#gc `SOLID;*)
-              set_line_attributes drawable ~width:1 ~style:Oe_config.dash_style ();
-              set_foreground drawable options#text_color;
-              let offset = self#left_margin - hadjust in
-              Alignment.iter ~start:expose_top ~stop:expose_bottom begin fun _ _ start stop _ ->
-                let start = start#forward_char in
-                let len = stop#line_index - start#line_index in
-                if len > 2 then begin
-                  let x1 = approx_char_width * start#line_index + offset in
-                  let x2 = approx_char_width * (stop#line_index - 1) + offset in
-                  let y, h = self#get_line_yrange start in
-                  let y = y - y0 + h - 3 (*(min 3 (h / 5))*) in
-                  (*Gdk.GC.set_dashes drawable#gc ~offset:(x2 - 6 (*- x1*)) [1; approx_char_width - 1];*)
-                  (*Gdk.GC.set_dashes drawable#gc ~offset:(x2 - approx_char_width - 2) [1; approx_char_width - 1];*)
-                  line drawable x1 y x2 y;
-                end
-              end
-              (*end;*)
-            end (*()*);
-            (* Current line border *)
-            begin
-              if self#has_focus && options#current_line_border_enabled then begin
-                match options#highlight_current_line with
-                | Some _ ->
-                  let iter = buffer#get_iter `INSERT in
-                  let y, h = view#get_line_yrange iter in
-                  let y = y - y0 in
-                  if iter#equal buffer#end_iter && iter#line_index = 0 then begin
-                    (* Fix for draw_current_line_background *)
-                    set_foreground drawable options#current_line_bg_color;
-                    rectangle drawable ~x:self#left_margin ~y ~filled:true ~width:w0 ~height:h ();
-                  end;
-                  set_line_attributes drawable ~join:Oe_config.current_line_join ~width:Oe_config.current_line_width ~style:Oe_config.current_line_style ();
-                  set_foreground drawable options#current_line_border_color;
-                  (*Gdk.GC.set_dashes drawable#gc ~offset:1 Oe_config.on_off_dashes;*)
-                  rectangle drawable ~x:current_line_border_x1 ~y ~filled:false
-                    ~width:(w0 - current_line_border_x2) ~height:(h - adjust) ();
+              let expose_y = y0 in
+              let expose_top, _ = self#get_line_at_y expose_y in
+              let expose_bottom, _ = self#get_line_at_y (expose_y + h0) in
+              (*  *)
+              let adjust      = Oe_config.current_line_border_adjust in
+              let hadjust     = int_of_float self#hadjustment#value - self#left_margin in
+              let drawable    = GDraw.Cairo.create window in
+              let { Cairo.x; y; w; h } = Cairo.clip_extents drawable in
+              (* Indentation guidelines *)
+              if options#show_indent_lines && not options#show_whitespace_chars
+              then (Text_indent_lines.draw_indent_lines self drawable) start stop y0;
+              (* Gutter border *)
+              begin
+                match self#get_window `LEFT with
+                | Some window ->
+                    let drawable = GDraw.Cairo.create window in
+                    let { Cairo.x; y; w; h } = Cairo.clip_extents drawable in
+                    set_line_attributes drawable ~width:2 ~style:`SOLID ();
+                    set_foreground drawable gutter.Gutter.border_color;
+                    line drawable (gutter.Gutter.size - 1) 0 (gutter.Gutter.size - 1) h0;
+                    if gutter.Gutter.fold_size > 0 then
+                      line drawable (gutter.Gutter.size - 2 - gutter.Gutter.fold_size) 0 (gutter.Gutter.size - 2 - gutter.Gutter.fold_size) h0;
                 | _ -> ()
               end;
-            end;
-            (* Border around matching delimiters *)
-            begin
-              match current_matching_tag_bounds_draw with
-              | (lstart, lstop) :: (rstart, rstop) :: [] ->
-                set_foreground drawable Oe_config.matching_delim_border_color;
-                set_line_attributes drawable ~width:1 ~style:`SOLID ();
-                let draw start stop =
-                  match buffer#get_iter_at_mark_opt (`MARK start) with
-                  | Some start ->
+              (* Right margin line *)
+              begin
+                match options#visible_right_margin with
+                | Some (column, color) ->
+                    let x = approx_char_width * column - hadjust - 1 in (* -1 per evitare sovrapposizione col cursore *)
+                    set_line_attributes drawable ~width:4 ~style:`SOLID ();
+                    set_foreground drawable color;
+                    line drawable x 0 x h0;
+                | _ -> ()
+              end;
+              (* ocamldoc_paragraph_bgcolor_enabled *)
+              if Oe_config.ocamldoc_paragraph_border_enabled
+              then (self#draw_paragraph_border drawable start stop y0 w0);
+              (* Special bookmarks *)
+              let iter = ref (expose_top#set_line_index 0) in
+              begin
+                match project with
+                | Some project ->
                     begin
-                      match buffer#get_iter_at_mark_opt (`MARK stop) with
-                      | Some stop ->
-                        let yl1, hl1 = view#get_line_yrange start in
-                        let yl1 = yl1 - y0 in
-                        (* count_displayed_lines *)
-                        let iter = ref (stop#set_line_index 0) in
-                        let x_chars = ref 0 in
-                        let lines_displayed = ref 1 in (* n-th display-line where "start" lies, counting from 1 *)
-                        while not (!iter#equal start) do
-                          if !iter#char = 9 then begin
-                            x_chars := ((!x_chars / 8) * 8 + 8);
-                          end else (incr x_chars);
-                          iter := !iter#forward_char;
-                          if view#starts_display_line !iter then (x_chars := 0; incr lines_displayed)
-                        done;
-                        (* count how many display-lines constitute the line *)
-                        let n_display_lines = ref !lines_displayed in
-                        let i = stop#copy in
-                        while view#forward_display_line i && i#line = stop#line do
-                          incr n_display_lines
-                        done;
-                        (*  *)
-                        let x = approx_char_width * !x_chars - hadjust - 1 in (* -1 per evitare sovrapposizione col cursore *)
-                        let width_chars = stop#line_index - start#line_index in
-                        let width = approx_char_width * width_chars in
-                        let pango = self#misc#pango_context in
-                        let metrics = pango#get_metrics() in
-                        let height = (metrics#ascent + metrics#descent) / Pango.scale -  1 in
-                        let y =
-                          if !lines_displayed > 1 (*0 ?*)
-                          then yl1 + ((!lines_displayed - 1) * (hl1 / !n_display_lines))
-                          else yl1 + view#pixels_above_lines
-                        in
-                        rectangle drawable ~x ~y ~width ~height ()
+                      match buffer#file with
+                      | Some file ->
+                          let filename = file#filename in
+                          while !iter#compare expose_bottom < 0 do
+                            begin
+                              match Project.find_bookmark project filename buffer#as_gtext_buffer !iter with
+                              | Some bm when bm.Oe.bm_num >= Bookmark.limit ->
+                                  set_line_attributes drawable ~width:2 ~style:`SOLID ();
+                                  set_foreground drawable options#indent_lines_color_dashed (*options#text_color*);
+                                  let y, h = view#get_line_yrange !iter in
+                                  let y = y - y0 + h in
+                                  line drawable 0 y w0 y;
+                              | _ -> ()
+                            end;
+                            iter := !iter#forward_line;
+                          done;
                       | _ -> ()
-                    end
-                  | _ -> ()
+                    end;
+                | _ -> ()
+              end;
+              (* Whitespace characters *)
+              if options#show_whitespace_chars then begin
+                let iter        = ref expose_top in
+                let pango       = self#misc#pango_context in
+                let layout      = pango#create_layout in
+                let draw _iter text =
+                  layout#set_text text;
+                  set_foreground drawable options#indent_lines_color_solid;
+                  Cairo_pango.show_layout drawable layout#as_layout;
+                  (*drawable#put_layout ~x ~y ~fore:options#base_color layout;
+                    drawable#put_layout ~x ~y ~fore:options#indent_lines_color_solid layout;*)
                 in
-                draw lstart lstop;
-                draw rstart rstop;
-              | _ -> ()
-            end;
-            false;
+                while !iter#compare expose_bottom < 0 do
+                  let line_num = !iter#line in
+                  while !iter#line = line_num do
+                    let char = !iter#char in
+                    begin
+                      match char with
+                      | 32 ->
+                          let start = !iter in
+                          let pos = start#line_index in
+                          iter := !iter#forward_find_char not_blank;
+                          draw start (create_middot_string (!iter#line_index - pos));
+                      | 13 -> draw !iter whitespace_crlf
+                      | 9 -> draw !iter whitespace_tab
+                      | _ when !iter#ends_line -> draw !iter whitespace_lf
+                      | _ -> ()
+                    end;
+                    iter := !iter#forward_char
+                  done;
+                done
+              end;
+              (* Dot leaders *)
+              if options#show_dot_leaders && not options#show_whitespace_chars then begin
+                (*Prf.crono Prf.prf_draw_dot_leaders begin fun () ->*)
+                (*Gdk.GC.set_fill drawable#gc `SOLID;*)
+                set_line_attributes drawable ~width:1 ~style:Oe_config.dash_style ();
+                set_foreground drawable options#text_color;
+                let offset = self#left_margin - hadjust in
+                Alignment.iter ~start:expose_top ~stop:expose_bottom begin fun _ _ start stop _ ->
+                  let start = start#forward_char in
+                  let len = stop#line_index - start#line_index in
+                  if len > 2 then begin
+                    let x1 = approx_char_width * start#line_index + offset in
+                    let x2 = approx_char_width * (stop#line_index - 1) + offset in
+                    let y, h = self#get_line_yrange start in
+                    let y = y - y0 + h - 3 (*(min 3 (h / 5))*) in
+                    (*Gdk.GC.set_dashes drawable#gc ~offset:(x2 - 6 (*- x1*)) [1; approx_char_width - 1];*)
+                    (*Gdk.GC.set_dashes drawable#gc ~offset:(x2 - approx_char_width - 2) [1; approx_char_width - 1];*)
+                    line drawable x1 y x2 y;
+                  end
+                end
+                (*end;*)
+              end (*()*);
+              (* Current line border *)
+              begin
+                if self#has_focus && options#current_line_border_enabled then begin
+                  match options#highlight_current_line with
+                  | Some _ ->
+                      let iter = buffer#get_iter `INSERT in
+                      let y, h = view#get_line_yrange iter in
+                      let y = y - y0 in
+                      if iter#equal buffer#end_iter && iter#line_index = 0 then begin
+                        (* Fix for draw_current_line_background *)
+                        set_foreground drawable options#current_line_bg_color;
+                        rectangle drawable ~x:self#left_margin ~y ~filled:true ~width:w0 ~height:h ();
+                      end;
+                      set_line_attributes drawable ~join:Oe_config.current_line_join ~width:Oe_config.current_line_width ~style:Oe_config.current_line_style ();
+                      set_foreground drawable options#current_line_border_color;
+                      (*Gdk.GC.set_dashes drawable#gc ~offset:1 Oe_config.on_off_dashes;*)
+                      rectangle drawable ~x:current_line_border_x1 ~y ~filled:false
+                        ~width:(w0 - current_line_border_x2) ~height:(h - adjust) ();
+                  | _ -> ()
+                end;
+              end;
+              (* Border around matching delimiters *)
+              begin
+                match current_matching_tag_bounds_draw with
+                | (lstart, lstop) :: (rstart, rstop) :: [] ->
+                    set_foreground drawable Oe_config.matching_delim_border_color;
+                    set_line_attributes drawable ~width:1 ~style:`SOLID ();
+                    let draw start stop =
+                      match buffer#get_iter_at_mark_opt (`MARK start) with
+                      | Some start ->
+                          begin
+                            match buffer#get_iter_at_mark_opt (`MARK stop) with
+                            | Some stop ->
+                                let yl1, hl1 = view#get_line_yrange start in
+                                let yl1 = yl1 - y0 in
+                                (* count_displayed_lines *)
+                                let iter = ref (stop#set_line_index 0) in
+                                let x_chars = ref 0 in
+                                let lines_displayed = ref 1 in (* n-th display-line where "start" lies, counting from 1 *)
+                                while not (!iter#equal start) do
+                                  if !iter#char = 9 then begin
+                                    x_chars := ((!x_chars / 8) * 8 + 8);
+                                  end else (incr x_chars);
+                                  iter := !iter#forward_char;
+                                  if view#starts_display_line !iter then (x_chars := 0; incr lines_displayed)
+                                done;
+                                (* count how many display-lines constitute the line *)
+                                let n_display_lines = ref !lines_displayed in
+                                let i = stop#copy in
+                                while view#forward_display_line i && i#line = stop#line do
+                                  incr n_display_lines
+                                done;
+                                (*  *)
+                                let x = approx_char_width * !x_chars - hadjust - 1 in (* -1 per evitare sovrapposizione col cursore *)
+                                let width_chars = stop#line_index - start#line_index in
+                                let width = approx_char_width * width_chars in
+                                let pango = self#misc#pango_context in
+                                let metrics = pango#get_metrics() in
+                                let height = (metrics#ascent + metrics#descent) / Pango.scale -  1 in
+                                let y =
+                                  if !lines_displayed > 1 (*0 ?*)
+                                  then yl1 + ((!lines_displayed - 1) * (hl1 / !n_display_lines))
+                                  else yl1 + view#pixels_above_lines
+                                in
+                                rectangle drawable ~x ~y ~width ~height ()
+                            | _ -> ()
+                          end
+                      | _ -> ()
+                    in
+                    draw lstart lstop;
+                    draw rstart rstop;
+                | _ -> ()
+              end;
+              false;
           | _ -> false
         end;
       with ex ->
@@ -783,38 +783,38 @@ and view ?project ?buffer () =
     method private draw_paragraph_border drawable start stop y0 w0 =
       match buffer#tag_ocamldoc_paragraph with
       | Some tag ->
-        begin
-          let start = ref (start#set_line_index 0) in
-          let stop = stop#forward_line#set_line_index 0 in
-          match Preferences.preferences#get.Preferences.pref_ocamldoc_paragraph_bgcolor_1 with
-          | Some color ->
-            set_foreground drawable (`NAME (Color.add_value color 0.08));
-            set_line_attributes drawable ~width:1 ~style:`SOLID ();
-            let hadjust = int_of_float self#hadjustment#value in
-            while !start#forward_line#compare stop <= 0 && not (!start#equal self#buffer#end_iter) do
-              if !start#has_tag tag then begin
-                let x = 0 - hadjust + self#left_margin in
-                let y1, _ = view#get_line_yrange !start in
-                let y = y1 - y0 in
-                let width = w0 + hadjust - self#left_margin - 2 in
-                let stop_tag = !start#forward_to_tag_toggle (Some tag) in
-                let y2, h = view#get_line_yrange stop_tag in
-                let height = y2 - y0 + h - y in
-                rectangle drawable ~x ~y ~width ~height ();
-                start := stop_tag#set_line_index 0;
-              end;
-              start := !start#forward_line;
-            done
-          | _ -> ()
-        end
+          begin
+            let start = ref (start#set_line_index 0) in
+            let stop = stop#forward_line#set_line_index 0 in
+            match Preferences.preferences#get.Preferences.pref_ocamldoc_paragraph_bgcolor_1 with
+            | Some color ->
+                set_foreground drawable (`NAME (Color.add_value color 0.08));
+                set_line_attributes drawable ~width:1 ~style:`SOLID ();
+                let hadjust = int_of_float self#hadjustment#value in
+                while !start#forward_line#compare stop <= 0 && not (!start#equal self#buffer#end_iter) do
+                  if !start#has_tag tag then begin
+                    let x = 0 - hadjust + self#left_margin in
+                    let y1, _ = view#get_line_yrange !start in
+                    let y = y1 - y0 in
+                    let width = w0 + hadjust - self#left_margin - 2 in
+                    let stop_tag = !start#forward_to_tag_toggle (Some tag) in
+                    let y2, h = view#get_line_yrange stop_tag in
+                    let height = y2 - y0 + h - y in
+                    rectangle drawable ~x ~y ~width ~height ();
+                    start := stop_tag#set_line_index 0;
+                  end;
+                  start := !start#forward_line;
+                done
+            | _ -> ()
+          end
       | _ -> ()
 
     initializer
       ignore (options#connect#mark_occurrences_changed ~callback:(fun _ -> self#mark_occurrences_manager#mark()));
       ignore (options#connect#after#mark_occurrences_changed ~callback:begin function
-          | true, color ->
+        | true, color ->
             self#mark_occurrences_manager#tag#set_property (`BACKGROUND_GDK (GDraw.color (`NAME color)));
-          | _ -> ()
+        | _ -> ()
         end);
       ignore (options#connect#after#line_numbers_changed ~callback:begin fun _ ->
           Line_num_labl.reset line_num_labl;
@@ -830,24 +830,24 @@ and view ?project ?buffer () =
           prev_line_background <- 0;
           match x with
           | None ->
-            Gaux.may signal_id_highlight_current_line ~f:begin fun id ->
-              self#tbuffer#remove_signal_handler id;
-              GtkSignal.disconnect self#tbuffer#as_buffer id;
-              signal_id_highlight_current_line <- None
-            end
+              Gaux.may signal_id_highlight_current_line ~f:begin fun id ->
+                self#tbuffer#remove_signal_handler id;
+                GtkSignal.disconnect self#tbuffer#as_buffer id;
+                signal_id_highlight_current_line <- None
+              end
           | Some color ->
-            options#set_current_line_bg_color (`NAME color);
-            options#set_current_line_border_color
-              (Oe_config.current_line_border_color (Color.add_value ?sfact:None) color);
-            Gmisclib.Util.set_tag_paragraph_background highlight_current_line_tag color;
-            let id = self#buffer#connect#mark_set ~callback:begin fun iter mark ->
-                match GtkText.Mark.get_name mark with
-                | Some name when name = "insert" -> self#draw_current_line_background iter
-                | _ -> ()
-              end in
-            signal_id_highlight_current_line <- Some id;
-            self#tbuffer#add_signal_handler id;
-            self#draw_current_line_background ~force:true (self#buffer#get_iter `INSERT)
+              options#set_current_line_bg_color (`NAME color);
+              options#set_current_line_border_color
+                (Oe_config.current_line_border_color (Color.add_value ?sfact:None) color);
+              Gmisclib.Util.set_tag_paragraph_background highlight_current_line_tag color;
+              let id = self#buffer#connect#mark_set ~callback:begin fun iter mark ->
+                  match GtkText.Mark.get_name mark with
+                  | Some name when name = "insert" -> self#draw_current_line_background iter
+                  | _ -> ()
+                end in
+              signal_id_highlight_current_line <- Some id;
+              self#tbuffer#add_signal_handler id;
+              self#draw_current_line_background ~force:true (self#buffer#get_iter `INSERT)
         end);
       Text_init.key_press self;
       Text_init.realize self;
@@ -889,14 +889,14 @@ and view ?project ?buffer () =
           Option.iter self#options#set_mark_occurrences !old_mark_occurrences;
           match !mark with
           | Some m ->
-            let iter = ref (buffer#get_iter_at_mark (`MARK m)) in
-            let stop = buffer#get_iter `INSERT in
-            while !iter#compare buffer#end_iter < 0 && !iter#compare stop <= 0 do
-              self#draw_current_line_background ~force:true !iter;
-              iter := !iter#forward_line;
-            done;
-            buffer#delete_mark (`MARK m);
-            mark := None
+              let iter = ref (buffer#get_iter_at_mark (`MARK m)) in
+              let stop = buffer#get_iter `INSERT in
+              while !iter#compare buffer#end_iter < 0 && !iter#compare stop <= 0 do
+                self#draw_current_line_background ~force:true !iter;
+                iter := !iter#forward_line;
+              done;
+              buffer#delete_mark (`MARK m);
+              mark := None
           | _ -> ()
         end
       in

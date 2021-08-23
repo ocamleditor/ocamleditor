@@ -80,8 +80,8 @@ let file ~browser ~group ~flags items =
         let module Remote = (val plugin) in
         let title =
           match open_remote#misc#get_property "label" with
-            | `STRING (Some x) -> x
-            | _ -> ""
+          | `STRING (Some x) -> x
+          | _ -> ""
         in
         let window = GWindow.window
             ~resizable:false

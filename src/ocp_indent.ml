@@ -45,7 +45,7 @@ let indent_config ~project ~pref =
   | None ->
       let config = Preferences.(pref.pref_editor_indent_config) in
       match String.trim config with
-    | "" -> IndentConfig.default
+      | "" -> IndentConfig.default
       | editor_config  -> IndentConfig.(update_from_string default editor_config)
 
 let collect (n : int) offsets = n :: offsets
@@ -91,7 +91,7 @@ let indent ~project ~view bounds =
       | `SELECTION -> buffer#selection_bounds
       | `BOUNDS iters -> iters
       | `ALL -> ensure_last_newline buffer#as_gtext_buffer;
-         	buffer#start_iter, buffer#end_iter
+          buffer#start_iter, buffer#end_iter
     in
     let start, stop = if start#compare stop > 0 then stop, start else start, stop in
     let stop = if not (stop#equal start) then stop#backward_line#forward_to_line_end else stop in

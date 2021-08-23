@@ -43,7 +43,7 @@ class error_indication (view : Ocaml_text.view) (global_gutter : GMisc.drawing_a
       match Oe_config.error_underline_mode with
       | `CUSTOM -> ()
       | `GTK ->
-        Gobject.Property.set tag_error#as_tag {Gobject.name="underline"; conv=Gobject.Data.int} 4;
+          Gobject.Property.set tag_error#as_tag {Gobject.name="underline"; conv=Gobject.Data.int} 4;
     end;
     let tag_warning = buffer#create_tag ~name:(sprintf "tag_warning-%f" ts) [`LEFT_MARGIN view#left_margin] in
     let tag_warning_unused = buffer#create_tag ~name:(sprintf "tag_warning_unused-%f" ts) Oe_config.warning_unused_properties in
@@ -87,8 +87,8 @@ class error_indication (view : Ocaml_text.view) (global_gutter : GMisc.drawing_a
       match Oe_config.error_underline_mode with
       | `CUSTOM -> ()
       | `GTK ->
-        Gobject.Property.set tag_error#as_tag {Gobject.name="underline"; conv=Gobject.Data.int}
-          (if flag_underline then 4 else 0)
+          Gobject.Property.set tag_error#as_tag {Gobject.name="underline"; conv=Gobject.Data.int}
+            (if flag_underline then 4 else 0)
 
     method create_tags () =
       tag_table#remove tag_error#as_tag;
@@ -276,14 +276,14 @@ class error_indication (view : Ocaml_text.view) (global_gutter : GMisc.drawing_a
                   popup#move ~x:(-1000) ~y:(-1000);
                   match location with
                   | `ITER _ ->
-                    let x, y = view#get_location_at_iter iter in
-                    popup#show();
-                    let y = y - popup#misc#allocation.Gtk.height - 5 in
-                    popup#move ~x ~y;
+                      let x, y = view#get_location_at_iter iter in
+                      popup#show();
+                      let y = y - popup#misc#allocation.Gtk.height - 5 in
+                      popup#move ~x ~y;
                   | `XY _ ->
-                    let x, y = Gdk.Window.get_pointer_location popup#misc#window in
-                    popup#show();
-                    popup#move ~x ~y:(y - popup#misc#allocation.Gtk.height - 12);
+                      let x, y = Gdk.Window.get_pointer_location popup#misc#window in
+                      popup#show();
+                      popup#move ~x ~y:(y - popup#misc#allocation.Gtk.height - 12);
                 end;
                 let incr = if Preferences.preferences#get.Preferences.pref_annot_type_tooltips_delay = 0 then 0.106 else 0.479 in
                 Gmisclib.Util.fade_window ~incr popup;
@@ -329,27 +329,27 @@ class error_indication (view : Ocaml_text.view) (global_gutter : GMisc.drawing_a
         if Oe_config.global_gutter_comments_enabled && tag_error_bounds = [] && view#mark_occurrences_manager#table = [] then begin
           match [@warning "-4"] Comments.scan_utf8 (buffer#get_text ()) with
           | Comments.Utf8 comments ->
-            (*Gdk.GC.set_dashes drawable#gc ~offset:0 [1; 1];*)
-            List.iter begin fun (start, stop, _, odoc) ->
-              let iter = buffer#get_iter (`OFFSET start) in
-              let is_fold = view#code_folding#is_folded iter#forward_to_line_end <> None in
-              let line_start = float iter#line in
-              let line_stop = float (buffer#get_iter (`OFFSET stop))#line in
-              let y1 = int_of_float ((line_start /. line_count) *. height) in
-              let y2 = int_of_float ((line_stop /. line_count) *. height) in
-              let y1 = y1 + alloc.Gtk.width in
-              let y2 = y2 + alloc.Gtk.width in
-              let filled = odoc in
-              let offset = if y1 = y2 then 0 else 1 in
-              let style = if is_fold then `ON_OFF_DASH else `SOLID in
-              set_line_attributes drawable ~width:1 ~style ();
-              if filled then begin
-                set_foreground drawable Oe_config.global_gutter_comments_bgcolor;
-                rectangle drawable ~filled ~x:x0 ~y:y1 ~width:(width - offset) ~height:(y2 - y1) ();
-              end;
-              set_foreground drawable Oe_config.global_gutter_comments_color;
-              rectangle drawable (*~filled*) ~x:x0 ~y:y1 ~width:(width - offset) ~height:(y2 - y1) ();
-            end comments
+              (*Gdk.GC.set_dashes drawable#gc ~offset:0 [1; 1];*)
+              List.iter begin fun (start, stop, _, odoc) ->
+                let iter = buffer#get_iter (`OFFSET start) in
+                let is_fold = view#code_folding#is_folded iter#forward_to_line_end <> None in
+                let line_start = float iter#line in
+                let line_stop = float (buffer#get_iter (`OFFSET stop))#line in
+                let y1 = int_of_float ((line_start /. line_count) *. height) in
+                let y2 = int_of_float ((line_stop /. line_count) *. height) in
+                let y1 = y1 + alloc.Gtk.width in
+                let y2 = y2 + alloc.Gtk.width in
+                let filled = odoc in
+                let offset = if y1 = y2 then 0 else 1 in
+                let style = if is_fold then `ON_OFF_DASH else `SOLID in
+                set_line_attributes drawable ~width:1 ~style ();
+                if filled then begin
+                  set_foreground drawable Oe_config.global_gutter_comments_bgcolor;
+                  rectangle drawable ~filled ~x:x0 ~y:y1 ~width:(width - offset) ~height:(y2 - y1) ();
+                end;
+                set_foreground drawable Oe_config.global_gutter_comments_color;
+                rectangle drawable (*~filled*) ~x:x0 ~y:y1 ~width:(width - offset) ~height:(y2 - y1) ();
+              end comments
           | _ -> assert false
         end;
         (* Draw a marker *)
@@ -383,25 +383,25 @@ class error_indication (view : Ocaml_text.view) (global_gutter : GMisc.drawing_a
         begin
           match Preferences.preferences#get.Preferences.pref_editor_mark_occurrences with
           | true, color ->
-            let bg = `NAME color in
-            let border = `NAME (Color.add_value color ~sfact:0.75 0.13) in
-            List.iter begin fun (m1, m2) ->
-              let start = buffer#get_iter_at_mark m1 in
-              let stop = buffer#get_iter_at_mark m2 in
-              let line_start = float start#line in
-              let line_stop = float stop#line in
-              let y1 = int_of_float ((line_start /. line_count) *. height) in
-              let y2 = int_of_float ((line_stop /. line_count) *. height) in
-              let y1 = y1 + alloc.Gtk.width - 1 in
-              let y2 = y2 + alloc.Gtk.width + 1 in
-              let width = width - 1 in
-              let height = y2 - y1 in
-              set_line_attributes drawable ~width:1 ~style:`SOLID ();
-              set_foreground drawable bg;
-              rectangle drawable ~filled:true ~x:x0 ~y:y1 ~width ~height ();
-              set_foreground drawable border;
-              rectangle drawable ~filled:false ~x:x0 ~y:y1 ~width ~height ();
-            end view#mark_occurrences_manager#table;
+              let bg = `NAME color in
+              let border = `NAME (Color.add_value color ~sfact:0.75 0.13) in
+              List.iter begin fun (m1, m2) ->
+                let start = buffer#get_iter_at_mark m1 in
+                let stop = buffer#get_iter_at_mark m2 in
+                let line_start = float start#line in
+                let line_stop = float stop#line in
+                let y1 = int_of_float ((line_start /. line_count) *. height) in
+                let y2 = int_of_float ((line_stop /. line_count) *. height) in
+                let y1 = y1 + alloc.Gtk.width - 1 in
+                let y2 = y2 + alloc.Gtk.width + 1 in
+                let width = width - 1 in
+                let height = y2 - y1 in
+                set_line_attributes drawable ~width:1 ~style:`SOLID ();
+                set_foreground drawable bg;
+                rectangle drawable ~filled:true ~x:x0 ~y:y1 ~width ~height ();
+                set_foreground drawable border;
+                rectangle drawable ~filled:false ~x:x0 ~y:y1 ~width ~height ();
+              end view#mark_occurrences_manager#table;
           | _ -> ()
         end;
         (* Errors *)
@@ -412,66 +412,66 @@ class error_indication (view : Ocaml_text.view) (global_gutter : GMisc.drawing_a
 
     method private draw_underline drawable top bottom x0 y0 offset = function
       | (start, stop, error) when (not (is_warning_unused error.Oe.er_level)) ->
-        let start = ref (buffer#get_iter_at_mark (`MARK start)) in
-        let stop = buffer#get_iter_at_mark (`MARK stop) in
-        let stop = if bottom#compare stop < 0 then bottom else stop in
-        let phase2 = phase * 2 in
-        while !start#compare stop < 0 do
-          begin
-            try
-              if top#compare !start <= 0 && !start#chars_in_line > 1 then begin
-                start := forward_non_blank !start;
-                let iter =
-                  if !start#ends_line then (raise Exit)
-                  else
-                    let line_end = !start#forward_to_line_end in
-                    if stop#compare line_end <= 0 then stop else line_end
-                in
-                let ys, h = view#get_line_yrange !start in
-                let y = ys + h - y0 in
-                let x = ref (Gdk.Rectangle.x (view#get_iter_location !start) - x0) in
-                let x2 = Gdk.Rectangle.x (view#get_iter_location iter) - x0 in
-                let yu = y - phase in
-                let segments = ref [] in
-                while !x <= x2 do
-                  segments := (!x + phase, y + offset) :: (!x, yu + offset) :: !segments; x := !x + phase2;
-                done;
-                lines_ drawable !segments;
-              end;
-            with Exit | Invalid_argument _ -> ()
-          end;
-          start := !start#forward_line
-        done;
+          let start = ref (buffer#get_iter_at_mark (`MARK start)) in
+          let stop = buffer#get_iter_at_mark (`MARK stop) in
+          let stop = if bottom#compare stop < 0 then bottom else stop in
+          let phase2 = phase * 2 in
+          while !start#compare stop < 0 do
+            begin
+              try
+                if top#compare !start <= 0 && !start#chars_in_line > 1 then begin
+                  start := forward_non_blank !start;
+                  let iter =
+                    if !start#ends_line then (raise Exit)
+                    else
+                      let line_end = !start#forward_to_line_end in
+                      if stop#compare line_end <= 0 then stop else line_end
+                  in
+                  let ys, h = view#get_line_yrange !start in
+                  let y = ys + h - y0 in
+                  let x = ref (Gdk.Rectangle.x (view#get_iter_location !start) - x0) in
+                  let x2 = Gdk.Rectangle.x (view#get_iter_location iter) - x0 in
+                  let yu = y - phase in
+                  let segments = ref [] in
+                  while !x <= x2 do
+                    segments := (!x + phase, y + offset) :: (!x, yu + offset) :: !segments; x := !x + phase2;
+                  done;
+                  lines_ drawable !segments;
+                end;
+              with Exit | Invalid_argument _ -> ()
+            end;
+            start := !start#forward_line
+          done;
       | _ -> ()
 
     method private expose drawable =
       if flag_underline then begin
         match view#get_window `TEXT with
         | Some window ->
-          let vrect = view#visible_rect in
-          let x0 = Gdk.Rectangle.x vrect in
-          let y0 = Gdk.Rectangle.y vrect in
-          let top, _ = view#get_line_at_y y0 in
-          let bottom, _ = view#get_line_at_y (y0 + (Gdk.Rectangle.height vrect)) in
-          (*  *)
-          set_line_attributes drawable ~width:1 ~style:`SOLID ~join:`MITER ();
-          let f = self#draw_underline drawable top bottom x0 y0 in
-          set_foreground drawable Oe_config.warning_underline_color;
-          List.iter (f 0) tag_warning_bounds;
-          set_foreground drawable Oe_config.warning_underline_shadow;
-          List.iter (f 1) tag_warning_bounds;
-          begin
-            match Oe_config.error_underline_mode with
-            | `CUSTOM ->
-              set_foreground drawable Oe_config.error_underline_color;
-              List.iter (f 0) tag_error_bounds;
-              set_foreground drawable Oe_config.error_underline_shadow;
-              List.iter (f 1) tag_error_bounds;
-            | _ -> ()
-          end;
-          (*Gdk.GC.set_fill drawable#gc `SOLID;*)
-          Cairo.fill drawable;
-          false
+            let vrect = view#visible_rect in
+            let x0 = Gdk.Rectangle.x vrect in
+            let y0 = Gdk.Rectangle.y vrect in
+            let top, _ = view#get_line_at_y y0 in
+            let bottom, _ = view#get_line_at_y (y0 + (Gdk.Rectangle.height vrect)) in
+            (*  *)
+            set_line_attributes drawable ~width:1 ~style:`SOLID ~join:`MITER ();
+            let f = self#draw_underline drawable top bottom x0 y0 in
+            set_foreground drawable Oe_config.warning_underline_color;
+            List.iter (f 0) tag_warning_bounds;
+            set_foreground drawable Oe_config.warning_underline_shadow;
+            List.iter (f 1) tag_warning_bounds;
+            begin
+              match Oe_config.error_underline_mode with
+              | `CUSTOM ->
+                  set_foreground drawable Oe_config.error_underline_color;
+                  List.iter (f 0) tag_error_bounds;
+                  set_foreground drawable Oe_config.error_underline_shadow;
+                  List.iter (f 1) tag_error_bounds;
+              | _ -> ()
+            end;
+            (*Gdk.GC.set_fill drawable#gc `SOLID;*)
+            Cairo.fill drawable;
+            false
         | _ -> false
       end else false
 

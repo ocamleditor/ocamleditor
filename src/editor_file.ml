@@ -45,7 +45,7 @@ class file filename =
     method is_writeable = File_util.is_writeable filename
 
     (** Se il file è cambiato sul disco dall'ultima operazione di
-       creazione, lettura o scrittuta *)
+        creazione, lettura o scrittuta *)
     method changed = ts < self#last_modified()
 
     method read =
@@ -76,15 +76,15 @@ class file filename =
         let dir = match move_to with
           | None -> filename
           | Some path ->
-            if not (Sys.file_exists path) then begin
-              let dirs = filename_split path in
-              ignore (List.fold_left begin fun acc dir ->
-                  let dir = Filename.concat acc dir in
-                  if not (Sys.file_exists dir) then (printf "%s, %s\n%!" path dir; Unix.mkdir dir 0o777);
-                  dir
-                end "" dirs);
-            end;
-            path
+              if not (Sys.file_exists path) then begin
+                let dirs = filename_split path in
+                ignore (List.fold_left begin fun acc dir ->
+                    let dir = Filename.concat acc dir in
+                    if not (Sys.file_exists dir) then (printf "%s, %s\n%!" path dir; Unix.mkdir dir 0o777);
+                    dir
+                  end "" dirs);
+              end;
+              path
         in
         let name_match = Str.string_match (Miscellanea.regexp ((Filename.chop_extension self#basename) ^ "\\.~\\([0-9]+\\)~\\..+$")) in
         let backups = List.filter_map begin fun n ->
@@ -136,12 +136,12 @@ class file filename =
 (** create *)
 let create ?remote filename =
   match remote with
-    | None -> (new file filename :> abstract_file)
-    | Some {Editor_file_type.host; user; pwd; sslkey; sshpublickeyfile; sslkeypasswd} ->
+  | None -> (new file filename :> abstract_file)
+  | Some {Editor_file_type.host; user; pwd; sslkey; sshpublickeyfile; sslkeypasswd} ->
       begin
         match !Plugins.remote with
-          | Some plugin ->
+        | Some plugin ->
             let module Remote = (val plugin) in
             Remote.create ~host ~user ~pwd ~sslkey ~sshpublickeyfile ~sslkeypasswd ~filename;
-          | None -> assert false
+        | None -> assert false
       end

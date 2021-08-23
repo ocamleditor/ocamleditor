@@ -22,46 +22,46 @@
 
 
 module Button =
-  struct
-    let button_menu = new Button_menu.button_menu
-  end
+struct
+  let button_menu = new Button_menu.button_menu
+end
 
 module Entry =
-  struct
-    let combo_search = new Entry_combo_search.widget
-  end
+struct
+  let combo_search = new Entry_combo_search.widget
+end
 
 module Idle =
-  struct
-    let add     = Gmisclib_util.idle_add
-    let add_gen = Gmisclib_util.idle_add_gen
-  end
+struct
+  let add     = Gmisclib_util.idle_add
+  let add_gen = Gmisclib_util.idle_add_gen
+end
 
 module Text =
-  struct
-    let hyperlink    = new Hyperlink.hyperlink
-    let undo_manager = new Undo.manager
-  end
+struct
+  let hyperlink    = new Hyperlink.hyperlink
+  let undo_manager = new Undo.manager
+end
 
 module Toolbar =
-  struct
-    let menu_tool_button = new Menu_tool_button.menu_tool_button
-  end
+struct
+  let menu_tool_button = new Menu_tool_button.menu_tool_button
+end
 
 module Util =
-  struct
-    exception Mark_deleted
-    let fade_window_enabled          = Gmisclib_util.fade_window_enabled
-    let fade_window                  = Gmisclib_util.fade_window
-    let esc_destroy_window           = Gmisclib_util.esc_destroy_window
-    let set_tag_paragraph_background = Gmisclib_util.set_tag_paragraph_background
-    let get_iter_at_mark_safe        = Gmisclib_util.get_iter_at_mark_safe
-    let get_iter_at_mark_opt         = Gmisclib_util.get_iter_at_mark_opt
-    let treeview_is_path_onscreen    = Gmisclib_util.treeview_is_path_onscreen
-  end
+struct
+  exception Mark_deleted
+  let fade_window_enabled          = Gmisclib_util.fade_window_enabled
+  let fade_window                  = Gmisclib_util.fade_window
+  let esc_destroy_window           = Gmisclib_util.esc_destroy_window
+  let set_tag_paragraph_background = Gmisclib_util.set_tag_paragraph_background
+  let get_iter_at_mark_safe        = Gmisclib_util.get_iter_at_mark_safe
+  let get_iter_at_mark_opt         = Gmisclib_util.get_iter_at_mark_opt
+  let treeview_is_path_onscreen    = Gmisclib_util.treeview_is_path_onscreen
+end
 
 module Window =
-  struct
-    module GeometryMemo = Window.GeometryMemo
-    let popup = new Window.popup
-  end
+struct
+  module GeometryMemo = Window.GeometryMemo
+  let popup = new Window.popup
+end

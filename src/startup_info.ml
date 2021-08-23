@@ -49,35 +49,35 @@ let get_locale () =
 
 (** print *)
 let print () = if true || App_config.application_debug then begin
-  let copyright = Str.replace_first (Str.regexp_string "©") "(c)" About.copyright in
-  Printf.printf "\n%s %s\n\n%!" About.program_name About.version (*copyright*);
-  let ocaml_version = Str.global_replace
-    (Str.regexp "\n") " - " (Str.global_replace (Str.regexp "\n$") "" (String.concat "\n" (Shell.get_command_output "ocamlc -v"))) in
-  let a, b, c = GMain.Main.version in
-  Printf.printf "---------------------------------------------------------------\n%!" ;
-  let properties = [
-    "OCaml Version", ocaml_version;
-    "OCamlEditor User Home", App_config.ocamleditor_user_home;
-    "icons", App_config.application_icons;
-    "plugins", App_config.application_plugins;
-    "oebuild", Oe_config.oebuild_command;
-  ] @
-  (if Sys.win32 then [
-     "oeproc", Oe_config.oeproc_command
-   ] else [
-     "xdg-open", (Option.value Oe_config.xdg_open_version ~default:"<Not Found>");
-   ]) @ [
-    "dot", (Option.value Oe_config.dot_version ~default:"<Not Found>");
-    "ocp-indent", (Option.value Oe_config.ocp_indent_version ~default:"<Not Found>");
-    "git", (Option.value Oe_config.git_version ~default:"<Not Found>");
-    "rc", (Option.value Oe_config.rc ~default:"<Not Found>");
-    "cvtres", (Option.value Oe_config.cvtres ~default:"<Not Found>");
-    "GTK Version", (sprintf "%d.%d.%d" a b c);
-    "Locale", (Option.value (get_locale ()) ~default:"<Not Found>");
-    "Charset", (let x, charset = Glib.Convert.get_charset () in sprintf "%b, %s" x charset);
-    "Backtrace status", (sprintf "%b" (Printexc.backtrace_status ()));
-  ] in
-  List.iter (printf "%s\n") (Text_util.dot_leaders properties);
-  Printf.printf "---------------------------------------------------------------\n%!" ;
-  print_newline();
-end
+    let copyright = Str.replace_first (Str.regexp_string "©") "(c)" About.copyright in
+    Printf.printf "\n%s %s\n\n%!" About.program_name About.version (*copyright*);
+    let ocaml_version = Str.global_replace
+        (Str.regexp "\n") " - " (Str.global_replace (Str.regexp "\n$") "" (String.concat "\n" (Shell.get_command_output "ocamlc -v"))) in
+    let a, b, c = GMain.Main.version in
+    Printf.printf "---------------------------------------------------------------\n%!" ;
+    let properties = [
+      "OCaml Version", ocaml_version;
+      "OCamlEditor User Home", App_config.ocamleditor_user_home;
+      "icons", App_config.application_icons;
+      "plugins", App_config.application_plugins;
+      "oebuild", Oe_config.oebuild_command;
+    ] @
+      (if Sys.win32 then [
+          "oeproc", Oe_config.oeproc_command
+        ] else [
+         "xdg-open", (Option.value Oe_config.xdg_open_version ~default:"<Not Found>");
+       ]) @ [
+        "dot", (Option.value Oe_config.dot_version ~default:"<Not Found>");
+        "ocp-indent", (Option.value Oe_config.ocp_indent_version ~default:"<Not Found>");
+        "git", (Option.value Oe_config.git_version ~default:"<Not Found>");
+        "rc", (Option.value Oe_config.rc ~default:"<Not Found>");
+        "cvtres", (Option.value Oe_config.cvtres ~default:"<Not Found>");
+        "GTK Version", (sprintf "%d.%d.%d" a b c);
+        "Locale", (Option.value (get_locale ()) ~default:"<Not Found>");
+        "Charset", (let x, charset = Glib.Convert.get_charset () in sprintf "%b, %s" x charset);
+        "Backtrace status", (sprintf "%b" (Printexc.backtrace_status ()));
+      ] in
+    List.iter (printf "%s\n") (Text_util.dot_leaders properties);
+    Printf.printf "---------------------------------------------------------------\n%!" ;
+    print_newline();
+  end

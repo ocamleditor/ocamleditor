@@ -71,8 +71,8 @@ let check current_version () = begin
       ignore (parse current_version result inchan);
       Unix.shutdown sock Unix.SHUTDOWN_ALL;
     with (Sys_error _) as ex -> begin
-      Printf.fprintf stderr "%s\n%!" (Printexc.to_string ex)
-    end
+        Printf.fprintf stderr "%s\n%!" (Printexc.to_string ex)
+      end
   end;
   !result
 end

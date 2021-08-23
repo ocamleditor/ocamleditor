@@ -29,25 +29,25 @@ val split_value_path : string -> string list
 val string_of_id : string list -> string
 
 module Modules :
-  sig
-    type t = {
-      mo_name     : string;
-      mo_filename : string;
-      mo_descr    : string;
-    }
-    val read :
-      ?filter:string -> path:string list -> unit -> (string * string) list
-    val get_descr : project:Prj.t -> t list
-  end
+sig
+  type t = {
+    mo_name     : string;
+    mo_filename : string;
+    mo_descr    : string;
+  }
+  val read :
+    ?filter:string -> path:string list -> unit -> (string * string) list
+  val get_descr : project:Prj.t -> t list
+end
 
 module Cache :
-  sig
-    val reset : project:Prj.t -> unit
-    val update :
-      cache:Oe.symbol_cache -> value_path:string list -> unit -> bool
-    val save : project:Prj.t -> unit
-    val load : project:Prj.t -> unit
-  end
+sig
+  val reset : project:Prj.t -> unit
+  val update :
+    cache:Oe.symbol_cache -> value_path:string list -> unit -> bool
+  val save : project:Prj.t -> unit
+  val load : project:Prj.t -> unit
+end
 
 val find_by_modulepath :
   ?kind:Oe.symbol_kind list ->

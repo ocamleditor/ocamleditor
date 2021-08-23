@@ -48,67 +48,67 @@ class widget ?packing () =
   let _           = view#append_column vc_name in
   let _           = view#append_column vc_descr in
   let _           = view#set_search_column 1 in
-object (self)
-  inherit GObj.widget sw#as_widget
+  object (self)
+    inherit GObj.widget sw#as_widget
 
-  val changed = new changed()
+    val changed = new changed()
 
-  initializer
-    vc_name#set_cell_data_func rend_text begin fun model row ->
-      let checked = model#get ~row ~column:col_toggle in
-      if checked && not self#is_current_model_filtered then begin
-        let color = Color.name (Color.set_value 0.90 (`COLOR (view#misc#style#base `NORMAL))) in
-        rend_text#set_properties [`CELL_BACKGROUND_SET true; `CELL_BACKGROUND color];
-        rend_toggle#set_properties [`CELL_BACKGROUND_SET true; `CELL_BACKGROUND color];
-      end else begin
-        rend_text#set_properties [`CELL_BACKGROUND_SET false];
-        rend_toggle#set_properties [`CELL_BACKGROUND_SET false];
-      end
-    end;
-    self#load();
-    ignore (rend_toggle#connect#toggled ~callback:begin fun path ->
-      let path =
-        if self#is_current_model_filtered then modelf#convert_path_to_child_path path else path
-      in
-      let row = model#get_iter path in
-      let name = model#get ~row ~column:col_name in
-      let checked = model#get ~row ~column:col_toggle in
-      model#set ~row ~column:col_toggle (not checked);
-      changed#call (name, checked);
-    end);
+    initializer
+      vc_name#set_cell_data_func rend_text begin fun model row ->
+        let checked = model#get ~row ~column:col_toggle in
+        if checked && not self#is_current_model_filtered then begin
+          let color = Color.name (Color.set_value 0.90 (`COLOR (view#misc#style#base `NORMAL))) in
+          rend_text#set_properties [`CELL_BACKGROUND_SET true; `CELL_BACKGROUND color];
+          rend_toggle#set_properties [`CELL_BACKGROUND_SET true; `CELL_BACKGROUND color];
+        end else begin
+          rend_text#set_properties [`CELL_BACKGROUND_SET false];
+          rend_toggle#set_properties [`CELL_BACKGROUND_SET false];
+        end
+      end;
+      self#load();
+      ignore (rend_toggle#connect#toggled ~callback:begin fun path ->
+          let path =
+            if self#is_current_model_filtered then modelf#convert_path_to_child_path path else path
+          in
+          let row = model#get_iter path in
+          let name = model#get ~row ~column:col_name in
+          let checked = model#get ~row ~column:col_toggle in
+          model#set ~row ~column:col_toggle (not checked);
+          changed#call (name, checked);
+        end);
 
-  method private is_current_model_filtered =
-    let current_model_oid = view#model#misc#get_oid in
-    let modelf_oid = modelf#misc#get_oid in
-    current_model_oid = modelf_oid
+    method private is_current_model_filtered =
+      let current_model_oid = view#model#misc#get_oid in
+      let modelf_oid = modelf#misc#get_oid in
+      current_model_oid = modelf_oid
 
-  method set_filter x =
-    view#set_model (if x then Some modelf#coerce else Some model#coerce)
+    method set_filter x =
+      view#set_model (if x then Some modelf#coerce else Some model#coerce)
 
-  method load () =
-    let lines = Shell.get_command_output "ocamlfind list -describe" in
-    let lines = List.fold_left begin fun (name_descr, acc) line ->
-      match name_descr with
-        | None ->
-          if Str.string_match re_name_descr line 0 then begin
-            let name = Str.matched_group 1 line in
-            let descr = Str.matched_group 2 line in
-            Some (name, descr), acc
-          end else (None, acc)
-        | Some (name, descr) ->
-          if Str.string_match re_version line 0 then begin
-            let version = Str.matched_group 1 line in
-            None, (name, descr, version) :: acc
-          end else None, (name, descr, "??") :: acc
-    end (None, []) lines in
-    let lines = List.rev (match lines with None, lines -> lines | _, lines -> lines)  in
-    model#clear();
-    List.iter begin fun (name, descr, version) ->
-      let row = model#append () in
-      model#set ~row ~column:col_toggle false;
-      model#set ~row ~column:col_name name;
-      model#set ~row ~column:col_descr (sprintf "%s\n<i><small>%s</small></i>" descr version);
-    end lines
+    method load () =
+      let lines = Shell.get_command_output "ocamlfind list -describe" in
+      let lines = List.fold_left begin fun (name_descr, acc) line ->
+          match name_descr with
+          | None ->
+              if Str.string_match re_name_descr line 0 then begin
+                let name = Str.matched_group 1 line in
+                let descr = Str.matched_group 2 line in
+                Some (name, descr), acc
+              end else (None, acc)
+          | Some (name, descr) ->
+              if Str.string_match re_version line 0 then begin
+                let version = Str.matched_group 1 line in
+                None, (name, descr, version) :: acc
+              end else None, (name, descr, "??") :: acc
+        end (None, []) lines in
+      let lines = List.rev (match lines with None, lines -> lines | _, lines -> lines)  in
+      model#clear();
+      List.iter begin fun (name, descr, version) ->
+        let row = model#append () in
+        model#set ~row ~column:col_toggle false;
+        model#set ~row ~column:col_name name;
+        model#set ~row ~column:col_descr (sprintf "%s\n<i><small>%s</small></i>" descr version);
+      end lines
 
     method select_packages names =
       model#foreach begin fun _ row ->
@@ -130,14 +130,14 @@ object (self)
       List.rev !result
 
     method connect = new signals ~changed
-end
+  end
 
 and changed () = object inherit [string * bool] signal () end
 and signals ~changed =
-object
-  inherit ml_signals [changed#disconnect]
-  method changed = changed#connect ~after
-end
+  object
+    inherit ml_signals [changed#disconnect]
+    method changed = changed#connect ~after
+  end
 
 let create = new widget
 
@@ -156,9 +156,9 @@ let dialog (parent : GObj.widget) () =
   ignore (button_filter#connect#toggled ~callback:(fun () -> widget#set_filter button_filter#active));
   window#resize ~width:parent#misc#allocation.Gtk.width ~height:400 ;
   ignore (window#event#connect#key_press ~callback:begin fun ev ->
-    if GdkEvent.Key.keyval ev = GdkKeysyms._Escape then (window#destroy (); true)
-    else false
-  end);
+      if GdkEvent.Key.keyval ev = GdkKeysyms._Escape then (window#destroy (); true)
+      else false
+    end);
   window#present();
   let x, y =
     let x0, y0 = Gdk.Window.get_pointer_location window#misc#window in

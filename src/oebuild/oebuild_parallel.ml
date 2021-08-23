@@ -47,11 +47,11 @@ module NODE = struct
 end
 
 type node = NODE.t = {
-    nd_create_command     : (string -> (string * string array) option);
-    nd_at_exit            : (process_output -> unit);
-    nd_filename           : string;
-    mutable nd_processing : bool;
-  }
+  nd_create_command     : (string -> (string * string array) option);
+  nd_at_exit            : (process_output -> unit);
+  nd_filename           : string;
+  mutable nd_processing : bool;
+}
 
 module Dag = Oebuild_dag.Make(NODE)
 
@@ -98,8 +98,8 @@ let print_results err_outputs ok_outputs =
 (** create_dag *)
 let create_dag ?times ?pp ~cb_create_command ~cb_at_exit ~toplevel_modules ~verbose () =
   match Dep_dag.create_dag ?times ?pp ~toplevel_modules ~verbose () with
-    | Dep_dag.Cycle cycle -> kprintf failwith "Cycle: %s" (String.concat "->" cycle)
-    | Dep_dag.Dag (dag', ocamldeps) ->
+  | Dep_dag.Cycle cycle -> kprintf failwith "Cycle: %s" (String.concat "->" cycle)
+  | Dep_dag.Dag (dag', ocamldeps) ->
       let dag = Hashtbl.create 17 in
       Hashtbl.iter begin fun filename _deps ->
         let node = {
@@ -139,7 +139,7 @@ let create_process ?(jobs=0) ~verbose cb_create_command cb_at_exit dag leaf erro
   let filename = Oebuild_util.replace_extension_to_ml leaf.Dag.node.NODE.nd_filename in
   let process_id = ref 0 in
   match cb_create_command filename with
-    | Some (command, args) when jobs = 0 || !job_counter <= jobs ->
+  | Some (command, args) when jobs = 0 || !job_counter <= jobs ->
       if verbose >= 4 then
         Printf.printf "Oebuild_parallel.create_process [%d/%d]: %s %s\n%!" !job_counter jobs (*filename*) (*print_endline*)
           command (String.concat " " (Array.to_list args))
@@ -154,23 +154,23 @@ let create_process ?(jobs=0) ~verbose cb_create_command cb_at_exit dag leaf erro
       } in
       let at_exit = function
         | None ->
-          begin match Unix.waitpid [] !process_id with
+            begin match Unix.waitpid [] !process_id with
             | _, Unix.WEXITED 0 ->
-              output.exit_code <- 0;
-              messages := output :: !messages
+                output.exit_code <- 0;
+                messages := output :: !messages
             | _, _              ->
-              output.exit_code <- 1; (* I do not need the exact exit code right now *)
-              errors := output :: !errors
-          end;
-          Mutex.lock dag.mutex;
-          Dag.remove_leaf dag.graph leaf;
-          Mutex.unlock dag.mutex;
-          (*if jobs > 0 then begin*)
-          Mutex.lock job_mutex;
-          decr job_counter;
-          Mutex.unlock job_mutex;
-          (*end;*)
-          cb_at_exit output
+                output.exit_code <- 1; (* I do not need the exact exit code right now *)
+                errors := output :: !errors
+            end;
+            Mutex.lock dag.mutex;
+            Dag.remove_leaf dag.graph leaf;
+            Mutex.unlock dag.mutex;
+            (*if jobs > 0 then begin*)
+            Mutex.lock job_mutex;
+            decr job_counter;
+            Mutex.unlock job_mutex;
+            (*end;*)
+            cb_at_exit output
         | Some ex -> Printf.eprintf "File \"oebuild_parallel.ml\": %s\n%s\n%!" (Printexc.to_string ex) (Printexc.get_backtrace());
       in
       let process_in = Spawn.loop (fun stdin ->
@@ -182,22 +182,22 @@ let create_process ?(jobs=0) ~verbose cb_create_command cb_at_exit dag leaf erro
           Buffer.add_char output.err '\n')
       in
       (*if jobs > 0 then begin*)
-        Mutex.lock job_mutex;
-        incr job_counter;
-        Mutex.unlock job_mutex;
+      Mutex.lock job_mutex;
+      incr job_counter;
+      Mutex.unlock job_mutex;
       (*end;*)
-        begin
-          match Spawn.async ~at_exit ~process_in ~process_err command args
-          with `ERROR ex -> ()
-             | `PID n -> process_id := n
-        end;
-    | None ->
+      begin
+        match Spawn.async ~at_exit ~process_in ~process_err command args
+        with `ERROR ex -> ()
+           | `PID n -> process_id := n
+      end;
+  | None ->
       if verbose >= 4 then
         Printf.printf "Oebuild_parallel.create_process: %30s (No command)\n%!" filename;
       Mutex.lock dag.mutex;
       Dag.remove_leaf dag.graph leaf;
       Mutex.unlock dag.mutex;
-    | _ ->
+  | _ ->
       leaf.Dag.node.NODE.nd_processing <- false;
 ;;
 

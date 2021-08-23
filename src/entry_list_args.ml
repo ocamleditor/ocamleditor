@@ -25,23 +25,23 @@ class widget ?packing () =
   let changed    = new changed () in
   let vbox       = GPack.vbox ~spacing:3 ?packing () in
   let entry_list = Entry_list.create (*~height:100*) ~packing:vbox#add () in
-object (self)
-  inherit GObj.widget vbox#as_widget
-  method entries = entry_list#entries
-  method set_entries = entry_list#set_entries
-  initializer
-    ignore (entry_list#append_empty());
-    ignore (entry_list#connect#changed ~callback:changed#call);
-  method connect = new signals ~changed
-end
+  object (self)
+    inherit GObj.widget vbox#as_widget
+    method entries = entry_list#entries
+    method set_entries = entry_list#set_entries
+    initializer
+      ignore (entry_list#append_empty());
+      ignore (entry_list#connect#changed ~callback:changed#call);
+    method connect = new signals ~changed
+  end
 
 and changed () = object (self) inherit [unit] GUtil.signal () as super end
 and replace_changed () = object (self) inherit [bool] GUtil.signal () as super end
 
 and signals ~changed =
-object (self)
-  inherit GUtil.ml_signals [changed#disconnect]
-  method changed = changed#connect ~after
-end
+  object (self)
+    inherit GUtil.ml_signals [changed#disconnect]
+    method changed = changed#connect ~after
+  end
 
 let create = new widget

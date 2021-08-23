@@ -99,10 +99,10 @@ module Diff = struct
         match text with
         | [color, text] -> create_label_tooltip [color, create_markup text]
         | [_, text1; _, text2] ->
-          create_label_tooltip [
-            color_del, create_markup text1;
-            color_add, create_markup text2;
-          ];
+            create_label_tooltip [
+              color_del, create_markup text1;
+              color_add, create_markup text2;
+            ];
         | _ -> create_label_tooltip []
       in
       page#set_global_gutter_tooltips (((0, y - 2, width, h + 2), tooltip_func) :: page#global_gutter_tooltips)
@@ -152,67 +152,67 @@ module Diff = struct
     let wtri = width * 2 / 3 in
     let paint color elems = function
       | One ln ->
-        let x0 = 0 (*width - wtri*) in
-        let y = y_of_line ln in
-        let height = max 3 line_height in
-        begin
-          match color with
-          | col when col = color_del ->
-            begin
-              match Oe_config.global_gutter_diff_style with
-              | `COLOR with_border ->
+          let x0 = 0 (*width - wtri*) in
+          let y = y_of_line ln in
+          let height = max 3 line_height in
+          begin
+            match color with
+            | col when col = color_del ->
+                begin
+                  match Oe_config.global_gutter_diff_style with
+                  | `COLOR with_border ->
+                      set_foreground drawable color;
+                      polygon drawable ~filled:true [x0, y; x0 + wtri, y - wtri; x0 + wtri, y + wtri];
+                      if (*true ||*) with_border then begin
+                        set_foreground drawable (Color.set_value 0.6 color);
+                        polygon drawable ~filled:false [0, y; wtri, y - wtri; wtri, y + wtri]
+                      end
+                  | `BW ->
+                      set_foreground drawable black;
+                      let tri = [x0, y; x0 + wtri, y - wtri; x0 + wtri, y + wtri] in
+                      polygon drawable ~filled:true tri;
+                      set_foreground drawable (Color.set_value 0.5 black);
+                      polygon drawable ~filled:false tri;
+                end;
+            | col when col = color_add ->
+                set_foreground drawable
+                  (match Oe_config.global_gutter_diff_style with
+                   | `COLOR _ -> color;
+                   | `BW -> black);
+                rectangle drawable ~filled:true ~x:0 ~y:(y - 2) ~width:(width-2) ~height ();
+            | color ->
+                begin
+                  match Oe_config.global_gutter_diff_style with
+                  | `COLOR with_border ->
+                      set_foreground drawable color;
+                      rectangle drawable ~filled:true ~x:0 ~y:(y - 2) ~width ~height ();
+                      if with_border then begin
+                        set_foreground drawable (Color.set_value 0.6 color);
+                        rectangle drawable ~filled:false ~x:0 ~y:(y - 2) ~width:(width-1) ~height ();
+                      end
+                  | `BW ->
+                      set_foreground drawable black;
+                      rectangle drawable ~filled:false ~x:0 ~y:(y - 2) ~width:(width - 1) ~height ();
+                end;
+          end;
+          create_tooltip page width y height elems
+      | Many (l1, l2) ->
+          let y1 = y_of_line l1 in
+          let y2 = y_of_line l2 in
+          let height = max 3 (y2 - y1 + line_height) in
+          begin
+            match Oe_config.global_gutter_diff_style with
+            | `COLOR with_border ->
                 set_foreground drawable color;
-                polygon drawable ~filled:true [x0, y; x0 + wtri, y - wtri; x0 + wtri, y + wtri];
-                if (*true ||*) with_border then begin
-                  set_foreground drawable (Color.set_value 0.6 color);
-                  polygon drawable ~filled:false [0, y; wtri, y - wtri; wtri, y + wtri]
-                end
-              | `BW ->
-                set_foreground drawable black;
-                let tri = [x0, y; x0 + wtri, y - wtri; x0 + wtri, y + wtri] in
-                polygon drawable ~filled:true tri;
-                set_foreground drawable (Color.set_value 0.5 black);
-                polygon drawable ~filled:false tri;
-            end;
-          | col when col = color_add ->
-            set_foreground drawable
-              (match Oe_config.global_gutter_diff_style with
-               | `COLOR _ -> color;
-               | `BW -> black);
-            rectangle drawable ~filled:true ~x:0 ~y:(y - 2) ~width:(width-2) ~height ();
-          | color ->
-            begin
-              match Oe_config.global_gutter_diff_style with
-              | `COLOR with_border ->
-                set_foreground drawable color;
-                rectangle drawable ~filled:true ~x:0 ~y:(y - 2) ~width ~height ();
+                rectangle drawable ~filled:true ~x:0 ~y:y1 ~width ~height ();
                 if with_border then begin
                   set_foreground drawable (Color.set_value 0.6 color);
-                  rectangle drawable ~filled:false ~x:0 ~y:(y - 2) ~width:(width-1) ~height ();
-                end
-              | `BW ->
-                set_foreground drawable black;
-                rectangle drawable ~filled:false ~x:0 ~y:(y - 2) ~width:(width - 1) ~height ();
-            end;
-        end;
-        create_tooltip page width y height elems
-      | Many (l1, l2) ->
-        let y1 = y_of_line l1 in
-        let y2 = y_of_line l2 in
-        let height = max 3 (y2 - y1 + line_height) in
-        begin
-          match Oe_config.global_gutter_diff_style with
-          | `COLOR with_border ->
-            set_foreground drawable color;
-            rectangle drawable ~filled:true ~x:0 ~y:y1 ~width ~height ();
-            if with_border then begin
-              set_foreground drawable (Color.set_value 0.6 color);
-              rectangle drawable ~filled:false ~x:0 ~y:y1 ~width:(width-1) ~height ();
-            end;
-          | `BW ->
-            wave_line ~drawable ~color:black ~width ~height ~y:y1 ~is_add:(color = color_add);
-        end;
-        create_tooltip page width y1 height elems
+                  rectangle drawable ~filled:false ~x:0 ~y:y1 ~width:(width-1) ~height ();
+                end;
+            | `BW ->
+                wave_line ~drawable ~color:black ~width ~height ~y:y1 ~is_add:(color = color_add);
+          end;
+          create_tooltip page width y1 height elems
     in
     let diffs = List.sort begin fun a b ->
         match a with
@@ -224,11 +224,11 @@ module Diff = struct
       Gmisclib.Idle.add ~prio:200 begin fun () ->
         match diff with
         | Add (_, ind, a) ->
-          paint color_add [color_add, a] ind |> ignore;
+            paint color_add [color_add, a] ind |> ignore;
         | Delete (_, ind, a) ->
-          paint color_del [color_del, a] ind |> ignore;
+            paint color_del [color_del, a] ind |> ignore;
         | Change (_, a, ind, b) ->
-          paint color_change [color_del, a; color_add, b] ind
+            paint color_change [color_del, a; color_add, b] ind
       end
     end diffs
 
@@ -281,53 +281,53 @@ let _ =
   begin
     match !Browser.browser with
     | Some browser ->
-      let editor = browser#editor in
-      (* Init editor pages *)
-      browser#editor#with_current_page Diff.init;
-      let callback page = Gmisclib.Idle.add ~prio:100 (fun () -> Diff.init page) in
-      editor#connect#add_page ~callback |> ignore;
-      editor#connect#switch_page ~callback |> ignore;
-      editor#connect#switch_page ~callback:Diff.paint_gutter |> ignore;
-      editor#connect#remove_page ~callback:begin fun page ->
-        Diff.initialized := List.filter ((<>) page#get_oid) Diff.(!initialized);
-        Hashtbl.remove Diff.cache page#get_oid;
-      end |> ignore;
-      (* Timeout *)
-      let id_timeout_diff = ref None in
-      let create_timeout_diff () =
-        Gaux.may !id_timeout_diff ~f:GMain.Timeout.remove;
-        id_timeout_diff := None;
-        let callback () =
-          try
-            editor#with_current_page begin fun page ->
-              if page#view#has_focus then (Diff.paint_gutter page);
-            end;
-            true
-          with ex ->
-            Printf.eprintf "File \"plugin_diff.ml\": %s\n%s\n%!" (Printexc.to_string ex) (Printexc.get_backtrace());
-            true
+        let editor = browser#editor in
+        (* Init editor pages *)
+        browser#editor#with_current_page Diff.init;
+        let callback page = Gmisclib.Idle.add ~prio:100 (fun () -> Diff.init page) in
+        editor#connect#add_page ~callback |> ignore;
+        editor#connect#switch_page ~callback |> ignore;
+        editor#connect#switch_page ~callback:Diff.paint_gutter |> ignore;
+        editor#connect#remove_page ~callback:begin fun page ->
+          Diff.initialized := List.filter ((<>) page#get_oid) Diff.(!initialized);
+          Hashtbl.remove Diff.cache page#get_oid;
+        end |> ignore;
+        (* Timeout *)
+        let id_timeout_diff = ref None in
+        let create_timeout_diff () =
+          Gaux.may !id_timeout_diff ~f:GMain.Timeout.remove;
+          id_timeout_diff := None;
+          let callback () =
+            try
+              editor#with_current_page begin fun page ->
+                if page#view#has_focus then (Diff.paint_gutter page);
+              end;
+              true
+            with ex ->
+              Printf.eprintf "File \"plugin_diff.ml\": %s\n%s\n%!" (Printexc.to_string ex) (Printexc.get_backtrace());
+              true
+          in
+          editor#with_current_page Diff.paint_gutter;
+          id_timeout_diff := Some (GMain.Timeout.add ~ms:3000 ~callback);
         in
-        editor#with_current_page Diff.paint_gutter;
-        id_timeout_diff := Some (GMain.Timeout.add ~ms:3000 ~callback);
-      in
-      let bind _ =
-        create_timeout_diff();
-        Gaux.may (GWindow.toplevel editor#coerce) ~f:begin fun (w : GWindow.window) ->
-          w#event#connect#focus_in ~callback:begin fun _ ->
-            create_timeout_diff();
-            false
-          end |> ignore;
-          w#event#connect#focus_out ~callback:begin fun _ ->
-            Gaux.may !id_timeout_diff ~f:GMain.Timeout.remove;
-            id_timeout_diff := None;
-            false
-          end |> ignore;
+        let bind _ =
+          create_timeout_diff();
+          Gaux.may (GWindow.toplevel editor#coerce) ~f:begin fun (w : GWindow.window) ->
+            w#event#connect#focus_in ~callback:begin fun _ ->
+              create_timeout_diff();
+              false
+            end |> ignore;
+            w#event#connect#focus_out ~callback:begin fun _ ->
+              Gaux.may !id_timeout_diff ~f:GMain.Timeout.remove;
+              id_timeout_diff := None;
+              false
+            end |> ignore;
+          end;
+        in
+        begin
+          try bind ()
+          with Gpointer.Null -> editor#misc#connect#map ~callback:bind |> ignore;
         end;
-      in
-      begin
-        try bind ()
-        with Gpointer.Null -> editor#misc#connect#map ~callback:bind |> ignore;
-      end;
     | _ -> failwith "Cannot initialize Plugin_diff because the browser object has not yet been created."
   end;
 

@@ -27,10 +27,10 @@ open Printf
 let find_forward ?start ?stop ?(all=true) ~(buffer : GText.buffer) ~regexp ~canceled () =
   let start_iter, stop_iter =
     match start, stop with
-      | Some i1, Some i2 -> i1, i2
-      | None, None -> buffer#start_iter, buffer#end_iter
-      | Some start, None -> start, buffer#end_iter
-      | None, Some stop -> buffer#start_iter, stop
+    | Some i1, Some i2 -> i1, i2
+    | None, None -> buffer#start_iter, buffer#end_iter
+    | Some start, None -> start, buffer#end_iter
+    | None, Some stop -> buffer#start_iter, stop
   in
   let iter = ref start_iter#copy in
   let linenum = ref 0 in
@@ -60,8 +60,8 @@ let find_forward ?start ?stop ?(all=true) ~(buffer : GText.buffer) ~regexp ~canc
                 let stop_offset = Convert.offset_from_pos line ~pos:stop in
                 offsets := (start_offset, stop_offset) :: !offsets;
                 if not all then (raise (Find_text.Found_step (!linenum - 1,
-                  (!iter#line_offset + start_offset),
-                  (!iter#line_offset + stop_offset))));
+                                                              (!iter#line_offset + start_offset),
+                                                              (!iter#line_offset + stop_offset))));
                 pos := stop;
               end
             done
@@ -133,8 +133,8 @@ let find_backward ~(start : GText.iter) ~(buffer : GText.buffer) ~regexp ~cancel
 (** find *)
 let find direction ~(view : Text.view) ~canceled =
   match Find_text.status.Find_text.current_regexp with
-    | None -> raise Find_text.No_current_regexp
-    | Some regexp -> begin
+  | None -> raise Find_text.No_current_regexp
+  | Some regexp -> begin
       let buffer = view#buffer in
       let start =
         let b1, b2 = buffer#selection_bounds in
@@ -144,23 +144,23 @@ let find direction ~(view : Text.view) ~canceled =
         begin
           let res =
             match direction with
-              | Find_text.Forward -> find_forward ~start ~all:false ~buffer ~regexp ~canceled ()
-              | Find_text.Backward -> find_backward ~start ~buffer ~regexp ~canceled ()
+            | Find_text.Forward -> find_forward ~start ~all:false ~buffer ~regexp ~canceled ()
+            | Find_text.Backward -> find_backward ~start ~buffer ~regexp ~canceled ()
           in
           match res with None -> begin
-            let message = sprintf "String \xC2\xAB%s\xC2\xBB not found." Find_text.status.Find_text.text_find#get in
-            Dialog.info ~title:"Search Failed" ~message view
-          end | _ -> assert false
+              let message = sprintf "String \xC2\xAB%s\xC2\xBB not found." Find_text.status.Find_text.text_find#get in
+              Dialog.info ~title:"Search Failed" ~message view
+            end | _ -> assert false
         end
       with Find_text.Found_step (line, o1, o2) ->
         begin
           begin
             match direction with
-              | Find_text.Forward ->
+            | Find_text.Forward ->
                 buffer#select_range
                   (buffer#get_iter (`LINECHAR (line, o2)))
                   (buffer#get_iter (`LINECHAR (line, o1)));
-              | Find_text.Backward ->
+            | Find_text.Backward ->
                 buffer#select_range
                   (buffer#get_iter (`LINECHAR (line, o1)))
                   (buffer#get_iter (`LINECHAR (line, o2)));

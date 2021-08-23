@@ -25,7 +25,7 @@ open Miscellanea
 open Target
 
 let re_error_line = Str.regexp_case_fold
-  ".*\"\\(.+\\)\", line \\([0-9]+\\), characters \\([0-9]+\\)-\\([0-9]+\\):?"
+    ".*\"\\(.+\\)\", line \\([0-9]+\\), characters \\([0-9]+\\)-\\([0-9]+\\):?"
 
 let re_assert_failure = Str.regexp ".*\\(Assert_failure(\"\\(.+\\)\", \\([0-9]+\\), \\([0-9]+\\))\\)"
 
@@ -45,14 +45,14 @@ class view ~(editor : Editor.editor) ?(task_kind=(`OTHER : Task.kind)) ~task ?pa
   let button_run        = GButton.tool_button ~packing:toolbar#insert () in
   let _                 = button_run#set_icon_widget begin match task_kind with
       | `OTHER | `RUN ->
-        button_run#set_tooltip_text "Start";
-        (Icons.create Icons.start_16);
+          button_run#set_tooltip_text "Start";
+          (Icons.create Icons.start_16);
       | `CLEAN | `CLEANALL ->
-        button_run#set_tooltip_text task.Task.et_name;
-        (Icons.create Icons.clear_build_16);
+          button_run#set_tooltip_text task.Task.et_name;
+          (Icons.create Icons.clear_build_16);
       | `ANNOT | `COMPILE ->
-        button_run#set_tooltip_text task.Task.et_name;
-        (Icons.create Icons.build_16);
+          button_run#set_tooltip_text task.Task.et_name;
+          (Icons.create Icons.build_16);
     end#coerce in
   let _                 = GButton.separator_tool_item ~packing:toolbar#insert () in
   (*  *)
@@ -78,161 +78,161 @@ class view ~(editor : Editor.editor) ?(task_kind=(`OTHER : Task.kind)) ~task ?pa
   let _                 = button_clear#connect#clicked ~callback:(fun () -> view#buffer#set_text "") in
   let _                 = button_wrap#set_active true in
   object (self)
-  inherit GObj.widget vbox#as_widget
-  inherit Messages.page ~role:"task-console" as super
+    inherit GObj.widget vbox#as_widget
+    inherit Messages.page ~role:"task-console" as super
 
-  val working_status_changed = new working_status_changed ()
-  val m_write = Mutex.create ()
-  val mutable seq_tag_location = 0
-  val mutable tag_locations = [];
-  val mutable process = None
-  val mutable signal_enabled = true
-  val mutable process_outchan = None
-  val mutable thread_run = None
-  val mutable has_errors = false
-  val mutable killed = false
-  val mutable task = task
-  val mutable button_run_signals = []
-  val mutable current_run_cb = None
-  val mutable current_use_thread = None
-  val mutable tab_label : GMisc.label option = None
+    val working_status_changed = new working_status_changed ()
+    val m_write = Mutex.create ()
+    val mutable seq_tag_location = 0
+    val mutable tag_locations = [];
+    val mutable process = None
+    val mutable signal_enabled = true
+    val mutable process_outchan = None
+    val mutable thread_run = None
+    val mutable has_errors = false
+    val mutable killed = false
+    val mutable task = task
+    val mutable button_run_signals = []
+    val mutable current_run_cb = None
+    val mutable current_use_thread = None
+    val mutable tab_label : GMisc.label option = None
 
-  method set_tab_label label = tab_label <- Some label
-  method tab_label = match tab_label with Some x -> x | _ -> assert false
+    method set_tab_label label = tab_label <- Some label
+    method tab_label = match tab_label with Some x -> x | _ -> assert false
 
-  method! parent_changed messages =
-    super#parent_changed messages;
-    toolbar#misc#hide();
-    if messages = Messages.vmessages then begin
-      toolbar#set_orientation `VERTICAL;
-      toolbar#misc#reparent hbox#coerce;
-      hbox#set_child_packing ~expand:false ~fill:false toolbar#coerce;
-      hbox#reorder_child ~pos:0 toolbar#coerce;
-    end else begin
-      toolbar#set_orientation `HORIZONTAL;
-      toolbar#misc#reparent vbox#coerce;
-      vbox#set_child_packing ~expand:false ~fill:false toolbar#coerce;
-    end;
-    hbox#set_child_packing ~expand:true ~fill:true sw#coerce;
-    toolbar#misc#show();
-
-  method button_run = button_run
-  method set_task x = task <- x
-  method set_has_errors x = has_errors <- x
-  method has_errors = has_errors
-  method killed = killed
-  method buffer = view#buffer
-  method view : GText.view = view
-  method has_process = process <> None
-  method clear () =
-    let buffer = view#buffer in
-    buffer#delete ~start:(buffer#get_iter `START) ~stop:(buffer#get_iter `END)
-
-  method close () =
-    button_stop#misc#set_sensitive false;
-    button_run#misc#set_sensitive true;
-    self#view#set_editable false;
-    process <- None;
-
-  method stop () =
-    match process with None -> () | Some proc ->
-      let exit_value = Process_termination.kill proc.Spawn.pid in
-      killed <- true;
-      self#close()
-
-  method restart () =
-    self#stop();
-    self#run ?run_cb:current_run_cb ?use_thread:current_use_thread ();
-
-  method iter_chan f inchan =
-    set_binary_mode_in inchan false;
-    try while true do f inchan done with End_of_file -> ()
-
-  method run ?(run_cb : (unit -> unit) option) ?(use_thread=true) () =
-    current_run_cb <- run_cb;
-    current_use_thread <- Some use_thread;
-    let callback () =
-      match process with
-        | None ->
-          if use_thread then begin
-            let th = Thread.create (fun () -> self#do_run task) () in
-            thread_run <- Some th;
-            Some th
-          end else begin
-            self#do_run task;
-            None
-          end
-        | Some _ ->
-          GtkThread2.async self#present ();
-          if use_thread then
-            (match thread_run with None -> assert false | Some th -> Some th)
-          else None
-    in
-    (* Disconnect previous callback assiciated with button_run and connect with a new one. *)
-    GtkThread2.sync begin fun () ->
-      begin
-        try
-          let sid = List.assoc button_run#misc#get_oid button_run_signals in
-          GtkSignal.disconnect button_run#as_widget sid;
-          ignore (List.remove_assoc button_run#misc#get_oid button_run_signals);
-        with Not_found -> ()
+    method! parent_changed messages =
+      super#parent_changed messages;
+      toolbar#misc#hide();
+      if messages = Messages.vmessages then begin
+        toolbar#set_orientation `VERTICAL;
+        toolbar#misc#reparent hbox#coerce;
+        hbox#set_child_packing ~expand:false ~fill:false toolbar#coerce;
+        hbox#reorder_child ~pos:0 toolbar#coerce;
+      end else begin
+        toolbar#set_orientation `HORIZONTAL;
+        toolbar#misc#reparent vbox#coerce;
+        vbox#set_child_packing ~expand:false ~fill:false toolbar#coerce;
       end;
-      let sid = button_run#connect#clicked ~callback:begin fun () ->
-        match (*task_kind,*) run_cb with
-          | (*`RUN,*) Some f -> ignore (f ())
-          | _ -> ignore (callback())
-      end in
-      button_run_signals <- (button_run#misc#get_oid, sid) :: button_run_signals;
-    end ();
-    callback()
+      hbox#set_child_packing ~expand:true ~fill:true sw#coerce;
+      toolbar#misc#show();
 
-  method private do_run task =
-    let finally () =
-      GtkThread2.async begin fun () ->
-        self#close();
-        if has_errors then begin
-          (*play "error.wav";*)
-          Gmisclib.Idle.add (fun () -> view#scroll_to_mark (`NAME "first_error_line"));
-        end else begin
-          (*play "success.wav";*)
-          Gmisclib.Idle.add (fun () -> ignore (view#scroll_to_mark `INSERT));
+    method button_run = button_run
+    method set_task x = task <- x
+    method set_has_errors x = has_errors <- x
+    method has_errors = has_errors
+    method killed = killed
+    method buffer = view#buffer
+    method view : GText.view = view
+    method has_process = process <> None
+    method clear () =
+      let buffer = view#buffer in
+      buffer#delete ~start:(buffer#get_iter `START) ~stop:(buffer#get_iter `END)
+
+    method close () =
+      button_stop#misc#set_sensitive false;
+      button_run#misc#set_sensitive true;
+      self#view#set_editable false;
+      process <- None;
+
+    method stop () =
+      match process with None -> () | Some proc ->
+        let exit_value = Process_termination.kill proc.Spawn.pid in
+        killed <- true;
+        self#close()
+
+    method restart () =
+      self#stop();
+      self#run ?run_cb:current_run_cb ?use_thread:current_use_thread ();
+
+    method iter_chan f inchan =
+      set_binary_mode_in inchan false;
+      try while true do f inchan done with End_of_file -> ()
+
+    method run ?(run_cb : (unit -> unit) option) ?(use_thread=true) () =
+      current_run_cb <- run_cb;
+      current_use_thread <- Some use_thread;
+      let callback () =
+        match process with
+        | None ->
+            if use_thread then begin
+              let th = Thread.create (fun () -> self#do_run task) () in
+              thread_run <- Some th;
+              Some th
+            end else begin
+              self#do_run task;
+              None
+            end
+        | Some _ ->
+            GtkThread2.async self#present ();
+            if use_thread then
+              (match thread_run with None -> assert false | Some th -> Some th)
+            else None
+      in
+      (* Disconnect previous callback assiciated with button_run and connect with a new one. *)
+      GtkThread2.sync begin fun () ->
+        begin
+          try
+            let sid = List.assoc button_run#misc#get_oid button_run_signals in
+            GtkSignal.disconnect button_run#as_widget sid;
+            ignore (List.remove_assoc button_run#misc#get_oid button_run_signals);
+          with Not_found -> ()
         end;
-        working_status_changed#call false;
-        Activity.remove task.Task.et_name;
-      end ()
-    in
-    if task_kind = `COMPILE && Preferences.preferences#get.Preferences.pref_editor_save_all_bef_comp then (editor#save_all());
-    has_errors <- false;
-    GtkThread2.async begin fun () ->
-      (try view#buffer#delete_mark (`NAME "first_error_line");
-      with GText.No_such_mark("first_error_line") -> ());
-      tag_locations <- [];
-      view#buffer#remove_all_tags ~start:(view#buffer#get_iter `START) ~stop:(view#buffer#get_iter `END);
-    end ();
-    (** Process start *)
-    let proc, cmd_line = Task_process.create task in
-    (** Print command line *)
-    GtkThread2.async begin fun () ->
-      self#view#set_editable true;
-      button_run#misc#set_sensitive false;
-      button_stop#misc#set_sensitive true;
-      working_status_changed#call true;
-      (*Activity.add Activity.Task task.Task.name;*)
-      Mutex.lock m_write;
-      signal_enabled <- false;
-      self#clear();
-(*      kprintf (view#buffer#insert ~tag_names:["bold"; "output"]) "Environment: %s" (String.concat "; " task.Task.env);
-      kprintf (view#buffer#insert ~tag_names:["bold"; "output"]) "\nWorking directory: %s\n" task.Task.dir;
-      kprintf (view#buffer#insert ~tag_names:["bold"; "output"]) "Command:\n%s\n" (Process.cmd_line proc);*)
-      (*kprintf (view#buffer#insert ~tag_names:["bold"; "output"]) "%s\n" (Cmd.expand (project.Prj.autocomp_compiler ^ " -v"));*)
-      let args = String.concat " " (List.map (fun (_ , x) -> x) (List.filter (fun (e, _) -> e) task.Task.et_args)) in
-      kprintf (view#buffer#insert ~tag_names:["bold"; "output"]) "%s %s\n" (Filename.quote task.Task.et_cmd) args;
-      signal_enabled <- true;
-      Mutex.unlock m_write;
-      self#present ();
-    end ();
-    process <- Some proc;
-    (*try*)
+        let sid = button_run#connect#clicked ~callback:begin fun () ->
+            match (*task_kind,*) run_cb with
+            | (*`RUN,*) Some f -> ignore (f ())
+            | _ -> ignore (callback())
+          end in
+        button_run_signals <- (button_run#misc#get_oid, sid) :: button_run_signals;
+      end ();
+      callback()
+
+    method private do_run task =
+      let finally () =
+        GtkThread2.async begin fun () ->
+          self#close();
+          if has_errors then begin
+            (*play "error.wav";*)
+            Gmisclib.Idle.add (fun () -> view#scroll_to_mark (`NAME "first_error_line"));
+          end else begin
+            (*play "success.wav";*)
+            Gmisclib.Idle.add (fun () -> ignore (view#scroll_to_mark `INSERT));
+          end;
+          working_status_changed#call false;
+          Activity.remove task.Task.et_name;
+        end ()
+      in
+      if task_kind = `COMPILE && Preferences.preferences#get.Preferences.pref_editor_save_all_bef_comp then (editor#save_all());
+      has_errors <- false;
+      GtkThread2.async begin fun () ->
+        (try view#buffer#delete_mark (`NAME "first_error_line");
+         with GText.No_such_mark("first_error_line") -> ());
+        tag_locations <- [];
+        view#buffer#remove_all_tags ~start:(view#buffer#get_iter `START) ~stop:(view#buffer#get_iter `END);
+      end ();
+      (** Process start *)
+      let proc, cmd_line = Task_process.create task in
+      (** Print command line *)
+      GtkThread2.async begin fun () ->
+        self#view#set_editable true;
+        button_run#misc#set_sensitive false;
+        button_stop#misc#set_sensitive true;
+        working_status_changed#call true;
+        (*Activity.add Activity.Task task.Task.name;*)
+        Mutex.lock m_write;
+        signal_enabled <- false;
+        self#clear();
+        (*      kprintf (view#buffer#insert ~tag_names:["bold"; "output"]) "Environment: %s" (String.concat "; " task.Task.env);
+                kprintf (view#buffer#insert ~tag_names:["bold"; "output"]) "\nWorking directory: %s\n" task.Task.dir;
+                kprintf (view#buffer#insert ~tag_names:["bold"; "output"]) "Command:\n%s\n" (Process.cmd_line proc);*)
+        (*kprintf (view#buffer#insert ~tag_names:["bold"; "output"]) "%s\n" (Cmd.expand (project.Prj.autocomp_compiler ^ " -v"));*)
+        let args = String.concat " " (List.map (fun (_ , x) -> x) (List.filter (fun (e, _) -> e) task.Task.et_args)) in
+        kprintf (view#buffer#insert ~tag_names:["bold"; "output"]) "%s %s\n" (Filename.quote task.Task.et_cmd) args;
+        signal_enabled <- true;
+        Mutex.unlock m_write;
+        self#present ();
+      end ();
+      process <- Some proc;
+      (*try*)
       let inchan = proc.Spawn.inchan in
       let outchan = proc.Spawn.outchan in
       let errchan = proc.Spawn.errchan in
@@ -292,14 +292,14 @@ class view ~(editor : Editor.editor) ?(task_kind=(`OTHER : Task.kind)) ~task ?pa
                 end else begin
                   let tag_names =
                     match !pending_loc_line with
-                      | None -> [tag]
-                      | Some (_(*pl*), _, pending_tag) ->
+                    | None -> [tag]
+                    | Some (_(*pl*), _, pending_tag) ->
                         let tag, apply_pending =
                           match !pending_tag with
-                            | Some t ->
+                          | Some t ->
                               pending_tag := if String.trim line = "" then None else Some t;
                               t, false
-                            | _ ->
+                          | _ ->
                               pending_tag := Some tag;
                               tag, true
                         in
@@ -312,7 +312,7 @@ class view ~(editor : Editor.editor) ?(task_kind=(`OTHER : Task.kind)) ~task ?pa
                   in
                   check_first_error tag stop;
                   view#buffer#insert ~iter:stop ~tag_names (line ^ "\n");
-              end;
+                end;
                 view#scroll_to_mark `INSERT;
                 signal_enabled <- true;
                 Mutex.unlock m_write;
@@ -325,127 +325,127 @@ class view ~(editor : Editor.editor) ?(task_kind=(`OTHER : Task.kind)) ~task ?pa
       (*begin
         try ignore (Spawn.Parallel_process.close proc);
         with ex -> (printf "%s\n%!" (Printexc.to_string ex))
-      end;*)
+        end;*)
       finally()
     (*with Spawn.Parallel_process.Not_started -> (finally())*)
 
-  initializer
-    ignore (button_detach#connect#clicked ~callback:(fun () -> self#detach button_detach));
-    ignore (button_incr_font#connect#clicked ~callback:(fun () -> Gtk_util.increase_font_size ~increment:1 view |> ignore));
-    ignore (button_decr_font#connect#clicked ~callback:(fun () -> Gtk_util.increase_font_size ~increment:(-1) view |> ignore));
-    ignore (Messages.vmessages#connect#remove_page ~callback:begin fun child ->
-      if child#misc#get_oid = vbox#misc#get_oid then begin
-        match process with None -> () | Some _ ->
-          Dialog.process_still_active ~name:task.Task.et_name
-            ~ok:self#stop ~cancel:(fun () -> raise Messages.Cancel_process_termination) ()
-      end
-    end);
-    (** Input of the user redirected to the outchan of the process *)
-    if task_kind = `RUN then begin
-      ignore (view#buffer#connect#after#insert_text ~callback:begin fun it txt ->
-        if process <> None && signal_enabled then (GtkThread2.sync begin fun () ->
-          let start = it#backward_chars (String.length txt) in
-          view#buffer#apply_tag_by_name "input" ~start ~stop:(view#buffer#get_iter `INSERT);
-          match process_outchan with None -> ()
-            | Some ochan ->
-              output_string ochan (Glib.Convert.convert_with_fallback ~fallback:"?"
-                ~from_codeset:"UTF-8" ~to_codeset:Oe_config.ocaml_codeset txt);
-              flush ochan;
-        end ())
-      end);
-    end;
-    (** Locations links are activated by button_press *)
-    let _ = view#event#connect#button_press ~callback:begin fun ev ->
-      let x = int_of_float (GdkEvent.Button.x ev) in
-      let y = int_of_float (GdkEvent.Button.y ev) in
-      let x, y = view#window_to_buffer_coords ~tag:`WIDGET ~x ~y in
-      let iter = view#get_iter_at_location ~x ~y in
-      let find t = List.assoc t#get_oid tag_locations in
-      let line = ref "" in
-      List.iter (fun t -> try line := (snd (find t)) with Not_found -> ()) iter#tags;
-      let group = if Str.string_match re_error_line !line 0 then 4 - 3
-        else if Str.string_match re_assert_failure !line 0 then 2
-        else 0 in
-      if group > 0 then begin
-        let basename = Str.matched_group group !line in  (* 2 *)
-        if basename <> "_none_" then begin
-          let linenum = int_of_string (Str.matched_group (group + 1) !line) in (* 3 *)
-          let start = int_of_string (Str.matched_group (group + 2) !line) in  (* 4 *)
-          let len = (* Length from the start of line *)
-            try int_of_string (Str.matched_group (group + 3) !line)
-            with Invalid_argument _ -> start
-          in
-          let parent = project.Prj.root // Prj.default_dir_src in
-          let filename = List.fold_left (fun acc x -> acc // x) parent (Miscellanea.filename_split basename) in
-          ignore (editor#open_file ~active:true ~scroll_offset:0 ~offset:0 ?remote:None filename);
-          match editor#get_page (`FILENAME filename) with
-            | None -> false
-            | Some page ->
-              editor#goto_view page#view;
-              let buf = (page#buffer :> Text.buffer) in
-              let lines = buf#line_count in
-              if linenum < lines - 1 then begin
-                Gmisclib.Idle.add begin fun () ->
-                  let it = buf#get_iter (`LINE (linenum - 1)) in
-                  let it = it#set_line_index 0 in
-                  let line = it#get_text ~stop:it#forward_to_line_end in
-                  let c = Convert.offset_from_pos line ~pos:start in
-                  let where = it#forward_chars c in
-                  let len = Convert.offset_from_pos (buf#get_text ~start:it ~stop:buf#end_iter ()) ~pos:len in
-                  buf#select_range where (it#forward_chars len);
-                  if (buf#get_iter `INSERT)#compare (buf#get_iter `SEL_BOUND) = 0 then (ignore(buf#select_word()));
-                  ignore (page#view#scroll_lazy where);
-                  page#view#misc#grab_focus();
-                end;
-                true
-             end else false;
-        end else false;
-      end else false
-    end in
-    (** Change the cursor and underline the links *)
-    let _ = view#event#connect#motion_notify ~callback:begin fun ev ->
-      let x = int_of_float (GdkEvent.Motion.x ev) in
-      let y = int_of_float (GdkEvent.Motion.y ev) in
-      let x, y = view#window_to_buffer_coords ~tag:`WIDGET ~x ~y in
-      let iter = view#get_iter_at_location ~x ~y in
-      List.iter (fun (_, (t, _)) -> t#set_properties [`UNDERLINE `NONE]) tag_locations;
-      Gaux.may (view#get_window `TEXT) ~f:(fun w -> Gdk.Window.set_cursor w (Gdk.Cursor.create `ARROW));
-      List.iter begin fun t ->
-        try
-          let _ = List.assoc t#get_oid tag_locations in
-          (*let start = iter#backward_to_tag_toggle (Some t) in
-          let stop = iter#forward_to_tag_toggle (Some t) in*)
-          t#set_properties [`UNDERLINE `LOW];
-          Gaux.may (view#get_window `TEXT) ~f:(fun w -> Gdk.Window.set_cursor w (Gdk.Cursor.create `HAND1));
-        with Not_found -> () (* The cursor is not inside a tag_location *)
-      end iter#tags;
-      false
-    end in
-    (*  *)
-(*    button_run#connect#clicked ~callback:(fun () -> ignore (self#run ()));*)
-    ignore (button_stop#connect#clicked ~callback:self#stop);
-    view#misc#modify_font_by_name Preferences.preferences#get.Preferences.pref_output_font;
-    view#misc#modify_base [`NORMAL, `NAME Preferences.preferences#get.Preferences.pref_output_bg];
-    ignore (view#buffer#create_tag ~name:"input"
-      [`FOREGROUND Preferences.preferences#get.Preferences.pref_output_fg_stdin]);
-    ignore (view#buffer#create_tag ~name:"error"
-      [`FOREGROUND Preferences.preferences#get.Preferences.pref_output_fg_err]);
-    ignore (view#buffer#create_tag ~name:"warning"
-      [`FOREGROUND Preferences.preferences#get.Preferences.pref_output_fg_warn]);
-    ignore (view#buffer#create_tag ~name:"output"
-      [`FOREGROUND Preferences.preferences#get.Preferences.pref_output_fg_stdout]);
-    ignore (view#buffer#create_tag ~name:"bold" [`WEIGHT `BOLD]);
-    view#misc#grab_focus()
+    initializer
+      ignore (button_detach#connect#clicked ~callback:(fun () -> self#detach button_detach));
+      ignore (button_incr_font#connect#clicked ~callback:(fun () -> Gtk_util.increase_font_size ~increment:1 view |> ignore));
+      ignore (button_decr_font#connect#clicked ~callback:(fun () -> Gtk_util.increase_font_size ~increment:(-1) view |> ignore));
+      ignore (Messages.vmessages#connect#remove_page ~callback:begin fun child ->
+          if child#misc#get_oid = vbox#misc#get_oid then begin
+            match process with None -> () | Some _ ->
+              Dialog.process_still_active ~name:task.Task.et_name
+                ~ok:self#stop ~cancel:(fun () -> raise Messages.Cancel_process_termination) ()
+          end
+        end);
+      (** Input of the user redirected to the outchan of the process *)
+      if task_kind = `RUN then begin
+        ignore (view#buffer#connect#after#insert_text ~callback:begin fun it txt ->
+            if process <> None && signal_enabled then (GtkThread2.sync begin fun () ->
+                let start = it#backward_chars (String.length txt) in
+                view#buffer#apply_tag_by_name "input" ~start ~stop:(view#buffer#get_iter `INSERT);
+                match process_outchan with None -> ()
+                                         | Some ochan ->
+                                             output_string ochan (Glib.Convert.convert_with_fallback ~fallback:"?"
+                                                                    ~from_codeset:"UTF-8" ~to_codeset:Oe_config.ocaml_codeset txt);
+                                             flush ochan;
+              end ())
+          end);
+      end;
+      (** Locations links are activated by button_press *)
+      let _ = view#event#connect#button_press ~callback:begin fun ev ->
+          let x = int_of_float (GdkEvent.Button.x ev) in
+          let y = int_of_float (GdkEvent.Button.y ev) in
+          let x, y = view#window_to_buffer_coords ~tag:`WIDGET ~x ~y in
+          let iter = view#get_iter_at_location ~x ~y in
+          let find t = List.assoc t#get_oid tag_locations in
+          let line = ref "" in
+          List.iter (fun t -> try line := (snd (find t)) with Not_found -> ()) iter#tags;
+          let group = if Str.string_match re_error_line !line 0 then 4 - 3
+            else if Str.string_match re_assert_failure !line 0 then 2
+            else 0 in
+          if group > 0 then begin
+            let basename = Str.matched_group group !line in  (* 2 *)
+            if basename <> "_none_" then begin
+              let linenum = int_of_string (Str.matched_group (group + 1) !line) in (* 3 *)
+              let start = int_of_string (Str.matched_group (group + 2) !line) in  (* 4 *)
+              let len = (* Length from the start of line *)
+                try int_of_string (Str.matched_group (group + 3) !line)
+                with Invalid_argument _ -> start
+              in
+              let parent = project.Prj.root // Prj.default_dir_src in
+              let filename = List.fold_left (fun acc x -> acc // x) parent (Miscellanea.filename_split basename) in
+              ignore (editor#open_file ~active:true ~scroll_offset:0 ~offset:0 ?remote:None filename);
+              match editor#get_page (`FILENAME filename) with
+              | None -> false
+              | Some page ->
+                  editor#goto_view page#view;
+                  let buf = (page#buffer :> Text.buffer) in
+                  let lines = buf#line_count in
+                  if linenum < lines - 1 then begin
+                    Gmisclib.Idle.add begin fun () ->
+                      let it = buf#get_iter (`LINE (linenum - 1)) in
+                      let it = it#set_line_index 0 in
+                      let line = it#get_text ~stop:it#forward_to_line_end in
+                      let c = Convert.offset_from_pos line ~pos:start in
+                      let where = it#forward_chars c in
+                      let len = Convert.offset_from_pos (buf#get_text ~start:it ~stop:buf#end_iter ()) ~pos:len in
+                      buf#select_range where (it#forward_chars len);
+                      if (buf#get_iter `INSERT)#compare (buf#get_iter `SEL_BOUND) = 0 then (ignore(buf#select_word()));
+                      ignore (page#view#scroll_lazy where);
+                      page#view#misc#grab_focus();
+                    end;
+                    true
+                  end else false;
+            end else false;
+          end else false
+        end in
+      (** Change the cursor and underline the links *)
+      let _ = view#event#connect#motion_notify ~callback:begin fun ev ->
+          let x = int_of_float (GdkEvent.Motion.x ev) in
+          let y = int_of_float (GdkEvent.Motion.y ev) in
+          let x, y = view#window_to_buffer_coords ~tag:`WIDGET ~x ~y in
+          let iter = view#get_iter_at_location ~x ~y in
+          List.iter (fun (_, (t, _)) -> t#set_properties [`UNDERLINE `NONE]) tag_locations;
+          Gaux.may (view#get_window `TEXT) ~f:(fun w -> Gdk.Window.set_cursor w (Gdk.Cursor.create `ARROW));
+          List.iter begin fun t ->
+            try
+              let _ = List.assoc t#get_oid tag_locations in
+              (*let start = iter#backward_to_tag_toggle (Some t) in
+                let stop = iter#forward_to_tag_toggle (Some t) in*)
+              t#set_properties [`UNDERLINE `LOW];
+              Gaux.may (view#get_window `TEXT) ~f:(fun w -> Gdk.Window.set_cursor w (Gdk.Cursor.create `HAND1));
+            with Not_found -> () (* The cursor is not inside a tag_location *)
+          end iter#tags;
+          false
+        end in
+      (*  *)
+      (*    button_run#connect#clicked ~callback:(fun () -> ignore (self#run ()));*)
+      ignore (button_stop#connect#clicked ~callback:self#stop);
+      view#misc#modify_font_by_name Preferences.preferences#get.Preferences.pref_output_font;
+      view#misc#modify_base [`NORMAL, `NAME Preferences.preferences#get.Preferences.pref_output_bg];
+      ignore (view#buffer#create_tag ~name:"input"
+                [`FOREGROUND Preferences.preferences#get.Preferences.pref_output_fg_stdin]);
+      ignore (view#buffer#create_tag ~name:"error"
+                [`FOREGROUND Preferences.preferences#get.Preferences.pref_output_fg_err]);
+      ignore (view#buffer#create_tag ~name:"warning"
+                [`FOREGROUND Preferences.preferences#get.Preferences.pref_output_fg_warn]);
+      ignore (view#buffer#create_tag ~name:"output"
+                [`FOREGROUND Preferences.preferences#get.Preferences.pref_output_fg_stdout]);
+      ignore (view#buffer#create_tag ~name:"bold" [`WEIGHT `BOLD]);
+      view#misc#grab_focus()
 
-  method vbox = vbox
+    method vbox = vbox
 
-  method connect = new signals ~working_status_changed
-end
+    method connect = new signals ~working_status_changed
+  end
 and signals ~working_status_changed =
-object
-  inherit GUtil.ml_signals [working_status_changed#disconnect]
-  method working_status_changed = working_status_changed#connect ~after
-end
+  object
+    inherit GUtil.ml_signals [working_status_changed#disconnect]
+    method working_status_changed = working_status_changed#connect ~after
+  end
 and working_status_changed () = object inherit [bool] GUtil.signal () end
 
 let views : (string * (view * GObj.widget)) list ref = ref []
@@ -453,48 +453,48 @@ let views : (string * (view * GObj.widget)) list ref = ref []
 (** create *)
 let create ~editor task_kind task =
   let console_id = sprintf "%s %s %s"
-    task.Task.et_name
-    task.Task.et_cmd
-    (String.concat " " (List.flatten (List.filter_map (fun (e, v) -> if e then Some (Shell.parse_args v) else None) task.Task.et_args))) in
+      task.Task.et_name
+      task.Task.et_cmd
+      (String.concat " " (List.flatten (List.filter_map (fun (e, v) -> if e then Some (Shell.parse_args v) else None) task.Task.et_args))) in
   try
     let (console, _) = List.assoc console_id !views in
     console#set_task task;
     console
   with Not_found -> begin
-    let label_widget, set_active_func, label, icon =
-      match task_kind with
+      let label_widget, set_active_func, label, icon =
+        match task_kind with
         | `RUN (*| `OTHER*) ->
-          let box = GPack.hbox ~spacing:3 () in
-          let icon = (Icons.create Icons.start_10) in
-          box#pack icon#coerce;
-          let label = GMisc.label ~text:task.Task.et_name ~packing:box#pack () in
-          box#coerce, Some begin fun active ->
-            (*if finished then (icon#misc#hide()) else (icon#misc#show());*)
-            if not active then (icon#misc#set_sensitive false) else (icon#misc#set_sensitive true);
-          end, label, Some icon
+            let box = GPack.hbox ~spacing:3 () in
+            let icon = (Icons.create Icons.start_10) in
+            box#pack icon#coerce;
+            let label = GMisc.label ~text:task.Task.et_name ~packing:box#pack () in
+            box#coerce, Some begin fun active ->
+              (*if finished then (icon#misc#hide()) else (icon#misc#show());*)
+              if not active then (icon#misc#set_sensitive false) else (icon#misc#set_sensitive true);
+            end, label, Some icon
         | _ ->
-          let label = GMisc.label ~text:task.Task.et_name () in
-          label#coerce, None, label, None
-    in
-    let page = new view ~editor ~task_kind ~task () in
-    if task_kind = `RUN then begin
-      page#set_close_tab_func begin fun () ->
-        if page#has_process then
-          Dialog.process_still_active ~name:task.Task.et_name
-            ~ok:page#stop ~cancel:GtkSignal.stop_emit ()
+            let label = GMisc.label ~text:task.Task.et_name () in
+            label#coerce, None, label, None
+      in
+      let page = new view ~editor ~task_kind ~task () in
+      if task_kind = `RUN then begin
+        page#set_close_tab_func begin fun () ->
+          if page#has_process then
+            Dialog.process_still_active ~name:task.Task.et_name
+              ~ok:page#stop ~cancel:GtkSignal.stop_emit ()
+        end;
       end;
-    end;
-    page#set_tab_label label;
-    page#set_title task.Task.et_name;
-    Gaux.may icon ~f:(fun icon -> page#set_icon (Some icon#pixbuf));
-    if task.Task.et_visible then Messages.vmessages#append_page ~label_widget ~with_spinner:(task_kind <> `RUN) page#as_page;
-    ignore (page#connect#working_status_changed ~callback:begin fun active ->
-      (match set_active_func with None -> page#is_working#set | Some f -> f) active
-    end);
-    ignore (page#misc#connect#destroy ~callback:(fun () -> views := List.remove_assoc console_id !views));
-    views := (console_id, (page, page#vbox#coerce)) :: !views;
-    page
-  end
+      page#set_tab_label label;
+      page#set_title task.Task.et_name;
+      Gaux.may icon ~f:(fun icon -> page#set_icon (Some icon#pixbuf));
+      if task.Task.et_visible then Messages.vmessages#append_page ~label_widget ~with_spinner:(task_kind <> `RUN) page#as_page;
+      ignore (page#connect#working_status_changed ~callback:begin fun active ->
+          (match set_active_func with None -> page#is_working#set | Some f -> f) active
+        end);
+      ignore (page#misc#connect#destroy ~callback:(fun () -> views := List.remove_assoc console_id !views));
+      views := (console_id, (page, page#vbox#coerce)) :: !views;
+      page
+    end
 
 (** exec_sync *)
 let exec_sync ?run_cb ?(use_thread=true) ?(at_exit=ignore) ~editor task_groups =
@@ -502,22 +502,22 @@ let exec_sync ?run_cb ?(use_thread=true) ?(at_exit=ignore) ~editor task_groups =
   let f tasks =
     try
       ignore (List.fold_left begin fun acc (task_kind, task) ->
-        let console =
-          match acc with
+          let console =
+            match acc with
             | Some console when mode = `all || mode = `group ->
-              console#set_task task;
-              console
+                console#set_task task;
+                console
             | _ -> GtkThread2.sync (create ~editor task_kind) task
-        in
-        (*if mode = `single then (GtkThread2.async console#tab_label#set_text task.Task.et_name);*)
-        begin
-          match console#run ?run_cb ~use_thread:true () with
+          in
+          (*if mode = `single then (GtkThread2.async console#tab_label#set_text task.Task.et_name);*)
+          begin
+            match console#run ?run_cb ~use_thread:true () with
             | None -> ();
             | Some th -> Thread.join th;
-        end;
-        if console#has_errors || console#killed then (raise Exit);
-        Some console
-      end None tasks);
+          end;
+          if console#has_errors || console#killed then (raise Exit);
+          Some console
+        end None tasks);
       at_exit()
     with Exit -> (at_exit(); raise Exit)
   in
@@ -525,8 +525,8 @@ let exec_sync ?run_cb ?(use_thread=true) ?(at_exit=ignore) ~editor task_groups =
     try
       begin
         match mode with
-          | `group -> List.iter (fun ts -> f ts) task_groups
-          | `all | `single -> f (List.flatten task_groups)
+        | `group -> List.iter (fun ts -> f ts) task_groups
+        | `all | `single -> f (List.flatten task_groups)
       end;
     with Exit -> ()
   in
@@ -544,10 +544,10 @@ let exec ~editor ?use_thread ?(with_deps=false) task_kind target =
       let et_before_clean = filter_tasks Task.Before_clean in
       let et_clean = filter_tasks Task.Clean in
       let et_clean = if et_clean = [] then [`CLEAN, begin
-        let cmd, args = Target.create_cmd_line target in
-        let name = sprintf "Clean \xC2\xAB%s\xC2\xBB" (Filename.basename target.Target.name) in
-        Task.create ~name ~env:[] ~dir:"" ~cmd ~args:(args @ [true, "-clean"]) ()
-      end] else et_clean in
+          let cmd, args = Target.create_cmd_line target in
+          let name = sprintf "Clean \xC2\xAB%s\xC2\xBB" (Filename.basename target.Target.name) in
+          Task.create ~name ~env:[] ~dir:"" ~cmd ~args:(args @ [true, "-clean"]) ()
+        end] else et_clean in
       let et_after_clean = filter_tasks Task.After_clean in
       (* Execute sequence *)
       Project.clean_tmp project;
@@ -557,11 +557,11 @@ let exec ~editor ?use_thread ?(with_deps=false) task_kind target =
   let tasks_annot () =
     if Oebuild.check_restrictions target.restrictions then
       [`ANNOT, begin
-        let cmd, args = Target.create_cmd_line target in
-        let args = (true, "-c") (*:: (true, "-annot")*) :: args in
-        let name = sprintf "Compile \xC2\xAB%s\xC2\xBB" (Filename.basename target.Target.name) in
-        Task.create ~name ~env:[] ~dir:"" ~cmd ~args ()
-      end]
+          let cmd, args = Target.create_cmd_line target in
+          let args = (true, "-c") (*:: (true, "-annot")*) :: args in
+          let name = sprintf "Compile \xC2\xAB%s\xC2\xBB" (Filename.basename target.Target.name) in
+          Task.create ~name ~env:[] ~dir:"" ~cmd ~args ()
+        end]
     else []
   in
   let build_deps = if with_deps then Target.find_target_dependencies project.Prj.targets target else [] in
@@ -569,13 +569,13 @@ let exec ~editor ?use_thread ?(with_deps=false) task_kind target =
   let build_name = sprintf "Build \xC2\xAB%s\xC2\xBB" (Filename.basename target.name) in
   let at_exit = fun () -> GtkThread2.async editor#with_current_page (fun p -> p#compile_buffer ?join:None ()) in
   match task_kind with
-    | `CLEANALL ->
+  | `CLEANALL ->
       let cmd, args = Target.create_cmd_line target in
       let task = Task.create ~name:"Clean Project" ~env:[] ~dir:"" ~cmd ~args:(args @ [true, "-distclean"]) () in
       exec_sync ~editor [[`CLEANALL, task]];
       (*let console = create ~editor `CLEANALL task in
-      ignore (console#button_run#connect#clicked ~callback:(fun () -> ignore (console#run())));
-      ignore(console#run ?use_thread ());*)
+        ignore (console#button_run#connect#clicked ~callback:(fun () -> ignore (console#run())));
+        ignore(console#run ?use_thread ());*)
       (* Remove executables *)
       List.iter begin fun target ->
         let compilation =
@@ -596,14 +596,14 @@ let exec ~editor ?use_thread ?(with_deps=false) task_kind target =
           Oebuild_util.remove_file ~verbose:false outname
         end compilation
       end project.Prj.targets;
-    | `CLEAN -> exec_sync ~editor [tasks_clean ()];
-    | `ANNOT -> exec_sync ~editor [tasks_annot ()];
-    | `COMPILE ->
+  | `CLEAN -> exec_sync ~editor [tasks_clean ()];
+  | `ANNOT -> exec_sync ~editor [tasks_annot ()];
+  | `COMPILE ->
       let rec f () = exec_sync ~run_cb:f ~editor ~at_exit (tasks_compile ~name:build_name ~build_deps ~can_compile_native target) in
       f()
-    | `COMPILE_ONLY ->
+  | `COMPILE_ONLY ->
       exec_sync ~editor ~at_exit (tasks_compile ~flags:["-c"] ~name:compile_name ~build_deps ~can_compile_native target);
-    | `RCONF rc ->
+  | `RCONF rc ->
       if Oebuild.check_restrictions target.restrictions then
         let compilation = if target.Target.opt then Oebuild.Native else Oebuild.Bytecode in
         let outkind = match target.target_type with
@@ -617,27 +617,27 @@ let exec ~editor ?use_thread ?(with_deps=false) task_kind target =
         let name = rc.Rconf.name in
         let prior_tasks =
           match rc.Rconf.build_task with
-            | `NONE -> []
-            | `CLEAN -> [tasks_clean ()]
-            | `COMPILE -> tasks_compile ~name:build_name ~build_deps ~can_compile_native target
-            | `REBUILD -> [(tasks_clean ()); List.flatten (tasks_compile ~name:build_name ~build_deps ~can_compile_native target)]
-            | `ETASK name ->
+          | `NONE -> []
+          | `CLEAN -> [tasks_clean ()]
+          | `COMPILE -> tasks_compile ~name:build_name ~build_deps ~can_compile_native target
+          | `REBUILD -> [(tasks_clean ()); List.flatten (tasks_compile ~name:build_name ~build_deps ~can_compile_native target)]
+          | `ETASK name ->
               let etask = List.find ((=) name) target.Target.external_tasks in
               [[`OTHER, etask]]
         in
         let tasks = prior_tasks @ [[
-          `RUN, Task.create
-            ~name
-            ~env:rc.Rconf.env
-            ~env_replace:rc.Rconf.env_replace
-            ~dir:""
-            ~cmd:(Filename.current_dir_name // outname)
-            ~args:(List.filter (fun (e, _) -> e) rc.Rconf.args) ();
-        ]] in
+            `RUN, Task.create
+              ~name
+              ~env:rc.Rconf.env
+              ~env_replace:rc.Rconf.env_replace
+              ~dir:""
+              ~cmd:(Filename.current_dir_name // outname)
+              ~args:(List.filter (fun (e, _) -> e) rc.Rconf.args) ();
+          ]] in
         let rec f () = ignore (exec_sync ~run_cb:f ~editor tasks) in
         f();
       else ()
-    | `INSTALL_LIBRARY ->
+  | `INSTALL_LIBRARY ->
       let oebuild, args = Target.create_cmd_line target in
       let name = Filename.basename target.Target.name in
       let tasks = (*prior_tasks @*) [
@@ -650,7 +650,7 @@ let exec ~editor ?use_thread ?(with_deps=false) task_kind target =
       ] in
       let rec f () = ignore (exec_sync ~run_cb:f ~editor [tasks]) in
       f();
-    | _ -> assert false
+  | _ -> assert false
 
 
 

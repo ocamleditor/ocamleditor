@@ -86,8 +86,8 @@ class incremental () =
     method private find ?view ?(control=SEARCH_TO_BOTTOM) () =
       Gaux.may view ~f:(fun _ -> self#set_view view);
       match self#view with
-        | None -> false
-        | Some v ->
+      | None -> false
+      | Some v ->
           if status#text_find <> "" then begin
             status#update_history();
             let buf = v#buffer in
@@ -117,13 +117,13 @@ class incremental () =
       let search = if status#backward then start#backward_search else start#forward_search in
       let text = status#text_find in
       match search text with
-        | None -> self#not_found text control view
-        | Some (i1, i2) ->
+      | None -> self#not_found text control view
+      | Some (i1, i2) ->
           begin
             match control with
-              | STOP_AFTER bound when i1#offset >= bound ->
+            | STOP_AFTER bound when i1#offset >= bound ->
                 false
-              | _ ->
+            | _ ->
                 view#scroll_lazy i1;
                 (*Gmisclib.Idle.add (fun () -> ignore (view#scroll_to_iter ~use_align:true ~xalign:1.0 ~yalign:0.5 i1));*)
                 if status#backward then buffer#select_range i2 i1
@@ -133,13 +133,13 @@ class incremental () =
 
     method private find_regexp ~control (view : Text.view) start =
       let text_to_find = Glib.Convert.convert_with_fallback ~fallback:"?"
-        ~from_codeset:"UTF-8" ~to_codeset:Oe_config.ocaml_codeset status#text_find in
+          ~from_codeset:"UTF-8" ~to_codeset:Oe_config.ocaml_codeset status#text_find in
       let buffer = view#buffer in
       try
         let ins = if status#backward then start#backward_char else start in
         let pos = ins#offset in
         let text = Glib.Convert.convert_with_fallback ~fallback:"?"
-          ~from_codeset:"UTF-8" ~to_codeset:Oe_config.ocaml_codeset (buffer#get_text ()) in
+            ~from_codeset:"UTF-8" ~to_codeset:Oe_config.ocaml_codeset (buffer#get_text ()) in
         let pat = if status#case_sensitive then Str.regexp text_to_find
           else Str.regexp_case_fold text_to_find in
         let pos = if status#backward then Str.search_backward pat text pos
@@ -152,8 +152,8 @@ class incremental () =
         else buffer#select_range start stop;
         true
       with
-        | Not_found -> self#not_found status#text_find control view
-        | _ -> false
+      | Not_found -> self#not_found status#text_find control view
+      | _ -> false
 
     method i_search =
       let inc = ref status#incremental in
@@ -169,13 +169,13 @@ class incremental () =
         self#set_view (Some view);
         let dialog =
           match Sys.os_type with
-(*            | "Win32" -> GWindow.window ~allow_grow:false
-                ~kind:`POPUP ~type_hint:`MENU ~modal:true ~border_width:5 ()*)
-            | _ -> GWindow.window ~resizable:true
-                ?type_hint:(match Sys.os_type with
-                  | "Win32" -> Some `UTILITY (* to skip taskbar on Windows *)
-                  | _ -> Some `DIALOG)
-                ~decorated:false ~modal:false ~border_width:1 ()
+          (*            | "Win32" -> GWindow.window ~allow_grow:false
+                          ~kind:`POPUP ~type_hint:`MENU ~modal:true ~border_width:5 ()*)
+          | _ -> GWindow.window ~resizable:true
+                   ?type_hint:(match Sys.os_type with
+                       | "Win32" -> Some `UTILITY (* to skip taskbar on Windows *)
+                       | _ -> Some `DIALOG)
+                   ~decorated:false ~modal:false ~border_width:1 ()
         in
         dialog#set_skip_taskbar_hint true;
         dialog#set_skip_pager_hint true;
@@ -184,15 +184,15 @@ class incremental () =
           let pX, pY = Gdk.Window.get_pointer_location view#misc#window in
           (* Coordinate del puntatore relative alla vista *)
           let win = (match view#get_window `WIDGET
-            with None -> failwith "Incremental_search.i_search: view#get_window `WIDGET = None" | Some w -> w) in
+                     with None -> failwith "Incremental_search.i_search: view#get_window `WIDGET = None" | Some w -> w) in
           let px, py = Gdk.Window.get_pointer_location win in
           dialog#move ~x:(pX - px + view#misc#allocation.Gtk.width - dialog#misc#allocation.Gtk.width - 5) ~y:(pY - py + 5);
         in
         let search ?(inc=false) (dir : [`BACKWARD | `FORWARD]) =
           begin
             match dir with
-              | `BACKWARD -> status#set_backward true
-              | `FORWARD -> status#set_backward false
+            | `BACKWARD -> status#set_backward true
+            | `FORWARD -> status#set_backward false
           end;
           status#set_incremental inc;
           self#find ~control:STOP ~view ()
@@ -204,7 +204,7 @@ class incremental () =
         dialog#misc#modify_bg [`NORMAL, `NAME border_color];
         let _ = ebox#misc#modify_bg [`NORMAL, `NAME color] in
         let lab = GMisc.label ~markup:"<b><big>Search for: </big></b>"
-          ~xalign:0.0 ~xpad:0 ~packing:(box#pack ~expand:true ~fill:true) () in
+            ~xalign:0.0 ~xpad:0 ~packing:(box#pack ~expand:true ~fill:true) () in
         let e = GEdit.entry ~packing:(box#pack ~expand:false ~fill:false) () in
         e#connect#changed ~callback:begin
           let prev = ref e#text in
@@ -249,35 +249,35 @@ class incremental () =
 
     method private not_found text choice view =
       match choice with
-        | NOT_EXISTS ->
+      | NOT_EXISTS ->
           let s = if status#use_regexp then "Regexp" else "String" in
           Dialog.info view ~message:(s ^ " \"" ^ text ^ "\" not found.");
           false
-        | SEARCH_TO_BOTTOM ->
+      | SEARCH_TO_BOTTOM ->
           Gmisclib.Idle.add (fun () -> ignore (view#scroll_to_iter (view#buffer#get_iter (if status#backward then `START else `END))));
           let message = GWindow.message_dialog
-            ~message:(if status#backward then "Top reached searching \""^text^"\" backward.\nSearch from the end?"
-              else "Bottom reached searching \""^text^"\" forward.\nSearch from the beginning?")
-            ~modal:true ~position:`CENTER
-            ~message_type:`QUESTION ~buttons:(GWindow.Buttons.yes_no) () in
+              ~message:(if status#backward then "Top reached searching \""^text^"\" backward.\nSearch from the end?"
+                        else "Bottom reached searching \""^text^"\" forward.\nSearch from the beginning?")
+              ~modal:true ~position:`CENTER
+              ~message_type:`QUESTION ~buttons:(GWindow.Buttons.yes_no) () in
           begin match window with
-            | None -> Gaux.may (GWindow.toplevel view)
-              ~f:(fun x -> message#set_transient_for x#as_window)
-            | Some w -> message#set_transient_for w#window#as_window
+          | None -> Gaux.may (GWindow.toplevel view)
+                      ~f:(fun x -> message#set_transient_for x#as_window)
+          | Some w -> message#set_transient_for w#window#as_window
           end;
           let response = message#run() in
           message#destroy();
           begin match response with
-            | `YES -> self#not_found text SEARCH_FROM_TOP view
-            | _ -> false
+          | `YES -> self#not_found text SEARCH_FROM_TOP view
+          | _ -> false
           end;
-        | SEARCH_FROM_TOP ->
+      | SEARCH_FROM_TOP ->
           let top = if status#backward then view#buffer#get_iter `END
             else view#buffer#get_iter `START in
           view#buffer#select_range top top;
           self#find ~control:NOT_EXISTS ();
-        | STOP -> false
-        | _ -> false
+      | STOP -> false
+      | _ -> false
 
     method connect = new signals ~found:signal_found
   end

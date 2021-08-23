@@ -26,42 +26,42 @@ open Miscellanea
 let get_switch_viewer_label page =
   let device =
     match Oe_config.dot_viewer with
-      | `PDF -> (module Dot_viewer_pdf.PDF : Dot_viewer_plugin.DEVICE)
-      | _ -> !Dot_viewer_plugin.device
+    | `PDF -> (module Dot_viewer_pdf.PDF : Dot_viewer_plugin.DEVICE)
+    | _ -> !Dot_viewer_plugin.device
   in
   match device with (module DEV : Dot_viewer_plugin.DEVICE) ->
     if not DEV.have_embedded_viewer then "Dependency Graph"
     else begin
       match page with
-        | Some page when page#button_dep_graph#active -> "Switch Viewer to \xC2\xABSource\xC2\xBB"
-        | Some _ -> "Switch Viewer to \xC2\xABDependencies\xC2\xBB"
-        | _ -> ""
+      | Some page when page#button_dep_graph#active -> "Switch Viewer to \xC2\xABSource\xC2\xBB"
+      | Some _ -> "Switch Viewer to \xC2\xABDependencies\xC2\xBB"
+      | _ -> ""
     end
 
 let get_switch_view_sensitive project page =
   (project.Prj.in_source_path page#get_filename) <> None
 
 let update_labels
-  ~code_folding
-  ~select_in_outline
-  ~enable_code_folding
-  ~collapse_enclosing
-  ~unfold_all
-  ~show_whitespace_chars
-  ~signal_show_whitespace_chars
-  ~toggle_word_wrap
-  ~signal_toggle_wrod_wrap
-  ~switch_viewer
-  ~rev_history
-  editor =
+    ~code_folding
+    ~select_in_outline
+    ~enable_code_folding
+    ~collapse_enclosing
+    ~unfold_all
+    ~show_whitespace_chars
+    ~signal_show_whitespace_chars
+    ~toggle_word_wrap
+    ~signal_toggle_wrod_wrap
+    ~switch_viewer
+    ~rev_history
+    editor =
   let page = editor#get_page `ACTIVE in
   let has_current_page = page <> None in
   let is_ml =
     match page with
-      | None -> false
-      | Some page ->
-       let name = page#get_filename in
-       name ^^^ ".ml" || name ^^^ ".mli"
+    | None -> false
+    | Some page ->
+        let name = page#get_filename in
+        name ^^^ ".ml" || name ^^^ ".mli"
   in
   code_folding#misc#set_sensitive is_ml;
   select_in_outline#misc#set_sensitive is_ml;
@@ -80,7 +80,7 @@ let update_labels
   let text = get_switch_viewer_label page in
   switch_viewer#misc#set_property "label" (`STRING (Some text));
   Option.iter (fun page ->
-    switch_viewer#misc#set_sensitive (get_switch_view_sensitive editor#project page)) page;;
+      switch_viewer#misc#set_sensitive (get_switch_view_sensitive editor#project page)) page;;
 
 let toggle_code_folding ~enable_code_folding editor =
   editor#code_folding_enabled#set enable_code_folding#active;

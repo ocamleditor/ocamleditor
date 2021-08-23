@@ -66,7 +66,7 @@ let main () = begin
           Plugin.load "plugin_diff.cma" |> ignore; (* plugin_diff requires editor pages *)
           Gaux.may splashscreen ~f:fade_out;
           Gaux.may (browser#editor#get_page `ACTIVE) ~f:(fun page -> page#view#misc#grab_focus());
-		  ()
+          ()
         end
       end |> ignore;
     end |> ignore;
@@ -80,8 +80,8 @@ let main () = begin
   in
   begin
     match Browser.splashscreen() with
-      | None -> start None
-      | Some splashscreen ->
+    | None -> start None
+    | Some splashscreen ->
         splashscreen#misc#connect#after#show ~callback:begin fun () ->
           GMain.Timeout.add ~ms:100 ~callback:(fun () -> start (Some splashscreen); false) |> ignore;
           (*Gmisclib.Idle.add ~prio:300 (fun () -> start (Some splashscreen));*)

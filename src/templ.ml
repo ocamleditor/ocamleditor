@@ -52,14 +52,14 @@ let load_custom kind =
         Template.table := [];
       with Dynlink.Error error ->
         raise (Error (sprintf
-          "Cannot load custom template from file:\n\n%s" filename, (Dynlink.error_message error)));
+                        "Cannot load custom template from file:\n\n%s" filename, (Dynlink.error_message error)));
     end
   in
   match kind with
-    | `project project ->
+  | `project project ->
       let filename = project.Prj.root // Oe_config.template_project_filename in
       load filename Project;
-    | `user ->
+  | `user ->
       let filename = Preferences.preferences#get.Preferences.pref_editor_custom_templ_filename in
       if filename <> "" then load filename User
 ;;
@@ -79,60 +79,60 @@ let apply ~project (view : Ocaml_text.view) (templ : Templates.t) =
   let mark_s = ref None in
   let insert_block text = function
     | `ALIGN n ->
-      let indent = (Alignment.mk_spaces (base + n)) in
-      let text = Str.global_replace (Miscellanea.regexp "\n\\(.\\)") ("\n" ^ indent ^ "\\1") text in
-      let text = indent ^ text in
-      buffer#insert text
+        let indent = (Alignment.mk_spaces (base + n)) in
+        let text = Str.global_replace (Miscellanea.regexp "\n\\(.\\)") ("\n" ^ indent ^ "\\1") text in
+        let text = indent ^ text in
+        buffer#insert text
     | `INDENT ->
-      let indent = (Alignment.mk_spaces !indent_width) in
-      let text = Str.global_replace (Miscellanea.regexp "\n\\(.\\)") ("\n" ^ indent ^ "\\1") text in
-      let text = indent ^ text in
-      buffer#insert text
+        let indent = (Alignment.mk_spaces !indent_width) in
+        let text = Str.global_replace (Miscellanea.regexp "\n\\(.\\)") ("\n" ^ indent ^ "\\1") text in
+        let text = indent ^ text in
+        buffer#insert text
     | `NONE -> buffer#insert text
   in
   (** Parse template *)
   begin
     match templ with
-      | Templ templ ->
+    | Templ templ ->
         ignore (buffer#delete_selection ());
         List.iter begin function
-          | I ->
+        | I ->
             Gaux.may !mark_i ~f:(fun mark -> buffer#delete_mark (`MARK mark));
             mark_i := Some (buffer#create_mark(* ~name:(Gtk_util.create_mark_name "Templ.apply2")*) (buffer#get_iter `INSERT));
-          | S ->
+        | S ->
             Gaux.may !mark_s ~f:(fun mark -> buffer#delete_mark (`MARK mark));
             mark_s := Some (buffer#create_mark(* ~name:(Gtk_util.create_mark_name "Templ.apply3")*) (buffer#get_iter `INSERT));
-          | NL -> buffer#insert "\n";
-          | IN -> indent_width := !indent_width + view#obuffer#tab_width;
-          | OUT -> indent_width := !indent_width - view#obuffer#tab_width;
-          | T text -> buffer#insert text
-          | T0 text -> insert_block text (`ALIGN 0);
-          | TI text -> insert_block text (`ALIGN !indent_width);
-          | SELECTION ->
+        | NL -> buffer#insert "\n";
+        | IN -> indent_width := !indent_width + view#obuffer#tab_width;
+        | OUT -> indent_width := !indent_width - view#obuffer#tab_width;
+        | T text -> buffer#insert text
+        | T0 text -> insert_block text (`ALIGN 0);
+        | TI text -> insert_block text (`ALIGN !indent_width);
+        | SELECTION ->
             let is_block = String.contains selection '\n' in
             if is_block then begin
               insert_block selection `INDENT;
             end else begin
               buffer#insert selection;
             end
-          | SELECTION_TRIM -> buffer#insert (String.trim selection)
-          | SELECTION_OPT def ->
+        | SELECTION_TRIM -> buffer#insert (String.trim selection)
+        | SELECTION_OPT def ->
             let selection = String.trim selection in
             buffer#insert (if selection = "" then def else selection)
-          | CURRENT_FILENAME ->
+        | CURRENT_FILENAME ->
             Gaux.may view#obuffer#file ~f:(fun file -> buffer#insert file#basename)
-          | CURRENT_LINE -> buffer#insert (string_of_int ((buffer#get_iter `INSERT)#line + 1))
-          | DESCRIPTION -> buffer#insert project.Prj.description
+        | CURRENT_LINE -> buffer#insert (string_of_int ((buffer#get_iter `INSERT)#line + 1))
+        | DESCRIPTION -> buffer#insert project.Prj.description
         end templ;
-      | Action func -> func view
+    | Action func -> func view
   end;
   let mark_end = buffer#create_mark(* ~name:(Gtk_util.create_mark_name "Templ.apply4")*) (buffer#get_iter `INSERT) in
   (** Place cursor *)
   (match !mark_i, !mark_s with
-    | None, None -> ()
-    | (Some mark), None -> buffer#place_cursor ~where:(buffer#get_iter_at_mark (`MARK mark));
-    | None, (Some mark) -> buffer#place_cursor ~where:(buffer#get_iter_at_mark (`MARK mark));
-    | (Some mi), (Some ms) -> buffer#select_range (buffer#get_iter_at_mark (`MARK mi)) (buffer#get_iter_at_mark (`MARK ms)));
+   | None, None -> ()
+   | (Some mark), None -> buffer#place_cursor ~where:(buffer#get_iter_at_mark (`MARK mark));
+   | None, (Some mark) -> buffer#place_cursor ~where:(buffer#get_iter_at_mark (`MARK mark));
+   | (Some mi), (Some ms) -> buffer#select_range (buffer#get_iter_at_mark (`MARK mi)) (buffer#get_iter_at_mark (`MARK ms)));
   view#tbuffer#undo#end_block();
   Gaux.may !mark_i ~f:(fun mark -> buffer#delete_mark (`MARK mark));
   Gaux.may !mark_s ~f:(fun mark -> buffer#delete_mark (`MARK mark));
@@ -144,11 +144,11 @@ let apply ~project (view : Ocaml_text.view) (templ : Templates.t) =
   ignore (Ocp_indent.indent ~view (`BOUNDS (start, stop)));
   (** Fix bug in draw_current_line_background *)
   (*let iter = ref (buffer#get_iter_at_mark (`MARK mark_begin)) in
-  let stop = buffer#get_iter_at_mark (`MARK mark_end) in
-  while !iter#compare stop <= 0 do
+    let stop = buffer#get_iter_at_mark (`MARK mark_end) in
+    while !iter#compare stop <= 0 do
     view#draw_current_line_background ~force:true !iter;
     iter := !iter#forward_line;
-  done;*)
+    done;*)
   (** Colorize *)
   let remove_marks () =
     buffer#delete_mark (`MARK mark_begin);
@@ -157,9 +157,9 @@ let apply ~project (view : Ocaml_text.view) (templ : Templates.t) =
   if buffer#lexical_enabled then begin
     let start, stop =
       match view#current_matching_tag_bounds with
-        | [_,d; a,_] ->
+      | [_,d; a,_] ->
           (buffer#get_iter_at_mark (`MARK a)), (buffer#get_iter_at_mark (`MARK d))
-        | _ -> (buffer#get_iter_at_mark (`MARK mark_begin)), ((buffer#get_iter_at_mark (`MARK mark_end)))
+      | _ -> (buffer#get_iter_at_mark (`MARK mark_begin)), ((buffer#get_iter_at_mark (`MARK mark_end)))
     in
     Lexical.tag view#buffer ~start ~stop;
     (*Lexical.tag view#buffer
@@ -184,26 +184,26 @@ class widget ~project ~(view : Ocaml_text.view) ?packing ()=
   let _ = lview#append_column vc_name in
   let _ = lview#append_column vc_descr in
   let _ = lview#set_headers_visible false in
-object (self)
-  inherit GObj.widget vbox#as_widget
-  initializer
-    (*lview#misc#modify_base [`NORMAL, `NAME Preferences.preferences#get.Preferences.pref_bg_color_popup];*)
-    List.iter begin fun (_, name, descr, templ) ->
-      let row = model#append () in
-      model#set ~row ~column:col_key name;
-      model#set ~row ~column:col_name (sprintf "<b><tt>%s</tt></b>" (Glib.Markup.escape_text name));
-      model#set ~row ~column:col_descr (sprintf "<tt>%s</tt>" (Glib.Markup.escape_text descr));
-    end !Templates.spec;
-    ignore (lview#connect#row_activated ~callback:begin fun path _ ->
-      let row = model#get_iter path in
-      let name = model#get ~row ~column:col_key in
-      try
-        let _, _, _, templ = List.find (fun (_, x, _, _) -> name = x) !Templates.spec in
-        apply ~project view templ;
-        Gaux.may (GWindow.toplevel vbox#coerce) ~f:(fun w -> w#destroy())
-      with Not_found -> ()
-    end)
-end
+  object (self)
+    inherit GObj.widget vbox#as_widget
+    initializer
+      (*lview#misc#modify_base [`NORMAL, `NAME Preferences.preferences#get.Preferences.pref_bg_color_popup];*)
+      List.iter begin fun (_, name, descr, templ) ->
+        let row = model#append () in
+        model#set ~row ~column:col_key name;
+        model#set ~row ~column:col_name (sprintf "<b><tt>%s</tt></b>" (Glib.Markup.escape_text name));
+        model#set ~row ~column:col_descr (sprintf "<tt>%s</tt>" (Glib.Markup.escape_text descr));
+      end !Templates.spec;
+      ignore (lview#connect#row_activated ~callback:begin fun path _ ->
+          let row = model#get_iter path in
+          let name = model#get ~row ~column:col_key in
+          try
+            let _, _, _, templ = List.find (fun (_, x, _, _) -> name = x) !Templates.spec in
+            apply ~project view templ;
+            Gaux.may (GWindow.toplevel vbox#coerce) ~f:(fun w -> w#destroy())
+          with Not_found -> ()
+        end)
+  end
 
 (** popup *)
 let popup project (view : Ocaml_text.view) =

@@ -36,23 +36,23 @@ type stats = {
 }
 
 class type abstract_file  =
-object
-  method filename : string
-  method set_filename : string -> unit
-  method dirname : string
-  method basename : string
-  method changed : bool
-  method last_modified : unit -> float
-  method exists : bool
-  method is_readonly : bool
-  method is_writeable : bool
-  method read : string
-  method write : string -> unit
-  method list : unit -> string list
-  method rename : string -> unit
-  method remove : unit
-  method remote : remote_login option
-  method backup : ?move_to:string -> unit -> string
-  method cleanup : unit -> unit
-  method stat : unit -> stats option
-end
+  object
+    method filename : string
+    method set_filename : string -> unit
+    method dirname : string
+    method basename : string
+    method changed : bool
+    method last_modified : unit -> float
+    method exists : bool
+    method is_readonly : bool
+    method is_writeable : bool
+    method read : string
+    method write : string -> unit
+    method list : unit -> string list
+    method rename : string -> unit
+    method remove : unit
+    method remote : remote_login option
+    method backup : ?move_to:string -> unit -> string
+    method cleanup : unit -> unit
+    method stat : unit -> stats option
+  end

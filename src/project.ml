@@ -44,23 +44,23 @@ let path_dot_oebuild p = p.root // default_dir_src // ".oebuild"
 (** abs_of_tmp *)
 let abs_of_tmp proj filename =
   match Miscellanea.filename_relative (".." // default_dir_tmp) filename with
-    | None -> filename
-    | Some relname -> (path_src proj) // relname
+  | None -> filename
+  | Some relname -> (path_src proj) // relname
 
 (** tmp_of_abs *)
 let tmp_of_abs proj filename =
   let tmp = path_tmp proj in
   match proj.Prj.in_source_path filename with
-    | None -> None
-    | Some rel_name -> Some (tmp, rel_name) ;;
+  | None -> None
+  | Some rel_name -> Some (tmp, rel_name) ;;
 
 (** set_ocaml_home *)
 let set_ocaml_home ~ocamllib project =
   let ocamllib, from_env =
     match ocamllib with
-      | "" -> Ocaml_config.ocamllib (), false
-      | path when Sys.file_exists path -> path, true
-      | _ -> Ocaml_config.ocamllib (), false
+    | "" -> Ocaml_config.ocamllib (), false
+    | path when Sys.file_exists path -> path, true
+    | _ -> Ocaml_config.ocamllib (), false
   in
   project.ocaml_home <- "";
   project.ocamllib <- ocamllib;
@@ -69,8 +69,8 @@ let set_ocaml_home ~ocamllib project =
   Ocaml_config.putenv_ocamllib (Some project.ocamllib);
   project.autocomp_compiler <- Ocaml_config.ocamlc();
   ignore (Thread.create begin fun () ->
-    project.can_compile_native <- (Ocaml_config.can_compile_native ~ocaml_home:project.ocaml_home ()) <> None;
-  end ())
+      project.can_compile_native <- (Ocaml_config.can_compile_native ~ocaml_home:project.ocaml_home ()) <> None;
+    end ())
 
 (** can_compile_native *)
 let can_compile_native proj = (Ocaml_config.can_compile_native ~ocaml_home:proj.ocaml_home ()) <> None
@@ -122,9 +122,9 @@ let create ~filename () =
 (** set_runtime_build_task *)
 let set_runtime_build_task proj rconf task_string =
   rconf.Rconf.build_task <- try
-    let target = List.find (fun b -> b.Target.id = rconf.Rconf.target_id) proj.targets in
-    Target.task_of_string target task_string
-  with Not_found -> `NONE
+      let target = List.find (fun b -> b.Target.id = rconf.Rconf.target_id) proj.targets in
+      Target.task_of_string target task_string
+    with Not_found -> `NONE
 
 (** to_xml *)
 
@@ -162,8 +162,8 @@ let get_search_path proj =
   let package = Str.split (Miscellanea.regexp ",") package in
   let package = List.filter ((<>) "") package in
   let package = List.flatten (List.map begin fun package ->
-    kprintf Shell.get_command_output "ocamlfind query %s -r %s" package Shell.redirect_stderr
-  end (Xlist.remove_dupl package)) in
+      kprintf Shell.get_command_output "ocamlfind query %s -r %s" package Shell.redirect_stderr
+    end (Xlist.remove_dupl package)) in
   let package = Xlist.remove_dupl (List.filter ((<>) "") package) in
   let includes = Xlist.remove_dupl (get_includes proj) in
   package @ includes;;
@@ -188,9 +188,9 @@ let get_load_path proj =
   let includes = "+threads" :: includes in
   let ocamllib = proj.ocamllib in
   let paths = List.map begin fun inc ->
-    if inc.[0] = '+' then (Filename.concat ocamllib (String.sub inc 1 (String.length inc - 1)))
-    else inc
-  end includes in
+      if inc.[0] = '+' then (Filename.concat ocamllib (String.sub inc 1 (String.length inc - 1)))
+      else inc
+    end includes in
   ocamllib :: (List.filter ((<>) ocamllib) ((proj.root // default_dir_src) :: paths))
 
 (** [load_path proj] adds to module [Load_path] the {i load path} of [proj].*)
@@ -207,23 +207,23 @@ let output_xml filename xml =
 
 let xml_of_open_files proj =
   Xml.Element ("open_files", [],
-    (List.map (fun (x, scroll_off, off, active) -> Xml.Element ("filename", [
-      "scroll", string_of_int scroll_off;
-      "cursor", string_of_int off;
-      "active", (string_of_bool active)
-    ], [Xml.PCData x])) proj.open_files));;
+               (List.map (fun (x, scroll_off, off, active) -> Xml.Element ("filename", [
+                    "scroll", string_of_int scroll_off;
+                    "cursor", string_of_int off;
+                    "active", (string_of_bool active)
+                  ], [Xml.PCData x])) proj.open_files));;
 
 let xml_of_bookmarks proj =
   Xml.Element ("bookmarks", [],
-    List.map begin fun bm ->
-      Xml.Element ("bookmark", [
-        "num", string_of_int bm.Oe.bm_num;
-        "offset", string_of_int (Bookmark.apply bm begin function
-          | `ITER iter -> GtkText.Iter.get_offset iter
-          | `OFFSET offset -> offset
-        end)
-      ], [Xml.PCData bm.Oe.bm_filename])
-    end proj.bookmarks);;
+               List.map begin fun bm ->
+                 Xml.Element ("bookmark", [
+                     "num", string_of_int bm.Oe.bm_num;
+                     "offset", string_of_int (Bookmark.apply bm begin function
+                       | `ITER iter -> GtkText.Iter.get_offset iter
+                       | `OFFSET offset -> offset
+                       end)
+                   ], [Xml.PCData bm.Oe.bm_filename])
+               end proj.bookmarks);;
 
 let xml_of_local childs = Xml.Element ("local", [], childs);;
 
@@ -235,19 +235,19 @@ let save_local filename proj =
 let save ?editor proj =
   let active_filename =
     match editor with None -> ""
-      | Some editor ->
-        proj.files <- List.map begin fun (file, (_scroll_offset, _offset)) ->
-          file,
-          match editor#get_page (`FILENAME file#filename) with
-            | None -> 0, 0
-            | Some page ->
-              let scroll_top = page#view#get_scroll_top () in
-              if page#load_complete then scroll_top, (page#buffer#get_iter `INSERT)#offset
-              else page#scroll_offset, page#initial_offset
-        end proj.files;
-        let active_filename =
-          match editor#get_page `ACTIVE with None -> "" | Some page -> page#get_filename
-        in active_filename
+                    | Some editor ->
+                        proj.files <- List.map begin fun (file, (_scroll_offset, _offset)) ->
+                            file,
+                            match editor#get_page (`FILENAME file#filename) with
+                            | None -> 0, 0
+                            | Some page ->
+                                let scroll_top = page#view#get_scroll_top () in
+                                if page#load_complete then scroll_top, (page#buffer#get_iter `INSERT)#offset
+                                else page#scroll_offset, page#initial_offset
+                          end proj.files;
+                        let active_filename =
+                          match editor#get_page `ACTIVE with None -> "" | Some page -> page#get_filename
+                        in active_filename
   in
   let filename = filename proj in
   let filename_local = filename_local proj in
@@ -259,14 +259,14 @@ let save ?editor proj =
     proj.modified <- false;
     unload_path proj;
     proj.open_files <- List.rev_map begin fun (file, (scroll_offset, offset)) ->
-      let active = active_filename = file#filename in
-      begin
-        match proj.in_source_path file#filename with
+        let active = active_filename = file#filename in
+        begin
+          match proj.in_source_path file#filename with
           | None ->
-            if Filename.is_implicit file#filename then (filename_unix_implicit file#filename) else file#filename
+              if Filename.is_implicit file#filename then (filename_unix_implicit file#filename) else file#filename
           | Some rel -> filename_unix_implicit rel
-      end, scroll_offset, offset, active
-    end proj.files;
+        end, scroll_offset, offset, active
+      end proj.files;
     (* output tools *)
     Project_tools.write proj;
     (*  *)
@@ -292,10 +292,10 @@ let save_bookmarks proj =
       let parser = XmlParser.make () in
       let xml = XmlParser.parse parser (XmlParser.SFile filename) in
       let xml = Xml.map begin fun node ->
-        match Xml.tag node with
+          match Xml.tag node with
           | "bookmarks" -> xml_of_bookmarks proj
           | _ -> node
-      end xml in
+        end xml in
       xml_of_local xml;
     end else (xml_of_local [xml_of_bookmarks proj])
   in
@@ -309,10 +309,10 @@ let remove_bookmark num proj =
 let set_bookmark bookmark proj =
   begin
     match List_opt.find (fun x -> x.Oe.bm_num = bookmark.Oe.bm_num) proj.bookmarks with
-      | Some bookmark ->
+    | Some bookmark ->
         Bookmark.remove bookmark;
         remove_bookmark bookmark.Oe.bm_num proj;
-      | _ -> ()
+    | _ -> ()
   end;
   proj.bookmarks <- bookmark :: proj.bookmarks;
   save_bookmarks proj;;
@@ -341,8 +341,8 @@ let load filename =
   if not (Sys.file_exists (proj.root // default_dir_tmp)) then (Unix.mkdir (proj.root // default_dir_tmp) 0o777);
   (*  *)
   proj.open_files <- List.map begin fun (filename, scroll_offset, offset, active) ->
-    (if Filename.is_implicit filename then proj.root // default_dir_src // filename else filename), scroll_offset, offset, active
-  end proj.open_files;
+      (if Filename.is_implicit filename then proj.root // default_dir_src // filename else filename), scroll_offset, offset, active
+    end proj.open_files;
   (*  *)
   proj.search_path <- get_search_path proj;
   (* Remove old version filenames *)
@@ -432,7 +432,7 @@ let clear_cache proj =
   Sys.command cmd;;
 
 (*(** load_rc_icons *)
-let load_rc_icons proj =
+  let load_rc_icons proj =
   Miscellanea.pushd (proj.root // Prj.default_dir_src);
   let script = Filename.concat (Filename.concat ".." "tools") "rc_compile.ml" in
   let cmd = sprintf "ocaml %s %S %S" script in
