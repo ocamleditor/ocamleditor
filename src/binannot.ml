@@ -188,33 +188,33 @@ let read_cmt ~project ~filename:source ?(timestamp=0.) ?compile_buffer () =
     let result =
       let ext = if source ^^^ ".ml" then Some ".cmt" else if source ^^^ ".mli" then Some ".cmti" else None in
       match ext with
-        | Some ext ->
+      | Some ext ->
           Option.fold (Project.tmp_of_abs project source) ~none:None ~some:(fun (tmp, relname) ->
-            let source_tmp = tmp // relname in
-            let source_avail =
-              if Sys.file_exists source_tmp then source_tmp
-              else Option.fold compile_buffer ~none:source ~some:(fun f -> f (); source_tmp)
-            in
-            let cmt = (Filename.chop_extension source_avail) ^ ext in
-            let mtime_cmt = (Unix.stat cmt).Unix.st_mtime in
-            if mtime_cmt = timestamp then None else begin
-              let mtime_src = (Unix.stat source_avail).Unix.st_mtime in
-              if mtime_cmt >= mtime_src then begin
-                Some (source, mtime_cmt, Cmt_format.read_cmt cmt)
-              end else None
-            end
-          )
-        | _ -> None (*kprintf invalid_arg "Binannot.read_cmt \"%s\"" source*)
-      in
-      result
+              let source_tmp = tmp // relname in
+              let source_avail =
+                if Sys.file_exists source_tmp then source_tmp
+                else Option.fold compile_buffer ~none:source ~some:(fun f -> f (); source_tmp)
+              in
+              let cmt = (Filename.chop_extension source_avail) ^ ext in
+              let mtime_cmt = (Unix.stat cmt).Unix.st_mtime in
+              if mtime_cmt = timestamp then None else begin
+                let mtime_src = (Unix.stat source_avail).Unix.st_mtime in
+                if mtime_cmt >= mtime_src then begin
+                  Some (source, mtime_cmt, Cmt_format.read_cmt cmt)
+                end else None
+              end
+            )
+      | _ -> None (*kprintf invalid_arg "Binannot.read_cmt \"%s\"" source*)
+    in
+    result
   with
-    | Unix.Unix_error (Unix.ENOENT as err, "stat", _) as ex ->
+  | Unix.Unix_error (Unix.ENOENT as err, "stat", _) as ex ->
       Log.println `WARN "%s - %s" (Printexc.to_string ex) (Unix.error_message err);
       None
-    | Unix.Unix_error (err, _, _) as ex ->
+  | Unix.Unix_error (err, _, _) as ex ->
       Log.println `ERROR "%s - %s" (Printexc.to_string ex) (Unix.error_message err);
       None
-    | ex ->
+  | ex ->
       Log.println `ERROR "%s" (Printexc.to_string ex);
       None
 ;;
@@ -223,17 +223,17 @@ let read_cmt ~project ~filename:source ?(timestamp=0.) ?compile_buffer () =
 let print_ident ?filter {ident_kind; ident_loc; _} =
   let loc' =
     match ident_kind with
-      | Def loc -> "scope: " ^ (string_of_loc loc.def_scope)
-      | Def_module def -> "def: " ^ (string_of_loc def.def_loc)
-      | Def_constr def -> "def: " ^ (string_of_loc def.def_loc)
-      | Int_ref def_loc -> "def: " ^ (string_of_loc def_loc)
-      | Ext_ref -> "---"
-      | Open scope -> "scope: " ^ (string_of_loc scope)
+    | Def loc -> "scope: " ^ (string_of_loc loc.def_scope)
+    | Def_module def -> "def: " ^ (string_of_loc def.def_loc)
+    | Def_constr def -> "def: " ^ (string_of_loc def.def_loc)
+    | Int_ref def_loc -> "def: " ^ (string_of_loc def_loc)
+    | Ext_ref -> "---"
+    | Open scope -> "scope: " ^ (string_of_loc scope)
   in
   let { txt; loc } = ident_loc in
   match filter with
-    | Some x when x <> txt -> ()
-    | _ ->
+  | Some x when x <> txt -> ()
+  | _ ->
       Format.printf "%-11s: %-30s (use: %-12s) (%-19s) %s\n%!"
         (String.uppercase_ascii (string_of_kind ident_kind))
         ident_loc.txt

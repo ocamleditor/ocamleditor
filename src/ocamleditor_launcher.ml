@@ -37,10 +37,10 @@ let first_line cmd =
 let launch () =
   let dir = Filename.dirname Sys.executable_name in
   (*let cmd = "START /D" ^ dir ^ " /B ocamleditor.bat" in (* Rimane *)
-  let cmd = "START /D" ^ dir ^ " ocamleditor.bat" in (* rimane e lampeggia *)
-  let cmd = "CD " ^  dir ^ " && CMD /C ocamleditor.bat" in (* rimane *)
-  let cmd = "CD " ^  dir ^ " && CMD /K ocamleditor.bat" in (* rimane *)
-  let cmd = "CD " ^  dir ^ " && ocamleditor.bat" in (* rimane *)*)
+    let cmd = "START /D" ^ dir ^ " ocamleditor.bat" in (* rimane e lampeggia *)
+    let cmd = "CD " ^  dir ^ " && CMD /C ocamleditor.bat" in (* rimane *)
+    let cmd = "CD " ^  dir ^ " && CMD /K ocamleditor.bat" in (* rimane *)
+    let cmd = "CD " ^  dir ^ " && ocamleditor.bat" in (* rimane *)*)
   let cmd =
     if Sys.win32 then
       if Ocaml_config.is_mingw then "START /D" ^ (Filename.quote dir) ^ " /B ocamleditor-mingw.bat"

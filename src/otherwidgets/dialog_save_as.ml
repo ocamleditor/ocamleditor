@@ -27,17 +27,17 @@ open Printf
 let sync_editor ~editor ~page ~filename window =
   let remote (*: Editor_file_type.remote_login option*) =
     match page#file with
-      | Some file -> file#remote
-      | _ -> assert false
+    | Some file -> file#remote
+    | _ -> assert false
   in
   page#revert();
   (*editor#close page;*)
   match editor#open_file ~active:true ~scroll_offset:0 ~offset:0 ?remote filename with
-    | Some page ->
+  | Some page ->
       editor#load_page ?scroll:None page;
       editor#goto_view page#view;
       window#destroy()
-    | _ ->
+  | _ ->
       Dialog.info ~title:"Error" ~message_type:`ERROR
         ~message:(sprintf "Cannot open file %s" filename) window
 
@@ -50,9 +50,9 @@ let create_file ~editor ~page ~text ~filename window =
 (** window *)
 let window ~editor ~page () =
   let window = GWindow.file_chooser_dialog
-    ~action:`SAVE ~icon:Icons.oe
-    ~title:(sprintf "Save \xC2\xAB%s\xC2\xBB as..." (Filename.basename page#get_filename))
-    ~position:`CENTER ~modal:true ~show:false ()
+      ~action:`SAVE ~icon:Icons.oe
+      ~title:(sprintf "Save \xC2\xAB%s\xC2\xBB as..." (Filename.basename page#get_filename))
+      ~position:`CENTER ~modal:true ~show:false ()
   in
   window#set_select_multiple false;
   window#add_select_button_stock `OK `OK;
@@ -61,7 +61,7 @@ let window ~editor ~page () =
   ignore (window#set_filename page#get_filename);
   let rec run () =
     match window#run () with
-      | `OK ->
+    | `OK ->
         Gaux.may window#filename ~f:begin fun filename ->
           let buffer : GText.buffer = page#buffer#as_text_buffer#as_gtext_buffer in
           let create_file () =
@@ -83,7 +83,7 @@ let window ~editor ~page () =
             Dialog_rename.ask_overwrite ~run ~overwrite ~filename window
           end else (create_file())
         end;
-      | _ -> window#destroy()
+    | _ -> window#destroy()
   in run()
 
 

@@ -26,8 +26,8 @@ open Miscellanea
 (** file_select *)
 let file_select ~editor () =
   let window = GWindow.window ~title:"Switch"
-    ~width:600 ~height:400 ~modal:true
-    ~position:`CENTER ~border_width:5 ~show:false () in
+      ~width:600 ~height:400 ~modal:true
+      ~position:`CENTER ~border_width:5 ~show:false () in
   Gmisclib.Window.GeometryMemo.add ~key:"dialog-switch-window" ~window Preferences.geometry_memo;
   Gaux.may (GWindow.toplevel editor) ~f:(fun x -> window#set_transient_for x#as_window);
   let vbox = GPack.vbox ~spacing:0 ~packing:window#add () in
@@ -44,7 +44,7 @@ let file_select ~editor () =
   let vc_path = GTree.view_column ~title:"Path" ~renderer:(renderer, ["text", col_path]) () in
   let vc_icon = GTree.view_column ~title:"" ~renderer:(renderer_icon, ["stock-id", col_icon]) () in
   let sw = GBin.scrolled_window ~shadow_type:`IN ~hpolicy:`AUTOMATIC ~vpolicy:`AUTOMATIC
-    ~packing:vbox#add () in
+      ~packing:vbox#add () in
   let view = GTree.view ~model:model ~headers_visible:false ~reorderable:true ~width:130 ~packing:sw#add () in
   view#append_column vc_icon;
   view#append_column vc_name;
@@ -58,13 +58,13 @@ let file_select ~editor () =
     model#set ~row ~column:col_path p#get_filename;
     let opened, changed =
       match editor#get_page (`FILENAME p#get_filename) with
-        | None -> false, false
-        | Some page -> true, page#view#buffer#modified
+      | None -> false, false
+      | Some page -> true, page#view#buffer#modified
     in
     model#set ~row ~column:col_icon (if changed then "gtk-floppy" else "");
   end editor#pages;
   let bbox = GPack.button_box `HORIZONTAL ~layout:`END ~border_width:8 ~spacing:8
-    ~packing:(vbox#pack ~expand:false) () in
+      ~packing:(vbox#pack ~expand:false) () in
   let button_close = GButton.button ~label:"Close files" ~packing:bbox#add () in
   let button_cancel = GButton.button ~label:"Done" ~packing:bbox#add () in
   button_cancel#connect#clicked ~callback:window#destroy;
@@ -78,24 +78,24 @@ let file_select ~editor () =
   in
   ignore (view#connect#row_activated ~callback:(fun _ _ -> activate ()));
   ignore (button_close#connect#clicked ~callback:begin fun () ->
-    let closing = ref [] in
-    List.iter begin fun path ->
-      let row = model#get_iter path in
-      let filename = model#get ~row ~column:col_path in
-      let page = editor#open_file ~active:true ~scroll_offset:0 ~offset:0 ?remote:None filename in
-      Gaux.may (editor#get_page `ACTIVE) ~f:(fun p -> ignore (editor#dialog_confirm_close p));
-      closing := row :: !closing;
-    end view#selection#get_selected_rows;
-    ignore (List.map model#remove !closing)
-  end);
+      let closing = ref [] in
+      List.iter begin fun path ->
+        let row = model#get_iter path in
+        let filename = model#get ~row ~column:col_path in
+        let page = editor#open_file ~active:true ~scroll_offset:0 ~offset:0 ?remote:None filename in
+        Gaux.may (editor#get_page `ACTIVE) ~f:(fun p -> ignore (editor#dialog_confirm_close p));
+        closing := row :: !closing;
+      end view#selection#get_selected_rows;
+      ignore (List.map model#remove !closing)
+    end);
   ignore (window#event#connect#key_release ~callback:begin fun ev ->
-    let key = GdkEvent.Key.keyval ev in
-    if key = GdkKeysyms._Escape then (window#destroy(); true)
-    else begin
-      window#present();
-      false
-    end
-  end);
+      let key = GdkEvent.Key.keyval ev in
+      if key = GdkKeysyms._Escape then (window#destroy(); true)
+      else begin
+        window#present();
+        false
+      end
+    end);
   editor#with_current_page begin fun page ->
     model#foreach begin fun _ row ->
       let filename = model#get ~row ~column:col_path in
@@ -115,17 +115,17 @@ let file_select ~editor () =
 let confirm_close ~editor (page : Editor_page.page) =
   if page#buffer#modified then begin
     let message = sprintf "File modified: \xC2\xAB%s\xC2\xBB. Do you wish to save changes?"
-      (Filename.basename page#get_filename) in
+        (Filename.basename page#get_filename) in
     let response = Dialog.confirm
-      ~title:"Close Modified File"
-      ~message ~image:(GMisc.image ~stock:`SAVE ~icon_size:`DIALOG ())#coerce
-      ~yes:("Save", begin fun () ->
-        editor#save page;
-        editor#close page;
-      end)
-      ~no:("Do Not Save", begin fun () ->
-        editor#close page;
-      end) page
+        ~title:"Close Modified File"
+        ~message ~image:(GMisc.image ~stock:`SAVE ~icon_size:`DIALOG ())#coerce
+        ~yes:("Save", begin fun () ->
+            editor#save page;
+            editor#close page;
+          end)
+        ~no:("Do Not Save", begin fun () ->
+            editor#close page;
+          end) page
     in response <> `CANCEL
   end else (editor#close page; true)
 
@@ -134,7 +134,7 @@ let confirm_close ~editor (page : Editor_page.page) =
 let save_modified ~editor ~close ~callback pages =
   if pages <> [] then begin
     let dialog = GWindow.dialog ~position:`CENTER ~border_width:5 ~no_separator:true
-      ~icon:Icons.oe ~modal:true ~title:"Save Modified" () in
+        ~icon:Icons.oe ~modal:true ~title:"Save Modified" () in
     let checklist = new Checklist.checklist
       ~packing:dialog#vbox#add
       (List.map (fun (x, p) -> x, p#get_filename) pages) in
@@ -145,7 +145,7 @@ let save_modified ~editor ~close ~callback pages =
     dialog#action_area#set_child_secondary checklist#button_all#coerce true;
     dialog#action_area#set_child_secondary checklist#button_none#coerce true;
     match dialog#run () with
-      | `OK ->
+    | `OK ->
         checklist#iter begin fun save filename ->
           let _, page = List.find (fun (_, p) -> p#get_filename = filename) pages in
           if save then (editor#save page) else (Autosave.delete ~filename ());
@@ -153,7 +153,7 @@ let save_modified ~editor ~close ~callback pages =
         end;
         dialog#destroy();
         callback();
-      | _ -> dialog#destroy()
+    | _ -> dialog#destroy()
   end else (callback())
 
 
@@ -162,12 +162,12 @@ let file_open ~editor () =
   let path = editor#project.Prj.root // Prj.default_dir_src in
   let filters = [
     ("Source files", ["*.ml*"; "README*"; "INSTALL*"; "META";
-      "ChangeLog"; "CHANGES"; "NEWS*"; "TODO*"; "BUGS*"; "CONTRIB*";
-      "Makefile*"; "*.sh"; "*.bat"; "*.cmd"]);
+                      "ChangeLog"; "CHANGES"; "NEWS*"; "TODO*"; "BUGS*"; "CONTRIB*";
+                      "Makefile*"; "*.sh"; "*.bat"; "*.cmd"]);
     ("All files", ["*"])]
   in
   let dialog = GWindow.file_chooser_dialog ~action:`OPEN ~width:600 ~height:600
-    ~title:"Open file..." ~icon:Icons.oe ~position:`CENTER ~show:false () in
+      ~title:"Open file..." ~icon:Icons.oe ~position:`CENTER ~show:false () in
   List.iter begin fun (name, patterns) ->
     dialog#add_filter (GFile.filter ~name ~patterns ())
   end filters;
@@ -176,9 +176,9 @@ let file_open ~editor () =
   dialog#set_current_folder path;
   dialog#set_select_multiple true;
   match dialog#run () with
-    | `OK ->
+  | `OK ->
       List.iter (fun filename ->
-        ignore (editor#open_file ~active:true ~scroll_offset:0 ~offset:0 ?remote:None filename)) dialog#get_filenames;
+          ignore (editor#open_file ~active:true ~scroll_offset:0 ~offset:0 ?remote:None filename)) dialog#get_filenames;
       dialog#destroy()
-    | _ -> dialog#destroy()
+  | _ -> dialog#destroy()
 

@@ -84,10 +84,10 @@ let task_of_string target = function
   | "<COMPILE>" -> `COMPILE
   | "<REBUILD>" -> `REBUILD
   | task_name -> begin
-    try
-      `ETASK (List.find (fun x -> x.Task.et_name = task_name) target.external_tasks)
-    with Not_found -> default_runtime_build_task
-  end
+      try
+        `ETASK (List.find (fun x -> x.Task.et_name = task_name) target.external_tasks)
+      with Not_found -> default_runtime_build_task
+    end
 
 let string_of_target_type = function
   | Executable -> "Executable"
@@ -162,17 +162,17 @@ let find_dependencies target =
 (** find_target_dependencies *)
 let rec find_target_dependencies targets trg =
   Miscellanea.Xlist.remove_dupl (List.flatten (List.map begin fun id ->
-    match List_opt.find (fun tg -> tg.id = id) targets with
+      match List_opt.find (fun tg -> tg.id = id) targets with
       | Some target -> (find_target_dependencies targets target) @ [target]
       | _ -> []
-  end trg.dependencies));;
+    end trg.dependencies));;
 
 (** filter_external_tasks *)
 let filter_external_tasks target phase =
   List.filter_map begin fun task ->
     match task.Task.et_phase with
     | Some ph ->
-      if task.Task.et_always_run_in_project && phase = ph then Some (`OTHER, task) else None
+        if task.Task.et_always_run_in_project && phase = ph then Some (`OTHER, task) else None
     | _ -> None
   end target.external_tasks
 
@@ -189,10 +189,10 @@ let create_rc_filename target =
 
 (** get_full_libs *)
 let get_full_libs target =
-    match target.resource_file with
-      | Some rc when Oe_config.rc <> None && Oe_config.cvtres <> None ->
-        (Filename.basename (Filename.chop_extension rc.Resource_file.rc_filename)) ^ ".obj " ^ target.libs
-      | _ -> target.libs
+  match target.resource_file with
+  | Some rc when Oe_config.rc <> None && Oe_config.cvtres <> None ->
+      (Filename.basename (Filename.chop_extension rc.Resource_file.rc_filename)) ^ ".obj " ^ target.libs
+  | _ -> target.libs
 
 (** create_cmd_line *)
 let create_cmd_line ?(flags=[]) ?(can_compile_native=true) target =
@@ -201,8 +201,8 @@ let create_cmd_line ?(flags=[]) ?(can_compile_native=true) target =
   let files = Shell.parse_args target.files in
   let serial_jobs = 
     match pref.Preferences.pref_build_parallel with 
-      | None -> ["-serial"] 
-      | Some n -> ["-jobs"; string_of_int n] 
+    | None -> ["-serial"] 
+    | Some n -> ["-jobs"; string_of_int n] 
   in
   let args =
     files
@@ -218,13 +218,13 @@ let create_cmd_line ?(flags=[]) ?(can_compile_native=true) target =
     @ (if target.libs <> "" || target.resource_file <> None then ["-l"; (quote (get_full_libs target))] else [])
     @ (if target.other_objects <> "" then ["-m"; quote (target.other_objects)] else [])
     @ begin
-        match target.target_type with
-          | Executable -> []
-          | Library -> ["-a"]
-          | Plugin -> ["-shared"]
-          | Pack -> ["-pack"]
-          | External -> []
-      end
+      match target.target_type with
+      | Executable -> []
+      | Library -> ["-a"]
+      | Plugin -> ["-shared"]
+      | Pack -> ["-pack"]
+      | External -> []
+    end
     @ (if target.byt then ["-byt"] else [])
     @ (if target.opt && can_compile_native then ["-opt"] else [])
     @ (if target.thread then ["-thread"] else [])
@@ -247,9 +247,9 @@ let rec tasks_compile ?(name="tasks_compile") ?(flags=[]) ?(build_deps=[]) ?can_
     let et_before_compile = filter_tasks Task.Before_compile in
     let et_compile = filter_tasks Task.Compile in
     let et_compile = if et_compile = [] then [`COMPILE, begin
-      let cmd, args = create_cmd_line ~flags ?can_compile_native target in
-      Task.create ~name ~env:[] ~dir:"" ~cmd ~args ()
-    end] else et_compile in
+        let cmd, args = create_cmd_line ~flags ?can_compile_native target in
+        Task.create ~name ~env:[] ~dir:"" ~cmd ~args ()
+      end] else et_compile in
     let et_after_compile = filter_tasks Task.After_compile in
     (* Execute sequence *)
     [build_deps @ et_before_compile @ et_compile @ et_after_compile]
@@ -258,31 +258,31 @@ let rec tasks_compile ?(name="tasks_compile") ?(flags=[]) ?(build_deps=[]) ?can_
 (** Convert from old file version *)
 let convert_from_1 old_filename =
   let targets = if Sys.file_exists old_filename then begin
-    let ichan = open_in_bin old_filename in
-    let (targets : Bconf_old_1.t list) = input_value ichan in
-    close_in ichan;
-    List.rev targets
-  end else [] in
+      let ichan = open_in_bin old_filename in
+      let (targets : Bconf_old_1.t list) = input_value ichan in
+      close_in ichan;
+      List.rev targets
+    end else [] in
   (* write new file version *)
   let i = ref (-1) in
   let targets = List.map begin fun t ->
-    incr i;
-    let target = create ~id:!i ~name:(string_of_int !i) in
-    target.default <- (!i = 0);
-    target.opt <- t.Bconf_old_1.opt;
-    target.libs <- t.Bconf_old_1.libs;
-    target.other_objects <- t.Bconf_old_1.mods;
-    target.includes <- t.Bconf_old_1.includes;
-    target.thread <- t.Bconf_old_1.thread;
-    target.vmthread <- t.Bconf_old_1.vmthread;
-    target.cflags <- t.Bconf_old_1.cflags;
-    target.lflags <- t.Bconf_old_1.lflags;
-    target.target_type <- (if t.Bconf_old_1.libname <> None then Library else Executable);
-    target.outname <- "";
-    target.lib_install_path <- "";
-    target
-  end targets in
-(*  if Sys.file_exists old_filename then (Sys.remove old_filename);*)
+      incr i;
+      let target = create ~id:!i ~name:(string_of_int !i) in
+      target.default <- (!i = 0);
+      target.opt <- t.Bconf_old_1.opt;
+      target.libs <- t.Bconf_old_1.libs;
+      target.other_objects <- t.Bconf_old_1.mods;
+      target.includes <- t.Bconf_old_1.includes;
+      target.thread <- t.Bconf_old_1.thread;
+      target.vmthread <- t.Bconf_old_1.vmthread;
+      target.cflags <- t.Bconf_old_1.cflags;
+      target.lflags <- t.Bconf_old_1.lflags;
+      target.target_type <- (if t.Bconf_old_1.libname <> None then Library else Executable);
+      target.outname <- "";
+      target.lib_install_path <- "";
+      target
+    end targets in
+  (*  if Sys.file_exists old_filename then (Sys.remove old_filename);*)
   targets
 
 

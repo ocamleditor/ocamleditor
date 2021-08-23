@@ -53,13 +53,13 @@ let iter ~(start : GText.iter) ~stop f =
       let w1 = Str.matched_group 4 line in
       let w2 = Str.matched_group 5 line in
       match !iter#forward_search w1 with
-        | Some (a, b) ->
+      | Some (a, b) ->
           begin
             match b#forward_search w2 with
-              | Some (c, d) -> f prefix a b c d;
-              | _ -> ()
+            | Some (c, d) -> f prefix a b c d;
+            | _ -> ()
           end
-        | _ -> ()
+      | _ -> ()
     end;
     iter := !iter#forward_line;
   done
@@ -136,7 +136,7 @@ let indent ~buffer ?(decrease=false) () =
     let start, stop = i1#line, i2#line in
     begin
       match decrease with
-        | false ->
+      | false ->
           let current = ref start in
           let spaces = mk_spaces buffer#tab_width in
           while !current < stop do
@@ -146,7 +146,7 @@ let indent ~buffer ?(decrease=false) () =
           let m = if (tbuffer#get_iter `INSERT)#compare (tbuffer#get_iter `SEL_BOUND) < 0
             then `INSERT else `SEL_BOUND in
           tbuffer#move_mark m ~where:(tbuffer#get_iter_at_char 0 ~line:start);
-        | true ->
+      | true ->
           let stop = if buffer#has_selection && i2#line_offset = 0 then stop - 1 else stop in
           for line = start to stop do
             let start = tbuffer#get_iter_at_char 0 ~line in
@@ -157,14 +157,12 @@ let indent ~buffer ?(decrease=false) () =
           done;
     end;
   end else begin
-    (*let ins = buffer#get_iter `INSERT in*)
     let increase () =
       (* Advance to the next indentation level *)
       let spaces = mk_spaces buffer#tab_width in
       tbuffer#insert spaces;
     in
-    (*if ins#ends_line && ins#line_index > 0 then (increase())
-ngila  else*) if not (indent_matching_previous ~buffer:tbuffer)
+    if not (indent_matching_previous ~buffer:tbuffer)
     then increase();
     GtkSignal.stop_emit();
   end;

@@ -49,111 +49,111 @@ let crono ?(label="Time") f x =
   in
   let time = Unix.gettimeofday() in
   let result = try f x with e -> begin
-    finally time;
-    raise e
-  end in
+      finally time;
+      raise e
+    end in
   finally time;
   result
 
 (** {6 Operazioni su liste} *)
 
 module Xlist =
-  struct
-    let pos x l =
-      let rec f l n =
-        match l with
-          | [] -> raise Not_found
-          | a :: b -> if x = a then n else f b (n + 1)
-      in f l 0
+struct
+  let pos x l =
+    let rec f l n =
+      match l with
+      | [] -> raise Not_found
+      | a :: b -> if x = a then n else f b (n + 1)
+    in f l 0
 
-    let remove_dupl l = (* slow *)
-      List.rev (List.fold_left (fun acc y -> if List.mem y acc then acc else y :: acc) [] l)
+  let remove_dupl l = (* slow *)
+    List.rev (List.fold_left (fun acc y -> if List.mem y acc then acc else y :: acc) [] l)
 
-    let max l =
-      let rec find cand = function
+  let max l =
+    let rec find cand = function
       | [] -> cand
       | x :: l -> find (max x cand) l in
-      match l with [] -> raise Not_found | x :: l -> find x l
+    match l with [] -> raise Not_found | x :: l -> find x l
 
-    let rev_tl ll =
-      let rec f acc = function
-        | [] -> invalid_arg "Empty List"
-        | _ :: [] -> []
-        | h :: t -> h :: acc @ (f acc t)
-      in f [] ll;;
+  let rev_tl ll =
+    let rec f acc = function
+      | [] -> invalid_arg "Empty List"
+      | _ :: [] -> []
+      | h :: t -> h :: acc @ (f acc t)
+    in f [] ll;;
 
-    let group_assoc ll =
-      let groups =
-        List.fold_left begin fun groups (k, v) ->
-          try
-            let group = List.assoc k groups in
-            group := v :: !group;
-            groups
-          with Not_found -> (k, ref [v]) :: groups;
-        end [] ll
-      in
-      List.map (fun (k, group) -> (k, List.rev !group)) groups;;
-  end
+  let group_assoc ll =
+    let groups =
+      List.fold_left begin fun groups (k, v) ->
+        try
+          let group = List.assoc k groups in
+          group := v :: !group;
+          groups
+        with Not_found -> (k, ref [v]) :: groups;
+      end [] ll
+    in
+    List.map (fun (k, group) -> (k, List.rev !group)) groups;;
+end
 
 (** {6 Memoization} *)
 
 module Memo =
-  struct
-    let fast ~f =
-      let memo = Hashtbl.create 7 in
-      fun ?(force=fun _ -> false) key ->
-        try
-          let data = Hashtbl.find memo key in
-          if force data then begin
-            Hashtbl.remove memo key;
-            raise Not_found;
-          end;
-          data
-        with Not_found ->
-          let data = f key in
-          Hashtbl.add memo key data;
-          data;;
+struct
+  let fast ~f =
+    let memo = Hashtbl.create 7 in
+    fun ?(force=fun _ -> false) key ->
+      try
+        let data = Hashtbl.find memo key in
+        if force data then begin
+          Hashtbl.remove memo key;
+          raise Not_found;
+        end;
+        data
+      with Not_found ->
+        let data = f key in
+        Hashtbl.add memo key data;
+        data;;
 
-    let create f =
-      let memo = Hashtbl.create 7 in
-      fun key ->
-        try Hashtbl.find memo key
-        with Not_found ->
-          let data = f key in
-          Hashtbl.add memo key data;
-          data;;
+  let create f =
+    let memo = Hashtbl.create 7 in
+    fun key ->
+      try Hashtbl.find memo key
+      with Not_found ->
+        let data = f key in
+        Hashtbl.add memo key data;
+        data;;
 
-    let create2 f = create (fun x -> create (f x))
+  let create2 f = create (fun x -> create (f x))
 
-    let sfast ~f =
-      let memo = Hashtbl.create 1 in
-      let count = ref 0 in
-      let found = ref 0 in
-      (fun ?(force=fun _ -> false) key ->
-        incr count;
-        let data = try
-          let r = Hashtbl.find memo key in
-          incr found;
-          if force r then begin
-            Hashtbl.remove memo key;
-            raise Not_found;
-          end;
-          r
-        with Not_found ->
-          let data = f key in
-          Hashtbl.add memo key data;
-          data
-        in
-        data),
-        (fun () ->
-          Printf.fprintf stdout "%i/%i = %f" !found !count (float(!found)/.float(!count));
-          print_newline()),
-        (fun () ->
-          Hashtbl.clear memo;
-          count := 0;
-          found := 0
-        )
-  end;;
+  let sfast ~f =
+    let memo = Hashtbl.create 1 in
+    let count = ref 0 in
+    let found = ref 0 in
+    (fun ?(force=fun _ -> false) key ->
+       incr count;
+       let data = try
+           let r = Hashtbl.find memo key in
+           incr found;
+           if force r then begin
+             Hashtbl.remove memo key;
+             raise Not_found;
+           end;
+           r
+         with Not_found ->
+           let data = f key in
+           Hashtbl.add memo key data;
+           data
+       in
+       data),
+    (fun () ->
+       Printf.fprintf stdout "%i/%i = %f" !found !count (float(!found)/.float(!count));
+       print_newline()),
+    (fun () ->
+       Hashtbl.clear memo;
+       count := 0;
+       found := 0
+    )
+end;;
 
 
 (** [Str.regexp] with memoization *)
@@ -178,37 +178,37 @@ let rpad txt c width =
   String.sub result 0 width
 
 (** Rimpiazza in un testo tutte le ricorrenze di sottostringhe con le relative
-  stringhe sostitutive. L'ultima sottostringa viene rimpiazzata nel testo ottenuto dopo
-  la sostituzione della penultima sottostringa, la penultima con la terzultima ecc.
-  @param memo Indica se usare il memo per la compilazione delle espressioni
+    stringhe sostitutive. L'ultima sottostringa viene rimpiazzata nel testo ottenuto dopo
+    la sostituzione della penultima sottostringa, la penultima con la terzultima ecc.
+    @param memo Indica se usare il memo per la compilazione delle espressioni
     regolari (default) o ricompilarle ogni volta.
-  @param regexp Indica se la sottostringa da cercare è un'espressione regolare (default)
+    @param regexp Indica se la sottostringa da cercare è un'espressione regolare (default)
     o una stringa esatta.
 *)
 let replace_all ?(memo=true) =
   let mk_regexp = (!~) ~force:(fun _ -> not memo) in
   fun ?(regexp=true) re_te s ->
-  List.fold_left begin fun s' (re, te) ->
-    Str.global_replace (mk_regexp (if not regexp then Str.quote re else re)) te s'
-  end s re_te
+    List.fold_left begin fun s' (re, te) ->
+      Str.global_replace (mk_regexp (if not regexp then Str.quote re else re)) te s'
+    end s re_te
 
 (** Simile a [replace_all] ma rimpiazza solo la prima ricorrenza. *)
 let replace_first ?(memo=true) =
   let mk_regexp = (!~) ~force:(fun _ -> not memo) in
   fun ?(regexp=true) re_te s ->
-  List.fold_left begin fun s' (re, te) ->
-    Str.replace_first (mk_regexp (if not regexp then Str.quote re else re)) te s'
-  end s re_te
+    List.fold_left begin fun s' (re, te) ->
+      Str.replace_first (mk_regexp (if not regexp then Str.quote re else re)) te s'
+    end s re_te
 
 (** [starts_with prefix s] restituisce [true] sse [s] inizia con [prefix]. *)
 let starts_with prefix s = string_partial_match (regexp_string prefix) s 0
 
 (** [strip_prefix prefix str]
 
-   If [str] starts with [prefix] strip the prefix from [str], otherwise return
-   [str].
+    If [str] starts with [prefix] strip the prefix from [str], otherwise return
+    [str].
 
-   Example:
+    Example:
      [strip_prefix "foo__" "foo__bar" = "bar"]
      [strip_prefix "foo__" "baz" = "baz"]
 *)
@@ -226,33 +226,33 @@ let strip_prefix prefix s =
 (** {6 Ricerca di espressioni regolari} *)
 
 module Search =
-  struct
-    type 'a t =
+struct
+  type 'a t =
       Skip (** Ignora la sotto-stringa trovata *)
-      | Append of 'a (** Aggiunge la sottostringa trovata alla lista dei risultati *)
-      | Found of 'a (** Restituisce la sottostringa trovata come unico
-        risultato e interrompe la ricerca *)
-    (** Rappresenta le istruzioni di controllo per le ricerche.
-    *)
+    | Append of 'a (** Aggiunge la sottostringa trovata alla lista dei risultati *)
+    | Found of 'a (** Restituisce la sottostringa trovata come unico
+                      risultato e interrompe la ricerca *)
+  (** Rappresenta le istruzioni di controllo per le ricerche.
+  *)
 
-    let all pat f ?(pos=0) text  =
-      let rec search pos acc =
-        try
-          let pos = search_forward pat text pos in
-          let matched_string = matched_string text in
-          let g = search (pos + 1) in
-            (match f ~pos ~matched_string with
-            | Skip -> g acc
-            | Append x -> g (x :: acc)
-            | Found x -> [x])
-        with Not_found -> acc in
-        List.rev (search pos [])
+  let all pat f ?(pos=0) text  =
+    let rec search pos acc =
+      try
+        let pos = search_forward pat text pos in
+        let matched_string = matched_string text in
+        let g = search (pos + 1) in
+        (match f ~pos ~matched_string with
+         | Skip -> g acc
+         | Append x -> g (x :: acc)
+         | Found x -> [x])
+      with Not_found -> acc in
+    List.rev (search pos [])
     (** Ricerca di tutte le sottostringhe di un testo. La funzione passata accetta come
-       parametri la stringa trovata e la sua posizione e restituisce un'istruzione di
-       controllo di tipo [Search.t]. Il risultato finale di [all] è la lista di tutti
-       i risultati trovati ed elaborati.
+        parametri la stringa trovata e la sua posizione e restituisce un'istruzione di
+        controllo di tipo [Search.t]. Il risultato finale di [all] è la lista di tutti
+        i risultati trovati ed elaborati.
     *)
-  end
+end
 
 (** get_lines_from_file *)
 let get_lines_from_file ~filename lnums =
@@ -265,14 +265,14 @@ let get_lines_from_file ~filename lnums =
       try
         while !lnums <> [] do
           match !lnums with
-            | lnum :: tl ->
+          | lnum :: tl ->
               let line = input_line chan in
               if !i = lnum then begin
                 result := (lnum, line) :: !result;
                 lnums := tl;
               end;
               incr i;
-            | _ -> assert false
+          | _ -> assert false
         done;
       with End_of_file -> ()
     end;
@@ -304,9 +304,9 @@ let map_file_lines filename f =
     if Sys.file_exists filename then Sys.remove filename;
     if Sys.file_exists tempfile then Sys.rename tempfile filename;
   with ex -> begin
-    finally();
-    raise ex
-  end;;
+      finally();
+      raise ex
+    end;;
 
 (** pushd and popd *)
 let pushd, popd =
@@ -352,16 +352,16 @@ Filename.concat "C:\\" "a";;
 
 (** [filename_relative path dirname] returns the part of [path] relative to [dirname].
   * E.g. [filename_relative "/a/b" "/a/b/c/d" = "c/d"]
-  *)
+*)
 let filename_relative dirname =
   let dirname = filename_split dirname in
   fun path ->
     let path = filename_split path in
     let rec loop dirname path =
       match dirname, path with
-        | [], path -> path
-        | a :: b, x :: y when a = x -> loop b y
-        | _ -> raise Not_found
+      | [], path -> path
+      | a :: b, x :: y when a = x -> loop b y
+      | _ -> raise Not_found
     in try Some (List.fold_left Filename.concat "" (loop dirname path)) with Not_found -> None;;
 
 (** filename_unix_implicit *)

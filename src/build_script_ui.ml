@@ -37,8 +37,8 @@ class widget ~project ?packing () =
   let _               = GMisc.label ~text:text_filename ~xalign:0.0 ~packing:fbox#pack () in
   let box             = GPack.hbox ~spacing:5 ~packing:fbox#pack () in
   let entry_filename  = GEdit.entry
-    ~text:(project.Prj.root // build_script.bs_filename)
-    ~packing:box#add () in
+      ~text:(project.Prj.root // build_script.bs_filename)
+      ~packing:box#add () in
   let button_filename = GButton.button ~label:"  ...  " ~packing:box#pack () in
   let notebook        = GPack.notebook ~packing:vbox#add () in
   (* Targets *)
@@ -90,94 +90,94 @@ class widget ~project ?packing () =
   let _ = GMisc.label ~packing:cbox#add () in
   let spinner = GMisc.image ~file:(App_config.application_icons // "spinner_16.gif") ~show:false ~packing:cbox#pack () in
   (*  *)
-object (self)
-  inherit GObj.widget vbox#as_widget
-  val mutable is_valid = new GUtil.variable true
+  object (self)
+    inherit GObj.widget vbox#as_widget
+    val mutable is_valid = new GUtil.variable true
 
-  initializer
-    if not enable_widget_args then (widget_args#misc#hide());
-    ignore (button_filename#connect#clicked ~callback:self#choose_file);
-    ignore (entry_filename#connect#changed
-              ~callback:(fun () -> is_valid#set (Filename.check_suffix entry_filename#text ".ml")));
-    Gmisclib.Idle.add entry_filename#misc#grab_focus;
-    match help_buttons with
+    initializer
+      if not enable_widget_args then (widget_args#misc#hide());
+      ignore (button_filename#connect#clicked ~callback:self#choose_file);
+      ignore (entry_filename#connect#changed
+                ~callback:(fun () -> is_valid#set (Filename.check_suffix entry_filename#text ".ml")));
+      Gmisclib.Idle.add entry_filename#misc#grab_focus;
+      match help_buttons with
       | (b0, _) :: bb ->
-        let filename = Filename.temp_file "build" ".tmp" in
-        let mkcallback name butt () =
-          if butt#active then begin
-            spinner#misc#show();
-            self#save ~tmp:filename ~filename:entry_filename#text ();
-            let text = ref "" in
-            let process_in = Spawn.loop (fun ic -> text := !text ^ (input_line ic) ^ "\n") in
-            Spawn.async ~process_in ~at_exit:begin function
+          let filename = Filename.temp_file "build" ".tmp" in
+          let mkcallback name butt () =
+            if butt#active then begin
+              spinner#misc#show();
+              self#save ~tmp:filename ~filename:entry_filename#text ();
+              let text = ref "" in
+              let process_in = Spawn.loop (fun ic -> text := !text ^ (input_line ic) ^ "\n") in
+              Spawn.async ~process_in ~at_exit:begin function
               | Some ex -> Printf.eprintf "File \"build_script_ui.ml\": %s\n%s\n%!" (Printexc.to_string ex) (Printexc.get_backtrace())
               | _ ->
-                if !text <> help#buffer#get_text () then GtkThread.sync help#buffer#set_text !text;
-                Gmisclib.Idle.add ~prio:300 spinner#misc#hide;
-            end "ocaml" [| filename; name; "-help" |] |> ignore;
-          end
-        in
-        b0#connect#clicked ~callback:(mkcallback "" b0) |> ignore;
-        List.iter (fun (b, name) -> b#connect#clicked ~callback:(mkcallback name b) |> ignore) bb;
-        self#misc#connect#destroy ~callback:(fun () -> if Sys.file_exists filename then Sys.remove filename) |> ignore;
-        notebook#connect#switch_page ~callback:begin fun page ->
-          if page = 3 then begin
-            try
-              let b, _ = List.find (fun (b, _) -> b#active) ((b0, "") :: bb) in
-              b#clicked();
-              Gmisclib.Idle.add b#misc#grab_focus
-            with Not_found -> ()
-          end
-        end |> ignore;
-        b0#clicked()
+                  if !text <> help#buffer#get_text () then GtkThread.sync help#buffer#set_text !text;
+                  Gmisclib.Idle.add ~prio:300 spinner#misc#hide;
+              end "ocaml" [| filename; name; "-help" |] |> ignore;
+            end
+          in
+          b0#connect#clicked ~callback:(mkcallback "" b0) |> ignore;
+          List.iter (fun (b, name) -> b#connect#clicked ~callback:(mkcallback name b) |> ignore) bb;
+          self#misc#connect#destroy ~callback:(fun () -> if Sys.file_exists filename then Sys.remove filename) |> ignore;
+          notebook#connect#switch_page ~callback:begin fun page ->
+            if page = 3 then begin
+              try
+                let b, _ = List.find (fun (b, _) -> b#active) ((b0, "") :: bb) in
+                b#clicked();
+                Gmisclib.Idle.add b#misc#grab_focus
+              with Not_found -> ()
+            end
+          end |> ignore;
+          b0#clicked()
       | _ -> ()
 
-  method is_valid = is_valid
+    method is_valid = is_valid
 
-  method private save ?tmp ~filename () =
-    project.Prj.build_script <- {
-      bs_filename = Filename.basename filename;
-      bs_targets  = widget_trg#get();
-      bs_args     = widget_args#get();
-      bs_commands = List.filter_map Fun.id [cmd_distclean#get(); cmd_install#get(); cmd_uninstall#get()];
-    };
-    GtkThread.sync (Build_script_printer.print ~minify:false ~project ~filename:(match tmp with Some x -> x | _ -> filename)) ();
-    Gmisclib.Idle.add ~prio:300 (fun () -> Project.save project)
+    method private save ?tmp ~filename () =
+      project.Prj.build_script <- {
+        bs_filename = Filename.basename filename;
+        bs_targets  = widget_trg#get();
+        bs_args     = widget_args#get();
+        bs_commands = List.filter_map Fun.id [cmd_distclean#get(); cmd_install#get(); cmd_uninstall#get()];
+      };
+      GtkThread.sync (Build_script_printer.print ~minify:false ~project ~filename:(match tmp with Some x -> x | _ -> filename)) ();
+      Gmisclib.Idle.add ~prio:300 (fun () -> Project.save project)
 
-  method apply () =
-    let filename = entry_filename#text in
-    if Sys.file_exists filename then begin
-      let response = Dialog.confirm ~message:(sprintf
-        "Are you sure you want to overwrite file \xC2\xAB%s\xC2\xBB?" (Filename.basename filename))
-        ~yes:("Overwrite", (fun () -> self#save ~filename ()))
-        ~no:("Do Not Overwrite", ignore)
-        ~title:"Overwrite File" self
-      in response <> `CANCEL
-    end else (self#save ~filename (); true);
+    method apply () =
+      let filename = entry_filename#text in
+      if Sys.file_exists filename then begin
+        let response = Dialog.confirm ~message:(sprintf
+                                                  "Are you sure you want to overwrite file \xC2\xAB%s\xC2\xBB?" (Filename.basename filename))
+            ~yes:("Overwrite", (fun () -> self#save ~filename ()))
+            ~no:("Do Not Overwrite", ignore)
+            ~title:"Overwrite File" self
+        in response <> `CANCEL
+      end else (self#save ~filename (); true);
 
-  method private choose_file () =
-    let window = GWindow.file_chooser_dialog
-      ~action:`SAVE ~icon:Icons.oe
-      ~title:text_filename
-      ~position:`CENTER ~modal:true ~show:false ()
-    in
-    window#set_select_multiple false;
-    window#add_select_button_stock `OK `OK;
-    window#add_button_stock `CANCEL `CANCEL;
-    window#set_default_response `OK;
-    let filter = GFile.filter ~name:"OCaml Source File" ~patterns:["*.ml"] () in
-    window#set_filter filter;
-    ignore (window#set_filename entry_filename#text);
-    match window#run () with
+    method private choose_file () =
+      let window = GWindow.file_chooser_dialog
+          ~action:`SAVE ~icon:Icons.oe
+          ~title:text_filename
+          ~position:`CENTER ~modal:true ~show:false ()
+      in
+      window#set_select_multiple false;
+      window#add_select_button_stock `OK `OK;
+      window#add_button_stock `CANCEL `CANCEL;
+      window#set_default_response `OK;
+      let filter = GFile.filter ~name:"OCaml Source File" ~patterns:["*.ml"] () in
+      window#set_filter filter;
+      ignore (window#set_filename entry_filename#text);
+      match window#run () with
       | `OK ->
-        Gaux.may window#filename ~f:entry_filename#set_text;
-        window#destroy()
+          Gaux.may window#filename ~f:entry_filename#set_text;
+          window#destroy()
       | _ -> window#destroy()
-end
+  end
 
 let window ~project () =
   let window = GWindow.window ~title:"Generate Build Script"
-    ~modal:true ~border_width:8 ~position:`CENTER ~icon:Icons.oe ~show:false () in
+      ~modal:true ~border_width:8 ~position:`CENTER ~icon:Icons.oe ~show:false () in
   Gmisclib.Window.GeometryMemo.add ~key:"dialog-build-script" ~window Preferences.geometry_memo;
   let vbox = GPack.vbox ~spacing:8 ~packing:window#add () in
   let widget = new widget ~project ~packing:vbox#add () in
@@ -192,7 +192,7 @@ let window ~project () =
     if key = _Return then (button_ok#clicked(); true)
     else if key = _Escape then (window#destroy(); true)
     else false
-  end);*)
+    end);*)
   Gmisclib.Util.esc_destroy_window window;
   window#show();
   window;;

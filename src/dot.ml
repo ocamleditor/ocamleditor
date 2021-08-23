@@ -65,8 +65,8 @@ let mk_dot_cmd ~outlang ~outfile ?(label="") ?(rotate=0.) filename =
 let draw ~project ~filename ?dot_include_all ?dot_types ?packing ?on_ready_cb () =
   let module Device =
     (val match Oe_config.dot_viewer with
-      | `DEFAULT -> !Dot_viewer_plugin.device
-      | `PDF -> (module Dot_viewer_pdf.PDF))
+       | `DEFAULT -> !Dot_viewer_plugin.device
+       | `PDF -> (module Dot_viewer_pdf.PDF))
   in
   let outlang       = Device.lang in
   let basename      = Filename.basename filename in

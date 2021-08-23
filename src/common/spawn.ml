@@ -18,8 +18,8 @@ let create_process ?wd ?env program args =
   let cwd = ref None in
   begin
     match wd with
-      | None -> ()
-      | Some x ->
+    | None -> ()
+    | Some x ->
         cwd := Some (Sys.getcwd());
         Sys.chdir x
   end;
@@ -29,8 +29,8 @@ let create_process ?wd ?env program args =
   try
     let pid =
       match env with
-        | None -> Unix.create_process program args out_read in_write err_write
-        | Some env -> Unix.create_process_env program args env out_read in_write err_write
+      | None -> Unix.create_process program args out_read in_write err_write
+      | Some env -> Unix.create_process_env program args env out_read in_write err_write
     in
     (match !cwd with None -> () | Some x -> Sys.chdir x; cwd := None);
     Unix.close out_read;
@@ -39,11 +39,11 @@ let create_process ?wd ?env program args =
     let proc = { pid; inchan; outchan; errchan } in
     proc
   with
-    | Unix.Unix_error (err, a, b) as ex ->
+  | Unix.Unix_error (err, a, b) as ex ->
       (match !cwd with None -> () | Some x -> Sys.chdir x; cwd := None);
       (*Printf.eprintf "%s (%S, %S)\n%!" (Unix.error_message err) a b;*)
       raise ex
-    | ex ->
+  | ex ->
       (match !cwd with None -> () | Some x -> Sys.chdir x; cwd := None);
       raise ex
 
@@ -98,13 +98,13 @@ let exec
       end ()
     in
     match mode with
-      | `SYNC ->
+    | `SYNC ->
         Thread.join the;
         Thread.join thi;
         (match tho with Some t -> Thread.join t | _ -> ());
         final();
         `SUCCESS
-      | `ASYNC -> `PID proc.pid
+    | `ASYNC -> `PID proc.pid
   with (Unix.Unix_error _) as ex -> `ERROR ex
 
 (** sync *)
@@ -118,19 +118,19 @@ let sync
     ?binary
     program args =
   match
-  exec `SYNC
-    ?working_directory
-    ?env
-    ?at_exit
-    ?process_in
-    ?process_out
-    ?process_err
-    ?binary
-    program args
+    exec `SYNC
+      ?working_directory
+      ?env
+      ?at_exit
+      ?process_in
+      ?process_out
+      ?process_err
+      ?binary
+      program args
   with
-    | `SUCCESS -> None
-    | `ERROR ex -> Some ex
-    | `PID _ -> assert false
+  | `SUCCESS -> None
+  | `ERROR ex -> Some ex
+  | `PID _ -> assert false
 
 (** async *)
 let async
@@ -143,19 +143,19 @@ let async
     ?binary
     program args =
   match
-  exec `ASYNC
-    ?working_directory
-    ?env
-    ?at_exit
-    ?process_in
-    ?process_out
-    ?process_err
-    ?binary
-    program args
+    exec `ASYNC
+      ?working_directory
+      ?env
+      ?at_exit
+      ?process_in
+      ?process_out
+      ?process_err
+      ?binary
+      program args
   with
-    | `SUCCESS -> assert false
-    | (`ERROR _) as x -> x
-    | (`PID _) as x -> x
+  | `SUCCESS -> assert false
+  | (`ERROR _) as x -> x
+  | (`PID _) as x -> x
 
 
 

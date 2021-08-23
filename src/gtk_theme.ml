@@ -26,8 +26,8 @@ open Preferences
 
 let avail_themes =
   match Oe_config.themes_dir with
-    | Some dir -> List.sort compare (Array.to_list (Sys.readdir dir))
-    | _ -> []
+  | Some dir -> List.sort compare (Array.to_list (Sys.readdir dir))
+  | _ -> []
 
 (* Condensed font for the file list in the search results pane. None is default font. (`STRETCH `CONDENSED doesn't work) *)
 let find_text_output_font_condensed : string option ref = ref None
@@ -41,8 +41,8 @@ let get_style_outline pref =
     let base_color = pref.Preferences.pref_outline_color_nor_bg in
     let even, odd =
       match pref.pref_outline_color_alt_rows with
-        | None -> base_color, base_color
-        | Some x -> base_color, (Color.name (Color.set_value x (`NAME base_color)))
+      | None -> base_color, base_color
+      | Some x -> base_color, (Color.name (Color.set_value x (`NAME base_color)))
     in
     sprintf "
           style \"outline-treestyle\" {
@@ -102,8 +102,8 @@ widget \"gtk-tooltip*\" style \"oe-tooltip\"
   in
   let style_targetlist, apply_targetlist =
     match Oe_config.targetlist_alternating_row_colors with
-      | None -> "", ""
-      | Some x ->
+    | None -> "", ""
+    | Some x ->
         let base_color = fst pref.Preferences.pref_bg_color in
         sprintf "
           style \"targetlist-treestyle\" {
@@ -124,7 +124,7 @@ widget \"gtk-tooltip*\" style \"oe-tooltip\"
   in
   let gtk_font_name =
     match String.trim pref.pref_general_font with
-      | "" ->
+    | "" ->
         begin
           try
             let family, size = List.find (fun (n, _) -> Gtk_util.try_font context n) ["Sans", 9] in
@@ -134,7 +134,7 @@ widget \"gtk-tooltip*\" style \"oe-tooltip\"
             sprintf "gtk-font-name = \"%s\"" font_name;
           with Not_found -> ""
         end;
-      | x -> sprintf "gtk-font-name = \"%s\"" x
+    | x -> sprintf "gtk-font-name = \"%s\"" x
   in
   let style_outline, apply_outline = get_style_outline pref in
   let rc =

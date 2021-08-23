@@ -33,7 +33,7 @@ type result = {
 let analyse ?(utf8=true) ?pend ?(error=ignore) text f =
   let pend = ref pend in
   let text = if utf8 then Glib.Convert.convert_with_fallback ~fallback:"?"
-      ~from_codeset:"UTF-8" ~to_codeset:Oe_config.ocaml_codeset text
+        ~from_codeset:"UTF-8" ~to_codeset:Oe_config.ocaml_codeset text
     else text in
   let lexbuf = Lexing.from_string text in
   try
@@ -48,15 +48,15 @@ let analyse ?(utf8=true) ?pend ?(error=ignore) text f =
         pend := f ~token ~lexeme ~start ~length ~lexbuf;
     done
   with
-    | End_of_file -> ()
-    | Lexer.Error (err, loc) -> begin
+  | End_of_file -> ()
+  | Lexer.Error (err, loc) -> begin
       error (err, loc)
     end
 
 (** scan *)
 let scan ?(utf8=true) ?(ignore_lexer_error=true) text f =
   let text = if utf8 then Glib.Convert.convert_with_fallback ~fallback:"?"
-      ~from_codeset:"UTF-8" ~to_codeset:Oe_config.ocaml_codeset text
+        ~from_codeset:"UTF-8" ~to_codeset:Oe_config.ocaml_codeset text
     else text in
   let lexbuf = Lexing.from_string text in
   try
@@ -75,20 +75,20 @@ let paths_opened text =
   let paths = ref [] in
   analyse text begin fun ~token ~lexeme:_ ~start:_ ~length:_ ~lexbuf ->
     match [@warning "-4"] token with
-      | OPEN ->
+    | OPEN ->
         let path = ref "" in
         let next_token = ref token in
         while
           next_token := Lexer.token lexbuf;
           match !next_token with
-            | UIDENT _ | DOT ->
+          | UIDENT _ | DOT ->
               path := (!path)^(Lexing.lexeme lexbuf);
               true
-            | _ -> false
+          | _ -> false
         do () done;
         paths := !path :: !paths;
         Some !next_token
-      | _ -> None
+    | _ -> None
   end;
   (List.rev !paths)
 
@@ -97,10 +97,10 @@ let strings text =
   let strings = ref [] in
   analyse text begin fun ~token ~lexeme:_ ~start ~length ~lexbuf:_ ->
     match [@warning "-4"] token with
-      | STRING (s, _, _) ->
+    | STRING (s, _, _) ->
         strings := {lexeme = s; start = start; length = length} :: !strings;
         None
-      | _ -> None
+    | _ -> None
   end;
   (*List.rev*) !strings
 
@@ -109,16 +109,16 @@ let in_string ?(utf8=true) text =
   let strings = ref [] in
   analyse ~utf8 text begin fun ~token ~lexeme:_ ~start ~length ~lexbuf:_ ->
     match [@warning "-4"] token with
-      | STRING _ ->
+    | STRING _ ->
         strings := (start, start + length) :: !strings;
         None
-      | _ -> None
+    | _ -> None
   end;
   let rec find strings pos =
     match strings with
-      | (start, stop) :: rest ->
+    | (start, stop) :: rest ->
         if start < pos && pos < stop then true else (find rest pos)
-      | [] -> false
+    | [] -> false
   in find !strings
 
 

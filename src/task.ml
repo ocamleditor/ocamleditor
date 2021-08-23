@@ -23,7 +23,7 @@
 
 type kind = [ `CLEAN | `CLEANALL | `ANNOT | `COMPILE | `RUN | `OTHER]
 type phase =
-  Before_clean | Clean | After_clean | Before_compile | Compile | After_compile
+    Before_clean | Clean | After_clean | Before_compile | Compile | After_compile
 
 type t = {
   mutable et_name                  : string;
@@ -66,18 +66,18 @@ let phase_of_string = function
 
 let create ~name ~env ?(env_replace=false) ~dir ~cmd ~args ?phase ?(run_in_project=false) ?(run_in_script=true)
     ?(readonly=false) ?(visible=true) () = {
-    et_name                  = name;
-    et_env                   = env;
-    et_env_replace           = env_replace;
-    et_dir                   = dir;
-    et_cmd                   = cmd;
-    et_args                  = args;
-    et_phase                 = phase;
-    et_always_run_in_project = run_in_project;
-    et_always_run_in_script  = run_in_script;
-    et_readonly              = readonly;
-    et_visible               = visible;
-  }
+  et_name                  = name;
+  et_env                   = env;
+  et_env_replace           = env_replace;
+  et_dir                   = dir;
+  et_cmd                   = cmd;
+  et_args                  = args;
+  et_phase                 = phase;
+  et_always_run_in_project = run_in_project;
+  et_always_run_in_script  = run_in_script;
+  et_readonly              = readonly;
+  et_visible               = visible;
+}
 
 module LogBuilder = Log.Make(struct
     let channel = stderr
@@ -95,7 +95,7 @@ let handle f task =
   let env =
     if task.et_env_replace then Array.concat [(*Unix.environment();*) tenv]
     else (Array.concat [tenv (* takes precedence *);
-      (Array.map (fun e -> true, e) (Unix.environment()))])
+                        (Array.map (fun e -> true, e) (Unix.environment()))])
   in
   let env = List.filter (fun (e, _) -> e) (Array.to_list env) in
   let env = Array.of_list (List.map (fun (_, v) -> v) env) in

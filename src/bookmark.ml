@@ -44,14 +44,14 @@ let rec remove bm =
   try
     begin
       match bm.bm_loc with
-        | Mark mark ->
+      | Mark mark ->
           begin
             match GtkText.Mark.get_buffer mark with
-              | None -> ()
-              | Some buffer ->
+            | None -> ()
+            | Some buffer ->
                 GtkText.Buffer.delete_mark buffer mark;
           end
-        | Offset _ -> ()
+      | Offset _ -> ()
     end;
     bm.bm_loc <- (Offset 0);
   with Not_found -> ()
@@ -59,43 +59,43 @@ let rec remove bm =
 (** apply *)
 and apply bm f =
   match bm.bm_loc with
-    | Mark mark ->
+  | Mark mark ->
       begin
         match GtkText.Mark.get_buffer mark with
-          | None ->
+        | None ->
             remove bm;
             invalid_arg "bookmark"
-          | Some buffer ->
+        | Some buffer ->
             let iter = Gmisclib.Util.get_iter_at_mark_safe buffer mark in
             f (`ITER iter)
       end
-    | Offset offset -> f (`OFFSET offset)
+  | Offset offset -> f (`OFFSET offset)
 
 (** mark_to_offset *)
 let mark_to_offset bm =
   ignore (apply bm begin function
     | `ITER iter ->
-      let loc = Offset (GtkText.Iter.get_offset iter) in
-      begin
-        match bm.bm_loc with
+        let loc = Offset (GtkText.Iter.get_offset iter) in
+        begin
+          match bm.bm_loc with
           | Mark m ->
-            begin
-              match GtkText.Mark.get_buffer m with
+              begin
+                match GtkText.Mark.get_buffer m with
                 | None -> assert false
                 | Some buffer -> GtkText.Buffer.delete_mark buffer m;
-            end
+              end
           | Offset _ -> assert false
-      end;
-      bm.bm_loc <- loc;
-      -1
+        end;
+        bm.bm_loc <- loc;
+        -1
     | `OFFSET _ -> -1
-  end)
+    end)
 
 (** offset_to_mark *)
 let offset_to_mark (buffer : GText.buffer) bm =
   match bm.bm_loc with
-    | Mark mark -> mark
-    | Offset offset ->
+  | Mark mark -> mark
+  | Offset offset ->
       let offset = min offset buffer#char_count in
       let mark = buffer#create_mark(* ~name:(Gtk_util.create_mark_name "Bookmark.offset_to_mark")*) (buffer#get_iter (`OFFSET offset)) in
       bm.bm_loc <- (Mark mark);

@@ -178,14 +178,14 @@ let items ~browser =
 let create_tool ~(toolbox : GPack.box) item =
   let image =
     match item.pixbuf with
-      | P _ when item.tag = `VIEW_MESSAGES -> Some (GMisc.image ~pixbuf:Icons.paned_bottom_large ())
-      | P pixbuf -> Some (GMisc.image ~pixbuf ())
-      | S stock -> Some (GMisc.image ~stock ~icon_size:`SMALL_TOOLBAR ())
-      | N -> None
+    | P _ when item.tag = `VIEW_MESSAGES -> Some (GMisc.image ~pixbuf:Icons.paned_bottom_large ())
+    | P pixbuf -> Some (GMisc.image ~pixbuf ())
+    | S stock -> Some (GMisc.image ~stock ~icon_size:`SMALL_TOOLBAR ())
+    | N -> None
   in
   match item.kind with
-    | I -> (GMisc.separator `VERTICAL ~packing:toolbox#pack ())#coerce
-    | BM ->
+  | I -> (GMisc.separator `VERTICAL ~packing:toolbox#pack ())#coerce
+  | BM ->
       let tool = Gmisclib.Button.button_menu ~relief:`NONE ~spacing:1 ~packing:toolbox#pack () in
       Gaux.may image ~f:(fun image -> tool#set_image image#coerce);
       tool#button#misc#set_name "menubar_button";
@@ -196,7 +196,7 @@ let create_tool ~(toolbox : GPack.box) item =
       tool#connect#clicked ~callback:(fun () -> Gmisclib.Idle.add item.tool_callback) |> ignore;
       Gaux.may item.tool_callback_menu ~f:(fun callback -> tool#connect#show_menu ~callback) |> ignore;
       tool#coerce
-    | M ->
+  | M ->
       let tool = Gmisclib.Button.button_menu ~label:item.label ~relief:`NONE ~packing:toolbox#pack () in
       Gaux.may image ~f:(fun image -> tool#set_image image#coerce);
       tool#button#misc#set_name "menubar_button";
@@ -206,12 +206,12 @@ let create_tool ~(toolbox : GPack.box) item =
       tool#connect#clicked ~callback:(fun () -> Gmisclib.Idle.add item.tool_callback) |> ignore;
       Gaux.may item.tool_callback_menu ~f:(fun callback -> tool#connect#show_menu ~callback) |> ignore;
       tool#coerce
-    | B ->
+  | B ->
       let button = GButton.button ~relief:`NONE ~packing:toolbox#pack () in
       begin
         match image with
-          | Some image -> button#set_image image#coerce
-          | _ -> button#set_label item.label
+        | Some image -> button#set_image image#coerce
+        | _ -> button#set_label item.label
       end;
       button#misc#set_name "menubar_button";
       button#set_focus_on_click false;
@@ -234,24 +234,24 @@ let create_item ~menu ~(toolbox : GPack.box) ~pos item =
         item.id :: (List.filter ((<>) item.id) preferences#get.pref_general_menubar_buttons);
     in
     match item.check#active with
-      | true when item.tool_widget <> None ->
+    | true when item.tool_widget <> None ->
         Gaux.may item.tool_widget ~f:(fun w -> w#misc#show());
         add_pref();
-      | true -> assert false
-      | false ->
+    | true -> assert false
+    | false ->
         Gaux.may item.tool_widget ~f:(fun w -> w#misc#hide());
         preferences#get.pref_general_menubar_buttons <- List.filter ((<>) item.id) preferences#get.pref_general_menubar_buttons;
   end |> ignore;
   let box = GPack.hbox ~packing:item.check#add () in
   let text, image =
     match item.pixbuf with
-      | P pixbuf -> item.label, GMisc.image ~pixbuf ~xpad:8 ~packing:box#pack ()
-      | S stock -> item.label, GMisc.image ~stock ~icon_size:`SMALL_TOOLBAR ~xpad:8 ~packing:box#pack ()
-      | N when item.kind = I ->
+    | P pixbuf -> item.label, GMisc.image ~pixbuf ~xpad:8 ~packing:box#pack ()
+    | S stock -> item.label, GMisc.image ~stock ~icon_size:`SMALL_TOOLBAR ~xpad:8 ~packing:box#pack ()
+    | N when item.kind = I ->
         let image = GMisc.image ~pixbuf:pixbuf_empty ~packing:box#pack ~xpad:3 () in
         let _ = GMisc.separator `HORIZONTAL ~packing:box#add () in
         "", image
-      | N ->
+    | N ->
         let image = GMisc.image ~pixbuf:pixbuf_empty ~packing:box#pack ~xpad:3 () in
         item.label, image
   in

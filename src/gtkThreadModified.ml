@@ -35,7 +35,7 @@ let loop_id = ref None
 let reset () = loop_id := None
 let cannot_sync () =
   match !loop_id with None -> true
-  | Some id -> Thread.id (Thread.self ()) = id
+                    | Some id -> Thread.id (Thread.self ()) = id
 
 let gui_safe () =
   not (Sys.os_type = "Win32") || !loop_id = Some(Thread.id (Thread.self ()))
@@ -46,22 +46,22 @@ let do_next_job () = with_jobs Queue.take ()
 (*let async j x = with_jobs (Queue.add (fun () -> j x))*)
 let async j x = with_jobs
     (Queue.add (fun () ->
-      GtkSignal.safe_call j x ~where:"asynchronous call"))
+         GtkSignal.safe_call j x ~where:"asynchronous call"))
 type 'a result = Val of 'a | Exn of exn | NA
 let sync f x =
   if cannot_sync () then f x else
-  let m = Mutex.create () in
-  let res = ref NA in
-  Mutex.lock m;
-  let c = Condition.create () in
-  let j x =
-    let y = try Val (f x) with e -> Exn e in
-    Mutex.lock m; res := y; Mutex.unlock m;
-    Condition.signal c
-  in
-  async j x;
-  while !res = NA do Condition.wait c m done;
-  match !res with Val y -> y | Exn e -> raise e | NA -> assert false
+    let m = Mutex.create () in
+    let res = ref NA in
+    Mutex.lock m;
+    let c = Condition.create () in
+    let j x =
+      let y = try Val (f x) with e -> Exn e in
+      Mutex.lock m; res := y; Mutex.unlock m;
+      Condition.signal c
+    in
+    async j x;
+    while !res = NA do Condition.wait c m done;
+    match !res with Val y -> y | Exn e -> raise e | NA -> assert false
 
 let do_jobs () =
   Thread.delay 0.013;
@@ -80,8 +80,8 @@ let thread_main_real () =
     while Glib.Main.is_running loop do
       let i = ref 0 in
       while !i < 100 && Glib.Main.pending () do
-	ignore (Glib.Main.iteration true);
-	incr i
+        ignore (Glib.Main.iteration true);
+        incr i
       done;
       ignore (do_jobs())
     done;
@@ -102,11 +102,11 @@ let start () =
   Thread.create main ()
 
 (* The code below would do nothing...
-let _ =
-  let mutex = Mutex.create () in
-  let depth = ref 0 in
-  GtkSignal.enter_callback :=
+   let _ =
+   let mutex = Mutex.create () in
+   let depth = ref 0 in
+   GtkSignal.enter_callback :=
     (fun () -> if !depth = 0 then Mutex.lock mutex; incr depth);
-  GtkSignal.exit_callback :=
+   GtkSignal.exit_callback :=
     (fun () -> decr depth; if !depth = 0 then Mutex.unlock mutex)
 *)

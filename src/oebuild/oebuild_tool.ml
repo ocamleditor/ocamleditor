@@ -212,16 +212,16 @@ let main () =
                  ()), deps
             end
           with
-            | Build_failed code, _ -> exit code (*(compilation, None)*)
-            | Built_successfully, deps ->
+          | Build_failed code, _ -> exit code (*(compilation, None)*)
+          | Built_successfully, deps ->
               begin
                 match !install_flag with
-                  (*| Some _ when not !serial -> failwith "-install is accepted only with -serial"*)
-                  | Some path ->
+                (*| Some _ when not !serial -> failwith "-install is accepted only with -serial"*)
+                | Some path ->
                     serial := true;
                     install ~compilation ~outname ~outkind:!outkind ~deps ~path
                       ~ccomp_type:(Ocaml_config.can_compile_native ());
-                  | _ -> ()
+                | _ -> ()
               end;
               last_outname := Some outname;
               (compilation, Some outname)
@@ -231,16 +231,16 @@ let main () =
         try
           begin
             match !run_code with
-              | Some Native ->
+            | Some Native ->
                 (match List.assoc Native outnames with None -> ()
                                                      | Some outname -> run_output ~outname ~args:!run_args)
-              | Some Bytecode ->
+            | Some Bytecode ->
                 (match List.assoc Bytecode outnames with None -> ()
                                                        | Some outname -> run_output ~outname ~args:!run_args)
-              | Some Unspecified ->
+            | Some Unspecified ->
                 (match !last_outname with None -> ()
                                         | Some outname -> run_output ~outname ~args:!run_args)
-              | None -> ()
+            | None -> ()
           end
         with Not_found -> (invalid_arg "-run-opt or -run-byt")
       end;

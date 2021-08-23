@@ -145,34 +145,34 @@ class pref_editor_indent title ?packing () =
   let sw_help     = GBin.scrolled_window ~hpolicy:`AUTOMATIC ~vpolicy:`AUTOMATIC ~shadow_type:`IN ~packing:box#add () in
   let view_help   = GText.view ~buffer:buffer_help ~height:380 ~packing:sw_help#add () in
   object
-  inherit page title vbox
+    inherit page title vbox
 
-  initializer
-    view#set_left_margin 2;
-    view#set_right_margin 2;
-    view_help#set_left_margin 2;
-    view_help#set_right_margin 2;
-    view_help#set_editable false;
-    view#set_wrap_mode `WORD;
-    view_help#set_wrap_mode `WORD;
-    let pref = Preferences.preferences#get in
-    view#misc#modify_font_by_name pref.Preferences.pref_base_font;
-    view_help#misc#modify_font_by_name pref.Preferences.pref_base_font;
-    view_help#set_cursor_visible false;
-    try
-      buffer_help#set_text ocp_indent_help;
-    with Glib.Convert.Error _ -> ()
+    initializer
+      view#set_left_margin 2;
+      view#set_right_margin 2;
+      view_help#set_left_margin 2;
+      view_help#set_right_margin 2;
+      view_help#set_editable false;
+      view#set_wrap_mode `WORD;
+      view_help#set_wrap_mode `WORD;
+      let pref = Preferences.preferences#get in
+      view#misc#modify_font_by_name pref.Preferences.pref_base_font;
+      view_help#misc#modify_font_by_name pref.Preferences.pref_base_font;
+      view_help#set_cursor_visible false;
+      try
+        buffer_help#set_text ocp_indent_help;
+      with Glib.Convert.Error _ -> ()
 
-  method write pref =
-    pref.Preferences.pref_editor_indent_empty_line <- (match combo_empty#active with
-      | 0 -> true
-      | _ -> false);
-    pref.Preferences.pref_editor_indent_config <- buffer#get_text();
+    method write pref =
+      pref.Preferences.pref_editor_indent_empty_line <- (match combo_empty#active with
+          | 0 -> true
+          | _ -> false);
+      pref.Preferences.pref_editor_indent_config <- buffer#get_text();
 
-  method read pref =
-    combo_empty#set_active (if pref.Preferences.pref_editor_indent_empty_line then 0 else 1);
-    buffer#set_text pref.Preferences.pref_editor_indent_config;
-end
+    method read pref =
+      combo_empty#set_active (if pref.Preferences.pref_editor_indent_empty_line then 0 else 1);
+      buffer#set_text pref.Preferences.pref_editor_indent_config;
+  end
 
 
 

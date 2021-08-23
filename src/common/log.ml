@@ -68,14 +68,14 @@ let timestamp () =
     t.Unix.tm_sec
 
 module Make (X : sig
-  val channel : out_channel
-  val verbosity : verbosity
-  val print_timestamp : bool
-end) (*: S*) = struct
+    val channel : out_channel
+    val verbosity : verbosity
+    val print_timestamp : bool
+  end) (*: S*) = struct
 
   module Make (Y : sig
-    val prefix : string
-  end) = struct
+      val prefix : string
+    end) = struct
 
     let prefixes = ref []
 

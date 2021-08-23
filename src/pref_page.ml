@@ -24,7 +24,7 @@
 open Printf
 
 let ocaml_preview =
-"(* Syntax Coloring Preview *)
+  "(* Syntax Coloring Preview *)
 open Printf
 
 (** ocamldoc comment block.
@@ -66,8 +66,8 @@ let create_align ?title ?(indent=13) ~(vbox : GPack.box) ?show () =
   let indent = match title with
     | None -> 0
     | Some title ->
-      let _ = GMisc.label ~markup:(sprintf "<b>%s</b>" title) ~xalign:0.0 ~packing:box#add () in
-      indent
+        let _ = GMisc.label ~markup:(sprintf "<b>%s</b>" title) ~xalign:0.0 ~packing:box#add () in
+        indent
   in
   let align = GBin.alignment ~padding:(0, 0, indent, 0) ~packing:box#add ?show () in
   align
@@ -84,9 +84,9 @@ class virtual page title (box : GPack.box) =
   let _    = GMisc.label ~markup:(sprintf "<big><b>%s</b></big>" title) ~xalign:0.0 ~packing:tbox#pack () in
   let _    = GMisc.separator `HORIZONTAL ~packing:tbox#pack () in
   let _    = box#reorder_child tbox#coerce ~pos:0 in
-object
-  inherit GObj.widget box#as_widget
-  method virtual write : Preferences.t -> unit
-  method virtual read : Preferences.t -> unit
-  method title = title
-end
+  object
+    inherit GObj.widget box#as_widget
+    method virtual write : Preferences.t -> unit
+    method virtual read : Preferences.t -> unit
+    method title = title
+  end

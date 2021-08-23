@@ -51,9 +51,9 @@ module Make (Entry : ENTRY) = struct
 
   let get_leaves : t -> entry list =
     fun dag ->
-      Hashtbl.fold begin fun _ entry acc ->
-        if entry.dependencies = [] then entry :: acc else acc
-      end dag [];;
+    Hashtbl.fold begin fun _ entry acc ->
+      if entry.dependencies = [] then entry :: acc else acc
+    end dag [];;
 
   let remove_leaf : t -> entry -> unit =
     fun dag leaf ->

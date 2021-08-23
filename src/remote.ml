@@ -65,8 +65,8 @@ module Remote = struct
 
       initializer
         match self#stat () with
-          | Some perm -> mtime <- perm.Editor_file_type.mtime;
-          | _ -> ()
+        | Some perm -> mtime <- perm.Editor_file_type.mtime;
+        | _ -> ()
 
       method cleanup () = curl#cleanup
       method filename = filename
@@ -97,7 +97,7 @@ module Remote = struct
       method private time_of_string str =
         let open Unix in
         match Str.split re_spaces str with
-          | [mon; day; year_time] ->
+        | [mon; day; year_time] ->
             let ltm = Unix.localtime (Unix.gettimeofday ()) in
             let year, hour, min =
               if String.contains year_time ':' then
@@ -105,11 +105,11 @@ module Remote = struct
                 let year = ltm.tm_year in
                 begin
                   match time with
-                    | [h; m] ->
+                  | [h; m] ->
                       year,
                       int_of_string h,
                       int_of_string m
-                    | _ -> assert false
+                  | _ -> assert false
                 end
               else (int_of_string year_time) - 1900, 0, 0
             in
@@ -124,7 +124,7 @@ module Remote = struct
               tm_yday = 0;
               tm_isdst = ltm.tm_isdst;
             }
-          | _ -> assert false
+        | _ -> assert false
 
       method stat () =
         self#protect begin fun () ->
@@ -208,22 +208,22 @@ module Remote = struct
 
       method is_readonly =
         match self#stat() with
-          | Some stat ->
+        | Some stat ->
             let perm = stat.Editor_file_type.perm in
             perm.[1] = 'r' && perm.[2] = '-'
-          | _ -> true
+        | _ -> true
 
       method is_writeable =
         match self#stat() with
-          | Some stat ->
+        | Some stat ->
             let perm = stat.Editor_file_type.perm in
             perm.[1] = 'r' && perm.[2] = 'w'
-          | _ -> false
+        | _ -> false
 
       method last_modified () =
         match self#stat() with
-          | Some stat -> stat.Editor_file_type.mtime
-          | _ -> 0.0
+        | Some stat -> stat.Editor_file_type.mtime
+        | _ -> 0.0
 
       method changed = mtime < self#last_modified()
 
@@ -271,8 +271,8 @@ module Remote = struct
           close_in chan;
           history
         with
-          | End_of_file -> (close_in chan; [])
-          | ex -> (close_in chan; raise ex)
+        | End_of_file -> (close_in chan; [])
+        | ex -> (close_in chan; raise ex)
       end else []
     in
     (* Write history *)
@@ -346,7 +346,7 @@ module Remote = struct
     let _  = entry_filename#misc#set_sensitive false in
     let _  = entry_filename#misc#modify_font_by_name "sans 10" in
     object (self)
-    inherit GObj.widget vbox#as_widget
+      inherit GObj.widget vbox#as_widget
 
       val mutable history = read_history ()
       val mutable remote_file = None
@@ -398,17 +398,17 @@ module Remote = struct
             let is_directory filename =
               let filename = if filename.[String.length filename - 1] = '/' then String.sub filename 0 (String.length filename - 1) else filename in
               match remote_file with
-                | Some file ->
+              | Some file ->
                   file#set_filename filename;
                   begin
                     try ignore (file#list ()); true
                     with
-                      | Error _ -> false
-                      | ex ->
+                    | Error _ -> false
+                    | ex ->
                         Printf.eprintf "File \"remote.ml\": %s\n%s\n%!" (Printexc.to_string ex) (Printexc.get_backtrace());
                         false
                   end;
-                | _ -> false
+              | _ -> false
             in
             Gdk.Window.set_cursor self#misc#window (Gdk.Cursor.create `WATCH);
             entry_filename#set_editable false;
@@ -429,7 +429,7 @@ module Remote = struct
 
       method private file_completion () =
         match remote_file with
-          | Some file ->
+        | Some file ->
             Gdk.Window.set_cursor self#misc#window (Gdk.Cursor.create `WATCH);
             begin
               try
@@ -451,7 +451,7 @@ module Remote = struct
                 Gdk.Window.set_cursor self#misc#window (Gdk.Cursor.create `ARROW);
                 raise ex
             end;
-          | _ -> ()
+        | _ -> ()
 
       method private split_user_host text =
         let pos = String.index text '@' in
@@ -478,10 +478,10 @@ module Remote = struct
           if entry_filename#text = "" then (self#file_completion());
           entry_filename#misc#grab_focus();
         with
-          | Error (_, reason, _) ->
+        | Error (_, reason, _) ->
             Dialog.message ~title ~message:(message ^ reason) `ERROR;
             finally()
-          | ex ->
+        | ex ->
             Dialog.display_exn ~parent:self ~title ~message ex;
             finally()
 
@@ -490,7 +490,7 @@ module Remote = struct
         let pwd = if check_save_password#active then entry_pwd#text else "" in
         let pass = if check_save_password#active then entry_pass#text else "" in
         history <- (user_host, (pwd, entry_key#filename, entry_pubkey#filename, pass, entry_filename#text)) ::
-            (List.remove_assoc user_host history);
+                   (List.remove_assoc user_host history);
         write_history history;
 
       method apply () =
@@ -520,8 +520,8 @@ module Remote = struct
   (** dialog_rename *)
   let dialog_rename ~editor ~page () =
     match page#file with
-      | None -> ()
-      | Some _ ->
+    | None -> ()
+    | Some _ ->
         let window = GWindow.dialog
             ~icon:Icons.oe ~title:(sprintf "Rename file?")
             ~position:`CENTER ~modal:true ~show:false ()
@@ -542,14 +542,14 @@ module Remote = struct
           end);
         let rec run () =
           match window#run () with
-            | `OK ->
+          | `OK ->
               let filename = entry#text in
               if filename <> page#get_filename then begin
                 let new_filename_exists =
                   let remote =
                     match page#file with
-                      | Some file -> (match file#remote with Some remote -> remote | _ -> assert false)
-                      | _ -> assert false
+                    | Some file -> (match file#remote with Some remote -> remote | _ -> assert false)
+                    | _ -> assert false
                   in
                   let newfile = Editor_file.create ~remote filename in
                   let newfile_exists = newfile#exists in
@@ -567,14 +567,14 @@ module Remote = struct
                   window#destroy()
                 end
               end else window#destroy()
-            | _ -> window#destroy()
+          | _ -> window#destroy()
         in run()
 
   (** dialog_save_as *)
   let dialog_save_as ~editor ~page () =
     match page#file with
-      | None -> ()
-      | Some _ ->
+    | None -> ()
+    | Some _ ->
         let window = GWindow.dialog
             ~icon:Icons.oe ~title:"Save as..."
             ~position:`CENTER ~modal:true ~show:false ()
@@ -595,13 +595,13 @@ module Remote = struct
           end);
         let rec run () =
           match window#run () with
-            | `OK ->
+          | `OK ->
               let filename = entry#text in
               if filename <> page#get_filename then begin
                 let remote =
                   match page#file with
-                    | Some file -> (match file#remote with Some remote -> remote | _ -> assert false)
-                    | _ -> assert false
+                  | Some file -> (match file#remote with Some remote -> remote | _ -> assert false)
+                  | _ -> assert false
                 in
                 let new_filename_exists =
                   let newfile = Editor_file.create ~remote filename in
@@ -629,7 +629,7 @@ module Remote = struct
                   window#destroy();
                 end
               end else window#destroy()
-            | _ -> window#destroy()
+          | _ -> window#destroy()
         in run()
 
 end

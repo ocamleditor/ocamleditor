@@ -33,14 +33,14 @@ type t = {
 }
 
 let create ~id ~name ~target_id = {
-   id          = id;
-   target_id   = target_id;
-   name        = name;
-   default     = false;
-   build_task  = `NONE;
-   env         = [];
-   env_replace = false;
-   args        = []
+  id          = id;
+  target_id   = target_id;
+  name        = name;
+  default     = false;
+  build_task  = `NONE;
+  env         = [];
+  env_replace = false;
+  args        = []
 }
 
 

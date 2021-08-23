@@ -77,8 +77,8 @@ let destroy_markers gutter markers =
   List.iter begin fun marker ->
     Gaux.may marker.icon_obj ~f:(fun i -> i#destroy());
     match GtkText.Mark.get_buffer marker.mark with
-      | None -> ()
-      | Some buffer ->
+    | None -> ()
+    | Some buffer ->
         GtkText.Buffer.delete_mark buffer marker.mark;
   end markers
 

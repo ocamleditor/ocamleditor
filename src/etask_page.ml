@@ -53,75 +53,75 @@ class view ?packing () =
   let entry_cmd = GEdit.entry ~packing:hbox#add () in
   let button_cmd = GButton.button ~label:"  ...  " ~packing:hbox#pack () in
   let _ = button_cmd#connect#clicked ~callback:begin fun () ->
-    let dialog = GWindow.file_chooser_dialog ~action:`OPEN ~position:`CENTER
-      ~title:"Choose program..." ~icon:Icons.oe
-      ~modal:true ~show:false () in
-    dialog#add_select_button_stock `OK `OK;
-    dialog#add_button_stock `CANCEL `CANCEL;
-    dialog#add_filter (GFile.filter ~name:"All Files" ~patterns:["*"] ());
-    dialog#add_filter (GFile.filter ~name:"OCaml Scripts" ~patterns:["*.ml"] ());
-    dialog#add_filter (GFile.filter ~name:"Shell Scripts" ~patterns:["*.sh"; "*.cmd"; "*.bat"] ());
-    dialog#add_filter (GFile.filter ~name:"Executables" ~patterns:["*.exe"] ());
-    match dialog#run () with
+      let dialog = GWindow.file_chooser_dialog ~action:`OPEN ~position:`CENTER
+          ~title:"Choose program..." ~icon:Icons.oe
+          ~modal:true ~show:false () in
+      dialog#add_select_button_stock `OK `OK;
+      dialog#add_button_stock `CANCEL `CANCEL;
+      dialog#add_filter (GFile.filter ~name:"All Files" ~patterns:["*"] ());
+      dialog#add_filter (GFile.filter ~name:"OCaml Scripts" ~patterns:["*.ml"] ());
+      dialog#add_filter (GFile.filter ~name:"Shell Scripts" ~patterns:["*.sh"; "*.cmd"; "*.bat"] ());
+      dialog#add_filter (GFile.filter ~name:"Executables" ~patterns:["*.exe"] ());
+      match dialog#run () with
       | `OK ->
-        Gaux.may dialog#filename ~f:entry_cmd#set_text;
-        dialog#destroy()
+          Gaux.may dialog#filename ~f:entry_cmd#set_text;
+          dialog#destroy()
       | _ -> dialog#destroy()
-  end in
+    end in
   (* Command line arguments and Environment Variables *)
   let entry_args, entry_env = Args_env_widget.create vbox in
-object (self)
-  inherit GObj.widget vbox#as_widget
-  val mutable etask = None
+  object (self)
+    inherit GObj.widget vbox#as_widget
+    val mutable etask = None
 
-  initializer
-    ignore (entry_name#connect#changed
-      ~callback:(self#update (fun etask -> etask.Task.et_name <- entry_name#text)));
-    ignore (check_always_project#connect#toggled
-      ~callback:(self#update (fun etask -> etask.Task.et_always_run_in_project <- check_always_project#active)));
-    ignore (check_always_script#connect#toggled
-      ~callback:(self#update (fun etask -> etask.Task.et_always_run_in_script <- check_always_script#active)));
-    ignore (entry_cmd#connect#changed
-      ~callback:(self#update (fun etask -> etask.Task.et_cmd <- entry_cmd#text)));
-    ignore (entry_args#connect#changed
-      ~callback:(self#update (fun etask -> etask.Task.et_args <- entry_args#entries)));
-    ignore (entry_env#connect#changed
-      ~callback:(self#update (fun etask -> etask.Task.et_env <- entry_env#entries)));
-    ignore (entry_env#connect#replace_changed
-      ~callback:(fun is_replace -> self#update (fun etask -> etask.Task.et_env_replace <- is_replace) ()));
-    ignore (combo_phase#connect#changed
-      ~callback:(self#update (fun etask -> etask.Task.et_phase <- Some (List.nth phases combo_phase#active))));
-    ignore (button_dir#connect#changed
-      ~callback:(self#update (fun etask -> etask.Task.et_dir <- button_dir#text)));
+    initializer
+      ignore (entry_name#connect#changed
+                ~callback:(self#update (fun etask -> etask.Task.et_name <- entry_name#text)));
+      ignore (check_always_project#connect#toggled
+                ~callback:(self#update (fun etask -> etask.Task.et_always_run_in_project <- check_always_project#active)));
+      ignore (check_always_script#connect#toggled
+                ~callback:(self#update (fun etask -> etask.Task.et_always_run_in_script <- check_always_script#active)));
+      ignore (entry_cmd#connect#changed
+                ~callback:(self#update (fun etask -> etask.Task.et_cmd <- entry_cmd#text)));
+      ignore (entry_args#connect#changed
+                ~callback:(self#update (fun etask -> etask.Task.et_args <- entry_args#entries)));
+      ignore (entry_env#connect#changed
+                ~callback:(self#update (fun etask -> etask.Task.et_env <- entry_env#entries)));
+      ignore (entry_env#connect#replace_changed
+                ~callback:(fun is_replace -> self#update (fun etask -> etask.Task.et_env_replace <- is_replace) ()));
+      ignore (combo_phase#connect#changed
+                ~callback:(self#update (fun etask -> etask.Task.et_phase <- Some (List.nth phases combo_phase#active))));
+      ignore (button_dir#connect#changed
+                ~callback:(self#update (fun etask -> etask.Task.et_dir <- button_dir#text)));
 
 
-  method set_task et =
-    etask <- Some et;
-    entry_name#set_text et.Task.et_name;
-    check_always_project#set_active et.Task.et_always_run_in_project;
-    check_always_script#set_active et.Task.et_always_run_in_script;
-    entry_cmd#set_text et.Task.et_cmd;
-    entry_args#set_entries et.Task.et_args;
-    entry_env#set_entries et.Task.et_env;
-    entry_env#set_replace et.Task.et_env_replace;
-    button_dir#set_text et.Task.et_dir;
-    self#misc#set_sensitive (not et.Task.et_readonly);
-    match et.Task.et_phase with
+    method set_task et =
+      etask <- Some et;
+      entry_name#set_text et.Task.et_name;
+      check_always_project#set_active et.Task.et_always_run_in_project;
+      check_always_script#set_active et.Task.et_always_run_in_script;
+      entry_cmd#set_text et.Task.et_cmd;
+      entry_args#set_entries et.Task.et_args;
+      entry_env#set_entries et.Task.et_env;
+      entry_env#set_replace et.Task.et_env_replace;
+      button_dir#set_text et.Task.et_dir;
+      self#misc#set_sensitive (not et.Task.et_readonly);
+      match et.Task.et_phase with
       | Some ph -> combo_phase#set_active (Miscellanea.Xlist.pos ph phases);
       | None -> combo_phase#set_active 0;
 
-  method private update update_func () =
-    Gaux.may etask ~f:update_func;
+    method private update update_func () =
+      Gaux.may etask ~f:update_func;
 
-  method entry_name = entry_name
+    method entry_name = entry_name
 
-  method connect = new signals ~changed
+    method connect = new signals ~changed
 
-end
+  end
 
 and changed () = object (self) inherit [unit] signal () as super end
 and signals ~changed =
-object (self)
-  inherit ml_signals [changed#disconnect]
-  method changed = changed#connect ~after
-end
+  object (self)
+    inherit ml_signals [changed#disconnect]
+    method changed = changed#connect ~after
+  end

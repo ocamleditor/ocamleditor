@@ -58,7 +58,7 @@ let replace (buffer : GText.buffer) =
     let iter = ref buffer#start_iter in
     while not !iter#is_end do
       match !iter#forward_search x with
-        | Some (start, stop) ->
+      | Some (start, stop) ->
           let mstart = buffer#create_mark(* ~name:(Gtk_util.create_mark_name "Greek.replace1")*) start in
           buffer#delete ~start ~stop;
           iter := buffer#get_iter_at_mark (`MARK mstart);
@@ -68,27 +68,27 @@ let replace (buffer : GText.buffer) =
             ~stop:((buffer#get_iter_at_mark (`MARK mstart))#forward_chars (Glib.Utf8.length y));*)
           iter := !iter#forward_char;
           buffer#delete_mark (`MARK mstart);
-        | None -> iter := buffer#end_iter
+      | None -> iter := buffer#end_iter
     done;
   in
   let iter = ref buffer#start_iter in
   while not !iter#is_end do
     match !iter#forward_search "'" with
-      | Some (start, stop) ->
+    | Some (start, stop) ->
         let mstart = buffer#create_mark(* ~name:(Gtk_util.create_mark_name "Greek.replace2")*) start in
         let mstop = ref mstart in
         iter := !iter#forward_char;
         begin
           match String.get (buffer#get_text ~start:!iter ~stop:!iter#forward_char ()) 0 with
-            | 'a'..'z' ->
+          | 'a'..'z' ->
               begin
                 iter := !iter#forward_char;
                 let stop = !iter#forward_char in
                 let text = buffer#get_text ~start:!iter ~stop () in
                 if String.length text > 0 then begin
                   match String.get text 0 with
-                    | '0'..'9' -> mstop := buffer#create_mark(* ~name:(Gtk_util.create_mark_name "Greek.replace3")*) stop
-                    | _ -> mstop := buffer#create_mark(* ~name:(Gtk_util.create_mark_name "Greek.replace4")*) !iter
+                  | '0'..'9' -> mstop := buffer#create_mark(* ~name:(Gtk_util.create_mark_name "Greek.replace3")*) stop
+                  | _ -> mstop := buffer#create_mark(* ~name:(Gtk_util.create_mark_name "Greek.replace4")*) !iter
                 end else mstop := buffer#create_mark(* ~name:(Gtk_util.create_mark_name "Greek.replace5")*) stop
               end;
               let start = buffer#get_iter_at_mark (`MARK mstart) in
@@ -100,12 +100,12 @@ let replace (buffer : GText.buffer) =
                 buffer#insert ~iter:(buffer#get_iter_at_mark (`MARK mstart)) repl;
                 iter := buffer#get_iter_at_mark (`MARK !mstop);
               end
-            | x ->
+          | x ->
               if not (GtkText.Mark.get_deleted mstart) then (buffer#delete_mark (`MARK mstart));
         end;
         if not (GtkText.Mark.get_deleted mstart) then (buffer#delete_mark (`MARK mstart));
         if not (GtkText.Mark.get_deleted !mstop) then (buffer#delete_mark (`MARK !mstop));
-      | None -> iter := buffer#end_iter
+    | None -> iter := buffer#end_iter
   done;
   replace "->" "\xE2\x86\x92";
   replace " * " " \xE2\xA8\xAF ";

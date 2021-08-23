@@ -59,25 +59,25 @@ let ocamldep ?times ?pp ?(ignore_stderr=false) ?(verbose=false) ?slash ?search_p
 
     let replace =
       match times with
-        | Some (times, opt) ->
+      | Some (times, opt) ->
           (* The resulting ocamldep-dag only contains files that need to be recompiled. *)
           fun table target dependencies ->
             let ml = Oebuild_util.replace_extension_to_ml target in
             let changed = Oebuild_table.update ~opt times ml in
             (* changed is true is source file is newer than object file *)
             Hashtbl.replace table target (changed, dependencies)
-        | _ -> fun table target dependencies ->
-          Hashtbl.replace table target (true, dependencies)
+      | _ -> fun table target dependencies ->
+        Hashtbl.replace table target (true, dependencies)
     in
     let open! Oebuild_util in
     List.iter begin fun entry ->
       match Str.split re1 entry with
-        | key :: _ when key ^^^ ".cmo" -> ()
-        | key :: [] -> replace table key []
-        | [key; deps] ->
+      | key :: _ when key ^^^ ".cmo" -> ()
+      | key :: [] -> replace table key []
+      | [key; deps] ->
           let deps = Str.split re3 deps in
           replace table key deps;
-        | _ -> eprintf "%s\n%s\n%!" filenames entry; assert false
+      | _ -> eprintf "%s\n%s\n%!" filenames entry; assert false
     end entries;
   end;
   table;;
@@ -150,8 +150,8 @@ let sort_dependencies (dag : ocamldeps) =
   in
   let rec loop res =
     match get_leaves dag with
-      | [] -> res
-      | leaves ->
+    | [] -> res
+    | leaves ->
         List.iter (Hashtbl.remove dag) leaves;
         loop (List.rev_append leaves res);
   in
@@ -215,7 +215,7 @@ let find_dep ?pp ?(ignore_stderr=false) ?(echo=true) target =
   let dir = Filename.dirname target in
   let filenames =
     (match dir with "." -> "*.mli" | _ -> dir ^ "/" ^ "*.mli *.mli") ^ " " ^
-      (match dir with "." -> "*.ml" | _ -> dir ^ "/" ^ "*.ml *.ml")
+    (match dir with "." -> "*.ml" | _ -> dir ^ "/" ^ "*.ml *.ml")
   in
   let search_path = Ocaml_config.expand_includes dir in
   let table = ocamldep ?pp ~ignore_stderr ~verbose:echo ~search_path filenames in
@@ -229,8 +229,8 @@ let find_dep ?pp ?(ignore_stderr=false) ?(echo=true) target =
     try
       if not (List.mem target !result) then begin
         match Hashtbl.find table target with
-          | (_, []) -> result := target :: !result;
-          | (_, deps) ->
+        | (_, []) -> result := target :: !result;
+        | (_, deps) ->
             List.iter find_chain deps;
             result := target :: !result;
       end

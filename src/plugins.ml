@@ -77,25 +77,25 @@ module type REMOTE = sig
       method misc : GObj.misc_ops
       method apply : unit -> unit
     end
-    and open_file :
-      unit ->
-      object
-        val mutable callbacks : (GtkSignal.id * (Editor_file_type.remote_login * string -> unit)) list
-        method call : Editor_file_type.remote_login * string -> unit
-        method callbacks : (GtkSignal.id * (Editor_file_type.remote_login * string -> unit)) list
-        method connect :
-          after:bool -> callback:(Editor_file_type.remote_login * string -> unit) -> GtkSignal.id
-        method disconnect : GtkSignal.id -> bool
-      end
-    and signals :
-      open_file:open_file ->
-      object ('a)
-        val after : bool
-        val mutable disconnectors : (GtkSignal.id -> bool) list
-        method after : 'a
-        method disconnect : GtkSignal.id -> unit
-        method open_file : callback:(Editor_file_type.remote_login * string -> unit) -> GtkSignal.id
-      end
+  and open_file :
+    unit ->
+    object
+      val mutable callbacks : (GtkSignal.id * (Editor_file_type.remote_login * string -> unit)) list
+      method call : Editor_file_type.remote_login * string -> unit
+      method callbacks : (GtkSignal.id * (Editor_file_type.remote_login * string -> unit)) list
+      method connect :
+        after:bool -> callback:(Editor_file_type.remote_login * string -> unit) -> GtkSignal.id
+      method disconnect : GtkSignal.id -> bool
+    end
+  and signals :
+    open_file:open_file ->
+    object ('a)
+      val after : bool
+      val mutable disconnectors : (GtkSignal.id -> bool) list
+      method after : 'a
+      method disconnect : GtkSignal.id -> unit
+      method open_file : callback:(Editor_file_type.remote_login * string -> unit) -> GtkSignal.id
+    end
 end
 
 

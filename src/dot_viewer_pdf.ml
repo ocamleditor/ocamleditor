@@ -24,11 +24,11 @@
 open Printf
 
 (*class virtual viewer =
-object
+  object
   method virtual display : filename:string -> unit
   method virtual coerce : GObj.widget
   method virtual destroy : unit -> unit
-end
+  end
 *)
 
 module PDF = struct
@@ -41,25 +41,25 @@ module PDF = struct
 
   let open_file filename =
     ignore (Thread.create begin fun () ->
-      begin
-        try
-          let cmd =
-            let filename = Filename.quote filename in
-            viewer_cmd ~filename
-          in
-          ignore (Sys.command cmd)
-        with ex -> Printf.printf "Dot.open_file: %s\n%!" (Printexc.to_string ex)
-      end;
-      Thread.delay 3.0;
-      let rec try_remove n =
-        try Sys.remove filename with _ ->
-          if n > 0 then begin
-            Thread.delay 1.;
-            try_remove (n-1)
-          end
-      in
-      try_remove 30
-    end ());;
+        begin
+          try
+            let cmd =
+              let filename = Filename.quote filename in
+              viewer_cmd ~filename
+            in
+            ignore (Sys.command cmd)
+          with ex -> Printf.printf "Dot.open_file: %s\n%!" (Printexc.to_string ex)
+        end;
+        Thread.delay 3.0;
+        let rec try_remove n =
+          try Sys.remove filename with _ ->
+            if n > 0 then begin
+              Thread.delay 1.;
+              try_remove (n-1)
+            end
+        in
+        try_remove 30
+      end ());;
 
   let lang = "pdf"
 
@@ -75,8 +75,8 @@ end
   val have_embedded_viewer : bool
   val create : ?packing:(GObj.widget -> unit) -> unit -> viewer option
   val draw : filename:string -> viewer option -> unit
-end
+  end
 
 
-let device : (module DEVICE) ref = ref (module PDF : DEVICE)
+  let device : (module DEVICE) ref = ref (module PDF : DEVICE)
 *)

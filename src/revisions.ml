@@ -160,32 +160,32 @@ class widget ~page ?packing () =
       view#connect#row_activated ~callback:(fun _ _ -> self#view_file ()) |> ignore;
       view#selection#connect#changed ~callback:begin fun () ->
         match view#selection#get_selected_rows with
-          | _ :: b :: c :: _ ->
+        | _ :: b :: c :: _ ->
             begin
               match view#get_cursor () with
-                | Some path, _ ->
+              | Some path, _ ->
                   let p = GTree.Path.to_string path in
                   if p <> GTree.Path.to_string b then view#selection#unselect_path b
                   else if p <> GTree.Path.to_string c then view#selection#unselect_path c
-                | _ -> ()
+              | _ -> ()
             end;
-          | _ -> ()
+        | _ -> ()
       end |> ignore;
       view#selection#connect#changed ~callback:begin fun () ->
         match view#selection#get_selected_rows with
-          | _ :: _ :: [] ->
+        | _ :: _ :: [] ->
             button_compare_ext#misc#set_sensitive true;
             button_diff#misc#set_sensitive true;
             button_view#misc#set_sensitive false;
-          | _ :: [] ->
+        | _ :: [] ->
             button_view#misc#set_sensitive true;
             button_compare_ext#misc#set_sensitive false;
             button_diff#misc#set_sensitive false;
-          | [] ->
+        | [] ->
             button_view#misc#set_sensitive false;
             button_compare_ext#misc#set_sensitive false;
             button_diff#misc#set_sensitive false;
-          | _ ->
+        | _ ->
             button_compare_ext#misc#set_sensitive false;
             button_diff#misc#set_sensitive false;
       end |> ignore;
@@ -197,16 +197,16 @@ class widget ~page ?packing () =
 
     method private set_show_withespaces () =
       match oview with
-        | Some ov ->
+      | Some ov ->
           ov#view#options#set_show_whitespace_chars button_ws#get_active;
           GtkBase.Widget.queue_draw ov#view#as_widget;
-        | _ -> ()
+      | _ -> ()
 
     method private view_diff () =
       Option.iter begin  fun (plugin : (module Plugins.DIFF)) ->
         let module Plugin_diff = (val plugin) in
         match view#selection#get_selected_rows with
-          | path2 :: path1 :: [] ->
+        | path2 :: path1 :: [] ->
             let row1 = model#get_iter path1 in
             let filename1 = self#get_filename ~row:row1 in
             let row2 = model#get_iter path2 in
@@ -228,7 +228,7 @@ class widget ~page ?packing () =
             ocamlview#buffer#connect#end_user_action ~callback:ocamlview#colorize |> ignore;
             oview <- Some ocamlview;
             ocamlview#view#misc#connect#destroy ~callback:(fun () -> oview <- None) |> ignore;
-          | _ -> ()
+        | _ -> ()
       end !Plugins.diff
 
     method private create_rev_indicator ?label ~row ~packing () =
@@ -244,7 +244,7 @@ class widget ~page ?packing () =
 
     method private view_file () =
       match view#selection#get_selected_rows with
-        | path :: [] ->
+      | path :: [] ->
           let row = model#get_iter path in
           let filename = self#get_filename ~row in
           (try pane#child2#destroy() with Gpointer.Null -> pane#set_position (pane#misc#allocation.Gtk.width / 2));
@@ -258,22 +258,22 @@ class widget ~page ?packing () =
           ocamlview#buffer#set_text (Buffer.contents (File_util.read filename));
           oview <- Some ocamlview;
           ocamlview#view#misc#connect#destroy ~callback:(fun () -> oview <- None) |> ignore;
-        | _ -> ()
+      | _ -> ()
 
     method private compare_ext () =
       match view#selection#get_selected_rows with
-        | path2 :: path1 :: [] ->
+      | path2 :: path1 :: [] ->
           let row = model#get_iter path1 in
           let filename1 = self#get_filename ~row in
           let row = model#get_iter path2 in
           let filename2 = self#get_filename ~row in
           Spawn.async mk_diff_cmd [| filename1; filename2 |] |> ignore
-        | _ -> ()
+      | _ -> ()
 
     method private get_filename ~row =
       match model#get ~row ~column:col_filename with
-        | Filename x -> x
-        | Command (cmd, ext) -> self#create_tmp_rev_file cmd ext
+      | Filename x -> x
+      | Command (cmd, ext) -> self#create_tmp_rev_file cmd ext
 
     method private create_tmp_rev_file cmd ext =
       let tmp = Filename.temp_file "ocamleditor" ext in
@@ -310,9 +310,9 @@ class widget ~page ?packing () =
         GtkThread.sync self#read_local_backups ();
         GtkThread.sync self#read_rev_history ();
         match selection with
-          | None ->
+        | None ->
             Gaux.may model#get_iter_first ~f:(fun row -> view#selection#select_path (model#get_path row));
-          | Some rev ->
+        | Some rev ->
             let find_path_by_rev (model : GTree.list_store) rev =
               let found = ref None in
               model#foreach begin fun path row ->
@@ -330,11 +330,11 @@ class widget ~page ?packing () =
 
     method private read_rev_history () =
       match Oe_config.git_version with
-        | None -> ()
-        | _ ->
+      | None -> ()
+      | _ ->
           let root = Filename.dirname (Project.path_src project) in
           match Miscellanea.filename_relative root page#get_filename with
-            | Some rel ->
+          | Some rel ->
               let sep = "\x1F" in
               let rel = List.fold_left (fun acc x -> acc ^ "/" ^ x) Filename.parent_dir_name (Miscellanea.filename_split rel) in
               let args = [|
@@ -349,23 +349,23 @@ class widget ~page ?packing () =
                   let line = Str.split re (input_line ic) in
                   let row = model#append () in
                   match line with
-                    | [rev; author; date; comment] ->
+                  | [rev; author; date; comment] ->
                       model#set ~row ~column:col_rev rev;
                       model#set ~row ~column:col_author author;
                       model#set ~row ~column:col_date date;
                       model#set ~row ~column:col_comment comment;
                       model#set ~row ~column:col_filename (Command ((sprintf "git show %s:%s" rev rel), get_filename_extension ~dir_sep:"/" rel));
-                    | _ -> ()
+                  | _ -> ()
                 end
               in
               Spawn.async ~process_in "git" args |> ignore;
-            | _ -> ()
+          | _ -> ()
 
     method private read_local_backups () =
       let src = Project.path_src project in
       let bak = Project.path_bak project in
       match Miscellanea.filename_relative src page#get_filename with
-        | Some rel ->
+      | Some rel ->
           let pos = String.rindex rel '.' in
           let prefix = String.sub rel 0 pos  in
           let suffix = String.sub rel pos (String.length rel - pos) in
@@ -394,7 +394,7 @@ class widget ~page ?packing () =
             model#set ~row ~column:col_author entry.author;
             model#set ~row ~column:col_filename entry.filename;
           end backups;
-        | _ -> ()
+      | _ -> ()
   end
 
 let create ~page =

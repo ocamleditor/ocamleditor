@@ -33,17 +33,17 @@ type t_column =
 type column_definition = string * column_type
 
 class virtual model () =
-object (self)
-  method virtual coerce : GTree.model
-  method virtual add : ?parent:Gtk.tree_iter -> unit -> Gtk.tree_iter
-  method virtual remove : Gtk.tree_iter -> bool
-  method virtual get : 'a. row:Gtk.tree_iter -> column:'a GTree.column -> 'a
-  method virtual set : 'a. row:Gtk.tree_iter -> column:'a GTree.column -> 'a -> unit
-  method virtual values : 'a. column:'a GTree.column -> 'a list
-  method virtual get_iter : Gtk.tree_path -> Gtk.tree_iter
-  method virtual get_path : Gtk.tree_iter -> Gtk.tree_path
-  method virtual iter_is_valid : Gtk.tree_iter -> bool
-end
+  object (self)
+    method virtual coerce : GTree.model
+    method virtual add : ?parent:Gtk.tree_iter -> unit -> Gtk.tree_iter
+    method virtual remove : Gtk.tree_iter -> bool
+    method virtual get : 'a. row:Gtk.tree_iter -> column:'a GTree.column -> 'a
+    method virtual set : 'a. row:Gtk.tree_iter -> column:'a GTree.column -> 'a -> unit
+    method virtual values : 'a. column:'a GTree.column -> 'a list
+    method virtual get_iter : Gtk.tree_path -> Gtk.tree_iter
+    method virtual get_path : Gtk.tree_iter -> Gtk.tree_path
+    method virtual iter_is_valid : Gtk.tree_iter -> bool
+  end
 
 type t = {
   model   : model;
@@ -54,15 +54,15 @@ type t = {
 (** Stores *)
 
 module Store =
-  struct
-    type t = GTree.column_list -> model
+struct
+  type t = GTree.column_list -> model
 
-    class tree cols =
-      (* Righe copiate da GTree *)
-      let _ = cols#lock () in
-      let types = (*List.map Gobject.Type.of_fundamental*) cols#types in
-      let store = GtkTree.TreeStore.create (Array.of_list types) in
-      let _ = Hashtbl.add GTree.model_ids(Gobject.get_oid store) cols#id in
+  class tree cols =
+    (* Righe copiate da GTree *)
+    let _ = cols#lock () in
+    let types = (*List.map Gobject.Type.of_fundamental*) cols#types in
+    let store = GtkTree.TreeStore.create (Array.of_list types) in
+    let _ = Hashtbl.add GTree.model_ids(Gobject.get_oid store) cols#id in
     object (self)
       inherit GTree.tree_store store as super_tree_store
       inherit model ()
@@ -72,12 +72,12 @@ module Store =
         failwith "Method Tree.Store.tree#values not implemented."
     end
 
-    class list' cols =
-      (* Righe copiate da GTree *)
-      let _ = cols#lock () in
-      let types = cols#types (*List.map Gobject.Type.of_fundamental (cols#kinds :> Gobject.fundamental_type list)*) in
-      let store = GtkTree.ListStore.create (Array.of_list types) in
-      let _ = Hashtbl.add GTree.model_ids (Gobject.get_oid store) cols#id in
+  class list' cols =
+    (* Righe copiate da GTree *)
+    let _ = cols#lock () in
+    let types = cols#types (*List.map Gobject.Type.of_fundamental (cols#kinds :> Gobject.fundamental_type list)*) in
+    let store = GtkTree.ListStore.create (Array.of_list types) in
+    let _ = Hashtbl.add GTree.model_ids (Gobject.get_oid store) cols#id in
     object (self)
       inherit GTree.list_store store as super_list_store
       inherit model () as super_model
@@ -95,35 +95,35 @@ module Store =
         with _ -> []
     end
 
-    let tree = fun cols -> ((new tree cols) :> model)
+  let tree = fun cols -> ((new tree cols) :> model)
 
-    let list = fun cols -> ((new list' cols) :> model)
-  end
+  let list = fun cols -> ((new list' cols) :> model)
+end
 
 
 (** Simple tree *)
 
 (*let expander_open = (GMisc.image ~file:"tree_minus.xpm" ())#pixbuf
-let expander_closed = (GMisc.image ~file:"tree_plus.xpm" ())#pixbuf
-let leaf = (GMisc.image ~file:"tree_leaf.xpm" ())#pixbuf*)
+  let expander_closed = (GMisc.image ~file:"tree_plus.xpm" ())#pixbuf
+  let leaf = (GMisc.image ~file:"tree_leaf.xpm" ())#pixbuf*)
 
 let create ~cols ?packing ?(store=Store.tree) () =
   let column_list = new GTree.column_list in
   let columns = List.map begin function (title, datatype) ->
     match datatype with
-      | BOOL ->
+    | BOOL ->
         let col = column_list#add Gobject.Data.boolean in
         let renderer = GTree.cell_renderer_toggle [] in
         let attrs = ["active", col] in
         C_bool (col, renderer), GTree.view_column ~title ~renderer:(renderer, attrs) ()
-      | STRING ->
+    | STRING ->
         let col = column_list#add Gobject.Data.string in
         let text_renderer = GTree.cell_renderer_text [(*`EDITABLE true*)] in
         let vc = GTree.view_column ~title () in
         vc#pack text_renderer;
         vc#add_attribute text_renderer "text" col;
         C_string (col, text_renderer), vc
-  end cols in
+    end cols in
   let store = store column_list in
   let sw = GBin.scrolled_window ~vpolicy:`AUTOMATIC ~hpolicy:`AUTOMATIC ?packing () in
   let view = GTree.view ~model:(store#coerce) ~packing:sw#add () in
@@ -147,17 +147,17 @@ let append ?parent ~(data : value list) tree =
   let row = tree.model#add ?parent () in
   List.iter2 begin fun (column, _) d ->
     match column with
-      | C_bool (column, _) -> tree.model#set (bool_of d) ~row ~column;
-      | C_string (column, _) -> tree.model#set (string_of d) ~row ~column;
+    | C_bool (column, _) -> tree.model#set (bool_of d) ~row ~column;
+    | C_string (column, _) -> tree.model#set (string_of d) ~row ~column;
   end tree.columns data;
   row
 
 let remove ~paths tree =
   let rows = Array.of_list paths in
   let rows = Array.mapi begin fun i r ->
-    (* Path meno la sua posiz. per permettere la rimozione con Array.iter *)
-    GTree.Path.create [(GTree.Path.get_indices r).(0) - i]
-  end rows in
+      (* Path meno la sua posiz. per permettere la rimozione con Array.iter *)
+      GTree.Path.create [(GTree.Path.get_indices r).(0) - i]
+    end rows in
   Array.iter (fun r -> ignore(tree.model#remove (tree.model#coerce#get_iter r))) rows;
   if tree.view#selection#count_selected_rows > 0 then
     tree.view#selection#select_path (rows.(0))

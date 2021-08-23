@@ -115,21 +115,21 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.|}
       begin
         match Check_for_updates.check About.version () with
         | Some ver ->
-          icon#set_stock `DIALOG_INFO;
-          label#misc#hide();
-          let text = sprintf "A new version of %s is available (%s)" About.program_name ver in
-          let button = GButton.button ~packing:(hbox#pack ~expand:true ~fill:false) () in
-          let label = GMisc.label ~text ~xalign:0.5 ~yalign:0.5 ~packing:button#add () in
-          modify_label ~color:"#0000ff" label;
-          button#set_relief `NONE;
-          ignore (button#connect#clicked ~callback:begin fun () ->
-              dialog#misc#hide();
-              open_url About.releases;
-              dialog#destroy();
-            end);
+            icon#set_stock `DIALOG_INFO;
+            label#misc#hide();
+            let text = sprintf "A new version of %s is available (%s)" About.program_name ver in
+            let button = GButton.button ~packing:(hbox#pack ~expand:true ~fill:false) () in
+            let label = GMisc.label ~text ~xalign:0.5 ~yalign:0.5 ~packing:button#add () in
+            modify_label ~color:"#0000ff" label;
+            button#set_relief `NONE;
+            ignore (button#connect#clicked ~callback:begin fun () ->
+                dialog#misc#hide();
+                open_url About.releases;
+                dialog#destroy();
+              end);
         | None ->
-          icon#set_stock `APPLY;
-          kprintf label#set_text "%s is up to date." About.program_name
+            icon#set_stock `APPLY;
+            kprintf label#set_text "%s is up to date." About.program_name
       end;
     with ex -> begin
         kprintf label#set_text "Unable to contact server for updates (%s)." (Printexc.to_string ex);
