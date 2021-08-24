@@ -43,21 +43,21 @@ let string_of_type = function
   | String -> "String"
 
 let type_of_string = function
-   | "Flag" -> Flag
-   | "Bool" -> Bool
-   | "String" -> String
-   | "Flag_Set" | "Flag_Clear" -> Flag
-   | _ -> invalid_arg "type_of_string"
+  | "Flag" -> Flag
+  | "Bool" -> Bool
+  | "String" -> String
+  | "Flag_Set" | "Flag_Clear" -> Flag
+  | _ -> invalid_arg "type_of_string"
 
 let string_of_pass = function
-   | `key -> "-key"
-   | `value -> "value"
-   | `key_value -> "-key value"
+  | `key -> "-key"
+  | `value -> "value"
+  | `key_value -> "-key value"
 
 let pass_of_string = function
-   | "-key" -> `key
-   | "value" -> `value
-   | "-key value" -> `key_value
-   | _ -> invalid_arg "pass_of_string"
+  | "-key" -> `key
+  | "value" -> `value
+  | "-key value" -> `key_value
+  | _ -> invalid_arg "pass_of_string"
 
 

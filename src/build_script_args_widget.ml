@@ -173,232 +173,232 @@ class widget ~project ?packing () =
   let button_remove     = GButton.button ~stock:`REMOVE ~packing:bbox#pack () in
   let _                 = button_remove#set_focus_on_click false in
   let _                 = button_remove#set_image (GMisc.image ~icon_size:`MENU ~stock:`REMOVE ())#coerce in
-object (self)
-  inherit GObj.widget hbox#as_widget
+  object (self)
+    inherit GObj.widget hbox#as_widget
 
-  val mutable n_rows = 0
+    val mutable n_rows = 0
 
-  initializer
-    ignore (button_add#connect#clicked ~callback:self#add);
-    ignore (button_remove#connect#clicked ~callback:self#remove);
-    ignore (rend_type#connect#edited ~callback:begin fun path text ->
-      let row = model#get_iter path in
-      model#set ~row ~column:col_opt_type text;
-      self#update_pass row;
+    initializer
+      ignore (button_add#connect#clicked ~callback:self#add);
+      ignore (button_remove#connect#clicked ~callback:self#remove);
+      ignore (rend_type#connect#edited ~callback:begin fun path text ->
+          let row = model#get_iter path in
+          model#set ~row ~column:col_opt_type text;
+          self#update_pass row;
+          let is_flag = self#is_flag row in
+          let is_bool = self#is_bool row in
+          let default_value = model#get ~row ~column:col_opt_def_value in
+
+          if is_bool && not (List.mem default_value ["true"; "false"])
+          then model#set ~row ~column:col_opt_def_value "true";
+
+          if is_flag && default_value <> ""
+          then model#set ~row ~column:col_opt_def_value "";
+
+          if is_flag then model#set ~row ~column:col_opt_def_flag false;
+
+          Gmisclib.Idle.add view#misc#grab_focus
+        end);
+      ignore (rend_name#connect#edited ~callback:begin fun path text ->
+          model#set ~row:(model#get_iter path) ~column:col_opt_key text;
+        end);
+      ignore (rend_doc#connect#edited ~callback:begin fun path text ->
+          model#set ~row:(model#get_iter path) ~column:col_opt_doc text;
+        end);
+      ignore (rend_et_name#connect#edited ~callback:begin fun path text ->
+          let row = model#get_iter path in
+          model#set ~row ~column:col_opt_arg string_of_add; (* Set ADD as default value *)
+          model#set ~row ~column:col_opt_et_name text;
+          self#update_pass row;
+          Gmisclib.Idle.add view#misc#grab_focus
+        end);
+      ignore (rend_args#connect#edited ~callback:begin fun path text ->
+          let row = model#get_iter path in
+          model_arg#clear();
+          model#set ~row ~column:col_opt_arg text;
+          self#update_pass row;
+          Gmisclib.Idle.add view#misc#grab_focus;
+        end);
+      ignore (rend_cmd#connect#edited ~callback:begin fun path text ->
+          let row = model#get_iter path in
+          model#set ~row ~column:col_opt_cmd text;
+          Gmisclib.Idle.add view#misc#grab_focus
+        end);
+      ignore (rend_pass#connect#edited ~callback:begin fun path text ->
+          let row = model#get_iter path in
+          model#set ~row ~column:col_opt_pass text;
+          Gmisclib.Idle.add view#misc#grab_focus
+        end);
+      ignore (rend_def_flag#connect#toggled ~callback:begin fun path ->
+          let row = model#get_iter path in
+          model#set ~row ~column:col_opt_def_flag (not (model#get ~row ~column:col_opt_def_flag));
+        end);
+      ignore (rend_def_ovr#connect#toggled ~callback:begin fun path ->
+          let row = model#get_iter path in
+          model#set ~row ~column:col_opt_def_ovr (not (model#get ~row ~column:col_opt_def_ovr));
+        end);
+      ignore (rend_def_bool#connect#edited ~callback:begin fun path text ->
+          let row = model#get_iter path in
+          model#set ~row ~column:col_opt_def_value text;
+        end);
+      ignore (rend_def_string#connect#edited ~callback:begin fun path text ->
+          let row = model#get_iter path in
+          model#set ~row ~column:col_opt_def_value text;
+        end);
+      (*  *)
+      ignore (view#selection#connect#after#changed ~callback:self#fill_model_arg);
+      ignore (view#connect#cursor_changed ~callback:self#fill_model_arg);
+      (* Cell Data Func *)
+      vc_opt_def#set_cell_data_func rend_def_flag begin fun _ row ->
+        let is_flag = self#is_flag row in
+        let is_bool = self#is_bool row in
+        let is_ovr = model#get ~row ~column:col_opt_def_ovr in
+        rend_def_flag#set_properties [`ACTIVATABLE is_flag; `VISIBLE (is_ovr && is_flag)];
+        rend_def_string#set_properties [`EDITABLE (not is_flag && not is_bool); `VISIBLE (is_ovr && not is_flag && not is_bool)];
+        rend_def_bool#set_properties [`EDITABLE is_bool; `VISIBLE (is_ovr && is_bool)];
+      end;
+      vc_opt_pass#set_cell_data_func rend_pass_flag begin fun _ row ->
+        let is_flag = self#is_flag row in
+        rend_pass_flag#set_properties [`VISIBLE is_flag];
+        rend_pass#set_properties [`VISIBLE (not is_flag); `EDITABLE (not is_flag); `MODE (if is_flag then `INERT else `EDITABLE)];
+      end;
+      self#set project.build_script.bs_args;
+
+    method private is_flag row = model#get ~row ~column:col_opt_type = "Flag"
+
+    method private is_bool row = (model#get ~row ~column:col_opt_type) = (string_of_type Bool)
+
+    method private is_arg_add row = (model#get ~row ~column:col_opt_arg) = string_of_add
+
+    method private update_pass row =
       let is_flag = self#is_flag row in
-      let is_bool = self#is_bool row in
-      let default_value = model#get ~row ~column:col_opt_def_value in
+      let is_arg_add = self#is_arg_add row in
+      if is_flag then begin
+        model#set ~row ~column:col_opt_pass (string_of_pass `key)
+      end else begin
+        if model#get ~row ~column:col_opt_pass = (string_of_pass `key) then model#set ~row ~column:col_opt_pass "";
+      end;
+      (*if is_arg_add then (model#set ~row ~column:col_opt_pass (string_of_pass `key_value));*)
 
-      if is_bool && not (List.mem default_value ["true"; "false"])
-      then model#set ~row ~column:col_opt_def_value "true";
+    method find_task_by_name et_name =
+      let res = ref None in
+      model_et#foreach begin fun path row ->
+        let name = model_et#get ~row ~column:col_et_name in
+        if name = et_name then (res := Some (model_et#get ~row ~column:col_et); true)
+        else false
+      end;
+      !res
 
-      if is_flag && default_value <> ""
-      then model#set ~row ~column:col_opt_def_value "";
+    method private fill_model_arg' args =
+      let row = model_arg#append () in
+      model_arg#set ~row ~column:col_arg string_of_add ;
+      List.iter begin fun (enabled, arg) ->
+        if enabled then
+          let row = model_arg#append () in
+          model_arg#set ~row ~column:col_arg arg;
+          n_rows <- n_rows + 1;
+      end args
 
-      if is_flag then model#set ~row ~column:col_opt_def_flag false;
-
-      Gmisclib.Idle.add view#misc#grab_focus
-    end);
-    ignore (rend_name#connect#edited ~callback:begin fun path text ->
-      model#set ~row:(model#get_iter path) ~column:col_opt_key text;
-    end);
-    ignore (rend_doc#connect#edited ~callback:begin fun path text ->
-      model#set ~row:(model#get_iter path) ~column:col_opt_doc text;
-    end);
-    ignore (rend_et_name#connect#edited ~callback:begin fun path text ->
-      let row = model#get_iter path in
-      model#set ~row ~column:col_opt_arg string_of_add; (* Set ADD as default value *)
-      model#set ~row ~column:col_opt_et_name text;
-      self#update_pass row;
-      Gmisclib.Idle.add view#misc#grab_focus
-    end);
-    ignore (rend_args#connect#edited ~callback:begin fun path text ->
-      let row = model#get_iter path in
+    method private fill_model_arg () =
       model_arg#clear();
-      model#set ~row ~column:col_opt_arg text;
-      self#update_pass row;
-      Gmisclib.Idle.add view#misc#grab_focus;
-    end);
-    ignore (rend_cmd#connect#edited ~callback:begin fun path text ->
-      let row = model#get_iter path in
-      model#set ~row ~column:col_opt_cmd text;
-      Gmisclib.Idle.add view#misc#grab_focus
-    end);
-    ignore (rend_pass#connect#edited ~callback:begin fun path text ->
-      let row = model#get_iter path in
-      model#set ~row ~column:col_opt_pass text;
-      Gmisclib.Idle.add view#misc#grab_focus
-    end);
-    ignore (rend_def_flag#connect#toggled ~callback:begin fun path ->
-      let row = model#get_iter path in
-      model#set ~row ~column:col_opt_def_flag (not (model#get ~row ~column:col_opt_def_flag));
-    end);
-    ignore (rend_def_ovr#connect#toggled ~callback:begin fun path ->
-      let row = model#get_iter path in
-      model#set ~row ~column:col_opt_def_ovr (not (model#get ~row ~column:col_opt_def_ovr));
-    end);
-    ignore (rend_def_bool#connect#edited ~callback:begin fun path text ->
-      let row = model#get_iter path in
-      model#set ~row ~column:col_opt_def_value text;
-    end);
-    ignore (rend_def_string#connect#edited ~callback:begin fun path text ->
-      let row = model#get_iter path in
-      model#set ~row ~column:col_opt_def_value text;
-    end);
-    (*  *)
-    ignore (view#selection#connect#after#changed ~callback:self#fill_model_arg);
-    ignore (view#connect#cursor_changed ~callback:self#fill_model_arg);
-    (* Cell Data Func *)
-    vc_opt_def#set_cell_data_func rend_def_flag begin fun _ row ->
-      let is_flag = self#is_flag row in
-      let is_bool = self#is_bool row in
-      let is_ovr = model#get ~row ~column:col_opt_def_ovr in
-      rend_def_flag#set_properties [`ACTIVATABLE is_flag; `VISIBLE (is_ovr && is_flag)];
-      rend_def_string#set_properties [`EDITABLE (not is_flag && not is_bool); `VISIBLE (is_ovr && not is_flag && not is_bool)];
-      rend_def_bool#set_properties [`EDITABLE is_bool; `VISIBLE (is_ovr && is_bool)];
-    end;
-    vc_opt_pass#set_cell_data_func rend_pass_flag begin fun _ row ->
-      let is_flag = self#is_flag row in
-      rend_pass_flag#set_properties [`VISIBLE is_flag];
-      rend_pass#set_properties [`VISIBLE (not is_flag); `EDITABLE (not is_flag); `MODE (if is_flag then `INERT else `EDITABLE)];
-    end;
-    self#set project.build_script.bs_args;
-
-  method private is_flag row = model#get ~row ~column:col_opt_type = "Flag"
-
-  method private is_bool row = (model#get ~row ~column:col_opt_type) = (string_of_type Bool)
-
-  method private is_arg_add row = (model#get ~row ~column:col_opt_arg) = string_of_add
-
-  method private update_pass row =
-    let is_flag = self#is_flag row in
-    let is_arg_add = self#is_arg_add row in
-    if is_flag then begin
-      model#set ~row ~column:col_opt_pass (string_of_pass `key)
-    end else begin
-      if model#get ~row ~column:col_opt_pass = (string_of_pass `key) then model#set ~row ~column:col_opt_pass "";
-    end;
-    (*if is_arg_add then (model#set ~row ~column:col_opt_pass (string_of_pass `key_value));*)
-
-  method find_task_by_name et_name =
-    let res = ref None in
-    model_et#foreach begin fun path row ->
-      let name = model_et#get ~row ~column:col_et_name in
-      if name = et_name then (res := Some (model_et#get ~row ~column:col_et); true)
-      else false
-    end;
-    !res
-
-  method private fill_model_arg' args =
-    let row = model_arg#append () in
-    model_arg#set ~row ~column:col_arg string_of_add ;
-    List.iter begin fun (enabled, arg) ->
-      if enabled then
-        let row = model_arg#append () in
-        model_arg#set ~row ~column:col_arg arg;
-        n_rows <- n_rows + 1;
-    end args
-
-  method private fill_model_arg () =
-    model_arg#clear();
-    match view#selection#get_selected_rows with
+      match view#selection#get_selected_rows with
       | path :: [] ->
-        let row = model#get_iter path in
-        let et_name = model#get ~row ~column:col_opt_et_name in
-        begin
-          match self#find_task_by_name et_name with
+          let row = model#get_iter path in
+          let et_name = model#get ~row ~column:col_opt_et_name in
+          begin
+            match self#find_task_by_name et_name with
             | Some (_, et) -> self#fill_model_arg' et.et_args
             | None -> self#fill_model_arg' []
-        end;
+          end;
       | _ -> model_arg#clear();
 
-  method add () =
-    let row = model#append () in
-    n_rows <- n_rows + 1;
-    let default_type = model_type#get
-      ~row:(model_type#get_iter (GTree.Path.create [0]))
-      ~column:col_type
-    in
-    model#set ~row ~column:col_opt_type default_type;
-    model#set ~row ~column:col_opt_key "";
-    model#set ~row ~column:col_opt_doc "";
-    model#set ~row ~column:col_opt_def_value "";
-    view#set_cursor (model#get_path row) vc_opt_cmd;
-    view#misc#grab_focus();
-
-  method remove () =
-    let paths = view#selection#get_selected_rows in
-    let remove_path path =
-      let next =
-        if GTree.Path.to_string path = GTree.Path.to_string (GTree.Path.create [n_rows - 1])
-        then let next = GTree.Path.copy path in ignore ((GTree.Path.prev next)); next
-        else path
-      in
-      ignore (model#remove (model#get_iter path));
-      n_rows <- n_rows - 1;
-      view#selection#select_path next;
-      view#scroll_to_cell ~align:(0.5, 0.0) next vc_opt_type;
-    in
-    List.iter remove_path paths
-
-  method set args =
-    List.iter begin fun arg ->
+    method add () =
       let row = model#append () in
-      model#set ~row ~column:col_opt_def_ovr arg.bsa_default_override;
-      model#set ~row ~column:col_opt_type (string_of_type arg.bsa_type);
-      model#set ~row ~column:col_opt_key arg.bsa_key;
-      model#set ~row ~column:col_opt_doc arg.bsa_doc;
-      begin
-        match arg.bsa_default with
+      n_rows <- n_rows + 1;
+      let default_type = model_type#get
+          ~row:(model_type#get_iter (GTree.Path.create [0]))
+          ~column:col_type
+      in
+      model#set ~row ~column:col_opt_type default_type;
+      model#set ~row ~column:col_opt_key "";
+      model#set ~row ~column:col_opt_doc "";
+      model#set ~row ~column:col_opt_def_value "";
+      view#set_cursor (model#get_path row) vc_opt_cmd;
+      view#misc#grab_focus();
+
+    method remove () =
+      let paths = view#selection#get_selected_rows in
+      let remove_path path =
+        let next =
+          if GTree.Path.to_string path = GTree.Path.to_string (GTree.Path.create [n_rows - 1])
+          then let next = GTree.Path.copy path in ignore ((GTree.Path.prev next)); next
+          else path
+        in
+        ignore (model#remove (model#get_iter path));
+        n_rows <- n_rows - 1;
+        view#selection#select_path next;
+        view#scroll_to_cell ~align:(0.5, 0.0) next vc_opt_type;
+      in
+      List.iter remove_path paths
+
+    method set args =
+      List.iter begin fun arg ->
+        let row = model#append () in
+        model#set ~row ~column:col_opt_def_ovr arg.bsa_default_override;
+        model#set ~row ~column:col_opt_type (string_of_type arg.bsa_type);
+        model#set ~row ~column:col_opt_key arg.bsa_key;
+        model#set ~row ~column:col_opt_doc arg.bsa_doc;
+        begin
+          match arg.bsa_default with
           | `flag x -> model#set ~row ~column:col_opt_def_flag x;
           | `bool x -> model#set ~row ~column:col_opt_def_value (string_of_bool x);
           | `string x -> model#set ~row ~column:col_opt_def_value x;
-      end;
-      model#set ~row ~column:col_opt_et_name (taskname_of_task arg.bsa_task);
-      model#set ~row ~column:col_opt_arg begin
-        match arg.bsa_mode with
+        end;
+        model#set ~row ~column:col_opt_et_name (taskname_of_task arg.bsa_task);
+        model#set ~row ~column:col_opt_arg begin
+          match arg.bsa_mode with
           | `add -> string_of_add
           | `replace arg -> arg
-      end;
-      model#set ~row ~column:col_opt_cmd (Build_script_command.string_of_command arg.bsa_cmd);
-      model#set ~row ~column:col_opt_pass (string_of_pass arg.bsa_pass);
-    end args;
+        end;
+        model#set ~row ~column:col_opt_cmd (Build_script_command.string_of_command arg.bsa_cmd);
+        model#set ~row ~column:col_opt_pass (string_of_pass arg.bsa_pass);
+      end args;
 
-  method get () =
-    let arguments = ref [] in
-    let count = ref 0 in
-    model#foreach begin fun path row ->
-      let bc_et = self#find_task_by_name (model#get ~row ~column:col_opt_et_name) in
-      (*match self#find_task_by_name (model#get ~row ~column:col_opt_et_name) with
-        | Some bc_et ->*)
-          let bsa_type = type_of_string (model#get ~row ~column:col_opt_type) in
-          let bsa_default =
-            match bsa_type with
-              | Flag -> `flag (model#get ~row ~column:col_opt_def_flag)
-              | Bool -> `bool (bool_of_string (model#get ~row ~column:col_opt_def_value))
-              | String -> `string (model#get ~row ~column:col_opt_def_value)
-          in
-          let bsa_mode =
-            let arg = model#get ~row ~column:col_opt_arg in
-            if arg = string_of_add then `add else (`replace arg)
-          in
-          arguments            := {
-            bsa_id               = !count;
-            bsa_type             = bsa_type;
-            bsa_key              = (model#get ~row ~column:col_opt_key);
-            bsa_doc              = (model#get ~row ~column:col_opt_doc);
-            bsa_default_override = (model#get ~row ~column:col_opt_def_ovr);
-            bsa_default          = bsa_default;
-            bsa_task             = bc_et;
-            bsa_mode             = bsa_mode;
-            bsa_pass             = (pass_of_string (model#get ~row ~column:col_opt_pass));
-            bsa_cmd              = (Build_script_command.command_of_string (model#get ~row ~column:col_opt_cmd))
-          } :: !arguments;
-          incr count;
-          false
+    method get () =
+      let arguments = ref [] in
+      let count = ref 0 in
+      model#foreach begin fun path row ->
+        let bc_et = self#find_task_by_name (model#get ~row ~column:col_opt_et_name) in
+        (*match self#find_task_by_name (model#get ~row ~column:col_opt_et_name) with
+          | Some bc_et ->*)
+        let bsa_type = type_of_string (model#get ~row ~column:col_opt_type) in
+        let bsa_default =
+          match bsa_type with
+          | Flag -> `flag (model#get ~row ~column:col_opt_def_flag)
+          | Bool -> `bool (bool_of_string (model#get ~row ~column:col_opt_def_value))
+          | String -> `string (model#get ~row ~column:col_opt_def_value)
+        in
+        let bsa_mode =
+          let arg = model#get ~row ~column:col_opt_arg in
+          if arg = string_of_add then `add else (`replace arg)
+        in
+        arguments            := {
+          bsa_id               = !count;
+          bsa_type             = bsa_type;
+          bsa_key              = (model#get ~row ~column:col_opt_key);
+          bsa_doc              = (model#get ~row ~column:col_opt_doc);
+          bsa_default_override = (model#get ~row ~column:col_opt_def_ovr);
+          bsa_default          = bsa_default;
+          bsa_task             = bc_et;
+          bsa_mode             = bsa_mode;
+          bsa_pass             = (pass_of_string (model#get ~row ~column:col_opt_pass));
+          bsa_cmd              = (Build_script_command.command_of_string (model#get ~row ~column:col_opt_cmd))
+        } :: !arguments;
+        incr count;
+        false
         (*| _-> false*)
-    end;
-    List.rev !arguments
-end
+      end;
+      List.rev !arguments
+  end
 
 

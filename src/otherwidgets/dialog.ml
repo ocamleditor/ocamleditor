@@ -25,12 +25,12 @@ open Printf
 
 let info ?(title="") ?(message_type=`INFO) ~message widget =
   match GWindow.toplevel widget with
-    | None -> ()
-    | Some parent ->
+  | None -> ()
+  | Some parent ->
       if message <> "" then begin
         let message = GWindow.message_dialog ~message ~title
-          ~modal:true ~position:`CENTER ~parent ~type_hint:`DIALOG
-          ~message_type ~buttons:(GWindow.Buttons.ok) () in
+            ~modal:true ~position:`CENTER ~parent ~type_hint:`DIALOG
+            ~message_type ~buttons:(GWindow.Buttons.ok) () in
         message#set_transient_for parent#as_window;
         ignore(message#run());
         message#destroy()
@@ -38,8 +38,8 @@ let info ?(title="") ?(message_type=`INFO) ~message widget =
 
 let message ?(title="") ~message message_type =
   let message = GWindow.message_dialog ~message ~title
-    ~modal:true ~position:`CENTER ~type_hint:`DIALOG ~icon:Icons.oe
-    ~message_type ~buttons:(GWindow.Buttons.ok) () in
+      ~modal:true ~position:`CENTER ~type_hint:`DIALOG ~icon:Icons.oe
+      ~message_type ~buttons:(GWindow.Buttons.ok) () in
   ignore(message#run());
   message#destroy()
 
@@ -54,36 +54,36 @@ let display_exn ?parent ?title ?(message="") e =
     dialog#destroy()
   in
   match parent with
-    | None -> display ()
-    | Some widget ->
+  | None -> display ()
+  | Some widget ->
       begin
         match GWindow.toplevel widget with
-          | None -> display ()
-          | Some parent -> display ~parent ()
+        | None -> display ()
+        | Some parent -> display ~parent ()
       end
 
 let process_still_active ~name ~ok ~cancel () =
   let dialog = GWindow.message_dialog ~title:"Process is still active"
-    ~message:(sprintf "Terminate process \"%s\"?" name)
-    ~message_type:`QUESTION ~buttons:GWindow.Buttons.ok_cancel ~modal:true ~position:`CENTER () in
+      ~message:(sprintf "Terminate process \"%s\"?" name)
+      ~message_type:`QUESTION ~buttons:GWindow.Buttons.ok_cancel ~modal:true ~position:`CENTER () in
   begin match dialog#run () with
-    | `OK -> ok()
-    | `CANCEL ->
+  | `OK -> ok()
+  | `CANCEL ->
       dialog#destroy();
       cancel()
-    | _ -> ()
+  | _ -> ()
   end;
   dialog#destroy();;
 
 let confirm ?(title="") ?image ~message ~yes ~no ?(cancel=true) parent =
   let dialog = GWindow.dialog
-    ~title
-    ~urgency_hint:true
-    ~position:`CENTER
-    ~modal:true
-    ~border_width:8
-    ~icon:Icons.oe
-    () in
+      ~title
+      ~urgency_hint:true
+      ~position:`CENTER
+      ~modal:true
+      ~border_width:8
+      ~icon:Icons.oe
+      () in
   let yes_text, yes_func = yes in
   let no_text, no_func = no in
   dialog#add_button yes_text `YES;
@@ -98,19 +98,19 @@ let confirm ?(title="") ?image ~message ~yes ~no ?(cancel=true) parent =
   let hbox = GPack.hbox ~spacing:8 ~packing:dialog#vbox#add () in
   Gaux.may image ~f:hbox#pack;
   hbox#pack (match image with
-    | Some image -> image
-    | _ -> (GMisc.image ~stock:`DIALOG_QUESTION ~icon_size:`DIALOG ())#coerce);
+      | Some image -> image
+      | _ -> (GMisc.image ~stock:`DIALOG_QUESTION ~icon_size:`DIALOG ())#coerce);
   let _ = GMisc.label ~xalign:0.0 ~text:message ~packing:hbox#add () in
   match dialog#run () with
-    | `YES ->
+  | `YES ->
       yes_func ();
       dialog#destroy();
       `YES
-    | `NO ->
+  | `NO ->
       no_func ();
       dialog#destroy();
       `NO
-    | _ ->
+  | _ ->
       dialog#destroy();
       `CANCEL
 

@@ -46,65 +46,65 @@ class widget ~project ?(spacing=3) ?border_width ~label_width ?packing ()=
   let button_native = GButton.button ~label:"Test" ~packing:box#pack () in
 
   let original_ocamllib = try Sys.getenv "OCAMLLIB" with Not_found -> "" in
-object (self)
-  inherit GObj.widget vbox#as_widget
+  object (self)
+    inherit GObj.widget vbox#as_widget
 
-  method private with_ocamllib : 'a.(unit -> 'a) -> 'a = fun f ->
-    Ocaml_config.putenv_ocamllib (Some entry_ocamllib#text);
-    let finally () = Ocaml_config.putenv_ocamllib (Some original_ocamllib) in
-    (try let result = f() in finally(); result with ex -> (finally(); raise ex))
+    method private with_ocamllib : 'a.(unit -> 'a) -> 'a = fun f ->
+      Ocaml_config.putenv_ocamllib (Some entry_ocamllib#text);
+      let finally () = Ocaml_config.putenv_ocamllib (Some original_ocamllib) in
+      (try let result = f() in finally(); result with ex -> (finally(); raise ex))
 
-  method get_ocaml_version () =
-    try
-      self#with_ocamllib begin fun () ->
-        let compiler = match Ocaml_config.find_tool `OCAMLC "" with Some x -> x | _ -> assert false in
-        let output = String.trim (Ocaml_config.ocaml_version ~compiler ()) in
-        let lines = Miscellanea.split "\n" output in
-        let version, stdlib = match lines with [a; b] -> a, b | _ -> assert false in
-        version, stdlib
-      end
-    with _ -> ("<Not found>", "")
+    method get_ocaml_version () =
+      try
+        self#with_ocamllib begin fun () ->
+          let compiler = match Ocaml_config.find_tool `OCAMLC "" with Some x -> x | _ -> assert false in
+          let output = String.trim (Ocaml_config.ocaml_version ~compiler ()) in
+          let lines = Miscellanea.split "\n" output in
+          let version, stdlib = match lines with [a; b] -> a, b | _ -> assert false in
+          version, stdlib
+        end
+      with _ -> ("<Not found>", "")
 
-  method chooser path () =
-    let chooser = GWindow.file_chooser_dialog ~position:`CENTER ~modal:true ~action:`SELECT_FOLDER () in
-    chooser#add_button_stock `OK `OK;
-    chooser#add_button_stock `CANCEL `CANCEL;
-    ignore (chooser#set_current_folder path);
-    let choose () =
-      Gaux.may chooser#filename ~f:(fun path -> entry_ocamllib#set_text path)
-    in
-    ignore (chooser#connect#current_folder_changed ~callback:choose);
-    match chooser#run() with _ -> chooser#destroy()
+    method chooser path () =
+      let chooser = GWindow.file_chooser_dialog ~position:`CENTER ~modal:true ~action:`SELECT_FOLDER () in
+      chooser#add_button_stock `OK `OK;
+      chooser#add_button_stock `CANCEL `CANCEL;
+      ignore (chooser#set_current_folder path);
+      let choose () =
+        Gaux.may chooser#filename ~f:(fun path -> entry_ocamllib#set_text path)
+      in
+      ignore (chooser#connect#current_folder_changed ~callback:choose);
+      match chooser#run() with _ -> chooser#destroy()
 
-  method ocamllib = entry_ocamllib#text
+    method ocamllib = entry_ocamllib#text
 
-  method reset () =
-    entry_ocamllib#set_text (if project.Prj.ocamllib_from_env then project.Prj.ocamllib else "");
+    method reset () =
+      entry_ocamllib#set_text (if project.Prj.ocamllib_from_env then project.Prj.ocamllib else "");
 
-  initializer
-    ignore (button_native#connect#clicked ~callback:begin fun () ->
-      entry_native#set_text "Please wait...";
-      Gmisclib.Idle.add begin fun () ->
-        let can_compile_native = self#with_ocamllib (Ocaml_config.can_compile_native) in
-        entry_native#set_text (match can_compile_native with Some ccomp_type -> "Yes (" ^ ccomp_type ^ ")" | _ -> "No")
-      end
-    end);
-    ignore (button_ocamllib#connect#clicked ~callback:begin fun () ->
-      self#chooser entry_ocamllib#text ();
-    end);
-    let set_tooltips () =
-      entry_ocamllib#misc#set_tooltip_text (sprintf "Environment Variable\nOCAMLLIB=%s" entry_ocamllib#text);
-      entry_version#misc#set_tooltip_text (sprintf "%s%s"
-        (Miscellanea.replace_first [" - ", "\n"] entry_version#text) "");
-    in
-    ignore (entry_ocamllib#connect#changed ~callback:begin fun () ->
-      let ver, stdlib = self#get_ocaml_version () in
-      kprintf entry_version#set_text "%s - %s" ver stdlib;
-      set_tooltips();
-      entry_native#set_text "";
-    end);
-    self#reset()
-end
+    initializer
+      ignore (button_native#connect#clicked ~callback:begin fun () ->
+          entry_native#set_text "Please wait...";
+          Gmisclib.Idle.add begin fun () ->
+            let can_compile_native = self#with_ocamllib (Ocaml_config.can_compile_native) in
+            entry_native#set_text (match can_compile_native with Some ccomp_type -> "Yes (" ^ ccomp_type ^ ")" | _ -> "No")
+          end
+        end);
+      ignore (button_ocamllib#connect#clicked ~callback:begin fun () ->
+          self#chooser entry_ocamllib#text ();
+        end);
+      let set_tooltips () =
+        entry_ocamllib#misc#set_tooltip_text (sprintf "Environment Variable\nOCAMLLIB=%s" entry_ocamllib#text);
+        entry_version#misc#set_tooltip_text (sprintf "%s%s"
+                                               (Miscellanea.replace_first [" - ", "\n"] entry_version#text) "");
+      in
+      ignore (entry_ocamllib#connect#changed ~callback:begin fun () ->
+          let ver, stdlib = self#get_ocaml_version () in
+          kprintf entry_version#set_text "%s - %s" ver stdlib;
+          set_tooltips();
+          entry_native#set_text "";
+        end);
+      self#reset()
+  end
 
 
 

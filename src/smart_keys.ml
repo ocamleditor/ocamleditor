@@ -31,11 +31,11 @@ let smart_home ~view state =
       let prev = iter#copy in
       let where = iter#set_line_offset 0 in
       let where = if Glib.Unichar.isspace where#char then begin
-        let first_non_blank = where#forward_find_char not_blank in
-        if first_non_blank#line <> iter#line then begin
-          if iter#line_index > 0 then where else iter#forward_to_line_end
-        end else first_non_blank
-      end else where in
+          let first_non_blank = where#forward_find_char not_blank in
+          if first_non_blank#line <> iter#line then begin
+            if iter#line_index > 0 then where else iter#forward_to_line_end
+          end else first_non_blank
+        end else where in
       buffer#move_mark `INSERT ~where;
       if state <> [`SHIFT] then buffer#move_mark `SEL_BOUND ~where;
       prev#compare where <> 0

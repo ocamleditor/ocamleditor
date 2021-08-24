@@ -66,86 +66,86 @@ class view ~target_list ?packing () =
   let _ = combo_task#add_attribute rend "markup" col_task_descr in
   (* Command Line Arguments and Environment Variables *)
   let entry_args, entry_env = Args_env_widget.create vbox in
-object (self)
-  inherit GObj.widget vbox#as_widget
-  val mutable rconfig = None
+  object (self)
+    inherit GObj.widget vbox#as_widget
+    val mutable rconfig = None
 
-  method set_tasks () =
-    match combo_bc#active_iter with
+    method set_tasks () =
+      match combo_bc#active_iter with
       | None -> ()
       | Some row ->
+          let bc = model_bc#get ~row ~column:col_bc in
+          let tasks = [
+            `NONE, Icons.empty_16;
+            `CLEAN, Icons.clear_build_16;
+            `COMPILE, Icons.build_16;
+            `REBUILD, Icons.empty_16
+          ] @ (List.map (fun x -> (`ETASK x, Icons.etask_16)) bc.Target.external_tasks) in
+          model_task#clear();
+          List.iter begin fun (task, icon) ->
+            let row = model_task#append () in
+            model_task#set ~row ~column:col_task_pb icon;
+            model_task#set ~row ~column:col_task_descr (Target.markup_of_task task);
+            model_task#set ~row ~column:col_task task
+          end tasks;
+          Gaux.may rconfig ~f:(fun rc -> rc.Rconf.target_id <- bc.Target.id);
+
+    initializer
+      self#set_targets();
+      ignore (combo_bc#connect#changed ~callback:self#set_tasks);
+      ignore (combo_task#connect#changed ~callback:begin fun () ->
+          Gaux.may rconfig ~f:begin fun rc ->
+            Gaux.may combo_task#active_iter ~f:(fun row ->
+                rc.Rconf.build_task <- model_task#get ~row ~column:col_task)
+          end;
+        end);
+      ignore (entry_args#connect#changed ~callback:begin fun () ->
+          Gaux.may rconfig ~f:(fun rc -> rc.Rconf.args <- entry_args#entries);
+        end);
+      ignore (entry_env#connect#changed ~callback:begin fun () ->
+          Gaux.may rconfig ~f:(fun rc -> rc.Rconf.env <- entry_env#entries);
+        end);
+      ignore (entry_env#connect#replace_changed ~callback:begin fun is_replace ->
+          Gaux.may rconfig ~f:(fun rc -> rc.Rconf.env_replace <- is_replace);
+        end);
+      combo_bc#set_active 0
+
+    method set_targets () =
+      model_bc#clear();
+      let targets = List.filter (fun bc -> bc.Target.target_type = Target.Executable && bc.Target.files <> "") (target_list#get_targets()) in
+      List.iter begin fun bc ->
+        let row = model_bc#append () in
+        model_bc#set ~row ~column:col_bc bc;
+        model_bc#set ~row ~column:col_bc_pixbuf Icons.start_16;
+        model_bc#set ~row ~column:col_name bc.Target.name;
+      end targets;
+
+    method set rc =
+      rconfig <- Some rc;
+      entry_name#set_text rc.Rconf.name;
+      model_bc#foreach begin fun path row ->
         let bc = model_bc#get ~row ~column:col_bc in
-        let tasks = [
-          `NONE, Icons.empty_16;
-          `CLEAN, Icons.clear_build_16;
-          `COMPILE, Icons.build_16;
-          `REBUILD, Icons.empty_16
-        ] @ (List.map (fun x -> (`ETASK x, Icons.etask_16)) bc.Target.external_tasks) in
-        model_task#clear();
-        List.iter begin fun (task, icon) ->
-          let row = model_task#append () in
-          model_task#set ~row ~column:col_task_pb icon;
-          model_task#set ~row ~column:col_task_descr (Target.markup_of_task task);
-          model_task#set ~row ~column:col_task task
-        end tasks;
-        Gaux.may rconfig ~f:(fun rc -> rc.Rconf.target_id <- bc.Target.id);
-
-  initializer
-    self#set_targets();
-    ignore (combo_bc#connect#changed ~callback:self#set_tasks);
-    ignore (combo_task#connect#changed ~callback:begin fun () ->
-      Gaux.may rconfig ~f:begin fun rc ->
-        Gaux.may combo_task#active_iter ~f:(fun row ->
-          rc.Rconf.build_task <- model_task#get ~row ~column:col_task)
-      end;
-    end);
-    ignore (entry_args#connect#changed ~callback:begin fun () ->
-      Gaux.may rconfig ~f:(fun rc -> rc.Rconf.args <- entry_args#entries);
-    end);
-    ignore (entry_env#connect#changed ~callback:begin fun () ->
-      Gaux.may rconfig ~f:(fun rc -> rc.Rconf.env <- entry_env#entries);
-    end);
-    ignore (entry_env#connect#replace_changed ~callback:begin fun is_replace ->
-      Gaux.may rconfig ~f:(fun rc -> rc.Rconf.env_replace <- is_replace);
-    end);
-    combo_bc#set_active 0
-
-  method set_targets () =
-    model_bc#clear();
-    let targets = List.filter (fun bc -> bc.Target.target_type = Target.Executable && bc.Target.files <> "") (target_list#get_targets()) in
-    List.iter begin fun bc ->
-      let row = model_bc#append () in
-      model_bc#set ~row ~column:col_bc bc;
-      model_bc#set ~row ~column:col_bc_pixbuf Icons.start_16;
-      model_bc#set ~row ~column:col_name bc.Target.name;
-    end targets;
-
-  method set rc =
-    rconfig <- Some rc;
-    entry_name#set_text rc.Rconf.name;
-    model_bc#foreach begin fun path row ->
-      let bc = model_bc#get ~row ~column:col_bc in
-      if bc.Target.id = rc.Rconf.target_id then begin
-        combo_bc#set_active_iter (Some row);
-        true
-      end else false
-    end;
-    model_task#foreach begin fun path row ->
-      let task = model_task#get ~row ~column:col_task in
-      match model_task#get ~row ~column:col_task with
-        | x when x = rc.Rconf.build_task ->
-          combo_task#set_active_iter (Some row);
+        if bc.Target.id = rc.Rconf.target_id then begin
+          combo_bc#set_active_iter (Some row);
           true
+        end else false
+      end;
+      model_task#foreach begin fun path row ->
+        let task = model_task#get ~row ~column:col_task in
+        match model_task#get ~row ~column:col_task with
+        | x when x = rc.Rconf.build_task ->
+            combo_task#set_active_iter (Some row);
+            true
         | _ -> false
-    end;
-    entry_args#set_entries rc.Rconf.args;
-    entry_env#set_entries rc.Rconf.env;
-    entry_env#set_replace rc.Rconf.env_replace;
+      end;
+      entry_args#set_entries rc.Rconf.args;
+      entry_env#set_entries rc.Rconf.env;
+      entry_env#set_replace rc.Rconf.env_replace;
 
-  method entry_name = entry_name
-  method combo_bc = combo_bc
-  method combo_task = combo_task
-end
+    method entry_name = entry_name
+    method combo_bc = combo_bc
+    method combo_task = combo_task
+  end
 
 
 

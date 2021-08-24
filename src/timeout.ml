@@ -34,16 +34,16 @@ let create ~delay ?(len=1) () = {
 
 let start timeout =
   timeout.id <- Some (GMain.Timeout.add ~ms:timeout.delay ~callback:begin fun () ->
-    Array.iteri begin fun i -> function
-      | Some f ->
-      (*try*)
-        f ();
-        Array.unsafe_set timeout.buffer i None;
-      (*with ex -> Printf.eprintf "File \"timeout.ml\": %s\n%s\n%!" (Printexc.to_string ex) (Printexc.get_backtrace());*)
-      | _ -> ()
-    end timeout.buffer;
-    true
-  end);;
+      Array.iteri begin fun i -> function
+        | Some f ->
+            (*try*)
+            f ();
+            Array.unsafe_set timeout.buffer i None;
+            (*with ex -> Printf.eprintf "File \"timeout.ml\": %s\n%s\n%!" (Printexc.to_string ex) (Printexc.get_backtrace());*)
+        | _ -> ()
+      end timeout.buffer;
+      true
+    end);;
 
 let set timeout i func = Array.unsafe_set timeout.buffer i (Some func)
 

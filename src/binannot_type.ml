@@ -102,27 +102,27 @@ let lookup offset =
       super.expr iterator expression;
 
       begin match exp_desc with
-        | Texp_constant _
-        | Texp_ident _
-        | Texp_construct _
-        | Texp_variant _
-        | Texp_record _
-        | Texp_array _
-        | Texp_field _
-        | Texp_object _
-        | Texp_new _
-        | Texp_send _
-        | Texp_override _
-        | Texp_instvar _ ->
+      | Texp_constant _
+      | Texp_ident _
+      | Texp_construct _
+      | Texp_variant _
+      | Texp_record _
+      | Texp_array _
+      | Texp_field _
+      | Texp_object _
+      | Texp_new _
+      | Texp_send _
+      | Texp_override _
+      | Texp_instvar _ ->
           raise @@ Found { ba_loc = exp_loc; ba_type = Odoc_info.string_of_type_expr exp_type }
 
-        (* The [exp_type] for this variants is just [unit] which is not very interesting.
-           Also [exp_loc] covers the whole expression not just the field/val name *)
-        | Texp_setfield (_, { loc; _ }, _, e) 
-        | Texp_setinstvar (_, _, { loc; _ }, e) ->
+      (* The [exp_type] for this variants is just [unit] which is not very interesting.
+         Also [exp_loc] covers the whole expression not just the field/val name *)
+      | Texp_setfield (_, { loc; _ }, _, e) 
+      | Texp_setinstvar (_, _, { loc; _ }, e) ->
           raise @@ Found { ba_loc = loc; ba_type = Odoc_info.string_of_type_expr e.exp_type }
 
-        | _ -> ()
+      | _ -> ()
       end
     end
   in
@@ -137,16 +137,16 @@ let lookup offset =
       match cf_desc with
       (* fields, btw virtual fields ? *)
       | Tcf_val (name, _, _, Tcfk_virtual core_type, _) ->
-        raise @@ Found { ba_loc = name.loc; ba_type = Odoc_info.string_of_type_expr core_type.ctyp_type }
+          raise @@ Found { ba_loc = name.loc; ba_type = Odoc_info.string_of_type_expr core_type.ctyp_type }
       | Tcf_val (name, _, _, Tcfk_concrete (_, expr), _) ->
-        raise @@ Found { ba_loc = name.loc; ba_type = Odoc_info.string_of_type_expr expr.exp_type }
+          raise @@ Found { ba_loc = name.loc; ba_type = Odoc_info.string_of_type_expr expr.exp_type }
 
       (* methods *)
       | Tcf_method (name, _, Tcfk_virtual core_type) ->
-        raise @@ Found { ba_loc = name.loc; ba_type = Odoc_info.string_of_type_expr core_type.ctyp_type }
+          raise @@ Found { ba_loc = name.loc; ba_type = Odoc_info.string_of_type_expr core_type.ctyp_type }
       | Tcf_method (name, _, Tcfk_concrete (_, { exp_desc = Texp_function { cases ; _ }; _ })) ->
-        (* List.hd cases is hack, of course *)
-        raise @@ Found { ba_loc = name.loc; ba_type = Odoc_info.string_of_type_expr (List.hd cases).c_rhs.exp_type }
+          (* List.hd cases is hack, of course *)
+          raise @@ Found { ba_loc = name.loc; ba_type = Odoc_info.string_of_type_expr (List.hd cases).c_rhs.exp_type }
 
       | _ -> ()
     end
@@ -183,21 +183,21 @@ let find_part_iterator iterator = function
 let find_by_offset ~project ~filename ~offset ?compile_buffer () =
   match Binannot.read_cmt ~project ~filename ?compile_buffer () with
   | Some (_, _, cmt) ->
-    begin
-      try
-        Odoc_info.reset_type_names();
-        begin
-          let iterator = lookup offset in
-          match cmt.cmt_annots with
-          | Implementation {str_items; _} -> List.iter (iterator.structure_item iterator) str_items
-          | Interface { sig_items; _ } -> List.iter (iterator.signature_item iterator) sig_items
-          | Partial_implementation parts
-          | Partial_interface parts  -> Array.iter (find_part_iterator iterator) parts
-          | Packed _ -> ()
-        end;
-        None
-      with Found ba -> Some ba
-    end;
+      begin
+        try
+          Odoc_info.reset_type_names();
+          begin
+            let iterator = lookup offset in
+            match cmt.cmt_annots with
+            | Implementation {str_items; _} -> List.iter (iterator.structure_item iterator) str_items
+            | Interface { sig_items; _ } -> List.iter (iterator.signature_item iterator) sig_items
+            | Partial_implementation parts
+            | Partial_interface parts  -> Array.iter (find_part_iterator iterator) parts
+            | Packed _ -> ()
+          end;
+          None
+        with Found ba -> Some ba
+      end;
   | _ -> None
 
 

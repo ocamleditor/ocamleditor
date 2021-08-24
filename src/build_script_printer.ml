@@ -79,28 +79,28 @@ let ident_of_arg =
 let print_add_args bc et args =
   List.fold_left begin fun acc arg ->
     match arg.bsa_task with
-      | Some (abc, aet) ->
+    | Some (abc, aet) ->
         if bc.Target.id = abc.Target.id && et.Task.et_name = aet.Task.et_name then
           match arg.bsa_mode with
-            | `add ->
+          | `add ->
               let condition =
                 sprintf "command = %s" (Build_script_command.code_of_command arg.bsa_cmd)
               in
               let arg =
                 match arg.bsa_pass with
-                  | `key -> 
+                | `key -> 
                     [ sprintf "\n                                %s && (!%s = Some true), \"%s\"" condition (ident_of_arg arg) arg.bsa_key ]
-                  | `value when arg.bsa_type = Bool -> 
+                | `value when arg.bsa_type = Bool -> 
                     [ sprintf "\n                                %s, (match !%s with Some x -> string_of_bool x | _ -> \"\")" condition (ident_of_arg arg) ]
-                  | `value -> 
+                | `value -> 
                     [ sprintf "\n                                %s, (match !%s with Some x -> x | _ -> \"\")" condition (ident_of_arg arg) ]
-                  | `key_value when arg.bsa_type = Bool -> 
+                | `key_value when arg.bsa_type = Bool -> 
                     [ sprintf "\n                                %s, (match !%s with Some _ -> \"%s\" | _ -> \"\")" 
                         condition (ident_of_arg arg) arg.bsa_key;
                       sprintf "\n                                %s, (match !%s with Some x -> sprintf \"%%b\" x | _ -> \"\")" 
                         condition (ident_of_arg arg)
                     ]
-                  | `key_value -> 
+                | `key_value -> 
                     [
                       sprintf "\n                                %s, (match !%s with Some _ -> \"%s\" | _ -> \"\")"
                         condition (ident_of_arg arg) arg.bsa_key;
@@ -109,9 +109,9 @@ let print_add_args bc et args =
                     ] 
               in
               arg :: acc
-            | `replace _ -> acc (* TODO:  *)
+          | `replace _ -> acc (* TODO:  *)
         else acc
-      | _ -> acc
+    | _ -> acc
   end [] args |> List.flatten;;
 
 (** print_external_tasks *)
@@ -123,33 +123,33 @@ let print_external_tasks ochan project =
   output_string ochan "let external_tasks = [\n";
   let targets = project.Prj.build_script.bs_targets in
   let ets = List.map begin fun {bst_target=tg; _} ->
-    let ets =
-      List.map begin fun et ->
-        let base_args = List.filter_map (fun (x, y) -> if x then Some y else None) et.et_args in
-        let base_args = List.map (sprintf "true,%S") base_args in
-        let custom_args = print_add_args tg et args in
-        let args = base_args @ custom_args in
-        let index = !i in
-        kprintf print "\n  %d, (fun command -> {" index;
-        kprintf print "  et_name                  = %S;" et.et_name;
-        kprintf print "  et_env                   = [%s];"
-          (String.concat ";" (List.map (sprintf "%S")
-            (List.filter_map (fun (x, y) -> if x then Some y else None) et.et_env)));
-        kprintf print "  et_env_replace           = %b;" et.et_env_replace;
-        kprintf print "  et_dir                   = %S;" et.et_dir;
-        kprintf print "  et_cmd                   = %S;" et.et_cmd;
-        kprintf print "  et_args                  = [%s];" (String.concat "; " args);
-        kprintf print "  et_phase                 = %s;" (match et.et_phase with Some p -> "Some " ^ (Task.string_of_phase p) | _ -> "None");
-        kprintf print "  et_always_run_in_project = %b;" et.et_always_run_in_project;
-        kprintf print "  et_always_run_in_script  = %b;" et.et_always_run_in_script;
-        kprintf print "  et_readonly              = %b;" et.et_readonly;
-        kprintf print "  et_visible               = %b;" et.et_visible;
-        kprintf print "});";
-        incr i;
-        index
-      end tg.external_tasks
-    in tg, ets
-  end targets in
+      let ets =
+        List.map begin fun et ->
+          let base_args = List.filter_map (fun (x, y) -> if x then Some y else None) et.et_args in
+          let base_args = List.map (sprintf "true,%S") base_args in
+          let custom_args = print_add_args tg et args in
+          let args = base_args @ custom_args in
+          let index = !i in
+          kprintf print "\n  %d, (fun command -> {" index;
+          kprintf print "  et_name                  = %S;" et.et_name;
+          kprintf print "  et_env                   = [%s];"
+            (String.concat ";" (List.map (sprintf "%S")
+                                  (List.filter_map (fun (x, y) -> if x then Some y else None) et.et_env)));
+          kprintf print "  et_env_replace           = %b;" et.et_env_replace;
+          kprintf print "  et_dir                   = %S;" et.et_dir;
+          kprintf print "  et_cmd                   = %S;" et.et_cmd;
+          kprintf print "  et_args                  = [%s];" (String.concat "; " args);
+          kprintf print "  et_phase                 = %s;" (match et.et_phase with Some p -> "Some " ^ (Task.string_of_phase p) | _ -> "None");
+          kprintf print "  et_always_run_in_project = %b;" et.et_always_run_in_project;
+          kprintf print "  et_always_run_in_script  = %b;" et.et_always_run_in_script;
+          kprintf print "  et_readonly              = %b;" et.et_readonly;
+          kprintf print "  et_visible               = %b;" et.et_visible;
+          kprintf print "});";
+          incr i;
+          index
+        end tg.external_tasks
+      in tg, ets
+    end targets in
   output_string ochan "];;\n";
   ets;;
 
@@ -165,10 +165,10 @@ let print_general_commands ochan external_tasks project =
     end external_tasks begin fun (tg, et_indexes) ->
       let et = List.combine tg.external_tasks et_indexes in
       match List_opt.find (fun (et, _) -> et.et_name = task.et_name) et with
-        | Some (_, index(*, _)*)) ->
+      | Some (_, index(*, _)*)) ->
           fprintf ochan "  `%s, (%d, %S);\n"
             (Build_script.string_of_command command.bsc_name) index command.bsc_descr;
-        | _ -> ()
+      | _ -> ()
     end ();
   end commands;
   fprintf ochan "]\n";;
@@ -179,9 +179,9 @@ let print_cmd_line_args ochan project =
   List.iter begin fun arg ->
     let default =
       match arg.bsa_default with
-        | `flag x -> string_of_bool x
-        | `bool x -> string_of_bool x
-        | `string x -> sprintf "%S" x
+      | `flag x -> string_of_bool x
+      | `bool x -> string_of_bool x
+      | `string x -> sprintf "%S" x
     in
     fprintf ochan "let %s = ref %s\n" (ident_of_arg arg) (if arg.bsa_default_override then "(Some " ^ default ^ ")" else "None");
   end args;
@@ -194,20 +194,20 @@ let print_cmd_line_args ochan project =
     List.iter begin fun arg ->
       let typ =
         match arg.bsa_type with
-          | Flag -> sprintf "Bool (fun x -> %s := Some x)" (ident_of_arg arg)
-          | Bool -> sprintf "Bool (fun x -> %s := Some x)" (ident_of_arg arg)
-          | String -> sprintf "String (fun x -> %s := Some x)" (ident_of_arg arg)
+        | Flag -> sprintf "Bool (fun x -> %s := Some x)" (ident_of_arg arg)
+        | Bool -> sprintf "Bool (fun x -> %s := Some x)" (ident_of_arg arg)
+        | String -> sprintf "String (fun x -> %s := Some x)" (ident_of_arg arg)
       in
       let default_value =
         if arg.bsa_default_override then
           match arg.bsa_default with
-            | `flag _ -> sprintf "\" ^ (match !%s with Some x -> sprintf \"%%s\" (if x then \"Set\" else \"Not Set\") | _ -> failwith \"build_script_printer (flag)\") ^ \"" (ident_of_arg arg)
-            | `bool _ -> sprintf "\" ^ (match !%s with Some x -> string_of_bool x | _ ->  failwith \"build_script_printer (bool)\") ^ \"" (ident_of_arg arg)
-            | `string _ -> sprintf "\" ^ (match !%s with Some x -> x | _ -> failwith \"build_script_printer (string)\") ^ \"" (ident_of_arg arg)
+          | `flag _ -> sprintf "\" ^ (match !%s with Some x -> sprintf \"%%s\" (if x then \"Set\" else \"Not Set\") | _ -> failwith \"build_script_printer (flag)\") ^ \"" (ident_of_arg arg)
+          | `bool _ -> sprintf "\" ^ (match !%s with Some x -> string_of_bool x | _ ->  failwith \"build_script_printer (bool)\") ^ \"" (ident_of_arg arg)
+          | `string _ -> sprintf "\" ^ (match !%s with Some x -> x | _ -> failwith \"build_script_printer (string)\") ^ \"" (ident_of_arg arg)
         else begin
           match arg.bsa_task with
-            | Some (_, task) -> sprintf "see \\\"%s %s -help\\\"" task.Task.et_cmd (String.concat " " (List.map (fun (c, x) -> if c then x else "") task.Task.et_args))
-            | _ -> "<unknown>"
+          | Some (_, task) -> sprintf "see \\\"%s %s -help\\\"" task.Task.et_cmd (String.concat " " (List.map (fun (c, x) -> if c then x else "") task.Task.et_args))
+          | _ -> "<unknown>"
         end
       in
       fprintf ochan "    %S, %s,\n      (\" %s [default: %s]\");\n" arg.bsa_key typ (String.escaped arg.bsa_doc) default_value;
@@ -234,9 +234,9 @@ module Minification = struct
               with Not_found -> begin
                   ignore (Str.matched_group 2 txt);
                   (match start with
-                    | [] -> f acc (p + 2) []
-                    | [start] -> f ((start, (p + 2), (txt.[start + 2] = '*')) :: acc) (p + 2) []
-                    | _::prev -> f acc (p + 2) prev)
+                   | [] -> f acc (p + 2) []
+                   | [start] -> f ((start, (p + 2), (txt.[start + 2] = '*')) :: acc) (p + 2) []
+                   | _::prev -> f acc (p + 2) prev)
                 end
             end
           with Not_found -> acc
@@ -289,9 +289,9 @@ let print ~project ~filename ~minify () =
     (*  *)
     finally();
   with ex -> begin
-    finally();
-    raise ex
-  end;;
+      finally();
+      raise ex
+    end;;
 
 
 

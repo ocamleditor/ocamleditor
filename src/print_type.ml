@@ -86,7 +86,7 @@ let markup3' descr =
   Miscellanea.replace_all [
     "\\([ \n(]\\|^\\)\\([?]?[a-z_][a-z0-9_']*\\):",  "\\1<i>\\2:</i>";
     "\\([A-Z`][A-Za-z0-9_']+\\)\\.", "<b>\\1</b>.";
-     ] descr
+  ] descr
 
 let markup3 = Miscellanea.Memo.create markup3'
 

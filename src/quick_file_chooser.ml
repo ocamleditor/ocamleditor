@@ -54,9 +54,9 @@ let crono_sum time f x =
   in
   let t = Unix.gettimeofday() in
   let result = try f x with e -> begin
-    finally t;
-    raise e
-  end in
+      finally t;
+      raise e
+    end in
   finally t;
   result;;
 
@@ -84,8 +84,8 @@ let create_model ~source ~name =
   } in
   begin
     match source with
-      | `path _ -> models := (name, model) :: !models;
-      | _ -> ()
+    | `path _ -> models := (name, model) :: !models;
+    | _ -> ()
   end;
   model;;
 
@@ -114,9 +114,9 @@ class widget ~source ~name ?filter ?packing () =
   let entry             = GEdit.entry ~packing:sbox#pack () in
   let model, filelist =
     match source with
-      | `path (roots, filelist) ->
+    | `path (roots, filelist) ->
         (try List.assoc name !models with Not_found -> create_model ~source ~name), filelist
-      | `filelist filelist -> (create_model ~source ~name), filelist
+    | `filelist filelist -> (create_model ~source ~name), filelist
   in
   let model_filter      = GTree.model_filter model.model in
   let _                 = model_filter#set_visible_column col_visible in
@@ -129,229 +129,229 @@ class widget ~source ~name ?filter ?packing () =
   let vc_name           = GTree.view_column ~title:"File" ~renderer:(renderer_basename, ["text", col_name]) () in
   let vc_path           = GTree.view_column ~title:"Path" ~renderer:(renderer, ["text", col_path]) () in
   let sw                = GBin.scrolled_window ~shadow_type:`IN ~hpolicy:`AUTOMATIC ~vpolicy:`AUTOMATIC
-    ~packing:vbox#add () in
+      ~packing:vbox#add () in
   let view              = GTree.view ~headers_visible:false ~reorderable:true ~width:130
-    ~enable_search:false ~packing:sw#add () in
+      ~enable_search:false ~packing:sw#add () in
   let _                 = view#append_column vc_pixbuf in
   let _                 = view#append_column vc_name in
   let _                 = view#append_column vc_path in
   let _                 = view#selection#set_mode `MULTIPLE in
   let _                 = view#set_model (Some model_filter#coerce) in
-object (self)
-  inherit GObj.widget ebox#as_widget
-  val is_filelist = match source with `filelist _ -> true | _ -> false
-  val mutable table_visible = []
-  val mutable table_results = []
-  val mutable choose_func = fun ~filename ~has_cursor -> `ignore
-  val mutable timeout_id = None
-  val mutable cache_results = []
-  val mutable last_pattern = ""
-  val mutable queue = Queue.create ()
+  object (self)
+    inherit GObj.widget ebox#as_widget
+    val is_filelist = match source with `filelist _ -> true | _ -> false
+    val mutable table_visible = []
+    val mutable table_results = []
+    val mutable choose_func = fun ~filename ~has_cursor -> `ignore
+    val mutable timeout_id = None
+    val mutable cache_results = []
+    val mutable last_pattern = ""
+    val mutable queue = Queue.create ()
 
-  initializer self#init()
+    initializer self#init()
 
-  method source = source
-  method model = model.model
-  method view = view
-  method renderer = renderer_basename
-  method select_path path = view#selection#select_path (model_filter#convert_child_path_to_path path);
-  method set_cursor path = view#set_cursor (model_filter#convert_child_path_to_path path) vc_name;
+    method source = source
+    method model = model.model
+    method view = view
+    method renderer = renderer_basename
+    method select_path path = view#selection#select_path (model_filter#convert_child_path_to_path path);
+    method set_cursor path = view#set_cursor (model_filter#convert_child_path_to_path path) vc_name;
 
-  method get_paths_with_icon () = model.index_icons
+    method get_paths_with_icon () = model.index_icons
 
-  method get_path ~filename =
-    try Some (Hashtbl.find model.filenames filename) with Not_found -> None
+    method get_path ~filename =
+      try Some (Hashtbl.find model.filenames filename) with Not_found -> None
 
-  method get_basename ~path =
-    let row = model.model#get_iter path in
-    row, model.model#get ~row ~column:col_name
+    method get_basename ~path =
+      let row = model.model#get_iter path in
+      row, model.model#get ~row ~column:col_name
 
-  method get_dirname ~row = model.model#get ~row ~column:col_path
+    method get_dirname ~row = model.model#get ~row ~column:col_path
 
-  method set_default_choose_func f = choose_func <- f
+    method set_default_choose_func f = choose_func <- f
 
-  method set_cell_data_func = vc_name#set_cell_data_func renderer_basename
+    method set_cell_data_func = vc_name#set_cell_data_func renderer_basename
 
-  method set_icon ~row pixbuf =
-    model.model#set ~row ~column:col_pixbuf pixbuf;
-    let path = model.model#get_path row in
-    match pixbuf with
+    method set_icon ~row pixbuf =
+      model.model#set ~row ~column:col_pixbuf pixbuf;
+      let path = model.model#get_path row in
+      match pixbuf with
       | None -> model.index_icons <- List.filter (fun x -> x <> path) model.index_icons
       | _ -> model.index_icons <- path :: model.index_icons
 
-  method reset_icons () =
-    List.iter begin fun path ->
-      let row = model.model#get_iter path in
-      let basename = model.model#get ~row ~column:col_name in
-      model.model#set ~row ~column:col_pixbuf None
-    end model.index_icons;
-    model.index_icons <- []
+    method reset_icons () =
+      List.iter begin fun path ->
+        let row = model.model#get_iter path in
+        let basename = model.model#get ~row ~column:col_name in
+        model.model#set ~row ~column:col_pixbuf None
+      end model.index_icons;
+      model.index_icons <- []
 
-  method update_model ?blocking () =
-    let scan () =
-      self#scan ?blocking ();
-      view#selection#select_path (GTree.Path.create [0]);
-    in
-    match blocking with
+    method update_model ?blocking () =
+      let scan () =
+        self#scan ?blocking ();
+        view#selection#select_path (GTree.Path.create [0]);
+      in
+      match blocking with
       | Some true -> (*crono ~label:"scan"*) scan ();
       | _ -> Gmisclib.Idle.add ~prio:300 scan
 
-  method activate :
+    method activate :
       ?f:(filename:string -> has_cursor:bool -> [`clear | `set of GdkPixbuf.pixbuf | `ignore]) ->
-        unit -> unit = fun ?f () ->
-    let path_cursor, _ = view#get_cursor () in
-    let has_cursor =
-      match path_cursor with None -> (fun _ -> false) | Some p ->
-        let p, _ = self#convert_path_to_child_path p in
-        let p = GTree.Path.to_string p in (fun x -> p = GTree.Path.to_string x)
-    in
-    let f = match f with Some f -> f | _ -> choose_func in
-    List.iter begin fun path ->
-      let path, row = self#convert_path_to_child_path path in
-      let dirname = model.model#get ~row ~column:col_path in
-      let basename = model.model#get ~row ~column:col_name in
-      let pixbuf = f ~filename:(dirname // basename) ~has_cursor:(has_cursor path) in
-      match pixbuf with
+      unit -> unit = fun ?f () ->
+      let path_cursor, _ = view#get_cursor () in
+      let has_cursor =
+        match path_cursor with None -> (fun _ -> false) | Some p ->
+          let p, _ = self#convert_path_to_child_path p in
+          let p = GTree.Path.to_string p in (fun x -> p = GTree.Path.to_string x)
+      in
+      let f = match f with Some f -> f | _ -> choose_func in
+      List.iter begin fun path ->
+        let path, row = self#convert_path_to_child_path path in
+        let dirname = model.model#get ~row ~column:col_path in
+        let basename = model.model#get ~row ~column:col_name in
+        let pixbuf = f ~filename:(dirname // basename) ~has_cursor:(has_cursor path) in
+        match pixbuf with
         | `ignore -> ()
         | `clear ->
-          model.model#set ~row ~column:col_pixbuf None;
-          model.index_icons <- List.filter (fun x -> x <> path) model.index_icons
+            model.model#set ~row ~column:col_pixbuf None;
+            model.index_icons <- List.filter (fun x -> x <> path) model.index_icons
         | `set pixbuf ->
-          model.model#set ~row ~column:col_pixbuf (Some pixbuf);
-          model.index_icons <- path :: model.index_icons
-    end view#selection#get_selected_rows;
+            model.model#set ~row ~column:col_pixbuf (Some pixbuf);
+            model.index_icons <- path :: model.index_icons
+      end view#selection#get_selected_rows;
 
-  method finalize () =
-    Gaux.may timeout_id ~f:GMain.Timeout.remove;
-    Gmisclib.Idle.add self#clear_model_filter;
-    vc_name#unset_cell_data_func renderer_basename
+    method finalize () =
+      Gaux.may timeout_id ~f:GMain.Timeout.remove;
+      Gmisclib.Idle.add self#clear_model_filter;
+      vc_name#unset_cell_data_func renderer_basename
 
-  method private convert_path_to_child_path path =
-    let current_model_oid = view#model#misc#get_oid in
-    let model_filter_oid = model_filter#misc#get_oid in
-    if current_model_oid = model_filter_oid then
-      let row = model_filter#get_iter path in
-      let row = model_filter#convert_iter_to_child_iter row in
-      let path = model_filter#convert_path_to_child_path path in
-      path, row
-    else
-      let row = model.model#get_iter path in
-      path, row
+    method private convert_path_to_child_path path =
+      let current_model_oid = view#model#misc#get_oid in
+      let model_filter_oid = model_filter#misc#get_oid in
+      if current_model_oid = model_filter_oid then
+        let row = model_filter#get_iter path in
+        let row = model_filter#convert_iter_to_child_iter row in
+        let path = model_filter#convert_path_to_child_path path in
+        path, row
+      else
+        let row = model.model#get_iter path in
+        path, row
 
-  method private convert_child_path_to_path path =
-    let current_model_oid = view#model#misc#get_oid in
-    let model_filter_oid = model_filter#misc#get_oid in
-    if current_model_oid = model_filter_oid then
-      let row = model.model#get_iter path in
-      path, row
-    else
-      let row = model_filter#get_iter path in
-      let row = model_filter#convert_child_iter_to_iter row in
-      let path = model_filter#convert_child_path_to_path path in
-      path, row
+    method private convert_child_path_to_path path =
+      let current_model_oid = view#model#misc#get_oid in
+      let model_filter_oid = model_filter#misc#get_oid in
+      if current_model_oid = model_filter_oid then
+        let row = model.model#get_iter path in
+        path, row
+      else
+        let row = model_filter#get_iter path in
+        let row = model_filter#convert_child_iter_to_iter row in
+        let path = model_filter#convert_child_path_to_path path in
+        path, row
 
-  method private visible_func ~row pattern =
-    entry#text <> "" &&
+    method private visible_func ~row pattern =
+      entry#text <> "" &&
       let basename = model.model#get ~row ~column:col_name in
       Str.string_match pattern basename 0
 
-  method private apply_pattern () =
-    begin
-      let len = String.length entry#text in
-      if len = 0 then begin
-        if is_filelist then (self#display_all()) else (self#clear_model_filter ());
-      end else if entry#text = "*" then begin
-        self#display_all ();
-      end else begin
-       (* if self#is_refinement() then (self#search_by_pattern ())
-        else *)begin
+    method private apply_pattern () =
+      begin
+        let len = String.length entry#text in
+        if len = 0 then begin
+          if is_filelist then (self#display_all()) else (self#clear_model_filter ());
+        end else if entry#text = "*" then begin
+          self#display_all ();
+        end else begin
+          (* if self#is_refinement() then (self#search_by_pattern ())
+             else *)begin
           let is_dirty = self#search_by_index () in
           if is_dirty then self#search_by_pattern ();
         end;
-        self#display table_results;
+          self#display table_results;
+        end;
+        if table_results <> [] then cache_results <- (entry#text, table_results) :: cache_results;
       end;
-      if table_results <> [] then cache_results <- (entry#text, table_results) :: cache_results;
-    end;
-    if not (List.mem entry#text ["*"]) then last_pattern <- entry#text
+      if not (List.mem entry#text ["*"]) then last_pattern <- entry#text
 
-  method private analyze_pattern parts =
-    List.fold_left begin fun acc text ->
-      match String.length text with
+    method private analyze_pattern parts =
+      List.fold_left begin fun acc text ->
+        match String.length text with
         | 0 -> acc
         | 1 ->
-          let results = Hashtbl.find_all model.index_c (String.unsafe_get text 0) in
-          (text, List.length results, results) :: acc
+            let results = Hashtbl.find_all model.index_c (String.unsafe_get text 0) in
+            (text, List.length results, results) :: acc
         | 2 ->
-          let results = Hashtbl.find_all model.index_cc text in
-          (text, List.length results, results) :: acc
+            let results = Hashtbl.find_all model.index_cc text in
+            (text, List.length results, results) :: acc
         | len ->
-          let ccs = ref [] in
-          let i = ref 0 in
-          while !i < len - 1 do
-            ccs := (String.sub text !i 2) :: !ccs;
-            incr i;
-          done;
-          (self#analyze_pattern !ccs) @ acc
-    end [] parts;
+            let ccs = ref [] in
+            let i = ref 0 in
+            while !i < len - 1 do
+              ccs := (String.sub text !i 2) :: !ccs;
+              incr i;
+            done;
+            (self#analyze_pattern !ccs) @ acc
+      end [] parts;
 
-  method private intersect results =
-    let results = List.sort (fun (_, l1, _) (_, l2, _) -> Stdlib.compare l1 l2) results in
-    (*Printf.printf "results=[%s]\n%!"
-      (String.concat "; " (List.map (fun (t, _, r) -> sprintf "%s=%d" t (List.length r)) results));*)
-    match results with
+    method private intersect results =
+      let results = List.sort (fun (_, l1, _) (_, l2, _) -> Stdlib.compare l1 l2) results in
+      (*Printf.printf "results=[%s]\n%!"
+        (String.concat "; " (List.map (fun (t, _, r) -> sprintf "%s=%d" t (List.length r)) results));*)
+      match results with
       | (_, _, i1) :: [] -> i1
       | (k1, _, i1) :: (k2, _, i2) :: _ when k1 <> k2 ->
-        (* The smaller data set is filtered over the bigger.
-           "index_cc" can contain multiple occurrences of the same tree path
-           (like "ab" in "abxaby" ) hence filtering "i1" over "i2" can give a
-           different result from filtering "i2" over "i1".
-           However, when the first character of the pattern is not a wildcard and
-           the pattern length is greater than 1, "i1" is from "index_0"
-           and connot contain duplicates. *)
-        (*crono ~label:"intersect"*) (List.filter (fun x -> List.mem x i2)) i1; (* OK *)
+          (* The smaller data set is filtered over the bigger.
+             "index_cc" can contain multiple occurrences of the same tree path
+             (like "ab" in "abxaby" ) hence filtering "i1" over "i2" can give a
+             different result from filtering "i2" over "i1".
+             However, when the first character of the pattern is not a wildcard and
+             the pattern length is greater than 1, "i1" is from "index_0"
+             and connot contain duplicates. *)
+          (*crono ~label:"intersect"*) (List.filter (fun x -> List.mem x i2)) i1; (* OK *)
       | (_, _, i1) :: (_, _, i2) :: _ -> i1
       | [] -> [] (*assert false*)
 
-  method private search_by_index () =
-    (*crono ~label:"search_by_index" begin fun () ->*)
+    method private search_by_index () =
+      (*crono ~label:"search_by_index" begin fun () ->*)
       let len = String.length entry#text in
       let pattern = String.lowercase_ascii entry#text in
       let c0 = String.unsafe_get pattern 0 in
       let dirty, results =
         match c0 with
-          | '?' when len = 2 ->
+        | '?' when len = 2 ->
             let c = String.unsafe_get pattern 1 in
             let results = Hashtbl.find_all model.index_1 c in
             false, [sprintf "?%c" c, List.length results, results]
-          | '?' when len = 3 ->
+        | '?' when len = 3 ->
             let cc = String.sub pattern 1 2 in
             let results = Hashtbl.find_all model.index_cc cc in
             true, [sprintf "%s" cc, List.length results, results]
-          | c0 when len = 1 && c0 <> '*' && c0 <> '?' -> (* a *)
+        | c0 when len = 1 && c0 <> '*' && c0 <> '?' -> (* a *)
             false,
-              let i0 = Hashtbl.find_all model.index_0 c0 in
-              [sprintf "(0)%c" c0, List.length i0, i0]
-          | c0 when len = 2 && c0 <> '*' && c0 <> '?' &&
-              (String.unsafe_get pattern 1 = '*' || String.unsafe_get pattern 1 = '?') -> (* a? *)
+            let i0 = Hashtbl.find_all model.index_0 c0 in
+            [sprintf "(0)%c" c0, List.length i0, i0]
+        | c0 when len = 2 && c0 <> '*' && c0 <> '?' &&
+                  (String.unsafe_get pattern 1 = '*' || String.unsafe_get pattern 1 = '?') -> (* a? *)
             false,
-              let i0 = Hashtbl.find_all model.index_0 c0 in
-              [sprintf "(0)%c" c0, List.length i0, i0]
-          | c0 when len = 2 && c0 <> '*' && c0 <> '?' &&
-              String.unsafe_get pattern 1 <> '*' && String.unsafe_get pattern 1 <> '?' -> (* ab *)
+            let i0 = Hashtbl.find_all model.index_0 c0 in
+            [sprintf "(0)%c" c0, List.length i0, i0]
+        | c0 when len = 2 && c0 <> '*' && c0 <> '?' &&
+                  String.unsafe_get pattern 1 <> '*' && String.unsafe_get pattern 1 <> '?' -> (* ab *)
             false,
-              let c1 = String.unsafe_get pattern 1 in
-              let i0 = Hashtbl.find_all model.index_0 c0 in
-              let i1 = Hashtbl.find_all model.index_1 c1 in
-              [sprintf "(0)%c" c0, List.length i0, i0; sprintf "(1)%c" c1, List.length i1, i1]
-          | c0 when len = 3 && c0 <> '*' && c0 <> '?' &&
-              String.unsafe_get pattern 1 <> '*' && String.unsafe_get pattern 1 <> '?' &&
-              (String.unsafe_get pattern 2 = '*' || String.unsafe_get pattern 2 = '?') -> (* ab? *)
+            let c1 = String.unsafe_get pattern 1 in
+            let i0 = Hashtbl.find_all model.index_0 c0 in
+            let i1 = Hashtbl.find_all model.index_1 c1 in
+            [sprintf "(0)%c" c0, List.length i0, i0; sprintf "(1)%c" c1, List.length i1, i1]
+        | c0 when len = 3 && c0 <> '*' && c0 <> '?' &&
+                  String.unsafe_get pattern 1 <> '*' && String.unsafe_get pattern 1 <> '?' &&
+                  (String.unsafe_get pattern 2 = '*' || String.unsafe_get pattern 2 = '?') -> (* ab? *)
             false,
-              let c1 = String.unsafe_get pattern 1 in
-              let i0 = Hashtbl.find_all model.index_0 c0 in
-              let i1 = Hashtbl.find_all model.index_1 c1 in
-              [sprintf "(0)%c" c0, List.length i0, i0; sprintf "(1)%c" c1, List.length i1, i1]
-          | _ ->
+            let c1 = String.unsafe_get pattern 1 in
+            let i0 = Hashtbl.find_all model.index_0 c0 in
+            let i1 = Hashtbl.find_all model.index_1 c1 in
+            [sprintf "(0)%c" c0, List.length i0, i0; sprintf "(1)%c" c1, List.length i1, i1]
+        | _ ->
             let parts = Str.split re_wildcards pattern in
             let results = (*crono ~label:"analyze_pattern"*) self#analyze_pattern parts in
             (List.length results > 1), results
@@ -360,139 +360,139 @@ object (self)
       let results = List.filter (fun p -> not (List.mem p model.index_removed)) results in
       table_results <- results;
       dirty
-   (* end ()*)
+    (* end ()*)
 
-  method private search_by_pattern () =
-    (*crono ~label:"search_by_pattern" begin fun () ->
-      Printf.printf "refine: %d->%!" (List.length table_results);*)
+    method private search_by_pattern () =
+      (*crono ~label:"search_by_pattern" begin fun () ->
+        Printf.printf "refine: %d->%!" (List.length table_results);*)
       let pattern = regexp_of_pattern entry#text in
       table_results <- List.fold_left begin fun acc path ->
-        let row = model.model#get_iter path in
-        let is_visible = self#visible_func ~row pattern in
-        if is_visible then path :: acc else acc
-      end [] table_results;
+          let row = model.model#get_iter path in
+          let is_visible = self#visible_func ~row pattern in
+          if is_visible then path :: acc else acc
+        end [] table_results;
       (*Printf.printf "%d\n%!" (List.length table_results);
-    end ()*)
+        end ()*)
 
-  method display paths =
-    view#set_model None;
-    let unchanged, hide = List.partition (fun x -> List.mem x paths) table_visible in
-    List.iter begin fun path ->
-      let row = model.model#get_iter path in
-      model.model#set ~row ~column:col_visible false;
-    end hide;
-    table_visible <- unchanged;
-    let count = ref (List.length table_visible) in
-    let tmp = ref [] in
-    begin
-      try
-        List.iter begin fun path ->
-          let add = not (List.mem path table_visible) in
-          if add then begin
-            tmp := path :: !tmp;
-            let row = model.model#get_iter path in
-            model.model#set ~row ~column:col_visible true;
-            incr count;
-            if !count >= limit then (raise Exit)
-          end;
-        end paths;
-      with Exit -> ()
-    end;
-    table_visible <- List.rev_append table_visible !tmp;
-    model_filter#refilter ();
-    view#set_model (Some model_filter#coerce);
-    Gmisclib.Idle.add (fun () -> view#scroll_to_point 0 0);
-    self#display_summary ();
-    Gmisclib.Idle.add begin fun () ->
-      match model_filter#get_iter_first with
+    method display paths =
+      view#set_model None;
+      let unchanged, hide = List.partition (fun x -> List.mem x paths) table_visible in
+      List.iter begin fun path ->
+        let row = model.model#get_iter path in
+        model.model#set ~row ~column:col_visible false;
+      end hide;
+      table_visible <- unchanged;
+      let count = ref (List.length table_visible) in
+      let tmp = ref [] in
+      begin
+        try
+          List.iter begin fun path ->
+            let add = not (List.mem path table_visible) in
+            if add then begin
+              tmp := path :: !tmp;
+              let row = model.model#get_iter path in
+              model.model#set ~row ~column:col_visible true;
+              incr count;
+              if !count >= limit then (raise Exit)
+            end;
+          end paths;
+        with Exit -> ()
+      end;
+      table_visible <- List.rev_append table_visible !tmp;
+      model_filter#refilter ();
+      view#set_model (Some model_filter#coerce);
+      Gmisclib.Idle.add (fun () -> view#scroll_to_point 0 0);
+      self#display_summary ();
+      Gmisclib.Idle.add begin fun () ->
+        match model_filter#get_iter_first with
         | Some row ->
-          let path = model_filter#get_path row in
-          view#selection#select_path path;
-          view#set_cursor path vc_name;
+            let path = model_filter#get_path row in
+            view#selection#select_path path;
+            view#set_cursor path vc_name;
         | _ -> ()
-    end
-
-  method display_all () =
-    self#clear_model_filter();
-    if model.length <= limit then begin
-      view#set_model (Some model.model#coerce);
-      self#display_summary();
-    end;
-
-  method private display_summary () =
-    kprintf label_count#set_text "%d of %d" (List.length table_visible) model.length;
-
-  method private clear_model_filter () =
-    view#set_model None;
-    List.iter begin fun path ->
-      model.model#set ~row:(model.model#get_iter path) ~column:col_visible false;
-    end table_visible;
-    table_visible <- [];
-    table_results <- [];
-    self#display_summary ()
-
-  method private append pattern filename =
-    if not (Hashtbl.mem model.filenames filename) then begin
-      let dirname = Filename.dirname filename in
-      let basename = Filename.basename filename in
-      let row = model.model#append() in
-      let path = model.model#get_path row in
-      model.length <- model.length + 1;
-      model.model#set ~row ~column:col_name basename;
-      model.model#set ~row ~column:col_path dirname;
-      (*  *)
-      let is_visible = self#visible_func ~row pattern in
-      model.model#set ~row ~column:col_visible is_visible;
-      if is_visible then (table_visible <- path :: table_visible);
-      (* Create indexes *)
-      let low_basename = String.lowercase_ascii basename in
-      let len = String.length low_basename in
-      Hashtbl.add model.index_0 low_basename.[0] path;
-      if len > 1 then Hashtbl.add model.index_1 low_basename.[1] path;
-      List.iter (fun c -> Hashtbl.add model.index_c c path) (char_contained low_basename);
-      let i = ref 0 in
-      while !i < len - 1 do
-        let cc = String.sub low_basename !i 2 in
-        Hashtbl.add model.index_cc cc path;
-        incr i;
-      done;
-      (* An index entry for the last single char. *)
-      let cc = String.sub low_basename (len - 1) 1 in
-      Hashtbl.add model.index_cc cc path;
-      (*  *)
-      Hashtbl.add model.filenames filename path;
-      self#display_summary ()
-    end;
-
-  method private scan ?(blocking=false) () =
-    let time = ref 0.0 in
-    let queue = Queue.create () in
-    let filter_dir d = not (List.mem d [".tmp"; "bak"]) in
-    let do_search dirname =
-      if filter_dir (Filename.basename dirname) then begin
-        let filenames = File_util.readdirs ~recursive:false filter dirname in
-        List.iter (fun x ->  Queue.add x queue) filenames;
-        Hashtbl.replace model.rtimes dirname (Unix.gettimeofday());
       end
-    in
-    let scan_tree roots =
-      match !roots with
+
+    method display_all () =
+      self#clear_model_filter();
+      if model.length <= limit then begin
+        view#set_model (Some model.model#coerce);
+        self#display_summary();
+      end;
+
+    method private display_summary () =
+      kprintf label_count#set_text "%d of %d" (List.length table_visible) model.length;
+
+    method private clear_model_filter () =
+      view#set_model None;
+      List.iter begin fun path ->
+        model.model#set ~row:(model.model#get_iter path) ~column:col_visible false;
+      end table_visible;
+      table_visible <- [];
+      table_results <- [];
+      self#display_summary ()
+
+    method private append pattern filename =
+      if not (Hashtbl.mem model.filenames filename) then begin
+        let dirname = Filename.dirname filename in
+        let basename = Filename.basename filename in
+        let row = model.model#append() in
+        let path = model.model#get_path row in
+        model.length <- model.length + 1;
+        model.model#set ~row ~column:col_name basename;
+        model.model#set ~row ~column:col_path dirname;
+        (*  *)
+        let is_visible = self#visible_func ~row pattern in
+        model.model#set ~row ~column:col_visible is_visible;
+        if is_visible then (table_visible <- path :: table_visible);
+        (* Create indexes *)
+        let low_basename = String.lowercase_ascii basename in
+        let len = String.length low_basename in
+        Hashtbl.add model.index_0 low_basename.[0] path;
+        if len > 1 then Hashtbl.add model.index_1 low_basename.[1] path;
+        List.iter (fun c -> Hashtbl.add model.index_c c path) (char_contained low_basename);
+        let i = ref 0 in
+        while !i < len - 1 do
+          let cc = String.sub low_basename !i 2 in
+          Hashtbl.add model.index_cc cc path;
+          incr i;
+        done;
+        (* An index entry for the last single char. *)
+        let cc = String.sub low_basename (len - 1) 1 in
+        Hashtbl.add model.index_cc cc path;
+        (*  *)
+        Hashtbl.add model.filenames filename path;
+        self#display_summary ()
+      end;
+
+    method private scan ?(blocking=false) () =
+      let time = ref 0.0 in
+      let queue = Queue.create () in
+      let filter_dir d = not (List.mem d [".tmp"; "bak"]) in
+      let do_search dirname =
+        if filter_dir (Filename.basename dirname) then begin
+          let filenames = File_util.readdirs ~recursive:false filter dirname in
+          List.iter (fun x ->  Queue.add x queue) filenames;
+          Hashtbl.replace model.rtimes dirname (Unix.gettimeofday());
+        end
+      in
+      let scan_tree roots =
+        match !roots with
         | root :: tl ->
-          roots := tl;
-          let dirs = File_util.readtree root in
-          List.iter begin fun dirname ->
-            try
-              let stat = Unix.stat dirname in
-              let rtime = Hashtbl.find model.rtimes dirname in
-              if stat.Unix.st_mtime > rtime then do_search dirname;
-            with Not_found -> (do_search dirname)
-          end dirs;
-          true
+            roots := tl;
+            let dirs = File_util.readtree root in
+            List.iter begin fun dirname ->
+              try
+                let stat = Unix.stat dirname in
+                let rtime = Hashtbl.find model.rtimes dirname in
+                if stat.Unix.st_mtime > rtime then do_search dirname;
+              with Not_found -> (do_search dirname)
+            end dirs;
+            true
         | [] -> false
-    in
-    let append roots =
-      let pattern = regexp_of_pattern entry#text in
-      (*try*)
+      in
+      let append roots =
+        let pattern = regexp_of_pattern entry#text in
+        (*try*)
         begin
           let i = ref 10 in
           while !i > 0 && Queue.length queue > 0 do
@@ -508,32 +508,32 @@ object (self)
             false
           end else true
         end;
-      (*with ex ->
-        Printf.eprintf "File \"dialog_find_file.ml\": %s\n%s\n%!" (Printexc.to_string ex) (Printexc.get_backtrace());
-        false*)
-    in
-    let filelist =
-      match model.source with
+        (*with ex ->
+          Printf.eprintf "File \"dialog_find_file.ml\": %s\n%s\n%!" (Printexc.to_string ex) (Printexc.get_backtrace());
+          false*)
+      in
+      let filelist =
+        match model.source with
         | `path (roots, filelist) ->
-          let roots = ref roots in
-          if blocking then begin
-            while scan_tree roots do () done;
-            while append roots do () done;
-          end else begin
-            let id = GMain.Timeout.add ~ms:200 ~callback:(fun () -> scan_tree roots) in
-            ignore (self#misc#connect#destroy ~callback:(fun () -> GMain.Timeout.remove id));
-            let id = GMain.Timeout.add ~ms:15 ~callback:(fun () -> append roots) in
-            ignore (self#misc#connect#destroy ~callback:(fun () -> GMain.Timeout.remove id));
-          end;
-          filelist
+            let roots = ref roots in
+            if blocking then begin
+              while scan_tree roots do () done;
+              while append roots do () done;
+            end else begin
+              let id = GMain.Timeout.add ~ms:200 ~callback:(fun () -> scan_tree roots) in
+              ignore (self#misc#connect#destroy ~callback:(fun () -> GMain.Timeout.remove id));
+              let id = GMain.Timeout.add ~ms:15 ~callback:(fun () -> append roots) in
+              ignore (self#misc#connect#destroy ~callback:(fun () -> GMain.Timeout.remove id));
+            end;
+            filelist
         | `filelist x -> x
-    in
-    let pattern = regexp_of_pattern entry#text in
-    List.iter (self#append pattern) filelist;
-    (*self#prune()*)
+      in
+      let pattern = regexp_of_pattern entry#text in
+      List.iter (self#append pattern) filelist;
+      (*self#prune()*)
 
-  method private prune () =
-    (*crono ~label:"prune" begin fun () ->*)
+    method private prune () =
+      (*crono ~label:"prune" begin fun () ->*)
       let count = ref 0 in
       Hashtbl.iter begin fun filename path ->
         if not (Sys.file_exists filename) then begin
@@ -550,68 +550,68 @@ object (self)
       self#display_summary ()
     (*end ()*)
 
-  method private is_refinement () =
-    let len = String.length entry#text in
-    let len_last = String.length last_pattern in
-    len_last + 1 = len &&
+    method private is_refinement () =
+      let len = String.length entry#text in
+      let len_last = String.length last_pattern in
+      len_last + 1 = len &&
       String.sub entry#text 0 (len - 1) = last_pattern
 
-  method private init () =
-    ignore (view#misc#connect#destroy ~callback:self#finalize);
-    (** Entry key press *)
-    ignore (entry#connect#changed ~callback:begin fun () ->
-      Gmisclib.Idle.add ~prio:200 self#apply_pattern;
-    end);
-    ignore (ebox#event#connect#key_press ~callback:begin fun ev ->
-      let key = GdkEvent.Key.keyval ev in
-      if key = GdkKeysyms._Up || key = GdkKeysyms._Down then begin
-        let clean = view#selection#get_selected_rows = [] in
-        if clean then begin
-          (try view#selection#select_path (GTree.Path.create [0]) with _ -> ());
-        end else begin
-          match view#selection#get_selected_rows with
-            | path :: _ ->
-              let path_0 = GTree.Path.copy path in
-              if key = GdkKeysyms._Up && GTree.Path.prev path then ()
-              else if key = GdkKeysyms._Down then (GTree.Path.next path);
-              view#set_cursor path vc_name;
-              if GdkEvent.Key.state ev = [`SHIFT] then (view#selection#select_range path_0 path)
-              else (view#selection#select_path path);
-            | [] -> ()
-        end;
-        view#misc#grab_focus();
-        not clean
-      end else false
-    end);
-    (** View key press *)
-    ignore (view#event#connect#key_release ~callback:begin fun ev ->
-      let key = GdkEvent.Key.keyval ev in
-      if key = GdkKeysyms._BackSpace then begin
-        (try entry#set_text (String.sub entry#text 0 (entry#text_length - 1)) with _ -> ());
-        entry#misc#grab_focus();
-        entry#set_position entry#text_length;
-        true
-      end else if key = GdkKeysyms._Left then begin
-        entry#misc#grab_focus();
-        entry#set_position (entry#text_length - 1);
-        true
-      end else if key = GdkKeysyms._Right then begin
-        entry#misc#grab_focus();
-        entry#set_position entry#text_length;
-        true
-      end else if key = GdkKeysyms._F3 then begin
-        entry#misc#grab_focus(); true
-      end else begin
-        let str = GdkEvent.Key.string ev in
-        if String.length str > 0 && Glib.Unichar.isprint (Glib.Utf8.first_char str) then
-          entry#set_text (entry#text ^ str);
-        false
-      end
-    end);
-    (**  *)
-    entry#misc#grab_focus();
-    if is_filelist then (self#display_all())
-end
+    method private init () =
+      ignore (view#misc#connect#destroy ~callback:self#finalize);
+      (** Entry key press *)
+      ignore (entry#connect#changed ~callback:begin fun () ->
+          Gmisclib.Idle.add ~prio:200 self#apply_pattern;
+        end);
+      ignore (ebox#event#connect#key_press ~callback:begin fun ev ->
+          let key = GdkEvent.Key.keyval ev in
+          if key = GdkKeysyms._Up || key = GdkKeysyms._Down then begin
+            let clean = view#selection#get_selected_rows = [] in
+            if clean then begin
+              (try view#selection#select_path (GTree.Path.create [0]) with _ -> ());
+            end else begin
+              match view#selection#get_selected_rows with
+              | path :: _ ->
+                  let path_0 = GTree.Path.copy path in
+                  if key = GdkKeysyms._Up && GTree.Path.prev path then ()
+                  else if key = GdkKeysyms._Down then (GTree.Path.next path);
+                  view#set_cursor path vc_name;
+                  if GdkEvent.Key.state ev = [`SHIFT] then (view#selection#select_range path_0 path)
+                  else (view#selection#select_path path);
+              | [] -> ()
+            end;
+            view#misc#grab_focus();
+            not clean
+          end else false
+        end);
+      (** View key press *)
+      ignore (view#event#connect#key_release ~callback:begin fun ev ->
+          let key = GdkEvent.Key.keyval ev in
+          if key = GdkKeysyms._BackSpace then begin
+            (try entry#set_text (String.sub entry#text 0 (entry#text_length - 1)) with _ -> ());
+            entry#misc#grab_focus();
+            entry#set_position entry#text_length;
+            true
+          end else if key = GdkKeysyms._Left then begin
+            entry#misc#grab_focus();
+            entry#set_position (entry#text_length - 1);
+            true
+          end else if key = GdkKeysyms._Right then begin
+            entry#misc#grab_focus();
+            entry#set_position entry#text_length;
+            true
+          end else if key = GdkKeysyms._F3 then begin
+            entry#misc#grab_focus(); true
+          end else begin
+            let str = GdkEvent.Key.string ev in
+            if String.length str > 0 && Glib.Unichar.isprint (Glib.Utf8.first_char str) then
+              entry#set_text (entry#text ^ str);
+            false
+          end
+        end);
+      (**  *)
+      entry#misc#grab_focus();
+      if is_filelist then (self#display_all())
+  end
 
 
 let init ~roots ~filter =
@@ -621,16 +621,16 @@ let init ~roots ~filter =
 let add_roots ~roots ~filter =
   let name = "" in
   match List_opt.assoc name !models with
-    | Some model ->
+  | Some model ->
       models := List.remove_assoc name !models;
       begin
         match model.source with
-          | `path (rr, filelist) ->
+        | `path (rr, filelist) ->
             let roots = rr @ roots in
             init ~roots ~filter
-          | _ -> assert false
+        | _ -> assert false
       end
-    | _ -> init ~roots ~filter
+  | _ -> init ~roots ~filter
 
 
 

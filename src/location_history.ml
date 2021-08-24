@@ -49,17 +49,17 @@ let create () = {
 let string_of_location loc =
   let label = sprintf "%s (%s)" (Filename.basename loc.filename) in
   match loc.mark with
-    | None -> label (string_of_int loc.offset)
-    | Some mark ->
+  | None -> label (string_of_int loc.offset)
+  | Some mark ->
       begin
         match GtkText.Mark.get_buffer mark with
-          | None ->
+        | None ->
             let deleted = GtkText.Mark.get_deleted mark in
             let name = Gaux.default "NN" ~opt:(GtkText.Mark.get_name mark) in
             eprintf "%s %d name=%s; deleted=%b\n%!" loc.filename loc.offset name deleted;
             (*assert false*)
             label name
-          | Some buffer ->
+        | Some buffer ->
             let iter = Gmisclib.Util.get_iter_at_mark_safe buffer mark in
             kprintf label "%d : %d" (GtkText.Iter.get_line iter + 1) (GtkText.Iter.get_line_offset iter)
       end
@@ -84,8 +84,8 @@ let divide' n ll =
   let rec loop prior subs n =
     if n <= 0 then (prior, subs) else begin
       match subs with
-        | [] -> prior, subs
-        | a :: b -> loop (a :: prior) b (n - 1)
+      | [] -> prior, subs
+      | a :: b -> loop (a :: prior) b (n - 1)
     end
   in
   let a, b = loop [] ll n in
@@ -98,29 +98,29 @@ let divide nh = divide' nh.current nh.history
 let equal l1 l2 =
   l1.filename = l2.filename && begin
     match l1.mark, l2.mark with
-      | None, None -> l1.offset = l2.offset
-      | (Some m1), (Some m2) -> (GtkText.Mark.get_name m1) = (GtkText.Mark.get_name m2)
-      | _ -> false
+    | None, None -> l1.offset = l2.offset
+    | (Some m1), (Some m2) -> (GtkText.Mark.get_name m1) = (GtkText.Mark.get_name m2)
+    | _ -> false
   end
 
 (** in_proximity *)
 let in_proximity ~(view : GText.view) ~filename ~offset = function
   | {filename=fn; mark=(Some mark); _} when filename = fn ->
-    if not (GtkText.Mark.get_deleted mark) then begin
-      let ofs = (view#buffer#get_iter_at_mark (`MARK mark))#offset in
-      abs (offset - ofs) < proximity;
-    end else false
+      if not (GtkText.Mark.get_deleted mark) then begin
+        let ofs = (view#buffer#get_iter_at_mark (`MARK mark))#offset in
+        abs (offset - ofs) < proximity;
+      end else false
   | _ -> false
 
 (** destroy *)
 let destroy loc =
   match loc.mark with
-    | None -> ()
-    | Some mark ->
+  | None -> ()
+  | Some mark ->
       begin
         match GtkText.Mark.get_buffer mark with
-          | None -> ()
-          | Some buffer -> GtkText.Buffer.delete_mark buffer mark
+        | None -> ()
+        | Some buffer -> GtkText.Buffer.delete_mark buffer mark
       end;
       loc.mark <- None
 
@@ -134,10 +134,10 @@ let trim nh =
     nh.history <- keep;
   end;
   nh.history <- List.filter begin fun loc ->
-    match loc.mark with
+      match loc.mark with
       | Some m -> not (GtkText.Mark.get_deleted m)
       | _ -> true
-  end nh.history
+    end nh.history
 
 (** add *)
 let add_location nh ~kind ~(view : GText.view) ~filename ~offset =
@@ -145,12 +145,12 @@ let add_location nh ~kind ~(view : GText.view) ~filename ~offset =
   let loc = {kind=kind; filename=filename; mark=(Some mark); offset=offset} in
   begin
     match nh.history with
-      | top :: tl ->
+    | top :: tl ->
         if false && in_proximity ~view ~filename ~offset top then begin
           destroy top;
           nh.history <- loc :: tl
         end else (nh.history <- loc :: nh.history);
-      | [] -> nh.history <- [loc]
+    | [] -> nh.history <- [loc]
   end;
   nh.current <- 0;
   loc
@@ -159,11 +159,11 @@ let add nh ~kind ~(view : GText.view) ~filename ~offset =
   (*Prf.crono Prf.prf_location_history_add begin fun () ->*)
   let in_proximity =
     match nh.history with
-      | top :: _ -> in_proximity ~view ~filename ~offset top
-      | _ -> false
+    | top :: _ -> in_proximity ~view ~filename ~offset top
+    | _ -> false
   in
   match kind with
-    | `EDIT when not in_proximity ->
+  | `EDIT when not in_proximity ->
       let queue =
         try Hashtbl.find nh.edit_table view#misc#get_oid
         with Not_found ->
@@ -179,8 +179,8 @@ let add nh ~kind ~(view : GText.view) ~filename ~offset =
           nh.history <- List.filter ((!=) loc) nh.history;
           let mark = match loc.mark with
             | Some m when not (GtkText.Mark.get_deleted m) ->
-              view#buffer#move_mark (`MARK m) ~where:(view#buffer#get_iter (`OFFSET offset));
-              m
+                view#buffer#move_mark (`MARK m) ~where:(view#buffer#get_iter (`OFFSET offset));
+                m
             | _ -> create_mark ~buffer:view#buffer ~offset
           in
           let loc = {kind=`EDIT; filename; mark=(Some mark); offset} in
@@ -189,9 +189,9 @@ let add nh ~kind ~(view : GText.view) ~filename ~offset =
         end
       in
       Queue.push loc queue
-    | `EDIT -> ()
-    | `BROWSE -> ignore (add_location nh ~kind ~view ~filename ~offset)
-  (*end ()*)
+  | `EDIT -> ()
+  | `BROWSE -> ignore (add_location nh ~kind ~view ~filename ~offset)
+(*end ()*)
 
 (** last_edit_location *)
 let last_edit_location nh = List_opt.find (fun loc -> loc.kind = `EDIT) nh.history
@@ -206,11 +206,11 @@ let goto nh ~location =
   let rec loop n = function
     | [] -> None
     | x :: y ->
-      if equal x location then Some n else (loop (n + 1) y)
+        if equal x location then Some n else (loop (n + 1) y)
   in
   match loop 0 nh.history with
-    | None -> ()
-    | Some n -> nh.current <- n
+  | None -> ()
+  | Some n -> nh.current <- n
 
 (** get_history_backward *)
 let get_history_backward nh =
@@ -254,7 +254,7 @@ let print nh =
   printf "%d/%d %d/%d %s\n%!" (current_index nh) (length nh)
     (List.length (get_history_backward nh)) (List.length (get_history_forward nh))
     (match current_location nh with None -> "None"
-    | Some loc -> string_of_location loc);
+                                  | Some loc -> string_of_location loc);
   let a, b = divide nh in
   List.iter (fun x -> printf "%s\n%!" (string_of_location x)) a;
   printf "---\n%!";

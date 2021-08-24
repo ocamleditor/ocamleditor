@@ -77,41 +77,41 @@ class widget ~project ~target ?packing () =
   let _ = bbox#set_child_secondary button_up#coerce true in
   let _ = bbox#set_child_secondary button_down#coerce true in
 
-object (self)
-  inherit GObj.widget table#as_widget
+  object (self)
+    inherit GObj.widget table#as_widget
 
-  initializer
-    self#set (match target.Target.resource_file with
-        | Some rc -> rc
-        | _ ->
-          let filename = Target.create_rc_filename target in
-          Resource_file.create ~filename ~title:target.name ~product:target.name ());
-    (* button_add *)
-    button_add#connect#clicked ~callback:begin fun () ->
-      let dialog = GWindow.file_chooser_dialog ~action:`OPEN ~modal:true ~title:"Add existing file to project" ~icon:Icons.oe ~position:`CENTER ~show:false () in
-      dialog#add_filter (GFile.filter ~name:"Icons Files (\x2A.ico)" ~patterns:["*.ico"] ());
-      dialog#add_select_button_stock `OK `OK;
-      dialog#add_button_stock `CANCEL `CANCEL;
-      dialog#set_select_multiple true;
-      dialog#set_current_folder (project.Prj.root // Prj.default_dir_src) |> ignore;
-      match dialog#run () with
+    initializer
+      self#set (match target.Target.resource_file with
+          | Some rc -> rc
+          | _ ->
+              let filename = Target.create_rc_filename target in
+              Resource_file.create ~filename ~title:target.name ~product:target.name ());
+      (* button_add *)
+      button_add#connect#clicked ~callback:begin fun () ->
+        let dialog = GWindow.file_chooser_dialog ~action:`OPEN ~modal:true ~title:"Add existing file to project" ~icon:Icons.oe ~position:`CENTER ~show:false () in
+        dialog#add_filter (GFile.filter ~name:"Icons Files (\x2A.ico)" ~patterns:["*.ico"] ());
+        dialog#add_select_button_stock `OK `OK;
+        dialog#add_button_stock `CANCEL `CANCEL;
+        dialog#set_select_multiple true;
+        dialog#set_current_folder (project.Prj.root // Prj.default_dir_src) |> ignore;
+        match dialog#run () with
         | `OK ->
-          List.iter (fun fn -> self#load_icon_from_file (Filename.basename fn) fn) dialog#get_filenames;
-          dialog#destroy()
+            List.iter (fun fn -> self#load_icon_from_file (Filename.basename fn) fn) dialog#get_filenames;
+            dialog#destroy()
         | _ -> dialog#destroy()
-    end |> ignore;
-    (* button_remove *)
-    button_remove#connect#clicked ~callback:begin fun () ->
-      let paths = icon_view#get_selected_items in
-      let rr = List.map model#get_row_reference paths in
-      List.iter (fun reference -> model#remove reference#iter |> ignore) rr;
-    end |> ignore;
-    (* button_up, button_down *)
-    let move up =
-      let paths = icon_view#get_selected_items in
-      let rr = List.map model#get_row_reference paths in
-      let move =
-        match up with
+      end |> ignore;
+      (* button_remove *)
+      button_remove#connect#clicked ~callback:begin fun () ->
+        let paths = icon_view#get_selected_items in
+        let rr = List.map model#get_row_reference paths in
+        List.iter (fun reference -> model#remove reference#iter |> ignore) rr;
+      end |> ignore;
+      (* button_up, button_down *)
+      let move up =
+        let paths = icon_view#get_selected_items in
+        let rr = List.map model#get_row_reference paths in
+        let move =
+          match up with
           | true -> fun path reference ->
             if GTree.Path.prev path then
               model#move_before ~iter:reference#iter ~pos:(model#get_iter path) |> ignore
@@ -120,104 +120,104 @@ object (self)
               GTree.Path.next path;
               model#move_after ~iter:reference#iter ~pos:(model#get_iter path) |> ignore
             with Failure _ -> ()
-      in
-      List.iter (fun r -> move (model#get_path r#iter) r) rr;
-      icon_changed#call();
-    in
-    button_up#connect#clicked ~callback:(fun () -> move true) |> ignore;
-    button_down#connect#clicked ~callback:(fun () -> move false) |> ignore;
-    let callback () =
-      let f button = button#misc#set_sensitive (icon_view#get_selected_items <> []) in
-      List.iter f [button_up; button_down; button_remove]
-    in
-    icon_view#connect#selection_changed ~callback |> ignore;
-    callback();
-
-  method set res =
-    entry_title#set_text res.rc_title;
-    entry_company#set_text res.rc_company;
-    entry_product#set_text res.rc_product;
-    entry_copyright#set_text res.rc_copyright;
-    begin
-      match res.rc_file_version with a,b,c,d ->
-        entry_file_version_1#set_value (float a);
-        entry_file_version_2#set_value (float b);
-        entry_file_version_3#set_value (float c);
-        entry_file_version_4#set_value (float d);
-    end;
-    List.iter begin fun filename ->
-      Gmisclib.Idle.add ~prio:300 begin fun () ->
-        self#load_icon_from_file (Filename.basename filename) filename
-      end
-    end res.rc_icons(*_data*);
-
-  method get =
-    let icofiles = ref [] in
-    model#foreach begin fun _ row ->
-      let filename = model#get ~row ~column:col_icofile in
-      icofiles := filename :: !icofiles;
-      false
-    end;
-    Resource_file.create
-      ~filename:(Target.create_rc_filename target)
-      ~title:entry_title#text
-      ~company:entry_company#text
-      ~product:entry_product#text
-      ~copyright:entry_copyright#text
-      ~file_version:(entry_file_version_1#value_as_int, entry_file_version_2#value_as_int,
-                     entry_file_version_3#value_as_int, entry_file_version_4#value_as_int)
-      ~icons:(List.rev !icofiles) ()
-
-  method save () = saved#call self#get
-
-  method private load_icon_from_file iconame filename =
-    if not Ocaml_config.is_mingw && Sys.file_exists filename then begin
-      let size = (Unix.stat filename).Unix.st_size in
-      if size > 0 then begin
-        let visual_size = 64 in
-        let pixbuf = GdkPixbuf.from_file filename in
-        let width = GdkPixbuf.get_width pixbuf in
-        let height = GdkPixbuf.get_height pixbuf in
-        let icon =
-          if max width height <= visual_size then pixbuf else begin
-            let w, h =
-              if width > height then visual_size, width / height * visual_size
-              else height / width * visual_size, visual_size
-            in
-            let dest = GdkPixbuf.create ~width:w ~height:h ~has_alpha:(GdkPixbuf.get_has_alpha pixbuf) () in
-            GdkPixbuf.scale ~dest ~width:w ~height:h pixbuf;
-            dest
-          end
         in
-        let row = model#append () in
-        model#set ~row ~column:col_name
-          (sprintf "%s\n<span size='small' style='italic'>(%d × %d)</span>"
-             (Filename.chop_extension iconame) width height);
-        model#set ~row ~column:col_pixbuf icon;
-        model#set ~row ~column:col_icofile filename;
+        List.iter (fun r -> move (model#get_path r#iter) r) rr;
         icon_changed#call();
-      end
-    end
+      in
+      button_up#connect#clicked ~callback:(fun () -> move true) |> ignore;
+      button_down#connect#clicked ~callback:(fun () -> move false) |> ignore;
+      let callback () =
+        let f button = button#misc#set_sensitive (icon_view#get_selected_items <> []) in
+        List.iter f [button_up; button_down; button_remove]
+      in
+      icon_view#connect#selection_changed ~callback |> ignore;
+      callback();
 
-  method get_first_icon () =
-    match model#get_iter_first with
+    method set res =
+      entry_title#set_text res.rc_title;
+      entry_company#set_text res.rc_company;
+      entry_product#set_text res.rc_product;
+      entry_copyright#set_text res.rc_copyright;
+      begin
+        match res.rc_file_version with a,b,c,d ->
+          entry_file_version_1#set_value (float a);
+          entry_file_version_2#set_value (float b);
+          entry_file_version_3#set_value (float c);
+          entry_file_version_4#set_value (float d);
+      end;
+      List.iter begin fun filename ->
+        Gmisclib.Idle.add ~prio:300 begin fun () ->
+          self#load_icon_from_file (Filename.basename filename) filename
+        end
+      end res.rc_icons(*_data*);
+
+    method get =
+      let icofiles = ref [] in
+      model#foreach begin fun _ row ->
+        let filename = model#get ~row ~column:col_icofile in
+        icofiles := filename :: !icofiles;
+        false
+      end;
+      Resource_file.create
+        ~filename:(Target.create_rc_filename target)
+        ~title:entry_title#text
+        ~company:entry_company#text
+        ~product:entry_product#text
+        ~copyright:entry_copyright#text
+        ~file_version:(entry_file_version_1#value_as_int, entry_file_version_2#value_as_int,
+                       entry_file_version_3#value_as_int, entry_file_version_4#value_as_int)
+        ~icons:(List.rev !icofiles) ()
+
+    method save () = saved#call self#get
+
+    method private load_icon_from_file iconame filename =
+      if not Ocaml_config.is_mingw && Sys.file_exists filename then begin
+        let size = (Unix.stat filename).Unix.st_size in
+        if size > 0 then begin
+          let visual_size = 64 in
+          let pixbuf = GdkPixbuf.from_file filename in
+          let width = GdkPixbuf.get_width pixbuf in
+          let height = GdkPixbuf.get_height pixbuf in
+          let icon =
+            if max width height <= visual_size then pixbuf else begin
+              let w, h =
+                if width > height then visual_size, width / height * visual_size
+                else height / width * visual_size, visual_size
+              in
+              let dest = GdkPixbuf.create ~width:w ~height:h ~has_alpha:(GdkPixbuf.get_has_alpha pixbuf) () in
+              GdkPixbuf.scale ~dest ~width:w ~height:h pixbuf;
+              dest
+            end
+          in
+          let row = model#append () in
+          model#set ~row ~column:col_name
+            (sprintf "%s\n<span size='small' style='italic'>(%d × %d)</span>"
+               (Filename.chop_extension iconame) width height);
+          model#set ~row ~column:col_pixbuf icon;
+          model#set ~row ~column:col_icofile filename;
+          icon_changed#call();
+        end
+      end
+
+    method get_first_icon () =
+      match model#get_iter_first with
       | Some row ->
-        let pixbuf = model#get ~row ~column:col_pixbuf in
-        Some pixbuf
+          let pixbuf = model#get ~row ~column:col_pixbuf in
+          Some pixbuf
       | _ -> None
 
-  method connect = new signals ~saved ~icon_changed
-end
+    method connect = new signals ~saved ~icon_changed
+  end
 
 and saved () = object inherit [Resource_file.t] GUtil.signal () end
 and icon_changed () = object inherit [unit] GUtil.signal () end
 
 and signals ~saved ~icon_changed =
-object
-  inherit GUtil.ml_signals [saved#disconnect; icon_changed#disconnect]
-  method saved = saved#connect ~after
-  method icon_changed = icon_changed#connect ~after
-end
+  object
+    inherit GUtil.ml_signals [saved#disconnect; icon_changed#disconnect]
+    method saved = saved#connect ~after
+    method icon_changed = icon_changed#connect ~after
+  end
 
 (** window *)
 let window ~project ~target () =

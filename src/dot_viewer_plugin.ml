@@ -1,9 +1,9 @@
 class virtual viewer =
-object
-  method virtual display : filename:string -> unit
-  method virtual coerce : GObj.widget
-  method virtual destroy : unit -> unit
-end
+  object
+    method virtual display : filename:string -> unit
+    method virtual coerce : GObj.widget
+    method virtual destroy : unit -> unit
+  end
 
 module type DEVICE = sig
   val lang : string
@@ -23,4 +23,4 @@ let device : (module DEVICE) ref = ref (module Dot_viewer_pdf.PDF : DEVICE)
         (device := Some (module Dot_viewer_pdf.PDF : DEVICE));
       get_device()*)
 
-  
+

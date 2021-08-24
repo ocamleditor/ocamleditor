@@ -55,14 +55,14 @@ let draw_indent_lines view (drawable : GDraw.drawable) start stop y0 =
   let lines = ref [] in
   let add_segment ll x y1 y2 =
     match List_opt.assoc x !ll with
-      | Some segs ->
+    | Some segs ->
         begin
           match !segs with
-            | (y3, y4) :: tl when y2 = y3 ->
+          | (y3, y4) :: tl when y2 = y3 ->
               segs := (y1, y4) :: tl;
-            | seg -> segs := (y1, y2) :: seg;
+          | seg -> segs := (y1, y2) :: seg;
         end
-      | _ -> (ll := (x, ref [y1, y2]) :: !ll)
+    | _ -> (ll := (x, ref [y1, y2]) :: !ll)
   in
   let hline = ref 0 in
   let hadjust = match view#hadjustment with Some adj -> int_of_float adj#value - left_margin | _ -> 0 in
@@ -140,23 +140,23 @@ let draw_indent_lines view (drawable : GDraw.drawable) start stop y0 =
     end !xlines
   end !lines;
 
-(*  Gdk.GC.set_dashes drawable#gc ~offset:1 [1; 5];
-  List.iter begin fun (x, xlines) ->
-    List.iter begin fun (y1, y2) ->
-      if y2 - y1 > !hline then begin
-        if !first && y1 <= cly && cly <= y2 then begin
-          drawable#set_foreground (`NAME "#ff0000");
-          drawable#set_line_attributes ~width:2 ~style:`SOLID ();
-          first := false;
-        end else begin
-          drawable#set_foreground view#options#base_color;
-          drawable#set_line_attributes ~width:2 ~style:`SOLID ();
-          drawable#line ~x ~y:y1 ~x ~y:y2;
-          drawable#set_foreground view#options#indent_lines_color_solid;
-          drawable#set_line_attributes ~width:1 ~style:`ON_OFF_DASH ();
-        end;
-        drawable#line ~x ~y:y1 ~x ~y:y2
-      end
-    end !xlines
-  end lines2;*)
+  (*  Gdk.GC.set_dashes drawable#gc ~offset:1 [1; 5];
+      List.iter begin fun (x, xlines) ->
+      List.iter begin fun (y1, y2) ->
+        if y2 - y1 > !hline then begin
+          if !first && y1 <= cly && cly <= y2 then begin
+            drawable#set_foreground (`NAME "#ff0000");
+            drawable#set_line_attributes ~width:2 ~style:`SOLID ();
+            first := false;
+          end else begin
+            drawable#set_foreground view#options#base_color;
+            drawable#set_line_attributes ~width:2 ~style:`SOLID ();
+            drawable#line ~x ~y:y1 ~x ~y:y2;
+            drawable#set_foreground view#options#indent_lines_color_solid;
+            drawable#set_line_attributes ~width:1 ~style:`ON_OFF_DASH ();
+          end;
+          drawable#line ~x ~y:y1 ~x ~y:y2
+        end
+      end !xlines
+      end lines2;*)
 

@@ -53,11 +53,11 @@ let re_quote = Miscellanea.regexp "\""
 
 let convert_target_type =
   function
-    | Target.Executable -> Oebuild.Executable
-    | Target.Library -> Oebuild.Library
-    | Target.Plugin -> Oebuild.Plugin
-    | Target.Pack -> Oebuild.Pack
-    | Target.External -> Oebuild.External
+  | Target.Executable -> Oebuild.Executable
+  | Target.Library -> Oebuild.Library
+  | Target.Plugin -> Oebuild.Plugin
+  | Target.Pack -> Oebuild.Pack
+  | Target.External -> Oebuild.External
 
 let preamble = "\
 #load \"unix.cma\"
@@ -97,9 +97,9 @@ let create_meta proj ~parent tg =
   in
   let target_deps =
     match parent with
-      | Some parent -> List.filter (fun x ->
-          x.id <> parent.id && not (List.mem x.id (List.map (fun y -> y.id) (Target.find_target_dependencies proj.targets parent)))) all_target_deps
-      | None -> all_target_deps
+    | Some parent -> List.filter (fun x ->
+        x.id <> parent.id && not (List.mem x.id (List.map (fun y -> y.id) (Target.find_target_dependencies proj.targets parent)))) all_target_deps
+    | None -> all_target_deps
   in
   let arb =
     if tg.byt
@@ -170,15 +170,15 @@ let generate_fl_installer proj outchan =
   let targets = ref proj.targets in
   let rec generate ~parent acc = function
     | tg :: tl ->
-      let metas =
-        if tg.is_fl_package && not (List.mem tg.id !processed) then begin
-          let meta = create_meta proj ~parent tg in
-          meta.meta_subpackages <- generate ~parent:(Some tg) [] tg.sub_targets;
-          processed := tg.id :: !processed;
-          meta :: acc
-        end else acc
-      in
-      generate ~parent:None metas tl
+        let metas =
+          if tg.is_fl_package && not (List.mem tg.id !processed) then begin
+            let meta = create_meta proj ~parent tg in
+            meta.meta_subpackages <- generate ~parent:(Some tg) [] tg.sub_targets;
+            processed := tg.id :: !processed;
+            meta :: acc
+          end else acc
+        in
+        generate ~parent:None metas tl
     | [] -> acc
   in
   let metas = List.rev (generate ~parent:None [] !targets) in
@@ -256,14 +256,14 @@ let write_findlib_tools proj =
       generate_fl_installer proj outchan;
       let tg =
         match tools with
-          | None ->
+        | None ->
             let id = (List.fold_left (fun cand t -> max t.id cand) 0 proj.targets) + 1 in
             let tg = Target.create ~id ~name:findlib_target_name in
             tg.target_type <- External;
             tg.readonly <- true;
             proj.targets <- proj.targets @ [tg];
             tg
-          | Some tg -> tg
+        | Some tg -> tg
       in
       rm_tools tg findlib_tools;
       tg.external_tasks <- tg.external_tasks @ findlib_tools;
@@ -274,10 +274,10 @@ let write_findlib_tools proj =
   end else begin
     if Sys.file_exists filename then Sys.remove filename;
     match tools with
-      | Some tg ->
+    | Some tg ->
         rm_tools tg findlib_tools;
         if tg.external_tasks = [] then proj.targets <- List.filter (fun t -> t.id <> tg.id) proj.targets
-      | _ -> ()
+    | _ -> ()
   end
 
 (** write_subsystem_tools *)
@@ -333,7 +333,7 @@ let write_resource_file proj =
     rc_task.Task.et_phase <- Some Task.Before_compile;
     rm_tools target [rc_task];
     match target.Target.resource_file with
-      | Some rc ->
+    | Some rc ->
         let exename = Oebuild.get_output_name
             ~compilation:Oebuild.Native
             ~outkind:Oebuild.Executable
@@ -353,9 +353,9 @@ let write_resource_file proj =
             then Some fn
             else begin
               match Miscellanea.filename_relative src fn with
-                | Some rel when (Filename.dirname rel = Filename.dirname exename) && Sys.file_exists (src // rel) -> Some rel
-                | Some _ -> None
-                | _ ->
+              | Some rel when (Filename.dirname rel = Filename.dirname exename) && Sys.file_exists (src // rel) -> Some rel
+              | Some _ -> None
+              | _ ->
                   if Sys.file_exists fn then begin
                     let ico = Filename.basename fn in
                     File_util.cp fn (src // exedirname // ico);
@@ -399,7 +399,7 @@ let write_resource_file proj =
         bprintf buf "}\n";
         (*  *)
         target.external_tasks <- rc_task :: target.external_tasks;
-      | _ -> ()
+    | _ -> ()
   end proj.targets;
   let dirname = proj.root // Prj.default_dir_tools in
   let filename = dirname // default_rccompile_basename in

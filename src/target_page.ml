@@ -61,8 +61,8 @@ class view ~project ~target_list ?packing () =
   let box = GPack.hbox ~spacing:5 ~packing:vbox#pack () in
   let _ = GMisc.label ~text:"Compilation: " ~xalign:0.0 ~packing:box#pack () in
   let combo_comp, _ = GEdit.combo_box_text
-    ~strings:["Bytecode"; "Native-code"; "Bytecode and native"]
-    ~active:0 ~packing:box#add () in
+      ~strings:["Bytecode"; "Native-code"; "Bytecode and native"]
+      ~active:0 ~packing:box#add () in
 
   (** Library *)
   (* Build a library with the specified toplevel modules *)
@@ -76,8 +76,8 @@ class view ~project ~target_list ?packing () =
 
   (** Output Type *)
   let combo_kind, _ = GEdit.combo_box_text
-    ~strings:["Library (-a)"; "Plugin (-shared)"; "Pack (-pack)"]
-    (*~active:0*) ~packing:lbox#add () in
+      ~strings:["Library (-a)"; "Plugin (-shared)"; "Pack (-pack)"]
+      (*~active:0*) ~packing:lbox#add () in
   (** Toplevel modules list *)
   let box = GPack.vbox ~packing:lbox#pack () in
   let _ = GMisc.label ~markup:"Toplevel modules" ~xalign:0.0 ~packing:box#pack () in
@@ -89,7 +89,7 @@ class view ~project ~target_list ?packing () =
   let filter_top = ref (GFile.filter ~name:"All files" ~patterns:["*"] ()) in
   let filter_toplevel_mods chooser () =
     match chooser#current_folder with
-      | Some dir ->
+    | Some dir ->
         chooser#unselect_all;
         Gmisclib.Idle.add ~prio:100 begin fun () ->
           if List.exists (fun x -> x#name = !filter_top#name) chooser#list_filters then chooser#remove_filter !filter_top;
@@ -100,34 +100,34 @@ class view ~project ~target_list ?packing () =
           chooser#set_filter filter;
           filter_top := filter;
         end;
-      | _ -> ()
+    | _ -> ()
   in
   let create_button_filter_topmods chooser =
     let button_find_top_modules = GButton.button ~label:"Filter top-level modules" () in
     chooser#set_extra_widget button_find_top_modules#coerce;
     ignore (button_find_top_modules#connect#clicked ~callback:(filter_toplevel_mods chooser));
     ignore (chooser#connect#after#current_folder_changed ~callback:begin fun () ->
-      if List.exists (fun x -> x#name = !filter_top#name) chooser#list_filters then chooser#remove_filter !filter_top;
-      chooser#set_filter filter_ml;
-    end);
+        if List.exists (fun x -> x#name = !filter_top#name) chooser#list_filters then chooser#remove_filter !filter_top;
+        chooser#set_filter filter_ml;
+      end);
   in
   let _ = button_lib_modules#connect#clicked ~callback:begin fun () ->
-    let chooser = GWindow.file_chooser_dialog ~title:"Choose the toplevel modules for the library..."
-      ~action:`OPEN ~position:`CENTER ~show:false () in
-    chooser#add_select_button_stock `OK `OK;
-    chooser#add_button_stock `CANCEL `CANCEL;
-    chooser#set_select_multiple true;
-    chooser#add_filter filter_ml;
-    chooser#set_filter filter_ml;
-    chooser#set_current_folder (Project.path_src project) |> ignore;
-    create_button_filter_topmods chooser;
-    match chooser#run () with
+      let chooser = GWindow.file_chooser_dialog ~title:"Choose the toplevel modules for the library..."
+          ~action:`OPEN ~position:`CENTER ~show:false () in
+      chooser#add_select_button_stock `OK `OK;
+      chooser#add_button_stock `CANCEL `CANCEL;
+      chooser#set_select_multiple true;
+      chooser#add_filter filter_ml;
+      chooser#set_filter filter_ml;
+      chooser#set_current_folder (Project.path_src project) |> ignore;
+      create_button_filter_topmods chooser;
+      match chooser#run () with
       | `OK ->
-        let filenames = mk_target_filenames project chooser#get_filenames in
-        entry_lib_modules#set_text (String.concat " " filenames);
-        chooser#destroy()
+          let filenames = mk_target_filenames project chooser#get_filenames in
+          entry_lib_modules#set_text (String.concat " " filenames);
+          chooser#destroy()
       | _ -> chooser#destroy()
-  end in
+    end in
   (** Install path for library *)
   let box = GPack.vbox ~packing:lbox#pack () in
   let ocamllib = project.Prj.ocamllib in
@@ -137,19 +137,19 @@ class view ~project ~target_list ?packing () =
   let entry_lib_install = GEdit.entry ~editable:true ~packing:hbox#add () in
   let button_lib_install = GButton.button ~label:"  ...  " ~packing:hbox#pack () in
   let _ = button_lib_install#misc#set_sensitive false in
-(*  let _ = button_lib_install#connect#clicked ~callback:begin fun () ->
-    let chooser = GWindow.file_chooser_dialog ~title:"Install path for the library"
-      ~action:`SELECT_FOLDER ~position:`CENTER ~show:false () in
-    chooser#add_select_button_stock `OK `OK;
-    chooser#add_button_stock `CANCEL `CANCEL;
-    chooser#set_select_multiple false;
-    chooser#set_current_folder Oe_config.ocamllib;
-    match chooser#run () with
-      | `OK ->
-        entry_lib_install#set_text (try List.hd chooser#get_filenames with Failure "hd" -> "");
-        chooser#destroy()
-      | _ -> chooser#destroy()
-  end in*)
+  (*  let _ = button_lib_install#connect#clicked ~callback:begin fun () ->
+      let chooser = GWindow.file_chooser_dialog ~title:"Install path for the library"
+        ~action:`SELECT_FOLDER ~position:`CENTER ~show:false () in
+      chooser#add_select_button_stock `OK `OK;
+      chooser#add_button_stock `CANCEL `CANCEL;
+      chooser#set_select_multiple false;
+      chooser#set_current_folder Oe_config.ocamllib;
+      match chooser#run () with
+        | `OK ->
+          entry_lib_install#set_text (try List.hd chooser#get_filenames with Failure "hd" -> "");
+          chooser#destroy()
+        | _ -> chooser#destroy()
+      end in*)
   (** Executable *)
   let mbox = GPack.vbox ~spacing:0 ~packing:(vbox#pack ~expand:false) () in
   let lmbox = GPack.hbox ~spacing:0 ~packing:mbox#pack () in
@@ -163,32 +163,32 @@ class view ~project ~target_list ?packing () =
   let entry_main_module = GEdit.entry ~editable:false ~packing:hbox#add () in
   let button_main_module = GButton.button ~label:"  ...  " ~packing:(hbox#pack ~expand:false) () in
   let _ = button_main_module#connect#clicked ~callback:begin fun () ->
-    let chooser = GWindow.file_chooser_dialog ~title:"Choose the main module..."
-      ~action:`OPEN ~position:`CENTER ~show:false () in
-    chooser#add_select_button_stock `OK `OK;
-    chooser#add_button_stock `CANCEL `CANCEL;
-    chooser#set_select_multiple false;
-    chooser#add_filter filter_ml;
-    chooser#set_filter filter_ml;
-    chooser#set_current_folder (Project.path_src project) |> ignore;
-    create_button_filter_topmods chooser;
-    match chooser#run () with
+      let chooser = GWindow.file_chooser_dialog ~title:"Choose the main module..."
+          ~action:`OPEN ~position:`CENTER ~show:false () in
+      chooser#add_select_button_stock `OK `OK;
+      chooser#add_button_stock `CANCEL `CANCEL;
+      chooser#set_select_multiple false;
+      chooser#add_filter filter_ml;
+      chooser#set_filter filter_ml;
+      chooser#set_current_folder (Project.path_src project) |> ignore;
+      create_button_filter_topmods chooser;
+      match chooser#run () with
       | `OK ->
-        begin
-          try
-            let filename = List.hd (mk_target_filenames project chooser#get_filenames) in
-            entry_main_module#set_text filename;
-          with Failure _ -> ()
-        end;
-        chooser#destroy()
+          begin
+            try
+              let filename = List.hd (mk_target_filenames project chooser#get_filenames) in
+              entry_main_module#set_text filename;
+            with Failure _ -> ()
+          end;
+          chooser#destroy()
       | _ -> chooser#destroy()
-  end in
+    end in
   let win32_box = GBin.frame ~label:" Native MS Application " ~packing:box#pack () in
   let box = GPack.hbox ~border_width:5 ~spacing:8 ~packing:win32_box#add () in
   let label = GMisc.label ~text:"Subsystem: " ~packing:box#pack () in
   let combo_subsystem, _ = GEdit.combo_box_text
-    ~strings:["Console"; "Windows"]
-    ~active:0 ~packing:box#pack () in
+      ~strings:["Console"; "Windows"]
+      ~active:0 ~packing:box#pack () in
   let align = GBin.alignment ~xscale:0.0 ~xalign:1.0 ~packing:box#add () in
   let button_resource_file = GButton.button ~label:((if Ocaml_config.is_mingw then "" else "Icons and ") ^ "Assembly Information...") ~packing:align#add () in
 
@@ -254,8 +254,8 @@ class view ~project ~target_list ?packing () =
   let check_dontlinkdep = GButton.check_button ~packing:more_vbox#pack () in
   let _ = check_dontlinkdep#add (GMisc.label ~markup:"Do not link module dependencies (<tt>-dont-link-dep</tt>)" ())#coerce in
   let _ = check_nodep#connect#toggled ~callback:begin fun () ->
-    check_dontlinkdep#misc#set_sensitive (not check_nodep#active)
-  end in
+      check_dontlinkdep#misc#set_sensitive (not check_nodep#active)
+    end in
 
   (** Dependencies Tab *)
   let vbox = GPack.vbox ~border_width:8 ~spacing:13 () in
@@ -266,10 +266,10 @@ class view ~project ~target_list ?packing () =
   let vbox = GPack.vbox ~width:550 ~border_width:8 ~spacing:13 () in
   let _ = nb#append_page ~tab_label:(GMisc.label ~text:"Conditions" ())#coerce vbox#coerce in
   let _ = GMisc.label ~xalign:0.0 ~line_wrap:true ~justify:`LEFT ~width:600
-    ~text:"Specify the conditions that determine whether commands on this target \
-should run. The selected conditions will be verified at \
-any attempt to perform a \"Clean\" or \"Build\" or any other external task, from \
-both within the IDE and from the generated build script." ~packing:vbox#pack () in
+      ~text:"Specify the conditions that determine whether commands on this target \
+             should run. The selected conditions will be verified at \
+             any attempt to perform a \"Clean\" or \"Build\" or any other external task, from \
+             both within the IDE and from the generated build script." ~packing:vbox#pack () in
   let align = GBin.alignment ~padding:(0,0,indent,0) ~packing:vbox#add () in
   let cbox = GPack.vbox ~spacing:3 ~packing:align#add () in
   let check_unix = GButton.check_button ~label:"O.S. type is Unix" ~packing:cbox#pack () in
@@ -281,9 +281,9 @@ both within the IDE and from the generated build script." ~packing:vbox#pack () 
   let check_fl_pkg = GButton.check_button ~label:"The following Findlib packages are installed:" ~packing:flbox#pack () in
   let entry_fl_pkg = GEdit.entry ~packing:flbox#add () in
   let _ = check_fl_pkg#connect#toggled ~callback:begin fun () ->
-    entry_fl_pkg#misc#set_sensitive check_fl_pkg#active;
-    if check_fl_pkg#active then entry_fl_pkg#misc#grab_focus()
-  end; in
+      entry_fl_pkg#misc#set_sensitive check_fl_pkg#active;
+      if check_fl_pkg#active then entry_fl_pkg#misc#grab_focus()
+    end; in
   let _ = entry_fl_pkg#misc#set_sensitive false in
   (* environment *)
   let envbox = GPack.hbox ~spacing:5 ~packing:cbox#pack () in
@@ -291,9 +291,9 @@ both within the IDE and from the generated build script." ~packing:vbox#pack () 
   let _ = GMisc.label ~markup:"Check environment variable (<span face='monospace' size='small'>name=value</span>):" ~packing:check_env#add () in
   let entry_env = GEdit.entry ~packing:envbox#add () in
   let _ = check_env#connect#toggled ~callback:begin fun () ->
-    entry_env#misc#set_sensitive check_env#active;
-    if check_env#active then entry_env#misc#grab_focus()
-  end; in
+      entry_env#misc#set_sensitive check_env#active;
+      if check_env#active then entry_env#misc#grab_focus()
+    end; in
   let _ = entry_env#misc#set_sensitive false in
   (* ocaml_config *)
   let ocfgbox = GPack.hbox ~spacing:5 ~packing:cbox#pack () in
@@ -301,9 +301,9 @@ both within the IDE and from the generated build script." ~packing:vbox#pack () 
   let _ = GMisc.label ~markup:"Check OCaml configuration property (<span face='monospace' size='small'>name=value</span>):" ~packing:check_ocfg#add () in
   let entry_ocfg = GEdit.entry ~packing:ocfgbox#add () in
   let _ = check_ocfg#connect#toggled ~callback:begin fun () ->
-    entry_ocfg#misc#set_sensitive check_ocfg#active;
-    if check_ocfg#active then entry_ocfg#misc#grab_focus()
-  end; in
+      entry_ocfg#misc#set_sensitive check_ocfg#active;
+      if check_ocfg#active then entry_ocfg#misc#grab_focus()
+    end; in
   let _ = entry_ocfg#misc#set_sensitive false in
 
   (** Findlib Tab *)
@@ -318,392 +318,392 @@ both within the IDE and from the generated build script." ~packing:vbox#pack () 
       ~packing:box#add ~show:false () in
   (*  *)
   let cmd_line = GEdit.entry ~editable:false ~show:App_config.application_debug () in
-object (self)
-  inherit GObj.widget mainbox#as_widget
-  val mutable target = None
-  val mutable signals_enabled = true
-  val mutable page_changed = false
+  object (self)
+    inherit GObj.widget mainbox#as_widget
+    val mutable target = None
+    val mutable signals_enabled = true
+    val mutable page_changed = false
 
-  initializer
-    (*  *)
-    button_package#set_focus_on_click false;
-    ignore (button_package#connect#clicked ~callback:begin fun () ->
-      let widget, window = Findlib_list.dialog flbox#coerce () in
-      Gaux.may target ~f:(fun tg -> widget#select_packages (Str.split (Miscellanea.regexp ", *") tg.package));
-      window#(*set_on_popdown*)connect#destroy begin fun () ->
-        entry_package#misc#grab_focus ();
-        entry_package#set_position (Glib.Utf8.length entry_package#text);
-      end |> ignore;
-      ignore (widget#connect#changed ~callback:begin fun _ ->
-        entry_package#set_text (String.concat "," (widget#get_selected_packages()))
-      end);
-    end);
-    (*  *)
-    ignore (widget_deps#connect#changed ~callback:begin fun () ->
-      self#update (fun target -> target.dependencies <- widget_deps#get()) ();
-      changed#call()
-    end;);
-    (*  *)
-    let checks = [
-      check_fl_pkg, begin fun () ->
-        let packages = String.trim entry_fl_pkg#text in
-        if packages <> "" then true, sprintf "FINDLIB(%s)" packages else false, ""
-      end;
-      check_env, begin fun () ->
-        let text = String.trim entry_env#text in
-        if Str.string_match Oebuild.re_prop_body text 0 then begin
-          let op = try if (Str.matched_group 3 text) = "=" then Some "=" else Some "<>" with Not_found -> None in
-          let name = Str.matched_group 2 text in
-          match op with
+    initializer
+      (*  *)
+      button_package#set_focus_on_click false;
+      ignore (button_package#connect#clicked ~callback:begin fun () ->
+          let widget, window = Findlib_list.dialog flbox#coerce () in
+          Gaux.may target ~f:(fun tg -> widget#select_packages (Str.split (Miscellanea.regexp ", *") tg.package));
+          window#(*set_on_popdown*)connect#destroy begin fun () ->
+            entry_package#misc#grab_focus ();
+            entry_package#set_position (Glib.Utf8.length entry_package#text);
+          end |> ignore;
+          ignore (widget#connect#changed ~callback:begin fun _ ->
+              entry_package#set_text (String.concat "," (widget#get_selected_packages()))
+            end);
+        end);
+      (*  *)
+      ignore (widget_deps#connect#changed ~callback:begin fun () ->
+          self#update (fun target -> target.dependencies <- widget_deps#get()) ();
+          changed#call()
+        end;);
+      (*  *)
+      let checks = [
+        check_fl_pkg, begin fun () ->
+          let packages = String.trim entry_fl_pkg#text in
+          if packages <> "" then true, sprintf "FINDLIB(%s)" packages else false, ""
+        end;
+        check_env, begin fun () ->
+          let text = String.trim entry_env#text in
+          if Str.string_match Oebuild.re_prop_body text 0 then begin
+            let op = try if (Str.matched_group 3 text) = "=" then Some "=" else Some "<>" with Not_found -> None in
+            let name = Str.matched_group 2 text in
+            match op with
             | Some op ->
-              let value = try Str.matched_group 4 text with Not_found -> "" in
-              true, sprintf "ENV(%s%s%s)" name op value
+                let value = try Str.matched_group 4 text with Not_found -> "" in
+                true, sprintf "ENV(%s%s%s)" name op value
             | None -> true, sprintf "ENV(%s)" name
-        end else false, ""
-      end;
-      check_ocfg, begin fun () ->
-        let text = String.trim entry_ocfg#text in
-        if Str.string_match Oebuild.re_prop_body text 0 then begin
-          let op = try if (Str.matched_group 3 text) = "=" then Some "=" else Some "<>" with Not_found -> None in
-          let name = Str.matched_group 2 text in
-          match op with
+          end else false, ""
+        end;
+        check_ocfg, begin fun () ->
+          let text = String.trim entry_ocfg#text in
+          if Str.string_match Oebuild.re_prop_body text 0 then begin
+            let op = try if (Str.matched_group 3 text) = "=" then Some "=" else Some "<>" with Not_found -> None in
+            let name = Str.matched_group 2 text in
+            match op with
             | Some op ->
-              let value = try Str.matched_group 4 text with Not_found -> "" in
-              true, sprintf "OCAML(%s%s%s)" name op value
+                let value = try Str.matched_group 4 text with Not_found -> "" in
+                true, sprintf "OCAML(%s%s%s)" name op value
             | None -> true, sprintf "OCAML(%s)" name
-        end else false, ""
-      end;
-      check_unix, (fun () -> true, "IS_UNIX");
-      check_win32, (fun () -> true, "IS_WIN32");
-      check_cygwin, (fun () -> true, "IS_CYGWIN");
-      check_native, (fun () -> true, "NATIVE")
-    ] in
-    let update_restr () =
-      self#update begin fun target ->
-        if signals_enabled then
-          target.restrictions <-
-            List.fold_left begin fun acc (check, f) ->
-              if check#active then begin
-                let enabled, value = f () in
-                if enabled then value :: acc else acc
-              end else acc
-            end [] checks;
-      end ();
-      changed#call()
-    in
-    List.iter begin fun (check, _) ->
-      ignore (check#connect#toggled ~callback:update_restr);
-    end checks;
-    ignore (entry_fl_pkg#connect#changed ~callback:update_restr);
-    ignore (entry_env#connect#changed ~callback:update_restr);
-    ignore (entry_ocfg#connect#changed ~callback:update_restr);
-    (*  *)
-    ignore (entry_name#connect#changed
-      ~callback:begin fun () ->
-        self#update (fun target -> target.name <- entry_name#text) ();
-        changed#call()
-      end);
-    ignore (entry_descr#connect#changed
-      ~callback:begin fun () ->
-        self#update (fun target -> target.descr <- entry_descr#text) ();
-        changed#call()
-      end);
-    ignore (combo_comp#connect#changed
-      ~callback:begin fun () ->
+          end else false, ""
+        end;
+        check_unix, (fun () -> true, "IS_UNIX");
+        check_win32, (fun () -> true, "IS_WIN32");
+        check_cygwin, (fun () -> true, "IS_CYGWIN");
+        check_native, (fun () -> true, "NATIVE")
+      ] in
+      let update_restr () =
         self#update begin fun target ->
-          target.byt <- (combo_comp#active = 0 || combo_comp#active = 2);
-          self#set_inline target;
-          check_dontaddopt#misc#set_sensitive (radio_executable#active && (combo_comp#active = 1 || combo_comp#active = 2));
+          if signals_enabled then
+            target.restrictions <-
+              List.fold_left begin fun acc (check, f) ->
+                if check#active then begin
+                  let enabled, value = f () in
+                  if enabled then value :: acc else acc
+                end else acc
+              end [] checks;
         end ();
         changed#call()
-      end);
-    ignore (combo_comp#connect#changed
-      ~callback:(self#update begin fun target ->
-        target.opt <- (combo_comp#active = 1 || combo_comp#active = 2);
-        self#set_inline target;
+      in
+      List.iter begin fun (check, _) ->
+        ignore (check#connect#toggled ~callback:update_restr);
+      end checks;
+      ignore (entry_fl_pkg#connect#changed ~callback:update_restr);
+      ignore (entry_env#connect#changed ~callback:update_restr);
+      ignore (entry_ocfg#connect#changed ~callback:update_restr);
+      (*  *)
+      ignore (entry_name#connect#changed
+                ~callback:begin fun () ->
+                  self#update (fun target -> target.name <- entry_name#text) ();
+                  changed#call()
+                end);
+      ignore (entry_descr#connect#changed
+                ~callback:begin fun () ->
+                  self#update (fun target -> target.descr <- entry_descr#text) ();
+                  changed#call()
+                end);
+      ignore (combo_comp#connect#changed
+                ~callback:begin fun () ->
+                  self#update begin fun target ->
+                    target.byt <- (combo_comp#active = 0 || combo_comp#active = 2);
+                    self#set_inline target;
+                    check_dontaddopt#misc#set_sensitive (radio_executable#active && (combo_comp#active = 1 || combo_comp#active = 2));
+                  end ();
+                  changed#call()
+                end);
+      ignore (combo_comp#connect#changed
+                ~callback:(self#update begin fun target ->
+                    target.opt <- (combo_comp#active = 1 || combo_comp#active = 2);
+                    self#set_inline target;
+                    check_dontaddopt#misc#set_sensitive (radio_executable#active && (combo_comp#active = 1 || combo_comp#active = 2));
+                  end));
+      let update_inline () =
+        self#update begin fun target ->
+          if signals_enabled then begin
+            target.inline <- (if target.opt && check_inline#active then Some entry_inline#value_as_int else None);
+          end
+        end ();
+        changed#call()
+      in
+      ignore (check_inline#connect#after#toggled ~callback:update_inline);
+      ignore (check_inline#connect#after#toggled ~callback:begin fun () ->
+          if signals_enabled then begin
+            entry_inline#misc#set_sensitive check_inline#active;
+          end
+        end);
+      ignore (adjustment_inline#connect#after#value_changed ~callback:update_inline);
+      ignore (entry_libs#connect#changed
+                ~callback:(self#update (fun target -> target.libs <- entry_libs#text)));
+      ignore (entry_mods#connect#changed
+                ~callback:(self#update (fun target -> target.other_objects <- entry_mods#text)));
+      ignore (entry_main_module#connect#changed
+                ~callback:(self#update begin fun target ->
+                    if signals_enabled then begin
+                      target.files <- entry_main_module#text;
+                      if entry_outname#text = "" then (entry_outname#set_text
+                                                         (Filename.chop_extension (Filename.basename entry_main_module#text)))
+                    end
+                  end));
+      ignore (entry_lib_modules#connect#changed
+                ~callback:(self#update begin fun target ->
+                    if signals_enabled then begin
+                      target.files <- entry_lib_modules#text
+                    end
+                  end));
+      ignore (entry_package#connect#changed
+                ~callback:(self#update (fun target -> target.package <- entry_package#text)));
+      ignore (entry_includes#connect#changed
+                ~callback:(self#update (fun target -> target.includes <- entry_includes#text)));
+      ignore (check_thread#connect#toggled
+                ~callback:(self#update (fun target -> target.thread <- check_thread#active)));
+      ignore (check_vmthread#connect#toggled
+                ~callback:(self#update (fun target -> target.vmthread <- check_vmthread#active)));
+      ignore (entry_pp#connect#changed
+                ~callback:(self#update (fun target -> target.pp <- entry_pp#text)));
+      ignore (entry_cflags#connect#changed
+                ~callback:(self#update (fun target -> target.cflags <- entry_cflags#text)));
+      ignore (entry_lflags#connect#changed
+                ~callback:(self#update (fun target -> target.lflags <- entry_lflags#text)));
+      (* Radio buttons signals *)
+      let get_target_type () =
+        if radio_archive#active then
+          (match combo_kind#active with 0 -> Library | 1 -> Plugin | 2 -> Pack | _ -> assert false)
+        else if radio_executable#active then Executable
+        else if radio_external#active then External
+        else assert false;
+      in
+      let set_sensitive_on_type_changed () =
+        align_lib#misc#set_sensitive (not radio_executable#active && not radio_external#active);
+        align_exec#misc#set_sensitive radio_executable#active;
+        entry_outname#misc#set_sensitive (not radio_external#active);
+        if radio_executable#active then (entry_main_module#misc#grab_focus())
+        else if radio_archive#active then (button_lib_modules#misc#grab_focus());
+        combo_comp#misc#set_sensitive (radio_executable#active || radio_archive#active);
         check_dontaddopt#misc#set_sensitive (radio_executable#active && (combo_comp#active = 1 || combo_comp#active = 2));
-      end));
-    let update_inline () =
-      self#update begin fun target ->
-        if signals_enabled then begin
-          target.inline <- (if target.opt && check_inline#active then Some entry_inline#value_as_int else None);
-        end
-      end ();
-      changed#call()
-    in
-    ignore (check_inline#connect#after#toggled ~callback:update_inline);
-    ignore (check_inline#connect#after#toggled ~callback:begin fun () ->
-      if signals_enabled then begin
-        entry_inline#misc#set_sensitive check_inline#active;
-      end
-    end);
-    ignore (adjustment_inline#connect#after#value_changed ~callback:update_inline);
-    ignore (entry_libs#connect#changed
-      ~callback:(self#update (fun target -> target.libs <- entry_libs#text)));
-    ignore (entry_mods#connect#changed
-      ~callback:(self#update (fun target -> target.other_objects <- entry_mods#text)));
-    ignore (entry_main_module#connect#changed
-      ~callback:(self#update begin fun target ->
-        if signals_enabled then begin
-          target.files <- entry_main_module#text;
-          if entry_outname#text = "" then (entry_outname#set_text
-            (Filename.chop_extension (Filename.basename entry_main_module#text)))
-        end
-      end));
-    ignore (entry_lib_modules#connect#changed
-      ~callback:(self#update begin fun target ->
-        if signals_enabled then begin
-          target.files <- entry_lib_modules#text
-        end
-      end));
-    ignore (entry_package#connect#changed
-      ~callback:(self#update (fun target -> target.package <- entry_package#text)));
-    ignore (entry_includes#connect#changed
-      ~callback:(self#update (fun target -> target.includes <- entry_includes#text)));
-    ignore (check_thread#connect#toggled
-      ~callback:(self#update (fun target -> target.thread <- check_thread#active)));
-    ignore (check_vmthread#connect#toggled
-      ~callback:(self#update (fun target -> target.vmthread <- check_vmthread#active)));
-    ignore (entry_pp#connect#changed
-      ~callback:(self#update (fun target -> target.pp <- entry_pp#text)));
-    ignore (entry_cflags#connect#changed
-      ~callback:(self#update (fun target -> target.cflags <- entry_cflags#text)));
-    ignore (entry_lflags#connect#changed
-      ~callback:(self#update (fun target -> target.lflags <- entry_lflags#text)));
-    (* Radio buttons signals *)
-    let get_target_type () =
-      if radio_archive#active then
-        (match combo_kind#active with 0 -> Library | 1 -> Plugin | 2 -> Pack | _ -> assert false)
-      else if radio_executable#active then Executable
-      else if radio_external#active then External
-      else assert false;
-    in
-    let set_sensitive_on_type_changed () =
-      align_lib#misc#set_sensitive (not radio_executable#active && not radio_external#active);
-      align_exec#misc#set_sensitive radio_executable#active;
-      entry_outname#misc#set_sensitive (not radio_external#active);
-      if radio_executable#active then (entry_main_module#misc#grab_focus())
-      else if radio_archive#active then (button_lib_modules#misc#grab_focus());
-      combo_comp#misc#set_sensitive (radio_executable#active || radio_archive#active);
-      check_dontaddopt#misc#set_sensitive (radio_executable#active && (combo_comp#active = 1 || combo_comp#active = 2));
-    in
-    ignore (radio_archive#connect#after#toggled
-        ~callback:(self#update begin fun target ->
+      in
+      ignore (radio_archive#connect#after#toggled
+                ~callback:(self#update begin fun target ->
+                    set_sensitive_on_type_changed();
+                    if signals_enabled then begin
+                      target.target_type <- get_target_type();
+                      entry_lib_modules#set_text "";
+                      entry_main_module#set_text "";
+                    end
+                  end));
+      ignore (combo_kind#connect#changed ~callback:(self#update (fun target ->
+          target.target_type <- get_target_type())));
+      ignore (radio_executable#connect#clicked ~callback:begin fun () ->
+          self#update begin fun target ->
             set_sensitive_on_type_changed();
             if signals_enabled then begin
               target.target_type <- get_target_type();
-              entry_lib_modules#set_text "";
-              entry_main_module#set_text "";
             end
-          end));
-    ignore (combo_kind#connect#changed ~callback:(self#update (fun target ->
-          target.target_type <- get_target_type())));
-    ignore (radio_executable#connect#clicked ~callback:begin fun () ->
-        self#update begin fun target ->
-          set_sensitive_on_type_changed();
+          end ();
+        end);
+      ignore (radio_external#connect#toggled ~callback:begin
+          self#update begin fun target ->
+            set_sensitive_on_type_changed();
+            if signals_enabled then begin
+              target.target_type <- get_target_type();
+            end
+          end;
+        end);
+      (*  *)
+      ignore (entry_outname#connect#changed
+                ~callback:(self#update (fun target -> target.outname <- entry_outname#text)));
+      ignore (entry_lib_install#connect#changed
+                ~callback:(self#update begin fun target ->
+                    target.lib_install_path <- entry_lib_install#text
+                  end));
+      ignore (check_nodep#connect#toggled
+                ~callback:(self#update (fun target -> target.nodep <- check_nodep#active)));
+      ignore (check_dontlinkdep#connect#toggled
+                ~callback:(self#update (fun target -> target.dontlinkdep <- check_dontlinkdep#active)));
+      let _ = check_thread#connect#toggled ~callback:begin fun () ->
           if signals_enabled then begin
-            target.target_type <- get_target_type();
+            check_vmthread#set_active false;
+            check_vmthread#misc#set_sensitive (not check_thread#active);
           end
-         end ();
-      end);
-    ignore (radio_external#connect#toggled ~callback:begin
-        self#update begin fun target ->
-          set_sensitive_on_type_changed();
+        end in
+      let _ = check_vmthread#connect#toggled ~callback:begin fun () ->
           if signals_enabled then begin
-            target.target_type <- get_target_type();
+            check_thread#set_active false;
+            check_thread#misc#set_sensitive (not check_vmthread#active);
           end
-        end;
-      end);
-    (*  *)
-    ignore (entry_outname#connect#changed
-      ~callback:(self#update (fun target -> target.outname <- entry_outname#text)));
-    ignore (entry_lib_install#connect#changed
-      ~callback:(self#update begin fun target ->
-        target.lib_install_path <- entry_lib_install#text
-      end));
-    ignore (check_nodep#connect#toggled
-      ~callback:(self#update (fun target -> target.nodep <- check_nodep#active)));
-    ignore (check_dontlinkdep#connect#toggled
-      ~callback:(self#update (fun target -> target.dontlinkdep <- check_dontlinkdep#active)));
-    let _ = check_thread#connect#toggled ~callback:begin fun () ->
-      if signals_enabled then begin
+        end in
+      check_is_fl_package#connect#toggled
+        ~callback:(self#update begin fun target ->
+            target.is_fl_package <- check_is_fl_package#active;
+            changed#call()
+          end) |> ignore;
+      combo_subsystem#connect#changed ~callback:(self#update begin fun target ->
+          target.subsystem <- Some (if combo_subsystem#active = 1 then Windows else Console);
+        end) |> ignore;
+      check_dontaddopt#connect#toggled
+        ~callback:(self#update begin fun target ->
+            target.dontaddopt <- check_dontaddopt#active;
+            changed#call()
+          end) |> ignore;
+      button_resource_file#connect#clicked ~callback:(fun () ->
+          Gaux.may target ~f:begin fun target ->
+            let _, widget = Resource_file_widget.window ~project ~target () in
+            widget#connect#saved ~callback:begin fun rc ->
+              self#update begin fun target ->
+                target.resource_file <- Some rc;
+                changed#call ();
+              end ();
+            end
+          end) |> ignore;
+      (*  *)
+      self#connect#changed ~callback:begin fun () ->
+        page_changed <- true;
+      end |> ignore;
+
+    method changed = page_changed
+    method set_changed x = page_changed <- x
+    method entry_cmd_line = cmd_line
+    method entry_name = entry_name
+
+    method private set_inline target =
+      check_inline#set_active (target.opt && target.inline <> None);
+      entry_inline#set_value (match target.inline with Some inline -> float inline | _ -> 1.);
+      check_inline#misc#set_sensitive target.opt;
+      entry_inline#misc#set_sensitive (target.opt && check_inline#active);
+
+    method private update update_func () =
+      Gaux.may target ~f:begin fun tg ->
+        update_func tg;
+        build_settings_vbox#misc#set_sensitive (tg.target_type <> External && not tg.readonly);
+        check_is_fl_package#misc#set_sensitive (tg.target_type <> External && not tg.readonly);
+        target_vbox#misc#set_sensitive (not tg.readonly);
+        entry_name#misc#set_sensitive (not tg.readonly);
+        (*entry_descr#misc#set_sensitive (not tg.readonly);*)
+        Gmisclib.Idle.add ~prio:300 (fun () -> self#update_cmd_line tg);
+        (*changed#call()*)
+      end;
+
+    method set_target tg =
+      signals_enabled <- false;
+      target <- Some tg;
+      widget_deps#set tg;
+      entry_name#set_text tg.name;
+      entry_descr#set_text tg.descr;
+      combo_comp#set_active (match tg.byt, tg.opt with
+          | true, false -> 0
+          | false, true -> 1
+          | true, true -> 2
+          | _ -> 0);
+      self#set_inline tg;
+      entry_libs#set_text tg.libs;
+      entry_mods#set_text tg.other_objects;
+      entry_package#set_text tg.package;
+      entry_includes#set_text tg.includes;
+      if tg.thread then begin
+        check_thread#set_active true;
+        check_thread#misc#set_sensitive true;
         check_vmthread#set_active false;
-        check_vmthread#misc#set_sensitive (not check_thread#active);
-      end
-    end in
-    let _ = check_vmthread#connect#toggled ~callback:begin fun () ->
-      if signals_enabled then begin
+        check_vmthread#misc#set_sensitive false;
+      end else if tg.vmthread then begin
         check_thread#set_active false;
-        check_thread#misc#set_sensitive (not check_vmthread#active);
-      end
-    end in
-    check_is_fl_package#connect#toggled
-      ~callback:(self#update begin fun target ->
-          target.is_fl_package <- check_is_fl_package#active;
-          changed#call()
-        end) |> ignore;
-    combo_subsystem#connect#changed ~callback:(self#update begin fun target ->
-        target.subsystem <- Some (if combo_subsystem#active = 1 then Windows else Console);
-      end) |> ignore;
-    check_dontaddopt#connect#toggled
-      ~callback:(self#update begin fun target ->
-          target.dontaddopt <- check_dontaddopt#active;
-          changed#call()
-        end) |> ignore;
-    button_resource_file#connect#clicked ~callback:(fun () ->
-        Gaux.may target ~f:begin fun target ->
-          let _, widget = Resource_file_widget.window ~project ~target () in
-          widget#connect#saved ~callback:begin fun rc ->
-            self#update begin fun target ->
-              target.resource_file <- Some rc;
-              changed#call ();
-            end ();
-          end
-        end) |> ignore;
-    (*  *)
-    self#connect#changed ~callback:begin fun () ->
-      page_changed <- true;
-    end |> ignore;
-
-  method changed = page_changed
-  method set_changed x = page_changed <- x
-  method entry_cmd_line = cmd_line
-  method entry_name = entry_name
-
-  method private set_inline target =
-    check_inline#set_active (target.opt && target.inline <> None);
-    entry_inline#set_value (match target.inline with Some inline -> float inline | _ -> 1.);
-    check_inline#misc#set_sensitive target.opt;
-    entry_inline#misc#set_sensitive (target.opt && check_inline#active);
-
-  method private update update_func () =
-    Gaux.may target ~f:begin fun tg ->
-      update_func tg;
-      build_settings_vbox#misc#set_sensitive (tg.target_type <> External && not tg.readonly);
-      check_is_fl_package#misc#set_sensitive (tg.target_type <> External && not tg.readonly);
-      target_vbox#misc#set_sensitive (not tg.readonly);
-      entry_name#misc#set_sensitive (not tg.readonly);
-      (*entry_descr#misc#set_sensitive (not tg.readonly);*)
-      Gmisclib.Idle.add ~prio:300 (fun () -> self#update_cmd_line tg);
-      (*changed#call()*)
-    end;
-
-  method set_target tg =
-    signals_enabled <- false;
-    target <- Some tg;
-    widget_deps#set tg;
-    entry_name#set_text tg.name;
-    entry_descr#set_text tg.descr;
-    combo_comp#set_active (match tg.byt, tg.opt with
-      | true, false -> 0
-      | false, true -> 1
-      | true, true -> 2
-      | _ -> 0);
-    self#set_inline tg;
-    entry_libs#set_text tg.libs;
-    entry_mods#set_text tg.other_objects;
-    entry_package#set_text tg.package;
-    entry_includes#set_text tg.includes;
-    if tg.thread then begin
-      check_thread#set_active true;
-      check_thread#misc#set_sensitive true;
-      check_vmthread#set_active false;
-      check_vmthread#misc#set_sensitive false;
-    end else if tg.vmthread then begin
-      check_thread#set_active false;
-      check_thread#misc#set_sensitive false;
-      check_vmthread#set_active true;
-      check_vmthread#misc#set_sensitive true;
-    end else begin
-      check_thread#set_active false;
-      check_thread#misc#set_sensitive true;
-      check_vmthread#set_active false;
-      check_vmthread#misc#set_sensitive true;
-    end;
-    entry_pp#set_text tg.pp;
-    entry_cflags#set_text tg.cflags;
-    entry_lflags#set_text tg.lflags;
-    begin
-      match tg.target_type with
+        check_thread#misc#set_sensitive false;
+        check_vmthread#set_active true;
+        check_vmthread#misc#set_sensitive true;
+      end else begin
+        check_thread#set_active false;
+        check_thread#misc#set_sensitive true;
+        check_vmthread#set_active false;
+        check_vmthread#misc#set_sensitive true;
+      end;
+      entry_pp#set_text tg.pp;
+      entry_cflags#set_text tg.cflags;
+      entry_lflags#set_text tg.lflags;
+      begin
+        match tg.target_type with
         | Executable -> radio_executable#set_active true
         | Library | Pack | Plugin -> radio_archive#set_active true
         | External -> radio_external#set_active true
-    end;
-    combo_kind#set_active (match tg.target_type with Library -> 0 | Plugin -> 1 | Pack -> 2 | Executable | External -> 0);
-    entry_outname#set_text tg.outname;
-    entry_lib_install#set_text tg.lib_install_path;
-    if (List.mem tg.target_type [Library; Plugin; Pack]) then begin
-      align_lib#misc#set_sensitive true;
-      align_exec#misc#set_sensitive false;
-      entry_lib_modules#set_text tg.files;
-      entry_main_module#set_text "";
-    end else if (List.mem tg.target_type [External]) then begin
-      align_lib#misc#set_sensitive false;
-      align_exec#misc#set_sensitive false;
-      entry_lib_modules#set_text "";
-      entry_main_module#set_text "";
-    end else begin
-      align_lib#misc#set_sensitive false;
-      align_exec#misc#set_sensitive true;
-      entry_lib_modules#set_text "";
-      let filename = Miscellanea.split " +" tg.files in
-      assert (List.length filename <= 1);
-      try
-        let filename = List.hd filename in
-        entry_main_module#set_text filename;
-      with Failure _ -> (ignore (entry_main_module#set_text ""))
-    end;
-    check_nodep#set_active tg.nodep;
-    check_dontlinkdep#set_active tg.dontlinkdep;
-    (*  *)
-    check_unix#set_active (List.mem "IS_UNIX" tg.restrictions);
-    check_win32#set_active (List.mem "IS_WIN32" tg.restrictions);
-    check_cygwin#set_active (List.mem "IS_CYGWIN" tg.restrictions);
-    check_native#set_active (List.exists (fun x -> List.mem x tg.restrictions) ["HAVE_NATIVE"; "HAS_NATIVE"; "NATIVE"]);
-    entry_fl_pkg#set_text begin
-      match List_opt.find (fun res -> Str.string_match Oebuild.re_fl_pkg_exist res 0) tg.restrictions
-      with
+      end;
+      combo_kind#set_active (match tg.target_type with Library -> 0 | Plugin -> 1 | Pack -> 2 | Executable | External -> 0);
+      entry_outname#set_text tg.outname;
+      entry_lib_install#set_text tg.lib_install_path;
+      if (List.mem tg.target_type [Library; Plugin; Pack]) then begin
+        align_lib#misc#set_sensitive true;
+        align_exec#misc#set_sensitive false;
+        entry_lib_modules#set_text tg.files;
+        entry_main_module#set_text "";
+      end else if (List.mem tg.target_type [External]) then begin
+        align_lib#misc#set_sensitive false;
+        align_exec#misc#set_sensitive false;
+        entry_lib_modules#set_text "";
+        entry_main_module#set_text "";
+      end else begin
+        align_lib#misc#set_sensitive false;
+        align_exec#misc#set_sensitive true;
+        entry_lib_modules#set_text "";
+        let filename = Miscellanea.split " +" tg.files in
+        assert (List.length filename <= 1);
+        try
+          let filename = List.hd filename in
+          entry_main_module#set_text filename;
+        with Failure _ -> (ignore (entry_main_module#set_text ""))
+      end;
+      check_nodep#set_active tg.nodep;
+      check_dontlinkdep#set_active tg.dontlinkdep;
+      (*  *)
+      check_unix#set_active (List.mem "IS_UNIX" tg.restrictions);
+      check_win32#set_active (List.mem "IS_WIN32" tg.restrictions);
+      check_cygwin#set_active (List.mem "IS_CYGWIN" tg.restrictions);
+      check_native#set_active (List.exists (fun x -> List.mem x tg.restrictions) ["HAVE_NATIVE"; "HAS_NATIVE"; "NATIVE"]);
+      entry_fl_pkg#set_text begin
+        match List_opt.find (fun res -> Str.string_match Oebuild.re_fl_pkg_exist res 0) tg.restrictions
+        with
         | Some res ->
-          if Str.string_match Oebuild.re_fl_pkg_exist res 0 then Str.matched_group 2 res else ""
+            if Str.string_match Oebuild.re_fl_pkg_exist res 0 then Str.matched_group 2 res else ""
         | None -> ""
-    end;
-    check_fl_pkg#set_active (entry_fl_pkg#text <> ""); (*(List.exists (fun r -> Str.string_match Oebuild.re_fl_pkg_exist r 0) tg.restrictions)*)
-    entry_env#set_text begin
-      match List_opt.find (fun res -> Str.string_match Oebuild.re_env res 0) tg.restrictions with
+      end;
+      check_fl_pkg#set_active (entry_fl_pkg#text <> ""); (*(List.exists (fun r -> Str.string_match Oebuild.re_fl_pkg_exist r 0) tg.restrictions)*)
+      entry_env#set_text begin
+        match List_opt.find (fun res -> Str.string_match Oebuild.re_env res 0) tg.restrictions with
         | Some res -> Str.matched_group 1 res
         | None -> ""
-    end;
-    check_env#set_active (entry_env#text <> "");
-    entry_ocfg#set_text begin
-      match List_opt.find (fun res -> Str.string_match Oebuild.re_ocfg res 0) tg.restrictions with
+      end;
+      check_env#set_active (entry_env#text <> "");
+      entry_ocfg#set_text begin
+        match List_opt.find (fun res -> Str.string_match Oebuild.re_ocfg res 0) tg.restrictions with
         | Some res -> Str.matched_group 1 res
         | None -> ""
-    end;
-    check_ocfg#set_active (entry_ocfg#text <> "");
-    (*  *)
-    check_is_fl_package#set_active tg.is_fl_package;
-    let win32_sensitive = true (*Sys.win32 && tg.opt && tg.target_type = Executable && Build_script_util.ccomp_type = Some "msvc"*) in
-    win32_box#misc#set_sensitive win32_sensitive;
-    combo_subsystem#set_active (match tg.subsystem with Some Windows -> 1 | Some Console | None -> 0);
-    check_dontaddopt#set_active tg.dontaddopt;
-    (*  *)
-    signals_enabled <- true;
-    Gmisclib.Idle.add ~prio:300 (fun () -> self#update_cmd_line tg);
-    check_is_fl_package#set_label (sprintf "Add package \xC2\xAB%s\xC2\xBB to %s" tg.name Project_tools.findlib_target_name )
+      end;
+      check_ocfg#set_active (entry_ocfg#text <> "");
+      (*  *)
+      check_is_fl_package#set_active tg.is_fl_package;
+      let win32_sensitive = true (*Sys.win32 && tg.opt && tg.target_type = Executable && Build_script_util.ccomp_type = Some "msvc"*) in
+      win32_box#misc#set_sensitive win32_sensitive;
+      combo_subsystem#set_active (match tg.subsystem with Some Windows -> 1 | Some Console | None -> 0);
+      check_dontaddopt#set_active tg.dontaddopt;
+      (*  *)
+      signals_enabled <- true;
+      Gmisclib.Idle.add ~prio:300 (fun () -> self#update_cmd_line tg);
+      check_is_fl_package#set_label (sprintf "Add package \xC2\xAB%s\xC2\xBB to %s" tg.name Project_tools.findlib_target_name )
 
-  method private update_cmd_line target =
-    let cmd, args = create_cmd_line target in
-    let args = List.filter_map (fun (e, a) -> if e then Some a else None) args in
-    let cmd = sprintf "%s %s" cmd (String.concat " " args) in
-    cmd_line#set_text cmd
+    method private update_cmd_line target =
+      let cmd, args = create_cmd_line target in
+      let args = List.filter_map (fun (e, a) -> if e then Some a else None) args in
+      let cmd = sprintf "%s %s" cmd (String.concat " " args) in
+      cmd_line#set_text cmd
 
-  method connect = new signals ~changed
+    method connect = new signals ~changed
 
-end
+  end
 
 and changed () = object (self) inherit [unit] signal () as super end
 and signals ~changed =
-object (self)
-  inherit ml_signals [changed#disconnect]
-  method changed = changed#connect ~after
-end
+  object (self)
+    inherit ml_signals [changed#disconnect]
+    method changed = changed#connect ~after
+  end

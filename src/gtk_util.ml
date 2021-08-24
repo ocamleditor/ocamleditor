@@ -41,13 +41,13 @@ let window widget
     ?(show=true)
     ~x ~y () =
   let window = GWindow.window
-    ~decorated
-    ~border_width:1
-    ~deletable:true
-    ~focus_on_map:focus
-    ~type_hint
-    ?wm_class
-    ~show:false ()
+      ~decorated
+      ~border_width:1
+      ~deletable:true
+      ~focus_on_map:focus
+      ~type_hint
+      ?wm_class
+      ~show:false ()
   in
   let ebox = GBin.event_box ~packing:window#add () in
   ebox#add widget;
@@ -55,10 +55,10 @@ let window widget
   let _ = window#misc#modify_bg [`NORMAL, color] in
   (*let _ = ebox#misc#modify_bg [`NORMAL, `NAME Preferences.preferences#get.Preferences.pref_bg_color_popup] in*)
   ignore (window#event#connect#after#focus_out ~callback:begin fun _ ->
-    if not destroy_child then (ebox#remove widget);
-    window#destroy();
-    true
-  end);
+      if not destroy_child then (ebox#remove widget);
+      window#destroy();
+      true
+    end);
   if escape then Gmisclib.Util.esc_destroy_window window;
   window#set_skip_pager_hint true;
   window#set_skip_taskbar_hint true;
@@ -84,11 +84,11 @@ let window widget
 let window_tooltip widget ?parent ?(fade=false) ~x ~y () =
   let fade = fade && !Gmisclib.Util.fade_window_enabled in
   let window = GWindow.window
-    ~decorated:false
-    ~kind:(if Sys.os_type = "Win32" then `POPUP else `TOPLEVEL)
-    ~type_hint:(if Sys.os_type = "Win32" then `MENU else `NORMAL)
-    ~border_width:1
-    ~show:false ()
+      ~decorated:false
+      ~kind:(if Sys.os_type = "Win32" then `POPUP else `TOPLEVEL)
+      ~type_hint:(if Sys.os_type = "Win32" then `MENU else `NORMAL)
+      ~border_width:1
+      ~show:false ()
   in
   let ebox = GBin.event_box ~packing:window#add () in
   ebox#add widget;

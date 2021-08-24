@@ -39,30 +39,30 @@ let is_mingw = try get "system" = "mingw" with Not_found -> false
 
 let putenv_ocamllib value =
   match Sys.os_type with
-    | "Win32" ->
+  | "Win32" ->
       let value = match value with None -> "" | Some x -> x in
       Unix.putenv "OCAMLLIB" value
-    | _ -> ignore (Sys.command "unset OCAMLLIB")
+  | _ -> ignore (Sys.command "unset OCAMLLIB")
 
 let find_best_compiler compilers =
   try
     Some (List.find begin fun comp ->
-      try
-        let output = kprintf Shell.get_command_output "%s -version%s" comp redirect_stderr in
-        output <> []
-      with _ -> false
-    end compilers)
+        try
+          let output = kprintf Shell.get_command_output "%s -version%s" comp redirect_stderr in
+          output <> []
+        with _ -> false
+      end compilers)
   with Not_found -> None;;
 
 let find_tool which path =
   let commands =
     match which with
-      | `BEST_OCAMLC -> ["ocamlc.opt"; "ocamlc"]
-      | `BEST_OCAMLOPT -> ["ocamlopt.opt"; "ocamlopt"]
-      | `BEST_OCAMLDEP -> ["ocamldep.opt"; "ocamldep"]
-      | `BEST_OCAMLDOC -> ["ocamldoc.opt"; "ocamldoc"]
-      | `OCAMLC -> ["ocamlc"]
-      | `OCAML -> ["ocaml"]
+    | `BEST_OCAMLC -> ["ocamlc.opt"; "ocamlc"]
+    | `BEST_OCAMLOPT -> ["ocamlopt.opt"; "ocamlopt"]
+    | `BEST_OCAMLDEP -> ["ocamldep.opt"; "ocamldep"]
+    | `BEST_OCAMLDOC -> ["ocamldoc.opt"; "ocamldoc"]
+    | `OCAMLC -> ["ocamlc"]
+    | `OCAML -> ["ocaml"]
   in
   let commands = if Sys.win32 then List.map (fun c -> if Filename.check_suffix c ".opt" then c ^ ".exe" else c) commands else commands in
   let quote    = if path <> "" && Sys.os_type = "Win32" && String.contains path ' ' then Filename.quote else (fun x -> x) in
@@ -109,9 +109,9 @@ let can_compile_native ?ocaml_home () =
     | _ -> Some "ocamlopt"
   in
   match compiler with
-    | Some compiler ->
+  | Some compiler ->
       let cmd = sprintf "%s -o %s %s%s" compiler exename filename
-        ((*if App_config.application_debug then redirect_stderr else*) "")
+          ((*if App_config.application_debug then redirect_stderr else*) "")
       in
       result := (Sys.command cmd) = 0;
       if Sys.file_exists filename then (Sys.remove filename);
@@ -135,5 +135,5 @@ let can_compile_native ?ocaml_home () =
           Some (Str.matched_group 1 conf)
         end else Some "<unknown ccomp_type>"
       end else None;
-    | _ -> None
+  | _ -> None
 ;;

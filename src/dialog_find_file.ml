@@ -64,7 +64,7 @@ let create ?(all=true) ~(editor : Editor.editor) ~roots () =
   let _                    = GMisc.label ~xalign:0.0 ~width:600 ~line_wrap:true ~markup:help ~packing:vbox#pack () in
   (* Buttons *)
   let bbox                 = GPack.button_box `HORIZONTAL ~layout:`END ~border_width:8 ~spacing:8
-                             ~packing:(vbox#pack ~expand:false) () in
+      ~packing:(vbox#pack ~expand:false) () in
   let button_close         = GButton.button ~label:"Close Files" ~packing:bbox#add () in
   let _                    = button_close#set_focus_on_click false in
   let _                    = button_close#misc#set_tooltip_text "Ctrl+Return" in
@@ -77,55 +77,55 @@ let create ?(all=true) ~(editor : Editor.editor) ~roots () =
   bbox#set_child_secondary button_clear_history#coerce true;
   (* Actions *)
   ignore (button_clear_history#connect#clicked ~callback:begin fun () ->
-    File_history.clear editor#file_history;
-  end);
+      File_history.clear editor#file_history;
+    end);
   ignore (button_done#connect#clicked ~callback:(fun () -> window#misc#hide(); window#destroy()));
   quick_file_chooser#set_default_choose_func begin fun ~filename ~has_cursor ->
     ignore (editor#open_file ~active:has_cursor ~scroll_offset:0 ~offset:0 ?remote:None filename);
     `set pixbuf_open_in_editor;
   end;
   ignore (button_open#connect#clicked ~callback:begin fun () ->
-    quick_file_chooser#activate();
-  end);
+      quick_file_chooser#activate();
+    end);
   ignore (button_close#connect#clicked ~callback:begin fun () ->
-    quick_file_chooser#activate ~f:begin fun ~filename ~has_cursor:_ ->
-      Gaux.may (editor#get_page (`FILENAME filename)) ~f:editor#dialog_confirm_close;
-      `clear
-    end ();
-  end);
+      quick_file_chooser#activate ~f:begin fun ~filename ~has_cursor:_ ->
+        Gaux.may (editor#get_page (`FILENAME filename)) ~f:editor#dialog_confirm_close;
+        `clear
+      end ();
+    end);
   ignore (quick_file_chooser#view#connect#row_activated ~callback:begin fun _ _ ->
-    quick_file_chooser#activate();
-    window#destroy()
-  end);
+      quick_file_chooser#activate();
+      window#destroy()
+    end);
   let show_currently_opened () =
     quick_file_chooser#display (quick_file_chooser#get_paths_with_icon ());
     Gmisclib.Idle.add ~prio:300 begin fun () ->
       editor#with_current_page begin fun page ->
         let filename = page#get_filename in
         match quick_file_chooser#get_path ~filename with
-          | Some path ->
+        | Some path ->
             begin
               try
                 quick_file_chooser#select_path path;
                 quick_file_chooser#set_cursor path;
               with Gpointer.Null -> ()
             end;
-          | _ -> ()
+        | _ -> ()
       end
     end
   in
   begin
     match quick_file_chooser#source with
-      | `path (hd :: _, _) ->
+    | `path (hd :: _, _) ->
         let is_relative =  Miscellanea.filename_relative hd in
         let len = String.length hd in
         quick_file_chooser#set_cell_data_func begin fun model row ->
           let dirname = model#get ~row ~column:Quick_file_chooser.col_path in
           let ld = String.length dirname in
           quick_file_chooser#renderer#set_properties [`WEIGHT
-            (if ld >= len && is_relative dirname <> None then `BOLD else `NORMAL)]
+                                                        (if ld >= len && is_relative dirname <> None then `BOLD else `NORMAL)]
         end
-      | _ -> ()
+    | _ -> ()
   end;
   (* Update icons *)
   let icon_func ~filename =
@@ -146,39 +146,39 @@ let create ?(all=true) ~(editor : Editor.editor) ~roots () =
     List.iter begin fun filename ->
       GtkThread2.sync begin fun () ->
         match quick_file_chooser#get_path ~filename with
-          | Some path ->
+        | Some path ->
             let row = quick_file_chooser#model#get_iter path in
             let pixbuf = icon_func ~filename in
             quick_file_chooser#set_icon ~row pixbuf;
-          | _ -> ()
+        | _ -> ()
       end ();
     end filenames;
   in
   (* Escape *)
   ignore (window#event#connect#key_press ~callback:begin fun ev ->
-    let state = GdkEvent.Key.state ev in
-    let key = GdkEvent.Key.keyval ev in
-    if key = GdkKeysyms._Escape then (window#destroy(); true)
-    else if List.for_all (fun x -> List.mem x [`CONTROL; `SHIFT]) state && key = GdkKeysyms._L then begin
-      show_currently_opened ();
-      true
-    end else if state = [`CONTROL] && key = GdkKeysyms._Return then begin
-      quick_file_chooser#activate ~f:begin fun ~filename ~has_cursor ->
-        match editor#get_page (`FILENAME filename) with
+      let state = GdkEvent.Key.state ev in
+      let key = GdkEvent.Key.keyval ev in
+      if key = GdkKeysyms._Escape then (window#destroy(); true)
+      else if List.for_all (fun x -> List.mem x [`CONTROL; `SHIFT]) state && key = GdkKeysyms._L then begin
+        show_currently_opened ();
+        true
+      end else if state = [`CONTROL] && key = GdkKeysyms._Return then begin
+        quick_file_chooser#activate ~f:begin fun ~filename ~has_cursor ->
+          match editor#get_page (`FILENAME filename) with
           | Some page ->
-            let is_closed = editor#dialog_confirm_close page in
-            if is_closed then `clear else `ignore
+              let is_closed = editor#dialog_confirm_close page in
+              if is_closed then `clear else `ignore
           | _ ->
-            ignore (editor#open_file ~active:has_cursor ~scroll_offset:0 ~offset:0 ?remote:None filename);
-            `set pixbuf_open_in_editor
-      end ();
-      true
-    end else if key = GdkKeysyms._Return then begin
-      quick_file_chooser#activate();
-      window#destroy();
-      true
-    end else false
-  end);
+              ignore (editor#open_file ~active:has_cursor ~scroll_offset:0 ~offset:0 ?remote:None filename);
+              `set pixbuf_open_in_editor
+        end ();
+        true
+      end else if key = GdkKeysyms._Return then begin
+        quick_file_chooser#activate();
+        window#destroy();
+        true
+      end else false
+    end);
   (* Present *)
   window#present();
   quick_file_chooser#update_model();

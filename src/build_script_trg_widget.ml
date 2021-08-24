@@ -52,79 +52,79 @@ class widget ~project ?packing () =
   let _                 = view#append_column vc_target in
   let _                 = view#append_column vc_show in
   (*let _                 = view#append_column vc_install_task in*)
-object (self)
-  inherit GObj.widget hbox#as_widget
-  val mutable table = []
+  object (self)
+    inherit GObj.widget hbox#as_widget
+    val mutable table = []
 
-  initializer
-    vc_target#set_cell_data_func rend_target begin fun model row ->
-      let target = model#get ~row ~column:col_target in
-      rend_target#set_properties [`TEXT target.Target.name];
-      rend_show#set_properties [`ACTIVATABLE target.Target.visible];
-      match target.Target.target_type with
+    initializer
+      vc_target#set_cell_data_func rend_target begin fun model row ->
+        let target = model#get ~row ~column:col_target in
+        rend_target#set_properties [`TEXT target.Target.name];
+        rend_show#set_properties [`ACTIVATABLE target.Target.visible];
+        match target.Target.target_type with
         | Target.Executable -> rend_pixbuf#set_properties [`VISIBLE true; `PIXBUF Icons.start_16; `XALIGN 0.0]
         | Target.Library -> rend_pixbuf#set_properties [`VISIBLE true; `PIXBUF Icons.library; `XALIGN 0.0]
         | Target.Plugin -> rend_pixbuf#set_properties [`VISIBLE true; `PIXBUF Icons.plugin; `XALIGN 0.0]
         | Target.Pack -> rend_pixbuf#set_properties [`VISIBLE true; `PIXBUF Icons.library; `XALIGN 0.0]
         | Target.External -> rend_pixbuf#set_properties [`VISIBLE true; `PIXBUF Icons.etask_16; `XALIGN 0.0]
-    end;
-    (*vc_install_task#set_cell_data_func rend_install_task begin fun model row ->
-      let target = model#get ~row ~column:col_target in
-      match target.Target.target_type with
-        | Target.Executable ->
-          let show = true || model#get ~row ~column:col_show in
-          rend_install_task#set_properties [`EDITABLE show; `STYLE `NORMAL; `FOREGROUND_GDK (view#misc#style#fg `NORMAL);]
-        | Target.Library
-        | Target.Plugin
-        | Target.Pack -> rend_install_task#set_properties [`FOREGROUND_GDK (view#misc#style#fg `INSENSITIVE); `EDITABLE false; `TEXT "Not Applicable"; `STYLE `ITALIC]
-    end;*)
-    ignore (rend_show#connect#toggled ~callback:begin fun path ->
-      let row = model#get_iter path in
-      model#set ~row ~column:col_show (not (model#get ~row ~column:col_show));
-    end);
-    (*(* Fill model_itask *)
-    ignore (rend_install_task#connect#edited ~callback:begin fun path text ->
-      let row = model#get_iter path in
-      let task_name =
-        match text with
-          | "<None>" ->
-      in
-      model#set ~row ~column:col_install_task text;
-    end);*)
-    (*ignore (view#selection#connect#after#changed ~callback:self#fill_model_itask);
-    ignore (view#connect#cursor_changed ~callback:self#fill_model_itask);*)
-    (* Fill model *)
-    List.iter begin fun tg ->
-      if tg.Target.visible then begin
-        let row = model#append () in
-        model#set ~row ~column:col_target tg;
-        model#set ~row ~column:col_show (tg.Target.visible && not tg.Target.readonly);
-        table <- (tg.Target.id, model#get_path row) :: table;
-      end
-    end targets;
-    (*  *)
-    self#set project.build_script.bs_targets;
-
-  method set build_script_targets =
-    List.iter begin fun bst ->
-      match List_opt.assoc bst.bst_target.Target.id table with
-        | Some path ->
+      end;
+      (*vc_install_task#set_cell_data_func rend_install_task begin fun model row ->
+        let target = model#get ~row ~column:col_target in
+        match target.Target.target_type with
+          | Target.Executable ->
+            let show = true || model#get ~row ~column:col_show in
+            rend_install_task#set_properties [`EDITABLE show; `STYLE `NORMAL; `FOREGROUND_GDK (view#misc#style#fg `NORMAL);]
+          | Target.Library
+          | Target.Plugin
+          | Target.Pack -> rend_install_task#set_properties [`FOREGROUND_GDK (view#misc#style#fg `INSENSITIVE); `EDITABLE false; `TEXT "Not Applicable"; `STYLE `ITALIC]
+        end;*)
+      ignore (rend_show#connect#toggled ~callback:begin fun path ->
           let row = model#get_iter path in
-          model#set ~row ~column:col_show bst.bst_show;
-        | _ -> ()
-    end build_script_targets;
+          model#set ~row ~column:col_show (not (model#get ~row ~column:col_show));
+        end);
+      (*(* Fill model_itask *)
+        ignore (rend_install_task#connect#edited ~callback:begin fun path text ->
+        let row = model#get_iter path in
+        let task_name =
+          match text with
+            | "<None>" ->
+        in
+        model#set ~row ~column:col_install_task text;
+        end);*)
+      (*ignore (view#selection#connect#after#changed ~callback:self#fill_model_itask);
+        ignore (view#connect#cursor_changed ~callback:self#fill_model_itask);*)
+      (* Fill model *)
+      List.iter begin fun tg ->
+        if tg.Target.visible then begin
+          let row = model#append () in
+          model#set ~row ~column:col_target tg;
+          model#set ~row ~column:col_show (tg.Target.visible && not tg.Target.readonly);
+          table <- (tg.Target.id, model#get_path row) :: table;
+        end
+      end targets;
+      (*  *)
+      self#set project.build_script.bs_targets;
 
-  method get () =
-    let targets = ref [] in
-    model#foreach begin fun _ row ->
-      targets := {
-        bst_target         = model#get ~row ~column:col_target;
-        bst_show           = model#get ~row ~column:col_show;
-      } :: !targets;
-      false
-    end;
-    List.rev !targets
-end
+    method set build_script_targets =
+      List.iter begin fun bst ->
+        match List_opt.assoc bst.bst_target.Target.id table with
+        | Some path ->
+            let row = model#get_iter path in
+            model#set ~row ~column:col_show bst.bst_show;
+        | _ -> ()
+      end build_script_targets;
+
+    method get () =
+      let targets = ref [] in
+      model#foreach begin fun _ row ->
+        targets := {
+          bst_target         = model#get ~row ~column:col_target;
+          bst_show           = model#get ~row ~column:col_show;
+        } :: !targets;
+        false
+      end;
+      List.rev !targets
+  end
 
 
 

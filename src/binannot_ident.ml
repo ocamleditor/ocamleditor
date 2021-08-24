@@ -95,7 +95,7 @@ module Log = Common.Log.Make(struct let prefix = "Binannot_ident" end)
 let find_external_definition ~project ~ext_ref =
   let longid = Binannot.longident_parse ext_ref.ident_loc.txt in
   match Longident.flatten longid with
-    | name :: _ :: _ | name :: [] ->
+  | name :: _ :: _ | name :: [] ->
       let ext_name = Longident.last longid in
       let longid = Odoc_misc.string_of_longident longid in
       let name = name ^ ".ml" in
@@ -117,17 +117,17 @@ let find_external_definition ~project ~ext_ref =
             try
               for i = Array.length locations - 1 downto 0 do
                 match locations.(i) with
-                  | None -> ()
-                  | Some ({ident_kind; ident_loc; _} as def_ident) ->
+                | None -> ()
+                | Some ({ident_kind; ident_loc; _} as def_ident) ->
                     match ident_kind with
-                      | Def def
-                          when def.def_scope.loc_end.pos_cnum = -1 && ident_loc.txt = ext_name ->
-                            raise (Binannot_ident_scan.Found def_ident)
-                      | Def_constr def
-                          when def.def_name = ext_name -> raise (Binannot_ident_scan.Found def_ident)
-                      | Def_module def
-                          when def.def_name = longid -> raise (Binannot_ident_scan.Found def_ident)
-                      | Int_ref _ | Ext_ref | Open _ | Def _ | Def_constr _ | Def_module _ -> ()
+                    | Def def
+                      when def.def_scope.loc_end.pos_cnum = -1 && ident_loc.txt = ext_name ->
+                        raise (Binannot_ident_scan.Found def_ident)
+                    | Def_constr def
+                      when def.def_name = ext_name -> raise (Binannot_ident_scan.Found def_ident)
+                    | Def_module def
+                      when def.def_name = longid -> raise (Binannot_ident_scan.Found def_ident)
+                    | Int_ref _ | Ext_ref | Open _ | Def _ | Def_constr _ | Def_module _ -> ()
               done;
               (* If ident is not found in "locations", return an ident corresponding to the file *)
               Project_file {
@@ -139,7 +139,7 @@ let find_external_definition ~project ~ext_ref =
           end;
         with Not_found (* Misc.find_in_path_uncap *) -> Library_def
       end;
-    | _ -> assert false
+  | _ -> assert false
 ;;
 
 (** find_project_external_references *)
@@ -161,52 +161,52 @@ let find_project_external_references =
   in
   fun ~project ~def ->
     match def.ident_kind with
-      | Def d when d.def_scope.loc_end.pos_cnum = -1 -> find_project_external_references' project def
-      | Def_module _ -> find_project_external_references' project def
-      | Def_constr _ -> find_project_external_references' project def
-      | Int_ref _ | Ext_ref | Open _ | Def _ -> []
+    | Def d when d.def_scope.loc_end.pos_cnum = -1 -> find_project_external_references' project def
+    | Def_module _ -> find_project_external_references' project def
+    | Def_constr _ -> find_project_external_references' project def
+    | Int_ref _ | Ext_ref | Open _ | Def _ -> []
 ;;
 
 (** find_external_references *)
 let find_external_references ~project ~ext_ref:{ident_kind; ident_loc; _} =
   match ident_kind with
-    | Ext_ref | Open _ ->
+  | Ext_ref | Open _ ->
       let lid = Longident.flatten (Binannot.longident_parse ident_loc.txt) in
       Binannot_ident_scan.scan_project_files ~project begin fun acc _filename entry ->
         match lid with
-          | mod_name :: _ :: _ | mod_name :: [] ->
+        | mod_name :: _ :: _ | mod_name :: [] ->
             let all_refs = Hashtbl.find_all entry.ext_refs mod_name in
             let refs = List.filter (fun x -> x.ident_loc.txt = ident_loc.txt) all_refs in
             acc @ refs;
-          | _ -> assert false
+        | _ -> assert false
       end
-    | Def_constr _ | Def _  | Def_module _ | Int_ref _ -> []
+  | Def_constr _ | Def _  | Def_module _ | Int_ref _ -> []
 ;;
 
 (** find_definition_and_references' *)
 let find_definition_and_references' ~project ~entry ~ident =
   let { Asttypes.loc; _ } = ident.ident_loc in
   match ident.ident_kind with
-    | Def _ | Def_constr _ -> (* Cursor offset is on a Def *)
+  | Def _ | Def_constr _ -> (* Cursor offset is on a Def *)
       let int_refs = Hashtbl.find_all entry.int_refs loc in
       let ext_refs = find_project_external_references ~project ~def:ident in
       {bai_def = Some ident; bai_refs = int_refs @ ext_refs}
-    | Def_module def ->
+  | Def_module def ->
       let int_refs = Hashtbl.find_all entry.int_refs loc in
       let mod_refs =
         find_external_references ~project
           ~ext_ref:{ident_kind=Open Location.none; ident_loc=Location.mkloc def.def_name def.def_loc; ident_fname=""}
       in
       {bai_def = Some ident; bai_refs = int_refs @ mod_refs}
-    | Int_ref def -> (* Cursor offset is on an Int_ref *)
+  | Int_ref def -> (* Cursor offset is on an Int_ref *)
       let bai_def = entry.locations.(def.loc_start.pos_cnum) in
       let int_refs = Hashtbl.find_all entry.int_refs def in
       let ext_refs = Option.fold ~none:[] ~some:(fun def -> find_project_external_references ~project ~def) bai_def in
       {bai_def; bai_refs = int_refs @ ext_refs}
-    | (Ext_ref | Open _) as ext -> (* Cursor offset is on an Ext_ref *)
+  | (Ext_ref | Open _) as ext -> (* Cursor offset is on an Ext_ref *)
       begin
         match find_external_definition ~project ~ext_ref:ident with
-          | Project_def def ->
+        | Project_def def ->
             let { Asttypes.loc; _ } = def.ident_loc in
             let entry_def = try Some (Hashtbl.find Binannot.table_idents def.ident_fname) with Not_found -> None in
             let int_refs = Option.fold ~none:[] ~some:(fun e -> Hashtbl.find_all e.int_refs loc) entry_def in
@@ -216,14 +216,14 @@ let find_definition_and_references' ~project ~entry ~ident =
               else find_external_references ~project ~ext_ref:ident
             in
             {bai_def = Some def; bai_refs = int_refs @ ext_refs}
-          | Library_def ->
+        | Library_def ->
             let refs = find_external_references ~project ~ext_ref:ident in
             {bai_def = None; bai_refs = refs}
-          | Project_file fident ->
+        | Project_file fident ->
             let int_refs = [] in
             let ext_refs = find_external_references ~project ~ext_ref:ident in
             {bai_def = Some fident; bai_refs = int_refs @ ext_refs}
-          | No_def ->
+        | No_def ->
             let lib_refs = find_external_references ~project ~ext_ref:ident in
             {bai_def = None; bai_refs = lib_refs}
       end
@@ -254,7 +254,7 @@ let find_definition_and_references ~project ~filename ~offset ?compile_buffer ()
     let entry = Hashtbl.find Binannot.table_idents filename in
     let ident = find_ident ~project ~filename ~offset ?compile_buffer () in
     Option.fold ~none:None ~some:(fun ident ->
-      Some (find_definition_and_references' ~project ~entry ~ident)) ident;
+        Some (find_definition_and_references' ~project ~entry ~ident)) ident;
   with Not_found -> None
 ;;
 
@@ -265,21 +265,21 @@ let find_definition ~project ~filename ~offset ?compile_buffer () =
     let entry = Hashtbl.find Binannot.table_idents filename in
     let ident = try entry.locations.(offset)
       with Invalid_argument _ ->
-       	Log.println `ERROR "Invalid offset %d for %s" offset filename;
-       	None
+        Log.println `ERROR "Invalid offset %d for %s" offset filename;
+        None
     in
     Option.fold ~none:None ~some:(fun ident ->
         match ident.ident_kind with
         | Def _ | Def_constr _ | Def_module _ -> Some ident
         | Int_ref def -> entry.locations.(def.loc_start.pos_cnum)
         | Ext_ref | Open _ ->
-          begin
-            match find_external_definition ~project ~ext_ref:ident with
-            | Project_def def -> Some def
-            | Project_file x -> Some x
-            | Library_def -> None
-            | No_def -> None
-          end) ident;
+            begin
+              match find_external_definition ~project ~ext_ref:ident with
+              | Project_def def -> Some def
+              | Project_file x -> Some x
+              | Library_def -> None
+              | No_def -> None
+            end) ident;
   with Not_found -> None
 ;;
 
@@ -292,28 +292,28 @@ let find_used_components ~project ~filename ~offset ?compile_buffer () =
     let ident = entry.locations.(offset) in
     Option.fold ident ~none:None ~some:begin fun ident ->
       match ident.ident_kind with
-        | Open scope ->
+      | Open scope ->
           let { Asttypes.txt; _ } = ident.ident_loc in
           let longid = Binannot.longident_parse txt in
           begin
             match Longident.flatten longid with
-              | modname :: _ ->
+            | modname :: _ ->
                 let uses = Hashtbl.find_all entry.ext_refs modname in
                 let uses = List.filter begin function [@warning "-4"]
                   | {ident_kind = Open _; _} -> false
                   | u when scope <==< u.ident_loc.Asttypes.loc.loc_start.pos_cnum ->
-                    let dirname =
-                      try
-                        String.concat "." (List.rev (List.tl (List.rev (Longident.flatten (Binannot.longident_parse u.ident_loc.txt)))))
-                      with Failure _ -> assert false
-                    in
-                    dirname = ident.ident_loc.txt
+                      let dirname =
+                        try
+                          String.concat "." (List.rev (List.tl (List.rev (Longident.flatten (Binannot.longident_parse u.ident_loc.txt)))))
+                        with Failure _ -> assert false
+                      in
+                      dirname = ident.ident_loc.txt
                   | _ -> false
-                end uses in
+                  end uses in
                 Some (ident, uses)
-              | [] -> assert false
+            | [] -> assert false
           end;
-        | Def _ | Def_constr _ | Def_module _ | Int_ref _ | Ext_ref -> Some (ident, [])
+      | Def _ | Def_constr _ | Def_module _ | Int_ref _ | Ext_ref -> Some (ident, [])
     end;
   with Not_found -> None
 ;;

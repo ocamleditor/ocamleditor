@@ -47,19 +47,19 @@ let print ~editor () =
     let l1, l2 = (p#buffer :> Text.buffer)#undo#length in
     let (mnames, mdel) as marks = count_marks p in
     Gaux.may current_page ~f:(fun page ->
-      if page#get_oid = p#get_oid then current_page_marks := Some (page, marks));
+        if page#get_oid = p#get_oid then current_page_marks := Some (page, marks));
     printf "%-80s: %4d/%4d %4d(%d)\n%!" p#get_filename l1 l2 (List.length mnames) mdel;
   end editor#pages;
   (*  *)
   begin
     match !current_page_marks with
-      | Some (current_page, (mnames, mdel)) ->
+    | Some (current_page, (mnames, mdel)) ->
         printf "-----------------------\n%!" ;
         printf "%s, %d marks (%d deleted)\n%!" current_page#get_filename (List.length mnames) mdel;
         let mnames = List.map (function (Some m, d) ->
-          m ^ (if d then "(del)" else "") | _ -> "") mnames in
+            m ^ (if d then "(del)" else "") | _ -> "") mnames in
         printf "%s\n%!" (String.concat "; " mnames);
-      | _ -> ()
+    | _ -> ()
   end;
   (*  *)
   Prf.print()

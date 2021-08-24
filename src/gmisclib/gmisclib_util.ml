@@ -35,9 +35,9 @@ let fade_window =
       window#show();
       let callback =
         let opa = ref 0.0 in fun () ->
-        window#set_opacity !opa;
-        opa := !opa +. incr;
-        !opa <= stop;
+          window#set_opacity !opa;
+          opa := !opa +. incr;
+          !opa <= stop;
       in
       ignore (callback() : bool);
       ignore (GMain.Timeout.add ~ms:20 ~callback : GMain.Timeout.id)
@@ -46,38 +46,38 @@ let fade_window =
 (** esc_destroy_window *)
 let esc_destroy_window window =
   ignore (window#event#connect#key_press ~callback:begin fun ev ->
-    let key = GdkEvent.Key.keyval ev in
-    if key = GdkKeysyms._Escape then (window#destroy(); true) else false
-  end);;
+      let key = GdkEvent.Key.keyval ev in
+      if key = GdkKeysyms._Escape then (window#destroy(); true) else false
+    end);;
 
 (** idle_add_gen *)
 let idle_add_gen ?prio f = GMain.Idle.add ?prio begin fun () ->
-  try f ()
-  with ex -> (eprintf "%s\n%s\n%!" (Printexc.to_string ex) (Printexc.get_backtrace())); false
-end
+    try f ()
+    with ex -> (eprintf "%s\n%s\n%!" (Printexc.to_string ex) (Printexc.get_backtrace())); false
+  end
 
 (** idle_add *)
 let idle_add ?prio (f : unit -> unit) = ignore (GMain.Idle.add ?prio begin fun () ->
-  try f (); false
-  with ex -> (eprintf "%s\n%s\n%!" (Printexc.to_string ex) (Printexc.get_backtrace())); false
-end)
+    try f (); false
+    with ex -> (eprintf "%s\n%s\n%!" (Printexc.to_string ex) (Printexc.get_backtrace())); false
+  end)
 
 (** get_iter_at_mark_safe *)
 let get_iter_at_mark_safe buffer mark =
   (*try*)
-    if GtkText.Mark.get_deleted mark then (raise Mark_deleted)
-    else (GtkText.Buffer.get_iter_at_mark buffer mark)
-  (*with ex ->
-    Printf.eprintf "File \"gtk_util.ml\": %s\n%s\n%!" (Printexc.to_string ex) (Printexc.get_backtrace());
-    raise ex*)
+  if GtkText.Mark.get_deleted mark then (raise Mark_deleted)
+  else (GtkText.Buffer.get_iter_at_mark buffer mark)
+(*with ex ->
+  Printf.eprintf "File \"gtk_util.ml\": %s\n%s\n%!" (Printexc.to_string ex) (Printexc.get_backtrace());
+  raise ex*)
 
 let get_iter_at_mark_opt buffer mark =
   (*try*)
-    if GtkText.Mark.get_deleted mark then None
-    else Some (GtkText.Buffer.get_iter_at_mark buffer mark)
-  (*with ex ->
-    Printf.eprintf "File \"gtk_util.ml\": %s\n%s\n%!" (Printexc.to_string ex) (Printexc.get_backtrace());
-    raise ex*)
+  if GtkText.Mark.get_deleted mark then None
+  else Some (GtkText.Buffer.get_iter_at_mark buffer mark)
+(*with ex ->
+  Printf.eprintf "File \"gtk_util.ml\": %s\n%s\n%!" (Printexc.to_string ex) (Printexc.get_backtrace());
+  raise ex*)
 
 (** set_tag_paragraph_background *)
 let set_tag_paragraph_background (tag : GText.tag) =

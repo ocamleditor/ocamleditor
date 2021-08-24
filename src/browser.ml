@@ -28,14 +28,14 @@ open Oe
 
 class browser () =
   let window = GWindow.window
-    ~title:About.program_name
-    ~icon:Icons.oe
-    ~type_hint:`NORMAL
-    ~kind:`TOPLEVEL
-    ~position:`CENTER
-    ~focus_on_map:true
-    ~allow_shrink:true
-    ~show:false ()
+      ~title:About.program_name
+      ~icon:Icons.oe
+      ~type_hint:`NORMAL
+      ~kind:`TOPLEVEL
+      ~position:`CENTER
+      ~focus_on_map:true
+      ~allow_shrink:true
+      ~show:false ()
   in
   (* signals *)
   let startup                            = new startup () in
@@ -109,7 +109,7 @@ class browser () =
   (*let button_gitbranch = Gmisclib.Button.button_menu ~label:"" ~relief:`NONE ~packing:gitbox#add () in*)
   let _ = 
     button_gitbranch#set_image (GMisc.image ~pixbuf:Icons.branch ())#coerce;
-(*    button_gitbranch#set_menu_only();*)
+    (*    button_gitbranch#set_menu_only();*)
   in
   (*  *)
   let vbox_menu_buttons = GPack.vbox ~border_width:0 ~packing:menubarbox#pack ~show:false () in
@@ -132,981 +132,981 @@ class browser () =
   let _ = button_menu_exit#set_focus_on_click false in
   let tout_low_prio = Timeout.create ~delay:0.75 () in
 
-object (self)
-  val mutable finalize = fun _ -> ()
-  val mutable projects = []
-  val mutable current_project = new GUtil.variable None
-  val mutable menubar_visible = true;
-  val mutable toolbar_visible = true;
-  val mutable tabbar_visible = true;
-  val mutable outline_visible = true;
-  val mutable maximized_view_action = `NONE
-  val mutable geometry = "";
-  val mutable project_history =
-    File_history.create
-      ~filename:Oe_config.project_history_filename
-      ~max_length:Oe_config.project_history_max_length
-  val mutable cache_dialog_project_properties = []
-  val mutable menu = None
-  val mutable pref_max_view_2 = false
-  val mutable pref_max_view_fullscreen = false
-  val mutable max_height_prev_h = -1
-  val mutable max_height_prev_y = -1
-  val mutable is_fullscreen = false
-  val mutable maximized_view_actions = [
-    `NONE, (fun () -> {
-      mva_menubar    = true; (* dummies *)
-      mva_toolbar    = true;
-      mva_tabbar     = true;
-      mva_messages   = false;
-      mva_fullscreen = false;
-    });
-    `FIRST, (fun () -> {
-      mva_menubar    = true(*Preferences.preferences#get.Preferences.pref_max_view_1_menubar*);
-      mva_toolbar    = Preferences.preferences#get.Preferences.pref_max_view_1_toolbar;
-      mva_tabbar     = Preferences.preferences#get.Preferences.pref_max_view_1_tabbar;
-      mva_messages   = Preferences.preferences#get.Preferences.pref_max_view_1_messages;
-      mva_fullscreen = Preferences.preferences#get.Preferences.pref_max_view_1_fullscreen;
-    });
-    `SECOND, (fun () -> {
-      mva_menubar    = true(*Preferences.preferences#get.Preferences.pref_max_view_2_menubar*);
-      mva_toolbar    = Preferences.preferences#get.Preferences.pref_max_view_2_toolbar;
-      mva_tabbar     = Preferences.preferences#get.Preferences.pref_max_view_2_tabbar;
-      mva_messages   = Preferences.preferences#get.Preferences.pref_max_view_2_messages;
-      mva_fullscreen = Preferences.preferences#get.Preferences.pref_max_view_2_fullscreen;
-    })
-  ];
+  object (self)
+    val mutable finalize = fun _ -> ()
+    val mutable projects = []
+    val mutable current_project = new GUtil.variable None
+    val mutable menubar_visible = true;
+    val mutable toolbar_visible = true;
+    val mutable tabbar_visible = true;
+    val mutable outline_visible = true;
+    val mutable maximized_view_action = `NONE
+    val mutable geometry = "";
+    val mutable project_history =
+      File_history.create
+        ~filename:Oe_config.project_history_filename
+        ~max_length:Oe_config.project_history_max_length
+    val mutable cache_dialog_project_properties = []
+    val mutable menu = None
+    val mutable pref_max_view_2 = false
+    val mutable pref_max_view_fullscreen = false
+    val mutable max_height_prev_h = -1
+    val mutable max_height_prev_y = -1
+    val mutable is_fullscreen = false
+    val mutable maximized_view_actions = [
+      `NONE, (fun () -> {
+            mva_menubar    = true; (* dummies *)
+            mva_toolbar    = true;
+            mva_tabbar     = true;
+            mva_messages   = false;
+            mva_fullscreen = false;
+          });
+      `FIRST, (fun () -> {
+            mva_menubar    = true(*Preferences.preferences#get.Preferences.pref_max_view_1_menubar*);
+            mva_toolbar    = Preferences.preferences#get.Preferences.pref_max_view_1_toolbar;
+            mva_tabbar     = Preferences.preferences#get.Preferences.pref_max_view_1_tabbar;
+            mva_messages   = Preferences.preferences#get.Preferences.pref_max_view_1_messages;
+            mva_fullscreen = Preferences.preferences#get.Preferences.pref_max_view_1_fullscreen;
+          });
+      `SECOND, (fun () -> {
+            mva_menubar    = true(*Preferences.preferences#get.Preferences.pref_max_view_2_menubar*);
+            mva_toolbar    = Preferences.preferences#get.Preferences.pref_max_view_2_toolbar;
+            mva_tabbar     = Preferences.preferences#get.Preferences.pref_max_view_2_tabbar;
+            mva_messages   = Preferences.preferences#get.Preferences.pref_max_view_2_messages;
+            mva_fullscreen = Preferences.preferences#get.Preferences.pref_max_view_2_fullscreen;
+          })
+    ];
 
-  method toolbar = toolbar
+    method toolbar = toolbar
 
-  method editor = editor
-  (*method vmessages = Messages.vmessages
-  method hmessages = Messages.hmessages*)
-  method shell () =
-    self#with_current_project (fun project -> Ocaml_shell.append_page ~project Messages.vmessages);
-    Messages.vmessages#set_visible true;
+    method editor = editor
+    (*method vmessages = Messages.vmessages
+      method hmessages = Messages.hmessages*)
+    method shell () =
+      self#with_current_project (fun project -> Ocaml_shell.append_page ~project Messages.vmessages);
+      Messages.vmessages#set_visible true;
 
-  method save_all () =
-    editor#save_all();
-    self#with_current_project(fun p -> Project.save ~editor p)
+    method save_all () =
+      editor#save_all();
+      self#with_current_project(fun p -> Project.save ~editor p)
 
-  method refresh () = self#with_current_project Project.refresh
-  method clear_cache () = self#with_current_project begin fun project ->
-    Project.clear_cache project |> ignore;
-    Symbols.Cache.reset ~project
- end
+    method refresh () = self#with_current_project Project.refresh
+    method clear_cache () = self#with_current_project begin fun project ->
+        Project.clear_cache project |> ignore;
+        Symbols.Cache.reset ~project
+      end
 
-  method project_clean () =
-    self#with_current_project (fun project ->
-        self#with_default_target (fun target ->
-            ignore (Task_console.exec ~editor:self#editor `CLEANALL target);
-            Project.clean_tmp project))
+    method project_clean () =
+      self#with_current_project (fun project ->
+          self#with_default_target (fun target ->
+              ignore (Task_console.exec ~editor:self#editor `CLEANALL target);
+              Project.clean_tmp project))
 
-  method current_project = current_project
+    method current_project = current_project
 
-  method project_history = project_history
+    method project_history = project_history
 
-  method private project_write_history () =
-    File_history.write project_history;
-    project_history_changed#call project_history;
+    method private project_write_history () =
+      File_history.write project_history;
+      project_history_changed#call project_history;
 
-  method project_close () =
-    self#with_current_project begin fun project ->
-      Project.save ~editor project;
-      self#project_write_history();
-      Symbols.Cache.save ~project;
-      Project.unload_path project;
-      List.iter (fun p -> Autosave.delete ~filename:p#get_filename ()) editor#pages;
-    end
+    method project_close () =
+      self#with_current_project begin fun project ->
+        Project.save ~editor project;
+        self#project_write_history();
+        Symbols.Cache.save ~project;
+        Project.unload_path project;
+        List.iter (fun p -> Autosave.delete ~filename:p#get_filename ()) editor#pages;
+      end
 
-  method project_open filename =
-    self#project_close();
-    let proj = Project.load filename in
-    current_project#set (Some proj);
-    Project.load_path proj;
-    editor#set_history_switch_page_locked true;
-    (*crono ~label:"close_all" *)editor#close_all ();
-    editor#pack_outline (Cmt_view.empty());
-    editor#set_project proj;
-    Sys.chdir (proj.root // Prj.default_dir_src);
-    Gmisclib.Idle.add ~prio:300 self#set_title;
-    (File_history.add project_history) filename;
-    Symbols.Cache.load ~project:proj;
-    Annotation.preload ~project:proj;
-    Gmisclib.Idle.add ~prio:300(*crono ~label:"Mbrowser_compl.create"*) (Mbrowser_compl.create ~project:proj);
-    Autosave.recover ();
-    Gmisclib.Idle.add ~prio:300(*crono ~label:"dialog_project_properties" (fun () -> *)(self#dialog_project_properties ~show:false);
-    begin
-      try Templ.load_custom (`project proj)
-      with Templ.Error (msg, details) ->
-        (Dialog.message ~title:"Warning" ~message:(sprintf "%s\n\n\"%s\"" msg details) `WARNING);
-    end;
-    (*Project.load_rc_icons proj;*)
-    switch_project#call();
-    (* Load files *)
-    let active_exists = ref false in
-    let i = ref 0 in
-    let _ =
-      List.map (begin fun (filename, scroll_offset, offset, active) ->
-        let filename = List.fold_left (//) "" (filename_split filename) in
-        incr i;
-        active_exists := !active_exists || active;
-        let active = active || (List.length proj.open_files = !i && not !active_exists) in
-        editor#open_file ~active ~scroll_offset ~offset ?remote:None filename;
-      end) proj.open_files
-    in
-    editor#set_history_switch_page_locked false;
-    proj.open_files <- [];
-    proj.modified <- false;
-    self#update_git_status();
-    proj
+    method project_open filename =
+      self#project_close();
+      let proj = Project.load filename in
+      current_project#set (Some proj);
+      Project.load_path proj;
+      editor#set_history_switch_page_locked true;
+      (*crono ~label:"close_all" *)editor#close_all ();
+      editor#pack_outline (Cmt_view.empty());
+      editor#set_project proj;
+      Sys.chdir (proj.root // Prj.default_dir_src);
+      Gmisclib.Idle.add ~prio:300 self#set_title;
+      (File_history.add project_history) filename;
+      Symbols.Cache.load ~project:proj;
+      Annotation.preload ~project:proj;
+      Gmisclib.Idle.add ~prio:300(*crono ~label:"Mbrowser_compl.create"*) (Mbrowser_compl.create ~project:proj);
+      Autosave.recover ();
+      Gmisclib.Idle.add ~prio:300(*crono ~label:"dialog_project_properties" (fun () -> *)(self#dialog_project_properties ~show:false);
+      begin
+        try Templ.load_custom (`project proj)
+        with Templ.Error (msg, details) ->
+          (Dialog.message ~title:"Warning" ~message:(sprintf "%s\n\n\"%s\"" msg details) `WARNING);
+      end;
+      (*Project.load_rc_icons proj;*)
+      switch_project#call();
+      (* Load files *)
+      let active_exists = ref false in
+      let i = ref 0 in
+      let _ =
+        List.map (begin fun (filename, scroll_offset, offset, active) ->
+            let filename = List.fold_left (//) "" (filename_split filename) in
+            incr i;
+            active_exists := !active_exists || active;
+            let active = active || (List.length proj.open_files = !i && not !active_exists) in
+            editor#open_file ~active ~scroll_offset ~offset ?remote:None filename;
+          end) proj.open_files
+      in
+      editor#set_history_switch_page_locked false;
+      proj.open_files <- [];
+      proj.modified <- false;
+      self#update_git_status();
+      proj
 
 
-  method dialog_project_open () =
-    let project_home =
-      match self#current_project#get with Some p -> p.Prj.root | _ -> App_config.user_home
-    in
-    let pat1 = "*"^Prj.default_extension in
-    let pat2 = "*"^Prj.old_extension in
-    let dialog = GWindow.file_chooser_dialog ~action:`OPEN ~width:600 ~height:600
-      ~title:"Open project..." ~icon:Icons.oe ~position:`CENTER ~show:false () in
-    dialog#add_filter (GFile.filter
-      ~name:(sprintf "%s projects (%s)" About.program_name pat1) ~patterns:[pat1] ());
-    dialog#add_filter (GFile.filter
-      ~name:(sprintf "%s projects old version (%s)" About.program_name pat2) ~patterns:[pat2] ());
-    dialog#add_select_button_stock `OK `OK;
-    dialog#add_button_stock `CANCEL `CANCEL;
-    dialog#set_select_multiple false;
-    dialog#set_current_folder (Filename.dirname project_home) |> ignore;
-    match dialog#run () with
+    method dialog_project_open () =
+      let project_home =
+        match self#current_project#get with Some p -> p.Prj.root | _ -> App_config.user_home
+      in
+      let pat1 = "*"^Prj.default_extension in
+      let pat2 = "*"^Prj.old_extension in
+      let dialog = GWindow.file_chooser_dialog ~action:`OPEN ~width:600 ~height:600
+          ~title:"Open project..." ~icon:Icons.oe ~position:`CENTER ~show:false () in
+      dialog#add_filter (GFile.filter
+                           ~name:(sprintf "%s projects (%s)" About.program_name pat1) ~patterns:[pat1] ());
+      dialog#add_filter (GFile.filter
+                           ~name:(sprintf "%s projects old version (%s)" About.program_name pat2) ~patterns:[pat2] ());
+      dialog#add_select_button_stock `OK `OK;
+      dialog#add_button_stock `CANCEL `CANCEL;
+      dialog#set_select_multiple false;
+      dialog#set_current_folder (Filename.dirname project_home) |> ignore;
+      match dialog#run () with
       | `OK ->
-        List.iter begin fun filename ->
-          let filename, save = if filename ^^^ Prj.old_extension then (Filename.chop_extension filename) ^ Prj.default_extension, true else filename, false in
-          let proj = self#project_open filename in
-          Quick_file_chooser.add_roots ~roots:[Filename.dirname filename] ~filter:Dialog_find_file.filter;
-          if save then (Project.save ~editor proj);
-       end dialog#get_filenames;
-        dialog#destroy()
+          List.iter begin fun filename ->
+            let filename, save = if filename ^^^ Prj.old_extension then (Filename.chop_extension filename) ^ Prj.default_extension, true else filename, false in
+            let proj = self#project_open filename in
+            Quick_file_chooser.add_roots ~roots:[Filename.dirname filename] ~filter:Dialog_find_file.filter;
+            if save then (Project.save ~editor proj);
+          end dialog#get_filenames;
+          dialog#destroy()
       | _ -> dialog#destroy()
 
-  method dialog_project_properties ?page_num ?(show=true) () =
-    self#with_current_project begin fun project ->
-      let id = Project.filename project in
-      let remove_from_cache () =
-        cache_dialog_project_properties <- List.filter (fun (x, _) -> x <> id) cache_dialog_project_properties
-      in
-      try
-        begin
-          let create_first_target widget =
-            if List.length project.Prj.targets = 0 then (ignore (widget#target_list#add_target()));
-          in
-          match List.assoc id cache_dialog_project_properties with
-            | window, widget, `ICONIFIED ->
-              remove_from_cache();
-              cache_dialog_project_properties <- (id, (window, widget, `VISIBLE)) :: cache_dialog_project_properties;
-              if show then begin
-                Gaux.may page_num ~f:widget#goto_page;
-                create_first_target widget;
-                window#set_modal false;
-                window#present();
-              end
-            | window, widget, _state ->
-              (*widget#reset();*)
-              if show then begin
-                Gaux.may page_num ~f:widget#goto_page;
-                create_first_target widget;
-                window#set_modal false;
-                window#present();
-              end
-        end;
-      with Not_found ->
-        let window, widget = Project_properties.create ~editor ?page_num ~show () in
-        (* "widget" (the "Project Properties" dialog) is cached, then
-           browser#current_project and the project instance stored in the dialog can
-           be different objects (i.e. after a project switch in the IDE).  *)
-        ignore (widget#connect#project_changed ~callback:(fun proj -> current_project#set (Some proj)));
-        ignore (window#connect#destroy ~callback:(fun _ -> remove_from_cache()));
-        ignore (window#misc#connect#hide ~callback:begin fun () ->
-          toolbar#update current_project#get;
-          widget#reset();
-        end);
-        ignore (window#event#connect#delete ~callback:begin fun _ ->
-          window#misc#hide();
-          true
-        end);
-        ignore (window#event#connect#window_state ~callback:begin fun ev ->
+    method dialog_project_properties ?page_num ?(show=true) () =
+      self#with_current_project begin fun project ->
+        let id = Project.filename project in
+        let remove_from_cache () =
+          cache_dialog_project_properties <- List.filter (fun (x, _) -> x <> id) cache_dialog_project_properties
+        in
+        try
           begin
-            match GdkEvent.WindowState.new_window_state ev with
-              | [`ICONIFIED] ->
-                remove_from_cache();
-                cache_dialog_project_properties <- (id, (window, widget, `ICONIFIED)) :: cache_dialog_project_properties;
-              | _ ->
+            let create_first_target widget =
+              if List.length project.Prj.targets = 0 then (ignore (widget#target_list#add_target()));
+            in
+            match List.assoc id cache_dialog_project_properties with
+            | window, widget, `ICONIFIED ->
                 remove_from_cache();
                 cache_dialog_project_properties <- (id, (window, widget, `VISIBLE)) :: cache_dialog_project_properties;
+                if show then begin
+                  Gaux.may page_num ~f:widget#goto_page;
+                  create_first_target widget;
+                  window#set_modal false;
+                  window#present();
+                end
+            | window, widget, _state ->
+                (*widget#reset();*)
+                if show then begin
+                  Gaux.may page_num ~f:widget#goto_page;
+                  create_first_target widget;
+                  window#set_modal false;
+                  window#present();
+                end
           end;
-          false
-        end);
-        cache_dialog_project_properties <- (id, (window, widget, `VISIBLE)) :: cache_dialog_project_properties;
-    end
+        with Not_found ->
+          let window, widget = Project_properties.create ~editor ?page_num ~show () in
+          (* "widget" (the "Project Properties" dialog) is cached, then
+             browser#current_project and the project instance stored in the dialog can
+             be different objects (i.e. after a project switch in the IDE).  *)
+          ignore (widget#connect#project_changed ~callback:(fun proj -> current_project#set (Some proj)));
+          ignore (window#connect#destroy ~callback:(fun _ -> remove_from_cache()));
+          ignore (window#misc#connect#hide ~callback:begin fun () ->
+              toolbar#update current_project#get;
+              widget#reset();
+            end);
+          ignore (window#event#connect#delete ~callback:begin fun _ ->
+              window#misc#hide();
+              true
+            end);
+          ignore (window#event#connect#window_state ~callback:begin fun ev ->
+              begin
+                match GdkEvent.WindowState.new_window_state ev with
+                | [`ICONIFIED] ->
+                    remove_from_cache();
+                    cache_dialog_project_properties <- (id, (window, widget, `ICONIFIED)) :: cache_dialog_project_properties;
+                | _ ->
+                    remove_from_cache();
+                    cache_dialog_project_properties <- (id, (window, widget, `VISIBLE)) :: cache_dialog_project_properties;
+              end;
+              false
+            end);
+          cache_dialog_project_properties <- (id, (window, widget, `VISIBLE)) :: cache_dialog_project_properties;
+      end
 
-  method dialog_project_new () =
-    let rec mkname n =
-      if n = 100 then (failwith "dialog_project_new (mkname)");
-      let name = sprintf "Untitled_%d" n in
-      if not (Sys.file_exists (App_config.user_home // name)) then name else (mkname (n + 1))
-    in
-    let name = mkname 0 in
-    let filename = App_config.user_home // name // (name^Prj.default_extension) in
-    let new_project = Project.create ~filename () in
-    let window, widget =
-      Project_properties.create ~show:true ~editor ~new_project ~callback:begin fun proj ->
-        self#project_close();
-        Project.save ~editor new_project;
-        ignore (self#project_open (Project.filename proj));
-      end ()
-    in
-    window#set_modal true;
-    ignore (widget#connect#project_changed ~callback:(fun proj -> current_project#set (Some proj)));
+    method dialog_project_new () =
+      let rec mkname n =
+        if n = 100 then (failwith "dialog_project_new (mkname)");
+        let name = sprintf "Untitled_%d" n in
+        if not (Sys.file_exists (App_config.user_home // name)) then name else (mkname (n + 1))
+      in
+      let name = mkname 0 in
+      let filename = App_config.user_home // name // (name^Prj.default_extension) in
+      let new_project = Project.create ~filename () in
+      let window, widget =
+        Project_properties.create ~show:true ~editor ~new_project ~callback:begin fun proj ->
+          self#project_close();
+          Project.save ~editor new_project;
+          ignore (self#project_open (Project.filename proj));
+        end ()
+      in
+      window#set_modal true;
+      ignore (widget#connect#project_changed ~callback:(fun proj -> current_project#set (Some proj)));
 
-  method dialog_file_new = Dialog_file_new.show ~editor:self#editor;
+    method dialog_file_new = Dialog_file_new.show ~editor:self#editor;
 
-  method dialog_external_tools () =
-    self#with_current_project begin fun project ->
-      External_tools.create
-        ~get_editor:(fun () -> self#editor)
-        ~get_current_project:(fun () -> project) ()
-    end
+    method dialog_external_tools () =
+      self#with_current_project begin fun project ->
+        External_tools.create
+          ~get_editor:(fun () -> self#editor)
+          ~get_current_project:(fun () -> project) ()
+      end
 
-  method dialog_find_file ?all () =
-    self#with_current_project begin fun project ->
-      let current = project.Prj.root in
-      let roots = project_history.File_history.content in (* project filenames .xml *)
-      let roots = List.filter ((<>) current) (List.map Filename.dirname roots) in
-      let roots = current :: roots in
-      let dialog = Dialog_find_file.create ?all ~roots ~editor () in
-      dialog#set_transient_for window#as_window;
-    end
+    method dialog_find_file ?all () =
+      self#with_current_project begin fun project ->
+        let current = project.Prj.root in
+        let roots = project_history.File_history.content in (* project filenames .xml *)
+        let roots = List.filter ((<>) current) (List.map Filename.dirname roots) in
+        let roots = current :: roots in
+        let dialog = Dialog_find_file.create ?all ~roots ~editor () in
+        dialog#set_transient_for window#as_window;
+      end
 
-  method menubar_visible = menubar_visible
-  method set_menubar_visible x =
-    if not x then menubarbox#misc#hide() else (menubarbox#misc#show());
-    menubar_visible <- x;
-    menubar_visibility_changed#call x;
+    method menubar_visible = menubar_visible
+    method set_menubar_visible x =
+      if not x then menubarbox#misc#hide() else (menubarbox#misc#show());
+      menubar_visible <- x;
+      menubar_visibility_changed#call x;
 
-  method toolbar_visible = toolbar_visible
-  method set_toolbar_visible x =
-    if not x then toolbar#misc#hide() else (toolbar#misc#show_all());
-    toolbar_visible <- x;
-    toolbar_visibility_changed#call toolbar_visible;
+    method toolbar_visible = toolbar_visible
+    method set_toolbar_visible x =
+      if not x then toolbar#misc#hide() else (toolbar#misc#show_all());
+      toolbar_visible <- x;
+      toolbar_visibility_changed#call toolbar_visible;
 
-  method outline_visible = outline_visible
-  method set_outline_visible x =
-    editor#set_show_outline x;
-    outline_visible <- x;
-    outline_visibility_changed#call x;
+    method outline_visible = outline_visible
+    method set_outline_visible x =
+      editor#set_show_outline x;
+      outline_visible <- x;
+      outline_visibility_changed#call x;
 
-  method set_tabbar_visible x =
-    editor#set_show_tabs x;
-    tabbar_visible <- x;
-    tabbar_visibility_changed#call x;
+    method set_tabbar_visible x =
+      editor#set_show_tabs x;
+      tabbar_visible <- x;
+      tabbar_visibility_changed#call x;
 
-  method set_vmessages_visible x =
-    Messages.vmessages#set_visible x;
-    vmessages_visibility_changed#call x;
+    method set_vmessages_visible x =
+      Messages.vmessages#set_visible x;
+      vmessages_visibility_changed#call x;
 
-  method set_hmessages_visible x =
-    Messages.hmessages#set_visible x;
-    hvmessages_visibility_changed#call x;
+    method set_hmessages_visible x =
+      Messages.hmessages#set_visible x;
+      hvmessages_visibility_changed#call x;
 
-  method private set_geometry () =
-    let alloc = window#misc#allocation in
-    geometry <- sprintf "%d\n%d\n%d\n%d\n%b\n%b\n%b\n%b\n"
-      (alloc.Gtk.width) (alloc.Gtk.height) (alloc.Gtk.x) (alloc.Gtk.y)
-      menubar_visible editor#show_tabs toolbar_visible outline_visible;
+    method private set_geometry () =
+      let alloc = window#misc#allocation in
+      geometry <- sprintf "%d\n%d\n%d\n%d\n%b\n%b\n%b\n%b\n"
+          (alloc.Gtk.width) (alloc.Gtk.height) (alloc.Gtk.x) (alloc.Gtk.y)
+          menubar_visible editor#show_tabs toolbar_visible outline_visible;
 
-  method update_git_status () =
-    Timeout.set tout_low_prio 0 begin fun () ->
-      let with_project f =
-        match current_project#get with
+    method update_git_status () =
+      Timeout.set tout_low_prio 0 begin fun () ->
+        let with_project f =
+          match current_project#get with
           | Some proj -> f proj
           | _ -> ()
-      in
-      with_project begin fun proj -> 
-        kprintf label_project_name#set_label "<b>%s</b>" proj.Prj.name;
-        label_project_name#misc#set_tooltip_text (Project.filename proj);
-      end;
-      Git.toplevel begin function 
+        in
+        with_project begin fun proj -> 
+          kprintf label_project_name#set_label "<b>%s</b>" proj.Prj.name;
+          label_project_name#misc#set_tooltip_text (Project.filename proj);
+        end;
+        Git.toplevel begin function 
         | Some toplevel ->
-          toplevel |> Filename.basename |> button_gitpath#set_label;
-          toplevel |> Filename.dirname |> button_gitpath#misc#set_tooltip_text;
+            toplevel |> Filename.basename |> button_gitpath#set_label;
+            toplevel |> Filename.dirname |> button_gitpath#misc#set_tooltip_text;
         | _ -> 
-          button_gitpath#set_label "";
-          button_gitpath#misc#set_tooltip_text "";
-      end;
-      Git.status begin function
+            button_gitpath#set_label "";
+            button_gitpath#misc#set_tooltip_text "";
+        end;
+        Git.status begin function
         | Some s ->
-          gitbox#misc#show();
-          button_gitbranch#set_label s.Git.branch;
-          let changes = 
-            s.Git.added + s.Git.modified + s.Git.deleted + s.Git.renamed + s.Git.copied + s.Git.untracked + s.Git.ignored
-          in
-          changes |> sprintf "%3d" |> button_gitpending#set_label;
-          Git.markup_of_status s |> button_gitpending#misc#set_tooltip_markup;
-          s.Git.ahead |> sprintf "%3d" |> button_gitunpushed#set_label;
-          s.Git.ahead |> sprintf "%d unpushed commits" |> button_gitunpushed#misc#set_tooltip_markup;
+            gitbox#misc#show();
+            button_gitbranch#set_label s.Git.branch;
+            let changes = 
+              s.Git.added + s.Git.modified + s.Git.deleted + s.Git.renamed + s.Git.copied + s.Git.untracked + s.Git.ignored
+            in
+            changes |> sprintf "%3d" |> button_gitpending#set_label;
+            Git.markup_of_status s |> button_gitpending#misc#set_tooltip_markup;
+            s.Git.ahead |> sprintf "%3d" |> button_gitunpushed#set_label;
+            s.Git.ahead |> sprintf "%d unpushed commits" |> button_gitunpushed#misc#set_tooltip_markup;
         | _ -> 
-          gitbox#misc#hide();
-      end;
-    end
+            gitbox#misc#hide();
+        end;
+      end
 
-  method set_title () =
-    let filename, modified =
-      match editor#get_page `ACTIVE with
+    method set_title () =
+      let filename, modified =
+        match editor#get_page `ACTIVE with
         | None -> "", false
         | Some page -> page#get_title, page#buffer#modified
-    in
-    match current_project#get with
+      in
+      match current_project#get with
       | Some proj ->
-        let projectname = proj.Prj.name in
-        [projectname; " - "; filename]
-        |> String.concat ""
-        |> window#set_title;
+          let projectname = proj.Prj.name in
+          [projectname; " - "; filename]
+          |> String.concat ""
+          |> window#set_title;
       | _ ->
-        window#set_title filename;
+          window#set_title filename;
 
-  val mutable busy = false
+    val mutable busy = false
 
-  method set_maximized_view (view : [ `FIRST | `NONE | `SECOND ]) =
-    let mb = menubar_visible in
-    let tb = toolbar_visible in
-    let tab = tabbar_visible in
-    let ms = Messages.vmessages#visible in
-    let fs = is_fullscreen in
-    let save_default () =
-      self#set_geometry();
-      maximized_view_actions <- (`NONE, (fun () -> {
-        mva_menubar    = mb;
-        mva_toolbar    = tb;
-        mva_tabbar     = tab;
-        mva_messages   = ms;
-        mva_fullscreen = fs;
-      })) :: (List.remove_assoc `NONE maximized_view_actions);
-    in
-    let reset_default () =
-      let original = (List.assoc `NONE maximized_view_actions) () in
-      self#set_menubar_visible original.mva_menubar;
-      self#set_toolbar_visible original.mva_toolbar;
-      self#set_tabbar_visible original.mva_tabbar;
-      self#set_vmessages_visible original.mva_messages;
-      self#set_fullscreen original.mva_fullscreen;
-      maximized_view_action <- `NONE
-    in
-    begin
-      match view with
+    method set_maximized_view (view : [ `FIRST | `NONE | `SECOND ]) =
+      let mb = menubar_visible in
+      let tb = toolbar_visible in
+      let tab = tabbar_visible in
+      let ms = Messages.vmessages#visible in
+      let fs = is_fullscreen in
+      let save_default () =
+        self#set_geometry();
+        maximized_view_actions <- (`NONE, (fun () -> {
+              mva_menubar    = mb;
+              mva_toolbar    = tb;
+              mva_tabbar     = tab;
+              mva_messages   = ms;
+              mva_fullscreen = fs;
+            })) :: (List.remove_assoc `NONE maximized_view_actions);
+      in
+      let reset_default () =
+        let original = (List.assoc `NONE maximized_view_actions) () in
+        self#set_menubar_visible original.mva_menubar;
+        self#set_toolbar_visible original.mva_toolbar;
+        self#set_tabbar_visible original.mva_tabbar;
+        self#set_vmessages_visible original.mva_messages;
+        self#set_fullscreen original.mva_fullscreen;
+        maximized_view_action <- `NONE
+      in
+      begin
+        match view with
         | `FIRST when maximized_view_action = `NONE ->
-          save_default();
-          let first = (List.assoc `FIRST maximized_view_actions) () in
-          self#set_menubar_visible first.mva_menubar;
-          self#set_toolbar_visible first.mva_toolbar;
-          self#set_tabbar_visible first.mva_tabbar;
-          if Messages.vmessages#visible then (self#set_vmessages_visible first.mva_messages);
-          self#set_fullscreen first.mva_fullscreen;
-          maximized_view_action <- `FIRST;
+            save_default();
+            let first = (List.assoc `FIRST maximized_view_actions) () in
+            self#set_menubar_visible first.mva_menubar;
+            self#set_toolbar_visible first.mva_toolbar;
+            self#set_tabbar_visible first.mva_tabbar;
+            if Messages.vmessages#visible then (self#set_vmessages_visible first.mva_messages);
+            self#set_fullscreen first.mva_fullscreen;
+            maximized_view_action <- `FIRST;
         | `SECOND when maximized_view_action = `NONE ->
-          save_default();
-          let second = (List.assoc `SECOND maximized_view_actions) () in
-          self#set_menubar_visible second.mva_menubar;
-          self#set_toolbar_visible second.mva_toolbar;
-          self#set_tabbar_visible second.mva_tabbar;
-          if Messages.vmessages#visible then (self#set_vmessages_visible second.mva_messages);
-          self#set_fullscreen second.mva_fullscreen;
-          maximized_view_action <- `SECOND;
+            save_default();
+            let second = (List.assoc `SECOND maximized_view_actions) () in
+            self#set_menubar_visible second.mva_menubar;
+            self#set_toolbar_visible second.mva_toolbar;
+            self#set_tabbar_visible second.mva_tabbar;
+            if Messages.vmessages#visible then (self#set_vmessages_visible second.mva_messages);
+            self#set_fullscreen second.mva_fullscreen;
+            maximized_view_action <- `SECOND;
         | `FIRST when maximized_view_action = `SECOND ->
-          reset_default();
-          self#set_maximized_view view
+            reset_default();
+            self#set_maximized_view view
         | `SECOND when maximized_view_action = `FIRST ->
-          reset_default();
-          self#set_maximized_view view
+            reset_default();
+            self#set_maximized_view view
         | `FIRST when maximized_view_action = `FIRST -> reset_default()
         | `SECOND when maximized_view_action = `SECOND -> reset_default()
         | `NONE when maximized_view_action = `FIRST -> reset_default();
         | `NONE when maximized_view_action = `SECOND -> reset_default();
         | `NONE when maximized_view_action = `NONE -> ()
         | _ -> assert false
-    end;
-    editor#with_current_page (fun p -> p#view#misc#grab_focus())
-
-  method set_fullscreen x =
-    if x && (not is_fullscreen) then begin
-      pref_max_view_fullscreen <- Preferences.preferences#get.Preferences.pref_max_view_fullscreen;
-      let decorated = not Preferences.preferences#get.Preferences.pref_max_view_fullscreen in
-      window#set_decorated decorated;
-      window#maximize();
-      if not decorated then begin
-        window_title_menu_icon#misc#show();
-        vbox_menu_buttons#misc#show();
       end;
-      menubar#misc#set_name "oe_menubar";
-      menubarbox#set_child_packing ~expand:false ~fill:false menubar#coerce;
-      toolbox#misc#show();
-    end else if (not x) && is_fullscreen then begin
-      window_title_menu_icon#misc#hide();
-      vbox_menu_buttons#misc#hide();
-      menubar#misc#set_name "";
-      menubarbox#set_child_packing ~expand:true ~fill:true menubar#coerce;
-      toolbox#misc#hide();
-      window#unmaximize();
-      window#set_decorated true;
-    end;
-    self#set_title ();
-    is_fullscreen <- x;
+      editor#with_current_page (fun p -> p#view#misc#grab_focus())
 
-  method set_menu_item_nav_history_sensitive () =
-    let back, forward, last = editor#location_history_is_empty () in
-    (*Location_history.print editor#location_history;
-    eprintf "%d, %d, %d, %b\n%!"
-      (List.length (Location_history.get_history_backward editor#location_history))
-      (List.length (Location_history.get_history_forward editor#location_history))
-      (Location_history.current_index editor#location_history)
-      last;*)
-    (!get_menu_item_nav_history_backward())#misc#set_sensitive (not back);
-    (!get_menu_item_nav_history_forward())#misc#set_sensitive (not forward);
-    (!get_menu_item_nav_history_last())#misc#set_sensitive (not last);
-    toolbar#tool_back#misc#set_sensitive (not back);
-    toolbar#tool_forward#misc#set_sensitive (not forward);
-    toolbar#tool_last_edit_loc#misc#set_sensitive (not last);
+    method set_fullscreen x =
+      if x && (not is_fullscreen) then begin
+        pref_max_view_fullscreen <- Preferences.preferences#get.Preferences.pref_max_view_fullscreen;
+        let decorated = not Preferences.preferences#get.Preferences.pref_max_view_fullscreen in
+        window#set_decorated decorated;
+        window#maximize();
+        if not decorated then begin
+          window_title_menu_icon#misc#show();
+          vbox_menu_buttons#misc#show();
+        end;
+        menubar#misc#set_name "oe_menubar";
+        menubarbox#set_child_packing ~expand:false ~fill:false menubar#coerce;
+        toolbox#misc#show();
+      end else if (not x) && is_fullscreen then begin
+        window_title_menu_icon#misc#hide();
+        vbox_menu_buttons#misc#hide();
+        menubar#misc#set_name "";
+        menubarbox#set_child_packing ~expand:true ~fill:true menubar#coerce;
+        toolbox#misc#hide();
+        window#unmaximize();
+        window#set_decorated true;
+      end;
+      self#set_title ();
+      is_fullscreen <- x;
 
-  method goto_location dir =
-    let move = function
-      | `NEXT ->
-        begin
-          match Location_history.next editor#location_history with
-            | None -> ()
-            | Some entry -> editor#location_history_goto entry
-        end
-      | `PREV ->
-        begin
-          match Location_history.previous editor#location_history with
-            | None -> ()
-            | Some entry -> editor#location_history_goto entry
-        end
-      | `LOCATION location ->
-        Location_history.goto editor#location_history ~location;
-        editor#location_history_goto location
-      | `LAST ->
-        begin
-          match Location_history.goto_last_edit_location editor#location_history with
-            | None -> ()
-            | Some loc -> editor#location_history_goto loc
-        end
-    in
-    begin
-      match dir with
+    method set_menu_item_nav_history_sensitive () =
+      let back, forward, last = editor#location_history_is_empty () in
+      (*Location_history.print editor#location_history;
+        eprintf "%d, %d, %d, %b\n%!"
+        (List.length (Location_history.get_history_backward editor#location_history))
+        (List.length (Location_history.get_history_forward editor#location_history))
+        (Location_history.current_index editor#location_history)
+        last;*)
+      (!get_menu_item_nav_history_backward())#misc#set_sensitive (not back);
+      (!get_menu_item_nav_history_forward())#misc#set_sensitive (not forward);
+      (!get_menu_item_nav_history_last())#misc#set_sensitive (not last);
+      toolbar#tool_back#misc#set_sensitive (not back);
+      toolbar#tool_forward#misc#set_sensitive (not forward);
+      toolbar#tool_last_edit_loc#misc#set_sensitive (not last);
+
+    method goto_location dir =
+      let move = function
+        | `NEXT ->
+            begin
+              match Location_history.next editor#location_history with
+              | None -> ()
+              | Some entry -> editor#location_history_goto entry
+            end
+        | `PREV ->
+            begin
+              match Location_history.previous editor#location_history with
+              | None -> ()
+              | Some entry -> editor#location_history_goto entry
+            end
+        | `LOCATION location ->
+            Location_history.goto editor#location_history ~location;
+            editor#location_history_goto location
+        | `LAST ->
+            begin
+              match Location_history.goto_last_edit_location editor#location_history with
+              | None -> ()
+              | Some loc -> editor#location_history_goto loc
+            end
+      in
+      begin
+        match dir with
         | `LAST -> move dir
         | `LOCATION _ -> move dir
         | _ ->
-          begin
-            match editor#get_page `ACTIVE with
+            begin
+              match editor#get_page `ACTIVE with
               | None -> move dir
               | Some page ->
-                let iter = page#buffer#get_iter `INSERT in
-                let current_editor_location = iter#offset in
-                begin
-                  match Location_history.current_location editor#location_history with
+                  let iter = page#buffer#get_iter `INSERT in
+                  let current_editor_location = iter#offset in
+                  begin
+                    match Location_history.current_location editor#location_history with
                     | Some cur_hist_loc when (cur_hist_loc.Location_history.filename = page#get_filename) ->
-                      let already_there =
-                        match cur_hist_loc.Location_history.mark with
+                        let already_there =
+                          match cur_hist_loc.Location_history.mark with
                           | None -> current_editor_location = cur_hist_loc.Location_history.offset
                           | Some cur_hist_mark ->
-                            let hmn = match GtkText.Mark.get_name cur_hist_mark with None -> assert false | Some x -> x in
-                            List.exists begin fun m ->
-                              match GtkText.Mark.get_name m with
+                              let hmn = match GtkText.Mark.get_name cur_hist_mark with None -> assert false | Some x -> x in
+                              List.exists begin fun m ->
+                                match GtkText.Mark.get_name m with
                                 | None -> false
                                 | Some name -> hmn = name
-                            end iter#marks
-                      in
-                      if already_there then (move dir) else (move (`LOCATION cur_hist_loc));
+                              end iter#marks
+                        in
+                        if already_there then (move dir) else (move (`LOCATION cur_hist_loc));
                     | Some chl -> move (`LOCATION chl);
                     | None -> ()
-                end;
-          end;
-    end;
-    self#set_menu_item_nav_history_sensitive();
+                  end;
+            end;
+      end;
+      self#set_menu_item_nav_history_sensitive();
 
-  method build_all configs =
-    let tasks = List.map begin fun target ->
-      let cmd, args = Target.create_cmd_line target in
-      let name = sprintf "Build \xC2\xAB%s\xC2\xBB" (Filename.basename target.Target.name) in
-      let task = Task.create ~name ~env:[] ~dir:"" ~cmd ~args () in
-      `COMPILE, task
-    end configs in
-    self#with_current_project (fun _ -> ignore (Task_console.exec_sync ~editor [tasks]))
+    method build_all configs =
+      let tasks = List.map begin fun target ->
+          let cmd, args = Target.create_cmd_line target in
+          let name = sprintf "Build \xC2\xAB%s\xC2\xBB" (Filename.basename target.Target.name) in
+          let task = Task.create ~name ~env:[] ~dir:"" ~cmd ~args () in
+          `COMPILE, task
+        end configs in
+      self#with_current_project (fun _ -> ignore (Task_console.exec_sync ~editor [tasks]))
 
-  method annot_type () =
-    editor#with_current_page begin fun page ->
-      try
-        let iter = `ITER (page#buffer#get_iter `INSERT) in
-        (*Opt.may page#annot_type (fun (at : Annot_type.annot_type) -> at#popup (*~position:`TOP_RIGHT*) iter ());*)
-        Option.iter (fun at ->  at#popup iter () : Annot_type.annot_type -> unit) page#annot_type;
-        if Preferences.preferences#get.Preferences.pref_err_tooltip then (page#error_indication#tooltip ~sticky:true iter);
-      with ex -> Printf.eprintf "File \"browser.ml\": %s\n%s\n%!" (Printexc.to_string ex) (Printexc.get_backtrace());
-    end
-
-  method annot_type_copy () =
-    editor#with_current_page begin fun page ->
-      Option.iter begin fun (annot_type : Annot_type.annot_type) ->
-        match annot_type#get_type (`ITER (page#buffer#get_iter `INSERT)) with
-        | Some {Annot_type.at_type; _} ->
-          self#annot_type();
-          let clipboard = GData.clipboard Gdk.Atom.clipboard in
-          clipboard#set_text at_type
-        | None -> ()
-      end page#annot_type
-    end
-
-  method annot_type_set_tooltips x =
-    Preferences.preferences#get.Preferences.pref_annot_type_tooltips_enabled <- x;
-    Preferences.save();
-    editor#with_current_page
-      (fun page -> Option.iter (fun obj -> obj#remove_tag ()) page#annot_type)
-
-  method create_menu_history dir ~menu =
-    let history = match dir with
-      | `BACK -> Location_history.get_history_backward editor#location_history
-      | `FORWARD -> Location_history.get_history_forward editor#location_history
-    in
-    try
-      List.iter begin (*let i = ref 0 in*) fun entry ->
-        let label = Location_history.string_of_location entry in
-        let label = if entry.Location_history.kind = `EDIT then label ^ "*" else label in
-        let mi = GMenu.menu_item ~label ~packing:menu#add () in
-        ignore (mi#connect#activate ~callback:(fun () -> self#goto_location (`LOCATION entry)));
-        (*if !i >= 30 then (raise Exit) else (incr i)*)
-      end history;
-      if List.length history = 0 then begin
+    method annot_type () =
+      editor#with_current_page begin fun page ->
         try
-          let sep = List.hd (List.tl menu#all_children) in
-          menu#remove sep
-        with _ -> ()
+          let iter = `ITER (page#buffer#get_iter `INSERT) in
+          (*Opt.may page#annot_type (fun (at : Annot_type.annot_type) -> at#popup (*~position:`TOP_RIGHT*) iter ());*)
+          Option.iter (fun at ->  at#popup iter () : Annot_type.annot_type -> unit) page#annot_type;
+          if Preferences.preferences#get.Preferences.pref_err_tooltip then (page#error_indication#tooltip ~sticky:true iter);
+        with ex -> Printf.eprintf "File \"browser.ml\": %s\n%s\n%!" (Printexc.to_string ex) (Printexc.get_backtrace());
       end
-    with Exit -> ()
 
-  method with_current_project f = match current_project#get with Some p -> f p | _ -> ()
+    method annot_type_copy () =
+      editor#with_current_page begin fun page ->
+        Option.iter begin fun (annot_type : Annot_type.annot_type) ->
+          match annot_type#get_type (`ITER (page#buffer#get_iter `INSERT)) with
+          | Some {Annot_type.at_type; _} ->
+              self#annot_type();
+              let clipboard = GData.clipboard Gdk.Atom.clipboard in
+              clipboard#set_text at_type
+          | None -> ()
+        end page#annot_type
+      end
 
-  method with_default_target f =
-    self#with_current_project begin fun project ->
-      match Project.default_target project with
+    method annot_type_set_tooltips x =
+      Preferences.preferences#get.Preferences.pref_annot_type_tooltips_enabled <- x;
+      Preferences.save();
+      editor#with_current_page
+        (fun page -> Option.iter (fun obj -> obj#remove_tag ()) page#annot_type)
+
+    method create_menu_history dir ~menu =
+      let history = match dir with
+        | `BACK -> Location_history.get_history_backward editor#location_history
+        | `FORWARD -> Location_history.get_history_forward editor#location_history
+      in
+      try
+        List.iter begin (*let i = ref 0 in*) fun entry ->
+          let label = Location_history.string_of_location entry in
+          let label = if entry.Location_history.kind = `EDIT then label ^ "*" else label in
+          let mi = GMenu.menu_item ~label ~packing:menu#add () in
+          ignore (mi#connect#activate ~callback:(fun () -> self#goto_location (`LOCATION entry)));
+          (*if !i >= 30 then (raise Exit) else (incr i)*)
+        end history;
+        if List.length history = 0 then begin
+          try
+            let sep = List.hd (List.tl menu#all_children) in
+            menu#remove sep
+          with _ -> ()
+        end
+      with Exit -> ()
+
+    method with_current_project f = match current_project#get with Some p -> f p | _ -> ()
+
+    method with_default_target f =
+      self#with_current_project begin fun project ->
+        match Project.default_target project with
         | Some bc -> f bc
         | _ -> ()
-    end
+      end
 
-  method with_default_runtime_config ~open_dialog f =
-    self#with_current_project begin fun project ->
-      match List_opt.find (fun x -> x.Rconf.default) project.Prj.executables with
+    method with_default_runtime_config ~open_dialog f =
+      self#with_current_project begin fun project ->
+        match List_opt.find (fun x -> x.Rconf.default) project.Prj.executables with
         | Some rconf -> f rconf
         | None when open_dialog -> self#dialog_project_properties ~page_num:2 ()
         | _ -> ()
-    end
+      end
 
-  method window : GWindow.window = window
+    method window : GWindow.window = window
 
-  method exit (editor : Editor.editor) () =
-    try
-      Preferences.preferences#get.Preferences.pref_hmessages_width <- Messages.hmessages#position;
-      Preferences.preferences#get.Preferences.pref_vmessages_height <- Messages.vmessages#position;
-      Preferences.preferences#get.Preferences.pref_outline_width <- editor#paned#position;
-      ignore(Messages.vmessages#remove_all_tabs());
-      if maximized_view_action = `NONE then (self#set_geometry());
-      (* Save geometry *)
-      let chan = open_out (Filename.concat App_config.ocamleditor_user_home "geometry") in
-      fprintf chan "%s" geometry;
-      close_out_noerr chan;
-      window#misc#hide();
-      (*  *)
-      let finalize () =
-        (* Save project *)
-        begin
-          try self#with_current_project begin fun project ->
-            Project.save ~editor project;
-            Symbols.Cache.save ~project;
-          end with Gpointer.Null -> ();
-        end;
-        (* Save project and file history *)
-        File_history.write editor#file_history;
-        self#project_write_history();
-        Preferences.save();
+    method exit (editor : Editor.editor) () =
+      try
+        Preferences.preferences#get.Preferences.pref_hmessages_width <- Messages.hmessages#position;
+        Preferences.preferences#get.Preferences.pref_vmessages_height <- Messages.vmessages#position;
+        Preferences.preferences#get.Preferences.pref_outline_width <- editor#paned#position;
+        ignore(Messages.vmessages#remove_all_tabs());
+        if maximized_view_action = `NONE then (self#set_geometry());
+        (* Save geometry *)
+        let chan = open_out (Filename.concat App_config.ocamleditor_user_home "geometry") in
+        fprintf chan "%s" geometry;
+        close_out_noerr chan;
+        window#misc#hide();
         (*  *)
-        finalize();
-        GMain.Main.quit();
-        Stdlib.exit 0
-      in
-      let pages = List.filter (fun p -> p#buffer#modified) editor#pages in
-      let pages = List.map (fun x -> true, x) pages in
-      editor#dialog_save_modified ~close:false ~callback:finalize pages
-    with Messages.Cancel_process_termination -> (GtkSignal.stop_emit())
+        let finalize () =
+          (* Save project *)
+          begin
+            try self#with_current_project begin fun project ->
+                Project.save ~editor project;
+                Symbols.Cache.save ~project;
+              end with Gpointer.Null -> ();
+          end;
+          (* Save project and file history *)
+          File_history.write editor#file_history;
+          self#project_write_history();
+          Preferences.save();
+          (*  *)
+          finalize();
+          GMain.Main.quit();
+          Stdlib.exit 0
+        in
+        let pages = List.filter (fun p -> p#buffer#modified) editor#pages in
+        let pages = List.map (fun x -> true, x) pages in
+        editor#dialog_save_modified ~close:false ~callback:finalize pages
+      with Messages.Cancel_process_termination -> (GtkSignal.stop_emit())
 
-  method startup = startup#call
+    method startup = startup#call
 
-  method menu =
-    match menu with
+    method menu =
+      match menu with
       | Some menu -> menu.Menu_types.menus
       | _ -> assert false
 
-  method private init () =
-    window#event#connect#window_state ~callback:begin fun ev ->
-      match GdkEvent.WindowState.new_window_state ev with
+    method private init () =
+      window#event#connect#window_state ~callback:begin fun ev ->
+        match GdkEvent.WindowState.new_window_state ev with
         | [`MAXIMIZED] when maximized_view_action <> `NONE && not window#decorated ->
-          Gmisclib.Idle.add ~prio:300 begin fun () ->
-            let alloc = window#misc#allocation in
-            window#resize ~width:alloc.Gtk.width ~height:(alloc.Gtk.height - 2);
-          end;
-          false
+            Gmisclib.Idle.add ~prio:300 begin fun () ->
+              let alloc = window#misc#allocation in
+              window#resize ~width:alloc.Gtk.width ~height:(alloc.Gtk.height - 2);
+            end;
+            false
         | _ -> false
-    end |> ignore;
-    let find_custom_button = Toolbox.populate ~browser:self ~packing:toolbox#pack in
-    let _ = Editor.set_menu_item_nav_history_sensitive := self#set_menu_item_nav_history_sensitive in
-    (* Menubar items *)
-    let open! Menu_types in
-    let menu_item_view_menubar = ref [] in
-    let menu_item_view_toolbar = ref [] in
-    let menu_item_view_tabbar = ref [] in
-    let menu_item_view_outline = ref [] in
-    let menu_item_view_messages = ref [] in
-    let menu_item_view_hmessages = ref [] in
-    let accel_group = GtkData.AccelGroup.create () in
-    let group = accel_group in
-    let menu_items = Menu.create ~browser:self ~group
-      ~get_menu_item_undo
-      ~get_menu_item_redo
-      ~get_menu_item_nav_history_backward
-      ~get_menu_item_nav_history_forward
-      ~get_menu_item_nav_history_last
-      ~menu_item_view_menubar
-      ~menu_item_view_toolbar
-      ~menu_item_view_tabbar
-      ~menu_item_view_outline
-      ~menu_item_view_messages ~menu_item_view_hmessages () in
-    menu <- Some menu_items;
-    List.iter menubar#append menu_items.menu_items;
-    (* Update Window menu with files added to the editor *)
-    ignore (editor#connect#add_page ~callback:begin fun page ->
-      begin
-        match page#file with None -> () | Some file ->
-          let offset = page#initial_offset in
-          let scroll_offset = page#view#get_scroll_top () in
-          self#with_current_project (fun project -> Project.add_file project ~scroll_offset ~offset file);
-      end;
-      Gaux.may menu ~f:begin fun menu ->
-        menu.window_signal_locked <- true;
-        let basename = Filename.basename page#get_filename in
-        let label = sprintf "%s%s" basename (if page#buffer#modified then "*" else "") in
-        let group = menu.window_radio_group in
-        let item = GMenu.radio_menu_item ?group ~active:true
-          ~label ~packing:(menu.window#insert ~pos:menu.window_n_childs) ()
-        in
-        menu.window_n_childs <- menu.window_n_childs + 1;
-        let _ = item#connect#toggled ~callback:begin fun () ->
-          if not menu.window_signal_locked then begin
-            ignore (editor#open_file ~active:true ~scroll_offset:0 ~offset:0 ?remote:None page#get_filename)
-          end
-        end in
-        menu.window_pages <- (page#misc#get_oid, item) :: menu.window_pages;
-        menu.window_signal_locked <- false;
-        menu.window_radio_group <- Some item#group;
-      end;
-    end);
-    (* Update Window menu with files removed from the editor *)
-    ignore (editor#connect#remove_page ~callback:begin fun page ->
-      self#with_current_project begin fun project ->
-        Project.remove_file project page#get_filename;
-        self#set_title ();
-        Gaux.may menu ~f:begin fun menu ->
-          try
-            let item = List.assoc page#misc#get_oid menu.window_pages in
-            item#destroy();
-            menu.window_pages <- List.remove_assoc page#misc#get_oid menu.window_pages;
-	    menu.window_n_childs <- menu.window_n_childs - 1;
-          with Not_found -> ()
-        end;
-      end
-    end);
-    (*  *)
-    ignore (editor#connect#switch_page ~callback:begin fun page ->
-      Gaux.may menu ~f:begin fun menu ->
-        let basename = Filename.basename page#get_filename in
-        kprintf (Menu.set_label menu.file_rename) "Rename \xC2\xAB%s\xC2\xBB" basename;
-        menu.file_switch#misc#set_sensitive
-          ((basename ^^^ ".ml") || (basename ^^^ ".mli"));
-        kprintf (Menu.set_label menu.file_close) "Close \xC2\xAB%s\xC2\xBB" basename;
-        kprintf (Menu.set_label menu.file_close_all) "Close All Except \xC2\xAB%s\xC2\xBB" basename;
-        kprintf (Menu.set_label menu.file_revert) "Revert to Saved \xC2\xAB%s\xC2\xBB" basename;
-        kprintf (Menu.set_label menu.file_delete) "Delete \xC2\xAB%s\xC2\xBB" basename;
-        match List_opt.assoc page#misc#get_oid menu.window_pages with
-          | Some item ->kprintf (Menu.set_label item) "%s" basename
-          | _ -> ()
-      end;
-    end);
-    (* Update Project menu with project history *)
-    ignore (self#connect#project_history_changed ~callback:begin fun history ->
-      Gaux.may menu ~f:begin fun menu ->
-        Gmisclib.Idle.add ~prio:600 begin fun () ->
-          List.iter (fun (_, i) -> menu.project#remove (i :> GMenu.menu_item)) menu.project_history;
-          menu.project_history <- []
-        end;
-        let project_names = List.map (fun x -> x, Filename.chop_extension (Filename.basename x)) history.File_history.content in
-        let project_names = List.sort (fun (_, x1) (_, x2) ->
-          compare (String.lowercase_ascii x1) (String.lowercase_ascii x2)) project_names in
-        List.iter begin fun (filename, label) ->
-          Gmisclib.Idle.add ~prio:600 begin fun () ->
-            let item = GMenu.check_menu_item ~label ~packing:menu.project#add () in
-            item#misc#set_tooltip_text (Filename.dirname filename);
-            ignore (item#connect#after#toggled ~callback:(fun () ->
-              if not menu.project_history_signal_locked && item#active then (ignore (self#project_open filename))));
-            menu.project_history <- (filename, item) :: menu.project_history;
+      end |> ignore;
+      let find_custom_button = Toolbox.populate ~browser:self ~packing:toolbox#pack in
+      let _ = Editor.set_menu_item_nav_history_sensitive := self#set_menu_item_nav_history_sensitive in
+      (* Menubar items *)
+      let open! Menu_types in
+      let menu_item_view_menubar = ref [] in
+      let menu_item_view_toolbar = ref [] in
+      let menu_item_view_tabbar = ref [] in
+      let menu_item_view_outline = ref [] in
+      let menu_item_view_messages = ref [] in
+      let menu_item_view_hmessages = ref [] in
+      let accel_group = GtkData.AccelGroup.create () in
+      let group = accel_group in
+      let menu_items = Menu.create ~browser:self ~group
+          ~get_menu_item_undo
+          ~get_menu_item_redo
+          ~get_menu_item_nav_history_backward
+          ~get_menu_item_nav_history_forward
+          ~get_menu_item_nav_history_last
+          ~menu_item_view_menubar
+          ~menu_item_view_toolbar
+          ~menu_item_view_tabbar
+          ~menu_item_view_outline
+          ~menu_item_view_messages ~menu_item_view_hmessages () in
+      menu <- Some menu_items;
+      List.iter menubar#append menu_items.menu_items;
+      (* Update Window menu with files added to the editor *)
+      ignore (editor#connect#add_page ~callback:begin fun page ->
+          begin
+            match page#file with None -> () | Some file ->
+              let offset = page#initial_offset in
+              let scroll_offset = page#view#get_scroll_top () in
+              self#with_current_project (fun project -> Project.add_file project ~scroll_offset ~offset file);
           end;
-        end project_names;
-      end
-    end);
-
-    Editor_menu.menu_item_view_menubar := (fun () -> menu_item_view_menubar);
-
-    (* Load current project *)
-    let rec load_current_proj history =
-      match history with [] -> () | filename :: _ ->
-        if Sys.file_exists filename then (ignore (self#project_open filename))
-        else (load_current_proj (List.tl history))
-    in
-    File_history.read project_history;
-    project_history.File_history.content <- List.filter (fun x -> (x ^^^ Prj.default_extension)) project_history.File_history.content;
-    project_history_changed#call project_history;
-    load_current_proj project_history.File_history.content;
-
-    (* Toolbar signals *)
-    toolbar#bind_signals self;
-
-    (*  *)
-    self#set_menu_item_nav_history_sensitive();
-    self#connect#menubar_visibility_changed ~callback:begin fun visible ->
-      List.iter begin fun (mi, sign) ->
-        mi#misc#handler_block sign;
-        mi#set_active visible;
-        mi#misc#handler_unblock sign;
-      end !menu_item_view_menubar
-    end |> ignore;
-    self#connect#toolbar_visibility_changed ~callback:begin fun visible ->
-      List.iter begin fun (mi, sign) ->
-        mi#misc#handler_block sign;
-        mi#set_active visible;
-        mi#misc#handler_unblock sign;
-      end !menu_item_view_toolbar
-    end |> ignore;
-    self#connect#tabbar_visibility_changed ~callback:begin fun visible ->
-      List.iter begin fun (mi, sign) ->
-        mi#misc#handler_block sign;
-        mi#set_active visible;
-        mi#misc#handler_unblock sign;
-      end !menu_item_view_tabbar
-    end |> ignore;
-    self#connect#outline_visibility_changed ~callback:begin fun visible ->
-      List.iter begin fun (mi, sign) ->
-        mi#misc#handler_block sign;
-        mi#set_active visible;
-        mi#misc#handler_unblock sign;
-      end !menu_item_view_outline
-    end |> ignore;
-    let update_view_vmessages_items visible =
-      List.iter begin fun (mi, sign) ->
-        toolbar#tool_messages_handler_block ();
-        mi#misc#handler_block sign;
-        mi#set_active visible;
-        toolbar#tool_messages_set_active visible;
-        mi#misc#handler_unblock sign;
-        toolbar#tool_messages_handler_unblock ();
-      end !menu_item_view_messages
-    in
-    Messages.vmessages#connect#visible_changed ~callback:update_view_vmessages_items |> ignore;
-    self#connect#vmessages_visibility_changed ~callback:update_view_vmessages_items |> ignore;
-    let update_view_hmessages_items visible =
-      List.iter begin fun (mi, sign) ->
-        toolbar#tool_hmessages_handler_block ();
-        mi#misc#handler_block sign;
-        mi#set_active visible;
-        toolbar#tool_hmessages_set_active visible;
-        mi#misc#handler_unblock sign;
-        toolbar#tool_hmessages_handler_unblock ();
-      end !menu_item_view_hmessages
-    in
-    Messages.hmessages#connect#visible_changed ~callback:update_view_hmessages_items |> ignore;
-    self#connect#hvmessages_visibility_changed ~callback:update_view_hmessages_items |> ignore;
-
-    (* Editor *)
-    paned#pack1 ~resize:true ~shrink:true editor#coerce;
-    let update_toolbar_save () =
-      let exists_unsaved = List.exists (fun p -> p#view#buffer#modified) editor#pages in
-      Gmisclib.Idle.add ~prio:300 (fun () -> toolbar#tool_save_all#misc#set_sensitive exists_unsaved);
-      Gaux.may (editor#get_page `ACTIVE) ~f:begin fun page ->
-        Gmisclib.Idle.add ~prio:300 (fun () ->
-            toolbar#tool_save#misc#set_sensitive page#buffer#modified);
-        Gmisclib.Idle.add ~prio:300 begin fun () ->
-          let button = find_custom_button `SAVE in
-          Option.iter
-            begin fun button ->
-              button#misc#set_sensitive page#buffer#modified;
-              button#misc#set_state `NORMAL
-            end
-            button
-        end;
-        Gmisclib.Idle.add ~prio:300 begin fun () ->
-          let button = find_custom_button `SAVE_ALL in
-          Option.iter
-            begin fun button ->
-              button#misc#set_sensitive exists_unsaved;
-              button#misc#set_state `NORMAL
-            end
-            button
-        end;
-        Gmisclib.Idle.add ~prio:300 self#set_title;
-      end;
-    in
-    let update_toolbar_undo () =
-      Gaux.may (editor#get_page `ACTIVE) ~f:begin fun page ->
-        let can_undo = (*page#buffer#modified &&*) page#buffer#undo#can_undo in
-        let can_redo = (*page#buffer#modified &&*) page#buffer#undo#can_redo in
-        toolbar#tool_undo#misc#set_sensitive can_undo;
-        toolbar#tool_redo#misc#set_sensitive can_redo;
-        (!get_menu_item_undo())#misc#set_sensitive can_undo;
-        (!get_menu_item_redo())#misc#set_sensitive can_redo;
-      end;
-    in
-    let callback _ =
-      toolbar#update current_project#get;
-      update_toolbar_save();
-      update_toolbar_undo();
-      Gaux.may (editor#get_page `ACTIVE) ~f:(fun _ -> self#set_title ());
-      self#set_menu_item_nav_history_sensitive();
-    in
-    ignore (editor#connect#switch_page ~callback);
-    ignore (editor#connect#remove_page ~callback);
-    ignore (editor#connect#add_page ~callback);
-    ignore (editor#connect#after#changed ~callback:update_toolbar_undo);
-    editor#connect#after#modified_changed ~callback:update_toolbar_save |> ignore;
-    editor#connect#file_saved ~callback:(fun _ -> self#update_git_status()) |> ignore;
-    ignore (editor#connect#file_history_changed ~callback:begin fun fh ->
-      Gaux.may menu ~f:begin fun menu ->
-        let f =
-          if List.length fh.File_history.content > 0
-          then (fun x -> x#misc#show()) else (fun x -> x#misc#hide())
-        in
-        List.iter f [
-          menu.file_recent_select;
-          menu.file_recent_clear;
-          menu.file_recent_sep;
-        ]
-      end;
-    end);
-    ignore (self#connect#switch_project ~callback:begin fun () ->
-      toolbar#update current_project#get;
-      self#set_menu_item_nav_history_sensitive()
-    end);
-    List.iter (fun c -> c#misc#set_sensitive (current_project#get <> None)) toolbar#children;
-    callback();
-    (* Initialize Quick_file_chooser *)
-    let roots = List.map Filename.dirname project_history.File_history.content in
-    Quick_file_chooser.init ~roots ~filter:Dialog_find_file.filter;
-    (* Geometry settings *)
-    let height = ref 700 in
-    let width = ref 1052 in
-    let pos_x = ref None in
-    let pos_y = ref None in
-    let is_menubar_visible = ref true in
-    let is_toolbar_visible = ref true in
-    let is_tabbar_visible = ref true in
-    let is_outline_visible = ref true in
-    begin
-      try
-        let chan = open_in (Filename.concat App_config.ocamleditor_user_home "geometry") in
-        width := int_of_string (input_line chan);
-        height := int_of_string (input_line chan);
-        pos_x := Some (int_of_string (input_line chan));
-        pos_y := Some (int_of_string (input_line chan));
-        (try is_menubar_visible := (bool_of_string (input_line chan)) with End_of_file -> ());
-        (try is_tabbar_visible := (bool_of_string (input_line chan)) with End_of_file -> ());
-        (try is_toolbar_visible := (bool_of_string (input_line chan)) with End_of_file -> ());
-        (try is_outline_visible := (bool_of_string (input_line chan)) with End_of_file -> ());
-        close_in chan;
-      with _ -> ()
-    end;
-    self#set_menubar_visible !is_menubar_visible;
-    self#set_toolbar_visible !is_toolbar_visible;
-    self#set_tabbar_visible !is_tabbar_visible;
-    self#set_outline_visible !is_outline_visible;
-    window#resize ~width:!width ~height:!height;
-    Gmisclib.Idle.add ~prio:300 begin fun () ->
-      Messages.vmessages#set_position (Preferences.preferences#get.Preferences.pref_vmessages_height);
-    end;
-    Gmisclib.Idle.add ~prio:300 (fun () -> Messages.hmessages#set_position (Preferences.preferences#get.Preferences.pref_hmessages_width));
-    ignore (window#event#connect#after#delete ~callback:(fun _ -> self#exit editor (); true));
-    button_menu_exit#connect#clicked ~callback:(fun () -> self#exit editor ()) |> ignore;
-    button_menu_reset#connect#clicked ~callback:(fun () -> self#set_maximized_view `NONE) |> ignore;
-    button_menu_iconify#connect#clicked ~callback:window#iconify |> ignore;
-    (*  *)
-    Ocaml_text.create_shell := self#shell;
-    (* Load custom templates *)
-    begin
-      try Templ.load_custom `user;
-      with Templ.Error (msg, details) ->
-        (Dialog.message ~title:"Warning" ~message:(sprintf "%s\n\n\"%s\"" msg details) `WARNING);
-    end;
-    (*  *)
-    self#set_geometry();
-    window#add_accel_group accel_group;
-    (* Listen for launcher *)
-    let launcher_list = App_config.launcher_filename in
-    let id_timeout = ref None in
-    let check_launcher () =
-      if Sys.file_exists launcher_list then begin
-        let text = File_util.read launcher_list in
-        let filenames = Str.split (Miscellanea.regexp "\n") (Buffer.contents text) in
-        let filenames = List.map String.trim filenames in
-        let filenames = Miscellanea.Xlist.remove_dupl filenames in
-        List.iter begin fun filename ->
-          editor#open_file ~active:true ~scroll_offset:0 ~offset:0 filename |> ignore;
-        end filenames;
-        let mv = maximized_view_action in
-        window#set_modal true;
-        window#present();
-        if Sys.file_exists launcher_list then Sys.remove launcher_list;
-        window#set_modal false;
-        self#set_maximized_view mv;
-        self#set_maximized_view mv;
-      end;
-    in
-    window#event#connect#focus_out ~callback:begin fun _ ->
-      Timeout.destroy tout_low_prio;
-      id_timeout := Some (GMain.Timeout.add ~ms:300 ~callback:begin fun () ->
-          check_launcher();
-          true
+          Gaux.may menu ~f:begin fun menu ->
+            menu.window_signal_locked <- true;
+            let basename = Filename.basename page#get_filename in
+            let label = sprintf "%s%s" basename (if page#buffer#modified then "*" else "") in
+            let group = menu.window_radio_group in
+            let item = GMenu.radio_menu_item ?group ~active:true
+                ~label ~packing:(menu.window#insert ~pos:menu.window_n_childs) ()
+            in
+            menu.window_n_childs <- menu.window_n_childs + 1;
+            let _ = item#connect#toggled ~callback:begin fun () ->
+                if not menu.window_signal_locked then begin
+                  ignore (editor#open_file ~active:true ~scroll_offset:0 ~offset:0 ?remote:None page#get_filename)
+                end
+              end in
+            menu.window_pages <- (page#misc#get_oid, item) :: menu.window_pages;
+            menu.window_signal_locked <- false;
+            menu.window_radio_group <- Some item#group;
+          end;
         end);
-      false
-    end |> ignore;
-    window#event#connect#focus_in ~callback:begin fun _ ->
-      self#set_title();
-      self#update_git_status();
-      Timeout.start tout_low_prio;
-      (match !id_timeout with Some id -> GMain.Timeout.remove id | _ -> ());
-      false
-    end |> ignore;
-    check_launcher()
+      (* Update Window menu with files removed from the editor *)
+      ignore (editor#connect#remove_page ~callback:begin fun page ->
+          self#with_current_project begin fun project ->
+            Project.remove_file project page#get_filename;
+            self#set_title ();
+            Gaux.may menu ~f:begin fun menu ->
+              try
+                let item = List.assoc page#misc#get_oid menu.window_pages in
+                item#destroy();
+                menu.window_pages <- List.remove_assoc page#misc#get_oid menu.window_pages;
+                menu.window_n_childs <- menu.window_n_childs - 1;
+              with Not_found -> ()
+            end;
+          end
+        end);
+      (*  *)
+      ignore (editor#connect#switch_page ~callback:begin fun page ->
+          Gaux.may menu ~f:begin fun menu ->
+            let basename = Filename.basename page#get_filename in
+            kprintf (Menu.set_label menu.file_rename) "Rename \xC2\xAB%s\xC2\xBB" basename;
+            menu.file_switch#misc#set_sensitive
+              ((basename ^^^ ".ml") || (basename ^^^ ".mli"));
+            kprintf (Menu.set_label menu.file_close) "Close \xC2\xAB%s\xC2\xBB" basename;
+            kprintf (Menu.set_label menu.file_close_all) "Close All Except \xC2\xAB%s\xC2\xBB" basename;
+            kprintf (Menu.set_label menu.file_revert) "Revert to Saved \xC2\xAB%s\xC2\xBB" basename;
+            kprintf (Menu.set_label menu.file_delete) "Delete \xC2\xAB%s\xC2\xBB" basename;
+            match List_opt.assoc page#misc#get_oid menu.window_pages with
+            | Some item ->kprintf (Menu.set_label item) "%s" basename
+            | _ -> ()
+          end;
+        end);
+      (* Update Project menu with project history *)
+      ignore (self#connect#project_history_changed ~callback:begin fun history ->
+          Gaux.may menu ~f:begin fun menu ->
+            Gmisclib.Idle.add ~prio:600 begin fun () ->
+              List.iter (fun (_, i) -> menu.project#remove (i :> GMenu.menu_item)) menu.project_history;
+              menu.project_history <- []
+            end;
+            let project_names = List.map (fun x -> x, Filename.chop_extension (Filename.basename x)) history.File_history.content in
+            let project_names = List.sort (fun (_, x1) (_, x2) ->
+                compare (String.lowercase_ascii x1) (String.lowercase_ascii x2)) project_names in
+            List.iter begin fun (filename, label) ->
+              Gmisclib.Idle.add ~prio:600 begin fun () ->
+                let item = GMenu.check_menu_item ~label ~packing:menu.project#add () in
+                item#misc#set_tooltip_text (Filename.dirname filename);
+                ignore (item#connect#after#toggled ~callback:(fun () ->
+                    if not menu.project_history_signal_locked && item#active then (ignore (self#project_open filename))));
+                menu.project_history <- (filename, item) :: menu.project_history;
+              end;
+            end project_names;
+          end
+        end);
 
-  method connect = new signals ~startup ~switch_project ~menubar_visibility_changed ~toolbar_visibility_changed
-    ~tabbar_visibility_changed ~outline_visibility_changed
-    ~vmessages_visibility_changed ~hvmessages_visibility_changed
-    ~project_history_changed
+      Editor_menu.menu_item_view_menubar := (fun () -> menu_item_view_menubar);
 
-  initializer
-    self#connect#startup ~callback:self#init |> ignore;
+      (* Load current project *)
+      let rec load_current_proj history =
+        match history with [] -> () | filename :: _ ->
+          if Sys.file_exists filename then (ignore (self#project_open filename))
+          else (load_current_proj (List.tl history))
+      in
+      File_history.read project_history;
+      project_history.File_history.content <- List.filter (fun x -> (x ^^^ Prj.default_extension)) project_history.File_history.content;
+      project_history_changed#call project_history;
+      load_current_proj project_history.File_history.content;
 
-end
+      (* Toolbar signals *)
+      toolbar#bind_signals self;
+
+      (*  *)
+      self#set_menu_item_nav_history_sensitive();
+      self#connect#menubar_visibility_changed ~callback:begin fun visible ->
+        List.iter begin fun (mi, sign) ->
+          mi#misc#handler_block sign;
+          mi#set_active visible;
+          mi#misc#handler_unblock sign;
+        end !menu_item_view_menubar
+      end |> ignore;
+      self#connect#toolbar_visibility_changed ~callback:begin fun visible ->
+        List.iter begin fun (mi, sign) ->
+          mi#misc#handler_block sign;
+          mi#set_active visible;
+          mi#misc#handler_unblock sign;
+        end !menu_item_view_toolbar
+      end |> ignore;
+      self#connect#tabbar_visibility_changed ~callback:begin fun visible ->
+        List.iter begin fun (mi, sign) ->
+          mi#misc#handler_block sign;
+          mi#set_active visible;
+          mi#misc#handler_unblock sign;
+        end !menu_item_view_tabbar
+      end |> ignore;
+      self#connect#outline_visibility_changed ~callback:begin fun visible ->
+        List.iter begin fun (mi, sign) ->
+          mi#misc#handler_block sign;
+          mi#set_active visible;
+          mi#misc#handler_unblock sign;
+        end !menu_item_view_outline
+      end |> ignore;
+      let update_view_vmessages_items visible =
+        List.iter begin fun (mi, sign) ->
+          toolbar#tool_messages_handler_block ();
+          mi#misc#handler_block sign;
+          mi#set_active visible;
+          toolbar#tool_messages_set_active visible;
+          mi#misc#handler_unblock sign;
+          toolbar#tool_messages_handler_unblock ();
+        end !menu_item_view_messages
+      in
+      Messages.vmessages#connect#visible_changed ~callback:update_view_vmessages_items |> ignore;
+      self#connect#vmessages_visibility_changed ~callback:update_view_vmessages_items |> ignore;
+      let update_view_hmessages_items visible =
+        List.iter begin fun (mi, sign) ->
+          toolbar#tool_hmessages_handler_block ();
+          mi#misc#handler_block sign;
+          mi#set_active visible;
+          toolbar#tool_hmessages_set_active visible;
+          mi#misc#handler_unblock sign;
+          toolbar#tool_hmessages_handler_unblock ();
+        end !menu_item_view_hmessages
+      in
+      Messages.hmessages#connect#visible_changed ~callback:update_view_hmessages_items |> ignore;
+      self#connect#hvmessages_visibility_changed ~callback:update_view_hmessages_items |> ignore;
+
+      (* Editor *)
+      paned#pack1 ~resize:true ~shrink:true editor#coerce;
+      let update_toolbar_save () =
+        let exists_unsaved = List.exists (fun p -> p#view#buffer#modified) editor#pages in
+        Gmisclib.Idle.add ~prio:300 (fun () -> toolbar#tool_save_all#misc#set_sensitive exists_unsaved);
+        Gaux.may (editor#get_page `ACTIVE) ~f:begin fun page ->
+          Gmisclib.Idle.add ~prio:300 (fun () ->
+              toolbar#tool_save#misc#set_sensitive page#buffer#modified);
+          Gmisclib.Idle.add ~prio:300 begin fun () ->
+            let button = find_custom_button `SAVE in
+            Option.iter
+              begin fun button ->
+                button#misc#set_sensitive page#buffer#modified;
+                button#misc#set_state `NORMAL
+              end
+              button
+          end;
+          Gmisclib.Idle.add ~prio:300 begin fun () ->
+            let button = find_custom_button `SAVE_ALL in
+            Option.iter
+              begin fun button ->
+                button#misc#set_sensitive exists_unsaved;
+                button#misc#set_state `NORMAL
+              end
+              button
+          end;
+          Gmisclib.Idle.add ~prio:300 self#set_title;
+        end;
+      in
+      let update_toolbar_undo () =
+        Gaux.may (editor#get_page `ACTIVE) ~f:begin fun page ->
+          let can_undo = (*page#buffer#modified &&*) page#buffer#undo#can_undo in
+          let can_redo = (*page#buffer#modified &&*) page#buffer#undo#can_redo in
+          toolbar#tool_undo#misc#set_sensitive can_undo;
+          toolbar#tool_redo#misc#set_sensitive can_redo;
+          (!get_menu_item_undo())#misc#set_sensitive can_undo;
+          (!get_menu_item_redo())#misc#set_sensitive can_redo;
+        end;
+      in
+      let callback _ =
+        toolbar#update current_project#get;
+        update_toolbar_save();
+        update_toolbar_undo();
+        Gaux.may (editor#get_page `ACTIVE) ~f:(fun _ -> self#set_title ());
+        self#set_menu_item_nav_history_sensitive();
+      in
+      ignore (editor#connect#switch_page ~callback);
+      ignore (editor#connect#remove_page ~callback);
+      ignore (editor#connect#add_page ~callback);
+      ignore (editor#connect#after#changed ~callback:update_toolbar_undo);
+      editor#connect#after#modified_changed ~callback:update_toolbar_save |> ignore;
+      editor#connect#file_saved ~callback:(fun _ -> self#update_git_status()) |> ignore;
+      ignore (editor#connect#file_history_changed ~callback:begin fun fh ->
+          Gaux.may menu ~f:begin fun menu ->
+            let f =
+              if List.length fh.File_history.content > 0
+              then (fun x -> x#misc#show()) else (fun x -> x#misc#hide())
+            in
+            List.iter f [
+              menu.file_recent_select;
+              menu.file_recent_clear;
+              menu.file_recent_sep;
+            ]
+          end;
+        end);
+      ignore (self#connect#switch_project ~callback:begin fun () ->
+          toolbar#update current_project#get;
+          self#set_menu_item_nav_history_sensitive()
+        end);
+      List.iter (fun c -> c#misc#set_sensitive (current_project#get <> None)) toolbar#children;
+      callback();
+      (* Initialize Quick_file_chooser *)
+      let roots = List.map Filename.dirname project_history.File_history.content in
+      Quick_file_chooser.init ~roots ~filter:Dialog_find_file.filter;
+      (* Geometry settings *)
+      let height = ref 700 in
+      let width = ref 1052 in
+      let pos_x = ref None in
+      let pos_y = ref None in
+      let is_menubar_visible = ref true in
+      let is_toolbar_visible = ref true in
+      let is_tabbar_visible = ref true in
+      let is_outline_visible = ref true in
+      begin
+        try
+          let chan = open_in (Filename.concat App_config.ocamleditor_user_home "geometry") in
+          width := int_of_string (input_line chan);
+          height := int_of_string (input_line chan);
+          pos_x := Some (int_of_string (input_line chan));
+          pos_y := Some (int_of_string (input_line chan));
+          (try is_menubar_visible := (bool_of_string (input_line chan)) with End_of_file -> ());
+          (try is_tabbar_visible := (bool_of_string (input_line chan)) with End_of_file -> ());
+          (try is_toolbar_visible := (bool_of_string (input_line chan)) with End_of_file -> ());
+          (try is_outline_visible := (bool_of_string (input_line chan)) with End_of_file -> ());
+          close_in chan;
+        with _ -> ()
+      end;
+      self#set_menubar_visible !is_menubar_visible;
+      self#set_toolbar_visible !is_toolbar_visible;
+      self#set_tabbar_visible !is_tabbar_visible;
+      self#set_outline_visible !is_outline_visible;
+      window#resize ~width:!width ~height:!height;
+      Gmisclib.Idle.add ~prio:300 begin fun () ->
+        Messages.vmessages#set_position (Preferences.preferences#get.Preferences.pref_vmessages_height);
+      end;
+      Gmisclib.Idle.add ~prio:300 (fun () -> Messages.hmessages#set_position (Preferences.preferences#get.Preferences.pref_hmessages_width));
+      ignore (window#event#connect#after#delete ~callback:(fun _ -> self#exit editor (); true));
+      button_menu_exit#connect#clicked ~callback:(fun () -> self#exit editor ()) |> ignore;
+      button_menu_reset#connect#clicked ~callback:(fun () -> self#set_maximized_view `NONE) |> ignore;
+      button_menu_iconify#connect#clicked ~callback:window#iconify |> ignore;
+      (*  *)
+      Ocaml_text.create_shell := self#shell;
+      (* Load custom templates *)
+      begin
+        try Templ.load_custom `user;
+        with Templ.Error (msg, details) ->
+          (Dialog.message ~title:"Warning" ~message:(sprintf "%s\n\n\"%s\"" msg details) `WARNING);
+      end;
+      (*  *)
+      self#set_geometry();
+      window#add_accel_group accel_group;
+      (* Listen for launcher *)
+      let launcher_list = App_config.launcher_filename in
+      let id_timeout = ref None in
+      let check_launcher () =
+        if Sys.file_exists launcher_list then begin
+          let text = File_util.read launcher_list in
+          let filenames = Str.split (Miscellanea.regexp "\n") (Buffer.contents text) in
+          let filenames = List.map String.trim filenames in
+          let filenames = Miscellanea.Xlist.remove_dupl filenames in
+          List.iter begin fun filename ->
+            editor#open_file ~active:true ~scroll_offset:0 ~offset:0 filename |> ignore;
+          end filenames;
+          let mv = maximized_view_action in
+          window#set_modal true;
+          window#present();
+          if Sys.file_exists launcher_list then Sys.remove launcher_list;
+          window#set_modal false;
+          self#set_maximized_view mv;
+          self#set_maximized_view mv;
+        end;
+      in
+      window#event#connect#focus_out ~callback:begin fun _ ->
+        Timeout.destroy tout_low_prio;
+        id_timeout := Some (GMain.Timeout.add ~ms:300 ~callback:begin fun () ->
+            check_launcher();
+            true
+          end);
+        false
+      end |> ignore;
+      window#event#connect#focus_in ~callback:begin fun _ ->
+        self#set_title();
+        self#update_git_status();
+        Timeout.start tout_low_prio;
+        (match !id_timeout with Some id -> GMain.Timeout.remove id | _ -> ());
+        false
+      end |> ignore;
+      check_launcher()
+
+    method connect = new signals ~startup ~switch_project ~menubar_visibility_changed ~toolbar_visibility_changed
+      ~tabbar_visibility_changed ~outline_visibility_changed
+      ~vmessages_visibility_changed ~hvmessages_visibility_changed
+      ~project_history_changed
+
+    initializer
+      self#connect#startup ~callback:self#init |> ignore;
+
+  end
 
 and startup () = object inherit [unit] signal () end
 and switch_project () = object inherit [unit] signal () end
@@ -1118,23 +1118,23 @@ and vmessages_visibility_changed () = object inherit [bool] signal () end
 and hvmessages_visibility_changed () = object inherit [bool] signal () end
 and project_history_changed () = object inherit [File_history.t] signal () end
 and signals ~startup ~switch_project ~menubar_visibility_changed ~toolbar_visibility_changed
-  ~tabbar_visibility_changed ~outline_visibility_changed
-  ~vmessages_visibility_changed ~hvmessages_visibility_changed
-  ~project_history_changed =
-object
-  inherit ml_signals [startup#disconnect; switch_project#disconnect; menubar_visibility_changed#disconnect;
-    toolbar_visibility_changed#disconnect; tabbar_visibility_changed#disconnect;
-    vmessages_visibility_changed#disconnect; project_history_changed#disconnect ]
-  method startup = startup#connect ~after
-  method switch_project = switch_project#connect ~after
-  method menubar_visibility_changed = menubar_visibility_changed#connect ~after
-  method toolbar_visibility_changed = toolbar_visibility_changed#connect ~after
-  method tabbar_visibility_changed = tabbar_visibility_changed#connect ~after
-  method outline_visibility_changed = outline_visibility_changed#connect ~after
-  method vmessages_visibility_changed = vmessages_visibility_changed#connect ~after
-  method hvmessages_visibility_changed = hvmessages_visibility_changed#connect ~after
-  method project_history_changed = project_history_changed#connect ~after
-end
+    ~tabbar_visibility_changed ~outline_visibility_changed
+    ~vmessages_visibility_changed ~hvmessages_visibility_changed
+    ~project_history_changed =
+  object
+    inherit ml_signals [startup#disconnect; switch_project#disconnect; menubar_visibility_changed#disconnect;
+                        toolbar_visibility_changed#disconnect; tabbar_visibility_changed#disconnect;
+                        vmessages_visibility_changed#disconnect; project_history_changed#disconnect ]
+    method startup = startup#connect ~after
+    method switch_project = switch_project#connect ~after
+    method menubar_visibility_changed = menubar_visibility_changed#connect ~after
+    method toolbar_visibility_changed = toolbar_visibility_changed#connect ~after
+    method tabbar_visibility_changed = tabbar_visibility_changed#connect ~after
+    method outline_visibility_changed = outline_visibility_changed#connect ~after
+    method vmessages_visibility_changed = vmessages_visibility_changed#connect ~after
+    method hvmessages_visibility_changed = hvmessages_visibility_changed#connect ~after
+    method project_history_changed = project_history_changed#connect ~after
+  end
 
 let browser = ref None
 

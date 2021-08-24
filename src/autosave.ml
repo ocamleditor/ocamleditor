@@ -103,7 +103,7 @@ let recover () =
   let files = List.map (fun x -> true, x) (List.rev !files) in
   if files <> [] then begin
     let dialog = GWindow.dialog ~position:`CENTER ~border_width:5 ~no_separator:true
-      ~icon:Icons.oe ~modal:true ~title:"Auto Recovery" () in
+        ~icon:Icons.oe ~modal:true ~title:"Auto Recovery" () in
     let checklist = new Checklist.checklist ~packing:dialog#vbox#add files in
     dialog#vbox#set_spacing 5;
     dialog#add_button_stock `OK `OK;
@@ -116,7 +116,7 @@ let recover () =
       Hashtbl.iter (fun filename _ -> delete ~bak:true ~filename ()) table;
     in
     match dialog#run () with
-      | `OK ->
+    | `OK ->
         checklist#iter begin fun active filename ->
           if active then begin
             let id = try Hashtbl.find table filename with Not_found -> assert false in
@@ -130,7 +130,7 @@ let recover () =
         end;
         clean_up();
         dialog#destroy()
-      | _ -> clean_up(); dialog#destroy()
+    | _ -> clean_up(); dialog#destroy()
   end;
   clean_backup();;
 

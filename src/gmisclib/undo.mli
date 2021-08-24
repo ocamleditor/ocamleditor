@@ -32,7 +32,7 @@ type action
     be enclosed in a user action, i.e. between {!GText.text.begin_user_action}
     and {!GText.text.end_user_action} or {!Undo.manager.begin_block} and
     {!Undo.manager.end_block}.
-  *)
+*)
 class manager :
   buffer:GText.buffer ->
   object
@@ -72,7 +72,7 @@ class manager :
         action was recorded: in this case the undo stack is not
         popped - the buffer is left unchanged - and the cursor is placed
         at the position where the topmost action of the stack can be reverted.
-      *)
+    *)
     method undo : unit -> bool
 
     (** Apply the given function so that changes it makes to the buffer will
@@ -80,7 +80,7 @@ class manager :
         function ([f]) returns [false] its inverse function ([g]) is not
         stored in the undo stack: the undo manager only applies [f] and
         discards [g].
-      *)
+    *)
     method func : (unit -> bool) -> inverse:(unit -> bool) -> unit
 
     (** Length of then internal undo and redo stacks. Intended for testing purposes. *)

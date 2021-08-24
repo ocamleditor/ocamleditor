@@ -48,60 +48,60 @@ class widget kind ~label ~project ?packing () =
   let _           = combo#add_attribute rend "markup" col_name in
   let _           = combo#add_attribute rend_descr "markup" col_descr in
   let targets     = project.Prj.targets in
-object (self)
-  inherit GObj.widget vbox#as_widget
+  object (self)
+    inherit GObj.widget vbox#as_widget
 
-  initializer
-    let row = model#append () in
-    model#set ~row ~column:col_name "<span>&lt;None&gt;</span>";
-    model#set ~row ~column:col_descr "";
-    model#set ~row ~column:col_task None;
-    List.iter begin fun tg ->
-      List.iter begin fun task ->
-        let row = model#append () in
-        model#set ~row ~column:col_name (sprintf
-          "<span size='small' color='%s'>%s</span>\n<span>%s</span>"
-            Oe_config.module_browser_secondary_title_color
-            (Glib.Markup.escape_text tg.name)
-            (Glib.Markup.escape_text task.et_name));
-        model#set ~row ~column:col_descr (sprintf "<tt>%s</tt>" (Glib.Markup.escape_text (self#string_of_task task)));
-        model#set ~row ~column:col_task (Some (tg.id, task.et_name));
-      end tg.external_tasks
-    end targets;
-    self#set project
+    initializer
+      let row = model#append () in
+      model#set ~row ~column:col_name "<span>&lt;None&gt;</span>";
+      model#set ~row ~column:col_descr "";
+      model#set ~row ~column:col_task None;
+      List.iter begin fun tg ->
+        List.iter begin fun task ->
+          let row = model#append () in
+          model#set ~row ~column:col_name (sprintf
+                                             "<span size='small' color='%s'>%s</span>\n<span>%s</span>"
+                                             Oe_config.module_browser_secondary_title_color
+                                             (Glib.Markup.escape_text tg.name)
+                                             (Glib.Markup.escape_text task.et_name));
+          model#set ~row ~column:col_descr (sprintf "<tt>%s</tt>" (Glib.Markup.escape_text (self#string_of_task task)));
+          model#set ~row ~column:col_task (Some (tg.id, task.et_name));
+        end tg.external_tasks
+      end targets;
+      self#set project
 
-  method private string_of_task task =
-    sprintf "%s %s%s"
-      task.et_cmd
-      (if task.et_dir <> "" then task.et_dir ^ "/" else "")
-      (String.concat " " (List.map (fun (active, arg) -> if active then arg else "") task.et_args))
+    method private string_of_task task =
+      sprintf "%s %s%s"
+        task.et_cmd
+        (if task.et_dir <> "" then task.et_dir ^ "/" else "")
+        (String.concat " " (List.map (fun (active, arg) -> if active then arg else "") task.et_args))
 
-  method set project =
-    let commands = project.Prj.build_script.bs_commands in
-    List_opt.may_find (fun cmd -> cmd.bsc_name = kind) commands begin fun command ->
-      model#foreach begin fun _ row ->
-        match model#get ~row ~column:col_task with
+    method set project =
+      let commands = project.Prj.build_script.bs_commands in
+      List_opt.may_find (fun cmd -> cmd.bsc_name = kind) commands begin fun command ->
+        model#foreach begin fun _ row ->
+          match model#get ~row ~column:col_task with
           | Some (target_id, task_name) ->
-            if target_id = command.bsc_target.id && task_name = command.bsc_task.et_name then begin
-              combo#set_active_iter (Some row);
-              true
-            end else false
+              if target_id = command.bsc_target.id && task_name = command.bsc_task.et_name then begin
+                combo#set_active_iter (Some row);
+                true
+              end else false
           | _ -> false
-      end;
-    end ();
-    match combo#active_iter with None -> combo#set_active 0 | _ -> ()
+        end;
+      end ();
+      match combo#active_iter with None -> combo#set_active 0 | _ -> ()
 
-  method get : unit -> Build_script.command option = fun () ->
-    let+ row = combo#active_iter in
-    let+ (target_id, task_name) = model#get  ~row ~column:col_task in
-    let+ bsc_target = Prj.find_target project target_id in
-    let+ bsc_task = Prj.find_task project task_name in
-    Some { bsc_name = kind
-         ; bsc_descr = task_name
-         ; bsc_target
-         ; bsc_task
-         }
-end
+    method get : unit -> Build_script.command option = fun () ->
+      let+ row = combo#active_iter in
+      let+ (target_id, task_name) = model#get  ~row ~column:col_task in
+      let+ bsc_target = Prj.find_target project target_id in
+      let+ bsc_task = Prj.find_task project task_name in
+      Some { bsc_name = kind
+           ; bsc_descr = task_name
+           ; bsc_target
+           ; bsc_task
+           }
+  end
 
 
 

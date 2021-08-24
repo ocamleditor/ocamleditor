@@ -45,16 +45,16 @@ let sync_page ~editor ~page ~filename ?remote () =
 (** rename *)
 let rename ~editor ~page ~filename () =
   match page#file with
-    | Some file ->
+  | Some file ->
       file#rename filename;
       sync_page ~editor ~page ~filename ?remote:file#remote ();
-    | _ -> assert false
+  | _ -> assert false
 
 (** ask_overwrite *)
 let ask_overwrite ~run ~overwrite ~filename window =
   match
     Dialog.confirm ~message:(sprintf
-        "Are you sure you want to overwrite file \xC2\xAB%s\xC2\xBB?" (Filename.basename filename))
+                               "Are you sure you want to overwrite file \xC2\xAB%s\xC2\xBB?" (Filename.basename filename))
       ~yes:("Overwrite", overwrite)
       ~no:("Do Not Overwrite", ignore)
       ~title:"Overwrite File" window;
@@ -63,9 +63,9 @@ let ask_overwrite ~run ~overwrite ~filename window =
 (** window *)
 let window ~editor ~page () =
   let window = GWindow.file_chooser_dialog
-    ~action:`SAVE ~icon:Icons.oe
-    ~title:(sprintf "Rename \xC2\xAB%s\xC2\xBB" (Filename.basename page#get_filename))
-    ~position:`CENTER ~modal:true ~show:false ()
+      ~action:`SAVE ~icon:Icons.oe
+      ~title:(sprintf "Rename \xC2\xAB%s\xC2\xBB" (Filename.basename page#get_filename))
+      ~position:`CENTER ~modal:true ~show:false ()
   in
   window#set_select_multiple false;
   window#add_select_button_stock `OK `OK;
@@ -74,7 +74,7 @@ let window ~editor ~page () =
   ignore (window#set_filename page#get_filename);
   let rec run () =
     match window#run () with
-      | `OK ->
+    | `OK ->
         Gaux.may window#filename ~f:begin fun filename ->
           let buffer : GText.buffer = page#buffer#as_text_buffer#as_gtext_buffer in
           if Sys.file_exists filename then begin
@@ -99,11 +99,11 @@ let window ~editor ~page () =
                 sync_page ~editor ~page ~filename ();
                 (* Reopen the page in the editor *)
                 match editor#open_file ~active:true ~scroll_offset:0 ~offset:0 ?remote:None filename with
-                  | Some page ->
+                | Some page ->
                     editor#load_page ?scroll:None page;
                     editor#goto_view page#view;
                     window#destroy()
-                  | _ ->
+                | _ ->
                     Dialog.info ~title:"Error" ~message_type:`ERROR
                       ~message:(sprintf "Cannot open file %s" filename) window;
               end else begin
@@ -114,7 +114,7 @@ let window ~editor ~page () =
             ask_overwrite ~run ~overwrite ~filename window
           end else (rename ~editor ~page ~filename (); window#destroy());
         end;
-      | _ -> window#destroy()
+    | _ -> window#destroy()
   in run()
 
 

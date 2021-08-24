@@ -45,13 +45,13 @@ let create (vbox : GPack.box) =
   in
   ignore (expander_args#connect#after#activate ~callback);
   ignore (expander_env#connect#after#activate ~callback:begin fun () ->
-    help#misc#show();
-    expander_args#set_expanded false;
-    let env = expander_env#expanded in
-    let args = expander_args#expanded in
-    vbox#set_child_packing ~expand:env ~fill:env expander_env#coerce;
-    vbox#set_child_packing ~expand:args ~fill:args expander_args#coerce;
-  end);
+      help#misc#show();
+      expander_args#set_expanded false;
+      let env = expander_env#expanded in
+      let args = expander_args#expanded in
+      vbox#set_child_packing ~expand:env ~fill:env expander_env#coerce;
+      vbox#set_child_packing ~expand:args ~fill:args expander_args#coerce;
+    end);
   callback();
   entry_args, entry_env
 

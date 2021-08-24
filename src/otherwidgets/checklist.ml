@@ -34,8 +34,8 @@ class checklist ?packing elements =
   let treeview = GTree.view ~model ~packing:sw#add ~height:300 () in
   object (self)
     inherit GObj.widget sw#as_widget
-      method button_all = all
-      method button_none = none
+    method button_all = all
+    method button_none = none
     method iter (f : bool -> string -> unit) =
       let row = model#get_iter (GTree.Path.create [0]) in
       let finish = ref false in

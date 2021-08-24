@@ -45,13 +45,13 @@ module Make (C : COMMAND) = struct
       ~(global_options : speclist)
       ?default_command
       ?(usage_msg=sprintf "\nUSAGE\n  %s [global_options*] <command> [options*] [args*]\n  %s <command> --help"
-        (Filename.basename args.(0)) (Filename.basename args.(0)))
+          (Filename.basename args.(0)) (Filename.basename args.(0)))
       execute_command =
     command := None;
     Arg.current := 0;
     let parse_anon arg =
       match !command with
-        | None ->
+      | None ->
           let cmd =
             try C.command_of_string arg
             with ex ->
@@ -60,22 +60,22 @@ module Make (C : COMMAND) = struct
           in
           command := Some cmd;
           raise Command_found
-        | _ -> assert false
+      | _ -> assert false
     in
     let help_string () =
       match !command with
-        | Some cmd ->
+      | Some cmd ->
           let spec, descr, _ = List.assoc cmd cmd_map in
           let cmd = C.string_of_command cmd in
           Arg.usage_string spec
             (sprintf "%s %s - %s\n\nUSAGE\n  %s [global_options*] %s [options*] [args*]\n\nOPTIONS"
-              (Filename.basename args.(0)) cmd descr (Filename.basename args.(0)) cmd)
-        | _ -> create_help_msg global_options usage_msg
+               (Filename.basename args.(0)) cmd descr (Filename.basename args.(0)) cmd)
+      | _ -> create_help_msg global_options usage_msg
     in
     if Array.length args = 1 then (raise (Arg.Help (help_string())));
     try Arg.parse_argv args global_options parse_anon usage_msg;
     with
-      | Command_found ->
+    | Command_found ->
         let len = Array.length args - !Arg.current in
         let command_args = Array.make len "" in
         Array.blit args !Arg.current command_args 0 len;
@@ -84,7 +84,7 @@ module Make (C : COMMAND) = struct
           try
             Arg.current := 0;
             let speclist = with_command (fun cmd -> let sp, _, _ =
-              try List.assoc cmd cmd_map with Not_found -> assert false in sp) in
+                                                      try List.assoc cmd cmd_map with Not_found -> assert false in sp) in
             Arg.parse_argv command_args speclist parse_anon usage_msg;
             let f = function
               | Some cmd -> execute_command cmd
@@ -92,23 +92,23 @@ module Make (C : COMMAND) = struct
             in
             f !command
           with
-            | Arg.Help _ ->
+          | Arg.Help _ ->
               with_command begin fun cmd ->
                 let cmd_specs, cmd_descr, cmd_usage = List.assoc cmd cmd_map in
                 raise (Help_Command  (cmd, (cmd_specs, cmd_descr, cmd_usage), help_string ()))
               end
-            | Arg.Bad msg as ex ->
+          | Arg.Bad msg as ex ->
               with_command begin fun _cmd ->
                 try
                   let first_line = String.sub msg 0 (String.index msg '\n') in
                   raise (Arg.Bad (sprintf "%s\n%s"
-                    (*(C.string_of_command cmd) (command_args.(!Arg.current))*) first_line (help_string())))
+                                    (*(C.string_of_command cmd) (command_args.(!Arg.current))*) first_line (help_string())))
                 with Not_found -> raise ex
               end
         end;
-      | Arg.Bad _ ->
+    | Arg.Bad _ ->
         raise (Arg.Bad (sprintf "unknown global option `%s'\n%s" (args.(!Arg.current)) (help_string())))
-      | Arg.Help _ -> raise (Arg.Help (help_string()));;
+    | Arg.Help _ -> raise (Arg.Help (help_string()));;
 
   let parse ~global_options ?default_command ?usage_msg f =
     parse_argv Sys.argv ~global_options ?default_command ?usage_msg f;;

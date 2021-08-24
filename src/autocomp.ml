@@ -33,9 +33,9 @@ let ppx_flags_package pkg =
   match Hashtbl.find cached_ppx_flags pkg with
   | flags -> flags
   | exception Not_found ->
-    let flags = Shell.get_command_output (Printf.sprintf "ocamlfind printppx %s" pkg) in
-    let ()    = Hashtbl.replace cached_ppx_flags pkg flags in
-    flags
+      let flags = Shell.get_command_output (Printf.sprintf "ocamlfind printppx %s" pkg) in
+      let ()    = Hashtbl.replace cached_ppx_flags pkg flags in
+      flags
 
 (** Gets the ppx flags for the packages used in current project to be used for
     auto-compilation.
@@ -86,15 +86,15 @@ let include_flags project =
     TODO: Only replace when there interface changed.
 *)
 let replace_cmi_file ~project tmp relpath =
-    let filename = relpath ^ ".cmi" in
-    let tmp_filename = tmp // filename in
-    if Sys.file_exists tmp_filename then begin
-      let src_filename = Project.path_src project // filename in
-      try
-        if Sys.file_exists src_filename then Sys.remove src_filename;
-        Sys.rename tmp_filename src_filename
-      with Sys_error _ as ex ->
-        Printf.eprintf "File \"autocomp.ml\": %s\n%s\n%!" (Printexc.to_string ex) (Printexc.get_backtrace());
+  let filename = relpath ^ ".cmi" in
+  let tmp_filename = tmp // filename in
+  if Sys.file_exists tmp_filename then begin
+    let src_filename = Project.path_src project // filename in
+    try
+      if Sys.file_exists src_filename then Sys.remove src_filename;
+      Sys.rename tmp_filename src_filename
+    with Sys_error _ as ex ->
+      Printf.eprintf "File \"autocomp.ml\": %s\n%s\n%!" (Printexc.to_string ex) (Printexc.get_backtrace());
   end
 
 (** Compile the current buffer using the flags from all project targets.
@@ -108,8 +108,8 @@ let compile_buffer ~project ~editor ~page ?(join=false) () =
   Activity.add Activity.Compile_buffer activity_name;
   try
     match page#buffer#save_buffer ?filename:None () with
-      | _, None -> ()
-      | _, Some (_, relpath) ->
+    | _, None -> ()
+    | _, Some (_, relpath) ->
         (* Compile *)
         let args =
           Array.concat [
@@ -139,7 +139,7 @@ let compile_buffer ~project ~editor ~page ?(join=false) () =
           if editor#show_outline then begin
             Gmisclib.Idle.add ~prio:100 begin fun () ->
               match page#outline with
-                | None ->
+              | None ->
                   let ol = new Cmt_view.widget ~editor ~page () in
                   ol#load ();
                   Gaux.may page#outline ~f:(fun x -> x#destroy());
@@ -147,7 +147,7 @@ let compile_buffer ~project ~editor ~page ?(join=false) () =
                   editor#with_current_page begin fun current_page ->
                     if current_page#get_oid = page#get_oid then (editor#pack_outline ol#coerce)
                   end;
-                | Some ol -> if no_errors then ol#load ()
+              | Some ol -> if no_errors then ol#load ()
             end
           end;
           Activity.remove activity_name;

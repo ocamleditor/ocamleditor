@@ -104,14 +104,14 @@ module Action = struct
         let stop = stop#backward_char in
         let eol = start#forward_to_line_end in
         match start#forward_search ~limit:eol "->" with
-          | Some (_, arrow) ->
+        | Some (_, arrow) ->
             let break = arrow#forward_find_char ~limit:eol is_not_blank in
             let has_break = break#equal eol in
             let break = if has_break then break#forward_char else break in
             let t1 = start#get_text ~stop:break in
             let t2 = break#get_text ~stop in
             Some (Miscellanea.rtrim t1, t2, has_break)
-          | _ -> None
+        | _ -> None
       in
       view#buffer#delete ~start ~stop;
       let indent_step = Alignment.mk_spaces view#tbuffer#tab_width in
@@ -119,14 +119,14 @@ module Action = struct
       let spaces = Alignment.mk_spaces indent in
       let new_text =
         match break_after_arrow with
-          | None ->
+        | None ->
             "begin\n" ^ spaces ^ indent_step ^
             (Str.global_replace (!~~ "\n") ("\n" ^ indent_step) text_within_delimiters) ^ "\n" ^
             spaces ^ "end"
-          | Some (t1, t2, has_break) ->
+        | Some (t1, t2, has_break) ->
             "begin " ^  t1 ^ "\n" ^
             (if has_break then t2 else
-              spaces ^ indent_step ^ (Str.global_replace (!~~ "\n") ("\n" ^ indent_step) t2)) ^
+               spaces ^ indent_step ^ (Str.global_replace (!~~ "\n") ("\n" ^ indent_step) t2)) ^
             "\n" ^ spaces ^ "end"
       in
       view#buffer#insert new_text;
@@ -161,7 +161,7 @@ let spec : spec list ref =
     "curf",  "Insert current filename", [CURRENT_FILENAME];
 
     "be", "begin <selection> end",
-      [T0 "begin"; NL; IN; SELECTION; OUT; T0 "end;"; I; NL];
+    [T0 "begin"; NL; IN; SELECTION; OUT; T0 "end;"; I; NL];
 
     "ifthen", "if ... then begin <selection> end else begin ... end;", [
       T0 "if "; I; T " then begin"; NL;
@@ -181,7 +181,7 @@ let spec : spec list ref =
     "ign", "ignore (<selection>)", [I; T "ignore ("; SELECTION; T ")"];
 
     "ignbe", "ignore begin ... end",
-      [T0 "ignore begin"; NL; IN; SELECTION; OUT; T0 "end;"; I; NL];
+    [T0 "ignore begin"; NL; IN; SELECTION; OUT; T0 "end;"; I; NL];
 
     "letfun", "let <selection> = function ...", [
       T "let "; SELECTION_TRIM; T " = function "; NL;
@@ -209,7 +209,7 @@ let spec : spec list ref =
     ];
 
     "print", "Printf.printf \"<selection> = %s\\n%!\" <selection>;",
-      [T "Printf.printf \""; SELECTION_TRIM; T " = %"; I; T "s"; S; T "\\n%!\" "; SELECTION_TRIM; T ";"];
+    [T "Printf.printf \""; SELECTION_TRIM; T " = %"; I; T "s"; S; T "\\n%!\" "; SELECTION_TRIM; T ";"];
 
     "matbe", "begin match ... with ... -> <selection> | _ -> ... end;", [
       T0 "begin"; NL;
@@ -227,13 +227,13 @@ let spec : spec list ref =
     ];
 
     "matsome", "match <selection> with | Some x -> ... | _ -> ...",
-      [T "match "; SELECTION_TRIM; T " with "; NL; IN; TI "| Some x -> "; NL; TI "| _ -> "; I; NL];
+    [T "match "; SELECTION_TRIM; T " with "; NL; IN; TI "| Some x -> "; NL; TI "| _ -> "; I; NL];
 
     "matsomeinline", "match <selection> with Some x | _ -> ...",
-      [T "match "; SELECTION_TRIM; T " with Some x -> "; I; T " | _ -> "];
+    [T "match "; SELECTION_TRIM; T " with Some x -> "; I; T " | _ -> "];
 
     "try", "try <selection> with ...",
-      [T0 "try"; NL; IN; SELECTION; OUT; T0 "with "; I; T " -> "; NL];
+    [T0 "try"; NL; IN; SELECTION; OUT; T0 "with "; I; T " -> "; NL];
 
     "tryf", "let finally = ... in try <slection>; finally() with ex -> (finally())", [
       T0 "let finally () = "; I; T " in"; NL;
@@ -251,7 +251,7 @@ let spec : spec list ref =
     ];
 
     "callback", "~callback:begin fun () -> ... end",
-      [T " ~callback:begin fun () ->"; IN; NL; TI ""; I; NL; OUT; TI "end;"];
+    [T " ~callback:begin fun () ->"; IN; NL; TI ""; I; NL; OUT; TI "end;"];
 
     "for", "for ... do ... done", [
       TI "for i = 0 to "; I; T " do"; NL;

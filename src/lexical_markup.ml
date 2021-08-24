@@ -60,13 +60,13 @@ let parse pref =
   in
   let span (highlight, tagname) =
     match List.assoc tagname tags with
-      | `NAME color, weight, style, underline, _, _ ->
+    | `NAME color, weight, style, underline, _, _ ->
         let weight    = match weight with `BOLD -> " font_weight='bold'" | _ -> "" in
         let style     = match style with `ITALIC -> " font_style='italic'" | _ -> "" in
         let underline = match underline with `LOW -> " underline='low'" | _ -> "" in
         let bgcolor   = if highlight then " bgcolor='" ^ bgcolor_highlight ^"'" else "" in
         String.concat "" ["<span color='"; color; "'"; weight; style; underline; bgcolor; ">"]
-      | _ -> assert false
+    | _ -> assert false
   in
   let span = Miscellanea.Memo.create span in
   fun ?(highlights=[]) text ->
@@ -110,7 +110,7 @@ let parse pref =
             | WHEN
             | WHILE
             | WITH
-                -> "control"
+              -> "control"
             | AND
             | AS
             | BAR
@@ -131,7 +131,7 @@ let parse pref =
             | TYPE
             | VAL
             | VIRTUAL
-                -> "define"
+              -> "define"
             | IN | INITIALIZER | NEW | OF -> "define"
             | BEGIN
             | END
@@ -140,10 +140,10 @@ let parse pref =
             | OPEN
             | SIG
             | STRUCT
-                -> "structure"
+              -> "structure"
             | CHAR _
             | STRING _
-                -> "char"
+              -> "char"
             (*| BACKQUOTE*)
             | INFIXOP0 _
             | INFIXOP1 _
@@ -152,39 +152,39 @@ let parse pref =
             | INFIXOP4 _
             | PREFIXOP _
             | HASH
-                -> "infix"
+              -> "infix"
             | LABEL _
             | OPTLABEL _
             | QUESTION
             | TILDE
-                -> "label"
+              -> "label"
             | UIDENT _ | BACKQUOTE -> "uident"
             | LIDENT _ ->
                 begin match !last with
-                  | QUESTION | TILDE -> "label"
-                  | BACKQUOTE -> "number"
-                  | _ -> ""
-                  (*(* TODO:  *)
+                | QUESTION | TILDE -> "label"
+                | BACKQUOTE -> "number"
+                | _ -> ""
+                (*(* TODO:  *)
                   | _, LBRACE, _, _ when !in_record -> "record_label"
                   | _, MUTABLE, _, _ when !in_record -> "record_label"
                   | _, WITH, _, _ when !in_record -> "record_label"
                   | _, SEMI, _, _ when !in_record -> "record_label"
                   | _, DOT, _, _ when !in_record && !in_record_label -> "record_label"
                   | _, LPAREN, _, _ ->
-                    (match !last_but_one with
-                      | _, (QUESTION | TILDE), _, _ -> "label"
-                      | _ -> (if lexeme = "failwith" || lexeme = "raise" || lexeme = "invalid_arg" then "custom" else "lident"))
+                  (match !last_but_one with
+                    | _, (QUESTION | TILDE), _, _ -> "label"
+                    | _ -> (if lexeme = "failwith" || lexeme = "raise" || lexeme = "invalid_arg" then "custom" else "lident"))
                   | last ->
-                    (if lexeme = "failwith" || lexeme = "raise" || lexeme = "invalid_arg" then "custom" else tag_lident last)*)
+                  (if lexeme = "failwith" || lexeme = "raise" || lexeme = "invalid_arg" then "custom" else tag_lident last)*)
                 end
             | COLON -> ""
-                (*begin match !last with
-                  _, LIDENT _, lstart, lstop ->
-                    if lstop = start then
-                      tb#apply_tag_by_name "label" ~start:(tpos lstart) ~stop:(tpos stop);
-                    ""
-                | _ -> ""
-                end*)
+            (*begin match !last with
+              _, LIDENT _, lstart, lstop ->
+                if lstop = start then
+                  tb#apply_tag_by_name "label" ~start:(tpos lstart) ~stop:(tpos stop);
+                ""
+              | _ -> ""
+              end*)
             | INT _ | FLOAT _  | TRUE | FALSE -> "number"
             | LBRACE -> in_record := true; in_record_label := true; "symbol"
             | RBRACE -> in_record := false; in_record_label := false; "symbol"
@@ -204,7 +204,7 @@ let parse pref =
           (*  *)
           let add with_span =
             match List.fold_left (fun acc h -> match h ^^^ range with None -> acc | x -> x) None highlights with
-              | Some (a, b) when a < b ->
+            | Some (a, b) when a < b ->
                 if with_span then begin
                   if a = lstart && b = lstop then begin
                     Buffer.add_string out (span (true, !tag));
@@ -228,7 +228,7 @@ let parse pref =
                     if after <> "" then (Buffer.add_string out (Glib.Markup.escape_text after););
                   end
                 end
-              | _ ->
+            | _ ->
                 if with_span then (Buffer.add_string out (span (false, !tag)));
                 Buffer.add_string out (Glib.Markup.escape_text lexeme);
           in
@@ -247,44 +247,44 @@ let parse pref =
       close_pending();
       Buffer.contents out
     with
-      | End_of_file ->
+    | End_of_file ->
         let lexeme = (String.sub text !pos (String.length text - !pos)) in
         (* TODO: consider highlights *)
         Buffer.add_string out (Glib.Markup.escape_text lexeme);
         close_pending();
         Buffer.contents out
-        (*(* comments *)
-        List.iter begin fun (b, e, _, ocamldoc) ->
-          if not ocamldoc then begin
-            let ms = Miscellanea.Search.all multi_space begin fun ~pos ~matched_string:mat ->
-              Miscellanea.Search.Append (pos, pos + String.length mat, mat)
-            end (String.sub u_text b (e - b)) in
-            let (*b = b and*) e = e - 2 in
-            let tag = "comment" in
-            tb#apply_tag_by_name tag ~start:(tpos b) ~stop:(tpos e);
-            List.iter begin fun (b1, e1, _) ->
-              tb#apply_tag_by_name tag ~start:(tpos (b + b1)) ~stop:(tpos (b + e1))
-            end ms
-          end
-        end (match comments with Comments.Utf8 x -> x | _ -> failwith "Lexical: Comments.Locale");
-        (* ocamldoc and ocamldoc-paragraph *)
-        List.iter begin fun (b, e, ocamldoc) ->
-          if ocamldoc then begin
-            let start = tb#get_iter (`OFFSET b) in
-            let stop = tb#get_iter (`OFFSET e) in
-            let tag, start =
-              let iter = start#backward_line in
-              if iter#ends_line
-              then ("ocamldoc-paragraph", start#set_line_index 0)
-              else ("ocamldoc", start#set_line_index 0) (* start *)
-            in
-            tb#apply_tag_by_name tag ~start ~stop;
-          end
-        end (match global_comments with Comments.Locale x -> x | _ -> failwith "Lexical: Comments.Utf8")*)
-      | (Lexer.Error (error, _)) as ex ->
+    (*(* comments *)
+      List.iter begin fun (b, e, _, ocamldoc) ->
+      if not ocamldoc then begin
+        let ms = Miscellanea.Search.all multi_space begin fun ~pos ~matched_string:mat ->
+          Miscellanea.Search.Append (pos, pos + String.length mat, mat)
+        end (String.sub u_text b (e - b)) in
+        let (*b = b and*) e = e - 2 in
+        let tag = "comment" in
+        tb#apply_tag_by_name tag ~start:(tpos b) ~stop:(tpos e);
+        List.iter begin fun (b1, e1, _) ->
+          tb#apply_tag_by_name tag ~start:(tpos (b + b1)) ~stop:(tpos (b + e1))
+        end ms
+      end
+      end (match comments with Comments.Utf8 x -> x | _ -> failwith "Lexical: Comments.Locale");
+      (* ocamldoc and ocamldoc-paragraph *)
+      List.iter begin fun (b, e, ocamldoc) ->
+      if ocamldoc then begin
+        let start = tb#get_iter (`OFFSET b) in
+        let stop = tb#get_iter (`OFFSET e) in
+        let tag, start =
+          let iter = start#backward_line in
+          if iter#ends_line
+          then ("ocamldoc-paragraph", start#set_line_index 0)
+          else ("ocamldoc", start#set_line_index 0) (* start *)
+        in
+        tb#apply_tag_by_name tag ~start ~stop;
+      end
+      end (match global_comments with Comments.Locale x -> x | _ -> failwith "Lexical: Comments.Utf8")*)
+    | (Lexer.Error (error, _)) as ex ->
         close_pending();
         Buffer.contents out
-      | ex ->
+    | ex ->
         close_pending();
         (printf "Lexical_markup: %s\n%!" (Printexc.to_string ex));
         ""

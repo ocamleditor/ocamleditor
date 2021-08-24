@@ -96,13 +96,13 @@ module Diff = struct
       let create_markup text = create_markup text in
       let tooltip_func () =
         match text with
-          | [color, text] -> create_label_tooltip [color, create_markup text]
-          | [_, text1; _, text2] ->
+        | [color, text] -> create_label_tooltip [color, create_markup text]
+        | [_, text1; _, text2] ->
             create_label_tooltip [
               color_del, create_markup text1;
               color_add, create_markup text2;
             ];
-          | _ -> create_label_tooltip []
+        | _ -> create_label_tooltip []
       in
       page#set_global_gutter_tooltips (((0, y - 2, width, h + 2), tooltip_func) :: page#global_gutter_tooltips)
     end
@@ -151,82 +151,82 @@ module Diff = struct
     let wtri = width * 2 / 3 in
     let paint color elems = function
       | One ln ->
-        let x0 = 0 (*width - wtri*) in
-        let y = y_of_line ln in
-        let height = max 3 line_height in
-        begin
-          match color with
+          let x0 = 0 (*width - wtri*) in
+          let y = y_of_line ln in
+          let height = max 3 line_height in
+          begin
+            match color with
             | col when col = color_del ->
-              begin
-                match Oe_config.global_gutter_diff_style with
+                begin
+                  match Oe_config.global_gutter_diff_style with
                   | `COLOR with_border ->
-                    drawable#set_foreground color;
-                    drawable#polygon ~filled:true [x0, y; x0 + wtri, y - wtri; x0 + wtri, y + wtri];
-                    if (*true ||*) with_border then begin
-                      drawable#set_foreground (Color.set_value 0.6 color);
-                      drawable#polygon ~filled:false [0, y; wtri, y - wtri; wtri, y + wtri]
-                    end
+                      drawable#set_foreground color;
+                      drawable#polygon ~filled:true [x0, y; x0 + wtri, y - wtri; x0 + wtri, y + wtri];
+                      if (*true ||*) with_border then begin
+                        drawable#set_foreground (Color.set_value 0.6 color);
+                        drawable#polygon ~filled:false [0, y; wtri, y - wtri; wtri, y + wtri]
+                      end
                   | `BW ->
-                    drawable#set_foreground black;
-                    let tri = [x0, y; x0 + wtri, y - wtri; x0 + wtri, y + wtri] in
-                    drawable#polygon ~filled:true tri;
-                    drawable#set_foreground (Color.set_value 0.5 black);
-                    drawable#polygon ~filled:false tri;
-              end;
+                      drawable#set_foreground black;
+                      let tri = [x0, y; x0 + wtri, y - wtri; x0 + wtri, y + wtri] in
+                      drawable#polygon ~filled:true tri;
+                      drawable#set_foreground (Color.set_value 0.5 black);
+                      drawable#polygon ~filled:false tri;
+                end;
             | col when col = color_add ->
-              drawable#set_foreground
-                (match Oe_config.global_gutter_diff_style with
-                  | `COLOR _ -> color;
-                  | `BW -> black);
-              drawable#rectangle ~filled:true ~x:0 ~y:(y - 2) ~width:(width-2) ~height ();
+                drawable#set_foreground
+                  (match Oe_config.global_gutter_diff_style with
+                   | `COLOR _ -> color;
+                   | `BW -> black);
+                drawable#rectangle ~filled:true ~x:0 ~y:(y - 2) ~width:(width-2) ~height ();
             | color ->
-              begin
-                match Oe_config.global_gutter_diff_style with
+                begin
+                  match Oe_config.global_gutter_diff_style with
                   | `COLOR with_border ->
-                    drawable#set_foreground color;
-                    drawable#rectangle ~filled:true ~x:0 ~y:(y - 2) ~width ~height ();
-                    if with_border then begin
-                      drawable#set_foreground (Color.set_value 0.6 color);
-                      drawable#rectangle ~filled:false ~x:0 ~y:(y - 2) ~width:(width-1) ~height ();
-                    end
+                      drawable#set_foreground color;
+                      drawable#rectangle ~filled:true ~x:0 ~y:(y - 2) ~width ~height ();
+                      if with_border then begin
+                        drawable#set_foreground (Color.set_value 0.6 color);
+                        drawable#rectangle ~filled:false ~x:0 ~y:(y - 2) ~width:(width-1) ~height ();
+                      end
                   | `BW ->
-                    drawable#set_foreground black;
-                    drawable#rectangle ~filled:false ~x:0 ~y:(y - 2) ~width:(width - 1) ~height ();
-              end;
-        end;
-        create_tooltip page width y height elems
+                      drawable#set_foreground black;
+                      drawable#rectangle ~filled:false ~x:0 ~y:(y - 2) ~width:(width - 1) ~height ();
+                end;
+          end;
+          create_tooltip page width y height elems
       | Many (l1, l2) ->
-        let y1 = y_of_line l1 in
-        let y2 = y_of_line l2 in
-        let height = max 3 (y2 - y1 + line_height) in
-        begin
-          match Oe_config.global_gutter_diff_style with
+          let y1 = y_of_line l1 in
+          let y2 = y_of_line l2 in
+          let height = max 3 (y2 - y1 + line_height) in
+          begin
+            match Oe_config.global_gutter_diff_style with
             | `COLOR with_border ->
-              drawable#set_foreground color;
-              drawable#rectangle ~filled:true ~x:0 ~y:y1 ~width ~height ();
-              if with_border then begin
-                drawable#set_foreground (Color.set_value 0.6 color);
-                drawable#rectangle ~filled:false ~x:0 ~y:y1 ~width:(width-1) ~height ();
-              end;
+                drawable#set_foreground color;
+                drawable#rectangle ~filled:true ~x:0 ~y:y1 ~width ~height ();
+                if with_border then begin
+                  drawable#set_foreground (Color.set_value 0.6 color);
+                  drawable#rectangle ~filled:false ~x:0 ~y:y1 ~width:(width-1) ~height ();
+                end;
             | `BW ->
-              wave_line ~drawable ~color:black ~width ~height ~y:y1 ~is_add:(color = color_add);
-        end;
-        create_tooltip page width y1 height elems
+                wave_line ~drawable ~color:black ~width ~height ~y:y1 ~is_add:(color = color_add);
+          end;
+          create_tooltip page width y1 height elems
     in
     let diffs = List.sort begin fun a b ->
         match a with
-          | Delete _ -> (match b with Delete _ -> 0 | _ -> 1)
-          | _ -> (match b with Delete _ -> -1 | _ -> 0)
+        | Delete _ -> (match b with Delete _ -> 0 | _ -> 1)
+        | _ -> (match b with Delete _ -> -1 | _ -> 0)
       end diffs
     in
     List.iter begin fun diff ->
       Gmisclib.Idle.add ~prio:200 begin fun () ->
         match diff with
-          | Add (_, ind, a) ->
+        | Add (_, ind, a) ->
             paint color_add [color_add, a] ind |> ignore;
-          | Delete (_, ind, a) ->
+        | Delete (_, ind, a) ->
             paint color_del [color_del, a] ind |> ignore;
-          | Change (_, a, ind, b) ->
+        | Change (_, a, ind, b) ->
             paint color_change [color_del, a; color_add, b] ind
       end
     end diffs
@@ -279,7 +279,7 @@ end
 let _ =
   begin
     match !Browser.browser with
-      | Some browser ->
+    | Some browser ->
         let editor = browser#editor in
         (* Init editor pages *)
         browser#editor#with_current_page Diff.init;
@@ -327,7 +327,7 @@ let _ =
           try bind ()
           with Gpointer.Null -> editor#misc#connect#map ~callback:bind |> ignore;
         end;
-      | _ -> failwith "Cannot initialize Plugin_diff because the browser object has not yet been created."
+    | _ -> failwith "Cannot initialize Plugin_diff because the browser object has not yet been created."
   end;
 
 

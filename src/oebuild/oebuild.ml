@@ -78,10 +78,10 @@ let get_compiler_command ?(times : Table.t option) ~opt ~compiler ~cflags ~inclu
     try
       begin
         match times with
-          | Some times ->
+        | Some times ->
             ignore (Table.find times filename opt);
             None
-          | _ -> raise Not_found
+        | _ -> raise Not_found
       end
     with Not_found -> begin
         let compiler, args = compiler in
@@ -100,14 +100,14 @@ let compile ?(times : Table.t option) ~opt ~compiler ~cflags ~includes ~filename
     ~verbose () =
   let command = get_compiler_command ?times ~opt ~compiler ~cflags ~includes ~filename ~verbose () in
   match command with
-    | Some (cmd, args) ->
+  | Some (cmd, args) ->
       let exit_code =
         let cmd_line = String.concat " " (cmd :: (Array.to_list args)) in
         Oebuild_util.command ~echo:(verbose >= 2) cmd_line
       in
       Option.iter (fun times -> Table.add times filename opt (Unix.gettimeofday())) times;
       exit_code
-    | _ -> 0
+  | _ -> 0
 
 (** link *)
 let link ~compilation ~compiler ~outkind ~lflags ~includes ~libs ~outname ~deps
@@ -147,35 +147,35 @@ let link ~compilation ~compiler ~outkind ~lflags ~includes ~libs ~outname ~deps
     Spawn.sync command args
   in
   match process_exit with
-    | None -> 0
-    | Some ex -> -9997
+  | None -> 0
+  | Some ex -> -9997
 ;;
 
 (** get_output_name *)
 let get_output_name ~compilation ~outkind ~outname ?(dontaddopt=false) () =
-    let o_ext =
-      match outkind with
-        | Library when compilation = Native -> ".cmxa"
-        | Library -> ".cma"
-        | Executable when compilation = Native && dontaddopt -> win32 ".exe" ""
-        | Executable when compilation = Native -> ".opt" ^ (win32 ".exe" "")
-        | Executable -> win32 ".exe" ""
-        | Plugin when compilation = Native -> ".cmxs"
-        | Plugin -> ".cma"
-        | Pack -> ".cmx"
-        | External -> ""
-    in
-    let name =
-      if outname = "" then "a" else unquote outname
-    in
-    name ^ o_ext
+  let o_ext =
+    match outkind with
+    | Library when compilation = Native -> ".cmxa"
+    | Library -> ".cma"
+    | Executable when compilation = Native && dontaddopt -> win32 ".exe" ""
+    | Executable when compilation = Native -> ".opt" ^ (win32 ".exe" "")
+    | Executable -> win32 ".exe" ""
+    | Plugin when compilation = Native -> ".cmxs"
+    | Plugin -> ".cma"
+    | Pack -> ".cmx"
+    | External -> ""
+  in
+  let name =
+    if outname = "" then "a" else unquote outname
+  in
+  name ^ o_ext
 ;;
 
 (** install *)
 let install ~compilation ~outkind ~outname ~deps ~path ~ccomp_type =
   let dest_outname = Filename.basename outname in
   match outkind with
-    | Library ->
+  | Library ->
       let path =
         let path = ocamllib // path in
         mkdir_p path;
@@ -194,8 +194,8 @@ let install ~compilation ~outkind ~outname ~deps ~path ~ccomp_type =
         let basename = sprintf "%s%s" (Filename.chop_extension outname) ext in
         cp basename (path // (Filename.basename basename));
       end;
-    | Executable
-    | Plugin | Pack | External -> eprintf "\"Oebuild.install\" not implemented for Executable, Plugin, Pack or External."
+  | Executable
+  | Plugin | Pack | External -> eprintf "\"Oebuild.install\" not implemented for Executable, Plugin, Pack or External."
 ;;
 
 (** run_output *)
@@ -206,11 +206,11 @@ let run_output ~outname ~args =
     let cmd = Filename.current_dir_name // cmd in
 
     (*let args = cmd :: args in
-    let args = Array.of_list args in
-    Unix.execv cmd args*)
+      let args = Array.of_list args in
+      Unix.execv cmd args*)
 
     (*let args = String.concat " " args in
-    ignore (kprintf command "%s %s" cmd args)*)
+      ignore (kprintf command "%s %s" cmd args)*)
 
     Spawn.sync
       ~process_in:Spawn.redirect_to_stdout ~process_err:Spawn.redirect_to_stderr
@@ -219,7 +219,7 @@ let run_output ~outname ~args =
   end else begin
     let cmd = Filename.current_dir_name // outname in
     (* From the execv manpage:
-      "The first argument, by convention, should point to the filename associated
+       "The first argument, by convention, should point to the filename associated
        with the file being executed." *)
     let args = cmd :: args in
     let args = Array.of_list args in
@@ -258,9 +258,9 @@ let serial_compile ~compilation ~times ~compiler ~cflags ~includes ~toplevel_mod
         compile_exit
       in
       crono ~label:"Serial compilation" (List.iter begin fun filename ->
-        compilation_exit := try_compile filename;
-        if !compilation_exit <> 0 then (raise Exit)
-      end) deps;
+          compilation_exit := try_compile filename;
+          if !compilation_exit <> 0 then (raise Exit)
+        end) deps;
     with Exit -> ()
   end;
   !compilation_exit
@@ -322,13 +322,13 @@ let build ~compilation ~package ~includes ~libs ~other_mods ~outkind ~compile_on
     if libs <> ""       then (printf "  ~libs ........... : %s\n" libs);
     if other_mods <> "" then (printf "  ~other_mods ..... : %s\n" other_mods);
     (match inline with Some n ->
-                              printf "  ~inline ......... : %d\n" n | _ -> ());
+       printf "  ~inline ......... : %d\n" n | _ -> ());
     if cflags <> ""     then (printf "  ~cflags ......... : %s\n" cflags);
     if lflags <> ""     then (printf "  ~lflags ......... : %s\n" cflags);
     if toplevel_modules <> []
-                        then (printf "  ~toplevel_modules : %s\n" (String.concat "," toplevel_modules));
+    then (printf "  ~toplevel_modules : %s\n" (String.concat "," toplevel_modules));
     if serial           then (printf "  ~serial ......... : %b\n" serial)
-                        else (printf "  ~jobs ........... : %d\n" jobs);
+    else (printf "  ~jobs ........... : %d\n" jobs);
     printf "  ~verbose ........ : %d\n" verbose;
     if verbose >= 2 then (printf "\n");
     printf "%!";
@@ -351,11 +351,11 @@ let build ~compilation ~package ~includes ~libs ~other_mods ~outkind ~compile_on
   (* inline *)
   begin
     match inline with
-      | Some inline when compilation = Native ->
+    | Some inline when compilation = Native ->
         let inline = string_of_int inline in
         cflags := !cflags ^ " -inline " ^ inline;
         lflags := !lflags ^ " -inline " ^ inline;
-      | _ -> ()
+    | _ -> ()
   end;
   (* Get compiler and linker names *)
   let package = check_package_list package in
@@ -426,13 +426,13 @@ let build ~compilation ~package ~includes ~libs ~other_mods ~outkind ~compile_on
       in
       if compile_only then compilation_exit else begin
         let compiler_output = Buffer.create 100 in
-          let link_exit =
-            crono ~label:"Linking phase"
-              (link ~compilation ~compiler:linker ~outkind ~lflags:!lflags
-              ~includes:!includes ~libs ~deps:obj_deps ~outname ~verbose) ()
-          in
-          if Buffer.length compiler_output > 0 then eprintf "%s\n%!" (Buffer.contents compiler_output);
-          link_exit
+        let link_exit =
+          crono ~label:"Linking phase"
+            (link ~compilation ~compiler:linker ~outkind ~lflags:!lflags
+               ~includes:!includes ~libs ~deps:obj_deps ~outname ~verbose) ()
+        in
+        if Buffer.length compiler_output > 0 then eprintf "%s\n%!" (Buffer.contents compiler_output);
+        link_exit
       end
     end else compilation_exit
   in
@@ -444,14 +444,14 @@ let build ~compilation ~package ~includes ~libs ~other_mods ~outkind ~compile_on
         [((Sys.getcwd()) // outname), (format_int (Unix.stat outname).Unix.st_size)]
         @
         match compilation with
-          | Native when outkind = Library ->
+        | Native when outkind = Library ->
             List.flatten (List.map begin fun ext ->
-              let filename = (Sys.getcwd()) // ((Filename.chop_extension outname) ^ ext) in
-              if Sys.file_exists filename then
-                [filename, (format_int (Unix.stat filename).Unix.st_size)]
-              else []
-            end [".lib"; ".a"])
-          | Bytecode | Unspecified | Native -> []
+                let filename = (Sys.getcwd()) // ((Filename.chop_extension outname) ^ ext) in
+                if Sys.file_exists filename then
+                  [filename, (format_int (Unix.stat filename).Unix.st_size)]
+                else []
+              end [".lib"; ".a"])
+        | Bytecode | Unspecified | Native -> []
       in
       List.iter (Printf.printf "%s\n%!") (dot_leaders ~right_align:true ~postfix:" bytes" result);
     end;
@@ -465,9 +465,9 @@ let lib_extensions = [".cma"; ".cmxa"; ".lib"; ".a"; ".dll"]
 
 let clean ~deps () =
   let files = List.map begin fun name ->
-    let name = Filename.chop_extension name in
-    List.map ((^) name) obj_extensions
-  end deps in
+      let name = Filename.chop_extension name in
+      List.map ((^) name) obj_extensions
+    end deps in
   let files = List.flatten files in
   let files = remove_dupl files in
   List.iter (remove_file ~verbose:false) files
@@ -519,10 +519,10 @@ let check_prop expr get =
     in
     begin
       match op with
-        | Some op ->
+      | Some op ->
           let value = try String.trim (Str.matched_group 4 expr) with Not_found -> "" in
           (try op (get name) value (* [2] *) with Not_found (* name is not defined. *) -> not is_eq) (* [3] *)
-        | None -> (try get name |> ignore; true with Not_found -> false) (* [1] *)
+      | None -> (try get name |> ignore; true with Not_found -> false) (* [1] *)
     end;
   with Not_found (* name (matched_group) *) -> false (* [4] *)
 
@@ -530,18 +530,18 @@ let check_prop expr get =
 (** check_restrictions *)
 let check_restrictions restr =
   List.for_all begin function
-    | "IS_UNIX" -> Sys.os_type = "Unix"
-    | "IS_WIN32" -> Sys.os_type = "Win32"
-    | "IS_CYGWIN" -> Sys.os_type = "Cygwin"
-    | "HAVE_NATIVE" | "HAS_NATIVE" | "NATIVE" -> Ocaml_config.can_compile_native () <> None (* should be cached *)
-    | res when Str.string_match re_env res 0 -> check_prop res Sys.getenv
-    | res when Str.string_match re_ocfg res 0 -> check_prop res Ocaml_config.get
-    | res when Str.string_match re_fl_pkg_exist res 0 ->
+  | "IS_UNIX" -> Sys.os_type = "Unix"
+  | "IS_WIN32" -> Sys.os_type = "Win32"
+  | "IS_CYGWIN" -> Sys.os_type = "Cygwin"
+  | "HAVE_NATIVE" | "HAS_NATIVE" | "NATIVE" -> Ocaml_config.can_compile_native () <> None (* should be cached *)
+  | res when Str.string_match re_env res 0 -> check_prop res Sys.getenv
+  | res when Str.string_match re_ocfg res 0 -> check_prop res Ocaml_config.get
+  | res when Str.string_match re_fl_pkg_exist res 0 ->
       let packages = Str.matched_group 2 res in
       let packages = Str.split re_comma packages in
       let redirect_stderr = if Sys.os_type = "Win32" then " 1>NUL 2>NUL" else " 1>/dev/null 2>/dev/null" in
       packages = [] || List.for_all begin fun package ->
         kprintf (Oebuild_util.command ~echo:false) "ocamlfind query %s %s" package redirect_stderr = 0
       end packages
-    | _ -> false
+  | _ -> false
   end restr;;
