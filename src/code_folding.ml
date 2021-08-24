@@ -304,6 +304,8 @@ class manager ~(view : Text.view) =
                   drawable#polygon ~filled:true [(xm, ym1 - 5); (xm, ym1 + 5); (xm + 5, ym1)];
                 end else begin
                   drawable#set_line_attributes ~width:1 ();
+                  drawable#set_foreground view#gutter.Gutter.marker_bg_color;
+                  drawable#polygon ~filled:true square;
                   drawable#set_foreground view#gutter.Gutter.marker_color;
                   drawable#polygon ~filled:false square;
                   drawable#segments [(xm, ym1 + dx12), (xm, ym1 + dx1*2); (xm - dxdx12, ym1 + dx), (xm + dxdx12, ym1 + dx)];
@@ -337,14 +339,14 @@ class manager ~(view : Text.view) =
                       match cont with
                       | `Contiguous when use_triangles ->
                           let ym2 = ym2 - 8 in
-                          drawable#segments [((xm, (ym2 - 3)), (xm, ym2)); ((xm, ym2), ((xm + dx), ym2))];
+                          drawable#segments [((xm, (ym2 - 5)), (xm, ym2)); ((xm, ym2), ((xm + dx), ym2))];
                       | `Contiguous -> ()
                       | `Collapsed ->
                           let ym2 = ym2 - 18 in
-                          drawable#segments [((xm, (ym2 - 3)), (xm, ym2)); ((xm, ym2), ((xm + dx), ym2))];
+                          drawable#segments [((xm, (ym2 - 5)), (xm, ym2)); ((xm, ym2), ((xm + dx), ym2))];
                       | _ ->
                           let ym2 = ym2 + dx in
-                          drawable#segments [((xm, (ym2 - 3)), (xm, ym2)); ((xm, ym2), ((xm + dx), ym2))];
+                          drawable#segments [((xm, (ym2 - 5)), (xm, ym2)); ((xm, ym2), ((xm + dx), ym2))];
                     end;
                 | _ -> ()
               end;
@@ -560,7 +562,6 @@ class manager ~(view : Text.view) =
                         | _ -> raise Exit
                       end else ((buffer#get_iter (`OFFSET o2))#set_line_index 0)
                     in
-                    Gdk.Window.set_cursor window (Gdk.Cursor.create `HAND1);
                     buffer#apply_tag tag_highlight ~start ~stop;
                     tag_highlight_applied <- Some mark;
                   with Exit -> ()
@@ -576,7 +577,6 @@ class manager ~(view : Text.view) =
       | _ -> ()
 
     method private highlight_remove ~window () =
-      Gdk.Window.set_cursor window (Gdk.Cursor.create `ARROW);
       if tag_highlight_applied <> None && not tag_highlight_busy then begin
         tag_highlight_busy <- true;
         let grad = Oe_config.code_folding_hightlight_gradient in
@@ -659,7 +659,6 @@ and code_folding_list_signals ~toggled = object
 end
 
 and toggled () = object inherit [bool * GText.iter * GText.iter] GUtil.signal () end
-
 
 
 
