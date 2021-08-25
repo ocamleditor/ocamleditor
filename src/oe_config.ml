@@ -66,8 +66,6 @@ let gutter_marker_bg_color               = (*`THEME*) `CALC 0.70
 let code_folding_scope_color             = `NAME "#e5e5e5" (* disabled *)
 let code_folding_highlight_color         = "#d0d0d0"
 let code_folding_hightlight_gradient     = ["#f4f4f4"; "#f9f9f9"; "#fefefe"] (* [] for no gradient *)
-let code_folding_font                    = ref (Some "-*-*-medium-r-*-sans-10-*-*-*-*-*-*-*")
-(* Font for the "n lines" label in the fold line; it must be 10 pixels height. None for no label *)
 let global_gutter_comments_enabled       = false
 let global_gutter_size                   = 13
 let global_gutter_comments_color         = `NAME "#fa80a5"
@@ -120,19 +118,6 @@ let _ = Printexc.record_backtrace (List.mem_assoc "record_backtrace" App_config.
 
 let _ = Unix.putenv "TERM" ""
 let getenv_ocamllib = try Some (Sys.getenv "OCAMLLIB") with Not_found -> None
-
-let _ =
-  (* Check whether "code_folding_font" can be loaded. *)
-  match !code_folding_font with
-  | None -> ()
-  | Some fontset ->
-      begin
-        try ignore (Gdk.Font.load_fontset fontset)
-        with Gpointer.Null -> begin
-            eprintf "Warning: could not load fontset \"%s\".\n%!" fontset;
-            code_folding_font := None
-          end
-      end;;
 
 (** Commands *)
 let find_command name =

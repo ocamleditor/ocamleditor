@@ -345,7 +345,7 @@ and view ?project ?buffer () =
 
     method! scroll_lazy iter =
       super#scroll_lazy iter;
-      if (self#code_folding#is_folded iter) <> None then begin
+      if self#code_folding#is_folded iter then begin
         self#code_folding#expand iter;
       end;
 
