@@ -694,7 +694,6 @@ class widget ~editor:_ ~page ?packing () =
       | Tsig_exception _exc -> ()
       | Tsig_module { Typedtree.md_type = mty; md_name = loc; _ } ->
           let kind =
-            let [@warning "-4"] _ = "Disable this pattern matching is fragile warning" in
             match [@warning "-4"] mty.mty_desc with
             | Tmty_functor _ -> Module_functor
             | _ -> Module
@@ -752,8 +751,9 @@ class widget ~editor:_ ~page ?packing () =
       | Tmod_unpack _ -> Some (self#append ?parent "Tmod_unpack" "")
 
     (* TODO: Handle visibiliy added in 4.08 *)
-    method private append_signature_item ?parent ?kind:_ =
-      function
+    method private append_signature_item ?parent ?kind:_ item =
+      Odoc_info.reset_type_names ();
+      match item with
       | Sig_value (id, vd, _) -> Some (self#append ?parent ~kind:Simple (Ident.name id) (string_of_type_expr vd.val_type))
       | Sig_type (id, _, _, _) -> Some (self#append ?parent (*~kind:Type*) (Ident.name id) "")
       | Sig_typext (id, _, _, _) -> Some (self#append ?parent ~kind:Exception (Ident.name id) "")
