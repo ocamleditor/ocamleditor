@@ -715,7 +715,7 @@ object (self)
                       | Some start ->
                         begin
                           match buffer#get_iter_at_mark_opt (`MARK stop) with
-                            | Some stop ->
+                            | Some stop when start#get_visible_text ~stop |> String.length > 0 ->
                               let yl1, hl1 = view#get_line_yrange start in
                               let yl1 = yl1 - y0 in
                               (* count_displayed_lines *)
@@ -748,12 +748,17 @@ object (self)
                                 else yl1 + view#pixels_above_lines
                               in
                               drawable#rectangle ~x ~y ~width ~height ();
-                            | _ -> ()
+                                true
+                            | _ -> false
                         end
-                      | _ -> ()
+                      | _ -> false
                   in
-                  draw lstart lstop;
-                  draw rstart rstop;
+                    (* lstart, lstop are for the RIGHT delimeter and rstart, 
+                       rstop are for the LEFT delimiter.
+                       To satisfy code folding, if the right delim. is not visible
+                       we do not even draw the border of the left delim.
+                    *)
+                    if draw lstart lstop then draw rstart rstop |> ignore;
                 | _ -> ()
             end;
             false;
