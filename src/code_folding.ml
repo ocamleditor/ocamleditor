@@ -166,14 +166,15 @@ class manager ~(view : Text.view) =
       | Some window ->
           let drawable = new GDraw.drawable window in
           let vrect = view#visible_rect in
+          let width = 2 in
           let y0 = Gdk.Rectangle.y vrect in
           let w0 = Gdk.Rectangle.width vrect in
           let offset = match Oe_config.dash_style_offset with Some x -> x | _ -> w0 in
-          let y = y - y0 in
+          let y = y - y0 + width / 2 in
           drawable#set_foreground fold_line_color;
           Gdk.GC.set_fill drawable#gc `SOLID;
           Gdk.GC.set_dashes drawable#gc ~offset [2; 2];
-          drawable#set_line_attributes ~width:2 ~style:Oe_config.dash_style ();
+          drawable#set_line_attributes ~width ~style:Oe_config.dash_style ();
           drawable#line ~x:0 ~y ~x:w0 ~y;
       | _ -> ()
 
@@ -249,10 +250,8 @@ class manager ~(view : Text.view) =
           in
           folds |> List.iter begin fun (_, _, _, ms, cont) ->
             (* Markers *)
-            drawable#set_line_attributes ~width:1 ~style:`SOLID ();
-            let xm = xm - 1 in
             let unmatched, _, (is_collapsed, ym1, ym2, _(*h1*), _(*h2*)) = ms in
-            let xm = xm - 2 in
+            let xm = xm - 3 in
             let ym1 = ym1 - dx in
             let ya = ym1 + 2*dx in
             let square = [(xm - dx, ym1); (xm + dx, ym1); (xm + dx, ya); (xm - dx, ya)] in
@@ -261,7 +260,7 @@ class manager ~(view : Text.view) =
               drawable#polygon ~filled:true square;
               drawable#set_foreground view#gutter.Gutter.marker_color;
               drawable#polygon ~filled:false square;
-              drawable#segments [(xm, ym1 + dx12), (xm, ym1 + dx1*2); (xm - dxdx12, ym1 + dx), (xm + dxdx12, ym1 + dx)];
+              drawable#segments [(xm, ym1 + dx12 + 1), (xm, ym1 + dx1*2 - 1); (xm - dxdx12 + 1, ym1 + dx), (xm + dxdx12 - 1, ym1 + dx)];
             end else begin
               drawable#set_foreground view#gutter.Gutter.bg_color;
               if unmatched then begin
@@ -274,21 +273,7 @@ class manager ~(view : Text.view) =
                 drawable#set_foreground view#gutter.Gutter.marker_color;
                 drawable#polygon ~filled:false square;
               end;
-              drawable#segments [(xm - dxdx12, ym1 + dx), (xm + dxdx12, ym1 + dx)];
-              match ym2 with
-              | Some ym2 ->
-                  let xm = xm - 2 in
-                  begin
-                    match cont with
-                    | `Contiguous -> ()
-                    | `Collapsed ->
-                        let ym2 = ym2 - 18 in
-                        drawable#segments [((xm, (ym2 - 3)), (xm, ym2)); ((xm, ym2), ((xm + dx), ym2))];
-                    | _ ->
-                        let ym2 = ym2 + dx in
-                        drawable#segments [((xm, (ym2 - 3)), (xm, ym2)); ((xm, ym2), ((xm + dx), ym2))];
-                  end;
-              | _ -> ()
+              drawable#segments [(xm - dxdx12 + 1, ym1 + dx), (xm + dxdx12 - 1, ym1 + dx)];
             end;
           end;
           graphics <- folds |> List.map (fun (_, a, b, ms, _) -> a, b, ms);
@@ -326,6 +311,7 @@ class manager ~(view : Text.view) =
             buffer#apply_tag tag_hidden ~start ~stop;
             table_tag_hidden <- {mark_start_fold=m1; mark_stop_fold=m2; tag=tag_hidden} :: table_tag_hidden;
             self#scan_folding_points();
+            self#highlight_remove ();
             Gmisclib.Idle.add view#draw_gutter;
             if is_in_range then
               Gmisclib.Idle.add begin fun () ->
@@ -458,6 +444,8 @@ class manager ~(view : Text.view) =
             | Mark (o1, o2, unmatched) as mark ->
                 if not tag_highlight_busy && tag_highlight_applied = None then begin
                   try
+                    let fi = self#get_folding_iters o1 o2 in
+                    if self#is_folded fi.fit_start_fold then raise Exit;
                     set_highlight_background tag_highlight Oe_config.code_folding_highlight_color;
                     let start = (buffer#get_iter (`OFFSET o1))#set_line_index 0 in
                     let stop =
@@ -474,14 +462,14 @@ class manager ~(view : Text.view) =
                   match tag_highlight_applied with
                   | None -> ()
                   | Some m when m = mark -> ()
-                  | _ -> self#highlight_remove ~window ();
+                  | _ -> self#highlight_remove ();
                 end;
             | Region
-            | Out -> self#highlight_remove ~window ()
+            | Out -> self#highlight_remove ()
           end
       | _ -> ()
 
-    method private highlight_remove ~window () =
+    method private highlight_remove () =
       if tag_highlight_applied <> None && not tag_highlight_busy then begin
         tag_highlight_busy <- true;
         let grad = Oe_config.code_folding_hightlight_gradient in
