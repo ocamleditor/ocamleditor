@@ -843,7 +843,7 @@ and view ?project ?buffer () =
               self#tbuffer#add_signal_handler id;
               self#draw_current_line_background ~force:true (self#buffer#get_iter `INSERT)
         end);
-      Text_init.key_press self;
+      Text_init.key_press ?project self;
       Text_init.realize self;
       Text_init.select_lines_from_gutter self;
       (** Margin and line spacings *)
