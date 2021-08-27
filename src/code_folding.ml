@@ -212,7 +212,7 @@ class manager ~(view : Text.view) =
                   let ys1 = yv1 in
                   let ys2 = yv2 + 1 in
                   let of2 = i2#offset in
-                  let ms = false, (of1, of2, yv1, h1), (is_collapsed, ym1, Some ym2, h1, h2) in
+                  let ms = false, (of1, of2, yv1, h1), (is_collapsed, ym1) in
                   folds := ((fi.fit_start_marker#line, i2#line, is_collapsed), ys1, ys2, ms) :: !folds
                 end
               end;
@@ -228,7 +228,7 @@ class manager ~(view : Text.view) =
                 let ym1 = yv1 + h1/2 - 1 in
                 let ys1 = yv1 in
                 let ys2 = yv2 + 1 in
-                let ms = true, (of1, bottom#offset, yv1, h1), (is_collapsed, ym1, None, h1, h2) in
+                let ms = true, (of1, bottom#offset, yv1, h1), (is_collapsed, ym1) in
                 folds := ((i1#line, -1, is_collapsed), ys1, ys2, ms) :: !folds
               end
           end;
@@ -238,16 +238,16 @@ class manager ~(view : Text.view) =
           let folds = 
             !folds |> List.fold_left begin fun acc ((_, l2, _) as ll, a, b, ms) ->
               match acc with
-              | ((l1', _, is_collapsed), _, _, _, _) :: _ when l2 = l1' + 1 -> 
-                  (ll, a, b, ms, (if is_collapsed then `Collapsed else `Contiguous)) :: acc
+              | ((l1', _, is_collapsed), _, _, _) :: _ when l2 = l1' + 1 -> 
+                  (ll, a, b, ms) :: acc
               | _ -> 
-                  (ll, a, b, ms, `Not_contiguous) :: acc
+                  (ll, a, b, ms) :: acc
             end [] 
             |> List.rev 
           in
-          folds |> List.iter begin fun (_, _, _, ms, cont) ->
+          folds |> List.iter begin fun (_, _, _, ms) ->
             (* Markers *)
-            let unmatched, _, (is_collapsed, ym1, ym2, _(*h1*), _(*h2*)) = ms in
+            let unmatched, _, (is_collapsed, ym1) = ms in
             let xm = xm - 3 in
             let ym1 = ym1 - dx in
             let ya = ym1 + 2*dx in
@@ -273,7 +273,7 @@ class manager ~(view : Text.view) =
               segments drawable [(xm - dxdx12 + 1, ym1 + dx), (xm + dxdx12 - 1, ym1 + dx)];
             end;
           end;
-          graphics <- folds |> List.map (fun (_, a, b, ms, _) -> a, b, ms);
+          graphics <- folds |> List.map (fun (_, a, b, ms) -> a, b, ms);
       | _ -> ()
 
     method private range ~fold start stop =

@@ -363,7 +363,7 @@ and view ?project ?buffer () =
             match GdkEvent.get_type ev with
             | `BUTTON_RELEASE when !two_button_press ->
                 two_button_press := false;
-                Gmisclib.Idle.add (fun () -> ignore (self#obuffer#select_word ~pat:Ocaml_word_bound.regexp ()));
+                self#obuffer#select_word ~pat:Ocaml_word_bound.regexp () |> ignore;
                 false
             | _ -> false
           end else false
