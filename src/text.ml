@@ -297,21 +297,27 @@ and view ?project ?buffer () =
       match Delimiters.find_match ~utf8:false text offset with
       | None -> None
       | Some (lstart, lstop, rstart, rstop) as delim when lstop <> rstart ->
-          let start = self#buffer#get_iter (`OFFSET lstart) in
-          let stop = self#buffer#get_iter (`OFFSET lstop) in
-          current_matching_tag_bounds <-
-            ((self#buffer#create_mark ~name:"delim_left_start" start),
-             (self#buffer#create_mark ~name:"delim_left_stop" stop)) :: [];
-          self#buffer#apply_tag_by_name "tag_matching_delim" ~start ~stop;
-          let start = self#buffer#get_iter (`OFFSET rstart) in
-          let stop = self#buffer#get_iter (`OFFSET rstop) in
-          current_matching_tag_bounds <-
-            ((self#buffer#create_mark ~name:"delim_right_start" start),
-             (self#buffer#create_mark ~name:"delim_right_stop" stop)) :: current_matching_tag_bounds;
-          self#buffer#apply_tag_by_name "tag_matching_delim" ~start ~stop;
-          current_matching_tag_bounds_draw <- current_matching_tag_bounds;
-          GtkBase.Widget.queue_draw self#as_widget;
-          delim
+          let lstart = self#buffer#get_iter (`OFFSET lstart) in
+          let lstop = self#buffer#get_iter (`OFFSET lstop) in
+          let rstart = self#buffer#get_iter (`OFFSET rstart) in
+          let rstop = self#buffer#get_iter (`OFFSET rstop) in
+          (* To satisfy code folding, if the right delim. is not visible
+             we do not even draw the background of the left delim.  
+             See also "Border around matching delimiters" *)
+          let rtext = rstart#get_visible_text ~stop:rstop in
+          if String.length rtext > 0 then begin
+            current_matching_tag_bounds <-
+              ((self#buffer#create_mark ~name:"delim_left_start" lstart),
+               (self#buffer#create_mark ~name:"delim_left_stop" lstop)) :: [];
+            self#buffer#apply_tag_by_name "tag_matching_delim" ~start:lstart ~stop:lstop;
+            current_matching_tag_bounds <-
+              ((self#buffer#create_mark ~name:"delim_right_start" rstart),
+               (self#buffer#create_mark ~name:"delim_right_stop" rstop)) :: current_matching_tag_bounds;
+            self#buffer#apply_tag_by_name "tag_matching_delim" ~start:rstart ~stop:rstop;
+            current_matching_tag_bounds_draw <- current_matching_tag_bounds;
+            GtkBase.Widget.queue_draw self#as_widget;
+            delim
+          end else None
       | Some (_, lstop, rstart, _) (*as delim*) when lstop = rstart ->
           ignore (self#innermost_enclosing_delim text lstop);
           None

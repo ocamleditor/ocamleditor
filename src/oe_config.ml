@@ -49,7 +49,7 @@ let warning_unused_color                 = "#a0a0a0"
 let warning_unused_properties            = [`FOREGROUND warning_unused_color; `STYLE `ITALIC]
 let warning_tootip_enabled               = false
 let current_line_border_color            = fun add bgcolor -> `NAME (add bgcolor 0.3)
-let current_line_width                   = 1 (* Must be >= 1. Left margin is automatically increased by current_line_width *)
+let current_line_width                   = 2 (* Must be >= 1. Left margin is automatically increased by current_line_width *)
 let current_line_style                   = (*`ON_OFF_DASH*) `SOLID
 let current_line_join                    = (*`ROUND `MITER `BEVEL *) `BEVEL
 let on_off_dashes                        = [1; 3]

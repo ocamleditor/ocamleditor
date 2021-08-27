@@ -454,7 +454,8 @@ class editor () =
               let nlines = stop#line - start#line in
               let nchars = stop#offset - start#offset in
               kprintf page#status_pos_sel#set_text "%d (%d)" nlines nchars;
-              if is_insert then page#view#mark_occurrences_manager#mark ()
+              if is_insert then 
+                Timeout.set tout_fast 0 page#view#mark_occurrences_manager#mark 
             end else begin
               page#view#mark_occurrences_manager#clear();
               page#status_pos_sel#set_text "0";

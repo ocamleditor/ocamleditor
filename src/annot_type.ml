@@ -91,7 +91,7 @@ class annot_type ~page =
 
     method apply_tag (where : source_point) =
       match self#get_type where with
-      | Some {at_start; at_stop; at_type} when (not view#buffer#has_selection) ->
+      | Some {at_start; at_stop; at_type} (*when (not view#buffer#has_selection)*) ->
           begin
             match tag_bounds with
             | Some (_, _, (prev_start, prev_stop)) when at_start = prev_start && at_stop = prev_stop -> None
