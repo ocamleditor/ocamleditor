@@ -11,8 +11,9 @@ directly from the editor and compiling projects."""
 authors: "Francesco Tovagliari <ftovagliari@gmail.com>"
 maintainer: "Vasile Rotaru <vrotaru.md@gmail.com>"
 
-homepage: "https://github.com/vrotaru/ocamleditor"
-bug-reports: "https://github.com/vrotaru/ocamleditor/issues"
+homepage: "https://github.com/ftovagliari/ocamleditor"
+bug-reports: "https://github.com/ftovagliari/ocamleditor/issues"
+dev-repo: "git+https://github.com/ftovagliari/ocamleditor.git"
 
 build: [["ocaml" "build.ml" "ocamleditor"]]
 install: [["ocaml" "install.ml" "-prefix" prefix]]
@@ -29,4 +30,3 @@ depopts: [
   "ocurl"
   "ocamldiff"
 ]
-
