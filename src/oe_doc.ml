@@ -61,7 +61,7 @@ struct
                 (stdlib_preprocessor @@ Filename.dirname filename);
                 [|
                   "-dump";
-                  out_filename;		
+                  out_filename;
                   "-I"; "+threads";
                 |];
                 (Array.of_list (Miscellanea.split " +" search_path));
@@ -678,7 +678,7 @@ struct
           end
       | Module.Element_value elem ->
           insert_elem (`Info elem.Value.val_info) begin fun () ->
-            (*Odoc_info.reset_type_names();*)
+            Odoc_info.reset_type_names();
             let typ = Odoc_info.string_of_type_expr elem.Value.val_type in
             (*let typ = Str.global_replace (!~~ ((Name.father elem.Value.val_name) ^ ".")) "" typ in*)
             buffer#insert ~tags:tag_type2 (String.concat " " ["val"; (get_relative elem.Value.val_name); ":"; typ]);
