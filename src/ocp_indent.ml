@@ -40,10 +40,15 @@ let find_ocp_indent_config' project =
 let find_ocp_indent_config = Miscellanea.Memo.fast ~f:find_ocp_indent_config'
 let find_ocp_indent_config = function
   | None -> None
-| Some project -> find_ocp_indent_config project
+  | Some project -> find_ocp_indent_config project
 
-
-let indent_config ?project pref =
+let indent_config ?project ~pref ?(syntaxes=[]) () =
+  Approx_lexer.disable_extensions ();
+  List.iter
+    (fun syntax -> try Approx_lexer.enable_extension syntax
+      with IndentExtend.Syntax_not_found name ->
+        Format.eprintf "Warning: unknown syntax extension %S@." name)
+    syntaxes;
   match find_ocp_indent_config project with
   | Some file_config -> IndentConfig.(update_from_string default file_config)
   | None ->
@@ -54,9 +59,9 @@ let indent_config ?project pref =
 
 let collect (n : int) offsets = n :: offsets
 
-let output ?project ~pref start stop = IndentPrinter.{
+let output ?project ~pref ?syntaxes start stop = IndentPrinter.{
     debug = false;
-    config = indent_config ?project pref;
+    config = indent_config ?project ~pref ?syntaxes ();
     in_lines = (fun n -> n >= start && n <= stop);
     indent_empty = false;
     adaptive = false;
@@ -86,7 +91,7 @@ let contents (buffer : GText.buffer) =
   buffer#get_text ~start ~stop ()
 
 (** indent *)
-let indent ?project ~view bounds =
+let indent ?project ~view ?syntaxes bounds =
   let pref = Preferences.preferences#get in
   let buffer = view#tbuffer in
   let indent () =
@@ -103,7 +108,7 @@ let indent ?project ~view bounds =
 
     let contents = contents buffer#as_gtext_buffer in
     let ns = Nstream.of_string contents in
-    let offsets = IndentPrinter.proceed (output ?project ~pref start_line stop_line) ns IndentBlock.empty [] in
+    let offsets = IndentPrinter.proceed (output ?project ~pref ?syntaxes start_line stop_line) ns IndentBlock.empty [] in
     let lines = List.rev offsets in
 
     buffer#undo#begin_block ~name:"ocp-indent";
@@ -145,3 +150,9 @@ let indent ?project ~view bounds =
       (if pref.Preferences.pref_editor_indent_empty_line then indent() else false)
     else if ins#ends_line then false else indent ()
   end else indent ()
+
+let indent_for_extension ~project ~view ~extension bounds =
+  match extension with
+  | ".ml" | ".mli" -> ignore @@ indent ~project ~view bounds
+  | ".mll" -> ignore @@ indent ~project ~view ~syntaxes: ["mll"] bounds
+  | _ -> ()
