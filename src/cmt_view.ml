@@ -872,7 +872,9 @@ class widget ~editor:_ ~page ?packing () =
       end;
       if !count_meth > 0 then (self#add_table_expanded_by_default parent)
 
-    method private append_class_item ?let_bindings_parent ?(expand_lets=false) ?count_meth ?parent = function
+    method private append_class_item ?let_bindings_parent ?(expand_lets=false) ?count_meth ?parent item =
+      Odoc_info.reset_type_names ();
+      match item with
       | Tcl_structure str ->
           List.map begin fun fi ->
             match fi.cf_desc with
