@@ -454,8 +454,8 @@ class editor () =
               let nlines = stop#line - start#line in
               let nchars = stop#offset - start#offset in
               kprintf page#status_pos_sel#set_text "%d (%d)" nlines nchars;
-              if is_insert then 
-                Timeout.set tout_fast 0 page#view#mark_occurrences_manager#mark 
+              if is_insert then
+                Timeout.set tout_fast 0 page#view#mark_occurrences_manager#mark
             end else begin
               page#view#mark_occurrences_manager#clear();
               page#status_pos_sel#set_text "0";
@@ -675,13 +675,15 @@ class editor () =
       | _ -> Dialog_rename.window ~editor:self ~page ()
 
     method save (page : Editor_page.page) =
+      let filename = page#get_filename in
+      let extension = Filename.extension filename in
       let pref = Preferences.preferences#get in
       if pref.pref_editor_trim_lines
       then page#buffer#trim_lines ();
       if pref.pref_editor_format_on_save
-      then ignore @@ Ocp_indent.indent ~project: self#project ~view:page#view `ALL;
+      then ignore @@ Ocp_indent.indent_for_extension ~project: self#project ~view:page#view ~extension `ALL;
       page#save();
-      file_saved#call page#get_filename;
+      file_saved#call filename;
 
     method dialog_confirm_close = Editor_dialog.confirm_close ~editor:self
 
