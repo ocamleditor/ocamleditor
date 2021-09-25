@@ -256,6 +256,9 @@ and view ?project ?buffer () =
         Gmisclib.Idle.add ~prio:300 (fun () -> GtkBase.Widget.queue_draw self#as_widget)
       end;
 
+    method scroll_iter_onscreen iter =
+      self#scroll_to_iter ~within_margin:0.1 iter |> ignore;
+
     method scroll dir =
       let rect = self#visible_rect in
       let it = match dir with

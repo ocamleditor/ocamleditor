@@ -27,24 +27,28 @@ let smart_home ~view state =
   let buffer : GText.buffer = view#buffer in
   let iter = buffer#get_iter `INSERT in
   if iter#chars_in_line > 1 then begin
-    if view#options#smart_home then begin
-      let prev = iter#copy in
-      let where = iter#set_line_offset 0 in
-      let where = if Glib.Unichar.isspace where#char then begin
-          let first_non_blank = where#forward_find_char not_blank in
-          if first_non_blank#line <> iter#line then begin
-            if iter#line_index > 0 then where else iter#forward_to_line_end
-          end else first_non_blank
-        end else where in
-      buffer#move_mark `INSERT ~where;
-      if state <> [`SHIFT] then buffer#move_mark `SEL_BOUND ~where;
-      prev#compare where <> 0
-    end else if iter#starts_line && (not view#options#smart_home) then begin
-      let where = iter#forward_find_char not_blank in
-      buffer#move_mark `INSERT ~where;
-      if state <> [`SHIFT] then buffer#move_mark `SEL_BOUND ~where;
-      true
-    end else false;
+    let offset0 = iter#set_line_offset 0 in
+    let where = 
+      if view#options#smart_home then begin
+        let initial_pos = iter#copy in
+        let where = 
+          if Glib.Unichar.isspace offset0#char then begin
+            let first_non_blank = offset0#forward_find_char not_blank in
+            if first_non_blank#line <> iter#line then begin
+              if iter#line_index > 0 then offset0 else iter#forward_to_line_end
+            end else first_non_blank
+          end else offset0 
+        in
+        if initial_pos#compare where = 0 then offset0 else where
+      end else begin
+        if iter#starts_line then iter#forward_find_char not_blank
+        else offset0
+      end
+    in
+    if state = [`SHIFT] then buffer#move_mark `INSERT ~where 
+    else buffer#place_cursor ~where;
+    view#scroll_iter_onscreen where;
+    true
   end else false;;
 
 let smart_end ~view state =
@@ -52,21 +56,31 @@ let smart_end ~view state =
   let backward_non_blank iter =
     let rec f it =
       let stop = it#backward_char in
-      if List.for_all ((<>) (it#get_text ~stop)) [" "; "\t"; "\r"] then it
+      if [" "; "\t"; "\r"] |> List.for_all ((<>) (it#get_text ~stop)) then it
       else f stop
     in
     f iter
   in
-  let iter = buffer#get_iter `INSERT in
-  if iter#ends_line then begin
-    let where = backward_non_blank iter in
-    buffer#move_mark `INSERT ~where;
-    if state <> [`SHIFT] then buffer#move_mark `SEL_BOUND ~where;
-    true
-  end else if not iter#ends_line && view#options#smart_end then begin
-    let prev = iter#copy in
-    let where = backward_non_blank iter#forward_to_line_end in
-    buffer#move_mark `INSERT ~where;
-    if state <> [`SHIFT] then buffer#move_mark `SEL_BOUND ~where;
-    prev#compare where <> 0
-  end else false;;
+  let initial_pos = buffer#get_iter `INSERT in
+  let where = 
+    if view#options#smart_end then begin
+      let where =
+        (if initial_pos#ends_line then initial_pos else initial_pos#forward_to_line_end) 
+        |> backward_non_blank
+      in
+      if initial_pos#compare where = 0 && not initial_pos#ends_line 
+      then where#forward_to_line_end 
+      else where
+    end else begin 
+      let where =
+        if initial_pos#ends_line then initial_pos |> backward_non_blank 
+        else initial_pos#forward_to_line_end
+      in
+      if initial_pos#compare where = 0 then where |> backward_non_blank else where
+    end
+  in
+  if state = [`SHIFT] then buffer#move_mark `INSERT ~where
+  else buffer#place_cursor ~where;
+  view#scroll_mark_onscreen `INSERT;
+  true
+;;
