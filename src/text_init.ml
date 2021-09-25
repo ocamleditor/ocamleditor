@@ -26,54 +26,54 @@ open Miscellanea
 
 (** key_press *)
 let key_press ?project view =
-  ignore (view#event#connect#key_press ~callback:begin fun ev ->
-      let state = GdkEvent.Key.state ev in
-      let key = GdkEvent.Key.keyval ev in
-      match state with
-      | [] ->
-          if key = _Tab then begin
-            let ocp_indent_applied =
-              (match view#tbuffer#file with Some file when not (file#filename ^^^ ".ml") && not (file#filename ^^^ ".ml") -> false | _ -> true) &&
-              if Oe_config.ocp_indent_tab_key_enabled then
-                match project with
-                | Some project ->
-                    (Ocp_indent.indent ~project ~view `SELECTION) 
-                | _ -> false
-              else false
-            in
-            if not ocp_indent_applied then begin
-              view#tbuffer#indent ?decrease:None ();
-              view#draw_current_line_background ?force:(Some true) (view#buffer#get_iter `INSERT);
-            end;
-            true
-          end else if key = _Return || key = _BackSpace then begin
-            Gmisclib.Idle.add ~prio:100 begin fun () ->
-              let iter = view#buffer#get_iter `INSERT in
-              view#draw_current_line_background ?force:None iter;
-            end;
-            false
-          end else if key = _Home then (Smart_keys.smart_home ~view state)
-          else if key = _End then (Smart_keys.smart_end ~view state)
-          else false
-      | [`MOD2] when key = _igrave ->
-          view#buffer#delete ~start:(view#buffer#get_iter `INSERT) ~stop:(view#buffer#get_iter `SEL_BOUND);
-          view#buffer#insert ?iter:None ?tag_names:None ?tags:None "~";
-          true
-      | [`MOD2] when key = _apostrophe ->
-          view#buffer#delete ~start:(view#buffer#get_iter `INSERT) ~stop:(view#buffer#get_iter `SEL_BOUND);
-          view#buffer#insert ?iter:None ?tag_names:None ?tags:None "`";
-          true
-      | [`CONTROL] when key = _Up -> ignore (view#scroll `UP); true
-      | [`CONTROL] when key = _Down -> ignore (view#scroll `DOWN); true
-      | [`SHIFT] when key = _Home -> Smart_keys.smart_home ~view state
-      | [`SHIFT] when key = _End -> Smart_keys.smart_end ~view state
-      | _ ->
-          if key = _ISO_Left_Tab then begin
-            view#tbuffer#indent ?decrease:(Some true) ();
+  view#event#connect#key_press ~callback:begin fun ev ->
+    let state = GdkEvent.Key.state ev in
+    let key = GdkEvent.Key.keyval ev in
+    match state with
+    | [] ->
+        if key = _Tab then begin
+          let ocp_indent_applied =
+            (match view#tbuffer#file with Some file when not (file#filename ^^^ ".ml") && not (file#filename ^^^ ".ml") -> false | _ -> true) &&
+            if Oe_config.ocp_indent_tab_key_enabled then
+              match project with
+              | Some project ->
+                  (Ocp_indent.indent ~project ~view `SELECTION) 
+              | _ -> false
+            else false
+          in
+          if not ocp_indent_applied then begin
+            view#tbuffer#indent ?decrease:None ();
             view#draw_current_line_background ?force:(Some true) (view#buffer#get_iter `INSERT);
-            true
-          end else false
-    end);;
+          end;
+          true
+        end else if key = _Return || key = _BackSpace then begin
+          Gmisclib.Idle.add ~prio:100 begin fun () ->
+            let iter = view#buffer#get_iter `INSERT in
+            view#draw_current_line_background ?force:None iter;
+          end;
+          false
+        end else if key = _Home || key = _KP_Home then (Smart_keys.smart_home ~view state)
+        else if key = _End || key = _KP_End then (Smart_keys.smart_end ~view state)
+        else false
+    | [`MOD2] when key = _igrave ->
+        view#buffer#delete ~start:(view#buffer#get_iter `INSERT) ~stop:(view#buffer#get_iter `SEL_BOUND);
+        view#buffer#insert ?iter:None ?tag_names:None ?tags:None "~";
+        true
+    | [`MOD2] when key = _apostrophe ->
+        view#buffer#delete ~start:(view#buffer#get_iter `INSERT) ~stop:(view#buffer#get_iter `SEL_BOUND);
+        view#buffer#insert ?iter:None ?tag_names:None ?tags:None "`";
+        true
+    | [`CONTROL] when key = _Up -> ignore (view#scroll `UP); true
+    | [`CONTROL] when key = _Down -> ignore (view#scroll `DOWN); true
+    | [`SHIFT] when key = _Home || key = _KP_7 -> Smart_keys.smart_home ~view state
+    | [`SHIFT] when key = _End || key = _KP_1 -> Smart_keys.smart_end ~view state
+    | _ ->
+        if key = _ISO_Left_Tab then begin
+          view#tbuffer#indent ?decrease:(Some true) ();
+          view#draw_current_line_background ?force:(Some true) (view#buffer#get_iter `INSERT);
+          true
+        end else false
+  end |> ignore;;
 
 (** realize *)
 let realize view =

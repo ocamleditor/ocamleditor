@@ -22,6 +22,7 @@
 
 open Pref_page
 open Pref_color
+open Printf
 
 (** preferences *)
 class preferences ~editor () =
@@ -109,7 +110,7 @@ class preferences ~editor () =
     method private reset_theme () =
       Gtk_theme.set_theme ?theme:initial_gtk_theme ~context:self#misc#pango_context ()
 
-    method private create ?(idle=false) title row  (page : string -> ?packing:(GObj.widget -> unit) -> unit -> page) =
+    method private create ?(idle=true) title row  (page : string -> ?packing:(GObj.widget -> unit) -> unit -> page) =
       model#set ~row ~column title;
       let f () =
         let page = page title ~packing:hbox#add () in
@@ -121,8 +122,8 @@ class preferences ~editor () =
 
     initializer
       (* Tree *)
-      let row = model#append () in self#create "General" row (new Pref_view.pref_view);
-      let row = model#append () in self#create ~idle:true "Fonts" row (new pref_fonts);
+      let row = model#append () in self#create ~idle:false "General" row (new Pref_view.pref_view);
+      let row = model#append () in self#create "Fonts" row (new pref_fonts);
       let row as parent = model#append () in self#create "Color" row (new pref_color);
       let row = model#append ~parent () in self#create "Module Structure" row (new pref_color_structure);
       let row as parent = model#append () in self#create "Editor" row (new pref_editor);
@@ -132,7 +133,7 @@ class preferences ~editor () =
       let row = model#append ~parent () in self#create "Indentation" row (new Pref_editor_indent.pref_editor_indent);
       let row = model#append ~parent () in self#create "Code Templates" row (new pref_templ);
       let row = model#append () in self#create "Build" row (new pref_build);
-      let row = model#append () in self#create ~idle:true "External Programs" row (new pref_program_pdf_viewer);
+      let row = model#append () in self#create "External Programs" row (new pref_program_pdf_viewer);
       view#expand_all();
       view#selection#set_mode `SINGLE;
       ignore (view#selection#connect#changed ~callback:begin fun () ->
@@ -275,26 +276,43 @@ and pref_fonts title ?packing () =
   let _            = notebook#append_page ~tab_label:(GMisc.label ~text:"Completion" ())#coerce box_compl#coerce in
   let _            = notebook#append_page ~tab_label:(GMisc.label ~text:"Output" ())#coerce font_other#coerce in
   let _            = notebook#append_page ~tab_label:(GMisc.label ~text:"Documentation" ())#coerce font_odoc#coerce in
-  object
+  let unchanged    = Array.make 5 true in
+  object (self)
     inherit page title vbox
 
     method write pref =
-      pref.Preferences.pref_general_font <- font_app#font_name;
-      pref.Preferences.pref_base_font <- font_editor#font_name;
-      pref.Preferences.pref_compl_font <- font_compl#font_name;
-      pref.Preferences.pref_output_font <- font_other#font_name;
-      pref.Preferences.pref_odoc_font <- font_odoc#font_name;
-      pref.Preferences.pref_compl_greek <- button_greek#active;
+      let open Preferences in
+      if not unchanged.(0) then pref.pref_general_font <- font_app#font_name;
+      if not unchanged.(1) then pref.pref_base_font <- font_editor#font_name;
+      if not unchanged.(2) then pref.pref_compl_font <- font_compl#font_name;
+      if not unchanged.(3) then pref.pref_output_font <- font_other#font_name;
+      if not unchanged.(4) then pref.pref_odoc_font <- font_odoc#font_name;
 
     method read pref =
-      font_app#set_font_name pref.Preferences.pref_general_font;
-      font_editor#set_font_name pref.Preferences.pref_base_font;
-      font_compl#set_font_name pref.Preferences.pref_compl_font;
-      font_other#set_font_name pref.Preferences.pref_output_font;
-      font_odoc#set_font_name pref.Preferences.pref_odoc_font;
-      button_greek#set_active pref.Preferences.pref_compl_greek;
+      let open Preferences in
+      let idle (f : string -> unit) x = 
+        Gdk.Window.set_cursor self#misc#window (Gdk.Cursor.create `WATCH);
+        Gmisclib.Idle.add ~prio:300 begin fun () ->
+          f x;
+          Gdk.Window.set_cursor self#misc#window (Gdk.Cursor.create `ARROW)
+        end
+      in
+      self#misc#connect#after#show ~callback:begin fun () ->
+        if unchanged.(0) then idle font_app#set_font_name pref.pref_general_font;
+        unchanged.(0) <- false
+      end |> ignore;
+      let on_first_switch_page page_num f x = 
+        notebook#connect#after#switch_page ~callback:begin function 
+        | n when n = page_num && unchanged.(page_num) -> idle f x; unchanged.(page_num) <- false 
+        | _ -> ()
+        end |> ignore; 
+      in
+      on_first_switch_page 1 font_editor#set_font_name pref.pref_base_font;
+      on_first_switch_page 2 font_compl#set_font_name pref.pref_compl_font; 
+      on_first_switch_page 3 font_other#set_font_name pref.pref_output_font; 
+      on_first_switch_page 4 font_odoc#set_font_name pref.pref_odoc_font; 
+      button_greek#set_active pref.pref_compl_greek;
   end
-
 
 (** pref_editor *)
 and pref_editor title ?packing () =
