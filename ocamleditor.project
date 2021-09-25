@@ -204,8 +204,8 @@
       <nodep>false</nodep>
       <dontlinkdep>false</dontlinkdep>
       <dontaddopt>false</dontaddopt>
-      <cflags>-w sy -g</cflags>
-      <lflags>-w sy -g</lflags>
+      <cflags>-w -s-y -g</cflags>
+      <lflags>-w -s-y -g</lflags>
       <target_type>Library</target_type>
       <outname>otherwidgets</outname>
       <lib_install_path></lib_install_path>
@@ -229,7 +229,7 @@
       <nodep>true</nodep>
       <dontlinkdep>false</dontlinkdep>
       <dontaddopt>false</dontaddopt>
-      <cflags>-w syxm -g</cflags>
+      <cflags>-w -s-y-x-m -g</cflags>
       <lflags>-g</lflags>
       <target_type>Executable</target_type>
       <outname>ocamleditor</outname>
@@ -254,7 +254,7 @@
       <nodep>false</nodep>
       <dontlinkdep>false</dontlinkdep>
       <dontaddopt>false</dontaddopt>
-      <cflags>-w syxm -g</cflags>
+      <cflags>-w -s-y-x-m -g</cflags>
       <lflags>-g</lflags>
       <target_type>Executable</target_type>
       <outname>ocamleditor</outname>
@@ -279,7 +279,7 @@
       <nodep>true</nodep>
       <dontlinkdep>false</dontlinkdep>
       <dontaddopt>false</dontaddopt>
-      <cflags>-w syxm -g</cflags>
+      <cflags>-w -s-y-x-m -g</cflags>
       <lflags>-g</lflags>
       <target_type>Executable</target_type>
       <outname>ocamleditor</outname>
@@ -328,7 +328,7 @@
       <nodep>false</nodep>
       <dontlinkdep>false</dontlinkdep>
       <dontaddopt>false</dontaddopt>
-      <cflags>-w syxm -g</cflags>
+      <cflags>-w -s-y-x-m -g</cflags>
       <lflags>-g</lflags>
       <target_type>Executable</target_type>
       <outname>ocamleditor</outname>
@@ -353,7 +353,7 @@
       <nodep>false</nodep>
       <dontlinkdep>false</dontlinkdep>
       <dontaddopt>false</dontaddopt>
-      <cflags>-w syxm -g</cflags>
+      <cflags>-w -s-y-x-m -g</cflags>
       <lflags>-g</lflags>
       <target_type>Library</target_type>
       <outname>ocamleditor_lib</outname>
@@ -428,7 +428,7 @@
       <nodep>false</nodep>
       <dontlinkdep>true</dontlinkdep>
       <dontaddopt>false</dontaddopt>
-      <cflags>-w syxm -g</cflags>
+      <cflags>-w -s-y-x-m -g</cflags>
       <lflags>-g lablrsvg.cma</lflags>
       <target_type>Library</target_type>
       <outname>../plugins/dot_viewer_svg</outname>
@@ -453,7 +453,7 @@
       <nodep>false</nodep>
       <dontlinkdep>true</dontlinkdep>
       <dontaddopt>false</dontaddopt>
-      <cflags>-g -w syxm</cflags>
+      <cflags>-g -w -s-y-x-m</cflags>
       <lflags>-g lablrsvg.cmxa</lflags>
       <target_type>Plugin</target_type>
       <outname>../plugins/dot_viewer_svg</outname>

@@ -109,7 +109,7 @@ let pat_iterator ~f ~filename ~scope =
         let definition = { def_name = Ident.name id; def_loc = loc.loc; def_scope = scope } in
         f { ident_fname; ident_kind  = Def definition; ident_loc = loc }
 
-    | Tpat_construct (lid, desc, _) ->
+    | Tpat_construct (lid, desc, _, _) ->
         let { Types.cstr_loc; _ } = desc in
         let name = Longident.flatten lid.txt |> String.concat "." in
         let ident_loc = Location.mkloc name lid.loc in
@@ -338,7 +338,7 @@ let rec iter_pattern
           ident_kind       = Def {def_name=loc.txt; def_loc=name_loc; def_scope=Location.none};
           ident_loc        = Location.mkloc (Ident.name id) name_loc;
         } :: (iter_pattern f pat)
-    | Tpat_construct ({ loc; _ }, { Types.cstr_name; cstr_res; cstr_tag; _ }, pl) ->
+    | Tpat_construct ({ loc; _ }, { Types.cstr_name; cstr_res; cstr_tag; _ }, pl, _) ->
         let type_expr = Binannot.lid_of_type_expr cstr_res in
         let path, is_qualified =
           match cstr_tag with
@@ -711,6 +711,7 @@ and iter_signature_item f {sig_desc; _} =
   | Tsig_modsubst mod_subst ->
       iter_module_substitution mod_subst;
       []
+  | Tsig_modtypesubst _ -> [] 
 
 (** iter_value_description *)
 and iter_value_description f {val_desc; _} = iter_core_type f val_desc
@@ -718,9 +719,11 @@ and iter_value_description f {val_desc; _} = iter_core_type f val_desc
 (** iter_with_constraint *)
 and iter_with_constraint f = function
   | Twith_type td -> iter_type_declaration f td
-  | Twith_module _ -> ()
+  | Twith_module (path, loc) -> ignore path; ignore loc  (* TODO ?? *)
   | Twith_typesubst td -> iter_type_declaration f td
-  | Twith_modsubst _ -> ()
+  | Twith_modsubst (path, loc) -> ignore path; ignore loc  (* TODO ?? *)
+  | Twith_modtype md -> iter_module_type f md
+  | Twith_modtypesubst md -> iter_module_type f md
 
 (** iter_core_type *)
 and iter_core_type _f ?loc:_ {ctyp_desc = _; _} = ()

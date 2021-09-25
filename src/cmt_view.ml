@@ -729,6 +729,8 @@ class widget ~editor:_ ~page ?packing () =
       (* Since 4.08.0 *)
       | Tsig_typesubst _ -> ()
       | Tsig_modsubst _ -> ()
+      (* Since 4.13.0 *)
+      | Typedtree.Tsig_modtypesubst _ -> ()
 
     method private append_module ?parent ?kind mod_desc =
       match mod_desc with
