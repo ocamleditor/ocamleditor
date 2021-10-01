@@ -28,9 +28,9 @@ open Menu_types
 let image_menu_item ~label ?(pixbuf=Icons.empty_8) ?stock ?(icon_size=`MENU) ?(show=true) ?packing () =
   let menu_item = GMenu.menu_item ?packing ~show () in
   let hbox = GPack.hbox ~border_width: 6 ~packing: menu_item#add () in
-  let _image = 
+  let _image =
     if Option.is_none stock then
-      GMisc.image ~pixbuf ~icon_size ~packing: hbox#add () 
+      GMisc.image ~pixbuf ~icon_size ~packing: hbox#add ()
     else
       GMisc.image ?stock ~packing: hbox#add ()
   in
@@ -559,6 +559,7 @@ let window ~browser ~group ~flags
   (** Last Edit Location *)
   let last_edit_location = image_menu_item ~label:"Last Edit Location" ~pixbuf:Icons.goto_last ~packing:menu#append () in
   last_edit_location#add_accelerator ~group ~modi:[`MOD1] GdkKeysyms._End ~flags;
+  last_edit_location#add_accelerator ~group ~modi:[`MOD1] GdkKeysyms._KP_End ~flags;
   ignore (last_edit_location#connect#activate ~callback:(fun () -> browser#goto_location `LAST));
   get_menu_item_nav_history_last := (fun () -> last_edit_location);
   (** Clear Location History *)

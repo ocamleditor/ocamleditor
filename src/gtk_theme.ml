@@ -142,6 +142,7 @@ widget \"gtk-tooltip*\" style \"oe-tooltip\"
       style_smallbutton; style_outline; style_targetlist;
       apply_smallbutton; apply_outline; apply_targetlist;
       "gtk-button-images = 1";
+      "gtk-double-click-time = 500";
       gtk_theme;
       gtk_font_name;
     ]
