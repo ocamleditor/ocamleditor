@@ -356,40 +356,28 @@ and view ?project ?buffer () =
       self#create_highlight_current_line_tag(); (* recreate current line tag after code folding highlight to draw it above *)
       (* Double-click selects OCaml identifiers; click on a selected range
          reduces the selection to part of the identifier. *)
-      let two_button_press = ref false in
-      ignore (self#event#connect#button_release ~callback:begin fun ev ->
-          self#misc#grab_focus();
-          if smart_click then begin
-            match GdkEvent.get_type ev with
-            | `BUTTON_RELEASE when !two_button_press ->
-                two_button_press := false;
-                self#obuffer#select_word ~pat:Ocaml_word_bound.regexp () |> ignore;
-                false
-            | _ -> false
-          end else false
-        end);
-      ignore (self#event#connect#button_press ~callback:begin fun ev ->
-          if GdkEvent.Button.button ev = 1 && smart_click then begin
-            match GdkEvent.get_type ev with
-            | `TWO_BUTTON_PRESS ->
-                two_button_press := true;
-                true (* true *)
-            | `BUTTON_PRESS when buffer#has_selection ->
-                let x = int_of_float (GdkEvent.Button.x ev) in
-                let y = int_of_float (GdkEvent.Button.y ev) in
-                let x, y = self#window_to_buffer_coords ~tag:`TEXT ~x ~y in
-                let where = self#get_iter_at_location ~x ~y in
-                let start, stop = buffer#selection_bounds in
-                let start, stop = if start#compare stop > 0 then stop, start else start, stop in
-                if where#in_range ~start ~stop then begin
+      self#event#connect#button_press ~callback:begin fun ev ->
+        if GdkEvent.Button.button ev = 1 && smart_click then begin
+          match GdkEvent.get_type ev with
+          | `TWO_BUTTON_PRESS ->
+              self#obuffer#select_word ~pat:Ocaml_word_bound.regexp () |> ignore;
+              true (* true *)
+          | `BUTTON_PRESS when buffer#has_selection ->
+              let x = int_of_float (GdkEvent.Button.x ev) in
+              let y = int_of_float (GdkEvent.Button.y ev) in
+              let x, y = self#window_to_buffer_coords ~tag:`TEXT ~x ~y in
+              let where = self#get_iter_at_location ~x ~y in
+              let start, stop = buffer#selection_bounds in
+              let start, stop = if start#compare stop > 0 then stop, start else start, stop in
+              if where#in_range ~start ~stop then begin
+                buffer#place_cursor ~where;
+                let a, b = self#obuffer#select_word ~pat:Ocaml_word_bound.part () in
+                if a#equal start && b#equal stop then begin
                   buffer#place_cursor ~where;
-                  let a, b = self#obuffer#select_word ~pat:Ocaml_word_bound.part () in
-                  if a#equal start && b#equal stop then begin
-                    buffer#place_cursor ~where;
-                    false
-                  end else true; (* true *)
-                end else false;
-            | _ -> false
-          end else false
-        end);
+                  false
+                end else true; (* true *)
+              end else false;
+          | _ -> false
+        end else false
+      end |> ignore
   end

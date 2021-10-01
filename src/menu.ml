@@ -564,6 +564,7 @@ let window ~browser ~group ~flags
   (** Last Edit Location *)
   let last_edit_location = GMenu.image_menu_item ~label:"Last Edit Location" ~packing:menu#append () in
   last_edit_location#add_accelerator ~group ~modi:[`MOD1] GdkKeysyms._End ~flags;
+  last_edit_location#add_accelerator ~group ~modi:[`MOD1] GdkKeysyms._KP_End ~flags;
   last_edit_location#set_image (GMisc.image ~pixbuf:Icons.goto_last ~icon_size:`MENU ())#coerce;
   ignore (last_edit_location#connect#activate ~callback:(fun () -> browser#goto_location `LAST));
   get_menu_item_nav_history_last := (fun () -> last_edit_location);
