@@ -21,8 +21,6 @@
 *)
 
 
-open Miscellanea
-
 class manager ~view =
   let buffer = view#tbuffer in
   object (self)
@@ -50,7 +48,24 @@ class manager ~view =
       self#clear();
       match view#options#mark_occurrences with
       | true, _ ->
-          let text = String.trim (buffer#selection_text ()) in
+          let text = buffer#selection_text () in
+          let text = 
+            if text = "" then begin 
+              let (start : GText.iter), (stop : GText.iter) = 
+                buffer#select_word 
+                  ?iter:None 
+                  ?pat:(Some Ocaml_word_bound.regexp) 
+                  ?select:(Some false) 
+                  ?search:(Some true) () 
+              in
+              buffer#get_text 
+                ?start:(Some start) 
+                ?stop:(Some stop) 
+                ?slice:(Some false)
+                ?visible:(Some false) ()
+            end else text 
+          in
+          let text = text |> String.trim in
           if String.length text > 1 && not (String.contains text '\n') && not (String.contains text '\r') then begin
             (*let vrect = view#visible_rect in
               let h0 = Gdk.Rectangle.height vrect in
