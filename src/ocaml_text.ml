@@ -360,7 +360,8 @@ and view ?project ?buffer () =
         if GdkEvent.Button.button ev = 1 && smart_click then begin
           match GdkEvent.get_type ev with
           | `TWO_BUTTON_PRESS ->
-              self#obuffer#select_word ~pat:Ocaml_word_bound.regexp () |> ignore;
+              Gmisclib.Idle.add ~prio:100 (fun () ->
+                  self#obuffer#select_word ~pat:Ocaml_word_bound.regexp () |> ignore);
               true (* true *)
           | `BUTTON_PRESS when buffer#has_selection ->
               let x = int_of_float (GdkEvent.Button.x ev) in
