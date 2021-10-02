@@ -53,7 +53,7 @@ class manager ~view =
         ?select:(Some false) 
         ?search:(Some true) () 
 
-    method private get_text start stop =
+    method private get_text (start, stop) =
       buffer#get_text 
         ?start:(Some start) 
         ?stop:(Some stop) 
@@ -66,10 +66,8 @@ class manager ~view =
       | true, under_cursor, _ ->
           let text = buffer#selection_text () in
           let text = 
-            if text = "" then begin 
-              let (start : GText.iter), (stop : GText.iter) = self#get_word_at_iter () in
-              self#get_text start stop;
-            end else text 
+            if text = "" then self#get_word_at_iter () |> self#get_text 
+            else text 
           in
           let text = text |> String.trim in
           if String.length text > 1 && not (String.contains text '\n') && not (String.contains text '\r') then begin
@@ -85,8 +83,10 @@ class manager ~view =
             while !iter#compare stop < 0 do
               match !iter#forward_search ?flags:None ?limit:(Some stop) text with
               | Some (a, b) ->
-                  let start, stop = self#get_word_at_iter ~iter:a () in
-                  if match_whole_word_only => (text = self#get_text start stop) then begin
+                  let found = 
+                    match_whole_word_only => (self#get_word_at_iter ~iter:a () |> self#get_text |> (=) text) 
+                  in
+                  if found then begin
                     buffer#apply_tag tag ~start:a ~stop:b;
                     let m1 = `MARK (buffer#create_mark ?name:None ?left_gravity:None a) in
                     let m2 = `MARK (buffer#create_mark ?name:None ?left_gravity:None b) in
