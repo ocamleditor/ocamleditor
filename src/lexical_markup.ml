@@ -54,7 +54,7 @@ let tag_lident = function
 
 let parse pref =
   let tags = pref.Preferences.pref_tags in
-  let _, bgcolor_highlight = Preferences.preferences#get.Preferences.pref_editor_mark_occurrences in
+  let _, _, bgcolor_highlight = Preferences.preferences#get.Preferences.pref_editor_mark_occurrences in
   let span_highlight text =
     String.concat "" ["<span bgcolor='"; bgcolor_highlight; "'>"; (Glib.Markup.escape_text text); "</span>"]
   in

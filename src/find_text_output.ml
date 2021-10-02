@@ -502,7 +502,7 @@ class widget
           in
           let old_error_indication_enabled = page#error_indication#enabled in
           let old_mark_occurrences = page#view#options#mark_occurrences in
-          page#view#options#set_mark_occurrences (false, "");
+          page#view#options#set_mark_occurrences (false, false, "");
           page#error_indication#set_enabled false;
           page#buffer#undo#begin_block ~name:"replace";
           buffers := page#buffer :: !buffers;

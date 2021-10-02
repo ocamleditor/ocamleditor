@@ -47,7 +47,7 @@ class manager ~view =
     method mark () =
       self#clear();
       match view#options#mark_occurrences with
-      | true, _ ->
+      | true, under_cursor, _ ->
           let text = buffer#selection_text () in
           let text = 
             if text = "" then begin 
