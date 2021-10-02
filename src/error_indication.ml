@@ -382,7 +382,7 @@ class error_indication (view : Ocaml_text.view) (global_gutter : GMisc.drawing_a
         (* Mark Occurrences *)
         begin
           match Preferences.preferences#get.Preferences.pref_editor_mark_occurrences with
-          | true, color ->
+          | true, under_cursor, color ->
               let bg = `NAME color in
               let border = `NAME (Color.add_value color ~sfact:0.75 0.13) in
               List.iter begin fun (m1, m2) ->

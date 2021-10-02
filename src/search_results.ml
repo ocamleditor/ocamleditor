@@ -354,7 +354,7 @@ class widget ~editor(* : Editor.editor)*) ?packing () =
                             let start = buffer#get_iter (`MARK mark_start) in
                             let stop = buffer#get_iter (`MARK mark_stop) in
                             let old = page#view#options#mark_occurrences in
-                            page#view#options#set_mark_occurrences (false, "");
+                            page#view#options#set_mark_occurrences (false, false, "");
                             buffer#select_range start stop;
                             page#ocaml_view#scroll_lazy start;
                             editor#goto_view page#view;
