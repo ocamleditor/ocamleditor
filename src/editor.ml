@@ -460,8 +460,8 @@ class editor () =
         buffer#add_signal_handler (buffer#connect#insert_text ~callback);
         buffer#add_signal_handler (buffer#connect#after#delete_range ~callback:(fun ~start ~stop -> callback start stop));
         (* Mark Set *)
-        let mark_occurrences, under_cursor, _ = view#options#mark_occurrences in
         buffer#add_signal_handler (buffer#connect#after#mark_set ~callback:begin fun _ mark ->
+            let mark_occurrences, under_cursor, _ = view#options#mark_occurrences in
             let is_insert = match GtkText.Mark.get_name mark with Some "insert" -> true | _ -> false in
             if mark_occurrences && under_cursor then
               Timeout.set tout_fast 0 page#view#mark_occurrences_manager#mark;
