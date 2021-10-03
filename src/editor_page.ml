@@ -276,11 +276,7 @@ class page ?file ~project ~scroll_offset ~offset ~editor () =
       ocaml_view#code_folding#set_enabled (x && is_ml);
 
     method redisplay () =
-      if buffer#lexical_enabled then begin
-        buffer#init_tags ();
-        let buffer = (buffer :> GText.buffer) in
-        Lexical.tag buffer;
-      end;
+      crono ~label:"Redisplay:colorize" Colorize.colorize_buffer ocaml_view;
       Preferences_apply.apply view Preferences.preferences#get;
       self#set_code_folding_enabled Preferences.preferences#get.Preferences.pref_code_folding_enabled;
       ocaml_view#code_folding#set_fold_line_color ocaml_view#options#text_color;
@@ -379,21 +375,21 @@ class page ?file ~project ~scroll_offset ~offset ~editor () =
       | Some file ->
           begin
             try
+              view#misc#hide();
               self#set_code_folding_enabled false;
               buffer#insert (Project.convert_to_utf8 project file#read);
-              (* Initial cursor position *)
-              if scroll then begin
-                Gmisclib.Idle.add begin fun () ->
+              (* Initial cursor position and syntax highlighting *)
+              Gmisclib.Idle.add begin fun () ->
+                if scroll then begin
+                  let where = buffer#get_iter (`OFFSET scroll_offset) in
+                  self#view#scroll_to_iter ~use_align:(self#view#scroll_to_iter where) ~xalign:1.0 where |> ignore;
                   let where = buffer#get_iter (`OFFSET offset) in
                   buffer#place_cursor ~where;
-                  let where = buffer#get_iter (`OFFSET scroll_offset) in
-                  Gmisclib.Idle.add ~prio:300 begin fun () ->
-                    ignore (self#view#scroll_to_iter ~use_align:(self#view#scroll_to_iter where) ~xalign:1.0 where);
-                  end
                 end;
+                Colorize.colorize_buffer ocaml_view;
+                view#misc#show();
+                view#misc#grab_focus();
               end;
-              (* Colorize *)
-              if buffer#lexical_enabled then (Lexical.tag self#view#buffer);
               buffer#set_modified false;
               begin
                 match signal_buffer_changed with
