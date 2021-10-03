@@ -16,7 +16,7 @@ bug-reports: "https://github.com/ftovagliari/ocamleditor/issues"
 dev-repo: "git+https://github.com/ftovagliari/ocamleditor.git"
 
 build: [["ocaml" "build.ml" "ocamleditor"]]
-install: [["ocaml" "install.ml" "-prefix" prefix]]
+install: [["ocaml" "tools/install.ml" "-prefix" prefix]]
 
 depends: [
   "ocaml" {>= "4.13" & < "4.14"}
