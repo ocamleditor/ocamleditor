@@ -356,12 +356,23 @@ and view ?project ?buffer () =
       self#create_highlight_current_line_tag(); (* recreate current line tag after code folding highlight to draw it above *)
       (* Double-click selects OCaml identifiers; click on a selected range
          reduces the selection to part of the identifier. *)
+      let two_button_press = ref false in
+      self#event#connect#button_release ~callback:begin fun ev ->
+        if GdkEvent.Button.button ev = 1 && smart_click then begin
+          match GdkEvent.get_type ev with
+          | `BUTTON_RELEASE when !two_button_press ->
+              two_button_press := false;
+              self#obuffer#select_word ~pat:Ocaml_word_bound.regexp () |> ignore;
+              false;
+          | _ -> false
+        end else false
+      end |> ignore;
       self#event#connect#button_press ~callback:begin fun ev ->
         if GdkEvent.Button.button ev = 1 && smart_click then begin
           match GdkEvent.get_type ev with
           | `TWO_BUTTON_PRESS ->
-              Gmisclib.Idle.add ~prio:100 (fun () ->
-                  self#obuffer#select_word ~pat:Ocaml_word_bound.regexp () |> ignore);
+              two_button_press := true;
+              self#obuffer#select_word ~pat:Ocaml_word_bound.regexp () |> ignore;
               true (* true *)
           | `BUTTON_PRESS when buffer#has_selection ->
               let x = int_of_float (GdkEvent.Button.x ev) in
