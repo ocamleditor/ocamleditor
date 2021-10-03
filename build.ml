@@ -3155,40 +3155,9 @@ let targets = [
   };
   
   (* 2 *)
-  "stdlib_pp", {
-    descr                = "";
-    num                  = 2;
-    id                   = 28;
-    output_name          = "stdlib_pp/stdlib_pp";
-    target_type          = Executable;
-    compilation_bytecode = true;
-    compilation_native   = true;
-    toplevel_modules     = "stdlib_pp/stdlib_pp.ml";
-    package              = "";
-    search_path          = "stdlib_pp"; (* -I *)
-    required_libraries   = "";
-    compiler_flags       = "";
-    linker_flags         = "";
-    thread               = false;
-    vmthread             = false;
-    pp                   = "";
-    inline               = Some 20;
-    nodep                = false;
-    dontlinkdep          = false;
-    dontaddopt           = false;
-    library_install_dir  = ""; (* Relative to the Standard Library Directory *)
-    other_objects        = "";
-    external_tasks       = [];
-    restrictions         = [];
-    dependencies         = [20];
-    show                 = true;
-    rc_filename          = None;
-  };
-  
-  (* 3 *)
   "gmisclib", {
     descr                = "Miscellaneous widgets based on LablGtk2.";
-    num                  = 3;
+    num                  = 2;
     id                   = 8;
     output_name          = "gmisclib";
     target_type          = Library;
@@ -3216,7 +3185,7 @@ let targets = [
     rc_filename          = None;
   };
   
-  (* 3 *)
+  (* 2 *)
   "otherwidgets", {
     descr                = "";
     num                  = 0;
@@ -3247,10 +3216,10 @@ let targets = [
     rc_filename          = None;
   };
   
-  (* 4 *)
+  (* 3 *)
   "ocamleditor", {
     descr                = "";
-    num                  = 4;
+    num                  = 3;
     id                   = 12;
     output_name          = "ocamleditor";
     target_type          = Executable;
@@ -3278,10 +3247,10 @@ let targets = [
     rc_filename          = None;
   };
   
-  (* 5 *)
+  (* 4 *)
   "ocamleditor-bytecode", {
     descr                = "";
-    num                  = 5;
+    num                  = 4;
     id                   = 0;
     output_name          = "ocamleditor";
     target_type          = Executable;
@@ -3309,10 +3278,10 @@ let targets = [
     rc_filename          = None;
   };
   
-  (* 6 *)
+  (* 5 *)
   "ocamleditor-msvc", {
     descr                = "";
-    num                  = 6;
+    num                  = 5;
     id                   = 15;
     output_name          = "ocamleditor";
     target_type          = Executable;
@@ -3340,10 +3309,10 @@ let targets = [
     rc_filename          = Some ".\\ocamleditor.opt.resource.rc";
   };
   
-  (* 7 *)
+  (* 6 *)
   "ocamleditor-native", {
     descr                = "";
-    num                  = 7;
+    num                  = 6;
     id                   = 11;
     output_name          = "ocamleditor";
     target_type          = Executable;
@@ -3371,10 +3340,10 @@ let targets = [
     rc_filename          = None;
   };
   
-  (* 8 *)
+  (* 7 *)
   "ocamleditor-lib", {
     descr                = "";
-    num                  = 8;
+    num                  = 7;
     id                   = 14;
     output_name          = "ocamleditor_lib";
     target_type          = Library;
@@ -3402,10 +3371,10 @@ let targets = [
     rc_filename          = None;
   };
   
-  (* 9 *)
+  (* 8 *)
   "plugin-remote-bytecode", {
     descr                = "";
-    num                  = 9;
+    num                  = 8;
     id                   = 17;
     output_name          = "../plugins/remote";
     target_type          = Library;
@@ -3433,10 +3402,10 @@ let targets = [
     rc_filename          = None;
   };
   
-  (* 10 *)
+  (* 9 *)
   "plugin-remote-native", {
     descr                = "";
-    num                  = 10;
+    num                  = 9;
     id                   = 16;
     output_name          = "../plugins/remote";
     target_type          = Plugin;
@@ -3464,10 +3433,10 @@ let targets = [
     rc_filename          = None;
   };
   
-  (* 11 *)
+  (* 10 *)
   "plugin-dotviewer-bytecode", {
     descr                = "";
-    num                  = 11;
+    num                  = 10;
     id                   = 18;
     output_name          = "../plugins/dot_viewer_svg";
     target_type          = Library;
@@ -3495,10 +3464,10 @@ let targets = [
     rc_filename          = None;
   };
   
-  (* 12 *)
+  (* 11 *)
   "plugin-dotviewer-native", {
     descr                = "";
-    num                  = 12;
+    num                  = 11;
     id                   = 19;
     output_name          = "../plugins/dot_viewer_svg";
     target_type          = Plugin;
@@ -3526,10 +3495,10 @@ let targets = [
     rc_filename          = None;
   };
   
-  (* 13 *)
+  (* 12 *)
   "plugin-diff-bytecode", {
     descr                = "";
-    num                  = 13;
+    num                  = 12;
     id                   = 25;
     output_name          = "../plugins/plugin_diff";
     target_type          = Library;
@@ -3557,10 +3526,10 @@ let targets = [
     rc_filename          = None;
   };
   
-  (* 14 *)
+  (* 13 *)
   "plugin-diff-native", {
     descr                = "";
-    num                  = 14;
+    num                  = 13;
     id                   = 26;
     output_name          = "../plugins/plugin_diff";
     target_type          = Plugin;
@@ -3588,7 +3557,7 @@ let targets = [
     rc_filename          = None;
   };
   
-  (* 14 *)
+  (* 13 *)
   "prepare-build", {
     descr                = "";
     num                  = 0;
@@ -3619,10 +3588,10 @@ let targets = [
     rc_filename          = None;
   };
   
-  (* 15 *)
+  (* 14 *)
   "launcher", {
     descr                = "Utility to open OCaml files from the file manager";
-    num                  = 15;
+    num                  = 14;
     id                   = 22;
     output_name          = "ocamleditorw";
     target_type          = Executable;
@@ -3650,7 +3619,7 @@ let targets = [
     rc_filename          = Some ".\\ocamleditorw.resource.rc";
   };
   
-  (* 15 *)
+  (* 14 *)
   "tools", {
     descr                = "";
     num                  = 0;
@@ -3681,7 +3650,7 @@ let targets = [
     rc_filename          = None;
   };
   
-  (* 15 *)
+  (* 14 *)
   "FINDLIB-TOOLS", {
     descr                = "";
     num                  = 0;

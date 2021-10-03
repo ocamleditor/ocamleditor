@@ -43,7 +43,6 @@ let prepare_build () =
     if not (Sys.file_exists "../plugins") then (mkdir "../plugins");
     run "ocamllex err_lexer.mll";
     run "ocamlyacc err_parser.mly";
-    run "ocamllex stdlib_pp/stdlib_pp.mll";
     if not is_win32 then begin
       (* Disabled because on Windows it changes the file permissions of oe_config.ml
          forcing it to be recompiled for plugins.*)
