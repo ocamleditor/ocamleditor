@@ -89,8 +89,6 @@ You will need the free NSIS install system (http://nsis.sourceforge.net).";
     end else (sys_command [cp; filename; !!(bin^"/ocamleditor"^exe)]);
     let filename = if Sys.file_exists ("oebuild/oebuild.opt" ^ exe) then ("oebuild/oebuild.opt" ^ exe) else ("oebuild/oebuild" ^ exe) in
     sys_command [cp; !!filename; !!bin];
-    let filename = if Sys.file_exists ("stdlib_pp/stdlib_pp.opt" ^ exe) then ("stdlib_pp/stdlib_pp.opt" ^ exe) else ("stdlib_pp/stdlib_pp" ^ exe) in
-    sys_command [cp; !!filename; !!bin];
     if Sys.win32 && is_mingw then begin
       let basename = "ocamleditor-mingw.bat" in
       sys_command [cp; basename; !!bin];
