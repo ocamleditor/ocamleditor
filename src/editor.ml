@@ -756,14 +756,22 @@ class editor () =
       end;
 
     method redisplay_views () =
-      self#with_current_page begin fun page ->
-        Gmisclib.Idle.add page#redisplay;
-        Gmisclib.Idle.add ~prio:400 (fun () -> page#compile_buffer ?join:None ());
-        List.iter (fun p -> if p != page then begin
-            Gmisclib.Idle.add ~prio:300 p#redisplay;
-            (*Gmisclib.Idle.add ~prio:400 (fun () -> p#compile_buffer ());*)
-          end) pages;
-      end;
+      self#with_current_page begin fun current_page ->
+        Gmisclib.Idle.add ~prio:100 current_page#redisplay;
+        Gmisclib.Idle.add ~prio:300 (fun () -> current_page#compile_buffer ?join:None ());
+        pages 
+        |> List.filter ((<>) current_page)
+        |> List.iter begin fun p ->
+          let sig_id = ref None in
+          sig_id := Some (self#connect#switch_page ~callback:begin fun cp ->
+              if p = cp then begin
+                Gmisclib.Idle.add ~prio:200 p#redisplay;
+                (*Gmisclib.Idle.add ~prio:400 (fun () -> p#compile_buffer ());*)
+                Gaux.may !sig_id ~f:self#disconnect 
+              end
+            end)
+        end
+      end
 
     method i_search () =
       self#with_current_page begin fun page ->
