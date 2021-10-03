@@ -22,18 +22,38 @@
 
 
 open Printf
-open Miscellanea
 open Odoc_info
 
+let strip_prefix = Miscellanea.strip_prefix
+
+(** In olden times life was simpler, [arg.mli] was compiled to [arg.cmi],
+    [bool.mli] to [bool.cmi] and so on.
+
+    Then from some version of OCaml to version 4.12 the rules have changed
+    for Stdlib and [arg.mli] was compiled to [stdlib__arg.cmi] and so on.
+
+    Then in version 4.13 things have changes again and [arg.mli] is compiled
+    to [stdlib_Arg.cmi]. So here we are.
+*)
+let stdlib_workaround filename =
+  let dirname = Filename.dirname filename in
+  let basename = Filename.basename filename in
+  let stripped = strip_prefix "stdlib__" basename in
+  if stripped = basename then
+    Filename.concat dirname basename
+  else
+    Filename.concat dirname @@ String.uncapitalize_ascii stripped
 module Database =
 struct
   (** ocamldoc_command *)
   let ocamldoc_command ~project ~filename () =
     try
       let file =
-        let mli = sprintf "%s.mli" (Filename.chop_extension filename) in
+        let basename = Filename.chop_extension filename in
+        let basename = stdlib_workaround basename in
+        let mli = sprintf "%s.mli" basename in
         if Sys.file_exists mli then Some mli else
-          let ml = sprintf "%s.ml" (Filename.chop_extension filename) in
+          let ml = sprintf "%s.ml" basename in
           if Sys.file_exists ml then Some ml else
             None
       in
@@ -46,47 +66,21 @@ struct
               Array.concat [
                 [|
                   "-dump";
-                  ((*Shell.quote_arg *)out_filename);
+                  out_filename;
                   "-I"; "+threads";
                 |];
                 (Array.of_list (Miscellanea.split " +" search_path));
                 [|
-                  (*Shell.quote_arg*) file;
+                  file;
                 |]
               ]
             in
-            ignore (Spawn.sync (*~process_in:Spawn.redirect_to_stdout ~process_err:Spawn.redirect_to_stderr*) (Ocaml_config.ocamldoc()) args);
+            ignore (Spawn.sync (Ocaml_config.ocamldoc()) args);
             Some out_filename
         | _ -> None
       end;
     with Invalid_argument _ -> None;;
 
-  (*(** read *)
-    let read (project, filename) =
-    let odoc = ocamldoc ~project ~filename () in
-    let time = Unix.gettimeofday () in
-    match odoc with
-      | Some filename ->
-        let module_list = Odoc_info.load_modules filename in
-        let elements = Odoc_info.Search.search_by_name module_list (Miscellanea.regexp "") in
-        let i = ref (-1) in
-        let elements = List.map begin fun res ->
-          incr i;
-          match res with
-            | Search.Res_type elem -> (!i, elem.Type.ty_name, Some Oe.Ptype), res
-            | Search.Res_value elem -> (!i, elem.Value.val_name, Some Oe.Pvalue), res
-            | Search.Res_module elem -> (!i, elem.Module.m_name, Some Oe.Pmodule), res
-            | Search.Res_module_type elem -> (!i, elem.Module.mt_name, Some Oe.Pmodtype), res
-            | Search.Res_class elem -> (!i, elem.Class.cl_name, Some Oe.Pclass), res
-            | Search.Res_class_type elem -> (!i, elem.Class.clt_name, Some Oe.Pcltype), res
-            | Search.Res_exception elem -> (!i, elem.Exception.ex_name, Some Oe.Pexception), res
-            | Search.Res_attribute elem -> (!i, elem.Value.att_value.Value.val_name, Some Oe.Pattribute), res
-            | Search.Res_method elem -> (!i, elem.Value.met_value.Value.val_name, Some Oe.Pmethod), res
-            | Search.Res_section (name, text) -> (!i, name, None), res
-        end elements in
-        if Sys.file_exists filename then (Sys.remove filename);
-        elements, time
-      | _ -> [], time;;*)
 
   let read' (project, filename) =
     let odoc = ocamldoc_command ~project ~filename () in
@@ -121,7 +115,7 @@ struct
   let find_module ~project ~symbol =
     let module_list = read ~project ~symbol in
     let module_name = Symbols.get_module_name symbol in
-    List_opt.find (fun m -> m.Odoc_info.Module.m_name = module_name) module_list
+    List.find_opt (fun m -> m.Odoc_info.Module.m_name = module_name) module_list
 
 end
 
@@ -132,8 +126,7 @@ struct
 
   let insert_newline ~(buffer : GText.buffer) ftag =
     let (!!) = ftag in
-    (*let iter = buffer#get_iter `INSERT in
-      if iter#line_index > 0 then*) (buffer#insert ~tags:[!!`LINE_SPACING_SMALL] "\n");;
+    buffer#insert ~tags:[!!`LINE_SPACING_SMALL] "\n";;
 
   let concat_raw_text text =
     let repl = if !pending_newline then (pending_newline := false; "") else "\n" in
