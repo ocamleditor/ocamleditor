@@ -57,11 +57,13 @@ class pref_editor_display title ?packing () =
   let rm_button                    = GButton.color_button ~packing:(rm_hbox#pack ~fill:false) () in
   let _                            = rm_button#set_relief `NONE in
   let mo_vbox                      = GPack.vbox ~spacing:5 ~packing:box#pack () in
-  let check_mark_occurrences       = GButton.check_button ~active:false ~label:"Highlight all occurrences of the selected word" ~packing:mo_vbox#pack () in
+  let check_mark_occurrences       = GButton.check_button ~active:false ~label:"Highlight all occurrences of selected text" ~packing:mo_vbox#pack () in
   let mo_align                     = GBin.alignment ~padding:(0, 0, indent, 0) ~packing:mo_vbox#add () in
-  let mo_hbox                      = GPack.hbox ~spacing:5 ~packing:mo_align#add () in
-  let _                            = GMisc.label ~text:"Color:" ~packing:mo_hbox#pack () in
-  let mo_button                    = GButton.color_button ~packing:(mo_hbox#pack ~fill:false) () in
+  let mo_vbox                      = GPack.vbox ~spacing:5 ~packing:mo_align#add () in
+  let check_mo_uc                  = GButton.check_button ~active:false ~label:"Highlight related keywords under cursor" ~packing:mo_vbox#pack () in
+  let mo_cbox                      = GPack.hbox ~spacing:5 ~packing:mo_vbox#add () in
+  let _                            = GMisc.label ~text:"Color:" ~packing:mo_cbox#pack () in
+  let mo_button                    = GButton.color_button ~packing:(mo_cbox#pack ~fill:false) () in
   let _                            = mo_button#set_relief `NONE in
   let check_thick_caret            = GButton.check_button ~label:"Enable thick caret" ~packing:box#pack () in
   object
@@ -72,7 +74,7 @@ class pref_editor_display title ?packing () =
           entry_right_margin#misc#set_sensitive check_right_margin#active;
         end);
       ignore (check_mark_occurrences#connect#toggled ~callback:begin fun () ->
-          mo_hbox#misc#set_sensitive check_mark_occurrences#active
+          mo_vbox#misc#set_sensitive check_mark_occurrences#active
         end);
       ignore (check_highlight_current_line#connect#toggled ~callback:begin fun () ->
           check_current_line_border#misc#set_sensitive check_highlight_current_line#active
@@ -96,7 +98,7 @@ class pref_editor_display title ?packing () =
       pref.Preferences.pref_code_folding_enabled <- check_code_folding#active;
       pref.Preferences.pref_show_global_gutter <- check_global_gutter#active;
       let color = color_name mo_button#color in
-      pref.Preferences.pref_editor_mark_occurrences <- check_mark_occurrences#active, color;
+      pref.Preferences.pref_editor_mark_occurrences <- check_mark_occurrences#active, check_mo_uc#active, color;
       pref.Preferences.pref_editor_dot_leaders <- check_show_dot_leaders#active;
       pref.Preferences.pref_editor_current_line_border <- check_current_line_border#active;
       pref.Preferences.pref_editor_indent_lines_color_s <- color_name il_button_solid#color;
@@ -116,9 +118,10 @@ class pref_editor_display title ?packing () =
       rm_button#set_color (GDraw.color (`NAME pref.Preferences.pref_right_margin_color));
       check_code_folding#set_active (pref.Preferences.pref_code_folding_enabled);
       check_global_gutter#set_active (pref.Preferences.pref_show_global_gutter);
-      let enabled, color = pref.Preferences.pref_editor_mark_occurrences in
+      let enabled, under_cursor, color = pref.Preferences.pref_editor_mark_occurrences in
       check_mark_occurrences#set_active (not enabled);
       check_mark_occurrences#set_active enabled;
+      check_mo_uc#set_active under_cursor;
       mo_button#set_color (GDraw.color (`NAME color));
       check_show_dot_leaders#set_active pref.Preferences.pref_editor_dot_leaders;
       check_current_line_border#set_active pref.Preferences.pref_editor_current_line_border;

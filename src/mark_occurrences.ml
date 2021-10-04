@@ -21,10 +21,10 @@
 *)
 
 
-open Miscellanea
-
 class manager ~view =
   let buffer = view#tbuffer in
+  let [@inline] (=>) a b = not a || b in
+  let match_whole_word_only = true in
   object (self)
     val mark_set = new mark_set ()
     val tag = buffer#create_tag ?name:(Some "mark_occurrences") []
@@ -46,11 +46,30 @@ class manager ~view =
         mark_set#call()
       end
 
+    method private get_word_at_iter ?iter () =
+      buffer#select_word 
+        ?iter 
+        ?pat:(Some Ocaml_word_bound.regexp) 
+        ?select:(Some false) 
+        ?search:(Some true) () 
+
+    method private get_text (start, stop) =
+      buffer#get_text 
+        ?start:(Some start) 
+        ?stop:(Some stop) 
+        ?slice:(Some false)
+        ?visible:(Some false) ()
+
     method mark () =
       self#clear();
       match view#options#mark_occurrences with
-      | true, _ ->
-          let text = String.trim (buffer#selection_text ()) in
+      | true, under_cursor, _ ->
+          let text = buffer#selection_text () in
+          let text = 
+            if text = "" then self#get_word_at_iter () |> self#get_text 
+            else text 
+          in
+          let text = text |> String.trim in
           if String.length text > 1 && not (String.contains text '\n') && not (String.contains text '\r') then begin
             (*let vrect = view#visible_rect in
               let h0 = Gdk.Rectangle.height vrect in
@@ -64,11 +83,16 @@ class manager ~view =
             while !iter#compare stop < 0 do
               match !iter#forward_search ?flags:None ?limit:(Some stop) text with
               | Some (a, b) ->
+                  let found = 
+                    match_whole_word_only => (self#get_word_at_iter ~iter:a () |> self#get_text |> (=) text) 
+                  in
+                  if found then begin
+                    buffer#apply_tag tag ~start:a ~stop:b;
+                    let m1 = `MARK (buffer#create_mark ?name:None ?left_gravity:None a) in
+                    let m2 = `MARK (buffer#create_mark ?name:None ?left_gravity:None b) in
+                    table <- (m1, m2) :: table;
+                  end;
                   iter := b;
-                  buffer#apply_tag tag ~start:a ~stop:b;
-                  let m1 = `MARK (buffer#create_mark ?name:None ?left_gravity:None a) in
-                  let m2 = `MARK (buffer#create_mark ?name:None ?left_gravity:None b) in
-                  table <- (m1, m2) :: table;
               | _ -> iter := stop
             done;
             if table <> [] then mark_set#call()

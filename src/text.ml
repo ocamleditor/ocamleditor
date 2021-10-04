@@ -809,7 +809,7 @@ and view ?project ?buffer () =
     initializer
       ignore (options#connect#mark_occurrences_changed ~callback:(fun _ -> self#mark_occurrences_manager#mark()));
       ignore (options#connect#after#mark_occurrences_changed ~callback:begin function
-        | true, color ->
+        | true, _, color ->
             self#mark_occurrences_manager#tag#set_property (`BACKGROUND_GDK (GDraw.color (`NAME color)));
         | _ -> ()
         end);
@@ -881,7 +881,7 @@ and view ?project ?buffer () =
         let mark = ref None in
         begin fun ~name ->
           old_mark_occurrences := Some self#options#mark_occurrences;
-          self#options#set_mark_occurrences (false, "");
+          self#options#set_mark_occurrences (false, false, "");
           mark := Some (buffer#create_mark(* ~name:(Gtk_util.create_mark_name "Text.initializer")*) (buffer#get_iter `INSERT))
         end,
         begin fun ~name ->

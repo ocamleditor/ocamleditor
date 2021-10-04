@@ -44,7 +44,7 @@ type t = {
   mutable pref_editor_trim_lines            : bool;
   mutable pref_editor_format_on_save        : bool;
   mutable pref_editor_custom_templ_filename : string;
-  mutable pref_editor_mark_occurrences      : bool * string;
+  mutable pref_editor_mark_occurrences      : bool * bool * string; (* enabled, under_cursor, color *)
   mutable pref_editor_left_margin           : int;
   mutable pref_editor_pixels_lines          : int * int;
   mutable pref_editor_save_all_bef_comp     : bool;
@@ -220,7 +220,7 @@ let create_defaults () = {
   pref_editor_trim_lines            = false;
   pref_editor_format_on_save        = false;
   pref_editor_custom_templ_filename = "";
-  pref_editor_mark_occurrences      = true, "#00FF00";
+  pref_editor_mark_occurrences      = true, true, "#C8FFC8";
   pref_editor_left_margin           = 1;
   pref_editor_pixels_lines          = 0,2;
   pref_editor_save_all_bef_comp     = true;
@@ -398,8 +398,10 @@ let to_xml pref =
         Xml.Element ("pref_editor_format_on_save", [], [Xml.PCData (string_of_bool pref.pref_editor_format_on_save)]);
         Xml.Element ("pref_editor_bak", [], [Xml.PCData (string_of_bool pref.pref_editor_bak)]);
         begin
-          let enabled, color = pref.pref_editor_mark_occurrences in
-          Xml.Element ("pref_editor_mark_occurrences", ["enabled", (string_of_bool enabled)], [Xml.PCData color]);
+          let enabled, under_cursor, color = pref.pref_editor_mark_occurrences in
+          Xml.Element ("pref_editor_mark_occurrences", 
+                       ["enabled", (string_of_bool enabled); 
+                        "under_cursor", (string_of_bool under_cursor)], [Xml.PCData color]);
         end;
         Xml.Element ("pref_editor_custom_templ_filename", [], [Xml.PCData (pref.pref_editor_custom_templ_filename)]);
         Xml.Element ("pref_editor_left_margin", [], [Xml.PCData (string_of_int pref.pref_editor_left_margin)]);
@@ -544,7 +546,11 @@ let from_file filename =
       | "pref_editor_format_on_save" -> pref.pref_editor_format_on_save <- bool_of_string (value node)
       | "pref_editor_bak" -> pref.pref_editor_bak <- bool_of_string (value node)
       | "pref_editor_custom_templ_filename" -> pref.pref_editor_custom_templ_filename <- value node
-      | "pref_editor_mark_occurrences" -> pref.pref_editor_mark_occurrences <- ((bool_of_string (Xml.attrib node "enabled")), value node)
+      | "pref_editor_mark_occurrences" -> 
+          pref.pref_editor_mark_occurrences <- (
+            (bool_of_string (Xml.attrib node "enabled")), 
+            (try bool_of_string (Xml.attrib node "under_cursor") with Xml.No_attribute _ -> true), 
+            value node)
       | "pref_editor_left_margin" -> pref.pref_editor_left_margin <- int_of_string (value node)
       | "pref_editor_pixels_lines" -> pref.pref_editor_pixels_lines <- (int_of_string (Xml.attrib node "above")), (int_of_string (Xml.attrib node "below"))
       | "pref_editor_save_all_bef_comp" -> pref.pref_editor_save_all_bef_comp <- (bool_of_string (value node))

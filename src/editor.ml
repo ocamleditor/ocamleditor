@@ -51,7 +51,7 @@ class editor () =
     val mutable pages_cache = []
     val mutable project = Project.create ~filename:"untitled.xyz" ()
     val tout_delim = Timeout.create ~delay:1.0 ~len:2 ()
-    val tout_fast = Timeout.create ~delay:0.3 ()
+    val tout_fast = Timeout.create ~delay:0.3 ~len:2 ()
     val location_history = Location_history.create()
     val mutable file_history =
       File_history.create
@@ -326,7 +326,7 @@ class editor () =
               let start = buffer#get_iter (`OFFSET (max 0 start)) in
               let stop = buffer#get_iter (`OFFSET (max 0 stop)) in
               let old = page#view#options#mark_occurrences in
-              page#view#options#set_mark_occurrences (false, "");
+              page#view#options#set_mark_occurrences (false, false, "");
               buffer#select_range start stop;
               page#ocaml_view#scroll_lazy start;
               page#view#options#set_mark_occurrences old
@@ -448,16 +448,20 @@ class editor () =
         buffer#add_signal_handler (buffer#connect#after#delete_range ~callback:(fun ~start ~stop -> callback start stop));
         (* Mark Set *)
         buffer#add_signal_handler (buffer#connect#after#mark_set ~callback:begin fun _ mark ->
+            let mark_occurrences, under_cursor, _ = view#options#mark_occurrences in
             let is_insert = match GtkText.Mark.get_name mark with Some "insert" -> true | _ -> false in
+            if mark_occurrences && under_cursor then
+              Timeout.set tout_fast 1 page#view#mark_occurrences_manager#mark;
             if buffer#has_selection then begin
               let start, stop = buffer#selection_bounds in
               let nlines = stop#line - start#line in
               let nchars = stop#offset - start#offset in
               kprintf page#status_pos_sel#set_text "%d (%d)" nlines nchars;
-              if is_insert then
-                Timeout.set tout_fast 0 page#view#mark_occurrences_manager#mark
+              if is_insert && mark_occurrences && not under_cursor then
+                Timeout.set tout_fast 1 page#view#mark_occurrences_manager#mark
             end else begin
-              page#view#mark_occurrences_manager#clear();
+              if mark_occurrences && not under_cursor then 
+                page#view#mark_occurrences_manager#clear();
               page#status_pos_sel#set_text "0";
             end;
             if is_insert then Timeout.set tout_delim 0 (self#cb_tout_delim page)

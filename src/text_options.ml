@@ -41,7 +41,7 @@ class options () =
     val mutable smart_home = true;
     val mutable smart_end = true;
     val mutable word_wrap = false
-    val mutable mark_occurrences : (bool * string) = false, ""
+    val mutable mark_occurrences : (bool * bool * string) = false, false , ""
     val mutable visible_right_margin : (int * GDraw.color) option = None;
     val mutable line_numbers_font = ""
     val mutable mark_occurrences_changed = new mark_occurrences_changed ()
@@ -131,7 +131,7 @@ and line_numbers_font_changed () = object inherit [string] signal () end
 and highlight_current_line_changed () = object inherit [string option] signal () end
 and show_markers_changed () = object inherit [bool] signal () end
 and word_wrap_changed () = object inherit [bool] signal () end
-and mark_occurrences_changed () = object inherit [bool * string] signal () end
+and mark_occurrences_changed () = object inherit [bool * bool * string] signal () end
 
 and signals
     ~line_numbers_changed
