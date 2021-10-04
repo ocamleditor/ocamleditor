@@ -256,7 +256,7 @@ and view ?project ?buffer () =
 
     method modify_font fontname =
       self#misc#modify_font_by_name fontname;
-      approx_char_width <- GPango.to_pixels (self#misc#pango_context#get_metrics())#approx_char_width;
+      approx_char_width <- GPango.to_pixels (self#misc#pango_context#get_metrics())#approx_digit_width;
       Gmisclib.Idle.add self#draw_gutter
 
     method create_highlight_current_line_tag () =
@@ -480,7 +480,7 @@ and view ?project ?buffer () =
       let fixed = if options#show_markers then Gutter.icon_size + gutter_fold_size else 0 in
       let size =
         if options#show_line_numbers then begin
-          approx_char_width <- GPango.to_pixels (self#misc#pango_context#get_metrics())#approx_char_width;
+          approx_char_width <- GPango.to_pixels (self#misc#pango_context#get_metrics())#approx_digit_width;
           let max_line = buffer#end_iter#line in
           let n_chars = String.length (string_of_int (max_line + 1)) in
           gutter.Gutter.chars <- n_chars;

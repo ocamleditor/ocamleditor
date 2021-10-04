@@ -296,7 +296,7 @@ class page ?file ~project ~scroll_offset ~offset ~editor () =
       ocaml_view#code_folding#set_enabled (x && is_ml);
 
     method redisplay () =
-      crono ~label:"Redisplay:colorize" Colorize.colorize_buffer ocaml_view;
+      Colorize.colorize_buffer ocaml_view;
       Preferences_apply.apply view Preferences.preferences#get;
       self#set_code_folding_enabled Preferences.preferences#get.Preferences.pref_code_folding_enabled;
       ocaml_view#code_folding#set_fold_line_color ocaml_view#options#text_color;
