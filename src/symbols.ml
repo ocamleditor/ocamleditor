@@ -221,7 +221,7 @@ module Signature = struct
           in
           (* Costruttori di tipi varianti *)
           begin match type_declaration.type_kind with
-          | Type_variant cc ->
+          | Type_variant (cc, _) ->
               List.fold_left begin fun acc
                 { cd_id = ident; cd_args = tel; cd_res = teo; _ } ->
                 let n = Ident.name ident in

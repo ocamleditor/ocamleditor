@@ -135,9 +135,3 @@ let get_oebuild_command () =
     find_command "oebuild.opt";
     find_command "oebuild";
   ]
-
-let get_stdlib_pp_command =
-  find_best [
-    find_command "stdlib_pp.opt";
-    find_command "stdlib_pp"
-  ]

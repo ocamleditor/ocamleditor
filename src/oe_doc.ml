@@ -26,17 +26,23 @@ open Odoc_info
 
 let strip_prefix = Miscellanea.strip_prefix
 
-let strip_stdlib_prefix filename =
+(** In olden times life was simpler, [arg.mli] was compiled to [arg.cmi],
+    [bool.mli] to [bool.cmi] and so on.
+
+    Then from some version of OCaml to version 4.12 the rules have changed
+    for Stdlib and [arg.mli] was compiled to [stdlib__arg.cmi] and so on.
+
+    Then in version 4.13 things have changes again and [arg.mli] is compiled
+    to [stdlib_Arg.cmi]. So here we are.
+*)
+let stdlib_workaround filename =
   let dirname = Filename.dirname filename in
   let basename = Filename.basename filename in
-  let basename = strip_prefix "stdlib__" basename in
-  Filename.concat dirname basename
-
-let stdlib_preprocessor dir =
-  if dir = Ocaml_config.ocamllib () then
-    [| "-pp"; App_config.get_stdlib_pp_command; |]
+  let stripped = strip_prefix "stdlib__" basename in
+  if stripped = basename then
+    Filename.concat dirname basename
   else
-    [||]
+    Filename.concat dirname @@ String.uncapitalize_ascii stripped
 
 module Database =
 struct
@@ -44,7 +50,8 @@ struct
   let ocamldoc_command ~project ~filename () =
     try
       let file =
-        let basename = strip_stdlib_prefix @@ Filename.chop_extension filename in
+        let basename = Filename.chop_extension filename in
+        let basename = stdlib_workaround basename in
         let mli = sprintf "%s.mli" basename in
         if Sys.file_exists mli then Some mli else
           let ml = sprintf "%s.ml" basename in
@@ -58,7 +65,6 @@ struct
             let search_path = Project.get_search_path_i_format project in
             let args =
               Array.concat [
-                (stdlib_preprocessor @@ Filename.dirname filename);
                 [|
                   "-dump";
                   out_filename;

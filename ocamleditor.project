@@ -138,31 +138,6 @@
       <restrictions></restrictions>
       <dependencies>7</dependencies>
     </target>
-    <target name="stdlib_pp" default="false" id="28" sub_targets="" is_fl_package="false" subsystem="" readonly="false" visible="true" node_collapsed="false">
-      <descr></descr>
-      <byt>true</byt>
-      <opt>true</opt>
-      <libs></libs>
-      <other_objects></other_objects>
-      <files>stdlib_pp/stdlib_pp.ml</files>
-      <package></package>
-      <includes>stdlib_pp</includes>
-      <thread>false</thread>
-      <vmthread>false</vmthread>
-      <pp></pp>
-      <inline>20</inline>
-      <nodep>false</nodep>
-      <dontlinkdep>false</dontlinkdep>
-      <dontaddopt>false</dontaddopt>
-      <cflags></cflags>
-      <lflags></lflags>
-      <target_type>Executable</target_type>
-      <outname>stdlib_pp/stdlib_pp</outname>
-      <lib_install_path></lib_install_path>
-      <external_tasks/>
-      <restrictions></restrictions>
-      <dependencies>20</dependencies>
-    </target>
     <target name="gmisclib" default="false" id="8" sub_targets="" is_fl_package="true" subsystem="" readonly="false" visible="true" node_collapsed="false">
       <descr>Miscellaneous widgets based on LablGtk2.</descr>
       <byt>true</byt>
@@ -204,8 +179,8 @@
       <nodep>false</nodep>
       <dontlinkdep>false</dontlinkdep>
       <dontaddopt>false</dontaddopt>
-      <cflags>-w sy -g</cflags>
-      <lflags>-w sy -g</lflags>
+      <cflags>-w -s-y -g</cflags>
+      <lflags>-w -s-y -g</lflags>
       <target_type>Library</target_type>
       <outname>otherwidgets</outname>
       <lib_install_path></lib_install_path>
@@ -229,7 +204,7 @@
       <nodep>true</nodep>
       <dontlinkdep>false</dontlinkdep>
       <dontaddopt>false</dontaddopt>
-      <cflags>-w syxm -g</cflags>
+      <cflags>-w -s-y-x-m -g</cflags>
       <lflags>-g</lflags>
       <target_type>Executable</target_type>
       <outname>ocamleditor</outname>
@@ -254,7 +229,7 @@
       <nodep>false</nodep>
       <dontlinkdep>false</dontlinkdep>
       <dontaddopt>false</dontaddopt>
-      <cflags>-w syxm -g</cflags>
+      <cflags>-w -s-y-x-m -g</cflags>
       <lflags>-g</lflags>
       <target_type>Executable</target_type>
       <outname>ocamleditor</outname>
@@ -279,7 +254,7 @@
       <nodep>true</nodep>
       <dontlinkdep>false</dontlinkdep>
       <dontaddopt>false</dontaddopt>
-      <cflags>-w syxm -g</cflags>
+      <cflags>-w -s-y-x-m -g</cflags>
       <lflags>-g</lflags>
       <target_type>Executable</target_type>
       <outname>ocamleditor</outname>
@@ -328,7 +303,7 @@
       <nodep>false</nodep>
       <dontlinkdep>false</dontlinkdep>
       <dontaddopt>false</dontaddopt>
-      <cflags>-w syxm -g</cflags>
+      <cflags>-w -s-y-x-m -g</cflags>
       <lflags>-g</lflags>
       <target_type>Executable</target_type>
       <outname>ocamleditor</outname>
@@ -353,7 +328,7 @@
       <nodep>false</nodep>
       <dontlinkdep>false</dontlinkdep>
       <dontaddopt>false</dontaddopt>
-      <cflags>-w syxm -g</cflags>
+      <cflags>-w -s-y-x-m -g</cflags>
       <lflags>-g</lflags>
       <target_type>Library</target_type>
       <outname>ocamleditor_lib</outname>
@@ -428,7 +403,7 @@
       <nodep>false</nodep>
       <dontlinkdep>true</dontlinkdep>
       <dontaddopt>false</dontaddopt>
-      <cflags>-w syxm -g</cflags>
+      <cflags>-w -s-y-x-m -g</cflags>
       <lflags>-g lablrsvg.cma</lflags>
       <target_type>Library</target_type>
       <outname>../plugins/dot_viewer_svg</outname>
@@ -453,7 +428,7 @@
       <nodep>false</nodep>
       <dontlinkdep>true</dontlinkdep>
       <dontaddopt>false</dontaddopt>
-      <cflags>-g -w syxm</cflags>
+      <cflags>-g -w -s-y-x-m</cflags>
       <lflags>-g lablrsvg.cmxa</lflags>
       <target_type>Plugin</target_type>
       <outname>../plugins/dot_viewer_svg</outname>
@@ -826,7 +801,6 @@
       <target target_id="10" show="false"/>
       <target target_id="7" show="false"/>
       <target target_id="5" show="true"/>
-      <target target_id="28" show="true"/>
       <target target_id="8" show="true"/>
       <target target_id="9" show="false"/>
       <target target_id="12" show="true"/>
