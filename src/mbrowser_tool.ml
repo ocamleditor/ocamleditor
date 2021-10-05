@@ -379,7 +379,7 @@ class widget ~project ?(is_completion=false) ?(enable_history=true) ?width ?heig
             (*end else if key = GdkKeysyms._Right then begin
               button_layout_odoc#set_active true;
               self#update_module_details ~force:true ();
-              	Gmisclib.Idle.add odoc_view#misc#grab_focus;
+             	Gmisclib.Idle.add odoc_view#misc#grab_focus;
               true
               end else if key = GdkKeysyms._Left then begin
               button_layout_odoc#set_active false;
@@ -719,8 +719,8 @@ class widget ~project ?(is_completion=false) ?(enable_history=true) ?width ?heig
       wlib#vc_icon#set_visible false;
       wlib#vc_add_descr#set_visible true;
       if lib_path = project.Prj.ocamllib then
-        wlib#set_title (Filename.dirname lib_path) "Standard Library"
-      else (wlib#set_title (Filename.dirname lib_path) (Filename.basename lib_path));
+        wlib#set_title ~subtitle:(Filename.dirname lib_path) "Standard Library"
+      else (wlib#set_title ~subtitle:(Filename.dirname lib_path) (Filename.basename lib_path));
       self#push wlib;
       f wlib
 
@@ -826,7 +826,7 @@ class widget ~project ?(is_completion=false) ?(enable_history=true) ?width ?heig
         let entries = List.filter (fun s -> s.sy_id <> class_path) entries in
         let entries = List.sort (fun a b -> compare a.sy_id b.sy_id) entries in
         widget#fill entries;
-        widget#set_title lib_path (String.concat "." class_path);
+        widget#set_title ~subtitle:lib_path (String.concat "." class_path);
         self#push widget;
         ignore (self#connect#switch_page ~callback:begin fun cur ->
             if widget#misc#get_oid = cur#misc#get_oid then (self#update_class_details widget ())
