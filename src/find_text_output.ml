@@ -140,13 +140,13 @@ class widget
       preview#set_cursor_visible false;
       preview#set_pixels_above_lines 3;
       preview#set_pixels_below_lines 3;
-      preview#set_border_window_size `LEFT 0;
+      preview#set_border_window_size ~typ:`LEFT ~size:0;
       ignore (preview#buffer#connect#after#mark_set ~callback:begin fun iter mark ->
           match GtkText.Mark.get_name mark with
           | Some "insert" ->
               if preview#buffer#has_selection then begin
                 GtkSignal.stop_emit();
-                preview#buffer#place_cursor (preview#buffer#get_iter `SEL_BOUND)
+                preview#buffer#place_cursor ~where:(preview#buffer#get_iter `SEL_BOUND)
               end
           | _ -> ()
         end);
