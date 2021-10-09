@@ -177,7 +177,7 @@ let rec scan_folding_points_new =
             match token with
             | METHOD -> points := stop :: !points;
             | VAL -> points := stop :: !points;
-            | INITIALIZER -> points := stop :: !points;
+            | INITIALIZER -> ()
             | END -> ()
             | OBJECT -> ()
             | STRUCT -> ()
@@ -208,7 +208,7 @@ let find_folding_point_end text =
       match token with
       | METHOD -> result := Some start; raise Exit
       | INITIALIZER -> result := Some start; raise Exit
-      | VAL -> ()
+      | VAL -> result := Some start; raise Exit
       | END -> ()
       | _ -> ()
     end;

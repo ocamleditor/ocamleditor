@@ -37,6 +37,14 @@ type fold_iters = {
   fit_stop : GText.iter;
 }
 
+type marker_info = {
+  yv1 : int;
+  ym1 : int;
+  ys1 : int;
+  ys2 : int;
+  h1 : int;
+}
+
 let fold_size = 11 (*10 *)
 let dx = 5 (*4*)
 let dx1 = dx - 1
@@ -172,7 +180,6 @@ class manager ~(view : Text.view) =
     method private draw_line iter =
       match view#get_window `TEXT with
       | Some window ->
-          Printf.printf "draw_line %d\n%!" iter#offset;
           let y, h = view#get_line_yrange iter in
           let drawable = new GDraw.drawable window in
           let vrect = view#visible_rect in
@@ -188,6 +195,16 @@ class manager ~(view : Text.view) =
           drawable#line ~x:0 ~y ~x:w0 ~y;
       | _ -> ()
 
+    method private get_marker_info y0 i1 i2 =
+      let yb1, h1 = view#get_line_yrange i1 in
+      let yb2, h2 = view#get_line_yrange i2 in
+      let yv1 = yb1 - y0 in
+      let yv2 = yb2 - y0 in
+      let ym1 = yv1 + h1/2 - 1 in
+      let ys1 = yv1 in
+      let ys2 = yv2 + 1 in
+      { yv1; ym1; ys1; ys2; h1 }
+
     method private draw_markers () =
       match view#get_window `LEFT with
       | Some window ->
@@ -200,7 +217,7 @@ class manager ~(view : Text.view) =
           let h0 = Gdk.Rectangle.height vrect in
           let bottom, _ = view#get_line_at_y (y0 + h0) in
           (* Filter folding_points to be drawn *)
-          folding_points (*exposed*) |> List.iter begin function
+          folding_points |> List.iter begin function
           | (of1, Some of2) ->
               let fi = self#get_folding_iters of1 of2 in
               let i1 = buffer#get_iter (`OFFSET of1) in
@@ -210,17 +227,9 @@ class manager ~(view : Text.view) =
                 if not (self#is_folded i1#backward_char) then begin
                   let is_collapsed = self#is_folded fi.fit_start_fold in
                   if is_collapsed then self#draw_line fi.fit_start_marker;
-                  let yb1, h1 = view#get_line_yrange fi.fit_start_marker in
-                  let yb2, h2 = view#get_line_yrange i2 in
-                  let yv1 = yb1 - y0 in
-                  let yv2 = yb2 - y0 in
-                  let ym1 = yv1 + h1/2 - 1 in
-                  let ym2 = yv2 - h2 + h2/2 + 3 in
-                  let ys1 = yv1 in
-                  let ys2 = yv2 + 1 in
-                  let of2 = i2#offset in
-                  let ms = false, (of1, of2, yv1, h1), (is_collapsed, ym1) in
-                  folds := ((fi.fit_start_marker#line, i2#line, is_collapsed), ys1, ys2, ms) :: !folds
+                  let mi = self#get_marker_info y0 fi.fit_start_marker i2 in
+                  let ms = false, (of1, of2, mi.yv1, mi.h1), (is_collapsed, mi.ym1) in
+                  folds := ((fi.fit_start_marker#line, i2#line, is_collapsed), mi.ys1, mi.ys2, ms) :: !folds
                 end
               end;
           | (of1, None) ->
@@ -228,17 +237,10 @@ class manager ~(view : Text.view) =
               if not (self#is_folded i1#backward_char) then begin
                 let bol_next_line = i1#forward_line#set_line_index 0 in
                 let is_collapsed = self#is_folded bol_next_line in
-                Printf.printf "    draw_markers %d %d %b\n%!" of1 bol_next_line#offset is_collapsed;
                 if is_collapsed then self#draw_line i1;
-                let yb1, h1 = view#get_line_yrange i1 in
-                let yb2, h2 = view#get_line_yrange bottom in
-                let yv1 = yb1 - y0 in
-                let yv2 = yb2 - y0 in
-                let ym1 = yv1 + h1/2 - 1 in
-                let ys1 = yv1 in
-                let ys2 = yv2 + 1 in
-                let ms = true, (of1, bottom#offset, yv1, h1), (is_collapsed, ym1) in
-                folds := ((i1#line, -1, is_collapsed), ys1, ys2, ms) :: !folds
+                let mi = self#get_marker_info y0 i1 bottom in
+                let ms = true, (of1, bottom#offset, mi.yv1, mi.h1), (is_collapsed, mi.ym1) in
+                folds := ((i1#line, -1, is_collapsed), mi.ys1, mi.ys2, ms) :: !folds
               end
           end;
           (* Draw lines and markers in the same iter (to reduce flickering?) *)
@@ -303,7 +305,6 @@ class manager ~(view : Text.view) =
       let fi = self#get_folding_iters o1 o2 in
       let start = fi.fit_start_fold in
       let stop = fi.fit_stop in
-      Printf.printf "fold_offsets: %d-%d\n%!" start#offset stop#offset;
       if stop#line - fi.fit_start_marker#line >= min_length then begin
         match self#remove_tag_from_table Hidden start with
         | None ->
@@ -319,7 +320,6 @@ class manager ~(view : Text.view) =
             (*Gmisclib.Util.set_tag_paragraph_background tag_readonly "yellow" (*Oe_config.code_folding_highlight_color*);*)
             buffer#apply_tag tag_hidden ~start ~stop;
             table_tag_hidden <- {mark_start_fold=m1; mark_stop_fold=m2; tag=tag_hidden} :: table_tag_hidden;
-            Printf.printf "  table_tag_hidden: %d, %d\n%!" start#offset stop#offset;
             self#scan_folding_points();
             self#highlight_remove ();
             Gmisclib.Idle.add view#draw_gutter;
