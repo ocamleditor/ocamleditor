@@ -165,6 +165,57 @@ let find_innermost_enclosing_delim ?(utf8=true) text pos =
   end;
   !stack;; (* [start, stop] of the left part of the innermost enclosing delimiters *)
 
+let rec scan_folding_points_new = 
+  let re_end_comment = Str.regexp "\\*)" in
+  fun text ->
+    let points = ref [] in
+    let start = ref 0 in
+    begin
+      try
+        Lex.scan ~utf8:true ~ignore_lexer_error:false text 
+          begin fun ~token ~start ~stop ->
+            match token with
+            | METHOD -> points := stop :: !points;
+            | VAL -> points := stop :: !points;
+            | INITIALIZER -> points := stop :: !points;
+            | END -> ()
+            | OBJECT -> ()
+            | STRUCT -> ()
+            | SIG -> ()
+            | BEGIN -> ()
+            | _ -> ()
+          end;
+      with
+      | Lexer.Error (Lexer.Unterminated_string, _) -> ()
+      | Lexer.Error (Lexer.Unterminated_comment _, _) -> ()
+      | Lexer.Error (Lexer.Unterminated_string_in_comment _, _) -> ()
+      | Lexer.Error _ as ex -> 
+          Printf.eprintf "File \"delimiters.ml\": %s\n%s\n%!" (Printexc.to_string ex) (Printexc.get_backtrace());
+      | Sys_error _ -> begin
+          Printf.eprintf "File \"delimiters.ml\": Sys_error\n%!";
+          let pos = (Str.search_forward re_end_comment text 0) + 2 in
+          let d, p = scan_folding_points_new (Str.string_after text pos) in
+          points := d;
+          start := pos;
+        end
+    end;
+    !points, !start;;
+
+let find_folding_point_end text =
+  let result = ref None in
+  try
+    Lex.scan ~utf8:true text begin fun ~token ~start ~stop ->
+      match token with
+      | METHOD -> result := Some start; raise Exit
+      | INITIALIZER -> result := Some start; raise Exit
+      | VAL -> ()
+      | END -> ()
+      | _ -> ()
+    end;
+    !result
+  with Exit -> !result
+;;
+
 (** scan_folding_points
   * on the assumption that the only construct that may not have the closing
   * delimiter is the global "let" binding.

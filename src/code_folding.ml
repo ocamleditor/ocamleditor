@@ -21,6 +21,7 @@
 *)
 
 open Printf
+open Miscellanea
 
 type hover = Out | Mark of (int * int * bool) | Region
 type tag_table_kind = Hidden
@@ -41,6 +42,9 @@ let dx = 5 (*4*)
 let dx1 = dx - 1
 let dx12 = (dx - 1) / 2
 let dxdx12 = dx - dx12
+
+type folding_mode = New | Old
+let folding_mode = New
 
 let split_length num =
   let rec f acc parts fact = function
@@ -104,21 +108,27 @@ class manager ~(view : Text.view) =
           (* Find all comments in the buffer *)
           let comments =
             let text = buffer#get_text () in
-            GtkThread2.sync Comments.scan_locale (Glib.Convert.convert_with_fallback ~fallback:""
-                                                    ~from_codeset:"UTF-8" ~to_codeset:Oe_config.ocaml_codeset text)
+            crono ~label:"Scan comments: " 
+              Comments.scan_locale (Glib.Convert.convert_with_fallback ~fallback:""
+                                      ~from_codeset:"UTF-8" ~to_codeset:Oe_config.ocaml_codeset text)
           in
           (* Adjust start and stop positions *)
           let start = start#backward_line#set_line_index 0 in
           let stop = stop#forward_line#set_line_index 0 in
           let text = buffer#get_text ~start ~stop () in
           (* Find folding points in the visible text *)
-          let fp, pos = GtkThread2.sync Delimiters.scan_folding_points text in
+          let fp, pos =
+            match folding_mode with
+            | New -> crono ~label:"scan_folding_points_new" Delimiters.scan_folding_points_new text
+            | Old -> 
+                let fp, pos = Delimiters.scan_folding_points text in
+                (* Forget the ends, to be compliant with the new mode *)
+                fp |> List.map (fun (a, _) -> a), pos 
+          in
           let offset = start#offset + pos in
+          fp |> List.iter (fun a -> Printf.printf "  %d\n%!" (offset + a));
           (* Visible rect. to buffer offsets *)
-          let fp = List.fold_left begin fun acc -> function
-              | (a, -1) -> (offset + a, None) :: acc
-              | (a, b) -> (offset + a, Some (offset + b)) :: acc
-            end [] fp in
+          let fp = List.fold_left (fun acc a -> (offset + a, None) :: acc) [] fp in
           (* Exclude folding points inside comments *)
           let fp = List.filter begin function
             | (a, Some b) -> ListLabels.for_all comments ~f:(fun (bc, ec, _) -> not (a >= bc && b <= ec))
@@ -147,7 +157,7 @@ class manager ~(view : Text.view) =
             ms
           with Not_found -> (raise Exit)
         in
-       	let unmatched, (yb1, yb2, yv1, h1), _ = ms in
+        let unmatched, (yb1, yb2, yv1, h1), _ = ms in
         if yv1 <= y && y <= yv1 + h1 then Mark (yb1, yb2, unmatched)
         else Out
       with Exit -> Region
@@ -155,22 +165,22 @@ class manager ~(view : Text.view) =
     method private get_folding_iters of1 of2 =
       let start_folding_point = buffer#get_iter (`OFFSET of1) in
       let stop = (buffer#get_iter (`OFFSET of2))#set_line_index 0 in
-      {
-        fit_start_marker = start_folding_point#set_line_index 0;
+      { fit_start_marker = start_folding_point#set_line_index 0;
         fit_start_fold = start_folding_point#forward_line#set_line_index 0;
-        fit_stop = stop;
-      }
+        fit_stop = stop; }
 
-    method private draw_line y =
+    method private draw_line iter =
       match view#get_window `TEXT with
       | Some window ->
+          Printf.printf "draw_line %d\n%!" iter#offset;
+          let y, h = view#get_line_yrange iter in
           let drawable = new GDraw.drawable window in
           let vrect = view#visible_rect in
           let width = 2 in
           let y0 = Gdk.Rectangle.y vrect in
           let w0 = Gdk.Rectangle.width vrect in
           let offset = match Oe_config.dash_style_offset with Some x -> x | _ -> w0 in
-          let y = y - y0 + width / 2 in
+          let y = y + h - y0 + width / 2 in
           drawable#set_foreground fold_line_color;
           Gdk.GC.set_fill drawable#gc `SOLID;
           Gdk.GC.set_dashes drawable#gc ~offset [2; 2];
@@ -190,10 +200,6 @@ class manager ~(view : Text.view) =
           let h0 = Gdk.Rectangle.height vrect in
           let bottom, _ = view#get_line_at_y (y0 + h0) in
           (* Filter folding_points to be drawn *)
-          let draw_line_at_iter iter =
-            let y, h = view#get_line_yrange iter in
-            self#draw_line (y + h);
-          in
           folding_points (*exposed*) |> List.iter begin function
           | (of1, Some of2) ->
               let fi = self#get_folding_iters of1 of2 in
@@ -203,7 +209,7 @@ class manager ~(view : Text.view) =
               if fi.fit_stop#line - fi.fit_start_marker#line > min_length then begin
                 if not (self#is_folded i1#backward_char) then begin
                   let is_collapsed = self#is_folded fi.fit_start_fold in
-                  if is_collapsed then draw_line_at_iter fi.fit_start_marker;
+                  if is_collapsed then self#draw_line fi.fit_start_marker;
                   let yb1, h1 = view#get_line_yrange fi.fit_start_marker in
                   let yb2, h2 = view#get_line_yrange i2 in
                   let yv1 = yb1 - y0 in
@@ -220,8 +226,10 @@ class manager ~(view : Text.view) =
           | (of1, None) ->
               let i1 = buffer#get_iter (`OFFSET of1) in
               if not (self#is_folded i1#backward_char) then begin
-                let is_collapsed = self#is_folded (if i1#ends_line then i1 else i1#forward_to_line_end) in
-               	if is_collapsed then draw_line_at_iter i1;
+                let bol_next_line = i1#forward_line#set_line_index 0 in
+                let is_collapsed = self#is_folded bol_next_line in
+                Printf.printf "    draw_markers %d %d %b\n%!" of1 bol_next_line#offset is_collapsed;
+                if is_collapsed then self#draw_line i1;
                 let yb1, h1 = view#get_line_yrange i1 in
                 let yb2, h2 = view#get_line_yrange bottom in
                 let yv1 = yb1 - y0 in
@@ -295,6 +303,7 @@ class manager ~(view : Text.view) =
       let fi = self#get_folding_iters o1 o2 in
       let start = fi.fit_start_fold in
       let stop = fi.fit_stop in
+      Printf.printf "fold_offsets: %d-%d\n%!" start#offset stop#offset;
       if stop#line - fi.fit_start_marker#line >= min_length then begin
         match self#remove_tag_from_table Hidden start with
         | None ->
@@ -310,6 +319,7 @@ class manager ~(view : Text.view) =
             (*Gmisclib.Util.set_tag_paragraph_background tag_readonly "yellow" (*Oe_config.code_folding_highlight_color*);*)
             buffer#apply_tag tag_hidden ~start ~stop;
             table_tag_hidden <- {mark_start_fold=m1; mark_stop_fold=m2; tag=tag_hidden} :: table_tag_hidden;
+            Printf.printf "  table_tag_hidden: %d, %d\n%!" start#offset stop#offset;
             self#scan_folding_points();
             self#highlight_remove ();
             Gmisclib.Idle.add view#draw_gutter;
@@ -361,7 +371,8 @@ class manager ~(view : Text.view) =
           | Mark (o1, o2, unmatched) ->
               let o2 = if unmatched then begin
                   match self#find_matching_delimiter o1 with
-                  | Some iter -> iter#forward_to_line_end#forward_char#offset
+                  | Some iter when folding_mode = New -> (iter#set_line_index 0)#offset
+                  | Some iter when folding_mode = Old -> iter#forward_to_line_end#forward_char#offset
                   | _ -> raise Exit
                 end else o2 in
               self#fold_offsets o1 o2;
@@ -372,11 +383,21 @@ class manager ~(view : Text.view) =
       with Exit -> true
 
     method private find_matching_delimiter o1 =
-      let iter = (buffer#get_iter (`OFFSET o1))#backward_word_start in
+      let iter = 
+        match folding_mode with
+        | New -> (buffer#get_iter (`OFFSET o1))
+        | Old -> (buffer#get_iter (`OFFSET o1))#backward_word_start  
+      in
       let text = buffer#get_text ~start:iter ~stop:buffer#end_iter () in
-      match Delimiters.find_closing_folding_point text with
+      let fold_end = 
+        match folding_mode with
+        | Old -> Delimiters.find_closing_folding_point text 
+        | New -> Delimiters.find_folding_point_end text
+      in
+      match fold_end with
       | Some stop ->
           let stop = stop + iter#offset in
+          Printf.printf "find_folding_point_end: %d->%d\n%!" iter#offset stop;
           Some (buffer#get_iter (`OFFSET stop))
       | _ -> None
 
@@ -451,7 +472,8 @@ class manager ~(view : Text.view) =
                     let stop =
                       if unmatched then begin
                         match self#find_matching_delimiter o1 with
-                        | Some iter -> iter#forward_to_line_end#forward_char
+                        | Some iter when folding_mode = New -> iter#set_line_index 0
+                        | Some iter when folding_mode = Old -> iter#forward_to_line_end#forward_char
                         | _ -> raise Exit
                       end else ((buffer#get_iter (`OFFSET o2))#set_line_index 0)
                     in
