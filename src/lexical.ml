@@ -250,6 +250,7 @@ let tag ?start ?stop (tb : GText.buffer) =
           | COMMA | DOT | DOTDOT | COLONCOLON | COLONEQUAL | UNDERSCORE
           | PLUSDOT | MINUSDOT
           | PLUSEQ | PERCENT
+          | DOTOP _
             -> "symbol"
           | LBRACKETAT | LBRACKETPERCENT | LBRACKETPERCENTPERCENT | LBRACKETATAT | LBRACKETATATAT
             -> in_annotation:= true; "annotation"
