@@ -107,6 +107,7 @@ let parse pref =
             | WITH
               -> "control"
             | AND
+            | ANDOP _
             | AS
             | BAR
             | CLASS
@@ -118,6 +119,7 @@ let parse pref =
             | FUNCTOR
             | INHERIT
             | LET
+            | LETOP _
             | METHOD
             | MODULE
             | MUTABLE
