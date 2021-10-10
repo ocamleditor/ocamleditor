@@ -121,6 +121,7 @@ let parse pref =
             | METHOD
             | MODULE
             | MUTABLE
+            | NONREC
             | PRIVATE
             | REC
             | TYPE
