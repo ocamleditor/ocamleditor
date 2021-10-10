@@ -166,6 +166,7 @@ let tag ?start ?stop (tb : GText.buffer) =
           | WITH
             -> "control"
           | AND
+          | ANDOP _
           | AS
           | BAR
           | CLASS
@@ -177,6 +178,7 @@ let tag ?start ?stop (tb : GText.buffer) =
           | FUNCTOR
           | INHERIT
           | LET
+          | LETOP _
           | METHOD
           | MODULE
           | MUTABLE
