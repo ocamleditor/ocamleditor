@@ -100,11 +100,11 @@ let tag ?start ?stop (tb : GText.buffer) =
   let global_comments = Comments.scan text in
   let start = match Comments.enclosing global_comments start#offset with
     | None -> start
-    | Some (x, y) ->
+    | Some (x, _) ->
         tb#get_iter_at_char x in
   let stop = match Comments.enclosing global_comments stop#offset with
     | None -> stop
-    | Some (x, y) ->
+    | Some (_, y) ->
         tb#get_iter_at_char y in
   (*  *)
   let u_text = tb#get_text ~start ~stop () in
@@ -119,6 +119,7 @@ let tag ?start ?stop (tb : GText.buffer) =
   let last_but_one = ref ("", EOF, 0, 0) in
   let in_record = ref false in
   let in_record_label = ref false in
+  let in_annotation = ref false in
   List.iter begin function
   | tagname when tagname <> "highlight_current_line" -> tb#remove_tag_by_name tagname ~start ~stop
   | _ -> ()
@@ -212,6 +213,7 @@ let tag ?start ?stop (tb : GText.buffer) =
           | TILDE
             -> "label"
           | UIDENT _ | BACKQUOTE -> "uident"
+          | LIDENT _ when !in_annotation -> "annotation"
           | LIDENT _ ->
               begin match !last with
               | _, (QUESTION | TILDE), _, _ -> "label"
@@ -241,11 +243,16 @@ let tag ?start ?stop (tb : GText.buffer) =
           | LBRACE -> in_record := true; in_record_label := true; "symbol"
           | RBRACE -> in_record := false; in_record_label := false; "symbol"
           | EQUAL when !in_record -> in_record_label := false; "symbol"
-          | LPAREN | RPAREN | LBRACKET | BARRBRACKET| RBRACKET | LBRACKETLESS | GREATERRBRACKET
+          | LPAREN | RPAREN | LBRACKET | BARRBRACKET | LBRACKETLESS | GREATERRBRACKET
           | LBRACELESS | GREATERRBRACE | LBRACKETBAR | LESSMINUS
           | EQUAL | PLUS | MINUS | STAR | QUOTE | SEMI | SEMISEMI | MINUSGREATER
-          | COMMA | DOT | DOTDOT | COLONCOLON | COLONEQUAL (*| LBRACE*) (*| RBRACE*) | UNDERSCORE
+          | COMMA | DOT | DOTDOT | COLONCOLON | COLONEQUAL | UNDERSCORE
+          | PLUSDOT | MINUSDOT
+          | PLUSEQ | PERCENT
             -> "symbol"
+          | LBRACKETAT | LBRACKETPERCENT | LBRACKETPERCENTPERCENT | LBRACKETATAT | LBRACKETATATAT
+            -> in_annotation:= true; "annotation"
+          | RBRACKET -> if !in_annotation then (in_annotation := false; "annotation") else "symbol"
           | ASSERT -> "custom"
           | EOF -> raise End_of_file
           | _ -> ""
