@@ -180,6 +180,7 @@ let tag ?start ?stop (tb : GText.buffer) =
           | METHOD
           | MODULE
           | MUTABLE
+          | NONREC
           | PRIVATE
           | REC
           | TYPE
