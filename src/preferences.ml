@@ -149,7 +149,8 @@ let default_tags = [
   "highlight";
   "highlight_current_line";
   "record_label";
-  "selection"
+  "selection";
+  "annotation";
 ]
 
 let tag_labels = List.combine default_tags [
@@ -173,6 +174,7 @@ let tag_labels = List.combine default_tags [
     "Line highlight";
     "Record label";
     "Selection";
+    "Annotation";
   ]
 
 let default_colors : text_properties list = [
@@ -196,6 +198,7 @@ let default_colors : text_properties list = [
   (`NAME "#C3FF96"),      `NORMAL, `NORMAL, `NONE, `MEDIUM, (true,  `NAME "#FFFFFF");(* #E8F2FF *) (* #F7F7D7 *) (*"#F9F9CA"*) (* #EBF9FF *)
   (`NAME "#474747"),      `NORMAL, `ITALIC, `NONE, `MEDIUM, (true,  `NAME "#FFFFFF");
   (`NAME "#FFFFFF"),      `NORMAL, `NORMAL, `NONE, `MEDIUM, (false, `NAME "#128C4C"); (* #1F80ED *)
+  (`NAME "#444488"),      `NORMAL, `ITALIC, `NONE, `MEDIUM, (true,  `NAME "FFFFFF");
 ]
 
 let create_defaults () = {
@@ -399,8 +402,8 @@ let to_xml pref =
         Xml.Element ("pref_editor_bak", [], [Xml.PCData (string_of_bool pref.pref_editor_bak)]);
         begin
           let enabled, under_cursor, color = pref.pref_editor_mark_occurrences in
-          Xml.Element ("pref_editor_mark_occurrences", 
-                       ["enabled", (string_of_bool enabled); 
+          Xml.Element ("pref_editor_mark_occurrences",
+                       ["enabled", (string_of_bool enabled);
                         "under_cursor", (string_of_bool under_cursor)], [Xml.PCData color]);
         end;
         Xml.Element ("pref_editor_custom_templ_filename", [], [Xml.PCData (pref.pref_editor_custom_templ_filename)]);
@@ -546,10 +549,10 @@ let from_file filename =
       | "pref_editor_format_on_save" -> pref.pref_editor_format_on_save <- bool_of_string (value node)
       | "pref_editor_bak" -> pref.pref_editor_bak <- bool_of_string (value node)
       | "pref_editor_custom_templ_filename" -> pref.pref_editor_custom_templ_filename <- value node
-      | "pref_editor_mark_occurrences" -> 
+      | "pref_editor_mark_occurrences" ->
           pref.pref_editor_mark_occurrences <- (
-            (bool_of_string (Xml.attrib node "enabled")), 
-            (try bool_of_string (Xml.attrib node "under_cursor") with Xml.No_attribute _ -> true), 
+            (bool_of_string (Xml.attrib node "enabled")),
+            (try bool_of_string (Xml.attrib node "under_cursor") with Xml.No_attribute _ -> true),
             value node)
       | "pref_editor_left_margin" -> pref.pref_editor_left_margin <- int_of_string (value node)
       | "pref_editor_pixels_lines" -> pref.pref_editor_pixels_lines <- (int_of_string (Xml.attrib node "above")), (int_of_string (Xml.attrib node "below"))
