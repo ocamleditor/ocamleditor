@@ -210,6 +210,7 @@ let tag ?start ?stop (tb : GText.buffer) =
           | INFIXOP4 _
           | PREFIXOP _
           | HASH | HASHOP _
+          | BANG
             -> "infix"
           | LABEL _
           | OPTLABEL _
@@ -247,20 +248,22 @@ let tag ?start ?stop (tb : GText.buffer) =
           | LBRACE -> in_record := true; in_record_label := true; "symbol"
           | RBRACE -> in_record := false; in_record_label := false; "symbol"
           | EQUAL when !in_record -> in_record_label := false; "symbol"
-          | LPAREN | RPAREN | LBRACKET | BARRBRACKET | LBRACKETLESS | GREATERRBRACKET
+          | LPAREN | RPAREN | LBRACKET | BARRBRACKET | LBRACKETLESS | LBRACKETGREATER | GREATERRBRACKET
           | LBRACELESS | GREATERRBRACE | LBRACKETBAR | LESSMINUS
           | EQUAL | PLUS | MINUS | STAR | QUOTE | SEMI | SEMISEMI | MINUSGREATER
           | COMMA | DOT | DOTDOT | COLONCOLON | COLONEQUAL | UNDERSCORE
-          | PLUSDOT | MINUSDOT
+          | PLUSDOT | MINUSDOT | LESS | GREATER
           | PLUSEQ | PERCENT
+          | COLONGREATER
           | DOTOP _
             -> "symbol"
           | LBRACKETAT | LBRACKETPERCENT | LBRACKETPERCENTPERCENT | LBRACKETATAT | LBRACKETATATAT
             -> in_annotation:= true; "annotation"
           | RBRACKET -> if !in_annotation then (in_annotation := false; "annotation") else "symbol"
           | ASSERT -> "custom"
+          | DOCSTRING _ | COMMENT _ -> "comment"
+          | EOL -> ""
           | EOF -> raise End_of_file
-          | _ -> ""
         in
         if tag <> "" then begin
           tb#apply_tag_by_name tag ~start:(tpos start) ~stop:(tpos stop);

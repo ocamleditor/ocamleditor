@@ -151,6 +151,7 @@ let parse pref =
             | INFIXOP4 _
             | PREFIXOP _
             | HASH | HASHOP _
+            | BANG
               -> "infix"
             | LABEL _
             | OPTLABEL _
@@ -189,20 +190,22 @@ let parse pref =
             | LBRACE -> in_record := true; in_record_label := true; "symbol"
             | RBRACE -> in_record := false; in_record_label := false; "symbol"
             | EQUAL when !in_record -> in_record_label := false; "symbol"
-            | LPAREN | RPAREN | LBRACKET | BARRBRACKET | LBRACKETLESS | GREATERRBRACKET
+            | LPAREN | RPAREN | LBRACKET | BARRBRACKET | LBRACKETLESS | LBRACKETGREATER | GREATERRBRACKET
             | LBRACELESS | GREATERRBRACE | LBRACKETBAR | LESSMINUS
             | EQUAL | PLUS | MINUS | STAR | QUOTE | SEMI | SEMISEMI | MINUSGREATER
             | COMMA | DOT | DOTDOT | COLONCOLON | COLONEQUAL | UNDERSCORE
-            | PLUSDOT | MINUSDOT
+            | PLUSDOT | MINUSDOT | LESS | GREATER
             | PLUSEQ | PERCENT
+            | COLONGREATER
             | DOTOP _
               -> "symbol"
             | LBRACKETAT | LBRACKETPERCENT | LBRACKETPERCENTPERCENT | LBRACKETATAT | LBRACKETATATAT
               -> in_annotation:= true; "annotation"
             | RBRACKET -> if !in_annotation then (in_annotation := false; "annotation") else "symbol"
             | ASSERT -> "custom"
+            | DOCSTRING _ | COMMENT _ -> "comment"
+            | EOL -> ""
             | EOF -> raise End_of_file
-            | _ -> ""
           end;
 
           Buffer.add_string out (Glib.Markup.escape_text (String.sub text !pos (lstart - !pos)));
