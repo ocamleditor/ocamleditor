@@ -23,7 +23,6 @@
 open Printf
 open Miscellanea
 
-type hover = Out | Mark of (int * int * bool) | Region
 type tag_table_kind = Hidden
 type tag_table_entry = {
   mark_start_fold : GText.mark;
@@ -37,13 +36,25 @@ type fold_iters = {
   fit_stop : GText.iter;
 }
 
-type marker_info = {
-  yv1 : int;
-  ym1 : int;
-  ys1 : int;
-  ys2 : int;
-  h1 : int;
+(* See src/code-folding.svg *)
+type region = {
+  i1 : GText.iter; (* offset 0 of the line containing the token starting the folding region *)
+  i2 : GText.iter; (* offset 0 of the line containing the token that ends the folding region *)
+  ic : GText.iter; (* offset 0 of the line at the beginning of the folding region *)
+  y0 : int; (* pixels in buffer coordinates of the visible rect. *)
+  mutable y1 : int; (* top of i1 line relative to y0 *)
+  mutable y1m : int; (* middle of the i1 line relative to y0 *)
+  mutable y2 : int; (* top of i2 line relative to y0 *)
+  h0 : int; (* height of the visible rect. *)
+  (*hh : int;
+    hr : int;*)
+  mutable h1 : int; (* height of the i1 line *)
+  mutable h2 : int; (* height of the i2 line *)
+  is_end_visible : bool; (* is i2 within the visible rect.? *)
+  mutable is_collapsed : bool;
 }
+
+type hover = Out | Mark of region | Region
 
 let fold_size = 11 (*10 *)
 let dx = 5 (*4*)
@@ -75,7 +86,7 @@ class manager ~(view : Text.view) =
   object (self)
     val mutable enabled = true;
     val mutable folding_points = []
-    val mutable graphics = []
+    val mutable regions = []
     val mutable markers = []
     val mutable tag_highlight_applied = None
     val mutable tag_highlight_busy = false
@@ -134,7 +145,6 @@ class manager ~(view : Text.view) =
                 fp |> List.map (fun (a, _) -> a), pos 
           in
           let offset = start#offset + pos in
-          fp |> List.iter (fun a -> Printf.printf "  %d\n%!" (offset + a));
           (* Visible rect. to buffer offsets *)
           let fp = List.fold_left (fun acc a -> (offset + a, None) :: acc) [] fp in
           (* Exclude folding points inside comments *)
@@ -155,29 +165,26 @@ class manager ~(view : Text.view) =
     method private is_hover x y =
       try
         let xs = view#gutter.Gutter.fold_x in
-        let ms =
+        let region =
           try
-            let _, _, ms = 
-              graphics |> List.find begin fun (y1, y2, _) ->
-                x >= xs && x <= view#gutter.Gutter.size && y1 <= y && y <= y2
-              end 
-            in
-            ms
+            regions |> List.find begin fun region ->
+              x >= xs && x <= view#gutter.Gutter.size && region.y1 <= y && y <= region.y2
+            end 
           with Not_found -> (raise Exit)
         in
-        let unmatched, (yb1, yb2, yv1, h1), _ = ms in
-        if yv1 <= y && y <= yv1 + h1 then Mark (yb1, yb2, unmatched)
+        if region.y1 <= y && y <= region.y1 + region.h1 
+        then Mark region
         else Out
       with Exit -> Region
 
     method private get_folding_iters of1 of2 =
       let start_folding_point = buffer#get_iter (`OFFSET of1) in
       let stop = (buffer#get_iter (`OFFSET of2))#set_line_index 0 in
-      { fit_start_marker = start_folding_point#set_line_index 0;
-        fit_start_fold = start_folding_point#forward_line#set_line_index 0;
-        fit_stop = stop; }
+      { fit_start_marker = start_folding_point#set_line_index 0; (* i1 *)
+        fit_start_fold = start_folding_point#forward_line#set_line_index 0; (* ic *)
+        fit_stop = stop; } (* i2 *)
 
-    method private draw_line iter =
+    method private draw_fold iter =
       match view#get_window `TEXT with
       | Some window ->
           let y, h = view#get_line_yrange iter in
@@ -195,77 +202,65 @@ class manager ~(view : Text.view) =
           drawable#line ~x:0 ~y ~x:w0 ~y;
       | _ -> ()
 
-    method private get_marker_info y0 i1 i2 =
-      let yb1, h1 = view#get_line_yrange i1 in
-      let yb2, h2 = view#get_line_yrange i2 in
-      let yv1 = yb1 - y0 in
-      let yv2 = yb2 - y0 in
-      let ym1 = yv1 + h1/2 - 1 in
-      let ys1 = yv1 in
-      let ys2 = yv2 + 1 in
-      { yv1; ym1; ys1; ys2; h1 }
+    method private add_region_info info =
+      let yb1, h1 = view#get_line_yrange info.i1 in
+      let yb2, h2 = view#get_line_yrange info.i2 in
+      info.y1 <- yb1 - info.y0;
+      info.y2 <- yb2 - info.y0 + 1;
+      info.y1m <- info.y1 + h1/2 - 1;
+      info.h1 <- h1;
+      info.h2 <- h2;
+      info.is_collapsed <- self#is_folded info.ic;
+      info
 
     method private draw_markers () =
       match view#get_window `LEFT with
       | Some window ->
           let xs = view#gutter.Gutter.fold_x in
           let xm = xs + view#gutter.Gutter.fold_size / 2 in (* center of the fold part *)
-          let folds = ref [] in
           let vrect = view#visible_rect in
           let y0 = Gdk.Rectangle.y vrect in
           (* Filter folding_points by visible area *)
           let h0 = Gdk.Rectangle.height vrect in
-          let bottom, _ = view#get_line_at_y (y0 + h0) in
           (* Filter folding_points to be drawn *)
-          folding_points |> List.iter begin function
+          regions <- [];
+          let add_region i1 i2 is_end_visible =
+            if not (self#is_folded i1#backward_char) then begin
+              let ic = i1#forward_line#set_line_index 0 in
+              let region = 
+                { i1; i2; ic; y0; y1 = -1; y1m = -1; y2 = -1; h0; h1 = -1; h2 = -1;
+                  is_end_visible; is_collapsed = false;
+                } |> self#add_region_info
+              in
+              regions <- region :: regions;
+            end
+          in
+          folding_points 
+          |> List.iter begin function
           | (of1, Some of2) ->
-              let fi = self#get_folding_iters of1 of2 in
               let i1 = buffer#get_iter (`OFFSET of1) in
-              let i2 = buffer#get_iter (`OFFSET of2) in
-              let i2 = i2#forward_line in
-              if fi.fit_stop#line - fi.fit_start_marker#line > min_length then begin
-                if not (self#is_folded i1#backward_char) then begin
-                  let is_collapsed = self#is_folded fi.fit_start_fold in
-                  if is_collapsed then self#draw_line fi.fit_start_marker;
-                  let mi = self#get_marker_info y0 fi.fit_start_marker i2 in
-                  let ms = false, (of1, of2, mi.yv1, mi.h1), (is_collapsed, mi.ym1) in
-                  folds := ((fi.fit_start_marker#line, i2#line, is_collapsed), mi.ys1, mi.ys2, ms) :: !folds
-                end
-              end;
+              let i2 = (buffer#get_iter (`OFFSET of2))#forward_line in
+              if i2#line - i1#line > min_length then 
+                add_region i1 i2 true
           | (of1, None) ->
               let i1 = buffer#get_iter (`OFFSET of1) in
-              if not (self#is_folded i1#backward_char) then begin
-                let bol_next_line = i1#forward_line#set_line_index 0 in
-                let is_collapsed = self#is_folded bol_next_line in
-                if is_collapsed then self#draw_line i1;
-                let mi = self#get_marker_info y0 i1 bottom in
-                let ms = true, (of1, bottom#offset, mi.yv1, mi.h1), (is_collapsed, mi.ym1) in
-                folds := ((i1#line, -1, is_collapsed), mi.ys1, mi.ys2, ms) :: !folds
-              end
+              let bottom = buffer#end_iter in
+              add_region i1 bottom false;
           end;
-          (* Draw lines and markers in the same iter (to reduce flickering?) *)
           let drawable = new GDraw.drawable window in
           drawable#set_foreground view#gutter.Gutter.marker_color;
           drawable#set_line_attributes ~width:2 ~cap:`PROJECTING ~style:`SOLID ();
           Gdk.GC.set_dashes drawable#gc ~offset:1 [1; 2];
-          let folds = 
-            !folds |> List.fold_left begin fun acc ((_, l2, _) as ll, a, b, ms) ->
-              match acc with
-              | ((l1', _, is_collapsed), _, _, _) :: _ when l2 = l1' + 1 -> 
-                  (ll, a, b, ms) :: acc
-              | _ -> 
-                  (ll, a, b, ms) :: acc
-            end [] 
-            |> List.rev 
-          in
-          folds |> List.iter begin fun (_, _, _, ms) ->
+          regions 
+          |> List.iter begin fun region ->
+            (* Draw fold *)
+            if region.is_collapsed then self#draw_fold region.i1;
             (* Markers *)
-            let unmatched, _, (is_collapsed, ym1) = ms in
             let xm = xm - 3 in
-            let ym1 = ym1 - dx in
+            let ym1 = region.y1m - dx in
             let ya = ym1 + 2*dx in
             let square = [(xm - dx, ym1); (xm + dx, ym1); (xm + dx, ya); (xm - dx, ya)] in
-            if is_collapsed then begin
+            if region.is_collapsed then begin
               drawable#set_foreground view#gutter.Gutter.marker_bg_color;
               drawable#polygon ~filled:true square;
               drawable#set_foreground view#gutter.Gutter.marker_color;
@@ -273,7 +268,7 @@ class manager ~(view : Text.view) =
               drawable#segments [(xm, ym1 + dx12 + 1), (xm, ym1 + dx1*2 - 1); (xm - dxdx12 + 1, ym1 + dx), (xm + dxdx12 - 1, ym1 + dx)];
             end else begin
               drawable#set_foreground view#gutter.Gutter.bg_color;
-              if unmatched then begin
+              if not region.is_end_visible then begin
                 drawable#set_foreground view#gutter.Gutter.bg_color;
                 drawable#polygon ~filled:true square;
                 drawable#set_foreground light_marker_color;
@@ -286,7 +281,6 @@ class manager ~(view : Text.view) =
               drawable#segments [(xm - dxdx12 + 1, ym1 + dx), (xm + dxdx12 - 1, ym1 + dx)];
             end;
           end;
-          graphics <- folds |> List.map (fun (_, a, b, ms) -> a, b, ms);
       | _ -> ()
 
     method private range ~fold start stop =
@@ -368,14 +362,16 @@ class manager ~(view : Text.view) =
       try
         begin
           match self#is_hover x y with
-          | Mark (o1, o2, unmatched) ->
-              let o2 = if unmatched then begin
-                  match self#find_matching_delimiter o1 with
+          | Mark region ->
+              let o2 = 
+                if not region.is_end_visible then begin
+                  match self#find_matching_delimiter region.i1#offset with
                   | Some iter when folding_mode = New -> (iter#set_line_index 0)#offset
                   | Some iter when folding_mode = Old -> iter#forward_to_line_end#forward_char#offset
                   | _ -> raise Exit
-                end else o2 in
-              self#fold_offsets o1 o2;
+                end else region.i2#offset 
+              in
+              self#fold_offsets region.i1#offset region.i2#offset;
               true
           | Region -> false
           | Out -> true
@@ -397,7 +393,6 @@ class manager ~(view : Text.view) =
       match fold_end with
       | Some stop ->
           let stop = stop + iter#offset in
-          Printf.printf "find_folding_point_end: %d->%d\n%!" iter#offset stop;
           Some (buffer#get_iter (`OFFSET stop))
       | _ -> None
 
@@ -462,15 +457,17 @@ class manager ~(view : Text.view) =
           self#draw_markers();
           begin
             match self#is_hover x y with
-            | Mark (o1, o2, unmatched) as mark ->
+            | Mark region as mark ->
                 if not tag_highlight_busy && tag_highlight_applied = None then begin
                   try
+                    let o1 = region.i1#offset in
+                    let o2 = region.i2#offset in
                     let fi = self#get_folding_iters o1 o2 in
                     if self#is_folded fi.fit_start_fold then raise Exit;
                     set_highlight_background tag_highlight Oe_config.code_folding_highlight_color;
                     let start = (buffer#get_iter (`OFFSET o1))#set_line_index 0 in
                     let stop =
-                      if unmatched then begin
+                      if not region.is_end_visible then begin
                         match self#find_matching_delimiter o1 with
                         | Some iter when folding_mode = New -> iter#set_line_index 0
                         | Some iter when folding_mode = Old -> iter#forward_to_line_end#forward_char
