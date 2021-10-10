@@ -141,6 +141,7 @@ let parse pref =
               -> "structure"
             | CHAR _
             | STRING _
+            | QUOTED_STRING_EXPR _ | QUOTED_STRING_ITEM _
               -> "char"
             (*| BACKQUOTE*)
             | INFIXOP0 _
