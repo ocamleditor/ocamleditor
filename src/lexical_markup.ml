@@ -147,7 +147,7 @@ let parse pref =
             | INFIXOP3 _
             | INFIXOP4 _
             | PREFIXOP _
-            | HASH
+            | HASH | HASHOP _
               -> "infix"
             | LABEL _
             | OPTLABEL _
