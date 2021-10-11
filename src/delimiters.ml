@@ -175,8 +175,8 @@ let rec scan_folding_points_new =
         Lex.scan ~utf8:true ~ignore_lexer_error:false text 
           begin fun ~token ~start ~stop ->
             match token with
-            | METHOD -> points := stop :: !points;
-            | VAL -> points := stop :: !points;
+            | METHOD -> points := (stop, false) :: !points;
+            | VAL -> points := (stop, false) :: !points;
             | INITIALIZER -> ()
             | END -> ()
             | OBJECT -> ()
@@ -235,7 +235,7 @@ let rec scan_folding_points =
           pending_let := List.tl !pending_let;
           pop recursive stop
       | (start) :: tl ->
-          delim := (start, stop) :: !delim;
+          delim := (start, stop, true) :: !delim;
           stack := tl;
           pending_let := List.tl !pending_let
       | _ -> ()
@@ -273,7 +273,7 @@ let rec scan_folding_points =
           start := pos;
         end
     end;
-    List.iter (fun a -> delim := (a, -1) :: !delim) !stack;
+    List.iter (fun a -> delim := (a, -1, false) :: !delim) !stack;
     !delim, !start;;
 
 (** find_closing_folding_point *)

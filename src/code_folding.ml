@@ -41,6 +41,9 @@ type region = {
   i1 : GText.iter; (* offset 0 of the line containing the token starting the folding region *)
   i2 : GText.iter; (* offset 0 of the line containing the token that ends the folding region *)
   ic : GText.iter; (* offset 0 of the line at the beginning of the folding region *)
+  has_end_token : bool;
+  fp1 : int;
+  fp2 : int option;
   y0 : int; (* pixels in buffer coordinates of the visible rect. *)
   mutable y1 : int; (* top of i1 line relative to y0 *)
   mutable y1m : int; (* middle of the i1 line relative to y0 *)
@@ -50,9 +53,16 @@ type region = {
     hr : int;*)
   mutable h1 : int; (* height of the i1 line *)
   mutable h2 : int; (* height of the i2 line *)
-  is_end_visible : bool; (* is i2 within the visible rect.? *)
   mutable is_collapsed : bool;
 }
+
+let string_of_region r =
+  sprintf "{ fp:%d,%s i:%d,%d,%d y:%d,%d,%d h:%d,%d,%d has_end_token:%b is_collapsed:%b }"
+    r.fp1 (match r.fp2 with Some x -> string_of_int x | _ -> "") 
+    r.i1#offset r.ic#offset r.i2#offset
+    r.y1 r.y2 r.y1m
+    r.h0 r.h1 r.h2
+    r.has_end_token r.is_collapsed
 
 type hover = Out | Mark of region | Region
 
@@ -142,19 +152,19 @@ class manager ~(view : Text.view) =
             | Old -> 
                 let fp, pos = Delimiters.scan_folding_points text in
                 (* Forget the ends, to be compliant with the new mode *)
-                fp |> List.map (fun (a, _) -> a), pos 
+                fp |> List.map (fun (a, _, has_end_token) -> a, has_end_token), pos 
           in
           let offset = start#offset + pos in
           (* Visible rect. to buffer offsets *)
-          let fp = List.fold_left (fun acc a -> (offset + a, None) :: acc) [] fp in
+          let fp = List.fold_left (fun acc (a, has_end_token) -> (offset + a, None, has_end_token) :: acc) [] fp in
           (* Exclude folding points inside comments *)
           let fp = List.filter begin function
-            | (a, Some b) -> ListLabels.for_all comments ~f:(fun (bc, ec, _) -> not (a >= bc && b <= ec))
-            | (a, None) -> ListLabels.for_all comments ~f:(fun (bc, ec, _) -> not (a >= bc && a <= ec))
+            | (a, Some b, _) -> ListLabels.for_all comments ~f:(fun (bc, ec, _) -> not (a >= bc && b <= ec))
+            | (a, None, _) -> ListLabels.for_all comments ~f:(fun (bc, ec, _) -> not (a >= bc && a <= ec))
             end fp in
           (* Join folding points to comments *)
-          let comments = List.map (fun (a, b, _) -> (a, Some b)) comments in
-          let fp = List.sort (fun (a, _) (b, _) -> Stdlib.compare a b) (fp @ comments) in
+          let comments = List.map (fun (a, b, _) -> (a, Some b, true)) comments in
+          let fp = List.sort (fun (a, _, _) (b, _, _) -> Stdlib.compare a b) (fp @ comments) in
           folding_points <- fp;
         end
       end
@@ -168,11 +178,12 @@ class manager ~(view : Text.view) =
         let region =
           try
             regions |> List.find begin fun region ->
-              x >= xs && x <= view#gutter.Gutter.size && region.y1 <= y && y <= region.y2
+              x >= xs && x <= view#gutter.Gutter.size && 
+              region.y1 <= y && y <= region.y2
             end 
           with Not_found -> (raise Exit)
         in
-        if region.y1 <= y && y <= region.y1 + region.h1 
+        if region.y1 <= y && y <= region.y1 + region.h1
         then Mark region
         else Out
       with Exit -> Region
@@ -224,12 +235,12 @@ class manager ~(view : Text.view) =
           let h0 = Gdk.Rectangle.height vrect in
           (* Filter folding_points to be drawn *)
           regions <- [];
-          let add_region i1 i2 is_end_visible =
+          let add_region fp1 fp2 i1 i2 has_end_token =
             if not (self#is_folded i1#backward_char) then begin
               let ic = i1#forward_line#set_line_index 0 in
               let region = 
-                { i1; i2; ic; y0; y1 = -1; y1m = -1; y2 = -1; h0; h1 = -1; h2 = -1;
-                  is_end_visible; is_collapsed = false;
+                { i1; i2; ic; fp1; fp2; y0; y1 = -1; y1m = -1; y2 = -1; h0; h1 = -1; h2 = -1;
+                  is_collapsed = false; has_end_token
                 } |> self#add_region_info
               in
               regions <- region :: regions;
@@ -237,15 +248,15 @@ class manager ~(view : Text.view) =
           in
           folding_points 
           |> List.iter begin function
-          | (of1, Some of2) ->
-              let i1 = buffer#get_iter (`OFFSET of1) in
-              let i2 = (buffer#get_iter (`OFFSET of2))#forward_line in
+          | (fp1, ((Some of2) as fp2), has_end_token) ->
+              let i1 = (buffer#get_iter (`OFFSET fp1))#set_line_index 0 in
+              (* TODO: i2 forward_line or not? *)
+              let i2 = (buffer#get_iter (`OFFSET of2))#set_line_index 0 in 
               if i2#line - i1#line > min_length then 
-                add_region i1 i2 true
-          | (of1, None) ->
-              let i1 = buffer#get_iter (`OFFSET of1) in
-              let bottom = buffer#end_iter in
-              add_region i1 bottom false;
+                add_region fp1 fp2 i1 i2 has_end_token
+          | (fp1, None, has_end_token) ->
+              let i1 = (buffer#get_iter (`OFFSET fp1))#set_line_index 0 in
+              add_region fp1 None i1 buffer#end_iter has_end_token;
           end;
           let drawable = new GDraw.drawable window in
           drawable#set_foreground view#gutter.Gutter.marker_color;
@@ -268,22 +279,24 @@ class manager ~(view : Text.view) =
               drawable#segments [(xm, ym1 + dx12 + 1), (xm, ym1 + dx1*2 - 1); (xm - dxdx12 + 1, ym1 + dx), (xm + dxdx12 - 1, ym1 + dx)];
             end else begin
               drawable#set_foreground view#gutter.Gutter.bg_color;
-              if not region.is_end_visible then begin
-                drawable#set_foreground view#gutter.Gutter.bg_color;
-                drawable#polygon ~filled:true square;
-                drawable#set_foreground light_marker_color;
-                drawable#polygon ~filled:false square;
-              end else begin
-                drawable#polygon ~filled:true square;
-                drawable#set_foreground view#gutter.Gutter.marker_color;
-                drawable#polygon ~filled:false square;
+              begin
+                match region.fp2 with
+                | None ->
+                    drawable#set_foreground view#gutter.Gutter.bg_color;
+                    drawable#polygon ~filled:true square;
+                    drawable#set_foreground light_marker_color;
+                    drawable#polygon ~filled:false square;
+                | _ ->
+                    drawable#polygon ~filled:true square;
+                    drawable#set_foreground view#gutter.Gutter.marker_color;
+                    drawable#polygon ~filled:false square;
               end;
               drawable#segments [(xm - dxdx12 + 1, ym1 + dx), (xm + dxdx12 - 1, ym1 + dx)];
             end;
           end;
       | _ -> ()
 
-    method private range ~fold start stop =
+    method private update_tag ~fold start stop =
       let iter = ref start in
       let stop = stop#set_line_index 0 in
       while not (!iter#equal stop) do
@@ -295,11 +308,9 @@ class manager ~(view : Text.view) =
         iter := !iter#forward_line
       done;
 
-    method private fold_offsets o1 o2 =
-      let fi = self#get_folding_iters o1 o2 in
-      let start = fi.fit_start_fold in
-      let stop = fi.fit_stop in
-      if stop#line - fi.fit_start_marker#line >= min_length then begin
+    method private fold_between start stop =
+      Printf.printf "fold_between: %d:%d %d:%d\n%!" start#line start#line_index stop#line stop#line_index;
+      if stop#line - start#line >= min_length then begin
         match self#remove_tag_from_table Hidden start with
         | None ->
             view#matching_delim_remove_tag ();
@@ -307,7 +318,7 @@ class manager ~(view : Text.view) =
             let is_in_range = ins#in_range ~start ~stop in
             Gaux.may view#signal_expose ~f:(fun id -> view#misc#handler_block id);
             view#matching_delim_remove_tag ();
-            self#range ~fold:false start stop;
+            self#update_tag ~fold:false start stop;
             let tag_hidden = buffer#create_tag [`INVISIBLE_SET true; `INVISIBLE true(*; `EDITABLE false*)] in
             let m1 = `MARK (buffer#create_mark(* ~name:(Gtk_util.create_mark_name "Code_folding.fold_offset1")*) start) in
             let m2 = `MARK (buffer#create_mark(* ~name:(Gtk_util.create_mark_name "Code_folding.fold_offset2")*) stop) in
@@ -319,14 +330,14 @@ class manager ~(view : Text.view) =
             Gmisclib.Idle.add view#draw_gutter;
             if is_in_range then
               Gmisclib.Idle.add begin fun () ->
-                let where = fi.fit_start_marker#forward_to_line_end in
+                let where = start#forward_to_line_end in
                 view#buffer#place_cursor ~where;
                 view#scroll_lazy where;
               end;
             Gaux.may view#signal_expose ~f:(fun id -> view#misc#handler_unblock id);
             toggled#call (true, start, stop);
         | Some {mark_start_fold=m1; mark_stop_fold=m2; tag=tag; _} ->
-            self#range ~fold:true start stop;
+            self#update_tag ~fold:true start stop;
             let iter = ref start in
             let n = stop#line - start#line in
             let sections = List.rev (split_length n) in
@@ -363,15 +374,18 @@ class manager ~(view : Text.view) =
         begin
           match self#is_hover x y with
           | Mark region ->
-              let o2 = 
-                if not region.is_end_visible then begin
-                  match self#find_matching_delimiter region.i1#offset with
-                  | Some iter when folding_mode = New -> (iter#set_line_index 0)#offset
-                  | Some iter when folding_mode = Old -> iter#forward_to_line_end#forward_char#offset
-                  | _ -> raise Exit
-                end else region.i2#offset 
+              Printf.printf "is_hover %s\n%!" (string_of_region region);
+              let o2 =
+                match region.fp2 with
+                | None ->
+                    begin
+                      match self#find_matching_delimiter region.fp1 with
+                      | Some iter -> iter#set_line_index 0 (* TODO depends on has_end_token *)
+                      | _ -> raise Exit
+                    end;
+                | _ -> region.i2#forward_line
               in
-              self#fold_offsets region.i1#offset region.i2#offset;
+              self#fold_between region.ic o2;
               true
           | Region -> false
           | Out -> true
@@ -410,12 +424,12 @@ class manager ~(view : Text.view) =
       let iter = buffer#get_iter `INSERT in
       let i = iter#forward_to_line_end#offset in
       let points = List.filter begin function
-        | (a, Some b) -> a <= i && i <= b
+        | (a, Some b, has_end_token) -> a <= i && i <= b
         | _ -> false
         end folding_points in
-      let points = List.sort (fun (a1, _) (a2, _) -> Stdlib.compare a2 a1) points in
+      let points = List.sort (fun (a1, _, _) (a2, _, _) -> Stdlib.compare a2 a1) points in
       match points with
-      | (o1, Some o2) :: _ -> self#fold_offsets o1 o2
+      | (o1, Some o2, has_end_token) :: _ -> failwith "self#fold_between o1 o2"
       | _ -> ()
 
     method expand_current () = self#expand (buffer#get_iter `INSERT)#forward_to_line_end
@@ -435,7 +449,7 @@ class manager ~(view : Text.view) =
         let start = buffer#get_iter_at_mark m1 in
         let stop = buffer#get_iter_at_mark m2 in
         buffer#remove_tag tag ~start ~stop;
-        self#range ~fold:true start stop; (* re-collapse folds inside the expanded fold, if they were folded *)
+        self#update_tag ~fold:true start stop; (* re-collapse folds inside the expanded fold, if they were folded *)
         buffer#delete_mark m1;
         buffer#delete_mark m2;
         table_tag_hidden <- List.filter (fun x -> x.mark_start_fold != m1) table_tag_hidden;
@@ -457,22 +471,27 @@ class manager ~(view : Text.view) =
           self#draw_markers();
           begin
             match self#is_hover x y with
-            | Mark region as mark ->
+            | Mark rm as mark ->
                 if not tag_highlight_busy && tag_highlight_applied = None then begin
                   try
-                    let o1 = region.i1#offset in
-                    let o2 = region.i2#offset in
-                    let fi = self#get_folding_iters o1 o2 in
-                    if self#is_folded fi.fit_start_fold then raise Exit;
+                    if self#is_folded rm.ic then raise Exit;
                     set_highlight_background tag_highlight Oe_config.code_folding_highlight_color;
-                    let start = (buffer#get_iter (`OFFSET o1))#set_line_index 0 in
+                    let start = rm.i1 in
                     let stop =
-                      if not region.is_end_visible then begin
-                        match self#find_matching_delimiter o1 with
-                        | Some iter when folding_mode = New -> iter#set_line_index 0
-                        | Some iter when folding_mode = Old -> iter#forward_to_line_end#forward_char
-                        | _ -> raise Exit
-                      end else ((buffer#get_iter (`OFFSET o2))#set_line_index 0)
+                      match rm.fp2 with
+                      | None ->
+                          begin
+                            match self#find_matching_delimiter rm.fp1 with
+                            | Some iter when rm.has_end_token -> iter#forward_to_line_end#forward_char
+                            | Some iter -> iter#set_line_index 0
+                            | _ -> raise Exit
+                          end;
+                      | Some fp2 when rm.has_end_token ->
+                          let iter = buffer#get_iter (`OFFSET fp2) in
+                          if iter#ends_line then (iter#set_line_index 0)#forward_to_line_end
+                          else iter#forward_to_line_end
+                      | Some fp2 ->
+                          (buffer#get_iter (`OFFSET fp2))#set_line_index 0
                     in
                     buffer#apply_tag tag_highlight ~start ~stop;
                     tag_highlight_applied <- Some mark;
@@ -480,8 +499,9 @@ class manager ~(view : Text.view) =
                 end else begin
                   match tag_highlight_applied with
                   | None -> ()
-                  | Some m when m = mark -> ()
-                  | _ -> self#highlight_remove ();
+                  | Some (Mark r) when 
+                      r.fp1 <> rm.fp1 && r.fp2 <> rm.fp2 -> self#highlight_remove ();
+                  | _ -> ();
                 end;
             | Region
             | Out -> self#highlight_remove ()
@@ -532,24 +552,24 @@ class manager ~(view : Text.view) =
                       Gaux.may signal_expose ~f:(fun id -> view#misc#handler_unblock id))));
           | _ -> ()
         end);
-      ignore (view#event#connect#after#button_release ~callback:begin fun ev ->
-          if enabled then begin
-            let window = GdkEvent.get_window ev in
-            match view#get_window `LEFT with
-            | Some w when (Gobject.get_oid w) = (Gobject.get_oid window) ->
-                let x = GdkEvent.Button.x ev in
-                let y = GdkEvent.Button.y ev in
-                Gaux.may signal_expose ~f:(fun id -> view#misc#handler_block id);
-                let handled = self#fold window (int_of_float x) (int_of_float y) in
-                Gaux.may signal_expose ~f:(fun id -> view#misc#handler_unblock id);
-                handled;
-            | _ -> false
-          end else false
-        end);
-      ignore (view#misc#connect#query_tooltip ~callback:begin fun ~x ~y ~kbd:_ _ ->
-          if enabled then (self#highlight x y);
-          false
-        end);
+      view#event#connect#after#button_release ~callback:begin fun ev ->
+        if enabled then begin
+          let window = GdkEvent.get_window ev in
+          match view#get_window `LEFT with
+          | Some w when (Gobject.get_oid w) = (Gobject.get_oid window) ->
+              let x = GdkEvent.Button.x ev in
+              let y = GdkEvent.Button.y ev in
+              Gaux.may signal_expose ~f:(fun id -> view#misc#handler_block id);
+              let handled = self#fold window (int_of_float x) (int_of_float y) in
+              Gaux.may signal_expose ~f:(fun id -> view#misc#handler_unblock id);
+              handled;
+          | _ -> false
+        end else false
+      end |> ignore;
+      view#misc#connect#query_tooltip ~callback:begin fun ~x ~y ~kbd:_ _ ->
+        if enabled then (self#highlight x y);
+        false
+      end |> ignore;
 
       view#misc#connect#after#realize ~callback:begin fun () ->
         light_marker_color <-
