@@ -234,7 +234,7 @@ let rec scan_folding_points =
           stack := tl;
           pending_let := List.tl !pending_let;
           pop recursive stop
-      | (start) :: tl ->
+      | start :: tl ->
           delim := (start, stop, true) :: !delim;
           stack := tl;
           pending_let := List.tl !pending_let
