@@ -58,7 +58,7 @@ let scan ?(utf8=true) ?(ignore_lexer_error=true) text f =
   let text = if utf8 then Glib.Convert.convert_with_fallback ~fallback:"?"
         ~from_codeset:"UTF-8" ~to_codeset:Oe_config.ocaml_codeset text
     else text in
-  let lexbuf = Lexing.from_string text in
+  let lexbuf = Lexing.from_string ~with_positions:false text in
   try
     while true do
       let token = Lexer.token lexbuf in

@@ -372,7 +372,7 @@ class manager ~(view : Text.view) =
         | None ->
             begin
               match self#find_matching_delimiter region.fp1 with
-              | Some iter -> iter#set_line_index 0 (* TODO depends on has_end_token *)
+              | Some iter -> iter
               | _ -> raise Exit
             end;
         | _ -> region.i2#forward_line
@@ -398,15 +398,17 @@ class manager ~(view : Text.view) =
         | Old -> (buffer#get_iter (`OFFSET o1))#backward_word_start  
       in
       let text = buffer#get_text ~start:iter ~stop:buffer#end_iter () in
-      let fold_end = 
-        match folding_mode with
-        | Old -> Delimiters.find_closing_folding_point text 
-        | New -> Delimiters.find_folding_point_end text
-      in
+      let fold_end = Delimiters.find_folding_point_end text in
       match fold_end with
-      | Some stop ->
+      | Some (stop, is_end_token) ->
           let stop = stop + iter#offset in
-          Some (buffer#get_iter (`OFFSET stop))
+          let iter = buffer#get_iter (`OFFSET stop) in
+          Some (begin 
+              if is_end_token then begin
+                if iter#ends_line then iter#forward_char
+                else iter#forward_to_line_end#forward_char
+              end else (iter#set_line_index 0)
+            end : GText.iter)
       | _ -> None
 
     method private remove_tag_from_table which_table iter =
@@ -483,8 +485,7 @@ class manager ~(view : Text.view) =
                       | None ->
                           begin
                             match self#find_matching_delimiter rm.fp1 with
-                            | Some iter when rm.has_end_token -> iter#forward_to_line_end#forward_char
-                            | Some iter -> iter#set_line_index 0
+                            | Some iter -> iter
                             | _ -> raise Exit
                           end;
                       | Some fp2 when rm.has_end_token ->

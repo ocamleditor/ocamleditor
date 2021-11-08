@@ -168,7 +168,9 @@ let find_innermost_enclosing_delim ?(utf8=true) text pos =
 let rec scan_folding_points_new = 
   let re_end_comment = Str.regexp "\\*)" in
   fun text ->
-    let points = ref [] in
+    let points = 
+      ref [] (* Right end of the starting token * Whether the token has the closing token (aka has_end_token) *)
+    in 
     let start = ref 0 in
     begin
       try
@@ -177,12 +179,14 @@ let rec scan_folding_points_new =
             match token with
             | METHOD -> points := (stop, false) :: !points;
             | VAL -> points := (stop, false) :: !points;
-            | INITIALIZER -> ()
+            | INITIALIZER -> points := (stop, false) :: !points;
             | END -> ()
             | OBJECT -> ()
             | STRUCT -> ()
             | SIG -> ()
             | BEGIN -> ()
+            | LET -> points := (stop, false) :: !points;
+            | IN -> points := (match !points with [] -> [] | a :: b -> b); (* Pops let...in *)
             | _ -> ()
           end;
       with
@@ -202,17 +206,28 @@ let rec scan_folding_points_new =
     !points, !start;;
 
 let find_folding_point_end text =
+  (* "text" begins just after the end of the starting token. The starting token 
+     is not included in "text". *)
   let result = ref None in
+  let stack_let = ref [] in
+  let count_begin = ref 0 in
   try
     Lex.scan ~utf8:true text begin fun ~token ~start ~stop ->
       match token with
-      | METHOD -> result := Some start; raise Exit
-      | INITIALIZER -> result := Some start; raise Exit
-      | VAL -> result := Some start; raise Exit
-      | END -> ()
-      | _ -> ()
+      | METHOD                    -> result := Some (start, false); raise Exit
+      | INITIALIZER               -> result := Some (start, false); raise Exit
+      | VAL                       -> result := Some (start, false); raise Exit
+      | LET                       -> stack_let := start :: !stack_let
+      | IN                        -> (try stack_let := List.tl !stack_let with Failure _ -> ())
+      | SEMISEMI 
+        when !stack_let = []      -> result := Some (stop, true); raise Exit
+      | BEGIN                     -> incr count_begin
+      | END when !count_begin > 0 -> decr count_begin
+      | END                       -> result := Some (start, true); raise Exit
+      | _                         -> ()
     end;
-    !result
+    (* Take the position of the first "let" at bottom of the stack *)
+    (try Some (!stack_let |> List.rev |> List.hd, false) with Failure _ -> None)
   with Exit -> !result
 ;;
 
