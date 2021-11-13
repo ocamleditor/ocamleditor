@@ -22,6 +22,7 @@
 
 open Printf
 open Miscellanea
+open Text_util
 
 type tag_table_kind = Hidden
 type tag_table_entry = {
@@ -136,9 +137,10 @@ class manager ~(view : Text.view) =
           let stop, _ = view#get_line_at_y (y0 + h0) in
           (* Find all comments in the buffer *)
           let comments =
-            let text = buffer#get_text () in
-            Comments.scan_locale (Glib.Convert.convert_with_fallback ~fallback:""
-                                    ~from_codeset:"UTF-8" ~to_codeset:Oe_config.ocaml_codeset text)
+            buffer#get_text ()
+            |> Glib.Convert.convert_with_fallback ~fallback:"" 
+              ~from_codeset:"UTF-8" ~to_codeset:Oe_config.ocaml_codeset
+            |> Comments.scan_locale 
           in
           (* Adjust start and stop positions *)
           let start = start#backward_line#set_line_index 0 in
@@ -158,8 +160,8 @@ class manager ~(view : Text.view) =
           let fp = List.fold_left (fun acc (a, has_end_token) -> (offset + a, None, has_end_token) :: acc) [] fp in
           (* Exclude folding points inside comments *)
           let fp = List.filter begin function
-            | (a, Some b, _) -> ListLabels.for_all comments ~f:(fun (bc, ec, _) -> not (a >= bc && b <= ec))
-            | (a, None, _) -> ListLabels.for_all comments ~f:(fun (bc, ec, _) -> not (a >= bc && a <= ec))
+            | (a, Some b, _) -> comments |> List.for_all (fun (bc, ec, _) -> not (a >= bc && b <= ec))
+            | (a, None, _) -> comments |> List.for_all (fun (bc, ec, _) -> not (a >= bc && a <= ec))
             end fp in
           (* Join folding points to comments *)
           let comments = List.map (fun (a, b, _) -> (a, Some b, true)) comments in
@@ -398,18 +400,29 @@ class manager ~(view : Text.view) =
         | Old -> (buffer#get_iter (`OFFSET o1))#backward_word_start  
       in
       let text = buffer#get_text ~start:iter ~stop:buffer#end_iter () in
-      let fold_end = Delimiters.find_folding_point_end text in
-      match fold_end with
-      | Some (stop, is_end_token) ->
-          let stop = stop + iter#offset in
-          let iter = buffer#get_iter (`OFFSET stop) in
-          Some (begin 
-              if is_end_token then begin
-                if iter#ends_line then iter#forward_char
-                else iter#forward_to_line_end#forward_char
-              end else (iter#set_line_index 0)
-            end : GText.iter)
-      | _ -> None
+      let stop, is_end_token = Delimiters.find_folding_point_end text in
+      let stop = stop + iter#offset in
+      let iter = buffer#get_iter (`OFFSET stop) in
+      Some begin
+        if is_end_token then begin
+          if iter#ends_line then iter#forward_char
+          else iter#forward_to_line_end#forward_char
+        end else begin
+          let comments =
+            buffer#get_text ()
+            |> Glib.Convert.convert_with_fallback ~fallback:"" 
+              ~from_codeset:"UTF-8" ~to_codeset:Oe_config.ocaml_codeset
+            |> Comments.scan_locale 
+          in
+          let rec search_code_backward (iter : GText.iter) =
+            let iter = iter#backward_find_char not_blank in
+            match Comments.enclosing (Comments.Locale comments) iter#offset with
+            | Some (start, stop) -> search_code_backward (buffer#get_iter (`OFFSET start))
+            | _ -> iter
+          in
+          (search_code_backward iter)#forward_to_line_end#forward_char
+        end
+      end
 
     method private remove_tag_from_table which_table iter =
       let tag_table = match which_table with Hidden -> table_tag_hidden in
@@ -555,16 +568,19 @@ class manager ~(view : Text.view) =
         end);
       view#event#connect#after#button_release ~callback:begin fun ev ->
         if enabled then begin
-          let window = GdkEvent.get_window ev in
-          match view#get_window `LEFT with
-          | Some w when (Gobject.get_oid w) = (Gobject.get_oid window) ->
-              let x = GdkEvent.Button.x ev in
-              let y = GdkEvent.Button.y ev in
-              Gaux.may signal_expose ~f:(fun id -> view#misc#handler_block id);
-              let handled = self#fold_at (int_of_float x) (int_of_float y) in
-              Gaux.may signal_expose ~f:(fun id -> view#misc#handler_unblock id);
-              handled;
-          | _ -> false
+          GMain.Idle.add begin fun () ->
+            let window = GdkEvent.get_window ev in
+            match view#get_window `LEFT with
+            | Some w when (Gobject.get_oid w) = (Gobject.get_oid window) ->
+                let x = GdkEvent.Button.x ev in
+                let y = GdkEvent.Button.y ev in
+                Gaux.may signal_expose ~f:(fun id -> view#misc#handler_block id);
+                self#fold_at (int_of_float x) (int_of_float y) |> ignore;
+                Gaux.may signal_expose ~f:(fun id -> view#misc#handler_unblock id);
+                false
+            | _ -> false
+          end |> ignore;
+          false
         end else false
       end |> ignore;
       view#misc#connect#query_tooltip ~callback:begin fun ~x ~y ~kbd:_ _ ->

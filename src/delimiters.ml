@@ -208,26 +208,31 @@ let rec scan_folding_points_new =
 let find_folding_point_end text =
   (* "text" begins just after the end of the starting token. The starting token 
      is not included in "text". *)
-  let result = ref None in
+  let result = ref (0, false) in
   let stack_let = ref [] in
   let count_begin = ref 0 in
   try
     Lex.scan ~utf8:true text begin fun ~token ~start ~stop ->
       match token with
-      | METHOD                    -> result := Some (start, false); raise Exit
-      | INITIALIZER               -> result := Some (start, false); raise Exit
-      | VAL                       -> result := Some (start, false); raise Exit
+      | METHOD                    -> result := (start, false); raise Exit
+      | INITIALIZER               -> result := (start, false); raise Exit
+      | VAL                       -> result := (start, false); raise Exit
       | LET                       -> stack_let := start :: !stack_let
       | IN                        -> (try stack_let := List.tl !stack_let with Failure _ -> ())
       | SEMISEMI 
-        when !stack_let = []      -> result := Some (stop, true); raise Exit
+        when !stack_let = []      -> result := (stop, true); raise Exit
       | BEGIN                     -> incr count_begin
       | END when !count_begin > 0 -> decr count_begin
-      | END                       -> result := Some (start, true); raise Exit
+      | END                       -> result := (start, false); raise Exit
       | _                         -> ()
     end;
-    (* Take the position of the first "let" at bottom of the stack *)
-    (try Some (!stack_let |> List.rev |> List.hd, false) with Failure _ -> None)
+    begin 
+      (* Return the position of the first "let" found which marks the end of our 
+         "let" and which is at the bottom of the stack; if it doesn't exist, we 
+         are on the last let-binding, so we return the end of the buffer. *)
+      try !stack_let |> List.rev |> List.hd, false
+      with Failure _ -> String.length text, false
+    end
   with Exit -> !result
 ;;
 
