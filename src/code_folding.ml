@@ -73,9 +73,6 @@ let dx1 = dx - 1
 let dx12 = (dx - 1) / 2
 let dxdx12 = dx - dx12
 
-type folding_mode = New | Old
-let folding_mode = New
-
 let split_length num =
   let rec f acc parts fact = function
     | 0 -> acc
@@ -129,7 +126,8 @@ class manager ~(view : Text.view) =
 
     method scan_folding_points () =
       if enabled then begin
-        Gmisclib.Idle.add (*~prio:300*) begin fun () ->
+        Gmisclib.Idle.add begin fun () ->
+          crono ~label:"scan_folding_points" begin fun () -> 
           let vrect = view#visible_rect in
           let h0 = Gdk.Rectangle.height vrect in
           let y0 = Gdk.Rectangle.y vrect in
@@ -167,6 +165,7 @@ class manager ~(view : Text.view) =
           let comments = List.map (fun (a, b, _) -> (a, Some b, true)) comments in
           let fp = List.sort (fun (a, _, _) (b, _, _) -> Stdlib.compare a b) (fp @ comments) in
           folding_points <- fp;
+          end ()
         end
       end
 
@@ -178,8 +177,9 @@ class manager ~(view : Text.view) =
         let xs = view#gutter.Gutter.fold_x in
         let region =
           try
-            regions |> List.find begin fun region ->
-              x >= xs && x <= view#gutter.Gutter.size && 
+            regions 
+            |> List.find begin fun region ->
+              xs <= x && x <= view#gutter.Gutter.size && 
               region.y1 <= y && y <= region.y2
             end 
           with Not_found -> (raise Exit)
@@ -188,13 +188,6 @@ class manager ~(view : Text.view) =
         then Mark region
         else Out
       with Exit -> Region
-
-    method private get_folding_iters of1 of2 =
-      let start_folding_point = buffer#get_iter (`OFFSET of1) in
-      let stop = (buffer#get_iter (`OFFSET of2))#set_line_index 0 in
-      { fit_start_marker = start_folding_point#set_line_index 0; (* i1 *)
-        fit_start_fold = start_folding_point#forward_line#set_line_index 0; (* ic *)
-        fit_stop = stop; } (* i2 *)
 
     method private draw_fold iter =
       match view#get_window `TEXT with
@@ -232,9 +225,8 @@ class manager ~(view : Text.view) =
           let xm = xs + view#gutter.Gutter.fold_size / 2 in (* center of the fold part *)
           let vrect = view#visible_rect in
           let y0 = Gdk.Rectangle.y vrect in
-          (* Filter folding_points by visible area *)
           let h0 = Gdk.Rectangle.height vrect in
-          (* Filter folding_points to be drawn *)
+          (* Filter folding_points by visible area *)
           regions <- [];
           let add_region fp1 fp2 i1 i2 has_end_token =
             if not (self#is_folded i1) then begin
@@ -258,10 +250,12 @@ class manager ~(view : Text.view) =
               let i1 = (buffer#get_iter (`OFFSET fp1))#set_line_index 0 in
               add_region fp1 None i1 buffer#end_iter has_end_token;
           end;
+          (*  *)
+
+          (*  *)
           let drawable = new GDraw.drawable window in
           drawable#set_foreground view#gutter.Gutter.marker_color;
           drawable#set_line_attributes ~width:2 ~cap:`PROJECTING ~style:`SOLID ();
-          Gdk.GC.set_dashes drawable#gc ~offset:1 [1; 2];
           regions 
           |> List.iter begin fun region ->
             (* Draw fold *)
@@ -279,15 +273,13 @@ class manager ~(view : Text.view) =
               drawable#segments [(xm, ym1 + dx12 + 1), (xm, ym1 + dx1*2 - 1); (xm - dxdx12 + 1, ym1 + dx), (xm + dxdx12 - 1, ym1 + dx)];
             end else begin
               drawable#set_foreground view#gutter.Gutter.bg_color;
+              drawable#polygon ~filled:true square;
               begin
                 match region.fp2 with
                 | None ->
-                    drawable#set_foreground view#gutter.Gutter.bg_color;
-                    drawable#polygon ~filled:true square;
                     drawable#set_foreground light_marker_color;
                     drawable#polygon ~filled:false square;
                 | _ ->
-                    drawable#polygon ~filled:true square;
                     drawable#set_foreground view#gutter.Gutter.marker_color;
                     drawable#polygon ~filled:false square;
               end;
@@ -309,7 +301,6 @@ class manager ~(view : Text.view) =
       done;
 
     method private fold_between start stop =
-      if stop#line - start#line >= min_length then begin
         match self#remove_tag_from_table Hidden start with
         | None ->
             view#matching_delim_remove_tag ();
@@ -366,17 +357,11 @@ class manager ~(view : Text.view) =
               buffer#delete_mark m2;
             end;
             toggled#call (false, start, stop);
-      end;
 
     method private fold_region region =
       let o2 =
         match region.fp2 with
-        | None ->
-            begin
-              match self#find_matching_delimiter region.fp1 with
-              | Some iter -> iter
-              | _ -> raise Exit
-            end;
+        | None -> self#find_matching_delimiter region.fp1
         | _ -> region.i2#forward_line
       in
       self#fold_between region.ic o2;
@@ -393,15 +378,18 @@ class manager ~(view : Text.view) =
         end;
       with Exit -> true
 
+    method private search_code_backward (iter : GText.iter) =
+      let iter = iter#backward_find_char not_blank in
+      match Comments.enclosing (Comments.Locale comments) iter#offset with
+      | Some (start, stop) -> self#search_code_backward (buffer#get_iter (`OFFSET start))
+      | _ -> iter
+
     method private find_matching_delimiter o1 =
-      let iter = 
-        match folding_mode with
-        | New -> (buffer#get_iter (`OFFSET o1))
-        | Old -> (buffer#get_iter (`OFFSET o1))#backward_word_start  
-      in
-      let text = buffer#get_text ~start:iter ~stop:buffer#end_iter () in
+      let start = buffer#get_iter (`OFFSET o1) in
+      let text = buffer#get_text ~start ~stop:buffer#end_iter () in
       let stop, is_end_token = Delimiters.find_folding_point_end text in
-      let stop = stop + iter#offset in
+      let stop = start#offset + stop in
+      (*Printf.printf "find_matching_delimiter: %d->%d\n%!" o1 stop;*)
       let iter = buffer#get_iter (`OFFSET stop) in
       Some begin
         if is_end_token then begin
@@ -514,11 +502,14 @@ class manager ~(view : Text.view) =
                 end else begin
                   match [@warning "-4"] tag_highlight_applied with
                   | Some (Mark r) when 
-                      r.fp1 <> rm.fp1 && r.fp2 <> rm.fp2 -> self#highlight_remove ();
+                      r.fp1 <> rm.fp1 && r.fp2 <> rm.fp2 -> 
+                      self#highlight_remove ();
                   | _ -> ();
                 end;
             | Region
-            | Out -> self#highlight_remove ()
+            | Out -> 
+                Printf.printf "highlight 2\n%!" ;
+                self#highlight_remove ()
           end
       | _ -> ()
 

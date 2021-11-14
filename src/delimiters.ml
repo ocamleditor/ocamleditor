@@ -165,7 +165,7 @@ let find_innermost_enclosing_delim ?(utf8=true) text pos =
   end;
   !stack;; (* [start, stop] of the left part of the innermost enclosing delimiters *)
 
-let rec scan_folding_points_new = 
+let rec scan_folding_points = 
   let re_end_comment = Str.regexp "\\*)" in
   fun text ->
     let points = 
@@ -198,7 +198,7 @@ let rec scan_folding_points_new =
       | Sys_error _ -> begin
           Printf.eprintf "File \"delimiters.ml\": Sys_error\n%!";
           let pos = (Str.search_forward re_end_comment text 0) + 2 in
-          let d, p = scan_folding_points_new (Str.string_after text pos) in
+          let d, p = scan_folding_points (Str.string_after text pos) in
           points := d;
           start := pos;
         end
@@ -240,7 +240,7 @@ let find_folding_point_end text =
   * on the assumption that the only construct that may not have the closing
   * delimiter is the global "let" binding.
 *)
-let rec scan_folding_points =
+let rec scan_folding_points_old =
   let re_end_comment = Str.regexp "\\*)" in
   fun text ->
     let delim = ref [] in
@@ -288,46 +288,13 @@ let rec scan_folding_points =
       (*Printf.eprintf "File \"delimiters.ml\": %s\n%s\n%!" (Printexc.to_string ex) (Printexc.get_backtrace());*)
       | Sys_error _ -> begin
           let pos = (Str.search_forward re_end_comment text 0) + 2 in
-          let d, p = scan_folding_points (Str.string_after text pos) in
+          let d, p = scan_folding_points_old (Str.string_after text pos) in
           delim := d;
           start := pos;
         end
     end;
     List.iter (fun a -> delim := (a, -1, false) :: !delim) !stack;
     !delim, !start;;
-
-(** find_closing_folding_point *)
-let find_closing_folding_point text =
-  let result = ref None in
-  let stack = ref 0 in
-  try
-    Lex.scan ~utf8:true text begin fun ~token ~start ~stop ->
-      begin
-        match token with
-        | BEGIN    -> incr stack;
-        | LET      -> incr stack;
-        | DO       -> incr stack;
-        | LBRACE   -> incr stack;
-        | LBRACKET -> incr stack;
-        | OBJECT   -> incr stack;
-        | STRUCT   -> incr stack;
-        | SIG      -> incr stack;
-        | END      -> decr stack;
-        | DONE     -> decr stack;
-        | RBRACE   -> decr stack;
-        | RBRACKET -> decr stack;
-        | IN       -> decr stack;
-        | SEMISEMI -> decr stack;
-        | _ -> ()
-      end;
-      if !stack = 0 then begin
-        result := Some start;
-        raise Exit
-      end
-    end;
-    !result
-  with Exit -> !result
-;;
 
 (** scan *)
 let scan text =
