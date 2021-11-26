@@ -88,12 +88,13 @@ let split_length num =
 
 class manager ~(view : Text.view) =
   (*let explicit = false in*)
-  let min_length = 3 in
+  let min_lines = 2 in
   let buffer = view#buffer in
   let set_highlight_background tag = Gmisclib.Util.set_tag_paragraph_background tag in
   object (self)
     val mutable enabled = true;
     val mutable folding_points = []
+    val mutable comments = []
     val mutable regions = []
     val mutable markers = []
     val mutable tag_highlight_applied = None
@@ -128,43 +129,46 @@ class manager ~(view : Text.view) =
       if enabled then begin
         Gmisclib.Idle.add begin fun () ->
           crono ~label:"scan_folding_points" begin fun () -> 
-          let vrect = view#visible_rect in
-          let h0 = Gdk.Rectangle.height vrect in
-          let y0 = Gdk.Rectangle.y vrect in
-          let start, _ = view#get_line_at_y y0 in
-          let stop, _ = view#get_line_at_y (y0 + h0) in
-          (* Find all comments in the buffer *)
-          let comments =
-            buffer#get_text ()
-            |> Glib.Convert.convert_with_fallback ~fallback:"" 
-              ~from_codeset:"UTF-8" ~to_codeset:Oe_config.ocaml_codeset
-            |> Comments.scan_locale 
-          in
-          (* Adjust start and stop positions *)
-          let start = start#backward_line#set_line_index 0 in
-          let stop = stop#forward_line#set_line_index 0 in
-          let text = buffer#get_text ~start ~stop () in
-          (* Find folding points in the visible text *)
-          let fp, pos =
-            match folding_mode with
-            | New -> Delimiters.scan_folding_points_new text
-            | Old -> 
-                let fp, pos = Delimiters.scan_folding_points text in
-                (* Forget the ends, to be compliant with the new mode *)
-                fp |> List.map (fun (a, _, has_end_token) -> a, has_end_token), pos 
-          in
-          let offset = start#offset + pos in
-          (* Visible rect. to buffer offsets *)
-          let fp = List.fold_left (fun acc (a, has_end_token) -> (offset + a, None, has_end_token) :: acc) [] fp in
-          (* Exclude folding points inside comments *)
-          let fp = List.filter begin function
-            | (a, Some b, _) -> comments |> List.for_all (fun (bc, ec, _) -> not (a >= bc && b <= ec))
-            | (a, None, _) -> comments |> List.for_all (fun (bc, ec, _) -> not (a >= bc && a <= ec))
-            end fp in
-          (* Join folding points to comments *)
-          let comments = List.map (fun (a, b, _) -> (a, Some b, true)) comments in
-          let fp = List.sort (fun (a, _, _) (b, _, _) -> Stdlib.compare a b) (fp @ comments) in
-          folding_points <- fp;
+            let vrect = view#visible_rect in
+            let h0 = Gdk.Rectangle.height vrect in
+            let y0 = Gdk.Rectangle.y vrect in
+            let start, _ = view#get_line_at_y y0 in
+            let stop, _ = view#get_line_at_y (y0 + h0) in
+            (* Adjust start and stop positions *)
+            let start = start#backward_line#set_line_index 0 in
+            let stop = stop#forward_line#set_line_index 0 in
+            let start_offset = start#offset in
+            let stop_offset = stop#offset in
+            (* Find all comments in the buffer and filter by visible rect. *)
+            comments <-
+              buffer#get_text ()
+              |> Glib.Convert.convert_with_fallback ~fallback:"" 
+                ~from_codeset:"UTF-8" ~to_codeset:Oe_config.ocaml_codeset
+              |> Comments.scan_locale
+              |> List.filter 
+                (fun (a, _, _) -> start_offset <= a && a <= stop_offset);
+            let text = buffer#get_text ~start ~stop:buffer#end_iter () in
+            let fp, pos = crono ~label:"Delimiters" Delimiters.scan_folding_points text in
+            let offset = start_offset + pos in
+            let fp = 
+              fp 
+              (* Find folding points in the visible text *)
+              |> List.filter_map begin fun (a, has_end_token) ->
+                let pos = offset + a in
+                if start_offset <= pos && pos <= stop_offset then
+                  Some (pos, None, has_end_token)
+                else None
+              end 
+              (* Exclude folding points inside comments *)
+              |> List.filter begin function
+              | (a, Some b, _) -> comments |> List.for_all (fun (bc, ec, _) -> not (a >= bc && b <= ec))
+              | (a, None, _) -> comments |> List.for_all (fun (bc, ec, _) -> not (a >= bc && a <= ec))
+              end
+            in
+            (* Join folding points to comments *)
+            let cmts = List.map (fun (a, b, _) -> (a, Some b, true)) comments in
+            let fp = List.sort (fun (a, _, _) (b, _, _) -> Stdlib.compare a b) (fp @ cmts) in
+            folding_points <- fp;
           end ()
         end
       end
@@ -391,25 +395,11 @@ class manager ~(view : Text.view) =
       let stop = start#offset + stop in
       (*Printf.printf "find_matching_delimiter: %d->%d\n%!" o1 stop;*)
       let iter = buffer#get_iter (`OFFSET stop) in
-      Some begin
         if is_end_token then begin
           if iter#ends_line then iter#forward_char
           else iter#forward_to_line_end#forward_char
         end else begin
-          let comments =
-            buffer#get_text ()
-            |> Glib.Convert.convert_with_fallback ~fallback:"" 
-              ~from_codeset:"UTF-8" ~to_codeset:Oe_config.ocaml_codeset
-            |> Comments.scan_locale 
-          in
-          let rec search_code_backward (iter : GText.iter) =
-            let iter = iter#backward_find_char not_blank in
-            match Comments.enclosing (Comments.Locale comments) iter#offset with
-            | Some (start, stop) -> search_code_backward (buffer#get_iter (`OFFSET start))
-            | _ -> iter
-          in
-          (search_code_backward iter)#forward_to_line_end#forward_char
-        end
+        (self#search_code_backward iter)#forward_to_line_end#forward_char
       end
 
     method private remove_tag_from_table which_table iter =
@@ -476,19 +466,14 @@ class manager ~(view : Text.view) =
           begin
             match self#is_hover x y with
             | Mark rm as mark ->
+                Printf.printf "highlight 1\n%!" ;
                 if not tag_highlight_busy && tag_highlight_applied = None then begin
-                  try
-                    if self#is_folded rm.ic then raise Exit;
+                  if not (self#is_folded rm.ic) then begin
                     set_highlight_background tag_highlight Oe_config.code_folding_highlight_color;
                     let start = rm.i1 in
                     let stop =
                       match rm.fp2 with
-                      | None ->
-                          begin
-                            match self#find_matching_delimiter rm.fp1 with
-                            | Some iter -> iter
-                            | _ -> raise Exit
-                          end;
+                      | None -> self#find_matching_delimiter rm.fp1
                       | Some fp2 when rm.has_end_token ->
                           let iter = buffer#get_iter (`OFFSET fp2) in
                           if iter#ends_line then (iter#set_line_index 0)#forward_to_line_end
@@ -498,7 +483,7 @@ class manager ~(view : Text.view) =
                     in
                     buffer#apply_tag tag_highlight ~start ~stop;
                     tag_highlight_applied <- Some mark;
-                  with Exit -> ()
+                  end
                 end else begin
                   match [@warning "-4"] tag_highlight_applied with
                   | Some (Mark r) when 
