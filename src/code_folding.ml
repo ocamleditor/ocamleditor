@@ -40,7 +40,7 @@ type fold_iters = {
 (* See src/code-folding.svg *)
 type region = {
   i1 : GText.iter; (* offset 0 of the line containing the token starting the folding region *)
-  i2 : GText.iter; (* offset 0 of the line containing the token that ends the folding region *)
+  mutable i2 : GText.iter; (* offset 0 of the line containing the token that ends the folding region *)
   ic : GText.iter; (* offset 0 of the line at the beginning of the folding region *)
   has_end_token : bool;
   fp1 : int;
@@ -126,6 +126,41 @@ class manager ~(view : Text.view) =
       fold_line_color <- x
 
     method scan_folding_points () =
+      (* This method scans the text buffer for folding points and stores them 
+         as a member of the object in the form of a list of triples, 
+         which are made up of: the start offset of the fold, the end 
+         offset (optional) and a boolean indicating whether the starting token 
+         has a final token that corresponds to it.
+
+         This method should be invoked whenever the visible section of text 
+         changes (eg when the scroll value changes or when code folds are 
+         collapsed or expanded).
+
+         The scan is done in two steps: a first step for comments and a second 
+         step for syntax elements.
+
+         The scan for the search of comments is done on the entire buffer and
+         always returns the beginning and the end of the comment, so in this
+         case the second element of the triple is always known, likewise it is 
+         known that there is an end-of-comment token. This scan affects the 
+         entire buffer but the result is filtered only to the comment blocks 
+         that start in the visible window.
+
+         The search for syntactic elements, on the other hand, is performed 
+         only on a portion of the text: the one that begins with the upper 
+         margin of the visible window and ends with the end of the buffer 
+         (which can be well beyond the lower limit of the visible window).
+         This scan limits itself to determining only the beginning tokens of the 
+         portion of code that constitutes the folding, as the determination 
+         of the end of this portion requires more calculations which are
+         for the moment left undetermined and postponed to a subsequent 
+         phase, after the folding points will be filtered.
+
+         The list of triples resulting from this method provides the basis 
+         for the subsequent filtering of those triples that are outside the 
+         scope of the "code folding" functionality and the subsequent 
+         completion with other information useful for the implementation, 
+         thus obtaining a data structure more real: the region. *)
       if enabled then begin
         Gmisclib.Idle.add begin fun () ->
           crono ~label:"scan_folding_points" begin fun () -> 
@@ -146,13 +181,16 @@ class manager ~(view : Text.view) =
                 ~from_codeset:"UTF-8" ~to_codeset:Oe_config.ocaml_codeset
               |> Comments.scan_locale
               |> List.filter 
-                (fun (a, _, _) -> start_offset <= a && a <= stop_offset);
+                (fun (cs, _, _) -> start_offset <= cs && cs <= stop_offset);
+            (* Find the fold points from the visible window to the end of the 
+               buffer. This is necessary to be able to catch top-level 
+               let-bindings not closed by ";;".*)
             let text = buffer#get_text ~start ~stop:buffer#end_iter () in
             let fp, pos = crono ~label:"Delimiters" Delimiters.scan_folding_points text in
             let offset = start_offset + pos in
             let fp = 
               fp 
-              (* Find folding points in the visible text *)
+              (* Filter by start offset within visible window. *)
               |> List.filter_map begin fun (a, has_end_token) ->
                 let pos = offset + a in
                 if start_offset <= pos && pos <= stop_offset then
@@ -235,12 +273,12 @@ class manager ~(view : Text.view) =
       let y0 = Gdk.Rectangle.y vrect in
       let h0 = Gdk.Rectangle.height vrect in
       regions <- [];
-      (* Filter folding_points by visible area *)
+      (* Convert folding points to regions and filter by minimum numeber of lines, when possible. *)
       regions <-
         folding_points
         |>List.filter_map begin function
         | fp1, ((Some of2) as fp2), has_end_token ->
-            let i1 = (buffer#get_iter (`OFFSET fp1))#set_line_index 0 in
+            let i1 = (buffer#get_iter (`OFFSET fp1))#set_line_index 0 in  
             let i2 = (buffer#get_iter (`OFFSET of2))#set_line_index 0 in 
             if i2#line - i1#line >= min_lines then 
               self#create_region y0 h0 fp1 fp2 i1 i2 has_end_token
@@ -254,7 +292,11 @@ class manager ~(view : Text.view) =
                 r0
             | _ -> None
         end;
-      (* Filter regions above the minimum number of lines. *)
+      (* Filter regions by minimum number of lines for those regions with 
+         indeterminate end offset: the end-of-region offset is determined 
+         empirically using the start of the next region. In this case, however, 
+         we need to move the offset back until we find the first code token in
+         order to exclude blanks and comments. *)
       if regions <> [] then begin
         let l0 = List.length regions in
         let r2 = (regions |> List.tl |> List.map (fun x -> Some x)) @ [None] in
@@ -263,17 +305,23 @@ class manager ~(view : Text.view) =
           |> List.filter_map begin fun (r1, r2) ->
             match r2 with 
             | Some r2 when r1.has_end_token -> Some r1
-            | Some r2 when 
+            | Some r2 -> 
                 let r21 = self#search_code_backward r2.i1 in
-                r21#line - r1.i1#line >= min_lines -> 
-                Some r1
-            | Some r2 -> None
+                if r21#line - r1.i1#line >= min_lines then begin
+                  (* patch end-of-region *)
+                  r1.i2 <- r21;
+                  let yb2, h2 = view#get_line_yrange r1.i2 in 
+                  r1.y2 <- yb2 - y0 + 1;
+                  r1.h2 <- h2;
+                  (* TODO: also patch fp2 *) 
+                  Some r1
+                end else None
             | _ -> Some r1
           end;
         (* Print debug info *)
         let l1 = List.length folding_points in
         let lc = List.length comments in
-        let info = regions |> List.map (fun r -> sprintf "%d(%d)" r.i1#offset r.y2) |> String.concat "," in
+        let info = regions |> List.map (fun r -> sprintf "%d-%d" r.i1#offset r.i2#offset) |> String.concat "," in
         Printf.printf "Regions: (%d+%d=%d)->%d->%d %s\n%!" 
           (l1 - lc) lc l1 l0 (List.length regions) info;
       end
@@ -486,7 +534,7 @@ class manager ~(view : Text.view) =
           begin
             match self#is_hover x y with
             | Some (Mark rm as mark) ->
-                Printf.printf "Mark\n%!" ;
+                Printf.printf "Mark %d-%d\n%!" rm.i1#offset rm.i2#offset;
                 if not tag_highlight_busy && tag_highlight_applied = None then begin
                   if not (self#is_folded rm.ic) then begin
                     set_highlight_background tag_highlight Oe_config.code_folding_highlight_color;
@@ -515,7 +563,7 @@ class manager ~(view : Text.view) =
                 Printf.printf "None\n%!" ;
                 self#highlight_remove ()
             | Some (Ribbon region) -> 
-                Printf.printf "Ribbon %d\n%!" region.i1#offset;
+                Printf.printf "Ribbon %d-%d\n%!" region.i1#offset region.i2#offset;
                 self#highlight_remove ()
           end
       | _ -> ()
