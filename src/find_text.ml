@@ -191,7 +191,7 @@ let read_status () =
       | _ -> ()
     end xml
   with
-  | Xml.File_not_found _ -> ()
+  | Xml_light_errors.File_not_found _ -> ()
   | Xml.Error _ -> begin
       if Sys.file_exists status.status_filename then (Sys.remove status.status_filename)
     end
