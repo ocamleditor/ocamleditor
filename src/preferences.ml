@@ -638,7 +638,7 @@ let from_file filename =
     end xml;
     pref.pref_bg_color <- (!bg_color, !bg_color_theme);
     pref
-  with Xml.File_not_found _ -> create_defaults()
+  with Xml_light_errors.File_not_found _ -> create_defaults()
 ;;
 
 (** geometry_memo *)
