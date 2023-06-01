@@ -46,12 +46,6 @@ end
 
 open Range
 
-let tag_lident = function
-  | _, METHOD, _, _ | _, PRIVATE, _, _ -> "method_name_def"
-  | _, IN, _, _ | _, INITIALIZER, _, _ | _, NEW, _, _ | _, OF, _, _ -> "lident"
-  | "define", _, _, _  -> "name_def"
-  | _ -> "lident";;
-
 let parse pref =
   let tags = pref.Preferences.pref_tags in
   let _, _, bgcolor_highlight = Preferences.preferences#get.Preferences.pref_editor_mark_occurrences in
@@ -85,6 +79,7 @@ let parse pref =
     let last_but_one = ref EOF in
     let in_record = ref false in
     let in_record_label = ref false in
+    let in_annotation = ref false in
     try
       while true do
         try
@@ -112,6 +107,7 @@ let parse pref =
             | WITH
               -> "control"
             | AND
+            | ANDOP _
             | AS
             | BAR
             | CLASS
@@ -123,9 +119,11 @@ let parse pref =
             | FUNCTOR
             | INHERIT
             | LET
+            | LETOP _
             | METHOD
             | MODULE
             | MUTABLE
+            | NONREC
             | PRIVATE
             | REC
             | TYPE
@@ -143,6 +141,7 @@ let parse pref =
               -> "structure"
             | CHAR _
             | STRING _
+            | QUOTED_STRING_EXPR _ | QUOTED_STRING_ITEM _
               -> "char"
             (*| BACKQUOTE*)
             | INFIXOP0 _
@@ -151,7 +150,8 @@ let parse pref =
             | INFIXOP3 _
             | INFIXOP4 _
             | PREFIXOP _
-            | HASH
+            | HASH | HASHOP _
+            | BANG
               -> "infix"
             | LABEL _
             | OPTLABEL _
@@ -159,6 +159,7 @@ let parse pref =
             | TILDE
               -> "label"
             | UIDENT _ | BACKQUOTE -> "uident"
+            | LIDENT _ when !in_annotation -> "annotation"
             | LIDENT _ ->
                 begin match !last with
                 | QUESTION | TILDE -> "label"
@@ -189,14 +190,22 @@ let parse pref =
             | LBRACE -> in_record := true; in_record_label := true; "symbol"
             | RBRACE -> in_record := false; in_record_label := false; "symbol"
             | EQUAL when !in_record -> in_record_label := false; "symbol"
-            | LPAREN | RPAREN | LBRACKET | BARRBRACKET| RBRACKET | LBRACKETLESS | GREATERRBRACKET
+            | LPAREN | RPAREN | LBRACKET | BARRBRACKET | LBRACKETLESS | LBRACKETGREATER | GREATERRBRACKET
             | LBRACELESS | GREATERRBRACE | LBRACKETBAR | LESSMINUS
             | EQUAL | PLUS | MINUS | STAR | QUOTE | SEMI | SEMISEMI | MINUSGREATER
-            | COMMA | DOT | DOTDOT | COLONCOLON | COLONEQUAL (*| LBRACE*) (*| RBRACE*) | UNDERSCORE
+            | COMMA | DOT | DOTDOT | COLONCOLON | COLONEQUAL | UNDERSCORE
+            | PLUSDOT | MINUSDOT | LESS | GREATER
+            | PLUSEQ | PERCENT
+            | COLONGREATER
+            | DOTOP _
               -> "symbol"
+            | LBRACKETAT | LBRACKETPERCENT | LBRACKETPERCENTPERCENT | LBRACKETATAT | LBRACKETATATAT
+              -> in_annotation:= true; "annotation"
+            | RBRACKET -> if !in_annotation then (in_annotation := false; "annotation") else "symbol"
             | ASSERT -> "custom"
+            | DOCSTRING _ | COMMENT _ -> "comment"
+            | EOL -> ""
             | EOF -> raise End_of_file
-            | _ -> ""
           end;
 
           Buffer.add_string out (Glib.Markup.escape_text (String.sub text !pos (lstart - !pos)));
