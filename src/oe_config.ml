@@ -52,7 +52,7 @@ let current_line_border_color            = fun add bgcolor -> `NAME (add bgcolor
 let current_line_width                   = 2 (* Must be >= 1. Left margin is automatically increased by current_line_width *)
 let current_line_style                   = (*`ON_OFF_DASH*) `SOLID
 let current_line_join                    = (*`ROUND `MITER `BEVEL *) `BEVEL
-let on_off_dashes                        = [1; 3]
+let on_off_dashes                        = [3; 3]
 (* Gutter colors:
    `CALC factor    : Calculated according to the bg color of the text view.
                     [darker] 0.5 <= factor <= 1.0 [same as text view]

@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- OCamlEditor-1.13.4 XML Project -->
+<!-- OCamlEditor-1.14.1 XML Project -->
 <project>
   <ocaml_home></ocaml_home>
   <ocamllib></ocamllib>
@@ -179,8 +179,8 @@
       <nodep>false</nodep>
       <dontlinkdep>false</dontlinkdep>
       <dontaddopt>false</dontaddopt>
-      <cflags>-w sy -g</cflags>
-      <lflags>-w sy -g</lflags>
+      <cflags>-w -s-y -g</cflags>
+      <lflags>-w -s-y -g</lflags>
       <target_type>Library</target_type>
       <outname>otherwidgets</outname>
       <lib_install_path></lib_install_path>
@@ -204,14 +204,14 @@
       <nodep>true</nodep>
       <dontlinkdep>false</dontlinkdep>
       <dontaddopt>false</dontaddopt>
-      <cflags>-w syxm -g</cflags>
+      <cflags>-w -s-y-x-m -g</cflags>
       <lflags>-g</lflags>
       <target_type>Executable</target_type>
       <outname>ocamleditor</outname>
       <lib_install_path></lib_install_path>
       <external_tasks/>
       <restrictions></restrictions>
-      <dependencies>14,16,26,22</dependencies>
+      <dependencies>14,19,16,26,22</dependencies>
     </target>
     <target name="ocamleditor-bytecode" default="false" id="0" sub_targets="" is_fl_package="false" subsystem="Console" readonly="false" visible="true" node_collapsed="false">
       <descr></descr>
@@ -229,7 +229,7 @@
       <nodep>false</nodep>
       <dontlinkdep>false</dontlinkdep>
       <dontaddopt>false</dontaddopt>
-      <cflags>-w syxm -g</cflags>
+      <cflags>-w -s-y-x-m -g</cflags>
       <lflags>-g</lflags>
       <target_type>Executable</target_type>
       <outname>ocamleditor</outname>
@@ -254,7 +254,7 @@
       <nodep>true</nodep>
       <dontlinkdep>false</dontlinkdep>
       <dontaddopt>false</dontaddopt>
-      <cflags>-w syxm -g</cflags>
+      <cflags>-w -s-y-x-m -g</cflags>
       <lflags>-g</lflags>
       <target_type>Executable</target_type>
       <outname>ocamleditor</outname>
@@ -303,14 +303,14 @@
       <nodep>false</nodep>
       <dontlinkdep>false</dontlinkdep>
       <dontaddopt>false</dontaddopt>
-      <cflags>-w syxm -g</cflags>
+      <cflags>-w -s-y-x-m -g</cflags>
       <lflags>-g</lflags>
       <target_type>Executable</target_type>
       <outname>ocamleditor</outname>
       <lib_install_path></lib_install_path>
       <external_tasks/>
       <restrictions></restrictions>
-      <dependencies>14,16,26</dependencies>
+      <dependencies>14,19,16,26</dependencies>
     </target>
     <target name="ocamleditor-lib" default="false" id="14" sub_targets="" is_fl_package="false" subsystem="" readonly="false" visible="true" node_collapsed="false">
       <descr></descr>
@@ -328,14 +328,14 @@
       <nodep>false</nodep>
       <dontlinkdep>false</dontlinkdep>
       <dontaddopt>false</dontaddopt>
-      <cflags>-w syxm -g</cflags>
+      <cflags>-w -s-y-x-m -g</cflags>
       <lflags>-g</lflags>
       <target_type>Library</target_type>
       <outname>ocamleditor_lib</outname>
       <lib_install_path></lib_install_path>
       <external_tasks/>
       <restrictions></restrictions>
-      <dependencies>4,10,5,6,8,9,20</dependencies>
+      <dependencies>4,10,5,28,8,9,20</dependencies>
     </target>
     <target name="plugin-remote-bytecode" default="false" id="17" sub_targets="" is_fl_package="false" subsystem="" readonly="false" visible="true" node_collapsed="false">
       <descr></descr>
@@ -403,7 +403,7 @@
       <nodep>false</nodep>
       <dontlinkdep>true</dontlinkdep>
       <dontaddopt>false</dontaddopt>
-      <cflags>-w syxm -g</cflags>
+      <cflags>-w -s-y-x-m -g</cflags>
       <lflags>-g lablrsvg.cma</lflags>
       <target_type>Library</target_type>
       <outname>../plugins/dot_viewer_svg</outname>
@@ -634,7 +634,7 @@
           <cmd>ocaml</cmd>
           <args>
             <arg enabled="true">mkversion.ml</arg>
-            <arg enabled="true">1.13.4</arg>
+            <arg enabled="true">1.14.0</arg>
           </args>
           <phase>Before_clean</phase>
         </task>
