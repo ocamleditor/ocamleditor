@@ -36,8 +36,8 @@ let scan_indent view (start : GText.iter) (stop : GText.iter) =
   !data;;
 
 let use_glow = false
-let style = if use_glow then `ON_OFF_DASH else `SOLID
-let width = 2
+let style = `ON_OFF_DASH
+let width = 1
 let color_hl_fg = `NAME "#000000"
 let color_hl_bg = `NAME "#e0f0ff"
 let color_hl_bg1 = `NAME "#fff0e0"

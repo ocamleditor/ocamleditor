@@ -149,7 +149,6 @@ class browser () =
     val mutable cache_dialog_project_properties = []
     val mutable menu = None
     val mutable pref_max_view_2 = false
-    val mutable pref_max_view_fullscreen = false
     val mutable max_height_prev_h = -1
     val mutable max_height_prev_y = -1
     val mutable is_fullscreen = false
@@ -538,14 +537,12 @@ class browser () =
 
     method set_fullscreen x =
       if x && (not is_fullscreen) then begin
-        pref_max_view_fullscreen <- Preferences.preferences#get.Preferences.pref_max_view_fullscreen;
-        let decorated = not Preferences.preferences#get.Preferences.pref_max_view_fullscreen in
-        window#set_decorated decorated;
-        window#maximize();
-        if not decorated then begin
-          window_title_menu_icon#misc#show();
-          vbox_menu_buttons#misc#show();
-        end;
+        (* pref_max_view_fullscreen = "Prefer fullscreen over maximize window" *)
+        let prefer_maximized_window = not Preferences.preferences#get.Preferences.pref_max_view_fullscreen in
+        if prefer_maximized_window then window#maximize() else window#fullscreen();
+        window#set_decorated (not prefer_maximized_window);
+        window_title_menu_icon#misc#show();
+        vbox_menu_buttons#misc#show();
         menubar#misc#set_name "oe_menubar";
         menubarbox#set_child_packing ~expand:false ~fill:false menubar#coerce;
         toolbox#misc#show();
@@ -555,6 +552,7 @@ class browser () =
         menubar#misc#set_name "";
         menubarbox#set_child_packing ~expand:true ~fill:true menubar#coerce;
         toolbox#misc#hide();
+        window#unfullscreen();
         window#unmaximize();
         window#set_decorated true;
       end;
