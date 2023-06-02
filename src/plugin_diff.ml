@@ -271,8 +271,8 @@ module Diff = struct
 
 
   (** to_buffer *)
-  let to_buffer (buffer : GText.buffer) filename1 filename2 =
-    Plugin_diff_gtext.insert buffer filename1 filename2
+  let to_buffer (buffer : GText.buffer) ignore_whitespace filename1 filename2 =
+    Plugin_diff_gtext.insert buffer ignore_whitespace filename1 filename2
 
 end
 
