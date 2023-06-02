@@ -118,7 +118,7 @@ module type DIFF = sig
 
   val paint_gutter : 'a editor_page -> unit
 
-  val to_buffer : GText.buffer -> string -> string -> unit
+  val to_buffer : GText.buffer -> bool -> string -> string -> unit
 
 end
 
