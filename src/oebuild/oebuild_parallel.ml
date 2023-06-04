@@ -152,26 +152,33 @@ let create_process ?(jobs=0) ~verbose cb_create_command cb_at_exit dag leaf erro
         err        = Buffer.create 10;
         out        = Buffer.create 10
       } in
-      let at_exit = function
+      let continue_with (_, process_status, error) =
+        let cont () =
+          Mutex.lock dag.mutex;
+          Dag.remove_leaf dag.graph leaf;
+          Mutex.unlock dag.mutex;
+          (*if jobs > 0 then begin*)
+          Mutex.lock job_mutex;
+          decr job_counter;
+          Mutex.unlock job_mutex;
+          (*end;*)
+          cb_at_exit output
+        in
+        match error with
         | None ->
-            begin match Unix.waitpid [] !process_id with
-            | _, Unix.WEXITED 0 ->
-                output.exit_code <- 0;
-                messages := output :: !messages
-            | _, _              ->
-                output.exit_code <- 1; (* I do not need the exact exit code right now *)
-                errors := output :: !errors
-            end;
-            Mutex.lock dag.mutex;
-            Dag.remove_leaf dag.graph leaf;
-            Mutex.unlock dag.mutex;
-            (*if jobs > 0 then begin*)
-            Mutex.lock job_mutex;
-            decr job_counter;
-            Mutex.unlock job_mutex;
-            (*end;*)
-            cb_at_exit output
-        | Some ex -> Printf.eprintf "File \"oebuild_parallel.ml\": %s\n%s\n%!" (Printexc.to_string ex) (Printexc.get_backtrace());
+            begin
+              match process_status with
+              | Unix.WEXITED 0 ->
+                  output.exit_code <- 0;
+                  messages := output :: !messages;
+                  cont ();
+              | Unix.WEXITED _ | Unix.WSIGNALED _ | Unix.WSTOPPED _ ->
+                  output.exit_code <- 1; (* I do not need the exact exit code right now *)
+                  errors := output :: !errors;
+                  cont ()
+            end
+        | Some ex ->
+            Printf.eprintf "File \"oebuild_parallel.ml\": %s\n%s\n%!" (Printexc.to_string ex) (Printexc.get_backtrace());
       in
       let process_in = Spawn.loop (fun stdin ->
           Buffer.add_string output.out (input_line stdin);
@@ -187,7 +194,7 @@ let create_process ?(jobs=0) ~verbose cb_create_command cb_at_exit dag leaf erro
       Mutex.unlock job_mutex;
       (*end;*)
       begin
-        match Spawn.async ~at_exit ~process_in ~process_err command args
+        match Spawn.async ~continue_with ~process_in ~process_err command args
         with `ERROR ex -> ()
            | `PID n -> process_id := n
       end;

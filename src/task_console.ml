@@ -129,6 +129,8 @@ class view ~(editor : Editor.editor) ?(task_kind=(`OTHER : Task.kind)) ~task ?pa
       buffer#delete ~start:(buffer#get_iter `START) ~stop:(buffer#get_iter `END)
 
     method close () =
+      (match process with None -> () | Some proc ->
+          Unix.waitpid [] proc.Spawn.pid |> ignore);
       button_stop#misc#set_sensitive false;
       button_run#misc#set_sensitive true;
       self#view#set_editable false;
