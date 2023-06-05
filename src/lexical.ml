@@ -26,7 +26,11 @@ let init_tags ?(tags=(!tags)) ?(colors=(!colors))
           | None -> ()
           | Some t -> table#remove t
         end;
-        let properties = [`FOREGROUND_GDK (GDraw.color col); `WEIGHT weight; `STYLE style; `UNDERLINE undline; `SCALE scale] in
+        let properties =
+          [`FOREGROUND_GDK (GDraw.color col); `STYLE style; `UNDERLINE undline; `SCALE scale]
+          @
+          (if weight > 0 then [`WEIGHT (`CUSTOM weight)] else [])
+        in
         let properties = if bg_default then properties else (`BACKGROUND_GDK (GDraw.color bg_color)) :: properties in
         let tag = tb#create_tag ~name:tagname properties in
         if tagname = "ocamldoc" then begin
@@ -37,7 +41,7 @@ let init_tags ?(tags=(!tags)) ?(colors=(!colors))
           end;
           Gaux.may (table#lookup "ocamldoc-paragraph") ~f:table#remove;
           let tag = tb#create_tag ~name:"ocamldoc-paragraph"
-              [`FOREGROUND_GDK (GDraw.color col); `WEIGHT weight; `STYLE style; `UNDERLINE undline; `PIXELS_BELOW_LINES 1; `PIXELS_ABOVE_LINES 1] in
+              [`FOREGROUND_GDK (GDraw.color col); `WEIGHT (`CUSTOM weight); `STYLE style; `UNDERLINE undline; `PIXELS_BELOW_LINES 1; `PIXELS_ABOVE_LINES 1] in
           if ocamldoc_paragraph_enabled then begin
             Gaux.may ocamldoc_paragraph_bgcolor_1 ~f:begin fun bg1 ->
               Gmisclib.Util.set_tag_paragraph_background tag bg1;
