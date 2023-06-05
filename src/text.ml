@@ -286,7 +286,7 @@ and view ?project ?buffer () =
           let rstart = self#buffer#get_iter (`OFFSET rstart) in
           let rstop = self#buffer#get_iter (`OFFSET rstop) in
           (* To satisfy code folding, if the right delim. is not visible
-             we do not even draw the background of the left delim.  
+             we do not even draw the background of the left delim.
              See also "Border around matching delimiters" *)
           let rtext = rstart#get_visible_text ~stop:rstop in
           if String.length rtext > 0 then begin
@@ -647,7 +647,9 @@ and view ?project ?buffer () =
                           let start = !iter in
                           let pos = start#line_index in
                           iter := !iter#forward_find_char not_blank;
-                          draw start (create_middot_string (!iter#line_index - pos));
+                          let len = !iter#line_index - pos in
+                          if len > 0 then
+                            draw start (create_middot_string len);
                       | 13 -> draw !iter whitespace_crlf
                       | 9 -> draw !iter whitespace_tab
                       | _ when !iter#ends_line -> draw !iter whitespace_lf
@@ -749,7 +751,7 @@ and view ?project ?buffer () =
                           end
                       | _ -> false
                     in
-                    (* lstart, lstop are for the RIGHT delimeter and rstart, 
+                    (* lstart, lstop are for the RIGHT delimeter and rstart,
                        rstop are for the LEFT delimiter.
                        To satisfy code folding, if the right delim. is not visible
                        we do not even draw the border of the left delim.
