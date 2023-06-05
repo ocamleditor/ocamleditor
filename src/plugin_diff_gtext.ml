@@ -31,8 +31,8 @@ let insert (buffer : GText.buffer) ignore_whitespace filename1 filename2 =
     with ex -> Printf.eprintf "File \"plugin_diff.ml\": %s\n%s\n%!" (Printexc.to_string ex) (Printexc.get_backtrace());
   in
   let diff = Preferences.preferences#get.Preferences.pref_program_diff in
-  let args = 
-    [ if ignore_whitespace then "--ignore-all-space" else ""; filename1; filename2 ] 
+  let args =
+    [ if ignore_whitespace then "--ignore-all-space" else ""; filename1; filename2 ]
     |> List.filter (fun x -> x <> "") |> Array.of_list
   in
   let color_add = Color.add_value Oe_config.global_gutter_diff_color_add (-0.3) in
@@ -54,7 +54,7 @@ let insert (buffer : GText.buffer) ignore_whitespace filename1 filename2 =
           incr i;
         end lines
       in
-      buffer#begin_user_action ();
+      Gmisclib.Idle.add ~prio:100 buffer#begin_user_action;
       List.iteri begin fun i diff ->
         Gmisclib.Idle.add ~prio:200 begin fun () ->
           begin
@@ -76,7 +76,7 @@ let insert (buffer : GText.buffer) ignore_whitespace filename1 filename2 =
                 insert_lines "+" l1 b;
           end;
           buffer#insert "(...)\n";
-          if i = (List.length !diffs) - 1 then 
+          if i = (List.length !diffs) - 1 then
             buffer#end_user_action ();
         end;
       end !diffs;
