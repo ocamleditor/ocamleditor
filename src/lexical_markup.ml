@@ -55,7 +55,7 @@ let parse pref =
   let span (highlight, tagname) =
     match List.assoc tagname tags with
     | `NAME color, weight, style, underline, _, _ ->
-        let weight    = match weight with `BOLD -> " font_weight='bold'" | _ -> "" in
+        let weight    = sprintf " font_weight='%d'" weight in
         let style     = match style with `ITALIC -> " font_style='italic'" | _ -> "" in
         let underline = match underline with `LOW -> " underline='low'" | _ -> "" in
         let bgcolor   = if highlight then " bgcolor='" ^ bgcolor_highlight ^"'" else "" in

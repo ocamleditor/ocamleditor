@@ -121,7 +121,7 @@ type t = {
 }
 and text_properties =
   GDraw.color *
-  Pango.Tags.weight *
+  int *
   Pango.Tags.style *
   Pango.Tags.underline *
   Pango.Tags.scale *
@@ -178,27 +178,27 @@ let tag_labels = List.combine default_tags [
   ]
 
 let default_colors : text_properties list = [
-  (`NAME "blue"),         `BOLD,   `NORMAL, `NONE, `MEDIUM, (true,  `NAME "#FFFFFF");
-  (`NAME "forestgreen"),  `BOLD,   `NORMAL, `NONE, `MEDIUM, (true,  `NAME "#FFFFFF");
-  (*    (`NAME "forestgreen"), `BOLD, `NORMAL, `NONE, `MEDIUM;*)
-  (`NAME "purple"),       `BOLD,   `NORMAL, `NONE, `MEDIUM, (true,  `NAME "#FFFFFF");
-  (`NAME "firebrick3"),   `NORMAL, `NORMAL, `NONE, `MEDIUM, (true,  `NAME "#FFFFFF");
-  (`NAME "indianred4"),   `NORMAL, `NORMAL, `NONE, `MEDIUM, (true,  `NAME "#FFFFFF");
-  (`NAME "saddlebrown"),  `BOLD,   `NORMAL, `NONE, `MEDIUM, (true,  `NAME "#FFFFFF");
-  (`NAME "midnightblue"), `BOLD,   `NORMAL, `NONE, `MEDIUM, (true,  `NAME "#FFFFFF");
-  (`NAME "blue"),         `NORMAL, `NORMAL, `NONE, `MEDIUM, (true,  `NAME "#FFFFFF");
-  (`NAME "black"),        `BOLD,   `NORMAL, `NONE, `MEDIUM, (true,  `NAME "#FFFFFF");
-  (`NAME "black"),        `NORMAL, `NORMAL, `NONE, `MEDIUM, (true,  `NAME "#FFFFFF");
-  (`NAME "black"),        `NORMAL, `NORMAL, `NONE, `MEDIUM, (true,  `NAME "#FFFFFF");
-  (`NAME "black"),        `NORMAL, `NORMAL, `NONE, `MEDIUM, (true,  `NAME "#FFFFFF");
-  (`NAME "black"),        `NORMAL, `NORMAL, `NONE, `MEDIUM, (true,  `NAME "#FFFFFF");
-  (`NAME "deeppink3"),    `NORMAL, `ITALIC, `NONE, `MEDIUM, (true,  `NAME "#FFFFFF");
-  (`NAME "deeppink3"),    `NORMAL, `ITALIC, `NONE, `MEDIUM, (true,  `NAME "#FFFFFF");
-  (`NAME "#FFFF00"),      `NORMAL, `NORMAL, `LOW,  `MEDIUM, (true,  `NAME "#FFFFFF");
-  (`NAME "#C3FF96"),      `NORMAL, `NORMAL, `NONE, `MEDIUM, (true,  `NAME "#FFFFFF");(* #E8F2FF *) (* #F7F7D7 *) (*"#F9F9CA"*) (* #EBF9FF *)
-  (`NAME "#474747"),      `NORMAL, `ITALIC, `NONE, `MEDIUM, (true,  `NAME "#FFFFFF");
-  (`NAME "#FFFFFF"),      `NORMAL, `NORMAL, `NONE, `MEDIUM, (false, `NAME "#128C4C"); (* #1F80ED *)
-  (`NAME "#444488"),      `NORMAL, `ITALIC, `NONE, `MEDIUM, (true,  `NAME "FFFFFF");
+  (`NAME "blue"),         700,   `NORMAL, `NONE, `MEDIUM, (true,  `NAME "#FFFFFF");
+  (`NAME "forestgreen"),  700,   `NORMAL, `NONE, `MEDIUM, (true,  `NAME "#FFFFFF");
+  (*    (`NAME "forestgreen"), (true, `BOLD, `NORMAL, `NONE, `MEDIUM;*)
+  (`NAME "purple"),       700,   `NORMAL, `NONE, `MEDIUM, (true,  `NAME "#FFFFFF");
+  (`NAME "firebrick3"),   0, `NORMAL, `NONE, `MEDIUM, (true,  `NAME "#FFFFFF");
+  (`NAME "indianred4"),   0, `NORMAL, `NONE, `MEDIUM, (true,  `NAME "#FFFFFF");
+  (`NAME "saddlebrown"),  700,   `NORMAL, `NONE, `MEDIUM, (true,  `NAME "#FFFFFF");
+  (`NAME "midnightblue"), 700,   `NORMAL, `NONE, `MEDIUM, (true,  `NAME "#FFFFFF");
+  (`NAME "blue"),         0, `NORMAL, `NONE, `MEDIUM, (true,  `NAME "#FFFFFF");
+  (`NAME "black"),        700,   `NORMAL, `NONE, `MEDIUM, (true,  `NAME "#FFFFFF");
+  (`NAME "black"),       0, `NORMAL, `NONE, `MEDIUM, (true,  `NAME "#FFFFFF");
+  (`NAME "black"),       0, `NORMAL, `NONE, `MEDIUM, (true,  `NAME "#FFFFFF");
+  (`NAME "black"),       0, `NORMAL, `NONE, `MEDIUM, (true,  `NAME "#FFFFFF");
+  (`NAME "black"),       0, `NORMAL, `NONE, `MEDIUM, (true,  `NAME "#FFFFFF");
+  (`NAME "deeppink3"),   0, `ITALIC, `NONE, `MEDIUM, (true,  `NAME "#FFFFFF");
+  (`NAME "deeppink3"),   0, `ITALIC, `NONE, `MEDIUM, (true,  `NAME "#FFFFFF");
+  (`NAME "#FFFF00"),     0, `NORMAL, `LOW,  `MEDIUM, (true,  `NAME "#FFFFFF");
+  (`NAME "#C3FF96"),     0, `NORMAL, `NONE, `MEDIUM, (true,  `NAME "#FFFFFF");(* #E8F2FF *) (* #F7F7D7 *) (*"#F9F9CA"*) (* #EBF9FF *)
+  (`NAME "#474747"),     0, `ITALIC, `NONE, `MEDIUM, (true,  `NAME "#FFFFFF");
+  (`NAME "#FFFFFF"),     0, `NORMAL, `NONE, `MEDIUM, (false, `NAME "#128C4C"); (* #1F80ED *)
+  (`NAME "#444488"),     0, `ITALIC, `NONE, `MEDIUM, (true,  `NAME "FFFFFF");
 ]
 
 let create_defaults () = {
@@ -311,11 +311,6 @@ let string_of_pos = function
   | `LEFT -> "LEFT"
   | `RIGHT -> "RIGHT"
 
-let string_of_weight = function
-  | `NORMAL -> "NORMAL"
-  | `BOLD -> "BOLD"
-  | _ -> assert false
-
 let string_of_style = function
   | `NORMAL -> "NORMAL"
   | `ITALIC -> "ITALIC"
@@ -339,9 +334,9 @@ let pos_of_string = function
   | _ -> assert false
 
 let weight_of_string = function
-  | "NORMAL" -> `NORMAL
-  | "BOLD" -> `BOLD
-  | _ -> assert false
+  | "NORMAL" -> 0 (* Legacy *)
+  | "BOLD" -> 700 (* Legacy *)
+  | n -> int_of_string n
 
 let style_of_string = function
   | "NORMAL" -> `NORMAL
@@ -385,7 +380,7 @@ let to_xml pref =
                        Xml.Element ("tag", [
                            ("name", id);
                            ("color", string_of_color color);
-                           ("weight", string_of_weight weight);
+                           ("weight", string_of_int weight);
                            ("style", string_of_style style);
                            ("underline", string_of_underline uline);
                            ("scale", "MEDIUM");
@@ -688,6 +683,3 @@ let reset_defaults () =
 let _ = begin
   load();
 end
-
-
-
