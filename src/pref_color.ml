@@ -1,7 +1,7 @@
 (*
 
   OCamlEditor
-  Copyright (C) 2010-2014 Francesco Tovagliari
+   Copyright (C) 2010-2014 Francesco Tovagliari
 
   This file is part of OCamlEditor.
 
@@ -19,7 +19,6 @@
   along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 *)
-
 
 open Printf
 open Pref_page
@@ -60,7 +59,13 @@ class pref_color title ?packing () =
   let _                   = GMisc.label ~text:"Foreground:" ~xalign:0.0 ~packing:(table#attach ~top:1 ~left:0) () in
   let button_tag_fg       = GButton.color_button ~packing:(table#attach ~top:1 ~left:1) () in
   let _                   = button_tag_fg#set_relief `NONE in
-  let check_tag_weight    = GButton.check_button ~label:"Bold" ~packing:(table#attach ~top:2 ~left:0) () in
+  let adjustment          = GData.adjustment ~lower:0.0 ~upper:1000.0 ~step_incr:100. ~page_incr:300. ~page_size:100.0 () in
+  let _                   = adjustment#connect#value_changed ~callback:(fun () ->
+      if (int_of_float adjustment#value) mod 100 > 0 then
+        adjustment#set_value (float (int_of_float (adjustment#value /. 100.) * 100))) in
+  let scale_tag_weight    = GRange.scale `HORIZONTAL ~digits:0 ~value_pos:`TOP ~draw_value:true ~adjustment
+      ~packing:(table#attach ~top:2 ~left:0) () in
+  let check_tag_weight    = GButton.check_button ~label:"Bold" (*~packing:(table#attach ~top:2 ~left:0)*) () in
   let check_tag_style     = GButton.check_button ~label:"Italic" ~packing:(table#attach ~top:3 ~left:0) () in
   let check_tag_underline = GButton.check_button ~label:"Underline" ~packing:(table#attach ~top:4 ~left:0) () in
   let _                   = check_tag_weight#set_image (GMisc.image ~stock:`BOLD ())#coerce in
@@ -122,13 +127,12 @@ class pref_color title ?packing () =
         button_default_bg#coerce,   button_default_bg#connect#color_set ~callback:self#update_preview;
         button_odoc_bg#coerce,      button_odoc_bg#connect#color_set ~callback:self#update_preview;
         button_odoc_bg2#coerce,     button_odoc_bg2#connect#color_set ~callback:self#update_preview;
-        check_tag_weight#coerce,    check_tag_weight#connect#clicked ~callback:self#update_preview;
+        scale_tag_weight#coerce,    scale_tag_weight#connect#value_changed ~callback:self#update_preview;
         check_tag_style#coerce,     check_tag_style#connect#clicked ~callback:self#update_preview;
         check_tag_underline#coerce, check_tag_underline#connect#clicked ~callback:self#update_preview;
       ];
       ignore (check_tag_bg#connect#after#clicked ~callback:(fun () ->
           button_tag_bg#misc#set_sensitive (not check_tag_bg#active)));
-
 
     method write pref =
       pref.Preferences.pref_bg_color_popup <- color_name button_tag_bg_popup#color;
@@ -183,7 +187,7 @@ class pref_color title ?packing () =
             match List_opt.assoc tname tags with
             | Some (color, weight, style, underline, _, (bg_default, bg_color)) ->
                 button_tag_fg#set_color (GDraw.color color);
-                check_tag_weight#set_active (weight <> `NORMAL);
+                scale_tag_weight#adjustment#set_value (float_of_int weight);
                 check_tag_style#set_active (style <> `NORMAL);
                 check_tag_underline#set_active (underline <> `NONE);
                 check_tag_bg#set_active bg_default;
@@ -209,7 +213,7 @@ class pref_color title ?packing () =
 
     method private update_preview () =
       let color      = button_tag_fg#color in
-      let weight     = if check_tag_weight#active then `BOLD else `NORMAL in
+      let weight     = scale_tag_weight#adjustment#value |> int_of_float in
       let style      = if check_tag_style#active then `ITALIC else `NORMAL in
       let underline  = if check_tag_underline#active then `SINGLE else `NONE in
       let bg_default = check_tag_bg#active in
