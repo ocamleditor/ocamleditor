@@ -26,7 +26,13 @@ let init_tags ?(tags=(!tags)) ?(colors=(!colors))
           | None -> ()
           | Some t -> table#remove t
         end;
-        let properties = [`FOREGROUND_GDK (GDraw.color col); `WEIGHT weight; `STYLE style; `UNDERLINE undline; `SCALE scale] in
+        let properties = [
+          Some (`FOREGROUND_GDK (GDraw.color col));
+          (match scale with `MEDIUM -> None | _ -> Some (`SCALE scale));
+          (match style with `NORMAL -> None | _ -> Some (`STYLE style));
+          (match undline with `NONE -> None | _ -> Some (`UNDERLINE undline));
+          (if weight > 0 then Some (`WEIGHT (`CUSTOM weight)) else None)
+        ] |> List.filter_map (fun x -> x) in
         let properties = if bg_default then properties else (`BACKGROUND_GDK (GDraw.color bg_color)) :: properties in
         let tag = tb#create_tag ~name:tagname properties in
         if tagname = "ocamldoc" then begin
@@ -36,8 +42,15 @@ let init_tags ?(tags=(!tags)) ?(colors=(!colors))
             end;
           end;
           Gaux.may (table#lookup "ocamldoc-paragraph") ~f:table#remove;
-          let tag = tb#create_tag ~name:"ocamldoc-paragraph"
-              [`FOREGROUND_GDK (GDraw.color col); `WEIGHT weight; `STYLE style; `UNDERLINE undline; `PIXELS_BELOW_LINES 1; `PIXELS_ABOVE_LINES 1] in
+          let properties = [
+            Some (`FOREGROUND_GDK (GDraw.color col));
+            (if weight > 0 then Some (`WEIGHT (`CUSTOM weight)) else None);
+            (match style with `NORMAL -> None | _ -> Some (`STYLE style));
+            (match undline with `NONE -> None | _ -> Some (`UNDERLINE undline));
+            Some (`PIXELS_BELOW_LINES 1);
+            Some (`PIXELS_ABOVE_LINES 1)
+          ] |> List.filter_map (fun x -> x) in
+          let tag = tb#create_tag ~name:"ocamldoc-paragraph" properties in
           if ocamldoc_paragraph_enabled then begin
             Gaux.may ocamldoc_paragraph_bgcolor_1 ~f:begin fun bg1 ->
               Gmisclib.Util.set_tag_paragraph_background tag bg1;
