@@ -290,7 +290,7 @@ and pref_fonts title ?packing () =
 
     method read pref =
       let open Preferences in
-      let idle (f : string -> unit) x = 
+      let idle (f : string -> unit) x =
         Gdk.Window.set_cursor self#misc#window (Gdk.Cursor.create `WATCH);
         Gmisclib.Idle.add ~prio:300 begin fun () ->
           f x;
@@ -301,16 +301,16 @@ and pref_fonts title ?packing () =
         if unchanged.(0) then idle font_app#set_font_name pref.pref_general_font;
         unchanged.(0) <- false
       end |> ignore;
-      let on_first_switch_page page_num f x = 
-        notebook#connect#after#switch_page ~callback:begin function 
-        | n when n = page_num && unchanged.(page_num) -> idle f x; unchanged.(page_num) <- false 
+      let on_first_switch_page page_num f x =
+        notebook#connect#after#switch_page ~callback:begin function
+        | n when n = page_num && unchanged.(page_num) -> idle f x; unchanged.(page_num) <- false
         | _ -> ()
-        end |> ignore; 
+        end |> ignore;
       in
       on_first_switch_page 1 font_editor#set_font_name pref.pref_base_font;
-      on_first_switch_page 2 font_compl#set_font_name pref.pref_compl_font; 
-      on_first_switch_page 3 font_other#set_font_name pref.pref_output_font; 
-      on_first_switch_page 4 font_odoc#set_font_name pref.pref_odoc_font; 
+      on_first_switch_page 2 font_compl#set_font_name pref.pref_compl_font;
+      on_first_switch_page 3 font_other#set_font_name pref.pref_output_font;
+      on_first_switch_page 4 font_odoc#set_font_name pref.pref_odoc_font;
       button_greek#set_active pref.pref_compl_greek;
   end
 
