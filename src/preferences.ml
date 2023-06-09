@@ -37,6 +37,7 @@ type t = {
   mutable pref_bg_color_popup               : string;
   mutable pref_fg_color_popup               : string;
   mutable pref_tags                         : (string * text_properties) list;
+  mutable pref_tags_dark                    : (string * text_properties) list;
   mutable pref_editor_tab_width             : int;
   mutable pref_editor_tab_spaces            : bool;
   mutable pref_editor_bak                   : bool;
@@ -216,6 +217,7 @@ let create_defaults () = {
   pref_bg_color_popup               = "#FFE375";  (* #EDE1B4 #f1edbd F0F4FF #F7F7F7 #E8ECFF #EAEAFF #F0F4FF *)
   pref_fg_color_popup               = "#000000";
   pref_tags                         = List.combine default_tags default_colors;
+  pref_tags_dark                    = List.combine default_tags default_colors;
   pref_editor_tab_width             = 2;
   pref_editor_tab_spaces            = true;
   pref_editor_bak                   = true;
@@ -358,6 +360,21 @@ let scale_of_string = function
 
 let color_of_string name = `NAME name
 
+let write_color_schema colors =
+  colors
+  |> List.map begin fun (id, (color, weight, style, uline, scale, (bg_default, bg_color))) ->
+    Xml.Element ("tag", [
+        ("name", id);
+        ("color", string_of_color color);
+        ("weight", string_of_int weight);
+        ("style", string_of_style style);
+        ("underline", string_of_underline uline);
+        ("scale", "MEDIUM");
+        ("bg_default", string_of_bool bg_default);
+        ("bg_color", string_of_color bg_color);
+      ], []);
+  end
+
 let to_xml pref =
   let xml =
     Xml.Element ("preferences", [], [
@@ -375,20 +392,8 @@ let to_xml pref =
         Xml.Element ("pref_bg_color_theme", [], [Xml.PCData (string_of_bool (snd pref.pref_bg_color))]);
         Xml.Element ("pref_bg_color_popup", [], [Xml.PCData pref.pref_bg_color_popup]);
         Xml.Element ("pref_fg_color_popup", [], [Xml.PCData pref.pref_fg_color_popup]);
-        Xml.Element ("pref_tags", [],
-                     List.map begin fun (id, (color, weight, style, uline, scale, (bg_default, bg_color))) ->
-                       Xml.Element ("tag", [
-                           ("name", id);
-                           ("color", string_of_color color);
-                           ("weight", string_of_int weight);
-                           ("style", string_of_style style);
-                           ("underline", string_of_underline uline);
-                           ("scale", "MEDIUM");
-                           ("bg_default", string_of_bool bg_default);
-                           ("bg_color", string_of_color bg_color);
-                         ], []);
-                     end pref.pref_tags
-                    );
+        Xml.Element ("pref_tags", [], (write_color_schema pref.pref_tags));
+        Xml.Element ("pref_tags_dark", [], (write_color_schema pref.pref_tags_dark));
         Xml.Element ("pref_editor_tab_width", [], [Xml.PCData (string_of_int pref.pref_editor_tab_width)]);
         Xml.Element ("pref_editor_tab_spaces", [], [Xml.PCData (string_of_bool pref.pref_editor_tab_spaces)]);
         Xml.Element ("pref_editor_wrap", [], [Xml.PCData (string_of_bool pref.pref_editor_wrap)]);
@@ -486,6 +491,29 @@ let to_xml pref =
   "<!-- OCamlEditor XML Preferences -->\n" ^ xml
 ;;
 
+let parse_color_schema default_colors node =
+  let colors = ref [] in
+  node |>
+  Xml.iter begin fun tp ->
+    colors := (
+      (Xml.attrib tp "name"), (
+        (color_of_string (Xml.attrib tp "color")),
+        (weight_of_string (Xml.attrib tp "weight")),
+        (style_of_string (Xml.attrib tp "style")),
+        (underline_of_string (Xml.attrib tp "underline")),
+        (try scale_of_string (Xml.attrib tp "scale") with Xml.No_attribute _ -> `MEDIUM),
+        ((try bool_of_string (Xml.attrib tp "bg_default") with Xml.No_attribute _ -> true),
+         (try color_of_string (Xml.attrib tp "bg_color") with Xml.No_attribute _ -> `NAME "#FFFFFF"))
+      )) :: !colors
+  end;
+  default_colors
+  |> List.iter begin fun (tag, _) ->
+    if try ignore (List.assoc tag !colors); false with Not_found -> true then begin
+      let defaults = List.assoc tag default_colors in
+      colors := (tag, defaults) :: !colors
+    end
+  end;
+  !colors
 
 let from_file filename =
   try
@@ -518,25 +546,9 @@ let from_file filename =
       | "pref_bg_color_popup" -> pref.pref_bg_color_popup <- value node
       | "pref_fg_color_popup" -> pref.pref_fg_color_popup <- value node
       | "pref_tags" ->
-          pref.pref_tags <- [];
-          Xml.iter begin fun tp ->
-            pref.pref_tags <- (
-              (Xml.attrib tp "name"), (
-                (color_of_string (Xml.attrib tp "color")),
-                (weight_of_string (Xml.attrib tp "weight")),
-                (style_of_string (Xml.attrib tp "style")),
-                (underline_of_string (Xml.attrib tp "underline")),
-                (try scale_of_string (Xml.attrib tp "scale") with Xml.No_attribute _ -> `MEDIUM),
-                ((try bool_of_string (Xml.attrib tp "bg_default") with Xml.No_attribute _ -> true),
-                 (try color_of_string (Xml.attrib tp "bg_color") with Xml.No_attribute _ -> `NAME "#FFFFFF"))
-              )) :: pref.pref_tags
-          end node;
-          List.iter begin fun (tag, _) ->
-            if try ignore (List.assoc tag pref.pref_tags); false with Not_found -> true then begin
-              let defaults = List.assoc tag default_pref.pref_tags in
-              pref.pref_tags <- (tag, defaults) :: pref.pref_tags
-            end
-          end default_pref.pref_tags
+          pref.pref_tags <- parse_color_schema default_pref.pref_tags node
+      | "pref_tags_dark" ->
+          pref.pref_tags_dark <- parse_color_schema default_pref.pref_tags_dark node
       | "pref_editor_tab_width" -> pref.pref_editor_tab_width <- int_of_string (value node)
       | "pref_editor_tab_spaces" -> pref.pref_editor_tab_spaces <- bool_of_string (value node)
       | "pref_editor_wrap" -> pref.pref_editor_wrap <- bool_of_string (value node)

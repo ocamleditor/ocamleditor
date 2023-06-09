@@ -168,9 +168,9 @@ let current_line_border_adjust, dash_style, dash_style_offset =
   | 2, 24 -> 1, `ON_OFF_DASH, (Some 2)
   | _     -> 1, `DOUBLE_DASH, None
 
-let themes_dir =
-  let themes = (!! (!! Sys.executable_name)) // "share" // "themes" in
-  if Sys.os_type = "Win32" && Sys.file_exists themes then Some themes else None;;
+let themes_dir = Some "/usr/share/themes"
+(*  let themes = (!! (!! Sys.executable_name)) // "share" // "themes" in
+    if (*Sys.os_type = "Win32" &&*) Sys.file_exists themes then Some themes else None;;*)
 
 (** Clear OCAMLLIB environment variable *)
 let _ = Ocaml_config.putenv_ocamllib None
