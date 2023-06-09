@@ -1,8 +1,3 @@
-  This is a friendly fork, which for the moment is mostly updates to reflect
-  the changes in OCaml from 4.01 to 4.10. The original README follows after
-  this paragraph. It is mostly accurate except for the OCaml version. The
-  required on is 4.10. It was only tested under Linux with opam installed
-  dependencies.
 
                                   OCamlEditor
 
@@ -31,7 +26,7 @@ COPYRIGHT
 
 DEPENDENCIES
 
-  * OCaml-4.12.0;
+  * OCaml-4.13.0;
   * Lablgtk-2.18.0 (installed with Findlib);
   * Xml-light (installed with Findlib);
   * Findlib-1.4.0;
@@ -87,46 +82,11 @@ INSTALLATION
 
 DEVELOPMENT
 
-  The main page for development is hosted on the OCaml Forge, see the
+  The main page for development is hosted on Github, see the
   project's page:
 
-    https://forge.ocamlcore.org/projects/ocamleditor
+    https://github.com/ocamleditor/ocamleditor
 
-  You can browse the source tree from:
-
-    https://forge.ocamlcore.org/scm/browser.php?group_id=141
-
-  or clone it by doing:
-
-    git clone https://forge.ocamlcore.org/anonscm/git/ocamleditor/ocamleditor.git
-
-
-
-INSTALLING Xml-Light WITH Findlib
-
-  Since the Xml-Light distribution does not include a Findlib installer,
-  you can do it yourself by following these notes:
-
-  META
-    version="2.2"
-    description="Minimal Xml parser and printer for OCaml."
-    requires=""
-    archive(byte)="xml-light.cma"
-    archive(native)="xml-light.cmxa"
-
-  ocamlfind install xml-light META \
-    xml-light.cmxa xml-light.cma \
-    xml.mli xmlParser.mli dtd.mli \
-    xml.cmi xmlParser.cmi dtd.cmi \
-    xml.cmx dtd.cmx xmlParser.cmx \
-    xml-light.a(lib)
-
-
-
-AUTHOR
-
-  You can report bugs or give feedbacks by e-mail to
-  Francesco Tovagliari <ftovagliari@gmail.com>
 
 
 
