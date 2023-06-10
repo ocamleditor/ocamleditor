@@ -129,5 +129,5 @@ let set_value value =
       (int_of_float (float (Gdk.Color.blue gdk) *. value))
     );;
 
-
+let avg (r, g, b) = (float r) /. 256. +. (float g) /. 256. +. (float b) /. 256.
 

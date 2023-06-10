@@ -31,7 +31,7 @@ class pref_view title ?packing () =
   let align                 = create_align ~vbox () in
   let box                   = GPack.vbox ~spacing:row_spacings ~packing:align#add () in
   let table                 = GPack.table ~col_spacings ~row_spacings ~packing:box#add () in
-  let _                     = GMisc.label ~text:"Look and feel:" ~xalign ~packing:(table#attach ~top:0 ~left:0 ~expand:`NONE) ~show:has_themes () in
+  let _                     = GMisc.label ~text:"Theme:" ~xalign ~packing:(table#attach ~top:0 ~left:0 ~expand:`NONE) ~show:has_themes () in
   let combo_theme, _        = GEdit.combo_box_text ~strings:Gtk_theme.avail_themes ~packing:(table#attach ~top:0 ~left:1 ~expand:`X) ~show:has_themes () in
   let check_splash          = GButton.check_button ~label:"Display splash screen" ~packing:box#pack () in
   let align                 = create_align ~title:"Tabs" ~vbox () in
@@ -100,7 +100,19 @@ class pref_view title ?packing () =
       | Some _ ->
           ignore (combo_theme#connect#changed ~callback:begin fun () ->
               let theme = self#get_theme_name() in
-              Gtk_theme.set_theme ?theme ~context:self#misc#pango_context ()
+              Gtk_theme.set_theme ?theme ~context:self#misc#pango_context ();
+              let button = GButton.button ~show:false ~packing:vbox#add () in
+              let avg_text_normal = button#misc#style#text `NORMAL |> Color.rgb_of_gdk |> Color.avg in
+              let avg_bg_normal = button#misc#style#bg `NORMAL |> Color.rgb_of_gdk |> Color.avg in
+              button#destroy();
+              Oe_config.is_dark_theme := avg_text_normal > avg_bg_normal;
+              let tags =
+                if !Oe_config.is_dark_theme then Preferences.preferences#get.Preferences.pref_tags_dark
+                else Preferences.preferences#get.Preferences.pref_tags in
+              let ltags, prop = List.split tags in
+              Lexical.tags := ltags;
+              Lexical.colors := prop;
+              Preferences.save();
             end);
       | _ -> ()
 
@@ -139,7 +151,7 @@ class pref_view title ?packing () =
       Option.iter
         (fun _ -> combo_theme#set_active (
              match pref.Preferences.pref_general_theme with
-             | Some name -> (try Xlist.pos name Gtk_theme.avail_themes with Not_found -> -1) 
+             | Some name -> (try Xlist.pos name Gtk_theme.avail_themes with Not_found -> -1)
              | _ -> -1))
         Oe_config.themes_dir;
       check_splash#set_active pref.Preferences.pref_general_splashscreen_enabled;
