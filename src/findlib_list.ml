@@ -143,7 +143,7 @@ let create = new widget
 
 let dialog (parent : GObj.widget) () =
   (*let window = Gmisclib.Window.popup ~widget:parent () in*)
-  let window = GWindow.window ~title:"Select Findlib packages" ~position:`CENTER ~type_hint:`UTILITY ~modal:true ~show:false () in
+  let window = GWindow.window ~title:"Select Findlib packages" ~position:`CENTER ~modal:true ~show:false () in
   Gaux.may (GWindow.toplevel parent) ~f:(fun x -> window#set_transient_for x#as_window);
   let vbox = GPack.vbox ~border_width:5 ~spacing:5 ~packing:window#add () in
   let widget = create ~packing:vbox#add () in
