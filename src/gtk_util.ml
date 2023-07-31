@@ -92,9 +92,9 @@ let window_tooltip widget ?parent ?(fade=false) ~x ~y () =
   in
   let ebox = GBin.event_box ~packing:window#add () in
   ebox#add widget;
-  let color = Color.set_value 0.62 (`NAME Preferences.preferences#get.Preferences.pref_bg_color_popup) in
+  let color = Color.set_value 0.62 (`NAME Preferences.preferences#get.editor_bg_color_popup) in
   let _ = window#misc#modify_bg [`NORMAL, color] in
-  let _ = ebox#misc#modify_bg [`NORMAL, `NAME Preferences.preferences#get.Preferences.pref_bg_color_popup] in
+  let _ = ebox#misc#modify_bg [`NORMAL, `NAME Preferences.preferences#get.editor_bg_color_popup] in
   window#set_skip_pager_hint true;
   window#set_skip_taskbar_hint true;
   window#set_accept_focus false;

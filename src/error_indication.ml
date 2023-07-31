@@ -63,9 +63,9 @@ class error_indication (view : Ocaml_text.view) vscrollbar global_gutter =
     val mutable sticky_popup = false
     val mutable table = []
     val mutable error_gutter_markers = []
-    val mutable flag_underline = Preferences.preferences#get.Preferences.pref_err_underline
-    val mutable flag_tooltip = Preferences.preferences#get.Preferences.pref_err_tooltip
-    val mutable flag_gutter = Preferences.preferences#get.Preferences.pref_err_gutter
+    val mutable flag_underline = Preferences.preferences#get.editor_err_underline
+    val mutable flag_tooltip = Preferences.preferences#get.editor_err_tooltip
+    val mutable flag_gutter = Preferences.preferences#get.editor_err_gutter
     val mutable tag_error = tag_error
     val mutable tag_warning = tag_warning
     val mutable tag_warning_unused = tag_warning_unused
@@ -268,7 +268,7 @@ class error_indication (view : Ocaml_text.view) vscrollbar global_gutter =
                 let markup = (*(error.Oe.er_location) ^*)
                   (Print_type.markup3 error_message) in
                 let label = GMisc.label ~markup ~xpad:5 ~ypad:5 ~packing:ebox#add () in
-                label#misc#modify_font_by_name Preferences.preferences#get.Preferences.pref_compl_font;
+                label#misc#modify_font_by_name Preferences.preferences#get.editor_completion_font;
                 (* Positioning *)
                 begin
                   popup#move ~x:(-1000) ~y:(-1000);
@@ -283,7 +283,7 @@ class error_indication (view : Ocaml_text.view) vscrollbar global_gutter =
                       popup#show();
                       popup#move ~x ~y:(y - popup#misc#allocation.Gtk.height - 12);
                 end;
-                let incr = if Preferences.preferences#get.Preferences.pref_annot_type_tooltips_delay = 0 then 0.106 else 0.479 in
+                let incr = if Preferences.preferences#get.editor_annot_type_tooltips_delay = 0 then 0.106 else 0.479 in
                 Gmisclib.Util.fade_window ~incr popup;
                 (*end ()*)
               with Not_found -> (if not sticky_popup then (self#hide_tooltip()))
@@ -378,28 +378,29 @@ class error_indication (view : Ocaml_text.view) vscrollbar global_gutter =
         end tag_warning_bounds;
         (* Mark Occurrences *)
         begin
-          match Preferences.preferences#get.Preferences.pref_editor_mark_occurrences with
-          | true, under_cursor, color ->
-              let bg = `NAME color in
-              let border = `NAME (Color.add_value color ~sfact:0.75 0.13) in
-              List.iter begin fun (m1, m2) ->
-                let start = buffer#get_iter_at_mark m1 in
-                let stop = buffer#get_iter_at_mark m2 in
-                let line_start = float start#line in
-                let line_stop = float stop#line in
-                let y1 = int_of_float ((line_start /. line_count) *. height) in
-                let y2 = int_of_float ((line_stop /. line_count) *. height) in
-                let y1 = y1 + alloc.Gtk.width - 1 in
-                let y2 = y2 + alloc.Gtk.width + 1 in
-                let width = width - 1 in
-                let height = y2 - y1 in
-                drawable#set_line_attributes ~width:1 ~style:`SOLID ();
-                drawable#set_foreground bg;
-                drawable#rectangle ~filled:true ~x:x0 ~y:y1 ~width ~height ();
-                drawable#set_foreground border;
-                drawable#rectangle ~filled:false ~x:x0 ~y:y1 ~width ~height ();
-              end view#mark_occurrences_manager#table;
-          | _ -> ()
+          if Preferences.preferences#get.editor_mark_occurrences_enabled then begin
+            let bg_color_occurrences = Preferences.preferences#get.editor_mark_occurrences_bg_color in
+            let under_cursor = Preferences.preferences#get.editor_mark_occurrences_under_cursor in
+            let bg = `NAME bg_color_occurrences in
+            let border = `NAME (Color.add_value bg_color_occurrences ~sfact:0.75 0.13) in
+            List.iter begin fun (m1, m2) ->
+              let start = buffer#get_iter_at_mark m1 in
+              let stop = buffer#get_iter_at_mark m2 in
+              let line_start = float start#line in
+              let line_stop = float stop#line in
+              let y1 = int_of_float ((line_start /. line_count) *. height) in
+              let y2 = int_of_float ((line_stop /. line_count) *. height) in
+              let y1 = y1 + alloc.Gtk.width - 1 in
+              let y2 = y2 + alloc.Gtk.width + 1 in
+              let width = width - 1 in
+              let height = y2 - y1 in
+              drawable#set_line_attributes ~width:1 ~style:`SOLID ();
+              drawable#set_foreground bg;
+              drawable#rectangle ~filled:true ~x:x0 ~y:y1 ~width ~height ();
+              drawable#set_foreground border;
+              drawable#rectangle ~filled:false ~x:x0 ~y:y1 ~width ~height ();
+            end view#mark_occurrences_manager#table;
+          end
         end;
         (* Errors *)
         List.iter begin fun (start, _, _) ->

@@ -97,7 +97,7 @@ let specs ~browser =
 
     1400, `COMPILE_FILE,   B, P Icons.compile_file_16, "Compile Current File", begin fun _ ->
       browser#editor#with_current_page begin fun p ->
-        if Preferences.preferences#get.Preferences.pref_editor_save_all_bef_comp then (editor#save_all());
+        if Preferences.preferences#get.editor_save_all_bef_comp then (editor#save_all());
         p#compile_buffer ?join:None ()
       end
     end, None;
@@ -230,8 +230,8 @@ let create_item ~menu ~(toolbox : GPack.box) ~pos item =
   end |> ignore;
   item.check#connect#toggled ~callback:begin fun () ->
     let add_pref () =
-      preferences#get.pref_general_menubar_buttons <-
-        item.id :: (List.filter ((<>) item.id) preferences#get.pref_general_menubar_buttons);
+      preferences#get.menubar_buttons <-
+        item.id :: (List.filter ((<>) item.id) preferences#get.menubar_buttons);
     in
     match item.check#active with
     | true when item.tool_widget <> None ->
@@ -240,7 +240,7 @@ let create_item ~menu ~(toolbox : GPack.box) ~pos item =
     | true -> assert false
     | false ->
         Gaux.may item.tool_widget ~f:(fun w -> w#misc#hide());
-        preferences#get.pref_general_menubar_buttons <- List.filter ((<>) item.id) preferences#get.pref_general_menubar_buttons;
+        preferences#get.menubar_buttons <- List.filter ((<>) item.id) preferences#get.menubar_buttons;
   end |> ignore;
   let box = GPack.hbox ~packing:item.check#add () in
   let text, image =
@@ -257,7 +257,7 @@ let create_item ~menu ~(toolbox : GPack.box) ~pos item =
   in
   let _ = GMisc.label ~text ~xalign:0.0 ~packing:box#add () in
   item.tool_widget <- Some (create_tool ~toolbox item);
-  let active = List.mem item.id preferences#get.pref_general_menubar_buttons in
+  let active = List.mem item.id preferences#get.menubar_buttons in
   item.check#set_active (not active);
   item.check#set_active active;
 ;;

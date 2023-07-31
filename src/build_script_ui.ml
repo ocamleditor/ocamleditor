@@ -73,7 +73,7 @@ class widget ~project ?packing () =
   let help            = GText.view ~packing:sw#add () in
   let help_buttons    =
     let pref = Preferences.preferences#get in
-    help#misc#modify_font_by_name pref.Preferences.pref_base_font;
+    help#misc#modify_font_by_name pref.editor_base_font;
     let b0 = GButton.radio_button ~relief:`NONE ~draw_indicator:false ~active:false ~packing:cbox#pack () in
     let _ = GMisc.label ~markup:"<span face='monospace' size='smaller'>General</span>" ~packing:b0#add () in
     let _ = GMisc.separator `VERTICAL ~packing:cbox#pack () in

@@ -107,9 +107,9 @@ class pref_view title ?packing () =
               button#destroy();
               Oe_config.is_dark_theme := avg_text_normal > avg_bg_normal;
               let tags =
-                if !Oe_config.is_dark_theme then Preferences.preferences#get.Preferences.pref_tags_dark
-                else Preferences.preferences#get.Preferences.pref_tags in
-              let ltags, prop = List.split tags in
+                if !Oe_config.is_dark_theme then Preferences.(preferences#get.editor_tags_dark)
+                else Preferences.preferences#get.editor_tags in
+              let ltags, prop = tags |> List.map (fun t -> t.Settings_t.name, t) |> List.split in
               Lexical.tags := ltags;
               Lexical.colors := prop;
               Preferences.save();
@@ -121,58 +121,58 @@ class pref_view title ?packing () =
 
     method write pref =
       Option.iter
-        (fun _ -> pref.Preferences.pref_general_theme <- self#get_theme_name())
+        (fun _ -> pref.theme <- self#get_theme_name())
         Oe_config.themes_dir;
-      pref.Preferences.pref_general_splashscreen_enabled <- check_splash#active;
-      pref.Preferences.pref_tab_pos <- (match combo_orient#active
-                                        with 0 -> `TOP | 1 | 5 -> `RIGHT | 2 -> `BOTTOM | 3 | 4 -> `LEFT | _ -> assert false);
-      pref.Preferences.pref_tab_vertical_text <- (match combo_orient#active
-                                                  with 0 | 1 | 2 | 3 -> false | 4 | 5 -> true | _ -> assert false);
-      pref.Preferences.pref_tab_label_type <- combo_labtype#active;
+      pref.splashscreen_enabled <- check_splash#active;
+      pref.tab_pos <- (match combo_orient#active
+                       with 0 -> `TOP | 1 | 5 -> `RIGHT | 2 -> `BOTTOM | 3 | 4 -> `LEFT | _ -> assert false);
+      pref.tab_vertical_text <- (match combo_orient#active
+                                 with 0 | 1 | 2 | 3 -> false | 4 | 5 -> true | _ -> assert false);
+      pref.tab_label_type <- combo_labtype#active;
       (*pref.Preferences.pref_max_view_1_menubar <- check_menubar_1#active;*)
-      pref.Preferences.pref_max_view_1_toolbar <- check_toolbar_1#active;
-      pref.Preferences.pref_max_view_1_tabbar <- check_tabbar_1#active;
-      pref.Preferences.pref_max_view_1_messages <- check_messages_1#active;
-      pref.Preferences.pref_max_view_1_fullscreen <- check_fullscreen_1#active;
+      pref.max_view_1_toolbar <- check_toolbar_1#active;
+      pref.max_view_1_tabbar <- check_tabbar_1#active;
+      pref.max_view_1_messages <- check_messages_1#active;
+      pref.max_view_1_fullscreen <- check_fullscreen_1#active;
       (*pref.Preferences.pref_max_view_2_menubar <- check_menubar_2#active;*)
-      pref.Preferences.pref_max_view_2_toolbar <- check_toolbar_2#active;
-      pref.Preferences.pref_max_view_2_tabbar <- check_tabbar_2#active;
-      pref.Preferences.pref_max_view_2_messages <- check_messages_2#active;
-      pref.Preferences.pref_max_view_2_fullscreen <- check_fullscreen_2#active;
-      pref.Preferences.pref_max_view_2 <- true (*snd_action_check#active*);
-      pref.Preferences.pref_max_view_fullscreen <- not use_maximize#active;
+      pref.max_view_2_toolbar <- check_toolbar_2#active;
+      pref.max_view_2_tabbar <- check_tabbar_2#active;
+      pref.max_view_2_messages <- check_messages_2#active;
+      pref.max_view_2_fullscreen <- check_fullscreen_2#active;
+      (*pref.max_view <- true (*snd_action_check#active*);*)
+      pref.max_view_prefer_fullscreen <- not use_maximize#active;
       (* pref.Preferences.pref_remember_window_geometry <- check_remember#active;
          Gmisclib.Window.GeometryMemo.set_enabled Preferences.geometry_memo pref.Preferences.pref_remember_window_geometry;*)
-      pref.Preferences.pref_detach_message_panes_separately <- check_detach_sep#active;
+      pref.detach_message_panes_separately <- check_detach_sep#active;
       (*pref.Preferences.pref_geometry_delayed <- check_geometry_delayed#active;
         Gmisclib.Window.GeometryMemo.set_delayed Preferences.geometry_memo pref.Preferences.pref_geometry_delayed;*)
 
     method read pref =
       Option.iter
         (fun _ -> combo_theme#set_active (
-             match pref.Preferences.pref_general_theme with
+             match pref.theme with
              | Some name -> (try Xlist.pos name Gtk_theme.avail_themes with Not_found -> -1)
              | _ -> -1))
         Oe_config.themes_dir;
-      check_splash#set_active pref.Preferences.pref_general_splashscreen_enabled;
-      combo_orient#set_active (match pref.Preferences.pref_tab_pos, pref.Preferences.pref_tab_vertical_text with
+      check_splash#set_active pref.splashscreen_enabled;
+      combo_orient#set_active (match pref.tab_pos, pref.tab_vertical_text with
           | `TOP, _ -> 0 | `RIGHT, false -> 1 | `BOTTOM, _ -> 2 | `LEFT, false -> 3
           | `LEFT, true -> 4 | `RIGHT, true -> 5);
-      combo_labtype#set_active pref.Preferences.pref_tab_label_type;
+      combo_labtype#set_active pref.tab_label_type;
       (*check_menubar_1#set_active pref.Preferences.pref_max_view_1_menubar;*)
-      check_toolbar_1#set_active pref.Preferences.pref_max_view_1_toolbar;
-      check_tabbar_1#set_active pref.Preferences.pref_max_view_1_tabbar;
-      check_messages_1#set_active pref.Preferences.pref_max_view_1_messages;
-      check_fullscreen_1#set_active pref.Preferences.pref_max_view_1_fullscreen;
+      check_toolbar_1#set_active pref.max_view_1_toolbar;
+      check_tabbar_1#set_active pref.max_view_1_tabbar;
+      check_messages_1#set_active pref.max_view_1_messages;
+      check_fullscreen_1#set_active pref.max_view_1_fullscreen;
       (*check_menubar_2#set_active pref.Preferences.pref_max_view_2_menubar;*)
-      check_toolbar_2#set_active pref.Preferences.pref_max_view_2_toolbar;
-      check_tabbar_2#set_active pref.Preferences.pref_max_view_2_tabbar;
-      check_messages_2#set_active pref.Preferences.pref_max_view_2_messages;
-      check_fullscreen_2#set_active pref.Preferences.pref_max_view_2_fullscreen;
+      check_toolbar_2#set_active pref.max_view_2_toolbar;
+      check_tabbar_2#set_active pref.max_view_2_tabbar;
+      check_messages_2#set_active pref.max_view_2_messages;
+      check_fullscreen_2#set_active pref.max_view_2_fullscreen;
       (*snd_action_check#set_active pref.Preferences.pref_max_view_2;*)
-      use_maximize#set_active (not pref.Preferences.pref_max_view_fullscreen);
+      use_maximize#set_active (not pref.max_view_prefer_fullscreen);
       (*check_remember#set_active pref.Preferences.pref_remember_window_geometry;*)
-      check_detach_sep#set_active pref.Preferences.pref_detach_message_panes_separately;
+      check_detach_sep#set_active pref.detach_message_panes_separately;
       (*check_geometry_delayed#set_active pref.Preferences.pref_geometry_delayed;*)
   end
 

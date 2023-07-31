@@ -35,7 +35,7 @@ let create_view ~project ~buffer ?file ?packing () =
 
 let shortname filename =
   let basename = Filename.basename filename in
-  if Preferences.preferences#get.Preferences.pref_tab_label_type = 1 then begin
+  if Preferences.preferences#get.tab_label_type = 1 then begin
     try Filename.chop_extension basename
     with Invalid_argument _ -> basename
   end else basename
@@ -131,7 +131,7 @@ class page ?file ~project ~scroll_offset ~offset ~editor () =
       ~pixbuf:Icons.lines_in_14
       ~packing:sbbox#pack
       ~callback:begin fun () ->
-        let above, below = Preferences.preferences#get.Preferences.pref_editor_pixels_lines in
+        let above, below = Preferences.preferences#get.editor_pixels_lines in
         text_view#set_pixels_above_lines (min (4 + above) (text_view#pixels_above_lines + 1));
         text_view#set_pixels_below_lines (min (4 + below) (text_view#pixels_below_lines + 1));
         Gmisclib.Idle.add text_view#draw_gutter;
@@ -190,7 +190,7 @@ class page ?file ~project ~scroll_offset ~offset ~editor () =
   in
   (** Global gutter *)
   let global_gutter = GMisc.drawing_area ~width:Oe_config.global_gutter_size ~packing:global_gutter_ebox#add
-      ~show:Preferences.preferences#get.Preferences.pref_show_global_gutter () in
+      ~show:Preferences.preferences#get.editor_show_global_gutter () in
   let _ = global_gutter#misc#set_has_tooltip true in
   let _ = global_gutter#event#add [`BUTTON_PRESS; `BUTTON_RELEASE] in
   (*  *)
@@ -199,7 +199,7 @@ class page ?file ~project ~scroll_offset ~offset ~editor () =
     end [status_filename] in
   let _                        =
     buffer#create_tag ~name:"tag_matching_delim" [
-      `BACKGROUND_GDK (Preferences.tag_color "highlight");
+      `BACKGROUND_GDK (Preferences.editor_tag_color "highlight");
       `BACKGROUND_FULL_HEIGHT_SET true;
       (*`UNDERLINE (Preferences.tag_underline "highlight");*)
     ]
@@ -246,7 +246,7 @@ class page ?file ~project ~scroll_offset ~offset ~editor () =
 
     method private set_tag_annot_background () =
       Option.iter (fun annot_type ->
-          annot_type#tag#set_property (`BACKGROUND Preferences.preferences#get.Preferences.pref_bg_color_popup)) annot_type;
+          annot_type#tag#set_property (`BACKGROUND Preferences.preferences#get.editor_bg_color_popup)) annot_type;
 
     method read_only = read_only
     method set_read_only ro =
@@ -298,21 +298,21 @@ class page ?file ~project ~scroll_offset ~offset ~editor () =
     method redisplay () =
       Colorize.colorize_buffer ocaml_view;
       Preferences_apply.apply view Preferences.preferences#get;
-      self#set_code_folding_enabled Preferences.preferences#get.Preferences.pref_code_folding_enabled;
+      self#set_code_folding_enabled Preferences.preferences#get.editor_code_folding_enabled;
       ocaml_view#code_folding#set_fold_line_color ocaml_view#options#text_color;
       Gaux.may (GtkText.TagTable.lookup buffer#tag_table "tag_matching_delim")
         ~f:(fun x -> GtkText.TagTable.remove buffer#tag_table x);
       ignore (buffer#create_tag ~name:"tag_matching_delim" [
-          `BACKGROUND_GDK (Preferences.tag_color "highlight");
+          `BACKGROUND_GDK (Preferences.editor_tag_color "highlight");
           `BACKGROUND_FULL_HEIGHT_SET true;
         ]);
       self#set_tag_annot_background();
       self#error_indication#create_tags();
-      self#error_indication#set_flag_underline Preferences.preferences#get.Preferences.pref_err_underline;
-      self#error_indication#set_flag_tooltip Preferences.preferences#get.Preferences.pref_err_tooltip;
-      self#error_indication#set_flag_gutter Preferences.preferences#get.Preferences.pref_err_gutter;
+      self#error_indication#set_flag_underline Preferences.preferences#get.editor_err_underline;
+      self#error_indication#set_flag_tooltip Preferences.preferences#get.editor_err_tooltip;
+      self#error_indication#set_flag_gutter Preferences.preferences#get.editor_err_gutter;
       self#view#create_highlight_current_line_tag();
-      Gaux.may outline ~f:(fun outline -> outline#view#misc#modify_font_by_name Preferences.preferences#get.Preferences.pref_compl_font);
+      Gaux.may outline ~f:(fun outline -> outline#view#misc#modify_font_by_name Preferences.preferences#get.editor_completion_font);
       error_indication#set_phase ();
 
     method update_statusbar () =
@@ -345,7 +345,7 @@ class page ?file ~project ~scroll_offset ~offset ~editor () =
 
     method save () = Gaux.may file ~f:begin fun file ->
         if not file#is_readonly then begin
-          if Preferences.preferences#get.Preferences.pref_editor_bak then (self#backup());
+          if Preferences.preferences#get.editor_bak then (self#backup());
           let text = Project.convert_from_utf8 project (buffer#get_text ()) in
           file#write text;
           Gmisclib.Idle.add self#update_statusbar;
@@ -477,7 +477,7 @@ class page ?file ~project ~scroll_offset ~offset ~editor () =
     method tooltip ?(typ=false) ((*(x, y) as*) location) =
       let location = `XY location in
       if typ then (Option.iter (fun at -> at#tooltip location) annot_type);
-      if Preferences.preferences#get.Preferences.pref_err_tooltip
+      if Preferences.preferences#get.editor_err_tooltip
       then (error_indication#tooltip location)
 
     method status_modified_icon = status_modified

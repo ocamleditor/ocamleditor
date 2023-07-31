@@ -37,7 +37,7 @@ type compl =
 
 (** completion *)
 class completion ~project ?packing () =
-  let window_decorated = Preferences.preferences#get.Preferences.pref_compl_decorated in
+  let window_decorated = Preferences.preferences#get.editor_completion_decorated in
   let vbox            = GPack.vbox ~spacing:0 ~border_width:2 ?packing () in
   let tbox            = GPack.hbox ~spacing:5 ~border_width:0 () in
   let ebox_resize     = GBin.event_box ~packing:(tbox#pack ~fill:false ~expand:false) ~show:(not window_decorated) () in
@@ -367,7 +367,7 @@ class completion ~project ?packing () =
         Option.iter begin fun p ->
           Option.iter
             (fun w -> w#set_opacity
-                (match Preferences.preferences#get.Preferences.pref_compl_opacity with
+                (match Preferences.preferences#get.editor_completion_opacity with
                  | Some opa -> opa
                  | _  -> 1.0))
             current_window;

@@ -65,7 +65,7 @@ class virtual page ~role =
     method connect_detach = new detach_signals ~detached
 
     method private detach button_detach =
-      if Preferences.preferences#get.Preferences.pref_detach_message_panes_separately then begin
+      if Preferences.preferences#get.detach_message_panes_separately then begin
         match detached_window with
         | Some (window : GWindow.window) ->
             begin

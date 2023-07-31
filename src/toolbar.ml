@@ -287,7 +287,7 @@ class ['a] toolbar ~(messages : Messages.messages) ~(hmessages : Messages.messag
         end);
       ignore (tool_compile_file#connect#clicked ~callback:begin fun () ->
           editor#with_current_page begin fun p ->
-            if Preferences.preferences#get.Preferences.pref_editor_save_all_bef_comp then (editor#save_all());
+            if Preferences.preferences#get.editor_save_all_bef_comp then (editor#save_all());
             p#compile_buffer ?join:None ()
           end
         end);

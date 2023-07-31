@@ -45,8 +45,8 @@ let markup_of_status s =
     s.modified, Printf.sprintf "<span font_family='monospace' color='orange' weight='bold' size='large'>~</span>%d" s.modified;
     (s.added + s.untracked), Printf.sprintf "<span font_family='monospace' color='green' weight='bold' size='large'>+</span>%d" (s.added + s.untracked);
     s.deleted, Printf.sprintf "<span font_family='monospace' color='red' weight='bold' size='large'>-</span>%d" s.deleted;
-  ] 
-  |> List.filter_map (fun (n, s) -> if n > 0 then Some s else None) 
+  ]
+  |> List.filter_map (fun (n, s) -> if n > 0 then Some s else None)
   |> String.concat " "
 
 let re_status = Str.regexp "\\([ MADRCU?!]\\)\\([ MADRCU?!]\\) +\\(.*\\)?"
@@ -55,64 +55,64 @@ let re_status_branch = Str.regexp "## \\(.*\\)\\.\\.\\.\\([^ ]*\\)\\( \\[ahead \
 (** status *)
 let status f =
   match Oe_config.git_version with
-  | None -> 
+  | None ->
       f None
   | _ ->
-      let status = 
-        { 
-          branch = ""; 
-          ahead = 0; 
-          added = 0; 
-          modified = 0; 
-          deleted = 0; 
-          renamed = 0; 
-          copied = 0; 
-          untracked = 0; 
-          ignored = 0 
-        } 
+      let status =
+        {
+          branch = "";
+          ahead = 0;
+          added = 0;
+          modified = 0;
+          deleted = 0;
+          renamed = 0;
+          copied = 0;
+          untracked = 0;
+          ignored = 0
+        }
       in
       let process_in =
         Spawn.loop begin fun ic ->
           let line = input_line ic in
           try
             if Str.first_chars line 3 = "## " then begin
-              let stop = 
+              let stop =
                 match String.index_opt line '.' with
                 | Some i -> i
                 | _ -> String.length line
               in
               let branch = String.sub line 3 (stop - 3) in
-              let ahead = 
+              let ahead =
                 if Str.string_match re_status_branch line 0 then begin
-                  try Str.matched_group 4 line |> int_of_string with Not_found -> 0 
+                  try Str.matched_group 4 line |> int_of_string with Not_found -> 0
                 end else 0
               in
-              status.branch <- branch; 
+              status.branch <- branch;
               status.ahead <- ahead;
             end else if Str.string_match re_status line 0 then begin
               let x = Str.matched_group 1 line in
               let y = Str.matched_group 2 line in
               begin
                 match (x, y) with
-                | "M", _ | _, "M" -> 
+                | "M", _ | _, "M" ->
                     status.modified <- status.modified + 1
-                | "A", _ | _, "A" -> 
+                | "A", _ | _, "A" ->
                     status.added <- status.added + 1
-                | "D", _ | _, "D" -> 
+                | "D", _ | _, "D" ->
                     status.deleted <- status.deleted + 1
-                | "R", _ | _, "R" -> 
+                | "R", _ | _, "R" ->
                     status.renamed <- status.renamed + 1
-                | "C", _ | _, "C" -> 
+                | "C", _ | _, "C" ->
                     status.copied <- status.copied + 1
-                | "?", _ -> 
+                | "?", _ ->
                     status.untracked <- status.untracked + 1
-                | "!", _ -> 
+                | "!", _ ->
                     status.ignored <- status.ignored + 1
-                | _ -> 
+                | _ ->
                     Log.println `ERROR "Unparseable git message: \"%s\"" line
               end;
             end;
-          with ex -> 
+          with ex ->
             Log.println `ERROR "Unparseable git message: \"%s\"\n" line ;
             Printf.eprintf "File \"git.ml\": %s\n%s\n%!" (Printexc.to_string ex) (Printexc.get_backtrace());
         end
@@ -126,8 +126,8 @@ let status f =
       in
       let program, args = "git", [|"status"; "-b"; "--porcelain=v1"|] in
       Log.println `DEBUG "%s %s" program (args |> Array.to_list |> String.concat " ");
-      Spawn.async 
-        ~process_in 
+      Spawn.async
+        ~process_in
         ~process_err
         ~at_exit:begin fun _ ->
           if !has_errors then GtkThread.async f None
@@ -150,8 +150,8 @@ let toplevel callback =
       in
       let program, args = "git", [|"rev-parse"; "--show-toplevel"|] in
       Log.println `DEBUG "%s %s" program (args |> Array.to_list |> String.concat " ");
-      Spawn.async 
-        ~process_in 
+      Spawn.async
+        ~process_in
         ~process_err
         ~at_exit:begin fun _ ->
           if !has_errors then GtkThread.async callback None
@@ -175,10 +175,10 @@ let diff_stat f =
               let ins = try int_of_string ins with Failure _ -> 0 in
               let del = try int_of_string del with Failure _ -> 0 in
               diffs := (ins, del, fn) :: !diffs;
-          | _ -> 
+          | _ ->
               Log.println `ERROR "Unparseable git message: \"%s\"" line
         end
-      in 
+      in
       let display diffs =
         let diffs = List.rev diffs in
         let ti, td, tc, mx = List.fold_left (fun (si, sd, sc, mx) (i, d, _) -> (si + i), (sd + d), (sc + i + d), (max mx (i+d))) (0, 0, 0, 0) diffs in
@@ -250,10 +250,10 @@ let show_diff_stat alloc widget =
   popup#event#connect#key_press ~callback:begin fun ev ->
     if GdkEvent.Key.keyval ev = GdkKeysyms._Escape then destroy popup else false
   end |> ignore;
-  let border_color = Color.add_value Preferences.preferences#get.Preferences.pref_bg_color_popup 0.1 in
+  let border_color = Color.add_value Preferences.preferences#get.editor_bg_color_popup 0.1 in
   popup#misc#modify_bg [`NORMAL, `NAME border_color];
   let lbox = GBin.event_box ~packing:popup#add () in
-  lbox#misc#modify_bg [`NORMAL, `NAME Preferences.preferences#get.Preferences.pref_bg_color_popup];
+  lbox#misc#modify_bg [`NORMAL, `NAME Preferences.preferences#get.editor_bg_color_popup];
   lbox#add widget;
   begin
     match alloc with
@@ -263,7 +263,7 @@ let show_diff_stat alloc widget =
         popup#move ~x:(alloc.Gtk.x + alloc.Gtk.width - popup#misc#allocation.Gtk.width) ~y:(alloc.Gtk.y + alloc.Gtk.height + 8);
     | _ -> popup#show();
   end;
-  let incr = if Preferences.preferences#get.Preferences.pref_annot_type_tooltips_delay = 0 then 0.106 else 0.479 in
+  let incr = if Preferences.preferences#get.editor_annot_type_tooltips_delay = 0 then 0.106 else 0.479 in
   Gmisclib.Util.fade_window ~incr popup
 
 (** install_popup *)

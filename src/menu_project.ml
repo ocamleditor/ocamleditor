@@ -221,7 +221,7 @@ let project ~browser ~group ~flags items =
   project_comp_file#set_image (GMisc.image ~pixbuf:Icons.compile_file_16 ())#coerce;
   ignore (project_comp_file#connect#activate ~callback:begin fun () ->
       browser#editor#with_current_page begin fun p ->
-        if Preferences.preferences#get.Preferences.pref_editor_save_all_bef_comp then (editor#save_all());
+        if Preferences.preferences#get.editor_save_all_bef_comp then (editor#save_all());
         p#compile_buffer ?join:None ()
       end
     end);

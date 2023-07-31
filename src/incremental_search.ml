@@ -199,7 +199,7 @@ class incremental () =
         in
         let ebox = GBin.event_box ~border_width:0 ~packing:dialog#add () in
         let box = GPack.hbox ~spacing:0 ~border_width:5 ~packing:ebox#add () in
-        let color = Preferences.preferences#get.Preferences.pref_bg_color_popup in
+        let color = Preferences.preferences#get.editor_bg_color_popup in
         let border_color = Color.add_value color 0.13 in
         dialog#misc#modify_bg [`NORMAL, `NAME border_color];
         let _ = ebox#misc#modify_bg [`NORMAL, `NAME color] in

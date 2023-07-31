@@ -89,7 +89,7 @@ class ocamlview ~colorize ?packing () =
 
 (** widget *)
 class widget ~page ?packing () =
-  let diff_cmd       = Preferences.preferences#get.Preferences.pref_program_diff_graphical  in
+  let diff_cmd       = Preferences.preferences#get.program_diff_graphical  in
   let mk_diff_cmd    = if Sys.win32 && not Ocaml_config.is_mingw then Filename.quote diff_cmd else diff_cmd in
   let project        = page#project in
   let mbox           = GPack.vbox ~spacing:0 ?packing () in
@@ -198,7 +198,7 @@ class widget ~page ?packing () =
           GtkBase.Widget.queue_draw ov#view#as_widget;
       | _ -> ()
 
-    method private set_ignore_whitespace () = 
+    method private set_ignore_whitespace () =
       ignore_whitespace <- button_ignore_ws#get_active;
       self#view_diff();
 
@@ -382,9 +382,9 @@ class widget ~page ?packing () =
           let re = (Str.quote prefix) ^ "\\.\\(~[0-9]+~\\)" ^ (Str.quote suffix) in
           let re = Str.regexp re in
           let dirname = bak // Filename.dirname rel in
-          let files = 
-            if Sys.file_exists dirname then 
-              Array.to_list (Sys.readdir dirname) 
+          let files =
+            if Sys.file_exists dirname then
+              Array.to_list (Sys.readdir dirname)
             else []
           in
           let basenames = List.filter_map begin fun basename ->

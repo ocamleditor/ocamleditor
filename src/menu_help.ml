@@ -32,7 +32,7 @@ let system_properties () =
   let vbox = GPack.vbox ~spacing:0 ~border_width:0 ~packing:window#add () in
   let sw = GBin.scrolled_window ~hpolicy:`AUTOMATIC ~vpolicy:`AUTOMATIC ~packing:vbox#add () in
   let view = GText.view ~buffer ~editable:false ~width:850 ~height:600 ~packing:sw#add () in
-  view#misc#modify_font_by_name (Preferences.preferences#get.Preferences.pref_base_font);
+  view#misc#modify_font_by_name (Preferences.preferences#get.editor_base_font);
   view#set_left_margin 8;
   view#set_right_margin 8;
   view#set_pixels_above_lines 2;

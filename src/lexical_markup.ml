@@ -47,19 +47,19 @@ end
 open Range
 
 let parse pref =
-  let tags = pref.Preferences.pref_tags in
-  let _, _, bgcolor_highlight = Preferences.preferences#get.Preferences.pref_editor_mark_occurrences in
+  let tags = pref.Settings_t.editor_tags in
+  let bgcolor_highlight = Preferences.preferences#get.editor_mark_occurrences_bg_color in
   let span_highlight text =
     String.concat "" ["<span bgcolor='"; bgcolor_highlight; "'>"; (Glib.Markup.escape_text text); "</span>"]
   in
   let span (highlight, tagname) =
-    match List.assoc tagname tags with
-    | `NAME color, weight, style, underline, _, _ ->
-        let weight    = sprintf " font_weight='%d'" weight in
-        let style     = match style with `ITALIC -> " font_style='italic'" | _ -> "" in
-        let underline = match underline with `LOW -> " underline='low'" | _ -> "" in
+    match List.find_opt (fun t -> t.Settings_t.name = tagname) tags with
+    | Some t ->
+        let weight    = sprintf " font_weight='%d'" t.weight in
+        let style     = match t.style with `ITALIC -> " font_style='italic'" | _ -> "" in
+        let underline = match t.underline with `NONE -> "" | _ -> " underline='single'" in
         let bgcolor   = if highlight then " bgcolor='" ^ bgcolor_highlight ^"'" else "" in
-        String.concat "" ["<span color='"; color; "'"; weight; style; underline; bgcolor; ">"]
+        String.concat "" ["<span color='"; t.color; "'"; weight; style; underline; bgcolor; ">"]
     | _ -> assert false
   in
   let span = Miscellanea.Memo.create span in

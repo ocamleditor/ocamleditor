@@ -150,7 +150,7 @@ let edit ~browser ~group ~flags
   annot_type_copy#add_accelerator ~group ~modi:[`CONTROL] GdkKeysyms._F2 ~flags;
   let annot_type_tooltips = GMenu.check_menu_item
       ~label:"Enable On-Mouse-Hover"
-      ~active:Preferences.preferences#get.Preferences.pref_annot_type_tooltips_enabled
+      ~active:Preferences.preferences#get.editor_annot_type_tooltips_enabled
       ~packing:annot_type_menu#add ()
   in
   ignore (annot_type_tooltips#connect#toggled ~callback:(fun () ->

@@ -73,9 +73,9 @@ module Diff = struct
   let create_label_tooltip elements =
     let ebox = GBin.event_box () in
     let vbox = GPack.vbox ~spacing:0 ~packing:ebox#add () in
-    let color = fst Preferences.preferences#get.Preferences.pref_bg_color in
+    let color = Preferences.preferences#get.editor_bg_color_user in
     ebox#misc#modify_bg [`NORMAL, `NAME color];
-    let fd = Pango.Font.from_string Preferences.preferences#get.Preferences.pref_base_font in
+    let fd = Pango.Font.from_string Preferences.preferences#get.editor_base_font in
     let size = Pango.Font.get_size fd - 1 * Pango.scale in
     Pango.Font.modify fd ~size ();
     let last = List.length elements - 1 in
@@ -238,7 +238,7 @@ module Diff = struct
       let buffer = page#buffer in
       let filename2 = buffer#tmp_filename in
       buffer#save_buffer ?filename:None () |> ignore;
-      let diff = Preferences.preferences#get.Preferences.pref_program_diff in
+      let diff = Preferences.preferences#get.program_diff in
       let args = [|
         "--binary";
         buffer#orig_filename;
