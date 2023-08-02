@@ -47,7 +47,7 @@ end
 open Range
 
 let parse pref =
-  let tags = pref.Settings_t.editor_tags in
+  let tags = if Preferences.preferences#get.theme_is_dark then pref.Settings_t.editor_tags_dark else pref.Settings_t.editor_tags in
   let bgcolor_highlight = Preferences.preferences#get.editor_mark_occurrences_bg_color in
   let span_highlight text =
     String.concat "" ["<span bgcolor='"; bgcolor_highlight; "'>"; (Glib.Markup.escape_text text); "</span>"]

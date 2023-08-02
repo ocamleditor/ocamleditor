@@ -59,6 +59,7 @@ type settings = Settings_t.settings = {
   mutable tab_pos: [ `TOP | `RIGHT | `BOTTOM | `LEFT ];
   mutable tab_vertical_text: bool;
   mutable theme: string option;
+  mutable theme_is_dark: bool;
   mutable vmessages_height: int;
   mutable editor_annot_type_tooltips_enabled: bool;
   mutable editor_annot_type_tooltips_delay: int;
@@ -1386,6 +1387,17 @@ let write_settings : _ -> settings -> _ = (
       )
         ob x.theme;
     );
+    if x.theme_is_dark <> false then (
+      if !is_first then
+        is_first := false
+      else
+        Buffer.add_char ob ',';
+        Buffer.add_string ob "\"theme_is_dark\":";
+      (
+        Yojson.Safe.write_bool
+      )
+        ob x.theme_is_dark;
+    );
     if x.vmessages_height <> 300 then (
       if !is_first then
         is_first := false
@@ -2024,6 +2036,7 @@ let read_settings = (
     let field_tab_pos = ref (`TOP) in
     let field_tab_vertical_text = ref (false) in
     let field_theme = ref (None) in
+    let field_theme_is_dark = ref (false) in
     let field_vmessages_height = ref (300) in
     let field_editor_annot_type_tooltips_enabled = ref (false) in
     let field_editor_annot_type_tooltips_delay = ref (0) in
@@ -2131,7 +2144,7 @@ let read_settings = (
               )
             | 10 -> (
                 if String.unsafe_get s pos = 'e' && String.unsafe_get s (pos+1) = 'd' && String.unsafe_get s (pos+2) = 'i' && String.unsafe_get s (pos+3) = 't' && String.unsafe_get s (pos+4) = 'o' && String.unsafe_get s (pos+5) = 'r' && String.unsafe_get s (pos+6) = '_' && String.unsafe_get s (pos+7) = 'b' && String.unsafe_get s (pos+8) = 'a' && String.unsafe_get s (pos+9) = 'k' then (
-                  50
+                  51
                 )
                 else (
                   -1
@@ -2144,7 +2157,7 @@ let read_settings = (
                         match String.unsafe_get s (pos+7) with
                           | 't' -> (
                               if String.unsafe_get s (pos+8) = 'a' && String.unsafe_get s (pos+9) = 'g' && String.unsafe_get s (pos+10) = 's' then (
-                                92
+                                93
                               )
                               else (
                                 -1
@@ -2152,7 +2165,7 @@ let read_settings = (
                             )
                           | 'w' -> (
                               if String.unsafe_get s (pos+8) = 'r' && String.unsafe_get s (pos+9) = 'a' && String.unsafe_get s (pos+10) = 'p' then (
-                                95
+                                96
                               )
                               else (
                                 -1
@@ -2199,6 +2212,14 @@ let read_settings = (
                   | 'o' -> (
                       if String.unsafe_get s (pos+1) = 'u' && String.unsafe_get s (pos+2) = 't' && String.unsafe_get s (pos+3) = 'l' && String.unsafe_get s (pos+4) = 'i' && String.unsafe_get s (pos+5) = 'n' && String.unsafe_get s (pos+6) = 'e' && String.unsafe_get s (pos+7) = '_' && String.unsafe_get s (pos+8) = 'w' && String.unsafe_get s (pos+9) = 'i' && String.unsafe_get s (pos+10) = 'd' && String.unsafe_get s (pos+11) = 't' && String.unsafe_get s (pos+12) = 'h' then (
                         22
+                      )
+                      else (
+                        -1
+                      )
+                    )
+                  | 't' -> (
+                      if String.unsafe_get s (pos+1) = 'h' && String.unsafe_get s (pos+2) = 'e' && String.unsafe_get s (pos+3) = 'm' && String.unsafe_get s (pos+4) = 'e' && String.unsafe_get s (pos+5) = '_' && String.unsafe_get s (pos+6) = 'i' && String.unsafe_get s (pos+7) = 's' && String.unsafe_get s (pos+8) = '_' && String.unsafe_get s (pos+9) = 'd' && String.unsafe_get s (pos+10) = 'a' && String.unsafe_get s (pos+11) = 'r' && String.unsafe_get s (pos+12) = 'k' then (
+                        46
                       )
                       else (
                         -1
@@ -2275,7 +2296,7 @@ let read_settings = (
                         match String.unsafe_get s (pos+7) with
                           | 'b' -> (
                               if String.unsafe_get s (pos+8) = 'a' && String.unsafe_get s (pos+9) = 's' && String.unsafe_get s (pos+10) = 'e' && String.unsafe_get s (pos+11) = '_' && String.unsafe_get s (pos+12) = 'f' && String.unsafe_get s (pos+13) = 'o' && String.unsafe_get s (pos+14) = 'n' && String.unsafe_get s (pos+15) = 't' then (
-                                51
+                                52
                               )
                               else (
                                 -1
@@ -2286,7 +2307,7 @@ let read_settings = (
                                 match String.unsafe_get s (pos+9) with
                                   | 'b' -> (
                                       if String.unsafe_get s (pos+10) = '_' && String.unsafe_get s (pos+11) = 'w' && String.unsafe_get s (pos+12) = 'i' && String.unsafe_get s (pos+13) = 'd' && String.unsafe_get s (pos+14) = 't' && String.unsafe_get s (pos+15) = 'h' then (
-                                        91
+                                        92
                                       )
                                       else (
                                         -1
@@ -2294,7 +2315,7 @@ let read_settings = (
                                     )
                                   | 'g' -> (
                                       if String.unsafe_get s (pos+10) = 's' && String.unsafe_get s (pos+11) = '_' && String.unsafe_get s (pos+12) = 'd' && String.unsafe_get s (pos+13) = 'a' && String.unsafe_get s (pos+14) = 'r' && String.unsafe_get s (pos+15) = 'k' then (
-                                        93
+                                        94
                                       )
                                       else (
                                         -1
@@ -2326,7 +2347,7 @@ let read_settings = (
                     )
                   | 'v' -> (
                       if String.unsafe_get s (pos+1) = 'm' && String.unsafe_get s (pos+2) = 'e' && String.unsafe_get s (pos+3) = 's' && String.unsafe_get s (pos+4) = 's' && String.unsafe_get s (pos+5) = 'a' && String.unsafe_get s (pos+6) = 'g' && String.unsafe_get s (pos+7) = 'e' && String.unsafe_get s (pos+8) = 's' && String.unsafe_get s (pos+9) = '_' && String.unsafe_get s (pos+10) = 'h' && String.unsafe_get s (pos+11) = 'e' && String.unsafe_get s (pos+12) = 'i' && String.unsafe_get s (pos+13) = 'g' && String.unsafe_get s (pos+14) = 'h' && String.unsafe_get s (pos+15) = 't' then (
-                        46
+                        47
                       )
                       else (
                         -1
@@ -2343,7 +2364,7 @@ let read_settings = (
                         match String.unsafe_get s (pos+7) with
                           | 'e' -> (
                               if String.unsafe_get s (pos+8) = 'r' && String.unsafe_get s (pos+9) = 'r' && String.unsafe_get s (pos+10) = '_' && String.unsafe_get s (pos+11) = 'g' && String.unsafe_get s (pos+12) = 'u' && String.unsafe_get s (pos+13) = 't' && String.unsafe_get s (pos+14) = 't' && String.unsafe_get s (pos+15) = 'e' && String.unsafe_get s (pos+16) = 'r' then (
-                                64
+                                65
                               )
                               else (
                                 -1
@@ -2353,7 +2374,7 @@ let read_settings = (
                               match String.unsafe_get s (pos+8) with
                                 | 'a' -> (
                                     if String.unsafe_get s (pos+9) = 'b' && String.unsafe_get s (pos+10) = '_' && String.unsafe_get s (pos+11) = 's' && String.unsafe_get s (pos+12) = 'p' && String.unsafe_get s (pos+13) = 'a' && String.unsafe_get s (pos+14) = 'c' && String.unsafe_get s (pos+15) = 'e' && String.unsafe_get s (pos+16) = 's' then (
-                                      90
+                                      91
                                     )
                                     else (
                                       -1
@@ -2361,7 +2382,7 @@ let read_settings = (
                                   )
                                 | 'r' -> (
                                     if String.unsafe_get s (pos+9) = 'i' && String.unsafe_get s (pos+10) = 'm' && String.unsafe_get s (pos+11) = '_' && String.unsafe_get s (pos+12) = 'l' && String.unsafe_get s (pos+13) = 'i' && String.unsafe_get s (pos+14) = 'n' && String.unsafe_get s (pos+15) = 'e' && String.unsafe_get s (pos+16) = 's' then (
-                                      94
+                                      95
                                     )
                                     else (
                                       -1
@@ -2425,7 +2446,7 @@ let read_settings = (
                         match String.unsafe_get s (pos+7) with
                           | 'd' -> (
                               if String.unsafe_get s (pos+8) = 'o' && String.unsafe_get s (pos+9) = 't' && String.unsafe_get s (pos+10) = '_' && String.unsafe_get s (pos+11) = 'l' && String.unsafe_get s (pos+12) = 'e' && String.unsafe_get s (pos+13) = 'a' && String.unsafe_get s (pos+14) = 'd' && String.unsafe_get s (pos+15) = 'e' && String.unsafe_get s (pos+16) = 'r' && String.unsafe_get s (pos+17) = 's' then (
-                                63
+                                64
                               )
                               else (
                                 -1
@@ -2433,7 +2454,7 @@ let read_settings = (
                             )
                           | 'e' -> (
                               if String.unsafe_get s (pos+8) = 'r' && String.unsafe_get s (pos+9) = 'r' && String.unsafe_get s (pos+10) = '_' && String.unsafe_get s (pos+11) = 't' && String.unsafe_get s (pos+12) = 'o' && String.unsafe_get s (pos+13) = 'o' && String.unsafe_get s (pos+14) = 'l' && String.unsafe_get s (pos+15) = 't' && String.unsafe_get s (pos+16) = 'i' && String.unsafe_get s (pos+17) = 'p' then (
-                                65
+                                66
                               )
                               else (
                                 -1
@@ -2441,7 +2462,7 @@ let read_settings = (
                             )
                           | 'l' -> (
                               if String.unsafe_get s (pos+8) = 'e' && String.unsafe_get s (pos+9) = 'f' && String.unsafe_get s (pos+10) = 't' && String.unsafe_get s (pos+11) = '_' && String.unsafe_get s (pos+12) = 'm' && String.unsafe_get s (pos+13) = 'a' && String.unsafe_get s (pos+14) = 'r' && String.unsafe_get s (pos+15) = 'g' && String.unsafe_get s (pos+16) = 'i' && String.unsafe_get s (pos+17) = 'n' then (
-                                73
+                                74
                               )
                               else (
                                 -1
@@ -2547,7 +2568,7 @@ let read_settings = (
                         match String.unsafe_get s (pos+7) with
                           | 'i' -> (
                               if String.unsafe_get s (pos+8) = 'n' && String.unsafe_get s (pos+9) = 'd' && String.unsafe_get s (pos+10) = 'e' && String.unsafe_get s (pos+11) = 'n' && String.unsafe_get s (pos+12) = 't' && String.unsafe_get s (pos+13) = '_' && String.unsafe_get s (pos+14) = 'l' && String.unsafe_get s (pos+15) = 'i' && String.unsafe_get s (pos+16) = 'n' && String.unsafe_get s (pos+17) = 'e' && String.unsafe_get s (pos+18) = 's' then (
-                                72
+                                73
                               )
                               else (
                                 -1
@@ -2555,7 +2576,7 @@ let read_settings = (
                             )
                           | 'p' -> (
                               if String.unsafe_get s (pos+8) = 'i' && String.unsafe_get s (pos+9) = 'x' && String.unsafe_get s (pos+10) = 'e' && String.unsafe_get s (pos+11) = 'l' && String.unsafe_get s (pos+12) = 's' && String.unsafe_get s (pos+13) = '_' && String.unsafe_get s (pos+14) = 'l' && String.unsafe_get s (pos+15) = 'i' && String.unsafe_get s (pos+16) = 'n' && String.unsafe_get s (pos+17) = 'e' && String.unsafe_get s (pos+18) = 's' then (
-                                79
+                                80
                               )
                               else (
                                 -1
@@ -2563,7 +2584,7 @@ let read_settings = (
                             )
                           | 'r' -> (
                               if String.unsafe_get s (pos+8) = 'i' && String.unsafe_get s (pos+9) = 'g' && String.unsafe_get s (pos+10) = 'h' && String.unsafe_get s (pos+11) = 't' && String.unsafe_get s (pos+12) = '_' && String.unsafe_get s (pos+13) = 'm' && String.unsafe_get s (pos+14) = 'a' && String.unsafe_get s (pos+15) = 'r' && String.unsafe_get s (pos+16) = 'g' && String.unsafe_get s (pos+17) = 'i' && String.unsafe_get s (pos+18) = 'n' then (
-                                80
+                                81
                               )
                               else (
                                 -1
@@ -2642,7 +2663,7 @@ let read_settings = (
                         match String.unsafe_get s (pos+7) with
                           | 'b' -> (
                               if String.unsafe_get s (pos+8) = 'g' && String.unsafe_get s (pos+9) = '_' && String.unsafe_get s (pos+10) = 'c' && String.unsafe_get s (pos+11) = 'o' && String.unsafe_get s (pos+12) = 'l' && String.unsafe_get s (pos+13) = 'o' && String.unsafe_get s (pos+14) = 'r' && String.unsafe_get s (pos+15) = '_' && String.unsafe_get s (pos+16) = 'u' && String.unsafe_get s (pos+17) = 's' && String.unsafe_get s (pos+18) = 'e' && String.unsafe_get s (pos+19) = 'r' then (
-                                54
+                                55
                               )
                               else (
                                 -1
@@ -2650,7 +2671,7 @@ let read_settings = (
                             )
                           | 'e' -> (
                               if String.unsafe_get s (pos+8) = 'r' && String.unsafe_get s (pos+9) = 'r' && String.unsafe_get s (pos+10) = '_' && String.unsafe_get s (pos+11) = 'u' && String.unsafe_get s (pos+12) = 'n' && String.unsafe_get s (pos+13) = 'd' && String.unsafe_get s (pos+14) = 'e' && String.unsafe_get s (pos+15) = 'r' && String.unsafe_get s (pos+16) = 'l' && String.unsafe_get s (pos+17) = 'i' && String.unsafe_get s (pos+18) = 'n' && String.unsafe_get s (pos+19) = 'e' then (
-                                66
+                                67
                               )
                               else (
                                 -1
@@ -2658,7 +2679,7 @@ let read_settings = (
                             )
                           | 'i' -> (
                               if String.unsafe_get s (pos+8) = 'n' && String.unsafe_get s (pos+9) = 'd' && String.unsafe_get s (pos+10) = 'e' && String.unsafe_get s (pos+11) = 'n' && String.unsafe_get s (pos+12) = 't' && String.unsafe_get s (pos+13) = '_' && String.unsafe_get s (pos+14) = 'c' && String.unsafe_get s (pos+15) = 'o' && String.unsafe_get s (pos+16) = 'n' && String.unsafe_get s (pos+17) = 'f' && String.unsafe_get s (pos+18) = 'i' && String.unsafe_get s (pos+19) = 'g' then (
-                                70
+                                71
                               )
                               else (
                                 -1
@@ -2805,7 +2826,7 @@ let read_settings = (
                                 match String.unsafe_get s (pos+16) with
                                   | 'p' -> (
                                       if String.unsafe_get s (pos+17) = 'o' && String.unsafe_get s (pos+18) = 'p' && String.unsafe_get s (pos+19) = 'u' && String.unsafe_get s (pos+20) = 'p' then (
-                                        52
+                                        53
                                       )
                                       else (
                                         -1
@@ -2813,7 +2834,7 @@ let read_settings = (
                                     )
                                   | 't' -> (
                                       if String.unsafe_get s (pos+17) = 'h' && String.unsafe_get s (pos+18) = 'e' && String.unsafe_get s (pos+19) = 'm' && String.unsafe_get s (pos+20) = 'e' then (
-                                        53
+                                        54
                                       )
                                       else (
                                         -1
@@ -2831,7 +2852,7 @@ let read_settings = (
                               match String.unsafe_get s (pos+8) with
                                 | 'g' -> (
                                     if String.unsafe_get s (pos+9) = '_' && String.unsafe_get s (pos+10) = 'c' && String.unsafe_get s (pos+11) = 'o' && String.unsafe_get s (pos+12) = 'l' && String.unsafe_get s (pos+13) = 'o' && String.unsafe_get s (pos+14) = 'r' && String.unsafe_get s (pos+15) = '_' && String.unsafe_get s (pos+16) = 'p' && String.unsafe_get s (pos+17) = 'o' && String.unsafe_get s (pos+18) = 'p' && String.unsafe_get s (pos+19) = 'u' && String.unsafe_get s (pos+20) = 'p' then (
-                                      67
+                                      68
                                     )
                                     else (
                                       -1
@@ -2839,7 +2860,7 @@ let read_settings = (
                                   )
                                 | 'o' -> (
                                     if String.unsafe_get s (pos+9) = 'r' && String.unsafe_get s (pos+10) = 'm' && String.unsafe_get s (pos+11) = 'a' && String.unsafe_get s (pos+12) = 't' && String.unsafe_get s (pos+13) = '_' && String.unsafe_get s (pos+14) = 'o' && String.unsafe_get s (pos+15) = 'n' && String.unsafe_get s (pos+16) = '_' && String.unsafe_get s (pos+17) = 's' && String.unsafe_get s (pos+18) = 'a' && String.unsafe_get s (pos+19) = 'v' && String.unsafe_get s (pos+20) = 'e' then (
-                                      68
+                                      69
                                     )
                                     else (
                                       -1
@@ -2851,7 +2872,7 @@ let read_settings = (
                             )
                           | 's' -> (
                               if String.unsafe_get s (pos+8) = 'm' && String.unsafe_get s (pos+9) = 'a' && String.unsafe_get s (pos+10) = 'r' && String.unsafe_get s (pos+11) = 't' && String.unsafe_get s (pos+12) = '_' && String.unsafe_get s (pos+13) = 'k' && String.unsafe_get s (pos+14) = 'e' && String.unsafe_get s (pos+15) = 'y' && String.unsafe_get s (pos+16) = 's' && String.unsafe_get s (pos+17) = '_' && String.unsafe_get s (pos+18) = 'e' && String.unsafe_get s (pos+19) = 'n' && String.unsafe_get s (pos+20) = 'd' then (
-                                88
+                                89
                               )
                               else (
                                 -1
@@ -2911,7 +2932,7 @@ let read_settings = (
                         match String.unsafe_get s (pos+7) with
                           | 'c' -> (
                               if String.unsafe_get s (pos+8) = 'o' && String.unsafe_get s (pos+9) = 'm' && String.unsafe_get s (pos+10) = 'p' && String.unsafe_get s (pos+11) = 'l' && String.unsafe_get s (pos+12) = 'e' && String.unsafe_get s (pos+13) = 't' && String.unsafe_get s (pos+14) = 'i' && String.unsafe_get s (pos+15) = 'o' && String.unsafe_get s (pos+16) = 'n' && String.unsafe_get s (pos+17) = '_' && String.unsafe_get s (pos+18) = 'f' && String.unsafe_get s (pos+19) = 'o' && String.unsafe_get s (pos+20) = 'n' && String.unsafe_get s (pos+21) = 't' then (
-                                56
+                                57
                               )
                               else (
                                 -1
@@ -2919,7 +2940,7 @@ let read_settings = (
                             )
                           | 's' -> (
                               if String.unsafe_get s (pos+8) = 'm' && String.unsafe_get s (pos+9) = 'a' && String.unsafe_get s (pos+10) = 'r' && String.unsafe_get s (pos+11) = 't' && String.unsafe_get s (pos+12) = '_' && String.unsafe_get s (pos+13) = 'k' && String.unsafe_get s (pos+14) = 'e' && String.unsafe_get s (pos+15) = 'y' && String.unsafe_get s (pos+16) = 's' && String.unsafe_get s (pos+17) = '_' && String.unsafe_get s (pos+18) = 'h' && String.unsafe_get s (pos+19) = 'o' && String.unsafe_get s (pos+20) = 'm' && String.unsafe_get s (pos+21) = 'e' then (
-                                89
+                                90
                               )
                               else (
                                 -1
@@ -2979,7 +3000,7 @@ let read_settings = (
                         match String.unsafe_get s (pos+7) with
                           | 'i' -> (
                               if String.unsafe_get s (pos+8) = 'n' && String.unsafe_get s (pos+9) = 'd' && String.unsafe_get s (pos+10) = 'e' && String.unsafe_get s (pos+11) = 'n' && String.unsafe_get s (pos+12) = 't' && String.unsafe_get s (pos+13) = '_' && String.unsafe_get s (pos+14) = 'e' && String.unsafe_get s (pos+15) = 'm' && String.unsafe_get s (pos+16) = 'p' && String.unsafe_get s (pos+17) = 't' && String.unsafe_get s (pos+18) = 'y' && String.unsafe_get s (pos+19) = '_' && String.unsafe_get s (pos+20) = 'l' && String.unsafe_get s (pos+21) = 'i' && String.unsafe_get s (pos+22) = 'n' && String.unsafe_get s (pos+23) = 'e' then (
-                                71
+                                72
                               )
                               else (
                                 -1
@@ -2989,7 +3010,7 @@ let read_settings = (
                               match String.unsafe_get s (pos+8) with
                                 | 'a' -> (
                                     if String.unsafe_get s (pos+9) = 'v' && String.unsafe_get s (pos+10) = 'e' && String.unsafe_get s (pos+11) = '_' && String.unsafe_get s (pos+12) = 'a' && String.unsafe_get s (pos+13) = 'l' && String.unsafe_get s (pos+14) = 'l' && String.unsafe_get s (pos+15) = '_' && String.unsafe_get s (pos+16) = 'b' && String.unsafe_get s (pos+17) = 'e' && String.unsafe_get s (pos+18) = 'f' && String.unsafe_get s (pos+19) = '_' && String.unsafe_get s (pos+20) = 'c' && String.unsafe_get s (pos+21) = 'o' && String.unsafe_get s (pos+22) = 'm' && String.unsafe_get s (pos+23) = 'p' then (
-                                      83
+                                      84
                                     )
                                     else (
                                       -1
@@ -2997,7 +3018,7 @@ let read_settings = (
                                   )
                                 | 'h' -> (
                                     if String.unsafe_get s (pos+9) = 'o' && String.unsafe_get s (pos+10) = 'w' && String.unsafe_get s (pos+11) = '_' && String.unsafe_get s (pos+12) = 'l' && String.unsafe_get s (pos+13) = 'i' && String.unsafe_get s (pos+14) = 'n' && String.unsafe_get s (pos+15) = 'e' && String.unsafe_get s (pos+16) = '_' && String.unsafe_get s (pos+17) = 'n' && String.unsafe_get s (pos+18) = 'u' && String.unsafe_get s (pos+19) = 'm' && String.unsafe_get s (pos+20) = 'b' && String.unsafe_get s (pos+21) = 'e' && String.unsafe_get s (pos+22) = 'r' && String.unsafe_get s (pos+23) = 's' then (
-                                      86
+                                      87
                                     )
                                     else (
                                       -1
@@ -3032,7 +3053,7 @@ let read_settings = (
                   match String.unsafe_get s (pos+7) with
                     | 'c' -> (
                         if String.unsafe_get s (pos+8) = 'o' && String.unsafe_get s (pos+9) = 'm' && String.unsafe_get s (pos+10) = 'p' && String.unsafe_get s (pos+11) = 'l' && String.unsafe_get s (pos+12) = 'e' && String.unsafe_get s (pos+13) = 't' && String.unsafe_get s (pos+14) = 'i' && String.unsafe_get s (pos+15) = 'o' && String.unsafe_get s (pos+16) = 'n' && String.unsafe_get s (pos+17) = '_' && String.unsafe_get s (pos+18) = 'o' && String.unsafe_get s (pos+19) = 'p' && String.unsafe_get s (pos+20) = 'a' && String.unsafe_get s (pos+21) = 'c' && String.unsafe_get s (pos+22) = 'i' && String.unsafe_get s (pos+23) = 't' && String.unsafe_get s (pos+24) = 'y' then (
-                          59
+                          60
                         )
                         else (
                           -1
@@ -3040,7 +3061,7 @@ let read_settings = (
                       )
                     | 'r' -> (
                         if String.unsafe_get s (pos+8) = 'i' && String.unsafe_get s (pos+9) = 'g' && String.unsafe_get s (pos+10) = 'h' && String.unsafe_get s (pos+11) = 't' && String.unsafe_get s (pos+12) = '_' && String.unsafe_get s (pos+13) = 'm' && String.unsafe_get s (pos+14) = 'a' && String.unsafe_get s (pos+15) = 'r' && String.unsafe_get s (pos+16) = 'g' && String.unsafe_get s (pos+17) = 'i' && String.unsafe_get s (pos+18) = 'n' && String.unsafe_get s (pos+19) = '_' && String.unsafe_get s (pos+20) = 'c' && String.unsafe_get s (pos+21) = 'o' && String.unsafe_get s (pos+22) = 'l' && String.unsafe_get s (pos+23) = 'o' && String.unsafe_get s (pos+24) = 'r' then (
-                          81
+                          82
                         )
                         else (
                           -1
@@ -3048,7 +3069,7 @@ let read_settings = (
                       )
                     | 's' -> (
                         if String.unsafe_get s (pos+8) = 'h' && String.unsafe_get s (pos+9) = 'o' && String.unsafe_get s (pos+10) = 'w' && String.unsafe_get s (pos+11) = '_' && String.unsafe_get s (pos+12) = 'g' && String.unsafe_get s (pos+13) = 'l' && String.unsafe_get s (pos+14) = 'o' && String.unsafe_get s (pos+15) = 'b' && String.unsafe_get s (pos+16) = 'a' && String.unsafe_get s (pos+17) = 'l' && String.unsafe_get s (pos+18) = '_' && String.unsafe_get s (pos+19) = 'g' && String.unsafe_get s (pos+20) = 'u' && String.unsafe_get s (pos+21) = 't' && String.unsafe_get s (pos+22) = 't' && String.unsafe_get s (pos+23) = 'e' && String.unsafe_get s (pos+24) = 'r' then (
-                          85
+                          86
                         )
                         else (
                           -1
@@ -3069,7 +3090,7 @@ let read_settings = (
                         match String.unsafe_get s (pos+10) with
                           | 'r' -> (
                               if String.unsafe_get s (pos+11) = 'e' && String.unsafe_get s (pos+12) = 'n' && String.unsafe_get s (pos+13) = 't' && String.unsafe_get s (pos+14) = '_' && String.unsafe_get s (pos+15) = 'l' && String.unsafe_get s (pos+16) = 'i' && String.unsafe_get s (pos+17) = 'n' && String.unsafe_get s (pos+18) = 'e' && String.unsafe_get s (pos+19) = '_' && String.unsafe_get s (pos+20) = 'b' && String.unsafe_get s (pos+21) = 'o' && String.unsafe_get s (pos+22) = 'r' && String.unsafe_get s (pos+23) = 'd' && String.unsafe_get s (pos+24) = 'e' && String.unsafe_get s (pos+25) = 'r' then (
-                                60
+                                61
                               )
                               else (
                                 -1
@@ -3077,7 +3098,7 @@ let read_settings = (
                             )
                           | 's' -> (
                               if String.unsafe_get s (pos+11) = 'o' && String.unsafe_get s (pos+12) = 'r' && String.unsafe_get s (pos+13) = '_' && String.unsafe_get s (pos+14) = 'a' && String.unsafe_get s (pos+15) = 's' && String.unsafe_get s (pos+16) = 'p' && String.unsafe_get s (pos+17) = 'e' && String.unsafe_get s (pos+18) = 'c' && String.unsafe_get s (pos+19) = 't' && String.unsafe_get s (pos+20) = '_' && String.unsafe_get s (pos+21) = 'r' && String.unsafe_get s (pos+22) = 'a' && String.unsafe_get s (pos+23) = 't' && String.unsafe_get s (pos+24) = 'i' && String.unsafe_get s (pos+25) = 'o' then (
-                                61
+                                62
                               )
                               else (
                                 -1
@@ -3111,7 +3132,7 @@ let read_settings = (
                           match String.unsafe_get s (pos+9) with
                             | 'd' -> (
                                 if String.unsafe_get s (pos+10) = 'e' && String.unsafe_get s (pos+11) = '_' && String.unsafe_get s (pos+12) = 'f' && String.unsafe_get s (pos+13) = 'o' && String.unsafe_get s (pos+14) = 'l' && String.unsafe_get s (pos+15) = 'd' && String.unsafe_get s (pos+16) = 'i' && String.unsafe_get s (pos+17) = 'n' && String.unsafe_get s (pos+18) = 'g' && String.unsafe_get s (pos+19) = '_' && String.unsafe_get s (pos+20) = 'e' && String.unsafe_get s (pos+21) = 'n' && String.unsafe_get s (pos+22) = 'a' && String.unsafe_get s (pos+23) = 'b' && String.unsafe_get s (pos+24) = 'l' && String.unsafe_get s (pos+25) = 'e' && String.unsafe_get s (pos+26) = 'd' then (
-                                  55
+                                  56
                                 )
                                 else (
                                   -1
@@ -3119,7 +3140,7 @@ let read_settings = (
                               )
                             | 'm' -> (
                                 if String.unsafe_get s (pos+10) = 'p' && String.unsafe_get s (pos+11) = 'l' && String.unsafe_get s (pos+12) = 'e' && String.unsafe_get s (pos+13) = 't' && String.unsafe_get s (pos+14) = 'i' && String.unsafe_get s (pos+15) = 'o' && String.unsafe_get s (pos+16) = 'n' && String.unsafe_get s (pos+17) = '_' && String.unsafe_get s (pos+18) = 'd' && String.unsafe_get s (pos+19) = 'e' && String.unsafe_get s (pos+20) = 'c' && String.unsafe_get s (pos+21) = 'o' && String.unsafe_get s (pos+22) = 'r' && String.unsafe_get s (pos+23) = 'a' && String.unsafe_get s (pos+24) = 't' && String.unsafe_get s (pos+25) = 'e' && String.unsafe_get s (pos+26) = 'd' then (
-                                  58
+                                  59
                                 )
                                 else (
                                   -1
@@ -3135,7 +3156,7 @@ let read_settings = (
                       )
                     | 'r' -> (
                         if String.unsafe_get s (pos+8) = 'i' && String.unsafe_get s (pos+9) = 'g' && String.unsafe_get s (pos+10) = 'h' && String.unsafe_get s (pos+11) = 't' && String.unsafe_get s (pos+12) = '_' && String.unsafe_get s (pos+13) = 'm' && String.unsafe_get s (pos+14) = 'a' && String.unsafe_get s (pos+15) = 'r' && String.unsafe_get s (pos+16) = 'g' && String.unsafe_get s (pos+17) = 'i' && String.unsafe_get s (pos+18) = 'n' && String.unsafe_get s (pos+19) = '_' && String.unsafe_get s (pos+20) = 'v' && String.unsafe_get s (pos+21) = 'i' && String.unsafe_get s (pos+22) = 's' && String.unsafe_get s (pos+23) = 'i' && String.unsafe_get s (pos+24) = 'b' && String.unsafe_get s (pos+25) = 'l' && String.unsafe_get s (pos+26) = 'e' then (
-                          82
+                          83
                         )
                         else (
                           -1
@@ -3154,7 +3175,7 @@ let read_settings = (
                   match String.unsafe_get s (pos+7) with
                     | 'c' -> (
                         if String.unsafe_get s (pos+8) = 'u' && String.unsafe_get s (pos+9) = 's' && String.unsafe_get s (pos+10) = 't' && String.unsafe_get s (pos+11) = 'o' && String.unsafe_get s (pos+12) = 'm' && String.unsafe_get s (pos+13) = '_' && String.unsafe_get s (pos+14) = 't' && String.unsafe_get s (pos+15) = 'e' && String.unsafe_get s (pos+16) = 'm' && String.unsafe_get s (pos+17) = 'p' && String.unsafe_get s (pos+18) = 'l' && String.unsafe_get s (pos+19) = '_' && String.unsafe_get s (pos+20) = 'f' && String.unsafe_get s (pos+21) = 'i' && String.unsafe_get s (pos+22) = 'l' && String.unsafe_get s (pos+23) = 'e' && String.unsafe_get s (pos+24) = 'n' && String.unsafe_get s (pos+25) = 'a' && String.unsafe_get s (pos+26) = 'm' && String.unsafe_get s (pos+27) = 'e' then (
-                          62
+                          63
                         )
                         else (
                           -1
@@ -3164,7 +3185,7 @@ let read_settings = (
                         match String.unsafe_get s (pos+8) with
                           | 'e' -> (
                               if String.unsafe_get s (pos+9) = 'a' && String.unsafe_get s (pos+10) = 'r' && String.unsafe_get s (pos+11) = 'c' && String.unsafe_get s (pos+12) = 'h' && String.unsafe_get s (pos+13) = '_' && String.unsafe_get s (pos+14) = 'w' && String.unsafe_get s (pos+15) = 'o' && String.unsafe_get s (pos+16) = 'r' && String.unsafe_get s (pos+17) = 'd' && String.unsafe_get s (pos+18) = '_' && String.unsafe_get s (pos+19) = 'a' && String.unsafe_get s (pos+20) = 't' && String.unsafe_get s (pos+21) = '_' && String.unsafe_get s (pos+22) = 'c' && String.unsafe_get s (pos+23) = 'u' && String.unsafe_get s (pos+24) = 'r' && String.unsafe_get s (pos+25) = 's' && String.unsafe_get s (pos+26) = 'o' && String.unsafe_get s (pos+27) = 'r' then (
-                                84
+                                85
                               )
                               else (
                                 -1
@@ -3172,7 +3193,7 @@ let read_settings = (
                             )
                           | 'h' -> (
                               if String.unsafe_get s (pos+9) = 'o' && String.unsafe_get s (pos+10) = 'w' && String.unsafe_get s (pos+11) = '_' && String.unsafe_get s (pos+12) = 'w' && String.unsafe_get s (pos+13) = 'h' && String.unsafe_get s (pos+14) = 'i' && String.unsafe_get s (pos+15) = 't' && String.unsafe_get s (pos+16) = 'e' && String.unsafe_get s (pos+17) = 's' && String.unsafe_get s (pos+18) = 'p' && String.unsafe_get s (pos+19) = 'a' && String.unsafe_get s (pos+20) = 'c' && String.unsafe_get s (pos+21) = 'e' && String.unsafe_get s (pos+22) = '_' && String.unsafe_get s (pos+23) = 'c' && String.unsafe_get s (pos+24) = 'h' && String.unsafe_get s (pos+25) = 'a' && String.unsafe_get s (pos+26) = 'r' && String.unsafe_get s (pos+27) = 's' then (
-                                87
+                                88
                               )
                               else (
                                 -1
@@ -3192,7 +3213,7 @@ let read_settings = (
               )
             | 29 -> (
                 if String.unsafe_get s pos = 'e' && String.unsafe_get s (pos+1) = 'd' && String.unsafe_get s (pos+2) = 'i' && String.unsafe_get s (pos+3) = 't' && String.unsafe_get s (pos+4) = 'o' && String.unsafe_get s (pos+5) = 'r' && String.unsafe_get s (pos+6) = '_' && String.unsafe_get s (pos+7) = 'h' && String.unsafe_get s (pos+8) = 'i' && String.unsafe_get s (pos+9) = 'g' && String.unsafe_get s (pos+10) = 'h' && String.unsafe_get s (pos+11) = 'l' && String.unsafe_get s (pos+12) = 'i' && String.unsafe_get s (pos+13) = 'g' && String.unsafe_get s (pos+14) = 'h' && String.unsafe_get s (pos+15) = 't' && String.unsafe_get s (pos+16) = '_' && String.unsafe_get s (pos+17) = 'c' && String.unsafe_get s (pos+18) = 'u' && String.unsafe_get s (pos+19) = 'r' && String.unsafe_get s (pos+20) = 'r' && String.unsafe_get s (pos+21) = 'e' && String.unsafe_get s (pos+22) = 'n' && String.unsafe_get s (pos+23) = 't' && String.unsafe_get s (pos+24) = '_' && String.unsafe_get s (pos+25) = 'l' && String.unsafe_get s (pos+26) = 'i' && String.unsafe_get s (pos+27) = 'n' && String.unsafe_get s (pos+28) = 'e' then (
-                  69
+                  70
                 )
                 else (
                   -1
@@ -3213,7 +3234,7 @@ let read_settings = (
                         match String.unsafe_get s (pos+7) with
                           | 'a' -> (
                               if String.unsafe_get s (pos+8) = 'n' && String.unsafe_get s (pos+9) = 'n' && String.unsafe_get s (pos+10) = 'o' && String.unsafe_get s (pos+11) = 't' && String.unsafe_get s (pos+12) = '_' && String.unsafe_get s (pos+13) = 't' && String.unsafe_get s (pos+14) = 'y' && String.unsafe_get s (pos+15) = 'p' && String.unsafe_get s (pos+16) = 'e' && String.unsafe_get s (pos+17) = '_' && String.unsafe_get s (pos+18) = 't' && String.unsafe_get s (pos+19) = 'o' && String.unsafe_get s (pos+20) = 'o' && String.unsafe_get s (pos+21) = 'l' && String.unsafe_get s (pos+22) = 't' && String.unsafe_get s (pos+23) = 'i' && String.unsafe_get s (pos+24) = 'p' && String.unsafe_get s (pos+25) = 's' && String.unsafe_get s (pos+26) = '_' && String.unsafe_get s (pos+27) = 'i' && String.unsafe_get s (pos+28) = 'm' && String.unsafe_get s (pos+29) = 'p' && String.unsafe_get s (pos+30) = 'l' then (
-                                49
+                                50
                               )
                               else (
                                 -1
@@ -3221,7 +3242,7 @@ let read_settings = (
                             )
                           | 'c' -> (
                               if String.unsafe_get s (pos+8) = 'o' && String.unsafe_get s (pos+9) = 'm' && String.unsafe_get s (pos+10) = 'p' && String.unsafe_get s (pos+11) = 'l' && String.unsafe_get s (pos+12) = 'e' && String.unsafe_get s (pos+13) = 't' && String.unsafe_get s (pos+14) = 'i' && String.unsafe_get s (pos+15) = 'o' && String.unsafe_get s (pos+16) = 'n' && String.unsafe_get s (pos+17) = '_' && String.unsafe_get s (pos+18) = 'g' && String.unsafe_get s (pos+19) = 'r' && String.unsafe_get s (pos+20) = 'e' && String.unsafe_get s (pos+21) = 'e' && String.unsafe_get s (pos+22) = 'k' && String.unsafe_get s (pos+23) = '_' && String.unsafe_get s (pos+24) = 'l' && String.unsafe_get s (pos+25) = 'e' && String.unsafe_get s (pos+26) = 't' && String.unsafe_get s (pos+27) = 't' && String.unsafe_get s (pos+28) = 'e' && String.unsafe_get s (pos+29) = 'r' && String.unsafe_get s (pos+30) = 's' then (
-                                57
+                                58
                               )
                               else (
                                 -1
@@ -3229,7 +3250,7 @@ let read_settings = (
                             )
                           | 'm' -> (
                               if String.unsafe_get s (pos+8) = 'a' && String.unsafe_get s (pos+9) = 'r' && String.unsafe_get s (pos+10) = 'k' && String.unsafe_get s (pos+11) = '_' && String.unsafe_get s (pos+12) = 'o' && String.unsafe_get s (pos+13) = 'c' && String.unsafe_get s (pos+14) = 'c' && String.unsafe_get s (pos+15) = 'u' && String.unsafe_get s (pos+16) = 'r' && String.unsafe_get s (pos+17) = 'r' && String.unsafe_get s (pos+18) = 'e' && String.unsafe_get s (pos+19) = 'n' && String.unsafe_get s (pos+20) = 'c' && String.unsafe_get s (pos+21) = 'e' && String.unsafe_get s (pos+22) = 's' && String.unsafe_get s (pos+23) = '_' && String.unsafe_get s (pos+24) = 'e' && String.unsafe_get s (pos+25) = 'n' && String.unsafe_get s (pos+26) = 'a' && String.unsafe_get s (pos+27) = 'b' && String.unsafe_get s (pos+28) = 'l' && String.unsafe_get s (pos+29) = 'e' && String.unsafe_get s (pos+30) = 'd' then (
-                                74
+                                75
                               )
                               else (
                                 -1
@@ -3252,7 +3273,7 @@ let read_settings = (
                   match String.unsafe_get s (pos+7) with
                     | 'a' -> (
                         if String.unsafe_get s (pos+8) = 'n' && String.unsafe_get s (pos+9) = 'n' && String.unsafe_get s (pos+10) = 'o' && String.unsafe_get s (pos+11) = 't' && String.unsafe_get s (pos+12) = '_' && String.unsafe_get s (pos+13) = 't' && String.unsafe_get s (pos+14) = 'y' && String.unsafe_get s (pos+15) = 'p' && String.unsafe_get s (pos+16) = 'e' && String.unsafe_get s (pos+17) = '_' && String.unsafe_get s (pos+18) = 't' && String.unsafe_get s (pos+19) = 'o' && String.unsafe_get s (pos+20) = 'o' && String.unsafe_get s (pos+21) = 'l' && String.unsafe_get s (pos+22) = 't' && String.unsafe_get s (pos+23) = 'i' && String.unsafe_get s (pos+24) = 'p' && String.unsafe_get s (pos+25) = 's' && String.unsafe_get s (pos+26) = '_' && String.unsafe_get s (pos+27) = 'd' && String.unsafe_get s (pos+28) = 'e' && String.unsafe_get s (pos+29) = 'l' && String.unsafe_get s (pos+30) = 'a' && String.unsafe_get s (pos+31) = 'y' then (
-                          48
+                          49
                         )
                         else (
                           -1
@@ -3260,7 +3281,7 @@ let read_settings = (
                       )
                     | 'm' -> (
                         if String.unsafe_get s (pos+8) = 'a' && String.unsafe_get s (pos+9) = 'r' && String.unsafe_get s (pos+10) = 'k' && String.unsafe_get s (pos+11) = '_' && String.unsafe_get s (pos+12) = 'o' && String.unsafe_get s (pos+13) = 'c' && String.unsafe_get s (pos+14) = 'c' && String.unsafe_get s (pos+15) = 'u' && String.unsafe_get s (pos+16) = 'r' && String.unsafe_get s (pos+17) = 'r' && String.unsafe_get s (pos+18) = 'e' && String.unsafe_get s (pos+19) = 'n' && String.unsafe_get s (pos+20) = 'c' && String.unsafe_get s (pos+21) = 'e' && String.unsafe_get s (pos+22) = 's' && String.unsafe_get s (pos+23) = '_' && String.unsafe_get s (pos+24) = 'b' && String.unsafe_get s (pos+25) = 'g' && String.unsafe_get s (pos+26) = '_' && String.unsafe_get s (pos+27) = 'c' && String.unsafe_get s (pos+28) = 'o' && String.unsafe_get s (pos+29) = 'l' && String.unsafe_get s (pos+30) = 'o' && String.unsafe_get s (pos+31) = 'r' then (
-                          76
+                          77
                         )
                         else (
                           -1
@@ -3276,7 +3297,7 @@ let read_settings = (
               )
             | 34 -> (
                 if String.unsafe_get s pos = 'e' && String.unsafe_get s (pos+1) = 'd' && String.unsafe_get s (pos+2) = 'i' && String.unsafe_get s (pos+3) = 't' && String.unsafe_get s (pos+4) = 'o' && String.unsafe_get s (pos+5) = 'r' && String.unsafe_get s (pos+6) = '_' && String.unsafe_get s (pos+7) = 'a' && String.unsafe_get s (pos+8) = 'n' && String.unsafe_get s (pos+9) = 'n' && String.unsafe_get s (pos+10) = 'o' && String.unsafe_get s (pos+11) = 't' && String.unsafe_get s (pos+12) = '_' && String.unsafe_get s (pos+13) = 't' && String.unsafe_get s (pos+14) = 'y' && String.unsafe_get s (pos+15) = 'p' && String.unsafe_get s (pos+16) = 'e' && String.unsafe_get s (pos+17) = '_' && String.unsafe_get s (pos+18) = 't' && String.unsafe_get s (pos+19) = 'o' && String.unsafe_get s (pos+20) = 'o' && String.unsafe_get s (pos+21) = 'l' && String.unsafe_get s (pos+22) = 't' && String.unsafe_get s (pos+23) = 'i' && String.unsafe_get s (pos+24) = 'p' && String.unsafe_get s (pos+25) = 's' && String.unsafe_get s (pos+26) = '_' && String.unsafe_get s (pos+27) = 'e' && String.unsafe_get s (pos+28) = 'n' && String.unsafe_get s (pos+29) = 'a' && String.unsafe_get s (pos+30) = 'b' && String.unsafe_get s (pos+31) = 'l' && String.unsafe_get s (pos+32) = 'e' && String.unsafe_get s (pos+33) = 'd' then (
-                  47
+                  48
                 )
                 else (
                   -1
@@ -3286,10 +3307,10 @@ let read_settings = (
                 if String.unsafe_get s pos = 'e' && String.unsafe_get s (pos+1) = 'd' && String.unsafe_get s (pos+2) = 'i' && String.unsafe_get s (pos+3) = 't' && String.unsafe_get s (pos+4) = 'o' && String.unsafe_get s (pos+5) = 'r' && String.unsafe_get s (pos+6) = '_' && String.unsafe_get s (pos+7) = 'o' && String.unsafe_get s (pos+8) = 'c' && String.unsafe_get s (pos+9) = 'a' && String.unsafe_get s (pos+10) = 'm' && String.unsafe_get s (pos+11) = 'l' && String.unsafe_get s (pos+12) = 'd' && String.unsafe_get s (pos+13) = 'o' && String.unsafe_get s (pos+14) = 'c' && String.unsafe_get s (pos+15) = '_' && String.unsafe_get s (pos+16) = 'p' && String.unsafe_get s (pos+17) = 'a' && String.unsafe_get s (pos+18) = 'r' && String.unsafe_get s (pos+19) = 'a' && String.unsafe_get s (pos+20) = 'g' && String.unsafe_get s (pos+21) = 'r' && String.unsafe_get s (pos+22) = 'a' && String.unsafe_get s (pos+23) = 'p' && String.unsafe_get s (pos+24) = 'h' && String.unsafe_get s (pos+25) = '_' && String.unsafe_get s (pos+26) = 'b' && String.unsafe_get s (pos+27) = 'g' && String.unsafe_get s (pos+28) = 'c' && String.unsafe_get s (pos+29) = 'o' && String.unsafe_get s (pos+30) = 'l' && String.unsafe_get s (pos+31) = 'o' && String.unsafe_get s (pos+32) = 'r' && String.unsafe_get s (pos+33) = '_' then (
                   match String.unsafe_get s (pos+34) with
                     | '1' -> (
-                        77
+                        78
                       )
                     | '2' -> (
-                        78
+                        79
                       )
                     | _ -> (
                         -1
@@ -3301,7 +3322,7 @@ let read_settings = (
               )
             | 36 -> (
                 if String.unsafe_get s pos = 'e' && String.unsafe_get s (pos+1) = 'd' && String.unsafe_get s (pos+2) = 'i' && String.unsafe_get s (pos+3) = 't' && String.unsafe_get s (pos+4) = 'o' && String.unsafe_get s (pos+5) = 'r' && String.unsafe_get s (pos+6) = '_' && String.unsafe_get s (pos+7) = 'm' && String.unsafe_get s (pos+8) = 'a' && String.unsafe_get s (pos+9) = 'r' && String.unsafe_get s (pos+10) = 'k' && String.unsafe_get s (pos+11) = '_' && String.unsafe_get s (pos+12) = 'o' && String.unsafe_get s (pos+13) = 'c' && String.unsafe_get s (pos+14) = 'c' && String.unsafe_get s (pos+15) = 'u' && String.unsafe_get s (pos+16) = 'r' && String.unsafe_get s (pos+17) = 'r' && String.unsafe_get s (pos+18) = 'e' && String.unsafe_get s (pos+19) = 'n' && String.unsafe_get s (pos+20) = 'c' && String.unsafe_get s (pos+21) = 'e' && String.unsafe_get s (pos+22) = 's' && String.unsafe_get s (pos+23) = '_' && String.unsafe_get s (pos+24) = 'u' && String.unsafe_get s (pos+25) = 'n' && String.unsafe_get s (pos+26) = 'd' && String.unsafe_get s (pos+27) = 'e' && String.unsafe_get s (pos+28) = 'r' && String.unsafe_get s (pos+29) = '_' && String.unsafe_get s (pos+30) = 'c' && String.unsafe_get s (pos+31) = 'u' && String.unsafe_get s (pos+32) = 'r' && String.unsafe_get s (pos+33) = 's' && String.unsafe_get s (pos+34) = 'o' && String.unsafe_get s (pos+35) = 'r' then (
-                  75
+                  76
                 )
                 else (
                   -1
@@ -3726,13 +3747,21 @@ let read_settings = (
             )
           | 46 ->
             if not (Yojson.Safe.read_null_if_possible p lb) then (
+              field_theme_is_dark := (
+                (
+                  Atdgen_runtime.Oj_run.read_bool
+                ) p lb
+              );
+            )
+          | 47 ->
+            if not (Yojson.Safe.read_null_if_possible p lb) then (
               field_vmessages_height := (
                 (
                   Atdgen_runtime.Oj_run.read_int
                 ) p lb
               );
             )
-          | 47 ->
+          | 48 ->
             if not (Yojson.Safe.read_null_if_possible p lb) then (
               field_editor_annot_type_tooltips_enabled := (
                 (
@@ -3740,7 +3769,7 @@ let read_settings = (
                 ) p lb
               );
             )
-          | 48 ->
+          | 49 ->
             if not (Yojson.Safe.read_null_if_possible p lb) then (
               field_editor_annot_type_tooltips_delay := (
                 (
@@ -3748,7 +3777,7 @@ let read_settings = (
                 ) p lb
               );
             )
-          | 49 ->
+          | 50 ->
             if not (Yojson.Safe.read_null_if_possible p lb) then (
               field_editor_annot_type_tooltips_impl := (
                 (
@@ -3756,7 +3785,7 @@ let read_settings = (
                 ) p lb
               );
             )
-          | 50 ->
+          | 51 ->
             if not (Yojson.Safe.read_null_if_possible p lb) then (
               field_editor_bak := (
                 (
@@ -3764,7 +3793,7 @@ let read_settings = (
                 ) p lb
               );
             )
-          | 51 ->
+          | 52 ->
             if not (Yojson.Safe.read_null_if_possible p lb) then (
               field_editor_base_font := (
                 (
@@ -3772,7 +3801,7 @@ let read_settings = (
                 ) p lb
               );
             )
-          | 52 ->
+          | 53 ->
             if not (Yojson.Safe.read_null_if_possible p lb) then (
               field_editor_bg_color_popup := (
                 (
@@ -3780,7 +3809,7 @@ let read_settings = (
                 ) p lb
               );
             )
-          | 53 ->
+          | 54 ->
             if not (Yojson.Safe.read_null_if_possible p lb) then (
               field_editor_bg_color_theme := (
                 (
@@ -3788,7 +3817,7 @@ let read_settings = (
                 ) p lb
               );
             )
-          | 54 ->
+          | 55 ->
             if not (Yojson.Safe.read_null_if_possible p lb) then (
               field_editor_bg_color_user := (
                 (
@@ -3796,7 +3825,7 @@ let read_settings = (
                 ) p lb
               );
             )
-          | 55 ->
+          | 56 ->
             if not (Yojson.Safe.read_null_if_possible p lb) then (
               field_editor_code_folding_enabled := (
                 (
@@ -3804,7 +3833,7 @@ let read_settings = (
                 ) p lb
               );
             )
-          | 56 ->
+          | 57 ->
             if not (Yojson.Safe.read_null_if_possible p lb) then (
               field_editor_completion_font := (
                 (
@@ -3812,7 +3841,7 @@ let read_settings = (
                 ) p lb
               );
             )
-          | 57 ->
+          | 58 ->
             if not (Yojson.Safe.read_null_if_possible p lb) then (
               field_editor_completion_greek_letters := (
                 (
@@ -3820,7 +3849,7 @@ let read_settings = (
                 ) p lb
               );
             )
-          | 58 ->
+          | 59 ->
             if not (Yojson.Safe.read_null_if_possible p lb) then (
               field_editor_completion_decorated := (
                 (
@@ -3828,7 +3857,7 @@ let read_settings = (
                 ) p lb
               );
             )
-          | 59 ->
+          | 60 ->
             if not (Yojson.Safe.read_null_if_possible p lb) then (
               field_editor_completion_opacity := (
                 (
@@ -3836,7 +3865,7 @@ let read_settings = (
                 ) p lb
               );
             )
-          | 60 ->
+          | 61 ->
             if not (Yojson.Safe.read_null_if_possible p lb) then (
               field_editor_current_line_border := (
                 (
@@ -3844,7 +3873,7 @@ let read_settings = (
                 ) p lb
               );
             )
-          | 61 ->
+          | 62 ->
             if not (Yojson.Safe.read_null_if_possible p lb) then (
               field_editor_cursor_aspect_ratio := (
                 (
@@ -3852,7 +3881,7 @@ let read_settings = (
                 ) p lb
               );
             )
-          | 62 ->
+          | 63 ->
             if not (Yojson.Safe.read_null_if_possible p lb) then (
               field_editor_custom_templ_filename := (
                 (
@@ -3860,7 +3889,7 @@ let read_settings = (
                 ) p lb
               );
             )
-          | 63 ->
+          | 64 ->
             if not (Yojson.Safe.read_null_if_possible p lb) then (
               field_editor_dot_leaders := (
                 (
@@ -3868,7 +3897,7 @@ let read_settings = (
                 ) p lb
               );
             )
-          | 64 ->
+          | 65 ->
             if not (Yojson.Safe.read_null_if_possible p lb) then (
               field_editor_err_gutter := (
                 (
@@ -3876,7 +3905,7 @@ let read_settings = (
                 ) p lb
               );
             )
-          | 65 ->
+          | 66 ->
             if not (Yojson.Safe.read_null_if_possible p lb) then (
               field_editor_err_tooltip := (
                 (
@@ -3884,7 +3913,7 @@ let read_settings = (
                 ) p lb
               );
             )
-          | 66 ->
+          | 67 ->
             if not (Yojson.Safe.read_null_if_possible p lb) then (
               field_editor_err_underline := (
                 (
@@ -3892,7 +3921,7 @@ let read_settings = (
                 ) p lb
               );
             )
-          | 67 ->
+          | 68 ->
             if not (Yojson.Safe.read_null_if_possible p lb) then (
               field_editor_fg_color_popup := (
                 (
@@ -3900,7 +3929,7 @@ let read_settings = (
                 ) p lb
               );
             )
-          | 68 ->
+          | 69 ->
             if not (Yojson.Safe.read_null_if_possible p lb) then (
               field_editor_format_on_save := (
                 (
@@ -3908,7 +3937,7 @@ let read_settings = (
                 ) p lb
               );
             )
-          | 69 ->
+          | 70 ->
             if not (Yojson.Safe.read_null_if_possible p lb) then (
               field_editor_highlight_current_line := (
                 (
@@ -3916,7 +3945,7 @@ let read_settings = (
                 ) p lb
               );
             )
-          | 70 ->
+          | 71 ->
             if not (Yojson.Safe.read_null_if_possible p lb) then (
               field_editor_indent_config := (
                 (
@@ -3924,7 +3953,7 @@ let read_settings = (
                 ) p lb
               );
             )
-          | 71 ->
+          | 72 ->
             if not (Yojson.Safe.read_null_if_possible p lb) then (
               field_editor_indent_empty_line := (
                 (
@@ -3932,7 +3961,7 @@ let read_settings = (
                 ) p lb
               );
             )
-          | 72 ->
+          | 73 ->
             if not (Yojson.Safe.read_null_if_possible p lb) then (
               field_editor_indent_lines := (
                 (
@@ -3992,7 +4021,7 @@ let read_settings = (
                 ) p lb
               );
             )
-          | 73 ->
+          | 74 ->
             if not (Yojson.Safe.read_null_if_possible p lb) then (
               field_editor_left_margin := (
                 (
@@ -4000,7 +4029,7 @@ let read_settings = (
                 ) p lb
               );
             )
-          | 74 ->
+          | 75 ->
             if not (Yojson.Safe.read_null_if_possible p lb) then (
               field_editor_mark_occurrences_enabled := (
                 (
@@ -4008,7 +4037,7 @@ let read_settings = (
                 ) p lb
               );
             )
-          | 75 ->
+          | 76 ->
             if not (Yojson.Safe.read_null_if_possible p lb) then (
               field_editor_mark_occurrences_under_cursor := (
                 (
@@ -4016,7 +4045,7 @@ let read_settings = (
                 ) p lb
               );
             )
-          | 76 ->
+          | 77 ->
             if not (Yojson.Safe.read_null_if_possible p lb) then (
               field_editor_mark_occurrences_bg_color := (
                 (
@@ -4024,7 +4053,7 @@ let read_settings = (
                 ) p lb
               );
             )
-          | 77 ->
+          | 78 ->
             if not (Yojson.Safe.read_null_if_possible p lb) then (
               field_editor_ocamldoc_paragraph_bgcolor_1 := (
                 (
@@ -4032,7 +4061,7 @@ let read_settings = (
                 ) p lb
               );
             )
-          | 78 ->
+          | 79 ->
             if not (Yojson.Safe.read_null_if_possible p lb) then (
               field_editor_ocamldoc_paragraph_bgcolor_2 := (
                 (
@@ -4040,7 +4069,7 @@ let read_settings = (
                 ) p lb
               );
             )
-          | 79 ->
+          | 80 ->
             if not (Yojson.Safe.read_null_if_possible p lb) then (
               field_editor_pixels_lines := (
                 (
@@ -4089,7 +4118,7 @@ let read_settings = (
                 ) p lb
               );
             )
-          | 80 ->
+          | 81 ->
             if not (Yojson.Safe.read_null_if_possible p lb) then (
               field_editor_right_margin := (
                 (
@@ -4097,7 +4126,7 @@ let read_settings = (
                 ) p lb
               );
             )
-          | 81 ->
+          | 82 ->
             if not (Yojson.Safe.read_null_if_possible p lb) then (
               field_editor_right_margin_color := (
                 (
@@ -4105,7 +4134,7 @@ let read_settings = (
                 ) p lb
               );
             )
-          | 82 ->
+          | 83 ->
             if not (Yojson.Safe.read_null_if_possible p lb) then (
               field_editor_right_margin_visible := (
                 (
@@ -4113,7 +4142,7 @@ let read_settings = (
                 ) p lb
               );
             )
-          | 83 ->
+          | 84 ->
             if not (Yojson.Safe.read_null_if_possible p lb) then (
               field_editor_save_all_bef_comp := (
                 (
@@ -4121,7 +4150,7 @@ let read_settings = (
                 ) p lb
               );
             )
-          | 84 ->
+          | 85 ->
             if not (Yojson.Safe.read_null_if_possible p lb) then (
               field_editor_search_word_at_cursor := (
                 (
@@ -4129,7 +4158,7 @@ let read_settings = (
                 ) p lb
               );
             )
-          | 85 ->
+          | 86 ->
             if not (Yojson.Safe.read_null_if_possible p lb) then (
               field_editor_show_global_gutter := (
                 (
@@ -4137,7 +4166,7 @@ let read_settings = (
                 ) p lb
               );
             )
-          | 86 ->
+          | 87 ->
             if not (Yojson.Safe.read_null_if_possible p lb) then (
               field_editor_show_line_numbers := (
                 (
@@ -4145,7 +4174,7 @@ let read_settings = (
                 ) p lb
               );
             )
-          | 87 ->
+          | 88 ->
             if not (Yojson.Safe.read_null_if_possible p lb) then (
               field_editor_show_whitespace_chars := (
                 (
@@ -4153,7 +4182,7 @@ let read_settings = (
                 ) p lb
               );
             )
-          | 88 ->
+          | 89 ->
             if not (Yojson.Safe.read_null_if_possible p lb) then (
               field_editor_smart_keys_end := (
                 (
@@ -4161,7 +4190,7 @@ let read_settings = (
                 ) p lb
               );
             )
-          | 89 ->
+          | 90 ->
             if not (Yojson.Safe.read_null_if_possible p lb) then (
               field_editor_smart_keys_home := (
                 (
@@ -4169,7 +4198,7 @@ let read_settings = (
                 ) p lb
               );
             )
-          | 90 ->
+          | 91 ->
             if not (Yojson.Safe.read_null_if_possible p lb) then (
               field_editor_tab_spaces := (
                 (
@@ -4177,7 +4206,7 @@ let read_settings = (
                 ) p lb
               );
             )
-          | 91 ->
+          | 92 ->
             if not (Yojson.Safe.read_null_if_possible p lb) then (
               field_editor_tab_width := (
                 (
@@ -4185,7 +4214,7 @@ let read_settings = (
                 ) p lb
               );
             )
-          | 92 ->
+          | 93 ->
             if not (Yojson.Safe.read_null_if_possible p lb) then (
               field_editor_tags := (
                 (
@@ -4193,7 +4222,7 @@ let read_settings = (
                 ) p lb
               );
             )
-          | 93 ->
+          | 94 ->
             if not (Yojson.Safe.read_null_if_possible p lb) then (
               field_editor_tags_dark := (
                 (
@@ -4201,7 +4230,7 @@ let read_settings = (
                 ) p lb
               );
             )
-          | 94 ->
+          | 95 ->
             if not (Yojson.Safe.read_null_if_possible p lb) then (
               field_editor_trim_lines := (
                 (
@@ -4209,7 +4238,7 @@ let read_settings = (
                 ) p lb
               );
             )
-          | 95 ->
+          | 96 ->
             if not (Yojson.Safe.read_null_if_possible p lb) then (
               field_editor_wrap := (
                 (
@@ -4278,7 +4307,7 @@ let read_settings = (
                 )
               | 10 -> (
                   if String.unsafe_get s pos = 'e' && String.unsafe_get s (pos+1) = 'd' && String.unsafe_get s (pos+2) = 'i' && String.unsafe_get s (pos+3) = 't' && String.unsafe_get s (pos+4) = 'o' && String.unsafe_get s (pos+5) = 'r' && String.unsafe_get s (pos+6) = '_' && String.unsafe_get s (pos+7) = 'b' && String.unsafe_get s (pos+8) = 'a' && String.unsafe_get s (pos+9) = 'k' then (
-                    50
+                    51
                   )
                   else (
                     -1
@@ -4291,7 +4320,7 @@ let read_settings = (
                           match String.unsafe_get s (pos+7) with
                             | 't' -> (
                                 if String.unsafe_get s (pos+8) = 'a' && String.unsafe_get s (pos+9) = 'g' && String.unsafe_get s (pos+10) = 's' then (
-                                  92
+                                  93
                                 )
                                 else (
                                   -1
@@ -4299,7 +4328,7 @@ let read_settings = (
                               )
                             | 'w' -> (
                                 if String.unsafe_get s (pos+8) = 'r' && String.unsafe_get s (pos+9) = 'a' && String.unsafe_get s (pos+10) = 'p' then (
-                                  95
+                                  96
                                 )
                                 else (
                                   -1
@@ -4346,6 +4375,14 @@ let read_settings = (
                     | 'o' -> (
                         if String.unsafe_get s (pos+1) = 'u' && String.unsafe_get s (pos+2) = 't' && String.unsafe_get s (pos+3) = 'l' && String.unsafe_get s (pos+4) = 'i' && String.unsafe_get s (pos+5) = 'n' && String.unsafe_get s (pos+6) = 'e' && String.unsafe_get s (pos+7) = '_' && String.unsafe_get s (pos+8) = 'w' && String.unsafe_get s (pos+9) = 'i' && String.unsafe_get s (pos+10) = 'd' && String.unsafe_get s (pos+11) = 't' && String.unsafe_get s (pos+12) = 'h' then (
                           22
+                        )
+                        else (
+                          -1
+                        )
+                      )
+                    | 't' -> (
+                        if String.unsafe_get s (pos+1) = 'h' && String.unsafe_get s (pos+2) = 'e' && String.unsafe_get s (pos+3) = 'm' && String.unsafe_get s (pos+4) = 'e' && String.unsafe_get s (pos+5) = '_' && String.unsafe_get s (pos+6) = 'i' && String.unsafe_get s (pos+7) = 's' && String.unsafe_get s (pos+8) = '_' && String.unsafe_get s (pos+9) = 'd' && String.unsafe_get s (pos+10) = 'a' && String.unsafe_get s (pos+11) = 'r' && String.unsafe_get s (pos+12) = 'k' then (
+                          46
                         )
                         else (
                           -1
@@ -4422,7 +4459,7 @@ let read_settings = (
                           match String.unsafe_get s (pos+7) with
                             | 'b' -> (
                                 if String.unsafe_get s (pos+8) = 'a' && String.unsafe_get s (pos+9) = 's' && String.unsafe_get s (pos+10) = 'e' && String.unsafe_get s (pos+11) = '_' && String.unsafe_get s (pos+12) = 'f' && String.unsafe_get s (pos+13) = 'o' && String.unsafe_get s (pos+14) = 'n' && String.unsafe_get s (pos+15) = 't' then (
-                                  51
+                                  52
                                 )
                                 else (
                                   -1
@@ -4433,7 +4470,7 @@ let read_settings = (
                                   match String.unsafe_get s (pos+9) with
                                     | 'b' -> (
                                         if String.unsafe_get s (pos+10) = '_' && String.unsafe_get s (pos+11) = 'w' && String.unsafe_get s (pos+12) = 'i' && String.unsafe_get s (pos+13) = 'd' && String.unsafe_get s (pos+14) = 't' && String.unsafe_get s (pos+15) = 'h' then (
-                                          91
+                                          92
                                         )
                                         else (
                                           -1
@@ -4441,7 +4478,7 @@ let read_settings = (
                                       )
                                     | 'g' -> (
                                         if String.unsafe_get s (pos+10) = 's' && String.unsafe_get s (pos+11) = '_' && String.unsafe_get s (pos+12) = 'd' && String.unsafe_get s (pos+13) = 'a' && String.unsafe_get s (pos+14) = 'r' && String.unsafe_get s (pos+15) = 'k' then (
-                                          93
+                                          94
                                         )
                                         else (
                                           -1
@@ -4473,7 +4510,7 @@ let read_settings = (
                       )
                     | 'v' -> (
                         if String.unsafe_get s (pos+1) = 'm' && String.unsafe_get s (pos+2) = 'e' && String.unsafe_get s (pos+3) = 's' && String.unsafe_get s (pos+4) = 's' && String.unsafe_get s (pos+5) = 'a' && String.unsafe_get s (pos+6) = 'g' && String.unsafe_get s (pos+7) = 'e' && String.unsafe_get s (pos+8) = 's' && String.unsafe_get s (pos+9) = '_' && String.unsafe_get s (pos+10) = 'h' && String.unsafe_get s (pos+11) = 'e' && String.unsafe_get s (pos+12) = 'i' && String.unsafe_get s (pos+13) = 'g' && String.unsafe_get s (pos+14) = 'h' && String.unsafe_get s (pos+15) = 't' then (
-                          46
+                          47
                         )
                         else (
                           -1
@@ -4490,7 +4527,7 @@ let read_settings = (
                           match String.unsafe_get s (pos+7) with
                             | 'e' -> (
                                 if String.unsafe_get s (pos+8) = 'r' && String.unsafe_get s (pos+9) = 'r' && String.unsafe_get s (pos+10) = '_' && String.unsafe_get s (pos+11) = 'g' && String.unsafe_get s (pos+12) = 'u' && String.unsafe_get s (pos+13) = 't' && String.unsafe_get s (pos+14) = 't' && String.unsafe_get s (pos+15) = 'e' && String.unsafe_get s (pos+16) = 'r' then (
-                                  64
+                                  65
                                 )
                                 else (
                                   -1
@@ -4500,7 +4537,7 @@ let read_settings = (
                                 match String.unsafe_get s (pos+8) with
                                   | 'a' -> (
                                       if String.unsafe_get s (pos+9) = 'b' && String.unsafe_get s (pos+10) = '_' && String.unsafe_get s (pos+11) = 's' && String.unsafe_get s (pos+12) = 'p' && String.unsafe_get s (pos+13) = 'a' && String.unsafe_get s (pos+14) = 'c' && String.unsafe_get s (pos+15) = 'e' && String.unsafe_get s (pos+16) = 's' then (
-                                        90
+                                        91
                                       )
                                       else (
                                         -1
@@ -4508,7 +4545,7 @@ let read_settings = (
                                     )
                                   | 'r' -> (
                                       if String.unsafe_get s (pos+9) = 'i' && String.unsafe_get s (pos+10) = 'm' && String.unsafe_get s (pos+11) = '_' && String.unsafe_get s (pos+12) = 'l' && String.unsafe_get s (pos+13) = 'i' && String.unsafe_get s (pos+14) = 'n' && String.unsafe_get s (pos+15) = 'e' && String.unsafe_get s (pos+16) = 's' then (
-                                        94
+                                        95
                                       )
                                       else (
                                         -1
@@ -4572,7 +4609,7 @@ let read_settings = (
                           match String.unsafe_get s (pos+7) with
                             | 'd' -> (
                                 if String.unsafe_get s (pos+8) = 'o' && String.unsafe_get s (pos+9) = 't' && String.unsafe_get s (pos+10) = '_' && String.unsafe_get s (pos+11) = 'l' && String.unsafe_get s (pos+12) = 'e' && String.unsafe_get s (pos+13) = 'a' && String.unsafe_get s (pos+14) = 'd' && String.unsafe_get s (pos+15) = 'e' && String.unsafe_get s (pos+16) = 'r' && String.unsafe_get s (pos+17) = 's' then (
-                                  63
+                                  64
                                 )
                                 else (
                                   -1
@@ -4580,7 +4617,7 @@ let read_settings = (
                               )
                             | 'e' -> (
                                 if String.unsafe_get s (pos+8) = 'r' && String.unsafe_get s (pos+9) = 'r' && String.unsafe_get s (pos+10) = '_' && String.unsafe_get s (pos+11) = 't' && String.unsafe_get s (pos+12) = 'o' && String.unsafe_get s (pos+13) = 'o' && String.unsafe_get s (pos+14) = 'l' && String.unsafe_get s (pos+15) = 't' && String.unsafe_get s (pos+16) = 'i' && String.unsafe_get s (pos+17) = 'p' then (
-                                  65
+                                  66
                                 )
                                 else (
                                   -1
@@ -4588,7 +4625,7 @@ let read_settings = (
                               )
                             | 'l' -> (
                                 if String.unsafe_get s (pos+8) = 'e' && String.unsafe_get s (pos+9) = 'f' && String.unsafe_get s (pos+10) = 't' && String.unsafe_get s (pos+11) = '_' && String.unsafe_get s (pos+12) = 'm' && String.unsafe_get s (pos+13) = 'a' && String.unsafe_get s (pos+14) = 'r' && String.unsafe_get s (pos+15) = 'g' && String.unsafe_get s (pos+16) = 'i' && String.unsafe_get s (pos+17) = 'n' then (
-                                  73
+                                  74
                                 )
                                 else (
                                   -1
@@ -4694,7 +4731,7 @@ let read_settings = (
                           match String.unsafe_get s (pos+7) with
                             | 'i' -> (
                                 if String.unsafe_get s (pos+8) = 'n' && String.unsafe_get s (pos+9) = 'd' && String.unsafe_get s (pos+10) = 'e' && String.unsafe_get s (pos+11) = 'n' && String.unsafe_get s (pos+12) = 't' && String.unsafe_get s (pos+13) = '_' && String.unsafe_get s (pos+14) = 'l' && String.unsafe_get s (pos+15) = 'i' && String.unsafe_get s (pos+16) = 'n' && String.unsafe_get s (pos+17) = 'e' && String.unsafe_get s (pos+18) = 's' then (
-                                  72
+                                  73
                                 )
                                 else (
                                   -1
@@ -4702,7 +4739,7 @@ let read_settings = (
                               )
                             | 'p' -> (
                                 if String.unsafe_get s (pos+8) = 'i' && String.unsafe_get s (pos+9) = 'x' && String.unsafe_get s (pos+10) = 'e' && String.unsafe_get s (pos+11) = 'l' && String.unsafe_get s (pos+12) = 's' && String.unsafe_get s (pos+13) = '_' && String.unsafe_get s (pos+14) = 'l' && String.unsafe_get s (pos+15) = 'i' && String.unsafe_get s (pos+16) = 'n' && String.unsafe_get s (pos+17) = 'e' && String.unsafe_get s (pos+18) = 's' then (
-                                  79
+                                  80
                                 )
                                 else (
                                   -1
@@ -4710,7 +4747,7 @@ let read_settings = (
                               )
                             | 'r' -> (
                                 if String.unsafe_get s (pos+8) = 'i' && String.unsafe_get s (pos+9) = 'g' && String.unsafe_get s (pos+10) = 'h' && String.unsafe_get s (pos+11) = 't' && String.unsafe_get s (pos+12) = '_' && String.unsafe_get s (pos+13) = 'm' && String.unsafe_get s (pos+14) = 'a' && String.unsafe_get s (pos+15) = 'r' && String.unsafe_get s (pos+16) = 'g' && String.unsafe_get s (pos+17) = 'i' && String.unsafe_get s (pos+18) = 'n' then (
-                                  80
+                                  81
                                 )
                                 else (
                                   -1
@@ -4789,7 +4826,7 @@ let read_settings = (
                           match String.unsafe_get s (pos+7) with
                             | 'b' -> (
                                 if String.unsafe_get s (pos+8) = 'g' && String.unsafe_get s (pos+9) = '_' && String.unsafe_get s (pos+10) = 'c' && String.unsafe_get s (pos+11) = 'o' && String.unsafe_get s (pos+12) = 'l' && String.unsafe_get s (pos+13) = 'o' && String.unsafe_get s (pos+14) = 'r' && String.unsafe_get s (pos+15) = '_' && String.unsafe_get s (pos+16) = 'u' && String.unsafe_get s (pos+17) = 's' && String.unsafe_get s (pos+18) = 'e' && String.unsafe_get s (pos+19) = 'r' then (
-                                  54
+                                  55
                                 )
                                 else (
                                   -1
@@ -4797,7 +4834,7 @@ let read_settings = (
                               )
                             | 'e' -> (
                                 if String.unsafe_get s (pos+8) = 'r' && String.unsafe_get s (pos+9) = 'r' && String.unsafe_get s (pos+10) = '_' && String.unsafe_get s (pos+11) = 'u' && String.unsafe_get s (pos+12) = 'n' && String.unsafe_get s (pos+13) = 'd' && String.unsafe_get s (pos+14) = 'e' && String.unsafe_get s (pos+15) = 'r' && String.unsafe_get s (pos+16) = 'l' && String.unsafe_get s (pos+17) = 'i' && String.unsafe_get s (pos+18) = 'n' && String.unsafe_get s (pos+19) = 'e' then (
-                                  66
+                                  67
                                 )
                                 else (
                                   -1
@@ -4805,7 +4842,7 @@ let read_settings = (
                               )
                             | 'i' -> (
                                 if String.unsafe_get s (pos+8) = 'n' && String.unsafe_get s (pos+9) = 'd' && String.unsafe_get s (pos+10) = 'e' && String.unsafe_get s (pos+11) = 'n' && String.unsafe_get s (pos+12) = 't' && String.unsafe_get s (pos+13) = '_' && String.unsafe_get s (pos+14) = 'c' && String.unsafe_get s (pos+15) = 'o' && String.unsafe_get s (pos+16) = 'n' && String.unsafe_get s (pos+17) = 'f' && String.unsafe_get s (pos+18) = 'i' && String.unsafe_get s (pos+19) = 'g' then (
-                                  70
+                                  71
                                 )
                                 else (
                                   -1
@@ -4952,7 +4989,7 @@ let read_settings = (
                                   match String.unsafe_get s (pos+16) with
                                     | 'p' -> (
                                         if String.unsafe_get s (pos+17) = 'o' && String.unsafe_get s (pos+18) = 'p' && String.unsafe_get s (pos+19) = 'u' && String.unsafe_get s (pos+20) = 'p' then (
-                                          52
+                                          53
                                         )
                                         else (
                                           -1
@@ -4960,7 +4997,7 @@ let read_settings = (
                                       )
                                     | 't' -> (
                                         if String.unsafe_get s (pos+17) = 'h' && String.unsafe_get s (pos+18) = 'e' && String.unsafe_get s (pos+19) = 'm' && String.unsafe_get s (pos+20) = 'e' then (
-                                          53
+                                          54
                                         )
                                         else (
                                           -1
@@ -4978,7 +5015,7 @@ let read_settings = (
                                 match String.unsafe_get s (pos+8) with
                                   | 'g' -> (
                                       if String.unsafe_get s (pos+9) = '_' && String.unsafe_get s (pos+10) = 'c' && String.unsafe_get s (pos+11) = 'o' && String.unsafe_get s (pos+12) = 'l' && String.unsafe_get s (pos+13) = 'o' && String.unsafe_get s (pos+14) = 'r' && String.unsafe_get s (pos+15) = '_' && String.unsafe_get s (pos+16) = 'p' && String.unsafe_get s (pos+17) = 'o' && String.unsafe_get s (pos+18) = 'p' && String.unsafe_get s (pos+19) = 'u' && String.unsafe_get s (pos+20) = 'p' then (
-                                        67
+                                        68
                                       )
                                       else (
                                         -1
@@ -4986,7 +5023,7 @@ let read_settings = (
                                     )
                                   | 'o' -> (
                                       if String.unsafe_get s (pos+9) = 'r' && String.unsafe_get s (pos+10) = 'm' && String.unsafe_get s (pos+11) = 'a' && String.unsafe_get s (pos+12) = 't' && String.unsafe_get s (pos+13) = '_' && String.unsafe_get s (pos+14) = 'o' && String.unsafe_get s (pos+15) = 'n' && String.unsafe_get s (pos+16) = '_' && String.unsafe_get s (pos+17) = 's' && String.unsafe_get s (pos+18) = 'a' && String.unsafe_get s (pos+19) = 'v' && String.unsafe_get s (pos+20) = 'e' then (
-                                        68
+                                        69
                                       )
                                       else (
                                         -1
@@ -4998,7 +5035,7 @@ let read_settings = (
                               )
                             | 's' -> (
                                 if String.unsafe_get s (pos+8) = 'm' && String.unsafe_get s (pos+9) = 'a' && String.unsafe_get s (pos+10) = 'r' && String.unsafe_get s (pos+11) = 't' && String.unsafe_get s (pos+12) = '_' && String.unsafe_get s (pos+13) = 'k' && String.unsafe_get s (pos+14) = 'e' && String.unsafe_get s (pos+15) = 'y' && String.unsafe_get s (pos+16) = 's' && String.unsafe_get s (pos+17) = '_' && String.unsafe_get s (pos+18) = 'e' && String.unsafe_get s (pos+19) = 'n' && String.unsafe_get s (pos+20) = 'd' then (
-                                  88
+                                  89
                                 )
                                 else (
                                   -1
@@ -5058,7 +5095,7 @@ let read_settings = (
                           match String.unsafe_get s (pos+7) with
                             | 'c' -> (
                                 if String.unsafe_get s (pos+8) = 'o' && String.unsafe_get s (pos+9) = 'm' && String.unsafe_get s (pos+10) = 'p' && String.unsafe_get s (pos+11) = 'l' && String.unsafe_get s (pos+12) = 'e' && String.unsafe_get s (pos+13) = 't' && String.unsafe_get s (pos+14) = 'i' && String.unsafe_get s (pos+15) = 'o' && String.unsafe_get s (pos+16) = 'n' && String.unsafe_get s (pos+17) = '_' && String.unsafe_get s (pos+18) = 'f' && String.unsafe_get s (pos+19) = 'o' && String.unsafe_get s (pos+20) = 'n' && String.unsafe_get s (pos+21) = 't' then (
-                                  56
+                                  57
                                 )
                                 else (
                                   -1
@@ -5066,7 +5103,7 @@ let read_settings = (
                               )
                             | 's' -> (
                                 if String.unsafe_get s (pos+8) = 'm' && String.unsafe_get s (pos+9) = 'a' && String.unsafe_get s (pos+10) = 'r' && String.unsafe_get s (pos+11) = 't' && String.unsafe_get s (pos+12) = '_' && String.unsafe_get s (pos+13) = 'k' && String.unsafe_get s (pos+14) = 'e' && String.unsafe_get s (pos+15) = 'y' && String.unsafe_get s (pos+16) = 's' && String.unsafe_get s (pos+17) = '_' && String.unsafe_get s (pos+18) = 'h' && String.unsafe_get s (pos+19) = 'o' && String.unsafe_get s (pos+20) = 'm' && String.unsafe_get s (pos+21) = 'e' then (
-                                  89
+                                  90
                                 )
                                 else (
                                   -1
@@ -5126,7 +5163,7 @@ let read_settings = (
                           match String.unsafe_get s (pos+7) with
                             | 'i' -> (
                                 if String.unsafe_get s (pos+8) = 'n' && String.unsafe_get s (pos+9) = 'd' && String.unsafe_get s (pos+10) = 'e' && String.unsafe_get s (pos+11) = 'n' && String.unsafe_get s (pos+12) = 't' && String.unsafe_get s (pos+13) = '_' && String.unsafe_get s (pos+14) = 'e' && String.unsafe_get s (pos+15) = 'm' && String.unsafe_get s (pos+16) = 'p' && String.unsafe_get s (pos+17) = 't' && String.unsafe_get s (pos+18) = 'y' && String.unsafe_get s (pos+19) = '_' && String.unsafe_get s (pos+20) = 'l' && String.unsafe_get s (pos+21) = 'i' && String.unsafe_get s (pos+22) = 'n' && String.unsafe_get s (pos+23) = 'e' then (
-                                  71
+                                  72
                                 )
                                 else (
                                   -1
@@ -5136,7 +5173,7 @@ let read_settings = (
                                 match String.unsafe_get s (pos+8) with
                                   | 'a' -> (
                                       if String.unsafe_get s (pos+9) = 'v' && String.unsafe_get s (pos+10) = 'e' && String.unsafe_get s (pos+11) = '_' && String.unsafe_get s (pos+12) = 'a' && String.unsafe_get s (pos+13) = 'l' && String.unsafe_get s (pos+14) = 'l' && String.unsafe_get s (pos+15) = '_' && String.unsafe_get s (pos+16) = 'b' && String.unsafe_get s (pos+17) = 'e' && String.unsafe_get s (pos+18) = 'f' && String.unsafe_get s (pos+19) = '_' && String.unsafe_get s (pos+20) = 'c' && String.unsafe_get s (pos+21) = 'o' && String.unsafe_get s (pos+22) = 'm' && String.unsafe_get s (pos+23) = 'p' then (
-                                        83
+                                        84
                                       )
                                       else (
                                         -1
@@ -5144,7 +5181,7 @@ let read_settings = (
                                     )
                                   | 'h' -> (
                                       if String.unsafe_get s (pos+9) = 'o' && String.unsafe_get s (pos+10) = 'w' && String.unsafe_get s (pos+11) = '_' && String.unsafe_get s (pos+12) = 'l' && String.unsafe_get s (pos+13) = 'i' && String.unsafe_get s (pos+14) = 'n' && String.unsafe_get s (pos+15) = 'e' && String.unsafe_get s (pos+16) = '_' && String.unsafe_get s (pos+17) = 'n' && String.unsafe_get s (pos+18) = 'u' && String.unsafe_get s (pos+19) = 'm' && String.unsafe_get s (pos+20) = 'b' && String.unsafe_get s (pos+21) = 'e' && String.unsafe_get s (pos+22) = 'r' && String.unsafe_get s (pos+23) = 's' then (
-                                        86
+                                        87
                                       )
                                       else (
                                         -1
@@ -5179,7 +5216,7 @@ let read_settings = (
                     match String.unsafe_get s (pos+7) with
                       | 'c' -> (
                           if String.unsafe_get s (pos+8) = 'o' && String.unsafe_get s (pos+9) = 'm' && String.unsafe_get s (pos+10) = 'p' && String.unsafe_get s (pos+11) = 'l' && String.unsafe_get s (pos+12) = 'e' && String.unsafe_get s (pos+13) = 't' && String.unsafe_get s (pos+14) = 'i' && String.unsafe_get s (pos+15) = 'o' && String.unsafe_get s (pos+16) = 'n' && String.unsafe_get s (pos+17) = '_' && String.unsafe_get s (pos+18) = 'o' && String.unsafe_get s (pos+19) = 'p' && String.unsafe_get s (pos+20) = 'a' && String.unsafe_get s (pos+21) = 'c' && String.unsafe_get s (pos+22) = 'i' && String.unsafe_get s (pos+23) = 't' && String.unsafe_get s (pos+24) = 'y' then (
-                            59
+                            60
                           )
                           else (
                             -1
@@ -5187,7 +5224,7 @@ let read_settings = (
                         )
                       | 'r' -> (
                           if String.unsafe_get s (pos+8) = 'i' && String.unsafe_get s (pos+9) = 'g' && String.unsafe_get s (pos+10) = 'h' && String.unsafe_get s (pos+11) = 't' && String.unsafe_get s (pos+12) = '_' && String.unsafe_get s (pos+13) = 'm' && String.unsafe_get s (pos+14) = 'a' && String.unsafe_get s (pos+15) = 'r' && String.unsafe_get s (pos+16) = 'g' && String.unsafe_get s (pos+17) = 'i' && String.unsafe_get s (pos+18) = 'n' && String.unsafe_get s (pos+19) = '_' && String.unsafe_get s (pos+20) = 'c' && String.unsafe_get s (pos+21) = 'o' && String.unsafe_get s (pos+22) = 'l' && String.unsafe_get s (pos+23) = 'o' && String.unsafe_get s (pos+24) = 'r' then (
-                            81
+                            82
                           )
                           else (
                             -1
@@ -5195,7 +5232,7 @@ let read_settings = (
                         )
                       | 's' -> (
                           if String.unsafe_get s (pos+8) = 'h' && String.unsafe_get s (pos+9) = 'o' && String.unsafe_get s (pos+10) = 'w' && String.unsafe_get s (pos+11) = '_' && String.unsafe_get s (pos+12) = 'g' && String.unsafe_get s (pos+13) = 'l' && String.unsafe_get s (pos+14) = 'o' && String.unsafe_get s (pos+15) = 'b' && String.unsafe_get s (pos+16) = 'a' && String.unsafe_get s (pos+17) = 'l' && String.unsafe_get s (pos+18) = '_' && String.unsafe_get s (pos+19) = 'g' && String.unsafe_get s (pos+20) = 'u' && String.unsafe_get s (pos+21) = 't' && String.unsafe_get s (pos+22) = 't' && String.unsafe_get s (pos+23) = 'e' && String.unsafe_get s (pos+24) = 'r' then (
-                            85
+                            86
                           )
                           else (
                             -1
@@ -5216,7 +5253,7 @@ let read_settings = (
                           match String.unsafe_get s (pos+10) with
                             | 'r' -> (
                                 if String.unsafe_get s (pos+11) = 'e' && String.unsafe_get s (pos+12) = 'n' && String.unsafe_get s (pos+13) = 't' && String.unsafe_get s (pos+14) = '_' && String.unsafe_get s (pos+15) = 'l' && String.unsafe_get s (pos+16) = 'i' && String.unsafe_get s (pos+17) = 'n' && String.unsafe_get s (pos+18) = 'e' && String.unsafe_get s (pos+19) = '_' && String.unsafe_get s (pos+20) = 'b' && String.unsafe_get s (pos+21) = 'o' && String.unsafe_get s (pos+22) = 'r' && String.unsafe_get s (pos+23) = 'd' && String.unsafe_get s (pos+24) = 'e' && String.unsafe_get s (pos+25) = 'r' then (
-                                  60
+                                  61
                                 )
                                 else (
                                   -1
@@ -5224,7 +5261,7 @@ let read_settings = (
                               )
                             | 's' -> (
                                 if String.unsafe_get s (pos+11) = 'o' && String.unsafe_get s (pos+12) = 'r' && String.unsafe_get s (pos+13) = '_' && String.unsafe_get s (pos+14) = 'a' && String.unsafe_get s (pos+15) = 's' && String.unsafe_get s (pos+16) = 'p' && String.unsafe_get s (pos+17) = 'e' && String.unsafe_get s (pos+18) = 'c' && String.unsafe_get s (pos+19) = 't' && String.unsafe_get s (pos+20) = '_' && String.unsafe_get s (pos+21) = 'r' && String.unsafe_get s (pos+22) = 'a' && String.unsafe_get s (pos+23) = 't' && String.unsafe_get s (pos+24) = 'i' && String.unsafe_get s (pos+25) = 'o' then (
-                                  61
+                                  62
                                 )
                                 else (
                                   -1
@@ -5258,7 +5295,7 @@ let read_settings = (
                             match String.unsafe_get s (pos+9) with
                               | 'd' -> (
                                   if String.unsafe_get s (pos+10) = 'e' && String.unsafe_get s (pos+11) = '_' && String.unsafe_get s (pos+12) = 'f' && String.unsafe_get s (pos+13) = 'o' && String.unsafe_get s (pos+14) = 'l' && String.unsafe_get s (pos+15) = 'd' && String.unsafe_get s (pos+16) = 'i' && String.unsafe_get s (pos+17) = 'n' && String.unsafe_get s (pos+18) = 'g' && String.unsafe_get s (pos+19) = '_' && String.unsafe_get s (pos+20) = 'e' && String.unsafe_get s (pos+21) = 'n' && String.unsafe_get s (pos+22) = 'a' && String.unsafe_get s (pos+23) = 'b' && String.unsafe_get s (pos+24) = 'l' && String.unsafe_get s (pos+25) = 'e' && String.unsafe_get s (pos+26) = 'd' then (
-                                    55
+                                    56
                                   )
                                   else (
                                     -1
@@ -5266,7 +5303,7 @@ let read_settings = (
                                 )
                               | 'm' -> (
                                   if String.unsafe_get s (pos+10) = 'p' && String.unsafe_get s (pos+11) = 'l' && String.unsafe_get s (pos+12) = 'e' && String.unsafe_get s (pos+13) = 't' && String.unsafe_get s (pos+14) = 'i' && String.unsafe_get s (pos+15) = 'o' && String.unsafe_get s (pos+16) = 'n' && String.unsafe_get s (pos+17) = '_' && String.unsafe_get s (pos+18) = 'd' && String.unsafe_get s (pos+19) = 'e' && String.unsafe_get s (pos+20) = 'c' && String.unsafe_get s (pos+21) = 'o' && String.unsafe_get s (pos+22) = 'r' && String.unsafe_get s (pos+23) = 'a' && String.unsafe_get s (pos+24) = 't' && String.unsafe_get s (pos+25) = 'e' && String.unsafe_get s (pos+26) = 'd' then (
-                                    58
+                                    59
                                   )
                                   else (
                                     -1
@@ -5282,7 +5319,7 @@ let read_settings = (
                         )
                       | 'r' -> (
                           if String.unsafe_get s (pos+8) = 'i' && String.unsafe_get s (pos+9) = 'g' && String.unsafe_get s (pos+10) = 'h' && String.unsafe_get s (pos+11) = 't' && String.unsafe_get s (pos+12) = '_' && String.unsafe_get s (pos+13) = 'm' && String.unsafe_get s (pos+14) = 'a' && String.unsafe_get s (pos+15) = 'r' && String.unsafe_get s (pos+16) = 'g' && String.unsafe_get s (pos+17) = 'i' && String.unsafe_get s (pos+18) = 'n' && String.unsafe_get s (pos+19) = '_' && String.unsafe_get s (pos+20) = 'v' && String.unsafe_get s (pos+21) = 'i' && String.unsafe_get s (pos+22) = 's' && String.unsafe_get s (pos+23) = 'i' && String.unsafe_get s (pos+24) = 'b' && String.unsafe_get s (pos+25) = 'l' && String.unsafe_get s (pos+26) = 'e' then (
-                            82
+                            83
                           )
                           else (
                             -1
@@ -5301,7 +5338,7 @@ let read_settings = (
                     match String.unsafe_get s (pos+7) with
                       | 'c' -> (
                           if String.unsafe_get s (pos+8) = 'u' && String.unsafe_get s (pos+9) = 's' && String.unsafe_get s (pos+10) = 't' && String.unsafe_get s (pos+11) = 'o' && String.unsafe_get s (pos+12) = 'm' && String.unsafe_get s (pos+13) = '_' && String.unsafe_get s (pos+14) = 't' && String.unsafe_get s (pos+15) = 'e' && String.unsafe_get s (pos+16) = 'm' && String.unsafe_get s (pos+17) = 'p' && String.unsafe_get s (pos+18) = 'l' && String.unsafe_get s (pos+19) = '_' && String.unsafe_get s (pos+20) = 'f' && String.unsafe_get s (pos+21) = 'i' && String.unsafe_get s (pos+22) = 'l' && String.unsafe_get s (pos+23) = 'e' && String.unsafe_get s (pos+24) = 'n' && String.unsafe_get s (pos+25) = 'a' && String.unsafe_get s (pos+26) = 'm' && String.unsafe_get s (pos+27) = 'e' then (
-                            62
+                            63
                           )
                           else (
                             -1
@@ -5311,7 +5348,7 @@ let read_settings = (
                           match String.unsafe_get s (pos+8) with
                             | 'e' -> (
                                 if String.unsafe_get s (pos+9) = 'a' && String.unsafe_get s (pos+10) = 'r' && String.unsafe_get s (pos+11) = 'c' && String.unsafe_get s (pos+12) = 'h' && String.unsafe_get s (pos+13) = '_' && String.unsafe_get s (pos+14) = 'w' && String.unsafe_get s (pos+15) = 'o' && String.unsafe_get s (pos+16) = 'r' && String.unsafe_get s (pos+17) = 'd' && String.unsafe_get s (pos+18) = '_' && String.unsafe_get s (pos+19) = 'a' && String.unsafe_get s (pos+20) = 't' && String.unsafe_get s (pos+21) = '_' && String.unsafe_get s (pos+22) = 'c' && String.unsafe_get s (pos+23) = 'u' && String.unsafe_get s (pos+24) = 'r' && String.unsafe_get s (pos+25) = 's' && String.unsafe_get s (pos+26) = 'o' && String.unsafe_get s (pos+27) = 'r' then (
-                                  84
+                                  85
                                 )
                                 else (
                                   -1
@@ -5319,7 +5356,7 @@ let read_settings = (
                               )
                             | 'h' -> (
                                 if String.unsafe_get s (pos+9) = 'o' && String.unsafe_get s (pos+10) = 'w' && String.unsafe_get s (pos+11) = '_' && String.unsafe_get s (pos+12) = 'w' && String.unsafe_get s (pos+13) = 'h' && String.unsafe_get s (pos+14) = 'i' && String.unsafe_get s (pos+15) = 't' && String.unsafe_get s (pos+16) = 'e' && String.unsafe_get s (pos+17) = 's' && String.unsafe_get s (pos+18) = 'p' && String.unsafe_get s (pos+19) = 'a' && String.unsafe_get s (pos+20) = 'c' && String.unsafe_get s (pos+21) = 'e' && String.unsafe_get s (pos+22) = '_' && String.unsafe_get s (pos+23) = 'c' && String.unsafe_get s (pos+24) = 'h' && String.unsafe_get s (pos+25) = 'a' && String.unsafe_get s (pos+26) = 'r' && String.unsafe_get s (pos+27) = 's' then (
-                                  87
+                                  88
                                 )
                                 else (
                                   -1
@@ -5339,7 +5376,7 @@ let read_settings = (
                 )
               | 29 -> (
                   if String.unsafe_get s pos = 'e' && String.unsafe_get s (pos+1) = 'd' && String.unsafe_get s (pos+2) = 'i' && String.unsafe_get s (pos+3) = 't' && String.unsafe_get s (pos+4) = 'o' && String.unsafe_get s (pos+5) = 'r' && String.unsafe_get s (pos+6) = '_' && String.unsafe_get s (pos+7) = 'h' && String.unsafe_get s (pos+8) = 'i' && String.unsafe_get s (pos+9) = 'g' && String.unsafe_get s (pos+10) = 'h' && String.unsafe_get s (pos+11) = 'l' && String.unsafe_get s (pos+12) = 'i' && String.unsafe_get s (pos+13) = 'g' && String.unsafe_get s (pos+14) = 'h' && String.unsafe_get s (pos+15) = 't' && String.unsafe_get s (pos+16) = '_' && String.unsafe_get s (pos+17) = 'c' && String.unsafe_get s (pos+18) = 'u' && String.unsafe_get s (pos+19) = 'r' && String.unsafe_get s (pos+20) = 'r' && String.unsafe_get s (pos+21) = 'e' && String.unsafe_get s (pos+22) = 'n' && String.unsafe_get s (pos+23) = 't' && String.unsafe_get s (pos+24) = '_' && String.unsafe_get s (pos+25) = 'l' && String.unsafe_get s (pos+26) = 'i' && String.unsafe_get s (pos+27) = 'n' && String.unsafe_get s (pos+28) = 'e' then (
-                    69
+                    70
                   )
                   else (
                     -1
@@ -5360,7 +5397,7 @@ let read_settings = (
                           match String.unsafe_get s (pos+7) with
                             | 'a' -> (
                                 if String.unsafe_get s (pos+8) = 'n' && String.unsafe_get s (pos+9) = 'n' && String.unsafe_get s (pos+10) = 'o' && String.unsafe_get s (pos+11) = 't' && String.unsafe_get s (pos+12) = '_' && String.unsafe_get s (pos+13) = 't' && String.unsafe_get s (pos+14) = 'y' && String.unsafe_get s (pos+15) = 'p' && String.unsafe_get s (pos+16) = 'e' && String.unsafe_get s (pos+17) = '_' && String.unsafe_get s (pos+18) = 't' && String.unsafe_get s (pos+19) = 'o' && String.unsafe_get s (pos+20) = 'o' && String.unsafe_get s (pos+21) = 'l' && String.unsafe_get s (pos+22) = 't' && String.unsafe_get s (pos+23) = 'i' && String.unsafe_get s (pos+24) = 'p' && String.unsafe_get s (pos+25) = 's' && String.unsafe_get s (pos+26) = '_' && String.unsafe_get s (pos+27) = 'i' && String.unsafe_get s (pos+28) = 'm' && String.unsafe_get s (pos+29) = 'p' && String.unsafe_get s (pos+30) = 'l' then (
-                                  49
+                                  50
                                 )
                                 else (
                                   -1
@@ -5368,7 +5405,7 @@ let read_settings = (
                               )
                             | 'c' -> (
                                 if String.unsafe_get s (pos+8) = 'o' && String.unsafe_get s (pos+9) = 'm' && String.unsafe_get s (pos+10) = 'p' && String.unsafe_get s (pos+11) = 'l' && String.unsafe_get s (pos+12) = 'e' && String.unsafe_get s (pos+13) = 't' && String.unsafe_get s (pos+14) = 'i' && String.unsafe_get s (pos+15) = 'o' && String.unsafe_get s (pos+16) = 'n' && String.unsafe_get s (pos+17) = '_' && String.unsafe_get s (pos+18) = 'g' && String.unsafe_get s (pos+19) = 'r' && String.unsafe_get s (pos+20) = 'e' && String.unsafe_get s (pos+21) = 'e' && String.unsafe_get s (pos+22) = 'k' && String.unsafe_get s (pos+23) = '_' && String.unsafe_get s (pos+24) = 'l' && String.unsafe_get s (pos+25) = 'e' && String.unsafe_get s (pos+26) = 't' && String.unsafe_get s (pos+27) = 't' && String.unsafe_get s (pos+28) = 'e' && String.unsafe_get s (pos+29) = 'r' && String.unsafe_get s (pos+30) = 's' then (
-                                  57
+                                  58
                                 )
                                 else (
                                   -1
@@ -5376,7 +5413,7 @@ let read_settings = (
                               )
                             | 'm' -> (
                                 if String.unsafe_get s (pos+8) = 'a' && String.unsafe_get s (pos+9) = 'r' && String.unsafe_get s (pos+10) = 'k' && String.unsafe_get s (pos+11) = '_' && String.unsafe_get s (pos+12) = 'o' && String.unsafe_get s (pos+13) = 'c' && String.unsafe_get s (pos+14) = 'c' && String.unsafe_get s (pos+15) = 'u' && String.unsafe_get s (pos+16) = 'r' && String.unsafe_get s (pos+17) = 'r' && String.unsafe_get s (pos+18) = 'e' && String.unsafe_get s (pos+19) = 'n' && String.unsafe_get s (pos+20) = 'c' && String.unsafe_get s (pos+21) = 'e' && String.unsafe_get s (pos+22) = 's' && String.unsafe_get s (pos+23) = '_' && String.unsafe_get s (pos+24) = 'e' && String.unsafe_get s (pos+25) = 'n' && String.unsafe_get s (pos+26) = 'a' && String.unsafe_get s (pos+27) = 'b' && String.unsafe_get s (pos+28) = 'l' && String.unsafe_get s (pos+29) = 'e' && String.unsafe_get s (pos+30) = 'd' then (
-                                  74
+                                  75
                                 )
                                 else (
                                   -1
@@ -5399,7 +5436,7 @@ let read_settings = (
                     match String.unsafe_get s (pos+7) with
                       | 'a' -> (
                           if String.unsafe_get s (pos+8) = 'n' && String.unsafe_get s (pos+9) = 'n' && String.unsafe_get s (pos+10) = 'o' && String.unsafe_get s (pos+11) = 't' && String.unsafe_get s (pos+12) = '_' && String.unsafe_get s (pos+13) = 't' && String.unsafe_get s (pos+14) = 'y' && String.unsafe_get s (pos+15) = 'p' && String.unsafe_get s (pos+16) = 'e' && String.unsafe_get s (pos+17) = '_' && String.unsafe_get s (pos+18) = 't' && String.unsafe_get s (pos+19) = 'o' && String.unsafe_get s (pos+20) = 'o' && String.unsafe_get s (pos+21) = 'l' && String.unsafe_get s (pos+22) = 't' && String.unsafe_get s (pos+23) = 'i' && String.unsafe_get s (pos+24) = 'p' && String.unsafe_get s (pos+25) = 's' && String.unsafe_get s (pos+26) = '_' && String.unsafe_get s (pos+27) = 'd' && String.unsafe_get s (pos+28) = 'e' && String.unsafe_get s (pos+29) = 'l' && String.unsafe_get s (pos+30) = 'a' && String.unsafe_get s (pos+31) = 'y' then (
-                            48
+                            49
                           )
                           else (
                             -1
@@ -5407,7 +5444,7 @@ let read_settings = (
                         )
                       | 'm' -> (
                           if String.unsafe_get s (pos+8) = 'a' && String.unsafe_get s (pos+9) = 'r' && String.unsafe_get s (pos+10) = 'k' && String.unsafe_get s (pos+11) = '_' && String.unsafe_get s (pos+12) = 'o' && String.unsafe_get s (pos+13) = 'c' && String.unsafe_get s (pos+14) = 'c' && String.unsafe_get s (pos+15) = 'u' && String.unsafe_get s (pos+16) = 'r' && String.unsafe_get s (pos+17) = 'r' && String.unsafe_get s (pos+18) = 'e' && String.unsafe_get s (pos+19) = 'n' && String.unsafe_get s (pos+20) = 'c' && String.unsafe_get s (pos+21) = 'e' && String.unsafe_get s (pos+22) = 's' && String.unsafe_get s (pos+23) = '_' && String.unsafe_get s (pos+24) = 'b' && String.unsafe_get s (pos+25) = 'g' && String.unsafe_get s (pos+26) = '_' && String.unsafe_get s (pos+27) = 'c' && String.unsafe_get s (pos+28) = 'o' && String.unsafe_get s (pos+29) = 'l' && String.unsafe_get s (pos+30) = 'o' && String.unsafe_get s (pos+31) = 'r' then (
-                            76
+                            77
                           )
                           else (
                             -1
@@ -5423,7 +5460,7 @@ let read_settings = (
                 )
               | 34 -> (
                   if String.unsafe_get s pos = 'e' && String.unsafe_get s (pos+1) = 'd' && String.unsafe_get s (pos+2) = 'i' && String.unsafe_get s (pos+3) = 't' && String.unsafe_get s (pos+4) = 'o' && String.unsafe_get s (pos+5) = 'r' && String.unsafe_get s (pos+6) = '_' && String.unsafe_get s (pos+7) = 'a' && String.unsafe_get s (pos+8) = 'n' && String.unsafe_get s (pos+9) = 'n' && String.unsafe_get s (pos+10) = 'o' && String.unsafe_get s (pos+11) = 't' && String.unsafe_get s (pos+12) = '_' && String.unsafe_get s (pos+13) = 't' && String.unsafe_get s (pos+14) = 'y' && String.unsafe_get s (pos+15) = 'p' && String.unsafe_get s (pos+16) = 'e' && String.unsafe_get s (pos+17) = '_' && String.unsafe_get s (pos+18) = 't' && String.unsafe_get s (pos+19) = 'o' && String.unsafe_get s (pos+20) = 'o' && String.unsafe_get s (pos+21) = 'l' && String.unsafe_get s (pos+22) = 't' && String.unsafe_get s (pos+23) = 'i' && String.unsafe_get s (pos+24) = 'p' && String.unsafe_get s (pos+25) = 's' && String.unsafe_get s (pos+26) = '_' && String.unsafe_get s (pos+27) = 'e' && String.unsafe_get s (pos+28) = 'n' && String.unsafe_get s (pos+29) = 'a' && String.unsafe_get s (pos+30) = 'b' && String.unsafe_get s (pos+31) = 'l' && String.unsafe_get s (pos+32) = 'e' && String.unsafe_get s (pos+33) = 'd' then (
-                    47
+                    48
                   )
                   else (
                     -1
@@ -5433,10 +5470,10 @@ let read_settings = (
                   if String.unsafe_get s pos = 'e' && String.unsafe_get s (pos+1) = 'd' && String.unsafe_get s (pos+2) = 'i' && String.unsafe_get s (pos+3) = 't' && String.unsafe_get s (pos+4) = 'o' && String.unsafe_get s (pos+5) = 'r' && String.unsafe_get s (pos+6) = '_' && String.unsafe_get s (pos+7) = 'o' && String.unsafe_get s (pos+8) = 'c' && String.unsafe_get s (pos+9) = 'a' && String.unsafe_get s (pos+10) = 'm' && String.unsafe_get s (pos+11) = 'l' && String.unsafe_get s (pos+12) = 'd' && String.unsafe_get s (pos+13) = 'o' && String.unsafe_get s (pos+14) = 'c' && String.unsafe_get s (pos+15) = '_' && String.unsafe_get s (pos+16) = 'p' && String.unsafe_get s (pos+17) = 'a' && String.unsafe_get s (pos+18) = 'r' && String.unsafe_get s (pos+19) = 'a' && String.unsafe_get s (pos+20) = 'g' && String.unsafe_get s (pos+21) = 'r' && String.unsafe_get s (pos+22) = 'a' && String.unsafe_get s (pos+23) = 'p' && String.unsafe_get s (pos+24) = 'h' && String.unsafe_get s (pos+25) = '_' && String.unsafe_get s (pos+26) = 'b' && String.unsafe_get s (pos+27) = 'g' && String.unsafe_get s (pos+28) = 'c' && String.unsafe_get s (pos+29) = 'o' && String.unsafe_get s (pos+30) = 'l' && String.unsafe_get s (pos+31) = 'o' && String.unsafe_get s (pos+32) = 'r' && String.unsafe_get s (pos+33) = '_' then (
                     match String.unsafe_get s (pos+34) with
                       | '1' -> (
-                          77
+                          78
                         )
                       | '2' -> (
-                          78
+                          79
                         )
                       | _ -> (
                           -1
@@ -5448,7 +5485,7 @@ let read_settings = (
                 )
               | 36 -> (
                   if String.unsafe_get s pos = 'e' && String.unsafe_get s (pos+1) = 'd' && String.unsafe_get s (pos+2) = 'i' && String.unsafe_get s (pos+3) = 't' && String.unsafe_get s (pos+4) = 'o' && String.unsafe_get s (pos+5) = 'r' && String.unsafe_get s (pos+6) = '_' && String.unsafe_get s (pos+7) = 'm' && String.unsafe_get s (pos+8) = 'a' && String.unsafe_get s (pos+9) = 'r' && String.unsafe_get s (pos+10) = 'k' && String.unsafe_get s (pos+11) = '_' && String.unsafe_get s (pos+12) = 'o' && String.unsafe_get s (pos+13) = 'c' && String.unsafe_get s (pos+14) = 'c' && String.unsafe_get s (pos+15) = 'u' && String.unsafe_get s (pos+16) = 'r' && String.unsafe_get s (pos+17) = 'r' && String.unsafe_get s (pos+18) = 'e' && String.unsafe_get s (pos+19) = 'n' && String.unsafe_get s (pos+20) = 'c' && String.unsafe_get s (pos+21) = 'e' && String.unsafe_get s (pos+22) = 's' && String.unsafe_get s (pos+23) = '_' && String.unsafe_get s (pos+24) = 'u' && String.unsafe_get s (pos+25) = 'n' && String.unsafe_get s (pos+26) = 'd' && String.unsafe_get s (pos+27) = 'e' && String.unsafe_get s (pos+28) = 'r' && String.unsafe_get s (pos+29) = '_' && String.unsafe_get s (pos+30) = 'c' && String.unsafe_get s (pos+31) = 'u' && String.unsafe_get s (pos+32) = 'r' && String.unsafe_get s (pos+33) = 's' && String.unsafe_get s (pos+34) = 'o' && String.unsafe_get s (pos+35) = 'r' then (
-                    75
+                    76
                   )
                   else (
                     -1
@@ -5873,13 +5910,21 @@ let read_settings = (
               )
             | 46 ->
               if not (Yojson.Safe.read_null_if_possible p lb) then (
+                field_theme_is_dark := (
+                  (
+                    Atdgen_runtime.Oj_run.read_bool
+                  ) p lb
+                );
+              )
+            | 47 ->
+              if not (Yojson.Safe.read_null_if_possible p lb) then (
                 field_vmessages_height := (
                   (
                     Atdgen_runtime.Oj_run.read_int
                   ) p lb
                 );
               )
-            | 47 ->
+            | 48 ->
               if not (Yojson.Safe.read_null_if_possible p lb) then (
                 field_editor_annot_type_tooltips_enabled := (
                   (
@@ -5887,7 +5932,7 @@ let read_settings = (
                   ) p lb
                 );
               )
-            | 48 ->
+            | 49 ->
               if not (Yojson.Safe.read_null_if_possible p lb) then (
                 field_editor_annot_type_tooltips_delay := (
                   (
@@ -5895,7 +5940,7 @@ let read_settings = (
                   ) p lb
                 );
               )
-            | 49 ->
+            | 50 ->
               if not (Yojson.Safe.read_null_if_possible p lb) then (
                 field_editor_annot_type_tooltips_impl := (
                   (
@@ -5903,7 +5948,7 @@ let read_settings = (
                   ) p lb
                 );
               )
-            | 50 ->
+            | 51 ->
               if not (Yojson.Safe.read_null_if_possible p lb) then (
                 field_editor_bak := (
                   (
@@ -5911,7 +5956,7 @@ let read_settings = (
                   ) p lb
                 );
               )
-            | 51 ->
+            | 52 ->
               if not (Yojson.Safe.read_null_if_possible p lb) then (
                 field_editor_base_font := (
                   (
@@ -5919,7 +5964,7 @@ let read_settings = (
                   ) p lb
                 );
               )
-            | 52 ->
+            | 53 ->
               if not (Yojson.Safe.read_null_if_possible p lb) then (
                 field_editor_bg_color_popup := (
                   (
@@ -5927,7 +5972,7 @@ let read_settings = (
                   ) p lb
                 );
               )
-            | 53 ->
+            | 54 ->
               if not (Yojson.Safe.read_null_if_possible p lb) then (
                 field_editor_bg_color_theme := (
                   (
@@ -5935,7 +5980,7 @@ let read_settings = (
                   ) p lb
                 );
               )
-            | 54 ->
+            | 55 ->
               if not (Yojson.Safe.read_null_if_possible p lb) then (
                 field_editor_bg_color_user := (
                   (
@@ -5943,7 +5988,7 @@ let read_settings = (
                   ) p lb
                 );
               )
-            | 55 ->
+            | 56 ->
               if not (Yojson.Safe.read_null_if_possible p lb) then (
                 field_editor_code_folding_enabled := (
                   (
@@ -5951,7 +5996,7 @@ let read_settings = (
                   ) p lb
                 );
               )
-            | 56 ->
+            | 57 ->
               if not (Yojson.Safe.read_null_if_possible p lb) then (
                 field_editor_completion_font := (
                   (
@@ -5959,7 +6004,7 @@ let read_settings = (
                   ) p lb
                 );
               )
-            | 57 ->
+            | 58 ->
               if not (Yojson.Safe.read_null_if_possible p lb) then (
                 field_editor_completion_greek_letters := (
                   (
@@ -5967,7 +6012,7 @@ let read_settings = (
                   ) p lb
                 );
               )
-            | 58 ->
+            | 59 ->
               if not (Yojson.Safe.read_null_if_possible p lb) then (
                 field_editor_completion_decorated := (
                   (
@@ -5975,7 +6020,7 @@ let read_settings = (
                   ) p lb
                 );
               )
-            | 59 ->
+            | 60 ->
               if not (Yojson.Safe.read_null_if_possible p lb) then (
                 field_editor_completion_opacity := (
                   (
@@ -5983,7 +6028,7 @@ let read_settings = (
                   ) p lb
                 );
               )
-            | 60 ->
+            | 61 ->
               if not (Yojson.Safe.read_null_if_possible p lb) then (
                 field_editor_current_line_border := (
                   (
@@ -5991,7 +6036,7 @@ let read_settings = (
                   ) p lb
                 );
               )
-            | 61 ->
+            | 62 ->
               if not (Yojson.Safe.read_null_if_possible p lb) then (
                 field_editor_cursor_aspect_ratio := (
                   (
@@ -5999,7 +6044,7 @@ let read_settings = (
                   ) p lb
                 );
               )
-            | 62 ->
+            | 63 ->
               if not (Yojson.Safe.read_null_if_possible p lb) then (
                 field_editor_custom_templ_filename := (
                   (
@@ -6007,7 +6052,7 @@ let read_settings = (
                   ) p lb
                 );
               )
-            | 63 ->
+            | 64 ->
               if not (Yojson.Safe.read_null_if_possible p lb) then (
                 field_editor_dot_leaders := (
                   (
@@ -6015,7 +6060,7 @@ let read_settings = (
                   ) p lb
                 );
               )
-            | 64 ->
+            | 65 ->
               if not (Yojson.Safe.read_null_if_possible p lb) then (
                 field_editor_err_gutter := (
                   (
@@ -6023,7 +6068,7 @@ let read_settings = (
                   ) p lb
                 );
               )
-            | 65 ->
+            | 66 ->
               if not (Yojson.Safe.read_null_if_possible p lb) then (
                 field_editor_err_tooltip := (
                   (
@@ -6031,7 +6076,7 @@ let read_settings = (
                   ) p lb
                 );
               )
-            | 66 ->
+            | 67 ->
               if not (Yojson.Safe.read_null_if_possible p lb) then (
                 field_editor_err_underline := (
                   (
@@ -6039,7 +6084,7 @@ let read_settings = (
                   ) p lb
                 );
               )
-            | 67 ->
+            | 68 ->
               if not (Yojson.Safe.read_null_if_possible p lb) then (
                 field_editor_fg_color_popup := (
                   (
@@ -6047,7 +6092,7 @@ let read_settings = (
                   ) p lb
                 );
               )
-            | 68 ->
+            | 69 ->
               if not (Yojson.Safe.read_null_if_possible p lb) then (
                 field_editor_format_on_save := (
                   (
@@ -6055,7 +6100,7 @@ let read_settings = (
                   ) p lb
                 );
               )
-            | 69 ->
+            | 70 ->
               if not (Yojson.Safe.read_null_if_possible p lb) then (
                 field_editor_highlight_current_line := (
                   (
@@ -6063,7 +6108,7 @@ let read_settings = (
                   ) p lb
                 );
               )
-            | 70 ->
+            | 71 ->
               if not (Yojson.Safe.read_null_if_possible p lb) then (
                 field_editor_indent_config := (
                   (
@@ -6071,7 +6116,7 @@ let read_settings = (
                   ) p lb
                 );
               )
-            | 71 ->
+            | 72 ->
               if not (Yojson.Safe.read_null_if_possible p lb) then (
                 field_editor_indent_empty_line := (
                   (
@@ -6079,7 +6124,7 @@ let read_settings = (
                   ) p lb
                 );
               )
-            | 72 ->
+            | 73 ->
               if not (Yojson.Safe.read_null_if_possible p lb) then (
                 field_editor_indent_lines := (
                   (
@@ -6139,7 +6184,7 @@ let read_settings = (
                   ) p lb
                 );
               )
-            | 73 ->
+            | 74 ->
               if not (Yojson.Safe.read_null_if_possible p lb) then (
                 field_editor_left_margin := (
                   (
@@ -6147,7 +6192,7 @@ let read_settings = (
                   ) p lb
                 );
               )
-            | 74 ->
+            | 75 ->
               if not (Yojson.Safe.read_null_if_possible p lb) then (
                 field_editor_mark_occurrences_enabled := (
                   (
@@ -6155,7 +6200,7 @@ let read_settings = (
                   ) p lb
                 );
               )
-            | 75 ->
+            | 76 ->
               if not (Yojson.Safe.read_null_if_possible p lb) then (
                 field_editor_mark_occurrences_under_cursor := (
                   (
@@ -6163,7 +6208,7 @@ let read_settings = (
                   ) p lb
                 );
               )
-            | 76 ->
+            | 77 ->
               if not (Yojson.Safe.read_null_if_possible p lb) then (
                 field_editor_mark_occurrences_bg_color := (
                   (
@@ -6171,7 +6216,7 @@ let read_settings = (
                   ) p lb
                 );
               )
-            | 77 ->
+            | 78 ->
               if not (Yojson.Safe.read_null_if_possible p lb) then (
                 field_editor_ocamldoc_paragraph_bgcolor_1 := (
                   (
@@ -6179,7 +6224,7 @@ let read_settings = (
                   ) p lb
                 );
               )
-            | 78 ->
+            | 79 ->
               if not (Yojson.Safe.read_null_if_possible p lb) then (
                 field_editor_ocamldoc_paragraph_bgcolor_2 := (
                   (
@@ -6187,7 +6232,7 @@ let read_settings = (
                   ) p lb
                 );
               )
-            | 79 ->
+            | 80 ->
               if not (Yojson.Safe.read_null_if_possible p lb) then (
                 field_editor_pixels_lines := (
                   (
@@ -6236,7 +6281,7 @@ let read_settings = (
                   ) p lb
                 );
               )
-            | 80 ->
+            | 81 ->
               if not (Yojson.Safe.read_null_if_possible p lb) then (
                 field_editor_right_margin := (
                   (
@@ -6244,7 +6289,7 @@ let read_settings = (
                   ) p lb
                 );
               )
-            | 81 ->
+            | 82 ->
               if not (Yojson.Safe.read_null_if_possible p lb) then (
                 field_editor_right_margin_color := (
                   (
@@ -6252,7 +6297,7 @@ let read_settings = (
                   ) p lb
                 );
               )
-            | 82 ->
+            | 83 ->
               if not (Yojson.Safe.read_null_if_possible p lb) then (
                 field_editor_right_margin_visible := (
                   (
@@ -6260,7 +6305,7 @@ let read_settings = (
                   ) p lb
                 );
               )
-            | 83 ->
+            | 84 ->
               if not (Yojson.Safe.read_null_if_possible p lb) then (
                 field_editor_save_all_bef_comp := (
                   (
@@ -6268,7 +6313,7 @@ let read_settings = (
                   ) p lb
                 );
               )
-            | 84 ->
+            | 85 ->
               if not (Yojson.Safe.read_null_if_possible p lb) then (
                 field_editor_search_word_at_cursor := (
                   (
@@ -6276,7 +6321,7 @@ let read_settings = (
                   ) p lb
                 );
               )
-            | 85 ->
+            | 86 ->
               if not (Yojson.Safe.read_null_if_possible p lb) then (
                 field_editor_show_global_gutter := (
                   (
@@ -6284,7 +6329,7 @@ let read_settings = (
                   ) p lb
                 );
               )
-            | 86 ->
+            | 87 ->
               if not (Yojson.Safe.read_null_if_possible p lb) then (
                 field_editor_show_line_numbers := (
                   (
@@ -6292,7 +6337,7 @@ let read_settings = (
                   ) p lb
                 );
               )
-            | 87 ->
+            | 88 ->
               if not (Yojson.Safe.read_null_if_possible p lb) then (
                 field_editor_show_whitespace_chars := (
                   (
@@ -6300,7 +6345,7 @@ let read_settings = (
                   ) p lb
                 );
               )
-            | 88 ->
+            | 89 ->
               if not (Yojson.Safe.read_null_if_possible p lb) then (
                 field_editor_smart_keys_end := (
                   (
@@ -6308,7 +6353,7 @@ let read_settings = (
                   ) p lb
                 );
               )
-            | 89 ->
+            | 90 ->
               if not (Yojson.Safe.read_null_if_possible p lb) then (
                 field_editor_smart_keys_home := (
                   (
@@ -6316,7 +6361,7 @@ let read_settings = (
                   ) p lb
                 );
               )
-            | 90 ->
+            | 91 ->
               if not (Yojson.Safe.read_null_if_possible p lb) then (
                 field_editor_tab_spaces := (
                   (
@@ -6324,7 +6369,7 @@ let read_settings = (
                   ) p lb
                 );
               )
-            | 91 ->
+            | 92 ->
               if not (Yojson.Safe.read_null_if_possible p lb) then (
                 field_editor_tab_width := (
                   (
@@ -6332,7 +6377,7 @@ let read_settings = (
                   ) p lb
                 );
               )
-            | 92 ->
+            | 93 ->
               if not (Yojson.Safe.read_null_if_possible p lb) then (
                 field_editor_tags := (
                   (
@@ -6340,7 +6385,7 @@ let read_settings = (
                   ) p lb
                 );
               )
-            | 93 ->
+            | 94 ->
               if not (Yojson.Safe.read_null_if_possible p lb) then (
                 field_editor_tags_dark := (
                   (
@@ -6348,7 +6393,7 @@ let read_settings = (
                   ) p lb
                 );
               )
-            | 94 ->
+            | 95 ->
               if not (Yojson.Safe.read_null_if_possible p lb) then (
                 field_editor_trim_lines := (
                   (
@@ -6356,7 +6401,7 @@ let read_settings = (
                   ) p lb
                 );
               )
-            | 95 ->
+            | 96 ->
               if not (Yojson.Safe.read_null_if_possible p lb) then (
                 field_editor_wrap := (
                   (
@@ -6419,6 +6464,7 @@ let read_settings = (
             tab_pos = !field_tab_pos;
             tab_vertical_text = !field_tab_vertical_text;
             theme = !field_theme;
+            theme_is_dark = !field_theme_is_dark;
             vmessages_height = !field_vmessages_height;
             editor_annot_type_tooltips_enabled = !field_editor_annot_type_tooltips_enabled;
             editor_annot_type_tooltips_delay = !field_editor_annot_type_tooltips_delay;

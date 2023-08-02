@@ -61,6 +61,7 @@ type settings = {
   ~tab_pos                         <ocaml default="`TOP" mutable> : [TOP | RIGHT | BOTTOM | LEFT];
   ~tab_vertical_text               <ocaml default="false" mutable> : bool;
   ~theme                           <ocaml default="None" mutable> : string option;
+  ~theme_is_dark                   <ocaml default="false" mutable> : bool;
   ~vmessages_height                <ocaml default="300" mutable> : int;
 
   ~editor_annot_type_tooltips_enabled  <ocaml default="false" mutable> : bool;

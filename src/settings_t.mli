@@ -59,6 +59,7 @@ type settings = {
   mutable tab_pos: [ `TOP | `RIGHT | `BOTTOM | `LEFT ];
   mutable tab_vertical_text: bool;
   mutable theme: string option;
+  mutable theme_is_dark: bool;
   mutable vmessages_height: int;
   mutable editor_annot_type_tooltips_enabled: bool;
   mutable editor_annot_type_tooltips_delay: int;

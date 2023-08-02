@@ -72,9 +72,11 @@ class "GtkTextView" style "s1"
     end;
   in
   view#options#set_base_color default_bg_color;
+  let editor_tags =
+    if Preferences.preferences#get.theme_is_dark then pref.editor_tags_dark else pref.editor_tags in
   if pref.editor_highlight_current_line then begin
     view#options#set_highlight_current_line
-      (Some (match (List.find_opt (fun t -> t.name = "highlight_current_line") pref.editor_tags)
+      (Some (match (List.find_opt (fun t -> t.name = "highlight_current_line") editor_tags)
              with Some t -> t.color | _ -> assert false));
   end else (view#options#set_highlight_current_line None);
   view#tbuffer#set_tab_width pref.editor_tab_width;
@@ -82,10 +84,10 @@ class "GtkTextView" style "s1"
   view#options#set_smart_home (pref.editor_smart_keys_home = 0);
   view#options#set_smart_end (pref.editor_smart_keys_end = 1);
   if pref.editor_right_margin_visible then begin
-    view#options#set_visible_right_margin (Some
-                                             (pref.editor_right_margin, `NAME pref.editor_right_margin_color))
+    view#options#set_visible_right_margin
+      (Some (pref.editor_right_margin, `NAME pref.editor_right_margin_color))
   end else (view#options#set_visible_right_margin None);
-  match List.find_opt (fun t -> t.name = "selection") pref.editor_tags with
+  match List.find_opt (fun t -> t.name = "selection") editor_tags with
   | Some t ->
       let bg_color = if t.bg_default then view#options#text_color else (`NAME t.bg_color) in
       view#misc#modify_base [`SELECTED, bg_color; `ACTIVE, bg_color];

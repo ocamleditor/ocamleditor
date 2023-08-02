@@ -172,8 +172,6 @@ let themes_dir = Some "/usr/share/themes"
 (*  let themes = (!! (!! Sys.executable_name)) // "share" // "themes" in
     if (*Sys.os_type = "Win32" &&*) Sys.file_exists themes then Some themes else None;;*)
 
-let is_dark_theme = ref false
-
 (** Clear OCAMLLIB environment variable *)
 let _ = Ocaml_config.putenv_ocamllib None
 

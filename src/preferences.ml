@@ -68,7 +68,7 @@ let save () =
       preferences#set { preferences#get with Settings_t.timestamp = Unix.gettimeofday() }
     with ex ->
       begin
-        Printf.printf "Failed to save settings to file \"%s\".\n%!" filename;
+        Printf.eprintf "Failed to save settings to file \"%s\".\n%s%!" filename (Printexc.to_string ex);
         close_out_noerr chan
       end;
   end

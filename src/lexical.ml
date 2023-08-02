@@ -7,12 +7,11 @@ open Printf
 let multi_space = regexp "\\( \\( +\\)\\)\\|(\\*\\*\\(\\*+\\)\\|(\\*\\* \\|(\\* \\|(\\*\\|\\*)"
 
 let tags, colors =
-  Preferences.preferences#get.editor_tags
-  |> List.map (fun (t : Settings_t.editor_tag) -> t.name, t)
-  |> List.split
-
-let tags = ref tags
-let colors = ref colors
+  let tags, colors =
+    (if Preferences.preferences#get.theme_is_dark then Preferences.preferences#get.editor_tags_dark else Preferences.preferences#get.editor_tags)
+    |> List.map (fun (t : Settings_t.editor_tag) -> t.name, t)
+    |> List.split
+  in ref tags, ref colors
 
 (* Initialization *)
 let init_tags ?(tags=(!tags)) ?(colors=(!colors))

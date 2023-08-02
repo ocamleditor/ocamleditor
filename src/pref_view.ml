@@ -88,41 +88,72 @@ class pref_view title ?packing () =
   (*let check_geometry_delayed    = GButton.check_button ~label:"Update delayed" ~packing:box#pack ~show:false () in*)
   object (self)
     inherit page title vbox
+    val is_dark_theme = new GUtil.variable false
+    val dark_theme_transition = Manual_reset_event.create false
+    val mutable combo_theme_changed_id = None
+
+    method private check_is_dark_theme () =
+      let fg_normal = self#misc#style#fg `NORMAL |> Color.rgb_of_gdk |> Color.avg in
+      let bg_normal = self#misc#style#bg `NORMAL |> Color.rgb_of_gdk |> Color.avg in
+      is_dark_theme#set (fg_normal > bg_normal)
 
     initializer
+      is_dark_theme#connect#changed ~callback:begin fun _ ->
+        GtkThread.sync begin fun () ->
+          Printf.printf "===> signal %b\n%!" is_dark_theme#get;
+          Manual_reset_event.set dark_theme_transition;
+        end ()
+      end |> ignore;
       (*let callback () =
         check_detach_sep#misc#set_sensitive check_remember#active;
         check_geometry_delayed#misc#set_sensitive check_remember#active
         in
         ignore (check_remember#connect#toggled ~callback);
         callback();*)
+      self#misc#connect#style_set ~callback:begin fun () ->
+        (* style_set is signaled multiple times on single theme change *)
+        self#check_is_dark_theme();
+      end |> ignore;
       match Oe_config.themes_dir with
       | Some _ ->
-          ignore (combo_theme#connect#changed ~callback:begin fun () ->
-              let theme = self#get_theme_name() in
-              Gtk_theme.set_theme ?theme ~context:self#misc#pango_context ();
-              let button = GButton.button ~show:false ~packing:vbox#add () in
-              let avg_text_normal = button#misc#style#text `NORMAL |> Color.rgb_of_gdk |> Color.avg in
-              let avg_bg_normal = button#misc#style#bg `NORMAL |> Color.rgb_of_gdk |> Color.avg in
-              button#destroy();
-              Oe_config.is_dark_theme := avg_text_normal > avg_bg_normal;
-              let tags =
-                if !Oe_config.is_dark_theme then Preferences.(preferences#get.editor_tags_dark)
-                else Preferences.preferences#get.editor_tags in
-              let ltags, prop = tags |> List.map (fun t -> t.Settings_t.name, t) |> List.split in
-              Lexical.tags := ltags;
-              Lexical.colors := prop;
-              Preferences.save();
-            end);
+          combo_theme_changed_id <-
+            Some begin
+              combo_theme#connect#changed ~callback:begin fun () ->
+                Manual_reset_event.reset dark_theme_transition;
+                is_dark_theme#set (not is_dark_theme#get); (* force a change to ensure event is set *)
+                (* Preview new theme and... *)
+                let theme = self#get_theme_name() in
+                Gtk_theme.set_theme ?theme ~context:self#misc#pango_context ();
+                Manual_reset_event.wait dark_theme_transition;
+                (* ... editor colors *)
+                let open Settings_t in
+                let tags =
+                  if is_dark_theme#get then Preferences.(preferences#get.editor_tags_dark)
+                  else Preferences.preferences#get.editor_tags
+                in
+                let ltags, prop = tags |> List.map (fun t -> t.Settings_t.name, t) |> List.split in
+                Lexical.tags := ltags;
+                Lexical.colors := prop;
+                (* Setting preferences trigger redisplay of editor pages *)
+                Preferences.preferences#set {
+                  Preferences.preferences#get with
+                  timestamp = Unix.gettimeofday();
+                  theme = theme;
+                  theme_is_dark = is_dark_theme#get;
+                }
+              end
+            end
       | _ -> ()
 
     method private get_theme_name () =
       try Some (List.nth Gtk_theme.avail_themes combo_theme#active) with Invalid_argument _ -> None
 
     method write pref =
-      Option.iter
-        (fun _ -> pref.theme <- self#get_theme_name())
-        Oe_config.themes_dir;
+      Oe_config.themes_dir |> Option.iter begin fun _ ->
+        pref.theme <- self#get_theme_name();
+        Manual_reset_event.wait dark_theme_transition;
+        pref.theme_is_dark <- is_dark_theme#get;
+      end;
       pref.splashscreen_enabled <- check_splash#active;
       pref.tab_pos <- (match combo_orient#active
                        with 0 -> `TOP | 1 | 5 -> `RIGHT | 2 -> `BOTTOM | 3 | 4 -> `LEFT | _ -> assert false);
@@ -148,12 +179,15 @@ class pref_view title ?packing () =
         Gmisclib.Window.GeometryMemo.set_delayed Preferences.geometry_memo pref.Preferences.pref_geometry_delayed;*)
 
     method read pref =
+      (* Avoid to apply theme with the initial value *)
+      combo_theme_changed_id |> Option.iter combo_theme#misc#handler_block;
       Option.iter
         (fun _ -> combo_theme#set_active (
              match pref.theme with
              | Some name -> (try Xlist.pos name Gtk_theme.avail_themes with Not_found -> -1)
              | _ -> -1))
         Oe_config.themes_dir;
+      combo_theme_changed_id |> Option.iter combo_theme#misc#handler_unblock;
       check_splash#set_active pref.splashscreen_enabled;
       combo_orient#set_active (match pref.tab_pos, pref.tab_vertical_text with
           | `TOP, _ -> 0 | `RIGHT, false -> 1 | `BOTTOM, _ -> 2 | `LEFT, false -> 3
