@@ -30,7 +30,7 @@ let default_values =
         bg_color = { light = "#ffffff"; dark = "#000000" };
         weight = 700; style = `NORMAL; underline = `NONE; scale = 1.0; bg_default = true };
       { name = "define";
-        color = { light = "forestgreen"; dark = "#32cd32" };
+        color = { light = "forestgreen"; dark = "#009000" };
         bg_color = { light = "#ffffff"; dark = "#000000" };
         weight = 700; style = `NORMAL; underline = `NONE; scale = 1.0; bg_default = true };
       { name = "structure";
@@ -50,7 +50,7 @@ let default_values =
         bg_color = { light = "#ffffff"; dark = "#000000" };
         weight = 700; style = `NORMAL; underline = `NONE; scale = 1.0; bg_default = true };
       { name = "uident";
-        color = { light = "midnightblue"; dark = "#009acd" };
+        color = { light = "midnightblue"; dark = "#1B98C3" };
         bg_color = { light = "#ffffff"; dark = "#000000" };
         weight = 700; style = `NORMAL; underline = `NONE; scale = 1.0; bg_default = true };
       { name = "number";
@@ -90,7 +90,7 @@ let default_values =
         bg_color = { light = "#ffffff"; dark = "#000000" };
         weight = 0; style = `NORMAL; underline = `NONE; scale = 1.0; bg_default = true };
       { name = "highlight_current_line";
-        color = { light = "#c3ff96"; dark = "#183900" };
+        color = { light = "#c3ff96"; dark = "#223316" };
         bg_color = { light = "#ffffff"; dark = "#000000" };
         weight = 0; style = `NORMAL; underline = `NONE; scale = 1.0; bg_default = true };
       { name = "record_label";
@@ -169,6 +169,11 @@ let (??) = get_themed_color
 
 let set_themed_color color x =
   if preferences#get.Settings_t.theme_is_dark then color.Settings_t.dark <- x else color.Settings_t.light <- x
+
+(*let set_themed_opt_color (color : Settings_t.color option) x =
+  if preferences#get.Settings_t.theme_is_dark
+  then (match color.Settings_t.dark with Some c -> c.dark <- x | _ -> c.dark <- None)
+  else color.Settings_t.light <- x*)
 
 let new_themed_color x alt =
   if preferences#get.Settings_t.theme_is_dark

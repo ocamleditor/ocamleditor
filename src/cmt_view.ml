@@ -21,6 +21,7 @@
 *)
 
 open Printf
+open Preferences
 open GUtil
 open Cmt_format
 open Location
@@ -147,9 +148,9 @@ let empty () =
   let vp = GBin.viewport () in
   let label = GMisc.label ~xalign:0.5 ~yalign:0. ~xpad:3 ~ypad:3
       ~text:"Structure is not available" ~packing:vp#add () in
-  vp#misc#modify_bg [`NORMAL, `NAME pref.outline_color_nor_bg];
+  vp#misc#modify_bg [`NORMAL, `NAME ?? (pref.outline_color_nor_bg)];
   label#misc#modify_fg [
-    `NORMAL, `NAME pref.outline_color_nor_fg
+    `NORMAL, `NAME ?? (pref.outline_color_nor_fg)
   ];
   vp#coerce;;
 
@@ -230,16 +231,16 @@ class widget ~editor:_ ~page ?packing () =
       let pref = Preferences.preferences#get in
       view#misc#modify_font_by_name pref.editor_completion_font;
       view#misc#modify_base [
-        `NORMAL,   `NAME pref.outline_color_nor_bg;
-        `SELECTED, `NAME pref.outline_color_sel_bg;
-        `ACTIVE,   `NAME pref.outline_color_act_bg;
+        `NORMAL,   `NAME ?? (pref.outline_color_nor_bg);
+        `SELECTED, `NAME ?? (pref.outline_color_sel_bg);
+        `ACTIVE,   `NAME ?? (pref.outline_color_act_bg);
       ];
       view#misc#modify_text [
-        `NORMAL,   `NAME pref.outline_color_nor_fg;
-        `SELECTED, `NAME pref.outline_color_sel_fg;
-        `ACTIVE,   `NAME pref.outline_color_act_fg;
+        `NORMAL,   `NAME ?? (pref.outline_color_nor_fg);
+        `SELECTED, `NAME ?? (pref.outline_color_sel_fg);
+        `ACTIVE,   `NAME ?? (pref.outline_color_act_fg);
       ];
-      type_color <- pref.outline_color_types;
+      type_color <- ?? (pref.outline_color_types);
       type_color_re <- Str.regexp_string type_color;
       type_color_sel <- Color.name_of_gdk (view#misc#style#fg `SELECTED);
       type_color_sel_re <- Str.regexp_string type_color_sel;

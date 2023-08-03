@@ -38,7 +38,7 @@ let set_find_text_output_font_condensed context =
 
 let get_style_outline (pref : Settings_t.settings) =
   let style_outline, apply_outline =
-    let base_color = pref.outline_color_nor_bg in
+    let base_color = ?? (pref.outline_color_nor_bg) in
     let even, odd =
       match pref.outline_color_alt_rows with
       | None -> base_color, base_color

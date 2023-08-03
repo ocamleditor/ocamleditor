@@ -46,7 +46,7 @@ class "GtkTextView" style "s1"
   view#options#set_mark_occurrences
     (pref.editor_mark_occurrences_enabled,
      pref.editor_mark_occurrences_under_cursor,
-     pref.editor_mark_occurrences_bg_color);
+     ?? (pref.editor_mark_occurrences_bg_color));
   view#mark_occurrences_manager#mark();
   let show_indent_lines, indent_lines_color_s, pref_editor_indent_lines_color_d = pref.editor_indent_lines in
   view#options#set_show_indent_lines show_indent_lines;
@@ -57,7 +57,8 @@ class "GtkTextView" style "s1"
   view#modify_font pref.editor_base_font;
   view#options#set_word_wrap pref.editor_wrap;
   view#options#set_show_dot_leaders pref.editor_dot_leaders;
-  view#options#set_current_line_border_enabled pref.editor_current_line_border;
+  view#options#set_current_line_border_enabled
+    (if pref.theme_is_dark then false else pref.editor_current_line_border);
   view#options#set_text_color (Color.name_of_gdk (Preferences.editor_tag_color "lident"));
   let default_bg_color =
     if pref.editor_bg_color_theme then begin
@@ -85,7 +86,7 @@ class "GtkTextView" style "s1"
   view#options#set_smart_end (pref.editor_smart_keys_end = 1);
   if pref.editor_right_margin_visible then begin
     view#options#set_visible_right_margin
-      (Some (pref.editor_right_margin, `NAME pref.editor_right_margin_color))
+      (Some (pref.editor_right_margin, `NAME ?? (pref.editor_right_margin_color)))
   end else (view#options#set_visible_right_margin None);
   match List.find_opt (fun t -> t.name = "selection") editor_tags with
   | Some t ->

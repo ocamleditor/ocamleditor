@@ -141,19 +141,7 @@ class pref_color title ?packing () =
     val mutable signals = []
 
     initializer
-      let signal_id =
-        Preferences.preferences#connect#changed ~callback:begin fun pref ->
-          let tags = pref.editor_tags in
-          let color =
-            match tags |> List.find_opt (fun t -> t.Settings_t.name = "lident") with
-            | Some tag -> ?? (tag.color)
-            | _ -> "NONE"
-          in
-          Printf.printf "********************* %s %b -- %s \n%!"
-            (pref.theme |> Option.value ~default:"NO-THEME")  pref.theme_is_dark color;
-          self#read pref
-        end
-      in
+      let signal_id = Preferences.preferences#connect#changed ~callback:self#read in
       self#misc#connect#destroy ~callback:(fun () -> Preferences.preferences#connect#disconnect signal_id) |> ignore;
       ignore (view_tag#selection#connect#after#changed ~callback:self#read_tags);
       signals <- [
@@ -171,8 +159,8 @@ class pref_color title ?packing () =
           button_tag_bg#misc#set_sensitive (not check_tag_bg#active)));
 
     method write pref =
-      pref.editor_bg_color_popup <- color_name button_tag_bg_popup#color;
-      pref.editor_fg_color_popup <- color_name button_tag_fg_popup#color;
+      set_themed_color pref.editor_bg_color_popup (color_name button_tag_bg_popup#color);
+      set_themed_color pref.editor_fg_color_popup (color_name button_tag_fg_popup#color);
       pref.editor_bg_color_theme <- false;
       Preferences.set_themed_color pref.editor_bg_color_user (color_name button_default_bg#color);
       pref.editor_tags <- tags;
@@ -184,12 +172,12 @@ class pref_color title ?packing () =
       set_themed_color pref.output_stdout_fg_color (color_name button_fg_stdout#color);
       set_themed_color pref.output_err_fg_color (color_name button_fg_err#color);
       set_themed_color pref.output_warn_fg_color (color_name button_fg_warn#color);
-      pref.editor_ocamldoc_paragraph_bgcolor_1 <- Some (color_name button_odoc_bg#color);
-      pref.editor_ocamldoc_paragraph_bgcolor_2 <- Some (color_name button_odoc_bg2#color);
+      set_themed_color pref.editor_ocamldoc_paragraph_bgcolor_1 (Some (color_name button_odoc_bg#color));
+      set_themed_color pref.editor_ocamldoc_paragraph_bgcolor_2 (Some (color_name button_odoc_bg2#color));
 
     method read pref =
-      button_tag_bg_popup#set_color (GDraw.color (`NAME pref.editor_bg_color_popup));
-      button_tag_fg_popup#set_color (GDraw.color (`NAME pref.editor_fg_color_popup));
+      button_tag_bg_popup#set_color (GDraw.color (`NAME ?? (pref.editor_bg_color_popup)));
+      button_tag_fg_popup#set_color (GDraw.color (`NAME ?? (pref.editor_fg_color_popup)));
       tags <- List.sort (fun a b -> compare a.Settings_t.name b.name) pref.editor_tags;
       button_default_bg#set_color (GDraw.color (`NAME (Preferences.get_themed_color pref.editor_bg_color_user)));
       tag_model#clear();
@@ -206,8 +194,8 @@ class pref_color title ?packing () =
       button_fg_stdout#set_color (GDraw.color (`NAME ?? (pref.output_stdout_fg_color)));
       button_fg_err#set_color (GDraw.color (`NAME ?? (pref.output_err_fg_color)));
       button_fg_warn#set_color (GDraw.color (`NAME ?? (pref.output_warn_fg_color)));
-      Gaux.may pref.editor_ocamldoc_paragraph_bgcolor_1 ~f:(fun color -> button_odoc_bg#set_color (GDraw.color (`NAME color)));
-      Gaux.may pref.editor_ocamldoc_paragraph_bgcolor_2 ~f:(fun color -> button_odoc_bg2#set_color (GDraw.color (`NAME color)));
+      ?? (pref.editor_ocamldoc_paragraph_bgcolor_1) |> Gaux.may ~f:(fun color -> button_odoc_bg#set_color (GDraw.color (`NAME color)));
+      ?? (pref.editor_ocamldoc_paragraph_bgcolor_2) |> Gaux.may ~f:(fun color -> button_odoc_bg2#set_color (GDraw.color (`NAME color)));
       self#update_preview ();
 
     method private read_tags () =
@@ -269,8 +257,12 @@ class pref_color title ?packing () =
         editor_bg_color_theme = false;
         editor_bg_color_user =
           Preferences.new_themed_color (color_name button_default_bg#color) Preferences.preferences#get.editor_bg_color_user;
-        editor_ocamldoc_paragraph_bgcolor_1 = Some (color_name button_odoc_bg#color);
-        editor_ocamldoc_paragraph_bgcolor_2 = Some (color_name button_odoc_bg2#color);
+        editor_ocamldoc_paragraph_bgcolor_1 =
+          Preferences.new_themed_color
+            (Some (color_name button_odoc_bg#color)) Preferences.preferences#get.editor_ocamldoc_paragraph_bgcolor_1;
+        editor_ocamldoc_paragraph_bgcolor_2 =
+          Preferences.new_themed_color
+            (Some (color_name button_odoc_bg#color)) Preferences.preferences#get.editor_ocamldoc_paragraph_bgcolor_2;
       } in
       temp_pref.editor_tags <- tags;
       let tag_names, colors = tags |> List.map (fun t -> t.Settings_t.name, t) |> List.split in
@@ -300,26 +292,31 @@ and pref_color_structure title ?packing () =
   let button_color_act_bg = GButton.color_button ~packing:(table#attach ~top:4 ~left:1 ~expand:`X) () in
   let button_color_act_fg = GButton.color_button ~packing:(table#attach ~top:5 ~left:1 ~expand:`X) () in
   let button_color_types  = GButton.color_button ~packing:(table#attach ~top:6 ~left:1 ~expand:`X) () in
-  object
+  object (self)
     inherit page title vbox
+
+    initializer
+      let signal_id = Preferences.preferences#connect#changed ~callback:self#read in
+      self#misc#connect#destroy ~callback:(fun () -> Preferences.preferences#connect#disconnect signal_id) |> ignore;
+
     method read pref =
-      button_color_types#set_color (GDraw.color (`NAME pref.outline_color_types));
-      button_color_nor_bg#set_color (GDraw.color (`NAME pref.outline_color_nor_bg));
-      button_color_nor_fg#set_color (GDraw.color (`NAME pref.outline_color_nor_fg));
-      button_color_sel_bg#set_color (GDraw.color (`NAME pref.outline_color_sel_bg));
-      button_color_sel_fg#set_color (GDraw.color (`NAME pref.outline_color_sel_fg));
-      button_color_act_bg#set_color (GDraw.color (`NAME pref.outline_color_act_bg));
-      button_color_act_fg#set_color (GDraw.color (`NAME pref.outline_color_act_fg));
+      button_color_types#set_color (GDraw.color (`NAME ?? (pref.outline_color_types)));
+      button_color_nor_bg#set_color (GDraw.color (`NAME ?? (pref.outline_color_nor_bg)));
+      button_color_nor_fg#set_color (GDraw.color (`NAME ?? (pref.outline_color_nor_fg)));
+      button_color_sel_bg#set_color (GDraw.color (`NAME ?? (pref.outline_color_sel_bg)));
+      button_color_sel_fg#set_color (GDraw.color (`NAME ?? (pref.outline_color_sel_fg)));
+      button_color_act_bg#set_color (GDraw.color (`NAME ?? (pref.outline_color_act_bg)));
+      button_color_act_fg#set_color (GDraw.color (`NAME ?? (pref.outline_color_act_fg)));
       check_alt_rows#set_active (pref.outline_color_alt_rows <> None);
 
     method write pref =
-      pref.outline_color_types <- color_name button_color_types#color;
-      pref.outline_color_nor_bg <- color_name button_color_nor_bg#color;
-      pref.outline_color_nor_fg <- color_name button_color_nor_fg#color;
-      pref.outline_color_sel_bg <- color_name button_color_sel_bg#color;
-      pref.outline_color_sel_fg <- color_name button_color_sel_fg#color;
-      pref.outline_color_act_bg <- color_name button_color_act_bg#color;
-      pref.outline_color_act_fg <- color_name button_color_act_fg#color;
+      set_themed_color pref.outline_color_types (color_name button_color_types#color);
+      set_themed_color pref.outline_color_nor_bg (color_name button_color_nor_bg#color);
+      set_themed_color pref.outline_color_nor_fg (color_name button_color_nor_fg#color);
+      set_themed_color pref.outline_color_sel_bg (color_name button_color_sel_bg#color);
+      set_themed_color pref.outline_color_sel_fg (color_name button_color_sel_fg#color);
+      set_themed_color pref.outline_color_act_bg (color_name button_color_act_bg#color);
+      set_themed_color pref.outline_color_act_fg (color_name button_color_act_fg#color);
       pref.outline_color_alt_rows <- if check_alt_rows#active then
           Some 0.95
         else None

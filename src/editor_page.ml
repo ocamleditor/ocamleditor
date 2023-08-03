@@ -23,6 +23,7 @@
 
 open Printf
 open Miscellanea
+open Preferences
 open GUtil
 
 let create_view ~project ~buffer ?file ?packing () =
@@ -246,7 +247,7 @@ class page ?file ~project ~scroll_offset ~offset ~editor () =
 
     method private set_tag_annot_background () =
       Option.iter (fun annot_type ->
-          annot_type#tag#set_property (`BACKGROUND Preferences.preferences#get.editor_bg_color_popup)) annot_type;
+          annot_type#tag#set_property (`BACKGROUND ?? (Preferences.preferences#get.editor_bg_color_popup))) annot_type;
 
     method read_only = read_only
     method set_read_only ro =

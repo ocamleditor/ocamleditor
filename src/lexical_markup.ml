@@ -52,7 +52,7 @@ let parse pref =
   let tags = pref.Settings_t.editor_tags in
   let bgcolor_highlight = preferences#get.editor_mark_occurrences_bg_color in
   let span_highlight text =
-    String.concat "" ["<span bgcolor='"; bgcolor_highlight; "'>"; (Glib.Markup.escape_text text); "</span>"]
+    String.concat "" ["<span bgcolor='"; ?? bgcolor_highlight; "'>"; (Glib.Markup.escape_text text); "</span>"]
   in
   let span (highlight, tagname) =
     match List.find_opt (fun t -> t.Settings_t.name = tagname) tags with
@@ -60,7 +60,7 @@ let parse pref =
         let weight    = sprintf " font_weight='%d'" t.weight in
         let style     = match t.style with `ITALIC -> " font_style='italic'" | _ -> "" in
         let underline = match t.underline with `NONE -> "" | _ -> " underline='single'" in
-        let bgcolor   = if highlight then " bgcolor='" ^ bgcolor_highlight ^"'" else "" in
+        let bgcolor   = if highlight then " bgcolor='" ^ (?? bgcolor_highlight) ^"'" else "" in
         String.concat "" ["<span color='"; ??(t.color); "'"; weight; style; underline; bgcolor; ">"]
     | _ -> assert false
   in

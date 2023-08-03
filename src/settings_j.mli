@@ -1,20 +1,17 @@
 (* Auto-generated from "settings.atd" *)
 [@@@ocaml.warning "-27-32-33-35-39"]
 
-type color = Settings_t.color = {
-  mutable light: string;
-  mutable dark: string
-}
+type 'a color = 'a Settings_t.color = { mutable light: 'a; mutable dark: 'a }
 
 type editor_tag = Settings_t.editor_tag = {
   mutable name: string;
-  mutable color: color;
+  mutable color: string color;
   mutable weight: int;
   mutable style: [ `NORMAL | `ITALIC ];
   mutable underline: [ `NONE | `SINGLE ];
   mutable scale: float;
   mutable bg_default: bool;
-  mutable bg_color: color
+  mutable bg_color: string color
 }
 
 type settings = Settings_t.settings = {
@@ -41,20 +38,20 @@ type settings = Settings_t.settings = {
   mutable odoc_font: string;
   mutable outline_show_types: bool;
   mutable outline_width: int;
-  mutable outline_color_types: string;
-  mutable outline_color_nor_bg: string;
-  mutable outline_color_nor_fg: string;
-  mutable outline_color_sel_bg: string;
-  mutable outline_color_sel_fg: string;
-  mutable outline_color_act_bg: string;
-  mutable outline_color_act_fg: string;
+  mutable outline_color_types: string color;
+  mutable outline_color_nor_bg: string color;
+  mutable outline_color_nor_fg: string color;
+  mutable outline_color_sel_bg: string color;
+  mutable outline_color_sel_fg: string color;
+  mutable outline_color_act_bg: string color;
+  mutable outline_color_act_fg: string color;
   mutable outline_color_alt_rows: float option;
   mutable output_font: string;
-  mutable output_bg_color: color;
-  mutable output_stdin_fg_color: color;
-  mutable output_stdout_fg_color: color;
-  mutable output_err_fg_color: color;
-  mutable output_warn_fg_color: color;
+  mutable output_bg_color: string color;
+  mutable output_stdin_fg_color: string color;
+  mutable output_stdout_fg_color: string color;
+  mutable output_err_fg_color: string color;
+  mutable output_warn_fg_color: string color;
   mutable program_diff: string;
   mutable program_diff_graphical: string;
   mutable program_pdf_viewer: string;
@@ -71,9 +68,9 @@ type settings = Settings_t.settings = {
   mutable editor_annot_type_tooltips_impl: int;
   mutable editor_bak: bool;
   mutable editor_base_font: string;
-  mutable editor_bg_color_popup: string;
+  mutable editor_bg_color_popup: string color;
   mutable editor_bg_color_theme: bool;
-  mutable editor_bg_color_user: color;
+  mutable editor_bg_color_user: string color;
   mutable editor_code_folding_enabled: bool;
   mutable editor_completion_font: string;
   mutable editor_completion_greek_letters: bool;
@@ -86,7 +83,7 @@ type settings = Settings_t.settings = {
   mutable editor_err_gutter: bool;
   mutable editor_err_tooltip: bool;
   mutable editor_err_underline: bool;
-  mutable editor_fg_color_popup: string;
+  mutable editor_fg_color_popup: string color;
   mutable editor_format_on_save: bool;
   mutable editor_highlight_current_line: bool;
   mutable editor_indent_config: string;
@@ -95,12 +92,12 @@ type settings = Settings_t.settings = {
   mutable editor_left_margin: int;
   mutable editor_mark_occurrences_enabled: bool;
   mutable editor_mark_occurrences_under_cursor: bool;
-  mutable editor_mark_occurrences_bg_color: string;
-  mutable editor_ocamldoc_paragraph_bgcolor_1: string option;
-  mutable editor_ocamldoc_paragraph_bgcolor_2: string option;
+  mutable editor_mark_occurrences_bg_color: string color;
+  mutable editor_ocamldoc_paragraph_bgcolor_1: string option color;
+  mutable editor_ocamldoc_paragraph_bgcolor_2: string option color;
   mutable editor_pixels_lines: (int * int);
   mutable editor_right_margin: int;
-  mutable editor_right_margin_color: string;
+  mutable editor_right_margin_color: string color;
   mutable editor_right_margin_visible: bool;
   mutable editor_save_all_bef_comp: bool;
   mutable editor_search_word_at_cursor: bool;
@@ -117,11 +114,13 @@ type settings = Settings_t.settings = {
 }
 
 val write_color :
-  Buffer.t -> color -> unit
+  (Buffer.t -> 'a -> unit) ->
+  Buffer.t -> 'a color -> unit
   (** Output a JSON value of type {!type:color}. *)
 
 val string_of_color :
-  ?len:int -> color -> string
+  (Buffer.t -> 'a -> unit) ->
+  ?len:int -> 'a color -> string
   (** Serialize a value of type {!type:color}
       into a JSON string.
       @param len specifies the initial length
@@ -129,11 +128,13 @@ val string_of_color :
                  Default: 1024. *)
 
 val read_color :
-  Yojson.Safe.lexer_state -> Lexing.lexbuf -> color
+  (Yojson.Safe.lexer_state -> Lexing.lexbuf -> 'a) ->
+  Yojson.Safe.lexer_state -> Lexing.lexbuf -> 'a color
   (** Input JSON data of type {!type:color}. *)
 
 val color_of_string :
-  string -> color
+  (Yojson.Safe.lexer_state -> Lexing.lexbuf -> 'a) ->
+  string -> 'a color
   (** Deserialize JSON data of type {!type:color}. *)
 
 val write_editor_tag :

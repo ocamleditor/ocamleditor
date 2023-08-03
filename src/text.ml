@@ -23,6 +23,7 @@
 open Printf
 open Text_util
 open Miscellanea
+open Preferences
 
 (** Buffer *)
 class buffer =
@@ -785,7 +786,7 @@ and view ?project ?buffer () =
           begin
             let start = ref (start#set_line_index 0) in
             let stop = stop#forward_line#set_line_index 0 in
-            match Preferences.preferences#get.editor_ocamldoc_paragraph_bgcolor_1 with
+            match ?? (Preferences.preferences#get.editor_ocamldoc_paragraph_bgcolor_1) with
             | Some color ->
                 drawable#set_foreground (`NAME (Color.add_value color 0.08));
                 drawable#set_line_attributes ~width:1 ~style:`SOLID ();

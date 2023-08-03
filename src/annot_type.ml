@@ -21,6 +21,7 @@
 *)
 
 open Printf
+open Preferences
 
 type source_point = [`ITER of GText.iter | `XY of (int * int)]
 
@@ -162,11 +163,11 @@ class annot_type ~page =
       | Some markup ->
           let popup = GWindow.window ~kind:`POPUP ~type_hint:`MENU
               ~decorated:false ~focus_on_map:false ~border_width:1 ~show:false () in
-          let color = Color.add_value Preferences.preferences#get.editor_bg_color_popup 0.1 in
+          let color = Color.add_value (?? (Preferences.preferences#get.editor_bg_color_popup)) 0.1 in
           popup#misc#modify_bg [`NORMAL, `NAME color];
           popup#misc#set_can_focus false;
           let ebox = GBin.event_box ~packing:popup#add () in
-          ebox#misc#modify_bg [`NORMAL, (`NAME Preferences.preferences#get.editor_bg_color_popup)];
+          ebox#misc#modify_bg [`NORMAL, (`NAME ?? (Preferences.preferences#get.editor_bg_color_popup))];
           let label = GMisc.label ~markup ~xalign:0.0 ~xpad:4 ~ypad:4 ~packing:ebox#add () in
           label#misc#modify_font_by_name Preferences.preferences#get.editor_completion_font;
           tag_popup <- Some popup;

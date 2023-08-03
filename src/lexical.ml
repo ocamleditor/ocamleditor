@@ -42,9 +42,13 @@ let init_tags ?(tags=(!tags)) ?(colors=(!colors))
         let tag = tb#create_tag ~name:tagname properties in
         if tagname = "ocamldoc" then begin
           if ocamldoc_paragraph_enabled then begin
-            Gaux.may ocamldoc_paragraph_bgcolor_2 ~f:begin fun bg2 ->
-              Gmisclib.Util.set_tag_paragraph_background tag bg2;
-            end;
+
+            ?? ocamldoc_paragraph_bgcolor_2
+            |> Gaux.may ~f:(fun c -> Gmisclib.Util.set_tag_paragraph_background tag c);
+
+            (*            Gaux.may ocamldoc_paragraph_bgcolor_2 ~f:begin fun bg2 ->
+                          Gmisclib.Util.set_tag_paragraph_background tag (?? bg2);
+                          end;*)
           end;
           Gaux.may (table#lookup "ocamldoc-paragraph") ~f:table#remove;
           let properties = [
@@ -57,9 +61,12 @@ let init_tags ?(tags=(!tags)) ?(colors=(!colors))
           ] |> List.filter_map (fun x -> x) in
           let tag = tb#create_tag ~name:"ocamldoc-paragraph" properties in
           if ocamldoc_paragraph_enabled then begin
-            Gaux.may ocamldoc_paragraph_bgcolor_1 ~f:begin fun bg1 ->
-              Gmisclib.Util.set_tag_paragraph_background tag bg1;
-            end
+            ?? ocamldoc_paragraph_bgcolor_1
+            |> Gaux.may ~f:(fun c -> Gmisclib.Util.set_tag_paragraph_background tag c);
+
+            (*            Gaux.may ocamldoc_paragraph_bgcolor_1 ~f:begin fun bg1 ->
+                          Gmisclib.Util.set_tag_paragraph_background tag (?? bg1);
+                          end*)
           end
         end
       end

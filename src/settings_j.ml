@@ -1,20 +1,17 @@
 (* Auto-generated from "settings.atd" *)
 [@@@ocaml.warning "-27-32-33-35-39"]
 
-type color = Settings_t.color = {
-  mutable light: string;
-  mutable dark: string
-}
+type 'a color = 'a Settings_t.color = { mutable light: 'a; mutable dark: 'a }
 
 type editor_tag = Settings_t.editor_tag = {
   mutable name: string;
-  mutable color: color;
+  mutable color: string color;
   mutable weight: int;
   mutable style: [ `NORMAL | `ITALIC ];
   mutable underline: [ `NONE | `SINGLE ];
   mutable scale: float;
   mutable bg_default: bool;
-  mutable bg_color: color
+  mutable bg_color: string color
 }
 
 type settings = Settings_t.settings = {
@@ -41,20 +38,20 @@ type settings = Settings_t.settings = {
   mutable odoc_font: string;
   mutable outline_show_types: bool;
   mutable outline_width: int;
-  mutable outline_color_types: string;
-  mutable outline_color_nor_bg: string;
-  mutable outline_color_nor_fg: string;
-  mutable outline_color_sel_bg: string;
-  mutable outline_color_sel_fg: string;
-  mutable outline_color_act_bg: string;
-  mutable outline_color_act_fg: string;
+  mutable outline_color_types: string color;
+  mutable outline_color_nor_bg: string color;
+  mutable outline_color_nor_fg: string color;
+  mutable outline_color_sel_bg: string color;
+  mutable outline_color_sel_fg: string color;
+  mutable outline_color_act_bg: string color;
+  mutable outline_color_act_fg: string color;
   mutable outline_color_alt_rows: float option;
   mutable output_font: string;
-  mutable output_bg_color: color;
-  mutable output_stdin_fg_color: color;
-  mutable output_stdout_fg_color: color;
-  mutable output_err_fg_color: color;
-  mutable output_warn_fg_color: color;
+  mutable output_bg_color: string color;
+  mutable output_stdin_fg_color: string color;
+  mutable output_stdout_fg_color: string color;
+  mutable output_err_fg_color: string color;
+  mutable output_warn_fg_color: string color;
   mutable program_diff: string;
   mutable program_diff_graphical: string;
   mutable program_pdf_viewer: string;
@@ -71,9 +68,9 @@ type settings = Settings_t.settings = {
   mutable editor_annot_type_tooltips_impl: int;
   mutable editor_bak: bool;
   mutable editor_base_font: string;
-  mutable editor_bg_color_popup: string;
+  mutable editor_bg_color_popup: string color;
   mutable editor_bg_color_theme: bool;
-  mutable editor_bg_color_user: color;
+  mutable editor_bg_color_user: string color;
   mutable editor_code_folding_enabled: bool;
   mutable editor_completion_font: string;
   mutable editor_completion_greek_letters: bool;
@@ -86,7 +83,7 @@ type settings = Settings_t.settings = {
   mutable editor_err_gutter: bool;
   mutable editor_err_tooltip: bool;
   mutable editor_err_underline: bool;
-  mutable editor_fg_color_popup: string;
+  mutable editor_fg_color_popup: string color;
   mutable editor_format_on_save: bool;
   mutable editor_highlight_current_line: bool;
   mutable editor_indent_config: string;
@@ -95,12 +92,12 @@ type settings = Settings_t.settings = {
   mutable editor_left_margin: int;
   mutable editor_mark_occurrences_enabled: bool;
   mutable editor_mark_occurrences_under_cursor: bool;
-  mutable editor_mark_occurrences_bg_color: string;
-  mutable editor_ocamldoc_paragraph_bgcolor_1: string option;
-  mutable editor_ocamldoc_paragraph_bgcolor_2: string option;
+  mutable editor_mark_occurrences_bg_color: string color;
+  mutable editor_ocamldoc_paragraph_bgcolor_1: string option color;
+  mutable editor_ocamldoc_paragraph_bgcolor_2: string option color;
   mutable editor_pixels_lines: (int * int);
   mutable editor_right_margin: int;
-  mutable editor_right_margin_color: string;
+  mutable editor_right_margin_color: string color;
   mutable editor_right_margin_visible: bool;
   mutable editor_save_all_bef_comp: bool;
   mutable editor_search_word_at_cursor: bool;
@@ -116,8 +113,8 @@ type settings = Settings_t.settings = {
   mutable editor_wrap: bool
 }
 
-let write_color : _ -> color -> _ = (
-  fun ob (x : color) ->
+let write__string_color : _ -> _ color -> _ = (
+  fun ob (x : _ color) ->
     Buffer.add_char ob '{';
     let is_first = ref true in
     if !is_first then
@@ -140,11 +137,11 @@ let write_color : _ -> color -> _ = (
       ob x.dark;
     Buffer.add_char ob '}';
 )
-let string_of_color ?(len = 1024) x =
+let string_of__string_color ?(len = 1024) x =
   let ob = Buffer.create len in
-  write_color ob x;
+  write__string_color ob x;
   Buffer.contents ob
-let read_color = (
+let read__string_color = (
   fun p lb ->
     Yojson.Safe.read_space p lb;
     Yojson.Safe.read_lcurl p lb;
@@ -264,11 +261,11 @@ let read_color = (
             light = (match !field_light with Some x -> x | None -> Atdgen_runtime.Oj_run.missing_field p "light");
             dark = (match !field_dark with Some x -> x | None -> Atdgen_runtime.Oj_run.missing_field p "dark");
           }
-         : color)
+         : _ color)
       )
 )
-let color_of_string s =
-  read_color (Yojson.Safe.init_lexer ()) (Lexing.from_string s)
+let _string_color_of_string s =
+  read__string_color (Yojson.Safe.init_lexer ()) (Lexing.from_string s)
 let write_editor_tag : _ -> editor_tag -> _ = (
   fun ob (x : editor_tag) ->
     Buffer.add_char ob '{';
@@ -288,7 +285,7 @@ let write_editor_tag : _ -> editor_tag -> _ = (
       Buffer.add_char ob ',';
       Buffer.add_string ob "\"color\":";
     (
-      write_color
+      write__string_color
     )
       ob x.color;
     if !is_first then
@@ -348,7 +345,7 @@ let write_editor_tag : _ -> editor_tag -> _ = (
       Buffer.add_char ob ',';
       Buffer.add_string ob "\"bg_color\":";
     (
-      write_color
+      write__string_color
     )
       ob x.bg_color;
     Buffer.add_char ob '}';
@@ -474,7 +471,7 @@ let read_editor_tag = (
             field_color := (
               Some (
                 (
-                  read_color
+                  read__string_color
                 ) p lb
               )
             );
@@ -580,7 +577,7 @@ let read_editor_tag = (
             field_bg_color := (
               Some (
                 (
-                  read_color
+                  read__string_color
                 ) p lb
               )
             );
@@ -693,7 +690,7 @@ let read_editor_tag = (
               field_color := (
                 Some (
                   (
-                    read_color
+                    read__string_color
                   ) p lb
                 )
               );
@@ -799,7 +796,7 @@ let read_editor_tag = (
               field_bg_color := (
                 Some (
                   (
-                    read_color
+                    read__string_color
                   ) p lb
                 )
               );
@@ -883,6 +880,159 @@ let read__string_option = (
 )
 let _string_option_of_string s =
   read__string_option (Yojson.Safe.init_lexer ()) (Lexing.from_string s)
+let write__string_option_color : _ -> _ color -> _ = (
+  fun ob (x : _ color) ->
+    Buffer.add_char ob '{';
+    let is_first = ref true in
+    if !is_first then
+      is_first := false
+    else
+      Buffer.add_char ob ',';
+      Buffer.add_string ob "\"light\":";
+    (
+      write__string_option
+    )
+      ob x.light;
+    if !is_first then
+      is_first := false
+    else
+      Buffer.add_char ob ',';
+      Buffer.add_string ob "\"dark\":";
+    (
+      write__string_option
+    )
+      ob x.dark;
+    Buffer.add_char ob '}';
+)
+let string_of__string_option_color ?(len = 1024) x =
+  let ob = Buffer.create len in
+  write__string_option_color ob x;
+  Buffer.contents ob
+let read__string_option_color = (
+  fun p lb ->
+    Yojson.Safe.read_space p lb;
+    Yojson.Safe.read_lcurl p lb;
+    let field_light = ref (None) in
+    let field_dark = ref (None) in
+    try
+      Yojson.Safe.read_space p lb;
+      Yojson.Safe.read_object_end lb;
+      Yojson.Safe.read_space p lb;
+      let f =
+        fun s pos len ->
+          if pos < 0 || len < 0 || pos + len > String.length s then
+            invalid_arg (Printf.sprintf "out-of-bounds substring position or length: string = %S, requested position = %i, requested length = %i" s pos len);
+          match len with
+            | 4 -> (
+                if String.unsafe_get s pos = 'd' && String.unsafe_get s (pos+1) = 'a' && String.unsafe_get s (pos+2) = 'r' && String.unsafe_get s (pos+3) = 'k' then (
+                  1
+                )
+                else (
+                  -1
+                )
+              )
+            | 5 -> (
+                if String.unsafe_get s pos = 'l' && String.unsafe_get s (pos+1) = 'i' && String.unsafe_get s (pos+2) = 'g' && String.unsafe_get s (pos+3) = 'h' && String.unsafe_get s (pos+4) = 't' then (
+                  0
+                )
+                else (
+                  -1
+                )
+              )
+            | _ -> (
+                -1
+              )
+      in
+      let i = Yojson.Safe.map_ident p f lb in
+      Atdgen_runtime.Oj_run.read_until_field_value p lb;
+      (
+        match i with
+          | 0 ->
+            field_light := (
+              Some (
+                (
+                  read__string_option
+                ) p lb
+              )
+            );
+          | 1 ->
+            field_dark := (
+              Some (
+                (
+                  read__string_option
+                ) p lb
+              )
+            );
+          | _ -> (
+              Yojson.Safe.skip_json p lb
+            )
+      );
+      while true do
+        Yojson.Safe.read_space p lb;
+        Yojson.Safe.read_object_sep p lb;
+        Yojson.Safe.read_space p lb;
+        let f =
+          fun s pos len ->
+            if pos < 0 || len < 0 || pos + len > String.length s then
+              invalid_arg (Printf.sprintf "out-of-bounds substring position or length: string = %S, requested position = %i, requested length = %i" s pos len);
+            match len with
+              | 4 -> (
+                  if String.unsafe_get s pos = 'd' && String.unsafe_get s (pos+1) = 'a' && String.unsafe_get s (pos+2) = 'r' && String.unsafe_get s (pos+3) = 'k' then (
+                    1
+                  )
+                  else (
+                    -1
+                  )
+                )
+              | 5 -> (
+                  if String.unsafe_get s pos = 'l' && String.unsafe_get s (pos+1) = 'i' && String.unsafe_get s (pos+2) = 'g' && String.unsafe_get s (pos+3) = 'h' && String.unsafe_get s (pos+4) = 't' then (
+                    0
+                  )
+                  else (
+                    -1
+                  )
+                )
+              | _ -> (
+                  -1
+                )
+        in
+        let i = Yojson.Safe.map_ident p f lb in
+        Atdgen_runtime.Oj_run.read_until_field_value p lb;
+        (
+          match i with
+            | 0 ->
+              field_light := (
+                Some (
+                  (
+                    read__string_option
+                  ) p lb
+                )
+              );
+            | 1 ->
+              field_dark := (
+                Some (
+                  (
+                    read__string_option
+                  ) p lb
+                )
+              );
+            | _ -> (
+                Yojson.Safe.skip_json p lb
+              )
+        );
+      done;
+      assert false;
+    with Yojson.End_of_object -> (
+        (
+          {
+            light = (match !field_light with Some x -> x | None -> Atdgen_runtime.Oj_run.missing_field p "light");
+            dark = (match !field_dark with Some x -> x | None -> Atdgen_runtime.Oj_run.missing_field p "dark");
+          }
+         : _ color)
+      )
+)
+let _string_option_color_of_string s =
+  read__string_option_color (Yojson.Safe.init_lexer ()) (Lexing.from_string s)
 let write__int_option = (
   Atdgen_runtime.Oj_run.write_option (
     Yojson.Safe.write_int
@@ -1286,80 +1436,80 @@ let write_settings : _ -> settings -> _ = (
       )
         ob x.outline_width;
     );
-    if x.outline_color_types <> "#877033" then (
+    if x.outline_color_types <> {light="#877033"; dark="#C0A661"} then (
       if !is_first then
         is_first := false
       else
         Buffer.add_char ob ',';
         Buffer.add_string ob "\"outline_color_types\":";
       (
-        Yojson.Safe.write_string
+        write__string_color
       )
         ob x.outline_color_types;
     );
-    if x.outline_color_nor_bg <> "#FFFFFF" then (
+    if x.outline_color_nor_bg <> {light="#FFFFFF"; dark="#1E1E1E"} then (
       if !is_first then
         is_first := false
       else
         Buffer.add_char ob ',';
         Buffer.add_string ob "\"outline_color_nor_bg\":";
       (
-        Yojson.Safe.write_string
+        write__string_color
       )
         ob x.outline_color_nor_bg;
     );
-    if x.outline_color_nor_fg <> "#000000" then (
+    if x.outline_color_nor_fg <> {light="#000000"; dark="#E1E1E1"} then (
       if !is_first then
         is_first := false
       else
         Buffer.add_char ob ',';
         Buffer.add_string ob "\"outline_color_nor_fg\":";
       (
-        Yojson.Safe.write_string
+        write__string_color
       )
         ob x.outline_color_nor_fg;
     );
-    if x.outline_color_sel_bg <> "#1F80ED" then (
+    if x.outline_color_sel_bg <> {light="#1F80ED"; dark="#4B81AD"} then (
       if !is_first then
         is_first := false
       else
         Buffer.add_char ob ',';
         Buffer.add_string ob "\"outline_color_sel_bg\":";
       (
-        Yojson.Safe.write_string
+        write__string_color
       )
         ob x.outline_color_sel_bg;
     );
-    if x.outline_color_sel_fg <> "#FFFFFF" then (
+    if x.outline_color_sel_fg <> {light="#FFFFFF"; dark="#FFFFFF"} then (
       if !is_first then
         is_first := false
       else
         Buffer.add_char ob ',';
         Buffer.add_string ob "\"outline_color_sel_fg\":";
       (
-        Yojson.Safe.write_string
+        write__string_color
       )
         ob x.outline_color_sel_fg;
     );
-    if x.outline_color_act_bg <> "#B1C3D8" then (
+    if x.outline_color_act_bg <> {light="#B1C3D8"; dark="#B1C3D8"} then (
       if !is_first then
         is_first := false
       else
         Buffer.add_char ob ',';
         Buffer.add_string ob "\"outline_color_act_bg\":";
       (
-        Yojson.Safe.write_string
+        write__string_color
       )
         ob x.outline_color_act_bg;
     );
-    if x.outline_color_act_fg <> "#000000" then (
+    if x.outline_color_act_fg <> {light="#000000"; dark="#1E1E1E"} then (
       if !is_first then
         is_first := false
       else
         Buffer.add_char ob ',';
         Buffer.add_string ob "\"outline_color_act_fg\":";
       (
-        Yojson.Safe.write_string
+        write__string_color
       )
         ob x.outline_color_act_fg;
     );
@@ -1385,58 +1535,58 @@ let write_settings : _ -> settings -> _ = (
       )
         ob x.output_font;
     );
-    if x.output_bg_color <> {light="#FFFFFF"; dark="#1e1e1e"} then (
+    if x.output_bg_color <> {light="#FFFFFF"; dark="#1E1E1E"} then (
       if !is_first then
         is_first := false
       else
         Buffer.add_char ob ',';
         Buffer.add_string ob "\"output_bg_color\":";
       (
-        write_color
+        write__string_color
       )
         ob x.output_bg_color;
     );
-    if x.output_stdin_fg_color <> {light="#0000FF"; dark="#0000c0"} then (
+    if x.output_stdin_fg_color <> {light="#0000FF"; dark="#5050FF"} then (
       if !is_first then
         is_first := false
       else
         Buffer.add_char ob ',';
         Buffer.add_string ob "\"output_stdin_fg_color\":";
       (
-        write_color
+        write__string_color
       )
         ob x.output_stdin_fg_color;
     );
-    if x.output_stdout_fg_color <> {light="#000000"; dark="#e1e1e1"} then (
+    if x.output_stdout_fg_color <> {light="#000000"; dark="#E1E1E1"} then (
       if !is_first then
         is_first := false
       else
         Buffer.add_char ob ',';
         Buffer.add_string ob "\"output_stdout_fg_color\":";
       (
-        write_color
+        write__string_color
       )
         ob x.output_stdout_fg_color;
     );
-    if x.output_err_fg_color <> {light="#FF0000"; dark="#c00000"} then (
+    if x.output_err_fg_color <> {light="#FF0000"; dark="#FF5050"} then (
       if !is_first then
         is_first := false
       else
         Buffer.add_char ob ',';
         Buffer.add_string ob "\"output_err_fg_color\":";
       (
-        write_color
+        write__string_color
       )
         ob x.output_err_fg_color;
     );
-    if x.output_warn_fg_color <> {light="darkorange"; dark="#C05000"} then (
+    if x.output_warn_fg_color <> {light="darkorange"; dark="#FFC050"} then (
       if !is_first then
         is_first := false
       else
         Buffer.add_char ob ',';
         Buffer.add_string ob "\"output_warn_fg_color\":";
       (
-        write_color
+        write__string_color
       )
         ob x.output_warn_fg_color;
     );
@@ -1621,14 +1771,14 @@ let write_settings : _ -> settings -> _ = (
       )
         ob x.editor_base_font;
     );
-    if x.editor_bg_color_popup <> "#FFE375" then (
+    if x.editor_bg_color_popup <> {light="#FFE375"; dark="#505050"} then (
       if !is_first then
         is_first := false
       else
         Buffer.add_char ob ',';
         Buffer.add_string ob "\"editor_bg_color_popup\":";
       (
-        Yojson.Safe.write_string
+        write__string_color
       )
         ob x.editor_bg_color_popup;
     );
@@ -1650,7 +1800,7 @@ let write_settings : _ -> settings -> _ = (
         Buffer.add_char ob ',';
         Buffer.add_string ob "\"editor_bg_color_user\":";
       (
-        write_color
+        write__string_color
       )
         ob x.editor_bg_color_user;
     );
@@ -1786,14 +1936,14 @@ let write_settings : _ -> settings -> _ = (
       )
         ob x.editor_err_underline;
     );
-    if x.editor_fg_color_popup <> "#000000" then (
+    if x.editor_fg_color_popup <> {light="#000000"; dark="#E1E1E1"} then (
       if !is_first then
         is_first := false
       else
         Buffer.add_char ob ',';
         Buffer.add_string ob "\"editor_fg_color_popup\":";
       (
-        Yojson.Safe.write_string
+        write__string_color
       )
         ob x.editor_fg_color_popup;
     );
@@ -1904,40 +2054,40 @@ let write_settings : _ -> settings -> _ = (
       )
         ob x.editor_mark_occurrences_under_cursor;
     );
-    if x.editor_mark_occurrences_bg_color <> "#c8ffc8" then (
+    if x.editor_mark_occurrences_bg_color <> {light="#c8ffc8"; dark="#455800"} then (
       if !is_first then
         is_first := false
       else
         Buffer.add_char ob ',';
         Buffer.add_string ob "\"editor_mark_occurrences_bg_color\":";
       (
-        Yojson.Safe.write_string
+        write__string_color
       )
         ob x.editor_mark_occurrences_bg_color;
     );
-    if x.editor_ocamldoc_paragraph_bgcolor_1 <> Some "#FAF7FA" then (
+    if x.editor_ocamldoc_paragraph_bgcolor_1 <> {light=Some "#FAF7FA"; dark=Some "#303030"} then (
       if !is_first then
         is_first := false
       else
         Buffer.add_char ob ',';
         Buffer.add_string ob "\"editor_ocamldoc_paragraph_bgcolor_1\":";
       (
-        write__string_option
+        write__string_option_color
       )
         ob x.editor_ocamldoc_paragraph_bgcolor_1;
     );
-    if x.editor_ocamldoc_paragraph_bgcolor_2 <> Some "#FAF7FA" then (
+    if x.editor_ocamldoc_paragraph_bgcolor_2 <> {light=Some "#FAF7FA"; dark=Some "#303030"} then (
       if !is_first then
         is_first := false
       else
         Buffer.add_char ob ',';
         Buffer.add_string ob "\"editor_ocamldoc_paragraph_bgcolor_2\":";
       (
-        write__string_option
+        write__string_option_color
       )
         ob x.editor_ocamldoc_paragraph_bgcolor_2;
     );
-    if x.editor_pixels_lines <> (0, 2) then (
+    if x.editor_pixels_lines <> (1, 1) then (
       if !is_first then
         is_first := false
       else
@@ -1972,14 +2122,14 @@ let write_settings : _ -> settings -> _ = (
       )
         ob x.editor_right_margin;
     );
-    if x.editor_right_margin_color <> "#e0e0e0" then (
+    if x.editor_right_margin_color <> {light="#e0e0e0"; dark="#808080"} then (
       if !is_first then
         is_first := false
       else
         Buffer.add_char ob ',';
         Buffer.add_string ob "\"editor_right_margin_color\":";
       (
-        Yojson.Safe.write_string
+        write__string_color
       )
         ob x.editor_right_margin_color;
     );
@@ -2159,20 +2309,20 @@ let read_settings = (
     let field_odoc_font = ref ("Serif 9") in
     let field_outline_show_types = ref (true) in
     let field_outline_width = ref (250) in
-    let field_outline_color_types = ref ("#877033") in
-    let field_outline_color_nor_bg = ref ("#FFFFFF") in
-    let field_outline_color_nor_fg = ref ("#000000") in
-    let field_outline_color_sel_bg = ref ("#1F80ED") in
-    let field_outline_color_sel_fg = ref ("#FFFFFF") in
-    let field_outline_color_act_bg = ref ("#B1C3D8") in
-    let field_outline_color_act_fg = ref ("#000000") in
+    let field_outline_color_types = ref ({light="#877033"; dark="#C0A661"}) in
+    let field_outline_color_nor_bg = ref ({light="#FFFFFF"; dark="#1E1E1E"}) in
+    let field_outline_color_nor_fg = ref ({light="#000000"; dark="#E1E1E1"}) in
+    let field_outline_color_sel_bg = ref ({light="#1F80ED"; dark="#4B81AD"}) in
+    let field_outline_color_sel_fg = ref ({light="#FFFFFF"; dark="#FFFFFF"}) in
+    let field_outline_color_act_bg = ref ({light="#B1C3D8"; dark="#B1C3D8"}) in
+    let field_outline_color_act_fg = ref ({light="#000000"; dark="#1E1E1E"}) in
     let field_outline_color_alt_rows = ref (None) in
     let field_output_font = ref ("monospace 8") in
-    let field_output_bg_color = ref ({light="#FFFFFF"; dark="#1e1e1e"}) in
-    let field_output_stdin_fg_color = ref ({light="#0000FF"; dark="#0000c0"}) in
-    let field_output_stdout_fg_color = ref ({light="#000000"; dark="#e1e1e1"}) in
-    let field_output_err_fg_color = ref ({light="#FF0000"; dark="#c00000"}) in
-    let field_output_warn_fg_color = ref ({light="darkorange"; dark="#C05000"}) in
+    let field_output_bg_color = ref ({light="#FFFFFF"; dark="#1E1E1E"}) in
+    let field_output_stdin_fg_color = ref ({light="#0000FF"; dark="#5050FF"}) in
+    let field_output_stdout_fg_color = ref ({light="#000000"; dark="#E1E1E1"}) in
+    let field_output_err_fg_color = ref ({light="#FF0000"; dark="#FF5050"}) in
+    let field_output_warn_fg_color = ref ({light="darkorange"; dark="#FFC050"}) in
     let field_program_diff = ref ("diff") in
     let field_program_diff_graphical = ref ("") in
     let field_program_pdf_viewer = ref ("") in
@@ -2189,7 +2339,7 @@ let read_settings = (
     let field_editor_annot_type_tooltips_impl = ref (0) in
     let field_editor_bak = ref (true) in
     let field_editor_base_font = ref ("monospace 9") in
-    let field_editor_bg_color_popup = ref ("#FFE375") in
+    let field_editor_bg_color_popup = ref ({light="#FFE375"; dark="#505050"}) in
     let field_editor_bg_color_theme = ref (false) in
     let field_editor_bg_color_user = ref ({ light = "#FFFFFF"; dark = "#1e1e1e"}) in
     let field_editor_code_folding_enabled = ref (true) in
@@ -2204,7 +2354,7 @@ let read_settings = (
     let field_editor_err_gutter = ref (true) in
     let field_editor_err_tooltip = ref (true) in
     let field_editor_err_underline = ref (true) in
-    let field_editor_fg_color_popup = ref ("#000000") in
+    let field_editor_fg_color_popup = ref ({light="#000000"; dark="#E1E1E1"}) in
     let field_editor_format_on_save = ref (false) in
     let field_editor_highlight_current_line = ref (true) in
     let field_editor_indent_config = ref ("") in
@@ -2213,12 +2363,12 @@ let read_settings = (
     let field_editor_left_margin = ref (1) in
     let field_editor_mark_occurrences_enabled = ref (true) in
     let field_editor_mark_occurrences_under_cursor = ref (true) in
-    let field_editor_mark_occurrences_bg_color = ref ("#c8ffc8") in
-    let field_editor_ocamldoc_paragraph_bgcolor_1 = ref (Some "#FAF7FA") in
-    let field_editor_ocamldoc_paragraph_bgcolor_2 = ref (Some "#FAF7FA") in
-    let field_editor_pixels_lines = ref ((0, 2)) in
+    let field_editor_mark_occurrences_bg_color = ref ({light="#c8ffc8"; dark="#455800"}) in
+    let field_editor_ocamldoc_paragraph_bgcolor_1 = ref ({light=Some "#FAF7FA"; dark=Some "#303030"}) in
+    let field_editor_ocamldoc_paragraph_bgcolor_2 = ref ({light=Some "#FAF7FA"; dark=Some "#303030"}) in
+    let field_editor_pixels_lines = ref ((1, 1)) in
     let field_editor_right_margin = ref (80) in
-    let field_editor_right_margin_color = ref ("#e0e0e0") in
+    let field_editor_right_margin_color = ref ({light="#e0e0e0"; dark="#808080"}) in
     let field_editor_right_margin_visible = ref (true) in
     let field_editor_save_all_bef_comp = ref (true) in
     let field_editor_search_word_at_cursor = ref (true) in
@@ -3650,7 +3800,7 @@ let read_settings = (
             if not (Yojson.Safe.read_null_if_possible p lb) then (
               field_outline_color_types := (
                 (
-                  Atdgen_runtime.Oj_run.read_string
+                  read__string_color
                 ) p lb
               );
             )
@@ -3658,7 +3808,7 @@ let read_settings = (
             if not (Yojson.Safe.read_null_if_possible p lb) then (
               field_outline_color_nor_bg := (
                 (
-                  Atdgen_runtime.Oj_run.read_string
+                  read__string_color
                 ) p lb
               );
             )
@@ -3666,7 +3816,7 @@ let read_settings = (
             if not (Yojson.Safe.read_null_if_possible p lb) then (
               field_outline_color_nor_fg := (
                 (
-                  Atdgen_runtime.Oj_run.read_string
+                  read__string_color
                 ) p lb
               );
             )
@@ -3674,7 +3824,7 @@ let read_settings = (
             if not (Yojson.Safe.read_null_if_possible p lb) then (
               field_outline_color_sel_bg := (
                 (
-                  Atdgen_runtime.Oj_run.read_string
+                  read__string_color
                 ) p lb
               );
             )
@@ -3682,7 +3832,7 @@ let read_settings = (
             if not (Yojson.Safe.read_null_if_possible p lb) then (
               field_outline_color_sel_fg := (
                 (
-                  Atdgen_runtime.Oj_run.read_string
+                  read__string_color
                 ) p lb
               );
             )
@@ -3690,7 +3840,7 @@ let read_settings = (
             if not (Yojson.Safe.read_null_if_possible p lb) then (
               field_outline_color_act_bg := (
                 (
-                  Atdgen_runtime.Oj_run.read_string
+                  read__string_color
                 ) p lb
               );
             )
@@ -3698,7 +3848,7 @@ let read_settings = (
             if not (Yojson.Safe.read_null_if_possible p lb) then (
               field_outline_color_act_fg := (
                 (
-                  Atdgen_runtime.Oj_run.read_string
+                  read__string_color
                 ) p lb
               );
             )
@@ -3722,7 +3872,7 @@ let read_settings = (
             if not (Yojson.Safe.read_null_if_possible p lb) then (
               field_output_bg_color := (
                 (
-                  read_color
+                  read__string_color
                 ) p lb
               );
             )
@@ -3730,7 +3880,7 @@ let read_settings = (
             if not (Yojson.Safe.read_null_if_possible p lb) then (
               field_output_stdin_fg_color := (
                 (
-                  read_color
+                  read__string_color
                 ) p lb
               );
             )
@@ -3738,7 +3888,7 @@ let read_settings = (
             if not (Yojson.Safe.read_null_if_possible p lb) then (
               field_output_stdout_fg_color := (
                 (
-                  read_color
+                  read__string_color
                 ) p lb
               );
             )
@@ -3746,7 +3896,7 @@ let read_settings = (
             if not (Yojson.Safe.read_null_if_possible p lb) then (
               field_output_err_fg_color := (
                 (
-                  read_color
+                  read__string_color
                 ) p lb
               );
             )
@@ -3754,7 +3904,7 @@ let read_settings = (
             if not (Yojson.Safe.read_null_if_possible p lb) then (
               field_output_warn_fg_color := (
                 (
-                  read_color
+                  read__string_color
                 ) p lb
               );
             )
@@ -3931,7 +4081,7 @@ let read_settings = (
             if not (Yojson.Safe.read_null_if_possible p lb) then (
               field_editor_bg_color_popup := (
                 (
-                  Atdgen_runtime.Oj_run.read_string
+                  read__string_color
                 ) p lb
               );
             )
@@ -3947,7 +4097,7 @@ let read_settings = (
             if not (Yojson.Safe.read_null_if_possible p lb) then (
               field_editor_bg_color_user := (
                 (
-                  read_color
+                  read__string_color
                 ) p lb
               );
             )
@@ -4051,7 +4201,7 @@ let read_settings = (
             if not (Yojson.Safe.read_null_if_possible p lb) then (
               field_editor_fg_color_popup := (
                 (
-                  Atdgen_runtime.Oj_run.read_string
+                  read__string_color
                 ) p lb
               );
             )
@@ -4175,7 +4325,7 @@ let read_settings = (
             if not (Yojson.Safe.read_null_if_possible p lb) then (
               field_editor_mark_occurrences_bg_color := (
                 (
-                  Atdgen_runtime.Oj_run.read_string
+                  read__string_color
                 ) p lb
               );
             )
@@ -4183,7 +4333,7 @@ let read_settings = (
             if not (Yojson.Safe.read_null_if_possible p lb) then (
               field_editor_ocamldoc_paragraph_bgcolor_1 := (
                 (
-                  read__string_option
+                  read__string_option_color
                 ) p lb
               );
             )
@@ -4191,7 +4341,7 @@ let read_settings = (
             if not (Yojson.Safe.read_null_if_possible p lb) then (
               field_editor_ocamldoc_paragraph_bgcolor_2 := (
                 (
-                  read__string_option
+                  read__string_option_color
                 ) p lb
               );
             )
@@ -4256,7 +4406,7 @@ let read_settings = (
             if not (Yojson.Safe.read_null_if_possible p lb) then (
               field_editor_right_margin_color := (
                 (
-                  Atdgen_runtime.Oj_run.read_string
+                  read__string_color
                 ) p lb
               );
             )
@@ -5786,7 +5936,7 @@ let read_settings = (
               if not (Yojson.Safe.read_null_if_possible p lb) then (
                 field_outline_color_types := (
                   (
-                    Atdgen_runtime.Oj_run.read_string
+                    read__string_color
                   ) p lb
                 );
               )
@@ -5794,7 +5944,7 @@ let read_settings = (
               if not (Yojson.Safe.read_null_if_possible p lb) then (
                 field_outline_color_nor_bg := (
                   (
-                    Atdgen_runtime.Oj_run.read_string
+                    read__string_color
                   ) p lb
                 );
               )
@@ -5802,7 +5952,7 @@ let read_settings = (
               if not (Yojson.Safe.read_null_if_possible p lb) then (
                 field_outline_color_nor_fg := (
                   (
-                    Atdgen_runtime.Oj_run.read_string
+                    read__string_color
                   ) p lb
                 );
               )
@@ -5810,7 +5960,7 @@ let read_settings = (
               if not (Yojson.Safe.read_null_if_possible p lb) then (
                 field_outline_color_sel_bg := (
                   (
-                    Atdgen_runtime.Oj_run.read_string
+                    read__string_color
                   ) p lb
                 );
               )
@@ -5818,7 +5968,7 @@ let read_settings = (
               if not (Yojson.Safe.read_null_if_possible p lb) then (
                 field_outline_color_sel_fg := (
                   (
-                    Atdgen_runtime.Oj_run.read_string
+                    read__string_color
                   ) p lb
                 );
               )
@@ -5826,7 +5976,7 @@ let read_settings = (
               if not (Yojson.Safe.read_null_if_possible p lb) then (
                 field_outline_color_act_bg := (
                   (
-                    Atdgen_runtime.Oj_run.read_string
+                    read__string_color
                   ) p lb
                 );
               )
@@ -5834,7 +5984,7 @@ let read_settings = (
               if not (Yojson.Safe.read_null_if_possible p lb) then (
                 field_outline_color_act_fg := (
                   (
-                    Atdgen_runtime.Oj_run.read_string
+                    read__string_color
                   ) p lb
                 );
               )
@@ -5858,7 +6008,7 @@ let read_settings = (
               if not (Yojson.Safe.read_null_if_possible p lb) then (
                 field_output_bg_color := (
                   (
-                    read_color
+                    read__string_color
                   ) p lb
                 );
               )
@@ -5866,7 +6016,7 @@ let read_settings = (
               if not (Yojson.Safe.read_null_if_possible p lb) then (
                 field_output_stdin_fg_color := (
                   (
-                    read_color
+                    read__string_color
                   ) p lb
                 );
               )
@@ -5874,7 +6024,7 @@ let read_settings = (
               if not (Yojson.Safe.read_null_if_possible p lb) then (
                 field_output_stdout_fg_color := (
                   (
-                    read_color
+                    read__string_color
                   ) p lb
                 );
               )
@@ -5882,7 +6032,7 @@ let read_settings = (
               if not (Yojson.Safe.read_null_if_possible p lb) then (
                 field_output_err_fg_color := (
                   (
-                    read_color
+                    read__string_color
                   ) p lb
                 );
               )
@@ -5890,7 +6040,7 @@ let read_settings = (
               if not (Yojson.Safe.read_null_if_possible p lb) then (
                 field_output_warn_fg_color := (
                   (
-                    read_color
+                    read__string_color
                   ) p lb
                 );
               )
@@ -6067,7 +6217,7 @@ let read_settings = (
               if not (Yojson.Safe.read_null_if_possible p lb) then (
                 field_editor_bg_color_popup := (
                   (
-                    Atdgen_runtime.Oj_run.read_string
+                    read__string_color
                   ) p lb
                 );
               )
@@ -6083,7 +6233,7 @@ let read_settings = (
               if not (Yojson.Safe.read_null_if_possible p lb) then (
                 field_editor_bg_color_user := (
                   (
-                    read_color
+                    read__string_color
                   ) p lb
                 );
               )
@@ -6187,7 +6337,7 @@ let read_settings = (
               if not (Yojson.Safe.read_null_if_possible p lb) then (
                 field_editor_fg_color_popup := (
                   (
-                    Atdgen_runtime.Oj_run.read_string
+                    read__string_color
                   ) p lb
                 );
               )
@@ -6311,7 +6461,7 @@ let read_settings = (
               if not (Yojson.Safe.read_null_if_possible p lb) then (
                 field_editor_mark_occurrences_bg_color := (
                   (
-                    Atdgen_runtime.Oj_run.read_string
+                    read__string_color
                   ) p lb
                 );
               )
@@ -6319,7 +6469,7 @@ let read_settings = (
               if not (Yojson.Safe.read_null_if_possible p lb) then (
                 field_editor_ocamldoc_paragraph_bgcolor_1 := (
                   (
-                    read__string_option
+                    read__string_option_color
                   ) p lb
                 );
               )
@@ -6327,7 +6477,7 @@ let read_settings = (
               if not (Yojson.Safe.read_null_if_possible p lb) then (
                 field_editor_ocamldoc_paragraph_bgcolor_2 := (
                   (
-                    read__string_option
+                    read__string_option_color
                   ) p lb
                 );
               )
@@ -6392,7 +6542,7 @@ let read_settings = (
               if not (Yojson.Safe.read_null_if_possible p lb) then (
                 field_editor_right_margin_color := (
                   (
-                    Atdgen_runtime.Oj_run.read_string
+                    read__string_color
                   ) p lb
                 );
               )
@@ -6611,3 +6761,156 @@ let read_settings = (
 )
 let settings_of_string s =
   read_settings (Yojson.Safe.init_lexer ()) (Lexing.from_string s)
+let write_color write__a : _ -> 'a color -> _ = (
+  fun ob (x : 'a color) ->
+    Buffer.add_char ob '{';
+    let is_first = ref true in
+    if !is_first then
+      is_first := false
+    else
+      Buffer.add_char ob ',';
+      Buffer.add_string ob "\"light\":";
+    (
+      write__a
+    )
+      ob x.light;
+    if !is_first then
+      is_first := false
+    else
+      Buffer.add_char ob ',';
+      Buffer.add_string ob "\"dark\":";
+    (
+      write__a
+    )
+      ob x.dark;
+    Buffer.add_char ob '}';
+)
+let string_of_color write__a ?(len = 1024) x =
+  let ob = Buffer.create len in
+  write_color write__a ob x;
+  Buffer.contents ob
+let read_color read__a = (
+  fun p lb ->
+    Yojson.Safe.read_space p lb;
+    Yojson.Safe.read_lcurl p lb;
+    let field_light = ref (None) in
+    let field_dark = ref (None) in
+    try
+      Yojson.Safe.read_space p lb;
+      Yojson.Safe.read_object_end lb;
+      Yojson.Safe.read_space p lb;
+      let f =
+        fun s pos len ->
+          if pos < 0 || len < 0 || pos + len > String.length s then
+            invalid_arg (Printf.sprintf "out-of-bounds substring position or length: string = %S, requested position = %i, requested length = %i" s pos len);
+          match len with
+            | 4 -> (
+                if String.unsafe_get s pos = 'd' && String.unsafe_get s (pos+1) = 'a' && String.unsafe_get s (pos+2) = 'r' && String.unsafe_get s (pos+3) = 'k' then (
+                  1
+                )
+                else (
+                  -1
+                )
+              )
+            | 5 -> (
+                if String.unsafe_get s pos = 'l' && String.unsafe_get s (pos+1) = 'i' && String.unsafe_get s (pos+2) = 'g' && String.unsafe_get s (pos+3) = 'h' && String.unsafe_get s (pos+4) = 't' then (
+                  0
+                )
+                else (
+                  -1
+                )
+              )
+            | _ -> (
+                -1
+              )
+      in
+      let i = Yojson.Safe.map_ident p f lb in
+      Atdgen_runtime.Oj_run.read_until_field_value p lb;
+      (
+        match i with
+          | 0 ->
+            field_light := (
+              Some (
+                (
+                  read__a
+                ) p lb
+              )
+            );
+          | 1 ->
+            field_dark := (
+              Some (
+                (
+                  read__a
+                ) p lb
+              )
+            );
+          | _ -> (
+              Yojson.Safe.skip_json p lb
+            )
+      );
+      while true do
+        Yojson.Safe.read_space p lb;
+        Yojson.Safe.read_object_sep p lb;
+        Yojson.Safe.read_space p lb;
+        let f =
+          fun s pos len ->
+            if pos < 0 || len < 0 || pos + len > String.length s then
+              invalid_arg (Printf.sprintf "out-of-bounds substring position or length: string = %S, requested position = %i, requested length = %i" s pos len);
+            match len with
+              | 4 -> (
+                  if String.unsafe_get s pos = 'd' && String.unsafe_get s (pos+1) = 'a' && String.unsafe_get s (pos+2) = 'r' && String.unsafe_get s (pos+3) = 'k' then (
+                    1
+                  )
+                  else (
+                    -1
+                  )
+                )
+              | 5 -> (
+                  if String.unsafe_get s pos = 'l' && String.unsafe_get s (pos+1) = 'i' && String.unsafe_get s (pos+2) = 'g' && String.unsafe_get s (pos+3) = 'h' && String.unsafe_get s (pos+4) = 't' then (
+                    0
+                  )
+                  else (
+                    -1
+                  )
+                )
+              | _ -> (
+                  -1
+                )
+        in
+        let i = Yojson.Safe.map_ident p f lb in
+        Atdgen_runtime.Oj_run.read_until_field_value p lb;
+        (
+          match i with
+            | 0 ->
+              field_light := (
+                Some (
+                  (
+                    read__a
+                  ) p lb
+                )
+              );
+            | 1 ->
+              field_dark := (
+                Some (
+                  (
+                    read__a
+                  ) p lb
+                )
+              );
+            | _ -> (
+                Yojson.Safe.skip_json p lb
+              )
+        );
+      done;
+      assert false;
+    with Yojson.End_of_object -> (
+        (
+          {
+            light = (match !field_light with Some x -> x | None -> Atdgen_runtime.Oj_run.missing_field p "light");
+            dark = (match !field_dark with Some x -> x | None -> Atdgen_runtime.Oj_run.missing_field p "dark");
+          }
+         : 'a color)
+      )
+)
+let color_of_string read__a s =
+  read_color read__a (Yojson.Safe.init_lexer ()) (Lexing.from_string s)
