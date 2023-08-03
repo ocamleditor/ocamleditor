@@ -1,20 +1,20 @@
 (* Auto-generated from "settings.atd" *)
 [@@@ocaml.warning "-27-32-33-35-39"]
 
+type color = Settings_t.color = {
+  mutable light: string;
+  mutable dark: string
+}
+
 type editor_tag = Settings_t.editor_tag = {
   mutable name: string;
-  mutable color: string;
+  mutable color: color;
   mutable weight: int;
   mutable style: [ `NORMAL | `ITALIC ];
   mutable underline: [ `NONE | `SINGLE ];
   mutable scale: float;
   mutable bg_default: bool;
-  mutable bg_color: string
-}
-
-type color = Settings_t.color = {
-  mutable light: string;
-  mutable dark: string
+  mutable bg_color: color
 }
 
 type settings = Settings_t.settings = {
@@ -112,568 +112,10 @@ type settings = Settings_t.settings = {
   mutable editor_tab_spaces: bool;
   mutable editor_tab_width: int;
   mutable editor_tags: editor_tag list;
-  mutable editor_tags_dark: editor_tag list;
   mutable editor_trim_lines: bool;
   mutable editor_wrap: bool
 }
 
-let write_editor_tag : _ -> editor_tag -> _ = (
-  fun ob (x : editor_tag) ->
-    Buffer.add_char ob '{';
-    let is_first = ref true in
-    if !is_first then
-      is_first := false
-    else
-      Buffer.add_char ob ',';
-      Buffer.add_string ob "\"name\":";
-    (
-      Yojson.Safe.write_string
-    )
-      ob x.name;
-    if !is_first then
-      is_first := false
-    else
-      Buffer.add_char ob ',';
-      Buffer.add_string ob "\"color\":";
-    (
-      Yojson.Safe.write_string
-    )
-      ob x.color;
-    if !is_first then
-      is_first := false
-    else
-      Buffer.add_char ob ',';
-      Buffer.add_string ob "\"weight\":";
-    (
-      Yojson.Safe.write_int
-    )
-      ob x.weight;
-    if !is_first then
-      is_first := false
-    else
-      Buffer.add_char ob ',';
-      Buffer.add_string ob "\"style\":";
-    (
-      fun ob x ->
-        match x with
-          | `NORMAL -> Buffer.add_string ob "<\"NORMAL\">"
-          | `ITALIC -> Buffer.add_string ob "<\"ITALIC\">"
-    )
-      ob x.style;
-    if !is_first then
-      is_first := false
-    else
-      Buffer.add_char ob ',';
-      Buffer.add_string ob "\"underline\":";
-    (
-      fun ob x ->
-        match x with
-          | `NONE -> Buffer.add_string ob "<\"NONE\">"
-          | `SINGLE -> Buffer.add_string ob "<\"SINGLE\">"
-    )
-      ob x.underline;
-    if !is_first then
-      is_first := false
-    else
-      Buffer.add_char ob ',';
-      Buffer.add_string ob "\"scale\":";
-    (
-      Yojson.Safe.write_float
-    )
-      ob x.scale;
-    if !is_first then
-      is_first := false
-    else
-      Buffer.add_char ob ',';
-      Buffer.add_string ob "\"bg_default\":";
-    (
-      Yojson.Safe.write_bool
-    )
-      ob x.bg_default;
-    if !is_first then
-      is_first := false
-    else
-      Buffer.add_char ob ',';
-      Buffer.add_string ob "\"bg_color\":";
-    (
-      Yojson.Safe.write_string
-    )
-      ob x.bg_color;
-    Buffer.add_char ob '}';
-)
-let string_of_editor_tag ?(len = 1024) x =
-  let ob = Buffer.create len in
-  write_editor_tag ob x;
-  Buffer.contents ob
-let read_editor_tag = (
-  fun p lb ->
-    Yojson.Safe.read_space p lb;
-    Yojson.Safe.read_lcurl p lb;
-    let field_name = ref (None) in
-    let field_color = ref (None) in
-    let field_weight = ref (None) in
-    let field_style = ref (None) in
-    let field_underline = ref (None) in
-    let field_scale = ref (None) in
-    let field_bg_default = ref (None) in
-    let field_bg_color = ref (None) in
-    try
-      Yojson.Safe.read_space p lb;
-      Yojson.Safe.read_object_end lb;
-      Yojson.Safe.read_space p lb;
-      let f =
-        fun s pos len ->
-          if pos < 0 || len < 0 || pos + len > String.length s then
-            invalid_arg (Printf.sprintf "out-of-bounds substring position or length: string = %S, requested position = %i, requested length = %i" s pos len);
-          match len with
-            | 4 -> (
-                if String.unsafe_get s pos = 'n' && String.unsafe_get s (pos+1) = 'a' && String.unsafe_get s (pos+2) = 'm' && String.unsafe_get s (pos+3) = 'e' then (
-                  0
-                )
-                else (
-                  -1
-                )
-              )
-            | 5 -> (
-                match String.unsafe_get s pos with
-                  | 'c' -> (
-                      if String.unsafe_get s (pos+1) = 'o' && String.unsafe_get s (pos+2) = 'l' && String.unsafe_get s (pos+3) = 'o' && String.unsafe_get s (pos+4) = 'r' then (
-                        1
-                      )
-                      else (
-                        -1
-                      )
-                    )
-                  | 's' -> (
-                      match String.unsafe_get s (pos+1) with
-                        | 'c' -> (
-                            if String.unsafe_get s (pos+2) = 'a' && String.unsafe_get s (pos+3) = 'l' && String.unsafe_get s (pos+4) = 'e' then (
-                              5
-                            )
-                            else (
-                              -1
-                            )
-                          )
-                        | 't' -> (
-                            if String.unsafe_get s (pos+2) = 'y' && String.unsafe_get s (pos+3) = 'l' && String.unsafe_get s (pos+4) = 'e' then (
-                              3
-                            )
-                            else (
-                              -1
-                            )
-                          )
-                        | _ -> (
-                            -1
-                          )
-                    )
-                  | _ -> (
-                      -1
-                    )
-              )
-            | 6 -> (
-                if String.unsafe_get s pos = 'w' && String.unsafe_get s (pos+1) = 'e' && String.unsafe_get s (pos+2) = 'i' && String.unsafe_get s (pos+3) = 'g' && String.unsafe_get s (pos+4) = 'h' && String.unsafe_get s (pos+5) = 't' then (
-                  2
-                )
-                else (
-                  -1
-                )
-              )
-            | 8 -> (
-                if String.unsafe_get s pos = 'b' && String.unsafe_get s (pos+1) = 'g' && String.unsafe_get s (pos+2) = '_' && String.unsafe_get s (pos+3) = 'c' && String.unsafe_get s (pos+4) = 'o' && String.unsafe_get s (pos+5) = 'l' && String.unsafe_get s (pos+6) = 'o' && String.unsafe_get s (pos+7) = 'r' then (
-                  7
-                )
-                else (
-                  -1
-                )
-              )
-            | 9 -> (
-                if String.unsafe_get s pos = 'u' && String.unsafe_get s (pos+1) = 'n' && String.unsafe_get s (pos+2) = 'd' && String.unsafe_get s (pos+3) = 'e' && String.unsafe_get s (pos+4) = 'r' && String.unsafe_get s (pos+5) = 'l' && String.unsafe_get s (pos+6) = 'i' && String.unsafe_get s (pos+7) = 'n' && String.unsafe_get s (pos+8) = 'e' then (
-                  4
-                )
-                else (
-                  -1
-                )
-              )
-            | 10 -> (
-                if String.unsafe_get s pos = 'b' && String.unsafe_get s (pos+1) = 'g' && String.unsafe_get s (pos+2) = '_' && String.unsafe_get s (pos+3) = 'd' && String.unsafe_get s (pos+4) = 'e' && String.unsafe_get s (pos+5) = 'f' && String.unsafe_get s (pos+6) = 'a' && String.unsafe_get s (pos+7) = 'u' && String.unsafe_get s (pos+8) = 'l' && String.unsafe_get s (pos+9) = 't' then (
-                  6
-                )
-                else (
-                  -1
-                )
-              )
-            | _ -> (
-                -1
-              )
-      in
-      let i = Yojson.Safe.map_ident p f lb in
-      Atdgen_runtime.Oj_run.read_until_field_value p lb;
-      (
-        match i with
-          | 0 ->
-            field_name := (
-              Some (
-                (
-                  Atdgen_runtime.Oj_run.read_string
-                ) p lb
-              )
-            );
-          | 1 ->
-            field_color := (
-              Some (
-                (
-                  Atdgen_runtime.Oj_run.read_string
-                ) p lb
-              )
-            );
-          | 2 ->
-            field_weight := (
-              Some (
-                (
-                  Atdgen_runtime.Oj_run.read_int
-                ) p lb
-              )
-            );
-          | 3 ->
-            field_style := (
-              Some (
-                (
-                  fun p lb ->
-                    Yojson.Safe.read_space p lb;
-                    match Yojson.Safe.start_any_variant p lb with
-                      | `Edgy_bracket -> (
-                          match Yojson.Safe.read_ident p lb with
-                            | "NORMAL" ->
-                              Yojson.Safe.read_space p lb;
-                              Yojson.Safe.read_gt p lb;
-                              `NORMAL
-                            | "ITALIC" ->
-                              Yojson.Safe.read_space p lb;
-                              Yojson.Safe.read_gt p lb;
-                              `ITALIC
-                            | x ->
-                              Atdgen_runtime.Oj_run.invalid_variant_tag p x
-                        )
-                      | `Double_quote -> (
-                          match Yojson.Safe.finish_string p lb with
-                            | "NORMAL" ->
-                              `NORMAL
-                            | "ITALIC" ->
-                              `ITALIC
-                            | x ->
-                              Atdgen_runtime.Oj_run.invalid_variant_tag p x
-                        )
-                      | `Square_bracket -> (
-                          match Atdgen_runtime.Oj_run.read_string p lb with
-                            | x ->
-                              Atdgen_runtime.Oj_run.invalid_variant_tag p x
-                        )
-                ) p lb
-              )
-            );
-          | 4 ->
-            field_underline := (
-              Some (
-                (
-                  fun p lb ->
-                    Yojson.Safe.read_space p lb;
-                    match Yojson.Safe.start_any_variant p lb with
-                      | `Edgy_bracket -> (
-                          match Yojson.Safe.read_ident p lb with
-                            | "NONE" ->
-                              Yojson.Safe.read_space p lb;
-                              Yojson.Safe.read_gt p lb;
-                              `NONE
-                            | "SINGLE" ->
-                              Yojson.Safe.read_space p lb;
-                              Yojson.Safe.read_gt p lb;
-                              `SINGLE
-                            | x ->
-                              Atdgen_runtime.Oj_run.invalid_variant_tag p x
-                        )
-                      | `Double_quote -> (
-                          match Yojson.Safe.finish_string p lb with
-                            | "NONE" ->
-                              `NONE
-                            | "SINGLE" ->
-                              `SINGLE
-                            | x ->
-                              Atdgen_runtime.Oj_run.invalid_variant_tag p x
-                        )
-                      | `Square_bracket -> (
-                          match Atdgen_runtime.Oj_run.read_string p lb with
-                            | x ->
-                              Atdgen_runtime.Oj_run.invalid_variant_tag p x
-                        )
-                ) p lb
-              )
-            );
-          | 5 ->
-            field_scale := (
-              Some (
-                (
-                  Atdgen_runtime.Oj_run.read_number
-                ) p lb
-              )
-            );
-          | 6 ->
-            field_bg_default := (
-              Some (
-                (
-                  Atdgen_runtime.Oj_run.read_bool
-                ) p lb
-              )
-            );
-          | 7 ->
-            field_bg_color := (
-              Some (
-                (
-                  Atdgen_runtime.Oj_run.read_string
-                ) p lb
-              )
-            );
-          | _ -> (
-              Yojson.Safe.skip_json p lb
-            )
-      );
-      while true do
-        Yojson.Safe.read_space p lb;
-        Yojson.Safe.read_object_sep p lb;
-        Yojson.Safe.read_space p lb;
-        let f =
-          fun s pos len ->
-            if pos < 0 || len < 0 || pos + len > String.length s then
-              invalid_arg (Printf.sprintf "out-of-bounds substring position or length: string = %S, requested position = %i, requested length = %i" s pos len);
-            match len with
-              | 4 -> (
-                  if String.unsafe_get s pos = 'n' && String.unsafe_get s (pos+1) = 'a' && String.unsafe_get s (pos+2) = 'm' && String.unsafe_get s (pos+3) = 'e' then (
-                    0
-                  )
-                  else (
-                    -1
-                  )
-                )
-              | 5 -> (
-                  match String.unsafe_get s pos with
-                    | 'c' -> (
-                        if String.unsafe_get s (pos+1) = 'o' && String.unsafe_get s (pos+2) = 'l' && String.unsafe_get s (pos+3) = 'o' && String.unsafe_get s (pos+4) = 'r' then (
-                          1
-                        )
-                        else (
-                          -1
-                        )
-                      )
-                    | 's' -> (
-                        match String.unsafe_get s (pos+1) with
-                          | 'c' -> (
-                              if String.unsafe_get s (pos+2) = 'a' && String.unsafe_get s (pos+3) = 'l' && String.unsafe_get s (pos+4) = 'e' then (
-                                5
-                              )
-                              else (
-                                -1
-                              )
-                            )
-                          | 't' -> (
-                              if String.unsafe_get s (pos+2) = 'y' && String.unsafe_get s (pos+3) = 'l' && String.unsafe_get s (pos+4) = 'e' then (
-                                3
-                              )
-                              else (
-                                -1
-                              )
-                            )
-                          | _ -> (
-                              -1
-                            )
-                      )
-                    | _ -> (
-                        -1
-                      )
-                )
-              | 6 -> (
-                  if String.unsafe_get s pos = 'w' && String.unsafe_get s (pos+1) = 'e' && String.unsafe_get s (pos+2) = 'i' && String.unsafe_get s (pos+3) = 'g' && String.unsafe_get s (pos+4) = 'h' && String.unsafe_get s (pos+5) = 't' then (
-                    2
-                  )
-                  else (
-                    -1
-                  )
-                )
-              | 8 -> (
-                  if String.unsafe_get s pos = 'b' && String.unsafe_get s (pos+1) = 'g' && String.unsafe_get s (pos+2) = '_' && String.unsafe_get s (pos+3) = 'c' && String.unsafe_get s (pos+4) = 'o' && String.unsafe_get s (pos+5) = 'l' && String.unsafe_get s (pos+6) = 'o' && String.unsafe_get s (pos+7) = 'r' then (
-                    7
-                  )
-                  else (
-                    -1
-                  )
-                )
-              | 9 -> (
-                  if String.unsafe_get s pos = 'u' && String.unsafe_get s (pos+1) = 'n' && String.unsafe_get s (pos+2) = 'd' && String.unsafe_get s (pos+3) = 'e' && String.unsafe_get s (pos+4) = 'r' && String.unsafe_get s (pos+5) = 'l' && String.unsafe_get s (pos+6) = 'i' && String.unsafe_get s (pos+7) = 'n' && String.unsafe_get s (pos+8) = 'e' then (
-                    4
-                  )
-                  else (
-                    -1
-                  )
-                )
-              | 10 -> (
-                  if String.unsafe_get s pos = 'b' && String.unsafe_get s (pos+1) = 'g' && String.unsafe_get s (pos+2) = '_' && String.unsafe_get s (pos+3) = 'd' && String.unsafe_get s (pos+4) = 'e' && String.unsafe_get s (pos+5) = 'f' && String.unsafe_get s (pos+6) = 'a' && String.unsafe_get s (pos+7) = 'u' && String.unsafe_get s (pos+8) = 'l' && String.unsafe_get s (pos+9) = 't' then (
-                    6
-                  )
-                  else (
-                    -1
-                  )
-                )
-              | _ -> (
-                  -1
-                )
-        in
-        let i = Yojson.Safe.map_ident p f lb in
-        Atdgen_runtime.Oj_run.read_until_field_value p lb;
-        (
-          match i with
-            | 0 ->
-              field_name := (
-                Some (
-                  (
-                    Atdgen_runtime.Oj_run.read_string
-                  ) p lb
-                )
-              );
-            | 1 ->
-              field_color := (
-                Some (
-                  (
-                    Atdgen_runtime.Oj_run.read_string
-                  ) p lb
-                )
-              );
-            | 2 ->
-              field_weight := (
-                Some (
-                  (
-                    Atdgen_runtime.Oj_run.read_int
-                  ) p lb
-                )
-              );
-            | 3 ->
-              field_style := (
-                Some (
-                  (
-                    fun p lb ->
-                      Yojson.Safe.read_space p lb;
-                      match Yojson.Safe.start_any_variant p lb with
-                        | `Edgy_bracket -> (
-                            match Yojson.Safe.read_ident p lb with
-                              | "NORMAL" ->
-                                Yojson.Safe.read_space p lb;
-                                Yojson.Safe.read_gt p lb;
-                                `NORMAL
-                              | "ITALIC" ->
-                                Yojson.Safe.read_space p lb;
-                                Yojson.Safe.read_gt p lb;
-                                `ITALIC
-                              | x ->
-                                Atdgen_runtime.Oj_run.invalid_variant_tag p x
-                          )
-                        | `Double_quote -> (
-                            match Yojson.Safe.finish_string p lb with
-                              | "NORMAL" ->
-                                `NORMAL
-                              | "ITALIC" ->
-                                `ITALIC
-                              | x ->
-                                Atdgen_runtime.Oj_run.invalid_variant_tag p x
-                          )
-                        | `Square_bracket -> (
-                            match Atdgen_runtime.Oj_run.read_string p lb with
-                              | x ->
-                                Atdgen_runtime.Oj_run.invalid_variant_tag p x
-                          )
-                  ) p lb
-                )
-              );
-            | 4 ->
-              field_underline := (
-                Some (
-                  (
-                    fun p lb ->
-                      Yojson.Safe.read_space p lb;
-                      match Yojson.Safe.start_any_variant p lb with
-                        | `Edgy_bracket -> (
-                            match Yojson.Safe.read_ident p lb with
-                              | "NONE" ->
-                                Yojson.Safe.read_space p lb;
-                                Yojson.Safe.read_gt p lb;
-                                `NONE
-                              | "SINGLE" ->
-                                Yojson.Safe.read_space p lb;
-                                Yojson.Safe.read_gt p lb;
-                                `SINGLE
-                              | x ->
-                                Atdgen_runtime.Oj_run.invalid_variant_tag p x
-                          )
-                        | `Double_quote -> (
-                            match Yojson.Safe.finish_string p lb with
-                              | "NONE" ->
-                                `NONE
-                              | "SINGLE" ->
-                                `SINGLE
-                              | x ->
-                                Atdgen_runtime.Oj_run.invalid_variant_tag p x
-                          )
-                        | `Square_bracket -> (
-                            match Atdgen_runtime.Oj_run.read_string p lb with
-                              | x ->
-                                Atdgen_runtime.Oj_run.invalid_variant_tag p x
-                          )
-                  ) p lb
-                )
-              );
-            | 5 ->
-              field_scale := (
-                Some (
-                  (
-                    Atdgen_runtime.Oj_run.read_number
-                  ) p lb
-                )
-              );
-            | 6 ->
-              field_bg_default := (
-                Some (
-                  (
-                    Atdgen_runtime.Oj_run.read_bool
-                  ) p lb
-                )
-              );
-            | 7 ->
-              field_bg_color := (
-                Some (
-                  (
-                    Atdgen_runtime.Oj_run.read_string
-                  ) p lb
-                )
-              );
-            | _ -> (
-                Yojson.Safe.skip_json p lb
-              )
-        );
-      done;
-      assert false;
-    with Yojson.End_of_object -> (
-        (
-          {
-            name = (match !field_name with Some x -> x | None -> Atdgen_runtime.Oj_run.missing_field p "name");
-            color = (match !field_color with Some x -> x | None -> Atdgen_runtime.Oj_run.missing_field p "color");
-            weight = (match !field_weight with Some x -> x | None -> Atdgen_runtime.Oj_run.missing_field p "weight");
-            style = (match !field_style with Some x -> x | None -> Atdgen_runtime.Oj_run.missing_field p "style");
-            underline = (match !field_underline with Some x -> x | None -> Atdgen_runtime.Oj_run.missing_field p "underline");
-            scale = (match !field_scale with Some x -> x | None -> Atdgen_runtime.Oj_run.missing_field p "scale");
-            bg_default = (match !field_bg_default with Some x -> x | None -> Atdgen_runtime.Oj_run.missing_field p "bg_default");
-            bg_color = (match !field_bg_color with Some x -> x | None -> Atdgen_runtime.Oj_run.missing_field p "bg_color");
-          }
-         : editor_tag)
-      )
-)
-let editor_tag_of_string s =
-  read_editor_tag (Yojson.Safe.init_lexer ()) (Lexing.from_string s)
 let write_color : _ -> color -> _ = (
   fun ob (x : color) ->
     Buffer.add_char ob '{';
@@ -827,6 +269,563 @@ let read_color = (
 )
 let color_of_string s =
   read_color (Yojson.Safe.init_lexer ()) (Lexing.from_string s)
+let write_editor_tag : _ -> editor_tag -> _ = (
+  fun ob (x : editor_tag) ->
+    Buffer.add_char ob '{';
+    let is_first = ref true in
+    if !is_first then
+      is_first := false
+    else
+      Buffer.add_char ob ',';
+      Buffer.add_string ob "\"name\":";
+    (
+      Yojson.Safe.write_string
+    )
+      ob x.name;
+    if !is_first then
+      is_first := false
+    else
+      Buffer.add_char ob ',';
+      Buffer.add_string ob "\"color\":";
+    (
+      write_color
+    )
+      ob x.color;
+    if !is_first then
+      is_first := false
+    else
+      Buffer.add_char ob ',';
+      Buffer.add_string ob "\"weight\":";
+    (
+      Yojson.Safe.write_int
+    )
+      ob x.weight;
+    if !is_first then
+      is_first := false
+    else
+      Buffer.add_char ob ',';
+      Buffer.add_string ob "\"style\":";
+    (
+      fun ob x ->
+        match x with
+          | `NORMAL -> Buffer.add_string ob "<\"NORMAL\">"
+          | `ITALIC -> Buffer.add_string ob "<\"ITALIC\">"
+    )
+      ob x.style;
+    if !is_first then
+      is_first := false
+    else
+      Buffer.add_char ob ',';
+      Buffer.add_string ob "\"underline\":";
+    (
+      fun ob x ->
+        match x with
+          | `NONE -> Buffer.add_string ob "<\"NONE\">"
+          | `SINGLE -> Buffer.add_string ob "<\"SINGLE\">"
+    )
+      ob x.underline;
+    if !is_first then
+      is_first := false
+    else
+      Buffer.add_char ob ',';
+      Buffer.add_string ob "\"scale\":";
+    (
+      Yojson.Safe.write_float
+    )
+      ob x.scale;
+    if !is_first then
+      is_first := false
+    else
+      Buffer.add_char ob ',';
+      Buffer.add_string ob "\"bg_default\":";
+    (
+      Yojson.Safe.write_bool
+    )
+      ob x.bg_default;
+    if !is_first then
+      is_first := false
+    else
+      Buffer.add_char ob ',';
+      Buffer.add_string ob "\"bg_color\":";
+    (
+      write_color
+    )
+      ob x.bg_color;
+    Buffer.add_char ob '}';
+)
+let string_of_editor_tag ?(len = 1024) x =
+  let ob = Buffer.create len in
+  write_editor_tag ob x;
+  Buffer.contents ob
+let read_editor_tag = (
+  fun p lb ->
+    Yojson.Safe.read_space p lb;
+    Yojson.Safe.read_lcurl p lb;
+    let field_name = ref (None) in
+    let field_color = ref (None) in
+    let field_weight = ref (None) in
+    let field_style = ref (None) in
+    let field_underline = ref (None) in
+    let field_scale = ref (None) in
+    let field_bg_default = ref (None) in
+    let field_bg_color = ref (None) in
+    try
+      Yojson.Safe.read_space p lb;
+      Yojson.Safe.read_object_end lb;
+      Yojson.Safe.read_space p lb;
+      let f =
+        fun s pos len ->
+          if pos < 0 || len < 0 || pos + len > String.length s then
+            invalid_arg (Printf.sprintf "out-of-bounds substring position or length: string = %S, requested position = %i, requested length = %i" s pos len);
+          match len with
+            | 4 -> (
+                if String.unsafe_get s pos = 'n' && String.unsafe_get s (pos+1) = 'a' && String.unsafe_get s (pos+2) = 'm' && String.unsafe_get s (pos+3) = 'e' then (
+                  0
+                )
+                else (
+                  -1
+                )
+              )
+            | 5 -> (
+                match String.unsafe_get s pos with
+                  | 'c' -> (
+                      if String.unsafe_get s (pos+1) = 'o' && String.unsafe_get s (pos+2) = 'l' && String.unsafe_get s (pos+3) = 'o' && String.unsafe_get s (pos+4) = 'r' then (
+                        1
+                      )
+                      else (
+                        -1
+                      )
+                    )
+                  | 's' -> (
+                      match String.unsafe_get s (pos+1) with
+                        | 'c' -> (
+                            if String.unsafe_get s (pos+2) = 'a' && String.unsafe_get s (pos+3) = 'l' && String.unsafe_get s (pos+4) = 'e' then (
+                              5
+                            )
+                            else (
+                              -1
+                            )
+                          )
+                        | 't' -> (
+                            if String.unsafe_get s (pos+2) = 'y' && String.unsafe_get s (pos+3) = 'l' && String.unsafe_get s (pos+4) = 'e' then (
+                              3
+                            )
+                            else (
+                              -1
+                            )
+                          )
+                        | _ -> (
+                            -1
+                          )
+                    )
+                  | _ -> (
+                      -1
+                    )
+              )
+            | 6 -> (
+                if String.unsafe_get s pos = 'w' && String.unsafe_get s (pos+1) = 'e' && String.unsafe_get s (pos+2) = 'i' && String.unsafe_get s (pos+3) = 'g' && String.unsafe_get s (pos+4) = 'h' && String.unsafe_get s (pos+5) = 't' then (
+                  2
+                )
+                else (
+                  -1
+                )
+              )
+            | 8 -> (
+                if String.unsafe_get s pos = 'b' && String.unsafe_get s (pos+1) = 'g' && String.unsafe_get s (pos+2) = '_' && String.unsafe_get s (pos+3) = 'c' && String.unsafe_get s (pos+4) = 'o' && String.unsafe_get s (pos+5) = 'l' && String.unsafe_get s (pos+6) = 'o' && String.unsafe_get s (pos+7) = 'r' then (
+                  7
+                )
+                else (
+                  -1
+                )
+              )
+            | 9 -> (
+                if String.unsafe_get s pos = 'u' && String.unsafe_get s (pos+1) = 'n' && String.unsafe_get s (pos+2) = 'd' && String.unsafe_get s (pos+3) = 'e' && String.unsafe_get s (pos+4) = 'r' && String.unsafe_get s (pos+5) = 'l' && String.unsafe_get s (pos+6) = 'i' && String.unsafe_get s (pos+7) = 'n' && String.unsafe_get s (pos+8) = 'e' then (
+                  4
+                )
+                else (
+                  -1
+                )
+              )
+            | 10 -> (
+                if String.unsafe_get s pos = 'b' && String.unsafe_get s (pos+1) = 'g' && String.unsafe_get s (pos+2) = '_' && String.unsafe_get s (pos+3) = 'd' && String.unsafe_get s (pos+4) = 'e' && String.unsafe_get s (pos+5) = 'f' && String.unsafe_get s (pos+6) = 'a' && String.unsafe_get s (pos+7) = 'u' && String.unsafe_get s (pos+8) = 'l' && String.unsafe_get s (pos+9) = 't' then (
+                  6
+                )
+                else (
+                  -1
+                )
+              )
+            | _ -> (
+                -1
+              )
+      in
+      let i = Yojson.Safe.map_ident p f lb in
+      Atdgen_runtime.Oj_run.read_until_field_value p lb;
+      (
+        match i with
+          | 0 ->
+            field_name := (
+              Some (
+                (
+                  Atdgen_runtime.Oj_run.read_string
+                ) p lb
+              )
+            );
+          | 1 ->
+            field_color := (
+              Some (
+                (
+                  read_color
+                ) p lb
+              )
+            );
+          | 2 ->
+            field_weight := (
+              Some (
+                (
+                  Atdgen_runtime.Oj_run.read_int
+                ) p lb
+              )
+            );
+          | 3 ->
+            field_style := (
+              Some (
+                (
+                  fun p lb ->
+                    Yojson.Safe.read_space p lb;
+                    match Yojson.Safe.start_any_variant p lb with
+                      | `Edgy_bracket -> (
+                          match Yojson.Safe.read_ident p lb with
+                            | "NORMAL" ->
+                              Yojson.Safe.read_space p lb;
+                              Yojson.Safe.read_gt p lb;
+                              `NORMAL
+                            | "ITALIC" ->
+                              Yojson.Safe.read_space p lb;
+                              Yojson.Safe.read_gt p lb;
+                              `ITALIC
+                            | x ->
+                              Atdgen_runtime.Oj_run.invalid_variant_tag p x
+                        )
+                      | `Double_quote -> (
+                          match Yojson.Safe.finish_string p lb with
+                            | "NORMAL" ->
+                              `NORMAL
+                            | "ITALIC" ->
+                              `ITALIC
+                            | x ->
+                              Atdgen_runtime.Oj_run.invalid_variant_tag p x
+                        )
+                      | `Square_bracket -> (
+                          match Atdgen_runtime.Oj_run.read_string p lb with
+                            | x ->
+                              Atdgen_runtime.Oj_run.invalid_variant_tag p x
+                        )
+                ) p lb
+              )
+            );
+          | 4 ->
+            field_underline := (
+              Some (
+                (
+                  fun p lb ->
+                    Yojson.Safe.read_space p lb;
+                    match Yojson.Safe.start_any_variant p lb with
+                      | `Edgy_bracket -> (
+                          match Yojson.Safe.read_ident p lb with
+                            | "NONE" ->
+                              Yojson.Safe.read_space p lb;
+                              Yojson.Safe.read_gt p lb;
+                              `NONE
+                            | "SINGLE" ->
+                              Yojson.Safe.read_space p lb;
+                              Yojson.Safe.read_gt p lb;
+                              `SINGLE
+                            | x ->
+                              Atdgen_runtime.Oj_run.invalid_variant_tag p x
+                        )
+                      | `Double_quote -> (
+                          match Yojson.Safe.finish_string p lb with
+                            | "NONE" ->
+                              `NONE
+                            | "SINGLE" ->
+                              `SINGLE
+                            | x ->
+                              Atdgen_runtime.Oj_run.invalid_variant_tag p x
+                        )
+                      | `Square_bracket -> (
+                          match Atdgen_runtime.Oj_run.read_string p lb with
+                            | x ->
+                              Atdgen_runtime.Oj_run.invalid_variant_tag p x
+                        )
+                ) p lb
+              )
+            );
+          | 5 ->
+            field_scale := (
+              Some (
+                (
+                  Atdgen_runtime.Oj_run.read_number
+                ) p lb
+              )
+            );
+          | 6 ->
+            field_bg_default := (
+              Some (
+                (
+                  Atdgen_runtime.Oj_run.read_bool
+                ) p lb
+              )
+            );
+          | 7 ->
+            field_bg_color := (
+              Some (
+                (
+                  read_color
+                ) p lb
+              )
+            );
+          | _ -> (
+              Yojson.Safe.skip_json p lb
+            )
+      );
+      while true do
+        Yojson.Safe.read_space p lb;
+        Yojson.Safe.read_object_sep p lb;
+        Yojson.Safe.read_space p lb;
+        let f =
+          fun s pos len ->
+            if pos < 0 || len < 0 || pos + len > String.length s then
+              invalid_arg (Printf.sprintf "out-of-bounds substring position or length: string = %S, requested position = %i, requested length = %i" s pos len);
+            match len with
+              | 4 -> (
+                  if String.unsafe_get s pos = 'n' && String.unsafe_get s (pos+1) = 'a' && String.unsafe_get s (pos+2) = 'm' && String.unsafe_get s (pos+3) = 'e' then (
+                    0
+                  )
+                  else (
+                    -1
+                  )
+                )
+              | 5 -> (
+                  match String.unsafe_get s pos with
+                    | 'c' -> (
+                        if String.unsafe_get s (pos+1) = 'o' && String.unsafe_get s (pos+2) = 'l' && String.unsafe_get s (pos+3) = 'o' && String.unsafe_get s (pos+4) = 'r' then (
+                          1
+                        )
+                        else (
+                          -1
+                        )
+                      )
+                    | 's' -> (
+                        match String.unsafe_get s (pos+1) with
+                          | 'c' -> (
+                              if String.unsafe_get s (pos+2) = 'a' && String.unsafe_get s (pos+3) = 'l' && String.unsafe_get s (pos+4) = 'e' then (
+                                5
+                              )
+                              else (
+                                -1
+                              )
+                            )
+                          | 't' -> (
+                              if String.unsafe_get s (pos+2) = 'y' && String.unsafe_get s (pos+3) = 'l' && String.unsafe_get s (pos+4) = 'e' then (
+                                3
+                              )
+                              else (
+                                -1
+                              )
+                            )
+                          | _ -> (
+                              -1
+                            )
+                      )
+                    | _ -> (
+                        -1
+                      )
+                )
+              | 6 -> (
+                  if String.unsafe_get s pos = 'w' && String.unsafe_get s (pos+1) = 'e' && String.unsafe_get s (pos+2) = 'i' && String.unsafe_get s (pos+3) = 'g' && String.unsafe_get s (pos+4) = 'h' && String.unsafe_get s (pos+5) = 't' then (
+                    2
+                  )
+                  else (
+                    -1
+                  )
+                )
+              | 8 -> (
+                  if String.unsafe_get s pos = 'b' && String.unsafe_get s (pos+1) = 'g' && String.unsafe_get s (pos+2) = '_' && String.unsafe_get s (pos+3) = 'c' && String.unsafe_get s (pos+4) = 'o' && String.unsafe_get s (pos+5) = 'l' && String.unsafe_get s (pos+6) = 'o' && String.unsafe_get s (pos+7) = 'r' then (
+                    7
+                  )
+                  else (
+                    -1
+                  )
+                )
+              | 9 -> (
+                  if String.unsafe_get s pos = 'u' && String.unsafe_get s (pos+1) = 'n' && String.unsafe_get s (pos+2) = 'd' && String.unsafe_get s (pos+3) = 'e' && String.unsafe_get s (pos+4) = 'r' && String.unsafe_get s (pos+5) = 'l' && String.unsafe_get s (pos+6) = 'i' && String.unsafe_get s (pos+7) = 'n' && String.unsafe_get s (pos+8) = 'e' then (
+                    4
+                  )
+                  else (
+                    -1
+                  )
+                )
+              | 10 -> (
+                  if String.unsafe_get s pos = 'b' && String.unsafe_get s (pos+1) = 'g' && String.unsafe_get s (pos+2) = '_' && String.unsafe_get s (pos+3) = 'd' && String.unsafe_get s (pos+4) = 'e' && String.unsafe_get s (pos+5) = 'f' && String.unsafe_get s (pos+6) = 'a' && String.unsafe_get s (pos+7) = 'u' && String.unsafe_get s (pos+8) = 'l' && String.unsafe_get s (pos+9) = 't' then (
+                    6
+                  )
+                  else (
+                    -1
+                  )
+                )
+              | _ -> (
+                  -1
+                )
+        in
+        let i = Yojson.Safe.map_ident p f lb in
+        Atdgen_runtime.Oj_run.read_until_field_value p lb;
+        (
+          match i with
+            | 0 ->
+              field_name := (
+                Some (
+                  (
+                    Atdgen_runtime.Oj_run.read_string
+                  ) p lb
+                )
+              );
+            | 1 ->
+              field_color := (
+                Some (
+                  (
+                    read_color
+                  ) p lb
+                )
+              );
+            | 2 ->
+              field_weight := (
+                Some (
+                  (
+                    Atdgen_runtime.Oj_run.read_int
+                  ) p lb
+                )
+              );
+            | 3 ->
+              field_style := (
+                Some (
+                  (
+                    fun p lb ->
+                      Yojson.Safe.read_space p lb;
+                      match Yojson.Safe.start_any_variant p lb with
+                        | `Edgy_bracket -> (
+                            match Yojson.Safe.read_ident p lb with
+                              | "NORMAL" ->
+                                Yojson.Safe.read_space p lb;
+                                Yojson.Safe.read_gt p lb;
+                                `NORMAL
+                              | "ITALIC" ->
+                                Yojson.Safe.read_space p lb;
+                                Yojson.Safe.read_gt p lb;
+                                `ITALIC
+                              | x ->
+                                Atdgen_runtime.Oj_run.invalid_variant_tag p x
+                          )
+                        | `Double_quote -> (
+                            match Yojson.Safe.finish_string p lb with
+                              | "NORMAL" ->
+                                `NORMAL
+                              | "ITALIC" ->
+                                `ITALIC
+                              | x ->
+                                Atdgen_runtime.Oj_run.invalid_variant_tag p x
+                          )
+                        | `Square_bracket -> (
+                            match Atdgen_runtime.Oj_run.read_string p lb with
+                              | x ->
+                                Atdgen_runtime.Oj_run.invalid_variant_tag p x
+                          )
+                  ) p lb
+                )
+              );
+            | 4 ->
+              field_underline := (
+                Some (
+                  (
+                    fun p lb ->
+                      Yojson.Safe.read_space p lb;
+                      match Yojson.Safe.start_any_variant p lb with
+                        | `Edgy_bracket -> (
+                            match Yojson.Safe.read_ident p lb with
+                              | "NONE" ->
+                                Yojson.Safe.read_space p lb;
+                                Yojson.Safe.read_gt p lb;
+                                `NONE
+                              | "SINGLE" ->
+                                Yojson.Safe.read_space p lb;
+                                Yojson.Safe.read_gt p lb;
+                                `SINGLE
+                              | x ->
+                                Atdgen_runtime.Oj_run.invalid_variant_tag p x
+                          )
+                        | `Double_quote -> (
+                            match Yojson.Safe.finish_string p lb with
+                              | "NONE" ->
+                                `NONE
+                              | "SINGLE" ->
+                                `SINGLE
+                              | x ->
+                                Atdgen_runtime.Oj_run.invalid_variant_tag p x
+                          )
+                        | `Square_bracket -> (
+                            match Atdgen_runtime.Oj_run.read_string p lb with
+                              | x ->
+                                Atdgen_runtime.Oj_run.invalid_variant_tag p x
+                          )
+                  ) p lb
+                )
+              );
+            | 5 ->
+              field_scale := (
+                Some (
+                  (
+                    Atdgen_runtime.Oj_run.read_number
+                  ) p lb
+                )
+              );
+            | 6 ->
+              field_bg_default := (
+                Some (
+                  (
+                    Atdgen_runtime.Oj_run.read_bool
+                  ) p lb
+                )
+              );
+            | 7 ->
+              field_bg_color := (
+                Some (
+                  (
+                    read_color
+                  ) p lb
+                )
+              );
+            | _ -> (
+                Yojson.Safe.skip_json p lb
+              )
+        );
+      done;
+      assert false;
+    with Yojson.End_of_object -> (
+        (
+          {
+            name = (match !field_name with Some x -> x | None -> Atdgen_runtime.Oj_run.missing_field p "name");
+            color = (match !field_color with Some x -> x | None -> Atdgen_runtime.Oj_run.missing_field p "color");
+            weight = (match !field_weight with Some x -> x | None -> Atdgen_runtime.Oj_run.missing_field p "weight");
+            style = (match !field_style with Some x -> x | None -> Atdgen_runtime.Oj_run.missing_field p "style");
+            underline = (match !field_underline with Some x -> x | None -> Atdgen_runtime.Oj_run.missing_field p "underline");
+            scale = (match !field_scale with Some x -> x | None -> Atdgen_runtime.Oj_run.missing_field p "scale");
+            bg_default = (match !field_bg_default with Some x -> x | None -> Atdgen_runtime.Oj_run.missing_field p "bg_default");
+            bg_color = (match !field_bg_color with Some x -> x | None -> Atdgen_runtime.Oj_run.missing_field p "bg_color");
+          }
+         : editor_tag)
+      )
+)
+let editor_tag_of_string s =
+  read_editor_tag (Yojson.Safe.init_lexer ()) (Lexing.from_string s)
 let write__string_option = (
   Atdgen_runtime.Oj_run.write_option (
     Yojson.Safe.write_string
@@ -1644,7 +1643,7 @@ let write_settings : _ -> settings -> _ = (
       )
         ob x.editor_bg_color_theme;
     );
-    if x.editor_bg_color_user <> { light = "#FFFFFF"; dark = "#000000"} then (
+    if x.editor_bg_color_user <> { light = "#FFFFFF"; dark = "#1e1e1e"} then (
       if !is_first then
         is_first := false
       else
@@ -2105,17 +2104,6 @@ let write_settings : _ -> settings -> _ = (
       )
         ob x.editor_tags;
     );
-    if x.editor_tags_dark <> [] then (
-      if !is_first then
-        is_first := false
-      else
-        Buffer.add_char ob ',';
-        Buffer.add_string ob "\"editor_tags_dark\":";
-      (
-        write__editor_tag_list
-      )
-        ob x.editor_tags_dark;
-    );
     if x.editor_trim_lines <> false then (
       if !is_first then
         is_first := false
@@ -2203,7 +2191,7 @@ let read_settings = (
     let field_editor_base_font = ref ("monospace 9") in
     let field_editor_bg_color_popup = ref ("#FFE375") in
     let field_editor_bg_color_theme = ref (false) in
-    let field_editor_bg_color_user = ref ({ light = "#FFFFFF"; dark = "#000000"}) in
+    let field_editor_bg_color_user = ref ({ light = "#FFFFFF"; dark = "#1e1e1e"}) in
     let field_editor_code_folding_enabled = ref (true) in
     let field_editor_completion_font = ref ("Sans 8") in
     let field_editor_completion_greek_letters = ref (true) in
@@ -2242,7 +2230,6 @@ let read_settings = (
     let field_editor_tab_spaces = ref (true) in
     let field_editor_tab_width = ref (2) in
     let field_editor_tags = ref ([]) in
-    let field_editor_tags_dark = ref ([]) in
     let field_editor_trim_lines = ref (false) in
     let field_editor_wrap = ref (false) in
     try
@@ -2323,7 +2310,7 @@ let read_settings = (
                             )
                           | 'w' -> (
                               if String.unsafe_get s (pos+8) = 'r' && String.unsafe_get s (pos+9) = 'a' && String.unsafe_get s (pos+10) = 'p' then (
-                                96
+                                95
                               )
                               else (
                                 -1
@@ -2461,27 +2448,8 @@ let read_settings = (
                               )
                             )
                           | 't' -> (
-                              if String.unsafe_get s (pos+8) = 'a' then (
-                                match String.unsafe_get s (pos+9) with
-                                  | 'b' -> (
-                                      if String.unsafe_get s (pos+10) = '_' && String.unsafe_get s (pos+11) = 'w' && String.unsafe_get s (pos+12) = 'i' && String.unsafe_get s (pos+13) = 'd' && String.unsafe_get s (pos+14) = 't' && String.unsafe_get s (pos+15) = 'h' then (
-                                        92
-                                      )
-                                      else (
-                                        -1
-                                      )
-                                    )
-                                  | 'g' -> (
-                                      if String.unsafe_get s (pos+10) = 's' && String.unsafe_get s (pos+11) = '_' && String.unsafe_get s (pos+12) = 'd' && String.unsafe_get s (pos+13) = 'a' && String.unsafe_get s (pos+14) = 'r' && String.unsafe_get s (pos+15) = 'k' then (
-                                        94
-                                      )
-                                      else (
-                                        -1
-                                      )
-                                    )
-                                  | _ -> (
-                                      -1
-                                    )
+                              if String.unsafe_get s (pos+8) = 'a' && String.unsafe_get s (pos+9) = 'b' && String.unsafe_get s (pos+10) = '_' && String.unsafe_get s (pos+11) = 'w' && String.unsafe_get s (pos+12) = 'i' && String.unsafe_get s (pos+13) = 'd' && String.unsafe_get s (pos+14) = 't' && String.unsafe_get s (pos+15) = 'h' then (
+                                92
                               )
                               else (
                                 -1
@@ -2540,7 +2508,7 @@ let read_settings = (
                                   )
                                 | 'r' -> (
                                     if String.unsafe_get s (pos+9) = 'i' && String.unsafe_get s (pos+10) = 'm' && String.unsafe_get s (pos+11) = '_' && String.unsafe_get s (pos+12) = 'l' && String.unsafe_get s (pos+13) = 'i' && String.unsafe_get s (pos+14) = 'n' && String.unsafe_get s (pos+15) = 'e' && String.unsafe_get s (pos+16) = 's' then (
-                                      95
+                                      94
                                     )
                                     else (
                                       -1
@@ -4382,21 +4350,13 @@ let read_settings = (
             )
           | 94 ->
             if not (Yojson.Safe.read_null_if_possible p lb) then (
-              field_editor_tags_dark := (
-                (
-                  read__editor_tag_list
-                ) p lb
-              );
-            )
-          | 95 ->
-            if not (Yojson.Safe.read_null_if_possible p lb) then (
               field_editor_trim_lines := (
                 (
                   Atdgen_runtime.Oj_run.read_bool
                 ) p lb
               );
             )
-          | 96 ->
+          | 95 ->
             if not (Yojson.Safe.read_null_if_possible p lb) then (
               field_editor_wrap := (
                 (
@@ -4486,7 +4446,7 @@ let read_settings = (
                               )
                             | 'w' -> (
                                 if String.unsafe_get s (pos+8) = 'r' && String.unsafe_get s (pos+9) = 'a' && String.unsafe_get s (pos+10) = 'p' then (
-                                  96
+                                  95
                                 )
                                 else (
                                   -1
@@ -4624,27 +4584,8 @@ let read_settings = (
                                 )
                               )
                             | 't' -> (
-                                if String.unsafe_get s (pos+8) = 'a' then (
-                                  match String.unsafe_get s (pos+9) with
-                                    | 'b' -> (
-                                        if String.unsafe_get s (pos+10) = '_' && String.unsafe_get s (pos+11) = 'w' && String.unsafe_get s (pos+12) = 'i' && String.unsafe_get s (pos+13) = 'd' && String.unsafe_get s (pos+14) = 't' && String.unsafe_get s (pos+15) = 'h' then (
-                                          92
-                                        )
-                                        else (
-                                          -1
-                                        )
-                                      )
-                                    | 'g' -> (
-                                        if String.unsafe_get s (pos+10) = 's' && String.unsafe_get s (pos+11) = '_' && String.unsafe_get s (pos+12) = 'd' && String.unsafe_get s (pos+13) = 'a' && String.unsafe_get s (pos+14) = 'r' && String.unsafe_get s (pos+15) = 'k' then (
-                                          94
-                                        )
-                                        else (
-                                          -1
-                                        )
-                                      )
-                                    | _ -> (
-                                        -1
-                                      )
+                                if String.unsafe_get s (pos+8) = 'a' && String.unsafe_get s (pos+9) = 'b' && String.unsafe_get s (pos+10) = '_' && String.unsafe_get s (pos+11) = 'w' && String.unsafe_get s (pos+12) = 'i' && String.unsafe_get s (pos+13) = 'd' && String.unsafe_get s (pos+14) = 't' && String.unsafe_get s (pos+15) = 'h' then (
+                                  92
                                 )
                                 else (
                                   -1
@@ -4703,7 +4644,7 @@ let read_settings = (
                                     )
                                   | 'r' -> (
                                       if String.unsafe_get s (pos+9) = 'i' && String.unsafe_get s (pos+10) = 'm' && String.unsafe_get s (pos+11) = '_' && String.unsafe_get s (pos+12) = 'l' && String.unsafe_get s (pos+13) = 'i' && String.unsafe_get s (pos+14) = 'n' && String.unsafe_get s (pos+15) = 'e' && String.unsafe_get s (pos+16) = 's' then (
-                                        95
+                                        94
                                       )
                                       else (
                                         -1
@@ -6545,21 +6486,13 @@ let read_settings = (
               )
             | 94 ->
               if not (Yojson.Safe.read_null_if_possible p lb) then (
-                field_editor_tags_dark := (
-                  (
-                    read__editor_tag_list
-                  ) p lb
-                );
-              )
-            | 95 ->
-              if not (Yojson.Safe.read_null_if_possible p lb) then (
                 field_editor_trim_lines := (
                   (
                     Atdgen_runtime.Oj_run.read_bool
                   ) p lb
                 );
               )
-            | 96 ->
+            | 95 ->
               if not (Yojson.Safe.read_null_if_possible p lb) then (
                 field_editor_wrap := (
                   (
@@ -6670,7 +6603,6 @@ let read_settings = (
             editor_tab_spaces = !field_editor_tab_spaces;
             editor_tab_width = !field_editor_tab_width;
             editor_tags = !field_editor_tags;
-            editor_tags_dark = !field_editor_tags_dark;
             editor_trim_lines = !field_editor_trim_lines;
             editor_wrap = !field_editor_wrap;
           }

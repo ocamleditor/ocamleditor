@@ -1,20 +1,20 @@
 (* Auto-generated from "settings.atd" *)
 [@@@ocaml.warning "-27-32-33-35-39"]
 
+type color = Settings_t.color = {
+  mutable light: string;
+  mutable dark: string
+}
+
 type editor_tag = Settings_t.editor_tag = {
   mutable name: string;
-  mutable color: string;
+  mutable color: color;
   mutable weight: int;
   mutable style: [ `NORMAL | `ITALIC ];
   mutable underline: [ `NONE | `SINGLE ];
   mutable scale: float;
   mutable bg_default: bool;
-  mutable bg_color: string
-}
-
-type color = Settings_t.color = {
-  mutable light: string;
-  mutable dark: string
+  mutable bg_color: color
 }
 
 type settings = Settings_t.settings = {
@@ -112,30 +112,9 @@ type settings = Settings_t.settings = {
   mutable editor_tab_spaces: bool;
   mutable editor_tab_width: int;
   mutable editor_tags: editor_tag list;
-  mutable editor_tags_dark: editor_tag list;
   mutable editor_trim_lines: bool;
   mutable editor_wrap: bool
 }
-
-val write_editor_tag :
-  Buffer.t -> editor_tag -> unit
-  (** Output a JSON value of type {!type:editor_tag}. *)
-
-val string_of_editor_tag :
-  ?len:int -> editor_tag -> string
-  (** Serialize a value of type {!type:editor_tag}
-      into a JSON string.
-      @param len specifies the initial length
-                 of the buffer used internally.
-                 Default: 1024. *)
-
-val read_editor_tag :
-  Yojson.Safe.lexer_state -> Lexing.lexbuf -> editor_tag
-  (** Input JSON data of type {!type:editor_tag}. *)
-
-val editor_tag_of_string :
-  string -> editor_tag
-  (** Deserialize JSON data of type {!type:editor_tag}. *)
 
 val write_color :
   Buffer.t -> color -> unit
@@ -156,6 +135,26 @@ val read_color :
 val color_of_string :
   string -> color
   (** Deserialize JSON data of type {!type:color}. *)
+
+val write_editor_tag :
+  Buffer.t -> editor_tag -> unit
+  (** Output a JSON value of type {!type:editor_tag}. *)
+
+val string_of_editor_tag :
+  ?len:int -> editor_tag -> string
+  (** Serialize a value of type {!type:editor_tag}
+      into a JSON string.
+      @param len specifies the initial length
+                 of the buffer used internally.
+                 Default: 1024. *)
+
+val read_editor_tag :
+  Yojson.Safe.lexer_state -> Lexing.lexbuf -> editor_tag
+  (** Input JSON data of type {!type:editor_tag}. *)
+
+val editor_tag_of_string :
+  string -> editor_tag
+  (** Deserialize JSON data of type {!type:editor_tag}. *)
 
 val write_settings :
   Buffer.t -> settings -> unit

@@ -22,6 +22,7 @@
 
 open Printf
 open Pref_page
+open Preferences
 
 (** pref_color *)
 class pref_color title ?packing () =
@@ -142,10 +143,10 @@ class pref_color title ?packing () =
     initializer
       let signal_id =
         Preferences.preferences#connect#changed ~callback:begin fun pref ->
-          let tags = if pref.theme_is_dark then pref.editor_tags_dark else pref.editor_tags in
+          let tags = pref.editor_tags in
           let color =
             match tags |> List.find_opt (fun t -> t.Settings_t.name = "lident") with
-            | Some tag -> tag.color
+            | Some tag -> ?? (tag.color)
             | _ -> "NONE"
           in
           Printf.printf "********************* %s %b -- %s \n%!"
@@ -174,7 +175,7 @@ class pref_color title ?packing () =
       pref.editor_fg_color_popup <- color_name button_tag_fg_popup#color;
       pref.editor_bg_color_theme <- false;
       Preferences.set_themed_color pref.editor_bg_color_user (color_name button_default_bg#color);
-      (if Preferences.preferences#get.theme_is_dark then pref.editor_tags_dark <- tags else pref.editor_tags <- tags);
+      pref.editor_tags <- tags;
       let ltags, prop = tags |> List.map (fun t -> t.Settings_t.name, t) |> List.split in
       Lexical.tags := ltags;
       Lexical.colors := prop;
@@ -189,8 +190,7 @@ class pref_color title ?packing () =
     method read pref =
       button_tag_bg_popup#set_color (GDraw.color (`NAME pref.editor_bg_color_popup));
       button_tag_fg_popup#set_color (GDraw.color (`NAME pref.editor_fg_color_popup));
-      tags <- List.sort (fun a b -> compare a.Settings_t.name b.name)
-          (if Preferences.preferences#get.theme_is_dark then pref.editor_tags_dark else pref.editor_tags);
+      tags <- List.sort (fun a b -> compare a.Settings_t.name b.name) pref.editor_tags;
       button_default_bg#set_color (GDraw.color (`NAME (Preferences.get_themed_color pref.editor_bg_color_user)));
       tag_model#clear();
       List.iter begin fun tag ->
@@ -220,12 +220,12 @@ class pref_color title ?packing () =
           begin
             match List.find_opt (fun t -> t.Settings_t.name = tname) tags with
             | Some t ->
-                button_tag_fg#set_color (GDraw.color (`NAME t.color));
+                button_tag_fg#set_color (GDraw.color (`NAME ?? (t.color)));
                 scale_tag_weight#adjustment#set_value (float_of_int t.weight);
                 check_tag_style#set_active (t.style <> `NORMAL);
                 check_tag_underline#set_active (t.underline <> `NONE);
                 check_tag_bg#set_active t.bg_default;
-                button_tag_bg#set_color (GDraw.color (`NAME t.bg_color));
+                button_tag_bg#set_color (GDraw.color (`NAME ?? (t.bg_color)));
             | _ -> ()
           end;
           if Oe_config.ocamldoc_paragraph_bgcolor_enabled && tname = "ocamldoc"
@@ -253,11 +253,14 @@ class pref_color title ?packing () =
       let bg_default = check_tag_bg#active in
       let bg_color   = button_tag_bg#color in
       if current_tag <> "" then begin
+        let prev_tag =
+          tags |> List.find_opt (fun t -> t.Settings_t.name = current_tag) |> Option.get
+        in
         tags <-
           {
             Settings_t.name = current_tag;
-            color = color_name color; weight; style; underline;
-            scale = 1.0; bg_default; bg_color = color_name bg_color
+            color = new_themed_color (color_name color) prev_tag.color; weight; style; underline;
+            scale = 1.0; bg_default; bg_color = new_themed_color (color_name bg_color) prev_tag.bg_color
           } ::
           (List.filter (fun t -> t.Settings_t.name <> current_tag) tags);
       end;
@@ -269,7 +272,7 @@ class pref_color title ?packing () =
         editor_ocamldoc_paragraph_bgcolor_1 = Some (color_name button_odoc_bg#color);
         editor_ocamldoc_paragraph_bgcolor_2 = Some (color_name button_odoc_bg2#color);
       } in
-      (if Preferences.preferences#get.theme_is_dark then temp_pref.editor_tags_dark <- tags else temp_pref.editor_tags <- tags);
+      temp_pref.editor_tags <- tags;
       let tag_names, colors = tags |> List.map (fun t -> t.Settings_t.name, t) |> List.split in
       preview#tbuffer#init_tags ~tags:tag_names ~colors
         ~ocamldoc_paragraph_bgcolor_1:temp_pref.editor_ocamldoc_paragraph_bgcolor_1

@@ -25,30 +25,89 @@ let default_values =
   let default_editor_tags =
     let open Settings_t in
     [
-      { name = "control"; color = "blue"; weight = 700; style = `NORMAL; underline = `NONE; scale = 1.0; bg_default = true; bg_color = "#ffffff" };
-      { name = "define"; color = "forestgreen"; weight = 700; style = `NORMAL; underline = `NONE; scale = 1.0; bg_default = true; bg_color = "#ffffff" };
-      { name = "structure"; color = "purple"; weight = 700; style = `NORMAL; underline = `NONE; scale = 1.0; bg_default = true; bg_color = "#ffffff" };
-      { name = "char"; color = "firebrick3"; weight = 0; style = `NORMAL; underline = `NONE; scale = 1.0; bg_default = true; bg_color = "#ffffff" };
-      { name = "infix"; color = "indianred4"; weight = 0; style = `NORMAL; underline = `NONE; scale = 1.0; bg_default = true; bg_color = "#ffffff" };
-      { name = "label"; color = "saddlebrown"; weight = 700; style = `NORMAL; underline = `NONE; scale = 1.0; bg_default = true; bg_color = "#ffffff" };
-      { name = "uident"; color = "midnightblue"; weight = 700; style = `NORMAL; underline = `NONE; scale = 1.0; bg_default = true; bg_color = "#ffffff" };
-      { name = "number"; color = "blue"; weight = 0; style = `NORMAL; underline = `NONE; scale = 1.0; bg_default = true; bg_color = "#ffffff" };
-      { name = "custom"; color = "black"; weight = 700; style = `NORMAL; underline = `NONE; scale = 1.0; bg_default = true; bg_color = "#ffffff" };
-      { name = "lident"; color = "black"; weight = 0; style = `NORMAL; underline = `NONE; scale = 1.0; bg_default = true; bg_color = "#ffffff" };
-      { name = "symbol"; color = "black"; weight = 0; style = `NORMAL; underline = `NONE; scale = 1.0; bg_default = true; bg_color = "#ffffff" };
-      { name = "name_def"; color = "black"; weight = 0; style = `NORMAL; underline = `NONE; scale = 1.0; bg_default = true; bg_color = "#ffffff" };
-      { name = "method_name_def"; color = "black"; weight = 0; style = `NORMAL; underline = `NONE; scale = 1.0; bg_default = true; bg_color = "#ffffff" };
-      { name = "comment"; color = "#CD1076"; weight = 0; style = `ITALIC; underline = `NONE; scale = 1.0; bg_default = true; bg_color = "#ffffff" };
-      { name = "ocamldoc"; color = "deeppink3"; weight = 0; style = `ITALIC; underline = `NONE; scale = 1.0; bg_default = true; bg_color = "#ffffff" };
-      { name = "highlight"; color = "#ffff00"; weight = 0; style = `NORMAL; underline = `NONE; scale = 1.0; bg_default = true; bg_color = "#ffffff" };
-      { name = "highlight_current_line"; color = "#c3ff96"; weight = 0; style = `NORMAL; underline = `NONE; scale = 1.0; bg_default = true; bg_color = "#ffffff" };
-      { name = "record_label"; color = "#474747"; weight = 0; style = `ITALIC; underline = `NONE; scale = 1.0; bg_default = true; bg_color = "#ffffff" };
-      { name = "selection"; color = "#ffffff"; weight = 0; style = `NORMAL; underline = `NONE; scale = 1.0; bg_default = false; bg_color = "#3584e4" };
-      { name = "annotation"; color = "#444488"; weight = 0; style = `ITALIC; underline = `NONE; scale = 1.0; bg_default = true; bg_color = "#ffffff" };
+      { name = "control";
+        color = { light = "blue"; dark = "#87CEFA" };
+        bg_color = { light = "#ffffff"; dark = "#000000" };
+        weight = 700; style = `NORMAL; underline = `NONE; scale = 1.0; bg_default = true };
+      { name = "define";
+        color = { light = "forestgreen"; dark = "#32cd32" };
+        bg_color = { light = "#ffffff"; dark = "#000000" };
+        weight = 700; style = `NORMAL; underline = `NONE; scale = 1.0; bg_default = true };
+      { name = "structure";
+        color = { light = "purple"; dark = "#C889C8" };
+        bg_color = { light = "#ffffff"; dark = "#000000" };
+        weight = 700; style = `NORMAL; underline = `NONE; scale = 1.0; bg_default = true };
+      { name = "char";
+        color = { light = "firebrick3"; dark = "#D2691E" };
+        bg_color = { light = "#ffffff"; dark = "#000000" };
+        weight = 0; style = `NORMAL; underline = `NONE; scale = 1.0; bg_default = true };
+      { name = "infix";
+        color = { light = "indianred4"; dark = "#ff6a6a" };
+        bg_color = { light = "#ffffff"; dark = "#000000" };
+        weight = 0; style = `NORMAL; underline = `NONE; scale = 1.0; bg_default = true };
+      { name = "label";
+        color = { light = "saddlebrown"; dark = "#B77871" };
+        bg_color = { light = "#ffffff"; dark = "#000000" };
+        weight = 700; style = `NORMAL; underline = `NONE; scale = 1.0; bg_default = true };
+      { name = "uident";
+        color = { light = "midnightblue"; dark = "#009acd" };
+        bg_color = { light = "#ffffff"; dark = "#000000" };
+        weight = 700; style = `NORMAL; underline = `NONE; scale = 1.0; bg_default = true };
+      { name = "number";
+        color = { light = "blue"; dark = "#add8e6" };
+        bg_color = { light = "#ffffff"; dark = "#000000" };
+        weight = 0; style = `NORMAL; underline = `NONE; scale = 1.0; bg_default = true };
+      { name = "custom";
+        color = { light = "black"; dark = "white" };
+        bg_color = { light = "#ffffff"; dark = "#000000" };
+        weight = 700; style = `NORMAL; underline = `NONE; scale = 1.0; bg_default = true };
+      { name = "lident";
+        color = { light = "black"; dark = "white" };
+        bg_color = { light = "#ffffff"; dark = "#000000" };
+        weight = 0; style = `NORMAL; underline = `NONE; scale = 1.0; bg_default = true };
+      { name = "symbol";
+        color = { light = "black"; dark = "white" };
+        bg_color = { light = "#ffffff"; dark = "#000000" };
+        weight = 0; style = `NORMAL; underline = `NONE; scale = 1.0; bg_default = true };
+      { name = "name_def";
+        color = { light = "black"; dark = "white" };
+        bg_color = { light = "#ffffff"; dark = "#000000" };
+        weight = 0; style = `NORMAL; underline = `NONE; scale = 1.0; bg_default = true };
+      { name = "method_name_def";
+        color = { light = "black"; dark = "white" };
+        bg_color = { light = "#ffffff"; dark = "#000000" };
+        weight = 0; style = `NORMAL; underline = `NONE; scale = 1.0; bg_default = true };
+      { name = "comment";
+        color = { light = "#CD1076"; dark = "#C72B7F" };
+        bg_color = { light = "#ffffff"; dark = "#000000" };
+        weight = 0; style = `ITALIC; underline = `NONE; scale = 1.0; bg_default = true };
+      { name = "ocamldoc";
+        color = { light = "deeppink3"; dark = "deeppink1" };
+        bg_color = { light = "#ffffff"; dark = "#000000" };
+        weight = 0; style = `ITALIC; underline = `NONE; scale = 1.0; bg_default = true };
+      { name = "highlight";
+        color = { light = "#ffff00"; dark = "#ffff00" };
+        bg_color = { light = "#ffffff"; dark = "#000000" };
+        weight = 0; style = `NORMAL; underline = `NONE; scale = 1.0; bg_default = true };
+      { name = "highlight_current_line";
+        color = { light = "#c3ff96"; dark = "#183900" };
+        bg_color = { light = "#ffffff"; dark = "#000000" };
+        weight = 0; style = `NORMAL; underline = `NONE; scale = 1.0; bg_default = true };
+      { name = "record_label";
+        color = { light = "#474747"; dark = "#d0d0d0" };
+        bg_color = { light = "#ffffff"; dark = "#000000" };
+        weight = 0; style = `ITALIC; underline = `NONE; scale = 1.0; bg_default = true };
+      { name = "selection";
+        color = { light = "#ffffff"; dark = "#000000" };
+        bg_color = { light = "#3584e4"; dark = "#4B81AD" };
+        weight = 0; style = `NORMAL; underline = `NONE; scale = 1.0; bg_default = false };
+      { name = "annotation";
+        color = { light = "#444488"; dark = "#444488" };
+        bg_color = { light = "#ffffff"; dark = "#000000" };
+        weight = 0; style = `ITALIC; underline = `NONE; scale = 1.0; bg_default = true };
     ]
   in
   settings.editor_tags <- default_editor_tags;
-  settings.editor_tags_dark <- default_editor_tags;
   settings
 
 let preferences = new GUtil.variable default_values
@@ -97,8 +156,29 @@ let load () =
   Otherwidgets_config.geometry_memo := (fun () -> geometry_memo);
 ;;
 
+(** reset_defaults *)
+let reset_defaults () =
+  if Sys.file_exists filename then Sys.remove filename;
+  preferences#set default_values;
+  save()
+
+let get_themed_color color =
+  if preferences#get.Settings_t.theme_is_dark then color.Settings_t.dark else color.Settings_t.light
+
+let (??) = get_themed_color
+
+let set_themed_color color x =
+  if preferences#get.Settings_t.theme_is_dark then color.Settings_t.dark <- x else color.Settings_t.light <- x
+
+let new_themed_color x alt =
+  if preferences#get.Settings_t.theme_is_dark
+  then { Settings_t.light = alt.Settings_t.light; dark = x }
+  else { Settings_t.light = x; dark = alt.Settings_t.dark }
+
 let editor_tag_color tagname =
-  (`NAME (List.find (fun t -> t.Settings_t.name = tagname) preferences#get.editor_tags).color) |> GDraw.color
+  let color = (List.find (fun t -> t.Settings_t.name = tagname) preferences#get.editor_tags).color in
+  let color_name = get_themed_color color in
+  (`NAME color_name) |> GDraw.color
 
 let editor_tag_label = function
   | "control"                -> "Control"
@@ -122,23 +202,6 @@ let editor_tag_label = function
   | "selection"              -> "Selection"
   | "annotation"             -> "Annotation"
   | x -> x
-
-(** reset_defaults *)
-let reset_defaults () =
-  if Sys.file_exists filename then Sys.remove filename;
-  preferences#set default_values;
-  save()
-
-let get_themed_color color =
-  if preferences#get.Settings_t.theme_is_dark then color.Settings_t.dark else color.Settings_t.light
-
-let set_themed_color color x =
-  if preferences#get.Settings_t.theme_is_dark then color.Settings_t.dark <- x else color.Settings_t.light <- x
-
-let new_themed_color x alt =
-  if preferences#get.Settings_t.theme_is_dark
-  then { Settings_t.light = alt.Settings_t.light; dark = x }
-  else { Settings_t.light = x; dark = alt.Settings_t.dark }
 
 let _ = begin
   load();

@@ -1,18 +1,18 @@
 (* Auto-generated from "settings.atd" *)
 [@@@ocaml.warning "-27-32-33-35-39"]
 
+type color = { mutable light: string; mutable dark: string }
+
 type editor_tag = {
   mutable name: string;
-  mutable color: string;
+  mutable color: color;
   mutable weight: int;
   mutable style: [ `NORMAL | `ITALIC ];
   mutable underline: [ `NONE | `SINGLE ];
   mutable scale: float;
   mutable bg_default: bool;
-  mutable bg_color: string
+  mutable bg_color: color
 }
-
-type color = { mutable light: string; mutable dark: string }
 
 type settings = {
   mutable timestamp: float;
@@ -109,7 +109,6 @@ type settings = {
   mutable editor_tab_spaces: bool;
   mutable editor_tab_width: int;
   mutable editor_tags: editor_tag list;
-  mutable editor_tags_dark: editor_tag list;
   mutable editor_trim_lines: bool;
   mutable editor_wrap: bool
 }

@@ -124,11 +124,8 @@ class pref_view title ?packing () =
                 Manual_reset_event.wait dark_theme_transition;
                 (* ... editor colors *)
                 let open Settings_t in
-                let tags =
-                  if is_dark_theme#get then Preferences.(preferences#get.editor_tags_dark)
-                  else Preferences.preferences#get.editor_tags
-                in
-                let ltags, prop = tags |> List.map (fun t -> t.Settings_t.name, t) |> List.split in
+                let ltags, prop =
+                  Preferences.preferences#get.editor_tags |> List.map (fun t -> t.Settings_t.name, t) |> List.split in
                 Lexical.tags := ltags;
                 Lexical.colors := prop;
                 (* Setting preferences refreshes editor pages *)

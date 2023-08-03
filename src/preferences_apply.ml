@@ -22,6 +22,7 @@
 
 
 open Printf
+open Preferences
 open Settings_t
 
 let apply (view : Text.view) pref =
@@ -72,12 +73,11 @@ class "GtkTextView" style "s1"
     end;
   in
   view#options#set_base_color default_bg_color;
-  let editor_tags =
-    if Preferences.preferences#get.theme_is_dark then pref.editor_tags_dark else pref.editor_tags in
+  let editor_tags = pref.editor_tags in
   if pref.editor_highlight_current_line then begin
     view#options#set_highlight_current_line
       (Some (match (List.find_opt (fun t -> t.name = "highlight_current_line") editor_tags)
-             with Some t -> t.color | _ -> assert false));
+             with Some t -> ?? (t.color) | _ -> assert false));
   end else (view#options#set_highlight_current_line None);
   view#tbuffer#set_tab_width pref.editor_tab_width;
   view#tbuffer#set_tab_spaces pref.editor_tab_spaces;
@@ -89,9 +89,9 @@ class "GtkTextView" style "s1"
   end else (view#options#set_visible_right_margin None);
   match List.find_opt (fun t -> t.name = "selection") editor_tags with
   | Some t ->
-      let bg_color = if t.bg_default then view#options#text_color else (`NAME t.bg_color) in
+      let bg_color = if t.bg_default then view#options#text_color else (`NAME ?? (t.bg_color)) in
       view#misc#modify_base [`SELECTED, bg_color; `ACTIVE, bg_color];
-      let fg_color = if t.bg_default then `NAME default_bg_color else `NAME t.color in
+      let fg_color = if t.bg_default then `NAME default_bg_color else `NAME ?? (t.color) in
       view#misc#modify_text [`SELECTED, fg_color; `ACTIVE, fg_color];
   | _ -> assert false
 

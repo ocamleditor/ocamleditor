@@ -25,6 +25,7 @@ open Parser
 open Printf
 open Location
 open Lexing
+open Preferences
 
 module Range = struct
   let range_of_loc {loc_start; loc_end; _} =
@@ -45,10 +46,11 @@ module Range = struct
 end
 
 open Range
+open Preferences
 
 let parse pref =
-  let tags = if Preferences.preferences#get.theme_is_dark then pref.Settings_t.editor_tags_dark else pref.Settings_t.editor_tags in
-  let bgcolor_highlight = Preferences.preferences#get.editor_mark_occurrences_bg_color in
+  let tags = pref.Settings_t.editor_tags in
+  let bgcolor_highlight = preferences#get.editor_mark_occurrences_bg_color in
   let span_highlight text =
     String.concat "" ["<span bgcolor='"; bgcolor_highlight; "'>"; (Glib.Markup.escape_text text); "</span>"]
   in
@@ -59,7 +61,7 @@ let parse pref =
         let style     = match t.style with `ITALIC -> " font_style='italic'" | _ -> "" in
         let underline = match t.underline with `NONE -> "" | _ -> " underline='single'" in
         let bgcolor   = if highlight then " bgcolor='" ^ bgcolor_highlight ^"'" else "" in
-        String.concat "" ["<span color='"; t.color; "'"; weight; style; underline; bgcolor; ">"]
+        String.concat "" ["<span color='"; ??(t.color); "'"; weight; style; underline; bgcolor; ">"]
     | _ -> assert false
   in
   let span = Miscellanea.Memo.create span in
