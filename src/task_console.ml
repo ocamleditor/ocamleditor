@@ -23,6 +23,7 @@
 open Printf
 open Miscellanea
 open Target
+open Preferences
 
 let re_error_line = Str.regexp_case_fold
     ".*\"\\(.+\\)\", line \\([0-9]+\\), characters \\([0-9]+\\)-\\([0-9]+\\):?"
@@ -428,15 +429,15 @@ class view ~(editor : Editor.editor) ?(task_kind=(`OTHER : Task.kind)) ~task ?pa
       (*    button_run#connect#clicked ~callback:(fun () -> ignore (self#run ()));*)
       ignore (button_stop#connect#clicked ~callback:self#stop);
       view#misc#modify_font_by_name Preferences.preferences#get.output_font;
-      view#misc#modify_base [`NORMAL, `NAME Preferences.preferences#get.output_bg_color];
+      view#misc#modify_base [`NORMAL, `NAME ?? (Preferences.preferences#get.output_bg_color)];
       ignore (view#buffer#create_tag ~name:"input"
-                [`FOREGROUND Preferences.preferences#get.output_stdin_fg_color]);
+                [`FOREGROUND ?? (Preferences.preferences#get.output_stdin_fg_color)]);
       ignore (view#buffer#create_tag ~name:"error"
-                [`FOREGROUND Preferences.preferences#get.output_err_fg_color]);
+                [`FOREGROUND ?? (Preferences.preferences#get.output_err_fg_color)]);
       ignore (view#buffer#create_tag ~name:"warning"
-                [`FOREGROUND Preferences.preferences#get.output_warn_fg_color]);
+                [`FOREGROUND ?? (Preferences.preferences#get.output_warn_fg_color)]);
       ignore (view#buffer#create_tag ~name:"output"
-                [`FOREGROUND Preferences.preferences#get.output_stdout_fg_color]);
+                [`FOREGROUND ?? (Preferences.preferences#get.output_stdout_fg_color)]);
       ignore (view#buffer#create_tag ~name:"bold" [`WEIGHT `BOLD]);
       view#misc#grab_focus()
 

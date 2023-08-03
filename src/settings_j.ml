@@ -50,11 +50,11 @@ type settings = Settings_t.settings = {
   mutable outline_color_act_fg: string;
   mutable outline_color_alt_rows: float option;
   mutable output_font: string;
-  mutable output_bg_color: string;
-  mutable output_stdin_fg_color: string;
-  mutable output_stdout_fg_color: string;
-  mutable output_err_fg_color: string;
-  mutable output_warn_fg_color: string;
+  mutable output_bg_color: color;
+  mutable output_stdin_fg_color: color;
+  mutable output_stdout_fg_color: color;
+  mutable output_err_fg_color: color;
+  mutable output_warn_fg_color: color;
   mutable program_diff: string;
   mutable program_diff_graphical: string;
   mutable program_pdf_viewer: string;
@@ -1385,58 +1385,58 @@ let write_settings : _ -> settings -> _ = (
       )
         ob x.output_font;
     );
-    if x.output_bg_color <> "#FFFFFF" then (
+    if x.output_bg_color <> {light="#FFFFFF"; dark="#1e1e1e"} then (
       if !is_first then
         is_first := false
       else
         Buffer.add_char ob ',';
         Buffer.add_string ob "\"output_bg_color\":";
       (
-        Yojson.Safe.write_string
+        write_color
       )
         ob x.output_bg_color;
     );
-    if x.output_stdin_fg_color <> "#0000FF" then (
+    if x.output_stdin_fg_color <> {light="#0000FF"; dark="#0000c0"} then (
       if !is_first then
         is_first := false
       else
         Buffer.add_char ob ',';
         Buffer.add_string ob "\"output_stdin_fg_color\":";
       (
-        Yojson.Safe.write_string
+        write_color
       )
         ob x.output_stdin_fg_color;
     );
-    if x.output_stdout_fg_color <> "#000000" then (
+    if x.output_stdout_fg_color <> {light="#000000"; dark="#e1e1e1"} then (
       if !is_first then
         is_first := false
       else
         Buffer.add_char ob ',';
         Buffer.add_string ob "\"output_stdout_fg_color\":";
       (
-        Yojson.Safe.write_string
+        write_color
       )
         ob x.output_stdout_fg_color;
     );
-    if x.output_err_fg_color <> "#FF0000" then (
+    if x.output_err_fg_color <> {light="#FF0000"; dark="#c00000"} then (
       if !is_first then
         is_first := false
       else
         Buffer.add_char ob ',';
         Buffer.add_string ob "\"output_err_fg_color\":";
       (
-        Yojson.Safe.write_string
+        write_color
       )
         ob x.output_err_fg_color;
     );
-    if x.output_warn_fg_color <> "darkorange" then (
+    if x.output_warn_fg_color <> {light="darkorange"; dark="#C05000"} then (
       if !is_first then
         is_first := false
       else
         Buffer.add_char ob ',';
         Buffer.add_string ob "\"output_warn_fg_color\":";
       (
-        Yojson.Safe.write_string
+        write_color
       )
         ob x.output_warn_fg_color;
     );
@@ -2168,11 +2168,11 @@ let read_settings = (
     let field_outline_color_act_fg = ref ("#000000") in
     let field_outline_color_alt_rows = ref (None) in
     let field_output_font = ref ("monospace 8") in
-    let field_output_bg_color = ref ("#FFFFFF") in
-    let field_output_stdin_fg_color = ref ("#0000FF") in
-    let field_output_stdout_fg_color = ref ("#000000") in
-    let field_output_err_fg_color = ref ("#FF0000") in
-    let field_output_warn_fg_color = ref ("darkorange") in
+    let field_output_bg_color = ref ({light="#FFFFFF"; dark="#1e1e1e"}) in
+    let field_output_stdin_fg_color = ref ({light="#0000FF"; dark="#0000c0"}) in
+    let field_output_stdout_fg_color = ref ({light="#000000"; dark="#e1e1e1"}) in
+    let field_output_err_fg_color = ref ({light="#FF0000"; dark="#c00000"}) in
+    let field_output_warn_fg_color = ref ({light="darkorange"; dark="#C05000"}) in
     let field_program_diff = ref ("diff") in
     let field_program_diff_graphical = ref ("") in
     let field_program_pdf_viewer = ref ("") in
@@ -3722,7 +3722,7 @@ let read_settings = (
             if not (Yojson.Safe.read_null_if_possible p lb) then (
               field_output_bg_color := (
                 (
-                  Atdgen_runtime.Oj_run.read_string
+                  read_color
                 ) p lb
               );
             )
@@ -3730,7 +3730,7 @@ let read_settings = (
             if not (Yojson.Safe.read_null_if_possible p lb) then (
               field_output_stdin_fg_color := (
                 (
-                  Atdgen_runtime.Oj_run.read_string
+                  read_color
                 ) p lb
               );
             )
@@ -3738,7 +3738,7 @@ let read_settings = (
             if not (Yojson.Safe.read_null_if_possible p lb) then (
               field_output_stdout_fg_color := (
                 (
-                  Atdgen_runtime.Oj_run.read_string
+                  read_color
                 ) p lb
               );
             )
@@ -3746,7 +3746,7 @@ let read_settings = (
             if not (Yojson.Safe.read_null_if_possible p lb) then (
               field_output_err_fg_color := (
                 (
-                  Atdgen_runtime.Oj_run.read_string
+                  read_color
                 ) p lb
               );
             )
@@ -3754,7 +3754,7 @@ let read_settings = (
             if not (Yojson.Safe.read_null_if_possible p lb) then (
               field_output_warn_fg_color := (
                 (
-                  Atdgen_runtime.Oj_run.read_string
+                  read_color
                 ) p lb
               );
             )
@@ -5858,7 +5858,7 @@ let read_settings = (
               if not (Yojson.Safe.read_null_if_possible p lb) then (
                 field_output_bg_color := (
                   (
-                    Atdgen_runtime.Oj_run.read_string
+                    read_color
                   ) p lb
                 );
               )
@@ -5866,7 +5866,7 @@ let read_settings = (
               if not (Yojson.Safe.read_null_if_possible p lb) then (
                 field_output_stdin_fg_color := (
                   (
-                    Atdgen_runtime.Oj_run.read_string
+                    read_color
                   ) p lb
                 );
               )
@@ -5874,7 +5874,7 @@ let read_settings = (
               if not (Yojson.Safe.read_null_if_possible p lb) then (
                 field_output_stdout_fg_color := (
                   (
-                    Atdgen_runtime.Oj_run.read_string
+                    read_color
                   ) p lb
                 );
               )
@@ -5882,7 +5882,7 @@ let read_settings = (
               if not (Yojson.Safe.read_null_if_possible p lb) then (
                 field_output_err_fg_color := (
                   (
-                    Atdgen_runtime.Oj_run.read_string
+                    read_color
                   ) p lb
                 );
               )
@@ -5890,7 +5890,7 @@ let read_settings = (
               if not (Yojson.Safe.read_null_if_possible p lb) then (
                 field_output_warn_fg_color := (
                   (
-                    Atdgen_runtime.Oj_run.read_string
+                    read_color
                   ) p lb
                 );
               )

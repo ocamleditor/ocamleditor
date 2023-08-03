@@ -47,11 +47,11 @@ type settings = {
   mutable outline_color_act_fg: string;
   mutable outline_color_alt_rows: float option;
   mutable output_font: string;
-  mutable output_bg_color: string;
-  mutable output_stdin_fg_color: string;
-  mutable output_stdout_fg_color: string;
-  mutable output_err_fg_color: string;
-  mutable output_warn_fg_color: string;
+  mutable output_bg_color: color;
+  mutable output_stdin_fg_color: color;
+  mutable output_stdout_fg_color: color;
+  mutable output_err_fg_color: color;
+  mutable output_warn_fg_color: color;
   mutable program_diff: string;
   mutable program_diff_graphical: string;
   mutable program_pdf_viewer: string;

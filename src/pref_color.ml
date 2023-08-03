@@ -179,11 +179,11 @@ class pref_color title ?packing () =
       let ltags, prop = tags |> List.map (fun t -> t.Settings_t.name, t) |> List.split in
       Lexical.tags := ltags;
       Lexical.colors := prop;
-      pref.output_bg_color <- color_name button_bg#color;
-      pref.output_stdin_fg_color <- color_name button_fg_stdin#color;
-      pref.output_stdout_fg_color <- color_name button_fg_stdout#color;
-      pref.output_err_fg_color <- color_name button_fg_err#color;
-      pref.output_warn_fg_color <- color_name button_fg_warn#color;
+      set_themed_color pref.output_bg_color (color_name button_bg#color);
+      set_themed_color pref.output_stdin_fg_color (color_name button_fg_stdin#color);
+      set_themed_color pref.output_stdout_fg_color (color_name button_fg_stdout#color);
+      set_themed_color pref.output_err_fg_color (color_name button_fg_err#color);
+      set_themed_color pref.output_warn_fg_color (color_name button_fg_warn#color);
       pref.editor_ocamldoc_paragraph_bgcolor_1 <- Some (color_name button_odoc_bg#color);
       pref.editor_ocamldoc_paragraph_bgcolor_2 <- Some (color_name button_odoc_bg2#color);
 
@@ -201,11 +201,11 @@ class pref_color title ?packing () =
         tag_model#set ~row ~column:lab_col label;
       end tags;
       view_tag#selection#select_path (GTree.Path.create [0]);
-      button_bg#set_color (GDraw.color (`NAME pref.output_bg_color));
-      button_fg_stdin#set_color (GDraw.color (`NAME pref.output_stdin_fg_color));
-      button_fg_stdout#set_color (GDraw.color (`NAME pref.output_stdout_fg_color));
-      button_fg_err#set_color (GDraw.color (`NAME pref.output_err_fg_color));
-      button_fg_warn#set_color (GDraw.color (`NAME pref.output_warn_fg_color));
+      button_bg#set_color (GDraw.color (`NAME ?? (pref.output_bg_color)));
+      button_fg_stdin#set_color (GDraw.color (`NAME ?? (pref.output_stdin_fg_color)));
+      button_fg_stdout#set_color (GDraw.color (`NAME ?? (pref.output_stdout_fg_color)));
+      button_fg_err#set_color (GDraw.color (`NAME ?? (pref.output_err_fg_color)));
+      button_fg_warn#set_color (GDraw.color (`NAME ?? (pref.output_warn_fg_color)));
       Gaux.may pref.editor_ocamldoc_paragraph_bgcolor_1 ~f:(fun color -> button_odoc_bg#set_color (GDraw.color (`NAME color)));
       Gaux.may pref.editor_ocamldoc_paragraph_bgcolor_2 ~f:(fun color -> button_odoc_bg2#set_color (GDraw.color (`NAME color)));
       self#update_preview ();

@@ -30,7 +30,6 @@ let init_tags ?(tags=(!tags)) ?(colors=(!colors))
           | None -> ()
           | Some t -> table#remove t
         end;
-        Printf.printf "==>%s %s\n%!" tagname (?? (tagprop.color));
         let fg_color = `FOREGROUND_GDK (to_gdk_color tagprop.color) in
         let properties = [
           Some fg_color;

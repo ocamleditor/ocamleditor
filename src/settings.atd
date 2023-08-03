@@ -51,11 +51,11 @@ type settings = {
   ~outline_color_alt_rows          <ocaml default="None" mutable> : float option;
 
   ~output_font                     <ocaml default="\"monospace 8\"" mutable> : string;
-  ~output_bg_color                 <ocaml default="\"#FFFFFF\"" mutable> : string;
-  ~output_stdin_fg_color           <ocaml default="\"#0000FF\"" mutable> : string;
-  ~output_stdout_fg_color          <ocaml default="\"#000000\"" mutable> : string;
-  ~output_err_fg_color             <ocaml default="\"#FF0000\"" mutable> : string;
-  ~output_warn_fg_color            <ocaml default="\"darkorange\"" mutable> : string;
+  ~output_bg_color                 <ocaml default="{light=\"#FFFFFF\"; dark=\"#1E1E1E\"}" mutable> : color;
+  ~output_stdin_fg_color           <ocaml default="{light=\"#0000FF\"; dark=\"#5050FF\"}" mutable> : color;
+  ~output_stdout_fg_color          <ocaml default="{light=\"#000000\"; dark=\"#E1E1E1\"}" mutable> : color;
+  ~output_err_fg_color             <ocaml default="{light=\"#FF0000\"; dark=\"#FF5050\"}" mutable> : color;
+  ~output_warn_fg_color            <ocaml default="{light=\"darkorange\"; dark=\"#FFC050\"}" mutable> : color;
 
   ~program_diff                    <ocaml default="\"diff\"" mutable> : string;
   ~program_diff_graphical          <ocaml default="\"\"" mutable> : string;
