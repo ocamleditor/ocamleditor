@@ -12,6 +12,11 @@ type editor_tag = Settings_t.editor_tag = {
   mutable bg_color: string
 }
 
+type color = Settings_t.color = {
+  mutable light: string;
+  mutable dark: string
+}
+
 type settings = Settings_t.settings = {
   mutable timestamp: float;
   mutable build_parallel: int option;
@@ -68,7 +73,7 @@ type settings = Settings_t.settings = {
   mutable editor_base_font: string;
   mutable editor_bg_color_popup: string;
   mutable editor_bg_color_theme: bool;
-  mutable editor_bg_color_user: string;
+  mutable editor_bg_color_user: color;
   mutable editor_code_folding_enabled: bool;
   mutable editor_completion_font: string;
   mutable editor_completion_greek_letters: bool;
@@ -131,6 +136,26 @@ val read_editor_tag :
 val editor_tag_of_string :
   string -> editor_tag
   (** Deserialize JSON data of type {!type:editor_tag}. *)
+
+val write_color :
+  Buffer.t -> color -> unit
+  (** Output a JSON value of type {!type:color}. *)
+
+val string_of_color :
+  ?len:int -> color -> string
+  (** Serialize a value of type {!type:color}
+      into a JSON string.
+      @param len specifies the initial length
+                 of the buffer used internally.
+                 Default: 1024. *)
+
+val read_color :
+  Yojson.Safe.lexer_state -> Lexing.lexbuf -> color
+  (** Input JSON data of type {!type:color}. *)
+
+val color_of_string :
+  string -> color
+  (** Deserialize JSON data of type {!type:color}. *)
 
 val write_settings :
   Buffer.t -> settings -> unit

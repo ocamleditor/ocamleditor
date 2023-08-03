@@ -12,6 +12,8 @@ type editor_tag = {
   mutable bg_color: string
 }
 
+type color = { mutable light: string; mutable dark: string }
+
 type settings = {
   mutable timestamp: float;
   mutable build_parallel: int option;
@@ -68,7 +70,7 @@ type settings = {
   mutable editor_base_font: string;
   mutable editor_bg_color_popup: string;
   mutable editor_bg_color_theme: bool;
-  mutable editor_bg_color_user: string;
+  mutable editor_bg_color_user: color;
   mutable editor_code_folding_enabled: bool;
   mutable editor_completion_font: string;
   mutable editor_completion_greek_letters: bool;

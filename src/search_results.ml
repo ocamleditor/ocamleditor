@@ -114,8 +114,9 @@ class widget ~editor(* : Editor.editor)*) ?packing () =
   let _                 = vc_hits#set_sort_column_id 1 in
   let _                 = vc_path#set_sort_column_id 2 in
   (* Model and view for lines *)
+  let open Preferences in
   let pref              = Preferences.preferences#get in
-  let gutter_bg_color   = Color.name (Color.set_value 0.93 (`NAME pref.editor_bg_color_user)) in
+  let gutter_bg_color   = Color.name (Color.set_value 0.93 (`NAME (Preferences.get_themed_color pref.editor_bg_color_user))) in
   let cols              = new GTree.column_list in
   let col_pixbuf        = cols#add ((Gobject.Data.gobject_option : (GdkPixbuf.pixbuf option) Gobject.data_conv)) in
   let col_markup        = cols#add Gobject.Data.string in
@@ -142,7 +143,7 @@ class widget ~editor(* : Editor.editor)*) ?packing () =
   (*  *)
   let _                 = view_lines#misc#modify_base [
       `SELECTED, `COLOR (Preferences.editor_tag_color "highlight_current_line");
-      `NORMAL,   `NAME pref.editor_bg_color_user;
+      `NORMAL,   `NAME (Preferences.get_themed_color pref.editor_bg_color_user);
       `ACTIVE,   `NAME gutter_bg_color
     ] in
   let _                 = view_lines#misc#modify_text [

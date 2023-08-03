@@ -26,6 +26,7 @@ open Printf
 
 (** preferences *)
 class preferences ~editor () =
+  let original_pref = { Preferences.preferences#get with timestamp = Preferences.preferences#get.timestamp } in
   let initial_gtk_theme = Preferences.preferences#get.theme in
   let initial_compl_decorated = Preferences.preferences#get.editor_completion_decorated in
   let initial_general_font = Preferences.preferences#get.font in

@@ -99,10 +99,7 @@ class pref_view title ?packing () =
 
     initializer
       is_dark_theme#connect#changed ~callback:begin fun _ ->
-        GtkThread.sync begin fun () ->
-          Printf.printf "===> signal %b\n%!" is_dark_theme#get;
-          Manual_reset_event.set dark_theme_transition;
-        end ()
+        GtkThread.sync (fun () -> Manual_reset_event.set dark_theme_transition) ()
       end |> ignore;
       (*let callback () =
         check_detach_sep#misc#set_sensitive check_remember#active;
@@ -134,7 +131,7 @@ class pref_view title ?packing () =
                 let ltags, prop = tags |> List.map (fun t -> t.Settings_t.name, t) |> List.split in
                 Lexical.tags := ltags;
                 Lexical.colors := prop;
-                (* Setting preferences trigger redisplay of editor pages *)
+                (* Setting preferences refreshes editor pages *)
                 Preferences.preferences#set {
                   Preferences.preferences#get with
                   timestamp = Unix.gettimeofday();

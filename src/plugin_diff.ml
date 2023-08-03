@@ -74,7 +74,7 @@ module Diff = struct
     let ebox = GBin.event_box () in
     let vbox = GPack.vbox ~spacing:0 ~packing:ebox#add () in
     let color = Preferences.preferences#get.editor_bg_color_user in
-    ebox#misc#modify_bg [`NORMAL, `NAME color];
+    ebox#misc#modify_bg [`NORMAL, `NAME (Preferences.get_themed_color color)];
     let fd = Pango.Font.from_string Preferences.preferences#get.editor_base_font in
     let size = Pango.Font.get_size fd - 1 * Pango.scale in
     Pango.Font.modify fd ~size ();

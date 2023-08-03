@@ -61,12 +61,12 @@ class "GtkTextView" style "s1"
   let default_bg_color =
     if pref.editor_bg_color_theme then begin
       (* "Use theme color" option removed *)
-      let color = (*`NAME*) (Preferences.default_values.editor_bg_color_user) in
+      let color = (*`NAME*) (Preferences.get_themed_color (Preferences.default_values.editor_bg_color_user)) in
       (*view#misc#modify_bg [`NORMAL, (Oe_config.gutter_color_bg color)];*)
       view#misc#modify_base [`NORMAL, `NAME color];
       color;
     end else begin
-      let color = (*`NAME*) pref.editor_bg_color_user in
+      let color = (*`NAME*) (Preferences.get_themed_color pref.editor_bg_color_user) in
       view#misc#modify_base [`NORMAL, `NAME color];
       color;
     end;

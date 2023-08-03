@@ -517,7 +517,7 @@ struct
         color;
       end;
     in
-    let bgparagraph = Color.add_value ~sfact:0.0 default_bg_color 0.06 in
+    let bgparagraph = Color.add_value ~sfact:0.0 (Preferences.get_themed_color default_bg_color) 0.06 in
     let tag_table = new GText.tag_table buffer#tag_table in
     let create_tag id name props =
       match tag_table#lookup name with

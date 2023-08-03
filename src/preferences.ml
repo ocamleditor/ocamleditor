@@ -55,7 +55,7 @@ let preferences = new GUtil.variable default_values
 
 let geometry_memo = Gmisclib.Window.GeometryMemo.create ~filename:Oe_config.geometry_memo_filename ()
 
-let filename = Filename.concat App_config.ocamleditor_user_home "settings.json"
+let filename = Filename.concat App_config.ocamleditor_user_home "settings.new.json"
 
 (** save *)
 let save () =
@@ -128,6 +128,17 @@ let reset_defaults () =
   if Sys.file_exists filename then Sys.remove filename;
   preferences#set default_values;
   save()
+
+let get_themed_color color =
+  if preferences#get.Settings_t.theme_is_dark then color.Settings_t.dark else color.Settings_t.light
+
+let set_themed_color color x =
+  if preferences#get.Settings_t.theme_is_dark then color.Settings_t.dark <- x else color.Settings_t.light <- x
+
+let new_themed_color x alt =
+  if preferences#get.Settings_t.theme_is_dark
+  then { Settings_t.light = alt.Settings_t.light; dark = x }
+  else { Settings_t.light = x; dark = alt.Settings_t.dark }
 
 let _ = begin
   load();

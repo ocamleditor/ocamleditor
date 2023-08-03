@@ -104,7 +104,7 @@ widget \"gtk-tooltip*\" style \"oe-tooltip\"
     match Oe_config.targetlist_alternating_row_colors with
     | None -> "", ""
     | Some x ->
-        let base_color = pref.editor_bg_color_user in
+        let base_color = (Preferences.get_themed_color pref.editor_bg_color_user) in
         sprintf "
           style \"targetlist-treestyle\" {
             GtkTreeView::even-row-color = \"%s\"

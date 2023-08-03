@@ -150,7 +150,7 @@ class pref_color title ?packing () =
           in
           Printf.printf "********************* %s %b -- %s \n%!"
             (pref.theme |> Option.value ~default:"NO-THEME")  pref.theme_is_dark color;
-          (*self#read pref                            *)
+          self#read pref
         end
       in
       self#misc#connect#destroy ~callback:(fun () -> Preferences.preferences#connect#disconnect signal_id) |> ignore;
@@ -173,7 +173,7 @@ class pref_color title ?packing () =
       pref.editor_bg_color_popup <- color_name button_tag_bg_popup#color;
       pref.editor_fg_color_popup <- color_name button_tag_fg_popup#color;
       pref.editor_bg_color_theme <- false;
-      pref.editor_bg_color_user <- color_name button_default_bg#color;
+      Preferences.set_themed_color pref.editor_bg_color_user (color_name button_default_bg#color);
       (if Preferences.preferences#get.theme_is_dark then pref.editor_tags_dark <- tags else pref.editor_tags <- tags);
       let ltags, prop = tags |> List.map (fun t -> t.Settings_t.name, t) |> List.split in
       Lexical.tags := ltags;
@@ -191,7 +191,7 @@ class pref_color title ?packing () =
       button_tag_fg_popup#set_color (GDraw.color (`NAME pref.editor_fg_color_popup));
       tags <- List.sort (fun a b -> compare a.Settings_t.name b.name)
           (if Preferences.preferences#get.theme_is_dark then pref.editor_tags_dark else pref.editor_tags);
-      button_default_bg#set_color (GDraw.color (`NAME pref.editor_bg_color_user));
+      button_default_bg#set_color (GDraw.color (`NAME (Preferences.get_themed_color pref.editor_bg_color_user)));
       tag_model#clear();
       List.iter begin fun tag ->
         let tagname = tag.Settings_t.name in
@@ -264,7 +264,8 @@ class pref_color title ?packing () =
       let temp_pref = {
         Preferences.preferences#get with
         editor_bg_color_theme = false;
-        editor_bg_color_user = color_name button_default_bg#color;
+        editor_bg_color_user =
+          Preferences.new_themed_color (color_name button_default_bg#color) Preferences.preferences#get.editor_bg_color_user;
         editor_ocamldoc_paragraph_bgcolor_1 = Some (color_name button_odoc_bg#color);
         editor_ocamldoc_paragraph_bgcolor_2 = Some (color_name button_odoc_bg2#color);
       } in
