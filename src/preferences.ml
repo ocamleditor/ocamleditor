@@ -114,7 +114,7 @@ let preferences = new GUtil.variable default_values
 
 let geometry_memo = Gmisclib.Window.GeometryMemo.create ~filename:Oe_config.geometry_memo_filename ()
 
-let filename = Filename.concat App_config.ocamleditor_user_home "settings.json"
+let filename = Filename.concat App_config.ocamleditor_user_home "settings.new.json"
 
 (** save *)
 let save () =

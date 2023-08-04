@@ -810,6 +810,17 @@ and view ?project ?buffer () =
       | _ -> ()
 
     initializer
+      Preferences.preferences#connect#changed ~callback:begin fun _ ->
+        self#gutter.Gutter.bg_color <- `WHITE;
+        self#gutter.Gutter.fg_color <- `WHITE;
+        self#gutter.Gutter.border_color <- `WHITE;
+        self#gutter.Gutter.marker_color <- `WHITE;
+        self#gutter.Gutter.marker_bg_color <- `WHITE;
+        Gmisclib.Idle.add begin fun () ->
+          Text_init.update_gutter_colors self;
+          Line_num_labl.iter (fun x -> x#misc#modify_fg [`NORMAL, self#gutter.Gutter.marker_color]) line_num_labl
+        end;
+      end |> ignore;
       ignore (options#connect#mark_occurrences_changed ~callback:(fun _ -> self#mark_occurrences_manager#mark()));
       ignore (options#connect#after#mark_occurrences_changed ~callback:begin function
         | true, _, color ->
