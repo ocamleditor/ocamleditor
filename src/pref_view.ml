@@ -89,7 +89,7 @@ class pref_view title ?packing () =
   object (self)
     inherit page title vbox
     val is_dark_theme = new GUtil.variable false
-    val dark_theme_transition = Manual_reset_event.create false
+    val dark_theme_transition = Manual_reset_event.create true
     val mutable combo_theme_changed_id = None
 
     method private check_is_dark_theme () =
@@ -99,6 +99,7 @@ class pref_view title ?packing () =
 
     initializer
       is_dark_theme#connect#changed ~callback:begin fun _ ->
+        Manual_reset_event.reset dark_theme_transition;
         GtkThread.sync (fun () -> Manual_reset_event.set dark_theme_transition) ()
       end |> ignore;
       (*let callback () =
@@ -116,8 +117,6 @@ class pref_view title ?packing () =
           combo_theme_changed_id <-
             Some begin
               combo_theme#connect#changed ~callback:begin fun () ->
-                Manual_reset_event.reset dark_theme_transition;
-                is_dark_theme#set (not is_dark_theme#get); (* force a change to ensure event is set *)
                 (* Preview new theme and... *)
                 let theme = self#get_theme_name() in
                 Gtk_theme.set_theme ?theme ~context:self#misc#pango_context ();
