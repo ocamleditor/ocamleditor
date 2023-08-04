@@ -88,7 +88,7 @@ type settings = Settings_t.settings = {
   mutable editor_highlight_current_line: bool;
   mutable editor_indent_config: string;
   mutable editor_indent_empty_line: bool;
-  mutable editor_indent_lines: (bool * string * string);
+  mutable editor_indent_lines: (bool * string color * string color);
   mutable editor_left_margin: int;
   mutable editor_mark_occurrences_enabled: bool;
   mutable editor_mark_occurrences_under_cursor: bool;
@@ -1991,7 +1991,7 @@ let write_settings : _ -> settings -> _ = (
       )
         ob x.editor_indent_empty_line;
     );
-    if x.editor_indent_lines <> (true, "#e6e6e6", "#d0d0d0") then (
+    if x.editor_indent_lines <> (true, {light="#e6e6e6"; dark="#808080"}, {light="#d0d0d0"; dark="#505050"}) then (
       if !is_first then
         is_first := false
       else
@@ -2008,13 +2008,13 @@ let write_settings : _ -> settings -> _ = (
           Buffer.add_char ob ',';
           (let _, x, _ = x in
           (
-            Yojson.Safe.write_string
+            write__string_color
           ) ob x
           );
           Buffer.add_char ob ',';
           (let _, _, x = x in
           (
-            Yojson.Safe.write_string
+            write__string_color
           ) ob x
           );
           Buffer.add_char ob ')';
@@ -2122,7 +2122,7 @@ let write_settings : _ -> settings -> _ = (
       )
         ob x.editor_right_margin;
     );
-    if x.editor_right_margin_color <> {light="#e0e0e0"; dark="#808080"} then (
+    if x.editor_right_margin_color <> {light="#e0e0e0"; dark="#606060"} then (
       if !is_first then
         is_first := false
       else
@@ -2359,7 +2359,7 @@ let read_settings = (
     let field_editor_highlight_current_line = ref (true) in
     let field_editor_indent_config = ref ("") in
     let field_editor_indent_empty_line = ref (true) in
-    let field_editor_indent_lines = ref ((true, "#e6e6e6", "#d0d0d0")) in
+    let field_editor_indent_lines = ref ((true, {light="#e6e6e6"; dark="#808080"}, {light="#d0d0d0"; dark="#505050"})) in
     let field_editor_left_margin = ref (1) in
     let field_editor_mark_occurrences_enabled = ref (true) in
     let field_editor_mark_occurrences_under_cursor = ref (true) in
@@ -2368,7 +2368,7 @@ let read_settings = (
     let field_editor_ocamldoc_paragraph_bgcolor_2 = ref ({light=Some "#FAF7FA"; dark=Some "#303030"}) in
     let field_editor_pixels_lines = ref ((1, 1)) in
     let field_editor_right_margin = ref (80) in
-    let field_editor_right_margin_color = ref ({light="#e0e0e0"; dark="#808080"}) in
+    let field_editor_right_margin_color = ref ({light="#e0e0e0"; dark="#606060"}) in
     let field_editor_right_margin_visible = ref (true) in
     let field_editor_save_all_bef_comp = ref (true) in
     let field_editor_search_word_at_cursor = ref (true) in
@@ -4261,7 +4261,7 @@ let read_settings = (
                       let x1 =
                         let x =
                           (
-                            Atdgen_runtime.Oj_run.read_string
+                            read__string_color
                           ) p lb
                         in
                         incr len;
@@ -4272,7 +4272,7 @@ let read_settings = (
                       let x2 =
                         let x =
                           (
-                            Atdgen_runtime.Oj_run.read_string
+                            read__string_color
                           ) p lb
                         in
                         incr len;
@@ -6397,7 +6397,7 @@ let read_settings = (
                         let x1 =
                           let x =
                             (
-                              Atdgen_runtime.Oj_run.read_string
+                              read__string_color
                             ) p lb
                           in
                           incr len;
@@ -6408,7 +6408,7 @@ let read_settings = (
                         let x2 =
                           let x =
                             (
-                              Atdgen_runtime.Oj_run.read_string
+                              read__string_color
                             ) p lb
                           in
                           incr len;

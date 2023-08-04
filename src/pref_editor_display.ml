@@ -93,8 +93,11 @@ class pref_editor_display title ?packing () =
       pref.editor_cursor_aspect_ratio <- (if check_thick_caret#active then 0.1 else 0.0);
       pref.editor_highlight_current_line <- check_highlight_current_line#active;
       pref.editor_show_line_numbers <- check_show_line_numbers#active;
+      let _, s, d = pref.editor_indent_lines in
+      let solid_color = color_name il_button_solid#color in
+      let dashed_color = color_name il_button_dashed#color in
       pref.editor_indent_lines <-
-        check_indent_lines#active, color_name il_button_solid#color, color_name il_button_dashed#color;
+        check_indent_lines#active, new_themed_color solid_color s, new_themed_color dashed_color d;
       let color = color_name rm_button#color in
       pref.editor_right_margin_visible <- check_right_margin#active;
       set_themed_color pref.editor_right_margin_color color;
@@ -130,7 +133,7 @@ class pref_editor_display title ?packing () =
       check_current_line_border#set_active pref.editor_current_line_border;
       check_highlight_current_line#set_active (not pref.editor_highlight_current_line);
       check_highlight_current_line#set_active pref.editor_highlight_current_line;
-      il_button_solid#set_color (GDraw.color (`NAME color_s));
-      il_button_dashed#set_color (GDraw.color (`NAME color_d));
+      il_button_solid#set_color (GDraw.color (`NAME ?? color_s));
+      il_button_dashed#set_color (GDraw.color (`NAME ?? color_d));
   end
 

@@ -50,8 +50,8 @@ class "GtkTextView" style "s1"
   view#mark_occurrences_manager#mark();
   let show_indent_lines, indent_lines_color_s, pref_editor_indent_lines_color_d = pref.editor_indent_lines in
   view#options#set_show_indent_lines show_indent_lines;
-  view#options#set_indent_lines_color_solid (`NAME indent_lines_color_s);
-  view#options#set_indent_lines_color_dashed (`NAME pref_editor_indent_lines_color_d);
+  view#options#set_indent_lines_color_solid (`NAME ?? indent_lines_color_s);
+  view#options#set_indent_lines_color_dashed (`NAME ?? pref_editor_indent_lines_color_d);
   view#options#set_show_line_numbers pref.editor_show_line_numbers;
   view#options#set_line_numbers_font pref.editor_base_font;
   view#modify_font pref.editor_base_font;

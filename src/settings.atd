@@ -97,7 +97,7 @@ type settings = {
   ~editor_highlight_current_line       <ocaml default="true" mutable> : bool;
   ~editor_indent_config                <ocaml default="\"\"" mutable> : string;
   ~editor_indent_empty_line            <ocaml default="true" mutable> : bool;
-  ~editor_indent_lines                 <ocaml default="(true, \"#e6e6e6\", \"#d0d0d0\")" mutable> : (bool * string * string);
+  ~editor_indent_lines                 <ocaml default="(true, {light=\"#e6e6e6\"; dark=\"#808080\"}, {light=\"#d0d0d0\"; dark=\"#505050\"})" mutable> : (bool * string color * string color);
   ~editor_left_margin                  <ocaml default="1" mutable> : int;
 
   ~editor_mark_occurrences_enabled     <ocaml default="true" mutable> : bool;
@@ -108,7 +108,7 @@ type settings = {
   ~editor_ocamldoc_paragraph_bgcolor_2 <ocaml default="{light=Some \"#FAF7FA\"; dark=Some \"#303030\"}" mutable> : string option color;
   ~editor_pixels_lines                 <ocaml default="(1, 1)" mutable> : (int * int);
   ~editor_right_margin                 <ocaml default="80" mutable> : int;
-  ~editor_right_margin_color           <ocaml default="{light=\"#e0e0e0\"; dark=\"#808080\"}" mutable> : string color;
+  ~editor_right_margin_color           <ocaml default="{light=\"#e0e0e0\"; dark=\"#606060\"}" mutable> : string color;
   ~editor_right_margin_visible         <ocaml default="true" mutable> : bool;
   ~editor_save_all_bef_comp            <ocaml default="true" mutable> : bool;
   ~editor_search_word_at_cursor        <ocaml default="true" mutable> : bool;

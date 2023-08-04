@@ -86,7 +86,7 @@ let default_values =
         bg_color = { light = "#ffffff"; dark = "#000000" };
         weight = 0; style = `ITALIC; underline = `NONE; scale = 1.0; bg_default = true };
       { name = "highlight";
-        color = { light = "#ffff00"; dark = "#ffff00" };
+        color = { light = "#ffff00"; dark = "#1e1e1e" };
         bg_color = { light = "#ffffff"; dark = "#000000" };
         weight = 0; style = `NORMAL; underline = `NONE; scale = 1.0; bg_default = true };
       { name = "highlight_current_line";

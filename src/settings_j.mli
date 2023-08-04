@@ -88,7 +88,7 @@ type settings = Settings_t.settings = {
   mutable editor_highlight_current_line: bool;
   mutable editor_indent_config: string;
   mutable editor_indent_empty_line: bool;
-  mutable editor_indent_lines: (bool * string * string);
+  mutable editor_indent_lines: (bool * string color * string color);
   mutable editor_left_margin: int;
   mutable editor_mark_occurrences_enabled: bool;
   mutable editor_mark_occurrences_under_cursor: bool;

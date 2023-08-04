@@ -97,7 +97,7 @@ class widget ~project ?(is_completion=false) ?(enable_history=true) ?width ?heig
   let _ =
     odoc_buffer#undo#disable();
     odoc_sw#add odoc_view#coerce;
-    pref.editor_indent_lines <- (false, "", "");
+    pref.editor_indent_lines <- (false, {light=""; dark=""}, {light=""; dark=""});
     pref.editor_highlight_current_line <- false;
     pref.editor_show_line_numbers <- false;
     pref.editor_right_margin_visible <- false;
