@@ -45,7 +45,8 @@ class error_indication (view : Ocaml_text.view) vscrollbar global_gutter =
           Gobject.Property.set tag_error#as_tag {Gobject.name="underline"; conv=Gobject.Data.int} 4;
     end;
     let tag_warning = buffer#create_tag ~name:(sprintf "tag_warning-%f" ts) [`LEFT_MARGIN view#left_margin] in
-    let tag_warning_unused = buffer#create_tag ~name:(sprintf "tag_warning_unused-%f" ts) Oe_config.warning_unused_properties in
+    let tag_warning_unused = buffer#create_tag ~name:(sprintf "tag_warning_unused-%f" ts)
+        [`FOREGROUND (?? Oe_config.warning_unused_color); `STYLE `ITALIC] in
     tag_error, tag_warning, tag_warning_unused
   in
   let tag_error, tag_warning, tag_warning_unused = create_tags () in
@@ -248,11 +249,11 @@ class error_indication (view : Ocaml_text.view) vscrollbar global_gutter =
                 let (start, stop, error), border_color, bg_color =
                   try
                     (self#find_message iter tag_error_bounds),
-                    Oe_config.error_popup_border_color, Oe_config.error_popup_bg_color
+                    ?? (Oe_config.error_popup_border_color), ?? (Oe_config.error_popup_bg_color)
                   with Not_found -> begin
                       if Oe_config.warning_tootip_enabled || not sticky then (raise Not_found);
                       (self#find_message iter tag_warning_bounds),
-                      Oe_config.warning_popup_border_color, Oe_config.warning_popup_bg_color
+                      ?? (Oe_config.warning_popup_border_color), ?? (Oe_config.warning_popup_bg_color)
                     end
                 in
                 (* Create popup *)
@@ -270,6 +271,7 @@ class error_indication (view : Ocaml_text.view) vscrollbar global_gutter =
                   (Print_type.markup3 error_message) in
                 let label = GMisc.label ~markup ~xpad:5 ~ypad:5 ~packing:ebox#add () in
                 label#misc#modify_font_by_name Preferences.preferences#get.editor_completion_font;
+                label#misc#modify_fg [`NORMAL, `BLACK];
                 (* Positioning *)
                 begin
                   popup#move ~x:(-1000) ~y:(-1000);
@@ -306,17 +308,14 @@ class error_indication (view : Ocaml_text.view) vscrollbar global_gutter =
         drawable#set_foreground view#gutter.Gutter.bg_color;
         drawable#rectangle ~filled:true ~x:x0 ~y:0 ~width ~height ();
         (* Rectangles at the top and bottom *)
-        drawable#set_foreground view#gutter.Gutter.fg_color;
-        drawable#rectangle ~filled:false ~x:x0 ~y:0 ~width:(width - 1) ~height:(alloc.Gtk.width - 1) ();
-        drawable#rectangle ~filled:false ~x:x0 ~y:(height - alloc.Gtk.width) ~width:(width - 1) ~height:(alloc.Gtk.width - 2) ();
         (* Rectangle at the top in different color *)
-        let color = if self#has_errors#get then (Some Oe_config.error_underline_color)
-          else if self#has_warnings#get then (Some Oe_config.warning_popup_border_color)
+        let color = if self#has_errors#get then (Some (?? Oe_config.error_underline_color))
+          else if self#has_warnings#get then (Some (?? Oe_config.warning_popup_border_color))
           else None (*(Some Oe_config.global_gutter_no_errors)*)
         in
         Gaux.may color ~f:begin fun color ->
           drawable#set_foreground color;
-          drawable#rectangle ~filled:true ~x:(x0 + 1) ~y:1 ~width:(width - 2) ~height:(alloc.Gtk.width - 2) ();
+          drawable#rectangle ~filled:true ~x:x0 ~y:0 ~width:(width - 1) ~height:(alloc.Gtk.width - 1) ();
         end;
         (* Draw markers *)
         let height = height - 2 * alloc.Gtk.width in
@@ -354,7 +353,7 @@ class error_indication (view : Ocaml_text.view) vscrollbar global_gutter =
         let draw_marker start color is_unused =
           let color =
             if is_unused
-            then (`NAME Oe_config.warning_unused_color) else color
+            then (`NAME (?? Oe_config.warning_unused_color)) else color
           in
           drawable#set_foreground color;
           let line_start = float (buffer#get_iter_at_mark (`MARK start))#line in
@@ -375,7 +374,7 @@ class error_indication (view : Ocaml_text.view) vscrollbar global_gutter =
         in
         (* Warnings *)
         List.iter begin fun (start, _, warning) ->
-          draw_marker start Oe_config.warning_popup_border_color (is_warning_unused warning.Oe.er_level);
+          draw_marker start (?? Oe_config.warning_popup_border_color) (is_warning_unused warning.Oe.er_level);
         end tag_warning_bounds;
         (* Mark Occurrences *)
         begin
@@ -405,7 +404,7 @@ class error_indication (view : Ocaml_text.view) vscrollbar global_gutter =
         end;
         (* Errors *)
         List.iter begin fun (start, _, _) ->
-          draw_marker start Oe_config.error_underline_color false;
+          draw_marker start (?? Oe_config.error_underline_color) false;
         end tag_error_bounds;
       with Gpointer.Null -> ()
 
@@ -459,16 +458,16 @@ class error_indication (view : Ocaml_text.view) vscrollbar global_gutter =
             let drawable = new GDraw.drawable window in
             drawable#set_line_attributes ~width:1 ~style:`SOLID ~join:`MITER ();
             let f = self#draw_underline drawable top bottom x0 y0 in
-            drawable#set_foreground Oe_config.warning_underline_color;
+            drawable#set_foreground (?? Oe_config.warning_underline_color);
             List.iter (f 0) tag_warning_bounds;
-            drawable#set_foreground Oe_config.warning_underline_shadow;
+            drawable#set_foreground (?? Oe_config.warning_underline_shadow);
             List.iter (f 1) tag_warning_bounds;
             begin
               match Oe_config.error_underline_mode with
               | `CUSTOM ->
-                  drawable#set_foreground Oe_config.error_underline_color;
+                  drawable#set_foreground (?? Oe_config.error_underline_color);
                   List.iter (f 0) tag_error_bounds;
-                  drawable#set_foreground Oe_config.error_underline_shadow;
+                  drawable#set_foreground (?? Oe_config.error_underline_shadow);
                   List.iter (f 1) tag_error_bounds;
               | _ -> ()
             end;

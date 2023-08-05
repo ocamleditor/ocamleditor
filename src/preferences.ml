@@ -102,7 +102,7 @@ let default_values =
         bg_color = { light = "#3584e4"; dark = "#4B81AD" };
         weight = 0; style = `NORMAL; underline = `NONE; scale = 1.0; bg_default = false };
       { name = "annotation";
-        color = { light = "#444488"; dark = "#444488" };
+        color = { light = "#444488"; dark = "#A880FF" };
         bg_color = { light = "#ffffff"; dark = "#000000" };
         weight = 0; style = `ITALIC; underline = `NONE; scale = 1.0; bg_default = true };
     ]
@@ -162,18 +162,13 @@ let reset_defaults () =
   preferences#set default_values;
   save()
 
-let get_themed_color color =
+let [@ inline] get_themed_color color =
   if preferences#get.Settings_t.theme_is_dark then color.Settings_t.dark else color.Settings_t.light
 
 let (??) = get_themed_color
 
 let set_themed_color color x =
   if preferences#get.Settings_t.theme_is_dark then color.Settings_t.dark <- x else color.Settings_t.light <- x
-
-(*let set_themed_opt_color (color : Settings_t.color option) x =
-  if preferences#get.Settings_t.theme_is_dark
-  then (match color.Settings_t.dark with Some c -> c.dark <- x | _ -> c.dark <- None)
-  else color.Settings_t.light <- x*)
 
 let new_themed_color x alt =
   if preferences#get.Settings_t.theme_is_dark

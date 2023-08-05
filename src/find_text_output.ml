@@ -25,6 +25,7 @@ open GdkKeysyms
 open GUtil
 open Find_text
 open Miscellanea
+open Preferences
 
 let strip_cr =
   let re = Str.regexp "\r$" in
@@ -164,7 +165,7 @@ class widget
       in
       let _ = tbuf#create_tag ~name:"find_text_result_hit" (bgcolor @ fgcolor) in
       let _ = tbuf#create_tag ~name:"find_text_result_linenum"
-          [Oe_config.find_text_output_linenumber_fgcolor; `WEIGHT `NORMAL;
+          [`FOREGROUND (?? Oe_config.find_text_output_linenumber_fgcolor); `WEIGHT `NORMAL;
            `BACKGROUND_FULL_HEIGHT_SET true; `SCALE `SMALL;] in
       let _ = tbuf#create_tag ~name:"find_text_insensitive"
           [`FOREGROUND "#b0b0b0"; `STYLE `ITALIC] in

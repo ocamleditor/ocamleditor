@@ -22,7 +22,9 @@
 
 open Miscellanea
 open Printf
+open Settings_t
 
+type dcolor = GDraw.color color
 
 (** Configuration Section =================================================== *)
 
@@ -35,18 +37,17 @@ let autosave_keep_backup                 = 3. *. 24. *. 60. *. 60.  (* 3 days, i
 let ocamldoc_paragraph_border_enabled    = true
 let ocamldoc_paragraph_bgcolor_enabled   = true
 let fade_window_enabled                  = not Ocaml_config.is_mingw (* Fade effect for popup windows *)
-let matching_delim_border_color          = `NAME "#ff0000"
-let error_popup_bg_color                 = `NAME "#ffeef2"
-let error_popup_border_color             = `NAME "#ff6a99"
-let error_underline_color                = `NAME "#ff0000"
-let error_underline_shadow               = `NAME "#FFa0a0"
+let matching_delim_border_color : dcolor = { light = `NAME "#ff0000"; dark = `NAME "#ff0000" }
+let error_popup_bg_color : dcolor        = { light = `NAME "#ffeef2"; dark = `NAME "#ffc6d4" }
+let error_popup_border_color : dcolor    = { light = `NAME "#ff6a99"; dark = `NAME "#ff6a99" }
+let error_underline_color : dcolor       = { light = `NAME "#ff0000"; dark = `NAME "#ff0000" }
+let error_underline_shadow : dcolor      = { light = `NAME "#FFa0a0"; dark = `NAME "#FFa0a0" }
 let error_underline_mode                 = (`CUSTOM : [`GTK | `CUSTOM])
-let warning_popup_bg_color               = `NAME "#fff4e8"
-let warning_popup_border_color           = `NAME "#FFB33C" (*"#ffc56a"*)
-let warning_underline_color              = warning_popup_border_color
-let warning_underline_shadow             = `NAME "#FFE36C"
-let warning_unused_color                 = "#a0a0a0"
-let warning_unused_properties            = [`FOREGROUND warning_unused_color; `STYLE `ITALIC]
+let warning_popup_bg_color : dcolor      = { light = `NAME "#fff4e8"; dark = `NAME "#fecc8f" }
+let warning_popup_border_color : dcolor  = { light = `NAME "#FFB33C"; dark = `NAME "darkorange" }
+let warning_underline_color : dcolor     = { light = `NAME "#fff4e8"; dark = `NAME "#6e3d00" }
+let warning_underline_shadow : dcolor    = { light = `NAME "#FFE36C"; dark = `NAME "#FFE36C" }
+let warning_unused_color                 = { light = "#a0a0a0"; dark = "#a0a0a0" }
 let warning_tootip_enabled               = false
 let current_line_border_color            = fun add bgcolor -> `NAME (add bgcolor 0.3)
 let current_line_width                   = 2 (* Must be >= 1. Left margin is automatically increased by current_line_width *)
@@ -80,7 +81,7 @@ let find_replace_history_max_length      = 75
 let find_text_output_border_color        = current_line_border_color(*fun _ _ -> `NAME "#707070"*) (* Current line border color of the find text output pane *)
 let find_text_output_highlight           = `DEFAULT, `DEFAULT (*`NAME "#ffff7e", `NONE*) (* Background and foreground colors to highlight occurrences where the pattern matches.
                                                                                             (`NONE=do not change color; `DEFAULT=default color; `NAME=specific color)*)
-let find_text_output_linenumber_fgcolor  = `FOREGROUND "#000000"
+let find_text_output_linenumber_fgcolor  = { light = "#000000"; dark = "#e1e1e1" }
 let file_history_filename                = App_config.ocamleditor_user_home // "file_history"
 let file_history_max_length              = 300
 let project_history_filename             = App_config.ocamleditor_user_home // "project_history"

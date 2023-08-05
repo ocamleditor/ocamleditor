@@ -89,9 +89,6 @@ class browser () =
   (*  *)
   let ebox_project_name = GBin.event_box ~packing:(menubarbox#pack ~expand:false) () in
   let label_project_name = GMisc.label ~markup:"" ~xpad:5 ~packing:ebox_project_name#add () in
-  let _ =
-    ebox_project_name#misc#modify_bg [`NORMAL, `COLOR (ebox_project_name#misc#style#base `PRELIGHT)];
-  in
   (* Git bar *)
   let gitbox = GPack.hbox ~spacing:8 ~packing:(menubarbox#pack ~expand:false) () in
   let button_gitunpushed = GButton.button ~relief:`NONE ~packing:gitbox#add () in
