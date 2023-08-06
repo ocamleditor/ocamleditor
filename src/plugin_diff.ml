@@ -40,9 +40,10 @@ module Diff = struct
   let global_gutter_diff_size = 8
   let global_gutter_diff_sep = 1
   let fact = 0.0
-  let color_add = `NAME (Color.add_value Oe_config.global_gutter_diff_color_add fact)
-  let color_del = `NAME (Color.add_value Oe_config.global_gutter_diff_color_del fact)
-  let color_change = `NAME (Color.add_value Oe_config.global_gutter_diff_color_change 0.2)
+  open Preferences
+  let color_add = `NAME (Color.add_value (?? Oe_config.global_gutter_diff_color_add) fact)
+  let color_del = `NAME (Color.add_value (?? Oe_config.global_gutter_diff_color_del) fact)
+  let color_change = `NAME (Color.add_value (?? Oe_config.global_gutter_diff_color_change) 0.2)
 
   let initialized : int list ref = ref []
 

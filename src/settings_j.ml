@@ -2054,7 +2054,7 @@ let write_settings : _ -> settings -> _ = (
       )
         ob x.editor_mark_occurrences_under_cursor;
     );
-    if x.editor_mark_occurrences_bg_color <> {light="#c8ffc8"; dark="#455800"} then (
+    if x.editor_mark_occurrences_bg_color <> {light="#c8ffc8"; dark="#3C4E00"} then (
       if !is_first then
         is_first := false
       else
@@ -2363,7 +2363,7 @@ let read_settings = (
     let field_editor_left_margin = ref (1) in
     let field_editor_mark_occurrences_enabled = ref (true) in
     let field_editor_mark_occurrences_under_cursor = ref (true) in
-    let field_editor_mark_occurrences_bg_color = ref ({light="#c8ffc8"; dark="#455800"}) in
+    let field_editor_mark_occurrences_bg_color = ref ({light="#c8ffc8"; dark="#3C4E00"}) in
     let field_editor_ocamldoc_paragraph_bgcolor_1 = ref ({light=Some "#FAF7FA"; dark=Some "#303030"}) in
     let field_editor_ocamldoc_paragraph_bgcolor_2 = ref ({light=Some "#FAF7FA"; dark=Some "#303030"}) in
     let field_editor_pixels_lines = ref ((1, 1)) in

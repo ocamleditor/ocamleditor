@@ -382,7 +382,8 @@ class error_indication (view : Ocaml_text.view) vscrollbar global_gutter =
             let bg_color_occurrences = Preferences.preferences#get.editor_mark_occurrences_bg_color in
             let under_cursor = Preferences.preferences#get.editor_mark_occurrences_under_cursor in
             let bg = `NAME ?? bg_color_occurrences in
-            let border = `NAME (Color.add_value (?? bg_color_occurrences) ~sfact:0.75 0.13) in
+            let factor = if Preferences.preferences#get.theme_is_dark then -0.23 else 0.13 in
+            let border = `NAME (Color.add_value (?? bg_color_occurrences) ~sfact:0.75 factor) in
             List.iter begin fun (m1, m2) ->
               let start = buffer#get_iter_at_mark m1 in
               let stop = buffer#get_iter_at_mark m2 in

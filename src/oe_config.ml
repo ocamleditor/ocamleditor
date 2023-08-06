@@ -71,9 +71,11 @@ let global_gutter_comments_enabled       = false
 let global_gutter_size                   = 13
 let global_gutter_comments_color         = `NAME "#fa80a5"
 let global_gutter_comments_bgcolor       = `NAME "#fad0f5"
-let global_gutter_diff_color_add         = "#60b060" (*"#d0ffd0"  *)
-let global_gutter_diff_color_del         = "#ff6060" (*"#ffd0d0"*)
-let global_gutter_diff_color_change      = "#ffffd0"
+
+
+let global_gutter_diff_color_add         = { light = "#60b060"; dark = "#13401e" }
+let global_gutter_diff_color_del         = { light = "#ff6060"; dark = "#3e181d" }
+let global_gutter_diff_color_change      = { light = "#ffffd0"; dark = "#ffffd0" }
 let global_gutter_diff_style             = (`COLOR false : [`BW | `COLOR of bool])
 let global_gutter_diff_tooltips          = true
 let global_gutter_no_errors              = `NAME "#daedd0"
