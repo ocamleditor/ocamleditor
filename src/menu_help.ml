@@ -26,7 +26,7 @@ open Printf
 
 (** system_properties *)
 let system_properties () =
-  let window = GWindow.window ~icon:Icons.oe ~title:"System Properties" ~position:`CENTER ~modal:true ~resizable:false ~show:false () in
+  let window = GWindow.window ~icon:(Preferences.Icon.get_themed_icon Icons.oe) ~title:"System Properties" ~position:`CENTER ~modal:true ~resizable:false ~show:false () in
   let text = Glib.Convert.locale_to_utf8 (System_properties.to_string ()) in
   let buffer = GText.buffer ~text () in
   let vbox = GPack.vbox ~spacing:0 ~border_width:0 ~packing:window#add () in
@@ -53,11 +53,11 @@ let about editor () =
       ~modal:true
       ~width:310
       ~position:`CENTER
-      ~icon:Icons.oe
+      ~icon:(Preferences.Icon.get_themed_icon Icons.oe)
       ~name:About.program_name
       ~version:About.version
       ~copyright:About.copyright
-      ~logo:Icons.logo
+      ~logo:(Preferences.Icon.get_themed_icon Icons.logo)
       ~comments:(sprintf "Commit: %s" !About.git_hash)
       ~license:{|OCamlEditor is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -133,7 +133,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.|}
       end;
     with ex -> begin
         kprintf label#set_text "Unable to contact server for updates (%s)." (Printexc.to_string ex);
-        icon#set_pixbuf Icons.warning_14;
+        icon#set_pixbuf (Preferences.Icon.get_themed_icon Icons.warning_14);
       end
   in
   (*ignore (dialog#misc#connect#show ~callback:begin fun () ->

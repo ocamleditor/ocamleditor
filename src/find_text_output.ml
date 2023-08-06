@@ -61,14 +61,14 @@ class widget
   let _                 = button_remove#misc#set_tooltip_text "Remove entry" in
   let _                 = GButton.separator_tool_item ~packing:toolbar#insert () in
   let button_restart    = GButton.tool_button ~packing:toolbar#insert () in
-  let _                 = button_restart#set_icon_widget (GMisc.image ~pixbuf:Icons.refresh16 ())#coerce in
+  let _                 = button_restart#set_icon_widget (GMisc.image ~pixbuf:(Preferences.Icon.get_themed_icon Icons.refresh16) ())#coerce in
   let _                 = button_restart#misc#set_tooltip_text "Repeat current search" in
   let button_new_search = GButton.tool_button ~packing:toolbar#insert () in
-  let _                 = button_new_search#set_icon_widget (GMisc.image ~pixbuf:Icons.find_16 ())#coerce in
+  let _                 = button_new_search#set_icon_widget (GMisc.image ~pixbuf:(Preferences.Icon.get_themed_icon Icons.find_16) ())#coerce in
   let _                 = button_new_search#misc#set_tooltip_text "New search" in
   let _                 = GButton.separator_tool_item ~packing:toolbar#insert () in
   let button_detach     = GButton.tool_button ~label:"Detach" ~packing:toolbar#insert () in
-  let _                 = button_detach#set_icon_widget (GMisc.image ~pixbuf:Icons.detach ())#coerce in
+  let _                 = button_detach#set_icon_widget (GMisc.image ~pixbuf:(Preferences.Icon.get_themed_icon Icons.detach) ())#coerce in
   let _                 = GButton.separator_tool_item ~packing:toolbar#insert () in
   let item_message      = GButton.tool_item ~packing:toolbar#insert () in
   let label_message     = GMisc.label ~packing:item_message#add () in

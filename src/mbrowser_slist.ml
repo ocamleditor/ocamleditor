@@ -33,27 +33,26 @@ type title = {
 
 (** pixbuf_of_kind *)
 let pixbuf_of_kind = function
-  | Pvalue                  -> Icons.func
-  | Pfunc                   -> Icons.func
-  | Pattribute              -> Icons.empty_14
-  | Pmethod                 -> Icons.met
-  | Pmethod_private_virtual -> Icons.met_private_virtual
-  | Pmethod_private         -> Icons.met_private
-  | Pmethod_virtual         -> Icons.met_virtual
-  | Ptype                   -> Icons.typ
-  | Plabel                  -> Icons.empty_14
-  | Pconstructor            -> Icons.empty_14 (*Icons.constructor*)
-  | Pexception              -> Icons.exc
-  | Pmodule                 -> Icons.module_impl
-  | Pmodtype                -> Icons.module_impl
-  | Pclass                  -> Icons.classe
-  | Pcltype                 -> Icons.class_type
-  | Ptype_abstract          -> Icons.type_abstract
-  | Ptype_variant           -> Icons.type_variant
-  | Ptype_record            -> Icons.type_record
-  | Std_lib                 -> Icons.empty_14
-  | Lib                     -> Icons.empty_14
-;;
+  | Pvalue                  -> Preferences.Icon.get_themed_icon Icons.func
+  | Pfunc                   -> Preferences.Icon.get_themed_icon Icons.func
+  | Pattribute              -> Preferences.Icon.get_themed_icon Icons.empty_14
+  | Pmethod                 -> Preferences.Icon.get_themed_icon Icons.met
+  | Pmethod_private_virtual -> Preferences.Icon.get_themed_icon Icons.met_private_virtual
+  | Pmethod_private         -> Preferences.Icon.get_themed_icon Icons.met_private
+  | Pmethod_virtual         -> Preferences.Icon.get_themed_icon Icons.met_virtual
+  | Ptype                   -> Preferences.Icon.get_themed_icon Icons.typ
+  | Plabel                  -> Preferences.Icon.get_themed_icon Icons.empty_14
+  | Pconstructor            -> Preferences.Icon.get_themed_icon Icons.empty_14 (*Icons.constructor*)
+  | Pexception              -> Preferences.Icon.get_themed_icon Icons.exc
+  | Pmodule                 -> Preferences.Icon.get_themed_icon Icons.module_impl
+  | Pmodtype                -> Preferences.Icon.get_themed_icon Icons.module_impl
+  | Pclass                  -> Preferences.Icon.get_themed_icon Icons.classe
+  | Pcltype                 -> Preferences.Icon.get_themed_icon Icons.class_type
+  | Ptype_abstract          -> Preferences.Icon.get_themed_icon Icons.type_abstract
+  | Ptype_variant           -> Preferences.Icon.get_themed_icon Icons.type_variant
+  | Ptype_record            -> Preferences.Icon.get_themed_icon Icons.type_record
+  | Std_lib                 -> Preferences.Icon.get_themed_icon Icons.empty_14
+  | Lib                     -> Preferences.Icon.get_themed_icon Icons.empty_14;;
 
 module Index = struct
   let len = 256

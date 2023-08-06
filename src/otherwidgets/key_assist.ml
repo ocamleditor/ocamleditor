@@ -58,7 +58,7 @@ let markup_left = "\
 open Printf
 
 let window () =
-  let window = GWindow.window ~icon:Icons.oe ~modal:true ~position:`CENTER
+  let window = GWindow.window ~icon:(!Otherwidgets_config.app_icon()) ~modal:true ~position:`CENTER
       ~show:false ~type_hint:`DIALOG ~title:"Key Assist" () in
   Gmisclib.Window.GeometryMemo.add ~key:"dialog-key-assist" ~window (!Otherwidgets_config.geometry_memo());
   window#set_skip_taskbar_hint true;

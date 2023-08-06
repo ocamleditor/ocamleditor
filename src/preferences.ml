@@ -162,6 +162,21 @@ let reset_defaults () =
   preferences#set default_values;
   save()
 
+module Icon = struct
+  let update_otherwidgets_icon pref =
+    Otherwidgets_config.app_icon :=
+      fun () -> if pref.Settings_t.theme_is_dark then Icons.Dark.oe else Icons.Light.oe
+
+  let _ =
+    update_otherwidgets_icon preferences#get;
+    preferences#connect#changed ~callback:update_otherwidgets_icon
+
+  let get_themed_icon (icon_light, icon_dark) =
+    if preferences#get.Settings_t.theme_is_dark then icon_dark else icon_light
+
+  let (??) = get_themed_icon
+end
+
 let [@ inline] get_themed_color color =
   if preferences#get.Settings_t.theme_is_dark then color.Settings_t.dark else color.Settings_t.light
 

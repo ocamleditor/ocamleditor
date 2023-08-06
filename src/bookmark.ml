@@ -27,16 +27,16 @@ let bookmarks_filename = Filename.concat App_config.ocamleditor_user_home "bookm
 let limit = 1000
 
 let icon = function
-  | 0 -> Some Icons.b0
-  | 1 -> Some Icons.b1
-  | 2 -> Some Icons.b2
-  | 3 -> Some Icons.b3
-  | 4 -> Some Icons.b4
-  | 5 -> Some Icons.b5
-  | 6 -> Some Icons.b6
-  | 7 -> Some Icons.b7
-  | 8 -> Some Icons.b8
-  | 9 -> Some Icons.b9
+  | 0 -> Some (Preferences.Icon.get_themed_icon Icons.b0)
+  | 1 -> Some (Preferences.Icon.get_themed_icon Icons.b1)
+  | 2 -> Some (Preferences.Icon.get_themed_icon Icons.b2)
+  | 3 -> Some (Preferences.Icon.get_themed_icon Icons.b3)
+  | 4 -> Some (Preferences.Icon.get_themed_icon Icons.b4)
+  | 5 -> Some (Preferences.Icon.get_themed_icon Icons.b5)
+  | 6 -> Some (Preferences.Icon.get_themed_icon Icons.b6)
+  | 7 -> Some (Preferences.Icon.get_themed_icon Icons.b7)
+  | 8 -> Some (Preferences.Icon.get_themed_icon Icons.b8)
+  | 9 -> Some (Preferences.Icon.get_themed_icon Icons.b9)
   | _ -> None;;
 
 (** remove *)

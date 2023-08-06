@@ -69,37 +69,37 @@ type kind =
   | Unknown
 
 let pixbuf_of_kind = function
-  | Function -> Some Icons.func
-  | Simple -> Some Icons.simple
-  | Method -> Some Icons.met
-  | Method_private -> Some Icons.met_private
-  | Method_virtual -> Some Icons.met_virtual
-  | Method_private_virtual -> Some Icons.met_private_virtual
-  | Method_inherited -> Some Icons.met
-  | Initializer -> Some Icons.init
-  | Attribute -> Some Icons.attribute
-  | Attribute_mutable -> Some Icons.attribute_mutable
-  | Attribute_mutable_virtual -> Some Icons.attribute_mutable_virtual
-  | Attribute_virtual -> Some Icons.attribute_virtual
-  | Type -> Some Icons.typ
-  | Type_abstract -> Some Icons.type_abstract
-  | Type_variant -> Some Icons.type_variant
-  | Type_record -> Some Icons.type_record
-  | Type_open -> Some Icons.type_variant
-  | Class -> Some Icons.classe
-  | Class_virtual -> Some Icons.class_virtual
-  | Class_type -> Some Icons.class_type
-  | Class_inherit -> Some Icons.class_inherit
+  | Function -> Some (Preferences.Icon.get_themed_icon Icons.func)
+  | Simple -> Some (Preferences.Icon.get_themed_icon Icons.simple)
+  | Method -> Some (Preferences.Icon.get_themed_icon Icons.met)
+  | Method_private -> Some (Preferences.Icon.get_themed_icon Icons.met_private)
+  | Method_virtual -> Some (Preferences.Icon.get_themed_icon Icons.met_virtual)
+  | Method_private_virtual -> Some (Preferences.Icon.get_themed_icon Icons.met_private_virtual)
+  | Method_inherited -> Some (Preferences.Icon.get_themed_icon Icons.met)
+  | Initializer -> Some (Preferences.Icon.get_themed_icon Icons.init)
+  | Attribute -> Some (Preferences.Icon.get_themed_icon Icons.attribute)
+  | Attribute_mutable -> Some (Preferences.Icon.get_themed_icon Icons.attribute_mutable)
+  | Attribute_mutable_virtual -> Some (Preferences.Icon.get_themed_icon Icons.attribute_mutable_virtual)
+  | Attribute_virtual -> Some (Preferences.Icon.get_themed_icon Icons.attribute_virtual)
+  | Type -> Some (Preferences.Icon.get_themed_icon Icons.typ)
+  | Type_abstract -> Some (Preferences.Icon.get_themed_icon Icons.type_abstract)
+  | Type_variant -> Some (Preferences.Icon.get_themed_icon Icons.type_variant)
+  | Type_record -> Some (Preferences.Icon.get_themed_icon Icons.type_record)
+  | Type_open -> Some (Preferences.Icon.get_themed_icon Icons.type_variant)
+  | Class -> Some (Preferences.Icon.get_themed_icon Icons.classe)
+  | Class_virtual -> Some (Preferences.Icon.get_themed_icon Icons.class_virtual)
+  | Class_type -> Some (Preferences.Icon.get_themed_icon Icons.class_type)
+  | Class_inherit -> Some (Preferences.Icon.get_themed_icon Icons.class_inherit)
   | Class_let_bindings -> None
-  | Module -> Some Icons.module_impl
-  | Module_functor -> Some Icons.module_funct
-  | Module_type -> Some Icons.module_type
-  | Module_include -> Some Icons.module_include
-  | Exception -> Some Icons.exc
-  | Error -> Some Icons.error_14
-  | Warning -> Some Icons.warning_14
-  | Folder_warnings -> Some Icons.folder_warning
-  | Folder_errors -> Some Icons.folder_error
+  | Module -> Some (Preferences.Icon.get_themed_icon Icons.module_impl)
+  | Module_functor -> Some (Preferences.Icon.get_themed_icon Icons.module_funct)
+  | Module_type -> Some (Preferences.Icon.get_themed_icon Icons.module_type)
+  | Module_include -> Some (Preferences.Icon.get_themed_icon Icons.module_include)
+  | Exception -> Some (Preferences.Icon.get_themed_icon Icons.exc)
+  | Error -> Some (Preferences.Icon.get_themed_icon Icons.error_14)
+  | Warning -> Some (Preferences.Icon.get_themed_icon Icons.warning_14)
+  | Folder_warnings -> Some (Preferences.Icon.get_themed_icon Icons.folder_warning)
+  | Folder_errors -> Some (Preferences.Icon.get_themed_icon Icons.folder_error)
   | Dependencies -> None
   | Bookmark pixbuf -> Some pixbuf
   | Unknown -> None;;
@@ -168,12 +168,12 @@ class widget ~editor:_ ~page ?packing () =
   let button_sort_rev        = GButton.toggle_button ~relief:`NONE ~packing:toolbar#pack () in
   let button_select_from_buf = GButton.button ~relief:`NONE ~packing:toolbar#pack () in
   let button_select_buf      = GButton.button ~relief:`NONE ~packing:toolbar#pack () in
-  let _                      = button_refresh#set_image (GMisc.image (*~stock:`REFRESH*) ~pixbuf:Icons.refresh16 ~icon_size:`MENU ())#coerce in
-  let _                      = button_sort#set_image (GMisc.image (*~stock:`SORT_ASCENDING*) ~pixbuf:Icons.sort_asc ~icon_size:`MENU ())#coerce in
-  let _                      = button_sort_rev#set_image (GMisc.image (*~stock:`SORT_DESCENDING*) ~pixbuf:Icons.sort_asc_rev ~icon_size:`MENU ())#coerce in
-  let _                      = button_show_types#set_image (GMisc.image ~pixbuf:Icons.typ ())#coerce in
-  let _                      = button_select_buf#set_image (GMisc.image ~pixbuf:Icons.select_in_buffer ())#coerce in
-  let _                      = button_select_from_buf#set_image (GMisc.image ~pixbuf:Icons.select_in_structure ())#coerce in
+  let _                      = button_refresh#set_image (GMisc.image (*~stock:`REFRESH*) ~pixbuf:(Preferences.Icon.get_themed_icon Icons.refresh16) ~icon_size:`MENU ())#coerce in
+  let _                      = button_sort#set_image (GMisc.image (*~stock:`SORT_ASCENDING*) ~pixbuf:(Preferences.Icon.get_themed_icon Icons.sort_asc) ~icon_size:`MENU ())#coerce in
+  let _                      = button_sort_rev#set_image (GMisc.image (*~stock:`SORT_DESCENDING*) ~pixbuf:(Preferences.Icon.get_themed_icon Icons.sort_asc_rev) ~icon_size:`MENU ())#coerce in
+  let _                      = button_show_types#set_image (GMisc.image ~pixbuf:(Preferences.Icon.get_themed_icon Icons.typ) ())#coerce in
+  let _                      = button_select_buf#set_image (GMisc.image ~pixbuf:(Preferences.Icon.get_themed_icon Icons.select_in_buffer) ())#coerce in
+  let _                      = button_select_from_buf#set_image (GMisc.image ~pixbuf:(Preferences.Icon.get_themed_icon Icons.select_in_structure) ())#coerce in
   let _                      = button_sort#misc#set_tooltip_text "Sort by name" in
   let _                      = button_sort_rev#misc#set_tooltip_text "Sort by reverse name" in
   let _                      = button_show_types#misc#set_tooltip_text "Show types" in

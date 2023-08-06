@@ -348,7 +348,7 @@ and signals ~project_changed ~project_name_changed ~show =
 let create ~editor ?callback ?new_project ?page_num ?show () =
   let project = match new_project with None -> editor#project | Some p -> p in
   let window = GWindow.window ~modal:false ~title:("Project \""^project.name^"\"")
-      ~icon:Icons.oe ~border_width:5 ~position:`CENTER ~show:false () in
+      ~icon:(Preferences.Icon.get_themed_icon Icons.oe) ~border_width:5 ~position:`CENTER ~show:false () in
   let widget = new widget ~editor ~packing:window#add ~project ?callback ?page_num ?show () in
   ignore (widget#button_close#connect#clicked ~callback:window#misc#hide);
   ignore (widget#connect#project_name_changed ~callback:begin fun name ->

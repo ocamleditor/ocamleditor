@@ -49,19 +49,19 @@ let pixbuf_empty =
 (** specs *)
 let specs ~browser =
   let editor : Editor.editor = browser#editor in [
-    100,  `NEW_FILE,       B, P Icons.new_file, "New File...",
+    100,  `NEW_FILE,       B, P (Preferences.Icon.get_themed_icon Icons.new_file), "New File...",
     (fun _ -> browser#dialog_file_new()),
     None;
 
-    200,  `OPEN_FILE,      B, P Icons.open_file, "Open File...",
+    200,  `OPEN_FILE,      B, P (Preferences.Icon.get_themed_icon Icons.open_file), "Open File...",
     (fun _ -> editor#dialog_file_open ()),
     None;
 
-    300,  `SAVE,           B, P Icons.save_16, "Save",
+    300,  `SAVE,           B, P (Preferences.Icon.get_themed_icon Icons.save_16), "Save",
     (fun _ -> Gaux.may ~f:editor#save (editor#get_page `ACTIVE)),
     None;
 
-    400,  `SAVE_ALL,       B, P Icons.save_all_16, "Save All",
+    400,  `SAVE_ALL,       B, P (Preferences.Icon.get_themed_icon Icons.save_all_16), "Save All",
     (fun _ -> browser#save_all ()),
     None;
 
@@ -71,31 +71,31 @@ let specs ~browser =
 
     600,  `SEP,            I, N, "", ignore, None;
 
-    700,  `FIND_REPL,      B, P Icons.find_replace, "Find and Replace", begin fun _ ->
+    700,  `FIND_REPL,      B, P (Preferences.Icon.get_themed_icon Icons.find_replace), "Find and Replace", begin fun _ ->
       Menu_search.find_replace ?find_all:None ?search_word_at_cursor:None editor
     end, None;
 
-    800,  `SEARCH_AGAIN,   B, P Icons.search_again_16, "Search Again",
+    800,  `SEARCH_AGAIN,   B, P (Preferences.Icon.get_themed_icon Icons.search_again_16), "Search Again",
     (fun _ -> Menu_search.search_again editor),
     None;
 
     900,  `SEP,            I, N, "", ignore, None;
 
-    1000, `VIEW_MESSAGES,  B, P Icons.paned_bottom, "View Messages",
+    1000, `VIEW_MESSAGES,  B, P (Preferences.Icon.get_themed_icon Icons.paned_bottom), "View Messages",
     (fun _ -> browser#set_vmessages_visible (not Messages.vmessages#visible)),
     None;
 
-    1100, `VIEW_HMESSAGES, B, P Icons.paned_right, "View Messages (Right Pane)",
+    1100, `VIEW_HMESSAGES, B, P (Preferences.Icon.get_themed_icon Icons.paned_right), "View Messages (Right Pane)",
     (fun _ -> browser#set_hmessages_visible (not Messages.hmessages#visible)),
     None;
 
     1200, `SEP,            I, N, "", ignore, None;
 
-    1300, `EVAL_TOPLEVEL,  B, P Icons.toplevel, "Eval in Toplevel",
+    1300, `EVAL_TOPLEVEL,  B, P (Preferences.Icon.get_themed_icon Icons.toplevel), "Eval in Toplevel",
     (fun _ -> editor#with_current_page (fun page -> page#ocaml_view#obuffer#send_to_shell ())),
     None;
 
-    1400, `COMPILE_FILE,   B, P Icons.compile_file_16, "Compile Current File", begin fun _ ->
+    1400, `COMPILE_FILE,   B, P (Preferences.Icon.get_themed_icon Icons.compile_file_16), "Compile Current File", begin fun _ ->
       browser#editor#with_current_page begin fun p ->
         if Preferences.preferences#get.editor_save_all_bef_comp then (editor#save_all());
         p#compile_buffer ?join:None ()
@@ -104,7 +104,7 @@ let specs ~browser =
 
     1500, `SEP,            I, N, "", ignore, None;
 
-    1600, `SHOW_TARGETS,   B, P Icons.target_16, "Targets", begin fun _ ->
+    1600, `SHOW_TARGETS,   B, P (Preferences.Icon.get_themed_icon Icons.target_16), "Targets", begin fun _ ->
       browser#dialog_project_properties ?page_num:(Some 1) ?show:(Some true) ()
     end, None;
 
@@ -114,15 +114,15 @@ let specs ~browser =
     browser#project_clean,
     None;
 
-    1800, `CLEAN,          BM, P Icons.clear_build_16, "Clean...",
+    1800, `CLEAN,          BM, P (Preferences.Icon.get_themed_icon Icons.clear_build_16), "Clean...",
     (fun () -> browser#toolbar#clean_current browser),
     Some (browser#toolbar#clean_menu browser);
 
-    1900, `COMPILE,        BM, P Icons.compile_all_16, "Compile...",
+    1900, `COMPILE,        BM, P (Preferences.Icon.get_themed_icon Icons.compile_all_16), "Compile...",
     (fun () -> browser#toolbar#compile_current browser),
     Some (browser#toolbar#compile_menu browser);
 
-    2000, `BUILD,          BM, P Icons.build_16, "Build...",
+    2000, `BUILD,          BM, P (Preferences.Icon.get_themed_icon Icons.build_16), "Build...",
     (fun () -> browser#toolbar#build_current browser),
     Some (browser#toolbar#build_menu browser);
 
@@ -148,7 +148,7 @@ let specs ~browser =
         end
       end);
 
-    2200, `RUN,            BM, P Icons.start_16, "Run...",
+    2200, `RUN,            BM, P (Preferences.Icon.get_themed_icon Icons.start_16), "Run...",
     (fun () -> browser#toolbar#run_current browser),
     Some (browser#toolbar#run_menu browser);
   ]
@@ -178,7 +178,7 @@ let items ~browser =
 let create_tool ~(toolbox : GPack.box) item =
   let image =
     match item.pixbuf with
-    | P _ when item.tag = `VIEW_MESSAGES -> Some (GMisc.image ~pixbuf:Icons.paned_bottom_large ())
+    | P _ when item.tag = `VIEW_MESSAGES -> Some (GMisc.image ~pixbuf:(Preferences.Icon.get_themed_icon Icons.paned_bottom_large) ())
     | P pixbuf -> Some (GMisc.image ~pixbuf ())
     | S stock -> Some (GMisc.image ~stock ~icon_size:`SMALL_TOOLBAR ())
     | N -> None

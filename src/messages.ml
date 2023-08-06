@@ -82,7 +82,7 @@ class virtual page ~role =
         | _ ->
             button_detach#misc#set_sensitive false; (* Fixes the button state *)
             (*button_detach#misc#set_state `NORMAL;*)
-            let icon = match self#icon with Some x -> x | _ -> Icons.oe in
+            let icon = match self#icon with Some x -> x | _ -> (Preferences.Icon.get_themed_icon Icons.oe) in
             let rect = self#misc#allocation in
             let has_memo = Preferences.geometry_memo.Gmisclib.Window.GeometryMemo.enabled in
             let memo_table = Preferences.geometry_memo.Gmisclib.Window.GeometryMemo.table in
@@ -212,7 +212,7 @@ and messages ~(paned : GPack.paned) () =
           let width, height =
             if has_memo && Hashtbl.mem memo_table role then None, None else (Some rect.Gtk.width), (Some rect.Gtk.height)
           in
-          let window = GWindow.window ~title:"Messages" ~icon:Icons.oe ?width ?height ~border_width:0 ~position:`CENTER ~allow_shrink:true ~show:false () in
+          let window = GWindow.window ~title:"Messages" ~icon:(Preferences.Icon.get_themed_icon Icons.oe) ?width ?height ~border_width:0 ~position:`CENTER ~allow_shrink:true ~show:false () in
           window#set_geometry_hints ~pos:true ~user_pos:true ~user_size:true self#coerce;
           Gmisclib.Window.GeometryMemo.add ~key:role ~window Preferences.geometry_memo;
           ignore (window#event#connect#delete ~callback:begin fun _ ->

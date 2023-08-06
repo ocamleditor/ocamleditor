@@ -157,7 +157,7 @@ class widget ~project ?packing () =
 
     method private choose_file () =
       let window = GWindow.file_chooser_dialog
-          ~action:`SAVE ~icon:Icons.oe
+          ~action:`SAVE ~icon:(Preferences.Icon.get_themed_icon Icons.oe)
           ~title:text_filename
           ~position:`CENTER ~modal:true ~show:false ()
       in
@@ -177,7 +177,7 @@ class widget ~project ?packing () =
 
 let window ~project () =
   let window = GWindow.window ~title:"Generate Build Script"
-      ~modal:true ~border_width:8 ~position:`CENTER ~icon:Icons.oe ~show:false () in
+      ~modal:true ~border_width:8 ~position:`CENTER ~icon:(Preferences.Icon.get_themed_icon Icons.oe) ~show:false () in
   Gmisclib.Window.GeometryMemo.add ~key:"dialog-build-script" ~window Preferences.geometry_memo;
   let vbox = GPack.vbox ~spacing:8 ~packing:window#add () in
   let widget = new widget ~project ~packing:vbox#add () in

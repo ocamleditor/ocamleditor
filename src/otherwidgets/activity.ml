@@ -34,7 +34,7 @@ let remove msg = table#set (List.filter (fun (_, m) -> m <> msg) table#get)
 (** Activity Monitor *)
 let monitor ~message ~monitor ~f () =
   let window    = GWindow.window
-      ~icon:Icons.oe
+      ~icon:(!Otherwidgets_config.app_icon())
       ~title:"Activity Monitor"
       ~modal:true
       ~type_hint:`UTILITY

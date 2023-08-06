@@ -154,8 +154,8 @@ class error_indication (view : Ocaml_text.view) vscrollbar global_gutter =
         if flag_gutter then begin
           let kind, pixbuf =
             match kind with
-            | `Warning -> `Warning error.Oe.er_message, Icons.warning_14
-            | `Error -> `Error error.Oe.er_message, Icons.error_16
+            | `Warning -> `Warning error.Oe.er_message, (Preferences.Icon.get_themed_icon Icons.warning_14)
+            | `Error -> `Error error.Oe.er_message, (Preferences.Icon.get_themed_icon Icons.error_16)
             | _ -> assert false
           in
           let marker = Gutter.create_marker ~kind

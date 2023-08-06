@@ -523,7 +523,7 @@ module Remote = struct
     | None -> ()
     | Some _ ->
         let window = GWindow.dialog
-            ~icon:Icons.oe ~title:(sprintf "Rename file?")
+            ~icon:(Preferences.Icon.get_themed_icon Icons.oe) ~title:(sprintf "Rename file?")
             ~position:`CENTER ~modal:true ~show:false ()
         in
         let _ = GMisc.label ~text:(sprintf "Rename remote file\n\n%s" page#get_title) ~xalign:0.0 ~packing:window#vbox#pack () in
@@ -576,7 +576,7 @@ module Remote = struct
     | None -> ()
     | Some _ ->
         let window = GWindow.dialog
-            ~icon:Icons.oe ~title:"Save as..."
+            ~icon:(Preferences.Icon.get_themed_icon Icons.oe) ~title:"Save as..."
             ~position:`CENTER ~modal:true ~show:false ()
         in
         let _ = GMisc.label ~text:(sprintf "Save remote file\n\n%s\n\nas:" page#get_title) ~xalign:0.0 ~packing:window#vbox#pack () in
