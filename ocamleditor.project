@@ -57,7 +57,7 @@
       <other_objects></other_objects>
       <files>icons/icons.ml</files>
       <package>lablgtk2</package>
-      <includes>common</includes>
+      <includes>common icons</includes>
       <thread>false</thread>
       <vmthread>false</vmthread>
       <pp></pp>
