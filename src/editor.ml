@@ -479,7 +479,7 @@ class editor () =
       let filename = page#get_filename in
       let basename = Filename.basename filename in
       let item = GMenu.image_menu_item ~label:(sprintf "Close \xC2\xAB%s\xC2\xBB" basename) ~packing:menu#add () in
-      item#set_image (GMisc.image ~stock:`CLOSE ~icon_size:`MENU ())#coerce;
+      item#set_image (Icons.create (Preferences.Icon.get_themed_icon Icons.close_16))#coerce;
       ignore (item#connect#activate ~callback:(fun () -> ignore (self#dialog_confirm_close page)));
       let item = GMenu.image_menu_item ~label:(sprintf "Close All Except \xC2\xAB%s\xC2\xBB" basename) ~packing:menu#add () in
       ignore (item#connect#activate ~callback:(fun () -> self#close_all ~except:page ()));
@@ -519,7 +519,7 @@ class editor () =
       ignore (item#connect#activate ~callback:(fun () -> self#with_current_page (fun page -> page#show_revision_history ())));
       let _ = GMenu.separator_item ~packing:menu#add () in
       let item = GMenu.image_menu_item ~label:"Save As..." ~packing:menu#add () in
-      item#set_image (GMisc.image ~pixbuf:(Preferences.Icon.get_themed_icon Icons.revert_to_saved_16) (*~stock:`SAVE_AS*) ~icon_size:`MENU ())#coerce;
+      item#set_image (GMisc.image ~pixbuf:(Preferences.Icon.get_themed_icon Icons.save_as_16) (*~stock:`SAVE_AS*) ~icon_size:`MENU ())#coerce;
       ignore (item#connect#activate ~callback:(fun () -> self#dialog_save_as page));
       let item = GMenu.image_menu_item ~label:(sprintf "Rename \xC2\xAB%s\xC2\xBB" basename) ~packing:menu#add () in
       ignore (item#connect#activate ~callback:(fun () -> self#dialog_rename page));

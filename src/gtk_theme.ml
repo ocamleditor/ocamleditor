@@ -81,6 +81,11 @@ let set_theme ?theme ~context () =
         xthickness = 0
         ythickness = 0
       }
+      style \"gitbutton\" {
+        GtkButton::image-spacing = 8
+        xthickness = 0
+        ythickness = 0
+      }
       style \"small-button\" {
         GtkButton::child-displacement-x = 0
         GtkButton::child-displacement-y = 0
@@ -98,7 +103,8 @@ widget \"*.windowbutton\" style \"window-button\"
 widget \"*.menubar_button_arrow\" style \"menubar-button-arrow\"
 widget \"*.oe_menubar\" style:highest \"oe_menubar\"
 widget \"gtk-tooltip*\" style \"oe-tooltip\"
-"
+widget \"*.gitbutton\" style:highest \"gitbutton\"
+                                               "
   in
   let style_targetlist, apply_targetlist =
     match Oe_config.targetlist_alternating_row_colors with
@@ -106,7 +112,7 @@ widget \"gtk-tooltip*\" style \"oe-tooltip\"
     | Some x ->
         let base_color = (Preferences.get_themed_color pref.editor_bg_color_user) in
         sprintf "
-          style \"targetlist-treestyle\" {
+                                               style \"targetlist-treestyle\" {
             GtkTreeView::even-row-color = \"%s\"
             GtkTreeView::odd-row-color = \"%s\"
           }" base_color (Color.name (Color.set_value x (`NAME base_color))),

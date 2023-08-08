@@ -185,7 +185,8 @@ class widget ~editor ?(callback=ignore) ~project ?page_num ?packing ?show () =
       ~packing:(box#pack ~expand:false) () in
   let button_ok = GButton.button ~stock:`OK ~packing:bb#add () in
   let button_apply = GButton.button ~stock:`APPLY ~packing:bb#add () in
-  let button_close = GButton.button ~use_mnemonic:false ~stock:`CLOSE ~packing:bb#add () in
+  let button_close = GButton.button ~use_mnemonic:false ~packing:bb#add () in
+  let _ = button_close#set_image (Icons.create (Preferences.Icon.get_themed_icon Icons.close_16))#coerce in
   let button_help = GButton.button ~use_mnemonic:false ~stock:`HELP ~packing:bb#add () in
   let _ = bb#set_child_secondary button_help#coerce true in
   let _ = button_help#misc#set_sensitive false in

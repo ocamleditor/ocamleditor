@@ -151,7 +151,8 @@ let dialog (parent : GObj.widget) () =
   let button_filter = GButton.check_button ~active:false ~label:"Show selected only" ~packing:hbox#pack () in
   button_filter#set_focus_on_click false;
   let bbox = GPack.button_box `HORIZONTAL ~layout:`END ~border_width:5 ~packing:hbox#add () in
-  let button_close = GButton.button ~stock:`CLOSE ~packing:bbox#pack () in
+  let button_close = GButton.button ~packing:bbox#pack () in
+  button_close#set_image (Icons.create (Preferences.Icon.get_themed_icon Icons.close_16))#coerce;
   ignore (button_close#connect#clicked ~callback:window#destroy);
   ignore (button_filter#connect#toggled ~callback:(fun () -> widget#set_filter button_filter#active));
   window#resize ~width:parent#misc#allocation.Gtk.width ~height:400 ;

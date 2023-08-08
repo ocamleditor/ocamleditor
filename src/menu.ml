@@ -42,13 +42,13 @@ let edit ~browser ~group ~flags
   end |> ignore;
   (* Undo *)
   let undo = GMenu.image_menu_item ~label:"Undo" ~packing:menu#add () in
-  undo#set_image (GMisc.image ~stock:`UNDO ~icon_size:`MENU ())#coerce;
+  undo#set_image (Icons.create (Preferences.Icon.get_themed_icon Icons.undo_16))#coerce;
   ignore (undo#connect#activate ~callback:(fun () -> editor#with_current_page (fun page -> page#undo())));
   undo#add_accelerator ~group ~modi:[`CONTROL] GdkKeysyms._z ~flags;
   get_menu_item_undo := (fun () -> undo);
   (* Redo *)
   let redo = GMenu.image_menu_item ~label:"Redo" ~packing:menu#add () in
-  redo#set_image (GMisc.image ~stock:`REDO ~icon_size:`MENU ())#coerce;
+  redo#set_image (Icons.create (Preferences.Icon.get_themed_icon Icons.redo_16))#coerce;
   ignore (redo#connect#activate ~callback:(fun () -> editor#with_current_page (fun page -> page#redo())));
   redo#add_accelerator ~group ~modi:[`CONTROL; `SHIFT] GdkKeysyms._z ~flags;
   get_menu_item_redo := (fun () -> redo);
@@ -643,7 +643,7 @@ let create ~browser ~group
     file_recent_clear             = GMenu.menu_item ~label:"Clear File History" ();
     file_recent_sep               = GMenu.separator_item ();
     file_switch                   = GMenu.menu_item ~label:"Switch to Implementation/Interface" ();
-    file_close                    = GMenu.image_menu_item ~stock:`CLOSE ();
+    file_close                    = GMenu.image_menu_item ~image:(Icons.create (Preferences.Icon.get_themed_icon Icons.close_16))#coerce ();
     file_close_all                = GMenu.menu_item ~label:"Close All" ();
     file_revert                   = GMenu.image_menu_item ~label:"Revert" (*~stock:`REVERT_TO_SAVED*) ();
     file_delete                   = GMenu.image_menu_item ~stock:`DELETE ();

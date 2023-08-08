@@ -65,7 +65,7 @@ let specs ~browser =
     (fun _ -> browser#save_all ()),
     None;
 
-    500,  `CLOSE,          B, S `CLOSE, "Close Current File",
+    500,  `CLOSE,          B, P (Preferences.Icon.get_themed_icon Icons.close_16), "Close Current File",
     (fun _ -> editor#with_current_page (fun p -> ignore (editor#dialog_confirm_close p))),
     None;
 

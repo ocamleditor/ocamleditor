@@ -39,7 +39,8 @@ let system_properties () =
   view#set_pixels_below_lines 2;
   view#set_cursor_visible false;
   let bbox = GPack.button_box `HORIZONTAL ~layout:`SPREAD ~border_width:8 ~packing:vbox#pack () in
-  let button_close = GButton.button ~stock:`CLOSE ~packing:bbox#pack () in
+  let button_close = GButton.button ~packing:bbox#pack () in
+  button_close#set_image (Icons.create (Preferences.Icon.get_themed_icon Icons.close_16))#coerce;
   button_close#connect#clicked ~callback:window#destroy |> ignore;
   Gmisclib.Util.esc_destroy_window window;
   window#show();

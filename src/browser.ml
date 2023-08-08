@@ -102,7 +102,9 @@ class browser () =
   in
   let button_gitpath = GButton.button ~relief:`NONE ~packing:gitbox#add () in
   let _ = button_gitpath#set_image (GMisc.image ~pixbuf:(Preferences.Icon.get_themed_icon Icons.git) ())#coerce in
+  let _ = button_gitpath#misc#set_name "gitbutton"in
   let button_gitbranch = GButton.button ~label:"" ~relief:`NONE ~packing:gitbox#add () in
+  let _ = button_gitbranch#misc#set_name "gitbutton" in
   (*let button_gitbranch = Gmisclib.Button.button_menu ~label:"" ~relief:`NONE ~packing:gitbox#add () in*)
   let _ =
     button_gitbranch#set_image (GMisc.image ~pixbuf:(Preferences.Icon.get_themed_icon Icons.branch) ())#coerce;

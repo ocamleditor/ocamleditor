@@ -35,9 +35,12 @@ class ['a] toolbar ~(messages : Messages.messages) ~(hmessages : Messages.messag
   let _                        = tool_open_file#set_icon_widget (GMisc.image ~pixbuf:(Preferences.Icon.get_themed_icon Icons.open_file) ())#coerce in
   let tool_save                = GButton.tool_button ~stock:`SAVE ~homogeneous:false ~label:"Save" () in
   let tool_save_all            = Gmisclib.Toolbar.menu_tool_button ~homogeneous:false ~toolbar ~label:"Save All" () in
-  let tool_close_file          = GButton.tool_button ~stock:`CLOSE ~label:"Close" () in
-  let tool_undo                = GButton.tool_button ~stock:`UNDO ~label:"Undo" () in
-  let tool_redo                = GButton.tool_button ~stock:`REDO ~label:"Redo" () in
+  let tool_close_file          = GButton.tool_button ~label:"Close" () in
+  let _                        = tool_close_file#set_icon_widget (Icons.create (Preferences.Icon.get_themed_icon Icons.close_16))#coerce in
+  let tool_undo                = GButton.tool_button ~label:"Undo" () in
+  let _                        = tool_undo#set_icon_widget (Icons.create (Preferences.Icon.get_themed_icon Icons.undo_16))#coerce in
+  let tool_redo                = GButton.tool_button ~label:"Redo" () in
+  let _                        = tool_redo#set_icon_widget (Icons.create (Preferences.Icon.get_themed_icon Icons.redo_16))#coerce in
   let tool_find_repl           = GButton.tool_button (*~stock:`FIND_AND_REPLACE*) ~label:"Find and Replace" () in
   let _                        = tool_find_repl#set_icon_widget (GMisc.image  ~pixbuf:(Preferences.Icon.get_themed_icon Icons.find_replace) ())#coerce in
   let tool_item_find_entry     = GButton.tool_item ~homogeneous:false () in
