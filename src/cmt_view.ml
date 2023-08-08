@@ -21,6 +21,7 @@
 *)
 
 open Printf
+module ColorOps = Color
 open Preferences
 open GUtil
 open Cmt_format
@@ -242,7 +243,7 @@ class widget ~editor:_ ~page ?packing () =
       ];
       type_color <- ?? (pref.outline_color_types);
       type_color_re <- Str.regexp_string type_color;
-      type_color_sel <- Color.name_of_gdk (view#misc#style#fg `SELECTED);
+      type_color_sel <- ColorOps.name_of_gdk (view#misc#style#fg `SELECTED);
       type_color_sel_re <- Str.regexp_string type_color_sel;
       span_type_color <- " <span color='" ^ type_color ^ "'>: ";
       let style_outline, apply_outline = Gtk_theme.get_style_outline pref in

@@ -21,8 +21,6 @@
 *)
 
 
-open Preferences
-
 let _ = Gmisclib.Util.fade_window_enabled := Oe_config.fade_window_enabled
 
 let create_mark_name =
@@ -94,7 +92,9 @@ let window_tooltip widget ?parent ?(fade=false) ~x ~y () =
   in
   let ebox = GBin.event_box ~packing:window#add () in
   ebox#add widget;
-  let color = Color.set_value 0.62 (`NAME ?? (Preferences.preferences#get.editor_bg_color_popup)) in
+  let module ColorOp = Color in
+  let open Preferences in
+  let color = ColorOp.set_value 0.62 (`NAME ?? (Preferences.preferences#get.editor_bg_color_popup)) in
   let _ = window#misc#modify_bg [`NORMAL, color] in
   let _ = ebox#misc#modify_bg [`NORMAL, `NAME ?? (Preferences.preferences#get.editor_bg_color_popup)] in
   window#set_skip_pager_hint true;

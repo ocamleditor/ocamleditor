@@ -22,7 +22,7 @@
 
 
 open Printf
-open Preferences
+module ColorOps = Color
 
 let avail_themes =
   match Oe_config.themes_dir with
@@ -38,11 +38,12 @@ let set_find_text_output_font_condensed context =
 
 let get_style_outline (pref : Settings_t.settings) =
   let style_outline, apply_outline =
+    let open Preferences in
     let base_color = ?? (pref.outline_color_nor_bg) in
     let even, odd =
       match pref.outline_color_alt_rows with
       | None -> base_color, base_color
-      | Some x -> base_color, (Color.name (Color.set_value x (`NAME base_color)))
+      | Some x -> base_color, (ColorOps.name (ColorOps.set_value x (`NAME base_color)))
     in
     sprintf "
           style \"outline-treestyle\" {
@@ -107,22 +108,23 @@ widget \"*.gitbutton\" style:highest \"gitbutton\"
                                                "
   in
   let style_targetlist, apply_targetlist =
+    let open Preferences in
     match Oe_config.targetlist_alternating_row_colors with
     | None -> "", ""
     | Some x ->
-        let base_color = (Preferences.get_themed_color pref.editor_bg_color_user) in
+        let base_color = (?? (pref.editor_bg_color_user)) in
         sprintf "
                                                style \"targetlist-treestyle\" {
             GtkTreeView::even-row-color = \"%s\"
             GtkTreeView::odd-row-color = \"%s\"
-          }" base_color (Color.name (Color.set_value x (`NAME base_color))),
+          }" base_color (ColorOps.name (ColorOps.set_value x (`NAME base_color))),
         "widget \"*.targetlist_treeview\" style \"targetlist-treestyle\""
   in
   let gtk_theme =
     Option.fold Oe_config.themes_dir
       ~none:""
       ~some:(fun _ ->
-          let theme = match theme with Some _ as x -> x | _ -> preferences#get.theme in
+          let theme = match theme with Some _ as x -> x | _ -> Preferences.preferences#get.theme in
           Option.fold theme
             ~none:""
             ~some:(fun theme -> sprintf "gtk-theme-name = \"%s\"" theme)

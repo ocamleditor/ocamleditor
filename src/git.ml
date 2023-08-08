@@ -21,6 +21,7 @@
 *)
 
 open Printf
+module ColorOps = Color
 open Preferences
 
 type status =
@@ -162,8 +163,8 @@ let toplevel callback =
 (** diff_stat *)
 let diff_stat f =
   let fact = -0.0 in
-  let color_add = Color.add_value (?? Oe_config.global_gutter_diff_color_add) fact in
-  let color_del = Color.add_value (?? Oe_config.global_gutter_diff_color_del) fact in
+  let color_add = ColorOps.add_value (?? Oe_config.global_gutter_diff_color_add) fact in
+  let color_del = ColorOps.add_value (?? Oe_config.global_gutter_diff_color_del) fact in
   match Oe_config.git_version with
   | None -> ()
   | _ ->
@@ -251,7 +252,7 @@ let show_diff_stat alloc widget =
   popup#event#connect#key_press ~callback:begin fun ev ->
     if GdkEvent.Key.keyval ev = GdkKeysyms._Escape then destroy popup else false
   end |> ignore;
-  let border_color = Color.add_value (?? (Preferences.preferences#get.editor_bg_color_popup)) 0.1 in
+  let border_color = ColorOps.add_value (?? (Preferences.preferences#get.editor_bg_color_popup)) 0.1 in
   popup#misc#modify_bg [`NORMAL, `NAME border_color];
   let lbox = GBin.event_box ~packing:popup#add () in
   lbox#misc#modify_bg [`NORMAL, `NAME ?? (Preferences.preferences#get.editor_bg_color_popup)];

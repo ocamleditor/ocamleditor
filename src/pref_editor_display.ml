@@ -97,17 +97,18 @@ class pref_editor_display title ?packing () =
       let solid_color = color_name il_button_solid#color in
       let dashed_color = color_name il_button_dashed#color in
       pref.editor_indent_lines <-
-        check_indent_lines#active, new_themed_color solid_color s, new_themed_color dashed_color d;
+        check_indent_lines#active, Preferences.Color.new_themed_color solid_color s,
+        Preferences.Color.new_themed_color dashed_color d;
       let color = color_name rm_button#color in
       pref.editor_right_margin_visible <- check_right_margin#active;
-      set_themed_color pref.editor_right_margin_color color;
+      Preferences.Color.set_themed_color pref.editor_right_margin_color color;
       pref.editor_right_margin <- entry_right_margin#value_as_int;
       pref.editor_code_folding_enabled <- check_code_folding#active;
       pref.editor_show_global_gutter <- check_global_gutter#active;
       let color = color_name mo_button#color in
       pref.editor_mark_occurrences_enabled = check_mark_occurrences#active;
       pref.editor_mark_occurrences_under_cursor = check_mo_uc#active;
-      set_themed_color pref.editor_mark_occurrences_bg_color color;
+      Preferences.Color.set_themed_color pref.editor_mark_occurrences_bg_color color;
       pref.editor_dot_leaders <- check_show_dot_leaders#active;
       pref.editor_current_line_border <- check_current_line_border#active;
 

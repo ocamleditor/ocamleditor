@@ -21,6 +21,8 @@
 *)
 
 
+module ColorOps = Color
+
 module Diff = struct
 
   type 'a editor_page =
@@ -41,9 +43,9 @@ module Diff = struct
   let global_gutter_diff_sep = 1
   let fact = 0.0
   open Preferences
-  let color_add = `NAME (Color.add_value (?? Oe_config.global_gutter_diff_color_add) fact)
-  let color_del = `NAME (Color.add_value (?? Oe_config.global_gutter_diff_color_del) fact)
-  let color_change = `NAME (Color.add_value (?? Oe_config.global_gutter_diff_color_change) 0.2)
+  let color_add = `NAME (ColorOps.add_value (?? Oe_config.global_gutter_diff_color_add) fact)
+  let color_del = `NAME (ColorOps.add_value (?? Oe_config.global_gutter_diff_color_del) fact)
+  let color_change = `NAME (ColorOps.add_value (?? Oe_config.global_gutter_diff_color_change) 0.2)
 
   let initialized : int list ref = ref []
 
@@ -75,7 +77,7 @@ module Diff = struct
     let ebox = GBin.event_box () in
     let vbox = GPack.vbox ~spacing:0 ~packing:ebox#add () in
     let color = Preferences.preferences#get.editor_bg_color_user in
-    ebox#misc#modify_bg [`NORMAL, `NAME (Preferences.get_themed_color color)];
+    ebox#misc#modify_bg [`NORMAL, `NAME (?? color)];
     let fd = Pango.Font.from_string Preferences.preferences#get.editor_base_font in
     let size = Pango.Font.get_size fd - 1 * Pango.scale in
     Pango.Font.modify fd ~size ();
@@ -164,14 +166,14 @@ module Diff = struct
                       drawable#set_foreground color;
                       drawable#polygon ~filled:true [x0, y; x0 + wtri, y - wtri; x0 + wtri, y + wtri];
                       if (*true ||*) with_border then begin
-                        drawable#set_foreground (Color.set_value 0.6 color);
+                        drawable#set_foreground (ColorOps.set_value 0.6 color);
                         drawable#polygon ~filled:false [0, y; wtri, y - wtri; wtri, y + wtri]
                       end
                   | `BW ->
                       drawable#set_foreground black;
                       let tri = [x0, y; x0 + wtri, y - wtri; x0 + wtri, y + wtri] in
                       drawable#polygon ~filled:true tri;
-                      drawable#set_foreground (Color.set_value 0.5 black);
+                      drawable#set_foreground (ColorOps.set_value 0.5 black);
                       drawable#polygon ~filled:false tri;
                 end;
             | col when col = color_add ->
@@ -187,7 +189,7 @@ module Diff = struct
                       drawable#set_foreground color;
                       drawable#rectangle ~filled:true ~x:0 ~y:(y - 2) ~width ~height ();
                       if with_border then begin
-                        drawable#set_foreground (Color.set_value 0.6 color);
+                        drawable#set_foreground (ColorOps.set_value 0.6 color);
                         drawable#rectangle ~filled:false ~x:0 ~y:(y - 2) ~width:(width-1) ~height ();
                       end
                   | `BW ->
@@ -206,7 +208,7 @@ module Diff = struct
                 drawable#set_foreground color;
                 drawable#rectangle ~filled:true ~x:0 ~y:y1 ~width ~height ();
                 if with_border then begin
-                  drawable#set_foreground (Color.set_value 0.6 color);
+                  drawable#set_foreground (ColorOps.set_value 0.6 color);
                   drawable#rectangle ~filled:false ~x:0 ~y:y1 ~width:(width-1) ~height ();
                 end;
             | `BW ->

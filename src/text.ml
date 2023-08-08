@@ -23,6 +23,7 @@
 open Printf
 open Text_util
 open Miscellanea
+module ColorOps = Color
 open Preferences
 
 (** Buffer *)
@@ -788,7 +789,7 @@ and view ?project ?buffer () =
             let stop = stop#forward_line#set_line_index 0 in
             match ?? (Preferences.preferences#get.editor_ocamldoc_paragraph_bgcolor_1) with
             | Some color ->
-                drawable#set_foreground (`NAME (Color.add_value color 0.08));
+                drawable#set_foreground (`NAME (ColorOps.add_value color 0.08));
                 drawable#set_line_attributes ~width:1 ~style:`SOLID ();
                 let hadjust = match hadjustment with Some adj -> int_of_float adj#value | _ -> 0 in
                 while !start#forward_line#compare stop <= 0 && not (!start#equal self#buffer#end_iter) do
@@ -849,7 +850,7 @@ and view ?project ?buffer () =
           | Some color ->
               options#set_current_line_bg_color (`NAME color);
               options#set_current_line_border_color
-                (Oe_config.current_line_border_color (Color.add_value ?sfact:None) color);
+                (Oe_config.current_line_border_color (ColorOps.add_value ?sfact:None) color);
               Gmisclib.Util.set_tag_paragraph_background highlight_current_line_tag color;
               let id = self#buffer#connect#mark_set ~callback:begin fun iter mark ->
                   match GtkText.Mark.get_name mark with

@@ -21,6 +21,7 @@
 *)
 
 open Printf
+module ColorOps = Color
 open Preferences
 
 type source_point = [`ITER of GText.iter | `XY of (int * int)]
@@ -163,7 +164,7 @@ class annot_type ~page =
       | Some markup ->
           let popup = GWindow.window ~kind:`POPUP ~type_hint:`MENU
               ~decorated:false ~focus_on_map:false ~border_width:1 ~show:false () in
-          let color = Color.add_value (?? (Preferences.preferences#get.editor_bg_color_popup)) 0.1 in
+          let color = ColorOps.add_value (?? (Preferences.preferences#get.editor_bg_color_popup)) 0.1 in
           popup#misc#modify_bg [`NORMAL, `NAME color];
           popup#misc#set_can_focus false;
           let ebox = GBin.event_box ~packing:popup#add () in
