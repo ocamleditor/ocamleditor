@@ -23,6 +23,7 @@
 
 open Printf
 open Miscellanea
+open Preferences
 
 let filter =
   let names = List.map (!~~) ["README"; "INSTALL"; "NEWS"; "BUGS"; "CONTRIB"; "Makefile"; "TODO"; "AUTHORS"; "ChangeLog"; "META"; "ocamleditor_opam"] in
@@ -41,14 +42,14 @@ let filter =
       with Not_found -> false
     end names;;
 
-let pixbuf_open_in_editor () = (Preferences.Icon.get_themed_icon Icons.button_close)
+let pixbuf_open_in_editor () = (??? Icons.button_close)
 
 let help = "<small>Press \"<tt>Ctrl+Return</tt>\" to toggle open/close; press \"<tt>F3</tt>\" to move focus to the search entry; press \"<tt>Ctrl+Shift+L</tt>\" to show the list of files currently open in the editor.</small>";;
 
 (** create *)
 let create ?(all=true) ~(editor : Editor.editor) ~roots () =
   let title                = if all then "Find File" else "Select File" in
-  let window               = GWindow.window ~title ~icon:(Preferences.Icon.get_themed_icon Icons.oe) ~height:500 ~modal:true ~type_hint:`DIALOG ~position:`CENTER ~border_width:5 ~show:false () in
+  let window               = GWindow.window ~title ~icon:(??? Icons.oe) ~height:500 ~modal:true ~type_hint:`DIALOG ~position:`CENTER ~border_width:5 ~show:false () in
   let _ = Gmisclib.Window.GeometryMemo.add ~key:"dialog-find-file" ~window Preferences.geometry_memo in
   let _                    = window#set_skip_taskbar_hint true in
   let _                    = window#set_skip_pager_hint true in
@@ -139,7 +140,7 @@ let create ?(all=true) ~(editor : Editor.editor) ~roots () =
         with Unix.Unix_error _ -> false, false
       end;
     in
-    if changed then Some (Preferences.Icon.get_themed_icon Icons.save_14) else (if opened then Some (pixbuf_open_in_editor ()) else None)
+    if changed then Some (??? Icons.save_14) else (if opened then Some (pixbuf_open_in_editor ()) else None)
   in
   let update_icons () =
     GtkThread2.sync quick_file_chooser#reset_icons ();

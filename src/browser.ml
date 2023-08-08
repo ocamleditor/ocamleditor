@@ -25,11 +25,12 @@ open Printf
 open Miscellanea
 open GUtil
 open Oe
+open Preferences
 
 class browser () =
   let window = GWindow.window
       ~title:About.program_name
-      ~icon:(Preferences.Icon.get_themed_icon Icons.oe)
+      ~icon:(??? Icons.oe)
       ~type_hint:`NORMAL
       ~kind:`TOPLEVEL
       ~position:`CENTER
@@ -61,7 +62,7 @@ class browser () =
   (* Menubar icon displayed full-screen mode *)
   let width, height = 32, 32 in
   let scaled = GdkPixbuf.create ~width ~height ~has_alpha:false () in
-  let _ = GdkPixbuf.scale ~dest:scaled ~width ~height (Preferences.Icon.get_themed_icon Icons.oe) in
+  let _ = GdkPixbuf.scale ~dest:scaled ~width ~height (??? Icons.oe) in
   let pixbuf = GdkPixbuf.create ~width ~height ~has_alpha:false () in
   let _ = GdkPixbuf.saturate_and_pixelate ~saturation:0.0 ~pixelate:true ~dest:pixbuf scaled in
   let window_title_menu_icon = GBin.event_box ~packing:menubarbox#pack ~show:false () in
@@ -92,22 +93,22 @@ class browser () =
   (* Git bar *)
   let gitbox = GPack.hbox ~spacing:8 ~packing:(menubarbox#pack ~expand:false) () in
   let button_gitunpushed = GButton.button ~relief:`NONE ~packing:gitbox#add () in
-  let _ = button_gitunpushed#set_image (GMisc.image ~pixbuf:(Preferences.Icon.get_themed_icon Icons.arrow_up) ())#coerce in
+  let _ = button_gitunpushed#set_image (GMisc.image ~pixbuf:(??? Icons.arrow_up) ())#coerce in
   let button_gitpending = GButton.button ~relief:`NONE ~packing:gitbox#add () in
   let _ =
-    button_gitpending#set_image (GMisc.image ~pixbuf:(Preferences.Icon.get_themed_icon Icons.edit) ())#coerce;
+    button_gitpending#set_image (GMisc.image ~pixbuf:(??? Icons.edit) ())#coerce;
     button_gitpending#connect#clicked ~callback:begin fun () ->
       Git.diff_stat (Git.show_diff_stat None);
     end
   in
   let button_gitpath = GButton.button ~relief:`NONE ~packing:gitbox#add () in
-  let _ = button_gitpath#set_image (GMisc.image ~pixbuf:(Preferences.Icon.get_themed_icon Icons.git) ())#coerce in
+  let _ = button_gitpath#set_image (GMisc.image ~pixbuf:(??? Icons.git) ())#coerce in
   let _ = button_gitpath#misc#set_name "gitbutton"in
   let button_gitbranch = GButton.button ~label:"" ~relief:`NONE ~packing:gitbox#add () in
   let _ = button_gitbranch#misc#set_name "gitbutton" in
   (*let button_gitbranch = Gmisclib.Button.button_menu ~label:"" ~relief:`NONE ~packing:gitbox#add () in*)
   let _ =
-    button_gitbranch#set_image (GMisc.image ~pixbuf:(Preferences.Icon.get_themed_icon Icons.branch) ())#coerce;
+    button_gitbranch#set_image (GMisc.image ~pixbuf:(??? Icons.branch) ())#coerce;
     (*    button_gitbranch#set_menu_only();*)
   in
   (*  *)
@@ -116,17 +117,17 @@ class browser () =
   let hbox_menu_buttons = GPack.hbox ~border_width:0 ~spacing:0 ~packing:align#add () in
 
   let button_menu_iconify = GButton.button ~relief:`NONE ~packing:hbox_menu_buttons#pack () in
-  let _ = GMisc.image ~pixbuf:(Preferences.Icon.get_themed_icon Icons.minimize_window) ~packing:button_menu_iconify#add () in
+  let _ = GMisc.image ~pixbuf:(??? Icons.minimize_window) ~packing:button_menu_iconify#add () in
   let _ = button_menu_iconify#misc#set_name "windowbutton" in
   let _ = button_menu_iconify#set_focus_on_click false in
 
   let button_menu_reset = GButton.button ~relief:`NONE ~packing:hbox_menu_buttons#pack () in
-  let _ = GMisc.image ~pixbuf:(Preferences.Icon.get_themed_icon Icons.restore_window) ~packing:button_menu_reset#add () in
+  let _ = GMisc.image ~pixbuf:(??? Icons.restore_window) ~packing:button_menu_reset#add () in
   let _ = button_menu_reset#misc#set_name "windowbutton" in
   let _ = button_menu_reset#set_focus_on_click false in
 
   let button_menu_exit = GButton.button ~relief:`NONE ~packing:hbox_menu_buttons#pack () in
-  let _ = GMisc.image ~pixbuf:(Preferences.Icon.get_themed_icon Icons.close_window) ~packing:button_menu_exit#add () in
+  let _ = GMisc.image ~pixbuf:(??? Icons.close_window) ~packing:button_menu_exit#add () in
   let _ = button_menu_exit#misc#set_name "windowbutton" in
   let _ = button_menu_exit#set_focus_on_click false in
   let tout_low_prio = Timeout.create ~delay:0.75 () in
@@ -267,7 +268,7 @@ class browser () =
       let pat1 = "*"^Prj.default_extension in
       let pat2 = "*"^Prj.old_extension in
       let dialog = GWindow.file_chooser_dialog ~action:`OPEN ~width:600 ~height:600
-          ~title:"Open project..." ~icon:(Preferences.Icon.get_themed_icon Icons.oe) ~position:`CENTER ~show:false () in
+          ~title:"Open project..." ~icon:(??? Icons.oe) ~position:`CENTER ~show:false () in
       dialog#add_filter (GFile.filter
                            ~name:(sprintf "%s projects (%s)" About.program_name pat1) ~patterns:[pat1] ());
       dialog#add_filter (GFile.filter
@@ -1146,7 +1147,7 @@ let splashscreen () =
   let pref = Preferences.preferences#get in
   if pref.splashscreen_enabled then begin
     let decorated = (*false && *)Sys.win32 in
-    let pixbuf = Preferences.Icon.get_themed_icon Icons.logo in
+    let pixbuf = ??? Icons.logo in
     let image = GMisc.image ~pixbuf () in
     let window = GWindow.window
         ~title:About.program_name

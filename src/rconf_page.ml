@@ -22,6 +22,7 @@
 
 
 open Printf
+open Preferences
 
 (** create_entry *)
 let create_entry ?label ~packing () =
@@ -76,11 +77,11 @@ class view ~target_list ?packing () =
       | Some row ->
           let bc = model_bc#get ~row ~column:col_bc in
           let tasks = [
-            `NONE, (Preferences.Icon.get_themed_icon Icons.empty_16);
-            `CLEAN, (Preferences.Icon.get_themed_icon Icons.clear_build_16);
-            `COMPILE, (Preferences.Icon.get_themed_icon Icons.build_16);
-            `REBUILD, (Preferences.Icon.get_themed_icon Icons.empty_16)
-          ] @ (List.map (fun x -> (`ETASK x, (Preferences.Icon.get_themed_icon Icons.etask_16))) bc.Target.external_tasks) in
+            `NONE, (??? Icons.empty_16);
+            `CLEAN, (??? Icons.clear_build_16);
+            `COMPILE, (??? Icons.build_16);
+            `REBUILD, (??? Icons.empty_16)
+          ] @ (List.map (fun x -> (`ETASK x, (??? Icons.etask_16))) bc.Target.external_tasks) in
           model_task#clear();
           List.iter begin fun (task, icon) ->
             let row = model_task#append () in
@@ -116,7 +117,7 @@ class view ~target_list ?packing () =
       List.iter begin fun bc ->
         let row = model_bc#append () in
         model_bc#set ~row ~column:col_bc bc;
-        model_bc#set ~row ~column:col_bc_pixbuf (Preferences.Icon.get_themed_icon Icons.start_16);
+        model_bc#set ~row ~column:col_bc_pixbuf (??? Icons.start_16);
         model_bc#set ~row ~column:col_name bc.Target.name;
       end targets;
 

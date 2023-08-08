@@ -23,6 +23,7 @@
 
 open Printf
 open Miscellanea
+open Preferences
 
 type t = {
   source                : [ `path of string list * string list (* roots x filenames *)
@@ -504,7 +505,7 @@ class widget ~source ~name ?filter ?packing () =
             table_results <- table_visible;
             if is_filelist then (self#apply_pattern());
             self#display_summary ();
-            icon_progress#set_pixbuf (Preferences.Icon.get_themed_icon Icons.empty_14);
+            icon_progress#set_pixbuf (??? Icons.empty_14);
             false
           end else true
         end;

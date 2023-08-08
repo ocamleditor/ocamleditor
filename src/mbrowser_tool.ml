@@ -26,6 +26,7 @@ open GdkKeysyms
 open Miscellanea
 open Oe
 open Mbrowser_slist
+open Preferences
 
 let title = "Module Browser"
 
@@ -55,31 +56,31 @@ class widget ~project ?(is_completion=false) ?(enable_history=true) ?width ?heig
   let radio_find_path     = GButton.radio_tool_button ~packing:toolbar#insert ~active:true () in
   let radio_find_name     = GButton.radio_tool_button ~packing:toolbar#insert ~group:radio_find_path () in
   let radio_find_type     = GButton.radio_tool_button ~packing:toolbar#insert ~group:radio_find_path () in
-  let _                   = radio_find_path#set_icon_widget (GMisc.image ~pixbuf:(Preferences.Icon.get_themed_icon Icons.path_name) ())#coerce in
-  let _                   = radio_find_name#set_icon_widget (GMisc.image ~pixbuf:(Preferences.Icon.get_themed_icon Icons.simple_name) ())#coerce in
-  let _                   = radio_find_type#set_icon_widget (GMisc.image ~pixbuf:(Preferences.Icon.get_themed_icon Icons.typ) ())#coerce in
+  let _                   = radio_find_path#set_icon_widget (GMisc.image ~pixbuf:(??? Icons.path_name) ())#coerce in
+  let _                   = radio_find_name#set_icon_widget (GMisc.image ~pixbuf:(??? Icons.simple_name) ())#coerce in
+  let _                   = radio_find_type#set_icon_widget (GMisc.image ~pixbuf:(??? Icons.typ) ())#coerce in
   let _                   = radio_find_path#misc#set_tooltip_text "Search by value path" in
   let _                   = radio_find_name#misc#set_tooltip_text "Search by simple value name" in
   let _                   = radio_find_type#misc#set_tooltip_text "Search by type" in
   let entry_find          = GEdit.entry ~width_chars:15 ~packing:item_find#add () in
   let button_find         = GButton.tool_button (*~stock:`FIND*) ~homogeneous:false ~packing:toolbar#insert () in
-  let _                   = button_find#set_icon_widget (GMisc.image ~pixbuf:(Preferences.Icon.get_themed_icon Icons.find_16) ())#coerce in
+  let _                   = button_find#set_icon_widget (GMisc.image ~pixbuf:(??? Icons.find_16) ())#coerce in
   let _                   = GButton.separator_tool_item ~draw:sep_visible ~packing:toolbar#insert () in
   let button_add          = GButton.tool_button ~stock:`ADD ~homogeneous:false ~packing:toolbar#insert ~show:false () in
   let button_remove       = GButton.tool_button ~stock:`REMOVE ~homogeneous:false ~packing:toolbar#insert () in
   let _                   = GButton.separator_tool_item ~draw:sep_visible ~packing:toolbar#insert () in
   let button_incr_font    = GButton.tool_button ~label:"Increase Font Size" ~homogeneous:false ~packing:toolbar#insert () in
-  let _                   = button_incr_font#set_icon_widget (GMisc.image ~pixbuf:(Preferences.Icon.get_themed_icon Icons.zoom_in_14) ~icon_size:`MENU ())#coerce in
+  let _                   = button_incr_font#set_icon_widget (GMisc.image ~pixbuf:(??? Icons.zoom_in_14) ~icon_size:`MENU ())#coerce in
   let button_decr_font    = GButton.tool_button ~label:"Decrease Font Size" ~homogeneous:false ~packing:toolbar#insert () in
-  let _                   = button_decr_font#set_icon_widget (GMisc.image ~pixbuf:(Preferences.Icon.get_themed_icon Icons.zoom_out_14) ~icon_size:`MENU ())#coerce in
+  let _                   = button_decr_font#set_icon_widget (GMisc.image ~pixbuf:(??? Icons.zoom_out_14) ~icon_size:`MENU ())#coerce in
   let _                   = GButton.separator_tool_item ~draw:true ~expand:false ~packing:toolbar#insert () in
   let button_layout_slist = GButton.toggle_tool_button ~label:"Symbol list" ~homogeneous:false ~active:false ~packing:toolbar#insert () in
-  let _                   = button_layout_slist#set_icon_widget (GMisc.image ~pixbuf:(Preferences.Icon.get_themed_icon Icons.item_list) ~icon_size:`MENU ())#coerce in
+  let _                   = button_layout_slist#set_icon_widget (GMisc.image ~pixbuf:(??? Icons.item_list) ~icon_size:`MENU ())#coerce in
   let button_layout_odoc  = GButton.toggle_tool_button ~label:"Documentation" ~homogeneous:false ~active:false ~packing:toolbar#insert () in
-  let _                   = button_layout_odoc#set_icon_widget (GMisc.image ~pixbuf:(Preferences.Icon.get_themed_icon Icons.doc) ~icon_size:`MENU ())#coerce in
+  let _                   = button_layout_odoc#set_icon_widget (GMisc.image ~pixbuf:(??? Icons.doc) ~icon_size:`MENU ())#coerce in
   let _                   = GButton.separator_tool_item ~draw:true ~expand:false ~packing:toolbar#insert () in
   let button_detach       = GButton.tool_button ~label:"Detach" ~homogeneous:false ~packing:toolbar#insert () in
-  let _                   = GMisc.image ~pixbuf:(Preferences.Icon.get_themed_icon Icons.detach) ~icon_size:`MENU ~packing:button_detach#set_icon_widget () in
+  let _                   = GMisc.image ~pixbuf:(??? Icons.detach) ~icon_size:`MENU ~packing:button_detach#set_icon_widget () in
   let box_slist           = GPack.vbox ~packing:paned#add1 ~show:false () in
   let label_title         = GMisc.label ~markup:"" ~xalign:0.5 ~xpad:3 ~ypad:5 ~packing:box_slist#pack () in
   let stack_box           = GPack.hbox ~packing:box_slist#add () in
@@ -281,7 +282,7 @@ class widget ~project ?(is_completion=false) ?(enable_history=true) ?width ?heig
               wlibs#view#misc#grab_focus()
         end);
       (* entry_find *)
-      entry_find#misc#set_property "secondary-icon-pixbuf" (`OBJECT (Some (Preferences.Icon.get_themed_icon Icons.button_close_8)));
+      entry_find#misc#set_property "secondary-icon-pixbuf" (`OBJECT (Some (??? Icons.button_close_8)));
       entry_find#misc#set_property "secondary-icon-sensitive" (`BOOL false);
       ignore begin GtkSignal.connect
           ~sgn:{
@@ -1171,7 +1172,7 @@ let append_to_messages ?page ?search_string ~project =
     let widget = new widget ~project () in
     messages#set_visible true;
     let hbox = GPack.hbox ~spacing:1 () in
-    let icon = GMisc.image ~pixbuf:(Preferences.Icon.get_themed_icon Icons.module_browser) ~packing:hbox#pack () in
+    let icon = GMisc.image ~pixbuf:(??? Icons.module_browser) ~packing:hbox#pack () in
     let label = GMisc.label ~text:title ~packing:hbox#add () in
     widget#create_widget_libraries ();
     begin

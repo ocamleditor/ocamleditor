@@ -96,13 +96,13 @@ class page ?file ~project ~scroll_offset ~offset ~editor () =
   let spinner                  = GMisc.image ~width:15 ~packing:sbox#pack () in
   let _                        = GMisc.separator `VERTICAL ~packing:sbox#pack () in
   let button_dotview           = create_small_toggle_button
-      ~pixbuf:(Preferences.Icon.get_themed_icon Icons.tree)
+      ~pixbuf:(??? Icons.tree)
       ~packing:sbbox#pack ()
       ~show:(false (*Oe_config.dot_version <> None*))
   in
   (** Icons for font size and row spacing adjustment *)
   let button_font_incr = create_small_button
-      ~pixbuf:(Preferences.Icon.get_themed_icon Icons.zoom_in_14)
+      ~pixbuf:(??? Icons.zoom_in_14)
       ~packing:sbbox#pack
       ~callback:begin fun () ->
         let fd = text_view#misc#pango_context#font_description in
@@ -114,7 +114,7 @@ class page ?file ~project ~scroll_offset ~offset ~editor () =
       end ()
   in
   let button_font_decr = create_small_button
-      ~pixbuf:(Preferences.Icon.get_themed_icon Icons.zoom_out_14)
+      ~pixbuf:(??? Icons.zoom_out_14)
       ~packing:sbbox#pack
       ~callback:begin fun () ->
         let fd = text_view#misc#pango_context#font_description in
@@ -129,7 +129,7 @@ class page ?file ~project ~scroll_offset ~offset ~editor () =
       end ()
   in
   let button_rowspacing_incr = create_small_button
-      ~pixbuf:(Preferences.Icon.get_themed_icon Icons.lines_in_14)
+      ~pixbuf:(??? Icons.lines_in_14)
       ~packing:sbbox#pack
       ~callback:begin fun () ->
         let above, below = Preferences.preferences#get.editor_pixels_lines in
@@ -139,7 +139,7 @@ class page ?file ~project ~scroll_offset ~offset ~editor () =
       end ()
   in
   let button_rowspacing_decr = create_small_button
-      ~pixbuf:(Preferences.Icon.get_themed_icon Icons.lines_out_14)
+      ~pixbuf:(??? Icons.lines_out_14)
       ~packing:sbbox#pack
       ~callback:begin fun () ->
         text_view#set_pixels_above_lines (max 0 (text_view#pixels_above_lines - 1));
@@ -148,8 +148,8 @@ class page ?file ~project ~scroll_offset ~offset ~editor () =
       end ()
   in
   (** Show whitespace and word wrap *)
-  let button_toggle_wrap = create_small_toggle_button ~pixbuf:(Preferences.Icon.get_themed_icon Icons.wrap_off_14) ~packing:sbbox#pack () in
-  let button_toggle_whitespace = create_small_toggle_button ~pixbuf:(Preferences.Icon.get_themed_icon Icons.whitespace_off_14) ~packing:sbbox#pack () in
+  let button_toggle_wrap = create_small_toggle_button ~pixbuf:(??? Icons.wrap_off_14) ~packing:sbbox#pack () in
+  let button_toggle_whitespace = create_small_toggle_button ~pixbuf:(??? Icons.whitespace_off_14) ~packing:sbbox#pack () in
   (** Navigation buttons in the statusbar *)
   (*let first_sep = GMisc.separator `VERTICAL ~packing:sobox#pack () in*)
   let location_goto where =
@@ -158,17 +158,17 @@ class page ?file ~project ~scroll_offset ~offset ~editor () =
     | Some loc -> editor#location_history_goto loc
   in
   let button_h_prev            = create_small_button
-      ~pixbuf:(Preferences.Icon.get_themed_icon Icons.arrow_prev_14)
+      ~pixbuf:(??? Icons.arrow_prev_14)
       ~tooltip:"Back"
       ~packing:sbbox#pack
       ~callback:(fun _ -> location_goto Location_history.previous) () in
   let button_h_next            = create_small_button
-      ~pixbuf:(Preferences.Icon.get_themed_icon Icons.arrow_next_14)
+      ~pixbuf:(??? Icons.arrow_next_14)
       ~tooltip:"Forward"
       ~packing:sbbox#pack
       ~callback:(fun _ -> location_goto Location_history.next) () in
   let button_h_last            = create_small_button
-      ~pixbuf:(Preferences.Icon.get_themed_icon Icons.arrow_last_14)
+      ~pixbuf:(??? Icons.arrow_last_14)
       ~tooltip:"Last Edit Location"
       ~packing:sbbox#pack
       ~callback:(fun _ -> location_goto Location_history.goto_last_edit_location) () in
@@ -506,7 +506,7 @@ class page ?file ~project ~scroll_offset ~offset ~editor () =
     method show_revision_history () =
       let rev = Revisions.create ~page:self in
       let hbox = GPack.hbox ~spacing:1 () in
-      let _ = GMisc.image ~pixbuf:(Preferences.Icon.get_themed_icon Icons.history) ~packing:hbox#pack () in
+      let _ = GMisc.image ~pixbuf:(??? Icons.history) ~packing:hbox#pack () in
       let label = GMisc.label ~text:(sprintf "\xC2\xAB%s\xC2\xBB history" (Filename.basename self#get_filename)) ~packing:hbox#pack () in
       Messages.vmessages#append_page ~label_widget:hbox#coerce ~with_spinner:false rev;
       rev#set_title label#text;
@@ -640,7 +640,7 @@ class page ?file ~project ~scroll_offset ~offset ~editor () =
               end else self#revert();
             self#set_read_only f#is_readonly;
             if read_only then begin
-              status_modified#set_pixbuf (Preferences.Icon.get_themed_icon Icons.lock_14);
+              status_modified#set_pixbuf (??? Icons.lock_14);
               status_modified#misc#set_tooltip_text "Read-only"
             end;
           end;
@@ -684,7 +684,7 @@ class page ?file ~project ~scroll_offset ~offset ~editor () =
       let activate_spinner (active : Activity.t list) =
         match active with
         | [] ->
-            spinner#set_pixbuf (Preferences.Icon.get_themed_icon Icons.empty_14);
+            spinner#set_pixbuf (??? Icons.empty_14);
             spinner#misc#set_tooltip_text "";
         | msgs ->
             let msgs = snd (List.split msgs) in

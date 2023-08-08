@@ -174,13 +174,10 @@ module Icon = struct
   let get_themed_icon (icon_light, icon_dark) =
     if preferences#get.Settings_t.theme_is_dark then icon_dark else icon_light
 
-  let (??) = get_themed_icon
 end
 
 let [@ inline] get_themed_color color =
   if preferences#get.Settings_t.theme_is_dark then color.Settings_t.dark else color.Settings_t.light
-
-let (??) = get_themed_color
 
 let set_themed_color color x =
   if preferences#get.Settings_t.theme_is_dark then color.Settings_t.dark <- x else color.Settings_t.light <- x
@@ -189,6 +186,9 @@ let new_themed_color x alt =
   if preferences#get.Settings_t.theme_is_dark
   then { Settings_t.light = alt.Settings_t.light; dark = x }
   else { Settings_t.light = x; dark = alt.Settings_t.dark }
+
+let (??) = get_themed_color
+let (???) = Icon.get_themed_icon
 
 let editor_tag_color tagname =
   let color = (List.find (fun t -> t.Settings_t.name = tagname) preferences#get.editor_tags).color in

@@ -23,10 +23,11 @@
 
 open Miscellanea
 open Printf
+open Preferences
 
 (** system_properties *)
 let system_properties () =
-  let window = GWindow.window ~icon:(Preferences.Icon.get_themed_icon Icons.oe) ~title:"System Properties" ~position:`CENTER ~modal:true ~resizable:false ~show:false () in
+  let window = GWindow.window ~icon:(??? Icons.oe) ~title:"System Properties" ~position:`CENTER ~modal:true ~resizable:false ~show:false () in
   let text = Glib.Convert.locale_to_utf8 (System_properties.to_string ()) in
   let buffer = GText.buffer ~text () in
   let vbox = GPack.vbox ~spacing:0 ~border_width:0 ~packing:window#add () in
@@ -40,7 +41,7 @@ let system_properties () =
   view#set_cursor_visible false;
   let bbox = GPack.button_box `HORIZONTAL ~layout:`SPREAD ~border_width:8 ~packing:vbox#pack () in
   let button_close = GButton.button ~packing:bbox#pack () in
-  button_close#set_image (Icons.create (Preferences.Icon.get_themed_icon Icons.close_16))#coerce;
+  button_close#set_image (Icons.create (??? Icons.close_16))#coerce;
   button_close#connect#clicked ~callback:window#destroy |> ignore;
   Gmisclib.Util.esc_destroy_window window;
   window#show();
@@ -54,11 +55,11 @@ let about editor () =
       ~modal:true
       ~width:310
       ~position:`CENTER
-      ~icon:(Preferences.Icon.get_themed_icon Icons.oe)
+      ~icon:(??? Icons.oe)
       ~name:About.program_name
       ~version:About.version
       ~copyright:About.copyright
-      ~logo:(Preferences.Icon.get_themed_icon Icons.logo)
+      ~logo:(??? Icons.logo)
       ~comments:(sprintf "Commit: %s" !About.git_hash)
       ~license:{|OCamlEditor is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -134,7 +135,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.|}
       end;
     with ex -> begin
         kprintf label#set_text "Unable to contact server for updates (%s)." (Printexc.to_string ex);
-        icon#set_pixbuf (Preferences.Icon.get_themed_icon Icons.warning_14);
+        icon#set_pixbuf (??? Icons.warning_14);
       end
   in
   (*ignore (dialog#misc#connect#show ~callback:begin fun () ->

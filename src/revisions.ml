@@ -86,6 +86,7 @@ class ocamlview ~colorize ?packing () =
 
   end
 
+open Preferences
 
 (** widget *)
 class widget ~page ?packing () =
@@ -96,18 +97,18 @@ class widget ~page ?packing () =
   let toolbar        = GButton.toolbar ~style:`ICONS ~orientation:`HORIZONTAL ~packing:(mbox#pack ~from:`END) () in
   let _              = toolbar#set_icon_size `MENU in
   let button_compare_ext = GButton.tool_button ~label:"Compare" ~packing:toolbar#insert () in
-  let _              = button_compare_ext#set_icon_widget (GMisc.image ~pixbuf:(Preferences.Icon.get_themed_icon Icons.diff) ())#coerce in
+  let _              = button_compare_ext#set_icon_widget (GMisc.image ~pixbuf:(??? Icons.diff) ())#coerce in
   let _              = kprintf button_compare_ext#misc#set_tooltip_markup "External diff with <span size='x-small' font-family='monospace'>%s</span>" diff_cmd in
   let _              = GButton.separator_tool_item ~packing:toolbar#insert () in
   let button_ignore_ws = GButton.toggle_tool_button ~label:"Ignore Whitespace" ~active:true ~packing:toolbar#insert () in
   let button_ws      = GButton.toggle_tool_button ~label:"View Whitespaces" ~active:true ~packing:toolbar#insert () in
-  let _              = button_ws#set_icon_widget (GMisc.image ~pixbuf:(Preferences.Icon.get_themed_icon Icons.whitespace_off_14) ())#coerce in
+  let _              = button_ws#set_icon_widget (GMisc.image ~pixbuf:(??? Icons.whitespace_off_14) ())#coerce in
   let _              = GButton.separator_tool_item ~packing:toolbar#insert () in
   let button_refresh = GButton.tool_button ~label:"Compare" ~packing:toolbar#insert () in
-  let _              = button_refresh#set_icon_widget (GMisc.image ~pixbuf:(Preferences.Icon.get_themed_icon Icons.refresh16) ())#coerce in
+  let _              = button_refresh#set_icon_widget (GMisc.image ~pixbuf:(??? Icons.refresh16) ())#coerce in
   let _              = GButton.separator_tool_item ~packing:toolbar#insert () in
   let button_detach  = GButton.tool_button ~label:"Detach" ~packing:toolbar#insert () in
-  let _              = button_detach#set_icon_widget (GMisc.image ~pixbuf:(Preferences.Icon.get_themed_icon Icons.detach) ())#coerce in
+  let _              = button_detach#set_icon_widget (GMisc.image ~pixbuf:(??? Icons.detach) ())#coerce in
   let item_message   = GButton.tool_item ~packing:toolbar#insert () in
   let label_message  = GMisc.label ~markup:(sprintf "<b>%s</b>" page#get_filename) ~xalign:0.0 ~yalign:0.5 ~xpad:8 ~packing:item_message#add () in
   let pane           = GPack.paned `HORIZONTAL ~packing:mbox#add () in

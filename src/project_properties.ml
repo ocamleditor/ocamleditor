@@ -24,6 +24,7 @@ open Project
 open Prj
 open Miscellanea
 open Printf
+open Preferences
 
 
 class widget ~editor ?(callback=ignore) ~project ?page_num ?packing ?show () =
@@ -186,7 +187,7 @@ class widget ~editor ?(callback=ignore) ~project ?page_num ?packing ?show () =
   let button_ok = GButton.button ~stock:`OK ~packing:bb#add () in
   let button_apply = GButton.button ~stock:`APPLY ~packing:bb#add () in
   let button_close = GButton.button ~use_mnemonic:false ~packing:bb#add () in
-  let _ = button_close#set_image (Icons.create (Preferences.Icon.get_themed_icon Icons.close_16))#coerce in
+  let _ = button_close#set_image (Icons.create (??? Icons.close_16))#coerce in
   let button_help = GButton.button ~use_mnemonic:false ~stock:`HELP ~packing:bb#add () in
   let _ = bb#set_child_secondary button_help#coerce true in
   let _ = button_help#misc#set_sensitive false in
@@ -349,7 +350,7 @@ and signals ~project_changed ~project_name_changed ~show =
 let create ~editor ?callback ?new_project ?page_num ?show () =
   let project = match new_project with None -> editor#project | Some p -> p in
   let window = GWindow.window ~modal:false ~title:("Project \""^project.name^"\"")
-      ~icon:(Preferences.Icon.get_themed_icon Icons.oe) ~border_width:5 ~position:`CENTER ~show:false () in
+      ~icon:(??? Icons.oe) ~border_width:5 ~position:`CENTER ~show:false () in
   let widget = new widget ~editor ~packing:window#add ~project ?callback ?page_num ?show () in
   ignore (widget#button_close#connect#clicked ~callback:window#misc#hide);
   ignore (widget#connect#project_name_changed ~callback:begin fun name ->

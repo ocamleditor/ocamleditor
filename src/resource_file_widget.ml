@@ -26,6 +26,7 @@ open Printf
 open Miscellanea
 open Resource_file
 open Target
+open Preferences
 
 let cols         = new GTree.column_list
 let col_name     = cols#add Gobject.Data.string
@@ -89,7 +90,7 @@ class widget ~project ~target ?packing () =
       (* button_add *)
       button_add#connect#clicked ~callback:begin fun () ->
         let dialog = GWindow.file_chooser_dialog ~action:`OPEN ~modal:true ~title:"Add existing file to project"
-            ~icon:(Preferences.Icon.get_themed_icon Icons.oe) ~position:`CENTER ~show:false () in
+            ~icon:(??? Icons.oe) ~position:`CENTER ~show:false () in
         dialog#add_filter (GFile.filter ~name:"Icons Files (\x2A.ico)" ~patterns:["*.ico"] ());
         dialog#add_select_button_stock `OK `OK;
         dialog#add_button_stock `CANCEL `CANCEL;
@@ -223,7 +224,7 @@ and signals ~saved ~icon_changed =
 (** window *)
 let window ~project ~target () =
   let window = GWindow.window ~title:"Icons and Assembly Information" ~modal:true ()
-      ~icon:(Preferences.Icon.get_themed_icon Icons.oe) ~position:`CENTER ~show:false in
+      ~icon:(??? Icons.oe) ~position:`CENTER ~show:false in
   Gmisclib.Util.esc_destroy_window window;
   let vbox = GPack.vbox ~spacing:8 ~border_width:8 ~packing:window#add () in
   let widget = new widget ~project ~target ~packing:vbox#add () in
