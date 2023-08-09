@@ -20,10 +20,11 @@
 
 *)
 
+open Settings_t
+
 let default_values =
   let settings = Settings_j.settings_of_string "{}" in
   let default_editor_tags =
-    let open Settings_t in
     [
       { name = "control";
         color = { light = "blue"; dark = "#87CEFA" };
@@ -124,7 +125,7 @@ let save () =
       let json = preferences#get |> Settings_j.string_of_settings |> Yojson.Safe.prettify in
       output_string chan json;
       close_out chan;
-      preferences#set { preferences#get with Settings_t.timestamp = Unix.gettimeofday() }
+      preferences#set { preferences#get with timestamp = Unix.gettimeofday() }
     with ex ->
       begin
         Printf.eprintf "Failed to save settings to file \"%s\".\n%s%!" filename (Printexc.to_string ex);
@@ -151,8 +152,8 @@ let load () =
   end else begin
     Printf.printf "File \"%s\" not found, using defaults.\n%!" filename;
   end;
-  Gmisclib.Window.GeometryMemo.set_enabled geometry_memo  preferences#get.remember_window_geometry;
-  Gmisclib.Window.GeometryMemo.set_delayed geometry_memo  preferences#get.geometry_delayed;
+  Gmisclib.Window.GeometryMemo.set_enabled geometry_memo preferences#get.remember_window_geometry;
+  Gmisclib.Window.GeometryMemo.set_delayed geometry_memo preferences#get.geometry_delayed;
   Otherwidgets_config.geometry_memo := (fun () -> geometry_memo);
 ;;
 
@@ -165,35 +166,34 @@ let reset_defaults () =
 module Icon = struct
   let update_otherwidgets_icon pref =
     Otherwidgets_config.app_icon :=
-      fun () -> if pref.Settings_t.theme_is_dark then Icons.Dark.oe else Icons.Light.oe
+      fun () -> if pref.theme_is_dark then Icons.Dark.oe else Icons.Light.oe
 
   let _ =
     update_otherwidgets_icon preferences#get;
     preferences#connect#changed ~callback:update_otherwidgets_icon
 
   let get_themed_icon (icon_light, icon_dark) =
-    if preferences#get.Settings_t.theme_is_dark then icon_dark else icon_light
-
+    if preferences#get.theme_is_dark then icon_dark else icon_light
 end
 
 module Color = struct
   let [@ inline] get_themed_color color =
-    if preferences#get.Settings_t.theme_is_dark then color.Settings_t.dark else color.Settings_t.light
+    if preferences#get.theme_is_dark then color.dark else color.light
 
   let set_themed_color color x =
-    if preferences#get.Settings_t.theme_is_dark then color.Settings_t.dark <- x else color.Settings_t.light <- x
+    if preferences#get.theme_is_dark then color.dark <- x else color.light <- x
 
   let new_themed_color x alt =
-    if preferences#get.Settings_t.theme_is_dark
-    then { Settings_t.light = alt.Settings_t.light; dark = x }
-    else { Settings_t.light = x; dark = alt.Settings_t.dark }
+    if preferences#get.theme_is_dark
+    then { light = alt.light; dark = x }
+    else { light = x; dark = alt.dark }
 end
 
 let (??) = Color.get_themed_color
 let (???) = Icon.get_themed_icon
 
 let editor_tag_color tagname =
-  let color = (List.find (fun t -> t.Settings_t.name = tagname) preferences#get.editor_tags).color in
+  let color = (List.find (fun t -> t.name = tagname) preferences#get.editor_tags).color in
   let color_name = Color.get_themed_color color in
   (`NAME color_name) |> GDraw.color
 

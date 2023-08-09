@@ -46,7 +46,6 @@ module Range = struct
 end
 
 open Range
-open Preferences
 
 let parse pref =
   let tags = pref.Settings_t.editor_tags in
@@ -166,7 +165,7 @@ let parse pref =
                 begin match !last with
                 | QUESTION | TILDE -> "label"
                 | BACKQUOTE -> "number"
-                | _ -> ""
+                | _ -> "lident"
                 (*(* TODO:  *)
                   | _, LBRACE, _, _ when !in_record -> "record_label"
                   | _, MUTABLE, _, _ when !in_record -> "record_label"

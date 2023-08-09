@@ -239,13 +239,12 @@ module Diff = struct
   let rec paint_gutter page =
     if page#changed_after_last_diff then begin
       let buffer = page#buffer in
-      let filename2 = buffer#tmp_filename in
       buffer#save_buffer ?filename:None () |> ignore;
       let diff = Preferences.preferences#get.program_diff in
       let args = [|
         "--binary";
-        buffer#orig_filename;
-        filename2
+        buffer#orig_filename; (* working tree version *)
+        buffer#tmp_filename (* TODO: should be last committed version *)
       |]
       in
       page#set_changed_after_last_diff false;
