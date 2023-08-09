@@ -46,7 +46,7 @@ class widget ~page ?label_widget ?(with_spinner=true) ?packing () =
   let ebox              = GBin.event_box ?packing () in
   let hbox              = GPack.hbox ~spacing:0 ~packing:ebox#add () in
   let button            = GButton.button ~relief:`NONE () in
-  let spinner           = GMisc.image ~xpad:2 ~ypad:2 ~file:(App_config.application_icons // "spinner_16.gif") () in
+  let spinner           = GMisc.image ~xpad:2 ~ypad:2 ~file:(Icon.get_themed_filename "spinner_16.gif") () in
   let image             = Icons.create (??? Icons.button_close_8) in
   let set_active =
     if with_spinner then fun active ->

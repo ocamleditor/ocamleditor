@@ -688,7 +688,7 @@ class page ?file ~project ~scroll_offset ~offset ~editor () =
             spinner#misc#set_tooltip_text "";
         | msgs ->
             let msgs = snd (List.split msgs) in
-            spinner#set_file (App_config.application_icons // "spinner.gif");
+            spinner#set_file (Icon.get_themed_filename "spinner.gif");
             spinner#misc#set_tooltip_text (String.concat "\n" (List.rev msgs));
       in
       ignore (Activity.table#connect#changed ~callback:activate_spinner);

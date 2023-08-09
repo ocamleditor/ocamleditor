@@ -37,30 +37,18 @@ let generate ochan path =
   in
   try
     fprintf ochan "module %s = struct\n" (String.capitalize_ascii path);
+    fprintf ochan "  let path = App_config.application_icons // \"%s\"\n" path;
     let icon_names =
       files |>
       List.map begin fun file ->
         let new_name = Str.global_replace (Str.regexp "-") "_" file in
         Sys.rename (icons // file) (icons // new_name);
         let icon_name = Filename.basename (Filename.chop_extension new_name) in
-        fprintf ochan "  let %s = GdkPixbuf.from_file (App_config.application_icons // \"%s\" // \"%s\")\n"
-          icon_name path new_name;
+        fprintf ochan "  let %s = GdkPixbuf.from_file (path // \"%s\")\n"
+          icon_name new_name;
         icon_name
       end;
     in
-    (*fprintf ochan "  let all_icons = [\n    %s\n  ]\n"
-      begin
-        icon_names
-        |> List.rev
-        |> List.fold_left (fun acc n ->
-            match acc with
-            | [] -> [[n]]
-            | hd :: tl when String.concat "  " hd |> String.length < 55 -> (n :: hd) :: tl
-            | hd :: tl -> [n] :: acc
-          ) []
-        |> List.map (String.concat "; ")
-        |> String.concat ";\n    "
-      end;*)
     fprintf ochan "end\n\n";
     icon_names
   with _ ->

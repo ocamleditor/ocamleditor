@@ -104,7 +104,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.|}
   Gaux.may (GWindow.toplevel editor) ~f:(fun x -> dialog#set_transient_for x#as_window);
   let align = GBin.alignment ~xalign:0.5 ~packing:vbox#add () in
   let hbox = GPack.hbox ~spacing:3 ~packing:align#add () in
-  let icon = GMisc.image ~xalign:1.0 ~file:(App_config.application_icons // "spinner_16.gif") ~packing:hbox#add ~show:false () in
+  let icon = GMisc.image ~xalign:1.0 ~file:(Icon.get_themed_filename "spinner_16.gif") ~packing:hbox#add ~show:false () in
   let label = GMisc.label ~text:" " ~height:22 ~xalign:0.0 ~yalign:0.5 ~packing:hbox#add () in
   icon#set_icon_size `MENU;
   modify_label label;

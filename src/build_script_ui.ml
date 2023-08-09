@@ -89,7 +89,7 @@ class widget ~project ?packing () =
     (b0, "") :: bb
   in
   let _ = GMisc.label ~packing:cbox#add () in
-  let spinner = GMisc.image ~file:(App_config.application_icons // "spinner_16.gif") ~show:false ~packing:cbox#pack () in
+  let spinner = GMisc.image ~file:(Icon.get_themed_filename "spinner_16.gif") ~show:false ~packing:cbox#pack () in
   (*  *)
   object (self)
     inherit GObj.widget vbox#as_widget

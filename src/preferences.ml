@@ -166,7 +166,9 @@ let reset_defaults () =
 module Icon = struct
   let update_otherwidgets_icon pref =
     Otherwidgets_config.app_icon :=
-      fun () -> if pref.theme_is_dark then Icons.Dark.oe else Icons.Light.oe
+      (fun () -> if pref.theme_is_dark then Icons.Dark.oe else Icons.Light.oe);
+    Otherwidgets_config.icon_path :=
+      (fun () -> if pref.theme_is_dark then Icons.Dark.path else Icons.Light.path)
 
   let _ =
     update_otherwidgets_icon preferences#get;
@@ -174,6 +176,11 @@ module Icon = struct
 
   let get_themed_icon (icon_light, icon_dark) =
     if preferences#get.theme_is_dark then icon_dark else icon_light
+
+  let get_themed_filename basename =
+    if preferences#get.theme_is_dark
+    then Filename.concat Icons.Dark.path basename
+    else Filename.concat Icons.Light.path basename
 end
 
 module Color = struct
