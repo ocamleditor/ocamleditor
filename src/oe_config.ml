@@ -64,8 +64,12 @@ let gutter_border_color                  = `THEME (*`CALC 0.875*) (*`CALC 0.97*)
 let gutter_marker_color                  = `THEME (*`CALC 0.50*)
 let gutter_marker_bg_color               = `THEME (*`CALC 0.80*)
 let code_folding_scope_color             = `NAME "#e5e5e5" (* disabled *)
-let code_folding_highlight_color         = "#d0d0d0"
-let code_folding_hightlight_gradient     = ["#f4f4f4"; "#f9f9f9"; "#fefefe"] (* [] for no gradient *)
+let code_folding_highlight_color         = { light = "#d0d0d0"; dark = "#303030" }
+let code_folding_hightlight_gradient     = [ (* [] for no gradient *)
+  { light = "#f4f4f4"; dark = "#202020" };
+  { light = "#f9f9f9"; dark = "#1b1b1b" };
+  { light = "#fefefe"; dark = "#161616" };
+]
 let global_gutter_comments_enabled       = false
 let global_gutter_size                   = 13
 let global_gutter_comments_color         = `NAME "#fa80a5"
