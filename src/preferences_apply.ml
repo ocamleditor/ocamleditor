@@ -58,8 +58,7 @@ class "GtkTextView" style "s1"
   view#modify_font pref.editor_base_font;
   view#options#set_word_wrap pref.editor_wrap;
   view#options#set_show_dot_leaders pref.editor_dot_leaders;
-  view#options#set_current_line_border_enabled
-    (if pref.theme_is_dark then false else pref.editor_current_line_border);
+  view#options#set_current_line_border_enabled pref.editor_current_line_border;
   view#options#set_text_color (ColorOps.name_of_gdk (Preferences.editor_tag_color "lident"));
   let default_bg_color =
     if pref.editor_bg_color_theme then begin
@@ -79,7 +78,7 @@ class "GtkTextView" style "s1"
   if pref.editor_highlight_current_line then begin
     view#options#set_highlight_current_line
       (Some (match (List.find_opt (fun t -> t.name = "highlight_current_line") editor_tags)
-             with Some t -> ?? (t.color) | _ -> assert false));
+             with Some t -> (?? (t.color)), (?? (t.bg_color)) | _ -> assert false));
   end else (view#options#set_highlight_current_line None);
   view#tbuffer#set_tab_width pref.editor_tab_width;
   view#tbuffer#set_tab_spaces pref.editor_tab_spaces;

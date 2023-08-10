@@ -129,7 +129,7 @@ class widget ~editor(* : Editor.editor)*) ?packing () =
   let view_lines        = GTree.view ~model:model_lines ~headers_visible:false ~packing:rsw#add () in
   let _                 = view_lines#misc#set_property "enable-grid-lines" (`INT 2) in
   let renderer          = GTree.cell_renderer_text [`YPAD 0; `XPAD 0; `XALIGN 1.0; `CELL_BACKGROUND gutter_bg_color] in
-  let renderer_matches_num = GTree.cell_renderer_text [`YPAD 0; `XPAD 0; `XALIGN 0.5; `SCALE `SMALL; `FOREGROUND "#0000ff"; `CELL_BACKGROUND gutter_bg_color] in
+  let renderer_matches_num = GTree.cell_renderer_text [`YPAD 0; `XPAD 0; `XALIGN 0.5; `SCALE `SMALL; `CELL_BACKGROUND gutter_bg_color] in
   let renderer_markup   = GTree.cell_renderer_text [`YPAD 2; `XPAD 0; ] in
   let renderer_pixbuf   = GTree.cell_renderer_pixbuf [`YPAD 0; `XPAD 0; `CELL_BACKGROUND gutter_bg_color] in
   let vc_line_num       = GTree.view_column ~title:"" () in
@@ -144,7 +144,7 @@ class widget ~editor(* : Editor.editor)*) ?packing () =
   let _                 = view_lines#append_column vc_markup in
   (*  *)
   let _                 = view_lines#misc#modify_base [
-      `SELECTED, `COLOR (Preferences.editor_tag_color "highlight_current_line");
+      `SELECTED, `COLOR (Preferences.editor_tag_bg_color "highlight_current_line");
       `NORMAL,   `NAME (?? (pref.editor_bg_color_user));
       `ACTIVE,   `NAME gutter_bg_color
     ] in

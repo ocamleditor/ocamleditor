@@ -49,7 +49,6 @@ let warning_underline_color : dcolor     = { light = `NAME "#fff4e8"; dark = `NA
 let warning_underline_shadow : dcolor    = { light = `NAME "#FFE36C"; dark = `NAME "#FFE36C" }
 let warning_unused_color                 = { light = "#a0a0a0"; dark = "#a0a0a0" }
 let warning_tootip_enabled               = false
-let current_line_border_color            = fun add bgcolor -> `NAME (add bgcolor 0.3)
 let current_line_width                   = 2 (* Must be >= 1. Left margin is automatically increased by current_line_width *)
 let current_line_style                   = (*`ON_OFF_DASH*) `SOLID
 let current_line_join                    = (*`ROUND `MITER `BEVEL *) `BEVEL
@@ -80,7 +79,6 @@ let global_gutter_diff_style             = (`COLOR false : [`BW | `COLOR of bool
 let global_gutter_diff_tooltips          = true
 let global_gutter_no_errors              = `NAME "#daedd0"
 let find_replace_history_max_length      = 75
-let find_text_output_border_color        = current_line_border_color(*fun _ _ -> `NAME "#707070"*) (* Current line border color of the find text output pane *)
 let find_text_output_highlight           = `DEFAULT, `DEFAULT (*`NAME "#ffff7e", `NONE*) (* Background and foreground colors to highlight occurrences where the pattern matches.
                                                                                             (`NONE=do not change color; `DEFAULT=default color; `NAME=specific color)*)
 let find_text_output_linenumber_fgcolor  = { light = "#000000"; dark = "#e1e1e1" }

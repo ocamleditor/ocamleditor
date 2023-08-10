@@ -29,7 +29,7 @@ class options () =
     val mutable base_color : GDraw.color = `WHITE
     val mutable indent_lines_color_solid : GDraw.color = `BLACK
     val mutable indent_lines_color_dashed : GDraw.color = `BLACK
-    val mutable highlight_current_line : string option = None
+    val mutable highlight_current_line : (string * string) option = None
     val mutable current_line_border_enabled = true;
     val mutable current_line_border_color : GDraw.color = `NAME "#d0d0d0"
     val mutable current_line_bg_color : GDraw.color = `NAME "#f0f0f0"
@@ -128,7 +128,7 @@ class options () =
 (** Signals *)
 and line_numbers_changed () = object inherit [bool] signal () end
 and line_numbers_font_changed () = object inherit [string] signal () end
-and highlight_current_line_changed () = object inherit [string option] signal () end
+and highlight_current_line_changed () = object inherit [(string * string) option] signal () end
 and show_markers_changed () = object inherit [bool] signal () end
 and word_wrap_changed () = object inherit [bool] signal () end
 and mark_occurrences_changed () = object inherit [bool * bool * string] signal () end

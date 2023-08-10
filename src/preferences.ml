@@ -91,8 +91,8 @@ let default_values =
         bg_color = { light = "#ffffff"; dark = "#000000" };
         weight = 0; style = `NORMAL; underline = `NONE; scale = 1.0; bg_default = true };
       { name = "highlight_current_line";
-        color = { light = "#c3ff96"; dark = "#223316" };
-        bg_color = { light = "#ffffff"; dark = "#000000" };
+        color = { light = "#c3ff96"; dark = "#2E7100" };
+        bg_color = { light = "#c3ff96"; dark = "#223316" };
         weight = 0; style = `NORMAL; underline = `NONE; scale = 1.0; bg_default = true };
       { name = "record_label";
         color = { light = "#474747"; dark = "#d0d0d0" };
@@ -198,6 +198,11 @@ end
 
 let (??) = Color.get_themed_color
 let (???) = Icon.get_themed_icon
+
+let editor_tag_bg_color tagname =
+  let color = (List.find (fun t -> t.name = tagname) preferences#get.editor_tags).bg_color in
+  let color_name = Color.get_themed_color color in
+  (`NAME color_name) |> GDraw.color
 
 let editor_tag_color tagname =
   let color = (List.find (fun t -> t.name = tagname) preferences#get.editor_tags).color in

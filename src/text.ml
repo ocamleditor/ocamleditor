@@ -847,11 +847,10 @@ and view ?project ?buffer () =
                 GtkSignal.disconnect self#tbuffer#as_buffer id;
                 signal_id_highlight_current_line <- None
               end
-          | Some color ->
-              options#set_current_line_bg_color (`NAME color);
-              options#set_current_line_border_color
-                (Oe_config.current_line_border_color (ColorOps.add_value ?sfact:None) color);
-              Gmisclib.Util.set_tag_paragraph_background highlight_current_line_tag color;
+          | Some (fg_color, bg_color) ->
+              options#set_current_line_bg_color (`NAME bg_color);
+              options#set_current_line_border_color (`NAME fg_color);
+              Gmisclib.Util.set_tag_paragraph_background highlight_current_line_tag bg_color;
               let id = self#buffer#connect#mark_set ~callback:begin fun iter mark ->
                   match GtkText.Mark.get_name mark with
                   | Some name when name = "insert" -> self#draw_current_line_background iter

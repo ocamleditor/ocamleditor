@@ -206,7 +206,8 @@ class pref_color title ?packing () =
           let tname = tag_model#get ~row ~column:tag_col in
           current_tag <- tname;
           begin
-            match List.find_opt (fun t -> t.Settings_t.name = tname) tags with
+            let open Settings_t in
+            match List.find_opt (fun t -> t.name = tname) tags with
             | Some t ->
                 button_tag_fg#set_color (GDraw.color (`NAME ?? (t.color)));
                 scale_tag_weight#adjustment#set_value (float_of_int t.weight);
@@ -227,6 +228,10 @@ class pref_color title ?packing () =
             label_tag_bg#misc#set_sensitive true;
             button_tag_bg#misc#set_sensitive true;
             check_tag_bg#misc#set_sensitive true;
+          end;
+          if tname = "highlight_current_line" then begin
+            check_tag_bg#set_active false;
+            check_tag_bg#misc#set_sensitive false;
           end;
           button_tag_bg#misc#set_sensitive (not check_tag_bg#active);
           self#update_preview();
