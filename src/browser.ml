@@ -60,19 +60,14 @@ class browser () =
   let vbox = GPack.vbox ~packing:Messages.hpaned#add1 () in
   let menubarbox = GPack.hbox ~spacing:0 ~packing:vbox#pack () in
   (* Menubar icon displayed full-screen mode *)
-  let width, height = 32, 32 in
-  let scaled = GdkPixbuf.create ~width ~height ~has_alpha:false () in
-  let _ = GdkPixbuf.scale ~dest:scaled ~width ~height (??? Icons.oe) in
-  let pixbuf = GdkPixbuf.create ~width ~height ~has_alpha:false () in
-  let _ = GdkPixbuf.saturate_and_pixelate ~saturation:0.0 ~pixelate:true ~dest:pixbuf scaled in
+  let logo = (??? Icons.oe_32) in
+  let width, height = GdkPixbuf.get_width logo, GdkPixbuf.get_height logo in
+  let pixbuf = GdkPixbuf.create ~width ~height ~has_alpha:(GdkPixbuf.get_has_alpha logo) () in
+  let () = GdkPixbuf.saturate_and_pixelate ~saturation:0.0 ~pixelate:true ~dest:pixbuf logo in
   let window_title_menu_icon = GBin.event_box ~packing:menubarbox#pack ~show:false () in
   let icon = GMisc.image ~pixbuf ~packing:window_title_menu_icon#add () in
   let _ = window_title_menu_icon#misc#set_property "visible-window" (`BOOL false) in
-  let _ = window_title_menu_icon#event#connect#leave_notify ~callback:begin fun _ ->
-      icon#set_pixbuf pixbuf;
-      false
-    end
-  in
+
   (* Menubar *)
   let menubar = GMenu.menu_bar ~border_width:0 ~packing:menubarbox#add () in
   let cursor = Gdk.Cursor.create `ARROW in
