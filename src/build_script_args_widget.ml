@@ -167,12 +167,10 @@ class widget ~project ?packing () =
   let _                 = vc_opt_pass#set_resizable true in
   (* Button Box *)
   let bbox              = GPack.button_box `VERTICAL ~layout:`START ~spacing:5 ~packing:hbox#pack () in
-  let button_add        = GButton.button ~stock:`ADD ~packing:bbox#pack () in
+  let button_add        = GButton.button ~label:"Add" ~packing:bbox#pack () in
   let _                 = button_add#set_focus_on_click false in
-  let _                 = button_add#set_image (GMisc.image ~icon_size:`MENU ~stock:`ADD ())#coerce in
-  let button_remove     = GButton.button ~stock:`REMOVE ~packing:bbox#pack () in
+  let button_remove     = GButton.button ~label:"Remove" ~packing:bbox#pack () in
   let _                 = button_remove#set_focus_on_click false in
-  let _                 = button_remove#set_image (GMisc.image ~icon_size:`MENU ~stock:`REMOVE ())#coerce in
   object (self)
     inherit GObj.widget hbox#as_widget
 

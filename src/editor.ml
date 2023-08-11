@@ -525,7 +525,7 @@ class editor () =
       ignore (item#connect#activate ~callback:(fun () -> self#dialog_rename page));
       Gaux.may page#file ~f:(fun file -> item#misc#set_sensitive file#is_writeable);
       let item = GMenu.image_menu_item ~label:(sprintf "Delete \xC2\xAB%s\xC2\xBB" basename) ~packing:menu#add () in
-      item#set_image (GMisc.image ~stock:`DELETE ~icon_size:`MENU ())#coerce;
+      item#set_image (Icons.create (??? Icons.close_window))#coerce;
       ignore (item#connect#activate ~callback:self#dialog_delete_current);
       Gaux.may page#file ~f:(fun file -> item#misc#set_sensitive file#is_writeable);
       let _ = GMenu.separator_item ~packing:menu#add () in

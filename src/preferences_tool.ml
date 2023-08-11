@@ -50,8 +50,8 @@ class preferences ~editor () =
   let _                 = GMisc.separator `HORIZONTAL ~packing:vbox#pack () in
   let button_box        = GPack.button_box `HORIZONTAL ~layout:`END ~border_width:5
       ~spacing:8 ~packing:(vbox#pack ~expand:false) () in
-  let ok_button         = GButton.button ~stock:`OK ~packing:button_box#add () in
-  let cancel_button     = GButton.button ~stock:`CANCEL ~packing:button_box#add () in
+  let ok_button         = GButton.button ~label:"OK" ~packing:button_box#add () in
+  let cancel_button     = GButton.button ~label:"Cancel" ~packing:button_box#add () in
   let reset_button      = GButton.button ~label:"Reset All" ~packing:button_box#add () in
   let _                 = button_box#set_child_secondary reset_button#coerce true in
   let reset_page_button = GButton.button ~label:"Reset Page" ~packing:button_box#add () in

@@ -47,7 +47,8 @@ class widget
   let paned             = GPack.paned `HORIZONTAL ~packing:vbox#add () in
   let toolbar           = GButton.toolbar ~style:`ICONS ~orientation:`HORIZONTAL ~packing:vbox#pack () in
   let _                 = toolbar#set_icon_size `MENU in
-  let button_stop       = GButton.tool_button ~stock:`STOP ~packing:toolbar#insert () in
+  let button_stop       = GButton.tool_button ~packing:toolbar#insert () in
+  let _                 = button_stop#set_icon_widget (GMisc.image ~pixbuf:(??? Icons.stop_16) ())#coerce in
   let _                 = GButton.separator_tool_item ~packing:toolbar#insert () in
   let button_prev_file  = GButton.tool_button ~stock:`MEDIA_REWIND ~packing:toolbar#insert () in
   let _                 = button_prev_file#misc#set_tooltip_text "Previous file" in

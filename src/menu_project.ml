@@ -229,8 +229,8 @@ let project ~browser ~group ~flags items =
   let sep2 = GMenu.separator_item ~packing:menu#add () in
 
   (* Project Properties *)
-  let dialog_project_properties = GMenu.image_menu_item ~label:"Properties" ~packing:menu#add () in
-  dialog_project_properties#set_image (GMisc.image ~stock:`PROPERTIES ~icon_size:`MENU ())#coerce;
+  let dialog_project_properties = GMenu.image_menu_item ~label:"Project Properties" ~packing:menu#add () in
+  dialog_project_properties#set_image (Icons.create (??? Icons.project_16))#coerce;
   ignore (dialog_project_properties#connect#activate ~callback:(fun () ->
       browser#dialog_project_properties ?page_num:(Some 0) ?show:(Some true) ()));
   dialog_project_properties#add_accelerator ~group ~modi:[`CONTROL; `SHIFT] GdkKeysyms._P ~flags;

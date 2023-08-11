@@ -42,7 +42,8 @@ class view ~(editor : Editor.editor) ?(task_kind=(`OTHER : Task.kind)) ~task ?pa
   let _                 = button_detach#set_icon_widget (GMisc.image ~pixbuf:(??? Icons.detach) ())#coerce in
   let _                 = GButton.separator_tool_item ~packing:toolbar#insert () in
   (*  *)
-  let button_stop       = GButton.tool_button ~stock:`STOP ~packing:toolbar#insert () in
+  let button_stop       = GButton.tool_button ~packing:toolbar#insert () in
+  let _                 = button_stop#set_icon_widget (GMisc.image ~pixbuf:(??? Icons.stop_16) ())#coerce in
   let _                 = tooltips#set_tip ~text:"Kill Process" button_stop#coerce in
   let button_run        = GButton.tool_button ~packing:toolbar#insert () in
   let _                 = button_run#set_icon_widget begin match task_kind with

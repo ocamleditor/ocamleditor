@@ -644,10 +644,10 @@ let create ~browser ~group
     file_recent_clear             = GMenu.menu_item ~label:"Clear File History" ();
     file_recent_sep               = GMenu.separator_item ();
     file_switch                   = GMenu.menu_item ~label:"Switch to Implementation/Interface" ();
-    file_close                    = GMenu.image_menu_item ~image:(Icons.create (??? Icons.close_16))#coerce ();
+    file_close                    = GMenu.image_menu_item ();
     file_close_all                = GMenu.menu_item ~label:"Close All" ();
     file_revert                   = GMenu.image_menu_item ~label:"Revert" (*~stock:`REVERT_TO_SAVED*) ();
-    file_delete                   = GMenu.image_menu_item ~stock:`DELETE ();
+    file_delete                   = GMenu.image_menu_item ~image:(Icons.create (??? Icons.delete_16)) ();
     window                        = GMenu.menu ();
     window_radio_group            = None;
     window_pages                  = [];

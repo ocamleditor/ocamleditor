@@ -181,7 +181,6 @@ let file ~browser ~group ~flags items =
   (* Exit *)
   let _ = GMenu.separator_item ~packing:menu#add () in
   let quit = GMenu.image_menu_item ~label:"Exit" ~packing:menu#add () in
-  quit#set_image (GMisc.image ~pixbuf:(??? Icons.close_window) (*~stock:`QUIT*) ~icon_size:`MENU ())#coerce;
   ignore (quit#connect#activate ~callback:(fun () -> browser#exit editor ()));
   (* callback *)
   ignore (file#misc#connect#state_changed ~callback:begin fun _ ->

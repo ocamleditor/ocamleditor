@@ -54,7 +54,8 @@ class ocaml_shell ?project () =
   let button_detach = GButton.tool_button ~label:"Detach" ~packing:toolbar#insert () in
   let _ = button_detach#set_icon_widget (GMisc.image ~pixbuf:(??? Icons.detach) ())#coerce in
   let _ = GButton.separator_tool_item ~packing:toolbar#insert () in
-  let b_kill = GButton.tool_button ~stock:`STOP ~packing:toolbar#insert () in
+  let b_kill = GButton.tool_button ~packing:toolbar#insert () in
+  let _ = b_kill#set_icon_widget (GMisc.image ~pixbuf:(??? Icons.stop_16) ())#coerce in
   (*  *)
   let tooltips = GData.tooltips () in
   (*  let _ = tooltips#set_tip ~text:"Previous phrase (Ctrl+Up)" b_prev#coerce in
