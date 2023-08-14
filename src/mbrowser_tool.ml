@@ -26,6 +26,7 @@ open GdkKeysyms
 open Miscellanea
 open Oe
 open Mbrowser_slist
+open Preferences
 
 let title = "Module Browser"
 
@@ -55,31 +56,31 @@ class widget ~project ?(is_completion=false) ?(enable_history=true) ?width ?heig
   let radio_find_path     = GButton.radio_tool_button ~packing:toolbar#insert ~active:true () in
   let radio_find_name     = GButton.radio_tool_button ~packing:toolbar#insert ~group:radio_find_path () in
   let radio_find_type     = GButton.radio_tool_button ~packing:toolbar#insert ~group:radio_find_path () in
-  let _                   = radio_find_path#set_icon_widget (GMisc.image ~pixbuf:Icons.path_name ())#coerce in
-  let _                   = radio_find_name#set_icon_widget (GMisc.image ~pixbuf:Icons.simple_name ())#coerce in
-  let _                   = radio_find_type#set_icon_widget (GMisc.image ~pixbuf:Icons.typ ())#coerce in
+  let _                   = radio_find_path#set_icon_widget (GMisc.image ~pixbuf:(??? Icons.path_name) ())#coerce in
+  let _                   = radio_find_name#set_icon_widget (GMisc.image ~pixbuf:(??? Icons.simple_name) ())#coerce in
+  let _                   = radio_find_type#set_icon_widget (GMisc.image ~pixbuf:(??? Icons.typ) ())#coerce in
   let _                   = radio_find_path#misc#set_tooltip_text "Search by value path" in
   let _                   = radio_find_name#misc#set_tooltip_text "Search by simple value name" in
   let _                   = radio_find_type#misc#set_tooltip_text "Search by type" in
   let entry_find          = GEdit.entry ~width_chars:15 ~packing:item_find#add () in
   let button_find         = GButton.tool_button (*~stock:`FIND*) ~homogeneous:false ~packing:toolbar#insert () in
-  let _                   = button_find#set_icon_widget (GMisc.image ~pixbuf:Icons.find_16 ())#coerce in
+  let _                   = button_find#set_icon_widget (GMisc.image ~pixbuf:(??? Icons.find_16) ())#coerce in
   let _                   = GButton.separator_tool_item ~draw:sep_visible ~packing:toolbar#insert () in
   let button_add          = GButton.tool_button ~stock:`ADD ~homogeneous:false ~packing:toolbar#insert ~show:false () in
   let button_remove       = GButton.tool_button ~stock:`REMOVE ~homogeneous:false ~packing:toolbar#insert () in
   let _                   = GButton.separator_tool_item ~draw:sep_visible ~packing:toolbar#insert () in
   let button_incr_font    = GButton.tool_button ~label:"Increase Font Size" ~homogeneous:false ~packing:toolbar#insert () in
-  let _                   = button_incr_font#set_icon_widget (GMisc.image ~pixbuf:Icons.zoom_in_14 ~icon_size:`MENU ())#coerce in
+  let _                   = button_incr_font#set_icon_widget (GMisc.image ~pixbuf:(??? Icons.zoom_in_14) ~icon_size:`MENU ())#coerce in
   let button_decr_font    = GButton.tool_button ~label:"Decrease Font Size" ~homogeneous:false ~packing:toolbar#insert () in
-  let _                   = button_decr_font#set_icon_widget (GMisc.image ~pixbuf:Icons.zoom_out_14 ~icon_size:`MENU ())#coerce in
+  let _                   = button_decr_font#set_icon_widget (GMisc.image ~pixbuf:(??? Icons.zoom_out_14) ~icon_size:`MENU ())#coerce in
   let _                   = GButton.separator_tool_item ~draw:true ~expand:false ~packing:toolbar#insert () in
   let button_layout_slist = GButton.toggle_tool_button ~label:"Symbol list" ~homogeneous:false ~active:false ~packing:toolbar#insert () in
-  let _                   = button_layout_slist#set_icon_widget (GMisc.image ~pixbuf:Icons.item_list ~icon_size:`MENU ())#coerce in
+  let _                   = button_layout_slist#set_icon_widget (GMisc.image ~pixbuf:(??? Icons.item_list) ~icon_size:`MENU ())#coerce in
   let button_layout_odoc  = GButton.toggle_tool_button ~label:"Documentation" ~homogeneous:false ~active:false ~packing:toolbar#insert () in
-  let _                   = button_layout_odoc#set_icon_widget (GMisc.image ~pixbuf:Icons.doc ~icon_size:`MENU ())#coerce in
+  let _                   = button_layout_odoc#set_icon_widget (GMisc.image ~pixbuf:(??? Icons.doc) ~icon_size:`MENU ())#coerce in
   let _                   = GButton.separator_tool_item ~draw:true ~expand:false ~packing:toolbar#insert () in
   let button_detach       = GButton.tool_button ~label:"Detach" ~homogeneous:false ~packing:toolbar#insert () in
-  let _                   = GMisc.image ~pixbuf:Icons.detach ~icon_size:`MENU ~packing:button_detach#set_icon_widget () in
+  let _                   = GMisc.image ~pixbuf:(??? Icons.detach) ~icon_size:`MENU ~packing:button_detach#set_icon_widget () in
   let box_slist           = GPack.vbox ~packing:paned#add1 ~show:false () in
   let label_title         = GMisc.label ~markup:"" ~xalign:0.5 ~xpad:3 ~ypad:5 ~packing:box_slist#pack () in
   let stack_box           = GPack.hbox ~packing:box_slist#add () in
@@ -88,21 +89,21 @@ class widget ~project ?(is_completion=false) ?(enable_history=true) ?width ?heig
   let odoc_buffer         = new Ocaml_text.buffer ~lexical_enabled:true () in
   let odoc_view           = new Ocaml_text.view ~buffer:odoc_buffer () in
   let odoc_tag            = odoc_buffer#create_tag
-      ((`FONT Preferences.preferences#get.Preferences.pref_odoc_font) :: Oe_config.odoc_tag_properties) in
+      ((`FONT Preferences.preferences#get.odoc_font) :: Oe_config.odoc_tag_properties) in
   let _                   = odoc_buffer#create_tag ~name:"large" [`SCALE `X_LARGE] in
   let tag_type2           = odoc_buffer#create_tag ~name:"type2" Oe_doc.Printer.Properties.type2 in
   let _                   = odoc_buffer#create_tag ~name:"line_spacing_small" [`SIZE_POINTS 4.] in
   let incremental_search  = new Incremental_search.incremental () in
-  let pref                = {Preferences.preferences#get with Preferences.pref_code_folding_enabled=false} in
+  let pref                = { Preferences.preferences#get with editor_code_folding_enabled=false } in
   let _ =
     odoc_buffer#undo#disable();
     odoc_sw#add odoc_view#coerce;
-    pref.Preferences.pref_editor_indent_lines <- false;
-    pref.Preferences.pref_highlight_current_line <- false;
-    pref.Preferences.pref_show_line_numbers <- false;
-    pref.Preferences.pref_right_margin_visible <- false;
-    let tags = pref.Preferences.pref_tags in
-    let tag_names, colors = List.split tags in
+    pref.editor_indent_lines <- (false, {light=""; dark=""}, {light=""; dark=""});
+    pref.editor_highlight_current_line <- false;
+    pref.editor_show_line_numbers <- false;
+    pref.editor_right_margin_visible <- false;
+    let tags = pref.editor_tags in
+    let tag_names, colors = tags |> List.map (fun t -> t.Settings_t.name, t) |> List.split in
     odoc_buffer#init_tags ~tags:tag_names ~colors ();
     Preferences_apply.apply (odoc_view :> Text.view) pref;
     odoc_view#code_folding#set_enabled false;
@@ -155,8 +156,8 @@ class widget ~project ?(is_completion=false) ?(enable_history=true) ?width ?heig
       self#set_is_completion is_completion;
       (*  *)
       ignore (Preferences.preferences#connect#changed ~callback:begin fun _ ->
-          odoc_view#misc#modify_font_by_name Preferences.preferences#get.Preferences.pref_base_font;
-          odoc_tag#set_property (`FONT Preferences.preferences#get.Preferences.pref_odoc_font);
+          odoc_view#misc#modify_font_by_name Preferences.preferences#get.editor_base_font;
+          odoc_tag#set_property (`FONT Preferences.preferences#get.odoc_font);
         end);
       tag_table#connect#tag_added ~callback:(fun tag -> tags <- new GText.tag tag :: tags) |> ignore;
       tag_table#connect#tag_removed ~callback:begin fun tag ->
@@ -281,7 +282,7 @@ class widget ~project ?(is_completion=false) ?(enable_history=true) ?width ?heig
               wlibs#view#misc#grab_focus()
         end);
       (* entry_find *)
-      entry_find#misc#set_property "secondary-icon-pixbuf" (`OBJECT (Some Icons.button_close_8));
+      entry_find#misc#set_property "secondary-icon-pixbuf" (`OBJECT (Some (??? Icons.button_close_8)));
       entry_find#misc#set_property "secondary-icon-sensitive" (`BOOL false);
       ignore begin GtkSignal.connect
           ~sgn:{
@@ -1171,7 +1172,7 @@ let append_to_messages ?page ?search_string ~project =
     let widget = new widget ~project () in
     messages#set_visible true;
     let hbox = GPack.hbox ~spacing:1 () in
-    let icon = GMisc.image ~pixbuf:Icons.module_browser ~packing:hbox#pack () in
+    let icon = GMisc.image ~pixbuf:(??? Icons.module_browser) ~packing:hbox#pack () in
     let label = GMisc.label ~text:title ~packing:hbox#add () in
     widget#create_widget_libraries ();
     begin

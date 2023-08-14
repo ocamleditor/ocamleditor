@@ -60,7 +60,7 @@ let load_custom kind =
       let filename = project.Prj.root // Oe_config.template_project_filename in
       load filename Project;
   | `user ->
-      let filename = Preferences.preferences#get.Preferences.pref_editor_custom_templ_filename in
+      let filename = Preferences.preferences#get.editor_custom_templ_filename in
       if filename <> "" then load filename User
 ;;
 

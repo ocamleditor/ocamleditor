@@ -23,6 +23,8 @@
 open Printf
 open Text_util
 open Miscellanea
+module ColorOps = Color
+open Preferences
 
 (** Buffer *)
 class buffer =
@@ -719,7 +721,7 @@ and view ?project ?buffer () =
               begin
                 match current_matching_tag_bounds_draw with
                 | (lstart, lstop) :: (rstart, rstop) :: [] ->
-                    drawable#set_foreground Oe_config.matching_delim_border_color;
+                    drawable#set_foreground (?? Oe_config.matching_delim_border_color);
                     drawable#set_line_attributes ~width:1 ~style:`SOLID ();
                     let draw start stop =
                       match buffer#get_iter_at_mark_opt (`MARK start) with
@@ -785,9 +787,9 @@ and view ?project ?buffer () =
           begin
             let start = ref (start#set_line_index 0) in
             let stop = stop#forward_line#set_line_index 0 in
-            match Preferences.preferences#get.Preferences.pref_ocamldoc_paragraph_bgcolor_1 with
+            match ?? (Preferences.preferences#get.editor_ocamldoc_paragraph_bgcolor_1) with
             | Some color ->
-                drawable#set_foreground (`NAME (Color.add_value color 0.08));
+                drawable#set_foreground (`NAME (ColorOps.add_value color 0.08));
                 drawable#set_line_attributes ~width:1 ~style:`SOLID ();
                 let hadjust = match hadjustment with Some adj -> int_of_float adj#value | _ -> 0 in
                 while !start#forward_line#compare stop <= 0 && not (!start#equal self#buffer#end_iter) do
@@ -809,6 +811,17 @@ and view ?project ?buffer () =
       | _ -> ()
 
     initializer
+      Preferences.preferences#connect#changed ~callback:begin fun _ ->
+        self#gutter.Gutter.bg_color <- `WHITE;
+        self#gutter.Gutter.fg_color <- `WHITE;
+        self#gutter.Gutter.border_color <- `WHITE;
+        self#gutter.Gutter.marker_color <- `WHITE;
+        self#gutter.Gutter.marker_bg_color <- `WHITE;
+        Gmisclib.Idle.add begin fun () ->
+          Text_init.update_gutter_colors self;
+          Line_num_labl.iter (fun x -> x#misc#modify_fg [`NORMAL, self#gutter.Gutter.marker_color]) line_num_labl
+        end;
+      end |> ignore;
       ignore (options#connect#mark_occurrences_changed ~callback:(fun _ -> self#mark_occurrences_manager#mark()));
       ignore (options#connect#after#mark_occurrences_changed ~callback:begin function
         | true, _, color ->
@@ -834,11 +847,10 @@ and view ?project ?buffer () =
                 GtkSignal.disconnect self#tbuffer#as_buffer id;
                 signal_id_highlight_current_line <- None
               end
-          | Some color ->
-              options#set_current_line_bg_color (`NAME color);
-              options#set_current_line_border_color
-                (Oe_config.current_line_border_color (Color.add_value ?sfact:None) color);
-              Gmisclib.Util.set_tag_paragraph_background highlight_current_line_tag color;
+          | Some (fg_color, bg_color) ->
+              options#set_current_line_bg_color (`NAME bg_color);
+              options#set_current_line_border_color (`NAME fg_color);
+              Gmisclib.Util.set_tag_paragraph_background highlight_current_line_tag bg_color;
               let id = self#buffer#connect#mark_set ~callback:begin fun iter mark ->
                   match GtkText.Mark.get_name mark with
                   | Some name when name = "insert" -> self#draw_current_line_background iter

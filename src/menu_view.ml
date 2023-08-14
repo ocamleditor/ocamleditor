@@ -65,7 +65,7 @@ let update_labels
   in
   code_folding#misc#set_sensitive is_ml;
   select_in_outline#misc#set_sensitive is_ml;
-  enable_code_folding#set_active Preferences.preferences#get.Preferences.pref_code_folding_enabled;
+  enable_code_folding#set_active Preferences.preferences#get.editor_code_folding_enabled;
   List.iter (fun x -> x#misc#set_sensitive enable_code_folding#active) [collapse_enclosing; unfold_all];
   show_whitespace_chars#misc#handler_block signal_show_whitespace_chars;
   show_whitespace_chars#set_active (editor#show_whitespace_chars);
@@ -85,6 +85,6 @@ let update_labels
 let toggle_code_folding ~enable_code_folding editor =
   editor#code_folding_enabled#set enable_code_folding#active;
   editor#with_current_page (fun page -> page#ocaml_view#code_folding#set_enabled enable_code_folding#active);
-  Preferences.preferences#get.Preferences.pref_code_folding_enabled <- enable_code_folding#active;
+  Preferences.preferences#get.editor_code_folding_enabled <- enable_code_folding#active;
   Preferences.save()
 

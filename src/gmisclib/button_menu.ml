@@ -151,8 +151,6 @@ class button_menu ?(label="") ?(relief=`NORMAL) ?stock ?spacing ?packing () =
         let _ = GMisc.separator `VERTICAL ~packing:box#pack ~show:draw_sep () in
         let arrow = GMisc.arrow ~kind:`DOWN ~width:8 ~height:1 () in
         box#pack arrow#coerce;
-        arrow#misc#modify_fg [`PRELIGHT, `BLACK];
-        label_widget#misc#modify_fg [`PRELIGHT, `BLACK];
         is_menu_only <- true;
       end;
 

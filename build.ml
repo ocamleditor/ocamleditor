@@ -126,7 +126,30 @@ module Make (C : COMMAND) = struct
 end;;
 
 end
-module Log = struct open Printf
+module Log = struct (*
+
+  OCamlEditor
+  Copyright (C) 2010-2014 Francesco Tovagliari
+
+  This file is part of OCamlEditor.
+
+  OCamlEditor is free software: you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation, either version 3 of the License, or
+  (at your option) any later version.
+
+  OCamlEditor is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License
+  along with this program. If not, see <http://www.gnu.org/licenses/>.
+
+*)
+
+
+open Printf
 
 type verbosity = [
   | `DEBUG
@@ -233,7 +256,30 @@ module Make (X : sig
   end
 end
 end
-module Shell = struct let redirect_stderr = if Sys.win32 then " 2>NUL" else " 2>/dev/null"
+module Shell = struct (*
+
+  OCamlEditor
+  Copyright (C) 2010-2014 Francesco Tovagliari
+
+  This file is part of OCamlEditor.
+
+  OCamlEditor is free software: you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation, either version 3 of the License, or
+  (at your option) any later version.
+
+  OCamlEditor is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License
+  along with this program. If not, see <http://www.gnu.org/licenses/>.
+
+*)
+
+
+let redirect_stderr = if Sys.win32 then " 2>NUL" else " 2>/dev/null"
 
 (** get_command_output *)
 let get_command_output command =
@@ -316,7 +362,30 @@ parse "1 \"2 \\\" 2\"";;
 
 *)
 end
-module Ocaml_config = struct open Printf
+module Ocaml_config = struct (*
+
+  OCamlEditor
+  Copyright (C) 2010-2014 Francesco Tovagliari
+
+  This file is part of OCamlEditor.
+
+  OCamlEditor is free software: you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation, either version 3 of the License, or
+  (at your option) any later version.
+
+  OCamlEditor is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License
+  along with this program. If not, see <http://www.gnu.org/licenses/>.
+
+*)
+
+
+open Printf
 
 let redirect_stderr = if Sys.os_type = "Win32" then " 2>NUL" else " 2>/dev/null"
 
@@ -433,7 +502,30 @@ let can_compile_native ?ocaml_home () =
   | _ -> None
 ;;
 end
-module App_config = struct open Printf
+module App_config = struct (*
+
+  OCamlEditor
+  Copyright (C) 2010-2014 Francesco Tovagliari
+
+  This file is part of OCamlEditor.
+
+  OCamlEditor is free software: you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation, either version 3 of the License, or
+  (at your option) any later version.
+
+  OCamlEditor is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License
+  along with this program. If not, see <http://www.gnu.org/licenses/>.
+
+*)
+
+
+open Printf
 
 let (//) = Filename.concat
 let (!!) = Filename.dirname
@@ -547,12 +639,6 @@ let get_oebuild_command () =
     find_command "oebuild.opt";
     find_command "oebuild";
   ]
-
-let get_stdlib_pp_command =
-  find_best [
-    find_command "stdlib_pp.opt";
-    find_command "stdlib_pp"
-  ]
 end
 module Spawn = struct type process = {
   pid : int;
@@ -616,12 +702,15 @@ let redirect_to_stderr = loop (fun chan -> input_line chan |> prerr_endline)
 (** redirect_to_ignore *)
 let redirect_to_ignore = loop (fun chan -> input_line chan |> ignore)
 
-(** exec *)
+(** exec
+    @param at_exit Deprecated, use continue_with instead.
+*)
 let exec
     mode
     ?working_directory
     ?env
     ?at_exit
+    ?continue_with
     ?process_in
     ?process_out
     ?process_err
@@ -634,14 +723,31 @@ let exec
     set_binary_mode_out proc.outchan binary;
     let process_in = match process_in with Some f -> f | _ -> redirect_to_ignore in
     let process_err = match process_err with Some f -> f | _ -> redirect_to_ignore in
+    let continue_with, deprecated_at_exit =
+      match continue_with, at_exit with
+      | Some f, None -> f, ignore
+      | None, Some f -> ignore, f
+      | None, None -> ignore, ignore
+      | Some _, Some _ -> invalid_arg "at_exit is not supported together with continue_with"
+    in
     let final () =
-      let f = match at_exit with Some f -> f | _ -> ignore in
-      try
-        Stdlib.close_in proc.inchan;
-        Stdlib.close_in proc.errchan;
-        Stdlib.close_out proc.outchan;
-        f None
-      with (Unix.Unix_error _) as ex -> f (Some ex)
+      let close_channels () =
+        try
+          Stdlib.close_in proc.inchan;
+          Stdlib.close_in proc.errchan;
+          Stdlib.close_out proc.outchan;
+          None
+        with (Unix.Unix_error _) as ex ->
+          Some ex
+      in
+      let pid, status = Unix.waitpid [] proc.pid in
+      match close_channels() with
+      | None ->
+          continue_with (pid, status, None);
+          deprecated_at_exit None
+      | Some ex ->
+          continue_with (pid, status, Some ex);
+          deprecated_at_exit (Some ex)
     in
     let tho = match process_out with Some f -> Some (Thread.create f proc.outchan) | _ -> None in
     let thi = Thread.create process_in proc.inchan in
@@ -663,10 +769,13 @@ let exec
     | `ASYNC -> `PID proc.pid
   with (Unix.Unix_error _) as ex -> `ERROR ex
 
-(** sync *)
+(** sync
+    @param at_exit Deprecated, use continue_with instead.
+*)
 let sync
     ?working_directory
     ?env
+    ?continue_with
     ?at_exit
     ?process_in
     ?process_out
@@ -677,6 +786,7 @@ let sync
     exec `SYNC
       ?working_directory
       ?env
+      ?continue_with
       ?at_exit
       ?process_in
       ?process_out
@@ -688,10 +798,13 @@ let sync
   | `ERROR ex -> Some ex
   | `PID _ -> assert false
 
-(** async *)
+(** async
+    @param at_exit Deprecated, use continue_with instead.
+*)
 let async
     ?working_directory
     ?env
+    ?continue_with
     ?at_exit
     ?process_in
     ?process_out
@@ -702,6 +815,7 @@ let async
     exec `ASYNC
       ?working_directory
       ?env
+      ?continue_with
       ?at_exit
       ?process_in
       ?process_out
@@ -716,7 +830,30 @@ let async
 
 
 end
-module Task = struct type kind = [ `CLEAN | `CLEANALL | `ANNOT | `COMPILE | `RUN | `OTHER]
+module Task = struct (*
+
+  OCamlEditor
+  Copyright (C) 2010-2014 Francesco Tovagliari
+
+  This file is part of OCamlEditor.
+
+  OCamlEditor is free software: you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation, either version 3 of the License, or
+  (at your option) any later version.
+
+  OCamlEditor is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License
+  along with this program. If not, see <http://www.gnu.org/licenses/>.
+
+*)
+
+
+type kind = [ `CLEAN | `CLEANALL | `ANNOT | `COMPILE | `RUN | `OTHER]
 type phase =
     Before_clean | Clean | After_clean | Before_compile | Compile | After_compile
 
@@ -804,7 +941,30 @@ let handle f task =
   args |> String.concat ";" |> Log.println `DEBUG "%s %s\n%!" prog;
   f ~env ~dir ~prog ~args;;
 end
-module Build_script_command = struct open Printf
+module Build_script_command = struct (*
+
+  OCamlEditor
+  Copyright (C) 2010-2014 Francesco Tovagliari
+
+  This file is part of OCamlEditor.
+
+  OCamlEditor is free software: you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation, either version 3 of the License, or
+  (at your option) any later version.
+
+  OCamlEditor is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License
+  along with this program. If not, see <http://www.gnu.org/licenses/>.
+
+*)
+
+
+open Printf
 
 type t = [`Show | `Build | `Install | `Uninstall | `Install_lib | `Clean | `Distclean]
 
@@ -840,7 +1000,30 @@ let code_of_command = function
   | `Clean -> "`Clean"
   | `Distclean -> "`Distclean"
 end
-module Oebuild_util = struct open Printf
+module Oebuild_util = struct (*
+
+  OCamlEditor
+  Copyright (C) 2010-2014 Francesco Tovagliari
+
+  This file is part of OCamlEditor.
+
+  OCamlEditor is free software: you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation, either version 3 of the License, or
+  (at your option) any later version.
+
+  OCamlEditor is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License
+  along with this program. If not, see <http://www.gnu.org/licenses/>.
+
+*)
+
+
+open Printf
 
 let (!$) = Filename.chop_extension
 let (//) = Filename.concat
@@ -1020,7 +1203,30 @@ let get_effective_command =
 ;;
 
 end
-module Oebuild_table = struct open Printf
+module Oebuild_table = struct (*
+
+  OCamlEditor
+  Copyright (C) 2010-2014 Francesco Tovagliari
+
+  This file is part of OCamlEditor.
+
+  OCamlEditor is free software: you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation, either version 3 of the License, or
+  (at your option) any later version.
+
+  OCamlEditor is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License
+  along with this program. If not, see <http://www.gnu.org/licenses/>.
+
+*)
+
+
+open Printf
 
 let dummy_crc = String.make 32 '0'
 
@@ -1077,7 +1283,30 @@ let update =
     end else ctime = 0.0
 ;;
 end
-module Oebuild_dag = struct module type ENTRY = sig
+module Oebuild_dag = struct (*
+
+  OCamlEditor
+  Copyright (C) 2010-2014 Francesco Tovagliari
+
+  This file is part of OCamlEditor.
+
+  OCamlEditor is free software: you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation, either version 3 of the License, or
+  (at your option) any later version.
+
+  OCamlEditor is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License
+  along with this program. If not, see <http://www.gnu.org/licenses/>.
+
+*)
+
+
+module type ENTRY = sig
   type key
   type t
   val equal : t -> t -> bool
@@ -1139,7 +1368,30 @@ end
 
 
 end
-module Oebuild_dep = struct open Printf
+module Oebuild_dep = struct (*
+
+  OCamlEditor
+  Copyright (C) 2010-2014 Francesco Tovagliari
+
+  This file is part of OCamlEditor.
+
+  OCamlEditor is free software: you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation, either version 3 of the License, or
+  (at your option) any later version.
+
+  OCamlEditor is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License
+  along with this program. If not, see <http://www.gnu.org/licenses/>.
+
+*)
+
+
+open Printf
 
 type ocamldeps = (string, bool * string list) Hashtbl.t
 exception Loop_found of string
@@ -1687,26 +1939,33 @@ let create_process ?(jobs=0) ~verbose cb_create_command cb_at_exit dag leaf erro
         err        = Buffer.create 10;
         out        = Buffer.create 10
       } in
-      let at_exit = function
+      let continue_with (_, process_status, error) =
+        let cont () =
+          Mutex.lock dag.mutex;
+          Dag.remove_leaf dag.graph leaf;
+          Mutex.unlock dag.mutex;
+          (*if jobs > 0 then begin*)
+          Mutex.lock job_mutex;
+          decr job_counter;
+          Mutex.unlock job_mutex;
+          (*end;*)
+          cb_at_exit output
+        in
+        match error with
         | None ->
-            begin match Unix.waitpid [] !process_id with
-            | _, Unix.WEXITED 0 ->
-                output.exit_code <- 0;
-                messages := output :: !messages
-            | _, _              ->
-                output.exit_code <- 1; (* I do not need the exact exit code right now *)
-                errors := output :: !errors
-            end;
-            Mutex.lock dag.mutex;
-            Dag.remove_leaf dag.graph leaf;
-            Mutex.unlock dag.mutex;
-            (*if jobs > 0 then begin*)
-            Mutex.lock job_mutex;
-            decr job_counter;
-            Mutex.unlock job_mutex;
-            (*end;*)
-            cb_at_exit output
-        | Some ex -> Printf.eprintf "File \"oebuild_parallel.ml\": %s\n%s\n%!" (Printexc.to_string ex) (Printexc.get_backtrace());
+            begin
+              match process_status with
+              | Unix.WEXITED 0 ->
+                  output.exit_code <- 0;
+                  messages := output :: !messages;
+                  cont ();
+              | Unix.WEXITED _ | Unix.WSIGNALED _ | Unix.WSTOPPED _ ->
+                  output.exit_code <- 1; (* I do not need the exact exit code right now *)
+                  errors := output :: !errors;
+                  cont ()
+            end
+        | Some ex ->
+            Printf.eprintf "File \"oebuild_parallel.ml\": %s\n%s\n%!" (Printexc.to_string ex) (Printexc.get_backtrace());
       in
       let process_in = Spawn.loop (fun stdin ->
           Buffer.add_string output.out (input_line stdin);
@@ -1722,7 +1981,7 @@ let create_process ?(jobs=0) ~verbose cb_create_command cb_at_exit dag leaf erro
       Mutex.unlock job_mutex;
       (*end;*)
       begin
-        match Spawn.async ~at_exit ~process_in ~process_err command args
+        match Spawn.async ~continue_with ~process_in ~process_err command args
         with `ERROR ex -> ()
            | `PID n -> process_id := n
       end;
@@ -1773,7 +2032,30 @@ let process_parallel ?jobs ~verbose dag =
 
 
 end
-module Oebuild = struct open Printf
+module Oebuild = struct (*
+
+  OCamlEditor
+  Copyright (C) 2010-2014 Francesco Tovagliari
+
+  This file is part of OCamlEditor.
+
+  OCamlEditor is free software: you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation, either version 3 of the License, or
+  (at your option) any later version.
+
+  OCamlEditor is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License
+  along with this program. If not, see <http://www.gnu.org/licenses/>.
+
+*)
+
+
+open Printf
 open Oebuild_util
 
 module Table = Oebuild_table
@@ -2298,7 +2580,30 @@ let check_restrictions restr =
   | _ -> false
   end restr;;
 end
-module Build_script_util = struct open Arg
+module Build_script_util = struct (*
+
+  OCamlEditor
+  Copyright (C) 2010-2014 Francesco Tovagliari
+
+  This file is part of OCamlEditor.
+
+  OCamlEditor is free software: you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation, either version 3 of the License, or
+  (at your option) any later version.
+
+  OCamlEditor is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License
+  along with this program. If not, see <http://www.gnu.org/licenses/>.
+
+*)
+
+
+open Arg
 open Printf
 open Oebuild
 open Oebuild_util
@@ -3226,7 +3531,7 @@ let targets = [
     compilation_bytecode = false;
     compilation_native   = true;
     toplevel_modules     = "ocamleditor.ml";
-    package              = "compiler-libs.common,dynlink,lablgtk2,ocp-indent.lib,str,unix,xml-light";
+    package              = "atdgen-runtime,compiler-libs.common,dynlink,lablgtk2,ocp-indent.lib,str,unix,xml-light,yojson";
     search_path          = "+ocamldoc gmisclib common icons otherwidgets oebuild "; (* -I *)
     required_libraries   = "process_termination odoc_info gmisclib common icons otherwidgets oebuildlib ocamleditor_lib";
     compiler_flags       = "-w -s-y-x-m -g";
@@ -3257,7 +3562,7 @@ let targets = [
     compilation_bytecode = true;
     compilation_native   = false;
     toplevel_modules     = "ocamleditor.ml";
-    package              = "compiler-libs.common,dynlink,lablgtk2,ocp-indent.lib,str,unix,xml-light";
+    package              = "atdgen-runtime,compiler-libs.common,dynlink,lablgtk2,ocp-indent.lib,str,unix,xml-light,yojson";
     search_path          = "+ocamldoc gmisclib common icons otherwidgets oebuild "; (* -I *)
     required_libraries   = "process_termination odoc_info gmisclib common icons otherwidgets oebuildlib";
     compiler_flags       = "-w -s-y-x-m -g";
@@ -3288,7 +3593,7 @@ let targets = [
     compilation_bytecode = false;
     compilation_native   = true;
     toplevel_modules     = "ocamleditor.ml";
-    package              = "compiler-libs.common,dynlink,lablgtk2,ocp-indent.lib,str,unix,xml-light";
+    package              = "compiler-libs.common,dynlink,lablgtk2,ocp-indent.lib,str,unix,xml-light,yojson";
     search_path          = "+ocamldoc gmisclib common icons otherwidgets oebuild "; (* -I *)
     required_libraries   = "process_termination odoc_info gmisclib common icons otherwidgets oebuildlib ocamleditor_lib";
     compiler_flags       = "-w -s-y-x-m -g";
@@ -3319,7 +3624,7 @@ let targets = [
     compilation_bytecode = false;
     compilation_native   = true;
     toplevel_modules     = "ocamleditor.ml";
-    package              = "compiler-libs.common,dynlink,lablgtk2,ocp-indent.lib,str,unix,xml-light";
+    package              = "atdgen-runtime,compiler-libs.common,dynlink,lablgtk2,ocp-indent.lib,str,unix,xml-light,yojson";
     search_path          = "+ocamldoc gmisclib common icons otherwidgets oebuild "; (* -I *)
     required_libraries   = "process_termination odoc_info gmisclib common icons otherwidgets oebuildlib ocamleditor_lib";
     compiler_flags       = "-w -s-y-x-m -g";
@@ -3350,7 +3655,7 @@ let targets = [
     compilation_bytecode = false;
     compilation_native   = true;
     toplevel_modules     = "ocamleditor_lib.ml";
-    package              = "compiler-libs.common,dynlink,lablgtk2,ocp-indent.lib,str,unix,xml-light";
+    package              = "atdgen-runtime,compiler-libs.common,dynlink,lablgtk2,ocp-indent.lib,str,unix,xml-light,yojson";
     search_path          = "+ocamldoc gmisclib common icons otherwidgets oebuild "; (* -I *)
     required_libraries   = "";
     compiler_flags       = "-w -s-y-x-m -g";

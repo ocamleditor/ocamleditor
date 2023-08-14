@@ -25,6 +25,8 @@ open GdkKeysyms
 open GUtil
 open Find_text
 open Miscellanea
+module ColorOps = Color
+open Preferences
 
 let strip_cr =
   let re = Str.regexp "\r$" in
@@ -45,7 +47,8 @@ class widget
   let paned             = GPack.paned `HORIZONTAL ~packing:vbox#add () in
   let toolbar           = GButton.toolbar ~style:`ICONS ~orientation:`HORIZONTAL ~packing:vbox#pack () in
   let _                 = toolbar#set_icon_size `MENU in
-  let button_stop       = GButton.tool_button ~stock:`STOP ~packing:toolbar#insert () in
+  let button_stop       = GButton.tool_button ~packing:toolbar#insert () in
+  let _                 = button_stop#set_icon_widget (GMisc.image ~pixbuf:(??? Icons.stop_16) ())#coerce in
   let _                 = GButton.separator_tool_item ~packing:toolbar#insert () in
   let button_prev_file  = GButton.tool_button ~stock:`MEDIA_REWIND ~packing:toolbar#insert () in
   let _                 = button_prev_file#misc#set_tooltip_text "Previous file" in
@@ -60,14 +63,14 @@ class widget
   let _                 = button_remove#misc#set_tooltip_text "Remove entry" in
   let _                 = GButton.separator_tool_item ~packing:toolbar#insert () in
   let button_restart    = GButton.tool_button ~packing:toolbar#insert () in
-  let _                 = button_restart#set_icon_widget (GMisc.image ~pixbuf:Icons.refresh16 ())#coerce in
+  let _                 = button_restart#set_icon_widget (GMisc.image ~pixbuf:(??? Icons.refresh16) ())#coerce in
   let _                 = button_restart#misc#set_tooltip_text "Repeat current search" in
   let button_new_search = GButton.tool_button ~packing:toolbar#insert () in
-  let _                 = button_new_search#set_icon_widget (GMisc.image ~pixbuf:Icons.find_16 ())#coerce in
+  let _                 = button_new_search#set_icon_widget (GMisc.image ~pixbuf:(??? Icons.find_16) ())#coerce in
   let _                 = button_new_search#misc#set_tooltip_text "New search" in
   let _                 = GButton.separator_tool_item ~packing:toolbar#insert () in
   let button_detach     = GButton.tool_button ~label:"Detach" ~packing:toolbar#insert () in
-  let _                 = button_detach#set_icon_widget (GMisc.image ~pixbuf:Icons.detach ())#coerce in
+  let _                 = button_detach#set_icon_widget (GMisc.image ~pixbuf:(??? Icons.detach) ())#coerce in
   let _                 = GButton.separator_tool_item ~packing:toolbar#insert () in
   let item_message      = GButton.tool_item ~packing:toolbar#insert () in
   let label_message     = GMisc.label ~packing:item_message#add () in
@@ -130,12 +133,12 @@ class widget
       vc_hits#set_sort_column_id 1;
       vc_path#set_sort_column_id 2;
       preview#set_smart_click false;
-      let current_line_color = Color.name_of_gdk (Preferences.tag_color "highlight_current_line") in
-      preview#options#set_highlight_current_line (Some current_line_color);
+      let current_line_border_color = ColorOps.name_of_gdk (Preferences.editor_tag_color "highlight_current_line") in
+      let current_line_color = ColorOps.name_of_gdk (Preferences.editor_tag_bg_color "highlight_current_line") in
+      preview#options#set_highlight_current_line (Some (current_line_border_color, current_line_color));
       preview#options#set_show_line_numbers false;
       preview#options#set_show_markers false;
-      preview#options#set_current_line_border_color
-        (Oe_config.find_text_output_border_color (Color.add_value ?sfact:None) current_line_color);
+      preview#options#set_current_line_border_color (`NAME current_line_border_color);
       preview#set_editable false;
       preview#set_cursor_visible false;
       preview#set_pixels_above_lines 3;
@@ -164,7 +167,7 @@ class widget
       in
       let _ = tbuf#create_tag ~name:"find_text_result_hit" (bgcolor @ fgcolor) in
       let _ = tbuf#create_tag ~name:"find_text_result_linenum"
-          [Oe_config.find_text_output_linenumber_fgcolor; `WEIGHT `NORMAL;
+          [`FOREGROUND (?? Oe_config.find_text_output_linenumber_fgcolor); `WEIGHT `NORMAL;
            `BACKGROUND_FULL_HEIGHT_SET true; `SCALE `SMALL;] in
       let _ = tbuf#create_tag ~name:"find_text_insensitive"
           [`FOREGROUND "#b0b0b0"; `STYLE `ITALIC] in
@@ -840,7 +843,7 @@ class widget
         end);
       ignore (preview#event#connect#focus_in ~callback:begin fun ev ->
           if tbuf#char_count > 0 then begin
-            let bgcolor = Color.name_of_gdk (Preferences.tag_color "highlight_current_line") in
+            let bgcolor = ColorOps.name_of_gdk (Preferences.editor_tag_bg_color "highlight_current_line") in
             Gmisclib.Util.set_tag_paragraph_background preview#highlight_current_line_tag bgcolor;
             let iter = tbuf#get_iter `INSERT in
             self#select_line iter;

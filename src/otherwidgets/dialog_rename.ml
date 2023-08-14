@@ -63,7 +63,7 @@ let ask_overwrite ~run ~overwrite ~filename window =
 (** window *)
 let window ~editor ~page () =
   let window = GWindow.file_chooser_dialog
-      ~action:`SAVE ~icon:Icons.oe
+      ~action:`SAVE ~icon:(!Otherwidgets_config.app_icon())
       ~title:(sprintf "Rename \xC2\xAB%s\xC2\xBB" (Filename.basename page#get_filename))
       ~position:`CENTER ~modal:true ~show:false ()
   in

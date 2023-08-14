@@ -45,6 +45,7 @@ let file_recent_callback ~(file_recent_menu : GMenu.menu) editor =
 let get_file_switch_sensitive page =
   let name = page#get_filename in (name ^^^ ".ml" || name ^^^ ".mli")
 
+open Preferences
 let file ~browser ~group ~flags items =
   let editor = browser#editor in
   let file = GMenu.menu_item ~label:"File" () in
@@ -53,7 +54,7 @@ let file ~browser ~group ~flags items =
   let new_project = GMenu.menu_item ~label:"New Project..." ~packing:menu#add () in
   ignore (new_project#connect#activate ~callback:browser#dialog_project_new);
   (* New file *)
-  let new_file = GMenu.image_menu_item ~image:(GMisc.image ~pixbuf:Icons.new_file (*~stock:`NEW*) ~icon_size:`MENU ())
+  let new_file = GMenu.image_menu_item ~image:(GMisc.image ~pixbuf:(??? Icons.new_file) (*~stock:`NEW*) ~icon_size:`MENU ())
       ~label:"New File..." ~packing:menu#add () in
   new_file#add_accelerator ~group ~modi:[`CONTROL] GdkKeysyms._n ~flags;
   ignore (new_file#connect#activate ~callback:browser#dialog_file_new);
@@ -64,7 +65,7 @@ let file ~browser ~group ~flags items =
   ignore (project_open#connect#activate ~callback:browser#dialog_project_open);
   project_open#add_accelerator ~group ~modi:[`CONTROL;`SHIFT] GdkKeysyms._o ~flags;
   (* Open File *)
-  let open_file = GMenu.image_menu_item ~image:(GMisc.image ~pixbuf:Icons.open_file (*~stock:`OPEN*) ~icon_size:`MENU ())
+  let open_file = GMenu.image_menu_item ~image:(GMisc.image ~pixbuf:(??? Icons.open_file) (*~stock:`OPEN*) ~icon_size:`MENU ())
       ~label:"Open File..." ~packing:menu#add () in
   open_file#add_accelerator ~group ~modi:[`CONTROL] GdkKeysyms._o ~flags;
   ignore (open_file#connect#activate ~callback:editor#dialog_file_open);
@@ -83,7 +84,7 @@ let file ~browser ~group ~flags items =
             ~type_hint:`DIALOG
             ~allow_grow:false ~allow_shrink:false
             ~position:`CENTER ~border_width:8
-            ~icon:Icons.oe ~title ~modal:true ~show:false ()
+            ~icon:(??? Icons.oe) ~title ~modal:true ~show:false ()
         in
         Gmisclib.Window.GeometryMemo.add ~key:"dialog-remote-edit" ~window Preferences.geometry_memo;
         let vbox = GPack.vbox ~spacing:8 ~packing:window#add () in
@@ -130,14 +131,14 @@ let file ~browser ~group ~flags items =
   (* Save *)
   let _ = GMenu.separator_item ~packing:menu#add () in
   let save_file = GMenu.image_menu_item ~label:"Save" ~packing:menu#add () in
-  save_file#set_image (GMisc.image ~pixbuf:Icons.save_16 ())#coerce;
+  save_file#set_image (GMisc.image ~pixbuf:(??? Icons.save_16) ())#coerce;
   save_file#add_accelerator ~group ~modi:[`CONTROL] GdkKeysyms._s ~flags;
   ignore (save_file#connect#activate ~callback:begin fun () ->
       Gaux.may ~f:editor#save (editor#get_page `ACTIVE)
     end);
   (* Save as.. *)
   let save_as = GMenu.image_menu_item
-      ~image:(GMisc.image ~pixbuf:Icons.save_as_16 ())
+      ~image:(GMisc.image ~pixbuf:(??? Icons.save_as_16) ())
       ~label:"Save As..." ~packing:menu#add () in
   save_as#add_accelerator ~group ~modi:[`CONTROL; `SHIFT] GdkKeysyms._s ~flags;
   ignore (save_as#connect#activate ~callback:begin fun () ->
@@ -147,7 +148,7 @@ let file ~browser ~group ~flags items =
   let save_all = GMenu.image_menu_item ~label:"Save All" ~packing:menu#add () in
   save_all#add_accelerator ~group ~modi:[`CONTROL; `SHIFT] GdkKeysyms._a ~flags;
   ignore (save_all#connect#activate ~callback:browser#save_all);
-  save_all#set_image (GMisc.image ~pixbuf:Icons.save_all_16 ())#coerce;
+  save_all#set_image (GMisc.image ~pixbuf:(??? Icons.save_all_16) ())#coerce;
   (* Rename *)
   menu#add items.file_rename;
   ignore (items.file_rename#connect#activate ~callback:begin fun () ->
@@ -180,7 +181,6 @@ let file ~browser ~group ~flags items =
   (* Exit *)
   let _ = GMenu.separator_item ~packing:menu#add () in
   let quit = GMenu.image_menu_item ~label:"Exit" ~packing:menu#add () in
-  quit#set_image (GMisc.image ~pixbuf:Icons.close_window (*~stock:`QUIT*) ~icon_size:`MENU ())#coerce;
   ignore (quit#connect#activate ~callback:(fun () -> browser#exit editor ()));
   (* callback *)
   ignore (file#misc#connect#state_changed ~callback:begin fun _ ->

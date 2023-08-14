@@ -21,6 +21,8 @@
 *)
 
 open Printf
+module ColorOps = Color
+open Preferences
 open GUtil
 open Cmt_format
 open Location
@@ -68,37 +70,37 @@ type kind =
   | Unknown
 
 let pixbuf_of_kind = function
-  | Function -> Some Icons.func
-  | Simple -> Some Icons.simple
-  | Method -> Some Icons.met
-  | Method_private -> Some Icons.met_private
-  | Method_virtual -> Some Icons.met_virtual
-  | Method_private_virtual -> Some Icons.met_private_virtual
-  | Method_inherited -> Some Icons.met
-  | Initializer -> Some Icons.init
-  | Attribute -> Some Icons.attribute
-  | Attribute_mutable -> Some Icons.attribute_mutable
-  | Attribute_mutable_virtual -> Some Icons.attribute_mutable_virtual
-  | Attribute_virtual -> Some Icons.attribute_virtual
-  | Type -> Some Icons.typ
-  | Type_abstract -> Some Icons.type_abstract
-  | Type_variant -> Some Icons.type_variant
-  | Type_record -> Some Icons.type_record
-  | Type_open -> Some Icons.type_variant
-  | Class -> Some Icons.classe
-  | Class_virtual -> Some Icons.class_virtual
-  | Class_type -> Some Icons.class_type
-  | Class_inherit -> Some Icons.class_inherit
+  | Function -> Some (??? Icons.func)
+  | Simple -> Some (??? Icons.simple)
+  | Method -> Some (??? Icons.met)
+  | Method_private -> Some (??? Icons.met_private)
+  | Method_virtual -> Some (??? Icons.met_virtual)
+  | Method_private_virtual -> Some (??? Icons.met_private_virtual)
+  | Method_inherited -> Some (??? Icons.met)
+  | Initializer -> Some (??? Icons.init)
+  | Attribute -> Some (??? Icons.attribute)
+  | Attribute_mutable -> Some (??? Icons.attribute_mutable)
+  | Attribute_mutable_virtual -> Some (??? Icons.attribute_mutable_virtual)
+  | Attribute_virtual -> Some (??? Icons.attribute_virtual)
+  | Type -> Some (??? Icons.typ)
+  | Type_abstract -> Some (??? Icons.type_abstract)
+  | Type_variant -> Some (??? Icons.type_variant)
+  | Type_record -> Some (??? Icons.type_record)
+  | Type_open -> Some (??? Icons.type_variant)
+  | Class -> Some (??? Icons.classe)
+  | Class_virtual -> Some (??? Icons.class_virtual)
+  | Class_type -> Some (??? Icons.class_type)
+  | Class_inherit -> Some (??? Icons.class_inherit)
   | Class_let_bindings -> None
-  | Module -> Some Icons.module_impl
-  | Module_functor -> Some Icons.module_funct
-  | Module_type -> Some Icons.module_type
-  | Module_include -> Some Icons.module_include
-  | Exception -> Some Icons.exc
-  | Error -> Some Icons.error_14
-  | Warning -> Some Icons.warning_14
-  | Folder_warnings -> Some Icons.folder_warning
-  | Folder_errors -> Some Icons.folder_error
+  | Module -> Some (??? Icons.module_impl)
+  | Module_functor -> Some (??? Icons.module_funct)
+  | Module_type -> Some (??? Icons.module_type)
+  | Module_include -> Some (??? Icons.module_include)
+  | Exception -> Some (??? Icons.exc)
+  | Error -> Some (??? Icons.error_14)
+  | Warning -> Some (??? Icons.warning_14)
+  | Folder_warnings -> Some (??? Icons.folder_warning)
+  | Folder_errors -> Some (??? Icons.folder_error)
   | Dependencies -> None
   | Bookmark pixbuf -> Some pixbuf
   | Unknown -> None;;
@@ -147,9 +149,9 @@ let empty () =
   let vp = GBin.viewport () in
   let label = GMisc.label ~xalign:0.5 ~yalign:0. ~xpad:3 ~ypad:3
       ~text:"Structure is not available" ~packing:vp#add () in
-  vp#misc#modify_bg [`NORMAL, `NAME pref.Preferences.pref_outline_color_nor_bg];
+  vp#misc#modify_bg [`NORMAL, `NAME ?? (pref.outline_color_nor_bg)];
   label#misc#modify_fg [
-    `NORMAL, `NAME pref.Preferences.pref_outline_color_nor_fg
+    `NORMAL, `NAME ?? (pref.outline_color_nor_fg)
   ];
   vp#coerce;;
 
@@ -158,7 +160,7 @@ let dummy_re = Str.regexp ""
 (** widget *)
 class widget ~editor:_ ~page ?packing () =
   let pref                   = Preferences.preferences#get in
-  let show_types             = pref.Preferences.pref_outline_show_types in
+  let show_types             = pref.outline_show_types in
   let vbox                   = GPack.vbox ?packing () in
   let toolbar                = GPack.hbox ~spacing:0 ~packing:vbox#pack ~show:true () in
   let button_refresh         = GButton.button ~relief:`NONE ~packing:toolbar#pack () in
@@ -167,12 +169,12 @@ class widget ~editor:_ ~page ?packing () =
   let button_sort_rev        = GButton.toggle_button ~relief:`NONE ~packing:toolbar#pack () in
   let button_select_from_buf = GButton.button ~relief:`NONE ~packing:toolbar#pack () in
   let button_select_buf      = GButton.button ~relief:`NONE ~packing:toolbar#pack () in
-  let _                      = button_refresh#set_image (GMisc.image (*~stock:`REFRESH*) ~pixbuf:Icons.refresh16 ~icon_size:`MENU ())#coerce in
-  let _                      = button_sort#set_image (GMisc.image (*~stock:`SORT_ASCENDING*) ~pixbuf:Icons.sort_asc ~icon_size:`MENU ())#coerce in
-  let _                      = button_sort_rev#set_image (GMisc.image (*~stock:`SORT_DESCENDING*) ~pixbuf:Icons.sort_asc_rev ~icon_size:`MENU ())#coerce in
-  let _                      = button_show_types#set_image (GMisc.image ~pixbuf:Icons.typ ())#coerce in
-  let _                      = button_select_buf#set_image (GMisc.image ~pixbuf:Icons.select_in_buffer ())#coerce in
-  let _                      = button_select_from_buf#set_image (GMisc.image ~pixbuf:Icons.select_in_structure ())#coerce in
+  let _                      = button_refresh#set_image (GMisc.image (*~stock:`REFRESH*) ~pixbuf:(??? Icons.refresh16) ~icon_size:`MENU ())#coerce in
+  let _                      = button_sort#set_image (GMisc.image (*~stock:`SORT_ASCENDING*) ~pixbuf:(??? Icons.sort_asc) ~icon_size:`MENU ())#coerce in
+  let _                      = button_sort_rev#set_image (GMisc.image (*~stock:`SORT_DESCENDING*) ~pixbuf:(??? Icons.sort_asc_rev) ~icon_size:`MENU ())#coerce in
+  let _                      = button_show_types#set_image (GMisc.image ~pixbuf:(??? Icons.typ) ())#coerce in
+  let _                      = button_select_buf#set_image (GMisc.image ~pixbuf:(??? Icons.select_in_buffer) ())#coerce in
+  let _                      = button_select_from_buf#set_image (GMisc.image ~pixbuf:(??? Icons.select_in_structure) ())#coerce in
   let _                      = button_sort#misc#set_tooltip_text "Sort by name" in
   let _                      = button_sort_rev#misc#set_tooltip_text "Sort by reverse name" in
   let _                      = button_show_types#misc#set_tooltip_text "Show types" in
@@ -228,25 +230,25 @@ class widget ~editor:_ ~page ?packing () =
 
     method update_preferences () =
       let pref = Preferences.preferences#get in
-      view#misc#modify_font_by_name pref.Preferences.pref_compl_font;
+      view#misc#modify_font_by_name pref.editor_completion_font;
       view#misc#modify_base [
-        `NORMAL,   `NAME pref.Preferences.pref_outline_color_nor_bg;
-        `SELECTED, `NAME pref.Preferences.pref_outline_color_sel_bg;
-        `ACTIVE,   `NAME pref.Preferences.pref_outline_color_act_bg;
+        `NORMAL,   `NAME ?? (pref.outline_color_nor_bg);
+        `SELECTED, `NAME ?? (pref.outline_color_sel_bg);
+        `ACTIVE,   `NAME ?? (pref.outline_color_act_bg);
       ];
       view#misc#modify_text [
-        `NORMAL,   `NAME pref.Preferences.pref_outline_color_nor_fg;
-        `SELECTED, `NAME pref.Preferences.pref_outline_color_sel_fg;
-        `ACTIVE,   `NAME pref.Preferences.pref_outline_color_act_fg;
+        `NORMAL,   `NAME ?? (pref.outline_color_nor_fg);
+        `SELECTED, `NAME ?? (pref.outline_color_sel_fg);
+        `ACTIVE,   `NAME ?? (pref.outline_color_act_fg);
       ];
-      type_color <- pref.Preferences.pref_outline_color_types;
+      type_color <- ?? (pref.outline_color_types);
       type_color_re <- Str.regexp_string type_color;
-      type_color_sel <- Color.name_of_gdk (view#misc#style#fg `SELECTED);
+      type_color_sel <- ColorOps.name_of_gdk (view#misc#style#fg `SELECTED);
       type_color_sel_re <- Str.regexp_string type_color_sel;
       span_type_color <- " <span color='" ^ type_color ^ "'>: ";
       let style_outline, apply_outline = Gtk_theme.get_style_outline pref in
       GtkMain.Rc.parse_string (style_outline ^ "\n" ^ apply_outline);
-      view#set_rules_hint (pref.Preferences.pref_outline_color_alt_rows <> None);
+      view#set_rules_hint (pref.outline_color_alt_rows <> None);
       GtkBase.Widget.queue_draw view#as_widget;
 
     initializer
@@ -304,7 +306,7 @@ class widget ~editor:_ ~page ?packing () =
           table_expanded_by_user <- List.remove_assoc (self#get_id_path row) table_expanded_by_user;
         end);
       ignore (view#misc#connect#realize ~callback:begin fun () ->
-          let show = pref.Preferences.pref_outline_show_types in
+          let show = pref.outline_show_types in
           if show <> button_show_types#active then button_show_types#clicked()
         end);
       (* Buttons *)
@@ -320,7 +322,7 @@ class widget ~editor:_ ~page ?packing () =
               false
             with Not_found -> false
           end;
-          pref.Preferences.pref_outline_show_types <- button_show_types#active;
+          pref.outline_show_types <- button_show_types#active;
           (*Preferences.save();*)
         end);
       ignore (button_select_from_buf#connect#clicked ~callback:begin fun () ->

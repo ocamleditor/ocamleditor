@@ -49,7 +49,7 @@ let indent_config ~project ~pref ?(syntaxes=[]) () =
   match find_ocp_indent_config project with
   | Some file_config -> IndentConfig.(update_from_string default file_config)
   | None ->
-      let config = Preferences.(pref.pref_editor_indent_config) in
+      let config = Settings_t.(pref.editor_indent_config) in
       match String.trim config with
       | "" -> IndentConfig.default
       | editor_config  -> IndentConfig.(update_from_string default editor_config)
@@ -144,7 +144,7 @@ let indent ~project ~view ?syntaxes bounds =
     let stop = if iter#ends_line then iter else iter#forward_to_line_end in
     let line = iter#get_text ~stop in
     if String.trim line = "" then
-      (if pref.Preferences.pref_editor_indent_empty_line then indent() else false)
+      (if pref.editor_indent_empty_line then indent() else false)
     else if ins#ends_line then false else indent ()
   end else indent ()
 

@@ -21,6 +21,7 @@
 *)
 
 open Miscellanea
+open Preferences
 
 module Log = Common.Log.Make(struct let prefix = "Binannot" end)
 let _ = Log.set_verbosity `ERROR

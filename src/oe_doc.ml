@@ -489,7 +489,7 @@ struct
   module Properties =
   struct
     let type2 =
-      let editor_font = Preferences.preferences#get.Preferences.pref_base_font in
+      let editor_font = Preferences.preferences#get.editor_base_font in
       [`FONT editor_font; `BACKGROUND_FULL_HEIGHT true;
        `PIXELS_ABOVE_LINES 1; `PIXELS_BELOW_LINES 1; `PIXELS_INSIDE_WRAP 0;
        `INDENT 1]
@@ -500,24 +500,26 @@ struct
   (** create_tags *)
   let create_tags ~(buffer : GText.buffer) =
     let indent = 13 in
-    let param_color = Color.name_of_gdk (Preferences.tag_color "label") in
-    let editor_font = Preferences.preferences#get.Preferences.pref_base_font in
+    let param_color = Color.name_of_gdk (Preferences.editor_tag_color "label") in
+    let editor_font = Preferences.preferences#get.editor_base_font in
     let editor_font_family = Pango.Font.get_family (GPango.font_description editor_font) in
-    let odoc_font = Preferences.preferences#get.Preferences.pref_odoc_font in
+    let odoc_font = Preferences.preferences#get.odoc_font in
     let set_acc_margin tag = Gobject.Property.set tag#as_tag {Gobject.name="accumulative-margin"; conv=Gobject.Data.boolean} true in
-    let black = Color.name_of_gdk (Preferences.tag_color "lident") in
+    let black = Color.name_of_gdk (Preferences.editor_tag_color "lident") in
     let gray = Color.add_value ~sfact:0.0 black (-.0.2) in
     let default_bg_color =
-      if snd Preferences.preferences#get.Preferences.pref_bg_color then begin
+      if Preferences.preferences#get.editor_bg_color_theme then begin
         (* "Use theme color" option removed *)
-        let color = fst ((Preferences.create_defaults()).Preferences.pref_bg_color) in
+        let color = Preferences.default_values.editor_bg_color_user in
         color;
       end else begin
-        let color = fst Preferences.preferences#get.Preferences.pref_bg_color in
+        let color = Preferences.preferences#get.editor_bg_color_user in
         color;
       end;
     in
-    let bgparagraph = Color.add_value ~sfact:0.0 default_bg_color 0.06 in
+    let module ColorOps = Color in
+    let open Preferences in
+    let bgparagraph = ColorOps.add_value ~sfact:0.0 (?? default_bg_color) 0.06 in
     let tag_table = new GText.tag_table buffer#tag_table in
     let create_tag id name props =
       match tag_table#lookup name with
@@ -569,12 +571,12 @@ struct
     ignore (Preferences.preferences#connect#changed ~callback:begin fun pref ->
         List.iter begin fun t ->
           let tag = List.assoc t tags in
-          tag#set_property (`FONT pref.Preferences.pref_base_font)
+          tag#set_property (`FONT pref.editor_base_font)
         end [`TT; `TTB; `TTF; `TYPE; `TYPE2; `PARAM];
         let tag = List.assoc `TTF tags in
-        tag#set_property (`FAMILY (Pango.Font.get_family (GPango.font_description pref.Preferences.pref_base_font)));
+        tag#set_property (`FAMILY (Pango.Font.get_family (GPango.font_description pref.editor_base_font)));
         let tag = List.assoc `TYPE_COMMENT tags in
-        tag#set_property (`FONT pref.Preferences.pref_odoc_font);
+        tag#set_property (`FONT pref.odoc_font);
       end);
     ftag;;
 

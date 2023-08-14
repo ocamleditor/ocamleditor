@@ -23,6 +23,7 @@
 open Printf
 open Miscellanea
 open Target
+open Preferences
 
 let re_error_line = Str.regexp_case_fold
     ".*\"\\(.+\\)\", line \\([0-9]+\\), characters \\([0-9]+\\)-\\([0-9]+\\):?"
@@ -38,37 +39,38 @@ class view ~(editor : Editor.editor) ?(task_kind=(`OTHER : Task.kind)) ~task ?pa
   let _                 = toolbar#set_icon_size `MENU in
   let sw                = GBin.scrolled_window ~shadow_type:`NONE ~hpolicy:`AUTOMATIC ~vpolicy:`AUTOMATIC ~packing:hbox#add () in
   let button_detach     = GButton.tool_button ~label:"Detach" ~packing:toolbar#insert () in
-  let _                 = button_detach#set_icon_widget (GMisc.image ~pixbuf:Icons.detach ())#coerce in
+  let _                 = button_detach#set_icon_widget (GMisc.image ~pixbuf:(??? Icons.detach) ())#coerce in
   let _                 = GButton.separator_tool_item ~packing:toolbar#insert () in
   (*  *)
-  let button_stop       = GButton.tool_button ~stock:`STOP ~packing:toolbar#insert () in
+  let button_stop       = GButton.tool_button ~packing:toolbar#insert () in
+  let _                 = button_stop#set_icon_widget (GMisc.image ~pixbuf:(??? Icons.stop_16) ())#coerce in
   let _                 = tooltips#set_tip ~text:"Kill Process" button_stop#coerce in
   let button_run        = GButton.tool_button ~packing:toolbar#insert () in
   let _                 = button_run#set_icon_widget begin match task_kind with
       | `OTHER | `RUN ->
           tooltips#set_tip ~text:"Start" button_run#coerce;
-          (Icons.create Icons.start_16);
+          (Icons.create (??? Icons.start_16));
       | `CLEAN | `CLEANALL ->
           tooltips#set_tip ~text:task.Task.et_name button_run#coerce;
-          (Icons.create Icons.clear_build_16);
+          (Icons.create (??? Icons.clear_build_16));
       | `ANNOT | `COMPILE ->
           tooltips#set_tip ~text:task.Task.et_name button_run#coerce;
-          (Icons.create Icons.build_16);
+          (Icons.create (??? Icons.build_16));
     end#coerce in
   let _                 = GButton.separator_tool_item ~packing:toolbar#insert () in
   (*  *)
   let button_clear      = GButton.tool_button ~packing:toolbar#insert () in
   let _                 = tooltips#set_tip ~text:"Clear Messages" button_clear#coerce in
-  let _                 = button_clear#set_icon_widget (Icons.create Icons.clear_16)#coerce in
+  let _                 = button_clear#set_icon_widget (Icons.create (??? Icons.clear_16))#coerce in
   let button_incr_font  = GButton.tool_button ~packing:toolbar#insert () in
   let _                 = tooltips#set_tip ~text:"Increase Font Size" button_incr_font#coerce in
-  let _                 = button_incr_font#set_icon_widget (GMisc.image ~pixbuf:Icons.zoom_in_14 ~icon_size:`MENU ())#coerce in
+  let _                 = button_incr_font#set_icon_widget (GMisc.image ~pixbuf:(??? Icons.zoom_in_14) ~icon_size:`MENU ())#coerce in
   let button_decr_font  = GButton.tool_button ~packing:toolbar#insert () in
   let _                 = tooltips#set_tip ~text:"Decrease Font Size" button_decr_font#coerce in
-  let _                 = button_decr_font#set_icon_widget (GMisc.image ~pixbuf:Icons.zoom_out_14 ~icon_size:`MENU ())#coerce in
+  let _                 = button_decr_font#set_icon_widget (GMisc.image ~pixbuf:(??? Icons.zoom_out_14) ~icon_size:`MENU ())#coerce in
   let button_wrap       = GButton.toggle_tool_button ~packing:toolbar#insert () in
   let _                 = tooltips#set_tip ~text:"Word Wrap" button_wrap#coerce in
-  let _                 = button_wrap#set_icon_widget (Icons.create Icons.wrap_lines_16)#coerce in
+  let _                 = button_wrap#set_icon_widget (Icons.create (??? Icons.wrap_lines_16))#coerce in
   (*  *)
   let view              = GText.view ~editable:(task_kind = `RUN) ~cursor_visible:true ~packing:sw#add () in
   let _                 = view#set_right_margin 2 in
@@ -204,7 +206,7 @@ class view ~(editor : Editor.editor) ?(task_kind=(`OTHER : Task.kind)) ~task ?pa
           Activity.remove task.Task.et_name;
         end ()
       in
-      if task_kind = `COMPILE && Preferences.preferences#get.Preferences.pref_editor_save_all_bef_comp then (editor#save_all());
+      if task_kind = `COMPILE && Preferences.preferences#get.editor_save_all_bef_comp then (editor#save_all());
       has_errors <- false;
       GtkThread2.async begin fun () ->
         (try view#buffer#delete_mark (`NAME "first_error_line");
@@ -427,16 +429,16 @@ class view ~(editor : Editor.editor) ?(task_kind=(`OTHER : Task.kind)) ~task ?pa
       (*  *)
       (*    button_run#connect#clicked ~callback:(fun () -> ignore (self#run ()));*)
       ignore (button_stop#connect#clicked ~callback:self#stop);
-      view#misc#modify_font_by_name Preferences.preferences#get.Preferences.pref_output_font;
-      view#misc#modify_base [`NORMAL, `NAME Preferences.preferences#get.Preferences.pref_output_bg];
+      view#misc#modify_font_by_name Preferences.preferences#get.output_font;
+      view#misc#modify_base [`NORMAL, `NAME ?? (Preferences.preferences#get.output_bg_color)];
       ignore (view#buffer#create_tag ~name:"input"
-                [`FOREGROUND Preferences.preferences#get.Preferences.pref_output_fg_stdin]);
+                [`FOREGROUND ?? (Preferences.preferences#get.output_stdin_fg_color)]);
       ignore (view#buffer#create_tag ~name:"error"
-                [`FOREGROUND Preferences.preferences#get.Preferences.pref_output_fg_err]);
+                [`FOREGROUND ?? (Preferences.preferences#get.output_err_fg_color)]);
       ignore (view#buffer#create_tag ~name:"warning"
-                [`FOREGROUND Preferences.preferences#get.Preferences.pref_output_fg_warn]);
+                [`FOREGROUND ?? (Preferences.preferences#get.output_warn_fg_color)]);
       ignore (view#buffer#create_tag ~name:"output"
-                [`FOREGROUND Preferences.preferences#get.Preferences.pref_output_fg_stdout]);
+                [`FOREGROUND ?? (Preferences.preferences#get.output_stdout_fg_color)]);
       ignore (view#buffer#create_tag ~name:"bold" [`WEIGHT `BOLD]);
       view#misc#grab_focus()
 
@@ -468,7 +470,7 @@ let create ~editor task_kind task =
         match task_kind with
         | `RUN (*| `OTHER*) ->
             let box = GPack.hbox ~spacing:3 () in
-            let icon = (Icons.create Icons.start_10) in
+            let icon = (Icons.create (??? Icons.start_10)) in
             box#pack icon#coerce;
             let label = GMisc.label ~text:task.Task.et_name ~packing:box#pack () in
             box#coerce, Some begin fun active ->

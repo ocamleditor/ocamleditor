@@ -54,7 +54,7 @@ let greeks_markup = [
 let gt = [ "-&gt;", "&#8594;";(* "-&gt;", "<big>&#8594;</big>";*) " *", " &#215;"];;
 
 let replace_greek descr =
-  if Preferences.preferences#get.Preferences.pref_compl_greek then begin
+  if Preferences.preferences#get.editor_completion_greek_letters then begin
     let descr = Miscellanea.replace_all ~regexp:false gt descr in
     let descr = Miscellanea.replace_all ~regexp:true greeks_markup descr in
     descr

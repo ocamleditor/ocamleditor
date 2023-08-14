@@ -26,6 +26,7 @@ open GdkKeysyms
 open Oe
 open Miscellanea
 open Mbrowser_slist
+open Preferences
 
 module Log = Common.Log.Make(struct let prefix = "Mbrowser_compl" end)
 
@@ -37,11 +38,11 @@ type compl =
 
 (** completion *)
 class completion ~project ?packing () =
-  let window_decorated = Preferences.preferences#get.Preferences.pref_compl_decorated in
+  let window_decorated = Preferences.preferences#get.editor_completion_decorated in
   let vbox            = GPack.vbox ~spacing:0 ~border_width:2 ?packing () in
   let tbox            = GPack.hbox ~spacing:5 ~border_width:0 () in
   let ebox_resize     = GBin.event_box ~packing:(tbox#pack ~fill:false ~expand:false) ~show:(not window_decorated) () in
-  let _               = GMisc.image ~pixbuf:Icons.grip ~packing:ebox_resize#add () in
+  let _               = GMisc.image ~pixbuf:(??? Icons.grip) ~packing:ebox_resize#add () in
   let ebox_title      = GBin.event_box ~packing:tbox#add () in
   let ebox_doc        = GBin.event_box ~packing:tbox#pack () in
   let ebox_font_incr  = GBin.event_box ~packing:tbox#pack () in
@@ -53,11 +54,11 @@ class completion ~project ?packing () =
   let _               = ebox_pin#misc#set_tooltip_text "Toggle pin status" in
   let _               = ebox_doc#misc#set_tooltip_markup "Show documentation pane (<tt><small>F1</small></tt>)" in
   let label_title     = GMisc.label ~markup:"" ~ypad:0 ~packing:ebox_title#add ~show:false () in
-  let _               = GMisc.image ~pixbuf:Icons.pin_off ~packing:ebox_pin#add () in
-  let _               = GMisc.image ~pixbuf:Icons.doc ~packing:ebox_doc#add () in
-  let _               = GMisc.image ~pixbuf:Icons.zoom_in_14 ~packing:ebox_font_incr#add () in
-  let _               = GMisc.image ~pixbuf:Icons.zoom_out_14 ~packing:ebox_font_decr#add () in
-  let _               = GMisc.image ~pixbuf:Icons.close_window ~icon_size:`MENU ~packing:ebox_close#add () in
+  let _               = GMisc.image ~pixbuf:(??? Icons.pin_off) ~packing:ebox_pin#add () in
+  let _               = GMisc.image ~pixbuf:(??? Icons.doc) ~packing:ebox_doc#add () in
+  let _               = GMisc.image ~pixbuf:(??? Icons.zoom_in_14) ~packing:ebox_font_incr#add () in
+  let _               = GMisc.image ~pixbuf:(??? Icons.zoom_out_14) ~packing:ebox_font_decr#add () in
+  let _               = GMisc.image ~pixbuf:(??? Icons.close_window) ~icon_size:`MENU ~packing:ebox_close#add () in
   let statusbar_box   = GPack.hbox ~spacing:5 ~packing:(vbox#pack ~from:`END) () in
   let label_longid    = GMisc.label ~markup:"" ~ypad:0 ~xalign:0.0 ~packing:statusbar_box#add () in
   let _               = GMisc.separator `VERTICAL ~packing:statusbar_box#pack () in
@@ -110,7 +111,7 @@ class completion ~project ?packing () =
 
     method set_pin_status value =
       pin_status <- value;
-      let pixbuf = if pin_status then Icons.pin_on else Icons.pin_off in
+      let pixbuf = if pin_status then (??? Icons.pin_on) else (??? Icons.pin_off) in
       let image = GMisc.image ~pixbuf () in
       ebox_pin#remove ebox_pin#child;
       ebox_pin#add image#coerce;
@@ -367,7 +368,7 @@ class completion ~project ?packing () =
         Option.iter begin fun p ->
           Option.iter
             (fun w -> w#set_opacity
-                (match Preferences.preferences#get.Preferences.pref_compl_opacity with
+                (match Preferences.preferences#get.editor_completion_opacity with
                  | Some opa -> opa
                  | _  -> 1.0))
             current_window;
@@ -431,7 +432,7 @@ class completion ~project ?packing () =
               ?wm_class:(if Sys.win32 then None else Some (About.program_name ^ "-completion"))
               ~x ~y ~focus:true ~escape:false ~show:(xy <> None) ()
           in
-          window#set_icon (Some Icons.oe);
+          window#set_icon (Some (??? Icons.oe));
           window#set_title "";
           window#set_deletable true;
           current_window <- Some window;

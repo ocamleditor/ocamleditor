@@ -24,6 +24,7 @@ open Printf
 open GdkKeysyms
 open Miscellanea
 open Oe
+open Preferences
 
 type title = {
   title     : string;
@@ -33,27 +34,26 @@ type title = {
 
 (** pixbuf_of_kind *)
 let pixbuf_of_kind = function
-  | Pvalue                  -> Icons.func
-  | Pfunc                   -> Icons.func
-  | Pattribute              -> Icons.empty_14
-  | Pmethod                 -> Icons.met
-  | Pmethod_private_virtual -> Icons.met_private_virtual
-  | Pmethod_private         -> Icons.met_private
-  | Pmethod_virtual         -> Icons.met_virtual
-  | Ptype                   -> Icons.typ
-  | Plabel                  -> Icons.empty_14
-  | Pconstructor            -> Icons.empty_14 (*Icons.constructor*)
-  | Pexception              -> Icons.exc
-  | Pmodule                 -> Icons.module_impl
-  | Pmodtype                -> Icons.module_impl
-  | Pclass                  -> Icons.classe
-  | Pcltype                 -> Icons.class_type
-  | Ptype_abstract          -> Icons.type_abstract
-  | Ptype_variant           -> Icons.type_variant
-  | Ptype_record            -> Icons.type_record
-  | Std_lib                 -> Icons.empty_14
-  | Lib                     -> Icons.empty_14
-;;
+  | Pvalue                  -> ??? Icons.func
+  | Pfunc                   -> ??? Icons.func
+  | Pattribute              -> ??? Icons.empty_14
+  | Pmethod                 -> ??? Icons.met
+  | Pmethod_private_virtual -> ??? Icons.met_private_virtual
+  | Pmethod_private         -> ??? Icons.met_private
+  | Pmethod_virtual         -> ??? Icons.met_virtual
+  | Ptype                   -> ??? Icons.typ
+  | Plabel                  -> ??? Icons.empty_14
+  | Pconstructor            -> ??? Icons.empty_14 (*Icons.constructor*)
+  | Pexception              -> ??? Icons.exc
+  | Pmodule                 -> ??? Icons.module_impl
+  | Pmodtype                -> ??? Icons.module_impl
+  | Pclass                  -> ??? Icons.classe
+  | Pcltype                 -> ??? Icons.class_type
+  | Ptype_abstract          -> ??? Icons.type_abstract
+  | Ptype_variant           -> ??? Icons.type_variant
+  | Ptype_record            -> ??? Icons.type_record
+  | Std_lib                 -> ??? Icons.empty_14
+  | Lib                     -> ??? Icons.empty_14;;
 
 module Index = struct
   let len = 256
@@ -139,7 +139,7 @@ class symbol_list ~kind ?(is_completion=false) ?model ?(index=Index.create ()) ?
     val mutable length = 0
 
     initializer
-      view#misc#modify_font_by_name Preferences.preferences#get.Preferences.pref_compl_font;
+      view#misc#modify_font_by_name Preferences.preferences#get.editor_completion_font;
       ignore (view#event#connect#key_press ~callback:begin fun ev ->
           let key = GdkEvent.Key.keyval ev in
           if key = _BackSpace then begin
