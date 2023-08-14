@@ -115,53 +115,29 @@ let preferences = new GUtil.variable default_values
 
 let geometry_memo = Gmisclib.Window.GeometryMemo.create ~filename:Oe_config.geometry_memo_filename ()
 
-let filename = Filename.concat App_config.ocamleditor_user_home "settings.new.json"
+module Themes = struct
+  let (//) = Filename.concat
+  let (!!) = Filename.dirname
 
-(** save *)
-let save () =
-  let chan = open_out_bin filename in
-  begin
-    try
-      let json = preferences#get |> Settings_j.string_of_settings |> Yojson.Safe.prettify in
-      output_string chan json;
-      close_out chan;
-      preferences#set { preferences#get with timestamp = Unix.gettimeofday() }
-    with ex ->
-      begin
-        Printf.eprintf "Failed to save settings to file \"%s\".\n%s%!" filename (Printexc.to_string ex);
-        close_out_noerr chan
-      end;
-  end
+  let directory =
+    [
+      Some ((!! (!! Sys.executable_name)) // "share" // "themes");
+      (try Some ((Sys.getenv "HOME") // ".themes") with Not_found -> None);
+      Some "/usr/share/themes";
+    ]
+    |> List.filter_map Fun.id
+    |> List.find_opt Sys.file_exists
 
-(** load *)
-let load () =
-  if Sys.file_exists filename then begin
-    let chan = open_in_bin filename in
-    begin
-      try
-        let json = really_input_string chan (in_channel_length  chan) in
-        let settings = Settings_j.settings_of_string json in
-        preferences#set settings;
-        close_in chan
-      with ex ->
-        begin
-          close_in_noerr chan;
-          Printf.printf "Failed to load settings from file \"%s\", using defaults.\n%!" filename;
-        end;
-    end;
-  end else begin
-    Printf.printf "File \"%s\" not found, using defaults.\n%!" filename;
-  end;
-  Gmisclib.Window.GeometryMemo.set_enabled geometry_memo preferences#get.remember_window_geometry;
-  Gmisclib.Window.GeometryMemo.set_delayed geometry_memo preferences#get.geometry_delayed;
-  Otherwidgets_config.geometry_memo := (fun () -> geometry_memo);
-;;
+  let avail_themes =
+    match directory with
+    | Some dir when Sys.file_exists dir -> List.sort compare (Array.to_list (Sys.readdir dir))
+    | _ -> []
 
-(** reset_defaults *)
-let reset_defaults () =
-  if Sys.file_exists filename then Sys.remove filename;
-  preferences#set default_values;
-  save()
+  let is_dark_theme (widget : GObj.widget) =
+    let fg_normal = widget#misc#style#fg `NORMAL |> Color.rgb_of_gdk |> Color.avg in
+    let bg_normal = widget#misc#style#bg `NORMAL |> Color.rgb_of_gdk |> Color.avg in
+    fg_normal > bg_normal
+end
 
 module Icon = struct
   let update_otherwidgets_icon pref =
@@ -232,6 +208,55 @@ let editor_tag_label = function
   | "annotation"             -> "Annotation"
   | x -> x
 
-let _ = begin
-  load();
-end
+let filename = Filename.concat App_config.ocamleditor_user_home "settings.new.json"
+
+let save () =
+  let chan = open_out_bin filename in
+  begin
+    try
+      let json = preferences#get |> Settings_j.string_of_settings |> Yojson.Safe.prettify in
+      output_string chan json;
+      close_out chan;
+      preferences#set { preferences#get with timestamp = Unix.gettimeofday() }
+    with ex ->
+      begin
+        Printf.eprintf "Failed to save settings to file \"%s\".\n%s%!" filename (Printexc.to_string ex);
+        close_out_noerr chan
+      end;
+  end
+
+let load () =
+  if Sys.file_exists filename then begin
+    let chan = open_in_bin filename in
+    begin
+      try
+        let json = really_input_string chan (in_channel_length  chan) in
+        let settings = Settings_j.settings_of_string json in
+        preferences#set settings;
+        close_in chan
+      with ex ->
+        begin
+          close_in_noerr chan;
+          Printf.printf "Failed to load settings from file \"%s\", using defaults.\n%!" filename;
+        end;
+    end;
+  end else begin
+    Printf.printf "File \"%s\" not found, using defaults.\n%!" filename;
+  end;
+  begin
+    match Themes.avail_themes with
+    | [] ->
+        preferences#get.theme <- None;
+        preferences#get.theme_is_dark <- false;
+    |  _-> ()
+  end;
+  Gmisclib.Window.GeometryMemo.set_enabled geometry_memo preferences#get.remember_window_geometry;
+  Gmisclib.Window.GeometryMemo.set_delayed geometry_memo preferences#get.geometry_delayed;
+  Otherwidgets_config.geometry_memo := (fun () -> geometry_memo)
+
+let reset_defaults () =
+  if Sys.file_exists filename then Sys.remove filename;
+  preferences#set default_values;
+  save()
+
+let _ = load()

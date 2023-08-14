@@ -27,12 +27,12 @@ open Miscellanea
 (** pref_view *)
 class pref_view title ?packing () =
   let vbox                  = GPack.vbox ~spacing ?packing () in
-  let has_themes            = Oe_config.themes_dir <> None in
+  let has_themes            = Preferences.Themes.directory <> None in
   let align                 = create_align ~vbox () in
   let box                   = GPack.vbox ~spacing:row_spacings ~packing:align#add () in
   let table                 = GPack.table ~col_spacings ~row_spacings ~packing:box#add () in
-  let _                     = GMisc.label ~text:"Theme:" ~xalign ~packing:(table#attach ~top:0 ~left:0 ~expand:`NONE) ~show:has_themes () in
-  let combo_theme, _        = GEdit.combo_box_text ~strings:Gtk_theme.avail_themes ~packing:(table#attach ~top:0 ~left:1 ~expand:`X) ~show:has_themes () in
+  let _                     = GMisc.label ~markup:"Theme\n<span size='small'>(requires restart)</span>:" ~xalign ~packing:(table#attach ~top:0 ~left:0 ~expand:`NONE) ~show:has_themes () in
+  let combo_theme, _        = GEdit.combo_box_text ~strings:Preferences.Themes.avail_themes ~packing:(table#attach ~top:0 ~left:1 ~expand:`X) ~show:has_themes () in
   let check_splash          = GButton.check_button ~label:"Display splash screen" ~packing:box#pack () in
   let align                 = create_align ~title:"Tabs" ~vbox () in
   let table                 = GPack.table ~col_spacings ~row_spacings ~packing:align#add () in
@@ -93,9 +93,7 @@ class pref_view title ?packing () =
     val mutable combo_theme_changed_id = None
 
     method private check_is_dark_theme () =
-      let fg_normal = self#misc#style#fg `NORMAL |> Color.rgb_of_gdk |> Color.avg in
-      let bg_normal = self#misc#style#bg `NORMAL |> Color.rgb_of_gdk |> Color.avg in
-      is_dark_theme#set (fg_normal > bg_normal)
+      is_dark_theme#set (Preferences.Themes.is_dark_theme self#coerce)
 
     initializer
       is_dark_theme#connect#changed ~callback:begin fun _ ->
@@ -112,7 +110,7 @@ class pref_view title ?packing () =
         (* style_set is signaled multiple times on single theme change *)
         self#check_is_dark_theme();
       end |> ignore;
-      match Oe_config.themes_dir with
+      match Preferences.Themes.directory with
       | Some _ ->
           combo_theme_changed_id <-
             Some begin
@@ -139,10 +137,10 @@ class pref_view title ?packing () =
       | _ -> ()
 
     method private get_theme_name () =
-      try Some (List.nth Gtk_theme.avail_themes combo_theme#active) with Invalid_argument _ -> None
+      try Some (List.nth Preferences.Themes.avail_themes combo_theme#active) with Invalid_argument _ -> None
 
     method write pref =
-      Oe_config.themes_dir |> Option.iter begin fun _ ->
+      Preferences.Themes.directory |> Option.iter begin fun _ ->
         pref.theme <- self#get_theme_name();
         Manual_reset_event.wait dark_theme_transition;
         pref.theme_is_dark <- is_dark_theme#get;
@@ -177,9 +175,9 @@ class pref_view title ?packing () =
       Option.iter
         (fun _ -> combo_theme#set_active (
              match pref.theme with
-             | Some name -> (try Xlist.pos name Gtk_theme.avail_themes with Not_found -> -1)
+             | Some name -> (try Xlist.pos name Preferences.Themes.avail_themes with Not_found -> -1)
              | _ -> -1))
-        Oe_config.themes_dir;
+        Preferences.Themes.directory;
       combo_theme_changed_id |> Option.iter combo_theme#misc#handler_unblock;
       check_splash#set_active pref.splashscreen_enabled;
       combo_orient#set_active (match pref.tab_pos, pref.tab_vertical_text with

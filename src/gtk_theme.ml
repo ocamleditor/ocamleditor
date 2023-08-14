@@ -24,11 +24,6 @@
 open Printf
 module ColorOps = Color
 
-let avail_themes =
-  match Oe_config.themes_dir with
-  | Some dir -> List.sort compare (Array.to_list (Sys.readdir dir))
-  | _ -> []
-
 (* Condensed font for the file list in the search results pane. None is default font. (`STRETCH `CONDENSED doesn't work) *)
 let find_text_output_font_condensed : string option ref = ref None
 let set_find_text_output_font_condensed context =
@@ -121,7 +116,7 @@ widget \"*.gitbutton\" style:highest \"gitbutton\"
         "widget \"*.targetlist_treeview\" style \"targetlist-treestyle\""
   in
   let gtk_theme =
-    Option.fold Oe_config.themes_dir
+    Option.fold Preferences.Themes.directory
       ~none:""
       ~some:(fun _ ->
           let theme = match theme with Some _ as x -> x | _ -> Preferences.preferences#get.theme in

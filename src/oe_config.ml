@@ -26,7 +26,7 @@ open Settings_t
 
 type dcolor = GDraw.color color
 
-(** Configuration Section =================================================== *)
+(** Configuration     Section =================================================== *)
 
 let dot_viewer : [`DEFAULT | `PDF]       = `DEFAULT
 let dot_attributes                       = " -Glabelloc=t -Gfontsize=26pt -Gfontname=\"Helvetica\" -Nfontsize=16pt -Nfontname=\"Helvetica\""
@@ -78,7 +78,7 @@ let global_gutter_comments_bgcolor       = `NAME "#fad0f5"
 
 let global_gutter_diff_color_add         = { light = "#60b060"; dark = "#13401e" }
 let global_gutter_diff_color_del         = { light = "#ff6060"; dark = "#3e181d" }
-let global_gutter_diff_color_change      = { light = "#ffffd0"; dark = "#ffffd0" }
+let global_gutter_diff_color_change      = { light = "#0079FF"; dark = "#0079FF" }
 let global_gutter_diff_style             = (`COLOR false : [`BW | `COLOR of bool])
 let global_gutter_diff_tooltips          = true
 let global_gutter_no_errors              = `NAME "#daedd0"
@@ -173,10 +173,6 @@ let current_line_border_adjust, dash_style, dash_style_offset =
   | 2, 24 -> 1, `ON_OFF_DASH, (Some 2)
   | _     -> 1, `DOUBLE_DASH, None
 
-let themes_dir = Some "/usr/share/themes"
-(*  let themes = (!! (!! Sys.executable_name)) // "share" // "themes" in
-    if (*Sys.os_type = "Win32" &&*) Sys.file_exists themes then Some themes else None;;*)
-
 (** Clear OCAMLLIB environment variable *)
 let _ = Ocaml_config.putenv_ocamllib None
 
@@ -185,14 +181,3 @@ let geometry_memo_filename = Filename.concat App_config.ocamleditor_user_home "g
 let _ =
   let old = Filename.concat App_config.ocamleditor_user_home "message_window_positions" in
   if Sys.file_exists old then Sys.remove old
-
-
-
-
-
-
-
-
-
-
-
