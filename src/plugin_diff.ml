@@ -28,10 +28,13 @@ module Diff = struct
   type 'a editor_page =
     < buffer : < line_count : int; orig_filename : string;
                  save_buffer : ?filename:string -> unit -> string * (string * string) option;
+                 get_text :
+                   ?start:GText.iter ->
+                   ?stop:GText.iter -> ?slice:bool -> ?visible:bool -> unit -> string;
                  tmp_filename : string; .. >;
       global_gutter : GMisc.drawing_area;
       global_gutter_tooltips : ((int * int * int * int) * (unit -> GObj.widget)) list;
-      changed_after_last_diff : bool;
+      changed_after_last_diff : bool; get_filename : string;
       set_changed_after_last_diff : bool -> unit;
       set_global_gutter_tooltips : ((int * int * int * int) * (unit -> GObj.widget)) list -> unit;
       view : < gutter : Gutter.t; ..>;
@@ -234,33 +237,38 @@ module Diff = struct
       end
     end diffs
 
+  let compare_with_head page continue_with =
+    match Miscellanea.filename_relative (Filename.dirname (Sys.getcwd())) page#get_filename with
+    | Some filename ->
+        let open Printf in
+        let buf = Buffer.create 1024 in
+        Spawn.async "git" [| "show"; sprintf "HEAD:%s" filename |]
+          ~process_in:(Spawn.loop (fun ic -> Buffer.add_string buf (input_line ic); Buffer.add_char buf '\n'))
+          ~continue_with:begin fun _ ->
+            let text = page#buffer#get_text ?start:None ?stop:None ?slice:None ?visible:None () in
+            continue_with (Odiff.strings_diffs (Buffer.contents buf) text)
+          end |> ignore
+    | _ -> ()
 
   (** paint_gutter *)
   let rec paint_gutter page =
     if page#changed_after_last_diff then begin
-      let buffer = page#buffer in
-      buffer#save_buffer ?filename:None () |> ignore;
-      let diff = Preferences.preferences#get.program_diff in
-      let args = [|
-        "--binary";
-        buffer#orig_filename; (* working tree version *)
-        buffer#tmp_filename (* TODO: should be last committed version *)
-      |]
-      in
-      page#set_changed_after_last_diff false;
-      let diffs = ref [] in
-      let process_in ic =
-        try diffs := Odiff.from_channel ic
-        with ex -> Printf.eprintf "File \"plugin_diff.ml\": %s\n%s\n%!" (Printexc.to_string ex) (Printexc.get_backtrace());
-      in
-      Spawn.async diff args
-        ~process_in (*~process_err:Spawn.redirect_to_stderr*)
-        ~at_exit:begin fun _ ->
-          Hashtbl.replace cache page#get_oid !diffs;
-          match !diffs with [] -> () | diffs ->
-            (*Printf.printf "%s\n%!" (Odiff.string_of_diffs diffs);*)
-            paint_diffs page diffs
-        end |> ignore
+      compare_with_head page begin fun diffs ->
+        page#set_changed_after_last_diff false;
+        let diffs =
+          diffs
+          |> List.filter begin fun diff ->
+            match diff with
+            | Odiff.Add (_, _, a) -> String.trim a <> ""
+            | Odiff.Delete (_, _, d) -> String.trim d <> ""
+            | Odiff.Change (_, a, _, b) -> (String.trim a) <> "" || (String.trim b) <> ""
+          end
+        in
+        Hashtbl.replace cache page#get_oid diffs;
+        match diffs with [] -> () | diffs ->
+          (*Printf.printf "%s\n%!" (Odiff.string_of_diffs diffs);*)
+          diffs |> paint_diffs page
+      end
     end else begin
       try
         let diffs = Hashtbl.find cache page#get_oid in

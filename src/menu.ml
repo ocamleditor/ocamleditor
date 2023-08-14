@@ -51,6 +51,7 @@ let edit ~browser ~group ~flags
   let redo = GMenu.image_menu_item ~label:"Redo" ~packing:menu#add () in
   redo#set_image (Icons.create (??? Icons.redo_16))#coerce;
   ignore (redo#connect#activate ~callback:(fun () -> editor#with_current_page (fun page -> page#redo())));
+  redo#add_accelerator ~group ~modi:[`CONTROL] GdkKeysyms._y ~flags;
   redo#add_accelerator ~group ~modi:[`CONTROL; `SHIFT] GdkKeysyms._z ~flags;
   get_menu_item_redo := (fun () -> redo);
   (* Cut & Paste... *)
