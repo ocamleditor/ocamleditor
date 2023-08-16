@@ -103,10 +103,13 @@ module type DIFF = sig
   type 'a editor_page =
     < buffer : < line_count : int; orig_filename : string;
                  save_buffer : ?filename:string -> unit -> string * (string * string) option;
+                 get_text :
+                   ?start:GText.iter ->
+                   ?stop:GText.iter -> ?slice:bool -> ?visible:bool -> unit -> string;
                  tmp_filename : string; .. >;
       global_gutter : GMisc.drawing_area;
       global_gutter_tooltips : ((int * int * int * int) * (unit -> GObj.widget)) list;
-      changed_after_last_diff : bool;
+      changed_after_last_diff : bool; get_filename : string;
       set_changed_after_last_diff : bool -> unit;
       set_global_gutter_tooltips : ((int * int * int * int) * (unit -> GObj.widget)) list -> unit;
       view : < gutter : Gutter.t; ..>;
