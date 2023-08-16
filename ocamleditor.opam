@@ -1,6 +1,6 @@
 opam-version: "2.0"
 name: "ocamleditor"
-version: "1.14.1"
+version: "1.14.2"
 
 synopsis:
   "OCamlEditor is a GTK+ source code editor and build tool for OCaml"

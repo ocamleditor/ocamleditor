@@ -225,7 +225,7 @@ class completion ~project ?packing () =
           widget#create_widget_class ~class_path ~f ();
           kprintf self#set_title "Class" class_type
             | _ ->
-                Log.println `TRACE "self completion is not supported%s\n%!" class_type;
+                Log.println `TRACE "self completion is not supported\n%!";
           end
       | _ -> kprintf self#set_title "" "";
 
