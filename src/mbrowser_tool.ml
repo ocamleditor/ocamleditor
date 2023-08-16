@@ -837,6 +837,33 @@ class widget ~project ?(is_completion=false) ?(enable_history=true) ?width ?heig
         f widget;
       end ()
 
+    (** create_widget_self *)
+    method create_widget_self ~methods ?(lib_path="") ?(f=ignore) () =
+      Activity.wrap Activity.Symbol begin fun () ->
+        let widget = self#create_widget ~kind:`Class () in
+        let entries =
+          methods
+          |> List.map begin fun (name, typ) ->
+            {
+              sy_kind = Pmethod;
+              sy_id = [ name ];
+              sy_type = sprintf "%s : %s" name typ;
+              sy_filename = "";
+              sy_local = false;
+            }
+          end
+        in
+        widget#fill entries;
+        widget#set_title ~subtitle:lib_path "self";
+        self#push widget;
+        ignore (self#connect#switch_page ~callback:begin fun cur ->
+            if widget#misc#get_oid = cur#misc#get_oid then (self#update_class_details widget ())
+          end);
+        ignore (widget#view#selection#connect#changed ~callback:(fun () -> self#update_class_details widget()));
+        self#update_class_details widget ();
+        f widget;
+      end ()
+
     (** create_widget_search_results *)
     method private create_widget_search_results ~symbols ?(fill=false) ?(f=self#default_select_func) () =
       let symbols = List.sort (fun a b -> compare (Symbols.get_name a) (Symbols.get_name b)) symbols in

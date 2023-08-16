@@ -29,6 +29,7 @@ open Mbrowser_slist
 open Preferences
 
 module Log = Common.Log.Make(struct let prefix = "Mbrowser_compl" end)
+let _ = Log.set_verbosity `ERROR
 
 type compl =
   | Compl_module of string list * string (* module_path x module_name *)
@@ -204,6 +205,24 @@ class completion ~project ?packing () =
       let f = widget#select_symbol_by_prefix ~module_path ~prefix ~kind:[] in
       widget#create_widget_module ~module_path ~f ~sort:true ();
 
+    method private parse_object_type object_type =
+      let open Parsetree in
+      let open Location in
+      match object_type.ptyp_desc with
+      | Ptyp_object (fields, flag) ->
+          fields
+          |> List.fold_left begin fun acc field ->
+            match field.pof_desc with
+            | Otag (loc, cty) ->
+                let buf = Buffer.create 128 in
+                let formatter = Format.formatter_of_buffer buf in
+                Pprintast.core_type formatter cty;
+                Format.pp_print_flush formatter ();
+                (loc.txt, (Buffer.contents buf)) :: acc
+            | Oinherit cty -> acc
+          end []
+      | _ -> []
+
     method private compl_class ~text ~page () =
       (*let re1 = Miscellanea.regexp "[a-zA-Z_0-9']$" in*)
       let ins = page#buffer#get_iter `INSERT in
@@ -221,11 +240,15 @@ class completion ~project ?packing () =
           begin
             match class_path with
             | Some class_path ->
-          let f = widget#select_symbol_by_prefix ~module_path:class_path ~prefix ~kind:[] in
-          widget#create_widget_class ~class_path ~f ();
-          kprintf self#set_title "Class" class_type
+                let f = widget#select_symbol_by_prefix ~module_path:class_path ~prefix ~kind:[] in
+                widget#create_widget_class ~class_path ~f ();
+                kprintf self#set_title "Class" class_type
             | _ ->
-                Log.println `TRACE "self completion is not supported\n%!";
+                let object_type = Lexing.from_string class_type |> Parse.core_type in
+                let methods = self#parse_object_type object_type |> List.rev in
+                let f = widget#select_symbol_by_prefix ~prefix ~kind:[] in
+                widget#create_widget_self ~methods ~f ();
+                kprintf self#set_title "Object" "self"
           end
       | _ -> kprintf self#set_title "" "";
 

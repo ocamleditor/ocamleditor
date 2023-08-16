@@ -97,12 +97,14 @@ struct
 
   (** read *)
   let read ~project ~symbol =
-    let force (_, ts) =
-      let filename = symbol.Oe.sy_filename in
-      ts < (Unix.stat filename).Unix.st_mtime
-    in
-    let module_list, _ = read_memo ~force (project, symbol.Oe.sy_filename) in
-    module_list
+    if symbol.Oe.sy_filename <> "" then begin
+      let force (_, ts) =
+        let filename = symbol.Oe.sy_filename in
+        ts < (Unix.stat filename).Unix.st_mtime
+      in
+      let module_list, _ = read_memo ~force (project, symbol.Oe.sy_filename) in
+      module_list
+    end else []
 
   (** find_name *)
   let find_name ~project ~symbol =

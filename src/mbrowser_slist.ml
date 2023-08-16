@@ -187,9 +187,6 @@ class symbol_list ~kind ?(is_completion=false) ?model ?(index=Index.create ()) ?
           else descr
         in
         let descr =
-          if local then sprintf "<span color='#0000ff'>%s</span>" descr else descr
-        in
-        let descr =
           if is_search_output && (symbol.sy_kind <> Pmodule || symbol_path <> name)
           then markup (Glib.Markup.escape_text symbol_path) descr else descr
         in
