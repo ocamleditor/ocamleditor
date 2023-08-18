@@ -219,7 +219,7 @@ and view ?project ?buffer () =
     val line_num_labl = Line_num_labl.create()
     val visible_height = new GUtil.variable 0
     val mutable signal_expose : GtkSignal.id option = None
-    val margin = new Margin.margin view
+    val margin = new Margin.container view
     val mutable gutter_icons = []
     val hyperlink = Gmisclib.Text.hyperlink ~view ()
     val mutable signal_id_highlight_current_line = None
@@ -475,7 +475,7 @@ and view ?project ?buffer () =
       end
 
     method draw_gutter () = (* 0.008 *)
-      margin#draw ~show_markers:options#show_markers ~show_line_numbers:options#show_line_numbers ~approx_char_width;
+      margin#draw ();
 
     method private expose ev =
       try
@@ -688,6 +688,8 @@ and view ?project ?buffer () =
       | _ -> ()
 
     initializer
+      margin#add (new Margin.line_numbers());
+      margin#connect#update ~callback:(fun () -> approx_char_width <- margin#approx_char_width) |> ignore;
       Preferences.preferences#connect#changed ~callback:begin fun _ ->
         self#gutter.Gutter.bg_color <- `WHITE;
         self#gutter.Gutter.fg_color <- `WHITE;
