@@ -222,7 +222,6 @@ and view ?project ?buffer () =
     val gutter = Gutter.create()
     val mutable gutter_icons = []
     val hyperlink = Gmisclib.Text.hyperlink ~view ()
-    val mutable realized = false
     val mutable signal_id_highlight_current_line = None
     val mutable mark_occurrences_manager = None
     val mutable current_line_border_x1 = 0
@@ -239,8 +238,6 @@ and view ?project ?buffer () =
 
     method options = options
 
-    method realized = realized
-    method set_realized x = realized <- x
     method hyperlink = hyperlink
 
     method signal_expose = signal_expose
@@ -516,7 +513,7 @@ and view ?project ?buffer () =
         let start, _ = self#get_line_at_y y0 in
         let stop, _ = self#get_line_at_y (y0 + h0) in
         (** Line Numbers *)
-        if realized && options#show_line_numbers then begin
+        if (self#misc#get_flag `REALIZED) && options#show_line_numbers then begin
           (*Prf.crono Prf.prf_line_numbers begin fun () ->*)
           Line_num_labl.reset line_num_labl;
           let iter = ref start#backward_line in

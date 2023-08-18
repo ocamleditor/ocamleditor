@@ -117,11 +117,9 @@ let update_gutter_colors view =
 
 (** realize *)
 let realize view =
-  if not view#realized then begin
-    view#misc#connect#after#realize ~callback:begin fun () ->
-      update_gutter_colors view;
-      view#set_realized true
-    end |> ignore
+  if not (view#misc#get_flag `REALIZED) then begin
+    view#misc#connect#after#realize
+      ~callback:(fun () -> update_gutter_colors view) |> ignore
   end
 
 (** select_lines_from_gutter *)
