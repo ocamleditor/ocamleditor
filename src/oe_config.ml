@@ -58,11 +58,12 @@ let on_off_dashes                        = [3; 3]
                     [darker] 0.5 <= factor <= 1.0 [same as text view]
    `THEME          : Based on the GTK theme.
    `NAME "#ffffff" : Specific color. *)
-let gutter_bg_color                      = `THEME (*`CALC 0.93*) (*`CALC 0.97*)
+let gutter_bg_color                      = `NAME "#424201" (* temporarily *) (*`THEME*)
 let gutter_fg_color                      = `THEME (*`CALC 0.50*) (*`NAME "#6070ff"*)
 let gutter_border_color                  = `THEME (*`CALC 0.875*) (*`CALC 0.97*)
 let gutter_marker_color                  = `THEME (*`CALC 0.50*)
 let gutter_marker_bg_color               = `THEME (*`CALC 0.80*)
+let gutter_diff_size                     = 50 (* 0 = disabled *)
 let code_folding_scope_color             = `NAME "#e5e5e5" (* disabled *)
 let code_folding_highlight_color         = { light = "#d0d0d0"; dark = "#303030" }
 let code_folding_hightlight_gradient     = [ (* [] for no gradient *)

@@ -219,7 +219,7 @@ and view ?project ?buffer () =
     val line_num_labl = Line_num_labl.create()
     val visible_height = new GUtil.variable 0
     val mutable signal_expose : GtkSignal.id option = None
-    val gutter = Gutter.create()
+    val margin = new Margin.margin view
     val mutable gutter_icons = []
     val hyperlink = Gmisclib.Text.hyperlink ~view ()
     val mutable signal_id_highlight_current_line = None
@@ -241,7 +241,7 @@ and view ?project ?buffer () =
     method hyperlink = hyperlink
 
     method signal_expose = signal_expose
-    method gutter = gutter
+    method gutter = margin#gutter
 
     method hadjustment = hadjustment
     method vadjustment = vadjustment
@@ -474,118 +474,8 @@ and view ?project ?buffer () =
         prev_line_background <- cur_line;
       end
 
-    method private set_gutter_size () =
-      let gutter_fold_size = gutter.Gutter.fold_size + 4 in (* 4 = borders around fold_size *)
-      let fixed = if options#show_markers then Gutter.icon_size + gutter_fold_size else 0 in
-      let size =
-        if options#show_line_numbers then begin
-          approx_char_width <- GPango.to_pixels (self#misc#pango_context#get_metrics())#approx_digit_width;
-          let max_line = buffer#end_iter#line in
-          let n_chars = String.length (string_of_int (max_line + 1)) in
-          gutter.Gutter.chars <- n_chars;
-          (max (Gutter.icon_size * 2) (n_chars * approx_char_width + gutter.Gutter.spacing)) + gutter_fold_size
-        end else begin
-          gutter.Gutter.chars <- 0;
-          fixed
-        end;
-      in
-      self#set_border_window_size ~typ:`LEFT ~size;
-      gutter.Gutter.size <- size;
-      gutter.Gutter.fold_x <- size - gutter.Gutter.fold_size; (* 2 borders on the right of fold_size *)
-
-    method private gutter_icons_same_pos child x y ym =
-      match List_opt.assoc ym gutter_icons with
-      | Some other ->
-          if child#misc#parent <> None && other#misc#parent <> None && other#misc#get_oid <> child#misc#get_oid then begin
-            let offset = (gutter.Gutter.size - gutter.Gutter.fold_size) / 4 in
-            self#move_child ~child:other ~x:(x - offset) ~y;
-            self#move_child ~child ~x:(x + offset) ~y
-          end
-      | _ -> ()
-
     method draw_gutter () = (* 0.008 *)
-      (*Prf.crono Prf.prf_draw_gutter begin fun () ->*)
-      try
-        self#set_gutter_size();
-        let vrect = self#visible_rect in
-        let h0 = Gdk.Rectangle.height vrect in
-        let y0 = Gdk.Rectangle.y vrect in
-        let start, _ = self#get_line_at_y y0 in
-        let stop, _ = self#get_line_at_y (y0 + h0) in
-        (** Line Numbers *)
-        if (self#misc#get_flag `REALIZED) && options#show_line_numbers then begin
-          (*Prf.crono Prf.prf_line_numbers begin fun () ->*)
-          Line_num_labl.reset line_num_labl;
-          let iter = ref start#backward_line in
-          let stop = stop#forward_line in
-          let x = gutter.Gutter.size - gutter.Gutter.fold_size - 4 - gutter.Gutter.spacing in
-          let y = ref 0 in
-          let h = ref 0 in
-          let num = ref 0 in
-          while not (!iter#equal stop) do
-            num := !iter#line + 1;
-            let yl, hl = self#get_line_yrange !iter in
-            y := yl - y0 + self#pixels_above_lines;
-            h := hl;
-            Line_num_labl.print ~view:self ~num:!num ~x ~y:!y ~width_chars:gutter.Gutter.chars line_num_labl;
-            iter := !iter#forward_line;
-          done;
-          let y = !y  + !h in
-          incr num;
-          Line_num_labl.print ~view:self ~num:!num ~x ~y ~width_chars:gutter.Gutter.chars line_num_labl
-          (*end()*)
-        end;
-        (** Markers *)
-        (*Prf.crono Prf.prf_other_markers begin fun () ->*)
-        let x = (gutter.Gutter.size - gutter.Gutter.fold_size - 3 - Gutter.icon_size) / 2 (*1*) in
-        List.iter begin fun mark ->
-          match mark.Gutter.icon_pixbuf with
-          | Some pixbuf ->
-              begin
-                match buffer#get_iter_at_mark_opt (`MARK mark.Gutter.mark) with
-                | Some mark_iter ->
-                    let ym, h = self#get_line_yrange mark_iter in
-                    let y = ym - y0 in
-                    Line_num_labl.hide (y + self#pixels_above_lines) line_num_labl;
-                    let y = y + (h - Gutter.icon_size) / 2 in
-                    let child = match mark.Gutter.icon_obj with
-                      | None ->
-                          let ebox = GBin.event_box () in
-                          ebox#misc#set_property "visible-window" (`BOOL false);
-                          let icon = GMisc.image ~pixbuf () in
-                          ebox#add icon#coerce;
-                          Gaux.may mark.Gutter.callback ~f:begin fun callback ->
-                            ignore (ebox#event#connect#enter_notify ~callback:begin fun ev ->
-                                let window = GdkEvent.get_window ev in
-                                Gdk.Window.set_cursor window (Gdk.Cursor.create `HAND1);
-                                true
-                              end);
-                            ignore (ebox#event#connect#leave_notify ~callback:begin fun ev ->
-                                let window = GdkEvent.get_window ev in
-                                Gdk.Window.set_cursor window (Gdk.Cursor.create `ARROW);
-                                true
-                              end);
-                            ebox#event#connect#button_press ~callback:begin fun _ ->
-                              self#misc#grab_focus();
-                              callback mark.Gutter.mark
-                            end
-                          end;
-                          let child = ebox#coerce in
-                          ignore (child#misc#connect#destroy ~callback:(fun () -> gutter_icons <- List.remove_assoc ym gutter_icons));
-                          self#add_child_in_window ~child ~which_window:`LEFT ~x ~y;
-                          mark.Gutter.icon_obj <- Some child;
-                          gutter_icons <- (ym, child) :: gutter_icons;
-                          child
-                      | Some child -> self#move_child ~child ~x ~y; child
-                    in
-                    self#gutter_icons_same_pos child x y ym;
-                | _ -> ()
-              end;
-          | _ -> ()
-        end gutter.Gutter.markers;
-        (*end ()*)
-      with ex -> eprintf "%s\n%s\n%!" (Printexc.to_string ex) (Printexc.get_backtrace())
-    (*end ()*)
+      margin#draw ~show_markers:options#show_markers ~show_line_numbers:options#show_line_numbers ~approx_char_width;
 
     method private expose ev =
       try
@@ -612,17 +502,7 @@ and view ?project ?buffer () =
               if options#show_indent_lines && not options#show_whitespace_chars
               then (Text_indent_lines.draw_indent_lines self drawable) start stop y0;
               (* Gutter border *)
-              begin
-                match self#get_window `LEFT with
-                | Some window ->
-                    let drawable    = new GDraw.drawable window in
-                    drawable#set_line_attributes ~style:`SOLID ();
-                    drawable#set_foreground gutter.Gutter.border_color;
-                    drawable#line ~x:(gutter.Gutter.size - 1) ~y:0 ~x:(gutter.Gutter.size - 1) ~y:h0;
-                    if gutter.Gutter.fold_size > 0 then
-                      drawable#line ~x:(gutter.Gutter.size - 2 - gutter.Gutter.fold_size) ~y:0 ~x:(gutter.Gutter.size - 2 - gutter.Gutter.fold_size) ~y:h0;
-                | _ -> ()
-              end;
+              (*margin#draw_border ~height:h0;*) (* not useful *)
               (* Right margin line *)
               begin
                 match options#visible_right_margin with
