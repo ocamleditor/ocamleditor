@@ -20,8 +20,6 @@
 
 *)
 
-open Printf
-
 type t = {
   mutable locked : (int * GMisc.label) list;
   mutable free : GMisc.label list;

@@ -414,6 +414,7 @@ let view ~browser ~group ~flags
   ignore (enable_code_folding#connect#after#toggled ~callback:begin fun () ->
       Menu_view.toggle_code_folding ~enable_code_folding editor
     end);
+  enable_code_folding#misc#set_sensitive false;
   let collapse_enclosing = GMenu.menu_item ~label:"Toggle Current Fold" ~packing:code_folding_menu#add () in
   ignore (collapse_enclosing#connect#activate ~callback:(fun () ->
       editor#with_current_page (fun page -> ignore (page#ocaml_view#code_folding#toggle_current_fold()))));

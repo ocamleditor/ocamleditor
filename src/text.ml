@@ -204,6 +204,9 @@ and view ?project ?buffer () =
   let create_highlight_current_line_tag () =
     buffer#create_tag ~name:(sprintf "highlight_current_line_tag_%f" (Unix.gettimeofday())) []
   in
+  let margin = new Margin.container view in
+  let margin_line_numbers = new Margin.line_numbers view in
+  let margin_markers = new Margin.markers margin#gutter margin_line_numbers in
   object (self)
     inherit GText.view view#as_view as super
 
@@ -216,10 +219,8 @@ and view ?project ?buffer () =
     val mutable current_matching_tag_bounds = []
     val mutable current_matching_tag_bounds_draw = []
     val mutable approx_char_width = 0
-    val line_num_labl = Line_num_labl.create()
     val visible_height = new GUtil.variable 0
     val mutable signal_expose : GtkSignal.id option = None
-    val margin = new Margin.container view
     val mutable gutter_icons = []
     val hyperlink = Gmisclib.Text.hyperlink ~view ()
     val mutable signal_id_highlight_current_line = None
@@ -263,8 +264,6 @@ and view ?project ?buffer () =
       tag_table#remove highlight_current_line_tag#as_tag;
       highlight_current_line_tag <- create_highlight_current_line_tag();
       self#options#set_highlight_current_line options#highlight_current_line
-
-    method line_num_labl = line_num_labl
 
     method highlight_current_line_tag = highlight_current_line_tag
 
@@ -501,8 +500,6 @@ and view ?project ?buffer () =
               (* Indentation guidelines *)
               if options#show_indent_lines && not options#show_whitespace_chars
               then (Text_indent_lines.draw_indent_lines self drawable) start stop y0;
-              (* Gutter border *)
-              (*margin#draw_border ~height:h0;*) (* not useful *)
               (* Right margin line *)
               begin
                 match options#visible_right_margin with
@@ -688,9 +685,20 @@ and view ?project ?buffer () =
       | _ -> ()
 
     initializer
-      margin#add (new Margin.line_numbers());
+      margin#add (margin_line_numbers :> Margin.margin);
+      margin#add margin_markers;
       margin#connect#update ~callback:(fun () -> approx_char_width <- margin#approx_char_width) |> ignore;
-      Preferences.preferences#connect#changed ~callback:begin fun _ ->
+      view#misc#connect#style_set ~callback:begin fun () ->
+        let fd = self#misc#pango_context#font_description in
+        margin_line_numbers#resize ~desc:fd ();
+        (* Applies the new font size to labels that have been created after
+           the number of lines of text has increased. *)
+        Gmisclib.Idle.add ~prio:300 begin fun () ->
+          margin_line_numbers#resize ~desc:fd ();
+          Gmisclib.Idle.add self#draw_gutter
+        end;
+      end |> ignore;
+      (*Preferences.preferences#connect#changed ~callback:begin fun _ ->
         self#gutter.Gutter.bg_color <- `WHITE;
         self#gutter.Gutter.fg_color <- `WHITE;
         self#gutter.Gutter.border_color <- `WHITE;
@@ -698,9 +706,9 @@ and view ?project ?buffer () =
         self#gutter.Gutter.marker_bg_color <- `WHITE;
         Gmisclib.Idle.add begin fun () ->
           Text_init.update_gutter_colors self;
-          Line_num_labl.iter (fun x -> x#misc#modify_fg [`NORMAL, self#gutter.Gutter.marker_color]) line_num_labl
+          margin_line_numbers#modify_color self#gutter.Gutter.marker_color
         end;
-      end |> ignore;
+        end |> ignore;*)
       ignore (options#connect#mark_occurrences_changed ~callback:(fun _ -> self#mark_occurrences_manager#mark()));
       ignore (options#connect#after#mark_occurrences_changed ~callback:begin function
         | true, _, color ->
@@ -708,14 +716,15 @@ and view ?project ?buffer () =
         | _ -> ()
         end);
       ignore (options#connect#after#line_numbers_changed ~callback:begin fun _ ->
-          Line_num_labl.reset line_num_labl;
+          margin_line_numbers#reset();
           Gmisclib.Idle.add self#draw_gutter
         end);
       ignore (options#connect#line_numbers_font_changed ~callback:begin fun fontname ->
-          Line_num_labl.iter (fun x -> x#misc#modify_font_by_name fontname) line_num_labl
+          margin_line_numbers#resize ~desc:(GPango.font_description fontname) ()
         end);
       options#set_line_numbers_font view#misc#pango_context#font_name;
-      ignore (options#connect#after#show_markers_changed ~callback:(fun _ -> Gmisclib.Idle.add self#draw_gutter));
+      ignore (options#connect#after#show_markers_changed ~callback:(fun _ ->
+          Gmisclib.Idle.add self#draw_gutter));
       ignore (options#connect#word_wrap_changed ~callback:(fun x -> self#set_wrap_mode (if x then `WORD else `NONE)));
       ignore (options#connect#after#highlight_current_line_changed ~callback:begin fun x ->
           prev_line_background <- 0;

@@ -250,6 +250,7 @@ let load () =
         preferences#get.theme_is_dark <- false;
     |  _-> ()
   end;
+  preferences#get.editor_code_folding_enabled <- false;
   Gmisclib.Window.GeometryMemo.set_enabled geometry_memo preferences#get.remember_window_geometry;
   Gmisclib.Window.GeometryMemo.set_delayed geometry_memo preferences#get.geometry_delayed;
   Otherwidgets_config.geometry_memo := (fun () -> geometry_memo)
