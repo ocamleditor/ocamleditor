@@ -262,9 +262,9 @@ class manager ~(view : Text.view) =
               drawable#polygon ~filled:false square;
               drawable#segments [(xm, ym1 + dx12 + 1), (xm, ym1 + dx1*2 - 1); (xm - dxdx12 + 1, ym1 + dx), (xm + dxdx12 - 1, ym1 + dx)];
             end else begin
-              drawable#set_foreground view#gutter.Gutter.bg_color;
+              drawable#set_foreground (`COLOR (view#misc#style#base `NORMAL));
               if unmatched then begin
-                drawable#set_foreground view#gutter.Gutter.bg_color;
+                drawable#set_foreground (`COLOR (view#misc#style#base `NORMAL));
                 drawable#polygon ~filled:true square;
                 drawable#set_foreground light_marker_color;
                 drawable#polygon ~filled:false square;

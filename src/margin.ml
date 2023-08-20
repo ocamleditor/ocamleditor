@@ -1,7 +1,6 @@
 open Gutter
 
 let icon_size = 15
-let icon_size_3_4 = icon_size * 3 / 4
 
 class virtual margin () =
   object (self)
@@ -75,7 +74,7 @@ class line_numbers (view : GText.view) =
             label
         | [] ->
             let label = GMisc.label ~xalign:1.0 ~yalign:0.5 ~text ~show:false () in
-            label#misc#modify_fg [`NORMAL, `COLOR (view#misc#style#fg `NORMAL)];
+            label#misc#modify_text [`NORMAL, `COLOR (Preferences.editor_tag_bg_color "lident")];
             label#misc#modify_font_by_name Preferences.preferences#get.editor_base_font;
             label#set_width_chars label_max_chars;
             view#add_child_in_window ~child:label#coerce ~which_window:`LEFT ~x:left ~y:top;
@@ -96,8 +95,7 @@ class markers gutter margin_line_numbers =
     method size = 0
 
     method draw ~view ~top ~left ~height ~start ~stop =
-      let width = margin_line_numbers#size in
-      let left = left - width + width / 2 - icon_size_3_4 in
+      let left = left - icon_size in (* icon right aligned *)
       gutter.markers
       |> List.iter begin fun mark ->
         match mark.icon_pixbuf with
@@ -109,12 +107,12 @@ class markers gutter margin_line_numbers =
                   let y = ym - top in
                   margin_line_numbers#hide_label (y + view#pixels_above_lines);
                   let y = y + (h - icon_size) / 2 in
-                  let child = match mark.icon_obj with
+                  begin
+                    match mark.icon_obj with
                     | None ->
                         let ebox = GBin.event_box () in
                         ebox#misc#set_property "visible-window" (`BOOL false);
-                        let icon = GMisc.image ~pixbuf () in
-                        ebox#add icon#coerce;
+                        let _ = GMisc.image ~pixbuf ~packing:ebox#add () in
                         Gaux.may mark.callback ~f:begin fun callback ->
                           ebox#event#connect#enter_notify ~callback:begin fun ev ->
                             let window = GdkEvent.get_window ev in
@@ -134,30 +132,30 @@ class markers gutter margin_line_numbers =
                         let child = ebox#coerce in
                         child#misc#connect#destroy ~callback:(fun () -> icons <- List.remove_assoc ym icons) |> ignore;
                         view#add_child_in_window ~child ~which_window:`LEFT ~x:left ~y;
+                        Gmisclib.Idle.add (fun () -> self#spread_markers view left y ym);
                         mark.icon_obj <- Some child;
                         icons <- (ym, child) :: icons;
-                        child
-                    | Some child -> view#move_child ~child ~x:left ~y; child
-                  in
-                  self#icons_same_pos view child left y ym;
+                    | _ ->
+                        self#spread_markers view left y ym;
+                  end;
               | _ -> ()
             end;
         | _ -> ()
       end
 
-    method private icons_same_pos view child x y ym =
-      match List_opt.assoc ym icons with
-      | Some other ->
-          if child#misc#parent <> None && other#misc#parent <> None && other#misc#get_oid <> child#misc#get_oid then begin
-            let offset = icon_size / 2 in
-            view#move_child ~child:other ~x:(x - offset) ~y;
-            view#move_child ~child ~x:(x + offset) ~y
-          end
-      | _ -> ()
+    method private spread_markers view x y ym =
+      icons
+      |> List.filter (fun (ym', _) -> ym = ym')
+      |> List.fold_left begin fun x (_, child) ->
+        view#move_child ~child ~x ~y;
+        x - icon_size
+      end x |> ignore
   end
 
 class container (view : GText.view) =
   let gutter = Gutter.create () in
+  let left_spacing = 5 in
+  let right_spacing = 5 in
   object (self)
     val update = new update
     val mutable childs : margin list = []
@@ -185,8 +183,9 @@ class container (view : GText.view) =
               margin#draw ~view ~top ~left ~height ~start ~stop;
               left + margin#size
             end else left
-          end 0
+          end left_spacing
         in
+        let size = size + right_spacing in
         gutter.size <- size;
         view#set_border_window_size ~typ:`LEFT ~size;
         approx_char_width <- GPango.to_pixels (view#misc#pango_context#get_metrics())#approx_digit_width;

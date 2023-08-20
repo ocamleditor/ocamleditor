@@ -112,7 +112,7 @@ module type DIFF = sig
       changed_after_last_diff : bool; get_filename : string;
       set_changed_after_last_diff : bool -> unit;
       set_global_gutter_tooltips : ((int * int * int * int) * (unit -> GObj.widget)) list -> unit;
-      view : < gutter : Gutter.t; ..>;
+      view : < gutter : Gutter.t; misc : < style : < base : [> `NORMAL ] -> Gdk.color; .. >; .. >; ..>;
       vscrollbar : GRange.range;
       get_oid : int;
       .. > as 'a

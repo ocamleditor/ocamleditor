@@ -306,7 +306,7 @@ class error_indication (view : Ocaml_text.view) vscrollbar global_gutter =
         let x0 = width0 - width in
         let alloc = vscrollbar#misc#allocation in
         (* Clean up *)
-        drawable#set_foreground view#gutter.Gutter.bg_color;
+        drawable#set_foreground (`COLOR (view#misc#style#base `NORMAL));
         drawable#rectangle ~filled:true ~x:x0 ~y:0 ~width ~height ();
         (* Rectangles at the top and bottom *)
         (* Rectangle at the top in different color *)

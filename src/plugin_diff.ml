@@ -37,7 +37,7 @@ module Diff = struct
       changed_after_last_diff : bool; get_filename : string;
       set_changed_after_last_diff : bool -> unit;
       set_global_gutter_tooltips : ((int * int * int * int) * (unit -> GObj.widget)) list -> unit;
-      view : < gutter : Gutter.t; ..>;
+      view : < gutter : Gutter.t; misc : < style : < base : [> `NORMAL ] -> Gdk.color; .. >; .. >; ..>;
       vscrollbar : GRange.range;
       get_oid : int;
       .. > as 'a
@@ -146,7 +146,7 @@ module Diff = struct
     let width = global_gutter_diff_size in
     let line_count = float page#buffer#line_count in
     let open Odiff in
-    drawable#set_foreground page#view#gutter.Gutter.bg_color;
+    drawable#set_foreground (`COLOR (page#view#misc#style#base `NORMAL));
     drawable#rectangle ~filled:true ~x:0 ~y:0 ~width ~height ();
     page#set_global_gutter_tooltips [];
     let black = page#view#gutter.Gutter.marker_color in

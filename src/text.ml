@@ -698,17 +698,6 @@ and view ?project ?buffer () =
           Gmisclib.Idle.add self#draw_gutter
         end;
       end |> ignore;
-      (*Preferences.preferences#connect#changed ~callback:begin fun _ ->
-        self#gutter.Gutter.bg_color <- `WHITE;
-        self#gutter.Gutter.fg_color <- `WHITE;
-        self#gutter.Gutter.border_color <- `WHITE;
-        self#gutter.Gutter.marker_color <- `WHITE;
-        self#gutter.Gutter.marker_bg_color <- `WHITE;
-        Gmisclib.Idle.add begin fun () ->
-          Text_init.update_gutter_colors self;
-          margin_line_numbers#modify_color self#gutter.Gutter.marker_color
-        end;
-        end |> ignore;*)
       ignore (options#connect#mark_occurrences_changed ~callback:(fun _ -> self#mark_occurrences_manager#mark()));
       ignore (options#connect#after#mark_occurrences_changed ~callback:begin function
         | true, _, color ->
@@ -749,7 +738,6 @@ and view ?project ?buffer () =
               self#draw_current_line_background ~force:true (self#buffer#get_iter `INSERT)
         end);
       Text_init.key_press ?project self;
-      Text_init.realize self;
       Text_init.select_lines_from_gutter self;
       (** Margin and line spacings *)
       (* To avoid strange application crash, avoid to draw the border of

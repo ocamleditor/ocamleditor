@@ -66,10 +66,12 @@ class "GtkTextView" style "s1"
       let color = (*`NAME*) (?? (Preferences.default_values.editor_bg_color_user)) in
       (*view#misc#modify_bg [`NORMAL, (Oe_config.gutter_color_bg color)];*)
       view#misc#modify_base [`NORMAL, `NAME color];
+      view#misc#modify_bg [`NORMAL, `NAME color];
       color;
     end else begin
       let color = (*`NAME*) (?? (pref.editor_bg_color_user)) in
       view#misc#modify_base [`NORMAL, `NAME color];
+      view#misc#modify_bg [`NORMAL, `NAME color];
       color;
     end;
   in
