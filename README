@@ -31,10 +31,12 @@ DEPENDENCIES
   * Xml-light (installed with Findlib);
   * Findlib-1.4.0;
   * ocp-indent;
+  * yojson;
+  * atdgen;
+  * ocamldiff;
   * (optional) ocurl-0.6 to allow remote editing;
   * (optional) Dot command to display the module dependencies graph;
   * (optional) Lablgtk.rsvg to embed the graph viewer in the editor.
-  * (optional) ocamldiff.
 
 
 

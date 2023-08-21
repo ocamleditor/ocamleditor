@@ -195,7 +195,7 @@
       <libs>process_termination odoc_info gmisclib common icons otherwidgets oebuildlib ocamleditor_lib</libs>
       <other_objects></other_objects>
       <files>ocamleditor.ml</files>
-      <package>atdgen-runtime,compiler-libs.common,dynlink,lablgtk2,ocp-indent.lib,str,unix,xml-light,yojson</package>
+      <package>atdgen-runtime,compiler-libs.common,diff,dynlink,lablgtk2,ocp-indent.lib,str,unix,xml-light,yojson</package>
       <includes>+ocamldoc gmisclib common icons otherwidgets oebuild </includes>
       <thread>true</thread>
       <vmthread>false</vmthread>
@@ -211,7 +211,7 @@
       <lib_install_path></lib_install_path>
       <external_tasks/>
       <restrictions></restrictions>
-      <dependencies>14,19,16,26,22</dependencies>
+      <dependencies>14,19,16,22</dependencies>
     </target>
     <target name="ocamleditor-bytecode" default="false" id="0" sub_targets="" is_fl_package="false" subsystem="Console" readonly="false" visible="true" node_collapsed="false">
       <descr></descr>
@@ -220,7 +220,7 @@
       <libs>process_termination odoc_info gmisclib common icons otherwidgets oebuildlib</libs>
       <other_objects></other_objects>
       <files>ocamleditor.ml</files>
-      <package>atdgen-runtime,compiler-libs.common,dynlink,lablgtk2,ocp-indent.lib,str,unix,xml-light,yojson</package>
+      <package>atdgen-runtime,compiler-libs.common,diff,dynlink,lablgtk2,ocp-indent.lib,str,unix,xml-light,yojson</package>
       <includes>+ocamldoc gmisclib common icons otherwidgets oebuild </includes>
       <thread>true</thread>
       <vmthread>false</vmthread>
@@ -236,7 +236,7 @@
       <lib_install_path></lib_install_path>
       <external_tasks/>
       <restrictions></restrictions>
-      <dependencies>4,10,7,5,28,8,9,20,17,18,25</dependencies>
+      <dependencies>4,10,7,5,8,9,20,17,18</dependencies>
     </target>
     <target name="ocamleditor-msvc" default="false" id="15" sub_targets="" is_fl_package="false" subsystem="Console" readonly="false" visible="true" node_collapsed="false">
       <descr></descr>
@@ -276,7 +276,7 @@
         </task>
       </external_tasks>
       <restrictions>IS_WIN32</restrictions>
-      <dependencies>14,19,16,26,22</dependencies>
+      <dependencies>14,19,16,22</dependencies>
       <resource_file>
         <filename>.\ocamleditor.opt.resource.rc</filename>
         <title>OCamlEditor</title>
@@ -294,7 +294,7 @@
       <libs>process_termination odoc_info gmisclib common icons otherwidgets oebuildlib ocamleditor_lib</libs>
       <other_objects></other_objects>
       <files>ocamleditor.ml</files>
-      <package>atdgen-runtime,compiler-libs.common,dynlink,lablgtk2,ocp-indent.lib,str,unix,xml-light,yojson</package>
+      <package>atdgen-runtime,compiler-libs.common,diff,dynlink,lablgtk2,ocp-indent.lib,str,unix,xml-light,yojson</package>
       <includes>+ocamldoc gmisclib common icons otherwidgets oebuild </includes>
       <thread>true</thread>
       <vmthread>false</vmthread>
@@ -310,7 +310,7 @@
       <lib_install_path></lib_install_path>
       <external_tasks/>
       <restrictions></restrictions>
-      <dependencies>14,19,16,26</dependencies>
+      <dependencies>14,19,16</dependencies>
     </target>
     <target name="ocamleditor-lib" default="false" id="14" sub_targets="" is_fl_package="false" subsystem="" readonly="false" visible="true" node_collapsed="false">
       <descr></descr>
@@ -319,7 +319,7 @@
       <libs></libs>
       <other_objects></other_objects>
       <files>ocamleditor_lib.ml</files>
-      <package>atdgen-runtime,compiler-libs.common,dynlink,lablgtk2,ocp-indent.lib,str,unix,xml-light,yojson</package>
+      <package>atdgen-runtime,compiler-libs.common,diff,dynlink,lablgtk2,ocp-indent.lib,str,unix,xml-light,yojson</package>
       <includes>+ocamldoc gmisclib common icons otherwidgets oebuild </includes>
       <thread>true</thread>
       <vmthread>false</vmthread>
@@ -344,7 +344,7 @@
       <libs></libs>
       <other_objects></other_objects>
       <files>remote.ml</files>
-      <package>curl,lablgtk2</package>
+      <package>atdgen-runtime,curl,lablgtk2,yojson</package>
       <includes>common icons otherwidgets gmisclib</includes>
       <thread>false</thread>
       <vmthread>false</vmthread>
@@ -369,7 +369,7 @@
       <libs></libs>
       <other_objects></other_objects>
       <files>remote.ml</files>
-      <package>curl,lablgtk2</package>
+      <package>curl,diff,lablgtk2</package>
       <includes>common icons otherwidgets gmisclib</includes>
       <thread>false</thread>
       <vmthread>false</vmthread>
@@ -435,56 +435,6 @@
       <lib_install_path></lib_install_path>
       <external_tasks/>
       <restrictions>FINDLIB(lablgtk2.rsvg)</restrictions>
-      <dependencies></dependencies>
-    </target>
-    <target name="plugin-diff-bytecode" default="false" id="25" sub_targets="" is_fl_package="false" subsystem="" readonly="false" visible="true" node_collapsed="false">
-      <descr></descr>
-      <byt>true</byt>
-      <opt>false</opt>
-      <libs></libs>
-      <other_objects></other_objects>
-      <files>plugin_diff_gtext.ml plugin_diff.ml</files>
-      <package>compiler-libs.common,diff,lablgtk2,str,unix,xml-light</package>
-      <includes>common otherwidgets gmisclib oebuild +ocamldoc icons</includes>
-      <thread>true</thread>
-      <vmthread>false</vmthread>
-      <pp></pp>
-      <inline></inline>
-      <nodep>false</nodep>
-      <dontlinkdep>true</dontlinkdep>
-      <dontaddopt>false</dontaddopt>
-      <cflags>-g -w -26-10</cflags>
-      <lflags>-g odiff.cma</lflags>
-      <target_type>Library</target_type>
-      <outname>../plugins/plugin_diff</outname>
-      <lib_install_path></lib_install_path>
-      <external_tasks/>
-      <restrictions>FINDLIB(diff)</restrictions>
-      <dependencies></dependencies>
-    </target>
-    <target name="plugin-diff-native" default="false" id="26" sub_targets="" is_fl_package="false" subsystem="" readonly="false" visible="true" node_collapsed="false">
-      <descr></descr>
-      <byt>false</byt>
-      <opt>true</opt>
-      <libs></libs>
-      <other_objects></other_objects>
-      <files>plugin_diff_gtext.ml plugin_diff.ml </files>
-      <package>compiler-libs.common,diff,lablgtk2,str,unix,xml-light</package>
-      <includes>common otherwidgets gmisclib oebuild icons</includes>
-      <thread>true</thread>
-      <vmthread>false</vmthread>
-      <pp></pp>
-      <inline></inline>
-      <nodep>false</nodep>
-      <dontlinkdep>true</dontlinkdep>
-      <dontaddopt>false</dontaddopt>
-      <cflags>-g -w -26-10-58</cflags>
-      <lflags>-g odiff.cmxa</lflags>
-      <target_type>Plugin</target_type>
-      <outname>../plugins/plugin_diff</outname>
-      <lib_install_path></lib_install_path>
-      <external_tasks/>
-      <restrictions>FINDLIB(diff)</restrictions>
       <dependencies></dependencies>
     </target>
     <target name="prepare-build" default="false" id="20" sub_targets="" is_fl_package="false" subsystem="Console" readonly="false" visible="true" node_collapsed="false">
@@ -812,8 +762,6 @@
       <target target_id="16" show="true"/>
       <target target_id="18" show="true"/>
       <target target_id="19" show="true"/>
-      <target target_id="25" show="true"/>
-      <target target_id="26" show="true"/>
       <target target_id="20" show="false"/>
       <target target_id="22" show="true"/>
       <target target_id="13" show="false"/>

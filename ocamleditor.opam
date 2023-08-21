@@ -26,8 +26,11 @@ depends: [
   "xml-light" {>= "2.2"}
   "yojson" {>= "2.1"}
   "atdgen" {>= "2.12"}
+  "ocamldiff" {>= "1.1"}
 ]
 depopts: [
   "ocurl"
-  "ocamldiff"
+]
+pin-depends: [
+  ["ocamldiff.1.1" "git+https://framagit.org/zoggy/ocamldiff.git"]
 ]
