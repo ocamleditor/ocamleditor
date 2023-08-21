@@ -238,7 +238,7 @@ let rec paint_gutter page =
 
 (** to_buffer *)
 let to_buffer (buffer : GText.buffer) ignore_whitespace filename1 filename2 =
-  (*Plugin_diff_gtext.insert buffer ignore_whitespace filename1 filename2*) ()
+  Global_diff_gtext.insert buffer ignore_whitespace filename1 filename2 
 
 (** Initialization *)
 let initialize editor =
