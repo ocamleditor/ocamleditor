@@ -40,7 +40,7 @@ module Log = Common.Log.Make (struct
     let prefix = "Git"
   end)
 
-let _ = Log.set_verbosity `DEBUG
+let _ = Log.set_verbosity `ERROR
 
 let markup_of_status s =
   [

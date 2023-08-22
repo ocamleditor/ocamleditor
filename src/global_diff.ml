@@ -5,38 +5,10 @@ let global_gutter_diff_sep = 1
 let fact = 0.0
 open Preferences
 let color_add = `NAME (ColorOps.add_value (?? Oe_config.global_gutter_diff_color_add) 0.25)
-let color_del = `NAME (ColorOps.add_value (?? Oe_config.global_gutter_diff_color_del) 0.25)
+let color_del = `NAME (ColorOps.add_value (?? Oe_config.global_gutter_diff_color_del) 0.65)
 let color_change = `NAME (?? Oe_config.global_gutter_diff_color_change)
 
 let initialized : (int * Margin_diff.widget) list ref = ref []
-
-(** init_page *)
-let init_page page =
-  match List.assoc_opt page#get_oid !initialized with
-  | None ->
-      let change_size () =
-        let _, height = (new GDraw.drawable page#global_gutter#misc#window)#size in
-        let new_width = Oe_config.global_gutter_size + global_gutter_diff_size + global_gutter_diff_sep in
-        page#global_gutter#set_size ~width:new_width ~height;
-        page#global_gutter#event#connect#button_release ~callback:begin fun ev ->
-          if (GdkEvent.Button.button ev = 3 && GdkEvent.get_type ev = `BUTTON_RELEASE) then begin
-            let x = GdkEvent.Button.x ev in
-            let y = GdkEvent.Button.y ev in
-            if int_of_float x < global_gutter_diff_size then begin
-              (*Printf.printf "----> %f, %f\n%!" x y;*)
-            end;
-          end;
-          true
-        end |> ignore;
-        let margin = new Margin_diff.widget page#view in
-        page#view#margin#add (margin :> Margin.margin);
-        initialized := (page#get_oid, margin) :: !initialized;
-      in
-      begin
-        try change_size () with Gpointer.Null ->
-          page#global_gutter#misc#connect#after#realize ~callback:change_size |> ignore
-      end;
-  | _ -> ()
 
 (** create_label_tooltip *)
 let create_label_tooltip elements =
@@ -96,8 +68,6 @@ let wave_line ~(drawable : GDraw.drawable) ~color ~width ~height ~y ~is_add =
       drawable#set_line_attributes ~width ~cap:`ROUND ~style:`SOLID ~join:`ROUND ();
       drawable#lines !polyline
     end;;
-
-let cache : (int, Odiff.diffs) Hashtbl.t = Hashtbl.create 17
 
 (** paint_diffs *)
 let paint_diffs page diffs =
@@ -190,7 +160,9 @@ let paint_diffs page diffs =
   in
   begin
     match List.assoc_opt page#get_oid !initialized with
-    | Some margin -> margin#set_diffs diffs
+    | Some margin ->
+        margin#set_diffs diffs;
+        page#view#draw_gutter()
     | _ -> ()
   end;
   List.iter begin fun diff ->
@@ -206,7 +178,6 @@ let paint_diffs page diffs =
   end diffs
 
 let compare_with_head page continue_with =
-  Printexc.record_backtrace true;
   match Miscellanea.filename_relative (Filename.dirname (Sys.getcwd())) page#get_filename with
   | Some filename ->
       let open Printf in
@@ -215,60 +186,74 @@ let compare_with_head page continue_with =
         ~process_in:(Spawn.loop (fun ic -> Buffer.add_string buf (input_line ic); Buffer.add_char buf '\n'))
         ~continue_with:begin fun _ ->
           let text = page#buffer#get_text ?start:None ?stop:None ?slice:None ?visible:None () in
-          try
+          try (*  *)
             continue_with (Odiff.strings_diffs (Buffer.contents buf) text)
           with ex ->
-            Printf.eprintf "File \"global_diff.ml\": %s\n%s\n%s\n%!"
-              (Printexc.to_string ex) (Printexc.get_backtrace()) (Buffer.contents buf);
+            Printf.eprintf "File \"global_diff.ml\": %s\n%s\n%!"
+              (Printexc.to_string ex) (Printexc.get_backtrace());
         end |> ignore
   | _ -> ()
 
-(** paint_gutter *)
-let rec paint_gutter page =
-  if page#changed_after_last_diff then begin
+let try_compare ?(force=false) page =
+  (*Printf.printf "BEFORE compare_with_head %s changed_after_last_diff=%b force=%b visible=%b\n%!" page#get_filename
+    page#changed_after_last_diff force
+    (page#view#misc#get_flag `VISIBLE);*)
+  if (page#changed_after_last_diff || force) && page#view#misc#get_flag `VISIBLE then begin
+    (*Printf.printf "AFTER compare_with_head %s changed_after_last_diff=%b force=%b visible=%b\n%!" page#get_filename
+      page#changed_after_last_diff force
+      (page#view#misc#get_flag `VISIBLE);*)
     compare_with_head page begin fun diffs ->
-      page#set_changed_after_last_diff false;
-      let diffs =
-        diffs
-        |> List.filter begin fun diff ->
-          match diff with
-          | Odiff.Add (_, _, a) -> String.trim a <> ""
-          | Odiff.Delete (_, _, d) -> String.trim d <> ""
-          | Odiff.Change (_, a, _, b) -> (String.trim a) <> "" || (String.trim b) <> ""
-        end
-      in
-      Hashtbl.replace cache page#get_oid diffs;
+      Printf.printf "compare_with_head %s\n%!" page#get_filename;
       try
-        match diffs with [] -> () | diffs ->
-          diffs |> paint_diffs page
-      with Gpointer.Null -> ()
+        diffs |> paint_diffs page;
+        page#set_changed_after_last_diff false;
+      with Gpointer.Null as ex ->
+        Printf.eprintf "File \"global_diff.ml\": %s\n%s\n%!" (Printexc.to_string ex) (Printexc.get_backtrace());
     end
-  end else begin
-    try
-      let diffs = Hashtbl.find cache page#get_oid in
-      paint_diffs page diffs
-    with
-    | Not_found ->
-        page#set_changed_after_last_diff true;
-        paint_gutter page;
-    | Gpointer.Null -> ()
   end
 
 (** to_buffer *)
 let to_buffer (buffer : GText.buffer) ignore_whitespace filename1 filename2 =
   Global_diff_gtext.insert buffer ignore_whitespace filename1 filename2
 
+(** init_page *)
+let init_page page =
+  match List.assoc_opt page#get_oid !initialized with
+  | None ->
+      let change_size () =
+        let _, height = (new GDraw.drawable page#global_gutter#misc#window)#size in
+        let new_width = Oe_config.global_gutter_size + global_gutter_diff_size + global_gutter_diff_sep in
+        page#global_gutter#set_size ~width:new_width ~height;
+        page#global_gutter#event#connect#button_release ~callback:begin fun ev ->
+          if (GdkEvent.Button.button ev = 3 && GdkEvent.get_type ev = `BUTTON_RELEASE) then begin
+            let x = GdkEvent.Button.x ev in
+            let y = GdkEvent.Button.y ev in
+            if int_of_float x < global_gutter_diff_size then begin
+              (*Printf.printf "----> %f, %f\n%!" x y;*)
+            end;
+          end;
+          true
+        end |> ignore;
+        let margin = new Margin_diff.widget page#view in
+        page#view#margin#add (margin :> Margin.margin);
+        initialized := (page#get_oid, margin) :: !initialized;
+        Gmisclib.Idle.add ~prio:500 page#view#draw_gutter
+      in
+      begin
+        page#view#event#connect#focus_in ~callback:(fun _ -> try_compare ~force:true page; false) |> ignore;
+        try change_size () with Gpointer.Null ->
+          page#global_gutter#misc#connect#after#realize ~callback:change_size |> ignore
+      end;
+  | _ -> ()
+
 (** Initialization *)
 let init_editor editor =
   (* Init editor pages *)
-  editor#with_current_page init_page;
-  let callback pg = Gmisclib.Idle.add ~prio:100 (fun () -> init_page pg) in
+  let callback pg = Gmisclib.Idle.add ~prio:300 (fun () -> init_page pg) in
   editor#connect#add_page ~callback |> ignore;
   editor#connect#switch_page ~callback |> ignore;
-  editor#connect#switch_page ~callback:paint_gutter |> ignore;
   editor#connect#remove_page ~callback:begin fun page ->
     initialized := List.filter (fun (oid, _) -> oid <> page#get_oid) (!initialized);
-    Hashtbl.remove cache page#get_oid;
   end |> ignore;
   (* Timeout *)
   let id_timeout_diff = ref None in
@@ -278,15 +263,14 @@ let init_editor editor =
     let callback () =
       try
         editor#with_current_page begin fun page ->
-          if page#view#misc#get_flag `HAS_FOCUS then (paint_gutter page);
+          if page#view#misc#get_flag `HAS_FOCUS then (try_compare page);
         end;
         true
       with ex ->
         Printf.eprintf "File \"plugin_diff.ml\": %s\n%s\n%!" (Printexc.to_string ex) (Printexc.get_backtrace());
         true
     in
-    editor#with_current_page paint_gutter;
-    id_timeout_diff := Some (GMain.Timeout.add ~ms:3000 ~callback);
+    id_timeout_diff := Some (GMain.Timeout.add ~ms:500 ~callback);
   in
   let bind _ =
     create_timeout_diff();
