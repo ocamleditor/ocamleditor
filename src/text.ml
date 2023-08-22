@@ -242,7 +242,8 @@ and view ?project ?buffer () =
     method hyperlink = hyperlink
 
     method signal_expose = signal_expose
-    method gutter = margin#gutter
+    method gutter = margin#gutter (* Legacy *)
+    method margin = margin
 
     method hadjustment = hadjustment
     method vadjustment = vadjustment

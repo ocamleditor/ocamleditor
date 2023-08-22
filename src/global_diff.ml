@@ -4,34 +4,39 @@ let global_gutter_diff_size = 8
 let global_gutter_diff_sep = 1
 let fact = 0.0
 open Preferences
-let color_add = `NAME (ColorOps.add_value (?? Oe_config.global_gutter_diff_color_add) fact)
-let color_del = `NAME (ColorOps.add_value (?? Oe_config.global_gutter_diff_color_del) fact)
-let color_change = `NAME (ColorOps.add_value (?? Oe_config.global_gutter_diff_color_change) 0.2)
+let color_add = `NAME (ColorOps.add_value (?? Oe_config.global_gutter_diff_color_add) 0.25)
+let color_del = `NAME (ColorOps.add_value (?? Oe_config.global_gutter_diff_color_del) 0.25)
+let color_change = `NAME (?? Oe_config.global_gutter_diff_color_change)
 
-let initialized : int list ref = ref []
+let initialized : (int * Margin_diff.widget) list ref = ref []
 
-(** init *)
-let init page =
-  if not (List.mem page#get_oid !initialized) then begin
-    let change_size () =
-      let _, height = (new GDraw.drawable page#global_gutter#misc#window)#size in
-      let new_width = Oe_config.global_gutter_size + global_gutter_diff_size + global_gutter_diff_sep in
-      page#global_gutter#set_size ~width:new_width ~height;
-      page#global_gutter#event#connect#button_release ~callback:begin fun ev ->
-        if (GdkEvent.Button.button ev = 3 && GdkEvent.get_type ev = `BUTTON_RELEASE) then begin
-          let x = GdkEvent.Button.x ev in
-          let y = GdkEvent.Button.y ev in
-          if int_of_float x < global_gutter_diff_size then begin
-            (*Printf.printf "----> %f, %f\n%!" x y;*)
+(** init_page *)
+let init_page page =
+  match List.assoc_opt page#get_oid !initialized with
+  | None ->
+      let change_size () =
+        let _, height = (new GDraw.drawable page#global_gutter#misc#window)#size in
+        let new_width = Oe_config.global_gutter_size + global_gutter_diff_size + global_gutter_diff_sep in
+        page#global_gutter#set_size ~width:new_width ~height;
+        page#global_gutter#event#connect#button_release ~callback:begin fun ev ->
+          if (GdkEvent.Button.button ev = 3 && GdkEvent.get_type ev = `BUTTON_RELEASE) then begin
+            let x = GdkEvent.Button.x ev in
+            let y = GdkEvent.Button.y ev in
+            if int_of_float x < global_gutter_diff_size then begin
+              (*Printf.printf "----> %f, %f\n%!" x y;*)
+            end;
           end;
-        end;
-        true
-      end |> ignore;
-      initialized := page#get_oid :: !initialized;
-    in
-    try change_size () with Gpointer.Null ->
-      page#global_gutter#misc#connect#after#realize ~callback:change_size |> ignore
-  end
+          true
+        end |> ignore;
+        let margin = new Margin_diff.widget page#view in
+        page#view#margin#add (margin :> Margin.margin);
+        initialized := (page#get_oid, margin) :: !initialized;
+      in
+      begin
+        try change_size () with Gpointer.Null ->
+          page#global_gutter#misc#connect#after#realize ~callback:change_size |> ignore
+      end;
+  | _ -> ()
 
 (** create_label_tooltip *)
 let create_label_tooltip elements =
@@ -183,6 +188,11 @@ let paint_diffs page diffs =
       | _ -> (match b with Delete _ -> -1 | _ -> 0)
     end diffs
   in
+  begin
+    match List.assoc_opt page#get_oid !initialized with
+    | Some margin -> margin#set_diffs diffs
+    | _ -> ()
+  end;
   List.iter begin fun diff ->
     Gmisclib.Idle.add ~prio:200 begin fun () ->
       match diff with
@@ -196,6 +206,7 @@ let paint_diffs page diffs =
   end diffs
 
 let compare_with_head page continue_with =
+  Printexc.record_backtrace true;
   match Miscellanea.filename_relative (Filename.dirname (Sys.getcwd())) page#get_filename with
   | Some filename ->
       let open Printf in
@@ -204,7 +215,11 @@ let compare_with_head page continue_with =
         ~process_in:(Spawn.loop (fun ic -> Buffer.add_string buf (input_line ic); Buffer.add_char buf '\n'))
         ~continue_with:begin fun _ ->
           let text = page#buffer#get_text ?start:None ?stop:None ?slice:None ?visible:None () in
-          continue_with (Odiff.strings_diffs (Buffer.contents buf) text)
+          try
+            continue_with (Odiff.strings_diffs (Buffer.contents buf) text)
+          with ex ->
+            Printf.eprintf "File \"global_diff.ml\": %s\n%s\n%s\n%!"
+              (Printexc.to_string ex) (Printexc.get_backtrace()) (Buffer.contents buf);
         end |> ignore
   | _ -> ()
 
@@ -223,33 +238,36 @@ let rec paint_gutter page =
         end
       in
       Hashtbl.replace cache page#get_oid diffs;
-      match diffs with [] -> () | diffs ->
-        (*Printf.printf "%s\n%!" (Odiff.string_of_diffs diffs);*)
-        diffs |> paint_diffs page
+      try
+        match diffs with [] -> () | diffs ->
+          diffs |> paint_diffs page
+      with Gpointer.Null -> ()
     end
   end else begin
     try
       let diffs = Hashtbl.find cache page#get_oid in
       paint_diffs page diffs
-    with Not_found ->
-      page#set_changed_after_last_diff true;
-      paint_gutter page;
+    with
+    | Not_found ->
+        page#set_changed_after_last_diff true;
+        paint_gutter page;
+    | Gpointer.Null -> ()
   end
 
 (** to_buffer *)
 let to_buffer (buffer : GText.buffer) ignore_whitespace filename1 filename2 =
-  Global_diff_gtext.insert buffer ignore_whitespace filename1 filename2 
+  Global_diff_gtext.insert buffer ignore_whitespace filename1 filename2
 
 (** Initialization *)
-let initialize editor =
+let init_editor editor =
   (* Init editor pages *)
-  editor#with_current_page init;
-  let callback page = Gmisclib.Idle.add ~prio:100 (fun () -> init page) in
+  editor#with_current_page init_page;
+  let callback pg = Gmisclib.Idle.add ~prio:100 (fun () -> init_page pg) in
   editor#connect#add_page ~callback |> ignore;
   editor#connect#switch_page ~callback |> ignore;
   editor#connect#switch_page ~callback:paint_gutter |> ignore;
   editor#connect#remove_page ~callback:begin fun page ->
-    initialized := List.filter ((<>) page#get_oid) (!initialized);
+    initialized := List.filter (fun (oid, _) -> oid <> page#get_oid) (!initialized);
     Hashtbl.remove cache page#get_oid;
   end |> ignore;
   (* Timeout *)

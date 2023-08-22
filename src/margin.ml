@@ -180,11 +180,12 @@ class container (view : GText.view) =
           childs
           |> List.fold_left begin fun left margin ->
             if margin#is_visible then begin
-              margin#draw ~view ~top ~left ~height ~start ~stop;
+              (*Gmisclib.Idle.add ~prio:100 (fun () -> *)margin#draw ~view ~top ~left ~height ~start ~stop;
               left + margin#size
             end else left
           end left_spacing
         in
+        (* TODO Optimize. There is no need to resize with every draw *)
         let size = size + right_spacing in
         gutter.size <- size;
         view#set_border_window_size ~typ:`LEFT ~size;

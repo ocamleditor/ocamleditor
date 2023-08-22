@@ -994,7 +994,7 @@ class editor () =
           | _ -> ()
           end
         end);
-      Global_diff.initialize self
+      Global_diff.init_editor self
   end
 
 (** Signals *)
