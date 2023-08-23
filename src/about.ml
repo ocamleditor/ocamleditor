@@ -22,7 +22,7 @@
 
 
 let program_name = "OCamlEditor"
-let version = "1.14.1"
+let version = "1.14.2"
 let copyright = "Copyright © 2010 - 2023 OCamlEditor Team"
 let website_address = "github.com/ocamleditor/ocamleditor"
 let website = "https://" ^ website_address ^ "/"
