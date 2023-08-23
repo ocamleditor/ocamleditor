@@ -166,6 +166,7 @@ class container (view : GText.view) =
     method approx_char_width = approx_char_width
 
     method add margin = childs <- childs @ [margin]
+    method remove margin = childs <- childs |> List.filter ((<>) margin)
 
     method draw () =
       (* Check `REALIZED to avoid caching line numbers without parent. *)

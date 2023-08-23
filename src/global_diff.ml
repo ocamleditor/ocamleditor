@@ -4,51 +4,19 @@ let global_gutter_diff_size = 8
 let global_gutter_diff_sep = 1
 let fact = 0.0
 open Preferences
-let color_add = `NAME (ColorOps.add_value (?? Oe_config.global_gutter_diff_color_add) 0.25)
-let color_del = `NAME (ColorOps.add_value (?? Oe_config.global_gutter_diff_color_del) 0.65)
+
+let color_add =
+  let sat, value = if Preferences.preferences#get.theme_is_dark then 0.2, 0.4 else -0.2, -0.4 in
+  `NAME (ColorOps.modify (?? Oe_config.global_gutter_diff_color_add) ~sat ~value)
+
+let color_del =
+  let sat, value = if Preferences.preferences#get.theme_is_dark then 0.2, 0.4 else -0.2, -0.4 in
+  `NAME (ColorOps.modify (?? Oe_config.global_gutter_diff_color_del) ~sat ~value)
+
 let color_change = `NAME (?? Oe_config.global_gutter_diff_color_change)
 
 let initialized : (int * Margin_diff.widget) list ref = ref []
 
-(** create_label_tooltip *)
-let create_label_tooltip elements =
-  let ebox = GBin.event_box () in
-  let vbox = GPack.vbox ~spacing:0 ~packing:ebox#add () in
-  let color = Preferences.preferences#get.editor_bg_color_user in
-  ebox#misc#modify_bg [`NORMAL, `NAME (?? color)];
-  let fd = Pango.Font.from_string Preferences.preferences#get.editor_base_font in
-  let size = Pango.Font.get_size fd - 1 * Pango.scale in
-  Pango.Font.modify fd ~size ();
-  let last = List.length elements - 1 in
-  List.iteri begin fun i (color, markup) ->
-    let hbox = GPack.hbox ~spacing:2 ~packing:vbox#pack () in
-    let ebox = GBin.event_box ~width:13 ~packing:hbox#pack () in
-    ebox#misc#modify_bg [`NORMAL, color];
-    let label = GMisc.label ~xalign:0.0 ~yalign:0.5 ~markup ~packing:hbox#add () in
-    label#misc#modify_font fd;
-    if i < last then GMisc.separator `HORIZONTAL ~packing:vbox#add () |> ignore
-  end elements;
-  ebox#coerce
-
-(** create_tooltip *)
-let create_tooltip page width y h text =
-  if Oe_config.global_gutter_diff_tooltips then begin
-    let create_markup = Lexical_markup.parse Preferences.preferences#get in
-    let create_markup text = create_markup text in
-    let tooltip_func () =
-      match text with
-      | [color, text] -> create_label_tooltip [color, create_markup text]
-      | [_, text1; _, text2] ->
-          create_label_tooltip [
-            color_del, create_markup text1;
-            color_add, create_markup text2;
-          ];
-      | _ -> create_label_tooltip []
-    in
-    page#set_global_gutter_tooltips (((0, y - 2, width, h + 2), tooltip_func) :: page#global_gutter_tooltips)
-  end
-
-(** wave_line *)
 let wave_line ~(drawable : GDraw.drawable) ~color ~width ~height ~y ~is_add =
   drawable#set_foreground color;
   let ww = width * 2 / 3 in
@@ -69,7 +37,6 @@ let wave_line ~(drawable : GDraw.drawable) ~color ~width ~height ~y ~is_add =
       drawable#lines !polyline
     end;;
 
-(** paint_diffs *)
 let paint_diffs page diffs =
   let window = page#global_gutter#misc#window in
   let drawable = new GDraw.drawable window in
@@ -132,8 +99,7 @@ let paint_diffs page diffs =
                     drawable#set_foreground black;
                     drawable#rectangle ~filled:false ~x:0 ~y:(y - 2) ~width:(width - 1) ~height ();
               end;
-        end;
-        create_tooltip page width y height elems
+        end
     | Many (l1, l2) ->
         let y1 = y_of_line l1 in
         let y2 = y_of_line l2 in
@@ -149,8 +115,7 @@ let paint_diffs page diffs =
               end;
           | `BW ->
               wave_line ~drawable ~color:black ~width ~height ~y:y1 ~is_add:(color = color_add);
-        end;
-        create_tooltip page width y1 height elems
+        end
   in
   let diffs = List.sort begin fun a b ->
       match a with
@@ -195,15 +160,8 @@ let compare_with_head page continue_with =
   | _ -> ()
 
 let try_compare ?(force=false) page =
-  (*Printf.printf "BEFORE compare_with_head %s changed_after_last_diff=%b force=%b visible=%b\n%!" page#get_filename
-    page#changed_after_last_diff force
-    (page#view#misc#get_flag `VISIBLE);*)
   if (page#changed_after_last_diff || force) && page#view#misc#get_flag `VISIBLE then begin
-    (*Printf.printf "AFTER compare_with_head %s changed_after_last_diff=%b force=%b visible=%b\n%!" page#get_filename
-      page#changed_after_last_diff force
-      (page#view#misc#get_flag `VISIBLE);*)
     compare_with_head page begin fun diffs ->
-      Printf.printf "compare_with_head %s\n%!" page#get_filename;
       try
         diffs |> paint_diffs page;
         page#set_changed_after_last_diff false;
@@ -212,11 +170,9 @@ let try_compare ?(force=false) page =
     end
   end
 
-(** to_buffer *)
 let to_buffer (buffer : GText.buffer) ignore_whitespace filename1 filename2 =
   Global_diff_gtext.insert buffer ignore_whitespace filename1 filename2
 
-(** init_page *)
 let init_page page =
   match List.assoc_opt page#get_oid !initialized with
   | None ->
@@ -246,13 +202,16 @@ let init_page page =
       end;
   | _ -> ()
 
-(** Initialization *)
 let init_editor editor =
-  (* Init editor pages *)
   let callback pg = Gmisclib.Idle.add ~prio:300 (fun () -> init_page pg) in
   editor#connect#add_page ~callback |> ignore;
   editor#connect#switch_page ~callback |> ignore;
   editor#connect#remove_page ~callback:begin fun page ->
+    begin
+      match !initialized |> List.assoc_opt page#get_oid with
+      | Some margin_diff -> page#view#margin#remove (margin_diff :> Margin.margin)
+      | _ -> ()
+    end;
     initialized := List.filter (fun (oid, _) -> oid <> page#get_oid) (!initialized);
   end |> ignore;
   (* Timeout *)

@@ -5,8 +5,14 @@ open Preferences
 
 class widget view =
   let drawing_area = GMisc.drawing_area () in
-  let color_add = `NAME (ColorOps.add_value (?? Oe_config.global_gutter_diff_color_add) 0.25) in
-  let color_del = `NAME (ColorOps.add_value (?? Oe_config.global_gutter_diff_color_del) 0.65) in
+  let color_add =
+    let sat, value = if Preferences.preferences#get.theme_is_dark then 0.2, 0.4 else -0.2, -0.4 in
+    `NAME (ColorOps.modify (?? Oe_config.global_gutter_diff_color_add) ~sat ~value)
+  in
+  let color_del =
+    let sat, value = if Preferences.preferences#get.theme_is_dark then 0.2, 0.4 else -0.65, 1.0 in
+    `NAME (ColorOps.modify (?? Oe_config.global_gutter_diff_color_del) ~sat ~value)
+  in
   let color_change = `NAME (?? Oe_config.global_gutter_diff_color_change) in
   let spacing = 5 in
   let line_width = 1 in
@@ -39,13 +45,13 @@ class widget view =
         drawable#rectangle ~x:0 ~y:0 ~width:area_width ~height ~filled:true ();
         diffs
         |> List.iter begin function
-        | Add (_, ind, a) ->
+        | Add (_, ind, _) ->
             drawable#set_foreground color_add;
             self#draw_bar drawable ind
-        | Delete (_, ind, a) ->
+        | Delete (_, ind, _) ->
             drawable#set_foreground color_del;
             self#draw_triangle drawable ind
-        | Change (_, a, ind, b) ->
+        | Change (_, _, ind, _) ->
             drawable#set_foreground color_change;
             self#draw_bar drawable ind
         end;

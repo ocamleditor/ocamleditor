@@ -81,7 +81,7 @@ let global_gutter_diff_color_add         = { light = "#60b060"; dark = "#13401e"
 let global_gutter_diff_color_del         = { light = "#ff6060"; dark = "#3e181d" }
 let global_gutter_diff_color_change      = { light = "#0079FF"; dark = "#0079FF" }
 let global_gutter_diff_style             = (`COLOR false : [`BW | `COLOR of bool])
-let global_gutter_diff_tooltips          = true
+let global_gutter_diff_tooltips          = false
 let global_gutter_no_errors              = `NAME "#daedd0"
 let find_replace_history_max_length      = 75
 let find_text_output_highlight           = `DEFAULT, `DEFAULT (*`NAME "#ffff7e", `NONE*) (* Background and foreground colors to highlight occurrences where the pattern matches.
