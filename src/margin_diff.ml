@@ -29,7 +29,6 @@ class widget view =
     val mutable top = 0
     val mutable height = 0
     method size = size
-    method is_visible = true
     method set_diffs x = diffs <- x
 
     initializer

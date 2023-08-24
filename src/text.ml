@@ -687,7 +687,7 @@ and view ?project ?buffer () =
 
     initializer
       margin#add (margin_line_numbers :> Margin.margin);
-      margin#add margin_markers;
+      margin#add (margin_markers :> Margin.margin);
       margin#connect#update ~callback:(fun () -> approx_char_width <- margin#approx_char_width) |> ignore;
       view#misc#connect#style_set ~callback:begin fun () ->
         let fd = self#misc#pango_context#font_description in
@@ -705,7 +705,9 @@ and view ?project ?buffer () =
             self#mark_occurrences_manager#tag#set_property (`BACKGROUND_GDK (GDraw.color (`NAME color)));
         | _ -> ()
         end);
-      ignore (options#connect#after#line_numbers_changed ~callback:begin fun _ ->
+      ignore (options#connect#after#line_numbers_changed ~callback:begin fun visible ->
+          margin_line_numbers#set_is_visible visible;
+          margin_markers#set_size (if visible then 0 else margin_markers#icon_size);
           margin_line_numbers#reset();
           Gmisclib.Idle.add self#draw_gutter
         end);

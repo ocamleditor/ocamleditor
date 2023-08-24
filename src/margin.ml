@@ -1,10 +1,10 @@
 open Gutter
 
-let icon_size = 15
-
 class virtual margin () =
   object (self)
-    method virtual is_visible : bool
+    val mutable is_visible = true
+    method is_visible = is_visible
+    method set_is_visible x = is_visible <- x
     method virtual size : int (* width of the margin in pixels *)
     method virtual draw :
       view:GText.view ->
@@ -22,7 +22,6 @@ class line_numbers (view : GText.view) =
     initializer
       self#resize();
 
-    method is_visible = true
     method size = size
     method reset () = Line_num_labl.reset labels
     method private iter func = Line_num_labl.iter func labels
@@ -91,11 +90,13 @@ class markers gutter margin_line_numbers =
   object (self)
     inherit margin ()
     val mutable icons = []
-    method is_visible = true
-    method size = 0
+    val mutable size = 0 (* visible line number => size = 0; hidden => size > 0 *)
+    method icon_size = 15
+    method size = size
+    method set_size x = size <- x
 
     method draw ~view ~top ~left ~height ~start ~stop =
-      let left = left - icon_size in (* icon right aligned *)
+      let left = (if size = 0 then left else left + size) - self#icon_size in (* icon right aligned *)
       gutter.markers
       |> List.iter begin fun mark ->
         match mark.icon_pixbuf with
@@ -106,7 +107,7 @@ class markers gutter margin_line_numbers =
                   let ym, h = view#get_line_yrange (new GText.iter mark_iter) in
                   let y = ym - top in
                   margin_line_numbers#hide_label (y + view#pixels_above_lines);
-                  let y = y + (h - icon_size) / 2 in
+                  let y = y + (h - self#icon_size) / 2 in
                   begin
                     match mark.icon_obj with
                     | None ->
@@ -148,7 +149,7 @@ class markers gutter margin_line_numbers =
       |> List.filter (fun (ym', _) -> ym = ym')
       |> List.fold_left begin fun x (_, child) ->
         view#move_child ~child ~x ~y;
-        x - icon_size
+        x - (if self#size = 0 then self#icon_size - 4 else 0 )
       end x |> ignore
   end
 
