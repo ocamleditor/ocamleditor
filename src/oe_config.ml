@@ -58,11 +58,12 @@ let on_off_dashes                        = [3; 3]
                     [darker] 0.5 <= factor <= 1.0 [same as text view]
    `THEME          : Based on the GTK theme.
    `NAME "#ffffff" : Specific color. *)
-let gutter_bg_color                      = `THEME (*`CALC 0.93*) (*`CALC 0.97*)
+let gutter_bg_color                      = `NAME "#424201" (* temporarily *) (*`THEME*)
 let gutter_fg_color                      = `THEME (*`CALC 0.50*) (*`NAME "#6070ff"*)
 let gutter_border_color                  = `THEME (*`CALC 0.875*) (*`CALC 0.97*)
 let gutter_marker_color                  = `THEME (*`CALC 0.50*)
 let gutter_marker_bg_color               = `THEME (*`CALC 0.80*)
+let gutter_diff_size                     = 50 (* 0 = disabled *)
 let code_folding_scope_color             = `NAME "#e5e5e5" (* disabled *)
 let code_folding_highlight_color         = { light = "#d0d0d0"; dark = "#303030" }
 let code_folding_hightlight_gradient     = [ (* [] for no gradient *)
@@ -80,7 +81,7 @@ let global_gutter_diff_color_add         = { light = "#60b060"; dark = "#13401e"
 let global_gutter_diff_color_del         = { light = "#ff6060"; dark = "#3e181d" }
 let global_gutter_diff_color_change      = { light = "#0079FF"; dark = "#0079FF" }
 let global_gutter_diff_style             = (`COLOR false : [`BW | `COLOR of bool])
-let global_gutter_diff_tooltips          = true
+let global_gutter_diff_tooltips          = false
 let global_gutter_no_errors              = `NAME "#daedd0"
 let find_replace_history_max_length      = 75
 let find_text_output_highlight           = `DEFAULT, `DEFAULT (*`NAME "#ffff7e", `NONE*) (* Background and foreground colors to highlight occurrences where the pattern matches.

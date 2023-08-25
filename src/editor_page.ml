@@ -109,8 +109,6 @@ class page ?file ~project ~scroll_offset ~offset ~editor () =
         let size = Pango.Font.get_size fd + Pango.scale in
         Pango.Font.modify fd ~size ();
         text_view#misc#modify_font fd;
-        Line_num_labl.iter (fun lab -> lab#misc#modify_font fd) text_view#line_num_labl;
-        Gmisclib.Idle.add text_view#draw_gutter;
       end ()
   in
   let button_font_decr = create_small_button
@@ -123,8 +121,6 @@ class page ?file ~project ~scroll_offset ~offset ~editor () =
           let size = size - Pango.scale in
           Pango.Font.modify fd ~size ();
           text_view#misc#modify_font fd;
-          Line_num_labl.iter (fun lab -> lab#misc#modify_font fd) text_view#line_num_labl;
-          Gmisclib.Idle.add text_view#draw_gutter
         end
       end ()
   in

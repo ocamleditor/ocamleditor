@@ -302,11 +302,11 @@ class error_indication (view : Ocaml_text.view) vscrollbar global_gutter =
         let drawable = new GDraw.drawable window in
         drawable#set_line_attributes ~width:1 ~style:`SOLID ~join:`ROUND ();
         let width0, height = drawable#size in
-        let width = if !Plugins.diff = None then width0 else Oe_config.global_gutter_size in
+        let width = Oe_config.global_gutter_size in
         let x0 = width0 - width in
         let alloc = vscrollbar#misc#allocation in
         (* Clean up *)
-        drawable#set_foreground view#gutter.Gutter.bg_color;
+        drawable#set_foreground (`COLOR (view#misc#style#base `NORMAL));
         drawable#rectangle ~filled:true ~x:x0 ~y:0 ~width ~height ();
         (* Rectangles at the top and bottom *)
         (* Rectangle at the top in different color *)

@@ -271,7 +271,7 @@ class editor () =
               ~message:(sprintf "File \xC2\xAB%s\xC2\xBB does not exist." bm.Oe.bm_filename) self;
             self#bookmark_remove ~num
         | Some page ->
-            if not page#view#realized then (self#goto_view page#view);
+            if not (page#view#misc#get_flag `REALIZED) then (self#goto_view page#view);
             Gmisclib.Idle.add ~prio:300 begin fun () ->
               ignore (Bookmark.apply bm begin function
                 | `OFFSET _ ->
@@ -286,7 +286,7 @@ class editor () =
                     -1
                 end)
             end;
-            if page#view#realized then (Gmisclib.Idle.add (*~prio:300*) (fun () -> self#goto_view page#view));
+            if page#view#misc#get_flag `REALIZED then (Gmisclib.Idle.add (*~prio:300*) (fun () -> self#goto_view page#view));
             Gmisclib.Idle.add ~prio:300 (fun () -> Project.save_bookmarks project);
       with Not_found -> ()
 
@@ -994,6 +994,7 @@ class editor () =
           | _ -> ()
           end
         end);
+      Global_diff.init_editor self
   end
 
 (** Signals *)

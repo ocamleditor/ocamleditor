@@ -75,55 +75,6 @@ let key_press ?project view =
         end else false
   end |> ignore;;
 
-let update_gutter_colors view =
-  (match view#gutter.Gutter.bg_color with
-   | `WHITE ->
-       view#gutter.Gutter.bg_color <-
-         (match Oe_config.gutter_bg_color with
-          | `CALC x -> Color.set_value x (`COLOR (view#misc#style#base `NORMAL))
-          | `THEME -> `COLOR (view#misc#style#base `NORMAL)
-          | (`NAME _) as color-> color)
-   | _ -> ());
-  (match view#gutter.Gutter.fg_color with
-   | `WHITE -> view#gutter.Gutter.fg_color <-
-         (match Oe_config.gutter_fg_color with
-          | `CALC x -> Color.set_value x (`COLOR (view#misc#style#base `NORMAL))
-          | `THEME -> `COLOR (view#misc#style#fg `NORMAL)
-          | (`NAME _) as color -> color)
-   | _ -> ());
-  (match view#gutter.Gutter.border_color with
-   | `WHITE -> view#gutter.Gutter.border_color <-
-         (match Oe_config.gutter_border_color with
-          | `CALC x -> Color.set_value x (`COLOR (view#misc#style#base `NORMAL))
-          | `THEME -> `COLOR (view#misc#style#base `NORMAL)
-          | (`NAME _) as color -> color)
-   | _ -> ());
-  (match view#gutter.Gutter.marker_color with
-   | `WHITE -> view#gutter.Gutter.marker_color <-
-         (match Oe_config.gutter_marker_color with
-          | `CALC x -> Color.set_value x (`COLOR (view#misc#style#base `NORMAL))
-          | `THEME -> `COLOR (view#misc#style#fg `NORMAL)
-          | (`NAME _) as color -> color)
-   | _ -> ());
-  (match view#gutter.Gutter.marker_bg_color with
-   | `WHITE -> view#gutter.Gutter.marker_bg_color <-
-         (match Oe_config.gutter_marker_bg_color with
-          | `CALC x -> Color.set_value x (`COLOR (view#misc#style#base `NORMAL))
-          | `THEME -> `COLOR (view#misc#style#dark `NORMAL)
-          | (`NAME _) as color -> color)
-   | _ -> ());
-  (* Change the bg color of the gutter on screen *)
-  view#misc#modify_bg [`NORMAL, view#gutter.Gutter.bg_color]
-
-(** realize *)
-let realize view =
-  if not view#realized then begin
-    view#misc#connect#after#realize ~callback:begin fun () ->
-      update_gutter_colors view;
-      view#set_realized true
-    end |> ignore
-  end
-
 (** select_lines_from_gutter *)
 let select_lines_from_gutter view =
   let self = view in
