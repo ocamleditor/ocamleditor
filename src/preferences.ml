@@ -103,7 +103,7 @@ let default_values =
         bg_color = { light = "#3584e4"; dark = "#4B81AD" };
         weight = 0; style = `NORMAL; underline = `NONE; scale = 1.0; bg_default = false };
       { name = "annotation";
-        color = { light = "#444488"; dark = "#A880FF" };
+        color = { light = "#444488"; dark = "#C68BFF" };
         bg_color = { light = "#ffffff"; dark = "#000000" };
         weight = 0; style = `ITALIC; underline = `NONE; scale = 1.0; bg_default = true };
     ]

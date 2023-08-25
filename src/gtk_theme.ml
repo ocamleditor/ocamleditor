@@ -144,7 +144,7 @@ widget \"*.gitbutton\" style:highest \"gitbutton\"
     String.concat "\n" [
       style_smallbutton; style_outline; style_targetlist;
       apply_smallbutton; apply_outline; apply_targetlist;
-      "gtk-button-images = 1";
+      "gtk-button-images = 0";
       "gtk-double-click-time = 500";
       "gtk-double-click-distance = 10";
       gtk_theme;
