@@ -177,7 +177,7 @@ class container (view : GText.view) =
         let top = Gdk.Rectangle.y vrect in
         let start, _ = view#get_line_at_y top in
         let stop, _ = view#get_line_at_y (top + height) in
-        view#set_border_window_size ~typ:`LEFT ~size:1; (* dummy initial size *)
+        view#set_border_window_size ~typ:`LEFT ~size:(max 50 gutter.size); (* dummy initial size *)
         let size =
           childs
           |> List.fold_left begin fun left margin ->
