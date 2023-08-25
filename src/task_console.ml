@@ -179,7 +179,7 @@ class view ~(editor : Editor.editor) ?(task_kind=(`OTHER : Task.kind)) ~task ?pa
           try
             let sid = List.assoc button_run#misc#get_oid button_run_signals in
             GtkSignal.disconnect button_run#as_widget sid;
-            ignore (List.remove_assoc button_run#misc#get_oid button_run_signals);
+            button_run_signals <- List.remove_assoc button_run#misc#get_oid button_run_signals;
           with Not_found -> ()
         end;
         let sid = button_run#connect#clicked ~callback:begin fun () ->
@@ -206,7 +206,6 @@ class view ~(editor : Editor.editor) ?(task_kind=(`OTHER : Task.kind)) ~task ?pa
           Activity.remove task.Task.et_name;
         end ()
       in
-      if task_kind = `COMPILE && Preferences.preferences#get.editor_save_all_bef_comp then (editor#save_all());
       has_errors <- false;
       GtkThread2.async begin fun () ->
         (try view#buffer#delete_mark (`NAME "first_error_line");
@@ -540,6 +539,13 @@ let exec_sync ?run_cb ?(use_thread=true) ?(at_exit=ignore) ~editor task_groups =
 
 (** exec *)
 let exec ~editor ?use_thread ?(with_deps=false) task_kind target =
+  if Preferences.preferences#get.editor_save_all_bef_comp && (
+      [`COMPILE; `COMPILE_ONLY] |> List.mem task_kind ||
+      (match task_kind with
+       | `RCONF rc -> rc.Rconf.build_task <> `NONE
+       | _ -> false)
+    )
+  then (editor#save_all());
   let project = editor#project in
   let can_compile_native = project.Prj.can_compile_native in
   let filter_tasks = Target.filter_external_tasks target in
