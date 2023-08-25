@@ -23,6 +23,7 @@
 
 open Printf
 open Miscellanea
+open Preferences
 
 type t = {
   source                : [ `path of string list * string list (* roots x filenames *)
@@ -110,7 +111,7 @@ class widget ~source ~name ?filter ?packing () =
   let box               = GPack.hbox ~spacing:5 ~packing:sbox#pack () in
   let _                 = GMisc.label ~markup:"Search for <small>(\"<tt>?</tt>\" matches any single character, \"<tt>*</tt>\" matches any string)</small>:" ~xalign:0.0 ~yalign:1.0 ~packing:box#add () in
   let label_count       = GMisc.label ~xalign:1.0 ~yalign:1.0 ~height:16 ~packing:box#pack () in
-  let icon_progress     = GMisc.image ~width:16 ~file:(App_config.application_icons // "spinner_16.gif") ~packing:box#pack () in
+  let icon_progress     = GMisc.image ~width:16 ~file:(Icon.get_themed_filename "spinner_16.gif") ~packing:box#pack () in
   let entry             = GEdit.entry ~packing:sbox#pack () in
   let model, filelist =
     match source with
@@ -504,7 +505,7 @@ class widget ~source ~name ?filter ?packing () =
             table_results <- table_visible;
             if is_filelist then (self#apply_pattern());
             self#display_summary ();
-            icon_progress#set_pixbuf Icons.empty_14;
+            icon_progress#set_pixbuf (??? Icons.empty_14);
             false
           end else true
         end;

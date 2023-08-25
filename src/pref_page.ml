@@ -86,7 +86,7 @@ class virtual page title (box : GPack.box) =
   let _    = box#reorder_child tbox#coerce ~pos:0 in
   object
     inherit GObj.widget box#as_widget
-    method virtual write : Preferences.t -> unit
-    method virtual read : Preferences.t -> unit
+    method virtual write : Settings_t.settings -> unit
+    method virtual read : Settings_t.settings -> unit
     method title = title
   end

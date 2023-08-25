@@ -22,7 +22,7 @@
 
 
 #cd "src"
-#use "../tools/scripting.ml"
+    #use "../tools/scripting.ml"
 
 open Printf
 
@@ -43,12 +43,14 @@ let prepare_build () =
     if not (Sys.file_exists "../plugins") then (mkdir "../plugins");
     run "ocamllex err_lexer.mll";
     run "ocamlyacc err_parser.mly";
+    run "atdgen -t settings.atd";
+    run "atdgen -j settings.atd";
     if not is_win32 then begin
       (* Disabled because on Windows it changes the file permissions of oe_config.ml
          forcing it to be recompiled for plugins.*)
       substitute ~filename:"oe_config.ml" ~regexp:true
-      ["let _ = Printexc\\.record_backtrace \\(\\(true\\)\\|\\(false\\)\\)$",
-       (sprintf "let _ = Printexc.record_backtrace %b" !record_backtrace)];
+        ["let _ = Printexc\\.record_backtrace \\(\\(true\\)\\|\\(false\\)\\)$",
+         (sprintf "let _ = Printexc.record_backtrace %b" !record_backtrace)];
     end;
     (try generate_oebuild_script() with Failure msg -> raise (Script_error ("generate_oebuild_script()", 2)));
     (*  *)
@@ -61,10 +63,10 @@ let prepare_build () =
   end;;
 
 let _ = main ~default_target:prepare_build ~targets:[
-  "-generate-oebuild-script", generate_oebuild_script, " (undocumented)";
-]~options:[
-  "-record-backtrace",       Bool (fun x -> record_backtrace := x), " Turn recording of exception backtraces on or off";
-  "-use-modified-gtkThread", Set use_modified_gtkThread, " Set this flag if you have Lablgtk-2.14.2 or earlier
+    "-generate-oebuild-script", generate_oebuild_script, " (undocumented)";
+  ]~options:[
+    "-record-backtrace",       Bool (fun x -> record_backtrace := x), " Turn recording of exception backtraces on or off";
+    "-use-modified-gtkThread", Set use_modified_gtkThread, " Set this flag if you have Lablgtk-2.14.2 or earlier
                             for using the included modified version of gtkThread.ml
                             to reduce CPU consumption";
-] ()
+  ] ()

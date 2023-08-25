@@ -25,6 +25,7 @@ open Parser
 open Printf
 open Location
 open Lexing
+open Preferences
 
 module Range = struct
   let range_of_loc {loc_start; loc_end; _} =
@@ -46,26 +47,20 @@ end
 
 open Range
 
-let tag_lident = function
-  | _, METHOD, _, _ | _, PRIVATE, _, _ -> "method_name_def"
-  | _, IN, _, _ | _, INITIALIZER, _, _ | _, NEW, _, _ | _, OF, _, _ -> "lident"
-  | "define", _, _, _  -> "name_def"
-  | _ -> "lident";;
-
 let parse pref =
-  let tags = pref.Preferences.pref_tags in
-  let _, _, bgcolor_highlight = Preferences.preferences#get.Preferences.pref_editor_mark_occurrences in
+  let tags = pref.Settings_t.editor_tags in
+  let bgcolor_highlight = preferences#get.editor_mark_occurrences_bg_color in
   let span_highlight text =
-    String.concat "" ["<span bgcolor='"; bgcolor_highlight; "'>"; (Glib.Markup.escape_text text); "</span>"]
+    String.concat "" ["<span bgcolor='"; ?? bgcolor_highlight; "'>"; (Glib.Markup.escape_text text); "</span>"]
   in
   let span (highlight, tagname) =
-    match List.assoc tagname tags with
-    | `NAME color, weight, style, underline, _, _ ->
-        let weight    = match weight with `BOLD -> " font_weight='bold'" | _ -> "" in
-        let style     = match style with `ITALIC -> " font_style='italic'" | _ -> "" in
-        let underline = match underline with `LOW -> " underline='low'" | _ -> "" in
-        let bgcolor   = if highlight then " bgcolor='" ^ bgcolor_highlight ^"'" else "" in
-        String.concat "" ["<span color='"; color; "'"; weight; style; underline; bgcolor; ">"]
+    match List.find_opt (fun t -> t.Settings_t.name = tagname) tags with
+    | Some t ->
+        let weight    = sprintf " font_weight='%d'" t.weight in
+        let style     = match t.style with `ITALIC -> " font_style='italic'" | _ -> "" in
+        let underline = match t.underline with `NONE -> "" | _ -> " underline='single'" in
+        let bgcolor   = if highlight then " bgcolor='" ^ (?? bgcolor_highlight) ^"'" else "" in
+        String.concat "" ["<span color='"; ??(t.color); "'"; weight; style; underline; bgcolor; ">"]
     | _ -> assert false
   in
   let span = Miscellanea.Memo.create span in
@@ -85,6 +80,7 @@ let parse pref =
     let last_but_one = ref EOF in
     let in_record = ref false in
     let in_record_label = ref false in
+    let in_annotation = ref false in
     try
       while true do
         try
@@ -112,6 +108,7 @@ let parse pref =
             | WITH
               -> "control"
             | AND
+            | ANDOP _
             | AS
             | BAR
             | CLASS
@@ -123,9 +120,11 @@ let parse pref =
             | FUNCTOR
             | INHERIT
             | LET
+            | LETOP _
             | METHOD
             | MODULE
             | MUTABLE
+            | NONREC
             | PRIVATE
             | REC
             | TYPE
@@ -143,6 +142,7 @@ let parse pref =
               -> "structure"
             | CHAR _
             | STRING _
+            | QUOTED_STRING_EXPR _ | QUOTED_STRING_ITEM _
               -> "char"
             (*| BACKQUOTE*)
             | INFIXOP0 _
@@ -151,7 +151,8 @@ let parse pref =
             | INFIXOP3 _
             | INFIXOP4 _
             | PREFIXOP _
-            | HASH
+            | HASH | HASHOP _
+            | BANG
               -> "infix"
             | LABEL _
             | OPTLABEL _
@@ -159,11 +160,12 @@ let parse pref =
             | TILDE
               -> "label"
             | UIDENT _ | BACKQUOTE -> "uident"
+            | LIDENT _ when !in_annotation -> "annotation"
             | LIDENT _ ->
                 begin match !last with
                 | QUESTION | TILDE -> "label"
                 | BACKQUOTE -> "number"
-                | _ -> ""
+                | _ -> "lident"
                 (*(* TODO:  *)
                   | _, LBRACE, _, _ when !in_record -> "record_label"
                   | _, MUTABLE, _, _ when !in_record -> "record_label"
@@ -189,14 +191,22 @@ let parse pref =
             | LBRACE -> in_record := true; in_record_label := true; "symbol"
             | RBRACE -> in_record := false; in_record_label := false; "symbol"
             | EQUAL when !in_record -> in_record_label := false; "symbol"
-            | LPAREN | RPAREN | LBRACKET | BARRBRACKET| RBRACKET | LBRACKETLESS | GREATERRBRACKET
+            | LPAREN | RPAREN | LBRACKET | BARRBRACKET | LBRACKETLESS | LBRACKETGREATER | GREATERRBRACKET
             | LBRACELESS | GREATERRBRACE | LBRACKETBAR | LESSMINUS
             | EQUAL | PLUS | MINUS | STAR | QUOTE | SEMI | SEMISEMI | MINUSGREATER
-            | COMMA | DOT | DOTDOT | COLONCOLON | COLONEQUAL (*| LBRACE*) (*| RBRACE*) | UNDERSCORE
+            | COMMA | DOT | DOTDOT | COLONCOLON | COLONEQUAL | UNDERSCORE
+            | PLUSDOT | MINUSDOT | LESS | GREATER
+            | PLUSEQ | PERCENT
+            | COLONGREATER
+            | DOTOP _
               -> "symbol"
+            | LBRACKETAT | LBRACKETPERCENT | LBRACKETPERCENTPERCENT | LBRACKETATAT | LBRACKETATATAT
+              -> in_annotation:= true; "annotation"
+            | RBRACKET -> if !in_annotation then (in_annotation := false; "annotation") else "symbol"
             | ASSERT -> "custom"
+            | DOCSTRING _ | COMMENT _ -> "comment" (* Lexer ignores comments *)
+            | EOL -> ""
             | EOF -> raise End_of_file
-            | _ -> ""
           end;
 
           Buffer.add_string out (Glib.Markup.escape_text (String.sub text !pos (lstart - !pos)));
@@ -242,7 +252,21 @@ let parse pref =
           pos := lstart + (String.length lexeme);
           last_but_one := !last;
           last := token;
-        with Lexer.Error _ -> ()
+        with Lexer.Error (err, _) ->
+          begin
+            let open Lexer in
+            match err with
+            | Illegal_character c -> printf "Illegal_character %C\n%!" c
+            | Illegal_escape (s, sopt) -> printf "Illegal_escape \n%!"
+            | Reserved_sequence (s, sopt) -> printf "Reserved_sequence \n%!"
+            | Unterminated_comment loc -> printf "Unterminated_comment \n%!"
+            | Unterminated_string -> printf "Unterminated_string \n%!"
+            | Unterminated_string_in_comment (l1, l2) -> printf "Unterminated_string_in_comment \n%!"
+            | Empty_character_literal -> printf "Empty_character_literal \n%!"
+            | Keyword_as_label s -> printf "Keyword_as_label \n%!"
+            | Invalid_literal s -> printf "Invalid_literal \n%!"
+            | Invalid_directive (s, sopt) -> printf "Invalid_directive \n%!"
+          end
       done;
       close_pending();
       Buffer.contents out
@@ -252,35 +276,13 @@ let parse pref =
         (* TODO: consider highlights *)
         Buffer.add_string out (Glib.Markup.escape_text lexeme);
         close_pending();
+        (*    Lexer.comments ()
+              |> List.iter begin fun (c, loc) ->
+              let _, line_start, char_start = Location.get_pos_info (loc.loc_start) in
+              let _, line_stop, char_stop = Location.get_pos_info (loc.loc_end) in
+              Printf.printf "comment = %d,%d -- %d,%d\n%!" line_start char_start line_stop char_stop;
+              end;*)
         Buffer.contents out
-    (*(* comments *)
-      List.iter begin fun (b, e, _, ocamldoc) ->
-      if not ocamldoc then begin
-        let ms = Miscellanea.Search.all multi_space begin fun ~pos ~matched_string:mat ->
-          Miscellanea.Search.Append (pos, pos + String.length mat, mat)
-        end (String.sub u_text b (e - b)) in
-        let (*b = b and*) e = e - 2 in
-        let tag = "comment" in
-        tb#apply_tag_by_name tag ~start:(tpos b) ~stop:(tpos e);
-        List.iter begin fun (b1, e1, _) ->
-          tb#apply_tag_by_name tag ~start:(tpos (b + b1)) ~stop:(tpos (b + e1))
-        end ms
-      end
-      end (match comments with Comments.Utf8 x -> x | _ -> failwith "Lexical: Comments.Locale");
-      (* ocamldoc and ocamldoc-paragraph *)
-      List.iter begin fun (b, e, ocamldoc) ->
-      if ocamldoc then begin
-        let start = tb#get_iter (`OFFSET b) in
-        let stop = tb#get_iter (`OFFSET e) in
-        let tag, start =
-          let iter = start#backward_line in
-          if iter#ends_line
-          then ("ocamldoc-paragraph", start#set_line_index 0)
-          else ("ocamldoc", start#set_line_index 0) (* start *)
-        in
-        tb#apply_tag_by_name tag ~start ~stop;
-      end
-      end (match global_comments with Comments.Locale x -> x | _ -> failwith "Lexical: Comments.Utf8")*)
     | (Lexer.Error (error, _)) as ex ->
         close_pending();
         Buffer.contents out

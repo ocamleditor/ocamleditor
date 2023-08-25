@@ -22,6 +22,7 @@
 
 open Printf
 open Find_text
+open Preferences
 
 (** create *)
 let create ~project ~editor ?(buffer : GText.buffer option) ?widget
@@ -32,7 +33,7 @@ let create ~project ~editor ?(buffer : GText.buffer option) ?widget
   in
   let search_in_path = buffer = None in
   let title = if search_in_path then "Find/Replace in Path" else "Find/Replace Text" in
-  let dialog = GWindow.window ~title ~icon:Icons.oe ~width:600 ~position:`CENTER
+  let dialog = GWindow.window ~title ~icon:(??? Icons.oe) ~width:600 ~position:`CENTER
       ~type_hint:`DIALOG ~border_width:8 ~modal:true ~show:false () in
   let key = if search_in_path then "dialog-find-text-path" else "dialog-find-text-buffer" in
   Gmisclib.Window.GeometryMemo.add ~key ~window:dialog Preferences.geometry_memo;

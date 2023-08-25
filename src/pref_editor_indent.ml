@@ -156,26 +156,20 @@ class pref_editor_indent title ?packing () =
       view#set_wrap_mode `WORD;
       view_help#set_wrap_mode `WORD;
       let pref = Preferences.preferences#get in
-      view#misc#modify_font_by_name pref.Preferences.pref_base_font;
-      view_help#misc#modify_font_by_name pref.Preferences.pref_base_font;
+      view#misc#modify_font_by_name pref.editor_base_font;
+      view_help#misc#modify_font_by_name pref.editor_base_font;
       view_help#set_cursor_visible false;
       try
         buffer_help#set_text ocp_indent_help;
       with Glib.Convert.Error _ -> ()
 
     method write pref =
-      pref.Preferences.pref_editor_indent_empty_line <- (match combo_empty#active with
+      pref.editor_indent_empty_line <- (match combo_empty#active with
           | 0 -> true
           | _ -> false);
-      pref.Preferences.pref_editor_indent_config <- buffer#get_text();
+      pref.editor_indent_config <- buffer#get_text();
 
     method read pref =
-      combo_empty#set_active (if pref.Preferences.pref_editor_indent_empty_line then 0 else 1);
-      buffer#set_text pref.Preferences.pref_editor_indent_config;
+      combo_empty#set_active (if pref.editor_indent_empty_line then 0 else 1);
+      buffer#set_text pref.editor_indent_config;
   end
-
-
-
-
-
-

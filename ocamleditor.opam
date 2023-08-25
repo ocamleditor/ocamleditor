@@ -1,6 +1,6 @@
 opam-version: "2.0"
 name: "ocamleditor"
-version: "1.14.0"
+version: "1.14.2"
 
 synopsis:
   "OCamlEditor is a GTK+ source code editor and build tool for OCaml"
@@ -24,8 +24,13 @@ depends: [
   "lablgtk" {>= "2.18.0"}
   "ocp-indent" { >= "1.8.0" }
   "xml-light" {>= "2.2"}
+  "yojson" {>= "2.1"}
+  "atdgen" {>= "2.12"}
+  "ocamldiff" {>= "1.1"}
 ]
 depopts: [
   "ocurl"
-  "ocamldiff"
+]
+pin-depends: [
+  ["ocamldiff.1.1" "git+https://framagit.org/zoggy/ocamldiff.git"]
 ]

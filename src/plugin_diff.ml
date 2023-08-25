@@ -21,18 +21,23 @@
 *)
 
 
+module ColorOps = Color
+
 module Diff = struct
 
   type 'a editor_page =
     < buffer : < line_count : int; orig_filename : string;
                  save_buffer : ?filename:string -> unit -> string * (string * string) option;
+                 get_text :
+                   ?start:GText.iter ->
+                   ?stop:GText.iter -> ?slice:bool -> ?visible:bool -> unit -> string;
                  tmp_filename : string; .. >;
       global_gutter : GMisc.drawing_area;
       global_gutter_tooltips : ((int * int * int * int) * (unit -> GObj.widget)) list;
-      changed_after_last_diff : bool;
+      changed_after_last_diff : bool; get_filename : string;
       set_changed_after_last_diff : bool -> unit;
       set_global_gutter_tooltips : ((int * int * int * int) * (unit -> GObj.widget)) list -> unit;
-      view : < gutter : Gutter.t; ..>;
+      view : < gutter : Gutter.t; misc : < style : < base : [> `NORMAL ] -> Gdk.color; .. >; .. >; ..>;
       vscrollbar : GRange.range;
       get_oid : int;
       .. > as 'a
@@ -40,9 +45,10 @@ module Diff = struct
   let global_gutter_diff_size = 8
   let global_gutter_diff_sep = 1
   let fact = 0.0
-  let color_add = `NAME (Color.add_value Oe_config.global_gutter_diff_color_add fact)
-  let color_del = `NAME (Color.add_value Oe_config.global_gutter_diff_color_del fact)
-  let color_change = `NAME (Color.add_value Oe_config.global_gutter_diff_color_change 0.2)
+  open Preferences
+  let color_add = `NAME (ColorOps.add_value (?? Oe_config.global_gutter_diff_color_add) fact)
+  let color_del = `NAME (ColorOps.add_value (?? Oe_config.global_gutter_diff_color_del) fact)
+  let color_change = `NAME (ColorOps.add_value (?? Oe_config.global_gutter_diff_color_change) 0.2)
 
   let initialized : int list ref = ref []
 
@@ -73,9 +79,9 @@ module Diff = struct
   let create_label_tooltip elements =
     let ebox = GBin.event_box () in
     let vbox = GPack.vbox ~spacing:0 ~packing:ebox#add () in
-    let color = fst Preferences.preferences#get.Preferences.pref_bg_color in
-    ebox#misc#modify_bg [`NORMAL, `NAME color];
-    let fd = Pango.Font.from_string Preferences.preferences#get.Preferences.pref_base_font in
+    let color = Preferences.preferences#get.editor_bg_color_user in
+    ebox#misc#modify_bg [`NORMAL, `NAME (?? color)];
+    let fd = Pango.Font.from_string Preferences.preferences#get.editor_base_font in
     let size = Pango.Font.get_size fd - 1 * Pango.scale in
     Pango.Font.modify fd ~size ();
     let last = List.length elements - 1 in
@@ -140,7 +146,7 @@ module Diff = struct
     let width = global_gutter_diff_size in
     let line_count = float page#buffer#line_count in
     let open Odiff in
-    drawable#set_foreground page#view#gutter.Gutter.bg_color;
+    drawable#set_foreground (`COLOR (page#view#misc#style#base `NORMAL));
     drawable#rectangle ~filled:true ~x:0 ~y:0 ~width ~height ();
     page#set_global_gutter_tooltips [];
     let black = page#view#gutter.Gutter.marker_color in
@@ -163,14 +169,14 @@ module Diff = struct
                       drawable#set_foreground color;
                       drawable#polygon ~filled:true [x0, y; x0 + wtri, y - wtri; x0 + wtri, y + wtri];
                       if (*true ||*) with_border then begin
-                        drawable#set_foreground (Color.set_value 0.6 color);
+                        drawable#set_foreground (ColorOps.set_value 0.6 color);
                         drawable#polygon ~filled:false [0, y; wtri, y - wtri; wtri, y + wtri]
                       end
                   | `BW ->
                       drawable#set_foreground black;
                       let tri = [x0, y; x0 + wtri, y - wtri; x0 + wtri, y + wtri] in
                       drawable#polygon ~filled:true tri;
-                      drawable#set_foreground (Color.set_value 0.5 black);
+                      drawable#set_foreground (ColorOps.set_value 0.5 black);
                       drawable#polygon ~filled:false tri;
                 end;
             | col when col = color_add ->
@@ -186,7 +192,7 @@ module Diff = struct
                       drawable#set_foreground color;
                       drawable#rectangle ~filled:true ~x:0 ~y:(y - 2) ~width ~height ();
                       if with_border then begin
-                        drawable#set_foreground (Color.set_value 0.6 color);
+                        drawable#set_foreground (ColorOps.set_value 0.6 color);
                         drawable#rectangle ~filled:false ~x:0 ~y:(y - 2) ~width:(width-1) ~height ();
                       end
                   | `BW ->
@@ -205,7 +211,7 @@ module Diff = struct
                 drawable#set_foreground color;
                 drawable#rectangle ~filled:true ~x:0 ~y:y1 ~width ~height ();
                 if with_border then begin
-                  drawable#set_foreground (Color.set_value 0.6 color);
+                  drawable#set_foreground (ColorOps.set_value 0.6 color);
                   drawable#rectangle ~filled:false ~x:0 ~y:y1 ~width:(width-1) ~height ();
                 end;
             | `BW ->
@@ -231,34 +237,38 @@ module Diff = struct
       end
     end diffs
 
+  let compare_with_head page continue_with =
+    match Miscellanea.filename_relative (Filename.dirname (Sys.getcwd())) page#get_filename with
+    | Some filename ->
+        let open Printf in
+        let buf = Buffer.create 1024 in
+        Spawn.async "git" [| "show"; sprintf "HEAD:%s" filename |]
+          ~process_in:(Spawn.loop (fun ic -> Buffer.add_string buf (input_line ic); Buffer.add_char buf '\n'))
+          ~continue_with:begin fun _ ->
+            let text = page#buffer#get_text ?start:None ?stop:None ?slice:None ?visible:None () in
+            continue_with (Odiff.strings_diffs (Buffer.contents buf) text)
+          end |> ignore
+    | _ -> ()
 
   (** paint_gutter *)
   let rec paint_gutter page =
     if page#changed_after_last_diff then begin
-      let buffer = page#buffer in
-      let filename2 = buffer#tmp_filename in
-      buffer#save_buffer ?filename:None () |> ignore;
-      let diff = Preferences.preferences#get.Preferences.pref_program_diff in
-      let args = [|
-        "--binary";
-        buffer#orig_filename;
-        filename2
-      |]
-      in
-      page#set_changed_after_last_diff false;
-      let diffs = ref [] in
-      let process_in ic =
-        try diffs := Odiff.from_channel ic
-        with ex -> Printf.eprintf "File \"plugin_diff.ml\": %s\n%s\n%!" (Printexc.to_string ex) (Printexc.get_backtrace());
-      in
-      Spawn.async diff args
-        ~process_in (*~process_err:Spawn.redirect_to_stderr*)
-        ~at_exit:begin fun _ ->
-          Hashtbl.replace cache page#get_oid !diffs;
-          match !diffs with [] -> () | diffs ->
-            (*Printf.printf "%s\n%!" (Odiff.string_of_diffs diffs);*)
-            paint_diffs page diffs
-        end |> ignore
+      compare_with_head page begin fun diffs ->
+        page#set_changed_after_last_diff false;
+        let diffs =
+          diffs
+          |> List.filter begin fun diff ->
+            match diff with
+            | Odiff.Add (_, _, a) -> String.trim a <> ""
+            | Odiff.Delete (_, _, d) -> String.trim d <> ""
+            | Odiff.Change (_, a, _, b) -> (String.trim a) <> "" || (String.trim b) <> ""
+          end
+        in
+        Hashtbl.replace cache page#get_oid diffs;
+        match diffs with [] -> () | diffs ->
+          (*Printf.printf "%s\n%!" (Odiff.string_of_diffs diffs);*)
+          diffs |> paint_diffs page
+      end
     end else begin
       try
         let diffs = Hashtbl.find cache page#get_oid in
@@ -270,8 +280,8 @@ module Diff = struct
 
 
   (** to_buffer *)
-  let to_buffer (buffer : GText.buffer) filename1 filename2 =
-    Plugin_diff_gtext.insert buffer filename1 filename2
+  let to_buffer (buffer : GText.buffer) ignore_whitespace filename1 filename2 =
+    Plugin_diff_gtext.insert buffer ignore_whitespace filename1 filename2
 
 end
 

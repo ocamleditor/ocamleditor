@@ -98,31 +98,4 @@ module type REMOTE = sig
     end
 end
 
-
-module type DIFF = sig
-  type 'a editor_page =
-    < buffer : < line_count : int; orig_filename : string;
-                 save_buffer : ?filename:string -> unit -> string * (string * string) option;
-                 tmp_filename : string; .. >;
-      global_gutter : GMisc.drawing_area;
-      global_gutter_tooltips : ((int * int * int * int) * (unit -> GObj.widget)) list;
-      changed_after_last_diff : bool;
-      set_changed_after_last_diff : bool -> unit;
-      set_global_gutter_tooltips : ((int * int * int * int) * (unit -> GObj.widget)) list -> unit;
-      view : < gutter : Gutter.t; ..>;
-      vscrollbar : GRange.range;
-      get_oid : int;
-      .. > as 'a
-
-  val init : 'a editor_page -> unit
-
-  val paint_gutter : 'a editor_page -> unit
-
-  val to_buffer : GText.buffer -> string -> string -> unit
-
-end
-
 let remote : (module REMOTE) option ref = ref None
-
-let diff : (module DIFF) option ref = ref None
-

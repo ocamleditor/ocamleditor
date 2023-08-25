@@ -23,3 +23,6 @@
 
 let geometry_memo : (unit -> Window.GeometryMemo.t) ref = ref (fun () -> failwith "Otherwidgets_config.geometry_memo")
 
+let app_icon : (unit -> GdkPixbuf.pixbuf) ref = ref (fun () -> failwith "Otherwidgets_config.app_icon")
+
+let icon_path : (unit -> string) ref = ref (fun () -> failwith "Otherwidgets_config.icon_path")

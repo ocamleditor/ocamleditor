@@ -1,0 +1,125 @@
+type 'a color = {
+  light <ocaml mutable> : 'a;
+  dark  <ocaml mutable> : 'a;
+}
+
+type editor_tag = {
+  name <ocaml mutable> : string;
+  color <ocaml mutable> : string color;
+  weight <ocaml mutable> : int;
+  style <ocaml mutable> : [ NORMAL | ITALIC ];
+  underline <ocaml mutable> : [ NONE | SINGLE ];
+  scale <ocaml mutable> : float;
+  bg_default <ocaml mutable> : bool;
+  bg_color <ocaml mutable> : string color;
+}
+type settings = {
+  ~timestamp                       <ocaml default="0.0" mutable> : float;
+  ~build_parallel                  <ocaml default="Some 0" mutable> : int option;
+  ~build_verbosity                 <ocaml default="2" mutable> : int;
+  ~check_updates                   <ocaml default="false" mutable> : bool;
+  ~detach_message_panes_separately <ocaml default="false" mutable> : bool;
+  ~font                            <ocaml default="\"Sans 9\"" mutable> : string;
+  ~geometry_delayed                <ocaml default="false" mutable> : bool;
+  ~hmessages_width                 <ocaml default="1000" mutable> : int;
+
+  ~max_view_1_menubar              <ocaml default="true" mutable> : bool;
+  ~max_view_1_toolbar              <ocaml default="false" mutable> : bool;
+  ~max_view_1_tabbar               <ocaml default="false" mutable> : bool;
+  ~max_view_1_messages             <ocaml default="false" mutable> : bool;
+  ~max_view_1_fullscreen           <ocaml default="false" mutable> : bool;
+
+  ~max_view_2_menubar              <ocaml default="true" mutable> : bool;
+  ~max_view_2_toolbar              <ocaml default="true" mutable> : bool;
+  ~max_view_2_tabbar               <ocaml default="true" mutable> : bool;
+  ~max_view_2_messages             <ocaml default="true" mutable> : bool;
+  ~max_view_2_fullscreen           <ocaml default="true" mutable> : bool;
+
+  ~max_view_prefer_fullscreen      <ocaml default="true" mutable> : bool;
+  ~menubar_buttons                 <ocaml default="[]" mutable> : int list;
+  ~odoc_font                       <ocaml default="\"Serif 9\"" mutable> : string;
+
+  ~outline_show_types              <ocaml default="true" mutable> : bool;
+  ~outline_width                   <ocaml default="250" mutable> : int;
+  ~outline_color_types             <ocaml default="{light=\"#877033\"; dark=\"#C0A661\"}" mutable> : string color;
+  ~outline_color_nor_bg            <ocaml default="{light=\"#FFFFFF\"; dark=\"#1E1E1E\"}" mutable> : string color;
+  ~outline_color_nor_fg            <ocaml default="{light=\"#000000\"; dark=\"#E1E1E1\"}" mutable> : string color;
+  ~outline_color_sel_bg            <ocaml default="{light=\"#1F80ED\"; dark=\"#4B81AD\"}" mutable> : string color;
+  ~outline_color_sel_fg            <ocaml default="{light=\"#FFFFFF\"; dark=\"#FFFFFF\"}" mutable> : string color;
+  ~outline_color_act_bg            <ocaml default="{light=\"#B1C3D8\"; dark=\"#B1C3D8\"}" mutable> : string color;
+  ~outline_color_act_fg            <ocaml default="{light=\"#000000\"; dark=\"#1E1E1E\"}" mutable> : string color;
+  ~outline_color_alt_rows          <ocaml default="None" mutable> : float option;
+
+  ~output_font                     <ocaml default="\"monospace 8\"" mutable> : string;
+  ~output_bg_color                 <ocaml default="{light=\"#FFFFFF\"; dark=\"#1E1E1E\"}" mutable> : string color;
+  ~output_stdin_fg_color           <ocaml default="{light=\"#0000FF\"; dark=\"#5050FF\"}" mutable> : string color;
+  ~output_stdout_fg_color          <ocaml default="{light=\"#000000\"; dark=\"#E1E1E1\"}" mutable> : string color;
+  ~output_err_fg_color             <ocaml default="{light=\"#FF0000\"; dark=\"#FF5050\"}" mutable> : string color;
+  ~output_warn_fg_color            <ocaml default="{light=\"darkorange\"; dark=\"#FFC050\"}" mutable> : string color;
+
+  ~program_diff                    <ocaml default="\"diff\"" mutable> : string;
+  ~program_diff_graphical          <ocaml default="\"\"" mutable> : string;
+  ~program_pdf_viewer              <ocaml default="\"\"" mutable> : string;
+  ~remember_window_geometry        <ocaml default="true" mutable> : bool;
+  ~splashscreen_enabled            <ocaml default="true" mutable> : bool;
+  ~tab_label_type                  <ocaml default="1" mutable> : int;
+  ~tab_pos                         <ocaml default="`TOP" mutable> : [TOP | RIGHT | BOTTOM | LEFT];
+  ~tab_vertical_text               <ocaml default="false" mutable> : bool;
+  ~theme                           <ocaml default="None" mutable> : string option;
+  ~theme_is_dark                   <ocaml default="false" mutable> : bool;
+  ~vmessages_height                <ocaml default="300" mutable> : int;
+
+  ~editor_annot_type_tooltips_enabled  <ocaml default="false" mutable> : bool;
+  ~editor_annot_type_tooltips_delay    <ocaml default="0" mutable> : int;
+  ~editor_annot_type_tooltips_impl     <ocaml default="0" mutable> : int;
+
+  ~editor_bak                          <ocaml default="true" mutable> : bool;
+  ~editor_base_font                    <ocaml default="\"monospace 9\"" mutable> : string;
+  ~editor_bg_color_popup               <ocaml default="{light=\"#FFE375\"; dark=\"#505050\"}" mutable> : string color;
+  ~editor_bg_color_theme               <ocaml default="false" mutable> : bool;
+  ~editor_bg_color_user                <ocaml default="{ light = \"#FFFFFF\"; dark = \"#1e1e1e\"}" mutable> : string color;
+  ~editor_code_folding_enabled         <ocaml default="true" mutable> : bool;
+
+  ~editor_completion_font              <ocaml default="\"Sans 8\"" mutable> : string;
+  ~editor_completion_greek_letters     <ocaml default="true" mutable> : bool;
+  ~editor_completion_decorated         <ocaml default="true" mutable> : bool;
+  ~editor_completion_opacity           <ocaml default="None" mutable> : float option;
+
+  ~editor_current_line_border          <ocaml default="true" mutable> : bool;
+  ~editor_cursor_aspect_ratio          <ocaml default="0.1" mutable> : float;
+  ~editor_custom_templ_filename        <ocaml default="\"\"" mutable> : string;
+  ~editor_dot_leaders                  <ocaml default="false" mutable> : bool;
+  ~editor_err_gutter                   <ocaml default="true" mutable> : bool;
+  ~editor_err_tooltip                  <ocaml default="true" mutable> : bool;
+  ~editor_err_underline                <ocaml default="true" mutable> : bool;
+  ~editor_fg_color_popup               <ocaml default="{light=\"#000000\"; dark=\"#E1E1E1\"}" mutable> : string color;
+  ~editor_format_on_save               <ocaml default="false" mutable> : bool;
+  ~editor_highlight_current_line       <ocaml default="true" mutable> : bool;
+  ~editor_indent_config                <ocaml default="\"\"" mutable> : string;
+  ~editor_indent_empty_line            <ocaml default="true" mutable> : bool;
+  ~editor_indent_lines                 <ocaml default="(true, {light=\"#e6e6e6\"; dark=\"#808080\"}, {light=\"#d0d0d0\"; dark=\"#505050\"})" mutable> : (bool * string color * string color);
+  ~editor_left_margin                  <ocaml default="1" mutable> : int;
+
+  ~editor_mark_occurrences_enabled     <ocaml default="true" mutable> : bool;
+  ~editor_mark_occurrences_under_cursor <ocaml default="true" mutable> : bool;
+  ~editor_mark_occurrences_bg_color    <ocaml default="{light=\"#c8ffc8\"; dark=\"#3C4E00\"}" mutable> : string color;
+
+  ~editor_ocamldoc_paragraph_bgcolor_1 <ocaml default="{light=Some \"#FAF7FA\"; dark=Some \"#303030\"}" mutable> : string option color;
+  ~editor_ocamldoc_paragraph_bgcolor_2 <ocaml default="{light=Some \"#FAF7FA\"; dark=Some \"#303030\"}" mutable> : string option color;
+  ~editor_pixels_lines                 <ocaml default="(1, 1)" mutable> : (int * int);
+  ~editor_right_margin                 <ocaml default="80" mutable> : int;
+  ~editor_right_margin_color           <ocaml default="{light=\"#e0e0e0\"; dark=\"#606060\"}" mutable> : string color;
+  ~editor_right_margin_visible         <ocaml default="true" mutable> : bool;
+  ~editor_save_all_bef_comp            <ocaml default="true" mutable> : bool;
+  ~editor_search_word_at_cursor        <ocaml default="true" mutable> : bool;
+  ~editor_show_global_gutter           <ocaml default="true" mutable> : bool;
+  ~editor_show_line_numbers            <ocaml default="true" mutable> : bool;
+  ~editor_show_whitespace_chars        <ocaml default="false" mutable> : bool;
+  ~editor_smart_keys_end               <ocaml default="0" mutable> : int;
+  ~editor_smart_keys_home              <ocaml default="0" mutable> : int;
+  ~editor_tab_spaces                   <ocaml default="true" mutable> : bool;
+  ~editor_tab_width                    <ocaml default="2" mutable> : int;
+  ~editor_tags                         <ocaml mutable> : editor_tag list;
+  ~editor_trim_lines                   <ocaml default="false" mutable> : bool;
+  ~editor_wrap                         <ocaml default="false" mutable> : bool;
+}

@@ -67,7 +67,10 @@ class widget ~prog ~(env : string array) ~(args : string list) ?packing ?show ()
     method kill () =
       alive <- false;
       view#misc#set_sensitive false;
-      Process_termination.kill process.Spawn.pid |> ignore
+      try
+        Process_termination.kill process.Spawn.pid |> ignore;
+        Unix.waitpid ~mode:[] process.Spawn.pid |> ignore
+      with Unix.Unix_error (Unix.ESRCH, _, _) -> ()
 
     method interrupt () = ()
     (*    if alive then try
@@ -87,10 +90,12 @@ class widget ~prog ~(env : string array) ~(args : string list) ?packing ?show ()
         let buf = Bytes.create len in
         let len = Unix.read ~buf ~pos:0 ~len fd in
         if len > 0 then begin
-          buffer#place_cursor ~where:buffer#end_iter;
           let txt = Bytes.sub_string buf ~pos:0 ~len in
-          self#insert txt;
-          self#set_input_start ();
+          GtkThread.sync begin fun () ->
+            buffer#place_cursor ~where:buffer#end_iter;
+            self#insert txt;
+            self#set_input_start ();
+          end () |> ignore
         end;
         len
       with Unix.Unix_error _ -> 0
@@ -126,7 +131,7 @@ class widget ~prog ~(env : string array) ~(args : string list) ?packing ?show ()
       end
 
     method (*private*) return () =
-      buffer#insert "\n";
+      self#insert "\n";
       if reading then reading <- false else begin
         let rec search (it : GText.iter) =
           match it#backward_search "# " with None -> it
@@ -156,7 +161,7 @@ class widget ~prog ~(env : string array) ~(args : string list) ?packing ?show ()
       self#set_input_start ();
       (*  *)
       h#add "";
-      view#misc#modify_font_by_name preferences#get.pref_base_font;
+      view#misc#modify_font_by_name preferences#get.editor_base_font;
       view#misc#set_size_chars ~width:80 ~height:25 ~lang:"C" ();
       view#event#connect#key_press ~callback:
         begin fun ev ->
@@ -167,14 +172,14 @@ class widget ~prog ~(env : string array) ~(args : string list) ?packing ?show ()
           else if key = _Down && state = [`CONTROL] then (self#history `previous; true)
           else true(*(self#keypress (GdkEvent.Key.string ev); false)*);
         end |> ignore;
-      buffer#connect#after#insert_text ~callback:
-        begin fun it s ->
-          try
-            let start = it#backward_chars (String.length s) in
-            self#lex ~start:(start#set_line_index 0) ~stop:it#forward_to_line_end;
-            view#scroll_mark_onscreen `INSERT;
-          with Gpointer.Null -> ()
-        end |> ignore;
+      buffer#connect#after#insert_text ~callback:begin fun it s ->
+        try
+          let start = it#backward_chars (String.length s) in
+          self#lex ~start:(start#set_line_index 0) ~stop:it#forward_to_line_end;
+          view#scroll_mark_onscreen `INSERT;
+        with (*Gpointer.Null as *)ex ->
+          Printf.eprintf "File \"shell_view.ml\": %s\n%s\n%!" (Printexc.to_string ex) (Printexc.get_backtrace());
+      end |> ignore;
       buffer#connect#after#delete_range ~callback:
         begin fun ~start ~stop:_ ->
           let start = start#set_line_index 0
@@ -192,7 +197,7 @@ class widget ~prog ~(env : string array) ~(args : string list) ?packing ?show ()
       ignore (List.map ~f:begin fun fd ->
           Thread.create begin fun () ->
             while alive do
-              ignore @@ self#read ~fd ~len:1024
+              self#read ~fd ~len:1024 |> ignore
             done
           end ();
         end (List.map ~f:Unix.descr_of_in_channel [errchan; inchan]));

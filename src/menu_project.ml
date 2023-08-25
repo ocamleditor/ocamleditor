@@ -155,8 +155,9 @@ let project ~browser ~group ~flags items =
   project#set_submenu menu;
 
   (* Clean default target *)
+  let open Preferences in
   let project_clean_default_target = GMenu.image_menu_item ~label:"Clean" ~packing:menu#add () in
-  project_clean_default_target#set_image (Icons.create Icons.clear_build_16)#coerce;
+  project_clean_default_target#set_image (Icons.create (??? Icons.clear_build_16))#coerce;
   project_clean_default_target#add_accelerator ~group ~modi:[`CONTROL] GdkKeysyms._F9 ~flags;
   ignore (project_clean_default_target#connect#activate ~callback:begin fun () ->
       browser#with_current_project (fun _ ->
@@ -166,7 +167,7 @@ let project ~browser ~group ~flags items =
 
   (* Compile *)
   let project_compile_only = GMenu.image_menu_item ~label:"Compile" ~packing:menu#add () in
-  project_compile_only#set_image (Icons.create Icons.compile_all_16)#coerce;
+  project_compile_only#set_image (Icons.create (??? Icons.compile_all_16))#coerce;
   project_compile_only#add_accelerator ~group ~modi:[`CONTROL] GdkKeysyms._F10 ~flags;
   ignore (project_compile_only#connect#activate ~callback:begin fun () ->
       browser#with_current_project (fun _ ->
@@ -176,7 +177,7 @@ let project ~browser ~group ~flags items =
 
   (* Build *)
   let project_build = GMenu.image_menu_item ~label:"Build" ~packing:menu#add () in
-  project_build#set_image (Icons.create Icons.build_16)#coerce;
+  project_build#set_image (Icons.create (??? Icons.build_16))#coerce;
   ignore (project_build#connect#activate ~callback:begin fun () ->
       browser#with_current_project (fun _ ->
           browser#with_default_target (fun target ->
@@ -185,7 +186,7 @@ let project ~browser ~group ~flags items =
 
   (* Run current *)
   let project_run = GMenu.image_menu_item ~label:"Run" ~packing:menu#add () in
-  project_run#set_image (Icons.create Icons.start_16)#coerce;
+  project_run#set_image (Icons.create (??? Icons.start_16))#coerce;
   project_run#add_accelerator ~group ~modi:[`CONTROL] GdkKeysyms._F11 ~flags;
   ignore (project_run#connect#activate ~callback:begin fun () ->
       browser#with_current_project (fun project ->
@@ -218,24 +219,24 @@ let project ~browser ~group ~flags items =
 
   (* Compile file *)
   let project_comp_file = GMenu.image_menu_item ~label:"Compile file" ~packing:menu#add () in
-  project_comp_file#set_image (GMisc.image ~pixbuf:Icons.compile_file_16 ())#coerce;
+  project_comp_file#set_image (GMisc.image ~pixbuf:(??? Icons.compile_file_16) ())#coerce;
   ignore (project_comp_file#connect#activate ~callback:begin fun () ->
       browser#editor#with_current_page begin fun p ->
-        if Preferences.preferences#get.Preferences.pref_editor_save_all_bef_comp then (editor#save_all());
+        if Preferences.preferences#get.editor_save_all_bef_comp then (editor#save_all());
         p#compile_buffer ?join:None ()
       end
     end);
   let sep2 = GMenu.separator_item ~packing:menu#add () in
 
   (* Project Properties *)
-  let dialog_project_properties = GMenu.image_menu_item ~label:"Properties" ~packing:menu#add () in
-  dialog_project_properties#set_image (GMisc.image ~stock:`PROPERTIES ~icon_size:`MENU ())#coerce;
+  let dialog_project_properties = GMenu.image_menu_item ~label:"Project Properties" ~packing:menu#add () in
+  dialog_project_properties#set_image (Icons.create (??? Icons.project_16))#coerce;
   ignore (dialog_project_properties#connect#activate ~callback:(fun () ->
       browser#dialog_project_properties ?page_num:(Some 0) ?show:(Some true) ()));
   dialog_project_properties#add_accelerator ~group ~modi:[`CONTROL; `SHIFT] GdkKeysyms._P ~flags;
 
   (* Targets *)
-  let project_targets = GMenu.image_menu_item ~image:(Icons.create Icons.target_16)#coerce ~label:"Targets" ~packing:menu#add () in
+  let project_targets = GMenu.image_menu_item ~image:(Icons.create (??? Icons.target_16))#coerce ~label:"Targets" ~packing:menu#add () in
   ignore (project_targets#connect#activate ~callback:(fun () ->
       browser#dialog_project_properties ?page_num:(Some 1) ?show:(Some true) ()));
   project_targets#add_accelerator ~group ~modi:[] GdkKeysyms._F12 ~flags;
@@ -250,7 +251,7 @@ let project ~browser ~group ~flags items =
 
   (* Project Refresh *)
   let project_refresh = GMenu.image_menu_item ~label:"Refresh" ~packing:menu#add () in
-  project_refresh#set_image (GMisc.image ~pixbuf:Icons.refresh16(*~stock:`REFRESH*) ~icon_size:`MENU ())#coerce;
+  project_refresh#set_image (GMisc.image ~pixbuf:(??? Icons.refresh16)(*~stock:`REFRESH*) ~icon_size:`MENU ())#coerce;
   ignore (project_refresh#connect#activate ~callback:browser#refresh);
 
   (* Project Clear Cache *)

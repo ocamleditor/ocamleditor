@@ -3,45 +3,70 @@
 open Parser
 open Str
 open Printf
+open Preferences
 
 let multi_space = regexp "\\( \\( +\\)\\)\\|(\\*\\*\\(\\*+\\)\\|(\\*\\* \\|(\\* \\|(\\*\\|\\*)"
 
-let tags, colors = List.split Preferences.preferences#get.Preferences.pref_tags
-
-let tags = ref tags
-let colors = ref colors
+let tags, colors =
+  let tags, colors =
+    Preferences.preferences#get.editor_tags
+    |> List.map (fun (t : Settings_t.editor_tag) -> t.name, t)
+    |> List.split
+  in ref tags, ref colors
 
 (* Initialization *)
 let init_tags ?(tags=(!tags)) ?(colors=(!colors))
     ?(ocamldoc_paragraph_enabled=Oe_config.ocamldoc_paragraph_bgcolor_enabled)
-    ?(ocamldoc_paragraph_bgcolor_1=(Preferences.preferences#get.Preferences.pref_ocamldoc_paragraph_bgcolor_1))
-    ?(ocamldoc_paragraph_bgcolor_2=(Preferences.preferences#get.Preferences.pref_ocamldoc_paragraph_bgcolor_2))
+    ?(ocamldoc_paragraph_bgcolor_1=(Preferences.preferences#get.editor_ocamldoc_paragraph_bgcolor_1))
+    ?(ocamldoc_paragraph_bgcolor_2=(Preferences.preferences#get.editor_ocamldoc_paragraph_bgcolor_2))
     (tb : #GText.buffer) =
   let table = new GText.tag_table tb#tag_table in
+  let to_gdk_color x = GDraw.color (`NAME ?? x) in
   List.iter2
-    begin fun tagname (col, weight, style, undline, scale, (bg_default, bg_color)) ->
+    begin fun tagname (tagprop : Settings_t.editor_tag) ->
       if tagname <> "highlight_current_line" then begin
         begin
           match table#lookup tagname with
           | None -> ()
           | Some t -> table#remove t
         end;
-        let properties = [`FOREGROUND_GDK (GDraw.color col); `WEIGHT weight; `STYLE style; `UNDERLINE undline; `SCALE scale] in
-        let properties = if bg_default then properties else (`BACKGROUND_GDK (GDraw.color bg_color)) :: properties in
+        let fg_color = `FOREGROUND_GDK (to_gdk_color tagprop.color) in
+        let properties = [
+          Some fg_color;
+          (match tagprop.scale with 1.0 -> None | _ -> None); (* scale is unused *)
+          (match tagprop.style with `NORMAL -> None | _ -> Some (`STYLE `ITALIC));
+          (match tagprop.underline with `NONE -> None | _ -> Some (`UNDERLINE `SINGLE));
+          (if tagprop.weight > 0 then Some (`WEIGHT (`CUSTOM tagprop.weight)) else None)
+        ] |> List.filter_map Fun.id in
+        let properties = if tagprop.bg_default then properties else (`BACKGROUND_GDK (to_gdk_color tagprop.bg_color)) :: properties in
         let tag = tb#create_tag ~name:tagname properties in
         if tagname = "ocamldoc" then begin
           if ocamldoc_paragraph_enabled then begin
-            Gaux.may ocamldoc_paragraph_bgcolor_2 ~f:begin fun bg2 ->
-              Gmisclib.Util.set_tag_paragraph_background tag bg2;
-            end;
+
+            ?? ocamldoc_paragraph_bgcolor_2
+            |> Gaux.may ~f:(fun c -> Gmisclib.Util.set_tag_paragraph_background tag c);
+
+            (*            Gaux.may ocamldoc_paragraph_bgcolor_2 ~f:begin fun bg2 ->
+                          Gmisclib.Util.set_tag_paragraph_background tag (?? bg2);
+                          end;*)
           end;
           Gaux.may (table#lookup "ocamldoc-paragraph") ~f:table#remove;
-          let tag = tb#create_tag ~name:"ocamldoc-paragraph"
-              [`FOREGROUND_GDK (GDraw.color col); `WEIGHT weight; `STYLE style; `UNDERLINE undline; `PIXELS_BELOW_LINES 1; `PIXELS_ABOVE_LINES 1] in
+          let properties = [
+            Some fg_color;
+            (if tagprop.weight > 0 then Some (`WEIGHT (`CUSTOM tagprop.weight)) else None);
+            (match tagprop.style with `NORMAL -> None | _ -> Some (`STYLE `ITALIC));
+            (match tagprop.underline with `NONE -> None | _ -> Some (`UNDERLINE `SINGLE));
+            Some (`PIXELS_BELOW_LINES 1);
+            Some (`PIXELS_ABOVE_LINES 1)
+          ] |> List.filter_map (fun x -> x) in
+          let tag = tb#create_tag ~name:"ocamldoc-paragraph" properties in
           if ocamldoc_paragraph_enabled then begin
-            Gaux.may ocamldoc_paragraph_bgcolor_1 ~f:begin fun bg1 ->
-              Gmisclib.Util.set_tag_paragraph_background tag bg1;
-            end
+            ?? ocamldoc_paragraph_bgcolor_1
+            |> Gaux.may ~f:(fun c -> Gmisclib.Util.set_tag_paragraph_background tag c);
+
+            (*            Gaux.may ocamldoc_paragraph_bgcolor_1 ~f:begin fun bg1 ->
+                          Gmisclib.Util.set_tag_paragraph_background tag (?? bg1);
+                          end*)
           end
         end
       end
@@ -100,11 +125,11 @@ let tag ?start ?stop (tb : GText.buffer) =
   let global_comments = Comments.scan text in
   let start = match Comments.enclosing global_comments start#offset with
     | None -> start
-    | Some (x, y) ->
+    | Some (x, _) ->
         tb#get_iter_at_char x in
   let stop = match Comments.enclosing global_comments stop#offset with
     | None -> stop
-    | Some (x, y) ->
+    | Some (_, y) ->
         tb#get_iter_at_char y in
   (*  *)
   let u_text = tb#get_text ~start ~stop () in
@@ -119,6 +144,7 @@ let tag ?start ?stop (tb : GText.buffer) =
   let last_but_one = ref ("", EOF, 0, 0) in
   let in_record = ref false in
   let in_record_label = ref false in
+  let in_annotation = ref false in
   List.iter begin function
   | tagname when tagname <> "highlight_current_line" -> tb#remove_tag_by_name tagname ~start ~stop
   | _ -> ()
@@ -165,6 +191,7 @@ let tag ?start ?stop (tb : GText.buffer) =
           | WITH
             -> "control"
           | AND
+          | ANDOP _
           | AS
           | BAR
           | CLASS
@@ -176,9 +203,11 @@ let tag ?start ?stop (tb : GText.buffer) =
           | FUNCTOR
           | INHERIT
           | LET
+          | LETOP _
           | METHOD
           | MODULE
           | MUTABLE
+          | NONREC
           | PRIVATE
           | REC
           | TYPE
@@ -196,6 +225,7 @@ let tag ?start ?stop (tb : GText.buffer) =
             -> "structure"
           | CHAR _
           | STRING _
+          | QUOTED_STRING_EXPR _ | QUOTED_STRING_ITEM _
             -> "char"
           (*| BACKQUOTE*)
           | INFIXOP0 _
@@ -204,7 +234,8 @@ let tag ?start ?stop (tb : GText.buffer) =
           | INFIXOP3 _
           | INFIXOP4 _
           | PREFIXOP _
-          | HASH
+          | HASH | HASHOP _
+          | BANG
             -> "infix"
           | LABEL _
           | OPTLABEL _
@@ -212,6 +243,7 @@ let tag ?start ?stop (tb : GText.buffer) =
           | TILDE
             -> "label"
           | UIDENT _ | BACKQUOTE -> "uident"
+          | LIDENT _ when !in_annotation -> "annotation"
           | LIDENT _ ->
               begin match !last with
               | _, (QUESTION | TILDE), _, _ -> "label"
@@ -241,14 +273,22 @@ let tag ?start ?stop (tb : GText.buffer) =
           | LBRACE -> in_record := true; in_record_label := true; "symbol"
           | RBRACE -> in_record := false; in_record_label := false; "symbol"
           | EQUAL when !in_record -> in_record_label := false; "symbol"
-          | LPAREN | RPAREN | LBRACKET | BARRBRACKET| RBRACKET | LBRACKETLESS | GREATERRBRACKET
+          | LPAREN | RPAREN | LBRACKET | BARRBRACKET | LBRACKETLESS | LBRACKETGREATER | GREATERRBRACKET
           | LBRACELESS | GREATERRBRACE | LBRACKETBAR | LESSMINUS
           | EQUAL | PLUS | MINUS | STAR | QUOTE | SEMI | SEMISEMI | MINUSGREATER
-          | COMMA | DOT | DOTDOT | COLONCOLON | COLONEQUAL (*| LBRACE*) (*| RBRACE*) | UNDERSCORE
+          | COMMA | DOT | DOTDOT | COLONCOLON | COLONEQUAL | UNDERSCORE
+          | PLUSDOT | MINUSDOT | LESS | GREATER
+          | PLUSEQ | PERCENT
+          | COLONGREATER
+          | DOTOP _
             -> "symbol"
+          | LBRACKETAT | LBRACKETPERCENT | LBRACKETPERCENTPERCENT | LBRACKETATAT | LBRACKETATATAT
+            -> in_annotation:= true; "annotation"
+          | RBRACKET -> if !in_annotation then (in_annotation := false; "annotation") else "symbol"
           | ASSERT -> "custom"
+          | DOCSTRING _ | COMMENT _ -> "comment"
+          | EOL -> ""
           | EOF -> raise End_of_file
-          | _ -> ""
         in
         if tag <> "" then begin
           tb#apply_tag_by_name tag ~start:(tpos start) ~stop:(tpos stop);

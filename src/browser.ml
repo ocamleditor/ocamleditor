@@ -25,11 +25,12 @@ open Printf
 open Miscellanea
 open GUtil
 open Oe
+open Preferences
 
 class browser () =
   let window = GWindow.window
       ~title:About.program_name
-      ~icon:Icons.oe
+      ~icon:(??? Icons.oe)
       ~type_hint:`NORMAL
       ~kind:`TOPLEVEL
       ~position:`CENTER
@@ -59,19 +60,14 @@ class browser () =
   let vbox = GPack.vbox ~packing:Messages.hpaned#add1 () in
   let menubarbox = GPack.hbox ~spacing:0 ~packing:vbox#pack () in
   (* Menubar icon displayed full-screen mode *)
-  let width, height = 32, 32 in
-  let scaled = GdkPixbuf.create ~width ~height ~has_alpha:false () in
-  let _ = GdkPixbuf.scale ~dest:scaled ~width ~height Icons.oe in
-  let pixbuf = GdkPixbuf.create ~width ~height ~has_alpha:false () in
-  let _ = GdkPixbuf.saturate_and_pixelate ~saturation:0.0 ~pixelate:true ~dest:pixbuf scaled in
+  let logo = (??? Icons.oe_32) in
+  let width, height = GdkPixbuf.get_width logo, GdkPixbuf.get_height logo in
+  let pixbuf = GdkPixbuf.create ~width ~height ~has_alpha:(GdkPixbuf.get_has_alpha logo) () in
+  let () = GdkPixbuf.saturate_and_pixelate ~saturation:0.0 ~pixelate:true ~dest:pixbuf logo in
   let window_title_menu_icon = GBin.event_box ~packing:menubarbox#pack ~show:false () in
   let icon = GMisc.image ~pixbuf ~packing:window_title_menu_icon#add () in
   let _ = window_title_menu_icon#misc#set_property "visible-window" (`BOOL false) in
-  let _ = window_title_menu_icon#event#connect#leave_notify ~callback:begin fun _ ->
-      icon#set_pixbuf pixbuf;
-      false
-    end
-  in
+
   (* Menubar *)
   let menubar = GMenu.menu_bar ~border_width:0 ~packing:menubarbox#add () in
   let cursor = Gdk.Cursor.create `ARROW in
@@ -89,26 +85,25 @@ class browser () =
   (*  *)
   let ebox_project_name = GBin.event_box ~packing:(menubarbox#pack ~expand:false) () in
   let label_project_name = GMisc.label ~markup:"" ~xpad:5 ~packing:ebox_project_name#add () in
-  let _ = 
-    ebox_project_name#misc#modify_bg [`NORMAL, `COLOR (ebox_project_name#misc#style#base `PRELIGHT)];
-  in
   (* Git bar *)
   let gitbox = GPack.hbox ~spacing:8 ~packing:(menubarbox#pack ~expand:false) () in
   let button_gitunpushed = GButton.button ~relief:`NONE ~packing:gitbox#add () in
-  let _ = button_gitunpushed#set_image (GMisc.image ~pixbuf:Icons.arrow_up ())#coerce in
+  let _ = button_gitunpushed#set_image (GMisc.image ~pixbuf:(??? Icons.arrow_up) ())#coerce in
   let button_gitpending = GButton.button ~relief:`NONE ~packing:gitbox#add () in
-  let _ = 
-    button_gitpending#set_image (GMisc.image ~pixbuf:Icons.edit ())#coerce;
+  let _ =
+    button_gitpending#set_image (GMisc.image ~pixbuf:(??? Icons.edit) ())#coerce;
     button_gitpending#connect#clicked ~callback:begin fun () ->
       Git.diff_stat (Git.show_diff_stat None);
-    end 
+    end
   in
   let button_gitpath = GButton.button ~relief:`NONE ~packing:gitbox#add () in
-  let _ = button_gitpath#set_image (GMisc.image ~pixbuf:Icons.git ())#coerce in
+  let _ = button_gitpath#set_image (GMisc.image ~pixbuf:(??? Icons.git) ())#coerce in
+  let _ = button_gitpath#misc#set_name "gitbutton"in
   let button_gitbranch = GButton.button ~label:"" ~relief:`NONE ~packing:gitbox#add () in
+  let _ = button_gitbranch#misc#set_name "gitbutton" in
   (*let button_gitbranch = Gmisclib.Button.button_menu ~label:"" ~relief:`NONE ~packing:gitbox#add () in*)
-  let _ = 
-    button_gitbranch#set_image (GMisc.image ~pixbuf:Icons.branch ())#coerce;
+  let _ =
+    button_gitbranch#set_image (GMisc.image ~pixbuf:(??? Icons.branch) ())#coerce;
     (*    button_gitbranch#set_menu_only();*)
   in
   (*  *)
@@ -117,17 +112,17 @@ class browser () =
   let hbox_menu_buttons = GPack.hbox ~border_width:0 ~spacing:0 ~packing:align#add () in
 
   let button_menu_iconify = GButton.button ~relief:`NONE ~packing:hbox_menu_buttons#pack () in
-  let _ = GMisc.image ~pixbuf:Icons.minimize_window ~packing:button_menu_iconify#add () in
+  let _ = GMisc.image ~pixbuf:(??? Icons.minimize_window) ~packing:button_menu_iconify#add () in
   let _ = button_menu_iconify#misc#set_name "windowbutton" in
   let _ = button_menu_iconify#set_focus_on_click false in
 
   let button_menu_reset = GButton.button ~relief:`NONE ~packing:hbox_menu_buttons#pack () in
-  let _ = GMisc.image ~pixbuf:Icons.restore_window ~packing:button_menu_reset#add () in
+  let _ = GMisc.image ~pixbuf:(??? Icons.restore_window) ~packing:button_menu_reset#add () in
   let _ = button_menu_reset#misc#set_name "windowbutton" in
   let _ = button_menu_reset#set_focus_on_click false in
 
   let button_menu_exit = GButton.button ~relief:`NONE ~packing:hbox_menu_buttons#pack () in
-  let _ = GMisc.image ~pixbuf:Icons.close_window ~packing:button_menu_exit#add () in
+  let _ = GMisc.image ~pixbuf:(??? Icons.close_window) ~packing:button_menu_exit#add () in
   let _ = button_menu_exit#misc#set_name "windowbutton" in
   let _ = button_menu_exit#set_focus_on_click false in
   let tout_low_prio = Timeout.create ~delay:0.75 () in
@@ -149,7 +144,6 @@ class browser () =
     val mutable cache_dialog_project_properties = []
     val mutable menu = None
     val mutable pref_max_view_2 = false
-    val mutable pref_max_view_fullscreen = false
     val mutable max_height_prev_h = -1
     val mutable max_height_prev_y = -1
     val mutable is_fullscreen = false
@@ -163,17 +157,17 @@ class browser () =
           });
       `FIRST, (fun () -> {
             mva_menubar    = true(*Preferences.preferences#get.Preferences.pref_max_view_1_menubar*);
-            mva_toolbar    = Preferences.preferences#get.Preferences.pref_max_view_1_toolbar;
-            mva_tabbar     = Preferences.preferences#get.Preferences.pref_max_view_1_tabbar;
-            mva_messages   = Preferences.preferences#get.Preferences.pref_max_view_1_messages;
-            mva_fullscreen = Preferences.preferences#get.Preferences.pref_max_view_1_fullscreen;
+            mva_toolbar    = Preferences.preferences#get.max_view_1_toolbar;
+            mva_tabbar     = Preferences.preferences#get.max_view_1_tabbar;
+            mva_messages   = Preferences.preferences#get.max_view_1_messages;
+            mva_fullscreen = Preferences.preferences#get.max_view_1_fullscreen;
           });
       `SECOND, (fun () -> {
             mva_menubar    = true(*Preferences.preferences#get.Preferences.pref_max_view_2_menubar*);
-            mva_toolbar    = Preferences.preferences#get.Preferences.pref_max_view_2_toolbar;
-            mva_tabbar     = Preferences.preferences#get.Preferences.pref_max_view_2_tabbar;
-            mva_messages   = Preferences.preferences#get.Preferences.pref_max_view_2_messages;
-            mva_fullscreen = Preferences.preferences#get.Preferences.pref_max_view_2_fullscreen;
+            mva_toolbar    = Preferences.preferences#get.max_view_2_toolbar;
+            mva_tabbar     = Preferences.preferences#get.max_view_2_tabbar;
+            mva_messages   = Preferences.preferences#get.max_view_2_messages;
+            mva_fullscreen = Preferences.preferences#get.max_view_2_fullscreen;
           })
     ];
 
@@ -269,7 +263,7 @@ class browser () =
       let pat1 = "*"^Prj.default_extension in
       let pat2 = "*"^Prj.old_extension in
       let dialog = GWindow.file_chooser_dialog ~action:`OPEN ~width:600 ~height:600
-          ~title:"Open project..." ~icon:Icons.oe ~position:`CENTER ~show:false () in
+          ~title:"Open project..." ~icon:(??? Icons.oe) ~position:`CENTER ~show:false () in
       dialog#add_filter (GFile.filter
                            ~name:(sprintf "%s projects (%s)" About.program_name pat1) ~patterns:[pat1] ());
       dialog#add_filter (GFile.filter
@@ -431,15 +425,15 @@ class browser () =
           | Some proj -> f proj
           | _ -> ()
         in
-        with_project begin fun proj -> 
+        with_project begin fun proj ->
           kprintf label_project_name#set_label "<b>%s</b>" proj.Prj.name;
           label_project_name#misc#set_tooltip_text (Project.filename proj);
         end;
-        Git.toplevel begin function 
+        Git.toplevel begin function
         | Some toplevel ->
             toplevel |> Filename.basename |> button_gitpath#set_label;
             toplevel |> Filename.dirname |> button_gitpath#misc#set_tooltip_text;
-        | _ -> 
+        | _ ->
             button_gitpath#set_label "";
             button_gitpath#misc#set_tooltip_text "";
         end;
@@ -447,14 +441,14 @@ class browser () =
         | Some s ->
             gitbox#misc#show();
             button_gitbranch#set_label s.Git.branch;
-            let changes = 
+            let changes =
               s.Git.added + s.Git.modified + s.Git.deleted + s.Git.renamed + s.Git.copied + s.Git.untracked + s.Git.ignored
             in
             changes |> sprintf "%3d" |> button_gitpending#set_label;
             Git.markup_of_status s |> button_gitpending#misc#set_tooltip_markup;
             s.Git.ahead |> sprintf "%3d" |> button_gitunpushed#set_label;
             s.Git.ahead |> sprintf "%d unpushed commits" |> button_gitunpushed#misc#set_tooltip_markup;
-        | _ -> 
+        | _ ->
             gitbox#misc#hide();
         end;
       end
@@ -538,14 +532,12 @@ class browser () =
 
     method set_fullscreen x =
       if x && (not is_fullscreen) then begin
-        pref_max_view_fullscreen <- Preferences.preferences#get.Preferences.pref_max_view_fullscreen;
-        let decorated = not Preferences.preferences#get.Preferences.pref_max_view_fullscreen in
-        window#set_decorated decorated;
-        window#maximize();
-        if not decorated then begin
-          window_title_menu_icon#misc#show();
-          vbox_menu_buttons#misc#show();
-        end;
+        (* pref_max_view_fullscreen = "Prefer fullscreen over maximize window" *)
+        let prefer_maximized_window = not Preferences.preferences#get.max_view_prefer_fullscreen in
+        if prefer_maximized_window then window#maximize() else window#fullscreen();
+        window#set_decorated (not prefer_maximized_window);
+        window_title_menu_icon#misc#show();
+        vbox_menu_buttons#misc#show();
         menubar#misc#set_name "oe_menubar";
         menubarbox#set_child_packing ~expand:false ~fill:false menubar#coerce;
         toolbox#misc#show();
@@ -555,6 +547,7 @@ class browser () =
         menubar#misc#set_name "";
         menubarbox#set_child_packing ~expand:true ~fill:true menubar#coerce;
         toolbox#misc#hide();
+        window#unfullscreen();
         window#unmaximize();
         window#set_decorated true;
       end;
@@ -648,7 +641,7 @@ class browser () =
           let iter = `ITER (page#buffer#get_iter `INSERT) in
           (*Opt.may page#annot_type (fun (at : Annot_type.annot_type) -> at#popup (*~position:`TOP_RIGHT*) iter ());*)
           Option.iter (fun at ->  at#popup iter () : Annot_type.annot_type -> unit) page#annot_type;
-          if Preferences.preferences#get.Preferences.pref_err_tooltip then (page#error_indication#tooltip ~sticky:true iter);
+          if Preferences.preferences#get.editor_err_tooltip then (page#error_indication#tooltip ~sticky:true iter);
         with ex -> Printf.eprintf "File \"browser.ml\": %s\n%s\n%!" (Printexc.to_string ex) (Printexc.get_backtrace());
       end
 
@@ -665,7 +658,7 @@ class browser () =
       end
 
     method annot_type_set_tooltips x =
-      Preferences.preferences#get.Preferences.pref_annot_type_tooltips_enabled <- x;
+      Preferences.preferences#get.editor_annot_type_tooltips_enabled <- x;
       Preferences.save();
       editor#with_current_page
         (fun page -> Option.iter (fun obj -> obj#remove_tag ()) page#annot_type)
@@ -712,9 +705,9 @@ class browser () =
 
     method exit (editor : Editor.editor) () =
       try
-        Preferences.preferences#get.Preferences.pref_hmessages_width <- Messages.hmessages#position;
-        Preferences.preferences#get.Preferences.pref_vmessages_height <- Messages.vmessages#position;
-        Preferences.preferences#get.Preferences.pref_outline_width <- editor#paned#position;
+        Preferences.preferences#get.hmessages_width <- Messages.hmessages#position;
+        Preferences.preferences#get.vmessages_height <- Messages.vmessages#position;
+        Preferences.preferences#get.outline_width <- editor#paned#position;
         ignore(Messages.vmessages#remove_all_tabs());
         if maximized_view_action = `NONE then (self#set_geometry());
         (* Save geometry *)
@@ -1042,9 +1035,9 @@ class browser () =
       self#set_outline_visible !is_outline_visible;
       window#resize ~width:!width ~height:!height;
       Gmisclib.Idle.add ~prio:300 begin fun () ->
-        Messages.vmessages#set_position (Preferences.preferences#get.Preferences.pref_vmessages_height);
+        Messages.vmessages#set_position (Preferences.preferences#get.vmessages_height);
       end;
-      Gmisclib.Idle.add ~prio:300 (fun () -> Messages.hmessages#set_position (Preferences.preferences#get.Preferences.pref_hmessages_width));
+      Gmisclib.Idle.add ~prio:300 (fun () -> Messages.hmessages#set_position (Preferences.preferences#get.hmessages_width));
       ignore (window#event#connect#after#delete ~callback:(fun _ -> self#exit editor (); true));
       button_menu_exit#connect#clicked ~callback:(fun () -> self#exit editor ()) |> ignore;
       button_menu_reset#connect#clicked ~callback:(fun () -> self#set_maximized_view `NONE) |> ignore;
@@ -1147,9 +1140,9 @@ let create () =
 (** splashscreen *)
 let splashscreen () =
   let pref = Preferences.preferences#get in
-  if pref.Preferences.pref_general_splashscreen_enabled then begin
+  if pref.splashscreen_enabled then begin
     let decorated = (*false && *)Sys.win32 in
-    let pixbuf = GdkPixbuf.from_file (App_config.application_icons // "logo.png") in
+    let pixbuf = ??? Icons.logo in
     let image = GMisc.image ~pixbuf () in
     let window = GWindow.window
         ~title:About.program_name

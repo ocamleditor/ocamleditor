@@ -60,12 +60,15 @@ let redirect_to_stderr = loop (fun chan -> input_line chan |> prerr_endline)
 (** redirect_to_ignore *)
 let redirect_to_ignore = loop (fun chan -> input_line chan |> ignore)
 
-(** exec *)
+(** exec
+    @param at_exit Deprecated, use continue_with instead.
+*)
 let exec
     mode
     ?working_directory
     ?env
     ?at_exit
+    ?continue_with
     ?process_in
     ?process_out
     ?process_err
@@ -78,14 +81,31 @@ let exec
     set_binary_mode_out proc.outchan binary;
     let process_in = match process_in with Some f -> f | _ -> redirect_to_ignore in
     let process_err = match process_err with Some f -> f | _ -> redirect_to_ignore in
+    let continue_with, deprecated_at_exit =
+      match continue_with, at_exit with
+      | Some f, None -> f, ignore
+      | None, Some f -> ignore, f
+      | None, None -> ignore, ignore
+      | Some _, Some _ -> invalid_arg "at_exit is not supported together with continue_with"
+    in
     let final () =
-      let f = match at_exit with Some f -> f | _ -> ignore in
-      try
-        Stdlib.close_in proc.inchan;
-        Stdlib.close_in proc.errchan;
-        Stdlib.close_out proc.outchan;
-        f None
-      with (Unix.Unix_error _) as ex -> f (Some ex)
+      let close_channels () =
+        try
+          Stdlib.close_in proc.inchan;
+          Stdlib.close_in proc.errchan;
+          Stdlib.close_out proc.outchan;
+          None
+        with (Unix.Unix_error _) as ex ->
+          Some ex
+      in
+      let pid, status = Unix.waitpid [] proc.pid in
+      match close_channels() with
+      | None ->
+          continue_with (pid, status, None);
+          deprecated_at_exit None
+      | Some ex ->
+          continue_with (pid, status, Some ex);
+          deprecated_at_exit (Some ex)
     in
     let tho = match process_out with Some f -> Some (Thread.create f proc.outchan) | _ -> None in
     let thi = Thread.create process_in proc.inchan in
@@ -107,10 +127,13 @@ let exec
     | `ASYNC -> `PID proc.pid
   with (Unix.Unix_error _) as ex -> `ERROR ex
 
-(** sync *)
+(** sync
+    @param at_exit Deprecated, use continue_with instead.
+*)
 let sync
     ?working_directory
     ?env
+    ?continue_with
     ?at_exit
     ?process_in
     ?process_out
@@ -121,6 +144,7 @@ let sync
     exec `SYNC
       ?working_directory
       ?env
+      ?continue_with
       ?at_exit
       ?process_in
       ?process_out
@@ -132,10 +156,13 @@ let sync
   | `ERROR ex -> Some ex
   | `PID _ -> assert false
 
-(** async *)
+(** async
+    @param at_exit Deprecated, use continue_with instead.
+*)
 let async
     ?working_directory
     ?env
+    ?continue_with
     ?at_exit
     ?process_in
     ?process_out
@@ -146,6 +173,7 @@ let async
     exec `ASYNC
       ?working_directory
       ?env
+      ?continue_with
       ?at_exit
       ?process_in
       ?process_out

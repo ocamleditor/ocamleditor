@@ -21,6 +21,8 @@
 *)
 
 open Printf
+module ColorOps = Color
+open Preferences
 
 let forward_non_blank iter =
   let rec f it =
@@ -44,7 +46,8 @@ class error_indication (view : Ocaml_text.view) vscrollbar global_gutter =
           Gobject.Property.set tag_error#as_tag {Gobject.name="underline"; conv=Gobject.Data.int} 4;
     end;
     let tag_warning = buffer#create_tag ~name:(sprintf "tag_warning-%f" ts) [`LEFT_MARGIN view#left_margin] in
-    let tag_warning_unused = buffer#create_tag ~name:(sprintf "tag_warning_unused-%f" ts) Oe_config.warning_unused_properties in
+    let tag_warning_unused = buffer#create_tag ~name:(sprintf "tag_warning_unused-%f" ts)
+        [`FOREGROUND (?? Oe_config.warning_unused_color); `STYLE `ITALIC] in
     tag_error, tag_warning, tag_warning_unused
   in
   let tag_error, tag_warning, tag_warning_unused = create_tags () in
@@ -63,9 +66,9 @@ class error_indication (view : Ocaml_text.view) vscrollbar global_gutter =
     val mutable sticky_popup = false
     val mutable table = []
     val mutable error_gutter_markers = []
-    val mutable flag_underline = Preferences.preferences#get.Preferences.pref_err_underline
-    val mutable flag_tooltip = Preferences.preferences#get.Preferences.pref_err_tooltip
-    val mutable flag_gutter = Preferences.preferences#get.Preferences.pref_err_gutter
+    val mutable flag_underline = Preferences.preferences#get.editor_err_underline
+    val mutable flag_tooltip = Preferences.preferences#get.editor_err_tooltip
+    val mutable flag_gutter = Preferences.preferences#get.editor_err_gutter
     val mutable tag_error = tag_error
     val mutable tag_warning = tag_warning
     val mutable tag_warning_unused = tag_warning_unused
@@ -152,8 +155,8 @@ class error_indication (view : Ocaml_text.view) vscrollbar global_gutter =
         if flag_gutter then begin
           let kind, pixbuf =
             match kind with
-            | `Warning -> `Warning error.Oe.er_message, Icons.warning_14
-            | `Error -> `Error error.Oe.er_message, Icons.error_16
+            | `Warning -> `Warning error.Oe.er_message, (??? Icons.warning_14)
+            | `Error -> `Error error.Oe.er_message, (??? Icons.error_16)
             | _ -> assert false
           in
           let marker = Gutter.create_marker ~kind
@@ -247,11 +250,11 @@ class error_indication (view : Ocaml_text.view) vscrollbar global_gutter =
                 let (start, stop, error), border_color, bg_color =
                   try
                     (self#find_message iter tag_error_bounds),
-                    Oe_config.error_popup_border_color, Oe_config.error_popup_bg_color
+                    ?? (Oe_config.error_popup_border_color), ?? (Oe_config.error_popup_bg_color)
                   with Not_found -> begin
                       if Oe_config.warning_tootip_enabled || not sticky then (raise Not_found);
                       (self#find_message iter tag_warning_bounds),
-                      Oe_config.warning_popup_border_color, Oe_config.warning_popup_bg_color
+                      ?? (Oe_config.warning_popup_border_color), ?? (Oe_config.warning_popup_bg_color)
                     end
                 in
                 (* Create popup *)
@@ -268,7 +271,8 @@ class error_indication (view : Ocaml_text.view) vscrollbar global_gutter =
                 let markup = (*(error.Oe.er_location) ^*)
                   (Print_type.markup3 error_message) in
                 let label = GMisc.label ~markup ~xpad:5 ~ypad:5 ~packing:ebox#add () in
-                label#misc#modify_font_by_name Preferences.preferences#get.Preferences.pref_compl_font;
+                label#misc#modify_font_by_name Preferences.preferences#get.editor_completion_font;
+                label#misc#modify_fg [`NORMAL, `BLACK];
                 (* Positioning *)
                 begin
                   popup#move ~x:(-1000) ~y:(-1000);
@@ -283,7 +287,7 @@ class error_indication (view : Ocaml_text.view) vscrollbar global_gutter =
                       popup#show();
                       popup#move ~x ~y:(y - popup#misc#allocation.Gtk.height - 12);
                 end;
-                let incr = if Preferences.preferences#get.Preferences.pref_annot_type_tooltips_delay = 0 then 0.106 else 0.479 in
+                let incr = if Preferences.preferences#get.editor_annot_type_tooltips_delay = 0 then 0.106 else 0.479 in
                 Gmisclib.Util.fade_window ~incr popup;
                 (*end ()*)
               with Not_found -> (if not sticky_popup then (self#hide_tooltip()))
@@ -298,24 +302,21 @@ class error_indication (view : Ocaml_text.view) vscrollbar global_gutter =
         let drawable = new GDraw.drawable window in
         drawable#set_line_attributes ~width:1 ~style:`SOLID ~join:`ROUND ();
         let width0, height = drawable#size in
-        let width = if !Plugins.diff = None then width0 else Oe_config.global_gutter_size in
+        let width = Oe_config.global_gutter_size in
         let x0 = width0 - width in
         let alloc = vscrollbar#misc#allocation in
         (* Clean up *)
-        drawable#set_foreground view#gutter.Gutter.bg_color;
+        drawable#set_foreground (`COLOR (view#misc#style#base `NORMAL));
         drawable#rectangle ~filled:true ~x:x0 ~y:0 ~width ~height ();
         (* Rectangles at the top and bottom *)
-        drawable#set_foreground view#gutter.Gutter.fg_color;
-        drawable#rectangle ~filled:false ~x:x0 ~y:0 ~width:(width - 1) ~height:(alloc.Gtk.width - 1) ();
-        drawable#rectangle ~filled:false ~x:x0 ~y:(height - alloc.Gtk.width) ~width:(width - 1) ~height:(alloc.Gtk.width - 2) ();
         (* Rectangle at the top in different color *)
-        let color = if self#has_errors#get then (Some Oe_config.error_underline_color)
-          else if self#has_warnings#get then (Some Oe_config.warning_popup_border_color)
+        let color = if self#has_errors#get then (Some (?? Oe_config.error_underline_color))
+          else if self#has_warnings#get then (Some (?? Oe_config.warning_popup_border_color))
           else None (*(Some Oe_config.global_gutter_no_errors)*)
         in
         Gaux.may color ~f:begin fun color ->
           drawable#set_foreground color;
-          drawable#rectangle ~filled:true ~x:(x0 + 1) ~y:1 ~width:(width - 2) ~height:(alloc.Gtk.width - 2) ();
+          drawable#rectangle ~filled:true ~x:x0 ~y:0 ~width:(width - 1) ~height:(alloc.Gtk.width - 1) ();
         end;
         (* Draw markers *)
         let height = height - 2 * alloc.Gtk.width in
@@ -353,7 +354,7 @@ class error_indication (view : Ocaml_text.view) vscrollbar global_gutter =
         let draw_marker start color is_unused =
           let color =
             if is_unused
-            then (`NAME Oe_config.warning_unused_color) else color
+            then (`NAME (?? Oe_config.warning_unused_color)) else color
           in
           drawable#set_foreground color;
           let line_start = float (buffer#get_iter_at_mark (`MARK start))#line in
@@ -374,36 +375,38 @@ class error_indication (view : Ocaml_text.view) vscrollbar global_gutter =
         in
         (* Warnings *)
         List.iter begin fun (start, _, warning) ->
-          draw_marker start Oe_config.warning_popup_border_color (is_warning_unused warning.Oe.er_level);
+          draw_marker start (?? Oe_config.warning_popup_border_color) (is_warning_unused warning.Oe.er_level);
         end tag_warning_bounds;
         (* Mark Occurrences *)
         begin
-          match Preferences.preferences#get.Preferences.pref_editor_mark_occurrences with
-          | true, under_cursor, color ->
-              let bg = `NAME color in
-              let border = `NAME (Color.add_value color ~sfact:0.75 0.13) in
-              List.iter begin fun (m1, m2) ->
-                let start = buffer#get_iter_at_mark m1 in
-                let stop = buffer#get_iter_at_mark m2 in
-                let line_start = float start#line in
-                let line_stop = float stop#line in
-                let y1 = int_of_float ((line_start /. line_count) *. height) in
-                let y2 = int_of_float ((line_stop /. line_count) *. height) in
-                let y1 = y1 + alloc.Gtk.width - 1 in
-                let y2 = y2 + alloc.Gtk.width + 1 in
-                let width = width - 1 in
-                let height = y2 - y1 in
-                drawable#set_line_attributes ~width:1 ~style:`SOLID ();
-                drawable#set_foreground bg;
-                drawable#rectangle ~filled:true ~x:x0 ~y:y1 ~width ~height ();
-                drawable#set_foreground border;
-                drawable#rectangle ~filled:false ~x:x0 ~y:y1 ~width ~height ();
-              end view#mark_occurrences_manager#table;
-          | _ -> ()
+          if Preferences.preferences#get.editor_mark_occurrences_enabled then begin
+            let bg_color_occurrences = Preferences.preferences#get.editor_mark_occurrences_bg_color in
+            let under_cursor = Preferences.preferences#get.editor_mark_occurrences_under_cursor in
+            let bg = `NAME ?? bg_color_occurrences in
+            let factor = if Preferences.preferences#get.theme_is_dark then -0.23 else 0.13 in
+            let border = `NAME (ColorOps.add_value (?? bg_color_occurrences) ~sfact:0.75 factor) in
+            List.iter begin fun (m1, m2) ->
+              let start = buffer#get_iter_at_mark m1 in
+              let stop = buffer#get_iter_at_mark m2 in
+              let line_start = float start#line in
+              let line_stop = float stop#line in
+              let y1 = int_of_float ((line_start /. line_count) *. height) in
+              let y2 = int_of_float ((line_stop /. line_count) *. height) in
+              let y1 = y1 + alloc.Gtk.width - 1 in
+              let y2 = y2 + alloc.Gtk.width + 1 in
+              let width = width - 1 in
+              let height = y2 - y1 in
+              drawable#set_line_attributes ~width:1 ~style:`SOLID ();
+              drawable#set_foreground bg;
+              drawable#rectangle ~filled:true ~x:x0 ~y:y1 ~width ~height ();
+              drawable#set_foreground border;
+              drawable#rectangle ~filled:false ~x:x0 ~y:y1 ~width ~height ();
+            end view#mark_occurrences_manager#table;
+          end
         end;
         (* Errors *)
         List.iter begin fun (start, _, _) ->
-          draw_marker start Oe_config.error_underline_color false;
+          draw_marker start (?? Oe_config.error_underline_color) false;
         end tag_error_bounds;
       with Gpointer.Null -> ()
 
@@ -457,16 +460,16 @@ class error_indication (view : Ocaml_text.view) vscrollbar global_gutter =
             let drawable = new GDraw.drawable window in
             drawable#set_line_attributes ~width:1 ~style:`SOLID ~join:`MITER ();
             let f = self#draw_underline drawable top bottom x0 y0 in
-            drawable#set_foreground Oe_config.warning_underline_color;
+            drawable#set_foreground (?? Oe_config.warning_underline_color);
             List.iter (f 0) tag_warning_bounds;
-            drawable#set_foreground Oe_config.warning_underline_shadow;
+            drawable#set_foreground (?? Oe_config.warning_underline_shadow);
             List.iter (f 1) tag_warning_bounds;
             begin
               match Oe_config.error_underline_mode with
               | `CUSTOM ->
-                  drawable#set_foreground Oe_config.error_underline_color;
+                  drawable#set_foreground (?? Oe_config.error_underline_color);
                   List.iter (f 0) tag_error_bounds;
-                  drawable#set_foreground Oe_config.error_underline_shadow;
+                  drawable#set_foreground (?? Oe_config.error_underline_shadow);
                   List.iter (f 1) tag_error_bounds;
               | _ -> ()
             end;
