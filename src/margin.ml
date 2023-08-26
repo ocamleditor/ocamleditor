@@ -89,7 +89,7 @@ class line_numbers (view : GText.view) =
 class markers gutter margin_line_numbers =
   object (self)
     inherit margin ()
-    val mutable icons = []
+    val mutable positions = []
     val mutable size = 0 (* visible line number => size = 0; hidden => size > 0 *)
     method icon_size = 15
     method size = size
@@ -97,6 +97,7 @@ class markers gutter margin_line_numbers =
 
     method draw ~view ~top ~left ~height ~start ~stop =
       let left = (if size = 0 then left else left + size) - self#icon_size in (* icon right aligned *)
+      positions <- [];
       gutter.markers
       |> List.iter begin fun mark ->
         match mark.icon_pixbuf with
@@ -117,7 +118,7 @@ class markers gutter margin_line_numbers =
                         Gaux.may mark.callback ~f:begin fun callback ->
                           ebox#event#connect#enter_notify ~callback:begin fun ev ->
                             let window = GdkEvent.get_window ev in
-                            Gdk.Window.set_cursor window (Gdk.Cursor.create `HAND1);
+                            Gdk.Window.set_cursor window (Gdk.Cursor.create `HAND2);
                             true
                           end |> ignore;
                           ebox#event#connect#leave_notify ~callback:begin fun ev ->
@@ -131,26 +132,26 @@ class markers gutter margin_line_numbers =
                           end
                         end;
                         let child = ebox#coerce in
-                        child#misc#connect#destroy ~callback:(fun () -> icons <- List.remove_assoc ym icons) |> ignore;
                         view#add_child_in_window ~child ~which_window:`LEFT ~x:left ~y;
-                        Gmisclib.Idle.add (fun () -> self#spread_markers view left y ym);
+                        positions <- (y, child) :: positions;
                         mark.icon_obj <- Some child;
-                        icons <- (ym, child) :: icons;
-                    | _ ->
-                        self#spread_markers view left y ym;
+                    | Some child ->
+                        view#move_child ~child ~x:left ~y;
+                        positions <- (y, child) :: positions;
                   end;
               | _ -> ()
             end;
         | _ -> ()
+      end;
+      (* Spread markers *)
+      positions |> Miscellanea.Xlist.group_assoc
+      |> List.iter begin fun (y, childs) ->
+        childs
+        |> List.fold_left begin fun x child ->
+          view#move_child ~child ~x ~y;
+          x - (if self#size = 0 then self#icon_size - 4 else 0 )
+        end left |> ignore
       end
-
-    method private spread_markers view x y ym =
-      icons
-      |> List.filter (fun (ym', _) -> ym = ym')
-      |> List.fold_left begin fun x (_, child) ->
-        view#move_child ~child ~x ~y;
-        x - (if self#size = 0 then self#icon_size - 4 else 0 )
-      end x |> ignore
   end
 
 class container (view : GText.view) =
