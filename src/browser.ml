@@ -27,17 +27,7 @@ open GUtil
 open Oe
 open Preferences
 
-class browser () =
-  let window = GWindow.window
-      ~title:About.program_name
-      ~icon:(??? Icons.oe)
-      ~type_hint:`NORMAL
-      ~kind:`TOPLEVEL
-      ~position:`CENTER
-      ~focus_on_map:true
-      ~allow_shrink:true
-      ~show:false ()
-  in
+class browser window =
   (* signals *)
   let startup                            = new startup () in
   let switch_project                     = new switch_project () in
@@ -1132,8 +1122,8 @@ and signals ~startup ~switch_project ~menubar_visibility_changed ~toolbar_visibi
 let browser = ref None
 
 (** create *)
-let create () =
-  let widget = new browser () in
+let create window =
+  let widget = new browser window in
   browser := Some widget;
   widget
 
@@ -1146,7 +1136,7 @@ let splashscreen () =
     let image = GMisc.image ~pixbuf () in
     let window = GWindow.window
         ~title:About.program_name
-        ~type_hint:(if Sys.win32 then `SPLASHSCREEN else `MENU)
+        ~type_hint:`SPLASHSCREEN
         ~position:`CENTER_ALWAYS
         ~border_width:(if decorated then 0 else 1)
         ~focus_on_map:true

@@ -115,16 +115,6 @@ widget \"*.gitbutton\" style:highest \"gitbutton\"
           }" base_color (ColorOps.name (ColorOps.set_value x (`NAME base_color))),
         "widget \"*.targetlist_treeview\" style \"targetlist-treestyle\""
   in
-  let gtk_theme =
-    Option.fold Preferences.Themes.directory
-      ~none:""
-      ~some:(fun _ ->
-          let theme = match theme with Some _ as x -> x | _ -> Preferences.preferences#get.theme in
-          Option.fold theme
-            ~none:""
-            ~some:(fun theme -> sprintf "gtk-theme-name = \"%s\"" theme)
-        )
-  in
   let gtk_font_name =
     match String.trim pref.font with
     | "" ->
@@ -147,7 +137,6 @@ widget \"*.gitbutton\" style:highest \"gitbutton\"
       "gtk-button-images = 0";
       "gtk-double-click-time = 500";
       "gtk-double-click-distance = 10";
-      gtk_theme;
       gtk_font_name;
     ]
   in
