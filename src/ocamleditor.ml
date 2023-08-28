@@ -56,7 +56,7 @@ let main () = begin
     let window = GWindow.window
         ~title:About.program_name
         ~icon:(??? Icons.oe)
-        ~position:`CENTER_ALWAYS
+        ~position:`CENTER
         ~width:1
         ~height:1
         ~decorated:false
@@ -70,7 +70,7 @@ let main () = begin
     in
     window#iconify(); (* doesn't work on WSL *)
     window#move ~x:0 ~y:0;
-    let theme_monitor = new Theme.monitor window in
+    let _ = new Theme.monitor window in
     let browser = Browser.create window in
     (* Before browser initialization *)
     browser#connect#startup ~callback:begin fun () ->
@@ -83,6 +83,7 @@ let main () = begin
     end |> ignore;
     browser#connect#after#startup ~callback:begin fun () ->
       Gmisclib.Idle.add ~prio:300 begin fun () ->
+        window#set_position `CENTER_ALWAYS;
         window#set_decorated true;
         window#deiconify();
         window#present();

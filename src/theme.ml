@@ -36,7 +36,7 @@ class monitor (window : GWindow.window) =
       end |> ignore;
       self#update_preferences()
 
-    method update_preferences () =
+    method private update_preferences () =
       Preferences.preferences#get.theme_is_dark <- is_current_theme_dark#get;
       Preferences.save();
   end
