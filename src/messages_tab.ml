@@ -77,6 +77,7 @@ class widget ~page ?label_widget ?(with_spinner=true) ?packing () =
     method private data_delete _ = ()
 
     method private init () =
+      ebox#misc#set_property "visible-window" (`BOOL false);
       ebox#drag#source_set targets ~modi:[`BUTTON1 ] ~actions:[`MOVE ];
       (*ebox#drag#source_set_icon drag_icon;*)
       ebox#drag#connect#data_get ~callback:self#data_get;
