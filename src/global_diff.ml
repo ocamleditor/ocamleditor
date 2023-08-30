@@ -205,7 +205,6 @@ let init_page page =
 let init_editor editor =
   let callback pg = Gmisclib.Idle.add ~prio:300 (fun () -> init_page pg) in
   editor#connect#add_page ~callback |> ignore;
-  editor#connect#switch_page ~callback |> ignore;
   editor#connect#remove_page ~callback:begin fun page ->
     begin
       match !initialized |> List.assoc_opt page#get_oid with

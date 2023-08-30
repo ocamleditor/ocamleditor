@@ -178,7 +178,9 @@ let spec : spec list ref =
       TI "end;";
     ];
 
-    "ign", "ignore (<selection>)", [I; T "ignore ("; SELECTION; T ")"];
+    "ign", "ignore @@ <selection>", [T "ignore @@ "; SELECTION; T ";"; I];
+    "ignpip", "<selection> |> ignore;", [SELECTION; T " |> ignore;"; I];
+    "ignpar", "ignore (<selection>)", [T "ignore ("; SELECTION; T ")"; I];
 
     "ignbe", "ignore begin ... end",
     [T0 "ignore begin"; NL; IN; SELECTION; OUT; T0 "end;"; I; NL];

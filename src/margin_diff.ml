@@ -34,7 +34,7 @@ class widget view =
     initializer
       view#add_child_in_window ~child:drawing_area#coerce ~which_window:`LEFT ~x:0 ~y:0;
       Preferences.preferences#connect#changed ~callback:begin fun _ ->
-        color_base <- `COLOR (view#misc#style#base `NORMAL)
+        Gmisclib.Idle.add (fun () -> color_base <- `COLOR (view#misc#style#base `NORMAL))
       end |> ignore;
       let drawable = new GDraw.drawable drawing_area#misc#window in
       drawable#set_background color_base;

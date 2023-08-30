@@ -188,11 +188,15 @@ class widget ~project ~(view : Ocaml_text.view) ?packing ()=
     inherit GObj.widget vbox#as_widget
     initializer
       (*lview#misc#modify_base [`NORMAL, `NAME Preferences.preferences#get.Preferences.pref_bg_color_popup];*)
+      let font_name = Preferences.preferences#get.editor_base_font in
+      let family = String.sub font_name 0 (Option.value (String.rindex_opt font_name ' ') ~default:(String.length font_name)) in
+      Printf.printf "font_name = %S %S\n%!" font_name family;
       List.iter begin fun (_, name, descr, templ) ->
         let row = model#append () in
         model#set ~row ~column:col_key name;
-        model#set ~row ~column:col_name (sprintf "<b><tt>%s</tt></b>" (Glib.Markup.escape_text name));
-        model#set ~row ~column:col_descr (sprintf "<tt>%s</tt>" (Glib.Markup.escape_text descr));
+        model#set ~row ~column:col_name (sprintf {|<b><span face="%s">%s</span></b>|} family (Glib.Markup.escape_text name));
+        model#set ~row ~column:col_descr (
+          sprintf {|<span face="%s">%s</span>|} family (Glib.Markup.escape_text descr));
       end !Templates.spec;
       ignore (lview#connect#row_activated ~callback:begin fun path _ ->
           let row = model#get_iter path in

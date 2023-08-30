@@ -27,7 +27,8 @@ open Miscellanea
 (** pref_view *)
 class pref_view title ?packing () =
   let vbox                  = GPack.vbox ~spacing ?packing () in
-  let has_themes            = Preferences.Themes.directory <> None in
+  (* Theme selection disabled as this is done from desktop environment settings. *)
+  let has_themes            = false && Preferences.Themes.directory <> None in
   let align                 = create_align ~vbox () in
   let box                   = GPack.vbox ~spacing:row_spacings ~packing:align#add () in
   let table                 = GPack.table ~col_spacings ~row_spacings ~packing:box#add () in

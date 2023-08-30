@@ -208,7 +208,7 @@ let editor_tag_label = function
   | "annotation"             -> "Annotation"
   | x -> x
 
-let filename = Filename.concat App_config.ocamleditor_user_home "settings.new.json"
+let filename = Filename.concat App_config.ocamleditor_user_home "settings.json"
 
 let save () =
   let chan = open_out_bin filename in
@@ -260,4 +260,7 @@ let reset_defaults () =
   preferences#set default_values;
   save()
 
-let _ = load()
+let _ =
+  let wrong_filename = Filename.concat App_config.ocamleditor_user_home "settings.new.json" in
+  if Sys.file_exists wrong_filename then Sys.rename wrong_filename filename;
+  load()
