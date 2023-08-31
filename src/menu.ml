@@ -80,17 +80,79 @@ let edit ~browser ~group ~flags
       editor#with_current_page (fun page ->
           ignore (page#ocaml_view#obuffer#select_ocaml_word ?pat:None ()))));
   select_word#add_accelerator ~group ~modi:[`CONTROL] GdkKeysyms._w ~flags;
-  (* Move to Matching Delimiter *)
-  let move_par_expr = GMenu.menu_item ~label:"Move to Matching Delimiter" ~packing:menu#add () in
-  ignore (move_par_expr#connect#activate ~callback:(fun () ->
-      editor#with_current_page (fun page -> page#view#matching_delim_goto ?select:None ?strict:None ())));
-  move_par_expr#add_accelerator ~group ~modi:[`CONTROL;] GdkKeysyms._d ~flags;
+
+  (* Enclosing expressions *)
+  let select_expr = GMenu.menu_item ~label:"Select Enclosing Expression" ~packing:menu#add () in
+  select_expr#connect#activate ~callback:(
+    let sid_mark_set = ref None in
+    let sid_keypress = ref None in
+    let ranges : Merlin_t.range array ref = ref [||] in
+    let index = ref 0 in
+    let is_rev_order = ref false in
+    let incr a b var n = var := min (max a (!var + n)) b in
+    fun () ->
+      editor#with_current_page (fun page ->
+          let buffer = page#ocaml_view#obuffer in
+          let select () =
+            match !ranges with
+            | ranges when 0 <= !index && !index < Array.length ranges ->
+                incr 0 (Array.length ranges) index (if !is_rev_order then -1 else 1);
+                let range = ranges.(!index) in
+                let start = buffer#get_iter (`LINECHAR (range.start.line - 1, range.start.col)) in
+                let stop = buffer#get_iter (`LINECHAR (range.stop.line - 1, range.stop.col)) in
+                buffer#select_range start stop;
+            | _ -> ()
+          in
+          match !ranges with
+          | [||] ->
+              let ins, sel = (buffer : Ocaml_text.buffer)#selection_bounds in
+              let open Merlin_t in
+              let start = { line = ins#line + 1; col = ins#line_offset } in
+              let stop = { line = sel#line + 1; col = sel#line_offset } in
+              let delims = page#view#current_matching_tag_bounds in
+              Printf.printf " = %d %d -- %d %d\n%!" start.line start.col stop.line stop.col;
+              Merlin.enclosing page#ocaml_view begin fun rr ->
+                ranges := Array.of_list ({start; stop} :: rr);
+                sid_mark_set := Some (buffer#connect#mark_set ~callback:begin fun _ mark ->
+                    (* WARNING: mark_set is not signaled on insert/delete text while buffer has selection *)
+                    match GtkText.Mark.get_name mark with
+                    | Some name when name = "selection_bound" && (not buffer#has_selection) ->
+                        ranges := [||];
+                        index := 0;
+                        is_rev_order := false;
+                        Option.iter (GtkSignal.disconnect buffer#as_buffer) !sid_mark_set;
+                        Option.iter (GtkSignal.disconnect page#ocaml_view#as_gtext_view#as_view) !sid_keypress
+                    | _ -> ()
+                  end);
+                sid_keypress := Some (page#ocaml_view#as_gtext_view#event#connect#key_press ~callback:begin fun ev ->
+                    if GdkEvent.Key.keyval ev = GdkKeysyms._Shift_R || GdkEvent.Key.keyval ev = GdkKeysyms._Shift_L then
+                      is_rev_order := not !is_rev_order;
+                    Printf.printf "is_rev_order = %b %d\n%!" !is_rev_order (GdkEvent.Key.state ev |> List.length);
+                    false
+                  end);
+                (* GMain.Timeout.add ~ms:200 ~callback:begin fun () ->
+                   if not buffer#has_selection then begin
+                     ranges := [||];
+                     index := 0;
+                     is_rev_order := false;
+                     (*                    Option.iter (GtkSignal.disconnect buffer#as_buffer) !sid_mark_set;*)
+                     Option.iter (GtkSignal.disconnect page#ocaml_view#as_gtext_view#as_view) !sid_keypress;
+                     false
+                   end else true
+                   end |> ignore;*)
+                GtkThread.async select ()
+              end
+          | _ -> select ()
+        )) |> ignore;
+  select_expr#add_accelerator ~group ~modi:[`CONTROL] GdkKeysyms._d ~flags;
+  select_expr#add_accelerator ~group ~modi:[`CONTROL; `SHIFT] GdkKeysyms._d ~flags;
+
   (* Select to Matching Delimiter *)
   let select_par_expr = GMenu.menu_item ~label:"Select to Matching Delimiter" ~packing:menu#add () in
   ignore (select_par_expr#connect#activate ~callback:(fun () ->
       editor#with_current_page (fun page ->
           ignore (page#view#matching_delim_goto ?select:(Some true) ?strict:None ()))));
-  select_par_expr#add_accelerator ~group ~modi:[`CONTROL;`SHIFT] GdkKeysyms._d ~flags;
+  select_par_expr#add_accelerator ~group ~modi:[`MOD1] GdkKeysyms._d ~flags;
   (* Comment/Uncomment *)
   let comment = GMenu.menu_item ~label:"Comment Block" ~packing:menu#add () in
   ignore (comment#connect#activate ~callback:(fun () ->
@@ -180,7 +242,6 @@ let edit ~browser ~group ~flags
         Some (cut :> GMenu.menu_item);
         Some (paste :> GMenu.menu_item);
         Some (select_word :> GMenu.menu_item);
-        Some (move_par_expr :> GMenu.menu_item);
         Some (select_par_expr :> GMenu.menu_item);
         Some (comment :> GMenu.menu_item);
         Some (toggle_case :> GMenu.menu_item);
@@ -207,7 +268,6 @@ let edit ~browser ~group ~flags
         List.iter (fun x -> x#misc#set_sensitive page#buffer#has_selection)
           [cut#coerce; copy#coerce; delete#coerce; toggle_case#coerce; increase_selection_indent#coerce];
         let has_tag_delim = page#view#current_matching_tag_bounds <> [] in
-        move_par_expr#misc#set_sensitive has_tag_delim;
         select_par_expr#misc#set_sensitive has_tag_delim;
       end;
     end);

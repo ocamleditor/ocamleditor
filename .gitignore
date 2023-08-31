@@ -45,4 +45,5 @@ fonts
 
 src/ocamleditorw
 .ocamlinit
-
+.merlin
+src/.merlin
