@@ -86,33 +86,46 @@ let edit ~browser ~group ~flags
   select_expr#connect#activate ~callback:(
     let sid_mark_set = ref None in
     let sid_keypress = ref None in
-    let ranges : Merlin_t.range array ref = ref [||] in
+    let ranges : (GText.iter * GText.iter) array ref = ref [||] in
     let index = ref 0 in
     let is_rev_order = ref false in
     let incr a b var n = var := min (max a (!var + n)) b in
     fun () ->
       editor#with_current_page (fun page ->
+          let open Merlin_t in
           let buffer = page#ocaml_view#obuffer in
+          let range_iter range =
+            let start = buffer#get_iter (`LINECHAR (range.start.line - 1, range.start.col)) in
+            let stop = buffer#get_iter (`LINECHAR (range.stop.line - 1, range.stop.col)) in
+            let length = abs (stop#offset - start#offset) in
+            start, stop, length
+          in
           let select () =
             match !ranges with
             | ranges when 0 <= !index && !index < Array.length ranges ->
                 incr 0 (Array.length ranges) index (if !is_rev_order then -1 else 1);
-                let range = ranges.(!index) in
-                let start = buffer#get_iter (`LINECHAR (range.start.line - 1, range.start.col)) in
-                let stop = buffer#get_iter (`LINECHAR (range.stop.line - 1, range.stop.col)) in
+                let start, stop = ranges.(!index) in
                 buffer#select_range start stop;
             | _ -> ()
           in
           match !ranges with
           | [||] ->
-              let ins, sel = (buffer : Ocaml_text.buffer)#selection_bounds in
-              let open Merlin_t in
-              let start = { line = ins#line + 1; col = ins#line_offset } in
-              let stop = { line = sel#line + 1; col = sel#line_offset } in
-              let delims = page#view#current_matching_tag_bounds in
-              Printf.printf " = %d %d -- %d %d\n%!" start.line start.col stop.line stop.col;
+              let extra =
+                let ins, sel = buffer#selection_bounds in
+                let length = abs (sel#offset - ins#offset) in
+                match page#view#current_matching_tag_bounds with
+                | [rstart, _; _, lstop] -> (* current_matching_tag_bounds are in reverse order *)
+                    let start = buffer#get_iter_at_mark (`MARK lstop) in
+                    let stop = buffer#get_iter_at_mark (`MARK rstart) in
+                    [ start, stop, abs (stop#offset - start#offset); ins, sel, length ]
+                | _ -> [ ins, sel, length ]
+              in
               Merlin.enclosing page#ocaml_view begin fun rr ->
-                ranges := Array.of_list ({start; stop} :: rr);
+                ranges :=
+                  (rr |> List.map range_iter) @ extra
+                  |> List.sort (fun (_, _, l1) (_, _, l2) -> compare l1 l2)
+                  |> List.map (fun (a, b, _) -> a, b)
+                  |> Array.of_list;
                 sid_mark_set := Some (buffer#connect#mark_set ~callback:begin fun _ mark ->
                     (* WARNING: mark_set is not signaled on insert/delete text while buffer has selection *)
                     match GtkText.Mark.get_name mark with
@@ -125,34 +138,22 @@ let edit ~browser ~group ~flags
                     | _ -> ()
                   end);
                 sid_keypress := Some (page#ocaml_view#as_gtext_view#event#connect#key_press ~callback:begin fun ev ->
-                    if GdkEvent.Key.keyval ev = GdkKeysyms._Shift_R || GdkEvent.Key.keyval ev = GdkKeysyms._Shift_L then
+                    if GdkEvent.Key.keyval ev = GdkKeysyms._Control_R || GdkEvent.Key.keyval ev = GdkKeysyms._Control_L then
                       is_rev_order := not !is_rev_order;
-                    Printf.printf "is_rev_order = %b %d\n%!" !is_rev_order (GdkEvent.Key.state ev |> List.length);
                     false
                   end);
-                (* GMain.Timeout.add ~ms:200 ~callback:begin fun () ->
-                   if not buffer#has_selection then begin
-                     ranges := [||];
-                     index := 0;
-                     is_rev_order := false;
-                     (*                    Option.iter (GtkSignal.disconnect buffer#as_buffer) !sid_mark_set;*)
-                     Option.iter (GtkSignal.disconnect page#ocaml_view#as_gtext_view#as_view) !sid_keypress;
-                     false
-                   end else true
-                   end |> ignore;*)
                 GtkThread.async select ()
               end
           | _ -> select ()
         )) |> ignore;
   select_expr#add_accelerator ~group ~modi:[`CONTROL] GdkKeysyms._d ~flags;
-  select_expr#add_accelerator ~group ~modi:[`CONTROL; `SHIFT] GdkKeysyms._d ~flags;
 
   (* Select to Matching Delimiter *)
   let select_par_expr = GMenu.menu_item ~label:"Select to Matching Delimiter" ~packing:menu#add () in
   ignore (select_par_expr#connect#activate ~callback:(fun () ->
       editor#with_current_page (fun page ->
           ignore (page#view#matching_delim_goto ?select:(Some true) ?strict:None ()))));
-  select_par_expr#add_accelerator ~group ~modi:[`MOD1] GdkKeysyms._d ~flags;
+  select_par_expr#add_accelerator ~group ~modi:[`CONTROL; `SHIFT] GdkKeysyms._d ~flags;
   (* Comment/Uncomment *)
   let comment = GMenu.menu_item ~label:"Comment Block" ~packing:menu#add () in
   ignore (comment#connect#activate ~callback:(fun () ->
@@ -308,7 +309,7 @@ let search ~browser ~group ~flags items =
   find_all#set_image (GMisc.image ~pixbuf:(??? Icons.search_results_16) ())#coerce;
   ignore (find_all#connect#activate ~callback:(fun () ->
       Menu_search.find_replace ?find_all:(Some true) ?search_word_at_cursor:(Some true) editor));
-  find_all#add_accelerator ~group ~modi:[`CONTROL; `SHIFT] GdkKeysyms._f ~flags;
+  find_all#add_accelerator ~group ~modi:[`MOD1] GdkKeysyms._f ~flags;
   (** Search Incremental *)
   let i_search = GMenu.image_menu_item ~label:"Search Incremental" ~packing:menu#add () in
   (*i_search#set_image (GMisc.image ~stock:`FIND ~icon_size:`MENU ())#coerce;*)
@@ -319,6 +320,7 @@ let search ~browser ~group ~flags items =
   ignore (find_in_path#connect#activate ~callback:begin fun () ->
       Menu_search.find_replace ~find_in_buffer:false ?search_word_at_cursor:(Some true) editor;
     end);
+  find_in_path#add_accelerator ~group ~modi:[`CONTROL;`SHIFT] GdkKeysyms._f ~flags;
   find_in_path#add_accelerator ~group ~modi:[`CONTROL] GdkKeysyms._p ~flags;
   (** Clear find/replace history *)
   let clear_find_history = GMenu.image_menu_item ~label:"Clear Find/Replace History" ~packing:menu#add () in

@@ -47,3 +47,6 @@ src/ocamleditorw
 .ocamlinit
 .merlin
 src/.merlin
+src/merlin_?.ml*
+src/settings_?.ml*
+

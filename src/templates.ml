@@ -192,7 +192,6 @@ let spec : spec list ref =
 
     "ign@@", "ignore @@ <selection>", [T "ignore @@ "; SELECTION; T ";"; I];
     "ign |>", "<selection> |> ignore;", [SELECTION; T " |> ignore;"; I];
-    "ign()", "ignore (<selection>)", [T "ignore ("; SELECTION; T ")"; I];
 
     "ignbe", "ignore begin ... end",
     [T0 "ignore begin"; NL; IN; SELECTION; OUT; T0 "end;"; I; NL];

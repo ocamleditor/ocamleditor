@@ -2,7 +2,7 @@ open Printf
 open Merlin_t
 
 module Log = Common.Log.Make(struct let prefix = "MERLIN" end)
-let _ = Log.set_verbosity `ERROR
+let _ = Log.set_verbosity `INFO
 
 let (//) = Filename.concat
 
@@ -19,7 +19,7 @@ let execute ?(continue_with=fun x -> x |> Yojson.Safe.prettify |> Printf.printf 
       [ "-filename"; basename; "<"; basename ]
     ] |> List.concat
   in
-  Printf.printf "%s\n%!" (cmd_line |> String.concat " ");
+  Log.println `INFO "%s" (cmd_line |> String.concat " ");
   Unix.open_process_in (cmd_line |> String.concat " ")
   |> Spawn.loop (fun ic -> ic |> input_line |> continue_with)
 
