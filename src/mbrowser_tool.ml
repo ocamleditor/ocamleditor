@@ -398,9 +398,9 @@ class widget ~project ?(is_completion=false) ?(enable_history=true) ?width ?heig
           end else if key = GdkKeysyms._F1 || (state = [`MOD1] && key = GdkKeysyms._Return) then begin
             button_layout_odoc#set_active (not button_layout_odoc#get_active);
             true
-          end else if box_odoc_visible && (*not is_completion &&*) state = [`CONTROL] && key = GdkKeysyms._e then begin
+          end else if box_odoc_visible && (*not is_completion &&*) state = [`CONTROL] && key = GdkKeysyms._f then begin
             odoc_buffer#place_cursor ~where:odoc_buffer#start_iter;
-            incremental_search#i_search ~view:(odoc_view :> Text.view) ~project;
+            incremental_search#i_search ?full_find:None ~view:(odoc_view :> Text.view) ~project ();
             true
           end else false
         end);

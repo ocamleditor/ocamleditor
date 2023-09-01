@@ -290,7 +290,7 @@ let search ~browser ~group ~flags items =
   find_repl#set_image (GMisc.image ~pixbuf:(??? Icons.find_replace) (*~stock:`FIND_AND_REPLACE*) ~icon_size:`MENU ())#coerce;
   ignore (find_repl#connect#activate ~callback:(fun () ->
       Menu_search.find_replace ?find_all:None ?search_word_at_cursor:None editor));
-  find_repl#add_accelerator ~group ~modi:[`CONTROL] GdkKeysyms._f ~flags;
+  (*find_repl#add_accelerator ~group ~modi:[`CONTROL] GdkKeysyms._f ~flags;*)
   (** Find Next *)
   let find_next = GMenu.image_menu_item ~label:"Find Next" ~packing:menu#add () in
   ignore (find_next#connect#activate ~callback:(fun () -> Menu_search.find_next editor));
@@ -313,8 +313,12 @@ let search ~browser ~group ~flags items =
   (** Search Incremental *)
   let i_search = GMenu.image_menu_item ~label:"Search Incremental" ~packing:menu#add () in
   (*i_search#set_image (GMisc.image ~stock:`FIND ~icon_size:`MENU ())#coerce;*)
-  ignore (i_search#connect#activate ~callback:editor#i_search);
-  i_search#add_accelerator ~group ~modi:[`CONTROL] GdkKeysyms._e ~flags;
+  let modi, key = [(`CONTROL : Gdk.Tags.modifier)], GdkKeysyms._f in
+  let full_find : unit -> unit = fun () -> Menu_search.find_replace ?find_all:None ?search_word_at_cursor:None editor in
+  i_search#connect#activate ~callback:begin fun () ->
+    editor#i_search ?full_find:(Some (modi, key, full_find)) ()
+  end |> ignore;
+  i_search#add_accelerator ~group ~modi key ~flags;
   (** Find/Replace in Path *)
   let find_in_path = GMenu.image_menu_item ~label:"Find/Replace in Path" ~packing:menu#add () in
   ignore (find_in_path#connect#activate ~callback:begin fun () ->
