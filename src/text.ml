@@ -624,9 +624,9 @@ and view ?project ?buffer () =
                                   incr n_display_lines
                                 done;
                                 (*  *)
-                                let x = approx_char_width * !x_chars - hadjust - 1 - 2 in (* -1 per evitare sovrapposizione col cursore *)
+                                let x = approx_char_width * !x_chars - hadjust - 1 in (* -1 per evitare sovrapposizione col cursore *)
                                 let width_chars = stop#line_index - start#line_index in
-                                let width = approx_char_width * width_chars + 4 in
+                                let width = approx_char_width * width_chars in
                                 let pango = self#misc#pango_context in
                                 let metrics = pango#get_metrics() in
                                 let height = (metrics#ascent + metrics#descent) / Pango.scale -  1 in
