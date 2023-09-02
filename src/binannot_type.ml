@@ -123,17 +123,19 @@ let lookup offset =
           begin
             let open Types in
             match value_desc.val_kind with
-            | Val_self (meths, _vars, _, _type_exp) ->
+            | Val_self (cls_sig, _meths, _vars, _) ->
+                (*Printf.printf " %s\n%!" (Odoc_info.string_of_type_expr cls_sig.csig_self);
+                  cls_sig.csig_meths |> Meths.iter (fun m (priv, virt, te) ->
+                    Printf.printf "  %s %s %s %s\n%!" m
+                      (Odoc_info.string_of_type_expr te)
+                      (match priv with Mpublic -> "" | Mprivate _ -> "private")
+                      (match virt with Asttypes.Virtual -> "V" | Asttypes.Concrete -> "C"));*)
                 let ba_type =
-                  (* Nothing better than this hack, for now.
-                     [_type_exp] omits private methods, same for [exp_type].
-                     [meths], however, does not distinguish private methods (not essential but would have been nice). *)
-                  Types.Meths.fold (fun li (_, te) acc -> (li, Odoc_info.string_of_type_expr te) :: acc) !meths []
-                  |> List.filter (fun (n, _) -> n <> "*dummy method*")
+                  Meths.fold (fun name (_priv, _virt, te) acc -> (name, Odoc_info.string_of_type_expr te) :: acc) cls_sig.csig_meths []
                   |> List.map (fun (n, t) -> Printf.sprintf "%s : %s" n t) |> String.concat "; "
                   |> Printf.sprintf "< %s; .. >"
                 in
-                raise @@ Found { ba_loc = exp_loc; ba_type }
+                raise @@ Found { ba_loc = exp_loc; ba_type };
             | Val_reg | Val_prim _ | Val_ivar _ | Val_anc _ ->
                 raise @@ Found { ba_loc = exp_loc; ba_type = Odoc_info.string_of_type_expr exp_type }
           end;
