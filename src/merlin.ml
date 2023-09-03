@@ -2,27 +2,30 @@ open Printf
 open Merlin_t
 
 module Log = Common.Log.Make(struct let prefix = "MERLIN" end)
-let _ = Log.set_verbosity `INFO
+let _ = Log.set_verbosity `DEBUG
 
 let (//) = Filename.concat
 
-let execute ?(continue_with=fun x -> x |> Yojson.Safe.prettify |> Printf.printf "%s\n%!") source_code command =
-  let cmd_line = "ocamlmerlin" :: "server" :: command in
-  Log.println `INFO "%s" (cmd_line |> String.concat " ");
+let execute
+    ?(continue_with=fun x -> x |> Yojson.Safe.prettify |> Log.println `INFO "%s")
+    filename source_code command =
+  let cmd_line = "ocamlmerlin" :: "server" :: command @ [ "-filename"; filename ] in
+  Log.println `INFO "%s\n%s" (Sys.getcwd()) (cmd_line |> String.concat " ");
   let ic, oc, _ = Unix.open_process_full (cmd_line |> String.concat " ") (Unix.environment ()) in
   output_string oc source_code;
   flush oc;
   close_out_noerr oc;
   ic |> Spawn.loop (fun ic -> ic |> input_line |> continue_with)
 
-let check_configuration () =
+let check_configuration ~filename ~source_code =
   [ "check-configuration" ]
-  |> execute ""
+  |> execute filename source_code
 
-let enclosing ~(position : GText.iter) ~source_code apply =
+let enclosing ~(position : GText.iter) ~filename ~source_code apply =
+  check_configuration ~filename ~source_code;
   let position = sprintf "%d:%d" (position#line + 1) position#line_offset in
   [ "enclosing"; "-position"; position ]
-  |> execute source_code ~continue_with:begin fun json ->
+  |> execute filename source_code ~continue_with:begin fun json ->
     match Merlin_j.enclosing_answer_of_string json with
     | Return enclosing ->
         Log.println `DEBUG "%s" (Yojson.Safe.prettify json);
@@ -32,11 +35,11 @@ let enclosing ~(position : GText.iter) ~source_code apply =
     | Exception msg -> Log.println `ERROR "%s" msg.value;
   end
 
-let case_analysis ~(start : GText.iter) ~(stop : GText.iter) ~source_code apply =
+let case_analysis ~(start : GText.iter) ~(stop : GText.iter) ~filename ~source_code apply =
   let start = sprintf "%d:%d" (start#line + 1) start#line_offset in
   let stop = sprintf "%d:%d" (stop#line + 1) stop#line_offset in
   [ "case-analysis"; "-start"; start; "-end"; stop ]
-  |> execute source_code ~continue_with:begin fun json ->
+  |> execute filename source_code ~continue_with:begin fun json ->
     match Merlin_j.case_analysis_answer_of_string json with
     | Return case_analysis ->
         Log.println `DEBUG "%s" (Yojson.Safe.prettify json);

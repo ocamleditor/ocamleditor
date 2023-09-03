@@ -68,6 +68,7 @@ let timestamp () =
     t.Unix.tm_sec
 
 module Make (X : sig
+    [@ deprected]
     val channel : out_channel
     val verbosity : verbosity
     val print_timestamp : bool
@@ -88,42 +89,48 @@ module Make (X : sig
 
     let prefix = Some (Y.prefix ^ ": ")
 
-    let log_formatter =
+    let log_formatter channel =
       Format.make_formatter
-        (fun buf start len -> output_substring X.channel buf start len)
-        (fun () -> flush X.channel)
+        (fun buf start len -> output_substring channel buf start len)
+        (fun () -> flush channel)
 
     let print level f =
       if level <> `OFF && level >= !verbosity then begin
-        if X.print_timestamp then (Printf.fprintf X.channel "%s " (timestamp()));
-        Printf.fprintf X.channel "[%s] " (string_of_verbosity level);
-        Option.iter (Printf.fprintf X.channel "%s") prefix;
-        Printf.kfprintf flush X.channel f
-      end else Printf.ifprintf X.channel f
+        let channel = if level >= `WARN then stderr else stdout in
+        if X.print_timestamp then (Printf.fprintf channel "%s " (timestamp()));
+        Printf.fprintf channel "[%s] " (string_of_verbosity level);
+        Option.iter (Printf.fprintf channel "%s") prefix;
+        Printf.kfprintf flush channel f
+      end else Printf.ifprintf stdout f
 
     let println level f =
       if level <> `OFF && level >= !verbosity then begin
-        if X.print_timestamp then (Printf.fprintf X.channel "%s " (timestamp()));
-        Printf.fprintf X.channel "[%s] " (string_of_verbosity level);
-        Option.iter (fprintf X.channel "%s") prefix;
-        Printf.kfprintf (function c -> Printf.fprintf c "\n%!") X.channel f
-      end else Printf.ifprintf X.channel f
+        let channel = if level >= `WARN then stderr else stdout in
+        if X.print_timestamp then (Printf.fprintf channel "%s " (timestamp()));
+        Printf.fprintf channel "[%s] " (string_of_verbosity level);
+        Option.iter (fprintf channel "%s") prefix;
+        Printf.kfprintf (function c -> Printf.fprintf c "\n%!") channel f
+      end else Printf.ifprintf stdout f
 
     let fprint level f =
       if level <> `OFF && level >= !verbosity then begin
-        if X.print_timestamp then (Printf.kprintf (Format.pp_print_string log_formatter) "%s " (timestamp()));
-        Printf.kprintf (Format.pp_print_string log_formatter) "[%s] " (string_of_verbosity level);
-        Option.iter (Format.pp_print_string log_formatter) prefix;
-        Format.kfprintf (fun fmt -> Format.pp_print_flush fmt ()) log_formatter f
+        let channel = if level >= `WARN then stderr else stdout in
+        let fmtr = log_formatter channel in
+        if X.print_timestamp then (Printf.kprintf (Format.pp_print_string fmtr) "%s " (timestamp()));
+        Printf.kprintf (Format.pp_print_string fmtr) "[%s] " (string_of_verbosity level);
+        Option.iter (Format.pp_print_string fmtr) prefix;
+        Format.kfprintf (fun fmt -> Format.pp_print_flush fmt ()) fmtr f
       end else Format.ifprintf Format.err_formatter f
 
     let fprintln level f =
       if level <> `OFF && level >= !verbosity then begin
-        if X.print_timestamp then (Printf.kprintf (Format.pp_print_string log_formatter) "%s " (timestamp()));
-        Printf.kprintf (Format.pp_print_string log_formatter) "[%s] " (string_of_verbosity level);
-        Option.iter (Format.pp_print_string log_formatter) prefix;
+        let channel = if level >= `WARN then stderr else stdout in
+        let fmtr = log_formatter channel in
+        if X.print_timestamp then (Printf.kprintf (Format.pp_print_string fmtr) "%s " (timestamp()));
+        Printf.kprintf (Format.pp_print_string fmtr) "[%s] " (string_of_verbosity level);
+        Option.iter (Format.pp_print_string fmtr) prefix;
         Format.kfprintf (fun fmt -> Format.pp_print_newline fmt (); Format.pp_print_flush fmt ())
-          log_formatter f
+          fmtr f
       end else Format.ifprintf Format.err_formatter f
   end
 end

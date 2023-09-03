@@ -1,7 +1,7 @@
 open Merlin_t
 
 module Log = Common.Log.Make(struct let prefix = "ENCL_EXPR" end)
-let _ = Log.set_verbosity `ERROR
+let _ = Log.set_verbosity `DEBUG
 
 class manager ~ocaml_view =
   let (<<) (lower_bound, upper_bound) value = min (max lower_bound value) upper_bound in
@@ -59,6 +59,7 @@ class manager ~ocaml_view =
           in
           Merlin.enclosing
             ~position:iter
+            ~filename:(Filename.basename filename)
             ~source_code:(buffer#get_text ())
             begin fun rr ->
               ranges <-
