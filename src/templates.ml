@@ -140,15 +140,18 @@ module Action = struct
       Alignment.align ~buffer:view#buffer ~start ~stop;
     end;;
 
-  let case_analysis view =
-    Merlin.case_analysis view begin fun (range, text) ->
-      GtkThread.async begin fun () ->
-        let start = view#buffer#get_iter (`LINECHAR (range.start.line - 1, range.start.col)) in
-        let stop = view#buffer#get_iter (`LINECHAR (range.stop.line - 1, range.stop.col)) in
-        view#buffer#delete ~start ~stop |> ignore;
-        view#buffer#insert text |> ignore;
-      end ()
-    end
+  let case_analysis (view : Ocaml_text.view) =
+    let start, stop = view#buffer#selection_bounds in
+    Merlin.case_analysis ~start ~stop
+      ~source_code:(view#buffer#get_text ())
+      begin fun (range, text) ->
+        GtkThread.async begin fun () ->
+          let start = view#buffer#get_iter (`LINECHAR (range.start.line - 1, range.start.col)) in
+          let stop = view#buffer#get_iter (`LINECHAR (range.stop.line - 1, range.stop.col)) in
+          view#buffer#delete ~start ~stop |> ignore;
+          view#buffer#insert text |> ignore;
+        end ()
+      end
 
 end
 

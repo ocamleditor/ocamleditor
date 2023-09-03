@@ -80,74 +80,12 @@ let edit ~browser ~group ~flags
       editor#with_current_page (fun page ->
           ignore (page#ocaml_view#obuffer#select_ocaml_word ?pat:None ()))));
   select_word#add_accelerator ~group ~modi:[`CONTROL] GdkKeysyms._w ~flags;
-
-  (* Enclosing expressions *)
+  (* Select Enclosing Expressions *)
   let select_expr = GMenu.menu_item ~label:"Select Enclosing Expression" ~packing:menu#add () in
-  select_expr#connect#activate ~callback:(
-    let sid_mark_set = ref None in
-    let sid_keypress = ref None in
-    let ranges : (GText.iter * GText.iter) array ref = ref [||] in
-    let index = ref 0 in
-    let is_rev_order = ref false in
-    let incr a b var n = var := min (max a (!var + n)) b in
-    fun () ->
-      editor#with_current_page (fun page ->
-          let open Merlin_t in
-          let buffer = page#ocaml_view#obuffer in
-          let range_iter range =
-            let start = buffer#get_iter (`LINECHAR (range.start.line - 1, range.start.col)) in
-            let stop = buffer#get_iter (`LINECHAR (range.stop.line - 1, range.stop.col)) in
-            let length = abs (stop#offset - start#offset) in
-            start, stop, length
-          in
-          let select () =
-            match !ranges with
-            | ranges when 0 <= !index && !index < Array.length ranges ->
-                incr 0 (Array.length ranges) index (if !is_rev_order then -1 else 1);
-                let start, stop = ranges.(!index) in
-                buffer#select_range start stop;
-            | _ -> ()
-          in
-          match !ranges with
-          | [||] ->
-              let extra =
-                let ins, sel = buffer#selection_bounds in
-                let length = abs (sel#offset - ins#offset) in
-                match page#view#current_matching_tag_bounds with
-                | [rstart, _; _, lstop] -> (* current_matching_tag_bounds are in reverse order *)
-                    let start = buffer#get_iter_at_mark (`MARK lstop) in
-                    let stop = buffer#get_iter_at_mark (`MARK rstart) in
-                    [ start, stop, abs (stop#offset - start#offset); ins, sel, length ]
-                | _ -> [ ins, sel, length ]
-              in
-              Merlin.enclosing page#ocaml_view begin fun rr ->
-                ranges :=
-                  (rr |> List.map range_iter) @ extra
-                  |> List.sort (fun (_, _, l1) (_, _, l2) -> compare l1 l2)
-                  |> List.map (fun (a, b, _) -> a, b)
-                  |> Array.of_list;
-                sid_mark_set := Some (buffer#connect#mark_set ~callback:begin fun _ mark ->
-                    (* WARNING: mark_set is not signaled on insert/delete text while buffer has selection *)
-                    match GtkText.Mark.get_name mark with
-                    | Some name when name = "selection_bound" && (not buffer#has_selection) ->
-                        ranges := [||];
-                        index := 0;
-                        is_rev_order := false;
-                        Option.iter (GtkSignal.disconnect buffer#as_buffer) !sid_mark_set;
-                        Option.iter (GtkSignal.disconnect page#ocaml_view#as_gtext_view#as_view) !sid_keypress
-                    | _ -> ()
-                  end);
-                sid_keypress := Some (page#ocaml_view#as_gtext_view#event#connect#key_press ~callback:begin fun ev ->
-                    if GdkEvent.Key.keyval ev = GdkKeysyms._Control_R || GdkEvent.Key.keyval ev = GdkKeysyms._Control_L then
-                      is_rev_order := not !is_rev_order;
-                    false
-                  end);
-                GtkThread.async select ()
-              end
-          | _ -> select ()
-        )) |> ignore;
+  select_expr#connect#activate ~callback:(fun () ->
+      editor#with_current_page (fun page -> page#ocaml_view#select_enclosing_expr ?iter:None ())
+    ) |> ignore;
   select_expr#add_accelerator ~group ~modi:[`CONTROL] GdkKeysyms._d ~flags;
-
   (* Select to Matching Delimiter *)
   let select_par_expr = GMenu.menu_item ~label:"Select to Matching Delimiter" ~packing:menu#add () in
   ignore (select_par_expr#connect#activate ~callback:(fun () ->
