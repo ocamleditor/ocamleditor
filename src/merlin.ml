@@ -2,15 +2,17 @@ open Printf
 open Merlin_t
 
 module Log = Common.Log.Make(struct let prefix = "MERLIN" end)
-let _ = Log.set_verbosity `DEBUG
+let _ = Log.set_verbosity `ERROR
 
 let (//) = Filename.concat
 
 let execute
     ?(continue_with=fun x -> x |> Yojson.Safe.prettify |> Log.println `INFO "%s")
     filename source_code command =
+  let cwd = Sys.getcwd() in
+  let filename = match Miscellanea.filename_relative cwd filename with Some path -> path | _ -> filename in
   let cmd_line = "ocamlmerlin" :: "server" :: command @ [ "-filename"; filename ] in
-  Log.println `INFO "%s\n%s" (Sys.getcwd()) (cmd_line |> String.concat " ");
+  Log.println `INFO "%s\n%s" cwd (cmd_line |> String.concat " ");
   let ic, oc, _ = Unix.open_process_full (cmd_line |> String.concat " ") (Unix.environment ()) in
   output_string oc source_code;
   flush oc;
