@@ -50,17 +50,21 @@ let system_properties () =
 
 (** about *)
 let about editor () =
+  let version, comments =
+    match About.version |> Str.split (Str.regexp "[~-]") with
+    | version :: comments :: _ -> version, comments
+    | _ -> "", ""
+  in
   let dialog = GWindow.about_dialog
-      ~type_hint:(if Sys.os_type = "Win32" then `SPLASHSCREEN else `DIALOG)
       ~modal:true
       ~width:310
       ~position:`CENTER
       ~icon:(??? Icons.oe)
       ~name:About.program_name
-      ~version:About.version
+      ~version
       ~copyright:About.copyright
       ~logo:(??? Icons.logo)
-      ~comments:(sprintf "Commit: %s" !About.git_hash)
+      (*~comments*)
       ~license:{|OCamlEditor is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
 the Free Software Foundation, either version 3 of the License, or

@@ -26,11 +26,12 @@ COPYRIGHT
 
 DEPENDENCIES
 
-  * OCaml-4.13.0;
-  * Lablgtk-2.18.0 (installed with Findlib);
+  * OCaml-4.14.0;
+  * Lablgtk (installed with Findlib);
   * Xml-light (installed with Findlib);
-  * Findlib-1.4.0;
+  * Findlib;
   * ocp-indent;
+  * merlin;
   * yojson;
   * atdgen;
   * ocamldiff;

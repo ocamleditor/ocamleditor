@@ -211,7 +211,7 @@ module Signature = struct
                 let kind = kind_of_typekind type_declaration.type_kind in
                 (print kind id (Printtyp.type_declaration id formatter) type_declaration) :: acc
             | Some te ->
-                begin match te.desc with
+                begin match Types.get_desc te with
                 | Tobject _ -> acc (* Niente definizione dei tipi oggetto *)
                 | _ ->
                     let kind = kind_of_typekind type_declaration.type_kind in
