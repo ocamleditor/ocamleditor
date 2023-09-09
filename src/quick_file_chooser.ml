@@ -144,7 +144,6 @@ class widget ~source ~name ?filter ?packing () =
     val mutable table_visible = []
     val mutable table_results = []
     val mutable choose_func = fun ~filename ~has_cursor -> `ignore
-    val mutable timeout_id = None
     val mutable cache_results = []
     val mutable last_pattern = ""
     val mutable queue = Queue.create ()
@@ -223,7 +222,6 @@ class widget ~source ~name ?filter ?packing () =
       end view#selection#get_selected_rows;
 
     method finalize () =
-      Gaux.may timeout_id ~f:GMain.Timeout.remove;
       Gmisclib.Idle.add self#clear_model_filter;
       vc_name#unset_cell_data_func renderer_basename
 
@@ -521,10 +519,8 @@ class widget ~source ~name ?filter ?packing () =
               while scan_tree roots do () done;
               while append roots do () done;
             end else begin
-              let id = GMain.Timeout.add ~ms:200 ~callback:(fun () -> scan_tree roots) in
-              ignore (self#misc#connect#destroy ~callback:(fun () -> GMain.Timeout.remove id));
-              let id = GMain.Timeout.add ~ms:15 ~callback:(fun () -> append roots) in
-              ignore (self#misc#connect#destroy ~callback:(fun () -> GMain.Timeout.remove id));
+              GMain.Timeout.add ~ms:200 ~callback:(fun () -> scan_tree roots) |> ignore;
+              GMain.Timeout.add ~ms:15 ~callback:(fun () -> append roots) |> ignore;
             end;
             filelist
         | `filelist x -> x

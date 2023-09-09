@@ -597,7 +597,7 @@ and view ?project ?buffer () =
                 match current_matching_tag_bounds_draw with
                 | (lstart, lstop) :: (rstart, rstop) :: [] ->
                     drawable#set_foreground (?? Oe_config.matching_delim_border_color);
-                    drawable#set_line_attributes ~width:1 ~style:`SOLID ();
+                    drawable#set_line_attributes ~width:2 ~style:`SOLID  ();
                     let draw start stop =
                       match buffer#get_iter_at_mark_opt (`MARK start) with
                       | Some start ->

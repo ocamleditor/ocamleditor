@@ -48,7 +48,7 @@ let markup_left = "\
 
 <tt><b>Ctrl+Shift+D</b></tt>: Selects the text within a pair of matching delimiters; if pressed a second time, extends the selection to include the delimiters.
 
-<tt><b>Ctrl+Shift+S</b></tt>: Searches the active buffer for all occurrences of the identifier under the cursor.
+<tt><b>Alt+F</b></tt>: Searches the active buffer for all occurrences of the identifier under the cursor.
 
 
 <b><big>Find/Replace Text Dialog</big></b>

@@ -45,6 +45,9 @@ let prepare_build () =
     run "ocamlyacc err_parser.mly";
     run "atdgen -t settings.atd";
     run "atdgen -j settings.atd";
+    run (rm ^ " merlin_t.* merlin_j.*");
+    run "atdgen -t merlin.atd";
+    run "atdgen -j merlin.atd";
     if not is_win32 then begin
       (* Disabled because on Windows it changes the file permissions of oe_config.ml
          forcing it to be recompiled for plugins.*)

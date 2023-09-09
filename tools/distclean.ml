@@ -30,12 +30,8 @@ let distclean () =
   remove_file "annot_lexer.ml";
   remove_file "annot_parser.ml";
   remove_file "annot_parser.mli";
-  remove_file "settings.ml";
-  remove_file "settings.mli";
-  remove_file "settings_t.ml";
-  remove_file "settings_t.mli";
-  remove_file "settings_j.ml";
-  remove_file "settings_j.mli";
+  run (rm ^ " settings_t.* settings_j.*");
+  run (rm ^ " merlin_t.* merlin_j.*");
   remove_file "err_lexer.ml";
   remove_file "err_parser.ml";
   remove_file "err_parser.mli";
@@ -52,7 +48,6 @@ let distclean () =
   rmdir (Filename.parent_dir_name // ".cache");
   kprintf run_no_errors "%s icons" rmr;
   pushd "..";
-  (*run "oasis setup";*)
   popd();
 ;;
 

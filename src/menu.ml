@@ -80,17 +80,18 @@ let edit ~browser ~group ~flags
       editor#with_current_page (fun page ->
           ignore (page#ocaml_view#obuffer#select_ocaml_word ?pat:None ()))));
   select_word#add_accelerator ~group ~modi:[`CONTROL] GdkKeysyms._w ~flags;
-  (* Move to Matching Delimiter *)
-  let move_par_expr = GMenu.menu_item ~label:"Move to Matching Delimiter" ~packing:menu#add () in
-  ignore (move_par_expr#connect#activate ~callback:(fun () ->
-      editor#with_current_page (fun page -> page#view#matching_delim_goto ?select:None ?strict:None ())));
-  move_par_expr#add_accelerator ~group ~modi:[`CONTROL;] GdkKeysyms._d ~flags;
+  (* Select Enclosing Expressions *)
+  let select_expr = GMenu.menu_item ~label:"Select Enclosing Expression" ~packing:menu#add () in
+  select_expr#connect#activate ~callback:(fun () ->
+      editor#with_current_page (fun page -> page#ocaml_view#select_enclosing_expr ?iter:None ())
+    ) |> ignore;
+  select_expr#add_accelerator ~group ~modi:[`CONTROL] GdkKeysyms._d ~flags;
   (* Select to Matching Delimiter *)
   let select_par_expr = GMenu.menu_item ~label:"Select to Matching Delimiter" ~packing:menu#add () in
   ignore (select_par_expr#connect#activate ~callback:(fun () ->
       editor#with_current_page (fun page ->
           ignore (page#view#matching_delim_goto ?select:(Some true) ?strict:None ()))));
-  select_par_expr#add_accelerator ~group ~modi:[`CONTROL;`SHIFT] GdkKeysyms._d ~flags;
+  select_par_expr#add_accelerator ~group ~modi:[`CONTROL; `SHIFT] GdkKeysyms._d ~flags;
   (* Comment/Uncomment *)
   let comment = GMenu.menu_item ~label:"Comment Block" ~packing:menu#add () in
   ignore (comment#connect#activate ~callback:(fun () ->
@@ -180,7 +181,6 @@ let edit ~browser ~group ~flags
         Some (cut :> GMenu.menu_item);
         Some (paste :> GMenu.menu_item);
         Some (select_word :> GMenu.menu_item);
-        Some (move_par_expr :> GMenu.menu_item);
         Some (select_par_expr :> GMenu.menu_item);
         Some (comment :> GMenu.menu_item);
         Some (toggle_case :> GMenu.menu_item);
@@ -207,7 +207,6 @@ let edit ~browser ~group ~flags
         List.iter (fun x -> x#misc#set_sensitive page#buffer#has_selection)
           [cut#coerce; copy#coerce; delete#coerce; toggle_case#coerce; increase_selection_indent#coerce];
         let has_tag_delim = page#view#current_matching_tag_bounds <> [] in
-        move_par_expr#misc#set_sensitive has_tag_delim;
         select_par_expr#misc#set_sensitive has_tag_delim;
       end;
     end);
@@ -229,7 +228,7 @@ let search ~browser ~group ~flags items =
   find_repl#set_image (GMisc.image ~pixbuf:(??? Icons.find_replace) (*~stock:`FIND_AND_REPLACE*) ~icon_size:`MENU ())#coerce;
   ignore (find_repl#connect#activate ~callback:(fun () ->
       Menu_search.find_replace ?find_all:None ?search_word_at_cursor:None editor));
-  find_repl#add_accelerator ~group ~modi:[`CONTROL] GdkKeysyms._f ~flags;
+  (*find_repl#add_accelerator ~group ~modi:[`CONTROL] GdkKeysyms._f ~flags;*)
   (** Find Next *)
   let find_next = GMenu.image_menu_item ~label:"Find Next" ~packing:menu#add () in
   ignore (find_next#connect#activate ~callback:(fun () -> Menu_search.find_next editor));
@@ -248,17 +247,22 @@ let search ~browser ~group ~flags items =
   find_all#set_image (GMisc.image ~pixbuf:(??? Icons.search_results_16) ())#coerce;
   ignore (find_all#connect#activate ~callback:(fun () ->
       Menu_search.find_replace ?find_all:(Some true) ?search_word_at_cursor:(Some true) editor));
-  find_all#add_accelerator ~group ~modi:[`CONTROL; `SHIFT] GdkKeysyms._f ~flags;
+  find_all#add_accelerator ~group ~modi:[`MOD1] GdkKeysyms._f ~flags;
   (** Search Incremental *)
   let i_search = GMenu.image_menu_item ~label:"Search Incremental" ~packing:menu#add () in
   (*i_search#set_image (GMisc.image ~stock:`FIND ~icon_size:`MENU ())#coerce;*)
-  ignore (i_search#connect#activate ~callback:editor#i_search);
-  i_search#add_accelerator ~group ~modi:[`CONTROL] GdkKeysyms._e ~flags;
+  let modi, key = [(`CONTROL : Gdk.Tags.modifier)], GdkKeysyms._f in
+  let full_find : unit -> unit = fun () -> Menu_search.find_replace ?find_all:None ?search_word_at_cursor:None editor in
+  i_search#connect#activate ~callback:begin fun () ->
+    editor#i_search ?full_find:(Some (modi, key, full_find)) ()
+  end |> ignore;
+  i_search#add_accelerator ~group ~modi key ~flags;
   (** Find/Replace in Path *)
   let find_in_path = GMenu.image_menu_item ~label:"Find/Replace in Path" ~packing:menu#add () in
   ignore (find_in_path#connect#activate ~callback:begin fun () ->
       Menu_search.find_replace ~find_in_buffer:false ?search_word_at_cursor:(Some true) editor;
     end);
+  find_in_path#add_accelerator ~group ~modi:[`CONTROL;`SHIFT] GdkKeysyms._f ~flags;
   find_in_path#add_accelerator ~group ~modi:[`CONTROL] GdkKeysyms._p ~flags;
   (** Clear find/replace history *)
   let clear_find_history = GMenu.image_menu_item ~label:"Clear Find/Replace History" ~packing:menu#add () in

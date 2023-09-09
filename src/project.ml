@@ -231,6 +231,32 @@ let save_local filename proj =
   let xml = Xml.to_string_fmt (xml_of_local [(xml_of_open_files proj); (xml_of_bookmarks proj)]) in
   output_xml filename xml;;
 
+let save_dot_merlin proj =
+  let filename = proj.root // ".merlin" in
+  let ochan = open_out_bin filename in
+  let finally () = close_out_noerr ochan in
+  try
+    let packages =
+      proj.targets
+      |> List.map (fun tg -> Str.split (Str.regexp ",") tg.Target.package)
+      |> List.flatten
+      |> Miscellanea.Xlist.remove_dupl
+      |> String.concat " "
+    in
+    [
+      sprintf "S %s" default_dir_src;
+      sprintf "S %s/**" default_dir_src;
+      sprintf "B %s" default_dir_src;
+      sprintf "B %s/**" default_dir_src;
+      sprintf "PKG %s" packages;
+    ]
+    |> String.concat "\n"
+    |> output_string ochan;
+    finally()
+  with ex ->
+    finally();
+    raise ex
+
 (** save. Creates [home], [home/src], [home/bak], [home/tmp] if not existing. *)
 let save ?editor proj =
   let active_filename =
@@ -278,6 +304,7 @@ let save ?editor proj =
     let xml = Xml.to_string_fmt (!write_xml proj) in
     output_xml filename xml;
     save_local filename_local proj;
+    save_dot_merlin proj;
     (* restore non persistent values *)
     proj.root <- root;
     proj.files <- files;
@@ -352,6 +379,7 @@ let load filename =
   if Sys.file_exists old then (Sys.remove old);
   (* Delete obsolete bookmarks *)
   proj.bookmarks <- proj.bookmarks |> List.filter (fun bm -> bm.Oe.bm_num <= Bookmark.limit);
+  save_dot_merlin proj;
   proj;;
 
 (** backup_file *)
@@ -450,5 +478,4 @@ let clear_cache proj =
         end rc.Resource_file.rc_icons_data;
   end proj.targets;
   Miscellanea.popd();*)
-
 
