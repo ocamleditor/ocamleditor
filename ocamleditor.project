@@ -5,7 +5,7 @@
   <ocamllib></ocamllib>
   <encoding>UTF-8</encoding>
   <name>ocamleditor</name>
-  <author>Francesco Tovagliari</author>
+  <author></author>
   <description/>
   <version>1.14.3-ocaml414</version>
   <autocomp enabled="true" delay="0.764" cflags=""/>
