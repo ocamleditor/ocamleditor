@@ -27,7 +27,7 @@ depends: [
   "yojson" {>= "2.1"}
   "atdgen" {>= "2.12"}
   "ocamldiff" {>= "1.1"}
-  "merlin" {= "4.9-414"}
+  "merlin" {>= "4.9"}
 ]
 depopts: [
   "ocurl"
