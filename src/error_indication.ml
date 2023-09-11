@@ -220,21 +220,22 @@ class error_indication (view : Ocaml_text.view) vscrollbar global_gutter =
         sticky_popup <- false
       end
 
-    method private find_message iter tags =
-      try
-        List.find (fun (start, _stop, _error) -> iter#equal (buffer#get_iter_at_mark (`MARK start))) tags
-      with Not_found -> begin
-          List.find begin fun (start, stop, _error) ->
+    method private filter_messages iter tags =
+      match
+        List.filter (fun (start, _stop, _error) -> iter#equal (buffer#get_iter_at_mark (`MARK start))) tags
+      with
+      | [] ->
+          List.filter begin fun (start, stop, _error) ->
             iter#in_range ~start:(buffer#get_iter_at_mark (`MARK start)) ~stop:(buffer#get_iter_at_mark (`MARK stop))
           end tags
-        end
+      | x -> x
 
     method tooltip ?(sticky=false) ?(need_focus=true) (location : [`ITER of GText.iter | `XY of int * int]) =
       if enabled && (not need_focus || view#misc#get_flag `HAS_FOCUS) then begin
         let iter = match location with `XY (x, y) -> view#get_iter_at_location ~x ~y | `ITER it -> it in
         if not iter#ends_line then begin
           try
-            (* When the tooltip is already shown, do nothing *)
+            (* If the tooltip is already displayed, take no action to prevent flickering. *)
             ignore (List.find begin fun (start, stop, _popup) ->
                 try
                   let start = buffer#get_iter_at_mark (`MARK start) in
@@ -247,49 +248,62 @@ class error_indication (view : Ocaml_text.view) vscrollbar global_gutter =
               try
                 (*Prf.crono Prf.prf_error_indication_tooltip begin fun () ->*)
                 (* Find message by iter *)
-                let (start, stop, error), border_color, bg_color =
-                  try
-                    (self#find_message iter tag_error_bounds),
+                let messages, border_color, bg_color =
+                  match
+                    (self#filter_messages iter tag_error_bounds),
                     ?? (Oe_config.error_popup_border_color), ?? (Oe_config.error_popup_bg_color)
-                  with Not_found -> begin
+                  with
+                  | [], _, _ ->
                       if Oe_config.warning_tootip_enabled || not sticky then (raise Not_found);
-                      (self#find_message iter tag_warning_bounds),
+                      (self#filter_messages iter tag_warning_bounds),
                       ?? (Oe_config.warning_popup_border_color), ?? (Oe_config.warning_popup_bg_color)
-                    end
+                  | x -> x
                 in
                 (* Create popup *)
                 self#hide_tooltip();
-                let popup = GWindow.window ~kind:`POPUP ~type_hint:`MENU ~decorated:false ~focus_on_map:false ~border_width:1 ~show:false () in
-                tag_popup <- (start, stop, popup) :: tag_popup;
-                sticky_popup <- sticky;
-                popup#misc#modify_bg [`NORMAL, border_color];
-                let ebox = GBin.event_box ~packing:popup#add () in
-                ebox#misc#modify_bg [`NORMAL, bg_color];
-                let error_message = Glib.Convert.convert_with_fallback ~fallback:"?"
-                    ~from_codeset:Oe_config.ocaml_codeset ~to_codeset:"UTF-8" error.Oe.er_message
+                let create_popup start stop error displacement =
+                  let popup = GWindow.window ~kind:`POPUP ~type_hint:`MENU ~decorated:false ~focus_on_map:false ~border_width:1 ~show:false () in
+                  tag_popup <- (start, stop, popup) :: tag_popup;
+                  sticky_popup <- sticky;
+                  popup#misc#modify_bg [`NORMAL, border_color];
+                  let ebox = GBin.event_box ~packing:popup#add () in
+                  ebox#misc#modify_bg [`NORMAL, bg_color];
+                  let error_message = Glib.Convert.convert_with_fallback ~fallback:"?"
+                      ~from_codeset:Oe_config.ocaml_codeset ~to_codeset:"UTF-8" error.Oe.er_message
+                  in
+                  let markup = (*(error.Oe.er_location) ^*)
+                    (Print_type.markup3 error_message) in
+                  let label = GMisc.label ~markup ~xpad:5 ~ypad:5 ~packing:ebox#add () in
+                  label#misc#modify_font_by_name Preferences.preferences#get.editor_completion_font;
+                  label#misc#modify_fg [`NORMAL, `BLACK];
+                  (* Positioning *)
+                  begin
+                    popup#move ~x:(-1000) ~y:(-1000);
+                    match location with
+                    | `ITER _ ->
+                        let x, y = view#get_location_at_iter iter in
+                        popup#show();
+                        let y = y - popup#misc#allocation.Gtk.height - 5 - displacement in
+                        popup#move ~x ~y;
+                    | `XY _ ->
+                        let x, y = Gdk.Window.get_pointer_location (Gdk.Window.root_parent ()) in
+                        popup#show();
+                        popup#move ~x ~y:(y - popup#misc#allocation.Gtk.height - 12 - displacement);
+                  end;
+                  let incr = if Preferences.preferences#get.editor_annot_type_tooltips_delay = 0 then 0.106 else 0.479 in
+                  Gmisclib.Util.fade_window ~incr popup;
+                  popup#misc#allocation.Gtk.height
+                  (*end ()*)
                 in
-                let markup = (*(error.Oe.er_location) ^*)
-                  (Print_type.markup3 error_message) in
-                let label = GMisc.label ~markup ~xpad:5 ~ypad:5 ~packing:ebox#add () in
-                label#misc#modify_font_by_name Preferences.preferences#get.editor_completion_font;
-                label#misc#modify_fg [`NORMAL, `BLACK];
-                (* Positioning *)
-                begin
-                  popup#move ~x:(-1000) ~y:(-1000);
-                  match location with
-                  | `ITER _ ->
-                      let x, y = view#get_location_at_iter iter in
-                      popup#show();
-                      let y = y - popup#misc#allocation.Gtk.height - 5 in
-                      popup#move ~x ~y;
-                  | `XY _ ->
-                      let x, y = Gdk.Window.get_pointer_location (Gdk.Window.root_parent ()) in
-                      popup#show();
-                      popup#move ~x ~y:(y - popup#misc#allocation.Gtk.height - 12);
-                end;
-                let incr = if Preferences.preferences#get.editor_annot_type_tooltips_delay = 0 then 0.106 else 0.479 in
-                Gmisclib.Util.fade_window ~incr popup;
-                (*end ()*)
+                messages
+                |> Miscellanea.Xlist.group_by (fun (start, stop, messages) ->
+                    (buffer#get_iter_at_mark (`MARK start))#offset, (buffer#get_iter_at_mark (`MARK stop))#offset)
+                |> List.iter begin fun ((start, stop), messages) ->
+                  messages |>
+                  List.fold_left begin fun displacement (start, stop, message) ->
+                    displacement + create_popup start stop message displacement;
+                  end 0 |> ignore
+                end
               with Not_found -> (if not sticky_popup then (self#hide_tooltip()))
             end
         end else (if not sticky_popup then (self#hide_tooltip()));

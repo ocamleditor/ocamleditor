@@ -420,7 +420,7 @@ class view ~(editor : Editor.editor) ?(task_kind=(`OTHER : Task.kind)) ~task ?pa
               (*let start = iter#backward_to_tag_toggle (Some t) in
                 let stop = iter#forward_to_tag_toggle (Some t) in*)
               t#set_properties [`UNDERLINE `LOW];
-              Gaux.may (view#get_window `TEXT) ~f:(fun w -> Gdk.Window.set_cursor w (Gdk.Cursor.create `HAND1));
+              Gaux.may (view#get_window `TEXT) ~f:(fun w -> Gdk.Window.set_cursor w (Gdk.Cursor.create `HAND2));
             with Not_found -> () (* The cursor is not inside a tag_location *)
           end iter#tags;
           false

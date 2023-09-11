@@ -295,6 +295,7 @@ let save ?editor proj =
       end proj.files;
     (* output tools *)
     Project_tools.write proj;
+    save_dot_merlin proj;
     (*  *)
     let root = proj.root in
     let files = proj.files in
@@ -304,7 +305,6 @@ let save ?editor proj =
     let xml = Xml.to_string_fmt (!write_xml proj) in
     output_xml filename xml;
     save_local filename_local proj;
-    save_dot_merlin proj;
     (* restore non persistent values *)
     proj.root <- root;
     proj.files <- files;
