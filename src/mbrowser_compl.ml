@@ -196,8 +196,8 @@ class completion ~project ?packing () =
       kprintf self#set_title "" "";
 
     method private compl_id ~prefix ~page () =
-      let f = widget#select_symbol_by_prefix ~prefix ~kind:[] in
-      widget#find_compl ~include_methods:false ~prefix ~page ~f ();
+      let selection_func = widget#select_symbol_by_prefix ~prefix ~kind:[] in
+      widget#find_compl ~include_methods:false ~prefix ~page ~selection_func ();
       kprintf self#set_title "" "";
 
     method private compl_module ~module_path ~prefix =

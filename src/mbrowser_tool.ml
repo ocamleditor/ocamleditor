@@ -525,23 +525,24 @@ class widget ~project ?(is_completion=false) ?(enable_history=true) ?width ?heig
         | _ -> prefix, false
       in
       let find re =
-        ignore(List_opt.find begin fun (path, _) ->
-            let row = widget#model#get_iter path in
-            let sym = widget#model#get ~row ~column:col_symbol_data in
-            let name = if by_value_path then String.concat "" sym.Oe.sy_id else Symbols.get_name sym in
-            found :=
-              if Str.string_match re name 0 && (kind = [] || List.mem sym.sy_kind kind) then begin
-                widget#view#selection#select_iter row;
-                Gmisclib.Idle.add begin fun () ->
-                  if widget#view#misc#get_flag `VISIBLE then begin
-                    widget#view#scroll_to_cell ~align:(0.38, 0.0) path widget#vc_icon;
-                    widget#view#set_cursor path widget#vc_icon;
-                  end;
+        paths
+        |> List_opt.find begin fun (path, _) ->
+          let row = widget#model#get_iter path in
+          let sym = widget#model#get ~row ~column:col_symbol_data in
+          let name = if by_value_path then String.concat "" sym.Oe.sy_id else Symbols.get_name sym in
+          found :=
+            if Str.string_match re name 0 && (kind = [] || List.mem sym.sy_kind kind) then begin
+              widget#view#selection#select_iter row;
+              Gmisclib.Idle.add begin fun () ->
+                if widget#view#misc#get_flag `VISIBLE then begin
+                  widget#view#scroll_to_cell ~align:(0.38, 0.0) path widget#vc_icon;
+                  widget#view#set_cursor path widget#vc_icon;
                 end;
-                true;
-              end else false;
-            !found
-          end paths)
+              end;
+              true;
+            end else false;
+          !found
+        end |> ignore;
       in
       find (Str.regexp_string full_prefix);
       if not !found then (find (Str.regexp_string_case_fold full_prefix));
@@ -576,7 +577,7 @@ class widget ~project ?(is_completion=false) ?(enable_history=true) ?width ?heig
         Gmisclib.Idle.add (fun () -> button_layout_slist#set_active (match symbols with [] | [_] -> false | _ -> true));
         odoc_view#buffer#set_text "";
         let f = self#select_best_match text in
-        self#create_widget_search_results ~symbols ~fill ~f ();
+        self#create_widget_search_results ~symbols ~fill ~selection_func:f ();
       end
 
     (** find *)
@@ -586,7 +587,7 @@ class widget ~project ?(is_completion=false) ?(enable_history=true) ?width ?heig
       end;
 
       (** find_compl *)
-    method find_compl ~prefix ~(page : Editor_page.page) ~include_methods ?(f=self#default_select_func) () =
+    method find_compl ~prefix ~(page : Editor_page.page) ~include_methods ?(selection_func=self#default_select_func) () =
       let path = Project.get_load_path project in
       (*let path = project.Project.ocamllib :: path in*)
       if String.length prefix > 0 then begin
@@ -600,7 +601,7 @@ class widget ~project ?(is_completion=false) ?(enable_history=true) ?width ?heig
             ~regexp
             project.Prj.symbols.syt_table
         in
-        self#create_widget_search_results ~symbols ~f ()
+        self#create_widget_search_results ~symbols ~selection_func ()
       end;
 
       (** find_symbol *)
@@ -865,8 +866,11 @@ class widget ~project ?(is_completion=false) ?(enable_history=true) ?width ?heig
       end ()
 
     (** create_widget_search_results *)
-    method private create_widget_search_results ~symbols ?(fill=false) ?(f=self#default_select_func) () =
-      let symbols = List.sort (fun a b -> compare (Symbols.get_name a) (Symbols.get_name b)) symbols in
+    method private create_widget_search_results ~symbols ?(fill=false) ?(selection_func=self#default_select_func) () =
+      let symbols = (* local symbols first *)
+        List.sort (fun a b ->
+            compare (not a.sy_local, Symbols.get_name a) (not b.sy_local, Symbols.get_name b)) symbols
+      in
       search_results_length <- List.length symbols;
       let widget : symbol_list =
         match (self#get_current_page() : symbol_list option) with
@@ -903,7 +907,7 @@ class widget ~project ?(is_completion=false) ?(enable_history=true) ?width ?heig
         ignore (widget#fill symbols);
         Gmisclib.Idle.add (fun () -> if widget#view#misc#get_flag `REALIZED then widget#view#scroll_to_point 0 0)
       end;
-      f widget
+      selection_func widget
 
     (** insert_odoc *)
     method private insert_odoc ~project ~symbol () =

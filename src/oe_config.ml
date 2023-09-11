@@ -95,7 +95,7 @@ let location_history_proximity           = 20 (* characters *)
 let location_history_max_length          = 30 (* hint *)
 let location_history_max_edit            = 5
 let module_browser_max_results           = 150 (* Max. number of search results to display in the search_entry as you type *)
-let module_browser_secondary_title_color = "#877033"
+let module_browser_secondary_title_color = { light = "#877033"; dark = "#707070" }
 let completion_popup_default_dimensions  = 900, 350
 let odoc_tag_properties                  = [ (* These properties apply to ocamldoc comments only, not to the type descriptions. *)
   `PIXELS_INSIDE_WRAP 2;
