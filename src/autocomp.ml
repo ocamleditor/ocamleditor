@@ -154,7 +154,19 @@ let compile_buffer ~project ~editor ~page ?(join=false) () =
         in
         let process_err = Spawn.loop process_err in
         if join then
-          Spawn.sync ~working_directory ~at_exit ~process_err project.Prj.autocomp_compiler args |> ignore
+          let result = Spawn.sync ~working_directory ~process_err project.Prj.autocomp_compiler args in
+          begin
+            match result with
+            | `SUCCESS (Unix.WEXITED code)
+            | `SUCCESS (Unix.WSIGNALED code)
+            | `SUCCESS (Unix.WSTOPPED code) ->
+                if code <> 0 then
+                  Printf.eprintf "File \"autocomp.ml\": %s %s -> exited with code %d\n%!"
+                    project.Prj.autocomp_compiler (args |> Array.to_list |> String.concat " ") code
+            | `ERROR ex ->
+                Printf.eprintf "File \"autocomp.ml\": %s\n%s\n%!" (Printexc.to_string ex) (Printexc.get_backtrace());
+          end;
+          at_exit ()
         else
           Spawn.async ~working_directory ~at_exit ~process_err project.Prj.autocomp_compiler args |> ignore
   with ex ->

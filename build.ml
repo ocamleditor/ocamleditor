@@ -742,12 +742,16 @@ let exec
       in
       let pid, status = Unix.waitpid [] proc.pid in
       match close_channels() with
-      | None ->
+      | None when mode = `ASYNC ->
           continue_with (pid, status, None);
-          deprecated_at_exit None
-      | Some ex ->
+          deprecated_at_exit None;
+          `SUCCESS status
+      | Some ex when mode = `ASYNC ->
           continue_with (pid, status, Some ex);
-          deprecated_at_exit (Some ex)
+          deprecated_at_exit (Some ex);
+          `ERROR ex
+      | None -> `SUCCESS status
+      | Some ex -> `ERROR ex
     in
     let tho = match process_out with Some f -> Some (Thread.create f proc.outchan) | _ -> None in
     let thi = Thread.create process_in proc.inchan in
@@ -756,7 +760,7 @@ let exec
         process_err proc.errchan;
         Thread.join thi;
         (match tho with Some t -> Thread.join t | _ -> ());
-        if mode = `ASYNC then final()
+        if mode = `ASYNC then (final() |> ignore)
       end ()
     in
     match mode with
@@ -764,19 +768,14 @@ let exec
         Thread.join the;
         Thread.join thi;
         (match tho with Some t -> Thread.join t | _ -> ());
-        final();
-        `SUCCESS
+        final()
     | `ASYNC -> `PID proc.pid
   with (Unix.Unix_error _) as ex -> `ERROR ex
 
-(** sync
-    @param at_exit Deprecated, use continue_with instead.
-*)
+(** sync *)
 let sync
     ?working_directory
     ?env
-    ?continue_with
-    ?at_exit
     ?process_in
     ?process_out
     ?process_err
@@ -786,16 +785,14 @@ let sync
     exec `SYNC
       ?working_directory
       ?env
-      ?continue_with
-      ?at_exit
       ?process_in
       ?process_out
       ?process_err
       ?binary
       program args
   with
-  | `SUCCESS -> None
-  | `ERROR ex -> Some ex
+  | (`SUCCESS _) as x -> x
+  | (`ERROR _) as x -> x
   | `PID _ -> assert false
 
 (** async
@@ -823,7 +820,7 @@ let async
       ?binary
       program args
   with
-  | `SUCCESS -> assert false
+  | `SUCCESS _ -> assert false
   | (`ERROR _) as x -> x
   | (`PID _) as x -> x
 
@@ -2160,7 +2157,7 @@ let link ~compilation ~compiler ~outkind ~lflags ~includes ~libs ~outname ~deps
         end else (sprintf "%s.%s" x ext)
       end libs
   in
-  let process_exit =
+  let linker_exit =
     let command, args = compiler in
     let args = Array.concat [
         args; (* Must be the first because starts with the first arg. of ocamlfind *)
@@ -2178,11 +2175,15 @@ let link ~compilation ~compiler ~outkind ~lflags ~includes ~libs ~outname ~deps
         (Array.of_list deps);
       ] in
     if verbose >= 2 then print_endline (String.concat " " (command :: (Array.to_list args)));
-    Spawn.sync command args
+    Spawn.sync ~process_in:Spawn.redirect_to_stdout ~process_err:Spawn.redirect_to_stderr command args
   in
-  match process_exit with
-  | None -> 0
-  | Some ex -> -9997
+  match linker_exit with
+  | `SUCCESS (Unix.WEXITED code)
+  | `SUCCESS (Unix.WSIGNALED code)
+  | `SUCCESS (Unix.WSTOPPED code) ->
+      if verbose >= 4 then prerr_string (sprintf "Linker exited with code %d" code);
+      code
+  | `ERROR ex -> -9997
 ;;
 
 (** get_output_name *)
@@ -2460,13 +2461,13 @@ let build ~compilation ~package ~includes ~libs ~other_mods ~outkind ~compile_on
       in
       if compile_only then compilation_exit else begin
         let compiler_output = Buffer.create 100 in
-        let link_exit =
+        let linker_exit =
           crono ~label:"Linking phase"
             (link ~compilation ~compiler:linker ~outkind ~lflags:!lflags
                ~includes:!includes ~libs ~deps:obj_deps ~outname ~verbose) ()
         in
         if Buffer.length compiler_output > 0 then eprintf "%s\n%!" (Buffer.contents compiler_output);
-        link_exit
+        linker_exit
       end
     end else compilation_exit
   in
@@ -2713,11 +2714,14 @@ module ETask = struct
       let exit_code = Spawn.sync
           ~process_in:Spawn.redirect_to_stdout
           ~process_err:Spawn.redirect_to_stderr
-          ~working_directory:dir ~env prog (Array.of_list args) 
+          ~working_directory:dir ~env prog (Array.of_list args)
       in
       match exit_code with
-      | None -> ()
-      | Some _ -> raise Error
+      | `ERROR _ -> raise Error
+      | `SUCCESS (Unix.WEXITED code)
+      | `SUCCESS (Unix.WSIGNALED code)
+      | `SUCCESS (Unix.WSTOPPED code) when code <> 0 -> raise Error
+      | _ -> ()
     end
 end
 

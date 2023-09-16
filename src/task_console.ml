@@ -132,8 +132,18 @@ class view ~(editor : Editor.editor) ?(task_kind=(`OTHER : Task.kind)) ~task ?pa
       buffer#delete ~start:(buffer#get_iter `START) ~stop:(buffer#get_iter `END)
 
     method close () =
-      (match process with None -> () | Some proc ->
-          Unix.waitpid [] proc.Spawn.pid |> ignore);
+      begin
+        match process with
+        | None -> ()
+        | Some proc ->
+            begin
+              let pid, status = Unix.waitpid [] proc.Spawn.pid in
+              match status with
+              | Unix.WEXITED code
+              | Unix.WSIGNALED code
+              | Unix.WSTOPPED code -> has_errors <- code <> 0
+            end;
+      end;
       button_stop#misc#set_sensitive false;
       button_run#misc#set_sensitive true;
       self#view#set_editable false;
@@ -193,11 +203,14 @@ class view ~(editor : Editor.editor) ?(task_kind=(`OTHER : Task.kind)) ~task ?pa
 
     method private do_run task =
       let finally () =
-        GtkThread2.async begin fun () ->
+        GtkThread2.sync begin fun () ->
           self#close();
           if has_errors then begin
             (*play "error.wav";*)
-            Gmisclib.Idle.add (fun () -> view#scroll_to_mark (`NAME "first_error_line"));
+            Gmisclib.Idle.add begin fun () ->
+              try view#scroll_to_mark (`NAME "first_error_line")
+              with GText.No_such_mark _ -> ()
+            end;
           end else begin
             (*play "success.wav";*)
             Gmisclib.Idle.add (fun () -> ignore (view#scroll_to_mark `INSERT));
