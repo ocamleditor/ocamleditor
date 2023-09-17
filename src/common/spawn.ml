@@ -5,8 +5,6 @@ type process = {
   errchan : in_channel;
 }
 
-type result = [ `PID of int | `ERROR of exn | `SUCCESS ]
-
 (** create_process *)
 let create_process ?wd ?env program args =
   let (in_read, in_write) = Unix.pipe() in
