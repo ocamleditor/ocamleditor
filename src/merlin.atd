@@ -32,6 +32,37 @@ type enclosing_answer = [
 type enclosing = { value : range list }
 
 
+type complete_prefix_answer = [
+  | Return <json name="return"> of complete_prefix
+  | Failure <json name="failure"> of message
+  | Error <json name="error"> of message
+  | Exception <json name="exception"> of message
+] <json
+  adapter.to_ocaml="Atdgen_runtime.Json_adapter.normalize_type_field \"class\""
+  adapter.from_ocaml="Atdgen_runtime.Json_adapter.restore_type_field \"class\""
+> <ocaml repr="classic">
+
+type complete_prefix = { value : complete_prefix_value }
+
+type complete_prefix_value = {
+  ?context : (string * application_context) option;
+  entries : entry list;
+}
+
+type entry = {
+  name : string;
+  kind : string;
+  desc : string;
+  info : string;
+}
+
+type label = { name : string; typ <json name="type"> : string }
+
+type application_context = {
+  argument_type : string;
+  labels : label list;
+}
+
 
 
 

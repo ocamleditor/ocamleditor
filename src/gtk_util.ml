@@ -31,18 +31,22 @@ let create_mark_name =
 (** window *)
 let window widget
     ?(type_hint=(if Sys.win32 then `UTILITY else `DIALOG))
+    ?modal
     ?(decorated=false)
     ?parent
+    ?(destroy_on_focus_out=true)
     ?(destroy_child=true)
     ?(fade=false)
     ?(focus=true)
     ?(escape=true)
+    ?(border_width=1)
     ?wm_class
     ?(show=true)
     ~x ~y () =
   let window = GWindow.window
       ~decorated
-      ~border_width:1
+      ?modal
+      ~border_width
       ~deletable:true
       ~focus_on_map:focus
       ~type_hint
@@ -54,11 +58,12 @@ let window widget
   let color = Color.set_value 0.38 (`COLOR (window#misc#style#base `NORMAL)) (*(`NAME Preferences.preferences#get.Preferences.pref_bg_color_popup)*) in
   let _ = window#misc#modify_bg [`NORMAL, color] in
   (*let _ = ebox#misc#modify_bg [`NORMAL, `NAME Preferences.preferences#get.Preferences.pref_bg_color_popup] in*)
-  ignore (window#event#connect#after#focus_out ~callback:begin fun _ ->
+  if destroy_on_focus_out then
+    window#event#connect#after#focus_out ~callback:begin fun _ ->
       if not destroy_child then (ebox#remove widget);
       window#destroy();
       true
-    end);
+    end |> ignore;
   if escape then Gmisclib.Util.esc_destroy_window window;
   window#set_skip_pager_hint true;
   window#set_skip_taskbar_hint true;

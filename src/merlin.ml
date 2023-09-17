@@ -1,8 +1,8 @@
 open Printf
-open Merlin_t
+open Merlin_j
 
 module Log = Common.Log.Make(struct let prefix = "MERLIN" end)
-let _ = Log.set_verbosity `ERROR
+let _ = Log.set_verbosity `DEBUG
 
 let (//) = Filename.concat
 
@@ -17,10 +17,14 @@ let execute
   output_string oc source_code;
   flush oc;
   close_out_noerr oc;
-  ic |> Spawn.loop (fun ic -> ic |> input_line |> continue_with)
+  Thread.create (Spawn.loop (fun ic -> ic |> input_line |> continue_with)) ic |> ignore
 
 let check_configuration ~filename ~source_code =
   [ "check-configuration" ]
+  |> execute filename source_code
+
+let errors ~filename ~source_code =
+  [ "errors" ]
   |> execute filename source_code
 
 let enclosing ~(position : GText.iter) ~filename ~source_code apply =
@@ -46,6 +50,32 @@ let case_analysis ~(start : GText.iter) ~(stop : GText.iter) ~filename ~source_c
     | Return case_analysis ->
         Log.println `DEBUG "%s" (Yojson.Safe.prettify json);
         apply case_analysis.value
+    | Failure msg
+    | Error msg
+    | Exception msg -> Log.println `ERROR "%s" msg.value;
+  end
+
+let complete_prefix ~(position : GText.iter) ~prefix ~filename ~source_code apply =
+  let position = sprintf "%d:%d" (position#line + 1) position#line_offset in
+  [ "complete-prefix"; "-position"; position; "-prefix"; prefix; "-doc true -types true" ]
+  |> execute filename source_code ~continue_with:begin fun json ->
+    match Merlin_j.complete_prefix_answer_of_string json with
+    | Return complete ->
+        Log.println `DEBUG "%s" (Yojson.Safe.prettify json);
+        apply complete.value
+    | Failure msg
+    | Error msg
+    | Exception msg -> Log.println `ERROR "%s" msg.value;
+  end
+
+let expand_prefix ~(position : GText.iter) ~prefix ~filename ~source_code apply =
+  let position = sprintf "%d:%d" (position#line + 1) position#line_offset in
+  [ "expand-prefix"; "-position"; position; "-prefix"; prefix; "-doc true -types true" ]
+  |> execute filename source_code ~continue_with:begin fun json ->
+    match Merlin_j.complete_prefix_answer_of_string json with
+    | Return complete ->
+        Log.println `DEBUG "%s" (Yojson.Safe.prettify json);
+        apply complete.value
     | Failure msg
     | Error msg
     | Exception msg -> Log.println `ERROR "%s" msg.value;
