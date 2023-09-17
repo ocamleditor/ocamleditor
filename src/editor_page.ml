@@ -45,20 +45,25 @@ let markup_label filename =
   let shortname = shortname filename in
   if filename ^^^ ".mli" then "<i>"^shortname^"</i>" else shortname
 
-let create_small_button ?button ?tooltip ~pixbuf ?callback ?packing ?show () =
+let create_small_button ?button ?tooltip ?pixbuf ?icon ?callback ?packing ?show () =
   let button =
     match button with Some b -> b | _ -> GButton.button ~relief:`NONE ?packing ?show ()
   in
-  button#set_image (GMisc.image ~pixbuf ())#coerce;
+  begin
+    match pixbuf with
+    | Some pixbuf -> button#set_image (GMisc.image ~pixbuf ())#coerce;
+    | _ ->
+        icon |> Option.iter (fun icon -> (Gtk_util.label_icon ~width:22 ~height:16 ~packing:button#add icon)#coerce |> ignore)
+  end;
   button#set_focus_on_click false;
   button#misc#set_name "smallbutton";
   Gaux.may tooltip ~f:button#misc#set_tooltip_text;
   Gaux.may callback ~f:(fun callback -> ignore (button#connect#clicked ~callback));
   button;;
 
-let create_small_toggle_button ?tooltip ~pixbuf ?callback ?packing ?show () =
+let create_small_toggle_button ?tooltip ~icon ?callback ?packing ?show () =
   let button = GButton.toggle_button ~relief:`NONE ?packing ?show () in
-  let _ = create_small_button ~button:(button :> GButton.button) ?tooltip ~pixbuf ?callback ?packing () in
+  let _ = create_small_button ~button:(button :> GButton.button) ?tooltip ~icon ?callback ?packing () in
   button;;
 
 (** Editor page *)
@@ -96,13 +101,13 @@ class page ?file ~project ~scroll_offset ~offset ~editor () =
   let spinner                  = GMisc.image ~width:15 ~packing:sbox#pack () in
   let _                        = GMisc.separator `VERTICAL ~packing:sbox#pack () in
   let button_dotview           = create_small_toggle_button
-      ~pixbuf:(??? Icons.tree)
+      ~icon:"󱘎 "
       ~packing:sbbox#pack ()
       ~show:(false (*Oe_config.dot_version <> None*))
   in
   (** Icons for font size and row spacing adjustment *)
   let button_font_incr = create_small_button
-      ~pixbuf:(??? Icons.zoom_in_14)
+      ~icon:"󰧴"
       ~packing:sbbox#pack
       ~callback:begin fun () ->
         let fd = text_view#misc#pango_context#font_description in
@@ -112,7 +117,7 @@ class page ?file ~project ~scroll_offset ~offset ~editor () =
       end ()
   in
   let button_font_decr = create_small_button
-      ~pixbuf:(??? Icons.zoom_out_14)
+      ~icon:"󰧳"
       ~packing:sbbox#pack
       ~callback:begin fun () ->
         let fd = text_view#misc#pango_context#font_description in
@@ -125,7 +130,7 @@ class page ?file ~project ~scroll_offset ~offset ~editor () =
       end ()
   in
   let button_rowspacing_incr = create_small_button
-      ~pixbuf:(??? Icons.lines_in_14)
+      ~icon:"󰡏"
       ~packing:sbbox#pack
       ~callback:begin fun () ->
         let above, below = Preferences.preferences#get.editor_pixels_lines in
@@ -135,7 +140,7 @@ class page ?file ~project ~scroll_offset ~offset ~editor () =
       end ()
   in
   let button_rowspacing_decr = create_small_button
-      ~pixbuf:(??? Icons.lines_out_14)
+      ~icon:"󰡍"
       ~packing:sbbox#pack
       ~callback:begin fun () ->
         text_view#set_pixels_above_lines (max 0 (text_view#pixels_above_lines - 1));
@@ -144,8 +149,8 @@ class page ?file ~project ~scroll_offset ~offset ~editor () =
       end ()
   in
   (** Show whitespace and word wrap *)
-  let button_toggle_wrap = create_small_toggle_button ~pixbuf:(??? Icons.wrap_off_14) ~packing:sbbox#pack () in
-  let button_toggle_whitespace = create_small_toggle_button ~pixbuf:(??? Icons.whitespace_off_14) ~packing:sbbox#pack () in
+  let button_toggle_wrap = create_small_toggle_button ~icon:"" ~packing:sbbox#pack () in
+  let button_toggle_whitespace = create_small_toggle_button ~icon:"" ~packing:sbbox#pack () in
   (** Navigation buttons in the statusbar *)
   (*let first_sep = GMisc.separator `VERTICAL ~packing:sobox#pack () in*)
   let location_goto where =
@@ -154,17 +159,17 @@ class page ?file ~project ~scroll_offset ~offset ~editor () =
     | Some loc -> editor#location_history_goto loc
   in
   let button_h_prev            = create_small_button
-      ~pixbuf:(??? Icons.arrow_prev_14)
+      ~icon:""
       ~tooltip:"Back"
       ~packing:sbbox#pack
       ~callback:(fun _ -> location_goto Location_history.previous) () in
   let button_h_next            = create_small_button
-      ~pixbuf:(??? Icons.arrow_next_14)
+      ~icon:""
       ~tooltip:"Forward"
       ~packing:sbbox#pack
       ~callback:(fun _ -> location_goto Location_history.next) () in
   let button_h_last            = create_small_button
-      ~pixbuf:(??? Icons.arrow_last_14)
+      ~icon:"󰞔"
       ~tooltip:"Last Edit Location"
       ~packing:sbbox#pack
       ~callback:(fun _ -> location_goto Location_history.goto_last_edit_location) () in

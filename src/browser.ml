@@ -77,24 +77,19 @@ class browser window =
   let label_project_name = GMisc.label ~markup:"" ~xpad:5 ~packing:ebox_project_name#add () in
   (* Git bar *)
   let gitbox = GPack.hbox ~spacing:8 ~packing:(menubarbox#pack ~expand:false) () in
-  let button_gitunpushed = GButton.button ~relief:`NONE ~packing:gitbox#add () in
-  let _ = button_gitunpushed#set_image (GMisc.image ~pixbuf:(??? Icons.arrow_up) ())#coerce in
-  let button_gitpending = GButton.button ~relief:`NONE ~packing:gitbox#add () in
+  let create_gitbutton icon =
+    let button = new Gtk_util.button_icon ~icon_width:18 ~icon_spacing:1 ~icon ~packing:gitbox#add ~relief:`NONE () in
+    button#misc#set_name "gitbutton";
+    button
+  in
+  let button_gitunpushed = create_gitbutton "" in
+  let button_gitpending = create_gitbutton "" in
+  let button_gitpath = create_gitbutton ""(*  *) in
+  let button_gitbranch = create_gitbutton "" in
   let _ =
-    button_gitpending#set_image (GMisc.image ~pixbuf:(??? Icons.edit) ())#coerce;
-    button_gitpending#connect#clicked ~callback:begin fun () ->
+    button_gitpending#button#connect#clicked ~callback:begin fun () ->
       Git.diff_stat (Git.show_diff_stat None);
     end
-  in
-  let button_gitpath = GButton.button ~relief:`NONE ~packing:gitbox#add () in
-  let _ = button_gitpath#set_image (GMisc.image ~pixbuf:(??? Icons.git) ())#coerce in
-  let _ = button_gitpath#misc#set_name "gitbutton"in
-  let button_gitbranch = GButton.button ~label:"" ~relief:`NONE ~packing:gitbox#add () in
-  let _ = button_gitbranch#misc#set_name "gitbutton" in
-  (*let button_gitbranch = Gmisclib.Button.button_menu ~label:"" ~relief:`NONE ~packing:gitbox#add () in*)
-  let _ =
-    button_gitbranch#set_image (GMisc.image ~pixbuf:(??? Icons.branch) ())#coerce;
-    (*    button_gitbranch#set_menu_only();*)
   in
   (*  *)
   let vbox_menu_buttons = GPack.vbox ~border_width:0 ~packing:menubarbox#pack ~show:false () in
@@ -421,7 +416,7 @@ class browser window =
         end;
         Git.toplevel begin function
         | Some toplevel ->
-            toplevel |> Filename.basename |> button_gitpath#set_label;
+            button_gitpath#set_label (Filename.basename toplevel);
             toplevel |> Filename.dirname |> button_gitpath#misc#set_tooltip_text;
         | _ ->
             button_gitpath#set_label "";
@@ -434,9 +429,9 @@ class browser window =
             let changes =
               s.Git.added + s.Git.modified + s.Git.deleted + s.Git.renamed + s.Git.copied + s.Git.untracked + s.Git.ignored
             in
-            changes |> sprintf "%3d" |> button_gitpending#set_label;
+            button_gitpending#set_label (sprintf "%3d" changes);
             Git.markup_of_status s |> button_gitpending#misc#set_tooltip_markup;
-            s.Git.ahead |> sprintf "%3d" |> button_gitunpushed#set_label;
+            button_gitunpushed#set_label (sprintf "%3d" s.Git.ahead);
             s.Git.ahead |> sprintf "%d unpushed commits" |> button_gitunpushed#misc#set_tooltip_markup;
         | _ ->
             gitbox#misc#hide();
