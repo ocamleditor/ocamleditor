@@ -30,7 +30,7 @@ let create_mark_name =
 
 (** window *)
 let window widget
-    ?(type_hint=(if Sys.win32 then `UTILITY else `DIALOG))
+    ?type_hint
     ?modal
     ?(decorated=false)
     ?parent
@@ -49,7 +49,7 @@ let window widget
       ~border_width
       ~deletable:true
       ~focus_on_map:focus
-      ~type_hint
+      ?type_hint
       ?wm_class
       ~show:false ()
   in
@@ -90,8 +90,8 @@ let window_tooltip widget ?parent ?(fade=false) ~x ~y () =
   let fade = fade && !Gmisclib.Util.fade_window_enabled in
   let window = GWindow.window
       ~decorated:false
-      ~kind:(if Sys.os_type = "Win32" then `POPUP else `TOPLEVEL)
-      ~type_hint:(if Sys.os_type = "Win32" then `MENU else `NORMAL)
+      ~kind:`POPUP (*`TOPLEVEL*)
+      ~type_hint:`MENU (*`NORMAL*)
       ~border_width:1
       ~show:false ()
   in
