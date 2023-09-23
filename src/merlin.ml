@@ -57,7 +57,7 @@ let case_analysis ~(start : GText.iter) ~(stop : GText.iter) ~filename ~source_c
 
 let complete_prefix ~(position : GText.iter) ~prefix ~filename ~source_code apply =
   let position = sprintf "%d:%d" (position#line + 1) position#line_offset in
-  [ "complete-prefix"; "-position"; position; "-prefix"; prefix; "-doc true -types true" ]
+  [ "complete-prefix"; "-position"; position; "-prefix"; sprintf "\"%s\"" prefix; "-doc true -types true" ]
   |> execute filename source_code ~continue_with:begin fun json ->
     match Merlin_j.complete_prefix_answer_of_string json with
     | Return complete ->
@@ -70,7 +70,7 @@ let complete_prefix ~(position : GText.iter) ~prefix ~filename ~source_code appl
 
 let expand_prefix ~(position : GText.iter) ~prefix ~filename ~source_code apply =
   let position = sprintf "%d:%d" (position#line + 1) position#line_offset in
-  [ "expand-prefix"; "-position"; position; "-prefix"; prefix; "-doc true -types true" ]
+  [ "expand-prefix"; "-position"; position; "-prefix";  sprintf "\"%s\"" prefix; "-doc true -types true" ]
   |> execute filename source_code ~continue_with:begin fun json ->
     match Merlin_j.complete_prefix_answer_of_string json with
     | Return complete ->

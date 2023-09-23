@@ -1,12 +1,14 @@
 open Merlin
 open GUtil
+open Preferences
+open Printf
 
 module String_utils = struct
   let rec locate_intersection left right =
     let len_right = String.length right in
     if len_right = 0 then String.length left, 0
     else
-      let re = Str.regexp_string right in
+      let re = Str.regexp (Printf.sprintf "%s$" (Str.quote right)) in
       try
         Str.search_backward re left (String.length left),
         len_right
@@ -16,24 +18,34 @@ end
 
 let single_instance = ref None
 
+let icon_of_kind = function
+  | "Value" -> " " (*   󰊕 *)
+  | "Type" -> "𝚻" (* 𝛕 *)
+  | "Module" -> " " (*     󰆧          󰆦          *)
+  | "Constructor" -> " "
+  | "Label" -> "󰌖 "
+  | "Class" -> " "
+  | "Method" -> " "
+  | "#" -> " " (* 󰽭 *)
+  | x -> x
+
 class widget ~project ~(page : Editor_page.page) ~x ~y ?packing () =
   let markup_types_color = Lexical_markup.parse Preferences.preferences#get in
   let markup_types_bw = Print_type.markup2 in
   let vbox = GPack.vbox ~spacing:5 ~border_width:0 ?packing () in
   let cols = new GTree.column_list in
+  let col_data  = cols#add Gobject.Data.string in
   let col_kind  = cols#add Gobject.Data.string in
   let col_name  = cols#add Gobject.Data.string in
   let col_desc  = cols#add Gobject.Data.string in
   let col_info  = cols#add Gobject.Data.string in
   let model = GTree.list_store cols in
   let renderer = GTree.cell_renderer_text [`SCALE `SMALL; `YPAD 0] in
-  let renderer_desc = GTree.cell_renderer_text [`SCALE `SMALL; `FONT (Preferences.preferences#get.editor_base_font)] in
-  let vc_kind = GTree.view_column ~renderer:(renderer, ["markup", col_kind]) () in
-  let vc_name = GTree.view_column ~renderer:(renderer, ["markup", col_name]) () in
-  let vc_descr = GTree.view_column ~renderer:(renderer_desc, ["markup", col_desc]) () in
+  let vc_kind = GTree.view_column ~renderer:(renderer, ["text", col_kind]) () in
+  let vc_name = GTree.view_column ~renderer:(renderer, ["text", col_name]) () in
   let label_prefix = GMisc.label ~packing:vbox#add ~show:false () in
   let sw = GBin.scrolled_window ~shadow_type:`NONE ~hpolicy:`NEVER ~vpolicy:`AUTOMATIC ~packing:vbox#add () in
-  let lview = GTree.view ~model:model ~headers_visible:false ~reorderable:false ~height:200 ~packing:sw#add () in
+  let lview = GTree.view ~model ~headers_visible:false ~reorderable:false ~height:200 ~packing:sw#add () in
   let _ = lview#set_enable_search false in
   let _ = lview#set_search_column 1 in
   let _ = lview#append_column vc_kind in
@@ -41,6 +53,7 @@ class widget ~project ~(page : Editor_page.page) ~x ~y ?packing () =
   let _ = lview#selection#set_mode `SINGLE in
   let label_info = GMisc.label ~markup:"" ~xalign:0.0 ~yalign:0.0 ~xpad:8 ~ypad:8 () in
   let window_info = Gtk_util.window_tooltip label_info#coerce ~parent:page ~x ~y () in
+  (*let _ = lview#misc#modify_base [`ACTIVE, `NAME ?? (Preferences.preferences#get.editor_bg_color_popup)] in*)
   let view = page#ocaml_view in
   let buffer = view#buffer in
   let merlin func =
@@ -62,7 +75,10 @@ class widget ~project ~(page : Editor_page.page) ~x ~y ?packing () =
 
     method complete (window : GWindow.window) =
       let position = buffer#get_iter_at_mark `INSERT in
-      let start, _ = page#buffer#as_text_buffer#select_word ~pat:Ocaml_word_bound.longid ~select:false ~search:false () in
+      let word_start, _ = page#buffer#as_text_buffer#select_word ~pat:Ocaml_word_bound.longid ~select:false ~search:false () in
+      let is_sharp uc = Glib.Utf8.from_unichar uc = "#" in
+      let start = position#backward_find_char ~limit:word_start is_sharp in
+      let start = if is_sharp start#char then start#forward_char else start in
       let prefix = page#buffer#get_text ~start ~stop:position () in
       current_prefix <- prefix;
       (*      let prefix =
@@ -83,15 +99,11 @@ class widget ~project ~(page : Editor_page.page) ~x ~y ?packing () =
         merlin@@expand_prefix ~position ~prefix begin fun expand_prefix ->
           expand_prefix.entries |> self#add_entries "E";
           loading_complete#call count;
+          (*merlin@@list_modules begin fun modules ->
+            modules |> String.concat ", " |> Printf.printf "%s"
+            end*)
         end;
       end;
-      lview#connect#row_activated ~callback:begin fun path _ ->
-        let row = model#get_iter path in
-        let name = model#get ~row ~column:col_name in
-        let a, b = String_utils.locate_intersection prefix name in
-        buffer#insert_interactive (String.sub name b (String.length name - b)) |> ignore;
-        window#destroy()
-      end |> ignore;
       let sid =
         view#event#connect#key_press ~callback:begin fun ev ->
           let keyval = GdkEvent.Key.keyval ev in
@@ -124,8 +136,16 @@ class widget ~project ~(page : Editor_page.page) ~x ~y ?packing () =
 
     method private apply name =
       let a, b = String_utils.locate_intersection current_prefix name in
-      Printf.printf "name=%S current_prefix=%S %d %d\n%!" name current_prefix a b;
-      (*label_prefix#set_label (Printf.sprintf "%s (%d, %d)" current_prefix a b)*)
+      let substitute = Str.string_after name b in
+      Printf.printf "name=%S current_prefix=%S %d %d %S\n%!" name current_prefix a b substitute;
+      let start = buffer#get_iter `INSERT in
+      let _, stop = page#buffer#as_text_buffer#select_word ~pat:Ocaml_word_bound.regexp ~select:false ~search:false () in
+      let stop = if start#compare stop >= 0 then start else stop in
+      page#view#tbuffer#undo#begin_block ~name:"compl";
+      buffer#delete_interactive ~start ~stop () |> ignore;
+      buffer#insert_interactive substitute |> ignore;
+      page#view#tbuffer#undo#end_block();
+      (*buffer#get_text() |> Lex.paths_opened |> String.concat ";" |> Printf.printf "%s\n%!" ;*)
 
     method private select_row direction =
       let path =
@@ -136,7 +156,7 @@ class widget ~project ~(page : Editor_page.page) ~x ~y ?packing () =
         | _ -> assert false
       in
       lview#selection#select_path path;
-      lview#scroll_to_cell path vc_name
+      lview#scroll_to_cell path vc_kind
 
     method private move_info path =
       let row_area = lview#get_cell_area ~path () in
@@ -172,15 +192,16 @@ class widget ~project ~(page : Editor_page.page) ~x ~y ?packing () =
         | _ -> None
       with Gpointer.Null -> None
 
-    method private add_entries kind entries =
+    method private add_entries data entries =
       try
         entries
         |> List.iter begin fun (entry : Merlin_t.entry) ->
           if is_destroyed then raise Exit;
           (* TODO: remove duplicates *)
           let row = model#append () in
-          model#set ~row ~column:col_kind kind;
-          model#set ~row ~column:col_name (Glib.Markup.escape_text entry.name);
+          model#set ~row ~column:col_data data;
+          model#set ~row ~column:col_kind (icon_of_kind entry.kind);
+          model#set ~row ~column:col_name entry.name;
           model#set ~row ~column:col_desc entry.desc;
           model#set ~row ~column:col_info entry.info;
           count <- count + 1;
