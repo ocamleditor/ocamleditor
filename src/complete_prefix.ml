@@ -78,7 +78,8 @@ class widget ~project ~(page : Editor_page.page) ~x ~y ?packing () =
       let word_start, _ = page#buffer#as_text_buffer#select_word ~pat:Ocaml_word_bound.longid ~select:false ~search:false () in
       let is_sharp uc = Glib.Utf8.from_unichar uc = "#" in
       let start = position#backward_find_char ~limit:word_start is_sharp in
-      let start = if is_sharp start#char then start#forward_char else start in
+      let is_method_compl = is_sharp start#char in
+      let start = if is_method_compl then start#forward_char else start in
       let prefix = page#buffer#get_text ~start ~stop:position () in
       current_prefix <- prefix;
       (*      let prefix =
@@ -86,6 +87,41 @@ class widget ~project ~(page : Editor_page.page) ~x ~y ?packing () =
       *)
       label_prefix#set_text prefix;
       count <- 0;
+      self#invoke_merlin ~prefix ~position ~expand:(not is_method_compl) window;
+      let view_signals =
+        [
+          view#event#connect#key_press ~callback:begin fun ev ->
+            let keyval = GdkEvent.Key.keyval ev in
+            if keyval = GdkKeysyms._Escape then begin
+              self#destroy();
+              true
+            end else if keyval = GdkKeysyms._Up then begin
+              self#select_row `PREV;
+              true
+            end else if keyval = GdkKeysyms._Down then begin
+              self#select_row `NEXT;
+              true
+            end else if keyval = GdkKeysyms._Return then begin
+              self#selected_path
+              |> Option.iter begin fun path ->
+                let row = model#get_iter path in
+                let name = model#get ~row ~column:col_name in
+                self#apply name;
+                self#destroy()
+              end;
+              true
+            end else false
+          end;
+          view#event#connect#focus_out ~callback:(fun _ -> self#destroy(); false);
+        ]
+      in
+      self#misc#connect#destroy ~callback:begin fun () ->
+        view_signals |> List.iter (GtkSignal.disconnect view#as_view);
+        window#destroy();
+      end |> ignore;
+      window#move ~x ~y
+
+    method private invoke_merlin ~prefix ~position ?(expand=true) window =
       merlin@@complete_prefix ~position ~prefix begin fun complete_prefix ->
         window#show();
         begin
@@ -96,43 +132,17 @@ class widget ~project ~(page : Editor_page.page) ~x ~y ?packing () =
               others |> self#add_entries "C";
           | [] -> ()
         end;
-        merlin@@expand_prefix ~position ~prefix begin fun expand_prefix ->
-          expand_prefix.entries |> self#add_entries "E";
+        if expand then begin
+          merlin@@expand_prefix ~position ~prefix begin fun expand_prefix ->
+            expand_prefix.entries |> self#add_entries "E";
+            loading_complete#call count;
+            (*merlin@@list_modules begin fun modules ->
+              modules |> String.concat ", " |> Printf.printf "%s"
+              end*)
+          end
+        end else
           loading_complete#call count;
-          (*merlin@@list_modules begin fun modules ->
-            modules |> String.concat ", " |> Printf.printf "%s"
-            end*)
-        end;
       end;
-      let sid =
-        view#event#connect#key_press ~callback:begin fun ev ->
-          let keyval = GdkEvent.Key.keyval ev in
-          if keyval = GdkKeysyms._Escape then begin
-            self#destroy();
-            true
-          end else if keyval = GdkKeysyms._Up then begin
-            self#select_row `PREV;
-            true
-          end else if keyval = GdkKeysyms._Down then begin
-            self#select_row `NEXT;
-            true
-          end else if keyval = GdkKeysyms._Return then begin
-            self#selected_path
-            |> Option.iter begin fun path ->
-              let row = model#get_iter path in
-              let name = model#get ~row ~column:col_name in
-              self#apply name;
-              self#destroy()
-            end;
-            true
-          end else false
-        end
-      in
-      self#misc#connect#destroy ~callback:begin fun () ->
-        GtkSignal.disconnect view#as_view sid;
-        window#destroy();
-      end |> ignore;
-      window#move ~x ~y
 
     method private apply name =
       let a, b = String_utils.locate_intersection current_prefix name in

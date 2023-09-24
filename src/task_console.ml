@@ -55,7 +55,7 @@ class view ~(editor : Editor.editor) ?(task_kind=(`OTHER : Task.kind)) ~task ?pa
           (Icons.create (??? Icons.clear_build_16))#coerce;
       | `ANNOT | `COMPILE ->
           tooltips#set_tip ~text:task.Task.et_name button_run#coerce;
-          (Gtk_util.label_icon "")#coerce;
+          (Gtk_util.label_icon ~color:"forestgreen" "")#coerce;
     end#coerce in
   let _                 = GButton.separator_tool_item ~packing:toolbar#insert () in
   (*  *)
