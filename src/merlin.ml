@@ -2,7 +2,7 @@ open Printf
 open Merlin_j
 
 module Log = Common.Log.Make(struct let prefix = "MERLIN" end)
-let _ = Log.set_verbosity `DEBUG
+let _ = Log.set_verbosity `INFO
 
 let (//) = Filename.concat
 

@@ -19,14 +19,14 @@ end
 let single_instance = ref None
 
 let icon_of_kind = function
-  | "Value" -> " " (*   󰊕 *)
-  | "Type" -> "𝚻" (* 𝛕 *)
-  | "Module" -> " " (*     󰆧          󰆦          *)
-  | "Constructor" -> " "
-  | "Label" -> "󰌖 "
-  | "Class" -> " "
-  | "Method" -> " "
-  | "#" -> " " (* 󰽭 *)
+  | "Value" -> "\u{ea8c} "
+  | "Type" -> "\u{1d6bb} "
+  | "Module" -> "\u{f1b2} "
+  | "Constructor" -> "\u{ea88} "
+  | "Label" -> "\u{f0316} "
+  | "Class" -> "\u{eb5b} "
+  | "Method" -> "\u{eb65} "
+  | "#" -> "\u{eb65} "
   | x -> x
 
 class widget ~project ~(page : Editor_page.page) ~x ~y ?packing () =
@@ -132,7 +132,7 @@ class widget ~project ~(page : Editor_page.page) ~x ~y ?packing () =
               others |> self#add_entries "C";
           | [] -> ()
         end;
-        if expand then begin
+        if count = 0 || expand then begin
           merlin@@expand_prefix ~position ~prefix begin fun expand_prefix ->
             expand_prefix.entries |> self#add_entries "E";
             loading_complete#call count;
