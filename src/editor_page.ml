@@ -69,6 +69,8 @@ let create_small_toggle_button ?tooltip ~icon ?callback ?packing ?show () =
 (** Editor page *)
 class page ?file ~project ~scroll_offset ~offset ~editor () =
   let file_changed             = new file_changed () in
+  let scroll_changed           = new scroll_changed () in
+  let signals                  = new signals ~file_changed ~scroll_changed in
   let buffer                   = new Ocaml_text.buffer ~project ?file () in
   let sw, text_view, ocaml_view = create_view ~project ~buffer ?file () in
   let vbox                     = GPack.vbox ~spacing:0 () in
@@ -626,7 +628,10 @@ class page ?file ~project ~scroll_offset ~offset ~editor () =
           false
         end)
       in
-      ignore (vscrollbar#connect#value_changed ~callback:(fun () -> view#misc#handler_block !signal_expose));
+      ignore (vscrollbar#connect#value_changed ~callback:begin fun () ->
+          view#misc#handler_block !signal_expose;
+          scroll_changed#call()
+        end);
       ignore (vscrollbar#connect#after#value_changed ~callback:(fun () ->
           Gmisclib.Idle.add ~prio:300 (fun () -> view#misc#handler_unblock !signal_expose)));
       (** After focus_in, check whether the file is changed on disk *)
@@ -714,14 +719,17 @@ class page ?file ~project ~scroll_offset ~offset ~editor () =
         button_dotview#misc#set_sensitive (Menu_view.get_switch_view_sensitive editor#project self);
       end
 
-    method connect = new signals ~file_changed
+    method connect = signals
+    method disconnect = signals#disconnect
   end
 
 (** Signals *)
 and file_changed () = object inherit [Editor_file.file option] signal () end
+and scroll_changed () = object inherit [unit] signal () end
 
-and signals ~file_changed =
+and signals ~file_changed ~scroll_changed =
   object
-    inherit ml_signals [file_changed#disconnect]
+    inherit ml_signals [file_changed#disconnect; scroll_changed#disconnect]
     method file_changed = file_changed#connect ~after
+    method scroll_changed = scroll_changed#connect ~after
   end

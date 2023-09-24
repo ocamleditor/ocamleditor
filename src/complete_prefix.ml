@@ -16,8 +16,6 @@ module String_utils = struct
         locate_intersection left (Str.first_chars right (len_right - 1))
 end
 
-let single_instance = ref None
-
 let icon_of_kind = function
   | "Value" -> "\u{ea8c} "
   | "Type" -> "\u{1d6bb} "
@@ -28,6 +26,26 @@ let icon_of_kind = function
   | "Method" -> "\u{eb65} "
   | "#" -> "\u{eb65} "
   | x -> x
+
+class virtual completion =
+  object
+    method virtual complete : GWindow.window -> unit
+    method virtual coerce : GObj.widget
+    method virtual destroy : unit -> unit
+  end
+
+let single_instance : completion option ref = ref None
+
+let create ~compl ~x ~y ~project ~page =
+  begin
+    match !single_instance with
+    | Some instance -> instance#destroy();
+    | _ -> ()
+  end;
+  let window = Gtk_util.window_tooltip compl#coerce ~parent:page ~x ~y () in
+  window#misc#hide();
+  compl#complete window;
+  single_instance := Some compl
 
 class widget ~project ~(page : Editor_page.page) ~x ~y ?packing () =
   let markup_types_color = Lexical_markup.parse Preferences.preferences#get in
@@ -43,7 +61,6 @@ class widget ~project ~(page : Editor_page.page) ~x ~y ?packing () =
   let renderer = GTree.cell_renderer_text [`SCALE `SMALL; `YPAD 0] in
   let vc_kind = GTree.view_column ~renderer:(renderer, ["text", col_kind]) () in
   let vc_name = GTree.view_column ~renderer:(renderer, ["text", col_name]) () in
-  let label_prefix = GMisc.label ~packing:vbox#add ~show:false () in
   let sw = GBin.scrolled_window ~shadow_type:`NONE ~hpolicy:`NEVER ~vpolicy:`AUTOMATIC ~packing:vbox#add () in
   let lview = GTree.view ~model ~headers_visible:false ~reorderable:false ~height:200 ~packing:sw#add () in
   let _ = lview#set_enable_search false in
@@ -66,6 +83,7 @@ class widget ~project ~(page : Editor_page.page) ~x ~y ?packing () =
     String.sub font_name 0 (Option.value (String.rindex_opt font_name ' ') ~default:(String.length font_name)) in
   object (self)
     inherit GObj.widget vbox#as_widget
+    inherit completion
 
     val mutable current_prefix = ""
     val mutable count = 0
@@ -75,19 +93,36 @@ class widget ~project ~(page : Editor_page.page) ~x ~y ?packing () =
 
     method complete (window : GWindow.window) =
       let position = buffer#get_iter_at_mark `INSERT in
-      let word_start, _ = page#buffer#as_text_buffer#select_word ~pat:Ocaml_word_bound.longid ~select:false ~search:false () in
+      let word_start, word_end = page#buffer#as_text_buffer#select_word ~pat:Ocaml_word_bound.longid ~select:false ~search:false () in
       let is_sharp uc = Glib.Utf8.from_unichar uc = "#" in
       let start = position#backward_find_char ~limit:word_start is_sharp in
       let is_method_compl = is_sharp start#char in
-      let start = if is_method_compl then start#forward_char else start in
-      let prefix = page#buffer#get_text ~start ~stop:position () in
+      let current_prefix_start = if is_method_compl then start#forward_char else start in
+      let prefix = page#buffer#get_text ~start:current_prefix_start ~stop:position () in
+      let prefix_start_offset = current_prefix_start#offset in
       current_prefix <- prefix;
-      (*      let prefix =
-              Merlin.enclosing
-      *)
-      label_prefix#set_text prefix;
       count <- 0;
       self#invoke_merlin ~prefix ~position ~expand:(not is_method_compl) window;
+      let page_signals = [
+        page#connect#scroll_changed ~callback:(fun _ -> self#destroy());
+      ] in
+      let buffer_signals = [
+        view#buffer#connect#mark_set ~callback:begin fun it mark ->
+          match GtkText.Mark.get_name mark with
+          | Some "insert" ->
+              let ins = buffer#get_iter `INSERT in
+              if
+                ins#offset < prefix_start_offset ||
+                ins#compare word_end > 0
+              then self#destroy();
+          | _ -> ()
+        end;
+        view#buffer#connect#changed ~callback:begin fun () ->
+          let x, y = view#get_location_at_cursor () in
+          let compl = new widget ~project ~page ~x ~y () in
+          create ~compl:(compl :> completion) ~x ~y ~project ~page;
+        end;
+      ] in
       let view_signals =
         [
           view#event#connect#key_press ~callback:begin fun ev ->
@@ -106,22 +141,25 @@ class widget ~project ~(page : Editor_page.page) ~x ~y ?packing () =
               |> Option.iter begin fun path ->
                 let row = model#get_iter path in
                 let name = model#get ~row ~column:col_name in
-                self#apply name;
-                self#destroy()
+                Gmisclib.Idle.add (fun () -> self#apply name);
               end;
               true
             end else false
           end;
           view#event#connect#focus_out ~callback:(fun _ -> self#destroy(); false);
+          view#event#connect#scroll ~callback:(fun _ -> self#destroy(); false);
         ]
       in
       self#misc#connect#destroy ~callback:begin fun () ->
+        page_signals |> List.iter page#disconnect;
+        buffer_signals |> List.iter (GtkSignal.disconnect buffer#as_buffer);
         view_signals |> List.iter (GtkSignal.disconnect view#as_view);
         window#destroy();
       end |> ignore;
       window#move ~x ~y
 
     method private invoke_merlin ~prefix ~position ?(expand=true) window =
+      let position = position#line + 1, position#line_offset in
       merlin@@complete_prefix ~position ~prefix begin fun complete_prefix ->
         window#show();
         begin
@@ -145,6 +183,7 @@ class widget ~project ~(page : Editor_page.page) ~x ~y ?packing () =
       end;
 
     method private apply name =
+      self#destroy(); (* TODO disconnect buffer changed event instead *)
       let a, b = String_utils.locate_intersection current_prefix name in
       let substitute = Str.string_after name b in
       Printf.printf "name=%S current_prefix=%S %d %d %S\n%!" name current_prefix a b substitute;
@@ -158,15 +197,17 @@ class widget ~project ~(page : Editor_page.page) ~x ~y ?packing () =
       (*buffer#get_text() |> Lex.paths_opened |> String.concat ";" |> Printf.printf "%s\n%!" ;*)
 
     method private select_row direction =
-      let path =
-        match lview#selection#get_selected_rows with
-        | [] -> GTree.Path.create [0]
-        | [ path ] when direction = `NEXT -> GTree.Path.next path; path
-        | [ path ] when direction = `PREV -> if GTree.Path.prev path then path else GTree.Path.create [0]
-        | _ -> assert false
-      in
-      lview#selection#select_path path;
-      lview#scroll_to_cell path vc_kind
+      if not is_destroyed then begin
+        let path =
+          match lview#selection#get_selected_rows with
+          | [] -> GTree.Path.create [0]
+          | [ path ] when direction = `NEXT -> GTree.Path.next path; path
+          | [ path ] when direction = `PREV -> if GTree.Path.prev path then path else GTree.Path.create [0]
+          | _ -> assert false
+        in
+        lview#selection#select_path path;
+        lview#scroll_to_cell path vc_kind
+      end
 
     method private move_info path =
       let row_area = lview#get_cell_area ~path () in
@@ -223,7 +264,6 @@ class widget ~project ~(page : Editor_page.page) ~x ~y ?packing () =
       window_info#misc#hide();
       view#misc#connect#after#realize ~callback:(fun _ -> vc_name#set_sizing `GROW_ONLY) |> ignore;
       label_info#set_use_markup true;
-      (*let window_info = Gtk_util.window label_info#coerce ~focus:false ~type_hint:`MENU ~parent:page ~x ~y ~show:false () in*)
       self#misc#connect#destroy ~callback:begin fun () ->
         window_info#destroy();
         single_instance := None;
@@ -253,16 +293,7 @@ and signals ~first_entry_available ~loading_complete =
   end
 
 let create_window ~project ~page =
-  begin
-    match !single_instance with
-    | Some instance -> instance#destroy();
-    | _ -> ()
-  end;
   let view = page#ocaml_view in
   let x, y = view#get_location_at_cursor () in
   let compl = new widget ~project ~page ~x ~y () in
-  (*let window = Gtk_util.window compl#coerce ~parent:page ~focus:false ~destroy_on_focus_out:false ~x ~y () in*)
-  let window = Gtk_util.window_tooltip compl#coerce ~parent:page ~x ~y () in
-  window#misc#hide();
-  compl#complete window;
-  single_instance := Some compl;
+  create ~compl:(compl :> completion) ~x ~y ~project ~page

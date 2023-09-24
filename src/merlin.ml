@@ -55,8 +55,8 @@ let case_analysis ~(start : GText.iter) ~(stop : GText.iter) ~filename ~source_c
     | Exception msg -> Log.println `ERROR "%s" msg.value;
   end
 
-let complete_prefix ~(position : GText.iter) ~prefix ~filename ~source_code apply =
-  let position = sprintf "%d:%d" (position#line + 1) position#line_offset in
+let complete_prefix ~position:(line, col) ~prefix ~filename ~source_code apply =
+  let position = sprintf "%d:%d" line col in
   [ "complete-prefix"; "-position"; position; "-prefix"; sprintf "\"%s\"" prefix; "-doc true -types true" ]
   |> execute filename source_code ~continue_with:begin fun json ->
     match Merlin_j.complete_prefix_answer_of_string json with
@@ -68,8 +68,8 @@ let complete_prefix ~(position : GText.iter) ~prefix ~filename ~source_code appl
     | Exception msg -> Log.println `ERROR "%s" msg.value;
   end
 
-let expand_prefix ~(position : GText.iter) ~prefix ~filename ~source_code apply =
-  let position = sprintf "%d:%d" (position#line + 1) position#line_offset in
+let expand_prefix ~position:(line, col) ~prefix ~filename ~source_code apply =
+  let position = sprintf "%d:%d" line col in
   [ "expand-prefix"; "-position"; position; "-prefix";  sprintf "\"%s\"" prefix; "-doc true -types true" ]
   |> execute filename source_code ~continue_with:begin fun json ->
     match Merlin_j.complete_prefix_answer_of_string json with
