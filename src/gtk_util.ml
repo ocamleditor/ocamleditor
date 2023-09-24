@@ -147,11 +147,25 @@ let try_font context family =
     true
   with Gpointer.Null -> false
 
+let label_icon ?(width=20) ?(height=16) ?(font_name="FiraCode Nerd Font Propo") ?color ?packing icon =
+  let markup = Printf.sprintf "<big>%s</big>" icon in
+  let label = GMisc.label ~xalign:0.5 ~yalign:0.5 ~xpad:0 ~ypad:0 ~width ~height ~markup ?packing () in
+  label#misc#modify_font_by_name font_name;
+  color |> Option.iter begin fun color ->
+    label#misc#modify_fg [ `NORMAL, `NAME color ];
+  end;
+  label
 
-
-
-
-
-
+class button_icon ?label ?(icon="") ?(icon_spacing=3) ?icon_width ?icon_height ?relief ?packing () =
+  let button = GButton.button ?label ?relief ?packing () in
+  let hbox = GPack.hbox ~spacing:icon_spacing ~packing:button#add () in
+  let icon = label_icon ?width:icon_width ?height:icon_height ~packing:hbox#add icon in
+  let label = GMisc.label ~packing:hbox#add () in
+  object (self)
+    inherit GObj.widget hbox#as_widget
+    method set_icon = icon#set_label
+    method set_label = label#set_label
+    method button = button
+  end
 
 
