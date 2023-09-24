@@ -63,6 +63,17 @@ type application_context = {
   labels : label list;
 }
 
+type list_modules_answer = [
+  | Return <json name="return"> of list_modules
+  | Failure <json name="failure"> of message
+  | Error <json name="error"> of message
+  | Exception <json name="exception"> of message
+] <json
+  adapter.to_ocaml="Atdgen_runtime.Json_adapter.normalize_type_field \"class\""
+  adapter.from_ocaml="Atdgen_runtime.Json_adapter.restore_type_field \"class\""
+> <ocaml repr="classic">
+
+type list_modules = { value : string list }
 
 
 
