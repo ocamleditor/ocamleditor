@@ -52,11 +52,11 @@ class widget ~project ~(page : Editor_page.page) ~x ~y ?packing () =
   let markup_types_bw = Print_type.markup2 in
   let vbox = GPack.vbox ~spacing:5 ~border_width:0 ?packing () in
   let cols = new GTree.column_list in
-  let col_data  = cols#add Gobject.Data.string in
-  let col_kind  = cols#add Gobject.Data.string in
-  let col_name  = cols#add Gobject.Data.string in
-  let col_desc  = cols#add Gobject.Data.string in
-  let col_info  = cols#add Gobject.Data.string in
+  let col_is_exp = cols#add Gobject.Data.boolean in
+  let col_kind = cols#add Gobject.Data.string in
+  let col_name = cols#add Gobject.Data.string in
+  let col_desc = cols#add Gobject.Data.string in
+  let col_info = cols#add Gobject.Data.string in
   let model = GTree.list_store cols in
   let renderer = GTree.cell_renderer_text [`SCALE `SMALL; `YPAD 0] in
   let vc_kind = GTree.view_column ~renderer:(renderer, ["text", col_kind]) () in
@@ -86,10 +86,14 @@ class widget ~project ~(page : Editor_page.page) ~x ~y ?packing () =
     inherit completion
 
     val mutable current_prefix = ""
+    val mutable current_prefix_offset_start = 0
     val mutable count = 0
     val first_entry_available = new first_entry_available()
     val loading_complete = new loading_complete()
     val mutable is_destroyed = false
+    val mutable page_signals = []
+    val mutable buffer_signals = []
+    val mutable view_signals = []
 
     method complete (window : GWindow.window) =
       let position = buffer#get_iter_at_mark `INSERT in
@@ -99,20 +103,28 @@ class widget ~project ~(page : Editor_page.page) ~x ~y ?packing () =
       let is_method_compl = is_sharp start#char in
       let current_prefix_start = if is_method_compl then start#forward_char else start in
       let prefix = page#buffer#get_text ~start:current_prefix_start ~stop:position () in
-      let prefix_start_offset = current_prefix_start#offset in
+      current_prefix_offset_start <- current_prefix_start#offset;
       current_prefix <- prefix;
       count <- 0;
       self#invoke_merlin ~prefix ~position ~expand:(not is_method_compl) window;
-      let page_signals = [
+      self#connect_signals word_end;
+      self#misc#connect#destroy ~callback:begin fun () ->
+        self#disconnect_signals();
+        window#destroy();
+      end |> ignore;
+      window#move ~x ~y
+
+    method private connect_signals word_end =
+      page_signals <- [
         page#connect#scroll_changed ~callback:(fun _ -> self#destroy());
-      ] in
-      let buffer_signals = [
+      ];
+      buffer_signals <- [
         view#buffer#connect#mark_set ~callback:begin fun it mark ->
           match GtkText.Mark.get_name mark with
           | Some "insert" ->
               let ins = buffer#get_iter `INSERT in
               if
-                ins#offset < prefix_start_offset ||
+                ins#offset < current_prefix_offset_start ||
                 ins#compare word_end > 0
               then self#destroy();
           | _ -> ()
@@ -122,8 +134,8 @@ class widget ~project ~(page : Editor_page.page) ~x ~y ?packing () =
           let compl = new widget ~project ~page ~x ~y () in
           create ~compl:(compl :> completion) ~x ~y ~project ~page;
         end;
-      ] in
-      let view_signals =
+      ];
+      view_signals <-
         [
           view#event#connect#key_press ~callback:begin fun ev ->
             let keyval = GdkEvent.Key.keyval ev in
@@ -138,25 +150,21 @@ class widget ~project ~(page : Editor_page.page) ~x ~y ?packing () =
               true
             end else if keyval = GdkKeysyms._Return then begin
               self#selected_path
-              |> Option.iter begin fun path ->
-                let row = model#get_iter path in
-                let name = model#get ~row ~column:col_name in
-                Gmisclib.Idle.add (fun () -> self#apply name);
-              end;
+              |> Option.iter (fun path -> Gmisclib.Idle.add (fun () -> self#apply path));
               true
             end else false
           end;
           view#event#connect#focus_out ~callback:(fun _ -> self#destroy(); false);
           view#event#connect#scroll ~callback:(fun _ -> self#destroy(); false);
         ]
-      in
-      self#misc#connect#destroy ~callback:begin fun () ->
-        page_signals |> List.iter page#disconnect;
-        buffer_signals |> List.iter (GtkSignal.disconnect buffer#as_buffer);
-        view_signals |> List.iter (GtkSignal.disconnect view#as_view);
-        window#destroy();
-      end |> ignore;
-      window#move ~x ~y
+
+    method private disconnect_signals () =
+      page_signals |> List.iter page#disconnect;
+      page_signals <- [];
+      buffer_signals |> List.iter (GtkSignal.disconnect buffer#as_buffer);
+      buffer_signals <- [];
+      view_signals |> List.iter (GtkSignal.disconnect view#as_view);
+      view_signals <- [];
 
     method private invoke_merlin ~prefix ~position ?(expand=true) window =
       let position = position#line + 1, position#line_offset in
@@ -165,14 +173,14 @@ class widget ~project ~(page : Editor_page.page) ~x ~y ?packing () =
         begin
           match complete_prefix.entries with
           | first :: others ->
-              [first] |> self#add_entries "C";
+              [first] |> self#add_entries false;
               first_entry_available#call();
-              others |> self#add_entries "C";
+              others |> self#add_entries false;
           | [] -> ()
         end;
         if count = 0 || expand then begin
           merlin@@expand_prefix ~position ~prefix begin fun expand_prefix ->
-            expand_prefix.entries |> self#add_entries "E";
+            expand_prefix.entries |> self#add_entries true;
             loading_complete#call count;
             (*merlin@@list_modules begin fun modules ->
               modules |> String.concat ", " |> Printf.printf "%s"
@@ -182,22 +190,32 @@ class widget ~project ~(page : Editor_page.page) ~x ~y ?packing () =
           loading_complete#call count;
       end;
 
-    method private apply name =
-      self#destroy(); (* TODO disconnect buffer changed event instead *)
-      let a, b = String_utils.locate_intersection current_prefix name in
-      let substitute = Str.string_after name b in
-      Printf.printf "name=%S current_prefix=%S %d %d %S\n%!" name current_prefix a b substitute;
-      let start = buffer#get_iter `INSERT in
-      let _, stop = page#buffer#as_text_buffer#select_word ~pat:Ocaml_word_bound.regexp ~select:false ~search:false () in
-      let stop = if start#compare stop >= 0 then start else stop in
+    method private apply path =
+      let row = model#get_iter path in
+      let name = model#get ~row ~column:col_name in
+      let is_expand = model#get ~row ~column:col_is_exp in
       page#view#tbuffer#undo#begin_block ~name:"compl";
-      buffer#delete_interactive ~start ~stop () |> ignore;
-      buffer#insert_interactive substitute |> ignore;
+      let _, stop = page#buffer#as_text_buffer#select_word ~pat:Ocaml_word_bound.regexp ~select:false ~search:false () in
+      self#disconnect_signals();
+      if is_expand then begin
+        let start = buffer#get_iter_at_char current_prefix_offset_start in
+        buffer#delete_interactive ~start ~stop () |> ignore;
+        buffer#insert_interactive name |> ignore;
+      end else begin
+        let a, b = String_utils.locate_intersection current_prefix name in
+        let substitute = Str.string_after name b in
+        Printf.printf "name=%S current_prefix=%S %d %d %S\n%!" name current_prefix a b substitute;
+        let start = buffer#get_iter `INSERT in
+        let stop = if start#compare stop >= 0 then start else stop in
+        buffer#delete_interactive ~start ~stop () |> ignore;
+        buffer#insert_interactive substitute |> ignore;
+      end;
       page#view#tbuffer#undo#end_block();
       (*buffer#get_text() |> Lex.paths_opened |> String.concat ";" |> Printf.printf "%s\n%!" ;*)
+      self#destroy();
 
     method private select_row direction =
-      if not is_destroyed then begin
+      try
         let path =
           match lview#selection#get_selected_rows with
           | [] -> GTree.Path.create [0]
@@ -207,7 +225,7 @@ class widget ~project ~(page : Editor_page.page) ~x ~y ?packing () =
         in
         lview#selection#select_path path;
         lview#scroll_to_cell path vc_kind
-      end
+      with Gpointer.Null -> ()
 
     method private move_info path =
       let row_area = lview#get_cell_area ~path () in
@@ -243,14 +261,14 @@ class widget ~project ~(page : Editor_page.page) ~x ~y ?packing () =
         | _ -> None
       with Gpointer.Null -> None
 
-    method private add_entries data entries =
+    method private add_entries is_expand entries =
       try
         entries
         |> List.iter begin fun (entry : Merlin_t.entry) ->
           if is_destroyed then raise Exit;
           (* TODO: remove duplicates *)
           let row = model#append () in
-          model#set ~row ~column:col_data data;
+          model#set ~row ~column:col_is_exp is_expand;
           model#set ~row ~column:col_kind (icon_of_kind entry.kind);
           model#set ~row ~column:col_name entry.name;
           model#set ~row ~column:col_desc entry.desc;
