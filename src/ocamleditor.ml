@@ -45,8 +45,27 @@ let fade_out window =
   end;
   window#destroy()
 
+let install_fonts () =
+  let (/) = Filename.concat in
+  let font_names =
+    App_config.application_fonts
+    |> File_util.get_files_in_directory
+    |> List.map Filename.basename
+  in
+  let font_dir = (Sys.getenv "HOME") / ".local" / "share" / "fonts" in
+  let fonts_exist = font_names |> List.for_all (fun name -> font_dir / name |> Sys.file_exists) in
+  if not fonts_exist then begin
+    font_names
+    |> List.iter begin fun name ->
+      let src = App_config.application_fonts / name in
+      let dest = font_dir / name in
+      File_util.cp src dest;
+    end
+  end
+
 (** main *)
 let main () = begin
+  install_fonts();
   let open Preferences in
   let _ = About.build_id := Build_id.timestamp in
   let _ = About.git_hash := Build_id.git_hash in

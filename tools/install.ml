@@ -22,8 +22,8 @@
 
 
 #cd "tools"
-#directory "."
-#use "scripting.ml"
+    #directory "."
+               #use "scripting.ml"
 
 open Printf
 
@@ -60,19 +60,22 @@ let install () =
   end else if !nsis then begin
     let exit_code = kprintf Sys.command "\"%s\" ..\\ocamleditor.nsi" (Filename.quote "%ProgramFiles(x86)%\\NSIS\\makensis") in
     match exit_code with
-      | 0 ->
+    | 0 ->
         let version = match get_lines_from_file ~filename:"../VERSION" [1] with (_, x) :: [] -> x | _ -> assert false in
         let cmd = sprintf "..\\ocamleditor-%s" version in
         ignore (Sys.command cmd)
-      | _ -> prerr_endline "This script is not available under Windows.
+    | _ -> prerr_endline "This script is not available under Windows.
 To install OCamlEditor, please use the included ocamleditor.nsi script.
 You will need the free NSIS install system (http://nsis.sourceforge.net).";
   end else begin
     if not (Sys.file_exists !prefix) then failwith ("Path " ^ !prefix ^ " doesn't exist");
     let exe, cpr, cp = if Sys.win32 then ".exe", "XCOPY /S/Y", "XCOPY /Y" else "", "cp -vr", "cp -v" in
     let icons = sprintf "%s/share/ocamleditor/icons" !prefix in
+    let fonts = sprintf "%s/share/ocamleditor/fonts" !prefix in
     mkdir_p icons;
+    mkdir_p fonts;
     sys_command [cpr; !!"../icons/*"; !!icons];
+    sys_command [cpr; !!"../fonts/*"; !!fonts];
     if Sys.readdir "../plugins" <> [||] then begin
       let plugins = sprintf "%s/share/ocamleditor/plugins" !prefix in
       mkdir_p plugins;
@@ -99,7 +102,7 @@ You will need the free NSIS install system (http://nsis.sourceforge.net).";
   end;;
 
 let _ = main ~dir:"../src" ~default_target:install ~options:[
-  "-prefix",   Set_string prefix,   (sprintf " Installation prefix (default is %s)" !prefix);
-  "-gmisclib", Set gmisclib,        (sprintf " Install gmisclib");
-  "-nsis",     Set nsis,            (sprintf " Create a Win32 installer with NSIS");
-] ()
+    "-prefix",   Set_string prefix,   (sprintf " Installation prefix (default is %s)" !prefix);
+    "-gmisclib", Set gmisclib,        (sprintf " Install gmisclib");
+    "-nsis",     Set nsis,            (sprintf " Create a Win32 installer with NSIS");
+  ] ()
