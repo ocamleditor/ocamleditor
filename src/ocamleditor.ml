@@ -53,6 +53,7 @@ let install_fonts () =
     |> List.map Filename.basename
   in
   let font_dir = (Sys.getenv "HOME") / ".local" / "share" / "fonts" in
+  Miscellanea.mkdir_p font_dir;
   let fonts_exist = font_names |> List.for_all (fun name -> font_dir / name |> Sys.file_exists) in
   if not fonts_exist then begin
     font_names

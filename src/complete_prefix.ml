@@ -1,5 +1,6 @@
 open Merlin
 open GUtil
+module ColorOps = Color
 open Preferences
 open Printf
 
@@ -16,16 +17,37 @@ module String_utils = struct
         locate_intersection left (Str.first_chars right (len_right - 1))
 end
 
-let icon_of_kind = function
-  | "Value" -> "\u{ea8c} "
-  | "Type" -> "\u{1d6bb} "
-  | "Module" -> "\u{f1b2} "
-  | "Constructor" -> "\u{ea88} "
-  | "Label" -> "\u{f0316} "
-  | "Class" -> "\u{eb5b} "
-  | "Method" -> "\u{eb65} "
-  | "#" -> "\u{eb65} "
-  | x -> x
+let re_indent = Str.regexp "^[ ]+"
+let re_multi_space = Str.regexp " [ ]+"
+let re_newlines = Str.regexp "[\n\r]+"
+
+let color_of_kind = function
+  | "Value" -> Preferences.editor_tag_color "structure"
+  | "Type" -> Preferences.editor_tag_color "lident"
+  | "Module" -> Preferences.editor_tag_color "uident"
+  | "Constructor" -> Preferences.editor_tag_color "lident"
+  | "Label" -> Preferences.editor_tag_color "label"
+  | "Class" -> Preferences.editor_tag_color "lident"
+  | "Method" -> Preferences.editor_tag_color "lident"
+  | "Signature" -> Preferences.editor_tag_color "lident"
+  | "Exn" -> `NAME "red" |> GDraw.color
+  | "#" -> Preferences.editor_tag_color "lident"
+  | x -> Preferences.editor_tag_color "lident"
+
+let icon_of_kind kind =
+  let color = kind |> color_of_kind |> ColorOps.name_of_gdk in
+  match kind with
+  | "Value" -> sprintf "<span color='%s'>\u{ea8c} </span>" color
+  | "Type" -> sprintf "<span color='%s'>\u{1d6bb} </span>" color
+  | "Module" -> sprintf "<span color='%s'>\u{f1b2} </span>" color
+  | "Constructor" -> sprintf "<span color='%s'>\u{ea88} </span>" color
+  | "Label" -> sprintf "<span color='%s'>\u{f0316} </span>" color
+  | "Class" -> sprintf "<span color='%s'>\u{eb5b} </span>" color
+  | "Method" -> sprintf "<span color='%s'>\u{eb65} </span>" color
+  | "Signature" -> sprintf "<span color='%s'>\u{eb61} </span>" color
+  | "Exn" -> sprintf "<span color='%s'>\u{f12a} </span>" color
+  | "#" -> sprintf "<span color='%s'>\u{f0ad} </span>" color
+  | x -> sprintf "<span color='%s'>%s</span>" color x
 
 class virtual completion =
   object
@@ -59,7 +81,7 @@ class widget ~project ~(page : Editor_page.page) ~x ~y ?packing () =
   let col_info = cols#add Gobject.Data.string in
   let model = GTree.list_store cols in
   let renderer = GTree.cell_renderer_text [`SCALE `SMALL; `YPAD 0] in
-  let vc_kind = GTree.view_column ~renderer:(renderer, ["text", col_kind]) () in
+  let vc_kind = GTree.view_column ~renderer:(renderer, ["markup", col_kind]) () in
   let vc_name = GTree.view_column ~renderer:(renderer, ["text", col_name]) () in
   let sw = GBin.scrolled_window ~shadow_type:`NONE ~hpolicy:`NEVER ~vpolicy:`AUTOMATIC ~packing:vbox#add () in
   let lview = GTree.view ~model ~headers_visible:false ~reorderable:false ~height:200 ~packing:sw#add () in
@@ -68,7 +90,7 @@ class widget ~project ~(page : Editor_page.page) ~x ~y ?packing () =
   let _ = lview#append_column vc_kind in
   let _ = lview#append_column vc_name in
   let _ = lview#selection#set_mode `SINGLE in
-  let label_info = GMisc.label ~markup:"" ~xalign:0.0 ~yalign:0.0 ~xpad:8 ~ypad:8 () in
+  let label_info = GMisc.label ~markup:"" ~xalign:0.0 ~yalign:0.0 ~xpad:8 ~ypad:8 ~line_wrap:true () in
   let window_info = Gtk_util.window_tooltip label_info#coerce ~parent:page ~x ~y () in
   (*let _ = lview#misc#modify_base [`ACTIVE, `NAME ?? (Preferences.preferences#get.editor_bg_color_popup)] in*)
   let view = page#ocaml_view in
@@ -81,6 +103,8 @@ class widget ~project ~(page : Editor_page.page) ~x ~y ?packing () =
   let font_name = Preferences.preferences#get.editor_base_font in
   let font_family_monospace =
     String.sub font_name 0 (Option.value (String.rindex_opt font_name ' ') ~default:(String.length font_name)) in
+  let code_color = ?? (preferences#get.editor_fg_color_popup) in
+  let pending_newline = ref false in
   object (self)
     inherit GObj.widget vbox#as_widget
     inherit completion
@@ -234,6 +258,70 @@ class widget ~project ~(page : Editor_page.page) ~x ~y ?packing () =
       window_info#resize ~width:1 ~height:1;
       Gmisclib.Idle.add (fun () -> window_info#move ~x ~y);
 
+    method private markup_of_info_element element =
+      let open Odoc_info in
+      let markup_of_elements text = text |> List.map self#markup_of_info_element |> String.concat "" in
+      begin
+        match element with
+        | Odoc_info.Raw text ->
+            let spc = if !pending_newline then "" else " " in
+            pending_newline := false;
+            Str.global_replace re_indent spc
+              (Str.global_replace re_multi_space " "
+                 (Str.global_replace re_newlines " " text))
+        | Code code -> sprintf "<span color='%s' face='%s'>%s</span>" code_color font_family_monospace code
+        | CodePre code -> sprintf "\n<span color='%s' face='%s'>%s</span>\n" code_color font_family_monospace code
+        | Verbatim text ->
+            sprintf "<tt>%s</tt>" text
+        | Bold text ->
+            sprintf "<b>%s</b>" (markup_of_elements text)
+        | Italic text ->
+            sprintf "<i>%s</i>" (markup_of_elements text)
+        | Emphasize text ->
+            sprintf "<i>%s</i>" (markup_of_elements text)
+        | List text ->
+            text
+            |> List.map (fun t -> t |> List.map self#markup_of_info_element |> String.concat "")
+            |> String.concat "\n\u{2022}  "
+            |> sprintf "\n\u{2022}  %s\n"
+        | Enum text ->
+            "\n" ^
+            (text
+             |> List.map markup_of_elements
+             |> List.mapi (fun i -> Printf.sprintf "%3d)  %s" (i+1))
+             |> String.concat "\n")
+        | Newline -> pending_newline := true; " " (*"<span color='red'>\u{ebea}</span>"*)
+        | Block text ->
+            sprintf "<span color='red'>Block %s</span>" (markup_of_elements text)
+        | Link (link, text) ->
+            sprintf "%s (<tt>%s</tt>)" (markup_of_elements text) link
+        | Ref (name, kind, text) ->
+            sprintf "<span color='%s' face='%s'>%s</span>%s" code_color font_family_monospace name
+              (match text with None -> "" | Some text -> (markup_of_elements text))
+        | Module_list _ -> ""
+        | Index_list -> ""
+        | Target (a, b) -> sprintf "<span color='red'>Target %S %S</span>" a b
+        | Center text -> sprintf "<span color='red'>Center %S</span>" (markup_of_elements text)
+        | Left text -> sprintf "<span color='red'>Left %S</span>" (markup_of_elements text)
+        | Right text -> sprintf "<span color='red'>Right %S</span>" (markup_of_elements text)
+        | Title (level, _, text) -> sprintf "<span weight='bold'>%s</span>" (markup_of_elements text)
+        | Latex text -> sprintf "<tt>%s</tt>" text
+        | Superscript text -> sprintf "<sup>%s</sup>" (markup_of_elements text)
+        | Subscript text -> sprintf "<sub>%s</sub>" (markup_of_elements text)
+        | Custom (a, text) ->
+            sprintf "<span color='red'>Custom %S %s</span>" a (markup_of_elements text)
+      end
+
+    method private markup_of_info info =
+      let open Odoc_info in
+      let odoc = info_of_string info in
+      match odoc.i_desc with
+      | None -> ""
+      | Some idesc ->
+          idesc
+          |> List.map self#markup_of_info_element
+          |> String.concat ""
+
     method private show_info () =
       match lview#selection#get_selected_rows with
       | [] -> ()
@@ -246,7 +334,8 @@ class widget ~project ~(page : Editor_page.page) ~x ~y ?packing () =
             Gmisclib.Idle.add begin fun () ->
               let markup =
                 Printf.sprintf "<span size='small' font_family='%s'>%s</span>\n<span size='small'>%s</span>"
-                  font_family_monospace (markup_types_bw desc) (Glib.Markup.escape_text info)
+                  (*                  font_family_monospace (markup_types_bw desc) (Glib.Markup.escape_text info)*)
+                  font_family_monospace (markup_types_bw desc) (self#markup_of_info info)
               in
               label_info#set_label markup;
               self#move_info path;

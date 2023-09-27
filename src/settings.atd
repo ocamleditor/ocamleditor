@@ -77,7 +77,7 @@ type settings = {
   ~editor_base_font                    <ocaml default="\"monospace 9\"" mutable> : string;
   ~editor_bg_color_popup               <ocaml default="{light=\"#FFE375\"; dark=\"#505050\"}" mutable> : string color;
   ~editor_bg_color_theme               <ocaml default="false" mutable> : bool;
-  ~editor_bg_color_user                <ocaml default="{ light = \"#FFFFFF\"; dark = \"#1e1e1e\"}" mutable> : string color;
+  ~editor_bg_color_user                <ocaml default="{ light = \"#FFFFFF\"; dark = \"#101010\"}" mutable> : string color;
   ~editor_code_folding_enabled         <ocaml default="true" mutable> : bool;
 
   ~editor_completion_font              <ocaml default="\"Sans 8\"" mutable> : string;
@@ -92,7 +92,7 @@ type settings = {
   ~editor_err_gutter                   <ocaml default="true" mutable> : bool;
   ~editor_err_tooltip                  <ocaml default="true" mutable> : bool;
   ~editor_err_underline                <ocaml default="true" mutable> : bool;
-  ~editor_fg_color_popup               <ocaml default="{light=\"#000000\"; dark=\"#E1E1E1\"}" mutable> : string color;
+  ~editor_fg_color_popup               <ocaml default="{light=\"#0035FF\"; dark=\"#7FA6FC\"}" mutable> : string color;
   ~editor_format_on_save               <ocaml default="false" mutable> : bool;
   ~editor_highlight_current_line       <ocaml default="true" mutable> : bool;
   ~editor_indent_config                <ocaml default="\"\"" mutable> : string;
