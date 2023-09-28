@@ -85,21 +85,31 @@ let window widget
   end;
   window
 
+let move_window_within_screen_bounds window x y =
+  let alloc = window#misc#allocation in
+  let x, y =
+    (if x + alloc.Gtk.width > (Gdk.Screen.width()) then max 0 (Gdk.Screen.width() - alloc.Gtk.width) else x),
+    (if y + alloc.Gtk.height > (Gdk.Screen.height()) then max 0 (Gdk.Screen.height() - alloc.Gtk.height) else y);
+  in
+  window#move ~x ~y;
+  x, y
+
 (** window_tooltip *)
-let window_tooltip widget ?parent ?(fade=false) ~x ~y () =
+let window_tooltip widget ?parent ?(fade=false) ~x ~y ?width ?height ?(show=true) () =
   let fade = fade && !Gmisclib.Util.fade_window_enabled in
   let window = GWindow.window
       ~decorated:false
       ~kind:`POPUP (*`TOPLEVEL*)
       ~type_hint:`MENU (*`NORMAL*)
       ~border_width:1
+      ?width ?height
       ~show:false ()
   in
   let ebox = GBin.event_box ~packing:window#add () in
   ebox#add widget;
-  let module ColorOp = Color in
-  let open Preferences in
-  (*  let color = ColorOp.set_value 0.62 (`NAME ?? (Preferences.preferences#get.editor_bg_color_popup)) in
+  (*let module ColorOp = Color in
+    let open Preferences in
+    let color = ColorOp.set_value 0.62 (`NAME ?? (Preferences.preferences#get.editor_bg_color_popup)) in
       let _ = window#misc#modify_bg [`NORMAL, color] in
       let _ = ebox#misc#modify_bg [`NORMAL, `NAME ?? (Preferences.preferences#get.editor_bg_color_popup)] in*)
   window#set_skip_pager_hint true;
@@ -110,14 +120,11 @@ let window_tooltip widget ?parent ?(fade=false) ~x ~y () =
   Gaux.may parent ~f:(fun parent -> Gaux.may (GWindow.toplevel parent) ~f:(fun x -> window#set_transient_for x#as_window));
   if fade then (window#set_opacity 0.0);
   window#move ~x ~y;
-  if fade then (Gmisclib.Util.fade_window window) else window#show();
-  if Sys.os_type <> "Win32" then (window#present());
-  let alloc = window#misc#allocation in
-  let x, y =
-    (if x + alloc.Gtk.width > (Gdk.Screen.width()) then (Gdk.Screen.width() - alloc.Gtk.width) else x),
-    (if y + alloc.Gtk.height > (Gdk.Screen.height()) then (Gdk.Screen.height() - alloc.Gtk.height) else y);
-  in
-  window#move ~x ~y;
+  if show then begin
+    if fade then (Gmisclib.Util.fade_window window) else window#show();
+    if Sys.os_type <> "Win32" then (window#present());
+  end;
+  move_window_within_screen_bounds window x y |> ignore;
   window
 
 (** with_tag *)

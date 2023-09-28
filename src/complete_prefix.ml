@@ -90,9 +90,6 @@ class widget ~project ~(page : Editor_page.page) ~x ~y ?packing () =
   let _ = lview#append_column vc_kind in
   let _ = lview#append_column vc_name in
   let _ = lview#selection#set_mode `SINGLE in
-  let label_info = GMisc.label ~markup:"" ~xalign:0.0 ~yalign:0.0 ~xpad:8 ~ypad:8 ~line_wrap:true () in
-  let window_info = Gtk_util.window_tooltip label_info#coerce ~parent:page ~x ~y () in
-  (*let _ = lview#misc#modify_base [`ACTIVE, `NAME ?? (Preferences.preferences#get.editor_bg_color_popup)] in*)
   let view = page#ocaml_view in
   let buffer = view#buffer in
   let merlin func =
@@ -118,6 +115,7 @@ class widget ~project ~(page : Editor_page.page) ~x ~y ?packing () =
     val mutable page_signals = []
     val mutable buffer_signals = []
     val mutable view_signals = []
+    val mutable current_window_info = []
 
     method complete (window : GWindow.window) =
       let position = buffer#get_iter_at_mark `INSERT in
@@ -206,9 +204,6 @@ class widget ~project ~(page : Editor_page.page) ~x ~y ?packing () =
           merlin@@expand_prefix ~position ~prefix begin fun expand_prefix ->
             expand_prefix.entries |> self#add_entries true;
             loading_complete#call count;
-            (*merlin@@list_modules begin fun modules ->
-              modules |> String.concat ", " |> Printf.printf "%s"
-              end*)
           end
         end else
           loading_complete#call count;
@@ -235,7 +230,6 @@ class widget ~project ~(page : Editor_page.page) ~x ~y ?packing () =
         buffer#insert_interactive substitute |> ignore;
       end;
       page#view#tbuffer#undo#end_block();
-      (*buffer#get_text() |> Lex.paths_opened |> String.concat ";" |> Printf.printf "%s\n%!" ;*)
       self#destroy();
 
     method private select_row direction =
@@ -251,13 +245,6 @@ class widget ~project ~(page : Editor_page.page) ~x ~y ?packing () =
         lview#scroll_to_cell path vc_kind
       with Gpointer.Null -> ()
 
-    method private move_info path =
-      let row_area = lview#get_cell_area ~path () in
-      let x = x + self#misc#allocation.Gtk.width in
-      let y = y + Gdk.Rectangle.y row_area in
-      window_info#resize ~width:1 ~height:1;
-      Gmisclib.Idle.add (fun () -> window_info#move ~x ~y);
-
     method private markup_of_info_element element =
       let open Odoc_info in
       let markup_of_elements text = text |> List.map self#markup_of_info_element |> String.concat "" in
@@ -266,13 +253,23 @@ class widget ~project ~(page : Editor_page.page) ~x ~y ?packing () =
         | Odoc_info.Raw text ->
             let spc = if !pending_newline then "" else " " in
             pending_newline := false;
-            Str.global_replace re_indent spc
-              (Str.global_replace re_multi_space " "
-                 (Str.global_replace re_newlines " " text))
-        | Code code -> sprintf "<span color='%s' face='%s'>%s</span>" code_color font_family_monospace code
-        | CodePre code -> sprintf "\n<span color='%s' face='%s'>%s</span>\n" code_color font_family_monospace code
+            text
+            |> Str.global_replace re_newlines " "
+            |> Str.global_replace re_multi_space " "
+            |> Str.global_replace re_indent spc
+            |> Glib.Markup.escape_text
+        | Code code ->
+            code
+            |> Glib.Markup.escape_text
+            |> sprintf "<span color='%s' face='%s'>%s</span>" code_color font_family_monospace
+        | CodePre code ->
+            code
+            |> Glib.Markup.escape_text
+            |> sprintf "\n<span color='%s' face='%s'>%s</span>\n" code_color font_family_monospace
         | Verbatim text ->
-            sprintf "<tt>%s</tt>" text
+            text
+            |> Glib.Markup.escape_text
+            |> sprintf "<tt>%s</tt>"
         | Bold text ->
             sprintf "<b>%s</b>" (markup_of_elements text)
         | Italic text ->
@@ -290,12 +287,12 @@ class widget ~project ~(page : Editor_page.page) ~x ~y ?packing () =
              |> List.map markup_of_elements
              |> List.mapi (fun i -> Printf.sprintf "%3d)  %s" (i+1))
              |> String.concat "\n")
-        | Newline -> pending_newline := true; " " (*"<span color='red'>\u{ebea}</span>"*)
+        | Newline -> pending_newline := true; "\n" (*"<span color='red'>\u{ebea}</span>"*)
         | Block text ->
             sprintf "<span color='red'>Block %s</span>" (markup_of_elements text)
         | Link (link, text) ->
             sprintf "%s (<tt>%s</tt>)" (markup_of_elements text) link
-        | Ref (name, kind, text) ->
+        | Ref (name, _kind, text) ->
             sprintf "<span color='%s' face='%s'>%s</span>%s" code_color font_family_monospace name
               (match text with None -> "" | Some text -> (markup_of_elements text))
         | Module_list _ -> ""
@@ -327,21 +324,50 @@ class widget ~project ~(page : Editor_page.page) ~x ~y ?packing () =
       | [] -> ()
       | path :: _ ->
           let row = model#get_iter path in
-          let name = model#get ~row ~column:col_name in
           let desc = model#get ~row ~column:col_desc in
           let info = model#get ~row ~column:col_info in
+          let info = String.trim info in
           if String.trim desc <> "" || String.trim info <> "" then begin
             Gmisclib.Idle.add begin fun () ->
               let markup =
-                Printf.sprintf "<span size='small' font_family='%s'>%s</span>\n<span size='small'>%s</span>"
-                  (*                  font_family_monospace (markup_types_bw desc) (Glib.Markup.escape_text info)*)
-                  font_family_monospace (markup_types_bw desc) (self#markup_of_info info)
+                Printf.sprintf "<span size='small' font_family='%s'>%s</span>%s<span size='small'>%s</span>"
+                  font_family_monospace (markup_types_bw desc)
+                  (if info <> "" then "\n\n" else "")
+                  (self#markup_of_info info)
               in
-              label_info#set_label markup;
-              self#move_info path;
-              window_info#show();
-            end;
+              self#display_window_info path markup
+            end
           end
+
+    method private display_window_info path markup =
+      let create_window ~x ~y ?width ?height ?show child =
+        current_window_info |> List.iter (fun w -> w#destroy());
+        let window = Gtk_util.window_tooltip child ~parent:page ~x ~y ?width ?height ?show () in
+        current_window_info <- window :: current_window_info;
+        self#misc#connect#destroy ~callback:window#destroy |> ignore;
+        window
+      in
+      let row_area = lview#get_cell_area ~path () in
+      let r0 = self#misc#allocation in
+      let wx, wy = Gdk.Window.get_position self#misc#toplevel#misc#window in
+      let x0 = wx + r0.Gtk.width in
+      let y0 = wy + Gdk.Rectangle.y row_area in
+      let label_info = GMisc.label ~markup ~xalign:0.0 ~yalign:0.0 ~xpad:10 ~ypad:10 ~line_wrap:true () in
+      let window_info = create_window ~x:x0 ~y:y0 ~show:false label_info#coerce in
+      window_info#resize ~width:1 ~height:1;
+      Gmisclib.Idle.add ~prio:100 begin fun () ->
+        window_info#show();
+        let _ = Gtk_util.move_window_within_screen_bounds window_info x0 y0 in
+        let r = window_info#misc#allocation in
+        if r.height > Gdk.Screen.height() then begin
+          let sw = GBin.scrolled_window ~hpolicy:`AUTOMATIC () in
+          let vp = GBin.viewport ~packing:sw#add () in
+          label_info#misc#reparent vp#coerce;
+          let width = r.width + 21 in
+          let height = Gdk.Screen.height() - y0 - 13 in
+          create_window ~x:x0 ~y:y0 ~width ~height sw#coerce |> ignore;
+        end
+      end
 
     method private selected_path =
       try
@@ -363,16 +389,12 @@ class widget ~project ~(page : Editor_page.page) ~x ~y ?packing () =
           model#set ~row ~column:col_desc entry.desc;
           model#set ~row ~column:col_info entry.info;
           count <- count + 1;
-          Gmisclib.Idle.add (fun () -> self#selected_path |> Option.iter self#move_info)
         end
       with Exit -> ()
 
     initializer
-      window_info#misc#hide();
       view#misc#connect#after#realize ~callback:(fun _ -> vc_name#set_sizing `GROW_ONLY) |> ignore;
-      label_info#set_use_markup true;
       self#misc#connect#destroy ~callback:begin fun () ->
-        window_info#destroy();
         single_instance := None;
         is_destroyed <- true
       end |> ignore;
@@ -383,9 +405,7 @@ class widget ~project ~(page : Editor_page.page) ~x ~y ?packing () =
         if count > 0 then Gmisclib.Idle.add self#show_info
         else self#destroy()
       end |> ignore;
-      lview#selection#connect#changed ~callback:begin fun () ->
-        self#show_info ()
-      end|> ignore;
+      lview#selection#connect#changed ~callback:self#show_info |> ignore;
 
     method connect = new signals ~first_entry_available ~loading_complete
   end
