@@ -82,10 +82,10 @@ class browser window =
     button#misc#set_name "gitbutton";
     button
   in
-  let button_gitunpushed = create_gitbutton "" in
-  let button_gitpending = create_gitbutton "" in
-  let button_gitpath = create_gitbutton ""(*  *) in
-  let button_gitbranch = create_gitbutton "" in
+  let button_gitunpushed = create_gitbutton "\u{eaa1}" in
+  let button_gitpending = create_gitbutton "\u{ea73}" in
+  let button_gitpath = create_gitbutton "\u{e65d}" in
+  let button_gitbranch = create_gitbutton "\u{f062c}" in
   let _ =
     button_gitpending#button#connect#clicked ~callback:begin fun () ->
       Git.diff_stat (Git.show_diff_stat None);

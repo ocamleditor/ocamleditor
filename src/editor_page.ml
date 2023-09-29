@@ -103,13 +103,13 @@ class page ?file ~project ~scroll_offset ~offset ~editor () =
   let spinner                  = GMisc.image ~width:15 ~packing:sbox#pack () in
   let _                        = GMisc.separator `VERTICAL ~packing:sbox#pack () in
   let button_dotview           = create_small_toggle_button
-      ~icon:"󱘎 "
+      ~icon:"\u{f104a} "
       ~packing:sbbox#pack ()
       ~show:(false (*Oe_config.dot_version <> None*))
   in
   (** Icons for font size and row spacing adjustment *)
   let button_font_incr = create_small_button
-      ~icon:"󰧴"
+      ~icon:"\u{f09f4}"
       ~packing:sbbox#pack
       ~callback:begin fun () ->
         let fd = text_view#misc#pango_context#font_description in
@@ -119,7 +119,7 @@ class page ?file ~project ~scroll_offset ~offset ~editor () =
       end ()
   in
   let button_font_decr = create_small_button
-      ~icon:"󰧳"
+      ~icon:"\u{f09f3}"
       ~packing:sbbox#pack
       ~callback:begin fun () ->
         let fd = text_view#misc#pango_context#font_description in
@@ -132,7 +132,7 @@ class page ?file ~project ~scroll_offset ~offset ~editor () =
       end ()
   in
   let button_rowspacing_incr = create_small_button
-      ~icon:"󰡏"
+      ~icon:"\u{f084f}"
       ~packing:sbbox#pack
       ~callback:begin fun () ->
         let above, below = Preferences.preferences#get.editor_pixels_lines in
@@ -142,7 +142,7 @@ class page ?file ~project ~scroll_offset ~offset ~editor () =
       end ()
   in
   let button_rowspacing_decr = create_small_button
-      ~icon:"󰡍"
+      ~icon:"\u{f084d}"
       ~packing:sbbox#pack
       ~callback:begin fun () ->
         text_view#set_pixels_above_lines (max 0 (text_view#pixels_above_lines - 1));
@@ -151,8 +151,8 @@ class page ?file ~project ~scroll_offset ~offset ~editor () =
       end ()
   in
   (** Show whitespace and word wrap *)
-  let button_toggle_wrap = create_small_toggle_button ~icon:"" ~packing:sbbox#pack () in
-  let button_toggle_whitespace = create_small_toggle_button ~icon:"" ~packing:sbbox#pack () in
+  let button_toggle_wrap = create_small_toggle_button ~icon:"\u{eb80}" ~packing:sbbox#pack () in
+  let button_toggle_whitespace = create_small_toggle_button ~icon:"\u{eb7d}" ~packing:sbbox#pack () in
   (** Navigation buttons in the statusbar *)
   (*let first_sep = GMisc.separator `VERTICAL ~packing:sobox#pack () in*)
   let location_goto where =
@@ -161,17 +161,17 @@ class page ?file ~project ~scroll_offset ~offset ~editor () =
     | Some loc -> editor#location_history_goto loc
   in
   let button_h_prev            = create_small_button
-      ~icon:""
+      ~icon:"\u{ea9b}"
       ~tooltip:"Back"
       ~packing:sbbox#pack
       ~callback:(fun _ -> location_goto Location_history.previous) () in
   let button_h_next            = create_small_button
-      ~icon:""
+      ~icon:"\u{ea9c}"
       ~tooltip:"Forward"
       ~packing:sbbox#pack
       ~callback:(fun _ -> location_goto Location_history.next) () in
   let button_h_last            = create_small_button
-      ~icon:"󰞔"
+      ~icon:"\u{f0794}"
       ~tooltip:"Last Edit Location"
       ~packing:sbbox#pack
       ~callback:(fun _ -> location_goto Location_history.goto_last_edit_location) () in
