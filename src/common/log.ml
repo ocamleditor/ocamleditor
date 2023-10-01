@@ -84,7 +84,9 @@ module Make (X : sig
       else prefixes := Y.prefix :: !prefixes
 
     let verbosity = ref X.verbosity
+    let print_timestamp = ref X.print_timestamp
     let set_verbosity x = verbosity := x
+    let set_print_timestamp x = print_timestamp := x
 
     let prefix = Some (Y.prefix ^ ": ")
 
@@ -95,7 +97,7 @@ module Make (X : sig
 
     let print level f =
       if level <> `OFF && level >= !verbosity then begin
-        if X.print_timestamp then (Printf.fprintf X.channel "%s " (timestamp()));
+        if !print_timestamp then (Printf.fprintf X.channel "%s " (timestamp()));
         Printf.fprintf X.channel "[%s] " (string_of_verbosity level);
         Option.iter (Printf.fprintf X.channel "%s") prefix;
         Printf.kfprintf flush X.channel f
@@ -103,7 +105,7 @@ module Make (X : sig
 
     let println level f =
       if level <> `OFF && level >= !verbosity then begin
-        if X.print_timestamp then (Printf.fprintf X.channel "%s " (timestamp()));
+        if !print_timestamp then (Printf.fprintf X.channel "%s " (timestamp()));
         Printf.fprintf X.channel "[%s] " (string_of_verbosity level);
         Option.iter (fprintf X.channel "%s") prefix;
         Printf.kfprintf (function c -> Printf.fprintf c "\n%!") X.channel f
@@ -111,7 +113,7 @@ module Make (X : sig
 
     let fprint level f =
       if level <> `OFF && level >= !verbosity then begin
-        if X.print_timestamp then (Printf.kprintf (Format.pp_print_string log_formatter) "%s " (timestamp()));
+        if !print_timestamp then (Printf.kprintf (Format.pp_print_string log_formatter) "%s " (timestamp()));
         Printf.kprintf (Format.pp_print_string log_formatter) "[%s] " (string_of_verbosity level);
         Option.iter (Format.pp_print_string log_formatter) prefix;
         Format.kfprintf (fun fmt -> Format.pp_print_flush fmt ()) log_formatter f
@@ -119,7 +121,7 @@ module Make (X : sig
 
     let fprintln level f =
       if level <> `OFF && level >= !verbosity then begin
-        if X.print_timestamp then (Printf.kprintf (Format.pp_print_string log_formatter) "%s " (timestamp()));
+        if !print_timestamp then (Printf.kprintf (Format.pp_print_string log_formatter) "%s " (timestamp()));
         Printf.kprintf (Format.pp_print_string log_formatter) "[%s] " (string_of_verbosity level);
         Option.iter (Format.pp_print_string log_formatter) prefix;
         Format.kfprintf (fun fmt -> Format.pp_print_newline fmt (); Format.pp_print_flush fmt ())
