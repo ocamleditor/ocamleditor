@@ -2,7 +2,9 @@ open Printf
 open Merlin_j
 
 module Log = Common.Log.Make(struct let prefix = "MERLIN" end)
-let _ = Log.set_verbosity `INFO
+let _ =
+  Log.set_print_timestamp true;
+  Log.set_verbosity `INFO
 
 let (//) = Filename.concat
 
@@ -12,7 +14,7 @@ let execute
   let cwd = Sys.getcwd() in
   let filename = match Miscellanea.filename_relative cwd filename with Some path -> path | _ -> filename in
   let cmd_line = "ocamlmerlin" :: "server" :: command @ [ "-filename"; filename ] in
-  Log.println `INFO "%s\n%s" cwd (cmd_line |> String.concat " ");
+  Log.println `INFO "%s" (cmd_line |> String.concat " ");
   let ic, oc, _ = Unix.open_process_full (cmd_line |> String.concat " ") (Unix.environment ()) in
   output_string oc source_code;
   flush oc;
@@ -27,9 +29,8 @@ let errors ~filename ~source_code =
   [ "errors" ]
   |> execute filename source_code
 
-let enclosing ~(position : GText.iter) ~filename ~source_code apply =
-  check_configuration ~filename ~source_code;
-  let position = sprintf "%d:%d" (position#line + 1) position#line_offset in
+let enclosing ~position:(line, col) ~filename ~source_code apply =
+  let position = sprintf "%d:%d" line col in
   [ "enclosing"; "-position"; position ]
   |> execute filename source_code ~continue_with:begin fun json ->
     match Merlin_j.enclosing_answer_of_string json with
@@ -76,6 +77,50 @@ let expand_prefix ~position:(line, col) ~prefix ~filename ~source_code apply =
     | Return complete ->
         Log.println `DEBUG "%s" (Yojson.Safe.prettify json);
         apply complete.value
+    | Failure msg
+    | Error msg
+    | Exception msg -> Log.println `ERROR "%s" msg.value;
+  end
+
+let type_enclosing ~position:(line, col) ?expression ?cursor ?verbosity ?index ~filename ~source_code apply =
+  let position = sprintf "%d:%d" line col in
+  ["type-enclosing"; "-position"; position ] @
+  (match expression with Some e -> ["-expression"; sprintf "\"%s\"" e ] | _ -> []) @
+  (match cursor with Some c -> ["-cursor"; string_of_int c ] | _ -> []) @
+  (match verbosity with Some v -> ["-verbosity"; v ] | _ -> []) @
+  (match index with Some i -> ["-index"; string_of_int i ] | _ -> [])
+  |> execute filename source_code ~continue_with:begin fun json ->
+    match Merlin_j.type_enclosing_answer_of_string json with
+    | Return types ->
+        Log.println `DEBUG "%s" (Yojson.Safe.prettify json);
+        apply types.value
+    | Failure msg
+    | Error msg
+    | Exception msg -> Log.println `ERROR "%s" msg.value;
+  end
+
+let type_expression ~position:(line, col) ~expression ~filename ~source_code apply =
+  let position = sprintf "%d:%d" line col in
+  [ "type-expression"; "-position"; position; "-expression"; sprintf "\"%s\"" expression ]
+  |> execute filename source_code ~continue_with:begin fun json ->
+    match Merlin_j.type_expression_answer_of_string json with
+    | Return list_modules ->
+        Log.println `INFO "%s" (Yojson.Safe.prettify json);
+        apply list_modules.value
+    | Failure msg
+    | Error msg
+    | Exception msg -> Log.println `ERROR "%s" msg.value;
+  end
+
+let document ~position:(line, col) ?identifier ~filename ~source_code apply =
+  let position = sprintf "%d:%d" line col in
+  "document" :: "-position" :: position ::
+  (match identifier with None -> [] | Some identifier -> ["-identifier"; sprintf "\"%s\"" identifier])
+  |> execute filename source_code ~continue_with:begin fun json ->
+    match Merlin_j.document_answer_of_string json with
+    | Return list_modules ->
+        Log.println `DEBUG "%s" (Yojson.Safe.prettify json);
+        apply list_modules.value
     | Failure msg
     | Error msg
     | Exception msg -> Log.println `ERROR "%s" msg.value;

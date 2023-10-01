@@ -32,6 +32,55 @@ type enclosing_answer = [
 type enclosing = { value : range list }
 
 
+type type_expression_answer = [
+  | Return <json name="return"> of type_expression
+  | Failure <json name="failure"> of message
+  | Error <json name="error"> of message
+  | Exception <json name="exception"> of message
+] <json
+  adapter.to_ocaml="Atdgen_runtime.Json_adapter.normalize_type_field \"class\""
+  adapter.from_ocaml="Atdgen_runtime.Json_adapter.restore_type_field \"class\""
+> <ocaml repr="classic">
+
+type type_expression = { value : string }
+
+
+type type_enclosing_answer = [
+  | Return <json name="return"> of type_enclosing
+  | Failure <json name="failure"> of message
+  | Error <json name="error"> of message
+  | Exception <json name="exception"> of message
+] <json
+  adapter.to_ocaml="Atdgen_runtime.Json_adapter.normalize_type_field \"class\""
+  adapter.from_ocaml="Atdgen_runtime.Json_adapter.restore_type_field \"class\""
+> <ocaml repr="classic">
+
+type type_enclosing = { value : type_enclosing_value list }
+
+type type_enclosing_value = {
+  start : pos;
+  stop <json name="end"> : pos;
+  typ  <json name="type"> : string;
+  tail : tail;
+}
+
+type tail = [ No <json name="no"> | Position <json name="position"> | Call <json name="call"> ] <ocaml repr="classic">
+
+
+type document_answer = [
+  | Return <json name="return"> of document
+  | Failure <json name="failure"> of message
+  | Error <json name="error"> of message
+  | Exception <json name="exception"> of message
+] <json
+  adapter.to_ocaml="Atdgen_runtime.Json_adapter.normalize_type_field \"class\""
+  adapter.from_ocaml="Atdgen_runtime.Json_adapter.restore_type_field \"class\""
+> <ocaml repr="classic">
+
+type document = { value : string }
+
+
+
 type complete_prefix_answer = [
   | Return <json name="return"> of complete_prefix
   | Failure <json name="failure"> of message

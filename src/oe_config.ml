@@ -36,7 +36,7 @@ let autosave_interval                    = 5_000 (* milliseconds *)
 let autosave_keep_backup                 = 3. *. 24. *. 60. *. 60.  (* 3 days, in milliseconds *)
 let ocamldoc_paragraph_border_enabled    = true
 let ocamldoc_paragraph_bgcolor_enabled   = true
-let fade_window_enabled                  = not Ocaml_config.is_mingw (* Fade effect for popup windows *)
+let fade_window_enabled                  = true (* Fade effect for popup windows *)
 let matching_delim_border_color : dcolor = { light = `NAME "#ff0000"; dark = `NAME "#ff0000" }
 let error_popup_bg_color : dcolor        = { light = `NAME "#ffeef2"; dark = `NAME "#ffc6d4" }
 let error_popup_border_color : dcolor    = { light = `NAME "#ff6a99"; dark = `NAME "#ff6a99" }
@@ -110,6 +110,7 @@ let targetlist_alternating_row_colors    = Some 0.95 (* like the gutter *)
 let editor_tab_color_alt_active          = `NAME "#a7a2ae"
 let editor_tab_color_alt_normal          = `NAME "#310080"
 let use_merlin_completion                = true
+let use_merlin_quick_info                = true
 
 
 (** End of Configuration Section ============================================ *)

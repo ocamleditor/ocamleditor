@@ -95,12 +95,12 @@ let move_window_within_screen_bounds window x y =
   x, y
 
 (** window_tooltip *)
-let window_tooltip widget ?parent ?(fade=false) ~x ~y ?width ?height ?(show=true) () =
+let window_tooltip widget ?parent ?(fade=false) ~x ~y ?width ?height ?(kind=`POPUP) ?(type_hint=`MENU) ?(show=true) () =
   let fade = fade && !Gmisclib.Util.fade_window_enabled in
   let window = GWindow.window
       ~decorated:false
-      ~kind:`POPUP (*`TOPLEVEL*)
-      ~type_hint:`MENU (*`NORMAL*)
+      ~kind (* `POPUP is faster *)
+      ~type_hint (*`NORMAL allows wm effects *)
       ~border_width:1
       ?width ?height
       ~show:false ()
@@ -110,19 +110,19 @@ let window_tooltip widget ?parent ?(fade=false) ~x ~y ?width ?height ?(show=true
   (*let module ColorOp = Color in
     let open Preferences in
     let color = ColorOp.set_value 0.62 (`NAME ?? (Preferences.preferences#get.editor_bg_color_popup)) in
-      let _ = window#misc#modify_bg [`NORMAL, color] in
-      let _ = ebox#misc#modify_bg [`NORMAL, `NAME ?? (Preferences.preferences#get.editor_bg_color_popup)] in*)
+    let _ = window#misc#modify_bg [`NORMAL, color] in
+    let _ = ebox#misc#modify_bg [`NORMAL, `NAME ?? (Preferences.preferences#get.editor_bg_color_popup)] in*)
   window#set_skip_pager_hint true;
   window#set_skip_taskbar_hint true;
   window#set_accept_focus false;
   window#misc#set_can_focus false;
-  window#set_focus_on_map false;
+  (*window#set_focus_on_map false;*)
   Gaux.may parent ~f:(fun parent -> Gaux.may (GWindow.toplevel parent) ~f:(fun x -> window#set_transient_for x#as_window));
   if fade then (window#set_opacity 0.0);
   window#move ~x ~y;
   if show then begin
-    if fade then (Gmisclib.Util.fade_window window) else window#show();
-    if Sys.os_type <> "Win32" then (window#present());
+    if fade then (Gmisclib.Util.fade_window window) else window#present();
+    (*if Sys.os_type <> "Win32" then (window#present());*)
   end;
   move_window_within_screen_bounds window x y |> ignore;
   window

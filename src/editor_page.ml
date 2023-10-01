@@ -219,6 +219,7 @@ class page ?file ~project ~scroll_offset ~offset ~editor () =
     val mutable changed_after_last_diff = true
     val mutable load_complete = false
     val mutable annot_type = None
+    val mutable quick_info = Quick_info.create ocaml_view
     val error_indication = new Error_indication.error_indication ocaml_view vscrollbar global_gutter
     val mutable outline = None
     val mutable dotview = None
@@ -649,6 +650,7 @@ class page ?file ~project ~scroll_offset ~offset ~editor () =
               status_modified#set_pixbuf (??? Icons.lock_14);
               status_modified#misc#set_tooltip_text "Read-only"
             end;
+            Quick_info.start quick_info
           end;
           false
         end);
@@ -656,6 +658,17 @@ class page ?file ~project ~scroll_offset ~offset ~editor () =
       ignore (text_view#event#connect#scroll ~callback:(fun _ -> Option.iter (fun at -> at#remove_tag()) annot_type; error_indication#hide_tooltip(); false));
       ignore (text_view#event#connect#leave_notify ~callback:(fun _ -> Option.iter (fun at -> at#remove_tag()) annot_type; error_indication#hide_tooltip(); false));
       ignore (text_view#event#connect#focus_out ~callback:(fun _ -> Option.iter (fun at -> at#remove_tag()) annot_type; error_indication#hide_tooltip(); false));
+
+      (*text_view#as_gtext_view#event#connect#enter_notify ~callback:(fun _ ->
+          Printf.printf "**** enter_notify ****** \n%!" ;
+          Quick_info.start self#ocaml_view quick_info; false) |> ignore;*)
+      (*text_view#event#connect#scroll ~callback:(fun _ -> Quick_info.stop quick_info; false) |> ignore;*)
+      (*text_view#as_gtext_view#event#connect#leave_notify ~callback:(fun _ ->
+          Printf.printf "---- leave_notify ----- \n%!" ;
+          Quick_info.stop quick_info; false) |> ignore;*)
+      text_view#event#connect#focus_out ~callback:(fun _ -> Quick_info.stop quick_info; false) |> ignore;
+
+
       (** Horizontal scrollbar appears/disappears according to the window size *)
       ignore (sw#misc#connect#size_allocate ~callback:begin fun _ ->
           let alloc = sw#misc#allocation in
