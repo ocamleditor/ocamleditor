@@ -3,7 +3,7 @@ open Merlin_j
 
 module Log = Common.Log.Make(struct let prefix = "MERLIN" end)
 let _ =
-  Log.set_print_timestamp true;
+  (*Log.set_print_timestamp true;*)
   Log.set_verbosity `INFO
 
 let (//) = Filename.concat
@@ -84,11 +84,13 @@ let expand_prefix ~position:(line, col) ~prefix ~filename ~source_code apply =
 
 let type_enclosing ~position:(line, col) ?expression ?cursor ?verbosity ?index ~filename ~source_code apply =
   let position = sprintf "%d:%d" line col in
-  ["type-enclosing"; "-position"; position ] @
-  (match expression with Some e -> ["-expression"; sprintf "\"%s\"" e ] | _ -> []) @
-  (match cursor with Some c -> ["-cursor"; string_of_int c ] | _ -> []) @
-  (match verbosity with Some v -> ["-verbosity"; v ] | _ -> []) @
-  (match index with Some i -> ["-index"; string_of_int i ] | _ -> [])
+  [
+    ["type-enclosing"; "-position"; position ];
+    (match expression with Some e -> ["-expression"; sprintf "\"%s\"" e ] | _ -> []);
+    (match cursor with Some c -> ["-cursor"; string_of_int c ] | _ -> []);
+    (match verbosity with Some v -> ["-verbosity"; v ] | _ -> []);
+    (match index with Some i -> ["-index"; string_of_int i ] | _ -> [])
+  ] |> List.concat
   |> execute filename source_code ~continue_with:begin fun json ->
     match Merlin_j.type_enclosing_answer_of_string json with
     | Return types ->
@@ -104,9 +106,9 @@ let type_expression ~position:(line, col) ~expression ~filename ~source_code app
   [ "type-expression"; "-position"; position; "-expression"; sprintf "\"%s\"" expression ]
   |> execute filename source_code ~continue_with:begin fun json ->
     match Merlin_j.type_expression_answer_of_string json with
-    | Return list_modules ->
+    | Return type_expression ->
         Log.println `INFO "%s" (Yojson.Safe.prettify json);
-        apply list_modules.value
+        apply type_expression.value
     | Failure msg
     | Error msg
     | Exception msg -> Log.println `ERROR "%s" msg.value;
@@ -118,9 +120,9 @@ let document ~position:(line, col) ?identifier ~filename ~source_code apply =
   (match identifier with None -> [] | Some identifier -> ["-identifier"; sprintf "\"%s\"" identifier])
   |> execute filename source_code ~continue_with:begin fun json ->
     match Merlin_j.document_answer_of_string json with
-    | Return list_modules ->
+    | Return document ->
         Log.println `DEBUG "%s" (Yojson.Safe.prettify json);
-        apply list_modules.value
+        apply document.value
     | Failure msg
     | Error msg
     | Exception msg -> Log.println `ERROR "%s" msg.value;
