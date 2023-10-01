@@ -49,9 +49,14 @@ let process_type qi (entry : type_enclosing_value) (entry2 : type_enclosing_valu
     let markup = Print_type.markup2 text in
     let label = GMisc.label ~xpad:5 ~ypad:5 ~xalign:0.0 ~yalign:0.0 ~markup () in
     let x, y =
-      match qi.view#get_window `WIDGET with
-      | Some _ -> Gdk.Window.get_pointer_location (Gdk.Window.root_parent ())
-      | _ -> assert false
+      let start = qi.view#obuffer#get_iter (`LINECHAR (entry.start.line - 1, entry.start.col)) in
+      let stop = qi.view#obuffer#get_iter (`LINECHAR (entry.stop.line - 1, entry.stop.col)) in
+      let r = qi.view#get_iter_location start in
+      let x, y = qi.view#buffer_to_window_coords ~tag:`WIDGET ~x:(Gdk.Rectangle.x r) ~y:(Gdk.Rectangle.y r) in
+      let pX, pY = Gdk.Window.get_pointer_location (Gdk.Window.root_parent ()) in
+      let win = (match qi.view#get_window `WIDGET with None -> assert false | Some w -> w) in
+      let px, py = Gdk.Window.get_pointer_location win in
+      pX - px + x, pY - py + y + (Gdk.Rectangle.height r)
     in
     let win = Gtk_util.window_tooltip label#coerce ~fade:false ~x ~y ~kind:`TOPLEVEL ~type_hint:`NORMAL ~show:false () in
     qi.window <- Some win;
@@ -93,12 +98,13 @@ let get_typeable_iter_at_coords qi x y =
   then None else Some iter
 
 let process_location ?(do_reset=false) qi x y =
+  if do_reset then begin
+    qi.prev_x <- x;
+    qi.prev_y <- y;
+  end;
   match get_typeable_iter_at_coords qi x y with
   | Some iter -> invoke_merlin qi iter
-  | _ when do_reset ->
-      qi.prev_x <- x;
-      qi.prev_y <- y;
-      reset qi "move-out"
+  | _ when do_reset -> reset qi "move-out"
   | _ -> ()
 
 let start qi =
