@@ -12,8 +12,12 @@ type t = {
   mutable prev_start : pos;
   mutable prev_stop : pos;
   mutable is_active : bool;
+  mutable is_idle : bool;
   mutable window : GWindow.window option;
 }
+
+let delay_idle = 2000
+let delay_work = 500
 
 let reset qi n =
   Printf.printf "RESET %s\n%!" n;
@@ -33,46 +37,55 @@ let stop qi =
 let (!=) (p1 : Merlin_j.pos) (p2 : Merlin_j.pos) =
   p1.col <> p2.col || p1.line <> p2.line
 
+let display qi markup start stop =
+  let open Preferences in
+  let label = GMisc.label ~xpad:5 ~ypad:5 ~xalign:0.0 ~yalign:0.0 ~markup () in
+  let x, y =
+    let r = qi.view#get_iter_location start in
+    let x, y = qi.view#buffer_to_window_coords ~tag:`WIDGET ~x:(Gdk.Rectangle.x r) ~y:(Gdk.Rectangle.y r) in
+    let pX, pY = Gdk.Window.get_pointer_location (Gdk.Window.root_parent ()) in
+    let win = (match qi.view#get_window `WIDGET with None -> assert false | Some w -> w) in
+    let px, py = Gdk.Window.get_pointer_location win in
+    pX - px + x, pY - py + y + (Gdk.Rectangle.height r)
+  in
+  let win = Gtk_util.window_tooltip label#coerce ~fade:false ~x ~y ~kind:`TOPLEVEL ~type_hint:`NORMAL ~show:false () in
+  qi.window <- Some win;
+  Gmisclib.Idle.add ~prio:300 begin fun () ->
+    win#show();
+    let r = label#misc#allocation in
+    if r.height > 200 then begin
+      let sw = GBin.scrolled_window ~hpolicy:`AUTOMATIC () in
+      let vp = GBin.viewport ~packing:sw#add () in
+      sw#misc#modify_bg [`NORMAL, `NAME ?? (Preferences.preferences#get.editor_bg_color_popup)];
+      vp#misc#modify_bg [`NORMAL, `NAME ?? (Preferences.preferences#get.editor_bg_color_popup)];
+      label#misc#reparent vp#coerce;
+      win#destroy();
+      let win = Gtk_util.window_tooltip sw#coerce ~fade:false ~x ~y ~width:700 ~height:300 ~kind:`TOPLEVEL ~type_hint:`NORMAL ~show:false () in
+      qi.window <- Some win;
+      win#present()
+    end else win#present()
+  end
+
+let build_content qi (entry : type_enclosing_value) (entry2 : type_enclosing_value option) =
+  let contains_type_vars = String.contains entry.typ '\'' in
+  let is_module = String.starts_with ~prefix:"(" entry.typ in
+  let text =
+    Printf.sprintf "%s%s" entry.typ
+      (if contains_type_vars || is_module
+       then entry2 |> Option.fold ~none:"" ~some:(fun (x : type_enclosing_value) -> "\n" ^ x.typ)
+       else "")
+  in
+  Print_type.markup2 text
+
 let process_type qi (entry : type_enclosing_value) (entry2 : type_enclosing_value option) =
   if qi.prev_start != entry.start || qi.prev_stop != entry.stop then begin
     reset qi "open";
     qi.prev_start <- entry.start;
     qi.prev_stop <- entry.stop;
-    let contains_type_vars = String.contains entry.typ '\'' in
-    let is_module = String.starts_with ~prefix:"(" entry.typ in
-    let text =
-      Printf.sprintf "%s%s" entry.typ
-        (if contains_type_vars || is_module
-         then entry2 |> Option.fold ~none:"" ~some:(fun (x : type_enclosing_value) -> "\n" ^ x.typ)
-         else "")
-    in
-    let markup = Print_type.markup2 text in
-    let label = GMisc.label ~xpad:5 ~ypad:5 ~xalign:0.0 ~yalign:0.0 ~markup () in
-    let x, y =
-      let start = qi.view#obuffer#get_iter (`LINECHAR (entry.start.line - 1, entry.start.col)) in
-      let stop = qi.view#obuffer#get_iter (`LINECHAR (entry.stop.line - 1, entry.stop.col)) in
-      let r = qi.view#get_iter_location start in
-      let x, y = qi.view#buffer_to_window_coords ~tag:`WIDGET ~x:(Gdk.Rectangle.x r) ~y:(Gdk.Rectangle.y r) in
-      let pX, pY = Gdk.Window.get_pointer_location (Gdk.Window.root_parent ()) in
-      let win = (match qi.view#get_window `WIDGET with None -> assert false | Some w -> w) in
-      let px, py = Gdk.Window.get_pointer_location win in
-      pX - px + x, pY - py + y + (Gdk.Rectangle.height r)
-    in
-    let win = Gtk_util.window_tooltip label#coerce ~fade:false ~x ~y ~kind:`TOPLEVEL ~type_hint:`NORMAL ~show:false () in
-    qi.window <- Some win;
-    Gmisclib.Idle.add ~prio:200 begin fun () ->
-      win#show();
-      let r = label#misc#allocation in
-      if r.height > 200 then begin
-        let sw = GBin.scrolled_window ~hpolicy:`AUTOMATIC () in
-        let vp = GBin.viewport ~packing:sw#add () in
-        label#misc#reparent vp#coerce;
-        win#destroy();
-        let win = Gtk_util.window_tooltip sw#coerce ~fade:false ~x ~y ~width:700 ~height:300 ~kind:`TOPLEVEL ~type_hint:`NORMAL ~show:false () in
-        qi.window <- Some win;
-        win#present()
-      end else win#present()
-    end
+    let markup = build_content qi entry entry2 in
+    let start = qi.view#obuffer#get_iter (`LINECHAR (entry.start.line - 1, entry.start.col)) in
+    let stop = qi.view#obuffer#get_iter (`LINECHAR (entry.stop.line - 1, entry.stop.col)) in
+    display qi markup start stop
   end
 
 let invoke_merlin qi iter =
@@ -107,47 +120,67 @@ let process_location ?(do_reset=false) qi x y =
   | _ when do_reset -> reset qi "move-out"
   | _ -> ()
 
-let start qi =
+let work qi x y root_window =
+  if x = qi.prev_x && y = qi.prev_y then begin
+    match qi.window with
+    | Some _ -> ()
+    | _ -> process_location qi x y
+  end else begin
+    match qi.window with
+    | Some win ->
+        let r = win#misc#allocation in
+        let wx, wy = Gdk.Window.get_position win#misc#window in
+        let px, py = Gdk.Window.get_pointer_location root_window in
+        let is_mouse_over =
+          wx <= px && px <= wx + r.width && wy <= py && py <= wy + r.height
+        in
+        if is_mouse_over then begin
+          win#event#connect#button_press ~callback:begin fun _ ->
+            qi.is_active <- false;
+            (*win#misc#modify_bg [`NORMAL, `COLOR (win#misc#style#fg `SELECTED)];*)
+            win#misc#modify_bg [`NORMAL, `COLOR (Preferences.editor_tag_bg_color "selection")];
+            true
+          end |> ignore
+        end else
+          process_location ~do_reset:true qi x y
+    | _ ->
+        process_location ~do_reset:true qi x y
+  end;
+  qi.is_active
+
+let rec start qi =
   if not qi.is_active then begin
     Printexc.record_backtrace true;
-    Printf.printf "Quick_info timer START \n%!" ;
+    Printf.printf "Quick_info timer START %s \n%!" (if qi.is_idle then "IDLE" else "WORKING");
     qi.is_active <- true;
     let root_window = Gdk.Window.root_parent () in
     match qi.view#get_window `WIDGET with
     | None -> assert false
     | Some view_window ->
-        GMain.Timeout.add ~ms:200 ~callback:begin fun () ->
-          begin
-            try
-              let x, y = Gdk.Window.get_pointer_location view_window in
-              if x = qi.prev_x && y = qi.prev_y then begin
-                match qi.window with
-                | Some _ -> ()
-                | _ -> process_location qi x y
-              end else begin
-                match qi.window with
-                | Some win ->
-                    let r = win#misc#allocation in
-                    let wx, wy = Gdk.Window.get_position win#misc#window in
-                    let px, py = Gdk.Window.get_pointer_location root_window in
-                    let is_mouse_over =
-                      wx <= px && px <= wx + r.width && wy <= py && py <= wy + r.height
-                    in
-                    if is_mouse_over then begin
-                      win#event#connect#button_press ~callback:begin fun _ ->
-                        qi.is_active <- false;
-                        (*win#misc#modify_bg [`NORMAL, `COLOR (win#misc#style#fg `SELECTED)];*)
-                        win#misc#modify_bg [`NORMAL, `COLOR (Preferences.editor_tag_bg_color "selection")];
-                        true
-                      end |> ignore
-                    end else
-                      process_location ~do_reset:true qi x y
-                | _ ->
-                    process_location ~do_reset:true qi x y
-              end;
-            with ex -> Printf.eprintf "File \"quick_info.ml\": %s\n%s\n%!" (Printexc.to_string ex) (Printexc.get_backtrace());
-          end;
-          qi.is_active
+        let ms = if qi.is_idle then delay_idle else delay_work in
+        GMain.Timeout.add ~ms ~callback:begin fun () ->
+          try
+            let x, y = Gdk.Window.get_pointer_location view_window in
+            let r = qi.view#misc#allocation in
+            if x >= 0 && y >= 0 && x <= r.width && y <= r.height then begin
+              if qi.is_idle then begin
+                stop qi;
+                qi.is_idle <- false;
+                start qi;
+                false
+              end else
+                work qi x y root_window
+            end else begin
+              if qi.is_idle then qi.is_active else begin
+                stop qi;
+                qi.is_idle <- true;
+                start qi;
+                false
+              end
+            end;
+          with ex ->
+            Printf.eprintf "File \"quick_info.ml\": %s\n%s\n%!" (Printexc.to_string ex) (Printexc.get_backtrace());
+            qi.is_active
         end
   end |> ignore
 
@@ -160,6 +193,7 @@ let create (view : Ocaml_text.view) =
       prev_start = { line = 0; col = 0 };
       prev_stop = { line = 0; col = 0 };
       is_active = false;
+      is_idle = false;
       window = None
     }
   in
