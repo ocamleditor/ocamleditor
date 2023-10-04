@@ -7,6 +7,7 @@ let merlin (buffer : Ocaml_text.buffer) func =
 
 type t = {
   view : Ocaml_text.view;
+  mutable timer_id : GMain.Timeout.id option;
   mutable prev_x : int;
   mutable prev_y : int;
   mutable prev_start : pos;
@@ -17,19 +18,22 @@ type t = {
 }
 
 let delay_idle = 2000
-let delay_work = 500
+let delay_work = 100
 
 let reset qi n =
   Printf.printf "RESET %s\n%!" n;
   qi.prev_start <- { line = 0; col = 0 };
   qi.prev_stop <- { line = 0; col = 0 };
-  qi.window |> Option.iter (fun w -> Gmisclib.Idle.add w#destroy);
-  qi.window <- None
+  qi.window |> Option.iter begin fun w ->
+    Gmisclib.Idle.add w#destroy;
+    qi.window <- None
+  end
 
 let stop qi =
   if qi.is_active then begin
-    reset qi "stop";
     qi.is_active <- false;
+    qi.timer_id |> Option.iter GMain.Timeout.remove;
+    reset qi "stop";
     Printf.printf "Quick_info timer STOP \n%!"
   end else
     Printf.printf "Quick_info already STOPPED \n%!"
@@ -48,7 +52,7 @@ let display qi markup start stop =
     let px, py = Gdk.Window.get_pointer_location win in
     pX - px + x, pY - py + y + (Gdk.Rectangle.height r)
   in
-  let win = Gtk_util.window_tooltip label#coerce ~fade:false ~x ~y ~kind:`TOPLEVEL ~type_hint:`NORMAL ~show:false () in
+  let win = Gtk_util.window_tooltip label#coerce ~fade:false ~x ~y ~show:false () in
   qi.window <- Some win;
   Gmisclib.Idle.add ~prio:300 begin fun () ->
     win#show();
@@ -60,7 +64,7 @@ let display qi markup start stop =
       vp#misc#modify_bg [`NORMAL, `NAME ?? (Preferences.preferences#get.editor_bg_color_popup)];
       label#misc#reparent vp#coerce;
       win#destroy();
-      let win = Gtk_util.window_tooltip sw#coerce ~fade:false ~x ~y ~width:700 ~height:300 ~kind:`TOPLEVEL ~type_hint:`NORMAL ~show:false () in
+      let win = Gtk_util.window_tooltip sw#coerce ~fade:false ~x ~y ~width:700 ~height:300 ~show:false () in
       qi.window <- Some win;
       win#present()
     end else win#present()
@@ -110,14 +114,15 @@ let get_typeable_iter_at_coords qi x y =
   || (match is_iter_in_comment qi.view#obuffer iter with None -> false | _ -> true)
   then None else Some iter
 
-let process_location ?(do_reset=false) qi x y =
+let process_location ?(do_reset=false) ?(invoke=true) qi x y =
   if do_reset then begin
     qi.prev_x <- x;
     qi.prev_y <- y;
   end;
   match get_typeable_iter_at_coords qi x y with
-  | Some iter -> invoke_merlin qi iter
-  | _ when do_reset -> reset qi "move-out"
+  | Some iter when invoke -> invoke_merlin qi iter
+  | Some _ -> ()
+  | _ when do_reset -> reset qi "not-typeable"
   | _ -> ()
 
 let work qi x y root_window =
@@ -144,7 +149,7 @@ let work qi x y root_window =
         end else
           process_location ~do_reset:true qi x y
     | _ ->
-        process_location ~do_reset:true qi x y
+        process_location ~do_reset:true ~invoke:false qi x y
   end;
   qi.is_active
 
@@ -158,36 +163,39 @@ let rec start qi =
     | None -> assert false
     | Some view_window ->
         let ms = if qi.is_idle then delay_idle else delay_work in
-        GMain.Timeout.add ~ms ~callback:begin fun () ->
-          try
-            let x, y = Gdk.Window.get_pointer_location view_window in
-            let r = qi.view#misc#allocation in
-            if x >= 0 && y >= 0 && x <= r.width && y <= r.height then begin
-              if qi.is_idle then begin
-                stop qi;
-                qi.is_idle <- false;
-                start qi;
-                false
-              end else
-                work qi x y root_window
-            end else begin
-              if qi.is_idle then qi.is_active else begin
-                stop qi;
-                qi.is_idle <- true;
-                start qi;
-                false
-              end
-            end;
-          with ex ->
-            Printf.eprintf "File \"quick_info.ml\": %s\n%s\n%!" (Printexc.to_string ex) (Printexc.get_backtrace());
-            qi.is_active
-        end
-  end |> ignore
+        qi.timer_id <- Some begin
+            GMain.Timeout.add ~ms ~callback:begin fun () ->
+              try
+                let x, y = Gdk.Window.get_pointer_location view_window in
+                let r = qi.view#misc#allocation in
+                if x >= 0 && y >= 0 && x <= r.width && y <= r.height then begin
+                  if qi.is_idle then begin
+                    stop qi;
+                    qi.is_idle <- false;
+                    start qi;
+                    false
+                  end else
+                    work qi x y root_window
+                end else begin
+                  if qi.is_idle then qi.is_active else begin
+                    stop qi;
+                    qi.is_idle <- true;
+                    start qi;
+                    false
+                  end
+                end;
+              with ex ->
+                Printf.eprintf "File \"quick_info.ml\": %s\n%s\n%!" (Printexc.to_string ex) (Printexc.get_backtrace());
+                qi.is_active
+            end
+          end
+  end
 
 let create (view : Ocaml_text.view) =
   let qi =
     {
       view = view;
+      timer_id = None;
       prev_x = 0;
       prev_y = 0;
       prev_start = { line = 0; col = 0 };

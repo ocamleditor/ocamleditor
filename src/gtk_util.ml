@@ -95,7 +95,7 @@ let move_window_within_screen_bounds window x y =
   x, y
 
 (** window_tooltip *)
-let window_tooltip widget ?parent ?(fade=false) ~x ~y ?width ?height ?(kind=`POPUP) ?(type_hint=`MENU) ?(show=true) () =
+let window_tooltip widget ?parent ?(fade=false) ~x ~y ?width ?height ?(kind=`POPUP) ?(type_hint=`NORMAL) ?(show=true) () =
   let fade = fade && !Gmisclib.Util.fade_window_enabled in
   let window = GWindow.window
       ~decorated:false
@@ -107,10 +107,8 @@ let window_tooltip widget ?parent ?(fade=false) ~x ~y ?width ?height ?(kind=`POP
   in
   let ebox = GBin.event_box ~packing:window#add () in
   ebox#add widget;
-  let module ColorOp = Color in
   let open Preferences in
-  let color = ColorOp.set_value 0.62 (`NAME ?? (Preferences.preferences#get.editor_bg_color_popup)) in
-  let _ = window#misc#modify_bg [`NORMAL, color] in
+  let _ = window#misc#modify_bg [`NORMAL, `NAME ?? (Preferences.preferences#get.editor_bg_color_popup)] in
   let _ = ebox#misc#modify_bg [`NORMAL, `NAME ?? (Preferences.preferences#get.editor_bg_color_popup)] in
   window#set_skip_pager_hint true;
   window#set_skip_taskbar_hint true;
