@@ -10,8 +10,7 @@ type t = {
   mutable timer_id : GMain.Timeout.id option;
   mutable prev_x : int;
   mutable prev_y : int;
-  mutable prev_start : pos;
-  mutable prev_stop : pos;
+  mutable current_area : (int * int * int * int) option;
   mutable is_active : bool;
   mutable is_idle : bool;
   mutable window : GWindow.window option;
@@ -20,12 +19,14 @@ type t = {
 let delay_idle = 2000
 let delay_work = 100
 
+let (@<=) (left, top, right, bottom) (x, y) =
+  left <= x && x <= right && top <= y && y <= bottom
+
 let reset qi n =
   Printf.printf "RESET %s\n%!" n;
-  qi.prev_start <- { line = 0; col = 0 };
-  qi.prev_stop <- { line = 0; col = 0 };
   qi.window |> Option.iter begin fun w ->
     Gmisclib.Idle.add w#destroy;
+    qi.current_area <- None;
     qi.window <- None
   end
 
@@ -41,16 +42,25 @@ let stop qi =
 let (!=) (p1 : Merlin_j.pos) (p2 : Merlin_j.pos) =
   p1.col <> p2.col || p1.line <> p2.line
 
+let get_area qi start stop =
+  let rstart = qi.view#get_iter_location start in
+  let rstop = qi.view#get_iter_location stop in
+  let xstart, ystart = qi.view#buffer_to_window_coords ~tag:`WIDGET
+      ~x:(Gdk.Rectangle.x rstart) ~y:(Gdk.Rectangle.y rstart) in
+  let xstop, ystop = qi.view#buffer_to_window_coords ~tag:`WIDGET
+      ~x:(Gdk.Rectangle.x rstop) ~y:(Gdk.Rectangle.y rstop + Gdk.Rectangle.height rstop) in
+  xstart, ystart, xstop, ystop
+
 let display qi markup start stop =
+  let xstart, ystart, xstop, ystop = get_area qi start stop in
+  qi.current_area <- Some (xstart, ystart, xstop, ystop);
   let open Preferences in
   let label = GMisc.label ~xpad:5 ~ypad:5 ~xalign:0.0 ~yalign:0.0 ~markup () in
   let x, y =
-    let r = qi.view#get_iter_location start in
-    let x, y = qi.view#buffer_to_window_coords ~tag:`WIDGET ~x:(Gdk.Rectangle.x r) ~y:(Gdk.Rectangle.y r) in
     let pX, pY = Gdk.Window.get_pointer_location (Gdk.Window.root_parent ()) in
     let win = (match qi.view#get_window `WIDGET with None -> assert false | Some w -> w) in
     let px, py = Gdk.Window.get_pointer_location win in
-    pX - px + x, pY - py + y + (Gdk.Rectangle.height r)
+    pX - px + xstart, pY - py + ystop
   in
   let win = Gtk_util.window_tooltip label#coerce ~fade:false ~x ~y ~show:false () in
   qi.window <- Some win;
@@ -82,15 +92,11 @@ let build_content qi (entry : type_enclosing_value) (entry2 : type_enclosing_val
   Print_type.markup2 text
 
 let process_type qi (entry : type_enclosing_value) (entry2 : type_enclosing_value option) =
-  if qi.prev_start != entry.start || qi.prev_stop != entry.stop then begin
-    reset qi "open";
-    qi.prev_start <- entry.start;
-    qi.prev_stop <- entry.stop;
-    let markup = build_content qi entry entry2 in
-    let start = qi.view#obuffer#get_iter (`LINECHAR (entry.start.line - 1, entry.start.col)) in
-    let stop = qi.view#obuffer#get_iter (`LINECHAR (entry.stop.line - 1, entry.stop.col)) in
-    display qi markup start stop
-  end
+  reset qi "open";
+  let markup = build_content qi entry entry2 in
+  let start = qi.view#obuffer#get_iter (`LINECHAR (entry.start.line - 1, entry.start.col)) in
+  let stop = qi.view#obuffer#get_iter (`LINECHAR (entry.stop.line - 1, entry.stop.col)) in
+  display qi markup start stop
 
 let invoke_merlin qi iter =
   let position = iter#line + 1, iter#line_index in
@@ -119,11 +125,16 @@ let process_location ?(do_reset=false) ?(invoke=true) qi x y =
     qi.prev_x <- x;
     qi.prev_y <- y;
   end;
-  match get_typeable_iter_at_coords qi x y with
-  | Some iter when invoke -> invoke_merlin qi iter
-  | Some _ -> ()
-  | _ when do_reset -> reset qi "not-typeable"
-  | _ -> ()
+  match qi.current_area with
+  | Some area when area @<= (x, y) -> ()
+  | _ ->
+      begin
+        match get_typeable_iter_at_coords qi x y with
+        | Some iter when invoke -> invoke_merlin qi iter
+        | Some _ -> ()
+        | _ when do_reset -> reset qi "not-typeable"
+        | _ -> ()
+      end
 
 let work qi x y root_window =
   if x = qi.prev_x && y = qi.prev_y then begin
@@ -198,8 +209,7 @@ let create (view : Ocaml_text.view) =
       timer_id = None;
       prev_x = 0;
       prev_y = 0;
-      prev_start = { line = 0; col = 0 };
-      prev_stop = { line = 0; col = 0 };
+      current_area = None;
       is_active = false;
       is_idle = false;
       window = None
