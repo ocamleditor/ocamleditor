@@ -23,6 +23,7 @@
 
 open Pref_page
 open Preferences
+open Settings_t
 
 (** pref_editor_display *)
 class pref_editor_display title ?packing () =
@@ -106,8 +107,8 @@ class pref_editor_display title ?packing () =
       pref.editor_code_folding_enabled <- check_code_folding#active;
       pref.editor_show_global_gutter <- check_global_gutter#active;
       let color = color_name mo_button#color in
-      pref.editor_mark_occurrences_enabled = check_mark_occurrences#active;
-      pref.editor_mark_occurrences_under_cursor = check_mo_uc#active;
+      pref.editor_mark_occurrences_enabled <- check_mark_occurrences#active;
+      pref.editor_mark_occurrences_under_cursor <- check_mo_uc#active;
       Preferences.Color.set_themed_color pref.editor_mark_occurrences_bg_color color;
       pref.editor_dot_leaders <- check_show_dot_leaders#active;
       pref.editor_current_line_border <- check_current_line_border#active;
