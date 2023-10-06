@@ -3,10 +3,15 @@ open Merlin_j
 
 module Log = Common.Log.Make(struct let prefix = "MERLIN" end)
 let _ =
-  (*Log.set_print_timestamp true;*)
+  Log.set_print_timestamp true;
   Log.set_verbosity `INFO
 
 let (//) = Filename.concat
+
+let loop (f : in_channel -> unit) ((ic, oc, ec) as channels) =
+  try while true do f ic done
+  with End_of_file ->
+    Unix.close_process_full channels |> ignore
 
 let execute
     ?(continue_with=fun x -> x |> Yojson.Safe.prettify |> Log.println `INFO "%s")
@@ -15,11 +20,10 @@ let execute
   let filename = match Miscellanea.filename_relative cwd filename with Some path -> path | _ -> filename in
   let cmd_line = "ocamlmerlin" :: "server" :: command @ [ "-filename"; filename ] in
   Log.println `INFO "%s" (cmd_line |> String.concat " ");
-  let ic, oc, _ = Unix.open_process_full (cmd_line |> String.concat " ") (Unix.environment ()) in
+  let (ic, oc, _) as channels = Unix.open_process_full (cmd_line |> String.concat " ") (Unix.environment ()) in
   output_string oc source_code;
-  flush oc;
   close_out_noerr oc;
-  Thread.create (Spawn.loop (fun ic -> ic |> input_line |> continue_with)) ic |> ignore
+  Thread.create (loop (fun ic -> ic |> input_line |> continue_with)) channels |> ignore
 
 let check_configuration ~filename ~source_code =
   [ "check-configuration" ]
