@@ -23,7 +23,7 @@ let (@<=) (left, top, right, bottom) (x, y) =
   left <= x && x <= right && top <= y && y <= bottom
 
 let reset qi n =
-  Printf.printf "RESET %s\n%!" n;
+  (*Printf.printf "RESET %s\n%!" n;*)
   qi.window |> Option.iter begin fun w ->
     Gmisclib.Idle.add w#destroy;
     qi.current_area <- None;

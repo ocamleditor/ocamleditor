@@ -21,6 +21,11 @@
 *)
 
 
+module Log = Common.Log.Make(struct let prefix = "MARK_OCCURRENCES" end)
+let _ =
+  Log.set_print_timestamp true;
+  Log.set_verbosity `DEBUG
+
 class manager ~view =
   let buffer = view#tbuffer in
   let [@inline] (=>) a b = not a || b in
@@ -47,29 +52,32 @@ class manager ~view =
       end
 
     method private get_word_at_iter ?iter () =
-      buffer#select_word 
-        ?iter 
-        ?pat:(Some Ocaml_word_bound.regexp) 
-        ?select:(Some false) 
-        ?search:(Some true) () 
+      buffer#select_word
+        ?iter
+        ?pat:(Some Ocaml_word_bound.regexp)
+        ?select:(Some false)
+        ?search:(Some true) ()
 
     method private get_text (start, stop) =
-      buffer#get_text 
-        ?start:(Some start) 
-        ?stop:(Some stop) 
+      buffer#get_text
+        ?start:(Some start)
+        ?stop:(Some stop)
         ?slice:(Some false)
         ?visible:(Some false) ()
 
     method mark () =
+      Log.println `DEBUG "BEGIN";
       self#clear();
+      Log.println `DEBUG "clear done";
       match view#options#mark_occurrences with
       | true, under_cursor, _ ->
           let text = buffer#selection_text () in
-          let text = 
-            if text = "" then self#get_word_at_iter () |> self#get_text 
-            else text 
+          let text =
+            if text = "" then self#get_word_at_iter () |> self#get_text
+            else text
           in
           let text = text |> String.trim in
+          Log.println `DEBUG "text: %S" text;
           if String.length text > 1 && not (String.contains text '\n') && not (String.contains text '\r') then begin
             (*let vrect = view#visible_rect in
               let h0 = Gdk.Rectangle.height vrect in
@@ -80,11 +88,12 @@ class manager ~view =
             let start = buffer#start_iter in
             let stop = buffer#end_iter in
             let iter = ref start in
+            Log.println `DEBUG "while do";
             while !iter#compare stop < 0 do
               match !iter#forward_search ?flags:None ?limit:(Some stop) text with
               | Some (a, b) ->
-                  let found = 
-                    match_whole_word_only => (self#get_word_at_iter ~iter:a () |> self#get_text |> (=) text) 
+                  let found =
+                    match_whole_word_only => (self#get_word_at_iter ~iter:a () |> self#get_text |> (=) text)
                   in
                   if found then begin
                     buffer#apply_tag tag ~start:a ~stop:b;
@@ -95,7 +104,12 @@ class manager ~view =
                   iter := b;
               | _ -> iter := stop
             done;
-            if table <> [] then mark_set#call()
+            Log.println `DEBUG "while done %b" (table <> []);
+            if table <> [] then begin
+              mark_set#call();
+              Log.println `DEBUG "mark_set called";
+            end;
+            Log.println `DEBUG "END";
           end
       | _ -> ()
 

@@ -25,6 +25,11 @@ open Miscellanea
 open Printf
 open Preferences
 
+module Log = Common.Log.Make(struct let prefix = "EDITOR" end)
+let _ =
+  Log.set_print_timestamp true;
+  Log.set_verbosity `DEBUG
+
 let set_menu_item_nav_history_sensitive = ref (fun () -> failwith "set_menu_item_nav_history_sensitive")
 
 (** Editor *)
@@ -431,12 +436,16 @@ class editor () =
         let view = page#view in
         let ocaml_view = page#ocaml_view in
         let cb_tout_fast () =
+          Log.println `DEBUG "cb_tout_fast BEGIN";
           ocaml_view#code_folding#scan_folding_points ();
           if buffer#lexical_enabled then begin
+            Log.println `DEBUG "cb_tout_fast colorize_within_nearest_tag_bounds";
             let iter = buffer#get_iter `INSERT in
             self#colorize_within_nearest_tag_bounds gtext_buffer iter;
           end;
+          Log.println `DEBUG "cb_tout_fast draw_gutter";
           view#draw_gutter ();
+          Log.println `DEBUG "cb_tout_fast END";
         in
         let callback iter _ =
           Gmisclib.Idle.add ~prio:100 (fun () -> view#draw_current_line_background ~force:true (buffer#get_iter `INSERT));
