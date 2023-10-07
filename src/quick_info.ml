@@ -14,6 +14,7 @@ type t = {
   mutable is_active : bool;
   mutable is_idle : bool;
   mutable window : GWindow.window option;
+  mutable merlin : (filename:string -> source_code:string -> unit) -> unit;
 }
 
 let delay_idle = 2000
@@ -51,60 +52,71 @@ let get_area qi start stop =
       ~x:(Gdk.Rectangle.x rstop) ~y:(Gdk.Rectangle.y rstop + Gdk.Rectangle.height rstop) in
   xstart, ystart, xstop, ystop
 
-let display qi markup start stop =
+let display qi start stop =
   let xstart, ystart, xstop, ystop = get_area qi start stop in
   qi.current_area <- Some (xstart, ystart, xstop, ystop);
   let open Preferences in
-  let label = GMisc.label ~xpad:5 ~ypad:5 ~xalign:0.0 ~yalign:0.0 ~markup () in
+  let vbox = GPack.vbox () in
+  let label_typ = GMisc.label ~xpad:5 ~ypad:5 ~xalign:0.0 ~yalign:0.0 ~packing:vbox#add () in
+  let label_doc = GMisc.label ~xpad:5 ~ypad:5 ~xalign:0.0 ~yalign:0.0 ~line_wrap:true ~packing:vbox#add () in
+  label_typ#set_use_markup true;
+  label_doc#set_use_markup true;
   let x, y =
     let pX, pY = Gdk.Window.get_pointer_location (Gdk.Window.root_parent ()) in
     let win = (match qi.view#get_window `WIDGET with None -> assert false | Some w -> w) in
     let px, py = Gdk.Window.get_pointer_location win in
     pX - px + xstart, pY - py + ystop
   in
-  let win = Gtk_util.window_tooltip label#coerce ~fade:false ~x ~y ~show:false () in
+  let win = Gtk_util.window_tooltip vbox#coerce ~fade:false ~x ~y ~show:false () in
   qi.window <- Some win;
   Gmisclib.Idle.add ~prio:300 begin fun () ->
     win#show();
-    let r = label#misc#allocation in
+    let r = vbox#misc#allocation in
     if r.height > 200 then begin
       let sw = GBin.scrolled_window ~hpolicy:`AUTOMATIC () in
       let vp = GBin.viewport ~packing:sw#add () in
       sw#misc#modify_bg [`NORMAL, `NAME ?? (Preferences.preferences#get.editor_bg_color_popup)];
       vp#misc#modify_bg [`NORMAL, `NAME ?? (Preferences.preferences#get.editor_bg_color_popup)];
-      label#misc#reparent vp#coerce;
+      vbox#misc#reparent vp#coerce;
       win#destroy();
       let win = Gtk_util.window_tooltip sw#coerce ~fade:false ~x ~y ~width:700 ~height:300 ~show:false () in
       qi.window <- Some win;
       win#present()
     end else win#present()
-  end
+  end;
+  label_typ, label_doc
 
 let build_content qi (entry : type_enclosing_value) (entry2 : type_enclosing_value option) =
+  (* TODO .... *)
   let contains_type_vars = String.contains entry.typ '\'' in
   let is_module = String.starts_with ~prefix:"(" entry.typ in
-  let text =
-    Printf.sprintf "%s%s" entry.typ
-      (if contains_type_vars || is_module
-       then entry2 |> Option.fold ~none:"" ~some:(fun (x : type_enclosing_value) -> "\n" ^ x.typ)
-       else "")
-  in
-  Print_type.markup2 text
+  Printf.sprintf "%s%s" entry.typ
+    (if contains_type_vars || is_module
+     then entry2 |> Option.fold ~none:"" ~some:(fun (x : type_enclosing_value) -> "\n" ^ x.typ)
+     else "")
 
-let process_type qi (entry : type_enclosing_value) (entry2 : type_enclosing_value option) =
+let process_type qi position (entry : type_enclosing_value) (entry2 : type_enclosing_value option) =
   reset qi "open";
-  let markup = build_content qi entry entry2 in
+  let typ = build_content qi entry entry2 in
+  let markup = Markup.type_info typ in
   let start = qi.view#obuffer#get_iter (`LINECHAR (entry.start.line - 1, entry.start.col)) in
   let stop = qi.view#obuffer#get_iter (`LINECHAR (entry.stop.line - 1, entry.stop.col)) in
-  display qi markup start stop
+  let label_typ, label_doc = display qi start stop in
+  (*<span size='small' font_family='%s'>%s</span>*)
+  label_typ#set_label markup;
+  let markup_odoc = new Markup.odoc() in
+  qi.merlin@@Merlin.document ~position begin fun doc ->
+    let markup = markup_odoc#convert doc in
+    label_doc#set_label markup;
+  end
 
 let invoke_merlin qi iter =
   let position = iter#line + 1, iter#line_index in
-  (merlin qi.view#obuffer)@@Merlin.type_enclosing ~position begin fun types ->
+  qi.merlin@@Merlin.type_enclosing ~position begin fun types ->
     match types with
     | [] -> reset qi "no-type"
-    | fst :: snd :: _ -> process_type qi fst (Some snd)
-    | fst :: _ -> process_type qi fst None
+    | fst :: snd :: _ -> process_type qi position fst (Some snd)
+    | fst :: _ -> process_type qi position fst None
   end
 
 let is_iter_in_comment (buffer : Ocaml_text.buffer) iter =
@@ -212,7 +224,8 @@ let create (view : Ocaml_text.view) =
       current_area = None;
       is_active = false;
       is_idle = false;
-      window = None
+      window = None;
+      merlin = merlin view#obuffer;
     }
   in
   view#event#connect#button_press ~callback:begin fun _ ->
