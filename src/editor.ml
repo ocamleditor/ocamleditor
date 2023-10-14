@@ -28,7 +28,7 @@ open Preferences
 module Log = Common.Log.Make(struct let prefix = "EDITOR" end)
 let _ =
   Log.set_print_timestamp true;
-  Log.set_verbosity `DEBUG
+  Log.set_verbosity `ERROR
 
 let set_menu_item_nav_history_sensitive = ref (fun () -> failwith "set_menu_item_nav_history_sensitive")
 

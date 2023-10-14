@@ -1,14 +1,13 @@
 open Printf
-open Merlin_j
 
 module Log = Common.Log.Make(struct let prefix = "MERLIN" end)
 let _ =
   Log.set_print_timestamp true;
-  Log.set_verbosity `INFO
+  Log.set_verbosity `ERROR
 
 let (//) = Filename.concat
 
-let loop (f : in_channel -> unit) ((ic, oc, ec) as channels) =
+let loop (f : in_channel -> unit) ((ic, _oc, _ec) as channels) =
   try while true do f ic done
   with End_of_file ->
     Unix.close_process_full channels |> ignore
@@ -20,7 +19,7 @@ let execute
   let filename = match Miscellanea.filename_relative cwd filename with Some path -> path | _ -> filename in
   let cmd_line = "ocamlmerlin" :: "server" :: command @ [ "-filename"; filename ] in
   Log.println `INFO "%s" (cmd_line |> String.concat " ");
-  let (ic, oc, _) as channels = Unix.open_process_full (cmd_line |> String.concat " ") (Unix.environment ()) in
+  let (_, oc, _) as channels = Unix.open_process_full (cmd_line |> String.concat " ") (Unix.environment ()) in
   output_string oc source_code;
   close_out_noerr oc;
   Thread.create (loop (fun ic -> ic |> input_line |> continue_with)) channels |> ignore

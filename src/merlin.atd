@@ -58,10 +58,10 @@ type type_enclosing_answer = [
 type type_enclosing = { value : type_enclosing_value list }
 
 type type_enclosing_value = {
-  start : pos;
-  stop <json name="end"> : pos;
-  typ  <json name="type"> : string;
-  tail : tail;
+  te_start <json name="start"> : pos;
+  te_stop <json name="end"> : pos;
+  te_type  <json name="type"> : string;
+  te_tail <json name="tail"> : tail;
 }
 
 type tail = [ No <json name="no"> | Position <json name="position"> | Call <json name="call"> ] <ocaml repr="classic">

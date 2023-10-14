@@ -24,7 +24,7 @@
 module Log = Common.Log.Make(struct let prefix = "MARK_OCCURRENCES" end)
 let _ =
   Log.set_print_timestamp true;
-  Log.set_verbosity `DEBUG
+  Log.set_verbosity `ERROR
 
 class manager ~view =
   let buffer = view#tbuffer in

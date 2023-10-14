@@ -56,6 +56,7 @@ let display qi start stop =
   let xstart, ystart, xstop, ystop = get_area qi start stop in
   qi.current_area <- Some (xstart, ystart, xstop, ystop);
   let open Preferences in
+  let open Settings_j in
   let vbox = GPack.vbox () in
   let label_typ = GMisc.label ~xpad:5 ~ypad:5 ~xalign:0.0 ~yalign:0.0 ~packing:vbox#add () in
   let label_doc = GMisc.label ~xpad:5 ~ypad:5 ~xalign:0.0 ~yalign:0.0 ~line_wrap:true ~packing:vbox#add () in
@@ -72,7 +73,7 @@ let display qi start stop =
   Gmisclib.Idle.add ~prio:300 begin fun () ->
     win#show();
     let r = vbox#misc#allocation in
-    if r.height > 200 then begin
+    if r.Gtk.height > 200 then begin
       let sw = GBin.scrolled_window ~hpolicy:`AUTOMATIC () in
       let vp = GBin.viewport ~packing:sw#add () in
       sw#misc#modify_bg [`NORMAL, `NAME ?? (Preferences.preferences#get.editor_bg_color_popup)];
@@ -88,19 +89,19 @@ let display qi start stop =
 
 let build_content qi (entry : type_enclosing_value) (entry2 : type_enclosing_value option) =
   (* TODO .... *)
-  let contains_type_vars = String.contains entry.typ '\'' in
-  let is_module = String.starts_with ~prefix:"(" entry.typ in
-  Printf.sprintf "%s%s" entry.typ
+  let contains_type_vars = String.contains entry.Merlin_t.te_type '\'' in
+  let is_module = String.starts_with ~prefix:"(" entry.te_type in
+  Printf.sprintf "%s%s" entry.te_type
     (if contains_type_vars || is_module
-     then entry2 |> Option.fold ~none:"" ~some:(fun (x : type_enclosing_value) -> "\n" ^ x.typ)
+     then entry2 |> Option.fold ~none:"" ~some:(fun (x : type_enclosing_value) -> "\n" ^ x.te_type)
      else "")
 
 let process_type qi position (entry : type_enclosing_value) (entry2 : type_enclosing_value option) =
   reset qi "open";
   let typ = build_content qi entry entry2 in
   let markup = Markup.type_info typ in
-  let start = qi.view#obuffer#get_iter (`LINECHAR (entry.start.line - 1, entry.start.col)) in
-  let stop = qi.view#obuffer#get_iter (`LINECHAR (entry.stop.line - 1, entry.stop.col)) in
+  let start = qi.view#obuffer#get_iter (`LINECHAR (entry.te_start.line - 1, entry.te_start.col)) in
+  let stop = qi.view#obuffer#get_iter (`LINECHAR (entry.te_stop.line - 1, entry.te_stop.col)) in
   let label_typ, label_doc = display qi start stop in
   (*<span size='small' font_family='%s'>%s</span>*)
   label_typ#set_label markup;
@@ -160,7 +161,7 @@ let work qi x y root_window =
         let wx, wy = Gdk.Window.get_position win#misc#window in
         let px, py = Gdk.Window.get_pointer_location root_window in
         let is_mouse_over =
-          wx <= px && px <= wx + r.width && wy <= py && py <= wy + r.height
+          wx <= px && px <= wx + r.Gtk.width && wy <= py && py <= wy + r.Gtk.height
         in
         if is_mouse_over then begin
           win#event#connect#button_press ~callback:begin fun _ ->
@@ -176,7 +177,12 @@ let work qi x y root_window =
   end;
   qi.is_active
 
-let rec start qi =
+let rec restart qi ~idle =
+  stop qi;
+  qi.is_idle <- idle;
+  start qi
+
+and start qi =
   if not qi.is_active then begin
     Printexc.record_backtrace true;
     Printf.printf "Quick_info timer START %s \n%!" (if qi.is_idle then "IDLE" else "WORKING");
@@ -191,22 +197,18 @@ let rec start qi =
               try
                 let x, y = Gdk.Window.get_pointer_location view_window in
                 let r = qi.view#misc#allocation in
-                if x >= 0 && y >= 0 && x <= r.width && y <= r.height then begin
+                if x >= 0 && y >= 0 && x <= r.Gtk.width && y <= r.Gtk.height then begin
                   if qi.is_idle then begin
-                    stop qi;
-                    qi.is_idle <- false;
-                    start qi;
+                    restart qi ~idle:false;
                     false
                   end else
                     work qi x y root_window
                 end else begin
                   if qi.is_idle then qi.is_active else begin
-                    stop qi;
-                    qi.is_idle <- true;
-                    start qi;
+                    restart qi ~idle:true;
                     false
                   end
-                end;
+                end
               with ex ->
                 Printf.eprintf "File \"quick_info.ml\": %s\n%s\n%!" (Printexc.to_string ex) (Printexc.get_backtrace());
                 qi.is_active
@@ -229,7 +231,8 @@ let create (view : Ocaml_text.view) =
     }
   in
   view#event#connect#button_press ~callback:begin fun _ ->
-    start qi;
+    reset qi "button-press";
+    restart qi ~idle:true;
     false
   end |> ignore;
   qi
