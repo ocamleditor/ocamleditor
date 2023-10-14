@@ -125,9 +125,7 @@ let paint_diffs page diffs =
   in
   begin
     match List.assoc_opt page#get_oid !initialized with
-    | Some margin ->
-        margin#set_diffs diffs;
-        page#view#draw_gutter()
+    | Some margin -> margin#set_diffs diffs
     | _ -> ()
   end;
   List.iter begin fun diff ->
