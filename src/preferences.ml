@@ -172,7 +172,10 @@ module Color = struct
     else { light = x; dark = alt.dark }
 end
 
+(** Alias for [Color.get_themed_color] *)
 let (??) = Color.get_themed_color
+
+(** Alias for [Color.get_themed_icon] *)
 let (???) = Icon.get_themed_icon
 
 let editor_tag_bg_color tagname =

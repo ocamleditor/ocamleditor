@@ -7,6 +7,7 @@ let merlin (buffer : Ocaml_text.buffer) func =
 
 type t = {
   view : Ocaml_text.view;
+  tag : GText.tag;
   mutable timer_id : GMain.Timeout.id option;
   mutable prev_x : int;
   mutable prev_y : int;
@@ -27,6 +28,7 @@ let reset qi n =
   (*Printf.printf "RESET %s\n%!" n;*)
   qi.window |> Option.iter begin fun w ->
     Gmisclib.Idle.add w#destroy;
+    qi.view#buffer#remove_tag qi.tag ~start:qi.view#buffer#start_iter ~stop:qi.view#buffer#end_iter;
     qi.current_area <- None;
     qi.window <- None
   end
@@ -57,21 +59,23 @@ let display qi start stop =
   qi.current_area <- Some (xstart, ystart, xstop, ystop);
   let open Preferences in
   let open Settings_j in
-  let vbox = GPack.vbox () in
+  let vbox = GPack.vbox ~spacing:2 () in
   let label_typ = GMisc.label ~xpad:5 ~ypad:5 ~xalign:0.0 ~yalign:0.0 ~packing:vbox#add () in
   let label_doc = GMisc.label ~xpad:5 ~ypad:5 ~xalign:0.0 ~yalign:0.0 ~line_wrap:true ~packing:vbox#add () in
   label_typ#set_use_markup true;
   label_doc#set_use_markup true;
   let x, y =
+    let _, lh = qi.view#get_line_yrange start in
     let pX, pY = Gdk.Window.get_pointer_location (Gdk.Window.root_parent ()) in
     let win = (match qi.view#get_window `WIDGET with None -> assert false | Some w -> w) in
     let px, py = Gdk.Window.get_pointer_location win in
-    pX - px + xstart, pY - py + ystop
+    pX (*- px + xstart*), pY - py + ystart + lh
   in
   let win = Gtk_util.window_tooltip vbox#coerce ~fade:false ~x ~y ~show:false () in
   qi.window <- Some win;
   Gmisclib.Idle.add ~prio:300 begin fun () ->
     win#show();
+    qi.view#buffer#apply_tag qi.tag ~start ~stop;
     let r = vbox#misc#allocation in
     if r.Gtk.height > 200 then begin
       let sw = GBin.scrolled_window ~hpolicy:`AUTOMATIC () in
@@ -217,9 +221,13 @@ and start qi =
   end
 
 let create (view : Ocaml_text.view) =
+  let module ColorOps = Color in
+  let open Preferences in
+  let bg_color = ?? (Preferences.preferences#get.editor_bg_color_popup) in
   let qi =
     {
       view = view;
+      tag = view#buffer#create_tag ~name:"quick-info" [`BACKGROUND bg_color];
       timer_id = None;
       prev_x = 0;
       prev_y = 0;
@@ -230,6 +238,11 @@ let create (view : Ocaml_text.view) =
       merlin = merlin view#obuffer;
     }
   in
+  view#event#connect#key_press ~callback:begin fun _ ->
+    reset qi "key-press";
+    restart qi ~idle:true;
+    false
+  end |> ignore;
   view#event#connect#button_press ~callback:begin fun _ ->
     reset qi "button-press";
     restart qi ~idle:true;
