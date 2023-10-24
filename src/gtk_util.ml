@@ -108,7 +108,7 @@ let window_tooltip widget ?parent ?(fade=false) ~x ~y ?width ?height ?(kind=`POP
   let ebox = GBin.event_box ~packing:window#add () in
   ebox#add widget;
   let open Preferences in
-  let _ = window#misc#modify_bg [`NORMAL, `NAME ?? (Preferences.preferences#get.editor_fg_color_popup)] in
+  let _ = window#misc#modify_bg [`NORMAL, `NAME ?? (Preferences.preferences#get.editor_bg_color_popup)] in
   let _ = ebox#misc#modify_bg [`NORMAL, `NAME ?? (Preferences.preferences#get.editor_bg_color_popup)] in
   window#set_skip_pager_hint true;
   window#set_skip_taskbar_hint true;

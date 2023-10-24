@@ -14,6 +14,7 @@ type t = {
   mutable current_area : (int * int * int * int) option;
   mutable is_active : bool;
   mutable is_idle : bool;
+  mutable is_suspended : bool;
   mutable window : GWindow.window option;
   mutable merlin : (filename:string -> source_code:string -> unit) -> unit;
 }
@@ -75,7 +76,6 @@ let display qi start stop =
   qi.window <- Some win;
   Gmisclib.Idle.add ~prio:300 begin fun () ->
     win#show();
-    qi.view#buffer#apply_tag qi.tag ~start ~stop;
     let r = vbox#misc#allocation in
     if r.Gtk.height > 200 then begin
       let sw = GBin.scrolled_window ~hpolicy:`AUTOMATIC () in
@@ -89,6 +89,7 @@ let display qi start stop =
       win#present()
     end else win#present()
   end;
+  qi.view#buffer#apply_tag qi.tag ~start ~stop;
   label_typ, label_doc
 
 let build_content qi (entry : type_enclosing_value) (entry2 : type_enclosing_value option) =
@@ -205,7 +206,7 @@ and start qi =
                   if qi.is_idle then begin
                     restart qi ~idle:false;
                     false
-                  end else
+                  end else if qi.is_suspended then qi.is_active else
                     work qi x y root_window
                 end else begin
                   if qi.is_idle then qi.is_active else begin
@@ -221,7 +222,6 @@ and start qi =
   end
 
 let create (view : Ocaml_text.view) =
-  let module ColorOps = Color in
   let open Preferences in
   let bg_color = ?? (Preferences.preferences#get.editor_bg_color_popup) in
   let qi =
@@ -234,13 +234,21 @@ let create (view : Ocaml_text.view) =
       current_area = None;
       is_active = false;
       is_idle = false;
+      is_suspended = false;
       window = None;
       merlin = merlin view#obuffer;
     }
   in
   view#event#connect#key_press ~callback:begin fun _ ->
-    reset qi "key-press";
-    restart qi ~idle:true;
+    if not qi.is_suspended then begin
+      reset qi "key-press";
+      restart qi ~idle:true;
+      qi.is_suspended <- true;
+    end;
+    false
+  end |> ignore;
+  view#event#connect#motion_notify ~callback:begin fun _ ->
+    qi.is_suspended <- false;
     false
   end |> ignore;
   view#event#connect#button_press ~callback:begin fun _ ->
