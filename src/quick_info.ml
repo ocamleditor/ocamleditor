@@ -15,6 +15,7 @@ type t = {
   mutable is_active : bool;
   mutable is_idle : bool;
   mutable is_suspended : bool;
+  mutable show_at : (int * int) option;
   mutable window : GWindow.window option;
   mutable merlin : (filename:string -> source_code:string -> unit) -> unit;
 }
@@ -37,6 +38,7 @@ let reset qi n =
 let stop qi =
   if qi.is_active then begin
     qi.is_active <- false;
+    qi.is_suspended <- false;
     qi.timer_id |> Option.iter GMain.Timeout.remove;
     reset qi "stop";
     Printf.printf "Quick_info timer STOP \n%!"
@@ -66,11 +68,16 @@ let display qi start stop =
   label_typ#set_use_markup true;
   label_doc#set_use_markup true;
   let x, y =
-    let _, lh = qi.view#get_line_yrange start in
     let pX, pY = Gdk.Window.get_pointer_location (Gdk.Window.root_parent ()) in
     let win = (match qi.view#get_window `WIDGET with None -> assert false | Some w -> w) in
     let px, py = Gdk.Window.get_pointer_location win in
-    pX (*- px + xstart*), pY - py + ystart + lh
+    match qi.show_at with
+    | Some (x, y) ->
+        qi.show_at <- None;
+        pX - px + x, pY - py + y
+    | _ ->
+        let ly, lh = qi.view#get_line_yrange start in
+        pX (*- px + xstart*), pY - py + ystart + lh
   in
   let win = Gtk_util.window_tooltip vbox#coerce ~fade:false ~x ~y ~show:false () in
   qi.window <- Some win;
@@ -154,6 +161,16 @@ let process_location ?(do_reset=false) ?(invoke=true) qi x y =
         | _ -> ()
       end
 
+let at_iter qi iter =
+  stop qi;
+  let rect = qi.view#get_iter_location iter in
+  let x = Gdk.Rectangle.x rect in
+  let y = Gdk.Rectangle.y rect in
+  let x, y = qi.view#buffer_to_window_coords ~x ~y ~tag:`WIDGET in
+  Printf.printf "quick_info_at_cursor %d %d\n%!" x y;
+  qi.show_at <- Some (x, y + Gdk.Rectangle.height rect);
+  process_location ~do_reset:true ~invoke:true qi x y
+
 let work qi x y root_window =
   if x = qi.prev_x && y = qi.prev_y then begin
     match qi.window with
@@ -188,13 +205,13 @@ let rec restart qi ~idle =
   start qi
 
 and start qi =
-  if not qi.is_active then begin
+  if not qi.is_active && Preferences.preferences#get.Settings_j.editor_quick_info_enabled then begin
     Printexc.record_backtrace true;
     Printf.printf "Quick_info timer START %s \n%!" (if qi.is_idle then "IDLE" else "WORKING");
     qi.is_active <- true;
     let root_window = Gdk.Window.root_parent () in
     match qi.view#get_window `WIDGET with
-    | None -> assert false
+    | None -> ()
     | Some view_window ->
         let ms = if qi.is_idle then delay_idle else delay_work in
         qi.timer_id <- Some begin
@@ -206,7 +223,8 @@ and start qi =
                   if qi.is_idle then begin
                     restart qi ~idle:false;
                     false
-                  end else if qi.is_suspended then qi.is_active else
+                  end else if qi.is_suspended
+                  then qi.is_active else
                     work qi x y root_window
                 end else begin
                   if qi.is_idle then qi.is_active else begin
@@ -236,14 +254,21 @@ let create (view : Ocaml_text.view) =
       is_idle = false;
       is_suspended = false;
       window = None;
+      show_at = None;
       merlin = merlin view#obuffer;
     }
   in
-  view#event#connect#key_press ~callback:begin fun _ ->
-    if not qi.is_suspended then begin
-      reset qi "key-press";
-      restart qi ~idle:true;
-      qi.is_suspended <- true;
+  view#event#connect#key_press ~callback:begin fun ev ->
+    if GdkEvent.Key.keyval ev = GdkKeysyms._Escape then begin
+      reset qi "Escape";
+      qi.is_suspended <- false;
+      restart qi ~idle:false;
+    end else begin
+      if not qi.is_suspended then begin
+        reset qi "key-press";
+        qi.is_suspended <- true;
+        restart qi ~idle:true;
+      end;
     end;
     false
   end |> ignore;
@@ -253,7 +278,13 @@ let create (view : Ocaml_text.view) =
   end |> ignore;
   view#event#connect#button_press ~callback:begin fun _ ->
     reset qi "button-press";
+    qi.is_suspended <- false;
     restart qi ~idle:true;
     false
+  end |> ignore;
+  Preferences.preferences#connect#changed ~callback:begin fun pref ->
+    match pref.Settings_j.editor_quick_info_enabled with
+    | true -> start qi
+    | false -> stop qi
   end |> ignore;
   qi

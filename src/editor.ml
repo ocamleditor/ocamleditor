@@ -545,18 +545,6 @@ class editor () =
       menu#popup ~time:(GdkEvent.Button.time ev) ~button:3;
       Gdk.Window.set_cursor menu#misc#window (Gdk.Cursor.create `ARROW);
 
-    method private callback_query_tooltip (page : Editor_page.page) ~x ~y ~kbd _ =
-      if x > page#view#gutter.Gutter.size && y > 10 && y < (Gdk.Rectangle.height page#view#visible_rect) - 10 then begin
-        let f () =
-          let location = page#view#window_to_buffer_coords ~tag:`WIDGET ~x ~y in
-          page#tooltip ~typ:preferences#get.editor_annot_type_tooltips_enabled location;
-        in
-        if (*true ||*) preferences#get.editor_annot_type_tooltips_delay = 1 then begin
-          Timeout.set tout_delim 0 (GtkThread2.async f);
-        end else (f());
-      end else (page#error_indication#hide_tooltip ~force:false ());
-      false;
-
     method open_file ~active ~scroll_offset ~offset ?remote filename =
       try
         let page =
@@ -603,7 +591,6 @@ class editor () =
                       end);
                     (* Annot type tooltips *)
                     page#view#misc#set_has_tooltip true;
-                    ignore (page#view#misc#connect#query_tooltip ~callback:(self#callback_query_tooltip page));
                     ignore (page#buffer#undo#connect#after#redo ~callback:(fun ~name -> changed#call()));
                     ignore (page#buffer#undo#connect#after#undo ~callback:(fun ~name -> changed#call()));
                     ignore (page#buffer#undo#connect#can_redo_changed ~callback:(fun _ -> changed#call()));

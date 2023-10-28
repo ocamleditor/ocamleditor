@@ -69,7 +69,7 @@ type settings = {
   ~theme_is_dark                   <ocaml default="false" mutable> : bool;
   ~vmessages_height                <ocaml default="300" mutable> : int;
 
-  ~editor_annot_type_tooltips_enabled  <ocaml default="false" mutable> : bool;
+  ~editor_quick_info_enabled <ocaml default="true" mutable> : bool;
   ~editor_annot_type_tooltips_delay    <ocaml default="0" mutable> : int;
   ~editor_annot_type_tooltips_impl     <ocaml default="0" mutable> : int;
 
