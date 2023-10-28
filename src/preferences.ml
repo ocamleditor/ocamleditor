@@ -43,9 +43,9 @@ let default_values =
         bg_color = { light = "#ffffff"; dark = "#000000" };
         weight = 0; style = `NORMAL; underline = `NONE; scale = 1.0; bg_default = true };
       { name = "infix";
-        color = { light = "indianred4"; dark = "#ff6a6a" };
+        color = { light = "#B34B4B"; dark = "#ff6a6a" };
         bg_color = { light = "#ffffff"; dark = "#000000" };
-        weight = 0; style = `NORMAL; underline = `NONE; scale = 1.0; bg_default = true };
+        weight = 500; style = `NORMAL; underline = `NONE; scale = 1.0; bg_default = true };
       { name = "label";
         color = { light = "saddlebrown"; dark = "#B77871" };
         bg_color = { light = "#ffffff"; dark = "#000000" };

@@ -75,7 +75,7 @@ type settings = {
 
   ~editor_bak                          <ocaml default="true" mutable> : bool;
   ~editor_base_font                    <ocaml default="\"monospace 9\"" mutable> : string;
-  ~editor_bg_color_popup               <ocaml default="{light=\"#f4f4f4\"; dark=\"#404040\"}" mutable> : string color;
+  ~editor_bg_color_popup               <ocaml default="{light=\"#e5e5e5\"; dark=\"#404040\"}" mutable> : string color;
   ~editor_bg_color_theme               <ocaml default="false" mutable> : bool;
   ~editor_bg_color_user                <ocaml default="{ light = \"#FFFFFF\"; dark = \"#101010\"}" mutable> : string color;
   ~editor_code_folding_enabled         <ocaml default="true" mutable> : bool;
