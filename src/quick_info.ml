@@ -1,5 +1,10 @@
 open Merlin_j
 
+module Log = Common.Log.Make(struct let prefix = "QUICK-INFO" end)
+let _ =
+  Log.set_print_timestamp true;
+  Log.set_verbosity `DEBUG
+
 let merlin (buffer : Ocaml_text.buffer) func =
   let filename = match buffer#file with Some file -> file#filename | _ -> "" in
   let source_code = buffer#get_text () in
@@ -33,8 +38,8 @@ type t = {
       the mouse or restarting the timer. *)
 
   mutable show_at : (int * int) option;
-  (** Sets the location to display quick information overriding the default
-      location, which is the mouse pointer. *)
+  (** Contains the location to display quick information when you want to
+      override the default location, which is the mouse pointer. *)
 
   mutable window : GWindow.window option;
   mutable merlin : (filename:string -> source_code:string -> unit) -> unit;
@@ -47,16 +52,16 @@ let (@<=) (left, top, right, bottom) (x, y) =
   left <= x && x <= right && top <= y && y <= bottom
 
 let suspend qi =
-  if not qi.is_suspended then Printf.printf "Suspended\n%!";
+  if not qi.is_suspended then Log.println `INFO "Suspended  %s" qi.filename;
   qi.is_suspended <- true
 
 let resume qi =
-  if qi.is_suspended then Printf.printf "Resumed\n%!";
+  if qi.is_suspended then Log.println `INFO "Resumed %s%!" qi.filename;
   qi.is_suspended <- false
 
 (** Hides the quick info popup and the expression highlighting. *)
 let hide qi n =
-  (*Printf.printf "HIDE %s\n%!" n;*)
+  (*Log.println `DEBUG "HIDE %s\n%!" n;*)
   qi.view#buffer#remove_tag qi.tag ~start:qi.view#buffer#start_iter ~stop:qi.view#buffer#end_iter;
   qi.current_area <- None;
   qi.window |> Option.iter begin fun w ->
@@ -72,9 +77,9 @@ let stop ?(do_hide=true) qi =
     qi.is_active <- false;
     resume qi;
     qi.timer_id |> Option.iter GMain.Timeout.remove;
-    Printf.printf "Quick_info timer STOP (%s)\n%!" qi.filename
+    Log.println `INFO "STOP (%s)%!" qi.filename
   end else
-    Printf.printf "Quick_info already STOPPED (%s) \n%!" qi.filename
+    Log.println `INFO "already STOPPED (%s)%!" qi.filename
 
 (** Stops the timer to clear the quick info status but does not hide quick info
     on the screen. *)
@@ -242,9 +247,13 @@ let rec restart qi ~idle =
   start qi
 
 and start qi =
-  if not qi.is_active && Preferences.preferences#get.Settings_j.editor_quick_info_enabled then begin
+  if
+    not qi.is_active &&
+    Preferences.preferences#get.Settings_j.editor_quick_info_enabled &&
+    qi.view#misc#get_flag `VISIBLE
+  then begin
     Printexc.record_backtrace true;
-    Printf.printf "Quick_info timer START %s (%s)\n%!" (if qi.is_idle then "IDLE" else "WORKING") qi.filename;
+    Log.println `INFO "START %s (%s)%!" (if qi.is_idle then "IDLE" else "WORKING") qi.filename;
     qi.is_active <- true;
     let root_window = Gdk.Window.root_parent () in
     match qi.view#get_window `WIDGET with
@@ -316,6 +325,16 @@ let create (view : Ocaml_text.view) =
   view#event#connect#button_press ~callback:begin fun _ ->
     hide qi "button-press";
     restart qi ~idle:true; (* restart idle to avoid redisplay popup *)
+    false
+  end |> ignore;
+  view#event#connect#focus_in ~callback:begin fun _ ->
+    Log.println `DEBUG "focus_int %s" qi.filename;
+    start qi;
+    false
+  end |> ignore;
+  view#event#connect#focus_out ~callback:begin fun _ ->
+    Log.println `DEBUG "focus_out %s" qi.filename;
+    stop qi;
     false
   end |> ignore;
   Preferences.preferences#connect#changed ~callback:begin fun pref ->
