@@ -28,19 +28,19 @@ let (@<=) (left, top, right, bottom) (x, y) =
 
 let reset qi n =
   (*Printf.printf "RESET %s\n%!" n;*)
+  qi.view#buffer#remove_tag qi.tag ~start:qi.view#buffer#start_iter ~stop:qi.view#buffer#end_iter;
+  qi.current_area <- None;
   qi.window |> Option.iter begin fun w ->
     Gmisclib.Idle.add w#destroy;
-    qi.view#buffer#remove_tag qi.tag ~start:qi.view#buffer#start_iter ~stop:qi.view#buffer#end_iter;
-    qi.current_area <- None;
     qi.window <- None
   end
 
 let stop qi =
+  reset qi "stop";
   if qi.is_active then begin
     qi.is_active <- false;
     qi.is_suspended <- false;
     qi.timer_id |> Option.iter GMain.Timeout.remove;
-    reset qi "stop";
     Printf.printf "Quick_info timer STOP \n%!"
   end else
     Printf.printf "Quick_info already STOPPED \n%!"

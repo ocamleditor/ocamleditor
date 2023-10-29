@@ -638,7 +638,7 @@ class page ?file ~project ~scroll_offset ~offset ~editor () =
         end);
       ignore (vscrollbar#connect#after#value_changed ~callback:(fun () ->
           Gmisclib.Idle.add ~prio:300 (fun () -> view#misc#handler_unblock !signal_expose)));
-      (** After focus_in, check whether the file is changed on disk *)
+      (* After focus_in, check if the file is changed on disk *)
       ignore (text_view#event#connect#after#focus_in ~callback:begin fun _ ->
           Gaux.may self#file ~f:begin fun f ->
             if f#exists && f#changed then
@@ -662,6 +662,7 @@ class page ?file ~project ~scroll_offset ~offset ~editor () =
       ignore (text_view#event#connect#leave_notify ~callback:(fun _ -> Option.iter (fun at -> at#remove_tag()) annot_type; error_indication#hide_tooltip(); false));
       ignore (text_view#event#connect#focus_out ~callback:(fun _ -> Option.iter (fun at -> at#remove_tag()) annot_type; error_indication#hide_tooltip(); false));
       text_view#event#connect#focus_out ~callback:(fun _ -> Quick_info.stop quick_info; false) |> ignore;
+      text_view#event#connect#leave_notify ~callback:(fun _ -> Quick_info.stop quick_info; false) |> ignore;
       (** Horizontal scrollbar appears/disappears according to the window size *)
       ignore (sw#misc#connect#size_allocate ~callback:begin fun _ ->
           let alloc = sw#misc#allocation in
