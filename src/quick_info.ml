@@ -15,6 +15,7 @@ type t = {
   view : Ocaml_text.view;
   filename : string;
   tag : GText.tag;
+  mutable can_tooltip : bool;
   mutable timer_id : GMain.Timeout.id option;
   mutable prev_x : int;
   mutable prev_y : int;
@@ -250,7 +251,8 @@ and start qi =
   if
     not qi.is_active &&
     Preferences.preferences#get.Settings_j.editor_quick_info_enabled &&
-    qi.view#misc#get_flag `VISIBLE
+    qi.view#misc#get_flag `VISIBLE &&
+    qi.view#misc#get_flag `HAS_FOCUS
   then begin
     Printexc.record_backtrace true;
     Log.println `INFO "START %s (%s)%!" (if qi.is_idle then "IDLE" else "WORKING") qi.filename;
@@ -263,21 +265,24 @@ and start qi =
         qi.timer_id <- Some begin
             GMain.Timeout.add ~ms ~callback:begin fun () ->
               try
-                let x, y = Gdk.Window.get_pointer_location view_window in
-                let r = qi.view#misc#allocation in
-                if x >= 0 && y >= 0 && x <= r.Gtk.width && y <= r.Gtk.height then begin
-                  if qi.is_idle then begin
-                    restart qi ~idle:false;
-                    false
-                  end else if qi.is_suspended then qi.is_active
-                  else
-                    work qi x y root_window
-                end else begin
-                  if qi.is_idle then qi.is_active else begin
-                    restart qi ~idle:true;
-                    false
+                if qi.can_tooltip then begin
+                  qi.can_tooltip <- false;
+                  let x, y = Gdk.Window.get_pointer_location view_window in
+                  let r = qi.view#misc#allocation in
+                  if x >= 0 && y >= 0 && x <= r.Gtk.width && y <= r.Gtk.height then begin
+                    if qi.is_idle then begin
+                      restart qi ~idle:false;
+                      false
+                    end else if qi.is_suspended then qi.is_active
+                    else
+                      work qi x y root_window
+                  end else begin
+                    if qi.is_idle then qi.is_active else begin
+                      restart qi ~idle:true;
+                      false
+                    end
                   end
-                end
+                end else qi.is_active
               with ex ->
                 Printf.eprintf "File \"quick_info.ml\": %s\n%s\n%!" (Printexc.to_string ex) (Printexc.get_backtrace());
                 qi.is_active
@@ -294,6 +299,7 @@ let create (view : Ocaml_text.view) =
       view = view;
       filename = filename;
       tag = view#buffer#create_tag ~name:"quick-info" [`BACKGROUND bg_color];
+      can_tooltip = false;
       timer_id = None;
       prev_x = 0;
       prev_y = 0;
@@ -335,6 +341,10 @@ let create (view : Ocaml_text.view) =
   view#event#connect#focus_out ~callback:begin fun _ ->
     Log.println `DEBUG "focus_out %s" qi.filename;
     stop qi;
+    false
+  end |> ignore;
+  view#misc#connect#query_tooltip ~callback:begin fun ~x ~y ~kbd _ ->
+    qi.can_tooltip <- true;
     false
   end |> ignore;
   Preferences.preferences#connect#changed ~callback:begin fun pref ->
