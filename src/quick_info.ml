@@ -5,17 +5,37 @@ let merlin (buffer : Ocaml_text.buffer) func =
   let source_code = buffer#get_text () in
   func ~filename ~source_code
 
+(** The type of quick info. *)
 type t = {
   view : Ocaml_text.view;
+  filename : string;
   tag : GText.tag;
   mutable timer_id : GMain.Timeout.id option;
   mutable prev_x : int;
   mutable prev_y : int;
   mutable current_area : (int * int * int * int) option;
+  (** It is the area of the editor view that contains the expression for which
+      quick info is currently shown. *)
+
   mutable is_active : bool;
+  (** Indicates whether the timer is running. [start] and [stop] change this flag. *)
+
   mutable is_idle : bool;
+  (** When the timer is idle it runs at low speed and does nothing other than
+      check whether the the mouse moves within the editor view and, in this case,
+      restarts in working (i.e. not idle) mode. *)
+
   mutable is_suspended : bool;
+  (** When timer is suspended it runs at working speed and does nothing.
+      The timer is suspended on key-press event in order to prevent quick info
+      popups from appearing as you type.
+      It can be reactivated by pressing Esc or the mouse button, or by moving
+      the mouse or restarting the timer. *)
+
   mutable show_at : (int * int) option;
+  (** Sets the location to display quick information overriding the default
+      location, which is the mouse pointer. *)
+
   mutable window : GWindow.window option;
   mutable merlin : (filename:string -> source_code:string -> unit) -> unit;
 }
@@ -26,8 +46,17 @@ let delay_work = 100
 let (@<=) (left, top, right, bottom) (x, y) =
   left <= x && x <= right && top <= y && y <= bottom
 
-let reset qi n =
-  (*Printf.printf "RESET %s\n%!" n;*)
+let suspend qi =
+  if not qi.is_suspended then Printf.printf "Suspended\n%!";
+  qi.is_suspended <- true
+
+let resume qi =
+  if qi.is_suspended then Printf.printf "Resumed\n%!";
+  qi.is_suspended <- false
+
+(** Hides the quick info popup and the expression highlighting. *)
+let hide qi n =
+  (*Printf.printf "HIDE %s\n%!" n;*)
   qi.view#buffer#remove_tag qi.tag ~start:qi.view#buffer#start_iter ~stop:qi.view#buffer#end_iter;
   qi.current_area <- None;
   qi.window |> Option.iter begin fun w ->
@@ -35,19 +64,32 @@ let reset qi n =
     qi.window <- None
   end
 
-let stop qi =
-  reset qi "stop";
+(** Optionally hides quick info (default is hide), stops the timer and clears
+    its status. *)
+let stop ?(do_hide=true) qi =
+  if do_hide then hide qi "stop";
   if qi.is_active then begin
     qi.is_active <- false;
-    qi.is_suspended <- false;
+    resume qi;
     qi.timer_id |> Option.iter GMain.Timeout.remove;
-    Printf.printf "Quick_info timer STOP \n%!"
+    Printf.printf "Quick_info timer STOP (%s)\n%!" qi.filename
   end else
-    Printf.printf "Quick_info already STOPPED \n%!"
+    Printf.printf "Quick_info already STOPPED (%s) \n%!" qi.filename
+
+(** Stops the timer to clear the quick info status but does not hide quick info
+    on the screen. *)
+let pin_window qi (win : GWindow.window) =
+  win#event#connect#button_press ~callback:begin fun _ ->
+    stop ~do_hide:false qi;
+    win#misc#modify_bg [`NORMAL, `COLOR (Preferences.editor_tag_bg_color "selection")];
+    true
+  end |> ignore
 
 let (!=) (p1 : Merlin_j.pos) (p2 : Merlin_j.pos) =
   p1.col <> p2.col || p1.line <> p2.line
 
+(** Returns the left, top, right and bottom bounds of the expression area, in
+    window coordinates. *)
 let get_area qi start stop =
   let rstart = qi.view#get_iter_location start in
   let rstop = qi.view#get_iter_location stop in
@@ -57,6 +99,7 @@ let get_area qi start stop =
       ~x:(Gdk.Rectangle.x rstop) ~y:(Gdk.Rectangle.y rstop + Gdk.Rectangle.height rstop) in
   xstart, ystart, xstop, ystop
 
+(** Displays the quick info popup window.  *)
 let display qi start stop =
   let xstart, ystart, xstop, ystop = get_area qi start stop in
   qi.current_area <- Some (xstart, ystart, xstop, ystop);
@@ -79,6 +122,7 @@ let display qi start stop =
         let ly, lh = qi.view#get_line_yrange start in
         pX (*- px + xstart*), pY - py + ystart + lh
   in
+  (* TODO Can this be optimized? *)
   let win = Gtk_util.window_tooltip vbox#coerce ~fade:false ~x ~y ~show:false () in
   qi.window <- Some win;
   Gmisclib.Idle.add ~prio:300 begin fun () ->
@@ -95,14 +139,7 @@ let display qi start stop =
       qi.window <- Some win;
       win#present()
     end else win#present();
-    qi.window |> Option.iter begin fun win ->
-      win#event#connect#button_press ~callback:begin fun _ ->
-        qi.is_active <- false;
-        (*win#misc#modify_bg [`NORMAL, `COLOR (win#misc#style#fg `SELECTED)];*)
-        win#misc#modify_bg [`NORMAL, `COLOR (Preferences.editor_tag_bg_color "selection")];
-        true
-      end |> ignore
-    end;
+    qi.window |> Option.iter (pin_window qi);
   end;
   qi.view#buffer#apply_tag qi.tag ~start ~stop;
   label_typ, label_doc
@@ -117,7 +154,7 @@ let build_content qi (entry : type_enclosing_value) (entry2 : type_enclosing_val
      else "")
 
 let process_type qi position (entry : type_enclosing_value) (entry2 : type_enclosing_value option) =
-  reset qi "open";
+  hide qi "open";
   let typ = build_content qi entry entry2 in
   let markup = Markup.type_info typ in
   let start = qi.view#obuffer#get_iter (`LINECHAR (entry.te_start.line - 1, entry.te_start.col)) in
@@ -135,7 +172,7 @@ let invoke_merlin qi iter =
   let position = iter#line + 1, iter#line_index in
   qi.merlin@@Merlin.type_enclosing ~position begin fun types ->
     match types with
-    | [] -> reset qi "no-type"
+    | [] -> hide qi "no-type"
     | fst :: snd :: _ -> process_type qi position fst (Some snd)
     | fst :: _ -> process_type qi position fst None
   end
@@ -153,11 +190,9 @@ let get_typeable_iter_at_coords qi x y =
   || (match is_iter_in_comment qi.view#obuffer iter with None -> false | _ -> true)
   then None else Some iter
 
-let process_location ?(do_reset=false) ?(invoke=true) qi x y =
-  if do_reset then begin
-    qi.prev_x <- x;
-    qi.prev_y <- y;
-  end;
+let process_location ?(invoke=true) qi x y =
+  qi.prev_x <- x;
+  qi.prev_y <- y;
   match qi.current_area with
   | Some area when area @<= (x, y) -> ()
   | _ ->
@@ -165,19 +200,20 @@ let process_location ?(do_reset=false) ?(invoke=true) qi x y =
         match get_typeable_iter_at_coords qi x y with
         | Some iter when invoke -> invoke_merlin qi iter
         | Some _ -> ()
-        | _ when do_reset -> reset qi "not-typeable"
-        | _ -> ()
+        | _ -> hide qi "not-typeable"
       end
 
+(** Displays quick info about the expression at the specified iter.
+    Stops the timer to avoid interference with the mouse movements.
+    The timer will be restarted by pressing Esc or the mouse button. *)
 let at_iter qi iter =
   stop qi;
   let rect = qi.view#get_iter_location iter in
   let x = Gdk.Rectangle.x rect in
   let y = Gdk.Rectangle.y rect in
   let x, y = qi.view#buffer_to_window_coords ~x ~y ~tag:`WIDGET in
-  Printf.printf "quick_info_at_cursor %d %d\n%!" x y;
   qi.show_at <- Some (x, y + Gdk.Rectangle.height rect);
-  process_location ~do_reset:true ~invoke:true qi x y
+  process_location ~invoke:true qi x y
 
 let work qi x y root_window =
   if x = qi.prev_x && y = qi.prev_y then begin
@@ -193,12 +229,13 @@ let work qi x y root_window =
         let is_mouse_over =
           wx <= px && px <= wx + r.Gtk.width && wy <= py && py <= wy + r.Gtk.height
         in
-        if is_mouse_over then () else process_location ~do_reset:true qi x y
+        if is_mouse_over then () else process_location qi x y
     | _ ->
-        process_location ~do_reset:true ~invoke:false qi x y
+        process_location ~invoke:false qi x y
   end;
   qi.is_active
 
+(** Restart the timer, possibly in idle mode. *)
 let rec restart qi ~idle =
   stop qi;
   qi.is_idle <- idle;
@@ -207,7 +244,7 @@ let rec restart qi ~idle =
 and start qi =
   if not qi.is_active && Preferences.preferences#get.Settings_j.editor_quick_info_enabled then begin
     Printexc.record_backtrace true;
-    Printf.printf "Quick_info timer START %s \n%!" (if qi.is_idle then "IDLE" else "WORKING");
+    Printf.printf "Quick_info timer START %s (%s)\n%!" (if qi.is_idle then "IDLE" else "WORKING") qi.filename;
     qi.is_active <- true;
     let root_window = Gdk.Window.root_parent () in
     match qi.view#get_window `WIDGET with
@@ -223,8 +260,8 @@ and start qi =
                   if qi.is_idle then begin
                     restart qi ~idle:false;
                     false
-                  end else if qi.is_suspended
-                  then qi.is_active else
+                  end else if qi.is_suspended then qi.is_active
+                  else
                     work qi x y root_window
                 end else begin
                   if qi.is_idle then qi.is_active else begin
@@ -242,9 +279,11 @@ and start qi =
 let create (view : Ocaml_text.view) =
   let open Preferences in
   let bg_color = ?? (Preferences.preferences#get.editor_bg_color_popup) in
+  let filename = match view#obuffer#file with Some file -> file#filename | _ -> "" in
   let qi =
     {
       view = view;
+      filename = filename;
       tag = view#buffer#create_tag ~name:"quick-info" [`BACKGROUND bg_color];
       timer_id = None;
       prev_x = 0;
@@ -260,26 +299,23 @@ let create (view : Ocaml_text.view) =
   in
   view#event#connect#key_press ~callback:begin fun ev ->
     if GdkEvent.Key.keyval ev = GdkKeysyms._Escape then begin
-      reset qi "Escape";
-      qi.is_suspended <- false;
+      hide qi "Escape";
       restart qi ~idle:false;
     end else begin
       if not qi.is_suspended then begin
-        reset qi "key-press";
-        qi.is_suspended <- true;
-        restart qi ~idle:true;
+        hide qi "key-press";
+        suspend qi;
       end;
     end;
     false
   end |> ignore;
   view#event#connect#motion_notify ~callback:begin fun _ ->
-    qi.is_suspended <- false;
+    if qi.is_suspended then resume qi;
     false
   end |> ignore;
   view#event#connect#button_press ~callback:begin fun _ ->
-    reset qi "button-press";
-    qi.is_suspended <- false;
-    restart qi ~idle:true;
+    hide qi "button-press";
+    restart qi ~idle:true; (* restart idle to avoid redisplay popup *)
     false
   end |> ignore;
   Preferences.preferences#connect#changed ~callback:begin fun pref ->

@@ -662,7 +662,6 @@ class page ?file ~project ~scroll_offset ~offset ~editor () =
       ignore (text_view#event#connect#leave_notify ~callback:(fun _ -> Option.iter (fun at -> at#remove_tag()) annot_type; error_indication#hide_tooltip(); false));
       ignore (text_view#event#connect#focus_out ~callback:(fun _ -> Option.iter (fun at -> at#remove_tag()) annot_type; error_indication#hide_tooltip(); false));
       text_view#event#connect#focus_out ~callback:(fun _ -> Quick_info.stop quick_info; false) |> ignore;
-      text_view#event#connect#leave_notify ~callback:(fun _ -> Quick_info.stop quick_info; false) |> ignore;
       (** Horizontal scrollbar appears/disappears according to the window size *)
       ignore (sw#misc#connect#size_allocate ~callback:begin fun _ ->
           let alloc = sw#misc#allocation in
