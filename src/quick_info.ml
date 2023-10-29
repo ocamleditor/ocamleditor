@@ -94,7 +94,15 @@ let display qi start stop =
       let win = Gtk_util.window_tooltip sw#coerce ~fade:false ~x ~y ~width:700 ~height:300 ~show:false () in
       qi.window <- Some win;
       win#present()
-    end else win#present()
+    end else win#present();
+    qi.window |> Option.iter begin fun win ->
+      win#event#connect#button_press ~callback:begin fun _ ->
+        qi.is_active <- false;
+        (*win#misc#modify_bg [`NORMAL, `COLOR (win#misc#style#fg `SELECTED)];*)
+        win#misc#modify_bg [`NORMAL, `COLOR (Preferences.editor_tag_bg_color "selection")];
+        true
+      end |> ignore
+    end;
   end;
   qi.view#buffer#apply_tag qi.tag ~start ~stop;
   label_typ, label_doc
@@ -185,15 +193,7 @@ let work qi x y root_window =
         let is_mouse_over =
           wx <= px && px <= wx + r.Gtk.width && wy <= py && py <= wy + r.Gtk.height
         in
-        if is_mouse_over then begin
-          win#event#connect#button_press ~callback:begin fun _ ->
-            qi.is_active <- false;
-            (*win#misc#modify_bg [`NORMAL, `COLOR (win#misc#style#fg `SELECTED)];*)
-            win#misc#modify_bg [`NORMAL, `COLOR (Preferences.editor_tag_bg_color "selection")];
-            true
-          end |> ignore
-        end else
-          process_location ~do_reset:true qi x y
+        if is_mouse_over then () else process_location ~do_reset:true qi x y
     | _ ->
         process_location ~do_reset:true ~invoke:false qi x y
   end;
