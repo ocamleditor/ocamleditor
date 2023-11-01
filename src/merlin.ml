@@ -17,7 +17,7 @@ let execute
     filename source_code command =
   let cwd = Sys.getcwd() in
   let filename = match Miscellanea.filename_relative cwd filename with Some path -> path | _ -> filename in
-  let cmd_line = "ocamlmerlin" :: "server" :: command @ [ "-filename"; filename ] in
+  let cmd_line = "ocamlmerlin" :: "server" :: command @ [ "-thread"; "-filename"; filename ] in
   Log.println `INFO "%s" (cmd_line |> String.concat " ");
   let (_, oc, _) as channels = Unix.open_process_full (cmd_line |> String.concat " ") (Unix.environment ()) in
   output_string oc source_code;

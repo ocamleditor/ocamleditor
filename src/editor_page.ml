@@ -606,7 +606,7 @@ class page ?file ~project ~scroll_offset ~offset ~editor () =
           end
 
     method quick_info_at_iter iter =
-      Quick_info.at_iter quick_info iter
+      Quick_info.at_iter quick_info iter ()
 
     initializer
       global_gutter#misc#connect#query_tooltip ~callback:begin fun ~x ~y ~kbd tooltip ->

@@ -137,6 +137,7 @@ widget \"*.gitbutton\" style:highest \"gitbutton\"
       "gtk-button-images = 0";
       "gtk-double-click-time = 500";
       "gtk-double-click-distance = 10";
+      "gtk-tooltip-timeout=500";
       gtk_font_name;
     ]
   in
