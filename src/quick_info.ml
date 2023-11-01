@@ -10,84 +10,136 @@ let merlin (buffer : Ocaml_text.buffer) func =
   let source_code = buffer#get_text () in
   func ~filename ~source_code
 
+module SignalId = struct
+  let create () = ref None
+  let save cell id = cell := Some id
+  let disconnect cell widget =
+    match !cell with
+    | Some id -> cell := None; GtkSignal.disconnect widget id
+    | None -> ()
+end
+
+module Lock = struct
+  let index = Mutex.create()
+  let wininfo = Mutex.create()
+  let mutex mx f x =
+    Mutex.lock mx;
+    try
+      let res = f x in
+      Mutex.unlock mx;
+      res
+    with ex ->
+      Mutex.unlock mx;
+      raise ex
+end
+
+(** [!!mutex f x] applies [f] to [x] inside a critical section locked by
+    [mutex] and returns its result. *)
+let (!!) mx f x = Lock.mutex mx f x
+
+let (<<-) x f = f x and (->>) f x = fun mx -> Lock.mutex mx f x
+
+let index = ref 10_000
+let new_index () =
+  !!Lock.index begin fun () ->
+    index := !index + 1;
+    !index
+  end ()
+
 (** The type of quick info. *)
 type t = {
   view : Ocaml_text.view;
   filename : string;
   tag : GText.tag;
-  mutable can_tooltip : bool;
-  mutable timer_id : GMain.Timeout.id option;
-  mutable prev_x : int;
-  mutable prev_y : int;
-  mutable current_area : (int * int * int * int) option;
-  (** It is the area of the editor view that contains the expression for which
-      quick info is currently shown. *)
-
-  mutable is_active : bool;
-  (** Indicates whether the timer is running. [start] and [stop] change this flag. *)
-
-  mutable is_idle : bool;
-  (** When the timer is idle it runs at low speed and does nothing other than
-      check whether the the mouse moves within the editor view and, in this case,
-      restarts in working (i.e. not idle) mode. *)
-
-  mutable is_suspended : bool;
-  (** When timer is suspended it runs at working speed and does nothing.
-      The timer is suspended on key-press event in order to prevent quick info
-      popups from appearing as you type.
-      It can be reactivated by pressing Esc or the mouse button, or by moving
-      the mouse or restarting the timer. *)
-
+  mutable current_x : int;
+  mutable current_y : int;
   mutable show_at : (int * int) option;
   (** Contains the location to display quick information when you want to
       override the default location, which is the mouse pointer. *)
 
-  mutable window : GWindow.window option;
+  mutable windows : wininfo list;
   mutable merlin : (filename:string -> source_code:string -> unit) -> unit;
 }
 
-let delay_idle = 2000
-let delay_work = 100
+and wininfo = {
+  window : GWindow.window;
+  mutable area : ((int * int * int * int) * (GText.iter * GText.iter)) option;
+  (** It is the area of the editor that contains the expression for which quick
+      info is currently shown. *)
+
+  mutable is_pinned : bool;
+  mutable index : int;
+}
 
 let (@<=) (left, top, right, bottom) (x, y) =
   left <= x && x <= right && top <= y && y <= bottom
 
-let suspend qi =
-  if not qi.is_suspended then Log.println `INFO "Suspended  %s" qi.filename;
-  qi.is_suspended <- true
+(** Returns the last open quick info window. This function is not thread safe. *)
+let get_current_window_unsafe qi =
+  match qi.windows with
+  | wininfo :: _ -> Some wininfo
+  | _ -> None
 
-let resume qi =
-  if qi.is_suspended then Log.println `INFO "Resumed %s%!" qi.filename;
-  qi.is_suspended <- false
+(** Returns the last open quick info window. *)
+let get_current_window qi = !!Lock.wininfo get_current_window_unsafe qi
 
-(** Hides the quick info popup and the expression highlighting. *)
-let hide qi n =
-  (*Log.println `DEBUG "HIDE %s\n%!" n;*)
-  qi.view#buffer#remove_tag qi.tag ~start:qi.view#buffer#start_iter ~stop:qi.view#buffer#end_iter;
-  qi.current_area <- None;
-  qi.window |> Option.iter begin fun w ->
-    Gmisclib.Idle.add w#destroy;
-    qi.window <- None
-  end
+let remove_highlight qi wi =
+  match wi.area with
+  | Some (_, (start, stop)) ->
+      qi.view#buffer#remove_tag qi.tag ~start ~stop;
+      wi.area <- None
+  | _ -> ()
 
-(** Optionally hides quick info (default is hide), stops the timer and clears
-    its status. *)
-let stop ?(do_hide=true) qi =
-  if do_hide then hide qi "stop";
-  if qi.is_active then begin
-    qi.is_active <- false;
-    resume qi;
-    qi.timer_id |> Option.iter GMain.Timeout.remove;
-    Log.println `INFO "STOP (%s)%!" qi.filename
-  end else
-    Log.println `INFO "already STOPPED (%s)%!" qi.filename
+let add_wininfo qi =
+  !!Lock.wininfo (fun wi -> qi.windows <- wi :: qi.windows)
 
-(** Stops the timer to clear the quick info status but does not hide quick info
-    on the screen. *)
-let pin_window qi (win : GWindow.window) =
-  win#event#connect#button_press ~callback:begin fun _ ->
-    stop ~do_hide:false qi;
-    win#misc#modify_bg [`NORMAL, `COLOR (Preferences.editor_tag_bg_color "selection")];
+(** Starts a timer that closes the specified quick-info window and removes
+    expression highlighting in the editor. An exception is the case
+    in which the window is pinned when the timer expires.
+    Delayed close allows the user to move the mouse pointer over the window
+    to pin it before it closes. *)
+let remove_wininfo qi wi =
+  GMain.Timeout.add ~ms:600 ~callback:begin fun () ->
+    if not wi.is_pinned then begin
+      !!Lock.wininfo begin fun () ->
+        if not wi.is_pinned then remove_highlight qi wi;
+        qi.windows <- qi.windows |> List.filter (fun x -> x.window#misc#get_oid <> wi.window#misc#get_oid);
+      end ();
+      wi.window#destroy();
+    end;
+    false
+  end |> ignore
+
+(** [is_pinned qi] is [true] iff the last open quick info window is pinned. *)
+let is_pinned qi =
+  match get_current_window qi with Some wi -> wi.is_pinned | _ -> false
+
+(** Immediately hides the last open quick-info window and all the others
+    previously open and in timed closure. The pinned window is an exception
+    and is not hidden. *)
+let hide qi =
+  !!Lock.wininfo begin fun () ->
+    qi.windows |> List.iter begin fun wi ->
+      if not wi.is_pinned then begin
+        remove_highlight qi wi;
+        wi.window#misc#hide()
+      end
+    end;
+  end ()
+
+let unpin qi =
+  !!Lock.wininfo (List.iter (fun w -> w.is_pinned <- false)) qi.windows;
+  hide qi
+
+(** Closes the last open quick-info and all other windows with timed closure. *)
+let close qi cause =
+  (*if cause <> "" then Log.println `DEBUG "CLOSE %s" cause;*)
+  qi.windows |> List.iter (remove_wininfo qi)
+
+let make_pinnable wininfo =
+  wininfo.window#event#connect#button_press ~callback:begin fun _ ->
+    wininfo.is_pinned <- true;
+    wininfo.window#misc#modify_bg [`NORMAL, `COLOR (Preferences.editor_tag_bg_color "selection")];
     true
   end |> ignore
 
@@ -108,10 +160,10 @@ let get_area qi start stop =
 (** Displays the quick info popup window.  *)
 let display qi start stop =
   let xstart, ystart, xstop, ystop = get_area qi start stop in
-  qi.current_area <- Some (xstart, ystart, xstop, ystop);
   let open Preferences in
   let open Settings_j in
   let vbox = GPack.vbox ~spacing:2 () in
+  (*let label_index = GMisc.label ~xpad:5 ~ypad:5 ~xalign:0.0 ~yalign:0.0 ~packing:vbox#add () in*)
   let label_typ = GMisc.label ~xpad:5 ~ypad:5 ~xalign:0.0 ~yalign:0.0 ~packing:vbox#add () in
   let label_doc = GMisc.label ~xpad:5 ~ypad:5 ~xalign:0.0 ~yalign:0.0 ~line_wrap:true ~packing:vbox#add () in
   label_typ#set_use_markup true;
@@ -128,11 +180,19 @@ let display qi start stop =
         let ly, lh = qi.view#get_line_yrange start in
         pX (*- px + xstart*), pY - py + ystart + lh
   in
-  (* TODO Can this be optimized? *)
-  let win = Gtk_util.window_tooltip vbox#coerce ~fade:false ~x ~y ~show:false () in
-  qi.window <- Some win;
-  Gmisclib.Idle.add ~prio:300 begin fun () ->
-    win#show();
+  let area = Some ((xstart, ystart, xstop, ystop), (start, stop)) in
+  let window = Gtk_util.window_tooltip vbox#coerce ~fade:false ~x ~y ~show:false () in
+  let wininfo = {
+    window;
+    area;
+    is_pinned = false;
+    index = new_index();
+  } in
+  add_wininfo qi wininfo;
+  (*kprintf label_index#set_label "%d" wininfo.index;*)
+  make_pinnable wininfo;
+  Gmisclib.Idle.add begin fun () ->
+    window#present();
     let r = vbox#misc#allocation in
     if r.Gtk.height > 200 then begin
       let sw = GBin.scrolled_window ~hpolicy:`AUTOMATIC () in
@@ -140,14 +200,22 @@ let display qi start stop =
       sw#misc#modify_bg [`NORMAL, `NAME ?? (Preferences.preferences#get.editor_bg_color_popup)];
       vp#misc#modify_bg [`NORMAL, `NAME ?? (Preferences.preferences#get.editor_bg_color_popup)];
       vbox#misc#reparent vp#coerce;
-      win#destroy();
-      let win = Gtk_util.window_tooltip sw#coerce ~fade:false ~x ~y ~width:700 ~height:300 ~show:false () in
-      qi.window <- Some win;
-      win#present()
-    end else win#present();
-    qi.window |> Option.iter (pin_window qi);
+      hide qi;
+      close qi "";
+      let window = Gtk_util.window_tooltip sw#coerce ~fade:false ~x ~y ~width:700 ~height:300 ~show:false () in
+      let wininfo = {
+        window;
+        area;
+        is_pinned = false;
+        index = new_index();
+      } in
+      add_wininfo qi wininfo;
+      (*kprintf label_index#set_label "%d" wininfo.index;*)
+      make_pinnable wininfo;
+      window#present()
+    end;
+    qi.view#buffer#apply_tag qi.tag ~start ~stop;
   end;
-  qi.view#buffer#apply_tag qi.tag ~start ~stop;
   label_typ, label_doc
 
 let build_content qi (entry : type_enclosing_value) (entry2 : type_enclosing_value option) =
@@ -159,8 +227,9 @@ let build_content qi (entry : type_enclosing_value) (entry2 : type_enclosing_val
      then entry2 |> Option.fold ~none:"" ~some:(fun (x : type_enclosing_value) -> "\n" ^ x.te_type)
      else "")
 
-let process_type qi position (entry : type_enclosing_value) (entry2 : type_enclosing_value option) =
-  hide qi "open";
+(** Opens a new quick information window with the information received from merlin.
+    This function is applied in a separate thread from the main one. *)
+let spawn_window qi position (entry : type_enclosing_value) (entry2 : type_enclosing_value option) =
   let typ = build_content qi entry entry2 in
   let markup = Markup.type_info typ in
   let start = qi.view#obuffer#get_iter (`LINECHAR (entry.te_start.line - 1, entry.te_start.col)) in
@@ -174,13 +243,13 @@ let process_type qi position (entry : type_enclosing_value) (entry2 : type_enclo
     label_doc#set_label markup;
   end
 
-let invoke_merlin qi iter =
+let invoke_merlin qi iter ~continue_with =
   let position = iter#line + 1, iter#line_index in
   qi.merlin@@Merlin.type_enclosing ~position begin fun types ->
     match types with
-    | [] -> hide qi "no-type"
-    | fst :: snd :: _ -> process_type qi position fst (Some snd)
-    | fst :: _ -> process_type qi position fst None
+    | [] -> close qi "no-type"
+    | fst :: snd :: _ -> continue_with position fst (Some snd)
+    | fst :: _ -> continue_with position fst None
   end
 
 let is_iter_in_comment (buffer : Ocaml_text.buffer) iter =
@@ -196,99 +265,58 @@ let get_typeable_iter_at_coords qi x y =
   || (match is_iter_in_comment qi.view#obuffer iter with None -> false | _ -> true)
   then None else Some iter
 
-let process_location ?(invoke=true) qi x y =
-  qi.prev_x <- x;
-  qi.prev_y <- y;
-  match qi.current_area with
-  | Some area when area @<= (x, y) -> ()
+let process_location qi x y =
+  let current_window = get_current_window qi in
+  let current_area = Option.bind current_window (fun x -> x.area) in
+  match current_area with
+  | Some (area, _) when area @<= (x, y) -> ()
+  | _ when is_pinned qi -> ()
   | _ ->
-      begin
-        match get_typeable_iter_at_coords qi x y with
-        | Some iter when invoke -> invoke_merlin qi iter
-        | Some _ -> ()
-        | _ -> hide qi "not-typeable"
-      end
-
-(** Displays quick info about the expression at the specified iter.
-    Stops the timer to avoid interference with the mouse movements.
-    The timer will be restarted by pressing Esc or the mouse button. *)
-let at_iter qi iter =
-  stop qi;
-  let rect = qi.view#get_iter_location iter in
-  let x = Gdk.Rectangle.x rect in
-  let y = Gdk.Rectangle.y rect in
-  let x, y = qi.view#buffer_to_window_coords ~x ~y ~tag:`WIDGET in
-  qi.show_at <- Some (x, y + Gdk.Rectangle.height rect);
-  process_location ~invoke:true qi x y
-
-let work qi x y root_window =
-  if x = qi.prev_x && y = qi.prev_y then begin
-    match qi.window with
-    | Some _ -> ()
-    | _ -> process_location qi x y
-  end else begin
-    match qi.window with
-    | Some win ->
-        let r = win#misc#allocation in
-        let wx, wy = Gdk.Window.get_position win#misc#window in
-        let px, py = Gdk.Window.get_pointer_location root_window in
-        let is_mouse_over =
-          wx <= px && px <= wx + r.Gtk.width && wy <= py && py <= wy + r.Gtk.height
-        in
-        if is_mouse_over then () else process_location qi x y
-    | _ ->
-        process_location ~invoke:false qi x y
-  end;
-  qi.is_active
-
-(** Restart the timer, possibly in idle mode. *)
-let rec restart qi ~idle =
-  stop qi;
-  qi.is_idle <- idle;
-  start qi
-
-and start qi =
-  if
-    not qi.is_active &&
-    Preferences.preferences#get.Settings_j.editor_quick_info_enabled &&
-    qi.view#misc#get_flag `VISIBLE &&
-    qi.view#misc#get_flag `HAS_FOCUS
-  then begin
-    Printexc.record_backtrace true;
-    Log.println `INFO "START %s (%s)%!" (if qi.is_idle then "IDLE" else "WORKING") qi.filename;
-    qi.is_active <- true;
-    let root_window = Gdk.Window.root_parent () in
-    match qi.view#get_window `WIDGET with
-    | None -> ()
-    | Some view_window ->
-        let ms = if qi.is_idle then delay_idle else delay_work in
-        qi.timer_id <- Some begin
-            GMain.Timeout.add ~ms ~callback:begin fun () ->
+      let is_immobile = x = qi.current_x && y = qi.current_y in
+      qi.current_x <- x;
+      qi.current_y <- y;
+      let is_mouse_over =
+        match current_window with
+        | Some wi ->
+            begin
               try
-                if qi.can_tooltip then begin
-                  qi.can_tooltip <- false;
-                  let x, y = Gdk.Window.get_pointer_location view_window in
-                  let r = qi.view#misc#allocation in
-                  if x >= 0 && y >= 0 && x <= r.Gtk.width && y <= r.Gtk.height then begin
-                    if qi.is_idle then begin
-                      restart qi ~idle:false;
-                      false
-                    end else if qi.is_suspended then qi.is_active
-                    else
-                      work qi x y root_window
-                  end else begin
-                    if qi.is_idle then qi.is_active else begin
-                      restart qi ~idle:true;
-                      false
-                    end
-                  end
-                end else qi.is_active
-              with ex ->
-                Printf.eprintf "File \"quick_info.ml\": %s\n%s\n%!" (Printexc.to_string ex) (Printexc.get_backtrace());
-                qi.is_active
+                let root_window = Gdk.Window.root_parent () in
+                let r = wi.window#misc#allocation in
+                let wx, wy = Gdk.Window.get_position wi.window#misc#window in
+                let px, py = Gdk.Window.get_pointer_location root_window in
+                wx <= px && px <= wx + r.Gtk.width && wy <= py && py <= wy + r.Gtk.height
+              with Gpointer.Null -> false
             end
-          end
-  end
+        | _ -> false
+      in
+      if is_mouse_over then ()
+      else if is_immobile then begin
+        match get_typeable_iter_at_coords qi x y with
+        | Some iter ->
+            hide qi;
+            close qi "before-invoke-merlin";
+            invoke_merlin qi iter ~continue_with:(spawn_window qi);
+        | _ -> close qi "not-typeable"
+      end else close qi ""
+
+(** Displays quick info about the expression at the specified iter. *)
+let at_iter (qi : t) (iter : GText.iter) () = ()
+(*  stop qi;
+    let rect = qi.view#get_iter_location iter in
+    let x = Gdk.Rectangle.x rect in
+    let y = Gdk.Rectangle.y rect in
+    let x, y = qi.view#buffer_to_window_coords ~x ~y ~tag:`WIDGET in
+    qi.show_at <- Some (x, y + Gdk.Rectangle.height rect);
+    process_location ~invoke:true qi x y*)
+
+let query_tooltip qi ~x ~y ~kbd _ =
+  (*Log.println `DEBUG "%d %d %f" x y (Unix.gettimeofday());*)
+  begin
+    try process_location qi x y;
+    with ex ->
+      Printf.eprintf "File \"quick_info.ml\": %s\n%s\n%!" (Printexc.to_string ex) (Printexc.get_backtrace());
+  end;
+  false
 
 let create (view : Ocaml_text.view) =
   let open Preferences in
@@ -299,57 +327,52 @@ let create (view : Ocaml_text.view) =
       view = view;
       filename = filename;
       tag = view#buffer#create_tag ~name:"quick-info" [`BACKGROUND bg_color];
-      can_tooltip = false;
-      timer_id = None;
-      prev_x = 0;
-      prev_y = 0;
-      current_area = None;
-      is_active = false;
-      is_idle = false;
-      is_suspended = false;
-      window = None;
+      current_x = 0;
+      current_y = 0;
       show_at = None;
+      windows = [];
       merlin = merlin view#obuffer;
     }
   in
+  let motion_notify = SignalId.create() in
   view#event#connect#key_press ~callback:begin fun ev ->
-    if GdkEvent.Key.keyval ev = GdkKeysyms._Escape then begin
-      hide qi "Escape";
-      restart qi ~idle:false;
-    end else begin
-      if not qi.is_suspended then begin
-        hide qi "key-press";
-        suspend qi;
-      end;
-    end;
-    false
-  end |> ignore;
-  view#event#connect#motion_notify ~callback:begin fun _ ->
-    if qi.is_suspended then resume qi;
+    view#misc#set_has_tooltip false;
+    view#event#connect#motion_notify ~callback:begin fun _ ->
+      view#misc#set_has_tooltip true;
+      SignalId.disconnect motion_notify view#as_widget;
+      false
+    end |> SignalId.save motion_notify;
+    hide qi;
+    close qi "key-press";
     false
   end |> ignore;
   view#event#connect#button_press ~callback:begin fun _ ->
-    hide qi "button-press";
-    restart qi ~idle:true; (* restart idle to avoid redisplay popup *)
+    unpin qi;
+    close qi "button-press";
+    false
+  end |> ignore;
+  view#event#connect#scroll ~callback:begin fun _ ->
+    unpin qi;
+    hide qi;
+    close qi "scroll";
     false
   end |> ignore;
   view#event#connect#focus_in ~callback:begin fun _ ->
-    Log.println `DEBUG "focus_int %s" qi.filename;
-    start qi;
+    GMain.Timeout.add ~ms:500 ~callback:begin fun () ->
+      view#misc#set_has_tooltip true;
+      false
+    end |> ignore;
     false
   end |> ignore;
   view#event#connect#focus_out ~callback:begin fun _ ->
-    Log.println `DEBUG "focus_out %s" qi.filename;
-    stop qi;
+    unpin qi;
+    view#misc#set_has_tooltip false;
+    close qi "focus_out";
     false
   end |> ignore;
-  view#misc#connect#query_tooltip ~callback:begin fun ~x ~y ~kbd _ ->
-    qi.can_tooltip <- true;
-    false
-  end |> ignore;
+  view#misc#set_has_tooltip true;
+  view#misc#connect#query_tooltip ~callback:(query_tooltip qi) |> ignore;
   Preferences.preferences#connect#changed ~callback:begin fun pref ->
-    match pref.Settings_j.editor_quick_info_enabled with
-    | true -> start qi
-    | false -> stop qi
+    qi.view#misc#set_has_tooltip pref.Settings_j.editor_quick_info_enabled
   end |> ignore;
   qi
