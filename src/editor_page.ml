@@ -605,6 +605,8 @@ class page ?file ~project ~scroll_offset ~offset ~editor () =
             Gmisclib.Idle.add (fun () -> ignore (view#scroll_to_iter iter));
           end
 
+    method quick_info = quick_info
+
     method quick_info_at_iter iter =
       Quick_info.at_iter quick_info iter ()
 

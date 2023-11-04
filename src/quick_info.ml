@@ -51,6 +51,7 @@ type t = {
   view : Ocaml_text.view;
   filename : string;
   tag : GText.tag;
+  mutable is_active : bool;
   mutable current_x : int;
   mutable current_y : int;
   mutable show_at : (int * int) option;
@@ -99,7 +100,7 @@ let add_wininfo qi =
     Delayed close allows the user to move the mouse pointer over the window
     to pin it before it closes. *)
 let remove_wininfo qi wi =
-  GMain.Timeout.add ~ms:600 ~callback:begin fun () ->
+  GMain.Timeout.add ~ms:200 ~callback:begin fun () ->
     if not wi.is_pinned then begin
       !!Lock.wininfo begin fun () ->
         if not wi.is_pinned then remove_highlight qi wi;
@@ -318,12 +319,17 @@ let query_tooltip qi ~x ~y ~kbd _ =
   end;
   false
 
+let set_active qi value =
+  qi.is_active <- value;
+  if not qi.is_active then hide qi
+
 let create (view : Ocaml_text.view) =
   let open Preferences in
   let bg_color = ?? (Preferences.preferences#get.editor_bg_color_popup) in
   let filename = match view#obuffer#file with Some file -> file#filename | _ -> "" in
   let qi =
     {
+      is_active = true;
       view = view;
       filename = filename;
       tag = view#buffer#create_tag ~name:"quick-info" [`BACKGROUND bg_color];
@@ -338,7 +344,7 @@ let create (view : Ocaml_text.view) =
   view#event#connect#key_press ~callback:begin fun ev ->
     view#misc#set_has_tooltip false;
     view#event#connect#motion_notify ~callback:begin fun _ ->
-      view#misc#set_has_tooltip true;
+      view#misc#set_has_tooltip qi.is_active;
       SignalId.disconnect motion_notify view#as_widget;
       false
     end |> SignalId.save motion_notify;
@@ -347,8 +353,10 @@ let create (view : Ocaml_text.view) =
     false
   end |> ignore;
   view#event#connect#button_press ~callback:begin fun _ ->
+    view#misc#set_has_tooltip false;
     unpin qi;
     close qi "button-press";
+    Gmisclib.Idle.add ~prio:300 (fun () -> view#misc#set_has_tooltip qi.is_active);
     false
   end |> ignore;
   view#event#connect#scroll ~callback:begin fun _ ->
@@ -359,20 +367,20 @@ let create (view : Ocaml_text.view) =
   end |> ignore;
   view#event#connect#focus_in ~callback:begin fun _ ->
     GMain.Timeout.add ~ms:500 ~callback:begin fun () ->
-      view#misc#set_has_tooltip true;
+      view#misc#set_has_tooltip qi.is_active;
       false
     end |> ignore;
     false
   end |> ignore;
   view#event#connect#focus_out ~callback:begin fun _ ->
-    unpin qi;
     view#misc#set_has_tooltip false;
+    unpin qi;
     close qi "focus_out";
     false
   end |> ignore;
-  view#misc#set_has_tooltip true;
+  view#misc#set_has_tooltip qi.is_active;
   view#misc#connect#query_tooltip ~callback:(query_tooltip qi) |> ignore;
   Preferences.preferences#connect#changed ~callback:begin fun pref ->
-    qi.view#misc#set_has_tooltip pref.Settings_j.editor_quick_info_enabled
+    qi.view#misc#set_has_tooltip (qi.is_active && pref.Settings_j.editor_quick_info_enabled)
   end |> ignore;
   qi
