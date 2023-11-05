@@ -48,6 +48,16 @@ let icon_pressed =
     "  .  "|];;
 
 
+let label_icon ?(width=20) ?(height=16) ?(font_name="FiraCode Nerd Font Propo") ?color ?packing icon =
+  let markup = Printf.sprintf "<big>%s</big>" icon in
+  let label = GMisc.label ~xalign:0.5 ~yalign:0.5 ~xpad:0 ~ypad:0 ~width ~height ~markup ?packing () in
+  label#misc#modify_font_by_name font_name;
+  color |> Option.iter begin fun color ->
+    label#misc#modify_fg [ `NORMAL, `NAME color; `ACTIVE, `NAME color; `PRELIGHT, `NAME color ];
+    label#misc#modify_text [ `NORMAL, `NAME color; `ACTIVE, `NAME color; `PRELIGHT, `NAME color ];
+  end;
+  label
+
 class button_menu ?(label="") ?(relief=`NORMAL) ?stock ?spacing ?packing () =
   let box = GPack.hbox ?spacing ?packing () in
   let button = GButton.button ~relief ?stock ~packing:box#pack () in
@@ -71,8 +81,8 @@ class button_menu ?(label="") ?(relief=`NORMAL) ?stock ?spacing ?packing () =
     inherit GObj.widget box#as_widget
     val relief = relief
     val mutable gmenu = None
-    val image_pressed = (GMisc.image ~pixbuf:icon_pressed ())#coerce
-    val image_normal = (GMisc.image ~pixbuf:icon_normal ())#coerce
+    val image_pressed = (label_icon ~width:5 "<span size='small'>\u{f035d}</span>")#coerce
+    val image_normal = (label_icon ~width:5 "<span size='small'>\u{f035d}</span>")#coerce
     val mutable tooltip_text = None
     val mutable sigid_button_press = None
     val mutable sigid_button_released = None
@@ -81,7 +91,8 @@ class button_menu ?(label="") ?(relief=`NORMAL) ?stock ?spacing ?packing () =
 
     initializer
       ignore (button#connect#clicked ~callback:clicked#call);
-      button_menu#set_image image_normal;
+      button_menu#add image_normal;
+      button_menu#set_border_width 0;
       button#set_focus_on_click false;
       button_menu#set_focus_on_click false;
       ignore (button#connect#enter ~callback:begin fun _ ->

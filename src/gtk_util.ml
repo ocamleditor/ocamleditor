@@ -157,7 +157,8 @@ let label_icon ?(width=20) ?(height=16) ?(font_name="FiraCode Nerd Font Propo") 
   let label = GMisc.label ~xalign:0.5 ~yalign:0.5 ~xpad:0 ~ypad:0 ~width ~height ~markup ?packing () in
   label#misc#modify_font_by_name font_name;
   color |> Option.iter begin fun color ->
-    label#misc#modify_fg [ `NORMAL, `NAME color ];
+    label#misc#modify_fg [ `NORMAL, `NAME color; `ACTIVE, `NAME color; `PRELIGHT, `NAME color ];
+    label#misc#modify_text [ `NORMAL, `NAME color; `ACTIVE, `NAME color; `PRELIGHT, `NAME color ];
   end;
   label
 
