@@ -210,8 +210,6 @@ let create_tool ~(toolbox : GPack.box) item =
       tool#button#misc#set_name "menubar_button";
       tool#button_menu#misc#set_name "menubar_button_arrow";
       tool#button#set_focus_on_click false;
-      tool#button#misc#modify_fg [`PRELIGHT, `BLACK];
-      tool#button_menu#misc#modify_fg [`PRELIGHT, `BLACK];
       tool#connect#clicked ~callback:(fun () -> Gmisclib.Idle.add item.tool_callback) |> ignore;
       Gaux.may item.tool_callback_menu ~f:(fun callback -> tool#connect#show_menu ~callback) |> ignore;
       tool#coerce
@@ -239,7 +237,6 @@ let create_tool ~(toolbox : GPack.box) item =
       end;
       button#misc#set_name "menubar_button";
       button#set_focus_on_click false;
-      button#child#misc#modify_fg [`PRELIGHT, `BLACK];
       let callback = fun () -> Gmisclib.Idle.add item.tool_callback in
       button#connect#clicked ~callback |> ignore;
       button#coerce
