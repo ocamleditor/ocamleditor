@@ -48,7 +48,7 @@ let icon_pressed =
     "  .  "|];;
 
 
-let label_icon ?(width=20) ?(height=16) ?(font_name="FiraCode Nerd Font Propo") ?color ?packing icon =
+let label_icon ?(width=20) ?(height=16) ?(font_name="FiraCode OCamlEditor") ?color ?packing icon =
   let markup = Printf.sprintf "<big>%s</big>" icon in
   let label = GMisc.label ~xalign:0.5 ~yalign:0.5 ~xpad:0 ~ypad:0 ~width ~height ~markup ?packing () in
   label#misc#modify_font_by_name font_name;

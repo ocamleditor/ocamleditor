@@ -50,12 +50,9 @@ class browser window =
   let vbox = GPack.vbox ~packing:Messages.hpaned#add1 () in
   let menubarbox = GPack.hbox ~spacing:0 ~packing:vbox#pack () in
   (* Menubar icon displayed full-screen mode *)
-  let logo = (??? Icons.oe_32) in
-  let width, height = GdkPixbuf.get_width logo, GdkPixbuf.get_height logo in
-  let pixbuf = GdkPixbuf.create ~width ~height ~has_alpha:(GdkPixbuf.get_has_alpha logo) () in
-  let () = GdkPixbuf.saturate_and_pixelate ~saturation:0.0 ~pixelate:true ~dest:pixbuf logo in
   let window_title_menu_icon = GBin.event_box ~packing:menubarbox#pack ~show:false () in
-  let icon = GMisc.image ~pixbuf ~packing:window_title_menu_icon#add () in
+  let icon = Gtk_util.label_icon ~width:32 ~height:32 "<span font='20'>\u{e10e}</span>" ~packing:window_title_menu_icon#add in
+  let _ = icon#misc#modify_fg [`NORMAL, `COLOR (icon#misc#style#fg `INSENSITIVE) ] in
   let _ = window_title_menu_icon#misc#set_property "visible-window" (`BOOL false) in
 
   (* Menubar *)

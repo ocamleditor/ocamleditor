@@ -107,7 +107,7 @@ let specs ~browser =
 
     1200, `SEP,            I, N, "", ignore, None;
 
-    1300, `EVAL_TOPLEVEL,  B, L ("<span size='x-large'>\u{e67a}</span>", None), "Eval in Toplevel",
+    1300, `EVAL_TOPLEVEL,  B, L ("<span size='x-large'>\u{e00a}</span>", None), "Eval in Toplevel",
     (fun _ -> editor#with_current_page (fun page -> page#ocaml_view#obuffer#send_to_shell ())),
     None;
 
@@ -126,21 +126,21 @@ let specs ~browser =
 
     1700, `SEP,            I, N, "", ignore, None;
 
-    1750, `CLEAN_PROJ,     B, L ("<span size='x-large'>\u{f00e2}</span>", None), "Clean Project",
+    1750, `CLEAN_PROJ,     B, N, "Clean Project",
     browser#project_clean,
     None;
 
-    1800, `CLEAN,          BM, L ("\u{f1299}", None), "Clean...",
+    1800, `CLEAN,          BM, L ("\u{f00e2}", None), "Clean...",
     (fun () -> browser#toolbar#clean_current browser),
     Some (browser#toolbar#clean_menu browser);
 
     1850, `SEP,            I, N, "", ignore, None;
 
-    1900, `COMPILE,        BM, L ("\u{f0045}", None), "Compile...",
+    1900, `COMPILE,        BM, L ("\u{e110}", None), "Compile...",
     (fun () -> browser#toolbar#compile_current browser),
     Some (browser#toolbar#compile_menu browser);
 
-    2000, `BUILD,          BM, L ("\u{f0120}", None), "Build...",
+    2000, `BUILD,          BM, L ("\u{e111}", None), "Build...",
     (fun () -> browser#toolbar#build_current browser),
     Some (browser#toolbar#build_menu browser);
 
@@ -205,7 +205,7 @@ let create_tool ~(toolbox : GPack.box) item =
   match item.kind with
   | I -> (GMisc.separator `VERTICAL ~packing:toolbox#pack ())#coerce
   | BM ->
-      let tool = Gmisclib.Button.button_menu ~relief:`NONE ~spacing:1 ~packing:toolbox#pack () in
+      let tool = Gmisclib.Button.button_menu ~relief:`NONE ~spacing:0 ~packing:toolbox#pack () in
       Gaux.may image ~f:(fun image -> tool#set_image image#coerce);
       tool#button#misc#set_name "menubar_button";
       tool#button_menu#misc#set_name "menubar_button_arrow";
