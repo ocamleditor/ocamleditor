@@ -122,6 +122,7 @@ let ocaml_codeset = "ISO-8859-1"
 *)
 let _ = Printexc.record_backtrace (List.mem_assoc "record_backtrace" App_config.application_param)
 
+let _ = App_config.ensure_ocamleditor_user_home ()
 let _ = Unix.putenv "TERM" ""
 let getenv_ocamllib = try Some (Sys.getenv "OCAMLLIB") with Not_found -> None
 

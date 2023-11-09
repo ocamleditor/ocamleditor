@@ -588,8 +588,10 @@ let ocamleditor_user_home =
     | false when application_debug -> ".ocamleditor.test"
     | false -> ".ocamleditor"
   in
-  let ocamleditor_user_home = user_home // dirname in
-  ocamleditor_user_home
+  user_home // dirname
+
+let ensure_ocamleditor_user_home () =
+  if not (Sys.file_exists ocamleditor_user_home) then (Unix.mkdir ocamleditor_user_home 509)
 
 let launcher_filename = ocamleditor_user_home // "launcher.list"
 
