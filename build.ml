@@ -212,7 +212,9 @@ module Make (X : sig
       else prefixes := Y.prefix :: !prefixes
 
     let verbosity = ref X.verbosity
+    let print_timestamp = ref X.print_timestamp
     let set_verbosity x = verbosity := x
+    let set_print_timestamp x = print_timestamp := x
 
     let prefix = Some (Y.prefix ^ ": ")
 
@@ -223,7 +225,7 @@ module Make (X : sig
 
     let print level f =
       if level <> `OFF && level >= !verbosity then begin
-        if X.print_timestamp then (Printf.fprintf X.channel "%s " (timestamp()));
+        if !print_timestamp then (Printf.fprintf X.channel "%s " (timestamp()));
         Printf.fprintf X.channel "[%s] " (string_of_verbosity level);
         Option.iter (Printf.fprintf X.channel "%s") prefix;
         Printf.kfprintf flush X.channel f
@@ -231,7 +233,7 @@ module Make (X : sig
 
     let println level f =
       if level <> `OFF && level >= !verbosity then begin
-        if X.print_timestamp then (Printf.fprintf X.channel "%s " (timestamp()));
+        if !print_timestamp then (Printf.fprintf X.channel "%s " (timestamp()));
         Printf.fprintf X.channel "[%s] " (string_of_verbosity level);
         Option.iter (fprintf X.channel "%s") prefix;
         Printf.kfprintf (function c -> Printf.fprintf c "\n%!") X.channel f
@@ -239,7 +241,7 @@ module Make (X : sig
 
     let fprint level f =
       if level <> `OFF && level >= !verbosity then begin
-        if X.print_timestamp then (Printf.kprintf (Format.pp_print_string log_formatter) "%s " (timestamp()));
+        if !print_timestamp then (Printf.kprintf (Format.pp_print_string log_formatter) "%s " (timestamp()));
         Printf.kprintf (Format.pp_print_string log_formatter) "[%s] " (string_of_verbosity level);
         Option.iter (Format.pp_print_string log_formatter) prefix;
         Format.kfprintf (fun fmt -> Format.pp_print_flush fmt ()) log_formatter f
@@ -247,7 +249,7 @@ module Make (X : sig
 
     let fprintln level f =
       if level <> `OFF && level >= !verbosity then begin
-        if X.print_timestamp then (Printf.kprintf (Format.pp_print_string log_formatter) "%s " (timestamp()));
+        if !print_timestamp then (Printf.kprintf (Format.pp_print_string log_formatter) "%s " (timestamp()));
         Printf.kprintf (Format.pp_print_string log_formatter) "[%s] " (string_of_verbosity level);
         Option.iter (Format.pp_print_string log_formatter) prefix;
         Format.kfprintf (fun fmt -> Format.pp_print_newline fmt (); Format.pp_print_flush fmt ())
@@ -586,9 +588,10 @@ let ocamleditor_user_home =
     | false when application_debug -> ".ocamleditor.test"
     | false -> ".ocamleditor"
   in
-  let ocamleditor_user_home = user_home // dirname in
-  if not (Sys.file_exists ocamleditor_user_home) then (Unix.mkdir ocamleditor_user_home 509);
-  ocamleditor_user_home
+  user_home // dirname
+
+let ensure_ocamleditor_user_home () =
+  if not (Sys.file_exists ocamleditor_user_home) then (Unix.mkdir ocamleditor_user_home 509)
 
 let launcher_filename = ocamleditor_user_home // "launcher.list"
 
@@ -646,8 +649,6 @@ module Spawn = struct type process = {
   outchan : out_channel;
   errchan : in_channel;
 }
-
-type result = [ `PID of int | `ERROR of exn | `SUCCESS ]
 
 (** create_process *)
 let create_process ?wd ?env program args =
@@ -2181,7 +2182,7 @@ let link ~compilation ~compiler ~outkind ~lflags ~includes ~libs ~outname ~deps
   | `SUCCESS (Unix.WEXITED code)
   | `SUCCESS (Unix.WSIGNALED code)
   | `SUCCESS (Unix.WSTOPPED code) ->
-      if verbose >= 4 then prerr_string (sprintf "Linker exited with code %d" code);
+      if code <> 0 && verbose >= 4 then prerr_string (sprintf "Linker exited with code %d" code);
       code
   | `ERROR ex -> -9997
 ;;
