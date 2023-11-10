@@ -1,4 +1,5 @@
 open Merlin_j
+open Printf
 
 module Log = Common.Log.Make(struct let prefix = "QUICK-INFO" end)
 let _ =
@@ -48,6 +49,7 @@ let new_index () =
 
 (** The type of quick info. *)
 type t = {
+  mutable markup_odoc : Markup.odoc;
   view : Ocaml_text.view;
   filename : string;
   tag : GText.tag;
@@ -169,8 +171,8 @@ let display qi start stop =
   let label_doc = GMisc.label ~xpad:5 ~ypad:5 ~xalign:0.0 ~yalign:0.0 ~line_wrap:true ~packing:vbox#add () in
   label_typ#set_use_markup true;
   label_doc#set_use_markup true;
-  label_doc#misc#modify_font_by_name (preferences#get.editor_completion_font);
-  label_typ#misc#modify_font_by_name (preferences#get.editor_base_font);
+  label_doc#misc#modify_font_by_name preferences#get.editor_completion_font;
+  kprintf label_typ#misc#modify_font_by_name "%s %s" preferences#get.editor_base_font qi.markup_odoc#code_font_size;
   let x, y =
     let pX, pY = Gdk.Window.get_pointer_location (Gdk.Window.root_parent ()) in
     let win = (match qi.view#get_window `WIDGET with None -> assert false | Some w -> w) in
@@ -235,14 +237,15 @@ let build_content qi (entry : type_enclosing_value) (entry2 : type_enclosing_val
 let spawn_window qi position (entry : type_enclosing_value) (entry2 : type_enclosing_value option) =
   let typ = build_content qi entry entry2 in
   let markup = Markup.type_info typ in
+  (*let markup = sprintf "<span size='%s'>%s</span>" markup_odoc#code_font_size (Markup.type_info typ) in
+    Printf.printf "%s\n%!" markup;*)
   let start = qi.view#obuffer#get_iter (`LINECHAR (entry.te_start.line - 1, entry.te_start.col)) in
   let stop = qi.view#obuffer#get_iter (`LINECHAR (entry.te_stop.line - 1, entry.te_stop.col)) in
   let label_typ, label_doc = display qi start stop in
   (*<span size='small' font_family='%s'>%s</span>*)
   label_typ#set_label markup;
-  let markup_odoc = new Markup.odoc() in
   qi.merlin@@Merlin.document ~position begin fun doc ->
-    let markup = markup_odoc#convert doc in
+    let markup = qi.markup_odoc#convert doc in
     label_doc#set_label markup;
   end
 
@@ -331,6 +334,7 @@ let create (view : Ocaml_text.view) =
   let filename = match view#obuffer#file with Some file -> file#filename | _ -> "" in
   let qi =
     {
+      markup_odoc = new Markup.odoc();
       is_active = true;
       view = view;
       filename = filename;
@@ -383,6 +387,7 @@ let create (view : Ocaml_text.view) =
   view#misc#set_has_tooltip qi.is_active;
   view#misc#connect#query_tooltip ~callback:(query_tooltip qi) |> ignore;
   Preferences.preferences#connect#changed ~callback:begin fun pref ->
-    qi.view#misc#set_has_tooltip (qi.is_active && pref.Settings_j.editor_quick_info_enabled)
+    qi.view#misc#set_has_tooltip (qi.is_active && pref.Settings_j.editor_quick_info_enabled);
+    qi.markup_odoc <- new Markup.odoc()
   end |> ignore;
   qi

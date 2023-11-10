@@ -51,7 +51,7 @@ class browser window =
   let menubarbox = GPack.hbox ~spacing:0 ~packing:vbox#pack () in
   (* Menubar icon displayed full-screen mode *)
   let window_title_menu_icon = GBin.event_box ~packing:menubarbox#pack ~show:false () in
-  let icon = Gtk_util.label_icon ~width:32 ~height:32 "<span font='20'>\u{e10e}</span>" ~packing:window_title_menu_icon#add in
+  let icon = Gtk_util.label_icon ~width:32 ~height:32 "<span font='18'>\u{e10e}</span>" ~packing:window_title_menu_icon#add in
   let _ = icon#misc#modify_fg [`NORMAL, `COLOR (icon#misc#style#fg `INSENSITIVE) ] in
   let _ = window_title_menu_icon#misc#set_property "visible-window" (`BOOL false) in
 

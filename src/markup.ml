@@ -10,13 +10,18 @@ let type_info ?(color=false) =
   else Print_type.markup2
 
 class odoc () =
-  let code_color = ?? (preferences#get.editor_fg_color_popup) in
-  let code_font_name = Preferences.preferences#get.editor_base_font in
+  let code_color = ?? (preferences#get.Settings_j.editor_fg_color_popup) in
+  let code_font_size =
+    let font = preferences#get.Settings_j.editor_completion_font in
+    Str.string_after font (String.rindex font ' ' + 1)
+  in
+  let code_font_name = Preferences.preferences#get.Settings_j.editor_base_font in
   let code_font_family =
     String.sub code_font_name 0 (Option.value (String.rindex_opt code_font_name ' ') ~default:(String.length code_font_name)) in
   let pending_newline = ref false in
   object (self)
     method code_font_family = code_font_family
+    method code_font_size = code_font_size
 
     method convert info =
       let open Odoc_info in
@@ -44,11 +49,11 @@ class odoc () =
         | Code code ->
             code
             |> Glib.Markup.escape_text
-            |> sprintf "<span color='%s' face='%s'>%s</span>" code_color code_font_family
+            |> sprintf "<span color='%s' font='%s %s'>%s</span>" code_color code_font_family code_font_size
         | CodePre code ->
             code
             |> Glib.Markup.escape_text
-            |> sprintf "\n<span color='%s' face='%s'>%s</span>\n" code_color code_font_family
+            |> sprintf "\n<span color='%s' font='%s %s'>%s</span>\n" code_color code_font_family code_font_size
         | Verbatim text ->
             text
             |> Glib.Markup.escape_text
@@ -76,7 +81,7 @@ class odoc () =
         | Link (link, text) ->
             sprintf "%s (<tt>%s</tt>)" (markup_of_elements text) link
         | Ref (name, _kind, text) ->
-            sprintf "<span color='%s' face='%s'>%s</span>%s" code_color code_font_family name
+            sprintf "<span color='%s' font='%s %s'>%s</span>%s" code_color code_font_family code_font_size name
               (match text with None -> "" | Some text -> (markup_of_elements text))
         | Module_list _ -> ""
         | Index_list -> ""
