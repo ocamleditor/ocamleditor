@@ -169,6 +169,8 @@ let display qi start stop =
   let label_doc = GMisc.label ~xpad:5 ~ypad:5 ~xalign:0.0 ~yalign:0.0 ~line_wrap:true ~packing:vbox#add () in
   label_typ#set_use_markup true;
   label_doc#set_use_markup true;
+  label_doc#misc#modify_font_by_name (preferences#get.editor_completion_font);
+  label_typ#misc#modify_font_by_name (preferences#get.editor_base_font);
   let x, y =
     let pX, pY = Gdk.Window.get_pointer_location (Gdk.Window.root_parent ()) in
     let win = (match qi.view#get_window `WIDGET with None -> assert false | Some w -> w) in

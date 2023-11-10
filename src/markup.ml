@@ -11,12 +11,12 @@ let type_info ?(color=false) =
 
 class odoc () =
   let code_color = ?? (preferences#get.editor_fg_color_popup) in
-  let font_name = Preferences.preferences#get.editor_base_font in
-  let font_family =
-    String.sub font_name 0 (Option.value (String.rindex_opt font_name ' ') ~default:(String.length font_name)) in
+  let code_font_name = Preferences.preferences#get.editor_base_font in
+  let code_font_family =
+    String.sub code_font_name 0 (Option.value (String.rindex_opt code_font_name ' ') ~default:(String.length code_font_name)) in
   let pending_newline = ref false in
   object (self)
-    method font_family = font_family
+    method code_font_family = code_font_family
 
     method convert info =
       let open Odoc_info in
@@ -44,11 +44,11 @@ class odoc () =
         | Code code ->
             code
             |> Glib.Markup.escape_text
-            |> sprintf "<span color='%s' face='%s'>%s</span>" code_color font_family
+            |> sprintf "<span color='%s' face='%s'>%s</span>" code_color code_font_family
         | CodePre code ->
             code
             |> Glib.Markup.escape_text
-            |> sprintf "\n<span color='%s' face='%s'>%s</span>\n" code_color font_family
+            |> sprintf "\n<span color='%s' face='%s'>%s</span>\n" code_color code_font_family
         | Verbatim text ->
             text
             |> Glib.Markup.escape_text
@@ -76,7 +76,7 @@ class odoc () =
         | Link (link, text) ->
             sprintf "%s (<tt>%s</tt>)" (markup_of_elements text) link
         | Ref (name, _kind, text) ->
-            sprintf "<span color='%s' face='%s'>%s</span>%s" code_color font_family name
+            sprintf "<span color='%s' face='%s'>%s</span>%s" code_color code_font_family name
               (match text with None -> "" | Some text -> (markup_of_elements text))
         | Module_list _ -> ""
         | Index_list -> ""

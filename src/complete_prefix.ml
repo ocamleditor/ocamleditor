@@ -74,7 +74,7 @@ class widget ~project ~(page : Editor_page.page) ~x ~y ?packing () =
   let col_desc = cols#add Gobject.Data.string in
   let col_info = cols#add Gobject.Data.string in
   let model = GTree.list_store cols in
-  let renderer = GTree.cell_renderer_text [`SCALE `SMALL; `YPAD 0] in
+  let renderer = GTree.cell_renderer_text [(*`SCALE `SMALL;*) `FONT Preferences.preferences#get.editor_completion_font; `YPAD 0] in
   let vc_kind = GTree.view_column ~renderer:(renderer, ["markup", col_kind]) () in
   let vc_name = GTree.view_column ~renderer:(renderer, ["text", col_name]) () in
   let sw = GBin.scrolled_window ~shadow_type:`NONE ~hpolicy:`NEVER ~vpolicy:`AUTOMATIC ~packing:vbox#add () in
@@ -246,9 +246,11 @@ class widget ~project ~(page : Editor_page.page) ~x ~y ?packing () =
           if String.trim desc <> "" || String.trim info <> "" then begin
             Gmisclib.Idle.add begin fun () ->
               let markup =
-                Printf.sprintf "<span size='small' font_family='%s'>%s</span>%s<span size='small'>%s</span>"
-                  markup_odoc#font_family (Markup.type_info desc)
+                Printf.sprintf "<span font_family='%s'>%s</span>%s<span font='%s'>%s</span>"
+                  markup_odoc#code_font_family
+                  (Markup.type_info desc)
                   (if info <> "" then "\n\n" else "")
+                  (Preferences.preferences#get.editor_completion_font)
                   (markup_odoc#convert info)
               in
               self#display_window_info path markup
