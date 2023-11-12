@@ -456,6 +456,7 @@ class editor () =
         buffer#add_signal_handler (buffer#connect#insert_text ~callback);
         buffer#add_signal_handler (buffer#connect#after#delete_range ~callback:(fun ~start ~stop -> callback start stop));
         (* Mark Set *)
+        let lab_sel_lines, lab_sel_chars = page#status_pos_sel in
         buffer#add_signal_handler (buffer#connect#after#mark_set ~callback:begin fun _ mark ->
             let mark_occurrences, under_cursor, _ = view#options#mark_occurrences in
             let is_insert = match GtkText.Mark.get_name mark with Some "insert" -> true | _ -> false in
@@ -465,13 +466,15 @@ class editor () =
               let start, stop = buffer#selection_bounds in
               let nlines = stop#line - start#line in
               let nchars = stop#offset - start#offset in
-              kprintf page#status_pos_sel#set_text "%d (%d)" nlines nchars;
+              lab_sel_lines#set_text (string_of_int nlines);
+              lab_sel_chars#set_text (string_of_int nchars);
               if is_insert && mark_occurrences && not under_cursor then
                 Timeout.set tout_fast 1 page#view#mark_occurrences_manager#mark
             end else begin
               if mark_occurrences && not under_cursor then
                 page#view#mark_occurrences_manager#clear();
-              page#status_pos_sel#set_text "0";
+              lab_sel_lines#set_text "0";
+              lab_sel_chars#set_text "0";
             end;
             if is_insert then Timeout.set tout_delim 0 (self#cb_tout_delim page)
           end);
@@ -545,6 +548,18 @@ class editor () =
       menu#popup ~time:(GdkEvent.Button.time ev) ~button:3;
       Gdk.Window.set_cursor menu#misc#window (Gdk.Cursor.create `ARROW);
 
+    method private callback_query_tooltip (page : Editor_page.page) ~x ~y ~kbd _ =
+      if x > page#view#gutter.Gutter.size && y > 10 && y < (Gdk.Rectangle.height page#view#visible_rect) - 10 then begin
+        let f () =
+          let location = page#view#window_to_buffer_coords ~tag:`WIDGET ~x ~y in
+          page#tooltip ~typ:false location;
+        in
+        if (*true ||*) preferences#get.editor_annot_type_tooltips_delay = 1 then begin
+          Timeout.set tout_delim 0 (GtkThread.async f);
+        end else (f());
+      end else (page#error_indication#hide_tooltip ~force:false ());
+      false;
+
     method open_file ~active ~scroll_offset ~offset ?remote filename =
       try
         let page =
@@ -577,6 +592,7 @@ class editor () =
                         image#set_pixbuf (if page#buffer#modified then (??? Icons.button_close_b) else (??? Icons.button_close));
                         false
                       end);
+                    ignore (page#view#misc#connect#query_tooltip ~callback:(self#callback_query_tooltip page));
                     ignore (page#buffer#connect#modified_changed ~callback:begin fun () ->
                         if page#buffer#modified then begin
                           page#status_modified_icon#set_pixbuf (??? Icons.save_14);

@@ -88,16 +88,24 @@ class page ?file ~project ~scroll_offset ~offset ~editor () =
   let status_filename          = GMisc.label ~selectable:true ~xalign:0.0 ~xpad:5 ~width:240 ~ellipsize:`END ~packing:sbox#add () in
   let sep_status_pos_box       = GMisc.separator `VERTICAL ~packing:sbox#pack () in
   let status_pos_box           = GPack.hbox ~spacing:3 ~packing:sbbox#pack () in
-  let _                        = GMisc.label ~xalign:0.0 ~yalign:0.5 ~text:"Ln:" ~packing:status_pos_box#pack () in
-  let status_pos_lin           = GMisc.label ~xalign:0.0 ~yalign:0.5 ~width:33 ~packing:status_pos_box#pack () in
-  (*let _                        = status_pos_lin#misc#modify_font_by_name "bold" in*)
-  let _                        = GMisc.label ~xalign:0.0 ~yalign:0.5 ~text:"Col:" ~packing:status_pos_box#pack () in
-  let status_pos_col           = GMisc.label ~xalign:0.0 ~yalign:0.5 ~width:33 ~packing:status_pos_box#pack () in
-  (*let _                        = status_pos_col#misc#modify_font_by_name "bold" in*)
-  let _                        = GMisc.label ~xalign:0.0 ~yalign:0.5 ~text:"Off:" ~packing:status_pos_box#pack () in
-  let status_pos_off           = GMisc.label ~xalign:0.0 ~yalign:0.5 ~width:40 ~packing:status_pos_box#pack () in
-  let _                        = GMisc.label ~xalign:0.0 ~yalign:0.5 ~text:"Sel:" ~packing:status_pos_box#pack () in
-  let status_pos_sel           = GMisc.label ~xalign:0.0 ~yalign:0.5 ~width:70 ~text:"0" ~packing:status_pos_box#pack () in
+  let _                        = GMisc.separator `VERTICAL ~packing:status_pos_box#pack () in
+  let label_pos_lin            = GMisc.label ~xalign:0.0 ~yalign:0.5 ~text:"\u{e0a1}\u{2009}" ~packing:status_pos_box#pack () in
+  let _                        = label_pos_lin#misc#modify_font_by_name "FiraCode OCamlEditor" in
+  let status_pos_lin           = GMisc.label ~xalign:0.0 ~yalign:0.5 ~width:34 ~packing:status_pos_box#pack () in
+  let _                        = GMisc.separator `VERTICAL ~packing:status_pos_box#pack () in
+  let label_pos_col            = GMisc.label ~xalign:0.0 ~yalign:0.5 ~markup:"<small>\u{e0a3}</small>\u{2009}" ~packing:status_pos_box#pack () in
+  let _                        = label_pos_col#misc#modify_font_by_name "FiraCode OCamlEditor" in
+  let status_pos_col           = GMisc.label ~xalign:0.0 ~yalign:0.5 ~width:34 ~packing:status_pos_box#pack () in
+  let _                        = GMisc.separator `VERTICAL ~packing:status_pos_box#pack () in
+  let status_pos_off           = GMisc.label ~xalign:0.0 ~yalign:0.5 ~width:55 ~packing:status_pos_box#pack () in
+  (*let _                        = status_pos_off#misc#set_tooltip_text "Character offset from start" in*)
+  let _                        = GMisc.separator `VERTICAL ~packing:status_pos_box#pack () in
+  let status_pos_sel           = GMisc.label ~xalign:0.0 ~yalign:0.5 ~width:34 ~text:"0" ~packing:status_pos_box#pack () in
+  (*let _                        = status_pos_sel#misc#set_tooltip_text "Selected lines" in*)
+  let _                        = GMisc.separator `VERTICAL ~packing:status_pos_box#pack () in
+  let status_pos_sel_chars     = GMisc.label ~xalign:0.0 ~yalign:0.5 ~width:55 ~text:"0" ~packing:status_pos_box#pack () in
+  (*let _                        = status_pos_sel_chars#misc#set_tooltip_text "Selected characters" in*)
+  let _                        = GMisc.separator `VERTICAL ~packing:status_pos_box#pack () in
   (**  *)
   let _                        = GMisc.separator `VERTICAL ~packing:sbox#pack () in
   let spinner                  = GMisc.image ~width:15 ~packing:sbox#pack () in
@@ -155,26 +163,26 @@ class page ?file ~project ~scroll_offset ~offset ~editor () =
   let button_toggle_whitespace = create_small_toggle_button ~icon:"\u{eb7d}" ~packing:sbbox#pack () in
   (** Navigation buttons in the statusbar *)
   (*let first_sep = GMisc.separator `VERTICAL ~packing:sobox#pack () in*)
-  let location_goto where =
-    match where editor#location_history with
-    | None -> ()
-    | Some loc -> editor#location_history_goto loc
-  in
-  let button_h_prev            = create_small_button
-      ~icon:"\u{ea9b}"
-      ~tooltip:"Back"
-      ~packing:sbbox#pack
-      ~callback:(fun _ -> location_goto Location_history.previous) () in
-  let button_h_next            = create_small_button
-      ~icon:"\u{ea9c}"
-      ~tooltip:"Forward"
-      ~packing:sbbox#pack
-      ~callback:(fun _ -> location_goto Location_history.next) () in
-  let button_h_last            = create_small_button
-      ~icon:"\u{f0794}"
-      ~tooltip:"Last Edit Location"
-      ~packing:sbbox#pack
-      ~callback:(fun _ -> location_goto Location_history.goto_last_edit_location) () in
+  (*  let location_goto where =
+      match where editor#location_history with
+      | None -> ()
+      | Some loc -> editor#location_history_goto loc
+      in
+      let button_h_prev            = create_small_button
+        ~icon:"\u{ea9b}"
+        ~tooltip:"Back"
+        ~packing:sbbox#pack
+        ~callback:(fun _ -> location_goto Location_history.previous) () in
+      let button_h_next            = create_small_button
+        ~icon:"\u{ea9c}"
+        ~tooltip:"Forward"
+        ~packing:sbbox#pack
+        ~callback:(fun _ -> location_goto Location_history.next) () in
+      let button_h_last            = create_small_button
+        ~icon:"\u{f0794}"
+        ~tooltip:"Last Edit Location"
+        ~packing:sbbox#pack
+        ~callback:(fun _ -> location_goto Location_history.goto_last_edit_location) () in*)
   (** Scrollbars *)
   let hscrollbar = GRange.scrollbar `HORIZONTAL ~adjustment:sw#hadjustment ~packing:spaned#add2 () in
   let vscrollbar = GRange.scrollbar `VERTICAL ~adjustment:sw#vadjustment (*~update_policy:`DELAYED*) ~packing:svbox#add () in
@@ -288,7 +296,7 @@ class page ?file ~project ~scroll_offset ~offset ~editor () =
     method buffer = buffer
     method project = project
     method vadjustment = sw#vadjustment
-    method status_pos_sel = status_pos_sel
+    method status_pos_sel = status_pos_sel, status_pos_sel_chars
     method undo () = if not (buffer#undo#undo()) then (text_view#scroll_lazy (buffer#get_iter `INSERT))
     method redo () = if not (buffer#undo#redo()) then (text_view#scroll_lazy (buffer#get_iter `INSERT))
 
@@ -524,7 +532,7 @@ class page ?file ~project ~scroll_offset ~offset ~editor () =
           dotview <- None;
           textbox#misc#show();
           List.iter (fun b -> b#misc#set_sensitive true)
-            [button_font_incr; button_font_decr; button_rowspacing_incr; button_rowspacing_decr; button_h_prev; button_h_next; button_h_last];
+            [button_font_incr; button_font_decr; button_rowspacing_incr; button_rowspacing_decr; (*button_h_prev; button_h_next; button_h_last*)];
           List.iter (fun b -> b#misc#set_sensitive true) [button_toggle_wrap; button_toggle_whitespace];
           hscrollbar#misc#show();
           status_pos_box#misc#show();
@@ -548,7 +556,7 @@ class page ?file ~project ~scroll_offset ~offset ~editor () =
                         dotview <- Some viewer;
                         List.iter (fun b -> b#misc#set_sensitive false)
                           [button_font_incr; button_font_decr; button_rowspacing_incr; button_rowspacing_decr;
-                           button_h_prev; button_h_next; button_h_last];
+                           (*button_h_prev; button_h_next; button_h_last*)];
                         List.iter (fun b -> b#misc#set_sensitive false) [button_toggle_wrap; button_toggle_whitespace];
                         hscrollbar#misc#hide();
                         status_pos_box#misc#hide();

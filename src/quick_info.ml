@@ -134,7 +134,7 @@ let unpin qi =
   !!Lock.wininfo (List.iter (fun w -> w.is_pinned <- false)) qi.windows;
   hide qi
 
-(** Closes the last open quick-info and all other windows with timed closure. *)
+(** Closes the last quick information opened and all other timed closing windows. *)
 let close qi cause =
   (*if cause <> "" then Log.println `DEBUG "CLOSE %s" cause;*)
   qi.windows |> List.iter (remove_wininfo qi)
@@ -197,27 +197,29 @@ let display qi start stop =
   (*kprintf label_index#set_label "%d" wininfo.index;*)
   make_pinnable wininfo;
   Gmisclib.Idle.add begin fun () ->
-    window#present();
-    let r = vbox#misc#allocation in
-    if r.Gtk.height > 200 then begin
-      let sw = GBin.scrolled_window ~hpolicy:`AUTOMATIC () in
-      let vp = GBin.viewport ~packing:sw#add () in
-      sw#misc#modify_bg [`NORMAL, `NAME ?? (Preferences.preferences#get.editor_bg_color_popup)];
-      vp#misc#modify_bg [`NORMAL, `NAME ?? (Preferences.preferences#get.editor_bg_color_popup)];
-      vbox#misc#reparent vp#coerce;
-      hide qi;
-      close qi "";
-      let window = Gtk_util.window_tooltip sw#coerce ~fade:false ~x ~y ~width:700 ~height:300 ~show:false () in
-      let wininfo = {
-        window;
-        area;
-        is_pinned = false;
-        index = new_index();
-      } in
-      add_wininfo qi wininfo;
-      (*kprintf label_index#set_label "%d" wininfo.index;*)
-      make_pinnable wininfo;
-      window#present()
+    if qi.view#misc#get_flag `HAS_FOCUS then begin
+      window#present();
+      let r = vbox#misc#allocation in
+      if r.Gtk.height > 200 then begin
+        let sw = GBin.scrolled_window ~hpolicy:`AUTOMATIC () in
+        let vp = GBin.viewport ~packing:sw#add () in
+        sw#misc#modify_bg [`NORMAL, `NAME ?? (Preferences.preferences#get.editor_bg_color_popup)];
+        vp#misc#modify_bg [`NORMAL, `NAME ?? (Preferences.preferences#get.editor_bg_color_popup)];
+        vbox#misc#reparent vp#coerce;
+        hide qi;
+        close qi "";
+        let window = Gtk_util.window_tooltip sw#coerce ~fade:false ~x ~y ~width:700 ~height:300 ~show:false () in
+        let wininfo = {
+          window;
+          area;
+          is_pinned = false;
+          index = new_index();
+        } in
+        add_wininfo qi wininfo;
+        (*kprintf label_index#set_label "%d" wininfo.index;*)
+        make_pinnable wininfo;
+        window#present()
+      end else hide qi
     end;
     qi.view#buffer#apply_tag qi.tag ~start ~stop;
   end;
@@ -235,18 +237,20 @@ let build_content qi (entry : type_enclosing_value) (entry2 : type_enclosing_val
 (** Opens a new quick information window with the information received from merlin.
     This function is applied in a separate thread from the main one. *)
 let spawn_window qi position (entry : type_enclosing_value) (entry2 : type_enclosing_value option) =
-  let typ = build_content qi entry entry2 in
-  let markup = Markup.type_info typ in
-  (*let markup = sprintf "<span size='%s'>%s</span>" markup_odoc#code_font_size (Markup.type_info typ) in
-    Printf.printf "%s\n%!" markup;*)
-  let start = qi.view#obuffer#get_iter (`LINECHAR (entry.te_start.line - 1, entry.te_start.col)) in
-  let stop = qi.view#obuffer#get_iter (`LINECHAR (entry.te_stop.line - 1, entry.te_stop.col)) in
-  let label_typ, label_doc = display qi start stop in
-  (*<span size='small' font_family='%s'>%s</span>*)
-  label_typ#set_label markup;
-  qi.merlin@@Merlin.document ~position begin fun doc ->
-    let markup = qi.markup_odoc#convert doc in
-    label_doc#set_label markup;
+  if qi.view#misc#get_flag `HAS_FOCUS then begin
+    let typ = build_content qi entry entry2 in
+    let markup = Markup.type_info typ in
+    (*let markup = sprintf "<span size='%s'>%s</span>" markup_odoc#code_font_size (Markup.type_info typ) in
+      Printf.printf "%s\n%!" markup;*)
+    let start = qi.view#obuffer#get_iter (`LINECHAR (entry.te_start.line - 1, entry.te_start.col)) in
+    let stop = qi.view#obuffer#get_iter (`LINECHAR (entry.te_stop.line - 1, entry.te_stop.col)) in
+    let label_typ, label_doc = display qi start stop in
+    (*<span size='small' font_family='%s'>%s</span>*)
+    label_typ#set_label markup;
+    qi.merlin@@Merlin.document ~position begin fun doc ->
+      let markup = qi.markup_odoc#convert doc in
+      label_doc#set_label markup;
+    end
   end
 
 let invoke_merlin qi iter ~continue_with =
