@@ -197,29 +197,27 @@ let display qi start stop =
   (*kprintf label_index#set_label "%d" wininfo.index;*)
   make_pinnable wininfo;
   Gmisclib.Idle.add begin fun () ->
-    if qi.view#misc#get_flag `HAS_FOCUS then begin
-      window#present();
-      let r = vbox#misc#allocation in
-      if r.Gtk.height > 200 then begin
-        let sw = GBin.scrolled_window ~hpolicy:`AUTOMATIC () in
-        let vp = GBin.viewport ~packing:sw#add () in
-        sw#misc#modify_bg [`NORMAL, `NAME ?? (Preferences.preferences#get.editor_bg_color_popup)];
-        vp#misc#modify_bg [`NORMAL, `NAME ?? (Preferences.preferences#get.editor_bg_color_popup)];
-        vbox#misc#reparent vp#coerce;
-        hide qi;
-        close qi "";
-        let window = Gtk_util.window_tooltip sw#coerce ~fade:false ~x ~y ~width:700 ~height:300 ~show:false () in
-        let wininfo = {
-          window;
-          area;
-          is_pinned = false;
-          index = new_index();
-        } in
-        add_wininfo qi wininfo;
-        (*kprintf label_index#set_label "%d" wininfo.index;*)
-        make_pinnable wininfo;
-        window#present()
-      end else hide qi
+    window#present();
+    let r = vbox#misc#allocation in
+    if r.Gtk.height > 200 then begin
+      let sw = GBin.scrolled_window ~hpolicy:`AUTOMATIC () in
+      let vp = GBin.viewport ~packing:sw#add () in
+      sw#misc#modify_bg [`NORMAL, `NAME ?? (Preferences.preferences#get.editor_bg_color_popup)];
+      vp#misc#modify_bg [`NORMAL, `NAME ?? (Preferences.preferences#get.editor_bg_color_popup)];
+      vbox#misc#reparent vp#coerce;
+      hide qi;
+      close qi "";
+      let window = Gtk_util.window_tooltip sw#coerce ~fade:false ~x ~y ~width:700 ~height:300 ~show:false () in
+      let wininfo = {
+        window;
+        area;
+        is_pinned = false;
+        index = new_index();
+      } in
+      add_wininfo qi wininfo;
+      (*kprintf label_index#set_label "%d" wininfo.index;*)
+      make_pinnable wininfo;
+      window#present()
     end;
     qi.view#buffer#apply_tag qi.tag ~start ~stop;
   end;
