@@ -279,6 +279,7 @@ let process_location qi x y =
   match current_area with
   | Some (area, _) when area @<= (x, y) -> ()
   | _ when is_pinned qi -> ()
+  | _ when qi.view#buffer#has_selection -> ()
   | _ ->
       let is_immobile = x = qi.current_x && y = qi.current_y in
       qi.current_x <- x;

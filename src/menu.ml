@@ -407,6 +407,7 @@ let view ~browser ~group ~flags
   let _ = maximize_0#connect#activate ~callback:(fun () -> browser#set_maximized_view `NONE) in
   maximize_1#add_accelerator ~group ~modi:[`CONTROL; `MOD1] GdkKeysyms._comma ~flags;
   maximize_2#add_accelerator ~group ~modi:[`CONTROL; `MOD1] GdkKeysyms._period ~flags;
+  maximize_2#add_accelerator ~group ~modi:[] GdkKeysyms._F11 ~flags;
   (** Remove All Messages *)
   let _ = GMenu.separator_item ~packing:menu#add () in
   let messages_remove = GMenu.menu_item ~label:"Remove All Messages" ~packing:menu#add () in
