@@ -59,12 +59,8 @@ class widget ?(color=false) ?packing () =
     method pack ?from widget = box#pack ?from ~expand:false ~fill:false widget
 
     method private set_style () =
-      (*      ebox#misc#modify_bg [`NORMAL, `COLOR (ebox#misc#style#dark `SELECTED)];
-              ebox#misc#modify_fg [`NORMAL, `COLOR (ebox#misc#style#fg `SELECTED)];
-              ebox#misc#modify_text [`NORMAL, `COLOR (ebox#misc#style#text `SELECTED)];*)
-
-      ebox#misc#modify_bg [`NORMAL, `COLOR (ebox#misc#style#light `NORMAL)];
-      (*      ebox#misc#modify_fg [`NORMAL, `COLOR (ebox#misc#style#fg `SELECTED)];
-              ebox#misc#modify_text [`NORMAL, `COLOR (ebox#misc#style#text `SELECTED)]*)
+      ebox#misc#modify_bg [`NORMAL, `COLOR (ebox#misc#style#dark `SELECTED)];
+      ebox#misc#modify_fg [`NORMAL, `COLOR (ebox#misc#style#fg `SELECTED)];
+      ebox#misc#modify_text [`NORMAL, `COLOR (ebox#misc#style#text `SELECTED)];
   end
 
