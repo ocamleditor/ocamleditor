@@ -164,9 +164,9 @@ let label_icon ?(width=20) ?(height=16) ?(font_name="FiraCode OCamlEditor") ?col
 
 class button_icon ?label ?(icon="") ?(icon_spacing=3) ?icon_width ?icon_height ?relief ?packing () =
   let button = GButton.button ?label ?relief ?packing () in
-  let hbox = GPack.hbox ~spacing:icon_spacing ~packing:button#add () in
+  let hbox = GPack.hbox ~border_width:0 ~spacing:icon_spacing ~packing:button#add () in
   let icon = label_icon ?width:icon_width ?height:icon_height ~packing:hbox#add icon in
-  let label = GMisc.label ~packing:hbox#add () in
+  let label = GMisc.label ~xpad:0 ~ypad:0 ~packing:hbox#add () in
   object (self)
     inherit GObj.widget hbox#as_widget
     method set_icon = icon#set_label

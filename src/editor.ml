@@ -595,11 +595,11 @@ class editor () =
                     ignore (page#view#misc#connect#query_tooltip ~callback:(self#callback_query_tooltip page));
                     ignore (page#buffer#connect#modified_changed ~callback:begin fun () ->
                         if page#buffer#modified then begin
-                          page#status_modified_icon#set_pixbuf (??? Icons.save_14);
+                          page#status_modified_icon#set_label "<span size='large'>\u{f0c7}</span>";
                           page#status_modified_icon#misc#set_tooltip_text "Modified";
                           image#set_pixbuf (??? Icons.button_close_b)
                         end else begin
-                          page#status_modified_icon#set_pixbuf (??? Icons.empty_14);
+                          page#status_modified_icon#set_label " ";
                           page#status_modified_icon#misc#set_tooltip_text "";
                           image#set_pixbuf (??? Icons.button_close)
                         end;

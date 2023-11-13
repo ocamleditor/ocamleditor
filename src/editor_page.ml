@@ -79,14 +79,16 @@ class page ?file ~project ~scroll_offset ~offset ~editor () =
   let svbox                    = GPack.vbox ~spacing:1 ~packing:textbox#pack () in (* Vertical scrollbar box *)
   let global_gutter_ebox       = GBin.event_box ~packing:textbox#pack () in (* Global gutter box *)
   (** Status bar *)
-  let _                        = GMisc.separator `HORIZONTAL ~packing:(vbox#pack ~expand:false) () in
-  let sbbox                    = GPack.hbox ~spacing:1 ~border_width:0 ~packing:vbox#pack () in
+  (*let _                        = GMisc.separator `HORIZONTAL ~packing:(vbox#pack ~expand:false) () in*)
+  let sbbox                    = GPack.hbox ~spacing:1 ~border_width:0 (*~packing:vbox#pack*) () in
   let spaned                   = GPack.paned `HORIZONTAL ~packing:sbbox#add () in
   let sbox                     = GPack.hbox ~spacing:1 ~border_width:0 ~packing:(spaned#pack1 ~shrink:false) () in
-  let status_modified          = GMisc.image ~icon_size:`MENU ~packing:sbox#pack () in
+  let status_filename          = GMisc.label ~selectable:true ~xalign:0.0 ~xpad:5 ~width:100 ~ellipsize:`END ~packing:sbox#add () in
+  let sep_status_pos_box       = GMisc.separator `VERTICAL ~packing:sbox#pack ~show:false () in
   let _                        = GMisc.separator `VERTICAL ~packing:sbox#pack () in
-  let status_filename          = GMisc.label ~selectable:true ~xalign:0.0 ~xpad:5 ~width:240 ~ellipsize:`END ~packing:sbox#add () in
-  let sep_status_pos_box       = GMisc.separator `VERTICAL ~packing:sbox#pack () in
+  let status_modified          = GMisc.label ~width:17 ~xpad:0 ~ypad:0 ~xalign:0.0 ~packing:sbox#pack () in
+  let _                        = status_modified#misc#modify_fg [`NORMAL, `NAME "#1E90FF"] in
+  let _                        = status_modified#set_use_markup true in
   let status_pos_box           = GPack.hbox ~spacing:3 ~packing:sbbox#pack () in
   let _                        = GMisc.separator `VERTICAL ~packing:status_pos_box#pack () in
   let label_pos_lin            = GMisc.label ~xalign:0.0 ~yalign:0.5 ~text:"\u{e0a1}\u{2009}" ~packing:status_pos_box#pack () in
@@ -161,30 +163,8 @@ class page ?file ~project ~scroll_offset ~offset ~editor () =
   (** Show whitespace and word wrap *)
   let button_toggle_wrap = create_small_toggle_button ~icon:"\u{eb80}" ~packing:sbbox#pack () in
   let button_toggle_whitespace = create_small_toggle_button ~icon:"\u{eb7d}" ~packing:sbbox#pack () in
-  (** Navigation buttons in the statusbar *)
-  (*let first_sep = GMisc.separator `VERTICAL ~packing:sobox#pack () in*)
-  (*  let location_goto where =
-      match where editor#location_history with
-      | None -> ()
-      | Some loc -> editor#location_history_goto loc
-      in
-      let button_h_prev            = create_small_button
-        ~icon:"\u{ea9b}"
-        ~tooltip:"Back"
-        ~packing:sbbox#pack
-        ~callback:(fun _ -> location_goto Location_history.previous) () in
-      let button_h_next            = create_small_button
-        ~icon:"\u{ea9c}"
-        ~tooltip:"Forward"
-        ~packing:sbbox#pack
-        ~callback:(fun _ -> location_goto Location_history.next) () in
-      let button_h_last            = create_small_button
-        ~icon:"\u{f0794}"
-        ~tooltip:"Last Edit Location"
-        ~packing:sbbox#pack
-        ~callback:(fun _ -> location_goto Location_history.goto_last_edit_location) () in*)
   (** Scrollbars *)
-  let hscrollbar = GRange.scrollbar `HORIZONTAL ~adjustment:sw#hadjustment ~packing:spaned#add2 () in
+  let hscrollbar = GRange.scrollbar `HORIZONTAL ~adjustment:sw#hadjustment ~packing:(spaned#pack2 ~resize:true ~shrink:false) () in
   let vscrollbar = GRange.scrollbar `VERTICAL ~adjustment:sw#vadjustment (*~update_policy:`DELAYED*) ~packing:svbox#add () in
   let _ =
     text_view#event#connect#scroll ~callback:begin fun ev ->
@@ -256,6 +236,8 @@ class page ?file ~project ~scroll_offset ~offset ~editor () =
 
     method changed_after_last_diff = changed_after_last_diff
     method set_changed_after_last_diff x = changed_after_last_diff <- x
+
+    method statusbar = sbbox#coerce
 
     method private set_tag_annot_background () =
       Option.iter (fun annot_type ->
@@ -660,7 +642,7 @@ class page ?file ~project ~scroll_offset ~offset ~editor () =
               end else self#revert();
             self#set_read_only f#is_readonly;
             if read_only then begin
-              status_modified#set_pixbuf (??? Icons.lock_14);
+              status_modified#set_label "\u{ea75}";
               status_modified#misc#set_tooltip_text "Read-only"
             end;
           end;
