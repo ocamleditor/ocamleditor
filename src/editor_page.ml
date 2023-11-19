@@ -85,6 +85,10 @@ class page ?file ~project ~scroll_offset ~offset ~editor () =
       if hscrollbar#adjustment#page_size = hscrollbar#adjustment#upper
       then hscrollbar#misc#hide() else hscrollbar#misc#show();
     end |> ignore;
+    if not Oe_config.unify_statusbars then begin
+      GMisc.separator `HORIZONTAL ~packing:(vbox#pack ~expand:false) () |> ignore;
+      vbox#pack editorbar#coerce;
+    end
   in
   let vscrollbar = GRange.scrollbar `VERTICAL ~adjustment:sw#vadjustment (*~update_policy:`DELAYED*) ~packing:svbox#add () in
   let _ =

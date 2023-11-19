@@ -112,6 +112,7 @@ let editor_tab_color_alt_normal          = `NAME "#310080"
 let use_merlin_completion                = true
 let use_merlin_quick_info                = true
 let colored_statusbar                    = true
+let unify_statusbars                     = false
 
 
 (** End of Configuration Section ============================================ *)

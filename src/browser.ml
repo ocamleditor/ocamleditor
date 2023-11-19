@@ -80,7 +80,8 @@ class browser window =
   let statusbar = new Statusbar.widget ~color:Oe_config.colored_statusbar ~packing:vbox#pack () in
   let gitbar = new Statusbar.gitbar ~packing:(statusbar#pack ~from:`END) () in
   let _ =
-    editor#connect#switch_page ~callback:(fun page -> statusbar#set_editor_status page#statusbar) |> ignore;
+    if Oe_config.unify_statusbars then
+      editor#connect#switch_page ~callback:(fun page -> statusbar#pack_editorbar page#statusbar) |> ignore;
   in
   (*  *)
   let vbox_menu_buttons = GPack.vbox ~border_width:0 ~packing:menubarbox#pack ~show:false () in
