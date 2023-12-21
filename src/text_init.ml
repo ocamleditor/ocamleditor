@@ -41,8 +41,6 @@ open Miscellanea
   | _ -> ()
   end*)
 
-let use_hack_for_italian_keyboard = true
-
 let key_press ?project view =
   view#event#connect#key_press ~callback:begin fun ev ->
     let state = GdkEvent.Key.state ev in
@@ -76,16 +74,8 @@ let key_press ?project view =
           view#draw_current_line_background ?force:None iter;
         end;
         false
-    | _ when key = _Home || key = _KP_Home -> Smart_keys.smart_home ~view state
-    | _ when key = _End || key = _KP_End -> Smart_keys.smart_end ~view state
-    | _ when key = _igrave && use_hack_for_italian_keyboard ->
-        view#buffer#delete ~start:(view#buffer#get_iter `INSERT) ~stop:(view#buffer#get_iter `SEL_BOUND);
-        view#buffer#insert ?iter:None ?tag_names:None ?tags:None "~";
-        true
-    | _ when key = _apostrophe && use_hack_for_italian_keyboard ->
-        view#buffer#delete ~start:(view#buffer#get_iter `INSERT) ~stop:(view#buffer#get_iter `SEL_BOUND);
-        view#buffer#insert ?iter:None ?tag_names:None ?tags:None "`";
-        true
+    | [] when key = _Home || key = _KP_Home -> Smart_keys.smart_home ~view state
+    | [] when key = _End || key = _KP_End -> Smart_keys.smart_end ~view state
     | _ -> false
   end |> ignore;;
 
