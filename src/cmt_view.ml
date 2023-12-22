@@ -169,12 +169,12 @@ class widget ~editor:_ ~page ?packing () =
   let button_sort_rev        = GButton.toggle_button ~relief:`NONE ~packing:toolbar#pack () in
   let button_select_from_buf = GButton.button ~relief:`NONE ~packing:toolbar#pack () in
   let button_select_buf      = GButton.button ~relief:`NONE ~packing:toolbar#pack () in
-  let _                      = button_refresh#set_image (GMisc.image (*~stock:`REFRESH*) ~pixbuf:(??? Icons.refresh16) ~icon_size:`MENU ())#coerce in
-  let _                      = button_sort#set_image (GMisc.image (*~stock:`SORT_ASCENDING*) ~pixbuf:(??? Icons.sort_asc) ~icon_size:`MENU ())#coerce in
-  let _                      = button_sort_rev#set_image (GMisc.image (*~stock:`SORT_DESCENDING*) ~pixbuf:(??? Icons.sort_asc_rev) ~icon_size:`MENU ())#coerce in
-  let _                      = button_show_types#set_image (GMisc.image ~pixbuf:(??? Icons.typ) ())#coerce in
-  let _                      = button_select_buf#set_image (GMisc.image ~pixbuf:(??? Icons.select_in_buffer) ())#coerce in
-  let _                      = button_select_from_buf#set_image (GMisc.image ~pixbuf:(??? Icons.select_in_structure) ())#coerce in
+  let _                      = button_refresh#add (Gtk_util.label_icon "\u{eb37}")#coerce in
+  let _                      = button_sort#add (Gtk_util.label_icon "\u{f15d}")#coerce in
+  let _                      = button_sort_rev#add (Gtk_util.label_icon "\u{f1860}")#coerce in
+  let _                      = button_show_types#add (Gtk_util.label_icon "\u{03c4}")#coerce in
+  let _                      = button_select_buf#add (Gtk_util.label_icon "<span size='xx-small'>\u{f061}</span>\u{f09ee}")#coerce in
+  let _                      = button_select_from_buf#add (Gtk_util.label_icon "\u{f13d2}<span size='xx-small'>\u{f060}</span>")#coerce  in
   let _                      = button_sort#misc#set_tooltip_text "Sort by name" in
   let _                      = button_sort_rev#misc#set_tooltip_text "Sort by reverse name" in
   let _                      = button_show_types#misc#set_tooltip_text "Show types" in

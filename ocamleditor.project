@@ -195,8 +195,8 @@
       <libs>process_termination odoc_info gmisclib common icons otherwidgets oebuildlib ocamleditor_lib</libs>
       <other_objects></other_objects>
       <files>ocamleditor.ml</files>
-      <package>atdgen-runtime,compiler-libs.common,diff,dynlink,lablgtk2,ocp-indent.lib,str,unix,xml-light,yojson</package>
-      <includes>+ocamldoc gmisclib common icons otherwidgets oebuild </includes>
+      <package>atdgen-runtime,compiler-libs.common,diff,dynlink,lablgtk2,ocamldoc,ocp-indent.lib,str,unix,xml-light,yojson</package>
+      <includes>gmisclib common icons otherwidgets oebuild </includes>
       <thread>true</thread>
       <vmthread>false</vmthread>
       <pp></pp>
@@ -220,8 +220,8 @@
       <libs>process_termination odoc_info gmisclib common icons otherwidgets oebuildlib</libs>
       <other_objects></other_objects>
       <files>ocamleditor.ml</files>
-      <package>atdgen-runtime,compiler-libs.common,diff,dynlink,lablgtk2,ocp-indent.lib,str,unix,xml-light,yojson</package>
-      <includes>+ocamldoc gmisclib common icons otherwidgets oebuild </includes>
+      <package>atdgen-runtime,compiler-libs.common,diff,dynlink,lablgtk2,ocamldoc,ocp-indent.lib,str,unix,xml-light,yojson</package>
+      <includes>gmisclib common icons otherwidgets oebuild </includes>
       <thread>true</thread>
       <vmthread>false</vmthread>
       <pp></pp>
@@ -245,8 +245,8 @@
       <libs>process_termination odoc_info gmisclib common icons otherwidgets oebuildlib ocamleditor_lib</libs>
       <other_objects></other_objects>
       <files>ocamleditor.ml</files>
-      <package>compiler-libs.common,dynlink,lablgtk2,ocp-indent.lib,str,unix,xml-light,yojson</package>
-      <includes>+ocamldoc gmisclib common icons otherwidgets oebuild </includes>
+      <package>compiler-libs.common,dynlink,lablgtk2,ocamldoc,ocp-indent.lib,str,unix,xml-light,yojson</package>
+      <includes>gmisclib common icons otherwidgets oebuild </includes>
       <thread>true</thread>
       <vmthread>false</vmthread>
       <pp></pp>
@@ -294,8 +294,8 @@
       <libs>process_termination odoc_info gmisclib common icons otherwidgets oebuildlib ocamleditor_lib</libs>
       <other_objects></other_objects>
       <files>ocamleditor.ml</files>
-      <package>atdgen-runtime,compiler-libs.common,diff,dynlink,lablgtk2,ocp-indent.lib,str,unix,xml-light,yojson</package>
-      <includes>+ocamldoc gmisclib common icons otherwidgets oebuild </includes>
+      <package>atdgen-runtime,compiler-libs.common,diff,dynlink,lablgtk2,ocamldoc,ocp-indent.lib,str,unix,xml-light,yojson</package>
+      <includes>gmisclib common icons otherwidgets oebuild </includes>
       <thread>true</thread>
       <vmthread>false</vmthread>
       <pp></pp>
@@ -319,8 +319,8 @@
       <libs></libs>
       <other_objects></other_objects>
       <files>ocamleditor_lib.ml</files>
-      <package>atdgen-runtime,compiler-libs.common,diff,dynlink,lablgtk2,ocp-indent.lib,str,unix,xml-light,yojson</package>
-      <includes>+ocamldoc gmisclib common icons otherwidgets oebuild </includes>
+      <package>atdgen-runtime,compiler-libs.common,diff,dynlink,lablgtk2,ocamldoc,ocp-indent.lib,str,unix,xml-light,yojson</package>
+      <includes>gmisclib common icons otherwidgets oebuild </includes>
       <thread>true</thread>
       <vmthread>false</vmthread>
       <pp></pp>

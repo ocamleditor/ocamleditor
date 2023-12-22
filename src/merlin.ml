@@ -1,31 +1,39 @@
 open Printf
-open Merlin_t
 
 module Log = Common.Log.Make(struct let prefix = "MERLIN" end)
-let _ = Log.set_verbosity `ERROR
+let _ =
+  Log.set_print_timestamp true;
+  Log.set_verbosity `ERROR
 
 let (//) = Filename.concat
+
+let loop (f : in_channel -> unit) ((ic, _oc, _ec) as channels) =
+  try while true do f ic done
+  with End_of_file ->
+    Unix.close_process_full channels |> ignore
 
 let execute
     ?(continue_with=fun x -> x |> Yojson.Safe.prettify |> Log.println `INFO "%s")
     filename source_code command =
   let cwd = Sys.getcwd() in
   let filename = match Miscellanea.filename_relative cwd filename with Some path -> path | _ -> filename in
-  let cmd_line = "ocamlmerlin" :: "server" :: command @ [ "-filename"; filename ] in
-  Log.println `INFO "%s\n%s" cwd (cmd_line |> String.concat " ");
-  let ic, oc, _ = Unix.open_process_full (cmd_line |> String.concat " ") (Unix.environment ()) in
+  let cmd_line = "ocamlmerlin" :: "server" :: command @ [ "-thread"; "-filename"; filename ] in
+  Log.println `INFO "%s" (cmd_line |> String.concat " ");
+  let (_, oc, _) as channels = Unix.open_process_full (cmd_line |> String.concat " ") (Unix.environment ()) in
   output_string oc source_code;
-  flush oc;
   close_out_noerr oc;
-  ic |> Spawn.loop (fun ic -> ic |> input_line |> continue_with)
+  Thread.create (loop (fun ic -> ic |> input_line |> continue_with)) channels |> ignore
 
 let check_configuration ~filename ~source_code =
   [ "check-configuration" ]
   |> execute filename source_code
 
-let enclosing ~(position : GText.iter) ~filename ~source_code apply =
-  check_configuration ~filename ~source_code;
-  let position = sprintf "%d:%d" (position#line + 1) position#line_offset in
+let errors ~filename ~source_code =
+  [ "errors" ]
+  |> execute filename source_code
+
+let enclosing ~position:(line, col) ~filename ~source_code apply =
+  let position = sprintf "%d:%d" line col in
   [ "enclosing"; "-position"; position ]
   |> execute filename source_code ~continue_with:begin fun json ->
     match Merlin_j.enclosing_answer_of_string json with
@@ -46,6 +54,90 @@ let case_analysis ~(start : GText.iter) ~(stop : GText.iter) ~filename ~source_c
     | Return case_analysis ->
         Log.println `DEBUG "%s" (Yojson.Safe.prettify json);
         apply case_analysis.value
+    | Failure msg
+    | Error msg
+    | Exception msg -> Log.println `ERROR "%s" msg.value;
+  end
+
+let complete_prefix ~position:(line, col) ~prefix ~filename ~source_code apply =
+  let position = sprintf "%d:%d" line col in
+  [ "complete-prefix"; "-position"; position; "-prefix"; sprintf "\"%s\"" prefix; "-doc true -types true" ]
+  |> execute filename source_code ~continue_with:begin fun json ->
+    match Merlin_j.complete_prefix_answer_of_string json with
+    | Return complete ->
+        Log.println `DEBUG "%s" (Yojson.Safe.prettify json);
+        apply complete.value
+    | Failure msg
+    | Error msg
+    | Exception msg -> Log.println `ERROR "%s" msg.value;
+  end
+
+let expand_prefix ~position:(line, col) ~prefix ~filename ~source_code apply =
+  let position = sprintf "%d:%d" line col in
+  [ "expand-prefix"; "-position"; position; "-prefix";  sprintf "\"%s\"" prefix; "-doc true -types true" ]
+  |> execute filename source_code ~continue_with:begin fun json ->
+    match Merlin_j.complete_prefix_answer_of_string json with
+    | Return complete ->
+        Log.println `DEBUG "%s" (Yojson.Safe.prettify json);
+        apply complete.value
+    | Failure msg
+    | Error msg
+    | Exception msg -> Log.println `ERROR "%s" msg.value;
+  end
+
+let type_enclosing ~position:(line, col) ?expression ?cursor ?verbosity ?index ~filename ~source_code apply =
+  let position = sprintf "%d:%d" line col in
+  [
+    ["type-enclosing"; "-position"; position ];
+    (match expression with Some e -> ["-expression"; sprintf "\"%s\"" e ] | _ -> []);
+    (match cursor with Some c -> ["-cursor"; string_of_int c ] | _ -> []);
+    (match verbosity with Some v -> ["-verbosity"; v ] | _ -> []);
+    (match index with Some i -> ["-index"; string_of_int i ] | _ -> [])
+  ] |> List.concat
+  |> execute filename source_code ~continue_with:begin fun json ->
+    match Merlin_j.type_enclosing_answer_of_string json with
+    | Return types ->
+        Log.println `DEBUG "%s" (Yojson.Safe.prettify json);
+        apply types.value
+    | Failure msg
+    | Error msg
+    | Exception msg -> Log.println `ERROR "%s" msg.value;
+  end
+
+let type_expression ~position:(line, col) ~expression ~filename ~source_code apply =
+  let position = sprintf "%d:%d" line col in
+  [ "type-expression"; "-position"; position; "-expression"; sprintf "\"%s\"" expression ]
+  |> execute filename source_code ~continue_with:begin fun json ->
+    match Merlin_j.type_expression_answer_of_string json with
+    | Return type_expression ->
+        Log.println `INFO "%s" (Yojson.Safe.prettify json);
+        apply type_expression.value
+    | Failure msg
+    | Error msg
+    | Exception msg -> Log.println `ERROR "%s" msg.value;
+  end
+
+let document ~position:(line, col) ?identifier ~filename ~source_code apply =
+  let position = sprintf "%d:%d" line col in
+  "document" :: "-position" :: position ::
+  (match identifier with None -> [] | Some identifier -> ["-identifier"; sprintf "\"%s\"" identifier])
+  |> execute filename source_code ~continue_with:begin fun json ->
+    match Merlin_j.document_answer_of_string json with
+    | Return document ->
+        Log.println `DEBUG "%s" (Yojson.Safe.prettify json);
+        apply document.value
+    | Failure msg
+    | Error msg
+    | Exception msg -> Log.println `ERROR "%s" msg.value;
+  end
+
+let list_modules ?ext ~filename ~source_code apply =
+  [ "list-modules"; "-ext .ml" ]
+  |> execute filename source_code ~continue_with:begin fun json ->
+    match Merlin_j.list_modules_answer_of_string json with
+    | Return list_modules ->
+        Log.println `DEBUG "%s" (Yojson.Safe.prettify json);
+        apply list_modules.value
     | Failure msg
     | Error msg
     | Exception msg -> Log.println `ERROR "%s" msg.value;

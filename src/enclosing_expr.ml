@@ -3,6 +3,12 @@ open Merlin_t
 module Log = Common.Log.Make(struct let prefix = "ENCL_EXPR" end)
 let _ = Log.set_verbosity `ERROR
 
+let iters_of_range buffer range =
+  let start = buffer#get_iter (`LINECHAR (range.start.line - 1, range.start.col)) in
+  let stop = buffer#get_iter (`LINECHAR (range.stop.line - 1, range.stop.col)) in
+  let length = abs (stop#offset - start#offset) in
+  start, stop, length
+
 class manager ~ocaml_view =
   let (<<) (lower_bound, upper_bound) value = min (max lower_bound value) upper_bound in
   let filename = match (ocaml_view#obuffer#as_text_buffer :> Text.buffer)#file with Some file -> file#filename | _ -> "" in
@@ -11,12 +17,6 @@ class manager ~ocaml_view =
     val mutable index = 0
     val mutable signal_ids : (GtkSignal.id * (GtkSignal.id -> unit)) list = []
     val mutable is_rev_order = false
-
-    method private range_iter buffer range =
-      let start = buffer#get_iter (`LINECHAR (range.start.line - 1, range.start.col)) in
-      let stop = buffer#get_iter (`LINECHAR (range.stop.line - 1, range.stop.col)) in
-      let length = abs (stop#offset - start#offset) in
-      start, stop, length
 
     method private select buffer =
       match ranges with
@@ -43,7 +43,7 @@ class manager ~ocaml_view =
       is_rev_order <- false;
       signal_ids |> List.iter (fun (sid, _) -> self#remove_signal sid);
 
-    method start ~iter =
+    method start ~(iter : GText.iter) =
       let buffer : GText.buffer = ocaml_view#obuffer#as_gtext_buffer in
       match ranges with
       | [||] ->
@@ -58,12 +58,12 @@ class manager ~ocaml_view =
             | _ -> [ ins, sel, length ]
           in
           Merlin.enclosing
-            ~position:iter
+            ~position:(iter#line + 1, iter#line_offset)
             ~filename:filename
             ~source_code:(buffer#get_text ())
             begin fun rr ->
               ranges <-
-                (rr |> List.map (self#range_iter buffer)) @ extra
+                (rr |> List.map (iters_of_range buffer)) @ extra
                 |> List.sort (fun (_, _, l1) (_, _, l2) -> compare l1 l2)
                 |> List.map (fun (a, b, _) -> a, b)
                 |> Array.of_list;

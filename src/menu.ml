@@ -138,27 +138,29 @@ let edit ~browser ~group ~flags
   let complet = GMenu.menu_item ~label:"Completion" ~packing:menu#add () in
   ignore (complet#connect#activate ~callback:begin fun () ->
       browser#with_current_project begin fun project ->
-        editor#with_current_page (fun page -> Mbrowser_compl.create ~project ~page ())
+        editor#with_current_page begin fun page ->
+          if Oe_config.use_merlin_completion then
+            Complete_prefix.create_window ~project ~page |> ignore
+          else
+            Mbrowser_compl.create ~project ~page ()
+        end
       end
     end);
   complet#add_accelerator ~group ~modi:[`CONTROL] GdkKeysyms._space ~flags;
-  (** Inferred Types *)
-  let annot_type = GMenu.menu_item ~label:"Inferred Types" ~packing:menu#add () in
-  let annot_type_menu = GMenu.menu ~packing:annot_type#set_submenu () in
-  let annot_type_show = GMenu.menu_item ~label:"Show Type at Cursor" ~packing:annot_type_menu#add () in
-  ignore (annot_type_show#connect#activate ~callback:browser#annot_type);
-  annot_type_show#add_accelerator ~group ~modi:[] GdkKeysyms._F2 ~flags;
-  let annot_type_copy = GMenu.menu_item ~label:"Copy Type at Cursor to Clipboard" ~packing:annot_type_menu#add () in
-  ignore (annot_type_copy#connect#activate ~callback:browser#annot_type_copy);
-  annot_type_copy#add_accelerator ~group ~modi:[`CONTROL] GdkKeysyms._F2 ~flags;
-  let annot_type_tooltips = GMenu.check_menu_item
+  (* Quick Info *)
+  let quick_info = GMenu.menu_item ~label:"Quick Info" ~packing:menu#add () in
+  let quick_info_menu = GMenu.menu ~packing:quick_info#set_submenu () in
+  let quick_info_at_cursor = GMenu.menu_item ~label:"Show Quick Info at Cursor" ~packing:quick_info_menu#add () in
+  ignore (quick_info_at_cursor#connect#activate ~callback:browser#quick_info_at_cursor);
+  quick_info_at_cursor#add_accelerator ~group ~modi:[] GdkKeysyms._F2 ~flags;
+  let quick_info_mouse = GMenu.check_menu_item
       ~label:"Enable On-Mouse-Hover"
-      ~active:Preferences.preferences#get.editor_annot_type_tooltips_enabled
-      ~packing:annot_type_menu#add ()
+      ~active:Preferences.preferences#get.Settings_j.editor_quick_info_enabled
+      ~packing:quick_info_menu#add ()
   in
-  ignore (annot_type_tooltips#connect#toggled ~callback:(fun () ->
-      browser#annot_type_set_tooltips annot_type_tooltips#active));
-  annot_type_tooltips#add_accelerator ~group ~modi:[`CONTROL; `MOD1] GdkKeysyms._F2 ~flags;
+  ignore (quick_info_mouse#connect#toggled ~callback:(fun () ->
+      Preferences.preferences#get.Settings_j.editor_quick_info_enabled <- quick_info_mouse#active;
+      Preferences.save()));
   (** Show documentation *)
   let show_doc_at_cursor = GMenu.image_menu_item ~label:"Show Documentation" ~packing:menu#add () in
   show_doc_at_cursor#connect#activate ~callback:editor#show_doc_at_cursor |> ignore;
@@ -186,7 +188,7 @@ let edit ~browser ~group ~flags
         Some (toggle_case :> GMenu.menu_item);
         Some (templates :> GMenu.menu_item);
         Some (complet :> GMenu.menu_item);
-        Some (annot_type :> GMenu.menu_item);
+        Some (quick_info :> GMenu.menu_item);
         Some (to_shell :> GMenu.menu_item);
         Some (select_all :> GMenu.menu_item);
         Some (increase_selection_indent :> GMenu.menu_item);
@@ -201,7 +203,7 @@ let edit ~browser ~group ~flags
           (comment :> GMenu.menu_item);
           (templates :> GMenu.menu_item);
           (complet :> GMenu.menu_item);
-          (annot_type :> GMenu.menu_item);
+          (quick_info :> GMenu.menu_item);
           (to_shell :> GMenu.menu_item);
         ];
         List.iter (fun x -> x#misc#set_sensitive page#buffer#has_selection)
@@ -405,6 +407,7 @@ let view ~browser ~group ~flags
   let _ = maximize_0#connect#activate ~callback:(fun () -> browser#set_maximized_view `NONE) in
   maximize_1#add_accelerator ~group ~modi:[`CONTROL; `MOD1] GdkKeysyms._comma ~flags;
   maximize_2#add_accelerator ~group ~modi:[`CONTROL; `MOD1] GdkKeysyms._period ~flags;
+  maximize_2#add_accelerator ~group ~modi:[] GdkKeysyms._F11 ~flags;
   (** Remove All Messages *)
   let _ = GMenu.separator_item ~packing:menu#add () in
   let messages_remove = GMenu.menu_item ~label:"Remove All Messages" ~packing:menu#add () in

@@ -43,9 +43,9 @@ let default_values =
         bg_color = { light = "#ffffff"; dark = "#000000" };
         weight = 0; style = `NORMAL; underline = `NONE; scale = 1.0; bg_default = true };
       { name = "infix";
-        color = { light = "indianred4"; dark = "#ff6a6a" };
+        color = { light = "#B34B4B"; dark = "#ff6a6a" };
         bg_color = { light = "#ffffff"; dark = "#000000" };
-        weight = 0; style = `NORMAL; underline = `NONE; scale = 1.0; bg_default = true };
+        weight = 500; style = `NORMAL; underline = `NONE; scale = 1.0; bg_default = true };
       { name = "label";
         color = { light = "saddlebrown"; dark = "#B77871" };
         bg_color = { light = "#ffffff"; dark = "#000000" };
@@ -83,7 +83,7 @@ let default_values =
         bg_color = { light = "#ffffff"; dark = "#000000" };
         weight = 0; style = `ITALIC; underline = `NONE; scale = 1.0; bg_default = true };
       { name = "ocamldoc";
-        color = { light = "deeppink3"; dark = "deeppink1" };
+        color = { light = "deeppink3"; dark = "#C72B7F" };
         bg_color = { light = "#ffffff"; dark = "#000000" };
         weight = 0; style = `ITALIC; underline = `NONE; scale = 1.0; bg_default = true };
       { name = "highlight";
@@ -172,7 +172,10 @@ module Color = struct
     else { light = x; dark = alt.dark }
 end
 
+(** Alias for [Color.get_themed_color] *)
 let (??) = Color.get_themed_color
+
+(** Alias for [Color.get_themed_icon] *)
 let (???) = Icon.get_themed_icon
 
 let editor_tag_bg_color tagname =

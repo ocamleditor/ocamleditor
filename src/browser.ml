@@ -50,12 +50,9 @@ class browser window =
   let vbox = GPack.vbox ~packing:Messages.hpaned#add1 () in
   let menubarbox = GPack.hbox ~spacing:0 ~packing:vbox#pack () in
   (* Menubar icon displayed full-screen mode *)
-  let logo = (??? Icons.oe_32) in
-  let width, height = GdkPixbuf.get_width logo, GdkPixbuf.get_height logo in
-  let pixbuf = GdkPixbuf.create ~width ~height ~has_alpha:(GdkPixbuf.get_has_alpha logo) () in
-  let () = GdkPixbuf.saturate_and_pixelate ~saturation:0.0 ~pixelate:true ~dest:pixbuf logo in
   let window_title_menu_icon = GBin.event_box ~packing:menubarbox#pack ~show:false () in
-  let icon = GMisc.image ~pixbuf ~packing:window_title_menu_icon#add () in
+  let icon = Gtk_util.label_icon ~width:32 ~height:32 "<span font='18'>\u{e10e}</span>" ~packing:window_title_menu_icon#add in
+  let _ = icon#misc#modify_fg [`NORMAL, `COLOR (icon#misc#style#fg `INSENSITIVE) ] in
   let _ = window_title_menu_icon#misc#set_property "visible-window" (`BOOL false) in
 
   (* Menubar *)
@@ -77,24 +74,19 @@ class browser window =
   let label_project_name = GMisc.label ~markup:"" ~xpad:5 ~packing:ebox_project_name#add () in
   (* Git bar *)
   let gitbox = GPack.hbox ~spacing:8 ~packing:(menubarbox#pack ~expand:false) () in
-  let button_gitunpushed = GButton.button ~relief:`NONE ~packing:gitbox#add () in
-  let _ = button_gitunpushed#set_image (GMisc.image ~pixbuf:(??? Icons.arrow_up) ())#coerce in
-  let button_gitpending = GButton.button ~relief:`NONE ~packing:gitbox#add () in
+  let create_gitbutton icon =
+    let button = new Gtk_util.button_icon ~icon_width:18 ~icon_spacing:1 ~icon ~packing:gitbox#add ~relief:`NONE () in
+    button#misc#set_name "gitbutton";
+    button
+  in
+  let button_gitunpushed = create_gitbutton "\u{eaa1}" in
+  let button_gitpending = create_gitbutton "\u{ea73}" in
+  let button_gitpath = create_gitbutton "\u{e65d}" in
+  let button_gitbranch = create_gitbutton "\u{f062c}" in
   let _ =
-    button_gitpending#set_image (GMisc.image ~pixbuf:(??? Icons.edit) ())#coerce;
-    button_gitpending#connect#clicked ~callback:begin fun () ->
+    button_gitpending#button#connect#clicked ~callback:begin fun () ->
       Git.diff_stat (Git.show_diff_stat None);
     end
-  in
-  let button_gitpath = GButton.button ~relief:`NONE ~packing:gitbox#add () in
-  let _ = button_gitpath#set_image (GMisc.image ~pixbuf:(??? Icons.git) ())#coerce in
-  let _ = button_gitpath#misc#set_name "gitbutton"in
-  let button_gitbranch = GButton.button ~label:"" ~relief:`NONE ~packing:gitbox#add () in
-  let _ = button_gitbranch#misc#set_name "gitbutton" in
-  (*let button_gitbranch = Gmisclib.Button.button_menu ~label:"" ~relief:`NONE ~packing:gitbox#add () in*)
-  let _ =
-    button_gitbranch#set_image (GMisc.image ~pixbuf:(??? Icons.branch) ())#coerce;
-    (*    button_gitbranch#set_menu_only();*)
   in
   (*  *)
   let vbox_menu_buttons = GPack.vbox ~border_width:0 ~packing:menubarbox#pack ~show:false () in
@@ -421,7 +413,7 @@ class browser window =
         end;
         Git.toplevel begin function
         | Some toplevel ->
-            toplevel |> Filename.basename |> button_gitpath#set_label;
+            button_gitpath#set_label (Filename.basename toplevel);
             toplevel |> Filename.dirname |> button_gitpath#misc#set_tooltip_text;
         | _ ->
             button_gitpath#set_label "";
@@ -434,9 +426,9 @@ class browser window =
             let changes =
               s.Git.added + s.Git.modified + s.Git.deleted + s.Git.renamed + s.Git.copied + s.Git.untracked + s.Git.ignored
             in
-            changes |> sprintf "%3d" |> button_gitpending#set_label;
+            button_gitpending#set_label (sprintf "%3d" changes);
             Git.markup_of_status s |> button_gitpending#misc#set_tooltip_markup;
-            s.Git.ahead |> sprintf "%3d" |> button_gitunpushed#set_label;
+            button_gitunpushed#set_label (sprintf "%3d" s.Git.ahead);
             s.Git.ahead |> sprintf "%d unpushed commits" |> button_gitunpushed#misc#set_tooltip_markup;
         | _ ->
             gitbox#misc#hide();
@@ -625,33 +617,11 @@ class browser window =
         end configs in
       self#with_current_project (fun _ -> ignore (Task_console.exec_sync ~editor [tasks]))
 
-    method annot_type () =
+    method quick_info_at_cursor () =
       editor#with_current_page begin fun page ->
-        try
-          let iter = `ITER (page#buffer#get_iter `INSERT) in
-          (*Opt.may page#annot_type (fun (at : Annot_type.annot_type) -> at#popup (*~position:`TOP_RIGHT*) iter ());*)
-          Option.iter (fun at ->  at#popup iter () : Annot_type.annot_type -> unit) page#annot_type;
-          if Preferences.preferences#get.editor_err_tooltip then (page#error_indication#tooltip ~sticky:true iter);
-        with ex -> Printf.eprintf "File \"browser.ml\": %s\n%s\n%!" (Printexc.to_string ex) (Printexc.get_backtrace());
+        let iter = page#buffer#get_iter `INSERT in
+        page#quick_info_at_iter iter
       end
-
-    method annot_type_copy () =
-      editor#with_current_page begin fun page ->
-        Option.iter begin fun (annot_type : Annot_type.annot_type) ->
-          match annot_type#get_type (`ITER (page#buffer#get_iter `INSERT)) with
-          | Some {Annot_type.at_type; _} ->
-              self#annot_type();
-              let clipboard = GData.clipboard Gdk.Atom.clipboard in
-              clipboard#set_text at_type
-          | None -> ()
-        end page#annot_type
-      end
-
-    method annot_type_set_tooltips x =
-      Preferences.preferences#get.editor_annot_type_tooltips_enabled <- x;
-      Preferences.save();
-      editor#with_current_page
-        (fun page -> Option.iter (fun obj -> obj#remove_tag ()) page#annot_type)
 
     method create_menu_history dir ~menu =
       let history = match dir with

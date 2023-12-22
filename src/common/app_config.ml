@@ -102,6 +102,8 @@ let get_application_dir name =
 
 let application_icons = get_application_dir "icons"
 
+let application_fonts = get_application_dir "fonts"
+
 let application_plugins = get_application_dir "plugins"
 
 let find_best ?(param="--help") prog =

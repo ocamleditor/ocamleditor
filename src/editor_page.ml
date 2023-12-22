@@ -45,25 +45,32 @@ let markup_label filename =
   let shortname = shortname filename in
   if filename ^^^ ".mli" then "<i>"^shortname^"</i>" else shortname
 
-let create_small_button ?button ?tooltip ~pixbuf ?callback ?packing ?show () =
+let create_small_button ?button ?tooltip ?pixbuf ?icon ?callback ?packing ?show () =
   let button =
     match button with Some b -> b | _ -> GButton.button ~relief:`NONE ?packing ?show ()
   in
-  button#set_image (GMisc.image ~pixbuf ())#coerce;
+  begin
+    match pixbuf with
+    | Some pixbuf -> button#set_image (GMisc.image ~pixbuf ())#coerce;
+    | _ ->
+        icon |> Option.iter (fun icon -> (Gtk_util.label_icon ~width:22 ~height:16 ~packing:button#add icon)#coerce |> ignore)
+  end;
   button#set_focus_on_click false;
   button#misc#set_name "smallbutton";
   Gaux.may tooltip ~f:button#misc#set_tooltip_text;
   Gaux.may callback ~f:(fun callback -> ignore (button#connect#clicked ~callback));
   button;;
 
-let create_small_toggle_button ?tooltip ~pixbuf ?callback ?packing ?show () =
+let create_small_toggle_button ?tooltip ~icon ?callback ?packing ?show () =
   let button = GButton.toggle_button ~relief:`NONE ?packing ?show () in
-  let _ = create_small_button ~button:(button :> GButton.button) ?tooltip ~pixbuf ?callback ?packing () in
+  let _ = create_small_button ~button:(button :> GButton.button) ?tooltip ~icon ?callback ?packing () in
   button;;
 
 (** Editor page *)
 class page ?file ~project ~scroll_offset ~offset ~editor () =
   let file_changed             = new file_changed () in
+  let scroll_changed           = new scroll_changed () in
+  let signals                  = new signals ~file_changed ~scroll_changed in
   let buffer                   = new Ocaml_text.buffer ~project ?file () in
   let sw, text_view, ocaml_view = create_view ~project ~buffer ?file () in
   let vbox                     = GPack.vbox ~spacing:0 () in
@@ -80,29 +87,37 @@ class page ?file ~project ~scroll_offset ~offset ~editor () =
   let _                        = GMisc.separator `VERTICAL ~packing:sbox#pack () in
   let status_filename          = GMisc.label ~selectable:true ~xalign:0.0 ~xpad:5 ~width:240 ~ellipsize:`END ~packing:sbox#add () in
   let sep_status_pos_box       = GMisc.separator `VERTICAL ~packing:sbox#pack () in
-  let status_pos_box           = GPack.hbox ~spacing:3 ~packing:sbox#pack () in
-  let _                        = GMisc.label ~xalign:0.0 ~yalign:0.5 ~text:"Ln:" ~packing:status_pos_box#pack () in
-  let status_pos_lin           = GMisc.label ~xalign:0.0 ~yalign:0.5 ~width:33 ~packing:status_pos_box#pack () in
-  (*let _                        = status_pos_lin#misc#modify_font_by_name "bold" in*)
-  let _                        = GMisc.label ~xalign:0.0 ~yalign:0.5 ~text:"Col:" ~packing:status_pos_box#pack () in
-  let status_pos_col           = GMisc.label ~xalign:0.0 ~yalign:0.5 ~width:33 ~packing:status_pos_box#pack () in
-  (*let _                        = status_pos_col#misc#modify_font_by_name "bold" in*)
-  let _                        = GMisc.label ~xalign:0.0 ~yalign:0.5 ~text:"Off:" ~packing:status_pos_box#pack () in
-  let status_pos_off           = GMisc.label ~xalign:0.0 ~yalign:0.5 ~width:40 ~packing:status_pos_box#pack () in
-  let _                        = GMisc.label ~xalign:0.0 ~yalign:0.5 ~text:"Sel:" ~packing:status_pos_box#pack () in
-  let status_pos_sel           = GMisc.label ~xalign:0.0 ~yalign:0.5 ~width:70 ~text:"0" ~packing:status_pos_box#pack () in
+  let status_pos_box           = GPack.hbox ~spacing:3 ~packing:sbbox#pack () in
+  let _                        = GMisc.separator `VERTICAL ~packing:status_pos_box#pack () in
+  let label_pos_lin            = GMisc.label ~xalign:0.0 ~yalign:0.5 ~text:"\u{e0a1}\u{2009}" ~packing:status_pos_box#pack () in
+  let _                        = label_pos_lin#misc#modify_font_by_name "FiraCode OCamlEditor" in
+  let status_pos_lin           = GMisc.label ~xalign:0.0 ~yalign:0.5 ~width:34 ~packing:status_pos_box#pack () in
+  let _                        = GMisc.separator `VERTICAL ~packing:status_pos_box#pack () in
+  let label_pos_col            = GMisc.label ~xalign:0.0 ~yalign:0.5 ~markup:"<small>\u{e0a3}</small>\u{2009}" ~packing:status_pos_box#pack () in
+  let _                        = label_pos_col#misc#modify_font_by_name "FiraCode OCamlEditor" in
+  let status_pos_col           = GMisc.label ~xalign:0.0 ~yalign:0.5 ~width:34 ~packing:status_pos_box#pack () in
+  let _                        = GMisc.separator `VERTICAL ~packing:status_pos_box#pack () in
+  let status_pos_off           = GMisc.label ~xalign:0.0 ~yalign:0.5 ~width:55 ~packing:status_pos_box#pack () in
+  (*let _                        = status_pos_off#misc#set_tooltip_text "Character offset from start" in*)
+  let _                        = GMisc.separator `VERTICAL ~packing:status_pos_box#pack () in
+  let status_pos_sel           = GMisc.label ~xalign:0.0 ~yalign:0.5 ~width:34 ~text:"0" ~packing:status_pos_box#pack () in
+  (*let _                        = status_pos_sel#misc#set_tooltip_text "Selected lines" in*)
+  let _                        = GMisc.separator `VERTICAL ~packing:status_pos_box#pack () in
+  let status_pos_sel_chars     = GMisc.label ~xalign:0.0 ~yalign:0.5 ~width:55 ~text:"0" ~packing:status_pos_box#pack () in
+  (*let _                        = status_pos_sel_chars#misc#set_tooltip_text "Selected characters" in*)
+  let _                        = GMisc.separator `VERTICAL ~packing:status_pos_box#pack () in
   (**  *)
   let _                        = GMisc.separator `VERTICAL ~packing:sbox#pack () in
   let spinner                  = GMisc.image ~width:15 ~packing:sbox#pack () in
   let _                        = GMisc.separator `VERTICAL ~packing:sbox#pack () in
   let button_dotview           = create_small_toggle_button
-      ~pixbuf:(??? Icons.tree)
+      ~icon:"\u{f104a} "
       ~packing:sbbox#pack ()
       ~show:(false (*Oe_config.dot_version <> None*))
   in
   (** Icons for font size and row spacing adjustment *)
   let button_font_incr = create_small_button
-      ~pixbuf:(??? Icons.zoom_in_14)
+      ~icon:"\u{f09f4}"
       ~packing:sbbox#pack
       ~callback:begin fun () ->
         let fd = text_view#misc#pango_context#font_description in
@@ -112,7 +127,7 @@ class page ?file ~project ~scroll_offset ~offset ~editor () =
       end ()
   in
   let button_font_decr = create_small_button
-      ~pixbuf:(??? Icons.zoom_out_14)
+      ~icon:"\u{f09f3}"
       ~packing:sbbox#pack
       ~callback:begin fun () ->
         let fd = text_view#misc#pango_context#font_description in
@@ -125,7 +140,7 @@ class page ?file ~project ~scroll_offset ~offset ~editor () =
       end ()
   in
   let button_rowspacing_incr = create_small_button
-      ~pixbuf:(??? Icons.lines_in_14)
+      ~icon:"\u{f084f}"
       ~packing:sbbox#pack
       ~callback:begin fun () ->
         let above, below = Preferences.preferences#get.editor_pixels_lines in
@@ -135,7 +150,7 @@ class page ?file ~project ~scroll_offset ~offset ~editor () =
       end ()
   in
   let button_rowspacing_decr = create_small_button
-      ~pixbuf:(??? Icons.lines_out_14)
+      ~icon:"\u{f084d}"
       ~packing:sbbox#pack
       ~callback:begin fun () ->
         text_view#set_pixels_above_lines (max 0 (text_view#pixels_above_lines - 1));
@@ -144,30 +159,30 @@ class page ?file ~project ~scroll_offset ~offset ~editor () =
       end ()
   in
   (** Show whitespace and word wrap *)
-  let button_toggle_wrap = create_small_toggle_button ~pixbuf:(??? Icons.wrap_off_14) ~packing:sbbox#pack () in
-  let button_toggle_whitespace = create_small_toggle_button ~pixbuf:(??? Icons.whitespace_off_14) ~packing:sbbox#pack () in
+  let button_toggle_wrap = create_small_toggle_button ~icon:"\u{eb80}" ~packing:sbbox#pack () in
+  let button_toggle_whitespace = create_small_toggle_button ~icon:"\u{eb7d}" ~packing:sbbox#pack () in
   (** Navigation buttons in the statusbar *)
   (*let first_sep = GMisc.separator `VERTICAL ~packing:sobox#pack () in*)
-  let location_goto where =
-    match where editor#location_history with
-    | None -> ()
-    | Some loc -> editor#location_history_goto loc
-  in
-  let button_h_prev            = create_small_button
-      ~pixbuf:(??? Icons.arrow_prev_14)
-      ~tooltip:"Back"
-      ~packing:sbbox#pack
-      ~callback:(fun _ -> location_goto Location_history.previous) () in
-  let button_h_next            = create_small_button
-      ~pixbuf:(??? Icons.arrow_next_14)
-      ~tooltip:"Forward"
-      ~packing:sbbox#pack
-      ~callback:(fun _ -> location_goto Location_history.next) () in
-  let button_h_last            = create_small_button
-      ~pixbuf:(??? Icons.arrow_last_14)
-      ~tooltip:"Last Edit Location"
-      ~packing:sbbox#pack
-      ~callback:(fun _ -> location_goto Location_history.goto_last_edit_location) () in
+  (*  let location_goto where =
+      match where editor#location_history with
+      | None -> ()
+      | Some loc -> editor#location_history_goto loc
+      in
+      let button_h_prev            = create_small_button
+        ~icon:"\u{ea9b}"
+        ~tooltip:"Back"
+        ~packing:sbbox#pack
+        ~callback:(fun _ -> location_goto Location_history.previous) () in
+      let button_h_next            = create_small_button
+        ~icon:"\u{ea9c}"
+        ~tooltip:"Forward"
+        ~packing:sbbox#pack
+        ~callback:(fun _ -> location_goto Location_history.next) () in
+      let button_h_last            = create_small_button
+        ~icon:"\u{f0794}"
+        ~tooltip:"Last Edit Location"
+        ~packing:sbbox#pack
+        ~callback:(fun _ -> location_goto Location_history.goto_last_edit_location) () in*)
   (** Scrollbars *)
   let hscrollbar = GRange.scrollbar `HORIZONTAL ~adjustment:sw#hadjustment ~packing:spaned#add2 () in
   let vscrollbar = GRange.scrollbar `VERTICAL ~adjustment:sw#vadjustment (*~update_policy:`DELAYED*) ~packing:svbox#add () in
@@ -212,6 +227,7 @@ class page ?file ~project ~scroll_offset ~offset ~editor () =
     val mutable changed_after_last_diff = true
     val mutable load_complete = false
     val mutable annot_type = None
+    val mutable quick_info = Quick_info.create ocaml_view
     val error_indication = new Error_indication.error_indication ocaml_view vscrollbar global_gutter
     val mutable outline = None
     val mutable dotview = None
@@ -280,7 +296,7 @@ class page ?file ~project ~scroll_offset ~offset ~editor () =
     method buffer = buffer
     method project = project
     method vadjustment = sw#vadjustment
-    method status_pos_sel = status_pos_sel
+    method status_pos_sel = status_pos_sel, status_pos_sel_chars
     method undo () = if not (buffer#undo#undo()) then (text_view#scroll_lazy (buffer#get_iter `INSERT))
     method redo () = if not (buffer#undo#redo()) then (text_view#scroll_lazy (buffer#get_iter `INSERT))
 
@@ -516,7 +532,7 @@ class page ?file ~project ~scroll_offset ~offset ~editor () =
           dotview <- None;
           textbox#misc#show();
           List.iter (fun b -> b#misc#set_sensitive true)
-            [button_font_incr; button_font_decr; button_rowspacing_incr; button_rowspacing_decr; button_h_prev; button_h_next; button_h_last];
+            [button_font_incr; button_font_decr; button_rowspacing_incr; button_rowspacing_decr; (*button_h_prev; button_h_next; button_h_last*)];
           List.iter (fun b -> b#misc#set_sensitive true) [button_toggle_wrap; button_toggle_whitespace];
           hscrollbar#misc#show();
           status_pos_box#misc#show();
@@ -540,7 +556,7 @@ class page ?file ~project ~scroll_offset ~offset ~editor () =
                         dotview <- Some viewer;
                         List.iter (fun b -> b#misc#set_sensitive false)
                           [button_font_incr; button_font_decr; button_rowspacing_incr; button_rowspacing_decr;
-                           button_h_prev; button_h_next; button_h_last];
+                           (*button_h_prev; button_h_next; button_h_last*)];
                         List.iter (fun b -> b#misc#set_sensitive false) [button_toggle_wrap; button_toggle_whitespace];
                         hscrollbar#misc#hide();
                         status_pos_box#misc#hide();
@@ -597,6 +613,11 @@ class page ?file ~project ~scroll_offset ~offset ~editor () =
             Gmisclib.Idle.add (fun () -> ignore (view#scroll_to_iter iter));
           end
 
+    method quick_info = quick_info
+
+    method quick_info_at_iter iter =
+      Quick_info.at_iter quick_info iter ()
+
     initializer
       global_gutter#misc#connect#query_tooltip ~callback:begin fun ~x ~y ~kbd tooltip ->
         try
@@ -621,10 +642,13 @@ class page ?file ~project ~scroll_offset ~offset ~editor () =
           false
         end)
       in
-      ignore (vscrollbar#connect#value_changed ~callback:(fun () -> view#misc#handler_block !signal_expose));
+      ignore (vscrollbar#connect#value_changed ~callback:begin fun () ->
+          view#misc#handler_block !signal_expose;
+          scroll_changed#call()
+        end);
       ignore (vscrollbar#connect#after#value_changed ~callback:(fun () ->
           Gmisclib.Idle.add ~prio:300 (fun () -> view#misc#handler_unblock !signal_expose)));
-      (** After focus_in, check whether the file is changed on disk *)
+      (* After focus_in, check if the file is changed on disk *)
       ignore (text_view#event#connect#after#focus_in ~callback:begin fun _ ->
           Gaux.may self#file ~f:begin fun f ->
             if f#exists && f#changed then
@@ -709,14 +733,17 @@ class page ?file ~project ~scroll_offset ~offset ~editor () =
         button_dotview#misc#set_sensitive (Menu_view.get_switch_view_sensitive editor#project self);
       end
 
-    method connect = new signals ~file_changed
+    method connect = signals
+    method disconnect = signals#disconnect
   end
 
 (** Signals *)
 and file_changed () = object inherit [Editor_file.file option] signal () end
+and scroll_changed () = object inherit [unit] signal () end
 
-and signals ~file_changed =
+and signals ~file_changed ~scroll_changed =
   object
-    inherit ml_signals [file_changed#disconnect]
+    inherit ml_signals [file_changed#disconnect; scroll_changed#disconnect]
     method file_changed = file_changed#connect ~after
+    method scroll_changed = scroll_changed#connect ~after
   end

@@ -40,7 +40,6 @@ setup.ml
 src/resource.res
 src/icons
 src/build_id.ml
-fonts
 *.so
 
 src/ocamleditorw

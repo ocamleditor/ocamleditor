@@ -21,7 +21,7 @@
 *)
 
 
-let regexp       = Str.regexp "[][ \t\n\r,:;!?\"\\-+/*=%&$<>|{}()^~.#]"
-let longid       = Str.regexp "[][ \t\n\r,:;!?\"\\-+/*=%&$<>|{}()^~]"
-let longid_sharp = Str.regexp "[][ \t\n\r,:;!?\"\\-+/*=%&$<>|{}()^~#]"
-let part         = Str.regexp "[][ \t\n\r,:;!?\"\\-+/*=%&$<>|{}()^~.#_]"
+let regexp       = Str.regexp "[][ \t\n\r,:;!?\"\\-+/*=%&$@<>|{}()^~.#]"
+let longid       = Str.regexp "[][ \t\n\r,:;!?\"\\-+/*=%&$@<>|{}()^~]"
+let longid_sharp = Str.regexp "[][ \t\n\r,:;!?\"\\-+/*=%&$@<>|{}()^~#]"
+let part         = Str.regexp "[][ \t\n\r,:;!?\"\\-+/*=%&$@<>|{}()^~.#_]"

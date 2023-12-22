@@ -30,22 +30,26 @@ let create_mark_name =
 
 (** window *)
 let window widget
-    ?(type_hint=(if Sys.win32 then `UTILITY else `DIALOG))
+    ?type_hint
+    ?modal
     ?(decorated=false)
     ?parent
+    ?(destroy_on_focus_out=true)
     ?(destroy_child=true)
     ?(fade=false)
     ?(focus=true)
     ?(escape=true)
+    ?(border_width=1)
     ?wm_class
     ?(show=true)
     ~x ~y () =
   let window = GWindow.window
       ~decorated
-      ~border_width:1
+      ?modal
+      ~border_width
       ~deletable:true
       ~focus_on_map:focus
-      ~type_hint
+      ?type_hint
       ?wm_class
       ~show:false ()
   in
@@ -54,11 +58,12 @@ let window widget
   let color = Color.set_value 0.38 (`COLOR (window#misc#style#base `NORMAL)) (*(`NAME Preferences.preferences#get.Preferences.pref_bg_color_popup)*) in
   let _ = window#misc#modify_bg [`NORMAL, color] in
   (*let _ = ebox#misc#modify_bg [`NORMAL, `NAME Preferences.preferences#get.Preferences.pref_bg_color_popup] in*)
-  ignore (window#event#connect#after#focus_out ~callback:begin fun _ ->
+  if destroy_on_focus_out then
+    window#event#connect#after#focus_out ~callback:begin fun _ ->
       if not destroy_child then (ebox#remove widget);
       window#destroy();
       true
-    end);
+    end |> ignore;
   if escape then Gmisclib.Util.esc_destroy_window window;
   window#set_skip_pager_hint true;
   window#set_skip_taskbar_hint true;
@@ -80,39 +85,44 @@ let window widget
   end;
   window
 
+let move_window_within_screen_bounds window x y =
+  let alloc = window#misc#allocation in
+  let x, y =
+    (if x + alloc.Gtk.width > (Gdk.Screen.width()) then max 0 (Gdk.Screen.width() - alloc.Gtk.width) else x),
+    (if y + alloc.Gtk.height > (Gdk.Screen.height()) then max 0 (Gdk.Screen.height() - alloc.Gtk.height) else y);
+  in
+  window#move ~x ~y;
+  x, y
+
 (** window_tooltip *)
-let window_tooltip widget ?parent ?(fade=false) ~x ~y () =
+let window_tooltip widget ?parent ?(fade=false) ~x ~y ?width ?height ?(kind=`POPUP) ?(type_hint=`NORMAL) ?(show=true) () =
   let fade = fade && !Gmisclib.Util.fade_window_enabled in
   let window = GWindow.window
       ~decorated:false
-      ~kind:(if Sys.os_type = "Win32" then `POPUP else `TOPLEVEL)
-      ~type_hint:(if Sys.os_type = "Win32" then `MENU else `NORMAL)
+      ~kind (* `POPUP is faster *)
+      ~type_hint (*`NORMAL allows wm effects *)
       ~border_width:1
+      ?width ?height
       ~show:false ()
   in
   let ebox = GBin.event_box ~packing:window#add () in
   ebox#add widget;
-  let module ColorOp = Color in
   let open Preferences in
-  let color = ColorOp.set_value 0.62 (`NAME ?? (Preferences.preferences#get.editor_bg_color_popup)) in
-  let _ = window#misc#modify_bg [`NORMAL, color] in
+  let _ = window#misc#modify_bg [`NORMAL, `NAME ?? (Preferences.preferences#get.editor_bg_color_popup)] in
   let _ = ebox#misc#modify_bg [`NORMAL, `NAME ?? (Preferences.preferences#get.editor_bg_color_popup)] in
   window#set_skip_pager_hint true;
   window#set_skip_taskbar_hint true;
   window#set_accept_focus false;
   window#misc#set_can_focus false;
-  window#set_focus_on_map false;
+  (*window#set_focus_on_map false;*)
   Gaux.may parent ~f:(fun parent -> Gaux.may (GWindow.toplevel parent) ~f:(fun x -> window#set_transient_for x#as_window));
   if fade then (window#set_opacity 0.0);
   window#move ~x ~y;
-  if fade then (Gmisclib.Util.fade_window window) else window#show();
-  if Sys.os_type <> "Win32" then (window#present());
-  let alloc = window#misc#allocation in
-  let x, y =
-    (if x + alloc.Gtk.width > (Gdk.Screen.width()) then (Gdk.Screen.width() - alloc.Gtk.width) else x),
-    (if y + alloc.Gtk.height > (Gdk.Screen.height()) then (Gdk.Screen.height() - alloc.Gtk.height) else y);
-  in
-  window#move ~x ~y;
+  if show then begin
+    if fade then (Gmisclib.Util.fade_window window) else window#present();
+    (*if Sys.os_type <> "Win32" then (window#present());*)
+  end;
+  move_window_within_screen_bounds window x y |> ignore;
   window
 
 (** with_tag *)
@@ -142,11 +152,26 @@ let try_font context family =
     true
   with Gpointer.Null -> false
 
+let label_icon ?(width=20) ?(height=16) ?(font_name="FiraCode OCamlEditor") ?color ?packing icon =
+  let markup = Printf.sprintf "<big>%s</big>" icon in
+  let label = GMisc.label ~xalign:0.5 ~yalign:0.5 ~xpad:0 ~ypad:0 ~width ~height ~markup ?packing () in
+  label#misc#modify_font_by_name font_name;
+  color |> Option.iter begin fun color ->
+    label#misc#modify_fg [ `NORMAL, `NAME color; `ACTIVE, `NAME color; `PRELIGHT, `NAME color ];
+    label#misc#modify_text [ `NORMAL, `NAME color; `ACTIVE, `NAME color; `PRELIGHT, `NAME color ];
+  end;
+  label
 
-
-
-
-
-
+class button_icon ?label ?(icon="") ?(icon_spacing=3) ?icon_width ?icon_height ?relief ?packing () =
+  let button = GButton.button ?label ?relief ?packing () in
+  let hbox = GPack.hbox ~spacing:icon_spacing ~packing:button#add () in
+  let icon = label_icon ?width:icon_width ?height:icon_height ~packing:hbox#add icon in
+  let label = GMisc.label ~packing:hbox#add () in
+  object (self)
+    inherit GObj.widget hbox#as_widget
+    method set_icon = icon#set_label
+    method set_label = label#set_label
+    method button = button
+  end
 
 

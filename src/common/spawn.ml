@@ -47,7 +47,7 @@ let create_process ?wd ?env program args =
 
 
 (** loop *)
-let loop (f : in_channel -> unit) chan = try while true do f chan done with End_of_file -> ()
+let loop (f : in_channel -> unit) chan = try while true do f chan done with End_of_file -> close_in_noerr chan
 
 (** redirect_to_stdout *)
 let redirect_to_stdout = loop (fun chan -> input_line chan |> print_endline)
