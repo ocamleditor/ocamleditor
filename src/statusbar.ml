@@ -1,4 +1,15 @@
 open Printf
+open Preferences
+
+let default_font_size =
+  let font = preferences#get.Settings_j.font in
+  Str.string_after font (String.rindex font ' ' + 1) |> int_of_string
+
+let font_size =
+  if Oe_config.unify_statusbars then None else Some 9
+
+let set_label_font_size label =
+  label#misc#modify_font_by_name (match font_size with Some x -> string_of_int x | _ -> "")
 
 let create_small_button ?tooltip ?icon ?button ?callback ?packing ?show () =
   let button =
@@ -9,7 +20,11 @@ let create_small_button ?tooltip ?icon ?button ?callback ?packing ?show () =
   button#set_focus_on_click false;
   button#misc#set_name "smallbutton";
   icon |> Option.iter begin fun icon ->
-    let icon = sprintf "<span font='9'>%s</span>" icon in
+    let icon =
+      match font_size with
+      | Some size -> sprintf "<span font='%d'>%s</span>" size icon
+      | _ -> icon
+    in
     (Gtk_util.label_icon (*~height:14*) ~packing:button#add icon)#coerce |> ignore
   end;
   Gaux.may tooltip ~f:button#misc#set_tooltip_text;
@@ -22,17 +37,19 @@ let create_small_toggle_button ?tooltip ~icon ?callback ?packing ?show () =
   button;;
 
 class editorbar ~view ?packing () =
-  let icon_font_name = "FiraCode OCamlEditor" in
+  let icon_font_name = sprintf "FiraCode OCamlEditor %s" (match font_size with Some x -> string_of_int x | _ -> "15") in
   let box = GPack.hbox ~spacing:1 ~border_width:0 ?packing () in
   let paned = GPack.paned `HORIZONTAL ~packing:box#add () in
   let _ = GMisc.separator `VERTICAL ~packing:box#pack () in
   let lbox = GPack.hbox ~spacing:1 ~border_width:0 ~packing:(paned#pack1 ~resize:true ~shrink:false) () in
   let status_filename = GMisc.label ~selectable:true ~xalign:0.0 ~xpad:5 ~ellipsize:`END ~packing:lbox#add () in
   let _ = status_filename#set_use_markup true in
+  let _ = set_label_font_size status_filename in
   let _ = GMisc.separator `VERTICAL ~packing:lbox#pack () in
-  let status_modified = GMisc.label ~width:17 ~xpad:0 ~ypad:0 ~xalign:0.0 ~packing:lbox#pack () in
+  let status_modified = GMisc.label ~markup:"" ~xpad:0 ~ypad:0 ~xalign:0.5 ~packing:lbox#pack () in
   let _ = status_modified#misc#modify_fg [`NORMAL, `NAME "#1E90FF"] in
   let _ = status_modified#set_use_markup true in
+  let _ = set_label_font_size status_modified in
 
   let pos_box = GPack.hbox ~spacing:3 ~packing:lbox#pack () in
 
@@ -40,21 +57,26 @@ class editorbar ~view ?packing () =
   let label_pos_lin = GMisc.label ~xalign:0.0 ~yalign:0.5 ~text:"\u{e0a1}\u{2009}" ~packing:pos_box#pack () in
   let _ = label_pos_lin#misc#modify_font_by_name icon_font_name in
   let status_pos_lin = GMisc.label ~xalign:0.0 ~yalign:0.5 ~width:34 ~packing:pos_box#pack () in
+  let _ = set_label_font_size status_pos_lin in
   let _ = GMisc.separator `VERTICAL ~packing:pos_box#pack () in
 
   let label_pos_col = GMisc.label ~xalign:0.0 ~yalign:0.5 ~markup:"<small>\u{e0a3}</small>\u{2009}" ~packing:pos_box#pack () in
   let _ = label_pos_col#misc#modify_font_by_name icon_font_name in
   let status_pos_col = GMisc.label ~xalign:0.0 ~yalign:0.5 ~width:34 ~packing:pos_box#pack () in
+  let _ = set_label_font_size status_pos_col in
   let _ = GMisc.separator `VERTICAL ~packing:pos_box#pack () in
 
   let status_pos_off = GMisc.label ~xalign:0.0 ~yalign:0.5 ~width:55 ~packing:pos_box#pack () in
+  let _ = set_label_font_size status_pos_off in
   (*let _ = status_pos_off#misc#set_tooltip_text "Character offset from start" in*)
   let _ = GMisc.separator `VERTICAL ~packing:pos_box#pack () in
 
   let status_pos_sel = GMisc.label ~xalign:0.0 ~yalign:0.5 ~width:34 ~text:"0" ~packing:pos_box#pack () in
   (*let _ = status_pos_sel#misc#set_tooltip_text "Selected lines" in*)
+  let _ = set_label_font_size status_pos_sel in
   let _ = GMisc.separator `VERTICAL ~packing:pos_box#pack () in
   let status_pos_sel_chars = GMisc.label ~xalign:0.0 ~yalign:0.5 ~width:55 ~text:"0" ~packing:pos_box#pack () in
+  let _ = set_label_font_size status_pos_sel_chars in
   (*let _ = status_pos_sel_chars#misc#set_tooltip_text "Selected characters" in*)
   let _ = GMisc.separator `VERTICAL ~packing:pos_box#pack () in
 
@@ -110,7 +132,14 @@ class editorbar ~view ?packing () =
   in
 
   let button_toggle_wrap = create_small_toggle_button ~icon:"\u{eb80}" ~packing:lbox#pack () in
-  let button_toggle_whitespace = create_small_toggle_button ~icon:"\u{eb7d}" ~packing:lbox#pack () in
+  let button_toggle_whitespace =
+    let icon =
+      let icon = "\u{eb7d}" in
+      match font_size with
+      | Some size -> sprintf "<span font='%d'>%s</span>" size icon
+      | _ -> icon
+    in
+    create_small_toggle_button ~icon ~packing:lbox#pack () in (* f1dd *)
 
   let spinner = GMisc.image ~width:15 ~packing:box#pack () in
   object (self)
@@ -138,7 +167,6 @@ class editorbar ~view ?packing () =
 class gitbar ?packing () =
   let box = GPack.hbox ~spacing:8 ?packing () in
   let create_gitbutton icon =
-    let icon = sprintf "<span font='9'>%s</span>" icon in
     let button = new Gtk_util.button_icon (*~icon_width:18*) ~icon_spacing:0 ~icon ~packing:box#add ~relief:`NONE () in
     button#button#set_focus_on_click false;
     button#button#misc#set_name "smallbutton";
@@ -161,7 +189,7 @@ class gitbar ?packing () =
   end
 
 class widget ?(color=true) ?packing () =
-  let ebox = GBin.event_box ?packing () in
+  let ebox = GBin.event_box ~border_width:0 ?packing () in
   let box = GPack.hbox ~spacing:1 ~border_width:0 ~packing:ebox#add () in
   let editorbar_placeholder = GBin.alignment ~packing:(box#pack ~from:`START ~expand:true ~fill:true) () in
   let _ = GMisc.separator `VERTICAL ~packing:(box#pack ~expand:false) () in
