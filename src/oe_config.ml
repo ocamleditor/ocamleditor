@@ -106,11 +106,13 @@ let layout_find_references               = `VERTICAL
 let layout_find_module_browser           = `VERTICAL
 (* Path relative to the project home directory where to find custom templates. *)
 let template_project_filename            = ".extensions" // "templates.cma"
-let targetlist_alternating_row_colors    = Some 0.95 (* like the gutter *)
+let targetlist_alternating_row_colors    = None
 let editor_tab_color_alt_active          = `NAME "#a7a2ae"
 let editor_tab_color_alt_normal          = `NAME "#310080"
 let use_merlin_completion                = true
 let use_merlin_quick_info                = true
+let colored_statusbar                    = true
+let unify_statusbars                     = false
 
 
 (** End of Configuration Section ============================================ *)

@@ -94,6 +94,7 @@ let main () = begin
         ~kind:`TOPLEVEL
         ~show:false ()
     in
+    Gtk_theme.set_theme ~context:window#misc#pango_context ();
     window#iconify(); (* doesn't work on WSL *)
     window#move ~x:0 ~y:0;
     let _ = new Theme.monitor window in
@@ -105,7 +106,6 @@ let main () = begin
       Printf.printf "%s\n%!" (System_properties.to_string());
       Plugin.load "dot_viewer_svg.cma" |> ignore;
       Project_xml.init();
-      Gtk_theme.set_theme ~context:browser#window#misc#pango_context ();
     end |> ignore;
     browser#connect#after#startup ~callback:begin fun () ->
       Gmisclib.Idle.add ~prio:300 begin fun () ->

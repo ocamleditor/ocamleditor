@@ -82,6 +82,9 @@ let set_theme ?theme ~context () =
         xthickness = 0
         ythickness = 0
       }
+      style \"oe-statusbar\" {
+        fg[NORMAL] = @selected_fg_color
+      }
       style \"small-button\" {
         GtkButton::child-displacement-x = 0
         GtkButton::child-displacement-y = 0
@@ -98,8 +101,9 @@ widget \"*.menubar_button\" style \"menubar-button\"
 widget \"*.windowbutton\" style \"window-button\"
 widget \"*.menubar_button_arrow\" style \"menubar-button-arrow\"
 widget \"*.oe_menubar\" style:highest \"oe_menubar\"
-widget \"gtk-tooltip*\" style \"oe-tooltip\"
+#widget \"gtk-tooltip*\" style \"oe-tooltip\"
 widget \"*.gitbutton\" style:highest \"gitbutton\"
+widget \"*.statusbar.*\" style:highest \"oe-statusbar\"
                                                "
   in
   let style_targetlist, apply_targetlist =

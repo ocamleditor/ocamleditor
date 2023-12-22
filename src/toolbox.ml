@@ -49,13 +49,15 @@ let pixbuf_empty =
 (** specs *)
 let specs ~browser =
   let editor : Editor.editor = browser#editor in [
-    30,  `BACK,       B, L ("\u{f0cde}", None), "Go Back",
+    30,  `BACK,       BM, L ("\u{f09c0}", None), "Go Back",
     (fun _ -> browser#goto_location `PREV),
     None;
-    40,  `FORWARD,       B, L ("\u{f0ce0}", None), "Go Forward",
+
+    40,  `FORWARD,       B, L ("\u{f09c2}", None), "Go Forward",
     (fun _ -> browser#goto_location `NEXT),
     None;
-    50,  `LAST_EDIT_LOC,       B, L ("\u{f1967}", None), "Go to Last Edit Location",
+
+    50,  `LAST_EDIT_LOC,       B, L ("\u{f09b7}", None), "Go to Last Edit Location",
     (fun _ -> browser#goto_location `LAST),
     None;
 
@@ -69,11 +71,11 @@ let specs ~browser =
     (fun _ -> editor#dialog_file_open ()),
     None;
 
-    300,  `SAVE,           B, L ("\u{f0818}", Some "#1E90FF"), "Save",
+    300,  `SAVE,           B, L ("\u{f0c7}", Some "#1E90FF"), "Save",
     (fun _ -> Gaux.may ~f:editor#save (editor#get_page `ACTIVE)),
     None;
 
-    400,  `SAVE_ALL,       B, L ("\u{f0f44}", Some "#1E90FF" ), "Save All",
+    400,  `SAVE_ALL,       B, L ("<span size='x-large'>\u{eb49}</span>", Some "#1E90FF" ), "Save All",
     (fun _ -> browser#save_all ()),
     None;
 

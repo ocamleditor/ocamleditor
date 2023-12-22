@@ -72,21 +72,16 @@ class browser window =
   (*  *)
   let ebox_project_name = GBin.event_box ~packing:(menubarbox#pack ~expand:false) () in
   let label_project_name = GMisc.label ~markup:"" ~xpad:5 ~packing:ebox_project_name#add () in
-  (* Git bar *)
-  let gitbox = GPack.hbox ~spacing:8 ~packing:(menubarbox#pack ~expand:false) () in
-  let create_gitbutton icon =
-    let button = new Gtk_util.button_icon ~icon_width:18 ~icon_spacing:1 ~icon ~packing:gitbox#add ~relief:`NONE () in
-    button#misc#set_name "gitbutton";
-    button
-  in
-  let button_gitunpushed = create_gitbutton "\u{eaa1}" in
-  let button_gitpending = create_gitbutton "\u{ea73}" in
-  let button_gitpath = create_gitbutton "\u{e65d}" in
-  let button_gitbranch = create_gitbutton "\u{f062c}" in
+  (* Status bar *)
   let _ =
-    button_gitpending#button#connect#clicked ~callback:begin fun () ->
-      Git.diff_stat (Git.show_diff_stat None);
-    end
+    if not Oe_config.colored_statusbar then
+      GMisc.separator `HORIZONTAL ~packing:(vbox#pack ~expand:false) () |> ignore;
+  in
+  let statusbar = new Statusbar.widget ~color:Oe_config.colored_statusbar ~packing:vbox#pack () in
+  let gitbar = new Statusbar.gitbar ~packing:(statusbar#pack ~from:`END) () in
+  let _ =
+    if Oe_config.unify_statusbars then
+      editor#connect#switch_page ~callback:(fun page -> statusbar#pack_editorbar page#statusbar) |> ignore;
   in
   (*  *)
   let vbox_menu_buttons = GPack.vbox ~border_width:0 ~packing:menubarbox#pack ~show:false () in
@@ -413,25 +408,25 @@ class browser window =
         end;
         Git.toplevel begin function
         | Some toplevel ->
-            button_gitpath#set_label (Filename.basename toplevel);
-            toplevel |> Filename.dirname |> button_gitpath#misc#set_tooltip_text;
+            gitbar#button_gitpath#set_label (Filename.basename toplevel);
+            toplevel |> Filename.dirname |> gitbar#button_gitpath#misc#set_tooltip_text;
         | _ ->
-            button_gitpath#set_label "";
-            button_gitpath#misc#set_tooltip_text "";
+            gitbar#button_gitpath#set_label "";
+            gitbar#button_gitpath#misc#set_tooltip_text "";
         end;
         Git.status begin function
         | Some s ->
-            gitbox#misc#show();
-            button_gitbranch#set_label s.Git.branch;
+            gitbar#misc#show();
+            gitbar#button_gitbranch#set_label s.Git.branch;
             let changes =
               s.Git.added + s.Git.modified + s.Git.deleted + s.Git.renamed + s.Git.copied + s.Git.untracked + s.Git.ignored
             in
-            button_gitpending#set_label (sprintf "%3d" changes);
-            Git.markup_of_status s |> button_gitpending#misc#set_tooltip_markup;
-            button_gitunpushed#set_label (sprintf "%3d" s.Git.ahead);
-            s.Git.ahead |> sprintf "%d unpushed commits" |> button_gitunpushed#misc#set_tooltip_markup;
+            gitbar#button_gitpending#set_label (sprintf "%3d" changes);
+            Git.markup_of_status s |> gitbar#button_gitpending#misc#set_tooltip_markup;
+            gitbar#button_gitunpushed#set_label (sprintf "%3d" s.Git.ahead);
+            s.Git.ahead |> sprintf "%d unpushed commits" |> gitbar#button_gitunpushed#misc#set_tooltip_markup;
         | _ ->
-            gitbox#misc#hide();
+            gitbar#misc#hide();
         end;
       end
 
