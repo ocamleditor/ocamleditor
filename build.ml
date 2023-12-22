@@ -608,6 +608,8 @@ let get_application_dir name =
 
 let application_icons = get_application_dir "icons"
 
+let application_fonts = get_application_dir "fonts"
+
 let application_plugins = get_application_dir "plugins"
 
 let find_best ?(param="--help") prog =
@@ -692,7 +694,7 @@ let create_process ?wd ?env program args =
 
 
 (** loop *)
-let loop (f : in_channel -> unit) chan = try while true do f chan done with End_of_file -> ()
+let loop (f : in_channel -> unit) chan = try while true do f chan done with End_of_file -> close_in_noerr chan
 
 (** redirect_to_stdout *)
 let redirect_to_stdout = loop (fun chan -> input_line chan |> print_endline)
@@ -3536,8 +3538,8 @@ let targets = [
     compilation_bytecode = false;
     compilation_native   = true;
     toplevel_modules     = "ocamleditor.ml";
-    package              = "atdgen-runtime,compiler-libs.common,diff,dynlink,lablgtk2,ocp-indent.lib,str,unix,xml-light,yojson";
-    search_path          = "+ocamldoc gmisclib common icons otherwidgets oebuild "; (* -I *)
+    package              = "atdgen-runtime,compiler-libs.common,diff,dynlink,lablgtk2,ocamldoc,ocp-indent.lib,str,unix,xml-light,yojson";
+    search_path          = "gmisclib common icons otherwidgets oebuild "; (* -I *)
     required_libraries   = "process_termination odoc_info gmisclib common icons otherwidgets oebuildlib ocamleditor_lib";
     compiler_flags       = "-w -s-y-x-m -g";
     linker_flags         = "-g";
@@ -3567,8 +3569,8 @@ let targets = [
     compilation_bytecode = true;
     compilation_native   = false;
     toplevel_modules     = "ocamleditor.ml";
-    package              = "atdgen-runtime,compiler-libs.common,diff,dynlink,lablgtk2,ocp-indent.lib,str,unix,xml-light,yojson";
-    search_path          = "+ocamldoc gmisclib common icons otherwidgets oebuild "; (* -I *)
+    package              = "atdgen-runtime,compiler-libs.common,diff,dynlink,lablgtk2,ocamldoc,ocp-indent.lib,str,unix,xml-light,yojson";
+    search_path          = "gmisclib common icons otherwidgets oebuild "; (* -I *)
     required_libraries   = "process_termination odoc_info gmisclib common icons otherwidgets oebuildlib";
     compiler_flags       = "-w -s-y-x-m -g";
     linker_flags         = "-g";
@@ -3598,8 +3600,8 @@ let targets = [
     compilation_bytecode = false;
     compilation_native   = true;
     toplevel_modules     = "ocamleditor.ml";
-    package              = "compiler-libs.common,dynlink,lablgtk2,ocp-indent.lib,str,unix,xml-light,yojson";
-    search_path          = "+ocamldoc gmisclib common icons otherwidgets oebuild "; (* -I *)
+    package              = "compiler-libs.common,dynlink,lablgtk2,ocamldoc,ocp-indent.lib,str,unix,xml-light,yojson";
+    search_path          = "gmisclib common icons otherwidgets oebuild "; (* -I *)
     required_libraries   = "process_termination odoc_info gmisclib common icons otherwidgets oebuildlib ocamleditor_lib";
     compiler_flags       = "-w -s-y-x-m -g";
     linker_flags         = "-g";
@@ -3629,8 +3631,8 @@ let targets = [
     compilation_bytecode = false;
     compilation_native   = true;
     toplevel_modules     = "ocamleditor.ml";
-    package              = "atdgen-runtime,compiler-libs.common,diff,dynlink,lablgtk2,ocp-indent.lib,str,unix,xml-light,yojson";
-    search_path          = "+ocamldoc gmisclib common icons otherwidgets oebuild "; (* -I *)
+    package              = "atdgen-runtime,compiler-libs.common,diff,dynlink,lablgtk2,ocamldoc,ocp-indent.lib,str,unix,xml-light,yojson";
+    search_path          = "gmisclib common icons otherwidgets oebuild "; (* -I *)
     required_libraries   = "process_termination odoc_info gmisclib common icons otherwidgets oebuildlib ocamleditor_lib";
     compiler_flags       = "-w -s-y-x-m -g";
     linker_flags         = "-g";
@@ -3660,8 +3662,8 @@ let targets = [
     compilation_bytecode = false;
     compilation_native   = true;
     toplevel_modules     = "ocamleditor_lib.ml";
-    package              = "atdgen-runtime,compiler-libs.common,diff,dynlink,lablgtk2,ocp-indent.lib,str,unix,xml-light,yojson";
-    search_path          = "+ocamldoc gmisclib common icons otherwidgets oebuild "; (* -I *)
+    package              = "atdgen-runtime,compiler-libs.common,diff,dynlink,lablgtk2,ocamldoc,ocp-indent.lib,str,unix,xml-light,yojson";
+    search_path          = "gmisclib common icons otherwidgets oebuild "; (* -I *)
     required_libraries   = "";
     compiler_flags       = "-w -s-y-x-m -g";
     linker_flags         = "-g";
