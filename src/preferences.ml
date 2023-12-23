@@ -31,7 +31,7 @@ let default_values =
         bg_color = { light = "#ffffff"; dark = "#000000" };
         weight = 700; style = `NORMAL; underline = `NONE; scale = 1.0; bg_default = true };
       { name = "define";
-        color = { light = "forestgreen"; dark = "#009000" };
+        color = { light = "#008600"; dark = "#2BA52B" };
         bg_color = { light = "#ffffff"; dark = "#000000" };
         weight = 700; style = `NORMAL; underline = `NONE; scale = 1.0; bg_default = true };
       { name = "structure";
@@ -51,7 +51,7 @@ let default_values =
         bg_color = { light = "#ffffff"; dark = "#000000" };
         weight = 700; style = `NORMAL; underline = `NONE; scale = 1.0; bg_default = true };
       { name = "uident";
-        color = { light = "midnightblue"; dark = "#1B98C3" };
+        color = { light = "#2626FF"; dark = "#6299FF" };
         bg_color = { light = "#ffffff"; dark = "#000000" };
         weight = 700; style = `NORMAL; underline = `NONE; scale = 1.0; bg_default = true };
       { name = "number";

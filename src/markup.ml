@@ -5,7 +5,7 @@ let re_indent = Str.regexp "^[ ]+"
 let re_multi_space = Str.regexp " [ ]+"
 let re_newlines = Str.regexp "[\n\r]+"
 
-let type_info ?(color=false) =
+let type_info ?(color=Oe_config.colored_types) =
   if color then Lexical_markup.parse Preferences.preferences#get ?highlights:None
   else Print_type.markup2
 

@@ -56,7 +56,7 @@ let parse pref =
   let span (highlight, tagname) =
     match List.find_opt (fun t -> t.Settings_t.name = tagname) tags with
     | Some t ->
-        let weight    = sprintf " font_weight='%d'" t.weight in
+        let weight    = (*if t.weight > 0 then sprintf " font_weight='%d'" t.weight else*) "" in
         let style     = match t.style with `ITALIC -> " font_style='italic'" | _ -> "" in
         let underline = match t.underline with `NONE -> "" | _ -> " underline='single'" in
         let bgcolor   = if highlight then " bgcolor='" ^ (?? bgcolor_highlight) ^"'" else "" in

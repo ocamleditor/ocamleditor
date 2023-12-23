@@ -172,7 +172,7 @@ let display qi start stop =
   label_typ#set_use_markup true;
   label_doc#set_use_markup true;
   label_doc#misc#modify_font_by_name preferences#get.editor_completion_font;
-  kprintf label_typ#misc#modify_font_by_name "%s %s" preferences#get.editor_base_font qi.markup_odoc#code_font_size;
+  label_typ#misc#modify_font_by_name preferences#get.editor_completion_font;
   let x, y =
     let pX, pY = Gdk.Window.get_pointer_location (Gdk.Window.root_parent ()) in
     let win = (match qi.view#get_window `WIDGET with None -> assert false | Some w -> w) in
@@ -194,7 +194,6 @@ let display qi start stop =
     index = new_index();
   } in
   add_wininfo qi wininfo;
-  (*kprintf label_index#set_label "%d" wininfo.index;*)
   make_pinnable wininfo;
   Gmisclib.Idle.add begin fun () ->
     window#present();
@@ -215,7 +214,6 @@ let display qi start stop =
         index = new_index();
       } in
       add_wininfo qi wininfo;
-      (*kprintf label_index#set_label "%d" wininfo.index;*)
       make_pinnable wininfo;
       window#present()
     end;
@@ -238,12 +236,9 @@ let spawn_window qi position (entry : type_enclosing_value) (entry2 : type_enclo
   if qi.view#misc#get_flag `HAS_FOCUS then begin
     let typ = build_content qi entry entry2 in
     let markup = Markup.type_info typ in
-    (*let markup = sprintf "<span size='%s'>%s</span>" markup_odoc#code_font_size (Markup.type_info typ) in
-      Printf.printf "%s\n%!" markup;*)
     let start = qi.view#obuffer#get_iter (`LINECHAR (entry.te_start.line - 1, entry.te_start.col)) in
     let stop = qi.view#obuffer#get_iter (`LINECHAR (entry.te_stop.line - 1, entry.te_stop.col)) in
     let label_typ, label_doc = display qi start stop in
-    (*<span size='small' font_family='%s'>%s</span>*)
     label_typ#set_label markup;
     qi.merlin@@Merlin.document ~position begin fun doc ->
       let markup = qi.markup_odoc#convert doc in

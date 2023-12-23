@@ -37,7 +37,7 @@ let create_small_toggle_button ?tooltip ~icon ?callback ?packing ?show () =
   button;;
 
 class editorbar ~view ?packing () =
-  let icon_font_name = sprintf "FiraCode OCamlEditor %s" (match font_size with Some x -> string_of_int x | _ -> "15") in
+  let icon_font_name = sprintf "FiraCode OCamlEditor %s" (match font_size with Some x -> string_of_int x | _ -> "") in
   let box = GPack.hbox ~spacing:1 ~border_width:0 ?packing () in
   let paned = GPack.paned `HORIZONTAL ~packing:box#add () in
   let _ = GMisc.separator `VERTICAL ~packing:box#pack () in
@@ -188,7 +188,7 @@ class gitbar ?packing () =
     method button_gitbranch = button_gitbranch
   end
 
-class widget ?(color=true) ?packing () =
+class widget ?packing () =
   let ebox = GBin.event_box ~border_width:0 ?packing () in
   let box = GPack.hbox ~spacing:1 ~border_width:0 ~packing:ebox#add () in
   let editorbar_placeholder = GBin.alignment ~packing:(box#pack ~from:`START ~expand:true ~fill:true) () in
@@ -196,11 +196,9 @@ class widget ?(color=true) ?packing () =
   object (self)
     inherit GObj.widget ebox#as_widget
     initializer
-      if color then begin
-        self#set_style();
-        ebox#misc#toplevel#misc#connect#after#style_set
-          ~callback:(fun () -> Gmisclib.Idle.add ~prio:300 self#set_style) |> ignore
-      end
+      self#set_style();
+      ebox#misc#toplevel#misc#connect#after#style_set
+        ~callback:(fun () -> Gmisclib.Idle.add ~prio:300 self#set_style) |> ignore
 
     method pack_editorbar (bar : editorbar) =
       if editorbar_placeholder#children <> [] then
@@ -210,7 +208,7 @@ class widget ?(color=true) ?packing () =
     method pack ?from widget = box#pack ?from ~expand:false ~fill:false widget
 
     method private set_style () =
-      ebox#misc#modify_bg [`NORMAL, `COLOR (ebox#misc#style#dark `SELECTED)];
-      ebox#misc#modify_fg [`NORMAL, `COLOR (ebox#misc#style#fg `SELECTED)];
+      ebox#misc#modify_bg [`NORMAL, `COLOR (ebox#misc#style#light `NORMAL)];
+      ebox#misc#modify_fg [`NORMAL, `COLOR (ebox#misc#style#fg `NORMAL)];
   end
 

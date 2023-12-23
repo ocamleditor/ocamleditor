@@ -73,11 +73,7 @@ class browser window =
   let ebox_project_name = GBin.event_box ~packing:(menubarbox#pack ~expand:false) () in
   let label_project_name = GMisc.label ~markup:"" ~xpad:5 ~packing:ebox_project_name#add () in
   (* Status bar *)
-  let _ =
-    if not Oe_config.colored_statusbar then
-      GMisc.separator `HORIZONTAL ~packing:(vbox#pack ~expand:false) () |> ignore;
-  in
-  let statusbar = new Statusbar.widget ~color:Oe_config.colored_statusbar ~packing:vbox#pack () in
+  let statusbar = new Statusbar.widget ~packing:vbox#pack () in
   let gitbar = new Statusbar.gitbar ~packing:(statusbar#pack ~from:`END) () in
   let _ =
     if Oe_config.unify_statusbars then
