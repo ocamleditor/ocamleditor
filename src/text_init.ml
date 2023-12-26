@@ -25,7 +25,7 @@ open GdkKeysyms
 open Miscellanea
 
 (** key_press *)
-let key_press ~project view =
+let key_press ?project view =
   ignore (view#event#connect#key_press ~callback:begin fun ev ->
       let state = GdkEvent.Key.state ev in
       let key = GdkEvent.Key.keyval ev in
@@ -35,7 +35,7 @@ let key_press ~project view =
             let ocp_indent_applied =
               (match view#tbuffer#file with Some file when not (file#filename ^^^ ".ml") && not (file#filename ^^^ ".ml") -> false | _ -> true) &&
               if Oe_config.ocp_indent_tab_key_enabled then
-                (Ocp_indent.indent ~project ~view `SELECTION) else false
+                (Ocp_indent.indent ?project ~view `SELECTION) else false
             in
             if not ocp_indent_applied then begin
               view#tbuffer#indent ?decrease:None ();

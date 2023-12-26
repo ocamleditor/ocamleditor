@@ -38,8 +38,12 @@ let find_ocp_indent_config' project =
   with _ -> None
 
 let find_ocp_indent_config = Miscellanea.Memo.fast ~f:find_ocp_indent_config'
+let find_ocp_indent_config = function
+  | None -> None
+| Some project -> find_ocp_indent_config project
 
-let indent_config ~project ~pref =
+
+let indent_config ?project pref =
   match find_ocp_indent_config project with
   | Some file_config -> IndentConfig.(update_from_string default file_config)
   | None ->
@@ -50,9 +54,9 @@ let indent_config ~project ~pref =
 
 let collect (n : int) offsets = n :: offsets
 
-let output ~project ~pref start stop = IndentPrinter.{
+let output ?project ~pref start stop = IndentPrinter.{
     debug = false;
-    config = indent_config ~project ~pref;
+    config = indent_config ?project pref;
     in_lines = (fun n -> n >= start && n <= stop);
     indent_empty = false;
     adaptive = false;
@@ -82,7 +86,7 @@ let contents (buffer : GText.buffer) =
   buffer#get_text ~start ~stop ()
 
 (** indent *)
-let indent ~project ~view bounds =
+let indent ?project ~view bounds =
   let pref = Preferences.preferences#get in
   let buffer = view#tbuffer in
   let indent () =
@@ -99,7 +103,7 @@ let indent ~project ~view bounds =
 
     let contents = contents buffer#as_gtext_buffer in
     let ns = Nstream.of_string contents in
-    let offsets = IndentPrinter.proceed (output ~project ~pref start_line stop_line) ns IndentBlock.empty [] in
+    let offsets = IndentPrinter.proceed (output ?project ~pref start_line stop_line) ns IndentBlock.empty [] in
     let lines = List.rev offsets in
 
     buffer#undo#begin_block ~name:"ocp-indent";

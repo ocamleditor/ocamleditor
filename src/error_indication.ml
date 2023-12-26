@@ -332,7 +332,7 @@ class error_indication (view : Ocaml_text.view) (global_gutter : GMisc.drawing_a
               (*Gdk.GC.set_dashes drawable#gc ~offset:0 [1; 1];*)
               List.iter begin fun (start, stop, _, odoc) ->
                 let iter = buffer#get_iter (`OFFSET start) in
-                let is_fold = view#code_folding#is_folded iter#forward_to_line_end <> None in
+                let is_fold = view#code_folding#is_folded iter#forward_to_line_end in
                 let line_start = float iter#line in
                 let line_stop = float (buffer#get_iter (`OFFSET stop))#line in
                 let y1 = int_of_float ((line_start /. line_count) *. height) in
@@ -491,7 +491,7 @@ class error_indication (view : Ocaml_text.view) (global_gutter : GMisc.drawing_a
       ignore (view#vadjustment#connect#after#value_changed ~callback:(fun () ->
           Gmisclib.Idle.add ~prio:300 (fun () -> view#misc#handler_unblock !signal_expose)));
       (* Global_gutter: expose *)
-      global_gutter#misc#connect#draw ~callback:(fun _ -> (*Prf.crono Prf.prf_paint_global_gutter*) self#paint_global_gutter (); false);
+      global_gutter#misc#connect#draw ~callback:(fun _ -> self#paint_global_gutter (); false);
       (* Global_gutter: button_press  *)
       global_gutter#event#connect#after#button_press ~callback:begin fun ev ->
         if (GdkEvent.Button.button ev = 1 && GdkEvent.get_type ev = `BUTTON_PRESS) then begin
