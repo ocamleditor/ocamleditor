@@ -5,9 +5,11 @@ let re_indent = Str.regexp "^[ ]+"
 let re_multi_space = Str.regexp " [ ]+"
 let re_newlines = Str.regexp "[\n\r]+"
 
-let type_info ?(color=Oe_config.colored_types) =
-  if color then Lexical_markup.parse Preferences.preferences#get ?highlights:None
-  else Print_type.markup2
+let type_info ?(color=Oe_config.colored_types) text =
+  if color then
+    Lexical_markup.parse Preferences.preferences#get ?highlights:None text
+    |> Print_type.replace_simbols_in_markup
+  else Print_type.markup2 text
 
 class odoc () =
   let code_color = ?? (preferences#get.Settings_j.editor_fg_color_popup) in
