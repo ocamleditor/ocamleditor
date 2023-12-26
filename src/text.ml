@@ -25,8 +25,6 @@ open Text_util
 open Miscellanea
 open Cairo_drawable
 
-
-
 (** Buffer *)
 class buffer =
   let word_bound = Miscellanea.regexp "\\b" in
@@ -505,13 +503,12 @@ and view ?project ?buffer () =
             Line_num_labl.print ~view:self ~num:!num ~x ~y:!y ~width_chars:gutter.Gutter.chars line_num_labl;
             iter := !iter#forward_line;
           done;
-
           let y = !y  + !h in
           incr num;
           Line_num_labl.print ~view:self ~num:!num ~x ~y ~width_chars:gutter.Gutter.chars line_num_labl
           (*end()*)
         end;
-        (* Markers *)
+        (** Markers *)
         (*Prf.crono Prf.prf_other_markers begin fun () ->*)
         let x = (gutter.Gutter.size - gutter.Gutter.fold_size - 3 - Gutter.icon_size) / 2 (*1*) in
         List.iter begin fun mark ->
@@ -522,8 +519,7 @@ and view ?project ?buffer () =
                 | Some mark_iter ->
                     let ym, h = self#get_line_yrange mark_iter in
                     let y = ym - y0 in
-                    if false then
-                      Line_num_labl.hide (y + self#pixels_above_lines) line_num_labl;
+                    Line_num_labl.hide (y + self#pixels_above_lines) line_num_labl;
                     let y = y + (h - Gutter.icon_size) / 2 in
                     let child = match mark.Gutter.icon_obj with
                       | None ->
@@ -578,10 +574,10 @@ and view ?project ?buffer () =
               visible_height#set h0;
               (* Expose area *)
             (*
-            let expose_area = GdkEvent.Expose.area ev in
-            let expose_y    = y0 + Gdk.Rectangle.y expose_area in
-            let expose_top, _ = self#get_line_at_y expose_y in
-            let expose_bottom, _ = self#get_line_at_y (expose_y + (Gdk.Rectangle.height expose_area)) in
+              let expose_area = GdkEvent.Expose.area ev in
+              let expose_y    = y0 + Gdk.Rectangle.y expose_area in
+              let expose_top, _ = self#get_line_at_y expose_y in
+              let expose_bottom, _ = self#get_line_at_y (expose_y + (Gdk.Rectangle.height expose_area)) in
             *)
               let expose_y = y0 in
               let expose_top, _ = self#get_line_at_y expose_y in
@@ -620,32 +616,6 @@ and view ?project ?buffer () =
               (* ocamldoc_paragraph_bgcolor_enabled *)
               if Oe_config.ocamldoc_paragraph_border_enabled
               then (self#draw_paragraph_border drawable start stop y0 w0);
-              (* Special bookmarks *)
-              let iter = ref (expose_top#set_line_index 0) in
-              begin
-                match project with
-                | Some project ->
-                    begin
-                      match buffer#file with
-                      | Some file ->
-                          let filename = file#filename in
-                          while !iter#compare expose_bottom < 0 do
-                            begin
-                              match Project.find_bookmark project filename buffer#as_gtext_buffer !iter with
-                              | Some bm when bm.Oe.bm_num >= Bookmark.limit ->
-                                  set_line_attributes drawable ~width:2 ~style:`SOLID ();
-                                  set_foreground drawable options#indent_lines_color_dashed (*options#text_color*);
-                                  let y, h = view#get_line_yrange !iter in
-                                  let y = y - y0 + h in
-                                  line drawable 0 y w0 y;
-                              | _ -> ()
-                            end;
-                            iter := !iter#forward_line;
-                          done;
-                      | _ -> ()
-                    end;
-                | _ -> ()
-              end;
               (* Whitespace characters *)
               if options#show_whitespace_chars then begin
                 let iter        = ref expose_top in
@@ -864,15 +834,14 @@ and view ?project ?buffer () =
       ignore (visible_height#connect#changed ~callback:(fun _ -> self#draw_gutter()));
       (* Refresh gutter and right margin line when scrolling *)
       ignore (self#hadjustment#connect#after#value_changed ~callback:begin fun _ ->
-          (* Redraw the entire window on horizontal scroll to refresh right margin *)
+              (* Redraw the entire window on horizontal scroll to refresh right margin *)
           print_endline "----- notify_hadjustment";
           GtkBase.Widget.queue_draw self#as_widget
         end
         );
       ignore (self#vadjustment#connect#after#value_changed ~callback:begin fun _ ->
           (* Update gutter on vertical scroll changes *)
-
-          Gmisclib.Idle.add self#draw_gutter;
+                  Gmisclib.Idle.add self#draw_gutter;
           Gmisclib.Idle.add ~prio:300 (fun () -> GtkBase.Widget.queue_draw self#as_widget)
         end
         );

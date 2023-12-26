@@ -350,7 +350,8 @@ let load filename =
   if Sys.file_exists old then (Sys.remove old);
   let old = mk_old_filename_local proj in
   if Sys.file_exists old then (Sys.remove old);
-  (*  *)
+  (* Delete obsolete bookmarks *)
+  proj.bookmarks <- proj.bookmarks |> List.filter (fun bm -> bm.Oe.bm_num <= Bookmark.limit);
   proj;;
 
 (** backup_file *)

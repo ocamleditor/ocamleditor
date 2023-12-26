@@ -603,7 +603,6 @@ class page ?file ~project ~scroll_offset ~offset ~editor () =
           status_pos_lin#set_text (string_of_int (iter#line + 1));
           status_pos_col#set_text (string_of_int iter#line_offset);
           status_pos_off#set_text (string_of_int iter#offset);
-
           false
         end)
       in
@@ -680,50 +679,6 @@ class page ?file ~project ~scroll_offset ~offset ~editor () =
         end);
       (** Mark occurrences *)
       ignore (view#mark_occurrences_manager#connect#mark_set ~callback:error_indication#paint_global_gutter);
-      (** Special bookmarks: draw an horizontal line.  *)
-      let start_selection = ref None in
-      let _ = text_view#event#connect#after#button_press ~callback:begin fun ev ->
-          let window = GdkEvent.get_window ev in
-          match text_view#get_window `LEFT with
-          | Some w when (Gobject.get_oid w) = (Gobject.get_oid window) ->
-              let y0 = Gdk.Rectangle.y text_view#visible_rect in
-              let y = GdkEvent.Button.y ev in
-              let where = fst (text_view#get_line_at_y ((int_of_float y) + y0)) in
-              start_selection := Some where;
-              false
-          | _ -> false
-        end in
-      let _ = text_view#event#connect#after#button_release ~callback:begin fun ev ->
-          let window = GdkEvent.get_window ev in
-          match text_view#get_window `LEFT with
-          | Some w when (Gobject.get_oid w) = (Gobject.get_oid window) ->
-              let y0 = Gdk.Rectangle.y text_view#visible_rect in
-              let y = GdkEvent.Button.y ev in
-              let where = fst (text_view#get_line_at_y ((int_of_float y) + y0)) in
-              begin
-                match !start_selection with
-                | Some started when started#equal where ->
-                    begin
-                      match Project.find_bookmark project self#get_filename buffer#as_gtext_buffer where with
-                      | Some bm when bm.Oe.bm_num >= Bookmark.limit ->
-                          editor#bookmark_remove ~num:bm.Oe.bm_num;
-                          GtkBase.Widget.queue_draw text_view#as_widget;
-                      | _ ->
-                          let num = Project.get_actual_maximum_bookmark project in
-                          let num = if num >= Bookmark.limit then num + 1 else Bookmark.limit in
-                          let callback (_ : Gtk.text_mark) =
-                            editor#bookmark_remove ~num;
-                            GtkBase.Widget.queue_draw text_view#as_widget;
-                            true
-                          in
-                          editor#bookmark_create ~num ?where:(Some where) ?callback:(Some callback) ();
-                    end;
-                | _ -> ()
-              end;
-              start_selection := None;
-              false
-          | _ -> false
-        end in
       (**  *)
       let callback _ = self#set_word_wrap (not word_wrap) in
       self#set_word_wrap word_wrap;
