@@ -203,6 +203,25 @@ let replace_first ?(memo=true) =
 (** [starts_with prefix s] restituisce [true] sse [s] inizia con [prefix]. *)
 let starts_with prefix s = string_partial_match (regexp_string prefix) s 0
 
+(** [strip_prefix prefix str]
+
+    If [str] starts with [prefix] strip the prefix from [str], otherwise return
+    [str].
+
+    Example:
+     [strip_prefix "foo__" "foo__bar" = "bar"]
+     [strip_prefix "foo__" "baz" = "baz"]
+*)
+let strip_prefix prefix s =
+  let s_len = String.length s in
+  let prefix_len = String.length prefix in
+  if s_len <= prefix_len then
+    s
+  else if prefix = String.sub s 0 prefix_len then
+    String.sub s prefix_len (s_len - prefix_len)
+  else
+    s
+
 
 (** {6 Ricerca di espressioni regolari} *)
 

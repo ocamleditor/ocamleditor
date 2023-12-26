@@ -133,7 +133,7 @@ let confirm_close ~editor (page : Editor_page.page) =
 (** save_modified *)
 let save_modified ~editor ~close ~callback pages =
   if pages <> [] then begin
-    let dialog = GWindow.dialog ~position:`CENTER ~border_width:5 ~no_separator:true
+    let dialog = GWindow.dialog ~position:`CENTER ~border_width:5
       ~icon:Icons.oe ~modal:true ~title:"Save Modified" () in
     let checklist = new Checklist.checklist
       ~packing:dialog#vbox#add

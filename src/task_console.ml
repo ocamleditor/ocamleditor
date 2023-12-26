@@ -33,7 +33,6 @@ class view ~(editor : Editor.editor) ?(task_kind=(`OTHER : Task.kind)) ~task ?pa
   let project           = editor#project in
   let vbox              = GPack.vbox ?packing () in
   let hbox              = GPack.hbox ~packing:vbox#add () in
-  let tooltips          = GData.tooltips () in
   let toolbar           = GButton.toolbar ~orientation:`VERTICAL ~style:`ICONS ~packing:hbox#pack () in
   let _                 = toolbar#set_icon_size `MENU in
   let sw                = GBin.scrolled_window ~shadow_type:`NONE ~hpolicy:`AUTOMATIC ~vpolicy:`AUTOMATIC ~packing:hbox#add () in
@@ -42,32 +41,32 @@ class view ~(editor : Editor.editor) ?(task_kind=(`OTHER : Task.kind)) ~task ?pa
   let _                 = GButton.separator_tool_item ~packing:toolbar#insert () in
   (*  *)
   let button_stop       = GButton.tool_button ~stock:`STOP ~packing:toolbar#insert () in
-  let _                 = tooltips#set_tip ~text:"Kill Process" button_stop#coerce in
+  let _                 = button_stop#set_tooltip_text "Kill Process" in
   let button_run        = GButton.tool_button ~packing:toolbar#insert () in
   let _                 = button_run#set_icon_widget begin match task_kind with
       | `OTHER | `RUN ->
-        tooltips#set_tip ~text:"Start" button_run#coerce;
+        button_run#set_tooltip_text "Start";
         (Icons.create Icons.start_16);
       | `CLEAN | `CLEANALL ->
-        tooltips#set_tip ~text:task.Task.et_name button_run#coerce;
+        button_run#set_tooltip_text task.Task.et_name;
         (Icons.create Icons.clear_build_16);
       | `ANNOT | `COMPILE ->
-        tooltips#set_tip ~text:task.Task.et_name button_run#coerce;
+        button_run#set_tooltip_text task.Task.et_name;
         (Icons.create Icons.build_16);
     end#coerce in
   let _                 = GButton.separator_tool_item ~packing:toolbar#insert () in
   (*  *)
   let button_clear      = GButton.tool_button ~packing:toolbar#insert () in
-  let _                 = tooltips#set_tip ~text:"Clear Messages" button_clear#coerce in
+  let _                 = button_clear#set_tooltip_text "Clear Messages" in
   let _                 = button_clear#set_icon_widget (Icons.create Icons.clear_16)#coerce in
   let button_incr_font  = GButton.tool_button ~packing:toolbar#insert () in
-  let _                 = tooltips#set_tip ~text:"Increase Font Size" button_incr_font#coerce in
+  let _                 = button_incr_font#set_tooltip_text "Increase Font Size" in
   let _                 = button_incr_font#set_icon_widget (GMisc.image ~pixbuf:Icons.zoom_in_14 ~icon_size:`MENU ())#coerce in
   let button_decr_font  = GButton.tool_button ~packing:toolbar#insert () in
-  let _                 = tooltips#set_tip ~text:"Decrease Font Size" button_decr_font#coerce in
+  let _                 = button_decr_font#set_tooltip_text "Decrease Font Size" in
   let _                 = button_decr_font#set_icon_widget (GMisc.image ~pixbuf:Icons.zoom_out_14 ~icon_size:`MENU ())#coerce in
   let button_wrap       = GButton.toggle_tool_button ~packing:toolbar#insert () in
-  let _                 = tooltips#set_tip ~text:"Word Wrap" button_wrap#coerce in
+  let _                 = button_wrap#set_tooltip_text "Word Wrap" in
   let _                 = button_wrap#set_icon_widget (Icons.create Icons.wrap_lines_16)#coerce in
   (*  *)
   let view              = GText.view ~editable:(task_kind = `RUN) ~cursor_visible:true ~packing:sw#add () in

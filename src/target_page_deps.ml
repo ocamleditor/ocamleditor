@@ -119,7 +119,7 @@ object (self)
         let window = GWindow.window ~modal:true ~type_hint:`DIALOG
           ~title:"Select one or more targets"
           ~icon:Icons.oe ~height:300 ~width:300 ~position:`CENTER
-          ~allow_shrink:true ~allow_grow:true ~show:false ()
+          ~resizable:true ~show:false ()
         in
         Gmisclib.Window.GeometryMemo.add ~key:"dialog-target-deps" ~window Preferences.geometry_memo;
         Gaux.may (GWindow.toplevel hbox) ~f:(fun w -> window#set_transient_for w#as_window);

@@ -42,6 +42,13 @@ let file_recent_callback ~(file_recent_menu : GMenu.menu) editor =
     end (List.rev editor#file_history.File_history.content);
   with Exit -> ()
 
+let image_menu_item ~label ?(pixbuf=Icons.empty_8) ?(show=true) ~packing () =
+  let menu_item = GMenu.menu_item ~packing ~show () in
+  let hbox = GPack.hbox ~border_width: 6 ~packing: menu_item#add () in
+  let _image = GMisc.image ~pixbuf ~icon_size: `MENU ~packing: hbox#add () in
+  let _label = GMisc.label ~text: label ~packing: hbox#add () in
+  menu_item
+
 let get_file_switch_sensitive page =
   let name = page#get_filename in (name ^^^ ".ml" || name ^^^ ".mli")
 
@@ -53,22 +60,21 @@ let file ~browser ~group ~flags items =
   let new_project = GMenu.menu_item ~label:"New Project..." ~packing:menu#add () in
   ignore (new_project#connect#activate ~callback:browser#dialog_project_new);
   (** New file *)
-  let new_file = GMenu.image_menu_item ~image:(GMisc.image ~pixbuf:Icons.new_file (*~stock:`NEW*) ~icon_size:`MENU ())
-      ~label:"New File..." ~packing:menu#add () in
+  let new_file = image_menu_item ~label: "New File..." ~pixbuf: Icons.new_file ~packing: menu#add () in
   new_file#add_accelerator ~group ~modi:[`CONTROL] GdkKeysyms._n ~flags;
   ignore (new_file#connect#activate ~callback:browser#dialog_file_new);
   (** Open Project *)
   let _ = GMenu.separator_item ~packing:menu#add () in
-  let project_open = GMenu.image_menu_item
+  let project_open = image_menu_item
       ~label:"Open Project..." ~packing:menu#add () in
   ignore (project_open#connect#activate ~callback:browser#dialog_project_open);
   project_open#add_accelerator ~group ~modi:[`CONTROL;`SHIFT] GdkKeysyms._o ~flags;
   (** Open File *)
-  let open_file = GMenu.image_menu_item ~image:(GMisc.image ~pixbuf:Icons.open_file (*~stock:`OPEN*) ~icon_size:`MENU ())
+  let open_file = image_menu_item ~pixbuf:Icons.open_file
       ~label:"Open File..." ~packing:menu#add () in
   open_file#add_accelerator ~group ~modi:[`CONTROL] GdkKeysyms._o ~flags;
   ignore (open_file#connect#activate ~callback:editor#dialog_file_open);
-  let open_remote = GMenu.image_menu_item ~label:"Open Remote File..." ~show:(Plugin.file_exists "remote.cma") ~packing:menu#add () in
+  let open_remote = image_menu_item ~label:"Open Remote File..." ~show:(Plugin.file_exists "remote.cma") ~packing:menu#add () in
   ignore (open_remote#connect#activate ~callback:begin fun () ->
       if !Plugins.remote = None then ignore (Plugin.load "remote.cma");
       Option.iter begin fun (plugin : (module Plugins.REMOTE)) ->
@@ -81,7 +87,7 @@ let file ~browser ~group ~flags items =
         let window = GWindow.window
             ~resizable:false
             ~type_hint:`DIALOG
-            ~allow_grow:false ~allow_shrink:false
+            (*~allow_grow:false ~allow_shrink:false*)
             ~position:`CENTER ~border_width:8
             ~icon:Icons.oe ~title ~modal:true ~show:false ()
         in
@@ -129,25 +135,23 @@ let file ~browser ~group ~flags items =
   items.file_switch#add_accelerator ~group ~modi:[`CONTROL; `SHIFT] GdkKeysyms._I ~flags;
   (** Save *)
   let _ = GMenu.separator_item ~packing:menu#add () in
-  let save_file = GMenu.image_menu_item ~label:"Save" ~packing:menu#add () in
-  save_file#set_image (GMisc.image ~pixbuf:Icons.save_16 ())#coerce;
+  let save_file = image_menu_item ~pixbuf:Icons.save_16 ~label:"Save" ~packing:menu#add () in
   save_file#add_accelerator ~group ~modi:[`CONTROL] GdkKeysyms._s ~flags;
   ignore (save_file#connect#activate ~callback:begin fun () ->
       Gaux.may ~f:editor#save (editor#get_page `ACTIVE)
     end);
   (** Save as.. *)
-  let save_as = GMenu.image_menu_item
-      ~image:(GMisc.image ~pixbuf:Icons.save_as_16 ())
+  let save_as = image_menu_item
+      ~pixbuf:Icons.save_as_16
       ~label:"Save As..." ~packing:menu#add () in
   save_as#add_accelerator ~group ~modi:[`CONTROL; `SHIFT] GdkKeysyms._s ~flags;
   ignore (save_as#connect#activate ~callback:begin fun () ->
       Gaux.may ~f:editor#dialog_save_as (editor#get_page `ACTIVE)
     end);
   (** Save All *)
-  let save_all = GMenu.image_menu_item ~label:"Save All" ~packing:menu#add () in
+  let save_all = image_menu_item ~pixbuf:Icons.save_all_16 ~label:"Save All" ~packing:menu#add () in
   save_all#add_accelerator ~group ~modi:[`CONTROL; `SHIFT] GdkKeysyms._a ~flags;
   ignore (save_all#connect#activate ~callback:browser#save_all);
-  save_all#set_image (GMisc.image ~pixbuf:Icons.save_all_16 ())#coerce;
   (** Rename *)
   menu#add items.file_rename;
   ignore (items.file_rename#connect#activate ~callback:begin fun () ->
@@ -179,8 +183,7 @@ let file ~browser ~group ~flags items =
   ignore (items.file_delete#connect#activate ~callback:editor#dialog_delete_current);
   (** Exit *)
   let _ = GMenu.separator_item ~packing:menu#add () in
-  let quit = GMenu.image_menu_item ~label:"Exit" ~packing:menu#add () in
-  quit#set_image (GMisc.image ~pixbuf:Icons.close_window (*~stock:`QUIT*) ~icon_size:`MENU ())#coerce;
+  let quit = image_menu_item ~pixbuf:Icons.close_window ~label:"Exit" ~packing:menu#add () in
   ignore (quit#connect#activate ~callback:(fun () -> browser#exit editor ()));
   (** callback *)
   ignore (file#misc#connect#state_changed ~callback:begin fun _ ->

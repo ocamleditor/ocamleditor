@@ -31,7 +31,7 @@ class preferences ~editor () =
   let initial_gtk_theme = Preferences.preferences#get.Preferences.pref_general_theme in
   let initial_compl_decorated = Preferences.preferences#get.Preferences.pref_compl_decorated in
   let initial_general_font = Preferences.preferences#get.Preferences.pref_general_font in
-  let window            = GWindow.window ~allow_shrink:false ~allow_grow:false ~resizable:true ~width:750
+  let window            = GWindow.window ~resizable:true ~width:750
     ~type_hint:`DIALOG ~modal:true ~title:"Preferences" ~position:`CENTER ~icon:Icons.oe ~show:false () in
   let _ = Gmisclib.Window.GeometryMemo.add ~key:"dialog-preferences" ~window Preferences.geometry_memo in
   let _                 = Gaux.may (GWindow.toplevel editor) ~f:(fun w -> window#set_transient_for w#as_window) in

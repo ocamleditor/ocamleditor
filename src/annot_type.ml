@@ -53,7 +53,7 @@ object (self)
     end else None
 
   method get_annot_at_location ~x ~y =
-    if view#misc#get_flag `HAS_FOCUS && (not buffer#changed_after_last_autocomp) then begin
+    if view#has_focus && (not buffer#changed_after_last_autocomp) then begin
       let iter =
         let iter = view#get_iter_at_location ~x ~y in
         if iter#ends_line
@@ -179,7 +179,7 @@ object (self)
                     begin
                       match view#get_window `WIDGET with
                         | Some _window ->
-                          let pX, pY = Gdk.Window.get_pointer_location (Gdk.Window.root_parent ()) in
+                          let pX, pY = Gdk.Window.get_pointer_location popup#misc#window in
                           popup#move ~x:pX ~y:(pY + 10);
                           popup#present();
                         | _ -> assert false

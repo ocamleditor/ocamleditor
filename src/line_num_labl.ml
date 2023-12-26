@@ -47,7 +47,7 @@ let print ~view ~x ~y ~num ~width_chars lnl =
       let label = GMisc.label ~xalign:1.0 ~yalign:0.5 ~text ~show:false () in
       label#misc#modify_fg [`NORMAL, view#gutter.Gutter.fg_color];
       label#misc#modify_font_by_name view#options#line_numbers_font;
-      view#add_child_in_window ~child:label#coerce ~which_window:`LEFT ~x:0 ~y:0;
+      view#add_child_in_window ~child:label#coerce ~which_window:`LEFT ~x ~y;
       label
   in
   (match List_opt.assoc y lnl.locked with Some x -> x#misc#hide() | _ -> ());
@@ -73,9 +73,3 @@ let reset lnl =
 (** hide *)
 let hide y lnl =
   match List_opt.assoc y lnl.locked with Some lnl -> lnl#misc#hide() | _ -> ()
-
-
-
-
-
-

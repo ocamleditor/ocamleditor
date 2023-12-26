@@ -128,16 +128,16 @@ let string_rev = Miscellanea.Memo.create string_rev;;
 
 let is_function type_expr =
   let rec f t =
-    match [@warning "-4"] t.Types.desc with
-      | Types.Tarrow _ -> true
-      | Types.Tlink t -> f t
-      | _ -> false
+    match [@warning "-4"] Types.get_desc t with
+    | Types.Tarrow _ -> true
+    | Types.Tlink t -> f t
+    | _ -> false
   in f type_expr;;
 
 let string_of_type_expr te =
-  match [@warning "-4"] te.desc with
-    | Tarrow (_, _, t2, _) -> Odoc_info.string_of_type_expr t2
-    | _ -> Odoc_info.string_of_type_expr te;;
+  match [@warning "-4"] Types.get_desc te with
+  | Tarrow (_, _, t2, _) -> Odoc_info.string_of_type_expr t2
+  | _ -> Odoc_info.string_of_type_expr te;;
 
 let string_of_longident t
   = String.concat "." @@ Longident.flatten t
@@ -393,7 +393,7 @@ object (self)
         match align with
           | Some align ->
             view#vadjustment#set_value (align *. view#vadjustment#upper);
-          | None when page#view#misc#get_flag `HAS_FOCUS ->
+          | None when page#view#has_focus ->
             if not (Gmisclib.Util.treeview_is_path_onscreen view path) then begin
               view#scroll_to_cell ~align:(0.38, 0.) path vc;
             end;
@@ -635,8 +635,8 @@ object (self)
       | Tstr_exception { tyexn_constructor; _ } ->
         let { ext_name = loc; ext_kind; _ } = tyexn_constructor in
         let core_types = ( match ext_kind with
-            | Text_decl (Typedtree.Cstr_tuple core_types, _) -> self#string_of_core_types core_types
-            | Text_decl (Typedtree.Cstr_record fields, _) ->  self#string_of_type_record fields
+            | Text_decl (_, Typedtree.Cstr_tuple core_types, _) -> self#string_of_core_types core_types
+            | Text_decl (_, Typedtree.Cstr_record fields, _) ->  self#string_of_type_record fields
             | Text_rebind _ -> "" )
         in
         ignore (self#append ?parent ~kind:Exception ~loc:loc.loc loc.txt core_types)
@@ -810,11 +810,11 @@ object (self)
 
   method private append_type_extension ?parent ~kind { txt; loc } constructors =
     let typs ext_kind = match ext_kind with
-      | Text_decl (Typedtree.Cstr_tuple ctl, cto) ->
+      | Text_decl (_, Typedtree.Cstr_tuple ctl, cto) ->
         let args = self#string_of_core_types ctl in
         let res = self#string_of_core_type_opt cto in
         self#repr_of_gadt_type args res
-      | Text_decl (Typedtree.Cstr_record fields, cto) ->
+      | Text_decl (_, Typedtree.Cstr_record fields, cto) ->
         let args = self#string_of_type_record fields in
         let res = self#string_of_core_type_opt cto in
         self#repr_of_gadt_type args res

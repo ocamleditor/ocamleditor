@@ -136,8 +136,8 @@ class widget ~editor ?(callback=ignore) ~project ?page_num ?packing ?show () =
               set_title "Target";
               Gmisclib.Idle.add (fun () -> target_page#set_target tg);
               Gmisclib.Idle.add begin fun () ->
-                if not (target_page#misc#get_flag `SENSITIVE) then (target_page#misc#set_sensitive true);
-                if not (target_page#misc#get_flag `VISIBLE) then begin
+                if not target_page#sensitive then (target_page#misc#set_sensitive true);
+                if not (target_page#visible) then begin
                   etask_page#misc#hide ();
                   target_page#misc#show ();
                 end
@@ -147,7 +147,7 @@ class widget ~editor ?(callback=ignore) ~project ?page_num ?packing ?show () =
               Gmisclib.Idle.add (fun () -> etask_page#set_task et);
               Gmisclib.Idle.add begin fun () ->
 (*                if not (etask_page#misc#get_flag `SENSITIVE) then (etask_page#misc#set_sensitive true);*)
-                if not (etask_page#misc#get_flag `VISIBLE) then begin
+                if not etask_page#visible then begin
                   target_page#misc#hide ();
                   etask_page#misc#show ();
                 end;
@@ -199,7 +199,7 @@ class widget ~editor ?(callback=ignore) ~project ?page_num ?packing ?show () =
     window#set_border_width 5;
     let label = GMisc.label ~text ~packing:window#vbox#add () in
     let fd = Gtk_util.increase_font_size ~increment:(-2) label#coerce in
-    Pango.Font.set_family fd "monospace";
+    fd#modify ~family: "monospace" ();
     label#misc#modify_font fd;
     match window#run () with _ -> window#destroy()
   end in
@@ -270,12 +270,13 @@ object (self)
         List.iter begin fun page ->
           page#compile_buffer ?join:None ();
           page#error_indication#remove_tag();
-          page#global_gutter#misc#draw (Some (Gdk.Rectangle.create
+          (* TODO global gutter *)
+          (*page#global_gutter#misc#draw (Some (Gdk.Rectangle.create
             ~x:page#global_gutter#misc#allocation.Gtk.x
             ~y:page#global_gutter#misc#allocation.Gtk.y
             ~width:page#global_gutter#misc#allocation.Gtk.width
             ~height:page#global_gutter#misc#allocation.Gtk.height
-          )) end editor#pages;
+          ))*) end editor#pages;
       end
     with
       | Project.Project_already_exists path ->

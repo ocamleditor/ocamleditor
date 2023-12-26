@@ -176,7 +176,7 @@ module SVG = struct
       match List_opt.assoc zm cache with
         | Some pixbuf -> pixbuf
         | None ->
-          let pixbuf = Rsvg.render_from_string ~size_cb:(Rsvg.at_zoom zm zm) buffer in
+          let pixbuf = (*Rsvg.render_from_string ~size_cb:(Rsvg.at_zoom zm zm) buffer*) Icons.empty_16 in
           cache <- (zm, pixbuf) :: cache;
           pixbuf
 

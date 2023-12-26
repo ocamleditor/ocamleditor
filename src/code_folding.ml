@@ -21,6 +21,8 @@
 *)
 
 open Printf
+open Cairo_drawable
+
 
 type hover = Out | Mark of (int * int * bool) | Region
 type tag_table_kind = Hidden | Readonly
@@ -56,7 +58,7 @@ class manager ~(view : Text.view) =
   (*let explicit = false in*)
   let min_length = 3 in
   let buffer = view#buffer in
-  let font = Gaux.may_map !Oe_config.code_folding_font ~f:Gdk.Font.load_fontset in
+  let font = Gaux.may_map !Oe_config.code_folding_font ~f:GPango.font_description_from_string in
   (*let code_folding_scope_color = Oe_config.code_folding_scope_color in*)
   let set_highlight_background tag = Gmisclib.Util.set_tag_paragraph_background tag in
   object (self)
@@ -162,7 +164,7 @@ class manager ~(view : Text.view) =
     method private draw_line y n_lines =
       match view#get_window `TEXT with
       | Some window ->
-        let drawable = new GDraw.drawable window in
+        let drawable = Gdk.Cairo.create window in
         let vrect = view#visible_rect in
         let y0 = Gdk.Rectangle.y vrect in
         let w0 = Gdk.Rectangle.width vrect in
@@ -171,33 +173,14 @@ class manager ~(view : Text.view) =
         begin
           match font with
           | None ->
-            drawable#set_foreground fold_line_color;
-            Gdk.GC.set_fill drawable#gc `SOLID;
-            Gdk.GC.set_dashes drawable#gc ~offset [2; 2];
-            drawable#set_line_attributes ~style:Oe_config.dash_style ();
-            drawable#line ~x:0 ~y ~x:w0 ~y;
-          | Some font ->
-            let text = sprintf "  %d lines  " n_lines in
-            Gdk.GC.set_font drawable#gc font;
-            let w = Gdk.Font.string_width font text in
-            let aw = 9 in
-            let margin = 40 in
-            let w0 = w0 - margin - w/2 in
-            drawable#set_foreground fold_line_color;
-            drawable#arc ~x:w0 ~y:(y - 6) ~width:aw ~height:12 ~start:89. ~angle:181. ();
-            drawable#arc ~x:(w0 + w - aw) ~y:(y - 6) ~width:aw ~height:12 ~start:91. ~angle:(-.181.) ();
-            drawable#string text ~font ~x:w0 ~y:(y + 3);
-            (* Draw line *)
-            drawable#set_foreground fold_line_color;
-            Gdk.GC.set_fill drawable#gc `SOLID;
-            Gdk.GC.set_dashes drawable#gc ~offset [2; 2];
-            drawable#set_line_attributes ~style:Oe_config.dash_style ();
-            drawable#line ~x:0 ~y ~x:w0 ~y;
-            drawable#line ~x:(w0 + w) ~y ~x:(w0 + w + margin) ~y;
+            set_foreground drawable fold_line_color;
+            set_line_attributes drawable ~width:1 ~style:Oe_config.dash_style ();
+            line drawable 0 y w0 y;
+          | Some font -> ()
         end
       | _ -> ()
 
-    method private draw_markers () =
+    method private draw_markers drawable =
       match view#get_window `LEFT with
       | Some window ->
         (*Prf.crono Prf.prf_draw_markers begin fun () ->*)
@@ -270,13 +253,12 @@ class manager ~(view : Text.view) =
             end
         end folding_points (*exposed*);
         (* Draw lines and markers in the same iter (to reduce flickering?) *)
-        let drawable = new GDraw.drawable window in
-        drawable#set_foreground view#gutter.Gutter.bg_color;
+        set_foreground drawable view#gutter.Gutter.bg_color;
         (*drawable#rectangle ~x:view#gutter.Gutter.fold_x ~y:0
           ~width:(view#gutter.Gutter.fold_size - 1) ~height:h0 ~filled:true ();*)
-        drawable#set_foreground view#gutter.Gutter.marker_color;
-        drawable#set_line_attributes ~width:2 ~cap:`PROJECTING ~style:`SOLID ();
-        Gdk.GC.set_dashes drawable#gc ~offset:1 [1; 2];
+        set_foreground drawable view#gutter.Gutter.marker_color;
+        set_line_attributes drawable ~width:2 ~cap:`PROJECTING ~style:`SOLID ();
+        (*Gdk.GC.set_dashes drawable#gc ~offset:1 [1; 2];*)
 
         let folds = List.rev (List.fold_left begin fun acc ((_, l2, _) as ll, a, b, c) ->
             (match acc with
@@ -288,47 +270,47 @@ class manager ~(view : Text.view) =
           (*(* Focus ribbon (disabled) *)
             if draw_focus_ribbon && (ys1 >= 0 || ys2 >= 0) && (ys1 <= h0 || ys1 <= h0) then begin
             drawable#set_foreground code_folding_scope_color;
-            drawable#set_line_attributes ~width:1 ~cap:`PROJECTING ~style:`SOLID ();
+            set_line_attributes drawable ~width:1 ~cap:`PROJECTING ~style:`SOLID ();
             drawable#rectangle ~x:xs ~y:ys1 ~width ~height:(ys2 - ys1 - 1) ~filled:true ();
             end;*)
           (* Markers *)
           let xm = xm - 1 in
           List.iter begin fun (unmatched, _, (is_collapsed, ym1, ym2, _(*h1*), _(*h2*))) ->
-            drawable#set_line_attributes ~width:(if unmatched || use_triangles then 1 else 2) ();
+            set_line_attributes drawable ~width:(if unmatched || use_triangles then 1 else 2) ();
             let xm = xm - 2 in
             let ym1 = ym1 - if use_triangles then 1 else dx in
             let ya = ym1 + 2*dx in
             let square = if use_triangles then [] else [(xm - dx, ym1); (xm + dx, ym1); (xm + dx, ya); (xm - dx, ya)] in
             if is_collapsed then begin
               if use_triangles then begin
-                drawable#polygon ~filled:true [(xm, ym1 - 5); (xm, ym1 + 5); (xm + 5, ym1)];
+                polygon drawable ~filled:true [(xm, ym1 - 5); (xm, ym1 + 5); (xm + 5, ym1)];
               end else begin
-                drawable#set_line_attributes ~width:1 ();
-                drawable#set_foreground view#gutter.Gutter.marker_color;
-                drawable#polygon ~filled:false square;
-                drawable#segments [(xm, ym1 + dx12), (xm, ym1 + dx1*2); (xm - dxdx12, ym1 + dx), (xm + dxdx12, ym1 + dx)];
+                set_line_attributes drawable ~width:1 ();
+                set_foreground drawable view#gutter.Gutter.marker_color;
+                polygon drawable ~filled:false square;
+                segments drawable [(xm, ym1 + dx12), (xm, ym1 + dx1*2); (xm - dxdx12, ym1 + dx), (xm + dxdx12, ym1 + dx)];
               end;
             end else begin
               if use_triangles then begin
-                if unmatched then (drawable#polygon ~filled:false [(xm - 4, ym1); (xm + dx - 1, ym1); (xm, ym1 + dx - 1)])
-                else (drawable#polygon ~filled:true [(xm - 4, ym1); (xm + dx, ym1); (xm, ym1 + dx)]);
+                if unmatched then (polygon drawable ~filled:false [(xm - 4, ym1); (xm + dx - 1, ym1); (xm, ym1 + dx - 1)])
+                else (polygon drawable ~filled:true [(xm - 4, ym1); (xm + dx, ym1); (xm, ym1 + dx)]);
               end else begin
-                drawable#set_line_attributes ~width:1 ();
-                drawable#set_foreground view#gutter.Gutter.bg_color;
+                set_line_attributes drawable ~width:1 ();
+                set_foreground drawable view#gutter.Gutter.bg_color;
                 if unmatched then begin
-                  (*drawable#set_line_attributes ~style:`ON_OFF_DASH ();*)
-                  drawable#set_foreground view#gutter.Gutter.bg_color;
-                  drawable#polygon ~filled:true square;
-                  drawable#set_foreground light_marker_color;
-                  drawable#polygon ~filled:false square;
+                  (*set_line_attributes drawable ~style:`ON_OFF_DASH ();*)
+                  set_foreground drawable view#gutter.Gutter.bg_color;
+                  polygon drawable ~filled:true square;
+                  set_foreground drawable light_marker_color;
+                  polygon drawable ~filled:false square;
                   (*drawable#segments [(xm - dx, ya), (xm + dx, ym1)(*; (xm - dx, ym1), (xm + dx, ya)*)];*)
                 end else begin
-                  drawable#set_line_attributes ~style:`SOLID ();
-                  drawable#polygon ~filled:true square;
-                  drawable#set_foreground view#gutter.Gutter.marker_color;
-                  drawable#polygon ~filled:false square;
+                  set_line_attributes drawable ~style:`SOLID ();
+                  polygon drawable ~filled:true square;
+                  set_foreground drawable view#gutter.Gutter.marker_color;
+                  polygon drawable ~filled:false square;
                 end;
-                drawable#segments [(xm - dxdx12, ym1 + dx), (xm + dxdx12, ym1 + dx)];
+                segments drawable [(xm - dxdx12, ym1 + dx), (xm + dxdx12, ym1 + dx)];
               end;
               match ym2 with
               | Some ym2 ->
@@ -337,14 +319,14 @@ class manager ~(view : Text.view) =
                   match cont with
                   | `Contiguous when use_triangles ->
                     let ym2 = ym2 - 8 in
-                    drawable#segments [((xm, (ym2 - 3)), (xm, ym2)); ((xm, ym2), ((xm + dx), ym2))];
+                    segments drawable [((xm, (ym2 - 3)), (xm, ym2)); ((xm, ym2), ((xm + dx), ym2))];
                   | `Contiguous -> ()
                   | `Collapsed ->
                     let ym2 = ym2 - 18 in
-                    drawable#segments [((xm, (ym2 - 3)), (xm, ym2)); ((xm, ym2), ((xm + dx), ym2))];
+                    segments drawable [((xm, (ym2 - 3)), (xm, ym2)); ((xm, ym2), ((xm + dx), ym2))];
                   | _ ->
                     let ym2 = ym2 + dx in
-                    drawable#segments [((xm, (ym2 - 3)), (xm, ym2)); ((xm, ym2), ((xm + dx), ym2))];
+                    segments drawable [((xm, (ym2 - 3)), (xm, ym2)); ((xm, ym2), ((xm + dx), ym2))];
                 end;
               | _ -> ()
             end;
@@ -545,7 +527,7 @@ class manager ~(view : Text.view) =
     method private highlight x y =
       match view#get_window `LEFT with
       | Some window ->
-        self#draw_markers();
+        self#draw_markers (GDraw.Cairo.create window);
         begin
           match self#is_hover x y with
           | Mark (o1, o2, unmatched) as mark ->
@@ -604,22 +586,19 @@ class manager ~(view : Text.view) =
       end;
 
     method private init () =
-      signal_expose <- Some (view#event#connect#after#expose ~callback:begin fun _ ->
-          if enabled then (self#draw_markers ());
+      signal_expose <- Some (view#misc#connect#after#draw ~callback:begin fun drawable ->
+          if enabled then (self#draw_markers drawable);
           false
         end);
-      ignore (view#connect#set_scroll_adjustments ~callback:begin fun _ vertical ->
-          match vertical with
-          | Some vertical ->
-            ignore (vertical#connect#value_changed ~callback:begin fun () ->
-                Gaux.may signal_expose ~f:(fun id -> view#misc#handler_block id);
-              end);
-            ignore (vertical#connect#after#value_changed ~callback:(fun () ->
-                Gmisclib.Idle.add ~prio:300 self#scan_folding_points;
-                Gmisclib.Idle.add ~prio:100 (fun () ->
-                    Gaux.may signal_expose ~f:(fun id -> view#misc#handler_unblock id))));
-          | _ -> ()
-        end);
+      ignore (view#connect#notify_vadjustment ~callback:begin fun vertical ->
+          Gaux.may signal_expose ~f:(fun id -> view#misc#handler_block id);
+
+          Gmisclib.Idle.add ~prio:300 self#scan_folding_points;
+          Gmisclib.Idle.add ~prio:100 (fun () ->
+              Gaux.may signal_expose ~f:(fun id -> view#misc#handler_unblock id)
+            )
+        end
+        );
       ignore (view#event#connect#after#button_release ~callback:begin fun ev ->
           if enabled then begin
             let window = GdkEvent.get_window ev in

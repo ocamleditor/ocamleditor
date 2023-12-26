@@ -37,7 +37,6 @@ let window widget
     ?(fade=false)
     ?(focus=true)
     ?(escape=true)
-    ?wm_class
     ?(show=true)
     ~x ~y () =
   let window = GWindow.window
@@ -46,7 +45,6 @@ let window widget
     ~deletable:true
     ~focus_on_map:focus
     ~type_hint
-    ?wm_class
     ~show:false ()
   in
   let ebox = GBin.event_box ~packing:window#add () in
@@ -122,11 +120,12 @@ let with_tag ~(buffer : GText.buffer) tag f =
 
 (** increase_font_size *)
 let increase_font_size ?weight ?(increment=3) widget =
-  let fd = widget#misc#pango_context#font_description in
+  let fd : GPango.font_description = widget#misc#pango_context#font_description in
   if increment <> 0 then begin
-    let size = Pango.Font.get_size fd + increment * Pango.scale in
+    let size = fd#size + increment * Pango.scale in
     if size >= 0 then begin
-      Pango.Font.modify fd ?weight ~size ();
+      let size = Some size in
+      fd#modify ?weight ?size ();
       widget#misc#modify_font fd;
     end;
   end;

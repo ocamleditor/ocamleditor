@@ -56,13 +56,13 @@ module Make (C : COMMAND) = struct
       ~(global_options : speclist)
       ?default_command
       ?(usage_msg=sprintf "\nUSAGE\n  %s [global_options*] <command> [options*] [args*]\n  %s <command> --help"
-        (Filename.basename args.(0)) (Filename.basename args.(0)))
+          (Filename.basename args.(0)) (Filename.basename args.(0)))
       execute_command =
     command := None;
     Arg.current := 0;
     let parse_anon arg =
       match !command with
-        | None ->
+      | None ->
           let cmd =
             try C.command_of_string arg
             with ex ->
@@ -71,22 +71,22 @@ module Make (C : COMMAND) = struct
           in
           command := Some cmd;
           raise Command_found
-        | _ -> assert false
+      | _ -> assert false
     in
     let help_string () =
       match !command with
-        | Some cmd ->
+      | Some cmd ->
           let spec, descr, _ = List.assoc cmd cmd_map in
           let cmd = C.string_of_command cmd in
           Arg.usage_string spec
             (sprintf "%s %s - %s\n\nUSAGE\n  %s [global_options*] %s [options*] [args*]\n\nOPTIONS"
-              (Filename.basename args.(0)) cmd descr (Filename.basename args.(0)) cmd)
-        | _ -> create_help_msg global_options usage_msg
+               (Filename.basename args.(0)) cmd descr (Filename.basename args.(0)) cmd)
+      | _ -> create_help_msg global_options usage_msg
     in
     if Array.length args = 1 then (raise (Arg.Help (help_string())));
     try Arg.parse_argv args global_options parse_anon usage_msg;
     with
-      | Command_found ->
+    | Command_found ->
         let len = Array.length args - !Arg.current in
         let command_args = Array.make len "" in
         Array.blit args !Arg.current command_args 0 len;
@@ -95,7 +95,7 @@ module Make (C : COMMAND) = struct
           try
             Arg.current := 0;
             let speclist = with_command (fun cmd -> let sp, _, _ =
-              try List.assoc cmd cmd_map with Not_found -> assert false in sp) in
+                                                      try List.assoc cmd cmd_map with Not_found -> assert false in sp) in
             Arg.parse_argv command_args speclist parse_anon usage_msg;
             let f = function
               | Some cmd -> execute_command cmd
@@ -103,30 +103,53 @@ module Make (C : COMMAND) = struct
             in
             f !command
           with
-            | Arg.Help _ ->
+          | Arg.Help _ ->
               with_command begin fun cmd ->
                 let cmd_specs, cmd_descr, cmd_usage = List.assoc cmd cmd_map in
                 raise (Help_Command  (cmd, (cmd_specs, cmd_descr, cmd_usage), help_string ()))
               end
-            | Arg.Bad msg as ex ->
+          | Arg.Bad msg as ex ->
               with_command begin fun _cmd ->
                 try
                   let first_line = String.sub msg 0 (String.index msg '\n') in
                   raise (Arg.Bad (sprintf "%s\n%s"
-                    (*(C.string_of_command cmd) (command_args.(!Arg.current))*) first_line (help_string())))
+                                    (*(C.string_of_command cmd) (command_args.(!Arg.current))*) first_line (help_string())))
                 with Not_found -> raise ex
               end
         end;
-      | Arg.Bad _ ->
+    | Arg.Bad _ ->
         raise (Arg.Bad (sprintf "unknown global option `%s'\n%s" (args.(!Arg.current)) (help_string())))
-      | Arg.Help _ -> raise (Arg.Help (help_string()));;
+    | Arg.Help _ -> raise (Arg.Help (help_string()));;
 
   let parse ~global_options ?default_command ?usage_msg f =
     parse_argv Sys.argv ~global_options ?default_command ?usage_msg f;;
 end;;
 
 end
-module Log = struct open Printf
+module Log = struct (*
+
+  OCamlEditor
+  Copyright (C) 2010-2014 Francesco Tovagliari
+
+  This file is part of OCamlEditor.
+
+  OCamlEditor is free software: you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation, either version 3 of the License, or
+  (at your option) any later version.
+
+  OCamlEditor is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License
+  along with this program. If not, see <http://www.gnu.org/licenses/>.
+
+*)
+
+
+open Printf
 
 type verbosity = [
   | `DEBUG
@@ -173,14 +196,14 @@ let timestamp () =
     t.Unix.tm_sec
 
 module Make (X : sig
-  val channel : out_channel
-  val verbosity : verbosity
-  val print_timestamp : bool
-end) (*: S*) = struct
+    val channel : out_channel
+    val verbosity : verbosity
+    val print_timestamp : bool
+  end) (*: S*) = struct
 
   module Make (Y : sig
-    val prefix : string
-  end) = struct
+      val prefix : string
+    end) = struct
 
     let prefixes = ref []
 
@@ -189,7 +212,9 @@ end) (*: S*) = struct
       else prefixes := Y.prefix :: !prefixes
 
     let verbosity = ref X.verbosity
+    let print_timestamp = ref X.print_timestamp
     let set_verbosity x = verbosity := x
+    let set_print_timestamp x = print_timestamp := x
 
     let prefix = Some (Y.prefix ^ ": ")
 
@@ -200,7 +225,7 @@ end) (*: S*) = struct
 
     let print level f =
       if level <> `OFF && level >= !verbosity then begin
-        if X.print_timestamp then (Printf.fprintf X.channel "%s " (timestamp()));
+        if !print_timestamp then (Printf.fprintf X.channel "%s " (timestamp()));
         Printf.fprintf X.channel "[%s] " (string_of_verbosity level);
         Option.iter (Printf.fprintf X.channel "%s") prefix;
         Printf.kfprintf flush X.channel f
@@ -208,7 +233,7 @@ end) (*: S*) = struct
 
     let println level f =
       if level <> `OFF && level >= !verbosity then begin
-        if X.print_timestamp then (Printf.fprintf X.channel "%s " (timestamp()));
+        if !print_timestamp then (Printf.fprintf X.channel "%s " (timestamp()));
         Printf.fprintf X.channel "[%s] " (string_of_verbosity level);
         Option.iter (fprintf X.channel "%s") prefix;
         Printf.kfprintf (function c -> Printf.fprintf c "\n%!") X.channel f
@@ -216,7 +241,7 @@ end) (*: S*) = struct
 
     let fprint level f =
       if level <> `OFF && level >= !verbosity then begin
-        if X.print_timestamp then (Printf.kprintf (Format.pp_print_string log_formatter) "%s " (timestamp()));
+        if !print_timestamp then (Printf.kprintf (Format.pp_print_string log_formatter) "%s " (timestamp()));
         Printf.kprintf (Format.pp_print_string log_formatter) "[%s] " (string_of_verbosity level);
         Option.iter (Format.pp_print_string log_formatter) prefix;
         Format.kfprintf (fun fmt -> Format.pp_print_flush fmt ()) log_formatter f
@@ -224,7 +249,7 @@ end) (*: S*) = struct
 
     let fprintln level f =
       if level <> `OFF && level >= !verbosity then begin
-        if X.print_timestamp then (Printf.kprintf (Format.pp_print_string log_formatter) "%s " (timestamp()));
+        if !print_timestamp then (Printf.kprintf (Format.pp_print_string log_formatter) "%s " (timestamp()));
         Printf.kprintf (Format.pp_print_string log_formatter) "[%s] " (string_of_verbosity level);
         Option.iter (Format.pp_print_string log_formatter) prefix;
         Format.kfprintf (fun fmt -> Format.pp_print_newline fmt (); Format.pp_print_flush fmt ())
@@ -233,7 +258,30 @@ end) (*: S*) = struct
   end
 end
 end
-module Shell = struct let redirect_stderr = if Sys.win32 then " 2>NUL" else " 2>/dev/null"
+module Shell = struct (*
+
+  OCamlEditor
+  Copyright (C) 2010-2014 Francesco Tovagliari
+
+  This file is part of OCamlEditor.
+
+  OCamlEditor is free software: you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation, either version 3 of the License, or
+  (at your option) any later version.
+
+  OCamlEditor is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License
+  along with this program. If not, see <http://www.gnu.org/licenses/>.
+
+*)
+
+
+let redirect_stderr = if Sys.win32 then " 2>NUL" else " 2>/dev/null"
 
 (** get_command_output *)
 let get_command_output command =
@@ -244,12 +292,12 @@ let get_command_output command =
     while true do output := (input_line ch) :: !output done;
     assert false
   with End_of_file -> begin
-    ignore (Unix.close_process_in ch);
-    List.rev !output
-  end | e -> begin
-    ignore (Unix.close_process_in ch);
-    raise e
-  end
+      ignore (Unix.close_process_in ch);
+      List.rev !output
+    end | e -> begin
+      ignore (Unix.close_process_in ch);
+      raise e
+    end
 
 (** quote_path *)
 let quote_path = if Sys.os_type = "Win32" then (fun x -> Filename.quote (Filename.quote x))
@@ -273,33 +321,33 @@ let parse_args line =
     Buffer.clear buf;
   in
   String.iter begin function
-    | (' ' as ch) when !state = InQuotedArg -> Buffer.add_char buf ch
-    | ' ' when !state = StartArg -> ()
-    | ' ' when !state = InUnquotedArg -> start_arg ();
-    | ' ' -> start_arg ()
-    | ('"' as ch) when !state = StartArg ->
+  | (' ' as ch) when !state = InQuotedArg -> Buffer.add_char buf ch
+  | ' ' when !state = StartArg -> ()
+  | ' ' when !state = InUnquotedArg -> start_arg ();
+  | ' ' -> start_arg ()
+  | ('"' as ch) when !state = StartArg ->
       state := InQuotedArg;
       Buffer.add_char buf ch
-    | ('"' as ch) when !state = InQuotedArg ->
+  | ('"' as ch) when !state = InQuotedArg ->
       Buffer.add_char buf ch;
       start_arg ();
-    | ('"' as ch) when !state = InQuotedArgAfterQuote ->
+  | ('"' as ch) when !state = InQuotedArgAfterQuote ->
       Buffer.add_char buf ch;
       state := InQuotedArg;
-    | ('"' as ch) when !state = InUnquotedArg ->
+  | ('"' as ch) when !state = InUnquotedArg ->
       start_arg ();
       Buffer.add_char buf ch;
       state := InQuotedArg;
-    | ('\\' as ch) when !state = InQuotedArg ->
+  | ('\\' as ch) when !state = InQuotedArg ->
       state := InQuotedArgAfterQuote;
       Buffer.add_char buf ch
-    | ch when !state = InQuotedArgAfterQuote ->
+  | ch when !state = InQuotedArgAfterQuote ->
       state := InQuotedArg;
       Buffer.add_char buf ch;
-    | ch when !state = StartArg ->
+  | ch when !state = StartArg ->
       state := InUnquotedArg;
       Buffer.add_char buf ch;
-    | ch -> Buffer.add_char buf ch;
+  | ch -> Buffer.add_char buf ch;
   end line;
   if Buffer.length buf > 0 then (start_arg ());
   List.rev !args;;
@@ -316,7 +364,30 @@ parse "1 \"2 \\\" 2\"";;
 
 *)
 end
-module Ocaml_config = struct open Printf
+module Ocaml_config = struct (*
+
+  OCamlEditor
+  Copyright (C) 2010-2014 Francesco Tovagliari
+
+  This file is part of OCamlEditor.
+
+  OCamlEditor is free software: you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation, either version 3 of the License, or
+  (at your option) any later version.
+
+  OCamlEditor is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License
+  along with this program. If not, see <http://www.gnu.org/licenses/>.
+
+*)
+
+
+open Printf
 
 let redirect_stderr = if Sys.os_type = "Win32" then " 2>NUL" else " 2>/dev/null"
 
@@ -334,30 +405,30 @@ let is_mingw = try get "system" = "mingw" with Not_found -> false
 
 let putenv_ocamllib value =
   match Sys.os_type with
-    | "Win32" ->
+  | "Win32" ->
       let value = match value with None -> "" | Some x -> x in
       Unix.putenv "OCAMLLIB" value
-    | _ -> ignore (Sys.command "unset OCAMLLIB")
+  | _ -> ignore (Sys.command "unset OCAMLLIB")
 
 let find_best_compiler compilers =
   try
     Some (List.find begin fun comp ->
-      try
-        let output = kprintf Shell.get_command_output "%s -version%s" comp redirect_stderr in
-        output <> []
-      with _ -> false
-    end compilers)
+        try
+          let output = kprintf Shell.get_command_output "%s -version%s" comp redirect_stderr in
+          output <> []
+        with _ -> false
+      end compilers)
   with Not_found -> None;;
 
 let find_tool which path =
   let commands =
     match which with
-      | `BEST_OCAMLC -> ["ocamlc.opt"; "ocamlc"]
-      | `BEST_OCAMLOPT -> ["ocamlopt.opt"; "ocamlopt"]
-      | `BEST_OCAMLDEP -> ["ocamldep.opt"; "ocamldep"]
-      | `BEST_OCAMLDOC -> ["ocamldoc.opt"; "ocamldoc"]
-      | `OCAMLC -> ["ocamlc"]
-      | `OCAML -> ["ocaml"]
+    | `BEST_OCAMLC -> ["ocamlc.opt"; "ocamlc"]
+    | `BEST_OCAMLOPT -> ["ocamlopt.opt"; "ocamlopt"]
+    | `BEST_OCAMLDEP -> ["ocamldep.opt"; "ocamldep"]
+    | `BEST_OCAMLDOC -> ["ocamldoc.opt"; "ocamldoc"]
+    | `OCAMLC -> ["ocamlc"]
+    | `OCAML -> ["ocaml"]
   in
   let commands = if Sys.win32 then List.map (fun c -> if Filename.check_suffix c ".opt" then c ^ ".exe" else c) commands else commands in
   let quote    = if path <> "" && Sys.os_type = "Win32" && String.contains path ' ' then Filename.quote else (fun x -> x) in
@@ -404,9 +475,9 @@ let can_compile_native ?ocaml_home () =
     | _ -> Some "ocamlopt"
   in
   match compiler with
-    | Some compiler ->
+  | Some compiler ->
       let cmd = sprintf "%s -o %s %s%s" compiler exename filename
-        ((*if App_config.application_debug then redirect_stderr else*) "")
+          ((*if App_config.application_debug then redirect_stderr else*) "")
       in
       result := (Sys.command cmd) = 0;
       if Sys.file_exists filename then (Sys.remove filename);
@@ -430,10 +501,33 @@ let can_compile_native ?ocaml_home () =
           Some (Str.matched_group 1 conf)
         end else Some "<unknown ccomp_type>"
       end else None;
-    | _ -> None
+  | _ -> None
 ;;
 end
-module App_config = struct open Printf
+module App_config = struct (*
+
+  OCamlEditor
+  Copyright (C) 2010-2014 Francesco Tovagliari
+
+  This file is part of OCamlEditor.
+
+  OCamlEditor is free software: you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation, either version 3 of the License, or
+  (at your option) any later version.
+
+  OCamlEditor is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License
+  along with this program. If not, see <http://www.gnu.org/licenses/>.
+
+*)
+
+
+open Printf
 
 let (//) = Filename.concat
 let (!!) = Filename.dirname
@@ -471,11 +565,11 @@ Str.split (Str.regexp ",") ",OCAMLEDITORPARAM=debug=2,,record_backtrace=1,,";;
 let application_param =
   try
     List.fold_left begin fun acc x ->
-      match (*Str.split (Str.regexp "=")*) split '=' x with
-        | n :: v :: [] -> (n, v) :: acc
-        | n :: [] -> (n, "") :: acc
-        | _ -> acc
-    end [] ((*Str.split (Str.regexp ",") *) split ',' (Sys.getenv "OCAMLEDITORPARAM"))
+      match split '=' x with
+      | n :: v :: [] -> (n, v) :: acc
+      | n :: [] -> (n, "") :: acc
+      | _ -> acc
+    end [] (split ',' (Sys.getenv "OCAMLEDITORPARAM"))
   with Not_found -> [];;
 
 let application_debug = try (List.assoc "debug" application_param) = "2" with Not_found -> false;;
@@ -489,14 +583,15 @@ let user_home =
 let ocamleditor_user_home =
   let dirname =
     match Ocaml_config.is_mingw with
-      | true when application_debug -> ".ocamleditor.mingw"
-      | true -> ".ocamleditor.test.mingw"
-      | false when application_debug -> ".ocamleditor.test"
-      | false -> ".ocamleditor"
+    | true when application_debug -> ".ocamleditor.mingw"
+    | true -> ".ocamleditor.test.mingw"
+    | false when application_debug -> ".ocamleditor.test"
+    | false -> ".ocamleditor"
   in
-  let ocamleditor_user_home = user_home // dirname in
-  if not (Sys.file_exists ocamleditor_user_home) then (Unix.mkdir ocamleditor_user_home 509);
-  ocamleditor_user_home
+  user_home // dirname
+
+let ensure_ocamleditor_user_home () =
+  if not (Sys.file_exists ocamleditor_user_home) then (Unix.mkdir ocamleditor_user_home 509)
 
 let launcher_filename = ocamleditor_user_home // "launcher.list"
 
@@ -515,41 +610,38 @@ let application_icons = get_application_dir "icons"
 
 let application_plugins = get_application_dir "plugins"
 
-let get_oebuild_command =
-  let find_best ?(param="--help") prog =
-    let redirect_stderr = if Sys.os_type = "Win32" then " 2>NUL" else " 2>/dev/null" in
-    try
-      List.find begin fun comp ->
-        let ok =
-          try
-            let cmd = sprintf "%s %s%s" (Filename.quote comp) param redirect_stderr in
-            if application_debug then (printf "Checking for %s... %!" cmd);
-            Shell.get_command_output cmd |> ignore;
-            true
-          with _ -> false
-        in
-        if application_debug then (printf "%b\n%!" ok);
-        ok
-      end prog
-    with Not_found ->
-      kprintf failwith "Cannot find: %s" (String.concat ", " prog)
-  in
-  let find_command name =
-    let basename = name ^ (if Sys.win32 then ".exe" else "") in
-    let path = (!! Sys.executable_name) // basename in
-    if Sys.file_exists path && not (Sys.is_directory path) then path
-    else
-      let path = (!! Sys.executable_name) // (if Filename.check_suffix name ".opt" then Filename.chop_extension name else name) // basename in
-      if Sys.file_exists path then path
-      else basename
-  in
-  begin fun () ->
-    let commands = [
-      find_command "oebuild.opt";
-      find_command "oebuild";
-    ] in
-    find_best commands
-  end
+let find_best ?(param="--help") prog =
+  let redirect_stderr = if Sys.os_type = "Win32" then " 2>NUL" else " 2>/dev/null" in
+  try
+    List.find begin fun comp ->
+      let ok =
+        try
+          let cmd = sprintf "%s %s%s" (Filename.quote comp) param redirect_stderr in
+          if application_debug then (printf "Checking for %s... %!" cmd);
+          Shell.get_command_output cmd |> ignore;
+          true
+        with _ -> false
+      in
+      if application_debug then (printf "%b\n%!" ok);
+      ok
+    end prog
+  with Not_found ->
+    kprintf failwith "Cannot find: %s" (String.concat ", " prog)
+
+let find_command name =
+  let basename = name ^ (if Sys.win32 then ".exe" else "") in
+  let path = (!! Sys.executable_name) // basename in
+  if Sys.file_exists path && not (Sys.is_directory path) then path
+  else
+    let path = (!! Sys.executable_name) // (if Filename.check_suffix name ".opt" then Filename.chop_extension name else name) // basename in
+    if Sys.file_exists path then path
+    else basename
+
+let get_oebuild_command () =
+  find_best [
+    find_command "oebuild.opt";
+    find_command "oebuild";
+  ]
 end
 module Spawn = struct type process = {
   pid : int;
@@ -557,8 +649,6 @@ module Spawn = struct type process = {
   outchan : out_channel;
   errchan : in_channel;
 }
-
-type result = [ `PID of int | `ERROR of exn | `SUCCESS ]
 
 (** create_process *)
 let create_process ?wd ?env program args =
@@ -571,8 +661,8 @@ let create_process ?wd ?env program args =
   let cwd = ref None in
   begin
     match wd with
-      | None -> ()
-      | Some x ->
+    | None -> ()
+    | Some x ->
         cwd := Some (Sys.getcwd());
         Sys.chdir x
   end;
@@ -582,8 +672,8 @@ let create_process ?wd ?env program args =
   try
     let pid =
       match env with
-        | None -> Unix.create_process program args out_read in_write err_write
-        | Some env -> Unix.create_process_env program args env out_read in_write err_write
+      | None -> Unix.create_process program args out_read in_write err_write
+      | Some env -> Unix.create_process_env program args env out_read in_write err_write
     in
     (match !cwd with None -> () | Some x -> Sys.chdir x; cwd := None);
     Unix.close out_read;
@@ -592,11 +682,11 @@ let create_process ?wd ?env program args =
     let proc = { pid; inchan; outchan; errchan } in
     proc
   with
-    | Unix.Unix_error (err, a, b) as ex ->
+  | Unix.Unix_error (err, a, b) as ex ->
       (match !cwd with None -> () | Some x -> Sys.chdir x; cwd := None);
       (*Printf.eprintf "%s (%S, %S)\n%!" (Unix.error_message err) a b;*)
       raise ex
-    | ex ->
+  | ex ->
       (match !cwd with None -> () | Some x -> Sys.chdir x; cwd := None);
       raise ex
 
@@ -613,12 +703,15 @@ let redirect_to_stderr = loop (fun chan -> input_line chan |> prerr_endline)
 (** redirect_to_ignore *)
 let redirect_to_ignore = loop (fun chan -> input_line chan |> ignore)
 
-(** exec *)
+(** exec
+    @param at_exit Deprecated, use continue_with instead.
+*)
 let exec
     mode
     ?working_directory
     ?env
     ?at_exit
+    ?continue_with
     ?process_in
     ?process_out
     ?process_err
@@ -631,14 +724,35 @@ let exec
     set_binary_mode_out proc.outchan binary;
     let process_in = match process_in with Some f -> f | _ -> redirect_to_ignore in
     let process_err = match process_err with Some f -> f | _ -> redirect_to_ignore in
+    let continue_with, deprecated_at_exit =
+      match continue_with, at_exit with
+      | Some f, None -> f, ignore
+      | None, Some f -> ignore, f
+      | None, None -> ignore, ignore
+      | Some _, Some _ -> invalid_arg "at_exit is not supported together with continue_with"
+    in
     let final () =
-      let f = match at_exit with Some f -> f | _ -> ignore in
-      try
-        Stdlib.close_in proc.inchan;
-        Stdlib.close_in proc.errchan;
-        Stdlib.close_out proc.outchan;
-        f None
-      with (Unix.Unix_error _) as ex -> f (Some ex)
+      let close_channels () =
+        try
+          Stdlib.close_in proc.inchan;
+          Stdlib.close_in proc.errchan;
+          Stdlib.close_out proc.outchan;
+          None
+        with (Unix.Unix_error _) as ex ->
+          Some ex
+      in
+      let pid, status = Unix.waitpid [] proc.pid in
+      match close_channels() with
+      | None when mode = `ASYNC ->
+          continue_with (pid, status, None);
+          deprecated_at_exit None;
+          `SUCCESS status
+      | Some ex when mode = `ASYNC ->
+          continue_with (pid, status, Some ex);
+          deprecated_at_exit (Some ex);
+          `ERROR ex
+      | None -> `SUCCESS status
+      | Some ex -> `ERROR ex
     in
     let tho = match process_out with Some f -> Some (Thread.create f proc.outchan) | _ -> None in
     let thi = Thread.create process_in proc.inchan in
@@ -647,48 +761,48 @@ let exec
         process_err proc.errchan;
         Thread.join thi;
         (match tho with Some t -> Thread.join t | _ -> ());
-        if mode = `ASYNC then final()
+        if mode = `ASYNC then (final() |> ignore)
       end ()
     in
     match mode with
-      | `SYNC ->
+    | `SYNC ->
         Thread.join the;
         Thread.join thi;
         (match tho with Some t -> Thread.join t | _ -> ());
-        final();
-        `SUCCESS
-      | `ASYNC -> `PID proc.pid
+        final()
+    | `ASYNC -> `PID proc.pid
   with (Unix.Unix_error _) as ex -> `ERROR ex
 
 (** sync *)
 let sync
     ?working_directory
     ?env
-    ?at_exit
     ?process_in
     ?process_out
     ?process_err
     ?binary
     program args =
   match
-  exec `SYNC
-    ?working_directory
-    ?env
-    ?at_exit
-    ?process_in
-    ?process_out
-    ?process_err
-    ?binary
-    program args
+    exec `SYNC
+      ?working_directory
+      ?env
+      ?process_in
+      ?process_out
+      ?process_err
+      ?binary
+      program args
   with
-    | `SUCCESS -> None
-    | `ERROR ex -> Some ex
-    | `PID _ -> assert false
+  | (`SUCCESS _) as x -> x
+  | (`ERROR _) as x -> x
+  | `PID _ -> assert false
 
-(** async *)
+(** async
+    @param at_exit Deprecated, use continue_with instead.
+*)
 let async
     ?working_directory
     ?env
+    ?continue_with
     ?at_exit
     ?process_in
     ?process_out
@@ -696,26 +810,50 @@ let async
     ?binary
     program args =
   match
-  exec `ASYNC
-    ?working_directory
-    ?env
-    ?at_exit
-    ?process_in
-    ?process_out
-    ?process_err
-    ?binary
-    program args
+    exec `ASYNC
+      ?working_directory
+      ?env
+      ?continue_with
+      ?at_exit
+      ?process_in
+      ?process_out
+      ?process_err
+      ?binary
+      program args
   with
-    | `SUCCESS -> assert false
-    | (`ERROR _) as x -> x
-    | (`PID _) as x -> x
+  | `SUCCESS _ -> assert false
+  | (`ERROR _) as x -> x
+  | (`PID _) as x -> x
 
 
 
 end
-module Task = struct type kind = [ `CLEAN | `CLEANALL | `ANNOT | `COMPILE | `RUN | `OTHER]
+module Task = struct (*
+
+  OCamlEditor
+  Copyright (C) 2010-2014 Francesco Tovagliari
+
+  This file is part of OCamlEditor.
+
+  OCamlEditor is free software: you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation, either version 3 of the License, or
+  (at your option) any later version.
+
+  OCamlEditor is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License
+  along with this program. If not, see <http://www.gnu.org/licenses/>.
+
+*)
+
+
+type kind = [ `CLEAN | `CLEANALL | `ANNOT | `COMPILE | `RUN | `OTHER]
 type phase =
-  Before_clean | Clean | After_clean | Before_compile | Compile | After_compile
+    Before_clean | Clean | After_clean | Before_compile | Compile | After_compile
 
 type t = {
   mutable et_name                  : string;
@@ -758,18 +896,18 @@ let phase_of_string = function
 
 let create ~name ~env ?(env_replace=false) ~dir ~cmd ~args ?phase ?(run_in_project=false) ?(run_in_script=true)
     ?(readonly=false) ?(visible=true) () = {
-    et_name                  = name;
-    et_env                   = env;
-    et_env_replace           = env_replace;
-    et_dir                   = dir;
-    et_cmd                   = cmd;
-    et_args                  = args;
-    et_phase                 = phase;
-    et_always_run_in_project = run_in_project;
-    et_always_run_in_script  = run_in_script;
-    et_readonly              = readonly;
-    et_visible               = visible;
-  }
+  et_name                  = name;
+  et_env                   = env;
+  et_env_replace           = env_replace;
+  et_dir                   = dir;
+  et_cmd                   = cmd;
+  et_args                  = args;
+  et_phase                 = phase;
+  et_always_run_in_project = run_in_project;
+  et_always_run_in_script  = run_in_script;
+  et_readonly              = readonly;
+  et_visible               = visible;
+}
 
 module LogBuilder = Log.Make(struct
     let channel = stderr
@@ -787,7 +925,7 @@ let handle f task =
   let env =
     if task.et_env_replace then Array.concat [(*Unix.environment();*) tenv]
     else (Array.concat [tenv (* takes precedence *);
-      (Array.map (fun e -> true, e) (Unix.environment()))])
+                        (Array.map (fun e -> true, e) (Unix.environment()))])
   in
   let env = List.filter (fun (e, _) -> e) (Array.to_list env) in
   let env = Array.of_list (List.map (fun (_, v) -> v) env) in
@@ -801,7 +939,30 @@ let handle f task =
   args |> String.concat ";" |> Log.println `DEBUG "%s %s\n%!" prog;
   f ~env ~dir ~prog ~args;;
 end
-module Build_script_command = struct open Printf
+module Build_script_command = struct (*
+
+  OCamlEditor
+  Copyright (C) 2010-2014 Francesco Tovagliari
+
+  This file is part of OCamlEditor.
+
+  OCamlEditor is free software: you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation, either version 3 of the License, or
+  (at your option) any later version.
+
+  OCamlEditor is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License
+  along with this program. If not, see <http://www.gnu.org/licenses/>.
+
+*)
+
+
+open Printf
 
 type t = [`Show | `Build | `Install | `Uninstall | `Install_lib | `Clean | `Distclean]
 
@@ -837,7 +998,30 @@ let code_of_command = function
   | `Clean -> "`Clean"
   | `Distclean -> "`Distclean"
 end
-module Oebuild_util = struct open Printf
+module Oebuild_util = struct (*
+
+  OCamlEditor
+  Copyright (C) 2010-2014 Francesco Tovagliari
+
+  This file is part of OCamlEditor.
+
+  OCamlEditor is free software: you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation, either version 3 of the License, or
+  (at your option) any later version.
+
+  OCamlEditor is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License
+  along with this program. If not, see <http://www.gnu.org/licenses/>.
+
+*)
+
+
+open Printf
 
 let (!$) = Filename.chop_extension
 let (//) = Filename.concat
@@ -938,9 +1122,9 @@ let crono ?(label="Time") f x =
   in
   let time = Unix.gettimeofday() in
   let result = try f x with e -> begin
-    finally time;
-    raise e
-  end in
+      finally time;
+      raise e
+    end in
   finally time;
   result
 
@@ -998,8 +1182,8 @@ let replace_extension_to_ml filename =
 (** split_prog_args *)
 let split_prog_args x =
   match split_args x with
-    | h :: t -> h, Array.of_list t
-    | _ -> assert false
+  | h :: t -> h, Array.of_list t
+  | _ -> assert false
 
 (** get_effective_command *)
 let get_effective_command =
@@ -1017,7 +1201,30 @@ let get_effective_command =
 ;;
 
 end
-module Oebuild_table = struct open Printf
+module Oebuild_table = struct (*
+
+  OCamlEditor
+  Copyright (C) 2010-2014 Francesco Tovagliari
+
+  This file is part of OCamlEditor.
+
+  OCamlEditor is free software: you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation, either version 3 of the License, or
+  (at your option) any later version.
+
+  OCamlEditor is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License
+  along with this program. If not, see <http://www.gnu.org/licenses/>.
+
+*)
+
+
+open Printf
 
 let dummy_crc = String.make 32 '0'
 
@@ -1074,7 +1281,30 @@ let update =
     end else ctime = 0.0
 ;;
 end
-module Oebuild_dag = struct module type ENTRY = sig
+module Oebuild_dag = struct (*
+
+  OCamlEditor
+  Copyright (C) 2010-2014 Francesco Tovagliari
+
+  This file is part of OCamlEditor.
+
+  OCamlEditor is free software: you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation, either version 3 of the License, or
+  (at your option) any later version.
+
+  OCamlEditor is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License
+  along with this program. If not, see <http://www.gnu.org/licenses/>.
+
+*)
+
+
+module type ENTRY = sig
   type key
   type t
   val equal : t -> t -> bool
@@ -1104,9 +1334,9 @@ module Make (Entry : ENTRY) = struct
 
   let get_leaves : t -> entry list =
     fun dag ->
-      Hashtbl.fold begin fun _ entry acc ->
-        if entry.dependencies = [] then entry :: acc else acc
-      end dag [];;
+    Hashtbl.fold begin fun _ entry acc ->
+      if entry.dependencies = [] then entry :: acc else acc
+    end dag [];;
 
   let remove_leaf : t -> entry -> unit =
     fun dag leaf ->
@@ -1136,7 +1366,30 @@ end
 
 
 end
-module Oebuild_dep = struct open Printf
+module Oebuild_dep = struct (*
+
+  OCamlEditor
+  Copyright (C) 2010-2014 Francesco Tovagliari
+
+  This file is part of OCamlEditor.
+
+  OCamlEditor is free software: you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation, either version 3 of the License, or
+  (at your option) any later version.
+
+  OCamlEditor is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License
+  along with this program. If not, see <http://www.gnu.org/licenses/>.
+
+*)
+
+
+open Printf
 
 type ocamldeps = (string, bool * string list) Hashtbl.t
 exception Loop_found of string
@@ -1174,25 +1427,25 @@ let ocamldep ?times ?pp ?(ignore_stderr=false) ?(verbose=false) ?slash ?search_p
 
     let replace =
       match times with
-        | Some (times, opt) ->
+      | Some (times, opt) ->
           (* The resulting ocamldep-dag only contains files that need to be recompiled. *)
           fun table target dependencies ->
             let ml = Oebuild_util.replace_extension_to_ml target in
             let changed = Oebuild_table.update ~opt times ml in
             (* changed is true is source file is newer than object file *)
             Hashtbl.replace table target (changed, dependencies)
-        | _ -> fun table target dependencies ->
-          Hashtbl.replace table target (true, dependencies)
+      | _ -> fun table target dependencies ->
+        Hashtbl.replace table target (true, dependencies)
     in
     let open! Oebuild_util in
     List.iter begin fun entry ->
       match Str.split re1 entry with
-        | key :: _ when key ^^^ ".cmo" -> ()
-        | key :: [] -> replace table key []
-        | [key; deps] ->
+      | key :: _ when key ^^^ ".cmo" -> ()
+      | key :: [] -> replace table key []
+      | [key; deps] ->
           let deps = Str.split re3 deps in
           replace table key deps;
-        | _ -> eprintf "%s\n%s\n%!" filenames entry; assert false
+      | _ -> eprintf "%s\n%s\n%!" filenames entry; assert false
     end entries;
   end;
   table;;
@@ -1265,8 +1518,8 @@ let sort_dependencies (dag : ocamldeps) =
   in
   let rec loop res =
     match get_leaves dag with
-      | [] -> res
-      | leaves ->
+    | [] -> res
+    | leaves ->
         List.iter (Hashtbl.remove dag) leaves;
         loop (List.rev_append leaves res);
   in
@@ -1330,7 +1583,7 @@ let find_dep ?pp ?(ignore_stderr=false) ?(echo=true) target =
   let dir = Filename.dirname target in
   let filenames =
     (match dir with "." -> "*.mli" | _ -> dir ^ "/" ^ "*.mli *.mli") ^ " " ^
-      (match dir with "." -> "*.ml" | _ -> dir ^ "/" ^ "*.ml *.ml")
+    (match dir with "." -> "*.ml" | _ -> dir ^ "/" ^ "*.ml *.ml")
   in
   let search_path = Ocaml_config.expand_includes dir in
   let table = ocamldep ?pp ~ignore_stderr ~verbose:echo ~search_path filenames in
@@ -1344,8 +1597,8 @@ let find_dep ?pp ?(ignore_stderr=false) ?(echo=true) target =
     try
       if not (List.mem target !result) then begin
         match Hashtbl.find table target with
-          | (_, []) -> result := target :: !result;
-          | (_, deps) ->
+        | (_, []) -> result := target :: !result;
+        | (_, deps) ->
             List.iter find_chain deps;
             result := target :: !result;
       end
@@ -1400,8 +1653,8 @@ exception Cycle_exception of string list
 (** array_exists *)
 let array_exists from p a =
   try for i = from to Array.length a - 1 do
-    if p a.(i) then raise Exit
-  done; false with Exit -> true
+      if p a.(i) then raise Exit
+    done; false with Exit -> true
 
 (** reduce *)
 let reduce : t -> unit = function table ->
@@ -1516,17 +1769,17 @@ let create_dag ?times ?pp ~toplevel_modules ~verbose () =
     end;
     Dag ((table : t), ocamldeps)
   with Cycle_exception cycle ->
-    match cycle with
-      | hd :: _ ->
-        let cycle =
-          let found = ref false in
-          List.filter begin fun x ->
-            found := !found || x = hd;
-            !found
-          end (List.rev cycle)
-        in
-        Cycle ((*List.rev*) cycle)
-      | [] -> assert false
+  match cycle with
+  | hd :: _ ->
+      let cycle =
+        let found = ref false in
+        List.filter begin fun x ->
+          found := !found || x = hd;
+          !found
+        end (List.rev cycle)
+      in
+      Cycle ((*List.rev*) cycle)
+  | [] -> assert false
 ;;
 
 end
@@ -1579,11 +1832,11 @@ module NODE = struct
 end
 
 type node = NODE.t = {
-    nd_create_command     : (string -> (string * string array) option);
-    nd_at_exit            : (process_output -> unit);
-    nd_filename           : string;
-    mutable nd_processing : bool;
-  }
+  nd_create_command     : (string -> (string * string array) option);
+  nd_at_exit            : (process_output -> unit);
+  nd_filename           : string;
+  mutable nd_processing : bool;
+}
 
 module Dag = Oebuild_dag.Make(NODE)
 
@@ -1630,8 +1883,8 @@ let print_results err_outputs ok_outputs =
 (** create_dag *)
 let create_dag ?times ?pp ~cb_create_command ~cb_at_exit ~toplevel_modules ~verbose () =
   match Dep_dag.create_dag ?times ?pp ~toplevel_modules ~verbose () with
-    | Dep_dag.Cycle cycle -> kprintf failwith "Cycle: %s" (String.concat "->" cycle)
-    | Dep_dag.Dag (dag', ocamldeps) ->
+  | Dep_dag.Cycle cycle -> kprintf failwith "Cycle: %s" (String.concat "->" cycle)
+  | Dep_dag.Dag (dag', ocamldeps) ->
       let dag = Hashtbl.create 17 in
       Hashtbl.iter begin fun filename _deps ->
         let node = {
@@ -1671,7 +1924,7 @@ let create_process ?(jobs=0) ~verbose cb_create_command cb_at_exit dag leaf erro
   let filename = Oebuild_util.replace_extension_to_ml leaf.Dag.node.NODE.nd_filename in
   let process_id = ref 0 in
   match cb_create_command filename with
-    | Some (command, args) when jobs = 0 || !job_counter <= jobs ->
+  | Some (command, args) when jobs = 0 || !job_counter <= jobs ->
       if verbose >= 4 then
         Printf.printf "Oebuild_parallel.create_process [%d/%d]: %s %s\n%!" !job_counter jobs (*filename*) (*print_endline*)
           command (String.concat " " (Array.to_list args))
@@ -1684,16 +1937,8 @@ let create_process ?(jobs=0) ~verbose cb_create_command cb_at_exit dag leaf erro
         err        = Buffer.create 10;
         out        = Buffer.create 10
       } in
-      let at_exit = function
-        | None ->
-          begin match Unix.waitpid [] !process_id with
-            | _, Unix.WEXITED 0 ->
-              output.exit_code <- 0;
-              messages := output :: !messages
-            | _, _              ->
-              output.exit_code <- 1; (* I do not need the exact exit code right now *)
-              errors := output :: !errors
-          end;
+      let continue_with (_, process_status, error) =
+        let cont () =
           Mutex.lock dag.mutex;
           Dag.remove_leaf dag.graph leaf;
           Mutex.unlock dag.mutex;
@@ -1703,7 +1948,22 @@ let create_process ?(jobs=0) ~verbose cb_create_command cb_at_exit dag leaf erro
           Mutex.unlock job_mutex;
           (*end;*)
           cb_at_exit output
-        | Some ex -> Printf.eprintf "File \"oebuild_parallel.ml\": %s\n%s\n%!" (Printexc.to_string ex) (Printexc.get_backtrace());
+        in
+        match error with
+        | None ->
+            begin
+              match process_status with
+              | Unix.WEXITED 0 ->
+                  output.exit_code <- 0;
+                  messages := output :: !messages;
+                  cont ();
+              | Unix.WEXITED _ | Unix.WSIGNALED _ | Unix.WSTOPPED _ ->
+                  output.exit_code <- 1; (* I do not need the exact exit code right now *)
+                  errors := output :: !errors;
+                  cont ()
+            end
+        | Some ex ->
+            Printf.eprintf "File \"oebuild_parallel.ml\": %s\n%s\n%!" (Printexc.to_string ex) (Printexc.get_backtrace());
       in
       let process_in = Spawn.loop (fun stdin ->
           Buffer.add_string output.out (input_line stdin);
@@ -1714,22 +1974,22 @@ let create_process ?(jobs=0) ~verbose cb_create_command cb_at_exit dag leaf erro
           Buffer.add_char output.err '\n')
       in
       (*if jobs > 0 then begin*)
-        Mutex.lock job_mutex;
-        incr job_counter;
-        Mutex.unlock job_mutex;
+      Mutex.lock job_mutex;
+      incr job_counter;
+      Mutex.unlock job_mutex;
       (*end;*)
-        begin
-          match Spawn.async ~at_exit ~process_in ~process_err command args
-          with `ERROR ex -> ()
-             | `PID n -> process_id := n
-        end;
-    | None ->
+      begin
+        match Spawn.async ~continue_with ~process_in ~process_err command args
+        with `ERROR ex -> ()
+           | `PID n -> process_id := n
+      end;
+  | None ->
       if verbose >= 4 then
         Printf.printf "Oebuild_parallel.create_process: %30s (No command)\n%!" filename;
       Mutex.lock dag.mutex;
       Dag.remove_leaf dag.graph leaf;
       Mutex.unlock dag.mutex;
-    | _ ->
+  | _ ->
       leaf.Dag.node.NODE.nd_processing <- false;
 ;;
 
@@ -1770,7 +2030,30 @@ let process_parallel ?jobs ~verbose dag =
 
 
 end
-module Oebuild = struct open Printf
+module Oebuild = struct (*
+
+  OCamlEditor
+  Copyright (C) 2010-2014 Francesco Tovagliari
+
+  This file is part of OCamlEditor.
+
+  OCamlEditor is free software: you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation, either version 3 of the License, or
+  (at your option) any later version.
+
+  OCamlEditor is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License
+  along with this program. If not, see <http://www.gnu.org/licenses/>.
+
+*)
+
+
+open Printf
 open Oebuild_util
 
 module Table = Oebuild_table
@@ -1827,10 +2110,10 @@ let get_compiler_command ?(times : Table.t option) ~opt ~compiler ~cflags ~inclu
     try
       begin
         match times with
-          | Some times ->
+        | Some times ->
             ignore (Table.find times filename opt);
             None
-          | _ -> raise Not_found
+        | _ -> raise Not_found
       end
     with Not_found -> begin
         let compiler, args = compiler in
@@ -1849,14 +2132,14 @@ let compile ?(times : Table.t option) ~opt ~compiler ~cflags ~includes ~filename
     ~verbose () =
   let command = get_compiler_command ?times ~opt ~compiler ~cflags ~includes ~filename ~verbose () in
   match command with
-    | Some (cmd, args) ->
+  | Some (cmd, args) ->
       let exit_code =
         let cmd_line = String.concat " " (cmd :: (Array.to_list args)) in
         Oebuild_util.command ~echo:(verbose >= 2) cmd_line
       in
       Option.iter (fun times -> Table.add times filename opt (Unix.gettimeofday())) times;
       exit_code
-    | _ -> 0
+  | _ -> 0
 
 (** link *)
 let link ~compilation ~compiler ~outkind ~lflags ~includes ~libs ~outname ~deps
@@ -1875,7 +2158,7 @@ let link ~compilation ~compiler ~outkind ~lflags ~includes ~libs ~outname ~deps
         end else (sprintf "%s.%s" x ext)
       end libs
   in
-  let process_exit =
+  let linker_exit =
     let command, args = compiler in
     let args = Array.concat [
         args; (* Must be the first because starts with the first arg. of ocamlfind *)
@@ -1893,38 +2176,42 @@ let link ~compilation ~compiler ~outkind ~lflags ~includes ~libs ~outname ~deps
         (Array.of_list deps);
       ] in
     if verbose >= 2 then print_endline (String.concat " " (command :: (Array.to_list args)));
-    Spawn.sync command args
+    Spawn.sync ~process_in:Spawn.redirect_to_stdout ~process_err:Spawn.redirect_to_stderr command args
   in
-  match process_exit with
-    | None -> 0
-    | Some ex -> -9997
+  match linker_exit with
+  | `SUCCESS (Unix.WEXITED code)
+  | `SUCCESS (Unix.WSIGNALED code)
+  | `SUCCESS (Unix.WSTOPPED code) ->
+      if code <> 0 && verbose >= 4 then prerr_string (sprintf "Linker exited with code %d" code);
+      code
+  | `ERROR ex -> -9997
 ;;
 
 (** get_output_name *)
 let get_output_name ~compilation ~outkind ~outname ?(dontaddopt=false) () =
-    let o_ext =
-      match outkind with
-        | Library when compilation = Native -> ".cmxa"
-        | Library -> ".cma"
-        | Executable when compilation = Native && dontaddopt -> win32 ".exe" ""
-        | Executable when compilation = Native -> ".opt" ^ (win32 ".exe" "")
-        | Executable -> win32 ".exe" ""
-        | Plugin when compilation = Native -> ".cmxs"
-        | Plugin -> ".cma"
-        | Pack -> ".cmx"
-        | External -> ""
-    in
-    let name =
-      if outname = "" then "a" else unquote outname
-    in
-    name ^ o_ext
+  let o_ext =
+    match outkind with
+    | Library when compilation = Native -> ".cmxa"
+    | Library -> ".cma"
+    | Executable when compilation = Native && dontaddopt -> win32 ".exe" ""
+    | Executable when compilation = Native -> ".opt" ^ (win32 ".exe" "")
+    | Executable -> win32 ".exe" ""
+    | Plugin when compilation = Native -> ".cmxs"
+    | Plugin -> ".cma"
+    | Pack -> ".cmx"
+    | External -> ""
+  in
+  let name =
+    if outname = "" then "a" else unquote outname
+  in
+  name ^ o_ext
 ;;
 
 (** install *)
 let install ~compilation ~outkind ~outname ~deps ~path ~ccomp_type =
   let dest_outname = Filename.basename outname in
   match outkind with
-    | Library ->
+  | Library ->
       let path =
         let path = ocamllib // path in
         mkdir_p path;
@@ -1943,8 +2230,8 @@ let install ~compilation ~outkind ~outname ~deps ~path ~ccomp_type =
         let basename = sprintf "%s%s" (Filename.chop_extension outname) ext in
         cp basename (path // (Filename.basename basename));
       end;
-    | Executable
-    | Plugin | Pack | External -> eprintf "\"Oebuild.install\" not implemented for Executable, Plugin, Pack or External."
+  | Executable
+  | Plugin | Pack | External -> eprintf "\"Oebuild.install\" not implemented for Executable, Plugin, Pack or External."
 ;;
 
 (** run_output *)
@@ -1955,11 +2242,11 @@ let run_output ~outname ~args =
     let cmd = Filename.current_dir_name // cmd in
 
     (*let args = cmd :: args in
-    let args = Array.of_list args in
-    Unix.execv cmd args*)
+      let args = Array.of_list args in
+      Unix.execv cmd args*)
 
     (*let args = String.concat " " args in
-    ignore (kprintf command "%s %s" cmd args)*)
+      ignore (kprintf command "%s %s" cmd args)*)
 
     Spawn.sync
       ~process_in:Spawn.redirect_to_stdout ~process_err:Spawn.redirect_to_stderr
@@ -1968,7 +2255,7 @@ let run_output ~outname ~args =
   end else begin
     let cmd = Filename.current_dir_name // outname in
     (* From the execv manpage:
-      "The first argument, by convention, should point to the filename associated
+       "The first argument, by convention, should point to the filename associated
        with the file being executed." *)
     let args = cmd :: args in
     let args = Array.of_list args in
@@ -2007,9 +2294,9 @@ let serial_compile ~compilation ~times ~compiler ~cflags ~includes ~toplevel_mod
         compile_exit
       in
       crono ~label:"Serial compilation" (List.iter begin fun filename ->
-        compilation_exit := try_compile filename;
-        if !compilation_exit <> 0 then (raise Exit)
-      end) deps;
+          compilation_exit := try_compile filename;
+          if !compilation_exit <> 0 then (raise Exit)
+        end) deps;
     with Exit -> ()
   end;
   !compilation_exit
@@ -2071,13 +2358,13 @@ let build ~compilation ~package ~includes ~libs ~other_mods ~outkind ~compile_on
     if libs <> ""       then (printf "  ~libs ........... : %s\n" libs);
     if other_mods <> "" then (printf "  ~other_mods ..... : %s\n" other_mods);
     (match inline with Some n ->
-                              printf "  ~inline ......... : %d\n" n | _ -> ());
+       printf "  ~inline ......... : %d\n" n | _ -> ());
     if cflags <> ""     then (printf "  ~cflags ......... : %s\n" cflags);
     if lflags <> ""     then (printf "  ~lflags ......... : %s\n" cflags);
     if toplevel_modules <> []
-                        then (printf "  ~toplevel_modules : %s\n" (String.concat "," toplevel_modules));
+    then (printf "  ~toplevel_modules : %s\n" (String.concat "," toplevel_modules));
     if serial           then (printf "  ~serial ......... : %b\n" serial)
-                        else (printf "  ~jobs ........... : %d\n" jobs);
+    else (printf "  ~jobs ........... : %d\n" jobs);
     printf "  ~verbose ........ : %d\n" verbose;
     if verbose >= 2 then (printf "\n");
     printf "%!";
@@ -2100,11 +2387,11 @@ let build ~compilation ~package ~includes ~libs ~other_mods ~outkind ~compile_on
   (* inline *)
   begin
     match inline with
-      | Some inline when compilation = Native ->
+    | Some inline when compilation = Native ->
         let inline = string_of_int inline in
         cflags := !cflags ^ " -inline " ^ inline;
         lflags := !lflags ^ " -inline " ^ inline;
-      | _ -> ()
+    | _ -> ()
   end;
   (* Get compiler and linker names *)
   let package = check_package_list package in
@@ -2175,13 +2462,13 @@ let build ~compilation ~package ~includes ~libs ~other_mods ~outkind ~compile_on
       in
       if compile_only then compilation_exit else begin
         let compiler_output = Buffer.create 100 in
-          let link_exit =
-            crono ~label:"Linking phase"
-              (link ~compilation ~compiler:linker ~outkind ~lflags:!lflags
-              ~includes:!includes ~libs ~deps:obj_deps ~outname ~verbose) ()
-          in
-          if Buffer.length compiler_output > 0 then eprintf "%s\n%!" (Buffer.contents compiler_output);
-          link_exit
+        let linker_exit =
+          crono ~label:"Linking phase"
+            (link ~compilation ~compiler:linker ~outkind ~lflags:!lflags
+               ~includes:!includes ~libs ~deps:obj_deps ~outname ~verbose) ()
+        in
+        if Buffer.length compiler_output > 0 then eprintf "%s\n%!" (Buffer.contents compiler_output);
+        linker_exit
       end
     end else compilation_exit
   in
@@ -2193,14 +2480,14 @@ let build ~compilation ~package ~includes ~libs ~other_mods ~outkind ~compile_on
         [((Sys.getcwd()) // outname), (format_int (Unix.stat outname).Unix.st_size)]
         @
         match compilation with
-          | Native when outkind = Library ->
+        | Native when outkind = Library ->
             List.flatten (List.map begin fun ext ->
-              let filename = (Sys.getcwd()) // ((Filename.chop_extension outname) ^ ext) in
-              if Sys.file_exists filename then
-                [filename, (format_int (Unix.stat filename).Unix.st_size)]
-              else []
-            end [".lib"; ".a"])
-          | Bytecode | Unspecified | Native -> []
+                let filename = (Sys.getcwd()) // ((Filename.chop_extension outname) ^ ext) in
+                if Sys.file_exists filename then
+                  [filename, (format_int (Unix.stat filename).Unix.st_size)]
+                else []
+              end [".lib"; ".a"])
+        | Bytecode | Unspecified | Native -> []
       in
       List.iter (Printf.printf "%s\n%!") (dot_leaders ~right_align:true ~postfix:" bytes" result);
     end;
@@ -2214,9 +2501,9 @@ let lib_extensions = [".cma"; ".cmxa"; ".lib"; ".a"; ".dll"]
 
 let clean ~deps () =
   let files = List.map begin fun name ->
-    let name = Filename.chop_extension name in
-    List.map ((^) name) obj_extensions
-  end deps in
+      let name = Filename.chop_extension name in
+      List.map ((^) name) obj_extensions
+    end deps in
   let files = List.flatten files in
   let files = remove_dupl files in
   List.iter (remove_file ~verbose:false) files
@@ -2268,10 +2555,10 @@ let check_prop expr get =
     in
     begin
       match op with
-        | Some op ->
+      | Some op ->
           let value = try String.trim (Str.matched_group 4 expr) with Not_found -> "" in
           (try op (get name) value (* [2] *) with Not_found (* name is not defined. *) -> not is_eq) (* [3] *)
-        | None -> (try get name |> ignore; true with Not_found -> false) (* [1] *)
+      | None -> (try get name |> ignore; true with Not_found -> false) (* [1] *)
     end;
   with Not_found (* name (matched_group) *) -> false (* [4] *)
 
@@ -2279,23 +2566,46 @@ let check_prop expr get =
 (** check_restrictions *)
 let check_restrictions restr =
   List.for_all begin function
-    | "IS_UNIX" -> Sys.os_type = "Unix"
-    | "IS_WIN32" -> Sys.os_type = "Win32"
-    | "IS_CYGWIN" -> Sys.os_type = "Cygwin"
-    | "HAVE_NATIVE" | "HAS_NATIVE" | "NATIVE" -> Ocaml_config.can_compile_native () <> None (* should be cached *)
-    | res when Str.string_match re_env res 0 -> check_prop res Sys.getenv
-    | res when Str.string_match re_ocfg res 0 -> check_prop res Ocaml_config.get
-    | res when Str.string_match re_fl_pkg_exist res 0 ->
+  | "IS_UNIX" -> Sys.os_type = "Unix"
+  | "IS_WIN32" -> Sys.os_type = "Win32"
+  | "IS_CYGWIN" -> Sys.os_type = "Cygwin"
+  | "HAVE_NATIVE" | "HAS_NATIVE" | "NATIVE" -> Ocaml_config.can_compile_native () <> None (* should be cached *)
+  | res when Str.string_match re_env res 0 -> check_prop res Sys.getenv
+  | res when Str.string_match re_ocfg res 0 -> check_prop res Ocaml_config.get
+  | res when Str.string_match re_fl_pkg_exist res 0 ->
       let packages = Str.matched_group 2 res in
       let packages = Str.split re_comma packages in
       let redirect_stderr = if Sys.os_type = "Win32" then " 1>NUL 2>NUL" else " 1>/dev/null 2>/dev/null" in
       packages = [] || List.for_all begin fun package ->
         kprintf (Oebuild_util.command ~echo:false) "ocamlfind query %s %s" package redirect_stderr = 0
       end packages
-    | _ -> false
+  | _ -> false
   end restr;;
 end
-module Build_script_util = struct open Arg
+module Build_script_util = struct (*
+
+  OCamlEditor
+  Copyright (C) 2010-2014 Francesco Tovagliari
+
+  This file is part of OCamlEditor.
+
+  OCamlEditor is free software: you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation, either version 3 of the License, or
+  (at your option) any later version.
+
+  OCamlEditor is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License
+  along with this program. If not, see <http://www.gnu.org/licenses/>.
+
+*)
+
+
+open Arg
 open Printf
 open Oebuild
 open Oebuild_util
@@ -2360,9 +2670,9 @@ let create_target ?dir f x =
 
 let create_target_func ?tg targets =
   match targets with
-    | default_target :: _ ->
+  | default_target :: _ ->
       (match tg with Some f -> create_target f | _ -> create_target default_target)
-    | [] -> fun _ -> ();;
+  | [] -> fun _ -> ();;
 
 (** system_config *)
 let ccomp_type = Ocaml_config.can_compile_native ()
@@ -2396,21 +2706,24 @@ module ETask = struct
     List.filter begin fun task ->
       if task.Task.et_always_run_in_script then
         match task.Task.et_phase with
-          | Some ph -> ph = phase
-          | _ -> false
+        | Some ph -> ph = phase
+        | _ -> false
       else false
     end tasks;;
 
   let execute = Task.handle begin fun ~env ~dir ~prog ~args ->
-    let exit_code = Spawn.sync
-        ~process_in:Spawn.redirect_to_stdout
-        ~process_err:Spawn.redirect_to_stderr
-        ~working_directory:dir ~env prog (Array.of_list args) 
-    in
-    match exit_code with
-      | None -> ()
-      | Some _ -> raise Error
-  end
+      let exit_code = Spawn.sync
+          ~process_in:Spawn.redirect_to_stdout
+          ~process_err:Spawn.redirect_to_stderr
+          ~working_directory:dir ~env prog (Array.of_list args)
+      in
+      match exit_code with
+      | `ERROR _ -> raise Error
+      | `SUCCESS (Unix.WEXITED code)
+      | `SUCCESS (Unix.WSIGNALED code)
+      | `SUCCESS (Unix.WSTOPPED code) when code <> 0 -> raise Error
+      | _ -> ()
+    end
 end
 
 (** add_target *)
@@ -2434,11 +2747,11 @@ let add_target targets name =
 (** find_target_dependencies *)
 let rec find_target_dependencies targets trg =
   remove_dupl (List.flatten (List.map begin fun id ->
-    try
-      let _, target = List.find (fun (_, tg) -> tg.id = id) targets in
-      (find_target_dependencies targets target) @ [target]
-    with Not_found -> []
-  end trg.dependencies));;
+      try
+        let _, target = List.find (fun (_, tg) -> tg.id = id) targets in
+        (find_target_dependencies targets target) @ [target]
+      with Not_found -> []
+    end trg.dependencies));;
 
 (** Show *)
 let show = fun targets -> function num, (name, t) ->
@@ -2446,16 +2759,16 @@ let show = fun targets -> function num, (name, t) ->
   (*let deps = Dep.find ~pp:t.pp ~ignore_stderr:false ~echo:false files in*)
   let b_deps = find_target_dependencies targets t in
   let b_deps = List.map begin fun tg ->
-    let name, _ = List.find (fun (_, t) -> t.id = tg.id) targets in
-    name
-  end b_deps in
+      let name, _ = List.find (fun (_, t) -> t.id = tg.id) targets in
+      name
+    end b_deps in
   let compilation =
     (if t.compilation_bytecode then [Bytecode] else []) @
     (if t.compilation_native && ccomp_type <> None then [Native] else [])
   in
   let outname = List.map begin fun compilation ->
       get_output_name ~compilation ~outkind:t.target_type ~outname:t.output_name ~dontaddopt:t.dontaddopt ()
-  end compilation
+    end compilation
   in
   let outkind = string_of_output_type t.target_type in
   let compilation = string_of_compilation_type (ccomp_type <> None) t in
@@ -2473,8 +2786,8 @@ let show = fun targets -> function num, (name, t) ->
     "Target dependencies", (String.concat ", " b_deps);
   ] in
   let properties = if t.target_type = Library then prop_1 @ [
-    "Install directory", (Oebuild.ocamllib // t.library_install_dir)
-  ] @ prop_2 else prop_1 @ prop_2 in
+      "Install directory", (Oebuild.ocamllib // t.library_install_dir)
+    ] @ prop_2 else prop_1 @ prop_2 in
   printf "%2d) %s (%s, %s)%s\n\n%!" num name outkind compilation
     (if t.descr <> "" then "\n    " ^ t.descr else "");
   let maxlength = List.fold_left (fun cand (x, _) -> let len = String.length x in max cand len) 0 properties in
@@ -2483,10 +2796,10 @@ let show = fun targets -> function num, (name, t) ->
 (** install_lib *)
 let install_lib ~compilation ~outname ~external_tasks ~deps target =
   match target.target_type with
-    | Library ->
+  | Library ->
       let deps = deps() in
       Oebuild.install ~compilation ~outkind:target.target_type ~outname ~deps ~path:target.library_install_dir ~ccomp_type
-    | Executable | Plugin | Pack | External ->
+  | Executable | Plugin | Pack | External ->
       eprintf "\"install\" not implemented for Executable, Plugin, Pack or External.";
       raise Exit;;
 
@@ -2494,38 +2807,38 @@ let install_lib ~compilation ~outname ~external_tasks ~deps target =
 let rec execute_target ~external_tasks ~targets:avail_targets ~command ?target_deps target =
   if Oebuild.check_restrictions target.restrictions then begin
     let compilation = (if target.compilation_bytecode then [Bytecode] else [])
-      @ (if target.compilation_native && (ccomp_type <> None) then [Native] else []) in
+                      @ (if target.compilation_native && (ccomp_type <> None) then [Native] else []) in
     let files = Str.split (Str.regexp " +") target.toplevel_modules in
     let deps () =
       let verbose = !Option.verbosity >= 4 in
       Oebuild_dep.ocamldep_toplevels ~verbose ~pp:target.pp ~ignore_stderr:false files |> Oebuild_dep.sort_dependencies
     in
     let etasks = List.map begin fun index ->
-      let mktask = try List.assoc index external_tasks with Not_found -> assert false in
-      mktask command
-    end target.external_tasks in
+        let mktask = try List.assoc index external_tasks with Not_found -> assert false in
+        mktask command
+      end target.external_tasks in
     try
       match target.target_type with
-        | External when command = `Build ->
+      | External when command = `Build ->
           build ~targets:avail_targets ~external_tasks ~etasks ~deps ~compilation:Unspecified
             ~outname:target.output_name ~files ?target_deps ~verbose:!Option.verbosity target
-        | External -> ()
-        | Executable | Library | Pack | Plugin ->
+      | External -> ()
+      | Executable | Library | Pack | Plugin ->
           List.iter begin fun compilation ->
             let outname = get_output_name ~compilation ~outkind:target.target_type ~outname:target.output_name ~dontaddopt:target.dontaddopt () in
             match command with
-              | `Build ->
+            | `Build ->
                 build ~targets:avail_targets ~external_tasks ~etasks ~deps ~compilation
                   ~outname ~files ?target_deps ~verbose:!Option.verbosity target
-              | `Install_lib -> install_lib ~compilation ~outname ~external_tasks ~deps target
-              | `Clean ->
+            | `Install_lib -> install_lib ~compilation ~outname ~external_tasks ~deps target
+            | `Clean ->
                 List.iter ETask.execute (ETask.filter etasks Before_clean);
                 let deps = deps() in
                 Oebuild.clean ~deps ();
                 List.iter ETask.execute (ETask.filter etasks After_clean);
-              | `Distclean ->
+            | `Distclean ->
                 if files <> [] then (Oebuild_util.remove_file ~verbose:false outname);
-              | `Show | `Install | `Uninstall -> assert false
+            | `Show | `Install | `Uninstall -> assert false
           end compilation
     with Exit -> ()
   end else begin
@@ -2543,8 +2856,8 @@ let rec execute_target ~external_tasks ~targets:avail_targets ~command ?target_d
 and build ~targets:avail_targets ~external_tasks ~etasks ~deps ~compilation ~outname ~files ?target_deps ~verbose target =
   let target_deps =
     match target_deps with
-      | None -> [] (*find_target_dependencies avail_targets target*)
-      | Some x -> x
+    | None -> [] (*find_target_dependencies avail_targets target*)
+    | Some x -> x
   in
   List.iter (execute_target ~external_tasks ~targets:avail_targets ~command:`Build) target_deps;
   let target_name, _ =
@@ -2560,41 +2873,41 @@ and build ~targets:avail_targets ~external_tasks ~etasks ~deps ~compilation ~out
     let crono = if !Option.verbosity >= 3 then Oebuild_util.crono else fun ?label f x -> f x in
     let libs =
       match target.rc_filename with
-        | Some rc_filename when Sys.win32 ->
+      | Some rc_filename when Sys.win32 ->
           let exit_code = Sys.command "where rc 2>&1 1>NUL" in
           if exit_code <> 0 then target.required_libraries
           else
             let exit_code = Sys.command "where cvtres 2>&1 1>NUL" in
             if exit_code <> 0 then target.required_libraries
             else (Filename.basename (Filename.chop_extension rc_filename)) ^ ".obj " ^ target.required_libraries
-        | _ -> target.required_libraries
+      | _ -> target.required_libraries
     in
     match crono ~label:"Build time" (Oebuild.build
-        ~compilation
-        ~package:target.package
-        ~includes:target.search_path
-        ~libs
-        ~other_mods:target.other_objects
-        ~outkind:target.target_type
-        ~compile_only:false
-        ~thread:target.thread
-        ~vmthread:target.vmthread
-        ~annot:false
-        ~bin_annot:false
-        ~pp:target.pp
-        ?inline:target.inline
-        ~cflags:target.compiler_flags
-        ~lflags:target.linker_flags
-        ~outname
-        ~deps
-        ~dontlinkdep:target.dontlinkdep
-        ~dontaddopt:target.dontaddopt
-        ~verbose
-        ~toplevel_modules:files) ()
+                                       ~compilation
+                                       ~package:target.package
+                                       ~includes:target.search_path
+                                       ~libs
+                                       ~other_mods:target.other_objects
+                                       ~outkind:target.target_type
+                                       ~compile_only:false
+                                       ~thread:target.thread
+                                       ~vmthread:target.vmthread
+                                       ~annot:false
+                                       ~bin_annot:false
+                                       ~pp:target.pp
+                                       ?inline:target.inline
+                                       ~cflags:target.compiler_flags
+                                       ~lflags:target.linker_flags
+                                       ~outname
+                                       ~deps
+                                       ~dontlinkdep:target.dontlinkdep
+                                       ~dontaddopt:target.dontaddopt
+                                       ~verbose
+                                       ~toplevel_modules:files) ()
     with
-      | Built_successfully ->
+    | Built_successfully ->
         List.iter ETask.execute (ETask.filter etasks After_compile);
-      | Build_failed n -> popd(); exit n
+    | Build_failed n -> popd(); exit n
 ;;
 
 (** main *)
@@ -2627,20 +2940,20 @@ let main ~cmd_line_args ~external_tasks ~general_commands ~targets:avail_targets
 
     let options =
       List.map (fun (a, b, c, d) -> a, Arg.align b, c, d) ([
-        `Build,       (find_args `Build),
+          `Build,       (find_args `Build),
           "Build libraries and executables (default command)", "";
-      ] @
-        command_install @
-        command_uninstall @ [
-        `Clean,       (find_args `Clean),
-          "Remove output files for the selected target",       "";
-        `Distclean,   (find_args `Distclean),
-          "Remove all build output",                           "";
-        `Install_lib, (find_args `Install_lib),
-          "Install libraries as subdirectories relative\n               to the standard library directory", "";
-        `Show,        (find_args `Show),
-          "Show the build options of a target",                "";
-      ]);;
+        ] @
+          command_install @
+          command_uninstall @ [
+            `Clean,       (find_args `Clean),
+            "Remove output files for the selected target",       "";
+            `Distclean,   (find_args `Distclean),
+            "Remove all build output",                           "";
+            `Install_lib, (find_args `Install_lib),
+            "Install libraries as subdirectories relative\n               to the standard library directory", "";
+            `Show,        (find_args `Show),
+            "Show the build options of a target",                "";
+          ]);;
 
     let anon_fun = function
       | `Show -> add_target avail_targets
@@ -2648,7 +2961,7 @@ let main ~cmd_line_args ~external_tasks ~general_commands ~targets:avail_targets
       | `Install_lib -> add_target avail_targets
       | `Clean -> add_target avail_targets
       | (`Install | `Uninstall | `Distclean) as x ->
-        fun arg -> kprintf failwith "Invalid anonymous argument `%s' for command `%s'" arg (string_of_command x);;
+          fun arg -> kprintf failwith "Invalid anonymous argument `%s' for command `%s'" arg (string_of_command x);;
 
     (** execute *)
     let execute command =
@@ -2665,13 +2978,13 @@ let main ~cmd_line_args ~external_tasks ~general_commands ~targets:avail_targets
             with Not_found -> ()
           in
           match command with
-            | `Distclean ->
+          | `Distclean ->
               List.iter (fun (_, t) -> execute_target ~external_tasks ~targets:avail_targets ~command t) avail_targets;
               Oebuild.distclean();
               execute_general_command `Distclean;
-            | (`Install | `Uninstall) as command ->
+          | (`Install | `Uninstall) as command ->
               execute_general_command command;
-            | `Show ->
+          | `Show ->
               printf "%s\n%!" (system_config ());
               Printf.printf "\n%!" ;
               if targets = [] then (raise (Arg.Bad "show: no target specified"));
@@ -2680,7 +2993,7 @@ let main ~cmd_line_args ~external_tasks ~general_commands ~targets:avail_targets
                 print_newline();
                 print_newline();
               end targets;
-            | _ ->
+          | _ ->
               if targets = [] then (raise (Arg.Bad (sprintf "%s: no target specified" (string_of_command command))));
               List.iter begin fun (_, (name, tg)) ->
                 let target_deps = remove_dupl (find_target_dependencies avail_targets tg) in
@@ -2692,9 +3005,9 @@ let main ~cmd_line_args ~external_tasks ~general_commands ~targets:avail_targets
       with Arg.Bad _ as ex ->
         popd();
         raise ex
-      | ex ->
-        popd();
-        Printf.eprintf "File \"build_script_util.ml\": %s\n%s\n%!" (Printexc.to_string ex) (Printexc.get_backtrace());;
+         | ex ->
+             popd();
+             Printf.eprintf "File \"build_script_util.ml\": %s\n%s\n%!" (Printexc.to_string ex) (Printexc.get_backtrace());;
   end in
 
   let module Argc = Argc.Make (Command) in
@@ -2709,13 +3022,13 @@ let main ~cmd_line_args ~external_tasks ~general_commands ~targets:avail_targets
   let maxlength = List.fold_left (fun cand (x, _) -> let len = String.length x in max cand len) 0 avail_targets in
   let targets_shown = List.filter (fun (_, tg) -> tg.show) avail_targets in
   let help_of_targets = String.concat "\n" (List.map begin fun (name, tg) ->
-    let name = rpad name ' ' maxlength in
-    sprintf "  %2d) %s (%s, %s)%s" tg.num name
-      (string_of_output_type tg.target_type) (string_of_compilation_type (ccomp_type <> None) tg)
-     	(if tg.descr <> "" then "\n      " ^ tg.descr else "")
-  end targets_shown) in
+      let name = rpad name ' ' maxlength in
+      sprintf "  %2d) %s (%s, %s)%s" tg.num name
+        (string_of_output_type tg.target_type) (string_of_compilation_type (ccomp_type <> None) tg)
+        (if tg.descr <> "" then "\n      " ^ tg.descr else "")
+    end targets_shown) in
   let usage_msg = sprintf
-    "\nUSAGE\n  ocaml %s [global-options*] <command> [command-options*] [targets*]\n  ocaml %s <command> -help"
+      "\nUSAGE\n  ocaml %s [global-options*] <command> [command-options*] [targets*]\n  ocaml %s <command> -help"
       command_name command_name
   in
   let help_string () =
@@ -2724,22 +3037,22 @@ let main ~cmd_line_args ~external_tasks ~general_commands ~targets:avail_targets
   in
   try Argc.parse ~usage_msg ~global_options ~default_command:`Build Command.execute
   with
-    | Arg.Help _ -> print_endline (help_string ())
-    | Arg.Bad msg -> prerr_endline msg
-    | Argc.Help_Command (cmd, (specs, descr, usage), msg) ->
+  | Arg.Help _ -> print_endline (help_string ())
+  | Arg.Bad msg -> prerr_endline msg
+  | Argc.Help_Command (cmd, (specs, descr, usage), msg) ->
       let name = Command.string_of_command cmd in
       begin
         match cmd with
-          | `Distclean ->
+        | `Distclean ->
             printf "%s %s - %s\n\nUSAGE\n  ocaml %s [global_options*] %s\n\nOPTIONS%s"
               command_name name descr command_name name (Arg.usage_string specs "")
-          | _ ->
+        | _ ->
             printf "%s %s - %s\n\nUSAGE\n  ocaml %s [global_options*] %s [options*] [targets*]\n\nOPTIONS%s"
               command_name name descr command_name name (Arg.usage_string specs "")
       end;
-    | Build_script_command.Unrecognized_command msg -> prerr_endline msg
-    | Error -> exit 2
-    | ex -> prerr_endline (Printexc.to_string ex)
+  | Build_script_command.Unrecognized_command msg -> prerr_endline msg
+  | Error -> exit 2
+  | ex -> prerr_endline (Printexc.to_string ex)
 ;;
 
 end
@@ -3068,7 +3381,7 @@ let targets = [
     compilation_bytecode = true;
     compilation_native   = true;
     toplevel_modules     = "icons/icons.ml";
-    package              = "lablgtk2";
+    package              = "lablgtk3";
     search_path          = "common"; (* -I *)
     required_libraries   = "";
     compiler_flags       = "-g";
@@ -3133,8 +3446,8 @@ let targets = [
     package              = "str,unix";
     search_path          = "common oebuild"; (* -I *)
     required_libraries   = "common";
-    compiler_flags       = "-w y";
-    linker_flags         = "";
+    compiler_flags       = "-w y -g";
+    linker_flags         = "-g";
     thread               = true;
     vmthread             = false;
     pp                   = "";
@@ -3161,7 +3474,7 @@ let targets = [
     compilation_bytecode = true;
     compilation_native   = true;
     toplevel_modules     = "gmisclib/gmisclib.ml";
-    package              = "lablgtk2";
+    package              = "lablgtk3";
     search_path          = "gmisclib"; (* -I *)
     required_libraries   = "";
     compiler_flags       = "-g";
@@ -3192,7 +3505,7 @@ let targets = [
     compilation_bytecode = true;
     compilation_native   = true;
     toplevel_modules     = "otherwidgets/otherwidgets.ml";
-    package              = "lablgtk2";
+    package              = "lablgtk3";
     search_path          = "icons common otherwidgets gmisclib"; (* -I *)
     required_libraries   = "gmisclib";
     compiler_flags       = "-w sy -g";
@@ -3223,7 +3536,7 @@ let targets = [
     compilation_bytecode = false;
     compilation_native   = true;
     toplevel_modules     = "ocamleditor.ml";
-    package              = "compiler-libs.common,dynlink,lablgtk2,str,unix,xml-light";
+    package              = "compiler-libs.common,dynlink,lablgtk3,str,unix,xml-light";
     search_path          = "+ocamldoc gmisclib common icons otherwidgets oebuild "; (* -I *)
     required_libraries   = "process_termination odoc_info gmisclib common icons otherwidgets oebuildlib ocamleditor_lib";
     compiler_flags       = "-w syxm -g";
@@ -3239,7 +3552,7 @@ let targets = [
     other_objects        = "";
     external_tasks       = [];
     restrictions         = [];
-    dependencies         = [14; 19; 16; 26; 22];
+    dependencies         = [14; 16; 26; 22];
     show                 = true;
     rc_filename          = None;
   };
@@ -3254,7 +3567,7 @@ let targets = [
     compilation_bytecode = true;
     compilation_native   = false;
     toplevel_modules     = "ocamleditor.ml";
-    package              = "compiler-libs.common,dynlink,lablgtk2,str,unix,xml-light";
+    package              = "compiler-libs.common,dynlink,lablgtk3,str,unix,xml-light";
     search_path          = "+ocamldoc gmisclib common icons otherwidgets oebuild "; (* -I *)
     required_libraries   = "process_termination odoc_info gmisclib common icons otherwidgets oebuildlib";
     compiler_flags       = "-w syxm -g";
@@ -3270,7 +3583,7 @@ let targets = [
     other_objects        = "";
     external_tasks       = [];
     restrictions         = [];
-    dependencies         = [4; 10; 7; 5; 6; 8; 9; 20; 17; 18; 25];
+    dependencies         = [4; 10; 7; 5; 8; 9; 20; 17; 25];
     show                 = true;
     rc_filename          = None;
   };
@@ -3285,7 +3598,7 @@ let targets = [
     compilation_bytecode = false;
     compilation_native   = true;
     toplevel_modules     = "ocamleditor.ml";
-    package              = "compiler-libs.common,dynlink,lablgtk2,str,unix,xml-light";
+    package              = "compiler-libs.common,dynlink,lablgtk3,str,unix,xml-light";
     search_path          = "+ocamldoc gmisclib common icons otherwidgets oebuild "; (* -I *)
     required_libraries   = "process_termination odoc_info gmisclib common icons otherwidgets oebuildlib ocamleditor_lib";
     compiler_flags       = "-w syxm -g";
@@ -3316,7 +3629,7 @@ let targets = [
     compilation_bytecode = false;
     compilation_native   = true;
     toplevel_modules     = "ocamleditor.ml";
-    package              = "compiler-libs.common,dynlink,lablgtk2,str,unix,xml-light";
+    package              = "cairo2,compiler-libs.common,dynlink,lablgtk3,str,unix,xml-light";
     search_path          = "+ocamldoc gmisclib common icons otherwidgets oebuild "; (* -I *)
     required_libraries   = "process_termination odoc_info gmisclib common icons otherwidgets oebuildlib ocamleditor_lib";
     compiler_flags       = "-w syxm -g";
@@ -3332,7 +3645,7 @@ let targets = [
     other_objects        = "";
     external_tasks       = [];
     restrictions         = [];
-    dependencies         = [14; 19; 16; 26];
+    dependencies         = [14; 16; 26];
     show                 = true;
     rc_filename          = None;
   };
@@ -3347,7 +3660,7 @@ let targets = [
     compilation_bytecode = false;
     compilation_native   = true;
     toplevel_modules     = "ocamleditor_lib.ml";
-    package              = "compiler-libs.common,dynlink,lablgtk2,str,unix,xml-light";
+    package              = "cairo2,compiler-libs.common,dynlink,lablgtk3,str,unix,xml-light";
     search_path          = "+ocamldoc gmisclib common icons otherwidgets oebuild "; (* -I *)
     required_libraries   = "";
     compiler_flags       = "-w syxm -g";
@@ -3378,7 +3691,7 @@ let targets = [
     compilation_bytecode = true;
     compilation_native   = false;
     toplevel_modules     = "remote.ml";
-    package              = "curl,lablgtk2";
+    package              = "curl,lablgtk3";
     search_path          = "common icons otherwidgets gmisclib"; (* -I *)
     required_libraries   = "";
     compiler_flags       = "-g -w -10";
@@ -3409,7 +3722,7 @@ let targets = [
     compilation_bytecode = false;
     compilation_native   = true;
     toplevel_modules     = "remote.ml";
-    package              = "curl,lablgtk2";
+    package              = "curl,lablgtk3";
     search_path          = "common icons otherwidgets gmisclib"; (* -I *)
     required_libraries   = "";
     compiler_flags       = "-g -w -10";
@@ -3440,8 +3753,8 @@ let targets = [
     compilation_bytecode = true;
     compilation_native   = false;
     toplevel_modules     = "dot_viewer_svg.ml";
-    package              = "lablgtk2.rsvg,xml-light";
-    search_path          = "common gmisclib"; (* -I *)
+    package              = "lablgtk3,xml-light";
+    search_path          = "common gmisclib otherwidgets"; (* -I *)
     required_libraries   = "";
     compiler_flags       = "-w syxm -g";
     linker_flags         = "-g lablrsvg.cma";
@@ -3456,7 +3769,7 @@ let targets = [
     other_objects        = "";
     external_tasks       = [];
     restrictions         = ["FINDLIB(lablgtk2.rsvg)"];
-    dependencies         = [];
+    dependencies         = [9];
     show                 = true;
     rc_filename          = None;
   };
@@ -3471,7 +3784,7 @@ let targets = [
     compilation_bytecode = false;
     compilation_native   = true;
     toplevel_modules     = "dot_viewer_svg.ml";
-    package              = "lablgtk2.rsvg,xml-light";
+    package              = "cairo2,lablgtk3,xml-light";
     search_path          = "common gmisclib"; (* -I *)
     required_libraries   = "";
     compiler_flags       = "-g -w syxm";
@@ -3502,7 +3815,7 @@ let targets = [
     compilation_bytecode = true;
     compilation_native   = false;
     toplevel_modules     = "plugin_diff_gtext.ml plugin_diff.ml";
-    package              = "compiler-libs.common,diff,lablgtk2,str,unix,xml-light";
+    package              = "compiler-libs.common,diff,lablgtk3,str,unix,xml-light";
     search_path          = "common otherwidgets gmisclib oebuild +ocamldoc icons"; (* -I *)
     required_libraries   = "";
     compiler_flags       = "-g -w -26-10";
@@ -3533,7 +3846,7 @@ let targets = [
     compilation_bytecode = false;
     compilation_native   = true;
     toplevel_modules     = "plugin_diff_gtext.ml plugin_diff.ml ";
-    package              = "compiler-libs.common,diff,lablgtk2,str,unix,xml-light";
+    package              = "compiler-libs.common,diff,lablgtk3,str,unix,xml-light";
     search_path          = "common otherwidgets gmisclib oebuild icons"; (* -I *)
     required_libraries   = "";
     compiler_flags       = "-g -w -26-10-58";

@@ -57,16 +57,6 @@ class button_menu ?(label="") ?(relief=`NORMAL) ?stock ?spacing ?packing () =
   let clicked = new clicked () in
   let show_menu = new show_menu () in
   let label_widget = GMisc.label ~text:label () in
-(*  let _ = GtkMain.Rc.parse_string "
-style \"gmisclib_button_menu_left\" {
-  GtkButton::inner-border = { 0, 0, 0, 0 }
-}
-style \"gmisclib_button_menu_right\" {
-  GtkButton::inner-border = { 0, 0, 0, 0 }
-}
-widget \"*.gmisclib_button_menu_left\" style \"gmisclib_button_menu_left\"
-widget \"*.gmisclib_button_menu_right\" style \"gmisclib_button_menu_right\"
-" in*)
 object (self)
   inherit GObj.widget box#as_widget
   val relief = relief
@@ -84,28 +74,17 @@ object (self)
     button_menu#set_image image_normal;
     button#set_focus_on_click false;
     button_menu#set_focus_on_click false;
-    ignore (button#connect#enter ~callback:begin fun _ ->
-      button_menu#misc#set_state `PRELIGHT;
-    end);
+    button_menu#set_sensitive true;
     ignore (button#connect#leave ~callback:begin fun _ ->
       self#set_button_menu_child false;
-      button_menu#misc#set_state `NORMAL;
       button_menu#set_relief relief;
     end);
     ignore (button#connect#pressed ~callback:begin fun _ ->
       self#set_button_menu_child true;
-      button_menu#misc#set_state `ACTIVE;
       button_menu#set_relief `HALF;
     end);
     ignore (button#connect#released ~callback:begin fun _ ->
       self#set_button_menu_child false;
-      button_menu#misc#set_state `NORMAL;
-    end);
-    ignore (button_menu#connect#enter ~callback:begin fun _ ->
-      button#misc#set_state `PRELIGHT;
-    end);
-    ignore (button_menu#connect#leave ~callback:begin fun _ ->
-      button#misc#set_state `NORMAL;
     end);
     ignore (button_menu#event#connect#button_press ~callback:begin fun ev ->
       self#popup_menu ev;
@@ -180,7 +159,7 @@ object (self)
     self#set_button_menu_child true;
     let time = GdkEvent.Button.time ev in
     let pos ~x ~y ~pushed_in =
-      let bt = if button#misc#get_flag `VISIBLE then button else button_menu in
+      let bt = if button#misc#visible then button else button_menu in
       let xP, yP = Gdk.Window.get_pointer_location bt#misc#window in
       let xA, yA = bt#misc#allocation.Gtk.x, bt#misc#allocation.Gtk.y in
       let x' = x - xP + xA in
@@ -202,9 +181,7 @@ object (self)
     end;
     ignore (menu#connect#deactivate ~callback:begin fun () ->
       self#set_button_menu_child false;
-      button_menu#misc#set_state `NORMAL;
       button_menu#set_relief relief;
-      button#misc#set_state `NORMAL;
       button#set_relief relief;
       Gaux.may tooltip_text ~f:box#misc#set_tooltip_text;
       tooltip_text <- None;
@@ -223,9 +200,7 @@ object (self)
       false;
     end |> ignore;
     GtkMenu.Menu.popup_at menu#as_menu ~button:(GdkEvent.Button.button ev) ~time pos;
-    button_menu#misc#set_state `ACTIVE;
     button_menu#set_relief `NORMAL;
-    button#misc#set_state `PRELIGHT;
     button#set_relief `NORMAL;
 
   method private popdown_menu () =

@@ -93,7 +93,7 @@ let confirm ?(title="") ?image ~message ~yes ~no ?(cancel=true) parent =
   dialog#set_skip_taskbar_hint false;
   dialog#set_skip_pager_hint false;
   dialog#vbox#set_spacing 8;
-  dialog#set_has_separator false;
+  (*dialog#set_has_separator false;*)
   Gaux.may ~f:(fun x -> dialog#set_transient_for x#as_window) (GWindow.toplevel parent);
   let hbox = GPack.hbox ~spacing:8 ~packing:dialog#vbox#add () in
   Gaux.may image ~f:hbox#pack;

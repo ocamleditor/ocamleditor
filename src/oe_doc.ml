@@ -112,7 +112,7 @@ struct
 
   (** find_name *)
   let find_name ~project ~symbol =
-    let value_path = Symbol.concat_value_path symbol in
+    let value_path = Symbols.concat_value_path symbol in
     let module_list = read ~project ~symbol in
     let re = kprintf Str.regexp "%s$" (Str.quote value_path) in
     Odoc_info.Search.search_by_name module_list re;;
@@ -120,7 +120,7 @@ struct
   (** find_module *)
   let find_module ~project ~symbol =
     let module_list = read ~project ~symbol in
-    let module_name = Symbol.get_module_name symbol in
+    let module_name = Symbols.get_module_name symbol in
     List_opt.find (fun m -> m.Odoc_info.Module.m_name = module_name) module_list
 
 end
@@ -514,7 +514,7 @@ end
     let indent = 13 in
     let param_color = Color.name_of_gdk (Preferences.tag_color "label") in
     let editor_font = Preferences.preferences#get.Preferences.pref_base_font in
-    let editor_font_family = Pango.Font.get_family (GPango.font_description editor_font) in
+    let editor_font_family = (GPango.font_description_from_string editor_font) #family in
     let odoc_font = Preferences.preferences#get.Preferences.pref_odoc_font in
     let set_acc_margin tag = Gobject.Property.set tag#as_tag {Gobject.name="accumulative-margin"; conv=Gobject.Data.boolean} true in
     let black = Color.name_of_gdk (Preferences.tag_color "lident") in
@@ -584,7 +584,7 @@ end
         tag#set_property (`FONT pref.Preferences.pref_base_font)
       end [`TT; `TTB; `TTF; `TYPE; `TYPE2; `PARAM];
       let tag = List.assoc `TTF tags in
-      tag#set_property (`FAMILY (Pango.Font.get_family (GPango.font_description pref.Preferences.pref_base_font)));
+      tag#set_property (`FAMILY (GPango.font_description_from_string pref.Preferences.pref_base_font) #family);
       let tag = List.assoc `TYPE_COMMENT tags in
       tag#set_property (`FONT pref.Preferences.pref_odoc_font);
     end);

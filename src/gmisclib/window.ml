@@ -117,14 +117,14 @@ object (self)
   method set_on_popdown f = on_popdown <- f
 
   method popdown () =
-    if popup#misc#get_flag `VISIBLE then begin
+    if popup#misc#visible then begin
       on_popdown();
       popup#misc#hide();
     end;
 
   method present () =
     popup#present();
-    let xP0, yP0 = Gdk.Window.get_pointer_location (Gdk.Window.root_parent ()) in
+    let xP0, yP0 = Gdk.Window.get_pointer_location popup#misc#window in
     let x, y = match position with
       | `POINTER -> xP0, yP0
       | _ ->

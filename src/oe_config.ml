@@ -65,7 +65,7 @@ let gutter_marker_color                  = (*`THEME*) `CALC 0.40
 let code_folding_scope_color             = `NAME "#e5e5e5" (* disabled *)
 let code_folding_highlight_color         = "#d0d0d0"
 let code_folding_hightlight_gradient     = ["#f4f4f4"; "#f9f9f9"; "#fefefe"] (* [] for no gradient *)
-let code_folding_font                    = ref (Some "-*-*-medium-r-*-sans-10-*-*-*-*-*-*-*")
+let code_folding_font                    = ref (Some "Monospace 10")
                                           (* Font for the "n lines" label in the fold line; it must be 10 pixels height. None for no label *)
 let global_gutter_comments_enabled       = false
 let global_gutter_size                   = 13
@@ -126,7 +126,7 @@ let _ =
     | None -> ()
     | Some fontset ->
       begin
-        try ignore (Gdk.Font.load_fontset fontset)
+        try ignore (GPango.font_description_from_string fontset)
         with Gpointer.Null -> begin
           eprintf "Warning: could not load fontset \"%s\".\n%!" fontset;
           code_folding_font := None

@@ -141,7 +141,7 @@ object (self)
     end);
     (* Toggled *)
     sign_id <- Some (button#connect#toggled ~callback:begin fun () ->
-      if popup#misc#get_flag `VISIBLE then (popup#popdown()) else begin
+      if popup#misc#visible then (popup#popdown()) else begin
           assert (self#set_active active_value#get);
           popup#present();
           button#misc#set_tooltip_markup "";

@@ -25,6 +25,19 @@ open Target
 open Task
 open GUtil
 
+let image_menu_item ~label ?(pixbuf=Icons.empty_8) ?stock ?(icon_size=`MENU) ?(show=true) ~packing () =
+  let menu_item = GMenu.menu_item ~packing ~show () in
+  let hbox = GPack.hbox ~border_width: 6 ~packing: menu_item#add () in
+  let _image = 
+		if Option.is_none stock then
+		 GMisc.image ~pixbuf ~icon_size ~packing: hbox#add () 
+	else
+	GMisc.image ?stock ~packing: hbox#add ()
+in
+  let _label = GMisc.label ~text: label ~packing: hbox#add () in
+  menu_item
+;;
+
 type item = Target of Target.t | ETask of Task.t
 
 let cols              = new GTree.column_list
@@ -67,7 +80,6 @@ class view ~editor ~project ?packing () =
   let _                 = view#append_column vc_default in
   let _                 = vc_default#set_visible true in
   let _                 = view#selection#set_mode `SINGLE in
-  let tooltips          = GData.tooltips () in
   (* Buttons *)
   let bbox              = GPack.hbox ~spacing:3 ~packing:vbox#pack () in
   let b_new             = Gmisclib.Button.button_menu ~packing:bbox#pack () in
@@ -75,23 +87,23 @@ class view ~editor ~project ?packing () =
   let _                 = b_new#misc#set_tooltip_text "New..." in
   let _                 = GMisc.label ~text:"" ~packing:bbox#add () in
   let b_remove          = GButton.button ~packing:bbox#pack () in
-  let _                 = tooltips#set_tip ~text:"Delete selected items" b_remove#coerce in
+  let _                 = b_remove#set_tooltip_text "Delete selected items" in
   let _                 = b_remove#set_image (GMisc.image ~stock:`DELETE ~icon_size:`MENU ())#coerce in
   let b_up              = GButton.button ~packing:bbox#pack () in
-  let _                 = tooltips#set_tip ~text:"Move Up" b_up#coerce in
+  let _                 = b_up#set_tooltip_text "Move Up" in
   let _                 = b_up#set_image (GMisc.image ~stock:`GO_UP ~icon_size:`MENU ())#coerce in
   let b_down            = GButton.button ~packing:bbox#pack () in
-  let _                 = tooltips#set_tip ~text:"Move Down" b_down#coerce in
+  let _                 = b_down#set_tooltip_text "Move Down" in
   let _                 = b_down#set_image (GMisc.image ~stock:`GO_DOWN ~icon_size:`MENU ())#coerce in
   let _                 = GMisc.label ~text:"" ~packing:bbox#add () in
   let b_clean           = GButton.button ~packing:bbox#pack () in
-  let _                 = tooltips#set_tip ~text:"Clean" b_clean#coerce in
+  let _                 = b_clean#set_tooltip_text "Clean" in
   let _                 = b_clean#set_image (Icons.create Icons.clear_build_16)#coerce in
   let b_compile         = GButton.button ~packing:bbox#pack () in
-  let _                 = tooltips#set_tip ~text:"Build" b_compile#coerce in
+  let _                 = b_compile#set_tooltip_text "Build" in
   let _                 = b_compile#set_image (Icons.create Icons.build_16)#coerce in
   let b_run             = GButton.button ~packing:bbox#pack () in
-  let _                 = tooltips#set_tip ~text:"Run external task/Install library" b_run#coerce in
+  let _                 = b_run#set_tooltip_text "Run external task/Install library" in
   let _                 = b_run#set_image (GMisc.image ~xalign:0.5 (*~width:24*) ~pixbuf:Icons.start_16 ())#coerce in
 object (self)
   inherit GObj.widget vbox#as_widget
@@ -111,11 +123,11 @@ object (self)
     b_new#set_menu_only ();
     ignore (b_new#connect#show_menu ~callback:begin fun (label, menu) ->
       label := None;
-      let item = GMenu.image_menu_item ~image:(GMisc.image ~pixbuf:Icons.target_16 ())#coerce ~label:"Create new target" ~packing:menu#append () in
+      let item = image_menu_item ~pixbuf:Icons.target_16 ~label:"Create new target" ~packing:menu#append () in
       ignore (item#connect#activate ~callback:(fun () -> ignore (self#add_target ())));
-      let item = GMenu.image_menu_item ~image:(GMisc.image ~pixbuf:Icons.etask_16 ())#coerce ~label:"Add external build task" ~packing:menu#append () in
+      let item = image_menu_item ~pixbuf:Icons.etask_16 ~label:"Add external build task" ~packing:menu#append () in
       ignore (item#connect#activate ~callback:self#add_external_task);
-      let item = GMenu.image_menu_item ~image:(GMisc.image ~stock:`COPY ())#coerce ~label:"Duplicate" ~packing:menu#append () in
+      let item = image_menu_item ~stock:`COPY ~label:"Duplicate" ~packing:menu#append () in
       ignore (item#connect#activate ~callback:self#duplicate);
     end);
     (*b_clean#connect#clicked*)

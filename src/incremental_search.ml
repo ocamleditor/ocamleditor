@@ -171,7 +171,7 @@ class incremental () =
           match Sys.os_type with
 (*            | "Win32" -> GWindow.window ~allow_grow:false
                 ~kind:`POPUP ~type_hint:`MENU ~modal:true ~border_width:5 ()*)
-            | _ -> GWindow.window ~allow_grow:true
+            | _ -> GWindow.window ~resizable:true
                 ?type_hint:(match Sys.os_type with
                   | "Win32" -> Some `UTILITY (* to skip taskbar on Windows *)
                   | _ -> Some `DIALOG)
@@ -181,7 +181,7 @@ class incremental () =
         dialog#set_skip_pager_hint true;
         let move () =
           (* Coordinate del puntatore relative al desktop *)
-          let pX, pY = Gdk.Window.get_pointer_location (Gdk.Window.root_parent ()) in
+          let pX, pY = Gdk.Window.get_pointer_location view#misc#window in
           (* Coordinate del puntatore relative alla vista *)
           let win = (match view#get_window `WIDGET
             with None -> failwith "Incremental_search.i_search: view#get_window `WIDGET = None" | Some w -> w) in

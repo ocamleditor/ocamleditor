@@ -22,7 +22,7 @@
 
 
 #cd "src"
-#use "../tools/scripting.ml"
+    #use "../tools/scripting.ml"
 
 open Printf
 
@@ -32,7 +32,7 @@ let distclean () =
   remove_file "annot_parser.mli";
   remove_file "err_lexer.ml";
   remove_file "err_parser.ml";
-  remove_file "err_parser.mli";;
+  remove_file "err_parser.mli";
   remove_file "oebuild_script.ml";
   remove_file "ocamleditor.opt.exe.manifest";
   remove_file "resource.res";
@@ -46,7 +46,6 @@ let distclean () =
   rmdir (Filename.parent_dir_name // ".cache");
   kprintf run_no_errors "%s icons" rmr;
   pushd "..";
-  (*run "oasis setup";*)
   popd();
 ;;
 
