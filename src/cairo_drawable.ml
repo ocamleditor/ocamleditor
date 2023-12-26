@@ -48,7 +48,7 @@ let set_foreground drawable color =
   Cairo.set_source_rgb drawable r g b
 ;;
 
-let set_line_attributes drawable ~width ?(style = `SOLID) ?(join = `BEVEL) ?(cap = `BUTT) () =
+let set_line_attributes drawable ?(width=1) ?(style = `SOLID) ?(join = `BEVEL) ?(cap = `BUTT) () =
   Cairo.set_line_width drawable (f width);
   ( match style with
     | `ON_OFF_DASH -> Cairo.set_dash drawable [| 3.0 |]

@@ -298,14 +298,15 @@ class manager ~(view : Text.view) =
                   set_line_attributes drawable ~width:1 ();
                   set_foreground drawable view#gutter.Gutter.bg_color;
                   if unmatched then begin
-                    (*set_line_attributes drawable ~style:`ON_OFF_DASH ();*)
+                    set_line_attributes drawable ~width:1 ();
                     set_foreground drawable view#gutter.Gutter.bg_color;
                     polygon drawable ~filled:true square;
-                    set_foreground drawable light_marker_color;
+                    set_foreground drawable view#gutter.marker_color;
                     polygon drawable ~filled:false square;
-                    (*drawable#segments [(xm - dx, ya), (xm + dx, ym1)(*; (xm - dx, ym1), (xm + dx, ya)*)];*)
+                    (*segments drawable [(xm - dx, ya), (xm + dx, ym1)(*; (xm - dx, ym1), (xm + dx, ya)*)];*)
                   end else begin
-                    set_line_attributes drawable ~style:`SOLID ();
+                    set_line_attributes drawable ~width:1 ();
+                    set_foreground drawable view#gutter.Gutter.bg_color;
                     polygon drawable ~filled:true square;
                     set_foreground drawable view#gutter.Gutter.marker_color;
                     polygon drawable ~filled:false square;
@@ -319,14 +320,14 @@ class manager ~(view : Text.view) =
                       match cont with
                       | `Contiguous when use_triangles ->
                           let ym2 = ym2 - 8 in
-                          segments drawable [((xm, (ym2 - 3)), (xm, ym2)); ((xm, ym2), ((xm + dx), ym2))];
+                          segments drawable [((xm, (ym2 - 5)), (xm, ym2)); ((xm, ym2), ((xm + dx), ym2))];
                       | `Contiguous -> ()
                       | `Collapsed ->
                           let ym2 = ym2 - 18 in
-                          segments drawable [((xm, (ym2 - 3)), (xm, ym2)); ((xm, ym2), ((xm + dx), ym2))];
+                          segments drawable [((xm, (ym2 - 5)), (xm, ym2)); ((xm, ym2), ((xm + dx), ym2))];
                       | _ ->
                           let ym2 = ym2 + dx in
-                          segments drawable [((xm, (ym2 - 3)), (xm, ym2)); ((xm, ym2), ((xm + dx), ym2))];
+                          segments drawable [((xm, (ym2 - 5)), (xm, ym2)); ((xm, ym2), ((xm + dx), ym2))];
                     end;
                 | _ -> ()
               end;
@@ -542,7 +543,6 @@ class manager ~(view : Text.view) =
                         | _ -> raise Exit
                       end else ((buffer#get_iter (`OFFSET o2))#set_line_index 0)
                     in
-                    Gdk.Window.set_cursor window (Gdk.Cursor.create `HAND1);
                     buffer#apply_tag tag_highlight ~start ~stop;
                     tag_highlight_applied <- Some mark;
                   with Exit -> ()
@@ -558,7 +558,6 @@ class manager ~(view : Text.view) =
       | _ -> ()
 
     method private highlight_remove ~window () =
-      Gdk.Window.set_cursor window (Gdk.Cursor.create `ARROW);
       if tag_highlight_applied <> None && not tag_highlight_busy then begin
         tag_highlight_busy <- true;
         let grad = Oe_config.code_folding_hightlight_gradient in

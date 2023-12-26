@@ -104,6 +104,14 @@ let realize view =
                 | `THEME -> `COLOR (self#misc#style#dark `NORMAL)
                 | (`NAME _) as color -> color)
          | _ -> ());
+        (match self#gutter.Gutter.marker_bg_color with
+         | `WHITE -> self#gutter.Gutter.marker_bg_color <-
+               (match Oe_config.gutter_marker_bg_color with
+                | `CALC x -> Color.set_value x (`COLOR (self#misc#style#base `NORMAL))
+                | `THEME -> `COLOR (self#misc#style#dark `NORMAL)
+                | (`NAME _) as color -> color
+               )
+         | _ -> ());
         (* Change the bg color of the gutter on screen *)
         view#misc#modify_bg [`NORMAL, self#gutter.Gutter.bg_color];
         self#set_realized true

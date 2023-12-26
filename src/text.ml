@@ -834,14 +834,14 @@ and view ?project ?buffer () =
       ignore (visible_height#connect#changed ~callback:(fun _ -> self#draw_gutter()));
       (* Refresh gutter and right margin line when scrolling *)
       ignore (self#hadjustment#connect#after#value_changed ~callback:begin fun _ ->
-              (* Redraw the entire window on horizontal scroll to refresh right margin *)
+          (* Redraw the entire window on horizontal scroll to refresh right margin *)
           print_endline "----- notify_hadjustment";
           GtkBase.Widget.queue_draw self#as_widget
         end
         );
       ignore (self#vadjustment#connect#after#value_changed ~callback:begin fun _ ->
           (* Update gutter on vertical scroll changes *)
-                  Gmisclib.Idle.add self#draw_gutter;
+          Gmisclib.Idle.add self#draw_gutter;
           Gmisclib.Idle.add ~prio:300 (fun () -> GtkBase.Widget.queue_draw self#as_widget)
         end
         );

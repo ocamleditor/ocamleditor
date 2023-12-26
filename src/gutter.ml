@@ -40,6 +40,7 @@ type t = {
   mutable fg_color        : GDraw.color;
   mutable border_color    : GDraw.color;
   mutable marker_color    : GDraw.color;
+  mutable marker_bg_color : GDraw.color;
   mutable markers         : marker list;
 }
 and marker = {
@@ -64,6 +65,7 @@ let create () = {
   fg_color        = `WHITE;
   border_color    = `WHITE;
   marker_color    = `WHITE;
+  marker_bg_color = `WHITE;
   markers         = [];
 }
 
