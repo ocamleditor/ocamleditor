@@ -107,8 +107,7 @@ class pref_view title ?packing () =
               button#destroy();
               Oe_config.is_dark_theme := avg_text_normal > avg_bg_normal;
               let tags =
-                if !Oe_config.is_dark_theme then Preferences.preferences#get.Preferences.pref_tags_dark
-                else Preferences.preferences#get.Preferences.pref_tags in
+                Preferences.preferences#get.Preferences.pref_tags in
               let ltags, prop = List.split tags in
               Lexical.tags := ltags;
               Lexical.colors := prop;
