@@ -135,9 +135,20 @@ let is_function type_expr =
     | _ -> false
   in f type_expr;;
 
-let string_of_type_expr te =
+let string_of_type_expr ?(is_method=false) te =
   match [@warning "-4"] Types.get_desc te with
-  | Tarrow (_, _, t2, _) -> Odoc_info.string_of_type_expr t2
+  | Tarrow (lab, t1, t2, _) ->
+      if is_method then Odoc_info.string_of_type_expr t2
+      else begin
+        let label =
+          match lab with
+          | Nolabel -> ""
+          | Labelled l -> l ^ ":"
+          | Optional l -> "?" ^ l ^ ":"
+        in
+        (* Still buggy: "?label:int" will print "?label:int option" *)
+        sprintf "%s%s -> %s" label (Odoc_info.string_of_type_expr t1) (Odoc_info.string_of_type_expr t2)
+      end
   | _ -> Odoc_info.string_of_type_expr te;;
 
 let string_of_longident t
@@ -915,16 +926,17 @@ class widget ~editor:_ ~page ?packing () =
                 in
                 Some (self#append ?parent ~kind ~loc:loc.loc loc.txt typ);
             | Tcf_method (loc, private_flag, kind) ->
+                let is_method = true in
                 let kind, typ, loc_body = match kind with
                   | Tcfk_virtual ct when private_flag = Private ->
-                      Method_private_virtual, string_of_type_expr ct.ctyp_type, ct.ctyp_loc
+                      Method_private_virtual, string_of_type_expr ~is_method ct.ctyp_type, ct.ctyp_loc
                   | Tcfk_virtual ct ->
-                      Method_virtual, string_of_type_expr ct.ctyp_type, ct.ctyp_loc
+                      Method_virtual, string_of_type_expr ~is_method ct.ctyp_type, ct.ctyp_loc
                   (* Since 4.02.0 -- TODO handle _override *)
                   | Tcfk_concrete (_override, te) when private_flag = Private ->
-                      Method_private, string_of_type_expr te.exp_type, te.exp_loc
+                      Method_private, string_of_type_expr ~is_method te.exp_type, te.exp_loc
                   | Tcfk_concrete (_override, te) ->
-                      Method, string_of_type_expr te.exp_type, te.exp_loc
+                      Method, string_of_type_expr ~is_method te.exp_type, te.exp_loc
                 in
                 Gaux.may count_meth ~f:incr;
                 Some (self#append ?parent ~kind ~loc:loc.loc ~loc_body:loc_body loc.txt typ);

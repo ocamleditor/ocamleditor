@@ -92,7 +92,7 @@ class file filename =
               Some (int_of_string (Str.matched_group 1 n))
             else None
           end (Array.to_list (Sys.readdir dir)) in
-        let n = try Xlist.max backups + 1 with Not_found -> 1 in
+        let n = try Xlist.max backups + 1 with Invalid_argument _ -> 1 in
         let backup_name =
           let pos = String.rindex filename '.' in
           let ext = String.sub filename pos (String.length filename - pos) in
