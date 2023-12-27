@@ -23,14 +23,18 @@
 open Printf
 open Cairo_drawable
 
-
 type hover = Out | Mark of (int * int * bool) | Region
-type tag_table_kind = Hidden | Readonly
+type tag_table_kind = Hidden
 type tag_table_entry = {
   mark_start_fold : GText.mark;
   mark_stop_fold  : GText.mark;
   tag             : GText.tag;
-  nlines          : int;
+}
+
+type fold_iters = {
+  fit_start_marker : GText.iter;
+  fit_start_fold : GText.iter;
+  fit_stop : GText.iter;
 }
 
 let fold_size = 11 (*10 *)
@@ -61,10 +65,10 @@ class manager ~(view : Text.view) =
     val mutable enabled = true;
     val mutable folding_points = []
     val mutable graphics = []
+    val mutable markers = []
     val mutable tag_highlight_applied = None
     val mutable tag_highlight_busy = false
     val mutable table_tag_hidden : tag_table_entry list = []
-    val mutable table_tag_readonly : tag_table_entry list = []
     val mutable signal_expose = None
     val mutable tag_highlight = buffer#create_tag
         ~name:(sprintf "tag_code_folding_focus_%f" (Unix.gettimeofday())) []
@@ -136,29 +140,29 @@ class manager ~(view : Text.view) =
         let xs = view#gutter.Gutter.fold_x in
         let ms =
           try
-            let _, _, _, ms, _ = List.find begin fun (_, y1, y2, _, _) ->
+            let _, _, ms = 
+              graphics |> List.find begin fun (y1, y2, _) ->
                 x >= xs && x <= view#gutter.Gutter.size && y1 <= y && y <= y2
-              end graphics in
+              end 
+            in
             ms
           with Not_found -> (raise Exit)
         in
-        let unmatched, (yb1, yb2, _, _, _), _ = List.find begin fun (_(*unmatched*), (_, _, yv1, _(*yv2*), h1), _) ->
-            yv1 <= y && y <= yv1 + h1
-          end !ms in
-        Mark (yb1, yb2, unmatched)
-      with Not_found -> Out | Exit -> Region
+       	let unmatched, (yb1, yb2, yv1, h1), _ = ms in
+        if yv1 <= y && y <= yv1 + h1 then Mark (yb1, yb2, unmatched)
+        else Out
+      with Exit -> Region
 
     method private get_folding_iters of1 of2 =
       let start_folding_point = buffer#get_iter (`OFFSET of1) in
-      let start_of_line_folding_point = start_folding_point#set_line_index 0 in
-      let start =
-        if start_folding_point#char <> 13 && start_folding_point#char <> 10
-        then start_folding_point#forward_to_line_end else start_folding_point
-      in
       let stop = (buffer#get_iter (`OFFSET of2))#set_line_index 0 in
-      start_of_line_folding_point, start, stop
+      {
+        fit_start_marker = start_folding_point#set_line_index 0;
+        fit_start_fold = start_folding_point#forward_line#set_line_index 0;
+        fit_stop = stop;
+      }
 
-    method private draw_line y n_lines =
+    method private draw_line y =
       match view#get_window `TEXT with
       | Some window ->
           let drawable = Gdk.Cairo.create window in
@@ -170,7 +174,6 @@ class manager ~(view : Text.view) =
           set_foreground drawable fold_line_color;
           set_line_attributes drawable ~width:2 ~style:Oe_config.dash_style ();
           line drawable 0 y w0 y;
-
       | _ -> ()
 
     method private draw_markers drawable =
@@ -187,19 +190,19 @@ class manager ~(view : Text.view) =
           (* Filter folding_points to be drawn *)
           let draw_line_at_iter iter =
             let y, h = view#get_line_yrange iter in
-            self#draw_line (y + h)
+            self#draw_line (y + h);
           in
-          List.iter begin function
+          folding_points (*exposed*) |> List.iter begin function
           | (of1, Some of2) ->
-              let _, start, stop = self#get_folding_iters of1 of2 in
+              let fi = self#get_folding_iters of1 of2 in
               let i1 = buffer#get_iter (`OFFSET of1) in
               let i2 = buffer#get_iter (`OFFSET of2) in
               let i2 = i2#forward_line in
-              if stop#line - start#line > min_length then begin
+              if fi.fit_stop#line - fi.fit_start_marker#line > min_length then begin
                 if not (self#is_folded i1#backward_char) then begin
-                  let is_collapsed = self#is_folded start in
-                  if is_collapsed then draw_line_at_iter start 1;
-                  let yb1, h1 = view#get_line_yrange start in
+                  let is_collapsed = self#is_folded fi.fit_start_fold in
+                  if is_collapsed then draw_line_at_iter fi.fit_start_marker;
+                  let yb1, h1 = view#get_line_yrange fi.fit_start_marker in
                   let yb2, h2 = view#get_line_yrange i2 in
                   let yv1 = yb1 - y0 in
                   let yv2 = yb2 - y0 in
@@ -208,14 +211,15 @@ class manager ~(view : Text.view) =
                   let ys1 = yv1 in
                   let ys2 = yv2 + 1 in
                   let of2 = i2#offset in
-                  folds := ((start#line, i2#line, is_collapsed), ys1, ys2, ref [false, (of1, of2, yv1, yv2, h1), (is_collapsed, ym1, Some ym2, h1, h2)]) :: !folds
+                  let ms = false, (of1, of2, yv1, h1), (is_collapsed, ym1, Some ym2, h1, h2) in
+                  folds := ((fi.fit_start_marker#line, i2#line, is_collapsed), ys1, ys2, ms) :: !folds
                 end
-              end
+              end;
           | (of1, None) ->
               let i1 = buffer#get_iter (`OFFSET of1) in
               if not (self#is_folded i1#backward_char) then begin
                 let is_collapsed = self#is_folded (if i1#ends_line then i1 else i1#forward_to_line_end) in
-                if is_collapsed then draw_line_at_iter i1 1;
+               	if is_collapsed then draw_line_at_iter i1;
                 let yb1, h1 = view#get_line_yrange i1 in
                 let yb2, h2 = view#get_line_yrange bottom in
                 let yv1 = yb1 - y0 in
@@ -223,65 +227,68 @@ class manager ~(view : Text.view) =
                 let ym1 = yv1 + h1/2 - 1 in
                 let ys1 = yv1 in
                 let ys2 = yv2 + 1 in
-                folds := ((i1#line, -1, is_collapsed), ys1, ys2, ref [true, (of1, bottom#offset, yv1, yv2, h1), (is_collapsed, ym1, None, h1, h2)]) :: !folds
+                let ms = true, (of1, bottom#offset, yv1, h1), (is_collapsed, ym1, None, h1, h2) in
+                folds := ((i1#line, -1, is_collapsed), ys1, ys2, ms) :: !folds
               end
-          end folding_points (*exposed*);
+          end;
           (* Draw lines and markers in the same iter (to reduce flickering?) *)
           set_foreground drawable view#gutter.Gutter.marker_color;
           set_line_attributes drawable ~width:2 ~cap:`PROJECTING ~style:`SOLID ();
-          (*Gdk.GC.set_dashes drawable#gc ~offset:1 [1; 2];*)
-
-          let folds = List.rev (List.fold_left begin fun acc ((_, l2, _) as ll, a, b, c) ->
-              (match acc with
-               | ((l1', _, is_collapsed), _, _, _, _) :: _ when l2 = l1' + 1 -> (ll, a, b, c, (if is_collapsed then `Collapsed else `Contiguous)) :: acc
-               | _ -> (ll, a, b, c, `Not_contiguous) :: acc)
-            end [] !folds) in
-
-          List.iter begin fun (_, _, _, ms, cont) ->
+          let folds = 
+            !folds |> List.fold_left begin fun acc ((_, l2, _) as ll, a, b, ms) ->
+              match acc with
+              | ((l1', _, is_collapsed), _, _, _, _) :: _ when l2 = l1' + 1 -> 
+                  (ll, a, b, ms, (if is_collapsed then `Collapsed else `Contiguous)) :: acc
+              | _ -> 
+                  (ll, a, b, ms, `Not_contiguous) :: acc
+            end [] 
+            |> List.rev 
+          in
+          folds |> List.iter begin fun (_, _, _, ms, cont) ->
             (* Markers *)
-            let xm = xm - 1 in
             set_line_attributes drawable ~width:1 ~style:`SOLID ();
-            List.iter begin fun (unmatched, _, (is_collapsed, ym1, ym2, _(*h1*), _(*h2*))) ->
-              let xm = xm - 2 in
-              let ym1 = ym1 - dx in
-              let ya = ym1 + 2*dx in
-              let square = [(xm - dx, ym1); (xm + dx, ym1); (xm + dx, ya); (xm - dx, ya)] in
-              if is_collapsed then begin
-                set_foreground drawable view#gutter.Gutter.marker_bg_color;
+            let xm = xm - 1 in
+            let unmatched, _, (is_collapsed, ym1, ym2, _(*h1*), _(*h2*)) = ms in
+            let xm = xm - 2 in
+            let ym1 = ym1 - dx in
+            let ya = ym1 + 2*dx in
+            let square = [(xm - dx, ym1); (xm + dx, ym1); (xm + dx, ya); (xm - dx, ya)] in
+            if is_collapsed then begin
+              set_foreground drawable view#gutter.Gutter.marker_bg_color;
+              polygon drawable ~filled:true square;
+              set_foreground drawable view#gutter.Gutter.marker_color;
+              polygon drawable ~filled:false square;
+              segments drawable [(xm, ym1 + dx12), (xm, ym1 + dx1*2); (xm - dxdx12, ym1 + dx), (xm + dxdx12, ym1 + dx)];
+            end else begin
+              set_foreground drawable view#gutter.Gutter.bg_color;
+              if unmatched then begin
+                set_foreground drawable view#gutter.Gutter.bg_color;
+                polygon drawable ~filled:true square;
+                set_foreground drawable light_marker_color;
+                polygon drawable ~filled:false square;
+              end else begin
                 polygon drawable ~filled:true square;
                 set_foreground drawable view#gutter.Gutter.marker_color;
                 polygon drawable ~filled:false square;
-                segments drawable [(xm, ym1 + dx12), (xm, ym1 + dx1*2); (xm - dxdx12, ym1 + dx), (xm + dxdx12, ym1 + dx)];
-              end else begin
-                set_foreground drawable view#gutter.Gutter.bg_color;
-                if unmatched then begin
-                  polygon drawable ~filled:true square;
-                  set_foreground drawable light_marker_color;
-                  polygon drawable ~filled:false square;
-                end else begin
-                  polygon drawable ~filled:true square;
-                  set_foreground drawable view#gutter.Gutter.marker_color;
-                  polygon drawable ~filled:false square;
-                end;
-                segments drawable [(xm - dxdx12, ym1 + dx), (xm + dxdx12, ym1 + dx)];
-                match ym2 with
-                | Some ym2 ->
-                    let xm = xm - 2 in
-                    begin
-                      match cont with
-                      | `Contiguous -> ()
-                      | `Collapsed ->
-                          let ym2 = ym2 - 18 in
-                          segments drawable [((xm, (ym2 - 5)), (xm, ym2)); ((xm, ym2), ((xm + dx), ym2))];
-                      | _ ->
-                          let ym2 = ym2 + dx in
-                          segments drawable [((xm, (ym2 - 5)), (xm, ym2)); ((xm, ym2), ((xm + dx), ym2))];
-                    end;
-                | _ -> ()
               end;
-            end !ms;
-          end folds;
-          graphics <- folds;
+              segments drawable [(xm - dxdx12, ym1 + dx), (xm + dxdx12, ym1 + dx)];
+              match ym2 with
+              | Some ym2 ->
+                  let xm = xm - 2 in
+                  begin
+                    match cont with
+                    | `Contiguous -> ()
+                    | `Collapsed ->
+                        let ym2 = ym2 - 18 in
+                        segments drawable [((xm, (ym2 - 3)), (xm, ym2)); ((xm, ym2), ((xm + dx), ym2))];
+                    | _ ->
+                        let ym2 = ym2 + dx in
+                        segments drawable [((xm, (ym2 - 3)), (xm, ym2)); ((xm, ym2), ((xm + dx), ym2))];
+                  end;
+              | _ -> ()
+            end;
+          end;
+          graphics <- folds |> List.map (fun (_, a, b, ms, _) -> a, b, ms);
       | _ -> ()
 
     method private range ~fold start stop =
@@ -297,31 +304,32 @@ class manager ~(view : Text.view) =
       done;
 
     method private fold_offsets o1 o2 =
-      let start_of_line_folding_point, start, stop = self#get_folding_iters o1 o2 in
-      if stop#line - start#line >= min_length then begin
+      let fi = self#get_folding_iters o1 o2 in
+      let start = fi.fit_start_fold in
+      let stop = fi.fit_stop in
+      if stop#line - fi.fit_start_marker#line >= min_length then begin
         match self#remove_tag_from_table Hidden start with
         | None ->
             view#matching_delim_remove_tag ();
             let ins = buffer#get_iter `INSERT in
-            if ins#in_range ~start ~stop then begin
-              let where = start#set_line_index 0 in
-              view#buffer#place_cursor ~where;
-              view#scroll_lazy where;
-            end;
+            let is_in_range = ins#in_range ~start ~stop in
             Gaux.may view#signal_expose ~f:(fun id -> view#misc#handler_block id);
             view#matching_delim_remove_tag ();
             self#range ~fold:false start stop;
-            let tag_readonly = buffer#create_tag [`EDITABLE false; (*`BACKGROUND "yellow";*) `BACKGROUND_FULL_HEIGHT true] in
             let tag_hidden = buffer#create_tag [`INVISIBLE_SET true; `INVISIBLE true(*; `EDITABLE false*)] in
             let m1 = `MARK (buffer#create_mark(* ~name:(Gtk_util.create_mark_name "Code_folding.fold_offset1")*) start) in
             let m2 = `MARK (buffer#create_mark(* ~name:(Gtk_util.create_mark_name "Code_folding.fold_offset2")*) stop) in
             (*Gmisclib.Util.set_tag_paragraph_background tag_readonly "yellow" (*Oe_config.code_folding_highlight_color*);*)
-            buffer#apply_tag tag_readonly ~start:start_of_line_folding_point ~stop;
             buffer#apply_tag tag_hidden ~start ~stop;
-            table_tag_hidden <- {mark_start_fold=m1; mark_stop_fold=m2; tag=tag_hidden; nlines=stop#line - start#line - 1} :: table_tag_hidden;
-            table_tag_readonly <- {mark_start_fold=m1; mark_stop_fold=m2; tag=tag_readonly; nlines=1} :: table_tag_readonly;
+            table_tag_hidden <- {mark_start_fold=m1; mark_stop_fold=m2; tag=tag_hidden} :: table_tag_hidden;
             self#scan_folding_points();
             Gmisclib.Idle.add view#draw_gutter;
+            if is_in_range then
+              Gmisclib.Idle.add begin fun () ->
+                let where = fi.fit_start_marker#forward_to_line_end in
+                view#buffer#place_cursor ~where;
+                view#scroll_lazy where;
+              end;
             Gaux.may view#signal_expose ~f:(fun id -> view#misc#handler_unblock id);
             toggled#call (true, start, stop);
         | Some {mark_start_fold=m1; mark_stop_fold=m2; tag=tag; _} ->
@@ -331,14 +339,8 @@ class manager ~(view : Text.view) =
             let sections = List.rev (split_length n) in
             Gaux.may view#signal_expose ~f:(fun id -> view#misc#handler_block id);
             Gaux.may signal_expose ~f:(fun id -> view#misc#handler_block id);
-            begin
-              match self#remove_tag_from_table Readonly start with
-              | Some {tag=tag_ro; _} ->
-                  buffer#remove_tag tag_ro ~start:start_of_line_folding_point ~stop;
-              | _ -> assert false
-            end;
-            Gmisclib.Idle.add_gen begin
-              let i = ref (List.length sections - 1) in
+            Gmisclib.Idle.add_gen begin 
+              let i = ref (List.length sections - 1) in 
               fun () ->
                 try
                   if !i > 0 && !iter#compare stop < 0 then begin
@@ -349,7 +351,6 @@ class manager ~(view : Text.view) =
                     true
                   end else begin
                     buffer#remove_tag tag ~start ~stop;
-
                     Gmisclib.Idle.add ~prio:100 view#draw_gutter;
                     Gaux.may view#signal_expose ~f:(fun id -> view#misc#handler_unblock id);
                     Gaux.may signal_expose ~f:(fun id -> view#misc#handler_unblock id);
@@ -391,13 +392,13 @@ class manager ~(view : Text.view) =
       | _ -> None
 
     method private remove_tag_from_table which_table iter =
-      let tag_table = match which_table with Hidden -> table_tag_hidden | Readonly -> table_tag_readonly in
+      let tag_table = match which_table with Hidden -> table_tag_hidden in
       let res, tab =
         List.fold_left begin fun (res, acc) ({tag=t; _} as entry) ->
           if res = None && iter#has_tag t then (Some entry, acc) else (res, entry :: acc)
         end (None, []) tag_table
       in
-      (match which_table with Hidden -> table_tag_hidden <- tab | Readonly -> table_tag_readonly <- tab);
+      (match which_table with Hidden -> table_tag_hidden <- tab);
       res
 
     method toggle_current_fold () =
@@ -424,14 +425,6 @@ class manager ~(view : Text.view) =
         end tags
       in
       (*  *)
-      let tags = tags_owned_by_iter ~which_table:table_tag_readonly in
-      List.iter begin fun {mark_start_fold=m1; mark_stop_fold=m2; tag=tag; _} ->
-        let start = buffer#get_iter_at_mark m1 in
-        let stop = buffer#get_iter_at_mark m2 in
-        buffer#remove_tag tag ~start:(start#set_line_index 0) ~stop;
-        table_tag_readonly <- List.filter (fun x -> x.mark_start_fold != m1) table_tag_readonly;
-      end tags;
-      (*  *)
       let tags = tags_owned_by_iter ~which_table:table_tag_hidden in
       List.iter begin fun {mark_start_fold=m1; mark_stop_fold=m2; tag=tag; _} ->
         let start = buffer#get_iter_at_mark m1 in
@@ -445,21 +438,12 @@ class manager ~(view : Text.view) =
       if List.length tags > 0 then (Gmisclib.Idle.add view#draw_gutter);
 
     method expand_all () =
-
       List.iter begin fun {mark_start_fold=m1; mark_stop_fold=m2; tag=tag; _} ->
         let start = buffer#get_iter_at_mark m1 in
         let stop = buffer#get_iter_at_mark m2 in
         buffer#remove_tag tag ~start ~stop;
       end table_tag_hidden;
-      List.iter begin fun {mark_start_fold=m1; mark_stop_fold=m2; tag=tag; _} ->
-        let start = buffer#get_iter_at_mark m1 in
-        let stop = buffer#get_iter_at_mark m2 in
-        buffer#remove_tag tag ~start:(start#set_line_index 0) ~stop;
-        buffer#delete_mark m1;
-        buffer#delete_mark m2;
-      end table_tag_readonly;
       table_tag_hidden <- [];
-      table_tag_readonly <- [];
       Gmisclib.Idle.add view#draw_gutter
 
     method private highlight x y =
@@ -472,7 +456,7 @@ class manager ~(view : Text.view) =
                 if not tag_highlight_busy && tag_highlight_applied = None then begin
                   try
                     set_highlight_background tag_highlight Oe_config.code_folding_highlight_color;
-                    let start = buffer#get_iter (`OFFSET o1) in
+                    let start = (buffer#get_iter (`OFFSET o1))#set_line_index 0 in
                     let stop =
                       if unmatched then begin
                         match self#find_matching_delimiter o1 with
@@ -527,10 +511,9 @@ class manager ~(view : Text.view) =
           false
         end);
       ignore (view#connect#notify_vadjustment ~callback:begin fun vertical ->
-          Gaux.may signal_expose ~f:(fun id -> view#misc#handler_block id);
-
-          Gmisclib.Idle.add ~prio:300 self#scan_folding_points;
-          Gmisclib.Idle.add ~prio:100 (fun () ->
+                  Gaux.may signal_expose ~f:(fun id -> view#misc#handler_block id);
+                  Gmisclib.Idle.add ~prio:300 self#scan_folding_points;
+                  Gmisclib.Idle.add ~prio:100 (fun () ->
               Gaux.may signal_expose ~f:(fun id -> view#misc#handler_unblock id)
             )
         end
@@ -574,7 +557,6 @@ and code_folding_list_signals ~toggled = object
 end
 
 and toggled () = object inherit [bool * GText.iter * GText.iter] GUtil.signal () end
-
 
 
 
