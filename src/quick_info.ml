@@ -165,13 +165,16 @@ let display qi start stop =
   let xstart, ystart, xstop, ystop = get_area qi start stop in
   let open Preferences in
   let open Settings_j in
-  let vbox = GPack.vbox ~spacing:2 () in
-  (*let label_index = GMisc.label ~xpad:5 ~ypad:5 ~xalign:0.0 ~yalign:0.0 ~packing:vbox#add () in*)
-  let label_typ = GMisc.label ~xpad:5 ~ypad:5 ~xalign:0.0 ~yalign:0.0 ~packing:vbox#add () in
-  let label_doc = GMisc.label ~xpad:5 ~ypad:5 ~xalign:0.0 ~yalign:0.0 ~line_wrap:true ~packing:vbox#add () in
+  let vbox = GPack.vbox ~border_width:5 ~spacing:5 () in
+  let label_typ = GMisc.label ~xpad:0 ~ypad:0 ~xalign:0.0 ~yalign:0.0 ~packing:vbox#add () in
+  let label_vars = GMisc.label ~xpad:0 ~ypad:0 ~xalign:0.0 ~yalign:0.0 ~packing:vbox#add ~show:false () in
+  let _ = GMisc.separator `HORIZONTAL ~packing:vbox#add () in
+  let label_doc = GMisc.label ~xpad:0 ~ypad:0 ~xalign:0.0 ~yalign:0.0 ~line_wrap:true ~packing:vbox#add () in
   label_typ#set_use_markup true;
+  label_vars#set_use_markup true;
   label_doc#set_use_markup true;
   label_doc#misc#modify_font_by_name preferences#get.editor_completion_font;
+  label_vars#misc#modify_font_by_name preferences#get.editor_completion_font;
   label_typ#misc#modify_font_by_name preferences#get.editor_completion_font;
   let x, y =
     let pX, pY = Gdk.Window.get_pointer_location (Gdk.Window.root_parent ()) in
@@ -219,34 +222,45 @@ let display qi start stop =
     end;
     qi.view#buffer#apply_tag qi.tag ~start ~stop;
   end;
-  label_typ, label_doc
+  label_typ, label_vars, label_doc
 
 let build_content qi (entry : type_enclosing_value) (entry2 : type_enclosing_value option) =
-  (* TODO .... *)
-  let contains_type_vars = String.contains entry.Merlin_t.te_type '\'' in
-  let is_module = String.starts_with ~prefix:"(" entry.te_type in
-  Printf.sprintf "%s%s" entry.te_type
-    (if contains_type_vars || is_module
-     then entry2 |> Option.fold ~none:"" ~some:(fun (x : type_enclosing_value) -> "\n" ^ x.te_type)
-     else "")
+  (*Printf.printf "merlin(1): %s\n%!" entry.Merlin_t.te_type;
+    Printf.printf "merlin(2): %s\n%!" (match entry2 with Some e -> e.Merlin_t.te_type | _ -> "NONE");*)
+  let type_expr, type_params =
+    let type_expr, varmap =
+      match entry2 with
+      | Some entry2 ->
+          Type_expr.find_substitutions entry.Merlin_t.te_type entry2.Merlin_t.te_type
+      | _ -> entry.Merlin_t.te_type, []
+    in
+    let info = varmap |> List.map (fun (n, v) -> sprintf "  %s is %s" (Markup.type_info n) (Markup.type_info v)) in
+    type_expr,
+    if info <> [] then "In this context\n" ^ (info |> String.concat "\n") else ""
+  in
+  Markup.type_info type_expr, type_params
 
 (** Opens a new quick information window with the information received from merlin.
     This function is applied in a separate thread from the main one. *)
 let spawn_window qi position (entry : type_enclosing_value) (entry2 : type_enclosing_value option) =
   if qi.view#misc#get_flag `HAS_FOCUS then begin
-    let typ = build_content qi entry entry2 in
-    let markup = Markup.type_info typ in
     let start = qi.view#obuffer#get_iter (`LINECHAR (entry.te_start.line - 1, entry.te_start.col)) in
     let stop = qi.view#obuffer#get_iter (`LINECHAR (entry.te_stop.line - 1, entry.te_stop.col)) in
-    let label_typ, label_doc = display qi start stop in
-    label_typ#set_label markup;
+    let text = start#get_text ~stop in
+    let type_expr, type_params = build_content qi entry entry2 in
+    let label_typ, label_vars, label_doc = display qi start stop in
+    label_typ#set_label type_expr;
+    if type_params <> "" then begin
+      label_vars#misc#show();
+      label_vars#set_label type_params
+    end;
     qi.merlin@@Merlin.document ~position begin fun doc ->
       let markup = qi.markup_odoc#convert doc in
       label_doc#set_label markup;
     end
   end
 
-let invoke_merlin qi iter ~continue_with =
+let invoke_merlin qi (iter : GText.iter) ~continue_with =
   let position = iter#line + 1, iter#line_index in
   qi.merlin@@Merlin.type_enclosing ~position begin fun types ->
     match types with

@@ -541,7 +541,7 @@ class page ?file ~project ~scroll_offset ~offset ~editor () =
       let signal_expose = ref (self#view#event#connect#after#expose ~callback:begin fun _ ->
           let iter = self#buffer#get_iter `INSERT in
           editorbar#pos_lin#set_text (string_of_int (iter#line + 1));
-          editorbar#pos_col#set_text (string_of_int iter#line_offset);
+          editorbar#pos_col#set_text (string_of_int (iter#line_offset + 1));
           editorbar#pos_off#set_text (string_of_int iter#offset);
           false
         end)

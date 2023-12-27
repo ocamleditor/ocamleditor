@@ -81,6 +81,7 @@ let parse pref =
     let in_record = ref false in
     let in_record_label = ref false in
     let in_annotation = ref false in
+    let in_type_var = ref None in
     try
       while true do
         try
@@ -161,6 +162,9 @@ let parse pref =
               -> "label"
             | UIDENT _ | BACKQUOTE -> "uident"
             | LIDENT _ when !in_annotation -> "annotation"
+            | LIDENT lident when !in_type_var <> None ->
+                in_type_var := Some lident;
+                "annotation"
             | LIDENT _ ->
                 begin match !last with
                 | QUESTION | TILDE -> "label"
@@ -193,13 +197,16 @@ let parse pref =
             | EQUAL when !in_record -> in_record_label := false; "symbol"
             | LPAREN | RPAREN | LBRACKET | BARRBRACKET | LBRACKETLESS | LBRACKETGREATER | GREATERRBRACKET
             | LBRACELESS | GREATERRBRACE | LBRACKETBAR | LESSMINUS
-            | EQUAL | PLUS | MINUS | STAR | QUOTE | SEMI | SEMISEMI | MINUSGREATER
+            | EQUAL | PLUS | MINUS | STAR | SEMI | SEMISEMI | MINUSGREATER
             | COMMA | DOT | DOTDOT | COLONCOLON | COLONEQUAL | UNDERSCORE
             | PLUSDOT | MINUSDOT | LESS | GREATER
             | PLUSEQ | PERCENT
             | COLONGREATER
             | DOTOP _
               -> "symbol"
+            | QUOTE ->
+                in_type_var := Some "";
+                "" (* TODO *)
             | LBRACKETAT | LBRACKETPERCENT | LBRACKETPERCENTPERCENT | LBRACKETATAT | LBRACKETATATAT
               -> in_annotation:= true; "annotation"
             | RBRACKET -> if !in_annotation then (in_annotation := false; "annotation") else "symbol"
@@ -209,7 +216,8 @@ let parse pref =
             | EOF -> raise End_of_file
           end;
 
-          Buffer.add_string out (Glib.Markup.escape_text (String.sub text !pos (lstart - !pos)));
+          let blanks = String.sub text !pos (lstart - !pos) in
+          if blanks <> "" then Buffer.add_string out blanks;
           close_pending();
           (*  *)
           let add with_span =
@@ -240,7 +248,15 @@ let parse pref =
                 end
             | _ ->
                 if with_span then (Buffer.add_string out (span (false, !tag)));
-                Buffer.add_string out (Glib.Markup.escape_text lexeme);
+                begin
+                  match !in_type_var with
+                  | Some "" -> ()
+                  | Some lident ->
+                      in_type_var := None;
+                      Buffer.add_string out (Glib.Markup.escape_text ("'" ^ lident));
+                  | _ ->
+                      Buffer.add_string out (Glib.Markup.escape_text lexeme);
+                end
           in
           (*  *)
           if !tag <> "" then begin
