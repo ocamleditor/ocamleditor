@@ -139,7 +139,7 @@ class symbol_list ~kind ?(is_completion=false) ?model ?(index=Index.create ()) ?
     val mutable length = 0
 
     initializer
-      view#misc#modify_font_by_name Preferences.preferences#get.Preferences.pref_compl_font;
+      view#misc#modify_font_by_name Preferences.preferences#get.editor_completion_font;
       ignore (view#event#connect#key_press ~callback:begin fun ev ->
           let key = GdkEvent.Key.keyval ev in
           if key = _BackSpace then begin

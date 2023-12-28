@@ -73,7 +73,7 @@ class virtual page ~role =
     method connect_detach = new detach_signals ~detached
 
     method private detach button_detach =
-      if Preferences.preferences#get.Preferences.pref_detach_message_panes_separately then begin
+      if Preferences.preferences#get.detach_message_panes_separately then begin
         match detached_window with
         | Some (window : GWindow.window) ->
             begin
@@ -241,7 +241,7 @@ and messages ~(paned : GPack.paned) () =
 
     method private set_page = notebook#set_page
 
-    method private data_received context ~x: _ ~y: _ data ~info: _ ~time =
+    method private data_received context ~x ~y data ~info ~time =
       let failed () = context#finish ~success:false ~del:false ~time in
       if data#format = 8 then  begin
         try

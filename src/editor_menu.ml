@@ -23,6 +23,7 @@
 let image_menu_item ~label ?(pixbuf=Icons.empty_8) ?stock ?(show=true) ~packing () =
   let menu_item = GMenu.menu_item ~packing ~show () in
   let hbox = GPack.hbox ~border_width: 6 ~packing: menu_item#add () in
+  hbox#set_halign `START;
   let _image = 
     if Option.is_none stock then
       GMisc.image ~pixbuf ~icon_size: `MENU ~packing: hbox#add () 
@@ -40,14 +41,14 @@ let menu_item_view_menubar : (unit -> (GMenu.check_menu_item * GtkSignal.id) lis
 let show_whitespace_characters_toggled ~editor () =
   let show = not (editor#show_whitespace_chars) in
   editor#set_show_whitespace_chars show;
-  Preferences.preferences#get.Preferences.pref_show_whitespace_chars <- show;
+  Preferences.preferences#get.editor_show_whitespace_chars <- show;
   Preferences.save();;
 
 (** toggle_word_wrap_toggled *)
 let toggle_word_wrap_toggled ~editor () =
   let wrap = not (editor#word_wrap) in
   editor#set_word_wrap wrap;
-  Preferences.preferences#get.Preferences.pref_editor_wrap <- wrap;
+  Preferences.preferences#get.editor_wrap <- wrap;
   Preferences.save();;
 
 (** create *)

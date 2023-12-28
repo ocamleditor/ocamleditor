@@ -23,18 +23,18 @@
 
 class menu_tool_button ~(toolbar:GButton.toolbar) ?homogeneous ?stock ?(label="") ?spacing ?packing () =
   let tool_item = GButton.tool_item ?homogeneous ?packing () in
-object
-  inherit Button_menu.button_menu ~label ?stock ~relief:`NONE ?spacing ~packing:tool_item#add () as super
+  object
+    inherit Button_menu.button_menu ~label ?stock ~relief:`NONE ?spacing ~packing:tool_item#add () as super
 
-  initializer
+    initializer
     if (toolbar#toolbar_style = `ICONS || toolbar#toolbar_style = `BOTH_HORIZ) && stock <> None then begin
-      super#button#unset_image();
-      List.iter super#button#remove super#button#children;
-      super#button#add (GMisc.image ?stock ~icon_size:toolbar#icon_size ())#coerce;
-    end;
+        super#button#unset_image();
+        List.iter super#button#remove super#button#children;
+        super#button#add (GMisc.image ?stock ~icon_size:toolbar#icon_size ())#coerce;
+      end;
 
-  method as_tool_item = tool_item
-end
+    method as_tool_item = tool_item
+  end
 
 let create = new menu_tool_button
 

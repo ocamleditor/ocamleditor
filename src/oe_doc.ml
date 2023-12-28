@@ -43,6 +43,7 @@ let stdlib_workaround filename =
     Filename.concat dirname basename
   else
     Filename.concat dirname @@ String.uncapitalize_ascii stripped
+
 module Database =
 struct
   (** ocamldoc_command *)
@@ -81,7 +82,6 @@ struct
       end;
     with Invalid_argument _ -> None;;
 
-
   let read' (project, filename) =
     let odoc = ocamldoc_command ~project ~filename () in
     let time = Unix.gettimeofday () in
@@ -115,6 +115,7 @@ struct
   let find_module ~project ~symbol =
     let module_list = read ~project ~symbol in
     let module_name = Symbols.get_module_name symbol in
+
     List.find_opt (fun m -> m.Odoc_info.Module.m_name = module_name) module_list
 
 end
@@ -143,7 +144,7 @@ struct
     function
     | Raw text ->
         let text = concat text in
-        if text.[0] = '\n' then begin
+        if String.length text > 0 && text.[0] = '\n' then begin
           buffer#insert ~tags:[!!`LINE_SPACING_SMALL] "\n";
           buffer#insert (Str.string_after text 1)
         end else buffer#insert text;
@@ -385,11 +386,6 @@ struct
     let insert_type = buffer#insert ~tags:[!!`TYPE] in
     let m1 = buffer#create_mark (buffer#get_iter `INSERT) in
     begin
-      (*let info = match elem.Type.ty_info with Some x -> Odoc_info.string_of_info x | _ -> "" in
-        let re = kprintf Str.regexp "[\r\n]*%s[\r\n]*" (Str.quote info) in
-        let typ = Odoc_info.string_of_type elem in
-        let typ = Str.global_replace re "" typ in
-        buffer#insert typ;*)
       let insert_type_element_comment text =
         Gtk_util.with_tag !!`TYPE_COMMENT ~buffer begin fun () ->
           buffer#insert " (\x2A ";
@@ -487,14 +483,13 @@ struct
     end;
     Lexical.tag buffer ~start:(buffer#get_iter_at_mark (`MARK m1)) ~stop:(buffer#get_iter `INSERT);
     buffer#delete_mark (`MARK m1);
-    (*Info.insert_info (!!) buffer elem.Odoc_type.ty_info*)
   ;;
 
 
   module Properties =
   struct
     let type2 =
-      let editor_font = Preferences.preferences#get.Preferences.pref_base_font in
+      let editor_font = Preferences.preferences#get.editor_base_font in
       [`FONT editor_font; `BACKGROUND_FULL_HEIGHT true;
        `PIXELS_ABOVE_LINES 1; `PIXELS_BELOW_LINES 1; `PIXELS_INSIDE_WRAP 0;
        `INDENT 1]
@@ -505,24 +500,24 @@ struct
   (** create_tags *)
   let create_tags ~(buffer : GText.buffer) =
     let indent = 13 in
-    let param_color = Color.name_of_gdk (Preferences.tag_color "label") in
-    let editor_font = Preferences.preferences#get.Preferences.pref_base_font in
-    let editor_font_family = (GPango.font_description_from_string editor_font) #family in
-    let odoc_font = Preferences.preferences#get.Preferences.pref_odoc_font in
+    let param_color = Color.name_of_gdk (Preferences.editor_tag_color "label") in
+    let editor_font = Preferences.preferences#get.editor_base_font in
+    let editor_font_family = (GPango.font_description_from_string editor_font)#family in
+    let odoc_font = Preferences.preferences#get.odoc_font in
     let set_acc_margin tag = Gobject.Property.set tag#as_tag {Gobject.name="accumulative-margin"; conv=Gobject.Data.boolean} true in
-    let black = Color.name_of_gdk (Preferences.tag_color "lident") in
+    let black = Color.name_of_gdk (Preferences.editor_tag_color "lident") in
     let gray = Color.add_value ~sfact:0.0 black (-.0.2) in
     let default_bg_color =
-      if snd Preferences.preferences#get.Preferences.pref_bg_color then begin
+      if Preferences.preferences#get.editor_bg_color_theme then begin
         (* "Use theme color" option removed *)
-        let color = (*`NAME*) (fst ((Preferences.create_defaults()).Preferences.pref_bg_color)) in
+        let color = Preferences.default_values.editor_bg_color_user in
         color;
       end else begin
-        let color = (*`NAME*) (fst Preferences.preferences#get.Preferences.pref_bg_color) in
+        let color = Preferences.preferences#get.editor_bg_color_user in
         color;
       end;
     in
-    let bgparagraph = Color.add_value ~sfact:0.0 default_bg_color 0.06 in
+    let bgparagraph = Color.add_value ~sfact:0.0 (Preferences.get_themed_color default_bg_color) 0.06 in
     let tag_table = new GText.tag_table buffer#tag_table in
     let create_tag id name props =
       match tag_table#lookup name with
@@ -566,7 +561,7 @@ struct
       create_tag (`TITLE 1) "title1" [`WEIGHT `BOLD; `SIZE_POINTS 19.0; `PIXELS_ABOVE_LINES 13; `PIXELS_BELOW_LINES 13];
       create_tag (`TITLE 0) "title0" [`WEIGHT `BOLD; `SIZE_POINTS 21.0; `PIXELS_ABOVE_LINES 13; `PIXELS_BELOW_LINES 13(*; `UNDERLINE `SINGLE*)];
     ] in
-    let ftag x = (*try*) List.assoc x tags (*with Not_found -> assert false*) in
+    let ftag x = List.assoc x tags in
     let (!!) = ftag in
     List.iter set_acc_margin [!!`PARAM; !!`PARAM_DESCR; !!`LI; !!`LEFT_MARGIN; !!`TYPE; !!`TYPE_COMMENT; !!`TYPE2];
     List.iter (fun t -> Gmisclib.Util.set_tag_paragraph_background t bgparagraph) [!!`TYPE2];
@@ -574,12 +569,12 @@ struct
     ignore (Preferences.preferences#connect#changed ~callback:begin fun pref ->
         List.iter begin fun t ->
           let tag = List.assoc t tags in
-          tag#set_property (`FONT pref.Preferences.pref_base_font)
+          tag#set_property (`FONT pref.editor_base_font)
         end [`TT; `TTB; `TTF; `TYPE; `TYPE2; `PARAM];
         let tag = List.assoc `TTF tags in
-        tag#set_property (`FAMILY (GPango.font_description_from_string pref.Preferences.pref_base_font) #family);
+        tag#set_property (`FAMILY ((GPango.font_description_from_string pref.editor_base_font)#family));
         let tag = List.assoc `TYPE_COMMENT tags in
-        tag#set_property (`FONT pref.Preferences.pref_odoc_font);
+        tag#set_property (`FONT pref.odoc_font);
       end);
     ftag;;
 
@@ -587,7 +582,6 @@ struct
   let insert ~(buffer : GText.buffer) ~kind elem =
     let (!!) = create_tags ~buffer in
     let insert_info = Info.insert_info (!!) buffer in
-    let [@warning "-4"] _ = "Disable this pattern matching is fragile warning" in
     begin
       match elem with
       | Search.Res_type elem
@@ -598,11 +592,9 @@ struct
         when List.mem kind [Oe.Pvalue; Oe.Pfunc] ->
           insert_info elem.Value.val_info
       | Search.Res_module elem ->
-          (*buffer#insert ~tags:[!!`BOLD; !!`LARGE] "Module ";*)
           buffer#insert ~tags:[!!`BOLD; !!`LARGE; !!`TTB] elem.Module.m_name;
           insert_info elem.Module.m_info
       | Search.Res_module_type elem ->
-          (*buffer#insert ~tags:[!!`BOLD; !!`LARGE] "Module type ";*)
           buffer#insert ~tags:[!!`BOLD; !!`LARGE; !!`TTB] elem.Module.mt_name;
           insert_info elem.Module.mt_info
       | Search.Res_class elem ->
@@ -619,7 +611,12 @@ struct
           buffer#insert ~tags:[!!`ITALIC] name;
           insert_newline ~buffer (!!);
           insert_text buffer text (!!);
-      | _ -> ()
+          (*TODO*)
+      | Search.Res_value value -> ignore value
+      | Search.Res_type typ -> ignore typ
+      | Search.Res_extension ext -> ignore ext
+      | Search.Res_recfield (f, t) -> ignore f; ignore t
+      | Search.Res_const (g, h) -> ignore g; ignore h
     end;
     insert_newline ~buffer (!!);;
 
@@ -650,16 +647,14 @@ struct
     (* Title and module description *)
     let fix_ocamldoc = ref (Gaux.may_map ~f:(fun x -> String.trim (Odoc_info.string_of_info x)) odoc.Module.m_info) in
     with_tag_odoc begin fun () ->
-      (*buffer#insert ~tags:[!!(`TITLE 0)] "Module ";*)
       buffer#insert ~tags:[!!(`TITLE 0); !!`TTF] odoc.Module.m_name;
       Info.insert_info ~newline_before:true (!!) buffer odoc.Module.m_info;
       buffer#insert "\n\n";
     end;
-    (*  *)
+
     let tag_type2 = [!!`TYPE2] in
     List.iter begin fun me ->
       let get_relative = Name.get_relative odoc.Module.m_name in
-      (*GtkThread2.sync begin fun () ->*)
       match me with
       | Module.Element_module elem ->
           insert_elem (`Info elem.Module.m_info) begin fun () ->
@@ -689,7 +684,7 @@ struct
           end
       | Module.Element_value elem ->
           insert_elem (`Info elem.Value.val_info) begin fun () ->
-            (*Odoc_info.reset_type_names();*)
+            Odoc_info.reset_type_names();
             let typ = Odoc_info.string_of_type_expr elem.Value.val_type in
             (*let typ = Str.global_replace (!~~ ((Name.father elem.Value.val_name) ^ ".")) "" typ in*)
             buffer#insert ~tags:tag_type2 (String.concat " " ["val"; (get_relative elem.Value.val_name); ":"; typ]);
@@ -718,11 +713,10 @@ struct
            | Some text when String.trim (Odoc_info.string_of_text elem) = text ->
                fix_ocamldoc := None;
            | _ -> with_tag_odoc (fun () -> insert_text buffer elem (!!)));
-          (*end ()*)
           (* Since 4.02.0 -- TODO *)
       | Module.Element_type_extension _ -> ()
     end (Module.module_elements odoc);
-    (*  *)
+
     insert_newline ~buffer (!!);
     Gmisclib.Idle.add ~prio:300 begin fun () ->
       List.iter (fun m -> buffer#delete_mark (`MARK m)) !marks

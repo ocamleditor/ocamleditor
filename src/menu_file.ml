@@ -45,6 +45,7 @@ let file_recent_callback ~(file_recent_menu : GMenu.menu) editor =
 let image_menu_item ~label ?(pixbuf=Icons.empty_8) ?(show=true) ~packing () =
   let menu_item = GMenu.menu_item ~packing ~show () in
   let hbox = GPack.hbox ~border_width: 6 ~packing: menu_item#add () in
+  hbox#set_halign `START;
   let _image = GMisc.image ~pixbuf ~icon_size: `MENU ~packing: hbox#add () in
   let _label = GMisc.label ~text: label ~packing: hbox#add () in
   menu_item
@@ -68,7 +69,7 @@ let file ~browser ~group ~flags items =
       ~label:"Open Project..." ~packing:menu#add () in
   ignore (project_open#connect#activate ~callback:browser#dialog_project_open);
   project_open#add_accelerator ~group ~modi:[`CONTROL;`SHIFT] GdkKeysyms._o ~flags;
-  (** Open File *)
+  (* Open File *)
   let open_file = image_menu_item ~pixbuf:Icons.open_file
       ~label:"Open File..." ~packing:menu#add () in
   open_file#add_accelerator ~group ~modi:[`CONTROL] GdkKeysyms._o ~flags;
@@ -139,7 +140,7 @@ let file ~browser ~group ~flags items =
   ignore (save_file#connect#activate ~callback:begin fun () ->
       Gaux.may ~f:editor#save (editor#get_page `ACTIVE)
     end);
-  (** Save as.. *)
+  (* Save as.. *)
   let save_as = image_menu_item
       ~pixbuf:Icons.save_as_16
       ~label:"Save As..." ~packing:menu#add () in
@@ -147,11 +148,11 @@ let file ~browser ~group ~flags items =
   ignore (save_as#connect#activate ~callback:begin fun () ->
       Gaux.may ~f:editor#dialog_save_as (editor#get_page `ACTIVE)
     end);
-  (** Save All *)
+  (* Save All *)
   let save_all = image_menu_item ~pixbuf:Icons.save_all_16 ~label:"Save All" ~packing:menu#add () in
   save_all#add_accelerator ~group ~modi:[`CONTROL; `SHIFT] GdkKeysyms._a ~flags;
   ignore (save_all#connect#activate ~callback:browser#save_all);
-  (** Rename *)
+  (* Rename *)
   menu#add items.file_rename;
   ignore (items.file_rename#connect#activate ~callback:begin fun () ->
       editor#with_current_page begin fun current_page ->

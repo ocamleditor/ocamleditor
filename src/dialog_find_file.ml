@@ -25,7 +25,7 @@ open Printf
 open Miscellanea
 
 let filter =
-  let names = List.map (!~~) ["README"; "INSTALL"; "NEWS"; "BUGS"; "CONTRIB"; "Makefile"; "TODO"; "AUTHORS"; "ChangeLog"; "META"; "ocamleditor.opam"] in
+  let names = List.map (!~~) ["README"; "INSTALL"; "NEWS"; "BUGS"; "CONTRIB"; "Makefile"; "TODO"; "AUTHORS"; "ChangeLog"; "META"; "ocamleditor_opam"] in
   fun filename ->
     filename ^^^ ".ml"  ||
     filename ^^^ ".mli" ||

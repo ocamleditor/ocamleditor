@@ -130,7 +130,7 @@ class widget
       vc_hits#set_sort_column_id 1;
       vc_path#set_sort_column_id 2;
       preview#set_smart_click false;
-      let current_line_color = Color.name_of_gdk (Preferences.tag_color "highlight_current_line") in
+      let current_line_color = Color.name_of_gdk (Preferences.editor_tag_color "highlight_current_line") in
       preview#options#set_highlight_current_line (Some current_line_color);
       preview#options#set_show_line_numbers false;
       preview#options#set_show_markers false;
@@ -840,7 +840,7 @@ class widget
         end);
       ignore (preview#event#connect#focus_in ~callback:begin fun ev ->
           if tbuf#char_count > 0 then begin
-            let bgcolor = Color.name_of_gdk (Preferences.tag_color "highlight_current_line") in
+            let bgcolor = Color.name_of_gdk (Preferences.editor_tag_color "highlight_current_line") in
             Gmisclib.Util.set_tag_paragraph_background preview#highlight_current_line_tag bgcolor;
             let iter = tbuf#get_iter `INSERT in
             self#select_line iter;

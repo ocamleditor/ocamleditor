@@ -161,7 +161,7 @@ class widget ~prog ~(env : string array) ~(args : string list) ?packing ?show ()
       self#set_input_start ();
       (*  *)
       h#add "";
-      view#misc#modify_font_by_name preferences#get.pref_base_font;
+      view#misc#modify_font_by_name preferences#get.editor_base_font;
       view#misc#set_size_chars ~width:80 ~height:25 ~lang:"C" ();
       view#event#connect#key_press ~callback:
         begin fun ev ->

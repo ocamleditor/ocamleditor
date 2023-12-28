@@ -22,6 +22,7 @@
 
 
 open Pref_page
+open Preferences
 
 (** pref_editor_display *)
 class pref_editor_display title ?packing () =
@@ -66,10 +67,12 @@ class pref_editor_display title ?packing () =
   let mo_button                    = GButton.color_button ~packing:(mo_cbox#pack ~fill:false) () in
   let _                            = mo_button#set_relief `NONE in
   let check_thick_caret            = GButton.check_button ~label:"Enable thick caret" ~packing:box#pack () in
-  object
+  object (self)
     inherit page title vbox
 
     initializer
+      let signal_id = Preferences.preferences#connect#changed ~callback:self#read in
+      self#misc#connect#destroy ~callback:(fun () -> Preferences.preferences#connect#disconnect signal_id) |> ignore;
       ignore (check_right_margin#connect#toggled ~callback:begin fun () ->
           entry_right_margin#misc#set_sensitive check_right_margin#active;
         end);
@@ -87,47 +90,47 @@ class pref_editor_display title ?packing () =
         end);
 
     method write pref =
-      pref.Preferences.pref_editor_cursor_aspect_ratio <- (if check_thick_caret#active then 0.1 else 0.0);
-      pref.Preferences.pref_highlight_current_line <- check_highlight_current_line#active;
-      pref.Preferences.pref_show_line_numbers <- check_show_line_numbers#active;
-      pref.Preferences.pref_editor_indent_lines <- check_indent_lines#active;
+      pref.editor_cursor_aspect_ratio <- (if check_thick_caret#active then 0.1 else 0.0);
+      pref.editor_highlight_current_line <- check_highlight_current_line#active;
+      pref.editor_show_line_numbers <- check_show_line_numbers#active;
+      pref.editor_indent_lines <-
+        check_indent_lines#active, color_name il_button_solid#color, color_name il_button_dashed#color;
       let color = color_name rm_button#color in
-      pref.Preferences.pref_right_margin_visible <- check_right_margin#active;
-      pref.Preferences.pref_right_margin_color <- color;
-      pref.Preferences.pref_right_margin <- entry_right_margin#value_as_int;
-      pref.Preferences.pref_code_folding_enabled <- check_code_folding#active;
-      pref.Preferences.pref_show_global_gutter <- check_global_gutter#active;
+      pref.editor_right_margin_visible <- check_right_margin#active;
+      set_themed_color pref.editor_right_margin_color color;
+      pref.editor_right_margin <- entry_right_margin#value_as_int;
+      pref.editor_code_folding_enabled <- check_code_folding#active;
+      pref.editor_show_global_gutter <- check_global_gutter#active;
       let color = color_name mo_button#color in
-      pref.Preferences.pref_editor_mark_occurrences <- check_mark_occurrences#active, check_mo_uc#active, color;
-      pref.Preferences.pref_editor_dot_leaders <- check_show_dot_leaders#active;
-      pref.Preferences.pref_editor_current_line_border <- check_current_line_border#active;
-      pref.Preferences.pref_editor_indent_lines_color_s <- color_name il_button_solid#color;
-      pref.Preferences.pref_editor_indent_lines_color_d <- color_name il_button_dashed#color;
+      pref.editor_mark_occurrences_enabled = check_mark_occurrences#active;
+      pref.editor_mark_occurrences_under_cursor = check_mo_uc#active;
+      set_themed_color pref.editor_mark_occurrences_bg_color color;
+      pref.editor_dot_leaders <- check_show_dot_leaders#active;
+      pref.editor_current_line_border <- check_current_line_border#active;
 
     method read pref =
-      check_thick_caret#set_active (pref.Preferences.pref_editor_cursor_aspect_ratio > 0.0);
-      check_highlight_current_line#set_active pref.Preferences.pref_highlight_current_line;
-      check_show_line_numbers#set_active pref.Preferences.pref_show_line_numbers;
-      let enabled = pref.Preferences.pref_editor_indent_lines in
+      check_thick_caret#set_active (pref.editor_cursor_aspect_ratio > 0.0);
+      check_highlight_current_line#set_active pref.editor_highlight_current_line;
+      check_show_line_numbers#set_active pref.editor_show_line_numbers;
+      let enabled, color_s, color_d = pref.editor_indent_lines in
       check_indent_lines#set_active (not enabled);
       check_indent_lines#set_active enabled;
-      let enabled = pref.Preferences.pref_right_margin_visible in
+      let enabled = pref.editor_right_margin_visible in
       check_right_margin#set_active (not enabled);
       check_right_margin#set_active enabled;
-      entry_right_margin#set_value (float pref.Preferences.pref_right_margin);
-      rm_button#set_color (GDraw.color (`NAME pref.Preferences.pref_right_margin_color));
-      check_code_folding#set_active (pref.Preferences.pref_code_folding_enabled);
-      check_global_gutter#set_active (pref.Preferences.pref_show_global_gutter);
-      let enabled, under_cursor, color = pref.Preferences.pref_editor_mark_occurrences in
-      check_mark_occurrences#set_active (not enabled);
-      check_mark_occurrences#set_active enabled;
-      check_mo_uc#set_active under_cursor;
-      mo_button#set_color (GDraw.color (`NAME color));
-      check_show_dot_leaders#set_active pref.Preferences.pref_editor_dot_leaders;
-      check_current_line_border#set_active pref.Preferences.pref_editor_current_line_border;
-      check_highlight_current_line#set_active (not pref.Preferences.pref_highlight_current_line);
-      check_highlight_current_line#set_active pref.Preferences.pref_highlight_current_line;
-      il_button_solid#set_color (GDraw.color (`NAME pref.Preferences.pref_editor_indent_lines_color_s));
-      il_button_dashed#set_color (GDraw.color (`NAME pref.Preferences.pref_editor_indent_lines_color_d));
+      entry_right_margin#set_value (float pref.editor_right_margin);
+      rm_button#set_color (GDraw.color (`NAME ?? (pref.editor_right_margin_color)));
+      check_code_folding#set_active (pref.editor_code_folding_enabled);
+      check_global_gutter#set_active (pref.editor_show_global_gutter);
+      check_mark_occurrences#set_active (not pref.editor_mark_occurrences_enabled);
+      check_mark_occurrences#set_active (pref.editor_mark_occurrences_enabled);
+      check_mo_uc#set_active pref.editor_mark_occurrences_under_cursor;
+      mo_button#set_color (GDraw.color (`NAME ?? (pref.editor_mark_occurrences_bg_color)));
+      check_show_dot_leaders#set_active pref.editor_dot_leaders;
+      check_current_line_border#set_active pref.editor_current_line_border;
+      check_highlight_current_line#set_active (not pref.editor_highlight_current_line);
+      check_highlight_current_line#set_active pref.editor_highlight_current_line;
+      il_button_solid#set_color (GDraw.color (`NAME color_s));
+      il_button_dashed#set_color (GDraw.color (`NAME color_d));
   end
 

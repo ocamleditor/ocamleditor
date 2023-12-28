@@ -773,10 +773,14 @@ let exec
     | `ASYNC -> `PID proc.pid
   with (Unix.Unix_error _) as ex -> `ERROR ex
 
-(** sync *)
+(** sync
+    @param at_exit Deprecated, use continue_with instead.
+*)
 let sync
     ?working_directory
     ?env
+    ?continue_with
+    ?at_exit
     ?process_in
     ?process_out
     ?process_err
@@ -786,6 +790,8 @@ let sync
     exec `SYNC
       ?working_directory
       ?env
+      ?continue_with
+      ?at_exit
       ?process_in
       ?process_out
       ?process_err
@@ -2715,7 +2721,7 @@ module ETask = struct
       let exit_code = Spawn.sync
           ~process_in:Spawn.redirect_to_stdout
           ~process_err:Spawn.redirect_to_stderr
-          ~working_directory:dir ~env prog (Array.of_list args)
+          ~working_directory:dir ~env prog (Array.of_list args) 
       in
       match exit_code with
       | `ERROR _ -> raise Error
@@ -3200,7 +3206,7 @@ let external_tasks = [
     et_env_replace           = false;
     et_dir                   = "../tools";
     et_cmd                   = "ocaml";
-    et_args                  = [true,"mkversion.ml"; true,"1.13.4"];
+    et_args                  = [true,"mkversion.ml"; true,"1.14.0"];
     et_phase                 = Some Before_clean;
     et_always_run_in_project = false;
     et_always_run_in_script  = false;
@@ -3508,8 +3514,8 @@ let targets = [
     package              = "lablgtk3";
     search_path          = "icons common otherwidgets gmisclib"; (* -I *)
     required_libraries   = "gmisclib";
-    compiler_flags       = "-w sy -g";
-    linker_flags         = "-w sy -g";
+    compiler_flags       = "-w -s-y -g";
+    linker_flags         = "-w -s-y -g";
     thread               = false;
     vmthread             = false;
     pp                   = "";
@@ -3536,10 +3542,10 @@ let targets = [
     compilation_bytecode = false;
     compilation_native   = true;
     toplevel_modules     = "ocamleditor.ml";
-    package              = "compiler-libs.common,dynlink,lablgtk3,ocp-indent.lib,str,unix,xml-light";
+    package              = "atdgen-runtime,compiler-libs.common,dynlink,lablgtk3,ocp-indent.lib,str,unix,xml-light,yojson";
     search_path          = "+ocamldoc gmisclib common icons otherwidgets oebuild "; (* -I *)
     required_libraries   = "process_termination odoc_info gmisclib common icons otherwidgets oebuildlib ocamleditor_lib";
-    compiler_flags       = "-w syxm -g";
+    compiler_flags       = "-w -s-y-x-m -g";
     linker_flags         = "-g";
     thread               = true;
     vmthread             = false;
@@ -3567,10 +3573,10 @@ let targets = [
     compilation_bytecode = true;
     compilation_native   = false;
     toplevel_modules     = "ocamleditor.ml";
-    package              = "compiler-libs.common,dynlink,lablgtk3,ocp-indent.lib,str,unix,xml-light";
+    package              = "atdgen-runtime,compiler-libs.common,dynlink,lablgtk3,ocp-indent.lib,str,unix,xml-light,yojson";
     search_path          = "+ocamldoc gmisclib common icons otherwidgets oebuild "; (* -I *)
     required_libraries   = "process_termination odoc_info gmisclib common icons otherwidgets oebuildlib";
-    compiler_flags       = "-w syxm -g";
+    compiler_flags       = "-w -s-y-x-m -g";
     linker_flags         = "-g";
     thread               = true;
     vmthread             = false;
@@ -3583,7 +3589,7 @@ let targets = [
     other_objects        = "";
     external_tasks       = [];
     restrictions         = [];
-    dependencies         = [4; 10; 7; 5; 8; 9; 20; 17; 25];
+    dependencies         = [4; 10; 7; 5; 28; 8; 9; 20; 17; 18; 25];
     show                 = true;
     rc_filename          = None;
   };
@@ -3598,10 +3604,10 @@ let targets = [
     compilation_bytecode = false;
     compilation_native   = true;
     toplevel_modules     = "ocamleditor.ml";
-    package              = "compiler-libs.common,dynlink,lablgtk3,ocp-indent.lib,str,unix,xml-light";
+    package              = "compiler-libs.common,dynlink,lablgtk3,ocp-indent.lib,str,unix,xml-light,yojson";
     search_path          = "+ocamldoc gmisclib common icons otherwidgets oebuild "; (* -I *)
     required_libraries   = "process_termination odoc_info gmisclib common icons otherwidgets oebuildlib ocamleditor_lib";
-    compiler_flags       = "-w syxm -g";
+    compiler_flags       = "-w -s-y-x-m -g";
     linker_flags         = "-g";
     thread               = true;
     vmthread             = false;
@@ -3629,10 +3635,10 @@ let targets = [
     compilation_bytecode = false;
     compilation_native   = true;
     toplevel_modules     = "ocamleditor.ml";
-    package              = "cairo2,compiler-libs.common,dynlink,lablgtk3,ocp-indent.lib,str,unix,xml-light";
+    package              = "atdgen-runtime,compiler-libs.common,dynlink,lablgtk3,ocp-indent.lib,str,unix,xml-light,yojson";
     search_path          = "+ocamldoc gmisclib common icons otherwidgets oebuild "; (* -I *)
     required_libraries   = "process_termination odoc_info gmisclib common icons otherwidgets oebuildlib ocamleditor_lib";
-    compiler_flags       = "-w syxm -g";
+    compiler_flags       = "-w -s-y-x-m -g";
     linker_flags         = "-g";
     thread               = true;
     vmthread             = false;
@@ -3660,10 +3666,10 @@ let targets = [
     compilation_bytecode = false;
     compilation_native   = true;
     toplevel_modules     = "ocamleditor_lib.ml";
-    package              = "cairo2,compiler-libs.common,dynlink,lablgtk3,ocp-indent.lib,str,unix,xml-light";
+    package              = "atdgen-runtime,compiler-libs.common,dynlink,lablgtk3,ocp-indent.lib,str,unix,xml-light,yojson";
     search_path          = "+ocamldoc gmisclib common icons otherwidgets oebuild "; (* -I *)
     required_libraries   = "";
-    compiler_flags       = "-w syxm -g";
+    compiler_flags       = "-w -s-y-x-m -g";
     linker_flags         = "-g";
     thread               = true;
     vmthread             = false;
@@ -3676,7 +3682,7 @@ let targets = [
     other_objects        = "";
     external_tasks       = [];
     restrictions         = [];
-    dependencies         = [4; 10; 5; 6; 8; 9; 20];
+    dependencies         = [4; 10; 5; 28; 8; 9; 20];
     show                 = true;
     rc_filename          = None;
   };
@@ -3756,7 +3762,7 @@ let targets = [
     package              = "lablgtk3,xml-light";
     search_path          = "common gmisclib otherwidgets"; (* -I *)
     required_libraries   = "";
-    compiler_flags       = "-w syxm -g";
+    compiler_flags       = "-w -s-y-x-m -g";
     linker_flags         = "-g lablrsvg.cma";
     thread               = true;
     vmthread             = false;
@@ -3768,7 +3774,7 @@ let targets = [
     library_install_dir  = ""; (* Relative to the Standard Library Directory *)
     other_objects        = "";
     external_tasks       = [];
-    restrictions         = ["FINDLIB(lablgtk2.rsvg)"];
+    restrictions         = [];
     dependencies         = [9];
     show                 = true;
     rc_filename          = None;
@@ -3787,7 +3793,7 @@ let targets = [
     package              = "cairo2,lablgtk3,xml-light";
     search_path          = "common gmisclib"; (* -I *)
     required_libraries   = "";
-    compiler_flags       = "-g -w syxm";
+    compiler_flags       = "-g -w -s-y-x-m";
     linker_flags         = "-g lablrsvg.cmxa";
     thread               = true;
     vmthread             = false;
@@ -3799,7 +3805,7 @@ let targets = [
     library_install_dir  = ""; (* Relative to the Standard Library Directory *)
     other_objects        = "";
     external_tasks       = [];
-    restrictions         = ["FINDLIB(lablgtk2.rsvg)"];
+    restrictions         = [];
     dependencies         = [];
     show                 = true;
     rc_filename          = None;

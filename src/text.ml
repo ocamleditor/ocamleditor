@@ -23,6 +23,7 @@
 open Printf
 open Text_util
 open Miscellanea
+open Preferences
 open Cairo_drawable
 
 (** Buffer *)
@@ -112,7 +113,7 @@ class buffer =
       method select_all () = self#select_range self#start_iter self#end_iter
 
       (* Deprecated: use get_iter_at_mark_opt *)
-      method! get_iter_at_mark mark =
+      method get_iter_at_mark mark =
         new GText.iter (Gmisclib.Util.get_iter_at_mark_safe self#as_buffer (self#get_mark mark))
 
       method get_iter_at_mark_opt mark =
@@ -772,7 +773,7 @@ and view ?project ?buffer () =
           begin
             let start = ref (start#set_line_index 0) in
             let stop = stop#forward_line#set_line_index 0 in
-            match Preferences.preferences#get.Preferences.pref_ocamldoc_paragraph_bgcolor_1 with
+            match ?? (Preferences.preferences#get.editor_ocamldoc_paragraph_bgcolor_1) with
             | Some color ->
                 set_foreground drawable (`NAME (Color.add_value color 0.08));
                 set_line_attributes drawable ~width:1 ~style:`SOLID ();
@@ -850,14 +851,14 @@ and view ?project ?buffer () =
       ignore (visible_height#connect#changed ~callback:(fun _ -> self#draw_gutter()));
       (* Refresh gutter and right margin line when scrolling *)
       ignore (self#hadjustment#connect#after#value_changed ~callback:begin fun _ ->
-          (* Redraw the entire window on horizontal scroll to refresh right margin *)
+              (* Redraw the entire window on horizontal scroll to refresh right margin *)
           print_endline "----- notify_hadjustment";
           GtkBase.Widget.queue_draw self#as_widget
         end
         );
       ignore (self#vadjustment#connect#after#value_changed ~callback:begin fun _ ->
           (* Update gutter on vertical scroll changes *)
-          Gmisclib.Idle.add self#draw_gutter;
+                  Gmisclib.Idle.add self#draw_gutter;
           Gmisclib.Idle.add ~prio:300 (fun () -> GtkBase.Widget.queue_draw self#as_widget)
         end
         );

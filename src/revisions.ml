@@ -89,7 +89,7 @@ class ocamlview ~colorize ?packing () =
 
 (** widget *)
 class widget ~page ?packing () =
-  let diff_cmd       = Preferences.preferences#get.Preferences.pref_program_diff_graphical  in
+  let diff_cmd       = Preferences.preferences#get.program_diff_graphical  in
   let mk_diff_cmd    = if Sys.win32 && not Ocaml_config.is_mingw then Filename.quote diff_cmd else diff_cmd in
   let project        = page#project in
   let mbox           = GPack.vbox ~spacing:0 ?packing () in

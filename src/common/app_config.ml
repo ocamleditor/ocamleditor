@@ -60,9 +60,9 @@ let application_param =
   try
     List.fold_left begin fun acc x ->
       match split '=' x with
-        | n :: v :: [] -> (n, v) :: acc
-        | n :: [] -> (n, "") :: acc
-        | _ -> acc
+      | n :: v :: [] -> (n, v) :: acc
+      | n :: [] -> (n, "") :: acc
+      | _ -> acc
     end [] (split ',' (Sys.getenv "OCAMLEDITORPARAM"))
   with Not_found -> [];;
 
@@ -77,10 +77,10 @@ let user_home =
 let ocamleditor_user_home =
   let dirname =
     match Ocaml_config.is_mingw with
-      | true when application_debug -> ".ocamleditor.mingw"
-      | true -> ".ocamleditor.test.mingw"
-      | false when application_debug -> ".ocamleditor.test"
-      | false -> ".ocamleditor"
+    | true when application_debug -> ".ocamleditor.mingw"
+    | true -> ".ocamleditor.test.mingw"
+    | false when application_debug -> ".ocamleditor.test"
+    | false -> ".ocamleditor"
   in
   let ocamleditor_user_home = user_home // dirname in
   if not (Sys.file_exists ocamleditor_user_home) then (Unix.mkdir ocamleditor_user_home 509);

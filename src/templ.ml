@@ -60,7 +60,7 @@ let load_custom kind =
       let filename = project.Prj.root // Oe_config.template_project_filename in
       load filename Project;
   | `user ->
-      let filename = Preferences.preferences#get.Preferences.pref_editor_custom_templ_filename in
+      let filename = Preferences.preferences#get.editor_custom_templ_filename in
       if filename <> "" then load filename User
 ;;
 
@@ -141,7 +141,7 @@ let apply ~project (view : Ocaml_text.view) (templ : Templates.t) =
   let start = start#set_line_index 0 in
   let stop = buffer#get_iter_at_mark (`MARK mark_end) in
   let stop = stop#forward_line#set_line_index 0 in
-  ignore (Ocp_indent.indent ~view (`BOUNDS (start, stop)));
+  ignore (Ocp_indent.indent ~project ~view (`BOUNDS (start, stop)));
   (** Fix bug in draw_current_line_background *)
   (*let iter = ref (buffer#get_iter_at_mark (`MARK mark_begin)) in
     let stop = buffer#get_iter_at_mark (`MARK mark_end) in

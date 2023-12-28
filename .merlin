@@ -1,0 +1,5 @@
+S src
+S src/**
+B src
+B src/**
+PKG lablgtk3 str unix atdgen-runtime compiler-libs.common dynlink lablgtk2 ocp-indent.lib xml-light yojson curl cairo2 diff

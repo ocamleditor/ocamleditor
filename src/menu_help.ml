@@ -32,7 +32,7 @@ let system_properties () =
   let vbox = GPack.vbox ~spacing:0 ~border_width:0 ~packing:window#add () in
   let sw = GBin.scrolled_window ~hpolicy:`AUTOMATIC ~vpolicy:`AUTOMATIC ~packing:vbox#add () in
   let view = GText.view ~buffer ~editable:false ~width:850 ~height:600 ~packing:sw#add () in
-  view#misc#modify_font_by_name (Preferences.preferences#get.Preferences.pref_base_font);
+  view#misc#modify_font_by_name (Preferences.preferences#get.editor_base_font);
   view#set_left_margin 8;
   view#set_right_margin 8;
   view#set_pixels_above_lines 2;
@@ -58,7 +58,7 @@ let about editor () =
       ~version:About.version
       ~copyright:About.copyright
       ~logo:Icons.logo
-      (*~comments:(sprintf "Build id: %s" About.build_id)*)
+      ~comments:(sprintf "Commit: %s" !About.git_hash)
       ~license:{|OCamlEditor is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
 the Free Software Foundation, either version 3 of the License, or
@@ -88,12 +88,14 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.|}
   ignore (link_button#connect#clicked ~callback:(fun () ->
       kprintf open_url "%s?%s-%s-%s"
         About.website Sys.os_type About.version !About.build_id));
+
   (* Report a bug *)
   let link_button = GButton.button ~relief:`NONE ~packing:hbox#add () in
   let label = GMisc.label ~text:"Report an issue" ~packing:link_button#add () in
   modify_label ~color:"#0000ff" label;
   link_button#set_focus_on_click false;
   ignore (link_button#connect#clicked ~callback:(fun () -> open_url About.issues));
+
   (* Check for updates *)
   dialog#set_skip_taskbar_hint true;
   dialog#set_skip_pager_hint true;
@@ -134,7 +136,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.|}
         icon#set_pixbuf Icons.warning_14;
       end
   in
-  ignore (dialog#misc#connect#show ~callback:begin fun () ->
+  (*ignore (dialog#misc#connect#show ~callback:begin fun () ->
       let count = ref 0 in
       ignore (GMain.Timeout.add ~ms:600 ~callback:begin fun () ->
           if !count = 1 then begin
@@ -144,7 +146,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.|}
           incr count;
           true
         end)
-    end);
+    end);*)
   match dialog#run() with _ -> dialog#destroy()
 
 

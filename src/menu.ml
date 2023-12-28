@@ -28,6 +28,7 @@ open Menu_types
 let image_menu_item ~label ?(pixbuf=Icons.empty_8) ?stock ?(icon_size=`MENU) ?(show=true) ?packing () =
   let menu_item = GMenu.menu_item ?packing ~show () in
   let hbox = GPack.hbox ~border_width: 6 ~packing: menu_item#add () in
+  hbox#set_halign `START;
   let _image =
     if Option.is_none stock then
       GMisc.image ~pixbuf ~icon_size ~packing: hbox#add ()
@@ -123,7 +124,7 @@ let edit ~browser ~group ~flags
   let indent_selection = ref None in
   let indent_all = ref None in
   let item = image_menu_item ~label:"Indent Line/Selection" ~packing:menu#add () in
-  let ocp_indent bounds page = ignore (Ocp_indent.indent ~view:page#view bounds) in
+  let ocp_indent bounds page = ignore (Ocp_indent.indent ~project: editor#project ~view:page#view bounds) in
   indent_selection := Some item;
   (*item#set_image (GMisc.image ~stock:`INDENT ~icon_size:`MENU ())#coerce;*)
   ignore (item#connect#activate ~callback:(fun () -> editor#with_current_page (ocp_indent `SELECTION)));
@@ -132,7 +133,8 @@ let edit ~browser ~group ~flags
   indent_all := Some item;
   (*item#set_image (GMisc.image ~stock:`INDENT ~icon_size:`MENU ())#coerce;*)
   ignore (item#connect#activate ~callback:(fun () -> editor#with_current_page (ocp_indent `ALL)));
-  (** Templates *)
+
+  (* Templates *)
   let templates = GMenu.menu_item ~label:"Templates..." ~packing:menu#add () in
   ignore (templates#connect#activate ~callback:(fun () ->
       browser#with_current_project (fun project ->
@@ -157,7 +159,7 @@ let edit ~browser ~group ~flags
   annot_type_copy#add_accelerator ~group ~modi:[`CONTROL] GdkKeysyms._F2 ~flags;
   let annot_type_tooltips = GMenu.check_menu_item
       ~label:"Enable On-Mouse-Hover"
-      ~active:Preferences.preferences#get.Preferences.pref_annot_type_tooltips_enabled
+      ~active:Preferences.preferences#get.editor_annot_type_tooltips_enabled
       ~packing:annot_type_menu#add ()
   in
   ignore (annot_type_tooltips#connect#toggled ~callback:(fun () ->

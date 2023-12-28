@@ -36,11 +36,11 @@ let set_find_text_output_font_condensed context =
     try Some (List.find (Gtk_util.try_font context) [(*"Arial Narrow"; *)"Arial"; "Helvetica"; "Sans"])
     with Not_found -> None
 
-let get_style_outline pref =
+let get_style_outline (pref : Settings_t.settings) =
   let style_outline, apply_outline =
-    let base_color = pref.Preferences.pref_outline_color_nor_bg in
+    let base_color = ?? (pref.outline_color_nor_bg) in
     let even, odd =
-      match pref.pref_outline_color_alt_rows with
+      match pref.outline_color_alt_rows with
       | None -> base_color, base_color
       | Some x -> base_color, (Color.name (Color.set_value x (`NAME base_color)))
     in
@@ -104,7 +104,7 @@ widget \"gtk-tooltip*\" style \"oe-tooltip\"
     match Oe_config.targetlist_alternating_row_colors with
     | None -> "", ""
     | Some x ->
-        let base_color = fst pref.Preferences.pref_bg_color in
+        let base_color = (Preferences.get_themed_color pref.editor_bg_color_user) in
         sprintf "
           style \"targetlist-treestyle\" {
             GtkTreeView::even-row-color = \"%s\"
@@ -116,20 +116,20 @@ widget \"gtk-tooltip*\" style \"oe-tooltip\"
     Option.fold Oe_config.themes_dir
       ~none:""
       ~some:(fun _ ->
-          let theme = match theme with Some _ as x -> x | _ -> preferences#get.pref_general_theme in
+          let theme = match theme with Some _ as x -> x | _ -> preferences#get.theme in
           Option.fold theme
             ~none:""
             ~some:(fun theme -> sprintf "gtk-theme-name = \"%s\"" theme)
         )
   in
   let gtk_font_name =
-    match String.trim pref.pref_general_font with
+    match String.trim pref.font with
     | "" ->
         begin
           try
             let family, size = List.find (fun (n, _) -> Gtk_util.try_font context n) ["Sans", 9] in
             let font_name = sprintf "%s %d" family size in
-            pref.Preferences.pref_general_font <- font_name;
+            pref.font <- font_name;
             Preferences.save();
             sprintf "gtk-font-name = \"%s\"" font_name;
           with Not_found -> ""

@@ -272,10 +272,10 @@ class widget ~editor ?(callback=ignore) ~project ?page_num ?packing ?show () =
             page#error_indication#remove_tag();
             (* TODO global gutter *)
             (*page#global_gutter#misc#draw (Some (Gdk.Rectangle.create
-              ~x:page#global_gutter#misc#allocation.Gtk.x
-              ~y:page#global_gutter#misc#allocation.Gtk.y
-              ~width:page#global_gutter#misc#allocation.Gtk.width
-              ~height:page#global_gutter#misc#allocation.Gtk.height
+                                                  ~x:page#global_gutter#misc#allocation.Gtk.x
+                                                  ~y:page#global_gutter#misc#allocation.Gtk.y
+                                                  ~width:page#global_gutter#misc#allocation.Gtk.width
+                                                  ~height:page#global_gutter#misc#allocation.Gtk.height
               ))*) end editor#pages;
         end
       with

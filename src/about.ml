@@ -23,10 +23,12 @@
 
 let program_name = "OCamlEditor"
 let version = "1.14.1"
-let copyright = "Copyright © 2010 - 2016 Francesco Tovagliari"
-let website_address = "ocamleditor.forge.ocamlcore.org"
-let website = "http://" ^ website_address ^ "/"
-let project_page = "https://github.com/ftovagliari/ocamleditor"
-let issues = "https://github.com/ftovagliari/ocamleditor/issues"
-let releases = "https://github.com/ftovagliari/ocamleditor/releases"
+let copyright = "Copyright © 2010 - 2023 OCamlEditor Team"
+let website_address = "github.com/ocamleditor/ocamleditor"
+let website = "https://" ^ website_address ^ "/"
+let project_page = "https://github.com/ocamleditor/ocamleditor"
+let issues = "https://github.com/ocamleditor/ocamleditor/issues"
+let releases = "https://github.com/ocamleditor/ocamleditor/releases"
 let build_id = ref ""
+let git_hash = ref ""
+

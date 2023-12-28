@@ -27,24 +27,24 @@ open Miscellanea
 (** key_press *)
 let key_press ?project view =
   view#event#connect#key_press ~callback:begin fun ev ->
-      let state = GdkEvent.Key.state ev in
-      let key = GdkEvent.Key.keyval ev in
-      match state with
-      | [] ->
-          if key = _Tab then begin
-            let ocp_indent_applied =
-              (match view#tbuffer#file with Some file when not (file#filename ^^^ ".ml") && not (file#filename ^^^ ".ml") -> false | _ -> true) &&
-              if Oe_config.ocp_indent_tab_key_enabled then
-                match project with
-                | Some project ->
-                    (Ocp_indent.indent ~project ~view `SELECTION) 
-                | _ -> false
-              else false
-            in
-            if not ocp_indent_applied then begin
-              view#tbuffer#indent ?decrease:None ();
-              view#draw_current_line_background ?force:(Some true) (view#buffer#get_iter `INSERT);
-            end;
+    let state = GdkEvent.Key.state ev in
+    let key = GdkEvent.Key.keyval ev in
+    match state with
+    | [] ->
+        if key = _Tab then begin
+          let ocp_indent_applied =
+            (match view#tbuffer#file with Some file when not (file#filename ^^^ ".ml") && not (file#filename ^^^ ".ml") -> false | _ -> true) &&
+            if Oe_config.ocp_indent_tab_key_enabled then
+              match project with
+              | Some project ->
+                  (Ocp_indent.indent ~project ~view `SELECTION) 
+              | _ -> false
+            else false
+          in
+          if not ocp_indent_applied then begin
+            view#tbuffer#indent ?decrease:None ();
+            view#draw_current_line_background ?force:(Some true) (view#buffer#get_iter `INSERT);
+          end;
           true
         end else if key = _Return || key = _BackSpace then begin
           Gmisclib.Idle.add ~prio:100 begin fun () ->

@@ -28,6 +28,7 @@ open GUtil
 let image_menu_item ~label ?(pixbuf=Icons.empty_8) ?stock ?(icon_size=`MENU) ?(show=true) ~packing () =
   let menu_item = GMenu.menu_item ~packing ~show () in
   let hbox = GPack.hbox ~border_width: 6 ~packing: menu_item#add () in
+  hbox#set_halign `START;
   let _image = 
     if Option.is_none stock then
       GMisc.image ~pixbuf ~icon_size ~packing: hbox#add () 

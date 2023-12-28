@@ -89,7 +89,7 @@ class browser () =
   (*  *)
   let ebox_project_name = GBin.event_box ~packing:(menubarbox#pack ~expand:false) () in
   let label_project_name = GMisc.label ~markup:"" ~xpad:5 ~packing:ebox_project_name#add () in
-  let _ = 
+  let _ =
     ebox_project_name#misc#modify_bg [`NORMAL, `COLOR (ebox_project_name#misc#style#base `PRELIGHT)];
   in
   (* Git bar *)
@@ -97,17 +97,17 @@ class browser () =
   let button_gitunpushed = GButton.button ~relief:`NONE ~packing:gitbox#add () in
   let _ = button_gitunpushed#set_image (GMisc.image ~pixbuf:Icons.arrow_up ())#coerce in
   let button_gitpending = GButton.button ~relief:`NONE ~packing:gitbox#add () in
-  let _ = 
+  let _ =
     button_gitpending#set_image (GMisc.image ~pixbuf:Icons.edit ())#coerce;
     button_gitpending#connect#clicked ~callback:begin fun () ->
       Git.diff_stat (Git.show_diff_stat None);
-    end 
+    end
   in
   let button_gitpath = GButton.button ~relief:`NONE ~packing:gitbox#add () in
   let _ = button_gitpath#set_image (GMisc.image ~pixbuf:Icons.git ())#coerce in
   let button_gitbranch = GButton.button ~label:"" ~relief:`NONE ~packing:gitbox#add () in
   (*let button_gitbranch = Gmisclib.Button.button_menu ~label:"" ~relief:`NONE ~packing:gitbox#add () in*)
-  let _ = 
+  let _ =
     button_gitbranch#set_image (GMisc.image ~pixbuf:Icons.branch ())#coerce;
     (*    button_gitbranch#set_menu_only();*)
   in
@@ -162,17 +162,17 @@ class browser () =
           });
       `FIRST, (fun () -> {
             mva_menubar    = true(*Preferences.preferences#get.Preferences.pref_max_view_1_menubar*);
-            mva_toolbar    = Preferences.preferences#get.Preferences.pref_max_view_1_toolbar;
-            mva_tabbar     = Preferences.preferences#get.Preferences.pref_max_view_1_tabbar;
-            mva_messages   = Preferences.preferences#get.Preferences.pref_max_view_1_messages;
-            mva_fullscreen = Preferences.preferences#get.Preferences.pref_max_view_1_fullscreen;
+            mva_toolbar    = Preferences.preferences#get.max_view_1_toolbar;
+            mva_tabbar     = Preferences.preferences#get.max_view_1_tabbar;
+            mva_messages   = Preferences.preferences#get.max_view_1_messages;
+            mva_fullscreen = Preferences.preferences#get.max_view_1_fullscreen;
           });
       `SECOND, (fun () -> {
             mva_menubar    = true(*Preferences.preferences#get.Preferences.pref_max_view_2_menubar*);
-            mva_toolbar    = Preferences.preferences#get.Preferences.pref_max_view_2_toolbar;
-            mva_tabbar     = Preferences.preferences#get.Preferences.pref_max_view_2_tabbar;
-            mva_messages   = Preferences.preferences#get.Preferences.pref_max_view_2_messages;
-            mva_fullscreen = Preferences.preferences#get.Preferences.pref_max_view_2_fullscreen;
+            mva_toolbar    = Preferences.preferences#get.max_view_2_toolbar;
+            mva_tabbar     = Preferences.preferences#get.max_view_2_tabbar;
+            mva_messages   = Preferences.preferences#get.max_view_2_messages;
+            mva_fullscreen = Preferences.preferences#get.max_view_2_fullscreen;
           })
     ];
 
@@ -430,15 +430,15 @@ class browser () =
           | Some proj -> f proj
           | _ -> ()
         in
-        with_project begin fun proj -> 
+        with_project begin fun proj ->
           kprintf label_project_name#set_label "<b>%s</b>" proj.Prj.name;
           label_project_name#misc#set_tooltip_text (Project.filename proj);
         end;
-        Git.toplevel begin function 
+        Git.toplevel begin function
         | Some toplevel ->
             toplevel |> Filename.basename |> button_gitpath#set_label;
             toplevel |> Filename.dirname |> button_gitpath#misc#set_tooltip_text;
-        | _ -> 
+        | _ ->
             button_gitpath#set_label "";
             button_gitpath#misc#set_tooltip_text "";
         end;
@@ -446,14 +446,14 @@ class browser () =
         | Some s ->
             gitbox#misc#show();
             button_gitbranch#set_label s.Git.branch;
-            let changes = 
+            let changes =
               s.Git.added + s.Git.modified + s.Git.deleted + s.Git.renamed + s.Git.copied + s.Git.untracked + s.Git.ignored
             in
             changes |> sprintf "%3d" |> button_gitpending#set_label;
             Git.markup_of_status s |> button_gitpending#misc#set_tooltip_markup;
             s.Git.ahead |> sprintf "%3d" |> button_gitunpushed#set_label;
             s.Git.ahead |> sprintf "%d unpushed commits" |> button_gitunpushed#misc#set_tooltip_markup;
-        | _ -> 
+        | _ ->
             gitbox#misc#hide();
         end;
       end
@@ -538,7 +538,7 @@ class browser () =
     method set_fullscreen x =
       if x && (not is_fullscreen) then begin
         (* pref_max_view_fullscreen = "Prefer fullscreen over maximize window" *)
-        let prefer_maximized_window = not Preferences.preferences#get.Preferences.pref_max_view_fullscreen in
+        let prefer_maximized_window = not Preferences.preferences#get.max_view_prefer_fullscreen in
         if prefer_maximized_window then window#maximize() else window#fullscreen();
         window#set_decorated (not prefer_maximized_window);
         window_title_menu_icon#misc#show();
@@ -646,7 +646,7 @@ class browser () =
           let iter = `ITER (page#buffer#get_iter `INSERT) in
           (*Opt.may page#annot_type (fun (at : Annot_type.annot_type) -> at#popup (*~position:`TOP_RIGHT*) iter ());*)
           Option.iter (fun at ->  at#popup iter () : Annot_type.annot_type -> unit) page#annot_type;
-          if Preferences.preferences#get.Preferences.pref_err_tooltip then (page#error_indication#tooltip ~sticky:true iter);
+          if Preferences.preferences#get.editor_err_tooltip then (page#error_indication#tooltip ~sticky:true iter);
         with ex -> Printf.eprintf "File \"browser.ml\": %s\n%s\n%!" (Printexc.to_string ex) (Printexc.get_backtrace());
       end
 
@@ -663,7 +663,7 @@ class browser () =
       end
 
     method annot_type_set_tooltips x =
-      Preferences.preferences#get.Preferences.pref_annot_type_tooltips_enabled <- x;
+      Preferences.preferences#get.editor_annot_type_tooltips_enabled <- x;
       Preferences.save();
       editor#with_current_page
         (fun page -> Option.iter (fun obj -> obj#remove_tag ()) page#annot_type)
@@ -710,9 +710,9 @@ class browser () =
 
     method exit (editor : Editor.editor) () =
       try
-        Preferences.preferences#get.Preferences.pref_hmessages_width <- Messages.hmessages#position;
-        Preferences.preferences#get.Preferences.pref_vmessages_height <- Messages.vmessages#position;
-        Preferences.preferences#get.Preferences.pref_outline_width <- editor#paned#position;
+        Preferences.preferences#get.hmessages_width <- Messages.hmessages#position;
+        Preferences.preferences#get.vmessages_height <- Messages.vmessages#position;
+        Preferences.preferences#get.outline_width <- editor#paned#position;
         ignore(Messages.vmessages#remove_all_tabs());
         if maximized_view_action = `NONE then (self#set_geometry());
         (* Save geometry *)
@@ -1041,9 +1041,9 @@ class browser () =
       self#set_outline_visible !is_outline_visible;
       window#resize ~width:!width ~height:!height;
       Gmisclib.Idle.add ~prio:300 begin fun () ->
-        Messages.vmessages#set_position (Preferences.preferences#get.Preferences.pref_vmessages_height);
+        Messages.vmessages#set_position (Preferences.preferences#get.vmessages_height);
       end;
-      Gmisclib.Idle.add ~prio:300 (fun () -> Messages.hmessages#set_position (Preferences.preferences#get.Preferences.pref_hmessages_width));
+      Gmisclib.Idle.add ~prio:300 (fun () -> Messages.hmessages#set_position (Preferences.preferences#get.hmessages_width));
       ignore (window#event#connect#after#delete ~callback:(fun _ -> self#exit editor (); true));
       button_menu_exit#connect#clicked ~callback:(fun () -> self#exit editor ()) |> ignore;
       button_menu_reset#connect#clicked ~callback:(fun () -> self#set_maximized_view `NONE) |> ignore;
@@ -1146,7 +1146,7 @@ let create () =
 (** splashscreen *)
 let splashscreen () =
   let pref = Preferences.preferences#get in
-  if pref.Preferences.pref_general_splashscreen_enabled then begin
+  if pref.splashscreen_enabled then begin
     let decorated = (*false && *)Sys.win32 in
     let pixbuf = GdkPixbuf.from_file (App_config.application_icons // "logo.png") in
     let image = GMisc.image ~pixbuf () in

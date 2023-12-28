@@ -145,9 +145,9 @@ module Signature = struct
     in
     begin
       match Printtyp.tree_of_class_declaration id cd Types.Trec_first with
-      | Osig_class (_(*vir_flag*), _(*name*), _(*params*), clt, _(*rs*)) ->
+      | Osig_class (_, _, _, clt, _) ->
           let rec parse_class_type = function
-            | Octy_signature (_(*self_ty*), csil) ->
+            | Octy_signature (_, csil) ->
                 List.filter_map begin function
                 | Ocsg_method (name, priv, virt, ty) ->
                     Some {
@@ -167,11 +167,11 @@ module Signature = struct
             | _ -> []
           in parse_class_type clt
       | _ -> []
-    end
+    end [@warning "-fragile-match"]
   ;;
 
   let rec read_module_type ~filename ~parent_longid = function
-    | Mty_ident _(*path*) -> (* TODO: parse_module_type, Tmty_ident *)
+    | Mty_ident _-> (* TODO: parse_module_type, Tmty_ident *)
         []
     | Mty_signature signature ->
         let modlid = match parent_longid with x :: _ -> x | _ -> "" in
@@ -216,7 +216,7 @@ module Signature = struct
                 | _ ->
                     let kind = kind_of_typekind type_declaration.type_kind in
                     (print kind id (Printtyp.type_declaration id formatter) type_declaration) :: acc
-                end
+                end [@warning "-fragile-match"]
             end
           in
           (* Costruttori di tipi varianti *)
@@ -257,7 +257,8 @@ module Signature = struct
                 {symbol with sy_type=d} :: acc
               end acc cc
           | _ -> acc
-          end
+          end [@warning "-fragile-match"]
+
       | Sig_typext (id, extension_constructor, _status, _visibility) ->
           (print Pexception id (Printtyp.extension_constructor id formatter)
              extension_constructor) :: acc;
@@ -276,7 +277,7 @@ module Signature = struct
                 ~filename ~parent_id:class_item.sy_id ~id class_declaration in
             class_item :: class_items @ acc;
           end
-      | Sig_class_type _(*(id, cltype_declaration, _, _visibility)*) -> acc
+      | Sig_class_type _ -> acc
     end [] sign
   ;;
 
@@ -300,7 +301,7 @@ module Signature = struct
               Persistent_env.report_error Format.err_formatter e;
               flush stderr;
               []
-        end
+        end [@warning "-fragile-match"]
     | Not_found | Sys_error _ -> []
     | Cmi_format.Error (Cmi_format.Not_an_interface msg) ->
         eprintf "Not_an_interface: %s\n" msg; []

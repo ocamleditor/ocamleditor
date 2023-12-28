@@ -74,18 +74,18 @@ module Diff = struct
   let create_label_tooltip elements =
     let ebox = GBin.event_box () in
     let vbox = GPack.vbox ~spacing:0 ~packing:ebox#add () in
-    let color = fst Preferences.preferences#get.Preferences.pref_bg_color in
-    ebox#misc#modify_bg [`NORMAL, `NAME color];
-    let font_description = GPango.font_description_from_string Preferences.preferences#get.Preferences.pref_base_font in
-    let size = font_description#size - 1 * Pango.scale in
-    font_description#modify ~size ();
+    let color = Preferences.preferences#get.editor_bg_color_user in
+    ebox#misc#modify_bg [`NORMAL, `NAME (Preferences.get_themed_color color)];
+    let fd = GPango.font_description_from_string Preferences.preferences#get.editor_base_font in
+    let size = fd#size - 1 * Pango.scale in
+    fd#modify ~size ();
     let last = List.length elements - 1 in
     List.iteri begin fun i (color, markup) ->
       let hbox = GPack.hbox ~spacing:2 ~packing:vbox#pack () in
       let ebox = GBin.event_box ~width:13 ~packing:hbox#pack () in
       ebox#misc#modify_bg [`NORMAL, color];
       let label = GMisc.label ~xalign:0.0 ~yalign:0.5 ~markup ~packing:hbox#add () in
-      label#misc#modify_font font_description;
+      label#misc#modify_font fd;
       if i < last then GMisc.separator `HORIZONTAL ~packing:vbox#add () |> ignore
     end elements;
     ebox#coerce
@@ -239,7 +239,7 @@ module Diff = struct
       let buffer = page#buffer in
       let filename2 = buffer#tmp_filename in
       buffer#save_buffer ?filename:None () |> ignore;
-      let diff = Preferences.preferences#get.Preferences.pref_program_diff in
+      let diff = Preferences.preferences#get.program_diff in
       let args = [|
         "--binary";
         buffer#orig_filename;

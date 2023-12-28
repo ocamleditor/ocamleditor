@@ -33,16 +33,16 @@ module GeometryMemo = struct
   let create ?(enabled=true) ?(delayed=false) ~filename () =
     let ichan = open_in_gen [Open_binary; Open_creat] 0o777 filename in
     let table =
-    try
-      begin
-        try
-          let (table : ((string, (int * int * int * int)) Hashtbl.t)) = input_value ichan in
-          table
-        with End_of_file -> Hashtbl.create 7
-      end;
-    with ex ->
-      close_in ichan;
-      raise ex
+      try
+        begin
+          try
+            let (table : ((string, (int * int * int * int)) Hashtbl.t)) = input_value ichan in
+            table
+          with End_of_file -> Hashtbl.create 7
+        end;
+      with ex ->
+        close_in ichan;
+        raise ex
     in
     { enabled; delayed; filename; table; }
 
@@ -104,55 +104,55 @@ class popup ?(position=(`SOUTH:[`NORTH | `SOUTH | `POINTER])) ?border_width ?(de
       | Some p  ->
         (match dir with `X -> widget#misc#allocation.Gtk.x | `Y ->  widget#misc#allocation.Gtk.y) + find_pos dir p
       | _ -> 0
-  in*)
-object (self)
-  val mutable on_popdown = fun () -> ()
-  initializer
-    popup#set_destroy_with_parent true;
-    ignore (popup#event#connect#after#focus_out ~callback:begin fun _ ->
-      self#popdown();
-      false
-    end);
+    in*)
+  object (self)
+    val mutable on_popdown = fun () -> ()
+    initializer
+      popup#set_destroy_with_parent true;
+      ignore (popup#event#connect#after#focus_out ~callback:begin fun _ ->
+          self#popdown();
+          false
+        end);
 
-  method set_on_popdown f = on_popdown <- f
+    method set_on_popdown f = on_popdown <- f
 
-  method popdown () =
+    method popdown () =
     if popup#misc#visible then begin
-      on_popdown();
-      popup#misc#hide();
-    end;
+        on_popdown();
+        popup#misc#hide();
+      end;
 
-  method present () =
-    popup#present();
+    method present () =
+      popup#present();
     let xP0, yP0 = Gdk.Window.get_pointer_location popup#misc#window in
-    let x, y = match position with
-      | `POINTER -> xP0, yP0
-      | _ ->
-        let xP, yP = Gdk.Window.get_pointer_location widget#misc#window in
-        let xW = xP0 - xP in
-        let yW = yP0 - yP in
-        let alloc = widget#misc#allocation in
-        let alloc_popup = popup#misc#allocation in
-        let x = xW + alloc.Gtk.x in
-        let y = yW + alloc.Gtk.y in
-        let y =
-          if position = `SOUTH
-          then y + alloc.Gtk.height
-          else y - alloc_popup.Gtk.height
-        in
-        let x, y =
-          (if x + alloc_popup.Gtk.width > (Gdk.Screen.width()) then (Gdk.Screen.width() - alloc_popup.Gtk.width - 3) else x),
-          (if y + alloc_popup.Gtk.height > (Gdk.Screen.height()) then (Gdk.Screen.height() - alloc_popup.Gtk.height - 3) else y);
-        in x, y
-    in
-    popup#move ~x ~y;
+      let x, y = match position with
+        | `POINTER -> xP0, yP0
+        | _ ->
+            let xP, yP = Gdk.Window.get_pointer_location widget#misc#window in
+            let xW = xP0 - xP in
+            let yW = yP0 - yP in
+            let alloc = widget#misc#allocation in
+            let alloc_popup = popup#misc#allocation in
+            let x = xW + alloc.Gtk.x in
+            let y = yW + alloc.Gtk.y in
+            let y =
+              if position = `SOUTH
+              then y + alloc.Gtk.height
+              else y - alloc_popup.Gtk.height
+            in
+            let x, y =
+              (if x + alloc_popup.Gtk.width > (Gdk.Screen.width()) then (Gdk.Screen.width() - alloc_popup.Gtk.width - 3) else x),
+              (if y + alloc_popup.Gtk.height > (Gdk.Screen.height()) then (Gdk.Screen.height() - alloc_popup.Gtk.height - 3) else y);
+            in x, y
+      in
+      popup#move ~x ~y;
 
 
-  method add = vbox#add
-  method set_transient_for = popup#set_transient_for
-  method set_modal = popup#set_modal
-  method event = popup#event
-  method misc = popup#misc
-  method move = popup#move
-  method resize = popup#resize
-end
+    method add = vbox#add
+    method set_transient_for = popup#set_transient_for
+    method set_modal = popup#set_modal
+    method event = popup#event
+    method misc = popup#misc
+    method move = popup#move
+    method resize = popup#resize
+  end

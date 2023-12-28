@@ -88,21 +88,21 @@ class widget ~project ?(is_completion=false) ?(enable_history=true) ?width ?heig
   let odoc_buffer         = new Ocaml_text.buffer ~lexical_enabled:true () in
   let odoc_view           = new Ocaml_text.view ~buffer:odoc_buffer () in
   let odoc_tag            = odoc_buffer#create_tag
-      ((`FONT Preferences.preferences#get.Preferences.pref_odoc_font) :: Oe_config.odoc_tag_properties) in
+      ((`FONT Preferences.preferences#get.odoc_font) :: Oe_config.odoc_tag_properties) in
   let _                   = odoc_buffer#create_tag ~name:"large" [`SCALE `X_LARGE] in
   let tag_type2           = odoc_buffer#create_tag ~name:"type2" Oe_doc.Printer.Properties.type2 in
   let _                   = odoc_buffer#create_tag ~name:"line_spacing_small" [`SIZE_POINTS 4.] in
   let incremental_search  = new Incremental_search.incremental () in
-  let pref                = {Preferences.preferences#get with Preferences.pref_code_folding_enabled=false} in
+  let pref                = { Preferences.preferences#get with editor_code_folding_enabled=false } in
   let _ =
     odoc_buffer#undo#disable();
     odoc_sw#add odoc_view#coerce;
-    pref.Preferences.pref_editor_indent_lines <- false;
-    pref.Preferences.pref_highlight_current_line <- false;
-    pref.Preferences.pref_show_line_numbers <- false;
-    pref.Preferences.pref_right_margin_visible <- false;
-    let tags = pref.Preferences.pref_tags in
-    let tag_names, colors = List.split tags in
+    pref.editor_indent_lines <- (false, "", "");
+    pref.editor_highlight_current_line <- false;
+    pref.editor_show_line_numbers <- false;
+    pref.editor_right_margin_visible <- false;
+    let tags = pref.editor_tags in
+    let tag_names, colors = tags |> List.map (fun t -> t.Settings_t.name, t) |> List.split in
     odoc_buffer#init_tags ~tags:tag_names ~colors ();
     Preferences_apply.apply (odoc_view :> Text.view) pref;
     odoc_view#code_folding#set_enabled false;
@@ -155,8 +155,8 @@ class widget ~project ?(is_completion=false) ?(enable_history=true) ?width ?heig
       self#set_is_completion is_completion;
       (*  *)
       ignore (Preferences.preferences#connect#changed ~callback:begin fun _ ->
-          odoc_view#misc#modify_font_by_name Preferences.preferences#get.Preferences.pref_base_font;
-          odoc_tag#set_property (`FONT Preferences.preferences#get.Preferences.pref_odoc_font);
+          odoc_view#misc#modify_font_by_name Preferences.preferences#get.editor_base_font;
+          odoc_tag#set_property (`FONT Preferences.preferences#get.odoc_font);
         end);
       tag_table#connect#tag_added ~callback:(fun tag -> tags <- new GText.tag tag :: tags) |> ignore;
       tag_table#connect#tag_removed ~callback:begin fun tag ->
@@ -346,7 +346,7 @@ class widget ~project ?(is_completion=false) ?(enable_history=true) ?width ?heig
       let create_timeout _ =
         id := Some (GMain.Timeout.add ~ms:100 ~callback:begin fun () ->
             let has_toplevel_focus = match GWindow.toplevel self#coerce with | Some w -> w#has_toplevel_focus | _ -> false in
-            if has_toplevel_focus && (need_timeout()) then begin
+            if has_toplevel_focus && vbox#visible && (need_timeout()) then begin
               try self#update_module_details ()
               with ex -> Printf.eprintf "File \"module_browser_tool.ml\": %s\n%s\n%!" (Printexc.to_string ex) (Printexc.get_backtrace());
             end;
@@ -604,11 +604,11 @@ class widget ~project ?(is_completion=false) ?(enable_history=true) ?width ?heig
 
       (** find_symbol *)
     method private find_symbol ?(root=[]) text =
-      let ident = Longident.flatten (Longident.parse text) in
+      let ident = Longident.flatten (Parse.longident @@ Lexing.from_string text) in
       match Symbols.find_by_modulepath ~kind:type_kinds project.Prj.symbols ident with
       | None ->
           (* If the symbol is relative, search recursively in the parent module *)
-          let rec find ?(root=[]) text =
+          let find ?(root=[]) text =
             let absolute_ident = root @ ident in
             match Symbols.find_by_modulepath ~kind:type_kinds project.Prj.symbols absolute_ident with
             | None ->

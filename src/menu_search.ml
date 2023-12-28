@@ -28,7 +28,7 @@ open Miscellanea
 let find_replace
     ?(find_all=false)
     ?(find_in_buffer=true)
-    ?(search_word_at_cursor=(Preferences.preferences#get.Preferences.pref_search_word_at_cursor))
+    ?(search_word_at_cursor=(Preferences.preferences#get.editor_search_word_at_cursor))
     editor =
   editor#with_current_page begin fun page ->
     let buffer = if find_in_buffer then Some page#view#buffer else None in

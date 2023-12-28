@@ -95,24 +95,23 @@ and annotation =
 
 
 (** Errors *)
-type error = {
-  er_warnings                 : error_message list;
-  er_errors                   : error_message list;
-}
-
-and error_level =
-  | Warning of int
+type error_level =
+  | Warning of int * string option
   | Alert of string
   | Error
 
-and error_message = {
+type error_message = {
   er_filename                 : string;
   er_level                    : error_level;
   er_lines                     : int * int;
   er_characters               : int * int;
   er_location                 : string;
   er_message                  : string;
-  er_inconsistent_assumptions : string option;
+}
+
+type error = {
+  er_warnings                 : error_message list;
+  er_errors                   : error_message list;
 }
 
 

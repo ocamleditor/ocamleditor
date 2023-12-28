@@ -114,8 +114,9 @@ class widget ~editor(* : Editor.editor)*) ?packing () =
   let _                 = vc_hits#set_sort_column_id 1 in
   let _                 = vc_path#set_sort_column_id 2 in
   (* Model and view for lines *)
+  let open Preferences in
   let pref              = Preferences.preferences#get in
-  let gutter_bg_color   = Color.name (Color.set_value 0.93 (`NAME (fst pref.Preferences.pref_bg_color))) in
+  let gutter_bg_color   = Color.name (Color.set_value 0.93 (`NAME (Preferences.get_themed_color pref.editor_bg_color_user))) in
   let cols              = new GTree.column_list in
   let col_pixbuf        = cols#add ((Gobject.Data.gobject_option : (GdkPixbuf.pixbuf option) Gobject.data_conv)) in
   let col_markup        = cols#add Gobject.Data.string in
@@ -141,16 +142,16 @@ class widget ~editor(* : Editor.editor)*) ?packing () =
   let _                 = view_lines#append_column vc_markup in
   (*  *)
   let _                 = view_lines#misc#modify_base [
-      `SELECTED, `COLOR (Preferences.tag_color "highlight_current_line");
-      `NORMAL,   `NAME (fst pref.Preferences.pref_bg_color);
+      `SELECTED, `COLOR (Preferences.editor_tag_color "highlight_current_line");
+      `NORMAL,   `NAME (Preferences.get_themed_color pref.editor_bg_color_user);
       `ACTIVE,   `NAME gutter_bg_color
     ] in
   let _                 = view_lines#misc#modify_text [
-      `SELECTED, `COLOR (Preferences.tag_color "lident");
-      `NORMAL,   `COLOR (Preferences.tag_color "lident");
-      `ACTIVE,   `COLOR (Preferences.tag_color "lident");
+      `SELECTED, `COLOR (Preferences.editor_tag_color "lident");
+      `NORMAL,   `COLOR (Preferences.editor_tag_color "lident");
+      `ACTIVE,   `COLOR (Preferences.editor_tag_color "lident");
     ] in
-  let _                 = view_lines#misc#modify_font_by_name pref.Preferences.pref_base_font in
+  let _                 = view_lines#misc#modify_font_by_name pref.editor_base_font in
   object (self)
     inherit GObj.widget vbox#as_widget
     inherit Messages.page ~role:"search-results"

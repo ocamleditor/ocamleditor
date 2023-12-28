@@ -27,7 +27,8 @@ open Menu_types
 
 let image_menu_item ~label ?(pixbuf=Icons.empty_8) ?stock ?(icon_size=`MENU) ?(show=true) ~packing () =
   let menu_item = GMenu.menu_item ~packing ~show () in
-  let hbox = GPack.hbox ~border_width: 6 ~packing: menu_item#add () in
+  let hbox = GPack.hbox ~border_width:2 ~spacing:6 ~packing: menu_item#add () in
+  hbox#set_halign `START;
   let _image =
     if Option.is_none stock then
       GMisc.image ~pixbuf ~icon_size ~packing: hbox#add ()
@@ -161,7 +162,7 @@ let project ~browser ~group ~flags items =
   let project = GMenu.menu_item ~label:"Project" () in
   let menu = items.project in
   let cursor = Gdk.Cursor.create `ARROW in
-  ignore (menu#misc#connect#draw ~callback:begin fun _ ->
+  ignore (menu#event#connect#expose ~callback:begin fun _ ->
       Gdk.Window.set_cursor menu#misc#window cursor;
       false
     end);
@@ -229,7 +230,7 @@ let project ~browser ~group ~flags items =
   let project_comp_file = image_menu_item ~label:"Compile file" ~pixbuf:Icons.compile_file_16 ~packing:menu#add () in
   ignore (project_comp_file#connect#activate ~callback:begin fun () ->
       browser#editor#with_current_page begin fun p ->
-        if Preferences.preferences#get.Preferences.pref_editor_save_all_bef_comp then (editor#save_all());
+        if Preferences.preferences#get.editor_save_all_bef_comp then (editor#save_all());
         p#compile_buffer ?join:None ()
       end
     end);

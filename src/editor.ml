@@ -45,7 +45,7 @@ class editor () =
   let hpaned = GPack.paned `HORIZONTAL () in
   let notebook = GPack.notebook ~show_border:true
       ~packing:(hpaned#pack2 ~resize:true ~shrink:true) ~scrollable:true () in
-  let _ = hpaned#set_position Preferences.preferences#get.Preferences.pref_outline_width in
+  let _ = hpaned#set_position Preferences.preferences#get.outline_width in
   let incremental_search = new Incremental_search.incremental () in
   let switch_page = new switch_page () in
   let remove_page = new remove_page () in
@@ -73,8 +73,8 @@ class editor () =
     val mutable history_switch_page = [];
     val code_folding_enabled = new GUtil.variable false
     val show_global_gutter = new GUtil.variable false
-    val mutable show_whitespace_chars = Preferences.preferences#get.Preferences.pref_show_whitespace_chars
-    val mutable word_wrap = Preferences.preferences#get.Preferences.pref_editor_wrap
+    val mutable show_whitespace_chars = Preferences.preferences#get.editor_show_whitespace_chars
+    val mutable word_wrap = Preferences.preferences#get.editor_wrap
     val mutable show_outline = true
 
     method tout_delim = tout_delim
@@ -359,8 +359,8 @@ class editor () =
     method set_tab_pos ?(page:Editor_page.page option) pos =
       notebook#set_tab_pos pos;
       let angle = match pos with
-        | `RIGHT when preferences#get.pref_tab_vertical_text -> 270.
-        | `LEFT when preferences#get.pref_tab_vertical_text -> 90.
+        | `RIGHT when preferences#get.tab_vertical_text -> 270.
+        | `LEFT when preferences#get.tab_vertical_text -> 90.
         | _ -> 0.
       in
       let pgs = match page with None -> pages | Some p -> [p] in
@@ -370,7 +370,7 @@ class editor () =
         label#set_label (Editor_page.markup_label filename);
         label#set_angle angle;
         let tbox = match pos with
-          | `RIGHT when preferences#get.pref_tab_vertical_text ->
+          | `RIGHT when preferences#get.tab_vertical_text ->
               let tbox = GPack.vbox () in
               if button#misc#parent <> None then (button#misc#reparent tbox#coerce) else (tbox#pack button#coerce);
               if label#misc#parent <> None then (label#misc#reparent tbox#coerce) else (tbox#pack label#coerce);
@@ -379,7 +379,7 @@ class editor () =
               label#set_xalign 0.5;
               label#set_yalign 0.0;
               tbox
-          | `LEFT when preferences#get.pref_tab_vertical_text ->
+          | `LEFT when preferences#get.tab_vertical_text ->
               let tbox = GPack.vbox () in
               if button#misc#parent <> None then (button#misc#reparent tbox#coerce) else (tbox#pack button#coerce);
               if label#misc#parent <> None then (label#misc#reparent tbox#coerce) else (tbox#pack label#coerce);
@@ -473,7 +473,7 @@ class editor () =
               if is_insert && mark_occurrences && not under_cursor then
                 Timeout.set tout_fast 1 page#view#mark_occurrences_manager#mark
             end else begin
-              if mark_occurrences && not under_cursor then 
+              if mark_occurrences && not under_cursor then
                 page#view#mark_occurrences_manager#clear();
               page#status_pos_sel#set_text "0";
             end;
@@ -548,9 +548,9 @@ class editor () =
       if x > page#view#gutter.Gutter.size && y > 10 && y < (Gdk.Rectangle.height page#view#visible_rect) - 10 then begin
         let f () =
           let location = page#view#window_to_buffer_coords ~tag:`WIDGET ~x ~y in
-          page#tooltip ~typ:preferences#get.Preferences.pref_annot_type_tooltips_enabled location;
+          page#tooltip ~typ:preferences#get.editor_annot_type_tooltips_enabled location;
         in
-        if (*true ||*) preferences#get.Preferences.pref_annot_type_tooltips_delay = 1 then begin
+        if (*true ||*) preferences#get.editor_annot_type_tooltips_delay = 1 then begin
           Timeout.set tout_delim 0 (GtkThread2.async f);
         end else (f());
       end else (page#error_indication#hide_tooltip ~force:false ());
@@ -633,7 +633,7 @@ class editor () =
                     (* Append tab *)
                     let _ = notebook#append_page ~tab_label:ebox#coerce page#coerce in
                     notebook#set_tab_reorderable page#coerce true;
-                    self#set_tab_pos ~page Preferences.preferences#get.Preferences.pref_tab_pos;
+                    self#set_tab_pos ~page Preferences.preferences#get.tab_pos;
                     if active then begin
                       self#load_page page;
                       notebook#goto_page (notebook#page_num page#coerce);
@@ -690,9 +690,9 @@ class editor () =
       let filename = page#get_filename in
       let extension = Filename.extension filename in
       let pref = Preferences.preferences#get in
-      if pref.pref_editor_trim_lines
+      if pref.editor_trim_lines
       then page#buffer#trim_lines ();
-      if pref.pref_editor_format_on_save
+      if pref.editor_format_on_save
       then ignore @@ Ocp_indent.indent_for_extension ~project: self#project ~view:page#view ~extension `ALL;
       page#save();
       file_saved#call filename;
@@ -767,7 +767,7 @@ class editor () =
       self#with_current_page begin fun current_page ->
         Gmisclib.Idle.add ~prio:100 current_page#redisplay;
         Gmisclib.Idle.add ~prio:300 (fun () -> current_page#compile_buffer ?join:None ());
-        pages 
+        pages
         |> List.filter ((<>) current_page)
         |> List.iter begin fun p ->
           let sig_id = ref None in
@@ -775,7 +775,7 @@ class editor () =
               if p = cp then begin
                 Gmisclib.Idle.add ~prio:200 p#redisplay;
                 (*Gmisclib.Idle.add ~prio:400 (fun () -> p#compile_buffer ());*)
-                Gaux.may !sig_id ~f:self#disconnect 
+                Gaux.may !sig_id ~f:self#disconnect
               end
             end)
         end
@@ -898,7 +898,7 @@ class editor () =
       (*  *)
       ignore (Preferences.preferences#connect#changed ~callback:(fun _ -> self#redisplay_views()));
       (*  *)
-      code_folding_enabled#set Preferences.preferences#get.pref_code_folding_enabled;
+      code_folding_enabled#set Preferences.preferences#get.editor_code_folding_enabled;
       ignore (code_folding_enabled#connect#changed ~callback:begin fun enabled ->
           List.iter (fun p -> p#set_code_folding_enabled enabled) (pages @ (snd (List.split pages_cache)))
         end);
@@ -913,7 +913,7 @@ class editor () =
           List.iter (fun p -> if enabled then p#global_gutter#misc#show()
                       else p#global_gutter#misc#hide()) (pages @ (snd (List.split pages_cache)))
         end);
-      show_global_gutter#set Preferences.preferences#get.pref_show_global_gutter;
+      show_global_gutter#set Preferences.preferences#get.editor_show_global_gutter;
       (*  *)
       self#add_timeouts();
       ignore (Timeout.start tout_delim);

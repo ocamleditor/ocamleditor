@@ -30,6 +30,12 @@ let distclean () =
   remove_file "annot_lexer.ml";
   remove_file "annot_parser.ml";
   remove_file "annot_parser.mli";
+  remove_file "settings.ml";
+  remove_file "settings.mli";
+  remove_file "settings_t.ml";
+  remove_file "settings_t.mli";
+  remove_file "settings_j.ml";
+  remove_file "settings_j.mli";
   remove_file "err_lexer.ml";
   remove_file "err_parser.ml";
   remove_file "err_parser.mli";

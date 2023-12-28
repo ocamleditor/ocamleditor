@@ -21,7 +21,6 @@
 *)
 
 open Miscellanea
-open Preferences
 
 module Log = Common.Log.Make(struct let prefix = "Binannot" end)
 let _ = Log.set_verbosity `ERROR
@@ -149,7 +148,7 @@ let pp_ident ppf { ident_kind; ident_loc; _ } =
   | Open loc       -> Format.fprintf ppf "opn %a" pp_loc loc
 
 let longident_parse repr = try
-    Longident.parse repr
+    Parse.longident @@ Lexing.from_string repr
   with ex ->
     (* Just a stopgap measure. The plan is to get rid of [Longident.parse] altogether *)
     Log.println `ERROR " !! unable to parse Longident.t from: %s" repr;
