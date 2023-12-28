@@ -25,20 +25,6 @@ open Target
 open Task
 open GUtil
 
-let image_menu_item ~label ?(pixbuf=Icons.empty_8) ?stock ?(icon_size=`MENU) ?(show=true) ~packing () =
-  let menu_item = GMenu.menu_item ~packing ~show () in
-  let hbox = GPack.hbox ~border_width: 6 ~packing: menu_item#add () in
-  hbox#set_halign `START;
-  let _image = 
-    if Option.is_none stock then
-      GMisc.image ~pixbuf ~icon_size ~packing: hbox#add () 
-    else
-      GMisc.image ?stock ~packing: hbox#add ()
-  in
-  let _label = GMisc.label ~text: label ~packing: hbox#add () in
-  menu_item
-;;
-
 type item = Target of Target.t | ETask of Task.t
 
 let cols              = new GTree.column_list
@@ -124,11 +110,11 @@ class view ~editor ~project ?packing () =
       b_new#set_menu_only ();
       ignore (b_new#connect#show_menu ~callback:begin fun (label, menu) ->
           label := None;
-          let item = image_menu_item ~pixbuf:Icons.target_16 ~label:"Create new target" ~packing:menu#append () in
+          let item = Image_menu.item ~pixbuf:Icons.target_16 ~label:"Create new target" ~packing:menu#append () in
           ignore (item#connect#activate ~callback:(fun () -> ignore (self#add_target ())));
-          let item = image_menu_item ~pixbuf:Icons.etask_16 ~label:"Add external build task" ~packing:menu#append () in
+          let item = Image_menu.item ~pixbuf:Icons.etask_16 ~label:"Add external build task" ~packing:menu#append () in
           ignore (item#connect#activate ~callback:self#add_external_task);
-          let item = image_menu_item ~stock:`COPY ~label:"Duplicate" ~packing:menu#append () in
+          let item = Image_menu.item ~stock:`COPY ~label:"Duplicate" ~packing:menu#append () in
           ignore (item#connect#activate ~callback:self#duplicate);
         end);
       (*b_clean#connect#clicked*)

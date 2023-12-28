@@ -25,19 +25,6 @@ open GdkKeysyms
 open Miscellanea
 open Menu_types
 
-let image_menu_item ~label ?(pixbuf=Icons.empty_8) ?stock ?(icon_size=`MENU) ?(show=true) ?packing () =
-  let menu_item = GMenu.menu_item ?packing ~show () in
-  let hbox = GPack.hbox ~border_width: 6 ~packing: menu_item#add () in
-  hbox#set_halign `START;
-  let _image =
-    if Option.is_none stock then
-      GMisc.image ~pixbuf ~icon_size ~packing: hbox#add ()
-    else
-      GMisc.image ?stock ~packing: hbox#add ()
-  in
-  let _label = GMisc.label ~text: label ~packing: hbox#add () in
-  menu_item
-;;
 (** set_label *)
 let set_label item text = item#misc#set_property "label" (`STRING (Some text));;
 
@@ -54,29 +41,29 @@ let edit ~browser ~group ~flags
     false;
   end |> ignore;
   (** Undo *)
-  let undo = image_menu_item ~label:"Undo" ~stock:`UNDO ~packing:menu#add () in
+  let undo = Image_menu.item ~label:"Undo" ~stock:`UNDO ~packing:menu#add () in
   ignore (undo#connect#activate ~callback:(fun () -> editor#with_current_page (fun page -> page#undo())));
   undo#add_accelerator ~group ~modi:[`CONTROL] GdkKeysyms._z ~flags;
   get_menu_item_undo := (fun () -> undo);
   (** Redo *)
-  let redo = image_menu_item ~label:"Redo" ~stock:`REDO ~packing:menu#add () in
+  let redo = Image_menu.item ~label:"Redo" ~stock:`REDO ~packing:menu#add () in
   ignore (redo#connect#activate ~callback:(fun () -> editor#with_current_page (fun page -> page#redo())));
   redo#add_accelerator ~group ~modi:[`CONTROL; `SHIFT] GdkKeysyms._z ~flags;
   get_menu_item_redo := (fun () -> redo);
   (* Cut & Paste... *)
   let _ = GMenu.separator_item ~packing:menu#add () in
-  let cut = image_menu_item ~label:"Cut" ~packing:menu#add () in
+  let cut = Image_menu.item ~label:"Cut" ~packing:menu#add () in
   cut#add_accelerator ~group ~modi:[`CONTROL] GdkKeysyms._x ~flags;
   ignore (cut#connect#activate ~callback:(fun () -> editor#with_current_page (fun page -> page#cut ())));
-  let copy = image_menu_item ~label:"Copy" ~packing:menu#add () in
+  let copy = Image_menu.item ~label:"Copy" ~packing:menu#add () in
   copy#add_accelerator ~group ~modi:[`CONTROL] GdkKeysyms._c ~flags;
   ignore (copy#connect#activate ~callback:(fun () -> editor#with_current_page (fun page -> page#copy ())));
-  let paste = image_menu_item ~label:"Paste" ~packing:menu#add () in
+  let paste = Image_menu.item ~label:"Paste" ~packing:menu#add () in
   paste#add_accelerator ~group ~modi:[`CONTROL] GdkKeysyms._v ~flags;
   ignore (paste#connect#activate ~callback:(fun () -> editor#with_current_page (fun page -> page#paste ())));
-  let delete = image_menu_item ~label:"Delete" ~packing:menu#add () in
+  let delete = Image_menu.item ~label:"Delete" ~packing:menu#add () in
   ignore (delete#connect#activate ~callback:(fun () -> editor#with_current_page (fun page -> page#delete ())));
-  let select_all = image_menu_item ~label:"Select All" ~packing:menu#add () in
+  let select_all = Image_menu.item ~label:"Select All" ~packing:menu#add () in
   (*select_all#set_image (GMisc.image ~stock:`SELECT_ALL ~icon_size:`MENU ())#coerce;*)
   ignore (select_all#connect#activate ~callback:(fun () ->
       editor#with_current_page (fun page ->
@@ -111,25 +98,25 @@ let edit ~browser ~group ~flags
       editor#with_current_page (fun page -> page#buffer#toggle_case ())));
   toggle_case#add_accelerator ~group ~modi:[`CONTROL] GdkKeysyms._u ~flags;
   (** Increase Selection Indent *)
-  let increase_selection_indent = image_menu_item ~label:"Increase Selection Indent" ~stock:`INDENT ~packing:menu#add () in
+  let increase_selection_indent = Image_menu.item ~label:"Increase Selection Indent" ~stock:`INDENT ~packing:menu#add () in
   ignore (increase_selection_indent#connect#activate ~callback:(fun () ->
       editor#with_current_page (fun page -> page#buffer#indent ?decrease:(Some false) ())));
   increase_selection_indent#add_accelerator ~group ~modi:[`CONTROL] GdkKeysyms._k ~flags;
   (** Decrease Selection Indent *)
-  let decrease_selection_indent = image_menu_item ~label:"Decrease Line/Selection Indent" ~stock:`UNINDENT ~packing:menu#add () in
+  let decrease_selection_indent = Image_menu.item ~label:"Decrease Line/Selection Indent" ~stock:`UNINDENT ~packing:menu#add () in
   ignore (decrease_selection_indent#connect#activate ~callback:(fun () ->
       editor#with_current_page (fun page -> page#buffer#indent ?decrease:(Some true) ())));
   decrease_selection_indent#add_accelerator ~group ~modi:[`SHIFT] GdkKeysyms._Tab ~flags;
   (* Indent Selection (ocp-indent) *)
   let indent_selection = ref None in
   let indent_all = ref None in
-  let item = image_menu_item ~label:"Indent Line/Selection" ~packing:menu#add () in
+  let item = Image_menu.item ~label:"Indent Line/Selection" ~packing:menu#add () in
   let ocp_indent bounds page = ignore (Ocp_indent.indent ~project: editor#project ~view:page#view bounds) in
   indent_selection := Some item;
   (*item#set_image (GMisc.image ~stock:`INDENT ~icon_size:`MENU ())#coerce;*)
   ignore (item#connect#activate ~callback:(fun () -> editor#with_current_page (ocp_indent `SELECTION)));
   item#add_accelerator ~group ~modi:[] GdkKeysyms._Tab ~flags;
-  let item = image_menu_item ~label:"Indent All" ~packing:menu#add () in
+  let item = Image_menu.item ~label:"Indent All" ~packing:menu#add () in
   indent_all := Some item;
   (*item#set_image (GMisc.image ~stock:`INDENT ~icon_size:`MENU ())#coerce;*)
   ignore (item#connect#activate ~callback:(fun () -> editor#with_current_page (ocp_indent `ALL)));
@@ -166,16 +153,16 @@ let edit ~browser ~group ~flags
       browser#annot_type_set_tooltips annot_type_tooltips#active));
   annot_type_tooltips#add_accelerator ~group ~modi:[`CONTROL; `MOD1] GdkKeysyms._F2 ~flags;
   (** Show documentation *)
-  let show_doc_at_cursor = image_menu_item ~label:"Show Documentation" ~packing:menu#add () in
+  let show_doc_at_cursor = Image_menu.item ~label:"Show Documentation" ~packing:menu#add () in
   show_doc_at_cursor#connect#activate ~callback:editor#show_doc_at_cursor |> ignore;
   show_doc_at_cursor#add_accelerator ~group ~modi:[`CONTROL; `MOD1] GdkKeysyms._F1 ~flags;
   let _ = GMenu.separator_item ~packing:menu#add () in
-  (** Eval in Toplevel *)
-  let to_shell = image_menu_item ~label:"Eval in Toplevel" ~pixbuf:Icons.toplevel ~packing:menu#add () in
+  (* Eval in Toplevel *)
+  let to_shell = Image_menu.item ~label:"Eval in Toplevel" ~pixbuf:Icons.toplevel ~packing:menu#add () in
   ignore (to_shell#connect#activate ~callback:(fun () ->
       editor#with_current_page (fun page -> page#ocaml_view#obuffer#send_to_shell ())));
   to_shell#add_accelerator ~group ~modi:[] GdkKeysyms._F8 ~flags;
-  (**  *)
+  (*  *)
   ignore (edit#misc#connect#state_changed ~callback:begin fun _ ->
       let has_current_page = editor#get_page `ACTIVE <> None in
       if not has_current_page then begin
@@ -231,62 +218,62 @@ let search ~browser ~group ~flags items =
     false;
   end |> ignore;
   (** Find and Replace *)
-  let find_repl = image_menu_item ~label:"Find and Replace" ~pixbuf:Icons.find_replace ~packing:menu#add () in
+  let find_repl = Image_menu.item ~label:"Find and Replace" ~pixbuf:Icons.find_replace ~packing:menu#add () in
   ignore (find_repl#connect#activate ~callback:(fun () ->
       Menu_search.find_replace ?find_all:None ?search_word_at_cursor:None editor));
   find_repl#add_accelerator ~group ~modi:[`CONTROL] GdkKeysyms._f ~flags;
   (** Find Next *)
-  let find_next = image_menu_item ~label:"Find Next" ~packing:menu#add () in
+  let find_next = Image_menu.item ~label:"Find Next" ~packing:menu#add () in
   ignore (find_next#connect#activate ~callback:(fun () -> Menu_search.find_next editor));
   find_next#add_accelerator ~group GdkKeysyms._F3 ~flags;
   (** Find Previous *)
-  let find_prev = image_menu_item ~label:"Find Previous" ~packing:menu#add () in
+  let find_prev = Image_menu.item ~label:"Find Previous" ~packing:menu#add () in
   ignore (find_prev#connect#activate ~callback:(fun () -> Menu_search.find_prev editor));
   find_prev#add_accelerator ~group ~modi:[`SHIFT] GdkKeysyms._F3 ~flags;
   (** Search Again *)
-  let search_again = image_menu_item ~label:"Search Again" ~pixbuf:Icons.search_again_16 ~packing:menu#add () in
+  let search_again = Image_menu.item ~label:"Search Again" ~pixbuf:Icons.search_again_16 ~packing:menu#add () in
   ignore (search_again#connect#activate ~callback:(fun () -> Menu_search.search_again editor));
   search_again#add_accelerator ~group ~modi:[`CONTROL] GdkKeysyms._F3 ~flags;
   (** Find All *)
-  let find_all = image_menu_item ~label:"Find All" ~pixbuf:Icons.search_results_16 ~packing:menu#add () in
+  let find_all = Image_menu.item ~label:"Find All" ~pixbuf:Icons.search_results_16 ~packing:menu#add () in
   ignore (find_all#connect#activate ~callback:(fun () ->
       Menu_search.find_replace ?find_all:(Some true) ?search_word_at_cursor:(Some true) editor));
   find_all#add_accelerator ~group ~modi:[`CONTROL; `SHIFT] GdkKeysyms._f ~flags;
   (** Search Incremental *)
-  let i_search = image_menu_item ~label:"Search Incremental" ~packing:menu#add () in
+  let i_search = Image_menu.item ~label:"Search Incremental" ~packing:menu#add () in
   (*i_search#set_image (GMisc.image ~stock:`FIND ~icon_size:`MENU ())#coerce;*)
   ignore (i_search#connect#activate ~callback:editor#i_search);
   i_search#add_accelerator ~group ~modi:[`CONTROL] GdkKeysyms._e ~flags;
   (** Find/Replace in Path *)
-  let find_in_path = image_menu_item ~label:"Find/Replace in Path" ~packing:menu#add () in
+  let find_in_path = Image_menu.item ~label:"Find/Replace in Path" ~packing:menu#add () in
   ignore (find_in_path#connect#activate ~callback:begin fun () ->
       Menu_search.find_replace ~find_in_buffer:false ?search_word_at_cursor:(Some true) editor;
     end);
   find_in_path#add_accelerator ~group ~modi:[`CONTROL] GdkKeysyms._p ~flags;
   (** Clear find/replace history *)
-  let clear_find_history = image_menu_item ~label:"Clear Find/Replace History" ~packing:menu#add () in
+  let clear_find_history = Image_menu.item ~label:"Clear Find/Replace History" ~packing:menu#add () in
   ignore (clear_find_history#connect#activate ~callback:Find_text.clear_history);
   let _ = GMenu.separator_item ~packing:menu#add () in
   (** Go to Line *)
-  let goto_line = image_menu_item
+  let goto_line = Image_menu.item
       (*~image:(GMisc.image ~stock:`JUMP_TO ~icon_size:`MENU ())*)
       ~label:"Go to Line..." ~packing:menu#add () in
   ignore (goto_line#connect#activate ~callback:(fun () ->
       editor#with_current_page (fun page -> page#ocaml_view#goto ())));
   goto_line#add_accelerator ~group ~modi:[`CONTROL] GdkKeysyms._g ~flags;
   (** Find definition *)
-  let find_definition = image_menu_item
+  let find_definition = Image_menu.item
       ~label:"Find Definition" ~pixbuf:Icons.definition ~packing:menu#add () in
   ignore (find_definition#connect#activate ~callback:(fun () ->
       editor#with_current_page (fun page ->
           ignore (editor#scroll_to_definition ~page ~iter:(page#buffer#get_iter `INSERT)))));
   find_definition#add_accelerator ~group ~modi:[`CONTROL] GdkKeysyms._Return ~flags;
   (** Find references *)
-  let find_references = image_menu_item ~label:"Find References" ~pixbuf:Icons.references ~packing:menu#add () in
+  let find_references = Image_menu.item ~label:"Find References" ~pixbuf:Icons.references ~packing:menu#add () in
   find_references#add_accelerator ~group ~modi:[`CONTROL; `SHIFT] GdkKeysyms._Return ~flags;
   ignore (find_references#connect#activate ~callback:(fun () -> Menu_search.find_definition_references editor));
   (** Find used components *)
-  let find_used_components = image_menu_item ~label:"" ~packing:menu#add () in
+  let find_used_components = Image_menu.item ~label:"" ~packing:menu#add () in
   let label_find_used_components = GMisc.label ~xalign:0. ~markup:"" ~packing:find_used_components#add () in
   ignore (find_used_components#connect#activate ~callback:(fun () -> Menu_search.find_used_components editor));
   (** *)
@@ -306,7 +293,7 @@ let search ~browser ~group ~flags items =
   dialog_find_file#add_accelerator ~group ~modi:[`CONTROL; `SHIFT] GdkKeysyms._L ~flags;
   let _ = GMenu.separator_item ~packing:menu#add () in
   (** Bookmarks *)
-  let bookmarks = image_menu_item ~pixbuf:Icons.bB ~label:"Bookmarks" ~packing:menu#add () in
+  let bookmarks = Image_menu.item ~pixbuf:Icons.bB ~label:"Bookmarks" ~packing:menu#add () in
   let bookmark_menu = GMenu.menu ~packing:bookmarks#set_submenu () in
   let _  = GMenu.menu_item ~packing:bookmark_menu#add () in
   Gmisclib.Idle.add begin fun () ->
@@ -389,11 +376,11 @@ let view ~browser ~group ~flags
     menu_item_view_hmessages := (item, sign) :: !menu_item_view_hmessages;
   end;
   (** Workspaces *)
-  let maximize = image_menu_item ~label:"Workspaces" ~stock:`FULLSCREEN ~packing:menu#add () in
+  let maximize = Image_menu.item ~label:"Workspaces" ~stock:`FULLSCREEN ~packing:menu#add () in
   let maximize_menu = GMenu.menu ~packing:maximize#set_submenu () in
-  let maximize_1 = image_menu_item ~label:"Workspace 1" ~packing:maximize_menu#add () in
-  let maximize_2 = image_menu_item ~label:"Workspace 2" ~packing:maximize_menu#add () in
-  let maximize_0 = image_menu_item ~label:"Reset Workspace" ~packing:maximize_menu#add () in
+  let maximize_1 = Image_menu.item ~label:"Workspace 1" ~packing:maximize_menu#add () in
+  let maximize_2 = Image_menu.item ~label:"Workspace 2" ~packing:maximize_menu#add () in
+  let maximize_0 = Image_menu.item ~label:"Reset Workspace" ~packing:maximize_menu#add () in
   let _ = maximize_1#connect#activate ~callback:(fun () -> browser#set_maximized_view `FIRST) in
   let _ = maximize_2#connect#activate ~callback:(fun () -> browser#set_maximized_view `SECOND) in
   let _ = maximize_0#connect#activate ~callback:(fun () -> browser#set_maximized_view `NONE) in
@@ -421,7 +408,7 @@ let view ~browser ~group ~flags
   ignore (unfold_all#connect#activate ~callback:(fun () ->
       editor#with_current_page (fun page -> ignore (page#ocaml_view#code_folding#expand_all()))));
   (** Select in Structure Pane *)
-  let select_in_outline = image_menu_item ~pixbuf:Icons.select_in_structure ~icon_size:`MENU
+  let select_in_outline = Image_menu.item ~pixbuf:Icons.select_in_structure ~icon_size:`MENU
       ~label:"Select in Structure Pane" ~packing:menu#add ()
   in
   ignore (select_in_outline#connect#activate ~callback:(fun () ->
@@ -444,13 +431,13 @@ let view ~browser ~group ~flags
   ignore (switch_viewer#connect#activate ~callback:begin fun () ->
       editor#with_current_page (fun page -> page#button_dep_graph#clicked ())
     end);
-  let rev_history = image_menu_item ~pixbuf:Icons.history
+  let rev_history = Image_menu.item ~pixbuf:Icons.history
       ~label:"Revision History" ~packing:menu#add ()
   in
   rev_history#connect#activate ~callback:begin fun () ->
     editor#with_current_page (fun page -> page#show_revision_history ())
   end |> ignore;
-  let git_diff = image_menu_item
+  let git_diff = Image_menu.item
       ~label:"Show statistics (Git)" ~packing:menu#add ()
   in
   git_diff#connect#activate ~callback:begin fun () ->
@@ -485,7 +472,7 @@ let tools ~browser ~group ~flags items =
     Gdk.Window.set_cursor menu#misc#window cursor;
     false;
   end |> ignore;
-  let preferences = image_menu_item ~label:"Preferences" ~packing:menu#add () in
+  let preferences = Image_menu.item ~label:"Preferences" ~packing:menu#add () in
   preferences#connect#activate ~callback:(fun () -> Preferences_tool.create ~editor ()) |> ignore;
   let _ = GMenu.separator_item ~packing:menu#add () in
   let toplevel = GMenu.menu_item ~label:"OCaml Toplevel" ~packing:menu#add () in
@@ -539,8 +526,8 @@ let window ~browser ~group ~flags
   (*window_switch#misc#set_sensitive (List.length !items > 0);*)
   let _ = GMenu.separator_item ~packing:menu#add () in
   (** Navigation Backward *)
-  let backward = image_menu_item ~label:"Back" ~pixbuf:Icons.go_back ~packing:menu#append () in
-  let forward = image_menu_item ~label:"Forward" ~pixbuf:Icons.go_forward ~packing:menu#append () in
+  let backward = Image_menu.item ~label:"Back" ~pixbuf:Icons.go_back ~packing:menu#append () in
+  let forward = Image_menu.item ~label:"Forward" ~pixbuf:Icons.go_forward ~packing:menu#append () in
   get_menu_item_nav_history_backward := (fun () -> backward);
   get_menu_item_nav_history_forward := (fun () -> forward);
   let backward_menu = GMenu.menu ~packing:backward#set_submenu () in
@@ -559,13 +546,13 @@ let window ~browser ~group ~flags
   let _ = GMenu.separator_item ~packing:forward_menu#add () in
   browser#create_menu_history `FORWARD ~menu:forward_menu;
   (** Last Edit Location *)
-  let last_edit_location = image_menu_item ~label:"Last Edit Location" ~pixbuf:Icons.goto_last ~packing:menu#append () in
+  let last_edit_location = Image_menu.item ~label:"Last Edit Location" ~pixbuf:Icons.goto_last ~packing:menu#append () in
   last_edit_location#add_accelerator ~group ~modi:[`MOD1] GdkKeysyms._End ~flags;
   last_edit_location#add_accelerator ~group ~modi:[`MOD1] GdkKeysyms._KP_End ~flags;
   ignore (last_edit_location#connect#activate ~callback:(fun () -> browser#goto_location `LAST));
   get_menu_item_nav_history_last := (fun () -> last_edit_location);
   (** Clear Location History *)
-  let clear_location_history = image_menu_item ~label:"Clear Location History"  ~packing:menu#append () in
+  let clear_location_history = Image_menu.item ~label:"Clear Location History"  ~packing:menu#append () in
   ignore (clear_location_history#connect#activate ~callback:begin fun () ->
       Location_history.clear editor#location_history;
       browser#set_menu_item_nav_history_sensitive()
@@ -638,10 +625,10 @@ let create ~browser ~group
     file_recent_clear             = GMenu.menu_item ~label:"Clear File History" ();
     file_recent_sep               = GMenu.separator_item ();
     file_switch                   = GMenu.menu_item ~label:"Switch to Implementation/Interface" ();
-    file_close                    = image_menu_item ~label:"Close" ~stock:`CLOSE ();
+    file_close                    = Image_menu.item ~label:"Close" ~stock:`CLOSE ();
     file_close_all                = GMenu.menu_item ~label:"Close All" ();
-    file_revert                   = image_menu_item ~label:"Revert" ~pixbuf:Icons.revert_to_saved_16 ();
-    file_delete                   = image_menu_item ~label:"Delete" ~stock:`DELETE ();
+    file_revert                   = Image_menu.item ~label:"Revert" ~pixbuf:Icons.revert_to_saved_16 ();
+    file_delete                   = Image_menu.item ~label:"Delete" ~stock:`DELETE ();
     window                        = GMenu.menu ();
     window_radio_group            = None;
     window_pages                  = [];

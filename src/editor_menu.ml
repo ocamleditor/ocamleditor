@@ -20,20 +20,6 @@
 
 *)
 
-let image_menu_item ~label ?(pixbuf=Icons.empty_8) ?stock ?(show=true) ~packing () =
-  let menu_item = GMenu.menu_item ~packing ~show () in
-  let hbox = GPack.hbox ~border_width: 6 ~packing: menu_item#add () in
-  hbox#set_halign `START;
-  let _image = 
-    if Option.is_none stock then
-      GMisc.image ~pixbuf ~icon_size: `MENU ~packing: hbox#add () 
-    else
-      GMisc.image ?stock ~packing: hbox#add ()
-  in
-  let _label = GMisc.label ~text: label ~packing: hbox#add () in
-  menu_item
-;;
-
 let menu_item_view_menubar : (unit -> (GMenu.check_menu_item * GtkSignal.id) list ref) ref =
   ref (fun () -> failwith "menu_item_view_menubar")
 
@@ -59,30 +45,30 @@ let create ~editor ~page () =
     | _ -> assert false
   in
   let gmenu = GMenu.menu () in
-  let cut = image_menu_item ~label:"Cut" ~stock:`CUT ~packing:gmenu#append () in
-  let copy = image_menu_item ~label:"Copy" ~stock:`COPY ~packing:gmenu#append () in
-  let paste = image_menu_item ~label:"Paste" ~stock:`PASTE ~packing:gmenu#append () in
-  let delete = image_menu_item ~label:"Delete" ~stock:`DELETE ~packing:gmenu#append () in
-  let select_all = image_menu_item ~label:"Select all" ~stock:`SELECT_ALL ~packing:gmenu#append () in
+  let cut = Image_menu.item ~label:"Cut" ~stock:`CUT ~packing:gmenu#append () in
+  let copy = Image_menu.item ~label:"Copy" ~stock:`COPY ~packing:gmenu#append () in
+  let paste = Image_menu.item ~label:"Paste" ~stock:`PASTE ~packing:gmenu#append () in
+  let delete = Image_menu.item ~label:"Delete" ~stock:`DELETE ~packing:gmenu#append () in
+  let select_all = Image_menu.item ~label:"Select all" ~stock:`SELECT_ALL ~packing:gmenu#append () in
   gmenu#append (GMenu.separator_item ());
   (*  *)
-  let indent_all = image_menu_item ~label:"Indent All" ~packing:gmenu#append () in
+  let indent_all = Image_menu.item ~label:"Indent All" ~packing:gmenu#append () in
   ignore (indent_all#connect#activate ~callback:begin fun () ->
       editor#with_current_page (fun page -> ignore (Ocp_indent.indent ~view:page#view `ALL));
     end);
   gmenu#append (GMenu.separator_item ());
 
   (*  *)
-  let show_doc_at_cursor = image_menu_item ~label:"Show Documentation" ~packing:gmenu#append () in
+  let show_doc_at_cursor = Image_menu.item ~label:"Show Documentation" ~packing:gmenu#append () in
   show_doc_at_cursor#connect#activate ~callback:editor#show_doc_at_cursor |> ignore;
   show_doc_at_cursor#misc#set_sensitive (Menu_file.get_file_switch_sensitive page);
-  let find_definition = image_menu_item ~label:"Find Definition" ~pixbuf: Icons.definition ~packing:gmenu#append () in
-  let find_references = image_menu_item ~label:"Find References" ~pixbuf: Icons.references ~packing:gmenu#append () in
+  let find_definition = Image_menu.item ~label:"Find Definition" ~pixbuf: Icons.definition ~packing:gmenu#append () in
+  let find_references = Image_menu.item ~label:"Find References" ~pixbuf: Icons.references ~packing:gmenu#append () in
   let find_used_components = GMenu.menu_item ~packing:gmenu#append () in
   let label_find_used_components = GMisc.label ~xalign:0. ~markup:"" ~packing:find_used_components#add () in
   (*  *)
   gmenu#append (GMenu.separator_item ());
-  let select_in_structure_pane = image_menu_item ~label:"Select in Structure Pane" ~pixbuf: Icons.select_in_structure ~packing:gmenu#append () in
+  let select_in_structure_pane = Image_menu.item ~label:"Select in Structure Pane" ~pixbuf: Icons.select_in_structure ~packing:gmenu#append () in
   ignore (select_in_structure_pane#connect#activate ~callback:begin fun () ->
       editor#with_current_page begin
         let sigid = ref None in
@@ -107,7 +93,7 @@ let create ~editor ~page () =
   select_in_structure_pane#misc#set_sensitive (Menu_file.get_file_switch_sensitive page);
   (*  *)
   gmenu#append (GMenu.separator_item ());
-  let eval_in_toplevel = image_menu_item ~label:"Eval in Toplevel" ~pixbuf: Icons.toplevel ~packing:gmenu#append () in
+  let eval_in_toplevel = Image_menu.item ~label:"Eval in Toplevel" ~pixbuf: Icons.toplevel ~packing:gmenu#append () in
   ignore (eval_in_toplevel#connect#activate ~callback:begin fun () ->
       editor#with_current_page (fun page -> page#ocaml_view#obuffer#send_to_shell ());
     end);

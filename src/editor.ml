@@ -25,19 +25,6 @@ open Miscellanea
 open Printf
 open Preferences
 
-let image_menu_item ~label ?(pixbuf=Icons.empty_8) ?stock ?(icon_size=`MENU) ?(show=true) ~packing () =
-  let menu_item = GMenu.menu_item ~packing ~show () in
-  let hbox = GPack.hbox ~border_width: 6 ~packing: menu_item#add () in
-  let _image = 
-    if Option.is_none stock then
-      GMisc.image ~pixbuf ~icon_size ~packing: hbox#add () 
-    else
-      GMisc.image ?stock ~packing: hbox#add ()
-  in
-  let _label = GMisc.label ~text: label ~packing: hbox#add () in
-  menu_item
-;;
-
 let set_menu_item_nav_history_sensitive = ref (fun () -> failwith "set_menu_item_nav_history_sensitive")
 
 (** Editor *)
@@ -491,11 +478,11 @@ class editor () =
       let menu = GMenu.menu () in
       let filename = page#get_filename in
       let basename = Filename.basename filename in
-      let item = image_menu_item ~label:(sprintf "Close \xC2\xAB%s\xC2\xBB" basename) ~stock:`CLOSE ~packing:menu#add () in
+      let item = Image_menu.item ~label:(sprintf "Close \xC2\xAB%s\xC2\xBB" basename) ~stock:`CLOSE ~packing:menu#add () in
       ignore (item#connect#activate ~callback:(fun () -> ignore (self#dialog_confirm_close page)));
-      let item = image_menu_item ~label:(sprintf "Close All Except \xC2\xAB%s\xC2\xBB" basename) ~packing:menu#add () in
+      let item = Image_menu.item ~label:(sprintf "Close All Except \xC2\xAB%s\xC2\xBB" basename) ~packing:menu#add () in
       ignore (item#connect#activate ~callback:(fun () -> self#close_all ~except:page ()));
-      let item = image_menu_item ~label:(sprintf "Revert \xC2\xAB%s\xC2\xBB" basename) ~pixbuf:Icons.revert_to_saved_16 ~packing:menu#add () in
+      let item = Image_menu.item ~label:(sprintf "Revert \xC2\xAB%s\xC2\xBB" basename) ~pixbuf:Icons.revert_to_saved_16 ~packing:menu#add () in
       ignore (item#connect#activate ~callback:(fun () -> self#revert page));
       let _ = GMenu.separator_item ~packing:menu#add () in
       let item = GMenu.menu_item ~label:"Copy Full Path" ~packing:menu#add () in
@@ -514,7 +501,7 @@ class editor () =
           Option.iter (fun cmd -> ignore (Thread.create (fun () -> ignore (Sys.command cmd)) ())) cmd
         end);
       let _ = GMenu.separator_item ~packing:menu#add () in
-      let item = image_menu_item ~label:"Switch to Implementation/Interface" ~packing:menu#add () in
+      let item = Image_menu.item ~label:"Switch to Implementation/Interface" ~packing:menu#add () in
       ignore (item#connect#activate ~callback:(fun () -> self#switch_mli_ml page));
       item#misc#set_sensitive (Menu_file.get_file_switch_sensitive page);
       self#with_current_page begin fun page ->
@@ -523,22 +510,22 @@ class editor () =
         ignore (switch_viewer#connect#activate ~callback:page#button_dep_graph#clicked);
         switch_viewer#misc#set_sensitive (Menu_view.get_switch_view_sensitive self#project page)
       end;
-      let item = image_menu_item
+      let item = Image_menu.item
           ~pixbuf:Icons.history
           ~label:"Revision History" ~packing:menu#add ()
       in
       ignore (item#connect#activate ~callback:(fun () -> self#with_current_page (fun page -> page#show_revision_history ())));
       let _ = GMenu.separator_item ~packing:menu#add () in
-      let item = image_menu_item ~label:"Save As..." ~pixbuf:Icons.revert_to_saved_16 ~packing:menu#add () in
+      let item = Image_menu.item ~label:"Save As..." ~pixbuf:Icons.revert_to_saved_16 ~packing:menu#add () in
       ignore (item#connect#activate ~callback:(fun () -> self#dialog_save_as page));
-      let item = image_menu_item ~label:(sprintf "Rename \xC2\xAB%s\xC2\xBB" basename) ~packing:menu#add () in
+      let item = Image_menu.item ~label:(sprintf "Rename \xC2\xAB%s\xC2\xBB" basename) ~packing:menu#add () in
       ignore (item#connect#activate ~callback:(fun () -> self#dialog_rename page));
       Gaux.may page#file ~f:(fun file -> item#misc#set_sensitive file#is_writeable);
-      let item = image_menu_item ~label:(sprintf "Delete \xC2\xAB%s\xC2\xBB" basename) ~stock:`DELETE ~packing:menu#add () in
+      let item = Image_menu.item ~label:(sprintf "Delete \xC2\xAB%s\xC2\xBB" basename) ~stock:`DELETE ~packing:menu#add () in
       ignore (item#connect#activate ~callback:self#dialog_delete_current);
       Gaux.may page#file ~f:(fun file -> item#misc#set_sensitive file#is_writeable);
       let _ = GMenu.separator_item ~packing:menu#add () in
-      let item = image_menu_item ~label:(sprintf "Compile \xC2\xAB%s\xC2\xBB" basename) ~pixbuf:Icons.compile_file_16 ~packing:menu#add () in
+      let item = Image_menu.item ~label:(sprintf "Compile \xC2\xAB%s\xC2\xBB" basename) ~pixbuf:Icons.compile_file_16 ~packing:menu#add () in
       ignore (item#connect#activate ~callback:(fun () -> page#compile_buffer ?join:None ()));
       item#misc#set_sensitive (Menu_file.get_file_switch_sensitive page);
       menu#popup ~time:(GdkEvent.Button.time ev) ~button:3;
