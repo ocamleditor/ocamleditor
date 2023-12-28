@@ -166,7 +166,7 @@ let display qi start stop =
   let open Preferences in
   let open Settings_j in
   let vbox = GPack.vbox ~border_width:5 ~spacing:5 () in
-  let label_typ = GMisc.label ~xpad:0 ~ypad:0 ~xalign:0.0 ~yalign:0.0 ~packing:vbox#add () in
+  let label_typ = GMisc.label ~xpad:0 ~ypad:0 ~xalign:0.0 ~yalign:0.0 ~line_wrap:false ~packing:vbox#add () in
   let label_vars = GMisc.label ~xpad:0 ~ypad:0 ~xalign:0.0 ~yalign:0.0 ~packing:vbox#add ~show:false () in
   let _ = GMisc.separator `HORIZONTAL ~packing:vbox#add () in
   let label_doc = GMisc.label ~xpad:0 ~ypad:0 ~xalign:0.0 ~yalign:0.0 ~line_wrap:true ~packing:vbox#add () in

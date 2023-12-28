@@ -42,51 +42,6 @@ class editorbar ~view ?packing () =
   let paned = GPack.paned `HORIZONTAL ~packing:box#add () in
   let _ = GMisc.separator `VERTICAL ~packing:box#pack () in
   let lbox = GPack.hbox ~spacing:1 ~border_width:0 ~packing:(paned#pack1 ~resize:true ~shrink:false) () in
-  let status_filename = GMisc.label ~selectable:true ~xalign:0.0 ~xpad:5 ~ellipsize:`END ~packing:lbox#add () in
-  let _ = status_filename#set_use_markup true in
-  let _ = set_label_font_size status_filename in
-  let _ = GMisc.separator `VERTICAL ~packing:lbox#pack () in
-  let status_modified = GMisc.label ~markup:"" ~xpad:0 ~ypad:0 ~xalign:0.5 ~packing:lbox#pack () in
-  let _ = status_modified#misc#modify_fg [`NORMAL, `NAME "#1E90FF"] in
-  let _ = status_modified#set_use_markup true in
-  let _ = set_label_font_size status_modified in
-
-  let pos_box = GPack.hbox ~spacing:3 ~packing:lbox#pack () in
-
-  let _ = GMisc.separator `VERTICAL ~packing:pos_box#pack () in
-  let label_pos_lin = GMisc.label ~xalign:0.0 ~yalign:0.5 ~text:"\u{e0a1}\u{2009}" ~packing:pos_box#pack () in
-  let _ = label_pos_lin#misc#modify_font_by_name icon_font_name in
-  let status_pos_lin = GMisc.label ~xalign:0.0 ~yalign:0.5 ~width:34 ~packing:pos_box#pack () in
-  let _ = set_label_font_size status_pos_lin in
-  let _ = GMisc.separator `VERTICAL ~packing:pos_box#pack () in
-
-  let label_pos_col = GMisc.label ~xalign:0.0 ~yalign:0.5 ~markup:"<small>\u{e0a3}</small>\u{2009}" ~packing:pos_box#pack () in
-  let _ = label_pos_col#misc#modify_font_by_name icon_font_name in
-  let status_pos_col = GMisc.label ~xalign:0.0 ~yalign:0.5 ~width:34 ~packing:pos_box#pack () in
-  let _ = set_label_font_size status_pos_col in
-  let _ = GMisc.separator `VERTICAL ~packing:pos_box#pack () in
-
-  let status_pos_off = GMisc.label ~xalign:0.0 ~yalign:0.5 ~width:55 ~packing:pos_box#pack () in
-  let _ = set_label_font_size status_pos_off in
-  (*let _ = status_pos_off#misc#set_tooltip_text "Character offset from start" in*)
-  let _ = GMisc.separator `VERTICAL ~packing:pos_box#pack () in
-
-  let status_pos_sel = GMisc.label ~xalign:0.0 ~yalign:0.5 ~width:34 ~text:"0" ~packing:pos_box#pack () in
-  (*let _ = status_pos_sel#misc#set_tooltip_text "Selected lines" in*)
-  let _ = set_label_font_size status_pos_sel in
-  let _ = GMisc.separator `VERTICAL ~packing:pos_box#pack () in
-  let status_pos_sel_chars = GMisc.label ~xalign:0.0 ~yalign:0.5 ~width:55 ~text:"0" ~packing:pos_box#pack () in
-  let _ = set_label_font_size status_pos_sel_chars in
-  (*let _ = status_pos_sel_chars#misc#set_tooltip_text "Selected characters" in*)
-  let _ = GMisc.separator `VERTICAL ~packing:pos_box#pack () in
-
-  let button_dotview = create_small_toggle_button
-      ~icon:"\u{f104a}"
-      ~packing:lbox#pack ()
-      ~show:(false (*Oe_config.dot_version <> None*))
-  in
-  let _ = GMisc.separator `VERTICAL ~show:false ~packing:lbox#pack () in
-
   let button_font_incr = create_small_button
       ~icon:"\u{f09f4}"
       ~packing:lbox#pack
@@ -141,7 +96,52 @@ class editorbar ~view ?packing () =
     in
     create_small_toggle_button ~icon ~packing:lbox#pack () in (* f1dd *)
 
+  let button_dotview = create_small_toggle_button
+      ~icon:"\u{f104a}"
+      ~packing:lbox#pack ()
+      ~show:(false (*Oe_config.dot_version <> None*))
+  in
+  let _ = GMisc.separator `VERTICAL ~show:true ~packing:lbox#pack () in
+
   let spinner = GMisc.image ~width:15 ~packing:box#pack () in
+  let status_filename = GMisc.label ~selectable:true ~xalign:0.0 ~xpad:5 ~ellipsize:`END ~packing:lbox#add () in
+  let _ = status_filename#set_use_markup true in
+  let _ = set_label_font_size status_filename in
+  let _ = GMisc.separator `VERTICAL ~packing:lbox#pack () in
+  let status_modified = GMisc.label ~markup:"" ~xpad:0 ~ypad:0 ~xalign:0.5 ~packing:lbox#pack () in
+  let _ = status_modified#misc#modify_fg [`NORMAL, `NAME "#1E90FF"] in
+  let _ = status_modified#set_use_markup true in
+  let _ = set_label_font_size status_modified in
+
+  let pos_box = GPack.hbox ~spacing:3 ~packing:lbox#pack () in
+
+  let _ = GMisc.separator `VERTICAL ~packing:pos_box#pack () in
+  let label_pos_lin = GMisc.label ~xalign:0.0 ~yalign:0.5 ~text:"\u{e0a1}\u{2009}" ~packing:pos_box#pack () in
+  let _ = label_pos_lin#misc#modify_font_by_name icon_font_name in
+  let status_pos_lin = GMisc.label ~xalign:0.0 ~yalign:0.5 ~width:34 ~packing:pos_box#pack () in
+  let _ = set_label_font_size status_pos_lin in
+  let _ = GMisc.separator `VERTICAL ~packing:pos_box#pack () in
+
+  let label_pos_col = GMisc.label ~xalign:0.0 ~yalign:0.5 ~markup:"<small>\u{e0a3}</small>\u{2009}" ~packing:pos_box#pack () in
+  let _ = label_pos_col#misc#modify_font_by_name icon_font_name in
+  let status_pos_col = GMisc.label ~xalign:0.0 ~yalign:0.5 ~width:34 ~packing:pos_box#pack () in
+  let _ = set_label_font_size status_pos_col in
+  let _ = GMisc.separator `VERTICAL ~packing:pos_box#pack () in
+
+  let status_pos_off = GMisc.label ~xalign:0.0 ~yalign:0.5 ~width:55 ~packing:pos_box#pack () in
+  let _ = set_label_font_size status_pos_off in
+  (*let _ = status_pos_off#misc#set_tooltip_text "Character offset from start" in*)
+  let _ = GMisc.separator `VERTICAL ~packing:pos_box#pack () in
+
+  let status_pos_sel = GMisc.label ~xalign:0.0 ~yalign:0.5 ~width:34 ~text:"0" ~packing:pos_box#pack () in
+  (*let _ = status_pos_sel#misc#set_tooltip_text "Selected lines" in*)
+  let _ = set_label_font_size status_pos_sel in
+  let _ = GMisc.separator `VERTICAL ~packing:pos_box#pack () in
+  let status_pos_sel_chars = GMisc.label ~xalign:0.0 ~yalign:0.5 ~width:55 ~text:"0" ~packing:pos_box#pack () in
+  let _ = set_label_font_size status_pos_sel_chars in
+  (*let _ = status_pos_sel_chars#misc#set_tooltip_text "Selected characters" in*)
+  let _ = GMisc.separator `VERTICAL ~packing:pos_box#pack () in
+
   object (self)
     inherit GObj.widget box#as_widget
     method paned = paned

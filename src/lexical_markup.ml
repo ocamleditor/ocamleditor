@@ -47,6 +47,8 @@ end
 
 open Range
 
+type type_label_state = Possible_label of string | Lident of string | Label of string | Off
+
 let parse pref =
   let tags = pref.Settings_t.editor_tags in
   let bgcolor_highlight = preferences#get.editor_mark_occurrences_bg_color in
@@ -82,6 +84,7 @@ let parse pref =
     let in_record_label = ref false in
     let in_annotation = ref false in
     let in_type_var = ref None in
+    let in_type_label = ref Off in
     try
       while true do
         try
@@ -166,31 +169,15 @@ let parse pref =
                 in_type_var := Some lident;
                 "annotation"
             | LIDENT _ ->
-                begin match !last with
+                begin match [@warning "-4"] !last with
                 | QUESTION | TILDE -> "label"
                 | BACKQUOTE -> "number"
-                | _ -> "lident"
-                (*(* TODO:  *)
-                  | _, LBRACE, _, _ when !in_record -> "record_label"
-                  | _, MUTABLE, _, _ when !in_record -> "record_label"
-                  | _, WITH, _, _ when !in_record -> "record_label"
-                  | _, SEMI, _, _ when !in_record -> "record_label"
-                  | _, DOT, _, _ when !in_record && !in_record_label -> "record_label"
-                  | _, LPAREN, _, _ ->
-                  (match !last_but_one with
-                    | _, (QUESTION | TILDE), _, _ -> "label"
-                    | _ -> (if lexeme = "failwith" || lexeme = "raise" || lexeme = "invalid_arg" then "custom" else "lident"))
-                  | last ->
-                  (if lexeme = "failwith" || lexeme = "raise" || lexeme = "invalid_arg" then "custom" else tag_lident last)*)
+                | _ ->
+                    in_type_label := Possible_label lexeme;
+                    "lident"
                 end
-            | COLON -> ""
-            (*begin match !last with
-              _, LIDENT _, lstart, lstop ->
-                if lstop = start then
-                  tb#apply_tag_by_name "label" ~start:(tpos lstart) ~stop:(tpos stop);
-                ""
-              | _ -> ""
-              end*)
+            | COLON ->
+                (match [@warning "-4"] !last with LIDENT lident -> in_type_label := Label (lident ^ lexeme); "label" | _ -> "")
             | INT _ | FLOAT _  | TRUE | FALSE -> "number"
             | LBRACE -> in_record := true; in_record_label := true; "symbol"
             | RBRACE -> in_record := false; in_record_label := false; "symbol"
@@ -206,7 +193,7 @@ let parse pref =
               -> "symbol"
             | QUOTE ->
                 in_type_var := Some "";
-                "" (* TODO *)
+                "" 
             | LBRACKETAT | LBRACKETPERCENT | LBRACKETPERCENTPERCENT | LBRACKETATAT | LBRACKETATATAT
               -> in_annotation:= true; "annotation"
             | RBRACKET -> if !in_annotation then (in_annotation := false; "annotation") else "symbol"
@@ -215,9 +202,22 @@ let parse pref =
             | EOL -> ""
             | EOF -> raise End_of_file
           end;
-
+          begin
+            match [@warning "-4"] token with
+            | COLON | LIDENT _ -> ()
+            | _ ->
+                begin
+                  match !in_type_label with
+                  | Possible_label lident -> in_type_label := Lident lident
+                  | _ -> ()
+                end
+          end;
           let blanks = String.sub text !pos (lstart - !pos) in
-          if blanks <> "" then Buffer.add_string out blanks;
+          if blanks <> "" then begin
+            match [@warning "-4"] !in_type_label with
+            | Lident lident -> in_type_label := Lident (lident ^ blanks)
+            | _ -> Buffer.add_string out blanks;
+          end;
           close_pending();
           (*  *)
           let add with_span =
@@ -254,8 +254,20 @@ let parse pref =
                   | Some lident ->
                       in_type_var := None;
                       Buffer.add_string out (Glib.Markup.escape_text ("'" ^ lident));
-                  | _ ->
-                      Buffer.add_string out (Glib.Markup.escape_text lexeme);
+                  | None ->
+                      begin
+                        match !in_type_label with
+                        | Label type_label ->
+                            in_type_label := Off;
+                            Buffer.add_string out (Glib.Markup.escape_text type_label);
+                        | Lident lident ->
+                            in_type_label := Off;
+                            Buffer.add_string out (Glib.Markup.escape_text lident);
+                            Buffer.add_string out (Glib.Markup.escape_text lexeme);
+                        | Off ->
+                            Buffer.add_string out (Glib.Markup.escape_text lexeme);
+                        | Possible_label _ -> ()
+                      end;
                 end
           in
           (*  *)
@@ -290,6 +302,12 @@ let parse pref =
     | End_of_file ->
         let lexeme = (String.sub text !pos (String.length text - !pos)) in
         (* TODO: consider highlights *)
+        begin
+          match [@warning "-4"] !in_type_label with
+          | Possible_label lident ->
+              Buffer.add_string out (Glib.Markup.escape_text lident);
+          | _ -> ()
+        end;
         Buffer.add_string out (Glib.Markup.escape_text lexeme);
         close_pending();
         (*    Lexer.comments ()

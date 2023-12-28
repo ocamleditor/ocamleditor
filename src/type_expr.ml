@@ -10,11 +10,15 @@ let blanks = ["[\r\n\t ]+", " "]
 let tee f x = f x; x
 
 let print_type te =
-  let buf = Buffer.create 100 in
+  (*Format.pp_set_geometry ~margin:80 ~max_indent:2 Format.std_formatter;*)
+  Format.asprintf "%a" Pprintast.core_type te
+  |> Str.split (Str.regexp "\n") |> List.map String.trim |> String.concat "\n"
+(*let buf = Buffer.create 100 in
   let formatter = Format.formatter_of_buffer buf in
+  Format.pp_set_geometry ~margin:80 ~max_indent:2 formatter;
   Pprintast.core_type formatter te;
   Format.pp_print_flush formatter ();
-  Miscellanea.replace_all blanks (Buffer.contents buf)
+  Buffer.contents buf |> Str.split (Str.regexp "\n") |> List.map String.trim |> String.concat "\n"*)
 
 exception Cannot_be_combined
 exception Cannot_be_unified
@@ -119,6 +123,6 @@ let find_substitutions te1 te2 =
       Log.println `ERROR "Cannot_be_combined:\n  %s\n  %s" (print_type pte1) (print_type pte2);
       print_type pte1, []
   | Cannot_be_unified ->
-      Log.println `ERROR "Cannot_be_unified:\n  %s\n  %s" (print_type pte1) (print_type pte2);
+      (*Log.println `ERROR "Cannot_be_unified:\n  %s\n  %s" (print_type pte1) (print_type pte2);*)
       print_type pte1, []
 
