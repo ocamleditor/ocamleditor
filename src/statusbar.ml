@@ -103,7 +103,6 @@ class editorbar ~view ?packing () =
   in
   let _ = GMisc.separator `VERTICAL ~show:true ~packing:lbox#pack () in
 
-  let spinner = GMisc.image ~width:15 ~packing:box#pack () in
   let status_filename = GMisc.label ~selectable:true ~xalign:0.0 ~xpad:5 ~ellipsize:`END ~packing:lbox#add () in
   let _ = status_filename#set_use_markup true in
   let _ = set_label_font_size status_filename in
@@ -154,7 +153,6 @@ class editorbar ~view ?packing () =
     method pos_off = status_pos_off
     method pos_sel = status_pos_sel
     method pos_sel_chars = status_pos_sel_chars
-    method spinner = spinner
     method button_dotview = button_dotview
     method button_font_incr = button_font_incr
     method button_font_decr = button_font_decr
@@ -193,6 +191,8 @@ class widget ?packing () =
   let box = GPack.hbox ~spacing:1 ~border_width:0 ~packing:ebox#add () in
   let editorbar_placeholder = GBin.alignment ~packing:(box#pack ~from:`START ~expand:true ~fill:true) () in
   let _ = GMisc.separator `VERTICAL ~packing:(box#pack ~expand:false) () in
+  let spinner = GMisc.image ~width:20 ~packing:box#pack () in
+  let _ = GMisc.separator `VERTICAL ~packing:(box#pack ~expand:false) () in
   object (self)
     inherit GObj.widget ebox#as_widget
     initializer
@@ -206,6 +206,8 @@ class widget ?packing () =
       editorbar_placeholder#add bar#coerce;
 
     method pack ?from widget = box#pack ?from ~expand:false ~fill:false widget
+
+    method spinner = spinner
 
     method private set_style () =
       ebox#misc#modify_bg [`NORMAL, `COLOR (ebox#misc#style#light `NORMAL)];

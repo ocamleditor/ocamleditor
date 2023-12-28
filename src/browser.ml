@@ -79,6 +79,21 @@ class browser window =
     if Oe_config.unify_statusbars then
       editor#connect#switch_page ~callback:(fun page -> statusbar#pack_editorbar page#statusbar) |> ignore;
   in
+  (** Spinner *)
+  let activate_spinner (active : Activity.t list) =
+    match active with
+    | [] ->
+        statusbar#spinner#set_pixbuf (??? Icons.empty_16);
+        statusbar#spinner#misc#set_tooltip_text "";
+    | msgs ->
+        let msgs = snd (List.split msgs) in
+        statusbar#spinner#set_file (Icon.get_themed_filename "spinner_16.gif");
+        statusbar#spinner#misc#set_tooltip_text (String.concat "\n" (List.rev msgs));
+  in
+  let _ =
+    Activity.table#connect#changed ~callback:activate_spinner;
+    activate_spinner Activity.table#get;
+  in
   (*  *)
   let vbox_menu_buttons = GPack.vbox ~border_width:0 ~packing:menubarbox#pack ~show:false () in
   let align = GBin.aspect_frame ~yalign:0.0 ~shadow_type:`NONE ~packing:vbox_menu_buttons#add () in

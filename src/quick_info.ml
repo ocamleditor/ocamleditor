@@ -66,16 +66,13 @@ type t = {
 
 and wininfo = {
   window : GWindow.window;
-  mutable area : ((int * int * int * int) * (GText.iter * GText.iter)) option;
-  (** It is the area of the editor that contains the expression for which quick
+  mutable range : (GText.iter * GText.iter) option;
+  (** It is the range of the buffer that contains the expression for which quick
       info is currently shown. *)
 
   mutable is_pinned : bool;
   mutable index : int;
 }
-
-let (@<=) (left, top, right, bottom) (x, y) =
-  left <= x && x <= right && top <= y && y <= bottom
 
 (** Returns the last open quick info window. This function is not thread safe. *)
 let get_current_window_unsafe qi =
@@ -87,10 +84,10 @@ let get_current_window_unsafe qi =
 let get_current_window qi = !!Lock.wininfo get_current_window_unsafe qi
 
 let remove_highlight qi wi =
-  match wi.area with
-  | Some (_, (start, stop)) ->
+  match wi.range with
+  | Some (start, stop) ->
       qi.view#buffer#remove_tag qi.tag ~start ~stop;
-      wi.area <- None
+      wi.range <- None
   | _ -> ()
 
 let add_wininfo qi =
@@ -188,11 +185,11 @@ let display qi start stop =
         let ly, lh = qi.view#get_line_yrange start in
         pX (*- px + xstart*), pY - py + ystart + lh
   in
-  let area = Some ((xstart, ystart, xstop, ystop), (start, stop)) in
+  let range = Some (start, stop) in
   let window = Gtk_util.window_tooltip vbox#coerce ~fade:false ~x ~y ~show:false () in
   let wininfo = {
     window;
-    area;
+    range;
     is_pinned = false;
     index = new_index();
   } in
@@ -212,7 +209,7 @@ let display qi start stop =
       let window = Gtk_util.window_tooltip sw#coerce ~fade:false ~x ~y ~width:700 ~height:300 ~show:false () in
       let wininfo = {
         window;
-        area;
+        range;
         is_pinned = false;
         index = new_index();
       } in
@@ -274,9 +271,7 @@ let is_iter_in_comment (buffer : Ocaml_text.buffer) iter =
     (Comments.scan (Glib.Convert.convert_with_fallback ~fallback:"" ~from_codeset:"UTF-8" ~to_codeset:Oe_config.ocaml_codeset
                       (buffer#get_text ()))) iter#offset
 
-let get_typeable_iter_at_coords qi x y =
-  let bx, by = qi.view#window_to_buffer_coords ~tag:`WIDGET ~x ~y in
-  let iter = qi.view#get_iter_at_location ~x:bx ~y:by in
+let get_typeable_iter_at_coords qi iter =
   if iter#ends_line
   || Glib.Unichar.isspace iter#char
   || (match is_iter_in_comment qi.view#obuffer iter with None -> false | _ -> true)
@@ -284,9 +279,11 @@ let get_typeable_iter_at_coords qi x y =
 
 let process_location qi x y =
   let current_window = get_current_window qi in
-  let current_area = Option.bind current_window (fun x -> x.area) in
-  match current_area with
-  | Some (area, _) when area @<= (x, y) -> ()
+  let current_range = Option.bind current_window (fun x -> x.range) in
+  let bx, by = qi.view#window_to_buffer_coords ~tag:`WIDGET ~x ~y in
+  let iter = qi.view#get_iter_at_location ~x:bx ~y:by in
+  match current_range with
+  | Some (start, stop) when iter#in_range ~start ~stop -> ()
   | _ when is_pinned qi -> ()
   | _ when qi.view#buffer#has_selection -> ()
   | _ ->
@@ -309,7 +306,7 @@ let process_location qi x y =
       in
       if is_mouse_over then ()
       else if is_immobile then begin
-        match get_typeable_iter_at_coords qi x y with
+        match get_typeable_iter_at_coords qi iter with
         | Some iter ->
             hide qi;
             close qi "before-invoke-merlin";

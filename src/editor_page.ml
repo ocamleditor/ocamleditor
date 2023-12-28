@@ -596,19 +596,6 @@ class page ?file ~project ~scroll_offset ~offset ~editor () =
       ignore (self#view#hyperlink#connect#activate ~callback:begin fun iter ->
           editor#scroll_to_definition ~page:self ~iter;
         end);
-      (** Spinner *)
-      let activate_spinner (active : Activity.t list) =
-        match active with
-        | [] ->
-            editorbar#spinner#set_pixbuf (??? Icons.empty_14);
-            editorbar#spinner#misc#set_tooltip_text "";
-        | msgs ->
-            let msgs = snd (List.split msgs) in
-            editorbar#spinner#set_file (Icon.get_themed_filename "spinner.gif");
-            editorbar#spinner#misc#set_tooltip_text (String.concat "\n" (List.rev msgs));
-      in
-      ignore (Activity.table#connect#changed ~callback:activate_spinner);
-      activate_spinner Activity.table#get;
       (** Code folding *)
       ignore (ocaml_view#code_folding#connect#toggled ~callback:begin fun _(*(expand, _, _)*) ->
           error_indication#paint_global_gutter()

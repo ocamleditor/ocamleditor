@@ -689,10 +689,6 @@ and view ?project ?buffer () =
       margin#add (margin_line_numbers :> Margin.margin);
       margin#add (margin_markers :> Margin.margin);
       margin#connect#update ~callback:(fun () -> approx_char_width <- margin#approx_char_width) |> ignore;
-      view#event#connect#button_press ~callback:begin fun _ ->
-        Messages.vmessages#set_visible false;
-        false
-      end |> ignore;
       view#misc#connect#style_set ~callback:begin fun () ->
         let fd = self#misc#pango_context#font_description in
         margin_line_numbers#resize ~desc:fd ();
