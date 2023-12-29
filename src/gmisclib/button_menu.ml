@@ -48,6 +48,16 @@ let icon_pressed =
     "  .  "|];;
 
 
+let label_icon ?(width=20) ?(height=16) ?(font_name="FiraCode OCamlEditor") ?color ?packing icon =
+  let markup = Printf.sprintf "<big>%s</big>" icon in
+  let label = GMisc.label ~xalign:0.5 ~yalign:0.5 ~xpad:0 ~ypad:0 ~width ~height ~markup ?packing () in
+  label#misc#modify_font_by_name font_name;
+  color |> Option.iter begin fun color ->
+    label#misc#modify_fg [ `NORMAL, `NAME color; `ACTIVE, `NAME color; `PRELIGHT, `NAME color ];
+    label#misc#modify_text [ `NORMAL, `NAME color; `ACTIVE, `NAME color; `PRELIGHT, `NAME color ];
+  end;
+  label
+
 class button_menu ?(label="") ?(relief=`NORMAL) ?stock ?spacing ?packing () =
   let box = GPack.hbox ?spacing ?packing () in
   let button = GButton.button ~relief ?stock ~packing:box#pack () in
@@ -57,12 +67,22 @@ class button_menu ?(label="") ?(relief=`NORMAL) ?stock ?spacing ?packing () =
   let clicked = new clicked () in
   let show_menu = new show_menu () in
   let label_widget = GMisc.label ~text:label () in
+  (*  let _ = GtkMain.Rc.parse_string "
+      style \"gmisclib_button_menu_left\" {
+      GtkButton::inner-border = { 0, 0, 0, 0 }
+      }
+      style \"gmisclib_button_menu_right\" {
+      GtkButton::inner-border = { 0, 0, 0, 0 }
+      }
+      widget \"*.gmisclib_button_menu_left\" style \"gmisclib_button_menu_left\"
+      widget \"*.gmisclib_button_menu_right\" style \"gmisclib_button_menu_right\"
+      " in*)
   object (self)
     inherit GObj.widget box#as_widget
     val relief = relief
     val mutable gmenu = None
-    val image_pressed = (GMisc.image ~pixbuf:icon_pressed ())#coerce
-    val image_normal = (GMisc.image ~pixbuf:icon_normal ())#coerce
+    val image_pressed = (label_icon ~width:5 "<span size='small'>\u{f035d}</span>")#coerce
+    val image_normal = (label_icon ~width:5 "<span size='small'>\u{f035d}</span>")#coerce
     val mutable tooltip_text = None
     val mutable sigid_button_press = None
     val mutable sigid_button_released = None
@@ -71,7 +91,8 @@ class button_menu ?(label="") ?(relief=`NORMAL) ?stock ?spacing ?packing () =
 
     initializer
       ignore (button#connect#clicked ~callback:clicked#call);
-      button_menu#set_image image_normal;
+      button_menu#add image_normal;
+      button_menu#set_border_width 0;
       button#set_focus_on_click false;
       button_menu#set_focus_on_click false;
     button_menu#set_sensitive true;
@@ -130,8 +151,6 @@ class button_menu ?(label="") ?(relief=`NORMAL) ?stock ?spacing ?packing () =
         let _ = GMisc.separator `VERTICAL ~packing:box#pack ~show:draw_sep () in
         let arrow = GMisc.arrow ~kind:`DOWN ~width:8 ~height:1 () in
         box#pack arrow#coerce;
-        arrow#misc#modify_fg [`PRELIGHT, `BLACK];
-        label_widget#misc#modify_fg [`PRELIGHT, `BLACK];
         is_menu_only <- true;
       end;
 
@@ -181,7 +200,9 @@ class button_menu ?(label="") ?(relief=`NORMAL) ?stock ?spacing ?packing () =
       end;
       ignore (menu#connect#deactivate ~callback:begin fun () ->
           self#set_button_menu_child false;
+          
           button_menu#set_relief relief;
+          
           button#set_relief relief;
           Gaux.may tooltip_text ~f:box#misc#set_tooltip_text;
           tooltip_text <- None;
@@ -200,6 +221,7 @@ class button_menu ?(label="") ?(relief=`NORMAL) ?stock ?spacing ?packing () =
         false;
       end |> ignore;
       GtkMenu.Menu.popup_at menu#as_menu ~button:(GdkEvent.Button.button ev) ~time pos;
+      
       button_menu#set_relief `NORMAL;
       
       button#set_relief `NORMAL;

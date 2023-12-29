@@ -40,9 +40,12 @@ setup.ml
 src/resource.res
 src/icons
 src/build_id.ml
-fonts
 *.so
 
 src/ocamleditorw
 .ocamlinit
+.merlin
+src/.merlin
+src/merlin_?.ml*
+src/settings_?.ml*
 

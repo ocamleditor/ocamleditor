@@ -34,7 +34,7 @@ let remove msg = table#set (List.filter (fun (_, m) -> m <> msg) table#get)
 (** Activity Monitor *)
 let monitor ~message ~monitor ~f () =
   let window    = GWindow.window
-      ~icon:Icons.oe
+      ~icon:(!Otherwidgets_config.app_icon())
       ~title:"Activity Monitor"
       ~modal:true
       ~type_hint:`UTILITY
@@ -47,7 +47,7 @@ let monitor ~message ~monitor ~f () =
   window#set_resizable false;
   let vbox      = GPack.vbox ~spacing:8 ~border_width:8 ~packing:window#add () in
   let hbox      = GPack.hbox ~spacing:8 ~packing:vbox#pack () in
-  let spinner   = GMisc.image ~file:(Filename.concat App_config.application_icons "spinner.gif") ~packing:hbox#pack () in
+  let spinner   = GMisc.image ~file:(Filename.concat (!Otherwidgets_config.icon_path()) "spinner.gif") ~packing:hbox#pack () in
   let label     = GMisc.label ~text:message ~width:250 ~xalign:0.0 ~yalign:0.5 ~packing:hbox#pack () in
   let button_ok = GButton.button ~label:"Background" ~packing:hbox#pack () in
   let id        = GMain.Timeout.add ~ms:100 ~callback:begin fun () ->

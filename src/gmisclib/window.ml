@@ -117,7 +117,7 @@ class popup ?(position=(`SOUTH:[`NORTH | `SOUTH | `POINTER])) ?border_width ?(de
     method set_on_popdown f = on_popdown <- f
 
     method popdown () =
-    if popup#misc#visible then begin
+      if popup#visible then begin
         on_popdown();
         popup#misc#hide();
       end;
@@ -155,4 +155,5 @@ class popup ?(position=(`SOUTH:[`NORTH | `SOUTH | `POINTER])) ?border_width ?(de
     method misc = popup#misc
     method move = popup#move
     method resize = popup#resize
+    method visible = popup#visible
   end

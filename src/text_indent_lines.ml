@@ -39,7 +39,7 @@ let scan_indent view (start : GText.iter) (stop : GText.iter) =
 let use_glow = false
 let style = `ON_OFF_DASH
 let width = 1
-let color_hl_fg = `NAME "#000000"
+let color_hl_fg = `NAME (if Preferences.preferences#get.theme_is_dark then "#ffffff" else "#000000")
 let color_hl_bg = `NAME "#e0f0ff"
 let color_hl_bg1 = `NAME "#fff0e0"
 

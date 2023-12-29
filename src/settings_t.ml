@@ -63,7 +63,7 @@ type settings = {
   mutable theme: string option;
   mutable theme_is_dark: bool;
   mutable vmessages_height: int;
-  mutable editor_annot_type_tooltips_enabled: bool;
+  mutable editor_quick_info_enabled: bool;
   mutable editor_annot_type_tooltips_delay: int;
   mutable editor_annot_type_tooltips_impl: int;
   mutable editor_bak: bool;
@@ -88,7 +88,7 @@ type settings = {
   mutable editor_highlight_current_line: bool;
   mutable editor_indent_config: string;
   mutable editor_indent_empty_line: bool;
-  mutable editor_indent_lines: (bool * string * string);
+  mutable editor_indent_lines: (bool * string color * string color);
   mutable editor_left_margin: int;
   mutable editor_mark_occurrences_enabled: bool;
   mutable editor_mark_occurrences_under_cursor: bool;

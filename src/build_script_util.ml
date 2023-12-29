@@ -131,11 +131,14 @@ module ETask = struct
       let exit_code = Spawn.sync
           ~process_in:Spawn.redirect_to_stdout
           ~process_err:Spawn.redirect_to_stderr
-          ~working_directory:dir ~env prog (Array.of_list args) 
+          ~working_directory:dir ~env prog (Array.of_list args)
       in
       match exit_code with
-      | None -> ()
-      | Some _ -> raise Error
+      | `ERROR _ -> raise Error
+      | `SUCCESS (Unix.WEXITED code)
+      | `SUCCESS (Unix.WSIGNALED code)
+      | `SUCCESS (Unix.WSTOPPED code) when code <> 0 -> raise Error
+      | _ -> ()
     end
 end
 

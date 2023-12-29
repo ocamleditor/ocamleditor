@@ -28,7 +28,7 @@
 
 let show ~editor () =
   let window = GWindow.file_chooser_dialog
-      ~action:`SAVE ~icon:Icons.oe
+      ~action:`SAVE ~icon:(!Otherwidgets_config.app_icon())
       ~title:"New File..."
       ~position:`CENTER ~modal:true ~show:false ()
   in

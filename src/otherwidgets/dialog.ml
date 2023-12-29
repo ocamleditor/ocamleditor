@@ -38,7 +38,7 @@ let info ?(title="") ?(message_type=`INFO) ~message widget =
 
 let message ?(title="") ~message message_type =
   let message = GWindow.message_dialog ~message ~title
-      ~modal:true ~position:`CENTER ~type_hint:`DIALOG ~icon:Icons.oe
+      ~modal:true ~position:`CENTER ~type_hint:`DIALOG ~icon:(!Otherwidgets_config.app_icon())
       ~message_type ~buttons:(GWindow.Buttons.ok) () in
   ignore(message#run());
   message#destroy()
@@ -82,7 +82,7 @@ let confirm ?(title="") ?image ~message ~yes ~no ?(cancel=true) parent =
       ~position:`CENTER
       ~modal:true
       ~border_width:8
-      ~icon:Icons.oe
+      ~icon:(!Otherwidgets_config.app_icon())
       () in
   let yes_text, yes_func = yes in
   let no_text, no_func = no in

@@ -24,7 +24,7 @@
 open Preferences
 open Printf
 
-type icon = P of GdkPixbuf.pixbuf | S of GtkStock.id | N
+type icon = P of GdkPixbuf.pixbuf | S of GtkStock.id | L of string * string option | N
 
 type kind = B | BM | M | I
 
@@ -49,62 +49,80 @@ let pixbuf_empty =
 (** specs *)
 let specs ~browser =
   let editor : Editor.editor = browser#editor in [
-    100,  `NEW_FILE,       B, P Icons.new_file, "New File...",
+    30,  `BACK,       BM, L ("\u{f09c0}", None), "Go Back",
+    (fun _ -> browser#goto_location `PREV),
+    None;
+
+    40,  `FORWARD,       B, L ("\u{f09c2}", None), "Go Forward",
+    (fun _ -> browser#goto_location `NEXT),
+    None;
+
+    50,  `LAST_EDIT_LOC,       B, L ("\u{f09b7}", None), "Go to Last Edit Location",
+    (fun _ -> browser#goto_location `LAST),
+    None;
+
+    60,  `SEP,            I, N, "", ignore, None;
+
+    100,  `NEW_FILE,       B, L ("\u{ea7f}", None), "New File...",
     (fun _ -> browser#dialog_file_new()),
     None;
 
-    200,  `OPEN_FILE,      B, P Icons.open_file, "Open File...",
+    200,  `OPEN_FILE,      B, L ("\u{f115}", Some "#FFA500"), "Open File...",
     (fun _ -> editor#dialog_file_open ()),
     None;
 
-    300,  `SAVE,           B, P Icons.save_16, "Save",
+    300,  `SAVE,           B, L ("\u{f0c7}", Some "#1E90FF"), "Save",
     (fun _ -> Gaux.may ~f:editor#save (editor#get_page `ACTIVE)),
     None;
 
-    400,  `SAVE_ALL,       B, P Icons.save_all_16, "Save All",
+    400,  `SAVE_ALL,       B, L ("<span size='x-large'>\u{eb49}</span>", Some "#1E90FF" ), "Save All",
     (fun _ -> browser#save_all ()),
     None;
 
-    500,  `CLOSE,          B, S `CLOSE, "Close Current File",
+    500,  `CLOSE,          B, L ("<span size='medium'>\u{e20d}</span>", None), "Close Current File",
     (fun _ -> editor#with_current_page (fun p -> ignore (editor#dialog_confirm_close p))),
     None;
 
     600,  `SEP,            I, N, "", ignore, None;
 
-    700,  `FIND_REPL,      B, P Icons.find_replace, "Find and Replace", begin fun _ ->
+    700,  `FIND_REPL,      B, L ("\u{f0c7d}", None), "Find in Buffer", begin fun _ ->
       Menu_search.find_replace ?find_all:None ?search_word_at_cursor:None editor
     end, None;
 
-    800,  `SEARCH_AGAIN,   B, P Icons.search_again_16, "Search Again",
-    (fun _ -> Menu_search.search_again editor),
-    None;
+    800,  `FIND_REPL_PATH,      B, L ("\u{f0969}", None), "Find in Path", begin fun _ ->
+      Menu_search.find_replace ?find_all:None ?find_in_buffer:(Some false) ?search_word_at_cursor:None editor
+    end, None;
+
+    (*    800,  `SEARCH_AGAIN,   B, P (??? Icons.search_again_16), "Search Again",
+          (fun _ -> Menu_search.search_again editor),
+          None;*)
 
     900,  `SEP,            I, N, "", ignore, None;
 
-    1000, `VIEW_MESSAGES,  B, P Icons.paned_bottom, "View Messages",
+    1000, `VIEW_MESSAGES,  B, L ("\u{f10a9}", None), "View Messages",
     (fun _ -> browser#set_vmessages_visible (not Messages.vmessages#visible)),
     None;
 
-    1100, `VIEW_HMESSAGES, B, P Icons.paned_right, "View Messages (Right Pane)",
+    1100, `VIEW_HMESSAGES, B, L ("\u{f10ab}", None), "View Messages (Right Pane)",
     (fun _ -> browser#set_hmessages_visible (not Messages.hmessages#visible)),
     None;
 
     1200, `SEP,            I, N, "", ignore, None;
 
-    1300, `EVAL_TOPLEVEL,  B, P Icons.toplevel, "Eval in Toplevel",
+    1300, `EVAL_TOPLEVEL,  B, L ("<span size='x-large'>\u{e00a}</span>", None), "Eval in Toplevel",
     (fun _ -> editor#with_current_page (fun page -> page#ocaml_view#obuffer#send_to_shell ())),
     None;
 
-    1400, `COMPILE_FILE,   B, P Icons.compile_file_16, "Compile Current File", begin fun _ ->
+    1500, `SEP,            I, N, "", ignore, None;
+
+    1400, `COMPILE_FILE,   B, L ("\u{f0966}", None), "Compile Current File", begin fun _ ->
       browser#editor#with_current_page begin fun p ->
         if Preferences.preferences#get.editor_save_all_bef_comp then (editor#save_all());
         p#compile_buffer ?join:None ()
       end
     end, None;
 
-    1500, `SEP,            I, N, "", ignore, None;
-
-    1600, `SHOW_TARGETS,   B, P Icons.target_16, "Targets", begin fun _ ->
+    1600, `SHOW_TARGETS,   B, L ("<span size='x-large'>\u{eab3}</span>", None), "Targets", begin fun _ ->
       browser#dialog_project_properties ?page_num:(Some 1) ?show:(Some true) ()
     end, None;
 
@@ -114,15 +132,17 @@ let specs ~browser =
     browser#project_clean,
     None;
 
-    1800, `CLEAN,          BM, P Icons.clear_build_16, "Clean...",
+    1800, `CLEAN,          BM, L ("\u{f00e2}", None), "Clean...",
     (fun () -> browser#toolbar#clean_current browser),
     Some (browser#toolbar#clean_menu browser);
 
-    1900, `COMPILE,        BM, P Icons.compile_all_16, "Compile...",
+    1850, `SEP,            I, N, "", ignore, None;
+
+    1900, `COMPILE,        BM, L ("\u{e110}", None), "Compile...",
     (fun () -> browser#toolbar#compile_current browser),
     Some (browser#toolbar#compile_menu browser);
 
-    2000, `BUILD,          BM, P Icons.build_16, "Build...",
+    2000, `BUILD,          BM, L ("\u{e111}", None), "Build...",
     (fun () -> browser#toolbar#build_current browser),
     Some (browser#toolbar#build_menu browser);
 
@@ -148,7 +168,7 @@ let specs ~browser =
         end
       end);
 
-    2200, `RUN,            BM, P Icons.start_16, "Run...",
+    2200, `RUN,            BM, L ("\u{f04b}", Some "forestgreen"), "Run...",
     (fun () -> browser#toolbar#run_current browser),
     Some (browser#toolbar#run_menu browser);
   ]
@@ -178,21 +198,20 @@ let items ~browser =
 let create_tool ~(toolbox : GPack.box) item =
   let image =
     match item.pixbuf with
-    | P _ when item.tag = `VIEW_MESSAGES -> Some (GMisc.image ~pixbuf:Icons.paned_bottom_large ())
-    | P pixbuf -> Some (GMisc.image ~pixbuf ())
-    | S stock -> Some (GMisc.image ~stock ~icon_size:`SMALL_TOOLBAR ())
+    | P _ when item.tag = `VIEW_MESSAGES -> Some ((GMisc.image ~pixbuf:(??? Icons.paned_bottom_large) ())#coerce)
+    | P pixbuf -> Some ((GMisc.image ~pixbuf ())#coerce)
+    | S stock -> Some ((GMisc.image ~stock ~icon_size:`SMALL_TOOLBAR ())#coerce)
+    | L (icon, color) -> Some (Gtk_util.label_icon ?color icon)#coerce
     | N -> None
   in
   match item.kind with
   | I -> (GMisc.separator `VERTICAL ~packing:toolbox#pack ())#coerce
   | BM ->
-      let tool = Gmisclib.Button.button_menu ~relief:`NONE ~spacing:1 ~packing:toolbox#pack () in
+      let tool = Gmisclib.Button.button_menu ~relief:`NONE ~spacing:0 ~packing:toolbox#pack () in
       Gaux.may image ~f:(fun image -> tool#set_image image#coerce);
       tool#button#misc#set_name "menubar_button";
       tool#button_menu#misc#set_name "menubar_button_arrow";
       tool#button#set_focus_on_click false;
-      tool#button#misc#modify_fg [`PRELIGHT, `BLACK];
-      tool#button_menu#misc#modify_fg [`PRELIGHT, `BLACK];
       tool#connect#clicked ~callback:(fun () -> Gmisclib.Idle.add item.tool_callback) |> ignore;
       Gaux.may item.tool_callback_menu ~f:(fun callback -> tool#connect#show_menu ~callback) |> ignore;
       tool#coerce
@@ -210,12 +229,16 @@ let create_tool ~(toolbox : GPack.box) item =
       let button = GButton.button ~relief:`NONE ~packing:toolbox#pack () in
       begin
         match image with
-        | Some image -> button#set_image image#coerce
+        | Some image ->
+            begin
+              match [@warning "-4" ] item.pixbuf with
+              | L _ -> button#add image#coerce
+              | _ -> button#set_image image#coerce
+            end
         | _ -> button#set_label item.label
       end;
       button#misc#set_name "menubar_button";
       button#set_focus_on_click false;
-      button#child#misc#modify_fg [`PRELIGHT, `BLACK];
       let callback = fun () -> Gmisclib.Idle.add item.tool_callback in
       button#connect#clicked ~callback |> ignore;
       button#coerce
@@ -245,15 +268,18 @@ let create_item ~menu ~(toolbox : GPack.box) ~pos item =
   let box = GPack.hbox ~packing:item.check#add () in
   let text, image =
     match item.pixbuf with
-    | P pixbuf -> item.label, GMisc.image ~pixbuf ~xpad:8 ~packing:box#pack ()
-    | S stock -> item.label, GMisc.image ~stock ~icon_size:`SMALL_TOOLBAR ~xpad:8 ~packing:box#pack ()
+    | P pixbuf -> item.label, (GMisc.image ~pixbuf ~xpad:8 ~packing:box#pack ())#coerce
+    | S stock -> item.label, (GMisc.image ~stock ~icon_size:`SMALL_TOOLBAR ~xpad:8 ~packing:box#pack ())#coerce
     | N when item.kind = I ->
         let image = GMisc.image ~pixbuf:pixbuf_empty ~packing:box#pack ~xpad:3 () in
         let _ = GMisc.separator `HORIZONTAL ~packing:box#add () in
-        "", image
+        "", image#coerce
     | N ->
         let image = GMisc.image ~pixbuf:pixbuf_empty ~packing:box#pack ~xpad:3 () in
-        item.label, image
+        item.label, image#coerce
+    | L (icon, color) ->
+        let widget = Gtk_util.label_icon ?color ~width:32 ~packing:box#pack icon in
+        item.label, widget#coerce
   in
   let _ = GMisc.label ~text ~xalign:0.0 ~packing:box#add () in
   item.tool_widget <- Some (create_tool ~toolbox item);

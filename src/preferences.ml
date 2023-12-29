@@ -20,10 +20,11 @@
 
 *)
 
+open Settings_t
+
 let default_values =
   let settings = Settings_j.settings_of_string "{}" in
   let default_editor_tags =
-    let open Settings_t in
     [
       { name = "control";
         color = { light = "blue"; dark = "#87CEFA" };
@@ -42,9 +43,9 @@ let default_values =
         bg_color = { light = "#ffffff"; dark = "#000000" };
         weight = 0; style = `NORMAL; underline = `NONE; scale = 1.0; bg_default = true };
       { name = "infix";
-        color = { light = "indianred4"; dark = "#ff6a6a" };
+        color = { light = "#B34B4B"; dark = "#ff6a6a" };
         bg_color = { light = "#ffffff"; dark = "#000000" };
-        weight = 0; style = `NORMAL; underline = `NONE; scale = 1.0; bg_default = true };
+        weight = 500; style = `NORMAL; underline = `NONE; scale = 1.0; bg_default = true };
       { name = "label";
         color = { light = "saddlebrown"; dark = "#B77871" };
         bg_color = { light = "#ffffff"; dark = "#000000" };
@@ -82,16 +83,16 @@ let default_values =
         bg_color = { light = "#ffffff"; dark = "#000000" };
         weight = 0; style = `ITALIC; underline = `NONE; scale = 1.0; bg_default = true };
       { name = "ocamldoc";
-        color = { light = "deeppink3"; dark = "deeppink1" };
+        color = { light = "deeppink3"; dark = "#C72B7F" };
         bg_color = { light = "#ffffff"; dark = "#000000" };
         weight = 0; style = `ITALIC; underline = `NONE; scale = 1.0; bg_default = true };
       { name = "highlight";
-        color = { light = "#ffff00"; dark = "#ffff00" };
+        color = { light = "#ffff00"; dark = "#1e1e1e" };
         bg_color = { light = "#ffffff"; dark = "#000000" };
         weight = 0; style = `NORMAL; underline = `NONE; scale = 1.0; bg_default = true };
       { name = "highlight_current_line";
-        color = { light = "#c3ff96"; dark = "#223316" };
-        bg_color = { light = "#ffffff"; dark = "#000000" };
+        color = { light = "#c3ff96"; dark = "#2E7100" };
+        bg_color = { light = "#c3ff96"; dark = "#223316" };
         weight = 0; style = `NORMAL; underline = `NONE; scale = 1.0; bg_default = true };
       { name = "record_label";
         color = { light = "#474747"; dark = "#d0d0d0" };
@@ -102,7 +103,7 @@ let default_values =
         bg_color = { light = "#3584e4"; dark = "#4B81AD" };
         weight = 0; style = `NORMAL; underline = `NONE; scale = 1.0; bg_default = false };
       { name = "annotation";
-        color = { light = "#444488"; dark = "#444488" };
+        color = { light = "#444488"; dark = "#C68BFF" };
         bg_color = { light = "#ffffff"; dark = "#000000" };
         weight = 0; style = `ITALIC; underline = `NONE; scale = 1.0; bg_default = true };
     ]
@@ -114,75 +115,77 @@ let preferences = new GUtil.variable default_values
 
 let geometry_memo = Gmisclib.Window.GeometryMemo.create ~filename:Oe_config.geometry_memo_filename ()
 
-let filename = Filename.concat App_config.ocamleditor_user_home "settings.new.json"
+module Themes = struct
+  let (//) = Filename.concat
+  let (!!) = Filename.dirname
 
-(** save *)
-let save () =
-  let chan = open_out_bin filename in
-  begin
-    try
-      let json = preferences#get |> Settings_j.string_of_settings |> Yojson.Safe.prettify in
-      output_string chan json;
-      close_out chan;
-      preferences#set { preferences#get with Settings_t.timestamp = Unix.gettimeofday() }
-    with ex ->
-      begin
-        Printf.eprintf "Failed to save settings to file \"%s\".\n%s%!" filename (Printexc.to_string ex);
-        close_out_noerr chan
-      end;
-  end
+  let directory =
+    [
+      Some ((!! (!! Sys.executable_name)) // "share" // "themes");
+      (try Some ((Sys.getenv "HOME") // ".themes") with Not_found -> None);
+      Some "/usr/share/themes";
+    ]
+    |> List.filter_map Fun.id
+    |> List.find_opt Sys.file_exists
 
-(** load *)
-let load () =
-  if Sys.file_exists filename then begin
-    let chan = open_in_bin filename in
-    begin
-      try
-        let json = really_input_string chan (in_channel_length  chan) in
-        let settings = Settings_j.settings_of_string json in
-        preferences#set settings;
-        close_in chan
-      with ex ->
-        begin
-          close_in_noerr chan;
-          Printf.printf "Failed to load settings from file \"%s\", using defaults.\n%!" filename;
-        end;
-    end;
-  end else begin
-    Printf.printf "File \"%s\" not found, using defaults.\n%!" filename;
-  end;
-  Gmisclib.Window.GeometryMemo.set_enabled geometry_memo  preferences#get.remember_window_geometry;
-  Gmisclib.Window.GeometryMemo.set_delayed geometry_memo  preferences#get.geometry_delayed;
-  Otherwidgets_config.geometry_memo := (fun () -> geometry_memo);
-;;
+  let avail_themes =
+    match directory with
+    | Some dir when Sys.file_exists dir -> List.sort compare (Array.to_list (Sys.readdir dir))
+    | _ -> []
 
-(** reset_defaults *)
-let reset_defaults () =
-  if Sys.file_exists filename then Sys.remove filename;
-  preferences#set default_values;
-  save()
+  let is_dark_theme (widget : GObj.widget) =
+    let fg_normal = widget#misc#style#fg `NORMAL |> Color.rgb_of_gdk |> Color.avg in
+    let bg_normal = widget#misc#style#bg `NORMAL |> Color.rgb_of_gdk |> Color.avg in
+    fg_normal > bg_normal
+end
 
-let get_themed_color color =
-  if preferences#get.Settings_t.theme_is_dark then color.Settings_t.dark else color.Settings_t.light
+module Icon = struct
+  let update_otherwidgets_icon pref =
+    Otherwidgets_config.app_icon :=
+      (fun () -> if pref.theme_is_dark then Icons.Dark.oe else Icons.Light.oe);
+    Otherwidgets_config.icon_path :=
+      (fun () -> if pref.theme_is_dark then Icons.Dark.path else Icons.Light.path)
 
-let (??) = get_themed_color
+  let _ =
+    update_otherwidgets_icon preferences#get;
+    preferences#connect#changed ~callback:update_otherwidgets_icon
 
-let set_themed_color color x =
-  if preferences#get.Settings_t.theme_is_dark then color.Settings_t.dark <- x else color.Settings_t.light <- x
+  let get_themed_icon (icon_light, icon_dark) =
+    if preferences#get.theme_is_dark then icon_dark else icon_light
 
-(*let set_themed_opt_color (color : Settings_t.color option) x =
-  if preferences#get.Settings_t.theme_is_dark
-  then (match color.Settings_t.dark with Some c -> c.dark <- x | _ -> c.dark <- None)
-  else color.Settings_t.light <- x*)
+  let get_themed_filename basename =
+    if preferences#get.theme_is_dark
+    then Filename.concat Icons.Dark.path basename
+    else Filename.concat Icons.Light.path basename
+end
 
-let new_themed_color x alt =
-  if preferences#get.Settings_t.theme_is_dark
-  then { Settings_t.light = alt.Settings_t.light; dark = x }
-  else { Settings_t.light = x; dark = alt.Settings_t.dark }
+module Color = struct
+  let [@ inline] get_themed_color color =
+    if preferences#get.theme_is_dark then color.dark else color.light
+
+  let set_themed_color color x =
+    if preferences#get.theme_is_dark then color.dark <- x else color.light <- x
+
+  let new_themed_color x alt =
+    if preferences#get.theme_is_dark
+    then { light = alt.light; dark = x }
+    else { light = x; dark = alt.dark }
+end
+
+(** Alias for [Color.get_themed_color] *)
+let (??) = Color.get_themed_color
+
+(** Alias for [Color.get_themed_icon] *)
+let (???) = Icon.get_themed_icon
+
+let editor_tag_bg_color tagname =
+  let color = (List.find (fun t -> t.name = tagname) preferences#get.editor_tags).bg_color in
+  let color_name = Color.get_themed_color color in
+  (`NAME color_name) |> GDraw.color
 
 let editor_tag_color tagname =
-  let color = (List.find (fun t -> t.Settings_t.name = tagname) preferences#get.editor_tags).color in
-  let color_name = get_themed_color color in
+  let color = (List.find (fun t -> t.name = tagname) preferences#get.editor_tags).color in
+  let color_name = Color.get_themed_color color in
   (`NAME color_name) |> GDraw.color
 
 let editor_tag_label = function
@@ -208,6 +211,59 @@ let editor_tag_label = function
   | "annotation"             -> "Annotation"
   | x -> x
 
-let _ = begin
-  load();
-end
+let filename = Filename.concat App_config.ocamleditor_user_home "settings.json"
+
+let save () =
+  let chan = open_out_bin filename in
+  begin
+    try
+      let json = preferences#get |> Settings_j.string_of_settings |> Yojson.Safe.prettify in
+      output_string chan json;
+      close_out chan;
+      preferences#set { preferences#get with timestamp = Unix.gettimeofday() }
+    with ex ->
+      begin
+        Printf.eprintf "Failed to save settings to file \"%s\".\n%s%!" filename (Printexc.to_string ex);
+        close_out_noerr chan
+      end;
+  end
+
+let load () =
+  if Sys.file_exists filename then begin
+    let chan = open_in_bin filename in
+    begin
+      try
+        let json = really_input_string chan (in_channel_length  chan) in
+        let settings = Settings_j.settings_of_string json in
+        preferences#set settings;
+        close_in chan
+      with ex ->
+        begin
+          close_in_noerr chan;
+          Printf.printf "Failed to load settings from file \"%s\", using defaults.\n%!" filename;
+        end;
+    end;
+  end else begin
+    Printf.printf "File \"%s\" not found, using defaults.\n%!" filename;
+  end;
+  begin
+    match Themes.avail_themes with
+    | [] ->
+        preferences#get.theme <- None;
+        preferences#get.theme_is_dark <- false;
+    |  _-> ()
+  end;
+  preferences#get.editor_code_folding_enabled <- false;
+  Gmisclib.Window.GeometryMemo.set_enabled geometry_memo preferences#get.remember_window_geometry;
+  Gmisclib.Window.GeometryMemo.set_delayed geometry_memo preferences#get.geometry_delayed;
+  Otherwidgets_config.geometry_memo := (fun () -> geometry_memo)
+
+let reset_defaults () =
+  if Sys.file_exists filename then Sys.remove filename;
+  preferences#set default_values;
+  save()
+
+let _ =
+  let wrong_filename = Filename.concat App_config.ocamleditor_user_home "settings.new.json" in
+  if Sys.file_exists wrong_filename then Sys.rename wrong_filename filename;
+  load()

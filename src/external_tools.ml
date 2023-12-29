@@ -82,10 +82,11 @@ let get_macros ~get_editor ~get_current_project () =
   macros, macros_help, translate_macro
 
 let create ~get_editor ~get_current_project () =
+  let open Preferences in
   let macros, macros_help, translate_macro = get_macros ~get_editor ~get_current_project () in
   (* Tools *)
   let tools = ref (read ()) in
-  let window = GWindow.window ~type_hint:`DIALOG ~icon:Icons.oe ~width:640 ~height:400
+  let window = GWindow.window ~type_hint:`DIALOG ~icon:(??? Icons.oe) ~width:640 ~height:400
       ~title:"Configure External Tools" ~position:`CENTER ~modal:true ~show:false () in
   Gmisclib.Window.GeometryMemo.add ~key:"dialog-external-tools" ~window Preferences.geometry_memo;
   window#show();
@@ -121,10 +122,10 @@ let create ~get_editor ~get_current_project () =
   let _ = GMisc.label ~text:(macros_help ()) ~xalign:0.0 ~packing:(vbox#pack ~expand:false) () in
   (* Bottoni *)
   let bbox = GPack.button_box `HORIZONTAL ~layout:`END ~spacing:8 ~packing:(vbox#pack ~expand:false) () in
-  let butt_add = GButton.button ~stock:`ADD ~packing:bbox#add () in
-  let butt_remove = GButton.button ~stock:`REMOVE ~packing:bbox#add () in
-  let butt_ok = GButton.button ~stock:`OK ~packing:bbox#add () in
-  let butt_cancel = GButton.button ~stock:`CANCEL ~packing:bbox#add () in
+  let butt_add = GButton.button ~label:"Add" ~packing:bbox#add () in
+  let butt_remove = GButton.button ~label:"Remove" ~packing:bbox#add () in
+  let butt_ok = GButton.button ~label:"OK" ~packing:bbox#add () in
+  let butt_cancel = GButton.button ~label:"Cancel" ~packing:bbox#add () in
   bbox#set_child_secondary butt_add#coerce true;
   bbox#set_child_secondary butt_remove#coerce true;
   (* Add *)

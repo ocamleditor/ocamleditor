@@ -26,6 +26,7 @@ open GdkKeysyms
 open Miscellanea
 open Oe
 open Mbrowser_slist
+open Preferences
 
 let title = "Module Browser"
 
@@ -55,31 +56,31 @@ class widget ~project ?(is_completion=false) ?(enable_history=true) ?width ?heig
   let radio_find_path     = GButton.radio_tool_button ~packing:toolbar#insert ~active:true () in
   let radio_find_name     = GButton.radio_tool_button ~packing:toolbar#insert ~group:radio_find_path () in
   let radio_find_type     = GButton.radio_tool_button ~packing:toolbar#insert ~group:radio_find_path () in
-  let _                   = radio_find_path#set_icon_widget (GMisc.image ~pixbuf:Icons.path_name ())#coerce in
-  let _                   = radio_find_name#set_icon_widget (GMisc.image ~pixbuf:Icons.simple_name ())#coerce in
-  let _                   = radio_find_type#set_icon_widget (GMisc.image ~pixbuf:Icons.typ ())#coerce in
+  let _                   = radio_find_path#set_icon_widget (GMisc.image ~pixbuf:(??? Icons.path_name) ())#coerce in
+  let _                   = radio_find_name#set_icon_widget (GMisc.image ~pixbuf:(??? Icons.simple_name) ())#coerce in
+  let _                   = radio_find_type#set_icon_widget (GMisc.image ~pixbuf:(??? Icons.typ) ())#coerce in
   let _                   = radio_find_path#misc#set_tooltip_text "Search by value path" in
   let _                   = radio_find_name#misc#set_tooltip_text "Search by simple value name" in
   let _                   = radio_find_type#misc#set_tooltip_text "Search by type" in
   let entry_find          = GEdit.entry ~width_chars:15 ~packing:item_find#add () in
   let button_find         = GButton.tool_button (*~stock:`FIND*) ~homogeneous:false ~packing:toolbar#insert () in
-  let _                   = button_find#set_icon_widget (GMisc.image ~pixbuf:Icons.find_16 ())#coerce in
+  let _                   = button_find#set_icon_widget (GMisc.image ~pixbuf:(??? Icons.find_16) ())#coerce in
   let _                   = GButton.separator_tool_item ~draw:sep_visible ~packing:toolbar#insert () in
   let button_add          = GButton.tool_button ~stock:`ADD ~homogeneous:false ~packing:toolbar#insert ~show:false () in
   let button_remove       = GButton.tool_button ~stock:`REMOVE ~homogeneous:false ~packing:toolbar#insert () in
   let _                   = GButton.separator_tool_item ~draw:sep_visible ~packing:toolbar#insert () in
   let button_incr_font    = GButton.tool_button ~label:"Increase Font Size" ~homogeneous:false ~packing:toolbar#insert () in
-  let _                   = button_incr_font#set_icon_widget (GMisc.image ~pixbuf:Icons.zoom_in_14 ~icon_size:`MENU ())#coerce in
+  let _                   = button_incr_font#set_icon_widget (GMisc.image ~pixbuf:(??? Icons.zoom_in_14) ~icon_size:`MENU ())#coerce in
   let button_decr_font    = GButton.tool_button ~label:"Decrease Font Size" ~homogeneous:false ~packing:toolbar#insert () in
-  let _                   = button_decr_font#set_icon_widget (GMisc.image ~pixbuf:Icons.zoom_out_14 ~icon_size:`MENU ())#coerce in
+  let _                   = button_decr_font#set_icon_widget (GMisc.image ~pixbuf:(??? Icons.zoom_out_14) ~icon_size:`MENU ())#coerce in
   let _                   = GButton.separator_tool_item ~draw:true ~expand:false ~packing:toolbar#insert () in
   let button_layout_slist = GButton.toggle_tool_button ~label:"Symbol list" ~homogeneous:false ~active:false ~packing:toolbar#insert () in
-  let _                   = button_layout_slist#set_icon_widget (GMisc.image ~pixbuf:Icons.item_list ~icon_size:`MENU ())#coerce in
+  let _                   = button_layout_slist#set_icon_widget (GMisc.image ~pixbuf:(??? Icons.item_list) ~icon_size:`MENU ())#coerce in
   let button_layout_odoc  = GButton.toggle_tool_button ~label:"Documentation" ~homogeneous:false ~active:false ~packing:toolbar#insert () in
-  let _                   = button_layout_odoc#set_icon_widget (GMisc.image ~pixbuf:Icons.doc ~icon_size:`MENU ())#coerce in
+  let _                   = button_layout_odoc#set_icon_widget (GMisc.image ~pixbuf:(??? Icons.doc) ~icon_size:`MENU ())#coerce in
   let _                   = GButton.separator_tool_item ~draw:true ~expand:false ~packing:toolbar#insert () in
   let button_detach       = GButton.tool_button ~label:"Detach" ~homogeneous:false ~packing:toolbar#insert () in
-  let _                   = GMisc.image ~pixbuf:Icons.detach ~icon_size:`MENU ~packing:button_detach#set_icon_widget () in
+  let _                   = GMisc.image ~pixbuf:(??? Icons.detach) ~icon_size:`MENU ~packing:button_detach#set_icon_widget () in
   let box_slist           = GPack.vbox ~packing:paned#add1 ~show:false () in
   let label_title         = GMisc.label ~markup:"" ~xalign:0.5 ~xpad:3 ~ypad:5 ~packing:box_slist#pack () in
   let stack_box           = GPack.hbox ~packing:box_slist#add () in
@@ -97,7 +98,7 @@ class widget ~project ?(is_completion=false) ?(enable_history=true) ?width ?heig
   let _ =
     odoc_buffer#undo#disable();
     odoc_sw#add odoc_view#coerce;
-    pref.editor_indent_lines <- (false, "", "");
+    pref.editor_indent_lines <- (false, {light=""; dark=""}, {light=""; dark=""});
     pref.editor_highlight_current_line <- false;
     pref.editor_show_line_numbers <- false;
     pref.editor_right_margin_visible <- false;
@@ -281,7 +282,7 @@ class widget ~project ?(is_completion=false) ?(enable_history=true) ?width ?heig
               wlibs#view#misc#grab_focus()
         end);
       (* entry_find *)
-      entry_find#misc#set_property "secondary-icon-pixbuf" (`OBJECT (Some Icons.button_close_8));
+      entry_find#misc#set_property "secondary-icon-pixbuf" (`OBJECT (Some (??? Icons.button_close_8)));
       entry_find#misc#set_property "secondary-icon-sensitive" (`BOOL false);
       ignore begin GtkSignal.connect
           ~sgn:{
@@ -397,9 +398,9 @@ class widget ~project ?(is_completion=false) ?(enable_history=true) ?width ?heig
           end else if key = GdkKeysyms._F1 || (state = [`MOD1] && key = GdkKeysyms._Return) then begin
             button_layout_odoc#set_active (not button_layout_odoc#get_active);
             true
-          end else if box_odoc_visible && (*not is_completion &&*) state = [`CONTROL] && key = GdkKeysyms._e then begin
+          end else if box_odoc_visible && (*not is_completion &&*) state = [`CONTROL] && key = GdkKeysyms._f then begin
             odoc_buffer#place_cursor ~where:odoc_buffer#start_iter;
-            incremental_search#i_search ~view:(odoc_view :> Text.view) ~project;
+            incremental_search#i_search ?full_find:None ~view:(odoc_view :> Text.view) ~project ();
             true
           end else false
         end);
@@ -524,23 +525,24 @@ class widget ~project ?(is_completion=false) ?(enable_history=true) ?width ?heig
         | _ -> prefix, false
       in
       let find re =
-        ignore(List_opt.find begin fun (path, _) ->
-            let row = widget#model#get_iter path in
-            let sym = widget#model#get ~row ~column:col_symbol_data in
-            let name = if by_value_path then String.concat "" sym.Oe.sy_id else Symbols.get_name sym in
-            found :=
-              if Str.string_match re name 0 && (kind = [] || List.mem sym.sy_kind kind) then begin
-                widget#view#selection#select_iter row;
-                Gmisclib.Idle.add begin fun () ->
-                  if widget#view#visible then begin
-                    widget#view#scroll_to_cell ~align:(0.38, 0.0) path widget#vc_icon;
-                    widget#view#set_cursor path widget#vc_icon;
-                  end;
+        paths
+        |> List_opt.find begin fun (path, _) ->
+          let row = widget#model#get_iter path in
+          let sym = widget#model#get ~row ~column:col_symbol_data in
+          let name = if by_value_path then String.concat "" sym.Oe.sy_id else Symbols.get_name sym in
+          found :=
+            if Str.string_match re name 0 && (kind = [] || List.mem sym.sy_kind kind) then begin
+              widget#view#selection#select_iter row;
+              Gmisclib.Idle.add begin fun () ->
+                if widget#view#visible then begin
+                  widget#view#scroll_to_cell ~align:(0.38, 0.0) path widget#vc_icon;
+                  widget#view#set_cursor path widget#vc_icon;
                 end;
-                true;
-              end else false;
-            !found
-          end paths)
+              end;
+              true;
+            end else false;
+          !found
+        end |> ignore;
       in
       find (Str.regexp_string full_prefix);
       if not !found then (find (Str.regexp_string_case_fold full_prefix));
@@ -575,7 +577,7 @@ class widget ~project ?(is_completion=false) ?(enable_history=true) ?width ?heig
         Gmisclib.Idle.add (fun () -> button_layout_slist#set_active (match symbols with [] | [_] -> false | _ -> true));
         odoc_view#buffer#set_text "";
         let f = self#select_best_match text in
-        self#create_widget_search_results ~symbols ~fill ~f ();
+        self#create_widget_search_results ~symbols ~fill ~selection_func:f ();
       end
 
     (** find *)
@@ -585,7 +587,7 @@ class widget ~project ?(is_completion=false) ?(enable_history=true) ?width ?heig
       end;
 
       (** find_compl *)
-    method find_compl ~prefix ~(page : Editor_page.page) ~include_methods ?(f=self#default_select_func) () =
+    method find_compl ~prefix ~(page : Editor_page.page) ~include_methods ?(selection_func=self#default_select_func) () =
       let path = Project.get_load_path project in
       (*let path = project.Project.ocamllib :: path in*)
       if String.length prefix > 0 then begin
@@ -599,7 +601,7 @@ class widget ~project ?(is_completion=false) ?(enable_history=true) ?width ?heig
             ~regexp
             project.Prj.symbols.syt_table
         in
-        self#create_widget_search_results ~symbols ~f ()
+        self#create_widget_search_results ~symbols ~selection_func ()
       end;
 
       (** find_symbol *)
@@ -836,9 +838,39 @@ class widget ~project ?(is_completion=false) ?(enable_history=true) ?width ?heig
         f widget;
       end ()
 
+    (** create_widget_self *)
+    method create_widget_self ~methods ?(lib_path="") ?(f=ignore) () =
+      Activity.wrap Activity.Symbol begin fun () ->
+        let widget = self#create_widget ~kind:`Class () in
+        let entries =
+          methods
+          |> List.map begin fun (name, typ) ->
+            {
+              sy_kind = Pmethod;
+              sy_id = [ name ];
+              sy_type = sprintf "%s : %s" name typ;
+              sy_filename = "";
+              sy_local = false;
+            }
+          end
+        in
+        widget#fill entries;
+        widget#set_title ~subtitle:lib_path "self";
+        self#push widget;
+        ignore (self#connect#switch_page ~callback:begin fun cur ->
+            if widget#misc#get_oid = cur#misc#get_oid then (self#update_class_details widget ())
+          end);
+        ignore (widget#view#selection#connect#changed ~callback:(fun () -> self#update_class_details widget()));
+        self#update_class_details widget ();
+        f widget;
+      end ()
+
     (** create_widget_search_results *)
-    method private create_widget_search_results ~symbols ?(fill=false) ?(f=self#default_select_func) () =
-      let symbols = List.sort (fun a b -> compare (Symbols.get_name a) (Symbols.get_name b)) symbols in
+    method private create_widget_search_results ~symbols ?(fill=false) ?(selection_func=self#default_select_func) () =
+      let symbols = (* local symbols first *)
+        List.sort (fun a b ->
+            compare (not a.sy_local, Symbols.get_name a) (not b.sy_local, Symbols.get_name b)) symbols
+      in
       search_results_length <- List.length symbols;
       let widget : symbol_list =
         match (self#get_current_page() : symbol_list option) with
@@ -875,7 +907,7 @@ class widget ~project ?(is_completion=false) ?(enable_history=true) ?width ?heig
         ignore (widget#fill symbols);
         Gmisclib.Idle.add (fun () -> if widget#visible then widget#view#scroll_to_point 0 0)
       end;
-      f widget
+      selection_func widget
 
     (** insert_odoc *)
     method private insert_odoc ~project ~symbol () =
@@ -1171,7 +1203,7 @@ let append_to_messages ?page ?search_string ~project =
     let widget = new widget ~project () in
     messages#set_visible true;
     let hbox = GPack.hbox ~spacing:1 () in
-    let icon = GMisc.image ~pixbuf:Icons.module_browser ~packing:hbox#pack () in
+    let icon = GMisc.image ~pixbuf:(??? Icons.module_browser) ~packing:hbox#pack () in
     let label = GMisc.label ~text:title ~packing:hbox#add () in
     widget#create_widget_libraries ();
     begin

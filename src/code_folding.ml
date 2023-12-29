@@ -140,10 +140,10 @@ class manager ~(view : Text.view) =
         let xs = view#gutter.Gutter.fold_x in
         let ms =
           try
-            let _, _, ms = 
+            let _, _, ms =
               graphics |> List.find begin fun (y1, y2, _) ->
                 x >= xs && x <= view#gutter.Gutter.size && y1 <= y && y <= y2
-              end 
+              end
             in
             ms
           with Not_found -> (raise Exit)
@@ -235,15 +235,15 @@ class manager ~(view : Text.view) =
           (* Draw lines and markers in the same iter (to reduce flickering?) *)
           set_foreground drawable view#gutter.Gutter.marker_color;
           set_line_attributes drawable ~width:2 ~cap:`PROJECTING ~style:`SOLID ();
-          let folds = 
+          let folds =
             !folds |> List.fold_left begin fun acc ((_, l2, _) as ll, a, b, ms) ->
               match acc with
-              | ((l1', _, is_collapsed), _, _, _) :: _ when l2 = l1' + 1 -> 
+              | ((l1', _, is_collapsed), _, _, _) :: _ when l2 = l1' + 1 ->
                   (ll, a, b, ms) :: acc
-              | _ -> 
+              | _ ->
                   (ll, a, b, ms) :: acc
-            end [] 
-            |> List.rev 
+            end []
+            |> List.rev
           in
           folds |> List.iter begin fun (_, _, _, ms) ->
             (* Markers *)
@@ -325,8 +325,8 @@ class manager ~(view : Text.view) =
             let sections = List.rev (split_length n) in
             Gaux.may view#signal_expose ~f:(fun id -> view#misc#handler_block id);
             Gaux.may signal_expose ~f:(fun id -> view#misc#handler_block id);
-            Gmisclib.Idle.add_gen begin 
-              let i = ref (List.length sections - 1) in 
+            Gmisclib.Idle.add_gen begin
+              let i = ref (List.length sections - 1) in
               fun () ->
                 try
                   if !i > 0 && !iter#compare stop < 0 then begin
@@ -443,7 +443,7 @@ class manager ~(view : Text.view) =
                   try
                     let fi = self#get_folding_iters o1 o2 in
                     if self#is_folded fi.fit_start_fold then raise Exit;
-                    set_highlight_background tag_highlight Oe_config.code_folding_highlight_color;
+                    set_highlight_background tag_highlight (Preferences.(??) Oe_config.code_folding_highlight_color);
                     let start = (buffer#get_iter (`OFFSET o1))#set_line_index 0 in
                     let stop =
                       if unmatched then begin
@@ -485,7 +485,7 @@ class manager ~(view : Text.view) =
               end else begin
                 (*tag_highlight_applied <- true;*)
                 let color = List.nth grad !i in
-                set_highlight_background tag_highlight color;
+                set_highlight_background tag_highlight (Preferences.(??) color);
                 incr i;
                 true
               end
@@ -498,12 +498,12 @@ class manager ~(view : Text.view) =
           if enabled then (self#draw_markers drawable);
           false
         end);
-      ignore (view#connect#notify_vadjustment ~callback:begin fun vertical ->
-                  Gaux.may signal_expose ~f:(fun id -> view#misc#handler_block id);
-                  Gmisclib.Idle.add ~prio:300 self#scan_folding_points;
-                  Gmisclib.Idle.add ~prio:100 (fun () ->
-              Gaux.may signal_expose ~f:(fun id -> view#misc#handler_unblock id)
-            )
+      ignore (view#vadjustment#connect#changed ~callback:begin fun _ ->
+              Gaux.may signal_expose ~f:(fun id -> view#misc#handler_block id);
+              Gmisclib.Idle.add ~prio:300 self#scan_folding_points;
+              Gmisclib.Idle.add ~prio:100 (fun () ->
+                  Gaux.may signal_expose ~f:(fun id -> view#misc#handler_unblock id)
+              )
         end
         );
       ignore (view#event#connect#after#button_release ~callback:begin fun ev ->

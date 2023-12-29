@@ -23,10 +23,11 @@
 
 open Miscellanea
 open Printf
+open Preferences
 
 (** system_properties *)
 let system_properties () =
-  let window = GWindow.window ~icon:Icons.oe ~title:"System Properties" ~position:`CENTER ~modal:true ~resizable:false ~show:false () in
+  let window = GWindow.window ~icon:(??? Icons.oe) ~title:"System Properties" ~position:`CENTER ~modal:true ~resizable:false ~show:false () in
   let text = Glib.Convert.locale_to_utf8 (System_properties.to_string ()) in
   let buffer = GText.buffer ~text () in
   let vbox = GPack.vbox ~spacing:0 ~border_width:0 ~packing:window#add () in
@@ -39,7 +40,8 @@ let system_properties () =
   view#set_pixels_below_lines 2;
   view#set_cursor_visible false;
   let bbox = GPack.button_box `HORIZONTAL ~layout:`SPREAD ~border_width:8 ~packing:vbox#pack () in
-  let button_close = GButton.button ~stock:`CLOSE ~packing:bbox#pack () in
+  let button_close = GButton.button ~packing:bbox#pack () in
+  button_close#set_image (Icons.create (??? Icons.close_16))#coerce;
   button_close#connect#clicked ~callback:window#destroy |> ignore;
   Gmisclib.Util.esc_destroy_window window;
   window#show();
@@ -48,17 +50,21 @@ let system_properties () =
 
 (** about *)
 let about editor () =
+  let version, comments =
+    match About.version |> Str.split (Str.regexp "[~-]") with
+    | version :: comments :: _ -> version, comments
+    | _ -> "", ""
+  in
   let dialog = GWindow.about_dialog
-      ~type_hint:(if Sys.os_type = "Win32" then `SPLASHSCREEN else `DIALOG)
       ~modal:true
       ~width:310
       ~position:`CENTER
-      ~icon:Icons.oe
+      ~icon:(??? Icons.oe)
       ~name:About.program_name
-      ~version:About.version
+      ~version
       ~copyright:About.copyright
-      ~logo:Icons.logo
-      ~comments:(sprintf "Commit: %s" !About.git_hash)
+      ~logo:(??? Icons.logo)
+      (*~comments*)
       ~license:{|OCamlEditor is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
 the Free Software Foundation, either version 3 of the License, or
@@ -102,7 +108,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.|}
   Gaux.may (GWindow.toplevel editor) ~f:(fun x -> dialog#set_transient_for x#as_window);
   let align = GBin.alignment ~xalign:0.5 ~packing:vbox#add () in
   let hbox = GPack.hbox ~spacing:3 ~packing:align#add () in
-  let icon = GMisc.image ~xalign:1.0 ~file:(App_config.application_icons // "spinner_16.gif") ~packing:hbox#add ~show:false () in
+  let icon = GMisc.image ~xalign:1.0 ~file:(Icon.get_themed_filename "spinner_16.gif") ~packing:hbox#add ~show:false () in
   let label = GMisc.label ~text:" " ~height:22 ~xalign:0.0 ~yalign:0.5 ~packing:hbox#add () in
   icon#set_icon_size `MENU;
   modify_label label;
@@ -133,7 +139,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.|}
       end;
     with ex -> begin
         kprintf label#set_text "Unable to contact server for updates (%s)." (Printexc.to_string ex);
-        icon#set_pixbuf Icons.warning_14;
+        icon#set_pixbuf (??? Icons.warning_14);
       end
   in
   (*ignore (dialog#misc#connect#show ~callback:begin fun () ->

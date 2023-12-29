@@ -22,6 +22,7 @@
 
 
 open Printf
+open Preferences
 
 (** insert *)
 let insert (buffer : GText.buffer) ignore_whitespace filename1 filename2 =
@@ -35,8 +36,8 @@ let insert (buffer : GText.buffer) ignore_whitespace filename1 filename2 =
     [ if ignore_whitespace then "--ignore-all-space" else ""; filename1; filename2 ]
     |> List.filter (fun x -> x <> "") |> Array.of_list
   in
-  let color_add = Color.add_value Oe_config.global_gutter_diff_color_add (-0.3) in
-  let color_del = Color.add_value Oe_config.global_gutter_diff_color_del (-0.5) in
+  let color_add = (*Color.add_value*) (?? Oe_config.global_gutter_diff_color_add) (*(-0.3) *)in
+  let color_del = (*Color.add_value*) (?? Oe_config.global_gutter_diff_color_del) (*(-0.5) *)in
   Spawn.async diff args
     ~process_in
     ~at_exit:begin fun _ ->

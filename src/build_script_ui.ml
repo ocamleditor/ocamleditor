@@ -24,6 +24,7 @@
 open Miscellanea
 open Printf
 open Build_script
+open Preferences
 
 let enable_widget_args = true
 
@@ -88,7 +89,7 @@ class widget ~project ?packing () =
     (b0, "") :: bb
   in
   let _ = GMisc.label ~packing:cbox#add () in
-  let spinner = GMisc.image ~file:(App_config.application_icons // "spinner_16.gif") ~show:false ~packing:cbox#pack () in
+  let spinner = GMisc.image ~file:(Icon.get_themed_filename "spinner_16.gif") ~show:false ~packing:cbox#pack () in
   (*  *)
   object (self)
     inherit GObj.widget vbox#as_widget
@@ -157,7 +158,7 @@ class widget ~project ?packing () =
 
     method private choose_file () =
       let window = GWindow.file_chooser_dialog
-          ~action:`SAVE ~icon:Icons.oe
+          ~action:`SAVE ~icon:(??? Icons.oe)
           ~title:text_filename
           ~position:`CENTER ~modal:true ~show:false ()
       in
@@ -177,13 +178,13 @@ class widget ~project ?packing () =
 
 let window ~project () =
   let window = GWindow.window ~title:"Generate Build Script"
-      ~modal:true ~border_width:8 ~position:`CENTER ~icon:Icons.oe ~show:false () in
+      ~modal:true ~border_width:8 ~position:`CENTER ~icon:(??? Icons.oe) ~show:false () in
   Gmisclib.Window.GeometryMemo.add ~key:"dialog-build-script" ~window Preferences.geometry_memo;
   let vbox = GPack.vbox ~spacing:8 ~packing:window#add () in
   let widget = new widget ~project ~packing:vbox#add () in
   let bbox = GPack.button_box `HORIZONTAL ~layout:`END ~spacing:8 ~packing:vbox#pack () in
-  let button_ok = GButton.button ~stock:`OK ~packing:bbox#pack () in
-  let button_cancel = GButton.button ~stock:`CANCEL ~packing:bbox#pack () in
+  let button_ok = GButton.button ~label:"OK" ~packing:bbox#pack () in
+  let button_cancel = GButton.button ~label:"Cancel" ~packing:bbox#pack () in
   ignore (button_ok#connect#clicked ~callback:(fun () -> if widget#apply() then window#destroy()));
   ignore (button_cancel#connect#clicked ~callback:window#destroy);
   ignore (widget#is_valid#connect#changed ~callback:button_ok#misc#set_sensitive);

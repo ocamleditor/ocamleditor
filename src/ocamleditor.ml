@@ -45,14 +45,58 @@ let fade_out window =
   end;
   window#destroy()
 
+let install_fonts () =
+  let (/) = Filename.concat in
+  let font_names =
+    App_config.application_fonts
+    |> File_util.get_files_in_directory
+    |> List.map Filename.basename
+  in
+  let font_dir = (Sys.getenv "HOME") / ".local" / "share" / "fonts" in
+  Miscellanea.mkdir_p font_dir;
+  let copy_font name =
+    Printf.printf "Installing font %s\n%!" (font_dir / name);
+    let src = App_config.application_fonts / name in
+    let dest = font_dir / name in
+    File_util.cp src dest
+  in
+  font_names
+  |> List.iter begin fun name ->
+    let filename = font_dir / name in
+    if Sys.file_exists filename then begin
+      let stat_old = Unix.stat filename in
+      let stat_new = Unix.stat (App_config.application_fonts / name) in
+      if stat_new.Unix.st_mtime > stat_old.Unix.st_mtime then copy_font name
+    end else copy_font name
+  end
+
 (** main *)
 let main () = begin
+  install_fonts();
+  let open Preferences in
   let _ = About.build_id := Build_id.timestamp in
   let _ = About.git_hash := Build_id.git_hash in
   let _locale = GtkMain.Main.init ~setlocale:false () in
 
   let start splashscreen =
-    let browser = Browser.create () in
+    let window = GWindow.window
+        ~title:About.program_name
+        ~icon:(??? Icons.oe)
+        ~position:`CENTER
+        ~width:1
+        ~height:1
+        ~decorated:false
+        ~focus_on_map:true
+        ~resizable:true
+        ~type_hint:`NORMAL
+        ~kind:`TOPLEVEL
+        ~show:false ()
+    in
+    Gtk_theme.set_theme ~context:window#misc#pango_context ();
+    window#iconify(); (* doesn't work on WSL *)
+    window#move ~x:0 ~y:0;
+    let _ = new Theme.monitor window in
+    let browser = Browser.create window in
     (* Before browser initialization *)
     browser#connect#startup ~callback:begin fun () ->
       Gaux.may splashscreen ~f:(fun w -> w#set_transient_for browser#window#as_window);
@@ -60,23 +104,21 @@ let main () = begin
       Printf.printf "%s\n%!" (System_properties.to_string());
       Plugin.load "dot_viewer_svg.cma" |> ignore;
       Project_xml.init();
-      Gtk_theme.set_theme ~context:browser#window#misc#pango_context ();
-      browser#window#misc#connect#show ~callback:begin fun () ->
-        Gmisclib.Idle.add ~prio:300 begin fun () ->
-          Plugin.load "plugin_diff.cma" |> ignore; (* plugin_diff requires editor pages *)
-          Gaux.may splashscreen ~f:fade_out;
-          Gaux.may (browser#editor#get_page `ACTIVE) ~f:(fun page -> page#view#misc#grab_focus());
-          ()
-        end
-      end |> ignore;
     end |> ignore;
-    (* After browser initialization (after splashscreen) and before browser window is shown *)
     browser#connect#after#startup ~callback:begin fun () ->
-      ()
+      Gmisclib.Idle.add ~prio:300 begin fun () ->
+        window#set_position `CENTER_ALWAYS;
+        window#set_decorated true;
+        window#deiconify();
+        window#present();
+        window#move ~x:0 ~y:0;
+        window#set_position `CENTER;
+        Gaux.may (browser#editor#get_page `ACTIVE) ~f:(fun page -> page#view#misc#grab_focus());
+        Gaux.may splashscreen ~f:fade_out;
+      end
     end |> ignore;
     (*  *)
     browser#startup();
-    browser#window#present();
   in
   begin
     match Browser.splashscreen() with

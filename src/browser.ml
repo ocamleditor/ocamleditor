@@ -25,18 +25,9 @@ open Printf
 open Miscellanea
 open GUtil
 open Oe
+open Preferences
 
-class browser () =
-  let window = GWindow.window
-      ~title:About.program_name
-      ~icon:Icons.oe
-      ~type_hint:`NORMAL
-      ~kind:`TOPLEVEL
-      ~position:`CENTER
-      ~focus_on_map:true
-      ~resizable:true
-      ~show:false ()
-  in
+class browser window =
   (* signals *)
   let startup                            = new startup () in
   let switch_project                     = new switch_project () in
@@ -59,19 +50,11 @@ class browser () =
   let vbox = GPack.vbox ~packing:Messages.hpaned#add1 () in
   let menubarbox = GPack.hbox ~spacing:0 ~packing:vbox#pack () in
   (* Menubar icon displayed full-screen mode *)
-  let width, height = 32, 32 in
-  let scaled = GdkPixbuf.create ~width ~height ~has_alpha:false () in
-  let _ = GdkPixbuf.scale ~dest:scaled ~width ~height Icons.oe in
-  let pixbuf = GdkPixbuf.create ~width ~height ~has_alpha:false () in
-  let _ = GdkPixbuf.saturate_and_pixelate ~saturation:0.0 ~pixelate:true ~dest:pixbuf scaled in
   let window_title_menu_icon = GBin.event_box ~packing:menubarbox#pack ~show:false () in
-  let icon = GMisc.image ~pixbuf ~packing:window_title_menu_icon#add () in
+  let icon = Gtk_util.label_icon ~width:32 ~height:32 "<span font='18'>\u{e10e}</span>" ~packing:window_title_menu_icon#add in
+  let _ = icon#misc#modify_fg [`NORMAL, `COLOR (icon#misc#style#fg `INSENSITIVE) ] in
   let _ = window_title_menu_icon#misc#set_property "visible-window" (`BOOL false) in
-  let _ = window_title_menu_icon#event#connect#leave_notify ~callback:begin fun _ ->
-      icon#set_pixbuf pixbuf;
-      false
-    end
-  in
+
   (* Menubar *)
   let menubar = GMenu.menu_bar ~border_width:0 ~packing:menubarbox#add () in
   let cursor = Gdk.Cursor.create `ARROW in
@@ -89,27 +72,16 @@ class browser () =
   (*  *)
   let ebox_project_name = GBin.event_box ~packing:(menubarbox#pack ~expand:false) () in
   let label_project_name = GMisc.label ~markup:"" ~xpad:5 ~packing:ebox_project_name#add () in
+  (* Status bar *)
   let _ =
-    ebox_project_name#misc#modify_bg [`NORMAL, `COLOR (ebox_project_name#misc#style#base `PRELIGHT)];
+    if not Oe_config.colored_statusbar then
+      GMisc.separator `HORIZONTAL ~packing:(vbox#pack ~expand:false) () |> ignore;
   in
-  (* Git bar *)
-  let gitbox = GPack.hbox ~spacing:8 ~packing:(menubarbox#pack ~expand:false) () in
-  let button_gitunpushed = GButton.button ~relief:`NONE ~packing:gitbox#add () in
-  let _ = button_gitunpushed#set_image (GMisc.image ~pixbuf:Icons.arrow_up ())#coerce in
-  let button_gitpending = GButton.button ~relief:`NONE ~packing:gitbox#add () in
+  let statusbar = new Statusbar.widget ~color:Oe_config.colored_statusbar ~packing:vbox#pack () in
+  let gitbar = new Statusbar.gitbar ~packing:(statusbar#pack ~from:`END) () in
   let _ =
-    button_gitpending#set_image (GMisc.image ~pixbuf:Icons.edit ())#coerce;
-    button_gitpending#connect#clicked ~callback:begin fun () ->
-      Git.diff_stat (Git.show_diff_stat None);
-    end
-  in
-  let button_gitpath = GButton.button ~relief:`NONE ~packing:gitbox#add () in
-  let _ = button_gitpath#set_image (GMisc.image ~pixbuf:Icons.git ())#coerce in
-  let button_gitbranch = GButton.button ~label:"" ~relief:`NONE ~packing:gitbox#add () in
-  (*let button_gitbranch = Gmisclib.Button.button_menu ~label:"" ~relief:`NONE ~packing:gitbox#add () in*)
-  let _ =
-    button_gitbranch#set_image (GMisc.image ~pixbuf:Icons.branch ())#coerce;
-    (*    button_gitbranch#set_menu_only();*)
+    if Oe_config.unify_statusbars then
+      editor#connect#switch_page ~callback:(fun page -> statusbar#pack_editorbar page#statusbar) |> ignore;
   in
   (*  *)
   let vbox_menu_buttons = GPack.vbox ~border_width:0 ~packing:menubarbox#pack ~show:false () in
@@ -117,17 +89,17 @@ class browser () =
   let hbox_menu_buttons = GPack.hbox ~border_width:0 ~spacing:0 ~packing:align#add () in
 
   let button_menu_iconify = GButton.button ~relief:`NONE ~packing:hbox_menu_buttons#pack () in
-  let _ = GMisc.image ~pixbuf:Icons.minimize_window ~packing:button_menu_iconify#add () in
+  let _ = GMisc.image ~pixbuf:(??? Icons.minimize_window) ~packing:button_menu_iconify#add () in
   let _ = button_menu_iconify#misc#set_name "windowbutton" in
   let _ = button_menu_iconify#set_focus_on_click false in
 
   let button_menu_reset = GButton.button ~relief:`NONE ~packing:hbox_menu_buttons#pack () in
-  let _ = GMisc.image ~pixbuf:Icons.restore_window ~packing:button_menu_reset#add () in
+  let _ = GMisc.image ~pixbuf:(??? Icons.restore_window) ~packing:button_menu_reset#add () in
   let _ = button_menu_reset#misc#set_name "windowbutton" in
   let _ = button_menu_reset#set_focus_on_click false in
 
   let button_menu_exit = GButton.button ~relief:`NONE ~packing:hbox_menu_buttons#pack () in
-  let _ = GMisc.image ~pixbuf:Icons.close_window ~packing:button_menu_exit#add () in
+  let _ = GMisc.image ~pixbuf:(??? Icons.close_window) ~packing:button_menu_exit#add () in
   let _ = button_menu_exit#misc#set_name "windowbutton" in
   let _ = button_menu_exit#set_focus_on_click false in
   let tout_low_prio = Timeout.create ~delay:0.75 () in
@@ -268,7 +240,7 @@ class browser () =
       let pat1 = "*"^Prj.default_extension in
       let pat2 = "*"^Prj.old_extension in
       let dialog = GWindow.file_chooser_dialog ~action:`OPEN ~width:600 ~height:600
-          ~title:"Open project..." ~icon:Icons.oe ~position:`CENTER ~show:false () in
+          ~title:"Open project..." ~icon:(??? Icons.oe) ~position:`CENTER ~show:false () in
       dialog#add_filter (GFile.filter
                            ~name:(sprintf "%s projects (%s)" About.program_name pat1) ~patterns:[pat1] ());
       dialog#add_filter (GFile.filter
@@ -436,25 +408,25 @@ class browser () =
         end;
         Git.toplevel begin function
         | Some toplevel ->
-            toplevel |> Filename.basename |> button_gitpath#set_label;
-            toplevel |> Filename.dirname |> button_gitpath#misc#set_tooltip_text;
+            gitbar#button_gitpath#set_label (Filename.basename toplevel);
+            toplevel |> Filename.dirname |> gitbar#button_gitpath#misc#set_tooltip_text;
         | _ ->
-            button_gitpath#set_label "";
-            button_gitpath#misc#set_tooltip_text "";
+            gitbar#button_gitpath#set_label "";
+            gitbar#button_gitpath#misc#set_tooltip_text "";
         end;
         Git.status begin function
         | Some s ->
-            gitbox#misc#show();
-            button_gitbranch#set_label s.Git.branch;
+            gitbar#misc#show();
+            gitbar#button_gitbranch#set_label s.Git.branch;
             let changes =
               s.Git.added + s.Git.modified + s.Git.deleted + s.Git.renamed + s.Git.copied + s.Git.untracked + s.Git.ignored
             in
-            changes |> sprintf "%3d" |> button_gitpending#set_label;
-            Git.markup_of_status s |> button_gitpending#misc#set_tooltip_markup;
-            s.Git.ahead |> sprintf "%3d" |> button_gitunpushed#set_label;
-            s.Git.ahead |> sprintf "%d unpushed commits" |> button_gitunpushed#misc#set_tooltip_markup;
+            gitbar#button_gitpending#set_label (sprintf "%3d" changes);
+            Git.markup_of_status s |> gitbar#button_gitpending#misc#set_tooltip_markup;
+            gitbar#button_gitunpushed#set_label (sprintf "%3d" s.Git.ahead);
+            s.Git.ahead |> sprintf "%d unpushed commits" |> gitbar#button_gitunpushed#misc#set_tooltip_markup;
         | _ ->
-            gitbox#misc#hide();
+            gitbar#misc#hide();
         end;
       end
 
@@ -640,33 +612,11 @@ class browser () =
         end configs in
       self#with_current_project (fun _ -> ignore (Task_console.exec_sync ~editor [tasks]))
 
-    method annot_type () =
+    method quick_info_at_cursor () =
       editor#with_current_page begin fun page ->
-        try
-          let iter = `ITER (page#buffer#get_iter `INSERT) in
-          (*Opt.may page#annot_type (fun (at : Annot_type.annot_type) -> at#popup (*~position:`TOP_RIGHT*) iter ());*)
-          Option.iter (fun at ->  at#popup iter () : Annot_type.annot_type -> unit) page#annot_type;
-          if Preferences.preferences#get.editor_err_tooltip then (page#error_indication#tooltip ~sticky:true iter);
-        with ex -> Printf.eprintf "File \"browser.ml\": %s\n%s\n%!" (Printexc.to_string ex) (Printexc.get_backtrace());
+        let iter = page#buffer#get_iter `INSERT in
+        page#quick_info_at_iter iter
       end
-
-    method annot_type_copy () =
-      editor#with_current_page begin fun page ->
-        Option.iter begin fun (annot_type : Annot_type.annot_type) ->
-          match annot_type#get_type (`ITER (page#buffer#get_iter `INSERT)) with
-          | Some {Annot_type.at_type; _} ->
-              self#annot_type();
-              let clipboard = GData.clipboard Gdk.Atom.clipboard in
-              clipboard#set_text at_type
-          | None -> ()
-        end page#annot_type
-      end
-
-    method annot_type_set_tooltips x =
-      Preferences.preferences#get.editor_annot_type_tooltips_enabled <- x;
-      Preferences.save();
-      editor#with_current_page
-        (fun page -> Option.iter (fun obj -> obj#remove_tag ()) page#annot_type)
 
     method create_menu_history dir ~menu =
       let history = match dir with
@@ -939,7 +889,6 @@ class browser () =
 
       (* Editor *)
       paned#pack1 ~resize:true ~shrink:true editor#coerce;
-      paned#pack2 ((GMisc.label ~text:"??" ())#coerce); (* HACK, to get rid of 0-width warnings *) 
       let update_toolbar_save () =
         let exists_unsaved = List.exists (fun p -> p#view#buffer#modified) editor#pages in
         Gmisclib.Idle.add ~prio:300 (fun () -> toolbar#tool_save_all#misc#set_sensitive exists_unsaved);
@@ -951,7 +900,6 @@ class browser () =
             Option.iter
               begin fun button ->
                 button#misc#set_sensitive page#buffer#modified;
-                (*button#misc#set_state `NORMAL*)
               end
               button
           end;
@@ -960,7 +908,6 @@ class browser () =
             Option.iter
               begin fun button ->
                 button#misc#set_sensitive exists_unsaved;
-                (*button#misc#set_state `NORMAL*)
               end
               button
           end;
@@ -1138,8 +1085,8 @@ and signals ~startup ~switch_project ~menubar_visibility_changed ~toolbar_visibi
 let browser = ref None
 
 (** create *)
-let create () =
-  let widget = new browser () in
+let create window =
+  let widget = new browser window in
   browser := Some widget;
   widget
 
@@ -1148,11 +1095,11 @@ let splashscreen () =
   let pref = Preferences.preferences#get in
   if pref.splashscreen_enabled then begin
     let decorated = (*false && *)Sys.win32 in
-    let pixbuf = GdkPixbuf.from_file (App_config.application_icons // "logo.png") in
+    let pixbuf = ??? Icons.logo in
     let image = GMisc.image ~pixbuf () in
     let window = GWindow.window
         ~title:About.program_name
-        ~type_hint:(if Sys.win32 then `SPLASHSCREEN else `MENU)
+        ~type_hint:`SPLASHSCREEN
         ~position:`CENTER_ALWAYS
         ~border_width:(if decorated then 0 else 1)
         ~focus_on_map:true

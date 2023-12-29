@@ -139,8 +139,23 @@ module Action = struct
       let start, stop = view#buffer#selection_bounds in
       Alignment.align ~buffer:view#buffer ~start ~stop;
     end;;
-end
 
+  let case_analysis (view : Ocaml_text.view) =
+    let start, stop = view#buffer#selection_bounds in
+    let filename = match (view#obuffer#as_text_buffer :> Text.buffer)#file with Some file -> file#filename | _ -> "" in
+    Merlin.case_analysis ~start ~stop
+      ~filename
+      ~source_code:(view#buffer#get_text ())
+      begin fun (range, text) ->
+        GtkThread.async begin fun () ->
+          let start = view#buffer#get_iter (`LINECHAR (range.start.line - 1, range.start.col)) in
+          let stop = view#buffer#get_iter (`LINECHAR (range.stop.line - 1, range.stop.col)) in
+          view#buffer#delete ~start ~stop |> ignore;
+          view#buffer#insert text |> ignore;
+        end ()
+      end
+
+end
 
 (** spec
     scope * template_name * description * code
@@ -152,6 +167,8 @@ let spec : spec list ref =
     "be()", "Replace currently highlighted delimiters with parentheses", Action.be_parent;
     "be)(", "Replace currently highlighted parentheses with \"begin ... end\"", Action.be_unparent;
     "align", "Align/collapse definitions", Action.align;
+    (*"meroutline", "Merlin outline", Merlin.outline;*)
+    "matcase", "(match <selection> with ...case-analysis of the selected expression)", Action.case_analysis;
   ] in
   (** Templates *)
   let templates = [
@@ -178,7 +195,8 @@ let spec : spec list ref =
       TI "end;";
     ];
 
-    "ign", "ignore (<selection>)", [I; T "ignore ("; SELECTION; T ")"];
+    "ign@@", "ignore @@ <selection>", [T "ignore @@ "; SELECTION; T ";"; I];
+    "ign |>", "<selection> |> ignore;", [SELECTION; T " |> ignore;"; I];
 
     "ignbe", "ignore begin ... end",
     [T0 "ignore begin"; NL; IN; SELECTION; OUT; T0 "end;"; I; NL];

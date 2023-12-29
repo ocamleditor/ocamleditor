@@ -21,17 +21,11 @@
 *)
 
 open GUtil
+open Miscellanea
+open Preferences
 
 exception Cancel_process_termination
 
-(** The Gtk+ 3.0 is more strict than 2.0 version and will fail on the line
-
-    let hpaned = GPack.paned `HORIZONTAL ()
-
-    if the the initialization routine was not called.
-    So I moved the call of GMain.init () from the ocamleditor here.
-    Maybe this will be temporary. Maybe.
-*)
 let _locale = GMain.init ~setlocale: false ()
 
 let hpaned = GPack.paned `HORIZONTAL ()
@@ -46,7 +40,7 @@ class virtual page ~role =
     val mutable detached_window = None
     val is_working = new GUtil.variable true
     val is_active = new GUtil.variable false
-    val mutable page_parent : messages option = None
+    val mutable holder : messages option = None
     val mutable close_tab_func = None
     val icon = new GUtil.variable None
     val title = new GUtil.variable ""
@@ -55,14 +49,15 @@ class virtual page ~role =
     method title = title#get
     method set_title = title#set
     method as_page = (self :> page)
-    method set_page_parent p = page_parent <- Some p
+    method set_holder p = holder <- Some p
     method present () =
       match detached_window with
       | Some window -> window#present()
-      | _ -> Gaux.may page_parent ~f:(fun messages -> messages#present self#coerce)
+      | _ -> Gaux.may holder ~f:(fun messages -> messages#present self#coerce)
     method is_working = is_working
     method is_active = is_active
-    method parent_changed : messages -> unit = self#set_page_parent
+    (*method virtual parent_changed : messages -> unit*)
+    method holder_changed : messages -> unit = self#set_holder
     method virtual coerce : GObj.widget
     method virtual misc : GObj.misc_ops
     method virtual destroy : unit -> unit
@@ -77,7 +72,7 @@ class virtual page ~role =
         match detached_window with
         | Some (window : GWindow.window) ->
             begin
-              match page_parent with
+              match holder with
               | Some messages_pane ->
                   ignore (messages_pane#reparent self#misc#get_oid);
                   window#destroy();
@@ -90,7 +85,7 @@ class virtual page ~role =
         | _ ->
             button_detach#misc#set_sensitive false; (* Fixes the button state *)
             (*button_detach#misc#set_state `NORMAL;*)
-            let icon = match self#icon with Some x -> x | _ -> Icons.oe in
+            let icon = match self#icon with Some x -> x | _ -> (??? Icons.oe) in
             let rect = self#misc#allocation in
             let has_memo = Preferences.geometry_memo.Gmisclib.Window.GeometryMemo.enabled in
             let memo_table = Preferences.geometry_memo.Gmisclib.Window.GeometryMemo.table in
@@ -106,7 +101,7 @@ class virtual page ~role =
             detached#call true;
             button_detach#misc#set_sensitive true;
       end else begin
-        match page_parent with
+        match holder with
         | Some messages_pane -> messages_pane#detach button_detach
         | _ -> assert false
       end
@@ -136,7 +131,7 @@ and detached () = object (self) inherit [bool] signal () end
 
 (** messages *)
 and messages ~(paned : GPack.paned) () =
-  let notebook        = GPack.notebook ~scrollable:true () in
+  let notebook        = GPack.notebook ~scrollable:true ~border_width:0 () in
   let remove_page     = new remove_page () in
   let switch_page     = new switch_page () in
   let visible_changed = new visible_changed () in
@@ -199,7 +194,7 @@ and messages ~(paned : GPack.paned) () =
           begin
             match parent with
             | Some (container : GObj.widget) ->
-                container#misc#hide ();
+                container#misc#hide();
                 button_detach#misc#set_sensitive false;
                 ignore (self#misc#reparent container#coerce);
                 detached_window <- None;
@@ -219,7 +214,7 @@ and messages ~(paned : GPack.paned) () =
           let width, height =
             if has_memo && Hashtbl.mem memo_table role then None, None else (Some rect.Gtk.width), (Some rect.Gtk.height)
           in
-          let window = GWindow.window ~title:"Messages" ~icon:Icons.oe ?width ?height ~border_width:0 ~position:`CENTER ~resizable:true ~show:false () in
+          let window = GWindow.window ~title:"Messages" ~icon:(??? Icons.oe) ?width ?height ~border_width:0 ~position:`CENTER ~resizable:true ~show:false () in
           window#set_geometry_hints ~pos:true ~user_pos:true ~user_size:true self#coerce;
           Gmisclib.Window.GeometryMemo.add ~key:role ~window Preferences.geometry_memo;
           ignore (window#event#connect#delete ~callback:begin fun _ ->
@@ -247,10 +242,10 @@ and messages ~(paned : GPack.paned) () =
         try
           let oid = int_of_string data#data in
           let _, page = self#reparent oid in
-          page#set_page_parent (self :> messages);
+          page#set_holder (self :> messages);
           notebook#goto_page (notebook#page_num page#coerce);
           context#finish ~success:true ~del:false ~time;
-          page#parent_changed (self :> messages);
+          page#holder_changed (self :> messages);
         with Not_found -> failed()
       end else (failed())
 
@@ -296,7 +291,7 @@ and messages ~(paned : GPack.paned) () =
           remove_page#call page#coerce;
           Hashtbl.remove table page#misc#get_oid;
         end);
-      page#set_page_parent (self :> messages);
+      page#set_holder (self :> messages);
       page#set_button tab_label#button;
       self#remove_empty_page();
 

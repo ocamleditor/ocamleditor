@@ -27,7 +27,6 @@ open Typedtree
 module Log = Common.Log.Make(struct let prefix = "Binannot_ident_scan" end)
 let _ = Log.set_verbosity `TRACE
 
-
 (** [Lexing.postion] copy *)
 type position = Lexing.position = {
   pos_fname : string;
@@ -317,15 +316,14 @@ let rec iterator ~f ~filename ~scope =
   { super with class_expr; module_expr; expr; structure_item; structure;
                type_kind; type_extension }
 
-
 (** register *)
 let register filename entry ({ ident_loc; ident_kind; _ } as ident) =
 
   let ( <== ) = Binannot.( <== ) in
   let loc = begin match ident_kind with
-      | Def def | Def_constr def | Def_module def -> def.def_loc
-      | Int_ref _ | Ext_ref | Open _ -> ident_loc.loc
-    end
+    | Def def | Def_constr def | Def_module def -> def.def_loc
+    | Int_ref _ | Ext_ref | Open _ -> ident_loc.loc
+  end
   in
   if loc <> Location.none then begin
     ident.ident_fname <- filename;
@@ -394,7 +392,7 @@ let scan ~project ~filename ?compile_buffer () =
           begin
             match [@warning "-4"] cmt.cmt_annots with
             | Implementation structure ->
-                  Tast_iterator.(iter.structure iter structure)
+                Tast_iterator.(iter.structure iter structure)
 
             | _ -> ()
           end

@@ -91,6 +91,9 @@ let add_value name ?(sfact=1.0) x =
   let xv = x in
   rgb hsv_of_name name (fun h s v -> name_of_hsv h (min 1. (s +. xs)) (min 1. (v -. xv)));;
 
+let modify name ~sat ~value =
+  rgb hsv_of_name name (fun h s v -> name_of_hsv h (min 1. (s +. sat)) (min 1. (v +. value)));;
+
 (*let hsl_of_name r g b =
   let r = (float r) /. 255. in
   let g = (float g) /. 255. in

@@ -24,6 +24,7 @@ open Project
 open Prj
 open Miscellanea
 open Printf
+open Preferences
 
 
 class widget ~editor ?(callback=ignore) ~project ?page_num ?packing ?show () =
@@ -147,7 +148,7 @@ class widget ~editor ?(callback=ignore) ~project ?page_num ?packing ?show () =
               Gmisclib.Idle.add (fun () -> etask_page#set_task et);
               Gmisclib.Idle.add begin fun () ->
                 (*                if not (etask_page#misc#get_flag `SENSITIVE) then (etask_page#misc#set_sensitive true);*)
-                if not etask_page#visible then begin
+                if not (etask_page#visible) then begin
                   target_page#misc#hide ();
                   etask_page#misc#show ();
                 end;
@@ -183,23 +184,23 @@ class widget ~editor ?(callback=ignore) ~project ?page_num ?packing ?show () =
   (** Buttons *)
   let bb = GPack.button_box `HORIZONTAL ~layout:`END ~spacing:8 ~border_width:8
       ~packing:(box#pack ~expand:false) () in
-  let button_ok = GButton.button ~stock:`OK ~packing:bb#add () in
-  let button_apply = GButton.button ~stock:`APPLY ~packing:bb#add () in
-  let button_close = GButton.button ~use_mnemonic:false ~stock:`CLOSE ~packing:bb#add () in
-  let button_help = GButton.button ~use_mnemonic:false ~stock:`HELP ~packing:bb#add () in
+  let button_ok = GButton.button ~label:"OK" ~packing:bb#add () in
+  let button_apply = GButton.button ~label:"Apply" ~packing:bb#add () in
+  let button_close = GButton.button ~label:"Close" ~use_mnemonic:false ~packing:bb#add () in
+  let button_help = GButton.button ~label:"Help" ~use_mnemonic:false ~packing:bb#add () in
   let _ = bb#set_child_secondary button_help#coerce true in
   let _ = button_help#misc#set_sensitive false in
   let _ = target_list#misc#connect#map ~callback:(fun () -> button_help#misc#set_sensitive true) in
   let _ = target_list#misc#connect#unmap ~callback:(fun () -> button_help#misc#set_sensitive false) in
   let _ = button_help#connect#clicked ~callback:begin fun () ->
-      let cmd = sprintf "\"%s\" --help" Oe_config.oebuild_command in
+      let cmd = sprintf "\"%s\" --help" @@ App_config.get_oebuild_command () in
       let text = String.concat "\n" (Shell.get_command_output cmd) in
       let window = GWindow.dialog ~title:cmd ~position:`CENTER () in
       window#add_button_stock `OK `OK;
       window#set_border_width 5;
       let label = GMisc.label ~text ~packing:window#vbox#add () in
       let fd = Gtk_util.increase_font_size ~increment:(-2) label#coerce in
-      fd#modify ~family: "monospace" ();
+      let _ = fd#modify ~family:"monospace" () in
       label#misc#modify_font fd;
       match window#run () with _ -> window#destroy()
     end in
@@ -270,13 +271,14 @@ class widget ~editor ?(callback=ignore) ~project ?page_num ?packing ?show () =
           List.iter begin fun page ->
             page#compile_buffer ?join:None ();
             page#error_indication#remove_tag();
-            (* TODO global gutter *)
-            (*page#global_gutter#misc#draw (Some (Gdk.Rectangle.create
+(*** TODO: looks like GMisc.drawing_area#draw is gone
+            page#global_gutter#misc#draw (Some (Gdk.Rectangle.create
                                                   ~x:page#global_gutter#misc#allocation.Gtk.x
                                                   ~y:page#global_gutter#misc#allocation.Gtk.y
                                                   ~width:page#global_gutter#misc#allocation.Gtk.width
-                                                  ~height:page#global_gutter#misc#allocation.Gtk.height
-              ))*) end editor#pages;
+                                                  ~height:page#global_gutter#misc#allocation.Gtk.height))
+*)
+                                               end editor#pages;
         end
       with
       | Project.Project_already_exists path ->
@@ -349,7 +351,7 @@ and signals ~project_changed ~project_name_changed ~show =
 let create ~editor ?callback ?new_project ?page_num ?show () =
   let project = match new_project with None -> editor#project | Some p -> p in
   let window = GWindow.window ~modal:false ~title:("Project \""^project.name^"\"")
-      ~icon:Icons.oe ~border_width:5 ~position:`CENTER ~show:false () in
+      ~icon:(??? Icons.oe) ~border_width:5 ~position:`CENTER ~show:false () in
   let widget = new widget ~editor ~packing:window#add ~project ?callback ?page_num ?show () in
   ignore (widget#button_close#connect#clicked ~callback:window#misc#hide);
   ignore (widget#connect#project_name_changed ~callback:begin fun name ->

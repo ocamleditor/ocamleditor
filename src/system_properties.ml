@@ -79,7 +79,7 @@ let to_string () =
     20, "executable", Sys.executable_name;
     20, "icons", App_config.application_icons;
     20, "plugins", App_config.application_plugins;
-    20, "oebuild", Oe_config.oebuild_command;
+    20, "oebuild", App_config.get_oebuild_command ();
     20, "native_compilation", (match Ocaml_config.can_compile_native () with Some x -> "Yes (" ^ x ^ ")" | _ -> "No");
   ] @
     (if Sys.win32 && not Ocaml_config.is_mingw then [

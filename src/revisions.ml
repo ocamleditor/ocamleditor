@@ -86,6 +86,7 @@ class ocamlview ~colorize ?packing () =
 
   end
 
+open Preferences
 
 (** widget *)
 class widget ~page ?packing () =
@@ -96,18 +97,18 @@ class widget ~page ?packing () =
   let toolbar        = GButton.toolbar ~style:`ICONS ~orientation:`HORIZONTAL ~packing:(mbox#pack ~from:`END) () in
   let _              = toolbar#set_icon_size `MENU in
   let button_compare_ext = GButton.tool_button ~label:"Compare" ~packing:toolbar#insert () in
-  let _              = button_compare_ext#set_icon_widget (GMisc.image ~pixbuf:Icons.diff ())#coerce in
+  let _              = button_compare_ext#set_icon_widget (GMisc.image ~pixbuf:(??? Icons.diff) ())#coerce in
   let _              = kprintf button_compare_ext#misc#set_tooltip_markup "External diff with <span size='x-small' font-family='monospace'>%s</span>" diff_cmd in
   let _              = GButton.separator_tool_item ~packing:toolbar#insert () in
   let button_ignore_ws = GButton.toggle_tool_button ~label:"Ignore Whitespace" ~active:true ~packing:toolbar#insert () in
   let button_ws      = GButton.toggle_tool_button ~label:"View Whitespaces" ~active:true ~packing:toolbar#insert () in
-  let _              = button_ws#set_icon_widget (GMisc.image ~pixbuf:Icons.whitespace_off_14 ())#coerce in
+  let _              = button_ws#set_icon_widget (GMisc.image ~pixbuf:(??? Icons.whitespace_off_14) ())#coerce in
   let _              = GButton.separator_tool_item ~packing:toolbar#insert () in
   let button_refresh = GButton.tool_button ~label:"Compare" ~packing:toolbar#insert () in
-  let _              = button_refresh#set_icon_widget (GMisc.image ~pixbuf:Icons.refresh16 ())#coerce in
+  let _              = button_refresh#set_icon_widget (GMisc.image ~pixbuf:(??? Icons.refresh16) ())#coerce in
   let _              = GButton.separator_tool_item ~packing:toolbar#insert () in
   let button_detach  = GButton.tool_button ~label:"Detach" ~packing:toolbar#insert () in
-  let _              = button_detach#set_icon_widget (GMisc.image ~pixbuf:Icons.detach ())#coerce in
+  let _              = button_detach#set_icon_widget (GMisc.image ~pixbuf:(??? Icons.detach) ())#coerce in
   let item_message   = GButton.tool_item ~packing:toolbar#insert () in
   let label_message  = GMisc.label ~markup:(sprintf "<b>%s</b>" page#get_filename) ~xalign:0.0 ~yalign:0.5 ~xpad:8 ~packing:item_message#add () in
   let pane           = GPack.paned `HORIZONTAL ~packing:mbox#add () in
@@ -212,32 +213,29 @@ class widget ~page ?packing () =
       end;
 
     method private view_diff () =
-      Option.iter begin  fun (plugin : (module Plugins.DIFF)) ->
-        let module Plugin_diff = (val plugin) in
-        match view#selection#get_selected_rows with
-        | path2 :: path1 :: [] ->
-            let row1 = model#get_iter path1 in
-            let filename1 = self#get_filename ~row:row1 in
-            let row2 = model#get_iter path2 in
-            let filename2 = self#get_filename ~row:row2 in
-            destroy_right_pane();
-            let colorize = is_ocaml_filename filename1 && is_ocaml_filename filename2 in
-            let vbox = GPack.vbox ~packing:pane#add2 () in
-            let _ = self#create_rev_indicator ~label:"From: " ~packing:vbox#pack ~row:row1 () in
-            let _ = self#create_rev_indicator ~label:"To: " ~packing:vbox#pack ~row:row2 () in
-            let ocamlview = new ocamlview ~colorize ~packing:vbox#add () in
-            ocamlview#view#set_editable false;
-            self#reduce_font_size ocamlview;
-            ocamlview#view#code_folding#set_enabled false;
-            ocamlview#view#options#set_show_line_numbers false;
-            ocamlview#view#options#set_show_whitespace_chars button_ws#get_active;
-            ocamlview#buffer#connect#end_user_action ~callback:ocamlview#colorize |> ignore;
-            ocamlview#buffer#set_text "";
-            Plugin_diff.to_buffer ocamlview#buffer#as_gtext_buffer ignore_whitespace filename1 filename2;
-            oview <- Some ocamlview;
-            ocamlview#view#misc#connect#destroy ~callback:(fun () -> oview <- None) |> ignore;
-        | _ -> ()
-      end !Plugins.diff
+      match view#selection#get_selected_rows with
+      | path2 :: path1 :: [] ->
+          let row1 = model#get_iter path1 in
+          let filename1 = self#get_filename ~row:row1 in
+          let row2 = model#get_iter path2 in
+          let filename2 = self#get_filename ~row:row2 in
+          destroy_right_pane();
+          let colorize = is_ocaml_filename filename1 && is_ocaml_filename filename2 in
+          let vbox = GPack.vbox ~packing:pane#add2 () in
+          let _ = self#create_rev_indicator ~label:"From: " ~packing:vbox#pack ~row:row1 () in
+          let _ = self#create_rev_indicator ~label:"To: " ~packing:vbox#pack ~row:row2 () in
+          let ocamlview = new ocamlview ~colorize ~packing:vbox#add () in
+          ocamlview#view#set_editable false;
+          self#reduce_font_size ocamlview;
+          ocamlview#view#code_folding#set_enabled false;
+          ocamlview#view#options#set_show_line_numbers false;
+          ocamlview#view#options#set_show_whitespace_chars button_ws#get_active;
+          ocamlview#buffer#connect#end_user_action ~callback:ocamlview#colorize |> ignore;
+          ocamlview#buffer#set_text "";
+          Global_diff.to_buffer ocamlview#buffer#as_gtext_buffer ignore_whitespace filename1 filename2;
+          oview <- Some ocamlview;
+          ocamlview#view#misc#connect#destroy ~callback:(fun () -> oview <- None) |> ignore;
+      | _ -> ()
 
     method private create_rev_indicator ?label ~row ~packing () =
       let rbox = GPack.hbox ~spacing:0 ~packing () in

@@ -48,6 +48,11 @@ let set_foreground drawable color =
   Cairo.set_source_rgb drawable r g b
 ;;
 
+let set_background drawable color =
+  set_foreground drawable color;
+  Cairo.fill drawable 
+
+
 let set_line_attributes drawable ?(width=1) ?(style = `SOLID) ?(join = `BEVEL) ?(cap = `BUTT) () =
   Cairo.set_line_width drawable (f width);
   ( match style with
@@ -85,3 +90,8 @@ let polygon drawable ?(filled = false) points =
   | pt :: more -> path drawable pt more;
 
       if filled then Cairo.fill drawable else Cairo.stroke drawable
+
+let put_layout drawable ~x ~y ~fore layout = 
+  set_foreground drawable fore;
+  Cairo.move_to drawable (f x) (f y);
+  Cairo_pango.show_layout drawable layout

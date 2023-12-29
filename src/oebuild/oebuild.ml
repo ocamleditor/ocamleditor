@@ -126,7 +126,7 @@ let link ~compilation ~compiler ~outkind ~lflags ~includes ~libs ~outname ~deps
         end else (sprintf "%s.%s" x ext)
       end libs
   in
-  let process_exit =
+  let linker_exit =
     let command, args = compiler in
     let args = Array.concat [
         args; (* Must be the first because starts with the first arg. of ocamlfind *)
@@ -144,11 +144,15 @@ let link ~compilation ~compiler ~outkind ~lflags ~includes ~libs ~outname ~deps
         (Array.of_list deps);
       ] in
     if verbose >= 2 then print_endline (String.concat " " (command :: (Array.to_list args)));
-    Spawn.sync command args
+    Spawn.sync ~process_in:Spawn.redirect_to_stdout ~process_err:Spawn.redirect_to_stderr command args
   in
-  match process_exit with
-  | None -> 0
-  | Some ex -> -9997
+  match linker_exit with
+  | `SUCCESS (Unix.WEXITED code)
+  | `SUCCESS (Unix.WSIGNALED code)
+  | `SUCCESS (Unix.WSTOPPED code) ->
+      if code <> 0 && verbose >= 4 then prerr_string (sprintf "Linker exited with code %d" code);
+      code
+  | `ERROR ex -> -9997
 ;;
 
 (** get_output_name *)
@@ -426,13 +430,13 @@ let build ~compilation ~package ~includes ~libs ~other_mods ~outkind ~compile_on
       in
       if compile_only then compilation_exit else begin
         let compiler_output = Buffer.create 100 in
-        let link_exit =
+        let linker_exit =
           crono ~label:"Linking phase"
             (link ~compilation ~compiler:linker ~outkind ~lflags:!lflags
                ~includes:!includes ~libs ~deps:obj_deps ~outname ~verbose) ()
         in
         if Buffer.length compiler_output > 0 then eprintf "%s\n%!" (Buffer.contents compiler_output);
-        link_exit
+        linker_exit
       end
     end else compilation_exit
   in

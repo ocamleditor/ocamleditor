@@ -20,6 +20,8 @@
 
 *)
 
+open Preferences
+
 let menu_item_view_menubar : (unit -> (GMenu.check_menu_item * GtkSignal.id) list ref) ref =
   ref (fun () -> failwith "menu_item_view_menubar")
 
@@ -54,7 +56,7 @@ let create ~editor ~page () =
   (*  *)
   let indent_all = Image_menu.item ~label:"Indent All" ~packing:gmenu#append () in
   ignore (indent_all#connect#activate ~callback:begin fun () ->
-      editor#with_current_page (fun page -> ignore (Ocp_indent.indent ~view:page#view `ALL));
+      editor#with_current_page (fun page -> ignore (Ocp_indent.indent ~project: editor#project ~view:page#view `ALL));
     end);
   gmenu#append (GMenu.separator_item ());
 
@@ -62,13 +64,13 @@ let create ~editor ~page () =
   let show_doc_at_cursor = Image_menu.item ~label:"Show Documentation" ~packing:gmenu#append () in
   show_doc_at_cursor#connect#activate ~callback:editor#show_doc_at_cursor |> ignore;
   show_doc_at_cursor#misc#set_sensitive (Menu_file.get_file_switch_sensitive page);
-  let find_definition = Image_menu.item ~label:"Find Definition" ~pixbuf: Icons.definition ~packing:gmenu#append () in
-  let find_references = Image_menu.item ~label:"Find References" ~pixbuf: Icons.references ~packing:gmenu#append () in
+  let find_definition = Image_menu.item ~label:"Find Definition" ~image: (GMisc.image ~pixbuf:(??? Icons.definition) ()) ~packing:gmenu#append () in
+  let find_references = Image_menu.item ~label:"Find References" ~image: (GMisc.image ~pixbuf:(??? Icons.references) ()) ~packing:gmenu#append () in
   let find_used_components = GMenu.menu_item ~packing:gmenu#append () in
   let label_find_used_components = GMisc.label ~xalign:0. ~markup:"" ~packing:find_used_components#add () in
   (*  *)
   gmenu#append (GMenu.separator_item ());
-  let select_in_structure_pane = Image_menu.item ~label:"Select in Structure Pane" ~pixbuf: Icons.select_in_structure ~packing:gmenu#append () in
+  let select_in_structure_pane = Image_menu.item ~label:"Select in Structure Pane" ~image: (GMisc.image ~pixbuf:(??? Icons.select_in_structure) ()) ~packing:gmenu#append () in
   ignore (select_in_structure_pane#connect#activate ~callback:begin fun () ->
       editor#with_current_page begin
         let sigid = ref None in
@@ -93,7 +95,7 @@ let create ~editor ~page () =
   select_in_structure_pane#misc#set_sensitive (Menu_file.get_file_switch_sensitive page);
   (*  *)
   gmenu#append (GMenu.separator_item ());
-  let eval_in_toplevel = Image_menu.item ~label:"Eval in Toplevel" ~pixbuf: Icons.toplevel ~packing:gmenu#append () in
+  let eval_in_toplevel = Image_menu.item ~label:"Eval in Toplevel" ~image: (Icons.create (??? Icons.toplevel)) ~packing:gmenu#append () in
   ignore (eval_in_toplevel#connect#activate ~callback:begin fun () ->
       editor#with_current_page (fun page -> page#ocaml_view#obuffer#send_to_shell ());
     end);
@@ -153,6 +155,8 @@ let create ~editor ~page () =
     toggle_word_wrap#set_active editor#word_wrap;
     (*show_menubar#set_active (get_menu_item_view_menubar())#active;*)
     List.iter (fun (w, s) -> w#misc#handler_unblock s) sigids;
+    gmenu#connect#deactivate ~callback:(fun () -> Quick_info.set_active page#quick_info true) |> ignore;
+    Quick_info.set_active page#quick_info false;
     gmenu#popup ~button:3 ~time:(GdkEvent.Button.time ev);
     Gdk.Window.set_cursor gmenu#misc#window (Gdk.Cursor.create `ARROW);
     true

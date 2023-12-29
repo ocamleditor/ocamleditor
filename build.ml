@@ -608,6 +608,8 @@ let get_application_dir name =
 
 let application_icons = get_application_dir "icons"
 
+let application_fonts = get_application_dir "fonts"
+
 let application_plugins = get_application_dir "plugins"
 
 let find_best ?(param="--help") prog =
@@ -692,7 +694,7 @@ let create_process ?wd ?env program args =
 
 
 (** loop *)
-let loop (f : in_channel -> unit) chan = try while true do f chan done with End_of_file -> ()
+let loop (f : in_channel -> unit) chan = try while true do f chan done with End_of_file -> close_in_noerr chan
 
 (** redirect_to_stdout *)
 let redirect_to_stdout = loop (fun chan -> input_line chan |> print_endline)
@@ -773,14 +775,10 @@ let exec
     | `ASYNC -> `PID proc.pid
   with (Unix.Unix_error _) as ex -> `ERROR ex
 
-(** sync
-    @param at_exit Deprecated, use continue_with instead.
-*)
+(** sync *)
 let sync
     ?working_directory
     ?env
-    ?continue_with
-    ?at_exit
     ?process_in
     ?process_out
     ?process_err
@@ -790,8 +788,6 @@ let sync
     exec `SYNC
       ?working_directory
       ?env
-      ?continue_with
-      ?at_exit
       ?process_in
       ?process_out
       ?process_err
@@ -2721,7 +2717,7 @@ module ETask = struct
       let exit_code = Spawn.sync
           ~process_in:Spawn.redirect_to_stdout
           ~process_err:Spawn.redirect_to_stderr
-          ~working_directory:dir ~env prog (Array.of_list args) 
+          ~working_directory:dir ~env prog (Array.of_list args)
       in
       match exit_code with
       | `ERROR _ -> raise Error
@@ -3388,7 +3384,7 @@ let targets = [
     compilation_native   = true;
     toplevel_modules     = "icons/icons.ml";
     package              = "lablgtk3";
-    search_path          = "common"; (* -I *)
+    search_path          = "common icons"; (* -I *)
     required_libraries   = "";
     compiler_flags       = "-g";
     linker_flags         = "-g";
@@ -3542,8 +3538,8 @@ let targets = [
     compilation_bytecode = false;
     compilation_native   = true;
     toplevel_modules     = "ocamleditor.ml";
-    package              = "atdgen-runtime,compiler-libs.common,dynlink,lablgtk3,ocp-indent.lib,str,unix,xml-light,yojson";
-    search_path          = "+ocamldoc gmisclib common icons otherwidgets oebuild "; (* -I *)
+    package              = "atdgen-runtime,compiler-libs.common,diff,dynlink,lablgtk3,ocamldoc,ocp-indent.lib,str,unix,xml-light,yojson";
+    search_path          = "gmisclib common icons otherwidgets oebuild "; (* -I *)
     required_libraries   = "process_termination odoc_info gmisclib common icons otherwidgets oebuildlib ocamleditor_lib";
     compiler_flags       = "-w -s-y-x-m -g";
     linker_flags         = "-g";
@@ -3558,7 +3554,7 @@ let targets = [
     other_objects        = "";
     external_tasks       = [];
     restrictions         = [];
-    dependencies         = [14; 16; 26; 22];
+    dependencies         = [14; 19; 16; 22];
     show                 = true;
     rc_filename          = None;
   };
@@ -3573,8 +3569,8 @@ let targets = [
     compilation_bytecode = true;
     compilation_native   = false;
     toplevel_modules     = "ocamleditor.ml";
-    package              = "atdgen-runtime,compiler-libs.common,dynlink,lablgtk3,ocp-indent.lib,str,unix,xml-light,yojson";
-    search_path          = "+ocamldoc gmisclib common icons otherwidgets oebuild "; (* -I *)
+    package              = "atdgen-runtime,compiler-libs.common,diff,dynlink,lablgtk3,ocamldoc,ocp-indent.lib,str,unix,xml-light,yojson";
+    search_path          = "gmisclib common icons otherwidgets oebuild "; (* -I *)
     required_libraries   = "process_termination odoc_info gmisclib common icons otherwidgets oebuildlib";
     compiler_flags       = "-w -s-y-x-m -g";
     linker_flags         = "-g";
@@ -3589,7 +3585,7 @@ let targets = [
     other_objects        = "";
     external_tasks       = [];
     restrictions         = [];
-    dependencies         = [4; 10; 7; 5; 28; 8; 9; 20; 17; 18; 25];
+    dependencies         = [4; 10; 7; 5; 8; 9; 20; 17; 18];
     show                 = true;
     rc_filename          = None;
   };
@@ -3604,8 +3600,8 @@ let targets = [
     compilation_bytecode = false;
     compilation_native   = true;
     toplevel_modules     = "ocamleditor.ml";
-    package              = "compiler-libs.common,dynlink,lablgtk3,ocp-indent.lib,str,unix,xml-light,yojson";
-    search_path          = "+ocamldoc gmisclib common icons otherwidgets oebuild "; (* -I *)
+    package              = "compiler-libs.common,dynlink,lablgtk3,ocamldoc,ocp-indent.lib,str,unix,xml-light,yojson";
+    search_path          = "gmisclib common icons otherwidgets oebuild "; (* -I *)
     required_libraries   = "process_termination odoc_info gmisclib common icons otherwidgets oebuildlib ocamleditor_lib";
     compiler_flags       = "-w -s-y-x-m -g";
     linker_flags         = "-g";
@@ -3620,7 +3616,7 @@ let targets = [
     other_objects        = "";
     external_tasks       = [2];
     restrictions         = ["IS_WIN32"];
-    dependencies         = [14; 19; 16; 26; 22];
+    dependencies         = [14; 19; 16; 22];
     show                 = true;
     rc_filename          = Some ".\\ocamleditor.opt.resource.rc";
   };
@@ -3635,8 +3631,8 @@ let targets = [
     compilation_bytecode = false;
     compilation_native   = true;
     toplevel_modules     = "ocamleditor.ml";
-    package              = "atdgen-runtime,compiler-libs.common,dynlink,lablgtk3,ocp-indent.lib,str,unix,xml-light,yojson";
-    search_path          = "+ocamldoc gmisclib common icons otherwidgets oebuild "; (* -I *)
+    package              = "atdgen-runtime,compiler-libs.common,diff,dynlink,lablgtk3,ocamldoc,ocp-indent.lib,str,unix,xml-light,yojson";
+    search_path          = "gmisclib common icons otherwidgets oebuild "; (* -I *)
     required_libraries   = "process_termination odoc_info gmisclib common icons otherwidgets oebuildlib ocamleditor_lib";
     compiler_flags       = "-w -s-y-x-m -g";
     linker_flags         = "-g";
@@ -3651,7 +3647,7 @@ let targets = [
     other_objects        = "";
     external_tasks       = [];
     restrictions         = [];
-    dependencies         = [14; 16; 26];
+    dependencies         = [14; 19; 16];
     show                 = true;
     rc_filename          = None;
   };
@@ -3666,8 +3662,8 @@ let targets = [
     compilation_bytecode = false;
     compilation_native   = true;
     toplevel_modules     = "ocamleditor_lib.ml";
-    package              = "atdgen-runtime,compiler-libs.common,dynlink,lablgtk3,ocp-indent.lib,str,unix,xml-light,yojson";
-    search_path          = "+ocamldoc gmisclib common icons otherwidgets oebuild "; (* -I *)
+    package              = "atdgen-runtime,compiler-libs.common,diff,dynlink,lablgtk3,ocamldoc,ocp-indent.lib,str,unix,xml-light,yojson";
+    search_path          = "gmisclib common icons otherwidgets oebuild "; (* -I *)
     required_libraries   = "";
     compiler_flags       = "-w -s-y-x-m -g";
     linker_flags         = "-g";
@@ -3697,7 +3693,7 @@ let targets = [
     compilation_bytecode = true;
     compilation_native   = false;
     toplevel_modules     = "remote.ml";
-    package              = "curl,lablgtk3";
+    package              = "atdgen-runtime,curl,lablgtk3,yojson";
     search_path          = "common icons otherwidgets gmisclib"; (* -I *)
     required_libraries   = "";
     compiler_flags       = "-g -w -10";
@@ -3728,7 +3724,7 @@ let targets = [
     compilation_bytecode = false;
     compilation_native   = true;
     toplevel_modules     = "remote.ml";
-    package              = "curl,lablgtk3";
+    package              = "curl,diff,lablgtk3";
     search_path          = "common icons otherwidgets gmisclib"; (* -I *)
     required_libraries   = "";
     compiler_flags       = "-g -w -10";
@@ -3749,10 +3745,10 @@ let targets = [
     rc_filename          = None;
   };
   
-  (* 10 *)
+  (* 9 *)
   "plugin-dotviewer-bytecode", {
     descr                = "";
-    num                  = 10;
+    num                  = 0;
     id                   = 18;
     output_name          = "../plugins/dot_viewer_svg";
     target_type          = Library;
@@ -3774,16 +3770,16 @@ let targets = [
     library_install_dir  = ""; (* Relative to the Standard Library Directory *)
     other_objects        = "";
     external_tasks       = [];
-    restrictions         = [];
+    restrictions         = ["FINDLIB(mythical-support-for-rsvg-in-lablgtk3)"];
     dependencies         = [9];
-    show                 = true;
+    show                 = false;
     rc_filename          = None;
   };
   
-  (* 11 *)
+  (* 9 *)
   "plugin-dotviewer-native", {
     descr                = "";
-    num                  = 11;
+    num                  = 0;
     id                   = 19;
     output_name          = "../plugins/dot_viewer_svg";
     target_type          = Plugin;
@@ -3805,75 +3801,13 @@ let targets = [
     library_install_dir  = ""; (* Relative to the Standard Library Directory *)
     other_objects        = "";
     external_tasks       = [];
-    restrictions         = [];
+    restrictions         = ["FINDLIB(mythical-support-for-rsvg-in-lablgtk3)"];
     dependencies         = [];
-    show                 = true;
+    show                 = false;
     rc_filename          = None;
   };
   
-  (* 12 *)
-  "plugin-diff-bytecode", {
-    descr                = "";
-    num                  = 12;
-    id                   = 25;
-    output_name          = "../plugins/plugin_diff";
-    target_type          = Library;
-    compilation_bytecode = true;
-    compilation_native   = false;
-    toplevel_modules     = "plugin_diff_gtext.ml plugin_diff.ml";
-    package              = "compiler-libs.common,diff,lablgtk3,str,unix,xml-light";
-    search_path          = "common otherwidgets gmisclib oebuild +ocamldoc icons"; (* -I *)
-    required_libraries   = "";
-    compiler_flags       = "-g -w -26-10";
-    linker_flags         = "-g odiff.cma";
-    thread               = true;
-    vmthread             = false;
-    pp                   = "";
-    inline               = None;
-    nodep                = false;
-    dontlinkdep          = true;
-    dontaddopt           = false;
-    library_install_dir  = ""; (* Relative to the Standard Library Directory *)
-    other_objects        = "";
-    external_tasks       = [];
-    restrictions         = ["FINDLIB(diff)"];
-    dependencies         = [];
-    show                 = true;
-    rc_filename          = None;
-  };
-  
-  (* 13 *)
-  "plugin-diff-native", {
-    descr                = "";
-    num                  = 13;
-    id                   = 26;
-    output_name          = "../plugins/plugin_diff";
-    target_type          = Plugin;
-    compilation_bytecode = false;
-    compilation_native   = true;
-    toplevel_modules     = "plugin_diff_gtext.ml plugin_diff.ml ";
-    package              = "compiler-libs.common,diff,lablgtk3,str,unix,xml-light";
-    search_path          = "common otherwidgets gmisclib oebuild icons"; (* -I *)
-    required_libraries   = "";
-    compiler_flags       = "-g -w -26-10-58";
-    linker_flags         = "-g odiff.cmxa";
-    thread               = true;
-    vmthread             = false;
-    pp                   = "";
-    inline               = None;
-    nodep                = false;
-    dontlinkdep          = true;
-    dontaddopt           = false;
-    library_install_dir  = ""; (* Relative to the Standard Library Directory *)
-    other_objects        = "";
-    external_tasks       = [];
-    restrictions         = ["FINDLIB(diff)"];
-    dependencies         = [];
-    show                 = true;
-    rc_filename          = None;
-  };
-  
-  (* 13 *)
+  (* 9 *)
   "prepare-build", {
     descr                = "";
     num                  = 0;
@@ -3904,10 +3838,10 @@ let targets = [
     rc_filename          = None;
   };
   
-  (* 14 *)
+  (* 10 *)
   "launcher", {
     descr                = "Utility to open OCaml files from the file manager";
-    num                  = 14;
+    num                  = 10;
     id                   = 22;
     output_name          = "ocamleditorw";
     target_type          = Executable;
@@ -3935,7 +3869,7 @@ let targets = [
     rc_filename          = Some ".\\ocamleditorw.resource.rc";
   };
   
-  (* 14 *)
+  (* 10 *)
   "tools", {
     descr                = "";
     num                  = 0;
@@ -3966,7 +3900,7 @@ let targets = [
     rc_filename          = None;
   };
   
-  (* 14 *)
+  (* 10 *)
   "FINDLIB-TOOLS", {
     descr                = "";
     num                  = 0;

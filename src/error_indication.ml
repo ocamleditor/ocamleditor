@@ -21,6 +21,7 @@
 *)
 
 open Printf
+module ColorOps = Color
 open Preferences
 open Cairo_drawable
 
@@ -46,7 +47,8 @@ class error_indication (view : Ocaml_text.view) (global_gutter : GMisc.drawing_a
           Gobject.Property.set tag_error#as_tag {Gobject.name="underline"; conv=Gobject.Data.int} 4;
     end;
     let tag_warning = buffer#create_tag ~name:(sprintf "tag_warning-%f" ts) [`LEFT_MARGIN view#left_margin] in
-    let tag_warning_unused = buffer#create_tag ~name:(sprintf "tag_warning_unused-%f" ts) Oe_config.warning_unused_properties in
+    let tag_warning_unused = buffer#create_tag ~name:(sprintf "tag_warning_unused-%f" ts)
+        [`FOREGROUND (?? Oe_config.warning_unused_color); `STYLE `ITALIC] in
     tag_error, tag_warning, tag_warning_unused
   in
   let tag_error, tag_warning, tag_warning_unused = create_tags () in
@@ -154,8 +156,8 @@ class error_indication (view : Ocaml_text.view) (global_gutter : GMisc.drawing_a
         if flag_gutter then begin
           let kind, pixbuf =
             match kind with
-            | `Warning -> `Warning error.Oe.er_message, Icons.warning_14
-            | `Error -> `Error error.Oe.er_message, Icons.error_16
+            | `Warning -> `Warning error.Oe.er_message, (??? Icons.warning_14)
+            | `Error -> `Error error.Oe.er_message, (??? Icons.error_16)
             | _ -> assert false
           in
           let marker = Gutter.create_marker ~kind
@@ -219,21 +221,22 @@ class error_indication (view : Ocaml_text.view) (global_gutter : GMisc.drawing_a
         sticky_popup <- false
       end
 
-    method private find_message iter tags =
-      try
-        List.find (fun (start, _stop, _error) -> iter#equal (buffer#get_iter_at_mark (`MARK start))) tags
-      with Not_found -> begin
-          List.find begin fun (start, stop, _error) ->
+    method private filter_messages iter tags =
+      match
+        List.filter (fun (start, _stop, _error) -> iter#equal (buffer#get_iter_at_mark (`MARK start))) tags
+      with
+      | [] ->
+          List.filter begin fun (start, stop, _error) ->
             iter#in_range ~start:(buffer#get_iter_at_mark (`MARK start)) ~stop:(buffer#get_iter_at_mark (`MARK stop))
           end tags
-        end
+      | x -> x
 
     method tooltip ?(sticky=false) ?(need_focus=true) (location : [`ITER of GText.iter | `XY of int * int]) =
       if enabled && (not need_focus || view#has_focus) then begin
         let iter = match location with `XY (x, y) -> view#get_iter_at_location ~x ~y | `ITER it -> it in
         if not iter#ends_line then begin
           try
-            (* When the tooltip is already shown, do nothing *)
+            (* If the tooltip is already displayed, take no action to prevent flickering. *)
             ignore (List.find begin fun (start, stop, _popup) ->
                 try
                   let start = buffer#get_iter_at_mark (`MARK start) in
@@ -246,48 +249,62 @@ class error_indication (view : Ocaml_text.view) (global_gutter : GMisc.drawing_a
               try
                 (*Prf.crono Prf.prf_error_indication_tooltip begin fun () ->*)
                 (* Find message by iter *)
-                let (start, stop, error), border_color, bg_color =
-                  try
-                    (self#find_message iter tag_error_bounds),
-                    Oe_config.error_popup_border_color, Oe_config.error_popup_bg_color
-                  with Not_found -> begin
+                let messages, border_color, bg_color =
+                  match
+                    (self#filter_messages iter tag_error_bounds),
+                    ?? (Oe_config.error_popup_border_color), ?? (Oe_config.error_popup_bg_color)
+                  with
+                  | [], _, _ ->
                       if Oe_config.warning_tootip_enabled || not sticky then (raise Not_found);
-                      (self#find_message iter tag_warning_bounds),
-                      Oe_config.warning_popup_border_color, Oe_config.warning_popup_bg_color
-                    end
+                      (self#filter_messages iter tag_warning_bounds),
+                      ?? (Oe_config.warning_popup_border_color), ?? (Oe_config.warning_popup_bg_color)
+                  | x -> x
                 in
                 (* Create popup *)
                 self#hide_tooltip();
-                let popup = GWindow.window ~kind:`POPUP ~type_hint:`MENU ~decorated:false ~focus_on_map:false ~border_width:1 ~show:false () in
-                tag_popup <- (start, stop, popup) :: tag_popup;
-                sticky_popup <- sticky;
-                popup#misc#modify_bg [`NORMAL, border_color];
-                let ebox = GBin.event_box ~packing:popup#add () in
-                ebox#misc#modify_bg [`NORMAL, bg_color];
-                let error_message = Glib.Convert.convert_with_fallback ~fallback:"?"
-                    ~from_codeset:Oe_config.ocaml_codeset ~to_codeset:"UTF-8" error.Oe.er_message
-                in
-                let markup = (*(error.Oe.er_location) ^*)
-                  (Print_type.markup3 error_message) in
-                let label = GMisc.label ~markup ~xpad:5 ~ypad:5 ~packing:ebox#add () in
-                label#misc#modify_font_by_name Preferences.preferences#get.editor_completion_font;
-                (* Positioning *)
-                begin
-                  popup#move ~x:(-1000) ~y:(-1000);
-                  match location with
-                  | `ITER _ ->
-                      let x, y = view#get_location_at_iter iter in
-                      popup#show();
-                      let y = y - popup#misc#allocation.Gtk.height - 5 in
-                      popup#move ~x ~y;
-                  | `XY _ ->
+                let create_popup start stop error displacement =
+                  let popup = GWindow.window ~kind:`POPUP ~type_hint:`MENU ~decorated:false ~focus_on_map:false ~border_width:1 ~show:false () in
+                  tag_popup <- (start, stop, popup) :: tag_popup;
+                  sticky_popup <- sticky;
+                  popup#misc#modify_bg [`NORMAL, border_color];
+                  let ebox = GBin.event_box ~packing:popup#add () in
+                  ebox#misc#modify_bg [`NORMAL, bg_color];
+                  let error_message = Glib.Convert.convert_with_fallback ~fallback:"?"
+                      ~from_codeset:Oe_config.ocaml_codeset ~to_codeset:"UTF-8" error.Oe.er_message
+                  in
+                  let markup = (*(error.Oe.er_location) ^*)
+                    (Print_type.markup3 error_message) in
+                  let label = GMisc.label ~markup ~xpad:5 ~ypad:5 ~packing:ebox#add () in
+                  label#misc#modify_font_by_name Preferences.preferences#get.editor_completion_font;
+                  label#misc#modify_fg [`NORMAL, `BLACK];
+                  (* Positioning *)
+                  begin
+                    popup#move ~x:(-1000) ~y:(-1000);
+                    match location with
+                    | `ITER _ ->
+                        let x, y = view#get_location_at_iter iter in
+                        popup#show();
+                        let y = y - popup#misc#allocation.Gtk.height - 5 - displacement in
+                        popup#move ~x ~y;
+                    | `XY _ ->
                       let x, y = Gdk.Window.get_pointer_location popup#misc#window in
-                      popup#show();
-                      popup#move ~x ~y:(y - popup#misc#allocation.Gtk.height - 12);
-                end;
-                let incr = if Preferences.preferences#get.editor_annot_type_tooltips_delay = 0 then 0.106 else 0.479 in
-                Gmisclib.Util.fade_window ~incr popup;
-                (*end ()*)
+                        popup#show();
+                        popup#move ~x ~y:(y - popup#misc#allocation.Gtk.height - 12 - displacement);
+                  end;
+                  let incr = if Preferences.preferences#get.editor_annot_type_tooltips_delay = 0 then 0.106 else 0.479 in
+                  Gmisclib.Util.fade_window ~incr popup;
+                  popup#misc#allocation.Gtk.height
+                  (*end ()*)
+                in
+                messages
+                |> Miscellanea.Xlist.group_by (fun (start, stop, messages) ->
+                    (buffer#get_iter_at_mark (`MARK start))#offset, (buffer#get_iter_at_mark (`MARK stop))#offset)
+                |> List.iter begin fun ((start, stop), messages) ->
+                  messages |>
+                  List.fold_left begin fun displacement (start, stop, message) ->
+                    displacement + create_popup start stop message displacement;
+                  end 0 |> ignore
+                end
               with Not_found -> (if not sticky_popup then (self#hide_tooltip()))
             end
         end else (if not sticky_popup then (self#hide_tooltip()));
@@ -300,25 +317,21 @@ class error_indication (view : Ocaml_text.view) (global_gutter : GMisc.drawing_a
         let drawable = Gdk.Cairo.create window in
         set_line_attributes drawable ~width:1 ~style:`SOLID ~join:`ROUND ();
         let allocation : Gtk.rectangle = global_gutter#misc#allocation in
-        let width0, height = allocation.width, allocation.height in
-        let width = if !Plugins.diff = None then width0 else Oe_config.global_gutter_size in
-        let x0 = width0 - width in
+        let width, height = allocation.width, allocation.height in
+        let x0 = 0 in
         let alloc = view#misc#allocation in(* TODO: was vscrolbar *)
         (* Clean up *)
         set_foreground drawable view#gutter.Gutter.bg_color;
         rectangle drawable ~filled:true ~x:x0 ~y:0 ~width ~height ();
         (* Rectangles at the top and bottom *)
-        set_foreground drawable view#gutter.Gutter.fg_color;
-        rectangle drawable ~filled:false ~x:x0 ~y:0 ~width:(width - 1) ~height:(alloc.Gtk.width - 1) ();
-        rectangle drawable ~filled:false ~x:x0 ~y:(height - alloc.Gtk.width) ~width:(width - 1) ~height:(alloc.Gtk.width - 2) ();
         (* Rectangle at the top in different color *)
-        let color = if self#has_errors#get then (Some Oe_config.error_underline_color)
-          else if self#has_warnings#get then (Some Oe_config.warning_popup_border_color)
+        let color = if self#has_errors#get then (Some (?? Oe_config.error_underline_color))
+          else if self#has_warnings#get then (Some (?? Oe_config.warning_popup_border_color))
           else None (*(Some Oe_config.global_gutter_no_errors)*)
         in
         Gaux.may color ~f:begin fun color ->
           set_foreground drawable color;
-          rectangle drawable ~filled:true ~x:(x0 + 1) ~y:1 ~width:(width - 2) ~height:(alloc.Gtk.width - 2) ();
+          rectangle drawable ~filled:true ~x:x0 ~y:0 ~width:(width - 1) ~height:(alloc.Gtk.width - 1) ();
         end;
         (* Draw markers *)
         let height = height - 2 * alloc.Gtk.width in
@@ -356,7 +369,7 @@ class error_indication (view : Ocaml_text.view) (global_gutter : GMisc.drawing_a
         let draw_marker start color is_unused =
           let color =
             if is_unused
-            then (`NAME Oe_config.warning_unused_color) else color
+            then (`NAME (?? Oe_config.warning_unused_color)) else color
           in
           set_foreground drawable color;
           let line_start = float (buffer#get_iter_at_mark (`MARK start))#line in
@@ -377,7 +390,7 @@ class error_indication (view : Ocaml_text.view) (global_gutter : GMisc.drawing_a
         in
         (* Warnings *)
         List.iter begin fun (start, _, warning) ->
-          draw_marker start Oe_config.warning_popup_border_color (is_warning_unused warning.Oe.er_level);
+          draw_marker start (?? Oe_config.warning_popup_border_color) (is_warning_unused warning.Oe.er_level);
         end tag_warning_bounds;
         (* Mark Occurrences *)
         begin
@@ -385,7 +398,8 @@ class error_indication (view : Ocaml_text.view) (global_gutter : GMisc.drawing_a
             let bg_color_occurrences = Preferences.preferences#get.editor_mark_occurrences_bg_color in
             let under_cursor = Preferences.preferences#get.editor_mark_occurrences_under_cursor in
             let bg = `NAME ?? bg_color_occurrences in
-            let border = `NAME (Color.add_value (?? bg_color_occurrences) ~sfact:0.75 0.13) in
+            let factor = if Preferences.preferences#get.theme_is_dark then -0.23 else 0.13 in
+            let border = `NAME (ColorOps.add_value (?? bg_color_occurrences) ~sfact:0.75 factor) in
             List.iter begin fun (m1, m2) ->
               let start = buffer#get_iter_at_mark m1 in
               let stop = buffer#get_iter_at_mark m2 in
@@ -407,7 +421,7 @@ class error_indication (view : Ocaml_text.view) (global_gutter : GMisc.drawing_a
         end;
         (* Errors *)
         List.iter begin fun (start, _, _) ->
-          draw_marker start Oe_config.error_underline_color false;
+          draw_marker start (?? Oe_config.error_underline_color) false;
         end tag_error_bounds;
       with Gpointer.Null -> ()
 
@@ -457,21 +471,20 @@ class error_indication (view : Ocaml_text.view) (global_gutter : GMisc.drawing_a
             (*  *)
             set_line_attributes drawable ~width:1 ~style:`SOLID ~join:`MITER ();
             let f = self#draw_underline drawable top bottom x0 y0 in
-            set_foreground drawable Oe_config.warning_underline_color;
+            set_foreground drawable (?? Oe_config.warning_underline_color);
             List.iter (f 0) tag_warning_bounds;
-            set_foreground drawable Oe_config.warning_underline_shadow;
+            set_foreground drawable (?? Oe_config.warning_underline_shadow);
             List.iter (f 1) tag_warning_bounds;
             begin
               match Oe_config.error_underline_mode with
               | `CUSTOM ->
-                  set_foreground drawable Oe_config.error_underline_color;
+                  set_foreground drawable (?? Oe_config.error_underline_color);
                   List.iter (f 0) tag_error_bounds;
-                  set_foreground drawable Oe_config.error_underline_shadow;
+                  set_foreground drawable (?? Oe_config.error_underline_shadow);
                   List.iter (f 1) tag_error_bounds;
               | _ -> ()
             end;
             (*Gdk.GC.set_fill drawable#gc `SOLID;*)
-            Cairo.fill drawable;
             false
         | _ -> false
       end else false

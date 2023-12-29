@@ -97,12 +97,14 @@ struct
 
   (** read *)
   let read ~project ~symbol =
-    let force (_, ts) =
-      let filename = symbol.Oe.sy_filename in
-      ts < (Unix.stat filename).Unix.st_mtime
-    in
-    let module_list, _ = read_memo ~force (project, symbol.Oe.sy_filename) in
-    module_list
+    if symbol.Oe.sy_filename <> "" then begin
+      let force (_, ts) =
+        let filename = symbol.Oe.sy_filename in
+        ts < (Unix.stat filename).Unix.st_mtime
+      in
+      let module_list, _ = read_memo ~force (project, symbol.Oe.sy_filename) in
+      module_list
+    end else []
 
   (** find_name *)
   let find_name ~project ~symbol =
@@ -517,7 +519,9 @@ struct
         color;
       end;
     in
-    let bgparagraph = Color.add_value ~sfact:0.0 (Preferences.get_themed_color default_bg_color) 0.06 in
+    let module ColorOps = Color in
+    let open Preferences in
+    let bgparagraph = ColorOps.add_value ~sfact:0.0 (?? default_bg_color) 0.06 in
     let tag_table = new GText.tag_table buffer#tag_table in
     let create_tag id name props =
       match tag_table#lookup name with
@@ -572,7 +576,7 @@ struct
           tag#set_property (`FONT pref.editor_base_font)
         end [`TT; `TTB; `TTF; `TYPE; `TYPE2; `PARAM];
         let tag = List.assoc `TTF tags in
-        tag#set_property (`FAMILY ((GPango.font_description_from_string pref.editor_base_font)#family));
+        tag#set_property (`FAMILY (GPango.font_description_from_string pref.editor_base_font)#family);
         let tag = List.assoc `TYPE_COMMENT tags in
         tag#set_property (`FONT pref.odoc_font);
       end);

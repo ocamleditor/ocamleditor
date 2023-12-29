@@ -67,7 +67,7 @@ let expr_loc expr =
   | (Texp_coerce (_, target), _, _) :: _ -> { exp_loc with loc_end = target.ctyp_loc.loc_end }
   | _ -> exp_loc
 
-(** [lookup offset] will return a [Tast_iterator.iterator] which will traverse 
+(** [lookup offset] will return a [Tast_iterator.iterator] which will traverse
     a [Typedtree] type in depth so that the offset remains within the type
     [loc_start], [loc_end] locations.
 
@@ -103,7 +103,6 @@ let lookup offset =
 
       begin match exp_desc with
       | Texp_constant _
-      | Texp_ident _
       | Texp_construct _
       | Texp_variant _
       | Texp_record _
@@ -115,13 +114,31 @@ let lookup offset =
       | Texp_override _
       | Texp_instvar _ ->
           raise @@ Found { ba_loc = exp_loc; ba_type = Odoc_info.string_of_type_expr exp_type }
-
       (* The [exp_type] for this variants is just [unit] which is not very interesting.
          Also [exp_loc] covers the whole expression not just the field/val name *)
-      | Texp_setfield (_, { loc; _ }, _, e) 
+      | Texp_setfield (_, { loc; _ }, _, e)
       | Texp_setinstvar (_, _, { loc; _ }, e) ->
           raise @@ Found { ba_loc = loc; ba_type = Odoc_info.string_of_type_expr e.exp_type }
-
+      | Texp_ident (_path, _, value_desc) ->
+          begin
+            let open Types in
+            match value_desc.val_kind with
+            | Val_self (cls_sig, _meths, _vars, _) ->
+                (*Printf.printf " %s\n%!" (Odoc_info.string_of_type_expr cls_sig.csig_self);
+                  cls_sig.csig_meths |> Meths.iter (fun m (priv, virt, te) ->
+                    Printf.printf "  %s %s %s %s\n%!" m
+                      (Odoc_info.string_of_type_expr te)
+                      (match priv with Mpublic -> "" | Mprivate _ -> "private")
+                      (match virt with Asttypes.Virtual -> "V" | Asttypes.Concrete -> "C"));*)
+                let ba_type =
+                  Meths.fold (fun name (_priv, _virt, te) acc -> (name, Odoc_info.string_of_type_expr te) :: acc) cls_sig.csig_meths []
+                  |> List.map (fun (n, t) -> Printf.sprintf "%s : %s" n t) |> String.concat "; "
+                  |> Printf.sprintf "< %s; .. >"
+                in
+                raise @@ Found { ba_loc = exp_loc; ba_type };
+            | Val_reg | Val_prim _ | Val_ivar _ | Val_anc _ ->
+                raise @@ Found { ba_loc = exp_loc; ba_type = Odoc_info.string_of_type_expr exp_type }
+          end;
       | _ -> ()
       end
     end
@@ -152,7 +169,7 @@ let lookup offset =
     end
   in
 
-  let typ iterator core_type = 
+  let typ iterator core_type =
     let { Typedtree.ctyp_type; ctyp_loc; _ } = core_type in
     let lo = ctyp_loc.loc_start.pos_cnum in
     let hi = ctyp_loc.loc_end.pos_cnum in
@@ -178,7 +195,7 @@ let find_part_iterator iterator = function
 (** [find_by_offset ~project ~filename ~offset ?compile_buffer ()]
 
     Read the [.cmt] file of a given filename in in project, compiling it if
-    neeeded and find the type at the given offset. 
+    neeeded and find the type at the given offset.
 *)
 let find_by_offset ~project ~filename ~offset ?compile_buffer () =
   match Binannot.read_cmt ~project ~filename ?compile_buffer () with
@@ -201,7 +218,7 @@ let find_by_offset ~project ~filename ~offset ?compile_buffer () =
   | _ -> None
 
 
-(** [find ~page ?iter ()] 
+(** [find ~page ?iter ()]
 
     Find the OCaml type in page either at the given [iter] or at the insert position
 *)

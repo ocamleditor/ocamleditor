@@ -27,18 +27,12 @@
 
 *)
 
-open Printf
-
 type t = {
   mutable size            : int;
-  mutable chars           : int;
   mutable start_selection : GText.iter option;
-  spacing                 : int;
   mutable fold_size       : int;
   mutable fold_x          : int;
   mutable bg_color        : GDraw.color;
-  mutable fg_color        : GDraw.color;
-  mutable border_color    : GDraw.color;
   mutable marker_color    : GDraw.color;
   mutable marker_bg_color : GDraw.color;
   mutable markers         : marker list;
@@ -51,19 +45,14 @@ and marker = {
   callback                : (Gtk.text_mark -> bool) option;
 }
 
-let icon_size = 15
 
 (** create *)
 let create () = {
   size            = 0;
-  chars           = 0;
   start_selection = None;
-  spacing         = 2;
   fold_size       = 0;
   fold_x          = (-1);
   bg_color        = `WHITE;
-  fg_color        = `WHITE;
-  border_color    = `WHITE;
   marker_color    = `WHITE;
   marker_bg_color = `WHITE;
   markers         = [];
@@ -71,7 +60,7 @@ let create () = {
 
 (** create_marker *)
 let create_marker ?(kind=`None) ~mark ?pixbuf ?callback () =
-  {kind=kind; mark=mark; icon_pixbuf=pixbuf; callback=callback; icon_obj=None}
+  {kind; mark; icon_pixbuf=pixbuf; callback; icon_obj=None}
 
 (** destroy_markers *)
 let destroy_markers gutter markers =

@@ -25,6 +25,11 @@ open Miscellanea
 open Printf
 open Preferences
 
+module Log = Common.Log.Make(struct let prefix = "EDITOR" end)
+let _ =
+  Log.set_print_timestamp true;
+  Log.set_verbosity `ERROR
+
 let set_menu_item_nav_history_sensitive = ref (fun () -> failwith "set_menu_item_nav_history_sensitive")
 
 (** Editor *)
@@ -271,7 +276,7 @@ class editor () =
               ~message:(sprintf "File \xC2\xAB%s\xC2\xBB does not exist." bm.Oe.bm_filename) self;
             self#bookmark_remove ~num
         | Some page ->
-            if not page#view#realized then (self#goto_view page#view);
+            if not page#view#visible then (self#goto_view page#view);
             Gmisclib.Idle.add ~prio:300 begin fun () ->
               ignore (Bookmark.apply bm begin function
                 | `OFFSET _ ->
@@ -286,7 +291,7 @@ class editor () =
                     -1
                 end)
             end;
-            if page#view#realized then (Gmisclib.Idle.add (*~prio:300*) (fun () -> self#goto_view page#view));
+            if page#view#visible then (Gmisclib.Idle.add (*~prio:300*) (fun () -> self#goto_view page#view));
             Gmisclib.Idle.add ~prio:300 (fun () -> Project.save_bookmarks project);
       with Not_found -> ()
 
@@ -431,12 +436,16 @@ class editor () =
         let view = page#view in
         let ocaml_view = page#ocaml_view in
         let cb_tout_fast () =
+          Log.println `DEBUG "cb_tout_fast BEGIN";
           ocaml_view#code_folding#scan_folding_points ();
           if buffer#lexical_enabled then begin
+            Log.println `DEBUG "cb_tout_fast colorize_within_nearest_tag_bounds";
             let iter = buffer#get_iter `INSERT in
             self#colorize_within_nearest_tag_bounds gtext_buffer iter;
           end;
+          Log.println `DEBUG "cb_tout_fast draw_gutter";
           view#draw_gutter ();
+          Log.println `DEBUG "cb_tout_fast END";
         in
         let callback iter _ =
           Gmisclib.Idle.add ~prio:100 (fun () -> view#draw_current_line_background ~force:true (buffer#get_iter `INSERT));
@@ -447,6 +456,7 @@ class editor () =
         buffer#add_signal_handler (buffer#connect#insert_text ~callback);
         buffer#add_signal_handler (buffer#connect#after#delete_range ~callback:(fun ~start ~stop -> callback start stop));
         (* Mark Set *)
+        let lab_sel_lines, lab_sel_chars = page#status_pos_sel in
         buffer#add_signal_handler (buffer#connect#after#mark_set ~callback:begin fun _ mark ->
             let mark_occurrences, under_cursor, _ = view#options#mark_occurrences in
             let is_insert = match GtkText.Mark.get_name mark with Some "insert" -> true | _ -> false in
@@ -456,13 +466,15 @@ class editor () =
               let start, stop = buffer#selection_bounds in
               let nlines = stop#line - start#line in
               let nchars = stop#offset - start#offset in
-              kprintf page#status_pos_sel#set_text "%d (%d)" nlines nchars;
+              lab_sel_lines#set_text (string_of_int nlines);
+              lab_sel_chars#set_text (string_of_int nchars);
               if is_insert && mark_occurrences && not under_cursor then
                 Timeout.set tout_fast 1 page#view#mark_occurrences_manager#mark
             end else begin
               if mark_occurrences && not under_cursor then
                 page#view#mark_occurrences_manager#clear();
-              page#status_pos_sel#set_text "0";
+              lab_sel_lines#set_text "0";
+              lab_sel_chars#set_text "0";
             end;
             if is_insert then Timeout.set tout_delim 0 (self#cb_tout_delim page)
           end);
@@ -478,11 +490,11 @@ class editor () =
       let menu = GMenu.menu () in
       let filename = page#get_filename in
       let basename = Filename.basename filename in
-      let item = Image_menu.item ~label:(sprintf "Close \xC2\xAB%s\xC2\xBB" basename) ~stock:`CLOSE ~packing:menu#add () in
+      let item = Image_menu.item ~label:(sprintf "Close \xC2\xAB%s\xC2\xBB" basename) ~image:(Icons.create (??? Icons.close_16)) ~packing:menu#add () in
       ignore (item#connect#activate ~callback:(fun () -> ignore (self#dialog_confirm_close page)));
       let item = Image_menu.item ~label:(sprintf "Close All Except \xC2\xAB%s\xC2\xBB" basename) ~packing:menu#add () in
       ignore (item#connect#activate ~callback:(fun () -> self#close_all ~except:page ()));
-      let item = Image_menu.item ~label:(sprintf "Revert \xC2\xAB%s\xC2\xBB" basename) ~pixbuf:Icons.revert_to_saved_16 ~packing:menu#add () in
+      let item = Image_menu.item ~label:(sprintf "Revert \xC2\xAB%s\xC2\xBB" basename) ~image:(GMisc.image ~pixbuf:(??? Icons.revert_to_saved_16) (*~stock:`REVERT_TO_SAVED*) ~icon_size:`MENU ()) ~packing:menu#add () in
       ignore (item#connect#activate ~callback:(fun () -> self#revert page));
       let _ = GMenu.separator_item ~packing:menu#add () in
       let item = GMenu.menu_item ~label:"Copy Full Path" ~packing:menu#add () in
@@ -511,21 +523,21 @@ class editor () =
         switch_viewer#misc#set_sensitive (Menu_view.get_switch_view_sensitive self#project page)
       end;
       let item = Image_menu.item
-          ~pixbuf:Icons.history
+          ~image:(GMisc.image ~pixbuf:(??? Icons.history) ())#coerce
           ~label:"Revision History" ~packing:menu#add ()
       in
       ignore (item#connect#activate ~callback:(fun () -> self#with_current_page (fun page -> page#show_revision_history ())));
       let _ = GMenu.separator_item ~packing:menu#add () in
-      let item = Image_menu.item ~label:"Save As..." ~pixbuf:Icons.revert_to_saved_16 ~packing:menu#add () in
+      let item = Image_menu.item ~label:"Save As..." ~image:(GMisc.image ~pixbuf:(??? Icons.save_as_16) (*~stock:`SAVE_AS*) ~icon_size:`MENU ()) ~packing:menu#add () in
       ignore (item#connect#activate ~callback:(fun () -> self#dialog_save_as page));
       let item = Image_menu.item ~label:(sprintf "Rename \xC2\xAB%s\xC2\xBB" basename) ~packing:menu#add () in
       ignore (item#connect#activate ~callback:(fun () -> self#dialog_rename page));
       Gaux.may page#file ~f:(fun file -> item#misc#set_sensitive file#is_writeable);
-      let item = Image_menu.item ~label:(sprintf "Delete \xC2\xAB%s\xC2\xBB" basename) ~stock:`DELETE ~packing:menu#add () in
+      let item = Image_menu.item ~label:(sprintf "Delete \xC2\xAB%s\xC2\xBB" basename) ~image:(Icons.create (??? Icons.close_window)) ~packing:menu#add () in
       ignore (item#connect#activate ~callback:self#dialog_delete_current);
       Gaux.may page#file ~f:(fun file -> item#misc#set_sensitive file#is_writeable);
       let _ = GMenu.separator_item ~packing:menu#add () in
-      let item = Image_menu.item ~label:(sprintf "Compile \xC2\xAB%s\xC2\xBB" basename) ~pixbuf:Icons.compile_file_16 ~packing:menu#add () in
+      let item = Image_menu.item ~label:(sprintf "Compile \xC2\xAB%s\xC2\xBB" basename) ~image:(GMisc.image ~pixbuf:(??? Icons.compile_file_16) ()) ~packing:menu#add () in
       ignore (item#connect#activate ~callback:(fun () -> page#compile_buffer ?join:None ()));
       item#misc#set_sensitive (Menu_file.get_file_switch_sensitive page);
       menu#popup ~time:(GdkEvent.Button.time ev) ~button:3;
@@ -535,10 +547,10 @@ class editor () =
       if x > page#view#gutter.Gutter.size && y > 10 && y < (Gdk.Rectangle.height page#view#visible_rect) - 10 then begin
         let f () =
           let location = page#view#window_to_buffer_coords ~tag:`WIDGET ~x ~y in
-          page#tooltip ~typ:preferences#get.editor_annot_type_tooltips_enabled location;
+          page#tooltip ~typ:false location;
         in
         if (*true ||*) preferences#get.editor_annot_type_tooltips_delay = 1 then begin
-          Timeout.set tout_delim 0 (GtkThread2.async f);
+          Timeout.set tout_delim 0 (GtkThread.async f);
         end else (f());
       end else (page#error_indication#hide_tooltip ~force:false ());
       false;
@@ -566,30 +578,30 @@ class editor () =
                     ignore (page#connect#file_changed ~callback:(fun _ -> switch_page#call page));
                     (* Tab Label with close button *)
                     let button_close = GButton.button ~relief:`NONE () in
-                    let image = Icons.create Icons.button_close in
+                    let image = Icons.create (??? Icons.button_close) in
                     ignore (button_close#event#connect#enter_notify ~callback:begin fun _ ->
-                        image#set_pixbuf (if page#buffer#modified then Icons.button_close_hi_b else Icons.button_close_hi);
+                        image#set_pixbuf (if page#buffer#modified then (??? Icons.button_close_hi_b) else (??? Icons.button_close_hi));
                         false
                       end);
                     ignore (button_close#event#connect#leave_notify ~callback:begin fun _ ->
-                        image#set_pixbuf (if page#buffer#modified then Icons.button_close_b else Icons.button_close);
+                        image#set_pixbuf (if page#buffer#modified then (??? Icons.button_close_b) else (??? Icons.button_close));
                         false
                       end);
+                    ignore (page#view#misc#connect#query_tooltip ~callback:(self#callback_query_tooltip page));
                     ignore (page#buffer#connect#modified_changed ~callback:begin fun () ->
                         if page#buffer#modified then begin
-                          page#status_modified_icon#set_pixbuf Icons.save_14;
+                          page#status_modified_icon#set_label "\u{f0c7}\u{2005}";
                           page#status_modified_icon#misc#set_tooltip_text "Modified";
-                          image#set_pixbuf Icons.button_close_b
+                          image#set_pixbuf (??? Icons.button_close_b)
                         end else begin
-                          page#status_modified_icon#set_pixbuf Icons.empty_14;
+                          page#status_modified_icon#set_label "    ";
                           page#status_modified_icon#misc#set_tooltip_text "";
-                          image#set_pixbuf Icons.button_close
+                          image#set_pixbuf (??? Icons.button_close)
                         end;
                         modified_changed#call();
                       end);
                     (* Annot type tooltips *)
                     page#view#misc#set_has_tooltip true;
-                    ignore (page#view#misc#connect#query_tooltip ~callback:(self#callback_query_tooltip page));
                     ignore (page#buffer#undo#connect#after#redo ~callback:(fun ~name -> changed#call()));
                     ignore (page#buffer#undo#connect#after#undo ~callback:(fun ~name -> changed#call()));
                     ignore (page#buffer#undo#connect#can_redo_changed ~callback:(fun _ -> changed#call()));
@@ -642,7 +654,7 @@ class editor () =
     method revert (page : Editor_page.page) = Gaux.may page#file ~f:begin fun _ ->
         if page#buffer#modified then ignore (Dialog.confirm
                                                ~title:"Revert File"
-                                               ~image:(GMisc.image ~pixbuf:Icons.revert_to_saved_16 (*~stock:`REVERT_TO_SAVED*) ~icon_size:`DIALOG ())#coerce
+                                               ~image:(GMisc.image ~pixbuf:(??? Icons.revert_to_saved_16) (*~stock:`REVERT_TO_SAVED*) ~icon_size:`DIALOG ())#coerce
                                                ~message:("File\n\""^page#get_filename^"\"\nmodified, revert?")
                                                ~yes:("Revert", fun () -> page#revert())
                                                ~no:("Do Not Revert", ignore) page)
@@ -768,9 +780,9 @@ class editor () =
         end
       end
 
-    method i_search () =
+    method i_search ?(full_find : (Gdk.Tags.modifier list * Gdk.keysym * (unit -> unit)) option) () =
       self#with_current_page begin fun page ->
-        incremental_search#i_search ~view:(page#view :> Text.view) ~project:self#project
+        incremental_search#i_search ?full_find ~view:(page#view :> Text.view) ~project:self#project ()
       end
 
     method location_history_is_empty () =
@@ -989,6 +1001,7 @@ class editor () =
           | _ -> ()
           end
         end);
+      Global_diff.init_editor self
   end
 
 (** Signals *)

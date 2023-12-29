@@ -32,7 +32,7 @@ open Option_syntax
 open Manual_reset_event
 
 module Log = Log.Make(struct
-    let channel = stderr
+    let channel = stdout
     let verbosity = `DEBUG
     let print_timestamp = false
   end)

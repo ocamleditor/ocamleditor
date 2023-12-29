@@ -27,21 +27,19 @@ exception Mark_deleted
 let fade_window_enabled = ref false
 
 (** fade_window *)
-let fade_window =
+let fade_window ?(incr=0.10) ?(stop=1.0) window =
   if !fade_window_enabled then begin
-    (*fun ?(incr=0.159) ?(stop=0.96) window ->*)
-    fun ?(incr=0.25) ?(stop=1.0) window ->
-      window#set_opacity 0.0;
-      window#show();
-      let callback =
-        let opa = ref 0.0 in fun () ->
-          window#set_opacity !opa;
-          opa := !opa +. incr;
-          !opa <= stop;
-      in
-      ignore (callback() : bool);
-      ignore (GMain.Timeout.add ~ms:20 ~callback : GMain.Timeout.id)
-  end else (fun ?incr:_ ?stop:_ window -> window#show())
+    window#set_opacity 0.0;
+    window#show();
+    let callback =
+      let opa = ref 0.0 in fun () ->
+        window#set_opacity !opa;
+        opa := !opa +. incr;
+        !opa <= stop;
+    in
+    ignore (callback() : bool);
+    ignore (GMain.Timeout.add ~ms:20 ~callback : GMain.Timeout.id)
+  end else window#present()
 
 (** esc_destroy_window *)
 let esc_destroy_window window =

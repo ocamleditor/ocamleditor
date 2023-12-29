@@ -24,6 +24,8 @@ open GUtil
 open Miscellanea
 open Location
 open Lexing
+module ColorOps = Color
+open Preferences
 
 type t = {
   filename          : string;
@@ -58,29 +60,35 @@ class widget ~editor(* : Editor.editor)*) ?packing () =
   (* Toolbar *)
   let toolbar           = GButton.toolbar ~style:`ICONS ~orientation:`HORIZONTAL ~packing:vbox#pack () in
   let _                 = toolbar#set_icon_size `MENU in
-  let button_stop       = GButton.tool_button ~stock:`STOP ~packing:toolbar#insert () in
+  let button_stop       = GButton.tool_button ~packing:toolbar#insert () in
+  let _                 = button_stop#set_label_widget (Gtk_util.label_icon ~color:"red" "\u{f04d}")#coerce in
   let _                 = GButton.separator_tool_item ~packing:toolbar#insert () in
-  let button_prev_file  = GButton.tool_button ~stock:`MEDIA_REWIND ~packing:toolbar#insert () in
+  let button_prev_file  = GButton.tool_button ~packing:toolbar#insert () in
   let _                 = button_prev_file#misc#set_tooltip_text "Previous file" in
-  let button_prev_line  = GButton.tool_button ~stock:`MEDIA_PREVIOUS ~packing:toolbar#insert () in
+  let _                 = button_prev_file#set_label_widget (Gtk_util.label_icon "\u{ea9b}")#coerce in
+  let button_prev_line  = GButton.tool_button ~packing:toolbar#insert () in
   let _                 = button_prev_line#misc#set_tooltip_text "Previous line" in
-  let button_next_line  = GButton.tool_button ~stock:`MEDIA_NEXT ~packing:toolbar#insert () in
+  let _                 = button_prev_line#set_label_widget (Gtk_util.label_icon "\u{eab5}")#coerce in
+  let button_next_line  = GButton.tool_button ~packing:toolbar#insert () in
   let _                 = button_next_line#misc#set_tooltip_text "Next line" in
-  let button_next_file  = GButton.tool_button ~stock:`MEDIA_FORWARD ~packing:toolbar#insert () in
+  let _                 = button_next_line#set_label_widget (Gtk_util.label_icon "\u{eab6}")#coerce in
+  let button_next_file  = GButton.tool_button ~packing:toolbar#insert () in
   let _                 = button_next_file#misc#set_tooltip_text "Next file" in
+  let _                 = button_next_file#set_label_widget (Gtk_util.label_icon "\u{ea9c}")#coerce in
   let _                 = GButton.separator_tool_item ~packing:toolbar#insert () in
-  let button_remove     = GButton.tool_button ~stock:`REMOVE ~packing:toolbar#insert () in
+  let button_remove     = GButton.tool_button ~packing:toolbar#insert () in
   let _                 = button_remove#misc#set_tooltip_text "Remove entry" in
+  let _                 = button_remove#set_label_widget (Gtk_util.label_icon "\u{eb3b}")#coerce in
   let _                 = GButton.separator_tool_item ~packing:toolbar#insert () in
   let button_restart    = GButton.tool_button ~packing:toolbar#insert () in
   let _                 = button_restart#misc#set_tooltip_text "Repeat current search" in
-  let _                 = button_restart#set_icon_widget (GMisc.image ~pixbuf:Icons.refresh16 ())#coerce in
+  let _                 = button_restart#set_label_widget (Gtk_util.label_icon "\u{eb37}")#coerce in
   let button_new_search = GButton.tool_button ~packing:toolbar#insert () in
   let _                 = button_new_search#misc#set_tooltip_text "New search" in
-  let _                 = button_new_search#set_icon_widget (GMisc.image ~pixbuf:Icons.find_16 ())#coerce in
+  let _                 = button_new_search#set_label_widget (Gtk_util.label_icon "\u{f422}")#coerce in
   let _                 = GButton.separator_tool_item ~packing:toolbar#insert () in
   let button_detach     = GButton.tool_button ~label:"Detach" ~packing:toolbar#insert () in
-  let _                 = button_detach#set_icon_widget (GMisc.image ~pixbuf:Icons.detach ())#coerce in
+  let _                 = button_detach#set_label_widget (Gtk_util.label_icon "\u{eb23}")#coerce in
   let _                 = GButton.separator_tool_item ~packing:toolbar#insert () in
   let item_message      = GButton.tool_item ~packing:toolbar#insert () in
   let label_message     = GMisc.label ~markup:"" ~packing:item_message#add () in
@@ -116,7 +124,7 @@ class widget ~editor(* : Editor.editor)*) ?packing () =
   (* Model and view for lines *)
   let open Preferences in
   let pref              = Preferences.preferences#get in
-  let gutter_bg_color   = Color.name (Color.set_value 0.93 (`NAME (Preferences.get_themed_color pref.editor_bg_color_user))) in
+  let gutter_bg_color   = ColorOps.name (ColorOps.set_value 0.93 (`NAME (?? (pref.editor_bg_color_user)))) in
   let cols              = new GTree.column_list in
   let col_pixbuf        = cols#add ((Gobject.Data.gobject_option : (GdkPixbuf.pixbuf option) Gobject.data_conv)) in
   let col_markup        = cols#add Gobject.Data.string in
@@ -127,7 +135,7 @@ class widget ~editor(* : Editor.editor)*) ?packing () =
   let view_lines        = GTree.view ~model:model_lines ~headers_visible:false ~packing:rsw#add () in
   let _                 = view_lines#misc#set_property "enable-grid-lines" (`INT 2) in
   let renderer          = GTree.cell_renderer_text [`YPAD 0; `XPAD 0; `XALIGN 1.0; `CELL_BACKGROUND gutter_bg_color] in
-  let renderer_matches_num = GTree.cell_renderer_text [`YPAD 0; `XPAD 0; `XALIGN 0.5; `SCALE `SMALL; `FOREGROUND "#0000ff"; `CELL_BACKGROUND gutter_bg_color] in
+  let renderer_matches_num = GTree.cell_renderer_text [`YPAD 0; `XPAD 0; `XALIGN 0.5; `SCALE `SMALL; `CELL_BACKGROUND gutter_bg_color] in
   let renderer_markup   = GTree.cell_renderer_text [`YPAD 2; `XPAD 0; ] in
   let renderer_pixbuf   = GTree.cell_renderer_pixbuf [`YPAD 0; `XPAD 0; `CELL_BACKGROUND gutter_bg_color] in
   let vc_line_num       = GTree.view_column ~title:"" () in
@@ -142,8 +150,8 @@ class widget ~editor(* : Editor.editor)*) ?packing () =
   let _                 = view_lines#append_column vc_markup in
   (*  *)
   let _                 = view_lines#misc#modify_base [
-      `SELECTED, `COLOR (Preferences.editor_tag_color "highlight_current_line");
-      `NORMAL,   `NAME (Preferences.get_themed_color pref.editor_bg_color_user);
+      `SELECTED, `COLOR (Preferences.editor_tag_bg_color "highlight_current_line");
+      `NORMAL,   `NAME (?? (pref.editor_bg_color_user));
       `ACTIVE,   `NAME gutter_bg_color
     ] in
   let _                 = view_lines#misc#modify_text [

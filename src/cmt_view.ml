@@ -21,6 +21,7 @@
 *)
 
 open Printf
+module ColorOps = Color
 open Preferences
 open GUtil
 open Cmt_format
@@ -69,37 +70,37 @@ type kind =
   | Unknown
 
 let pixbuf_of_kind = function
-  | Function -> Some Icons.func
-  | Simple -> Some Icons.simple
-  | Method -> Some Icons.met
-  | Method_private -> Some Icons.met_private
-  | Method_virtual -> Some Icons.met_virtual
-  | Method_private_virtual -> Some Icons.met_private_virtual
-  | Method_inherited -> Some Icons.met
-  | Initializer -> Some Icons.init
-  | Attribute -> Some Icons.attribute
-  | Attribute_mutable -> Some Icons.attribute_mutable
-  | Attribute_mutable_virtual -> Some Icons.attribute_mutable_virtual
-  | Attribute_virtual -> Some Icons.attribute_virtual
-  | Type -> Some Icons.typ
-  | Type_abstract -> Some Icons.type_abstract
-  | Type_variant -> Some Icons.type_variant
-  | Type_record -> Some Icons.type_record
-  | Type_open -> Some Icons.type_variant
-  | Class -> Some Icons.classe
-  | Class_virtual -> Some Icons.class_virtual
-  | Class_type -> Some Icons.class_type
-  | Class_inherit -> Some Icons.class_inherit
+  | Function -> Some (??? Icons.func)
+  | Simple -> Some (??? Icons.simple)
+  | Method -> Some (??? Icons.met)
+  | Method_private -> Some (??? Icons.met_private)
+  | Method_virtual -> Some (??? Icons.met_virtual)
+  | Method_private_virtual -> Some (??? Icons.met_private_virtual)
+  | Method_inherited -> Some (??? Icons.met)
+  | Initializer -> Some (??? Icons.init)
+  | Attribute -> Some (??? Icons.attribute)
+  | Attribute_mutable -> Some (??? Icons.attribute_mutable)
+  | Attribute_mutable_virtual -> Some (??? Icons.attribute_mutable_virtual)
+  | Attribute_virtual -> Some (??? Icons.attribute_virtual)
+  | Type -> Some (??? Icons.typ)
+  | Type_abstract -> Some (??? Icons.type_abstract)
+  | Type_variant -> Some (??? Icons.type_variant)
+  | Type_record -> Some (??? Icons.type_record)
+  | Type_open -> Some (??? Icons.type_variant)
+  | Class -> Some (??? Icons.classe)
+  | Class_virtual -> Some (??? Icons.class_virtual)
+  | Class_type -> Some (??? Icons.class_type)
+  | Class_inherit -> Some (??? Icons.class_inherit)
   | Class_let_bindings -> None
-  | Module -> Some Icons.module_impl
-  | Module_functor -> Some Icons.module_funct
-  | Module_type -> Some Icons.module_type
-  | Module_include -> Some Icons.module_include
-  | Exception -> Some Icons.exc
-  | Error -> Some Icons.error_14
-  | Warning -> Some Icons.warning_14
-  | Folder_warnings -> Some Icons.folder_warning
-  | Folder_errors -> Some Icons.folder_error
+  | Module -> Some (??? Icons.module_impl)
+  | Module_functor -> Some (??? Icons.module_funct)
+  | Module_type -> Some (??? Icons.module_type)
+  | Module_include -> Some (??? Icons.module_include)
+  | Exception -> Some (??? Icons.exc)
+  | Error -> Some (??? Icons.error_14)
+  | Warning -> Some (??? Icons.warning_14)
+  | Folder_warnings -> Some (??? Icons.folder_warning)
+  | Folder_errors -> Some (??? Icons.folder_error)
   | Dependencies -> None
   | Bookmark pixbuf -> Some pixbuf
   | Unknown -> None;;
@@ -168,12 +169,12 @@ class widget ~editor:_ ~page ?packing () =
   let button_sort_rev        = GButton.toggle_button ~relief:`NONE ~packing:toolbar#pack () in
   let button_select_from_buf = GButton.button ~relief:`NONE ~packing:toolbar#pack () in
   let button_select_buf      = GButton.button ~relief:`NONE ~packing:toolbar#pack () in
-  let _                      = button_refresh#set_image (GMisc.image (*~stock:`REFRESH*) ~pixbuf:Icons.refresh16 ~icon_size:`MENU ())#coerce in
-  let _                      = button_sort#set_image (GMisc.image (*~stock:`SORT_ASCENDING*) ~pixbuf:Icons.sort_asc ~icon_size:`MENU ())#coerce in
-  let _                      = button_sort_rev#set_image (GMisc.image (*~stock:`SORT_DESCENDING*) ~pixbuf:Icons.sort_asc_rev ~icon_size:`MENU ())#coerce in
-  let _                      = button_show_types#set_image (GMisc.image ~pixbuf:Icons.typ ())#coerce in
-  let _                      = button_select_buf#set_image (GMisc.image ~pixbuf:Icons.select_in_buffer ())#coerce in
-  let _                      = button_select_from_buf#set_image (GMisc.image ~pixbuf:Icons.select_in_structure ())#coerce in
+  let _                      = button_refresh#add (Gtk_util.label_icon "\u{eb37}")#coerce in
+  let _                      = button_sort#add (Gtk_util.label_icon "\u{f15d}")#coerce in
+  let _                      = button_sort_rev#add (Gtk_util.label_icon "\u{f1860}")#coerce in
+  let _                      = button_show_types#add (Gtk_util.label_icon "\u{03c4}")#coerce in
+  let _                      = button_select_buf#add (Gtk_util.label_icon "<span size='xx-small'>\u{f061}</span>\u{f09ee}")#coerce in
+  let _                      = button_select_from_buf#add (Gtk_util.label_icon "\u{f13d2}<span size='xx-small'>\u{f060}</span>")#coerce  in
   let _                      = button_sort#misc#set_tooltip_text "Sort by name" in
   let _                      = button_sort_rev#misc#set_tooltip_text "Sort by reverse name" in
   let _                      = button_show_types#misc#set_tooltip_text "Show types" in
@@ -191,7 +192,7 @@ class widget ~editor:_ ~page ?packing () =
   let model_sort_default     = GTree.model_sort model in
   let model_sort_name        = GTree.model_sort model in
   let model_sort_name_rev    = GTree.model_sort model in
-  let sw                     = GBin.scrolled_window ~shadow_type:`IN ~hpolicy:`AUTOMATIC ~vpolicy:`AUTOMATIC ~packing:vbox#add () in
+  let sw                     = GBin.scrolled_window ~shadow_type:`NONE ~hpolicy:`AUTOMATIC ~vpolicy:`AUTOMATIC ~packing:vbox#add () in
   let view                   = GTree.view ~model:model_sort_default ~headers_visible:false ~packing:sw#add ~width:350 ~height:500 () in
   let renderer_pixbuf        = GTree.cell_renderer_pixbuf [`YPAD 0; `XPAD 0] in
   let renderer_markup        = GTree.cell_renderer_text [`YPAD 0] in
@@ -242,7 +243,7 @@ class widget ~editor:_ ~page ?packing () =
       ];
       type_color <- ?? (pref.outline_color_types);
       type_color_re <- Str.regexp_string type_color;
-      type_color_sel <- Color.name_of_gdk (view#misc#style#fg `SELECTED);
+      type_color_sel <- ColorOps.name_of_gdk (view#misc#style#fg `SELECTED);
       type_color_sel_re <- Str.regexp_string type_color_sel;
       span_type_color <- " <span color='" ^ type_color ^ "'>: ";
       let style_outline, apply_outline = Gtk_theme.get_style_outline pref in

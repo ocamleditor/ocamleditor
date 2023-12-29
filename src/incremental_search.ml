@@ -23,6 +23,7 @@
 open GdkKeysyms
 open GUtil
 open Printf
+module ColorOps = Color
 open Preferences
 
 let set_last_incremental = ref (fun text regexp -> failwith "set_last_incremental")
@@ -161,7 +162,7 @@ class incremental () =
       let old_back = ref status#backward in
       let old_case = ref status#case_sensitive in
       let old_regexp = ref status#use_regexp in
-      fun ~view ~project ->
+      fun ?(full_find : (Gdk.Tags.modifier list * Gdk.keysym * (unit -> unit)) option) ~view ~project () ->
         status#set_case_sensitive false;
         status#set_use_regexp true;
         status#set_i_search true;
@@ -201,10 +202,10 @@ class incremental () =
         let ebox = GBin.event_box ~border_width:0 ~packing:dialog#add () in
         let box = GPack.hbox ~spacing:0 ~border_width:5 ~packing:ebox#add () in
         let color = ?? (Preferences.preferences#get.editor_bg_color_popup) in
-        let border_color = Color.add_value color 0.13 in
+        let border_color = ColorOps.add_value color 0.13 in
         dialog#misc#modify_bg [`NORMAL, `NAME border_color];
         let _ = ebox#misc#modify_bg [`NORMAL, `NAME color] in
-        let lab = GMisc.label ~markup:"<b><big>Search for: </big></b>"
+        let lab = GMisc.label ~markup:"<b><big>Search for: </big></b>\n<span size='xx-small'>Ctrl+F for Find/Replace</span>"
             ~xalign:0.0 ~xpad:0 ~packing:(box#pack ~expand:true ~fill:true) () in
         let e = GEdit.entry ~packing:(box#pack ~expand:false ~fill:false) () in
         e#connect#changed ~callback:begin
@@ -221,20 +222,27 @@ class incremental () =
                 status#set_text_find t;
               end;
             end
-        end;
+        end |> ignore;
         dialog#event#connect#focus_out ~callback:begin fun ev ->
           dialog#destroy();
           true
-        end;
+        end |> ignore;
         dialog#event#connect#key_press ~callback:
           begin fun ev ->
-            let state = GdkEvent.Key.state ev and key = GdkEvent.Key.keyval ev in
-            if state = [`CONTROL] && key = GdkKeysyms._e then (search `FORWARD; true)
-            else if key = _Left || key = _Right || key = _Escape then (dialog#destroy(); true)
-            else if key = _Up then (move(); search `BACKWARD; true)
-            else if key = _Down then (move(); search `FORWARD; true)
-            else false;
-          end;
+            let state = GdkEvent.Key.state ev |> List.sort compare in
+            let keyval = GdkEvent.Key.keyval ev in
+            match full_find with
+            | Some (modi, key, find_func)
+              when state = (modi |> List.sort compare) && keyval = key ->
+                dialog#destroy();
+                find_func ();
+                true
+            | _ ->
+                if keyval = _Left || keyval = _Right || keyval = _Escape then (dialog#destroy(); true)
+                else if keyval = _Up then (move(); search `BACKWARD |> ignore; true)
+                else if keyval = _Down then (move(); search `FORWARD |> ignore; true)
+                else false;
+          end |> ignore;
         dialog#connect#destroy ~callback:
           begin fun () ->
             status#set_incremental !inc;
@@ -242,7 +250,7 @@ class incremental () =
             status#set_i_search false;
             status#set_case_sensitive !old_case;
             status#set_use_regexp !old_regexp;
-          end;
+          end |> ignore;
         move();
         dialog#show();
         move();

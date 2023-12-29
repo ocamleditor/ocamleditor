@@ -26,11 +26,15 @@ COPYRIGHT
 
 DEPENDENCIES
 
-  * OCaml-4.13.0;
-  * Lablgtk-2.18.0 (installed with Findlib);
+  * OCaml-4.14.0;
+  * Lablgtk (installed with Findlib);
   * Xml-light (installed with Findlib);
-  * Findlib-1.4.0;
+  * Findlib;
   * ocp-indent;
+  * merlin;
+  * yojson;
+  * atdgen;
+  * ocamldiff;
   * (optional) ocurl-0.6 to allow remote editing;
   * (optional) Dot command to display the module dependencies graph;
   * (optional) Lablgtk.rsvg to embed the graph viewer in the editor.

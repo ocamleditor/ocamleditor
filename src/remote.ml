@@ -517,13 +517,14 @@ module Remote = struct
       method open_file = open_file#connect ~after
     end
 
+  open Preferences
   (** dialog_rename *)
   let dialog_rename ~editor ~page () =
     match page#file with
     | None -> ()
     | Some _ ->
         let window = GWindow.dialog
-            ~icon:Icons.oe ~title:(sprintf "Rename file?")
+            ~icon:(??? Icons.oe) ~title:(sprintf "Rename file?")
             ~position:`CENTER ~modal:true ~show:false ()
         in
         let _ = GMisc.label ~text:(sprintf "Rename remote file\n\n%s" page#get_title) ~xalign:0.0 ~packing:window#vbox#pack () in
@@ -576,7 +577,7 @@ module Remote = struct
     | None -> ()
     | Some _ ->
         let window = GWindow.dialog
-            ~icon:Icons.oe ~title:"Save as..."
+            ~icon:(??? Icons.oe) ~title:"Save as..."
             ~position:`CENTER ~modal:true ~show:false ()
         in
         let _ = GMisc.label ~text:(sprintf "Save remote file\n\n%s\n\nas:" page#get_title) ~xalign:0.0 ~packing:window#vbox#pack () in

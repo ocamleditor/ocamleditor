@@ -23,6 +23,7 @@
 
 open Printf
 open Miscellanea
+open Preferences
 
 type t = {
   source                : [ `path of string list * string list (* roots x filenames *)
@@ -110,7 +111,7 @@ class widget ~source ~name ?filter ?packing () =
   let box               = GPack.hbox ~spacing:5 ~packing:sbox#pack () in
   let _                 = GMisc.label ~markup:"Search for <small>(\"<tt>?</tt>\" matches any single character, \"<tt>*</tt>\" matches any string)</small>:" ~xalign:0.0 ~yalign:1.0 ~packing:box#add () in
   let label_count       = GMisc.label ~xalign:1.0 ~yalign:1.0 ~height:16 ~packing:box#pack () in
-  let icon_progress     = GMisc.image ~width:16 ~file:(App_config.application_icons // "spinner_16.gif") ~packing:box#pack () in
+  let icon_progress     = GMisc.image ~width:16 ~file:(Icon.get_themed_filename "spinner_16.gif") ~packing:box#pack () in
   let entry             = GEdit.entry ~packing:sbox#pack () in
   let model, filelist =
     match source with
@@ -143,7 +144,6 @@ class widget ~source ~name ?filter ?packing () =
     val mutable table_visible = []
     val mutable table_results = []
     val mutable choose_func = fun ~filename ~has_cursor -> `ignore
-    val mutable timeout_id = None
     val mutable cache_results = []
     val mutable last_pattern = ""
     val mutable queue = Queue.create ()
@@ -222,7 +222,6 @@ class widget ~source ~name ?filter ?packing () =
       end view#selection#get_selected_rows;
 
     method finalize () =
-      Gaux.may timeout_id ~f:GMain.Timeout.remove;
       Gmisclib.Idle.add self#clear_model_filter;
       vc_name#unset_cell_data_func renderer_basename
 
@@ -504,7 +503,7 @@ class widget ~source ~name ?filter ?packing () =
             table_results <- table_visible;
             if is_filelist then (self#apply_pattern());
             self#display_summary ();
-            icon_progress#set_pixbuf Icons.empty_14;
+            icon_progress#set_pixbuf (??? Icons.empty_14);
             false
           end else true
         end;
@@ -520,10 +519,8 @@ class widget ~source ~name ?filter ?packing () =
               while scan_tree roots do () done;
               while append roots do () done;
             end else begin
-              let id = GMain.Timeout.add ~ms:200 ~callback:(fun () -> scan_tree roots) in
-              ignore (self#misc#connect#destroy ~callback:(fun () -> GMain.Timeout.remove id));
-              let id = GMain.Timeout.add ~ms:15 ~callback:(fun () -> append roots) in
-              ignore (self#misc#connect#destroy ~callback:(fun () -> GMain.Timeout.remove id));
+              GMain.Timeout.add ~ms:200 ~callback:(fun () -> scan_tree roots) |> ignore;
+              GMain.Timeout.add ~ms:15 ~callback:(fun () -> append roots) |> ignore;
             end;
             filelist
         | `filelist x -> x

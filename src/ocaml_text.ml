@@ -263,6 +263,7 @@ and view ?project ?buffer () =
     val mutable popup = None
     val mutable smart_click = true;
     val mutable code_folding = None
+    val mutable select_enclosing_expr = None
 
     method obuffer = buffer
 
@@ -343,6 +344,9 @@ and view ?project ?buffer () =
 
     method code_folding = match code_folding with Some m -> m | _ -> assert false
 
+    method select_enclosing_expr ?(iter = buffer#get_iter_at_mark `INSERT) () =
+      select_enclosing_expr |> Option.iter (fun sel -> sel#start ~iter)
+
     method! scroll_lazy iter =
       super#scroll_lazy iter;
       if self#code_folding#is_folded iter then begin
@@ -350,6 +354,7 @@ and view ?project ?buffer () =
       end;
 
     initializer
+      select_enclosing_expr <- Some (new Enclosing_expr.manager ~ocaml_view:self);
       let cf = new Code_folding.manager ~view:(self :> Text.view) in
       code_folding <- Some cf;
       cf#set_fold_line_color options#text_color;

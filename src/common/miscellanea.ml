@@ -85,14 +85,16 @@ struct
   let group_assoc ll =
     let groups =
       List.fold_left begin fun groups (k, v) ->
-        try
-          let group = List.assoc k groups in
-          group := v :: !group;
-          groups
-        with Not_found -> (k, ref [v]) :: groups;
+        match List.assoc_opt k groups with
+        | Some group ->
+            group := v :: !group;
+            groups
+        | _ -> (k, ref [v]) :: groups
       end [] ll
     in
     List.map (fun (k, group) -> (k, List.rev !group)) groups;;
+
+  let group_by f ll = group_assoc (List.map (fun x -> f x, x) ll)
 end
 
 (** {6 Memoization} *)

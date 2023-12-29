@@ -24,6 +24,7 @@ open Printf
 open GdkKeysyms
 open Miscellanea
 open Oe
+open Preferences
 
 type title = {
   title     : string;
@@ -33,27 +34,26 @@ type title = {
 
 (** pixbuf_of_kind *)
 let pixbuf_of_kind = function
-  | Pvalue                  -> Icons.func
-  | Pfunc                   -> Icons.func
-  | Pattribute              -> Icons.empty_14
-  | Pmethod                 -> Icons.met
-  | Pmethod_private_virtual -> Icons.met_private_virtual
-  | Pmethod_private         -> Icons.met_private
-  | Pmethod_virtual         -> Icons.met_virtual
-  | Ptype                   -> Icons.typ
-  | Plabel                  -> Icons.empty_14
-  | Pconstructor            -> Icons.empty_14 (*Icons.constructor*)
-  | Pexception              -> Icons.exc
-  | Pmodule                 -> Icons.module_impl
-  | Pmodtype                -> Icons.module_impl
-  | Pclass                  -> Icons.classe
-  | Pcltype                 -> Icons.class_type
-  | Ptype_abstract          -> Icons.type_abstract
-  | Ptype_variant           -> Icons.type_variant
-  | Ptype_record            -> Icons.type_record
-  | Std_lib                 -> Icons.empty_14
-  | Lib                     -> Icons.empty_14
-;;
+  | Pvalue                  -> ??? Icons.func
+  | Pfunc                   -> ??? Icons.func
+  | Pattribute              -> ??? Icons.empty_14
+  | Pmethod                 -> ??? Icons.met
+  | Pmethod_private_virtual -> ??? Icons.met_private_virtual
+  | Pmethod_private         -> ??? Icons.met_private
+  | Pmethod_virtual         -> ??? Icons.met_virtual
+  | Ptype                   -> ??? Icons.typ
+  | Plabel                  -> ??? Icons.empty_14
+  | Pconstructor            -> ??? Icons.empty_14 (*Icons.constructor*)
+  | Pexception              -> ??? Icons.exc
+  | Pmodule                 -> ??? Icons.module_impl
+  | Pmodtype                -> ??? Icons.module_impl
+  | Pclass                  -> ??? Icons.classe
+  | Pcltype                 -> ??? Icons.class_type
+  | Ptype_abstract          -> ??? Icons.type_abstract
+  | Ptype_variant           -> ??? Icons.type_variant
+  | Ptype_record            -> ??? Icons.type_record
+  | Std_lib                 -> ??? Icons.empty_14
+  | Lib                     -> ??? Icons.empty_14;;
 
 module Index = struct
   let len = 256
@@ -88,7 +88,7 @@ let col_symbol_data = cols#add Gobject.Data.caml
 
 (** symbol_list *)
 class symbol_list ~kind ?(is_completion=false) ?model ?(index=Index.create ()) ?packing ?width ?height () =
-  let renderer        = GTree.cell_renderer_text [`YPAD (match kind with `Search -> 5 | _ -> 0)] in
+  let renderer        = GTree.cell_renderer_text [`YPAD (match kind with `Search -> 0 | _ -> 0)] in
   let renderer_pixbuf = GTree.cell_renderer_pixbuf [] in
   let model           = match model with Some m -> m | _ -> GTree.list_store cols in
   let vc_icon         = GTree.view_column ~renderer:(renderer_pixbuf, ["pixbuf", col_icon]) ~title:"" () in
@@ -165,19 +165,21 @@ class symbol_list ~kind ?(is_completion=false) ?model ?(index=Index.create ()) ?
       let markup =
         match kind with
         | `Search when not is_completion ->
-            sprintf "<span weight='bold' color='%s' bgcolor='#ffffff'>%s</span>\n%s" Oe_config.module_browser_secondary_title_color
+            sprintf "<span weight='bold' color='%s' bgcolor='#ffffff'>%s</span>\n%s"
+              ?? Oe_config.module_browser_secondary_title_color
         | _ ->
-            sprintf "<span weight='bold' color='%s'>%s</span>\n%s" Oe_config.module_browser_secondary_title_color
+            sprintf "<span weight='bold' color='%s'>%s</span>\n%s"
+              ?? Oe_config.module_browser_secondary_title_color
       in
       List.iter begin fun symbol ->
-        let name = Symbols.get_name symbol in
+        let is_local = symbol.sy_local in
+        let name = if is_local then symbol.sy_id |> List.rev |> List.hd  else Symbols.get_name symbol in
         let symbol_path = Symbols.concat_value_path symbol in
         let row = model#append () in
         model#set ~row ~column:col_symbol_data symbol;
         model#set ~row ~column:col_icon (pixbuf_of_kind symbol.sy_kind);
         model#set ~row ~column:col_search name;
-        let local = symbol.sy_local in
-        let descr = if local then sprintf "%s : %s" name symbol.sy_type else symbol.sy_type in
+        let descr = if is_local then sprintf "%s : %s" name symbol.sy_type else symbol.sy_type in
         let name_escaped = Glib.Markup.escape_text name in
         let descr = Print_type.markup2 descr in
         let descr = replace_first ["\\([ \t]*\\)\\("^(Str.quote name_escaped)^"\\)\\([ \t]+\\|$\\)", "\\1<b>\\2</b>\\3"] descr in
@@ -187,12 +189,10 @@ class symbol_list ~kind ?(is_completion=false) ?model ?(index=Index.create ()) ?
           else descr
         in
         let descr =
-          if local then sprintf "<span color='#0000ff'>%s</span>" descr else descr
-        in
-        let descr =
-          if is_search_output && (symbol.sy_kind <> Pmodule || symbol_path <> name)
+          if is_search_output && (symbol.sy_kind <> Pmodule || symbol_path <> name) && not is_local
           then markup (Glib.Markup.escape_text symbol_path) descr else descr
         in
+        let descr = if is_local then sprintf "<i>%s</i>" descr else descr in
         model#set ~row ~column:col_type_descr descr;
         let path = model#get_path row in
         Index.add index name path;

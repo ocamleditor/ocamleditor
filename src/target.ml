@@ -236,7 +236,7 @@ let create_cmd_line ?(flags=[]) ?(can_compile_native=true) target =
     @ flags
   in
   let args = List.map (fun a -> true, a) args in
-  Oe_config.oebuild_command, args
+  App_config.get_oebuild_command (), args
 
 (** tasks_compile *)
 let rec tasks_compile ?(name="tasks_compile") ?(flags=[]) ?(build_deps=[]) ?can_compile_native target =

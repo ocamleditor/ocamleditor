@@ -38,37 +38,38 @@ class view ~(editor : Editor.editor) ?(task_kind=(`OTHER : Task.kind)) ~task ?pa
   let _                 = toolbar#set_icon_size `MENU in
   let sw                = GBin.scrolled_window ~shadow_type:`NONE ~hpolicy:`AUTOMATIC ~vpolicy:`AUTOMATIC ~packing:hbox#add () in
   let button_detach     = GButton.tool_button ~label:"Detach" ~packing:toolbar#insert () in
-  let _                 = button_detach#set_icon_widget (GMisc.image ~pixbuf:Icons.detach ())#coerce in
+  let _                 = button_detach#set_icon_widget (Gtk_util.label_icon "\u{eb23} ")#coerce in
   let _                 = GButton.separator_tool_item ~packing:toolbar#insert () in
   (*  *)
   let button_stop       = GButton.tool_button ~stock:`STOP ~packing:toolbar#insert () in
+  let _                 = button_stop#set_icon_widget (Gtk_util.label_icon ~color:"red" "\u{f04d}")#coerce in
   let _                 = button_stop#set_tooltip_text "Kill Process" in
   let button_run        = GButton.tool_button ~packing:toolbar#insert () in
   let _                 = button_run#set_icon_widget begin match task_kind with
       | `OTHER | `RUN ->
           button_run#set_tooltip_text "Start";
-          (Icons.create Icons.start_16);
+          (Gtk_util.label_icon ~color:"forestgreen" "\u{f04b}")#coerce;
       | `CLEAN | `CLEANALL ->
           button_run#set_tooltip_text task.Task.et_name;
-          (Icons.create Icons.clear_build_16);
+          (Icons.create (??? Icons.clear_build_16))#coerce;
       | `ANNOT | `COMPILE ->
           button_run#set_tooltip_text task.Task.et_name;
-          (Icons.create Icons.build_16);
+          (Gtk_util.label_icon ~color:"forestgreen" "\u{eba2}")#coerce;
     end#coerce in
   let _                 = GButton.separator_tool_item ~packing:toolbar#insert () in
   (*  *)
   let button_clear      = GButton.tool_button ~packing:toolbar#insert () in
   let _                 = button_clear#set_tooltip_text "Clear Messages" in
-  let _                 = button_clear#set_icon_widget (Icons.create Icons.clear_16)#coerce in
+  let _                 = button_clear#set_icon_widget (Gtk_util.label_icon "\u{eabf} ")#coerce in
   let button_incr_font  = GButton.tool_button ~packing:toolbar#insert () in
   let _                 = button_incr_font#set_tooltip_text "Increase Font Size" in
-  let _                 = button_incr_font#set_icon_widget (GMisc.image ~pixbuf:Icons.zoom_in_14 ~icon_size:`MENU ())#coerce in
+  let _                 = button_incr_font#set_icon_widget (Gtk_util.label_icon "\u{f09f4} ")#coerce in
   let button_decr_font  = GButton.tool_button ~packing:toolbar#insert () in
   let _                 = button_decr_font#set_tooltip_text "Decrease Font Size" in
-  let _                 = button_decr_font#set_icon_widget (GMisc.image ~pixbuf:Icons.zoom_out_14 ~icon_size:`MENU ())#coerce in
+  let _                 = button_decr_font#set_icon_widget (Gtk_util.label_icon "\u{f09f3} ")#coerce in
   let button_wrap       = GButton.toggle_tool_button ~packing:toolbar#insert () in
   let _                 = button_wrap#set_tooltip_text "Word Wrap" in
-  let _                 = button_wrap#set_icon_widget (Icons.create Icons.wrap_lines_16)#coerce in
+  let _                 = button_wrap#set_icon_widget (Gtk_util.label_icon "\u{eb80} ")#coerce in
   (*  *)
   let view              = GText.view ~editable:(task_kind = `RUN) ~cursor_visible:true ~packing:sw#add () in
   let _                 = view#set_right_margin 2 in
@@ -101,8 +102,7 @@ class view ~(editor : Editor.editor) ?(task_kind=(`OTHER : Task.kind)) ~task ?pa
     method set_tab_label label = tab_label <- Some label
     method tab_label = match tab_label with Some x -> x | _ -> assert false
 
-    method! parent_changed messages =
-      super#parent_changed messages;
+    method! holder_changed messages =
       toolbar#misc#hide();
       if messages = Messages.vmessages then begin
         toolbar#set_orientation `VERTICAL;
@@ -130,8 +130,18 @@ class view ~(editor : Editor.editor) ?(task_kind=(`OTHER : Task.kind)) ~task ?pa
       buffer#delete ~start:(buffer#get_iter `START) ~stop:(buffer#get_iter `END)
 
     method close () =
-      (match process with None -> () | Some proc ->
-          Unix.waitpid [] proc.Spawn.pid |> ignore);
+      begin
+        match process with
+        | None -> ()
+        | Some proc ->
+            begin
+              let pid, status = Unix.waitpid [] proc.Spawn.pid in
+              match status with
+              | Unix.WEXITED code
+              | Unix.WSIGNALED code
+              | Unix.WSTOPPED code -> has_errors <- code <> 0
+            end;
+      end;
       button_stop#misc#set_sensitive false;
       button_run#misc#set_sensitive true;
       self#view#set_editable false;
@@ -177,7 +187,7 @@ class view ~(editor : Editor.editor) ?(task_kind=(`OTHER : Task.kind)) ~task ?pa
           try
             let sid = List.assoc button_run#misc#get_oid button_run_signals in
             GtkSignal.disconnect button_run#as_widget sid;
-            ignore (List.remove_assoc button_run#misc#get_oid button_run_signals);
+            button_run_signals <- List.remove_assoc button_run#misc#get_oid button_run_signals;
           with Not_found -> ()
         end;
         let sid = button_run#connect#clicked ~callback:begin fun () ->
@@ -191,11 +201,14 @@ class view ~(editor : Editor.editor) ?(task_kind=(`OTHER : Task.kind)) ~task ?pa
 
     method private do_run task =
       let finally () =
-        GtkThread2.async begin fun () ->
+        GtkThread2.sync begin fun () ->
           self#close();
           if has_errors then begin
             (*play "error.wav";*)
-            Gmisclib.Idle.add (fun () -> view#scroll_to_mark (`NAME "first_error_line"));
+            Gmisclib.Idle.add begin fun () ->
+              try view#scroll_to_mark (`NAME "first_error_line")
+              with GText.No_such_mark _ -> ()
+            end;
           end else begin
             (*play "success.wav";*)
             Gmisclib.Idle.add (fun () -> ignore (view#scroll_to_mark `INSERT));
@@ -204,7 +217,6 @@ class view ~(editor : Editor.editor) ?(task_kind=(`OTHER : Task.kind)) ~task ?pa
           Activity.remove task.Task.et_name;
         end ()
       in
-      if task_kind = `COMPILE && Preferences.preferences#get.editor_save_all_bef_comp then (editor#save_all());
       has_errors <- false;
       GtkThread2.async begin fun () ->
         (try view#buffer#delete_mark (`NAME "first_error_line");
@@ -419,7 +431,7 @@ class view ~(editor : Editor.editor) ?(task_kind=(`OTHER : Task.kind)) ~task ?pa
               (*let start = iter#backward_to_tag_toggle (Some t) in
                 let stop = iter#forward_to_tag_toggle (Some t) in*)
               t#set_properties [`UNDERLINE `LOW];
-              Gaux.may (view#get_window `TEXT) ~f:(fun w -> Gdk.Window.set_cursor w (Gdk.Cursor.create `HAND1));
+              Gaux.may (view#get_window `TEXT) ~f:(fun w -> Gdk.Window.set_cursor w (Gdk.Cursor.create `HAND2));
             with Not_found -> () (* The cursor is not inside a tag_location *)
           end iter#tags;
           false
@@ -468,7 +480,7 @@ let create ~editor task_kind task =
         match task_kind with
         | `RUN (*| `OTHER*) ->
             let box = GPack.hbox ~spacing:3 () in
-            let icon = (Icons.create Icons.start_10) in
+            let icon = (Icons.create (??? Icons.start_10)) in
             box#pack icon#coerce;
             let label = GMisc.label ~text:task.Task.et_name ~packing:box#pack () in
             box#coerce, Some begin fun active ->
@@ -538,6 +550,13 @@ let exec_sync ?run_cb ?(use_thread=true) ?(at_exit=ignore) ~editor task_groups =
 
 (** exec *)
 let exec ~editor ?use_thread ?(with_deps=false) task_kind target =
+  if Preferences.preferences#get.editor_save_all_bef_comp && (
+      [`COMPILE; `COMPILE_ONLY] |> List.mem task_kind ||
+      (match task_kind with
+       | `RCONF rc -> rc.Rconf.build_task <> `NONE
+       | _ -> false)
+    )
+  then (editor#save_all());
   let project = editor#project in
   let can_compile_native = project.Prj.can_compile_native in
   let filter_tasks = Target.filter_external_tasks target in

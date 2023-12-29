@@ -5,8 +5,6 @@ type process = {
   errchan : in_channel;
 }
 
-type result = [ `PID of int | `ERROR of exn | `SUCCESS ]
-
 (** create_process *)
 let create_process ?wd ?env program args =
   let (in_read, in_write) = Unix.pipe() in
@@ -49,7 +47,7 @@ let create_process ?wd ?env program args =
 
 
 (** loop *)
-let loop (f : in_channel -> unit) chan = try while true do f chan done with End_of_file -> ()
+let loop (f : in_channel -> unit) chan = try while true do f chan done with End_of_file -> close_in_noerr chan
 
 (** redirect_to_stdout *)
 let redirect_to_stdout = loop (fun chan -> input_line chan |> print_endline)
@@ -100,12 +98,16 @@ let exec
       in
       let pid, status = Unix.waitpid [] proc.pid in
       match close_channels() with
-      | None ->
+      | None when mode = `ASYNC ->
           continue_with (pid, status, None);
-          deprecated_at_exit None
-      | Some ex ->
+          deprecated_at_exit None;
+          `SUCCESS status
+      | Some ex when mode = `ASYNC ->
           continue_with (pid, status, Some ex);
-          deprecated_at_exit (Some ex)
+          deprecated_at_exit (Some ex);
+          `ERROR ex
+      | None -> `SUCCESS status
+      | Some ex -> `ERROR ex
     in
     let tho = match process_out with Some f -> Some (Thread.create f proc.outchan) | _ -> None in
     let thi = Thread.create process_in proc.inchan in
@@ -114,7 +116,7 @@ let exec
         process_err proc.errchan;
         Thread.join thi;
         (match tho with Some t -> Thread.join t | _ -> ());
-        if mode = `ASYNC then final()
+        if mode = `ASYNC then (final() |> ignore)
       end ()
     in
     match mode with
@@ -122,8 +124,7 @@ let exec
         Thread.join the;
         Thread.join thi;
         (match tho with Some t -> Thread.join t | _ -> ());
-        final();
-        `SUCCESS
+        final()
     | `ASYNC -> `PID proc.pid
   with (Unix.Unix_error _) as ex -> `ERROR ex
 
@@ -133,8 +134,6 @@ let exec
 let sync
     ?working_directory
     ?env
-    ?continue_with
-    ?at_exit
     ?process_in
     ?process_out
     ?process_err
@@ -144,16 +143,14 @@ let sync
     exec `SYNC
       ?working_directory
       ?env
-      ?continue_with
-      ?at_exit
       ?process_in
       ?process_out
       ?process_err
       ?binary
       program args
   with
-  | `SUCCESS -> None
-  | `ERROR ex -> Some ex
+  | (`SUCCESS _) as x -> x
+  | (`ERROR _) as x -> x
   | `PID _ -> assert false
 
 (** async
@@ -181,7 +178,7 @@ let async
       ?binary
       program args
   with
-  | `SUCCESS -> assert false
+  | `SUCCESS _ -> assert false
   | (`ERROR _) as x -> x
   | (`PID _) as x -> x
 

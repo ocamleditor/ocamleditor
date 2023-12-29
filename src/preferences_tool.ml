@@ -23,6 +23,7 @@
 open Pref_page
 open Pref_color
 open Printf
+open Preferences
 
 (** preferences *)
 class preferences ~editor () =
@@ -31,7 +32,7 @@ class preferences ~editor () =
   let initial_compl_decorated = Preferences.preferences#get.editor_completion_decorated in
   let initial_general_font = Preferences.preferences#get.font in
   let window            = GWindow.window ~resizable:true ~width:800
-      ~type_hint:`DIALOG ~modal:true ~title:"Preferences" ~position:`CENTER ~icon:Icons.oe ~show:false () in
+      ~type_hint:`DIALOG ~modal:true ~title:"Preferences" ~position:`CENTER ~icon:(??? Icons.oe) ~show:false () in
   let _ = Gmisclib.Window.GeometryMemo.add ~key:"dialog-preferences" ~window Preferences.geometry_memo in
   let _                 = Gaux.may (GWindow.toplevel editor) ~f:(fun w -> window#set_transient_for w#as_window) in
   let vbox              = GPack.vbox ~border_width:8 ~spacing:8 ~packing:window#add () in
@@ -49,8 +50,8 @@ class preferences ~editor () =
   let _                 = GMisc.separator `HORIZONTAL ~packing:vbox#pack () in
   let button_box        = GPack.button_box `HORIZONTAL ~layout:`END ~border_width:5
       ~spacing:8 ~packing:(vbox#pack ~expand:false) () in
-  let ok_button         = GButton.button ~stock:`OK ~packing:button_box#add () in
-  let cancel_button     = GButton.button ~stock:`CANCEL ~packing:button_box#add () in
+  let ok_button         = GButton.button ~label:"OK" ~packing:button_box#add () in
+  let cancel_button     = GButton.button ~label:"Cancel" ~packing:button_box#add () in
   let reset_button      = GButton.button ~label:"Reset All" ~packing:button_box#add () in
   let _                 = button_box#set_child_secondary reset_button#coerce true in
   let reset_page_button = GButton.button ~label:"Reset Page" ~packing:button_box#add () in
@@ -67,7 +68,9 @@ class preferences ~editor () =
       current <- title;
 
     method private write () =
-      List.iter (fun (_, page) -> page#write Preferences.preferences#get) pages;
+      pages
+      |> List.rev
+      |> List.iter (fun (_, page) -> page#write Preferences.preferences#get);
       editor#set_tab_pos ?page:None Preferences.preferences#get.tab_pos;
       editor#code_folding_enabled#set Preferences.preferences#get.editor_code_folding_enabled;
       editor#show_global_gutter#set Preferences.preferences#get.editor_show_global_gutter;
@@ -395,7 +398,7 @@ and pref_program_pdf_viewer title ?packing () =
     let bind button entry =
       button#connect#clicked ~callback:begin fun () ->
         let chooser    = GWindow.file_chooser_dialog ~action:`OPEN ~title:label_text
-            ~icon:Icons.oe ~position:`CENTER ~modal:true () in
+            ~icon:(??? Icons.oe) ~position:`CENTER ~modal:true () in
         ignore (chooser#set_filename entry#text);
         chooser#add_button_stock `OK `OK;
         chooser#add_button_stock `CANCEL `CANCEL;
@@ -484,7 +487,7 @@ and pref_templ title ?packing () =
   let _          =
     ignore (button#connect#clicked ~callback:begin fun () ->
         let chooser    = GWindow.file_chooser_dialog ~action:`OPEN ~title:(label_text ^ " (.cma)")
-            ~icon:Icons.oe ~position:`CENTER ~modal:true () in
+            ~icon:(??? Icons.oe) ~position:`CENTER ~modal:true () in
         chooser#set_filter (GFile.filter ~patterns:["*.cma"] ());
         ignore (chooser#set_filename entry#text);
         chooser#add_button_stock `OK `OK;

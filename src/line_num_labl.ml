@@ -20,8 +20,6 @@
 
 *)
 
-open Printf
-
 type t = {
   mutable locked : (int * GMisc.label) list;
   mutable free : GMisc.label list;
@@ -34,29 +32,6 @@ let create () = {
   locked = [];
   max_width = 0;
 }
-
-(** print *)
-let print ~view ~x ~y ~num ~width_chars lnl =
-  let text = string_of_int num in
-  let label = match lnl.free with
-    | label :: tl ->
-        lnl.free <- tl;
-        label#set_text text;
-        label
-    | [] ->
-        let label = GMisc.label ~xalign:1.0 ~yalign:0.5 ~text ~show:false () in
-        label#misc#modify_fg [`NORMAL, view#gutter.Gutter.fg_color];
-        label#misc#modify_font_by_name view#options#line_numbers_font;
-        view#add_child_in_window ~child:label#coerce ~which_window:`LEFT ~x:0 ~y:0;
-        label
-  in
-  (match List_opt.assoc y lnl.locked with Some x -> x#misc#hide() | _ -> ());
-  lnl.locked <- (y, label) :: lnl.locked;
-  label#set_width_chars width_chars;
-  label#misc#show();
-  let width = max label#misc#allocation.Gtk.width lnl.max_width in
-  view#move_child ~child:label#coerce ~x:(x - width) ~y;
-  if width > lnl.max_width then (lnl.max_width <- width)
 
 (** iter *)
 let iter f lnl =

@@ -63,7 +63,7 @@ type settings = Settings_t.settings = {
   mutable theme: string option;
   mutable theme_is_dark: bool;
   mutable vmessages_height: int;
-  mutable editor_annot_type_tooltips_enabled: bool;
+  mutable editor_quick_info_enabled: bool;
   mutable editor_annot_type_tooltips_delay: int;
   mutable editor_annot_type_tooltips_impl: int;
   mutable editor_bak: bool;
@@ -88,7 +88,7 @@ type settings = Settings_t.settings = {
   mutable editor_highlight_current_line: bool;
   mutable editor_indent_config: string;
   mutable editor_indent_empty_line: bool;
-  mutable editor_indent_lines: (bool * string * string);
+  mutable editor_indent_lines: (bool * string color * string color);
   mutable editor_left_margin: int;
   mutable editor_mark_occurrences_enabled: bool;
   mutable editor_mark_occurrences_under_cursor: bool;
@@ -1716,16 +1716,16 @@ let write_settings : _ -> settings -> _ = (
       )
         ob x.vmessages_height;
     );
-    if x.editor_annot_type_tooltips_enabled <> false then (
+    if x.editor_quick_info_enabled <> true then (
       if !is_first then
         is_first := false
       else
         Buffer.add_char ob ',';
-        Buffer.add_string ob "\"editor_annot_type_tooltips_enabled\":";
+        Buffer.add_string ob "\"editor_quick_info_enabled\":";
       (
         Yojson.Safe.write_bool
       )
-        ob x.editor_annot_type_tooltips_enabled;
+        ob x.editor_quick_info_enabled;
     );
     if x.editor_annot_type_tooltips_delay <> 0 then (
       if !is_first then
@@ -1771,7 +1771,7 @@ let write_settings : _ -> settings -> _ = (
       )
         ob x.editor_base_font;
     );
-    if x.editor_bg_color_popup <> {light="#FFE375"; dark="#505050"} then (
+    if x.editor_bg_color_popup <> {light="#e5e5e5"; dark="#404040"} then (
       if !is_first then
         is_first := false
       else
@@ -1793,7 +1793,7 @@ let write_settings : _ -> settings -> _ = (
       )
         ob x.editor_bg_color_theme;
     );
-    if x.editor_bg_color_user <> { light = "#FFFFFF"; dark = "#1e1e1e"} then (
+    if x.editor_bg_color_user <> { light = "#FFFFFF"; dark = "#101010"} then (
       if !is_first then
         is_first := false
       else
@@ -1936,7 +1936,7 @@ let write_settings : _ -> settings -> _ = (
       )
         ob x.editor_err_underline;
     );
-    if x.editor_fg_color_popup <> {light="#000000"; dark="#E1E1E1"} then (
+    if x.editor_fg_color_popup <> {light="#757575"; dark="#909090"} then (
       if !is_first then
         is_first := false
       else
@@ -1991,7 +1991,7 @@ let write_settings : _ -> settings -> _ = (
       )
         ob x.editor_indent_empty_line;
     );
-    if x.editor_indent_lines <> (true, "#e6e6e6", "#d0d0d0") then (
+    if x.editor_indent_lines <> (true, {light="#e6e6e6"; dark="#808080"}, {light="#d0d0d0"; dark="#505050"}) then (
       if !is_first then
         is_first := false
       else
@@ -2008,13 +2008,13 @@ let write_settings : _ -> settings -> _ = (
           Buffer.add_char ob ',';
           (let _, x, _ = x in
           (
-            Yojson.Safe.write_string
+            write__string_color
           ) ob x
           );
           Buffer.add_char ob ',';
           (let _, _, x = x in
           (
-            Yojson.Safe.write_string
+            write__string_color
           ) ob x
           );
           Buffer.add_char ob ')';
@@ -2054,7 +2054,7 @@ let write_settings : _ -> settings -> _ = (
       )
         ob x.editor_mark_occurrences_under_cursor;
     );
-    if x.editor_mark_occurrences_bg_color <> {light="#c8ffc8"; dark="#455800"} then (
+    if x.editor_mark_occurrences_bg_color <> {light="#c8ffc8"; dark="#3C4E00"} then (
       if !is_first then
         is_first := false
       else
@@ -2065,7 +2065,7 @@ let write_settings : _ -> settings -> _ = (
       )
         ob x.editor_mark_occurrences_bg_color;
     );
-    if x.editor_ocamldoc_paragraph_bgcolor_1 <> {light=Some "#FAF7FA"; dark=Some "#303030"} then (
+    if x.editor_ocamldoc_paragraph_bgcolor_1 <> {light=Some "#FAF7FA"; dark=Some "#181818"} then (
       if !is_first then
         is_first := false
       else
@@ -2076,7 +2076,7 @@ let write_settings : _ -> settings -> _ = (
       )
         ob x.editor_ocamldoc_paragraph_bgcolor_1;
     );
-    if x.editor_ocamldoc_paragraph_bgcolor_2 <> {light=Some "#FAF7FA"; dark=Some "#303030"} then (
+    if x.editor_ocamldoc_paragraph_bgcolor_2 <> {light=Some "#FAF7FA"; dark=Some "#181818"} then (
       if !is_first then
         is_first := false
       else
@@ -2122,7 +2122,7 @@ let write_settings : _ -> settings -> _ = (
       )
         ob x.editor_right_margin;
     );
-    if x.editor_right_margin_color <> {light="#e0e0e0"; dark="#808080"} then (
+    if x.editor_right_margin_color <> {light="#e0e0e0"; dark="#6A3D3D"} then (
       if !is_first then
         is_first := false
       else
@@ -2334,14 +2334,14 @@ let read_settings = (
     let field_theme = ref (None) in
     let field_theme_is_dark = ref (false) in
     let field_vmessages_height = ref (300) in
-    let field_editor_annot_type_tooltips_enabled = ref (false) in
+    let field_editor_quick_info_enabled = ref (true) in
     let field_editor_annot_type_tooltips_delay = ref (0) in
     let field_editor_annot_type_tooltips_impl = ref (0) in
     let field_editor_bak = ref (true) in
     let field_editor_base_font = ref ("monospace 9") in
-    let field_editor_bg_color_popup = ref ({light="#FFE375"; dark="#505050"}) in
+    let field_editor_bg_color_popup = ref ({light="#e5e5e5"; dark="#404040"}) in
     let field_editor_bg_color_theme = ref (false) in
-    let field_editor_bg_color_user = ref ({ light = "#FFFFFF"; dark = "#1e1e1e"}) in
+    let field_editor_bg_color_user = ref ({ light = "#FFFFFF"; dark = "#101010"}) in
     let field_editor_code_folding_enabled = ref (true) in
     let field_editor_completion_font = ref ("Sans 8") in
     let field_editor_completion_greek_letters = ref (true) in
@@ -2354,21 +2354,21 @@ let read_settings = (
     let field_editor_err_gutter = ref (true) in
     let field_editor_err_tooltip = ref (true) in
     let field_editor_err_underline = ref (true) in
-    let field_editor_fg_color_popup = ref ({light="#000000"; dark="#E1E1E1"}) in
+    let field_editor_fg_color_popup = ref ({light="#757575"; dark="#909090"}) in
     let field_editor_format_on_save = ref (false) in
     let field_editor_highlight_current_line = ref (true) in
     let field_editor_indent_config = ref ("") in
     let field_editor_indent_empty_line = ref (true) in
-    let field_editor_indent_lines = ref ((true, "#e6e6e6", "#d0d0d0")) in
+    let field_editor_indent_lines = ref ((true, {light="#e6e6e6"; dark="#808080"}, {light="#d0d0d0"; dark="#505050"})) in
     let field_editor_left_margin = ref (1) in
     let field_editor_mark_occurrences_enabled = ref (true) in
     let field_editor_mark_occurrences_under_cursor = ref (true) in
-    let field_editor_mark_occurrences_bg_color = ref ({light="#c8ffc8"; dark="#455800"}) in
-    let field_editor_ocamldoc_paragraph_bgcolor_1 = ref ({light=Some "#FAF7FA"; dark=Some "#303030"}) in
-    let field_editor_ocamldoc_paragraph_bgcolor_2 = ref ({light=Some "#FAF7FA"; dark=Some "#303030"}) in
+    let field_editor_mark_occurrences_bg_color = ref ({light="#c8ffc8"; dark="#3C4E00"}) in
+    let field_editor_ocamldoc_paragraph_bgcolor_1 = ref ({light=Some "#FAF7FA"; dark=Some "#181818"}) in
+    let field_editor_ocamldoc_paragraph_bgcolor_2 = ref ({light=Some "#FAF7FA"; dark=Some "#181818"}) in
     let field_editor_pixels_lines = ref ((1, 1)) in
     let field_editor_right_margin = ref (80) in
-    let field_editor_right_margin_color = ref ({light="#e0e0e0"; dark="#808080"}) in
+    let field_editor_right_margin_color = ref ({light="#e0e0e0"; dark="#6A3D3D"}) in
     let field_editor_right_margin_visible = ref (true) in
     let field_editor_save_all_bef_comp = ref (true) in
     let field_editor_search_word_at_cursor = ref (true) in
@@ -3335,6 +3335,14 @@ let read_settings = (
                           -1
                         )
                       )
+                    | 'q' -> (
+                        if String.unsafe_get s (pos+8) = 'u' && String.unsafe_get s (pos+9) = 'i' && String.unsafe_get s (pos+10) = 'c' && String.unsafe_get s (pos+11) = 'k' && String.unsafe_get s (pos+12) = '_' && String.unsafe_get s (pos+13) = 'i' && String.unsafe_get s (pos+14) = 'n' && String.unsafe_get s (pos+15) = 'f' && String.unsafe_get s (pos+16) = 'o' && String.unsafe_get s (pos+17) = '_' && String.unsafe_get s (pos+18) = 'e' && String.unsafe_get s (pos+19) = 'n' && String.unsafe_get s (pos+20) = 'a' && String.unsafe_get s (pos+21) = 'b' && String.unsafe_get s (pos+22) = 'l' && String.unsafe_get s (pos+23) = 'e' && String.unsafe_get s (pos+24) = 'd' then (
+                          48
+                        )
+                        else (
+                          -1
+                        )
+                      )
                     | 'r' -> (
                         if String.unsafe_get s (pos+8) = 'i' && String.unsafe_get s (pos+9) = 'g' && String.unsafe_get s (pos+10) = 'h' && String.unsafe_get s (pos+11) = 't' && String.unsafe_get s (pos+12) = '_' && String.unsafe_get s (pos+13) = 'm' && String.unsafe_get s (pos+14) = 'a' && String.unsafe_get s (pos+15) = 'r' && String.unsafe_get s (pos+16) = 'g' && String.unsafe_get s (pos+17) = 'i' && String.unsafe_get s (pos+18) = 'n' && String.unsafe_get s (pos+19) = '_' && String.unsafe_get s (pos+20) = 'c' && String.unsafe_get s (pos+21) = 'o' && String.unsafe_get s (pos+22) = 'l' && String.unsafe_get s (pos+23) = 'o' && String.unsafe_get s (pos+24) = 'r' then (
                           82
@@ -3566,14 +3574,6 @@ let read_settings = (
                     | _ -> (
                         -1
                       )
-                )
-                else (
-                  -1
-                )
-              )
-            | 34 -> (
-                if String.unsafe_get s pos = 'e' && String.unsafe_get s (pos+1) = 'd' && String.unsafe_get s (pos+2) = 'i' && String.unsafe_get s (pos+3) = 't' && String.unsafe_get s (pos+4) = 'o' && String.unsafe_get s (pos+5) = 'r' && String.unsafe_get s (pos+6) = '_' && String.unsafe_get s (pos+7) = 'a' && String.unsafe_get s (pos+8) = 'n' && String.unsafe_get s (pos+9) = 'n' && String.unsafe_get s (pos+10) = 'o' && String.unsafe_get s (pos+11) = 't' && String.unsafe_get s (pos+12) = '_' && String.unsafe_get s (pos+13) = 't' && String.unsafe_get s (pos+14) = 'y' && String.unsafe_get s (pos+15) = 'p' && String.unsafe_get s (pos+16) = 'e' && String.unsafe_get s (pos+17) = '_' && String.unsafe_get s (pos+18) = 't' && String.unsafe_get s (pos+19) = 'o' && String.unsafe_get s (pos+20) = 'o' && String.unsafe_get s (pos+21) = 'l' && String.unsafe_get s (pos+22) = 't' && String.unsafe_get s (pos+23) = 'i' && String.unsafe_get s (pos+24) = 'p' && String.unsafe_get s (pos+25) = 's' && String.unsafe_get s (pos+26) = '_' && String.unsafe_get s (pos+27) = 'e' && String.unsafe_get s (pos+28) = 'n' && String.unsafe_get s (pos+29) = 'a' && String.unsafe_get s (pos+30) = 'b' && String.unsafe_get s (pos+31) = 'l' && String.unsafe_get s (pos+32) = 'e' && String.unsafe_get s (pos+33) = 'd' then (
-                  48
                 )
                 else (
                   -1
@@ -4039,7 +4039,7 @@ let read_settings = (
             )
           | 48 ->
             if not (Yojson.Safe.read_null_if_possible p lb) then (
-              field_editor_annot_type_tooltips_enabled := (
+              field_editor_quick_info_enabled := (
                 (
                   Atdgen_runtime.Oj_run.read_bool
                 ) p lb
@@ -4261,7 +4261,7 @@ let read_settings = (
                       let x1 =
                         let x =
                           (
-                            Atdgen_runtime.Oj_run.read_string
+                            read__string_color
                           ) p lb
                         in
                         incr len;
@@ -4272,7 +4272,7 @@ let read_settings = (
                       let x2 =
                         let x =
                           (
-                            Atdgen_runtime.Oj_run.read_string
+                            read__string_color
                           ) p lb
                         in
                         incr len;
@@ -5471,6 +5471,14 @@ let read_settings = (
                             -1
                           )
                         )
+                      | 'q' -> (
+                          if String.unsafe_get s (pos+8) = 'u' && String.unsafe_get s (pos+9) = 'i' && String.unsafe_get s (pos+10) = 'c' && String.unsafe_get s (pos+11) = 'k' && String.unsafe_get s (pos+12) = '_' && String.unsafe_get s (pos+13) = 'i' && String.unsafe_get s (pos+14) = 'n' && String.unsafe_get s (pos+15) = 'f' && String.unsafe_get s (pos+16) = 'o' && String.unsafe_get s (pos+17) = '_' && String.unsafe_get s (pos+18) = 'e' && String.unsafe_get s (pos+19) = 'n' && String.unsafe_get s (pos+20) = 'a' && String.unsafe_get s (pos+21) = 'b' && String.unsafe_get s (pos+22) = 'l' && String.unsafe_get s (pos+23) = 'e' && String.unsafe_get s (pos+24) = 'd' then (
+                            48
+                          )
+                          else (
+                            -1
+                          )
+                        )
                       | 'r' -> (
                           if String.unsafe_get s (pos+8) = 'i' && String.unsafe_get s (pos+9) = 'g' && String.unsafe_get s (pos+10) = 'h' && String.unsafe_get s (pos+11) = 't' && String.unsafe_get s (pos+12) = '_' && String.unsafe_get s (pos+13) = 'm' && String.unsafe_get s (pos+14) = 'a' && String.unsafe_get s (pos+15) = 'r' && String.unsafe_get s (pos+16) = 'g' && String.unsafe_get s (pos+17) = 'i' && String.unsafe_get s (pos+18) = 'n' && String.unsafe_get s (pos+19) = '_' && String.unsafe_get s (pos+20) = 'c' && String.unsafe_get s (pos+21) = 'o' && String.unsafe_get s (pos+22) = 'l' && String.unsafe_get s (pos+23) = 'o' && String.unsafe_get s (pos+24) = 'r' then (
                             82
@@ -5702,14 +5710,6 @@ let read_settings = (
                       | _ -> (
                           -1
                         )
-                  )
-                  else (
-                    -1
-                  )
-                )
-              | 34 -> (
-                  if String.unsafe_get s pos = 'e' && String.unsafe_get s (pos+1) = 'd' && String.unsafe_get s (pos+2) = 'i' && String.unsafe_get s (pos+3) = 't' && String.unsafe_get s (pos+4) = 'o' && String.unsafe_get s (pos+5) = 'r' && String.unsafe_get s (pos+6) = '_' && String.unsafe_get s (pos+7) = 'a' && String.unsafe_get s (pos+8) = 'n' && String.unsafe_get s (pos+9) = 'n' && String.unsafe_get s (pos+10) = 'o' && String.unsafe_get s (pos+11) = 't' && String.unsafe_get s (pos+12) = '_' && String.unsafe_get s (pos+13) = 't' && String.unsafe_get s (pos+14) = 'y' && String.unsafe_get s (pos+15) = 'p' && String.unsafe_get s (pos+16) = 'e' && String.unsafe_get s (pos+17) = '_' && String.unsafe_get s (pos+18) = 't' && String.unsafe_get s (pos+19) = 'o' && String.unsafe_get s (pos+20) = 'o' && String.unsafe_get s (pos+21) = 'l' && String.unsafe_get s (pos+22) = 't' && String.unsafe_get s (pos+23) = 'i' && String.unsafe_get s (pos+24) = 'p' && String.unsafe_get s (pos+25) = 's' && String.unsafe_get s (pos+26) = '_' && String.unsafe_get s (pos+27) = 'e' && String.unsafe_get s (pos+28) = 'n' && String.unsafe_get s (pos+29) = 'a' && String.unsafe_get s (pos+30) = 'b' && String.unsafe_get s (pos+31) = 'l' && String.unsafe_get s (pos+32) = 'e' && String.unsafe_get s (pos+33) = 'd' then (
-                    48
                   )
                   else (
                     -1
@@ -6175,7 +6175,7 @@ let read_settings = (
               )
             | 48 ->
               if not (Yojson.Safe.read_null_if_possible p lb) then (
-                field_editor_annot_type_tooltips_enabled := (
+                field_editor_quick_info_enabled := (
                   (
                     Atdgen_runtime.Oj_run.read_bool
                   ) p lb
@@ -6397,7 +6397,7 @@ let read_settings = (
                         let x1 =
                           let x =
                             (
-                              Atdgen_runtime.Oj_run.read_string
+                              read__string_color
                             ) p lb
                           in
                           incr len;
@@ -6408,7 +6408,7 @@ let read_settings = (
                         let x2 =
                           let x =
                             (
-                              Atdgen_runtime.Oj_run.read_string
+                              read__string_color
                             ) p lb
                           in
                           incr len;
@@ -6707,7 +6707,7 @@ let read_settings = (
             theme = !field_theme;
             theme_is_dark = !field_theme_is_dark;
             vmessages_height = !field_vmessages_height;
-            editor_annot_type_tooltips_enabled = !field_editor_annot_type_tooltips_enabled;
+            editor_quick_info_enabled = !field_editor_quick_info_enabled;
             editor_annot_type_tooltips_delay = !field_editor_annot_type_tooltips_delay;
             editor_annot_type_tooltips_impl = !field_editor_annot_type_tooltips_impl;
             editor_bak = !field_editor_bak;

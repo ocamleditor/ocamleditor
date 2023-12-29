@@ -26,8 +26,10 @@ open GdkKeysyms
 open Oe
 open Miscellanea
 open Mbrowser_slist
+open Preferences
 
 module Log = Common.Log.Make(struct let prefix = "Mbrowser_compl" end)
+let _ = Log.set_verbosity `ERROR
 
 type compl =
   | Compl_module of string list * string (* module_path x module_name *)
@@ -41,7 +43,7 @@ class completion ~project ?packing () =
   let vbox            = GPack.vbox ~spacing:0 ~border_width:2 ?packing () in
   let tbox            = GPack.hbox ~spacing:5 ~border_width:0 () in
   let ebox_resize     = GBin.event_box ~packing:(tbox#pack ~fill:false ~expand:false) ~show:(not window_decorated) () in
-  let _               = GMisc.image ~pixbuf:Icons.grip ~packing:ebox_resize#add () in
+  let _               = GMisc.image ~pixbuf:(??? Icons.grip) ~packing:ebox_resize#add () in
   let ebox_title      = GBin.event_box ~packing:tbox#add () in
   let ebox_doc        = GBin.event_box ~packing:tbox#pack () in
   let ebox_font_incr  = GBin.event_box ~packing:tbox#pack () in
@@ -53,11 +55,11 @@ class completion ~project ?packing () =
   let _               = ebox_pin#misc#set_tooltip_text "Toggle pin status" in
   let _               = ebox_doc#misc#set_tooltip_markup "Show documentation pane (<tt><small>F1</small></tt>)" in
   let label_title     = GMisc.label ~markup:"" ~ypad:0 ~packing:ebox_title#add ~show:false () in
-  let _               = GMisc.image ~pixbuf:Icons.pin_off ~packing:ebox_pin#add () in
-  let _               = GMisc.image ~pixbuf:Icons.doc ~packing:ebox_doc#add () in
-  let _               = GMisc.image ~pixbuf:Icons.zoom_in_14 ~packing:ebox_font_incr#add () in
-  let _               = GMisc.image ~pixbuf:Icons.zoom_out_14 ~packing:ebox_font_decr#add () in
-  let _               = GMisc.image ~pixbuf:Icons.close_window ~icon_size:`MENU ~packing:ebox_close#add () in
+  let _               = GMisc.image ~pixbuf:(??? Icons.pin_off) ~packing:ebox_pin#add () in
+  let _               = GMisc.image ~pixbuf:(??? Icons.doc) ~packing:ebox_doc#add () in
+  let _               = GMisc.image ~pixbuf:(??? Icons.zoom_in_14) ~packing:ebox_font_incr#add () in
+  let _               = GMisc.image ~pixbuf:(??? Icons.zoom_out_14) ~packing:ebox_font_decr#add () in
+  let _               = GMisc.image ~pixbuf:(??? Icons.close_window) ~icon_size:`MENU ~packing:ebox_close#add () in
   let statusbar_box   = GPack.hbox ~spacing:5 ~packing:(vbox#pack ~from:`END) () in
   let label_longid    = GMisc.label ~markup:"" ~ypad:0 ~xalign:0.0 ~packing:statusbar_box#add () in
   let _               = GMisc.separator `VERTICAL ~packing:statusbar_box#pack () in
@@ -110,7 +112,7 @@ class completion ~project ?packing () =
 
     method set_pin_status value =
       pin_status <- value;
-      let pixbuf = if pin_status then Icons.pin_on else Icons.pin_off in
+      let pixbuf = if pin_status then (??? Icons.pin_on) else (??? Icons.pin_off) in
       let image = GMisc.image ~pixbuf () in
       ebox_pin#remove ebox_pin#child;
       ebox_pin#add image#coerce;
@@ -152,7 +154,7 @@ class completion ~project ?packing () =
     method private get_compl text =
       let re = Miscellanea.regexp "[a-zA-Z_0-9'.#]+$" in
       if Str.string_match re text 0 then begin
-        let value_path = Symbols.split_value_path text in
+        let value_path = try Symbols.split_value_path text with Syntaxerr.Error _ -> [ text ] in
         begin
           match List.rev value_path with
           | hd :: [] when String.contains hd '#' ->
@@ -194,14 +196,32 @@ class completion ~project ?packing () =
       kprintf self#set_title "" "";
 
     method private compl_id ~prefix ~page () =
-      let f = widget#select_symbol_by_prefix ~prefix ~kind:[] in
-      widget#find_compl ~include_methods:false ~prefix ~page ~f ();
+      let selection_func = widget#select_symbol_by_prefix ~prefix ~kind:[] in
+      widget#find_compl ~include_methods:false ~prefix ~page ~selection_func ();
       kprintf self#set_title "" "";
 
     method private compl_module ~module_path ~prefix =
       kprintf self#set_title "Module" (Symbols.string_of_id module_path);
       let f = widget#select_symbol_by_prefix ~module_path ~prefix ~kind:[] in
       widget#create_widget_module ~module_path ~f ~sort:true ();
+
+    method private parse_object_type object_type =
+      let open Parsetree in
+      let open Location in
+      match object_type.ptyp_desc with
+      | Ptyp_object (fields, flag) ->
+          fields
+          |> List.fold_left begin fun acc field ->
+            match field.pof_desc with
+            | Otag (loc, cty) ->
+                let buf = Buffer.create 128 in
+                let formatter = Format.formatter_of_buffer buf in
+                Pprintast.core_type formatter cty;
+                Format.pp_print_flush formatter ();
+                (loc.txt, (Buffer.contents buf)) :: acc
+            | Oinherit cty -> acc
+          end []
+      | _ -> []
 
     method private compl_class ~text ~page () =
       (*let re1 = Miscellanea.regexp "[a-zA-Z_0-9']$" in*)
@@ -213,10 +233,23 @@ class completion ~project ?packing () =
       match class_type with
       | Some class_type ->
           Log.println `TRACE "class_type = %s\n%!" class_type;
-          let class_path = Longident.flatten (Parse.longident @@ Lexing.from_string class_type) in
-          let f = widget#select_symbol_by_prefix ~module_path:class_path ~prefix ~kind:[] in
-          widget#create_widget_class ~class_path ~f ();
-          kprintf self#set_title "Class" class_type
+          let class_path =
+            try Some (Lexing.from_string class_type |> Parse.longident |> Longident.flatten)
+            with Syntaxerr.Error _ -> None
+          in
+          begin
+            match class_path with
+            | Some class_path ->
+                let f = widget#select_symbol_by_prefix ~module_path:class_path ~prefix ~kind:[] in
+                widget#create_widget_class ~class_path ~f ();
+                kprintf self#set_title "Class" class_type
+            | _ ->
+                let object_type = Lexing.from_string class_type |> Parse.core_type in
+                let methods = self#parse_object_type object_type |> List.rev in
+                let f = widget#select_symbol_by_prefix ~prefix ~kind:[] in
+                widget#create_widget_self ~methods ~f ();
+                kprintf self#set_title "Object" "self"
+          end
       | _ -> kprintf self#set_title "" "";
 
     method private apply_completion
@@ -430,7 +463,7 @@ class completion ~project ?packing () =
               ~type_hint:(if Sys.win32 then `UTILITY else `DIALOG)
               ~x ~y ~focus:true ~escape:false ~show:(xy <> None) ()
           in
-          window#set_icon (Some Icons.oe);
+          window#set_icon (Some (??? Icons.oe));
           window#set_title "";
           window#set_deletable true;
           current_window <- Some window;

@@ -21,7 +21,6 @@
 *)
 
 
-open Miscellanea
 open Printf
 
 let targets = [{ Gtk.target = "STRING"; flags = []; info = 0}]
@@ -41,12 +40,13 @@ class drag_handler = object
       ~(time : int32) = false
 end
 
+open Preferences
 class widget ~page ?label_widget ?(with_spinner=true) ?packing () =
   let ebox              = GBin.event_box ?packing () in
   let hbox              = GPack.hbox ~spacing:0 ~packing:ebox#add () in
   let button            = GButton.button ~relief:`NONE () in
-  let spinner           = GMisc.image ~xpad:2 ~ypad:2 ~file:(App_config.application_icons // "spinner_16.gif") () in
-  let image             = Icons.create Icons.button_close_8 in
+  let spinner           = GMisc.image ~xpad:2 ~ypad:2 ~file:(Icon.get_themed_filename "spinner_16.gif") () in
+  let image             = Icons.create (??? Icons.button_close_8) in
   let set_active =
     if with_spinner then fun active ->
       if active then begin
@@ -76,6 +76,7 @@ class widget ~page ?label_widget ?(with_spinner=true) ?packing () =
     method private data_delete _ = ()
 
     method private init () =
+      ebox#misc#set_property "visible-window" (`BOOL false);
       ebox#drag#source_set targets ~modi:[`BUTTON1 ] ~actions:[`MOVE ];
       (*ebox#drag#source_set_icon drag_icon;*)
       ebox#drag#connect#data_get ~callback:self#data_get;
@@ -89,11 +90,11 @@ class widget ~page ?label_widget ?(with_spinner=true) ?packing () =
       button#misc#set_can_default false;
       button#set_image image#coerce;
       ignore (button#event#connect#enter_notify ~callback:begin fun _ ->
-          image#set_pixbuf Icons.button_close_hi_8;
+          image#set_pixbuf (??? Icons.button_close_hi_8);
           false
         end);
       ignore (button#event#connect#leave_notify ~callback:begin fun _ ->
-          image#set_pixbuf Icons.button_close_8;
+          image#set_pixbuf (??? Icons.button_close_8);
           false
         end);
       if with_spinner then (hbox#pack spinner#coerce) else (hbox#pack button#coerce);

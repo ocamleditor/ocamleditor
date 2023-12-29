@@ -141,7 +141,7 @@ class widget ?model ?width ?(popup_width=280) ?(popup_height=300) ?packing () =
         end);
       (* Toggled *)
       sign_id <- Some (button#connect#toggled ~callback:begin fun () ->
-      if popup#misc#visible then (popup#popdown()) else begin
+          if popup#visible then (popup#popdown()) else begin
             assert (self#set_active active_value#get);
             popup#present();
             button#misc#set_tooltip_markup "";

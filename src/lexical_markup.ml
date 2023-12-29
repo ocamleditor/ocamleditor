@@ -46,7 +46,6 @@ module Range = struct
 end
 
 open Range
-open Preferences
 
 let parse pref =
   let tags = pref.Settings_t.editor_tags in
@@ -166,7 +165,7 @@ let parse pref =
                 begin match !last with
                 | QUESTION | TILDE -> "label"
                 | BACKQUOTE -> "number"
-                | _ -> ""
+                | _ -> "lident"
                 (*(* TODO:  *)
                   | _, LBRACE, _, _ when !in_record -> "record_label"
                   | _, MUTABLE, _, _ when !in_record -> "record_label"
@@ -205,7 +204,7 @@ let parse pref =
               -> in_annotation:= true; "annotation"
             | RBRACKET -> if !in_annotation then (in_annotation := false; "annotation") else "symbol"
             | ASSERT -> "custom"
-            | DOCSTRING _ | COMMENT _ -> "comment"
+            | DOCSTRING _ | COMMENT _ -> "comment" (* Lexer ignores comments *)
             | EOL -> ""
             | EOF -> raise End_of_file
           end;
@@ -253,7 +252,21 @@ let parse pref =
           pos := lstart + (String.length lexeme);
           last_but_one := !last;
           last := token;
-        with Lexer.Error _ -> ()
+        with Lexer.Error (err, _) ->
+          begin
+            let open Lexer in
+            match err with
+            | Illegal_character c -> printf "Illegal_character %C\n%!" c
+            | Illegal_escape (s, sopt) -> printf "Illegal_escape \n%!"
+            | Reserved_sequence (s, sopt) -> printf "Reserved_sequence \n%!"
+            | Unterminated_comment loc -> printf "Unterminated_comment \n%!"
+            | Unterminated_string -> printf "Unterminated_string \n%!"
+            | Unterminated_string_in_comment (l1, l2) -> printf "Unterminated_string_in_comment \n%!"
+            | Empty_character_literal -> printf "Empty_character_literal \n%!"
+            | Keyword_as_label s -> printf "Keyword_as_label \n%!"
+            | Invalid_literal s -> printf "Invalid_literal \n%!"
+            | Invalid_directive (s, sopt) -> printf "Invalid_directive \n%!"
+          end
       done;
       close_pending();
       Buffer.contents out
@@ -263,35 +276,13 @@ let parse pref =
         (* TODO: consider highlights *)
         Buffer.add_string out (Glib.Markup.escape_text lexeme);
         close_pending();
+        (*    Lexer.comments ()
+              |> List.iter begin fun (c, loc) ->
+              let _, line_start, char_start = Location.get_pos_info (loc.loc_start) in
+              let _, line_stop, char_stop = Location.get_pos_info (loc.loc_end) in
+              Printf.printf "comment = %d,%d -- %d,%d\n%!" line_start char_start line_stop char_stop;
+              end;*)
         Buffer.contents out
-    (*(* comments *)
-      List.iter begin fun (b, e, _, ocamldoc) ->
-      if not ocamldoc then begin
-        let ms = Miscellanea.Search.all multi_space begin fun ~pos ~matched_string:mat ->
-          Miscellanea.Search.Append (pos, pos + String.length mat, mat)
-        end (String.sub u_text b (e - b)) in
-        let (*b = b and*) e = e - 2 in
-        let tag = "comment" in
-        tb#apply_tag_by_name tag ~start:(tpos b) ~stop:(tpos e);
-        List.iter begin fun (b1, e1, _) ->
-          tb#apply_tag_by_name tag ~start:(tpos (b + b1)) ~stop:(tpos (b + e1))
-        end ms
-      end
-      end (match comments with Comments.Utf8 x -> x | _ -> failwith "Lexical: Comments.Locale");
-      (* ocamldoc and ocamldoc-paragraph *)
-      List.iter begin fun (b, e, ocamldoc) ->
-      if ocamldoc then begin
-        let start = tb#get_iter (`OFFSET b) in
-        let stop = tb#get_iter (`OFFSET e) in
-        let tag, start =
-          let iter = start#backward_line in
-          if iter#ends_line
-          then ("ocamldoc-paragraph", start#set_line_index 0)
-          else ("ocamldoc", start#set_line_index 0) (* start *)
-        in
-        tb#apply_tag_by_name tag ~start ~stop;
-      end
-      end (match global_comments with Comments.Locale x -> x | _ -> failwith "Lexical: Comments.Utf8")*)
     | (Lexer.Error (error, _)) as ex ->
         close_pending();
         Buffer.contents out

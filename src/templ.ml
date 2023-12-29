@@ -180,7 +180,7 @@ class widget ~project ~(view : Ocaml_text.view) ?packing ()=
   let vc_name = GTree.view_column ~renderer:(renderer, ["markup", col_name]) ~title:"Name" () in
   let vc_descr = GTree.view_column ~renderer:(renderer, ["markup", col_descr]) ~title:"Description" () in
   let sw = GBin.scrolled_window ~shadow_type:`NONE ~hpolicy:`AUTOMATIC ~vpolicy:`AUTOMATIC ~packing:vbox#add () in
-  let lview = GTree.view ~model:model ~headers_visible:true ~reorderable:false ~width:620 ~height:200 ~packing:sw#add () in
+  let lview = GTree.view ~model:model ~headers_visible:true ~reorderable:false ~width:800 ~height:200 ~packing:sw#add () in
   let _ = lview#append_column vc_name in
   let _ = lview#append_column vc_descr in
   let _ = lview#set_headers_visible false in
@@ -188,11 +188,14 @@ class widget ~project ~(view : Ocaml_text.view) ?packing ()=
     inherit GObj.widget vbox#as_widget
     initializer
       (*lview#misc#modify_base [`NORMAL, `NAME Preferences.preferences#get.Preferences.pref_bg_color_popup];*)
+      let font_name = Preferences.preferences#get.editor_base_font in
+      let family = String.sub font_name 0 (Option.value (String.rindex_opt font_name ' ') ~default:(String.length font_name)) in
       List.iter begin fun (_, name, descr, templ) ->
         let row = model#append () in
         model#set ~row ~column:col_key name;
-        model#set ~row ~column:col_name (sprintf "<b><tt>%s</tt></b>" (Glib.Markup.escape_text name));
-        model#set ~row ~column:col_descr (sprintf "<tt>%s</tt>" (Glib.Markup.escape_text descr));
+        model#set ~row ~column:col_name (sprintf {|<b><span face="%s" size="small">%s</span></b>|} family (Glib.Markup.escape_text name));
+        model#set ~row ~column:col_descr (
+          sprintf {|<span face="%s" size="small">%s</span>|} family (Glib.Markup.escape_text descr));
       end !Templates.spec;
       ignore (lview#connect#row_activated ~callback:begin fun path _ ->
           let row = model#get_iter path in
@@ -210,7 +213,6 @@ let popup project (view : Ocaml_text.view) =
   let x, y = view#get_location_at_cursor () in
   let widget = new widget ~project ~view () in
   ignore (Gtk_util.window widget#coerce ~parent:view ~x ~y ())
-
 
 
 

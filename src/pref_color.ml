@@ -159,27 +159,27 @@ class pref_color title ?packing () =
           button_tag_bg#misc#set_sensitive (not check_tag_bg#active)));
 
     method write pref =
-      set_themed_color pref.editor_bg_color_popup (color_name button_tag_bg_popup#color);
-      set_themed_color pref.editor_fg_color_popup (color_name button_tag_fg_popup#color);
+      Preferences.Color.set_themed_color pref.editor_bg_color_popup (color_name button_tag_bg_popup#color);
+      Preferences.Color.set_themed_color pref.editor_fg_color_popup (color_name button_tag_fg_popup#color);
       pref.editor_bg_color_theme <- false;
-      Preferences.set_themed_color pref.editor_bg_color_user (color_name button_default_bg#color);
+      Preferences.Color.set_themed_color pref.editor_bg_color_user (color_name button_default_bg#color);
       pref.editor_tags <- tags;
       let ltags, prop = tags |> List.map (fun t -> t.Settings_t.name, t) |> List.split in
       Lexical.tags := ltags;
       Lexical.colors := prop;
-      set_themed_color pref.output_bg_color (color_name button_bg#color);
-      set_themed_color pref.output_stdin_fg_color (color_name button_fg_stdin#color);
-      set_themed_color pref.output_stdout_fg_color (color_name button_fg_stdout#color);
-      set_themed_color pref.output_err_fg_color (color_name button_fg_err#color);
-      set_themed_color pref.output_warn_fg_color (color_name button_fg_warn#color);
-      set_themed_color pref.editor_ocamldoc_paragraph_bgcolor_1 (Some (color_name button_odoc_bg#color));
-      set_themed_color pref.editor_ocamldoc_paragraph_bgcolor_2 (Some (color_name button_odoc_bg2#color));
+      Preferences.Color.set_themed_color pref.output_bg_color (color_name button_bg#color);
+      Preferences.Color.set_themed_color pref.output_stdin_fg_color (color_name button_fg_stdin#color);
+      Preferences.Color.set_themed_color pref.output_stdout_fg_color (color_name button_fg_stdout#color);
+      Preferences.Color.set_themed_color pref.output_err_fg_color (color_name button_fg_err#color);
+      Preferences.Color.set_themed_color pref.output_warn_fg_color (color_name button_fg_warn#color);
+      Preferences.Color.set_themed_color pref.editor_ocamldoc_paragraph_bgcolor_1 (Some (color_name button_odoc_bg#color));
+      Preferences.Color.set_themed_color pref.editor_ocamldoc_paragraph_bgcolor_2 (Some (color_name button_odoc_bg2#color));
 
     method read pref =
       button_tag_bg_popup#set_color (GDraw.color (`NAME ?? (pref.editor_bg_color_popup)));
       button_tag_fg_popup#set_color (GDraw.color (`NAME ?? (pref.editor_fg_color_popup)));
       tags <- List.sort (fun a b -> compare a.Settings_t.name b.name) pref.editor_tags;
-      button_default_bg#set_color (GDraw.color (`NAME (Preferences.get_themed_color pref.editor_bg_color_user)));
+      button_default_bg#set_color (GDraw.color (`NAME (?? (pref.editor_bg_color_user))));
       tag_model#clear();
       List.iter begin fun tag ->
         let tagname = tag.Settings_t.name in
@@ -206,7 +206,8 @@ class pref_color title ?packing () =
           let tname = tag_model#get ~row ~column:tag_col in
           current_tag <- tname;
           begin
-            match List.find_opt (fun t -> t.Settings_t.name = tname) tags with
+            let open Settings_t in
+            match List.find_opt (fun t -> t.name = tname) tags with
             | Some t ->
                 button_tag_fg#set_color (GDraw.color (`NAME ?? (t.color)));
                 scale_tag_weight#adjustment#set_value (float_of_int t.weight);
@@ -228,6 +229,10 @@ class pref_color title ?packing () =
             button_tag_bg#misc#set_sensitive true;
             check_tag_bg#misc#set_sensitive true;
           end;
+          if tname = "highlight_current_line" then begin
+            check_tag_bg#set_active false;
+            check_tag_bg#misc#set_sensitive false;
+          end;
           button_tag_bg#misc#set_sensitive (not check_tag_bg#active);
           self#update_preview();
           List.iter (fun (w, s) -> w#misc#handler_unblock s) signals;
@@ -247,8 +252,8 @@ class pref_color title ?packing () =
         tags <-
           {
             Settings_t.name = current_tag;
-            color = new_themed_color (color_name color) prev_tag.color; weight; style; underline;
-            scale = 1.0; bg_default; bg_color = new_themed_color (color_name bg_color) prev_tag.bg_color
+            color = Preferences.Color.new_themed_color (color_name color) prev_tag.color; weight; style; underline;
+            scale = 1.0; bg_default; bg_color = Preferences.Color.new_themed_color (color_name bg_color) prev_tag.bg_color
           } ::
           (List.filter (fun t -> t.Settings_t.name <> current_tag) tags);
       end;
@@ -256,12 +261,12 @@ class pref_color title ?packing () =
         Preferences.preferences#get with
         editor_bg_color_theme = false;
         editor_bg_color_user =
-          Preferences.new_themed_color (color_name button_default_bg#color) Preferences.preferences#get.editor_bg_color_user;
+          Preferences.Color.new_themed_color (color_name button_default_bg#color) Preferences.preferences#get.editor_bg_color_user;
         editor_ocamldoc_paragraph_bgcolor_1 =
-          Preferences.new_themed_color
+          Preferences.Color.new_themed_color
             (Some (color_name button_odoc_bg#color)) Preferences.preferences#get.editor_ocamldoc_paragraph_bgcolor_1;
         editor_ocamldoc_paragraph_bgcolor_2 =
-          Preferences.new_themed_color
+          Preferences.Color.new_themed_color
             (Some (color_name button_odoc_bg#color)) Preferences.preferences#get.editor_ocamldoc_paragraph_bgcolor_2;
       } in
       temp_pref.editor_tags <- tags;
@@ -310,13 +315,13 @@ and pref_color_structure title ?packing () =
       check_alt_rows#set_active (pref.outline_color_alt_rows <> None);
 
     method write pref =
-      set_themed_color pref.outline_color_types (color_name button_color_types#color);
-      set_themed_color pref.outline_color_nor_bg (color_name button_color_nor_bg#color);
-      set_themed_color pref.outline_color_nor_fg (color_name button_color_nor_fg#color);
-      set_themed_color pref.outline_color_sel_bg (color_name button_color_sel_bg#color);
-      set_themed_color pref.outline_color_sel_fg (color_name button_color_sel_fg#color);
-      set_themed_color pref.outline_color_act_bg (color_name button_color_act_bg#color);
-      set_themed_color pref.outline_color_act_fg (color_name button_color_act_fg#color);
+      Preferences.Color.set_themed_color pref.outline_color_types (color_name button_color_types#color);
+      Preferences.Color.set_themed_color pref.outline_color_nor_bg (color_name button_color_nor_bg#color);
+      Preferences.Color.set_themed_color pref.outline_color_nor_fg (color_name button_color_nor_fg#color);
+      Preferences.Color.set_themed_color pref.outline_color_sel_bg (color_name button_color_sel_bg#color);
+      Preferences.Color.set_themed_color pref.outline_color_sel_fg (color_name button_color_sel_fg#color);
+      Preferences.Color.set_themed_color pref.outline_color_act_bg (color_name button_color_act_bg#color);
+      Preferences.Color.set_themed_color pref.outline_color_act_fg (color_name button_color_act_fg#color);
       pref.outline_color_alt_rows <- if check_alt_rows#active then
           Some 0.95
         else None

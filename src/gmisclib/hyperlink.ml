@@ -58,7 +58,7 @@ and hyperlink ~(view : GText.view) ?(use_ctrl_key=true) () =
             Gaux.may current_hover ~f:(fun (start, stop) -> buffer#remove_tag tag ~start ~stop);
             current_hover <- Some (start, stop);
             buffer#apply_tag tag ~start ~stop;
-            Gaux.may (view#get_window `TEXT) ~f:(fun w -> Gdk.Window.set_cursor w (Gdk.Cursor.create `HAND1));
+            Gaux.may (view#get_window `TEXT) ~f:(fun w -> Gdk.Window.set_cursor w (Gdk.Cursor.create `HAND2));
       end
 
     method private remove_hover () =
