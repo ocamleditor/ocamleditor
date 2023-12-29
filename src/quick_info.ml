@@ -228,7 +228,11 @@ let build_content qi (entry : type_enclosing_value) (entry2 : type_enclosing_val
     let type_expr, varmap =
       match entry2 with
       | Some entry2 ->
-          Type_expr.find_substitutions entry.Merlin_t.te_type entry2.Merlin_t.te_type
+          begin
+            try
+              Type_expr.find_substitutions entry.Merlin_t.te_type entry2.Merlin_t.te_type
+            with Syntaxerr.Error _ -> entry.Merlin_t.te_type, []
+          end;
       | _ -> entry.Merlin_t.te_type, []
     in
     let info = varmap |> List.map (fun (n, v) -> sprintf "  %s is %s" (Markup.type_info n) (Markup.type_info v)) in
