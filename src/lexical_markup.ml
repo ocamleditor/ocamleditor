@@ -85,6 +85,13 @@ let parse pref =
     let in_annotation = ref false in
     let in_type_var = ref None in
     let in_type_label = ref Off in
+    let finalize_lident () =
+      match [@warning "-4"] !in_type_label with
+      | Possible_label lident ->
+          in_type_label := Off;
+          Buffer.add_string out (Glib.Markup.escape_text lident);
+      | _ -> ()
+    in
     try
       while true do
         try
@@ -173,7 +180,9 @@ let parse pref =
                 | QUESTION | TILDE -> "label"
                 | BACKQUOTE -> "number"
                 | _ ->
-                    in_type_label := Possible_label lexeme;
+                    (match !in_type_label with
+                     | Possible_label x -> in_type_label := Lident x;
+                     | Lident _ | Label _ | Off -> in_type_label := Possible_label lexeme);
                     "lident"
                 end
             | COLON ->
@@ -193,7 +202,7 @@ let parse pref =
               -> "symbol"
             | QUOTE ->
                 in_type_var := Some "";
-                "" 
+                ""
             | LBRACKETAT | LBRACKETPERCENT | LBRACKETPERCENTPERCENT | LBRACKETATAT | LBRACKETATATAT
               -> in_annotation:= true; "annotation"
             | RBRACKET -> if !in_annotation then (in_annotation := false; "annotation") else "symbol"
@@ -302,25 +311,16 @@ let parse pref =
     | End_of_file ->
         let lexeme = (String.sub text !pos (String.length text - !pos)) in
         (* TODO: consider highlights *)
-        begin
-          match [@warning "-4"] !in_type_label with
-          | Possible_label lident ->
-              Buffer.add_string out (Glib.Markup.escape_text lident);
-          | _ -> ()
-        end;
+        finalize_lident ();
         Buffer.add_string out (Glib.Markup.escape_text lexeme);
         close_pending();
-        (*    Lexer.comments ()
-              |> List.iter begin fun (c, loc) ->
-              let _, line_start, char_start = Location.get_pos_info (loc.loc_start) in
-              let _, line_stop, char_stop = Location.get_pos_info (loc.loc_end) in
-              Printf.printf "comment = %d,%d -- %d,%d\n%!" line_start char_start line_stop char_stop;
-              end;*)
         Buffer.contents out
     | (Lexer.Error (error, _)) as ex ->
+        finalize_lident ();
         close_pending();
         Buffer.contents out
     | ex ->
+        finalize_lident ();
         close_pending();
         (printf "Lexical_markup: %s\n%!" (Printexc.to_string ex));
         ""
