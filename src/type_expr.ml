@@ -3,7 +3,7 @@ open Parsetree
 module Log = Common.Log.Make(struct let prefix = "UNIFY" end)
 let _ =
   Log.set_print_timestamp true;
-  Log.set_verbosity `DEBUG
+  Log.set_verbosity `ERROR
 
 let blanks = ["[\r\n\t ]+", " "]
 
@@ -120,7 +120,7 @@ let find_substitutions te1 te2 =
     end
   with
   | Cannot_be_combined ->
-      Log.println `ERROR "Cannot_be_combined:\n  %s\n  %s" (print_type pte1) (print_type pte2);
+      (*Log.println `ERROR "Cannot_be_combined:\n  %s\n  %s" (print_type pte1) (print_type pte2);*)
       print_type pte1, []
   | Cannot_be_unified ->
       (*Log.println `ERROR "Cannot_be_unified:\n  %s\n  %s" (print_type pte1) (print_type pte2);*)
