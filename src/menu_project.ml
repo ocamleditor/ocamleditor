@@ -148,7 +148,7 @@ let project ~browser ~group ~flags items =
   let project = GMenu.menu_item ~label:"Project" () in
   let menu = items.project in
   let cursor = Gdk.Cursor.create `ARROW in
-  ignore (menu#event#connect#expose ~callback:begin fun _ ->
+  ignore (menu#misc#connect#draw ~callback:begin fun _ ->
       Gdk.Window.set_cursor menu#misc#window cursor;
       false
     end);

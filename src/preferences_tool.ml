@@ -43,7 +43,7 @@ class preferences ~editor () =
   let renderer          = GTree.cell_renderer_text [] in
   let view_column       = GTree.view_column ~title:"File" ~renderer:(renderer, ["text", column]) () in
   let sw                = GBin.scrolled_window ~shadow_type:`IN ~hpolicy:`AUTOMATIC ~vpolicy:`AUTOMATIC
-      ~packing:(hbox#pack ~expand:false) () in
+      ~packing:(hbox#pack ~expand:true) () in
   let view              = GTree.view ~model:model ~headers_visible:false ~reorderable:false ~width:160
       ~height:300 ~packing:sw#add () in
   let _                 = view#append_column view_column in
