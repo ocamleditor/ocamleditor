@@ -191,6 +191,7 @@ let init_page page =
         let margin = new Margin_diff.widget page#view in
         page#view#margin#add (margin :> Margin.margin);
         initialized := (page#get_oid, margin) :: !initialized;
+        try_compare ~force:true page;
         Gmisclib.Idle.add ~prio:500 page#view#draw_gutter
       in
       begin

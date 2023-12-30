@@ -112,6 +112,31 @@ type application_context = {
   labels : label list;
 }
 
+
+
+type outline_answer = [
+  | Return <json name="return"> of outline_value
+  | Failure <json name="failure"> of message
+  | Error <json name="error"> of message
+  | Exception <json name="exception"> of message
+] <json
+  adapter.to_ocaml="Atdgen_runtime.Json_adapter.normalize_type_field \"class\""
+  adapter.from_ocaml="Atdgen_runtime.Json_adapter.restore_type_field \"class\""
+> <ocaml repr="classic">
+
+type outline_value = { value : outline list }
+
+type outline = {
+  ol_start <json name="start"> : pos;
+  ol_stop <json name="end"> : pos;
+  ol_name <json name="name"> : string;
+  ol_kind <json name="kind"> : string;
+  ol_children <json name="children"> : outline list;
+}
+
+
+
+
 type list_modules_answer = [
   | Return <json name="return"> of list_modules
   | Failure <json name="failure"> of message

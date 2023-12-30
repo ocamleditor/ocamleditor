@@ -17,7 +17,7 @@ class widget view =
   let spacing = 5 in
   let line_width = 1 in
   let filled = true in
-  let size = 13 in
+  let size = 10 in
   let area_width = size - spacing in
   let width = area_width - line_width in
   object (self)
@@ -28,6 +28,7 @@ class widget view =
     val mutable stop_line = 0
     val mutable top = 0
     val mutable height = 0
+    method index = 20
     method size = size
     method set_diffs x = diffs <- x
 

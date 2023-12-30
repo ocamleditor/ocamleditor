@@ -20,9 +20,11 @@
 
 *)
 
-type t = {
-  mutable locked : (int * GMisc.label) list;
-  mutable free : GMisc.label list;
+type 'a item = < misc : < hide : unit -> unit; .. >; .. > as 'a
+
+type 'a pool = {
+  mutable locked : (int * 'a item) list;
+  mutable free : 'a list;
   mutable max_width : int;
 }
 
@@ -33,21 +35,37 @@ let create () = {
   max_width = 0;
 }
 
-(** iter *)
+(** Iterates a function over all elements of the pool, whether they are available or not. *)
 let iter f lnl =
   List.iter f lnl.free;
   List.iter (*f*) (fun (_, labl) -> f labl) lnl.locked
 
-(** reset *)
-let reset lnl =
+(** Unlocks all locked items and makes them available. *)
+let reset (lnl : 'a pool) =
   let lck = snd (List.split lnl.locked) in
   lnl.free <- List.rev_append lck lnl.free;
   List.iter (fun l -> l#misc#hide()) lnl.free;
   lnl.locked <- []
 
-(** hide *)
-let hide y lnl =
-  match List_opt.assoc y lnl.locked with Some lnl -> lnl#misc#hide() | _ -> ()
+(** [hide key pool] calls the [hide] method on the locked element of the pool
+    identified by [key]. It does nothing if the element identified by [key] is
+    not among the locked elements. *)
+let hide key lnl =
+  match List_opt.assoc key lnl.locked with Some lnl -> lnl#misc#hide() | _ -> ()
+
+let find lnl x = List.assoc_opt x lnl.locked
+
+(** Marks an item as in-use so that it cannot be obtained from the pool. *)
+let lock lnl x =
+  lnl.locked <- x :: lnl.locked
+
+(** Gets a free item from the pool. *)
+let get lnl =
+  match lnl.free with
+  | label :: tl ->
+      lnl.free <- tl;
+      Some label
+  | [] -> None
 
 
 

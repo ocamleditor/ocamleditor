@@ -6,6 +6,11 @@ class virtual margin () =
     method is_visible = is_visible
     method set_is_visible x = is_visible <- x
     method virtual size : int (* width of the margin in pixels *)
+    method virtual index : int
+
+    (** Called whenever the margin needs to be redrawn.
+        @param top The top edge of the margin area to be drawn, in buffer coordinates.
+    *)
     method virtual draw :
       view:GText.view ->
       top:int -> left:int -> height:int ->
@@ -23,6 +28,7 @@ class line_numbers (view : GText.view) =
       self#resize();
 
     method size = size
+    method index = 0
     method reset () = Line_num_labl.reset labels
     method private iter func = Line_num_labl.iter func labels
     method hide_label id = Line_num_labl.hide id labels
@@ -65,13 +71,13 @@ class line_numbers (view : GText.view) =
       let open Line_num_labl in
       let open Settings_t in
       let text = string_of_int num in
-      let label = match labels.free with
-        | label :: tl ->
-            labels.free <- tl;
+      let label =
+        match Line_num_labl.get labels with
+        | Some label ->
             label#set_text text;
             view#move_child ~child:label#coerce ~x:left ~y:top;
             label
-        | [] ->
+        | _ ->
             let label = GMisc.label ~xalign:1.0 ~yalign:0.5 ~text ~show:false () in
             label#misc#modify_text [`NORMAL, `COLOR (Preferences.editor_tag_bg_color "lident")];
             label#misc#modify_font_by_name Preferences.preferences#get.editor_base_font;
@@ -79,8 +85,8 @@ class line_numbers (view : GText.view) =
             view#add_child_in_window ~child:label#coerce ~which_window:`LEFT ~x:left ~y:top;
             label
       in
-      (match List.assoc_opt top labels.locked with Some x -> x#misc#hide() | _ -> ());
-      labels.locked <- (top, label) :: labels.locked;
+      (match Line_num_labl.find labels top with Some x -> x#misc#hide() | _ -> ());
+      Line_num_labl.lock labels (top, label);
       label#misc#show();
       let width = max label#misc#allocation.Gtk.width labels.max_width in
       if width > labels.max_width then (labels.max_width <- width)
@@ -92,6 +98,7 @@ class markers gutter margin_line_numbers =
     val mutable positions = []
     val mutable size = 0 (* visible line number => size = 0; hidden => size > 0 *)
     method icon_size = 15
+    method index = 10
     method size = size
     method set_size x = size <- x
 
@@ -164,10 +171,16 @@ class container (view : GText.view) =
     val mutable width = 0
     val mutable approx_char_width = 0
 
+    initializer
+      view#misc#connect#realize ~callback:begin fun _ ->
+        self#draw();
+      end |> ignore;
+
     method gutter = gutter
     method approx_char_width = approx_char_width
 
-    method add margin = childs <- childs @ [margin]
+    method add margin =
+      childs <- margin :: childs |> List.sort (fun m1 m2 -> Stdlib.compare m1#index m2#index)
     method remove margin = childs <- childs |> List.filter ((<>) margin)
 
     method draw () =

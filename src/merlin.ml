@@ -143,6 +143,18 @@ let list_modules ?ext ~filename ~source_code apply =
     | Exception msg -> Log.println `ERROR "%s" msg.value;
   end
 
+let outline ~filename ~source_code apply =
+  [ "outline" ] |> execute filename source_code ~continue_with:begin fun json ->
+    match Merlin_j.outline_answer_of_string json with
+    | Return outline ->
+        Log.println `DEBUG "%s" (Yojson.Safe.prettify json);
+        apply outline.value
+    | Failure msg
+    | Error msg
+    | Exception msg -> Log.println `ERROR "%s" msg.value;
+  end
+
+
 (*let locate (view : Ocaml_text.view) =
   let pos = view#buffer#get_iter_at_mark `INSERT in
   let position = sprintf "%d:%d" (pos#line + 1) pos#line_offset in

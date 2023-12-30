@@ -201,6 +201,7 @@ let create_tool ~(toolbox : GPack.box) item =
     | P _ when item.tag = `VIEW_MESSAGES -> Some ((GMisc.image ~pixbuf:(??? Icons.paned_bottom_large) ())#coerce)
     | P pixbuf -> Some ((GMisc.image ~pixbuf ())#coerce)
     | S stock -> Some ((GMisc.image ~stock ~icon_size:`SMALL_TOOLBAR ())#coerce)
+    | L (icon, color) when item.tag = `VIEW_MESSAGES -> Some (Gtk_util.label_icon ~width:70 ?color icon)#coerce
     | L (icon, color) -> Some (Gtk_util.label_icon ?color icon)#coerce
     | N -> None
   in

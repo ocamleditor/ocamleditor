@@ -146,20 +146,11 @@ let make_pinnable wininfo =
 let (!=) (p1 : Merlin_j.pos) (p2 : Merlin_j.pos) =
   p1.col <> p2.col || p1.line <> p2.line
 
-(** Returns the left, top, right and bottom bounds of the expression area, in
-    window coordinates. *)
-let get_area qi start stop =
-  let rstart = qi.view#get_iter_location start in
-  let rstop = qi.view#get_iter_location stop in
-  let xstart, ystart = qi.view#buffer_to_window_coords ~tag:`WIDGET
-      ~x:(Gdk.Rectangle.x rstart) ~y:(Gdk.Rectangle.y rstart) in
-  let xstop, ystop = qi.view#buffer_to_window_coords ~tag:`WIDGET
-      ~x:(Gdk.Rectangle.x rstop) ~y:(Gdk.Rectangle.y rstop + Gdk.Rectangle.height rstop) in
-  xstart, ystart, xstop, ystop
-
 (** Displays the quick info popup window.  *)
 let display qi start stop =
-  let xstart, ystart, xstop, ystop = get_area qi start stop in
+  let rstart = qi.view#get_iter_location start in
+  let _, ystart = qi.view#buffer_to_window_coords ~tag:`WIDGET
+      ~x:(Gdk.Rectangle.x rstart) ~y:(Gdk.Rectangle.y rstart) in
   let open Preferences in
   let open Settings_j in
   let vbox = GPack.vbox ~border_width:5 ~spacing:5 () in
