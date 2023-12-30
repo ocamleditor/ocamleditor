@@ -333,7 +333,6 @@ class page ?file ~project ~scroll_offset ~offset ~editor () =
                     signal_buffer_changed <- Some (buffer#connect#changed ~callback:begin fun () ->
                         changed_after_last_autosave <- true;
                         changed_after_last_diff <- true;
-                        buffer#set_changed_timestamp (Unix.gettimeofday());
                         buffer#set_changed_after_last_autocomp true
                       end);
                 | _ -> ()

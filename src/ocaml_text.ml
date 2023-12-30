@@ -44,7 +44,6 @@ class buffer ?project ?file ?(lexical_enabled=false) () =
     val mutable shell : Shell_view.widget option = None
     val mutable select_word_state = []
     val mutable select_word_state_init = None
-    val mutable changed_timestamp = 0.0
     val mutable changed_after_last_autocomp = false
 
     method check_lexical_coloring_enabled = check_lexical_coloring_enabled
@@ -52,9 +51,6 @@ class buffer ?project ?file ?(lexical_enabled=false) () =
 
     method changed_after_last_autocomp = changed_after_last_autocomp
     method set_changed_after_last_autocomp x = changed_after_last_autocomp <- x
-
-    method set_changed_timestamp x = changed_timestamp <- x
-    method changed_timestamp = changed_timestamp
 
     method set_lexical_enabled x = lexical_enabled <- x
     method lexical_enabled = lexical_enabled

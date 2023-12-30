@@ -323,7 +323,7 @@ class editor () =
           if not page#load_complete then (self#load_page ~scroll:false page);
           let loc = ident.Binannot.ident_loc in
           let buffer = page#buffer in
-          let ts = buffer#changed_timestamp in
+          let ts = buffer#last_edit_timestamp in
           if ts <= (Unix.stat filename (*loc.loc.loc_start.pos_fname*)).Unix.st_mtime then begin
             if loc.loc <> Location.none then begin
               let start = loc.loc.loc_start.pos_cnum in
@@ -812,7 +812,7 @@ class editor () =
                   try
                     self#with_current_page begin fun page ->
                       if page#view#misc#get_flag `HAS_FOCUS && page#buffer#changed_after_last_autocomp then begin
-                        if Unix.gettimeofday() -. page#buffer#changed_timestamp > project.Prj.autocomp_delay (*/. 2.*)
+                        if Unix.gettimeofday() -. page#buffer#last_edit_timestamp > project.Prj.autocomp_delay (*/. 2.*)
                         then (page#compile_buffer ?join:None ())
                       end
                     end
