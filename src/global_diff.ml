@@ -164,7 +164,7 @@ let try_compare ?(force=false) page =
     compare_with_head page begin fun diffs ->
       try
         diffs |> paint_diffs page;
-        Option.iter (fun m -> m#set_unchanged_after_last_diff()) margin
+        Option.iter (fun m -> m#sync_diff_time()) margin
       with Gpointer.Null as ex ->
         Printf.eprintf "File \"global_diff.ml\": %s\n%s\n%!" (Printexc.to_string ex) (Printexc.get_backtrace());
     end

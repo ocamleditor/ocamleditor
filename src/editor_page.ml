@@ -124,7 +124,7 @@ class page ?file ~project ~scroll_offset ~offset ~editor () =
     val mutable read_only = false;
     val mutable tab_widget : (GBin.alignment * GButton.button * GMisc.label) option = None
     val mutable resized = false
-    val mutable last_autosave_time = 0.0
+    val mutable last_autosave_time = buffer#last_edit_time
     val mutable load_complete = false
     val mutable annot_type = None
     val mutable quick_info = Quick_info.create ocaml_view
@@ -151,7 +151,7 @@ class page ?file ~project ~scroll_offset ~offset ~editor () =
     method set_outline x = outline <- x
 
     method is_changed_after_last_autosave = last_autosave_time < buffer#last_edit_time
-    method set_unchanged_after_last_autosave () = last_autosave_time <- Unix.gettimeofday()
+    method sync_autosave_time () = last_autosave_time <- Unix.gettimeofday()
 
     method statusbar = editorbar
 
@@ -262,7 +262,7 @@ class page ?file ~project ~scroll_offset ~offset ~editor () =
           Gmisclib.Idle.add self#update_statusbar;
           Gmisclib.Idle.add (fun () -> self#compile_buffer ?join:None ());
           (* Delete existing recovery copy *)
-          self#set_unchanged_after_last_autosave ();
+          self#sync_autosave_time ();
           Autosave.delete ~filename:file#filename ();
           (*  *)
           buffer#set_modified false;
@@ -287,7 +287,7 @@ class page ?file ~project ~scroll_offset ~offset ~editor () =
         buffer#unblock_signal_handlers();
         self#set_file (Some file);
         (*  *)
-        self#set_unchanged_after_last_autosave ();
+        self#sync_autosave_time ();
         Autosave.delete ~filename:file#filename ();
         (*  *)
         Gmisclib.Idle.add ~prio:300 (fun () -> vscrollbar#adjustment#set_value vv);
@@ -325,6 +325,8 @@ class page ?file ~project ~scroll_offset ~offset ~editor () =
               if not buffer#undo#is_enabled then (buffer#undo#enable());
               load_complete <- true;
               buffer#save_buffer ~filename:buffer#orig_filename () |> ignore;
+              (*buffer#set_last_edit_time (Unix.gettimeofday());*)
+              last_autosave_time <- buffer#last_edit_time;
               (*  *)
               self#set_code_folding_enabled editor#code_folding_enabled#get; (* calls scan_folding_points, if enabled *)
               self#view#matching_delim ();
@@ -367,7 +369,7 @@ class page ?file ~project ~scroll_offset ~offset ~editor () =
       if project.Prj.autocomp_enabled
       && ((project.Prj.in_source_path filename) <> None)
       && (filename ^^^ ".ml" || filename ^^^ ".mli") then begin
-        buffer#set_unchanged_after_last_autocomp ();
+        buffer#sync_autocomp_time ();
         Autocomp.compile_buffer ~project ~editor ~page:self ?join ();
       end else begin
         editor#pack_outline (Cmt_view.empty());

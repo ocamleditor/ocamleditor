@@ -28,11 +28,11 @@ class widget view =
     val mutable stop_line = 0
     val mutable top = 0
     val mutable height = 0
-    val mutable last_diff_time = 0.0
+    val mutable last_diff_time = view#tbuffer#last_edit_time
     method size = size
     method set_diffs x = diffs <- x
     method is_changed_after_last_diff = last_diff_time < view#tbuffer#last_edit_time
-    method set_unchanged_after_last_diff () = last_diff_time <- Unix.gettimeofday()
+    method sync_diff_time () = last_diff_time <- Unix.gettimeofday()
 
     initializer
       view#add_child_in_window ~child:drawing_area#coerce ~which_window:`LEFT ~x:0 ~y:0;

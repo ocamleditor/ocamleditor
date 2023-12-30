@@ -758,8 +758,8 @@ class editor () =
             File_history.add file_history file#filename;
             file_history_changed#call file_history;
             (* Delete existing recovery copy *)
-            page#set_unchanged_after_last_autosave ();
-            page#buffer#set_unchanged_after_last_autocomp ();
+            page#sync_autosave_time ();
+            page#buffer#sync_autocomp_time ();
             Autosave.delete ~filename:file#filename ();
       end;
 
@@ -811,7 +811,7 @@ class editor () =
                 if project.Prj.autocomp_enabled then begin
                   try
                     self#with_current_page begin fun page ->
-                      if page#view#misc#get_flag `HAS_FOCUS && page#buffer#changed_after_last_autocomp then begin
+                      if page#view#misc#get_flag `HAS_FOCUS && page#buffer#is_changed_after_last_autocomp then begin
                         if Unix.gettimeofday() -. page#buffer#last_edit_time > project.Prj.autocomp_delay (*/. 2.*)
                         then (page#compile_buffer ?join:None ())
                       end
@@ -834,7 +834,7 @@ class editor () =
                     let filename = page#get_filename in
                     let text = (page#buffer :> GText.buffer)#get_text () in
                     Autosave.backup ~filename ~text;
-                    page#set_unchanged_after_last_autosave ();
+                    page#sync_autosave_time ();
                   end
                 end) pages;
                   true
