@@ -889,7 +889,8 @@ class browser window =
 
       (* Editor *)
       paned#pack1 ~resize:true ~shrink:true editor#coerce;
-      let update_toolbar_save () =
+      paned#pack2 ((GMisc.label ~text:"??"())#coerce); (* HACK, to get rid of 0-width warnings *)
+       let update_toolbar_save () =
         let exists_unsaved = List.exists (fun p -> p#view#buffer#modified) editor#pages in
         Gmisclib.Idle.add ~prio:300 (fun () -> toolbar#tool_save_all#misc#set_sensitive exists_unsaved);
         Gaux.may (editor#get_page `ACTIVE) ~f:begin fun page ->
