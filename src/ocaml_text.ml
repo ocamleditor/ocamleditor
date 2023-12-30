@@ -44,13 +44,13 @@ class buffer ?project ?file ?(lexical_enabled=false) () =
     val mutable shell : Shell_view.widget option = None
     val mutable select_word_state = []
     val mutable select_word_state_init = None
-    val mutable changed_after_last_autocomp = false
+    val mutable last_autocomp_time = 0.0
 
     method check_lexical_coloring_enabled = check_lexical_coloring_enabled
     method colorize ?start ?stop () = Lexical.tag ?start ?stop self#as_gtext_buffer
 
-    method changed_after_last_autocomp = changed_after_last_autocomp
-    method set_changed_after_last_autocomp x = changed_after_last_autocomp <- x
+    method changed_after_last_autocomp = last_autocomp_time < self#as_text_buffer#last_edit_time
+    method set_unchanged_after_last_autocomp () = last_autocomp_time <- self#as_text_buffer#last_edit_time
 
     method set_lexical_enabled x = lexical_enabled <- x
     method lexical_enabled = lexical_enabled

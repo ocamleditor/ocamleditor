@@ -159,12 +159,12 @@ let compare_with_head page continue_with =
 
 let try_compare ?(force=false) page =
   let margin = List.assoc_opt page#get_oid !initialized in
-  let is_changed = Option.fold ~none:true ~some:(fun m -> m#changed_after_last_diff) margin in 
+  let is_changed = Option.fold ~none:true ~some:(fun m -> m#is_changed_after_last_diff) margin in
   if (is_changed || force) && page#view#misc#get_flag `VISIBLE then begin
     compare_with_head page begin fun diffs ->
       try
         diffs |> paint_diffs page;
-        Option.iter (fun m -> m#set_last_diff_timestamp()) margin
+        Option.iter (fun m -> m#set_unchanged_after_last_diff()) margin
       with Gpointer.Null as ex ->
         Printf.eprintf "File \"global_diff.ml\": %s\n%s\n%!" (Printexc.to_string ex) (Printexc.get_backtrace());
     end

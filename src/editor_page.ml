@@ -124,7 +124,7 @@ class page ?file ~project ~scroll_offset ~offset ~editor () =
     val mutable read_only = false;
     val mutable tab_widget : (GBin.alignment * GButton.button * GMisc.label) option = None
     val mutable resized = false
-    val mutable changed_after_last_autosave = false
+    val mutable last_autosave_time = 0.0
     val mutable load_complete = false
     val mutable annot_type = None
     val mutable quick_info = Quick_info.create ocaml_view
@@ -133,7 +133,6 @@ class page ?file ~project ~scroll_offset ~offset ~editor () =
     val mutable dotview = None
     val mutable word_wrap = editor#word_wrap
     val mutable show_whitespace = editor#show_whitespace_chars
-    val mutable signal_buffer_changed = None
     val mutable signal_button_toggle_wrap = None
     val mutable signal_button_toggle_whitespace = None
     val mutable signal_button_dotview = None
@@ -151,8 +150,8 @@ class page ?file ~project ~scroll_offset ~offset ~editor () =
     method outline = outline
     method set_outline x = outline <- x
 
-    method changed_after_last_autosave = changed_after_last_autosave
-    method set_changed_after_last_autosave x = changed_after_last_autosave <- x
+    method is_changed_after_last_autosave = last_autosave_time < buffer#last_edit_time
+    method set_unchanged_after_last_autosave () = last_autosave_time <- Unix.gettimeofday()
 
     method statusbar = editorbar
 
@@ -263,7 +262,7 @@ class page ?file ~project ~scroll_offset ~offset ~editor () =
           Gmisclib.Idle.add self#update_statusbar;
           Gmisclib.Idle.add (fun () -> self#compile_buffer ?join:None ());
           (* Delete existing recovery copy *)
-          self#set_changed_after_last_autosave false;
+          self#set_unchanged_after_last_autosave ();
           Autosave.delete ~filename:file#filename ();
           (*  *)
           buffer#set_modified false;
@@ -288,7 +287,7 @@ class page ?file ~project ~scroll_offset ~offset ~editor () =
         buffer#unblock_signal_handlers();
         self#set_file (Some file);
         (*  *)
-        self#set_changed_after_last_autosave false;
+        self#set_unchanged_after_last_autosave ();
         Autosave.delete ~filename:file#filename ();
         (*  *)
         Gmisclib.Idle.add ~prio:300 (fun () -> vscrollbar#adjustment#set_value vv);
@@ -323,15 +322,6 @@ class page ?file ~project ~scroll_offset ~offset ~editor () =
                 view#misc#grab_focus();
               end;
               buffer#set_modified false;
-              begin
-                match signal_buffer_changed with
-                | None ->
-                    signal_buffer_changed <- Some (buffer#connect#changed ~callback:begin fun () ->
-                        changed_after_last_autosave <- true;
-                        buffer#set_changed_after_last_autocomp true
-                      end);
-                | _ -> ()
-              end;
               if not buffer#undo#is_enabled then (buffer#undo#enable());
               load_complete <- true;
               buffer#save_buffer ~filename:buffer#orig_filename () |> ignore;
@@ -377,7 +367,7 @@ class page ?file ~project ~scroll_offset ~offset ~editor () =
       if project.Prj.autocomp_enabled
       && ((project.Prj.in_source_path filename) <> None)
       && (filename ^^^ ".ml" || filename ^^^ ".mli") then begin
-        buffer#set_changed_after_last_autocomp false;
+        buffer#set_unchanged_after_last_autocomp ();
         Autocomp.compile_buffer ~project ~editor ~page:self ?join ();
       end else begin
         editor#pack_outline (Cmt_view.empty());
