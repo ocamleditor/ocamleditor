@@ -28,7 +28,7 @@ open GUtil
 
 let create_view ~project ~buffer ?file ?packing () =
   let sw = GBin.scrolled_window ~width:100 ~height:100 ~shadow_type:`NONE
-      ~hpolicy:`AUTOMATIC ~vpolicy:`AUTOMATIC ?packing () in
+      ~hpolicy:`NEVER ~vpolicy:`AUTOMATIC ?packing () in
   let view = new Ocaml_text.view ~project ~buffer () in
   Preferences_apply.apply (view :> Text.view) Preferences.preferences#get;
   let _  = sw#add view#coerce in
