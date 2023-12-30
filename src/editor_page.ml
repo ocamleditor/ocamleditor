@@ -125,7 +125,6 @@ class page ?file ~project ~scroll_offset ~offset ~editor () =
     val mutable tab_widget : (GBin.alignment * GButton.button * GMisc.label) option = None
     val mutable resized = false
     val mutable changed_after_last_autosave = false
-    val mutable changed_after_last_diff = true
     val mutable load_complete = false
     val mutable annot_type = None
     val mutable quick_info = Quick_info.create ocaml_view
@@ -154,9 +153,6 @@ class page ?file ~project ~scroll_offset ~offset ~editor () =
 
     method changed_after_last_autosave = changed_after_last_autosave
     method set_changed_after_last_autosave x = changed_after_last_autosave <- x
-
-    method changed_after_last_diff = changed_after_last_diff
-    method set_changed_after_last_diff x = changed_after_last_diff <- x
 
     method statusbar = editorbar
 
@@ -332,7 +328,6 @@ class page ?file ~project ~scroll_offset ~offset ~editor () =
                 | None ->
                     signal_buffer_changed <- Some (buffer#connect#changed ~callback:begin fun () ->
                         changed_after_last_autosave <- true;
-                        changed_after_last_diff <- true;
                         buffer#set_changed_after_last_autocomp true
                       end);
                 | _ -> ()

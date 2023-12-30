@@ -28,8 +28,11 @@ class widget view =
     val mutable stop_line = 0
     val mutable top = 0
     val mutable height = 0
+    val mutable last_diff_timestamp = 0.0
     method size = size
     method set_diffs x = diffs <- x
+    method changed_after_last_diff = last_diff_timestamp < view#tbuffer#last_edit_timestamp
+    method set_last_diff_timestamp () = last_diff_timestamp <- Unix.gettimeofday()
 
     initializer
       view#add_child_in_window ~child:drawing_area#coerce ~which_window:`LEFT ~x:0 ~y:0;
