@@ -90,8 +90,8 @@ let remove_highlight qi wi =
       wi.range <- None
   | _ -> ()
 
-let add_wininfo qi =
-  !!Lock.wininfo (fun wi -> qi.windows <- wi :: qi.windows)
+let add_wininfo qi callback =
+  !!Lock.wininfo (fun wi -> qi.windows <- wi :: qi.windows; callback())
 
 (** Starts a timer that closes the specified quick-info window and removes
     expression highlighting in the editor. An exception is the case
@@ -193,7 +193,8 @@ let display qi start stop =
     is_pinned = false;
     index = new_index();
   } in
-  add_wininfo qi wininfo;
+  let callback () = qi.view#buffer#apply_tag qi.tag ~start ~stop in
+  add_wininfo qi callback wininfo;
   make_pinnable wininfo;
   Gmisclib.Idle.add begin fun () ->
     window#present();
@@ -213,11 +214,10 @@ let display qi start stop =
         is_pinned = false;
         index = new_index();
       } in
-      add_wininfo qi wininfo;
+      add_wininfo qi callback wininfo;
       make_pinnable wininfo;
       window#present()
-    end;
-    qi.view#buffer#apply_tag qi.tag ~start ~stop;
+    end
   end;
   label_typ, label_vars, label_doc
 
