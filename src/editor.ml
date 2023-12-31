@@ -323,7 +323,7 @@ class editor () =
           if not page#load_complete then (self#load_page ~scroll:false page);
           let loc = ident.Binannot.ident_loc in
           let buffer = page#buffer in
-          let ts = buffer#changed_timestamp in
+          let ts = buffer#last_edit_time in
           if ts <= (Unix.stat filename (*loc.loc.loc_start.pos_fname*)).Unix.st_mtime then begin
             if loc.loc <> Location.none then begin
               let start = loc.loc.loc_start.pos_cnum in
@@ -758,8 +758,8 @@ class editor () =
             File_history.add file_history file#filename;
             file_history_changed#call file_history;
             (* Delete existing recovery copy *)
-            page#set_changed_after_last_autosave false;
-            page#buffer#set_changed_after_last_autocomp false;
+            page#sync_autosave_time ();
+            page#buffer#sync_autocomp_time ();
             Autosave.delete ~filename:file#filename ();
       end;
 
@@ -811,8 +811,8 @@ class editor () =
                 if project.Prj.autocomp_enabled then begin
                   try
                     self#with_current_page begin fun page ->
-                      if page#view#misc#get_flag `HAS_FOCUS && page#buffer#changed_after_last_autocomp then begin
-                        if Unix.gettimeofday() -. page#buffer#changed_timestamp > project.Prj.autocomp_delay (*/. 2.*)
+                      if page#view#misc#get_flag `HAS_FOCUS && page#buffer#is_changed_after_last_autocomp then begin
+                        if Unix.gettimeofday() -. page#buffer#last_edit_time > project.Prj.autocomp_delay (*/. 2.*)
                         then (page#compile_buffer ?join:None ())
                       end
                     end
@@ -830,11 +830,11 @@ class editor () =
             if Oe_config.autosave_enabled then begin
               id_timeout_autosave := Some (GMain.Timeout.add ~ms:Autosave.interval ~callback:begin fun () ->
                   (*Prf.crono Prf.prf_autosave*) (List.iter begin fun page ->
-                  if page#changed_after_last_autosave then begin
+                  if page#is_changed_after_last_autosave then begin
                     let filename = page#get_filename in
                     let text = (page#buffer :> GText.buffer)#get_text () in
                     Autosave.backup ~filename ~text;
-                    page#set_changed_after_last_autosave false;
+                    page#sync_autosave_time ();
                   end
                 end) pages;
                   true

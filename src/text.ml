@@ -58,8 +58,10 @@ class buffer =
       val mutable tmp_filename = "" (*tmp_filename*)
       val mutable orig_filename = ""
       val mutable project_tmp_path = None (*project_tmp_path*)
+      val mutable last_edit_time = Unix.gettimeofday()
 
       initializer
+        buffer#connect#changed ~callback:(fun () -> last_edit_time <- Unix.gettimeofday()) |> ignore;
         self#reset_tmp_filename ();
         orig_filename <- tmp_filename ^ ".orig";
         at_exit begin fun () ->
@@ -72,6 +74,8 @@ class buffer =
 
       method tmp_filename = tmp_filename
       method orig_filename = orig_filename
+      method last_edit_time = last_edit_time
+      method set_last_edit_time time = last_edit_time <- time
 
       method reset_tmp_filename () =
         let a, b =
