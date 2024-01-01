@@ -181,7 +181,7 @@ class annot_type ~page =
                       begin
                         match view#get_window `WIDGET with
                         | Some _window ->
-                            let pX, pY = Gdk.Window.get_pointer_location popup#misc#window in
+                            let pX, pY = Gdk.Window.get_pointer_location view#misc#window in
                             popup#move ~x:pX ~y:(pY + 10);
                             popup#present();
                         | _ -> assert false

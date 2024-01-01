@@ -37,56 +37,11 @@ let create_small_toggle_button ?tooltip ~icon ?callback ?packing ?show () =
   button;;
 
 class editorbar ~view ?packing () =
-  let icon_font_name = sprintf "FiraCode OCamlEditor %s" (match font_size with Some x -> string_of_int x | _ -> "15") in
+  let icon_font_name = sprintf "FiraCode OCamlEditor %s" (match font_size with Some x -> string_of_int x | _ -> "") in
   let box = GPack.hbox ~spacing:1 ~border_width:0 ?packing () in
   let paned = GPack.paned `HORIZONTAL ~packing:box#add () in
   let _ = GMisc.separator `VERTICAL ~packing:box#pack () in
   let lbox = GPack.hbox ~spacing:1 ~border_width:0 ~packing:(paned#pack1 ~resize:true ~shrink:false) () in
-  let status_filename = GMisc.label ~selectable:true ~xalign:0.0 ~xpad:5 ~ellipsize:`END ~packing:lbox#add () in
-  let _ = status_filename#set_use_markup true in
-  let _ = set_label_font_size status_filename in
-  let _ = GMisc.separator `VERTICAL ~packing:lbox#pack () in
-  let status_modified = GMisc.label ~markup:"" ~xpad:0 ~ypad:0 ~xalign:0.5 ~packing:lbox#pack () in
-  let _ = status_modified#misc#modify_fg [`NORMAL, `NAME "#1E90FF"] in
-  let _ = status_modified#set_use_markup true in
-  let _ = set_label_font_size status_modified in
-
-  let pos_box = GPack.hbox ~spacing:3 ~packing:lbox#pack () in
-
-  let _ = GMisc.separator `VERTICAL ~packing:pos_box#pack () in
-  let label_pos_lin = GMisc.label ~xalign:0.0 ~yalign:0.5 ~text:"\u{e0a1}\u{2009}" ~packing:pos_box#pack () in
-  let _ = label_pos_lin#misc#modify_font_by_name icon_font_name in
-  let status_pos_lin = GMisc.label ~xalign:0.0 ~yalign:0.5 ~width:34 ~packing:pos_box#pack () in
-  let _ = set_label_font_size status_pos_lin in
-  let _ = GMisc.separator `VERTICAL ~packing:pos_box#pack () in
-
-  let label_pos_col = GMisc.label ~xalign:0.0 ~yalign:0.5 ~markup:"<small>\u{e0a3}</small>\u{2009}" ~packing:pos_box#pack () in
-  let _ = label_pos_col#misc#modify_font_by_name icon_font_name in
-  let status_pos_col = GMisc.label ~xalign:0.0 ~yalign:0.5 ~width:34 ~packing:pos_box#pack () in
-  let _ = set_label_font_size status_pos_col in
-  let _ = GMisc.separator `VERTICAL ~packing:pos_box#pack () in
-
-  let status_pos_off = GMisc.label ~xalign:0.0 ~yalign:0.5 ~width:55 ~packing:pos_box#pack () in
-  let _ = set_label_font_size status_pos_off in
-  (*let _ = status_pos_off#misc#set_tooltip_text "Character offset from start" in*)
-  let _ = GMisc.separator `VERTICAL ~packing:pos_box#pack () in
-
-  let status_pos_sel = GMisc.label ~xalign:0.0 ~yalign:0.5 ~width:34 ~text:"0" ~packing:pos_box#pack () in
-  (*let _ = status_pos_sel#misc#set_tooltip_text "Selected lines" in*)
-  let _ = set_label_font_size status_pos_sel in
-  let _ = GMisc.separator `VERTICAL ~packing:pos_box#pack () in
-  let status_pos_sel_chars = GMisc.label ~xalign:0.0 ~yalign:0.5 ~width:55 ~text:"0" ~packing:pos_box#pack () in
-  let _ = set_label_font_size status_pos_sel_chars in
-  (*let _ = status_pos_sel_chars#misc#set_tooltip_text "Selected characters" in*)
-  let _ = GMisc.separator `VERTICAL ~packing:pos_box#pack () in
-
-  let button_dotview = create_small_toggle_button
-      ~icon:"\u{f104a}"
-      ~packing:lbox#pack ()
-      ~show:(false (*Oe_config.dot_version <> None*))
-  in
-  let _ = GMisc.separator `VERTICAL ~show:false ~packing:lbox#pack () in
-
   let button_font_incr = create_small_button
       ~icon:"\u{f09f4}"
       ~packing:lbox#pack
@@ -141,7 +96,51 @@ class editorbar ~view ?packing () =
     in
     create_small_toggle_button ~icon ~packing:lbox#pack () in (* f1dd *)
 
-  let spinner = GMisc.image ~width:15 ~packing:box#pack () in
+  let button_dotview = create_small_toggle_button
+      ~icon:"\u{f104a}"
+      ~packing:lbox#pack ()
+      ~show:(false (*Oe_config.dot_version <> None*))
+  in
+  let _ = GMisc.separator `VERTICAL ~show:true ~packing:lbox#pack () in
+
+  let status_filename = GMisc.label ~selectable:true ~xalign:0.0 ~xpad:5 ~ellipsize:`END ~packing:lbox#add () in
+  let _ = status_filename#set_use_markup true in
+  let _ = set_label_font_size status_filename in
+  let _ = GMisc.separator `VERTICAL ~packing:lbox#pack () in
+  let status_modified = GMisc.label ~markup:"" ~xpad:0 ~ypad:0 ~xalign:0.5 ~packing:lbox#pack () in
+  let _ = status_modified#misc#modify_fg [`NORMAL, `NAME "#1E90FF"] in
+  let _ = status_modified#set_use_markup true in
+  let _ = set_label_font_size status_modified in
+
+  let pos_box = GPack.hbox ~spacing:3 ~packing:lbox#pack () in
+
+  let _ = GMisc.separator `VERTICAL ~packing:pos_box#pack () in
+  let label_pos_lin = GMisc.label ~xalign:0.0 ~yalign:0.5 ~text:"\u{e0a1}\u{2009}" ~packing:pos_box#pack () in
+  let _ = label_pos_lin#misc#modify_font_by_name icon_font_name in
+  let status_pos_lin = GMisc.label ~xalign:0.0 ~yalign:0.5 ~width:34 ~packing:pos_box#pack () in
+  let _ = set_label_font_size status_pos_lin in
+  let _ = GMisc.separator `VERTICAL ~packing:pos_box#pack () in
+
+  let label_pos_col = GMisc.label ~xalign:0.0 ~yalign:0.5 ~markup:"<small>\u{e0a3}</small>\u{2009}" ~packing:pos_box#pack () in
+  let _ = label_pos_col#misc#modify_font_by_name icon_font_name in
+  let status_pos_col = GMisc.label ~xalign:0.0 ~yalign:0.5 ~width:34 ~packing:pos_box#pack () in
+  let _ = set_label_font_size status_pos_col in
+  let _ = GMisc.separator `VERTICAL ~packing:pos_box#pack () in
+
+  let status_pos_off = GMisc.label ~xalign:0.0 ~yalign:0.5 ~width:55 ~packing:pos_box#pack () in
+  let _ = set_label_font_size status_pos_off in
+  (*let _ = status_pos_off#misc#set_tooltip_text "Character offset from start" in*)
+  let _ = GMisc.separator `VERTICAL ~packing:pos_box#pack () in
+
+  let status_pos_sel = GMisc.label ~xalign:0.0 ~yalign:0.5 ~width:34 ~text:"0" ~packing:pos_box#pack () in
+  (*let _ = status_pos_sel#misc#set_tooltip_text "Selected lines" in*)
+  let _ = set_label_font_size status_pos_sel in
+  let _ = GMisc.separator `VERTICAL ~packing:pos_box#pack () in
+  let status_pos_sel_chars = GMisc.label ~xalign:0.0 ~yalign:0.5 ~width:55 ~text:"0" ~packing:pos_box#pack () in
+  let _ = set_label_font_size status_pos_sel_chars in
+  (*let _ = status_pos_sel_chars#misc#set_tooltip_text "Selected characters" in*)
+  let _ = GMisc.separator `VERTICAL ~packing:pos_box#pack () in
+
   object (self)
     inherit GObj.widget box#as_widget
     method paned = paned
@@ -154,7 +153,6 @@ class editorbar ~view ?packing () =
     method pos_off = status_pos_off
     method pos_sel = status_pos_sel
     method pos_sel_chars = status_pos_sel_chars
-    method spinner = spinner
     method button_dotview = button_dotview
     method button_font_incr = button_font_incr
     method button_font_decr = button_font_decr
@@ -188,19 +186,19 @@ class gitbar ?packing () =
     method button_gitbranch = button_gitbranch
   end
 
-class widget ?(color=true) ?packing () =
+class widget ?packing () =
   let ebox = GBin.event_box ~border_width:0 ?packing () in
   let box = GPack.hbox ~spacing:1 ~border_width:0 ~packing:ebox#add () in
   let editorbar_placeholder = GBin.alignment ~packing:(box#pack ~from:`START ~expand:true ~fill:true) () in
   let _ = GMisc.separator `VERTICAL ~packing:(box#pack ~expand:false) () in
+  let spinner = GMisc.image ~width:20 ~packing:box#pack () in
+  let _ = GMisc.separator `VERTICAL ~packing:(box#pack ~expand:false) () in
   object (self)
     inherit GObj.widget ebox#as_widget
     initializer
-      if color then begin
-        self#set_selected_style ();
-        ebox#misc#toplevel#misc#connect#after#style_set
-          ~callback:(fun () -> Gmisclib.Idle.add ~prio:300 self#set_selected_style) |> ignore
-      end
+      self#set_my_style();
+      ebox#misc#toplevel#misc#connect#after#style_set
+        ~callback:(fun () -> Gmisclib.Idle.add ~prio:300 self#set_my_style) |> ignore
 
     method pack_editorbar (bar : editorbar) =
       if editorbar_placeholder#children <> [] then
@@ -209,8 +207,10 @@ class widget ?(color=true) ?packing () =
 
     method pack ?from widget = box#pack ?from ~expand:false ~fill:false widget
 
-    method private set_selected_style () =
-      ebox#misc#modify_bg [`NORMAL, `COLOR (ebox#misc#style#dark `SELECTED)];
-      ebox#misc#modify_fg [`NORMAL, `COLOR (ebox#misc#style#fg `SELECTED)];
+    method spinner = spinner
+
+    method private set_my_style () =
+      ebox#misc#modify_bg [`NORMAL, `COLOR (ebox#misc#style#light `NORMAL)];
+      ebox#misc#modify_fg [`NORMAL, `COLOR (ebox#misc#style#fg `NORMAL)];
   end
 

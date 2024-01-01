@@ -245,22 +245,25 @@ class widget ~project ~(page : Editor_page.page) ~x ~y ?packing () =
           let info = String.trim info in
           if String.trim desc <> "" || String.trim info <> "" then begin
             Gmisclib.Idle.add begin fun () ->
-              let markup =
-                Printf.sprintf "<span font='%s %s'>%s</span>%s<span font='%s'>%s</span>"
-                  markup_odoc#code_font_family
-                  markup_odoc#code_font_size
-                  (Markup.type_info desc)
-                  (if info <> "" then "\n\n" else "")
+              let markup_type =
+                Printf.sprintf "<span font='%s'>%s</span>"
                   (Preferences.preferences#get.editor_completion_font)
-                  (markup_odoc#convert info)
+                  (Markup.type_info desc)
               in
-              self#display_window_info path markup
+              let markup_doc =
+                if info <> "" then
+                  Printf.sprintf "<span font='%s'>%s</span>"
+                    (Preferences.preferences#get.editor_completion_font)
+                    (markup_odoc#convert info)
+                else ""
+              in
+              self#display_window_info path markup_type markup_doc
             end
           end
 
-    method private display_window_info path markup =
+    method private display_window_info path markup_type markup_doc =
       let create_window ~x ~y ?width ?height ?show child =
-        current_window_info |> List.iter (fun w -> w#destroy());
+        current_window_info |> List.iter (fun w -> Gmisclib.Idle.add w#destroy);
         let window = Gtk_util.window_tooltip child ~parent:page ~x ~y ?width ?height ?show () in
         current_window_info <- window :: current_window_info;
         self#misc#connect#destroy ~callback:window#destroy |> ignore;
@@ -271,8 +274,11 @@ class widget ~project ~(page : Editor_page.page) ~x ~y ?packing () =
       let wx, wy = Gdk.Window.get_position self#misc#toplevel#misc#window in
       let x0 = wx + r0.Gtk.width in
       let y0 = wy + Gdk.Rectangle.y row_area in
-      let label_info = GMisc.label ~markup ~xalign:0.0 ~yalign:0.0 ~xpad:10 ~ypad:10 ~line_wrap:true () in
-      let window_info = create_window ~x:x0 ~y:y0 ~show:false label_info#coerce in
+      let vbox = GPack.vbox ~spacing:5 ~border_width:5 () in
+      let label_type = GMisc.label ~markup:markup_type ~xalign:0.0 ~yalign:0.0 ~xpad:0 ~ypad:0 ~line_wrap:true ~packing:vbox#add () in
+      let _ = GMisc.separator `HORIZONTAL ~packing:vbox#add ~show:(markup_doc <> "") () in
+      let label_doc = GMisc.label ~markup:markup_doc ~xalign:0.0 ~yalign:0.0 ~xpad:0 ~ypad:0 ~line_wrap:true ~packing:vbox#add ~show:(markup_doc <> "") () in
+      let window_info = create_window ~x:x0 ~y:y0 ~show:false vbox#coerce in
       window_info#resize ~width:1 ~height:1;
       Gmisclib.Idle.add ~prio:100 begin fun () ->
         window_info#show();
@@ -281,7 +287,7 @@ class widget ~project ~(page : Editor_page.page) ~x ~y ?packing () =
         if r.height > Gdk.Screen.height() then begin
           let sw = GBin.scrolled_window ~hpolicy:`AUTOMATIC () in
           let vp = GBin.viewport ~packing:sw#add () in
-          label_info#misc#reparent vp#coerce;
+          vbox#misc#reparent vp#coerce;
           let width = r.width + 21 in
           let height = Gdk.Screen.height() - y0 - 13 in
           create_window ~x:x0 ~y:y0 ~width ~height sw#coerce |> ignore;

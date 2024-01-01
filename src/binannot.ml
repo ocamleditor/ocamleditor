@@ -21,6 +21,7 @@
 *)
 
 open Miscellanea
+open Preferences
 
 module Log = Common.Log.Make(struct let prefix = "Binannot" end)
 let _ = Log.set_verbosity `ERROR
@@ -147,6 +148,13 @@ let pp_ident ppf { ident_kind; ident_loc; _ } =
                         pp_short_loc ident_loc.loc
   | Open loc       -> Format.fprintf ppf "opn %a" pp_loc loc
 
+let longident_parse repr = try
+    Parse.longident @@ Lexing.from_string repr
+  with ex ->
+    (* Just a stopgap measure. The plan is to get rid of [Longident.parse] altogether *)
+    Log.println `ERROR " !! unable to parse Longident.t from: %s" repr;
+    raise ex
+
 let table_idents : (string, entry) Hashtbl.t = Hashtbl.create 7 (* source filename, entry *)
 
 let string_of_kind = function
@@ -170,7 +178,7 @@ let cnum_of_loc loc =
   loc.loc_start.pos_fname, loc.loc_start.pos_cnum, loc.loc_end.pos_cnum
 
 let string_of_type_expr te = Odoc_info.string_of_type_expr te;;
-let lid_of_type_expr te = Parse.longident @@ Lexing.from_string (string_of_type_expr te)
+let lid_of_type_expr te = longident_parse (string_of_type_expr te)
 
 let (<==) loc offset = loc.loc_start.pos_cnum <= offset && offset <= loc.loc_end.pos_cnum
 let (<==<) loc offset = loc.loc_start.pos_cnum <= offset && (offset <= loc.loc_end.pos_cnum || loc.loc_end.pos_cnum = -1)

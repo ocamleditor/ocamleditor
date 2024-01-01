@@ -73,15 +73,26 @@ class browser window =
   let ebox_project_name = GBin.event_box ~packing:(menubarbox#pack ~expand:false) () in
   let label_project_name = GMisc.label ~markup:"" ~xpad:5 ~packing:ebox_project_name#add () in
   (* Status bar *)
-  let _ =
-    if not Oe_config.colored_statusbar then
-      GMisc.separator `HORIZONTAL ~packing:(vbox#pack ~expand:false) () |> ignore;
-  in
-  let statusbar = new Statusbar.widget ~color:Oe_config.colored_statusbar ~packing:vbox#pack () in
+  let statusbar = new Statusbar.widget ~packing:vbox#pack () in
   let gitbar = new Statusbar.gitbar ~packing:(statusbar#pack ~from:`END) () in
   let _ =
     if Oe_config.unify_statusbars then
       editor#connect#switch_page ~callback:(fun page -> statusbar#pack_editorbar page#statusbar) |> ignore;
+  in
+  (** Spinner *)
+  let activate_spinner (active : Activity.t list) =
+    match active with
+    | [] ->
+        statusbar#spinner#set_pixbuf (??? Icons.empty_16);
+        statusbar#spinner#misc#set_tooltip_text "";
+    | msgs ->
+        let msgs = snd (List.split msgs) in
+        statusbar#spinner#set_file (Icon.get_themed_filename "spinner_16.gif");
+        statusbar#spinner#misc#set_tooltip_text (String.concat "\n" (List.rev msgs));
+  in
+  let _ =
+    Activity.table#connect#changed ~callback:activate_spinner;
+    activate_spinner Activity.table#get;
   in
   (*  *)
   let vbox_menu_buttons = GPack.vbox ~border_width:0 ~packing:menubarbox#pack ~show:false () in
@@ -889,8 +900,7 @@ class browser window =
 
       (* Editor *)
       paned#pack1 ~resize:true ~shrink:true editor#coerce;
-      paned#pack2 ((GMisc.label ~text:"??"())#coerce); (* HACK, to get rid of 0-width warnings *)
-       let update_toolbar_save () =
+      let update_toolbar_save () =
         let exists_unsaved = List.exists (fun p -> p#view#buffer#modified) editor#pages in
         Gmisclib.Idle.add ~prio:300 (fun () -> toolbar#tool_save_all#misc#set_sensitive exists_unsaved);
         Gaux.may (editor#get_page `ACTIVE) ~f:begin fun page ->

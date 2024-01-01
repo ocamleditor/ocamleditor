@@ -461,6 +461,7 @@ class completion ~project ?packing () =
           let window = Gtk_util.window self#coerce
               ~decorated:window_decorated
               ~type_hint:(if Sys.win32 then `UTILITY else `DIALOG)
+              ?wm_class:(if Sys.win32 then None else Some (About.program_name ^ "-completion"))
               ~x ~y ~focus:true ~escape:false ~show:(xy <> None) ()
           in
           window#set_icon (Some (??? Icons.oe));

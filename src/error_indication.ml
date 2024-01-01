@@ -287,7 +287,7 @@ class error_indication (view : Ocaml_text.view) (global_gutter : GMisc.drawing_a
                         let y = y - popup#misc#allocation.Gtk.height - 5 - displacement in
                         popup#move ~x ~y;
                     | `XY _ ->
-                      let x, y = Gdk.Window.get_pointer_location popup#misc#window in
+                        let x, y = Gdk.Window.get_pointer_location view#misc#window in
                         popup#show();
                         popup#move ~x ~y:(y - popup#misc#allocation.Gtk.height - 12 - displacement);
                   end;
@@ -316,12 +316,12 @@ class error_indication (view : Ocaml_text.view) (global_gutter : GMisc.drawing_a
         table <- [];
         let drawable = Gdk.Cairo.create window in
         set_line_attributes drawable ~width:1 ~style:`SOLID ~join:`ROUND ();
-        let allocation : Gtk.rectangle = global_gutter#misc#allocation in
-        let width, height = allocation.width, allocation.height in
-        let x0 = 0 in
-        let alloc = view#misc#allocation in(* TODO: was vscrolbar *)
+        let { Gtk.width = width0; height; _ } = global_gutter#misc#allocation in
+        let width = Oe_config.global_gutter_size in
+        let x0 = width0 - width in
+        let alloc = view#misc#allocation in
         (* Clean up *)
-        set_foreground drawable view#gutter.Gutter.bg_color;
+        set_foreground drawable (`COLOR (view#misc#style#base `NORMAL));
         rectangle drawable ~filled:true ~x:x0 ~y:0 ~width ~height ();
         (* Rectangles at the top and bottom *)
         (* Rectangle at the top in different color *)
@@ -411,11 +411,11 @@ class error_indication (view : Ocaml_text.view) (global_gutter : GMisc.drawing_a
               let y2 = y2 + alloc.Gtk.width + 1 in
               let width = width - 1 in
               let height = y2 - y1 in
-                set_line_attributes drawable ~width:1 ~style:`SOLID ();
-                set_foreground drawable bg;
-                rectangle drawable ~filled:true ~x:x0 ~y:y1 ~width ~height ();
-                set_foreground drawable border;
-                rectangle drawable ~filled:false ~x:x0 ~y:y1 ~width ~height ();
+              set_line_attributes drawable ~width:1 ~style:`SOLID ();
+              set_foreground drawable bg;
+              rectangle drawable ~filled:true ~x:x0 ~y:y1 ~width ~height ();
+              set_foreground drawable border;
+              rectangle drawable ~filled:false ~x:x0 ~y:y1 ~width ~height ();
             end view#mark_occurrences_manager#table;
           end
         end;
@@ -451,7 +451,7 @@ class error_indication (view : Ocaml_text.view) (global_gutter : GMisc.drawing_a
                   while !x <= x2 do
                     segments := (!x + phase, y + offset) :: (!x, yu + offset) :: !segments; x := !x + phase2;
                   done;
-                  lines_ drawable !segments;
+                  lines drawable !segments;
                 end;
               with Exit | Invalid_argument _ -> ()
             end;
@@ -466,8 +466,11 @@ class error_indication (view : Ocaml_text.view) (global_gutter : GMisc.drawing_a
             let vrect = view#visible_rect in
             let x0 = Gdk.Rectangle.x vrect in
             let y0 = Gdk.Rectangle.y vrect in
-            let top, _ = view#get_line_at_y y0 in
-            let bottom, _ = view#get_line_at_y (y0 + (Gdk.Rectangle.height vrect)) in
+            (* Draw exposed area only *)
+            let expose_area = Cairo.clip_extents drawable in
+            let ya = y0 + int_of_float expose_area.y in
+            let top, _ = view#get_line_at_y ya in
+            let bottom, _ = view#get_line_at_y (ya + (int_of_float expose_area.h)) in
             (*  *)
             set_line_attributes drawable ~width:1 ~style:`SOLID ~join:`MITER ();
             let f = self#draw_underline drawable top bottom x0 y0 in
@@ -514,7 +517,7 @@ class error_indication (view : Ocaml_text.view) (global_gutter : GMisc.drawing_a
           if y > float (alloc.Gtk.width) then begin
             let window = global_gutter#misc#window in
             let drawable = Gdk.Cairo.create window in
-            let height = global_gutter#misc#allocation.height in
+            let height = int_of_float (Cairo.clip_extents drawable).h in
             let height = float (height - 2 * alloc.Gtk.width) in
             let y = y -. (float alloc.Gtk.width) in
             let tooltip, iter =

@@ -2,4 +2,4 @@ S src
 S src/**
 B src
 B src/**
-PKG lablgtk3 str unix atdgen-runtime compiler-libs.common diff dynlink ocamldoc ocp-indent.lib xml-light yojson curl cairo2
+PKG cairo2 lablgtk3 str unix atdgen-runtime compiler-libs.common diff dynlink ocamldoc ocp-indent.lib xml-light yojson curl

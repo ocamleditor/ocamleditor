@@ -147,14 +147,14 @@ let draw_indent_lines view (drawable : Gdk.cairo) start stop y0 =
         if y2 - y1 > !hline then begin
           if !first && y1 <= cly && cly <= y2 then begin
             drawable#set_foreground (`NAME "#ff0000");
-            drawable#set_line_attributes ~width:2 ~style:`SOLID ();
+            set_line_attributes drawable ~width:2 ~style:`SOLID ();
             first := false;
           end else begin
             drawable#set_foreground view#options#base_color;
-            drawable#set_line_attributes ~width:2 ~style:`SOLID ();
+            set_line_attributes drawable ~width:2 ~style:`SOLID ();
             drawable#line ~x ~y:y1 ~x ~y:y2;
             drawable#set_foreground view#options#indent_lines_color_solid;
-            drawable#set_line_attributes ~width:1 ~style:`ON_OFF_DASH ();
+            set_line_attributes drawable ~width:1 ~style:`ON_OFF_DASH ();
           end;
           drawable#line ~x ~y:y1 ~x ~y:y2
         end

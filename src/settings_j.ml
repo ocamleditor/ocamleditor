@@ -1771,7 +1771,7 @@ let write_settings : _ -> settings -> _ = (
       )
         ob x.editor_base_font;
     );
-    if x.editor_bg_color_popup <> {light="#e5e5e5"; dark="#404040"} then (
+    if x.editor_bg_color_popup <> {light="#e5e5e5"; dark="#252525"} then (
       if !is_first then
         is_first := false
       else
@@ -1936,7 +1936,7 @@ let write_settings : _ -> settings -> _ = (
       )
         ob x.editor_err_underline;
     );
-    if x.editor_fg_color_popup <> {light="#757575"; dark="#909090"} then (
+    if x.editor_fg_color_popup <> {light="#525252"; dark="#9C9C9C"} then (
       if !is_first then
         is_first := false
       else
@@ -2339,7 +2339,7 @@ let read_settings = (
     let field_editor_annot_type_tooltips_impl = ref (0) in
     let field_editor_bak = ref (true) in
     let field_editor_base_font = ref ("monospace 9") in
-    let field_editor_bg_color_popup = ref ({light="#e5e5e5"; dark="#404040"}) in
+    let field_editor_bg_color_popup = ref ({light="#e5e5e5"; dark="#252525"}) in
     let field_editor_bg_color_theme = ref (false) in
     let field_editor_bg_color_user = ref ({ light = "#FFFFFF"; dark = "#101010"}) in
     let field_editor_code_folding_enabled = ref (true) in
@@ -2354,7 +2354,7 @@ let read_settings = (
     let field_editor_err_gutter = ref (true) in
     let field_editor_err_tooltip = ref (true) in
     let field_editor_err_underline = ref (true) in
-    let field_editor_fg_color_popup = ref ({light="#757575"; dark="#909090"}) in
+    let field_editor_fg_color_popup = ref ({light="#525252"; dark="#9C9C9C"}) in
     let field_editor_format_on_save = ref (false) in
     let field_editor_highlight_current_line = ref (true) in
     let field_editor_indent_config = ref ("") in

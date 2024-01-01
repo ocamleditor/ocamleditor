@@ -34,7 +34,7 @@ let packages = [
   "gmisclib","\
 version         = \"1.15.0-ocaml414\"
 description     = \"Miscellaneous widgets based on LablGtk2.\"
-requires        = \"lablgtk3\"
+requires        = \"cairo2,lablgtk3\"
 archive(byte)   = \"gmisclib.cma\"
 archive(native) = \"gmisclib.cmxa\"",
   [

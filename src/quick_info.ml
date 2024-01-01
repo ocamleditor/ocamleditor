@@ -66,16 +66,13 @@ type t = {
 
 and wininfo = {
   window : GWindow.window;
-  mutable area : ((int * int * int * int) * (GText.iter * GText.iter)) option;
-  (** It is the area of the editor that contains the expression for which quick
+  mutable range : (GText.iter * GText.iter) option;
+  (** It is the range of the buffer that contains the expression for which quick
       info is currently shown. *)
 
   mutable is_pinned : bool;
   mutable index : int;
 }
-
-let (@<=) (left, top, right, bottom) (x, y) =
-  left <= x && x <= right && top <= y && y <= bottom
 
 (** Returns the last open quick info window. This function is not thread safe. *)
 let get_current_window_unsafe qi =
@@ -87,14 +84,14 @@ let get_current_window_unsafe qi =
 let get_current_window qi = !!Lock.wininfo get_current_window_unsafe qi
 
 let remove_highlight qi wi =
-  match wi.area with
-  | Some (_, (start, stop)) ->
+  match wi.range with
+  | Some (start, stop) ->
       qi.view#buffer#remove_tag qi.tag ~start ~stop;
-      wi.area <- None
+      wi.range <- None
   | _ -> ()
 
-let add_wininfo qi =
-  !!Lock.wininfo (fun wi -> qi.windows <- wi :: qi.windows)
+let add_wininfo qi callback =
+  !!Lock.wininfo (fun wi -> qi.windows <- wi :: qi.windows; callback())
 
 (** Starts a timer that closes the specified quick-info window and removes
     expression highlighting in the editor. An exception is the case
@@ -165,16 +162,19 @@ let display qi start stop =
   let xstart, ystart, xstop, ystop = get_area qi start stop in
   let open Preferences in
   let open Settings_j in
-  let vbox = GPack.vbox ~spacing:2 () in
-  (*let label_index = GMisc.label ~xpad:5 ~ypad:5 ~xalign:0.0 ~yalign:0.0 ~packing:vbox#add () in*)
-  let label_typ = GMisc.label ~xpad:5 ~ypad:5 ~xalign:0.0 ~yalign:0.0 ~packing:vbox#add () in
-  let label_doc = GMisc.label ~xpad:5 ~ypad:5 ~xalign:0.0 ~yalign:0.0 ~line_wrap:true ~packing:vbox#add () in
+  let vbox = GPack.vbox ~border_width:5 ~spacing:5 () in
+  let label_typ = GMisc.label ~xpad:0 ~ypad:0 ~xalign:0.0 ~yalign:0.0 ~line_wrap:false ~packing:vbox#add () in
+  let label_vars = GMisc.label ~xpad:0 ~ypad:0 ~xalign:0.0 ~yalign:0.0 ~packing:vbox#add ~show:false () in
+  let _ = GMisc.separator `HORIZONTAL ~packing:vbox#add () in
+  let label_doc = GMisc.label ~xpad:0 ~ypad:0 ~xalign:0.0 ~yalign:0.0 ~line_wrap:true ~packing:vbox#add () in
   label_typ#set_use_markup true;
+  label_vars#set_use_markup true;
   label_doc#set_use_markup true;
   label_doc#misc#modify_font_by_name preferences#get.editor_completion_font;
-  kprintf label_typ#misc#modify_font_by_name "%s %s" preferences#get.editor_base_font qi.markup_odoc#code_font_size;
+  label_vars#misc#modify_font_by_name preferences#get.editor_completion_font;
+  label_typ#misc#modify_font_by_name preferences#get.editor_completion_font;
   let x, y =
-    let pX, pY = Gdk.Window.get_pointer_location vbox#misc#window in
+    let pX, pY = Gdk.Window.get_pointer_location qi.view#misc#window in
     let win = (match qi.view#get_window `WIDGET with None -> assert false | Some w -> w) in
     let px, py = Gdk.Window.get_pointer_location win in
     match qi.show_at with
@@ -185,16 +185,16 @@ let display qi start stop =
         let ly, lh = qi.view#get_line_yrange start in
         pX (*- px + xstart*), pY - py + ystart + lh
   in
-  let area = Some ((xstart, ystart, xstop, ystop), (start, stop)) in
+  let range = Some (start, stop) in
   let window = Gtk_util.window_tooltip vbox#coerce ~fade:false ~x ~y ~show:false () in
   let wininfo = {
     window;
-    area;
+    range;
     is_pinned = false;
     index = new_index();
   } in
-  add_wininfo qi wininfo;
-  (*kprintf label_index#set_label "%d" wininfo.index;*)
+  let callback () = qi.view#buffer#apply_tag qi.tag ~start ~stop in
+  add_wininfo qi callback wininfo;
   make_pinnable wininfo;
   Gmisclib.Idle.add begin fun () ->
     window#present();
@@ -210,48 +210,58 @@ let display qi start stop =
       let window = Gtk_util.window_tooltip sw#coerce ~fade:false ~x ~y ~width:700 ~height:300 ~show:false () in
       let wininfo = {
         window;
-        area;
+        range;
         is_pinned = false;
         index = new_index();
       } in
-      add_wininfo qi wininfo;
-      (*kprintf label_index#set_label "%d" wininfo.index;*)
+      add_wininfo qi callback wininfo;
       make_pinnable wininfo;
       window#present()
-    end;
-    qi.view#buffer#apply_tag qi.tag ~start ~stop;
+    end
   end;
-  label_typ, label_doc
+  label_typ, label_vars, label_doc
 
 let build_content qi (entry : type_enclosing_value) (entry2 : type_enclosing_value option) =
-  (* TODO .... *)
-  let contains_type_vars = String.contains entry.Merlin_t.te_type '\'' in
-  let is_module = String.starts_with ~prefix:"(" entry.te_type in
-  Printf.sprintf "%s%s" entry.te_type
-    (if contains_type_vars || is_module
-     then entry2 |> Option.fold ~none:"" ~some:(fun (x : type_enclosing_value) -> "\n" ^ x.te_type)
-     else "")
+  (*Printf.printf "merlin(1): %s\n%!" entry.Merlin_t.te_type;
+    Printf.printf "merlin(2): %s\n%!" (match entry2 with Some e -> e.Merlin_t.te_type | _ -> "NONE");*)
+  let type_expr, type_params =
+    let type_expr, varmap =
+      match entry2 with
+      | Some entry2 ->
+          begin
+            try
+              Type_expr.find_substitutions entry.Merlin_t.te_type entry2.Merlin_t.te_type
+            with Syntaxerr.Error _ -> entry.Merlin_t.te_type, []
+          end;
+      | _ -> entry.Merlin_t.te_type, []
+    in
+    let info = varmap |> List.map (fun (n, v) -> sprintf "  %s is %s" (Markup.type_info n) (Markup.type_info v)) in
+    type_expr,
+    if info <> [] then "In this context\n" ^ (info |> String.concat "\n") else ""
+  in
+  Markup.type_info type_expr, type_params
 
 (** Opens a new quick information window with the information received from merlin.
     This function is applied in a separate thread from the main one. *)
 let spawn_window qi position (entry : type_enclosing_value) (entry2 : type_enclosing_value option) =
   if qi.view#has_focus then begin
-    let typ = build_content qi entry entry2 in
-    let markup = Markup.type_info typ in
-    (*let markup = sprintf "<span size='%s'>%s</span>" markup_odoc#code_font_size (Markup.type_info typ) in
-      Printf.printf "%s\n%!" markup;*)
     let start = qi.view#obuffer#get_iter (`LINECHAR (entry.te_start.line - 1, entry.te_start.col)) in
     let stop = qi.view#obuffer#get_iter (`LINECHAR (entry.te_stop.line - 1, entry.te_stop.col)) in
-    let label_typ, label_doc = display qi start stop in
-    (*<span size='small' font_family='%s'>%s</span>*)
-    label_typ#set_label markup;
+    let text = start#get_text ~stop in
+    let type_expr, type_params = build_content qi entry entry2 in
+    let label_typ, label_vars, label_doc = display qi start stop in
+    label_typ#set_label type_expr;
+    if type_params <> "" then begin
+      label_vars#misc#show();
+      label_vars#set_label type_params
+    end;
     qi.merlin@@Merlin.document ~position begin fun doc ->
       let markup = qi.markup_odoc#convert doc in
       label_doc#set_label markup;
     end
   end
 
-let invoke_merlin qi iter ~continue_with =
+let invoke_merlin qi (iter : GText.iter) ~continue_with =
   let position = iter#line + 1, iter#line_index in
   qi.merlin@@Merlin.type_enclosing ~position begin fun types ->
     match types with
@@ -265,9 +275,7 @@ let is_iter_in_comment (buffer : Ocaml_text.buffer) iter =
     (Comments.scan (Glib.Convert.convert_with_fallback ~fallback:"" ~from_codeset:"UTF-8" ~to_codeset:Oe_config.ocaml_codeset
                       (buffer#get_text ()))) iter#offset
 
-let get_typeable_iter_at_coords qi x y =
-  let bx, by = qi.view#window_to_buffer_coords ~tag:`WIDGET ~x ~y in
-  let iter = qi.view#get_iter_at_location ~x:bx ~y:by in
+let get_typeable_iter_at_coords qi iter =
   if iter#ends_line
   || Glib.Unichar.isspace iter#char
   || (match is_iter_in_comment qi.view#obuffer iter with None -> false | _ -> true)
@@ -275,9 +283,11 @@ let get_typeable_iter_at_coords qi x y =
 
 let process_location qi x y =
   let current_window = get_current_window qi in
-  let current_area = Option.bind current_window (fun x -> x.area) in
-  match current_area with
-  | Some (area, _) when area @<= (x, y) -> ()
+  let current_range = Option.bind current_window (fun x -> x.range) in
+  let bx, by = qi.view#window_to_buffer_coords ~tag:`WIDGET ~x ~y in
+  let iter = qi.view#get_iter_at_location ~x:bx ~y:by in
+  match current_range with
+  | Some (start, stop) when iter#in_range ~start ~stop -> ()
   | _ when is_pinned qi -> ()
   | _ when qi.view#buffer#has_selection -> ()
   | _ ->
@@ -289,7 +299,7 @@ let process_location qi x y =
         | Some wi ->
             begin
               try
-                let root_window = wi.window#misc#window in
+                let root_window = qi.view#misc#window in
                 let r = wi.window#misc#allocation in
                 let wx, wy = Gdk.Window.get_position wi.window#misc#window in
                 let px, py = Gdk.Window.get_pointer_location root_window in
@@ -300,7 +310,7 @@ let process_location qi x y =
       in
       if is_mouse_over then ()
       else if is_immobile then begin
-        match get_typeable_iter_at_coords qi x y with
+        match get_typeable_iter_at_coords qi iter with
         | Some iter ->
             hide qi;
             close qi "before-invoke-merlin";

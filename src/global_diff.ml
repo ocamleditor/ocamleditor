@@ -43,7 +43,6 @@ let paint_diffs page diffs =
   let drawable = Gdk.Cairo.create window in
   set_line_attributes drawable ~width:1 ~style:`SOLID ~join:`ROUND ();
   let { Cairo.w; _ } = Cairo.clip_extents drawable in
-  let alloc_width = int_of_float w in
   let height = int_of_float w in
   let width = global_gutter_diff_size in
   let line_count = float page#buffer#line_count in
@@ -52,9 +51,9 @@ let paint_diffs page diffs =
   rectangle drawable ~filled:true ~x:0 ~y:0 ~width ~height ();
   page#set_global_gutter_tooltips [];
   let black = page#view#gutter.Gutter.marker_color in
-  let height = height - 2 * alloc_width in
+  let height = height - 2 * width in
   let height = float height in
-  let y_of_line ln = alloc_width + int_of_float ((float ln /. line_count) *. height) in
+  let y_of_line ln = width + int_of_float ((float ln /. line_count) *. height) in
   let line_height = int_of_float (height /. line_count) in
   let wtri = width * 2 / 3 in
   let paint color elems = function

@@ -41,7 +41,7 @@ class view ~(editor : Editor.editor) ?(task_kind=(`OTHER : Task.kind)) ~task ?pa
   let _                 = button_detach#set_icon_widget (Gtk_util.label_icon "\u{eb23} ")#coerce in
   let _                 = GButton.separator_tool_item ~packing:toolbar#insert () in
   (*  *)
-  let button_stop       = GButton.tool_button ~stock:`STOP ~packing:toolbar#insert () in
+  let button_stop       = GButton.tool_button ~packing:toolbar#insert () in
   let _                 = button_stop#set_icon_widget (Gtk_util.label_icon ~color:"red" "\u{f04d}")#coerce in
   let _                 = button_stop#set_tooltip_text "Kill Process" in
   let button_run        = GButton.tool_button ~packing:toolbar#insert () in

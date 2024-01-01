@@ -409,12 +409,19 @@ and view ?project ?buffer () =
       (vxs + xb - vxb + (self#get_border_window_size `LEFT)),
       (vys + yb - vyb + Gdk.Rectangle.height rect_it)
 
+    method private root_window =
+      let window_ref = ref self#misc#window in
+      try
+        while true do window_ref := Gdk.Window.get_parent !window_ref done;
+        !window_ref
+      with _ -> !window_ref
+
     method get_location_at_iter iter =
       let rect = view#get_iter_location iter in
       let x = Gdk.Rectangle.x rect in
       let y = Gdk.Rectangle.y rect in
       let x0, y0 =
-        let pX, pY = Gdk.Window.get_pointer_location (Gdk.Window.get_parent self#misc#window) in
+        let pX, pY = Gdk.Window.get_pointer_location self#root_window in
         let win = (match view#get_window `TEXT with None -> assert false | Some w -> w) in
         let px, py = Gdk.Window.get_pointer_location win in
         (pX - px), (pY - py)
@@ -427,7 +434,7 @@ and view ?project ?buffer () =
       x, y
 
     method get_location_top_right () =
-      let pX, pY = Gdk.Window.get_pointer_location (Gdk.Window.get_parent self#misc#window) in
+      let pX, pY = Gdk.Window.get_pointer_location self#root_window in
       let win = (match self#get_window `WIDGET
                  with None -> failwith "Text.text#get_location_top_right `WIDGET = None" | Some w -> w) in
       let px, py = Gdk.Window.get_pointer_location win in
@@ -673,6 +680,19 @@ and view ?project ?buffer () =
       | _ -> ()
 
     initializer
+      margin#add (margin_line_numbers :> Margin.margin);
+      margin#add (margin_markers :> Margin.margin);
+      margin#connect#update ~callback:(fun () -> approx_char_width <- margin#approx_char_width) |> ignore;
+      view#misc#connect#style_set ~callback:begin fun () ->
+        let fd = self#misc#pango_context#font_description in
+        margin_line_numbers#resize ~desc:fd ();
+        (* Applies the new font size to labels that have been created after
+           the number of lines of text has increased. *)
+        Gmisclib.Idle.add ~prio:300 begin fun () ->
+          margin_line_numbers#resize ~desc:fd ();
+          Gmisclib.Idle.add self#draw_gutter
+        end;
+      end |> ignore;
       ignore (options#connect#mark_occurrences_changed ~callback:(fun _ -> self#mark_occurrences_manager#mark()));
       ignore (options#connect#after#mark_occurrences_changed ~callback:begin function
         | true, _, color ->

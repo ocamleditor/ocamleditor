@@ -69,11 +69,22 @@ struct
   let remove_dupl l = (* slow *)
     List.rev (List.fold_left (fun acc y -> if List.mem y acc then acc else y :: acc) [] l)
 
-  let max l =
-    let rec find cand = function
-      | [] -> cand
-      | x :: l -> find (max x cand) l in
-    match l with [] -> raise Not_found | x :: l -> find x l
+  let min_by f = function
+    | [] -> invalid_arg "min_by"
+    | hd :: tl ->
+        fst (List.fold_left (fun ((_, cand) as b) x ->
+            let r = f x  in
+            if f x < cand then x, r else b) (hd, f hd) tl)
+
+  let max_by f = function
+    | [] -> invalid_arg "max_by"
+    | hd :: tl ->
+        fst (List.fold_left (fun ((_, cand) as b) x ->
+            let r = f x  in
+            if f x > cand then x, r else b) (hd, f hd) tl)
+
+  let min l = min_by Fun.id l
+  let max l = max_by Fun.id l
 
   let rev_tl ll =
     let rec f acc = function
@@ -95,6 +106,7 @@ struct
     List.map (fun (k, group) -> (k, List.rev !group)) groups;;
 
   let group_by f ll = group_assoc (List.map (fun x -> f x, x) ll)
+
 end
 
 (** {6 Memoization} *)
@@ -162,6 +174,7 @@ end;;
 let (!~) = Memo.fast ~f:Str.regexp
 let (!~~) = Memo.fast ~f:Str.regexp_string
 let regexp = (!~)
+let regexp_string = (!~~)
 let regexp_case_fold = Memo.fast ~f:Str.regexp_case_fold
 
 (** Miscellaneus string functions *)
@@ -191,7 +204,7 @@ let replace_all ?(memo=true) =
   let mk_regexp = (!~) ~force:(fun _ -> not memo) in
   fun ?(regexp=true) re_te s ->
     List.fold_left begin fun s' (re, te) ->
-      Str.global_replace (mk_regexp (if not regexp then Str.quote re else re)) te s'
+      Str.global_replace (if not regexp then (!~~) ~force:(fun _ -> not memo) re else mk_regexp re) te s'
     end s re_te
 
 (** Simile a [replace_all] ma rimpiazza solo la prima ricorrenza. *)

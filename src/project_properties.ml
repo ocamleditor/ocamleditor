@@ -200,7 +200,7 @@ class widget ~editor ?(callback=ignore) ~project ?page_num ?packing ?show () =
       window#set_border_width 5;
       let label = GMisc.label ~text ~packing:window#vbox#add () in
       let fd = Gtk_util.increase_font_size ~increment:(-2) label#coerce in
-      let _ = fd#modify ~family:"monospace" () in
+      fd#modify ~family:"monospace" ();
       label#misc#modify_font fd;
       match window#run () with _ -> window#destroy()
     end in
@@ -271,14 +271,14 @@ class widget ~editor ?(callback=ignore) ~project ?page_num ?packing ?show () =
           List.iter begin fun page ->
             page#compile_buffer ?join:None ();
             page#error_indication#remove_tag();
-(*** TODO: looks like GMisc.drawing_area#draw is gone
-            page#global_gutter#misc#draw (Some (Gdk.Rectangle.create
+            (* TODO: ??? *)
+            (*page#global_gutter#misc#draw (Some (Gdk.Rectangle.create
                                                   ~x:page#global_gutter#misc#allocation.Gtk.x
                                                   ~y:page#global_gutter#misc#allocation.Gtk.y
                                                   ~width:page#global_gutter#misc#allocation.Gtk.width
-                                                  ~height:page#global_gutter#misc#allocation.Gtk.height))
-*)
-                                               end editor#pages;
+                                                  ~height:page#global_gutter#misc#allocation.Gtk.height
+                                               ))*)
+          end editor#pages;
         end
       with
       | Project.Project_already_exists path ->

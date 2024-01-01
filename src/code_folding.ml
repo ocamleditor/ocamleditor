@@ -499,9 +499,9 @@ class manager ~(view : Text.view) =
           false
         end);
       ignore (view#vadjustment#connect#changed ~callback:begin fun _ ->
-              Gaux.may signal_expose ~f:(fun id -> view#misc#handler_block id);
-              Gmisclib.Idle.add ~prio:300 self#scan_folding_points;
-              Gmisclib.Idle.add ~prio:100 (fun () ->
+                  Gaux.may signal_expose ~f:(fun id -> view#misc#handler_block id);
+                  Gmisclib.Idle.add ~prio:300 self#scan_folding_points;
+                  Gmisclib.Idle.add ~prio:100 (fun () ->
                   Gaux.may signal_expose ~f:(fun id -> view#misc#handler_unblock id)
               )
         end

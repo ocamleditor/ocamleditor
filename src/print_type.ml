@@ -23,37 +23,37 @@
 open Printf
 
 let greeks_markup = [
-  "&apos;a\\([0-9]*\\)", "&#945;<sub>\\1</sub>";
-  "&apos;b\\([0-9]*\\)", "&#946;<sub>\\1</sub>";
-  "&apos;c\\([0-9]*\\)", "&#947;<sub>\\1</sub>";
-  "&apos;d\\([0-9]*\\)", "&#948;<sub>\\1</sub>";
-  "&apos;e\\([0-9]*\\)", "&#949;<sub>\\1</sub>";
-  "&apos;f\\([0-9]*\\)", "&#950;<sub>\\1</sub>";
-  "&apos;g\\([0-9]*\\)", "&#951;<sub>\\1</sub>";
-  "&apos;h\\([0-9]*\\)", "&#952;<sub>\\1</sub>";
-  "&apos;i\\([0-9]*\\)", "&#953;<sub>\\1</sub>";
-  "&apos;j\\([0-9]*\\)", "&#954;<sub>\\1</sub>";
-  "&apos;k\\([0-9]*\\)", "&#955;<sub>\\1</sub>";
-  "&apos;l\\([0-9]*\\)", "&#956;<sub>\\1</sub>";
-  "&apos;m\\([0-9]*\\)", "&#957;<sub>\\1</sub>";
-  "&apos;n\\([0-9]*\\)", "&#958;<sub>\\1</sub>";
-  "&apos;o\\([0-9]*\\)", "&#959;<sub>\\1</sub>";
-  "&apos;p\\([0-9]*\\)", "&#960;<sub>\\1</sub>";
-  "&apos;q\\([0-9]*\\)", "&#961;<sub>\\1</sub>";
-  "&apos;r\\([0-9]*\\)", "&#962;<sub>\\1</sub>";
-  "&apos;s\\([0-9]*\\)", "&#963;<sub>\\1</sub>";
-  "&apos;t\\([0-9]*\\)", "&#964;<sub>\\1</sub>";
-  "&apos;u\\([0-9]*\\)", "&#965;<sub>\\1</sub>";
-  "&apos;v\\([0-9]*\\)", "&#966;<sub>\\1</sub>";
-  "&apos;w\\([0-9]*\\)", "&#967;<sub>\\1</sub>";
-  "&apos;x\\([0-9]*\\)", "&#968;<sub>\\1</sub>";
-  "&apos;y\\([0-9]*\\)", "&#969;<sub>\\1</sub>";
+  "&apos;a\\([0-9]*\\)\\b", "&#945;<sub>\\1</sub>";
+  "&apos;b\\([0-9]*\\)\\b", "&#946;<sub>\\1</sub>";
+  "&apos;c\\([0-9]*\\)\\b", "&#947;<sub>\\1</sub>";
+  "&apos;d\\([0-9]*\\)\\b", "&#948;<sub>\\1</sub>";
+  "&apos;e\\([0-9]*\\)\\b", "&#949;<sub>\\1</sub>";
+  "&apos;f\\([0-9]*\\)\\b", "&#950;<sub>\\1</sub>";
+  "&apos;g\\([0-9]*\\)\\b", "&#951;<sub>\\1</sub>";
+  "&apos;h\\([0-9]*\\)\\b", "&#952;<sub>\\1</sub>";
+  "&apos;i\\([0-9]*\\)\\b", "&#953;<sub>\\1</sub>";
+  "&apos;j\\([0-9]*\\)\\b", "&#954;<sub>\\1</sub>";
+  "&apos;k\\([0-9]*\\)\\b", "&#955;<sub>\\1</sub>";
+  "&apos;l\\([0-9]*\\)\\b", "&#956;<sub>\\1</sub>";
+  "&apos;m\\([0-9]*\\)\\b", "&#957;<sub>\\1</sub>";
+  "&apos;n\\([0-9]*\\)\\b", "&#958;<sub>\\1</sub>";
+  "&apos;o\\([0-9]*\\)\\b", "&#959;<sub>\\1</sub>";
+  "&apos;p\\([0-9]*\\)\\b", "&#960;<sub>\\1</sub>";
+  "&apos;q\\([0-9]*\\)\\b", "&#961;<sub>\\1</sub>";
+  "&apos;r\\([0-9]*\\)\\b", "&#962;<sub>\\1</sub>";
+  "&apos;s\\([0-9]*\\)\\b", "&#963;<sub>\\1</sub>";
+  "&apos;t\\([0-9]*\\)\\b", "&#964;<sub>\\1</sub>";
+  "&apos;u\\([0-9]*\\)\\b", "&#965;<sub>\\1</sub>";
+  "&apos;v\\([0-9]*\\)\\b", "&#966;<sub>\\1</sub>";
+  "&apos;w\\([0-9]*\\)\\b", "&#967;<sub>\\1</sub>";
+  "&apos;x\\([0-9]*\\)\\b", "&#968;<sub>\\1</sub>";
+  "&apos;y\\([0-9]*\\)\\b", "&#969;<sub>\\1</sub>";
   (*"&apos;z\\([0-9]*\\)", "&#970;<sub>\\1</sub>";*)
 ];;
 
-let gt = [ "-&gt;", "&#8594;";(* "-&gt;", "<big>&#8594;</big>";*) " *", " &#215;"];;
+let gt = [ "-&gt;", "&#8594;";(* "-&gt;", "<big>&#8594;</big>";*) "*", "&#215;"];;
 
-let replace_greek descr =
+let replace_simbols_in_markup descr =
   if Preferences.preferences#get.editor_completion_greek_letters then begin
     let descr = Miscellanea.replace_all ~regexp:false gt descr in
     let descr = Miscellanea.replace_all ~regexp:true greeks_markup descr in
@@ -61,14 +61,14 @@ let replace_greek descr =
   end else descr
 
 let markup' descr =
-  let descr = replace_greek (Glib.Markup.escape_text descr) in
+  let descr = replace_simbols_in_markup (Glib.Markup.escape_text descr) in
   Miscellanea.replace_all
     ["\\([ \n(]\\|^\\)\\([?]?[a-z_][a-z0-9_']*\\):", "\\1<i><small>\\2:</small></i>"] descr
 
 let markup = Miscellanea.Memo.create markup'
 
 let markup2' descr =
-  let descr = replace_greek (Glib.Markup.escape_text descr) in
+  let descr = replace_simbols_in_markup (Glib.Markup.escape_text descr) in
   Miscellanea.replace_all [
     "\\([ \n(]\\|^\\)\\([?]?[a-z_][a-z0-9_']*\\):",  "\\1<small><i>\\2:</i></small>";
 
@@ -82,7 +82,7 @@ let markup2' descr =
 let markup2 = Miscellanea.Memo.create markup2'
 
 let markup3' descr =
-  let descr = replace_greek (Glib.Markup.escape_text descr) in
+  let descr = replace_simbols_in_markup (Glib.Markup.escape_text descr) in
   Miscellanea.replace_all [
     "\\([ \n(]\\|^\\)\\([?]?[a-z_][a-z0-9_']*\\):",  "\\1<i>\\2:</i>";
     "\\([A-Z`][A-Za-z0-9_']+\\)\\.", "<b>\\1</b>.";
@@ -120,11 +120,15 @@ let greeks = [
 ];;
 
 let arrows = [
-  " -> ", " → ";
-  " * ", " × "
+  "->", "\u{2192}";   (* \u{2192} *)
+  "*", "\u{00d7}"
 ]
 
 let replace_greeks_2 typ = Miscellanea.replace_all ~regexp:true greeks typ;;
-let replace_arrow typ = Miscellanea.replace_all ~regexp:false arrows typ;;
+let replace_symbols typ =
+  if Preferences.preferences#get.editor_completion_greek_letters then begin
+    Miscellanea.replace_all ~regexp:true greeks
+      (Miscellanea.replace_all ~regexp:false arrows typ)
+  end else typ;;
 
 

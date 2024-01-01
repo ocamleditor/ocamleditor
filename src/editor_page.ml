@@ -89,6 +89,16 @@ class page ?file ~project ~scroll_offset ~offset ~editor () =
       vbox#pack editorbar#coerce;
     end
   in
+  let _ =
+    sw#misc#connect#size_allocate ~callback:begin fun _ ->
+      if hscrollbar#adjustment#page_size = hscrollbar#adjustment#upper
+      then hscrollbar#misc#hide() else hscrollbar#misc#show();
+    end |> ignore;
+    if not Oe_config.unify_statusbars then begin
+      GMisc.separator `HORIZONTAL ~packing:(vbox#pack ~expand:false) () |> ignore;
+      vbox#pack editorbar#coerce;
+    end
+  in
   (** Global gutter *)
   let global_gutter = GMisc.drawing_area ~packing:global_gutter_ebox#add
       ~show:Preferences.preferences#get.editor_show_global_gutter () in
@@ -525,7 +535,7 @@ class page ?file ~project ~scroll_offset ~offset ~editor () =
         let signal_expose = ref (self#view#misc#connect#after#draw ~callback:begin fun _drawable ->
           let iter = self#buffer#get_iter `INSERT in
           editorbar#pos_lin#set_text (string_of_int (iter#line + 1));
-          editorbar#pos_col#set_text (string_of_int iter#line_offset);
+          editorbar#pos_col#set_text (string_of_int (iter#line_offset + 1));
           editorbar#pos_off#set_text (string_of_int iter#offset);
           false
         end)
@@ -578,19 +588,6 @@ class page ?file ~project ~scroll_offset ~offset ~editor () =
       ignore (self#view#hyperlink#connect#activate ~callback:begin fun iter ->
           editor#scroll_to_definition ~page:self ~iter;
         end);
-      (** Spinner *)
-      let activate_spinner (active : Activity.t list) =
-        match active with
-        | [] ->
-            editorbar#spinner#set_pixbuf (??? Icons.empty_14);
-            editorbar#spinner#misc#set_tooltip_text "";
-        | msgs ->
-            let msgs = snd (List.split msgs) in
-            editorbar#spinner#set_file (Icon.get_themed_filename "spinner.gif");
-            editorbar#spinner#misc#set_tooltip_text (String.concat "\n" (List.rev msgs));
-      in
-      ignore (Activity.table#connect#changed ~callback:activate_spinner);
-      activate_spinner Activity.table#get;
       (** Code folding *)
       ignore (ocaml_view#code_folding#connect#toggled ~callback:begin fun _(*(expand, _, _)*) ->
           error_indication#paint_global_gutter()

@@ -42,6 +42,7 @@ let window widget
     ?(focus=true)
     ?(escape=true)
     ?(border_width=1)
+    ?wm_class
     ?(show=true)
     ~x ~y () =
   let window = GWindow.window

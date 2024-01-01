@@ -576,7 +576,7 @@ struct
           tag#set_property (`FONT pref.editor_base_font)
         end [`TT; `TTB; `TTF; `TYPE; `TYPE2; `PARAM];
         let tag = List.assoc `TTF tags in
-        tag#set_property (`FAMILY (GPango.font_description_from_string pref.editor_base_font)#family);
+        tag#set_property (`FAMILY  (GPango.font_description_from_string pref.editor_base_font)#family);
         let tag = List.assoc `TYPE_COMMENT tags in
         tag#set_property (`FONT pref.odoc_font);
       end);

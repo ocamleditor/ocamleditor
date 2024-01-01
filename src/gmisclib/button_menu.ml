@@ -95,7 +95,6 @@ class button_menu ?(label="") ?(relief=`NORMAL) ?stock ?spacing ?packing () =
       button_menu#set_border_width 0;
       button#set_focus_on_click false;
       button_menu#set_focus_on_click false;
-    button_menu#set_sensitive true;
       ignore (button#connect#leave ~callback:begin fun _ ->
           self#set_button_menu_child false;
           button_menu#set_relief relief;
@@ -178,7 +177,7 @@ class button_menu ?(label="") ?(relief=`NORMAL) ?stock ?spacing ?packing () =
       self#set_button_menu_child true;
       let time = GdkEvent.Button.time ev in
       let pos ~x ~y ~pushed_in =
-      let bt = if button#misc#visible then button else button_menu in
+        let bt = if button#visible then button else button_menu in
         let xP, yP = Gdk.Window.get_pointer_location bt#misc#window in
         let xA, yA = bt#misc#allocation.Gtk.x, bt#misc#allocation.Gtk.y in
         let x' = x - xP + xA in
@@ -200,9 +199,9 @@ class button_menu ?(label="") ?(relief=`NORMAL) ?stock ?spacing ?packing () =
       end;
       ignore (menu#connect#deactivate ~callback:begin fun () ->
           self#set_button_menu_child false;
-          
+
           button_menu#set_relief relief;
-          
+
           button#set_relief relief;
           Gaux.may tooltip_text ~f:box#misc#set_tooltip_text;
           tooltip_text <- None;
@@ -221,9 +220,9 @@ class button_menu ?(label="") ?(relief=`NORMAL) ?stock ?spacing ?packing () =
         false;
       end |> ignore;
       GtkMenu.Menu.popup_at menu#as_menu ~button:(GdkEvent.Button.button ev) ~time pos;
-      
+
       button_menu#set_relief `NORMAL;
-      
+
       button#set_relief `NORMAL;
 
     method private popdown_menu () =

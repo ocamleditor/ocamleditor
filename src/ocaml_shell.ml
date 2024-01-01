@@ -60,12 +60,12 @@ class ocaml_shell ?project () =
   (*  let _ = tooltips#set_tip ~text:"Previous phrase (Ctrl+Up)" b_prev#coerce in
       let _ = tooltips#set_tip ~text:"Next phrase (Ctrl+Down)" b_next#coerce in
       let _ = tooltips#set_tip ~text:"Send phrase (Return)" b_send#coerce in*)
-  let _ = b_use       #set_tooltip_text "Use file..." in
-  let _ = b_load      #set_tooltip_text "Load bytecode..." in
-  let _ = b_directory #set_tooltip_text "Import directory.." in
-  let _ = b_load_path #set_tooltip_text "Loat project path" in
-  let _ = b_kill      #set_tooltip_text "Kill process" in
-  let _ = b_rename    #set_tooltip_text "Rename Toplevel Window" in
+  let _ = b_use#set_tooltip_text "Use file..." in
+  let _ = b_load#set_tooltip_text "Load bytecode..." in
+  let _ = b_directory#set_tooltip_text "Import directory..." in
+  let _ = b_load_path#set_tooltip_text "Load project path" in
+  let _ = b_kill#set_tooltip_text "Kill process" in
+  let _ = b_rename#set_tooltip_text "Rename Toplevel Window" in
   (*  *)
   let prog = Ocaml_config.ocaml () in
   let args = ["-noinit"] in
@@ -83,7 +83,7 @@ class ocaml_shell ?project () =
     inherit GObj.widget vbox#as_widget
     inherit Messages.page ~role:"ocaml-toplevel" as super
 
-    method parent_changed m =
+    method holder_changed m =
       toolbar#misc#hide();
       if m = Messages.vmessages then begin
         toolbar#set_orientation `VERTICAL;

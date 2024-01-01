@@ -291,6 +291,7 @@ and pref_fonts title ?packing () =
       if not unchanged.(2) then pref.editor_completion_font <- font_compl#font_name;
       if not unchanged.(3) then pref.output_font <- font_other#font_name;
       if not unchanged.(4) then pref.odoc_font <- font_odoc#font_name;
+      pref.editor_completion_greek_letters <- button_greek#active
 
     method read pref =
       let open Settings_t in

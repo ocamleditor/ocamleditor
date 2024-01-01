@@ -23,6 +23,8 @@ open Cairo_drawable
 
 module ColorOps = Color
 
+module ColorOps = Color
+
 module Diff = struct
 
   type 'a editor_page =
@@ -147,7 +149,7 @@ module Diff = struct
     let width = global_gutter_diff_size in
     let line_count = float page#buffer#line_count in
     let open Odiff in
-    set_foreground drawable (`COLOR (page#view#misc#style#base `NORMAL));
+    set_foregound drawable (`COLOR (page#view#misc#style#base `NORMAL));
     rectangle drawable ~filled:true ~x:0 ~y:0 ~width ~height ();
     page#set_global_gutter_tooltips [];
     let black = page#view#gutter.Gutter.marker_color in
@@ -167,21 +169,21 @@ module Diff = struct
                 begin
                   match Oe_config.global_gutter_diff_style with
                   | `COLOR with_border ->
-                      set_foreground drawable color;
-                      polygon drawable ~filled:true [x0, y; x0 + wtri, y - wtri; x0 + wtri, y + wtri];
+                      set_foregound drawable color;
+                      drawable#polygon ~filled:true [x0, y; x0 + wtri, y - wtri; x0 + wtri, y + wtri];
                       if (*true ||*) with_border then begin
-                        set_foreground drawable (ColorOps.set_value 0.6 color);
-                        polygon drawable ~filled:false [0, y; wtri, y - wtri; wtri, y + wtri]
+                        set_foregound drawable (ColorOps.set_value 0.6 color);
+                        drawable#polygon ~filled:false [0, y; wtri, y - wtri; wtri, y + wtri]
                       end
                   | `BW ->
-                      set_foreground drawable black;
+                      set_foregound drawable black;
                       let tri = [x0, y; x0 + wtri, y - wtri; x0 + wtri, y + wtri] in
-                      polygon drawable ~filled:true tri;
-                      set_foreground drawable (ColorOps.set_value 0.5 black);
-                      polygon drawable ~filled:false tri;
+                      drawable#polygon ~filled:true tri;
+                      set_foregound drawable (ColorOps.set_value 0.5 black);
+                      drawable#polygon ~filled:false tri;
                 end;
             | col when col = color_add ->
-                set_foreground drawable
+                set_foregound drawable
                   (match Oe_config.global_gutter_diff_style with
                    | `COLOR _ -> color;
                    | `BW -> black);
@@ -190,14 +192,14 @@ module Diff = struct
                 begin
                   match Oe_config.global_gutter_diff_style with
                   | `COLOR with_border ->
-                      set_foreground drawable color;
+                      set_foregound drawable color;
                       rectangle drawable ~filled:true ~x:0 ~y:(y - 2) ~width ~height ();
                       if with_border then begin
-                        set_foreground drawable (ColorOps.set_value 0.6 color);
+                        set_foregound drawable (ColorOps.set_value 0.6 color);
                         rectangle drawable ~filled:false ~x:0 ~y:(y - 2) ~width:(width-1) ~height ();
                       end
                   | `BW ->
-                      set_foreground drawable black;
+                      set_foregound drawable black;
                       rectangle drawable ~filled:false ~x:0 ~y:(y - 2) ~width:(width - 1) ~height ();
                 end;
           end;
@@ -209,10 +211,10 @@ module Diff = struct
           begin
             match Oe_config.global_gutter_diff_style with
             | `COLOR with_border ->
-                set_foreground drawable color;
+                set_foregound drawable color;
                 rectangle drawable ~filled:true ~x:0 ~y:y1 ~width ~height ();
                 if with_border then begin
-                  set_foreground drawable (ColorOps.set_value 0.6 color);
+                  set_foregound drawable (ColorOps.set_value 0.6 color);
                   rectangle drawable ~filled:false ~x:0 ~y:y1 ~width:(width-1) ~height ();
                 end;
             | `BW ->
