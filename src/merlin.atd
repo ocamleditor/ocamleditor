@@ -131,6 +131,7 @@ type outline = {
   ol_stop <json name="end"> : pos;
   ol_name <json name="name"> : string;
   ol_kind <json name="kind"> : string;
+  ~ol_level <ocaml mutable default="0"> : int;
   ol_children <json name="children"> : outline list;
 }
 
