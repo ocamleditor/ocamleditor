@@ -83,14 +83,6 @@ class preferences ~editor () =
               Gtk_theme.set_theme ~theme ~context:self#misc#pango_context ();
         | _ -> self#reset_theme();
       end;
-      if initial_compl_decorated <> Preferences.preferences#get.editor_completion_decorated then begin
-        let (cached_window, cached_widget) = List.assoc (Project.filename editor#project) !Mbrowser_compl.cache in
-        cached_widget#set_pin_status false;
-        cached_widget#hide();
-        cached_widget#destroy();
-        cached_window#destroy();
-        Mbrowser_compl.cache := List.remove_assoc (Project.filename editor#project) !Mbrowser_compl.cache;
-      end;
 
     method private ok () =
       self#write();
@@ -133,7 +125,6 @@ class preferences ~editor () =
       let row as parent = model#append () in self#create "Editor" row (new pref_editor);
       let row = model#append ~parent () in self#create "Display" row (new Pref_editor_display.pref_editor_display);
       let row = model#append ~parent () in self#create "Actions" row (new pref_editor_actions);
-      let row = model#append ~parent () in self#create "Completion" row (new pref_editor_compl);
       let row = model#append ~parent () in self#create "Indentation" row (new Pref_editor_indent.pref_editor_indent);
       let row = model#append ~parent () in self#create "Code Templates" row (new pref_templ);
       let row = model#append () in self#create "Build" row (new pref_build);
@@ -227,39 +218,6 @@ and pref_editor_actions title ?packing () =
             (*combo_annot_type_tooltips_impl#set_active pref.Preferences.pref_annot_type_tooltips_impl;*)*)
       check_search_word_at_cursor#set_active pref.editor_search_word_at_cursor;
       (*check_save_all_bef_comp#set_active pref.Preferences.pref_editor_save_all_bef_comp*)
-  end
-
-(** pref_editor_compl *)
-and pref_editor_compl title ?packing () =
-  let vbox            = GPack.vbox ~spacing ?packing () in
-  let check_decorated = GButton.check_button ~label:"Enable window decorations" ~packing:vbox#pack () in
-  let ovbox           = GPack.vbox ~spacing:5 ~packing:vbox#pack () in
-  let check_opacity   = GButton.check_button ~label:"Enable transparent window" ~packing:ovbox#pack () in
-  let align           = GBin.alignment ~xscale:0.38 ~xalign:0.0 ~padding:(0, 0, indent, 0) ~packing:ovbox#pack () in
-  let obox            = GPack.hbox ~spacing:5 ~packing:align#add () in
-  let adjustment      = GData.adjustment ~lower:0.0 ~upper:100.0 ~step_incr:10. ~page_incr:10. ~page_size:0.0 () in
-  let _               = GMisc.label ~text:"Opacity (%):" ~packing:obox#pack () in
-  let scale_opacity   = GRange.scale `HORIZONTAL ~digits:0 ~adjustment ~packing:obox#add () in
-  object
-    inherit page title vbox
-
-    initializer
-      scale_opacity#set_value_pos `RIGHT;
-      check_opacity#connect#toggled ~callback:begin fun () ->
-        obox#misc#set_sensitive check_opacity#active;
-      end |> ignore;
-      obox#misc#set_sensitive check_opacity#active;
-
-    method write pref =
-      pref.editor_completion_decorated <- check_decorated#active;
-      pref.editor_completion_opacity <- if check_opacity#active then Some (scale_opacity#adjustment#value /. 100.) else None;
-
-    method read pref =
-      check_decorated#set_active pref.editor_completion_decorated;
-      check_opacity#set_active (pref.editor_completion_opacity <> None);
-      match pref.editor_completion_opacity with
-      | Some n -> scale_opacity#adjustment#set_value (n *. 100.)
-      | _ -> scale_opacity#adjustment#set_value 100.0
   end
 
 (** pref_fonts *)
