@@ -138,7 +138,7 @@ let edit ~browser ~group ~flags
           if Oe_config.use_merlin_completion then
             Complete_prefix.create_window ~project ~page |> ignore
           else
-            Mbrowser_compl.create ~project ~page ()
+            Mbrowser_compl.create ~project ~parent:(`WIDGET page) ~page ()
         end
       end
     end);
@@ -220,20 +220,20 @@ let search ~browser ~group ~flags items =
     Gdk.Window.set_cursor menu#misc#window cursor;
     false;
   end |> ignore;
-  (** Find and Replace *)
+  (*** Find and Replace *)
   let find_repl = Image_menu.item ~label:"Find and Replace" ~image:(GMisc.image ~pixbuf:(??? Icons.find_replace) (*~stock:`FIND_AND_REPLACE*) ~icon_size:`MENU ()) ~packing:menu#add () in
   ignore (find_repl#connect#activate ~callback:(fun () ->
       Menu_search.find_replace ?find_all:None ?search_word_at_cursor:None editor));
   (*find_repl#add_accelerator ~group ~modi:[`CONTROL] GdkKeysyms._f ~flags;*)
-  (** Find Next *)
+  (*** Find Next *)
   let find_next = Image_menu.item ~label:"Find Next" ~packing:menu#add () in
   ignore (find_next#connect#activate ~callback:(fun () -> Menu_search.find_next editor));
   find_next#add_accelerator ~group GdkKeysyms._F3 ~flags;
-  (** Find Previous *)
+  (*** Find Previous *)
   let find_prev = Image_menu.item ~label:"Find Previous" ~packing:menu#add () in
   ignore (find_prev#connect#activate ~callback:(fun () -> Menu_search.find_prev editor));
   find_prev#add_accelerator ~group ~modi:[`SHIFT] GdkKeysyms._F3 ~flags;
-  (** Search Again *)
+  (*** Search Again *)
   let search_again = Image_menu.item ~label:"Search Again" ~image:(GMisc.image ~pixbuf:(??? Icons.search_again_16) ()) ~packing:menu#add () in
   ignore (search_again#connect#activate ~callback:(fun () -> Menu_search.search_again editor));
   search_again#add_accelerator ~group ~modi:[`CONTROL] GdkKeysyms._F3 ~flags;

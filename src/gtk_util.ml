@@ -23,6 +23,15 @@
 module ColorOps = Color
 open Preferences
 
+type parent = [`WINDOW of GWindow.window | `WIDGET of GObj.widget ]
+
+(** Will fail if parent is an widget without a toplevel window *)
+let set_parent window parent = match parent with
+  | `WINDOW w -> window#set_transient_for w#as_window
+  | `WIDGET w -> let parent = GWindow.toplevel w |> Option.get in
+      window#set_transient_for parent#as_window
+
+
 let _ = Gmisclib.Util.fade_window_enabled := Oe_config.fade_window_enabled
 
 let create_mark_name =
@@ -31,18 +40,16 @@ let create_mark_name =
     prefix ^ (string_of_int !count);;
 
 (** window *)
-let window widget
+let window widget ~parent
     ?type_hint
     ?modal
     ?(decorated=false)
-    ?parent
     ?(destroy_on_focus_out=true)
     ?(destroy_child=true)
     ?(fade=false)
     ?(focus=true)
     ?(escape=true)
     ?(border_width=1)
-    ?wm_class
     ?(show=true)
     ~x ~y () =
   let window = GWindow.window
@@ -54,6 +61,7 @@ let window widget
       ?type_hint
       ~show:false ()
   in
+  let _ = set_parent window parent in
   let ebox = GBin.event_box ~packing:window#add () in
   ebox#add widget;
   let color = ColorOps.set_value 0.38 (`COLOR (window#misc#style#base `NORMAL)) (*(`NAME Preferences.preferences#get.Preferences.pref_bg_color_popup)*) in
@@ -69,7 +77,6 @@ let window widget
   window#set_skip_pager_hint true;
   window#set_skip_taskbar_hint true;
   window#set_urgency_hint false;
-  Gaux.may parent ~f:(fun parent -> Gaux.may (GWindow.toplevel parent) ~f:(fun x -> window#set_transient_for x#as_window));
   window#set_accept_focus focus;
   if show then begin
     if fade then (window#set_opacity 0.0);
@@ -96,7 +103,7 @@ let move_window_within_screen_bounds window x y =
   x, y
 
 (** window_tooltip *)
-let window_tooltip widget ?parent ?(fade=false) ~x ~y ?width ?height ?(kind=`POPUP) ?(type_hint=`NORMAL) ?(show=true) () =
+let window_tooltip widget ~parent ?(fade=false) ~x ~y ?width ?height ?(kind=`POPUP) ?(type_hint=`NORMAL) ?(show=true) () =
   let fade = fade && !Gmisclib.Util.fade_window_enabled in
   let window = GWindow.window
       ~decorated:false
@@ -106,6 +113,7 @@ let window_tooltip widget ?parent ?(fade=false) ~x ~y ?width ?height ?(kind=`POP
       ?width ?height
       ~show:false ()
   in
+  let _ = set_parent window parent in
   let ebox = GBin.event_box ~packing:window#add () in
   ebox#add widget;
   let open Preferences in
@@ -116,7 +124,6 @@ let window_tooltip widget ?parent ?(fade=false) ~x ~y ?width ?height ?(kind=`POP
   window#set_accept_focus false;
   window#misc#set_can_focus false;
   (*window#set_focus_on_map false;*)
-  Gaux.may parent ~f:(fun parent -> Gaux.may (GWindow.toplevel parent) ~f:(fun x -> window#set_transient_for x#as_window));
   if fade then (window#set_opacity 0.0);
   window#move ~x ~y;
   if show then begin

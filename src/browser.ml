@@ -215,7 +215,7 @@ class browser window =
       (File_history.add project_history) filename;
       Symbols.Cache.load ~project:proj;
       Annotation.preload ~project:proj;
-      Gmisclib.Idle.add ~prio:300(*crono ~label:"Mbrowser_compl.create"*) (Mbrowser_compl.create ~project:proj);
+      Gmisclib.Idle.add ~prio:300(*crono ~label:"Mbrowser_compl.create"*) (Mbrowser_compl.create ~project:proj ~parent:(`WINDOW window));
       Autosave.recover ();
       Gmisclib.Idle.add ~prio:300(*crono ~label:"dialog_project_properties" (fun () -> *)(self#dialog_project_properties ~show:false);
       begin

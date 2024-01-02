@@ -38,7 +38,7 @@ type compl =
   | Compl_none
 
 (** completion *)
-class completion ~project ?packing () =
+class completion ~project ~parent ?packing () =
   let window_decorated = Preferences.preferences#get.editor_completion_decorated in
   let vbox            = GPack.vbox ~spacing:0 ~border_width:2 ?packing () in
   let tbox            = GPack.hbox ~spacing:5 ~border_width:0 () in
@@ -458,10 +458,9 @@ class completion ~project ?packing () =
           window
       | None ->
           let x, y = match xy with Some (x, y) -> x, y | _ -> 0,0 in
-          let window = Gtk_util.window self#coerce
+          let window = Gtk_util.window self#coerce ~parent
               ~decorated:window_decorated
               ~type_hint:(if Sys.win32 then `UTILITY else `DIALOG)
-              ?wm_class:(if Sys.win32 then None else Some (About.program_name ^ "-completion"))
               ~x ~y ~focus:true ~escape:false ~show:(xy <> None) ()
           in
           window#set_icon (Some (??? Icons.oe));
@@ -601,14 +600,14 @@ class completion ~project ?packing () =
 (** create *)
 let cache : (string * (GWindow.window * completion)) list ref = ref [];;
 
-let create ~project ?(page : Editor_page.page option) () =
+let create ~project ~parent ?(page : Editor_page.page option) () =
   let _ =
     try
       let _, compl = List.assoc (Project.filename project) !cache in
       ignore (compl#present ?page ());
       compl
     with Not_found -> begin
-        let compl = new completion ~project () in
+        let compl = new completion ~project ~parent () in
         let window = compl#present ?page () in
         cache := (Project.filename project, (window, compl)) :: !cache;
         compl

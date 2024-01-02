@@ -186,7 +186,7 @@ let display qi start stop =
         pX (*- px + xstart*), pY - py + ystart + lh
   in
   let range = Some (start, stop) in
-  let window = Gtk_util.window_tooltip vbox#coerce ~fade:false ~x ~y ~show:false () in
+  let window = Gtk_util.window_tooltip ~parent:(`WIDGET qi.view) vbox#coerce ~fade:false ~x ~y ~show:false () in
   let wininfo = {
     window;
     range;
@@ -207,7 +207,7 @@ let display qi start stop =
       vbox#misc#reparent vp#coerce;
       hide qi;
       close qi "";
-      let window = Gtk_util.window_tooltip sw#coerce ~fade:false ~x ~y ~width:700 ~height:300 ~show:false () in
+      let window = Gtk_util.window_tooltip ~parent:(`WIDGET qi.view) sw#coerce ~fade:false ~x ~y ~width:700 ~height:300 ~show:false () in
       let wininfo = {
         window;
         range;

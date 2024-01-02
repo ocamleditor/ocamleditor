@@ -95,6 +95,7 @@ end
 (** popup *)
 class popup ?(position=(`SOUTH:[`NORTH | `SOUTH | `POINTER])) ?border_width ?(decorated=false) ?(focus_on_map=true) ~widget () =
   let popup = GWindow.window(* ~kind:`POPUP*) ~type_hint:`UTILITY ~decorated ~focus_on_map ~modal:false ~deletable:true ~border_width:1 ~title:"" () in
+  let _     = Gaux.may (GWindow.toplevel widget) ~f:(fun w -> popup#set_transient_for w#as_window) in
   let ebox = GBin.event_box ~packing:popup#add () in
   let vbox = GPack.vbox ?border_width ~packing:ebox#add () in
   (*let _ = popup#misc#modify_bg [`NORMAL, `COLOR (ebox#misc#style#bg `ACTIVE)] in *)
@@ -124,7 +125,7 @@ class popup ?(position=(`SOUTH:[`NORTH | `SOUTH | `POINTER])) ?border_width ?(de
 
     method present () =
       popup#present();
-    let xP0, yP0 = Gdk.Window.get_pointer_location popup#misc#window in
+      let xP0, yP0 = Gdk.Window.get_pointer_location widget#misc#window in
       let x, y = match position with
         | `POINTER -> xP0, yP0
         | _ ->
