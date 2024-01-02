@@ -37,6 +37,7 @@ let icon_of_kind kind =
   | "Type" -> sprintf "<span color='%s'>\u{1d6bb} </span>" color
   | "Module" -> sprintf "<span color='%s'>\u{f1b2} </span>" color
   | "Constructor" -> sprintf "<span color='%s'>\u{ea88} </span>" color
+  | "Variant" -> sprintf "<span color='%s'>\u{ea88} </span>" color
   | "Label" -> sprintf "<span color='%s'>\u{f0316} </span>" color
   | "Class" -> sprintf "<span color='%s'>\u{eb5b} </span>" color
   | "Method" -> sprintf "<span color='%s'>\u{eb65} </span>" color
