@@ -65,7 +65,7 @@ let gutter_marker_color                  = `THEME (*`CALC 0.50*)
 let gutter_marker_bg_color               = `THEME (*`CALC 0.80*)
 let gutter_diff_size                     = 50 (* 0 = disabled *)
 let code_folding_scope_color             = `NAME "#e5e5e5" (* disabled *)
-let code_folding_highlight_color         = { light = "#d0d0d0"; dark = "#303030" }
+let code_folding_highlight_color         = { light = "#d0d0d0"; dark = "#202020" }
 let code_folding_hightlight_gradient     = [ (* [] for no gradient *)
   { light = "#f4f4f4"; dark = "#202020" };
   { light = "#f9f9f9"; dark = "#1b1b1b" };
