@@ -126,7 +126,6 @@ class page ?file ~project ~scroll_offset ~offset ~editor () =
     val mutable resized = false
     val mutable last_autosave_time = buffer#last_edit_time
     val mutable load_complete = false
-    val mutable annot_type = None
     val mutable quick_info = Quick_info.create ocaml_view
     val error_indication = new Error_indication.error_indication ocaml_view vscrollbar global_gutter
     val mutable outline = None
@@ -141,7 +140,6 @@ class page ?file ~project ~scroll_offset ~offset ~editor () =
     method global_gutter_tooltips = global_gutter_tooltips
     method set_global_gutter_tooltips x = global_gutter_tooltips <- x
 
-    method annot_type = annot_type
     method error_indication = error_indication
 
     method global_gutter = global_gutter
@@ -154,10 +152,6 @@ class page ?file ~project ~scroll_offset ~offset ~editor () =
     method sync_autosave_time () = last_autosave_time <- Unix.gettimeofday()
 
     method statusbar = editorbar
-
-    method private set_tag_annot_background () =
-      Option.iter (fun annot_type ->
-          annot_type#tag#set_property (`BACKGROUND ?? (Preferences.preferences#get.editor_bg_color_popup))) annot_type;
 
     method read_only = read_only
     method set_read_only ro =
@@ -217,7 +211,6 @@ class page ?file ~project ~scroll_offset ~offset ~editor () =
           `BACKGROUND_GDK (Preferences.editor_tag_color "highlight");
           `BACKGROUND_FULL_HEIGHT_SET true;
         ]);
-      self#set_tag_annot_background();
       self#error_indication#create_tags();
       self#error_indication#set_flag_underline Preferences.preferences#get.editor_err_underline;
       self#error_indication#set_flag_tooltip Preferences.preferences#get.editor_err_tooltip;
@@ -376,11 +369,9 @@ class page ?file ~project ~scroll_offset ~offset ~editor () =
         self#set_outline None;
       end
 
-    method tooltip ?(typ=false) ((*(x, y) as*) location) =
-      let location = `XY location in
-      if typ then (Option.iter (fun at -> at#tooltip location) annot_type);
+    method tooltip ((*(x, y) as*) location) =
       if Preferences.preferences#get.editor_err_tooltip
-      then (error_indication#tooltip location)
+      then (error_indication#tooltip (`XY location))
 
     method status_modified_icon = editorbar#modified
 
@@ -519,10 +510,8 @@ class page ?file ~project ~scroll_offset ~offset ~editor () =
       ignore (self#misc#connect#destroy ~callback:begin fun () ->
           Option.iter (fun f -> f#cleanup()) file
         end);
-      annot_type <- Some (new Annot_type.annot_type ~page:self);
       (**  *)
       view#hyperlink#enable();
-      self#set_tag_annot_background();
       (** Expose: Statusbar *)
       let signal_expose = ref (self#view#event#connect#after#expose ~callback:begin fun _ ->
           let iter = self#buffer#get_iter `INSERT in
@@ -556,10 +545,6 @@ class page ?file ~project ~scroll_offset ~offset ~editor () =
           end;
           false
         end);
-      (** Clean up type annotation tag *)
-      ignore (text_view#event#connect#scroll ~callback:(fun _ -> Option.iter (fun at -> at#remove_tag()) annot_type; error_indication#hide_tooltip(); false));
-      ignore (text_view#event#connect#leave_notify ~callback:(fun _ -> Option.iter (fun at -> at#remove_tag()) annot_type; error_indication#hide_tooltip(); false));
-      ignore (text_view#event#connect#focus_out ~callback:(fun _ -> Option.iter (fun at -> at#remove_tag()) annot_type; error_indication#hide_tooltip(); false));
       (** Hyperlinks *)
       ignore (self#view#hyperlink#connect#hover ~callback:begin fun (bounds, iter) ->
           if iter#inside_word then begin
