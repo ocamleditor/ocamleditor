@@ -548,7 +548,7 @@ class editor () =
       if x > page#view#gutter.Gutter.size && y > 10 && y < (Gdk.Rectangle.height page#view#visible_rect) - 10 then begin
         let f () =
           let location = page#view#window_to_buffer_coords ~tag:`WIDGET ~x ~y in
-          page#tooltip ~typ:false location;
+          page#tooltip location;
         in
         if (*true ||*) preferences#get.editor_annot_type_tooltips_delay = 1 then begin
           Timeout.set tout_delim 0 (GtkThread.async f);
@@ -793,7 +793,6 @@ class editor () =
 
     method private cb_tout_delim page () =
       page#view#matching_delim ();
-      Option.iter (fun x -> x#remove_tag ()) page#annot_type;
       page#error_indication#hide_tooltip();
 
     val signals = new signals hpaned#as_widget ~add_page ~switch_page ~remove_page ~changed ~modified_changed
@@ -920,8 +919,6 @@ class editor () =
       ignore (Timeout.start tout_fast);
       (* Switch page: update the statusbar and remove annot tag *)
       ignore (notebook#connect#after#switch_page ~callback:begin fun _ ->
-          (* Clean up type annotation tag and error indications *)
-          List.iter (fun page -> Option.iter (fun x -> x#remove_tag ()) page#annot_type) pages;
           (* Current page *)
           self#with_current_page begin fun page ->
             if not page#load_complete && not history_switch_page_locked then (self#load_page page);
