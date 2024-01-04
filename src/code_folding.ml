@@ -170,7 +170,6 @@ class manager ~(view : Text.view) =
           let width = 2 in
           let y0 = Gdk.Rectangle.y vrect in
           let w0 = Gdk.Rectangle.width vrect in
-          let offset = match Oe_config.dash_style_offset with Some x -> x | _ -> w0 in
           let y = y - y0 + width / 2 in
           set_foreground drawable fold_line_color;
           set_line_attributes drawable ~width ~style:Oe_config.dash_style ();
@@ -208,7 +207,6 @@ class manager ~(view : Text.view) =
                   let yv1 = yb1 - y0 in
                   let yv2 = yb2 - y0 in
                   let ym1 = yv1 + h1/2 - 1 in
-                  let ym2 = yv2 - h2 + h2/2 + 3 in
                   let ys1 = yv1 in
                   let ys2 = yv2 + 1 in
                   let of2 = i2#offset in

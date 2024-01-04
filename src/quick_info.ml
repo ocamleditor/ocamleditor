@@ -174,6 +174,7 @@ let display qi start stop =
   label_vars#misc#modify_font_by_name preferences#get.editor_completion_font;
   label_typ#misc#modify_font_by_name preferences#get.editor_completion_font;
   let x, y =
+
     let pX, pY = Gdk.Window.get_pointer_location qi.view#misc#window in
     let win = (match qi.view#get_window `WIDGET with None -> assert false | Some w -> w) in
     let px, py = Gdk.Window.get_pointer_location win in

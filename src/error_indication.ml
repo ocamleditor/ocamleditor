@@ -331,7 +331,7 @@ class error_indication (view : Ocaml_text.view) (global_gutter : GMisc.drawing_a
         in
         Gaux.may color ~f:begin fun color ->
           set_foreground drawable color;
-          rectangle drawable ~filled:true ~x:x0 ~y:0 ~width:(width - 1) ~height:(alloc.Gtk.width - 1) ();
+          rectangle drawable ~filled:true ~x:x0 ~y:0 ~width:(width - 1) ~height:(width - 1) ();
         end;
         (* Draw markers *)
         let height = height - 2 * alloc.Gtk.width in
