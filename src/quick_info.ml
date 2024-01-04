@@ -187,6 +187,7 @@ let display qi start stop =
   in
   let range = Some (start, stop) in
   let window = Gtk_util.window_tooltip vbox#coerce ~fade:false ~x ~y ~show:false () in
+  let _ = window#set_transient_for (Window.root_window2 qi.view) in
   let wininfo = {
     window;
     range;
@@ -208,6 +209,7 @@ let display qi start stop =
       hide qi;
       close qi "";
       let window = Gtk_util.window_tooltip sw#coerce ~fade:false ~x ~y ~width:700 ~height:300 ~show:false () in
+      let _ = window#set_transient_for (Window.root_window2 qi.view) in
       let wininfo = {
         window;
         range;

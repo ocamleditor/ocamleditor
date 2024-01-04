@@ -1,7 +1,6 @@
 open Merlin
 open GUtil
 module ColorOps = Color
-open Preferences
 open Printf
 
 module String_utils = struct
@@ -62,6 +61,7 @@ let create ~compl ~x ~y ~project ~page =
     | _ -> ()
   end;
   let window = Gtk_util.window_tooltip compl#coerce ~parent:page ~x ~y () in
+  let _ = window#set_transient_for (Window.root_window2 page) in
   window#misc#hide();
   compl#complete window;
   single_instance := Some compl
@@ -266,6 +266,7 @@ class widget ~project ~(page : Editor_page.page) ~x ~y ?packing () =
       let create_window ~x ~y ?width ?height ?show child =
         current_window_info |> List.iter (fun w -> Gmisclib.Idle.add w#destroy);
         let window = Gtk_util.window_tooltip child ~parent:page ~x ~y ?width ?height ?show () in
+        let _ = window#set_transient_for (Window.root_window2 page) in
         current_window_info <- window :: current_window_info;
         self#misc#connect#destroy ~callback:window#destroy |> ignore;
         window

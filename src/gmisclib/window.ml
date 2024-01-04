@@ -91,9 +91,8 @@ module GeometryMemo = struct
     end;;
 end
 
-let root_window widget =
-  let window_ref = ref widget#misc#window in
-  try
-    while true do window_ref := Gdk.Window.get_parent !window_ref done;
-    !window_ref
-  with _ -> !window_ref
+let root_window widget : Gdk.window =
+  widget#misc#toplevel#misc#window
+
+let root_window2 widget : Gtk.window Gtk.obj =
+  widget#misc#toplevel#as_widget |> GtkWindow.Window.cast
