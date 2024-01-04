@@ -23,9 +23,6 @@
 module ColorOps = Color
 open Preferences
 
-type parent = [`WINDOW of GWindow.window | `WIDGET of GObj.widget ]
-
-
 let create_mark_name =
   let count = ref 0 in fun prefix ->
     incr count;

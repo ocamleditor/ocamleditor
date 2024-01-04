@@ -264,6 +264,7 @@ class error_indication (view : Ocaml_text.view) (global_gutter : GMisc.drawing_a
                 self#hide_tooltip();
                 let create_popup start stop error displacement =
                   let popup = GWindow.window ~kind:`POPUP ~type_hint:`MENU ~decorated:false ~focus_on_map:false ~border_width:1 ~show:false () in
+                  let _ = popup#set_transient_for (Window.root_window2 view) in
                   tag_popup <- (start, stop, popup) :: tag_popup;
                   sticky_popup <- sticky;
                   popup#misc#modify_bg [`NORMAL, border_color];
