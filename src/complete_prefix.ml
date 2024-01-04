@@ -37,6 +37,7 @@ let icon_of_kind kind =
   | "Type" -> sprintf "<span color='%s'>\u{1d6bb} </span>" color
   | "Module" -> sprintf "<span color='%s'>\u{f1b2} </span>" color
   | "Constructor" -> sprintf "<span color='%s'>\u{ea88} </span>" color
+  | "Variant" -> sprintf "<span color='%s'>\u{ea88} </span>" color
   | "Label" -> sprintf "<span color='%s'>\u{f0316} </span>" color
   | "Class" -> sprintf "<span color='%s'>\u{eb5b} </span>" color
   | "Method" -> sprintf "<span color='%s'>\u{eb65} </span>" color
@@ -60,7 +61,7 @@ let create ~compl ~x ~y ~project ~page =
     | Some instance -> instance#destroy();
     | _ -> ()
   end;
-  let window = Gtk_util.window_tooltip compl#coerce ~parent:(`WIDGET page) ~x ~y () in
+  let window = Gtk_util.window_tooltip compl#coerce ~parent:page ~x ~y () in
   window#misc#hide();
   compl#complete window;
   single_instance := Some compl
@@ -264,7 +265,7 @@ class widget ~project ~(page : Editor_page.page) ~x ~y ?packing () =
     method private display_window_info path markup_type markup_doc =
       let create_window ~x ~y ?width ?height ?show child =
         current_window_info |> List.iter (fun w -> Gmisclib.Idle.add w#destroy);
-        let window = Gtk_util.window_tooltip child ~parent:(`WIDGET page) ~x ~y ?width ?height ?show () in
+        let window = Gtk_util.window_tooltip child ~parent:page ~x ~y ?width ?height ?show () in
         current_window_info <- window :: current_window_info;
         self#misc#connect#destroy ~callback:window#destroy |> ignore;
         window

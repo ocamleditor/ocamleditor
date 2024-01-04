@@ -229,7 +229,6 @@ and messages ~(paned : GPack.paned) () =
           Gaux.may current_page ~f:(fun page -> window#set_title page#title);
           (*detached#call true;*)
           button_detach#misc#set_sensitive true;
-
     method private empty =
       let len = List.length notebook#children in
       len = 0 || len = 1 && empty_page <> None

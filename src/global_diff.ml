@@ -42,8 +42,8 @@ let paint_diffs page diffs =
   let window = page#global_gutter#misc#window in
   let drawable = Gdk.Cairo.create window in
   set_line_attributes drawable ~width:1 ~style:`SOLID ~join:`ROUND ();
-  let { Cairo.w; _ } = Cairo.clip_extents drawable in
-  let height = int_of_float w in
+  let { Cairo.h; _ } = Cairo.clip_extents drawable in
+  let height = int_of_float h in
   let width = global_gutter_diff_size in
   let line_count = float page#buffer#line_count in
   let open Odiff in
@@ -159,11 +159,13 @@ let compare_with_head page continue_with =
   | _ -> ()
 
 let try_compare ?(force=false) page =
-  if (page#changed_after_last_diff || force) && page#view#visible then begin
+  let margin = List.assoc_opt page#get_oid !initialized in
+  let is_changed = Option.fold ~none:true ~some:(fun m -> m#is_changed_after_last_diff) margin in
+  if (is_changed || force) && page#visible then begin
     compare_with_head page begin fun diffs ->
       try
         diffs |> paint_diffs page;
-        page#set_changed_after_last_diff false;
+        Option.iter (fun m -> m#sync_diff_time()) margin
       with Gpointer.Null as ex ->
         Printf.eprintf "File \"global_diff.ml\": %s\n%s\n%!" (Printexc.to_string ex) (Printexc.get_backtrace());
     end

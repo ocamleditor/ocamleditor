@@ -174,8 +174,7 @@ let display qi start stop =
   label_vars#misc#modify_font_by_name preferences#get.editor_completion_font;
   label_typ#misc#modify_font_by_name preferences#get.editor_completion_font;
   let x, y =
-
-    let pX, pY = Gdk.Window.get_pointer_location qi.view#misc#window in
+    let pX, pY = Gdk.Window.get_pointer_location (Window.root_window qi.view) in
     let win = (match qi.view#get_window `WIDGET with None -> assert false | Some w -> w) in
     let px, py = Gdk.Window.get_pointer_location win in
     match qi.show_at with
@@ -187,7 +186,7 @@ let display qi start stop =
         pX (*- px + xstart*), pY - py + ystart + lh
   in
   let range = Some (start, stop) in
-  let window = Gtk_util.window_tooltip ~parent:(`WIDGET qi.view) vbox#coerce ~fade:false ~x ~y ~show:false () in
+  let window = Gtk_util.window_tooltip vbox#coerce ~fade:false ~x ~y ~show:false () in
   let wininfo = {
     window;
     range;
@@ -208,7 +207,7 @@ let display qi start stop =
       vbox#misc#reparent vp#coerce;
       hide qi;
       close qi "";
-      let window = Gtk_util.window_tooltip ~parent:(`WIDGET qi.view) sw#coerce ~fade:false ~x ~y ~width:700 ~height:300 ~show:false () in
+      let window = Gtk_util.window_tooltip sw#coerce ~fade:false ~x ~y ~width:700 ~height:300 ~show:false () in
       let wininfo = {
         window;
         range;
@@ -245,7 +244,7 @@ let build_content qi (entry : type_enclosing_value) (entry2 : type_enclosing_val
 (** Opens a new quick information window with the information received from merlin.
     This function is applied in a separate thread from the main one. *)
 let spawn_window qi position (entry : type_enclosing_value) (entry2 : type_enclosing_value option) =
-  if qi.view#has_focus then begin
+  if qi.view#visible then begin
     let start = qi.view#obuffer#get_iter (`LINECHAR (entry.te_start.line - 1, entry.te_start.col)) in
     let stop = qi.view#obuffer#get_iter (`LINECHAR (entry.te_stop.line - 1, entry.te_stop.col)) in
     let text = start#get_text ~stop in
@@ -286,38 +285,40 @@ let process_location qi x y =
   let current_window = get_current_window qi in
   let current_range = Option.bind current_window (fun x -> x.range) in
   let bx, by = qi.view#window_to_buffer_coords ~tag:`WIDGET ~x ~y in
-  let iter = qi.view#get_iter_at_location ~x:bx ~y:by in
-  match current_range with
-  | Some (start, stop) when iter#in_range ~start ~stop -> ()
-  | _ when is_pinned qi -> ()
-  | _ when qi.view#buffer#has_selection -> ()
-  | _ ->
-      let is_immobile = x = qi.current_x && y = qi.current_y in
-      qi.current_x <- x;
-      qi.current_y <- y;
-      let is_mouse_over =
-        match current_window with
-        | Some wi ->
-            begin
-              try
-                let root_window = qi.view#misc#window in
-                let r = wi.window#misc#allocation in
-                let wx, wy = Gdk.Window.get_position wi.window#misc#window in
-                let px, py = Gdk.Window.get_pointer_location root_window in
-                wx <= px && px <= wx + r.Gtk.width && wy <= py && py <= wy + r.Gtk.height
-              with Gpointer.Null -> false
-            end
-        | _ -> false
-      in
-      if is_mouse_over then ()
-      else if is_immobile then begin
-        match get_typeable_iter_at_coords qi iter with
-        | Some iter ->
-            hide qi;
-            close qi "before-invoke-merlin";
-            invoke_merlin qi iter ~continue_with:(spawn_window qi);
-        | _ -> close qi "not-typeable"
-      end else close qi ""
+  if bx > 0 then begin
+    let iter = qi.view#get_iter_at_location ~x:bx ~y:by in
+    match current_range with
+    | Some (start, stop) when iter#in_range ~start ~stop -> ()
+    | _ when is_pinned qi -> ()
+    | _ when qi.view#buffer#has_selection -> ()
+    | _ ->
+        let is_immobile = x = qi.current_x && y = qi.current_y in
+        qi.current_x <- x;
+        qi.current_y <- y;
+        let is_mouse_over =
+          match current_window with
+          | Some wi ->
+              begin
+                try
+                  let root_window = Window.root_window qi.view in
+                  let r = wi.window#misc#allocation in
+                  let wx, wy = Gdk.Window.get_position wi.window#misc#window in
+                  let px, py = Gdk.Window.get_pointer_location root_window in
+                  wx <= px && px <= wx + r.Gtk.width && wy <= py && py <= wy + r.Gtk.height
+                with Gpointer.Null -> false
+              end
+          | _ -> false
+        in
+        if is_mouse_over then ()
+        else if is_immobile then begin
+          match get_typeable_iter_at_coords qi iter with
+          | Some iter ->
+              hide qi;
+              close qi "before-invoke-merlin";
+              invoke_merlin qi iter ~continue_with:(spawn_window qi);
+          | _ -> close qi "not-typeable"
+        end else close qi ""
+  end
 
 (** Displays quick info about the expression at the specified iter. *)
 let at_iter (qi : t) (iter : GText.iter) () = ()
@@ -396,6 +397,10 @@ let create (view : Ocaml_text.view) =
     view#misc#set_has_tooltip false;
     unpin qi;
     close qi "focus_out";
+    false
+  end |> ignore;
+  view#event#connect#leave_notify ~callback:begin fun _ ->
+    close qi "leave_notify";
     false
   end |> ignore;
   view#misc#set_has_tooltip qi.is_active;

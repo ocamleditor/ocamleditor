@@ -134,12 +134,7 @@ let edit ~browser ~group ~flags
   let complet = GMenu.menu_item ~label:"Completion" ~packing:menu#add () in
   ignore (complet#connect#activate ~callback:begin fun () ->
       browser#with_current_project begin fun project ->
-        editor#with_current_page begin fun page ->
-          if Oe_config.use_merlin_completion then
-            Complete_prefix.create_window ~project ~page |> ignore
-          else
-            Mbrowser_compl.create ~project ~parent:(`WIDGET page) ~page ()
-        end
+        editor#with_current_page (fun page -> Complete_prefix.create_window ~project ~page |> ignore)
       end
     end);
   complet#add_accelerator ~group ~modi:[`CONTROL] GdkKeysyms._space ~flags;

@@ -212,9 +212,8 @@ class widget ~project ~(view : Ocaml_text.view) ?packing ()=
 let popup project (view : Ocaml_text.view) =
   let x, y = view#get_location_at_cursor () in
   let widget = new widget ~project ~view () in
-  ignore (Gtk_util.window widget#coerce ~parent:(`WIDGET view) ~x ~y ())
-
-
+  let window = Gtk_util.window widget#coerce ~x ~y () in
+  ignore ("TODO: set_transient_for" , window)
 
 
 

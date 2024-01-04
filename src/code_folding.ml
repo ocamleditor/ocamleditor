@@ -176,9 +176,10 @@ class manager ~(view : Text.view) =
           line drawable 0 y w0 y;
       | _ -> ()
 
-    method private draw_markers drawable =
+    method private draw_markers _drawable =
       match view#get_window `LEFT with
       | Some window ->
+          let drawable = Gdk.Cairo.create window in
           let xs = view#gutter.Gutter.fold_x in
           let xm = xs + view#gutter.Gutter.fold_size / 2 in (* center of the fold part *)
           let folds = ref [] in

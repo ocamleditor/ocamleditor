@@ -196,9 +196,9 @@ class widget ?packing () =
   object (self)
     inherit GObj.widget ebox#as_widget
     initializer
-      self#set_my_style();
+      self#set_custom_style();
       ebox#misc#toplevel#misc#connect#after#style_set
-        ~callback:(fun () -> Gmisclib.Idle.add ~prio:300 self#set_my_style) |> ignore
+        ~callback:(fun () -> Gmisclib.Idle.add ~prio:300 self#set_custom_style) |> ignore
 
     method pack_editorbar (bar : editorbar) =
       if editorbar_placeholder#children <> [] then
@@ -209,7 +209,7 @@ class widget ?packing () =
 
     method spinner = spinner
 
-    method private set_my_style () =
+    method private set_custom_style () =
       ebox#misc#modify_bg [`NORMAL, `COLOR (ebox#misc#style#light `NORMAL)];
       ebox#misc#modify_fg [`NORMAL, `COLOR (ebox#misc#style#fg `NORMAL)];
   end

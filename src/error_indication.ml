@@ -287,7 +287,7 @@ class error_indication (view : Ocaml_text.view) (global_gutter : GMisc.drawing_a
                         let y = y - popup#misc#allocation.Gtk.height - 5 - displacement in
                         popup#move ~x ~y;
                     | `XY _ ->
-                        let x, y = Gdk.Window.get_pointer_location view#misc#window in
+                        let x, y = Gdk.Window.get_pointer_location (Window.root_window view) in
                         popup#show();
                         popup#move ~x ~y:(y - popup#misc#allocation.Gtk.height - 12 - displacement);
                   end;
@@ -385,7 +385,7 @@ class error_indication (view : Ocaml_text.view) (global_gutter : GMisc.drawing_a
               lines := (x0 + (!i+1) * h, y + h/2) :: (x0 + !i * h, y - h/2) :: !lines;
               incr i; incr i;
             done;
-            lines_ drawable !lines
+            Cairo_drawable.lines drawable !lines
           end else rectangle drawable ~filled:true ~x:x0 ~y ~width ~height:3 ();
         in
         (* Warnings *)
@@ -459,10 +459,11 @@ class error_indication (view : Ocaml_text.view) (global_gutter : GMisc.drawing_a
           done;
       | _ -> ()
 
-    method private expose drawable =
+    method private expose _drawable =
       if flag_underline then begin
         match view#get_window `TEXT with
         | Some window ->
+            let drawable = Gdk.Cairo.create window in
             let vrect = view#visible_rect in
             let x0 = Gdk.Rectangle.x vrect in
             let y0 = Gdk.Rectangle.y vrect in

@@ -44,8 +44,10 @@ class buffer =
       val mutable tmp_filename = "" (*tmp_filename*)
       val mutable orig_filename = ""
       val mutable project_tmp_path = None (*project_tmp_path*)
+      val mutable last_edit_time = Unix.gettimeofday()
 
       initializer
+        buffer#connect#changed ~callback:(fun () -> last_edit_time <- Unix.gettimeofday()) |> ignore;
         self#reset_tmp_filename ();
         orig_filename <- tmp_filename ^ ".orig";
         at_exit begin fun () ->
@@ -58,6 +60,8 @@ class buffer =
 
       method tmp_filename = tmp_filename
       method orig_filename = orig_filename
+      method last_edit_time = last_edit_time
+      method set_last_edit_time time = last_edit_time <- time
 
       method reset_tmp_filename () =
         let a, b =
@@ -409,19 +413,12 @@ and view ?project ?buffer () =
       (vxs + xb - vxb + (self#get_border_window_size `LEFT)),
       (vys + yb - vyb + Gdk.Rectangle.height rect_it)
 
-    method private root_window =
-      let window_ref = ref self#misc#window in
-      try
-        while true do window_ref := Gdk.Window.get_parent !window_ref done;
-        !window_ref
-      with _ -> !window_ref
-
     method get_location_at_iter iter =
       let rect = view#get_iter_location iter in
       let x = Gdk.Rectangle.x rect in
       let y = Gdk.Rectangle.y rect in
       let x0, y0 =
-        let pX, pY = Gdk.Window.get_pointer_location self#root_window in
+        let pX, pY = Gdk.Window.get_pointer_location (Window.root_window self) in
         let win = (match view#get_window `TEXT with None -> assert false | Some w -> w) in
         let px, py = Gdk.Window.get_pointer_location win in
         (pX - px), (pY - py)
@@ -434,7 +431,7 @@ and view ?project ?buffer () =
       x, y
 
     method get_location_top_right () =
-      let pX, pY = Gdk.Window.get_pointer_location self#root_window in
+      let pX, pY = Gdk.Window.get_pointer_location (Window.root_window self) in
       let win = (match self#get_window `WIDGET
                  with None -> failwith "Text.text#get_location_top_right `WIDGET = None" | Some w -> w) in
       let px, py = Gdk.Window.get_pointer_location win in

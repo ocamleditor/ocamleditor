@@ -438,7 +438,7 @@ class widget ~project ?(is_completion=false) ?(enable_history=true) ?width ?heig
                     in
                     let label = GMisc.label ~xpad:5 ~ypad:5 ~markup () in
                     Gaux.may (odoc_view#get_window `WIDGET) ~f:begin fun window ->
-                      let pX, pY = Gdk.Window.get_pointer_location odoc_view#misc#window in
+                      let pX, pY = Gdk.Window.get_pointer_location (Window.root_window odoc_view) in
                       ignore (self#tooltip_destroy());
                       let popup = Gtk_util.window_tooltip label#coerce ~parent:(`WIDGET odoc_view) ~fade:true ~x:(pX + 0) ~y:(pY + 20) () in
                       tooltip_popup <- Some (popup, markup);
