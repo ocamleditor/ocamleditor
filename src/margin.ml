@@ -64,6 +64,7 @@ class line_numbers (view : GText.view) =
     method private print_numbers ~view ~left ~top ~num labels =
       let open Line_num_labl in
       let open Settings_t in
+      let top = top + int_of_float view#vadjustment#value in
       let text = string_of_int num in
       let label = match labels.free with
         | label :: tl ->
@@ -108,7 +109,7 @@ class markers gutter margin_line_numbers =
                   let ym, h = view#get_line_yrange (new GText.iter mark_iter) in
                   let y = ym - top in
                   margin_line_numbers#hide_label (y + view#pixels_above_lines);
-                  let y = y + (h - self#icon_size) / 2 in
+                  let y = y + (h - self#icon_size) / 2 + int_of_float view#vadjustment#value in
                   begin
                     match mark.icon_obj with
                     | None ->
