@@ -195,7 +195,7 @@
       <libs>process_termination odoc_info gmisclib common icons otherwidgets oebuildlib ocamleditor_lib</libs>
       <other_objects></other_objects>
       <files>ocamleditor.ml</files>
-      <package>atdgen-runtime,cairo2,compiler-libs.common,diff,dynlink,lablgtk3,ocamldoc,ocp-indent.lib,str,unix,xml-light,yojson</package>
+      <package>atdgen-runtime,cairo2,compiler-libs.common,ocamldiff,dynlink,lablgtk3,ocamldoc,ocp-indent.lib,str,unix,xml-light,yojson</package>
       <includes>gmisclib common icons otherwidgets oebuild </includes>
       <thread>true</thread>
       <vmthread>false</vmthread>
@@ -220,7 +220,7 @@
       <libs>process_termination odoc_info gmisclib common icons otherwidgets oebuildlib</libs>
       <other_objects></other_objects>
       <files>ocamleditor.ml</files>
-      <package>atdgen-runtime,cairo2,compiler-libs.common,diff,dynlink,lablgtk3,ocamldoc,ocp-indent.lib,str,unix,xml-light,yojson</package>
+      <package>atdgen-runtime,cairo2,compiler-libs.common,ocamldiff,dynlink,lablgtk3,ocamldoc,ocp-indent.lib,str,unix,xml-light,yojson</package>
       <includes>gmisclib common icons otherwidgets oebuild </includes>
       <thread>true</thread>
       <vmthread>false</vmthread>
@@ -294,7 +294,7 @@
       <libs>process_termination odoc_info gmisclib common icons otherwidgets oebuildlib ocamleditor_lib</libs>
       <other_objects></other_objects>
       <files>ocamleditor.ml</files>
-      <package>atdgen-runtime,cairo2,compiler-libs.common,diff,dynlink,lablgtk3,ocamldoc,ocp-indent.lib,str,unix,xml-light,yojson</package>
+      <package>atdgen-runtime,cairo2,compiler-libs.common,ocamldiff,dynlink,lablgtk3,ocamldoc,ocp-indent.lib,str,unix,xml-light,yojson</package>
       <includes>gmisclib common icons otherwidgets oebuild </includes>
       <thread>true</thread>
       <vmthread>false</vmthread>
@@ -319,7 +319,7 @@
       <libs></libs>
       <other_objects></other_objects>
       <files>ocamleditor_lib.ml</files>
-      <package>atdgen-runtime,cairo2,compiler-libs.common,diff,dynlink,lablgtk3,ocamldoc,ocp-indent.lib,str,unix,xml-light,yojson</package>
+      <package>atdgen-runtime,cairo2,compiler-libs.common,ocamldiff,dynlink,lablgtk3,ocamldoc,ocp-indent.lib,str,unix,xml-light,yojson</package>
       <includes>gmisclib common icons otherwidgets oebuild </includes>
       <thread>true</thread>
       <vmthread>false</vmthread>
@@ -369,7 +369,7 @@
       <libs></libs>
       <other_objects></other_objects>
       <files>remote.ml</files>
-      <package>cairo2,curl,diff,lablgtk3</package>
+      <package>cairo2,curl,ocamldiff,lablgtk3</package>
       <includes>common icons otherwidgets gmisclib</includes>
       <thread>false</thread>
       <vmthread>false</vmthread>
