@@ -26,11 +26,6 @@ struct
   let button_menu = new Button_menu.button_menu
 end
 
-module Entry =
-struct
-  let combo_search = new Entry_combo_search.widget
-end
-
 module Idle =
 struct
   let add     = Gmisclib_util.idle_add
@@ -63,5 +58,4 @@ end
 module Window =
 struct
   module GeometryMemo = Window.GeometryMemo
-  let popup = new Window.popup
 end
