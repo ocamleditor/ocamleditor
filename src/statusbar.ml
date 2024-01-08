@@ -140,7 +140,7 @@ class editorbar ~view ?packing () =
   let _ = set_label_font_size status_pos_sel_chars in
   (*let _ = status_pos_sel_chars#misc#set_tooltip_text "Selected characters" in*)
   let _ = GMisc.separator `VERTICAL ~packing:pos_box#pack () in
-
+  let _ = paned#set_position 900 in
   object (self)
     inherit GObj.widget box#as_widget
     method paned = paned

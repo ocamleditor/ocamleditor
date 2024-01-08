@@ -264,7 +264,7 @@ class widget ~project ~(page : Editor_page.page) ~x ~y ?packing () =
 
     method private display_window_info path markup_type markup_doc =
       let create_window ~x ~y ?width ?height ?show child =
-        current_window_info |> List.iter (fun w -> Gmisclib.Idle.add w#destroy);
+        current_window_info |> List.iter (fun w -> (*Gmisclib.Idle.add*) w#destroy());
         let window = Gtk_util.window_tooltip child ~parent:page ~x ~y ?width ?height ?show () in
         current_window_info <- window :: current_window_info;
         self#misc#connect#destroy ~callback:window#destroy |> ignore;

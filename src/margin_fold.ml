@@ -3,10 +3,6 @@ open Merlin_j
 open GUtil
 open Preferences
 
-type fold = {
-  is_collapsed : bool;
-}
-
 module Icons = struct
   let expander_open = "\u{f107}"
   let expander_closed = "\u{f105}"
@@ -25,6 +21,7 @@ class expander ~(view : Ocaml_text.view) ~start ~stop ~tag_highlight ~tag_invisi
   object (self)
     inherit GObj.widget ebox#as_widget
     val mutable is_expanded = true
+    val mutable in_use = true
     val mutable start_highlight = start_highlight
     val mutable start_invisible = start_invisible
     val mutable start = start
@@ -49,15 +46,24 @@ class expander ~(view : Ocaml_text.view) ~start ~stop ~tag_highlight ~tag_invisi
         false
       end |> ignore;
 
-    method set_bounds (istart : GText.iter) (istop : GText.iter) =
+    method private set_bounds (istart : GText.iter) (istop : GText.iter) =
       let start_highlight', start_invisible', stop' = get_geometry istart istop in
       start_highlight <- start_highlight';
       start_invisible <- start_invisible';
       start <- istart;
       stop <- stop'
 
-    method get_bounds () = start, stop
+    method bounds() = start, stop
     method is_expanded = is_expanded
+    method in_use = in_use
+
+    method abandon() =
+      ebox#misc#hide();
+      in_use <- false
+
+    method regain start stop =
+      self#set_bounds start stop;
+      in_use <- true
 
     method expand () =
       let was_collapsed = not is_expanded in
@@ -81,6 +87,14 @@ class expander ~(view : Ocaml_text.view) ~start ~stop ~tag_highlight ~tag_invisi
       label#set_text Icons.expander_closed;
       is_expanded <- false;
 
+    method hide_region () =
+      Printf.printf "hide_region %d %d \n%!" (start_invisible#line + 1) (stop#line + 1);
+      buffer#apply_tag tag_invisible ~start:start_invisible ~stop;
+
+    method show_region () =
+      Printf.printf "show_region %d-%d\n%!" (start#line + 1) (stop#line + 1);
+      buffer#remove_tag tag_invisible ~start ~stop;
+
     method connect = new signals ~toggled
   end
 
@@ -98,7 +112,8 @@ class margin_fold (view : Ocaml_text.view) =
   let buffer = view#obuffer in
   let tag_highlight = buffer#create_tag ~name:"fold-highlight"
       [ `PARAGRAPH_BACKGROUND (?? Oe_config.code_folding_highlight_color) ] in
-  let tag_invisible = buffer#create_tag ~name:"fold-invisible" [ `INVISIBLE true ] in
+  let tag_invisible = buffer#create_tag ~name:"fold-invisible"
+      [ `INVISIBLE true ] in
   let merlin func =
     let filename = match buffer#file with Some file -> file#filename | _ -> "" in
     let source_code = buffer#get_text () in
@@ -136,7 +151,7 @@ class margin_fold (view : Ocaml_text.view) =
       if not self#is_changed_after_last_outline then begin
         let buffer_start_line = start#line in
         let buffer_stop_line = stop#line in
-        Hashtbl.iter (fun _ ex -> ex#misc#hide()) expanders;
+        Hashtbl.iter (fun _ ex -> ex#abandon()) expanders;
         outline
         |> List.iter begin fun ol ->
           let fold_start_line = ol.ol_start.line - 1 in
@@ -145,7 +160,13 @@ class margin_fold (view : Ocaml_text.view) =
             && (ol.ol_kind = "Method" || ol.ol_start.line <> ol.ol_stop.line)
           in
           if is_folding_point then self#draw_expander ol top left
-        end
+        end;
+        Hashtbl.iter begin fun key ex ->
+          if not ex#in_use then begin
+            ex#destroy();
+            Hashtbl.remove expanders key
+          end
+        end expanders
       end else is_pending <- true
 
     method private draw_expander ol top left =
@@ -167,11 +188,12 @@ class margin_fold (view : Ocaml_text.view) =
             let expander = new expander ~start ~stop ~tag_highlight ~tag_invisible ~view () in
             Hashtbl.replace expanders key expander;
             view#add_child_in_window ~child:expander#coerce ~which_window:`LEFT ~x:left ~y;
+            expander#show_region();
             expander#connect#toggled ~callback:(fun _ -> expander_toggled#call expander) |> ignore;
             expander
         | Some expander ->
             view#move_child ~child:expander#coerce ~x:left ~y;
-            expander#set_bounds start stop;
+            expander#regain start stop;
             expander
       in
       if List.exists (fun t -> t#get_oid = tag_invisible#get_oid) start#tags
@@ -181,15 +203,14 @@ class margin_fold (view : Ocaml_text.view) =
     method amend_nested_collapsed (expander : expander) =
       (* TODO more precise start *)
       if expander#is_expanded then begin
-        let start, stop = expander#get_bounds() in
+        let start, stop = expander#bounds() in
         Hashtbl.iter begin fun _ exp ->
-          let s, _ = exp#get_bounds() in
-          if start#compare s < 0 && s#compare stop < 0 then begin
-            (* When the outer expander is expanded, all nested ones are also
-               expanded, because the tag_highlight is removed everywhere, but
-               the expander state remains "collapsed". *)
-            if not exp#is_expanded then exp#collapse();
-          end
+          let s, _ = exp#bounds() in
+          (* When the outer expander is expanded, all nested ones are also
+             expanded, because the tag_highlight is removed everywhere, but
+             the expander state remains "collapsed". *)
+          if not exp#is_expanded && start#compare s < 0 && s#compare stop < 0
+          then exp#hide_region();
         end expanders
       end
 
@@ -218,9 +239,6 @@ class margin_fold (view : Ocaml_text.view) =
     method connect = new margin_signals ~expander_toggled ~synchronized
 
     initializer
-      view#event#add [`ENTER_NOTIFY; `LEAVE_NOTIFY ];
-      view#event#connect#enter_notify ~callback:(fun _ -> self#start_timer(); false) |> ignore;
-      view#event#connect#leave_notify ~callback:(fun _ -> self#stop_timer(); false) |> ignore;
       view#event#connect#focus_in ~callback:(fun _ -> self#start_timer(); false) |> ignore;
       view#event#connect#focus_out ~callback:(fun _ -> self#stop_timer(); false) |> ignore;
       self#start_timer()
@@ -241,13 +259,18 @@ let init_page (page : Editor_page.page) =
     page#view#margin#add (margin :> Margin.margin);
     margin#connect#synchronized ~callback:begin fun () ->
       if margin#is_pending then begin
+        Printf.printf "pending\n%!" ;
         Gmisclib.Idle.add ~prio:300 page#view#draw_gutter;
         margin#clear_pending()
       end
     end |> ignore;
-    margin#connect#expander_toggled ~callback:(fun expander ->
-        margin#amend_nested_collapsed expander;
-        Gmisclib.Idle.add ~prio:300 page#view#draw_gutter) |> ignore;
+    margin#connect#expander_toggled ~callback:begin fun expander ->
+      margin#amend_nested_collapsed expander;
+      Gmisclib.Idle.add ~prio:300 begin fun () ->
+        Printf.printf "draw_gutter\n%!" ;
+        page#view#draw_gutter();
+      end
+    end |> ignore;
   with ex ->
     Printf.eprintf "File \"margin_fold.ml\": %s\n%s\n%!" (Printexc.to_string ex) (Printexc.get_backtrace())
 
