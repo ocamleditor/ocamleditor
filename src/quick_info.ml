@@ -345,24 +345,7 @@ let set_active qi value =
   qi.is_active <- value;
   if not qi.is_active then hide qi
 
-let create (view : Ocaml_text.view) =
-  let open Preferences in
-  let bg_color = ?? (Preferences.preferences#get.editor_bg_color_popup) in
-  let filename = match view#obuffer#file with Some file -> file#filename | _ -> "" in
-  let qi =
-    {
-      markup_odoc = new Markup.odoc();
-      is_active = true;
-      view = view;
-      filename = filename;
-      tag = view#buffer#create_tag ~name:"quick-info" [`BACKGROUND bg_color];
-      current_x = 0;
-      current_y = 0;
-      show_at = None;
-      windows = [];
-      merlin = merlin view#obuffer;
-    }
-  in
+let connect_to_view qi (view : Ocaml_text.view) =
   let motion_notify = SignalId.create() in
   view#event#connect#key_press ~callback:begin fun ev ->
     view#misc#set_has_tooltip false;
@@ -406,9 +389,30 @@ let create (view : Ocaml_text.view) =
     false
   end |> ignore;
   view#misc#set_has_tooltip qi.is_active;
-  view#misc#connect#query_tooltip ~callback:(query_tooltip qi) |> ignore;
+  view#misc#connect#query_tooltip ~callback:(query_tooltip qi) |> ignore
+
+let create (view : Ocaml_text.view) =
+  let open Preferences in
+  let bg_color = ?? (Preferences.preferences#get.editor_bg_color_popup) in
+  let filename = match view#obuffer#file with Some file -> file#filename | _ -> "" in
+  let qi =
+    {
+      markup_odoc = new Markup.odoc();
+      is_active = true;
+      view = view;
+      filename = filename;
+      tag = view#buffer#create_tag ~name:"quick-info" [`BACKGROUND bg_color];
+      current_x = 0;
+      current_y = 0;
+      show_at = None;
+      windows = [];
+      merlin = merlin view#obuffer;
+    }
+  in
   Preferences.preferences#connect#changed ~callback:begin fun pref ->
     qi.view#misc#set_has_tooltip (qi.is_active && pref.Settings_j.editor_quick_info_enabled);
     qi.markup_odoc <- new Markup.odoc()
   end |> ignore;
+  if view#obuffer#is_ocaml_file filename then 
+    connect_to_view qi view;
   qi
