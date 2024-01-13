@@ -94,7 +94,7 @@ let to_string () =
       70, "dot", (Option.value Oe_config.dot_version ~default:"<Not Found>");
       50, "findlib", (Option.value (findlib_package_exists "findlib") ~default:"<Not Found>");
       50, "lablgtk2", (Option.value (findlib_package_exists "lablgtk2") ~default:"<Not Found>");
-      50, "diff", (Option.value (findlib_package_exists "diff") ~default:"<Not Found>");
+      50, "ocamldiff", (Option.value (findlib_package_exists "ocamldiff") ~default:"<Not Found>");
       50, "lablgtk2.rsvg", (Option.value (findlib_package_exists "lablgtk2.rsvg") ~default:"<Not Found>");
       50, "curl", (Option.value (findlib_package_exists "curl") ~default:"<Not Found>");
       70, "git", (Option.value Oe_config.git_version ~default:"<Not Found>");
