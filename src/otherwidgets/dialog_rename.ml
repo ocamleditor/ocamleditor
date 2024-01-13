@@ -26,7 +26,7 @@ open Printf
 (** colorize *)
 let colorize page filename =
   let old = page#buffer#lexical_enabled in
-  let is_lexical_enabled = page#buffer#check_lexical_coloring_enabled filename in
+  let is_lexical_enabled = page#buffer#is_ocaml_file filename in
   page#buffer#set_lexical_enabled is_lexical_enabled;
   if is_lexical_enabled && not old then (page#buffer#colorize ?start:None ?stop:None ())
   else if not is_lexical_enabled then begin
