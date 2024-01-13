@@ -32,7 +32,7 @@ module type REMOTE = sig
              create_file : ?remote:Editor_file_type.remote_login ->
                string -> 'b;
              pages : 'a list; .. > ->
-    page:< buffer : < check_lexical_coloring_enabled : string -> bool;
+    page:< buffer : < is_ocaml_file : string -> bool;
                       colorize : ?start:'c -> ?stop:'d -> unit -> unit;
                       end_iter : 'e; lexical_enabled : bool;
                       remove_tag : 'f -> start:'g -> stop:'e -> unit;
