@@ -89,16 +89,6 @@ class page ?file ~project ~scroll_offset ~offset ~editor () =
       vbox#pack editorbar#coerce;
     end
   in
-  let _ =
-    sw#misc#connect#size_allocate ~callback:begin fun _ ->
-      if hscrollbar#adjustment#page_size = hscrollbar#adjustment#upper
-      then hscrollbar#misc#hide() else hscrollbar#misc#show();
-    end |> ignore;
-    if not Oe_config.unify_statusbars then begin
-      GMisc.separator `HORIZONTAL ~packing:(vbox#pack ~expand:false) () |> ignore;
-      vbox#pack editorbar#coerce;
-    end
-  in
   (** Global gutter *)
   let global_gutter = GMisc.drawing_area ~packing:global_gutter_ebox#add
       ~show:Preferences.preferences#get.editor_show_global_gutter () in
@@ -394,7 +384,7 @@ class page ?file ~project ~scroll_offset ~offset ~editor () =
       let hbox = GPack.hbox ~spacing:1 () in
       let _ = GMisc.image ~pixbuf:(??? Icons.history) ~packing:hbox#pack () in
       let label = GMisc.label ~text:(sprintf "\xC2\xAB%s\xC2\xBB history" (Filename.basename self#get_filename)) ~packing:hbox#pack () in
-        Messages.vmessages#append_page ~label_widget:hbox#coerce ~with_spinner:false (rev :> Messages.page);
+      Messages.vmessages#append_page ~label_widget:hbox#coerce ~with_spinner:false (rev :> Messages.page);
       rev#set_title label#text;
       rev#present();
       rev#set_icon None;
@@ -507,7 +497,7 @@ class page ?file ~project ~scroll_offset ~offset ~editor () =
       (**  *)
       view#hyperlink#enable();
       (** Expose: Statusbar *)
-        let signal_expose = ref (self#view#misc#connect#after#draw ~callback:begin fun _drawable ->
+      let signal_expose = ref (self#view#misc#connect#after#draw ~callback:begin fun _drawable ->
           let iter = self#buffer#get_iter `INSERT in
           editorbar#pos_lin#set_text (string_of_int (iter#line + 1));
           editorbar#pos_col#set_text (string_of_int (iter#line_offset + 1));
@@ -515,9 +505,9 @@ class page ?file ~project ~scroll_offset ~offset ~editor () =
           false
         end)
       in
-        ignore (view#vadjustment#connect#changed ~callback:(fun () -> view#misc#handler_block !signal_expose));
-        ignore (view#vadjustment#connect#after#changed ~callback:(fun () ->
-            view#draw_gutter ();
+      ignore (view#vadjustment#connect#changed ~callback:(fun () -> view#misc#handler_block !signal_expose));
+      ignore (view#vadjustment#connect#after#changed ~callback:(fun () ->
+          view#draw_gutter ();
           Gmisclib.Idle.add ~prio:300 (fun () -> view#misc#handler_unblock !signal_expose)));
       (* After focus_in, check if the file is changed on disk *)
       ignore (text_view#event#connect#after#focus_in ~callback:begin fun _ ->
