@@ -113,6 +113,8 @@ let set_has_references editor item =
 (* workaround, because the [lablgtk] has no method [set_label]. Gtk has *)
 let update_menu_item_label menu_item text =
   let child = menu_item#children |> List.hd in
+  let box = GContainer.cast_container child in
+  let child = box#children |> List.hd in
   let label = GMisc.label_cast child in
   label#set_text text
 
