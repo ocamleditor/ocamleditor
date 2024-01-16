@@ -144,7 +144,6 @@ let create ~editor ~page () =
     select_all#connect#activate ~callback:page#buffer#select_all;
 
     Menu_search.update_items_visibility
-      ~label_find_used_components
       ~find_used_components
       ~find_definition
       ~find_references

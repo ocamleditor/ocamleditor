@@ -276,14 +276,12 @@ let search ~browser ~group ~flags items =
   find_references#add_accelerator ~group ~modi:[`CONTROL; `SHIFT] GdkKeysyms._Return ~flags;
   ignore (find_references#connect#activate ~callback:(fun () -> Menu_search.find_definition_references editor));
   (** Find used components *)
-  let find_used_components = Image_menu.item ~label:"" ~packing:menu#add () in
-  let label_find_used_components = GMisc.label ~xalign:0. ~markup:"" ~packing:find_used_components#add () in
+  let find_used_components = Image_menu.item ~label:"Find Used Components" ~packing:menu#add () in
   ignore (find_used_components#connect#activate ~callback:(fun () -> Menu_search.find_used_components editor));
   (** *)
   ignore (search_item#misc#connect#state_changed ~callback:begin fun state ->
       if state = `NORMAL then begin
         Menu_search.update_items_visibility
-          ~label_find_used_components
           ~find_used_components
           ~find_definition
           ~find_references

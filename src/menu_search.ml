@@ -110,8 +110,14 @@ let set_has_references editor item =
     item#misc#set_sensitive has
   end
 
+(* workaround, because the [lablgtk] has no method [set_label]. Gtk has *)
+let update_menu_item_label menu_item text =
+  let child = menu_item#children |> List.hd in
+  let label = GMisc.label_cast child in
+  label#set_text text
+
 (** set_has_used_components *)
-let set_has_used_components editor label item =
+let set_has_used_components editor item =
   editor#with_current_page begin fun page ->
     let project = editor#project in
     let filename = page#get_filename in
@@ -125,10 +131,10 @@ let set_has_used_components editor label item =
         ~compile_buffer:(fun () -> page#compile_buffer ?join:(Some true))  ()
     with
     | Some (ident, used_components) when used_components <> [] ->
-        label#set_label (sprintf "Find Used Components of <tt>%s</tt>" ident.ident_loc.Location.txt);
+        update_menu_item_label item (sprintf "Find Used Components of <tt>%s</tt>" ident.ident_loc.Location.txt);
         item#misc#set_sensitive true;
     | _ ->
-        label#set_label "Find Used Components of...";
+        update_menu_item_label item "Find Used Components of...";
         item#misc#set_sensitive false;
   end
 
@@ -256,13 +262,12 @@ let find_used_components editor =
 
 (** update_items_visibility *)
 let update_items_visibility
-    ~label_find_used_components
     ~find_used_components
     ~find_definition
     ~find_references
     editor =
   Gmisclib.Idle.add ~prio:100 begin fun () ->
-    set_has_used_components editor label_find_used_components find_used_components;
+    set_has_used_components editor find_used_components;
     set_has_definition editor find_definition;
     set_has_references editor find_references;
   end
