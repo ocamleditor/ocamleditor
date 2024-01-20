@@ -108,7 +108,7 @@ class markers gutter margin_line_numbers =
               | Some mark_iter ->
                   let ym, h = view#get_line_yrange (new GText.iter mark_iter) in
                   let y = ym - top in
-                  margin_line_numbers#hide_label (y + view#pixels_above_lines);
+                  margin_line_numbers#hide_label (y + view#pixels_above_lines + int_of_float view#vadjustment#value);
                   let y = y + (h - self#icon_size) / 2 + int_of_float view#vadjustment#value in
                   begin
                     match mark.icon_obj with
