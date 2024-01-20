@@ -88,5 +88,5 @@ class widget view =
       stop_line <- stop#line + 1;
       top <- t;
       height <- h;
-      view#move_child ~child:drawing_area#coerce ~x:(left + spacing) ~y:0;
+      view#move_child ~child:drawing_area#coerce ~x:(left + spacing) ~y:t;
   end

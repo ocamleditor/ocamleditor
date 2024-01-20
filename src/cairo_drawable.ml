@@ -40,7 +40,26 @@ let rectangle drawable ~x ~y ~width ~height ?(filled = false) () =
   if filled then Cairo.fill drawable else Cairo.stroke drawable
 ;;
 
+let rectanglef drawable ~x ~y ~w ~h ?(filled = false) () =
+  Cairo.move_to drawable x y;
+  Cairo.line_to drawable (x +. w) y;
+  Cairo.line_to drawable (x +. w) (y +. h);
+  Cairo.line_to drawable x (y +. h);
+  Cairo.line_to drawable x y;
+
+  if filled then Cairo.fill drawable else Cairo.stroke drawable
+;;
+
 let set_foreground drawable color =
+  let color = match color with
+    | `NAME s ->
+        if String.length s <> 7 then
+          let () = print_endline @@ "Invalid color name: " ^ s in
+          `NAME (String.sub s 0 7)
+        else color
+    | _ -> color
+  in
+
   let color = GDraw.color color in
   let r = (Gdk.Color.red color |> f) /. 65535.0 in
   let g = (Gdk.Color.green color |> f) /. 65535.0 in
@@ -50,7 +69,7 @@ let set_foreground drawable color =
 
 let set_background drawable color =
   set_foreground drawable color;
-  Cairo.fill drawable 
+  Cairo.fill drawable
 
 
 let set_line_attributes drawable ?(width=1) ?(style = `SOLID) ?(join = `BEVEL) ?(cap = `BUTT) () =
@@ -91,7 +110,7 @@ let polygon drawable ?(filled = false) points =
 
       if filled then Cairo.fill drawable else Cairo.stroke drawable
 
-let put_layout drawable ~x ~y ~fore layout = 
+let put_layout drawable ~x ~y ~fore layout =
   set_foreground drawable fore;
   Cairo.move_to drawable (f x) (f y);
   Cairo_pango.show_layout drawable layout

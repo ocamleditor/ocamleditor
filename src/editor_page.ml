@@ -509,6 +509,9 @@ class page ?file ~project ~scroll_offset ~offset ~editor () =
       ignore (view#vadjustment#connect#after#changed ~callback:(fun () ->
           view#draw_gutter ();
           Gmisclib.Idle.add ~prio:300 (fun () -> view#misc#handler_unblock !signal_expose)));
+      ignore (view#vadjustment#connect#after#value_changed ~callback:(fun _ ->
+          Gmisclib.Idle.add view#draw_gutter
+        ));
       (* After focus_in, check if the file is changed on disk *)
       ignore (text_view#event#connect#after#focus_in ~callback:begin fun _ ->
           Gaux.may self#file ~f:begin fun f ->
