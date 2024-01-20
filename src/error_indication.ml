@@ -550,23 +550,3 @@ class error_indication (view : Ocaml_text.view) (global_gutter : GMisc.drawing_a
         false
       end |> ignore
   end
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

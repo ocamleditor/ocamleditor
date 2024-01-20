@@ -9,20 +9,9 @@ let line drawable x1 y1 x2 y2 =
   stroke drawable
 ;;
 
-let lines drawable (x1, y1) xys =
-  let open Cairo in
-  move_to drawable (f x1) (f y1);
-  List.iter (fun (x, y) ->
-      line_to drawable (f x) (f y);
-      stroke drawable
-    ) xys
-
-let lines drawable xys =
-  lines drawable (List.hd xys) (List.tl xys)
-
-let rec lines_ drawable = function
+let rec lines drawable = function
   | [] -> ()
-  | (x1, y1) :: (x2, y2) :: more -> line drawable x1 y1 x2 y2; lines_ drawable more
+  | (x1, y1) :: (x2, y2) :: more -> line drawable x1 y1 x2 y2; lines drawable more
   | _ -> assert false
 
 let rec segments drawable = function
