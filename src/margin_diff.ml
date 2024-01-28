@@ -7,11 +7,11 @@ open Cairo_drawable
 class widget view =
   let drawing_area = GMisc.drawing_area () in
   let color_add =
-    let sat, value = if Preferences.preferences#get.theme_is_dark then 0.2, 0.4 else -0.2, -0.4 in
+    let sat, value = if Preferences.preferences#get.theme_is_dark then 0.2, 0.4 else 0.4, 0.2 in
     `NAME (ColorOps.modify (?? Oe_config.global_gutter_diff_color_add) ~sat ~value)
   in
   let color_del =
-    let sat, value = if Preferences.preferences#get.theme_is_dark then 0.2, 0.4 else -0.65, 1.0 in
+    let sat, value = if Preferences.preferences#get.theme_is_dark then 0.2, 0.4 else 0.4, 0.2 in
     `NAME (ColorOps.modify (?? Oe_config.global_gutter_diff_color_del) ~sat ~value)
   in
   let color_change = `NAME (?? Oe_config.global_gutter_diff_color_change) in
