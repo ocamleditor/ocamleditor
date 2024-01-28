@@ -40,15 +40,6 @@ let rectanglef drawable ~x ~y ~w ~h ?(filled = false) () =
 ;;
 
 let set_foreground drawable color =
-  let color = match color with
-    | `NAME s ->
-        if String.length s <> 7 then
-          let () = print_endline @@ "Invalid color name: " ^ s in
-          `NAME (String.sub s 0 7)
-        else color
-    | _ -> color
-  in
-
   let color = GDraw.color color in
   let r = (Gdk.Color.red color |> f) /. 65535.0 in
   let g = (Gdk.Color.green color |> f) /. 65535.0 in
