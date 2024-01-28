@@ -2,17 +2,34 @@ open Margin
 open Merlin_j
 open GUtil
 open Preferences
+open Printf
 
 module Icons = struct
   let expander_open = "\u{f107}"
   let expander_closed = "\u{f105}"
 end
 
+let counter = ref 0
+
+let mk_polygon n r =
+  let pi = 3.14189 in
+  let m = float n in
+  Array.make n r
+  |> Array.mapi begin fun i r ->
+    let i = float i in
+    r *. cos (2. *. pi *. i /. m) |> int_of_float,
+    r *. sin (2. *. pi *. i /. m) |> int_of_float
+  end
+
+let dot = mk_polygon 5 2.3 |> Array.to_list
+
 class expander ~(view : Ocaml_text.view) ~start ~stop ~tag_highlight ~tag_invisible ?packing () =
   let ebox = GBin.event_box ?packing () in
-  let label = Gtk_util.label_icon Icons.expander_open ~packing:ebox#add in
+  let label = Gtk_util.label_icon ~width:30 (sprintf "<span size='x-small'>%d</span>%s" !counter Icons.expander_open) ~packing:ebox#add in
   let buffer = view#buffer in
-  let get_geometry start stop =
+  let id = !counter in
+  let mark = buffer#create_mark ~name:(sprintf "fold-%d" id) start in
+  let get_geometry (start : GText.iter) (stop : GText.iter) =
     start#set_line_offset 0,
     start#forward_line#set_line_offset 0,
     stop#forward_line#set_line_index 0
@@ -29,7 +46,9 @@ class expander ~(view : Ocaml_text.view) ~start ~stop ~tag_highlight ~tag_invisi
     val toggled = new toggled()
 
     initializer
-      ebox#misc#set_property "visible-window" (`BOOL false);
+      incr counter;
+      GtkText.Mark.set_visible mark true;
+      ebox#misc#set_property "visible-window" (`BOOL true);
       ebox#event#connect#button_press ~callback:begin fun ev ->
         if is_expanded then self#collapse() else self#expand();
         false
@@ -47,15 +66,22 @@ class expander ~(view : Ocaml_text.view) ~start ~stop ~tag_highlight ~tag_invisi
       end |> ignore;
 
     method private set_bounds (istart : GText.iter) (istop : GText.iter) =
-      let start_highlight', start_invisible', stop' = get_geometry istart istop in
-      start_highlight <- start_highlight';
-      start_invisible <- start_invisible';
+      let a, b, c = get_geometry istart istop in
+      start_highlight <- a;
+      start_invisible <- b;
       start <- istart;
-      stop <- stop'
+      stop <- c
 
-    method bounds() = start, stop
+    method id = id
+    method mark = mark
+    method bounds = start, stop
     method is_expanded = is_expanded
+    method is_collapsed = not is_expanded
     method in_use = in_use
+
+    method is_visible =
+      let start = buffer#get_iter (`MARK mark) in
+      start#tags |> List.for_all (fun t -> t#get_oid <> tag_invisible#get_oid)
 
     method abandon() =
       ebox#misc#hide();
@@ -63,14 +89,16 @@ class expander ~(view : Ocaml_text.view) ~start ~stop ~tag_highlight ~tag_invisi
 
     method regain start stop =
       self#set_bounds start stop;
-      in_use <- true
+      in_use <- true;
+      (*if self#is_collapsed then self#collapse() else self#expand()*)
 
     method expand () =
-      let was_collapsed = not is_expanded in
-      label#set_text Icons.expander_open;
+      let was_collapsed = self#is_collapsed in
+      Printf.kprintf label#set_label "<span size='x-small'>%d</span>%s" id Icons.expander_open;
       Gmisclib.Idle.add ~prio:300 begin fun () ->
-        buffer#remove_tag tag_invisible ~start:start_invisible ~stop;
-        if was_collapsed then toggled#call true
+        self#show_region();
+        if was_collapsed then toggled#call true;
+        GtkBase.Widget.queue_draw view#as_widget (* Updates ellipsis *)
       end;
       is_expanded <- true;
 
@@ -81,19 +109,19 @@ class expander ~(view : Ocaml_text.view) ~start ~stop ~tag_highlight ~tag_invisi
       let was_expanded = is_expanded in
       buffer#remove_tag tag_highlight ~start:start_highlight ~stop;
       Gmisclib.Idle.add ~prio:300 begin fun () ->
-        buffer#apply_tag tag_invisible ~start:start_invisible ~stop;
+        self#hide_region();
         if was_expanded then toggled#call false;
       end;
-      label#set_text Icons.expander_closed;
+      Printf.kprintf label#set_label "<span size='x-small'>%d</span>%s" id Icons.expander_closed;
       is_expanded <- false;
 
     method hide_region () =
-      Printf.printf "hide_region %d %d \n%!" (start_invisible#line + 1) (stop#line + 1);
       buffer#apply_tag tag_invisible ~start:start_invisible ~stop;
 
     method show_region () =
-      Printf.printf "show_region %d-%d\n%!" (start#line + 1) (stop#line + 1);
-      buffer#remove_tag tag_invisible ~start ~stop;
+      (*if not self#is_expanded then begin*)
+      buffer#remove_tag tag_invisible ~start:start_invisible ~stop;
+      (*end*)
 
     method connect = new signals ~toggled
   end
@@ -107,7 +135,7 @@ and signals ~toggled =
 
 
 class margin_fold (view : Ocaml_text.view) =
-  let size = 13 in
+  let size = 30(*13*) in
   let spacing = 5 in
   let buffer = view#obuffer in
   let tag_highlight = buffer#create_tag ~name:"fold-highlight"
@@ -127,12 +155,27 @@ class margin_fold (view : Ocaml_text.view) =
         List.rev_append (hd :: (flatten level tl)) (flatten (level + 1) hd.ol_children)
         (*hd :: (flatten (List.rev_append hd.ol_children tl))*)
   in
+  let rec walk f (ol : Merlin_j.outline list) =
+    match ol with
+    | [] -> ()
+    | hd :: tl ->
+        let walk_children = f hd in
+        if walk_children then walk f hd.ol_children;
+        walk f tl
+  in
+  let char_width =
+    let desc =
+      (* TODO Update on preferences change *)
+      Preferences.preferences#get.Settings_t.editor_base_font
+      |> GPango.font_description
+    in
+    GPango.to_pixels (view#misc#pango_context#get_metrics ~desc ())#approx_digit_width in
   object (self)
     inherit margin()
     val mutable last_outline_time = 0.0
     val mutable is_pending = false
     val mutable outline = []
-    val mutable expanders : (string, expander) Hashtbl.t = Hashtbl.create 7
+    val mutable expanders : expander list = []
     val expander_toggled = new expander_toggled()
     val synchronized = new synchronized()
     method index = 30
@@ -143,30 +186,23 @@ class margin_fold (view : Ocaml_text.view) =
     method is_changed_after_last_outline = last_outline_time < view#tbuffer#last_edit_time
     method sync_outline_time () =
       last_outline_time <- Unix.gettimeofday();
-      (*Printf.printf "sync [%d]\n%!" (Thread.self() |> Thread.id);*)
       synchronized#call();
 
     method draw ~view ~top ~left ~height ~start ~stop =
-      (*Printf.printf "is_changed_after_last_outline = %b\n%!" self#is_changed_after_last_outline;*)
       if not self#is_changed_after_last_outline then begin
         let buffer_start_line = start#line in
         let buffer_stop_line = stop#line in
-        Hashtbl.iter (fun _ ex -> ex#abandon()) expanders;
+        List.iter (fun ex -> ex#abandon()) expanders;
         outline
-        |> List.iter begin fun ol ->
+        |> walk begin fun ol ->
           let fold_start_line = ol.ol_start.line - 1 in
           let is_folding_point =
             buffer_start_line <= fold_start_line && fold_start_line <= buffer_stop_line
             && (ol.ol_kind = "Method" || ol.ol_start.line <> ol.ol_stop.line)
           in
-          if is_folding_point then self#draw_expander ol top left
-        end;
-        Hashtbl.iter begin fun key ex ->
-          if not ex#in_use then begin
-            ex#destroy();
-            Hashtbl.remove expanders key
-          end
-        end expanders
+          if is_folding_point then self#draw_expander ol top left;
+          true
+        end
       end else is_pending <- true
 
     method private draw_expander ol top left =
@@ -177,16 +213,17 @@ class margin_fold (view : Ocaml_text.view) =
       let stop = buffer#get_iter (`LINECHAR (ol.ol_stop.line - 1, ol.ol_stop.col)) in
       (*Printf.printf "%S: %d:%d - %d:%d -- %d:%d\n%!"
         (buffer#get_text ~start ~stop:start#forward_to_line_end ())
-        ol.ol_start.line ol.ol_start.col ol.ol_stop.line ol.ol_stop.col
-        start#line start#line_offset;*)
+        ol.ol_start.line ol.ol_start.col
+        ol.ol_stop.line ol.ol_stop.col
+        (start#line + 1) start#line_offset;*)
       let yl, _ = view#get_line_yrange start in
       let y = yl - top + view#pixels_above_lines in
-      let key = buffer#get_text ~start ~stop ~visible:false () (*|> Hashtbl.hash*) in
       let expander =
-        match Hashtbl.find_opt expanders key with
+        match expanders |> List.find_opt (fun exp -> (buffer#get_iter (`MARK exp#mark))#compare start = 0) with
         | None ->
             let expander = new expander ~start ~stop ~tag_highlight ~tag_invisible ~view () in
-            Hashtbl.replace expanders key expander;
+            expanders <- expander :: expanders;
+            (*Printf.printf "NEW %d-%d\n%S\n%!" (start#line + 1) (stop#line + 1) (String.sub key 0 (String.index key '\n'));*)
             view#add_child_in_window ~child:expander#coerce ~which_window:`LEFT ~x:left ~y;
             expander#show_region();
             expander#connect#toggled ~callback:(fun _ -> expander_toggled#call expander) |> ignore;
@@ -196,21 +233,52 @@ class margin_fold (view : Ocaml_text.view) =
             expander#regain start stop;
             expander
       in
+      (* Hide expanders inside invisible regions *)
       if List.exists (fun t -> t#get_oid = tag_invisible#get_oid) start#tags
       then expander#misc#hide()
       else expander#misc#show();
 
+    method draw_ellipsis ev =
+      match view#get_window `TEXT with
+      | Some window ->
+          let line_width = 1 in
+          let drawable = new GDraw.drawable window in
+          drawable#set_line_attributes ~width:line_width ~style:`SOLID ();
+          drawable#set_foreground (`NAME "#ff0000");
+          let vrect = view#visible_rect in
+          let y0 = Gdk.Rectangle.y vrect in
+          expanders
+          |> List.iter begin fun expander ->
+            let start = buffer#get_iter (`MARK expander#mark) in
+            if expander#is_collapsed && expander#is_visible then
+              let start = start#forward_to_line_end in
+              let y, height = view#get_line_yrange start in
+              let x_chars = start#line_index in
+              let x = (x_chars + 1) * char_width in
+              let y = y - y0 + 1 in
+              let height = height - 4 in (* do not overlap current line border *)
+              let width = height * 8 / 5 in
+              drawable#rectangle ~x ~y ~filled:false ~width ~height ();
+              let h2 = height / 2 in
+              let w2 = width / 2 + line_width in
+              let y'' = y + h2 in
+              dot |> List.map (fun (x', y') -> x' + x + w2 - h2, y' + y'') |> drawable#polygon ~filled:true;
+              dot |> List.map (fun (x', y') -> x' + x + w2, y' + y'') |> drawable#polygon ~filled:true;
+              dot |> List.map (fun (x', y') -> x' + x + w2 + h2, y' + y'') |> drawable#polygon ~filled:true;
+          end
+      | _ -> ()
+
     method amend_nested_collapsed (expander : expander) =
       (* TODO more precise start *)
       if expander#is_expanded then begin
-        let start, stop = expander#bounds() in
-        Hashtbl.iter begin fun _ exp ->
-          let s, _ = exp#bounds() in
+        let start, stop = expander#bounds in
+        List.iter begin fun exp ->
+          let s, _ = exp#bounds in
           (* When the outer expander is expanded, all nested ones are also
              expanded, because the tag_highlight is removed everywhere, but
              the expander state remains "collapsed". *)
-          if not exp#is_expanded && start#compare s < 0 && s#compare stop < 0
-          then exp#hide_region();
+          if exp#is_collapsed && start#compare s < 0 && s#compare stop < 0
+          then exp#hide_region()
         end expanders
       end
 
@@ -218,7 +286,7 @@ class margin_fold (view : Ocaml_text.view) =
       if self#is_changed_after_last_outline then begin
         merlin@@Merlin.outline begin fun (ol : Merlin_j.outline list) ->
           self#sync_outline_time();
-          outline <- flatten 0 ol;
+          outline <- (*flatten 0*) ol;
         end;
       end;
       true
@@ -241,6 +309,7 @@ class margin_fold (view : Ocaml_text.view) =
     initializer
       view#event#connect#focus_in ~callback:(fun _ -> self#start_timer(); false) |> ignore;
       view#event#connect#focus_out ~callback:(fun _ -> self#stop_timer(); false) |> ignore;
+      view#event#connect#expose ~callback:(fun ev -> self#draw_ellipsis ev; false) |> ignore;
       self#start_timer()
   end
 
@@ -259,17 +328,13 @@ let init_page (page : Editor_page.page) =
     page#view#margin#add (margin :> Margin.margin);
     margin#connect#synchronized ~callback:begin fun () ->
       if margin#is_pending then begin
-        Printf.printf "pending\n%!" ;
         Gmisclib.Idle.add ~prio:300 page#view#draw_gutter;
         margin#clear_pending()
       end
     end |> ignore;
     margin#connect#expander_toggled ~callback:begin fun expander ->
       margin#amend_nested_collapsed expander;
-      Gmisclib.Idle.add ~prio:300 begin fun () ->
-        Printf.printf "draw_gutter\n%!" ;
-        page#view#draw_gutter();
-      end
+      Gmisclib.Idle.add ~prio:300 (fun () -> page#view#draw_gutter())
     end |> ignore;
   with ex ->
     Printf.eprintf "File \"margin_fold.ml\": %s\n%s\n%!" (Printexc.to_string ex) (Printexc.get_backtrace())
