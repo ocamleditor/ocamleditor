@@ -21,6 +21,8 @@
 *)
 
 
+let clamp x = int_of_float (255. *. (max 0. (min x 1.0)));;
+
 let name = function `RGB (red, green, blue) -> Printf.sprintf "#%02X%02X%02X" red green blue
 
 let name_of_gdk color =
@@ -78,12 +80,9 @@ let name_of_hsv h s v =
       else v, p, q
     end
   in
-  let r = if r < 0. then 0. else r in
-  let g = if g < 0. then 0. else g in
-  let b = if b < 0. then 0. else b in
-  let r = int_of_float (r *. 255.) in
-  let g = int_of_float (g *. 255.) in
-  let b = int_of_float (b *. 255.) in
+  let r = clamp r in
+  let g = clamp g in
+  let b = clamp b in
   Printf.sprintf "#%02x%02x%02x" r g b;;
 
 let add_value name ?(sfact=1.0) x =
