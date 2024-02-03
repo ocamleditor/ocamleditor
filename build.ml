@@ -775,7 +775,9 @@ let exec
     | `ASYNC -> `PID proc.pid
   with (Unix.Unix_error _) as ex -> `ERROR ex
 
-(** sync *)
+(** sync
+    @param at_exit Deprecated, use continue_with instead.
+*)
 let sync
     ?working_directory
     ?env
@@ -3755,11 +3757,11 @@ let targets = [
     compilation_bytecode = true;
     compilation_native   = false;
     toplevel_modules     = "dot_viewer_svg.ml";
-    package              = "cairo2,lablgtk3,xml-light";
+    package              = "atdgen-runtime,cairo2,lablgtk3,lablgtk3-rsvg2,xml-light,yojson";
     search_path          = "common gmisclib otherwidgets"; (* -I *)
     required_libraries   = "";
     compiler_flags       = "-w -s-y-x-m -g";
-    linker_flags         = "-g lablrsvg.cma";
+    linker_flags         = "-g lablgtk3_rsvg2.cma";
     thread               = true;
     vmthread             = false;
     pp                   = "";
@@ -3770,7 +3772,7 @@ let targets = [
     library_install_dir  = ""; (* Relative to the Standard Library Directory *)
     other_objects        = "";
     external_tasks       = [];
-    restrictions         = ["FINDLIB(not-avalable-for-gtk3)"];
+    restrictions         = ["FINDLIB(lablgtk3-rsvg2)"];
     dependencies         = [9];
     show                 = true;
     rc_filename          = None;
@@ -3786,11 +3788,11 @@ let targets = [
     compilation_bytecode = false;
     compilation_native   = true;
     toplevel_modules     = "dot_viewer_svg.ml";
-    package              = "cairo2,lablgtk3,xml-light";
+    package              = "cairo2,lablgtk3,lablgtk3-rsvg2,xml-light";
     search_path          = "common gmisclib"; (* -I *)
     required_libraries   = "";
     compiler_flags       = "-g -w -s-y-x-m";
-    linker_flags         = "-g lablrsvg.cmxa";
+    linker_flags         = "-g lablgtk3_rsvg2.cmxa";
     thread               = true;
     vmthread             = false;
     pp                   = "";
@@ -3801,7 +3803,7 @@ let targets = [
     library_install_dir  = ""; (* Relative to the Standard Library Directory *)
     other_objects        = "";
     external_tasks       = [];
-    restrictions         = ["FINDLIB(not-avalable-for-gtk3)"];
+    restrictions         = ["FINDLIB(lablgtk3-rsvg2)"];
     dependencies         = [];
     show                 = true;
     rc_filename          = None;

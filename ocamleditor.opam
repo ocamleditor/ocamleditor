@@ -20,14 +20,15 @@ install: [["ocaml" "tools/install.ml" "-prefix" prefix]]
 depends: [
   "ocaml" {>= "4.14" & < "5"}
   "ocamlfind" {>= "1.4.0"}
-  "lablgtk" {>= "2.18.0"}
+  "lablgtk3" {>= "3.1.4"}
   "ocp-indent" { >= "1.8.0" }
   "xml-light" {>= "2.2"}
   "yojson" {>= "2.1"}
   "atdgen" {>= "2.12"}
-  "ocamldiff" {>= "1.1"}
+  "ocamldiff" {>= "1.2"}
   "merlin" {>= "4.9"}
 ]
 depopts: [
   "ocurl"
+  "lablgtk3-rsvg2" {>= "3.1.4"}
 ]

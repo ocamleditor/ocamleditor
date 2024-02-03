@@ -394,7 +394,7 @@
       <libs></libs>
       <other_objects></other_objects>
       <files>dot_viewer_svg.ml</files>
-      <package>cairo2,lablgtk3,xml-light</package>
+      <package>atdgen-runtime,cairo2,lablgtk3,lablgtk3-rsvg2,xml-light,yojson</package>
       <includes>common gmisclib otherwidgets</includes>
       <thread>true</thread>
       <vmthread>false</vmthread>
@@ -404,12 +404,12 @@
       <dontlinkdep>true</dontlinkdep>
       <dontaddopt>false</dontaddopt>
       <cflags>-w -s-y-x-m -g</cflags>
-      <lflags>-g lablrsvg.cma</lflags>
+      <lflags>-g lablgtk3_rsvg2.cma</lflags>
       <target_type>Library</target_type>
       <outname>../plugins/dot_viewer_svg</outname>
       <lib_install_path></lib_install_path>
       <external_tasks/>
-      <restrictions>FINDLIB(not-avalable-for-gtk3)</restrictions>
+      <restrictions>FINDLIB(lablgtk3-rsvg2)</restrictions>
       <dependencies>9</dependencies>
     </target>
     <target name="plugin-dotviewer-native" default="false" id="19" sub_targets="" is_fl_package="false" subsystem="" readonly="false" visible="true" node_collapsed="false">
@@ -419,7 +419,7 @@
       <libs></libs>
       <other_objects></other_objects>
       <files>dot_viewer_svg.ml</files>
-      <package>cairo2,lablgtk3,xml-light</package>
+      <package>cairo2,lablgtk3,lablgtk3-rsvg2,xml-light</package>
       <includes>common gmisclib</includes>
       <thread>true</thread>
       <vmthread>false</vmthread>
@@ -429,12 +429,12 @@
       <dontlinkdep>true</dontlinkdep>
       <dontaddopt>false</dontaddopt>
       <cflags>-g -w -s-y-x-m</cflags>
-      <lflags>-g lablrsvg.cmxa</lflags>
+      <lflags>-g lablgtk3_rsvg2.cmxa</lflags>
       <target_type>Plugin</target_type>
       <outname>../plugins/dot_viewer_svg</outname>
       <lib_install_path></lib_install_path>
       <external_tasks/>
-      <restrictions>FINDLIB(not-avalable-for-gtk3)</restrictions>
+      <restrictions>FINDLIB(lablgtk3-rsvg2)</restrictions>
       <dependencies></dependencies>
     </target>
     <target name="prepare-build" default="false" id="20" sub_targets="" is_fl_package="false" subsystem="Console" readonly="false" visible="true" node_collapsed="false">
