@@ -21,7 +21,7 @@ let mk_polygon n r =
     r *. sin (2. *. pi *. i /. m) |> int_of_float
   end
 
-let dot = mk_polygon 5 2.3 |> Array.to_list
+let dot = mk_polygon 4 2.3 |> Array.to_list
 
 class expander ~(view : Ocaml_text.view) ~start ~stop ~tag_highlight ~tag_invisible ?packing () =
   let ebox = GBin.event_box ?packing () in
@@ -34,15 +34,23 @@ class expander ~(view : Ocaml_text.view) ~start ~stop ~tag_highlight ~tag_invisi
     start#forward_line#set_line_offset 0,
     stop#forward_line#set_line_index 0
   in
-  let start_highlight, start_invisible, stop = get_geometry start stop in
+  let head, body, foot = get_geometry start stop in
   object (self)
     inherit GObj.widget ebox#as_widget
     val mutable is_expanded = true
-    val mutable in_use = true
-    val mutable start_highlight = start_highlight
-    val mutable start_invisible = start_invisible
-    val mutable start = start
-    val mutable stop = stop
+
+    (** The start of the region to highlight when the pointer is over the
+        expander. It is the line_offset zero in the head line. *)
+    val mutable head = head
+
+    (** The start of the region to be made invisible when the expander is
+        collapsed. This is the start of the {i body}. *)
+    val mutable body = body
+
+    (** The end of the folding point which is also the end of the invisible region
+        ({i body}) and the end of the highlighted region when the pointer is over
+        the expander ({i head} + {i body}). *)
+    val mutable foot = foot
     val toggled = new toggled()
 
     initializer
@@ -53,44 +61,38 @@ class expander ~(view : Ocaml_text.view) ~start ~stop ~tag_highlight ~tag_invisi
         if is_expanded then self#collapse() else self#expand();
         false
       end |> ignore;
+      (* Preview of the fold region when the mouse is over the expander. *)
       ebox#event#connect#enter_notify ~callback:begin fun ev ->
         Gdk.Window.set_cursor ebox#misc#window (Gdk.Cursor.create `HAND2);
-        (*Printf.printf "-->%d,%d -- %d,%d\n%!" (start_highlight#line + 1) start_highlight#line_offset (stop#line + 1) stop#line_offset;*)
-        if is_expanded then buffer#apply_tag tag_highlight ~start:start_highlight ~stop;
+        if is_expanded then buffer#apply_tag tag_highlight ~start:head ~stop:foot;
         false
       end |> ignore;
       ebox#event#connect#leave_notify ~callback:begin fun ev ->
         Gdk.Window.set_cursor ebox#misc#window (Gdk.Cursor.create `ARROW);
-        buffer#remove_tag tag_highlight ~start:start_highlight ~stop;
+        buffer#remove_tag tag_highlight ~start:head ~stop:foot;
         false
-      end |> ignore;
+      end |> ignore
 
-    method private set_bounds (istart : GText.iter) (istop : GText.iter) =
-      let a, b, c = get_geometry istart istop in
-      start_highlight <- a;
-      start_invisible <- b;
-      start <- istart;
-      stop <- c
+    (** The iter where the {i folding point} starts. It is between head and body. *)
+    method folding_point = buffer#get_iter (`MARK mark)
 
-    method id = id
-    method mark = mark
-    method bounds = start, stop
     method is_expanded = is_expanded
     method is_collapsed = not is_expanded
-    method in_use = in_use
+    method body_contains iter = body#compare iter <= 0 && iter#compare foot <= 0
 
+    (** An expander is visible if its start position does not have a tag with
+        the invisible property, that is, if it is not contained in the body of
+        another collapsed expander. *)
     method is_visible =
       let start = buffer#get_iter (`MARK mark) in
       start#tags |> List.for_all (fun t -> t#get_oid <> tag_invisible#get_oid)
 
-    method abandon() =
-      ebox#misc#hide();
-      in_use <- false
-
-    method regain start stop =
-      self#set_bounds start stop;
-      in_use <- true;
-      (*if self#is_collapsed then self#collapse() else self#expand()*)
+    method relocate istop =
+      let fp = buffer#get_iter (`MARK mark) in
+      let a, b, c = get_geometry fp istop in
+      head <- a;
+      body <- b;
+      foot <- c
 
     method expand () =
       let was_collapsed = self#is_collapsed in
@@ -104,10 +106,10 @@ class expander ~(view : Ocaml_text.view) ~start ~stop ~tag_highlight ~tag_invisi
 
     method collapse () =
       let iter = buffer#get_iter `INSERT in
-      if iter#compare start >= 0 && iter#compare stop <= 0 then
-        buffer#move_mark `INSERT ~where:start#backward_line#forward_to_line_end;
+      if iter#compare body >= 0 && iter#compare foot <= 0 then
+        buffer#move_mark `INSERT ~where:head#backward_line#forward_to_line_end;
       let was_expanded = is_expanded in
-      buffer#remove_tag tag_highlight ~start:start_highlight ~stop;
+      buffer#remove_tag tag_highlight ~start:head ~stop:foot;
       Gmisclib.Idle.add ~prio:300 begin fun () ->
         self#hide_region();
         if was_expanded then toggled#call false;
@@ -116,12 +118,10 @@ class expander ~(view : Ocaml_text.view) ~start ~stop ~tag_highlight ~tag_invisi
       is_expanded <- false;
 
     method hide_region () =
-      buffer#apply_tag tag_invisible ~start:start_invisible ~stop;
+      buffer#apply_tag tag_invisible ~start:body ~stop:foot;
 
     method show_region () =
-      (*if not self#is_expanded then begin*)
-      buffer#remove_tag tag_invisible ~start:start_invisible ~stop;
-      (*end*)
+      buffer#remove_tag tag_invisible ~start:body ~stop:foot;
 
     method connect = new signals ~toggled
   end
@@ -172,18 +172,29 @@ class margin_fold (view : Ocaml_text.view) =
     GPango.to_pixels (view#misc#pango_context#get_metrics ~desc ())#approx_digit_width in
   object (self)
     inherit margin()
+
+    (** The time the folding points currently in cache were calculated. *)
     val mutable last_outline_time = 0.0
-    val mutable is_pending = false
+
+    (** The margin is refresh pending when it is requested to be drawn but cannot be
+        drawn because the buffer has changed and folding points currently
+        cached have become invalid. The drawing of the margin is therefore
+        postponed until the folding points are refreshed. *)
+    val mutable is_refresh_pending = false
+
+    (** The currently cached folding points. *)
     val mutable outline = []
+
     val mutable expanders : expander list = []
     val expander_toggled = new expander_toggled()
     val synchronized = new synchronized()
     method index = 30
     method size = size
 
-    method is_pending = is_pending
-    method clear_pending () = is_pending <- false
+    method is_refresh_pending = is_refresh_pending
+    method clear_refresh_pending () = is_refresh_pending <- false
     method is_changed_after_last_outline = last_outline_time < view#tbuffer#last_edit_time
+
     method sync_outline_time () =
       last_outline_time <- Unix.gettimeofday();
       synchronized#call();
@@ -192,7 +203,7 @@ class margin_fold (view : Ocaml_text.view) =
       if not self#is_changed_after_last_outline then begin
         let buffer_start_line = start#line in
         let buffer_stop_line = stop#line in
-        List.iter (fun ex -> ex#abandon()) expanders;
+        List.iter (fun ex -> ex#misc#hide()) expanders;
         outline
         |> walk begin fun ol ->
           let fold_start_line = ol.ol_start.line - 1 in
@@ -203,7 +214,7 @@ class margin_fold (view : Ocaml_text.view) =
           if is_folding_point then self#draw_expander ol top left;
           true
         end
-      end else is_pending <- true
+      end else is_refresh_pending <- true
 
     method private draw_expander ol top left =
       (*Printf.printf "draw_expander %d:%d -- %d:%d [%d] [%s %d]\n%!"
@@ -219,7 +230,7 @@ class margin_fold (view : Ocaml_text.view) =
       let yl, _ = view#get_line_yrange start in
       let y = yl - top + view#pixels_above_lines in
       let expander =
-        match expanders |> List.find_opt (fun exp -> (buffer#get_iter (`MARK exp#mark))#compare start = 0) with
+        match expanders |> List.find_opt (fun exp -> exp#folding_point#equal start) with
         | None ->
             let expander = new expander ~start ~stop ~tag_highlight ~tag_invisible ~view () in
             expanders <- expander :: expanders;
@@ -230,7 +241,7 @@ class margin_fold (view : Ocaml_text.view) =
             expander
         | Some expander ->
             view#move_child ~child:expander#coerce ~x:left ~y;
-            expander#regain start stop;
+            expander#relocate stop;
             expander
       in
       (* Hide expanders inside invisible regions *)
@@ -249,7 +260,7 @@ class margin_fold (view : Ocaml_text.view) =
           let y0 = Gdk.Rectangle.y vrect in
           expanders
           |> List.iter begin fun expander ->
-            let start = buffer#get_iter (`MARK expander#mark) in
+            let start = expander#folding_point in
             if expander#is_collapsed && expander#is_visible then
               let start = start#forward_to_line_end in
               let y, height = view#get_line_yrange start in
@@ -259,25 +270,22 @@ class margin_fold (view : Ocaml_text.view) =
               let height = height - 4 in (* do not overlap current line border *)
               let width = height * 8 / 5 in
               drawable#rectangle ~x ~y ~filled:false ~width ~height ();
-              let h2 = height / 2 in
-              let w2 = width / 2 + line_width in
-              let y'' = y + h2 in
-              dot |> List.map (fun (x', y') -> x' + x + w2 - h2, y' + y'') |> drawable#polygon ~filled:true;
-              dot |> List.map (fun (x', y') -> x' + x + w2, y' + y'') |> drawable#polygon ~filled:true;
-              dot |> List.map (fun (x', y') -> x' + x + w2 + h2, y' + y'') |> drawable#polygon ~filled:true;
+              let h3 = height / 3 in
+              let x = x + width / 2 in
+              let y = y + h3 + h3 in
+              dot |> List.map (fun (xd, yd) -> x + xd - h3, y + yd) |> drawable#polygon ~filled:true;
+              dot |> List.map (fun (xd, yd) -> x + xd,      y + yd) |> drawable#polygon ~filled:true;
+              dot |> List.map (fun (xd, yd) -> x + xd + h3, y + yd) |> drawable#polygon ~filled:true;
           end
       | _ -> ()
 
     method amend_nested_collapsed (expander : expander) =
-      (* TODO more precise start *)
       if expander#is_expanded then begin
-        let start, stop = expander#bounds in
         List.iter begin fun exp ->
-          let s, _ = exp#bounds in
           (* When the outer expander is expanded, all nested ones are also
              expanded, because the tag_highlight is removed everywhere, but
              the expander state remains "collapsed". *)
-          if exp#is_collapsed && start#compare s < 0 && s#compare stop < 0
+          if exp#is_collapsed && expander#body_contains exp#folding_point
           then exp#hide_region()
         end expanders
       end
@@ -327,9 +335,9 @@ let init_page (page : Editor_page.page) =
     let margin = new margin_fold page#ocaml_view in
     page#view#margin#add (margin :> Margin.margin);
     margin#connect#synchronized ~callback:begin fun () ->
-      if margin#is_pending then begin
+      if margin#is_refresh_pending then begin
         Gmisclib.Idle.add ~prio:300 page#view#draw_gutter;
-        margin#clear_pending()
+        margin#clear_refresh_pending()
       end
     end |> ignore;
     margin#connect#expander_toggled ~callback:begin fun expander ->

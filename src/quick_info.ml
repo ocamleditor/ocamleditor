@@ -402,6 +402,6 @@ let create (view : Ocaml_text.view) =
     qi.view#misc#set_has_tooltip (qi.is_active && pref.Settings_j.editor_quick_info_enabled);
     qi.markup_odoc <- new Markup.odoc()
   end |> ignore;
-  if view#obuffer#is_ocaml_file filename then 
+  if view#obuffer#is_ocaml_file filename then
     connect_to_view qi view;
   qi
