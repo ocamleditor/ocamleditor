@@ -128,10 +128,11 @@ type outline_value = { value : outline list }
 
 type outline = {
   ol_start <json name="start"> : pos;
-  ol_stop <json name="end"> : pos;
+  ol_stop <json name="end"> <ocaml mutable> : pos;
   ol_name <json name="name"> : string;
   ol_kind <json name="kind"> : string;
   ~ol_level <ocaml mutable default="0"> : int;
+  ~ol_parent <ocaml mutable default="None"> : outline option;
   ol_children <json name="children"> : outline list;
 }
 

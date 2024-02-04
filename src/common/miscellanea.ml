@@ -69,19 +69,23 @@ struct
   let remove_dupl l = (* slow *)
     List.rev (List.fold_left (fun acc y -> if List.mem y acc then acc else y :: acc) [] l)
 
+  (** Returns the lowest of all elements of the list, compared via operator
+      [Stdlib.(<)] on the function result. *)
   let min_by f = function
     | [] -> invalid_arg "min_by"
     | hd :: tl ->
         fst (List.fold_left (fun ((_, cand) as b) x ->
-            let r = f x  in
-            if f x < cand then x, r else b) (hd, f hd) tl)
+            let r = f x in
+            if r < cand then x, r else b) (hd, f hd) tl)
 
+  (** Returns the greatest of all elements of the list, compared via operator
+      [Stdlib.(>)] on the function result. *)
   let max_by f = function
     | [] -> invalid_arg "max_by"
     | hd :: tl ->
         fst (List.fold_left (fun ((_, cand) as b) x ->
-            let r = f x  in
-            if f x > cand then x, r else b) (hd, f hd) tl)
+            let r = f x in
+            if r > cand then x, r else b) (hd, f hd) tl)
 
   let min l = min_by Fun.id l
   let max l = max_by Fun.id l
@@ -105,7 +109,17 @@ struct
     in
     List.map (fun (k, group) -> (k, List.rev !group)) groups;;
 
-  let group_by f ll = group_assoc (List.map (fun x -> f x, x) ll)
+  (** Applies a key-generating function to each element of a list and yields a
+      list of unique keys. Each unique key contains a list of all elements that
+      match to this key. *)
+  let group_by f ll = group_assoc (List.map (fun x -> f x, x) ll);;
+
+  (** Returns a list of each element in the input list and its predecessor,
+      with the exception of the first element which is only returned as the
+      predecessor of the second element. *)
+  let pairwise = function
+    | [] | [_] -> []
+    | hd :: tl -> List.fold_left_map (fun p x -> x, (p, x)) hd tl |> snd;;
 
 end
 

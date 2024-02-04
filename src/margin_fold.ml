@@ -3,6 +3,7 @@ open Merlin_j
 open GUtil
 open Preferences
 open Printf
+open Miscellanea
 
 module Icons = struct
   let expander_open = "\u{f107}"
@@ -155,13 +156,13 @@ class margin_fold (view : Ocaml_text.view) =
         List.rev_append (hd :: (flatten level tl)) (flatten (level + 1) hd.ol_children)
         (*hd :: (flatten (List.rev_append hd.ol_children tl))*)
   in
-  let rec walk f (ol : Merlin_j.outline list) =
+  let rec walk f parent (ol : Merlin_j.outline list) =
     match ol with
     | [] -> ()
     | hd :: tl ->
-        let walk_children = f hd in
-        if walk_children then walk f hd.ol_children;
-        walk f tl
+        let walk_children = f parent hd in
+        if walk_children then walk f (Some hd) hd.ol_children;
+        walk f parent tl
   in
   let char_width =
     let desc =
@@ -203,17 +204,38 @@ class margin_fold (view : Ocaml_text.view) =
       if not self#is_changed_after_last_outline then begin
         let buffer_start_line = start#line in
         let buffer_stop_line = stop#line in
+        let methods = ref [] in
         List.iter (fun ex -> ex#misc#hide()) expanders;
         outline
-        |> walk begin fun ol ->
+        |> walk begin fun parent ol ->
           let fold_start_line = ol.ol_start.line - 1 in
           let is_folding_point =
-            buffer_start_line <= fold_start_line && fold_start_line <= buffer_stop_line
-            && (ol.ol_kind = "Method" || ol.ol_start.line <> ol.ol_stop.line)
+            ol.ol_kind = "Method"
+            || buffer_start_line <= fold_start_line
+               && fold_start_line <= buffer_stop_line
+               && ol.ol_start.line <> ol.ol_stop.line
           in
-          if is_folding_point then self#draw_expander ol top left;
+          if is_folding_point then begin
+            self#draw_expander ol top left;
+            if ol.ol_kind = "Method" then begin
+              ol.ol_parent <- parent;
+              methods := ol :: !methods
+            end
+          end;
           true
+        end None;
+        !methods
+        |> Xlist.group_by (fun ol -> ol.ol_parent)
+        |> List.iter begin fun (parent, meths) ->
+          match parent with
+          | Some parent  ->
+              ({ parent with ol_start = parent.ol_stop } :: meths)
+              |> List.sort (fun m1 m2 -> Stdlib.compare m1.ol_start m2.ol_start)
+              |> Xlist.pairwise
+              |> List.iter (fun (ol1, ol2) -> ol1.ol_stop <- ol2.ol_start);
+          | _ -> ()
         end
+        |> ignore
       end else is_refresh_pending <- true
 
     method private draw_expander ol top left =
@@ -221,12 +243,19 @@ class margin_fold (view : Ocaml_text.view) =
         ol.ol_start.line ol.ol_start.col ol.ol_stop.line ol.ol_stop.col
         (Thread.self() |> Thread.id) ol.ol_kind ol.ol_level;*)
       let start = buffer#get_iter (`LINECHAR (ol.ol_start.line - 1, ol.ol_start.col))  in
-      let stop = buffer#get_iter (`LINECHAR (ol.ol_stop.line - 1, ol.ol_stop.col)) in
-      (*Printf.printf "%S: %d:%d - %d:%d -- %d:%d\n%!"
-        (buffer#get_text ~start ~stop:start#forward_to_line_end ())
-        ol.ol_start.line ol.ol_start.col
-        ol.ol_stop.line ol.ol_stop.col
-        (start#line + 1) start#line_offset;*)
+      let stop =
+        if ol.ol_kind = "Method" then
+          let stop = buffer#get_iter (`LINECHAR (ol.ol_stop.line - 1, ol.ol_stop.col)) in
+          (stop#set_line_offset 0)#backward_find_char Text_util.not_blank;
+        else
+          buffer#get_iter (`LINECHAR (ol.ol_stop.line - 1, ol.ol_stop.col)) in
+      (*(*if ol.ol_kind = "Method" then begin
+        Printf.printf "%S: %d:%d - %d:%d -- %d:%d\n%!"
+          (buffer#get_text ~start ~stop:start#forward_to_line_end ())
+          ol.ol_start.line ol.ol_start.col
+          ol.ol_stop.line ol.ol_stop.col
+          (start#line + 1) start#line_offset;*)
+        end;*)
       let yl, _ = view#get_line_yrange start in
       let y = yl - top + view#pixels_above_lines in
       let expander =
