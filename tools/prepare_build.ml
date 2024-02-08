@@ -59,7 +59,7 @@ let prepare_build () =
     (*  *)
     let chan = open_out_bin "../src/build_id.ml" in
     kprintf (output_string chan) "let timestamp = \"%f\"\n" (Unix.gettimeofday ());
-    kprintf (output_string chan) "let git_hash = %S\n" (get_command_output "git rev-parse HEAD" |> List.hd);
+    kprintf (output_string chan) "let git_hash = \"\"\n";
     close_out_noerr chan;
     (*  *)
     print_newline()
