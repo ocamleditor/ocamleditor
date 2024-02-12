@@ -193,7 +193,6 @@ let tag ?start ?stop (tb : GText.buffer) =
           | AND
           | ANDOP _
           | AS
-          | BAR
           | CLASS
           | CONSTRAINT
           | EXCEPTION
@@ -235,8 +234,8 @@ let tag ?start ?stop (tb : GText.buffer) =
           | INFIXOP4 _
           | PREFIXOP _
           | HASH | HASHOP _
-          | BANG
-            -> "infix"
+          | BANG | LESS | GREATER
+            -> "symbol"
           | LABEL _
           | OPTLABEL _
           | QUESTION
@@ -277,10 +276,11 @@ let tag ?start ?stop (tb : GText.buffer) =
           | LBRACELESS | GREATERRBRACE | LBRACKETBAR | LESSMINUS
           | EQUAL | PLUS | MINUS | STAR | QUOTE | SEMI | SEMISEMI | MINUSGREATER
           | COMMA | DOT | DOTDOT | COLONCOLON | COLONEQUAL | UNDERSCORE
-          | PLUSDOT | MINUSDOT | LESS | GREATER
+          | PLUSDOT | MINUSDOT
           | PLUSEQ | PERCENT
           | COLONGREATER
           | DOTOP _
+          | BAR
             -> "symbol"
           | LBRACKETAT | LBRACKETPERCENT | LBRACKETPERCENTPERCENT | LBRACKETATAT | LBRACKETATATAT
             -> in_annotation:= true; "annotation"
