@@ -69,7 +69,7 @@ let default_values =
       { name = "symbol";
         color = { light = "black"; dark = "white" };
         bg_color = { light = "#ffffff"; dark = "#000000" };
-        weight = 0; style = `NORMAL; underline = `NONE; scale = 1.0; bg_default = true };
+        weight = 500; style = `NORMAL; underline = `NONE; scale = 1.0; bg_default = true };
       { name = "name_def";
         color = { light = "black"; dark = "white" };
         bg_color = { light = "#ffffff"; dark = "#000000" };
