@@ -76,17 +76,6 @@ class expander ~(view : Ocaml_text.view) ~start ~stop ~tag_highlight ~tag_invisi
       self#misc#connect#destroy ~callback:begin fun () ->
         buffer#delete_mark mark
       end |> ignore;
-      (* TODO: a mark_set for each expander could be is too expensive *)
-      buffer#connect#mark_set ~callback:begin fun _ mark ->
-        match GtkText.Mark.get_name mark with
-        | Some "insert" ->
-            if
-              self#is_collapsed &&
-              let iter = buffer#get_iter `INSERT in
-              iter#tags |> List.exists (fun t -> t#get_oid = tag_invisible#get_oid)
-            then Gmisclib.Idle.add ~prio:300 self#expand
-        | _ -> ()
-      end |> ignore;
       (*      view#obuffer#undo#connect#after#undo ~callback:begin fun ~name ->
               let iter = buffer#get_iter `INSERT in
               let is_invisible = iter#tags |> List.exists (fun t -> t#get_oid = tag_invisible#get_oid) in
@@ -138,7 +127,7 @@ class expander ~(view : Ocaml_text.view) ~start ~stop ~tag_highlight ~tag_invisi
     method expand () =
       let was_collapsed = self#is_collapsed in
       Printf.kprintf label#set_label "<span size='x-small'>%d</span>%s" id Icons.expander_open;
-      Gmisclib.Idle.add ~prio:300 begin fun () ->
+      Gmisclib.Idle.add ~prio:200 begin fun () ->
         self#show_region();
         if was_collapsed then toggled#call true;
         GtkBase.Widget.queue_draw view#as_widget (* Updates ellipsis *)
@@ -371,8 +360,10 @@ class margin_fold (view : Ocaml_text.view) =
     method private invoke_merlin () =
       if self#is_changed_after_last_outline then begin
         merlin@@Merlin.outline begin fun (ol : Merlin_j.outline list) ->
-          self#sync_outline_time();
-          outline <- (*flatten 0*) ol;
+          GtkThread.async begin fun () ->
+            self#sync_outline_time();
+            outline <- (*flatten 0*) ol;
+          end ()
         end;
       end;
       true
@@ -396,6 +387,18 @@ class margin_fold (view : Ocaml_text.view) =
       view#event#connect#focus_in ~callback:(fun _ -> self#start_timer(); false) |> ignore;
       view#event#connect#focus_out ~callback:(fun _ -> self#stop_timer(); false) |> ignore;
       view#event#connect#expose ~callback:(fun ev -> self#draw_ellipsis ev; false) |> ignore;
+      buffer#connect#mark_set ~callback:begin fun iter mark ->
+        (* It would be better to have the undo manager tell you when to open
+           the expander instead of checking every single cursor movement... *)
+        match GtkText.Mark.get_name mark with
+        | Some "insert" ->
+            expanders
+            |> List.iter begin fun exp ->
+              if exp#is_collapsed && iter#line > exp#body#line && exp#body_contains iter
+              then (*Gmisclib.Idle.add*) exp#expand()
+            end
+        | _ -> ()
+      end |> ignore;
       self#start_timer()
   end
 
@@ -414,7 +417,7 @@ let init_page (page : Editor_page.page) =
     page#view#margin#add (margin :> Margin.margin);
     margin#connect#synchronized ~callback:begin fun () ->
       if margin#is_refresh_pending then begin
-        Gmisclib.Idle.add ~prio:300 page#view#draw_gutter;
+        Gmisclib.Idle.add ~prio:100 page#view#draw_gutter;
         margin#clear_refresh_pending()
       end
     end |> ignore;
