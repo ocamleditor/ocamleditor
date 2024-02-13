@@ -66,7 +66,7 @@ type t = {
 
 and wininfo = {
   window : GWindow.window;
-  mutable range : (GText.iter * GText.iter) option;
+  mutable range : (Gtk.text_mark * Gtk.text_mark) option;
   (** It is the range of the buffer that contains the expression for which quick
       info is currently shown. *)
 
@@ -85,9 +85,24 @@ let get_current_window qi = !!Lock.wininfo get_current_window_unsafe qi
 
 let remove_highlight qi wi =
   match wi.range with
-  | Some (start, stop) ->
-      qi.view#buffer#remove_tag qi.tag ~start ~stop;
-      wi.range <- None
+  | Some (m_start, m_stop) ->
+      Fun.protect begin fun () ->
+        let start =
+          match Gmisclib.Util.get_iter_at_mark_opt qi.view#buffer#as_buffer m_start with
+          | Some it -> new GText.iter it
+          | _ -> qi.view#buffer#start_iter
+        in
+        let stop =
+          match Gmisclib.Util.get_iter_at_mark_opt qi.view#buffer#as_buffer m_stop with
+          | Some it -> new GText.iter it
+          | _ -> qi.view#buffer#end_iter
+        in
+        qi.view#buffer#remove_tag qi.tag ~start ~stop;
+      end ~finally:begin fun () ->
+        wi.range <- None;
+        if not (GtkText.Mark.get_deleted m_start) then qi.view#buffer#delete_mark (`MARK m_start);
+        if not (GtkText.Mark.get_deleted m_stop) then qi.view#buffer#delete_mark (`MARK m_stop);
+      end
   | _ -> ()
 
 let add_wininfo qi callback =
@@ -146,20 +161,11 @@ let make_pinnable wininfo =
 let (!=) (p1 : Merlin_j.pos) (p2 : Merlin_j.pos) =
   p1.col <> p2.col || p1.line <> p2.line
 
-(** Returns the left, top, right and bottom bounds of the expression area, in
-    window coordinates. *)
-let get_area qi start stop =
-  let rstart = qi.view#get_iter_location start in
-  let rstop = qi.view#get_iter_location stop in
-  let xstart, ystart = qi.view#buffer_to_window_coords ~tag:`WIDGET
-      ~x:(Gdk.Rectangle.x rstart) ~y:(Gdk.Rectangle.y rstart) in
-  let xstop, ystop = qi.view#buffer_to_window_coords ~tag:`WIDGET
-      ~x:(Gdk.Rectangle.x rstop) ~y:(Gdk.Rectangle.y rstop + Gdk.Rectangle.height rstop) in
-  xstart, ystart, xstop, ystop
-
 (** Displays the quick info popup window.  *)
 let display qi start stop =
-  let xstart, ystart, xstop, ystop = get_area qi start stop in
+  let rstart = qi.view#get_iter_location start in
+  let _, ystart = qi.view#buffer_to_window_coords ~tag:`WIDGET
+      ~x:(Gdk.Rectangle.x rstart) ~y:(Gdk.Rectangle.y rstart) in
   let open Preferences in
   let open Settings_j in
   let vbox = GPack.vbox ~border_width:5 ~spacing:5 () in
@@ -185,7 +191,9 @@ let display qi start stop =
         let ly, lh = qi.view#get_line_yrange start in
         pX (*- px + xstart*), pY - py + ystart + lh
   in
-  let range = Some (start, stop) in
+  let m1 = qi.view#buffer#create_mark ~name:"qi-start" start in
+  let m2 = qi.view#buffer#create_mark ~name:"qi-stop" stop in
+  let range = Some (m1, m2) in
   let window = Gtk_util.window_tooltip vbox#coerce ~fade:false ~x ~y ~show:false () in
   let _ = window#set_transient_for (Window.root_window2 qi.view) in
   let wininfo = {
@@ -194,7 +202,19 @@ let display qi start stop =
     is_pinned = false;
     index = new_index();
   } in
-  let callback () = qi.view#buffer#apply_tag qi.tag ~start ~stop in
+  let callback () =
+    match wininfo.range with
+    | Some (m_start, m_stop) ->
+        GtkThread.async
+          begin fun () ->
+            try
+              let start = Gmisclib.Util.get_iter_at_mark_safe qi.view#buffer#as_buffer m_start in
+              let stop = Gmisclib.Util.get_iter_at_mark_safe qi.view#buffer#as_buffer m_stop in
+              GtkText.Buffer.apply_tag qi.view#buffer#as_buffer qi.tag#as_tag start stop
+            with Gmisclib_util.Mark_deleted -> Log.println `WARN "Mark_deleted"
+          end ()
+    | _ -> ()
+  in
   add_wininfo qi callback wininfo;
   make_pinnable wininfo;
   Gmisclib.Idle.add begin fun () ->
@@ -258,18 +278,22 @@ let spawn_window qi position (entry : type_enclosing_value) (entry2 : type_enclo
       label_vars#set_label type_params
     end;
     qi.merlin@@Merlin.document ~position begin fun doc ->
-      let markup = qi.markup_odoc#convert doc in
-      label_doc#set_label markup;
+      GtkThread.async begin fun () ->
+        let markup = qi.markup_odoc#convert doc in
+        label_doc#set_label markup;
+      end ()
     end
   end
 
 let invoke_merlin qi (iter : GText.iter) ~continue_with =
   let position = iter#line + 1, iter#line_index in
   qi.merlin@@Merlin.type_enclosing ~position begin fun types ->
-    match types with
-    | [] -> close qi "no-type"
-    | fst :: snd :: _ -> continue_with position fst (Some snd)
-    | fst :: _ -> continue_with position fst None
+    GtkThread.async begin fun () ->
+      match types with
+      | [] -> close qi "no-type"
+      | fst :: snd :: _ -> continue_with position fst (Some snd)
+      | fst :: _ -> continue_with position fst None
+    end ()
   end
 
 let is_iter_in_comment (buffer : Ocaml_text.buffer) iter =
@@ -283,6 +307,13 @@ let get_typeable_iter_at_coords qi iter =
   || (match is_iter_in_comment qi.view#obuffer iter with None -> false | _ -> true)
   then None else Some iter
 
+let in_range buffer iter ~start ~stop =
+  try
+    let start = Gmisclib.Util.get_iter_at_mark_safe buffer start in
+    let stop = Gmisclib.Util.get_iter_at_mark_safe buffer stop in
+    GtkText.Iter.in_range iter start stop
+  with Gmisclib_util.Mark_deleted -> false
+
 let process_location qi x y =
   let current_window = get_current_window qi in
   let current_range = Option.bind current_window (fun x -> x.range) in
@@ -290,7 +321,7 @@ let process_location qi x y =
   if bx > 0 then begin
     let iter = qi.view#get_iter_at_location ~x:bx ~y:by in
     match current_range with
-    | Some (start, stop) when iter#in_range ~start ~stop -> ()
+    | Some (start, stop) when in_range qi.view#buffer#as_buffer iter#as_iter ~start ~stop -> ()
     | _ when is_pinned qi -> ()
     | _ when qi.view#buffer#has_selection -> ()
     | _ ->
@@ -413,6 +444,6 @@ let create (view : Ocaml_text.view) =
     qi.view#misc#set_has_tooltip (qi.is_active && pref.Settings_j.editor_quick_info_enabled);
     qi.markup_odoc <- new Markup.odoc()
   end |> ignore;
-  if view#obuffer#is_ocaml_file filename then 
+  if view#obuffer#is_ocaml_file filename then
     connect_to_view qi view;
   qi
