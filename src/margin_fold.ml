@@ -24,13 +24,18 @@ let mk_polygon n r =
 
 let dot = mk_polygon 4 2.3 |> Array.to_list
 
-class expander ~(view : Ocaml_text.view) ~start ~stop ~tag_highlight ~tag_invisible ?packing () =
+class expander ~(view : Ocaml_text.view) ~tag_highlight ~tag_invisible ?packing () =
   let ebox = GBin.event_box ?packing () in
   let label = Gtk_util.label_icon ~width:30 (sprintf "<span size='x-small'>%d</span>%s" !counter Icons.expander_open) ~packing:ebox#add in
   let buffer = view#buffer in
   let id = !counter in
   let mark =
-    let m = buffer#create_mark ~name:(sprintf "fold-%d" id) start in (* mark placed in the initializer *)
+    let m = buffer#create_mark ~name:(sprintf "fold-%d" id) buffer#start_iter in (* mark placed in the initializer *)
+    GtkText.Mark.set_visible m true;
+    `MARK m
+  in
+  let mark_foot =
+    let m = buffer#create_mark ~name:(sprintf "fold-foot-%d" id) buffer#start_iter in (* mark placed in the initializer *)
     GtkText.Mark.set_visible m true;
     `MARK m
   in
@@ -40,22 +45,11 @@ class expander ~(view : Ocaml_text.view) ~start ~stop ~tag_highlight ~tag_invisi
     val mutable is_expanded = true
     val mutable hash = 0
 
-    (** The end of the folding point which is also the end of the invisible region
-        ({i body}) and the end of the highlighted region when the pointer is over
-        the expander ({i head} + {i body}). *)
-    val mutable foot = start (* dummy initial value *)
-
-    (** The start *)
-    val mutable start = start
-
     val toggled = new toggled()
     val refresh_needed = new refresh_needed()
 
     initializer
       incr counter;
-      self#relocate start stop;
-      hash <- self#hash;
-      self#place_mark();
       view#add_child_in_window ~child:self#coerce ~which_window:`LEFT ~x:0 ~y:0;
       ebox#misc#set_property "visible-window" (`BOOL true);
       ebox#event#connect#button_press ~callback:begin fun ev ->
@@ -65,16 +59,17 @@ class expander ~(view : Ocaml_text.view) ~start ~stop ~tag_highlight ~tag_invisi
       (* Preview of the fold region when the mouse is over the expander. *)
       ebox#event#connect#enter_notify ~callback:begin fun ev ->
         Gdk.Window.set_cursor ebox#misc#window (Gdk.Cursor.create `HAND2);
-        if is_expanded then buffer#apply_tag tag_highlight ~start:self#head ~stop:foot;
+        if is_expanded then buffer#apply_tag tag_highlight ~start:self#head ~stop:self#foot;
         false
       end |> ignore;
       ebox#event#connect#leave_notify ~callback:begin fun ev ->
         Gdk.Window.set_cursor ebox#misc#window (Gdk.Cursor.create `ARROW);
-        buffer#remove_tag tag_highlight ~start:self#head ~stop:foot;
+        buffer#remove_tag tag_highlight ~start:self#head ~stop:self#foot;
         false
       end |> ignore;
       self#misc#connect#destroy ~callback:begin fun () ->
-        buffer#delete_mark mark
+        buffer#delete_mark mark;
+        buffer#delete_mark mark_foot
       end |> ignore;
       (*      view#obuffer#undo#connect#after#undo ~callback:begin fun ~name ->
               let iter = buffer#get_iter `INSERT in
@@ -83,15 +78,23 @@ class expander ~(view : Ocaml_text.view) ~start ~stop ~tag_highlight ~tag_invisi
               if self#is_collapsed && is_invisible then Gmisclib.Idle.add ~prio:300 self#expand
               end |> ignore;*)
 
-    method private place_mark () = buffer#move_mark mark ~where:self#folding_point#forward_to_line_end
-
     method private hash =
-      buffer#get_text ~start ~stop:self#body () |> Hashtbl.hash
+      buffer#get_text ~start:self#head  ~stop:self#body () |> Hashtbl.hash
 
     method relocate (istart : GText.iter) (istop : GText.iter) =
-      start <- istart;
-      foot <- istop#forward_line#set_line_index 0;
-      self#place_mark();
+      buffer#move_mark mark ~where:istart;
+      let where =
+        (* Handles definitions like "type...{...\n} and ..." or ";;" *)
+        let limit = istop#forward_to_line_end in
+        let istop =
+          match istop#forward_search ~limit ";;" with
+          | Some (_, it) -> it
+          | _ -> istop
+        in
+        let it = istop#forward_find_char ~limit Text_util.not_blank in
+        if it#ends_line then istop#forward_line#set_line_offset 0 else it
+      in
+      buffer#move_mark mark_foot ~where;
       if hash <> 0 && self#hash <> hash then begin
         Gmisclib.Idle.add begin fun () ->
           self#expand();
@@ -99,23 +102,24 @@ class expander ~(view : Ocaml_text.view) ~start ~stop ~tag_highlight ~tag_invisi
           self#misc#hide();
           refresh_needed#call()
         end
-      end
+      end else hash <- self#hash;
 
     method is_valid = is_valid
     method id = id
 
-    (** The start of the region to highlight when the mouse pointer is over the expander. *)
-    method private head = start#set_line_offset 0
-
     (** The iter where the {i folding point} starts. It is between head and body. *)
-    method folding_point = start
+    method folding_point = buffer#get_iter mark
+
+    (** The start of the region to highlight when the mouse pointer is over the expander. *)
+    method private head = self#body#set_line_offset 0
 
     (** The start of the region to be made invisible when the expander is collapsed. *)
-    method body = buffer#get_iter mark
+    method body = self#folding_point#forward_to_line_end
+    method foot = buffer#get_iter mark_foot
 
     method is_expanded = is_expanded
     method is_collapsed = not is_expanded
-    method body_contains iter = self#body#compare iter <= 0 && iter#compare foot <= 0
+    method body_contains iter = self#body#compare iter <= 0 && iter#compare self#foot < 0
 
     (** An expander is visible if its start position does not have a tag with
         the invisible property, that is, if it is not contained in the body of
@@ -136,10 +140,10 @@ class expander ~(view : Ocaml_text.view) ~start ~stop ~tag_highlight ~tag_invisi
 
     method collapse () =
       let iter = buffer#get_iter `INSERT in
-      if iter#compare self#body > 0 && iter#compare foot <= 0 then
+      if iter#compare self#body > 0 && iter#compare self#foot <= 0 then
         buffer#move_mark `INSERT ~where:self#body;
       let was_expanded = is_expanded in
-      buffer#remove_tag tag_highlight ~start:self#head ~stop:foot;
+      buffer#remove_tag tag_highlight ~start:self#head ~stop:self#foot;
       Gmisclib.Idle.add ~prio:300 begin fun () ->
         self#hide_region();
         if was_expanded then toggled#call false;
@@ -148,13 +152,13 @@ class expander ~(view : Ocaml_text.view) ~start ~stop ~tag_highlight ~tag_invisi
       is_expanded <- false;
 
     method hide_region () =
-      buffer#apply_tag tag_invisible ~start:self#body ~stop:foot;
+      buffer#apply_tag tag_invisible ~start:self#body ~stop:self#foot;
 
     method show_region () =
-      buffer#remove_tag tag_invisible ~start:self#body ~stop:foot;
+      buffer#remove_tag tag_invisible ~start:self#body ~stop:self#foot;
 
     method show top left =
-      let yl, _ = view#get_line_yrange start in
+      let yl, _ = view#get_line_yrange self#head in
       let y = yl - top + view#pixels_above_lines in
       view#move_child ~child:self#coerce ~x:left ~y;
       self#misc#show()
@@ -184,14 +188,6 @@ class margin_fold (view : Ocaml_text.view) =
     let filename = match buffer#file with Some file -> file#filename | _ -> "" in
     let source_code = buffer#get_text () in
     func ~filename ~source_code
-  in
-  let rec flatten level (ol : Merlin_j.outline list) =
-    match ol with
-    | [] -> []
-    | hd :: tl ->
-        hd.ol_level <- level;
-        List.rev_append (hd :: (flatten level tl)) (flatten (level + 1) hd.ol_children)
-        (*hd :: (flatten (List.rev_append hd.ol_children tl))*)
   in
   let rec walk f parent (ol : Merlin_j.outline list) =
     match ol with
@@ -301,9 +297,9 @@ class margin_fold (view : Ocaml_text.view) =
       let expander =
         match expanders |> List.find_opt (fun exp -> exp#folding_point#equal start) with
         | None ->
-            let expander = new expander ~start ~stop ~tag_highlight ~tag_invisible ~view () in
+            let expander = new expander ~tag_highlight ~tag_invisible ~view () in
+            expander#relocate start stop;
             expanders <- expander :: expanders;
-            (*Printf.printf "NEW %d-%d\n%S\n%!" (start#line + 1) (stop#line + 1) (String.sub key 0 (String.index key '\n'));*)
             expander#show_region();
             expander#connect#toggled ~callback:(fun _ -> expander_toggled#call expander) |> ignore;
             expander#connect#refresh_needed ~callback:(fun () -> is_refresh_pending <- true) |> ignore;
@@ -362,7 +358,7 @@ class margin_fold (view : Ocaml_text.view) =
         merlin@@Merlin.outline begin fun (ol : Merlin_j.outline list) ->
           GtkThread.async begin fun () ->
             self#sync_outline_time();
-            outline <- (*flatten 0*) ol;
+            outline <- ol;
           end ()
         end;
       end;
@@ -387,15 +383,18 @@ class margin_fold (view : Ocaml_text.view) =
       view#event#connect#focus_in ~callback:(fun _ -> self#start_timer(); false) |> ignore;
       view#event#connect#focus_out ~callback:(fun _ -> self#stop_timer(); false) |> ignore;
       view#event#connect#expose ~callback:(fun ev -> self#draw_ellipsis ev; false) |> ignore;
-      buffer#connect#mark_set ~callback:begin fun iter mark ->
+      buffer#connect#mark_set ~callback:begin fun _ mark ->
         (* It would be better to have the undo manager tell you when to open
            the expander instead of checking every single cursor movement... *)
         match GtkText.Mark.get_name mark with
         | Some "insert" ->
             expanders
             |> List.iter begin fun exp ->
-              if exp#is_collapsed && iter#line > exp#body#line && exp#body_contains iter
-              then (*Gmisclib.Idle.add*) exp#expand()
+              if exp#is_collapsed then begin
+                let iter = buffer#get_iter `INSERT in
+                if iter#line > exp#body#line && exp#body_contains iter
+                then exp#expand()
+              end
             end
         | _ -> ()
       end |> ignore;
