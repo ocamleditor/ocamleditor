@@ -235,7 +235,7 @@ let tag ?start ?stop (tb : GText.buffer) =
           | PREFIXOP _
           | HASH | HASHOP _
           | BANG | LESS | GREATER
-            -> "symbol"
+            -> "infix"
           | LABEL _
           | OPTLABEL _
           | QUESTION
