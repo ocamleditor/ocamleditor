@@ -11,6 +11,7 @@ module Icons = struct
 end
 
 let counter = ref 0
+let is_debug = false
 
 let mk_polygon n r =
   let pi = 3.14189 in
@@ -26,17 +27,18 @@ let dot = mk_polygon 4 2.3 |> Array.to_list
 
 class expander ~(view : Ocaml_text.view) ~tag_highlight ~tag_invisible ?packing () =
   let ebox = GBin.event_box ?packing () in
-  let label = Gtk_util.label_icon ~width:30 (sprintf "<span size='x-small'>%d</span>%s" !counter Icons.expander_open) ~packing:ebox#add in
+  let markup = if is_debug then sprintf "<span size='x-small'>%d</span>%s" !counter Icons.expander_open else Icons.expander_open in
+  let label = Gtk_util.label_icon markup ~packing:ebox#add in
   let buffer = view#buffer in
   let id = !counter in
   let mark =
     let m = buffer#create_mark ~name:(sprintf "fold-%d" id) buffer#start_iter in (* mark placed in the initializer *)
-    GtkText.Mark.set_visible m true;
+    GtkText.Mark.set_visible m is_debug;
     `MARK m
   in
   let mark_foot =
     let m = buffer#create_mark ~name:(sprintf "fold-foot-%d" id) buffer#start_iter in (* mark placed in the initializer *)
-    GtkText.Mark.set_visible m true;
+    GtkText.Mark.set_visible m is_debug;
     `MARK m
   in
   object (self)
@@ -51,7 +53,7 @@ class expander ~(view : Ocaml_text.view) ~tag_highlight ~tag_invisible ?packing 
     initializer
       incr counter;
       view#add_child_in_window ~child:self#coerce ~which_window:`LEFT ~x:0 ~y:0;
-      ebox#misc#set_property "visible-window" (`BOOL true);
+      ebox#misc#set_property "visible-window" (`BOOL is_debug);
       ebox#event#connect#button_press ~callback:begin fun ev ->
         if is_expanded then self#collapse() else self#expand();
         false
@@ -130,7 +132,9 @@ class expander ~(view : Ocaml_text.view) ~tag_highlight ~tag_invisible ?packing 
 
     method expand () =
       let was_collapsed = self#is_collapsed in
-      Printf.kprintf label#set_label "<span size='x-small'>%d</span>%s" id Icons.expander_open;
+      label#set_label
+        (if is_debug then sprintf "<span size='x-small'>%d</span>%s" id Icons.expander_open
+         else sprintf "<big>%s</big>" Icons.expander_open);
       Gmisclib.Idle.add ~prio:200 begin fun () ->
         self#show_region();
         if was_collapsed then toggled#call true;
@@ -148,7 +152,9 @@ class expander ~(view : Ocaml_text.view) ~tag_highlight ~tag_invisible ?packing 
         self#hide_region();
         if was_expanded then toggled#call false;
       end;
-      Printf.kprintf label#set_label "<span size='x-small'>%d</span>%s" id Icons.expander_closed;
+      label#set_label
+        (if is_debug then sprintf "<span size='x-small'>%d</span>%s" id Icons.expander_closed
+         else sprintf "<big>%s</big>" Icons.expander_closed);
       is_expanded <- false;
 
     method hide_region () =
@@ -177,7 +183,7 @@ and signals ~toggled ~refresh_needed =
 
 
 class margin_fold (view : Ocaml_text.view) =
-  let size = 30(*13*) in
+  let size = if is_debug then 30 else 13 in
   let spacing = 5 in
   let buffer = view#obuffer in
   let tag_highlight = buffer#create_tag ~name:"fold-highlight"
@@ -239,11 +245,11 @@ class margin_fold (view : Ocaml_text.view) =
         let buffer_stop_line = stop#line in
         let methods = ref [] in
         expanders <-
-          List.filter_map (fun ex ->
-              ex#misc#hide();
-              if not ex#is_valid then (ex#destroy(); None)
-              else Some ex
-            ) expanders;
+          List.filter_map begin fun ex ->
+            ex#misc#hide();
+            if not ex#is_valid then (ex#destroy(); None)
+            else Some ex
+          end expanders;
         outline
         |> walk begin fun parent ol ->
           let fold_start_line = ol.ol_start.line - 1 in
@@ -311,7 +317,7 @@ class margin_fold (view : Ocaml_text.view) =
       (* Hide expanders inside invisible regions *)
       if List.exists (fun t -> t#get_oid = tag_invisible#get_oid) start#tags
       then expander#misc#hide()
-      else expander#show top left;
+      else expander#show top left
 
     method draw_ellipsis _ =
       match view#get_window `TEXT with
@@ -384,8 +390,6 @@ class margin_fold (view : Ocaml_text.view) =
       view#event#connect#focus_out ~callback:(fun _ -> self#stop_timer(); false) |> ignore;
       view#event#connect#expose ~callback:(fun ev -> self#draw_ellipsis ev; false) |> ignore;
       buffer#connect#mark_set ~callback:begin fun _ mark ->
-        (* It would be better to have the undo manager tell you when to open
-           the expander instead of checking every single cursor movement... *)
         match GtkText.Mark.get_name mark with
         | Some "insert" ->
             expanders
