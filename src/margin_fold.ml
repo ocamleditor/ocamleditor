@@ -199,8 +199,8 @@ class margin_fold (view : Ocaml_text.view) =
     match ol with
     | [] -> ()
     | hd :: tl ->
-        let walk_children = f parent hd in
-        if walk_children then walk f (Some hd) hd.ol_children;
+        f parent hd;
+        walk f (Some hd) hd.ol_children;
         walk f parent tl
   in
   let char_width =
@@ -209,7 +209,15 @@ class margin_fold (view : Ocaml_text.view) =
       Preferences.preferences#get.Settings_t.editor_base_font
       |> GPango.font_description
     in
-    GPango.to_pixels (view#misc#pango_context#get_metrics ~desc ())#approx_digit_width in
+    GPango.to_pixels (view#misc#pango_context#get_metrics ~desc ())#approx_digit_width
+  in
+  let rec skip_comments_backward (comments : (int * int * bool) list) (start : GText.iter) =
+    let it = (start#backward_find_char Text_util.not_blank)#forward_char in
+    let offset = it#offset in
+    match comments |> List.find_opt (fun (_, e, _) -> offset = e) with
+    | Some (b, e, _) -> skip_comments_backward comments (buffer#get_iter (`OFFSET b))
+    | _ -> buffer#get_iter (`OFFSET offset)
+  in
   object (self)
     inherit margin()
 
@@ -224,6 +232,8 @@ class margin_fold (view : Ocaml_text.view) =
 
     (** The currently cached folding points. *)
     val mutable outline = []
+
+    val mutable comments = []
 
     val mutable expanders : expander list = []
     val expander_toggled = new expander_toggled()
@@ -244,6 +254,12 @@ class margin_fold (view : Ocaml_text.view) =
         let buffer_start_line = start#line in
         let buffer_stop_line = stop#line in
         let methods = ref [] in
+        let [@ inline] is_drawable ol =
+          let fold_start_line = ol.ol_start.line - 1 in
+          buffer_start_line <= fold_start_line &&
+          fold_start_line <= buffer_stop_line &&
+          ol.ol_stop.line > ol.ol_start.line
+        in
         expanders <-
           List.filter_map begin fun ex ->
             ex#misc#hide();
@@ -252,23 +268,17 @@ class margin_fold (view : Ocaml_text.view) =
           end expanders;
         outline
         |> walk begin fun parent ol ->
-          let fold_start_line = ol.ol_start.line - 1 in
-          let is_folding_point =
-            ol.ol_kind = "Method"
-            || buffer_start_line <= fold_start_line
-               && fold_start_line <= buffer_stop_line
-               && ol.ol_start.line <> ol.ol_stop.line
-          in
+          let is_folding_point = ol.ol_kind = "Method" || is_drawable ol in
           if is_folding_point then begin
-            self#draw_expander ol top left;
             if ol.ol_kind = "Method" then begin
               ol.ol_parent <- parent;
               methods := ol :: !methods
-            end
-          end;
-          true
+            end else
+              self#draw_expander ol top left;
+          end
         end None;
         !methods
+        |> List.filter (fun ol -> ol.ol_parent <> None)
         |> Xlist.group_by (fun ol -> ol.ol_parent)
         |> List.iter begin fun (parent, meths) ->
           match parent with
@@ -279,18 +289,19 @@ class margin_fold (view : Ocaml_text.view) =
               |> List.iter (fun (ol1, ol2) -> ol1.ol_stop <- ol2.ol_start);
           | _ -> ()
         end
-        |> ignore
+        |> ignore;
+        !methods |> List.iter (fun ol -> if is_drawable ol then self#draw_expander ol top left)
       end else is_refresh_pending <- true
 
     method private draw_expander ol top left =
       (*Printf.printf "draw_expander %d:%d -- %d:%d [%d] [%s %d]\n%!"
         ol.ol_start.line ol.ol_start.col ol.ol_stop.line ol.ol_stop.col
         (Thread.self() |> Thread.id) ol.ol_kind ol.ol_level;*)
-      let start = buffer#get_iter (`LINECHAR (ol.ol_start.line - 1, ol.ol_start.col))  in
+      let start = buffer#get_iter (`LINECHAR (ol.ol_start.line - 1, ol.ol_start.col)) in
       let stop =
         if ol.ol_kind = "Method" then
           let stop = buffer#get_iter (`LINECHAR (ol.ol_stop.line - 1, ol.ol_stop.col)) in
-          (stop#set_line_offset 0)#backward_find_char Text_util.not_blank;
+          skip_comments_backward comments (stop#set_line_offset 0);
         else
           buffer#get_iter (`LINECHAR (ol.ol_stop.line - 1, ol.ol_stop.col)) in
       (*(*if ol.ol_kind = "Method" then begin
@@ -300,24 +311,26 @@ class margin_fold (view : Ocaml_text.view) =
           ol.ol_stop.line ol.ol_stop.col
           (start#line + 1) start#line_offset;*)
         end;*)
-      let expander =
-        match expanders |> List.find_opt (fun exp -> exp#folding_point#equal start) with
-        | None ->
-            let expander = new expander ~tag_highlight ~tag_invisible ~view () in
-            expander#relocate start stop;
-            expanders <- expander :: expanders;
-            expander#show_region();
-            expander#connect#toggled ~callback:(fun _ -> expander_toggled#call expander) |> ignore;
-            expander#connect#refresh_needed ~callback:(fun () -> is_refresh_pending <- true) |> ignore;
-            expander
-        | Some expander ->
-            expander#relocate start stop;
-            expander
-      in
-      (* Hide expanders inside invisible regions *)
-      if List.exists (fun t -> t#get_oid = tag_invisible#get_oid) start#tags
-      then expander#misc#hide()
-      else expander#show top left
+      if stop#line > start#line then begin
+        let expander =
+          match expanders |> List.find_opt (fun exp -> exp#folding_point#equal start) with
+          | None ->
+              let expander = new expander ~tag_highlight ~tag_invisible ~view () in
+              expander#relocate start stop;
+              expanders <- expander :: expanders;
+              expander#show_region();
+              expander#connect#toggled ~callback:(fun _ -> expander_toggled#call expander) |> ignore;
+              expander#connect#refresh_needed ~callback:(fun () -> is_refresh_pending <- true) |> ignore;
+              expander
+          | Some expander ->
+              expander#relocate start stop;
+              expander
+        in
+        (* Hide expanders inside invisible regions *)
+        if List.exists (fun t -> t#get_oid = tag_invisible#get_oid) start#tags
+        then expander#misc#hide()
+        else expander#show top left
+      end
 
     method draw_ellipsis _ =
       match view#get_window `TEXT with
@@ -367,6 +380,10 @@ class margin_fold (view : Ocaml_text.view) =
             outline <- ol;
           end ()
         end;
+        comments <-
+          let text = buffer#get_text () in
+          GtkThread2.sync Comments.scan_locale (Glib.Convert.convert_with_fallback ~fallback:""
+                                                  ~from_codeset:"UTF-8" ~to_codeset:Oe_config.ocaml_codeset text)
       end;
       true
 
