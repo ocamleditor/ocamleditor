@@ -61,7 +61,7 @@ class manager ~(view : Text.view) =
   let buffer = view#buffer in
   let set_highlight_background tag = Gmisclib.Util.set_tag_paragraph_background tag in
   object (self)
-    val mutable enabled = true;
+    val mutable enabled = false;
     val mutable folding_points = []
     val mutable graphics = []
     val mutable markers = []
@@ -76,7 +76,8 @@ class manager ~(view : Text.view) =
     val mutable light_marker_color = `NAME "#000000"
 
     method enabled = enabled
-    method set_enabled x =
+    method set_enabled (x : bool) =
+      let x = false in
       enabled <- x;
       if enabled then begin
         view#gutter.Gutter.fold_size <- fold_size;

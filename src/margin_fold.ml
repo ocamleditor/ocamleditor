@@ -4,6 +4,7 @@ open GUtil
 open Preferences
 open Printf
 open Miscellanea
+open Settings_j
 
 module Icons = struct
   let expander_open = "\u{f107}"
@@ -11,7 +12,7 @@ module Icons = struct
 end
 
 let counter = ref 0
-let is_debug = true
+let is_debug = false
 
 let mk_polygon n r =
   let pi = 3.14189 in
@@ -72,7 +73,7 @@ class expander ~(view : Ocaml_text.view) ~tag_highlight ~tag_invisible ?packing 
       self#misc#connect#destroy ~callback:begin fun () ->
         buffer#delete_mark mark;
         buffer#delete_mark mark_foot
-      end |> ignore;
+      end |> ignore
 
     method private hash =
       buffer#get_text ~start:self#head  ~stop:self#body () |> Hashtbl.hash
@@ -129,11 +130,9 @@ class expander ~(view : Ocaml_text.view) ~tag_highlight ~tag_invisible ?packing 
       label#set_label
         (if is_debug then sprintf "<span size='x-small'>%d</span>%s" id Icons.expander_open
          else sprintf "<big>%s</big>" Icons.expander_open);
-      Gmisclib.Idle.add ~prio:200 begin fun () ->
-        self#show_region();
-        if was_collapsed then toggled#call true;
-        GtkBase.Widget.queue_draw view#as_widget (* Updates ellipsis *)
-      end;
+      self#show_region();
+      if was_collapsed then toggled#call true;
+      GtkBase.Widget.queue_draw view#as_widget; (* Updates ellipsis *)
       is_expanded <- true;
 
     method collapse () =
@@ -239,6 +238,8 @@ class margin_fold (view : Ocaml_text.view) =
     val mutable expanders : expander list = []
     val expander_toggled = new expander_toggled()
     val synchronized = new synchronized()
+    val mutable signals = []
+
     method index = 30
     method size = size
 
@@ -372,12 +373,12 @@ class margin_fold (view : Ocaml_text.view) =
           GtkThread.async begin fun () ->
             self#sync_outline_time();
             outline <- ol;
+            comments <-
+              let text = buffer#get_text () in
+              GtkThread2.sync Comments.scan_locale (Glib.Convert.convert_with_fallback ~fallback:""
+                                                      ~from_codeset:"UTF-8" ~to_codeset:Oe_config.ocaml_codeset text)
           end ()
-        end;
-        comments <-
-          let text = buffer#get_text () in
-          GtkThread2.sync Comments.scan_locale (Glib.Convert.convert_with_fallback ~fallback:""
-                                                  ~from_codeset:"UTF-8" ~to_codeset:Oe_config.ocaml_codeset text)
+        end
       end;
       true
 
@@ -394,26 +395,55 @@ class margin_fold (view : Ocaml_text.view) =
       Option.iter GMain.Timeout.remove timer_id;
       timer_id <- None
 
+    method private connect_signals () =
+      signals <- [
+        `VIEW (view#event#connect#focus_in ~callback:(fun _ -> self#start_timer(); false));
+        `VIEW (view#event#connect#focus_out ~callback:(fun _ -> self#stop_timer(); false));
+        `VIEW (view#event#connect#expose ~callback:(fun ev -> self#draw_ellipsis ev; false));
+        `BUFFER (buffer#connect#mark_set ~callback:begin fun _ mark ->
+            match GtkText.Mark.get_name mark with
+            | Some "insert" ->
+                expanders
+                |> List.iter begin fun exp ->
+                  if exp#is_collapsed then begin
+                    let iter = buffer#get_iter `INSERT in
+                    if iter#line > exp#body#line && exp#body_contains iter
+                    then exp#expand()
+                  end
+                end
+            | _ -> ()
+          end);
+      ]
+
+    method private disconnect_signals () =
+      signals |> List.iter (function
+          | `VIEW sign -> GtkSignal.disconnect view#as_view sign
+          | `BUFFER sign -> GtkSignal.disconnect buffer#as_buffer sign);
+      signals <- [];
+
+    method private configure is_enabled =
+      self#set_is_visible is_enabled;
+      if is_enabled then begin
+        self#connect_signals();
+        self#start_timer();
+      end else begin
+        expanders |> List.iter begin fun exp ->
+          exp#expand();
+          exp#destroy()
+        end;
+        self#stop_timer();
+        expanders <- [];
+        self#disconnect_signals();
+      end
+
     method connect = new margin_signals ~expander_toggled ~synchronized
 
     initializer
-      view#event#connect#focus_in ~callback:(fun _ -> self#start_timer(); false) |> ignore;
-      view#event#connect#focus_out ~callback:(fun _ -> self#stop_timer(); false) |> ignore;
-      view#event#connect#expose ~callback:(fun ev -> self#draw_ellipsis ev; false) |> ignore;
-      buffer#connect#mark_set ~callback:begin fun _ mark ->
-        match GtkText.Mark.get_name mark with
-        | Some "insert" ->
-            expanders
-            |> List.iter begin fun exp ->
-              if exp#is_collapsed then begin
-                let iter = buffer#get_iter `INSERT in
-                if iter#line > exp#body#line && exp#body_contains iter
-                then exp#expand()
-              end
-            end
-        | _ -> ()
+      self#set_is_visible Preferences.preferences#get.editor_code_folding_enabled;
+      Preferences.preferences#connect#changed ~callback:begin fun pref ->
+        self#configure pref.editor_code_folding_enabled
       end |> ignore;
-      self#start_timer()
+      self#configure self#is_visible;
   end
 
 and expander_toggled () = object inherit [expander] signal () end

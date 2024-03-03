@@ -78,7 +78,7 @@ type settings = {
   ~editor_bg_color_popup               <ocaml default="{light=\"#e5e5e5\"; dark=\"#252525\"}" mutable> : string color;
   ~editor_bg_color_theme               <ocaml default="false" mutable> : bool;
   ~editor_bg_color_user                <ocaml default="{ light = \"#FFFFFF\"; dark = \"#101010\"}" mutable> : string color;
-  ~editor_code_folding_enabled         <ocaml default="true" mutable> : bool;
+  ~editor_code_folding_enabled         <ocaml default="false" mutable> : bool;
 
   ~editor_completion_font              <ocaml default="\"Sans 8\"" mutable> : string;
   ~editor_completion_greek_letters     <ocaml default="true" mutable> : bool;
