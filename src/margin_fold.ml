@@ -11,7 +11,7 @@ module Icons = struct
 end
 
 let counter = ref 0
-let is_debug = false
+let is_debug = true
 
 let mk_polygon n r =
   let pi = 3.14189 in
@@ -73,12 +73,6 @@ class expander ~(view : Ocaml_text.view) ~tag_highlight ~tag_invisible ?packing 
         buffer#delete_mark mark;
         buffer#delete_mark mark_foot
       end |> ignore;
-      (*      view#obuffer#undo#connect#after#undo ~callback:begin fun ~name ->
-              let iter = buffer#get_iter `INSERT in
-              let is_invisible = iter#tags |> List.exists (fun t -> t#get_oid = tag_invisible#get_oid) in
-              Printf.printf "UNDO %b %d:%d\n%!" is_invisible (iter#line + 1) iter#line_offset;
-              if self#is_collapsed && is_invisible then Gmisclib.Idle.add ~prio:300 self#expand
-              end |> ignore;*)
 
     method private hash =
       buffer#get_text ~start:self#head  ~stop:self#body () |> Hashtbl.hash
@@ -218,6 +212,13 @@ class margin_fold (view : Ocaml_text.view) =
     | Some (b, e, _) -> skip_comments_backward comments (buffer#get_iter (`OFFSET b))
     | _ -> buffer#get_iter (`OFFSET offset)
   in
+  let is_drawable buffer_start_line buffer_stop_line =
+    fun [@ inline] ol ->
+      let fold_start_line = ol.ol_start.line - 1 in
+      buffer_start_line <= fold_start_line &&
+      fold_start_line <= buffer_stop_line &&
+      ol.ol_stop.line > ol.ol_start.line
+  in
   object (self)
     inherit margin()
 
@@ -251,15 +252,8 @@ class margin_fold (view : Ocaml_text.view) =
 
     method draw ~view ~top ~left ~height ~start ~stop =
       if not self#is_changed_after_last_outline then begin
-        let buffer_start_line = start#line in
-        let buffer_stop_line = stop#line in
+        let is_drawable = is_drawable start#line stop#line in
         let methods = ref [] in
-        let [@ inline] is_drawable ol =
-          let fold_start_line = ol.ol_start.line - 1 in
-          buffer_start_line <= fold_start_line &&
-          fold_start_line <= buffer_stop_line &&
-          ol.ol_stop.line > ol.ol_start.line
-        in
         expanders <-
           List.filter_map begin fun ex ->
             ex#misc#hide();
