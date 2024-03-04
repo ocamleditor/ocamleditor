@@ -157,7 +157,7 @@ class manager ~(buffer : GText.buffer) =
       self#disable();
 
     method private push pending (b1, b2) =
-      Stack.push (pending, b1, b2) current_stack;
+      Stack.push (pending, b1, b2, Unix.gettimeofday()) current_stack;
       pending_action <- None;
       if current_stack == undos then (can_undo_changed#call self#can_undo) else (can_redo_changed#call self#can_redo);
 
@@ -169,7 +169,7 @@ class manager ~(buffer : GText.buffer) =
       | _ -> assert false
 
     method private pop ?(in_block=false) stack =
-      let (action, b1, b2) (*as pending*) = Stack.pop stack in
+      let (action, b1, b2, t1) (*as pending*) = Stack.pop stack in
       (* current_stack is used by the insert/delete handlers when activated by the undo/redo of popped actions. *)
       current_stack <- (if stack == undos then redos else undos);
       begin
@@ -178,15 +178,15 @@ class manager ~(buffer : GText.buffer) =
             let stop = buffer#get_iter (`OFFSET action.pos) in
             buffer#delete ~start:(stop#backward_chars action.length) ~stop;
             if in_block then (self#pop ~in_block stack)
-        (*else begin (* Pop all contiguous Inserts *)
-          try
-            begin
-              match Stack.top stack with
-                | Insert _, _, _ -> self#pop stack
-                | _ -> ()
-            end;
-          with Stack.Empty -> ()
-          end*)
+            else begin (* Pop all contiguous Inserts *)
+              try
+                begin
+                  match [@warning "-4"] Stack.top stack with
+                  | Insert _, _, _, t2 when abs_float(t1 -. t2) <= 0.2 -> self#pop stack
+                  | _ -> ()
+                end;
+              with Stack.Empty -> ()
+            end
         | Delete action ->
             let iter = buffer#get_iter (`OFFSET b1) in
             buffer#insert ~iter action.text;
@@ -195,7 +195,7 @@ class manager ~(buffer : GText.buffer) =
               let b1, b2 = action.bounds in
               buffer#select_range (where#forward_chars b1) (where#forward_chars b2);
             end;
-            if in_block then (self#pop ~in_block stack)
+            if in_block then (self#pop ~in_block stack);
         | End_block name ->
             self#push (Begin_block name) (b1, b2);
             self#pop ~in_block:true stack; (* Popping from End_block to Begin_block *)
@@ -231,9 +231,9 @@ class manager ~(buffer : GText.buffer) =
           let sel = (buffer#get_iter `SEL_BOUND) in
           let block_name, b1, b2 =
             match [@warning "-4"] Stack.top stack with (* Cannot raise Stack.Empty *)
-            | (Begin_block name), b1, b2 -> name, b1, b2
-            | (End_block name), b1, b2 -> name, b1, b2
-            | _, b1, b2 -> "", b1, b2
+            | (Begin_block name), b1, b2, _ -> name, b1, b2
+            | (End_block name), b1, b2, _ -> name, b1, b2
+            | _, b1, b2, _ -> "", b1, b2
           in
           let b1, b2 = (buffer#get_iter (`OFFSET b1)), (buffer#get_iter (`OFFSET b2)) in
           if ins#equal b1 && sel#equal b2 then begin
@@ -259,7 +259,7 @@ class manager ~(buffer : GText.buffer) =
         self#push_pending_action();
       begin
         match [@warning "-4"] Stack.top current_stack with
-        | (Begin_block name), _, _ when name = current_block_name ->
+        | (Begin_block name), _, _, _ when name = current_block_name ->
             ignore (Stack.pop current_stack) (* remove empty blocks from the stack *)
         | _ ->
             self#push (End_block current_block_name)

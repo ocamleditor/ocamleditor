@@ -294,11 +294,11 @@ class margin_fold (view : Ocaml_text.view) =
           | _ -> ()
         end
         |> ignore;
-        !methods |> List.iter (fun ol -> if is_drawable ol then self#draw_expander ol top left)
+        !methods |> List.iter (fun ol -> if is_drawable ol then self#draw_expander ol top left);
       end else is_refresh_pending <- true
 
     method private draw_expander ol top left =
-      (*Printf.printf "draw_expander %d:%d -- %d:%d [%d] [%s %d]\n%!"
+      (*Log.println `TRACE "  draw_expander %d:%d -- %d:%d [%d] [%s %d]"
         ol.ol_start.line ol.ol_start.col ol.ol_stop.line ol.ol_stop.col
         (Thread.self() |> Thread.id) ol.ol_kind ol.ol_level;*)
       let start = buffer#get_iter (`LINECHAR (ol.ol_start.line - 1, ol.ol_start.col)) in
@@ -380,14 +380,14 @@ class margin_fold (view : Ocaml_text.view) =
     method private invoke_merlin () =
       if self#is_changed_after_last_outline then begin
         merlin@@Merlin.outline begin fun (ol : Merlin_j.outline list) ->
-          GtkThread.async begin fun () ->
-            self#sync_outline_time();
+          GtkThread.sync begin fun () ->
             outline <- ol;
+            let text = buffer#get_text () in
             comments <-
-              let text = buffer#get_text () in
               Comments.scan_locale (Glib.Convert.convert_with_fallback ~fallback:""
-                                      ~from_codeset:"UTF-8" ~to_codeset:Oe_config.ocaml_codeset text)
-          end ()
+                                      ~from_codeset:"UTF-8" ~to_codeset:Oe_config.ocaml_codeset text);
+            self#sync_outline_time();
+          end ();
         end
       end;
       true
@@ -398,7 +398,7 @@ class margin_fold (view : Ocaml_text.view) =
       match timer_id with
       | None ->
           self#invoke_merlin() |> ignore;
-          timer_id <- Some (GMain.Timeout.add ~ms:100 ~callback:self#invoke_merlin);
+          timer_id <- Some (GMain.Timeout.add ~ms:300 ~callback:self#invoke_merlin);
       | _ -> ()
 
     method private stop_timer() =
@@ -473,7 +473,9 @@ let init_page (page : Editor_page.page) =
     page#view#margin#add (margin :> Margin.margin);
     margin#connect#synchronized ~callback:begin fun () ->
       if margin#is_refresh_pending then begin
-        Gmisclib.Idle.add ~prio:100 page#view#draw_gutter;
+        (*Gmisclib.Idle.add ~prio:100 begin fun () ->*)
+        page#view#draw_gutter(); (* triggers draw *)
+        (*end;*)
         margin#clear_refresh_pending()
       end
     end |> ignore;
