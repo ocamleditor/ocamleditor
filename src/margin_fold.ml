@@ -6,6 +6,11 @@ open Printf
 open Miscellanea
 open Settings_j
 
+module Log = Common.Log.Make(struct let prefix = "FOLD" end)
+let _ =
+  Log.set_print_timestamp true;
+  Log.set_verbosity `DEBUG
+
 module Icons = struct
   let expander_open = "\u{f107}"
   let expander_closed = "\u{f105}"
@@ -135,9 +140,9 @@ class expander ~(view : Ocaml_text.view) ~tag_highlight ~tag_invisible ?packing 
         (if is_debug then sprintf "<span size='x-small'>%d</span>%s" id Icons.expander_open
          else sprintf "<big>%s</big>" Icons.expander_open);
       self#show_region();
+      is_expanded <- true;
       if was_collapsed then toggled#call true;
       GtkBase.Widget.queue_draw view#as_widget; (* Updates ellipsis *)
-      is_expanded <- true;
 
     method collapse () =
       let iter = buffer#get_iter `INSERT in
@@ -362,14 +367,12 @@ class margin_fold (view : Ocaml_text.view) =
       | _ -> ()
 
     method amend_nested_collapsed (expander : expander) =
-      if expander#is_expanded then begin
-        List.iter begin fun exp ->
-          (* When the outer expander is expanded, all nested ones are also
-             expanded, because the tag_highlight is removed everywhere, but
-             the expander state remains "collapsed". *)
-          if exp#is_collapsed && expander#body_contains exp#body
-          then exp#hide_region()
-        end expanders
+      self#iter_expanders begin fun exp ->
+        (* When the outer expander is expanded, all nested ones are also
+           expanded, because the tag_highlight is removed everywhere, but
+           the expander state remains "collapsed". *)
+        if exp#is_collapsed && expander#body_contains exp#body
+        then exp#hide_region()
       end
 
     method iter_expanders func = List.iter func expanders
@@ -382,8 +385,8 @@ class margin_fold (view : Ocaml_text.view) =
             outline <- ol;
             comments <-
               let text = buffer#get_text () in
-              GtkThread2.sync Comments.scan_locale (Glib.Convert.convert_with_fallback ~fallback:""
-                                                      ~from_codeset:"UTF-8" ~to_codeset:Oe_config.ocaml_codeset text)
+              Comments.scan_locale (Glib.Convert.convert_with_fallback ~fallback:""
+                                      ~from_codeset:"UTF-8" ~to_codeset:Oe_config.ocaml_codeset text)
           end ()
         end
       end;
@@ -475,7 +478,7 @@ let init_page (page : Editor_page.page) =
       end
     end |> ignore;
     margin#connect#expander_toggled ~callback:begin fun expander ->
-      margin#amend_nested_collapsed expander;
+      if expander#is_expanded then margin#amend_nested_collapsed expander;
       Gmisclib.Idle.add ~prio:300 (fun () -> page#view#draw_gutter())
     end |> ignore;
     pages := (page#misc#get_oid, margin) :: !pages

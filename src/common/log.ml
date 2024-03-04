@@ -56,16 +56,19 @@ let verbosities = List.mapi (fun i x -> x, i) [`DEBUG; `TRACE; `INFO; `WARN; `ER
 let (>=) x y = List.assoc x verbosities >= List.assoc y verbosities
 
 let timestamp () =
-  let t = Unix.time () in
-  let t = Unix.gmtime t in
+  let time = Unix.gettimeofday () in
+  let frac, secs = modf time in
+  let t = Unix.gmtime secs in
+  let ms = int_of_float (ceil (frac *. 1000.)) in
   Printf.sprintf
-    "%04d-%02d-%02dT%02d:%02d:%02d"
+    "%04d-%02d-%02dT%02d:%02d:%02d.%03d"
     (1900 + t.Unix.tm_year)
     (1 + t.Unix.tm_mon)
     t.Unix.tm_mday
     t.Unix.tm_hour
     t.Unix.tm_min
     t.Unix.tm_sec
+    ms
 
 module Make (X : sig
     val channel : out_channel
@@ -98,7 +101,7 @@ module Make (X : sig
     let print level f =
       if level <> `OFF && level >= !verbosity then begin
         if !print_timestamp then (Printf.fprintf X.channel "%s " (timestamp()));
-        Printf.fprintf X.channel "[%s] " (string_of_verbosity level);
+        Printf.fprintf X.channel "[%s] [%d] " (string_of_verbosity level) (Thread.id (Thread.self()));
         Option.iter (Printf.fprintf X.channel "%s") prefix;
         Printf.kfprintf flush X.channel f
       end else Printf.ifprintf X.channel f
@@ -106,7 +109,7 @@ module Make (X : sig
     let println level f =
       if level <> `OFF && level >= !verbosity then begin
         if !print_timestamp then (Printf.fprintf X.channel "%s " (timestamp()));
-        Printf.fprintf X.channel "[%s] " (string_of_verbosity level);
+        Printf.fprintf X.channel "[%s] [%d] " (string_of_verbosity level) (Thread.id (Thread.self()));
         Option.iter (fprintf X.channel "%s") prefix;
         Printf.kfprintf (function c -> Printf.fprintf c "\n%!") X.channel f
       end else Printf.ifprintf X.channel f
@@ -114,7 +117,7 @@ module Make (X : sig
     let fprint level f =
       if level <> `OFF && level >= !verbosity then begin
         if !print_timestamp then (Printf.kprintf (Format.pp_print_string log_formatter) "%s " (timestamp()));
-        Printf.kprintf (Format.pp_print_string log_formatter) "[%s] " (string_of_verbosity level);
+        Printf.kprintf (Format.pp_print_string log_formatter) "[%s] [%d] " (string_of_verbosity level) (Thread.id (Thread.self()));
         Option.iter (Format.pp_print_string log_formatter) prefix;
         Format.kfprintf (fun fmt -> Format.pp_print_flush fmt ()) log_formatter f
       end else Format.ifprintf Format.err_formatter f
@@ -122,7 +125,7 @@ module Make (X : sig
     let fprintln level f =
       if level <> `OFF && level >= !verbosity then begin
         if !print_timestamp then (Printf.kprintf (Format.pp_print_string log_formatter) "%s " (timestamp()));
-        Printf.kprintf (Format.pp_print_string log_formatter) "[%s] " (string_of_verbosity level);
+        Printf.kprintf (Format.pp_print_string log_formatter) "[%s] [%d] " (string_of_verbosity level) (Thread.id (Thread.self()));
         Option.iter (Format.pp_print_string log_formatter) prefix;
         Format.kfprintf (fun fmt -> Format.pp_print_newline fmt (); Format.pp_print_flush fmt ())
           log_formatter f
