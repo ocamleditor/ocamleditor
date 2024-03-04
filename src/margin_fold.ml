@@ -46,6 +46,7 @@ class expander ~(view : Ocaml_text.view) ~tag_highlight ~tag_invisible ?packing 
     inherit GObj.widget ebox#as_widget
     val mutable is_valid = true
     val mutable is_expanded = true
+    val mutable is_definition = false
     val mutable hash = 0
 
     val toggled = new toggled()
@@ -77,6 +78,9 @@ class expander ~(view : Ocaml_text.view) ~tag_highlight ~tag_invisible ?packing 
 
     method private hash =
       buffer#get_text ~start:self#head  ~stop:self#body () |> Hashtbl.hash
+
+    method set_is_definition x = is_definition <- x
+    method is_definition = is_definition
 
     method relocate (istart : GText.iter) (istop : GText.iter) =
       buffer#move_mark mark ~where:istart;
@@ -213,9 +217,9 @@ class margin_fold (view : Ocaml_text.view) =
   in
   let is_drawable buffer_start_line buffer_stop_line =
     fun [@ inline] ol ->
-      let fold_start_line = ol.ol_start.line - 1 in
-      buffer_start_line <= fold_start_line &&
-      fold_start_line <= buffer_stop_line &&
+      (*let fold_start_line = ol.ol_start.line - 1 in
+        buffer_start_line <= fold_start_line &&
+        fold_start_line <= buffer_stop_line &&*)
       ol.ol_stop.line > ol.ol_start.line
   in
   object (self)
@@ -321,6 +325,7 @@ class margin_fold (view : Ocaml_text.view) =
               expander#relocate start stop;
               expander
         in
+        expander#set_is_definition (ol.ol_kind = "Value" || ol.ol_kind = "Method");
         (* Hide expanders inside invisible regions *)
         if List.exists (fun t -> t#get_oid = tag_invisible#get_oid) start#tags
         then expander#misc#hide()
@@ -366,6 +371,8 @@ class margin_fold (view : Ocaml_text.view) =
           then exp#hide_region()
         end expanders
       end
+
+    method iter_expanders func = List.iter func expanders
 
     method private invoke_merlin () =
       if self#is_changed_after_last_outline then begin
@@ -455,6 +462,8 @@ and margin_signals ~expander_toggled ~synchronized =
     method synchronized = synchronized#connect ~after
   end
 
+let pages : (int * margin_fold) list ref = ref []
+
 let init_page (page : Editor_page.page) =
   try
     let margin = new margin_fold page#ocaml_view in
@@ -469,12 +478,24 @@ let init_page (page : Editor_page.page) =
       margin#amend_nested_collapsed expander;
       Gmisclib.Idle.add ~prio:300 (fun () -> page#view#draw_gutter())
     end |> ignore;
+    pages := (page#misc#get_oid, margin) :: !pages
   with ex ->
     Printf.eprintf "File \"margin_fold.ml\": %s\n%s\n%!" (Printexc.to_string ex) (Printexc.get_backtrace())
 
+let iter_page_expanders (page : Editor_page.page) callback =
+  match !pages |> List.assoc_opt page#misc#get_oid with
+  | Some margin -> margin#iter_expanders callback
+  | _ -> ()
+
+let collapse_to_definitions (page : Editor_page.page) =
+  iter_page_expanders page (fun exp -> if exp#is_definition then exp#collapse())
+
+let expand_all (page : Editor_page.page) =
+  iter_page_expanders page (fun exp -> exp#expand())
+
 let init_editor editor =
   editor#connect#add_page ~callback:init_page |> ignore;
-  (*editor#connect#remove_page ~callback:begin fun page ->
-    ()
-    end |> ignore*)
+  editor#connect#remove_page ~callback:begin fun page ->
+    pages := List.filter (fun (oid, _) -> oid <> page#misc#get_oid) !pages
+  end |> ignore
 

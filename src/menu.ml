@@ -420,10 +420,15 @@ let view ~browser ~group ~flags
   ignore (collapse_enclosing#connect#activate ~callback:(fun () ->
       editor#with_current_page (fun page -> ignore (page#ocaml_view#code_folding#toggle_current_fold()))));
   collapse_enclosing#add_accelerator ~group ~modi:[`CONTROL;] GdkKeysyms._minus ~flags;
+  (* Collapse to Definitions *)
+  let collapse_definitions = GMenu.menu_item ~label:"Collapse to Definitions" ~packing:code_folding_menu#add () in
+  collapse_definitions#connect#activate ~callback:(fun () ->
+      editor#with_current_page Margin_fold.collapse_to_definitions) |> ignore;
+  collapse_definitions#add_accelerator ~group ~modi:[`CONTROL;] GdkKeysyms._h ~flags;
   (* Expand All folds *)
   let unfold_all = GMenu.menu_item ~label:"Expand All Folds" ~packing:code_folding_menu#add () in
-  ignore (unfold_all#connect#activate ~callback:(fun () ->
-      editor#with_current_page (fun page -> ignore (page#ocaml_view#code_folding#expand_all()))));
+  unfold_all#connect#activate ~callback:(fun () -> editor#with_current_page Margin_fold.expand_all) |> ignore;
+  unfold_all#add_accelerator ~group ~modi:[`CONTROL; `SHIFT] GdkKeysyms._h ~flags;
   (** Select in Structure Pane *)
   let select_in_outline = GMenu.image_menu_item
       ~image:(GMisc.image ~pixbuf:(??? Icons.select_in_structure) ~icon_size:`MENU ())
