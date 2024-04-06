@@ -274,7 +274,9 @@ class widget ~editor:_ ~page ?packing () =
           end else begin
             Str.replace_first type_color_re type_color_sel markup
           end in
-        model#set ~row ~column:col_markup new_markup;
+        try
+          model#set ~row ~column:col_markup new_markup;
+        with ex -> Printexc.print_backtrace stderr; print_endline @@ "replace_color_in_markup: " ^ Printexc.to_string ex
       in
       ignore (view#selection#connect#changed ~callback:begin fun () ->
           match view#selection#get_selected_rows with
@@ -1078,7 +1080,9 @@ class widget ~editor:_ ~page ?packing () =
           let callbacks = List.rev (model#get ~row ~column:col_lazy) in
           List.iter (fun f -> f()) callbacks;
           result := callbacks <> [];
-        with Failure _ -> ()
+        with
+        | Failure _ -> ()
+        | ex -> Printexc.print_backtrace stderr; print_endline @@ "force_lazy callback ex: " ^ Printexc.to_string ex
       end;
       model#set ~row ~column:col_lazy [];
       !result
