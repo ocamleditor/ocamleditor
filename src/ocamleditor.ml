@@ -85,7 +85,7 @@ let main () = begin
         ~position:`CENTER
         ~width:1
         ~height:1
-        ~decorated:false
+        ~decorated:true
         ~focus_on_map:true
         ~resizable:true
         ~type_hint:`NORMAL
@@ -99,7 +99,7 @@ let main () = begin
     let browser = Browser.create window in
     (* Before browser initialization *)
     browser#connect#startup ~callback:begin fun () ->
-      Gaux.may splashscreen ~f:(fun w -> w#set_transient_for browser#window#as_window);
+      Gaux.may splashscreen ~f:(fun w -> w#set_transient_for window#as_window);
       Sys.chdir (Filename.dirname Sys.executable_name);
       Printf.printf "%s\n%!" (System_properties.to_string());
       Plugin.load "dot_viewer_svg.cma" |> ignore;
@@ -108,7 +108,6 @@ let main () = begin
     browser#connect#after#startup ~callback:begin fun () ->
       Gmisclib.Idle.add ~prio:300 begin fun () ->
         window#set_position `CENTER_ALWAYS;
-        window#set_decorated true;
         window#deiconify();
         window#present();
         window#move ~x:0 ~y:0;
