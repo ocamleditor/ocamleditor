@@ -192,10 +192,9 @@ class margin_fold (view : Ocaml_text.view) =
       [ `PARAGRAPH_BACKGROUND (?? Oe_config.code_folding_highlight_color) ] in
   let tag_invisible = buffer#create_tag ~name:"fold-invisible"
       [ `INVISIBLE true ] in
-  let merlin func =
+  let merlin text func =
     let filename = match buffer#file with Some file -> file#filename | _ -> "" in
-    let source_code = buffer#get_text () in
-    func ~filename ~source_code
+    func ~filename ~source_code:text
   in
   let rec walk f parent (ol : Merlin_j.outline list) =
     match ol with
@@ -241,6 +240,7 @@ class margin_fold (view : Ocaml_text.view) =
 
     (** The currently cached folding points. *)
     val mutable outline = []
+    val mutable outline_text = ""
 
     val mutable comments = []
 
@@ -258,7 +258,7 @@ class margin_fold (view : Ocaml_text.view) =
 
     method sync_outline_time () =
       last_outline_time <- Unix.gettimeofday();
-      synchronized#call();
+      (*synchronized#call();*)
 
     method draw ~view ~top ~left ~height ~start ~stop =
       if not self#is_changed_after_last_outline then begin
@@ -306,8 +306,13 @@ class margin_fold (view : Ocaml_text.view) =
         if ol.ol_kind = "Method" then
           let stop = buffer#get_iter (`LINECHAR (ol.ol_stop.line - 1, ol.ol_stop.col)) in
           skip_comments_backward comments (stop#set_line_offset 0);
-        else
-          buffer#get_iter (`LINECHAR (ol.ol_stop.line - 1, ol.ol_stop.col)) in
+        else begin
+          (*Log.print `DEBUG "draw_expander: %d,%d " (ol.ol_stop.line - 1) ol.ol_stop.col;*)
+          let iter = buffer#get_iter (`LINECHAR (ol.ol_stop.line - 1, ol.ol_stop.col)) in
+          (*Log.println `DEBUG "OK";*)
+          iter
+        end
+      in
       (*(*if ol.ol_kind = "Method" then begin
         Printf.printf "%S: %d:%d - %d:%d -- %d:%d\n%!"
           (buffer#get_text ~start ~stop:start#forward_to_line_end ())
@@ -315,27 +320,27 @@ class margin_fold (view : Ocaml_text.view) =
           ol.ol_stop.line ol.ol_stop.col
           (start#line + 1) start#line_offset;*)
         end;*)
-      if stop#line > start#line then begin
-        let expander =
-          match expanders |> List.find_opt (fun exp -> exp#folding_point#equal start) with
-          | None ->
-              let expander = new expander ~tag_highlight ~tag_invisible ~view () in
-              expander#relocate start stop;
-              expanders <- expander :: expanders;
-              expander#show_region();
-              expander#connect#toggled ~callback:(fun _ -> expander_toggled#call expander) |> ignore;
-              expander#connect#refresh_needed ~callback:(fun () -> is_refresh_pending <- true) |> ignore;
-              expander
-          | Some expander ->
-              expander#relocate start stop;
-              expander
-        in
-        expander#set_is_definition (ol.ol_kind = "Value" || ol.ol_kind = "Method");
-        (* Hide expanders inside invisible regions *)
-        if List.exists (fun t -> t#get_oid = tag_invisible#get_oid) start#tags
-        then expander#misc#hide()
-        else expander#show top left
-      end
+      (*if stop#line > start#line then begin*)
+      let expander =
+        match expanders |> List.find_opt (fun exp -> exp#folding_point#equal start) with
+        | None ->
+            let expander = new expander ~tag_highlight ~tag_invisible ~view () in
+            expander#relocate start stop;
+            expanders <- expander :: expanders;
+            expander#show_region();
+            expander#connect#toggled ~callback:(fun _ -> expander_toggled#call expander) |> ignore;
+            expander#connect#refresh_needed ~callback:(fun () -> is_refresh_pending <- true) |> ignore;
+            expander
+        | Some expander ->
+            (*expander#relocate start stop;*)
+            expander
+      in
+      expander#set_is_definition (ol.ol_kind = "Value" || ol.ol_kind = "Method");
+      (* Hide expanders inside invisible regions *)
+      if List.exists (fun t -> t#get_oid = tag_invisible#get_oid) start#tags
+      then expander#misc#hide()
+      else expander#show top left
+    (*end*)
 
     method draw_ellipsis _ =
       match view#get_window `TEXT with
@@ -379,14 +384,16 @@ class margin_fold (view : Ocaml_text.view) =
 
     method private invoke_merlin () =
       if self#is_changed_after_last_outline then begin
-        merlin@@Merlin.outline begin fun (ol : Merlin_j.outline list) ->
+        let source_code = buffer#get_text () in
+        self#sync_outline_time();
+        (merlin source_code)@@Merlin.outline begin fun (ol : Merlin_j.outline list) ->
           GtkThread.sync begin fun () ->
             outline <- ol;
-            let text = buffer#get_text () in
+            outline_text <- source_code;
             comments <-
               Comments.scan_locale (Glib.Convert.convert_with_fallback ~fallback:""
-                                      ~from_codeset:"UTF-8" ~to_codeset:Oe_config.ocaml_codeset text);
-            self#sync_outline_time();
+                                      ~from_codeset:"UTF-8" ~to_codeset:Oe_config.ocaml_codeset source_code);
+            synchronized#call();
           end ();
         end
       end;

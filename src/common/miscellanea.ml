@@ -116,7 +116,7 @@ struct
 
   (** Returns a list of each element in the input list and its predecessor,
       with the exception of the first element which is only returned as the
-      predecessor of the second element. *)
+      predecessor of the second element. [pairwise [1; 2; 3] = [(1, 2); (2, 3)]] *)
   let pairwise = function
     | [] | [_] -> []
     | hd :: tl -> List.fold_left_map (fun p x -> x, (p, x)) hd tl |> snd;;
