@@ -18,7 +18,13 @@ let compile () =
     sys_command ["ocamlmklib"; (sprintf "%s.%s" filename ext); "process_termination.ml"; "-o process_termination"]
   else begin
     sys_command ["ocamlc"; "-c"; "process_termination.ml"];
-    sys_command ["ocamlmklib"; (sprintf "%s.%s" filename ext); "process_termination.cmo"; "-o process_termination"; "-v"]
+    sys_command [
+      "ocamlmklib"; "-v";
+      "-o process_termination";
+      "process_termination.cmo";
+      (sprintf "%s.%s" filename ext);
+      "-custom"
+    ];
   end
 ;;
 
