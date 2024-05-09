@@ -15,7 +15,7 @@ let compile () =
   sys_command ["ocamlc"; filename ^ ".c" ];
   let ext = if Sys.win32 && not is_mingw then "obj" else "o" in
   if is_native_supported then
-    sys_command ["ocamlmklib"; (sprintf "%s.%s" filename ext); "process_termination.ml"; "-o process_termination"]
+    sys_command ["ocamlmklib"; "-custom"; (sprintf "%s.%s" filename ext); "process_termination.ml"; "-o process_termination"]
   else begin
     sys_command ["ocamlc"; "-c"; "process_termination.ml"];
     sys_command [
