@@ -360,7 +360,7 @@
       <lib_install_path></lib_install_path>
       <external_tasks/>
       <restrictions>FINDLIB(curl)</restrictions>
-      <dependencies></dependencies>
+      <dependencies>9</dependencies>
     </target>
     <target name="plugin-remote-native" default="false" id="16" sub_targets="" is_fl_package="false" subsystem="" readonly="false" visible="true" node_collapsed="false">
       <descr></descr>
@@ -369,7 +369,7 @@
       <libs></libs>
       <other_objects></other_objects>
       <files>remote.ml</files>
-      <package>curl,ocamldiff,lablgtk2</package>
+      <package>atdgen-runtime,curl,lablgtk2,yojson</package>
       <includes>common icons otherwidgets gmisclib</includes>
       <thread>false</thread>
       <vmthread>false</vmthread>
@@ -385,7 +385,7 @@
       <lib_install_path></lib_install_path>
       <external_tasks/>
       <restrictions>FINDLIB(curl)</restrictions>
-      <dependencies></dependencies>
+      <dependencies>9</dependencies>
     </target>
     <target name="plugin-dotviewer-bytecode" default="false" id="18" sub_targets="" is_fl_package="false" subsystem="" readonly="false" visible="true" node_collapsed="false">
       <descr></descr>
@@ -394,8 +394,8 @@
       <libs></libs>
       <other_objects></other_objects>
       <files>dot_viewer_svg.ml</files>
-      <package>lablgtk2.rsvg,xml-light</package>
-      <includes>common gmisclib</includes>
+      <package>atdgen-runtime,lablgtk2.rsvg,xml-light,yojson</package>
+      <includes>common icons otherwidgets gmisclib</includes>
       <thread>true</thread>
       <vmthread>false</vmthread>
       <pp></pp>
@@ -410,7 +410,7 @@
       <lib_install_path></lib_install_path>
       <external_tasks/>
       <restrictions>FINDLIB(lablgtk2.rsvg)</restrictions>
-      <dependencies></dependencies>
+      <dependencies>9</dependencies>
     </target>
     <target name="plugin-dotviewer-native" default="false" id="19" sub_targets="" is_fl_package="false" subsystem="" readonly="false" visible="true" node_collapsed="false">
       <descr></descr>
@@ -419,8 +419,8 @@
       <libs></libs>
       <other_objects></other_objects>
       <files>dot_viewer_svg.ml</files>
-      <package>lablgtk2.rsvg,xml-light</package>
-      <includes>common gmisclib</includes>
+      <package>atdgen-runtime,lablgtk2.rsvg,xml-light,yojson</package>
+      <includes>common icons otherwidgets gmisclib</includes>
       <thread>true</thread>
       <vmthread>false</vmthread>
       <pp></pp>
@@ -435,7 +435,7 @@
       <lib_install_path></lib_install_path>
       <external_tasks/>
       <restrictions>FINDLIB(lablgtk2.rsvg)</restrictions>
-      <dependencies></dependencies>
+      <dependencies>9</dependencies>
     </target>
     <target name="prepare-build" default="false" id="20" sub_targets="" is_fl_package="false" subsystem="Console" readonly="false" visible="true" node_collapsed="false">
       <descr></descr>
