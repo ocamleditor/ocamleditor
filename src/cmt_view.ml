@@ -608,6 +608,7 @@ class widget ~editor:_ ~page ?packing () =
       } in
       let path, row =
         (*GtkThread2.sync begin fun () ->*)
+        model#misc#freeze_notify ();
         let row = model#append ?parent () in
         let path = model#get_path row in
         model#set ~row ~column:col_name name;
@@ -615,6 +616,7 @@ class widget ~editor:_ ~page ?packing () =
         model#set ~row ~column:col_default_sort count;
         count <- count + 1;
         Gaux.may kind ~f:(fun k -> Gaux.may (pixbuf_of_kind k) ~f:(model#set ~row ~column:col_icon));
+        model#misc#thaw_notify ();
         path, row
         (* end ()*)
       in

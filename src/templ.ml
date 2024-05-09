@@ -24,7 +24,6 @@
 open Printf
 open Miscellanea
 open Templates
-open Template
 
 type t = Templates.t list
 
@@ -191,11 +190,13 @@ class widget ~project ~(view : Ocaml_text.view) ?packing ()=
       let font_name = Preferences.preferences#get.editor_base_font in
       let family = String.sub font_name 0 (Option.value (String.rindex_opt font_name ' ') ~default:(String.length font_name)) in
       List.iter begin fun (_, name, descr, templ) ->
+        model#misc#freeze_notify ();
         let row = model#append () in
         model#set ~row ~column:col_key name;
         model#set ~row ~column:col_name (sprintf {|<b><span face="%s" size="small">%s</span></b>|} family (Glib.Markup.escape_text name));
         model#set ~row ~column:col_descr (
           sprintf {|<span face="%s" size="small">%s</span>|} family (Glib.Markup.escape_text descr));
+        model#misc#thaw_notify ();
       end !Templates.spec;
       ignore (lview#connect#row_activated ~callback:begin fun path _ ->
           let row = model#get_iter path in
@@ -213,12 +214,8 @@ let popup project (view : Ocaml_text.view) =
   let x, y = view#get_location_at_cursor () in
   let widget = new widget ~project ~view () in
   let window = Gtk_util.window widget#coerce ~x ~y () in
-  ignore ("TODO: set_transient_for" , window)
+  window#set_transient_for (Window.root_window2 view);
 
-
-
-
-
-
-
+  window#set_width_request 120;
+  window#set_height_request 180
 

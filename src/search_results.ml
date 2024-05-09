@@ -25,7 +25,6 @@ open Miscellanea
 open Location
 open Lexing
 module ColorOps = Color
-open Preferences
 
 type t = {
   filename          : string;
@@ -261,11 +260,13 @@ class widget ~editor(* : Editor.editor)*) ?packing () =
         hits <- hits + row_hits;
         count_files <- count_files + 1;
         count_dirs <- count_dirs + (if List.mem dir !dirs then 0 else 1);
+        model_files#misc#freeze_notify ();
         let row = model_files#append () in
         model_files#set ~row ~column:col_file (Filename.basename filename);
         model_files#set ~row ~column:col_path dir;
         model_files#set ~row ~column:col_hits row_hits;
         model_files#set ~row ~column:col_entry entry;
+        model_files#misc#thaw_notify ();
       end results;
 
     method private files_selection_changed () =
