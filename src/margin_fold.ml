@@ -224,7 +224,7 @@ class margin_fold (view : Ocaml_text.view) =
       (*let fold_start_line = ol.ol_start.line - 1 in
         buffer_start_line <= fold_start_line &&
         fold_start_line <= buffer_stop_line &&*)
-      ol.ol_stop.line > ol.ol_start.line
+      ol.ol_start.line < ol.ol_stop.line - 1
   in
   object (self)
     inherit margin()
