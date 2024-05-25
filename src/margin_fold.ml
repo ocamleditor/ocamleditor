@@ -49,6 +49,9 @@ class expander ~(view : Ocaml_text.view) ~tag_highlight ~tag_invisible ?packing 
   in
   object (self)
     inherit GObj.widget ebox#as_widget
+
+    (** The expander is invalid if the text it contains has changed and, as
+        such, has already been destroyed *)
     val mutable is_valid = true
     val mutable is_expanded = true
     val mutable is_definition = false
@@ -106,11 +109,13 @@ class expander ~(view : Ocaml_text.view) ~tag_highlight ~tag_invisible ?packing 
           self#expand();
           is_valid <- false;
           self#misc#hide();
+          self#destroy();
           refresh_needed#call()
         end
-      end else hash <- self#hash;
+      end else hash <- self#hash
 
     method is_valid = is_valid
+
     method id = id
 
     (** The iter where the {i folding point} starts. It is between head and body. *)
@@ -165,11 +170,13 @@ class expander ~(view : Ocaml_text.view) ~tag_highlight ~tag_invisible ?packing 
     method show_region () =
       buffer#remove_tag tag_invisible ~start:self#body ~stop:self#foot;
 
-    method show top left =
+    method show top left height =
       let yl, _ = view#get_line_yrange self#head in
       let y = yl - top + view#pixels_above_lines in
-      view#move_child ~child:self#coerce ~x:left ~y;
-      self#misc#show()
+      if y >= 0 && y <= height then begin
+        view#move_child ~child:self#coerce ~x:left ~y;
+        self#misc#show()
+      end else self#misc#hide()
 
     method connect = new signals ~toggled ~refresh_needed
   end
@@ -235,7 +242,7 @@ class margin_fold (view : Ocaml_text.view) =
     (** The margin is refresh pending when it is requested to be drawn but cannot be
         drawn because the buffer has changed and folding points currently
         cached have become invalid. The drawing of the margin is therefore
-        postponed until the folding points are refreshed. *)
+        postponed until the folding points are back in sync. *)
     val mutable is_refresh_pending = false
 
     (** The currently cached folding points. *)
@@ -262,42 +269,48 @@ class margin_fold (view : Ocaml_text.view) =
 
     method draw ~view ~top ~left ~height ~start ~stop =
       if not self#is_changed_after_last_outline then begin
-        let is_drawable = is_drawable start#line stop#line in
-        let methods = ref [] in
-        expanders <-
-          List.filter_map begin fun ex ->
-            ex#misc#hide();
-            if not ex#is_valid then (ex#destroy(); None)
-            else Some ex
-          end expanders;
-        outline
-        |> walk begin fun parent ol ->
-          let is_folding_point = ol.ol_kind = "Method" || is_drawable ol in
-          if is_folding_point then begin
-            if ol.ol_kind = "Method" then begin
-              ol.ol_parent <- parent;
-              methods := ol :: !methods
-            end else
-              self#draw_expander ol top left;
-          end
-        end None;
-        !methods
-        |> List.filter (fun ol -> ol.ol_parent <> None)
-        |> Xlist.group_by (fun ol -> ol.ol_parent)
-        |> List.iter begin fun (parent, meths) ->
-          match parent with
-          | Some parent  ->
-              ({ parent with ol_start = parent.ol_stop } :: meths)
-              |> List.sort (fun m1 m2 -> Stdlib.compare m1.ol_start m2.ol_start)
-              |> Xlist.pairwise
-              |> List.iter (fun (ol1, ol2) -> ol1.ol_stop <- ol2.ol_start);
-          | _ -> ()
-        end
-        |> ignore;
-        !methods |> List.iter (fun ol -> if is_drawable ol then self#draw_expander ol top left);
+        match expanders with
+        (* Separate the case in which markers and expanders need to be
+           reconstructed from the case in which only the positions within the visible
+           area need to be updated (for example in the case of scrolling). *)
+        | [] ->
+            let is_drawable = is_drawable start#line stop#line in
+            let methods = ref [] in
+            expanders <-
+              List.filter_map begin fun ex ->
+                ex#misc#hide();
+                if ex#is_valid then Some ex else None
+              end expanders;
+            outline
+            |> walk begin fun parent ol ->
+              let is_folding_point = ol.ol_kind = "Method" || is_drawable ol in
+              if is_folding_point then begin
+                if ol.ol_kind = "Method" then begin
+                  ol.ol_parent <- parent;
+                  methods := ol :: !methods
+                end else
+                  self#draw_expander ol top left height;
+              end
+            end None;
+            !methods
+            |> List.filter (fun ol -> ol.ol_parent <> None)
+            |> Xlist.group_by (fun ol -> ol.ol_parent)
+            |> List.iter begin fun (parent, meths) ->
+              match parent with
+              | Some parent  ->
+                  ({ parent with ol_start = parent.ol_stop } :: meths)
+                  |> List.sort (fun m1 m2 -> Stdlib.compare m1.ol_start m2.ol_start)
+                  |> Xlist.pairwise
+                  |> List.iter (fun (ol1, ol2) -> ol1.ol_stop <- ol2.ol_start);
+              | _ -> ()
+            end
+            |> ignore;
+            !methods |> List.iter (fun ol -> if is_drawable ol then self#draw_expander ol top left height);
+        | _ ->
+            expanders |> List.iter (fun ex -> ex#show top left height)
       end else is_refresh_pending <- true
 
-    method private draw_expander ol top left =
+    method private draw_expander ol top left height =
       (*Log.println `TRACE "  draw_expander %d:%d -- %d:%d [%d] [%s %d]"
         ol.ol_start.line ol.ol_start.col ol.ol_stop.line ol.ol_stop.col
         (Thread.self() |> Thread.id) ol.ol_kind ol.ol_level;*)
@@ -339,7 +352,7 @@ class margin_fold (view : Ocaml_text.view) =
       (* Hide expanders inside invisible regions *)
       if List.exists (fun t -> t#get_oid = tag_invisible#get_oid) start#tags
       then expander#misc#hide()
-      else expander#show top left
+      else expander#show top left height
     (*end*)
 
     method draw_ellipsis _ =

@@ -763,13 +763,16 @@ and view ?project ?buffer () =
           match h, v with
           | (Some h), (Some v) ->
               (* Redraw the entire window on horizontal scroll to refresh right margin *)
-              ignore (h#connect#after#value_changed
-                        ~callback:(fun () -> GtkBase.Widget.queue_draw self#as_widget));
+              h#connect#after#value_changed
+                ~callback:(fun () -> GtkBase.Widget.queue_draw self#as_widget) |> ignore;
               (* Update gutter on vertical scroll changed *)
-              ignore (v#connect#after#value_changed ~callback:begin fun () ->
-                  Gmisclib.Idle.add self#draw_gutter;
-                  Gmisclib.Idle.add ~prio:300 (fun () -> GtkBase.Widget.queue_draw self#as_widget);
-                end);
+              v#connect#value_changed
+                ~callback:begin fun () ->
+                  Gmisclib.Idle.add begin fun () ->
+                    self#draw_gutter();
+                    GtkBase.Widget.queue_draw self#as_widget;
+                  end |> ignore;
+                end |> ignore;
           | _ -> ()
         end);
       (** Fix bug in draw_current_line_background *)
