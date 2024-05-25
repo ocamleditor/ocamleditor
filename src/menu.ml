@@ -545,7 +545,6 @@ let window ~browser ~group ~flags
   (** window_switch *)
   let window_switch = GMenu.menu_item ~label:"Switch..." ~packing:menu#append () in
   ignore (window_switch#connect#activate ~callback:editor#dialog_file_select);
-  window_switch#add_accelerator ~group ~modi:[`CONTROL] GdkKeysyms._B ~flags;
   (*window_switch#misc#set_sensitive (List.length !items > 0);*)
   let _ = GMenu.separator_item ~packing:menu#add () in
   (** Navigation Backward *)

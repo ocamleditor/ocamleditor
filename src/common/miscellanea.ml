@@ -55,7 +55,7 @@ let crono ?(label="Time") f x =
   finally time;
   result
 
-(** {6 Operazioni su liste} *)
+(** {6 List operations} *)
 
 module Xlist =
 struct
@@ -206,13 +206,15 @@ let rpad txt c width =
   let result = txt ^ (String.make width c) in
   String.sub result 0 width
 
-(** Rimpiazza in un testo tutte le ricorrenze di sottostringhe con le relative
-    stringhe sostitutive. L'ultima sottostringa viene rimpiazzata nel testo ottenuto dopo
-    la sostituzione della penultima sottostringa, la penultima con la terzultima ecc.
-    @param memo Indica se usare il memo per la compilazione delle espressioni
-    regolari (default) o ricompilarle ogni volta.
-    @param regexp Indica se la sottostringa da cercare è un'espressione regolare (default)
-    o una stringa esatta.
+(** Replaces all occurrences of substrings with the specified replacement strings. TThe last
+    substring is replaced in the text obtained after replacing the second to last substring, the
+    second to last after replacing the third to last and so on.
+
+    @param memo Specifies whether to use the memo for compiling regular expressions (default) or
+    recompiling them every time.
+
+    @param regexp Specifies whether the substring to search for is a regular expression (default)
+    or an exact string.
 *)
 let replace_all ?(memo=true) =
   let mk_regexp = (!~) ~force:(fun _ -> not memo) in
@@ -221,7 +223,7 @@ let replace_all ?(memo=true) =
       Str.global_replace (if not regexp then (!~~) ~force:(fun _ -> not memo) re else mk_regexp re) te s'
     end s re_te
 
-(** Simile a [replace_all] ma rimpiazza solo la prima ricorrenza. *)
+(** Like [replace_all] but only replaces the first occurrence. *)
 let replace_first ?(memo=true) =
   let mk_regexp = (!~) ~force:(fun _ -> not memo) in
   fun ?(regexp=true) re_te s ->
@@ -229,7 +231,7 @@ let replace_first ?(memo=true) =
       Str.replace_first (mk_regexp (if not regexp then Str.quote re else re)) te s'
     end s re_te
 
-(** [starts_with prefix s] restituisce [true] sse [s] inizia con [prefix]. *)
+(** [starts_with prefix s] returns [true] if and only if [s] starts with [prefix]. *)
 let starts_with prefix s = string_partial_match (regexp_string prefix) s 0
 
 (** [strip_prefix prefix str]
@@ -252,18 +254,20 @@ let strip_prefix prefix s =
     s
 
 
-(** {6 Ricerca di espressioni regolari} *)
+(** {6 Regular expression search} *)
 
 module Search =
 struct
+  (** Represents control statements for searches. *)
   type 'a t =
-      Skip (** Ignora la sotto-stringa trovata *)
-    | Append of 'a (** Aggiunge la sottostringa trovata alla lista dei risultati *)
-    | Found of 'a (** Restituisce la sottostringa trovata come unico
-                      risultato e interrompe la ricerca *)
-  (** Rappresenta le istruzioni di controllo per le ricerche.
-  *)
+      Skip (** Ignore the substring found. *)
+    | Append of 'a (** Adds the found substring to the results list. *)
+    | Found of 'a (** Returns the found substring as the only result and stops the search. *)
 
+  (** Search for all substrings in a text. The passed function accepts the found
+      string and its position as parameters and returns a control statement of
+      type [Search.t]. The final result of [all] is the list of all results
+      found and processed. *)
   let all pat f ?(pos=0) text  =
     let rec search pos acc =
       try
@@ -276,11 +280,6 @@ struct
          | Found x -> [x])
       with Not_found -> acc in
     List.rev (search pos [])
-    (** Ricerca di tutte le sottostringhe di un testo. La funzione passata accetta come
-        parametri la stringa trovata e la sua posizione e restituisce un'istruzione di
-        controllo di tipo [Search.t]. Il risultato finale di [all] è la lista di tutti
-        i risultati trovati ed elaborati.
-    *)
 end
 
 (** get_lines_from_file *)

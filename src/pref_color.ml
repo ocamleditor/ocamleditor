@@ -243,6 +243,7 @@ class pref_color title ?packing () =
       let weight     = scale_tag_weight#adjustment#value |> int_of_float in
       let style      = if check_tag_style#active then `ITALIC else `NORMAL in
       let underline  = if check_tag_underline#active then `SINGLE else `NONE in
+      let scale      = Preferences.editor_tag_scale current_tag in
       let bg_default = check_tag_bg#active in
       let bg_color   = button_tag_bg#color in
       if current_tag <> "" then begin
@@ -253,7 +254,7 @@ class pref_color title ?packing () =
           {
             Settings_t.name = current_tag;
             color = Preferences.Color.new_themed_color (color_name color) prev_tag.color; weight; style; underline;
-            scale = 1.0; bg_default; bg_color = Preferences.Color.new_themed_color (color_name bg_color) prev_tag.bg_color
+            scale = scale; bg_default; bg_color = Preferences.Color.new_themed_color (color_name bg_color) prev_tag.bg_color
           } ::
           (List.filter (fun t -> t.Settings_t.name <> current_tag) tags);
       end;

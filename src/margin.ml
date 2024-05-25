@@ -1,8 +1,11 @@
 open Gutter
 
+type kind = FOLDING | LINE_NUMBERS | MARKERS | DIFF
+
 class virtual margin () =
   object (self)
     val mutable is_visible = true
+    method virtual kind : kind
     method is_visible = is_visible
     method set_is_visible x = is_visible <- x
     method virtual size : int (* width of the margin in pixels *)
@@ -27,6 +30,7 @@ class line_numbers (view : GText.view) =
     initializer
       self#resize();
 
+    method kind = LINE_NUMBERS
     method size = size
     method index = 0
     method reset () = Line_num_labl.reset labels
@@ -97,6 +101,7 @@ class markers gutter margin_line_numbers =
     inherit margin ()
     val mutable positions = []
     val mutable size = 0 (* visible line number => size = 0; hidden => size > 0 *)
+    method kind = MARKERS
     method icon_size = 15
     method index = 10
     method size = size
@@ -182,6 +187,7 @@ class container (view : GText.view) =
     method add margin =
       childs <- margin :: childs |> List.sort (fun m1 m2 -> Stdlib.compare m1#index m2#index)
     method remove margin = childs <- childs |> List.filter ((<>) margin)
+    method list = childs
 
     method draw () =
       (* Check `REALIZED to avoid caching line numbers without parent. *)

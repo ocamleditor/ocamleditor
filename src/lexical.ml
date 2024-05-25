@@ -33,7 +33,7 @@ let init_tags ?(tags=(!tags)) ?(colors=(!colors))
         let fg_color = `FOREGROUND_GDK (to_gdk_color tagprop.color) in
         let properties = [
           Some fg_color;
-          (match tagprop.scale with 1.0 -> None | _ -> None); (* scale is unused *)
+          (match tagprop.scale with 1.0 -> None | _ -> Some (`SCALE (`CUSTOM tagprop.scale)));
           (match tagprop.style with `NORMAL -> None | _ -> Some (`STYLE `ITALIC));
           (match tagprop.underline with `NONE -> None | _ -> Some (`UNDERLINE `SINGLE));
           (if tagprop.weight > 0 then Some (`WEIGHT (`CUSTOM tagprop.weight)) else None)
@@ -54,6 +54,7 @@ let init_tags ?(tags=(!tags)) ?(colors=(!colors))
           let properties = [
             Some fg_color;
             (if tagprop.weight > 0 then Some (`WEIGHT (`CUSTOM tagprop.weight)) else None);
+            (match tagprop.scale with 1.0 -> None | _ -> Some (`SCALE (`CUSTOM tagprop.scale)));
             (match tagprop.style with `NORMAL -> None | _ -> Some (`STYLE `ITALIC));
             (match tagprop.underline with `NONE -> None | _ -> Some (`UNDERLINE `SINGLE));
             Some (`PIXELS_BELOW_LINES 1);

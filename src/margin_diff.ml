@@ -28,6 +28,7 @@ class widget view =
     val mutable stop_line = 0
     val mutable top = 0
     val mutable height = 0
+    method kind = DIFF
     method index = 20
     val mutable last_diff_time = view#tbuffer#last_edit_time
     method size = size

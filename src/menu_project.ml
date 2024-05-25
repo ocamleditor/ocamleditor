@@ -158,6 +158,7 @@ let project ~browser ~group ~flags items =
   let open Preferences in
   let project_clean_default_target = GMenu.image_menu_item ~label:"Clean" ~packing:menu#add () in
   project_clean_default_target#set_image (Icons.create (??? Icons.clear_build_16))#coerce;
+  project_clean_default_target#add_accelerator ~group ~modi:[`CONTROL;`SHIFT] GdkKeysyms._Delete ~flags;
   project_clean_default_target#add_accelerator ~group ~modi:[`CONTROL] GdkKeysyms._F9 ~flags;
   ignore (project_clean_default_target#connect#activate ~callback:begin fun () ->
       browser#with_current_project (fun _ ->
@@ -168,6 +169,7 @@ let project ~browser ~group ~flags items =
   (* Compile *)
   let project_compile_only = GMenu.image_menu_item ~label:"Compile" ~packing:menu#add () in
   project_compile_only#set_image (Icons.create (??? Icons.compile_all_16))#coerce;
+  project_compile_only#add_accelerator ~group ~modi:[`CONTROL] GdkKeysyms._B ~flags;
   project_compile_only#add_accelerator ~group ~modi:[`CONTROL] GdkKeysyms._F10 ~flags;
   ignore (project_compile_only#connect#activate ~callback:begin fun () ->
       browser#with_current_project (fun _ ->
@@ -178,6 +180,7 @@ let project ~browser ~group ~flags items =
   (* Build *)
   let project_build = GMenu.image_menu_item ~label:"Build" ~packing:menu#add () in
   project_build#set_image (Icons.create (??? Icons.build_16))#coerce;
+  project_build#add_accelerator ~group ~modi:[`CONTROL;`SHIFT] GdkKeysyms._B ~flags;
   ignore (project_build#connect#activate ~callback:begin fun () ->
       browser#with_current_project (fun _ ->
           browser#with_default_target (fun target ->

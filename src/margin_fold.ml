@@ -199,9 +199,14 @@ class margin_fold (view : Ocaml_text.view) =
   let size = if is_debug then 30 else 13 in
   let spacing = 5 in
   let buffer = view#obuffer in
-  let tag_highlight = buffer#create_tag ~name:"fold-highlight"
+  let add_tag name properties =
+    match GtkText.TagTable.lookup buffer#tag_table name with
+    | Some tag -> new GText.tag tag
+    | _ -> buffer#create_tag ~name properties
+  in
+  let tag_highlight = add_tag Oe_config.code_folding_tag_highlight_name
       [ `PARAGRAPH_BACKGROUND (?? Oe_config.code_folding_highlight_color) ] in
-  let tag_invisible = buffer#create_tag ~name:"fold-invisible"
+  let tag_invisible = add_tag Oe_config.code_folding_tag_invisible_name
       [ `INVISIBLE true ] in
   let merlin text func =
     let filename = match buffer#file with Some file -> file#filename | _ -> "" in
@@ -235,7 +240,7 @@ class margin_fold (view : Ocaml_text.view) =
       (*let fold_start_line = ol.ol_start.line - 1 in
         buffer_start_line <= fold_start_line &&
         fold_start_line <= buffer_stop_line &&*)
-      ol.ol_start.line < ol.ol_stop.line - 1
+      ol.ol_stop.line - ol.ol_start.line > 2
   in
   object (self)
     inherit margin()
@@ -260,6 +265,7 @@ class margin_fold (view : Ocaml_text.view) =
     val synchronized = new synchronized()
     val mutable signals = []
 
+    method kind = FOLDING
     method index = 30
     method size = size
 
@@ -493,21 +499,32 @@ let pages : (int * margin_fold) list ref = ref []
 
 let init_page (page : Editor_page.page) =
   try
-    let margin = new margin_fold page#ocaml_view in
-    page#view#margin#add (margin :> Margin.margin);
-    margin#connect#synchronized ~callback:begin fun () ->
-      if margin#is_refresh_pending then begin
-        (*Gmisclib.Idle.add ~prio:100 begin fun () ->*)
-        page#view#draw_gutter(); (* triggers draw *)
-        (*end;*)
-        margin#clear_refresh_pending()
-      end
-    end |> ignore;
-    margin#connect#expander_toggled ~callback:begin fun expander ->
-      if expander#is_expanded then margin#amend_nested_collapsed expander;
-      Gmisclib.Idle.add ~prio:300 (fun () -> page#view#draw_gutter())
-    end |> ignore;
-    pages := (page#misc#get_oid, margin) :: !pages
+    page#view#margin#list |> List.find_opt (fun m -> m#kind = FOLDING)
+    |> begin function
+    | None ->
+        let margin = new margin_fold page#ocaml_view in
+        page#view#margin#add (margin :> Margin.margin);
+        margin#connect#synchronized ~callback:begin fun () ->
+          if margin#is_refresh_pending then begin
+            (*Gmisclib.Idle.add ~prio:100 begin fun () ->*)
+            page#view#draw_gutter(); (* triggers draw *)
+            (*end;*)
+            margin#clear_refresh_pending()
+          end
+        end |> ignore;
+        margin#connect#expander_toggled ~callback:begin fun expander ->
+          if expander#is_expanded then margin#amend_nested_collapsed expander;
+          Gmisclib.Idle.add ~prio:300 (fun () -> page#view#draw_gutter())
+        end |> ignore;
+        page#misc#connect#destroy ~callback:begin fun () ->
+          pages := List.filter begin fun (oid, margin) ->
+              page#view#margin#remove (margin :> Margin.margin);
+              oid <> page#misc#get_oid
+            end !pages
+        end |> ignore;
+        pages := (page#misc#get_oid, margin) :: !pages
+    | _ -> ()
+    end
   with ex ->
     Printf.eprintf "File \"margin_fold.ml\": %s\n%s\n%!" (Printexc.to_string ex) (Printexc.get_backtrace())
 
@@ -524,7 +541,10 @@ let expand_all (page : Editor_page.page) =
 
 let init_editor editor =
   editor#connect#add_page ~callback:init_page |> ignore;
-  editor#connect#remove_page ~callback:begin fun page ->
-    pages := List.filter (fun (oid, _) -> oid <> page#misc#get_oid) !pages
-  end |> ignore
+  (*  editor#connect#remove_page ~callback:begin fun page ->
+      pages := List.filter begin fun (oid, margin) ->
+          page#view#margin#remove (margin :> Margin.margin);
+          oid <> page#misc#get_oid
+        end !pages
+      end |> ignore*)
 

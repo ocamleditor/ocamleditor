@@ -73,19 +73,19 @@ let default_values =
       { name = "name_def";
         color = { light = "black"; dark = "white" };
         bg_color = { light = "#ffffff"; dark = "#000000" };
-        weight = 0; style = `NORMAL; underline = `NONE; scale = 1.0; bg_default = true };
+        weight = 600; style = `NORMAL; underline = `NONE; scale = 1.0; bg_default = true };
       { name = "method_name_def";
         color = { light = "black"; dark = "white" };
         bg_color = { light = "#ffffff"; dark = "#000000" };
-        weight = 0; style = `NORMAL; underline = `NONE; scale = 1.0; bg_default = true };
+        weight = 600; style = `NORMAL; underline = `NONE; scale = 1.0; bg_default = true };
       { name = "comment";
-        color = { light = "#CD1076"; dark = "#C72B7F" };
+        color = { light = "#CD1076"; dark = "#D85991" };
         bg_color = { light = "#ffffff"; dark = "#000000" };
-        weight = 0; style = `ITALIC; underline = `NONE; scale = 1.0; bg_default = true };
+        weight = 0; style = `ITALIC; underline = `NONE; scale = 0.8; bg_default = true };
       { name = "ocamldoc";
-        color = { light = "deeppink3"; dark = "#C72B7F" };
+        color = { light = "deeppink3"; dark = "#D85991" };
         bg_color = { light = "#ffffff"; dark = "#000000" };
-        weight = 0; style = `ITALIC; underline = `NONE; scale = 1.0; bg_default = true };
+        weight = 400; style = `ITALIC; underline = `NONE; scale = 0.8; bg_default = true };
       { name = "highlight";
         color = { light = "#ffff00"; dark = "#1e1e1e" };
         bg_color = { light = "#ffffff"; dark = "#000000" };
@@ -187,6 +187,9 @@ let editor_tag_color tagname =
   let color = (List.find (fun t -> t.name = tagname) preferences#get.editor_tags).color in
   let color_name = Color.get_themed_color color in
   (`NAME color_name) |> GDraw.color
+
+let editor_tag_scale tagname =
+  (List.find (fun t -> t.name = tagname) preferences#get.editor_tags).scale
 
 let editor_tag_label = function
   | "control"                -> "Control"
