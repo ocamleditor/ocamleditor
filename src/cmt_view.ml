@@ -336,9 +336,18 @@ class widget ~editor:_ ~page ?packing () =
           pref.outline_show_types <- button_show_types#active;
           (*Preferences.save();*)
         end);
-      ignore (button_select_from_buf#connect#clicked ~callback:begin fun () ->
-          ignore (self#select_from_buffer ?align:None (page#buffer#get_mark `INSERT))
-        end);
+      button_select_from_buf#connect#clicked ~callback:begin fun () ->
+        self#select_from_buffer ?align:None (page#buffer#get_mark `INSERT) |> ignore;
+      end |> ignore;
+      let start_auto_select_from_buffer _ =
+        GMain.Timeout.add ~ms:1000 ~callback:begin fun () ->
+          self#select_from_buffer ?align:None (page#buffer#get_mark `INSERT) |> ignore;
+          page#view#misc#get_flag `HAS_FOCUS
+        end |> ignore;
+        false
+      in
+      start_auto_select_from_buffer() |> ignore;
+      page#view#event#connect#focus_in ~callback:start_auto_select_from_buffer |> ignore;
       (* Sort *)
       (*model_sort_default#set_sort_column_id col_default_sort.GTree.index `ASCENDING;
         model_sort_name#set_sort_column_id col_name.GTree.index `ASCENDING;

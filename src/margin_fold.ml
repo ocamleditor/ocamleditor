@@ -76,7 +76,9 @@ class expander ~(view : Ocaml_text.view) ~tag_highlight ~tag_invisible ?packing 
       end |> ignore;
       ebox#event#connect#leave_notify ~callback:begin fun ev ->
         Gdk.Window.set_cursor ebox#misc#window (Gdk.Cursor.create `ARROW);
-        if is_expanded then buffer#remove_tag tag_highlight ~start:self#head ~stop:self#foot;
+        if is_expanded then
+          (* FIX add tag_highlight again to the nested expanders *)
+          buffer#remove_tag tag_highlight ~start:self#head ~stop:self#foot;
         false
       end |> ignore;
       self#misc#connect#destroy ~callback:begin fun () ->

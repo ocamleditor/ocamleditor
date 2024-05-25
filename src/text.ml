@@ -690,6 +690,7 @@ and view ?project ?buffer () =
       | _ -> ()
 
     initializer
+      view#event#add [`FOCUS_CHANGE];
       margin#add (margin_line_numbers :> Margin.margin);
       margin#add (margin_markers :> Margin.margin);
       margin#connect#update ~callback:(fun () -> approx_char_width <- margin#approx_char_width) |> ignore;
