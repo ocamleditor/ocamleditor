@@ -76,7 +76,7 @@ class expander ~(view : Ocaml_text.view) ~tag_highlight ~tag_invisible ?packing 
       end |> ignore;
       ebox#event#connect#leave_notify ~callback:begin fun ev ->
         Gdk.Window.set_cursor ebox#misc#window (Gdk.Cursor.create `ARROW);
-        buffer#remove_tag tag_highlight ~start:self#head ~stop:self#foot;
+        if is_expanded then buffer#remove_tag tag_highlight ~start:self#head ~stop:self#foot;
         false
       end |> ignore;
       self#misc#connect#destroy ~callback:begin fun () ->
@@ -152,10 +152,10 @@ class expander ~(view : Ocaml_text.view) ~tag_highlight ~tag_invisible ?packing 
     method collapse () =
       let iter = buffer#get_iter `INSERT in
       if iter#compare self#body > 0 && iter#compare self#foot <= 0 then
-        buffer#move_mark `INSERT ~where:self#body;
+        buffer#place_cursor ~where:self#body;
       let was_expanded = is_expanded in
-      buffer#remove_tag tag_highlight ~start:self#head ~stop:self#foot;
-      Gmisclib.Idle.add ~prio:300 begin fun () ->
+      Gmisclib.Idle.add begin fun () ->
+        buffer#remove_tag tag_highlight ~start:self#head ~stop:self#foot;
         self#hide_region();
         if was_expanded then toggled#call false;
       end;
@@ -166,9 +166,11 @@ class expander ~(view : Ocaml_text.view) ~tag_highlight ~tag_invisible ?packing 
 
     method hide_region () =
       buffer#apply_tag tag_invisible ~start:self#body ~stop:self#foot;
+      buffer#apply_tag tag_highlight ~start:self#head ~stop:self#head#forward_to_line_end;
 
     method show_region () =
       buffer#remove_tag tag_invisible ~start:self#body ~stop:self#foot;
+      buffer#remove_tag tag_highlight ~start:self#head ~stop:self#head#forward_to_line_end;
 
     method show top left height =
       let yl, _ = view#get_line_yrange self#head in
