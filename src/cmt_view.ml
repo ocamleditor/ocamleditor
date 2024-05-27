@@ -343,7 +343,7 @@ class widget ~editor:_ ~page ?packing () =
         GMain.Timeout.add ~ms:1500 ~callback:begin fun () ->
           Gmisclib.Idle.add ~prio:300 (fun () ->
               self#select_from_buffer ?align:None (page#buffer#get_mark `INSERT) |> ignore);
-          page#view#misc#get_flag `HAS_FOCUS
+          self#misc#get_flag `VISIBLE && page#view#misc#get_flag `HAS_FOCUS
         end |> ignore;
         false
       in
@@ -384,49 +384,51 @@ class widget ~editor:_ ~page ?packing () =
     method view = view
 
     method select_from_buffer ?(align : float option) (mark : Gtk.text_mark) =
-      let iter = buffer#get_iter_at_mark (`MARK mark) in
-      let found = ref None in
-      model#foreach begin fun path _ ->
-        try
-          let info = Hashtbl.find table_info path in
-          match info.mark with
-          | Some mark ->
-              let i = buffer#get_iter_at_mark (`MARK mark) in
-              if i#compare iter > 0 then true
-              else begin
-                found := Some path;
-                false
+      if self#misc#get_flag `VISIBLE then begin
+        let iter = buffer#get_iter_at_mark (`MARK mark) in
+        let found = ref None in
+        model#foreach begin fun path _ ->
+          try
+            let info = Hashtbl.find table_info path in
+            match info.mark with
+            | Some mark ->
+                let i = buffer#get_iter_at_mark (`MARK mark) in
+                if i#compare iter > 0 then true
+                else begin
+                  found := Some path;
+                  false
+                end
+            | _ -> false
+          with Not_found -> false
+        end;
+        let is_selected = ref false in
+        Gaux.may !found ~f:begin fun path ->
+          let smodel = self#get_model () in
+          let path = smodel#convert_child_path_to_path path in
+          match view#selection#get_selected_rows with
+          | sel_path :: _ when sel_path = path && align = None -> is_selected := true
+          | _ -> begin
+              let row = model#get_iter path in
+              let has_lazy = self#force_lazy row in
+              if has_lazy then is_selected := self#select_from_buffer ?align mark else begin
+                view#expand_to_path path;
+                Gaux.may signal_selection_changed ~f:view#selection#misc#handler_block;
+                view#selection#select_path path;
+                Gaux.may signal_selection_changed ~f:view#selection#misc#handler_unblock;
+                is_selected := true;
+                match align with
+                | Some align ->
+                    view#vadjustment#set_value (align *. view#vadjustment#upper);
+                | None when page#view#misc#get_flag `HAS_FOCUS ->
+                    if not (Gmisclib.Util.treeview_is_path_onscreen view path) then begin
+                      view#scroll_to_cell ~align:(0.38, 0.) path vc;
+                    end;
+                | _ -> ()
               end
-          | _ -> false
-        with Not_found -> false
-      end;
-      let is_selected = ref false in
-      Gaux.may !found ~f:begin fun path ->
-        let smodel = self#get_model () in
-        let path = smodel#convert_child_path_to_path path in
-        match view#selection#get_selected_rows with
-        | sel_path :: _ when sel_path = path && align = None -> is_selected := true
-        | _ -> begin
-            let row = model#get_iter path in
-            let has_lazy = self#force_lazy row in
-            if has_lazy then is_selected := self#select_from_buffer ?align mark else begin
-              view#expand_to_path path;
-              Gaux.may signal_selection_changed ~f:view#selection#misc#handler_block;
-              view#selection#select_path path;
-              Gaux.may signal_selection_changed ~f:view#selection#misc#handler_unblock;
-              is_selected := true;
-              match align with
-              | Some align ->
-                  view#vadjustment#set_value (align *. view#vadjustment#upper);
-              | None when page#view#misc#get_flag `HAS_FOCUS ->
-                  if not (Gmisclib.Util.treeview_is_path_onscreen view path) then begin
-                    view#scroll_to_cell ~align:(0.38, 0.) path vc;
-                  end;
-              | _ -> ()
             end
-          end
-      end;
-      !is_selected
+        end;
+        !is_selected
+      end else false
 
     method select_in_buffer () =
       match view#selection#get_selected_rows with
