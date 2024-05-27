@@ -23,6 +23,7 @@
 open Printf
 module ColorOps = Color
 open Preferences
+open Miscellanea
 
 let forward_non_blank iter =
   let rec f it =
@@ -119,6 +120,14 @@ class error_indication (view : Ocaml_text.view) vscrollbar global_gutter =
 
     method has_errors_or_warnings = has_errors_or_warnings
     method first_error_or_warning = match self#first_error with None -> self#first_warning | x -> x
+    method scroll_to_first_error () =
+      let iter =
+        match self#first_error_or_warning with
+        | None -> buffer#start_iter
+        | Some (start, _, _) -> buffer#get_iter_at_mark (`MARK start)
+      in
+      view#scroll_lazy iter;
+      buffer#place_cursor ~where:iter
 
     method private callback_gutter_marker mark =
       let iter = buffer#get_iter_at_mark (`MARK mark) in
@@ -322,21 +331,22 @@ class error_indication (view : Ocaml_text.view) vscrollbar global_gutter =
         (* Clean up *)
         drawable#set_foreground (`COLOR (view#misc#style#base `NORMAL));
         drawable#rectangle ~filled:true ~x:x0 ~y:0 ~width ~height ();
-        (* Rectangles at the top and bottom *)
-        (* Rectangle at the top in different color *)
-        let color = if self#has_errors#get then (Some (?? Oe_config.error_underline_color))
-          else if self#has_warnings#get then (Some (?? Oe_config.warning_popup_border_color))
-          else None (*(Some Oe_config.global_gutter_no_errors)*)
-        in
-        Gaux.may color ~f:begin fun color ->
-          drawable#set_foreground color;
-          drawable#rectangle ~filled:true ~x:x0 ~y:0 ~width:(width - 1) ~height:(alloc.Gtk.width - 1) ();
-        end;
         (* Draw markers *)
-        let height = height - 2 * alloc.Gtk.width in
-        let line_count = float buffer#line_count in
+        let line_count, (!!) =
+          match GtkText.TagTable.lookup buffer#tag_table Oe_config.code_folding_tag_invisible_name with
+          | Some tag ->
+              let tag = new GText.tag tag in
+              let visible_lines = ref [] in
+              let iter = ref buffer#end_iter in
+              while !iter#line > buffer#start_iter#line do
+                if not (!iter#has_tag tag) then visible_lines := !iter#line :: !visible_lines;
+                iter := !iter#backward_line
+              done;
+              float (List.length !visible_lines),
+              fun ln -> float (List.length (Xlist.take_while (fun x -> x <= ln) !visible_lines))
+          | _ -> float buffer#line_count, float
+        in
         let height = float height in
-        (*let width = width - 1 in*)
         (* Comments *)
         if Oe_config.global_gutter_comments_enabled && tag_error_bounds = [] && view#mark_occurrences_manager#table = [] then begin
           match [@warning "-4"] Comments.scan_utf8 (buffer#get_text ()) with
@@ -345,12 +355,10 @@ class error_indication (view : Ocaml_text.view) vscrollbar global_gutter =
               List.iter begin fun (start, stop, _, odoc) ->
                 let iter = buffer#get_iter (`OFFSET start) in
                 let is_fold = view#code_folding#is_folded iter#forward_to_line_end in
-                let line_start = float iter#line in
-                let line_stop = float (buffer#get_iter (`OFFSET stop))#line in
-                let y1 = int_of_float ((line_start /. line_count) *. height) in
-                let y2 = int_of_float ((line_stop /. line_count) *. height) in
-                let y1 = y1 + alloc.Gtk.width in
-                let y2 = y2 + alloc.Gtk.width in
+                let line_start = iter#line in
+                let line_stop = (buffer#get_iter (`OFFSET stop))#line in
+                let y1 = int_of_float ((!!line_start /. line_count) *. height) in
+                let y2 = int_of_float ((!!line_stop /. line_count) *. height) in
                 let filled = odoc in
                 let offset = if y1 = y2 then 0 else 1 in
                 let style = if is_fold then `ON_OFF_DASH else `SOLID in
@@ -371,10 +379,9 @@ class error_indication (view : Ocaml_text.view) vscrollbar global_gutter =
             then (`NAME (?? Oe_config.warning_unused_color)) else color
           in
           drawable#set_foreground color;
-          let line_start = float (buffer#get_iter_at_mark (`MARK start))#line in
-          let y = int_of_float ((line_start /. line_count) *. height) in
+          let line_start = (buffer#get_iter_at_mark (`MARK start))#line in
+          let y = int_of_float ((!!line_start /. line_count) *. height) in
           table <- (y + 1, start) :: table;
-          let y = y + alloc.Gtk.width in
           if is_unused then begin
             let lines = ref [] in
             let h = 4 in
@@ -402,12 +409,12 @@ class error_indication (view : Ocaml_text.view) vscrollbar global_gutter =
             List.iter begin fun (m1, m2) ->
               let start = buffer#get_iter_at_mark m1 in
               let stop = buffer#get_iter_at_mark m2 in
-              let line_start = float start#line in
-              let line_stop = float stop#line in
-              let y1 = int_of_float ((line_start /. line_count) *. height) in
-              let y2 = int_of_float ((line_stop /. line_count) *. height) in
-              let y1 = y1 + alloc.Gtk.width - 1 in
-              let y2 = y2 + alloc.Gtk.width + 1 in
+              let line_start = start#line in
+              let line_stop = stop#line in
+              let y1 = int_of_float ((!!line_start /. line_count) *. height) in
+              let y2 = int_of_float ((!!line_stop /. line_count) *. height) in
+              let y1 = y1 - 1 in
+              let y2 = y2 + 1 in
               let width = width - 1 in
               let height = y2 - y1 in
               drawable#set_line_attributes ~width:1 ~style:`SOLID ();
@@ -514,36 +521,25 @@ class error_indication (view : Ocaml_text.view) vscrollbar global_gutter =
         if (GdkEvent.Button.button ev = 1 && GdkEvent.get_type ev = `BUTTON_PRESS) then begin
           let alloc = vscrollbar#misc#allocation in
           let y = GdkEvent.Button.y ev in
-          if y > float (alloc.Gtk.width) then begin
-            let window = global_gutter#misc#window in
-            let drawable = new GDraw.drawable window in
-            let _, height = drawable#size in
-            let height = float (height - 2 * alloc.Gtk.width) in
-            let y = y -. (float alloc.Gtk.width) in
-            let tooltip, iter =
-              try
-                let _, mark = List.find (fun (yy, _) -> let yy = float yy in yy -. 4. <= y && y <= yy +. 4.) (List.rev table) in
-                true, (buffer#get_iter_at_mark (`MARK mark))
-              with Not_found -> begin
-                  let line_count = float buffer#line_count in
-                  let line = int_of_float (y /. height *. line_count) in
-                  false, buffer#get_iter (`LINE line);
-                end
-            in
-            view#scroll_lazy iter;
-            buffer#place_cursor ~where:iter;
-            if tooltip then begin
-              Gmisclib.Idle.add ~prio:300 (fun () -> self#tooltip ~sticky:true (`ITER iter));
-            end;
-          end else begin
-            let iter =
-              match self#first_error_or_warning with
-              | None -> buffer#start_iter
-              | Some (start, _, _) -> buffer#get_iter_at_mark (`MARK start)
-            in
-            view#scroll_lazy iter;
-            buffer#place_cursor ~where:iter;
-          end;
+          let window = global_gutter#misc#window in
+          let drawable = new GDraw.drawable window in
+          let _, height = drawable#size in
+          let height = float height in
+          let tooltip, iter =
+            try
+              let _, mark = List.find (fun (yy, _) -> let yy = float yy in yy -. 4. <= y && y <= yy +. 4.) (List.rev table) in
+              true, (buffer#get_iter_at_mark (`MARK mark))
+            with Not_found -> begin
+                let line_count = float buffer#line_count in
+                let line = int_of_float (y /. height *. line_count) in
+                false, buffer#get_iter (`LINE line);
+              end
+          in
+          view#scroll_lazy iter;
+          buffer#place_cursor ~where:iter;
+          if tooltip then begin
+            Gmisclib.Idle.add ~prio:300 (fun () -> self#tooltip ~sticky:true (`ITER iter));
+          end
         end;
         false
       end |> ignore

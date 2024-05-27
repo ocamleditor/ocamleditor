@@ -121,6 +121,12 @@ struct
     | [] | [_] -> []
     | hd :: tl -> List.fold_left_map (fun p x -> x, (p, x)) hd tl |> snd;;
 
+  (** Returns elements from a list as long as a specified condition is true, and then skips
+      the remaining elements. *)
+  let rec take_while f = function
+    | hd :: _ when not (f hd) -> []
+    | hd :: tl -> hd :: (take_while f tl)
+    | [] -> [];;
 end
 
 (** {6 Memoization} *)
