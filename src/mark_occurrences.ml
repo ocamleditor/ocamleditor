@@ -32,6 +32,7 @@ class manager ~view =
   let match_whole_word_only = true in
   object (self)
     val mark_set = new mark_set ()
+    val clear = new clear ()
     val tag = buffer#create_tag ?name:(Some "mark_occurrences") []
     val mutable table : (GText.mark * GText.mark) list = []
 
@@ -108,18 +109,20 @@ class manager ~view =
             if table <> [] then begin
               mark_set#call();
               Log.println `DEBUG "mark_set called";
-            end;
+            end else clear#call();
             Log.println `DEBUG "END";
           end
       | _ -> ()
 
-    method connect = new signals ~mark_set
+    method connect = new signals ~mark_set ~clear
   end
 
-and signals ~mark_set = object
-  inherit GUtil.ml_signals [mark_set#disconnect]
+and signals ~mark_set ~clear = object
+  inherit GUtil.ml_signals [mark_set#disconnect; clear#disconnect]
   method mark_set = mark_set#connect ~after
+  method clear = clear#connect ~after
 end
 
 and mark_set () = object inherit [unit] GUtil.signal () end
+and clear () = object inherit [unit] GUtil.signal () end
 

@@ -59,6 +59,7 @@ class expander ~(view : Ocaml_text.view) ~tag_highlight ~tag_invisible ?packing 
 
     val toggled = new toggled()
     val refresh_needed = new refresh_needed()
+    val mutable contains_mark_occurrence = false
 
     initializer
       incr counter;
@@ -182,6 +183,10 @@ class expander ~(view : Ocaml_text.view) ~tag_highlight ~tag_invisible ?packing 
         self#misc#show()
       end else self#misc#hide()
 
+    method set_contains_mark_occurrence value = contains_mark_occurrence <- value
+
+    method contains_mark_occurrence = contains_mark_occurrence
+
     method connect = new signals ~toggled ~refresh_needed
   end
 
@@ -204,6 +209,7 @@ class margin_fold (view : Ocaml_text.view) =
     | Some tag -> new GText.tag tag
     | _ -> buffer#create_tag ~name properties
   in
+  let color_occurrences = `NAME ?? (Preferences.preferences#get.editor_mark_occurrences_bg_color) in
   let tag_highlight = add_tag Oe_config.code_folding_tag_highlight_name
       [ `PARAGRAPH_BACKGROUND (?? Oe_config.code_folding_highlight_color) ] in
   let tag_invisible = add_tag Oe_config.code_folding_tag_invisible_name
@@ -371,7 +377,7 @@ class margin_fold (view : Ocaml_text.view) =
           let line_width = 1 in
           let drawable = new GDraw.drawable window in
           drawable#set_line_attributes ~width:line_width ~style:`SOLID ();
-          drawable#set_foreground (`NAME "#ff0000");
+          drawable#set_foreground Oe_config.code_folding_expander_color;
           let vrect = view#visible_rect in
           let y0 = Gdk.Rectangle.y vrect in
           expanders
@@ -384,6 +390,11 @@ class margin_fold (view : Ocaml_text.view) =
               let y = y - y0 + 1 in
               let height = height - 4 in (* do not overlap current line border *)
               let width = height * 8 / 5 in
+              if expander#contains_mark_occurrence then begin
+                drawable#set_foreground color_occurrences;
+                drawable#rectangle ~x ~y ~filled:true ~width ~height ();
+                drawable#set_foreground Oe_config.code_folding_expander_color;
+              end;
               drawable#rectangle ~x ~y ~filled:false ~width ~height ();
               let h3 = height / 3 in
               let x = x + width / 2 in
@@ -522,7 +533,25 @@ let init_page (page : Editor_page.page) =
               oid <> page#misc#get_oid
             end !pages
         end |> ignore;
-        pages := (page#misc#get_oid, margin) :: !pages
+        pages := (page#misc#get_oid, margin) :: !pages;
+        (* Highlight expanders that contain marked occurrences *)
+        page#view#mark_occurrences_manager#connect#mark_set ~callback:begin fun () ->
+          margin#iter_expanders begin fun exp ->
+            exp#set_contains_mark_occurrence false;
+            if not exp#is_expanded then begin
+              if page#view#mark_occurrences_manager#table
+                 |> List.exists (fun (m1, _) ->
+                     exp#body_contains (page#buffer#get_iter_at_mark m1))
+              then exp#set_contains_mark_occurrence true;
+            end
+          end
+        end |> ignore;
+        (* Remove highlights from all expanders when there are no marked occurrences *)
+        page#view#mark_occurrences_manager#connect#mark_set ~callback:begin fun () ->
+          match page#view#mark_occurrences_manager#table with
+          | [] -> GtkBase.Widget.queue_draw page#view#as_widget
+          | _ -> ()
+        end |> ignore;
     | _ -> ()
     end
   with ex ->

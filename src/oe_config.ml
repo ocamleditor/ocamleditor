@@ -71,8 +71,10 @@ let code_folding_hightlight_gradient     = [ (* [] for no gradient *)
   { light = "#f9f9f9"; dark = "#1b1b1b" };
   { light = "#fefefe"; dark = "#161616" };
 ]
-let code_folding_tag_invisible_name = "fold-invisible"
-let code_folding_tag_highlight_name = "fold-highlight"
+let code_folding_tag_invisible_name      = "fold-invisible"
+let code_folding_tag_highlight_name      = "fold-highlight"
+let code_folding_expander_color          = `NAME "#ff0000"
+
 
 let global_gutter_comments_enabled       = false
 let global_gutter_size                   = 13
