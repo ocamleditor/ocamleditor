@@ -309,42 +309,48 @@ class editor () =
       | _ -> None
 
     method scroll_to_definition ~page ~iter =
-      Gaux.may (self#get_definition iter) ~f:begin fun ident ->
-        self#location_history_add ~page ~iter ~kind:`BROWSE ();
-        self#goto_ident ident
-      end
+      match self#get_page `ACTIVE with
+      | Some page ->
+          Merlin.locate ~position:(iter#line + 1, iter#line_offset)
+            ~filename:page#get_filename
+            ~source_code:(page#buffer#get_text ())
+            begin function
+            | `String msg -> Printf.printf "%s\n%!" msg;
+            | `Assoc assoc ->
+                let file, ln, col = ref "", ref 0, ref 0 in
+                assoc |> List.iter (function
+                    | "file", `String x -> file := x
+                    | "pos", `Assoc ["line", `Int l; "col", `Int c]
+                    | "pos", `Assoc ["col", `Int c; "line", `Int l] -> ln := l - 1; col := c
+                    | _ -> ());
+                GtkThread.async begin fun () ->
+                  self#location_history_add ~page ~iter ~kind:`BROWSE ();
+                  self#goto_location !file !ln !col
+                end ()
+            | _ -> ()
+            end;
+      | _ -> ()
 
-    method goto_ident ident =
-      let open Location in
-      let open Lexing in
-      let filename = ident.Binannot.ident_fname in
+    method goto_location filename line col =
       match self#get_page (`FILENAME filename) with
       | Some page ->
           if not page#load_complete then (self#load_page ~scroll:false page);
-          let loc = ident.Binannot.ident_loc in
           let buffer = page#buffer in
           let ts = buffer#last_edit_time in
-          if ts <= (Unix.stat filename (*loc.loc.loc_start.pos_fname*)).Unix.st_mtime then begin
-            if loc.loc <> Location.none then begin
-              let start = loc.loc.loc_start.pos_cnum in
-              let stop = loc.loc.loc_end.pos_cnum in
-              let start = buffer#get_iter (`OFFSET (max 0 start)) in
-              let stop = buffer#get_iter (`OFFSET (max 0 stop)) in
-              let old = page#view#options#mark_occurrences in
-              page#view#options#set_mark_occurrences (false, false, "");
-              buffer#select_range start stop;
-              page#ocaml_view#scroll_lazy start;
-              page#view#options#set_mark_occurrences old
-            end;
-            self#goto_view page#view;
-            switch_page#call page;
-            let iter = buffer#get_iter `INSERT in
-            self#location_history_add ~page ~iter ~kind:(`BROWSE : Location_history.kind) ();
-            Gmisclib.Idle.add page#view#misc#grab_focus
-          end
+          let start = buffer#get_iter (`LINE line) in
+          let old = page#view#options#mark_occurrences in
+          page#view#options#set_mark_occurrences (false, false, "");
+          page#ocaml_view#scroll_lazy start;
+          page#buffer#place_cursor ~where:(buffer#get_iter (`LINECHAR (line, col)));
+          page#view#options#set_mark_occurrences old;
+          self#goto_view page#view;
+          switch_page#call page;
+          let iter = buffer#get_iter `INSERT in
+          self#location_history_add ~page ~iter ~kind:(`BROWSE : Location_history.kind) ();
+          Gmisclib.Idle.add page#view#misc#grab_focus
       | _ ->
           ignore (self#open_file ~active:false ~scroll_offset:0 ~offset:0 filename);
-          self#goto_ident ident
+          self#goto_location filename line col
 
     method dialog_file_select () = Editor_dialog.file_select ~editor:self ()
 

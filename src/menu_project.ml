@@ -242,7 +242,7 @@ let project ~browser ~group ~flags items =
   let project_targets = GMenu.image_menu_item ~image:(Icons.create (??? Icons.target_16))#coerce ~label:"Targets" ~packing:menu#add () in
   ignore (project_targets#connect#activate ~callback:(fun () ->
       browser#dialog_project_properties ?page_num:(Some 1) ?show:(Some true) ()));
-  project_targets#add_accelerator ~group ~modi:[] GdkKeysyms._F12 ~flags;
+  project_targets#add_accelerator ~group ~modi:[`MOD1] GdkKeysyms._Return ~flags;
 
   (* Generate build script *)
   let project_script = GMenu.image_menu_item ~label:"Generate Build Script" ~packing:menu#add () in

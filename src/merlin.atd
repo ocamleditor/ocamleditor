@@ -136,6 +136,18 @@ type outline = {
   ol_children <json name="children"> : outline list;
 }
 
+type locate_answer = [
+  | Return <json name="return"> of locate_value
+  | Failure <json name="failure"> of message
+  | Error <json name="error"> of message
+  | Exception <json name="exception"> of message
+] <json
+  adapter.to_ocaml="Atdgen_runtime.Json_adapter.normalize_type_field \"class\""
+  adapter.from_ocaml="Atdgen_runtime.Json_adapter.restore_type_field \"class\""
+> <ocaml repr="classic">
+
+type locate_value = { value : abstract }
+
 
 
 

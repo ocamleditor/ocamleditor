@@ -279,6 +279,7 @@ let search ~browser ~group ~flags items =
   ignore (find_definition#connect#activate ~callback:(fun () ->
       editor#with_current_page (fun page ->
           ignore (editor#scroll_to_definition ~page ~iter:(page#buffer#get_iter `INSERT)))));
+  find_definition#add_accelerator ~group ~modi:[] GdkKeysyms._F12 ~flags;
   find_definition#add_accelerator ~group ~modi:[`CONTROL] GdkKeysyms._Return ~flags;
   (** Find references *)
   let find_references = GMenu.image_menu_item ~label:"Find References" ~packing:menu#add () in

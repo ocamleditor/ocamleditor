@@ -15,8 +15,8 @@ let loop (f : in_channel -> unit) ((ic, _oc, _ec) as channels) =
 let execute
     ?(continue_with=fun x -> x |> Yojson.Safe.prettify |> Log.println `INFO "%s")
     filename source_code command =
-  let cwd = Sys.getcwd() in
-  let filename = match Miscellanea.filename_relative cwd filename with Some path -> path | _ -> filename in
+  (*let cwd = Sys.getcwd() in
+    let filename = match Miscellanea.filename_relative cwd filename with Some path -> path | _ -> filename in*)
   let cmd_line = "ocamlmerlin" :: "server" :: command @ [ "-thread"; "-filename"; filename ] in
   Log.println `INFO "%s" (cmd_line |> String.concat " ");
   let (_, oc, _) as channels = Unix.open_process_full (cmd_line |> String.concat " ") (Unix.environment ()) in
@@ -149,6 +149,22 @@ let outline ~filename ~source_code apply =
     | Return outline ->
         Log.println `DEBUG "%s" (Yojson.Safe.prettify json);
         apply outline.value
+    | Failure msg
+    | Error msg
+    | Exception msg -> Log.println `ERROR "%s" msg.value;
+  end
+
+let locate ~position:(line, col) ?prefix ?look_for ~filename ~source_code apply =
+  let position = sprintf "%d:%d" line col in
+  "locate" :: "-position" :: position ::
+  (match prefix with None -> "" | Some prefix -> sprintf "-prefix \"%s\"" prefix) ::
+  (match look_for with None -> "" | Some look_for -> sprintf "-look-for %s" look_for) ::
+  []
+  |> execute filename source_code ~continue_with:begin fun json ->
+    match Merlin_j.locate_answer_of_string json with
+    | Return document ->
+        Log.println `DEBUG "%s" (Yojson.Safe.prettify json);
+        apply document.value
     | Failure msg
     | Error msg
     | Exception msg -> Log.println `ERROR "%s" msg.value;
