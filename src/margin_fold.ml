@@ -1,6 +1,7 @@
 open Margin
 open Merlin_j
 open GUtil
+module ColorOps = Color
 open Preferences
 open Printf
 open Miscellanea
@@ -209,6 +210,7 @@ class margin_fold (view : Ocaml_text.view) =
     | Some tag -> new GText.tag tag
     | _ -> buffer#create_tag ~name properties
   in
+  let color_expander = Oe_config.code_folding_expander_color in
   let color_occurrences = `NAME ?? (Preferences.preferences#get.editor_mark_occurrences_bg_color) in
   let tag_highlight = add_tag Oe_config.code_folding_tag_highlight_name
       [ `PARAGRAPH_BACKGROUND (?? Oe_config.code_folding_highlight_color) ] in
@@ -377,7 +379,7 @@ class margin_fold (view : Ocaml_text.view) =
           let line_width = 1 in
           let drawable = new GDraw.drawable window in
           drawable#set_line_attributes ~width:line_width ~style:`SOLID ();
-          drawable#set_foreground Oe_config.code_folding_expander_color;
+          drawable#set_foreground color_expander;
           let vrect = view#visible_rect in
           let y0 = Gdk.Rectangle.y vrect in
           expanders
@@ -393,7 +395,7 @@ class margin_fold (view : Ocaml_text.view) =
               if expander#contains_mark_occurrence then begin
                 drawable#set_foreground color_occurrences;
                 drawable#rectangle ~x ~y ~filled:true ~width ~height ();
-                drawable#set_foreground Oe_config.code_folding_expander_color;
+                drawable#set_foreground color_expander;
               end;
               drawable#rectangle ~x ~y ~filled:false ~width ~height ();
               let h3 = height / 3 in

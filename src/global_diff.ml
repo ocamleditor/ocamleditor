@@ -50,11 +50,11 @@ let paint_diffs page diffs =
   drawable#rectangle ~filled:true ~x:0 ~y:0 ~width ~height ();
   page#set_global_gutter_tooltips [];
   let black = page#view#gutter.Gutter.marker_color in
-  let height = height - 2 * alloc.Gtk.width in
   let height = float height in
-  let y_of_line ln = alloc.Gtk.width + int_of_float ((float ln /. line_count) *. height) in
+  let y_of_line ln = int_of_float ((float ln /. line_count) *. height) in
   let line_height = int_of_float (height /. line_count) in
   let wtri = width * 2 / 3 in
+  let wtri2 = wtri in
   let paint color elems = function
     | One ln ->
         let x0 = 0 (*width - wtri*) in
@@ -67,10 +67,10 @@ let paint_diffs page diffs =
                 match Oe_config.global_gutter_diff_style with
                 | `COLOR with_border ->
                     drawable#set_foreground color;
-                    drawable#polygon ~filled:true [x0, y; x0 + wtri, y - wtri; x0 + wtri, y + wtri];
+                    drawable#polygon ~filled:true [x0, y; x0 + wtri, y - wtri2; x0 + wtri, y + wtri2];
                     if (*true ||*) with_border then begin
                       drawable#set_foreground (ColorOps.set_value 0.6 color);
-                      drawable#polygon ~filled:false [0, y; wtri, y - wtri; wtri, y + wtri]
+                      drawable#polygon ~filled:false [0, y; wtri, y - wtri2; wtri, y + wtri2]
                     end
                 | `BW ->
                     drawable#set_foreground black;

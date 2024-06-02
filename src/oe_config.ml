@@ -76,8 +76,7 @@ let code_folding_tag_highlight_name      = "fold-highlight"
 let code_folding_expander_color          = `NAME "#ff0000"
 
 
-let global_gutter_comments_enabled       = false
-let global_gutter_size                   = 13
+let global_gutter_size                   = 21
 let global_gutter_comments_color         = `NAME "#fa80a5"
 let global_gutter_comments_bgcolor       = `NAME "#fad0f5"
 

@@ -56,6 +56,7 @@ class error_indication (view : Ocaml_text.view) vscrollbar global_gutter =
     | Oe.Warning (20, _) | Oe.Warning (26, _) | Oe.Warning (27, _) -> true
     | _ -> false
   in
+  let use_high_contrast = true in
   object (self)
     val mutable tag_error_bounds = []
     val mutable tag_warning_bounds = []
@@ -70,6 +71,8 @@ class error_indication (view : Ocaml_text.view) vscrollbar global_gutter =
     val mutable flag_underline = Preferences.preferences#get.editor_err_underline
     val mutable flag_tooltip = Preferences.preferences#get.editor_err_tooltip
     val mutable flag_gutter = Preferences.preferences#get.editor_err_gutter
+    val mutable current_line_fgcolor = `NAME "#000000"
+    val mutable current_line_bgcolor = `NAME "#000000"
     val mutable tag_error = tag_error
     val mutable tag_warning = tag_warning
     val mutable tag_warning_unused = tag_warning_unused
@@ -326,7 +329,9 @@ class error_indication (view : Ocaml_text.view) vscrollbar global_gutter =
         drawable#set_line_attributes ~width:1 ~style:`SOLID ~join:`ROUND ();
         let width0, height = drawable#size in
         let width = Oe_config.global_gutter_size in
+        let half_width = width * 2 / 3 in
         let x0 = width0 - width in
+        let xm = x0 + width / 3 - 1 in
         let alloc = vscrollbar#misc#allocation in
         (* Clean up *)
         drawable#set_foreground (`COLOR (view#misc#style#base `NORMAL));
@@ -347,31 +352,6 @@ class error_indication (view : Ocaml_text.view) vscrollbar global_gutter =
           | _ -> float buffer#line_count, float
         in
         let height = float height in
-        (* Comments *)
-        if Oe_config.global_gutter_comments_enabled && tag_error_bounds = [] && view#mark_occurrences_manager#table = [] then begin
-          match [@warning "-4"] Comments.scan_utf8 (buffer#get_text ()) with
-          | Comments.Utf8 comments ->
-              Gdk.GC.set_dashes drawable#gc ~offset:0 [1; 1];
-              List.iter begin fun (start, stop, _, odoc) ->
-                let iter = buffer#get_iter (`OFFSET start) in
-                let is_fold = view#code_folding#is_folded iter#forward_to_line_end in
-                let line_start = iter#line in
-                let line_stop = (buffer#get_iter (`OFFSET stop))#line in
-                let y1 = int_of_float ((!!line_start /. line_count) *. height) in
-                let y2 = int_of_float ((!!line_stop /. line_count) *. height) in
-                let filled = odoc in
-                let offset = if y1 = y2 then 0 else 1 in
-                let style = if is_fold then `ON_OFF_DASH else `SOLID in
-                drawable#set_line_attributes ~width:1 ~style ();
-                if filled then begin
-                  drawable#set_foreground Oe_config.global_gutter_comments_bgcolor;
-                  drawable#rectangle ~filled ~x:x0 ~y:y1 ~width:(width - offset) ~height:(y2 - y1) ();
-                end;
-                drawable#set_foreground Oe_config.global_gutter_comments_color;
-                drawable#rectangle (*~filled*) ~x:x0 ~y:y1 ~width:(width - offset) ~height:(y2 - y1) ();
-              end comments
-          | _ -> assert false
-        end;
         (* Draw a marker *)
         let draw_marker start color is_unused =
           let color =
@@ -380,19 +360,19 @@ class error_indication (view : Ocaml_text.view) vscrollbar global_gutter =
           in
           drawable#set_foreground color;
           let line_start = (buffer#get_iter_at_mark (`MARK start))#line in
-          let y = int_of_float ((!!line_start /. line_count) *. height) in
+          let y = int_of_float ((!!line_start /. line_count) *. height) - 1 in
           table <- (y + 1, start) :: table;
           if is_unused then begin
             let lines = ref [] in
-            let h = 4 in
+            let h = 2 in
             let i = ref 0 in
-            let n = width /  h in
+            let n = half_width / h in
             while !i < n do
               lines := (x0 + (!i+1) * h, y + h/2) :: (x0 + !i * h, y - h/2) :: !lines;
               incr i; incr i;
             done;
             drawable#lines !lines
-          end else drawable#rectangle ~filled:true ~x:x0 ~y ~width ~height:3 ();
+          end else drawable#rectangle ~filled:true ~x:x0 ~y ~width:half_width ~height:3 ();
         in
         (* Warnings *)
         List.iter begin fun (start, _, warning) ->
@@ -406,22 +386,16 @@ class error_indication (view : Ocaml_text.view) vscrollbar global_gutter =
             let bg = `NAME ?? bg_color_occurrences in
             let factor = if Preferences.preferences#get.theme_is_dark then -0.23 else 0.13 in
             let border = `NAME (ColorOps.add_value (?? bg_color_occurrences) ~sfact:0.75 factor) in
-            List.iter begin fun (m1, m2) ->
+            List.iter begin fun (m1, _) ->
               let start = buffer#get_iter_at_mark m1 in
-              let stop = buffer#get_iter_at_mark m2 in
               let line_start = start#line in
-              let line_stop = stop#line in
-              let y1 = int_of_float ((!!line_start /. line_count) *. height) in
-              let y2 = int_of_float ((!!line_stop /. line_count) *. height) in
-              let y1 = y1 - 1 in
-              let y2 = y2 + 1 in
-              let width = width - 1 in
-              let height = y2 - y1 in
+              let y1 = int_of_float ((!!line_start /. line_count) *. height) - 1 in
+              let h = 3 in
               drawable#set_line_attributes ~width:1 ~style:`SOLID ();
               drawable#set_foreground bg;
-              drawable#rectangle ~filled:true ~x:x0 ~y:y1 ~width ~height ();
+              drawable#rectangle ~filled:true ~x:xm ~y:y1 ~width:half_width ~height:h ();
               drawable#set_foreground border;
-              drawable#rectangle ~filled:false ~x:x0 ~y:y1 ~width ~height ();
+              drawable#rectangle ~filled:false ~x:xm ~y:y1 ~width:half_width ~height:h ();
             end view#mark_occurrences_manager#table;
           end
         end;
@@ -429,6 +403,15 @@ class error_indication (view : Ocaml_text.view) vscrollbar global_gutter =
         List.iter begin fun (start, _, _) ->
           draw_marker start (?? Oe_config.error_underline_color) false;
         end tag_error_bounds;
+        (* Current line *)
+        let h = 4 in
+        let iter = buffer#get_iter `INSERT in
+        let y1 = int_of_float ((!!(iter#line) /. line_count) *. height) in
+        let y1 = y1 - h / 2 in
+        (*        drawable#set_foreground current_line_bgcolor;
+                  drawable#rectangle ~filled:true ~x:x0 ~y:y1 ~width ~height:h ();*)
+        drawable#set_foreground current_line_fgcolor;
+        drawable#rectangle ~filled:false ~x:x0 ~y:y1 ~width:(width - 1) ~height:h ();
       with Gpointer.Null -> ()
 
     method private draw_underline drawable top bottom x0 y0 offset = function
@@ -542,7 +525,21 @@ class error_indication (view : Ocaml_text.view) vscrollbar global_gutter =
           end
         end;
         false
-      end |> ignore
+      end |> ignore;
+      let set_pref pref =
+        if not use_high_contrast then begin
+          current_line_fgcolor <- Preferences.editor_tag_color_name "highlight_current_line";
+          current_line_bgcolor <- Preferences.editor_tag_bg_color_name "highlight_current_line";
+        end else if Preferences.preferences#get.theme_is_dark then begin
+          current_line_fgcolor <- `NAME "#ffffff";
+          current_line_bgcolor <- `NAME "#909090";
+        end else begin
+          current_line_fgcolor <- `NAME "#000000";
+          current_line_bgcolor <- `NAME "#505050";
+        end
+      in
+      Preferences.preferences#connect#changed ~callback:set_pref |> ignore;
+      set_pref();
   end
 
 

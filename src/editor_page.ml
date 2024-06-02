@@ -571,6 +571,11 @@ class page ?file ~project ~scroll_offset ~offset ~editor () =
       ignore (ocaml_view#code_folding#connect#toggled ~callback:begin fun _(*(expand, _, _)*) ->
           error_indication#paint_global_gutter()
         end);
+      ocaml_view#buffer#connect#mark_set ~callback:begin fun it mark ->
+        match GtkText.Mark.get_name mark with
+        | Some "insert" -> error_indication#paint_global_gutter()
+        | _ -> ()
+      end |> ignore;
       (** Mark occurrences *)
       ignore (view#mark_occurrences_manager#connect#mark_set ~callback:error_indication#paint_global_gutter);
       (**  *)

@@ -178,15 +178,19 @@ let (??) = Color.get_themed_color
 (** Alias for [Color.get_themed_icon] *)
 let (???) = Icon.get_themed_icon
 
-let editor_tag_bg_color tagname =
+let editor_tag_bg_color_name tagname =
   let color = (List.find (fun t -> t.name = tagname) preferences#get.editor_tags).bg_color in
   let color_name = Color.get_themed_color color in
-  (`NAME color_name) |> GDraw.color
+  (`NAME color_name)
 
-let editor_tag_color tagname =
+let [@ inline] editor_tag_bg_color tagname = editor_tag_bg_color_name tagname |> GDraw.color
+
+let editor_tag_color_name tagname =
   let color = (List.find (fun t -> t.name = tagname) preferences#get.editor_tags).color in
   let color_name = Color.get_themed_color color in
-  (`NAME color_name) |> GDraw.color
+  `NAME color_name
+
+let [@ inline] editor_tag_color tagname = editor_tag_color_name tagname |> GDraw.color
 
 let editor_tag_scale tagname =
   (List.find (fun t -> t.name = tagname) preferences#get.editor_tags).scale
