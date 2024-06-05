@@ -68,8 +68,8 @@ let create ~editor ~page () =
   find_definition#set_image (GMisc.image ~pixbuf:(??? Icons.definition) ())#coerce;
   let find_references = GMenu.image_menu_item ~label:"Find References" ~packing:gmenu#append () in
   find_references#set_image (GMisc.image ~pixbuf:(??? Icons.references) ())#coerce;
-  let find_used_components = GMenu.menu_item ~packing:gmenu#append () in
-  let label_find_used_components = GMisc.label ~xalign:0. ~markup:"" ~packing:find_used_components#add () in
+  (*  let find_used_components = GMenu.menu_item ~packing:gmenu#append () in
+      let label_find_used_components = GMisc.label ~xalign:0. ~markup:"" ~packing:find_used_components#add () in*)
   (*  *)
   gmenu#append (GMenu.separator_item ());
   let select_in_structure_pane = GMenu.image_menu_item ~label:"Select in Structure Pane" ~packing:gmenu#append () in
@@ -131,7 +131,7 @@ let create ~editor ~page () =
   ignore (find_references#connect#activate ~callback:begin
       Activity.wrap Activity.Annot (fun () -> Menu_search.find_definition_references editor)
     end);
-  ignore (find_used_components#connect#activate ~callback:(fun () -> Menu_search.find_used_components editor));
+  (*ignore (find_used_components#connect#activate ~callback:(fun () -> Menu_search.find_used_components editor));*)
   (*  *)
   let callback ev =
     let clip = GData.clipboard Gdk.Atom.clipboard in
@@ -148,8 +148,8 @@ let create ~editor ~page () =
     select_all#connect#activate ~callback:page#buffer#select_all;
 
     Menu_search.update_items_visibility
-      ~label_find_used_components
-      ~find_used_components
+      (*~label_find_used_components
+        ~find_used_components*)
       ~find_definition
       ~find_references
       editor;

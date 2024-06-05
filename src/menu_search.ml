@@ -110,8 +110,7 @@ let set_has_references editor item =
     item#misc#set_sensitive has
   end
 
-(** set_has_used_components *)
-let set_has_used_components editor label item =
+(*let set_has_used_components editor label item =
   editor#with_current_page begin fun page ->
     let project = editor#project in
     let filename = page#get_filename in
@@ -131,7 +130,7 @@ let set_has_used_components editor label item =
         label#set_label "Find Used Components of...";
         item#misc#set_sensitive false;
   end
-
+*)
 (** create_search_results_pane *)
 let create_search_results_pane ~pixbuf ~editor ~page =
   let widget = new Search_results.widget ~editor () in
@@ -205,8 +204,7 @@ let find_definition_references editor =
     widget#start_search();
   end
 
-(** find_used_components *)
-let find_used_components editor =
+(*let find_used_components editor =
   editor#with_current_page begin fun page ->
     let project = editor#project in
     let filename = page#get_filename in
@@ -252,16 +250,16 @@ let find_used_components editor =
         widget#start_search();
     | _ -> ()
   end
-
+*)
 (** update_items_visibility *)
 let update_items_visibility
-    ~label_find_used_components
-    ~find_used_components
+    (*~label_find_used_components
+      ~find_used_components*)
     ~find_definition
     ~find_references
     editor =
   Gmisclib.Idle.add ~prio:100 begin fun () ->
-    set_has_used_components editor label_find_used_components find_used_components;
+    (*set_has_used_components editor label_find_used_components find_used_components;*)
     set_has_definition editor find_definition;
     set_has_references editor find_references;
   end
