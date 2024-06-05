@@ -172,8 +172,8 @@ class gitbar ?packing () =
   in
   let button_gitunpushed = create_gitbutton "\u{eaa1}" in
   let button_gitpending = create_gitbutton "\u{ea73}" in
-  let button_gitpath = create_gitbutton "\u{e65d}" in
   let button_gitbranch = create_gitbutton "\u{f062c}" in
+  let button_gitpath = create_gitbutton "\u{e65d}" in
   object (self)
     inherit GObj.widget box#as_widget
     initializer
@@ -188,11 +188,12 @@ class gitbar ?packing () =
 
 class widget ?packing () =
   let ebox = GBin.event_box ~border_width:0 ?packing () in
-  let box = GPack.hbox ~spacing:1 ~border_width:0 ~packing:ebox#add () in
-  let editorbar_placeholder = GBin.alignment ~packing:(box#pack ~from:`START ~expand:true ~fill:true) () in
-  let _ = GMisc.separator `VERTICAL ~packing:(box#pack ~expand:false) () in
-  let spinner = GMisc.image ~width:20 ~packing:box#pack () in
-  let _ = GMisc.separator `VERTICAL ~packing:(box#pack ~expand:false) () in
+  let statusbar = GMisc.statusbar (*~spacing:1*) ~border_width:0 ~packing:ebox#add () in
+  let editorbar_placeholder = GBin.alignment ~packing:(statusbar#pack ~from:`START ~expand:true ~fill:true) () in
+  let _ = GMisc.separator `VERTICAL ~packing:(statusbar#pack ~expand:false) () in
+  let spinner = GMisc.image ~width:20 ~packing:statusbar#pack () in
+  let _ = GMisc.separator `VERTICAL ~packing:(statusbar#pack ~expand:false) () in
+  let context_flash = statusbar#new_context ~name:"flash-messages" in
   object (self)
     inherit GObj.widget ebox#as_widget
     initializer
@@ -205,9 +206,11 @@ class widget ?packing () =
         editorbar_placeholder#remove editorbar_placeholder#child#coerce;
       editorbar_placeholder#add bar#coerce;
 
-    method pack ?from widget = box#pack ?from ~expand:false ~fill:false widget
+    method pack ?from widget = statusbar#pack ?from ~expand:false ~fill:false widget
 
     method spinner = spinner
+
+    method flash_message ?(delay=3000) msg = context_flash#flash ~delay msg
 
     method private set_style () =
       ebox#misc#modify_bg [`NORMAL, `COLOR (ebox#misc#style#light `NORMAL)];
