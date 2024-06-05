@@ -313,6 +313,7 @@ class editor () =
       | Some page ->
           Merlin.locate ~position:(iter#line + 1, iter#line_offset)
             ~filename:page#get_filename
+            ~look_for:`Implementation
             ~source_code:(page#buffer#get_text ())
             begin function
             | `String msg -> Printf.printf "%s\n%!" msg;

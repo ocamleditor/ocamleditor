@@ -91,7 +91,10 @@ let type_enclosing ~position:(line, col) ?expression ?cursor ?verbosity ?index ~
     ["type-enclosing"; "-position"; position ];
     (match expression with Some e -> ["-expression"; sprintf "\"%s\"" e ] | _ -> []);
     (match cursor with Some c -> ["-cursor"; string_of_int c ] | _ -> []);
-    (match verbosity with Some v -> ["-verbosity"; v ] | _ -> []);
+    (match verbosity with
+     | Some `Smart -> ["-verbosity"; "smart" ]
+     | Some (`Int n) -> ["-verbosity"; string_of_int n ]
+     | _ -> []);
     (match index with Some i -> ["-index"; string_of_int i ] | _ -> [])
   ] |> List.concat
   |> execute filename source_code ~continue_with:begin fun json ->
@@ -158,8 +161,24 @@ let locate ~position:(line, col) ?prefix ?look_for ~filename ~source_code apply 
   let position = sprintf "%d:%d" line col in
   "locate" :: "-position" :: position ::
   (match prefix with None -> "" | Some prefix -> sprintf "-prefix \"%s\"" prefix) ::
-  (match look_for with None -> "" | Some look_for -> sprintf "-look-for %s" look_for) ::
-  []
+  (match look_for with
+   | None -> ""
+   | Some `Interface -> "-look-for interface"
+   | Some `Implementation -> "-look-for implementation") :: []
+  |> execute filename source_code ~continue_with:begin fun json ->
+    match Merlin_j.locate_answer_of_string json with
+    | Return document ->
+        Log.println `DEBUG "%s" (Yojson.Safe.prettify json);
+        apply document.value
+    | Failure msg
+    | Error msg
+    | Exception msg -> Log.println `ERROR "%s" msg.value;
+  end
+
+let occurrences ~identifier_at:(line, col) ?scope ~filename ~source_code apply =
+  let identifier_at = sprintf "%d:%d" line col in
+  "occurrences" :: "-identifier-at" :: identifier_at ::
+  (match scope with None -> "" | Some `Buffer -> sprintf "-scope buffer" | Some `Project -> "-scope project") :: []
   |> execute filename source_code ~continue_with:begin fun json ->
     match Merlin_j.locate_answer_of_string json with
     | Return document ->
