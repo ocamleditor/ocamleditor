@@ -1,6 +1,7 @@
 type pos = { line : int; col : int }
 
 type range = {
+  ?file : string option;
   start : pos;
   stop <json name="end"> : pos;
 }

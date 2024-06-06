@@ -7,7 +7,7 @@ let re_newlines = Str.regexp "[\n\r]+"
 
 let type_info ?(color=Oe_config.colored_types) text =
   if color then
-    Lexical_markup.parse Preferences.preferences#get ?highlights:None text
+    Lexical_markup.parse ~use_bold:false Preferences.preferences#get ?highlights:None text
     |> Print_type.replace_simbols_in_markup
   else Print_type.markup2 text
 
