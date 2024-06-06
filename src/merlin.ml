@@ -180,7 +180,7 @@ let occurrences ~identifier_at:(line, col) ?scope ~filename ~source_code apply =
   "occurrences" :: "-identifier-at" :: identifier_at ::
   (match scope with None -> "" | Some `Buffer -> sprintf "-scope buffer" | Some `Project -> "-scope project") :: []
   |> execute filename source_code ~continue_with:begin fun json ->
-    match Merlin_j.locate_answer_of_string json with
+    match Merlin_j.occurrences_answer_of_string json with
     | Return document ->
         Log.println `DEBUG "%s" (Yojson.Safe.prettify json);
         apply document.value

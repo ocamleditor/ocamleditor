@@ -204,6 +204,29 @@ let find_definition_references editor =
     widget#start_search();
   end
 
+let find_definition_references_NEW editor =
+  match editor#get_page `ACTIVE with
+  | Some page ->
+      let iter = page#buffer#get_iter `INSERT in
+      Merlin.occurrences ~identifier_at:(iter#line + 1, iter#line_offset)
+        ~filename:page#get_filename
+        (*~scope:`Buffer*)
+        ~source_code:(page#buffer#get_text ?start:None ?stop:None ?slice:None ?visible:None ())
+        begin fun ranges ->
+          let open Merlin_j in
+          ranges
+          |> List.iter begin fun range ->
+            Printf.printf "%s %d:%d\n%!"
+              (match range.file with Some x -> x | _ -> "LOCAL")
+              range.start.line range.start.col;
+          end
+          (*GtkThread.async begin fun () ->
+            editor#location_history_add ~page ~iter ~kind:`BROWSE ();
+            (*editor#goto_location !file !ln !col*)
+            end ()*)
+        end;
+  | _ -> ()
+
 (*let find_used_components editor =
   editor#with_current_page begin fun page ->
     let project = editor#project in
