@@ -23,13 +23,13 @@
 open Printf
 open Target
 open GUtil
-open Miscellanea
+open Utils
 
 let mk_target_filenames project filenames =
   let filenames = List.filter_map project.Prj.in_source_path filenames in
   if Sys.win32 then begin
     List.map begin fun filename ->
-      Miscellanea.filename_unix_implicit filename
+      Utils.filename_unix_implicit filename
     end filenames
   end else filenames
 
@@ -329,7 +329,7 @@ class view ~project ~target_list ?packing () =
       button_package#set_focus_on_click false;
       ignore (button_package#connect#clicked ~callback:begin fun () ->
           let widget, window = Findlib_list.dialog flbox#coerce () in
-          Gaux.may target ~f:(fun tg -> widget#select_packages (Str.split (Miscellanea.regexp ", *") tg.package));
+          Gaux.may target ~f:(fun tg -> widget#select_packages (Str.split (Utils.regexp ", *") tg.package));
           window#(*set_on_popdown*)connect#destroy ~callback:begin fun () ->
             entry_package#misc#grab_focus ();
             entry_package#set_position (Glib.Utf8.length entry_package#text);
@@ -646,7 +646,7 @@ class view ~project ~target_list ?packing () =
         align_lib#misc#set_sensitive false;
         align_exec#misc#set_sensitive true;
         entry_lib_modules#set_text "";
-        let filename = Miscellanea.split " +" tg.files in
+        let filename = Utils.split " +" tg.files in
         assert (List.length filename <= 1);
         try
           let filename = List.hd filename in

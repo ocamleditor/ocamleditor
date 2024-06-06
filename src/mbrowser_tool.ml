@@ -23,7 +23,7 @@
 
 open Printf
 open GdkKeysyms
-open Miscellanea
+open Utils
 open Oe
 open Mbrowser_slist
 open Preferences
@@ -615,7 +615,7 @@ class widget ~project ?(is_completion=false) ?(enable_history=true) ?width ?heig
             match Symbols.find_by_modulepath ~kind:type_kinds project.Prj.symbols absolute_ident with
             | None ->
                 if root = [] then None else begin
-                  let root = (*try*) Xlist.rev_tl root (*with Invalid_argument "Empty List" -> []*) in
+                  let root = (*try*) ListExt.rev_tl root (*with Invalid_argument "Empty List" -> []*) in
                   self#find_symbol ~root text
                 end
             | symbol -> symbol
@@ -654,10 +654,10 @@ class widget ~project ?(is_completion=false) ?(enable_history=true) ?width ?heig
           if a = ocamllib then -1 else if b = ocamllib then 1 else compare a b
         end (Project.get_load_path project)
       in
-      let is_source_path_relaitve = Miscellanea.filename_relative (Project.path_src project) in
-      let is_ocamllib_relative = Miscellanea.filename_relative ocamllib in
+      let is_source_path_relaitve = Utils.filename_relative (Project.path_src project) in
+      let is_ocamllib_relative = Utils.filename_relative ocamllib in
       List.iter begin fun path ->
-        (*let path = List.fold_left (//) "" (List.map (fun x -> Str.replace_first (!~ ":/") ":\\\\" x) (Miscellanea.filename_split path)) in*)
+        (*let path = List.fold_left (//) "" (List.map (fun x -> Str.replace_first (!~ ":/") ":\\\\" x) (Utils.filename_split path)) in*)
         let basename = Filename.basename path in
         let kind, basename, add_descr =
           match is_source_path_relaitve path with

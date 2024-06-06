@@ -24,7 +24,7 @@ open Printf
 open GdkKeysyms
 open GUtil
 open Find_text
-open Miscellanea
+open Utils
 module ColorOps = Color
 open Preferences
 
@@ -730,7 +730,7 @@ class widget
         (*(*GtkThread.async*) self#place_marks res;*)
       end results;
       let get_text filename = Buffer.contents (File_util.read filename) in
-      let get_text = Miscellanea.Memo.create get_text in
+      let get_text = Utils.Memo.create get_text in
       let get_comments filename =
         if List.exists ((^^^) filename) [".ml"; ".mli"; ".mll"; ".mly"] then
           let text = get_text filename in
@@ -742,7 +742,7 @@ class widget
           comments, strings
         else [], []
       in
-      let get_comments = Miscellanea.Memo.create get_comments in
+      let get_comments = Utils.Memo.create get_comments in
       Gaux.may sigid_changed ~f:(fun id -> view#selection#misc#disconnect id);
       sigid_changed <- Some (view#selection#connect#after#changed ~callback:begin fun () ->
           try
@@ -768,7 +768,7 @@ class widget
                       let utf8_line_length = Glib.Utf8.length line0 in
                       let scarto = 0 in
                       let disaply_line = sprintf "%s: %s"
-                          (Miscellanea.lpad (string_of_int linenum) ' ' maxlinenum_length) line0 in
+                          (Utils.lpad (string_of_int linenum) ' ' maxlinenum_length) line0 in
                       tbuf#insert (disaply_line ^ (if !i = List.length lines_involved - 1 then "" else "\n"));
                       let iter = tbuf#get_iter `INSERT in
                       if tbuf#lexical_enabled then begin

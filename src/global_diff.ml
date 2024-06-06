@@ -141,7 +141,7 @@ let paint_diffs page diffs =
   end diffs
 
 let compare_with_head page continue_with =
-  match Miscellanea.filename_relative (Filename.dirname (Sys.getcwd())) page#get_filename with
+  match Utils.filename_relative (Filename.dirname (Sys.getcwd())) page#get_filename with
   | Some filename ->
       let open Printf in
       let buf = Buffer.create 1024 in

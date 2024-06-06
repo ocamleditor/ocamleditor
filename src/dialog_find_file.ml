@@ -22,7 +22,7 @@
 [@@@warning "-48"]
 
 open Printf
-open Miscellanea
+open Utils
 open Preferences
 
 let filter =
@@ -119,7 +119,7 @@ let create ?(all=true) ~(editor : Editor.editor) ~roots () =
   begin
     match quick_file_chooser#source with
     | `path (hd :: _, _) ->
-        let is_relative =  Miscellanea.filename_relative hd in
+        let is_relative =  Utils.filename_relative hd in
         let len = String.length hd in
         quick_file_chooser#set_cell_data_func begin fun model row ->
           let dirname = model#get ~row ~column:Quick_file_chooser.col_path in

@@ -22,7 +22,7 @@
 [@@@warning "-48"]
 
 open Printf
-open Miscellanea
+open Utils
 open Preferences
 
 type t = {
@@ -100,7 +100,7 @@ let regexp_of_pattern pattern =
   let pattern = (Str.global_replace re_dot "\\." pattern) in
   let pattern = (Str.global_replace re_question "." pattern) in
   let pattern = (Str.global_replace re_asterisk "[-+ 'a-zA-Z!^%&$()@#;.,_0-9]*" pattern) in
-  Miscellanea.regexp_case_fold pattern;;
+  Utils.regexp_case_fold pattern;;
 
 (** widget *)
 class widget ~source ~name ?filter ?packing () =

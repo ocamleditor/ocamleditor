@@ -22,13 +22,13 @@
 
 open Printf
 open Text_util
-open Miscellanea
+open Utils
 module ColorOps = Color
 open Preferences
 
 (** Buffer *)
 class buffer =
-  let word_bound = Miscellanea.regexp "\\b" in
+  let word_bound = Utils.regexp "\\b" in
   fun ?project ?buffer ?file () ->
     let buffer = match buffer with None -> GText.buffer () | Some b -> b in
     let create_tmp_filename () = Filename.temp_file "buffer-" ".tmp", None in
@@ -190,7 +190,7 @@ class buffer =
         (*Glib.Convert.convert_with_fallback ~fallback:"?"
           ~from_codeset:"UTF-8" ~to_codeset:Oe_config.ocaml_codeset text
           in*)
-        Miscellanea.mkdir_p (Filename.dirname filename);
+        Utils.mkdir_p (Filename.dirname filename);
         let chan = open_out_bin filename in
         begin
           try

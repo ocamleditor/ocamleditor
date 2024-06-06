@@ -22,7 +22,7 @@
 
 
 open Printf
-open Miscellanea
+open Utils
 open Preferences
 open GUtil
 
@@ -429,7 +429,7 @@ class page ?file ~project ~scroll_offset ~offset ~editor () =
             try
               begin match editor#project.Prj.in_source_path self#get_filename with
               | Some filename ->
-                  let filename = String.concat "/" (Miscellanea.filename_split filename) in
+                  let filename = String.concat "/" (Utils.filename_split filename) in
                   let on_ready_cb viewer =
                     Option.iter begin fun viewer ->
                       if editorbar#button_dotview#active then begin

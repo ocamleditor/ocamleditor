@@ -4,7 +4,7 @@ open GUtil
 module ColorOps = Color
 open Preferences
 open Printf
-open Miscellanea
+open Utils
 open Settings_j
 
 module Log = Common.Log.Make(struct let prefix = "FOLD" end)
@@ -312,13 +312,13 @@ class margin_fold (view : Ocaml_text.view) =
             end None;
             !methods
             |> List.filter (fun ol -> ol.ol_parent <> None)
-            |> Xlist.group_by (fun ol -> ol.ol_parent)
+            |> ListExt.group_by (fun ol -> ol.ol_parent)
             |> List.iter begin fun (parent, meths) ->
               match parent with
               | Some parent  ->
                   ({ parent with ol_start = parent.ol_stop } :: meths)
                   |> List.sort (fun m1 m2 -> Stdlib.compare m1.ol_start m2.ol_start)
-                  |> Xlist.pairwise
+                  |> ListExt.pairwise
                   |> List.iter (fun (ol1, ol2) -> ol1.ol_stop <- ol2.ol_start);
               | _ -> ()
             end

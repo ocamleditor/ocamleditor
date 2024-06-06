@@ -20,7 +20,7 @@
 
 *)
 
-open Miscellanea
+open Utils
 open Unix
 open Str
 open Printf
@@ -28,7 +28,7 @@ open Printf
 (*#load "unix.cma"
   #load "str.cma"
   #directory "C:\\ocaml\\devel\\ocamleditor\\src\\common"
-  #load "miscellanea.cmo"
+  #load "utils.cmo"
 
   exact_match ~pat:(unix_regexp "*.{ml,mli,mll,mly,bat,cmd,txt,css,js}") "a.mli";;*)
 
@@ -38,7 +38,7 @@ struct
 
   (**** Memoized rexgexp *)
 
-  let (~!) = Miscellanea.Memo.create Str.regexp;;
+  let (~!) = Utils.Memo.create Str.regexp;;
 
   (* Convert Windows-style directory separator '\' to caml-style '/' *)
   let caml_dir path =

@@ -20,7 +20,7 @@
 
 *)
 
-open Miscellanea
+open Utils
 open Printf
 open Prj
 
@@ -43,7 +43,7 @@ let path_dot_oebuild p = p.root // default_dir_src // ".oebuild"
 
 (** abs_of_tmp *)
 let abs_of_tmp proj filename =
-  match Miscellanea.filename_relative (".." // default_dir_tmp) filename with
+  match Utils.filename_relative (".." // default_dir_tmp) filename with
   | None -> filename
   | Some relname -> (path_src proj) // relname
 
@@ -100,7 +100,7 @@ let create ~filename () =
     autocomp_dflags    = [|"-c"; "-w"; "+a-48-70"; "-thread"; "-bin-annot"|];
     autocomp_compiler  = "";
     search_path        = [];
-    in_source_path     = Miscellanea.filename_relative (root // default_dir_src);
+    in_source_path     = Utils.filename_relative (root // default_dir_src);
     source_paths       = (try File_util.readtree (root // default_dir_src) with Sys_error _ -> []);
     can_compile_native = true;
     symbols            = {
@@ -154,18 +154,18 @@ let get_includes =
   fun proj ->
     let includes = String.concat " " (List.map (fun t -> t.Target.includes) proj.targets) in
     let includes = Str.split re includes in
-    Xlist.remove_dupl includes
+    ListExt.remove_dupl includes
 
 (** get_search_path *)
 let get_search_path proj =
   let package = String.concat "," (List.map (fun t -> t.Target.package) proj.targets) in
-  let package = Str.split (Miscellanea.regexp ",") package in
+  let package = Str.split (Utils.regexp ",") package in
   let package = List.filter ((<>) "") package in
   let package = List.flatten (List.map begin fun package ->
       kprintf Shell.get_command_output "ocamlfind query %s -r %s" package Shell.redirect_stderr
-    end (Xlist.remove_dupl package)) in
-  let package = Xlist.remove_dupl (List.filter ((<>) "") package) in
-  let includes = Xlist.remove_dupl (get_includes proj) in
+    end (ListExt.remove_dupl package)) in
+  let package = ListExt.remove_dupl (List.filter ((<>) "") package) in
+  let includes = ListExt.remove_dupl (get_includes proj) in
   package @ includes;;
 
 (** get_search_path_i_format *)
@@ -240,7 +240,7 @@ let save_dot_merlin proj =
       proj.targets
       |> List.map (fun tg -> Str.split (Str.regexp ",") tg.Target.package)
       |> List.flatten
-      |> Miscellanea.Xlist.remove_dupl
+      |> Utils.ListExt.remove_dupl
       |> String.concat " "
     in
     [
@@ -386,7 +386,7 @@ let load filename =
 let backup_file project (file : Editor_file.file) =
   let src = (project.root // default_dir_src) in
   if starts_with src file#filename then begin
-    let rel = match Miscellanea.filename_relative src file#filename with
+    let rel = match Utils.filename_relative src file#filename with
       | None -> assert false | Some x -> Filename.dirname x in
     let move_to = project.root // default_dir_bak // rel in
     ignore (file#backup ~move_to ())
@@ -413,7 +413,7 @@ let remove_file proj filename =
 (** Returns the names of the libraries of all targets. *)
 let get_libraries proj =
   let libs = String.concat " " (List.map (fun t -> t.Target.libs) proj.targets) in
-  Miscellanea.Xlist.remove_dupl (Miscellanea.split "[ \r\n\t]+" libs)
+  Utils.ListExt.remove_dupl (Utils.split "[ \r\n\t]+" libs)
 
 (** clean_tmp *)
 let clean_tmp proj =
@@ -435,7 +435,7 @@ let refresh proj =
   proj.author <- np.author;
   proj.description <- np.description;
   proj.version <- np.version;
-  proj.in_source_path <- Miscellanea.filename_relative (np.root // default_dir_src);
+  proj.in_source_path <- Utils.filename_relative (np.root // default_dir_src);
   proj.source_paths <- (try File_util.readtree (np.root // default_dir_src) with Sys_error _ -> [])
 
 (** clear_cache *)
@@ -462,7 +462,7 @@ let clear_cache proj =
 
 (*(** load_rc_icons *)
   let load_rc_icons proj =
-  Miscellanea.pushd (proj.root // Prj.default_dir_src);
+  Utils.pushd (proj.root // Prj.default_dir_src);
   let script = Filename.concat (Filename.concat ".." "tools") "rc_compile.ml" in
   let cmd = sprintf "ocaml %s %S %S" script in
   List.iter begin fun target ->
@@ -477,5 +477,5 @@ let clear_cache proj =
           Oebuild_util.exec ~verbose:false ~join:false ~process_in (cmd target.Target.name iconame) |> ignore
         end rc.Resource_file.rc_icons_data;
   end proj.targets;
-  Miscellanea.popd();*)
+  Utils.popd();*)
 

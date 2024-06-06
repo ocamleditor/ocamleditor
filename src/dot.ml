@@ -22,7 +22,7 @@
 
 
 open Printf
-open Miscellanea
+open Utils
 
 let round f =
   int_of_float (if f < 0. then f -. 0.5 else f +. 0.5)
@@ -37,7 +37,7 @@ let mk_ocamldoc_cmd ~project ?(dot_include_all=false) ?(dot_reduce=true) ?(dot_t
        "-I";
        "+threads";
     |];
-    (Array.of_list (Miscellanea.split " +" search_path));
+    (Array.of_list (Utils.split " +" search_path));
     [|
       (if dot_include_all then "-dot-include-all" else "");
       (if dot_reduce then "-dot-reduce" else "");
@@ -78,7 +78,7 @@ let draw ~project ~filename ?dot_include_all ?dot_types ?packing ?on_ready_cb ()
   in
   let dependants =
     let path = [Filename.dirname filename] in
-    let modname = Miscellanea.modname_of_path filename in
+    let modname = Utils.modname_of_path filename in
     Oebuild_dep.find_dependants ~path ~modname
   in
   let sourcefiles   = dependencies @ dependants in
@@ -91,7 +91,7 @@ let draw ~project ~filename ?dot_include_all ?dot_types ?packing ?on_ready_cb ()
   let activity_name = "Generating module dependency graph, please wait..." in
   Activity.add Activity.Other activity_name;
   Spawn.async ~at_exit:begin fun _ ->
-    let modname = Miscellanea.modname_of_path filename in
+    let modname = Utils.modname_of_path filename in
     let re = kprintf Str.regexp "\"%s\" \\[.*color=\\(.+\\).*\\]" modname in
     (*let re1 = Str.regexp "\\(\".*\"\\) \\[style=filled, color=darkturquoise\\];$" in*)
     map_file_lines dotfile begin fun ~lnum ~line ->

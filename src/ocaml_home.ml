@@ -59,7 +59,7 @@ class widget ~project ?(spacing=3) ?border_width ~label_width ?packing ()=
         self#with_ocamllib begin fun () ->
           let compiler = match Ocaml_config.find_tool `OCAMLC "" with Some x -> x | _ -> assert false in
           let output = String.trim (Ocaml_config.ocaml_version ~compiler ()) in
-          let lines = Miscellanea.split "\n" output in
+          let lines = Utils.split "\n" output in
           let version, stdlib = match lines with [a; b] -> a, b | _ -> assert false in
           version, stdlib
         end
@@ -95,7 +95,7 @@ class widget ~project ?(spacing=3) ?border_width ~label_width ?packing ()=
       let set_tooltips () =
         entry_ocamllib#misc#set_tooltip_text (sprintf "Environment Variable\nOCAMLLIB=%s" entry_ocamllib#text);
         entry_version#misc#set_tooltip_text (sprintf "%s%s"
-                                               (Miscellanea.replace_first [" - ", "\n"] entry_version#text) "");
+                                               (Utils.replace_first [" - ", "\n"] entry_version#text) "");
       in
       ignore (entry_ocamllib#connect#changed ~callback:begin fun () ->
           let ver, stdlib = self#get_ocaml_version () in

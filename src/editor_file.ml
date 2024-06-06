@@ -21,7 +21,7 @@
 *)
 
 
-open Miscellanea
+open Utils
 open Unix
 open Printf
 open Editor_file_type
@@ -86,13 +86,13 @@ class file filename =
               end;
               path
         in
-        let name_match = Str.string_match (Miscellanea.regexp ((Filename.chop_extension self#basename) ^ "\\.~\\([0-9]+\\)~\\..+$")) in
+        let name_match = Str.string_match (Utils.regexp ((Filename.chop_extension self#basename) ^ "\\.~\\([0-9]+\\)~\\..+$")) in
         let backups = List.filter_map begin fun n ->
             if name_match n 0 then
               Some (int_of_string (Str.matched_group 1 n))
             else None
           end (Array.to_list (Sys.readdir dir)) in
-        let n = try Xlist.max backups + 1 with Invalid_argument _ -> 1 in
+        let n = try ListExt.max backups + 1 with Invalid_argument _ -> 1 in
         let backup_name =
           let pos = String.rindex filename '.' in
           let ext = String.sub filename pos (String.length filename - pos) in

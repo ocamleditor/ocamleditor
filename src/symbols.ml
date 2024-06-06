@@ -24,11 +24,11 @@
 open Types
 open Outcometree
 open Oe
-open Miscellanea
+open Utils
 open Printf
 
 let ocaml_stdlib = Ocaml_config.ocamllib ()
-let strip_prefix = Miscellanea.strip_prefix
+let strip_prefix = Utils.strip_prefix
 
 let get_parent_path symbol =
   match List.rev symbol.sy_id with
@@ -104,7 +104,7 @@ module Modules = struct
         if in_source_path then (sprintf "%s (project)" project.Prj.name)
         else if project.Prj.ocamllib = dirname then "StdLib"
         else begin
-          match Miscellanea.filename_relative project.Prj.ocamllib dirname with
+          match Utils.filename_relative project.Prj.ocamllib dirname with
           | None -> filename
           | Some extra -> "+" ^ extra
         end
@@ -341,7 +341,7 @@ module Cache = struct
 
   let create_filename ~project =
     let cache_dir = Project.path_cache project in
-    Miscellanea.mkdir_p cache_dir;
+    Utils.mkdir_p cache_dir;
     cache_dir // "symbols";;
 
   let reset ~project =

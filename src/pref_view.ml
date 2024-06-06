@@ -22,7 +22,7 @@
 
 
 open Pref_page
-open Miscellanea
+open Utils
 
 (** pref_view *)
 class pref_view title ?packing () =
@@ -176,7 +176,7 @@ class pref_view title ?packing () =
       Option.iter
         (fun _ -> combo_theme#set_active (
              match pref.theme with
-             | Some name -> (try Xlist.pos name Preferences.Themes.avail_themes with Not_found -> -1)
+             | Some name -> (try ListExt.pos name Preferences.Themes.avail_themes with Not_found -> -1)
              | _ -> -1))
         Preferences.Themes.directory;
       combo_theme_changed_id |> Option.iter combo_theme#misc#handler_unblock;

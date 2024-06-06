@@ -308,7 +308,7 @@ let parse ?(use_bold=true) pref =
   state.span_highlight <- (fun text ->
       (* For tokens without a tag? *)
       String.concat "" ["<span bgcolor='"; ?? bgcolor_highlight; "'>"; (Glib.Markup.escape_text text); "</span>"]);
-  state.span <- (Miscellanea.Memo.create open_span_tag);
+  state.span <- (Utils.Memo.create open_span_tag);
   fun ?(highlights=[]) text ->
     reset_state state text;
     let buffer = Lexing.from_string text in

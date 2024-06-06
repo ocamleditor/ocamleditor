@@ -38,5 +38,5 @@ let whitespace_crlf        = "\xC2\xA4\xC2\xB6"
 let whitespace_lf          = "\xC2\xB6"
 let dot_leaders            = Oebuild_util.dot_leaders
 let format_int             = Oebuild_util.format_int
-let create_middot_string   = Miscellanea.Memo.create (fun x ->
+let create_middot_string   = Utils.Memo.create (fun x ->
     String.concat "" (List.init x (Fun.const one_dot_leader)))

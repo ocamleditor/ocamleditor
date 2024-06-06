@@ -21,7 +21,7 @@
 *)
 
 
-open Miscellanea
+open Utils
 open Printf
 
 let targets = [{ Gtk.target = "STRING"; flags = []; info = 0}]

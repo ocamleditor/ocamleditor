@@ -21,7 +21,7 @@
 *)
 
 open GUtil
-open Miscellanea
+open Utils
 open Location
 open Lexing
 module ColorOps = Color
@@ -290,7 +290,7 @@ class widget ~editor(* : Editor.editor)*) ?packing () =
           match locations with
           | Offset locs ->
               let line_nums = List.map (fun (_, { txt; loc }) -> loc.loc_start.pos_lnum) locs in
-              Miscellanea.get_lines_from_file ~filename:real_filename line_nums
+              Utils.get_lines_from_file ~filename:real_filename line_nums
           | Mark locs ->
               List.sort (fun (n1, _) (n2, _) -> compare n1 n2)
                 (List.fold_left begin fun acc (_, (buffer : GText.buffer), mark_start, _) ->

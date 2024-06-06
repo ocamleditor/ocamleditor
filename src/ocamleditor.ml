@@ -53,7 +53,7 @@ let install_fonts () =
     |> List.map Filename.basename
   in
   let font_dir = (Sys.getenv "HOME") / ".local" / "share" / "fonts" in
-  Miscellanea.mkdir_p font_dir;
+  Utils.mkdir_p font_dir;
   let copy_font name =
     Printf.printf "Installing font %s\n%!" (font_dir / name);
     let src = App_config.application_fonts / name in

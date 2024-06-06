@@ -23,7 +23,7 @@
 open Printf
 module ColorOps = Color
 open Preferences
-open Miscellanea
+open Utils
 
 let forward_non_blank iter =
   let rec f it =
@@ -308,7 +308,7 @@ class error_indication (view : Ocaml_text.view) vscrollbar global_gutter =
                   (*end ()*)
                 in
                 messages
-                |> Miscellanea.Xlist.group_by (fun (start, stop, messages) ->
+                |> Utils.ListExt.group_by (fun (start, stop, messages) ->
                     (buffer#get_iter_at_mark (`MARK start))#offset, (buffer#get_iter_at_mark (`MARK stop))#offset)
                 |> List.iter begin fun ((start, stop), messages) ->
                   messages |>
@@ -348,7 +348,7 @@ class error_indication (view : Ocaml_text.view) vscrollbar global_gutter =
                 iter := !iter#backward_line
               done;
               float (List.length !visible_lines),
-              fun ln -> float (List.length (Xlist.take_while (fun x -> x <= ln) !visible_lines))
+              fun ln -> float (List.length (ListExt.take_while (fun x -> x <= ln) !visible_lines))
           | _ -> float buffer#line_count, float
         in
         let height = float height in

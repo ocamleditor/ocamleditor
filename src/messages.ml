@@ -21,7 +21,7 @@
 *)
 
 open GUtil
-open Miscellanea
+open Utils
 open Preferences
 
 exception Cancel_process_termination

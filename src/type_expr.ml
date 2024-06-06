@@ -111,7 +111,7 @@ let find_substitutions te1 te2 =
     let result = print_type (unify pte1 pte2) in
     result,
     !vars
-    |> Miscellanea.Xlist.remove_dupl
+    |> Utils.ListExt.remove_dupl
     |> List.sort Stdlib.compare
     |> List.map begin fun (name, value) ->
       name,

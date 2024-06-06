@@ -108,7 +108,7 @@ class view ?packing () =
       button_dir#set_text et.Task.et_dir;
       self#misc#set_sensitive (not et.Task.et_readonly);
       match et.Task.et_phase with
-      | Some ph -> combo_phase#set_active (Miscellanea.Xlist.pos ph phases);
+      | Some ph -> combo_phase#set_active (Utils.ListExt.pos ph phases);
       | None -> combo_phase#set_active 0;
 
     method private update update_func () =

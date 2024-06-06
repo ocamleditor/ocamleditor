@@ -22,7 +22,7 @@
 
 
 open Printf
-open Miscellanea
+open Utils
 open Templates
 open Template
 
@@ -80,12 +80,12 @@ let apply ~project (view : Ocaml_text.view) (templ : Templates.t) =
   let insert_block text = function
     | `ALIGN n ->
         let indent = (Alignment.mk_spaces (base + n)) in
-        let text = Str.global_replace (Miscellanea.regexp "\n\\(.\\)") ("\n" ^ indent ^ "\\1") text in
+        let text = Str.global_replace (Utils.regexp "\n\\(.\\)") ("\n" ^ indent ^ "\\1") text in
         let text = indent ^ text in
         buffer#insert text
     | `INDENT ->
         let indent = (Alignment.mk_spaces !indent_width) in
-        let text = Str.global_replace (Miscellanea.regexp "\n\\(.\\)") ("\n" ^ indent ^ "\\1") text in
+        let text = Str.global_replace (Utils.regexp "\n\\(.\\)") ("\n" ^ indent ^ "\\1") text in
         let text = indent ^ text in
         buffer#insert text
     | `NONE -> buffer#insert text

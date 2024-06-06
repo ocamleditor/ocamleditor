@@ -57,7 +57,7 @@ let crono ?(label="Time") f x =
 
 (** {6 List operations} *)
 
-module Xlist =
+module ListExt =
 struct
   let pos x l =
     let rec f l n =
@@ -293,7 +293,7 @@ let get_lines_from_file ~filename lnums =
   let chan = open_in filename in
   let result = ref [] in
   let i = ref 1 in
-  let lnums = ref (List.sort compare (Xlist.remove_dupl lnums)) in
+  let lnums = ref (List.sort compare (ListExt.remove_dupl lnums)) in
   try
     begin
       try

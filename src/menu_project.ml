@@ -22,7 +22,7 @@
 
 
 open Printf
-open Miscellanea
+open Utils
 open Menu_types
 
 let set_label item text = item#misc#set_property "label" (`STRING (Some text));;

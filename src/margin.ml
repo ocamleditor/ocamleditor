@@ -156,7 +156,7 @@ class markers gutter margin_line_numbers =
         | _ -> ()
       end;
       (* Spread markers *)
-      positions |> Miscellanea.Xlist.group_assoc
+      positions |> Utils.ListExt.group_assoc
       |> List.iter begin fun (y, childs) ->
         childs
         |> List.fold_left begin fun x child ->

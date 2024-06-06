@@ -22,7 +22,7 @@
 
 
 open Printf
-open Miscellanea
+open Utils
 open Preferences
 
 (** find_replace *)
@@ -173,7 +173,7 @@ let find_definition_references editor =
             def_name := (match bai_refs with ident :: _ -> ident.ident_loc.txt | [] -> "");
             let results = (match bai_def with | Some x -> [x] | _ -> []) @ bai_refs in
             let results = List.map (fun ident -> ident.ident_fname, ident) results in
-            let results = List.rev (Miscellanea.Xlist.group_assoc results) in
+            let results = List.rev (Utils.ListExt.group_assoc results) in
             List.map begin fun (filename, idents) ->
               let real_filenames = ref [] in
               let locations =

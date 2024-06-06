@@ -22,7 +22,7 @@
 
 
 open Printf
-open Miscellanea
+open Utils
 
 (* user@host, (password, key, pubkey, passphrase, last_filename) *)
 type history_entry = (string * (string * string option * string option * string * string))

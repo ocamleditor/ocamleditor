@@ -21,7 +21,7 @@
 *)
 
 open Printf
-open Miscellanea
+open Utils
 
 (** interval (milliseconds) *)
 let interval = Oe_config.autosave_interval
@@ -75,7 +75,7 @@ let delete ?(bak=false) ~filename () =
     if Sys.file_exists pathid then begin
       if bak then begin
         let path_bak = (path // "bak") in
-        Miscellanea.mkdir_p path_bak;
+        Utils.mkdir_p path_bak;
         Sys.rename pathid (path_bak // (Filename.basename pathid));
       end else (Sys.remove pathid)
     end

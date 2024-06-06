@@ -22,7 +22,7 @@
 
 open Project
 open Prj
-open Miscellanea
+open Utils
 open Printf
 open Preferences
 
@@ -221,7 +221,7 @@ class widget ~editor ?(callback=ignore) ~project ?page_num ?packing ?show () =
 
     method reset () =
       entry_encoding#set_active (match project.encoding with None -> (List.length encodings - 1)
-                                                           | Some x -> (try Miscellanea.Xlist.pos x encodings with Not_found -> 0));
+                                                           | Some x -> (try Utils.ListExt.pos x encodings with Not_found -> 0));
       name_entry#set_text project.name;
       desc_entry#set_text project.description;
       author_entry#set_text project.author;

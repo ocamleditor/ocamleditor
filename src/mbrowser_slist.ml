@@ -22,7 +22,7 @@
 
 open Printf
 open GdkKeysyms
-open Miscellanea
+open Utils
 open Oe
 open Preferences
 

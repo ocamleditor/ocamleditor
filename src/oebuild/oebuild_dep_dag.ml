@@ -41,7 +41,7 @@ let reduce : t -> unit = function table ->
     let deps = try Hashtbl.find table y with Not_found -> [] in
     (List.mem x deps) || (List.exists ((<-?-) x) deps)
   in
-  let is_descendant = (*Miscellanea.Memo.create2*) (<-?-) in
+  let is_descendant = (*Utils.Memo.create2*) (<-?-) in
   let reduce ll =
     let stop = ref "" in
     let rec reduce' ll =

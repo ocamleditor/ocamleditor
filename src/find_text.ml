@@ -22,7 +22,7 @@
 
 
 open Printf
-open Miscellanea
+open Utils
 
 exception Buffer_changed of int * string * string
 exception Skip_file

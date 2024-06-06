@@ -50,7 +50,7 @@ let letters = [
 ];;
 
 
-let greek = Miscellanea.replace_all ~regexp:true letters
+let greek = Utils.replace_all ~regexp:true letters
 
 let replace (buffer : GText.buffer) =
   (*let tag = buffer#create_tag [`SCALE `X_LARGE] in*)

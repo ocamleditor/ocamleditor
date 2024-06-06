@@ -21,7 +21,7 @@
 *)
 
 open GUtil
-open Miscellanea
+open Utils
 open Printf
 open Preferences
 

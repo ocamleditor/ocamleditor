@@ -1,12 +1,12 @@
-open Miscellanea
+open Utils
 
-let idleize ?prio f c () = 
+let idleize ?prio f c () =
   Gmisclib.Idle.add ?prio (f (); c);;
 
-let cascade_rev ff = 
+let cascade_rev ff =
   List.fold_left (fun acc f -> f acc) ignore ff;;
 
-let idleize_cascade ?prio x = 
+let idleize_cascade ?prio x =
   x |> List.map (idleize ?prio) |> cascade_rev;;
 
 let colorize_buffer (view : Ocaml_text.view) =

@@ -20,7 +20,7 @@
 
 *)
 
-open Miscellanea
+open Utils
 open Cmt_format
 open Typedtree
 

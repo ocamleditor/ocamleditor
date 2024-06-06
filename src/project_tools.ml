@@ -22,7 +22,7 @@
 
 
 
-open Miscellanea
+open Utils
 open Prj
 open Printf
 open Target
@@ -49,7 +49,7 @@ type files = {
 let default_fl_installer_basename = "findlib.ml"
 let default_rccompile_basename = "rc_compile.ml"
 let default_editbin_basename = "editbin.ml"
-let re_quote = Miscellanea.regexp "\""
+let re_quote = Utils.regexp "\""
 
 let convert_target_type =
   function
@@ -118,7 +118,7 @@ let create_meta proj ~parent tg =
       cmis @ acc
     end [] (target_deps @ [tg]);
   in
-  let cmis = Miscellanea.Xlist.remove_dupl cmis in
+  let cmis = Utils.ListExt.remove_dupl cmis in
   let mlis = List.filter (fun x -> Sys.file_exists ((Filename.chop_extension x) ^ ".mli")) cmis in
   let mlis = List.map (fun x -> (Filename.chop_extension x) ^ ".mli") mlis in
   {
@@ -161,9 +161,9 @@ let generate_meta outchan meta =
   fprintf outchan "  (\x2A\x2A %s \x2A)\n  %S,\"\\\n%s\",\n  [\n    %s\n  ], [\n    %s\n  ], [\n    %s\n  ];\n%!"
     meta.meta_name meta.meta_name
     (Str.global_replace re_quote "\\\"" (Buffer.contents buf))
-    (String.concat ";\n    " (List.map (sprintf "%S") (List.sort compare (Miscellanea.Xlist.remove_dupl files.archives))))
-    (String.concat ";\n    " (List.map (sprintf "%S") (List.sort compare (Miscellanea.Xlist.remove_dupl files.cmis))))
-    (String.concat ";\n    " (List.map (sprintf "%S") (List.sort compare (Miscellanea.Xlist.remove_dupl files.mlis))))
+    (String.concat ";\n    " (List.map (sprintf "%S") (List.sort compare (Utils.ListExt.remove_dupl files.archives))))
+    (String.concat ";\n    " (List.map (sprintf "%S") (List.sort compare (Utils.ListExt.remove_dupl files.cmis))))
+    (String.concat ";\n    " (List.map (sprintf "%S") (List.sort compare (Utils.ListExt.remove_dupl files.mlis))))
 
 let generate_fl_installer proj outchan =
   let processed = ref [] in
@@ -352,7 +352,7 @@ let write_resource_file proj =
             if Filename.is_implicit fn && Sys.file_exists (src // fn)
             then Some fn
             else begin
-              match Miscellanea.filename_relative src fn with
+              match Utils.filename_relative src fn with
               | Some rel when (Filename.dirname rel = Filename.dirname exename) && Sys.file_exists (src // rel) -> Some rel
               | Some _ -> None
               | _ ->
@@ -389,7 +389,7 @@ let write_resource_file proj =
         bprintf buf "            VALUE \"FileVersion\", \"%d.%d.%d.%d\\000\"\n" a b c d;
         bprintf buf "            VALUE \"InternalName\", \"%s\\000\"\n" (String.escaped (Filename.basename exename));
         bprintf buf "            VALUE \"ProductName\", \"%s\\000\"\n" (String.escaped rc.rc_product);
-        bprintf buf "            VALUE \"LegalCopyright\", \"%s\\000\"\n" (Str.global_replace (Miscellanea.regexp "©") "\\\\251" (String.escaped rc.rc_copyright));
+        bprintf buf "            VALUE \"LegalCopyright\", \"%s\\000\"\n" (Str.global_replace (Utils.regexp "©") "\\\\251" (String.escaped rc.rc_copyright));
         bprintf buf "        }\n";
         bprintf buf "    }\n";
         bprintf buf "    BLOCK \"VarFileInfo\"\n";

@@ -55,21 +55,21 @@ let gt = [ "-&gt;", "&#8594;";(* "-&gt;", "<big>&#8594;</big>";*) "*", "&#215;"]
 
 let replace_simbols_in_markup descr =
   if Preferences.preferences#get.editor_completion_greek_letters then begin
-    let descr = Miscellanea.replace_all ~regexp:false gt descr in
-    let descr = Miscellanea.replace_all ~regexp:true greeks_markup descr in
+    let descr = Utils.replace_all ~regexp:false gt descr in
+    let descr = Utils.replace_all ~regexp:true greeks_markup descr in
     descr
   end else descr
 
 let markup' descr =
   let descr = replace_simbols_in_markup (Glib.Markup.escape_text descr) in
-  Miscellanea.replace_all
+  Utils.replace_all
     ["\\([ \n(]\\|^\\)\\([?]?[a-z_][a-z0-9_']*\\):", "\\1<i><small>\\2:</small></i>"] descr
 
-let markup = Miscellanea.Memo.create markup'
+let markup = Utils.Memo.create markup'
 
 let markup2' descr =
   let descr = replace_simbols_in_markup (Glib.Markup.escape_text descr) in
-  Miscellanea.replace_all [
+  Utils.replace_all [
     "\\([ \n(]\\|^\\)\\([?]?[a-z_][a-z0-9_']*\\):",  "\\1<small><i>\\2:</i></small>";
 
     (*"\\([A-Z][A-Za-z0-9_']+\\)\\.", "<b><small>\\1.</small></b>";*)
@@ -79,16 +79,16 @@ let markup2' descr =
     "\\(method[ \t\r\n]+\\)\\([A-Za-z0-9_']+\\)", "<small>\\1</small>\\2";
   ] descr
 
-let markup2 = Miscellanea.Memo.create markup2'
+let markup2 = Utils.Memo.create markup2'
 
 let markup3' descr =
   let descr = replace_simbols_in_markup (Glib.Markup.escape_text descr) in
-  Miscellanea.replace_all [
+  Utils.replace_all [
     "\\([ \n(]\\|^\\)\\([?]?[a-z_][a-z0-9_']*\\):",  "\\1<i>\\2:</i>";
     "\\([A-Z`][A-Za-z0-9_']+\\)\\.", "<b>\\1</b>.";
   ] descr
 
-let markup3 = Miscellanea.Memo.create markup3'
+let markup3 = Utils.Memo.create markup3'
 
 let greeks = [
   "'a\\([0-9]*\\)", "α\\1";
@@ -124,11 +124,11 @@ let arrows = [
   "*", "\u{00d7}"
 ]
 
-let replace_greeks_2 typ = Miscellanea.replace_all ~regexp:true greeks typ;;
+let replace_greeks_2 typ = Utils.replace_all ~regexp:true greeks typ;;
 let replace_symbols typ =
   if Preferences.preferences#get.editor_completion_greek_letters then begin
-    Miscellanea.replace_all ~regexp:true greeks
-      (Miscellanea.replace_all ~regexp:false arrows typ)
+    Utils.replace_all ~regexp:true greeks
+      (Utils.replace_all ~regexp:false arrows typ)
   end else typ;;
 
 

@@ -172,7 +172,7 @@ let diff_stat f =
       let process_in =
         Spawn.loop begin fun ic ->
           let line = String.trim (input_line ic) in
-          match Str.split (Miscellanea.regexp "\t") line with
+          match Str.split (Utils.regexp "\t") line with
           | [ins; del; fn] ->
               let ins = try int_of_string ins with Failure _ -> 0 in
               let del = try int_of_string del with Failure _ -> 0 in

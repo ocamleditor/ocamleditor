@@ -125,7 +125,7 @@ let string_rev str =
   Bytes.init len (fun i -> str.[len - i - 1])
   |> Bytes.to_string
 
-let string_rev = Miscellanea.Memo.create string_rev;;
+let string_rev = Utils.Memo.create string_rev;;
 
 let is_function type_expr =
   let rec f t =
@@ -578,7 +578,7 @@ class widget ~editor:_ ~page ?packing () =
       let typ_utf8 = Glib.Convert.convert_with_fallback ~fallback:"" ~from_codeset:Oe_config.ocaml_codeset ~to_codeset:"UTF-8" typ in
       if button_show_types#active && typ <> "" then String.concat "" [
           markup_name; span_type_color;
-          (Print_type.markup2 (Miscellanea.replace_all ~regexp:true ["\n", ""; " +", " "] typ_utf8));
+          (Print_type.markup2 (Utils.replace_all ~regexp:true ["\n", ""; " +", " "] typ_utf8));
           "</span>"
         ] else markup_name
 

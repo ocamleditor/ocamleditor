@@ -23,7 +23,7 @@
 
 open Project
 open Printf
-open Miscellanea
+open Utils
 open Oe
 
 (** write *)
@@ -38,7 +38,7 @@ let write proj =
       Xml.Element ("author", [], [Xml.PCData proj.author]);
       (*Xml.Element ("description", [], [Xml.PCData proj.description]);*)
       Xml.Element ("description", [],
-                   (List.map (fun x -> Xml.Element ("line", [], [Xml.PCData x])) (Miscellanea.split "\n" proj.description)));
+                   (List.map (fun x -> Xml.Element ("line", [], [Xml.PCData x])) (Utils.split "\n" proj.description)));
       Xml.Element ("version", [], [Xml.PCData proj.version]);
       Xml.Element ("autocomp", [
           "enabled", string_of_bool proj.autocomp_enabled;

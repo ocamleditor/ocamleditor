@@ -20,7 +20,7 @@
 
 *)
 
-open Miscellanea
+open Utils
 open Preferences
 
 module Log = Common.Log.Make(struct let prefix = "Binannot" end)

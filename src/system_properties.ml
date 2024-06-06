@@ -43,7 +43,7 @@ let get_locale () =
       Some (Str.matched_group 1 locale)
     end
   with ex ->
-    Printf.eprintf "File \"miscellanea.ml\": %s\n%s\n%!" (Printexc.to_string ex) (Printexc.get_backtrace());
+    Printf.eprintf "File \"utils.ml\": %s\n%s\n%!" (Printexc.to_string ex) (Printexc.get_backtrace());
     None
 
 (** findlib_package_exists *)

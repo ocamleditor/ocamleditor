@@ -303,8 +303,8 @@ let tag ?start ?stop (tb : GText.buffer) =
       (* comments *)
       List.iter begin fun (b, e, _, ocamldoc) ->
         if not ocamldoc then begin
-          let ms = Miscellanea.Search.all multi_space begin fun ~pos ~matched_string:mat ->
-              Miscellanea.Search.Append (pos, pos + String.length mat, mat)
+          let ms = Utils.Search.all multi_space begin fun ~pos ~matched_string:mat ->
+              Utils.Search.Append (pos, pos + String.length mat, mat)
             end (String.sub u_text b (e - b)) in
           let (*b = b and*) e = e - 2 in
           let tag = "comment" in

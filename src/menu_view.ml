@@ -21,7 +21,7 @@
 *)
 
 
-open Miscellanea
+open Utils
 
 let get_switch_viewer_label page =
   let device =

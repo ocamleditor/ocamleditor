@@ -24,7 +24,7 @@
 #load "unix.cma"
 #load "str.cma"
 #use "../src/common/shell.ml"
-#use "../src/common/miscellanea.ml"
+#use "../src/common/utils.ml"
 
 exception Script_error of string * int
 

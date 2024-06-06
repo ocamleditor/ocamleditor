@@ -181,7 +181,7 @@ let main () =
               let deps =
                 if !nodep then !toplevel_modules
                 else if !serial
-                then Miscellanea.crono ~label:"Oebuild_dep.find" (fun () -> Oebuild_dep.find ~pp:!pp ~ignore_stderr:false !toplevel_modules) ()
+                then Utils.crono ~label:"Oebuild_dep.find" (fun () -> Oebuild_dep.find ~pp:!pp ~ignore_stderr:false !toplevel_modules) ()
                 else []
               in
               (build

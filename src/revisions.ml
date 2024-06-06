@@ -21,7 +21,7 @@
 *)
 
 
-open Miscellanea
+open Utils
 open Printf
 
 type t = {
@@ -341,10 +341,10 @@ class widget ~page ?packing () =
       | None -> ()
       | _ ->
           let root = Filename.dirname (Project.path_src project) in
-          match Miscellanea.filename_relative root page#get_filename with
+          match Utils.filename_relative root page#get_filename with
           | Some rel ->
               let sep = "\x1F" in
-              let rel = List.fold_left (fun acc x -> acc ^ "/" ^ x) Filename.parent_dir_name (Miscellanea.filename_split rel) in
+              let rel = List.fold_left (fun acc x -> acc ^ "/" ^ x) Filename.parent_dir_name (Utils.filename_split rel) in
               let args = [|
                 "log";
                 (sprintf "--format=%%h%s%%an%s%%ai%s%%s" sep sep sep);
@@ -372,7 +372,7 @@ class widget ~page ?packing () =
     method private read_local_backups () =
       let src = Project.path_src project in
       let bak = Project.path_bak project in
-      match Miscellanea.filename_relative src page#get_filename with
+      match Utils.filename_relative src page#get_filename with
       | Some rel ->
           let pos = String.rindex rel '.' in
           let prefix = String.sub rel 0 pos  in

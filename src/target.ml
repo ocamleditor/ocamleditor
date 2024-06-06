@@ -153,15 +153,15 @@ let create ~id ~name = {
 
 (** find_top_dependencies *)
 let find_top_dependencies target =
-  Oebuild_dep.ocamldep_toplevels (Miscellanea.split " +" target.files) |> Oebuild_dep.sort_dependencies
+  Oebuild_dep.ocamldep_toplevels (Utils.split " +" target.files) |> Oebuild_dep.sort_dependencies
 
 (** find_dependencies *)
 let find_dependencies target =
-  Oebuild_dep.ocamldep_recursive (Miscellanea.split " +" target.files) |> Oebuild_dep.sort_dependencies
+  Oebuild_dep.ocamldep_recursive (Utils.split " +" target.files) |> Oebuild_dep.sort_dependencies
 
 (** find_target_dependencies *)
 let rec find_target_dependencies targets trg =
-  Miscellanea.Xlist.remove_dupl (List.flatten (List.map begin fun id ->
+  Utils.ListExt.remove_dupl (List.flatten (List.map begin fun id ->
       match List_opt.find (fun tg -> tg.id = id) targets with
       | Some target -> (find_target_dependencies targets target) @ [target]
       | _ -> []

@@ -22,7 +22,7 @@
 
 open Prj
 open Printf
-open Miscellanea
+open Utils
 open GUtil
 open Oe
 open Preferences
@@ -1024,9 +1024,9 @@ class browser window =
       let check_launcher () =
         if Sys.file_exists launcher_list then begin
           let text = File_util.read launcher_list in
-          let filenames = Str.split (Miscellanea.regexp "\n") (Buffer.contents text) in
+          let filenames = Str.split (Utils.regexp "\n") (Buffer.contents text) in
           let filenames = List.map String.trim filenames in
-          let filenames = Miscellanea.Xlist.remove_dupl filenames in
+          let filenames = Utils.ListExt.remove_dupl filenames in
           List.iter begin fun filename ->
             editor#open_file ~active:true ~scroll_offset:0 ~offset:0 filename |> ignore;
           end filenames;

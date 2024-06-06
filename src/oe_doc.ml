@@ -24,7 +24,7 @@
 open Printf
 open Odoc_info
 
-let strip_prefix = Miscellanea.strip_prefix
+let strip_prefix = Utils.strip_prefix
 
 (** In olden times life was simpler, [arg.mli] was compiled to [arg.cmi],
     [bool.mli] to [bool.cmi] and so on.
@@ -70,7 +70,7 @@ struct
                   out_filename;
                   "-I"; "+threads";
                 |];
-                (Array.of_list (Miscellanea.split " +" search_path));
+                (Array.of_list (Utils.split " +" search_path));
                 [|
                   file;
                 |]
@@ -93,7 +93,7 @@ struct
     | _ -> [], time;;
 
   (** read_memo *)
-  let read_memo = Miscellanea.Memo.fast ~f:read';;
+  let read_memo = Utils.Memo.fast ~f:read';;
 
   (** read *)
   let read ~project ~symbol =
@@ -133,9 +133,9 @@ struct
 
   let concat_raw_text text =
     let repl = if !pending_newline then (pending_newline := false; "") else "\n" in
-    let text = Str.global_replace (Miscellanea.regexp "^\n[ *]+") repl text in
-    let text = Str.global_replace (Miscellanea.regexp "\n[ *]+$") " " text in
-    let text = Str.global_replace (Miscellanea.regexp "\n[ *]+") " " text in
+    let text = Str.global_replace (Utils.regexp "^\n[ *]+") repl text in
+    let text = Str.global_replace (Utils.regexp "\n[ *]+$") " " text in
+    let text = Str.global_replace (Utils.regexp "\n[ *]+") " " text in
     text;;
 
   let rec insert_text ?concat buffer text ftag =
@@ -442,7 +442,7 @@ struct
                 else
                   " of { " ^ String.concat " * " args ^ " }"
               end in
-            insert_type (Miscellanea.rpad code ' ' maxlength);
+            insert_type (Utils.rpad code ' ' maxlength);
             match vc.Type.vc_text with
             | Some { i_desc = Some text; _ } -> insert_type_element_comment text
             | _ -> insert_newline ~buffer (!!)
@@ -464,17 +464,17 @@ struct
             end 0 rfl in
           List.iter begin fun rf ->
             if rf.Type.rf_mutable then begin
-              let s = Miscellanea.rpad ("mutable " ^ rf.Type.rf_name) ' ' maxlength in
+              let s = Utils.rpad ("mutable " ^ rf.Type.rf_name) ' ' maxlength in
               buffer#insert ~tags:[!!`TYPE; !!`INDENT] "  ";
               buffer#insert ~tags:[!!`TYPE; !!`INDENT] s
             end else begin
-              let s = Miscellanea.rpad rf.Type.rf_name ' ' maxlength in
+              let s = Utils.rpad rf.Type.rf_name ' ' maxlength in
               buffer#insert ~tags:[!!`TYPE; !!`INDENT] "  ";
               buffer#insert ~tags:[!!`TYPE; !!`INDENT] s
             end;
             buffer#insert ~tags:[!!`TYPE; !!`INDENT] " : ";
             buffer#insert ~tags:[!!`TYPE; !!`INDENT]
-              (Miscellanea.rpad (!!! rf) ' ' maxlength_te);
+              (Utils.rpad (!!! rf) ' ' maxlength_te);
             match rf.Type.rf_text with
             | Some { i_desc = Some text; _ } -> insert_type_element_comment text
             | _ -> insert_newline ~buffer (!!)

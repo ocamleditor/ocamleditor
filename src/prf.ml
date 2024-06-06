@@ -91,11 +91,11 @@ let print () =
         let pc = cr.time /. total *. 100. in
         perc := !perc +. pc;
         printf "%-50s : %5d  %6.3f  %7.2f  %5.2f%%  %4.2f\n%!"
-          (Miscellanea.rpad (cr.name ^ " ") '.' 50) cr.calls (cr.time /. (float cr.calls)) cr.time pc
+          (Utils.rpad (cr.name ^ " ") '.' 50) cr.calls (cr.time /. (float cr.calls)) cr.time pc
           (((float cr.calls) /. (total *. 60.)) *. 1000.)
       end
     end (List.rev (List.sort (fun a b -> Stdlib.compare a.time b.time) !funcs));
     printf "\
 ----------------------------------------------------------------------------------------------\n%!";
-    printf "%-50s   %5d  %6.3f  %7.2f  %5.2f%%\n%!" (Miscellanea.rpad " " ' ' 50) 0 0.0 total !perc
+    printf "%-50s   %5d  %6.3f  %7.2f  %5.2f%%\n%!" (Utils.rpad " " ' ' 50) 0 0.0 total !perc
 

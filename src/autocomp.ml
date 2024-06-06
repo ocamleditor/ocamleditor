@@ -20,7 +20,7 @@
 
 *)
 
-let re_tmp = Miscellanea.regexp (Printf.sprintf "File \"..[\\/]%s[\\/]" Prj.default_dir_tmp)
+let re_tmp = Utils.regexp (Printf.sprintf "File \"..[\\/]%s[\\/]" Prj.default_dir_tmp)
 let (!!) = Filename.quote
 let (//) = Filename.concat
 
@@ -114,7 +114,7 @@ let compile_buffer ~project ~editor ~page ?(join=false) () =
         let args =
           Array.concat [
             project.Prj.autocomp_dflags;
-            (Array.of_list (Miscellanea.split " +" project.Prj.autocomp_cflags));
+            (Array.of_list (Utils.split " +" project.Prj.autocomp_cflags));
             [| "-error-style"; "short" |];
             (include_flags project);
             (ppx_flags project);
@@ -125,7 +125,7 @@ let compile_buffer ~project ~editor ~page ?(join=false) () =
         let process_err stderr =
           let line = input_line stderr in
           let line = Str.replace_first re_tmp "File \"" line in
-          Buffer.add_string compiler_output (Miscellanea.rtrim line);
+          Buffer.add_string compiler_output (Utils.rtrim line);
           Buffer.add_char compiler_output '\n';
         in
         let at_exit _ =

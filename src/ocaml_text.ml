@@ -21,7 +21,7 @@
 *)
 
 open Parser
-open Miscellanea
+open Utils
 
 let shells = ref []
 
@@ -69,7 +69,7 @@ class buffer ?project ?file ?(lexical_enabled=false) () =
           let it = self#get_iter (`LINE i) in
           let line = self#get_line_at_iter it in
           try
-            let _ = Str.search_forward (Miscellanea.regexp "\\([ \t]+\\)\r?\n$") line 0 in
+            let _ = Str.search_forward (Utils.regexp "\\([ \t]+\\)\r?\n$") line 0 in
             let len = String.length (Str.matched_group 1 line) in
             let stop = it#forward_to_line_end in
             let start = stop#backward_chars len in
@@ -101,7 +101,7 @@ class buffer ?project ?file ?(lexical_enabled=false) () =
           if String.length phrase > 0 then begin
             let phrase =
               try
-                Str.search_backward (Miscellanea.regexp ";;") phrase (String.length phrase) |> ignore;
+                Str.search_backward (Utils.regexp ";;") phrase (String.length phrase) |> ignore;
                 phrase
               with Not_found -> phrase ^ ";;"
             in
@@ -170,7 +170,7 @@ class buffer ?project ?file ?(lexical_enabled=false) () =
             let start, stop = self#selection_bounds in
             let start, _ = if start#compare stop > 0 then stop, start else start, stop in
             if String.contains selection '_' || String.contains selection '.' then begin
-              let parts = Miscellanea.split "[_.]" selection in
+              let parts = Utils.split "[_.]" selection in
               let start = ref start in
               select_word_state <- List.map begin fun p ->
                   match !start#forward_search p with
@@ -211,7 +211,7 @@ class buffer ?project ?file ?(lexical_enabled=false) () =
           let s = Glib.Utf8.from_unichar c in not (List.mem s ["."; "_"; "'"])
         end)#forward_char in
       let lident = String.trim (self#get_text ~start ~stop ()) in
-      let lident = Str.split_delim (Miscellanea.regexp "\\.") lident in
+      let lident = Str.split_delim (Utils.regexp "\\.") lident in
       let lident =
         if match lident with x :: _ -> x = "" | _ -> false
         then List.tl lident else lident in

@@ -22,7 +22,7 @@
 
 open Printf
 open GUtil
-open Miscellanea
+open Utils
 open Preferences
 
 class ['a] toolbar ~(messages : Messages.messages) ~(hmessages : Messages.messages) ~(editor : Editor.editor) () =

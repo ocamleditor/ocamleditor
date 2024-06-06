@@ -21,7 +21,7 @@
 *)
 
 open Printf
-open Miscellanea
+open Utils
 
 type t =
   | Templ of templ
@@ -110,7 +110,7 @@ module Action = struct
             let break = if has_break then break#forward_char else break in
             let t1 = start#get_text ~stop:break in
             let t2 = break#get_text ~stop in
-            Some (Miscellanea.rtrim t1, t2, has_break)
+            Some (Utils.rtrim t1, t2, has_break)
         | _ -> None
       in
       view#buffer#delete ~start ~stop;

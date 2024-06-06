@@ -21,7 +21,7 @@
 *)
 
 
-open Miscellanea
+open Utils
 open Printf
 open Target
 open Task
@@ -88,25 +88,25 @@ let print_add_args bc et args =
               in
               let arg =
                 match arg.bsa_pass with
-                | `key -> 
+                | `key ->
                     [ sprintf "\n                                %s && (!%s = Some true), \"%s\"" condition (ident_of_arg arg) arg.bsa_key ]
-                | `value when arg.bsa_type = Bool -> 
+                | `value when arg.bsa_type = Bool ->
                     [ sprintf "\n                                %s, (match !%s with Some x -> string_of_bool x | _ -> \"\")" condition (ident_of_arg arg) ]
-                | `value -> 
+                | `value ->
                     [ sprintf "\n                                %s, (match !%s with Some x -> x | _ -> \"\")" condition (ident_of_arg arg) ]
-                | `key_value when arg.bsa_type = Bool -> 
-                    [ sprintf "\n                                %s, (match !%s with Some _ -> \"%s\" | _ -> \"\")" 
+                | `key_value when arg.bsa_type = Bool ->
+                    [ sprintf "\n                                %s, (match !%s with Some _ -> \"%s\" | _ -> \"\")"
                         condition (ident_of_arg arg) arg.bsa_key;
-                      sprintf "\n                                %s, (match !%s with Some x -> sprintf \"%%b\" x | _ -> \"\")" 
+                      sprintf "\n                                %s, (match !%s with Some x -> sprintf \"%%b\" x | _ -> \"\")"
                         condition (ident_of_arg arg)
                     ]
-                | `key_value -> 
+                | `key_value ->
                     [
                       sprintf "\n                                %s, (match !%s with Some _ -> \"%s\" | _ -> \"\")"
                         condition (ident_of_arg arg) arg.bsa_key;
                       sprintf "\n                                %s, (match !%s with Some x -> sprintf \"%%s\" x | _ -> \"\")"
                         condition (ident_of_arg arg)
-                    ] 
+                    ]
               in
               arg :: acc
           | `replace _ -> acc (* TODO:  *)
@@ -187,7 +187,7 @@ let print_cmd_line_args ochan project =
   end args;
   (*  *)
   let cargs = List.map (fun a -> a.bsa_cmd, a) args in
-  let groups = Xlist.group_assoc cargs in
+  let groups = ListExt.group_assoc cargs in
   fprintf ochan "\nlet cmd_line_args = [\n";
   List.iter begin fun (cmd, args) ->
     fprintf ochan "  %s, [\n" (Build_script_command.code_of_command cmd);
@@ -248,11 +248,11 @@ module Minification = struct
 
   let minify =
     let re = Str.regexp "[\r\n]+ *" in
-    fun buf ->          
+    fun buf ->
       (* TODO: find something less ugly than this use of Bytes.(..) *)
       let b_buf = Bytes.of_string buf in
       buf
-      |> Comments.scan 
+      |> Comments.scan
       |> List.iter begin fun (b, e, _) ->
         let len = e - b in
         String.blit (String.make len ' ') 0 b_buf b len
@@ -266,7 +266,7 @@ let print ~project ~filename ~minify () =
   let ochan = open_out_bin filename in
   let finally () = close_out_noerr ochan in
   try
-    Oebuild_script.code 
+    Oebuild_script.code
     |> (if minify then Minification.minify else Fun.id)
     |> output_string ochan;
     output_string ochan "open Arg\n";
