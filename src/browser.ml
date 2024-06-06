@@ -78,6 +78,7 @@ class browser window =
   let _ =
     if Oe_config.unify_statusbars then
       editor#connect#switch_page ~callback:(fun page -> statusbar#pack_editorbar page#statusbar) |> ignore;
+    editor#connect#notification ~callback:statusbar#flash_message |> ignore;
   in
   (** Spinner *)
   let activate_spinner (active : Activity.t list) =

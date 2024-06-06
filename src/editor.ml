@@ -45,6 +45,7 @@ class editor () =
   let file_history_changed = new file_history_changed () in
   let outline_visibility_changed = new outline_visibility_changed () in
   let file_saved = new file_saved () in
+  let notification = new notification () in
   let changed = new changed () in
   let add_page = new add_page () in
   object (self)
@@ -316,7 +317,7 @@ class editor () =
             ~look_for:`Implementation
             ~source_code:(page#buffer#get_text ())
             begin function
-            | `String msg -> Printf.printf "%s\n%!" msg;
+            | `String msg -> notification#call msg
             | `Assoc assoc ->
                 let file, ln, col = ref "", ref 0, ref 0 in
                 assoc |> List.iter (function
@@ -326,14 +327,15 @@ class editor () =
                     | _ -> ());
                 GtkThread.async begin fun () ->
                   self#location_history_add ~page ~iter ~kind:`BROWSE ();
-                  self#goto_location !file !ln !col
+                  self#goto_location !file !ln !col;
                 end ()
             | _ -> ()
             end;
       | _ -> ()
 
     method goto_location filename line col =
-      match self#get_page (`FILENAME filename) with
+      let target_page = if filename = "" then `ACTIVE else `FILENAME filename in
+      match self#get_page target_page with
       | Some page ->
           if not page#load_complete then (self#load_page ~scroll:false page);
           let buffer = page#buffer in
@@ -803,7 +805,7 @@ class editor () =
       page#error_indication#hide_tooltip();
 
     val signals = new signals hpaned#as_widget ~add_page ~switch_page ~remove_page ~changed ~modified_changed
-      ~file_history_changed ~outline_visibility_changed ~file_saved
+      ~file_history_changed ~outline_visibility_changed ~file_saved ~notification
     method connect = signals
     method disconnect = signals#disconnect
 
@@ -1019,14 +1021,17 @@ and add_page () = object inherit [Editor_page.page] signal () end
 and file_history_changed () = object inherit [File_history.t] signal () end
 and outline_visibility_changed () = object inherit [bool] signal () end
 and file_saved () = object inherit [string] signal () end
+and notification () = object inherit [string] signal () end
 
 and signals hpaned ~add_page ~switch_page ~remove_page ~changed ~modified_changed
-    ~file_history_changed ~outline_visibility_changed ~file_saved =
+    ~file_history_changed ~outline_visibility_changed ~file_saved ~notification =
   object
     inherit GObj.widget_signals_impl hpaned
     inherit add_ml_signals hpaned [switch_page#disconnect;
                                    remove_page#disconnect; modified_changed#disconnect;
-                                   add_page#disconnect; changed#disconnect; outline_visibility_changed#disconnect]
+                                   add_page#disconnect; changed#disconnect;
+                                   outline_visibility_changed#disconnect;
+                                   notification#disconnect]
     method switch_page = switch_page#connect ~after
     method remove_page = remove_page#connect ~after
     method modified_changed = modified_changed#connect ~after
@@ -1035,5 +1040,6 @@ and signals hpaned ~add_page ~switch_page ~remove_page ~changed ~modified_change
     method file_history_changed = file_history_changed#connect ~after
     method outline_visibility_changed = outline_visibility_changed#connect ~after
     method file_saved = file_saved#connect ~after
+    method notification = notification#connect ~after
   end
 
