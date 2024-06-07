@@ -71,13 +71,10 @@ let init_tags ?(tags=(!tags)) ?(colors=(!colors))
           end
         end
       end
-    end tags colors;;
-(*begin
-  match table#lookup "error" with
-    | None -> ()
-    | Some t -> table#remove t
-  end;
-  ignore(tb#create_tag ~name:"error" [`FOREGROUND "red"; `WEIGHT `BOLD])*)
+    end tags colors;
+  (* Give the unused warning tag the highest priority *)
+  table#lookup Oe_config.warning_unused_tag_name
+  |> Option.iter (fun t -> GtkText.Tag.set_priority t (table#size - 1))
 
 (* Line_offset *)
 let line_starts s =
