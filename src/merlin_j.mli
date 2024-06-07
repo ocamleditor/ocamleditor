@@ -34,7 +34,7 @@ type type_enclosing_answer = Merlin_t.type_enclosing_answer =
   | Exception of message
 
 
-type range = Merlin_t.range = { start: pos; stop: pos }
+type range = Merlin_t.range = { file: string option; start: pos; stop: pos }
 
 type list_modules = Merlin_t.list_modules = { value: string list }
 

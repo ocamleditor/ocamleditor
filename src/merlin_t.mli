@@ -32,7 +32,7 @@ type type_enclosing_answer =
   | Exception of message
 
 
-type range = { start: pos; stop: pos }
+type range = { file: string option; start: pos; stop: pos }
 
 type list_modules = { value: string list }
 

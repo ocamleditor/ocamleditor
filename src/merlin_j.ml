@@ -34,7 +34,7 @@ type type_enclosing_answer = Merlin_t.type_enclosing_answer =
   | Exception of message
 
 
-type range = Merlin_t.range = { start: pos; stop: pos }
+type range = Merlin_t.range = { file: string option; start: pos; stop: pos }
 
 type list_modules = Merlin_t.list_modules = { value: string list }
 
@@ -1153,10 +1153,78 @@ let read_type_enclosing_answer = (
 )
 let type_enclosing_answer_of_string s =
   read_type_enclosing_answer (Yojson.Safe.init_lexer ()) (Lexing.from_string s)
+let write__string_option = (
+  Atdgen_runtime.Oj_run.write_option (
+    Yojson.Safe.write_string
+  )
+)
+let string_of__string_option ?(len = 1024) x =
+  let ob = Buffer.create len in
+  write__string_option ob x;
+  Buffer.contents ob
+let read__string_option = (
+  fun p lb ->
+    Yojson.Safe.read_space p lb;
+    match Yojson.Safe.start_any_variant p lb with
+      | `Edgy_bracket -> (
+          match Yojson.Safe.read_ident p lb with
+            | "None" ->
+              Yojson.Safe.read_space p lb;
+              Yojson.Safe.read_gt p lb;
+              (None : _ option)
+            | "Some" ->
+              Atdgen_runtime.Oj_run.read_until_field_value p lb;
+              let x = (
+                  Atdgen_runtime.Oj_run.read_string
+                ) p lb
+              in
+              Yojson.Safe.read_space p lb;
+              Yojson.Safe.read_gt p lb;
+              (Some x : _ option)
+            | x ->
+              Atdgen_runtime.Oj_run.invalid_variant_tag p x
+        )
+      | `Double_quote -> (
+          match Yojson.Safe.finish_string p lb with
+            | "None" ->
+              (None : _ option)
+            | x ->
+              Atdgen_runtime.Oj_run.invalid_variant_tag p x
+        )
+      | `Square_bracket -> (
+          match Atdgen_runtime.Oj_run.read_string p lb with
+            | "Some" ->
+              Yojson.Safe.read_space p lb;
+              Yojson.Safe.read_comma p lb;
+              Yojson.Safe.read_space p lb;
+              let x = (
+                  Atdgen_runtime.Oj_run.read_string
+                ) p lb
+              in
+              Yojson.Safe.read_space p lb;
+              Yojson.Safe.read_rbr p lb;
+              (Some x : _ option)
+            | x ->
+              Atdgen_runtime.Oj_run.invalid_variant_tag p x
+        )
+)
+let _string_option_of_string s =
+  read__string_option (Yojson.Safe.init_lexer ()) (Lexing.from_string s)
 let write_range : _ -> range -> _ = (
   fun ob (x : range) ->
     Buffer.add_char ob '{';
     let is_first = ref true in
+    (match x.file with None -> () | Some x ->
+      if !is_first then
+        is_first := false
+      else
+        Buffer.add_char ob ',';
+        Buffer.add_string ob "\"file\":";
+      (
+        Yojson.Safe.write_string
+      )
+        ob x;
+    );
     if !is_first then
       is_first := false
     else
@@ -1185,6 +1253,7 @@ let read_range = (
   fun p lb ->
     Yojson.Safe.read_space p lb;
     Yojson.Safe.read_lcurl p lb;
+    let field_file = ref (None) in
     let field_start = ref (None) in
     let field_stop = ref (None) in
     try
@@ -1198,7 +1267,15 @@ let read_range = (
           match len with
             | 3 -> (
                 if String.unsafe_get s pos = 'e' && String.unsafe_get s (pos+1) = 'n' && String.unsafe_get s (pos+2) = 'd' then (
-                  1
+                  2
+                )
+                else (
+                  -1
+                )
+              )
+            | 4 -> (
+                if String.unsafe_get s pos = 'f' && String.unsafe_get s (pos+1) = 'i' && String.unsafe_get s (pos+2) = 'l' && String.unsafe_get s (pos+3) = 'e' then (
+                  0
                 )
                 else (
                   -1
@@ -1206,7 +1283,7 @@ let read_range = (
               )
             | 5 -> (
                 if String.unsafe_get s pos = 's' && String.unsafe_get s (pos+1) = 't' && String.unsafe_get s (pos+2) = 'a' && String.unsafe_get s (pos+3) = 'r' && String.unsafe_get s (pos+4) = 't' then (
-                  0
+                  1
                 )
                 else (
                   -1
@@ -1221,6 +1298,16 @@ let read_range = (
       (
         match i with
           | 0 ->
+            if not (Yojson.Safe.read_null_if_possible p lb) then (
+              field_file := (
+                Some (
+                  (
+                    Atdgen_runtime.Oj_run.read_string
+                  ) p lb
+                )
+              );
+            )
+          | 1 ->
             field_start := (
               Some (
                 (
@@ -1228,7 +1315,7 @@ let read_range = (
                 ) p lb
               )
             );
-          | 1 ->
+          | 2 ->
             field_stop := (
               Some (
                 (
@@ -1251,7 +1338,15 @@ let read_range = (
             match len with
               | 3 -> (
                   if String.unsafe_get s pos = 'e' && String.unsafe_get s (pos+1) = 'n' && String.unsafe_get s (pos+2) = 'd' then (
-                    1
+                    2
+                  )
+                  else (
+                    -1
+                  )
+                )
+              | 4 -> (
+                  if String.unsafe_get s pos = 'f' && String.unsafe_get s (pos+1) = 'i' && String.unsafe_get s (pos+2) = 'l' && String.unsafe_get s (pos+3) = 'e' then (
+                    0
                   )
                   else (
                     -1
@@ -1259,7 +1354,7 @@ let read_range = (
                 )
               | 5 -> (
                   if String.unsafe_get s pos = 's' && String.unsafe_get s (pos+1) = 't' && String.unsafe_get s (pos+2) = 'a' && String.unsafe_get s (pos+3) = 'r' && String.unsafe_get s (pos+4) = 't' then (
-                    0
+                    1
                   )
                   else (
                     -1
@@ -1274,6 +1369,16 @@ let read_range = (
         (
           match i with
             | 0 ->
+              if not (Yojson.Safe.read_null_if_possible p lb) then (
+                field_file := (
+                  Some (
+                    (
+                      Atdgen_runtime.Oj_run.read_string
+                    ) p lb
+                  )
+                );
+              )
+            | 1 ->
               field_start := (
                 Some (
                   (
@@ -1281,7 +1386,7 @@ let read_range = (
                   ) p lb
                 )
               );
-            | 1 ->
+            | 2 ->
               field_stop := (
                 Some (
                   (
@@ -1298,6 +1403,7 @@ let read_range = (
     with Yojson.End_of_object -> (
         (
           {
+            file = !field_file;
             start = (match !field_start with Some x -> x | None -> Atdgen_runtime.Oj_run.missing_field p "start");
             stop = (match !field_stop with Some x -> x | None -> Atdgen_runtime.Oj_run.missing_field p "stop");
           }
