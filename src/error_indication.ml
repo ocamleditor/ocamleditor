@@ -46,7 +46,7 @@ class error_indication (view : Ocaml_text.view) vscrollbar global_gutter =
           Gobject.Property.set tag_error#as_tag {Gobject.name="underline"; conv=Gobject.Data.int} 4;
     end;
     let tag_warning = buffer#create_tag ~name:(sprintf "tag_warning-%f" ts) [`LEFT_MARGIN view#left_margin] in
-    let tag_warning_unused = buffer#create_tag ~name:(sprintf "tag_warning_unused-%f" ts)
+    let tag_warning_unused = buffer#create_tag ~name:Oe_config.warning_unused_tag_name
         [`FOREGROUND (?? Oe_config.warning_unused_color); `STYLE `ITALIC] in
     tag_error, tag_warning, tag_warning_unused
   in
