@@ -108,14 +108,20 @@ let remove_highlight qi wi =
 let add_wininfo qi callback =
   !!Lock.wininfo (fun wi -> qi.windows <- wi :: qi.windows; callback())
 
+let is_poiter_over (wi : wininfo) =
+  try
+    let px, py = Gdk.Window.get_pointer_location wi.window#misc#window in
+    px >= 0 && py >= 0
+  with Gpointer.Null -> false
+
 (** Starts a timer that closes the specified quick-info window and removes
     expression highlighting in the editor. An exception is the case
     in which the window is pinned when the timer expires.
     Delayed close allows the user to move the mouse pointer over the window
     to pin it before it closes. *)
 let remove_wininfo qi wi =
-  GMain.Timeout.add ~ms:200 ~callback:begin fun () ->
-    if not wi.is_pinned then begin
+  GMain.Timeout.add ~ms:300 ~callback:begin fun () ->
+    if not wi.is_pinned && not (is_poiter_over wi) then begin
       !!Lock.wininfo begin fun () ->
         if not wi.is_pinned then remove_highlight qi wi;
         qi.windows <- qi.windows |> List.filter (fun x -> x.window#misc#get_oid <> wi.window#misc#get_oid);
