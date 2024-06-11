@@ -349,7 +349,7 @@ class page ?file ~project ~scroll_offset ~offset ~editor () =
         buffer#sync_autocomp_time ();
         Autocomp.compile_buffer ~project ~editor ~page:self ?join ();
       end else begin
-        editor#pack_outline (Cmt_view.empty());
+        editor#pack_outline (Outline_view.empty());
         self#set_outline None;
       end
 

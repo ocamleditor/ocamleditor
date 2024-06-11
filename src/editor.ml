@@ -932,7 +932,7 @@ class editor () =
             match page#outline with
             | Some outline when self#show_outline (*&& outline#get_oid <> hpaned#child1#get_oid*) ->
                 self#pack_outline outline#coerce
-            | _ -> self#pack_outline (Cmt_view.empty())
+            | _ -> self#pack_outline (Outline_view.empty())
           end
         end);
       (* Record last active page *)

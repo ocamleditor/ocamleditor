@@ -208,7 +208,7 @@ class browser window =
       Project.load_path proj;
       editor#set_history_switch_page_locked true;
       (*crono ~label:"close_all" *)editor#close_all ();
-      editor#pack_outline (Cmt_view.empty());
+      editor#pack_outline (Outline_view.empty());
       editor#set_project proj;
       Sys.chdir (proj.root // Prj.default_dir_src);
       Gmisclib.Idle.add ~prio:300 self#set_title;
