@@ -25,13 +25,36 @@ module ColorOps = Color
 open Preferences
 open GUtil
 open Cmt_format
-open Location
 open Typedtree
 open! Asttypes
 open! Types
 
 module Log = Common.Log.Make(struct let prefix = "Outline_view" end)
 let _ = Log.set_verbosity `DEBUG
+
+
+
+(** [Lexing.postion] copy *)
+type position = Lexing.position = {
+  pos_fname : string;
+  pos_lnum  : int;
+  pos_bol   : int;
+  pos_cnum  : int;
+}
+
+(** [Location.t] copy *)
+type location = Location.t = {
+  loc_start : position;
+  loc_end   : position;
+  loc_ghost : bool;
+}
+
+(** ['a Location.loc] & ['a Asttypes.loc] copy *)
+type 'a loc = 'a Location.loc = {
+  txt : 'a;
+  loc : location;
+}
+
 
 type kind =
   | Function
@@ -137,22 +160,6 @@ let is_function type_expr =
     | _ -> false
   in f type_expr;;
 
-let string_of_type_expr ?(is_method=false) te =
-  match [@warning "-4"] Types.get_desc te with
-  | Tarrow (lab, t1, t2, _) ->
-      if is_method then Odoc_info.string_of_type_expr t2
-      else begin
-        let label =
-          match lab with
-          | Nolabel -> ""
-          | Labelled l -> l ^ ":"
-          | Optional l -> "?" ^ l ^ ":"
-        in
-        (* Still buggy: "?label:int" will print "?label:int option" *)
-        sprintf "%s%s -> %s" label (Odoc_info.string_of_type_expr t1) (Odoc_info.string_of_type_expr t2)
-      end
-  | _ -> Odoc_info.string_of_type_expr te;;
-
 let string_of_longident t
   = String.concat "." @@ Longident.flatten t
 
@@ -170,6 +177,21 @@ let empty () =
 
 let dummy_re = Str.regexp ""
 
+let outline_iterator (model : GTree.tree_store) =
+  let super = Tast_iterator.default_iterator in
+  let open Tast_iterator in
+  let structure_item iterator (item : Typedtree.structure_item) =
+    let { str_desc; _ } = item in
+    let row = model#append () in
+    ( match str_desc with
+      | Tstr_eval (_, _) -> print_endline "eval ??"
+      | _ -> model#set ~row ~column:col_icon (??? Icons.init)
+    ) [@warning "-fragile-match"];
+
+    super.structure_item iterator item
+  in
+  { super with structure_item }
+
 class widget ~page () =
   let model = GTree.tree_store cols in
   let model_sort_default = GTree.model_sort model in
@@ -185,31 +207,26 @@ class widget ~page () =
   let _ = vc#add_attribute renderer_pixbuf "pixbuf" col_icon in
 
   let _ = view#append_column vc in
-  object
+  let iterator = outline_iterator model in
+  object (self)
     inherit GObj.widget vbox#as_widget
 
-    method load () = ()
+    method load () =
+      let compile_buffer () = page#compile_buffer ?join:(Some true) () in
+      let cmt_opt = Binannot.read_cmt ~project:page#project ~filename:page#get_filename ~compile_buffer () in
+      match cmt_opt with
+      | None -> ()
+      | Some (_, _, cmt) -> self#load_cmt cmt
+
+
+    method private load_cmt cmt = match cmt.cmt_annots with
+      | Implementation impl -> iterator.structure iterator impl
+      | _ ->
+          print_endline "Got an cmt"
 
     method view = view
 
     method select_from_buffer ?(align : float option) (mark : Gtk.text_mark) = false
-
-    method private append ?parent ?kind ?loc ?loc_body name typ =
-      let markup = name ^ typ in
-      let info = {
-        typ ;
-        kind ;
-        location = loc ;
-        body = loc_body ;
-        mark = None
-      } in
-      let path, row =
-        let row = model#append ?parent () in
-        let path = model#get_path row in
-        Option.iter (model#set ~row ~column:col_icon) (pixbuf_of_kind kind);
-        path, row
-      in
-      ()
 
 
   end
