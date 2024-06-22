@@ -604,7 +604,7 @@ let help ~browser ~group ~flags items =
   let system_properties = GMenu.menu_item ~label:"System Properties" ~packing:menu#add () in
   ignore (system_properties#connect#activate ~callback:Menu_help.system_properties);
   let about = GMenu.menu_item ~label:(sprintf "About %s" About.program_name) ~packing:menu#add () in
-  ignore (about#connect#activate ~callback:(Menu_help.about editor));
+  ignore (about#connect#activate ~callback:Menu_help.about);
   help, menu
 ;;
 
