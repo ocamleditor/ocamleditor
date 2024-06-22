@@ -19,22 +19,13 @@ let rec segments drawable = function
   | ((x1, y1), (x2, y2)) :: more ->
       line drawable x1 y1 x2 y2; segments drawable more
 
-let rectangle drawable ~x ~y ~width ~height ?(filled = false) () =
-  Cairo.move_to drawable (f x) (f y);
-  Cairo.line_to drawable (f (x + width)) (f y);
-  Cairo.line_to drawable (f (x + width)) (f (y + height));
-  Cairo.line_to drawable (f x) (f (y + height));
-  Cairo.line_to drawable (f x) (f y);
-
+let [@inline] rectangle drawable ~x ~y ~width ~height ?(filled = false) () =
+  Cairo.rectangle drawable (f x) (f y) ~w:(f width) ~h:(f height);
   if filled then Cairo.fill drawable else Cairo.stroke drawable
 ;;
 
-let rectanglef drawable ~x ~y ~w ~h ?(filled = false) () =
-  Cairo.move_to drawable x y;
-  Cairo.line_to drawable (x +. w) y;
-  Cairo.line_to drawable (x +. w) (y +. h);
-  Cairo.line_to drawable x (y +. h);
-  Cairo.line_to drawable x y;
+let [@inline] rectanglef drawable ~x ~y ~w ~h ?(filled = false) () =
+  Cairo.rectangle drawable x y ~w ~h;
 
   if filled then Cairo.fill drawable else Cairo.stroke drawable
 ;;
