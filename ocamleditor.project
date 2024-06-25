@@ -195,7 +195,7 @@
       <libs>process_termination odoc_info gmisclib common icons otherwidgets oebuildlib ocamleditor_lib</libs>
       <other_objects></other_objects>
       <files>ocamleditor.ml</files>
-      <package>atdgen-runtime,cairo2,compiler-libs.common,ocamldiff,dynlink,lablgtk3,ocamldoc,ocp-indent.lib,str,unix,xml-light,yojson</package>
+      <package>atdgen-runtime,cairo2,compiler-libs.common,dynlink,lablgtk3,memtrace,ocamldiff,ocamldoc,ocp-indent.lib,str,unix,xml-light,yojson</package>
       <includes>gmisclib common icons otherwidgets oebuild </includes>
       <thread>true</thread>
       <vmthread>false</vmthread>

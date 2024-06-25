@@ -20,7 +20,6 @@
 
 *)
 
-open Printf
 module ColorOps = Color
 open Preferences
 open GUtil
@@ -31,7 +30,6 @@ open! Types
 
 module Log = Common.Log.Make(struct let prefix = "Outline_view" end)
 let _ = Log.set_verbosity `DEBUG
-
 
 
 (** [Lexing.postion] copy *)
@@ -177,20 +175,111 @@ let empty () =
 
 let dummy_re = Str.regexp ""
 
+module M = struct
+  type t = int
+  type s = string
+  let t = 1
+  module N = struct
+    let v = 2
+  end
+end
+
+let count = ref 0
+let parent_row = ref None
+
+let model_clear (model : GTree.tree_store) =
+  count := 0;
+  parent_row := None;
+  model#clear ()
+
+let model_append (model : GTree.tree_store) ?icon text =
+  let parent = !parent_row in
+  let row = model#append ?parent () in
+  let () = Option.iter (fun icon -> model#set ~row ~column:col_icon (??? icon)) icon in
+  let () = model#set ~row ~column:col_markup text in
+  let () = model#set ~row ~column:col_default_sort !count in
+  incr count;
+  row
+
+let update_parent_markup
+    ( model : GTree.tree_store )
+    ( fn : string -> string)
+  =
+  match !parent_row with
+  | None -> ()
+  | Some row -> let markup = fn (model#get ~row ~column:col_markup) in
+      model#set ~row ~column:col_markup markup
+
+let b text = "<b>" ^ text ^ "</b>"
+let i text = "<i>" ^ text ^ "</i>"
+
+let string_of_id ?(default="") id =
+  id |> Option.map Ident.name |> Option.value ~default
+
+let string_of_functor_parameter = function
+  | Typedtree.Unit -> "()"
+  | Typedtree.Named (id, _, _) ->
+      let name = string_of_id id in
+      "(" ^ name ^ " : type)"
+
 let outline_iterator (model : GTree.tree_store) =
   let super = Tast_iterator.default_iterator in
-  let open Tast_iterator in
-  let structure_item iterator (item : Typedtree.structure_item) =
-    let { str_desc; _ } = item in
-    let row = model#append () in
-    ( match str_desc with
-      | Tstr_eval (_, _) -> print_endline "eval ??"
-      | _ -> model#set ~row ~column:col_icon (??? Icons.init)
-    ) [@warning "-fragile-match"];
+  let open! Tast_iterator in
 
-    super.structure_item iterator item
+  let append text = model_append model text |> ignore in
+  let structure_item iterator (item : structure_item) =
+
+    let { str_desc; _ } = item in
+    ( match str_desc with
+      | Tstr_eval (_, _) -> append "_ (eval)"
+      | Tstr_value (_, _) -> append "_ value)"
+      | Tstr_primitive _ -> append "_ (primitive)"
+      | Tstr_type (_, _) -> append "_ (type)"
+      | Tstr_typext _ -> append "_ (typext)"
+      | Tstr_exception _ -> append "_ (exception)"
+      | Tstr_module mb -> iterator.module_binding iterator mb
+      | Tstr_recmodule _ -> append "_ (rec module)"
+      | Tstr_modtype _ -> append "_ (modtype)"
+      | Tstr_open _ -> append "_ (open)"
+      | Tstr_class _ -> append "_ (class)"
+      | Tstr_class_type _ -> append "_ (classtype)"
+      | Tstr_include _ -> append "_ (include)"
+      | Tstr_attribute _ -> append "_ (attribute)"
+    )
   in
-  { super with structure_item }
+
+  let module_binding iterator (mb : module_binding) =
+    let { mb_id; mb_expr; _ } = mb in
+    let text = string_of_id mb_id in
+
+    let parent = !parent_row in
+    let row =  model_append model ~icon:Icons.module_impl (b text) in
+    parent_row := Some row;
+    iterator.module_expr iterator mb_expr;
+    parent_row := parent
+  in
+
+  let module_expr iterator { mod_desc; _ } =
+    match mod_desc with
+    | Tmod_ident (_, { txt; _ }) ->
+        let alias = String.concat "." @@ Longident.flatten txt in
+        model_append model ~icon:Icons.simple (i alias) |> ignore
+    | Tmod_structure structure ->
+        iterator.structure iterator structure;
+    | Tmod_functor (p, expr) ->
+        let param = string_of_functor_parameter p in
+        update_parent_markup model (fun name -> name ^ " " ^ param) ;
+        iterator.module_expr iterator expr;
+    | Tmod_apply (m1, m2, _) ->
+        iterator.module_expr iterator m1;
+        iterator.module_expr iterator m2;
+    | Tmod_constraint (_, _, _, _) ->
+        model_append model ~icon:Icons.simple "Constraint" |> ignore;
+    | Tmod_unpack (_, _) ->
+        model_append model ~icon:Icons.simple "Unpack ???" |> ignore
+
+  in
+  { super with structure_item; module_binding; module_expr }
 
 class widget ~page () =
   let model = GTree.tree_store cols in
@@ -201,12 +290,16 @@ class widget ~page () =
   let view = GTree.view ~model:model_sort_default ~headers_visible:false ~packing:sw#add ~width:350 ~height:500 () in
 
   let renderer_pixbuf = GTree.cell_renderer_pixbuf [`YPAD 0; `XPAD 0] in
+  let renderer_markup = GTree.cell_renderer_text [`YPAD 0] in
   let vc = GTree.view_column () in
 
   let _ = vc#pack ~expand:false renderer_pixbuf in
+  let _  = vc#pack ~expand:false renderer_markup  in
   let _ = vc#add_attribute renderer_pixbuf "pixbuf" col_icon in
+  let _ = vc#add_attribute renderer_markup "markup" col_markup in
 
   let _ = view#append_column vc in
+  let _ = view#misc#set_property "enable-tree-lines" (`BOOL true) in
   let iterator = outline_iterator model in
   object (self)
     inherit GObj.widget vbox#as_widget
@@ -219,10 +312,12 @@ class widget ~page () =
       | Some (_, _, cmt) -> self#load_cmt cmt
 
 
-    method private load_cmt cmt = match cmt.cmt_annots with
+    method private load_cmt cmt =
+      model_clear model ;
+      match cmt.cmt_annots with
       | Implementation impl -> iterator.structure iterator impl
       | _ ->
-          print_endline "Got an cmt"
+          print_endline "Not an implementation"
 
     method view = view
 
@@ -232,4 +327,3 @@ class widget ~page () =
   end
 
 let create = new widget
-

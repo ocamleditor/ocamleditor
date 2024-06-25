@@ -132,4 +132,6 @@ let main () = begin
   GtkThread2.main ();
 end
 
-let _ = Printexc.print main ()
+let _ =
+  Memtrace.trace_if_requested ();
+  Printexc.print main ()

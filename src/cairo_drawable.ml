@@ -1,8 +1,8 @@
 
 (* Cairo helpers *)
-let f = float_of_int;;
+let f  = float_of_int;;
 
-let line drawable x1 y1 x2 y2 =
+let [@inline] line drawable x1 y1 x2 y2 =
   let open Cairo in
   move_to drawable (f x1) (f y1);
   line_to drawable (f x2) (f y2);
