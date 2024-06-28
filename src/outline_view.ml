@@ -24,7 +24,6 @@ module ColorOps = Color
 open Preferences
 open Cmt_format
 open Typedtree
-open! Types
 
 module Log = Common.Log.Make(struct let prefix = "Outline_view" end)
 let _ = Log.set_verbosity `DEBUG
@@ -55,6 +54,7 @@ let cols               = new GTree.column_list
 let col_icon           = cols#add (Gobject.Data.gobject_by_name "GdkPixbuf")
 let col_name           = cols#add Gobject.Data.string
 let col_markup         = cols#add Gobject.Data.string
+let col_loc            = cols#add Gobject.Data.int
 let col_lazy           : (unit -> unit) list GTree.column = cols#add Gobject.Data.caml
 let col_default_sort   = cols#add Gobject.Data.int
 
@@ -99,12 +99,14 @@ let model_clear (model : GTree.tree_store) =
 let model_append
     ( model : GTree.tree_store )
     ?icon
+    ?(loc = 0)
     ( text : string )
   =
   let parent = !parent_row in
   let row = model#append ?parent () in
   let () = Option.iter (fun icon -> model#set ~row ~column:col_icon (??? icon)) icon in
   let () = model#set ~row ~column:col_markup text in
+  let () = model#set ~row ~column:col_loc loc in
   let () = model#set ~row ~column:col_default_sort !count in
   incr count;
   row
@@ -205,17 +207,18 @@ let outline_iterator (model : GTree.tree_store) =
       ( iterator : Tast_iterator.iterator )
       { vb_pat; vb_expr; _ }
     =
-    let { pat_desc; _ } = vb_pat in
-    let { exp_type; exp_loc; _ } = vb_expr in
+    let { pat_desc; pat_loc; _ } = vb_pat in
+    let loc = pat_loc.loc_start.pos_cnum in
+    let { exp_type; _ } = vb_expr in
     ( match pat_desc with
       | Tpat_any -> ()  (* let _ = .. *)
       | Tpat_constant _ -> () (* let () = .. *)
       | Tpat_var (id, _) ->
           let icon = if is_function exp_type then Icons.func else Icons.simple in
           let st = Odoc_info.string_of_type_expr exp_type in
-          model_append model ~icon (Ident.name id ^ " : " ^ st) |> ignore;
+          model_append model ~icon ~loc (Ident.name id ^ " : " ^ st) |> ignore;
 
-      | _ -> model_append model "_ (value)" |> ignore;
+      | _ -> model_append model ~loc "_ (value)" |> ignore;
     )
   in
   { super with
@@ -243,6 +246,7 @@ class widget ~page () =
 
   let _ = view#append_column vc in
   let _ = view#misc#set_property "enable-tree-lines" (`BOOL true) in
+  let buffer : Ocaml_text.buffer = page#buffer in
   let iterator = outline_iterator model in
   object (self)
     inherit GObj.widget vbox#as_widget
@@ -266,6 +270,35 @@ class widget ~page () =
 
     method select_from_buffer ?(align : float option) (mark : Gtk.text_mark) = false
 
+    method private selection_changed () =
+      ( match view#selection#get_selected_rows with
+        | path :: _ ->
+            let row = model#get_iter path in
+            let markup = model#get ~row ~column:col_markup in
+            print_endline markup ;
+
+            let offset = model#get ~row ~column:col_loc in
+
+            let text_iter = buffer#get_iter (`OFFSET offset) in
+            let view : Text.view = page#view in
+
+            view#scroll_lazy text_iter ;
+            buffer#select_range text_iter text_iter ;
+            view#misc#grab_focus ();
+
+
+            print_endline @@ "offset : " ^ string_of_int offset ;
+
+
+            ()
+
+
+        | [] -> ()
+      )
+
+    initializer
+      view#selection#connect#changed ~callback:self#selection_changed
+      |> ignore
 
   end
 
