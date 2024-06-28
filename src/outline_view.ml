@@ -22,10 +22,8 @@
 
 module ColorOps = Color
 open Preferences
-open GUtil
 open Cmt_format
 open Typedtree
-open! Asttypes
 open! Types
 
 module Log = Common.Log.Make(struct let prefix = "Outline_view" end)
@@ -53,102 +51,12 @@ type 'a loc = 'a Location.loc = {
   loc : location;
 }
 
-
-type kind =
-  | Function
-  | Simple
-  | Class
-  | Class_virtual
-  | Class_type
-  | Class_inherit
-  | Class_let_bindings
-  | Attribute
-  | Attribute_mutable
-  | Attribute_mutable_virtual
-  | Attribute_virtual
-  | Initializer
-  | Method
-  | Method_private
-  | Method_virtual
-  | Method_private_virtual
-  | Method_inherited
-  | Type
-  | Type_abstract
-  | Type_variant
-  | Type_record
-  | Type_open
-  | Module
-  | Module_functor
-  | Module_type
-  | Module_include
-  | Exception
-  | Error
-  | Warning
-  | Folder_warnings
-  | Folder_errors
-  | Dependencies
-  | Bookmark of GdkPixbuf.pixbuf
-  | Unknown
-
-let pixbuf_of_kind = function
-  | Function -> Some (??? Icons.func)
-  | Simple -> Some (??? Icons.simple)
-  | Method -> Some (??? Icons.met)
-  | Method_private -> Some (??? Icons.met_private)
-  | Method_virtual -> Some (??? Icons.met_virtual)
-  | Method_private_virtual -> Some (??? Icons.met_private_virtual)
-  | Method_inherited -> Some (??? Icons.met)
-  | Initializer -> Some (??? Icons.init)
-  | Attribute -> Some (??? Icons.attribute)
-  | Attribute_mutable -> Some (??? Icons.attribute_mutable)
-  | Attribute_mutable_virtual -> Some (??? Icons.attribute_mutable_virtual)
-  | Attribute_virtual -> Some (??? Icons.attribute_virtual)
-  | Type -> Some (??? Icons.typ)
-  | Type_abstract -> Some (??? Icons.type_abstract)
-  | Type_variant -> Some (??? Icons.type_variant)
-  | Type_record -> Some (??? Icons.type_record)
-  | Type_open -> Some (??? Icons.type_variant)
-  | Class -> Some (??? Icons.classe)
-  | Class_virtual -> Some (??? Icons.class_virtual)
-  | Class_type -> Some (??? Icons.class_type)
-  | Class_inherit -> Some (??? Icons.class_inherit)
-  | Class_let_bindings -> None
-  | Module -> Some (??? Icons.module_impl)
-  | Module_functor -> Some (??? Icons.module_funct)
-  | Module_type -> Some (??? Icons.module_type)
-  | Module_include -> Some (??? Icons.module_include)
-  | Exception -> Some (??? Icons.exc)
-  | Error -> Some (??? Icons.error_14)
-  | Warning -> Some (??? Icons.warning_14)
-  | Folder_warnings -> Some (??? Icons.folder_warning)
-  | Folder_errors -> Some (??? Icons.folder_error)
-  | Dependencies -> None
-  | Bookmark pixbuf -> Some pixbuf
-  | Unknown -> None;;
-
-let pixbuf_of_kind kind_opt = Option.bind kind_opt pixbuf_of_kind
-
-type info = {
-  typ          : string;
-  kind         : kind option;
-  location     : Location.t option;
-  body         : Location.t option;
-  mutable mark : Gtk.text_mark option;
-}
-
 let cols               = new GTree.column_list
 let col_icon           = cols#add (Gobject.Data.gobject_by_name "GdkPixbuf")
 let col_name           = cols#add Gobject.Data.string
 let col_markup         = cols#add Gobject.Data.string
 let col_lazy           : (unit -> unit) list GTree.column = cols#add Gobject.Data.caml
 let col_default_sort   = cols#add Gobject.Data.int
-
-let string_rev str =
-  let len = String.length str in
-  Bytes.init len (fun i -> str.[len - i - 1])
-  |> Bytes.to_string
-
-let string_rev = Miscellanea.Memo.create string_rev;;
 
 let is_function type_expr =
   let rec f t =
@@ -175,14 +83,10 @@ let empty () =
 
 let dummy_re = Str.regexp ""
 
-module M = struct
-  type t = int
-  type s = string
-  let t = 1
-  module N = struct
-    let v = 2
-  end
-end
+type point = { x : int; y : int }
+let make_point x y = { x; y }
+
+let { x = ox; y = oy } as origin = make_point 0 0
 
 let count = ref 0
 let parent_row = ref None
@@ -192,7 +96,11 @@ let model_clear (model : GTree.tree_store) =
   parent_row := None;
   model#clear ()
 
-let model_append (model : GTree.tree_store) ?icon text =
+let model_append
+    ( model : GTree.tree_store )
+    ?icon
+    ( text : string )
+  =
   let parent = !parent_row in
   let row = model#append ?parent () in
   let () = Option.iter (fun icon -> model#set ~row ~column:col_icon (??? icon)) icon in
@@ -203,12 +111,12 @@ let model_append (model : GTree.tree_store) ?icon text =
 
 let update_parent_markup
     ( model : GTree.tree_store )
-    ( fn : string -> string)
+    ( update_fn : string -> string )
   =
   match !parent_row with
-  | None -> ()
-  | Some row -> let markup = fn (model#get ~row ~column:col_markup) in
+  | Some row -> let markup = update_fn (model#get ~row ~column:col_markup) in
       model#set ~row ~column:col_markup markup
+  | None -> ()
 
 let b text = "<b>" ^ text ^ "</b>"
 let i text = "<i>" ^ text ^ "</i>"
@@ -218,9 +126,11 @@ let string_of_id ?(default="") id =
 
 let string_of_functor_parameter = function
   | Typedtree.Unit -> "()"
-  | Typedtree.Named (id, _, _) ->
-      let name = string_of_id id in
-      "(" ^ name ^ " : type)"
+  | Typedtree.Named (id, _, md_type) ->
+      let md_name = string_of_id id in
+      let { mty_type; _ } = md_type in
+      let md_type = Odoc_info.string_of_module_type mty_type in
+      "(" ^ md_name ^ " : TODO " ^ md_type ^ ")"
 
 let outline_iterator (model : GTree.tree_store) =
   let super = Tast_iterator.default_iterator in
@@ -232,7 +142,16 @@ let outline_iterator (model : GTree.tree_store) =
     let { str_desc; _ } = item in
     ( match str_desc with
       | Tstr_eval (_, _) -> append "_ (eval)"
-      | Tstr_value (_, _) -> append "_ value)"
+      | Tstr_value (is_rec, vb) ->
+          if is_rec = Asttypes.Recursive then (
+            let parent = !parent_row in
+            parent_row :=  Some (model_append model (b "rec"));
+            List.iter (iterator.value_binding iterator) vb;
+            parent_row := parent
+          )
+          else
+            List.iter (iterator.value_binding iterator) vb
+
       | Tstr_primitive _ -> append "_ (primitive)"
       | Tstr_type (_, _) -> append "_ (type)"
       | Tstr_typext _ -> append "_ (typext)"
@@ -259,7 +178,10 @@ let outline_iterator (model : GTree.tree_store) =
     parent_row := parent
   in
 
-  let module_expr iterator { mod_desc; _ } =
+  let module_expr
+      ( iterator : Tast_iterator.iterator )
+      { mod_desc; _ }
+    =
     match mod_desc with
     | Tmod_ident (_, { txt; _ }) ->
         let alias = String.concat "." @@ Longident.flatten txt in
@@ -276,10 +198,31 @@ let outline_iterator (model : GTree.tree_store) =
     | Tmod_constraint (_, _, _, _) ->
         model_append model ~icon:Icons.simple "Constraint" |> ignore;
     | Tmod_unpack (_, _) ->
-        model_append model ~icon:Icons.simple "Unpack ???" |> ignore
-
+        model_append model ~icon:Icons.simple "Unpack What" |> ignore
   in
-  { super with structure_item; module_binding; module_expr }
+
+  let value_binding
+      ( iterator : Tast_iterator.iterator )
+      { vb_pat; vb_expr; _ }
+    =
+    let { pat_desc; _ } = vb_pat in
+    let { exp_type; exp_loc; _ } = vb_expr in
+    ( match pat_desc with
+      | Tpat_any -> ()  (* let _ = .. *)
+      | Tpat_constant _ -> () (* let () = .. *)
+      | Tpat_var (id, _) ->
+          let icon = if is_function exp_type then Icons.func else Icons.simple in
+          let st = Odoc_info.string_of_type_expr exp_type in
+          model_append model ~icon (Ident.name id ^ " : " ^ st) |> ignore;
+
+      | _ -> model_append model "_ (value)" |> ignore;
+    )
+  in
+  { super with
+    structure_item;
+    module_binding; module_expr;
+    value_binding
+  }
 
 class widget ~page () =
   let model = GTree.tree_store cols in
@@ -289,7 +232,7 @@ class widget ~page () =
   let sw = GBin.scrolled_window ~shadow_type:`NONE ~hpolicy:`AUTOMATIC ~vpolicy:`AUTOMATIC ~packing:vbox#add () in
   let view = GTree.view ~model:model_sort_default ~headers_visible:false ~packing:sw#add ~width:350 ~height:500 () in
 
-  let renderer_pixbuf = GTree.cell_renderer_pixbuf [`YPAD 0; `XPAD 0] in
+  let renderer_pixbuf = GTree.cell_renderer_pixbuf [`YPAD 0; `YALIGN 0.0; `XPAD 0] in
   let renderer_markup = GTree.cell_renderer_text [`YPAD 0] in
   let vc = GTree.view_column () in
 
