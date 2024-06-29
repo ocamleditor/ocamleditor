@@ -55,7 +55,7 @@ let col_icon           = cols#add (Gobject.Data.gobject_by_name "GdkPixbuf")
 let col_name           = cols#add Gobject.Data.string
 let col_markup         = cols#add Gobject.Data.string
 let col_loc            = cols#add Gobject.Data.int
-let col_lazy           : (unit -> unit) list GTree.column = cols#add Gobject.Data.caml
+let col_tooltip        = cols#add Gobject.Data.string
 let col_default_sort   = cols#add Gobject.Data.int
 
 let is_function type_expr =
@@ -68,6 +68,19 @@ let is_function type_expr =
 
 let string_of_longident t
   = String.concat "." @@ Longident.flatten t
+
+let flatten_type_expr te =
+  let buf = Buffer.create 64 in
+  let is_space = ref false in
+  String.iter (fun ch ->
+      ( match !is_space, ch with
+        | false, ch when ch = '\n' || ch = ' ' -> is_space := false; Buffer.add_char buf ' ';
+        | false, ch -> Buffer.add_char buf ch
+
+        | true, ch  when ch = '\n' || ch = ' ' -> ()
+        | true, ch -> is_space := false; Buffer.add_char buf ch
+      )) te;
+  Buffer.contents buf
 
 (** empty *)
 let empty () =
@@ -98,6 +111,7 @@ let model_append
     ( model : GTree.tree_store )
     ?icon
     ?(loc = 0)
+    ?(tooltip = "TODO")
     ( text : string )
   =
   let parent = !parent_row in
@@ -105,6 +119,7 @@ let model_append
   let () = Option.iter (fun icon -> model#set ~row ~column:col_icon (??? icon)) icon in
   let () = model#set ~row ~column:col_markup text in
   let () = model#set ~row ~column:col_loc loc in
+  let () = model#set ~row ~column:col_tooltip tooltip in
   let () = model#set ~row ~column:col_default_sort !count in
   incr count;
   row
@@ -211,21 +226,29 @@ let outline_iterator (model : GTree.tree_store) =
     ( match pat_desc with
       | Tpat_any -> ()  (* let _ = .. *)
       | Tpat_constant _ -> () (* let () = .. *)
-      | Tpat_var (id, _) ->
+      | Tpat_var (id, _)
+      | Tpat_alias (_, id, _) ->
           let odoc_type = Odoc_info.string_of_type_expr exp_type in
-          let outline_type = Print_type.markup2 odoc_type in
+          let tooltip = Print_type.markup2 odoc_type in
           let name = b @@ Ident.name id in
-          let markup = name ^ " : " ^ outline_type in
+          let flat_type = flatten_type_expr tooltip in
+          let markup = name ^ " : " ^ flat_type in
           if is_function exp_type then
-            let row = model_append model ~icon:Icons.func ~loc markup in
+            let row = model_append model ~icon:Icons.func ~loc ~tooltip markup in
             let parent = !parent_row in
             let () = parent_row := Some row in
             let () = super.expr iterator vb_expr in
             parent_row := parent
           else
-            model_append model ~icon:Icons.simple ~loc markup|> ignore;
+            model_append model ~icon:Icons.simple ~loc ~tooltip markup|> ignore;
 
-      | _ -> model_append model ~loc "_ (pat other)" |> ignore;
+      | Tpat_construct _ -> model_append model ~loc "_ (pat construct)" |> ignore
+      | Tpat_tuple _ -> model_append model ~loc "_ (pat tuple)" |> ignore
+      | Tpat_variant _ -> model_append model ~loc "_ (pat variant)" |> ignore
+      | Tpat_record _ -> model_append model ~loc "_ (pat record)" |> ignore
+      | Tpat_array _ -> model_append model ~loc "_ (pat array)" |> ignore
+      | Tpat_lazy _ -> model_append model ~loc "_ (pat lazy)" |> ignore
+      | Tpat_or _ -> model_append model ~loc "_ (pat constructor)" |> ignore
     )
   in
   { super with
@@ -253,6 +276,7 @@ class widget ~page () =
 
   let _ = view#append_column vc in
   let _ = view#misc#set_property "enable-tree-lines" (`BOOL true) in
+  let _ = view#set_tooltip_column col_tooltip.GTree.index in
   let buffer : Ocaml_text.buffer = page#buffer in
   let iterator = outline_iterator model in
   object (self)
