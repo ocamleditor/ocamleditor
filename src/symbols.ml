@@ -364,8 +364,7 @@ module Cache = struct
           end
       end ());;
 
-  (* Update the part of the symbol cache relative to a specific module
-     (check a single file.cmi). *)
+  (** Updates the part of the symbol cache relative to a specific module (check a single file.cmi). *)
   let update ~cache ~value_path () =
     match value_path with
     | modlid :: _ ->
@@ -475,10 +474,8 @@ let find_local_defs ~regexp ~(project : Prj.t) ~filename ~offset =
   | _ -> []
 ;;
 
-(*
- * Cerca per corrispondenza esatta. In caso di modulo restituisce solo il risultato
- * relativo al modulo (senza i valori in esso contenuti).
- *)
+(** Cerca per corrispondenza esatta. In caso di modulo restituisce solo il risultato
+    relativo al modulo (senza i valori in esso contenuti). *)
 let find_by_modulepath ?(kind=[]) (cache : symbol_cache) value_path =
   ignore (Cache.update ~cache ~value_path ());
   let s_table = cache.syt_table in
@@ -557,10 +554,8 @@ let filter_by_type ~regexp symbols =
     try Str.search_forward regexp symbol.sy_type start |> ignore; true with Not_found -> false
   end symbols
 
-(*
- * Trova tutti i simboli che iniziano con value_path; nel caso di un modulo
- * restituisce anche i valori in esso contenuti.
- *)
+(** Trova tutti i simboli che iniziano con value_path; nel caso di un modulo
+    restituisce anche i valori in esso contenuti. *)
 let filter_by_modulepath ?(update_cache=true) (cache : symbol_cache) value_path =
   if update_cache then (ignore (Cache.update ~cache ~value_path ()));
   let s_table = cache.syt_table in

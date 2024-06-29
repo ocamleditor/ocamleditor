@@ -5,8 +5,6 @@ let _ =
   Log.set_print_timestamp true;
   Log.set_verbosity `ERROR
 
-let (//) = Filename.concat
-
 let loop (f : in_channel -> unit) ((ic, _oc, _ec) as channels) =
   try while true do f ic done
   with End_of_file ->
@@ -134,8 +132,8 @@ let document ~position:(line, col) ?identifier ~filename ~source_code apply =
     | Exception msg -> Log.println `ERROR "%s" msg.value;
   end
 
-let list_modules ?ext ~filename ~source_code apply =
-  [ "list-modules"; "-ext .ml" ]
+let list_modules ?(ext=[".ml"]) ?(filename="dummy") ?(source_code="") apply =
+  "list-modules" :: (match ext with [] -> [] | _ -> ext |> List.map (sprintf "-ext %s"))
   |> execute filename source_code ~continue_with:begin fun json ->
     match Merlin_j.list_modules_answer_of_string json with
     | Return list_modules ->

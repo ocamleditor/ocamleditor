@@ -196,6 +196,7 @@ let (!~~) = Memo.fast ~f:Str.regexp_string
 let regexp = (!~)
 let regexp_string = (!~~)
 let regexp_case_fold = Memo.fast ~f:Str.regexp_case_fold
+let regexp_string_case_fold = Memo.fast ~f:Str.regexp_string_case_fold
 
 (** Miscellaneus string functions *)
 
@@ -270,16 +271,17 @@ struct
     | Append of 'a (** Adds the found substring to the results list. *)
     | Found of 'a (** Returns the found substring as the only result and stops the search. *)
 
-  (** Search for all substrings in a text. The passed function accepts the found
+  (** Searches for all substrings in a text. The passed function accepts the found
       string and its position as parameters and returns a control statement of
       type [Search.t]. The final result of [all] is the list of all results
       found and processed. *)
-  let all pat f ?(pos=0) text  =
+  let all pat f ?(pos=0) ?(lookahead=false) text  =
     let rec search pos acc =
       try
         let pos = search_forward pat text pos in
         let matched_string = matched_string text in
-        let g = search (pos + 1) in
+        let lookahead = if lookahead then String.length matched_string else 1 in
+        let g = search (pos + lookahead) in
         (match f ~pos ~matched_string with
          | Skip -> g acc
          | Append x -> g (x :: acc)

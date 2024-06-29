@@ -69,12 +69,15 @@ let monitor ~message ~monitor ~f () =
 ;;
 
 (** wrap *)
-let wrap kind f x =
-  let is_active () = try Some (List.assoc kind table#get) with Not_found -> None in
-  if is_active () <> None then begin
-    let message = List.assoc kind table#get in
-    monitor ~message ~monitor:is_active ~f ();
-  end else (f())
+let wrap ?(delay=0) kind f x =
+  GMain.Timeout.add ~ms:delay ~callback:begin fun () ->
+    let is_active () = try Some (List.assoc kind table#get) with Not_found -> None in
+    if is_active () <> None then begin
+      let message = List.assoc kind table#get in
+      monitor ~message ~monitor:is_active ~f x;
+    end else (f x);
+    false
+  end |> ignore
 
 
 
