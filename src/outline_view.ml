@@ -81,8 +81,6 @@ let empty () =
   ];
   vp#coerce;;
 
-let dummy_re = Str.regexp ""
-
 type point = { x : int; y : int }
 let make_point x y = { x; y }
 
@@ -116,7 +114,8 @@ let update_parent_markup
     ( update_fn : string -> string )
   =
   match !parent_row with
-  | Some row -> let markup = update_fn (model#get ~row ~column:col_markup) in
+  | Some row ->
+      let markup = update_fn (model#get ~row ~column:col_markup) in
       model#set ~row ~column:col_markup markup
   | None -> ()
 
@@ -140,7 +139,6 @@ let outline_iterator (model : GTree.tree_store) =
 
   let append text = model_append model text |> ignore in
   let structure_item iterator (item : structure_item) =
-
     let { str_desc; _ } = item in
     ( match str_desc with
       | Tstr_eval (_, _) -> append "_ (eval)"
@@ -214,11 +212,20 @@ let outline_iterator (model : GTree.tree_store) =
       | Tpat_any -> ()  (* let _ = .. *)
       | Tpat_constant _ -> () (* let () = .. *)
       | Tpat_var (id, _) ->
-          let icon = if is_function exp_type then Icons.func else Icons.simple in
-          let st = Odoc_info.string_of_type_expr exp_type in
-          model_append model ~icon ~loc (Ident.name id ^ " : " ^ st) |> ignore;
+          let odoc_type = Odoc_info.string_of_type_expr exp_type in
+          let outline_type = Print_type.markup2 odoc_type in
+          let name = b @@ Ident.name id in
+          let markup = name ^ " : " ^ outline_type in
+          if is_function exp_type then
+            let row = model_append model ~icon:Icons.func ~loc markup in
+            let parent = !parent_row in
+            let () = parent_row := Some row in
+            let () = super.expr iterator vb_expr in
+            parent_row := parent
+          else
+            model_append model ~icon:Icons.simple ~loc markup|> ignore;
 
-      | _ -> model_append model ~loc "_ (value)" |> ignore;
+      | _ -> model_append model ~loc "_ (pat other)" |> ignore;
     )
   in
   { super with
@@ -274,25 +281,11 @@ class widget ~page () =
       ( match view#selection#get_selected_rows with
         | path :: _ ->
             let row = model#get_iter path in
-            let markup = model#get ~row ~column:col_markup in
-            print_endline markup ;
-
             let offset = model#get ~row ~column:col_loc in
-
             let text_iter = buffer#get_iter (`OFFSET offset) in
             let view : Text.view = page#view in
-
-            view#scroll_lazy text_iter ;
-            buffer#select_range text_iter text_iter ;
-            view#misc#grab_focus ();
-
-
-            print_endline @@ "offset : " ^ string_of_int offset ;
-
-
-            ()
-
-
+            view#scroll_lazy text_iter;
+            buffer#select_range text_iter text_iter
         | [] -> ()
       )
 
