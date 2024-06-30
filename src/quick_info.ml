@@ -228,8 +228,10 @@ let display qi start stop =
     if r.Gtk.height > 200 then begin
       let sw = GBin.scrolled_window ~hpolicy:`AUTOMATIC () in
       let vp = GBin.viewport ~packing:sw#add () in
-      sw#misc#modify_bg [`NORMAL, `NAME ?? (Preferences.preferences#get.editor_bg_color_popup)];
-      vp#misc#modify_bg [`NORMAL, `NAME ?? (Preferences.preferences#get.editor_bg_color_popup)];
+      if not Oe_config.use_theme_colors_when_possible then begin
+        sw#misc#modify_bg [`NORMAL, `NAME ?? (Preferences.preferences#get.editor_bg_color_popup)];
+        vp#misc#modify_bg [`NORMAL, `NAME ?? (Preferences.preferences#get.editor_bg_color_popup)];
+      end;
       vbox#misc#reparent vp#coerce;
       hide qi;
       close qi "";

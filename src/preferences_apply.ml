@@ -62,23 +62,20 @@ class "GtkTextView" style "s1"
   view#options#set_text_color (ColorOps.name_of_gdk (Preferences.editor_tag_color "lident"));
   let default_bg_color =
     if pref.editor_bg_color_theme then begin
-      (* "Use theme color" option removed *)
-      let color = (*`NAME*) (?? (Preferences.default_values.editor_bg_color_user)) in
-      (*view#misc#modify_bg [`NORMAL, (Oe_config.gutter_color_bg color)];*)
+      let color = (?? (Preferences.default_values.editor_bg_color_user)) in
       view#misc#modify_base [`NORMAL, `NAME color];
-      view#misc#modify_bg [`NORMAL, `NAME color];
       color;
     end else begin
       let color = (*`NAME*) (?? (pref.editor_bg_color_user)) in
       view#misc#modify_base [`NORMAL, `NAME color];
-      view#misc#modify_bg [`NORMAL, `NAME color];
       color;
     end;
   in
   view#options#set_base_color default_bg_color;
-  view#misc#modify_bg [
-    `NORMAL, `NAME ?? (Preferences.preferences#get.editor_bg_color_popup)
-  ];
+  if not Oe_config.use_theme_colors_when_possible then
+    view#misc#modify_bg [
+      `NORMAL, `NAME ?? (Preferences.preferences#get.editor_bg_color_popup)
+    ];
   let editor_tags = pref.editor_tags in
   if pref.editor_highlight_current_line then begin
     view#options#set_highlight_current_line

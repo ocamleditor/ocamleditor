@@ -252,10 +252,9 @@ let show_diff_stat alloc widget =
   popup#event#connect#key_press ~callback:begin fun ev ->
     if GdkEvent.Key.keyval ev = GdkKeysyms._Escape then destroy popup else false
   end |> ignore;
-  let border_color = ColorOps.add_value (?? (Preferences.preferences#get.editor_bg_color_popup)) 0.1 in
-  popup#misc#modify_bg [`NORMAL, `NAME border_color];
   let lbox = GBin.event_box ~packing:popup#add () in
-  lbox#misc#modify_bg [`NORMAL, `NAME ?? (Preferences.preferences#get.editor_bg_color_popup)];
+  if not Oe_config.use_theme_colors_when_possible then
+    lbox#misc#modify_bg [`NORMAL, `NAME ?? (Preferences.preferences#get.editor_bg_color_popup)];
   lbox#add widget;
   begin
     match alloc with

@@ -177,7 +177,7 @@ class incremental () =
                    ?type_hint:(match Sys.os_type with
                        | "Win32" -> Some `UTILITY (* to skip taskbar on Windows *)
                        | _ -> Some `DIALOG)
-                   ~decorated:false ~modal:false ~border_width:1 ()
+                   ~decorated:false ~modal:false ~border_width:2 ()
         in
         dialog#set_skip_taskbar_hint true;
         dialog#set_skip_pager_hint true;
@@ -201,10 +201,11 @@ class incremental () =
         in
         let ebox = GBin.event_box ~border_width:0 ~packing:dialog#add () in
         let box = GPack.hbox ~spacing:0 ~border_width:5 ~packing:ebox#add () in
-        let color = ?? (Preferences.preferences#get.editor_bg_color_popup) in
-        let border_color = ColorOps.add_value color 0.13 in
-        dialog#misc#modify_bg [`NORMAL, `NAME border_color];
-        let _ = ebox#misc#modify_bg [`NORMAL, `NAME color] in
+        let border_color = Preferences.editor_tag_color_name "highlight_current_line" in
+        dialog#misc#modify_bg [`NORMAL, border_color];
+        let _ =
+          if not Oe_config.use_theme_colors_when_possible then
+            ebox#misc#modify_bg [`NORMAL, `NAME ?? (Preferences.preferences#get.editor_bg_color_popup)] in
         let lab = GMisc.label ~markup:"<b><big>Search for: </big></b>\n<span size='xx-small'>Ctrl+F for Find/Replace</span>"
             ~xalign:0.0 ~xpad:0 ~packing:(box#pack ~expand:true ~fill:true) () in
         let e = GEdit.entry ~packing:(box#pack ~expand:false ~fill:false) () in
