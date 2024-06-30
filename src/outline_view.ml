@@ -152,11 +152,12 @@ let outline_iterator (model : GTree.tree_store) =
   let super = Tast_iterator.default_iterator in
   let open! Tast_iterator in
 
-  let append text = model_append model text |> ignore in
+  let append ?loc text = model_append model ?loc text |> ignore in
   let structure_item iterator (item : structure_item) =
-    let { str_desc; _ } = item in
+    let { str_desc; str_loc; _ } = item in
+    let loc = str_loc.loc_start.pos_cnum in
     ( match str_desc with
-      | Tstr_eval (_, _) -> append "_ (eval)"
+      | Tstr_eval (_, _) -> append ~loc "_ (eval)"
       | Tstr_value (is_rec, vb) ->
           if is_rec = Asttypes.Recursive then (
             let parent = !parent_row in
@@ -167,18 +168,18 @@ let outline_iterator (model : GTree.tree_store) =
           else
             List.iter (iterator.value_binding iterator) vb
 
-      | Tstr_primitive _ -> append "_ (primitive)"
-      | Tstr_type (_, _) -> append "_ (type)"
-      | Tstr_typext _ -> append "_ (typext)"
-      | Tstr_exception _ -> append "_ (exception)"
+      | Tstr_primitive _ -> append ~loc "_ (primitive)"
+      | Tstr_type (_, _) -> append ~loc "_ (type)"
+      | Tstr_typext _ -> append ~loc "_ (typext)"
+      | Tstr_exception _ -> append ~loc "_ (exception)"
       | Tstr_module mb -> iterator.module_binding iterator mb
-      | Tstr_recmodule _ -> append "_ (rec module)"
-      | Tstr_modtype _ -> append "_ (modtype)"
-      | Tstr_open _ -> append "_ (open)"
-      | Tstr_class _ -> append "_ (class)"
-      | Tstr_class_type _ -> append "_ (classtype)"
-      | Tstr_include _ -> append "_ (include)"
-      | Tstr_attribute _ -> append "_ (attribute)"
+      | Tstr_recmodule _ -> append ~loc "_ (rec module)"
+      | Tstr_modtype _ -> append ~loc "_ (modtype)"
+      | Tstr_open _ -> append ~loc "_ (open)"
+      | Tstr_class _ -> append ~loc "_ (class)"
+      | Tstr_class_type _ -> append ~loc "_ (classtype)"
+      | Tstr_include _ -> append ~loc "_ (include)"
+      | Tstr_attribute _ -> append ~loc "_ (attribute)"
     )
   in
 
@@ -193,7 +194,7 @@ let outline_iterator (model : GTree.tree_store) =
     parent_row := parent
   in
 
-  let module_expr
+  let module_expr 
       ( iterator : Tast_iterator.iterator )
       { mod_desc; _ }
     =
@@ -282,6 +283,8 @@ class widget ~page () =
   object (self)
     inherit GObj.widget vbox#as_widget
 
+    val mutable selection_changed_signal = view#selection#connect#changed ~callback:(fun _ -> ())
+
     method load () =
       let compile_buffer () = page#compile_buffer ?join:(Some true) () in
       let cmt_opt = Binannot.read_cmt ~project:page#project ~filename:page#get_filename ~compile_buffer () in
@@ -291,11 +294,14 @@ class widget ~page () =
 
 
     method private load_cmt cmt =
+      view#misc#handler_block selection_changed_signal ;
       model_clear model ;
-      match cmt.cmt_annots with
-      | Implementation impl -> iterator.structure iterator impl
-      | _ ->
-          print_endline "Not an implementation"
+      ( match cmt.cmt_annots with
+        | Implementation impl -> iterator.structure iterator impl
+        | _ ->
+            print_endline "Not an implementation"
+      ) ;
+      view#misc#handler_unblock selection_changed_signal
 
     method view = view
 
@@ -314,8 +320,7 @@ class widget ~page () =
       )
 
     initializer
-      view#selection#connect#changed ~callback:self#selection_changed
-      |> ignore
+      selection_changed_signal <- view#selection#connect#changed ~callback:self#selection_changed
 
   end
 
