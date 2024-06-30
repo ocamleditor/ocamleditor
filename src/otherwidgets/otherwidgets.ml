@@ -19,11 +19,11 @@
   along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 *)
+[@@@warning "-unused-open"]
 
 open Otherwidgets_config
 open Tree
 open Key_assist
-open Check_for_updates
 open Activity
 open Checklist
 open Dialog
