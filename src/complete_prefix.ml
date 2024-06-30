@@ -70,21 +70,29 @@ class widget ~project ~(page : Editor_page.page) ~x ~y ?packing () =
   let vbox = GPack.vbox ~spacing:5 ~border_width:0 ?packing () in
   let cols = new GTree.column_list in
   let col_is_exp = cols#add Gobject.Data.boolean in
+  let col_prio = cols#add Gobject.Data.float in
+  let col_source = cols#add Gobject.Data.string in
   let col_kind = cols#add Gobject.Data.string in
   let col_name = cols#add Gobject.Data.string in
   let col_desc = cols#add Gobject.Data.string in
   let col_info = cols#add Gobject.Data.string in
   let model = GTree.list_store cols in
-  let renderer = GTree.cell_renderer_text [`FONT Preferences.preferences#get.editor_completion_font; `XPAD 0; `YPAD 0] in
+  let model_sort = GTree.model_sort model in
+  let renderer = GTree.cell_renderer_text [
+      `FONT Preferences.preferences#get.editor_completion_font; `XPAD 0; `YPAD 0
+    ] in
   let vc_kind = GTree.view_column ~renderer:(renderer, ["markup", col_kind]) () in
+  let vc_source = GTree.view_column ~renderer:(renderer, ["text", col_source]) () in
   let vc_name = GTree.view_column ~renderer:(renderer, ["text", col_name]) () in
   let sw = GBin.scrolled_window ~shadow_type:`NONE ~hpolicy:`NEVER ~vpolicy:`AUTOMATIC ~packing:vbox#add () in
-  let lview = GTree.view ~model ~headers_visible:false ~reorderable:false ~height:200 ~packing:sw#add () in
+  let lview = GTree.view ~model:model_sort ~headers_visible:false ~reorderable:false ~height:200 ~packing:sw#add () in
   let _ = lview#set_enable_search false in
   let _ = lview#set_search_column 1 in
   let _ = lview#append_column vc_kind in
+  let _ = lview#append_column vc_source in
   let _ = lview#append_column vc_name in
   let _ = lview#selection#set_mode `SINGLE in
+  let _ = model_sort#set_sort_column_id col_prio.GTree.index `DESCENDING in
   let view = page#ocaml_view in
   let buffer = view#buffer in
   let merlin func =
@@ -181,21 +189,28 @@ class widget ~project ~(page : Editor_page.page) ~x ~y ?packing () =
 
     method private invoke_merlin ~prefix ~position ?(expand=true) window =
       let position = position#line + 1, position#line_offset in
-      merlin@@complete_prefix ~position ~prefix begin fun complete_prefix ->
+      view#obuffer#merlin@@complete_prefix ~position ~prefix begin fun complete_prefix ->
         window#show();
         begin
           match complete_prefix.entries with
           | first :: others ->
-              [first] |> self#add_entries false;
+              [1., first] |> self#add_entries "C";
               first_entry_available#call();
-              others |> self#add_entries false;
+              others |> List.map (fun x -> 1., x) |> self#add_entries "C";
           | [] -> ()
+        end;
+        if Oe_config.completion_name_table_enabled then begin
+          if String.length (String.trim prefix) >= 2 then begin
+            project |> Names.update_all
+              ~cont:(fun db -> db |> Names.filter prefix |> self#add_entries "N");
+            loading_complete#call count;
+          end
         end;
         if count = 0 || expand then begin
           merlin@@expand_prefix ~position ~prefix begin fun expand_prefix ->
-            expand_prefix.entries |> self#add_entries true;
+            expand_prefix.entries |> List.map (fun x -> 1., x) |> self#add_entries "E";
             loading_complete#call count;
-          end
+          end;
         end else
           loading_complete#call count;
       end;
@@ -214,7 +229,6 @@ class widget ~project ~(page : Editor_page.page) ~x ~y ?packing () =
       end else begin
         let a, b = String_utils.locate_intersection current_prefix name in
         let substitute = Str.string_after name b in
-        Printf.printf "name=%S current_prefix=%S %d %d %S\n%!" name current_prefix a b substitute;
         let start = buffer#get_iter `INSERT in
         let stop = if start#compare stop >= 0 then start else stop in
         buffer#delete_interactive ~start ~stop () |> ignore;
@@ -237,30 +251,41 @@ class widget ~project ~(page : Editor_page.page) ~x ~y ?packing () =
       with Gpointer.Null -> ()
 
     method private show_info () =
-      match lview#selection#get_selected_rows with
-      | [] -> ()
-      | path :: _ ->
-          let row = model#get_iter path in
-          let desc = model#get ~row ~column:col_desc in
-          let info = model#get ~row ~column:col_info in
-          let info = String.trim info in
-          if String.trim desc <> "" || String.trim info <> "" then begin
-            Gmisclib.Idle.add begin fun () ->
-              let markup_type =
-                Printf.sprintf "<span font='%s'>%s</span>"
-                  (Preferences.preferences#get.editor_completion_font)
-                  (Markup.type_info desc)
-              in
-              let markup_doc =
-                if info <> "" then
+      try
+        match lview#selection#get_selected_rows with
+        | [] -> ()
+        | spath :: _ ->
+            let path = model_sort#convert_path_to_child_path spath in
+            let row = model#get_iter path in
+            let desc = model#get ~row ~column:col_desc in
+            let info = model#get ~row ~column:col_info in
+            let info = String.trim info in
+            if String.trim desc <> "" || String.trim info <> "" then begin
+              Gmisclib.Idle.add begin fun () ->
+                let markup_type =
                   Printf.sprintf "<span font='%s'>%s</span>"
                     (Preferences.preferences#get.editor_completion_font)
-                    (markup_odoc#convert info)
-                else ""
-              in
-              self#display_window_info path markup_type markup_doc
+                    (Markup.type_info desc)
+                in
+                let markup_doc =
+                  if info <> "" then
+                    Printf.sprintf "<span font='%s'>%s</span>"
+                      (Preferences.preferences#get.editor_completion_font)
+                      (markup_odoc#convert info)
+                  else ""
+                in
+                self#display_window_info spath markup_type markup_doc
+              end
+            end else begin
+              let name = model#get ~row ~column:col_name in
+              merlin@@Merlin.type_expression ~position:(1,1) ~expression:name begin fun res ->
+                GtkThread.async begin fun () ->
+                  model#set ~row ~column:col_desc res;
+                  self#show_info()
+                end ()
+              end
             end
-          end
+      with Gpointer.Null -> ()
 
     method private display_window_info path markup_type markup_doc =
       let create_window ~x ~y ?width ?height ?show child =
@@ -298,23 +323,38 @@ class widget ~project ~(page : Editor_page.page) ~x ~y ?packing () =
     method private selected_path =
       try
         match lview#selection#get_selected_rows with
-        | [path] -> Some path
+        | [ spath ] -> Some (model_sort#convert_path_to_child_path spath)
         | _ -> None
       with Gpointer.Null -> None
 
-    method private add_entries is_expand entries =
+    val mutable model_entries : (float ref * Gtk.tree_iter * Merlin_t.entry) list = []
+
+    method private add_entries source entries =
+      let is_expand = source = "E" || source = "N" in
+      let add_row (entry : Merlin_t.entry) score =
+        let row = model#append () in
+        model#set ~row ~column:col_is_exp is_expand;
+        model#set ~row ~column:col_source (sprintf "%s %6.2f" source score);
+        model#set ~row ~column:col_prio score;
+        model#set ~row ~column:col_kind (icon_of_kind entry.kind);
+        model#set ~row ~column:col_name entry.name;
+        model#set ~row ~column:col_desc entry.desc;
+        model#set ~row ~column:col_info entry.info;
+        count <- count + 1;
+        model_entries <- (ref score, row, entry) :: model_entries;
+      in
       try
         entries
-        |> List.iter begin fun (entry : Merlin_t.entry) ->
+        |> List.iter begin fun (score, (entry : Merlin_t.entry)) ->
           if is_destroyed then raise Exit;
-          (* TODO: remove duplicates *)
-          let row = model#append () in
-          model#set ~row ~column:col_is_exp is_expand;
-          model#set ~row ~column:col_kind (icon_of_kind entry.kind);
-          model#set ~row ~column:col_name entry.name;
-          model#set ~row ~column:col_desc entry.desc;
-          model#set ~row ~column:col_info entry.info;
-          count <- count + 1;
+          model_entries
+          |> List.find_opt (fun (_, _, e) -> e.Merlin_t.name = entry.Merlin_t.name)
+          |> function
+          | Some (s, row, _) when score > !s ->
+              s := score;
+              if model#remove row then add_row entry score
+          | None -> add_row entry score
+          | _ -> ()
         end
       with Exit -> ()
 

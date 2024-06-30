@@ -219,6 +219,11 @@ class buffer ?project ?file ?(lexical_enabled=false) () =
 
     method tag_table_lexical : (GText.tag option) list = lexical_tags
 
+    method merlin : 'a.(filename:string -> source_code:string -> 'a) -> 'a = fun func ->
+      let filename = match self#file with Some file -> file#filename | _ -> "" in
+      let source_code = self#get_text () in
+      func ~filename ~source_code
+
     initializer
       (* Lexical *)
       (*let ocamldoc_paragraph_enabled =
