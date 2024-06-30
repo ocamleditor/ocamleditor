@@ -100,8 +100,9 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.|}
   let label = GMisc.label ~text:"Report an issue" ~packing:link_button#add () in
   modify_label ~color:"#0000ff" label;
   link_button#set_focus_on_click false;
-  ignore (link_button#connect#clicked ~callback:(fun () -> open_url About.issues))
+  ignore (link_button#connect#clicked ~callback:(fun () -> open_url About.issues));
 
+  match dialog#run() with _ -> dialog#destroy()
 
 
 
