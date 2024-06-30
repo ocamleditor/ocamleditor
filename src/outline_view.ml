@@ -288,8 +288,7 @@ class widget ~page () =
   object (self)
     inherit GObj.widget vbox#as_widget
 
-    val mutable selection_changed_signal = view#selection#connect#changed ~callback:(fun _ -> ())
-    val mutable scroll_to_selection = false
+    val mutable selection_changed_signal = Obj.magic 0
 
     method load () =
       let compile_buffer () = page#compile_buffer ?join:(Some true) () in
@@ -300,8 +299,7 @@ class widget ~page () =
 
 
     method private load_cmt cmt =
-      scroll_to_selection <- false;
-      view#misc#handler_block selection_changed_signal ;
+      view#selection#misc#handler_block selection_changed_signal ;
       model_clear model ;
       ( match cmt.cmt_annots with
         | Implementation impl -> iterator.structure iterator impl
@@ -309,7 +307,7 @@ class widget ~page () =
             print_endline "Not an implementation"
       ) ;
       view#selection#unselect_all ();
-      view#misc#handler_unblock selection_changed_signal
+      view#selection#misc#handler_unblock selection_changed_signal
 
     method view = view
 
@@ -317,17 +315,15 @@ class widget ~page () =
 
     method private selection_changed () =
       ( match view#selection#get_selected_rows with
-        | path :: _ when scroll_to_selection ->
+        | [ path ] ->
             let row = model#get_iter path in
             let offset = model#get ~row ~column:col_loc in
             let text_iter = buffer#get_iter (`OFFSET offset) in
             let view : Text.view = page#view in
             view#scroll_lazy text_iter;
             buffer#select_range text_iter text_iter
-        | [] -> ()
-      ) ;
-      (* Hack to not scroll to end of buffer when the buffer is saved and cmt reloaded. *)
-      scroll_to_selection <- true
+        | _ -> ()
+      )
 
     initializer
       selection_changed_signal <- view#selection#connect#changed ~callback:self#selection_changed
