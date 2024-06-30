@@ -69,7 +69,7 @@ let is_function type_expr =
 let string_of_longident t
   = String.concat "." @@ Longident.flatten t
 
-let flatten_type_expr te =
+let flatten_formatted te =
   let buf = Buffer.create 64 in
   let is_space = ref false in
   String.iter (fun ch ->
@@ -184,17 +184,18 @@ let outline_iterator (model : GTree.tree_store) =
   in
 
   let module_binding iterator (mb : module_binding) =
-    let { mb_id; mb_expr; _ } = mb in
+    let { mb_id; mb_expr; mb_loc; _ } = mb in
     let text = string_of_id mb_id in
+    let loc = mb_loc.loc_start.pos_cnum in
 
     let parent = !parent_row in
-    let row =  model_append model ~icon:Icons.module_impl (b text) in
+    let row =  model_append model ~icon:Icons.module_impl ~loc (b text) in
     parent_row := Some row;
     iterator.module_expr iterator mb_expr;
     parent_row := parent
   in
 
-  let module_expr 
+  let module_expr
       ( iterator : Tast_iterator.iterator )
       { mod_desc; _ }
     =
@@ -210,7 +211,11 @@ let outline_iterator (model : GTree.tree_store) =
         iterator.module_expr iterator expr;
     | Tmod_apply (m1, m2, _) ->
         iterator.module_expr iterator m1;
+        let row = model_append model ~icon:Icons.module_impl ~tooltip:"" "" in
+        let parent = !parent_row in
+        parent_row := Some row;
         iterator.module_expr iterator m2;
+        parent_row := parent
     | Tmod_constraint (_, _, _, _) ->
         model_append model ~icon:Icons.simple "Constraint" |> ignore;
     | Tmod_unpack (_, _) ->
@@ -232,7 +237,7 @@ let outline_iterator (model : GTree.tree_store) =
           let odoc_type = Odoc_info.string_of_type_expr exp_type in
           let tooltip = Print_type.markup2 odoc_type in
           let name = b @@ Ident.name id in
-          let flat_type = flatten_type_expr tooltip in
+          let flat_type = flatten_formatted tooltip in
           let markup = name ^ " : " ^ flat_type in
           if is_function exp_type then
             let row = model_append model ~icon:Icons.func ~loc ~tooltip markup in
@@ -284,6 +289,7 @@ class widget ~page () =
     inherit GObj.widget vbox#as_widget
 
     val mutable selection_changed_signal = view#selection#connect#changed ~callback:(fun _ -> ())
+    val mutable scroll_to_selection = false
 
     method load () =
       let compile_buffer () = page#compile_buffer ?join:(Some true) () in
@@ -294,6 +300,7 @@ class widget ~page () =
 
 
     method private load_cmt cmt =
+      scroll_to_selection <- false;
       view#misc#handler_block selection_changed_signal ;
       model_clear model ;
       ( match cmt.cmt_annots with
@@ -301,6 +308,7 @@ class widget ~page () =
         | _ ->
             print_endline "Not an implementation"
       ) ;
+      view#selection#unselect_all ();
       view#misc#handler_unblock selection_changed_signal
 
     method view = view
@@ -309,7 +317,7 @@ class widget ~page () =
 
     method private selection_changed () =
       ( match view#selection#get_selected_rows with
-        | path :: _ ->
+        | path :: _ when scroll_to_selection ->
             let row = model#get_iter path in
             let offset = model#get ~row ~column:col_loc in
             let text_iter = buffer#get_iter (`OFFSET offset) in
@@ -317,7 +325,9 @@ class widget ~page () =
             view#scroll_lazy text_iter;
             buffer#select_range text_iter text_iter
         | [] -> ()
-      )
+      ) ;
+      (* Hack to not scroll to end of buffer when the buffer is saved and cmt reloaded. *)
+      scroll_to_selection <- true
 
     initializer
       selection_changed_signal <- view#selection#connect#changed ~callback:self#selection_changed
