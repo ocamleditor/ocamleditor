@@ -59,7 +59,6 @@ let on_off_dashes                        = [3; 3]
                     [darker] 0.5 <= factor <= 1.0 [same as text view]
    `THEME          : Based on the GTK theme.
    `NAME "#ffffff" : Specific color. *)
-let gutter_bg_color                      = `NAME "#424201" (* temporarily *) (*`THEME*)
 let gutter_fg_color                      = `THEME (*`CALC 0.50*) (*`NAME "#6070ff"*)
 let gutter_border_color                  = `THEME (*`CALC 0.875*) (*`CALC 0.97*)
 let gutter_marker_color                  = `THEME (*`CALC 0.50*)
@@ -102,6 +101,7 @@ let location_history_max_edit            = 5
 let module_browser_max_results           = 150 (* Max. number of search results to display in the search_entry as you type *)
 let module_browser_secondary_title_color = { light = "#877033"; dark = "#707070" }
 let completion_popup_default_dimensions  = 900, 350
+let completion_name_table_enabled        = true
 let odoc_tag_properties                  = [ (* These properties apply to ocamldoc comments only, not to the type descriptions. *)
   `PIXELS_INSIDE_WRAP 2;
   `PIXELS_BELOW_LINES 2;

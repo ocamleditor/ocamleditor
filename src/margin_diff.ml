@@ -23,7 +23,7 @@ class widget view =
   object (self)
     inherit margin ()
     val mutable diffs : Odiff.diffs = []
-    val mutable color_base = `COLOR (view#misc#style#base `NORMAL)
+    val mutable color_base = `COLOR (view#misc#style#bg `NORMAL)
     val mutable start_line = 0
     val mutable stop_line = 0
     val mutable top = 0
@@ -39,7 +39,7 @@ class widget view =
     initializer
       view#add_child_in_window ~child:drawing_area#coerce ~which_window:`LEFT ~x:0 ~y:0;
       Preferences.preferences#connect#changed ~callback:begin fun _ ->
-        Gmisclib.Idle.add (fun () -> color_base <- `COLOR (view#misc#style#base `NORMAL))
+        Gmisclib.Idle.add (fun () -> color_base <- `COLOR (view#misc#style#bg `NORMAL))
       end |> ignore;
       let drawable = new GDraw.drawable drawing_area#misc#window in
       drawable#set_background color_base;

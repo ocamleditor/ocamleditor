@@ -76,6 +76,9 @@ class "GtkTextView" style "s1"
     end;
   in
   view#options#set_base_color default_bg_color;
+  view#misc#modify_bg [
+    `NORMAL, `NAME ?? (Preferences.preferences#get.editor_bg_color_popup)
+  ];
   let editor_tags = pref.editor_tags in
   if pref.editor_highlight_current_line then begin
     view#options#set_highlight_current_line
