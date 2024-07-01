@@ -92,7 +92,24 @@ class widget ~project ~(page : Editor_page.page) ~x ~y ?packing () =
   let _ = lview#append_column vc_source in
   let _ = lview#append_column vc_name in
   let _ = lview#selection#set_mode `SINGLE in
-  let _ = model_sort#set_sort_column_id col_prio.GTree.index `DESCENDING in
+  let _ = model_sort#set_sort_column_id col_prio.GTree.index `ASCENDING in
+  let _ =
+    model_sort#set_sort_func col_prio.GTree.index begin fun model r1 r2 ->
+      let p1 = model#get ~row:r1 ~column:col_prio in
+      let p2 = model#get ~row:r2 ~column:col_prio in
+      let cmpp = compare p2 p1 in
+      if cmpp = 0 then begin
+        let s1 = model#get ~row:r1 ~column:col_source in
+        let s2 = model#get ~row:r2 ~column:col_source in
+        let cmps = compare s1 s2 in
+        if cmps = 0 then begin
+          let n1 = model#get ~row:r1 ~column:col_name in
+          let n2 = model#get ~row:r2 ~column:col_name in
+          compare n1 n2
+        end else cmps
+      end else cmpp
+    end
+  in
   let view = page#ocaml_view in
   let buffer = view#buffer in
   let merlin func =
@@ -202,8 +219,10 @@ class widget ~project ~(page : Editor_page.page) ~x ~y ?packing () =
         if Oe_config.completion_name_table_enabled then begin
           if String.length (String.trim prefix) >= 2 then begin
             project |> Names.update_all
-              ~cont:(fun db -> db |> Names.filter prefix |> self#add_entries "N");
-            loading_complete#call count;
+              ~cont:begin fun db ->
+                db |> Names.filter prefix |> self#add_entries "N";
+                loading_complete#call count;
+              end;
           end
         end;
         if count = 0 || expand then begin

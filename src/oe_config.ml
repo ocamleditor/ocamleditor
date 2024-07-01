@@ -47,7 +47,7 @@ let warning_popup_bg_color : dcolor      = { light = `NAME "#fff4e8"; dark = `NA
 let warning_popup_border_color : dcolor  = { light = `NAME "#FFB33C"; dark = `NAME "darkorange" }
 let warning_underline_color : dcolor     = { light = `NAME "#fff4e8"; dark = `NAME "#6e3d00" }
 let warning_underline_shadow : dcolor    = { light = `NAME "#FFE36C"; dark = `NAME "#FFE36C" }
-let warning_unused_color                 = { light = "#a0a0a0"; dark = "#808080" }
+let warning_unused_color                 = { light = "#a0a0a0"; dark = "#707070" }
 let warning_unused_tag_name              = "tag_warning_unused"
 let warning_tootip_enabled               = false
 let current_line_width                   = 2 (* Must be >= 1. Left margin is automatically increased by current_line_width *)

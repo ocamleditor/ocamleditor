@@ -167,7 +167,7 @@ let compare pat str =
       let compactness = if number_of_paths > 0 then  1. /. float number_of_paths else 0. in
       let s_relevance = amount /. ls in
       let p_relevance = amount /. lp in
-      let top = lp +. 1. +. 2. in
+      let top = lp +. 3. in
       let score = amount +. compactness +. s_relevance +. p_relevance in
       let score_perc = score /. top in
       (*Printf.printf "%S %S %.2f -- %.2f %.2f %.2f %.2f -- %d %d\n%!" pat str score_perc
