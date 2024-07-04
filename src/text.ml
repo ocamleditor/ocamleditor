@@ -658,7 +658,8 @@ and view ?project ?buffer () =
                 set_foreground drawable (`NAME (ColorOps.add_value color 0.08));
                 set_line_attributes drawable ~width:1 ~style:`SOLID ();
                 let hadjust = int_of_float self#hadjustment#value in
-                while !start#forward_line#compare stop <= 0 && not (!start#equal self#buffer#end_iter) do
+                let next_start = ref !start#forward_line in
+                while !next_start#compare stop <= 0 && not (!start#equal self#buffer#end_iter) do
                   if !start#has_tag tag then begin
                     let x = 0 - hadjust + self#left_margin in
                     let y1, _ = view#get_line_yrange !start in
@@ -670,7 +671,8 @@ and view ?project ?buffer () =
                     rectangle drawable ~x ~y ~width ~height ();
                     start := stop_tag#set_line_index 0;
                   end;
-                  start := !start#forward_line;
+                  start := !next_start;
+                  next_start := !start#forward_line
                 done
             | _ -> ()
           end
@@ -745,14 +747,14 @@ and view ?project ?buffer () =
       ignore (visible_height#connect#changed ~callback:(fun _ -> self#draw_gutter()));
       (* Refresh gutter and right margin line when scrolling *)
       ignore (self#hadjustment#connect#after#value_changed ~callback:begin fun _ ->
-              (* Redraw the entire window on horizontal scroll to refresh right margin *)
+          (* Redraw the entire window on horizontal scroll to refresh right margin *)
           print_endline "----- notify_hadjustment";
           GtkBase.Widget.queue_draw self#as_widget
         end
         );
       ignore (self#vadjustment#connect#after#value_changed ~callback:begin fun _ ->
           (* Update gutter on vertical scroll changes *)
-                  Gmisclib.Idle.add self#draw_gutter;
+          Gmisclib.Idle.add self#draw_gutter;
           Gmisclib.Idle.add ~prio:300 (fun () -> GtkBase.Widget.queue_draw self#as_widget)
         end
         );

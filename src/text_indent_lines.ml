@@ -67,9 +67,18 @@ let draw_indent_lines view (drawable : Gdk.cairo) start stop y0 =
   in
   let hline = ref 0 in
   let hadjust = int_of_float view#hadjustment#value - left_margin in
+  let line_yranges = Hashtbl.create 80 in
+  let line_yrange line =
+    match Hashtbl.find line_yranges line with
+    | yrange -> yrange
+    | exception Not_found ->
+        let iter = buffer#get_iter (`LINE line) in
+        let y, h = view#get_line_yrange iter in
+        Hashtbl.replace line_yranges line (y, h);
+        (y, h)
+  in
   let draw line indent =
-    let iter = buffer#get_iter (`LINE line) in
-    let y1, h1 = view#get_line_yrange iter in
+    let y1, h1 = line_yrange line in
     let y1 = y1 - y0 in
     let y2 = y1 + h1 in
     hline := max h1 !hline;
