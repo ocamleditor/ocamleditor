@@ -74,7 +74,7 @@ let flatten_formatted te =
   let is_space = ref false in
   String.iter (fun ch ->
       ( match !is_space, ch with
-        | false, ch when ch = '\n' || ch = ' ' -> is_space := false; Buffer.add_char buf ' ';
+        | false, ch when ch = '\n' || ch = ' ' -> is_space := true; Buffer.add_char buf ' ';
         | false, ch -> Buffer.add_char buf ch
 
         | true, ch  when ch = '\n' || ch = ' ' -> ()
@@ -140,6 +140,11 @@ let i text = "<i>" ^ text ^ "</i>"
 let string_of_id ?(default="") id =
   id |> Option.map Ident.name |> Option.value ~default
 
+let string_of_type_expr te =
+  Odoc_info.reset_type_names ();
+  Odoc_info.string_of_type_expr te
+  |> Print_type.markup2
+
 let string_of_functor_parameter = function
   | Typedtree.Unit -> "()"
   | Typedtree.Named (id, _, md_type) ->
@@ -154,9 +159,9 @@ let outline_iterator (model : GTree.tree_store) =
 
   let append ?loc text = model_append model ?loc text |> ignore in
   let structure_item iterator (item : structure_item) =
-    let { str_desc; str_loc; _ } = item in
+    let { str_desc = desc; str_loc; _ } = item in
     let loc = str_loc.loc_start.pos_cnum in
-    ( match str_desc with
+    ( match desc with
       | Tstr_eval (_, _) -> append ~loc "_ (eval)"
       | Tstr_value (is_rec, vb) ->
           if is_rec = Asttypes.Recursive then (
@@ -226,10 +231,10 @@ let outline_iterator (model : GTree.tree_store) =
       ( iterator : Tast_iterator.iterator )
       { vb_pat; vb_expr; _ }
     =
-    let { pat_desc; pat_loc; _ } = vb_pat in
+    let { pat_desc = desc; pat_loc; _ } = vb_pat in
     let loc = pat_loc.loc_start.pos_cnum in
     let { exp_type; _ } = vb_expr in
-    ( match pat_desc with
+    ( match desc with
       | Tpat_any -> ()  (* let _ = .. *)
       | Tpat_constant _ -> () (* let () = .. *)
       | Tpat_var (id, _)
@@ -251,7 +256,16 @@ let outline_iterator (model : GTree.tree_store) =
       | Tpat_construct _ -> model_append model ~loc "_ (pat construct)" |> ignore
       | Tpat_tuple _ -> model_append model ~loc "_ (pat tuple)" |> ignore
       | Tpat_variant _ -> model_append model ~loc "_ (pat variant)" |> ignore
-      | Tpat_record _ -> model_append model ~loc "_ (pat record)" |> ignore
+      | Tpat_record (fields, _) ->
+          List.iter (
+            fun (lb_loc, lb_desc, _) ->
+              let { loc; _ } = lb_loc in
+              let { Types.lbl_name; lbl_arg; _} = lb_desc in
+              let arg_type = string_of_type_expr lbl_arg in
+              let markup = lbl_name ^ " : " ^ arg_type in
+              let loc = loc.loc_start.pos_cnum in
+              append ~loc markup
+          ) fields
       | Tpat_array _ -> model_append model ~loc "_ (pat array)" |> ignore
       | Tpat_lazy _ -> model_append model ~loc "_ (pat lazy)" |> ignore
       | Tpat_or _ -> model_append model ~loc "_ (pat constructor)" |> ignore
