@@ -25,6 +25,8 @@ open Preferences
 open Cmt_format
 open Typedtree
 
+module TI = Tast_iterator
+
 module Log = Common.Log.Make(struct let prefix = "Outline_view" end)
 let _ = Log.set_verbosity `DEBUG
 
@@ -77,7 +79,7 @@ let flatten_formatted te =
         | false, ch when ch = '\n' || ch = ' ' -> is_space := true; Buffer.add_char buf ' ';
         | false, ch -> Buffer.add_char buf ch
 
-        | true, ch  when ch = '\n' || ch = ' ' -> ()
+        | true, ch when ch = '\n' || ch = ' ' -> ()
         | true, ch -> is_space := false; Buffer.add_char buf ch
       )) te;
   Buffer.contents buf
@@ -96,8 +98,6 @@ let empty () =
 
 type point = { x : int; y : int }
 let make_point x y = { x; y }
-
-let { x = ox; y = oy } as origin = make_point 0 0
 
 let count = ref 0
 let parent_row = ref None
@@ -154,8 +154,7 @@ let string_of_functor_parameter = function
       "(" ^ md_name ^ " : TODO " ^ md_type ^ ")"
 
 let outline_iterator (model : GTree.tree_store) =
-  let super = Tast_iterator.default_iterator in
-  let open! Tast_iterator in
+  let super = TI.default_iterator in
 
   let append ?loc text = model_append model ?loc text |> ignore in
   let structure_item iterator (item : structure_item) =
@@ -167,11 +166,11 @@ let outline_iterator (model : GTree.tree_store) =
           if is_rec = Asttypes.Recursive then (
             let parent = !parent_row in
             parent_row :=  Some (model_append model (b "rec"));
-            List.iter (iterator.value_binding iterator) vb;
+            List.iter (iterator.TI.value_binding iterator) vb;
             parent_row := parent
           )
           else
-            List.iter (iterator.value_binding iterator) vb
+            List.iter (iterator.TI.value_binding iterator) vb
 
       | Tstr_primitive _ -> append ~loc "_ (primitive)"
       | Tstr_type (_, _) -> append ~loc "_ (type)"
@@ -196,12 +195,12 @@ let outline_iterator (model : GTree.tree_store) =
     let parent = !parent_row in
     let row =  model_append model ~icon:Icons.module_impl ~loc (b text) in
     parent_row := Some row;
-    iterator.module_expr iterator mb_expr;
+    iterator.TI.module_expr iterator mb_expr;
     parent_row := parent
   in
 
   let module_expr
-      ( iterator : Tast_iterator.iterator )
+      ( iterator : TI.iterator )
       { mod_desc; _ }
     =
     match mod_desc with
@@ -209,17 +208,17 @@ let outline_iterator (model : GTree.tree_store) =
         let alias = String.concat "." @@ Longident.flatten txt in
         model_append model ~icon:Icons.simple (i alias) |> ignore
     | Tmod_structure structure ->
-        iterator.structure iterator structure;
+        iterator.TI.structure iterator structure;
     | Tmod_functor (p, expr) ->
         let param = string_of_functor_parameter p in
         update_parent_markup model (fun name -> name ^ " " ^ param) ;
-        iterator.module_expr iterator expr;
+        iterator.TI.module_expr iterator expr;
     | Tmod_apply (m1, m2, _) ->
-        iterator.module_expr iterator m1;
+        iterator.TI.module_expr iterator m1;
         let row = model_append model ~icon:Icons.module_impl ~tooltip:"" "" in
         let parent = !parent_row in
         parent_row := Some row;
-        iterator.module_expr iterator m2;
+        iterator.TI.module_expr iterator m2;
         parent_row := parent
     | Tmod_constraint (_, _, _, _) ->
         model_append model ~icon:Icons.simple "Constraint" |> ignore;
@@ -231,20 +230,17 @@ let outline_iterator (model : GTree.tree_store) =
       ( iterator : Tast_iterator.iterator )
       { vb_pat; vb_expr; _ }
     =
-    let { pat_desc = desc; pat_loc; _ } = vb_pat in
+    let { pat_desc; pat_loc; pat_type; _ } = vb_pat in
     let loc = pat_loc.loc_start.pos_cnum in
-    let { exp_type; _ } = vb_expr in
-    ( match desc with
+    ( match pat_desc with
       | Tpat_any -> ()  (* let _ = .. *)
       | Tpat_constant _ -> () (* let () = .. *)
-      | Tpat_var (id, _)
-      | Tpat_alias (_, id, _) ->
-          let odoc_type = Odoc_info.string_of_type_expr exp_type in
-          let tooltip = Print_type.markup2 odoc_type in
+      | Tpat_var (id, _) ->
+          let tooltip = string_of_type_expr pat_type in
           let name = b @@ Ident.name id in
           let flat_type = flatten_formatted tooltip in
           let markup = name ^ " : " ^ flat_type in
-          if is_function exp_type then
+          if is_function pat_type then
             let row = model_append model ~icon:Icons.func ~loc ~tooltip markup in
             let parent = !parent_row in
             let () = parent_row := Some row in
@@ -252,29 +248,81 @@ let outline_iterator (model : GTree.tree_store) =
             parent_row := parent
           else
             model_append model ~icon:Icons.simple ~loc ~tooltip markup|> ignore;
+      | Tpat_alias (al_pat, id, _) ->
+          iterator.TI.pat iterator al_pat ;
+          let tooltip = string_of_type_expr pat_type in
+          let name = b @@ Ident.name id in
+          let flat_type = flatten_formatted tooltip in
+          let markup = name ^ " : " ^ flat_type in
+          model_append model ~icon:Icons.simple ~loc ~tooltip markup|> ignore;
 
       | Tpat_construct _ -> model_append model ~loc "_ (pat construct)" |> ignore
-      | Tpat_tuple _ -> model_append model ~loc "_ (pat tuple)" |> ignore
+      | Tpat_tuple pats ->
+          (* TODO: maybe insert parent row for tuple *)
+          List.iter (iterator.TI.pat iterator) pats
       | Tpat_variant _ -> model_append model ~loc "_ (pat variant)" |> ignore
       | Tpat_record (fields, _) ->
+          (* TODO: insert a parent for record *)
           List.iter (
-            fun (lb_loc, lb_desc, _) ->
-              let { loc; _ } = lb_loc in
-              let { Types.lbl_name; lbl_arg; _} = lb_desc in
-              let arg_type = string_of_type_expr lbl_arg in
-              let markup = lbl_name ^ " : " ^ arg_type in
-              let loc = loc.loc_start.pos_cnum in
-              append ~loc markup
+            fun (_, _, lb_pat) ->
+              iterator.TI.pat iterator lb_pat;
           ) fields
       | Tpat_array _ -> model_append model ~loc "_ (pat array)" |> ignore
       | Tpat_lazy _ -> model_append model ~loc "_ (pat lazy)" |> ignore
       | Tpat_or _ -> model_append model ~loc "_ (pat constructor)" |> ignore
     )
   in
+
+  let pat iterator (type k) (pattern : k Typedtree.general_pattern) =
+    let { pat_desc = desc; pat_loc; pat_type; _} = pattern in
+    let loc = pat_loc.loc_start.pos_cnum in
+    ( match desc with
+      (* value patterns *)
+      | Tpat_any -> ()  (* let _ = .. *)
+      | Tpat_constant _ -> () (* let () = .. *)
+      | Tpat_var (id, _) ->
+          let tooltip = string_of_type_expr pat_type in
+          let name = b @@ Ident.name id in
+          let flat_type = flatten_formatted tooltip in
+          let markup = name ^ " : " ^ flat_type in
+          model_append model ~icon:Icons.simple ~loc ~tooltip markup|> ignore;
+
+      | Tpat_alias (al_pat, id, _) ->
+          iterator.TI.pat iterator al_pat ;
+          let tooltip = string_of_type_expr pat_type in
+          let name = b @@ Ident.name id in
+          let flat_type = flatten_formatted tooltip in
+          let markup = name ^ " : " ^ flat_type in
+          model_append model ~icon:Icons.simple ~loc ~tooltip markup|> ignore;
+
+      | Tpat_construct _ -> model_append model ~loc "_ (pat construct)" |> ignore
+      | Tpat_tuple pats ->
+          (* TODO: maybe insert parent row for tuple, with just an icon *)
+          List.iter (iterator.TI.pat iterator) pats
+      | Tpat_variant _ -> model_append model ~loc "_ (pat variant)" |> ignore
+      | Tpat_record (fields, _) ->
+          (* TODO: maybe insert parent row for record, with just an icon *)
+          List.iter (
+            fun (_, _, lb_pat) ->
+              iterator.TI.pat iterator lb_pat;
+          ) fields
+      | Tpat_array _ -> model_append model ~loc "_ (pat array)" |> ignore
+      | Tpat_lazy _ -> model_append model ~loc "_ (pat lazy)" |> ignore
+
+      (* computation patterns *)
+      | Tpat_value case -> ignore case
+      | Tpat_exception _ -> model_append model ~loc "_ (pat exception)" |> ignore
+
+      (* generic patterns *)
+      | Tpat_or _ -> model_append model ~loc "_ (pat constructor)" |> ignore
+    )
+
+  in
   { super with
     structure_item;
     module_binding; module_expr;
-    value_binding
+    value_binding;
+    pat
   }
 
 class widget ~page () =
@@ -316,9 +364,13 @@ class widget ~page () =
       view#selection#misc#handler_block selection_changed_signal ;
       model_clear model ;
       ( match cmt.cmt_annots with
-        | Implementation impl -> iterator.structure iterator impl
-        | _ ->
-            print_endline "Not an implementation"
+        | Implementation structure -> iterator.TI.structure iterator structure
+        | Partial_implementation items ->
+            Array.iter ignore items
+        | Interface signature -> iterator.TI.signature iterator signature
+        | Partial_interface items ->
+            Array.iter ignore items
+        | Packed _ -> ()
       ) ;
       view#selection#unselect_all ();
       view#selection#misc#handler_unblock selection_changed_signal
