@@ -86,6 +86,7 @@ let flatten_formatted te =
 
 (** empty *)
 let empty () =
+  let open! Settings_j in
   let pref = Preferences.preferences#get in
   let vp = GBin.viewport () in
   let label = GMisc.label ~xalign:0.5 ~yalign:0. ~xpad:3 ~ypad:3
@@ -95,9 +96,6 @@ let empty () =
     `NORMAL, `NAME ?? (pref.outline_color_nor_fg)
   ];
   vp#coerce;;
-
-type point = { x : int; y : int }
-let make_point x y = { x; y }
 
 let count = ref 0
 let parent_row = ref None
@@ -156,6 +154,14 @@ let string_of_functor_parameter = function
 let outline_iterator (model : GTree.tree_store) =
   let super = TI.default_iterator in
 
+  let expr : expression option ref = ref None in
+  let parameter : bool ref = ref false in
+
+  let id_name id =
+    Ident.name id |> (if !parameter then i else b),
+    if !parameter then None else Some Icons.simple
+  in
+
   let append ?loc text = model_append model ?loc text |> ignore in
   let structure_item iterator (item : structure_item) =
     let { str_desc = desc; str_loc; _ } = item in
@@ -176,7 +182,7 @@ let outline_iterator (model : GTree.tree_store) =
       | Tstr_type (_, _) -> append ~loc "_ (type)"
       | Tstr_typext _ -> append ~loc "_ (typext)"
       | Tstr_exception _ -> append ~loc "_ (exception)"
-      | Tstr_module mb -> iterator.module_binding iterator mb
+      | Tstr_module mb -> iterator.TI.module_binding iterator mb
       | Tstr_recmodule _ -> append ~loc "_ (rec module)"
       | Tstr_modtype _ -> append ~loc "_ (modtype)"
       | Tstr_open _ -> append ~loc "_ (open)"
@@ -230,47 +236,9 @@ let outline_iterator (model : GTree.tree_store) =
       ( iterator : Tast_iterator.iterator )
       { vb_pat; vb_expr; _ }
     =
-    let { pat_desc; pat_loc; pat_type; _ } = vb_pat in
-    let loc = pat_loc.loc_start.pos_cnum in
-    ( match pat_desc with
-      | Tpat_any -> ()  (* let _ = .. *)
-      | Tpat_constant _ -> () (* let () = .. *)
-      | Tpat_var (id, _) ->
-          let tooltip = string_of_type_expr pat_type in
-          let name = b @@ Ident.name id in
-          let flat_type = flatten_formatted tooltip in
-          let markup = name ^ " : " ^ flat_type in
-          if is_function pat_type then
-            let row = model_append model ~icon:Icons.func ~loc ~tooltip markup in
-            let parent = !parent_row in
-            let () = parent_row := Some row in
-            let () = super.expr iterator vb_expr in
-            parent_row := parent
-          else
-            model_append model ~icon:Icons.simple ~loc ~tooltip markup|> ignore;
-      | Tpat_alias (al_pat, id, _) ->
-          iterator.TI.pat iterator al_pat ;
-          let tooltip = string_of_type_expr pat_type in
-          let name = b @@ Ident.name id in
-          let flat_type = flatten_formatted tooltip in
-          let markup = name ^ " : " ^ flat_type in
-          model_append model ~icon:Icons.simple ~loc ~tooltip markup|> ignore;
-
-      | Tpat_construct _ -> model_append model ~loc "_ (pat construct)" |> ignore
-      | Tpat_tuple pats ->
-          (* TODO: maybe insert parent row for tuple *)
-          List.iter (iterator.TI.pat iterator) pats
-      | Tpat_variant _ -> model_append model ~loc "_ (pat variant)" |> ignore
-      | Tpat_record (fields, _) ->
-          (* TODO: insert a parent for record *)
-          List.iter (
-            fun (_, _, lb_pat) ->
-              iterator.TI.pat iterator lb_pat;
-          ) fields
-      | Tpat_array _ -> model_append model ~loc "_ (pat array)" |> ignore
-      | Tpat_lazy _ -> model_append model ~loc "_ (pat lazy)" |> ignore
-      | Tpat_or _ -> model_append model ~loc "_ (pat constructor)" |> ignore
-    )
+    expr := Some vb_expr;
+    iterator.TI.pat iterator vb_pat;
+    expr := None
   in
 
   let pat iterator (type k) (pattern : k Typedtree.general_pattern) =
@@ -282,18 +250,25 @@ let outline_iterator (model : GTree.tree_store) =
       | Tpat_constant _ -> () (* let () = .. *)
       | Tpat_var (id, _) ->
           let tooltip = string_of_type_expr pat_type in
-          let name = b @@ Ident.name id in
+          let name, icon = id_name id in
           let flat_type = flatten_formatted tooltip in
           let markup = name ^ " : " ^ flat_type in
-          model_append model ~icon:Icons.simple ~loc ~tooltip markup|> ignore;
+          if is_function pat_type && Option.is_some !expr then (
+            let parent = !parent_row in
+            parent_row := Some (model_append model ?icon ~loc ~tooltip markup);
+            iterator.TI.expr iterator (Option.get !expr);
+            parent_row := parent
+          )
+          else
+            model_append model ~loc ?icon ~tooltip markup |> ignore;
 
       | Tpat_alias (al_pat, id, _) ->
           iterator.TI.pat iterator al_pat ;
           let tooltip = string_of_type_expr pat_type in
-          let name = b @@ Ident.name id in
+          let name, icon = id_name id in
           let flat_type = flatten_formatted tooltip in
           let markup = name ^ " : " ^ flat_type in
-          model_append model ~icon:Icons.simple ~loc ~tooltip markup|> ignore;
+          model_append model ~loc ?icon ~tooltip markup |> ignore;
 
       | Tpat_construct _ -> model_append model ~loc "_ (pat construct)" |> ignore
       | Tpat_tuple pats ->
@@ -316,13 +291,32 @@ let outline_iterator (model : GTree.tree_store) =
       (* generic patterns *)
       | Tpat_or _ -> model_append model ~loc "_ (pat constructor)" |> ignore
     )
+  in
+  let expr ( iterator : TI.iterator ) ( item : expression ) =
+    let { exp_desc; _ } = item in
+    ( match exp_desc with
+      | Texp_ident _ -> ()
+      | Texp_constant _ -> ()
+      | Texp_match _ -> ()
+      | Texp_apply _ -> ()
+      | Texp_function { cases; _ } ->
+          List.iter
+            ( fun { c_lhs; c_rhs; _ } ->
+                parameter := true;
+                iterator.TI.pat iterator c_lhs;
+                parameter := false;
+                iterator.TI.expr iterator c_rhs
+            )
+            cases;
+      | _ -> super.TI.expr iterator item
+    )
 
   in
   { super with
-    structure_item;
+    TI.structure_item;
     module_binding; module_expr;
     value_binding;
-    pat
+    pat; expr
   }
 
 class widget ~page () =
