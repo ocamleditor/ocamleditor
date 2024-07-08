@@ -161,6 +161,10 @@ let outline_iterator (model : GTree.tree_store) =
     Ident.name id |> (if !parameter then i else b),
     if !parameter then None else Some Icons.simple
   in
+  let lid_name lid =
+    string_of_longident lid |> (if !parameter then i else b),
+    if !parameter then None else Some Icons.simple
+  in
 
   let append ?loc text = model_append model ?loc text |> ignore in
   let structure_item iterator (item : structure_item) =
@@ -186,10 +190,80 @@ let outline_iterator (model : GTree.tree_store) =
       | Tstr_recmodule _ -> append ~loc "_ (rec module)"
       | Tstr_modtype _ -> append ~loc "_ (modtype)"
       | Tstr_open _ -> append ~loc "_ (open)"
-      | Tstr_class _ -> append ~loc "_ (class)"
-      | Tstr_class_type _ -> append ~loc "_ (classtype)"
+      | Tstr_class classes ->
+          List.iter
+            ( fun (cls, _) ->
+                let { ci_id_name; _ } = cls in
+                let { txt; loc } = ci_id_name in
+                let loc = loc.loc_start.pos_cnum in
+
+                let parent = !parent_row in
+                parent_row := Some (model_append model ~loc ~icon:Icons.classe (b txt));
+                iterator.TI.class_declaration iterator cls;
+
+                parent_row := parent;
+            )
+            classes
+      | Tstr_class_type decls ->
+          List.iter
+            ( fun (cls_id, _, item) ->
+                let parent = !parent_row in
+                parent_row := Some (model_append model ~loc ~icon:Icons.class_type (b @@ Ident.name cls_id));
+                iterator.TI.class_type_declaration iterator item;
+                parent_row := parent
+            )
+            decls
       | Tstr_include _ -> append ~loc "_ (include)"
       | Tstr_attribute _ -> append ~loc "_ (attribute)"
+    )
+  in
+
+  let class_expr iterator ( item : class_expr ) =
+    let { cl_desc; cl_loc; _ } = item in
+    let loc  = cl_loc.loc_start.pos_cnum in
+    ( match cl_desc with
+      | Tcl_ident _ -> append ~loc "Tcl_ident - TODO";
+      | Tcl_structure item ->
+          iterator.TI.class_structure iterator item
+      | Tcl_fun (_, pat, _, cl_expr, _ ) ->
+          (* TODO: Do somethign about the label *)
+          parameter := true;
+          iterator.TI.pat iterator pat;
+          parameter := false;
+
+          iterator.TI.class_expr iterator cl_expr
+      | Tcl_apply _ -> append ~loc "Tcl_apply - TODO"
+      | Tcl_let _ -> super.TI.class_expr iterator item
+      | Tcl_constraint _ -> append ~loc "Tcl_constraint - TODO"
+      | Tcl_open _ -> append ~loc "Tcl_open - TODO"
+    )
+  in
+
+  let class_structure iterator ( item : class_structure ) =
+    let { cstr_self; cstr_fields; _ } = item in
+    parameter := true;
+    iterator.TI.pat iterator cstr_self;
+    parameter := false;
+
+    List.iter
+      (iterator.TI.class_field iterator)
+      cstr_fields
+  in
+
+  let class_field iterator ( item : class_field ) =
+    let { cf_desc; cf_loc; _ } = item in
+    let loc = cf_loc.loc_start.pos_cnum in
+
+    ( match cf_desc with
+      | Tcf_inherit _ -> append ~loc "Tcf_inherit - TODO"
+      | Tcf_val ( { txt; _ }, _, _, _, _ ) ->
+          model_append model ~loc  ("val " ^ i txt) |> ignore
+      | Tcf_method ( { txt; _ }, _, _ ) ->
+          model_append model ~loc ~icon:Icons.met ~tooltip:"TODO: Add method type" ("method " ^ b txt) |> ignore
+      | Tcf_constraint _ -> append ~loc "Tcf_constraint - TODO"
+      | Tcf_initializer _ ->
+          model_append model ~loc ~icon:Icons.grip ~tooltip:"" (b "initializer") |> ignore
+      | Tcf_attribute _ -> append ~loc "Tcf_attribute - TODO"
     )
   in
 
@@ -266,11 +340,20 @@ let outline_iterator (model : GTree.tree_store) =
           iterator.TI.pat iterator al_pat ;
           let tooltip = string_of_type_expr pat_type in
           let name, icon = id_name id in
-          let flat_type = flatten_formatted tooltip in
-          let markup = name ^ " : " ^ flat_type in
-          model_append model ~loc ?icon ~tooltip markup |> ignore;
+          if String.contains name '-' then
+            ignore name (* object utility aliases *)
+          else (
+            let flat_type = flatten_formatted tooltip in
+            let markup = name ^ " : " ^ flat_type in
+            model_append model ~loc ?icon ~tooltip markup |> ignore
+          )
 
-      | Tpat_construct _ -> model_append model ~loc "_ (pat construct)" |> ignore
+      | Tpat_construct (lid, cd, pats, params_opt) ->
+          let { txt; loc } = lid in
+          let loc = loc.loc_start.pos_cnum in
+          let name, icon = lid_name txt in
+          model_append model ~loc ?icon (name ^ " ??") |> ignore
+
       | Tpat_tuple pats ->
           (* TODO: maybe insert parent row for tuple, with just an icon *)
           List.iter (iterator.TI.pat iterator) pats
@@ -316,7 +399,8 @@ let outline_iterator (model : GTree.tree_store) =
     TI.structure_item;
     module_binding; module_expr;
     value_binding;
-    pat; expr
+    pat; expr;
+    class_expr; class_structure; class_field
   }
 
 class widget ~page () =
@@ -366,6 +450,9 @@ class widget ~page () =
             Array.iter ignore items
         | Packed _ -> ()
       ) ;
+      (* TODO: Remove this hack and set the bottom margin *)
+      model_append model "" |> ignore;
+
       view#selection#unselect_all ();
       view#selection#misc#handler_unblock selection_changed_signal
 
