@@ -138,7 +138,11 @@ let i text = "<i>" ^ text ^ "</i>"
 let string_of_id ?(default="") id =
   id |> Option.map Ident.name |> Option.value ~default
 
-let string_of_type_expr te =
+let string_of_type_expr ?(is_method=false) te =
+  let te = match Types.get_desc te with
+    | Types.Tarrow (_, _self, te2, _) when is_method -> te2
+    | _ -> te
+  in
   Odoc_info.reset_type_names ();
   Odoc_info.string_of_type_expr te
   |> Print_type.markup2
@@ -254,12 +258,21 @@ let outline_iterator (model : GTree.tree_store) =
     let { cf_desc; cf_loc; _ } = item in
     let loc = cf_loc.loc_start.pos_cnum in
 
+    let field_type ?is_method kind =
+      ( match kind with
+        | Tcfk_virtual _core_type -> "virtual -- TODO"
+        | Tcfk_concrete (_, { exp_type; _ }) -> string_of_type_expr ?is_method exp_type
+      )
+    in
+
     ( match cf_desc with
       | Tcf_inherit _ -> append ~loc "Tcf_inherit - TODO"
-      | Tcf_val ( { txt; _ }, _, _, _, _ ) ->
-          model_append model ~loc  ("val " ^ i txt) |> ignore
-      | Tcf_method ( { txt; _ }, _, _ ) ->
-          model_append model ~loc ~icon:Icons.met ~tooltip:"TODO: Add method type" ("method " ^ b txt) |> ignore
+      | Tcf_val ( { txt; _ }, _, _, kind, _ ) ->
+          let field_type = field_type kind in
+          model_append model ~loc ~tooltip:field_type  ("val " ^ i txt ^ " : " ^ field_type) |> ignore
+      | Tcf_method ( { txt; _ }, _, kind ) ->
+          let field_type = field_type ~is_method:true kind in
+          model_append model ~loc ~icon:Icons.met ~tooltip:field_type ("method " ^ b txt ^ " : " ^ field_type) |> ignore
       | Tcf_constraint _ -> append ~loc "Tcf_constraint - TODO"
       | Tcf_initializer _ ->
           model_append model ~loc ~icon:Icons.grip ~tooltip:"" (b "initializer") |> ignore
