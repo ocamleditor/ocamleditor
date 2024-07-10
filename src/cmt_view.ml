@@ -136,20 +136,11 @@ let is_function type_expr =
   in f type_expr;;
 
 let string_of_type_expr ?(is_method=false) te =
-  match [@warning "-4"] Types.get_desc te with
-  | Tarrow (lab, t1, t2, _) ->
-      if is_method then Odoc_info.string_of_type_expr t2
-      else begin
-        let label =
-          match lab with
-          | Nolabel -> ""
-          | Labelled l -> l ^ ":"
-          | Optional l -> "?" ^ l ^ ":"
-        in
-        (* Still buggy: "?label:int" will print "?label:int option" *)
-        sprintf "%s%s -> %s" label (Odoc_info.string_of_type_expr t1) (Odoc_info.string_of_type_expr t2)
-      end
-  | _ -> Odoc_info.string_of_type_expr te;;
+  let te = match Types.get_desc te with
+    | Tarrow (_, te1, te2, _) when is_method -> te2
+    | _ -> te
+  in
+  Odoc_info.string_of_type_expr te
 
 let string_of_longident t
   = String.concat "." @@ Longident.flatten t
@@ -693,7 +684,7 @@ class widget ~editor:_ ~page ?packing () =
       match item.sig_desc with
       | Tsig_value { Typedtree.val_name; val_loc; val_desc; _ } ->
           Odoc_info.reset_type_names();
-          let typ = Odoc_info.string_of_type_expr val_desc.ctyp_type in
+          let typ = string_of_type_expr val_desc.ctyp_type in
           ignore (self#append ?parent ~kind:Function ~loc:val_loc ~loc_body:val_desc.ctyp_loc val_name.txt typ);
       | Tsig_type (_, decls) -> List.iter (self#append_type ?parent) decls
       (*| Tsig_exception { Typedtree.ext_kind; ext_name = loc; _ } ->
@@ -934,7 +925,7 @@ class widget ~editor:_ ~page ?packing () =
                       Method_virtual, string_of_type_expr ~is_method ct.ctyp_type, ct.ctyp_loc
                   (* Since 4.02.0 -- TODO handle _override *)
                   | Tcfk_concrete (_override, te) when private_flag = Private ->
-                      Method_private, string_of_type_expr ~is_method te.exp_type, te.exp_loc
+                      Method_private, string_of_type_expr ~is_method  te.exp_type, te.exp_loc
                   | Tcfk_concrete (_override, te) ->
                       Method, string_of_type_expr ~is_method te.exp_type, te.exp_loc
                 in
@@ -1012,7 +1003,7 @@ class widget ~editor:_ ~page ?packing () =
 
     method private string_of_type_abstract decl =
       match decl.typ_manifest with
-      | Some ct -> Odoc_info.string_of_type_expr ct.ctyp_type
+      | Some ct -> string_of_type_expr ct.ctyp_type
       | _ -> ""
 
     method private string_of_type_record decls =
