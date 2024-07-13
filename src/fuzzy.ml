@@ -72,13 +72,13 @@ let print_matrix m =
   Printf.printf "\n%!";
   for i = 0 to Array.length m - 1 do
     for j = 0 to Array.length (m.(i)) - 1 do
-      if m.(i).(j) <> '\x00' then Printf.printf "%c" m.(i).(j) else Printf.printf " "
+      if m.(i).(j) <> '\x00' then Printf.printf "%c" m.(i).(j) else Printf.printf "`"
     done;
     Printf.printf "\n%!"
   done;;
 
 let print_path_matrix la lb paths =
-  let m = Array.make_matrix la lb '\x00' in
+  let m = Array.make_matrix la lb '`' in
   paths |> Array.iteri (fun i n ->
       if n > 0 then begin
         let a = i / lb in
@@ -164,19 +164,31 @@ let compare pat str =
       let ls = float len_str in
       let amount = List.fold_left (fun sum l -> List.length l + sum) 0 paths |> float in
       let number_of_paths = List.length paths in
-      let compactness = if number_of_paths > 0 then  1. /. float number_of_paths else 0. in
+      let compactness = if number_of_paths > 0 then
+          (*let x = float number_of_paths in
+            (1.2 *. sin x) /. x*)
+          1. /. float number_of_paths
+          (*amount /. float number_of_paths*)
+        else 0.
+      in
       let s_relevance = amount /. ls in
       let p_relevance = amount /. lp in
-      let top = lp +. 3. in
+      let top = lp +. (*lp +.*) 1. +. 2. in
       let score = amount +. compactness +. s_relevance +. p_relevance in
       let score_perc = score /. top in
-      (*Printf.printf "%S %S %.2f -- %.2f %.2f %.2f %.2f -- %d %d\n%!" pat str score_perc
-        amount compactness s_relevance p_relevance len_pat len_str;*)
+      (*Printf.printf "%S %S %.2f -- %.2f %.2f %.2f %.2f -- %d %d -- n_paths: %d\n%!" pat str score_perc
+        amount compactness s_relevance p_relevance len_pat len_str (List.length paths);*)
       if score_perc >= 0.62 then score_perc else 0.
     end else 0.
 ;;
 
-(*compare "mysmilarstring" "myawfullysimilarstirng";;
-  compare "mysmilarstring" "mysimilarstring";;
-  compare "similar" "somewhresimlrbetweenthisstring";;
-  compare "foldlstrioght" "List.fold_right";;*)
+compare "mysmilarstring" "myawfullysimilarstirng";; (* 74 *)
+compare "mysmilarstring" "mysimilarstring";; (* 97 *)
+compare "similar" "somewhresimlrbetweenthisstring";; (* 45 *)
+compare "foldlstrioght" "List.fold_right";; (* 80 *)
+compare "fildlostri" "LogBuilder.print_timestamp";; (* 81 *)
+compare "fildlistri" "LogBuilder.print_timestamp";; (* 72 *)
+compare "New York Mets vs Atlanta Braves" "Atlanta Braves vs New York Mets";;
+compare "foldlist" "List.fold_left";; (* 92 *)
+
+

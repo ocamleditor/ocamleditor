@@ -206,32 +206,24 @@ class widget ~project ~(page : Editor_page.page) ~x ~y ?packing () =
 
     method private invoke_merlin ~prefix ~position ?(expand=true) window =
       let position = position#line + 1, position#line_offset in
+      if Oe_config.completion_name_table_enabled then begin
+        if String.length (String.trim prefix) >= 2 then begin
+          project |> Names.update_all
+            ~cont:begin fun db ->
+              db |> Names.filter prefix |> self#add_entries "N";
+              GtkThread.sync (fun () -> loading_complete#call count) ()
+            end;
+        end
+      end;
       view#obuffer#merlin@@complete_prefix ~position ~prefix begin fun complete_prefix ->
-        window#show();
-        begin
-          match complete_prefix.entries with
-          | first :: others ->
-              [1., first] |> self#add_entries "C";
-              first_entry_available#call();
-              others |> List.map (fun x -> 1., x) |> self#add_entries "C";
-          | [] -> ()
-        end;
-        if Oe_config.completion_name_table_enabled then begin
-          if String.length (String.trim prefix) >= 2 then begin
-            project |> Names.update_all
-              ~cont:begin fun db ->
-                db |> Names.filter prefix |> self#add_entries "N";
-                loading_complete#call count;
-              end;
-          end
-        end;
+        window#show(); (* NB The window is shown here *)
+        complete_prefix.entries |> List.map (fun x -> 1., x) |> self#add_entries "C";
         if count = 0 || expand then begin
           merlin@@expand_prefix ~position ~prefix begin fun expand_prefix ->
             expand_prefix.entries |> List.map (fun x -> 1., x) |> self#add_entries "E";
             loading_complete#call count;
           end;
-        end else
-          loading_complete#call count;
+        end else loading_complete#call count;
       end;
 
     method private apply path =
@@ -349,6 +341,7 @@ class widget ~project ~(page : Editor_page.page) ~x ~y ?packing () =
     val mutable model_entries : (float ref * Gtk.tree_iter * Merlin_t.entry) list = []
 
     method private add_entries source entries =
+      let last_count = count in
       let is_expand = source = "E" || source = "N" in
       let add_row (entry : Merlin_t.entry) score =
         let row = model#append () in
@@ -362,20 +355,23 @@ class widget ~project ~(page : Editor_page.page) ~x ~y ?packing () =
         count <- count + 1;
         model_entries <- (ref score, row, entry) :: model_entries;
       in
-      try
-        entries
-        |> List.iter begin fun (score, (entry : Merlin_t.entry)) ->
-          if is_destroyed then raise Exit;
-          model_entries
-          |> List.find_opt (fun (_, _, e) -> e.Merlin_t.name = entry.Merlin_t.name)
-          |> function
-          | Some (s, row, _) when score > !s ->
-              s := score;
-              if model#remove row then add_row entry score
-          | None -> add_row entry score
-          | _ -> ()
-        end
-      with Exit -> ()
+      begin
+        try
+          entries
+          |> List.iter begin fun (score, (entry : Merlin_t.entry)) ->
+            if is_destroyed || List.length model_entries > 30 then raise Exit;
+            model_entries
+            |> List.find_opt (fun (_, _, e) -> e.Merlin_t.name = entry.Merlin_t.name)
+            |> function
+            | Some (s, row, _) when score > !s ->
+                s := score;
+                if model#remove row then add_row entry score
+            | None -> add_row entry score
+            | _ -> ()
+          end
+        with Exit -> ()
+      end;
+      if last_count = 0 && count > 0 then first_entry_available#call();
 
     initializer
       view#misc#connect#after#realize ~callback:(fun _ -> vc_name#set_sizing `GROW_ONLY) |> ignore;
