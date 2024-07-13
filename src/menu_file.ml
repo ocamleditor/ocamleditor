@@ -179,6 +179,7 @@ let file ~browser ~group ~flags items =
   let _ = GMenu.separator_item ~packing:menu#add () in
   let quit = Image_menu.item ~label:"Exit" ~packing:menu#add () in
   ignore (quit#connect#activate ~callback:(fun () -> browser#exit editor ()));
+  quit#add_accelerator ~group ~modi:[`CONTROL] GdkKeysyms._q ~flags;
   (* callback *)
   ignore (file#misc#connect#state_changed ~callback:begin fun _ ->
       let page = editor#get_page `ACTIVE in
