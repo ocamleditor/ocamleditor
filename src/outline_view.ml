@@ -54,7 +54,6 @@ type 'a loc = 'a Location.loc = {
 
 let cols               = new GTree.column_list
 let col_icon           = cols#add (Gobject.Data.gobject_by_name "GdkPixbuf")
-let col_name           = cols#add Gobject.Data.string
 let col_markup         = cols#add Gobject.Data.string
 let col_loc            = cols#add Gobject.Data.int
 let col_tooltip        = cols#add Gobject.Data.string
@@ -139,9 +138,9 @@ let string_of_id ?(default="") id =
   id |> Option.map Ident.name |> Option.value ~default
 
 let string_of_type_expr ?(is_method=false) te =
-  let te = match Types.get_desc te with
-    | Types.Tarrow (_, _self, te2, _) when is_method -> te2
-    | _ -> te
+  let te = ( match Types.get_desc te with
+      | Types.Tarrow (_, _self, te2, _) when is_method -> te2
+      | _ -> te ) [@warning "-fragile-match"]
   in
   Odoc_info.reset_type_names ();
   Odoc_info.string_of_type_expr te
@@ -158,7 +157,7 @@ let string_of_functor_parameter = function
 let outline_iterator (model : GTree.tree_store) =
   let super = TI.default_iterator in
 
-  let expr : expression option ref = ref None in
+  let value_binding_expr : expression option ref = ref None in
   let parameter : bool ref = ref false in
 
   let id_name id =
@@ -251,7 +250,7 @@ let outline_iterator (model : GTree.tree_store) =
                 parent_row := parent;
 
                 iterator.TI.class_expr iterator cl_expr
-          )
+          ) [@warning "-fragile-match"]
 
       | Tcl_constraint _ -> append ~loc "Tcl_constraint - TODO"
       | Tcl_open _ -> append ~loc "Tcl_open - TODO"
@@ -270,7 +269,7 @@ let outline_iterator (model : GTree.tree_store) =
       cstr_fields
   in
 
-  let class_field iterator ( item : class_field ) =
+  let class_field _iterator ( item : class_field ) =
     let { cf_desc; cf_loc; _ } = item in
     let loc = cf_loc.loc_start.pos_cnum in
 
@@ -357,9 +356,9 @@ let outline_iterator (model : GTree.tree_store) =
       ( iterator : Tast_iterator.iterator )
       { vb_pat; vb_expr; _ }
     =
-    expr := Some vb_expr;
+    value_binding_expr := Some vb_expr;
     iterator.TI.pat iterator vb_pat;
-    expr := None
+    value_binding_expr := None
   in
 
   let pat iterator (type k) (pattern : k Typedtree.general_pattern) =
@@ -374,10 +373,11 @@ let outline_iterator (model : GTree.tree_store) =
           let name, icon = id_name id in
           let flat_type = flatten_formatted tooltip in
           let markup = name ^ " : " ^ flat_type in
-          if is_function pat_type && Option.is_some !expr then (
+          if is_function pat_type && Option.is_some !value_binding_expr then (
+            let icon = Some Icons.func in
             let parent = !parent_row in
             parent_row := Some (model_append model ?icon ~loc ~tooltip markup);
-            iterator.TI.expr iterator (Option.get !expr);
+            iterator.TI.expr iterator (Option.get !value_binding_expr);
             parent_row := parent
           )
           else
@@ -395,11 +395,11 @@ let outline_iterator (model : GTree.tree_store) =
             model_append model ~loc ?icon ~tooltip markup |> ignore
           )
 
-      | Tpat_construct (lid, cd, pats, params_opt) ->
+      | Tpat_construct (lid, _cd, _pats, _params_opt) ->
           let { txt; loc } = lid in
           let loc = loc.loc_start.pos_cnum in
           let name, icon = lid_name txt in
-          model_append model ~loc ?icon (name ^ " ??") |> ignore
+          model_append model ~loc ?icon (name) |> ignore
 
       | Tpat_tuple pats ->
           (* TODO: maybe insert parent row for tuple, with just an icon *)
@@ -425,10 +425,6 @@ let outline_iterator (model : GTree.tree_store) =
   let expr ( iterator : TI.iterator ) ( item : expression ) =
     let { exp_desc; _ } = item in
     ( match exp_desc with
-      | Texp_ident _ -> ()
-      | Texp_constant _ -> ()
-      | Texp_match _ -> ()
-      | Texp_apply _ -> ()
       | Texp_function { cases; _ } ->
           List.iter
             ( fun { c_lhs; c_rhs; _ } ->
@@ -439,7 +435,7 @@ let outline_iterator (model : GTree.tree_store) =
             )
             cases;
       | _ -> super.TI.expr iterator item
-    )
+    ) [@warning "-fragile-match"]
   in
   { super with
     TI.structure_item;
@@ -504,7 +500,9 @@ class widget ~page () =
 
     method view = view
 
-    method select_from_buffer ?(align : float option) (mark : Gtk.text_mark) = false
+    method select_from_buffer ?(align : float option) (mark : Gtk.text_mark) =
+      ignore align;
+      ignore mark
 
     method private selection_changed () =
       ( match view#selection#get_selected_rows with
