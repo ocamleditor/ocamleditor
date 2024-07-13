@@ -222,7 +222,7 @@ let outline_iterator (model : GTree.tree_store) =
     )
   in
 
-  let class_expr iterator ( item : class_expr ) =
+  let rec class_expr iterator ( item : class_expr ) let_bindings =
     let { cl_desc; cl_loc; _ } = item in
     let loc  = cl_loc.loc_start.pos_cnum in
     ( match cl_desc with
@@ -236,12 +236,28 @@ let outline_iterator (model : GTree.tree_store) =
           parameter := false;
 
           iterator.TI.class_expr iterator cl_expr
+
       | Tcl_apply _ -> append ~loc "Tcl_apply - TODO"
-      | Tcl_let _ -> super.TI.class_expr iterator item
+
+      | Tcl_let (_rec_flag, bindings, _, cl_expr) ->
+          let { cl_desc; _ } = cl_expr in
+          ( match cl_desc with
+            | Tcl_let (_, inner_bindings, _, cl_expr) ->
+                class_expr iterator cl_expr (let_bindings @ bindings @ inner_bindings)
+            | _ ->
+                let parent = !parent_row in
+                parent_row := Some (model_append model ~loc ~tooltip:"" (Glib.Markup.escape_text "<let bindings>"));
+                List.iter (iterator.TI.value_binding iterator) (let_bindings @ bindings);
+                parent_row := parent;
+
+                iterator.TI.class_expr iterator cl_expr
+          )
+
       | Tcl_constraint _ -> append ~loc "Tcl_constraint - TODO"
       | Tcl_open _ -> append ~loc "Tcl_open - TODO"
     )
   in
+  let class_expr iterator item = class_expr iterator item [] in
 
   let class_structure iterator ( item : class_structure ) =
     let { cstr_self; cstr_fields; _ } = item in
@@ -264,15 +280,33 @@ let outline_iterator (model : GTree.tree_store) =
         | Tcfk_concrete (_, { exp_type; _ }) -> string_of_type_expr ?is_method exp_type
       )
     in
+    let field_icon kind flag =
+      ( match kind, flag with
+        | Tcfk_virtual _, Asttypes.Mutable -> Icons.attribute_mutable_virtual
+        | Tcfk_virtual _, Asttypes.Immutable -> Icons.attribute_virtual
+        | Tcfk_concrete _, Asttypes.Immutable -> Icons.attribute
+        | Tcfk_concrete _, Asttypes.Mutable -> Icons.attribute_mutable
+      )
+    in
+    let method_icon kind flag =
+      ( match kind, flag with
+        | Tcfk_virtual _, Asttypes.Public -> Icons.met_virtual
+        | Tcfk_virtual _, Asttypes.Private -> Icons.met_private_virtual
+        | Tcfk_concrete _, Asttypes.Public  -> Icons.met
+        | Tcfk_concrete _, Asttypes.Private -> Icons.met_private
+      )
+    in
 
     ( match cf_desc with
       | Tcf_inherit _ -> append ~loc "Tcf_inherit - TODO"
-      | Tcf_val ( { txt; _ }, _, _, kind, _ ) ->
+      | Tcf_val ( { txt; _ }, flag, _, kind, _ ) ->
           let field_type = field_type kind in
-          model_append model ~loc ~tooltip:field_type  ("val " ^ i txt ^ " : " ^ field_type) |> ignore
-      | Tcf_method ( { txt; _ }, _, kind ) ->
+          let icon = field_icon kind flag in
+          model_append model ~loc ~icon ~tooltip:field_type  (i txt ^ " : " ^ field_type) |> ignore
+      | Tcf_method ( { txt; _ }, priv, kind ) ->
           let field_type = field_type ~is_method:true kind in
-          model_append model ~loc ~icon:Icons.met ~tooltip:field_type ("method " ^ b txt ^ " : " ^ field_type) |> ignore
+          let icon = method_icon kind priv in
+          model_append model ~loc ~icon ~tooltip:field_type (b txt ^ " : " ^ field_type) |> ignore
       | Tcf_constraint _ -> append ~loc "Tcf_constraint - TODO"
       | Tcf_initializer _ ->
           model_append model ~loc ~icon:Icons.grip ~tooltip:"" (b "initializer") |> ignore
@@ -406,7 +440,6 @@ let outline_iterator (model : GTree.tree_store) =
             cases;
       | _ -> super.TI.expr iterator item
     )
-
   in
   { super with
     TI.structure_item;
@@ -450,7 +483,6 @@ class widget ~page () =
       | None -> ()
       | Some (_, _, cmt) -> self#load_cmt cmt
 
-
     method private load_cmt cmt =
       view#selection#misc#handler_block selection_changed_signal ;
       model_clear model ;
@@ -464,7 +496,8 @@ class widget ~page () =
         | Packed _ -> ()
       ) ;
       (* TODO: Remove this hack and set the bottom margin *)
-      model_append model "" |> ignore;
+      let loc = max_int in
+      model_append model ~loc ~tooltip:"" "" |> ignore;
 
       view#selection#unselect_all ();
       view#selection#misc#handler_unblock selection_changed_signal
