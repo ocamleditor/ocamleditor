@@ -135,7 +135,12 @@ let is_function type_expr =
     | _ -> false
   in f type_expr;;
 
-let string_of_type_expr = Odoc_info.string_of_type_expr
+let string_of_type_expr ?(is_method=false) te =
+  let te = match Types.get_desc te with
+    | Tarrow (_, te1, te2, _) when is_method -> te2
+    | _ -> te
+  in
+  Odoc_info.string_of_type_expr te
 
 let string_of_longident t
   = String.concat "." @@ Longident.flatten t
@@ -931,14 +936,14 @@ class widget ~editor:_ ~page ?packing () =
                 let is_method = true in
                 let kind, typ, loc_body = match kind with
                   | Tcfk_virtual ct when private_flag = Private ->
-                      Method_private_virtual, string_of_type_expr ct.ctyp_type, ct.ctyp_loc
+                      Method_private_virtual, string_of_type_expr ~is_method ct.ctyp_type, ct.ctyp_loc
                   | Tcfk_virtual ct ->
-                      Method_virtual, string_of_type_expr ct.ctyp_type, ct.ctyp_loc
+                      Method_virtual, string_of_type_expr ~is_method ct.ctyp_type, ct.ctyp_loc
                   (* Since 4.02.0 -- TODO handle _override *)
                   | Tcfk_concrete (_override, te) when private_flag = Private ->
-                      Method_private, string_of_type_expr te.exp_type, te.exp_loc
+                      Method_private, string_of_type_expr ~is_method  te.exp_type, te.exp_loc
                   | Tcfk_concrete (_override, te) ->
-                      Method, string_of_type_expr te.exp_type, te.exp_loc
+                      Method, string_of_type_expr ~is_method te.exp_type, te.exp_loc
                 in
                 Gaux.may count_meth ~f:incr;
                 Some (self#append ?parent ~kind ~loc:loc.loc ~loc_body:loc_body loc.txt typ);
