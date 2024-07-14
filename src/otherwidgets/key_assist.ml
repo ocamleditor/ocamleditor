@@ -42,7 +42,7 @@ let markup_right = "\
 let markup_left = "\
 <b><big>Editor</big></b>
 
-<tt><b>Ctrl+Q</b></tt>: Selects the nearest comment block and adds comment or removes comment. If you press <tt>Ctrl+Q</tt> when a space character is selected, you get <tt>(* &lt;cursor&gt; *)</tt>; when two space characters are selected, you get <tt>(** &lt;cursor&gt; *)</tt>.
+<tt><b>Ctrl+/</b></tt>: Selects the nearest comment block and adds comment or removes comment. If you press <tt>Ctrl+/</tt> when a space character is selected, you get <tt>(* &lt;cursor&gt; *)</tt>; when two space characters are selected, you get <tt>(** &lt;cursor&gt; *)</tt>.
 
 <tt><b>Ctrl+W</b></tt>: Selects a word; when pressed repeatedly cycles through the various parts (separated by '_' or '.') of an identifier.
 

@@ -96,7 +96,7 @@ let edit ~browser ~group ~flags
   let comment = GMenu.menu_item ~label:"Comment Block" ~packing:menu#add () in
   ignore (comment#connect#activate ~callback:(fun () ->
       editor#with_current_page (fun page -> ignore (page#ocaml_view#toggle_comment ()))));
-  comment#add_accelerator ~group ~modi:[`CONTROL] GdkKeysyms._q ~flags;
+  comment#add_accelerator ~group ~modi:[`CONTROL] GdkKeysyms._slash ~flags;
   (* Change To Uppercase/Lowercase *)
   let toggle_case = GMenu.menu_item ~label:"Convert To Uppercase/Lowercase" ~packing:menu#add () in
   ignore (toggle_case#connect#activate ~callback:(fun () ->
