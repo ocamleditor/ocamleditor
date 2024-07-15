@@ -367,8 +367,7 @@ class browser window =
         let roots = project_history.File_history.content in (* project filenames .xml *)
         let roots = List.filter ((<>) current) (List.map Filename.dirname roots) in
         let roots = current :: roots in
-        let dialog = Dialog_find_file.create ?all ~roots ~editor () in
-        dialog#set_transient_for window#as_window;
+        Dialog_find_file.create ?all ~roots ~editor () |> ignore;
       end
 
     method menubar_visible = menubar_visible

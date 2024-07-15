@@ -182,13 +182,13 @@ let compare pat str =
     end else 0.
 ;;
 
-compare "mysmilarstring" "myawfullysimilarstirng";; (* 74 *)
-compare "mysmilarstring" "mysimilarstring";; (* 97 *)
-compare "similar" "somewhresimlrbetweenthisstring";; (* 45 *)
-compare "foldlstrioght" "List.fold_right";; (* 80 *)
-compare "fildlostri" "LogBuilder.print_timestamp";; (* 81 *)
-compare "fildlistri" "LogBuilder.print_timestamp";; (* 72 *)
-compare "New York Mets vs Atlanta Braves" "Atlanta Braves vs New York Mets";;
-compare "foldlist" "List.fold_left";; (* 92 *)
+(*compare "mysmilarstring" "myawfullysimilarstirng";; (* 74 *)
+  compare "mysmilarstring" "mysimilarstring";; (* 97 *)
+  compare "similar" "somewhresimlrbetweenthisstring";; (* 45 *)
+  compare "foldlstrioght" "List.fold_right";; (* 80 *)
+  compare "fildlostri" "LogBuilder.print_timestamp";; (* 81 *)
+  compare "fildlistri" "LogBuilder.print_timestamp";; (* 72 *)
+  compare "New York Mets vs Atlanta Braves" "Atlanta Braves vs New York Mets";;
+  compare "foldlist" "List.fold_left";; (* 92 *)*)
 
 

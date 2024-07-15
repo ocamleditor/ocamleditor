@@ -71,6 +71,10 @@ let create ~project ~editor ?(buffer : GText.buffer option) ?widget
   let check_selected_text_only = GButton.check_button ~label:"Selected text only"
       ~packing:(table#attach ~top:1 ~left:1 ~expand:`X)
       ~show:(not search_in_path && buffer_has_selection) () in
+  (* check_match_whole_word *)
+  let check_match_whole_word = GButton.check_button ~label:"Match whole word"
+      ~active:status.match_whole_word
+      ~packing:(table#attach ~top:2 ~left:0 ~expand:`X) () in
   (** Search path *)
   let frame = GBin.frame ~label:" Search path " ~packing:(vbox#pack ~expand:false) ~show:search_in_path () in
   let pbox = GPack.vbox ~spacing:5 ~border_width:5 ~packing:frame#add () in
@@ -226,6 +230,7 @@ let create ~project ~editor ?(buffer : GText.buffer option) ?widget
       ~text_repl:entry_repl#entry#text
       ~use_regexp:check_use_regexp#active
       ~case_sensitive:check_case_sensitive#active
+      ~match_whole_word:check_match_whole_word#active
       ~direction:(if check_search_backward#active then Backward else Forward)
       ~path:begin
         if radio_specified_path#active then Specified entry_specified_path#entry#text

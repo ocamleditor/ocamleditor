@@ -39,6 +39,7 @@ class status () =
     val mutable i_search = false;
     val mutable use_regexp = false;
     val mutable case_sensitive = false;
+    val mutable match_whole_word = false;
     val mutable history_find : string list = []
     val mutable history_replace : string list = []
     val mutable view = None
@@ -47,11 +48,13 @@ class status () =
     method i_search = i_search
     method use_regexp = use_regexp
     method case_sensitive = case_sensitive
+    method match_whole_word = match_whole_word
     method set_backward v = backward <- v
     method set_incremental v = incremental <- v
     method set_i_search v = i_search <- v
     method set_use_regexp v = use_regexp <- v
     method set_case_sensitive v = case_sensitive <- v
+    method set_match_whole_word v = match_whole_word <- v
     method history_find = history_find
     method history_replace = history_replace
     method text_find = text_find
@@ -161,9 +164,11 @@ class incremental () =
       let inc = ref status#incremental in
       let old_back = ref status#backward in
       let old_case = ref status#case_sensitive in
+      let old_match_whole_word = ref status#match_whole_word in
       let old_regexp = ref status#use_regexp in
       fun ?(full_find : (Gdk.Tags.modifier list * Gdk.keysym * (unit -> unit)) option) ~view ~project () ->
         status#set_case_sensitive false;
+        status#set_match_whole_word false;
         status#set_use_regexp true;
         status#set_i_search true;
         status#set_text_find "";
@@ -177,7 +182,7 @@ class incremental () =
                    ?type_hint:(match Sys.os_type with
                        | "Win32" -> Some `UTILITY (* to skip taskbar on Windows *)
                        | _ -> Some `DIALOG)
-                   ~decorated:false ~modal:false ~border_width:2 ()
+                   ~decorated:false ~modal:false ~border_width:1 ()
         in
         dialog#set_skip_taskbar_hint true;
         dialog#set_skip_pager_hint true;
@@ -201,8 +206,7 @@ class incremental () =
         in
         let ebox = GBin.event_box ~border_width:0 ~packing:dialog#add () in
         let box = GPack.hbox ~spacing:0 ~border_width:5 ~packing:ebox#add () in
-        let border_color = Preferences.editor_tag_color_name "highlight_current_line" in
-        dialog#misc#modify_bg [`NORMAL, border_color];
+        dialog#misc#modify_bg [`NORMAL, `COLOR (dialog#misc#style#bg `SELECTED)];
         let _ =
           if not Oe_config.use_theme_colors_when_possible then
             ebox#misc#modify_bg [`NORMAL, `NAME ?? (Preferences.preferences#get.editor_bg_color_popup)] in
@@ -224,7 +228,11 @@ class incremental () =
               end;
             end
         end |> ignore;
-        dialog#event#connect#focus_out ~callback:begin fun ev ->
+        dialog#event#connect#focus_in ~callback:begin fun _ ->
+          move();
+          false
+        end |> ignore;
+        dialog#event#connect#focus_out ~callback:begin fun _ ->
           dialog#destroy();
           true
         end |> ignore;
@@ -250,11 +258,10 @@ class incremental () =
             status#set_backward !old_back;
             status#set_i_search false;
             status#set_case_sensitive !old_case;
+            status#set_match_whole_word !old_match_whole_word;
             status#set_use_regexp !old_regexp;
           end |> ignore;
-        move();
         dialog#show();
-        move();
         e#misc#grab_focus()
 
     method private not_found text choice view =

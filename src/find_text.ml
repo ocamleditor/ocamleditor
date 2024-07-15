@@ -44,6 +44,7 @@ type status = {
   mutable text_repl      : string;
   mutable use_regexp     : bool;
   mutable case_sensitive : bool;
+  mutable match_whole_word : bool;
   mutable direction      : direction;
   mutable path           : path;
   mutable recursive      : bool;
@@ -82,6 +83,7 @@ let status =
     text_repl       = "";
     use_regexp      = false;
     case_sensitive  = false;
+    match_whole_word = false;
     direction       = Forward;
     path            = Project_source;
     recursive       = false;
@@ -125,6 +127,7 @@ let write_status () =
     Xml.Element ("find_text", [
         "check_regexp", (string_of_bool status.use_regexp);
         "check_case", (string_of_bool status.case_sensitive);
+        "check_match_whole_word", (string_of_bool status.match_whole_word);
         "check_rec", (string_of_bool status.recursive);
         "check_pat", (string_of_bool (status.pattern <> None));
         "radio_path", (string_of_bool (match status.path with Specified _ -> true | _ -> false));
@@ -156,6 +159,8 @@ let read_status () =
     let attribs = Xml.attribs xml in
     status.use_regexp <- (bool_of_string (List.assoc "check_regexp" attribs));
     status.case_sensitive <- (bool_of_string (List.assoc "check_case" attribs));
+    status.match_whole_word <-
+      (match List.assoc_opt "check_match_whole_word" attribs with Some x -> bool_of_string x | _ -> false);
     status.recursive <- (bool_of_string (List.assoc "check_rec" attribs));
     status.pattern <- if bool_of_string (List.assoc "check_pat" attribs) then Some "" else None;
     status.path <-
@@ -197,15 +202,21 @@ let read_status () =
     end
 
 (** create_regexp *)
-let create_regexp ~project ?(use_regexp=status.use_regexp) ?(case_sensitive=status.case_sensitive) ~text () =
-  let f =
-    match use_regexp, case_sensitive with
-    | true, true -> Str.regexp
-    | true, false -> Str.regexp_case_fold
-    | false, true -> Str.regexp_string
-    | false, false -> Str.regexp_string_case_fold
-  in
-  f (Project.convert_from_utf8 project text)
+let create_regexp ~project
+    ?(use_regexp=status.use_regexp)
+    ?(case_sensitive=status.case_sensitive)
+    ?(match_whole_word=status.match_whole_word)
+    ~text () =
+  let text = Project.convert_from_utf8 project text in
+  match match_whole_word, use_regexp, case_sensitive with
+  | false, true, true -> Str.regexp text
+  | false, true, false -> Str.regexp_case_fold text
+  | false, false, true -> Str.regexp_string text
+  | false, false, false -> Str.regexp_string_case_fold text
+  | true, true, true -> Str.regexp (sprintf "\\b%s\\b" text)
+  | true, true, false -> Str.regexp_case_fold (sprintf "\\b%s\\b" text)
+  | true, false, true -> Str.regexp (sprintf "\\b%s\\b" (Str.quote text))
+  | true, false, false -> Str.regexp_case_fold (sprintf "\\b%s\\b" (Str.quote text))
 
 (** update_status *)
 let update_status
@@ -214,6 +225,7 @@ let update_status
     ?(text_repl=status.text_repl)
     ?(use_regexp=status.use_regexp)
     ?(case_sensitive=status.case_sensitive)
+    ?(match_whole_word=status.match_whole_word)
     ?(direction=status.direction)
     ?(path=status.path)
     ?(recursive=status.recursive)
@@ -222,6 +234,7 @@ let update_status
   status.text_repl <- text_repl;
   status.use_regexp <- use_regexp;
   status.case_sensitive <- case_sensitive;
+  status.match_whole_word <- match_whole_word;
   status.recursive <- recursive;
   status.direction <- direction;
   status.pattern <- pattern;

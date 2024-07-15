@@ -49,11 +49,14 @@ let help = "<small>Press \"<tt>Ctrl+Return</tt>\" to toggle open/close; press \"
 (** create *)
 let create ?(all=true) ~(editor : Editor.editor) ~roots () =
   let title                = if all then "Find File" else "Select File" in
-  let window               = GWindow.window ~title ~icon:(??? Icons.oe) ~height:500 ~modal:true ~type_hint:`DIALOG ~position:`CENTER ~border_width:5 ~show:false () in
-  let _ = Gmisclib.Window.GeometryMemo.add ~key:"dialog-find-file" ~window Preferences.geometry_memo in
+  let window               = GWindow.window ~title ~icon:(??? Icons.oe) ~height:500 ~modal:true ~decorated:false ~position:`CENTER(*_ON_PARENT*) ~border_width:1 ~show:false () in
+  let _                    = Gmisclib.Window.GeometryMemo.add ~key:"dialog-find-file" ~window Preferences.geometry_memo in
   let _                    = window#set_skip_taskbar_hint true in
   let _                    = window#set_skip_pager_hint true in
-  let vbox                 = GPack.vbox ~spacing:5 ~packing:window#add () in
+  let _                    = window#misc#modify_bg [`NORMAL, `COLOR (window#misc#style#bg `SELECTED)] in
+  let ebox                 = GBin.event_box ~packing:window#add () in
+  let _                    = window#set_focus_on_map true in
+  let vbox                 = GPack.vbox ~spacing:5 ~border_width:5 ~packing:ebox#add () in
   (* Quick file chooser *)
   let source               =
     if all then begin
@@ -99,6 +102,12 @@ let create ?(all=true) ~(editor : Editor.editor) ~roots () =
       quick_file_chooser#activate();
       window#destroy()
     end);
+  window#event#connect#focus_out ~callback:begin fun _ ->
+    Printf.printf "focus_out \n%!" ;
+    window#misc#hide();
+    window#destroy();
+    true
+  end |> ignore;
   let show_currently_opened () =
     quick_file_chooser#display (quick_file_chooser#get_paths_with_icon ());
     Gmisclib.Idle.add ~prio:300 begin fun () ->
