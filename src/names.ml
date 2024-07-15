@@ -56,16 +56,17 @@ let get_project_source_filenames project =
   |> List.concat
 
 let filter pattern db =
-  let compare = Fuzzy.compare pattern in
+  let compare = Utils.Memo.fast ~f:(fun (a, b) -> Fuzzy.compare a b) in
   !!Lock.namedb begin fun () ->
     db.table
     |> List.map (fun entry ->
         entry.values
         |> List.filter_map begin fun val_entry ->
-          let score = compare val_entry.name in
+          let score = compare (pattern, val_entry.name) in
           if score > 0. then Some (score, val_entry) else None
         end)
     |> List.concat
+    |> List.sort (fun (a, _) (b, _) -> Stdlib.compare b a)
   end ()
 
 let rec add_outline db entry modname outline =
@@ -140,13 +141,15 @@ let init ?(cont=ignore) project =
 let update_all ?(cont=ignore) project =
   match !database with
   | Some db ->
-      get_project_source_filenames project
-      |> List.iter begin fun filename ->
-        match db.table |> List.find_opt (fun x -> x.filename = filename) with
-        | Some dbf when (Unix.stat filename).Unix.st_mtime <= dbf.timestamp -> ()
-        | _ -> update db filename
-      end;
-      cont db
+      Thread.create begin fun () ->
+        get_project_source_filenames project
+        |> List.iter begin fun filename ->
+          match db.table |> List.find_opt (fun x -> x.filename = filename) with
+          | Some dbf when (Unix.stat filename).Unix.st_mtime <= dbf.timestamp -> ()
+          | _ -> update db filename
+        end;
+        cont db
+      end () |> ignore;
   | _ ->
       let message = "Loading completion..." in
       Activity.add Activity.Other message;

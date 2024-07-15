@@ -1,4 +1,25 @@
-open Printf;;
+(*
+
+  OCamlEditor
+  Copyright (C) 2010-2024 Francesco Tovagliari
+
+  This file is part of OCamlEditor.
+
+  OCamlEditor is free software: you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation, either version 3 of the License, or
+  (at your option) any later version.
+
+  OCamlEditor is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License
+  along with this program. If not, see <http://www.gnu.org/licenses/>.
+
+*)
+
 
 let distance s t =
   let m = String.length s in
@@ -51,13 +72,13 @@ let print_matrix m =
   Printf.printf "\n%!";
   for i = 0 to Array.length m - 1 do
     for j = 0 to Array.length (m.(i)) - 1 do
-      if m.(i).(j) <> '\x00' then Printf.printf "%c" m.(i).(j) else Printf.printf " "
+      if m.(i).(j) <> '\x00' then Printf.printf "%c" m.(i).(j) else Printf.printf "`"
     done;
     Printf.printf "\n%!"
   done;;
 
 let print_path_matrix la lb paths =
-  let m = Array.make_matrix la lb '\x00' in
+  let m = Array.make_matrix la lb '`' in
   paths |> Array.iteri (fun i n ->
       if n > 0 then begin
         let a = i / lb in
@@ -75,19 +96,17 @@ let matching_positions a b =
   let la = Array.length a in
   let lb = Array.length b in
   let m = Array.make_matrix la lb '\x00' in
-  let count = ref 0 in
-  let ind = ref [] in
+  let index = ref [] in
   for i = 0 to la - 1 do
     for j = 0 to lb - 1 do
       if Array.unsafe_get a i = Array.unsafe_get b j then begin
         m.(i).(j) <- Array.unsafe_get a i;
-        ind := (i, j) :: !ind;
-        incr count
+        index := (i, j) :: !index;
       end
     done;
   done;
   (*print_matrix m;*)
-  la, lb, m, !ind, !count;;
+  la, lb, m, !index;;
 
 let matching_paths la lb m ind =
   let mapping = Array.make (la * lb) 0 in
@@ -108,50 +127,68 @@ let join edges =
     edges.(i) <- 0;
     if j = 0 then [i] else i :: follow j
   in
-  for i = 0 to Array.length edges - 1 do
-    if edges.(i) > 0 then paths := (follow i) :: !paths;
-  done;
+  edges |> Array.iteri (fun i e -> if e > 0 then paths := (follow i) :: !paths);
   !paths;;
 
 let remove_shortest_overlapping lb paths =
   let paths = Array.of_list paths in
   let len = Array.length paths in
   for i = 0 to len - 1 do
-    if paths.(i) <> [] then begin
-      let rooti = List.hd paths.(i) in
-      let bi = rooti / lb in
-      for j = i + 1 to len - 1 do
-        if paths.(j) <> [] then begin
-          let ij_overlap = paths.(j) |> List.exists (fun n -> n / lb = bi) in
-          if ij_overlap then begin
-            if List.length paths.(i) <= List.length paths.(j) then
-              paths.(i) <- []
-            else
-              paths.(j) <- []
-          end
-        end
-      done
-    end
+    match paths.(i) with
+    | [] -> ()
+    | (root_i :: _) as path_i ->
+        let bi = root_i / lb in
+        for j = i + 1 to len - 1 do
+          match paths.(j) with
+          | [] -> ()
+          | path_j ->
+              let ij_overlap = path_j |> List.exists (fun n -> n / lb = bi) in
+              if ij_overlap then begin
+                if List.length path_i <= List.length path_j then
+                  paths.(i) <- []
+                else
+                  paths.(j) <- []
+              end
+        done
   done;
-  paths |> Array.to_list |> List.filter (fun p -> p <> []);;
+  paths |> Array.to_list |> List.filter ((<>) []);;
 
-let compare pat =
-  let lpat = float (String.length pat) in
-  fun str ->
-    let lstr = float (String.length str) in
-    let la, lb, m, ind, count = matching_positions pat str in
-    if count > 0 then
-      begin
-        let paths = matching_paths la lb m ind in
-        let paths = paths |> join |> remove_shortest_overlapping lb in
-        let amount = List.fold_left (fun sum l -> List.length l + sum) 0 paths |> float in
-        let compactness = amount /. float (List.length paths) in
-        let s_relevance = amount /. lstr in
-        let p_relevance = amount /. lpat in
-        let top = lpat +. lpat +. 2. in
-        let score = amount +. compactness +. s_relevance +. p_relevance in
-        let score_perc = score /. top in
-        (*pat, str, score_perc, (amount, compactness, s_relevance, p_relevance);*)
-        if score_perc >= 0.62 then score_perc else 0.
-      end else 0.;
+let compare pat str =
+  let len_pat, len_str, matrix, index = matching_positions pat str in
+  if List.length index > 0 then
+    begin
+      let paths = matching_paths len_pat len_str matrix index in
+      (*print_path_matrix len_pat len_str paths;*)
+      let paths = paths |> join |> remove_shortest_overlapping len_str in
+      let lp = float len_pat in
+      let ls = float len_str in
+      let amount = List.fold_left (fun sum l -> List.length l + sum) 0 paths |> float in
+      let number_of_paths = List.length paths in
+      let compactness = if number_of_paths > 0 then
+          (*let x = float number_of_paths in
+            (1.2 *. sin x) /. x*)
+          1. /. float number_of_paths
+          (*amount /. float number_of_paths*)
+        else 0.
+      in
+      let s_relevance = amount /. ls in
+      let p_relevance = amount /. lp in
+      let top = lp +. (*lp +.*) 1. +. 2. in
+      let score = amount +. compactness +. s_relevance +. p_relevance in
+      let score_perc = score /. top in
+      (*Printf.printf "%S %S %.2f -- %.2f %.2f %.2f %.2f -- %d %d -- n_paths: %d\n%!" pat str score_perc
+        amount compactness s_relevance p_relevance len_pat len_str (List.length paths);*)
+      if score_perc >= 0.62 then score_perc else 0.
+    end else 0.
 ;;
+
+compare "mysmilarstring" "myawfullysimilarstirng";; (* 74 *)
+compare "mysmilarstring" "mysimilarstring";; (* 97 *)
+compare "similar" "somewhresimlrbetweenthisstring";; (* 45 *)
+compare "foldlstrioght" "List.fold_right";; (* 80 *)
+compare "fildlostri" "LogBuilder.print_timestamp";; (* 81 *)
+compare "fildlistri" "LogBuilder.print_timestamp";; (* 72 *)
+compare "New York Mets vs Atlanta Braves" "Atlanta Braves vs New York Mets";;
+compare "foldlist" "List.fold_left";; (* 92 *)
+
+

@@ -278,7 +278,6 @@ class margin_fold (view : Ocaml_text.view) =
     method size = size
 
     method is_refresh_pending = is_refresh_pending
-    method clear_refresh_pending () = is_refresh_pending <- false
     method is_changed_after_last_outline = last_outline_time < view#tbuffer#last_edit_time
 
     method sync_outline_time () =
@@ -291,7 +290,7 @@ class margin_fold (view : Ocaml_text.view) =
         (* Separate the case in which markers and expanders need to be
            reconstructed from the case in which only the positions within the visible
            area need to be updated (for example in the case of scrolling). *)
-        | [] ->
+        | _ when expanders = [] || is_refresh_pending ->
             let is_drawable = is_drawable start#line stop#line in
             let methods = ref [] in
             expanders <-
@@ -324,9 +323,11 @@ class margin_fold (view : Ocaml_text.view) =
             end
             |> ignore;
             !methods |> List.iter (fun ol -> if is_drawable ol then self#draw_expander ol top left height);
+            is_refresh_pending <- false
         | _ ->
             expanders |> List.iter (fun ex -> ex#show top left height)
-      end else is_refresh_pending <- true
+      end else
+        is_refresh_pending <- true
 
     method private draw_expander ol top left height =
       (*Log.println `TRACE "  draw_expander %d:%d -- %d:%d [%d] [%s %d]"
@@ -522,7 +523,6 @@ let init_page (page : Editor_page.page) =
             (*Gmisclib.Idle.add ~prio:100 begin fun () ->*)
             page#view#draw_gutter(); (* triggers draw *)
             (*end;*)
-            margin#clear_refresh_pending()
           end
         end |> ignore;
         margin#connect#expander_toggled ~callback:begin fun expander ->

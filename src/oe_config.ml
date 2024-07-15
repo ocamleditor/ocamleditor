@@ -47,13 +47,14 @@ let warning_popup_bg_color : dcolor      = { light = `NAME "#fff4e8"; dark = `NA
 let warning_popup_border_color : dcolor  = { light = `NAME "#FFB33C"; dark = `NAME "darkorange" }
 let warning_underline_color : dcolor     = { light = `NAME "#fff4e8"; dark = `NAME "#6e3d00" }
 let warning_underline_shadow : dcolor    = { light = `NAME "#FFE36C"; dark = `NAME "#FFE36C" }
-let warning_unused_color                 = { light = "#a0a0a0"; dark = "#808080" }
+let warning_unused_color                 = { light = "#a0a0a0"; dark = "#707070" }
 let warning_unused_tag_name              = "tag_warning_unused"
 let warning_tootip_enabled               = false
 let current_line_width                   = 2 (* Must be >= 1. Left margin is automatically increased by current_line_width *)
 let current_line_style                   = (*`ON_OFF_DASH*) `SOLID
 let current_line_join                    = (*`ROUND `MITER `BEVEL *) `BEVEL
 let on_off_dashes                        = [3; 3]
+let use_theme_colors_when_possible       = true
 (* Gutter colors:
    `CALC factor    : Calculated according to the bg color of the text view.
                     [darker] 0.5 <= factor <= 1.0 [same as text view]

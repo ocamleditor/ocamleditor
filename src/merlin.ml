@@ -173,6 +173,19 @@ let locate ~position:(line, col) ?prefix ?look_for ~filename ~source_code apply 
     | Exception msg -> Log.println `ERROR "%s" msg.value;
   end
 
+let locate_type ~position:(line, col) ~filename ~source_code apply =
+  let position = sprintf "%d:%d" line col in
+  "locate-type" :: "-position" :: position :: []
+  |> execute filename source_code ~continue_with:begin fun json ->
+    match Merlin_j.locate_type_answer_of_string json with
+    | Return document ->
+        Log.println `DEBUG "%s" (Yojson.Safe.prettify json);
+        apply document.value
+    | Failure msg
+    | Error msg
+    | Exception msg -> Log.println `ERROR "%s" msg.value;
+  end
+
 let occurrences ~identifier_at:(line, col) ?scope ~filename ~source_code apply =
   let identifier_at = sprintf "%d:%d" line col in
   "occurrences" :: "-identifier-at" :: identifier_at ::

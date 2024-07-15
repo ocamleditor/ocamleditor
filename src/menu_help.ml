@@ -101,7 +101,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.|}
   modify_label ~color:"#0000ff" label;
   link_button#set_focus_on_click false;
   ignore (link_button#connect#clicked ~callback:(fun () -> open_url About.issues));
-
   match dialog#run() with _ -> dialog#destroy()
 
 

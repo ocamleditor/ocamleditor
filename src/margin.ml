@@ -1,4 +1,5 @@
 open Gutter
+open Preferences
 
 type kind = FOLDING | LINE_NUMBERS | MARKERS | DIFF
 
@@ -83,7 +84,8 @@ class line_numbers (view : GText.view) =
             label
         | _ ->
             let label = GMisc.label ~xalign:1.0 ~yalign:0.5 ~text ~show:false () in
-            label#misc#modify_text [`NORMAL, `COLOR (Preferences.editor_tag_bg_color "lident")];
+            let color = Oe_config.warning_unused_color in
+            label#misc#modify_fg [`NORMAL, `NAME ?? color];
             label#misc#modify_font_by_name Preferences.preferences#get.editor_base_font;
             label#set_width_chars label_max_chars;
             view#add_child_in_window ~child:label#coerce ~which_window:`LEFT ~x:left ~y:top;
