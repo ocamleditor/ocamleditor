@@ -364,14 +364,14 @@ let outline_iterator (model : GTree.tree_store) =
   let pat iterator (type k) (pattern : k Typedtree.general_pattern) =
     let { pat_desc = desc; pat_loc; pat_type; _} = pattern in
     let loc = pat_loc.loc_start.pos_cnum in
+    let tooltip = string_of_type_expr pat_type in
+    let flat_type = flatten_formatted tooltip in
     ( match desc with
       (* value patterns *)
       | Tpat_any -> ()  (* let _ = .. *)
       | Tpat_constant _ -> () (* let () = .. *)
       | Tpat_var (id, _) ->
-          let tooltip = string_of_type_expr pat_type in
           let name, icon = id_name id in
-          let flat_type = flatten_formatted tooltip in
           let markup = name ^ " : " ^ flat_type in
           if is_function pat_type && Option.is_some !value_binding_expr then (
             let icon = Some Icons.func in
@@ -385,12 +385,10 @@ let outline_iterator (model : GTree.tree_store) =
 
       | Tpat_alias (al_pat, id, _) ->
           iterator.TI.pat iterator al_pat ;
-          let tooltip = string_of_type_expr pat_type in
           let name, icon = id_name id in
           if String.contains name '-' then
             ignore name (* object utility aliases *)
           else (
-            let flat_type = flatten_formatted tooltip in
             let markup = name ^ " : " ^ flat_type in
             model_append model ~loc ?icon ~tooltip markup |> ignore
           )
@@ -434,6 +432,7 @@ let outline_iterator (model : GTree.tree_store) =
                 iterator.TI.expr iterator c_rhs
             )
             cases;
+      | Texp_match _ -> ()
       | _ -> super.TI.expr iterator item
     ) [@warning "-fragile-match"]
   in
