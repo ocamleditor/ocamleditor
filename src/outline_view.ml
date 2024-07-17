@@ -30,6 +30,7 @@ module TI = Tast_iterator
 module Log = Common.Log.Make(struct let prefix = "Outline_view" end)
 let _ = Log.set_verbosity `DEBUG
 
+let f x ~y ?(z=1) () = x + y + z
 
 (** [Lexing.postion] copy *)
 type position = Lexing.position = {
@@ -158,15 +159,25 @@ let outline_iterator (model : GTree.tree_store) =
   let super = TI.default_iterator in
 
   let value_binding_expr : expression option ref = ref None in
-  let parameter : bool ref = ref false in
+  let parameter : Asttypes.arg_label option ref = ref None in
 
   let id_name id =
-    Ident.name id |> (if !parameter then i else b),
-    if !parameter then None else Some Icons.simple
+    let is_parameter = Option.is_some !parameter in
+    let name = Ident.name id in
+    let name = ( match !parameter with
+        | Some (Asttypes.Nolabel) -> name
+        | Some (Asttypes.Labelled n) when n = name -> "~" ^ name
+        | Some (Asttypes.Labelled n) -> "~" ^ n ^ ":" ^ name
+        | Some (Asttypes.Optional n)  -> "?" ^ n
+        | None -> name )
+    in
+    ( if is_parameter then i name else b name ),
+    ( if is_parameter then None else Some Icons.simple )
   in
   let lid_name lid =
-    string_of_longident lid |> (if !parameter then i else b),
-    if !parameter then None else Some Icons.simple
+    let is_parameter = Option.is_some !parameter in
+    string_of_longident lid |> (if is_parameter then i else b),
+    if is_parameter then None else Some Icons.simple
   in
 
   let append ?loc text = model_append model ?loc text |> ignore in
@@ -228,11 +239,11 @@ let outline_iterator (model : GTree.tree_store) =
       | Tcl_ident _ -> append ~loc "Tcl_ident - TODO";
       | Tcl_structure item ->
           iterator.TI.class_structure iterator item
-      | Tcl_fun (_, pat, _, cl_expr, _ ) ->
+      | Tcl_fun (arg_label, pat, _, cl_expr, _ ) ->
           (* TODO: Do somethign about the label *)
-          parameter := true;
+          parameter := Some arg_label;
           iterator.TI.pat iterator pat;
-          parameter := false;
+          parameter := None;
 
           iterator.TI.class_expr iterator cl_expr
 
@@ -260,9 +271,9 @@ let outline_iterator (model : GTree.tree_store) =
 
   let class_structure iterator ( item : class_structure ) =
     let { cstr_self; cstr_fields; _ } = item in
-    parameter := true;
+    parameter := Some Asttypes.Nolabel;
     iterator.TI.pat iterator cstr_self;
-    parameter := false;
+    parameter := None;
 
     List.iter
       (iterator.TI.class_field iterator)
@@ -423,12 +434,12 @@ let outline_iterator (model : GTree.tree_store) =
   let expr ( iterator : TI.iterator ) ( item : expression ) =
     let { exp_desc; _ } = item in
     ( match exp_desc with
-      | Texp_function { cases; _ } ->
+      | Texp_function { arg_label; cases; _ } ->
           List.iter
             ( fun { c_lhs; c_rhs; _ } ->
-                parameter := true;
+                parameter := Some arg_label;
                 iterator.TI.pat iterator c_lhs;
-                parameter := false;
+                parameter := None;
                 iterator.TI.expr iterator c_rhs
             )
             cases;
