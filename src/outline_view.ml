@@ -138,9 +138,10 @@ let i text = "<i>" ^ text ^ "</i>"
 let string_of_id ?(default="") id =
   id |> Option.map Ident.name |> Option.value ~default
 
-let string_of_type_expr ?(is_method=false) te =
+let string_of_type_expr ?(is_method=false) ?(is_optional=false) te =
   let te = ( match Types.get_desc te with
       | Types.Tarrow (_, _self, te2, _) when is_method -> te2
+      | Types.Tconstr (_, [te2], _) when is_optional -> te2
       | _ -> te ) [@warning "-fragile-match"]
   in
   Odoc_info.reset_type_names ();
@@ -375,7 +376,8 @@ let outline_iterator (model : GTree.tree_store) =
   let pat iterator (type k) (pattern : k Typedtree.general_pattern) =
     let { pat_desc = desc; pat_loc; pat_type; _} = pattern in
     let loc = pat_loc.loc_start.pos_cnum in
-    let tooltip = string_of_type_expr pat_type in
+    let is_optional = match !parameter with Some (Asttypes.Optional _) -> true | _ -> false in
+    let tooltip = string_of_type_expr ~is_optional pat_type in
     let flat_type = flatten_formatted tooltip in
     ( match desc with
       (* value patterns *)
