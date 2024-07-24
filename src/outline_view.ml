@@ -105,6 +105,40 @@ let model_clear (model : GTree.tree_store) =
   parent_row := None;
   model#clear ()
 
+let rec model_find
+    ( model : GTree.tree_store )
+    ( row : Gtk.tree_iter )
+    ( view : GTree.view)
+    pos
+  =
+  let loc = model#get ~row ~column:col_loc in
+  if loc < pos then
+    let path = model#get_path row in
+    let has_next = model#iter_next row in
+    if has_next then
+      let loc = model#get ~row ~column:col_loc in
+      if loc >= pos then (
+        view#expand_row path;
+        let column = view#get_column 0 in
+        view#scroll_to_cell path column
+      )
+      else
+        model_find model row view pos
+    else (
+      view#expand_row path;
+      let column = view#get_column 0 in
+      view#scroll_to_cell path column
+    )
+
+let model_find
+    ( model : GTree.tree_store )
+    ( view : GTree.view)
+    pos
+  =
+  match model#get_iter_first with
+  | Some iter -> model_find model iter view pos
+  | None -> ()
+
 let model_append
     ( model : GTree.tree_store )
     ?icon
@@ -281,7 +315,7 @@ let outline_iterator (model : GTree.tree_store) =
       cstr_fields
   in
 
-  let class_field _iterator ( item : class_field ) =
+  let class_field _ ( item : class_field ) =
     let { cf_desc; cf_loc; _ } = item in
     let loc = cf_loc.loc_start.pos_cnum in
 
@@ -430,7 +464,7 @@ let outline_iterator (model : GTree.tree_store) =
       | Tpat_exception _ -> model_append model ~loc "_ (pat exception)" |> ignore
 
       (* generic patterns *)
-      | Tpat_or _ -> model_append model ~loc "_ (pat constructor)" |> ignore
+      | Tpat_or _ -> model_append model ~loc "_ (pat or)" |> ignore
     )
   in
   let expr ( iterator : TI.iterator ) ( item : expression ) =
@@ -444,10 +478,12 @@ let outline_iterator (model : GTree.tree_store) =
                 parameter := None;
                 (* Optional parameters need special care *)
                 let { exp_desc; _ } = c_rhs in
-                ( match exp_desc with
-                  | Texp_let (_, _, expr) -> iterator.TI.expr iterator expr
-                  | _ -> iterator.TI.expr iterator c_rhs
-                )
+                let expr = ( match arg_label, exp_desc with
+                    | Asttypes.Optional _, Texp_let (_, _, expr) -> expr
+                    | _ -> c_rhs
+                  )
+                in
+                iterator.TI.expr iterator expr
             )
             cases;
       | Texp_match _ -> ()
@@ -492,9 +528,12 @@ class widget ~page () =
     method load () =
       let compile_buffer () = page#compile_buffer ?join:(Some true) () in
       let cmt_opt = Binannot.read_cmt ~project:page#project ~filename:page#get_filename ~compile_buffer () in
-      match cmt_opt with
-      | None -> ()
-      | Some (_, _, cmt) -> self#load_cmt cmt
+      ( match cmt_opt with
+        | None -> ()
+        | Some (_, _, cmt) -> self#load_cmt cmt
+      );
+      let text_iter = buffer#get_iter `INSERT in
+      model_find model view text_iter#offset
 
     method private load_cmt cmt =
       view#selection#misc#handler_block selection_changed_signal ;
