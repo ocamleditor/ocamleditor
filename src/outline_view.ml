@@ -442,7 +442,12 @@ let outline_iterator (model : GTree.tree_store) =
                 parameter := Some arg_label;
                 iterator.TI.pat iterator c_lhs;
                 parameter := None;
-                iterator.TI.expr iterator c_rhs
+                (* Optional parameters need special care *)
+                let { exp_desc; _ } = c_rhs in
+                ( match exp_desc with
+                  | Texp_let (_, _, expr) -> iterator.TI.expr iterator expr
+                  | _ -> iterator.TI.expr iterator c_rhs
+                )
             )
             cases;
       | Texp_match _ -> ()
