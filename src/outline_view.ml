@@ -118,16 +118,20 @@ let rec model_find
     if has_next then
       let loc = model#get ~row ~column:col_loc in
       if loc >= pos then (
-        view#expand_row path;
-        let column = view#get_column 0 in
-        view#scroll_to_cell path column
+        if not (view#row_expanded path) then (
+          view#expand_row path;
+          let column = view#get_column col_icon.GTree.index in
+          view#scroll_to_cell path column
+        )
       )
       else
         model_find model row view pos
     else (
-      view#expand_row path;
-      let column = view#get_column 0 in
-      view#scroll_to_cell path column
+      if not (view#row_expanded path) then (
+        view#expand_row path;
+        let column = view#get_column col_icon.GTree.index in
+        view#scroll_to_cell path column
+      )
     )
 
 let model_find
@@ -222,9 +226,9 @@ let outline_iterator (model : GTree.tree_store) =
     ( match desc with
       | Tstr_eval (_, _) -> append ~loc "_ (eval)"
       | Tstr_value (is_rec, vb) ->
-          if is_rec = Asttypes.Recursive then (
+          if is_rec = Asttypes.Recursive && List.length vb > 1 then (
             let parent = !parent_row in
-            parent_row :=  Some (model_append model (b "rec"));
+            parent_row :=  Some (model_append model ("rec"));
             List.iter (iterator.TI.value_binding iterator) vb;
             parent_row := parent
           )
@@ -573,7 +577,8 @@ class widget ~page () =
       )
 
     initializer
-      selection_changed_signal <- view#selection#connect#changed ~callback:self#selection_changed
+      selection_changed_signal <- view#selection#connect#changed ~callback:self#selection_changed ;
+      ignore @@ buffer#connect#notify_cursor_position ~callback:(fun pos -> model_find model view pos)
 
   end
 
