@@ -30,8 +30,6 @@ module TI = Tast_iterator
 module Log = Common.Log.Make(struct let prefix = "Outline_view" end)
 let _ = Log.set_verbosity `DEBUG
 
-let f x ~y ?(z=1) () = x + y + z
-
 (** [Lexing.postion] copy *)
 type position = Lexing.position = {
   pos_fname : string;
@@ -111,6 +109,8 @@ let rec model_find
     ( view : GTree.view)
     pos
   =
+  let align = ( 0.0, 0.0 ) in
+  let column = view#get_column col_icon.GTree.index in
   let loc = model#get ~row ~column:col_loc in
   if loc < pos then
     let path = model#get_path row in
@@ -120,8 +120,8 @@ let rec model_find
       if loc >= pos then (
         if not (view#row_expanded path) then (
           view#expand_row path;
-          let column = view#get_column col_icon.GTree.index in
-          view#scroll_to_cell path column
+          view#selection#select_path path;
+          view#scroll_to_cell ~align path column
         )
       )
       else
@@ -129,8 +129,8 @@ let rec model_find
     else (
       if not (view#row_expanded path) then (
         view#expand_row path;
-        let column = view#get_column col_icon.GTree.index in
-        view#scroll_to_cell path column
+        view#selection#select_path path;
+        view#scroll_to_cell ~align path column
       )
     )
 
@@ -480,7 +480,7 @@ let outline_iterator (model : GTree.tree_store) =
                 parameter := Some arg_label;
                 iterator.TI.pat iterator c_lhs;
                 parameter := None;
-                (* Optional parameters need special care *)
+                (* Optional parameters need special care, so that they are not displayed twice. *)
                 let { exp_desc; _ } = c_rhs in
                 let expr = ( match arg_label, exp_desc with
                     | Asttypes.Optional _, Texp_let (_, _, expr) -> expr
@@ -490,6 +490,7 @@ let outline_iterator (model : GTree.tree_store) =
                 iterator.TI.expr iterator expr
             )
             cases;
+      | Texp_ifthenelse _ -> ()
       | Texp_match _ -> ()
       | _ -> super.TI.expr iterator item
     ) [@warning "-fragile-match"]
@@ -576,9 +577,15 @@ class widget ~page () =
         | _ -> ()
       )
 
+    method private cursor_position_changed pos =
+      view#selection#misc#handler_block selection_changed_signal;
+      model_find model view pos;
+      view#selection#misc#handler_unblock selection_changed_signal
+
+
     initializer
       selection_changed_signal <- view#selection#connect#changed ~callback:self#selection_changed ;
-      ignore @@ buffer#connect#notify_cursor_position ~callback:(fun pos -> model_find model view pos)
+      ignore @@ buffer#connect#notify_cursor_position ~callback:self#cursor_position_changed
 
   end
 
