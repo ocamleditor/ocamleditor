@@ -196,6 +196,10 @@ let string_of_functor_parameter = function
       let md_type = Odoc_info.string_of_module_type mty_type in
       "(" ^ md_name ^ " : TODO " ^ md_type ^ ")"
 
+let rec f x = g x
+
+and g y = y + 1
+
 let outline_iterator (model : GTree.tree_store) =
   let super = TI.default_iterator in
 
@@ -230,7 +234,7 @@ let outline_iterator (model : GTree.tree_store) =
       | Tstr_value (is_rec, vb) ->
           if is_rec = Asttypes.Recursive && List.length vb > 1 then (
             let parent = !parent_row in
-            parent_row :=  Some (model_append model ("rec"));
+            parent_row :=  Some (model_append model ~loc "\u{2295}");
             List.iter (iterator.TI.value_binding iterator) vb;
             parent_row := parent
           )
@@ -540,7 +544,7 @@ class widget ~page () =
         | Some (_, _, cmt) -> self#load_cmt cmt
       );
       let text_iter = buffer#get_iter `INSERT in
-      model_find model view text_iter#offset
+      self#cursor_position_changed text_iter#offset
 
     method private load_cmt cmt =
       view#selection#misc#handler_block selection_changed_signal ;
