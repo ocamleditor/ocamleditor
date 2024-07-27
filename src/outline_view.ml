@@ -112,14 +112,20 @@ let rec model_find
   let align = ( 0.0, 0.0 ) in
   let column = view#get_column col_icon.GTree.index in
   let loc = model#get ~row ~column:col_loc in
+
+  let has_child = model#iter_has_child row in
+  let row_child = if has_child then model#iter_children (Some row) else row in
   if loc <= pos then
     let path = model#get_path row in
     let has_next = model#iter_next row in
     if has_next then
       let loc = model#get ~row ~column:col_loc in
       if loc > pos then (
-        if not (view#row_expanded path) then (
-          view#expand_row path;
+        view#expand_row path;
+        if has_child then (
+          model_find model row_child view pos
+        )
+        else (
           view#selection#select_path path;
           view#scroll_to_cell ~align path column
         )
@@ -127,11 +133,9 @@ let rec model_find
       else
         model_find model row view pos
     else (
-      if not (view#row_expanded path) then (
-        view#expand_row path;
-        view#selection#select_path path;
-        view#scroll_to_cell ~align path column
-      )
+      view#expand_row path;
+      view#selection#select_path path;
+      view#scroll_to_cell ~align path column
     )
 
 let model_find
