@@ -112,12 +112,12 @@ let rec model_find
   let align = ( 0.0, 0.0 ) in
   let column = view#get_column col_icon.GTree.index in
   let loc = model#get ~row ~column:col_loc in
-  if loc < pos then
+  if loc <= pos then
     let path = model#get_path row in
     let has_next = model#iter_next row in
     if has_next then
       let loc = model#get ~row ~column:col_loc in
-      if loc >= pos then (
+      if loc > pos then (
         if not (view#row_expanded path) then (
           view#expand_row path;
           view#selection#select_path path;
@@ -140,7 +140,9 @@ let model_find
     pos
   =
   match model#get_iter_first with
-  | Some iter -> model_find model iter view pos
+  | Some iter ->
+      view#collapse_all ();
+      model_find model iter view pos
   | None -> ()
 
 let model_append
