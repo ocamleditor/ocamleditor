@@ -246,7 +246,16 @@ let outline_iterator (model : GTree.tree_store) =
             List.iter (iterator.TI.value_binding iterator) vb
 
       | Tstr_primitive _ -> append ~loc "_ (primitive)"
-      | Tstr_type (_, _) -> append ~loc "_ (type)"
+      | Tstr_type (is_rec, type_decls) ->
+          if is_rec = Asttypes.Recursive && List.length type_decls > 1 then (
+            let parent = !parent_row in
+            parent_row := Some (model_append model ~loc "\u{2295}");
+            List.iter (iterator.TI.type_declaration iterator) type_decls;
+            parent_row := parent
+          )
+          else
+            List.iter (iterator.TI.type_declaration iterator) type_decls
+
       | Tstr_typext _ -> append ~loc "_ (typext)"
       | Tstr_exception _ -> append ~loc "_ (exception)"
       | Tstr_module mb -> iterator.TI.module_binding iterator mb
@@ -323,13 +332,12 @@ let outline_iterator (model : GTree.tree_store) =
     parameter := Some Asttypes.Nolabel;
     iterator.TI.pat iterator cstr_self;
     parameter := None;
-
     List.iter
       (iterator.TI.class_field iterator)
       cstr_fields
   in
 
-  let class_field _ ( item : class_field ) =
+  let class_field iterator ( item : class_field ) =
     let { cf_desc; cf_loc; _ } = item in
     let loc = cf_loc.loc_start.pos_cnum in
 
@@ -365,7 +373,12 @@ let outline_iterator (model : GTree.tree_store) =
       | Tcf_method ( { txt; _ }, priv, kind ) ->
           let field_type = field_type ~is_method:true kind in
           let icon = method_icon kind priv in
-          model_append model ~loc ~icon ~tooltip:field_type (b txt ^ " : " ^ field_type) |> ignore
+          model_append model ~loc ~icon ~tooltip:field_type (b txt ^ " : " ^ field_type) |> ignore ;
+          ( match kind with
+            | Tcfk_virtual _ -> ()
+            | Tcfk_concrete (_, expr) -> iterator.TI.expr iterator expr
+          )
+
       | Tcf_constraint _ -> append ~loc "Tcf_constraint - TODO"
       | Tcf_initializer _ ->
           model_append model ~loc ~icon:Icons.grip ~tooltip:"" (b "initializer") |> ignore
@@ -424,7 +437,11 @@ let outline_iterator (model : GTree.tree_store) =
   let pat iterator (type k) (pattern : k Typedtree.general_pattern) =
     let { pat_desc = desc; pat_loc; pat_type; _} = pattern in
     let loc = pat_loc.loc_start.pos_cnum in
-    let is_optional = match !parameter with Some (Asttypes.Optional _) -> true | _ -> false in
+    let is_optional = ( match !parameter with
+        | Some (Asttypes.Optional _) -> true
+        | _ -> false
+      ) [@warning "-fragile-match"]
+    in
     let tooltip = string_of_type_expr ~is_optional pat_type in
     let flat_type = flatten_formatted tooltip in
     ( match desc with
