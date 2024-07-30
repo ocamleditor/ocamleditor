@@ -106,14 +106,15 @@ let model_clear (model : GTree.tree_store) =
 let rec model_find
     ( model : GTree.tree_store )
     ( row : Gtk.tree_iter )
-    ( view : GTree.view)
-    pos
+    ( view : GTree.view )
+    ( pos : int )
   =
   let align = ( 0.0, 0.0 ) in
   let column = view#get_column col_icon.GTree.index in
   let loc = model#get ~row ~column:col_loc in
 
   let has_child = model#iter_has_child row in
+  let depth = model#iter_depth row in
   let row_child = if has_child then model#iter_children (Some row) else row in
   if loc <= pos then
     let path = model#get_path row in
@@ -122,26 +123,27 @@ let rec model_find
       let loc = model#get ~row ~column:col_loc in
       if loc > pos then (
         view#expand_row path;
-        if has_child then (
-          model_find model row_child view pos
-        )
-        else (
+        if has_child || depth = 0 then (
           view#selection#select_path path;
-          view#scroll_to_cell ~align path column
+          view#scroll_to_cell ~align path column;
+          if has_child then
+            model_find model row_child view pos
         )
       )
       else
         model_find model row view pos
     else (
-      view#expand_row path;
-      view#selection#select_path path;
-      view#scroll_to_cell ~align path column
+      if has_child || depth = 0 then (
+        view#expand_row path;
+        view#selection#select_path path;
+        view#scroll_to_cell ~align path column;
+      )
     )
 
 let model_find
     ( model : GTree.tree_store )
     ( view : GTree.view)
-    pos
+    ( pos : int )
   =
   match model#get_iter_first with
   | Some iter ->
@@ -204,6 +206,9 @@ let rec f x = g x
 
 and g y = y + 1
 
+type foo = { x : bar }
+and bar = Bar1 of int * float | Bar2 of string * string
+
 let outline_iterator (model : GTree.tree_store) =
   let super = TI.default_iterator in
 
@@ -238,7 +243,7 @@ let outline_iterator (model : GTree.tree_store) =
       | Tstr_value (is_rec, vb) ->
           if is_rec = Asttypes.Recursive && List.length vb > 1 then (
             let parent = !parent_row in
-            parent_row :=  Some (model_append model ~loc "\u{2295}");
+            parent_row :=  Some (model_append model ~loc (b "let rec" ^ " \u{2295}"));
             List.iter (iterator.TI.value_binding iterator) vb;
             parent_row := parent
           )
@@ -249,7 +254,7 @@ let outline_iterator (model : GTree.tree_store) =
       | Tstr_type (is_rec, type_decls) ->
           if is_rec = Asttypes.Recursive && List.length type_decls > 1 then (
             let parent = !parent_row in
-            parent_row := Some (model_append model ~loc "\u{2295}");
+            parent_row := Some (model_append model ~loc (b "type rec" ^ " \u{2295}"));
             List.iter (iterator.TI.type_declaration iterator) type_decls;
             parent_row := parent
           )
@@ -522,11 +527,74 @@ let outline_iterator (model : GTree.tree_store) =
       | _ -> super.TI.expr iterator item
     ) [@warning "-fragile-match"]
   in
+
+  let type_declaration ( _ : TI.iterator ) ( item : type_declaration ) =
+    let { typ_id; typ_loc; typ_kind; typ_manifest; _ } = item in
+    let name = Ident.name typ_id in
+    let loc = typ_loc.loc_start.pos_cnum in
+
+    let string_of_abstract_type = function
+      | Some { ctyp_type; _ } -> string_of_type_expr ctyp_type
+      | None -> ""
+    in
+    let string_of_record_type fields =
+      Odoc_info.reset_type_names ();
+      let fields = List.map
+          ( fun { ld_id ; ld_type; _ } ->
+              let { ctyp_type; _ } = ld_type in
+              Ident.name ld_id ^ " : " ^ Odoc_info.string_of_type_expr ctyp_type
+          )
+          fields
+      in
+      "{\n    " ^  String.concat ";\n    " fields ^ ";\n}" |> Print_type.markup2
+    in
+    let string_of_variant_type decls =
+      let cstrs = List.map
+          ( fun { cd_id; cd_args; cd_res; _ } ->
+              let name = Ident.name cd_id in
+              let args = ( match cd_args with
+                  |  Cstr_tuple core_types ->
+                      String.concat " * " (List.map (fun { ctyp_type; _ } -> Odoc_info.string_of_type_expr ctyp_type) core_types)
+                  | Cstr_record fields -> string_of_record_type fields |> flatten_formatted
+                )
+              in
+              let res = ( match cd_res with
+                  | Some { ctyp_type; _ } -> Odoc_info.string_of_type_expr ctyp_type
+                  | None -> ""
+                )
+              in
+              match args, res with
+              | "", "" -> name
+              | _ , "" -> name ^ " of " ^ args
+              | "", _  -> name ^ " : " ^ res
+              | _, _   -> name ^ " : " ^ args ^ " -> " ^ res
+          )
+          decls
+      in
+      "    " ^ String.concat "\n|   " cstrs
+    in
+
+    ( match typ_kind with
+      | Ttype_abstract ->
+          let tooltip = string_of_abstract_type typ_manifest in
+          let markup = i name ^ " : " ^ flatten_formatted tooltip in
+          model_append model ~loc ~icon:Icons.type_abstract ~tooltip markup |> ignore
+      | Ttype_variant decls ->
+          let tooltip = string_of_variant_type decls in
+          let markup = i name ^ " : " ^ flatten_formatted tooltip in
+          model_append model ~loc ~icon:Icons.type_variant ~tooltip markup |> ignore
+      | Ttype_record fields ->
+          let tooltip = string_of_record_type fields in
+          let markup = i name ^ " : " ^ flatten_formatted tooltip in
+          model_append model ~loc ~icon:Icons.type_record ~tooltip markup |> ignore
+      | Ttype_open -> model_append model ~loc ~icon:Icons.type_variant (i name) |> ignore
+    )
+  in
   { super with
     TI.structure_item;
     module_binding; module_expr;
     value_binding;
-    pat; expr;
+    pat; expr; type_declaration;
     class_expr; class_structure; class_field
   }
 
