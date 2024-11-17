@@ -20,6 +20,7 @@
 
 *)
 
+open Printf
 
 let distance s t =
   let m = String.length s in
@@ -80,7 +81,7 @@ let print_matrix m =
 let print_path_matrix la lb paths =
   let m = Array.make_matrix la lb '`' in
   paths |> Array.iteri (fun i n ->
-      if n > 0 then begin
+      if n >= 0 then begin
         let a = i / lb in
         let b = i mod lb in
         m.(a).(b) <- '*';
@@ -105,11 +106,14 @@ let matching_positions a b =
       end
     done;
   done;
-  (*print_matrix m;*)
+  if !Sys.interactive then print_matrix m;
   la, lb, m, !index;;
 
-let matching_paths la lb m ind =
-  let mapping = Array.make (la * lb) 0 in
+let matching_paths la lb m index =
+  let mapping = Array.make (la * lb) (-1) in
+  if m.(0).(0) <> '\x00' then mapping.(0) <- 0;
+  if m.(la - 1).(lb - 1) <> '\x00' then
+    mapping.(Array.length mapping - 1) <- Array.length mapping - 1;
   let neighbors (i, j) =
     if i > 0 && j > 0 && m.(i - 1).(j - 1) <> '\x00' then
       let start = (i - 1) * lb + (j - 1) in
@@ -117,17 +121,17 @@ let matching_paths la lb m ind =
       (*Printf.printf "%d,%d -> %d,%d  --  %d -> %d\n%!" (i-1) (j-1) i j start stop;*)
       mapping.(start) <- stop;
   in
-  ind |> List.iter neighbors;
+  List.iter neighbors index;
   mapping;;
 
 let join edges =
   let paths = ref [] in
   let rec follow i =
     let j = edges.(i) in
-    edges.(i) <- 0;
-    if j = 0 then [i] else i :: follow j
+    edges.(i) <- -1;
+    if j <= 0 || j = i then [i] else i :: follow j
   in
-  edges |> Array.iteri (fun i e -> if e > 0 then paths := (follow i) :: !paths);
+  edges |> Array.iteri (fun i e -> if e >= 0 then paths := (follow i) :: !paths);
   !paths;;
 
 let remove_shortest_overlapping lb paths =
@@ -153,13 +157,17 @@ let remove_shortest_overlapping lb paths =
   done;
   paths |> Array.to_list |> List.filter ((<>) []);;
 
-let compare pat str =
+let [@inline] ( @|> ) g f = if g then f else Fun.id
+
+let compare ?(simplify=true) pat str =
   let len_pat, len_str, matrix, index = matching_positions pat str in
   if List.length index > 0 then
     begin
       let paths = matching_paths len_pat len_str matrix index in
-      (*print_path_matrix len_pat len_str paths;*)
-      let paths = paths |> join |> remove_shortest_overlapping len_str in
+      if !Sys.interactive then print_path_matrix len_pat len_str paths;
+      let paths = paths |> join |> simplify @|> remove_shortest_overlapping len_str in
+      if !Sys.interactive then
+        paths |> List.map (fun p -> p |> List.map string_of_int |> String.concat "-") |> String.concat " " |> printf "%s\n%!";
       let lp = float len_pat in
       let ls = float len_str in
       let amount = List.fold_left (fun sum l -> List.length l + sum) 0 paths |> float in
@@ -176,9 +184,12 @@ let compare pat str =
       let top = lp +. (*lp +.*) 1. +. 2. in
       let score = amount +. compactness +. s_relevance +. p_relevance in
       let score_perc = score /. top in
-      (*Printf.printf "%S %S %.2f -- %.2f %.2f %.2f %.2f -- %d %d -- n_paths: %d\n%!" pat str score_perc
-        amount compactness s_relevance p_relevance len_pat len_str (List.length paths);*)
-      if score_perc >= 0.62 then score_perc else 0.
+      if !Sys.interactive then
+        Printf.printf "%S %S score:%.2f am:%d cp:%.2f sr:%.2f pr:%.2f lp:%d ls:%d paths:%d\n%!"
+          pat str score_perc (int_of_float amount) compactness s_relevance p_relevance len_pat len_str (List.length paths);
+      if !Sys.interactive then score_perc
+      else if score_perc >= 0.62 then score_perc
+      else 0.
     end else 0.
 ;;
 
@@ -190,5 +201,17 @@ let compare pat str =
   compare "fildlistri" "LogBuilder.print_timestamp";; (* 72 *)
   compare "New York Mets vs Atlanta Braves" "Atlanta Braves vs New York Mets";;
   compare "foldlist" "List.fold_left";; (* 92 *)*)
+
+(*
+  compare "llength" "Seq.length";;
+  compare "llength" "List.length";;
+  compare "lilength" "List.length";;
+  compare "lifolet2" "List.fold_left2";;
+  compare ~simplify:true  "lifole2" "List.fold_left2";;  (*76*)
+  compare ~simplify:false "lifole2" "List.fold_left2";;  (*99*)
+  compare "lifole2" "List.fold_left";; (*66*)
+  compare "follilef2" "List.fold_left";; (*82*)
+  compare "lfold2" "List.fold_left2";; (*86*)
+*)
 
 
