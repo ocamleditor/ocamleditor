@@ -1061,7 +1061,8 @@ class browser window =
       (* Key sequences ("chords") *)
       window#event#connect#key_press ~callback:begin fun ev ->
         let keyval = GdkEvent.Key.keyval ev in
-        if keyval = GdkKeysyms._k then begin
+        let state = GdkEvent.Key.state ev in
+        if state = [`CONTROL] && keyval = GdkKeysyms._k then begin
           let window = GWindow.window
               ~position:`CENTER
               ~modal:true
