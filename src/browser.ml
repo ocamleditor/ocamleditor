@@ -367,7 +367,8 @@ class browser window =
         let roots = project_history.File_history.content in (* project filenames .xml *)
         let roots = List.filter ((<>) current) (List.map Filename.dirname roots) in
         let roots = current :: roots in
-        Dialog_find_file.create ?all ~roots ~editor () |> ignore;
+        let dialog = Dialog_find_file.create ?all ~roots ~editor () in
+        dialog#set_transient_for window#as_window;
       end
 
     method menubar_visible = menubar_visible
@@ -1057,6 +1058,43 @@ class browser window =
         (match !id_timeout with Some id -> GMain.Timeout.remove id | _ -> ());
         false
       end |> ignore;
+      (* Key sequences ("chords") *)
+      window#event#connect#key_press ~callback:begin fun ev ->
+        let keyval = GdkEvent.Key.keyval ev in
+        if keyval = GdkKeysyms._k then begin
+          let window = GWindow.window
+              ~position:`CENTER
+              ~modal:true
+              ~decorated:false
+              ~width:1 ~height:1
+              ~show:true ()
+          in
+          let ms = 5000 in
+          statusbar#flash_message ~delay:ms "Ctrl+K was pressed. Waiting for a second key...";
+          GMain.Timeout.add ~ms ~callback:(fun () -> window#destroy(); false) |> ignore;
+          window#event#connect#key_press ~callback:begin fun ev ->
+            let state = GdkEvent.Key.state ev in
+            let keyval = GdkEvent.Key.keyval ev in
+            let result =
+              if state = [`CONTROL] && keyval = GdkKeysyms._c then begin
+                editor#with_current_page (fun page -> ignore (page#ocaml_view#toggle_comment ()));
+                true
+              end else if keyval = GdkKeysyms._0 then begin
+                editor#with_current_page Margin_fold.collapse_to_definitions;
+                true
+              end else if keyval = GdkKeysyms._j then begin
+                editor#with_current_page Margin_fold.expand_all;
+                true
+              end else false
+            in
+            statusbar#flash_message ~delay:ms "";
+            window#destroy ();
+            result
+          end |> ignore;
+          true
+        end else false
+      end |> ignore;
+      (*  *)
       check_launcher()
 
     method connect = new signals ~startup ~switch_project ~menubar_visibility_changed ~toolbar_visibility_changed

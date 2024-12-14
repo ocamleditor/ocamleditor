@@ -117,7 +117,6 @@ let file ~browser ~group ~flags items =
   ignore (items.file_recent_select#connect#activate ~callback:begin fun () ->
       browser#dialog_find_file ?all:(Some false) ()
     end);
-  items.file_recent_select#add_accelerator ~group ~modi:[`CONTROL] GdkKeysyms._K ~flags;
   (* recent items *)
   ignore (file_recent#connect#activate ~callback:(fun () -> file_recent_callback ~file_recent_menu editor));
   (* file_recent_clear *)

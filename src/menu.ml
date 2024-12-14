@@ -107,13 +107,13 @@ let edit ~browser ~group ~flags
   increase_selection_indent#set_image (GMisc.image ~stock:`INDENT ~icon_size:`MENU ())#coerce;
   ignore (increase_selection_indent#connect#activate ~callback:(fun () ->
       editor#with_current_page (fun page -> page#buffer#indent ?decrease:(Some false) ())));
-  increase_selection_indent#add_accelerator ~group ~modi:[`CONTROL] GdkKeysyms._k ~flags;
+  increase_selection_indent#add_accelerator ~group ~modi:[`SHIFT;`MOD1] GdkKeysyms._Right ~flags;
   (* Decrease Selection Indent *)
   let decrease_selection_indent = GMenu.image_menu_item ~label:"Decrease Line/Selection Indent" ~packing:menu#add () in
   decrease_selection_indent#set_image (GMisc.image ~stock:`UNINDENT ~icon_size:`MENU ())#coerce;
   ignore (decrease_selection_indent#connect#activate ~callback:(fun () ->
       editor#with_current_page (fun page -> page#buffer#indent ?decrease:(Some true) ())));
-  decrease_selection_indent#add_accelerator ~group ~modi:[`SHIFT] GdkKeysyms._Tab ~flags;
+  decrease_selection_indent#add_accelerator ~group ~modi:[`SHIFT;`MOD1] GdkKeysyms._Left ~flags;
   (* Indent Selection (ocp-indent) *)
   let indent_selection = ref None in
   let indent_all = ref None in
@@ -422,14 +422,12 @@ let view ~browser ~group ~flags
       editor#with_current_page (fun page -> ignore (page#ocaml_view#code_folding#toggle_current_fold()))));
   collapse_enclosing#add_accelerator ~group ~modi:[`CONTROL;] GdkKeysyms._minus ~flags;
   (* Collapse to Definitions *)
-  let collapse_definitions = GMenu.menu_item ~label:"Collapse to Definitions" ~packing:code_folding_menu#add () in
+  let collapse_definitions = GMenu.menu_item ~label:"Collapse to Definitions [Ctrl+K 0]" ~packing:code_folding_menu#add () in
   collapse_definitions#connect#activate ~callback:(fun () ->
       editor#with_current_page Margin_fold.collapse_to_definitions) |> ignore;
-  collapse_definitions#add_accelerator ~group ~modi:[`CONTROL;] GdkKeysyms._h ~flags;
   (* Expand All folds *)
-  let unfold_all = GMenu.menu_item ~label:"Expand All Folds" ~packing:code_folding_menu#add () in
+  let unfold_all = GMenu.menu_item ~label:"Expand All Folds [Ctrl+K j]" ~packing:code_folding_menu#add () in
   unfold_all#connect#activate ~callback:(fun () -> editor#with_current_page Margin_fold.expand_all) |> ignore;
-  unfold_all#add_accelerator ~group ~modi:[`CONTROL; `SHIFT] GdkKeysyms._h ~flags;
   (** Select in Structure Pane *)
   let select_in_outline = GMenu.image_menu_item
       ~image:(GMisc.image ~pixbuf:(??? Icons.select_in_structure) ~icon_size:`MENU ())
