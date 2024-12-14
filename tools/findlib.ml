@@ -32,7 +32,7 @@ open Printf
 let packages = [
   (** gmisclib *)
   "gmisclib","\
-version         = \"1.15.2-ocaml414\"
+version         = \"1.16.0-ocaml414\"
 description     = \"Miscellaneous widgets based on LablGtk2.\"
 requires        = \"lablgtk2\"
 archive(byte)   = \"gmisclib.cma\"
