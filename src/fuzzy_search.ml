@@ -265,3 +265,5 @@ struct
   ;;
 
 end
+
+module FuzzyLetters = Make(Letter);;

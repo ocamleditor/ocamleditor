@@ -1,6 +1,7 @@
 open Printf
 open Merlin_t
 open Utils
+open Fuzzy_search
 
 module Log = Common.Log.Make(struct let prefix = "NAMEDB" end)
 let _ =
@@ -54,8 +55,6 @@ let get_project_source_filenames project =
   |> List.map (fun dir ->
       File_util.ls ~dir ~pattern:"*.ml" |> List.map (Filename.concat dir))
   |> List.concat
-
-module FuzzyLetters = Fuzzy_search.Make(Fuzzy_search.Letter);;
 
 let filter pattern db =
   let compare = Utils.Memo.fast ~f:(fun (a, b) -> FuzzyLetters.compare `Greedy a b) in

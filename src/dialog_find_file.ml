@@ -109,7 +109,7 @@ let create ?(all=true) ~(editor : Editor.editor) ~roots () =
     true
   end |> ignore;
   let show_currently_opened () =
-    quick_file_chooser#display (quick_file_chooser#get_paths_with_icon ());
+    quick_file_chooser#display (quick_file_chooser#get_paths_with_icon () |> List.map (fun x -> 0., x));
     Gmisclib.Idle.add ~prio:300 begin fun () ->
       editor#with_current_page begin fun page ->
         let filename = page#get_filename in
