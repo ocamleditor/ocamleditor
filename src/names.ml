@@ -87,13 +87,28 @@ let rec add_outline db entry modname outline =
   end;
   !!Lock.namedb (fun () -> entry.values <- List.rev_append !temp entry.values) ()
 
-let add_compl db modname compl =
+let rec add_compl db modname compl count_lib_values =
   let entry = { filename=""; modname; timestamp=0.0; values=[] } in
   entry.values <- { name = modname; kind = "Module"; desc = ""; info = "" } :: entry.values;
   compl
   |> List.iter (fun (item : Merlin_j.entry) ->
+      if item.kind = "Module" then begin
+        Thread.delay 20.;
+        complete_prefix db (sprintf "%s.%s" modname item.name) count_lib_values
+      end;
       entry.values <- { item with name = modname ^ "." ^ item.name } :: entry.values);
   entry
+
+and complete_prefix db modname count_lib_values =
+  Merlin.complete_prefix ~position:(1,1) ~prefix:(modname ^ ".") ~filename:"dummy" ~source_code:""
+    begin fun compl ->
+      let mod_entry = add_compl db modname compl.entries count_lib_values in
+      !!Lock.namedb begin fun () ->
+        mod_entry.timestamp <- Unix.gettimeofday();
+        db.table <- mod_entry :: db.table;
+        count_lib_values := !count_lib_values + List.length mod_entry.values
+      end ()
+    end
 
 let update ?(is_init=false) db filename =
   if is_init then Thread.delay 0.075
@@ -123,17 +138,7 @@ let init ?(cont=ignore) project =
     "Str" :: "Unix" :: "Thread" :: modules
     |> List.iter begin fun modname ->
       match List.find_opt (fun me -> me.modname = modname) db.table with
-      | None ->
-          let prefix = modname ^ "." in
-          Merlin.complete_prefix ~position:(1,1) ~prefix ~filename:"dummy" ~source_code:""
-            begin fun compl ->
-              let mod_entry = add_compl db modname compl.entries in
-              !!Lock.namedb begin fun () ->
-                mod_entry.timestamp <- Unix.gettimeofday();
-                db.table <- mod_entry :: db.table;
-                count_lib_values := !count_lib_values + List.length mod_entry.values
-              end ()
-            end
+      | None -> complete_prefix db modname count_lib_values
       | _ -> ()
     end
   end;

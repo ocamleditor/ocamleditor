@@ -93,6 +93,7 @@ class widget ~project ~(page : Editor_page.page) ~x ~y ?packing () =
   let _ = lview#append_column vc_name in
   let _ = lview#selection#set_mode `SINGLE in
   let _ = model_sort#set_sort_column_id col_prio.GTree.index `ASCENDING in
+  let _ = vc_source#set_visible true in
   let _ =
     model_sort#set_sort_func col_prio.GTree.index begin fun model r1 r2 ->
       let p1 = model#get ~row:r1 ~column:col_prio in

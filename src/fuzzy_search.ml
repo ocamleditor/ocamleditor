@@ -100,6 +100,7 @@ struct
   let find_common_paths_greedy2 a b =
     let length_a = Array.length a in
     let length_b = Array.length b in
+    let half_lengthb = length_b / 2 in
     let last_a = length_a - 1 in
     let last_b = length_b - 1 in
     let path = ref [] in
@@ -128,7 +129,7 @@ struct
         begin
           match search !i !j with
           | Some (i', j') ->
-              if j' <= length_b / 2 then j := j'
+              if j' <= half_lengthb then j := j'
               else begin
                 i := i';
                 j := length_b;
@@ -225,12 +226,12 @@ struct
     paths |> Array.to_list |> List.filter ((<>) [])
   ;;
 
-  let compare ?(simplify=true) algoritm pat str =
+  let compare ?(simplify=true) algorithm pat str =
     let pat = Elt.deserialize pat in
     let str = Elt.deserialize str in
     let len_pat, len_str = Array.length pat, Array.length str in
     let find =
-      match algoritm with
+      match algorithm with
       | `Brute -> find_common_paths_brute
       | `Greedy -> find_common_paths_greedy
       | `Greedy2 -> find_common_paths_greedy2

@@ -422,11 +422,11 @@ let view ~browser ~group ~flags
       editor#with_current_page (fun page -> ignore (page#ocaml_view#code_folding#toggle_current_fold()))));
   collapse_enclosing#add_accelerator ~group ~modi:[`CONTROL;] GdkKeysyms._minus ~flags;
   (* Collapse to Definitions *)
-  let collapse_definitions = GMenu.menu_item ~label:"Collapse to Definitions [Ctrl+K 0]" ~packing:code_folding_menu#add () in
+  let collapse_definitions = GMenu.menu_item ~label:"Collapse to Definitions [Ctrl+K Ctrl+0]" ~packing:code_folding_menu#add () in
   collapse_definitions#connect#activate ~callback:(fun () ->
       editor#with_current_page Margin_fold.collapse_to_definitions) |> ignore;
   (* Expand All folds *)
-  let unfold_all = GMenu.menu_item ~label:"Expand All Folds [Ctrl+K j]" ~packing:code_folding_menu#add () in
+  let unfold_all = GMenu.menu_item ~label:"Expand All Folds [Ctrl+K Ctrl+J]" ~packing:code_folding_menu#add () in
   unfold_all#connect#activate ~callback:(fun () -> editor#with_current_page Margin_fold.expand_all) |> ignore;
   (** Select in Structure Pane *)
   let select_in_outline = GMenu.image_menu_item
