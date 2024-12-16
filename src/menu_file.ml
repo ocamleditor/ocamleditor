@@ -180,7 +180,13 @@ let file ~browser ~group ~flags items =
   (* Exit *)
   let _ = GMenu.separator_item ~packing:menu#add () in
   let quit = GMenu.image_menu_item ~label:"Exit" ~packing:menu#add () in
-  ignore (quit#connect#activate ~callback:(fun () -> browser#exit editor ()));
+  quit#connect#activate ~callback:begin fun () ->
+    let confirm =
+      Dialog.confirm ~title:"Confirm exit" ~message:"Are you sure you want to close the editor?"
+        ~yes:("Close", ignore) ~no:("Cancel", ignore) ~cancel:false browser#window
+    in
+    match confirm with `YES -> browser#exit editor () | _ -> ()
+  end |> ignore;
   quit#add_accelerator ~group ~modi:[`CONTROL] GdkKeysyms._q ~flags;
   (* callback *)
   ignore (file#misc#connect#state_changed ~callback:begin fun _ ->
