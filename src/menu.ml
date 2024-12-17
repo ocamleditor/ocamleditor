@@ -94,9 +94,14 @@ let edit ~browser ~group ~flags
   select_par_expr#add_accelerator ~group ~modi:[`CONTROL; `SHIFT] GdkKeysyms._d ~flags;
   (* Comment/Uncomment *)
   let comment = GMenu.menu_item ~label:"Comment Block" ~packing:menu#add () in
-  ignore (comment#connect#activate ~callback:(fun () ->
-      editor#with_current_page (fun page -> ignore (page#ocaml_view#toggle_comment ()))));
+  comment#connect#activate ~callback:(fun () ->
+      editor#with_current_page (fun page -> page#ocaml_view#toggle_comment false)) |> ignore;
   comment#add_accelerator ~group ~modi:[`CONTROL] GdkKeysyms._slash ~flags;
+  let select_comment = GMenu.menu_item ~label:"Select Comment" ~packing:menu#add () in
+  select_comment#connect#activate ~callback:(fun () ->
+      editor#with_current_page (fun page -> page#ocaml_view#toggle_comment true)) |> ignore;
+  select_comment#add_accelerator ~group ~modi:[`CONTROL; `SHIFT] GdkKeysyms._slash ~flags; (* Doesn't work *)
+  select_comment#add_accelerator ~group ~modi:[`CONTROL; `MOD1] GdkKeysyms._slash ~flags;
   (* Change To Uppercase/Lowercase *)
   let toggle_case = GMenu.menu_item ~label:"Convert To Uppercase/Lowercase" ~packing:menu#add () in
   ignore (toggle_case#connect#activate ~callback:(fun () ->
@@ -180,6 +185,7 @@ let edit ~browser ~group ~flags
         Some (select_word :> GMenu.menu_item);
         Some (select_par_expr :> GMenu.menu_item);
         Some (comment :> GMenu.menu_item);
+        Some (select_comment :> GMenu.menu_item);
         Some (toggle_case :> GMenu.menu_item);
         Some (templates :> GMenu.menu_item);
         Some (complet :> GMenu.menu_item);
@@ -196,6 +202,7 @@ let edit ~browser ~group ~flags
         let sensitive = name ^^^ ".ml" || name ^^^ ".mli" in
         List.iter (fun i -> i#misc#set_sensitive sensitive) [
           (comment :> GMenu.menu_item);
+          (select_comment :> GMenu.menu_item);
           (templates :> GMenu.menu_item);
           (complet :> GMenu.menu_item);
           (quick_info :> GMenu.menu_item);

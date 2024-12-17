@@ -678,7 +678,7 @@ class browser window =
         Preferences.preferences#get.outline_width <- editor#paned#position;
         ignore(Messages.vmessages#remove_all_tabs());
         if maximized_view_action = `NONE then (self#set_geometry());
-        (* Save geometry *)
+        (*Save geometry*)
         let chan = open_out (Filename.concat App_config.ocamleditor_user_home "geometry") in
         fprintf chan "%s" geometry;
         close_out_noerr chan;
@@ -1078,7 +1078,7 @@ class browser window =
             let keyval = GdkEvent.Key.keyval ev in
             let result =
               if state = [`CONTROL] && keyval = GdkKeysyms._c then begin
-                editor#with_current_page (fun page -> ignore (page#ocaml_view#toggle_comment ()));
+                editor#with_current_page (fun page -> ignore (page#ocaml_view#toggle_comment false));
                 true
               end else if keyval = GdkKeysyms._0 then begin
                 editor#with_current_page Margin_fold.collapse_to_definitions;

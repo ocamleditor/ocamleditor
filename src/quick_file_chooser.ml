@@ -399,9 +399,9 @@ class widget ~source ~name ?filter ?packing () =
     method private init () =
       ignore (view#misc#connect#destroy ~callback:self#finalize);
       (* Entry key press *)
-      ignore (entry#connect#changed ~callback:begin fun () ->
-          Gmisclib.Idle.add ~prio:200 self#apply_pattern;
-        end);
+      entry#connect#changed ~callback:begin fun () ->
+        Gmisclib.Idle.add ~prio:200 self#apply_pattern;
+      end |> ignore;
       ignore (ebox#event#connect#key_press ~callback:begin fun ev ->
           let key = GdkEvent.Key.keyval ev in
           if key = GdkKeysyms._Up || key = GdkKeysyms._Down then begin

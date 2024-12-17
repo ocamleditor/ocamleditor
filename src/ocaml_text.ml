@@ -271,75 +271,94 @@ and view ?project ?buffer () =
     method smart_click = smart_click
     method set_smart_click x = smart_click <- x
 
-    method private comment_block =
-      let bounds = "(*", "*)" in
-      fun reverse ->
-        let bounds, len = if reverse then (snd bounds, fst bounds), (-2) else bounds, 2 in
-        let tb = self#buffer in
-        let start = tb#get_iter `SEL_BOUND in
-        let stop = tb#get_iter `INSERT in
-        let s1 = tb#get_text ~start ~stop:(start#forward_chars len)  () in
-        let s2 = tb#get_text ~start:(stop#backward_chars len) ~stop () in
-        if (s1 = (fst bounds)) && (s2 = (snd bounds)) then begin
-          tb#delete ~start:start ~stop:(start#forward_chars len);
-          tb#delete
-            ~start:((tb#get_iter `INSERT)#backward_chars len) ~stop:(tb#get_iter `INSERT);
-        end else begin
-          tb#insert ~iter:start (fst bounds);
-          tb#insert ~iter:(tb#get_iter `INSERT) (snd bounds);
-          if reverse then
-            tb#move_mark `INSERT ~where:((tb#get_iter `INSERT)#backward_chars 2)
-          else
-            tb#move_mark `SEL_BOUND ~where:((tb#get_iter `SEL_BOUND)#backward_chars 2)
-        end;
-        let start, stop = tb#get_iter_at_mark `SEL_BOUND, tb#get_iter `INSERT in
-        let start, stop = if reverse then stop, start else start, stop in
-        let stop = stop#forward_lines 2 in
-        Lexical.tag ~start ~stop self#buffer;
+    method private comment_selection () =
+      let bounds = "(\042", "\042)" in
+      let tb = self#buffer in
+      let mstart, mstop = self#get_selection_bounds true in
+      let start = tb#get_iter_at_mark mstart in
+      let stop = tb#get_iter_at_mark mstop in
+      let s1 = tb#get_text ~start ~stop:(start#forward_chars 2)  () in
+      let s2 = tb#get_text ~start:(stop#backward_chars 2) ~stop () in
+      if s1 = (fst bounds) && s2 = (snd bounds) then begin
+        tb#delete_interactive ~start:start ~stop:(start#forward_chars 2) () |> ignore;
+        let stop = tb#get_iter_at_mark mstop in
+        tb#delete_interactive ~start:(stop#backward_chars 2) ~stop () |> ignore;
+      end else begin
+        tb#insert_interactive ~iter:start (fst bounds) |> ignore;
+        let stop = tb#get_iter_at_mark mstop in
+        tb#insert_interactive ~iter:stop (snd bounds) |> ignore;
+        tb#move_mark mstart ~where:(((tb#get_iter_at_mark mstart))#backward_chars 2);
+      end;
+      let start, stop = tb#get_iter_at_mark mstart, tb#get_iter_at_mark mstop in
+      let start = start#backward_lines 2 in
+      let stop = stop#forward_lines 2 in
+      Lexical.tag ~start ~stop self#buffer
 
-    method toggle_comment () =
-      if buffer#lexical_enabled then begin
-        let f () =
-          let tb = self#buffer in
-          let start = tb#get_iter_at_mark `SEL_BOUND in
-          let stop = tb#get_iter `INSERT in
-          let comp = start#compare stop in
-          let pos = stop#offset in
-          if self#buffer#get_text ~start ~stop () = " " then begin
-            self#buffer#insert ~iter:(if comp > 0 then start else stop) " ";
-            self#comment_block (comp > 0);
-            self#buffer#move_mark `INSERT ~where:(self#buffer#get_iter_at_mark `SEL_BOUND);
-            let where = self#buffer#get_iter_at_mark `INSERT in
-            self#buffer#place_cursor ~where:(if comp > 0 then where#backward_chars 3 else where#forward_chars 3);
-            false
-          end else if buffer#get_text ~start ~stop () = "  " then begin
-            self#comment_block (comp > 0);
-            buffer#move_mark `INSERT ~where:(buffer#get_iter_at_mark `SEL_BOUND);
-            let where = buffer#get_iter_at_mark `INSERT in
-            buffer#place_cursor ~where:(if comp > 0 then where#backward_chars 4 else where#forward_chars 2);
-            buffer#insert ~iter:(buffer#get_iter `INSERT) "*";
-            buffer#place_cursor ~where:(buffer#get_iter `INSERT)#forward_char;
-            false
-          end else begin
-            if comp <> 0 then begin
-              self#comment_block (comp > 0);
-              true
-            end else begin
-              match
-                Comments.nearest (Comments.scan
-                                    (Glib.Convert.convert_with_fallback ~fallback:"?"
-                                       ~from_codeset:"UTF-8" ~to_codeset:Oe_config.ocaml_codeset (tb#get_text ()))) pos
-              with
-              | None -> false
-              | Some (b, e) ->
-                  let i, s = if abs(pos - b) <= abs(pos - e) then b, e else e, b in
-                  tb#select_range (tb#get_iter_at_char s) (tb#get_iter_at_char i);
-                  self#scroll_lazy (tb#get_iter `INSERT);
-                  false
-            end
-          end;
+    method private get_selection_bounds trim =
+      let in_indent (iter : GText.iter) =
+        Text_util.is_blank iter#char &&
+        let bol = iter#set_line_offset 0 in
+        let it = iter#backward_find_char ~limit:bol Text_util.not_blank in
+        it#equal bol
+      in
+      let tb = self#buffer in
+      let mstart : GText.mark = `SEL_BOUND in
+      let mstop : GText.mark = `INSERT in
+      let start = tb#get_iter_at_mark mstart in
+      let stop = tb#get_iter_at_mark mstop in
+      let mstart, mstop = if start#compare stop > 0 then mstop, mstart else mstart, mstop in
+      let start, stop = if start#compare stop > 0 then stop, start else start, stop in
+      if trim then begin
+        let start, stop =
+          (if in_indent start then start#forward_find_char Text_util.not_blank else start),
+          (if in_indent stop then (stop#backward_find_char Text_util.not_blank)#forward_char else stop)
         in
-        buffer#undo#func f ~inverse:f;
+        tb#move_mark mstart ~where:start;
+        tb#move_mark mstop ~where:stop;
+      end;
+      mstart, mstop
+
+    method toggle_comment (select_nearest : bool) =
+      if buffer#lexical_enabled then begin
+        buffer#undo#begin_block ~name:"comment";
+        let tb = self#buffer in
+        let start = tb#get_iter_at_mark `SEL_BOUND in
+        let stop = tb#get_iter `INSERT in
+        let comp = start#compare stop in
+        let pos = stop#offset in
+        let selection = self#buffer#get_text ~start ~stop () in
+        if selection = " " || selection = "  " then begin
+          let boc, eoc =
+            if selection = " " then "(\042", " \042)" else "(\042\042", "\042)"
+          in
+          let mstart, mstop = self#get_selection_bounds false in
+          let iter = tb#get_iter_at_mark mstart in
+          self#buffer#insert_interactive ~iter boc |> ignore;
+          let iter = tb#get_iter_at_mark mstop in
+          self#buffer#insert_interactive ~iter eoc |> ignore;
+          let start = tb#get_iter_at_mark mstart in
+          tb#place_cursor ~where:start#forward_char;
+        end else begin
+          if comp <> 0 then begin
+            self#comment_selection ();
+          end else if select_nearest then begin
+            match
+              Comments.nearest (Comments.scan
+                                  (Glib.Convert.convert_with_fallback ~fallback:"?"
+                                     ~from_codeset:"UTF-8" ~to_codeset:Oe_config.ocaml_codeset (tb#get_text ()))) pos
+            with
+            | None -> ()
+            | Some (b, e) ->
+                let i, s = if abs(pos - b) <= abs(pos - e) then b, e else e, b in
+                tb#select_range (tb#get_iter_at_char s) (tb#get_iter_at_char i);
+                self#scroll_lazy (tb#get_iter `INSERT);
+          end else begin
+            buffer#move_mark `SEL_BOUND ~where:((tb#get_iter `INSERT)#set_line_offset 0);
+            buffer#move_mark `INSERT ~where:(tb#get_iter `SEL_BOUND)#forward_to_line_end;
+            self#toggle_comment false;
+          end
+        end;
+        buffer#undo#end_block ();
         self#misc#grab_focus();
       end
 
