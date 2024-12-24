@@ -487,6 +487,11 @@ class margin_fold (view : Ocaml_text.view) =
         end;
         self#stop_timer();
         expanders <- [];
+        outline <- [];
+        outline_text <- "";
+        comments <- [];
+        last_outline_time <- 0.0;
+        is_refresh_pending <- false;
         self#disconnect_signals();
       end
 

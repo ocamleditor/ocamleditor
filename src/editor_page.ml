@@ -25,6 +25,7 @@ open Printf
 open Utils
 open Preferences
 open GUtil
+open Settings_t
 
 let create_view ~project ~buffer ?file ?packing () =
   let sw = GBin.scrolled_window ~width:100 ~height:100 ~shadow_type:`NONE
@@ -293,6 +294,8 @@ class page ?file ~project ~scroll_offset ~offset ~editor () =
           begin
             try
               view#misc#hide();
+              let old_code_folding = Preferences.preferences#get.editor_code_folding_enabled in
+              Preferences.preferences#set { Preferences.preferences#get with editor_code_folding_enabled = false};
               buffer#insert (Project.convert_to_utf8 project file#read);
               (* Initial cursor position and syntax highlighting *)
               Gmisclib.Idle.add begin fun () ->
@@ -315,6 +318,7 @@ class page ?file ~project ~scroll_offset ~offset ~editor () =
               (*  *)
               self#view#matching_delim ();
               Gmisclib.Idle.add ~prio:300 (fun () -> self#compile_buffer ?join:None ());
+              Preferences.preferences#set { Preferences.preferences#get with editor_code_folding_enabled = old_code_folding};
               (* Bookmarks: offsets to marks *)
               let redraw = ref false in
               List.iter begin fun bm ->
