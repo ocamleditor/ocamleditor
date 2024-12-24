@@ -227,7 +227,6 @@ class widget ~page ?packing () =
           let ocamlview = new ocamlview ~colorize ~packing:vbox#add () in
           ocamlview#view#set_editable false;
           self#reduce_font_size ocamlview;
-          ocamlview#view#code_folding#set_enabled false;
           ocamlview#view#options#set_show_line_numbers false;
           ocamlview#view#options#set_show_whitespace_chars button_ws#get_active;
           ocamlview#buffer#connect#end_user_action ~callback:ocamlview#colorize |> ignore;
@@ -259,7 +258,6 @@ class widget ~page ?packing () =
           let colorize = is_ocaml_filename filename in
           let ocamlview = new ocamlview ~colorize ~packing:vbox#add () in
           self#reduce_font_size ocamlview;
-          ocamlview#view#code_folding#set_enabled true;
           ocamlview#view#set_editable false;
           ocamlview#view#options#set_show_whitespace_chars button_ws#get_active;
           ocamlview#buffer#set_text (Buffer.contents (File_util.read filename));

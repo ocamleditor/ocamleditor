@@ -425,8 +425,8 @@ let view ~browser ~group ~flags
       Menu_view.toggle_code_folding ~enable_code_folding editor
     end);
   let collapse_enclosing = GMenu.menu_item ~label:"Toggle Current Fold" ~packing:code_folding_menu#add () in
-  ignore (collapse_enclosing#connect#activate ~callback:(fun () ->
-      editor#with_current_page (fun page -> ignore (page#ocaml_view#code_folding#toggle_current_fold()))));
+  collapse_enclosing#connect#activate ~callback:(fun () ->
+      editor#with_current_page (fun page -> (* TODO *) ())) |> ignore;
   collapse_enclosing#add_accelerator ~group ~modi:[`CONTROL;] GdkKeysyms._minus ~flags;
   (* Collapse to Definitions *)
   let collapse_definitions = GMenu.menu_item ~label:"Collapse to Definitions [Ctrl+K Ctrl+0]" ~packing:code_folding_menu#add () in

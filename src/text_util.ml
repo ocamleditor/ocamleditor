@@ -30,7 +30,7 @@ let string_width s =
   !width
 
 let blanks                 = [13;10;32;9]
-let is_blank c   = List.mem c blanks
+let is_blank c             = List.mem c blanks
 let [@inline] not_blank c  = not (is_blank c)
 let whitespace_middot      = (*"·" *)"\xC2\xB7"
 let one_dot_leader         = whitespace_middot

@@ -83,8 +83,6 @@ let update_labels
       switch_viewer#misc#set_sensitive (get_switch_view_sensitive editor#project page)) page;;
 
 let toggle_code_folding ~enable_code_folding editor =
-  editor#code_folding_enabled#set enable_code_folding#active;
-  editor#with_current_page (fun page -> page#ocaml_view#code_folding#set_enabled enable_code_folding#active);
   Preferences.preferences#get.editor_code_folding_enabled <- enable_code_folding#active;
   Preferences.save()
 

@@ -445,7 +445,6 @@ class editor () =
         let view = page#view in
         let ocaml_view = page#ocaml_view in
         let cb_tout_fast () =
-          ocaml_view#code_folding#scan_folding_points ();
           if buffer#lexical_enabled then begin
             let iter = buffer#get_iter `INSERT in
             self#colorize_within_nearest_tag_bounds gtext_buffer iter;
@@ -907,15 +906,6 @@ class editor () =
       ignore (Preferences.preferences#connect#changed ~callback:(fun _ -> self#redisplay_views()));
       (*  *)
       code_folding_enabled#set Preferences.preferences#get.editor_code_folding_enabled;
-      ignore (code_folding_enabled#connect#changed ~callback:begin fun enabled ->
-          List.iter (fun p -> p#set_code_folding_enabled enabled) (pages @ (snd (List.split pages_cache)))
-        end);
-      (* i_search expands the fold where text is found *)
-      ignore (incremental_search#connect#found ~callback:begin fun view ->
-          match self#get_page (`VIEW view) with
-          | Some page -> page#ocaml_view#code_folding#expand_current ()
-          | _ -> ()
-        end);
       (*  *)
       ignore (show_global_gutter#connect#changed ~callback:begin fun enabled ->
           List.iter (fun p -> if enabled then p#global_gutter#misc#show()
@@ -932,7 +922,6 @@ class editor () =
           self#with_current_page begin fun page ->
             if not page#load_complete && not history_switch_page_locked then (self#load_page page);
             page#update_statusbar();
-            page#set_code_folding_enabled code_folding_enabled#get; (* calls scan_folding_points, if enabled *)
             page#view#draw_current_line_background (page#buffer#get_iter `INSERT);
             if not history_switch_page_locked then (switch_page#call page);
           end;

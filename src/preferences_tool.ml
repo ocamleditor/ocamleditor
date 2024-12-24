@@ -72,7 +72,6 @@ class preferences ~editor () =
       |> List.rev
       |> List.iter (fun (_, page) -> page#write Preferences.preferences#get);
       editor#set_tab_pos ?page:None Preferences.preferences#get.tab_pos;
-      editor#code_folding_enabled#set Preferences.preferences#get.editor_code_folding_enabled;
       editor#show_global_gutter#set Preferences.preferences#get.editor_show_global_gutter;
       begin
         match Preferences.preferences#get.theme with

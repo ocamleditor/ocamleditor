@@ -106,7 +106,6 @@ class widget ~project ?(is_completion=false) ?(enable_history=true) ?width ?heig
     let tag_names, colors = tags |> List.map (fun t -> t.Settings_t.name, t) |> List.split in
     odoc_buffer#init_tags ~tags:tag_names ~colors ();
     Preferences_apply.apply (odoc_view :> Text.view) pref;
-    odoc_view#code_folding#set_enabled false;
     odoc_view#set_pixels_above_lines 0;
     odoc_view#set_pixels_below_lines 0;
     odoc_view#set_pixels_inside_wrap 0;

@@ -74,7 +74,7 @@ struct
         matrix.(i).(j) <- Some a.(i);
         path := ((i, j), ref a.(i)) :: !path;
         if i >= last_a || j >= last_b then end_path()
-        else search (i + 1) (j + 1) true
+        else (search [@tailcall]) (i + 1) (j + 1) true
       end
     in
     for i = 0 to last_a do
@@ -112,15 +112,14 @@ struct
     in
     let rec search i j =
       incr count;
-      if a.(i) <> b.(j) then begin
-        if List.length !path > 1 then (end_path(); Some (i - 1, j - 1))
-        else (path := []; None)
-      end else begin
+      if a.(i) = b.(j) then begin
         path := ((i, j), ref a.(i)) :: !path;
         if i = last_a || j = last_b
         then (end_path(); Some (i, j))
-        else search (i + 1) (j + 1)
-      end;
+        else (search [@tailcall]) (i + 1) (j + 1)
+      end else if List.length !path > 1
+      then (end_path(); Some (i - 1, j - 1))
+      else (path := []; None)
     in
     let i = ref 0 in
     while !i < length_a do
@@ -174,7 +173,7 @@ struct
         path := ((i, j), ref a.(i)) :: !path;
         if i = last_a || j = last_b
         then (end_path(); i)
-        else search (i + 1) (j + 1)
+        else (search [@tailcall]) (i + 1) (j + 1)
       end;
     in
     let i = ref 0 in
@@ -267,4 +266,4 @@ struct
 
 end
 
-module FuzzyLetters = Make(Letter);;
+module [@local] FuzzyLetters = Make(Letter);;

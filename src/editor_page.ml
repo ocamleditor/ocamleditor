@@ -195,16 +195,9 @@ class page ?file ~project ~scroll_offset ~offset ~editor () =
     method initial_offset : int = offset
     method scroll_offset = scroll_offset
 
-    method set_code_folding_enabled x =
-      let is_ml = match file with None -> false | Some file ->
-        file#basename ^^^ ".ml" || file#basename ^^^ ".mli" in
-      ocaml_view#code_folding#set_enabled (x && is_ml);
-
     method redisplay () =
       Colorize.colorize_buffer ocaml_view;
       Preferences_apply.apply view Preferences.preferences#get;
-      self#set_code_folding_enabled Preferences.preferences#get.editor_code_folding_enabled;
-      ocaml_view#code_folding#set_fold_line_color ocaml_view#options#text_color;
       Gaux.may (GtkText.TagTable.lookup buffer#tag_table "tag_matching_delim")
         ~f:(fun x -> GtkText.TagTable.remove buffer#tag_table x);
       ignore (buffer#create_tag ~name:"tag_matching_delim" [
@@ -300,7 +293,6 @@ class page ?file ~project ~scroll_offset ~offset ~editor () =
           begin
             try
               view#misc#hide();
-              self#set_code_folding_enabled false;
               buffer#insert (Project.convert_to_utf8 project file#read);
               (* Initial cursor position and syntax highlighting *)
               Gmisclib.Idle.add begin fun () ->
@@ -321,7 +313,6 @@ class page ?file ~project ~scroll_offset ~offset ~editor () =
               (*buffer#set_last_edit_time (Unix.gettimeofday());*)
               last_autosave_time <- buffer#last_edit_time;
               (*  *)
-              self#set_code_folding_enabled editor#code_folding_enabled#get; (* calls scan_folding_points, if enabled *)
               self#view#matching_delim ();
               Gmisclib.Idle.add ~prio:300 (fun () -> self#compile_buffer ?join:None ());
               (* Bookmarks: offsets to marks *)
@@ -566,10 +557,6 @@ class page ?file ~project ~scroll_offset ~offset ~editor () =
         end);
       ignore (self#view#hyperlink#connect#activate ~callback:begin fun iter ->
           editor#scroll_to_definition ~page:self ~iter;
-        end);
-      (** Code folding *)
-      ignore (ocaml_view#code_folding#connect#toggled ~callback:begin fun _(*(expand, _, _)*) ->
-          error_indication#paint_global_gutter()
         end);
       ocaml_view#buffer#connect#mark_set ~callback:begin fun it mark ->
         match GtkText.Mark.get_name mark with
