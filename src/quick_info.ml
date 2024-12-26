@@ -175,16 +175,20 @@ let display qi start stop =
   let open Preferences in
   let open Settings_j in
   let vbox = GPack.vbox ~border_width:5 ~spacing:5 () in
-  let label_typ = GMisc.label ~xpad:0 ~ypad:0 ~xalign:0.0 ~yalign:0.0 ~line_wrap:false ~packing:vbox#add () in
+  let vbox1 = GPack.vbox ~border_width:0 ~spacing:0 ~packing:vbox#add () in
+  let label_fn = GMisc.label ~xpad:0 ~ypad:0 ~xalign:0.0 ~yalign:0.0 ~line_wrap:false ~packing:vbox1#add () in
+  let label_typ = GMisc.label ~xpad:10 ~ypad:0 ~xalign:0.0 ~yalign:0.0 ~line_wrap:false ~packing:vbox1#add () in
   let label_vars = GMisc.label ~xpad:0 ~ypad:0 ~xalign:0.0 ~yalign:0.0 ~packing:vbox#add ~show:false () in
   let _ = GMisc.separator `HORIZONTAL ~packing:vbox#add () in
   let label_doc = GMisc.label ~xpad:0 ~ypad:0 ~xalign:0.0 ~yalign:0.0 ~line_wrap:true ~packing:vbox#add () in
   label_typ#set_use_markup true;
+  label_fn#set_use_markup true;
   label_vars#set_use_markup true;
   label_doc#set_use_markup true;
   label_doc#misc#modify_font_by_name preferences#get.editor_completion_font;
   label_vars#misc#modify_font_by_name preferences#get.editor_completion_font;
   label_typ#misc#modify_font_by_name preferences#get.editor_completion_font;
+  label_fn#misc#modify_font_by_name preferences#get.editor_base_font;
   let x, y =
     let pX, pY = Gdk.Window.get_pointer_location (Gdk.Window.root_parent ()) in
     let win = (match qi.view#get_window `WIDGET with None -> assert false | Some w -> w) in
@@ -194,7 +198,7 @@ let display qi start stop =
         qi.show_at <- None;
         pX - px + x, pY - py + y
     | _ ->
-        let ly, lh = qi.view#get_line_yrange start in
+        let _, lh = qi.view#get_line_yrange start in
         pX (*- px + xstart*), pY - py + ystart + lh
   in
   let m1 = qi.view#buffer#create_mark ~name:"qi-start" start in
@@ -247,38 +251,53 @@ let display qi start stop =
       window#present()
     end
   end;
-  label_typ, label_vars, label_doc
+  label_fn, label_typ, label_vars, label_doc
 
 let build_content qi (entry : type_enclosing_value) (entry2 : type_enclosing_value option) =
   (*Printf.printf "merlin(1): %s\n%!" entry.Merlin_t.te_type;
     Printf.printf "merlin(2): %s\n%!" (match entry2 with Some e -> e.Merlin_t.te_type | _ -> "NONE");*)
-  let type_expr, type_params =
-    let type_expr, varmap =
+  let tail, (type_expr, type_params) =
+    let tail, (type_expr, varmap) =
       match entry2 with
       | Some entry2 ->
           begin
             try
-              Type_expr.find_substitutions entry.Merlin_t.te_type entry2.Merlin_t.te_type
-            with Syntaxerr.Error _ -> entry.Merlin_t.te_type, []
+              entry.Merlin_t.te_tail, Type_expr.find_substitutions entry.Merlin_t.te_type entry2.Merlin_t.te_type
+            with Syntaxerr.Error _ -> entry.Merlin_t.te_tail, (entry.Merlin_t.te_type, [])
           end;
-      | _ -> entry.Merlin_t.te_type, []
+      | _ -> entry.Merlin_t.te_tail, (entry.Merlin_t.te_type, [])
     in
     let info = varmap |> List.map (fun (n, v) -> sprintf "  %s is %s" (Markup.type_info n) (Markup.type_info v)) in
-    type_expr,
-    if info <> [] then "In this context\n" ^ (info |> String.concat "\n") else ""
+    tail, (type_expr,
+           if info <> [] then "In this context\n" ^ (info |> String.concat "\n") else "")
   in
-  Markup.type_info type_expr, type_params
+  let tail_info =
+    match tail with
+    | Merlin_t.No -> ""
+    | Merlin_t.Position -> "\nTail Position"
+    | Merlin_t.Call -> "\nTail Call"
+  in
+  tail_info, Markup.type_info type_expr, type_params
 
 (** Opens a new quick information window with the information received from merlin.
-    This function is applied in a separate thread from the main one. *)
+    This function is applied in a separate thread. *)
 let spawn_window qi position (entry : type_enclosing_value) (entry2 : type_enclosing_value option) =
   if qi.view#misc#get_flag `HAS_FOCUS then begin
     let start = qi.view#obuffer#get_iter (`LINECHAR (entry.te_start.line - 1, entry.te_start.col)) in
     let stop = qi.view#obuffer#get_iter (`LINECHAR (entry.te_stop.line - 1, entry.te_stop.col)) in
-    let text = start#get_text ~stop in
-    let type_expr, type_params = build_content qi entry entry2 in
-    let label_typ, label_vars, label_doc = display qi start stop in
-    label_typ#set_label type_expr;
+    let tail_info, type_expr, type_params = build_content qi entry entry2 in
+    let label_fn, label_typ, label_vars, label_doc = display qi start stop in
+    let ident = qi.view#obuffer#get_text ~start ~stop () in
+    let context = qi.filename, Some (start#line + 1), Some (start#line_offset + 1) in
+    GtkThread.async begin fun () ->
+      let fullname = Ocp_index.fullname ~context ident in
+      Gmisclib.Idle.add ~prio:300 begin fun () ->
+        match fullname with
+        | Some fullname -> label_fn#set_label (sprintf "<span size='small'>%s</span>" (Markup.type_info fullname));
+        | None -> label_fn#misc#hide()
+      end
+    end ();
+    label_typ#set_label (sprintf "%s%s" type_expr tail_info);
     if type_params <> "" then begin
       label_vars#misc#show();
       label_vars#set_label type_params
