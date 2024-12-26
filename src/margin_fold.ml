@@ -475,25 +475,28 @@ class margin_fold (view : Ocaml_text.view) =
           | `BUFFER sign -> GtkSignal.disconnect buffer#as_buffer sign);
       signals <- [];
 
+    method enable () =
+      self#set_is_visible true;
+      self#connect_signals();
+      self#start_timer();
+
+    method disable () =
+      self#set_is_visible false;
+      expanders |> List.iter begin fun exp ->
+        exp#expand();
+        exp#destroy()
+      end;
+      self#stop_timer();
+      expanders <- [];
+      outline <- [];
+      outline_text <- "";
+      comments <- [];
+      last_outline_time <- 0.0;
+      is_refresh_pending <- false;
+      self#disconnect_signals();
+
     method private configure is_enabled =
-      self#set_is_visible is_enabled;
-      if is_enabled then begin
-        self#connect_signals();
-        self#start_timer();
-      end else begin
-        expanders |> List.iter begin fun exp ->
-          exp#expand();
-          exp#destroy()
-        end;
-        self#stop_timer();
-        expanders <- [];
-        outline <- [];
-        outline_text <- "";
-        comments <- [];
-        last_outline_time <- 0.0;
-        is_refresh_pending <- false;
-        self#disconnect_signals();
-      end
+      if is_enabled then self#enable() else self#disable()
 
     method connect = new margin_signals ~expander_toggled ~synchronized
 
@@ -557,6 +560,21 @@ let init_page (page : Editor_page.page) =
         page#view#mark_occurrences_manager#connect#mark_set ~callback:begin fun () ->
           match page#view#mark_occurrences_manager#table with
           | [] -> GtkBase.Widget.queue_draw page#view#as_widget
+          | _ -> ()
+        end |> ignore;
+        (* Disable while page is loading. *)
+        page#connect#load ~callback:begin
+          let old_is_visible = ref margin#is_visible in
+          function
+          | `Begin ->
+              old_is_visible := margin#is_visible;
+              margin#disable()
+          | `End when !old_is_visible ->
+              Gmisclib.Idle.add ~prio:300 begin fun () ->
+                margin#enable();
+                page#view#draw_gutter();
+                GtkBase.Widget.queue_draw page#view#as_widget;
+              end
           | _ -> ()
         end |> ignore;
     | _ -> ()

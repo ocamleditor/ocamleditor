@@ -27,6 +27,8 @@ open Preferences
 open GUtil
 open Settings_t
 
+type load_event_phase = [ `Begin | `End ]
+
 let create_view ~project ~buffer ?file ?packing () =
   let sw = GBin.scrolled_window ~width:100 ~height:100 ~shadow_type:`NONE
       ~hpolicy:`NEVER ~vpolicy:`NEVER ?packing () in
@@ -71,7 +73,8 @@ let create_small_toggle_button ?tooltip ~icon ?callback ?packing ?show () =
 class page ?file ~project ~scroll_offset ~offset ~editor () =
   let file_changed             = new file_changed () in
   let scroll_changed           = new scroll_changed () in
-  let signals                  = new signals ~file_changed ~scroll_changed in
+  let load                     = new load () in
+  let signals                  = new signals ~file_changed ~scroll_changed ~load in
   let buffer                   = new Ocaml_text.buffer ~project ?file () in
   let sw, text_view, ocaml_view = create_view ~project ~buffer ?file () in
   let vbox                     = GPack.vbox ~spacing:0 () in
@@ -294,8 +297,7 @@ class page ?file ~project ~scroll_offset ~offset ~editor () =
           begin
             try
               view#misc#hide();
-              let old_code_folding = Preferences.preferences#get.editor_code_folding_enabled in
-              Preferences.preferences#set { Preferences.preferences#get with editor_code_folding_enabled = false};
+              load#call `Begin;
               buffer#insert (Project.convert_to_utf8 project file#read);
               (* Initial cursor position and syntax highlighting *)
               Gmisclib.Idle.add begin fun () ->
@@ -318,7 +320,6 @@ class page ?file ~project ~scroll_offset ~offset ~editor () =
               (*  *)
               self#view#matching_delim ();
               Gmisclib.Idle.add ~prio:300 (fun () -> self#compile_buffer ?join:None ());
-              Preferences.preferences#set { Preferences.preferences#get with editor_code_folding_enabled = old_code_folding};
               (* Bookmarks: offsets to marks *)
               let redraw = ref false in
               List.iter begin fun bm ->
@@ -336,6 +337,7 @@ class page ?file ~project ~scroll_offset ~offset ~editor () =
                   view#gutter.Gutter.markers <- marker :: view#gutter.Gutter.markers
               end project.Prj.bookmarks;
               Project.save_bookmarks project;
+              load#call `End;
               if !redraw then (GtkBase.Widget.queue_draw text_view#as_widget);
               true
             with Glib.Convert.Error (_, message) -> begin
@@ -590,10 +592,12 @@ class page ?file ~project ~scroll_offset ~offset ~editor () =
 (** Signals *)
 and file_changed () = object inherit [Editor_file.file option] signal () end
 and scroll_changed () = object inherit [unit] signal () end
+and load () = object inherit [load_event_phase] signal () end
 
-and signals ~file_changed ~scroll_changed =
+and signals ~file_changed ~scroll_changed ~load =
   object
-    inherit ml_signals [file_changed#disconnect; scroll_changed#disconnect]
+    inherit ml_signals [file_changed#disconnect; scroll_changed#disconnect; load#disconnect]
     method file_changed = file_changed#connect ~after
     method scroll_changed = scroll_changed#connect ~after
+    method load = load#connect ~after
   end
