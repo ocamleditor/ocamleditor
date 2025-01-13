@@ -60,8 +60,9 @@ class manager ~ocaml_view =
           Merlin.enclosing
             ~position:(iter#line + 1, iter#line_offset)
             ~filename:filename
-            ~source_code:(buffer#get_text ())
-            begin fun rr ->
+            ~buffer:(buffer#get_text ()) ()
+          |> Async.map ~name:__FUNCTION__ begin function
+          | Merlin.Ok rr ->
               ranges <-
                 (rr |> List.map (iters_of_range buffer)) @ extra
                 |> List.sort (fun (_, _, l1) (_, _, l2) -> compare l1 l2)
@@ -99,6 +100,9 @@ class manager ~ocaml_view =
                 self#reset ();
                 false
               end |> self#add_signal (GtkSignal.disconnect gtext_view#as_view);
-            end
+          | Merlin.Failure msg -> Printf.printf "%s\n%!" msg
+          | Merlin.Error msg -> Printf.eprintf "File %s: %s\n%!" __FILE__ msg
+          end
+          |> Async.start
       | _ -> self#select buffer
   end

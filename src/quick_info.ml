@@ -201,13 +201,14 @@ let display qi start stop =
         let _, lh = qi.view#get_line_yrange start in
         pX (*- px + xstart*), pY - py + ystart + lh
   in
-  let m1 = qi.view#buffer#create_mark ~name:"qi-start" start in
-  let m2 = qi.view#buffer#create_mark ~name:"qi-stop" stop in
-  let range = Some (m1, m2) in
+  let create_range () =
+    Some (qi.view#buffer#create_mark ~name:"qi-start" start,
+          qi.view#buffer#create_mark ~name:"qi-stop" stop)
+  in
   let window = Gtk_util.window_tooltip vbox#coerce ~fade:false ~x ~y ~show:false () in
   let wininfo = {
     window;
-    range;
+    range = create_range ();
     is_pinned = false;
     index = new_index();
   } in
@@ -242,7 +243,7 @@ let display qi start stop =
       let window = Gtk_util.window_tooltip sw#coerce ~fade:false ~x ~y ~width:700 ~height:300 ~show:false () in
       let wininfo = {
         window;
-        range;
+        range = create_range ();
         is_pinned = false;
         index = new_index();
       } in
@@ -341,7 +342,7 @@ let in_range buffer iter ~start ~stop =
 
 let process_location qi x y =
   let current_window = get_current_window qi in
-  let current_range = Option.bind current_window (fun x -> x.range) in
+  let current_range = Option.bind current_window (fun w -> w.range) in
   let bx, by = qi.view#window_to_buffer_coords ~tag:`WIDGET ~x ~y in
   if bx > 0 then begin
     let iter = qi.view#get_iter_at_location ~x:bx ~y:by in
@@ -449,7 +450,7 @@ let connect_to_view qi (view : Ocaml_text.view) =
 
 let create (view : Ocaml_text.view) =
   let open Preferences in
-  let bg_color = ?? (Preferences.preferences#get.editor_bg_color_popup) in
+  let bg_color = ?? (Preferences.preferences#get.Settings_t.editor_bg_color_popup) in
   let filename = match view#obuffer#file with Some file -> file#filename | _ -> "" in
   let qi =
     {

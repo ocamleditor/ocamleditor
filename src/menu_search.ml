@@ -86,8 +86,17 @@ let search_again editor =
 (** set_has_definition *)
 let set_has_definition editor item =
   editor#with_current_page begin fun page ->
-    let def = editor#get_definition (page#buffer#get_iter `INSERT) in
-    item#misc#set_sensitive (def <> None);
+    let def =
+      Definition.find
+        ~filename:page#get_filename
+        ~buffer:(page#buffer#get_text ?start:None ?stop:None ?slice:None ?visible:None ())
+        ~iter: (page#buffer#get_iter `INSERT)
+        (*|> Async.await*)
+    in
+    match def with
+    | Merlin.Ok def -> item#misc#set_sensitive (def <> None);
+    | Merlin.Failure _ -> ()
+    | Merlin.Error _ -> ()
   end
 
 (** set_has_references *)

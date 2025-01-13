@@ -134,14 +134,19 @@ let init ?(cont=ignore) project =
   database := Some db;
   let count_lib_values = ref 0 in
   get_project_source_filenames project |> List.iter (update ~is_init:true db);
-  Merlin.list_modules begin fun modules ->
-    "Str" :: "Unix" :: "Thread" :: modules
-    |> List.iter begin fun modname ->
-      match List.find_opt (fun me -> me.modname = modname) db.table with
-      | None -> complete_prefix db modname count_lib_values
-      | _ -> ()
-    end
-  end;
+  Merlin.list_modules ()
+  |> Async.map ~name:__FUNCTION__ begin function
+  | Merlin.Ok modules ->
+      "Str" :: "Unix" :: "Thread" :: modules
+      |> List.iter begin fun modname ->
+        match List.find_opt (fun me -> me.modname = modname) db.table with
+        | None -> complete_prefix db modname count_lib_values
+        | _ -> ()
+      end
+  | Merlin.Failure msg | Merlin.Error msg ->
+      Log.println `ERROR "%s" msg
+  end
+  |> Async.start;
   cont db
 
 let update_all ?(cont=ignore) project =

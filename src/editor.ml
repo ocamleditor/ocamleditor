@@ -296,41 +296,24 @@ class editor () =
             Gmisclib.Idle.add ~prio:300 (fun () -> Project.save_bookmarks project);
       with Not_found -> ()
 
-    method get_definition (iter : GText.iter) =
-      match self#get_page `ACTIVE with
-      | Some page ->
-          let project = self#project in
-          let filename = page#get_filename in
-          let offset = iter#offset in
-          Binannot_ident.find_definition
-            ~project
-            ~filename
-            ~offset
-            ~compile_buffer:(fun () -> page#compile_buffer ?join:(Some true))  ()
-      | _ -> None
-
     method scroll_to_definition ~page ~iter =
       match self#get_page `ACTIVE with
       | Some page ->
-          Merlin.locate ~position:(iter#line + 1, iter#line_offset)
+          Definition.find
             ~filename:page#get_filename
-            ~look_for:`Implementation
-            ~source_code:(page#buffer#get_text ())
-            begin function
-            | `String msg -> notification#call msg
-            | `Assoc assoc ->
-                let file, ln, col = ref "", ref 0, ref 0 in
-                assoc |> List.iter (function
-                    | "file", `String x -> file := x
-                    | "pos", `Assoc ["line", `Int l; "col", `Int c]
-                    | "pos", `Assoc ["col", `Int c; "line", `Int l] -> ln := l - 1; col := c
-                    | _ -> ());
-                GtkThread.async begin fun () ->
-                  self#location_history_add ~page ~iter ~kind:`BROWSE ();
-                  self#goto_location !file !ln !col;
-                end ()
-            | _ -> ()
-            end;
+            ~buffer:(page#buffer#get_text ())
+            ~iter
+          |> begin function
+          | Merlin.Ok (Some location) ->
+              GtkThread.async begin fun () ->
+                let open Definition in
+                self#location_history_add ~page ~iter ~kind:`BROWSE ();
+                self#goto_location location.filename location.line location.col;
+              end ()
+          | Merlin.Ok None -> ()
+          | Merlin.Failure msg -> Printf.printf "%s\n%!" msg
+          | Merlin.Error msg -> Printf.eprintf "File %s: %s\n%!" __FILE__ msg
+          end
       | _ -> ()
 
     method goto_location filename line col =

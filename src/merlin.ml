@@ -30,19 +30,6 @@ let errors ~filename ~source_code =
   [ "errors" ]
   |> execute filename source_code
 
-let enclosing ~position:(line, col) ~filename ~source_code apply =
-  let position = sprintf "%d:%d" line col in
-  [ "enclosing"; "-position"; position ]
-  |> execute filename source_code ~continue_with:begin fun json ->
-    match Merlin_j.enclosing_answer_of_string json with
-    | Return enclosing ->
-        Log.println `DEBUG "%s" (Yojson.Safe.prettify json);
-        apply enclosing.value
-    | Failure msg
-    | Error msg
-    | Exception msg -> Log.println `ERROR "%s" msg.value;
-  end
-
 let case_analysis ~(start : GText.iter) ~(stop : GText.iter) ~filename ~source_code apply =
   let start = sprintf "%d:%d" (start#line + 1) start#line_offset in
   let stop = sprintf "%d:%d" (stop#line + 1) stop#line_offset in
@@ -132,42 +119,12 @@ let document ~position:(line, col) ?identifier ~filename ~source_code apply =
     | Exception msg -> Log.println `ERROR "%s" msg.value;
   end
 
-let list_modules ?(ext=[".ml"]) ?(filename="dummy") ?(source_code="") apply =
-  "list-modules" :: (match ext with [] -> [] | _ -> ext |> List.map (sprintf "-ext %s"))
-  |> execute filename source_code ~continue_with:begin fun json ->
-    match Merlin_j.list_modules_answer_of_string json with
-    | Return list_modules ->
-        Log.println `DEBUG "%s" (Yojson.Safe.prettify json);
-        apply list_modules.value
-    | Failure msg
-    | Error msg
-    | Exception msg -> Log.println `ERROR "%s" msg.value;
-  end
-
 let outline ~filename ~source_code apply =
   [ "outline" ] |> execute filename source_code ~continue_with:begin fun json ->
     match Merlin_j.outline_answer_of_string json with
     | Return outline ->
         Log.println `DEBUG "%s" (Yojson.Safe.prettify json);
         apply outline.value
-    | Failure msg
-    | Error msg
-    | Exception msg -> Log.println `ERROR "%s" msg.value;
-  end
-
-let locate ~position:(line, col) ?prefix ?look_for ~filename ~source_code apply =
-  let position = sprintf "%d:%d" line col in
-  "locate" :: "-position" :: position ::
-  (match prefix with None -> "" | Some prefix -> sprintf "-prefix \"%s\"" prefix) ::
-  (match look_for with
-   | None -> ""
-   | Some `Interface -> "-look-for interface"
-   | Some `Implementation -> "-look-for implementation") :: []
-  |> execute filename source_code ~continue_with:begin fun json ->
-    match Merlin_j.locate_answer_of_string json with
-    | Return document ->
-        Log.println `DEBUG "%s" (Yojson.Safe.prettify json);
-        apply document.value
     | Failure msg
     | Error msg
     | Exception msg -> Log.println `ERROR "%s" msg.value;
@@ -198,4 +155,69 @@ let occurrences ~identifier_at:(line, col) ?scope ~filename ~source_code apply =
     | Failure msg
     | Error msg
     | Exception msg -> Log.println `ERROR "%s" msg.value;
+  end
+
+type 'a result = Ok of 'a | Failure of string | Error of string
+
+type json_string = string
+
+let execute_async filename source_code (*continuation*) command =
+  let cmd_line = "ocamlmerlin" :: "server" :: command @ [ "-thread"; "-filename"; filename ] in
+  Log.println `INFO "%s" (cmd_line |> String.concat " ");
+  let (ic, oc, _) as channels = Unix.open_process_full (cmd_line |> String.concat " ") (Unix.environment ()) in
+  output_string oc source_code;
+  close_out_noerr oc;
+  Async.create ~name:(List.hd command) begin fun () ->
+    let json = In_channel.input_all ic in
+    Unix.close_process_full channels |> ignore;
+    (json : json_string) (*|> continuation*)
+  end
+
+let locate ~position:(line, col) ?prefix ?look_for ~filename ~buffer () =
+  let position = sprintf "%d:%d" line col in
+  "locate" :: "-position" :: position ::
+  (match prefix with None -> "" | Some prefix -> sprintf "-prefix \"%s\"" prefix) ::
+  (match look_for with
+   | None -> ""
+   | Some `Interface -> "-look-for interface"
+   | Some `Implementation -> "-look-for implementation") :: []
+  |> execute_async filename buffer
+  |> Async.map ~name:"locate-result" begin fun json ->
+    match Merlin_j.locate_answer_of_string json with
+    | Return document ->
+        Log.println `DEBUG "%s" (Yojson.Safe.prettify json);
+        Ok document.value
+    | Failure msg -> Error msg.value
+    | Error msg | Exception msg ->
+        Log.println `ERROR "%s" msg.value;
+        Error msg.value
+  end
+
+let enclosing ~position:(line, col) ~filename ~buffer () =
+  let position = sprintf "%d:%d" line col in
+  [ "enclosing"; "-position"; position ]
+  |> execute_async filename buffer
+  |> Async.map ~name:"enclosing-result" begin fun json ->
+    match Merlin_j.enclosing_answer_of_string json with
+    | Return enclosing ->
+        Log.println `DEBUG "%s" (Yojson.Safe.prettify json);
+        Ok enclosing.value
+    | Failure msg -> Error msg.value
+    | Error msg | Exception msg ->
+        Log.println `ERROR "%s" msg.value;
+        Error msg.value
+  end
+
+let list_modules ?(ext=[".ml"]) ?(filename="dummy") ?(buffer="") () =
+  "list-modules" :: (match ext with [] -> [] | _ -> ext |> List.map (sprintf "-ext %s"))
+  |> execute_async filename buffer
+  |> Async.map ~name:"list_modules-result" begin fun json ->
+    match Merlin_j.list_modules_answer_of_string json with
+    | Return list_modules ->
+        Log.println `DEBUG "%s" (Yojson.Safe.prettify json);
+        Ok list_modules.value
+    | Failure msg -> Error msg.value
+    | Error msg | Exception msg ->
+        Log.println `ERROR "%s" msg.value;
+        Error msg.value
   end
