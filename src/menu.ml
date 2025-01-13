@@ -152,7 +152,7 @@ let edit ~browser ~group ~flags
   let quick_info_menu = GMenu.menu ~packing:quick_info#set_submenu () in
   let quick_info_at_cursor = GMenu.menu_item ~label:"Show Quick Info at Cursor" ~packing:quick_info_menu#add () in
   ignore (quick_info_at_cursor#connect#activate ~callback:browser#quick_info_at_cursor);
-  quick_info_at_cursor#add_accelerator ~group ~modi:[] GdkKeysyms._F2 ~flags;
+  quick_info_at_cursor#add_accelerator ~group ~modi:[`CONTROL] GdkKeysyms._i ~flags;
   let quick_info_mouse = GMenu.check_menu_item
       ~label:"Enable On-Mouse-Hover"
       ~active:Preferences.preferences#get.Settings_j.editor_quick_info_enabled

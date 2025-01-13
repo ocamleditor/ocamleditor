@@ -340,7 +340,7 @@ let in_range buffer iter ~start ~stop =
     GtkText.Iter.in_range iter start stop
   with Gmisclib_util.Mark_deleted -> false
 
-let process_location qi x y =
+let process_location qi ?(is_at_iter=false) x y =
   let current_window = get_current_window qi in
   let current_range = Option.bind current_window (fun w -> w.range) in
   let bx, by = qi.view#window_to_buffer_coords ~tag:`WIDGET ~x ~y in
@@ -369,7 +369,7 @@ let process_location qi x y =
           | _ -> false
         in
         if is_mouse_over then ()
-        else if is_immobile then begin
+        else if is_immobile || is_at_iter then begin
           match get_typeable_iter_at_coords qi iter with
           | Some iter ->
               hide qi;
@@ -380,14 +380,14 @@ let process_location qi x y =
   end
 
 (** Displays quick info about the expression at the specified iter. *)
-let at_iter (qi : t) (iter : GText.iter) () = ()
-(*  stop qi;
-    let rect = qi.view#get_iter_location iter in
-    let x = Gdk.Rectangle.x rect in
-    let y = Gdk.Rectangle.y rect in
-    let x, y = qi.view#buffer_to_window_coords ~x ~y ~tag:`WIDGET in
-    qi.show_at <- Some (x, y + Gdk.Rectangle.height rect);
-    process_location ~invoke:true qi x y*)
+let at_iter (qi : t) (iter : GText.iter) () =
+  close qi "at_iter";
+  let rect = qi.view#get_iter_location iter in
+  let x = Gdk.Rectangle.x rect in
+  let y = Gdk.Rectangle.y rect in
+  let x, y = qi.view#buffer_to_window_coords ~x ~y ~tag:`WIDGET in
+  qi.show_at <- Some (x, y + Gdk.Rectangle.height rect);
+  process_location qi ~is_at_iter:true x y
 
 let query_tooltip qi ~x ~y ~kbd _ =
   (*Log.println `DEBUG "%d %d %f" x y (Unix.gettimeofday());*)
