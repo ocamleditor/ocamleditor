@@ -286,11 +286,13 @@ class margin_fold (view : Ocaml_text.view) =
 
     method draw ~view ~top ~left ~height ~start ~stop =
       if not self#is_changed_after_last_outline then begin
+        Log.println `DEBUG "draw (is_changed_after_last_outline)";
         match expanders with
         (* Separate the case in which markers and expanders need to be
            reconstructed from the case in which only the positions within the visible
            area need to be updated (for example in the case of scrolling). *)
         | _ when expanders = [] || is_refresh_pending ->
+            Log.println `DEBUG "draw 1";
             let is_drawable = is_drawable start#line stop#line in
             let methods = ref [] in
             expanders <-
@@ -309,6 +311,7 @@ class margin_fold (view : Ocaml_text.view) =
                   self#draw_expander ol top left height;
               end
             end None;
+            Log.println `DEBUG "draw 1.1";
             !methods
             |> List.filter (fun ol -> ol.ol_parent <> None)
             |> ListExt.group_by (fun ol -> ol.ol_parent)
@@ -322,10 +325,14 @@ class margin_fold (view : Ocaml_text.view) =
               | _ -> ()
             end
             |> ignore;
+            Log.println `DEBUG "draw 1.2";
             !methods |> List.iter (fun ol -> if is_drawable ol then self#draw_expander ol top left height);
-            is_refresh_pending <- false
+            is_refresh_pending <- false;
+            Log.println `DEBUG "draw 1.3";
         | _ ->
-            expanders |> List.iter (fun ex -> ex#show top left height)
+            Log.println `DEBUG "draw 2";
+            expanders |> List.iter (fun ex -> ex#show top left height);
+            Log.println `DEBUG "draw 2.1";
       end else
         is_refresh_pending <- true
 
@@ -425,12 +432,15 @@ class margin_fold (view : Ocaml_text.view) =
         self#sync_outline_time();
         (merlin source_code)@@Merlin.outline begin fun (ol : Merlin_j.outline list) ->
           GtkThread.sync begin fun () ->
+            Log.println `DEBUG "BEGIN GtkThread.sync";
             outline <- ol;
             outline_text <- source_code;
             comments <-
               Comments.scan_locale (Glib.Convert.convert_with_fallback ~fallback:""
                                       ~from_codeset:"UTF-8" ~to_codeset:Oe_config.ocaml_codeset source_code);
+            Log.println `DEBUG "call synchronized";
             synchronized#call();
+            Log.println `DEBUG "END GtkThread.sync";
           end ();
         end
       end;
@@ -529,7 +539,9 @@ let init_page (page : Editor_page.page) =
         margin#connect#synchronized ~callback:begin fun () ->
           if margin#is_refresh_pending then begin
             (*Gmisclib.Idle.add ~prio:100 begin fun () ->*)
+            Log.println `DEBUG "synchronized: begin draw_gutter";
             page#view#draw_gutter(); (* triggers draw *)
+            Log.println `DEBUG "synchronized: end draw_gutter";
             (*end;*)
           end
         end |> ignore;
