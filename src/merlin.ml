@@ -70,28 +70,6 @@ let expand_prefix ~position:(line, col) ~prefix ~filename ~source_code apply =
     | Exception msg -> Log.println `ERROR "%s" msg.value;
   end
 
-let type_enclosing ~position:(line, col) ?expression ?cursor ?verbosity ?index ~filename ~source_code apply =
-  let position = sprintf "%d:%d" line col in
-  [
-    ["type-enclosing"; "-position"; position ];
-    (match expression with Some e -> ["-expression"; sprintf "\"%s\"" e ] | _ -> []);
-    (match cursor with Some c -> ["-cursor"; string_of_int c ] | _ -> []);
-    (match verbosity with
-     | Some `Smart -> ["-verbosity"; "smart" ]
-     | Some (`Int n) -> ["-verbosity"; string_of_int n ]
-     | _ -> []);
-    (match index with Some i -> ["-index"; string_of_int i ] | _ -> [])
-  ] |> List.concat
-  |> execute filename source_code ~continue_with:begin fun json ->
-    match Merlin_j.type_enclosing_answer_of_string json with
-    | Return types ->
-        Log.println `DEBUG "%s" (Yojson.Safe.prettify json);
-        apply types.value
-    | Failure msg
-    | Error msg
-    | Exception msg -> Log.println `ERROR "%s" msg.value;
-  end
-
 let type_expression ~position:(line, col) ~expression ~filename ~source_code apply =
   let position = sprintf "%d:%d" line col in
   [ "type-expression"; "-position"; position; "-expression"; sprintf "\"%s\"" expression ]
@@ -100,20 +78,6 @@ let type_expression ~position:(line, col) ~expression ~filename ~source_code app
     | Return type_expression ->
         Log.println `INFO "%s" (Yojson.Safe.prettify json);
         apply type_expression.value
-    | Failure msg
-    | Error msg
-    | Exception msg -> Log.println `ERROR "%s" msg.value;
-  end
-
-let document ~position:(line, col) ?identifier ~filename ~source_code apply =
-  let position = sprintf "%d:%d" line col in
-  "document" :: "-position" :: position ::
-  (match identifier with None -> [] | Some identifier -> ["-identifier"; sprintf "\"%s\"" identifier])
-  |> execute filename source_code ~continue_with:begin fun json ->
-    match Merlin_j.document_answer_of_string json with
-    | Return document ->
-        Log.println `DEBUG "%s" (Yojson.Safe.prettify json);
-        apply document.value
     | Failure msg
     | Error msg
     | Exception msg -> Log.println `ERROR "%s" msg.value;
@@ -161,7 +125,7 @@ type 'a result = Ok of 'a | Failure of string | Error of string
 
 type json_string = string
 
-let execute_async filename source_code (*continuation*) command =
+let execute_async filename source_code command =
   let cmd_line = "ocamlmerlin" :: "server" :: command @ [ "-thread"; "-filename"; filename ] in
   Log.println `INFO "%s" (cmd_line |> String.concat " ");
   let (ic, oc, _) as channels = Unix.open_process_full (cmd_line |> String.concat " ") (Unix.environment ()) in
@@ -170,8 +134,13 @@ let execute_async filename source_code (*continuation*) command =
   Async.create ~name:(List.hd command) begin fun () ->
     let json = In_channel.input_all ic in
     Unix.close_process_full channels |> ignore;
-    (json : json_string) (*|> continuation*)
+    (json : json_string)
   end
+
+let as_cps merlin_func ~filename ~buffer cont =
+  merlin_func ~filename ~buffer
+  |> Async.map cont
+  |> Async.start
 
 let locate ~position:(line, col) ?prefix ?look_for ~filename ~buffer () =
   let position = sprintf "%d:%d" line col in
@@ -218,6 +187,48 @@ let list_modules ?(ext=[".ml"]) ?(filename="dummy") ?(buffer="") () =
         Ok list_modules.value
     | Failure msg -> Error msg.value
     | Error msg | Exception msg ->
+        Log.println `ERROR "%s" msg.value;
+        Error msg.value
+  end
+
+let document ~position:(line, col) ?identifier ~filename ~buffer () =
+  let position = sprintf "%d:%d" line col in
+  "document" :: "-position" :: position ::
+  (match identifier with None -> [] | Some identifier -> ["-identifier"; sprintf "\"%s\"" identifier])
+  |> execute_async filename buffer
+  |> Async.map begin fun json ->
+    match Merlin_j.document_answer_of_string json with
+    | Return document ->
+        Log.println `DEBUG "%s" (Yojson.Safe.prettify json);
+        Ok document.value
+    | Failure msg
+    | Error msg
+    | Exception msg ->
+        Log.println `ERROR "%s" msg.value;
+        Error msg.value
+  end
+
+let type_enclosing ~position:(line, col) ?expression ?cursor ?verbosity ?index ~filename ~buffer () =
+  let position = sprintf "%d:%d" line col in
+  [
+    ["type-enclosing"; "-position"; position ];
+    (match expression with Some e -> ["-expression"; sprintf "\"%s\"" e ] | _ -> []);
+    (match cursor with Some c -> ["-cursor"; string_of_int c ] | _ -> []);
+    (match verbosity with
+     | Some `Smart -> ["-verbosity"; "smart" ]
+     | Some (`Int n) -> ["-verbosity"; string_of_int n ]
+     | _ -> []);
+    (match index with Some i -> ["-index"; string_of_int i ] | _ -> [])
+  ] |> List.concat
+  |> execute_async filename buffer
+  |> Async.map begin fun json ->
+    match Merlin_j.type_enclosing_answer_of_string json with
+    | Return types ->
+        Log.println `DEBUG "%s" (Yojson.Safe.prettify json);
+        Ok types.value
+    | Failure msg
+    | Error msg
+    | Exception msg ->
         Log.println `ERROR "%s" msg.value;
         Error msg.value
   end

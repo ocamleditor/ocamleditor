@@ -1,19 +1,19 @@
 type 'a t = {
   mutex : Mutex.t;
-  cond : Condition.t;
+  notempty : Condition.t;
   mutable value : 'a option;
 }
 
 let create initial_value = {
   mutex = Mutex.create ();
-  cond = Condition.create();
+  notempty = Condition.create();
   value = initial_value
 }
 
 let set ev value =
   Mutex.lock ev.mutex;
   ev.value <- Some value;
-  Condition.signal ev.cond;
+  Condition.signal ev.notempty;
   Mutex.unlock ev.mutex
 
 let reset ev =
@@ -24,7 +24,7 @@ let reset ev =
 let wait ev =
   Mutex.lock ev.mutex;
   while ev.value = None do
-    Condition.wait ev.cond ev.mutex
+    Condition.wait ev.notempty ev.mutex
   done;
   Mutex.unlock ev.mutex;
   match ev.value with

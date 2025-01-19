@@ -6,10 +6,10 @@ let _ =
   Log.set_print_timestamp true;
   Log.set_verbosity `DEBUG
 
-let merlin (buffer : Ocaml_text.buffer) func =
+let merlin (buffer : Ocaml_text.buffer) func cont =
   let filename = match buffer#file with Some file -> file#filename | _ -> "" in
-  let source_code = buffer#get_text () in
-  func ~filename ~source_code
+  let buffer = buffer#get_text () in
+  (Merlin.as_cps func ~filename ~buffer) cont
 
 module SignalId = struct
   let create () = ref None
@@ -38,7 +38,7 @@ end
     [mutex] and returns its result. *)
 let (!!) mx f x = Lock.mutex mx f x
 
-let (<<-) x f = f x and (->>) f x = fun mx -> Lock.mutex mx f x
+let (>=>) f x = f x
 
 let index = ref 10_000
 let new_index () =
@@ -61,7 +61,6 @@ type t = {
       override the default location, which is the mouse pointer. *)
 
   mutable windows : wininfo list;
-  mutable merlin : (filename:string -> source_code:string -> unit) -> unit;
 }
 
 and wininfo = {
@@ -303,24 +302,28 @@ let spawn_window qi position (entry : type_enclosing_value) (entry2 : type_enclo
       label_vars#misc#show();
       label_vars#set_label type_params
     end;
-    qi.merlin@@Merlin.document ~position begin fun doc ->
-      GtkThread.async begin fun () ->
-        let markup = qi.markup_odoc#convert doc in
-        label_doc#set_label markup;
-      end ()
-    end
+    merlin qi.view#obuffer @@ Merlin.document ~position () >=> begin function
+      | Merlin.Ok doc ->
+          GtkThread.async begin fun () ->
+            let markup = qi.markup_odoc#convert doc in
+            label_doc#set_label markup;
+          end ()
+      | Merlin.Failure msg | Merlin.Error msg -> ()
+      end
   end
 
 let invoke_merlin qi (iter : GText.iter) ~continue_with =
   let position = iter#line + 1, iter#line_index in
-  qi.merlin@@Merlin.type_enclosing ~position begin fun types ->
-    GtkThread.async begin fun () ->
-      match types with
-      | [] -> close qi "no-type"
-      | fst :: snd :: _ -> continue_with position fst (Some snd)
-      | fst :: _ -> continue_with position fst None
-    end ()
-  end
+  merlin qi.view#obuffer @@ Merlin.type_enclosing ~position () >=> begin function
+    | Merlin.Ok types ->
+        GtkThread.async begin fun () ->
+          match types with
+          | [] -> close qi "no-type"
+          | fst :: snd :: _ -> continue_with position fst (Some snd)
+          | fst :: _ -> continue_with position fst None
+        end ()
+    | Merlin.Failure msg | Merlin.Error msg -> ()
+    end
 
 let is_iter_in_comment (buffer : Ocaml_text.buffer) iter =
   Comments.enclosing
@@ -380,7 +383,7 @@ let process_location qi ?(is_at_iter=false) x y =
   end
 
 (** Displays quick info about the expression at the specified iter. *)
-let at_iter (qi : t) (iter : GText.iter) () =
+let at_iter qi (iter : GText.iter) () =
   close qi "at_iter";
   let rect = qi.view#get_iter_location iter in
   let x = Gdk.Rectangle.x rect in
@@ -463,7 +466,6 @@ let create (view : Ocaml_text.view) =
       current_y = 0;
       show_at = None;
       windows = [];
-      merlin = merlin view#obuffer;
     }
   in
   Preferences.preferences#connect#changed ~callback:begin fun pref ->

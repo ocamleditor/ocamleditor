@@ -229,6 +229,7 @@ class widget ~editor:_ ~page ?packing () =
     val mutable type_color_re = dummy_re
     val mutable type_color_sel = ""
     val mutable span_type_color = ""
+    val mutable code_font_family = ""
 
     method update_preferences () =
       let pref = Preferences.preferences#get in
@@ -251,6 +252,9 @@ class widget ~editor:_ ~page ?packing () =
       let style_outline, apply_outline = Gtk_theme.get_style_outline pref in
       GtkMain.Rc.parse_string (style_outline ^ "\n" ^ apply_outline);
       view#set_rules_hint (pref.outline_color_alt_rows <> None);
+      let base_font = pref.editor_base_font in
+      code_font_family <-
+        String.sub base_font 0 (Option.value (String.rindex_opt base_font ' ') ~default:(String.length base_font));
       GtkBase.Widget.queue_draw view#as_widget;
 
     initializer
@@ -564,7 +568,9 @@ class widget ~editor:_ ~page ?packing () =
         | Some Class | Some Class_virtual | Some Class_type | Some Module | Some Module_functor | Some Module_include ->
             "<b>" ^ (Glib.Markup.escape_text name) ^ "</b>"
         | Some Initializer | Some Class_let_bindings | Some Method_inherited -> "<i>" ^ (Glib.Markup.escape_text name) ^ "</i>"
-        | _ -> Glib.Markup.escape_text name
+        | _ when Str.string_match (Utils.regexp "[a-zA-Z_]+") name 0 -> Glib.Markup.escape_text name
+        (* Allows you to show ligatures in operators *)
+        | _ -> "<span face='" ^ code_font_family ^ "'>" ^ Glib.Markup.escape_text name ^ "</span>"
       in
       let typ_utf8 = Glib.Convert.convert_with_fallback ~fallback:"" ~from_codeset:Oe_config.ocaml_codeset ~to_codeset:"UTF-8" typ in
       if button_show_types#active && typ <> "" then String.concat "" [
