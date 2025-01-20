@@ -220,8 +220,9 @@ let find_definition_references_NEW editor =
       Merlin.occurrences ~identifier_at:(iter#line + 1, iter#line_offset)
         ~filename:page#get_filename
         (*~scope:`Buffer*)
-        ~source_code:(page#buffer#get_text ?start:None ?stop:None ?slice:None ?visible:None ())
-        begin fun ranges ->
+        ~buffer:(page#buffer#get_text ?start:None ?stop:None ?slice:None ?visible:None ()) ()
+      |> Async.start_with_continuation begin function
+      | Merlin.Ok ranges ->
           let open Merlin_j in
           ranges
           |> List.iter begin fun range ->
@@ -229,11 +230,12 @@ let find_definition_references_NEW editor =
               (match range.file with Some x -> x | _ -> "LOCAL")
               range.start.line range.start.col;
           end
-          (*GtkThread.async begin fun () ->
-            editor#location_history_add ~page ~iter ~kind:`BROWSE ();
-            (*editor#goto_location !file !ln !col*)
-            end ()*)
-        end;
+      (*GtkThread.async begin fun () ->
+        editor#location_history_add ~page ~iter ~kind:`BROWSE ();
+        (*editor#goto_location !file !ln !col*)
+        end ()*)
+      | Merlin.Failure _ | Merlin.Error _ -> ()
+      end
   | _ -> ()
 
 (*let find_used_components editor =

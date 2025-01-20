@@ -61,7 +61,7 @@ class manager ~ocaml_view =
             ~position:(iter#line + 1, iter#line_offset)
             ~filename:filename
             ~buffer:(buffer#get_text ()) ()
-          |> Async.map ~name:__FUNCTION__ begin function
+          |> Async.start_with_continuation begin function
           | Merlin.Ok rr ->
               ranges <-
                 (rr |> List.map (iters_of_range buffer)) @ extra
@@ -103,6 +103,5 @@ class manager ~ocaml_view =
           | Merlin.Failure msg -> Printf.printf "%s\n%!" msg
           | Merlin.Error msg -> Printf.eprintf "File %s: %s\n%!" __FILE__ msg
           end
-          |> Async.start
       | _ -> self#select buffer
   end

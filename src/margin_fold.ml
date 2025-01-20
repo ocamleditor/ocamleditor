@@ -218,7 +218,7 @@ class margin_fold (view : Ocaml_text.view) =
       [ `INVISIBLE true ] in
   let merlin text func =
     let filename = match buffer#file with Some file -> file#filename | _ -> "" in
-    func ~filename ~source_code:text
+    func ~filename ~buffer:text
   in
   let rec walk f parent (ol : Merlin_j.outline list) =
     match ol with
@@ -430,18 +430,21 @@ class margin_fold (view : Ocaml_text.view) =
       if self#is_changed_after_last_outline then begin
         let source_code = buffer#get_text () in
         self#sync_outline_time();
-        (merlin source_code)@@Merlin.outline begin fun (ol : Merlin_j.outline list) ->
-          GtkThread.sync begin fun () ->
-            Log.println `DEBUG "BEGIN GtkThread.sync";
-            outline <- ol;
-            outline_text <- source_code;
-            comments <-
-              Comments.scan_locale (Glib.Convert.convert_with_fallback ~fallback:""
-                                      ~from_codeset:"UTF-8" ~to_codeset:Oe_config.ocaml_codeset source_code);
-            Log.println `DEBUG "call synchronized";
-            synchronized#call();
-            Log.println `DEBUG "END GtkThread.sync";
-          end ();
+        (merlin source_code)@@Merlin.outline
+        |> Async.start_with_continuation begin function
+        | Merlin.Ok (ol : Merlin_j.outline list) ->
+            GtkThread.sync begin fun () ->
+              Log.println `DEBUG "BEGIN GtkThread.sync";
+              outline <- ol;
+              outline_text <- source_code;
+              comments <-
+                Comments.scan_locale (Glib.Convert.convert_with_fallback ~fallback:""
+                                        ~from_codeset:"UTF-8" ~to_codeset:Oe_config.ocaml_codeset source_code);
+              Log.println `DEBUG "call synchronized";
+              synchronized#call();
+              Log.println `DEBUG "END GtkThread.sync";
+            end ();
+        | Merlin.Failure _ | Merlin.Error _ -> ()
         end
       end;
       true

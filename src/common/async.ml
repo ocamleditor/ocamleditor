@@ -51,6 +51,9 @@ let start_as_task (a : 'a expr) =
 
 let [@inline] start (a : 'a expr) = start_as_task a |> ignore
 
+let [@inline] start_with_continuation ?(name="unnamed") cont (a : 'a expr) =
+  map ~name cont a |> start
+
 let rec await (task : 'a task) =
   Mutex.lock task.mutex;
   let state = task.state in
@@ -64,6 +67,10 @@ let rec await (task : 'a task) =
   | Faulted ex -> raise ex
 
 let [@inline] run_synchronously (a : 'a expr) = await (start_as_task a);;
+
+module Infix = struct
+  let (>=>) a f = start_with_continuation f a
+end
 
 
 (*module Test = struct

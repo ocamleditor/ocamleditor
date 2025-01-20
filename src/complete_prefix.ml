@@ -1,5 +1,6 @@
-open Merlin
 open GUtil
+open Utils
+open Merlin
 module ColorOps = Color
 open Preferences
 open Printf
@@ -113,10 +114,10 @@ class widget ~project ~(page : Editor_page.page) ~x ~y ?packing () =
   in
   let view = page#ocaml_view in
   let buffer = view#buffer in
-  let merlin func =
+  let merlin merlin_func cont =
     let filename = match (view#obuffer#as_text_buffer :> Text.buffer)#file with Some file -> file#filename | _ -> "" in
-    let source_code = buffer#get_text () in
-    func ~filename ~source_code
+    let buffer = buffer#get_text () in
+    (Merlin.as_cps merlin_func ~filename ~buffer) cont
   in
   let markup_odoc = new Markup.odoc() in
   object (self)
@@ -216,16 +217,20 @@ class widget ~project ~(page : Editor_page.page) ~x ~y ?packing () =
             end;
         end
       end;
-      view#obuffer#merlin@@complete_prefix ~position ~prefix begin fun complete_prefix ->
-        window#show(); (* NB The window is shown here *)
-        complete_prefix.entries |> List.map (fun x -> 1., x) |> self#add_entries "C";
-        if count = 0 || expand then begin
-          merlin@@expand_prefix ~position ~prefix begin fun expand_prefix ->
-            expand_prefix.entries |> List.map (fun x -> 1., x) |> self#add_entries "E";
-            loading_complete#call count;
-          end;
-        end else loading_complete#call count;
-      end;
+      merlin@@complete_prefix ~position ~prefix |=> begin function
+        | Merlin.Ok complete_prefix ->
+            window#show(); (* NB The window is shown here *)
+            complete_prefix.Merlin_j.entries |> List.map (fun x -> 1., x) |> self#add_entries "C";
+            if count = 0 || expand then begin
+              merlin@@expand_prefix ~position ~prefix |=> begin function
+                | Ok expand_prefix ->
+                    expand_prefix.Merlin_j.entries |> List.map (fun x -> 1., x) |> self#add_entries "E";
+                    loading_complete#call count;
+                | Error _ | Failure _ -> ()
+                end
+            end else loading_complete#call count;
+        | Error _ | Failure _ -> ()
+        end
 
     method private apply path =
       let row = model#get_iter path in
@@ -290,12 +295,14 @@ class widget ~project ~(page : Editor_page.page) ~x ~y ?packing () =
               end
             end else begin
               let name = model#get ~row ~column:col_name in
-              merlin@@Merlin.type_expression ~position:(1,1) ~expression:name begin fun res ->
-                GtkThread.async begin fun () ->
-                  model#set ~row ~column:col_desc res;
-                  self#show_info()
-                end ()
-              end
+              merlin@@Merlin.type_expression ~position:(1,1) ~expression:name |=> begin function
+                | Ok res ->
+                    GtkThread.async begin fun () ->
+                      model#set ~row ~column:col_desc res;
+                      self#show_info()
+                    end ()
+                | Error _ | Failure _ -> ()
+                end
             end
       with Gpointer.Null -> ()
 

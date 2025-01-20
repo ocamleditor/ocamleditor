@@ -1,5 +1,6 @@
 open Merlin_j
 open Printf
+open Utils
 
 module Log = Common.Log.Make(struct let prefix = "QUICK-INFO" end)
 let _ =
@@ -37,8 +38,6 @@ end
 (** [!!mutex f x] applies [f] to [x] inside a critical section locked by
     [mutex] and returns its result. *)
 let (!!) mx f x = Lock.mutex mx f x
-
-let (>=>) f x = f x
 
 let index = ref 10_000
 let new_index () =
@@ -302,7 +301,7 @@ let spawn_window qi position (entry : type_enclosing_value) (entry2 : type_enclo
       label_vars#misc#show();
       label_vars#set_label type_params
     end;
-    merlin qi.view#obuffer @@ Merlin.document ~position () >=> begin function
+    merlin qi.view#obuffer @@ Merlin.document ~position () |=> begin function
       | Merlin.Ok doc ->
           GtkThread.async begin fun () ->
             let markup = qi.markup_odoc#convert doc in
@@ -314,7 +313,7 @@ let spawn_window qi position (entry : type_enclosing_value) (entry2 : type_enclo
 
 let invoke_merlin qi (iter : GText.iter) ~continue_with =
   let position = iter#line + 1, iter#line_index in
-  merlin qi.view#obuffer @@ Merlin.type_enclosing ~position () >=> begin function
+  merlin qi.view#obuffer @@ Merlin.type_enclosing ~position () |=> begin function
     | Merlin.Ok types ->
         GtkThread.async begin fun () ->
           match types with
@@ -322,7 +321,7 @@ let invoke_merlin qi (iter : GText.iter) ~continue_with =
           | fst :: snd :: _ -> continue_with position fst (Some snd)
           | fst :: _ -> continue_with position fst None
         end ()
-    | Merlin.Failure msg | Merlin.Error msg -> ()
+    | Merlin.Failure _ | Merlin.Error _ -> ()
     end
 
 let is_iter_in_comment (buffer : Ocaml_text.buffer) iter =
