@@ -264,7 +264,6 @@ class margin_fold (view : Ocaml_text.view) =
 
     (** The currently cached folding points. *)
     val mutable outline = []
-    val mutable outline_text = ""
 
     val mutable comments = []
 
@@ -293,13 +292,14 @@ class margin_fold (view : Ocaml_text.view) =
            area need to be updated (for example in the case of scrolling). *)
         | _ when expanders = [] || is_refresh_pending ->
             Log.println `DEBUG "draw 1";
-            let is_drawable = is_drawable start#line stop#line in
+            let is_drawable = is_drawable 0 0 (*start#line stop#line*) in (* dummy values *)
             let methods = ref [] in
             expanders <-
               List.filter_map begin fun ex ->
                 ex#misc#hide();
                 if ex#is_valid then Some ex else None
               end expanders;
+            Log.println `DEBUG "draw 1.0";
             outline
             |> walk begin fun parent ol ->
               let is_folding_point = ol.ol_kind = "Method" || is_drawable ol in
@@ -330,7 +330,7 @@ class margin_fold (view : Ocaml_text.view) =
             is_refresh_pending <- false;
             Log.println `DEBUG "draw 1.3";
         | _ ->
-            Log.println `DEBUG "draw 2";
+            Log.println `DEBUG "draw 2, expanders length: %d" (List.length expanders);
             expanders |> List.iter (fun ex -> ex#show top left height);
             Log.println `DEBUG "draw 2.1";
       end else
@@ -344,6 +344,7 @@ class margin_fold (view : Ocaml_text.view) =
       let stop =
         if ol.ol_kind = "Method" then
           let stop = buffer#get_iter (`LINECHAR (ol.ol_stop.line - 1, ol.ol_stop.col)) in
+          Log.println `DEBUG "skip_comments_backward";
           skip_comments_backward comments (stop#set_line_offset 0);
         else begin
           (*Log.print `DEBUG "draw_expander: %d,%d " (ol.ol_stop.line - 1) ol.ol_stop.col;*)
@@ -433,10 +434,10 @@ class margin_fold (view : Ocaml_text.view) =
         (merlin source_code)@@Merlin.outline
         |> Async.start_with_continuation begin function
         | Merlin.Ok (ol : Merlin_j.outline list) ->
+            Log.println `DEBUG "STARTING GtkThread.sync (%d)" (Thread.id (Thread.self()));
             GtkThread.sync begin fun () ->
-              Log.println `DEBUG "BEGIN GtkThread.sync";
+              Log.println `DEBUG "BEGIN GtkThread.sync (%d)" (Thread.id (Thread.self()));
               outline <- ol;
-              outline_text <- source_code;
               comments <-
                 Comments.scan_locale (Glib.Convert.convert_with_fallback ~fallback:""
                                         ~from_codeset:"UTF-8" ~to_codeset:Oe_config.ocaml_codeset source_code);
@@ -502,7 +503,6 @@ class margin_fold (view : Ocaml_text.view) =
       self#stop_timer();
       expanders <- [];
       outline <- [];
-      outline_text <- "";
       comments <- [];
       last_outline_time <- 0.0;
       is_refresh_pending <- false;
