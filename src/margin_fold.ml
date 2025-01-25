@@ -440,7 +440,7 @@ class margin_fold (view : Ocaml_text.view) =
                   Comments.scan_locale (Glib.Convert.convert_with_fallback ~fallback:""
                                           ~from_codeset:"UTF-8" ~to_codeset:Oe_config.ocaml_codeset source_code);
                 synchronized#call();
-              end;
+              end else Log.println `WARN "*** outline not updated ***";
               Log.println `DEBUG "END GtkThread.sync";
             end ();
         | Merlin.Failure _ | Merlin.Error _ -> ()

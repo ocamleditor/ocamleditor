@@ -26,6 +26,8 @@ open Utils
 module ColorOps = Color
 open Preferences
 
+type bound = Gtk.text_mark * Gtk.text_mark
+
 (** Buffer *)
 class buffer =
   let word_bound = Utils.regexp "\\b" in
@@ -221,7 +223,7 @@ and view ?project ?buffer () =
     val mutable prev_line_background = 0
     val mutable highlight_current_line_tag = create_highlight_current_line_tag ()
     val mutable current_matching_tag_bounds = []
-    val mutable text_outline = []
+    val mutable text_outline = ([] : [ `Ref of bound | `Word of bound | `Delim of bound ] list)
     val mutable approx_char_width = 0
     val visible_height = new GUtil.variable 0
     val mutable signal_expose : GtkSignal.id option = None
@@ -320,7 +322,7 @@ and view ?project ?buffer () =
               ((self#buffer#create_mark ~name:"delim_right_start" rstart),
                (self#buffer#create_mark ~name:"delim_right_stop" rstop)) :: current_matching_tag_bounds;
             self#buffer#apply_tag_by_name "tag_matching_delim" ~start:rstart ~stop:rstop;
-            text_outline <- current_matching_tag_bounds;
+            text_outline <- text_outline @ (current_matching_tag_bounds |> List.map (fun x -> `Delim x));
             GtkBase.Widget.queue_draw self#as_widget;
             delim
           end else None
@@ -695,7 +697,7 @@ and view ?project ?buffer () =
          This is done by setting current_matching_tag_bounds_draw to [], still
          keeping marks in current_matching_tag_bounds to be used for syntax
          coloring after the insert_text event. *)
-      (* Try to disable this... *) (*ignore (buffer#connect#insert_text ~callback:(fun _ _ -> current_matching_tag_bounds_draw <- []));*)
+      buffer#connect#insert_text ~callback:(fun _ _ -> text_outline <- []) |> ignore;
       (** Expose *)
       view#misc#connect#realize ~callback:begin fun () ->
         match view#get_window `TEXT with
