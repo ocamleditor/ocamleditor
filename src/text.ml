@@ -229,6 +229,10 @@ and view ?project ?buffer () =
     val hyperlink = Gmisclib.Text.hyperlink ~view ()
     val mutable signal_id_highlight_current_line = None
     val mutable mark_occurrences_manager = None
+
+    val mutable draw_text_border = fun y0 approx_char_width hadjust drawable lstart lstop -> false
+    method set_text_border_func f = draw_text_border <- f
+
     val mutable current_line_border_x1 = 0
     method set_current_line_border_x1 x = current_line_border_x1 <- x
     val mutable current_line_border_x2 = 0
@@ -602,55 +606,9 @@ and view ?project ?buffer () =
                 | (lstart, lstop) :: (rstart, rstop) :: [] ->
                     drawable#set_foreground (?? Oe_config.matching_delim_border_color);
                     drawable#set_line_attributes ~width:2 ~style:`SOLID  ();
-                    let draw start stop =
-                      match buffer#get_iter_at_mark_opt (`MARK start) with
-                      | Some start ->
-                          begin
-                            match buffer#get_iter_at_mark_opt (`MARK stop) with
-                            | Some stop when start#get_visible_text ~stop |> String.length > 0 ->
-                                let yl1, hl1 = view#get_line_yrange start in
-                                let yl1 = yl1 - y0 in
-                                (* count_displayed_lines *)
-                                let iter = ref (stop#set_line_index 0) in
-                                let x_chars = ref 0 in
-                                let lines_displayed = ref 1 in (* n-th display-line where "start" lies, counting from 1 *)
-                                while not (!iter#equal start) do
-                                  if !iter#char = 9 then begin
-                                    x_chars := ((!x_chars / 8) * 8 + 8);
-                                  end else (incr x_chars);
-                                  iter := !iter#forward_char;
-                                  if view#starts_display_line !iter then (x_chars := 0; incr lines_displayed)
-                                done;
-                                (* count how many display-lines constitute the line *)
-                                let n_display_lines = ref !lines_displayed in
-                                let i = stop#copy in
-                                while view#forward_display_line i && i#line = stop#line do
-                                  incr n_display_lines
-                                done;
-                                (*  *)
-                                let x = approx_char_width * !x_chars - hadjust - 1 in (* -1 per evitare sovrapposizione col cursore *)
-                                let width_chars = stop#line_index - start#line_index in
-                                let width = approx_char_width * width_chars in
-                                let pango = self#misc#pango_context in
-                                let metrics = pango#get_metrics() in
-                                let height = (metrics#ascent + metrics#descent) / Pango.scale -  1 in
-                                let y =
-                                  if !lines_displayed > 1 (*0 ?*)
-                                  then yl1 + ((!lines_displayed - 1) * (hl1 / !n_display_lines))
-                                  else yl1 + view#pixels_above_lines
-                                in
-                                drawable#rectangle ~x ~y ~width ~height ();
-                                true
-                            | _ -> false
-                          end
-                      | _ -> false
-                    in
-                    (* lstart, lstop are for the RIGHT delimeter and rstart,
-                       rstop are for the LEFT delimiter.
-                       To satisfy code folding, if the right delim. is not visible
-                       we do not even draw the border of the left delim.
-                    *)
-                    if draw lstart lstop then draw rstart rstop |> ignore;
+                    (* lstart, lstop are for the RIGHT delimeter and rstart, rstop are for the LEFT delimiter. *)
+                    if draw_text_border y0 approx_char_width hadjust drawable lstart lstop
+                    then draw_text_border y0 approx_char_width hadjust drawable rstart rstop |> ignore;
                 | _ -> ()
               end;
               false;

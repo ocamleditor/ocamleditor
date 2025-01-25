@@ -67,9 +67,7 @@ class manager ~view =
         ?visible:(Some false) ()
 
     method mark () =
-      Log.println `DEBUG "BEGIN";
       self#clear();
-      Log.println `DEBUG "clear done";
       match view#options#mark_occurrences with
       | true, under_cursor, _ ->
           let text = buffer#selection_text () in
@@ -78,18 +76,10 @@ class manager ~view =
             else text
           in
           let text = text |> String.trim in
-          Log.println `DEBUG "text: %S" text;
           if String.length text > 1 && not (String.contains text '\n') && not (String.contains text '\r') then begin
-            (*let vrect = view#visible_rect in
-              let h0 = Gdk.Rectangle.height vrect in
-              let y0 = Gdk.Rectangle.y vrect in
-              let start, _ = view#get_line_at_y y0 in
-              let stop, _ = view#get_line_at_y (y0 + h0) in
-              let stop = stop#forward_line in*)
             let start = buffer#start_iter in
             let stop = buffer#end_iter in
             let iter = ref start in
-            Log.println `DEBUG "while do";
             while !iter#compare stop < 0 do
               match !iter#forward_search ?flags:None ?limit:(Some stop) text with
               | Some (a, b) ->
@@ -105,12 +95,7 @@ class manager ~view =
                   iter := b;
               | _ -> iter := stop
             done;
-            Log.println `DEBUG "while done %b" (table <> []);
-            if table <> [] then begin
-              mark_set#call();
-              Log.println `DEBUG "mark_set called";
-            end else clear#call();
-            Log.println `DEBUG "END";
+            if table <> [] then mark_set#call() else clear#call();
           end
       | _ -> ()
 

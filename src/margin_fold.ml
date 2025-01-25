@@ -291,7 +291,6 @@ class margin_fold (view : Ocaml_text.view) =
            reconstructed from the case in which only the positions within the visible
            area need to be updated (for example in the case of scrolling). *)
         | _ when expanders = [] || is_refresh_pending ->
-            Log.println `DEBUG "draw 1";
             let is_drawable = is_drawable 0 0 (*start#line stop#line*) in (* dummy values *)
             let methods = ref [] in
             expanders <-
@@ -337,19 +336,18 @@ class margin_fold (view : Ocaml_text.view) =
         is_refresh_pending <- true
 
     method private draw_expander ol top left height =
-      (*Log.println `TRACE "  draw_expander %d:%d -- %d:%d [%d] [%s %d]"
-        ol.ol_start.line ol.ol_start.col ol.ol_stop.line ol.ol_stop.col
-        (Thread.self() |> Thread.id) ol.ol_kind ol.ol_level;*)
+      Log.println `DEBUG "draw 3.0 %s %b" ol.ol_kind self#is_changed_after_last_outline;
       let start = buffer#get_iter (`LINECHAR (ol.ol_start.line - 1, ol.ol_start.col)) in
+      Log.println `DEBUG "draw 3.1";
       let stop =
         if ol.ol_kind = "Method" then
           let stop = buffer#get_iter (`LINECHAR (ol.ol_stop.line - 1, ol.ol_stop.col)) in
           Log.println `DEBUG "skip_comments_backward";
           skip_comments_backward comments (stop#set_line_offset 0);
         else begin
-          (*Log.print `DEBUG "draw_expander: %d,%d " (ol.ol_stop.line - 1) ol.ol_stop.col;*)
+          Log.print `DEBUG "draw_expander: %d,%d " (ol.ol_stop.line - 1) ol.ol_stop.col;
           let iter = buffer#get_iter (`LINECHAR (ol.ol_stop.line - 1, ol.ol_stop.col)) in
-          (*Log.println `DEBUG "OK";*)
+          Log.println `DEBUG "OK";
           iter
         end
       in

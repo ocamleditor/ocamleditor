@@ -40,8 +40,10 @@ let create_view ~project ~buffer ?file ?packing () =
       ~hpolicy:`NEVER ~vpolicy:`NEVER ?packing () in
   let view = new Ocaml_text.view ~project ~buffer () in
   Preferences_apply.apply (view :> Text.view) Preferences.preferences#get;
+  let tview = (view :> Text.view) in
+  tview#set_text_border_func (Text_border.draw tview);
   let _  = sw#add view#coerce in
-  sw, (view :> Text.view), view
+  sw, tview, view
 
 let shortname filename =
   let basename = Filename.basename filename in

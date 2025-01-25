@@ -288,9 +288,10 @@ let search ~browser ~group ~flags items =
           ignore (editor#scroll_to_definition ~page ~iter:(page#buffer#get_iter `INSERT)))));
   find_definition#add_accelerator ~group ~modi:[] GdkKeysyms._F12 ~flags;
   find_definition#add_accelerator ~group ~modi:[`CONTROL] GdkKeysyms._Return ~flags;
-  (** Find references *)
+  (* Find references *)
   let find_references = GMenu.image_menu_item ~label:"Find References" ~packing:menu#add () in
   find_references#set_image (GMisc.image ~pixbuf:(??? Icons.references) ())#coerce;
+  find_references#add_accelerator ~group ~modi:[`SHIFT] GdkKeysyms._F12 ~flags;
   find_references#add_accelerator ~group ~modi:[`CONTROL; `SHIFT] GdkKeysyms._Return ~flags;
   ignore (find_references#connect#activate ~callback:(fun () -> Menu_search.find_definition_references editor));
   (*(** Find used components *)
