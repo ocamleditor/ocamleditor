@@ -221,7 +221,7 @@ and view ?project ?buffer () =
     val mutable prev_line_background = 0
     val mutable highlight_current_line_tag = create_highlight_current_line_tag ()
     val mutable current_matching_tag_bounds = []
-    val mutable current_matching_tag_bounds_draw = []
+    val mutable text_outline = []
     val mutable approx_char_width = 0
     val visible_height = new GUtil.variable 0
     val mutable signal_expose : GtkSignal.id option = None
@@ -229,10 +229,6 @@ and view ?project ?buffer () =
     val hyperlink = Gmisclib.Text.hyperlink ~view ()
     val mutable signal_id_highlight_current_line = None
     val mutable mark_occurrences_manager = None
-
-    val mutable draw_text_border = fun y0 approx_char_width hadjust drawable lstart lstop -> false
-    method set_text_border_func f = draw_text_border <- f
-
     val mutable current_line_border_x1 = 0
     method set_current_line_border_x1 x = current_line_border_x1 <- x
     val mutable current_line_border_x2 = 0
@@ -324,7 +320,7 @@ and view ?project ?buffer () =
               ((self#buffer#create_mark ~name:"delim_right_start" rstart),
                (self#buffer#create_mark ~name:"delim_right_stop" rstop)) :: current_matching_tag_bounds;
             self#buffer#apply_tag_by_name "tag_matching_delim" ~start:rstart ~stop:rstop;
-            current_matching_tag_bounds_draw <- current_matching_tag_bounds;
+            text_outline <- current_matching_tag_bounds;
             GtkBase.Widget.queue_draw self#as_widget;
             delim
           end else None
@@ -343,7 +339,7 @@ and view ?project ?buffer () =
         self#buffer#delete_mark mstart;
         self#buffer#delete_mark mstop;
       end current_matching_tag_bounds;
-      current_matching_tag_bounds_draw <- [];
+      text_outline <- [];
       current_matching_tag_bounds <- [];
 
     method matching_delim () =
@@ -482,138 +478,126 @@ and view ?project ?buffer () =
         prev_line_background <- cur_line;
       end
 
-    method draw_gutter () = (* 0.008 *)
-      margin#draw ();
+    method draw_gutter () = (* 0.008 *) margin#draw ();
 
-    method private expose ev =
+    method private expose drawable ev =
       try
+        let vrect       = self#visible_rect in
+        let h0          = Gdk.Rectangle.height vrect in
+        let w0          = Gdk.Rectangle.width vrect in
+        let y0          = Gdk.Rectangle.y vrect in
+        let start, _    = self#get_line_at_y y0 in
+        let stop, _     = self#get_line_at_y (y0 + h0) in
+        visible_height#set h0;
+        (* Expose area *)
+        let expose_area = GdkEvent.Expose.area ev in
+        let expose_y    = y0 + Gdk.Rectangle.y expose_area in
+        let expose_top, _ = self#get_line_at_y expose_y in
+        let expose_bottom, _ = self#get_line_at_y (expose_y + (Gdk.Rectangle.height expose_area)) in
+        (*  *)
+        let adjust      = Oe_config.current_line_border_adjust in
+        let hadjust     = match hadjustment with Some adj -> int_of_float adj#value - self#left_margin | _ -> 0 in
+        (* Indentation guidelines *)
+        if options#show_indent_lines && not options#show_whitespace_chars
+        then (Text_indent_lines.draw_indent_lines self drawable) start stop y0;
+        (* Right margin line *)
         begin
-          match self#get_window `TEXT with
-          | Some window ->
-              let vrect       = self#visible_rect in
-              let h0          = Gdk.Rectangle.height vrect in
-              let w0          = Gdk.Rectangle.width vrect in
-              let y0          = Gdk.Rectangle.y vrect in
-              let start, _    = self#get_line_at_y y0 in
-              let stop, _     = self#get_line_at_y (y0 + h0) in
-              visible_height#set h0;
-              (* Expose area *)
-              let expose_area = GdkEvent.Expose.area ev in
-              let expose_y    = y0 + Gdk.Rectangle.y expose_area in
-              let expose_top, _ = self#get_line_at_y expose_y in
-              let expose_bottom, _ = self#get_line_at_y (expose_y + (Gdk.Rectangle.height expose_area)) in
-              (*  *)
-              let adjust      = Oe_config.current_line_border_adjust in
-              let hadjust     = match hadjustment with Some adj -> int_of_float adj#value - self#left_margin | _ -> 0 in
-              let drawable    = new GDraw.drawable window in
-              (* Indentation guidelines *)
-              if options#show_indent_lines && not options#show_whitespace_chars
-              then (Text_indent_lines.draw_indent_lines self drawable) start stop y0;
-              (* Right margin line *)
-              begin
-                match options#visible_right_margin with
-                | Some (column, color) ->
-                    let x = approx_char_width * column - hadjust - 1 in (* -1 per evitare sovrapposizione col cursore *)
-                    drawable#set_line_attributes ~style:`SOLID ();
-                    drawable#set_foreground color;
-                    drawable#line ~x ~y:0 ~x ~y:h0;
-                | _ -> ()
-              end;
-              (* ocamldoc_paragraph_bgcolor_enabled *)
-              if Oe_config.ocamldoc_paragraph_border_enabled
-              then (self#draw_paragraph_border drawable start stop y0 w0);
-              (* Whitespace characters *)
-              if options#show_whitespace_chars then begin
-                let iter        = ref expose_top in
-                let pango       = self#misc#pango_context in
-                let layout      = pango#create_layout in
-                let draw iter text =
-                  let rect = self#get_iter_location iter in
-                  let x = Gdk.Rectangle.x rect - hadjust in
-                  let y = Gdk.Rectangle.y rect - y0 in
-                  Pango.Layout.set_text layout text;
-                  drawable#put_layout ~x ~y ~fore:options#base_color layout;
-                  drawable#put_layout ~x ~y ~fore:options#indent_lines_color_solid layout;
-                in
-                while !iter#compare expose_bottom < 0 do
-                  let line_num = !iter#line in
-                  while !iter#line = line_num do
-                    let char = !iter#char in
-                    begin
-                      match char with
-                      | 32 ->
-                          let start = !iter in
-                          let pos = start#line_index in
-                          iter := !iter#forward_find_char not_blank;
-                          let len = !iter#line_index - pos in
-                          if len > 0 then
-                            draw start (create_middot_string len);
-                      | 13 -> draw !iter whitespace_crlf
-                      | 9 -> draw !iter whitespace_tab
-                      | _ when !iter#ends_line -> draw !iter whitespace_lf
-                      | _ -> ()
-                    end;
-                    iter := !iter#forward_char
-                  done;
-                done
-              end;
-              (* Dot leaders *)
-              if options#show_dot_leaders && not options#show_whitespace_chars then begin
-                (*Prf.crono Prf.prf_draw_dot_leaders begin fun () ->*)
-                Gdk.GC.set_fill drawable#gc `SOLID;
-                drawable#set_line_attributes ~width:1 ~style:Oe_config.dash_style ();
-                drawable#set_foreground options#text_color;
-                let offset = self#left_margin - hadjust in
-                Alignment.iter ~start:expose_top ~stop:expose_bottom begin fun _ _ start stop _ ->
-                  let start = start#forward_char in
-                  let len = stop#line_index - start#line_index in
-                  if len > 2 then begin
-                    let x1 = approx_char_width * start#line_index + offset in
-                    let x2 = approx_char_width * (stop#line_index - 1) + offset in
-                    let y, h = self#get_line_yrange start in
-                    let y = y - y0 + h - 3 (*(min 3 (h / 5))*) in
-                    (*Gdk.GC.set_dashes drawable#gc ~offset:(x2 - 6 (*- x1*)) [1; approx_char_width - 1];*)
-                    Gdk.GC.set_dashes drawable#gc ~offset:(x2 - approx_char_width - 2) [1; approx_char_width - 1];
-                    drawable#line ~x:x1 ~y ~x:x2 ~y;
-                  end
-                end
-                (*end;*)
-              end (*()*);
-              (* Current line border *)
-              begin
-                if self#misc#get_flag `HAS_FOCUS && options#current_line_border_enabled then begin
-                  match options#highlight_current_line with
-                  | Some _ ->
-                      let iter = buffer#get_iter `INSERT in
-                      let y, h = view#get_line_yrange iter in
-                      let y = y - y0 in
-                      if iter#equal buffer#end_iter && iter#line_index = 0 then begin
-                        (* Fix for draw_current_line_background *)
-                        drawable#set_foreground options#current_line_bg_color;
-                        drawable#rectangle ~x:self#left_margin ~y ~filled:true ~width:w0 ~height:h ();
-                      end;
-                      drawable#set_line_attributes ~join:Oe_config.current_line_join ~width:Oe_config.current_line_width ~style:Oe_config.current_line_style ();
-                      drawable#set_foreground options#current_line_border_color;
-                      Gdk.GC.set_dashes drawable#gc ~offset:1 Oe_config.on_off_dashes;
-                      drawable#rectangle ~x:current_line_border_x1 ~y ~filled:false
-                        ~width:(w0 - current_line_border_x2) ~height:(h - adjust) ();
-                  | _ -> ()
-                end;
-              end;
-              (* Border around matching delimiters *)
-              begin
-                match current_matching_tag_bounds_draw with
-                | (lstart, lstop) :: (rstart, rstop) :: [] ->
-                    drawable#set_foreground (?? Oe_config.matching_delim_border_color);
-                    drawable#set_line_attributes ~width:2 ~style:`SOLID  ();
-                    (* lstart, lstop are for the RIGHT delimeter and rstart, rstop are for the LEFT delimiter. *)
-                    if draw_text_border y0 approx_char_width hadjust drawable lstart lstop
-                    then draw_text_border y0 approx_char_width hadjust drawable rstart rstop |> ignore;
-                | _ -> ()
-              end;
-              false;
-          | _ -> false
+          match options#visible_right_margin with
+          | Some (column, color) ->
+              let x = approx_char_width * column - hadjust - 1 in (* -1 per evitare sovrapposizione col cursore *)
+              drawable#set_line_attributes ~style:`SOLID ();
+              drawable#set_foreground color;
+              drawable#line ~x ~y:0 ~x ~y:h0;
+          | _ -> ()
         end;
+        (* ocamldoc_paragraph_bgcolor_enabled *)
+        if Oe_config.ocamldoc_paragraph_border_enabled
+        then (self#draw_paragraph_border drawable start stop y0 w0);
+        (* Whitespace characters *)
+        if options#show_whitespace_chars then begin
+          let iter        = ref expose_top in
+          let pango       = self#misc#pango_context in
+          let layout      = pango#create_layout in
+          let draw iter text =
+            let rect = self#get_iter_location iter in
+            let x = Gdk.Rectangle.x rect - hadjust in
+            let y = Gdk.Rectangle.y rect - y0 in
+            Pango.Layout.set_text layout text;
+            drawable#put_layout ~x ~y ~fore:options#base_color layout;
+            drawable#put_layout ~x ~y ~fore:options#indent_lines_color_solid layout;
+          in
+          while !iter#compare expose_bottom < 0 do
+            let line_num = !iter#line in
+            while !iter#line = line_num do
+              let char = !iter#char in
+              begin
+                match char with
+                | 32 ->
+                    let start = !iter in
+                    let pos = start#line_index in
+                    iter := !iter#forward_find_char not_blank;
+                    let len = !iter#line_index - pos in
+                    if len > 0 then
+                      draw start (create_middot_string len);
+                | 13 -> draw !iter whitespace_crlf
+                | 9 -> draw !iter whitespace_tab
+                | _ when !iter#ends_line -> draw !iter whitespace_lf
+                | _ -> ()
+              end;
+              iter := !iter#forward_char
+            done;
+          done
+        end;
+        (* Dot leaders *)
+        if options#show_dot_leaders && not options#show_whitespace_chars then begin
+          (*Prf.crono Prf.prf_draw_dot_leaders begin fun () ->*)
+          Gdk.GC.set_fill drawable#gc `SOLID;
+          drawable#set_line_attributes ~width:1 ~style:Oe_config.dash_style ();
+          drawable#set_foreground options#text_color;
+          let offset = self#left_margin - hadjust in
+          Alignment.iter ~start:expose_top ~stop:expose_bottom begin fun _ _ start stop _ ->
+            let start = start#forward_char in
+            let len = stop#line_index - start#line_index in
+            if len > 2 then begin
+              let x1 = approx_char_width * start#line_index + offset in
+              let x2 = approx_char_width * (stop#line_index - 1) + offset in
+              let y, h = self#get_line_yrange start in
+              let y = y - y0 + h - 3 (*(min 3 (h / 5))*) in
+              (*Gdk.GC.set_dashes drawable#gc ~offset:(x2 - 6 (*- x1*)) [1; approx_char_width - 1];*)
+              Gdk.GC.set_dashes drawable#gc ~offset:(x2 - approx_char_width - 2) [1; approx_char_width - 1];
+              drawable#line ~x:x1 ~y ~x:x2 ~y;
+            end
+          end
+          (*end;*)
+        end (*()*);
+        (* Current line border *)
+        begin
+          if self#misc#get_flag `HAS_FOCUS && options#current_line_border_enabled then begin
+            match options#highlight_current_line with
+            | Some _ ->
+                let iter = buffer#get_iter `INSERT in
+                let y, h = view#get_line_yrange iter in
+                let y = y - y0 in
+                if iter#equal buffer#end_iter && iter#line_index = 0 then begin
+                  (* Fix for draw_current_line_background *)
+                  drawable#set_foreground options#current_line_bg_color;
+                  drawable#rectangle ~x:self#left_margin ~y ~filled:true ~width:w0 ~height:h ();
+                end;
+                drawable#set_line_attributes ~join:Oe_config.current_line_join ~width:Oe_config.current_line_width ~style:Oe_config.current_line_style ();
+                drawable#set_foreground options#current_line_border_color;
+                Gdk.GC.set_dashes drawable#gc ~offset:1 Oe_config.on_off_dashes;
+                drawable#rectangle ~x:current_line_border_x1 ~y ~filled:false
+                  ~width:(w0 - current_line_border_x2) ~height:(h - adjust) ();
+            | _ -> ()
+          end;
+        end;
+        (* Border around matching delimiters *)
+        begin
+          drawable#set_foreground (?? Oe_config.matching_delim_border_color);
+          drawable#set_line_attributes ~width:2 ~style:`SOLID  ();
+          text_outline |> List.iter (Text_outline.draw self drawable approx_char_width hadjust y0);
+        end;
+        false;
       with ex ->
         Printf.eprintf "File \"text.ml\": %s\n%s\n%!" (Printexc.to_string ex) (Printexc.get_backtrace());
         false
@@ -711,9 +695,16 @@ and view ?project ?buffer () =
          This is done by setting current_matching_tag_bounds_draw to [], still
          keeping marks in current_matching_tag_bounds to be used for syntax
          coloring after the insert_text event. *)
-      ignore (buffer#connect#insert_text ~callback:(fun _ _ -> current_matching_tag_bounds_draw <- []));
+      (* Try to disable this... *) (*ignore (buffer#connect#insert_text ~callback:(fun _ _ -> current_matching_tag_bounds_draw <- []));*)
       (** Expose *)
-      signal_expose <- Some (self#event#connect#after#expose ~callback:self#expose);
+      view#misc#connect#realize ~callback:begin fun () ->
+        match view#get_window `TEXT with
+        | Some window ->
+            let drawable = new GDraw.drawable window in
+            signal_expose <- Some (self#event#connect#after#expose ~callback:(self#expose drawable));
+        | _ -> failwith "realize"
+      end |> ignore;
+      (*  *)
       ignore (visible_height#connect#changed ~callback:(fun _ -> self#draw_gutter()));
       (** Refresh gutter and right margin line when scrolling *)
       ignore (self#connect#set_scroll_adjustments ~callback:begin fun h v ->

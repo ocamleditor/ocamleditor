@@ -1,4 +1,4 @@
-let draw (view : Text.view) y0 approx_char_width hadjust (drawable : GDraw.drawable) start stop =
+let draw view (drawable : GDraw.drawable) approx_char_width hadjust y0 (start, stop) =
   let buffer = view#tbuffer in
   match buffer#get_iter_at_mark_opt (`MARK start) with
   | Some start ->
@@ -29,7 +29,7 @@ let draw (view : Text.view) y0 approx_char_width hadjust (drawable : GDraw.drawa
             let width_chars = stop#line_index - start#line_index in
             let width = approx_char_width * width_chars in
             let pango = view#misc#pango_context in
-            let metrics = pango#get_metrics() in
+            let metrics = pango#get_metrics ?desc:None ?lang:None () in
             let height = (metrics#ascent + metrics#descent) / Pango.scale -  1 in
             let y =
               if !lines_displayed > 1 (*0 ?*)
@@ -37,8 +37,7 @@ let draw (view : Text.view) y0 approx_char_width hadjust (drawable : GDraw.drawa
               else yl1 + view#pixels_above_lines
             in
             drawable#rectangle ~x ~y ~width ~height ();
-            true
-        | _ -> false
+        | _ -> ()
       end
-  | _ -> false
+  | _ -> ()
 

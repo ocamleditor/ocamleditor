@@ -279,9 +279,7 @@ class margin_fold (view : Ocaml_text.view) =
     method is_refresh_pending = is_refresh_pending
     method is_changed_after_last_outline = last_outline_time < view#tbuffer#last_edit_time
 
-    method sync_outline_time () =
-      last_outline_time <- Unix.gettimeofday();
-      (*synchronized#call();*)
+    method sync_outline_time () = last_outline_time <- Unix.gettimeofday()
 
     method draw ~view ~top ~left ~height ~start ~stop =
       if not self#is_changed_after_last_outline then begin
@@ -432,15 +430,17 @@ class margin_fold (view : Ocaml_text.view) =
         (merlin source_code)@@Merlin.outline
         |> Async.start_with_continuation begin function
         | Merlin.Ok (ol : Merlin_j.outline list) ->
-            Log.println `DEBUG "STARTING GtkThread.sync (%d)" (Thread.id (Thread.self()));
+            Log.println `DEBUG "STARTING GtkThread.sync";
             GtkThread.sync begin fun () ->
-              Log.println `DEBUG "BEGIN GtkThread.sync (%d)" (Thread.id (Thread.self()));
-              outline <- ol;
-              comments <-
-                Comments.scan_locale (Glib.Convert.convert_with_fallback ~fallback:""
-                                        ~from_codeset:"UTF-8" ~to_codeset:Oe_config.ocaml_codeset source_code);
-              Log.println `DEBUG "call synchronized";
-              synchronized#call();
+              Log.println `DEBUG "BEGIN GtkThread.sync";
+              if not self#is_changed_after_last_outline then begin
+                Log.println `DEBUG "update outline";
+                outline <- ol;
+                comments <-
+                  Comments.scan_locale (Glib.Convert.convert_with_fallback ~fallback:""
+                                          ~from_codeset:"UTF-8" ~to_codeset:Oe_config.ocaml_codeset source_code);
+                synchronized#call();
+              end;
               Log.println `DEBUG "END GtkThread.sync";
             end ();
         | Merlin.Failure _ | Merlin.Error _ -> ()

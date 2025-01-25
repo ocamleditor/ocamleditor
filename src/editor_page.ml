@@ -41,7 +41,6 @@ let create_view ~project ~buffer ?file ?packing () =
   let view = new Ocaml_text.view ~project ~buffer () in
   Preferences_apply.apply (view :> Text.view) Preferences.preferences#get;
   let tview = (view :> Text.view) in
-  tview#set_text_border_func (Text_border.draw tview);
   let _  = sw#add view#coerce in
   sw, tview, view
 
