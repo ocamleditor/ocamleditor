@@ -264,7 +264,6 @@ class margin_fold (view : Ocaml_text.view) =
 
     (** The currently cached folding points. *)
     val mutable outline = []
-    val mutable outline_text = ""
 
     val mutable comments = []
 
@@ -291,7 +290,7 @@ class margin_fold (view : Ocaml_text.view) =
            reconstructed from the case in which only the positions within the visible
            area need to be updated (for example in the case of scrolling). *)
         | _ when expanders = [] || is_refresh_pending ->
-            let is_drawable = is_drawable start#line stop#line in
+            let is_drawable = is_drawable 0 0 (*start#line stop#line*) in (* dummy values *)
             let methods = ref [] in
             expanders <-
               List.filter_map begin fun ex ->
@@ -425,12 +424,13 @@ class margin_fold (view : Ocaml_text.view) =
         self#sync_outline_time();
         (merlin source_code)@@Merlin.outline begin fun (ol : Merlin_j.outline list) ->
           GtkThread.sync begin fun () ->
-            outline <- ol;
-            outline_text <- source_code;
-            comments <-
-              Comments.scan_locale (Glib.Convert.convert_with_fallback ~fallback:""
-                                      ~from_codeset:"UTF-8" ~to_codeset:Oe_config.ocaml_codeset source_code);
-            synchronized#call();
+            if not self#is_changed_after_last_outline then begin
+              outline <- ol;
+              comments <-
+                Comments.scan_locale (Glib.Convert.convert_with_fallback ~fallback:""
+                                        ~from_codeset:"UTF-8" ~to_codeset:Oe_config.ocaml_codeset source_code);
+              synchronized#call();
+            end
           end ();
         end
       end;
@@ -489,7 +489,6 @@ class margin_fold (view : Ocaml_text.view) =
       self#stop_timer();
       expanders <- [];
       outline <- [];
-      outline_text <- "";
       comments <- [];
       last_outline_time <- 0.0;
       is_refresh_pending <- false;
