@@ -56,7 +56,7 @@ class editor () =
     val mutable pages = []
     val mutable pages_cache = []
     val mutable project = Project.create ~filename:"untitled.xyz" ()
-    val tout_delim = Timeout.create ~delay:1.0 ~len:2 ()
+    val tout_delim = Timeout.create ~delay:1.5 ~len:3 ()
     val tout_fast = Timeout.create ~delay:0.3 ~len:2 ()
     val location_history = Location_history.create()
     val mutable file_history =
@@ -296,41 +296,24 @@ class editor () =
             Gmisclib.Idle.add ~prio:300 (fun () -> Project.save_bookmarks project);
       with Not_found -> ()
 
-    method get_definition (iter : GText.iter) =
-      match self#get_page `ACTIVE with
-      | Some page ->
-          let project = self#project in
-          let filename = page#get_filename in
-          let offset = iter#offset in
-          Binannot_ident.find_definition
-            ~project
-            ~filename
-            ~offset
-            ~compile_buffer:(fun () -> page#compile_buffer ?join:(Some true))  ()
-      | _ -> None
-
     method scroll_to_definition ~page ~iter =
       match self#get_page `ACTIVE with
       | Some page ->
-          Merlin.locate ~position:(iter#line + 1, iter#line_offset)
+          Definition.find
             ~filename:page#get_filename
-            ~look_for:`Implementation
-            ~source_code:(page#buffer#get_text ())
-            begin function
-            | `String msg -> notification#call msg
-            | `Assoc assoc ->
-                let file, ln, col = ref "", ref 0, ref 0 in
-                assoc |> List.iter (function
-                    | "file", `String x -> file := x
-                    | "pos", `Assoc ["line", `Int l; "col", `Int c]
-                    | "pos", `Assoc ["col", `Int c; "line", `Int l] -> ln := l - 1; col := c
-                    | _ -> ());
-                GtkThread.async begin fun () ->
-                  self#location_history_add ~page ~iter ~kind:`BROWSE ();
-                  self#goto_location !file !ln !col;
-                end ()
-            | _ -> ()
-            end;
+            ~buffer:(page#buffer#get_text ())
+            ~iter
+          |> begin function
+          | Merlin.Ok (Some location) ->
+              GtkThread.async begin fun () ->
+                let open Definition in
+                self#location_history_add ~page ~iter ~kind:`BROWSE ();
+                self#goto_location location.filename location.line location.col;
+              end ()
+          | Merlin.Ok None -> ()
+          | Merlin.Failure msg -> Printf.printf "%s\n%!" msg
+          | Merlin.Error msg -> Printf.eprintf "File %s: %s\n%!" __FILE__ msg
+          end
       | _ -> ()
 
     method goto_location filename line col =
@@ -464,16 +447,20 @@ class editor () =
         buffer#add_signal_handler (buffer#connect#after#mark_set ~callback:begin fun _ mark ->
             let mark_occurrences, under_cursor, _ = view#options#mark_occurrences in
             let is_insert = match GtkText.Mark.get_name mark with Some "insert" -> true | _ -> false in
-            if mark_occurrences && under_cursor then
-              Timeout.set tout_fast 1 page#view#mark_occurrences_manager#mark;
+            if mark_occurrences && under_cursor then begin
+              Timeout.set tout_fast 1 page#view#mark_occurrences_manager#mark_words;
+              Timeout.set tout_delim 2 page#view#mark_occurrences_manager#mark_refs;
+            end;
             if buffer#has_selection then begin
               let start, stop = buffer#selection_bounds in
               let nlines = stop#line - start#line in
               let nchars = stop#offset - start#offset in
               lab_sel_lines#set_text (string_of_int nlines);
               lab_sel_chars#set_text (string_of_int nchars);
-              if is_insert && mark_occurrences && not under_cursor then
-                Timeout.set tout_fast 1 page#view#mark_occurrences_manager#mark
+              if is_insert && mark_occurrences && not under_cursor then begin
+                Timeout.set tout_fast 1 page#view#mark_occurrences_manager#mark_words;
+                Timeout.set tout_delim 2 page#view#mark_occurrences_manager#mark_refs;
+              end
             end else begin
               if mark_occurrences && not under_cursor then
                 page#view#mark_occurrences_manager#clear();

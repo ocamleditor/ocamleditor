@@ -26,6 +26,12 @@ open Utils
 open Preferences
 open GUtil
 open Settings_t
+open Gtk_util
+
+module Log = Common.Log.Make(struct let prefix = "EDITOR_PAGE" end)
+let _ =
+  Log.set_print_timestamp true;
+  Log.set_verbosity `DEBUG
 
 type load_event_phase = [ `Begin | `End ]
 
@@ -34,8 +40,9 @@ let create_view ~project ~buffer ?file ?packing () =
       ~hpolicy:`NEVER ~vpolicy:`NEVER ?packing () in
   let view = new Ocaml_text.view ~project ~buffer () in
   Preferences_apply.apply (view :> Text.view) Preferences.preferences#get;
+  let tview = (view :> Text.view) in
   let _  = sw#add view#coerce in
-  sw, (view :> Text.view), view
+  sw, tview, view
 
 let shortname filename =
   let basename = Filename.basename filename in
@@ -542,28 +549,41 @@ class page ?file ~project ~scroll_offset ~offset ~editor () =
           end;
           false
         end);
-      (** Hyperlinks *)
-      ignore (self#view#hyperlink#connect#hover ~callback:begin fun (bounds, iter) ->
-          if iter#inside_word then begin
-            match editor#get_definition iter with
-            | None -> ()
-            | Some _ ->
-                match
-                  Binannot_ident.find_ident
-                    ~project ~filename:self#get_filename ~offset:iter#offset
-                    ~compile_buffer:(fun () -> self#compile_buffer ?join:(Some true)) ()
-                with
-                | Some ident_at_iter ->
-                    let _, start, stop = Binannot.cnum_of_loc ident_at_iter.Binannot.ident_loc.Location.loc in
-                    let start = buffer#get_iter (`OFFSET start) in
-                    let stop = buffer#get_iter (`OFFSET stop) in
-                    bounds := Some (start, stop)
-                | _ -> ()
-          end
-        end);
-      ignore (self#view#hyperlink#connect#activate ~callback:begin fun iter ->
-          editor#scroll_to_definition ~page:self ~iter;
-        end);
+      (* Hyperlinks *)
+      let current_hyperlink_exists = ref false in
+      let remove_hover = ref None in
+      self#view#hyperlink#connect#hover ~callback:begin
+        let get_bounds iter =
+          let start, stop = self#buffer#select_word ~iter ~select:false ~pat:Ocaml_word_bound.longid () in
+          if !current_hyperlink_exists then begin
+            begin
+              match !remove_hover with
+              | None ->
+                  remove_hover := Some (self#view#hyperlink#connect#remove_hover ~callback:begin fun () ->
+                      current_hyperlink_exists := false;
+                      !remove_hover |> Option.iter (fun sig_id ->
+                          remove_hover := None;
+                          self#view#hyperlink#connect#disconnect sig_id);
+                    end);
+              | _ -> ()
+            end;
+            Some (start, stop)
+          end else None
+        in
+        fun (bounds, iter) ->
+          if iter#inside_word then
+            if not !current_hyperlink_exists then begin
+              match
+                Definition.find
+                  ~filename:self#get_filename ~buffer:(buffer#get_text ()) ~iter
+              with
+              | Merlin.Ok (Some _) -> current_hyperlink_exists := true;
+              | Merlin.Ok None | Merlin.Failure _ | Merlin.Error _ -> ()
+            end;
+          bounds := get_bounds iter
+      end |> ignore;
+      self#view#hyperlink#connect#activate ~callback:(fun iter -> editor#scroll_to_definition ~page:self ~iter) |> ignore;
+      (*  *)
       ocaml_view#buffer#connect#mark_set ~callback:begin fun it mark ->
         match GtkText.Mark.get_name mark with
         | Some "insert" -> error_indication#paint_global_gutter()

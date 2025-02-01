@@ -337,7 +337,7 @@ class error_indication (view : Ocaml_text.view) vscrollbar global_gutter =
         drawable#set_foreground (`COLOR (view#misc#style#base `NORMAL));
         drawable#rectangle ~filled:true ~x:x0 ~y:0 ~width ~height ();
         (* Draw markers *)
-        let line_count, (!!) =
+        let line_count, visible_lines_before =
           match GtkText.TagTable.lookup buffer#tag_table Oe_config.code_folding_tag_invisible_name with
           | Some tag ->
               let tag = new GText.tag tag in
@@ -348,7 +348,7 @@ class error_indication (view : Ocaml_text.view) vscrollbar global_gutter =
                 iter := !iter#backward_line
               done;
               float (List.length !visible_lines),
-              fun ln -> float (List.length (ListExt.take_while (fun x -> x <= ln) !visible_lines))
+              fun ln -> !visible_lines |> ListExt.count_while ((>) ln) |> float
           | _ -> float buffer#line_count, float
         in
         let height = float height in
@@ -360,7 +360,7 @@ class error_indication (view : Ocaml_text.view) vscrollbar global_gutter =
           in
           drawable#set_foreground color;
           let line_start = (buffer#get_iter_at_mark (`MARK start))#line in
-          let y = int_of_float ((!!line_start /. line_count) *. height) - 1 in
+          let y = int_of_float ((visible_lines_before line_start /. line_count) *. height) - 1 in
           table <- (y + 1, start) :: table;
           if is_unused then begin
             let lines = ref [] in
@@ -375,41 +375,45 @@ class error_indication (view : Ocaml_text.view) vscrollbar global_gutter =
           end else drawable#rectangle ~filled:true ~x:x0 ~y ~width:half_width ~height:3 ();
         in
         (* Warnings *)
+        let color = ?? Oe_config.warning_popup_border_color in
         List.iter begin fun (start, _, warning) ->
-          draw_marker start (?? Oe_config.warning_popup_border_color) (is_warning_unused warning.Oe.er_level);
+          draw_marker start color (is_warning_unused warning.Oe.er_level);
         end tag_warning_bounds;
         (* Mark Occurrences *)
-        begin
-          if Preferences.preferences#get.editor_mark_occurrences_enabled then begin
-            let bg_color_occurrences = Preferences.preferences#get.editor_mark_occurrences_bg_color in
-            let under_cursor = Preferences.preferences#get.editor_mark_occurrences_under_cursor in
-            let bg = `NAME ?? bg_color_occurrences in
-            let factor = if Preferences.preferences#get.theme_is_dark then -0.23 else 0.13 in
-            let border = `NAME (ColorOps.add_value (?? bg_color_occurrences) ~sfact:0.75 factor) in
-            List.iter begin fun (m1, _) ->
-              let start = buffer#get_iter_at_mark m1 in
-              let line_start = start#line in
-              let y1 = int_of_float ((!!line_start /. line_count) *. height) - 1 in
-              let h = 3 in
-              drawable#set_line_attributes ~width:1 ~style:`SOLID ();
-              drawable#set_foreground bg;
-              drawable#rectangle ~filled:true ~x:xm ~y:y1 ~width:half_width ~height:h ();
-              drawable#set_foreground border;
-              drawable#rectangle ~filled:false ~x:xm ~y:y1 ~width:half_width ~height:h ();
-            end view#mark_occurrences_manager#table;
-          end
+        let line_height = height /. line_count in
+        let open Settings_t in
+        if Preferences.preferences#get.editor_mark_occurrences_enabled then begin
+          let bg_color_occurrences = Preferences.preferences#get.editor_mark_occurrences_bg_color in
+          let bg = `NAME ?? bg_color_occurrences in
+          let factor = if Preferences.preferences#get.theme_is_dark then -0.23 else 0.13 in
+          let border = `NAME (ColorOps.add_value (?? bg_color_occurrences) ~sfact:0.75 factor) in
+          drawable#set_line_attributes ~width:1 ~style:`SOLID ();
+          List.iter begin fun (m1, _) ->
+            let start = buffer#get_iter_at_mark m1 in
+            let y = int_of_float (visible_lines_before start#line *. line_height) - 1 in
+            drawable#set_foreground bg;
+            drawable#rectangle ~filled:true ~x:xm ~y ~width:half_width ~height:3 ();
+            drawable#set_foreground border;
+            drawable#rectangle ~filled:false ~x:xm ~y ~width:half_width ~height:3 ();
+          end view#mark_occurrences_manager#table;
+          let color = ?? Oe_config.ref_bg_color in
+          let width = half_width / 2 in
+          let x = xm + width in
+          drawable#set_foreground color;
+          List.iter begin fun (mark, _) ->
+            let start = buffer#get_iter_at_mark mark in
+            let y = int_of_float (visible_lines_before start#line *. line_height) in
+            drawable#rectangle ~filled:true ~x ~y ~width ~height:2 ();
+          end view#mark_occurrences_manager#refs;
         end;
         (* Errors *)
-        List.iter begin fun (start, _, _) ->
-          draw_marker start (?? Oe_config.error_underline_color) false;
-        end tag_error_bounds;
+        let color = ?? Oe_config.error_underline_color in
+        List.iter (fun (start, _, _) -> draw_marker start color false) tag_error_bounds;
         (* Current line *)
         let h = 4 in
         let iter = buffer#get_iter `INSERT in
-        let y1 = int_of_float ((!!(iter#line) /. line_count) *. height) in
+        let y1 = int_of_float (visible_lines_before iter#line *. line_height) in
         let y1 = y1 - h / 2 in
-        (*        drawable#set_foreground current_line_bgcolor;
-                  drawable#rectangle ~filled:true ~x:x0 ~y:y1 ~width ~height:h ();*)
         drawable#set_foreground current_line_fgcolor;
         drawable#rectangle ~filled:false ~x:x0 ~y:y1 ~width:(width - 1) ~height:h ();
       with Gpointer.Null -> ()

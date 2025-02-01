@@ -30,27 +30,53 @@ class manager ~view =
   let buffer = view#tbuffer in
   let [@inline] (=>) a b = not a || b in
   let match_whole_word_only = true in
+  let filename =
+    match buffer#file with
+    | Some (file : Editor_file.file) -> file#filename
+    | _ -> ""
+  in
+  let tag = buffer#create_tag ?name:(Some "mark_occurrences") [] in
+  let clear_func (m1, m2) =
+    let start = buffer#get_iter_at_mark m1 in
+    let stop = buffer#get_iter_at_mark m2 in
+    buffer#remove_tag tag ~start ~stop;
+    buffer#delete_mark m1;
+    buffer#delete_mark m2
+  in
   object (self)
     val mark_set = new mark_set ()
-    val clear = new clear ()
-    val tag = buffer#create_tag ?name:(Some "mark_occurrences") []
-    val mutable table : (GText.mark * GText.mark) list = []
+    (*val tag = buffer#create_tag ?name:(Some "mark_occurrences") []*)
+    val mutable word_marks : (GText.mark * GText.mark) list = []
+    val mutable ref_marks : (GText.mark * GText.mark) list = []
+    val mutable last_merlin_invoke_time = 0.0
+    val mutable last_merlin_invoke_line = 0
+    val mutable last_merlin_invoke_col = 0
 
-    method table = table
+    method table = word_marks
+    method refs = ref_marks
     method tag : GText.tag = tag
 
+    method private clear_words () =
+      match word_marks with
+      | [] -> false
+      | _ ->
+          List.iter clear_func word_marks;
+          word_marks <- [];
+          true
+
+    method private clear_refs () =
+      match ref_marks with
+      | [] -> false
+      | _ ->
+          List.iter begin fun (m1, m2) ->
+            buffer#delete_mark m1;
+            buffer#delete_mark m2
+          end ref_marks;
+          ref_marks <- [];
+          true
+
     method clear () =
-      if table <> [] then begin
-        List.iter begin fun (m1, m2) ->
-          let start = buffer#get_iter_at_mark m1 in
-          let stop = buffer#get_iter_at_mark m2 in
-          buffer#remove_tag tag ~start ~stop;
-          buffer#delete_mark m1;
-          buffer#delete_mark m2;
-        end table;
-        table <- [];
-        mark_set#call()
-      end
+      if self#clear_words() || self#clear_refs() then mark_set#call()
 
     method private get_word_at_iter ?iter () =
       buffer#select_word
@@ -66,10 +92,45 @@ class manager ~view =
         ?slice:(Some false)
         ?visible:(Some false) ()
 
-    method mark () =
-      Log.println `DEBUG "BEGIN";
-      self#clear();
-      Log.println `DEBUG "clear done";
+    method mark_refs () =
+      let iter = buffer#get_iter `INSERT in
+      let line = iter#line + 1 in
+      let col = iter#line_offset in
+      if line <> last_merlin_invoke_line || col <> last_merlin_invoke_col then begin
+        view#filter_outline_text (function `Ref _ -> false | _ -> true);
+        GtkBase.Widget.queue_draw view#as_widget;
+        last_merlin_invoke_time <- buffer#last_edit_time;
+        let text = buffer#get_text ?start:None ?stop:None ?slice:None ?visible:None () in
+        last_merlin_invoke_line <- line;
+        last_merlin_invoke_col <- col;
+        Merlin.occurrences ~identifier_at:(line, col) ~filename ~scope:`Buffer ~buffer:text ()
+        |> Async.start_with_continuation begin function
+        | Merlin.Ok ranges ->
+            let open Merlin_j in
+            if last_merlin_invoke_time = buffer#last_edit_time then
+              (*Gmisclib.Idle.add begin fun () ->*)
+              GtkThread.async begin fun () ->
+                self#clear_refs() |> ignore;
+                ranges
+                |> List.fold_left begin fun acc range ->
+                  if range.start.line > 0 then begin
+                    let start = buffer#get_iter (`LINECHAR (range.start.line - 1, range.start.col)) in
+                    let stop = buffer#get_iter (`LINECHAR (range.stop.line - 1, range.stop.col)) in
+                    let m1 = buffer#create_mark ?name:None ?left_gravity:None start in
+                    let m2 = buffer#create_mark ?name:None ?left_gravity:None stop in
+                    ref_marks <- (`MARK m1, `MARK m2) :: ref_marks;
+                    `Ref (m1, m2) :: acc;
+                  end else acc
+                end []
+                |> view#add_outline_text;
+                if ref_marks <> [] then mark_set#call()
+              end ()
+        | Merlin.Failure _ | Merlin.Error _ -> ()
+        end
+      end
+
+    method mark_words () =
+      self#clear_words() |> ignore;
       match view#options#mark_occurrences with
       | true, under_cursor, _ ->
           let text = buffer#selection_text () in
@@ -78,18 +139,10 @@ class manager ~view =
             else text
           in
           let text = text |> String.trim in
-          Log.println `DEBUG "text: %S" text;
           if String.length text > 1 && not (String.contains text '\n') && not (String.contains text '\r') then begin
-            (*let vrect = view#visible_rect in
-              let h0 = Gdk.Rectangle.height vrect in
-              let y0 = Gdk.Rectangle.y vrect in
-              let start, _ = view#get_line_at_y y0 in
-              let stop, _ = view#get_line_at_y (y0 + h0) in
-              let stop = stop#forward_line in*)
             let start = buffer#start_iter in
             let stop = buffer#end_iter in
             let iter = ref start in
-            Log.println `DEBUG "while do";
             while !iter#compare stop < 0 do
               match !iter#forward_search ?flags:None ?limit:(Some stop) text with
               | Some (a, b) ->
@@ -98,31 +151,28 @@ class manager ~view =
                   in
                   if found then begin
                     buffer#apply_tag tag ~start:a ~stop:b;
-                    let m1 = `MARK (buffer#create_mark ?name:None ?left_gravity:None a) in
-                    let m2 = `MARK (buffer#create_mark ?name:None ?left_gravity:None b) in
-                    table <- (m1, m2) :: table;
+                    let m1 = buffer#create_mark ?name:None ?left_gravity:None a in
+                    let m2 = buffer#create_mark ?name:None ?left_gravity:None b in
+                    word_marks <- (`MARK m1, `MARK m2) :: word_marks;
                   end;
                   iter := b;
               | _ -> iter := stop
             done;
-            Log.println `DEBUG "while done %b" (table <> []);
-            if table <> [] then begin
-              mark_set#call();
-              Log.println `DEBUG "mark_set called";
-            end else clear#call();
-            Log.println `DEBUG "END";
+            if word_marks <> [] then mark_set#call()
           end
       | _ -> ()
 
-    method connect = new signals ~mark_set ~clear
+    method mark () =
+      self#mark_refs();
+      self#mark_words()
+
+    method connect = new signals ~mark_set
   end
 
-and signals ~mark_set ~clear = object
-  inherit GUtil.ml_signals [mark_set#disconnect; clear#disconnect]
+and signals ~mark_set = object
+  inherit GUtil.ml_signals [mark_set#disconnect]
   method mark_set = mark_set#connect ~after
-  method clear = clear#connect ~after
 end
 
 and mark_set () = object inherit [unit] GUtil.signal () end
-and clear () = object inherit [unit] GUtil.signal () end
 

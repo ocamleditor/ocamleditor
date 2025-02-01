@@ -27,6 +27,7 @@ let (//) = Filename.concat
 let (!!) = Filename.dirname
 let (!$) = Filename.quote
 let (^^^) = Filename.check_suffix
+let (|=>) f x = f x
 
 (** try ... finally ... *)
 let finally = fun f1 f2 ->
@@ -127,6 +128,11 @@ struct
     | hd :: _ when not (f hd) -> []
     | hd :: tl -> hd :: (take_while f tl)
     | [] -> [];;
+
+  let rec count_while f = function
+    | hd :: _ when not (f hd) -> 0
+    | _ :: tl -> 1 + (count_while f tl)
+    | [] -> 0;;
 end
 
 (** {6 Memoization} *)

@@ -26,25 +26,30 @@ open GUtil
 class hover () = object
   inherit [(GText.iter * GText.iter) option ref * GText.iter] signal ()
 end
+class remove_hover () = object
+  inherit [unit] signal ()
+end
 and activate () = object
   inherit [GText.iter] signal ()
 end
-and signals ~hover ~activate = object
-  inherit ml_signals [hover#disconnect; activate#disconnect; ]
+and signals ~hover ~remove_hover ~activate = object
+  inherit ml_signals [hover#disconnect; remove_hover#disconnect; activate#disconnect; ]
   method hover = hover#connect ~after
+  method remove_hover = remove_hover#connect ~after
   method activate = activate#connect ~after
 end
 
 (** hyperlink *)
-and hyperlink ~(view : GText.view) ?(use_ctrl_key=true) () =
+and hyperlink ~(view : GText.view) ?(use_ctrl_key=true) ?(hover_color="#FF0000") () =
   let not_use_ctrl_key = not use_ctrl_key in
   let buffer = view#buffer in
   let hover = new hover () in
+  let remove_hover = new remove_hover () in
   let activate = new activate () in
-  let tag = buffer#create_tag [`UNDERLINE `SINGLE] in
+  let tag = buffer#create_tag [`UNDERLINE `DOUBLE; `FOREGROUND hover_color] in
   object (self)
     val mutable current_hover = None
-    method connect = new signals ~hover ~activate
+    method connect = new signals ~hover ~remove_hover ~activate
 
     method private apply_hover ~x ~y =
       let x, y = view#window_to_buffer_coords ~tag:`TEXT ~x ~y in
@@ -58,6 +63,7 @@ and hyperlink ~(view : GText.view) ?(use_ctrl_key=true) () =
             Gaux.may current_hover ~f:(fun (start, stop) -> buffer#remove_tag tag ~start ~stop);
             current_hover <- Some (start, stop);
             buffer#apply_tag tag ~start ~stop;
+            tag#set_priority (GtkText.TagTable.get_size buffer#tag_table - 1);
             Gaux.may (view#get_window `TEXT) ~f:(fun w -> Gdk.Window.set_cursor w (Gdk.Cursor.create `HAND2));
       end
 
@@ -65,6 +71,7 @@ and hyperlink ~(view : GText.view) ?(use_ctrl_key=true) () =
       Gaux.may (view#get_window `TEXT) ~f:(fun w -> Gdk.Window.set_cursor w (Gdk.Cursor.create `XTERM));
       Gaux.may current_hover ~f:(fun (start, stop) -> buffer#remove_tag tag ~start ~stop);
       current_hover <- None;
+      remove_hover#call();
 
     method enable () =
       ignore(view#event#connect#after#motion_notify ~callback:begin fun ev ->
@@ -76,7 +83,8 @@ and hyperlink ~(view : GText.view) ?(use_ctrl_key=true) () =
           false
         end);
       ignore(view#event#connect#after#leave_notify ~callback:begin fun _ev ->
-          self#remove_hover (); false
+          self#remove_hover ();
+          false
         end);
       ignore(view#buffer#connect#changed ~callback:begin fun () ->
           Gaux.may (view#get_window `TEXT) ~f:(fun w -> Gdk.Window.set_cursor w (Gdk.Cursor.create `XTERM));

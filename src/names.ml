@@ -100,15 +100,17 @@ let rec add_compl db modname compl count_lib_values =
   entry
 
 and complete_prefix db modname count_lib_values =
-  Merlin.complete_prefix ~position:(1,1) ~prefix:(modname ^ ".") ~filename:"dummy" ~source_code:""
-    begin fun compl ->
+  Merlin.complete_prefix ~position:(1,1) ~prefix:(modname ^ ".") ~filename:"dummy" ~buffer:""
+  |> Async.start_with_continuation begin function
+  | Merlin.Ok compl ->
       let mod_entry = add_compl db modname compl.entries count_lib_values in
       !!Lock.namedb begin fun () ->
         mod_entry.timestamp <- Unix.gettimeofday();
         db.table <- mod_entry :: db.table;
         count_lib_values := !count_lib_values + List.length mod_entry.values
       end ()
-    end
+  | Merlin.Error _ | Merlin.Failure _ -> ()
+  end
 
 let update ?(is_init=false) db filename =
   if is_init then Thread.delay 0.075
@@ -122,11 +124,13 @@ let update ?(is_init=false) db filename =
     !!Lock.namedb (fun () -> db.table <- mod_entry :: db.table) ();
     Merlin.outline
       ~filename
-      ~source_code:(File_util.read filename |> Buffer.contents)
-      begin fun outline ->
+      ~buffer:(File_util.read filename |> Buffer.contents)
+    |> Async.start_with_continuation begin function
+    | Merlin.Ok outline ->
         add_outline db mod_entry modname outline;
         !!Lock.namedb (fun () -> mod_entry.timestamp <- Unix.gettimeofday()) ();
-      end;
+    | Merlin.Failure _ | Merlin.Error _ -> ()
+    end;
   end
 
 let init ?(cont=ignore) project =
@@ -134,13 +138,16 @@ let init ?(cont=ignore) project =
   database := Some db;
   let count_lib_values = ref 0 in
   get_project_source_filenames project |> List.iter (update ~is_init:true db);
-  Merlin.list_modules begin fun modules ->
-    "Str" :: "Unix" :: "Thread" :: modules
-    |> List.iter begin fun modname ->
-      match List.find_opt (fun me -> me.modname = modname) db.table with
-      | None -> complete_prefix db modname count_lib_values
-      | _ -> ()
-    end
+  Merlin.list_modules () |> Async.start_with_continuation begin function
+  | Merlin.Ok modules ->
+      "Str" :: "Unix" :: "Thread" :: modules
+      |> List.iter begin fun modname ->
+        match List.find_opt (fun me -> me.modname = modname) db.table with
+        | None -> complete_prefix db modname count_lib_values
+        | _ -> ()
+      end
+  | Merlin.Failure msg | Merlin.Error msg ->
+      Log.println `ERROR "%s" msg
   end;
   cont db
 

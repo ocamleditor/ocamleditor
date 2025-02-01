@@ -1,15 +1,16 @@
 open Merlin_j
 open Printf
+open Utils
 
 module Log = Common.Log.Make(struct let prefix = "QUICK-INFO" end)
 let _ =
   Log.set_print_timestamp true;
   Log.set_verbosity `DEBUG
 
-let merlin (buffer : Ocaml_text.buffer) func =
+let merlin (buffer : Ocaml_text.buffer) func cont =
   let filename = match buffer#file with Some file -> file#filename | _ -> "" in
-  let source_code = buffer#get_text () in
-  func ~filename ~source_code
+  let buffer = buffer#get_text () in
+  (Merlin.as_cps func ~filename ~buffer) cont
 
 module SignalId = struct
   let create () = ref None
@@ -38,8 +39,6 @@ end
     [mutex] and returns its result. *)
 let (!!) mx f x = Lock.mutex mx f x
 
-let (<<-) x f = f x and (->>) f x = fun mx -> Lock.mutex mx f x
-
 let index = ref 10_000
 let new_index () =
   !!Lock.index begin fun () ->
@@ -61,7 +60,6 @@ type t = {
       override the default location, which is the mouse pointer. *)
 
   mutable windows : wininfo list;
-  mutable merlin : (filename:string -> source_code:string -> unit) -> unit;
 }
 
 and wininfo = {
@@ -201,13 +199,14 @@ let display qi start stop =
         let _, lh = qi.view#get_line_yrange start in
         pX (*- px + xstart*), pY - py + ystart + lh
   in
-  let m1 = qi.view#buffer#create_mark ~name:"qi-start" start in
-  let m2 = qi.view#buffer#create_mark ~name:"qi-stop" stop in
-  let range = Some (m1, m2) in
+  let create_range () =
+    Some (qi.view#buffer#create_mark ~name:"qi-start" start,
+          qi.view#buffer#create_mark ~name:"qi-stop" stop)
+  in
   let window = Gtk_util.window_tooltip vbox#coerce ~fade:false ~x ~y ~show:false () in
   let wininfo = {
     window;
-    range;
+    range = create_range ();
     is_pinned = false;
     index = new_index();
   } in
@@ -242,7 +241,7 @@ let display qi start stop =
       let window = Gtk_util.window_tooltip sw#coerce ~fade:false ~x ~y ~width:700 ~height:300 ~show:false () in
       let wininfo = {
         window;
-        range;
+        range = create_range ();
         is_pinned = false;
         index = new_index();
       } in
@@ -302,24 +301,28 @@ let spawn_window qi position (entry : type_enclosing_value) (entry2 : type_enclo
       label_vars#misc#show();
       label_vars#set_label type_params
     end;
-    qi.merlin@@Merlin.document ~position begin fun doc ->
-      GtkThread.async begin fun () ->
-        let markup = qi.markup_odoc#convert doc in
-        label_doc#set_label markup;
-      end ()
-    end
+    merlin qi.view#obuffer @@ Merlin.document ~position () |=> begin function
+      | Merlin.Ok doc ->
+          GtkThread.async begin fun () ->
+            let markup = qi.markup_odoc#convert doc in
+            label_doc#set_label markup;
+          end ()
+      | Merlin.Failure msg | Merlin.Error msg -> ()
+      end
   end
 
 let invoke_merlin qi (iter : GText.iter) ~continue_with =
   let position = iter#line + 1, iter#line_index in
-  qi.merlin@@Merlin.type_enclosing ~position begin fun types ->
-    GtkThread.async begin fun () ->
-      match types with
-      | [] -> close qi "no-type"
-      | fst :: snd :: _ -> continue_with position fst (Some snd)
-      | fst :: _ -> continue_with position fst None
-    end ()
-  end
+  merlin qi.view#obuffer @@ Merlin.type_enclosing ~position () |=> begin function
+    | Merlin.Ok types ->
+        GtkThread.async begin fun () ->
+          match types with
+          | [] -> close qi "no-type"
+          | fst :: snd :: _ -> continue_with position fst (Some snd)
+          | fst :: _ -> continue_with position fst None
+        end ()
+    | Merlin.Failure _ | Merlin.Error _ -> ()
+    end
 
 let is_iter_in_comment (buffer : Ocaml_text.buffer) iter =
   Comments.enclosing
@@ -339,9 +342,9 @@ let in_range buffer iter ~start ~stop =
     GtkText.Iter.in_range iter start stop
   with Gmisclib_util.Mark_deleted -> false
 
-let process_location qi x y =
+let process_location qi ?(is_at_iter=false) x y =
   let current_window = get_current_window qi in
-  let current_range = Option.bind current_window (fun x -> x.range) in
+  let current_range = Option.bind current_window (fun w -> w.range) in
   let bx, by = qi.view#window_to_buffer_coords ~tag:`WIDGET ~x ~y in
   if bx > 0 then begin
     let iter = qi.view#get_iter_at_location ~x:bx ~y:by in
@@ -368,7 +371,7 @@ let process_location qi x y =
           | _ -> false
         in
         if is_mouse_over then ()
-        else if is_immobile then begin
+        else if is_immobile || is_at_iter then begin
           match get_typeable_iter_at_coords qi iter with
           | Some iter ->
               hide qi;
@@ -379,14 +382,14 @@ let process_location qi x y =
   end
 
 (** Displays quick info about the expression at the specified iter. *)
-let at_iter (qi : t) (iter : GText.iter) () = ()
-(*  stop qi;
-    let rect = qi.view#get_iter_location iter in
-    let x = Gdk.Rectangle.x rect in
-    let y = Gdk.Rectangle.y rect in
-    let x, y = qi.view#buffer_to_window_coords ~x ~y ~tag:`WIDGET in
-    qi.show_at <- Some (x, y + Gdk.Rectangle.height rect);
-    process_location ~invoke:true qi x y*)
+let at_iter qi (iter : GText.iter) () =
+  close qi "at_iter";
+  let rect = qi.view#get_iter_location iter in
+  let x = Gdk.Rectangle.x rect in
+  let y = Gdk.Rectangle.y rect in
+  let x, y = qi.view#buffer_to_window_coords ~x ~y ~tag:`WIDGET in
+  qi.show_at <- Some (x, y + Gdk.Rectangle.height rect);
+  process_location qi ~is_at_iter:true x y
 
 let query_tooltip qi ~x ~y ~kbd _ =
   (*Log.println `DEBUG "%d %d %f" x y (Unix.gettimeofday());*)
@@ -449,7 +452,7 @@ let connect_to_view qi (view : Ocaml_text.view) =
 
 let create (view : Ocaml_text.view) =
   let open Preferences in
-  let bg_color = ?? (Preferences.preferences#get.editor_bg_color_popup) in
+  let bg_color = ?? (Preferences.preferences#get.Settings_t.editor_bg_color_popup) in
   let filename = match view#obuffer#file with Some file -> file#filename | _ -> "" in
   let qi =
     {
@@ -462,7 +465,6 @@ let create (view : Ocaml_text.view) =
       current_y = 0;
       show_at = None;
       windows = [];
-      merlin = merlin view#obuffer;
     }
   in
   Preferences.preferences#connect#changed ~callback:begin fun pref ->

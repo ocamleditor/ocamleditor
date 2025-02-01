@@ -10,7 +10,7 @@ open Settings_j
 module Log = Common.Log.Make(struct let prefix = "FOLD" end)
 let _ =
   Log.set_print_timestamp true;
-  Log.set_verbosity `DEBUG
+  Log.set_verbosity `ERROR
 
 module Icons = struct
   let expander_open = "\u{f107}"
@@ -218,7 +218,7 @@ class margin_fold (view : Ocaml_text.view) =
       [ `INVISIBLE true ] in
   let merlin text func =
     let filename = match buffer#file with Some file -> file#filename | _ -> "" in
-    func ~filename ~source_code:text
+    func ~filename ~buffer:text
   in
   let rec walk f parent (ol : Merlin_j.outline list) =
     match ol with
@@ -279,12 +279,11 @@ class margin_fold (view : Ocaml_text.view) =
     method is_refresh_pending = is_refresh_pending
     method is_changed_after_last_outline = last_outline_time < view#tbuffer#last_edit_time
 
-    method sync_outline_time () =
-      last_outline_time <- Unix.gettimeofday();
-      (*synchronized#call();*)
+    method sync_outline_time () = last_outline_time <- Unix.gettimeofday()
 
     method draw ~view ~top ~left ~height ~start ~stop =
       if not self#is_changed_after_last_outline then begin
+        Log.println `DEBUG "draw (is_changed_after_last_outline)";
         match expanders with
         (* Separate the case in which markers and expanders need to be
            reconstructed from the case in which only the positions within the visible
@@ -297,6 +296,7 @@ class margin_fold (view : Ocaml_text.view) =
                 ex#misc#hide();
                 if ex#is_valid then Some ex else None
               end expanders;
+            Log.println `DEBUG "draw 1.0";
             outline
             |> walk begin fun parent ol ->
               let is_folding_point = ol.ol_kind = "Method" || is_drawable ol in
@@ -308,6 +308,7 @@ class margin_fold (view : Ocaml_text.view) =
                   self#draw_expander ol top left height;
               end
             end None;
+            Log.println `DEBUG "draw 1.1";
             !methods
             |> List.filter (fun ol -> ol.ol_parent <> None)
             |> ListExt.group_by (fun ol -> ol.ol_parent)
@@ -321,26 +322,31 @@ class margin_fold (view : Ocaml_text.view) =
               | _ -> ()
             end
             |> ignore;
+            Log.println `DEBUG "draw 1.2";
             !methods |> List.iter (fun ol -> if is_drawable ol then self#draw_expander ol top left height);
-            is_refresh_pending <- false
+            is_refresh_pending <- false;
+            Log.println `DEBUG "draw 1.3";
         | _ ->
-            expanders |> List.iter (fun ex -> ex#show top left height)
+            Log.println `DEBUG "draw 2, expanders length: %d" (List.length expanders);
+            expanders |> List.iter (fun ex -> ex#show top left height);
+            Log.println `DEBUG "draw 2.1";
       end else
         is_refresh_pending <- true
 
     method private draw_expander ol top left height =
-      (*Log.println `TRACE "  draw_expander %d:%d -- %d:%d [%d] [%s %d]"
-        ol.ol_start.line ol.ol_start.col ol.ol_stop.line ol.ol_stop.col
-        (Thread.self() |> Thread.id) ol.ol_kind ol.ol_level;*)
+      Log.println `DEBUG "draw 3.0 %s %b" ol.ol_kind self#is_changed_after_last_outline;
       let start = buffer#get_iter (`LINECHAR (ol.ol_start.line - 1, ol.ol_start.col)) in
+      Log.println `DEBUG "draw 3.1";
       let stop =
         if ol.ol_kind = "Method" then
+          (* TODO: Still crashes on the following line, even when is_changed_after_last_outline is false. *)
           let stop = buffer#get_iter (`LINECHAR (ol.ol_stop.line - 1, ol.ol_stop.col)) in
+          Log.println `DEBUG "skip_comments_backward";
           skip_comments_backward comments (stop#set_line_offset 0);
         else begin
-          (*Log.print `DEBUG "draw_expander: %d,%d " (ol.ol_stop.line - 1) ol.ol_stop.col;*)
+          Log.print `DEBUG "draw_expander: %d,%d " (ol.ol_stop.line - 1) ol.ol_stop.col;
           let iter = buffer#get_iter (`LINECHAR (ol.ol_stop.line - 1, ol.ol_stop.col)) in
-          (*Log.println `DEBUG "OK";*)
+          Log.println `DEBUG "OK";
           iter
         end
       in
@@ -422,16 +428,23 @@ class margin_fold (view : Ocaml_text.view) =
       if self#is_changed_after_last_outline then begin
         let source_code = buffer#get_text () in
         self#sync_outline_time();
-        (merlin source_code)@@Merlin.outline begin fun (ol : Merlin_j.outline list) ->
-          GtkThread.sync begin fun () ->
-            if not self#is_changed_after_last_outline then begin
-              outline <- ol;
-              comments <-
-                Comments.scan_locale (Glib.Convert.convert_with_fallback ~fallback:""
-                                        ~from_codeset:"UTF-8" ~to_codeset:Oe_config.ocaml_codeset source_code);
-              synchronized#call();
-            end
-          end ();
+        (merlin source_code)@@Merlin.outline
+        |> Async.start_with_continuation begin function
+        | Merlin.Ok (ol : Merlin_j.outline list) ->
+            Log.println `DEBUG "STARTING GtkThread.sync";
+            GtkThread.sync begin fun () ->
+              Log.println `DEBUG "BEGIN GtkThread.sync";
+              if not self#is_changed_after_last_outline then begin
+                Log.println `DEBUG "update outline";
+                outline <- ol;
+                comments <-
+                  Comments.scan_locale (Glib.Convert.convert_with_fallback ~fallback:""
+                                          ~from_codeset:"UTF-8" ~to_codeset:Oe_config.ocaml_codeset source_code);
+                synchronized#call();
+              end else Log.println `WARN "*** outline not updated ***";
+              Log.println `DEBUG "END GtkThread.sync";
+            end ();
+        | Merlin.Failure _ | Merlin.Error _ -> ()
         end
       end;
       true
@@ -528,7 +541,9 @@ let init_page (page : Editor_page.page) =
         margin#connect#synchronized ~callback:begin fun () ->
           if margin#is_refresh_pending then begin
             (*Gmisclib.Idle.add ~prio:100 begin fun () ->*)
+            Log.println `DEBUG "synchronized: begin draw_gutter";
             page#view#draw_gutter(); (* triggers draw *)
+            Log.println `DEBUG "synchronized: end draw_gutter";
             (*end;*)
           end
         end |> ignore;

@@ -143,17 +143,20 @@ module Action = struct
   let case_analysis (view : Ocaml_text.view) =
     let start, stop = view#buffer#selection_bounds in
     let filename = match (view#obuffer#as_text_buffer :> Text.buffer)#file with Some file -> file#filename | _ -> "" in
+    let open Merlin_j in
     Merlin.case_analysis ~start ~stop
       ~filename
-      ~source_code:(view#buffer#get_text ())
-      begin fun (range, text) ->
+      ~buffer:(view#buffer#get_text ())
+    |> Async.start_with_continuation begin function
+    | Merlin.Ok (range, text) ->
         GtkThread.async begin fun () ->
           let start = view#buffer#get_iter (`LINECHAR (range.start.line - 1, range.start.col)) in
           let stop = view#buffer#get_iter (`LINECHAR (range.stop.line - 1, range.stop.col)) in
           view#buffer#delete ~start ~stop |> ignore;
           view#buffer#insert text |> ignore;
         end ()
-      end
+    | Merlin.Failure _ | Merlin.Error _ -> ()
+    end
 
 end
 

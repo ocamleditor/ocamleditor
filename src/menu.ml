@@ -152,7 +152,7 @@ let edit ~browser ~group ~flags
   let quick_info_menu = GMenu.menu ~packing:quick_info#set_submenu () in
   let quick_info_at_cursor = GMenu.menu_item ~label:"Show Quick Info at Cursor" ~packing:quick_info_menu#add () in
   ignore (quick_info_at_cursor#connect#activate ~callback:browser#quick_info_at_cursor);
-  quick_info_at_cursor#add_accelerator ~group ~modi:[] GdkKeysyms._F2 ~flags;
+  quick_info_at_cursor#add_accelerator ~group ~modi:[`CONTROL] GdkKeysyms._i ~flags;
   let quick_info_mouse = GMenu.check_menu_item
       ~label:"Enable On-Mouse-Hover"
       ~active:Preferences.preferences#get.Settings_j.editor_quick_info_enabled
@@ -288,16 +288,19 @@ let search ~browser ~group ~flags items =
           ignore (editor#scroll_to_definition ~page ~iter:(page#buffer#get_iter `INSERT)))));
   find_definition#add_accelerator ~group ~modi:[] GdkKeysyms._F12 ~flags;
   find_definition#add_accelerator ~group ~modi:[`CONTROL] GdkKeysyms._Return ~flags;
-  (** Find references *)
+  (* Find references *)
   let find_references = GMenu.image_menu_item ~label:"Find References" ~packing:menu#add () in
   find_references#set_image (GMisc.image ~pixbuf:(??? Icons.references) ())#coerce;
+  find_references#add_accelerator ~group ~modi:[`SHIFT] GdkKeysyms._F12 ~flags;
   find_references#add_accelerator ~group ~modi:[`CONTROL; `SHIFT] GdkKeysyms._Return ~flags;
   ignore (find_references#connect#activate ~callback:(fun () -> Menu_search.find_definition_references editor));
-  (*(** Find used components *)
-    let find_used_components = GMenu.image_menu_item ~packing:menu#add () in
-    let label_find_used_components = GMisc.label ~xalign:0. ~markup:"" ~packing:find_used_components#add () in
-    ignore (find_used_components#connect#activate ~callback:(fun () -> Menu_search.find_used_components editor));*)
-  (** *)
+  (* Occurrences *)
+  let occurrences = GMenu.image_menu_item ~label:"Occurrences (experimental)" ~packing:menu#add () in
+  occurrences#add_accelerator ~group ~modi:[] GdkKeysyms._F2 ~flags;
+  occurrences#connect#activate ~callback:begin fun () ->
+    Menu_search.local_refs editor
+  end |> ignore;
+  (*  *)
   ignore (search_item#misc#connect#state_changed ~callback:begin fun state ->
       if state = `NORMAL then begin
         Menu_search.update_items_visibility

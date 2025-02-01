@@ -90,7 +90,7 @@ class pref_view title ?packing () =
   object (self)
     inherit page title vbox
     val is_dark_theme = new GUtil.variable false
-    val dark_theme_transition = Manual_reset_event.create true
+    val dark_theme_transition = Manual_reset_event.create (Some true)
     val mutable combo_theme_changed_id = None
 
     method private check_is_dark_theme () =
@@ -99,7 +99,7 @@ class pref_view title ?packing () =
     initializer
       is_dark_theme#connect#changed ~callback:begin fun _ ->
         Manual_reset_event.reset dark_theme_transition;
-        GtkThread.sync (fun () -> Manual_reset_event.set dark_theme_transition) ()
+        GtkThread.sync (fun () -> Manual_reset_event.set dark_theme_transition true) ()
       end |> ignore;
       (*let callback () =
         check_detach_sep#misc#set_sensitive check_remember#active;
@@ -119,7 +119,7 @@ class pref_view title ?packing () =
                 (* Preview new theme and... *)
                 let theme = self#get_theme_name() in
                 Gtk_theme.set_theme ?theme ~context:self#misc#pango_context ();
-                Manual_reset_event.wait dark_theme_transition;
+                Manual_reset_event.wait dark_theme_transition |> ignore;
                 (* ... editor colors *)
                 let open Settings_t in
                 let ltags, prop =
@@ -143,7 +143,7 @@ class pref_view title ?packing () =
     method write pref =
       Preferences.Themes.directory |> Option.iter begin fun _ ->
         pref.theme <- self#get_theme_name();
-        Manual_reset_event.wait dark_theme_transition;
+        Manual_reset_event.wait dark_theme_transition |> ignore;
         pref.theme_is_dark <- is_dark_theme#get;
       end;
       pref.splashscreen_enabled <- check_splash#active;

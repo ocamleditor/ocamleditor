@@ -38,6 +38,9 @@ let ocamldoc_paragraph_border_enabled    = false
 let ocamldoc_paragraph_bgcolor_enabled   = true
 let fade_window_enabled                  = true (* Fade effect for popup windows *)
 let matching_delim_border_color : dcolor = { light = `NAME "#ff0000"; dark = `NAME "#ff0000" }
+let word_border_color : dcolor           = { light = `NAME "#ffffff"; dark = `NAME "#ffffff" }
+let ref_border_color : dcolor            = { light = `NAME "#0090d0"; dark = `NAME "#00d090" }
+let ref_bg_color : dcolor                = { light = `NAME "#0090d0"; dark = `NAME "#00d090" }
 let error_popup_bg_color : dcolor        = { light = `NAME "#ffeef2"; dark = `NAME "#ffc6d4" }
 let error_popup_border_color : dcolor    = { light = `NAME "#ff6a99"; dark = `NAME "#ff6a99" }
 let error_underline_color : dcolor       = { light = `NAME "#ff0000"; dark = `NAME "#ff0000" }
@@ -77,7 +80,7 @@ let code_folding_tag_highlight_name      = "fold-highlight"
 let code_folding_expander_color          = `NAME "#ff0000"
 
 
-let global_gutter_size                   = 21
+let global_gutter_size                   = 30
 let global_gutter_comments_color         = `NAME "#fa80a5"
 let global_gutter_comments_bgcolor       = `NAME "#fad0f5"
 

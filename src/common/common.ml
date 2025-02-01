@@ -30,6 +30,7 @@ open List_opt
 open Argc
 open Option_syntax
 open Manual_reset_event
+open Async
 
 module Log = Log.Make(struct
     let channel = stdout
