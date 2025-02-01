@@ -56,7 +56,7 @@ class editor () =
     val mutable pages = []
     val mutable pages_cache = []
     val mutable project = Project.create ~filename:"untitled.xyz" ()
-    val tout_delim = Timeout.create ~delay:1.0 ~len:2 ()
+    val tout_delim = Timeout.create ~delay:1.5 ~len:3 ()
     val tout_fast = Timeout.create ~delay:0.3 ~len:2 ()
     val location_history = Location_history.create()
     val mutable file_history =
@@ -447,16 +447,20 @@ class editor () =
         buffer#add_signal_handler (buffer#connect#after#mark_set ~callback:begin fun _ mark ->
             let mark_occurrences, under_cursor, _ = view#options#mark_occurrences in
             let is_insert = match GtkText.Mark.get_name mark with Some "insert" -> true | _ -> false in
-            if mark_occurrences && under_cursor then
-              Timeout.set tout_fast 1 page#view#mark_occurrences_manager#mark;
+            if mark_occurrences && under_cursor then begin
+              Timeout.set tout_fast 1 page#view#mark_occurrences_manager#mark_words;
+              Timeout.set tout_delim 2 page#view#mark_occurrences_manager#mark_refs;
+            end;
             if buffer#has_selection then begin
               let start, stop = buffer#selection_bounds in
               let nlines = stop#line - start#line in
               let nchars = stop#offset - start#offset in
               lab_sel_lines#set_text (string_of_int nlines);
               lab_sel_chars#set_text (string_of_int nchars);
-              if is_insert && mark_occurrences && not under_cursor then
-                Timeout.set tout_fast 1 page#view#mark_occurrences_manager#mark
+              if is_insert && mark_occurrences && not under_cursor then begin
+                Timeout.set tout_fast 1 page#view#mark_occurrences_manager#mark_words;
+                Timeout.set tout_delim 2 page#view#mark_occurrences_manager#mark_refs;
+              end
             end else begin
               if mark_occurrences && not under_cursor then
                 page#view#mark_occurrences_manager#clear();

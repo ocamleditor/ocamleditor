@@ -2,7 +2,12 @@ open Preferences
 
 let draw view (drawable : GDraw.drawable) approx_char_width hadjust y0 bounds =
   let buffer = view#tbuffer in
-  let start, stop = match bounds with `Ref x -> x | `Word x -> x | `Delim x -> x in
+  let (start, stop), color, line_width =
+    match bounds with
+    | `Ref x -> x, ?? Oe_config.ref_border_color, 1
+    | `Word x -> x, ?? Oe_config.word_border_color, 0
+    | `Delim x -> x, ?? Oe_config.matching_delim_border_color, 2
+  in
   match buffer#get_iter_at_mark_opt (`MARK start) with
   | Some start ->
       begin
@@ -39,8 +44,8 @@ let draw view (drawable : GDraw.drawable) approx_char_width hadjust y0 bounds =
               then yl1 + ((!lines_displayed - 1) * (hl1 / !n_display_lines))
               else yl1 + view#pixels_above_lines
             in
-            drawable#set_foreground (?? Oe_config.matching_delim_border_color);
-            drawable#set_line_attributes ~width:2 ~style:`SOLID  ();
+            drawable#set_foreground color;
+            drawable#set_line_attributes ~width:line_width ();
             drawable#rectangle ~x ~y ~width ~height ();
         | _ -> ()
       end

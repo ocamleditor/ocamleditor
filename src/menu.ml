@@ -294,11 +294,13 @@ let search ~browser ~group ~flags items =
   find_references#add_accelerator ~group ~modi:[`SHIFT] GdkKeysyms._F12 ~flags;
   find_references#add_accelerator ~group ~modi:[`CONTROL; `SHIFT] GdkKeysyms._Return ~flags;
   ignore (find_references#connect#activate ~callback:(fun () -> Menu_search.find_definition_references editor));
-  (*(** Find used components *)
-    let find_used_components = GMenu.image_menu_item ~packing:menu#add () in
-    let label_find_used_components = GMisc.label ~xalign:0. ~markup:"" ~packing:find_used_components#add () in
-    ignore (find_used_components#connect#activate ~callback:(fun () -> Menu_search.find_used_components editor));*)
-  (** *)
+  (* Occurrences *)
+  let occurrences = GMenu.image_menu_item ~label:"Occurrences (experimental)" ~packing:menu#add () in
+  occurrences#add_accelerator ~group ~modi:[] GdkKeysyms._F2 ~flags;
+  occurrences#connect#activate ~callback:begin fun () ->
+    Menu_search.local_refs editor
+  end |> ignore;
+  (*  *)
   ignore (search_item#misc#connect#state_changed ~callback:begin fun state ->
       if state = `NORMAL then begin
         Menu_search.update_items_visibility

@@ -10,7 +10,7 @@ open Settings_j
 module Log = Common.Log.Make(struct let prefix = "FOLD" end)
 let _ =
   Log.set_print_timestamp true;
-  Log.set_verbosity `DEBUG
+  Log.set_verbosity `ERROR
 
 module Icons = struct
   let expander_open = "\u{f107}"
@@ -339,6 +339,7 @@ class margin_fold (view : Ocaml_text.view) =
       Log.println `DEBUG "draw 3.1";
       let stop =
         if ol.ol_kind = "Method" then
+          (* TODO: Still crashes on the following line, even when is_changed_after_last_outline is false. *)
           let stop = buffer#get_iter (`LINECHAR (ol.ol_stop.line - 1, ol.ol_stop.col)) in
           Log.println `DEBUG "skip_comments_backward";
           skip_comments_backward comments (stop#set_line_offset 0);

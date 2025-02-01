@@ -261,6 +261,9 @@ and view ?project ?buffer () =
 
     method approx_char_width = approx_char_width
 
+    method add_outline_text bounds = text_outline <- List.rev_append text_outline bounds
+    method filter_outline_text filter = text_outline <- List.filter filter text_outline;
+
     method modify_font fontname =
       self#misc#modify_font_by_name fontname;
       approx_char_width <- GPango.to_pixels (self#misc#pango_context#get_metrics())#approx_digit_width;
@@ -322,7 +325,7 @@ and view ?project ?buffer () =
               ((self#buffer#create_mark ~name:"delim_right_start" rstart),
                (self#buffer#create_mark ~name:"delim_right_stop" rstop)) :: current_matching_tag_bounds;
             self#buffer#apply_tag_by_name "tag_matching_delim" ~start:rstart ~stop:rstop;
-            text_outline <- text_outline @ (current_matching_tag_bounds |> List.map (fun x -> `Delim x));
+            self#add_outline_text (current_matching_tag_bounds |> List.map (fun x -> `Delim x));
             GtkBase.Widget.queue_draw self#as_widget;
             delim
           end else None
@@ -341,7 +344,7 @@ and view ?project ?buffer () =
         self#buffer#delete_mark mstart;
         self#buffer#delete_mark mstop;
       end current_matching_tag_bounds;
-      text_outline <- [];
+      text_outline <- text_outline |> List.filter (function `Word _ -> true | `Ref _ -> true | `Delim _ -> false);
       current_matching_tag_bounds <- [];
 
     method matching_delim () =
@@ -587,18 +590,13 @@ and view ?project ?buffer () =
                 end;
                 drawable#set_line_attributes ~join:Oe_config.current_line_join ~width:Oe_config.current_line_width ~style:Oe_config.current_line_style ();
                 drawable#set_foreground options#current_line_border_color;
-                Gdk.GC.set_dashes drawable#gc ~offset:1 Oe_config.on_off_dashes;
                 drawable#rectangle ~x:current_line_border_x1 ~y ~filled:false
                   ~width:(w0 - current_line_border_x2) ~height:(h - adjust) ();
             | _ -> ()
           end;
         end;
         (* Border around matching delimiters *)
-        begin
-          drawable#set_foreground (?? Oe_config.matching_delim_border_color);
-          drawable#set_line_attributes ~width:2 ~style:`SOLID  ();
-          text_outline |> List.iter (Text_outline.draw self drawable approx_char_width hadjust y0);
-        end;
+        text_outline |> List.iter (Text_outline.draw self drawable approx_char_width hadjust y0);
         false;
       with ex ->
         Printf.eprintf "File \"text.ml\": %s\n%s\n%!" (Printexc.to_string ex) (Printexc.get_backtrace());
@@ -612,7 +610,7 @@ and view ?project ?buffer () =
             let stop = stop#forward_line#set_line_index 0 in
             match ?? (Preferences.preferences#get.editor_ocamldoc_paragraph_bgcolor_1) with
             | Some color ->
-                drawable#set_foreground (`NAME (ColorOps.add_value color 0.08));
+                drawable#set_foreground (*(`NAME "red")*) (`NAME (ColorOps.modify color ~sat:0.1 ~value:0.1));
                 drawable#set_line_attributes ~width:1 ~style:`SOLID ();
                 let hadjust = match hadjustment with Some adj -> int_of_float adj#value | _ -> 0 in
                 while !start#forward_line#compare stop <= 0 && not (!start#equal self#buffer#end_iter) do

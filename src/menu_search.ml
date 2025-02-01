@@ -191,7 +191,7 @@ let find_definition_references editor =
     widget#start_search();
   end
 
-let occurrences editor =
+let local_refs editor =
   match editor#get_page `ACTIVE with
   | Some page ->
       let iter = page#buffer#get_iter `INSERT in
