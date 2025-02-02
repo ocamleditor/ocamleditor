@@ -123,8 +123,8 @@ let remove_wininfo qi wi =
       !!Lock.wininfo begin fun () ->
         if not wi.is_pinned then remove_highlight qi wi;
         qi.windows <- qi.windows |> List.filter (fun x -> x.window#misc#get_oid <> wi.window#misc#get_oid);
+        wi.window#destroy();
       end ();
-      wi.window#destroy();
     end;
     false
   end |> ignore

@@ -91,8 +91,8 @@ let default_values =
         bg_color = { light = "#ffffff"; dark = "#000000" };
         weight = 0; style = `NORMAL; underline = `NONE; scale = 1.0; bg_default = true };
       { name = "highlight_current_line";
-        color = { light = "#c3ff96"; dark = "#2E7100" };
-        bg_color = { light = "#c3ff96"; dark = "#223316" };
+        color = { light = "#90e090"; dark = "#2E7100" };
+        bg_color = { light = "#e3ffe3"; dark = "#223316" };
         weight = 0; style = `NORMAL; underline = `NONE; scale = 1.0; bg_default = true };
       { name = "record_label";
         color = { light = "#474747"; dark = "#d0d0d0" };
