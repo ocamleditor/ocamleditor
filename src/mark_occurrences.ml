@@ -52,7 +52,7 @@ class manager ~view =
     val mutable last_merlin_invoke_line = 0
     val mutable last_merlin_invoke_col = 0
 
-    method table = word_marks
+    method words = word_marks
     method refs = ref_marks
     method tag : GText.tag = tag
 

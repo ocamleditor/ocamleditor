@@ -10,7 +10,7 @@ open Settings_j
 module Log = Common.Log.Make(struct let prefix = "FOLD" end)
 let _ =
   Log.set_print_timestamp true;
-  Log.set_verbosity `ERROR
+  Log.set_verbosity `DEBUG
 
 module Icons = struct
   let expander_open = "\u{f107}"
@@ -277,7 +277,7 @@ class margin_fold (view : Ocaml_text.view) =
     method size = size
 
     method is_refresh_pending = is_refresh_pending
-    method is_changed_after_last_outline = last_outline_time < view#tbuffer#last_edit_time
+    method is_changed_after_last_outline = last_outline_time <= view#tbuffer#last_edit_time
 
     method sync_outline_time () = last_outline_time <- Unix.gettimeofday()
 
@@ -345,6 +345,7 @@ class margin_fold (view : Ocaml_text.view) =
           skip_comments_backward comments (stop#set_line_offset 0);
         else begin
           Log.print `DEBUG "draw_expander: %d,%d " (ol.ol_stop.line - 1) ol.ol_stop.col;
+          (* TODO: Still crashes on the following line, even when is_changed_after_last_outline is false. *)
           let iter = buffer#get_iter (`LINECHAR (ol.ol_stop.line - 1, ol.ol_stop.col)) in
           Log.println `DEBUG "OK";
           iter
@@ -563,7 +564,7 @@ let init_page (page : Editor_page.page) =
           margin#iter_expanders begin fun exp ->
             exp#set_contains_mark_occurrence false;
             if not exp#is_expanded then begin
-              if page#view#mark_occurrences_manager#table
+              if page#view#mark_occurrences_manager#words
                  |> List.exists (fun (m1, _) ->
                      exp#body_contains (page#buffer#get_iter_at_mark m1))
               then exp#set_contains_mark_occurrence true;
@@ -572,7 +573,7 @@ let init_page (page : Editor_page.page) =
         end |> ignore;
         (* Remove highlights from all expanders when there are no marked occurrences *)
         page#view#mark_occurrences_manager#connect#mark_set ~callback:begin fun () ->
-          match page#view#mark_occurrences_manager#table with
+          match page#view#mark_occurrences_manager#words with
           | [] -> GtkBase.Widget.queue_draw page#view#as_widget
           | _ -> ()
         end |> ignore;

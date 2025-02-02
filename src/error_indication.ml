@@ -395,7 +395,7 @@ class error_indication (view : Ocaml_text.view) vscrollbar global_gutter =
             drawable#rectangle ~filled:true ~x:xm ~y ~width:half_width ~height:3 ();
             drawable#set_foreground border;
             drawable#rectangle ~filled:false ~x:xm ~y ~width:half_width ~height:3 ();
-          end view#mark_occurrences_manager#table;
+          end view#mark_occurrences_manager#words;
           let color = ?? Oe_config.ref_bg_color in
           let width = half_width / 2 in
           let x = xm + width in
