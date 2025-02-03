@@ -294,12 +294,10 @@ let search ~browser ~group ~flags items =
   find_references#add_accelerator ~group ~modi:[`SHIFT] GdkKeysyms._F12 ~flags;
   find_references#add_accelerator ~group ~modi:[`CONTROL; `SHIFT] GdkKeysyms._Return ~flags;
   ignore (find_references#connect#activate ~callback:(fun () -> Menu_search.find_definition_references editor));
-  (* Occurrences *)
-  let occurrences = GMenu.image_menu_item ~label:"Occurrences (experimental)" ~packing:menu#add () in
-  occurrences#add_accelerator ~group ~modi:[] GdkKeysyms._F2 ~flags;
-  occurrences#connect#activate ~callback:begin fun () ->
-    Menu_search.local_refs editor
-  end |> ignore;
+  (* Rename *)
+  let rename = GMenu.image_menu_item ~label:"Rename (experimental)" ~packing:menu#add () in
+  rename#add_accelerator ~group ~modi:[] GdkKeysyms._F2 ~flags;
+  rename#connect#activate ~callback:(fun () -> Definition.rename editor) |> ignore;
   (*  *)
   ignore (search_item#misc#connect#state_changed ~callback:begin fun state ->
       if state = `NORMAL then begin

@@ -121,32 +121,28 @@ let in_string ?(utf8=true) text =
     | [] -> false
   in find !strings
 
+exception Found
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+let in_label text pos =
+  try
+    let tilde = ref false in
+    analyse text begin fun ~token ~lexeme ~start ~length ~lexbuf ->
+      if !tilde && start <= pos && pos <= start + length then begin
+        tilde := false;
+        match [@warning "-4"] token with
+        | LIDENT _ -> raise Found
+        | _ -> None
+      end else begin
+        tilde := false;
+        match [@warning "-4"] token with
+        | TILDE ->
+            tilde := true;
+            None
+        | _ -> None
+      end
+    end;
+    false
+  with Found -> true
 
 
 

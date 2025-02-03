@@ -68,6 +68,9 @@ let rec await (task : 'a task) =
 
 let [@inline] run_synchronously (a : 'a expr) = await (start_as_task a);;
 
+let concurrent ?name (computations : 'a expr array) =
+  create ?name (fun () -> computations |> Array.map (fun c -> start_as_task c |> await))
+
 module Infix = struct
   let (>=>) a f = start_with_continuation f a
 end

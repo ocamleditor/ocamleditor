@@ -90,7 +90,6 @@ let set_has_definition editor item =
         ~filename:page#get_filename
         ~buffer:(page#buffer#get_text ?start:None ?stop:None ?slice:None ?visible:None ())
         ~iter: (page#buffer#get_iter `INSERT)
-        (*|> Async.await*)
     in
     match def with
     | Merlin.Ok def -> item#misc#set_sensitive (def <> None);
@@ -190,31 +189,6 @@ let find_definition_references editor =
     end |> ignore;
     widget#start_search();
   end
-
-let local_refs editor =
-  match editor#get_page `ACTIVE with
-  | Some page ->
-      let iter = page#buffer#get_iter `INSERT in
-      Merlin.occurrences ~identifier_at:(iter#line + 1, iter#line_offset)
-        ~filename:page#get_filename
-        ~scope:`Buffer
-        ~buffer:(page#buffer#get_text ?start:None ?stop:None ?slice:None ?visible:None ()) ()
-      |> Async.start_with_continuation begin function
-      | Merlin.Ok ranges ->
-          let open Merlin_j in
-          ranges
-          |> List.iter begin fun range ->
-            Printf.printf "%s %d:%d\n%!"
-              (match range.file with Some x -> x | _ -> "LOCAL")
-              range.start.line range.start.col;
-          end
-      (*GtkThread.async begin fun () ->
-        editor#location_history_add ~page ~iter ~kind:`BROWSE ();
-        (*editor#goto_location !file !ln !col*)
-        end ()*)
-      | Merlin.Failure _ | Merlin.Error _ -> ()
-      end
-  | _ -> ()
 
 (** update_items_visibility *)
 let update_items_visibility

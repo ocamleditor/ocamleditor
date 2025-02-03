@@ -24,7 +24,7 @@
 module Log = Common.Log.Make(struct let prefix = "MARK_OCCURRENCES" end)
 let _ =
   Log.set_print_timestamp true;
-  Log.set_verbosity `ERROR
+  Log.set_verbosity `DEBUG
 
 class manager ~view =
   let buffer = view#tbuffer in
@@ -108,8 +108,8 @@ class manager ~view =
         | Merlin.Ok ranges ->
             let open Merlin_j in
             if last_merlin_invoke_time = buffer#last_edit_time then
-              (*Gmisclib.Idle.add begin fun () ->*)
-              GtkThread.async begin fun () ->
+              Gmisclib.Idle.add begin fun () ->
+                (*GtkThread.async begin fun () ->*)
                 self#clear_refs() |> ignore;
                 ranges
                 |> List.fold_left begin fun acc range ->
@@ -123,8 +123,8 @@ class manager ~view =
                   end else acc
                 end []
                 |> view#add_outline_text;
-                if ref_marks <> [] then mark_set#call()
-              end ()
+                if ref_marks <> [] then mark_set#call();
+              end
         | Merlin.Failure _ | Merlin.Error _ -> ()
         end
       end
