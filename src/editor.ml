@@ -70,6 +70,8 @@ class editor () =
     val mutable word_wrap = Preferences.preferences#get.editor_wrap
     val mutable show_outline = true
 
+    method status_message = notification#call
+
     method tout_delim = tout_delim
 
     method paned = hpaned

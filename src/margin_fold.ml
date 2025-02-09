@@ -334,51 +334,43 @@ class margin_fold (view : Ocaml_text.view) =
         is_refresh_pending <- true
 
     method private draw_expander ol top left height =
-      Log.println `DEBUG "draw 3.0 %s %b" ol.ol_kind self#is_changed_after_last_outline;
-      let start = buffer#get_iter (`LINECHAR (ol.ol_start.line - 1, ol.ol_start.col)) in
-      Log.println `DEBUG "draw 3.1";
-      let stop =
-        if ol.ol_kind = "Method" then
-          (* TODO: Still crashes on the following line, even when is_changed_after_last_outline is false. *)
-          let stop = buffer#get_iter (`LINECHAR (ol.ol_stop.line - 1, ol.ol_stop.col)) in
-          Log.println `DEBUG "skip_comments_backward";
-          skip_comments_backward comments (stop#set_line_offset 0);
-        else begin
-          Log.print `DEBUG "draw_expander: %d,%d " (ol.ol_stop.line - 1) ol.ol_stop.col;
-          (* TODO: Still crashes on the following line, even when is_changed_after_last_outline is false. *)
-          let iter = buffer#get_iter (`LINECHAR (ol.ol_stop.line - 1, ol.ol_stop.col)) in
-          Log.println `DEBUG "OK";
-          iter
-        end
-      in
-      (*(*if ol.ol_kind = "Method" then begin
-        Printf.printf "%S: %d:%d - %d:%d -- %d:%d\n%!"
-          (buffer#get_text ~start ~stop:start#forward_to_line_end ())
-          ol.ol_start.line ol.ol_start.col
-          ol.ol_stop.line ol.ol_stop.col
-          (start#line + 1) start#line_offset;*)
-        end;*)
-      (*if stop#line > start#line then begin*)
-      let expander =
-        match expanders |> List.find_opt (fun exp -> exp#folding_point#equal start) with
-        | None ->
-            let expander = new expander ~tag_highlight ~tag_invisible ~view () in
-            expander#relocate start stop;
-            expanders <- expander :: expanders;
-            expander#show_region();
-            expander#connect#toggled ~callback:(fun _ -> expander_toggled#call expander) |> ignore;
-            expander#connect#refresh_needed ~callback:(fun () -> is_refresh_pending <- true) |> ignore;
-            expander
-        | Some expander ->
-            (*expander#relocate start stop;*)
-            expander
-      in
-      expander#set_is_definition (ol.ol_kind = "Value" || ol.ol_kind = "Method");
-      (* Hide expanders inside invisible regions *)
-      if List.exists (fun t -> t#get_oid = tag_invisible#get_oid) start#tags
-      then expander#misc#hide()
-      else expander#show top left height
-    (*end*)
+      Gmisclib.Idle.add ~prio:100 begin fun () ->
+        Log.println `DEBUG "draw 3.0 %s %b" ol.ol_kind self#is_changed_after_last_outline;
+        let start = buffer#get_iter (`LINECHAR (ol.ol_start.line - 1, ol.ol_start.col)) in
+        Log.println `DEBUG "draw 3.1";
+        let stop =
+          if ol.ol_kind = "Method" then
+            (* TODO: Still crashes on the following line, even when is_changed_after_last_outline is false. *)
+            let stop = buffer#get_iter (`LINECHAR (ol.ol_stop.line - 1, ol.ol_stop.col)) in
+            Log.println `DEBUG "skip_comments_backward";
+            skip_comments_backward comments (stop#set_line_offset 0);
+          else begin
+            Log.print `DEBUG "draw_expander: %d,%d " (ol.ol_stop.line - 1) ol.ol_stop.col;
+            (* TODO: Still crashes on the following line, even when is_changed_after_last_outline is false. *)
+            let iter = buffer#get_iter (`LINECHAR (ol.ol_stop.line - 1, ol.ol_stop.col)) in
+            Log.println `DEBUG "OK";
+            iter
+          end
+        in
+        let expander =
+          match expanders |> List.find_opt (fun exp -> exp#folding_point#equal start) with
+          | None ->
+              let expander = new expander ~tag_highlight ~tag_invisible ~view () in
+              expander#relocate start stop;
+              expanders <- expander :: expanders;
+              expander#show_region();
+              expander#connect#toggled ~callback:(fun _ -> expander_toggled#call expander) |> ignore;
+              expander#connect#refresh_needed ~callback:(fun () -> is_refresh_pending <- true) |> ignore;
+              expander
+          | Some expander ->
+              expander
+        in
+        expander#set_is_definition (ol.ol_kind = "Value" || ol.ol_kind = "Method");
+        (* Hide expanders inside invisible regions *)
+        if List.exists (fun t -> t#get_oid = tag_invisible#get_oid) start#tags
+        then expander#misc#hide()
+        else expander#show top left height
+      end
 
     method draw_ellipsis _ =
       match view#get_window `TEXT with
