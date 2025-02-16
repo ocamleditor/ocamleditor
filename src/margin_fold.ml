@@ -10,12 +10,14 @@ open Settings_j
 module Log = Common.Log.Make(struct let prefix = "FOLD" end)
 let _ =
   Log.set_print_timestamp true;
-  Log.set_verbosity `DEBUG
+  Log.set_verbosity `ERROR
 
 module Icons = struct
   let expander_open = "\u{f107}"
   let expander_closed = "\u{f105}"
 end
+
+exception Invalid_linechar
 
 let counter = ref 0
 let is_debug = false
@@ -240,8 +242,12 @@ class margin_fold (view : Ocaml_text.view) =
     let it = (start#backward_find_char Text_util.not_blank)#forward_char in
     let offset = it#offset in
     match comments |> List.find_opt (fun (_, e, _) -> offset = e) with
-    | Some (b, e, _) -> skip_comments_backward comments (buffer#get_iter (`OFFSET b))
-    | _ -> buffer#get_iter (`OFFSET offset)
+    | Some (b, e, _) ->
+        Log.println `DEBUG "skip_comments_backward 1";
+        skip_comments_backward comments (buffer#get_iter (`OFFSET b))
+    | _ ->
+        Log.println `DEBUG "skip_comments_backward 2";
+        buffer#get_iter (`OFFSET offset)
   in
   let is_drawable buffer_start_line buffer_stop_line =
     fun [@ inline] ol ->
@@ -283,94 +289,91 @@ class margin_fold (view : Ocaml_text.view) =
 
     method draw ~view ~top ~left ~height ~start ~stop =
       if not self#is_changed_after_last_outline then begin
-        Log.println `DEBUG "draw (is_changed_after_last_outline)";
-        match expanders with
-        (* Separate the case in which markers and expanders need to be
-           reconstructed from the case in which only the positions within the visible
-           area need to be updated (for example in the case of scrolling). *)
-        | _ when expanders = [] || is_refresh_pending ->
-            let is_drawable = is_drawable 0 0 (*start#line stop#line*) in (* dummy values *)
-            let methods = ref [] in
-            expanders <-
-              List.filter_map begin fun ex ->
-                ex#misc#hide();
-                if ex#is_valid then Some ex else None
-              end expanders;
-            Log.println `DEBUG "draw 1.0";
-            outline
-            |> walk begin fun parent ol ->
-              let is_folding_point = ol.ol_kind = "Method" || is_drawable ol in
-              if is_folding_point then begin
-                if ol.ol_kind = "Method" then begin
-                  ol.ol_parent <- parent;
-                  methods := ol :: !methods
-                end else
-                  self#draw_expander ol top left height;
-              end
-            end None;
-            Log.println `DEBUG "draw 1.1";
-            !methods
-            |> List.filter (fun ol -> ol.ol_parent <> None)
-            |> ListExt.group_by (fun ol -> ol.ol_parent)
-            |> List.iter begin fun (parent, meths) ->
-              match parent with
-              | Some parent  ->
-                  ({ parent with ol_start = parent.ol_stop } :: meths)
-                  |> List.sort (fun m1 m2 -> Stdlib.compare m1.ol_start m2.ol_start)
-                  |> ListExt.pairwise
-                  |> List.iter (fun (ol1, ol2) -> ol1.ol_stop <- ol2.ol_start);
-              | _ -> ()
-            end
-            |> ignore;
-            Log.println `DEBUG "draw 1.2";
-            !methods |> List.iter (fun ol -> if is_drawable ol then self#draw_expander ol top left height);
-            is_refresh_pending <- false;
-            Log.println `DEBUG "draw 1.3";
-        | _ ->
-            Log.println `DEBUG "draw 2, expanders length: %d" (List.length expanders);
-            expanders |> List.iter (fun ex -> ex#show top left height);
-            Log.println `DEBUG "draw 2.1";
+        begin
+          try
+            Log.println `DEBUG "draw (is_changed_after_last_outline)";
+            match expanders with
+            (* Separate the case in which markers and expanders need to be
+               reconstructed from the case in which only the positions within the visible
+               area need to be updated (for example in the case of scrolling). *)
+            | _ when expanders = [] || is_refresh_pending ->
+                let is_drawable = is_drawable 0 0 (*start#line stop#line*) in (* dummy values *)
+                let methods = ref [] in
+                expanders <-
+                  List.filter_map begin fun ex ->
+                    ex#misc#hide();
+                    if ex#is_valid then Some ex else None
+                  end expanders;
+                Log.println `DEBUG "draw 1.0";
+                outline
+                |> walk begin fun parent ol ->
+                  let is_folding_point = ol.ol_kind = "Method" || is_drawable ol in
+                  if is_folding_point then begin
+                    if ol.ol_kind = "Method" then begin
+                      ol.ol_parent <- parent;
+                      methods := ol :: !methods
+                    end else
+                      self#draw_expander ol top left height;
+                  end
+                end None;
+                Log.println `DEBUG "draw 1.1";
+                !methods
+                |> List.filter (fun ol -> ol.ol_parent <> None)
+                |> ListExt.group_by (fun ol -> ol.ol_parent)
+                |> List.iter begin fun (parent, meths) ->
+                  match parent with
+                  | Some parent  ->
+                      ({ parent with ol_start = parent.ol_stop } :: meths)
+                      |> List.sort (fun m1 m2 -> Stdlib.compare m1.ol_start m2.ol_start)
+                      |> ListExt.pairwise
+                      |> List.iter (fun (ol1, ol2) -> ol1.ol_stop <- ol2.ol_start);
+                  | _ -> ()
+                end
+                |> ignore;
+                Log.println `DEBUG "draw 1.2";
+                !methods |> List.iter (fun ol -> if is_drawable ol then self#draw_expander ol top left height);
+                is_refresh_pending <- false;
+                Log.println `DEBUG "draw 1.3";
+            | _ ->
+                Log.println `DEBUG "draw 2, expanders length: %d" (List.length expanders);
+                expanders |> List.iter (fun ex -> ex#show top left height);
+                Log.println `DEBUG "draw 2.1";
+          with Invalid_linechar ->
+            Log.println `ERROR "===>> Invalid_linechar <<===";
+            is_refresh_pending <- true
+        end;
       end else
         is_refresh_pending <- true
 
     method private draw_expander ol top left height =
-      Gmisclib.Idle.add ~prio:100 begin fun () ->
-        Log.println `DEBUG "draw 3.0 %s %b" ol.ol_kind self#is_changed_after_last_outline;
-        let start = buffer#get_iter (`LINECHAR (ol.ol_start.line - 1, ol.ol_start.col)) in
-        Log.println `DEBUG "draw 3.1";
-        let stop =
-          if ol.ol_kind = "Method" then
-            (* TODO: Still crashes on the following line, even when is_changed_after_last_outline is false. *)
-            let stop = buffer#get_iter (`LINECHAR (ol.ol_stop.line - 1, ol.ol_stop.col)) in
-            Log.println `DEBUG "skip_comments_backward";
-            skip_comments_backward comments (stop#set_line_offset 0);
-          else begin
-            Log.print `DEBUG "draw_expander: %d,%d " (ol.ol_stop.line - 1) ol.ol_stop.col;
-            (* TODO: Still crashes on the following line, even when is_changed_after_last_outline is false. *)
-            let iter = buffer#get_iter (`LINECHAR (ol.ol_stop.line - 1, ol.ol_stop.col)) in
-            Log.println `DEBUG "OK";
-            iter
-          end
-        in
-        let expander =
-          match expanders |> List.find_opt (fun exp -> exp#folding_point#equal start) with
-          | None ->
-              let expander = new expander ~tag_highlight ~tag_invisible ~view () in
-              expander#relocate start stop;
-              expanders <- expander :: expanders;
-              expander#show_region();
-              expander#connect#toggled ~callback:(fun _ -> expander_toggled#call expander) |> ignore;
-              expander#connect#refresh_needed ~callback:(fun () -> is_refresh_pending <- true) |> ignore;
-              expander
-          | Some expander ->
-              expander
-        in
-        expander#set_is_definition (ol.ol_kind = "Value" || ol.ol_kind = "Method");
-        (* Hide expanders inside invisible regions *)
-        if List.exists (fun t -> t#get_oid = tag_invisible#get_oid) start#tags
-        then expander#misc#hide()
-        else expander#show top left height
-      end
+      let start = buffer#get_iter (`LINECHAR (ol.ol_start.line - 1, ol.ol_start.col)) in
+      if ol.ol_stop.line <= 0 || ol.ol_stop.line > buffer#end_iter#line + 1 then raise Invalid_linechar;
+      let stop_line = buffer#get_iter (`LINE (ol.ol_stop.line - 1)) in
+      if ol.ol_stop.col >= stop_line#chars_in_line then raise Invalid_linechar;
+      let stop =
+        let iter = buffer#get_iter (`LINECHAR (ol.ol_stop.line - 1, ol.ol_stop.col)) in
+        if ol.ol_kind = "Method" then
+          skip_comments_backward comments (iter#set_line_offset 0)
+        else iter
+      in
+      let expander =
+        match expanders |> List.find_opt (fun exp -> exp#folding_point#equal start) with
+        | None ->
+            let expander = new expander ~tag_highlight ~tag_invisible ~view () in
+            expander#relocate start stop;
+            expanders <- expander :: expanders;
+            expander#show_region();
+            expander#connect#toggled ~callback:(fun _ -> expander_toggled#call expander) |> ignore;
+            expander#connect#refresh_needed ~callback:(fun () -> is_refresh_pending <- true) |> ignore;
+            expander
+        | Some expander ->
+            expander
+      in
+      expander#set_is_definition (ol.ol_kind = "Value" || ol.ol_kind = "Method");
+      (* Hide expanders inside invisible regions *)
+      if List.exists (fun t -> t#get_oid = tag_invisible#get_oid) start#tags
+      then expander#misc#hide()
+      else expander#show top left height
 
     method draw_ellipsis _ =
       match view#get_window `TEXT with

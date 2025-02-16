@@ -113,13 +113,22 @@ class manager ~view =
                 self#clear_refs() |> ignore;
                 ranges
                 |> List.fold_left begin fun acc range ->
-                  if range.start.line > 0 then begin
-                    let start = buffer#get_iter (`LINECHAR (range.start.line - 1, range.start.col)) in
-                    let stop = buffer#get_iter (`LINECHAR (range.stop.line - 1, range.stop.col)) in
-                    let m1 = buffer#create_mark ?name:None ?left_gravity:None start in
-                    let m2 = buffer#create_mark ?name:None ?left_gravity:None stop in
-                    ref_marks <- (`MARK m1, `MARK m2) :: ref_marks;
-                    `Ref (m1, m2) :: acc;
+                  let last_line = buffer#end_iter#line + 1 in
+                  if 0 < range.start.line && range.start.line <= last_line &&
+                     0 < range.stop.line && range.stop.line <= buffer#end_iter#line + 1
+                  then begin
+                    let start_line = buffer#get_iter (`LINE (range.start.line - 1)) in
+                    if range.start.col < start_line#chars_in_line then
+                      let stop_line = buffer#get_iter (`LINE (range.stop.line - 1)) in
+                      if range.stop.col < stop_line#chars_in_line then
+                        let start = buffer#get_iter (`LINECHAR (range.start.line - 1, range.start.col)) in
+                        let stop = buffer#get_iter (`LINECHAR (range.stop.line - 1, range.stop.col)) in
+                        let m1 = buffer#create_mark ?name:None ?left_gravity:None start in
+                        let m2 = buffer#create_mark ?name:None ?left_gravity:None stop in
+                        ref_marks <- (`MARK m1, `MARK m2) :: ref_marks;
+                        `Ref (m1, m2) :: acc
+                      else acc
+                    else acc
                   end else acc
                 end []
                 |> view#add_outline_text;
