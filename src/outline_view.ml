@@ -151,6 +151,12 @@ let model_find
       model_find model iter view pos
   | None -> ()
 
+let model_expand_rec_bindings
+    ( model : GTree.tree_store )
+    ( view : GTree.view )
+  =
+  ()
+
 let model_append
     ( model : GTree.tree_store )
     ?icon
@@ -184,10 +190,9 @@ let i text = "<i>" ^ text ^ "</i>"
 let string_of_id ?(default="") id =
   id |> Option.map Ident.name |> Option.value ~default
 
-let string_of_type_expr ?(is_method=false) ?(is_optional=false) te =
+let string_of_type_expr ?(is_method=false) te =
   let te = ( match Types.get_desc te with
       | Types.Tarrow (_, _self, te2, _) when is_method -> te2
-      | Types.Tconstr (_, [te2], _) when is_optional -> te2
       | _ -> te ) [@warning "-fragile-match"]
   in
   Odoc_info.reset_type_names ();
@@ -213,25 +218,13 @@ let outline_iterator (model : GTree.tree_store) =
   let super = TI.default_iterator in
 
   let value_binding_expr : expression option ref = ref None in
-  let parameter : Asttypes.arg_label option ref = ref None in
 
   let id_name id =
-    let is_parameter = Option.is_some !parameter in
     let name = Ident.name id in
-    let name = ( match !parameter with
-        | Some (Asttypes.Nolabel) -> name
-        | Some (Asttypes.Labelled n) when n = name -> "~" ^ name
-        | Some (Asttypes.Labelled n) -> "~" ^ n ^ ":" ^ name
-        | Some (Asttypes.Optional n)  -> "?" ^ n
-        | None -> name )
-    in
-    ( if is_parameter then i name else b name ),
-    ( if is_parameter then None else Some Icons.simple )
+    b name, Some Icons.simple
   in
   let lid_name lid =
-    let is_parameter = Option.is_some !parameter in
-    string_of_longident lid |> (if is_parameter then i else b),
-    if is_parameter then None else Some Icons.simple
+    string_of_longident lid |> b, Some Icons.simple
   in
 
   let append ?loc text = model_append model ?loc text |> ignore in
@@ -304,9 +297,7 @@ let outline_iterator (model : GTree.tree_store) =
           iterator.TI.class_structure iterator item
       | Tcl_fun (arg_label, pat, _, cl_expr, _ ) ->
           (* TODO: Do somethign about the label *)
-          parameter := Some arg_label;
           iterator.TI.pat iterator pat;
-          parameter := None;
 
           iterator.TI.class_expr iterator cl_expr
 
@@ -334,9 +325,7 @@ let outline_iterator (model : GTree.tree_store) =
 
   let class_structure iterator ( item : class_structure ) =
     let { cstr_self; cstr_fields; _ } = item in
-    parameter := Some Asttypes.Nolabel;
     iterator.TI.pat iterator cstr_self;
-    parameter := None;
     List.iter
       (iterator.TI.class_field iterator)
       cstr_fields
@@ -442,12 +431,7 @@ let outline_iterator (model : GTree.tree_store) =
   let pat iterator (type k) (pattern : k Typedtree.general_pattern) =
     let { pat_desc = desc; pat_loc; pat_type; _} = pattern in
     let loc = pat_loc.loc_start.pos_cnum in
-    let is_optional = ( match !parameter with
-        | Some (Asttypes.Optional _) -> true
-        | _ -> false
-      ) [@warning "-fragile-match"]
-    in
-    let tooltip = string_of_type_expr ~is_optional pat_type in
+    let tooltip = string_of_type_expr pat_type in
     let flat_type = flatten_formatted tooltip in
     ( match desc with
       (* value patterns *)
@@ -508,10 +492,7 @@ let outline_iterator (model : GTree.tree_store) =
     ( match exp_desc with
       | Texp_function { arg_label; cases; _ } ->
           List.iter
-            ( fun { c_lhs; c_rhs; _ } ->
-                parameter := Some arg_label;
-                iterator.TI.pat iterator c_lhs;
-                parameter := None;
+            ( fun { c_rhs; _ } ->
                 (* Optional parameters need special care, so that they are not displayed twice. *)
                 let { exp_desc; _ } = c_rhs in
                 let expr = ( match arg_label, exp_desc with
@@ -524,6 +505,7 @@ let outline_iterator (model : GTree.tree_store) =
             cases;
       | Texp_ifthenelse _ -> ()
       | Texp_match _ -> ()
+      | Texp_try _ -> ()
       | _ -> super.TI.expr iterator item
     ) [@warning "-fragile-match"]
   in
@@ -652,6 +634,7 @@ class widget ~page () =
       model_append model ~loc ~tooltip:"" "" |> ignore;
 
       view#selection#unselect_all ();
+
       view#selection#misc#handler_unblock selection_changed_signal
 
     method view = view

@@ -133,5 +133,4 @@ let main () = begin
 end
 
 let _ =
-  Memtrace.trace_if_requested ();
   Printexc.print main ()

@@ -179,7 +179,7 @@ let init_page page =
   | None ->
       let change_size () =
         let new_width = Oe_config.global_gutter_size + global_gutter_diff_size + global_gutter_diff_sep in
-        page#global_gutter#set_width_request new_width; 
+        page#global_gutter#set_width_request new_width;
         page#global_gutter#event#connect#button_release ~callback:begin fun ev ->
           if (GdkEvent.Button.button ev = 3 && GdkEvent.get_type ev = `BUTTON_RELEASE) then begin
             let x = GdkEvent.Button.x ev in

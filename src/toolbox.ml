@@ -22,7 +22,6 @@
 
 
 open Preferences
-open Printf
 
 type icon = P of GdkPixbuf.pixbuf | S of GtkStock.id | L of string * string option | N
 

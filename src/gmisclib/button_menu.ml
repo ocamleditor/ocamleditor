@@ -67,16 +67,7 @@ class button_menu ?(label="") ?(relief=`NORMAL) ?stock ?spacing ?packing () =
   let clicked = new clicked () in
   let show_menu = new show_menu () in
   let label_widget = GMisc.label ~text:label () in
-  (*  let _ = GtkMain.Rc.parse_string "
-      style \"gmisclib_button_menu_left\" {
-      GtkButton::inner-border = { 0, 0, 0, 0 }
-      }
-      style \"gmisclib_button_menu_right\" {
-      GtkButton::inner-border = { 0, 0, 0, 0 }
-      }
-      widget \"*.gmisclib_button_menu_left\" style \"gmisclib_button_menu_left\"
-      widget \"*.gmisclib_button_menu_right\" style \"gmisclib_button_menu_right\"
-      " in*)
+
   object (self)
     inherit GObj.widget box#as_widget
     val relief = relief
