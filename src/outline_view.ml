@@ -66,7 +66,7 @@ let is_function type_expr =
     | _ -> false
   in f type_expr;;
 
-let string_of_longident t
+let string_from_longident t
   = String.concat "." @@ Longident.flatten t
 
 let flatten_formatted te =
@@ -187,7 +187,7 @@ let update_parent_markup
 let b text = "<b>" ^ text ^ "</b>"
 let i text = "<i>" ^ text ^ "</i>"
 
-let string_of_id ?(default="") id =
+let string_from_id ?(default="") id =
   id |> Option.map Ident.name |> Option.value ~default
 
 let string_of_type_expr ?(is_method=false) te =
@@ -202,7 +202,7 @@ let string_of_type_expr ?(is_method=false) te =
 let string_of_functor_parameter = function
   | Typedtree.Unit -> "()"
   | Typedtree.Named (id, _, md_type) ->
-      let md_name = string_of_id id in
+      let md_name = string_from_id id in
       let { mty_type; _ } = md_type in
       let md_type = Odoc_info.string_of_module_type mty_type in
       "(" ^ md_name ^ " : TODO " ^ md_type ^ ")"
@@ -224,7 +224,7 @@ let outline_iterator (model : GTree.tree_store) =
     b name, Some Icons.simple
   in
   let lid_name lid =
-    string_of_longident lid |> b, Some Icons.simple
+    string_from_longident lid |> b, Some Icons.simple
   in
 
   let append ?loc text = model_append model ?loc text |> ignore in
@@ -382,7 +382,7 @@ let outline_iterator (model : GTree.tree_store) =
 
   let module_binding iterator (mb : module_binding) =
     let { mb_id; mb_expr; mb_loc; _ } = mb in
-    let text = string_of_id mb_id in
+    let text = string_from_id mb_id in
     let loc = mb_loc.loc_start.pos_cnum in
 
     let parent = !parent_row in
