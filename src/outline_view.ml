@@ -295,10 +295,8 @@ let outline_iterator (model : GTree.tree_store) =
       | Tcl_ident _ -> append ~loc "Tcl_ident - TODO";
       | Tcl_structure item ->
           iterator.TI.class_structure iterator item
-      | Tcl_fun (arg_label, pat, _, cl_expr, _ ) ->
-          (* TODO: Do somethign about the label *)
-          iterator.TI.pat iterator pat;
 
+      | Tcl_fun (_, _, _, cl_expr, _ ) ->
           iterator.TI.class_expr iterator cl_expr
 
       | Tcl_apply _ -> append ~loc "Tcl_apply - TODO"
