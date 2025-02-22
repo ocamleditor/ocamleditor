@@ -288,14 +288,14 @@ let spawn_window qi position (entry : type_enclosing_value) (entry2 : type_enclo
     let label_fn, label_typ, label_vars, label_doc = display qi start stop in
     let ident = qi.view#obuffer#get_text ~start ~stop () in
     let context = qi.filename, Some (start#line + 1), Some (start#line_offset + 1) in
-    GtkThread.async begin fun () ->
-      let fullname = Ocp_index.fullname ~context ident in
-      Gmisclib.Idle.add ~prio:300 begin fun () ->
+    Ocp_index.fullname_async ~context ident
+    |> Async.map (fun fullname ->
         match fullname with
-        | Some fullname -> label_fn#set_label (sprintf "<span size='small'>%s</span>" (Markup.type_info fullname));
-        | None -> label_fn#misc#hide()
-      end
-    end ();
+        | Some fullname ->
+            label_fn#misc#show();
+            label_fn#set_label (sprintf "<span size='small'>%s</span>" (Markup.type_info fullname));
+        | None -> label_fn#misc#hide())
+    |> Async.run_synchronously;
     label_typ#set_label (sprintf "%s%s" type_expr tail_info);
     if type_params <> "" then begin
       label_vars#misc#show();
