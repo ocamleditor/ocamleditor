@@ -259,7 +259,7 @@ let outline_iterator (model : GTree.tree_store) =
       | Tstr_module mb -> iterator.TI.module_binding iterator mb
       | Tstr_recmodule _ -> append ~loc "_ (rec module)"
       | Tstr_modtype _ -> append ~loc "_ (modtype)"
-      | Tstr_open _ -> append ~loc "_ (open)"
+      | Tstr_open _ -> ()
       | Tstr_class classes ->
           List.iter
             ( fun (cls, _) ->
