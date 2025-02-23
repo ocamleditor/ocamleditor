@@ -281,8 +281,19 @@ let outline_iterator (model : GTree.tree_store) =
                 parent_row := parent
             )
             decls
-      | Tstr_include _ -> append ~loc "_ (include)"
-      | Tstr_attribute _ -> append ~loc "_ (attribute)"
+
+      | Tstr_include { incl_mod; incl_loc; _ } ->
+          let loc  = incl_loc.loc_start.pos_cnum in
+          let { mod_desc; mod_env; _ } = incl_mod in
+          ( match mod_desc with
+            | Tmod_ident (_, { txt; _ }) ->
+                let alias = String.concat "." @@ Longident.flatten txt in
+                model_append model ~loc ~icon:Icons.module_include alias |> ignore
+            | _ -> ()
+          )
+
+
+      | Tstr_attribute _ -> ()
     )
   in
 
@@ -389,12 +400,14 @@ let outline_iterator (model : GTree.tree_store) =
 
   let module_expr
       ( iterator : TI.iterator )
-      { mod_desc; _ }
+      { mod_desc; mod_loc; _ }
     =
+    let loc = mod_loc.loc_start.pos_cnum in
     match mod_desc with
     | Tmod_ident (_, { txt; _ }) ->
         let alias = String.concat "." @@ Longident.flatten txt in
-        model_append model ~icon:Icons.simple (i alias) |> ignore
+        model_append model ~loc ~icon:Icons.simple (i alias) |> ignore
+
     | Tmod_structure structure ->
         iterator.TI.structure iterator structure;
     | Tmod_functor (p, expr) ->
@@ -403,7 +416,7 @@ let outline_iterator (model : GTree.tree_store) =
         iterator.TI.module_expr iterator expr;
     | Tmod_apply (m1, m2, _) ->
         iterator.TI.module_expr iterator m1;
-        let row = model_append model ~icon:Icons.module_impl ~tooltip:"" "" in
+        let row = model_append model ~loc ~icon:Icons.module_impl ~tooltip:"" "" in
         let parent = !parent_row in
         parent_row := Some row;
         iterator.TI.module_expr iterator m2;
