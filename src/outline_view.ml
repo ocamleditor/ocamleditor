@@ -30,6 +30,15 @@ module TI = Tast_iterator
 module Log = Common.Log.Make(struct let prefix = "Outline_view" end)
 let _ = Log.set_verbosity `DEBUG
 
+module X = struct
+  include struct
+
+    let v= 1
+
+  end
+
+end
+
 (** [Lexing.postion] copy *)
 type position = Lexing.position = {
   pos_fname : string;
@@ -173,7 +182,7 @@ let model_append
   let () = model#set ~row ~column:col_expand expand in
   let () = model#set ~row ~column:col_default_sort !count in
   incr count;
-  row
+  Some row
 
 let update_parent_markup
     ( model : GTree.tree_store )
@@ -234,7 +243,7 @@ let outline_iterator (model : GTree.tree_store) =
       | Tstr_value (is_rec, vb) ->
           if is_rec = Asttypes.Recursive && List.length vb > 1 then (
             let parent = !parent_row in
-            parent_row :=  Some (model_append model ~loc ~expand:true let_rec_markup);
+            parent_row :=  model_append model ~loc ~expand:true let_rec_markup;
             List.iter (iterator.TI.value_binding iterator) vb;
             parent_row := parent
           )
@@ -245,7 +254,7 @@ let outline_iterator (model : GTree.tree_store) =
       | Tstr_type (is_rec, type_decls) ->
           if is_rec = Asttypes.Recursive && List.length type_decls > 1 then (
             let parent = !parent_row in
-            parent_row := Some (model_append model ~loc ~expand:true type_rec_markup);
+            parent_row := model_append model ~loc ~expand:true type_rec_markup;
             List.iter (iterator.TI.type_declaration iterator) type_decls;
             parent_row := parent
           )
@@ -257,7 +266,7 @@ let outline_iterator (model : GTree.tree_store) =
       | Tstr_module mb -> iterator.TI.module_binding iterator mb
       | Tstr_recmodule ms -> List.iter (iterator.TI.module_binding iterator) ms
       | Tstr_modtype mt -> iterator.TI.module_type_declaration iterator mt
-      | Tstr_open od -> iterator.TI.open_declaration iterator od
+      | Tstr_open _ -> ()
       | Tstr_class classes ->
           List.iter
             ( fun (cls, _) ->
@@ -266,7 +275,7 @@ let outline_iterator (model : GTree.tree_store) =
                 let loc = loc.loc_start.pos_cnum in
 
                 let parent = !parent_row in
-                parent_row := Some (model_append model ~loc ~icon:Icons.classe (b txt));
+                parent_row := model_append model ~loc ~icon:Icons.classe (b txt);
                 iterator.TI.class_declaration iterator cls;
 
                 parent_row := parent;
@@ -276,7 +285,7 @@ let outline_iterator (model : GTree.tree_store) =
           List.iter
             ( fun (cls_id, _, item) ->
                 let parent = !parent_row in
-                parent_row := Some (model_append model ~loc ~icon:Icons.class_type (b @@ Ident.name cls_id));
+                parent_row := model_append model ~loc ~icon:Icons.class_type (b @@ Ident.name cls_id);
                 iterator.TI.class_type_declaration iterator item;
                 parent_row := parent
             )
@@ -284,11 +293,18 @@ let outline_iterator (model : GTree.tree_store) =
 
       | Tstr_include { incl_mod; incl_loc; _ } ->
           let loc  = incl_loc.loc_start.pos_cnum in
-          let { mod_desc; mod_env; _ } = incl_mod in
+          let { mod_desc; _ } = incl_mod in
           ( match mod_desc with
             | Tmod_ident (_, { txt; _ }) ->
                 let alias = String.concat "." @@ Longident.flatten txt in
                 model_append model ~loc ~icon:Icons.module_include alias |> ignore
+
+            | Tmod_structure structure ->
+                let parent = !parent_row in
+                parent_row := model_append model ~loc ~icon:Icons.module_include "struct";
+                iterator.TI.structure iterator structure;
+                parent_row := parent
+
             | _ -> ()
           )
 
@@ -317,7 +333,7 @@ let outline_iterator (model : GTree.tree_store) =
                 class_expr iterator cl_expr (let_bindings @ bindings @ inner_bindings)
             | _ ->
                 let parent = !parent_row in
-                parent_row := Some (model_append model ~loc ~tooltip:"" let_bindings_markup);
+                parent_row := model_append model ~loc ~tooltip:"" let_bindings_markup;
                 List.iter (iterator.TI.value_binding iterator) (let_bindings @ bindings);
                 parent_row := parent;
 
@@ -392,8 +408,7 @@ let outline_iterator (model : GTree.tree_store) =
     let loc = mb_loc.loc_start.pos_cnum in
 
     let parent = !parent_row in
-    let row =  model_append model ~icon:Icons.module_impl ~loc (b text) in
-    parent_row := Some row;
+    parent_row := model_append model ~icon:Icons.module_impl ~loc (b text);
     iterator.TI.module_expr iterator mb_expr;
     parent_row := parent
   in
@@ -416,9 +431,8 @@ let outline_iterator (model : GTree.tree_store) =
         iterator.TI.module_expr iterator expr;
     | Tmod_apply (m1, m2, _) ->
         iterator.TI.module_expr iterator m1;
-        let row = model_append model ~loc ~icon:Icons.module_impl ~tooltip:"" "" in
         let parent = !parent_row in
-        parent_row := Some row;
+        parent_row := model_append model ~loc ~icon:Icons.module_impl "";
         iterator.TI.module_expr iterator m2;
         parent_row := parent
     | Tmod_constraint (_, _, _, _) -> ()
@@ -453,7 +467,7 @@ let outline_iterator (model : GTree.tree_store) =
           if is_function pat_type && Option.is_some !value_binding_expr then (
             let icon = Some Icons.func in
             let parent = !parent_row in
-            parent_row := Some (model_append model ?icon ~loc ~tooltip markup);
+            parent_row := model_append model ?icon ~loc ~tooltip markup;
             iterator.TI.expr iterator (Option.get !value_binding_expr);
             parent_row := parent
           )
