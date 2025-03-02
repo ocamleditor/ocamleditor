@@ -215,11 +215,11 @@ let string_of_functor_parameter = function
       let md_name = string_from_id id in
       let { mty_type; _ } = md_type in
       let md_type = Odoc_info.string_of_module_type mty_type in
-      "(" ^ md_name ^ " : TODO " ^ md_type ^ ")"
+      "(" ^ md_name ^ " : " ^ md_type ^ ")"
 
 let let_bindings_markup = Glib.Markup.escape_text "<let bindings>"
-let let_rec_markup = i "let rec "
-let type_rec_markup = i "type rec "
+let let_rec_markup = i "let rec"
+let type_rec_markup = i "type rec"
 
 let outline_iterator (model : GTree.tree_store) =
   let super = TI.default_iterator in

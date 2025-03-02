@@ -47,6 +47,10 @@ let icon_pressed =
     " ... ";
     "  .  "|];;
 
+let custom_css = {|#gmisclib_button_menu_right {
+  min-width: 12px;
+}
+|}
 
 let label_icon ?(width=20) ?(height=16) ?(font_name="FiraCode OCamlEditor") ?color ?packing icon =
   let markup = Printf.sprintf "<big>%s</big>" icon in
@@ -102,6 +106,11 @@ class button_menu ?(label="") ?(relief=`NORMAL) ?stock ?spacing ?packing () =
           true
         end);
       ignore (button_menu#connect#released ~callback:self#popdown_menu);
+
+      let css_provider = GObj.css_provider () in
+      css_provider#load_from_data custom_css;
+      button_menu#misc#style_context#add_provider css_provider 600;
+
 
     method connect = new signals ~clicked ~show_menu
 
