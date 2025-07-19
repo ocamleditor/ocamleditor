@@ -10,7 +10,7 @@ open Settings_j
 module Log = Common.Log.Make(struct let prefix = "FOLD" end)
 let _ =
   Log.set_print_timestamp true;
-  Log.set_verbosity `ERROR
+  Log.set_verbosity `DEBUG
 
 module Icons = struct
   let expander_open = "\u{f107}"
