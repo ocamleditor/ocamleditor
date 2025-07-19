@@ -21,7 +21,7 @@
 ;!include FontName.nsh
 
 Name "OCamlEditor"
-OutFile "OCamlEditor-1.14.0-Windows.exe"
+OutFile "OCamlEditor-1.18.0-ocaml414-Windows.exe"
 InstallDir $PROGRAMFILES\OCamlEditor
 InstallDirRegKey HKLM "Software\OCamlEditor" "Install_Dir"
 #!define GTK_RUNTIME C:\devel\GTK2-Runtime
@@ -43,11 +43,11 @@ RequestExecutionLevel Admin
 ;  !insertmacro MUI_UNPAGE_INSTFILES
 ;  !insertmacro MUI_LANGUAGE "English"
 
-VIProductVersion "1.14.0.0"
+VIProductVersion "1.18.0-ocaml414.0"
 VIAddVersionKey "ProductName" "OCamlEditor"
 VIAddVersionKey "LegalCopyright" "Copyright © 2010-2012 Francesco Tovagliari"
 VIAddVersionKey "FileDescription" "OCamlEditor Setup"
-VIAddVersionKey "FileVersion" "1.14.0"
+VIAddVersionKey "FileVersion" "1.18.0-ocaml414"
 ;Icon "share\ocamleditor\icons\ocamleditor.ico"
 
 LicenseText "Please read the following License Agreement. You must accept the terms of this agreement before continuing with the installation."
@@ -97,7 +97,7 @@ Section "OCamlEditor (required)"
   ; Write the uninstall keys for Windows
   WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\OCamlEditor" "DisplayIcon" '"$INSTDIR\bin\ocamleditor.exe"'
   WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\OCamlEditor" "DisplayName" "OCamlEditor"
-  WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\OCamlEditor" "DisplayVersion" "1.14.0"
+  WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\OCamlEditor" "DisplayVersion" "1.18.0-ocaml414"
   WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\OCamlEditor" "UninstallString" '"$INSTDIR\uninstall.exe"'
   WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\OCamlEditor" "InstallLocation" '"$INSTDIR"'
   WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\OCamlEditor" "HelpLink" "http://ocamleditor.forge.ocamlcore.org"

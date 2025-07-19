@@ -584,7 +584,7 @@
           <cmd>ocaml</cmd>
           <args>
             <arg enabled="true">mkversion.ml</arg>
-            <arg enabled="true">1.15.2-ocaml414</arg>
+            <arg enabled="true">1.18.0-ocaml414</arg>
           </args>
           <phase>Before_clean</phase>
         </task>
