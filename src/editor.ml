@@ -70,6 +70,8 @@ class editor () =
     val mutable word_wrap = Preferences.preferences#get.editor_wrap
     val mutable show_outline = true
 
+    method status_message = notification#call
+
     method tout_delim = tout_delim
 
     method paned = hpaned
@@ -304,11 +306,12 @@ class editor () =
             ~buffer:(page#buffer#get_text ())
             ~iter
           |> begin function
-          | Merlin.Ok (Some location) ->
+          | Merlin.Ok (Some range) ->
               GtkThread.async begin fun () ->
-                let open Definition in
+                let open Merlin_t in
                 self#location_history_add ~page ~iter ~kind:`BROWSE ();
-                self#goto_location location.filename location.line location.col;
+                let filename = match range.file with None -> "" | Some x -> x in
+                self#goto_location filename range.start.line range.start.col;
               end ()
           | Merlin.Ok None -> ()
           | Merlin.Failure msg -> Printf.printf "%s\n%!" msg

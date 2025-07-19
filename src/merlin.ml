@@ -218,7 +218,11 @@ let type_expression ~position:(line, col) ~expression ~filename ~buffer =
 let occurrences ~identifier_at:(line, col) ?scope ~filename ~buffer () =
   let identifier_at = sprintf "%d:%d" line col in
   "occurrences" :: "-identifier-at" :: identifier_at ::
-  (match scope with None -> "" | Some `Buffer -> sprintf "-scope buffer" | Some `Project -> "-scope project") :: []
+  (match scope with
+   | None -> ""
+   | Some `Buffer -> sprintf "-scope buffer"
+   | Some `Project -> "-scope project"
+   | Some `Renaming -> "-scope renaming") :: []
   |> execute_async filename buffer
   |> Async.map begin fun json ->
     match Merlin_j.occurrences_answer_of_string json with

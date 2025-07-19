@@ -24,7 +24,7 @@
 module Log = Common.Log.Make(struct let prefix = "MARK_OCCURRENCES" end)
 let _ =
   Log.set_print_timestamp true;
-  Log.set_verbosity `ERROR
+  Log.set_verbosity `DEBUG
 
 class manager ~view =
   let buffer = view#tbuffer in
@@ -108,23 +108,32 @@ class manager ~view =
         | Merlin.Ok ranges ->
             let open Merlin_j in
             if last_merlin_invoke_time = buffer#last_edit_time then
-              (*Gmisclib.Idle.add begin fun () ->*)
-              GtkThread.async begin fun () ->
+              Gmisclib.Idle.add begin fun () ->
+                (*GtkThread.async begin fun () ->*)
                 self#clear_refs() |> ignore;
                 ranges
                 |> List.fold_left begin fun acc range ->
-                  if range.start.line > 0 then begin
-                    let start = buffer#get_iter (`LINECHAR (range.start.line - 1, range.start.col)) in
-                    let stop = buffer#get_iter (`LINECHAR (range.stop.line - 1, range.stop.col)) in
-                    let m1 = buffer#create_mark ?name:None ?left_gravity:None start in
-                    let m2 = buffer#create_mark ?name:None ?left_gravity:None stop in
-                    ref_marks <- (`MARK m1, `MARK m2) :: ref_marks;
-                    `Ref (m1, m2) :: acc;
+                  let last_line = buffer#end_iter#line + 1 in
+                  if 0 < range.start.line && range.start.line <= last_line &&
+                     0 < range.stop.line && range.stop.line <= buffer#end_iter#line + 1
+                  then begin
+                    let start_line = buffer#get_iter (`LINE (range.start.line - 1)) in
+                    if range.start.col < start_line#chars_in_line then
+                      let stop_line = buffer#get_iter (`LINE (range.stop.line - 1)) in
+                      if range.stop.col < stop_line#chars_in_line then
+                        let start = buffer#get_iter (`LINECHAR (range.start.line - 1, range.start.col)) in
+                        let stop = buffer#get_iter (`LINECHAR (range.stop.line - 1, range.stop.col)) in
+                        let m1 = buffer#create_mark ?name:None ?left_gravity:None start in
+                        let m2 = buffer#create_mark ?name:None ?left_gravity:None stop in
+                        ref_marks <- (`MARK m1, `MARK m2) :: ref_marks;
+                        `Ref (m1, m2) :: acc
+                      else acc
+                    else acc
                   end else acc
                 end []
                 |> view#add_outline_text;
-                if ref_marks <> [] then mark_set#call()
-              end ()
+                if ref_marks <> [] then mark_set#call();
+              end
         | Merlin.Failure _ | Merlin.Error _ -> ()
         end
       end

@@ -45,7 +45,7 @@ let analyse ?(utf8=true) ?pend ?(error=ignore) text f =
         let stop = Lexing.lexeme_end lexbuf in
         let length = stop - start in
         let lexeme = Bytes.sub_string lexbuf.lex_buffer start length in
-        pend := f ~token ~lexeme ~start ~length ~lexbuf;
+        pend := f ~token ~lexeme ~start ~stop ~lexbuf;
     done
   with
   | End_of_file -> ()
@@ -73,7 +73,7 @@ let scan ?(utf8=true) ?(ignore_lexer_error=true) text f =
 (** Moduli aperti con "open" nel testo. *)
 let paths_opened text =
   let paths = ref [] in
-  analyse text begin fun ~token ~lexeme:_ ~start:_ ~length:_ ~lexbuf ->
+  analyse text begin fun ~token ~lexeme:_ ~start:_ ~stop:_ ~lexbuf ->
     match [@warning "-4"] token with
     | OPEN ->
         let path = ref "" in
@@ -95,10 +95,10 @@ let paths_opened text =
 (** Tutte le stringhe. *)
 let strings text =
   let strings = ref [] in
-  analyse text begin fun ~token ~lexeme:_ ~start ~length ~lexbuf:_ ->
+  analyse text begin fun ~token ~lexeme:_ ~start ~stop ~lexbuf:_ ->
     match [@warning "-4"] token with
     | STRING (s, _, _) ->
-        strings := {lexeme = s; start = start; length = length} :: !strings;
+        strings := {lexeme = s; start = start; length = stop - start} :: !strings;
         None
     | _ -> None
   end;
@@ -107,10 +107,10 @@ let strings text =
 (** in_string *)
 let in_string ?(utf8=true) text =
   let strings = ref [] in
-  analyse ~utf8 text begin fun ~token ~lexeme:_ ~start ~length ~lexbuf:_ ->
+  analyse ~utf8 text begin fun ~token ~lexeme:_ ~start ~stop ~lexbuf:_ ->
     match [@warning "-4"] token with
     | STRING _ ->
-        strings := (start, start + length) :: !strings;
+        strings := (start, stop) :: !strings;
         None
     | _ -> None
   end;
@@ -121,31 +121,71 @@ let in_string ?(utf8=true) text =
     | [] -> false
   in find !strings
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+let for_renaming text pos =
+  let exception Found of
+      [ `None | `Label | `Record_label_semi | `Record_label_equal | `Dot_lident
+      | `Lident | `Uident ]
+  in
+  let tilde = ref false in
+  let lbrace = ref 0 in
+  let check_record_label lexbuf =
+    match [@warning "-4"] Lexer.token lexbuf with
+    | LIDENT _ ->
+        let start = Lexing.lexeme_start lexbuf in
+        let stop = Lexing.lexeme_end lexbuf in
+        if start <= pos && pos <= stop then begin
+          match Lexer.token lexbuf with
+          | SEMI -> raise (Found `Record_label_semi)
+          | EQUAL -> raise (Found `Record_label_equal)
+          | _ -> ()
+        end
+    | _ -> ()
+  in
+  try
+    analyse text begin fun ~token ~lexeme ~start ~stop ~lexbuf ->
+      if !tilde && start <= pos && pos <= stop then begin
+        match [@warning "-4"] token with
+        | LIDENT _ -> raise (Found `Label)
+        | _ -> None
+      end else begin
+        tilde := false;
+        match [@warning "-4"] token with
+        | TILDE | QUESTION ->
+            tilde := true;
+            None
+        | LBRACE ->
+            incr lbrace;
+            check_record_label lexbuf;
+            None
+        | RBRACE ->
+            decr lbrace;
+            None
+        | SEMI when !lbrace > 0 ->
+            check_record_label lexbuf;
+            None
+        | DOT ->
+            begin
+              match [@warning "-4"] Lexer.token lexbuf with
+              | LIDENT _ ->
+                  let start = Lexing.lexeme_start lexbuf in
+                  let stop = Lexing.lexeme_end lexbuf in
+                  if start <= pos && pos <= stop then begin
+                    raise (Found `Dot_lident)
+                  end
+              | _ -> ()
+            end;
+            None
+        | LIDENT _ when !lbrace = 0 && start <= pos && pos <= stop ->
+            raise (Found `Lident);
+        | UIDENT _ when start <= pos && pos <= stop ->
+            raise (Found `Uident);
+        | _ -> None
+      end
+    end;
+    `None
+  with
+  | Found result -> result
+  | _ -> `None
 
 
 

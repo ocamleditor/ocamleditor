@@ -139,6 +139,10 @@ let edit ~browser ~group ~flags
       browser#with_current_project (fun project ->
           editor#with_current_page (fun page -> Templ.popup project page#ocaml_view))));
   templates#add_accelerator ~group ~modi:[`CONTROL] GdkKeysyms._j ~flags;
+  (* Rename *)
+  let rename = GMenu.image_menu_item ~label:"Rename Symbol" ~packing:menu#add () in
+  rename#add_accelerator ~group ~modi:[] GdkKeysyms._F2 ~flags;
+  rename#connect#activate ~callback:(fun () -> Rename.rename editor) |> ignore;
   (* Completion *)
   let complet = GMenu.menu_item ~label:"Completion" ~packing:menu#add () in
   ignore (complet#connect#activate ~callback:begin fun () ->
@@ -294,12 +298,6 @@ let search ~browser ~group ~flags items =
   find_references#add_accelerator ~group ~modi:[`SHIFT] GdkKeysyms._F12 ~flags;
   find_references#add_accelerator ~group ~modi:[`CONTROL; `SHIFT] GdkKeysyms._Return ~flags;
   ignore (find_references#connect#activate ~callback:(fun () -> Menu_search.find_definition_references editor));
-  (* Occurrences *)
-  let occurrences = GMenu.image_menu_item ~label:"Occurrences (experimental)" ~packing:menu#add () in
-  occurrences#add_accelerator ~group ~modi:[] GdkKeysyms._F2 ~flags;
-  occurrences#connect#activate ~callback:begin fun () ->
-    Menu_search.local_refs editor
-  end |> ignore;
   (*  *)
   ignore (search_item#misc#connect#state_changed ~callback:begin fun state ->
       if state = `NORMAL then begin
