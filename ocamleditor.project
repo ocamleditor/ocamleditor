@@ -31,21 +31,7 @@
       <target_type>Library</target_type>
       <outname>common/common</outname>
       <lib_install_path></lib_install_path>
-      <external_tasks>
-        <task name="comp_process_termination">
-          <always_run_in_project>true</always_run_in_project>
-          <always_run_in_script>true</always_run_in_script>
-          <readonly>false</readonly>
-          <visible>true</visible>
-          <env replace="false"/>
-          <dir>..</dir>
-          <cmd>ocaml</cmd>
-          <args>
-            <arg enabled="true">tools/comp_process_termination.ml</arg>
-          </args>
-          <phase>Before_compile</phase>
-        </task>
-      </external_tasks>
+      <external_tasks/>
       <restrictions></restrictions>
       <dependencies></dependencies>
     </target>
@@ -192,7 +178,7 @@
       <descr></descr>
       <byt>false</byt>
       <opt>true</opt>
-      <libs>process_termination odoc_info gmisclib common icons otherwidgets oebuildlib ocamleditor_lib</libs>
+      <libs>odoc_info gmisclib common icons otherwidgets oebuildlib ocamleditor_lib</libs>
       <other_objects></other_objects>
       <files>ocamleditor.ml</files>
       <package>atdgen-runtime,compiler-libs.common,ocamldiff,dynlink,lablgtk2,ocamldoc,ocp-indent.lib,str,unix,xml-light,yojson</package>
@@ -217,7 +203,7 @@
       <descr></descr>
       <byt>true</byt>
       <opt>false</opt>
-      <libs>process_termination odoc_info gmisclib common icons otherwidgets oebuildlib</libs>
+      <libs>odoc_info gmisclib common icons otherwidgets oebuildlib</libs>
       <other_objects></other_objects>
       <files>ocamleditor.ml</files>
       <package>atdgen-runtime,compiler-libs.common,ocamldiff,dynlink,lablgtk2,ocamldoc,ocp-indent.lib,str,unix,xml-light,yojson</package>
@@ -242,7 +228,7 @@
       <descr></descr>
       <byt>false</byt>
       <opt>true</opt>
-      <libs>process_termination odoc_info gmisclib common icons otherwidgets oebuildlib ocamleditor_lib</libs>
+      <libs>odoc_info gmisclib common icons otherwidgets oebuildlib ocamleditor_lib</libs>
       <other_objects></other_objects>
       <files>ocamleditor.ml</files>
       <package>compiler-libs.common,dynlink,lablgtk2,ocamldoc,ocp-indent.lib,str,unix,xml-light,yojson</package>
@@ -291,7 +277,7 @@
       <descr></descr>
       <byt>false</byt>
       <opt>true</opt>
-      <libs>process_termination odoc_info gmisclib common icons otherwidgets oebuildlib ocamleditor_lib</libs>
+      <libs>odoc_info gmisclib common icons otherwidgets oebuildlib ocamleditor_lib</libs>
       <other_objects></other_objects>
       <files>ocamleditor.ml</files>
       <package>atdgen-runtime,compiler-libs.common,ocamldiff,dynlink,lablgtk2,ocamldoc,ocp-indent.lib,str,unix,xml-light,yojson</package>

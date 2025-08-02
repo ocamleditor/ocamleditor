@@ -151,7 +151,7 @@ class view ~(editor : Editor.editor) ?(task_kind=(`OTHER : Task.kind)) ~task ?pa
 
     method stop () =
       match process with None -> () | Some proc ->
-        let exit_value = Process_termination.kill proc.Spawn.pid in
+        Unix.kill proc.Spawn.pid 9 |> ignore;
         killed <- true;
         self#close()
 

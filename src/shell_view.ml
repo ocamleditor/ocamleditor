@@ -68,7 +68,7 @@ class widget ~prog ~(env : string array) ~(args : string list) ?packing ?show ()
       alive <- false;
       view#misc#set_sensitive false;
       try
-        Process_termination.kill process.Spawn.pid |> ignore;
+        Unix.kill ~pid:process.Spawn.pid ~signal:9 |> ignore;
         Unix.waitpid ~mode:[] process.Spawn.pid |> ignore
       with Unix.Unix_error (Unix.ESRCH, _, _) -> ()
 

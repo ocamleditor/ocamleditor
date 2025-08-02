@@ -284,7 +284,7 @@ module Shell = struct (*
 *)
 
 
-let redirect_stderr = if Sys.win32 then " 2>NUL" else " 2>/dev/null"
+let redirect_stderr = " 2>/dev/null"
 
 (** get_command_output *)
 let get_command_output command =
@@ -303,12 +303,10 @@ let get_command_output command =
     end
 
 (** quote_path *)
-let quote_path = if Sys.os_type = "Win32" then (fun x -> Filename.quote (Filename.quote x))
-  else (fun x -> x)
+let quote_path = Fun.id
 
 (** quote_arg *)
-let quote_arg = if Sys.os_type = "Win32" then (fun x -> Filename.quote x)
-  else (fun x -> x)
+let quote_arg = Fun.id
 
 type state = StartArg | InUnquotedArg | InQuotedArg | InQuotedArgAfterQuote;;
 
@@ -392,7 +390,7 @@ module Ocaml_config = struct (*
 
 open Printf
 
-let redirect_stderr = if Sys.os_type = "Win32" then " 2>NUL" else " 2>/dev/null"
+let redirect_stderr = " 2>/dev/null"
 
 
 let read_ocaml_config () =
@@ -433,8 +431,7 @@ let find_tool which path =
     | `OCAMLC -> ["ocamlc"]
     | `OCAML -> ["ocaml"]
   in
-  let commands = if Sys.win32 then List.map (fun c -> if Filename.check_suffix c ".opt" then c ^ ".exe" else c) commands else commands in
-  let quote    = if path <> "" && Sys.os_type = "Win32" && String.contains path ' ' then Filename.quote else (fun x -> x) in
+  let quote    = Fun.id in
   let path     = if path <> "" then Filename.concat path "bin" else "" in
   find_best_compiler (List.map quote (List.map (Filename.concat path) commands))
 
@@ -472,7 +469,7 @@ let can_compile_native ?ocaml_home () =
     with _ -> (close_out ochan)
   end;
   let outname = Filename.chop_extension filename in
-  let exename = outname ^ (if Sys.os_type = "Win32" then ".exe" else "") in
+  let exename = outname in
   let compiler = match ocaml_home with
     | Some home -> find_tool `BEST_OCAMLOPT home
     | _ -> Some "ocamlopt"
@@ -493,10 +490,6 @@ let can_compile_native ?ocaml_home () =
       if Sys.file_exists obj then (Sys.remove obj);
       let obj = outname ^ ".obj" in
       if Sys.file_exists obj then (Sys.remove obj);
-      if Sys.win32 then begin
-        let manifest = exename ^ ".manifest" in
-        if Sys.file_exists manifest then (Sys.remove manifest);
-      end;
       if !result then begin
         let conf = String.concat "\n" (kprintf Shell.get_command_output "%s -config" compiler) in
         let re = Str.regexp "ccomp_type: \\(.*\\)\n" in
@@ -616,7 +609,7 @@ let application_fonts = get_application_dir "fonts"
 let application_plugins = get_application_dir "plugins"
 
 let find_best ?(param="--help") prog =
-  let redirect_stderr = if Sys.os_type = "Win32" then " 2>NUL" else " 2>/dev/null" in
+  let redirect_stderr = " 2>/dev/null" in
   try
     List.find begin fun comp ->
       let ok =
@@ -634,7 +627,7 @@ let find_best ?(param="--help") prog =
     kprintf failwith "Cannot find: %s" (String.concat ", " prog)
 
 let find_command name =
-  let basename = name ^ (if Sys.win32 then ".exe" else "") in
+  let basename = name in
   let path = (!! Sys.executable_name) // basename in
   if Sys.file_exists path && not (Sys.is_directory path) then path
   else
@@ -1033,7 +1026,7 @@ let (//) = Filename.concat
 let (^^^) = Filename.check_suffix
 let (<@) = List.mem
 let win32 = (fun a b -> match Sys.os_type with "Win32" -> a | _ -> b)
-let redirect_stderr_to_null = if Sys.os_type = "Win32" then " 2>NUL" else " 2>/dev/null"
+let redirect_stderr_to_null = " 2>/dev/null"
 
 (** format_int *)
 let format_int n =
@@ -1201,7 +1194,7 @@ let get_effective_command =
       let effective_compiler = Str.string_after effective_compiler 2  in
       let effective_compiler = Str.replace_first re_verbose "" effective_compiler in
       let a, b = split_prog_args effective_compiler in
-      (if Sys.win32 then a ^ ".exe" else a), b
+      a, b
     with Not_found -> split_prog_args ocamlfind
 ;;
 
@@ -2095,7 +2088,7 @@ let ocamllib = Ocaml_config.ocamllib()
 
 (** check_package_list *)
 let check_package_list =
-  let redirect_stderr = if Sys.os_type = "Win32" then " 1>NUL 2>NUL" else " 1>/dev/null 2>/dev/null" in
+  let redirect_stderr = " 1>/dev/null 2>/dev/null" in
   fun package_list ->
     let package_list = Str.split (Str.regexp "[, ]") package_list in
     let available, unavailable =
@@ -2242,30 +2235,13 @@ let install ~compilation ~outkind ~outname ~deps ~path ~ccomp_type =
 (** run_output *)
 let run_output ~outname ~args =
   let args = List.rev args in
-  if Sys.win32 then begin
-    let cmd = Str.global_replace (Str.regexp "/") "\\\\" outname in
-    let cmd = Filename.current_dir_name // cmd in
-
-    (*let args = cmd :: args in
-      let args = Array.of_list args in
-      Unix.execv cmd args*)
-
-    (*let args = String.concat " " args in
-      ignore (kprintf command "%s %s" cmd args)*)
-
-    Spawn.sync
-      ~process_in:Spawn.redirect_to_stdout ~process_err:Spawn.redirect_to_stderr
-      cmd (Array.of_list args) |> ignore
-
-  end else begin
-    let cmd = Filename.current_dir_name // outname in
-    (* From the execv manpage:
-       "The first argument, by convention, should point to the filename associated
-       with the file being executed." *)
-    let args = cmd :: args in
-    let args = Array.of_list args in
-    Unix.execv cmd args
-  end
+  let cmd = Filename.current_dir_name // outname in
+  (* From the execv manpage:
+     "The first argument, by convention, should point to the filename associated
+     with the file being executed." *)
+  let args = cmd :: args in
+  let args = Array.of_list args in
+  Unix.execv cmd args
 ;;
 
 (** sort_dependencies *)
@@ -2580,7 +2556,7 @@ let check_restrictions restr =
   | res when Str.string_match re_fl_pkg_exist res 0 ->
       let packages = Str.matched_group 2 res in
       let packages = Str.split re_comma packages in
-      let redirect_stderr = if Sys.os_type = "Win32" then " 1>NUL 2>NUL" else " 1>/dev/null 2>/dev/null" in
+      let redirect_stderr = " 1>/dev/null 2>/dev/null" in
       packages = [] || List.for_all begin fun package ->
         kprintf (Oebuild_util.command ~echo:false) "ocamlfind query %s %s" package redirect_stderr = 0
       end packages
@@ -2876,17 +2852,7 @@ and build ~targets:avail_targets ~external_tasks ~etasks ~deps ~compilation ~out
   if tasks_compile <> [] then List.iter ETask.execute (tasks_compile)
   else
     let crono = if !Option.verbosity >= 3 then Oebuild_util.crono else fun ?label f x -> f x in
-    let libs =
-      match target.rc_filename with
-      | Some rc_filename when Sys.win32 ->
-          let exit_code = Sys.command "where rc 2>&1 1>NUL" in
-          if exit_code <> 0 then target.required_libraries
-          else
-            let exit_code = Sys.command "where cvtres 2>&1 1>NUL" in
-            if exit_code <> 0 then target.required_libraries
-            else (Filename.basename (Filename.chop_extension rc_filename)) ^ ".obj " ^ target.required_libraries
-      | _ -> target.required_libraries
-    in
+    let libs = target.required_libraries in
     match crono ~label:"Build time" (Oebuild.build
                                        ~compilation
                                        ~package:target.package
@@ -3102,20 +3068,6 @@ let cmd_line_args = [
 let external_tasks = [
   
   0, (fun command -> {
-    et_name                  = "comp_process_termination";
-    et_env                   = [];
-    et_env_replace           = false;
-    et_dir                   = "..";
-    et_cmd                   = "ocaml";
-    et_args                  = [true,"tools/comp_process_termination.ml"];
-    et_phase                 = Some Before_compile;
-    et_always_run_in_project = true;
-    et_always_run_in_script  = true;
-    et_readonly              = false;
-    et_visible               = true;
-  });
-  
-  1, (fun command -> {
     et_name                  = "mkicons";
     et_env                   = [];
     et_env_replace           = false;
@@ -3129,7 +3081,7 @@ let external_tasks = [
     et_visible               = true;
   });
   
-  2, (fun command -> {
+  1, (fun command -> {
     et_name                  = "RC_COMPILE";
     et_env                   = [];
     et_env_replace           = false;
@@ -3143,7 +3095,7 @@ let external_tasks = [
     et_visible               = false;
   });
   
-  3, (fun command -> {
+  2, (fun command -> {
     et_name                  = "prepare-build";
     et_env                   = [];
     et_env_replace           = false;
@@ -3157,7 +3109,7 @@ let external_tasks = [
     et_visible               = true;
   });
   
-  4, (fun command -> {
+  3, (fun command -> {
     et_name                  = "RC_COMPILE";
     et_env                   = [];
     et_env_replace           = false;
@@ -3171,7 +3123,7 @@ let external_tasks = [
     et_visible               = false;
   });
   
-  5, (fun command -> {
+  4, (fun command -> {
     et_name                  = "SUBSYSTEM:WINDOWS";
     et_env                   = [];
     et_env_replace           = false;
@@ -3185,7 +3137,7 @@ let external_tasks = [
     et_visible               = false;
   });
   
-  6, (fun command -> {
+  5, (fun command -> {
     et_name                  = "mkrelease";
     et_env                   = [];
     et_env_replace           = false;
@@ -3199,7 +3151,7 @@ let external_tasks = [
     et_visible               = true;
   });
   
-  7, (fun command -> {
+  6, (fun command -> {
     et_name                  = "mkversion";
     et_env                   = [];
     et_env_replace           = false;
@@ -3213,7 +3165,7 @@ let external_tasks = [
     et_visible               = true;
   });
   
-  8, (fun command -> {
+  7, (fun command -> {
     et_name                  = "generate_oebuild_script";
     et_env                   = [];
     et_env_replace           = false;
@@ -3227,7 +3179,7 @@ let external_tasks = [
     et_visible               = true;
   });
   
-  9, (fun command -> {
+  8, (fun command -> {
     et_name                  = "Install OCamlEditor";
     et_env                   = [];
     et_env_replace           = false;
@@ -3245,7 +3197,7 @@ let external_tasks = [
     et_visible               = true;
   });
   
-  10, (fun command -> {
+  9, (fun command -> {
     et_name                  = "Uninstall OCamlEditor";
     et_env                   = [];
     et_env_replace           = false;
@@ -3262,7 +3214,7 @@ let external_tasks = [
     et_visible               = true;
   });
   
-  11, (fun command -> {
+  10, (fun command -> {
     et_name                  = "distclean";
     et_env                   = [];
     et_env_replace           = false;
@@ -3276,7 +3228,7 @@ let external_tasks = [
     et_visible               = true;
   });
   
-  12, (fun command -> {
+  11, (fun command -> {
     et_name                  = "install";
     et_env                   = [];
     et_env_replace           = false;
@@ -3290,7 +3242,7 @@ let external_tasks = [
     et_visible               = true;
   });
   
-  13, (fun command -> {
+  12, (fun command -> {
     et_name                  = "uninstall";
     et_env                   = [];
     et_env_replace           = false;
@@ -3304,7 +3256,7 @@ let external_tasks = [
     et_visible               = true;
   });
   
-  14, (fun command -> {
+  13, (fun command -> {
     et_name                  = "reinstall";
     et_env                   = [];
     et_env_replace           = false;
@@ -3318,7 +3270,7 @@ let external_tasks = [
     et_visible               = true;
   });
   
-  15, (fun command -> {
+  14, (fun command -> {
     et_name                  = "print";
     et_env                   = [];
     et_env_replace           = false;
@@ -3335,9 +3287,9 @@ let external_tasks = [
 
 
 let general_commands = [
-  `Distclean, (11, "distclean");
-  `Install, (9, "Install OCamlEditor");
-  `Uninstall, (10, "Uninstall OCamlEditor");
+  `Distclean, (10, "distclean");
+  `Install, (8, "Install OCamlEditor");
+  `Uninstall, (9, "Uninstall OCamlEditor");
 ]
 
 
@@ -3369,7 +3321,7 @@ let targets = [
     dontaddopt           = false;
     library_install_dir  = ""; (* Relative to the Standard Library Directory *)
     other_objects        = "";
-    external_tasks       = [0];
+    external_tasks       = [];
     restrictions         = [];
     dependencies         = [];
     show                 = false;
@@ -3400,7 +3352,7 @@ let targets = [
     dontaddopt           = false;
     library_install_dir  = ""; (* Relative to the Standard Library Directory *)
     other_objects        = "";
-    external_tasks       = [1];
+    external_tasks       = [0];
     restrictions         = [];
     dependencies         = [];
     show                 = false;
@@ -3543,7 +3495,7 @@ let targets = [
     toplevel_modules     = "ocamleditor.ml";
     package              = "atdgen-runtime,compiler-libs.common,ocamldiff,dynlink,lablgtk2,ocamldoc,ocp-indent.lib,str,unix,xml-light,yojson";
     search_path          = "gmisclib common icons otherwidgets oebuild "; (* -I *)
-    required_libraries   = "process_termination odoc_info gmisclib common icons otherwidgets oebuildlib ocamleditor_lib";
+    required_libraries   = "odoc_info gmisclib common icons otherwidgets oebuildlib ocamleditor_lib";
     compiler_flags       = "-w -s-y-x-m -g";
     linker_flags         = "-g";
     thread               = true;
@@ -3574,7 +3526,7 @@ let targets = [
     toplevel_modules     = "ocamleditor.ml";
     package              = "atdgen-runtime,compiler-libs.common,ocamldiff,dynlink,lablgtk2,ocamldoc,ocp-indent.lib,str,unix,xml-light,yojson";
     search_path          = "gmisclib common icons otherwidgets oebuild "; (* -I *)
-    required_libraries   = "process_termination odoc_info gmisclib common icons otherwidgets oebuildlib";
+    required_libraries   = "odoc_info gmisclib common icons otherwidgets oebuildlib";
     compiler_flags       = "-w -s-y-x-m -g";
     linker_flags         = "-g";
     thread               = true;
@@ -3605,7 +3557,7 @@ let targets = [
     toplevel_modules     = "ocamleditor.ml";
     package              = "compiler-libs.common,dynlink,lablgtk2,ocamldoc,ocp-indent.lib,str,unix,xml-light,yojson";
     search_path          = "gmisclib common icons otherwidgets oebuild "; (* -I *)
-    required_libraries   = "process_termination odoc_info gmisclib common icons otherwidgets oebuildlib ocamleditor_lib";
+    required_libraries   = "odoc_info gmisclib common icons otherwidgets oebuildlib ocamleditor_lib";
     compiler_flags       = "-w -s-y-x-m -g";
     linker_flags         = "-g";
     thread               = true;
@@ -3617,7 +3569,7 @@ let targets = [
     dontaddopt           = false;
     library_install_dir  = ""; (* Relative to the Standard Library Directory *)
     other_objects        = "";
-    external_tasks       = [2];
+    external_tasks       = [1];
     restrictions         = ["IS_WIN32"];
     dependencies         = [14; 19; 16; 22];
     show                 = true;
@@ -3636,7 +3588,7 @@ let targets = [
     toplevel_modules     = "ocamleditor.ml";
     package              = "atdgen-runtime,compiler-libs.common,ocamldiff,dynlink,lablgtk2,ocamldoc,ocp-indent.lib,str,unix,xml-light,yojson";
     search_path          = "gmisclib common icons otherwidgets oebuild "; (* -I *)
-    required_libraries   = "process_termination odoc_info gmisclib common icons otherwidgets oebuildlib ocamleditor_lib";
+    required_libraries   = "odoc_info gmisclib common icons otherwidgets oebuildlib ocamleditor_lib";
     compiler_flags       = "-w -s-y-x-m -g";
     linker_flags         = "-g";
     thread               = true;
@@ -3834,7 +3786,7 @@ let targets = [
     dontaddopt           = false;
     library_install_dir  = ""; (* Relative to the Standard Library Directory *)
     other_objects        = "";
-    external_tasks       = [3];
+    external_tasks       = [2];
     restrictions         = [];
     dependencies         = [];
     show                 = false;
@@ -3865,7 +3817,7 @@ let targets = [
     dontaddopt           = true;
     library_install_dir  = ""; (* Relative to the Standard Library Directory *)
     other_objects        = "";
-    external_tasks       = [4; 5];
+    external_tasks       = [3; 4];
     restrictions         = ["OCAML(system<>mingw)"];
     dependencies         = [];
     show                 = true;
@@ -3896,7 +3848,7 @@ let targets = [
     dontaddopt           = false;
     library_install_dir  = ""; (* Relative to the Standard Library Directory *)
     other_objects        = "";
-    external_tasks       = [6; 7; 8; 9; 10; 11];
+    external_tasks       = [5; 6; 7; 8; 9; 10];
     restrictions         = [];
     dependencies         = [];
     show                 = false;
@@ -3927,7 +3879,7 @@ let targets = [
     dontaddopt           = false;
     library_install_dir  = ""; (* Relative to the Standard Library Directory *)
     other_objects        = "";
-    external_tasks       = [12; 13; 14; 15];
+    external_tasks       = [11; 12; 13; 14];
     restrictions         = [];
     dependencies         = [];
     show                 = false;
