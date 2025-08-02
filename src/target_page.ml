@@ -178,14 +178,6 @@ class view ~project ~target_list ?packing () =
           chooser#destroy()
       | _ -> chooser#destroy()
     end in
-  (*let win32_box = GBin.frame ~label:" Native MS Application " ~packing:box#pack () in
-    let box = GPack.hbox ~border_width:5 ~spacing:8 ~packing:win32_box#add () in
-    let label = GMisc.label ~text:"Subsystem: " ~packing:box#pack () in
-    let combo_subsystem, _ = GEdit.combo_box_text
-      ~strings:["Console"; "Windows"]
-      ~active:0 ~packing:box#pack () in
-    let align = GBin.alignment ~xscale:0.0 ~xalign:1.0 ~packing:box#add () in
-    let button_resource_file = GButton.button ~label:((if Ocaml_config.is_mingw then "" else "Icons and ") ^ "Assembly Information...") ~packing:align#add () in*)
 
   (** Radio External *)
   let mbox = GPack.vbox ~spacing:0 ~packing:(vbox#pack ~expand:false) () in

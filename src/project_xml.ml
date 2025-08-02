@@ -95,19 +95,7 @@ let write proj =
                                       end t.Target.external_tasks);
                          Xml.Element ("restrictions", [], [Xml.PCData (String.concat "&" t.Target.restrictions)]);
                          Xml.Element ("dependencies", [], [Xml.PCData (String.concat "," (List.map string_of_int t.Target.dependencies))]);
-                       ] @ (match t.Target.resource_file with
-              | None -> []
-              | Some rc -> [
-                  Xml.Element ("resource_file", [],
-                               let open Resource_file in [
-                                 Xml.Element ("filename", [], [Xml.PCData rc.rc_filename]);
-                                 Xml.Element ("title", [], [Xml.PCData rc.rc_title]);
-                                 Xml.Element ("company", [], [Xml.PCData rc.rc_company]);
-                                 Xml.Element ("product", [], [Xml.PCData rc.rc_product]);
-                                 Xml.Element ("copyright", [], [Xml.PCData rc.rc_copyright]);
-                                 Xml.Element ("file_version", [], [Xml.PCData (match rc.rc_file_version with a,b,c,d -> sprintf "%d.%d.%d.%d" a b c d)]);
-                                 Xml.Element ("icons", [], List.map (fun (fn(*, _*)) -> Xml.Element ("icon", [], [Xml.PCData fn])) rc.rc_icons(*_data*));
-                               ])])
+                       ]
             ) end proj.targets);
       Xml.Element ("executables", [], List.map begin fun t ->
           Xml.Element ("executable", [
@@ -385,24 +373,7 @@ let read filename =
               | "runtime_args" | "run" ->
                   runtime_args := (attrib tp "enabed" bool_of_string true, value tp);
               | "lib_install_path" -> target.lib_install_path <- value tp
-              | "resource_file" ->
-                  let rc = Resource_file.create () in
-                  Xml.iter begin fun nrc ->
-                    let open Resource_file in
-                    match Xml.tag nrc with
-                    | "filename" ->
-                        target.resource_file <- Some rc;
-                        rc.rc_filename <- value nrc
-                    | "title" -> rc.rc_title <- value nrc
-                    | "company" -> rc.rc_company <- value nrc
-                    | "product" -> rc.rc_product <- value nrc
-                    | "file_version" -> rc.rc_file_version <- (match Str.split (!~ "\\.") (value nrc) with
-                        | [a;b;c;d] -> int_of_string a, int_of_string b, int_of_string c, int_of_string d | _ -> assert false)
-                    | "copyright" -> rc.rc_copyright <- value nrc
-                    | "icons" ->
-                        rc.rc_icons(*_data*) <- List.rev (Xml.fold (fun acc name -> (value name(*, Buffer.create 1000*)) :: acc) [] nrc);
-                    | _ -> ()
-                  end tp;
+              | "resource_file" -> () (* Obsolete *)
               | "external_tasks" ->
                   let external_tasks =
                     Xml.fold begin fun acc tnode ->

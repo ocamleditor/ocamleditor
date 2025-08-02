@@ -288,28 +288,29 @@ and build ~targets:avail_targets ~external_tasks ~etasks ~deps ~compilation ~out
   else
     let crono = if !Option.verbosity >= 3 then Oebuild_util.crono else fun ?label f x -> f x in
     let libs = target.required_libraries in
-    match crono ~label:"Build time" (Oebuild.build
-                                       ~compilation
-                                       ~package:target.package
-                                       ~includes:target.search_path
-                                       ~libs
-                                       ~other_mods:target.other_objects
-                                       ~outkind:target.target_type
-                                       ~compile_only:false
-                                       ~thread:target.thread
-                                       ~vmthread:target.vmthread
-                                       ~annot:false
-                                       ~bin_annot:false
-                                       ~pp:target.pp
-                                       ?inline:target.inline
-                                       ~cflags:target.compiler_flags
-                                       ~lflags:target.linker_flags
-                                       ~outname
-                                       ~deps
-                                       ~dontlinkdep:target.dontlinkdep
-                                       ~dontaddopt:target.dontaddopt
-                                       ~verbose
-                                       ~toplevel_modules:files) ()
+    match crono ~label:"Build time"
+            (Oebuild.build
+               ~compilation
+               ~package:target.package
+               ~includes:target.search_path
+               ~libs
+               ~other_mods:target.other_objects
+               ~outkind:target.target_type
+               ~compile_only:false
+               ~thread:target.thread
+               ~vmthread:target.vmthread
+               ~annot:false
+               ~bin_annot:false
+               ~pp:target.pp
+               ?inline:target.inline
+               ~cflags:target.compiler_flags
+               ~lflags:target.linker_flags
+               ~outname
+               ~deps
+               ~dontlinkdep:target.dontlinkdep
+               ~dontaddopt:target.dontaddopt
+               ~verbose
+               ~toplevel_modules:files) ()
     with
     | Built_successfully ->
         List.iter ETask.execute (ETask.filter etasks After_compile);

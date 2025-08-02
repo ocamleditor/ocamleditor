@@ -3082,20 +3082,6 @@ let external_tasks = [
   });
   
   1, (fun command -> {
-    et_name                  = "RC_COMPILE";
-    et_env                   = [];
-    et_env_replace           = false;
-    et_dir                   = "";
-    et_cmd                   = "ocaml";
-    et_args                  = [true,"../tools/rc_compile.ml"; true,"\"ocamleditor-msvc\""];
-    et_phase                 = Some Before_compile;
-    et_always_run_in_project = true;
-    et_always_run_in_script  = true;
-    et_readonly              = true;
-    et_visible               = false;
-  });
-  
-  2, (fun command -> {
     et_name                  = "prepare-build";
     et_env                   = [];
     et_env_replace           = false;
@@ -3109,35 +3095,7 @@ let external_tasks = [
     et_visible               = true;
   });
   
-  3, (fun command -> {
-    et_name                  = "RC_COMPILE";
-    et_env                   = [];
-    et_env_replace           = false;
-    et_dir                   = "";
-    et_cmd                   = "ocaml";
-    et_args                  = [true,"../tools/rc_compile.ml"; true,"\"launcher\""];
-    et_phase                 = Some Before_compile;
-    et_always_run_in_project = true;
-    et_always_run_in_script  = true;
-    et_readonly              = true;
-    et_visible               = false;
-  });
-  
-  4, (fun command -> {
-    et_name                  = "SUBSYSTEM:WINDOWS";
-    et_env                   = [];
-    et_env_replace           = false;
-    et_dir                   = "";
-    et_cmd                   = "ocaml";
-    et_args                  = [true,"../tools/editbin.ml"; true,"ocamleditorw"];
-    et_phase                 = Some After_compile;
-    et_always_run_in_project = true;
-    et_always_run_in_script  = true;
-    et_readonly              = true;
-    et_visible               = false;
-  });
-  
-  5, (fun command -> {
+  2, (fun command -> {
     et_name                  = "mkrelease";
     et_env                   = [];
     et_env_replace           = false;
@@ -3151,7 +3109,7 @@ let external_tasks = [
     et_visible               = true;
   });
   
-  6, (fun command -> {
+  3, (fun command -> {
     et_name                  = "mkversion";
     et_env                   = [];
     et_env_replace           = false;
@@ -3165,7 +3123,7 @@ let external_tasks = [
     et_visible               = true;
   });
   
-  7, (fun command -> {
+  4, (fun command -> {
     et_name                  = "generate_oebuild_script";
     et_env                   = [];
     et_env_replace           = false;
@@ -3179,7 +3137,7 @@ let external_tasks = [
     et_visible               = true;
   });
   
-  8, (fun command -> {
+  5, (fun command -> {
     et_name                  = "Install OCamlEditor";
     et_env                   = [];
     et_env_replace           = false;
@@ -3197,7 +3155,7 @@ let external_tasks = [
     et_visible               = true;
   });
   
-  9, (fun command -> {
+  6, (fun command -> {
     et_name                  = "Uninstall OCamlEditor";
     et_env                   = [];
     et_env_replace           = false;
@@ -3214,7 +3172,7 @@ let external_tasks = [
     et_visible               = true;
   });
   
-  10, (fun command -> {
+  7, (fun command -> {
     et_name                  = "distclean";
     et_env                   = [];
     et_env_replace           = false;
@@ -3228,7 +3186,7 @@ let external_tasks = [
     et_visible               = true;
   });
   
-  11, (fun command -> {
+  8, (fun command -> {
     et_name                  = "install";
     et_env                   = [];
     et_env_replace           = false;
@@ -3242,7 +3200,7 @@ let external_tasks = [
     et_visible               = true;
   });
   
-  12, (fun command -> {
+  9, (fun command -> {
     et_name                  = "uninstall";
     et_env                   = [];
     et_env_replace           = false;
@@ -3256,7 +3214,7 @@ let external_tasks = [
     et_visible               = true;
   });
   
-  13, (fun command -> {
+  10, (fun command -> {
     et_name                  = "reinstall";
     et_env                   = [];
     et_env_replace           = false;
@@ -3270,7 +3228,7 @@ let external_tasks = [
     et_visible               = true;
   });
   
-  14, (fun command -> {
+  11, (fun command -> {
     et_name                  = "print";
     et_env                   = [];
     et_env_replace           = false;
@@ -3287,9 +3245,9 @@ let external_tasks = [
 
 
 let general_commands = [
-  `Distclean, (10, "distclean");
-  `Install, (8, "Install OCamlEditor");
-  `Uninstall, (9, "Uninstall OCamlEditor");
+  `Distclean, (7, "distclean");
+  `Install, (5, "Install OCamlEditor");
+  `Uninstall, (6, "Uninstall OCamlEditor");
 ]
 
 
@@ -3546,40 +3504,9 @@ let targets = [
   };
   
   (* 5 *)
-  "ocamleditor-msvc", {
-    descr                = "";
-    num                  = 5;
-    id                   = 15;
-    output_name          = "ocamleditor";
-    target_type          = Executable;
-    compilation_bytecode = false;
-    compilation_native   = true;
-    toplevel_modules     = "ocamleditor.ml";
-    package              = "compiler-libs.common,dynlink,lablgtk2,ocamldoc,ocp-indent.lib,str,unix,xml-light,yojson";
-    search_path          = "gmisclib common icons otherwidgets oebuild "; (* -I *)
-    required_libraries   = "odoc_info gmisclib common icons otherwidgets oebuildlib ocamleditor_lib";
-    compiler_flags       = "-w -s-y-x-m -g";
-    linker_flags         = "-g";
-    thread               = true;
-    vmthread             = false;
-    pp                   = "";
-    inline               = Some 50;
-    nodep                = true;
-    dontlinkdep          = false;
-    dontaddopt           = false;
-    library_install_dir  = ""; (* Relative to the Standard Library Directory *)
-    other_objects        = "";
-    external_tasks       = [1];
-    restrictions         = ["IS_WIN32"];
-    dependencies         = [14; 19; 16; 22];
-    show                 = true;
-    rc_filename          = Some ".\\ocamleditor.opt.resource.rc";
-  };
-  
-  (* 6 *)
   "ocamleditor-native", {
     descr                = "";
-    num                  = 6;
+    num                  = 5;
     id                   = 11;
     output_name          = "ocamleditor";
     target_type          = Executable;
@@ -3607,10 +3534,10 @@ let targets = [
     rc_filename          = None;
   };
   
-  (* 7 *)
+  (* 6 *)
   "ocamleditor-lib", {
     descr                = "";
-    num                  = 7;
+    num                  = 6;
     id                   = 14;
     output_name          = "ocamleditor_lib";
     target_type          = Library;
@@ -3638,10 +3565,10 @@ let targets = [
     rc_filename          = None;
   };
   
-  (* 8 *)
+  (* 7 *)
   "plugin-remote-bytecode", {
     descr                = "";
-    num                  = 8;
+    num                  = 7;
     id                   = 17;
     output_name          = "../plugins/remote";
     target_type          = Library;
@@ -3669,10 +3596,10 @@ let targets = [
     rc_filename          = None;
   };
   
-  (* 9 *)
+  (* 8 *)
   "plugin-remote-native", {
     descr                = "";
-    num                  = 9;
+    num                  = 8;
     id                   = 16;
     output_name          = "../plugins/remote";
     target_type          = Plugin;
@@ -3700,10 +3627,10 @@ let targets = [
     rc_filename          = None;
   };
   
-  (* 10 *)
+  (* 9 *)
   "plugin-dotviewer-bytecode", {
     descr                = "";
-    num                  = 10;
+    num                  = 9;
     id                   = 18;
     output_name          = "../plugins/dot_viewer_svg";
     target_type          = Library;
@@ -3731,10 +3658,10 @@ let targets = [
     rc_filename          = None;
   };
   
-  (* 11 *)
+  (* 10 *)
   "plugin-dotviewer-native", {
     descr                = "";
-    num                  = 11;
+    num                  = 10;
     id                   = 19;
     output_name          = "../plugins/dot_viewer_svg";
     target_type          = Plugin;
@@ -3762,7 +3689,7 @@ let targets = [
     rc_filename          = None;
   };
   
-  (* 11 *)
+  (* 10 *)
   "prepare-build", {
     descr                = "";
     num                  = 0;
@@ -3786,18 +3713,18 @@ let targets = [
     dontaddopt           = false;
     library_install_dir  = ""; (* Relative to the Standard Library Directory *)
     other_objects        = "";
-    external_tasks       = [2];
+    external_tasks       = [1];
     restrictions         = [];
     dependencies         = [];
     show                 = false;
     rc_filename          = None;
   };
   
-  (* 12 *)
+  (* 11 *)
   "launcher", {
     descr                = "Utility to open OCaml files from the file manager";
-    num                  = 12;
-    id                   = 22;
+    num                  = 11;
+    id                   = 28;
     output_name          = "ocamleditorw";
     target_type          = Executable;
     compilation_bytecode = false;
@@ -3817,14 +3744,14 @@ let targets = [
     dontaddopt           = true;
     library_install_dir  = ""; (* Relative to the Standard Library Directory *)
     other_objects        = "";
-    external_tasks       = [3; 4];
+    external_tasks       = [];
     restrictions         = ["OCAML(system<>mingw)"];
     dependencies         = [];
     show                 = true;
-    rc_filename          = Some ".\\ocamleditorw.resource.rc";
+    rc_filename          = None;
   };
   
-  (* 12 *)
+  (* 11 *)
   "tools", {
     descr                = "";
     num                  = 0;
@@ -3848,14 +3775,14 @@ let targets = [
     dontaddopt           = false;
     library_install_dir  = ""; (* Relative to the Standard Library Directory *)
     other_objects        = "";
-    external_tasks       = [5; 6; 7; 8; 9; 10];
+    external_tasks       = [2; 3; 4; 5; 6; 7];
     restrictions         = [];
     dependencies         = [];
     show                 = false;
     rc_filename          = None;
   };
   
-  (* 12 *)
+  (* 11 *)
   "FINDLIB-TOOLS", {
     descr                = "";
     num                  = 0;
@@ -3879,7 +3806,7 @@ let targets = [
     dontaddopt           = false;
     library_install_dir  = ""; (* Relative to the Standard Library Directory *)
     other_objects        = "";
-    external_tasks       = [11; 12; 13; 14];
+    external_tasks       = [8; 9; 10; 11];
     restrictions         = [];
     dependencies         = [];
     show                 = false;

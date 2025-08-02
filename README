@@ -77,10 +77,6 @@ INSTALLATION
   "/usr/local/share/ocamleditor/plugins". You can specify an installation
   prefix other than "/usr/local" by giving an absolute file name as argument.
 
-  Windows users may build an installer by compiling the included NSIS
-  script, "ocamleditor.nsi". The free NSIS install system can be found at
-  http://nsis.sourceforge.net
-
 
 
 DEVELOPMENT
