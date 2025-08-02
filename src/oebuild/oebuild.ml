@@ -58,7 +58,7 @@ let ocamllib = Ocaml_config.ocamllib()
 
 (** check_package_list *)
 let check_package_list =
-  let redirect_stderr = if Sys.os_type = "Win32" then " 1>NUL 2>NUL" else " 1>/dev/null 2>/dev/null" in
+  let redirect_stderr = " 1>/dev/null 2>/dev/null" in
   fun package_list ->
     let package_list = Str.split (Str.regexp "[, ]") package_list in
     let available, unavailable =
@@ -205,30 +205,13 @@ let install ~compilation ~outkind ~outname ~deps ~path ~ccomp_type =
 (** run_output *)
 let run_output ~outname ~args =
   let args = List.rev args in
-  if Sys.win32 then begin
-    let cmd = Str.global_replace (Str.regexp "/") "\\\\" outname in
-    let cmd = Filename.current_dir_name // cmd in
-
-    (*let args = cmd :: args in
-      let args = Array.of_list args in
-      Unix.execv cmd args*)
-
-    (*let args = String.concat " " args in
-      ignore (kprintf command "%s %s" cmd args)*)
-
-    Spawn.sync
-      ~process_in:Spawn.redirect_to_stdout ~process_err:Spawn.redirect_to_stderr
-      cmd (Array.of_list args) |> ignore
-
-  end else begin
-    let cmd = Filename.current_dir_name // outname in
-    (* From the execv manpage:
-       "The first argument, by convention, should point to the filename associated
-       with the file being executed." *)
-    let args = cmd :: args in
-    let args = Array.of_list args in
-    Unix.execv cmd args
-  end
+  let cmd = Filename.current_dir_name // outname in
+  (* From the execv manpage:
+     "The first argument, by convention, should point to the filename associated
+     with the file being executed." *)
+  let args = cmd :: args in
+  let args = Array.of_list args in
+  Unix.execv cmd args
 ;;
 
 (** sort_dependencies *)
@@ -543,7 +526,7 @@ let check_restrictions restr =
   | res when Str.string_match re_fl_pkg_exist res 0 ->
       let packages = Str.matched_group 2 res in
       let packages = Str.split re_comma packages in
-      let redirect_stderr = if Sys.os_type = "Win32" then " 1>NUL 2>NUL" else " 1>/dev/null 2>/dev/null" in
+      let redirect_stderr = " 1>/dev/null 2>/dev/null" in
       packages = [] || List.for_all begin fun package ->
         kprintf (Oebuild_util.command ~echo:false) "ocamlfind query %s %s" package redirect_stderr = 0
       end packages

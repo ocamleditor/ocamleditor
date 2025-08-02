@@ -1148,7 +1148,7 @@ let create window =
 let splashscreen () =
   let pref = Preferences.preferences#get in
   if pref.splashscreen_enabled then begin
-    let decorated = (*false && *)Sys.win32 in
+    let decorated = false in
     let pixbuf = ??? Icons.logo in
     let image = GMisc.image ~pixbuf () in
     let window = GWindow.window

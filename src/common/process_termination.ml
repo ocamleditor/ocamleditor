@@ -21,6 +21,4 @@
 *)
 
 
-external win_terminate_process: int -> bool = "o_terminate_process"
-
-let kill pid = if Sys.win32 then win_terminate_process pid |> ignore else Unix.kill pid 9
+let kill pid = Unix.kill pid 9

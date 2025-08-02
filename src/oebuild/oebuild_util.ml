@@ -28,7 +28,7 @@ let (//) = Filename.concat
 let (^^^) = Filename.check_suffix
 let (<@) = List.mem
 let win32 = (fun a b -> match Sys.os_type with "Win32" -> a | _ -> b)
-let redirect_stderr_to_null = if Sys.os_type = "Win32" then " 2>NUL" else " 2>/dev/null"
+let redirect_stderr_to_null = " 2>/dev/null"
 
 (** format_int *)
 let format_int n =
@@ -196,7 +196,7 @@ let get_effective_command =
       let effective_compiler = Str.string_after effective_compiler 2  in
       let effective_compiler = Str.replace_first re_verbose "" effective_compiler in
       let a, b = split_prog_args effective_compiler in
-      (if Sys.win32 then a ^ ".exe" else a), b
+      a, b
     with Not_found -> split_prog_args ocamlfind
 ;;
 

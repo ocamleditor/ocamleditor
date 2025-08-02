@@ -72,7 +72,6 @@ let window widget
   window#set_accept_focus focus;
   if show then begin
     if fade then (window#set_opacity 0.0);
-    if Sys.os_type = "Win32" then (window#present());
     window#move ~x ~y;
     let alloc = window#misc#allocation in
     let x, y =

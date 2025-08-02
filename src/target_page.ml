@@ -26,12 +26,7 @@ open GUtil
 open Utils
 
 let mk_target_filenames project filenames =
-  let filenames = List.filter_map project.Prj.in_source_path filenames in
-  if Sys.win32 then begin
-    List.map begin fun filename ->
-      Utils.filename_unix_implicit filename
-    end filenames
-  end else filenames
+  List.filter_map project.Prj.in_source_path filenames
 
 (*let default_icon =
   let size = 48 in
@@ -183,14 +178,14 @@ class view ~project ~target_list ?packing () =
           chooser#destroy()
       | _ -> chooser#destroy()
     end in
-  let win32_box = GBin.frame ~label:" Native MS Application " ~packing:box#pack () in
-  let box = GPack.hbox ~border_width:5 ~spacing:8 ~packing:win32_box#add () in
-  let label = GMisc.label ~text:"Subsystem: " ~packing:box#pack () in
-  let combo_subsystem, _ = GEdit.combo_box_text
+  (*let win32_box = GBin.frame ~label:" Native MS Application " ~packing:box#pack () in
+    let box = GPack.hbox ~border_width:5 ~spacing:8 ~packing:win32_box#add () in
+    let label = GMisc.label ~text:"Subsystem: " ~packing:box#pack () in
+    let combo_subsystem, _ = GEdit.combo_box_text
       ~strings:["Console"; "Windows"]
       ~active:0 ~packing:box#pack () in
-  let align = GBin.alignment ~xscale:0.0 ~xalign:1.0 ~packing:box#add () in
-  let button_resource_file = GButton.button ~label:((if Ocaml_config.is_mingw then "" else "Icons and ") ^ "Assembly Information...") ~packing:align#add () in
+    let align = GBin.alignment ~xscale:0.0 ~xalign:1.0 ~packing:box#add () in
+    let button_resource_file = GButton.button ~label:((if Ocaml_config.is_mingw then "" else "Icons and ") ^ "Assembly Information...") ~packing:align#add () in*)
 
   (** Radio External *)
   let mbox = GPack.vbox ~spacing:0 ~packing:(vbox#pack ~expand:false) () in
@@ -542,23 +537,10 @@ class view ~project ~target_list ?packing () =
             target.is_fl_package <- check_is_fl_package#active;
             changed#call()
           end) |> ignore;
-      combo_subsystem#connect#changed ~callback:(self#update begin fun target ->
-          target.subsystem <- Some (if combo_subsystem#active = 1 then Windows else Console);
-        end) |> ignore;
       check_dontaddopt#connect#toggled
         ~callback:(self#update begin fun target ->
             target.dontaddopt <- check_dontaddopt#active;
             changed#call()
-          end) |> ignore;
-      button_resource_file#connect#clicked ~callback:(fun () ->
-          Gaux.may target ~f:begin fun target ->
-            let _, widget = Resource_file_widget.window ~project ~target () in
-            widget#connect#saved ~callback:begin fun rc ->
-              self#update begin fun target ->
-                target.resource_file <- Some rc;
-                changed#call ();
-              end ();
-            end
           end) |> ignore;
       (*  *)
       self#connect#changed ~callback:begin fun () ->
@@ -682,9 +664,6 @@ class view ~project ~target_list ?packing () =
       check_ocfg#set_active (entry_ocfg#text <> "");
       (*  *)
       check_is_fl_package#set_active tg.is_fl_package;
-      let win32_sensitive = true (*Sys.win32 && tg.opt && tg.target_type = Executable && Build_script_util.ccomp_type = Some "msvc"*) in
-      win32_box#misc#set_sensitive win32_sensitive;
-      combo_subsystem#set_active (match tg.subsystem with Some Windows -> 1 | Some Console | None -> 0);
       check_dontaddopt#set_active tg.dontaddopt;
       (*  *)
       signals_enabled <- true;

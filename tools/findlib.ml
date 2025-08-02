@@ -53,7 +53,7 @@ let _ =
   if Array.length Sys.argv < 2 then failwith "Invalid parameters";
   let cwd = Sys.getcwd() in
   Sys.chdir "src";
-  let lib_ext = if Sys.win32 && not is_mingw then ".lib" else ".a" in
+  let lib_ext = ".a" in
   List.iter begin fun (name, defs, archives, (cmis : string list), (mlis : string list)) ->
     let cmxas = List.filter (fun x -> Filename.check_suffix x ".cmxa") archives in
     let libs = String.concat " " (List.map (fun x -> (Filename.chop_extension x) ^ lib_ext) cmxas) in
@@ -64,7 +64,7 @@ let _ =
     if Sys.file_exists _META then failwith "Cannot write META file: file exists";
     let chan = open_out_bin _META in
     try
-      let sudo = if Sys.win32 || List.mem Sys.argv.(1) ["print"] then "" else "sudo -E " in
+      let sudo = if false || List.mem Sys.argv.(1) ["print"] then "" else "sudo -E " in
       let cmd = ref [] in
       if not (List.mem Sys.argv.(1) ["install"; "uninstall"; "reinstall"; "print"]) then failwith "Invalid parameters";
       output_string chan defs;
