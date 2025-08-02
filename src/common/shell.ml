@@ -21,7 +21,7 @@
 *)
 
 
-let redirect_stderr = if Sys.win32 then " 2>NUL" else " 2>/dev/null"
+let redirect_stderr = " 2>/dev/null"
 
 (** get_command_output *)
 let get_command_output command =

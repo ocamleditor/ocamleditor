@@ -188,11 +188,7 @@ let create_rc_filename target =
   Filename.concat (Filename.dirname rcname) ((Filename.basename rcname) ^ ".resource.rc")
 
 (** get_full_libs *)
-let get_full_libs target =
-  match target.resource_file with
-  | Some rc when Oe_config.rc <> None && Oe_config.cvtres <> None ->
-      (Filename.basename (Filename.chop_extension rc.Resource_file.rc_filename)) ^ ".obj " ^ target.libs
-  | _ -> target.libs
+let get_full_libs target = target.libs
 
 (** create_cmd_line *)
 let create_cmd_line ?(flags=[]) ?(can_compile_native=true) target =

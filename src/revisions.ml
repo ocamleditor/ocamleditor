@@ -91,7 +91,7 @@ open Preferences
 (** widget *)
 class widget ~page ?packing () =
   let diff_cmd       = Preferences.preferences#get.program_diff_graphical  in
-  let mk_diff_cmd    = if Sys.win32 && not Ocaml_config.is_mingw then Filename.quote diff_cmd else diff_cmd in
+  let mk_diff_cmd    = diff_cmd in
   let project        = page#project in
   let mbox           = GPack.vbox ~spacing:0 ?packing () in
   let toolbar        = GButton.toolbar ~style:`ICONS ~orientation:`HORIZONTAL ~packing:(mbox#pack ~from:`END) () in

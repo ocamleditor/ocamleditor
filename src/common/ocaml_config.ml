@@ -64,7 +64,6 @@ let find_tool which path =
     | `OCAMLC -> ["ocamlc"]
     | `OCAML -> ["ocaml"]
   in
-  let commands = if Sys.win32 then List.map (fun c -> if Filename.check_suffix c ".opt" then c ^ ".exe" else c) commands else commands in
   let quote    = if path <> "" && Sys.os_type = "Win32" && String.contains path ' ' then Filename.quote else (fun x -> x) in
   let path     = if path <> "" then Filename.concat path "bin" else "" in
   find_best_compiler (List.map quote (List.map (Filename.concat path) commands))
@@ -124,10 +123,6 @@ let can_compile_native ?ocaml_home () =
       if Sys.file_exists obj then (Sys.remove obj);
       let obj = outname ^ ".obj" in
       if Sys.file_exists obj then (Sys.remove obj);
-      if Sys.win32 then begin
-        let manifest = exename ^ ".manifest" in
-        if Sys.file_exists manifest then (Sys.remove manifest);
-      end;
       if !result then begin
         let conf = String.concat "\n" (kprintf Shell.get_command_output "%s -config" compiler) in
         let re = Str.regexp "ccomp_type: \\(.*\\)\n" in

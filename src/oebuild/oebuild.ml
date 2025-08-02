@@ -205,30 +205,13 @@ let install ~compilation ~outkind ~outname ~deps ~path ~ccomp_type =
 (** run_output *)
 let run_output ~outname ~args =
   let args = List.rev args in
-  if Sys.win32 then begin
-    let cmd = Str.global_replace (Str.regexp "/") "\\\\" outname in
-    let cmd = Filename.current_dir_name // cmd in
-
-    (*let args = cmd :: args in
-      let args = Array.of_list args in
-      Unix.execv cmd args*)
-
-    (*let args = String.concat " " args in
-      ignore (kprintf command "%s %s" cmd args)*)
-
-    Spawn.sync
-      ~process_in:Spawn.redirect_to_stdout ~process_err:Spawn.redirect_to_stderr
-      cmd (Array.of_list args) |> ignore
-
-  end else begin
-    let cmd = Filename.current_dir_name // outname in
-    (* From the execv manpage:
-       "The first argument, by convention, should point to the filename associated
-       with the file being executed." *)
-    let args = cmd :: args in
-    let args = Array.of_list args in
-    Unix.execv cmd args
-  end
+  let cmd = Filename.current_dir_name // outname in
+  (* From the execv manpage:
+     "The first argument, by convention, should point to the filename associated
+     with the file being executed." *)
+  let args = cmd :: args in
+  let args = Array.of_list args in
+  Unix.execv cmd args
 ;;
 
 (** sort_dependencies *)

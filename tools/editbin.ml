@@ -29,6 +29,6 @@ let get_command_output command =
 
 let is_mingw = List.exists ((=) "system: mingw") (get_command_output "ocamlc -config")
 
-let _ = if not Sys.win32 || is_mingw then exit 0
+let _ = exit 0
 
 let _ = Printf.kprintf Sys.command "editbin %S /subsystem:windows 2>&1 1>NUL" Sys.argv.(1)

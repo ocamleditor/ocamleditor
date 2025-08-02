@@ -125,7 +125,7 @@ let find_best ?(param="--help") prog =
     kprintf failwith "Cannot find: %s" (String.concat ", " prog)
 
 let find_command name =
-  let basename = name ^ (if Sys.win32 then ".exe" else "") in
+  let basename = name in
   let path = (!! Sys.executable_name) // basename in
   if Sys.file_exists path && not (Sys.is_directory path) then path
   else

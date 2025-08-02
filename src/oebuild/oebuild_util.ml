@@ -196,7 +196,7 @@ let get_effective_command =
       let effective_compiler = Str.string_after effective_compiler 2  in
       let effective_compiler = Str.replace_first re_verbose "" effective_compiler in
       let a, b = split_prog_args effective_compiler in
-      (if Sys.win32 then a ^ ".exe" else a), b
+      a, b
     with Not_found -> split_prog_args ocamlfind
 ;;
 
