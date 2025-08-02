@@ -28,7 +28,7 @@ let (//) = Filename.concat
 let (^^^) = Filename.check_suffix
 let (<@) = List.mem
 let win32 = (fun a b -> match Sys.os_type with "Win32" -> a | _ -> b)
-let redirect_stderr_to_null = if Sys.os_type = "Win32" then " 2>NUL" else " 2>/dev/null"
+let redirect_stderr_to_null = " 2>/dev/null"
 
 (** format_int *)
 let format_int n =

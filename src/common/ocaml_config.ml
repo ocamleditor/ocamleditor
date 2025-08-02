@@ -23,7 +23,7 @@
 
 open Printf
 
-let redirect_stderr = if Sys.os_type = "Win32" then " 2>NUL" else " 2>/dev/null"
+let redirect_stderr = " 2>/dev/null"
 
 
 let read_ocaml_config () =
@@ -64,7 +64,7 @@ let find_tool which path =
     | `OCAMLC -> ["ocamlc"]
     | `OCAML -> ["ocaml"]
   in
-  let quote    = if path <> "" && Sys.os_type = "Win32" && String.contains path ' ' then Filename.quote else (fun x -> x) in
+  let quote    = Fun.id in
   let path     = if path <> "" then Filename.concat path "bin" else "" in
   find_best_compiler (List.map quote (List.map (Filename.concat path) commands))
 
@@ -102,7 +102,7 @@ let can_compile_native ?ocaml_home () =
     with _ -> (close_out ochan)
   end;
   let outname = Filename.chop_extension filename in
-  let exename = outname ^ (if Sys.os_type = "Win32" then ".exe" else "") in
+  let exename = outname in
   let compiler = match ocaml_home with
     | Some home -> find_tool `BEST_OCAMLOPT home
     | _ -> Some "ocamlopt"

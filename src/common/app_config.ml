@@ -107,7 +107,7 @@ let application_fonts = get_application_dir "fonts"
 let application_plugins = get_application_dir "plugins"
 
 let find_best ?(param="--help") prog =
-  let redirect_stderr = if Sys.os_type = "Win32" then " 2>NUL" else " 2>/dev/null" in
+  let redirect_stderr = " 2>/dev/null" in
   try
     List.find begin fun comp ->
       let ok =

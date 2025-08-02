@@ -40,12 +40,10 @@ let get_command_output command =
     end
 
 (** quote_path *)
-let quote_path = if Sys.os_type = "Win32" then (fun x -> Filename.quote (Filename.quote x))
-  else (fun x -> x)
+let quote_path = Fun.id
 
 (** quote_arg *)
-let quote_arg = if Sys.os_type = "Win32" then (fun x -> Filename.quote x)
-  else (fun x -> x)
+let quote_arg = Fun.id
 
 type state = StartArg | InUnquotedArg | InQuotedArg | InQuotedArgAfterQuote;;
 

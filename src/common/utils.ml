@@ -418,7 +418,7 @@ let modname_of_path path =
 
 (** open_url *)
 let open_url url =
-  let cmd = if Sys.os_type = "Win32" then "start " ^ url else "xdg-open " ^ url in
+  let cmd = "xdg-open " ^ url in
   let exit_code = Sys.command cmd in
   if exit_code > 0 then kprintf failwith "Cannot execute %s" cmd
 

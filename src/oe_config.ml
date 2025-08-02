@@ -151,7 +151,7 @@ let oebuild_command = App_config.get_oebuild_command ()
 
 let get_version ?(ok_status=0) command =
   try
-    let redirect_stderr = if Sys.os_type = "Win32" then "1>NUL 2>NUL" else "1>/dev/null 2>/dev/null" in
+    let redirect_stderr = "1>/dev/null 2>/dev/null" in
     let cmd = sprintf "%s %s" command redirect_stderr in
     let status_not_found = [127] in
     let status = Sys.command cmd in
@@ -178,7 +178,6 @@ let current_line_border_adjust, dash_style, dash_style_offset =
   | 2, 16 -> 0, `DOUBLE_DASH, None
   | 2, 20 -> 1, `ON_OFF_DASH, (Some 2)
   | 2, 22 -> 2, `DOUBLE_DASH, None
-  | 2, 24 when Sys.os_type = "Win32" -> 1, `DOUBLE_DASH, None
   | 2, 24 -> 1, `ON_OFF_DASH, (Some 2)
   | _     -> 1, `DOUBLE_DASH, None
 

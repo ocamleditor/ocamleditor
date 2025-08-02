@@ -58,7 +58,7 @@ let ocamllib = Ocaml_config.ocamllib()
 
 (** check_package_list *)
 let check_package_list =
-  let redirect_stderr = if Sys.os_type = "Win32" then " 1>NUL 2>NUL" else " 1>/dev/null 2>/dev/null" in
+  let redirect_stderr = " 1>/dev/null 2>/dev/null" in
   fun package_list ->
     let package_list = Str.split (Str.regexp "[, ]") package_list in
     let available, unavailable =
@@ -526,7 +526,7 @@ let check_restrictions restr =
   | res when Str.string_match re_fl_pkg_exist res 0 ->
       let packages = Str.matched_group 2 res in
       let packages = Str.split re_comma packages in
-      let redirect_stderr = if Sys.os_type = "Win32" then " 1>NUL 2>NUL" else " 1>/dev/null 2>/dev/null" in
+      let redirect_stderr = " 1>/dev/null 2>/dev/null" in
       packages = [] || List.for_all begin fun package ->
         kprintf (Oebuild_util.command ~echo:false) "ocamlfind query %s %s" package redirect_stderr = 0
       end packages
