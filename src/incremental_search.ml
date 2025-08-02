@@ -176,12 +176,8 @@ class incremental () =
         self#set_view (Some view);
         let dialog =
           match Sys.os_type with
-          (*            | "Win32" -> GWindow.window ~allow_grow:false
-                          ~kind:`POPUP ~type_hint:`MENU ~modal:true ~border_width:5 ()*)
           | _ -> GWindow.window ~allow_grow:true
-                   ?type_hint:(match Sys.os_type with
-                       | "Win32" -> Some `UTILITY (* to skip taskbar on Windows *)
-                       | _ -> Some `DIALOG)
+                   ?type_hint:(Some `DIALOG)
                    ~decorated:false ~modal:false ~border_width:1 ()
         in
         dialog#set_skip_taskbar_hint true;

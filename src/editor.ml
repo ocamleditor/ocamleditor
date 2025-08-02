@@ -501,10 +501,9 @@ class editor () =
       let item = GMenu.menu_item ~label:"Open Containing Folder" ~packing:menu#add () in
       ignore (item#connect#activate ~callback:begin fun () ->
           let cmd =
-            match Sys.os_type with
-            | "Win32" | "Win64" -> Some (sprintf "explorer /select,\"%s\"" filename)
-            | _ when Oe_config.xdg_open_version <> None -> Some (sprintf "xdg-open %s" (Filename.quote (Filename.dirname filename)))
-            | _ -> None
+            if Oe_config.xdg_open_version <> None
+            then Some (sprintf "xdg-open %s" (Filename.quote (Filename.dirname filename)))
+            else None
           in
           Option.iter (fun cmd -> ignore (Thread.create (fun () -> ignore (Sys.command cmd)) ())) cmd
         end);

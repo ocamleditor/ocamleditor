@@ -136,8 +136,6 @@ let main () =
       ("-serial",      Set serial,                      " (undocumented)");
       ("-verbose",     Set_int verbose,                 " (undocumented)");
       (*    ("-cs", Set compile_separately, " Compile separately without recompiling unmodified modules.");*)
-      (*    ("-install", Set_string install, "\"<path>\" Copy the output to the specified directory. When building libraries the path is relative to " ^
-            (win32 "%OCAMLLIB%" "$OCAMLLIB") ^ ". Create all non-existing directories.");*)
     ] in
   let command_name = Filename.basename Sys.argv.(0) in
   let help_message = sprintf "\nUsage:\n  %s target.ml... [options]\n\nOptions:" command_name in

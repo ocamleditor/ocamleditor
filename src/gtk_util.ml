@@ -80,7 +80,7 @@ let window widget
     in
     window#move ~x ~y;
     if fade then (Gmisclib.Util.fade_window window);
-    if Sys.os_type <> "Win32" then (window#present());
+    window#present();
   end;
   window
 
@@ -121,7 +121,6 @@ let window_tooltip widget ?parent ?(fade=false) ~x ~y ?width ?height ?(kind=`POP
   window#move ~x ~y;
   if show then begin
     if fade then (Gmisclib.Util.fade_window window) else window#present();
-    (*if Sys.os_type <> "Win32" then (window#present());*)
   end;
   move_window_within_screen_bounds window x y |> ignore;
   window

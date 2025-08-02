@@ -37,12 +37,7 @@ let get name = List.assoc name cache
 
 let is_mingw = try get "system" = "mingw" with Not_found -> false
 
-let putenv_ocamllib value =
-  match Sys.os_type with
-  | "Win32" ->
-      let value = match value with None -> "" | Some x -> x in
-      Unix.putenv "OCAMLLIB" value
-  | _ -> ignore (Sys.command "unset OCAMLLIB")
+let putenv_ocamllib () = Sys.command "unset OCAMLLIB" |> ignore
 
 let find_best_compiler compilers =
   try

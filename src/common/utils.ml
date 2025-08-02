@@ -372,7 +372,6 @@ let mkdir_p =
     loop d
 
 (** filename_split *)
-(*let filename_split = Str.split (match Sys.os_type with "Win32" -> Str.regexp "[\\/]" | _ -> Str.regexp "/");;*)
 let filename_split filename =
   let rec loop filename =
     let dirname = Filename.dirname filename in

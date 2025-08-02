@@ -161,9 +161,9 @@ let get_output_name ~compilation ~outkind ~outname ?(dontaddopt=false) () =
     match outkind with
     | Library when compilation = Native -> ".cmxa"
     | Library -> ".cma"
-    | Executable when compilation = Native && dontaddopt -> win32 ".exe" ""
-    | Executable when compilation = Native -> ".opt" ^ (win32 ".exe" "")
-    | Executable -> win32 ".exe" ""
+    | Executable when compilation = Native && dontaddopt -> ""
+    | Executable when compilation = Native -> ".opt"
+    | Executable -> ""
     | Plugin when compilation = Native -> ".cmxs"
     | Plugin -> ".cma"
     | Pack -> ".cmx"

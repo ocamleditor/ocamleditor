@@ -182,7 +182,7 @@ let current_line_border_adjust, dash_style, dash_style_offset =
   | _     -> 1, `DOUBLE_DASH, None
 
 (** Clear OCAMLLIB environment variable *)
-let _ = Ocaml_config.putenv_ocamllib None
+let _ = Ocaml_config.putenv_ocamllib ()
 
 (** geometry_memo_filename *)
 let geometry_memo_filename = Filename.concat App_config.ocamleditor_user_home "geometry_memo.ocaml"

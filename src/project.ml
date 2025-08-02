@@ -66,7 +66,7 @@ let set_ocaml_home ~ocamllib project =
   project.ocamllib <- ocamllib;
   project.ocamllib_from_env <- from_env;
   Unix.putenv "OCAML_HOME" project.ocaml_home;
-  Ocaml_config.putenv_ocamllib (Some project.ocamllib);
+  Ocaml_config.putenv_ocamllib ();
   project.autocomp_compiler <- Ocaml_config.ocamlc();
   ignore (Thread.create begin fun () ->
       project.can_compile_native <- (Ocaml_config.can_compile_native ~ocaml_home:project.ocaml_home ()) <> None;

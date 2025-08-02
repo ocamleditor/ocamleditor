@@ -50,8 +50,8 @@ class widget ~project ?(spacing=3) ?border_width ~label_width ?packing ()=
     inherit GObj.widget vbox#as_widget
 
     method private with_ocamllib : 'a.(unit -> 'a) -> 'a = fun f ->
-      Ocaml_config.putenv_ocamllib (Some entry_ocamllib#text);
-      let finally () = Ocaml_config.putenv_ocamllib (Some original_ocamllib) in
+      Ocaml_config.putenv_ocamllib ();
+      let finally () = Ocaml_config.putenv_ocamllib () in
       (try let result = f() in finally(); result with ex -> (finally(); raise ex))
 
     method get_ocaml_version () =
