@@ -174,6 +174,31 @@
       <restrictions></restrictions>
       <dependencies>8</dependencies>
     </target>
+    <target name="ocamleditor-lib" default="false" id="14" sub_targets="" is_fl_package="false" subsystem="" readonly="false" visible="true" node_collapsed="false">
+      <descr></descr>
+      <byt>false</byt>
+      <opt>true</opt>
+      <libs></libs>
+      <other_objects></other_objects>
+      <files>ocamleditor_lib.ml</files>
+      <package>atdgen-runtime,compiler-libs.common,ocamldiff,dynlink,lablgtk2,ocamldoc,ocp-indent.lib,str,unix,xml-light,yojson</package>
+      <includes>gmisclib common icons otherwidgets oebuild </includes>
+      <thread>true</thread>
+      <vmthread>false</vmthread>
+      <pp></pp>
+      <inline>50</inline>
+      <nodep>false</nodep>
+      <dontlinkdep>false</dontlinkdep>
+      <dontaddopt>false</dontaddopt>
+      <cflags>-w -s-y-x-m -g</cflags>
+      <lflags>-g</lflags>
+      <target_type>Library</target_type>
+      <outname>ocamleditor_lib</outname>
+      <lib_install_path></lib_install_path>
+      <external_tasks/>
+      <restrictions></restrictions>
+      <dependencies>4,10,5,28,8,9,20</dependencies>
+    </target>
     <target name="ocamleditor" default="false" id="12" sub_targets="" is_fl_package="false" subsystem="Console" readonly="false" visible="true" node_collapsed="false">
       <descr></descr>
       <byt>false</byt>
@@ -248,31 +273,6 @@
       <external_tasks/>
       <restrictions></restrictions>
       <dependencies>14,19,16</dependencies>
-    </target>
-    <target name="ocamleditor-lib" default="false" id="14" sub_targets="" is_fl_package="false" subsystem="" readonly="false" visible="true" node_collapsed="false">
-      <descr></descr>
-      <byt>false</byt>
-      <opt>true</opt>
-      <libs></libs>
-      <other_objects></other_objects>
-      <files>ocamleditor_lib.ml</files>
-      <package>atdgen-runtime,compiler-libs.common,ocamldiff,dynlink,lablgtk2,ocamldoc,ocp-indent.lib,str,unix,xml-light,yojson</package>
-      <includes>gmisclib common icons otherwidgets oebuild </includes>
-      <thread>true</thread>
-      <vmthread>false</vmthread>
-      <pp></pp>
-      <inline>50</inline>
-      <nodep>false</nodep>
-      <dontlinkdep>false</dontlinkdep>
-      <dontaddopt>false</dontaddopt>
-      <cflags>-w -s-y-x-m -g</cflags>
-      <lflags>-g</lflags>
-      <target_type>Library</target_type>
-      <outname>ocamleditor_lib</outname>
-      <lib_install_path></lib_install_path>
-      <external_tasks/>
-      <restrictions></restrictions>
-      <dependencies>4,10,5,28,8,9,20</dependencies>
     </target>
     <target name="plugin-remote-bytecode" default="false" id="17" sub_targets="" is_fl_package="false" subsystem="" readonly="false" visible="true" node_collapsed="false">
       <descr></descr>

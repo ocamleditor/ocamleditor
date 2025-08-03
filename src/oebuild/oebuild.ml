@@ -223,7 +223,6 @@ let sort_dependencies ~deps subset =
   List.rev !result
 ;;
 
-
 (** serial_compile *)
 let serial_compile ~compilation ~times ~compiler ~cflags ~includes ~toplevel_modules:_ ~deps ~verbose =
   let crono = if verbose >= 3 then crono else fun ?label:_ f x -> f x in
@@ -284,8 +283,7 @@ let parallel_compile ~compilation ?times ?pp ~compiler ~cflags ~includes ~toplev
 
 (** Build *)
 let build ~compilation ~package ~includes ~libs ~other_mods ~outkind ~compile_only
-    ~thread ~vmthread ~annot ~bin_annot ~pp ?inline ~cflags ~lflags ~outname ~deps ~dontlinkdep ~dontaddopt (*~ms_paths*)
-    ~toplevel_modules ?(jobs=0) ?(serial=false) ?(prof=false) ?(verbose=2) () =
+    ~thread ~vmthread ~annot ~bin_annot ~pp ?inline ~cflags ~lflags ~outname ~deps ~dontlinkdep ~dontaddopt     ~toplevel_modules ?(jobs=0) ?(serial=false) ?(prof=false) ?(verbose=2) () =
 
   let crono = if verbose >= 3 then crono else fun ?label f x -> f x in
   let crono4 = if verbose >= 4 then crono else fun ?label f x -> f x in
@@ -512,7 +510,6 @@ let check_prop expr get =
       | None -> (try get name |> ignore; true with Not_found -> false) (* [1] *)
     end;
   with Not_found (* name (matched_group) *) -> false (* [4] *)
-
 
 (** check_restrictions *)
 let check_restrictions restr =
