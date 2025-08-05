@@ -3516,37 +3516,7 @@ let targets = [
     show                 = true;
   };
   
-  (* 6 *)
-  "ocamleditor-native", {
-    descr                = "";
-    num                  = 6;
-    id                   = 11;
-    output_name          = "ocamleditor";
-    target_type          = Executable;
-    compilation_bytecode = false;
-    compilation_native   = true;
-    toplevel_modules     = "ocamleditor.ml";
-    package              = "atdgen-runtime,compiler-libs.common,curl,dynlink,lablgtk2,ocamldiff,ocamldoc,ocp-indent.lib,str,unix,xml-light,yojson";
-    search_path          = "gmisclib common icons otherwidgets oebuild "; (* -I *)
-    required_libraries   = "odoc_info gmisclib common icons otherwidgets oebuildlib ocamleditor_lib";
-    compiler_flags       = "-w -s-y-x-m -g";
-    linker_flags         = "-g";
-    thread               = true;
-    vmthread             = false;
-    pp                   = "";
-    inline               = Some 50;
-    nodep                = false;
-    dontlinkdep          = false;
-    dontaddopt           = false;
-    library_install_dir  = ""; (* Relative to the Standard Library Directory *)
-    other_objects        = "";
-    external_tasks       = [];
-    restrictions         = [];
-    dependencies         = [14; 19; 16];
-    show                 = true;
-  };
-  
-  (* 6 *)
+  (* 5 *)
   "prepare-build", {
     descr                = "";
     num                  = 0;
@@ -3576,10 +3546,10 @@ let targets = [
     show                 = false;
   };
   
-  (* 7 *)
+  (* 6 *)
   "launcher", {
     descr                = "Utility to open OCaml files from the file manager";
-    num                  = 7;
+    num                  = 6;
     id                   = 28;
     output_name          = "ocamleditorw";
     target_type          = Executable;
@@ -3606,7 +3576,7 @@ let targets = [
     show                 = true;
   };
   
-  (* 7 *)
+  (* 6 *)
   "tools", {
     descr                = "";
     num                  = 0;
@@ -3636,7 +3606,7 @@ let targets = [
     show                 = false;
   };
   
-  (* 7 *)
+  (* 6 *)
   "FINDLIB-TOOLS", {
     descr                = "";
     num                  = 0;

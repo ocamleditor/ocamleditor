@@ -47,10 +47,6 @@ HOW TO COMPILE
 
     ocaml build.ml ocamleditor
 
-  Under Windows with MSVC execute:
-
-    ocaml build.ml ocamleditor-msvc
-
   If the native code compiler is not available on your platform, compile with:
 
     ocaml build.ml ocamleditor-bytecode
