@@ -53,7 +53,6 @@ type target = {
   restrictions : string list;
   dependencies : int list;
   show : bool;
-  rc_filename : string option;
 }
 
 type target_map_entry = int * (string * target)

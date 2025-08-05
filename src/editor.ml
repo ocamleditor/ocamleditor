@@ -664,23 +664,13 @@ class editor () =
     method dialog_save_as page =
       match page#file with
       | Some file when file#remote <> None ->
-          Option.iter
-            begin fun (plugin : (module Plugins.REMOTE)) ->
-              let module Remote = (val plugin) in
-              Remote.dialog_save_as ~editor:self ~page ()
-            end
-            !Plugins.remote
+          Remote.dialog_save_as ~editor:self ~page ()
       | _ -> Dialog_save_as.window ~editor:self ~page ()
 
     method dialog_rename page =
       match page#file with
       | Some file when file#remote <> None ->
-          Option.iter
-            begin fun (plugin : (module Plugins.REMOTE)) ->
-              let module Remote = (val plugin) in
-              Remote.dialog_rename ~editor:self ~page ()
-            end
-            !Plugins.remote
+          Remote.dialog_rename ~editor:self ~page ()
       | _ -> Dialog_rename.window ~editor:self ~page ()
 
     method save (page : Editor_page.page) =

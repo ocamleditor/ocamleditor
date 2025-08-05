@@ -181,7 +181,7 @@
       <libs></libs>
       <other_objects></other_objects>
       <files>ocamleditor_lib.ml</files>
-      <package>atdgen-runtime,compiler-libs.common,ocamldiff,dynlink,lablgtk2,ocamldoc,ocp-indent.lib,str,unix,xml-light,yojson</package>
+      <package>atdgen-runtime,compiler-libs.common,curl,dynlink,lablgtk2,ocamldiff,ocamldoc,ocp-indent.lib,str,unix,xml-light,yojson</package>
       <includes>gmisclib common icons otherwidgets oebuild </includes>
       <thread>true</thread>
       <vmthread>false</vmthread>
@@ -206,7 +206,7 @@
       <libs>odoc_info gmisclib common icons otherwidgets oebuildlib ocamleditor_lib</libs>
       <other_objects></other_objects>
       <files>ocamleditor.ml</files>
-      <package>atdgen-runtime,compiler-libs.common,ocamldiff,dynlink,lablgtk2,ocamldoc,ocp-indent.lib,str,unix,xml-light,yojson</package>
+      <package>atdgen-runtime,compiler-libs.common,curl,dynlink,lablgtk2,ocamldiff,ocamldoc,ocp-indent.lib,str,unix,xml-light,yojson</package>
       <includes>gmisclib common icons otherwidgets oebuild </includes>
       <thread>true</thread>
       <vmthread>false</vmthread>
@@ -231,7 +231,7 @@
       <libs>odoc_info gmisclib common icons otherwidgets oebuildlib</libs>
       <other_objects></other_objects>
       <files>ocamleditor.ml</files>
-      <package>atdgen-runtime,compiler-libs.common,ocamldiff,dynlink,lablgtk2,ocamldoc,ocp-indent.lib,str,unix,xml-light,yojson</package>
+      <package>atdgen-runtime,compiler-libs.common,curl,dynlink,lablgtk2,ocamldiff,ocamldoc,ocp-indent.lib,str,unix,xml-light,yojson</package>
       <includes>gmisclib common icons otherwidgets oebuild </includes>
       <thread>true</thread>
       <vmthread>false</vmthread>
@@ -256,7 +256,7 @@
       <libs>odoc_info gmisclib common icons otherwidgets oebuildlib ocamleditor_lib</libs>
       <other_objects></other_objects>
       <files>ocamleditor.ml</files>
-      <package>atdgen-runtime,compiler-libs.common,ocamldiff,dynlink,lablgtk2,ocamldoc,ocp-indent.lib,str,unix,xml-light,yojson</package>
+      <package>atdgen-runtime,compiler-libs.common,curl,dynlink,lablgtk2,ocamldiff,ocamldoc,ocp-indent.lib,str,unix,xml-light,yojson</package>
       <includes>gmisclib common icons otherwidgets oebuild </includes>
       <thread>true</thread>
       <vmthread>false</vmthread>
@@ -273,56 +273,6 @@
       <external_tasks/>
       <restrictions></restrictions>
       <dependencies>14,19,16</dependencies>
-    </target>
-    <target name="plugin-remote-bytecode" default="false" id="17" sub_targets="" is_fl_package="false" subsystem="" readonly="false" visible="true" node_collapsed="false">
-      <descr></descr>
-      <byt>true</byt>
-      <opt>false</opt>
-      <libs></libs>
-      <other_objects></other_objects>
-      <files>remote.ml</files>
-      <package>atdgen-runtime,curl,lablgtk2,yojson</package>
-      <includes>common icons otherwidgets gmisclib</includes>
-      <thread>false</thread>
-      <vmthread>false</vmthread>
-      <pp></pp>
-      <inline></inline>
-      <nodep>false</nodep>
-      <dontlinkdep>true</dontlinkdep>
-      <dontaddopt>false</dontaddopt>
-      <cflags>-g -w -10</cflags>
-      <lflags>-g curl.cma</lflags>
-      <target_type>Library</target_type>
-      <outname>../plugins/remote</outname>
-      <lib_install_path></lib_install_path>
-      <external_tasks/>
-      <restrictions>FINDLIB(curl)</restrictions>
-      <dependencies>9</dependencies>
-    </target>
-    <target name="plugin-remote-native" default="false" id="16" sub_targets="" is_fl_package="false" subsystem="" readonly="false" visible="true" node_collapsed="false">
-      <descr></descr>
-      <byt>false</byt>
-      <opt>true</opt>
-      <libs></libs>
-      <other_objects></other_objects>
-      <files>remote.ml</files>
-      <package>atdgen-runtime,curl,lablgtk2,yojson</package>
-      <includes>common icons otherwidgets gmisclib</includes>
-      <thread>false</thread>
-      <vmthread>false</vmthread>
-      <pp></pp>
-      <inline></inline>
-      <nodep>false</nodep>
-      <dontlinkdep>true</dontlinkdep>
-      <dontaddopt>false</dontaddopt>
-      <cflags>-g -w -10</cflags>
-      <lflags>-g curl.cmxa</lflags>
-      <target_type>Plugin</target_type>
-      <outname>../plugins/remote</outname>
-      <lib_install_path></lib_install_path>
-      <external_tasks/>
-      <restrictions>FINDLIB(curl)</restrictions>
-      <dependencies>9</dependencies>
     </target>
     <target name="plugin-dotviewer-bytecode" default="false" id="18" sub_targets="" is_fl_package="false" subsystem="" readonly="false" visible="true" node_collapsed="false">
       <descr></descr>
@@ -652,12 +602,10 @@
       <target target_id="5" show="true"/>
       <target target_id="8" show="true"/>
       <target target_id="9" show="false"/>
+      <target target_id="14" show="true"/>
       <target target_id="12" show="true"/>
       <target target_id="0" show="true"/>
       <target target_id="11" show="true"/>
-      <target target_id="14" show="true"/>
-      <target target_id="17" show="true"/>
-      <target target_id="16" show="true"/>
       <target target_id="18" show="true"/>
       <target target_id="19" show="true"/>
       <target target_id="20" show="false"/>

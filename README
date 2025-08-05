@@ -35,7 +35,7 @@ DEPENDENCIES
   * yojson;
   * atdgen;
   * ocamldiff;
-  * (optional) ocurl-0.6 to allow remote editing;
+  * ocurl-0.6 to allow remote editing;
   * (optional) Dot command to display the module dependencies graph;
   * (optional) Lablgtk.rsvg to embed the graph viewer in the editor.
 
