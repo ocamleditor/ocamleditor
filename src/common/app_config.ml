@@ -107,7 +107,7 @@ let application_fonts = get_application_dir "fonts"
 let application_plugins = get_application_dir "plugins"
 
 let find_best ?(param="--help") prog =
-  let redirect_stderr = if Sys.os_type = "Win32" then " 2>NUL" else " 2>/dev/null" in
+  let redirect_stderr = " 2>/dev/null" in
   try
     List.find begin fun comp ->
       let ok =
@@ -125,7 +125,7 @@ let find_best ?(param="--help") prog =
     kprintf failwith "Cannot find: %s" (String.concat ", " prog)
 
 let find_command name =
-  let basename = name ^ (if Sys.win32 then ".exe" else "") in
+  let basename = name in
   let path = (!! Sys.executable_name) // basename in
   if Sys.file_exists path && not (Sys.is_directory path) then path
   else

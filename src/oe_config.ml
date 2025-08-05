@@ -139,7 +139,7 @@ let getenv_ocamllib = try Some (Sys.getenv "OCAMLLIB") with Not_found -> None
 
 (** Commands *)
 let find_command name =
-  let basename = name ^ (if Sys.win32 then ".exe" else "") in
+  let basename = name in
   let path = (!! Sys.executable_name) // basename in
   if Sys.file_exists path && not (Sys.is_directory path) then path
   else
@@ -151,13 +151,13 @@ let oebuild_command = App_config.get_oebuild_command ()
 
 let get_version ?(ok_status=0) command =
   try
-    let redirect_stderr = if Sys.os_type = "Win32" then "1>NUL 2>NUL" else "1>/dev/null 2>/dev/null" in
+    let redirect_stderr = "1>/dev/null 2>/dev/null" in
     let cmd = sprintf "%s %s" command redirect_stderr in
-    let status_not_found = if Sys.win32 then [1; 9009] else [127] in
+    let status_not_found = [127] in
     let status = Sys.command cmd in
     (*Printf.printf "%s -- %d -- %b\n%!" cmd status (status = ok_status);*)
     if status = ok_status || not (List.mem status status_not_found) then
-      let redirect_stderr = if Sys.win32 then " 2>&1" else " 2>&1" in
+      let redirect_stderr = " 2>&1" in
       let cmd = sprintf "%s %s" command redirect_stderr in
       (match Shell.get_command_output cmd with ver :: _ -> Some ver | _ -> None)
     else failwith cmd
@@ -167,10 +167,6 @@ let dot_version = get_version "dot -V"
 let plink_version = get_version "plink -V" (* exits with status = 1 *)
 let xdg_open_version = get_version "xdg-open --version"
 let git_version = get_version ~ok_status:1 "git --version"
-let ml = if Sys.win32 then get_version ~ok_status:0 "ml" else None
-let cl = if Sys.win32 then get_version ~ok_status:0 "cl" else None
-let rc = if Sys.win32 then get_version ~ok_status:1 "rc" else None
-let cvtres = if Sys.win32 then get_version ~ok_status:0 "cvtres" else None
 
 
 (** GTK config *)
@@ -182,12 +178,11 @@ let current_line_border_adjust, dash_style, dash_style_offset =
   | 2, 16 -> 0, `DOUBLE_DASH, None
   | 2, 20 -> 1, `ON_OFF_DASH, (Some 2)
   | 2, 22 -> 2, `DOUBLE_DASH, None
-  | 2, 24 when Sys.os_type = "Win32" -> 1, `DOUBLE_DASH, None
   | 2, 24 -> 1, `ON_OFF_DASH, (Some 2)
   | _     -> 1, `DOUBLE_DASH, None
 
 (** Clear OCAMLLIB environment variable *)
-let _ = Ocaml_config.putenv_ocamllib None
+let _ = Ocaml_config.putenv_ocamllib ()
 
 (** geometry_memo_filename *)
 let geometry_memo_filename = Filename.concat App_config.ocamleditor_user_home "geometry_memo.ocaml"

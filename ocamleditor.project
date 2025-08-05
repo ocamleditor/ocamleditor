@@ -31,21 +31,7 @@
       <target_type>Library</target_type>
       <outname>common/common</outname>
       <lib_install_path></lib_install_path>
-      <external_tasks>
-        <task name="comp_process_termination">
-          <always_run_in_project>true</always_run_in_project>
-          <always_run_in_script>true</always_run_in_script>
-          <readonly>false</readonly>
-          <visible>true</visible>
-          <env replace="false"/>
-          <dir>..</dir>
-          <cmd>ocaml</cmd>
-          <args>
-            <arg enabled="true">tools/comp_process_termination.ml</arg>
-          </args>
-          <phase>Before_compile</phase>
-        </task>
-      </external_tasks>
+      <external_tasks/>
       <restrictions></restrictions>
       <dependencies></dependencies>
     </target>
@@ -188,130 +174,6 @@
       <restrictions></restrictions>
       <dependencies>8</dependencies>
     </target>
-    <target name="ocamleditor" default="false" id="12" sub_targets="" is_fl_package="false" subsystem="Console" readonly="false" visible="true" node_collapsed="false">
-      <descr></descr>
-      <byt>false</byt>
-      <opt>true</opt>
-      <libs>process_termination odoc_info gmisclib common icons otherwidgets oebuildlib ocamleditor_lib</libs>
-      <other_objects></other_objects>
-      <files>ocamleditor.ml</files>
-      <package>atdgen-runtime,compiler-libs.common,ocamldiff,dynlink,lablgtk2,ocamldoc,ocp-indent.lib,str,unix,xml-light,yojson</package>
-      <includes>gmisclib common icons otherwidgets oebuild </includes>
-      <thread>true</thread>
-      <vmthread>false</vmthread>
-      <pp></pp>
-      <inline>50</inline>
-      <nodep>true</nodep>
-      <dontlinkdep>false</dontlinkdep>
-      <dontaddopt>false</dontaddopt>
-      <cflags>-w -s-y-x-m -g</cflags>
-      <lflags>-g</lflags>
-      <target_type>Executable</target_type>
-      <outname>ocamleditor</outname>
-      <lib_install_path></lib_install_path>
-      <external_tasks/>
-      <restrictions></restrictions>
-      <dependencies>14,19,16,22</dependencies>
-    </target>
-    <target name="ocamleditor-bytecode" default="false" id="0" sub_targets="" is_fl_package="false" subsystem="Console" readonly="false" visible="true" node_collapsed="false">
-      <descr></descr>
-      <byt>true</byt>
-      <opt>false</opt>
-      <libs>process_termination odoc_info gmisclib common icons otherwidgets oebuildlib</libs>
-      <other_objects></other_objects>
-      <files>ocamleditor.ml</files>
-      <package>atdgen-runtime,compiler-libs.common,ocamldiff,dynlink,lablgtk2,ocamldoc,ocp-indent.lib,str,unix,xml-light,yojson</package>
-      <includes>gmisclib common icons otherwidgets oebuild </includes>
-      <thread>true</thread>
-      <vmthread>false</vmthread>
-      <pp></pp>
-      <inline></inline>
-      <nodep>false</nodep>
-      <dontlinkdep>false</dontlinkdep>
-      <dontaddopt>false</dontaddopt>
-      <cflags>-w -s-y-x-m -g</cflags>
-      <lflags>-g</lflags>
-      <target_type>Executable</target_type>
-      <outname>ocamleditor</outname>
-      <lib_install_path></lib_install_path>
-      <external_tasks/>
-      <restrictions></restrictions>
-      <dependencies>4,10,7,5,8,9,20,17,18</dependencies>
-    </target>
-    <target name="ocamleditor-msvc" default="false" id="15" sub_targets="" is_fl_package="false" subsystem="Console" readonly="false" visible="true" node_collapsed="false">
-      <descr></descr>
-      <byt>false</byt>
-      <opt>true</opt>
-      <libs>process_termination odoc_info gmisclib common icons otherwidgets oebuildlib ocamleditor_lib</libs>
-      <other_objects></other_objects>
-      <files>ocamleditor.ml</files>
-      <package>compiler-libs.common,dynlink,lablgtk2,ocamldoc,ocp-indent.lib,str,unix,xml-light,yojson</package>
-      <includes>gmisclib common icons otherwidgets oebuild </includes>
-      <thread>true</thread>
-      <vmthread>false</vmthread>
-      <pp></pp>
-      <inline>50</inline>
-      <nodep>true</nodep>
-      <dontlinkdep>false</dontlinkdep>
-      <dontaddopt>false</dontaddopt>
-      <cflags>-w -s-y-x-m -g</cflags>
-      <lflags>-g</lflags>
-      <target_type>Executable</target_type>
-      <outname>ocamleditor</outname>
-      <lib_install_path></lib_install_path>
-      <external_tasks>
-        <task name="RC_COMPILE">
-          <always_run_in_project>true</always_run_in_project>
-          <always_run_in_script>true</always_run_in_script>
-          <readonly>true</readonly>
-          <visible>false</visible>
-          <env replace="false"/>
-          <dir></dir>
-          <cmd>ocaml</cmd>
-          <args>
-            <arg enabled="true">../tools/rc_compile.ml</arg>
-            <arg enabled="true">&quot;ocamleditor-msvc&quot;</arg>
-          </args>
-          <phase>Before_compile</phase>
-        </task>
-      </external_tasks>
-      <restrictions>IS_WIN32</restrictions>
-      <dependencies>14,19,16,22</dependencies>
-      <resource_file>
-        <filename>.\ocamleditor.opt.resource.rc</filename>
-        <title>OCamlEditor</title>
-        <company></company>
-        <product>OCamlEditor</product>
-        <copyright>© 2016 Francesco Tovagliari</copyright>
-        <file_version>1.13.3.0</file_version>
-        <icons/>
-      </resource_file>
-    </target>
-    <target name="ocamleditor-native" default="true" id="11" sub_targets="" is_fl_package="false" subsystem="" readonly="false" visible="true" node_collapsed="false">
-      <descr></descr>
-      <byt>false</byt>
-      <opt>true</opt>
-      <libs>process_termination odoc_info gmisclib common icons otherwidgets oebuildlib ocamleditor_lib</libs>
-      <other_objects></other_objects>
-      <files>ocamleditor.ml</files>
-      <package>atdgen-runtime,compiler-libs.common,ocamldiff,dynlink,lablgtk2,ocamldoc,ocp-indent.lib,str,unix,xml-light,yojson</package>
-      <includes>gmisclib common icons otherwidgets oebuild </includes>
-      <thread>true</thread>
-      <vmthread>false</vmthread>
-      <pp></pp>
-      <inline>50</inline>
-      <nodep>false</nodep>
-      <dontlinkdep>false</dontlinkdep>
-      <dontaddopt>false</dontaddopt>
-      <cflags>-w -s-y-x-m -g</cflags>
-      <lflags>-g</lflags>
-      <target_type>Executable</target_type>
-      <outname>ocamleditor</outname>
-      <lib_install_path></lib_install_path>
-      <external_tasks/>
-      <restrictions></restrictions>
-      <dependencies>14,19,16</dependencies>
-    </target>
     <target name="ocamleditor-lib" default="false" id="14" sub_targets="" is_fl_package="false" subsystem="" readonly="false" visible="true" node_collapsed="false">
       <descr></descr>
       <byt>false</byt>
@@ -336,6 +198,81 @@
       <external_tasks/>
       <restrictions></restrictions>
       <dependencies>4,10,5,28,8,9,20</dependencies>
+    </target>
+    <target name="ocamleditor" default="false" id="12" sub_targets="" is_fl_package="false" subsystem="Console" readonly="false" visible="true" node_collapsed="false">
+      <descr></descr>
+      <byt>false</byt>
+      <opt>true</opt>
+      <libs>odoc_info gmisclib common icons otherwidgets oebuildlib ocamleditor_lib</libs>
+      <other_objects></other_objects>
+      <files>ocamleditor.ml</files>
+      <package>atdgen-runtime,compiler-libs.common,ocamldiff,dynlink,lablgtk2,ocamldoc,ocp-indent.lib,str,unix,xml-light,yojson</package>
+      <includes>gmisclib common icons otherwidgets oebuild </includes>
+      <thread>true</thread>
+      <vmthread>false</vmthread>
+      <pp></pp>
+      <inline>50</inline>
+      <nodep>true</nodep>
+      <dontlinkdep>false</dontlinkdep>
+      <dontaddopt>false</dontaddopt>
+      <cflags>-w -s-y-x-m -g</cflags>
+      <lflags>-g</lflags>
+      <target_type>Executable</target_type>
+      <outname>ocamleditor</outname>
+      <lib_install_path></lib_install_path>
+      <external_tasks/>
+      <restrictions></restrictions>
+      <dependencies>14,19,16,22</dependencies>
+    </target>
+    <target name="ocamleditor-bytecode" default="false" id="0" sub_targets="" is_fl_package="false" subsystem="Console" readonly="false" visible="true" node_collapsed="false">
+      <descr></descr>
+      <byt>true</byt>
+      <opt>false</opt>
+      <libs>odoc_info gmisclib common icons otherwidgets oebuildlib</libs>
+      <other_objects></other_objects>
+      <files>ocamleditor.ml</files>
+      <package>atdgen-runtime,compiler-libs.common,ocamldiff,dynlink,lablgtk2,ocamldoc,ocp-indent.lib,str,unix,xml-light,yojson</package>
+      <includes>gmisclib common icons otherwidgets oebuild </includes>
+      <thread>true</thread>
+      <vmthread>false</vmthread>
+      <pp></pp>
+      <inline></inline>
+      <nodep>false</nodep>
+      <dontlinkdep>false</dontlinkdep>
+      <dontaddopt>false</dontaddopt>
+      <cflags>-w -s-y-x-m -g</cflags>
+      <lflags>-g</lflags>
+      <target_type>Executable</target_type>
+      <outname>ocamleditor</outname>
+      <lib_install_path></lib_install_path>
+      <external_tasks/>
+      <restrictions></restrictions>
+      <dependencies>4,10,7,5,8,9,20,17,18</dependencies>
+    </target>
+    <target name="ocamleditor-native" default="true" id="11" sub_targets="" is_fl_package="false" subsystem="" readonly="false" visible="true" node_collapsed="false">
+      <descr></descr>
+      <byt>false</byt>
+      <opt>true</opt>
+      <libs>odoc_info gmisclib common icons otherwidgets oebuildlib ocamleditor_lib</libs>
+      <other_objects></other_objects>
+      <files>ocamleditor.ml</files>
+      <package>atdgen-runtime,compiler-libs.common,ocamldiff,dynlink,lablgtk2,ocamldoc,ocp-indent.lib,str,unix,xml-light,yojson</package>
+      <includes>gmisclib common icons otherwidgets oebuild </includes>
+      <thread>true</thread>
+      <vmthread>false</vmthread>
+      <pp></pp>
+      <inline>50</inline>
+      <nodep>false</nodep>
+      <dontlinkdep>false</dontlinkdep>
+      <dontaddopt>false</dontaddopt>
+      <cflags>-w -s-y-x-m -g</cflags>
+      <lflags>-g</lflags>
+      <target_type>Executable</target_type>
+      <outname>ocamleditor</outname>
+      <lib_install_path></lib_install_path>
+      <external_tasks/>
+      <restrictions></restrictions>
+      <dependencies>14,19,16</dependencies>
     </target>
     <target name="plugin-remote-bytecode" default="false" id="17" sub_targets="" is_fl_package="false" subsystem="" readonly="false" visible="true" node_collapsed="false">
       <descr></descr>
@@ -476,7 +413,7 @@
       <restrictions></restrictions>
       <dependencies></dependencies>
     </target>
-    <target name="launcher" default="false" id="22" sub_targets="" is_fl_package="false" subsystem="Windows" readonly="false" visible="true" node_collapsed="false">
+    <target name="launcher" default="false" id="28" sub_targets="" is_fl_package="false" subsystem="" readonly="false" visible="true" node_collapsed="false">
       <descr>Utility to open OCaml files from the file manager</descr>
       <byt>false</byt>
       <opt>true</opt>
@@ -497,47 +434,9 @@
       <target_type>Executable</target_type>
       <outname>ocamleditorw</outname>
       <lib_install_path></lib_install_path>
-      <external_tasks>
-        <task name="RC_COMPILE">
-          <always_run_in_project>true</always_run_in_project>
-          <always_run_in_script>true</always_run_in_script>
-          <readonly>true</readonly>
-          <visible>false</visible>
-          <env replace="false"/>
-          <dir></dir>
-          <cmd>ocaml</cmd>
-          <args>
-            <arg enabled="true">../tools/rc_compile.ml</arg>
-            <arg enabled="true">&quot;launcher&quot;</arg>
-          </args>
-          <phase>Before_compile</phase>
-        </task>
-        <task name="SUBSYSTEM:WINDOWS">
-          <always_run_in_project>true</always_run_in_project>
-          <always_run_in_script>true</always_run_in_script>
-          <readonly>true</readonly>
-          <visible>false</visible>
-          <env replace="false"/>
-          <dir></dir>
-          <cmd>ocaml</cmd>
-          <args>
-            <arg enabled="true">../tools/editbin.ml</arg>
-            <arg enabled="true">ocamleditorw</arg>
-          </args>
-          <phase>After_compile</phase>
-        </task>
-      </external_tasks>
+      <external_tasks/>
       <restrictions>OCAML(system&lt;&gt;mingw)</restrictions>
       <dependencies></dependencies>
-      <resource_file>
-        <filename>.\ocamleditorw.resource.rc</filename>
-        <title>OCamlEditor</title>
-        <company></company>
-        <product>OCamlEditor</product>
-        <copyright>© 2016 Francesco Tovagliari</copyright>
-        <file_version>1.13.4.0</file_version>
-        <icons/>
-      </resource_file>
     </target>
     <target name="tools" default="false" id="13" sub_targets="" is_fl_package="false" subsystem="Console" readonly="false" visible="true" node_collapsed="false">
       <descr></descr>
@@ -755,7 +654,6 @@
       <target target_id="9" show="false"/>
       <target target_id="12" show="true"/>
       <target target_id="0" show="true"/>
-      <target target_id="15" show="true"/>
       <target target_id="11" show="true"/>
       <target target_id="14" show="true"/>
       <target target_id="17" show="true"/>
@@ -763,7 +661,7 @@
       <target target_id="18" show="true"/>
       <target target_id="19" show="true"/>
       <target target_id="20" show="false"/>
-      <target target_id="22" show="true"/>
+      <target target_id="28" show="true"/>
       <target target_id="13" show="false"/>
       <target target_id="27" show="false"/>
     </targets>

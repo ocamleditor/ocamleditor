@@ -66,7 +66,7 @@ let set_ocaml_home ~ocamllib project =
   project.ocamllib <- ocamllib;
   project.ocamllib_from_env <- from_env;
   Unix.putenv "OCAML_HOME" project.ocaml_home;
-  Ocaml_config.putenv_ocamllib (Some project.ocamllib);
+  Ocaml_config.putenv_ocamllib ();
   project.autocomp_compiler <- Ocaml_config.ocamlc();
   ignore (Thread.create begin fun () ->
       project.can_compile_native <- (Ocaml_config.can_compile_native ~ocaml_home:project.ocaml_home ()) <> None;
@@ -446,7 +446,7 @@ let clear_cache proj =
     Sys.remove dot_oebuild;
     printf "File removed %s...\n%!" dot_oebuild;
   end;
-  let rmr = if Sys.os_type = "Win32" then "DEL /F /Q /S" else "rm -fr" in
+  let rmr = "rm -fr" in
   let dir = path_cache proj in
   let files = Sys.readdir dir in
   Array.iter begin fun x ->
@@ -459,23 +459,3 @@ let clear_cache proj =
   let cmd = sprintf "%s \"%s\"\\*" rmr (path_tmp proj) in
   Log.println `TRACE "%s\n%!" cmd;
   Sys.command cmd;;
-
-(*(** load_rc_icons *)
-  let load_rc_icons proj =
-  Utils.pushd (proj.root // Prj.default_dir_src);
-  let script = Filename.concat (Filename.concat ".." "tools") "rc_compile.ml" in
-  let cmd = sprintf "ocaml %s %S %S" script in
-  List.iter begin fun target ->
-    match target.Target.resource_file with
-      | None -> ()
-      | Some rc ->
-        List.iter begin fun (iconame, data) ->
-          let process_in ic =
-            try while true do Buffer.add_channel data ic 1024 done
-            with End_of_file -> ()
-          in
-          Oebuild_util.exec ~verbose:false ~join:false ~process_in (cmd target.Target.name iconame) |> ignore
-        end rc.Resource_file.rc_icons_data;
-  end proj.targets;
-  Utils.popd();*)
-

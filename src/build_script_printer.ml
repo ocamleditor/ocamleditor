@@ -64,7 +64,6 @@ let print_targets ochan targets external_tasks =
     kprintf print "  restrictions         = [%s];" (String.concat "; " (List.map (sprintf "%S") tg.restrictions));
     kprintf print "  dependencies         = [%s];" (String.concat "; " (List.map (sprintf "%d") tg.dependencies));
     kprintf print "  show                 = %b;" bst_show;
-    kprintf print "  rc_filename          = %s;" (match tg.resource_file with None -> "None" | Some rc -> "Some \"" ^ (String.escaped rc.Resource_file.rc_filename) ^ "\"");
     kprintf print "};";
   end targets;
   output_string ochan "];;\n";;

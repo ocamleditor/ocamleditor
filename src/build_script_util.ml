@@ -287,39 +287,30 @@ and build ~targets:avail_targets ~external_tasks ~etasks ~deps ~compilation ~out
   if tasks_compile <> [] then List.iter ETask.execute (tasks_compile)
   else
     let crono = if !Option.verbosity >= 3 then Oebuild_util.crono else fun ?label f x -> f x in
-    let libs =
-      match target.rc_filename with
-      | Some rc_filename when Sys.win32 ->
-          let exit_code = Sys.command "where rc 2>&1 1>NUL" in
-          if exit_code <> 0 then target.required_libraries
-          else
-            let exit_code = Sys.command "where cvtres 2>&1 1>NUL" in
-            if exit_code <> 0 then target.required_libraries
-            else (Filename.basename (Filename.chop_extension rc_filename)) ^ ".obj " ^ target.required_libraries
-      | _ -> target.required_libraries
-    in
-    match crono ~label:"Build time" (Oebuild.build
-                                       ~compilation
-                                       ~package:target.package
-                                       ~includes:target.search_path
-                                       ~libs
-                                       ~other_mods:target.other_objects
-                                       ~outkind:target.target_type
-                                       ~compile_only:false
-                                       ~thread:target.thread
-                                       ~vmthread:target.vmthread
-                                       ~annot:false
-                                       ~bin_annot:false
-                                       ~pp:target.pp
-                                       ?inline:target.inline
-                                       ~cflags:target.compiler_flags
-                                       ~lflags:target.linker_flags
-                                       ~outname
-                                       ~deps
-                                       ~dontlinkdep:target.dontlinkdep
-                                       ~dontaddopt:target.dontaddopt
-                                       ~verbose
-                                       ~toplevel_modules:files) ()
+    let libs = target.required_libraries in
+    match crono ~label:"Build time"
+            (Oebuild.build
+               ~compilation
+               ~package:target.package
+               ~includes:target.search_path
+               ~libs
+               ~other_mods:target.other_objects
+               ~outkind:target.target_type
+               ~compile_only:false
+               ~thread:target.thread
+               ~vmthread:target.vmthread
+               ~annot:false
+               ~bin_annot:false
+               ~pp:target.pp
+               ?inline:target.inline
+               ~cflags:target.compiler_flags
+               ~lflags:target.linker_flags
+               ~outname
+               ~deps
+               ~dontlinkdep:target.dontlinkdep
+               ~dontaddopt:target.dontaddopt
+               ~verbose
+               ~toplevel_modules:files) ()
     with
     | Built_successfully ->
         List.iter ETask.execute (ETask.filter etasks After_compile);
