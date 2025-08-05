@@ -3546,67 +3546,7 @@ let targets = [
     show                 = true;
   };
   
-  (* 7 *)
-  "plugin-dotviewer-bytecode", {
-    descr                = "";
-    num                  = 7;
-    id                   = 18;
-    output_name          = "../plugins/dot_viewer_svg";
-    target_type          = Library;
-    compilation_bytecode = true;
-    compilation_native   = false;
-    toplevel_modules     = "dot_viewer_svg.ml";
-    package              = "atdgen-runtime,lablgtk2.rsvg,xml-light,yojson";
-    search_path          = "common icons otherwidgets gmisclib"; (* -I *)
-    required_libraries   = "";
-    compiler_flags       = "-w -s-y-x-m -g";
-    linker_flags         = "-g lablrsvg.cma";
-    thread               = true;
-    vmthread             = false;
-    pp                   = "";
-    inline               = None;
-    nodep                = false;
-    dontlinkdep          = true;
-    dontaddopt           = false;
-    library_install_dir  = ""; (* Relative to the Standard Library Directory *)
-    other_objects        = "";
-    external_tasks       = [];
-    restrictions         = ["FINDLIB(lablgtk2.rsvg)"];
-    dependencies         = [9];
-    show                 = true;
-  };
-  
-  (* 8 *)
-  "plugin-dotviewer-native", {
-    descr                = "";
-    num                  = 8;
-    id                   = 19;
-    output_name          = "../plugins/dot_viewer_svg";
-    target_type          = Plugin;
-    compilation_bytecode = false;
-    compilation_native   = true;
-    toplevel_modules     = "dot_viewer_svg.ml";
-    package              = "atdgen-runtime,lablgtk2.rsvg,xml-light,yojson";
-    search_path          = "common icons otherwidgets gmisclib"; (* -I *)
-    required_libraries   = "";
-    compiler_flags       = "-g -w -s-y-x-m";
-    linker_flags         = "-g lablrsvg.cmxa";
-    thread               = true;
-    vmthread             = false;
-    pp                   = "";
-    inline               = None;
-    nodep                = false;
-    dontlinkdep          = true;
-    dontaddopt           = false;
-    library_install_dir  = ""; (* Relative to the Standard Library Directory *)
-    other_objects        = "";
-    external_tasks       = [];
-    restrictions         = ["FINDLIB(lablgtk2.rsvg)"];
-    dependencies         = [9];
-    show                 = true;
-  };
-  
-  (* 8 *)
+  (* 6 *)
   "prepare-build", {
     descr                = "";
     num                  = 0;
@@ -3636,10 +3576,10 @@ let targets = [
     show                 = false;
   };
   
-  (* 9 *)
+  (* 7 *)
   "launcher", {
     descr                = "Utility to open OCaml files from the file manager";
-    num                  = 9;
+    num                  = 7;
     id                   = 28;
     output_name          = "ocamleditorw";
     target_type          = Executable;
@@ -3666,7 +3606,7 @@ let targets = [
     show                 = true;
   };
   
-  (* 9 *)
+  (* 7 *)
   "tools", {
     descr                = "";
     num                  = 0;
@@ -3696,7 +3636,7 @@ let targets = [
     show                 = false;
   };
   
-  (* 9 *)
+  (* 7 *)
   "FINDLIB-TOOLS", {
     descr                = "";
     num                  = 0;

@@ -434,25 +434,8 @@ class page ?file ~project ~scroll_offset ~offset ~editor () =
               begin match editor#project.Prj.in_source_path self#get_filename with
               | Some filename ->
                   let filename = String.concat "/" (Utils.filename_split filename) in
-                  let on_ready_cb viewer =
-                    Option.iter begin fun viewer ->
-                      if editorbar#button_dotview#active then begin
-                        textbox#misc#hide();
-                        vbox#reorder_child viewer#coerce ~pos:0;
-                        dotview <- Some viewer;
-                        List.iter (fun b -> b#misc#set_sensitive false)
-                          [editorbar#button_font_incr; editorbar#button_font_decr; editorbar#button_rowspacing_incr; editorbar#button_rowspacing_decr;
-                           (*button_h_prev; button_h_next; button_h_last*)];
-                        List.iter (fun b -> b#misc#set_sensitive false) [editorbar#button_toggle_wrap; editorbar#button_toggle_whitespace];
-                        hscrollbar#misc#hide();
-                        editorbar#pos_box#misc#hide();
-                      end
-                    end viewer
-                  in
-                  begin match Dot.draw ~project:editor#project ~filename ~packing:vbox#add ~on_ready_cb () with
-                  | None -> reset_button()
-                  | _ -> ();
-                  end
+                  Dot.draw ~project:editor#project ~filename ();
+                  reset_button()
 
               | None ->
                   let title = "Could not show dependency graph" in
@@ -601,7 +584,7 @@ class page ?file ~project ~scroll_offset ~offset ~editor () =
       (** Dotview *)
       if Oe_config.dot_version <> None then begin
         (signal_button_dotview <- Some (editorbar#button_dotview#connect#clicked ~callback:self#show_dep_graph));
-        editorbar#button_dotview#misc#set_tooltip_text (Menu_view.get_switch_viewer_label (Some self));
+        editorbar#button_dotview#misc#set_tooltip_text "Dependency Graph";
         editorbar#button_dotview#misc#set_sensitive (Menu_view.get_switch_view_sensitive editor#project self);
       end
 

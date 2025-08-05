@@ -36,8 +36,8 @@ DEPENDENCIES
   * atdgen;
   * ocamldiff;
   * ocurl-0.6 to allow remote editing;
-  * (optional) Dot command to display the module dependencies graph;
-  * (optional) Lablgtk.rsvg to embed the graph viewer in the editor.
+  * Dot command to display the module dependencies graph;
+  * Lablgtk.rsvg to embed the graph viewer in the editor.
 
 
 

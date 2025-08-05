@@ -28,7 +28,6 @@ type dcolor = GDraw.color color
 
 (** Configuration     Section =================================================== *)
 
-let dot_viewer : [`DEFAULT | `PDF]       = `DEFAULT
 let dot_attributes                       = " -Glabelloc=t -Gfontsize=26pt -Gfontname=\"Helvetica\" -Nfontsize=16pt -Nfontname=\"Helvetica\""
 let ocp_indent_tab_key_enabled           = true
 let autosave_enabled                     = true
