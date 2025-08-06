@@ -104,7 +104,6 @@ let main () = begin
       Gaux.may splashscreen ~f:(fun w -> w#set_transient_for browser#window#as_window);
       Sys.chdir (Filename.dirname Sys.executable_name);
       Printf.printf "%s\n%!" (System_properties.to_string());
-      Plugin.load "dot_viewer_svg.cma" |> ignore;
       Project_xml.init();
     end |> ignore;
     browser#connect#after#startup ~callback:begin fun () ->

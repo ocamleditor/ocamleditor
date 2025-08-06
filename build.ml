@@ -404,12 +404,7 @@ let get name = List.assoc name cache
 
 let is_mingw = try get "system" = "mingw" with Not_found -> false
 
-let putenv_ocamllib value =
-  match Sys.os_type with
-  | "Win32" ->
-      let value = match value with None -> "" | Some x -> x in
-      Unix.putenv "OCAMLLIB" value
-  | _ -> ignore (Sys.command "unset OCAMLLIB")
+let putenv_ocamllib () = Sys.command "unset OCAMLLIB" |> ignore
 
 let find_best_compiler compilers =
   try
@@ -1025,7 +1020,6 @@ let (!$) = Filename.chop_extension
 let (//) = Filename.concat
 let (^^^) = Filename.check_suffix
 let (<@) = List.mem
-let win32 = (fun a b -> match Sys.os_type with "Win32" -> a | _ -> b)
 let redirect_stderr_to_null = " 2>/dev/null"
 
 (** format_int *)
@@ -1145,7 +1139,7 @@ let command ?(echo=true) cmd =
   exit_code
 
 (** Remove files with wildcards *)
-let rm = win32 "DEL /F /Q" "rm -f"
+let rm = "rm -f"
 
 (** Copy file *)
 let copy_file ic oc =
@@ -2191,9 +2185,9 @@ let get_output_name ~compilation ~outkind ~outname ?(dontaddopt=false) () =
     match outkind with
     | Library when compilation = Native -> ".cmxa"
     | Library -> ".cma"
-    | Executable when compilation = Native && dontaddopt -> win32 ".exe" ""
-    | Executable when compilation = Native -> ".opt" ^ (win32 ".exe" "")
-    | Executable -> win32 ".exe" ""
+    | Executable when compilation = Native && dontaddopt -> ""
+    | Executable when compilation = Native -> ".opt"
+    | Executable -> ""
     | Plugin when compilation = Native -> ".cmxs"
     | Plugin -> ".cma"
     | Pack -> ".cmx"
@@ -2252,7 +2246,6 @@ let sort_dependencies ~deps subset =
   end deps;
   List.rev !result
 ;;
-
 
 (** serial_compile *)
 let serial_compile ~compilation ~times ~compiler ~cflags ~includes ~toplevel_modules:_ ~deps ~verbose =
@@ -2314,8 +2307,7 @@ let parallel_compile ~compilation ?times ?pp ~compiler ~cflags ~includes ~toplev
 
 (** Build *)
 let build ~compilation ~package ~includes ~libs ~other_mods ~outkind ~compile_only
-    ~thread ~vmthread ~annot ~bin_annot ~pp ?inline ~cflags ~lflags ~outname ~deps ~dontlinkdep ~dontaddopt (*~ms_paths*)
-    ~toplevel_modules ?(jobs=0) ?(serial=false) ?(prof=false) ?(verbose=2) () =
+    ~thread ~vmthread ~annot ~bin_annot ~pp ?inline ~cflags ~lflags ~outname ~deps ~dontlinkdep ~dontaddopt     ~toplevel_modules ?(jobs=0) ?(serial=false) ?(prof=false) ?(verbose=2) () =
 
   let crono = if verbose >= 3 then crono else fun ?label f x -> f x in
   let crono4 = if verbose >= 4 then crono else fun ?label f x -> f x in
@@ -2543,7 +2535,6 @@ let check_prop expr get =
     end;
   with Not_found (* name (matched_group) *) -> false (* [4] *)
 
-
 (** check_restrictions *)
 let check_restrictions restr =
   List.for_all begin function
@@ -2618,7 +2609,6 @@ type target = {
   restrictions : string list;
   dependencies : int list;
   show : bool;
-  rc_filename : string option;
 }
 
 type target_map_entry = int * (string * target)
@@ -2853,28 +2843,29 @@ and build ~targets:avail_targets ~external_tasks ~etasks ~deps ~compilation ~out
   else
     let crono = if !Option.verbosity >= 3 then Oebuild_util.crono else fun ?label f x -> f x in
     let libs = target.required_libraries in
-    match crono ~label:"Build time" (Oebuild.build
-                                       ~compilation
-                                       ~package:target.package
-                                       ~includes:target.search_path
-                                       ~libs
-                                       ~other_mods:target.other_objects
-                                       ~outkind:target.target_type
-                                       ~compile_only:false
-                                       ~thread:target.thread
-                                       ~vmthread:target.vmthread
-                                       ~annot:false
-                                       ~bin_annot:false
-                                       ~pp:target.pp
-                                       ?inline:target.inline
-                                       ~cflags:target.compiler_flags
-                                       ~lflags:target.linker_flags
-                                       ~outname
-                                       ~deps
-                                       ~dontlinkdep:target.dontlinkdep
-                                       ~dontaddopt:target.dontaddopt
-                                       ~verbose
-                                       ~toplevel_modules:files) ()
+    match crono ~label:"Build time"
+            (Oebuild.build
+               ~compilation
+               ~package:target.package
+               ~includes:target.search_path
+               ~libs
+               ~other_mods:target.other_objects
+               ~outkind:target.target_type
+               ~compile_only:false
+               ~thread:target.thread
+               ~vmthread:target.vmthread
+               ~annot:false
+               ~bin_annot:false
+               ~pp:target.pp
+               ?inline:target.inline
+               ~cflags:target.compiler_flags
+               ~lflags:target.linker_flags
+               ~outname
+               ~deps
+               ~dontlinkdep:target.dontlinkdep
+               ~dontaddopt:target.dontaddopt
+               ~verbose
+               ~toplevel_modules:files) ()
     with
     | Built_successfully ->
         List.iter ETask.execute (ETask.filter etasks After_compile);
@@ -3283,7 +3274,6 @@ let targets = [
     restrictions         = [];
     dependencies         = [];
     show                 = false;
-    rc_filename          = None;
   };
   
   (* 0 *)
@@ -3314,7 +3304,6 @@ let targets = [
     restrictions         = [];
     dependencies         = [];
     show                 = false;
-    rc_filename          = None;
   };
   
   (* 0 *)
@@ -3345,7 +3334,6 @@ let targets = [
     restrictions         = [];
     dependencies         = [4];
     show                 = false;
-    rc_filename          = None;
   };
   
   (* 1 *)
@@ -3376,7 +3364,6 @@ let targets = [
     restrictions         = [];
     dependencies         = [7];
     show                 = true;
-    rc_filename          = None;
   };
   
   (* 2 *)
@@ -3407,7 +3394,6 @@ let targets = [
     restrictions         = [];
     dependencies         = [];
     show                 = true;
-    rc_filename          = None;
   };
   
   (* 2 *)
@@ -3438,113 +3424,19 @@ let targets = [
     restrictions         = [];
     dependencies         = [8];
     show                 = false;
-    rc_filename          = None;
   };
   
   (* 3 *)
-  "ocamleditor", {
-    descr                = "";
-    num                  = 3;
-    id                   = 12;
-    output_name          = "ocamleditor";
-    target_type          = Executable;
-    compilation_bytecode = false;
-    compilation_native   = true;
-    toplevel_modules     = "ocamleditor.ml";
-    package              = "atdgen-runtime,compiler-libs.common,ocamldiff,dynlink,lablgtk2,ocamldoc,ocp-indent.lib,str,unix,xml-light,yojson";
-    search_path          = "gmisclib common icons otherwidgets oebuild "; (* -I *)
-    required_libraries   = "odoc_info gmisclib common icons otherwidgets oebuildlib ocamleditor_lib";
-    compiler_flags       = "-w -s-y-x-m -g";
-    linker_flags         = "-g";
-    thread               = true;
-    vmthread             = false;
-    pp                   = "";
-    inline               = Some 50;
-    nodep                = true;
-    dontlinkdep          = false;
-    dontaddopt           = false;
-    library_install_dir  = ""; (* Relative to the Standard Library Directory *)
-    other_objects        = "";
-    external_tasks       = [];
-    restrictions         = [];
-    dependencies         = [14; 19; 16; 22];
-    show                 = true;
-    rc_filename          = None;
-  };
-  
-  (* 4 *)
-  "ocamleditor-bytecode", {
-    descr                = "";
-    num                  = 4;
-    id                   = 0;
-    output_name          = "ocamleditor";
-    target_type          = Executable;
-    compilation_bytecode = true;
-    compilation_native   = false;
-    toplevel_modules     = "ocamleditor.ml";
-    package              = "atdgen-runtime,compiler-libs.common,ocamldiff,dynlink,lablgtk2,ocamldoc,ocp-indent.lib,str,unix,xml-light,yojson";
-    search_path          = "gmisclib common icons otherwidgets oebuild "; (* -I *)
-    required_libraries   = "odoc_info gmisclib common icons otherwidgets oebuildlib";
-    compiler_flags       = "-w -s-y-x-m -g";
-    linker_flags         = "-g";
-    thread               = true;
-    vmthread             = false;
-    pp                   = "";
-    inline               = None;
-    nodep                = false;
-    dontlinkdep          = false;
-    dontaddopt           = false;
-    library_install_dir  = ""; (* Relative to the Standard Library Directory *)
-    other_objects        = "";
-    external_tasks       = [];
-    restrictions         = [];
-    dependencies         = [4; 10; 7; 5; 8; 9; 20; 17; 18];
-    show                 = true;
-    rc_filename          = None;
-  };
-  
-  (* 5 *)
-  "ocamleditor-native", {
-    descr                = "";
-    num                  = 5;
-    id                   = 11;
-    output_name          = "ocamleditor";
-    target_type          = Executable;
-    compilation_bytecode = false;
-    compilation_native   = true;
-    toplevel_modules     = "ocamleditor.ml";
-    package              = "atdgen-runtime,compiler-libs.common,ocamldiff,dynlink,lablgtk2,ocamldoc,ocp-indent.lib,str,unix,xml-light,yojson";
-    search_path          = "gmisclib common icons otherwidgets oebuild "; (* -I *)
-    required_libraries   = "odoc_info gmisclib common icons otherwidgets oebuildlib ocamleditor_lib";
-    compiler_flags       = "-w -s-y-x-m -g";
-    linker_flags         = "-g";
-    thread               = true;
-    vmthread             = false;
-    pp                   = "";
-    inline               = Some 50;
-    nodep                = false;
-    dontlinkdep          = false;
-    dontaddopt           = false;
-    library_install_dir  = ""; (* Relative to the Standard Library Directory *)
-    other_objects        = "";
-    external_tasks       = [];
-    restrictions         = [];
-    dependencies         = [14; 19; 16];
-    show                 = true;
-    rc_filename          = None;
-  };
-  
-  (* 6 *)
   "ocamleditor-lib", {
     descr                = "";
-    num                  = 6;
+    num                  = 3;
     id                   = 14;
     output_name          = "ocamleditor_lib";
     target_type          = Library;
     compilation_bytecode = false;
     compilation_native   = true;
     toplevel_modules     = "ocamleditor_lib.ml";
-    package              = "atdgen-runtime,compiler-libs.common,ocamldiff,dynlink,lablgtk2,ocamldoc,ocp-indent.lib,str,unix,xml-light,yojson";
+    package              = "atdgen-runtime,compiler-libs.common,curl,dynlink,lablgtk2,ocamldiff,ocamldoc,ocp-indent.lib,str,unix,xml-light,yojson";
     search_path          = "gmisclib common icons otherwidgets oebuild "; (* -I *)
     required_libraries   = "";
     compiler_flags       = "-w -s-y-x-m -g";
@@ -3562,134 +3454,69 @@ let targets = [
     restrictions         = [];
     dependencies         = [4; 10; 5; 28; 8; 9; 20];
     show                 = true;
-    rc_filename          = None;
   };
   
-  (* 7 *)
-  "plugin-remote-bytecode", {
+  (* 4 *)
+  "ocamleditor", {
     descr                = "";
-    num                  = 7;
-    id                   = 17;
-    output_name          = "../plugins/remote";
-    target_type          = Library;
-    compilation_bytecode = true;
-    compilation_native   = false;
-    toplevel_modules     = "remote.ml";
-    package              = "atdgen-runtime,curl,lablgtk2,yojson";
-    search_path          = "common icons otherwidgets gmisclib"; (* -I *)
-    required_libraries   = "";
-    compiler_flags       = "-g -w -10";
-    linker_flags         = "-g curl.cma";
-    thread               = false;
-    vmthread             = false;
-    pp                   = "";
-    inline               = None;
-    nodep                = false;
-    dontlinkdep          = true;
-    dontaddopt           = false;
-    library_install_dir  = ""; (* Relative to the Standard Library Directory *)
-    other_objects        = "";
-    external_tasks       = [];
-    restrictions         = ["FINDLIB(curl)"];
-    dependencies         = [9];
-    show                 = true;
-    rc_filename          = None;
-  };
-  
-  (* 8 *)
-  "plugin-remote-native", {
-    descr                = "";
-    num                  = 8;
-    id                   = 16;
-    output_name          = "../plugins/remote";
-    target_type          = Plugin;
+    num                  = 4;
+    id                   = 12;
+    output_name          = "ocamleditor";
+    target_type          = Executable;
     compilation_bytecode = false;
     compilation_native   = true;
-    toplevel_modules     = "remote.ml";
-    package              = "atdgen-runtime,curl,lablgtk2,yojson";
-    search_path          = "common icons otherwidgets gmisclib"; (* -I *)
-    required_libraries   = "";
-    compiler_flags       = "-g -w -10";
-    linker_flags         = "-g curl.cmxa";
-    thread               = false;
-    vmthread             = false;
-    pp                   = "";
-    inline               = None;
-    nodep                = false;
-    dontlinkdep          = true;
-    dontaddopt           = false;
-    library_install_dir  = ""; (* Relative to the Standard Library Directory *)
-    other_objects        = "";
-    external_tasks       = [];
-    restrictions         = ["FINDLIB(curl)"];
-    dependencies         = [9];
-    show                 = true;
-    rc_filename          = None;
-  };
-  
-  (* 9 *)
-  "plugin-dotviewer-bytecode", {
-    descr                = "";
-    num                  = 9;
-    id                   = 18;
-    output_name          = "../plugins/dot_viewer_svg";
-    target_type          = Library;
-    compilation_bytecode = true;
-    compilation_native   = false;
-    toplevel_modules     = "dot_viewer_svg.ml";
-    package              = "atdgen-runtime,lablgtk2.rsvg,xml-light,yojson";
-    search_path          = "common icons otherwidgets gmisclib"; (* -I *)
-    required_libraries   = "";
+    toplevel_modules     = "ocamleditor.ml";
+    package              = "atdgen-runtime,compiler-libs.common,curl,dynlink,lablgtk2,ocamldiff,ocamldoc,ocp-indent.lib,str,unix,xml-light,yojson";
+    search_path          = "gmisclib common icons otherwidgets oebuild "; (* -I *)
+    required_libraries   = "odoc_info gmisclib common icons otherwidgets oebuildlib ocamleditor_lib";
     compiler_flags       = "-w -s-y-x-m -g";
-    linker_flags         = "-g lablrsvg.cma";
+    linker_flags         = "-g";
     thread               = true;
     vmthread             = false;
     pp                   = "";
-    inline               = None;
-    nodep                = false;
-    dontlinkdep          = true;
+    inline               = Some 50;
+    nodep                = true;
+    dontlinkdep          = false;
     dontaddopt           = false;
     library_install_dir  = ""; (* Relative to the Standard Library Directory *)
     other_objects        = "";
     external_tasks       = [];
-    restrictions         = ["FINDLIB(lablgtk2.rsvg)"];
-    dependencies         = [9];
+    restrictions         = [];
+    dependencies         = [14; 19; 16; 22];
     show                 = true;
-    rc_filename          = None;
   };
   
-  (* 10 *)
-  "plugin-dotviewer-native", {
+  (* 5 *)
+  "ocamleditor-bytecode", {
     descr                = "";
-    num                  = 10;
-    id                   = 19;
-    output_name          = "../plugins/dot_viewer_svg";
-    target_type          = Plugin;
-    compilation_bytecode = false;
-    compilation_native   = true;
-    toplevel_modules     = "dot_viewer_svg.ml";
-    package              = "atdgen-runtime,lablgtk2.rsvg,xml-light,yojson";
-    search_path          = "common icons otherwidgets gmisclib"; (* -I *)
-    required_libraries   = "";
-    compiler_flags       = "-g -w -s-y-x-m";
-    linker_flags         = "-g lablrsvg.cmxa";
+    num                  = 5;
+    id                   = 0;
+    output_name          = "ocamleditor";
+    target_type          = Executable;
+    compilation_bytecode = true;
+    compilation_native   = false;
+    toplevel_modules     = "ocamleditor.ml";
+    package              = "atdgen-runtime,compiler-libs.common,curl,dynlink,lablgtk2,ocamldiff,ocamldoc,ocp-indent.lib,str,unix,xml-light,yojson";
+    search_path          = "gmisclib common icons otherwidgets oebuild "; (* -I *)
+    required_libraries   = "odoc_info gmisclib common icons otherwidgets oebuildlib";
+    compiler_flags       = "-w -s-y-x-m -g";
+    linker_flags         = "-g";
     thread               = true;
     vmthread             = false;
     pp                   = "";
     inline               = None;
     nodep                = false;
-    dontlinkdep          = true;
+    dontlinkdep          = false;
     dontaddopt           = false;
     library_install_dir  = ""; (* Relative to the Standard Library Directory *)
     other_objects        = "";
     external_tasks       = [];
-    restrictions         = ["FINDLIB(lablgtk2.rsvg)"];
-    dependencies         = [9];
+    restrictions         = [];
+    dependencies         = [4; 10; 7; 5; 8; 9; 20; 17; 18];
     show                 = true;
-    rc_filename          = None;
   };
   
-  (* 10 *)
+  (* 5 *)
   "prepare-build", {
     descr                = "";
     num                  = 0;
@@ -3717,13 +3544,12 @@ let targets = [
     restrictions         = [];
     dependencies         = [];
     show                 = false;
-    rc_filename          = None;
   };
   
-  (* 11 *)
+  (* 6 *)
   "launcher", {
     descr                = "Utility to open OCaml files from the file manager";
-    num                  = 11;
+    num                  = 6;
     id                   = 28;
     output_name          = "ocamleditorw";
     target_type          = Executable;
@@ -3748,10 +3574,9 @@ let targets = [
     restrictions         = ["OCAML(system<>mingw)"];
     dependencies         = [];
     show                 = true;
-    rc_filename          = None;
   };
   
-  (* 11 *)
+  (* 6 *)
   "tools", {
     descr                = "";
     num                  = 0;
@@ -3779,10 +3604,9 @@ let targets = [
     restrictions         = [];
     dependencies         = [];
     show                 = false;
-    rc_filename          = None;
   };
   
-  (* 11 *)
+  (* 6 *)
   "FINDLIB-TOOLS", {
     descr                = "";
     num                  = 0;
@@ -3810,7 +3634,6 @@ let targets = [
     restrictions         = [];
     dependencies         = [];
     show                 = false;
-    rc_filename          = None;
   };
 ];;
 

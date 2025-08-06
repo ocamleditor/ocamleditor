@@ -456,7 +456,7 @@ let view ~browser ~group ~flags
       ~callback:(Editor_menu.toggle_word_wrap_toggled ~editor) in
   (**  *)
   let _ = GMenu.separator_item ~packing:menu#add () in
-  let switch_viewer = GMenu.menu_item ~label:"Switch Viewer to \xC2\xABDependencies\xC2\xBB" ~packing:menu#add () in
+  let switch_viewer = GMenu.menu_item ~label:"Dependency Graph" ~packing:menu#add () in
   ignore (switch_viewer#connect#activate ~callback:begin fun () ->
       editor#with_current_page (fun page -> page#button_dep_graph#clicked ())
     end);

@@ -512,8 +512,7 @@ class editor () =
       ignore (item#connect#activate ~callback:(fun () -> self#switch_mli_ml page));
       item#misc#set_sensitive (Menu_file.get_file_switch_sensitive page);
       self#with_current_page begin fun page ->
-        let label = Menu_view.get_switch_viewer_label (Some page) in
-        let switch_viewer = GMenu.menu_item ~label ~packing:menu#add () in
+        let switch_viewer = GMenu.menu_item ~label:"Dependency Graph" ~packing:menu#add () in
         ignore (switch_viewer#connect#activate ~callback:page#button_dep_graph#clicked);
         switch_viewer#misc#set_sensitive (Menu_view.get_switch_view_sensitive self#project page)
       end;
@@ -664,23 +663,13 @@ class editor () =
     method dialog_save_as page =
       match page#file with
       | Some file when file#remote <> None ->
-          Option.iter
-            begin fun (plugin : (module Plugins.REMOTE)) ->
-              let module Remote = (val plugin) in
-              Remote.dialog_save_as ~editor:self ~page ()
-            end
-            !Plugins.remote
+          Remote.dialog_save_as ~editor:self ~page ()
       | _ -> Dialog_save_as.window ~editor:self ~page ()
 
     method dialog_rename page =
       match page#file with
       | Some file when file#remote <> None ->
-          Option.iter
-            begin fun (plugin : (module Plugins.REMOTE)) ->
-              let module Remote = (val plugin) in
-              Remote.dialog_rename ~editor:self ~page ()
-            end
-            !Plugins.remote
+          Remote.dialog_rename ~editor:self ~page ()
       | _ -> Dialog_rename.window ~editor:self ~page ()
 
     method save (page : Editor_page.page) =
@@ -862,7 +851,6 @@ class editor () =
       self#misc#connect#map ~callback:begin fun _ ->
         Gaux.may (GWindow.toplevel self#coerce) ~f:begin fun (w : GWindow.window) ->
           w#event#connect#focus_in ~callback:begin fun _ ->
-            Plugin.load "plugin_diff.cma" |> ignore;
             create_timeout_autocomp();
             create_timeout_autosave();
             create_timeout_delim();
