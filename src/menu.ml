@@ -508,9 +508,6 @@ let tools ~browser ~group ~flags items =
   let toplevel = GMenu.menu_item ~label:"OCaml Toplevel" ~packing:menu#add () in
   ignore (toplevel#connect#activate ~callback:browser#shell);
   let module_browser = GMenu.menu_item ~label:"Module Browser" ~packing:menu#add () in
-  ignore (module_browser#connect#activate ~callback:(fun () ->
-      browser#with_current_project (fun project ->
-          Mbrowser_tool.append_to_messages ?page:None ?search_string:None ~project)));
   let dialog_external_tools = GMenu.menu_item ~label:"External Tools" ~packing:menu#add () in
   ignore (dialog_external_tools#connect#activate ~callback:browser#dialog_external_tools);
   let _ = GMenu.separator_item ~packing:menu#add () in

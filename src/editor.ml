@@ -868,14 +868,7 @@ class editor () =
         end;
       end |> ignore;
 
-    method show_doc_at_cursor () =
-      self#with_current_page begin fun page ->
-        let search_string =
-          let _ = page#buffer#select_ocaml_word ?pat:(Some Ocaml_word_bound.longid_sharp) () in
-          Some (page#buffer#selection_text());
-        in
-        Mbrowser_tool.append_to_messages ~page ?search_string ~project:page#project
-      end
+    method show_doc_at_cursor () = ()
 
     initializer
       File_history.read file_history;

@@ -194,7 +194,7 @@ let get_load_path proj =
   ocamllib :: (List.filter ((<>) ocamllib) ((proj.root // default_dir_src) :: paths))
 
 (** [load_path proj] adds to module [Load_path] the {i load path} of [proj].*)
-let load_path proj = List.iter Load_path.add_dir (get_load_path proj)
+let load_path proj = List.iter (Load_path.add_dir ~hidden:false) (get_load_path proj)
 
 (** [unload_path proj] removes from [Load_path] the {i load path} of [proj].*)
 let unload_path proj = List.iter Load_path.remove_dir (get_load_path proj)
