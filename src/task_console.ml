@@ -238,12 +238,12 @@ class view ~(editor : Editor.editor) ?(task_kind=(`OTHER : Task.kind)) ~task ?pa
         Mutex.lock m_write;
         signal_enabled <- false;
         self#clear();
-        (*      kprintf (view#buffer#insert ~tag_names:["bold"; "output"]) "Environment: %s" (String.concat "; " task.Task.env);
-                kprintf (view#buffer#insert ~tag_names:["bold"; "output"]) "\nWorking directory: %s\n" task.Task.dir;
-                kprintf (view#buffer#insert ~tag_names:["bold"; "output"]) "Command:\n%s\n" (Process.cmd_line proc);*)
-        (*kprintf (view#buffer#insert ~tag_names:["bold"; "output"]) "%s\n" (Cmd.expand (project.Prj.autocomp_compiler ^ " -v"));*)
+        (*      ksprintf (view#buffer#insert ~tag_names:["bold"; "output"]) "Environment: %s" (String.concat "; " task.Task.env);
+                ksprintf (view#buffer#insert ~tag_names:["bold"; "output"]) "\nWorking directory: %s\n" task.Task.dir;
+                ksprintf (view#buffer#insert ~tag_names:["bold"; "output"]) "Command:\n%s\n" (Process.cmd_line proc);*)
+        (*ksprintf (view#buffer#insert ~tag_names:["bold"; "output"]) "%s\n" (Cmd.expand (project.Prj.autocomp_compiler ^ " -v"));*)
         let args = String.concat " " (List.map (fun (_ , x) -> x) (List.filter (fun (e, _) -> e) task.Task.et_args)) in
-        kprintf (view#buffer#insert ~tag_names:["bold"; "output"]) "%s %s\n" (Filename.quote task.Task.et_cmd) args;
+        ksprintf (view#buffer#insert ~tag_names:["bold"; "output"]) "%s %s\n" (Filename.quote task.Task.et_cmd) args;
         signal_enabled <- true;
         Mutex.unlock m_write;
         self#present ();

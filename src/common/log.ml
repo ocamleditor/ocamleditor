@@ -116,16 +116,16 @@ module Make (X : sig
 
     let fprint level f =
       if level <> `OFF && level >= !verbosity then begin
-        if !print_timestamp then (Printf.kprintf (Format.pp_print_string log_formatter) "%s " (timestamp()));
-        Printf.kprintf (Format.pp_print_string log_formatter) "[%s] [%d] " (string_of_verbosity level) (Thread.id (Thread.self()));
+        if !print_timestamp then (Printf.ksprintf (Format.pp_print_string log_formatter) "%s " (timestamp()));
+        Printf.ksprintf (Format.pp_print_string log_formatter) "[%s] [%d] " (string_of_verbosity level) (Thread.id (Thread.self()));
         Option.iter (Format.pp_print_string log_formatter) prefix;
         Format.kfprintf (fun fmt -> Format.pp_print_flush fmt ()) log_formatter f
       end else Format.ifprintf Format.err_formatter f
 
     let fprintln level f =
       if level <> `OFF && level >= !verbosity then begin
-        if !print_timestamp then (Printf.kprintf (Format.pp_print_string log_formatter) "%s " (timestamp()));
-        Printf.kprintf (Format.pp_print_string log_formatter) "[%s] [%d] " (string_of_verbosity level) (Thread.id (Thread.self()));
+        if !print_timestamp then (Printf.ksprintf (Format.pp_print_string log_formatter) "%s " (timestamp()));
+        Printf.ksprintf (Format.pp_print_string log_formatter) "[%s] [%d] " (string_of_verbosity level) (Thread.id (Thread.self()));
         Option.iter (Format.pp_print_string log_formatter) prefix;
         Format.kfprintf (fun fmt -> Format.pp_print_newline fmt (); Format.pp_print_flush fmt ())
           log_formatter f

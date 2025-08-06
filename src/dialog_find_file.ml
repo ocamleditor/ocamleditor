@@ -60,7 +60,7 @@ let create ?(all=true) ~(editor : Editor.editor) ~roots () =
   (* Quick file chooser *)
   let source               =
     if all then begin
-      kprintf window#set_title "%s" title;
+      ksprintf window#set_title "%s" title;
       `path (roots, editor#file_history.File_history.content)
     end else `filelist editor#file_history.File_history.content
   in

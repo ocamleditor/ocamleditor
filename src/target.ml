@@ -106,7 +106,7 @@ let target_type_of_string = function
 let subsystem_of_string = function
   | "Console" -> Console
   | "Windows" -> Windows
-  | x -> kprintf failwith "subsystem_of_string: %S" x
+  | x -> ksprintf failwith "subsystem_of_string: %S" x
 
 let string_of_subsystem = function
   | Console -> "Console"

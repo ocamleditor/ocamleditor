@@ -122,7 +122,7 @@ let find_best ?(param="--help") prog =
       ok
     end prog
   with Not_found ->
-    kprintf failwith "Cannot find: %s" (String.concat ", " prog)
+    ksprintf failwith "Cannot find: %s" (String.concat ", " prog)
 
 let find_command name =
   let basename = name in

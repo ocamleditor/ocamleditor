@@ -411,7 +411,7 @@ class browser window =
           | _ -> ()
         in
         with_project begin fun proj ->
-          kprintf label_project_name#set_label "<b>%s</b>" proj.Prj.name;
+          ksprintf label_project_name#set_label "<b>%s</b>" proj.Prj.name;
           label_project_name#misc#set_tooltip_text (Project.filename proj);
         end;
         Git.toplevel begin function
@@ -790,15 +790,15 @@ class browser window =
       ignore (editor#connect#switch_page ~callback:begin fun page ->
           Gaux.may menu ~f:begin fun menu ->
             let basename = Filename.basename page#get_filename in
-            kprintf (Menu.set_label menu.file_rename) "Rename \xC2\xAB%s\xC2\xBB" basename;
+            ksprintf (Menu.set_label menu.file_rename) "Rename \xC2\xAB%s\xC2\xBB" basename;
             menu.file_switch#misc#set_sensitive
               ((basename ^^^ ".ml") || (basename ^^^ ".mli"));
-            kprintf (Menu.set_label menu.file_close) "Close \xC2\xAB%s\xC2\xBB" basename;
-            kprintf (Menu.set_label menu.file_close_all) "Close All Except \xC2\xAB%s\xC2\xBB" basename;
-            kprintf (Menu.set_label menu.file_revert) "Revert to Saved \xC2\xAB%s\xC2\xBB" basename;
-            kprintf (Menu.set_label menu.file_delete) "Delete \xC2\xAB%s\xC2\xBB" basename;
+            ksprintf (Menu.set_label menu.file_close) "Close \xC2\xAB%s\xC2\xBB" basename;
+            ksprintf (Menu.set_label menu.file_close_all) "Close All Except \xC2\xAB%s\xC2\xBB" basename;
+            ksprintf (Menu.set_label menu.file_revert) "Revert to Saved \xC2\xAB%s\xC2\xBB" basename;
+            ksprintf (Menu.set_label menu.file_delete) "Delete \xC2\xAB%s\xC2\xBB" basename;
             match List_opt.assoc page#misc#get_oid menu.window_pages with
-            | Some item ->kprintf (Menu.set_label item) "%s" basename
+            | Some item ->ksprintf (Menu.set_label item) "%s" basename
             | _ -> ()
           end;
         end);

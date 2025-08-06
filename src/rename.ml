@@ -116,9 +116,9 @@ let rename editor =
                 (* TODO Support prefix and infix symbols *)
                 if Str.string_match re_ocaml_ident new_name 0 then begin
                   let count = do_rename page renaming_positions new_name in
-                  Printf.kprintf editor#status_message "%d occurrences have been renamed." count;
+                  Printf.ksprintf editor#status_message "%d occurrences have been renamed." count;
                 end else
-                  Printf.kprintf editor#status_message "%S is not a valid identifier." new_name;
+                  Printf.ksprintf editor#status_message "%S is not a valid identifier." new_name;
                 window#destroy();
                 true
               end else false

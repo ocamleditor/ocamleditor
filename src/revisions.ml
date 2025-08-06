@@ -98,7 +98,7 @@ class widget ~page ?packing () =
   let _              = toolbar#set_icon_size `MENU in
   let button_compare_ext = GButton.tool_button ~label:"Compare" ~packing:toolbar#insert () in
   let _              = button_compare_ext#set_icon_widget (GMisc.image ~pixbuf:(??? Icons.diff) ())#coerce in
-  let _              = kprintf button_compare_ext#misc#set_tooltip_markup "External diff with <span size='x-small' font-family='monospace'>%s</span>" diff_cmd in
+  let _              = ksprintf button_compare_ext#misc#set_tooltip_markup "External diff with <span size='x-small' font-family='monospace'>%s</span>" diff_cmd in
   let _              = GButton.separator_tool_item ~packing:toolbar#insert () in
   let button_ignore_ws = GButton.toggle_tool_button ~label:"Ignore Whitespace" ~active:true ~packing:toolbar#insert () in
   let button_ws      = GButton.toggle_tool_button ~label:"View Whitespaces" ~active:true ~packing:toolbar#insert () in

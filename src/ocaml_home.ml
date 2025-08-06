@@ -99,7 +99,7 @@ class widget ~project ?(spacing=3) ?border_width ~label_width ?packing ()=
       in
       ignore (entry_ocamllib#connect#changed ~callback:begin fun () ->
           let ver, stdlib = self#get_ocaml_version () in
-          kprintf entry_version#set_text "%s - %s" ver stdlib;
+          ksprintf entry_version#set_text "%s - %s" ver stdlib;
           set_tooltips();
           entry_native#set_text "";
         end);

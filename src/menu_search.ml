@@ -121,7 +121,7 @@ let create_search_results_pane ~pixbuf ~editor ~page =
   widget, mark, label
 
 (** find_definition_references *)
-let find_definition_references editor =
+let find_definition_references editor = (*  *)
   editor#with_current_page begin fun page ->
     let widget, mark, label = create_search_results_pane ~pixbuf:(??? Icons.references) ~editor ~page in
     widget#connect#search_started ~callback:begin fun () ->
@@ -134,7 +134,7 @@ let find_definition_references editor =
       label#set_text !def_name;
       widget#set_title !def_name;
       if widget#icon = None then widget#set_icon (Some (??? Icons.references));
-      kprintf widget#label_message#set_label "References to identifier <tt>%s</tt>" (Glib.Markup.escape_text !def_name);
+      ksprintf widget#label_message#set_label "References to identifier <tt>%s</tt>" (Glib.Markup.escape_text !def_name);
     end |> ignore;
     widget#start_search();
   end

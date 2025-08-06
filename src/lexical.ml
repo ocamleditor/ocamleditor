@@ -285,6 +285,7 @@ let tag ?start ?stop (tb : GText.buffer) =
           | RBRACKET -> if !in_annotation then (in_annotation := false; "annotation") else "symbol"
           | ASSERT -> "custom"
           | DOCSTRING _ | COMMENT _ -> "comment"
+          | METAOCAML_ESCAPE | METAOCAML_BRACKET_OPEN | METAOCAML_BRACKET_CLOSE | EFFECT -> ""
           | EOL -> ""
           | EOF -> raise End_of_file
         in

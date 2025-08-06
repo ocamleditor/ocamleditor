@@ -27,7 +27,7 @@ let redirect_stderr = " 2>/dev/null"
 
 
 let read_ocaml_config () =
-  let conf = Printf.kprintf Shell.get_command_output "ocamlc -config" in
+  let conf = Printf.ksprintf Shell.get_command_output "ocamlc -config" in
   let re = Str.regexp ": " in
   List.map (fun l -> match Str.split re l with [n;v] -> n, v | [n] -> n, "" | _ -> assert false) conf
 
@@ -43,7 +43,7 @@ let find_best_compiler compilers =
   try
     Some (List.find begin fun comp ->
         try
-          let output = kprintf Shell.get_command_output "%s -version%s" comp redirect_stderr in
+          let output = ksprintf Shell.get_command_output "%s -version%s" comp redirect_stderr in
           output <> []
         with _ -> false
       end compilers)
@@ -119,7 +119,7 @@ let can_compile_native ?ocaml_home () =
       let obj = outname ^ ".obj" in
       if Sys.file_exists obj then (Sys.remove obj);
       if !result then begin
-        let conf = String.concat "\n" (kprintf Shell.get_command_output "%s -config" compiler) in
+        let conf = String.concat "\n" (ksprintf Shell.get_command_output "%s -config" compiler) in
         let re = Str.regexp "ccomp_type: \\(.*\\)\n" in
         if Str.search_forward re conf 0 >= 0 then begin
           Some (Str.matched_group 1 conf)

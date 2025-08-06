@@ -59,7 +59,7 @@ class widget ~prog ~(env : string array) ~(args : string list) ?packing ?show ()
     method restart = self#kill
 
     method quit () =
-      kprintf self#insert "#quit;;\n";
+      ksprintf self#insert "#quit;;\n";
       self#return();
       alive <- false;
       self#kill();
