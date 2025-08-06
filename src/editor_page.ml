@@ -139,7 +139,6 @@ class page ?file ~project ~scroll_offset ~offset ~editor () =
     val mutable load_complete = false
     val mutable quick_info = Quick_info.create ocaml_view
     val error_indication = new Error_indication.error_indication ocaml_view vscrollbar global_gutter
-    val mutable outline = None
     val mutable dotview = None
     val mutable word_wrap = editor#word_wrap
     val mutable show_whitespace = editor#show_whitespace_chars
@@ -155,9 +154,6 @@ class page ?file ~project ~scroll_offset ~offset ~editor () =
 
     method global_gutter = global_gutter
     method vscrollbar = vscrollbar
-
-    method outline = outline
-    method set_outline x = outline <- x
 
     method is_changed_after_last_autosave = last_autosave_time < buffer#last_edit_time
     method sync_autosave_time () = last_autosave_time <- Unix.gettimeofday()
@@ -220,7 +216,6 @@ class page ?file ~project ~scroll_offset ~offset ~editor () =
       self#error_indication#set_flag_tooltip Preferences.preferences#get.editor_err_tooltip;
       self#error_indication#set_flag_gutter Preferences.preferences#get.editor_err_gutter;
       self#view#create_highlight_current_line_tag();
-      Gaux.may outline ~f:(fun outline -> outline#view#misc#modify_font_by_name Preferences.preferences#get.editor_completion_font);
       error_indication#set_phase ();
 
     method update_statusbar () =
@@ -369,8 +364,6 @@ class page ?file ~project ~scroll_offset ~offset ~editor () =
         buffer#sync_autocomp_time ();
         Autocomp.compile_buffer ~project ~editor ~page:self ?join ();
       end else begin
-        editor#pack_outline (Cmt_view.empty());
-        self#set_outline None;
       end
 
     method tooltip ((*(x, y) as*) location) =

@@ -40,7 +40,7 @@ let prepare_build () =
     eprintf "You are using OCaml-%s but version %s is required." Sys.ocaml_version required_ocaml_version;
   end else begin
     cp ~echo:true (if !use_modified_gtkThread then "gtkThreadModified.ml" else "gtkThreadOriginal.ml") "gtkThread2.ml";
-    if not (Sys.file_exists "../plugins") then (mkdir "../plugins");
+    (* if not (Sys.file_exists "../plugins") then (mkdir "../plugins"); *)
     run "ocamllex err_lexer.mll";
     run "ocamlyacc err_parser.mly";
     run "atdgen -t settings.atd";
@@ -57,10 +57,10 @@ let prepare_build () =
     end;
     (try generate_oebuild_script() with Failure msg -> raise (Script_error ("generate_oebuild_script()", 2)));
     (*  *)
-    let chan = open_out_bin "../src/build_id.ml" in
+    (* let chan = open_out_bin "../src/build_id.ml" in
     kprintf (output_string chan) "let timestamp = \"%f\"\n" (Unix.gettimeofday ());
     kprintf (output_string chan) "let git_hash = \"\"\n";
-    close_out_noerr chan;
+    close_out_noerr chan; *)
     (*  *)
     print_newline()
   end;;

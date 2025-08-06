@@ -176,7 +176,6 @@ class browser window =
     method refresh () = self#with_current_project Project.refresh
     method clear_cache () = self#with_current_project begin fun project ->
         Project.clear_cache project |> ignore;
-        Symbols.Cache.reset ~project
       end
 
     method project_clean () =
@@ -197,7 +196,6 @@ class browser window =
       self#with_current_project begin fun project ->
         Project.save ~editor project;
         self#project_write_history();
-        Symbols.Cache.save ~project;
         Names.Cache.save ~project;
         Project.unload_path project;
         List.iter (fun p -> Autosave.delete ~filename:p#get_filename ()) editor#pages;
@@ -210,14 +208,11 @@ class browser window =
       Project.load_path proj;
       editor#set_history_switch_page_locked true;
       (*crono ~label:"close_all" *)editor#close_all ();
-      editor#pack_outline (Cmt_view.empty());
       editor#set_project proj;
       Sys.chdir (proj.root // Prj.default_dir_src);
       Gmisclib.Idle.add ~prio:300 self#set_title;
       (File_history.add project_history) filename;
-      Symbols.Cache.load ~project:proj;
       Names.Cache.load ~project:proj;
-      Annotation.preload ~project:proj;
       Autosave.recover ();
       Gmisclib.Idle.add ~prio:300(*crono ~label:"dialog_project_properties" (fun () -> *)(self#dialog_project_properties ~show:false);
       begin
@@ -689,7 +684,6 @@ class browser window =
           begin
             try self#with_current_project begin fun project ->
                 Project.save ~editor project;
-                Symbols.Cache.save ~project;
                 Names.Cache.save ~project;
               end with Gpointer.Null -> ();
           end;

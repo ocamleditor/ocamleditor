@@ -98,18 +98,6 @@ class editor () =
     method show_outline = show_outline
     method set_show_outline show =
       show_outline <- show;
-      try
-        self#with_current_page begin fun page ->
-          match page#outline with
-          | Some ol when show -> self#pack_outline ol#coerce;
-          | Some ol ->
-              ol#destroy();
-              page#set_outline None;
-          | _ ->
-              (try hpaned#remove hpaned#child1 with Gpointer.Null -> ());
-              if show then (page#compile_buffer ?join:None());
-        end;
-      with Gpointer.Null -> ()
 
     method show_whitespace_chars = show_whitespace_chars
     method set_show_whitespace_chars x =
@@ -868,14 +856,7 @@ class editor () =
         end;
       end |> ignore;
 
-    method show_doc_at_cursor () =
-      self#with_current_page begin fun page ->
-        let search_string =
-          let _ = page#buffer#select_ocaml_word ?pat:(Some Ocaml_word_bound.longid_sharp) () in
-          Some (page#buffer#selection_text());
-        in
-        Mbrowser_tool.append_to_messages ~page ?search_string ~project:page#project
-      end
+    method show_doc_at_cursor () = ()
 
     initializer
       File_history.read file_history;
@@ -904,11 +885,8 @@ class editor () =
           end;
         end);
       ignore (self#connect#switch_page ~callback:begin fun _ ->
-          self#with_current_page begin fun page ->
-            match page#outline with
-            | Some outline when self#show_outline (*&& outline#get_oid <> hpaned#child1#get_oid*) ->
-                self#pack_outline outline#coerce
-            | _ -> self#pack_outline (Cmt_view.empty())
+          self#with_current_page begin fun page -> 
+            ()
           end
         end);
       (* Record last active page *)

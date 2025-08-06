@@ -181,7 +181,7 @@
       <libs></libs>
       <other_objects></other_objects>
       <files>ocamleditor_lib.ml</files>
-      <package>atdgen-runtime,compiler-libs.common,curl,dynlink,lablgtk2,ocamldiff,ocamldoc,ocp-indent.lib,str,unix,xml-light,yojson</package>
+      <package>atdgen-runtime,curl,dynlink,lablgtk2,ocamldiff,ocp-indent.lib,str,unix,xml-light,yojson,compiler-libs,odoc,ocamldoc</package>
       <includes>gmisclib common icons otherwidgets oebuild </includes>
       <thread>true</thread>
       <vmthread>false</vmthread>
@@ -203,10 +203,10 @@
       <descr></descr>
       <byt>false</byt>
       <opt>true</opt>
-      <libs>odoc_info gmisclib common icons otherwidgets oebuildlib ocamleditor_lib</libs>
+      <libs>ocamlcommon ocamldoc/odoc_info gmisclib common icons otherwidgets oebuildlib ocamleditor_lib</libs>
       <other_objects></other_objects>
       <files>ocamleditor.ml</files>
-      <package>atdgen-runtime,compiler-libs.common,curl,dynlink,lablgtk2,ocamldiff,ocamldoc,ocp-indent.lib,str,unix,xml-light,yojson</package>
+      <package>atdgen-runtime,curl,dynlink,lablgtk2,ocamldiff,ocp-indent.lib,str,unix,xml-light,yojson,compiler-libs,odoc,ocamldoc</package>
       <includes>gmisclib common icons otherwidgets oebuild </includes>
       <thread>true</thread>
       <vmthread>false</vmthread>
@@ -228,10 +228,10 @@
       <descr></descr>
       <byt>true</byt>
       <opt>false</opt>
-      <libs>odoc_info gmisclib common icons otherwidgets oebuildlib</libs>
+      <libs>ocamlcommon ocamldoc/odoc_info gmisclib common icons otherwidgets oebuildlib ocamleditor_lib</libs>
       <other_objects></other_objects>
       <files>ocamleditor.ml</files>
-      <package>atdgen-runtime,compiler-libs.common,curl,dynlink,lablgtk2,ocamldiff,ocamldoc,ocp-indent.lib,str,unix,xml-light,yojson</package>
+      <package>atdgen-runtime,curl,dynlink,lablgtk2,ocamldiff,ocp-indent.lib,str,unix,xml-light,yojson,compiler-libs,odoc,ocamldoc</package>
       <includes>gmisclib common icons otherwidgets oebuild </includes>
       <thread>true</thread>
       <vmthread>false</vmthread>

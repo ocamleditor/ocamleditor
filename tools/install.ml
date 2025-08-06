@@ -76,11 +76,6 @@ You will need the free NSIS install system (http://nsis.sourceforge.net).";
     mkdir_p fonts;
     sys_command [cpr; !!"../icons/*"; !!icons];
     sys_command [cpr; !!"../fonts/*"; !!fonts];
-    if Sys.readdir "../plugins" <> [||] then begin
-      let plugins = sprintf "%s/share/ocamleditor/plugins" !prefix in
-      mkdir_p plugins;
-      sys_command [cpr; !!"../plugins/*"; !!plugins]
-    end;
     let bin = sprintf "%s/bin" !prefix in
     mkdir_p bin;
     let filename = if Sys.file_exists ("ocamleditor.opt" ^ exe) then ("ocamleditor.opt" ^ exe) else ("ocamleditor" ^ exe) in

@@ -440,10 +440,6 @@ let view ~browser ~group ~flags
   let select_in_outline = GMenu.image_menu_item
       ~image:(GMisc.image ~pixbuf:(??? Icons.select_in_structure) ~icon_size:`MENU ())
       ~label:"Select in Structure Pane" ~packing:menu#add () in
-  ignore (select_in_outline#connect#activate ~callback:(fun () ->
-      editor#with_current_page (fun page ->
-          editor#set_show_outline true;
-          Gaux.may page#outline ~f:(fun ol -> ol#select_from_buffer ?align:None (page#buffer#get_mark `INSERT)))));
   (** Show Whitespace Characters *)
   let show_whitespace_chars = GMenu.check_menu_item
       ~active:editor#show_whitespace_chars
@@ -508,9 +504,6 @@ let tools ~browser ~group ~flags items =
   let toplevel = GMenu.menu_item ~label:"OCaml Toplevel" ~packing:menu#add () in
   ignore (toplevel#connect#activate ~callback:browser#shell);
   let module_browser = GMenu.menu_item ~label:"Module Browser" ~packing:menu#add () in
-  ignore (module_browser#connect#activate ~callback:(fun () ->
-      browser#with_current_project (fun project ->
-          Mbrowser_tool.append_to_messages ?page:None ?search_string:None ~project)));
   let dialog_external_tools = GMenu.menu_item ~label:"External Tools" ~packing:menu#add () in
   ignore (dialog_external_tools#connect#activate ~callback:browser#dialog_external_tools);
   let _ = GMenu.separator_item ~packing:menu#add () in
