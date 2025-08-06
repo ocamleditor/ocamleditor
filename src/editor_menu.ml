@@ -83,10 +83,6 @@ let create ~editor ~page () =
               editor#disconnect id;
               sigid := None;
             end;
-            match page#outline with
-            | Some ol ->
-                ignore (ol#select_from_buffer ?align:None (page#buffer#get_mark `INSERT))
-            | _ -> ()
           end else begin
             sigid := Some (editor#connect#outline_visibility_changed
                              ~callback:(function true -> f page | false -> ()));

@@ -74,8 +74,8 @@ let install_fonts () =
 let main () = begin
   install_fonts();
   let open Preferences in
-  let _ = About.build_id := Build_id.timestamp in
-  let _ = About.git_hash := Build_id.git_hash in
+  (* let _ = About.build_id := Build_id.timestamp in
+  let _ = About.git_hash := Build_id.git_hash in *)
   let _locale = GtkMain.Main.init ~setlocale:false () in
 
   let start splashscreen =

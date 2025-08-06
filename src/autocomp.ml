@@ -137,18 +137,6 @@ let compile_buffer ~project ~editor ~page ?(join=false) () =
           (* Outline *)
           let no_errors = errors.Oe.er_errors = [] in
           if editor#show_outline then begin
-            Gmisclib.Idle.add ~prio:100 begin fun () ->
-              match page#outline with
-              | None ->
-                  let ol = new Cmt_view.widget ~editor ~page () in
-                  ol#load ();
-                  Gaux.may page#outline ~f:(fun x -> x#destroy());
-                  page#set_outline (Some ol);
-                  editor#with_current_page begin fun current_page ->
-                    if current_page#get_oid = page#get_oid then (editor#pack_outline ol#coerce)
-                  end;
-              | Some ol -> if no_errors then ol#load ()
-            end
           end;
           Activity.remove activity_name;
         in
