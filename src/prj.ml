@@ -51,6 +51,7 @@ type t = {
   mutable symbols            : Oe.symbol_cache;
   mutable build_script       : Build_script.t;
   mutable bookmarks          : Oe.bookmark list;
+  mutable file_watcher       : Inotify.watch option;
 }
 
 let default_extension = ".project"

@@ -25,6 +25,9 @@ open Printf
 open Prj
 
 module Log = Common.Log.Make(struct let prefix = "Project" end)
+let _ =
+  Log.set_print_timestamp true;
+  Log.set_verbosity `INFO
 
 exception Project_already_exists of string
 
@@ -52,7 +55,7 @@ let tmp_of_abs proj filename =
   let tmp = path_tmp proj in
   match proj.Prj.in_source_path filename with
   | None -> None
-  | Some rel_name -> Some (tmp, rel_name) ;;
+  | Some rel_name -> Some (tmp, rel_name);; 
 
 (** set_ocaml_home *)
 let set_ocaml_home ~ocamllib project =
@@ -116,6 +119,7 @@ let create ~filename () =
       bs_commands              = [];
     };
     bookmarks          = [];
+    file_watcher = None;
   } in
   proj;;
 
@@ -357,6 +361,30 @@ let find_bookmark proj filename buffer iter =
 let get_actual_maximum_bookmark project =
   List.fold_left (fun acc bm -> max acc bm.Oe.bm_num) 0 project.bookmarks;;
 
+let inotify = Inotify.create ()
+
+let start_file_watcher proj =
+  proj.file_watcher <- Some (Inotify.add_watch inotify "." [Inotify.S_Move]);
+  Thread.create begin fun () ->
+    Printf.printf "Project %s STARTING file watcher loop.\n%!" proj.Prj.name;
+    while proj.file_watcher <> None do
+      Thread.delay 0.3;
+      let update_index =
+        Inotify.read inotify
+        |> List.exists begin fun (_, _, _, name) ->
+          let name = Option.value name ~default:"" in
+          Filename.check_suffix name ".cmt"
+        end
+      in
+      if update_index then begin
+        (* TODO Add other sub dirs *)
+        Utils.crono ~label:"Updating ocaml-index" Sys.command "ocaml-index *.cmt common/*.cmt" |> ignore;
+      end;
+    done;
+    Printf.printf "Project %s STOPPED file watcher loop.\n%!" proj.Prj.name;
+  end () |> ignore
+
+
 (** load *)
 let load filename =
   let filename = if Sys.file_exists filename then filename else mk_old_filename filename in
@@ -380,7 +408,13 @@ let load filename =
   (* Delete obsolete bookmarks *)
   proj.bookmarks <- proj.bookmarks |> List.filter (fun bm -> bm.Oe.bm_num <= Bookmark.limit);
   save_dot_merlin proj;
+  start_file_watcher proj;
   proj;;
+
+let unload proj =
+  proj.Prj.file_watcher |> Option.iter (Inotify.rm_watch inotify);
+  proj.Prj.file_watcher <- None;
+  unload_path proj
 
 (** backup_file *)
 let backup_file project (file : Editor_file.file) =

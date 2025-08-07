@@ -197,7 +197,7 @@ class browser window =
         Project.save ~editor project;
         self#project_write_history();
         Names.Cache.save ~project;
-        Project.unload_path project;
+        Project.unload project;
         List.iter (fun p -> Autosave.delete ~filename:p#get_filename ()) editor#pages;
       end
 

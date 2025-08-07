@@ -222,9 +222,7 @@ let occurrences ~identifier_at:(line, col) ?scope ?index_file ~filename ~buffer 
   (match scope with
    | None -> ""
    | Some `Buffer -> "-scope buffer"
-   | Some `Project ->
-       Sys.command "ocaml-index *.cmt";
-       "-scope project"
+   | Some `Project -> "-scope project"
    | Some `Renaming -> "-scope renaming") :: []
   |> execute_async filename buffer
   |> Async.map begin fun json ->

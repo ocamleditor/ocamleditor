@@ -29,6 +29,7 @@ depends: [
   "atdgen" {>= "2.12"}
   "ocamldiff" {>= "1.2"}
   "merlin" {>= "5.5"}
+  "inotify"
   "ocurl"
 ]
 
