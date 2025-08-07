@@ -215,19 +215,22 @@ let type_expression ~position:(line, col) ~expression ~filename ~buffer =
         Error msg.value
   end
 
-let occurrences ~identifier_at:(line, col) ?scope ~filename ~buffer () =
+let occurrences ~identifier_at:(line, col) ?scope ?index_file ~filename ~buffer () =
   let identifier_at = sprintf "%d:%d" line col in
   "occurrences" :: "-identifier-at" :: identifier_at ::
+  (match index_file with None -> "-index-file project.ocaml-index" | Some file -> sprintf "-index-file %s" file) ::
   (match scope with
    | None -> ""
-   | Some `Buffer -> sprintf "-scope buffer"
-   | Some `Project -> "-scope project"
+   | Some `Buffer -> "-scope buffer"
+   | Some `Project ->
+       Sys.command "ocaml-index *.cmt";
+       "-scope project"
    | Some `Renaming -> "-scope renaming") :: []
   |> execute_async filename buffer
   |> Async.map begin fun json ->
     match Merlin_j.occurrences_answer_of_string json with
     | Return document ->
-        Log.println `DEBUG "%s" (Yojson.Safe.prettify json);
+        Log.println `INFO "%s" (Yojson.Safe.prettify json);
         Ok document.value
     | Failure msg ->
         Log.println `ERROR "%s" msg.value;

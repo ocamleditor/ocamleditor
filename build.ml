@@ -2356,7 +2356,7 @@ let build ~compilation ~package ~includes ~libs ~other_mods ~outkind ~compile_on
   if thread then (cflags := !cflags ^ " -thread"; lflags := !lflags ^ " -thread");
   if vmthread then (cflags := !cflags ^ " -vmthread"; lflags := !lflags ^ " -vmthread");
   if annot then (cflags := !cflags ^ " -annot");
-  if bin_annot then (cflags := !cflags ^ " -bin-annot");
+  if bin_annot then (cflags := !cflags ^ " -bin-annot -bin-annot-occurrences");
   if pp <> "" then (cflags := !cflags ^ " -pp " ^ pp);
   let pp = if pp <> "" then Some pp else None in
   (* inline *)

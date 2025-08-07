@@ -112,12 +112,13 @@ let create_search_results_pane ~pixbuf ~editor ~page =
   let label = GMisc.label ~packing:hbox#pack () in
   let iter = page#buffer#get_iter `INSERT in
   let mark = page#buffer#create_mark ?name:None ?left_gravity:None iter in
-  ignore (widget#misc#connect#destroy ~callback:(fun () -> page#buffer#delete_mark (`MARK mark)));
-  ignore (widget#connect#after#search_started ~callback:begin fun () ->
-      if widget#misc#parent = None then
-        (ignore (Messages.vmessages#append_page ~label_widget:hbox#coerce widget#as_page));
-      widget#present ();
-    end);
+  widget#misc#connect#destroy ~callback:(fun () -> page#buffer#delete_mark (`MARK mark))
+  |> ignore;
+  widget#connect#after#search_started ~callback:begin fun () ->
+    if widget#misc#parent = None then
+      Messages.vmessages#append_page ~label_widget:hbox#coerce widget#as_page |> ignore;
+    widget#present ();
+  end |> ignore;
   widget, mark, label
 
 (** find_definition_references *)
@@ -127,14 +128,37 @@ let find_definition_references editor = (*  *)
     widget#connect#search_started ~callback:begin fun () ->
       let project = page#project in
       let filename = page#get_filename in
-      let results = None in
-      let def_name = ref "" in
-      let results = [] in
-      widget#set_results results;
-      label#set_text !def_name;
-      widget#set_title !def_name;
-      if widget#icon = None then widget#set_icon (Some (??? Icons.references));
-      ksprintf widget#label_message#set_label "References to identifier <tt>%s</tt>" (Glib.Markup.escape_text !def_name);
+
+      let buffer : Ocaml_text.buffer = page#buffer in
+      let iter = buffer#get_iter `INSERT in
+      let line = iter#line + 1 in
+      let col = iter#line_offset in
+      let text = buffer#get_text () in
+
+      Merlin.occurrences ~identifier_at:(line, col) ~scope:`Project ~filename ~buffer:text ()
+      |> Async.start_with_continuation begin function
+      | Merlin.Ok ranges ->
+          let open Merlin_j in
+          ranges
+          |> List.iter begin fun range ->
+            (*{filename; real_filename; locations = Offset locations; timestamp};*)
+            Printf.printf "%s %d:%d\n%!"
+              (match range.file with Some x -> x | _ -> "LOCAL")
+              range.start.line range.start.col;
+          end
+      | Merlin.Failure _ | Merlin.Error _ -> ()
+      end
+
+
+
+      (*let results = None in
+        let def_name = ref "" in
+        let results = [] in
+        widget#set_results results;
+        label#set_text !def_name;
+        widget#set_title !def_name;
+        if widget#icon = None then widget#set_icon (Some (??? Icons.references));
+        ksprintf widget#label_message#set_label "References to identifier <tt>%s</tt>" (Glib.Markup.escape_text !def_name);*)
     end |> ignore;
     widget#start_search();
   end
