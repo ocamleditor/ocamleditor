@@ -4,6 +4,8 @@
 
 *)
 
+#directory "+str"
+#directory "+unix"
 #directory "+threads"
 #load "str.cma"
 #load "unix.cma"
@@ -244,16 +246,16 @@ module Make (X : sig
 
     let fprint level f =
       if level <> `OFF && level >= !verbosity then begin
-        if !print_timestamp then (Printf.kprintf (Format.pp_print_string log_formatter) "%s " (timestamp()));
-        Printf.kprintf (Format.pp_print_string log_formatter) "[%s] [%d] " (string_of_verbosity level) (Thread.id (Thread.self()));
+        if !print_timestamp then (Printf.ksprintf (Format.pp_print_string log_formatter) "%s " (timestamp()));
+        Printf.ksprintf (Format.pp_print_string log_formatter) "[%s] [%d] " (string_of_verbosity level) (Thread.id (Thread.self()));
         Option.iter (Format.pp_print_string log_formatter) prefix;
         Format.kfprintf (fun fmt -> Format.pp_print_flush fmt ()) log_formatter f
       end else Format.ifprintf Format.err_formatter f
 
     let fprintln level f =
       if level <> `OFF && level >= !verbosity then begin
-        if !print_timestamp then (Printf.kprintf (Format.pp_print_string log_formatter) "%s " (timestamp()));
-        Printf.kprintf (Format.pp_print_string log_formatter) "[%s] [%d] " (string_of_verbosity level) (Thread.id (Thread.self()));
+        if !print_timestamp then (Printf.ksprintf (Format.pp_print_string log_formatter) "%s " (timestamp()));
+        Printf.ksprintf (Format.pp_print_string log_formatter) "[%s] [%d] " (string_of_verbosity level) (Thread.id (Thread.self()));
         Option.iter (Format.pp_print_string log_formatter) prefix;
         Format.kfprintf (fun fmt -> Format.pp_print_newline fmt (); Format.pp_print_flush fmt ())
           log_formatter f
@@ -394,7 +396,7 @@ let redirect_stderr = " 2>/dev/null"
 
 
 let read_ocaml_config () =
-  let conf = Printf.kprintf Shell.get_command_output "ocamlc -config" in
+  let conf = Printf.ksprintf Shell.get_command_output "ocamlc -config" in
   let re = Str.regexp ": " in
   List.map (fun l -> match Str.split re l with [n;v] -> n, v | [n] -> n, "" | _ -> assert false) conf
 
@@ -410,7 +412,7 @@ let find_best_compiler compilers =
   try
     Some (List.find begin fun comp ->
         try
-          let output = kprintf Shell.get_command_output "%s -version%s" comp redirect_stderr in
+          let output = ksprintf Shell.get_command_output "%s -version%s" comp redirect_stderr in
           output <> []
         with _ -> false
       end compilers)
@@ -486,7 +488,7 @@ let can_compile_native ?ocaml_home () =
       let obj = outname ^ ".obj" in
       if Sys.file_exists obj then (Sys.remove obj);
       if !result then begin
-        let conf = String.concat "\n" (kprintf Shell.get_command_output "%s -config" compiler) in
+        let conf = String.concat "\n" (ksprintf Shell.get_command_output "%s -config" compiler) in
         let re = Str.regexp "ccomp_type: \\(.*\\)\n" in
         if Str.search_forward re conf 0 >= 0 then begin
           Some (Str.matched_group 1 conf)
@@ -619,7 +621,7 @@ let find_best ?(param="--help") prog =
       ok
     end prog
   with Not_found ->
-    kprintf failwith "Cannot find: %s" (String.concat ", " prog)
+    ksprintf failwith "Cannot find: %s" (String.concat ", " prog)
 
 let find_command name =
   let basename = name in
@@ -1596,7 +1598,7 @@ let find_dep ?pp ?(ignore_stderr=false) ?(echo=true) target =
       end
     with Not_found ->
       (* This exception can be caused by syntax errors in the source files. *)
-      (kprintf failwith "Dep: %s" target)
+      (ksprintf failwith "Dep: %s" target)
   in
   find_chain target;
   List.rev ((*List.map replace_extension_to_ml*) !result)
@@ -1688,7 +1690,7 @@ let dot_of_dag (dag : t) =
   let buf = Buffer.create 1000 in
   Buffer.add_string buf "digraph {\n";
   Hashtbl.iter begin fun key ->
-    List.iter (kprintf (Buffer.add_string buf) "%S -> %S;\n" key)
+    List.iter (ksprintf (Buffer.add_string buf) "%S -> %S;\n" key)
   end dag;
   Buffer.add_string buf "}\n";
   Buffer.contents buf;;
@@ -1875,7 +1877,7 @@ let print_results err_outputs ok_outputs =
 (** create_dag *)
 let create_dag ?times ?pp ~cb_create_command ~cb_at_exit ~toplevel_modules ~verbose () =
   match Dep_dag.create_dag ?times ?pp ~toplevel_modules ~verbose () with
-  | Dep_dag.Cycle cycle -> kprintf failwith "Cycle: %s" (String.concat "->" cycle)
+  | Dep_dag.Cycle cycle -> ksprintf failwith "Cycle: %s" (String.concat "->" cycle)
   | Dep_dag.Dag (dag', ocamldeps) ->
       let dag = Hashtbl.create 17 in
       Hashtbl.iter begin fun filename _deps ->
@@ -2087,7 +2089,7 @@ let check_package_list =
     let package_list = Str.split (Str.regexp "[, ]") package_list in
     let available, unavailable =
       List.partition begin fun package ->
-        kprintf (Oebuild_util.command ~echo:false) "ocamlfind query %s %s" package redirect_stderr = 0
+        ksprintf (Oebuild_util.command ~echo:false) "ocamlfind query %s %s" package redirect_stderr = 0
       end package_list
     in
     if unavailable <> [] then begin
@@ -2549,7 +2551,7 @@ let check_restrictions restr =
       let packages = Str.split re_comma packages in
       let redirect_stderr = " 1>/dev/null 2>/dev/null" in
       packages = [] || List.for_all begin fun package ->
-        kprintf (Oebuild_util.command ~echo:false) "ocamlfind query %s %s" package redirect_stderr = 0
+        ksprintf (Oebuild_util.command ~echo:false) "ocamlfind query %s %s" package redirect_stderr = 0
       end packages
   | _ -> false
   end restr;;
@@ -2815,7 +2817,7 @@ let rec execute_target ~external_tasks ~targets:avail_targets ~command ?target_d
   end else begin
     let target_name, _ =
       try List.find (fun (_, t) -> t.id = target.id) avail_targets
-      with Not_found -> kprintf failwith "Target not found (id=%d)" target.id
+      with Not_found -> ksprintf failwith "Target not found (id=%d)" target.id
     in
     if !Option.verbosity >= 1 then begin
       Printf.printf "=== %s ===\n%!" target_name;
@@ -2833,7 +2835,7 @@ and build ~targets:avail_targets ~external_tasks ~etasks ~deps ~compilation ~out
   List.iter (execute_target ~external_tasks ~targets:avail_targets ~command:`Build) target_deps;
   let target_name, _ =
     try List.find (fun (_, t) -> t.id = target.id) avail_targets
-    with Not_found -> kprintf failwith "Target not found (id=%d)" target.id
+    with Not_found -> ksprintf failwith "Target not found (id=%d)" target.id
   in
   if !Option.verbosity >= 1 then Printf.printf "=== %s ===\n%!" target_name;
   List.iter ETask.execute (ETask.filter etasks Before_compile);
@@ -2923,7 +2925,7 @@ let main ~cmd_line_args ~external_tasks ~general_commands ~targets:avail_targets
       | `Install_lib -> add_target avail_targets
       | `Clean -> add_target avail_targets
       | (`Install | `Uninstall | `Distclean) as x ->
-          fun arg -> kprintf failwith "Invalid anonymous argument `%s' for command `%s'" arg (string_of_command x);;
+          fun arg -> ksprintf failwith "Invalid anonymous argument `%s' for command `%s'" arg (string_of_command x);;
 
     (** execute *)
     let execute command =
@@ -3025,34 +3027,17 @@ open Arg
 open Task
 open Printf
 
-let arg_0_record_backtrace = ref (Some true)
-let arg_1_use_modified_gtkThread = ref (Some false)
-let arg_2_prefix = ref None
-let arg_3_gmisclib = ref (Some false)
-let arg_4_nsis = ref (Some false)
-let arg_5_prefix = ref None
-let arg_6_ver_1_8_0 = ref (Some false)
+let arg_0_prefix = ref None
+let arg_1_prefix = ref None
 
 let cmd_line_args = [
   `Uninstall, [
-    "-prefix", String (fun x -> arg_5_prefix := Some x),
+    "-prefix", String (fun x -> arg_1_prefix := Some x),
       (" Uninstallation prefix [default: see \"ocaml tools/uninstall.ml -help\"]");
-    "-ver-1.8.0", Bool (fun x -> arg_6_ver_1_8_0 := Some x),
-      (" Uninstall OCamlEditor ver. 1.8.0 or earlier [default: " ^ (match !arg_6_ver_1_8_0 with Some x -> sprintf "%s" (if x then "Set" else "Not Set") | _ -> failwith "build_script_printer (flag)") ^ "]");
   ];
   `Install, [
-    "-prefix", String (fun x -> arg_2_prefix := Some x),
+    "-prefix", String (fun x -> arg_0_prefix := Some x),
       (" Installation prefix [default: see \"ocaml tools/install.ml -help\"]");
-    "-gmisclib", Bool (fun x -> arg_3_gmisclib := Some x),
-      (" Install the gmisclib library (miscellaneous widgets \n             based on LablGtk2) [default: " ^ (match !arg_3_gmisclib with Some x -> sprintf "%s" (if x then "Set" else "Not Set") | _ -> failwith "build_script_printer (flag)") ^ "]");
-    "-nsis", Bool (fun x -> arg_4_nsis := Some x),
-      (" Create a Win32 installer with NSIS [default: " ^ (match !arg_4_nsis with Some x -> sprintf "%s" (if x then "Set" else "Not Set") | _ -> failwith "build_script_printer (flag)") ^ "]");
-  ];
-  `Build, [
-    "-record-backtrace", Bool (fun x -> arg_0_record_backtrace := Some x),
-      (" Turn recording of exception backtraces on or off [default: " ^ (match !arg_0_record_backtrace with Some x -> string_of_bool x | _ ->  failwith "build_script_printer (bool)") ^ "]");
-    "-use-modified-gtkThread", Bool (fun x -> arg_1_use_modified_gtkThread := Some x),
-      (" Set this flag if you have Lablgtk-2.14.2 or earlier\n                           and you want to use the included modified version of \n                           gtkThread.ml to reduce CPU consumption [default: " ^ (match !arg_1_use_modified_gtkThread with Some x -> sprintf "%s" (if x then "Set" else "Not Set") | _ -> failwith "build_script_printer (flag)") ^ "]");
   ];
 ]
 
@@ -3135,10 +3120,8 @@ let external_tasks = [
     et_dir                   = "..";
     et_cmd                   = "ocaml";
     et_args                  = [true,"tools/install.ml"; 
-                                command = `Install && (!arg_4_nsis = Some true), "-nsis"; 
-                                command = `Install && (!arg_3_gmisclib = Some true), "-gmisclib"; 
-                                command = `Install, (match !arg_2_prefix with Some _ -> "-prefix" | _ -> ""); 
-                                command = `Install, (match !arg_2_prefix with Some x -> sprintf "%s" x | _ -> "")];
+                                command = `Install, (match !arg_0_prefix with Some _ -> "-prefix" | _ -> ""); 
+                                command = `Install, (match !arg_0_prefix with Some x -> sprintf "%s" x | _ -> "")];
     et_phase                 = Some Before_clean;
     et_always_run_in_project = false;
     et_always_run_in_script  = false;
@@ -3153,9 +3136,8 @@ let external_tasks = [
     et_dir                   = "..";
     et_cmd                   = "ocaml";
     et_args                  = [true,"tools/uninstall.ml"; 
-                                command = `Uninstall && (!arg_6_ver_1_8_0 = Some true), "-ver-1.8.0"; 
-                                command = `Uninstall, (match !arg_5_prefix with Some _ -> "-prefix" | _ -> ""); 
-                                command = `Uninstall, (match !arg_5_prefix with Some x -> sprintf "%s" x | _ -> "")];
+                                command = `Uninstall, (match !arg_1_prefix with Some _ -> "-prefix" | _ -> ""); 
+                                command = `Uninstall, (match !arg_1_prefix with Some x -> sprintf "%s" x | _ -> "")];
     et_phase                 = Some Before_clean;
     et_always_run_in_project = false;
     et_always_run_in_script  = false;
@@ -3257,7 +3239,7 @@ let targets = [
     compilation_native   = true;
     toplevel_modules     = "common/common.ml";
     package              = "";
-    search_path          = "common"; (* -I *)
+    search_path          = "common +unix +str"; (* -I *)
     required_libraries   = "";
     compiler_flags       = "-g";
     linker_flags         = "-g";
@@ -3317,7 +3299,7 @@ let targets = [
     compilation_native   = true;
     toplevel_modules     = "oebuild/oebuild.ml oebuild/oebuild_dep_ext.ml";
     package              = "";
-    search_path          = "common oebuild"; (* -I *)
+    search_path          = "common oebuild +unix +str"; (* -I *)
     required_libraries   = "";
     compiler_flags       = "-w y";
     linker_flags         = "";
@@ -3377,7 +3359,7 @@ let targets = [
     compilation_native   = true;
     toplevel_modules     = "gmisclib/gmisclib.ml";
     package              = "lablgtk2";
-    search_path          = "gmisclib"; (* -I *)
+    search_path          = "gmisclib +unix"; (* -I *)
     required_libraries   = "";
     compiler_flags       = "-g";
     linker_flags         = "-g";
@@ -3467,7 +3449,7 @@ let targets = [
     compilation_native   = true;
     toplevel_modules     = "ocamleditor.ml";
     package              = "atdgen-runtime,curl,dynlink,lablgtk2,ocamldiff,ocp-indent.lib,str,unix,xml-light,yojson,compiler-libs,odoc,ocamldoc";
-    search_path          = "gmisclib common icons otherwidgets oebuild "; (* -I *)
+    search_path          = "gmisclib common icons otherwidgets oebuild"; (* -I *)
     required_libraries   = "ocamlcommon ocamldoc/odoc_info gmisclib common icons otherwidgets oebuildlib ocamleditor_lib";
     compiler_flags       = "-w -s-y-x-m -g";
     linker_flags         = "-g";

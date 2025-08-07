@@ -147,7 +147,7 @@ let increase_font_size ?weight ?(increment=3) widget =
 (** try_font *)
 let try_font context family =
   try
-    let fd = Printf.kprintf Pango.Font.from_string "%s 9" family in
+    let fd = Printf.ksprintf Pango.Font.from_string "%s 9" family in
     let _ = Pango.Context.load_font context#as_context fd in
     true
   with Gpointer.Null -> false

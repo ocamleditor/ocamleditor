@@ -226,6 +226,7 @@ let get_tag token state =
   | RBRACKET -> if state.in_annotation then (state.in_annotation <- false; "annotation") else "symbol"
   | ASSERT -> "custom"
   | DOCSTRING _ | COMMENT _ -> "comment" (* Lexer ignores comments *)
+  | METAOCAML_ESCAPE | METAOCAML_BRACKET_OPEN | METAOCAML_BRACKET_CLOSE | EFFECT -> ""
   | EOL -> ""
   | EOF -> raise End_of_file;;
 
@@ -365,6 +366,12 @@ let parse ?(use_bold=true) pref =
             | Keyword_as_label s -> printf "Keyword_as_label \n%!"
             | Invalid_literal s -> printf "Invalid_literal \n%!"
             | Invalid_directive (s, sopt) -> printf "Invalid_directive \n%!"
+            | Capitalized_label _ -> printf "Capitalized_label \n%!"
+            | Invalid_encoding _ -> printf "Invalid_encoding \n%!"
+            | Invalid_char_in_ident _ -> printf "Invalid_char_in_ident \n%!"
+            | Non_lowercase_delimiter _ -> printf "Non_lowercase_delimiter \n%!"
+            | Capitalized_raw_identifier _ -> printf "Capitalized_raw_identifier \n%!"
+            | Unknown_keyword _ -> printf "Unknown_keyword \n%!"
           end
       done;
       close_pending state;

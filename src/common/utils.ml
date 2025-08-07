@@ -419,7 +419,7 @@ let modname_of_path path =
 let open_url url =
   let cmd = "xdg-open " ^ url in
   let exit_code = Sys.command cmd in
-  if exit_code > 0 then kprintf failwith "Cannot execute %s" cmd
+  if exit_code > 0 then ksprintf failwith "Cannot execute %s" cmd
 
 
 

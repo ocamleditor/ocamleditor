@@ -87,7 +87,7 @@ let draw ~project ~filename ?dot_include_all ?dot_types () =
   Activity.add Activity.Other activity_name;
   Spawn.async ~continue_with:begin fun _ ->
     let modname = Utils.modname_of_path filename in
-    let re = kprintf Str.regexp "\"%s\" \\[.*color=\\(.+\\).*\\]" modname in
+    let re = ksprintf Str.regexp "\"%s\" \\[.*color=\\(.+\\).*\\]" modname in
     (*let re1 = Str.regexp "\\(\".*\"\\) \\[style=filled, color=darkturquoise\\];$" in*)
     map_file_lines dotfile begin fun ~lnum ~line ->
       (*if Str.string_match re line 0 then (sprintf "\"%s\" [style=filled, color=black, fontcolor=white];\n" modname)*)

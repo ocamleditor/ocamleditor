@@ -139,7 +139,7 @@ class file ~host ~user ~pwd ~sslkey ~sshpublickeyfile ~sslkeypasswd ~filename : 
     method stat () =
       self#protect begin fun () ->
         let path = if filename = "" then "" else self#dirname in
-        kprintf self#set_url "sftp://%s%s@%s%s/" user (if pwd = "" then "" else ":" ^ pwd) host path;
+        ksprintf self#set_url "sftp://%s%s@%s%s/" user (if pwd = "" then "" else ":" ^ pwd) host path;
         curl#set_upload false;
         let buf = Buffer.create 1000 in
         curl#set_writefunction begin fun str ->
@@ -148,7 +148,7 @@ class file ~host ~user ~pwd ~sslkey ~sshpublickeyfile ~sslkeypasswd ~filename : 
         end;
         curl#perform;
         let listing = Buffer.contents buf in
-        let re_filename = kprintf Str.regexp " %s$" self#basename in
+        let re_filename = ksprintf Str.regexp " %s$" self#basename in
         try
           let stop = Str.search_forward re_filename listing 0 in
           let start = Str.search_backward re_cap listing stop in
@@ -204,7 +204,7 @@ class file ~host ~user ~pwd ~sslkey ~sshpublickeyfile ~sslkeypasswd ~filename : 
       self#protect begin fun () ->
         let path = if Filename.is_implicit filename then "/" ^ filename else filename in
         let path = if path = "/" then "" else path in
-        kprintf self#set_url "sftp://%s%s@%s%s/" user (if pwd = "" then "" else ":" ^ pwd) host path;
+        ksprintf self#set_url "sftp://%s%s@%s%s/" user (if pwd = "" then "" else ":" ^ pwd) host path;
         curl#set_upload false;
         curl#set_ftplistonly true;
         let buf = Buffer.create 1000 in
@@ -245,7 +245,7 @@ class file ~host ~user ~pwd ~sslkey ~sshpublickeyfile ~sslkeypasswd ~filename : 
 
     method rename newpath =
       self#protect begin fun () ->
-        kprintf self#set_url "sftp://%s%s@%s" user (if pwd = "" then "" else ":" ^ pwd) host;
+        ksprintf self#set_url "sftp://%s%s@%s" user (if pwd = "" then "" else ":" ^ pwd) host;
         curl#set_postquote [sprintf "rename '%s' '%s'" filename newpath];
         curl#set_upload false;
         curl#perform;
@@ -254,7 +254,7 @@ class file ~host ~user ~pwd ~sslkey ~sshpublickeyfile ~sslkeypasswd ~filename : 
 
     method remove = if self#exists then
         self#protect begin fun () ->
-          kprintf self#set_url "sftp://%s%s@%s" user (if pwd = "" then "" else ":" ^ pwd) host;
+          ksprintf self#set_url "sftp://%s%s@%s" user (if pwd = "" then "" else ":" ^ pwd) host;
           curl#set_postquote [sprintf "rm '%s'" filename];
           curl#set_upload false;
           curl#perform;

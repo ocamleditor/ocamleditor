@@ -4,6 +4,8 @@
 
 *)
 
+#directory "+unix"
+#directory "+str"
 #load "unix.cma"
 #load "str.cma"
 open Printf

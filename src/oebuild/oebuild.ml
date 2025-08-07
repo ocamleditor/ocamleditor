@@ -63,7 +63,7 @@ let check_package_list =
     let package_list = Str.split (Str.regexp "[, ]") package_list in
     let available, unavailable =
       List.partition begin fun package ->
-        kprintf (Oebuild_util.command ~echo:false) "ocamlfind query %s %s" package redirect_stderr = 0
+        ksprintf (Oebuild_util.command ~echo:false) "ocamlfind query %s %s" package redirect_stderr = 0
       end package_list
     in
     if unavailable <> [] then begin
@@ -525,7 +525,7 @@ let check_restrictions restr =
       let packages = Str.split re_comma packages in
       let redirect_stderr = " 1>/dev/null 2>/dev/null" in
       packages = [] || List.for_all begin fun package ->
-        kprintf (Oebuild_util.command ~echo:false) "ocamlfind query %s %s" package redirect_stderr = 0
+        ksprintf (Oebuild_util.command ~echo:false) "ocamlfind query %s %s" package redirect_stderr = 0
       end packages
   | _ -> false
   end restr;;

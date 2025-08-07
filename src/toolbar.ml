@@ -341,7 +341,7 @@ class ['a] toolbar ~(messages : Messages.messages) ~(hmessages : Messages.messag
       editor#with_current_page begin fun p ->
         let name = Filename.basename p#get_filename in
         if name ^^^ ".ml" || name ^^^ ".mli" then begin
-          kprintf tool_compile_file#misc#set_tooltip_text "Compile \xC2\xAB%s\xC2\xBB" name;
+          ksprintf tool_compile_file#misc#set_tooltip_text "Compile \xC2\xAB%s\xC2\xBB" name;
           tool_compile_file#misc#set_sensitive true
         end else begin
           tool_compile_file#misc#set_tooltip_text "";

@@ -293,7 +293,7 @@ class widget ~source ~name ?filter ?packing () =
       end;
 
     method private display_summary () =
-      kprintf label_count#set_text "%d of %d" (List.length visible_paths) model.length;
+      ksprintf label_count#set_text "%d of %d" (List.length visible_paths) model.length;
 
     method private clear_model_filter () =
       view#set_model None;

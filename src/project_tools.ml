@@ -58,6 +58,8 @@ let convert_target_type =
   | Target.External -> Oebuild.External
 
 let preamble = "\
+#directory \"+unix\"
+#directory \"+str\"
 #load \"unix.cma\"
 #load \"str.cma\"
 open Printf

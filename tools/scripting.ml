@@ -21,6 +21,8 @@
 *)
 
 
+#directory "+unix"
+#directory "+str"
 #load "unix.cma"
 #load "str.cma"
 #use "../src/common/shell.ml"

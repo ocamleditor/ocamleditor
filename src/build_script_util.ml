@@ -259,7 +259,7 @@ let rec execute_target ~external_tasks ~targets:avail_targets ~command ?target_d
   end else begin
     let target_name, _ =
       try List.find (fun (_, t) -> t.id = target.id) avail_targets
-      with Not_found -> kprintf failwith "Target not found (id=%d)" target.id
+      with Not_found -> ksprintf failwith "Target not found (id=%d)" target.id
     in
     if !Option.verbosity >= 1 then begin
       Printf.printf "=== %s ===\n%!" target_name;
@@ -277,7 +277,7 @@ and build ~targets:avail_targets ~external_tasks ~etasks ~deps ~compilation ~out
   List.iter (execute_target ~external_tasks ~targets:avail_targets ~command:`Build) target_deps;
   let target_name, _ =
     try List.find (fun (_, t) -> t.id = target.id) avail_targets
-    with Not_found -> kprintf failwith "Target not found (id=%d)" target.id
+    with Not_found -> ksprintf failwith "Target not found (id=%d)" target.id
   in
   if !Option.verbosity >= 1 then Printf.printf "=== %s ===\n%!" target_name;
   List.iter ETask.execute (ETask.filter etasks Before_compile);
@@ -367,7 +367,7 @@ let main ~cmd_line_args ~external_tasks ~general_commands ~targets:avail_targets
       | `Install_lib -> add_target avail_targets
       | `Clean -> add_target avail_targets
       | (`Install | `Uninstall | `Distclean) as x ->
-          fun arg -> kprintf failwith "Invalid anonymous argument `%s' for command `%s'" arg (string_of_command x);;
+          fun arg -> ksprintf failwith "Invalid anonymous argument `%s' for command `%s'" arg (string_of_command x);;
 
     (** execute *)
     let execute command =

@@ -231,7 +231,7 @@ class page ?file ~project ~scroll_offset ~offset ~editor () =
                   let last_modified = sprintf "%4d-%d-%d %02d:%02d:%02d" (tm.Unix.tm_year + 1900)
                       (tm.Unix.tm_mon + 1) tm.Unix.tm_mday tm.Unix.tm_hour tm.Unix.tm_min tm.Unix.tm_sec
                   in
-                  kprintf editorbar#filename#misc#set_tooltip_markup "%s%s\nLast modified: %s\n%s bytes - %s lines - %s characters"
+                  ksprintf editorbar#filename#misc#set_tooltip_markup "%s%s\nLast modified: %s\n%s bytes - %s lines - %s characters"
                     (if project.Prj.in_source_path file#filename <> None then "<b>" ^ project.Prj.name ^ "</b>\n" else "")
                     self#get_title
                     last_modified
@@ -343,7 +343,7 @@ class page ?file ~project ~scroll_offset ~offset ~editor () =
               if !redraw then (GtkBase.Widget.queue_draw text_view#as_widget);
               true
             with Glib.Convert.Error (_, message) -> begin
-                let message = if project.Prj.encoding <> Some "UTF-8" then (kprintf Convert.to_utf8
+                let message = if project.Prj.encoding <> Some "UTF-8" then (ksprintf Convert.to_utf8
                                                                               "Cannot convert file\n\n%s\n\nfrom %s codeset to UTF-8.\n\n%s"
                                                                               file#filename
                                                                               (match project.Prj.encoding with None -> "Default" | Some x -> x)

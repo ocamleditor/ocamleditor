@@ -351,13 +351,13 @@ class widget
           else match buffer with
             | None ->
                 let n_res = List.length results in
-                kprintf label_message#set_text "%d hit%s in %d file%s%s"
+                ksprintf label_message#set_text "%d hit%s in %d file%s%s"
                   hits (if hits = 1 then "" else "s") n_res (if n_res = 1 then "" else "s")
                   (if n_res > 1 then sprintf " (%d %s)" count_dirs
                        (if count_dirs = 1 then "directory" else "directories") else "");
             | _ ->
                 let bufname = match editor#get_page `ACTIVE with Some p -> p#get_filename | _ -> assert false in
-                kprintf label_message#set_text "%d hits in \xC2\xAB%s\xC2\xBB" hits (Filename.basename bufname)
+                ksprintf label_message#set_text "%d hits in \xC2\xAB%s\xC2\xBB" hits (Filename.basename bufname)
         end ()
       end
 
