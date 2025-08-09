@@ -612,7 +612,7 @@ class widget
               List.iter begin fun (start, stop) ->
                 let iter = page#buffer#get_iter (`LINECHAR (ln, 0)) in
                 let bline = page#buffer#get_text ?start:(Some iter) ?stop:(Some iter#forward_to_line_end) ?slice:None ?visible:None () in
-                if (Project.convert_to_utf8 project (strip_cr line)) = (strip_cr bline) then begin
+                if strip_cr line = strip_cr bline then begin
                   let name_start = new_mark_name() in
                   let (_ : Gtk.text_mark) = page#buffer#create_mark ?name:(Some name_start) ?left_gravity:None (iter#forward_chars start) in
                   delete_marks <- (fun () -> page#buffer#delete_mark (`NAME name_start)) :: delete_marks;

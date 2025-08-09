@@ -181,7 +181,7 @@
       <libs></libs>
       <other_objects></other_objects>
       <files>ocamleditor_lib.ml</files>
-      <package>atdgen-runtime,curl,dynlink,lablgtk2,ocamldiff,ocp-indent.lib,str,unix,xml-light,yojson,compiler-libs,odoc,ocamldoc</package>
+      <package>atdgen-runtime,curl,dynlink,lablgtk2,ocamldiff,ocp-indent.lib,str,unix,xml-light,yojson,compiler-libs,odoc,ocamldoc,inotify</package>
       <includes>gmisclib common icons otherwidgets oebuild </includes>
       <thread>true</thread>
       <vmthread>false</vmthread>
@@ -206,7 +206,7 @@
       <libs>ocamlcommon ocamldoc/odoc_info gmisclib common icons otherwidgets oebuildlib ocamleditor_lib</libs>
       <other_objects></other_objects>
       <files>ocamleditor.ml</files>
-      <package>atdgen-runtime,curl,dynlink,lablgtk2,ocamldiff,ocp-indent.lib,str,unix,xml-light,yojson,compiler-libs,odoc,ocamldoc</package>
+      <package>atdgen-runtime,curl,dynlink,lablgtk2,ocamldiff,ocp-indent.lib,str,unix,xml-light,yojson,compiler-libs,odoc,ocamldoc,inotify</package>
       <includes>gmisclib common icons otherwidgets oebuild</includes>
       <thread>true</thread>
       <vmthread>false</vmthread>
@@ -231,7 +231,7 @@
       <libs>ocamlcommon ocamldoc/odoc_info gmisclib common icons otherwidgets oebuildlib ocamleditor_lib</libs>
       <other_objects></other_objects>
       <files>ocamleditor.ml</files>
-      <package>atdgen-runtime,curl,dynlink,lablgtk2,ocamldiff,ocp-indent.lib,str,unix,xml-light,yojson,compiler-libs,odoc,ocamldoc</package>
+      <package>atdgen-runtime,curl,dynlink,lablgtk2,ocamldiff,ocp-indent.lib,str,unix,xml-light,yojson,compiler-libs,odoc,ocamldoc,inotify</package>
       <includes>gmisclib common icons otherwidgets oebuild </includes>
       <thread>true</thread>
       <vmthread>false</vmthread>

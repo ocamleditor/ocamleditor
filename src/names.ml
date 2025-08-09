@@ -20,31 +20,8 @@ type db = {
   mutable timestamp : float;
 }
 
-module Lock = struct
-  let namedb = Mutex.create()
-  let [@inline] mutex mx f x =
-    Mutex.lock mx;
-    try
-      let res = f x in
-      Mutex.unlock mx;
-      res
-    with ex ->
-      Mutex.unlock mx;
-      raise ex
-end
-
-(** [!!mutex f x] applies [f] to [x] inside a critical section locked by
-    [mutex] and returns its result. *)
-let (!!) mx f x = Lock.mutex mx f x
-
-(*module Project_watcher = struct
-
-  let create (project : Prj.t) =
-    let inotify = Inotify.create() in
-    let path = Project.path_src project in
-    let watch = Inotify.add_watch inotify path [Inotify.S_Create; Inotify.S_Delete; Inotify.S_Modify] in
-    ()
-  end*)
+type lock_name = NameDb
+module Lock = (val Locks.create [NameDb])
 
 let count db = db.table |> List.fold_left (fun sum x -> sum + List.length x.values) 0
 
@@ -58,7 +35,7 @@ let get_project_source_filenames project =
 
 let filter pattern db =
   let compare = Utils.Memo.fast ~f:(fun (a, b) -> FuzzyLetters.compare `Greedy a b) in
-  !!Lock.namedb begin fun () ->
+  Lock.use NameDb begin fun () ->
     db.table
     |> List.map (fun entry ->
         entry.values
@@ -68,7 +45,7 @@ let filter pattern db =
         end)
     |> List.concat
     |> List.sort (fun (a, _) (b, _) -> Stdlib.compare b a)
-  end ()
+  end
 
 let rec add_outline db entry modname outline =
   let temp = ref [ { kind = "Module"; name = modname; desc = ""; info = "" } ] in
@@ -85,7 +62,7 @@ let rec add_outline db entry modname outline =
       temp := value :: !temp
     end
   end;
-  !!Lock.namedb (fun () -> entry.values <- List.rev_append !temp entry.values) ()
+  Lock.use NameDb (fun () -> entry.values <- List.rev_append !temp entry.values)
 
 let rec add_compl db modname compl count_lib_values =
   let entry = { filename=""; modname; timestamp=0.0; values=[] } in
@@ -104,31 +81,31 @@ and complete_prefix db modname count_lib_values =
   |> Async.start_with_continuation begin function
   | Merlin.Ok compl ->
       let mod_entry = add_compl db modname compl.entries count_lib_values in
-      !!Lock.namedb begin fun () ->
+      Lock.use NameDb begin fun () ->
         mod_entry.timestamp <- Unix.gettimeofday();
         db.table <- mod_entry :: db.table;
         count_lib_values := !count_lib_values + List.length mod_entry.values
-      end ()
+      end
   | Merlin.Error _ | Merlin.Failure _ -> ()
   end
 
 let update ?(is_init=false) db filename =
   if is_init then Thread.delay 0.075
   else
-    !!Lock.namedb (fun () ->
-        db.table <- db.table |> List.filter (fun me -> me.filename <> filename)) ();
+    Lock.use NameDb (fun () ->
+        db.table <- db.table |> List.filter (fun me -> me.filename <> filename));
   if Sys.file_exists filename then begin
     let modname =
       filename |> Filename.basename |> Filename.remove_extension |> String.capitalize_ascii in
     let mod_entry = { filename; modname; timestamp=Unix.gettimeofday(); values=[] } in
-    !!Lock.namedb (fun () -> db.table <- mod_entry :: db.table) ();
+    Lock.use NameDb (fun () -> db.table <- mod_entry :: db.table);
     Merlin.outline
       ~filename
       ~buffer:(File_util.read filename |> Buffer.contents)
     |> Async.start_with_continuation begin function
     | Merlin.Ok outline ->
         add_outline db mod_entry modname outline;
-        !!Lock.namedb (fun () -> mod_entry.timestamp <- Unix.gettimeofday()) ();
+        Lock.use NameDb (fun () -> mod_entry.timestamp <- Unix.gettimeofday());
     | Merlin.Failure _ | Merlin.Error _ -> ()
     end;
   end
@@ -193,7 +170,7 @@ module Cache = struct
   let save ~project =
     match !database with
     | Some table ->
-        !!Lock.namedb begin fun () ->
+        Lock.use NameDb begin fun () ->
           let filename = create_filename ~project in
           let chan = open_out_bin filename in
           let finally () = close_out chan in
@@ -206,13 +183,13 @@ module Cache = struct
               finally();
               raise ex
             end
-        end ();
+        end;
     | _ -> ();;
 
   let load ~project =
     let filename = create_filename ~project in
     if Sys.file_exists filename then begin
-      !!Lock.namedb begin fun () ->
+      Lock.use NameDb begin fun () ->
         let chan = open_in_bin filename in
         let finally () = close_in chan in
         try
@@ -227,7 +204,7 @@ module Cache = struct
             finally();
             raise ex
           end
-      end ()
+      end
     end else (reset ~project);;
 
 end

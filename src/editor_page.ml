@@ -300,7 +300,7 @@ class page ?file ~project ~scroll_offset ~offset ~editor () =
             try
               view#misc#hide();
               load#call `Begin;
-              buffer#insert (Project.convert_to_utf8 project file#read);
+              buffer#insert file#read;
               (* Initial cursor position and syntax highlighting *)
               Gmisclib.Idle.add begin fun () ->
                 if scroll then begin

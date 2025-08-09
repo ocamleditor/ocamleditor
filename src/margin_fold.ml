@@ -433,9 +433,7 @@ class margin_fold (view : Ocaml_text.view) =
               if not self#is_changed_after_last_outline then begin
                 Log.println `DEBUG "update outline";
                 outline <- ol;
-                comments <-
-                  Comments.scan_locale (Glib.Convert.convert_with_fallback ~fallback:""
-                                          ~from_codeset:"UTF-8" ~to_codeset:Oe_config.ocaml_codeset source_code);
+                comments <- Comments.scan_locale source_code;
                 synchronized#call();
               end else Log.println `WARN "*** outline not updated ***";
               Log.println `DEBUG "END GtkThread.sync";

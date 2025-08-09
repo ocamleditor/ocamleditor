@@ -31,6 +31,7 @@ open Argc
 open Option_syntax
 open Manual_reset_event
 open Async
+open Locks
 
 module Log = Log.Make(struct
     let channel = stdout
