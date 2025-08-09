@@ -55,7 +55,7 @@ let tmp_of_abs proj filename =
   let tmp = path_tmp proj in
   match proj.Prj.in_source_path filename with
   | None -> None
-  | Some rel_name -> Some (tmp, rel_name);; 
+  | Some rel_name -> Some (tmp, rel_name);;
 
 (** set_ocaml_home *)
 let set_ocaml_home ~ocamllib project =
@@ -349,27 +349,69 @@ let get_actual_maximum_bookmark project =
 
 let inotify = Inotify.create ()
 
-let start_file_watcher proj =
-  proj.file_watcher <- Some (Inotify.add_watch inotify "." [Inotify.S_Move]);
-  Thread.create begin fun () ->
-    Printf.printf "Project %s STARTING file watcher loop.\n%!" proj.Prj.name;
-    while proj.file_watcher <> None do
-      Thread.delay 0.3;
-      let update_index =
-        Inotify.read inotify
-        |> List.exists begin fun (_, _, _, name) ->
-          let name = Option.value name ~default:"" in
-          Filename.check_suffix name ".cmt"
-        end
-      in
-      if update_index then begin
-        (* TODO Add other sub dirs *)
-        Utils.crono ~label:"Updating ocaml-index" Sys.command "ocaml-index *.cmt common/*.cmt" |> ignore;
-      end;
-    done;
-    Printf.printf "Project %s STOPPED file watcher loop.\n%!" proj.Prj.name;
-  end () |> ignore
+let update_ocaml_index (proj : Prj.t) =
+  Async.create begin fun () ->
+    let proj_sub_dirs =
+      get_search_path_local proj
+      |> List.map (Utils.filename_relative (path_src proj))
+      |> List.filter_map Fun.id
+      |> List.filter ((<>)"")
+      |> List.map (sprintf "%s/*.cmt")
+      |> String.concat " "
+    in
+    let update_index = sprintf "ocaml-index *.cmt %s" proj_sub_dirs in
+    Utils.crono ~label:update_index Sys.command update_index |> ignore;
+  end |> Async.start
 
+type lock_name = Watcher
+module Lock = (val Locks.create [ Watcher ])
+
+let start_file_watcher proj =
+  Lock.use Watcher begin fun () ->
+    match proj.file_watcher with
+    | None ->
+        let watch = Inotify.add_watch inotify (path_src proj) [ Inotify.S_Move ] in
+        proj.file_watcher <- Some watch;
+        let watch = Inotify.int_of_watch watch in
+        Thread.create begin fun () ->
+          let thid = Thread.id (Thread.self ()) in
+          try
+            Printf.printf "Project %s STARTED file watcher loop %d.\n%!" proj.Prj.name thid;
+            while true do
+              Thread.delay 0.1;
+              let events = Inotify.read inotify in
+              begin
+                match proj.file_watcher with
+                | Some w when Inotify.int_of_watch w = watch -> ()
+                | _ -> raise Exit
+              end;
+              Async.create begin fun () ->
+                let need_update_index =
+                  events
+                  |> List.exists begin fun (_, _, _, name) ->
+                    let name = Option.value name ~default:"" in
+                    Filename.check_suffix name ".cmt"
+                  end
+                in
+                if need_update_index then update_ocaml_index proj;
+              end |> Async.start;
+            done;
+            Printf.printf "Project %s STOPPED file watcher loop %d.\n%!" proj.Prj.name thid;
+          with
+          | Exit ->
+              Printf.printf "Project %s EXITED file watcher loop %d.\n%!" proj.Prj.name thid;
+          | ex ->
+              Printf.eprintf "File \"project.ml\": %s\n%s\n%!" (Printexc.to_string ex) (Printexc.get_backtrace());
+        end () |> ignore;
+    | _ ->
+        Printf.eprintf "Already watching...\n%!";
+  end
+
+let stop_file_watcher proj =
+  Lock.use Watcher begin fun () ->
+    proj.Prj.file_watcher |> Option.iter (Inotify.rm_watch inotify);
+    proj.Prj.file_watcher <- None;
+  end
 
 (** load *)
 let load filename =
@@ -398,8 +440,7 @@ let load filename =
   proj;;
 
 let unload proj =
-  proj.Prj.file_watcher |> Option.iter (Inotify.rm_watch inotify);
-  proj.Prj.file_watcher <- None;
+  stop_file_watcher proj;
   unload_path proj
 
 (** backup_file *)

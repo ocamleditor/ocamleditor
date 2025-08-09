@@ -518,25 +518,32 @@ let exec_sync ?run_cb ?(use_thread=true) ?(at_exit=ignore) ~editor task_groups =
   let mode : [`all | `group | `single] = `single in
   let f tasks =
     try
-      ignore (List.fold_left begin fun acc (task_kind, task) ->
-          let console =
-            match acc with
-            | Some console when mode = `all || mode = `group ->
-                console#set_task task;
-                console
-            | _ -> GtkThread2.sync (create ~editor task_kind) task
-          in
-          (*if mode = `single then (GtkThread2.async console#tab_label#set_text task.Task.et_name);*)
-          begin
-            match console#run ?run_cb ~use_thread:true () with
-            | None -> ();
-            | Some th -> Thread.join th;
-          end;
-          if console#has_errors || console#killed then (raise Exit);
-          Some console
-        end None tasks);
+      Project.stop_file_watcher editor#project;
+      tasks
+      |> List.fold_left begin fun acc (task_kind, task) ->
+        let console =
+          match acc with
+          | Some console when mode = `all || mode = `group ->
+              console#set_task task;
+              console
+          | _ -> GtkThread2.sync (create ~editor task_kind) task
+        in
+        (*if mode = `single then (GtkThread2.async console#tab_label#set_text task.Task.et_name);*)
+        begin
+          match console#run ?run_cb ~use_thread:true () with
+          | None -> ();
+          | Some th -> Thread.join th;
+        end;
+        if console#has_errors || console#killed then (raise Exit);
+        Some console
+      end None
+      |> ignore;
+      Project.start_file_watcher editor#project;
       at_exit()
-    with Exit -> (at_exit(); raise Exit)
+    with Exit ->
+      Project.start_file_watcher editor#project;
+      at_exit();
+      raise Exit
   in
   let g () =
     try
@@ -591,7 +598,10 @@ let exec ~editor ?use_thread ?(with_deps=false) task_kind target =
   let build_deps = if with_deps then Target.find_target_dependencies project.Prj.targets target else [] in
   let compile_name = sprintf "Compile \xC2\xAB%s\xC2\xBB" (Filename.basename target.name) in
   let build_name = sprintf "Build \xC2\xAB%s\xC2\xBB" (Filename.basename target.name) in
-  let at_exit = fun () -> GtkThread2.async editor#with_current_page (fun p -> p#compile_buffer ?join:None ()) in
+  let compile_buffer = fun () ->
+    (* N.B. compile_buffer also updates ocaml-index *)
+    GtkThread2.async editor#with_current_page (fun p -> p#compile_buffer ?join:None ());
+  in
   match task_kind with
   | `CLEANALL ->
       let cmd, args = Target.create_cmd_line target in
@@ -623,10 +633,10 @@ let exec ~editor ?use_thread ?(with_deps=false) task_kind target =
   | `CLEAN -> exec_sync ~editor [tasks_clean ()];
   | `ANNOT -> exec_sync ~editor [tasks_annot ()];
   | `COMPILE ->
-      let rec f () = exec_sync ~run_cb:f ~editor ~at_exit (tasks_compile ~name:build_name ~build_deps ~can_compile_native target) in
+      let rec f () = exec_sync ~run_cb:f ~editor ~at_exit:compile_buffer (tasks_compile ~name:build_name ~build_deps ~can_compile_native target) in
       f()
   | `COMPILE_ONLY ->
-      exec_sync ~editor ~at_exit (tasks_compile ~flags:["-c"] ~name:compile_name ~build_deps ~can_compile_native target);
+      exec_sync ~editor ~at_exit:compile_buffer (tasks_compile ~flags:["-c"] ~name:compile_name ~build_deps ~can_compile_native target);
   | `RCONF rc ->
       if Oebuild.check_restrictions target.restrictions then
         let compilation = if target.Target.opt then Oebuild.Native else Oebuild.Bytecode in
