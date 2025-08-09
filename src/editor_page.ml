@@ -249,8 +249,7 @@ class page ?file ~project ~scroll_offset ~offset ~editor () =
     method save () = Gaux.may file ~f:begin fun file ->
         if not file#is_readonly then begin
           if Preferences.preferences#get.editor_bak then (self#backup());
-          let text = Project.convert_from_utf8 project (buffer#get_text ()) in
-          file#write text;
+          file#write (buffer#get_text ());
           Gmisclib.Idle.add self#update_statusbar;
           Gmisclib.Idle.add (fun () -> self#compile_buffer ?join:None ());
           (* Delete existing recovery copy *)

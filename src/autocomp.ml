@@ -138,8 +138,7 @@ let compile_buffer ~project ~editor ~page ?(join=false) () =
           GtkThread2.async page#error_indication#apply_tag errors;
           (* Outline *)
           let no_errors = errors.Oe.er_errors = [] in
-          if editor#show_outline then begin
-          end;
+          if editor#show_outline then begin end;
           Activity.remove activity_name;
         in
         let process_err = Spawn.loop process_err in

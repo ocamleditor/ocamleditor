@@ -188,7 +188,6 @@ class buffer =
 
       method save_buffer ?(filename=tmp_filename) () =
         let text = buffer#get_text () in
-        let text = match project with Some project -> Project.convert_from_utf8 project text | _ -> text in
         Utils.mkdir_p (Filename.dirname filename);
         let chan = open_out_bin filename in
         begin

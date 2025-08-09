@@ -130,20 +130,6 @@ let set_runtime_build_task proj rconf task_string =
       Target.task_of_string target task_string
     with Not_found -> `NONE
 
-(** to_xml *)
-
-(** from_file *)
-
-(** convert_to_utf8 *)
-let convert_to_utf8 proj text = match proj.encoding with
-  | None -> Convert.to_utf8 text
-  | Some from_codeset -> Glib.Convert.convert ~from_codeset ~to_codeset:"UTF-8" text
-
-(** convert_from_utf8 *)
-let convert_from_utf8 proj text = match proj.encoding with
-  | None -> Convert.from_utf8 text
-  | Some to_codeset -> Glib.Convert.convert ~from_codeset:"UTF-8" ~to_codeset text
-
 (** Returns the full filename of the project configuration file. *)
 let filename proj = Filename.concat proj.root (proj.name ^ default_extension)
 let mk_old_filename filename = (Filename.chop_extension filename) ^ old_extension
