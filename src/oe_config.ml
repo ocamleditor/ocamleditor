@@ -125,7 +125,7 @@ let unify_statusbars                     = false
 
 
 
-let ocaml_codeset = "ISO-8859-1"
+let ocaml_codeset = "UTF-8"
 
 (*
   THE FOLLOWING LINE IS PROCESSED BY "tools/prepare_build", DO NOT EDIT.

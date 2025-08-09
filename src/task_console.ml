@@ -363,11 +363,11 @@ class view ~(editor : Editor.editor) ?(task_kind=(`OTHER : Task.kind)) ~task ?pa
             if process <> None && signal_enabled then (GtkThread2.sync begin fun () ->
                 let start = it#backward_chars (String.length txt) in
                 view#buffer#apply_tag_by_name "input" ~start ~stop:(view#buffer#get_iter `INSERT);
-                match process_outchan with None -> ()
-                                         | Some ochan ->
-                                             output_string ochan (Glib.Convert.convert_with_fallback ~fallback:"?"
-                                                                    ~from_codeset:"UTF-8" ~to_codeset:Oe_config.ocaml_codeset txt);
-                                             flush ochan;
+                match process_outchan with
+                | None -> ()
+                | Some ochan ->
+                    output_string ochan txt;
+                    flush ochan;
               end ())
           end);
       end;

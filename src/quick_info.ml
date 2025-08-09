@@ -325,9 +325,7 @@ let invoke_merlin qi (iter : GText.iter) ~continue_with =
     end
 
 let is_iter_in_comment (buffer : Ocaml_text.buffer) iter =
-  Comments.enclosing
-    (Comments.scan (Glib.Convert.convert_with_fallback ~fallback:"" ~from_codeset:"UTF-8" ~to_codeset:Oe_config.ocaml_codeset
-                      (buffer#get_text ()))) iter#offset
+  Comments.enclosing (Comments.scan (buffer#get_text ())) iter#offset
 
 let get_typeable_iter_at_coords qi iter =
   if iter#ends_line
