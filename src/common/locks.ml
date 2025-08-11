@@ -7,7 +7,7 @@ let create (type a) (names : a list) =
   let locks = names |> List.map (fun name -> name, Mutex.create ()) in
   (module struct
     type name = a
-    let use name f = Mutex.protect (List.assoc name locks) f
+    let use name = Mutex.protect (List.assoc name locks)
   end : LOCK_OPS with type name = a)
 
 (*type lock_name = A | B | Database
