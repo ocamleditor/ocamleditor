@@ -313,11 +313,10 @@ class widget ~editor(* : Editor.editor)*) ?packing () =
           (lnum, line, line_locs)
         end lines
       in
-      let open Lexical_markup in
-      let parse = parse Preferences.preferences#get in
+      let parse = Lexical_markup.parse Preferences.preferences#get in
       List.iter begin fun (lnum, line, line_locs) ->
+        (*Printf.printf "%d: %s\n%!" lnum line;*)
         let ranges = ranges_of_locations line_locs in
-        let line = (*String.trim*) line in
         let markup = parse ~highlights:ranges line in
         let markup = Convert.to_utf8 markup in
         let pixbuf =

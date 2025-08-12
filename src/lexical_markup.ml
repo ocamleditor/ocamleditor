@@ -233,13 +233,17 @@ let get_tag token state =
 let finalize_lident state =
   match [@warning "-4"] state.in_type_label with
   | Possible_label lident ->
+      (*Printf.printf "  finalize_lident Possible_label %s\n%!" lident;*)
       state.in_type_label <- Off;
       append state.output (Glib.Markup.escape_text lident);
-  | _ -> ()
+  | _ ->
+      (*Printf.printf "  finalize_lident %S\n%!" state.lexeme;*)
+      ()
 
 let add highlights state ((lstart, lstop) as range) with_span =
   match highlights |> List.fold_left (fun acc h -> match h ^^^ range with None -> acc | x -> x) None with
   | Some (a, b) when a < b ->
+      (*Printf.printf "  ADD lexeme %S, with_span %b, tag %s %d,%d\n%!" state.lexeme with_span state.tag a b;*)
       if with_span then begin
         if a = lstart && b = lstop then begin
           state.in_highlight <- true;
@@ -267,6 +271,7 @@ let add highlights state ((lstart, lstop) as range) with_span =
         end
       end
   | _ ->
+      (*Printf.printf "  ADD lexeme %S, with_span %b, tag %s\n%!" state.lexeme with_span state.tag;*)
       if with_span then (append state.output (state.span (false, state.tag)));
       begin
         match state.in_type_var with
@@ -278,17 +283,22 @@ let add highlights state ((lstart, lstop) as range) with_span =
             begin
               match state.in_type_label with
               | Label type_label ->
+                  (*Printf.printf "    Label %S\n%!" type_label;*)
                   state.in_type_label <- Off;
                   append state.output (Glib.Markup.escape_text type_label);
               | Lident lident ->
+                  (*Printf.printf "    Lident %S\n%!" lident;*)
                   state.in_type_label <- Off;
                   append state.output (state.span (false, "lident"));
                   append state.output (Glib.Markup.escape_text lident);
                   append state.output "</span>";
                   append state.output (Glib.Markup.escape_text state.lexeme);
               | Off ->
+                  (*Printf.printf "    Off\n%!";*)
                   append state.output  (Glib.Markup.escape_text state.lexeme);
-              | Possible_label _ -> ()
+              | Possible_label x ->
+                  (*Printf.printf "    Possible_label %S\n%!" x;*)
+                  ()
             end;
       end
 
@@ -318,9 +328,10 @@ let parse ?(use_bold=true) pref =
       while true do
         try
           let token = Lexer.token buffer in
-          let (lstart, _) as range = Lexing.lexeme_start buffer, Lexing.lexeme_end buffer in
+          let (lstart, lstop) as range = Lexing.lexeme_start buffer, Lexing.lexeme_end buffer in
           state.lexeme <- Lexing.lexeme buffer;
           state.tag <- get_tag token state;
+          (*Printf.printf "TOKEN lexeme %S, tag %s %d,%d\n%!" state.lexeme state.tag lstart lstop;*)
           let add_with_span = add range in
           begin
             match [@warning "-4"] token with
@@ -347,11 +358,13 @@ let parse ?(use_bold=true) pref =
               if state.tag <> "" then begin
                 add_with_span true;
                 if state.tag <> "char" then (append state.output "</span>") else (state.is_span_pending <- true);
-              end else add_with_span false
+              end else
+                add_with_span false
             with Continue -> partial_reset_state state
           end;
           state.pos <- lstart + (String.length state.lexeme);
           state.prev_token <- token;
+          finalize_lident state;
         with Lexer.Error (err, _) ->
           begin
             let open Lexer in
@@ -383,6 +396,7 @@ let parse ?(use_bold=true) pref =
         finalize_lident state;
         append state.output (Glib.Markup.escape_text lexeme);
         close_pending state;
+        (*Printf.printf "===> %S\n%!" (Buffer.contents state.output);*)
         Buffer.contents state.output
     | Lexer.Error _ ->
         finalize_lident state;
