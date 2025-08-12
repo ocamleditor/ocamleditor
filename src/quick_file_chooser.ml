@@ -459,7 +459,7 @@ let init ~roots ~filter =
 
 let add_roots ~roots ~filter =
   let name = "" in
-  match List_opt.assoc name !models with
+  match List.assoc_opt name !models with
   | Some model ->
       models := List.remove_assoc name !models;
       begin

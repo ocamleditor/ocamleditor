@@ -635,7 +635,7 @@ class view ~project ~target_list ?packing () =
       check_cygwin#set_active (List.mem "IS_CYGWIN" tg.restrictions);
       check_native#set_active (List.exists (fun x -> List.mem x tg.restrictions) ["HAVE_NATIVE"; "HAS_NATIVE"; "NATIVE"]);
       entry_fl_pkg#set_text begin
-        match List_opt.find (fun res -> Str.string_match Oebuild.re_fl_pkg_exist res 0) tg.restrictions
+        match List.find_opt (fun res -> Str.string_match Oebuild.re_fl_pkg_exist res 0) tg.restrictions
         with
         | Some res ->
             if Str.string_match Oebuild.re_fl_pkg_exist res 0 then Str.matched_group 2 res else ""
@@ -643,13 +643,13 @@ class view ~project ~target_list ?packing () =
       end;
       check_fl_pkg#set_active (entry_fl_pkg#text <> ""); (*(List.exists (fun r -> Str.string_match Oebuild.re_fl_pkg_exist r 0) tg.restrictions)*)
       entry_env#set_text begin
-        match List_opt.find (fun res -> Str.string_match Oebuild.re_env res 0) tg.restrictions with
+        match List.find_opt (fun res -> Str.string_match Oebuild.re_env res 0) tg.restrictions with
         | Some res -> Str.matched_group 1 res
         | None -> ""
       end;
       check_env#set_active (entry_env#text <> "");
       entry_ocfg#set_text begin
-        match List_opt.find (fun res -> Str.string_match Oebuild.re_ocfg res 0) tg.restrictions with
+        match List.find_opt (fun res -> Str.string_match Oebuild.re_ocfg res 0) tg.restrictions with
         | Some res -> Str.matched_group 1 res
         | None -> ""
       end;

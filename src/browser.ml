@@ -658,7 +658,7 @@ class browser window =
 
     method with_default_runtime_config ~open_dialog f =
       self#with_current_project begin fun project ->
-        match List_opt.find (fun x -> x.Rconf.default) project.Prj.executables with
+        match List.find_opt (fun x -> x.Rconf.default) project.Prj.executables with
         | Some rconf -> f rconf
         | None when open_dialog -> self#dialog_project_properties ~page_num:2 ()
         | _ -> ()
@@ -797,7 +797,7 @@ class browser window =
             ksprintf (Menu.set_label menu.file_close_all) "Close All Except \xC2\xAB%s\xC2\xBB" basename;
             ksprintf (Menu.set_label menu.file_revert) "Revert to Saved \xC2\xAB%s\xC2\xBB" basename;
             ksprintf (Menu.set_label menu.file_delete) "Delete \xC2\xAB%s\xC2\xBB" basename;
-            match List_opt.assoc page#misc#get_oid menu.window_pages with
+            match List.assoc_opt page#misc#get_oid menu.window_pages with
             | Some item ->ksprintf (Menu.set_label item) "%s" basename
             | _ -> ()
           end;

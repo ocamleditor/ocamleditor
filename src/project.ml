@@ -325,7 +325,7 @@ let remove_bookmark num proj =
 (** set_bookmark *)
 let set_bookmark bookmark proj =
   begin
-    match List_opt.find (fun x -> x.Oe.bm_num = bookmark.Oe.bm_num) proj.bookmarks with
+    match List.find_opt (fun x -> x.Oe.bm_num = bookmark.Oe.bm_num) proj.bookmarks with
     | Some bookmark ->
         Bookmark.remove bookmark;
         remove_bookmark bookmark.Oe.bm_num proj;
@@ -336,7 +336,7 @@ let set_bookmark bookmark proj =
 
 (** find_bookmark *)
 let find_bookmark proj filename buffer iter =
-  List_opt.find begin fun bm ->
+  List.find_opt begin fun bm ->
     if bm.Oe.bm_filename = filename then begin
       let mark = Bookmark.offset_to_mark buffer bm in
       iter#line = (buffer#get_iter (`MARK mark))#line

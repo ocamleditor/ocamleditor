@@ -169,10 +169,10 @@ let fold node tag f init =
     if Xml.tag node = tag then f node else acc end init node;;
 
 let attrib node name f default =
-  match List_opt.assoc name (Xml.attribs node) with Some v -> f v | _ -> default;;
+  match List.assoc_opt name (Xml.attribs node) with Some v -> f v | _ -> default;;
 
 let fattrib node name f default =
-  match List_opt.assoc name (Xml.attribs node) with Some v -> f v | _ -> (default ());;
+  match List.assoc_opt name (Xml.attribs node) with Some v -> f v | _ -> (default ());;
 
 (** xml_bs_targets *)
 let xml_bs_targets proj node =
@@ -447,7 +447,7 @@ let read filename =
   List.iter (fun (rconf, task_string) -> set_runtime_build_task proj rconf task_string) !task_map;
   (* Set default runtime configuration *)
   begin
-    match List_opt.find (fun x -> x.Rconf.default) proj.executables with
+    match List.find_opt (fun x -> x.Rconf.default) proj.executables with
     | None ->
         (match proj.executables with pr :: _ -> pr.Rconf.default <- true | _ -> ());
     | _ -> ()

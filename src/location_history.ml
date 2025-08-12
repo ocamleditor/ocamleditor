@@ -194,7 +194,7 @@ let add nh ~kind ~(view : GText.view) ~filename ~offset =
 (*end ()*)
 
 (** last_edit_location *)
-let last_edit_location nh = List_opt.find (fun loc -> loc.kind = `EDIT) nh.history
+let last_edit_location nh = List.find_opt (fun loc -> loc.kind = `EDIT) nh.history
 
 (** goto_last_edit_location *)
 let goto_last_edit_location nh =

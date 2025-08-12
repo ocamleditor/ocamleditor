@@ -159,16 +159,20 @@ let print_general_commands ochan external_tasks project =
   List.iter begin fun command ->
     let target = command.bsc_target in
     let task = command.bsc_task in
-    List_opt.may_find begin fun (tg, _) ->
-      tg.id = target.id && task.et_name = task.et_name
-    end external_tasks begin fun (tg, et_indexes) ->
-      let et = List.combine tg.external_tasks et_indexes in
-      match List_opt.find (fun (et, _) -> et.et_name = task.et_name) et with
-      | Some (_, index(*, _)*)) ->
-          fprintf ochan "  `%s, (%d, %S);\n"
-            (Build_script.string_of_command command.bsc_name) index command.bsc_descr;
-      | _ -> ()
-    end ();
+    external_tasks
+    |> List.find_map begin fun (tg, et_indexes) ->
+      if tg.id = target.id && task.et_name = task.et_name then
+        Some begin
+          let et = List.combine tg.external_tasks et_indexes in
+          match List.find_opt (fun (et, _) -> et.et_name = task.et_name) et with
+          | Some (_, index(*, _)*)) ->
+              fprintf ochan "  `%s, (%d, %S);\n"
+                (Build_script.string_of_command command.bsc_name) index command.bsc_descr;
+          | _ -> ()
+        end else None
+    end |> ignore;
+
+
   end commands;
   fprintf ochan "]\n";;
 

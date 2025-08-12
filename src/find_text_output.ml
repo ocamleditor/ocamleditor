@@ -752,7 +752,7 @@ class widget
             let path = model#get ~row ~column:col_path in
             let filename = path // file in
             tbuf#set_lexical_enabled (filename ^^^ ".ml" || filename ^^^ ".mli" || filename ^^^ ".mll" || filename ^^^ ".mly");
-            match List_opt.find (fun {filename=fn; _} -> fn = filename) results with
+            match List.find_opt (fun {filename=fn; _} -> fn = filename) results with
             | None -> () (* TODO: Under Windows sometimes I get filenames separated by "backslash" instead of "/" in results. *)
             | Some res ->
                 let lines_involved = res.lines in
