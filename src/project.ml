@@ -363,11 +363,10 @@ let update_ocaml_index (proj : Prj.t) =
     Utils.crono ~label:update_index Sys.command update_index |> ignore;
   end |> Async.start
 
-type lock_name = Watcher
-module Lock = (val Locks.create [ Watcher ])
+let mx_watcher = Mutex.create()
 
 let start_file_watcher proj =
-  Lock.use Watcher begin fun () ->
+  Mutex.protect mx_watcher begin fun () ->
     match proj.file_watcher with
     | None ->
         let watch = Inotify.add_watch inotify (path_src proj) [ Inotify.S_Move ] in
@@ -408,7 +407,7 @@ let start_file_watcher proj =
   end
 
 let stop_file_watcher proj =
-  Lock.use Watcher begin fun () ->
+  Mutex.protect mx_watcher begin fun () ->
     proj.Prj.file_watcher |> Option.iter (Inotify.rm_watch inotify);
     proj.Prj.file_watcher <- None;
   end

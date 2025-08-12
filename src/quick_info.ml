@@ -21,12 +21,13 @@ module SignalId = struct
     | None -> ()
 end
 
-type lock_name = Index | Wininfo
-module Lock = (val Locks.create [Index; Wininfo])
+let mx_index = Mutex.create()
+let mx_wininfo = Mutex.create()
+
 
 let index = ref 10_000
 let new_index () =
-  Lock.use Index begin fun () ->
+  Mutex.protect mx_index begin fun () ->
     index := !index + 1;
     !index
   end
@@ -64,7 +65,7 @@ let get_current_window_unsafe qi =
   | _ -> None
 
 (** Returns the last open quick info window. *)
-let get_current_window qi = Lock.use Wininfo (fun () -> get_current_window_unsafe qi)
+let get_current_window qi = Mutex.protect mx_wininfo (fun () -> get_current_window_unsafe qi)
 
 let remove_highlight qi wi =
   match wi.range with
@@ -89,7 +90,7 @@ let remove_highlight qi wi =
   | _ -> ()
 
 let add_wininfo qi callback =
-  Lock.use Wininfo (fun () wi -> qi.windows <- wi :: qi.windows; callback())
+  Mutex.protect mx_wininfo (fun () wi -> qi.windows <- wi :: qi.windows; callback())
 
 let is_poiter_over (wi : wininfo) =
   try
@@ -105,7 +106,7 @@ let is_poiter_over (wi : wininfo) =
 let remove_wininfo qi wi =
   GMain.Timeout.add ~ms:300 ~callback:begin fun () ->
     if not wi.is_pinned && not (is_poiter_over wi) then begin
-      Lock.use Wininfo begin fun () ->
+      Mutex.protect mx_wininfo begin fun () ->
         if not wi.is_pinned then remove_highlight qi wi;
         qi.windows <- qi.windows |> List.filter (fun x -> x.window#misc#get_oid <> wi.window#misc#get_oid);
         wi.window#destroy();
@@ -122,7 +123,7 @@ let is_pinned qi =
     previously open and in timed closure. The pinned window is an exception
     and is not hidden. *)
 let hide qi =
-  Lock.use Wininfo begin fun () ->
+  Mutex.protect mx_wininfo begin fun () ->
     qi.windows |> List.iter begin fun wi ->
       if not wi.is_pinned then begin
         remove_highlight qi wi;
@@ -132,7 +133,7 @@ let hide qi =
   end
 
 let unpin qi =
-  Lock.use Wininfo (fun () -> List.iter (fun w -> w.is_pinned <- false) qi.windows);
+  Mutex.protect mx_wininfo (fun () -> List.iter (fun w -> w.is_pinned <- false) qi.windows);
   hide qi
 
 (** Closes the last quick information opened and all other timed closing windows. *)

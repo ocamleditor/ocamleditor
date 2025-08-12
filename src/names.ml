@@ -20,8 +20,8 @@ type db = {
   mutable timestamp : float;
 }
 
-type lock_name = NameDb | CountThreads
-module Lock = (val Locks.create [ NameDb; CountThreads ])
+let mx_name_db = Mutex.create()
+let mx_count_threads = Mutex.create()
 
 let count db = db.table |> List.fold_left (fun sum x -> sum + List.length x.values) 0
 
@@ -39,7 +39,7 @@ let get_project_source_filenames project =
 
 let filter pattern db =
   let compare = Utils.Memo.fast ~f:(fun (a, b) -> FuzzyLetters.compare ~min_score:0.85 `Greedy a b) in
-  Lock.use NameDb begin fun () ->
+  Mutex.protect mx_name_db begin fun () ->
     db.table
     |> List.map (fun entry ->
         entry.values
@@ -72,7 +72,7 @@ let rec add_outline db entry modname outline =
       temp := value :: !temp
     end
   end;
-  Lock.use NameDb (fun () -> entry.values <- List.rev_append !temp entry.values)
+  Mutex.protect mx_name_db (fun () -> entry.values <- List.rev_append !temp entry.values)
 
 let max_merlin_processes = 8
 let merlin_process = Semaphore.Counting.make max_merlin_processes
@@ -92,14 +92,14 @@ let rec add_compl db modname compl count_lib_values =
 
 and complete_prefix db modname count_lib_values =
   let finally ?ex () =
-    Lock.use CountThreads (fun () -> decr count_merlin_threads);
+    Mutex.protect mx_count_threads (fun () -> decr count_merlin_threads);
     ex |> Option.iter (fun ex -> Log.println `ERROR "%s" (Printexc.to_string ex));
     if !count_merlin_threads <= 0 then begin
       Manual_reset_event.set event_database_initialized (Some true)
     end
   in
   try
-    Lock.use CountThreads (fun () -> incr count_merlin_threads);
+    Mutex.protect mx_count_threads (fun () -> incr count_merlin_threads);
     Semaphore.Counting.acquire merlin_process;
     Merlin.complete_prefix ~position:(1,1) ~prefix:(modname ^ ".") ~filename:"dummy" ~buffer:""
     |> Async.start_with_continuation ~name:(sprintf "%s-compl-%s" __MODULE__ modname) begin function
@@ -108,7 +108,7 @@ and complete_prefix db modname count_lib_values =
           try
             Semaphore.Counting.release merlin_process;
             let mod_entry = add_compl db modname compl.entries count_lib_values in
-            Lock.use NameDb begin fun () ->
+            Mutex.protect mx_name_db begin fun () ->
               mod_entry.timestamp <- Unix.gettimeofday();
               db.table <- mod_entry :: db.table;
               count_lib_values := !count_lib_values + List.length mod_entry.values
@@ -123,20 +123,20 @@ and complete_prefix db modname count_lib_values =
 let update ?(is_init=false) db filename =
   if is_init then Thread.delay 0.075
   else
-    Lock.use NameDb (fun () ->
+    Mutex.protect mx_name_db (fun () ->
         db.table <- db.table |> List.filter (fun me -> me.filename <> filename));
   if Sys.file_exists filename then begin
     let modname =
       filename |> Filename.basename |> Filename.remove_extension |> String.capitalize_ascii in
     let mod_entry = { filename; modname; timestamp=Unix.gettimeofday(); values=[] } in
-    Lock.use NameDb (fun () -> db.table <- mod_entry :: db.table);
+    Mutex.protect mx_name_db (fun () -> db.table <- mod_entry :: db.table);
     Merlin.outline
       ~filename
       ~buffer:(File_util.read filename |> Buffer.contents)
     |> Async.start_with_continuation ~name:(sprintf "%s-outline-%s" __MODULE__ modname) begin function
     | Merlin.Ok outline ->
         add_outline db mod_entry modname outline;
-        Lock.use NameDb (fun () -> mod_entry.timestamp <- Unix.gettimeofday());
+        Mutex.protect mx_name_db (fun () -> mod_entry.timestamp <- Unix.gettimeofday());
     | Merlin.Failure _ | Merlin.Error _ -> ()
     end;
   end
@@ -199,7 +199,7 @@ module Cache = struct
   let dump project =
     match !database with
     | Some db ->
-        Lock.use NameDb begin fun () ->
+        Mutex.protect mx_name_db begin fun () ->
           let filename = create_filename ~dump:true project in
           let chan = open_out_bin filename in
           let finally () = close_out chan in
@@ -239,7 +239,7 @@ module Cache = struct
   let save ~project =
     match !database with
     | Some table ->
-        Lock.use NameDb begin fun () ->
+        Mutex.protect mx_name_db begin fun () ->
           let filename = create_filename project in
           let chan = open_out_bin filename in
           let finally () = close_out chan in
@@ -258,7 +258,7 @@ module Cache = struct
   let load ~project =
     let filename = create_filename project in
     if Sys.file_exists filename then begin
-      Lock.use NameDb begin fun () ->
+      Mutex.protect mx_name_db begin fun () ->
         let chan = open_in_bin filename in
         let finally () = close_in chan in
         try
