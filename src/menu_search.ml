@@ -158,9 +158,11 @@ let find_definition_references editor =
         let ranges = ranges |> List.map (fun r -> (None : GdkPixbuf.pixbuf option), r) in
         let ranges =
           match def_range with
-          | Some ((_, dr) as r') ->
-              r' :: (ranges |> List.filter (fun (_, r) -> r.start.line <> dr.start.line && r.stop.line <> dr.stop.line))
-          | _ -> ranges
+          | Some (_, dr) ->
+              let is_def_range (_, r) = r.start.line = dr.start.line && r.start.col = dr.start.col && r.stop.line = dr.stop.line in
+              ranges |> List.map (fun ((_, r) as r') -> if is_def_range r' then Some (??? Icons.edit), r else r')
+          | _ -> (* Already at definition point: definition range is returned but we don't know what it is *)
+              ranges
         in
         ranges
         |> Utils.ListExt.group_by (fun (_, r) -> r.file)

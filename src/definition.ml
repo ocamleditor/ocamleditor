@@ -17,8 +17,10 @@ let locate ~filename ~text ~(iter : GText.iter) =
                 | "pos", `Assoc ["line", `Int l; "col", `Int c]
                 | "pos", `Assoc ["col", `Int c; "line", `Int l] -> ln := l - 1; col := c
                 | _ -> ());
+            let stop_col = !col(* iter#forward_word_end #line_offset - 1*) in
             let start = { Merlin_t.line = !ln; col = !col } in
-            Merlin.Ok (Some { Merlin_t.file = !file; start; stop = start } )
+            let stop = { Merlin_t.line = !ln; col = stop_col } in
+            Merlin.Ok (Some { Merlin_t.file = !file; start; stop } )
         | _ ->
             Merlin.Ok None
       end

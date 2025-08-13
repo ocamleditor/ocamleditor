@@ -295,7 +295,7 @@ let add highlights state ((lstart, lstop) as range) with_span =
                   append state.output (Glib.Markup.escape_text state.lexeme);
               | Off ->
                   (*Printf.printf "    Off\n%!";*)
-                  append state.output  (Glib.Markup.escape_text state.lexeme);
+                  append state.output (Glib.Markup.escape_text state.lexeme);
               | Possible_label x ->
                   (*Printf.printf "    Possible_label %S\n%!" x;*)
                   ()
@@ -364,7 +364,6 @@ let parse ?(use_bold=true) pref =
           end;
           state.pos <- lstart + (String.length state.lexeme);
           state.prev_token <- token;
-          finalize_lident state;
         with Lexer.Error (err, _) ->
           begin
             let open Lexer in
@@ -391,10 +390,9 @@ let parse ?(use_bold=true) pref =
       Buffer.contents state.output
     with
     | End_of_file ->
-        let lexeme = (String.sub text state.pos (String.length text - state.pos)) in
         (* TODO: consider highlights *)
         finalize_lident state;
-        append state.output (Glib.Markup.escape_text lexeme);
+        append state.output (Glib.Markup.escape_text state.lexeme);
         close_pending state;
         (*Printf.printf "===> %S\n%!" (Buffer.contents state.output);*)
         Buffer.contents state.output

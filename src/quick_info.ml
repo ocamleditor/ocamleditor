@@ -1,3 +1,4 @@
+
 open Merlin_j
 open Printf
 open Utils
@@ -89,8 +90,8 @@ let remove_highlight qi wi =
       end
   | _ -> ()
 
-let add_wininfo qi callback =
-  Mutex.protect mx_wininfo (fun () wi -> qi.windows <- wi :: qi.windows; callback())
+let add_wininfo qi callback wi =
+  Mutex.protect mx_wininfo (fun () -> qi.windows <- wi :: qi.windows; callback())
 
 let is_poiter_over (wi : wininfo) =
   try
