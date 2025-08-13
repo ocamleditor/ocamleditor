@@ -549,8 +549,8 @@ class page ?file ~project ~scroll_offset ~offset ~editor () =
           if iter#inside_word then
             if not !current_hyperlink_exists then begin
               match
-                Definition.find
-                  ~filename:self#get_filename ~buffer:(buffer#get_text ()) ~iter
+                Definition.locate
+                  ~filename:self#get_filename ~text:(buffer#get_text ()) ~iter
               with
               | Merlin.Ok (Some _) -> current_hyperlink_exists := true;
               | Merlin.Ok None | Merlin.Failure _ | Merlin.Error _ -> ()

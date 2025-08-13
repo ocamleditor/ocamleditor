@@ -289,9 +289,9 @@ class editor () =
     method scroll_to_definition ~page ~iter =
       match self#get_page `ACTIVE with
       | Some page ->
-          Definition.find
+          Definition.locate
             ~filename:page#get_filename
-            ~buffer:(page#buffer#get_text ())
+            ~text:(page#buffer#get_text ())
             ~iter
           |> begin function
           | Merlin.Ok (Some range) ->

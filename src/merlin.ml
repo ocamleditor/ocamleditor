@@ -30,6 +30,9 @@ let check_configuration ~filename ~buffer =
 let errors ~filename ~buffer =
   [ "errors" ] |> execute_async filename buffer
 
+[@@@warning "-42"]
+[@@@warning "-40"]
+
 let case_analysis ~(start : GText.iter) ~(stop : GText.iter) ~filename ~buffer =
   let start = sprintf "%d:%d" (start#line + 1) start#line_offset in
   let stop = sprintf "%d:%d" (stop#line + 1) stop#line_offset in
@@ -59,9 +62,32 @@ let locate ~position:(line, col) ?prefix ?look_for ~filename ~buffer () =
   |> execute_async filename buffer
   |> Async.map ~name:"locate-result" begin fun json ->
     match Merlin_j.locate_answer_of_string json with
-    | Return document ->
+    | Return locate ->
         Log.println `DEBUG "%s" (Yojson.Safe.prettify json);
-        Ok document.value
+        Ok locate.value
+    | Failure msg ->
+        Log.println `ERROR "%s" msg.value;
+        Failure msg.value
+    | Error msg | Exception msg ->
+        Log.println `ERROR "%s" msg.value;
+        Error msg.value
+  end
+
+let occurrences ~identifier_at:(line, col) ?scope ?index_file ~filename ~buffer () =
+  let identifier_at = sprintf "%d:%d" line col in
+  "occurrences" :: "-identifier-at" :: identifier_at ::
+  (match index_file with None -> "-index-file project.ocaml-index" | Some file -> sprintf "-index-file %s" file) ::
+  (match scope with
+   | None -> ""
+   | Some `Buffer -> "-scope buffer"
+   | Some `Project -> "-scope project"
+   | Some `Renaming -> "-scope renaming") :: []
+  |> execute_async filename buffer
+  |> Async.map begin fun json ->
+    match Merlin_j.occurrences_answer_of_string json with
+    | Return occurrences ->
+        Log.println `INFO "%s" (Yojson.Safe.prettify json);
+        Ok occurrences.value
     | Failure msg ->
         Log.println `ERROR "%s" msg.value;
         Failure msg.value
@@ -207,29 +233,6 @@ let type_expression ~position:(line, col) ~expression ~filename ~buffer =
     | Return type_expression ->
         Log.println `INFO "%s" (Yojson.Safe.prettify json);
         Ok type_expression.value
-    | Failure msg ->
-        Log.println `ERROR "%s" msg.value;
-        Failure msg.value
-    | Error msg | Exception msg ->
-        Log.println `ERROR "%s" msg.value;
-        Error msg.value
-  end
-
-let occurrences ~identifier_at:(line, col) ?scope ?index_file ~filename ~buffer () =
-  let identifier_at = sprintf "%d:%d" line col in
-  "occurrences" :: "-identifier-at" :: identifier_at ::
-  (match index_file with None -> "-index-file project.ocaml-index" | Some file -> sprintf "-index-file %s" file) ::
-  (match scope with
-   | None -> ""
-   | Some `Buffer -> "-scope buffer"
-   | Some `Project -> "-scope project"
-   | Some `Renaming -> "-scope renaming") :: []
-  |> execute_async filename buffer
-  |> Async.map begin fun json ->
-    match Merlin_j.occurrences_answer_of_string json with
-    | Return document ->
-        Log.println `INFO "%s" (Yojson.Safe.prettify json);
-        Ok document.value
     | Failure msg ->
         Log.println `ERROR "%s" msg.value;
         Failure msg.value

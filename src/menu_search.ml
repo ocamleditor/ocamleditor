@@ -86,9 +86,9 @@ let search_again editor =
 let set_has_definition editor item =
   editor#with_current_page begin fun page ->
     let def =
-      Definition.find
+      Definition.locate
         ~filename:page#get_filename
-        ~buffer:(page#buffer#get_text ?start:None ?stop:None ?slice:None ?visible:None ())
+        ~text:(page#buffer#get_text ?start:None ?stop:None ?slice:None ?visible:None ())
         ~iter: (page#buffer#get_iter `INSERT)
     in
     match def with
@@ -100,7 +100,15 @@ let set_has_definition editor item =
 (** set_has_references *)
 let set_has_references editor item =
   editor#with_current_page begin fun page ->
-    item#misc#set_sensitive true
+    let filename : string = page#get_filename in
+    let buffer : Ocaml_text.buffer = page#buffer in
+    let text = buffer#get_text () in
+    let iter = buffer#get_iter `INSERT in
+    let line = iter#line + 1 in
+    let col = iter#line_offset in
+    Definition.references ~filename ~text ~iter
+    |> Async.start_with_continuation
+      (fun ranges -> item#misc#set_sensitive (ranges <> []))
   end
 
 (** create_search_results_pane *)
@@ -126,58 +134,55 @@ let find_definition_references editor =
     let widget, mark, label = create_search_results_pane ~pixbuf:(??? Icons.references) ~editor ~page in
     widget#set_title "TITLE";
     widget#connect#search_started ~callback:begin fun () ->
-      let project = page#project in
       let filename : string = page#get_filename in
-
       let buffer : Ocaml_text.buffer = page#buffer in
       let iter = buffer#get_iter `INSERT in
-      let line = iter#line + 1 in
-      let col = iter#line_offset in
       let text = buffer#get_text () in
       let wstart, wstop = buffer#select_word ~pat:Ocaml_word_bound.regexp ~select:false () in
       let ident = buffer#get_text ~start:wstart ~stop:wstop () in
-
-      Merlin.occurrences ~identifier_at:(line, col) ~scope:`Project ~filename ~buffer:text ()
-      |> Async.start_with_continuation begin function
-      | Merlin.Ok ranges ->
-          let open Merlin_j in
-          let def = Definition.find ~filename ~buffer:text ~iter in
-          let def_range =
-            match def with
-            | Merlin.Ok (Some range) ->
-                [ Some (??? Icons.edit),
-                  { range with
-                    start = { range.start with line = range.start.line + 1};
-                    stop = { range.stop with line = range.stop.line + 1 } } ]
-            | Merlin.Ok None
-            | Merlin.Failure _
-            | Merlin.Error _ -> []
-          in
-          let ranges = ranges |> List.map (fun r -> (None : GdkPixbuf.pixbuf option), r) in
-          let results =
-            def_range @ ranges
-            |> Utils.ListExt.group_by (fun (_, r) -> r.file)
-            |> List.map begin fun (file, ranges) ->
-              let filename = match file with Some x -> x | _ -> filename in
-              let timestamp = (Unix.stat filename).Unix.st_mtime in
-              { Search_results.filename;
-                real_filename = filename;
-                locations = Search_results.Offset ranges;
-                timestamp };
-            end
-            |> List.sort compare
-          in
-          widget#set_results results;
-          if widget#icon = None then widget#set_icon (Some (??? Icons.references));
-          label#set_text ident;
-          ksprintf widget#label_message#set_label
-            "References to <tt>%s</tt>" (Glib.Markup.escape_text ident);
-          widget#next_file()
-      | Merlin.Failure _ | Merlin.Error _ -> ()
+      let open Merlin_j in
+      let def_range =
+        match Definition.locate ~filename ~text ~iter with
+        | Merlin.Ok (Some range) ->
+            Some
+              (Some (??? Icons.edit),
+               { range with
+                 start = { range.start with line = range.start.line + 1};
+                 stop = { range.stop with line = range.stop.line + 1 } })
+        | Merlin.Ok None
+        | Merlin.Failure _
+        | Merlin.Error _ -> None
+      in
+      Definition.references ~filename ~text ~iter
+      |> Async.start_with_continuation begin fun ranges ->
+        let ranges = ranges |> List.map (fun r -> (None : GdkPixbuf.pixbuf option), r) in
+        let ranges =
+          match def_range with
+          | Some ((_, dr) as r') ->
+              r' :: (ranges |> List.filter (fun (_, r) -> r.start.line <> dr.start.line && r.stop.line <> dr.stop.line))
+          | _ -> ranges
+        in
+        ranges
+        |> Utils.ListExt.group_by (fun (_, r) -> r.file)
+        |> List.map begin fun (file, ranges) ->
+          let filename = match file with Some x -> x | _ -> filename in
+          let timestamp = (Unix.stat filename).Unix.st_mtime in
+          { Search_results.filename;
+            real_filename = filename;
+            locations = Search_results.Offset ranges;
+            timestamp };
+        end
+        |> List.sort compare
+        |> widget#set_results;
+        if widget#icon = None then widget#set_icon (Some (??? Icons.references));
+        label#set_text ident;
+        ksprintf widget#label_message#set_label
+          "References to <tt>%s</tt>" (Glib.Markup.escape_text ident);
+        widget#next_file()
       end
     end |> ignore;
     widget#start_search();
-  end
+  end;;
 
 (** update_items_visibility *)
 let update_items_visibility
