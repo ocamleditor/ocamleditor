@@ -40,7 +40,7 @@ class expander ~(view : Ocaml_text.view) ~tag_highlight ~tag_invisible ?packing 
   let label = Gtk_util.label_icon markup ~packing:ebox#add in
   let buffer = view#buffer in
   let id = !counter in
-  let mark =
+  let mark_folding_point =
     let m = buffer#create_mark ~name:(sprintf "fold-%d" id) buffer#start_iter in (* mark placed in the initializer *)
     GtkText.Mark.set_visible m is_debug;
     `MARK m
@@ -86,7 +86,7 @@ class expander ~(view : Ocaml_text.view) ~tag_highlight ~tag_invisible ?packing 
         false
       end |> ignore;
       self#misc#connect#destroy ~callback:begin fun () ->
-        buffer#delete_mark mark;
+        buffer#delete_mark mark_folding_point;
         buffer#delete_mark mark_foot
       end |> ignore
 
@@ -96,18 +96,18 @@ class expander ~(view : Ocaml_text.view) ~tag_highlight ~tag_invisible ?packing 
     method set_is_definition x = is_definition <- x
     method is_definition = is_definition
 
-    method relocate (istart : GText.iter) (istop : GText.iter) =
-      buffer#move_mark mark ~where:istart;
+    method place_marks ~folding_point ~(foot : GText.iter) =
+      buffer#move_mark mark_folding_point ~where:folding_point;
       let where =
         (* Handles definitions like "type...{...\n} and ..." or ";;" *)
-        let limit = istop#forward_to_line_end in
-        let istop =
-          match istop#forward_search ~limit ";;" with
+        let limit = foot#forward_to_line_end in
+        let foot =
+          match foot#forward_search ~limit ";;" with
           | Some (_, it) -> it
-          | _ -> istop
+          | _ -> foot
         in
-        let it = istop#forward_find_char ~limit Text_util.not_blank in
-        if it#ends_line then istop#forward_line#set_line_offset 0 else it
+        let it = foot#forward_find_char ~limit Text_util.not_blank in
+        if it#ends_line then foot#forward_line#set_line_offset 0 else it
       in
       buffer#move_mark mark_foot ~where;
       if hash <> 0 && self#hash <> hash then begin
@@ -125,7 +125,7 @@ class expander ~(view : Ocaml_text.view) ~tag_highlight ~tag_invisible ?packing 
     method id = id
 
     (** The iter where the {i folding point} starts. It is between head and body. *)
-    method folding_point = buffer#get_iter mark
+    method folding_point = buffer#get_iter mark_folding_point
 
     (** The start of the region to highlight when the mouse pointer is over the expander. *)
     method private head = self#body#set_line_offset 0
@@ -360,7 +360,7 @@ class margin_fold (view : Ocaml_text.view) =
         match expanders |> List.find_opt (fun exp -> exp#folding_point#equal start) with
         | None ->
             let expander = new expander ~tag_highlight ~tag_invisible ~view () in
-            expander#relocate start stop;
+            expander#place_marks ~folding_point:start ~foot:stop;
             expanders <- expander :: expanders;
             expander#show_region();
             expander#connect#toggled ~callback:(fun _ -> expander_toggled#call expander) |> ignore;
