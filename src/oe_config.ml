@@ -67,6 +67,10 @@ let gutter_border_color                  = `THEME (*`CALC 0.875*) (*`CALC 0.97*)
 let gutter_marker_color                  = `THEME (*`CALC 0.50*)
 let gutter_marker_bg_color               = `THEME (*`CALC 0.80*)
 let gutter_diff_size                     = 50 (* 0 = disabled *)
+
+(** Whether the [collapse_to_definitions] command should collapse all definitions,
+    including nested ones, or only affect top-level definitions. *)
+let code_folding_deep_collapse           = true
 let code_folding_scope_color             = `NAME "#e5e5e5" (* disabled *)
 let code_folding_highlight_color         = { light = "#f1f1f1"; dark = "#202020" }
 let code_folding_hightlight_gradient     = [ (* [] for no gradient *)
