@@ -168,14 +168,14 @@ class expander ~(view : Ocaml_text.view) ~tag_highlight ~tag_invisible ?packing 
       if was_collapsed then toggled#call true;
       GtkBase.Widget.queue_draw view#as_widget; (* Updates ellipsis *)
 
-    method collapse () =
+    method collapse ?prio () =
       let iter = buffer#get_iter `INSERT in
       if iter#compare self#body > 0 && iter#compare self#foot <= 0 then
         buffer#place_cursor ~where:self#body;
       let was_expanded = is_expanded in
-      Gmisclib.Idle.add begin fun () ->
+      Gmisclib.Idle.add ~prio:300 begin fun () ->
         buffer#remove_tag tag_highlight ~start:self#head ~stop:self#foot;
-        self#hide_region();
+        self#hide_region ?prio ();
         if was_expanded then toggled#call false;
       end;
       label#set_label
@@ -183,12 +183,30 @@ class expander ~(view : Ocaml_text.view) ~tag_highlight ~tag_invisible ?packing 
          else sprintf "<big>%s</big>" Icons.expander_closed);
       is_expanded <- false;
 
-    method hide_region () =
-      buffer#apply_tag tag_invisible ~start:self#body ~stop:self#foot;
+    method private animate ?(prio=200) f =
+      let steps = ref [] in
+      let lines = self#foot#line - self#body#line in
+      let inc = max 1 (lines / 5) in
+      let make_steps start stop f =
+        let iter = ref start in
+        while !iter#line < stop#line do
+          let start = !iter#copy in
+          let inc = min inc (stop#line - !iter#line) in
+          let stop = !iter#forward_lines inc in
+          steps := (f start stop) :: !steps;
+          iter := stop;
+        done;
+      in
+      make_steps self#body self#foot (fun start stop () -> f ~start ~stop);
+      steps := (fun () -> f ~start:self#body ~stop:self#foot) :: !steps;
+      Gmisclib_util.idleize_cascade ~prio !steps ();
+
+    method hide_region ?prio () =
+      self#animate ?prio (buffer#apply_tag tag_invisible);
       buffer#apply_tag tag_highlight ~start:self#head ~stop:self#head#forward_to_line_end;
 
-    method show_region () =
-      buffer#remove_tag tag_invisible ~start:self#body ~stop:self#foot;
+    method show_region ?prio () =
+      self#animate ?prio (buffer#remove_tag tag_invisible);
       buffer#remove_tag tag_highlight ~start:self#head ~stop:self#head#forward_to_line_end;
 
     method show top left height =
@@ -269,7 +287,6 @@ class margin_fold (view : Ocaml_text.view) =
     | _ ->
         buffer#get_iter (`OFFSET offset)
   in
-  let [@inline] is_drawable ol = ol.ol_stop.line - ol.ol_start.line > 1 in
   object (self)
     inherit margin()
 
@@ -320,15 +337,12 @@ class margin_fold (view : Ocaml_text.view) =
                   end expanders;
                 outline
                 |> walk begin fun parent ol ->
-                  let is_folding_point = ol.ol_kind = "Method" || is_drawable ol in
-                  if is_folding_point then begin
-                    ol.ol_parent <- parent;
-                    if ol.ol_kind = "Method" then methods := ol :: !methods
-                    else self#draw_expander ol top left height;
-                  end
+                  ol.ol_parent <- parent;
+                  if ol.ol_kind = "Method" then methods := ol :: !methods
+                  else self#draw_expander ol top left height;
                 end None;
                 !methods
-                |> List.filter (fun ol -> ol.ol_parent <> None && is_drawable ol)
+                |> List.filter (fun ol -> ol.ol_parent <> None)
                 |> Utils.ListExt.group_by (fun ol -> ol.ol_parent)
                 |> List.iter begin fun (parent, meths) ->
                   match parent with
@@ -340,7 +354,7 @@ class margin_fold (view : Ocaml_text.view) =
                   | _ -> ()
                 end
                 |> ignore;
-                !methods |> List.iter (fun ol -> if is_drawable ol then self#draw_expander ol top left height);
+                !methods |> List.iter (fun ol -> self#draw_expander ol top left height);
                 is_refresh_pending <- false;
             | _ ->
                 expanders |> List.iter (fun ex -> ex#show top left height);
@@ -362,24 +376,26 @@ class margin_fold (view : Ocaml_text.view) =
           skip_comments_backward comments (iter#set_line_offset 0)
         else iter
       in
-      let expander =
-        match expanders |> List.find_opt (fun exp -> exp#folding_point#equal start) with
-        | None ->
-            let expander = new expander ~tag_highlight ~tag_invisible ~view () in
-            expander#place_marks ~folding_point:start ~foot:stop;
-            expanders <- expander :: expanders;
-            expander#show_region();
-            expander#connect#toggled ~callback:(fun _ -> expander_toggled#call expander) |> ignore;
-            expander#connect#refresh_needed ~callback:(fun () -> is_refresh_pending <- true) |> ignore;
-            expander
-        | Some expander ->
-            expander
-      in
-      expander#set_is_definition ((Oe_config.code_folding_deep_collapse || ol.ol_parent <> None) && ol.ol_kind = "Value" || ol.ol_kind = "Method");
-      (* Hide expanders inside invisible regions *)
-      if not expander#is_visible
-      then expander#misc#hide()
-      else expander#show top left height
+      if stop#line > start#line then begin
+        let expander =
+          match expanders |> List.find_opt (fun exp -> exp#folding_point#equal start) with
+          | None ->
+              let expander = new expander ~tag_highlight ~tag_invisible ~view () in
+              expander#place_marks ~folding_point:start ~foot:stop;
+              expanders <- expander :: expanders;
+              expander#show_region();
+              expander#connect#toggled ~callback:(fun _ -> expander_toggled#call expander) |> ignore;
+              expander#connect#refresh_needed ~callback:(fun () -> is_refresh_pending <- true) |> ignore;
+              expander
+          | Some expander ->
+              expander
+        in
+        expander#set_is_definition ((Oe_config.code_folding_deep_collapse || ol.ol_parent <> None) && ol.ol_kind = "Value" || ol.ol_kind = "Method");
+        (* Hide expanders inside invisible regions *)
+        if not expander#is_visible
+        then expander#misc#hide()
+        else expander#show top left height
+      end
 
     method draw_ellipsis _ =
       match view#get_window `TEXT with
@@ -424,7 +440,7 @@ class margin_fold (view : Ocaml_text.view) =
            expanded, because the tag_highlight is removed everywhere, but
            the expander state remains "collapsed". *)
         if exp#is_collapsed && expander#body_contains exp#body
-        then exp#hide_region()
+        then exp#hide_region ?prio:None ()
       end
 
     method iter_expanders func = List.iter func expanders
@@ -599,7 +615,7 @@ let iter_page_expanders (page : Editor_page.page) callback =
   | _ -> ()
 
 let collapse_to_definitions (page : Editor_page.page) =
-  iter_page_expanders page (fun exp -> if exp#is_definition then exp#collapse())
+  iter_page_expanders page (fun exp -> if exp#is_definition then exp#collapse ~prio:100 ())
 
 let expand_all (page : Editor_page.page) =
   iter_page_expanders page (fun exp -> exp#expand())
