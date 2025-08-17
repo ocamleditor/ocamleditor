@@ -158,12 +158,12 @@ class expander ~(view : Ocaml_text.view) ~tag_highlight ~tag_invisible ?packing 
       (*self#misc#get_flag `VISIBLE &&*)
       (self#body#set_line_offset 0)#tags |> List.for_all (fun t -> t#get_oid <> tag_invisible#get_oid)
 
-    method expand () =
+    method expand ?prio () =
       let was_collapsed = self#is_collapsed in
       label#set_label
         (if is_debug then sprintf "<span size='x-small'>%d</span>%s" id Icons.expander_open
          else sprintf "<big>%s</big>" Icons.expander_open);
-      self#show_region();
+      self#show_region ?prio ();
       is_expanded <- true;
       if was_collapsed then toggled#call true;
       GtkBase.Widget.queue_draw view#as_widget; (* Updates ellipsis *)
@@ -206,7 +206,14 @@ class expander ~(view : Ocaml_text.view) ~tag_highlight ~tag_invisible ?packing 
       buffer#apply_tag tag_highlight ~start:self#head ~stop:self#head#forward_to_line_end;
 
     method show_region ?prio () =
-      self#animate ?prio (buffer#remove_tag tag_invisible);
+      begin
+        match prio with
+        | Some 100 ->
+            (* Fixes a crash when disabling code folding, where expanders are expanded and destroyed. *)
+            buffer#remove_tag tag_invisible ~start:self#body ~stop:self#foot;
+        | _ ->
+            self#animate ?prio (buffer#remove_tag tag_invisible);
+      end;
       buffer#remove_tag tag_highlight ~start:self#head ~stop:self#head#forward_to_line_end;
 
     method show top left height =
@@ -490,7 +497,7 @@ class margin_fold (view : Ocaml_text.view) =
                   if exp#is_collapsed then begin
                     let iter = buffer#get_iter `INSERT in
                     if iter#line > exp#body#line && exp#body_contains iter
-                    then exp#expand()
+                    then exp#expand ?prio:None ()
                   end
                 end
             | _ -> ()
@@ -511,7 +518,7 @@ class margin_fold (view : Ocaml_text.view) =
     method disable () =
       self#set_is_visible false;
       expanders |> List.iter begin fun exp ->
-        exp#expand();
+        exp#expand ?prio:(Some 100) ();
         exp#destroy()
       end;
       self#stop_timer();
