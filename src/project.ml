@@ -360,7 +360,7 @@ let update_ocaml_index (proj : Prj.t) =
       |> String.concat " "
     in
     let update_index = sprintf "ocaml-index *.cmt %s" proj_sub_dirs in
-    Utils.crono ~label:update_index Sys.command update_index |> ignore;
+    (*Utils.crono ~label:update_index*) Sys.command update_index |> ignore;
   end |> Async.start
 
 let mx_watcher = Mutex.create()

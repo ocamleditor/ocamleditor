@@ -456,7 +456,7 @@ class margin_fold (view : Ocaml_text.view) =
               if not self#is_changed_after_last_outline then begin
                 outline <- ol;
                 comments <- Comments.scan_locale source_code;
-                synchronized#call();
+                synchronized#call ol;
               end else Log.println `WARN "*** outline not updated ***";
             end ();
         | Merlin.Failure _ | Merlin.Error _ -> ()
@@ -536,7 +536,7 @@ class margin_fold (view : Ocaml_text.view) =
   end
 
 and expander_toggled () = object inherit [expander] signal () end
-and synchronized () = object inherit [unit] signal () end
+and synchronized () = object inherit [Merlin_j.outline list] signal () end
 and margin_signals ~expander_toggled ~synchronized =
   object
     inherit ml_signals [expander_toggled#disconnect; synchronized#disconnect]
@@ -552,13 +552,16 @@ let init_page (page : Editor_page.page) =
     |> begin function
     | None ->
         let margin = new margin_fold page#ocaml_view in
+        let code_outline = new Code_outline.widget ~page () in
+        page#pack_outline code_outline#coerce;
         page#view#margin#add (margin :> Margin.margin);
-        margin#connect#synchronized ~callback:begin fun () ->
+        margin#connect#synchronized ~callback:begin fun ol ->
           if margin#is_refresh_pending then begin
             (*Gmisclib.Idle.add ~prio:100 begin fun () ->*)
             page#view#draw_gutter(); (* triggers draw *)
             (*end;*)
-          end
+          end;
+          code_outline#outline#set ol;
         end |> ignore;
         margin#connect#expander_toggled ~callback:begin fun expander ->
           if expander#is_expanded then margin#amend_nested_collapsed expander;

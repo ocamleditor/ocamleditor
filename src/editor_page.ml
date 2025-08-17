@@ -85,7 +85,7 @@ class page ?file ~project ~scroll_offset ~offset ~editor () =
   let buffer                   = new Ocaml_text.buffer ~project ?file () in
   let sw, text_view, ocaml_view = create_view ~project ~buffer ?file () in
   let vbox                     = GPack.vbox ~spacing:0 () in
-  let textbox                  = GPack.hbox ~spacing:1 ~packing:vbox#add () in
+  let textbox                  = GPack.hbox ~spacing:0 ~packing:vbox#add () in
   let _                        = textbox#add sw#coerce in (* Text box *)
   let svbox                    = GPack.vbox ~spacing:1 ~packing:textbox#pack () in (* Vertical scrollbar box *)
   let global_gutter_ebox       = GBin.event_box ~packing:textbox#pack () in (* Global gutter box *)
@@ -161,9 +161,11 @@ class page ?file ~project ~scroll_offset ~offset ~editor () =
     method statusbar = editorbar
 
     method read_only = read_only
+
     method set_read_only ro =
       read_only <- ro;
       text_view#set_editable (not ro)
+
     method set_tab_widget x = tab_widget <- Some x
     method tab_widget = match tab_widget with None -> assert false | Some x -> x
     method file = file
@@ -579,6 +581,10 @@ class page ?file ~project ~scroll_offset ~offset ~editor () =
         editorbar#button_dotview#misc#set_tooltip_text "Dependency Graph";
         editorbar#button_dotview#misc#set_sensitive (Menu_view.get_switch_view_sensitive editor#project self);
       end
+
+    method pack_outline (widget : GObj.widget) =
+      textbox#pack widget;
+      textbox#reorder_child widget ~pos:0
 
     method connect = signals
     method disconnect = signals#disconnect
