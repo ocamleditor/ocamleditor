@@ -136,6 +136,7 @@ class browser window =
     val mutable max_height_prev_h = -1
     val mutable max_height_prev_y = -1
     val mutable is_fullscreen = false
+    val mutable is_decorated = true
     val mutable maximized_view_actions = [
       `NONE, (fun () -> {
             mva_menubar    = true; (* dummies *)
@@ -143,20 +144,23 @@ class browser window =
             mva_tabbar     = true;
             mva_messages   = false;
             mva_fullscreen = false;
+            mva_decorated  = false;
           });
       `FIRST, (fun () -> {
             mva_menubar    = true(*Preferences.preferences#get.Preferences.pref_max_view_1_menubar*);
             mva_toolbar    = Preferences.preferences#get.max_view_1_toolbar;
             mva_tabbar     = Preferences.preferences#get.max_view_1_tabbar;
             mva_messages   = Preferences.preferences#get.max_view_1_messages;
-            mva_fullscreen = Preferences.preferences#get.max_view_1_fullscreen;
+            mva_fullscreen = false;
+            mva_decorated  = false;
           });
       `SECOND, (fun () -> {
             mva_menubar    = true(*Preferences.preferences#get.Preferences.pref_max_view_2_menubar*);
             mva_toolbar    = Preferences.preferences#get.max_view_2_toolbar;
             mva_tabbar     = Preferences.preferences#get.max_view_2_tabbar;
             mva_messages   = Preferences.preferences#get.max_view_2_messages;
-            mva_fullscreen = Preferences.preferences#get.max_view_2_fullscreen;
+            mva_fullscreen = true;
+            mva_decorated  = true; (* not used if fullscreen *)
           })
     ];
 
@@ -461,6 +465,7 @@ class browser window =
       let tab = tabbar_visible in
       let ms = Messages.vmessages#visible in
       let fs = is_fullscreen in
+      let dc = is_decorated in
       let save_default () =
         self#set_geometry();
         maximized_view_actions <- (`NONE, (fun () -> {
@@ -469,6 +474,7 @@ class browser window =
               mva_tabbar     = tab;
               mva_messages   = ms;
               mva_fullscreen = fs;
+              mva_decorated  = dc;
             })) :: (List.remove_assoc `NONE maximized_view_actions);
       in
       let reset_default () =
@@ -478,6 +484,8 @@ class browser window =
         self#set_tabbar_visible original.mva_tabbar;
         self#set_vmessages_visible original.mva_messages;
         self#set_fullscreen original.mva_fullscreen;
+        window#set_decorated original.mva_decorated;
+        toolbox#misc#hide();
         maximized_view_action <- `NONE
       in
       begin
@@ -489,7 +497,12 @@ class browser window =
             self#set_toolbar_visible first.mva_toolbar;
             self#set_tabbar_visible first.mva_tabbar;
             if Messages.vmessages#visible then (self#set_vmessages_visible first.mva_messages);
-            self#set_fullscreen first.mva_fullscreen;
+            if first.mva_fullscreen then
+              self#set_fullscreen first.mva_fullscreen
+            else begin
+              window#set_decorated first.mva_decorated;
+              if not first.mva_decorated then toolbox#misc#show()
+            end;
             maximized_view_action <- `FIRST;
         | `SECOND when maximized_view_action = `NONE ->
             save_default();
@@ -498,16 +511,21 @@ class browser window =
             self#set_toolbar_visible second.mva_toolbar;
             self#set_tabbar_visible second.mva_tabbar;
             if Messages.vmessages#visible then (self#set_vmessages_visible second.mva_messages);
-            self#set_fullscreen second.mva_fullscreen;
+            if second.mva_fullscreen then
+              self#set_fullscreen second.mva_fullscreen
+            else
+              window#set_decorated second.mva_decorated;
             maximized_view_action <- `SECOND;
         | `FIRST when maximized_view_action = `SECOND ->
             reset_default();
             self#set_maximized_view view
-        | `SECOND when maximized_view_action = `FIRST ->
+        | `SECOND when maximized_view_action = `FIRST -> reset_default();
+        | `FIRST when maximized_view_action = `FIRST ->
             reset_default();
-            self#set_maximized_view view
-        | `FIRST when maximized_view_action = `FIRST -> reset_default()
-        | `SECOND when maximized_view_action = `SECOND -> reset_default()
+            self#set_maximized_view `SECOND;
+        | `SECOND when maximized_view_action = `SECOND ->
+            reset_default();
+            self#set_maximized_view `FIRST;
         | `NONE when maximized_view_action = `FIRST -> reset_default();
         | `NONE when maximized_view_action = `SECOND -> reset_default();
         | `NONE when maximized_view_action = `NONE -> ()
@@ -515,8 +533,8 @@ class browser window =
       end;
       editor#with_current_page (fun p -> p#view#misc#grab_focus())
 
-    method set_fullscreen x =
-      if x && (not is_fullscreen) then begin
+    method set_fullscreen want_fullscreen =
+      if want_fullscreen && (not is_fullscreen) then begin
         (* pref_max_view_fullscreen = "Prefer fullscreen over maximize window" *)
         let prefer_maximized_window = not Preferences.preferences#get.max_view_prefer_fullscreen in
         if prefer_maximized_window then window#maximize() else window#fullscreen();
@@ -526,7 +544,7 @@ class browser window =
         menubar#misc#set_name "oe_menubar";
         menubarbox#set_child_packing ~expand:false ~fill:false menubar#coerce;
         toolbox#misc#show();
-      end else if (not x) && is_fullscreen then begin
+      end else if (not want_fullscreen) && is_fullscreen then begin
         window_title_menu_icon#misc#hide();
         vbox_menu_buttons#misc#hide();
         menubar#misc#set_name "";
@@ -537,7 +555,7 @@ class browser window =
         window#set_decorated true;
       end;
       self#set_title ();
-      is_fullscreen <- x;
+      is_fullscreen <- want_fullscreen;
 
     method set_menu_item_nav_history_sensitive () =
       let back, forward, last = editor#location_history_is_empty () in

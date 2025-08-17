@@ -28,12 +28,14 @@ type settings = {
   ~max_view_1_tabbar               <ocaml default="false" mutable> : bool;
   ~max_view_1_messages             <ocaml default="false" mutable> : bool;
   ~max_view_1_fullscreen           <ocaml default="false" mutable> : bool;
+  ~max_view_1_decorated            <ocaml default="false" mutable> : bool;
 
   ~max_view_2_menubar              <ocaml default="true" mutable> : bool;
   ~max_view_2_toolbar              <ocaml default="true" mutable> : bool;
   ~max_view_2_tabbar               <ocaml default="true" mutable> : bool;
   ~max_view_2_messages             <ocaml default="true" mutable> : bool;
   ~max_view_2_fullscreen           <ocaml default="true" mutable> : bool;
+  ~max_view_2_decorated            <ocaml default="false" mutable> : bool;
 
   ~max_view_prefer_fullscreen      <ocaml default="true" mutable> : bool;
   ~menubar_buttons                 <ocaml default="[]" mutable> : int list;

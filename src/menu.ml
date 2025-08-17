@@ -400,18 +400,18 @@ let view ~browser ~group ~flags
     menu_item_view_hmessages := (item, sign) :: !menu_item_view_hmessages;
   end;
   (** Workspaces *)
-  let maximize = GMenu.image_menu_item ~label:"Workspaces" ~packing:menu#add () in
-  maximize#set_image (GMisc.image ~stock:`FULLSCREEN ~icon_size:`MENU ())#coerce;
-  let maximize_menu = GMenu.menu ~packing:maximize#set_submenu () in
-  let maximize_1 = GMenu.image_menu_item ~label:"Workspace 1" ~packing:maximize_menu#add () in
-  let maximize_2 = GMenu.image_menu_item ~label:"Workspace 2" ~packing:maximize_menu#add () in
-  let maximize_0 = GMenu.image_menu_item ~label:"Reset Workspace" ~packing:maximize_menu#add () in
-  let _ = maximize_1#connect#activate ~callback:(fun () -> browser#set_maximized_view `FIRST) in
-  let _ = maximize_2#connect#activate ~callback:(fun () -> browser#set_maximized_view `SECOND) in
-  let _ = maximize_0#connect#activate ~callback:(fun () -> browser#set_maximized_view `NONE) in
-  maximize_1#add_accelerator ~group ~modi:[`CONTROL; `MOD1] GdkKeysyms._comma ~flags;
-  maximize_2#add_accelerator ~group ~modi:[`CONTROL; `MOD1] GdkKeysyms._period ~flags;
-  maximize_2#add_accelerator ~group ~modi:[] GdkKeysyms._F11 ~flags;
+  let appearance = GMenu.image_menu_item ~label:"Appearance" ~packing:menu#add () in
+  let appearance_menu = GMenu.menu ~packing:appearance#set_submenu () in
+  let compact_mode = GMenu.image_menu_item ~label:"Compact Mode" ~packing:appearance_menu#add () in
+  let fullscreen = GMenu.image_menu_item ~label:"Fullscreen" ~packing:appearance_menu#add () in
+  let resore_default_layout = GMenu.image_menu_item ~label:"Restore Default Layout" ~packing:appearance_menu#add () in
+  let _ = compact_mode#connect#activate ~callback:(fun () -> browser#set_maximized_view `FIRST) in
+  let _ = fullscreen#connect#activate ~callback:(fun () -> browser#set_maximized_view `SECOND) in
+  let _ = resore_default_layout#connect#activate ~callback:(fun () -> browser#set_maximized_view `NONE) in
+  fullscreen#add_accelerator ~group ~modi:[] GdkKeysyms._F11 ~flags;
+  fullscreen#add_accelerator ~group ~modi:[`CONTROL; `MOD1] GdkKeysyms._period ~flags;
+  compact_mode#add_accelerator ~group ~modi:[`CONTROL; `MOD1] GdkKeysyms._comma ~flags;
+  resore_default_layout#add_accelerator ~group ~modi:[] GdkKeysyms._Escape ~flags;
   (** Remove All Messages *)
   let _ = GMenu.separator_item ~packing:menu#add () in
   let messages_remove = GMenu.menu_item ~label:"Remove All Messages" ~packing:menu#add () in

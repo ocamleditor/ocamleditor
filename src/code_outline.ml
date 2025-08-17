@@ -171,15 +171,18 @@ class widget ~(page : Editor_page.page) ?packing () =
 
     method build () =
       model#clear();
-      outline#get
-      |> List.rev
-      |> List.iter begin fun ol ->
-        let row = model#append () in
-        let path = model#get_path row in
-        model#set ~row ~column:col_data ol;
-        pixbuf_of_kind ol.ol_kind |> Option.iter (model#set ~row ~column:col_icon);
-        model#set ~row ~column:col_markup ol.ol_name;
-      end
+      let steps =
+        outline#get
+        |> List.rev
+        |> List.map begin fun ol ->
+          fun () ->
+            let row = model#append () in
+            model#set ~row ~column:col_data ol;
+            pixbuf_of_kind ol.ol_kind |> Option.iter (model#set ~row ~column:col_icon);
+            model#set ~row ~column:col_markup ol.ol_name;
+        end
+      in
+      Gmisclib.Idle.idleize_cascade ~prio:300 steps ()
 
     method update_preferences () =
       let pref = Preferences.preferences#get in

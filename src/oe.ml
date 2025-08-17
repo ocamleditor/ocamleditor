@@ -133,4 +133,5 @@ type browser_maximized_view_action = {
   mva_tabbar                  : bool;
   mva_messages                : bool;
   mva_fullscreen              : bool;
+  mva_decorated               : bool;
 }
