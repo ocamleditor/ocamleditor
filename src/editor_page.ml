@@ -249,8 +249,7 @@ class page ?file ~project ~scroll_offset ~offset ~editor () =
     method save () = Gaux.may file ~f:begin fun file ->
         if not file#is_readonly then begin
           if Preferences.preferences#get.editor_bak then (self#backup());
-          let text = Project.convert_from_utf8 project (buffer#get_text ()) in
-          file#write text;
+          file#write (buffer#get_text ());
           Gmisclib.Idle.add self#update_statusbar;
           Gmisclib.Idle.add (fun () -> self#compile_buffer ?join:None ());
           (* Delete existing recovery copy *)
@@ -300,7 +299,7 @@ class page ?file ~project ~scroll_offset ~offset ~editor () =
             try
               view#misc#hide();
               load#call `Begin;
-              buffer#insert (Project.convert_to_utf8 project file#read);
+              buffer#insert file#read;
               (* Initial cursor position and syntax highlighting *)
               Gmisclib.Idle.add begin fun () ->
                 if scroll then begin
@@ -550,8 +549,8 @@ class page ?file ~project ~scroll_offset ~offset ~editor () =
           if iter#inside_word then
             if not !current_hyperlink_exists then begin
               match
-                Definition.find
-                  ~filename:self#get_filename ~buffer:(buffer#get_text ()) ~iter
+                Definition.locate
+                  ~filename:self#get_filename ~text:(buffer#get_text ()) ~iter
               with
               | Merlin.Ok (Some _) -> current_hyperlink_exists := true;
               | Merlin.Ok None | Merlin.Failure _ | Merlin.Error _ -> ()

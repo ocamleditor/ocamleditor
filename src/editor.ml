@@ -153,15 +153,15 @@ class editor () =
       [`ACTIVE | `FILENAME of string | `NUM of int | `VIEW of Text.view] -> Editor_page.page option =
       function
       | `ACTIVE ->
-          List_opt.find (fun p ->
+          List.find_opt (fun p ->
               p#get_oid = (notebook#get_nth_page notebook#current_page)#get_oid) pages
       | `FILENAME filename ->
           let uncapitalize = Fun.id in
           let filename = uncapitalize filename in
-          List_opt.find (fun p ->
+          List.find_opt (fun p ->
               match p#file with None -> false | Some f -> uncapitalize f#filename = filename) pages
-      | `NUM n -> List_opt.find (fun p -> p#get_oid = (notebook#get_nth_page n)#get_oid) pages
-      | `VIEW v -> List_opt.find (fun p -> p#view#get_oid = v#get_oid) pages
+      | `NUM n -> List.find_opt (fun p -> p#get_oid = (notebook#get_nth_page n)#get_oid) pages
+      | `VIEW v -> List.find_opt (fun p -> p#view#get_oid = v#get_oid) pages
 
     method dialog_file_open () = Editor_dialog.file_open ~editor:self ()
 
@@ -289,9 +289,9 @@ class editor () =
     method scroll_to_definition ~page ~iter =
       match self#get_page `ACTIVE with
       | Some page ->
-          Definition.find
+          Definition.locate
             ~filename:page#get_filename
-            ~buffer:(page#buffer#get_text ())
+            ~text:(page#buffer#get_text ())
             ~iter
           |> begin function
           | Merlin.Ok (Some range) ->
@@ -885,13 +885,13 @@ class editor () =
           end;
         end);
       ignore (self#connect#switch_page ~callback:begin fun _ ->
-          self#with_current_page begin fun page -> 
+          self#with_current_page begin fun page ->
             ()
           end
         end);
       (* Record last active page *)
       let rec get_history project =
-        match List_opt.assoc project.Prj.name history_switch_page with
+        match List.assoc_opt project.Prj.name history_switch_page with
         | Some x -> x
         | _ ->
             history_switch_page <- (project.Prj.name, []) :: history_switch_page;
@@ -919,7 +919,7 @@ class editor () =
                     begin
                       let finally () = replace_history project tl in
                       begin
-                        match List_opt.find (fun p -> p#misc#get_oid = last#misc#get_oid) pages with
+                        match List.find_opt (fun p -> p#misc#get_oid = last#misc#get_oid) pages with
                         | None -> finally(); find_page()
                         | _ ->
                             notebook#goto_page (notebook#page_num last);

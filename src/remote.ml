@@ -558,7 +558,9 @@ let dialog_rename ~editor ~page () =
               let _, new_filename_exists = check_new_filename_exists page filename in
               if new_filename_exists then begin
                 let overwrite () =
-                  List_opt.may_find (fun p -> p#get_filename = filename) editor#pages editor#close ();
+                  editor#pages
+                  |> List.find_map (fun p -> if p#get_filename = filename then Some (editor#close p) else None)
+                  |> ignore;
                   Dialog_rename.rename ~editor ~page ~filename ();
                 in
                 Dialog_rename.ask_overwrite ~run ~overwrite ~filename window

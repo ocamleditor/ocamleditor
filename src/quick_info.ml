@@ -21,30 +21,16 @@ module SignalId = struct
     | None -> ()
 end
 
-module Lock = struct
-  let index = Mutex.create()
-  let wininfo = Mutex.create()
-  let mutex mx f x =
-    Mutex.lock mx;
-    try
-      let res = f x in
-      Mutex.unlock mx;
-      res
-    with ex ->
-      Mutex.unlock mx;
-      raise ex
-end
+let mx_index = Mutex.create()
+let mx_wininfo = Mutex.create()
 
-(** [!!mutex f x] applies [f] to [x] inside a critical section locked by
-    [mutex] and returns its result. *)
-let (!!) mx f x = Lock.mutex mx f x
 
 let index = ref 10_000
 let new_index () =
-  !!Lock.index begin fun () ->
+  Mutex.protect mx_index begin fun () ->
     index := !index + 1;
     !index
-  end ()
+  end
 
 (** The type of quick info. *)
 type t = {
@@ -79,7 +65,7 @@ let get_current_window_unsafe qi =
   | _ -> None
 
 (** Returns the last open quick info window. *)
-let get_current_window qi = !!Lock.wininfo get_current_window_unsafe qi
+let get_current_window qi = Mutex.protect mx_wininfo (fun () -> get_current_window_unsafe qi)
 
 let remove_highlight qi wi =
   match wi.range with
@@ -103,8 +89,8 @@ let remove_highlight qi wi =
       end
   | _ -> ()
 
-let add_wininfo qi callback =
-  !!Lock.wininfo (fun wi -> qi.windows <- wi :: qi.windows; callback())
+let add_wininfo qi callback wi =
+  Mutex.protect mx_wininfo (fun () -> qi.windows <- wi :: qi.windows; callback())
 
 let is_poiter_over (wi : wininfo) =
   try
@@ -120,11 +106,11 @@ let is_poiter_over (wi : wininfo) =
 let remove_wininfo qi wi =
   GMain.Timeout.add ~ms:300 ~callback:begin fun () ->
     if not wi.is_pinned && not (is_poiter_over wi) then begin
-      !!Lock.wininfo begin fun () ->
+      Mutex.protect mx_wininfo begin fun () ->
         if not wi.is_pinned then remove_highlight qi wi;
         qi.windows <- qi.windows |> List.filter (fun x -> x.window#misc#get_oid <> wi.window#misc#get_oid);
         wi.window#destroy();
-      end ();
+      end;
     end;
     false
   end |> ignore
@@ -137,17 +123,17 @@ let is_pinned qi =
     previously open and in timed closure. The pinned window is an exception
     and is not hidden. *)
 let hide qi =
-  !!Lock.wininfo begin fun () ->
+  Mutex.protect mx_wininfo begin fun () ->
     qi.windows |> List.iter begin fun wi ->
       if not wi.is_pinned then begin
         remove_highlight qi wi;
         wi.window#misc#hide()
       end
     end;
-  end ()
+  end
 
 let unpin qi =
-  !!Lock.wininfo (List.iter (fun w -> w.is_pinned <- false)) qi.windows;
+  Mutex.protect mx_wininfo (fun () -> List.iter (fun w -> w.is_pinned <- false) qi.windows);
   hide qi
 
 (** Closes the last quick information opened and all other timed closing windows. *)
@@ -325,9 +311,7 @@ let invoke_merlin qi (iter : GText.iter) ~continue_with =
     end
 
 let is_iter_in_comment (buffer : Ocaml_text.buffer) iter =
-  Comments.enclosing
-    (Comments.scan (Glib.Convert.convert_with_fallback ~fallback:"" ~from_codeset:"UTF-8" ~to_codeset:Oe_config.ocaml_codeset
-                      (buffer#get_text ()))) iter#offset
+  Comments.enclosing (Comments.scan (buffer#get_text ())) iter#offset
 
 let get_typeable_iter_at_coords qi iter =
   if iter#ends_line

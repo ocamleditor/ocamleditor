@@ -120,6 +120,7 @@ class widget ~project ~(page : Editor_page.page) ~x ~y ?packing () =
     (Merlin.as_cps merlin_func ~filename ~buffer) cont
   in
   let markup_odoc = new Markup.odoc() in
+  let mx_model_entries = Mutex.create() in
   object (self)
     inherit GObj.widget vbox#as_widget
     inherit completion
@@ -346,7 +347,7 @@ class widget ~project ~(page : Editor_page.page) ~x ~y ?packing () =
         | _ -> None
       with Gpointer.Null -> None
 
-    val mutable model_entries : (float ref * Gtk.tree_iter * Merlin_t.entry) list = []
+    val mutable model_entries : (float ref * Gtk.tree_path ref * Merlin_t.entry) list = []
 
     method private add_entries source entries =
       let last_count = count in
@@ -360,21 +361,31 @@ class widget ~project ~(page : Editor_page.page) ~x ~y ?packing () =
         model#set ~row ~column:col_name entry.name;
         model#set ~row ~column:col_desc entry.desc;
         model#set ~row ~column:col_info entry.info;
-        count <- count + 1;
-        model_entries <- (ref score, row, entry) :: model_entries;
+        Mutex.protect mx_model_entries begin fun () ->
+          count <- count + 1;
+          let path = model#get_path row in
+          model_entries <- (ref score, ref path, entry) :: model_entries;
+        end;
+        row
       in
       begin
         try
           entries
           |> List.iter begin fun (score, (entry : Merlin_t.entry)) ->
-            if is_destroyed || List.length model_entries > 30 then raise Exit;
+            if is_destroyed then raise Exit;
             model_entries
             |> List.find_opt (fun (_, _, e) -> e.Merlin_t.name = entry.Merlin_t.name)
             |> function
-            | Some (s, row, _) when score > !s ->
-                s := score;
-                if model#remove row then add_row entry score
-            | None -> add_row entry score
+            | Some (s, path, _) when score > !s ->
+                Mutex.protect mx_model_entries begin fun () ->
+                  s := score;
+                  let row = model#get_iter !path in
+                  if model#remove row then begin
+                    let row = add_row entry score in
+                    path := model#get_path row
+                  end
+                end
+            | None -> add_row entry score |> ignore
             | _ -> ()
           end
         with Exit -> ()

@@ -13,7 +13,7 @@ let do_rename page renaming_positions new_name =
       let start = page#buffer#get_iter_at_mark m1 in
       let stop = page#buffer#get_iter_at_mark m2 in
       let is_use =
-        match [@warning "-4"] Definition.find ~filename:page#get_filename ~buffer:text ~iter:start with
+        match [@warning "-4"] Definition.locate ~filename:page#get_filename ~text ~iter:start with
         | Merlin.Ok (Some _) -> true
         | _ -> false
       in

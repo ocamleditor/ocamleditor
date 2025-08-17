@@ -160,7 +160,7 @@ let find_dependencies target =
 (** find_target_dependencies *)
 let rec find_target_dependencies targets trg =
   Utils.ListExt.remove_dupl (List.flatten (List.map begin fun id ->
-      match List_opt.find (fun tg -> tg.id = id) targets with
+      match List.find_opt (fun tg -> tg.id = id) targets with
       | Some target -> (find_target_dependencies targets target) @ [target]
       | _ -> []
     end trg.dependencies));;

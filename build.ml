@@ -2356,7 +2356,7 @@ let build ~compilation ~package ~includes ~libs ~other_mods ~outkind ~compile_on
   if thread then (cflags := !cflags ^ " -thread"; lflags := !lflags ^ " -thread");
   if vmthread then (cflags := !cflags ^ " -vmthread"; lflags := !lflags ^ " -vmthread");
   if annot then (cflags := !cflags ^ " -annot");
-  if bin_annot then (cflags := !cflags ^ " -bin-annot");
+  if bin_annot then (cflags := !cflags ^ " -bin-annot -bin-annot-occurrences");
   if pp <> "" then (cflags := !cflags ^ " -pp " ^ pp);
   let pp = if pp <> "" then Some pp else None in
   (* inline *)
@@ -3418,7 +3418,7 @@ let targets = [
     compilation_bytecode = false;
     compilation_native   = true;
     toplevel_modules     = "ocamleditor_lib.ml";
-    package              = "atdgen-runtime,curl,dynlink,lablgtk2,ocamldiff,ocp-indent.lib,str,unix,xml-light,yojson,compiler-libs,odoc,ocamldoc";
+    package              = "atdgen-runtime,curl,dynlink,lablgtk2,ocamldiff,ocp-indent.lib,str,unix,xml-light,yojson,compiler-libs,odoc,ocamldoc,inotify";
     search_path          = "gmisclib common icons otherwidgets oebuild "; (* -I *)
     required_libraries   = "";
     compiler_flags       = "-w -s-y-x-m -g";
@@ -3448,7 +3448,7 @@ let targets = [
     compilation_bytecode = false;
     compilation_native   = true;
     toplevel_modules     = "ocamleditor.ml";
-    package              = "atdgen-runtime,curl,dynlink,lablgtk2,ocamldiff,ocp-indent.lib,str,unix,xml-light,yojson,compiler-libs,odoc,ocamldoc";
+    package              = "atdgen-runtime,curl,dynlink,lablgtk2,ocamldiff,ocp-indent.lib,str,unix,xml-light,yojson,compiler-libs,odoc,ocamldoc,inotify";
     search_path          = "gmisclib common icons otherwidgets oebuild"; (* -I *)
     required_libraries   = "ocamlcommon ocamldoc/odoc_info gmisclib common icons otherwidgets oebuildlib ocamleditor_lib";
     compiler_flags       = "-w -s-y-x-m -g";
@@ -3478,7 +3478,7 @@ let targets = [
     compilation_bytecode = true;
     compilation_native   = false;
     toplevel_modules     = "ocamleditor.ml";
-    package              = "atdgen-runtime,curl,dynlink,lablgtk2,ocamldiff,ocp-indent.lib,str,unix,xml-light,yojson,compiler-libs,odoc,ocamldoc";
+    package              = "atdgen-runtime,curl,dynlink,lablgtk2,ocamldiff,ocp-indent.lib,str,unix,xml-light,yojson,compiler-libs,odoc,ocamldoc,inotify";
     search_path          = "gmisclib common icons otherwidgets oebuild "; (* -I *)
     required_libraries   = "ocamlcommon ocamldoc/odoc_info gmisclib common icons otherwidgets oebuildlib ocamleditor_lib";
     compiler_flags       = "-w -s-y-x-m -g";

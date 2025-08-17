@@ -62,5 +62,7 @@ let print ~editor () =
     | _ -> ()
   end;
   (*  *)
+  Names.Cache.dump editor#project;
+  (*  *)
   Prf.print()
 ;;

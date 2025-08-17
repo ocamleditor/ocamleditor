@@ -79,7 +79,9 @@ let window ~editor ~page () =
           let buffer : GText.buffer = page#buffer#as_text_buffer#as_gtext_buffer in
           if Sys.file_exists filename then begin
             let overwrite () =
-              List_opt.may_find (fun p -> p#get_filename = filename) editor#pages editor#close ();
+              editor#pages
+              |> List.find_map (fun p -> if p#get_filename = filename then Some (editor#close p) else None)
+              |> ignore;
               rename ~editor ~page ~filename ();
             in
             ask_overwrite ~run ~overwrite ~filename window

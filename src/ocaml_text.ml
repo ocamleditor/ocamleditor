@@ -336,11 +336,7 @@ and view ?project ?buffer () =
           if comp <> 0 then begin
             self#comment_selection ();
           end else if select_nearest then begin
-            match
-              Comments.nearest (Comments.scan
-                                  (Glib.Convert.convert_with_fallback ~fallback:"?"
-                                     ~from_codeset:"UTF-8" ~to_codeset:Oe_config.ocaml_codeset (tb#get_text ()))) pos
-            with
+            match Comments.nearest (Comments.scan (tb#get_text ())) pos with
             | None -> ()
             | Some (b, e) ->
                 let i, s = if abs(pos - b) <= abs(pos - e) then b, e else e, b in

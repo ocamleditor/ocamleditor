@@ -188,10 +188,6 @@ class buffer =
 
       method save_buffer ?(filename=tmp_filename) () =
         let text = buffer#get_text () in
-        let text = match project with Some project -> Project.convert_from_utf8 project text | _ -> text in
-        (*Glib.Convert.convert_with_fallback ~fallback:"?"
-          ~from_codeset:"UTF-8" ~to_codeset:Oe_config.ocaml_codeset text
-          in*)
         Utils.mkdir_p (Filename.dirname filename);
         let chan = open_out_bin filename in
         begin
@@ -352,10 +348,8 @@ and view ?project ?buffer () =
       let pos = self#buffer#get_iter `INSERT in
       let start = pos#backward_chars 5 in
       let stop = pos#forward_chars 5 in
-      let text55 = Glib.Convert.convert_with_fallback ~fallback:"?"
-          ~from_codeset:"UTF-8" ~to_codeset:Oe_config.ocaml_codeset (self#buffer#get_text ~start ~stop ()) in
-      let text = Glib.Convert.convert_with_fallback ~fallback:"?"
-          ~from_codeset:"UTF-8" ~to_codeset:Oe_config.ocaml_codeset (self#buffer#get_text ()) in
+      let text55 = self#buffer#get_text ~start ~stop () in
+      let text = self#buffer#get_text () in
       if Delimiters.is_delimiter ~utf8:false text55 (pos#offset - start#offset) then begin
         ignore (self#matching_delim_apply_tag text pos#offset)
       end else begin

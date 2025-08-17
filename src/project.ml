@@ -25,6 +25,9 @@ open Printf
 open Prj
 
 module Log = Common.Log.Make(struct let prefix = "Project" end)
+let _ =
+  Log.set_print_timestamp true;
+  Log.set_verbosity `INFO
 
 exception Project_already_exists of string
 
@@ -52,7 +55,7 @@ let tmp_of_abs proj filename =
   let tmp = path_tmp proj in
   match proj.Prj.in_source_path filename with
   | None -> None
-  | Some rel_name -> Some (tmp, rel_name) ;;
+  | Some rel_name -> Some (tmp, rel_name);;
 
 (** set_ocaml_home *)
 let set_ocaml_home ~ocamllib project =
@@ -97,7 +100,7 @@ let create ~filename () =
     autocomp_enabled   = true;
     autocomp_delay     = 1.0;
     autocomp_cflags    = "";
-    autocomp_dflags    = [|"-c"; "-w"; "+a-48-70"; "-thread"; "-bin-annot"|];
+    autocomp_dflags    = [|"-c"; "-w"; "+a-48-70"; "-thread"; "-bin-annot"; "-bin-annot-occurrences" |];
     autocomp_compiler  = "";
     search_path        = [];
     in_source_path     = Utils.filename_relative (root // default_dir_src);
@@ -116,6 +119,7 @@ let create ~filename () =
       bs_commands              = [];
     };
     bookmarks          = [];
+    file_watcher = None;
   } in
   proj;;
 
@@ -125,20 +129,6 @@ let set_runtime_build_task proj rconf task_string =
       let target = List.find (fun b -> b.Target.id = rconf.Rconf.target_id) proj.targets in
       Target.task_of_string target task_string
     with Not_found -> `NONE
-
-(** to_xml *)
-
-(** from_file *)
-
-(** convert_to_utf8 *)
-let convert_to_utf8 proj text = match proj.encoding with
-  | None -> Convert.to_utf8 text
-  | Some from_codeset -> Glib.Convert.convert ~from_codeset ~to_codeset:"UTF-8" text
-
-(** convert_from_utf8 *)
-let convert_from_utf8 proj text = match proj.encoding with
-  | None -> Convert.from_utf8 text
-  | Some to_codeset -> Glib.Convert.convert ~from_codeset:"UTF-8" ~to_codeset text
 
 (** Returns the full filename of the project configuration file. *)
 let filename proj = Filename.concat proj.root (proj.name ^ default_extension)
@@ -335,7 +325,7 @@ let remove_bookmark num proj =
 (** set_bookmark *)
 let set_bookmark bookmark proj =
   begin
-    match List_opt.find (fun x -> x.Oe.bm_num = bookmark.Oe.bm_num) proj.bookmarks with
+    match List.find_opt (fun x -> x.Oe.bm_num = bookmark.Oe.bm_num) proj.bookmarks with
     | Some bookmark ->
         Bookmark.remove bookmark;
         remove_bookmark bookmark.Oe.bm_num proj;
@@ -346,7 +336,7 @@ let set_bookmark bookmark proj =
 
 (** find_bookmark *)
 let find_bookmark proj filename buffer iter =
-  List_opt.find begin fun bm ->
+  List.find_opt begin fun bm ->
     if bm.Oe.bm_filename = filename then begin
       let mark = Bookmark.offset_to_mark buffer bm in
       iter#line = (buffer#get_iter (`MARK mark))#line
@@ -356,6 +346,71 @@ let find_bookmark proj filename buffer iter =
 (** get_actual_maximum_bookmark *)
 let get_actual_maximum_bookmark project =
   List.fold_left (fun acc bm -> max acc bm.Oe.bm_num) 0 project.bookmarks;;
+
+let inotify = Inotify.create ()
+
+let update_ocaml_index (proj : Prj.t) =
+  Async.create begin fun () ->
+    let proj_sub_dirs =
+      get_search_path_local proj
+      |> List.map (Utils.filename_relative (path_src proj))
+      |> List.filter_map Fun.id
+      |> List.filter ((<>)"")
+      |> List.map (sprintf "%s/*.cmt")
+      |> String.concat " "
+    in
+    let update_index = sprintf "ocaml-index *.cmt %s" proj_sub_dirs in
+    Utils.crono ~label:update_index Sys.command update_index |> ignore;
+  end |> Async.start
+
+let mx_watcher = Mutex.create()
+
+let start_file_watcher proj =
+  Mutex.protect mx_watcher begin fun () ->
+    match proj.file_watcher with
+    | None ->
+        let watch = Inotify.add_watch inotify (path_src proj) [ Inotify.S_Move ] in
+        proj.file_watcher <- Some watch;
+        let watch = Inotify.int_of_watch watch in
+        Thread.create begin fun () ->
+          let thid = Thread.id (Thread.self ()) in
+          try
+            Printf.printf "Project %s STARTED file watcher loop %d.\n%!" proj.Prj.name thid;
+            while true do
+              Thread.delay 0.1;
+              let events = Inotify.read inotify in
+              begin
+                match proj.file_watcher with
+                | Some w when Inotify.int_of_watch w = watch -> ()
+                | _ -> raise Exit
+              end;
+              Async.create begin fun () ->
+                let need_update_index =
+                  events
+                  |> List.exists begin fun (_, _, _, name) ->
+                    let name = Option.value name ~default:"" in
+                    Filename.check_suffix name ".cmt"
+                  end
+                in
+                if need_update_index then update_ocaml_index proj;
+              end |> Async.start;
+            done;
+            Printf.printf "Project %s STOPPED file watcher loop %d.\n%!" proj.Prj.name thid;
+          with
+          | Exit ->
+              Printf.printf "Project %s EXITED file watcher loop %d.\n%!" proj.Prj.name thid;
+          | ex ->
+              Printf.eprintf "File \"project.ml\": %s\n%s\n%!" (Printexc.to_string ex) (Printexc.get_backtrace());
+        end () |> ignore;
+    | _ ->
+        Printf.eprintf "Already watching...\n%!";
+  end
+
+let stop_file_watcher proj =
+  Mutex.protect mx_watcher begin fun () ->
+    proj.Prj.file_watcher |> Option.iter (Inotify.rm_watch inotify);
+    proj.Prj.file_watcher <- None;
+  end
 
 (** load *)
 let load filename =
@@ -380,7 +435,12 @@ let load filename =
   (* Delete obsolete bookmarks *)
   proj.bookmarks <- proj.bookmarks |> List.filter (fun bm -> bm.Oe.bm_num <= Bookmark.limit);
   save_dot_merlin proj;
+  start_file_watcher proj;
   proj;;
+
+let unload proj =
+  stop_file_watcher proj;
+  unload_path proj
 
 (** backup_file *)
 let backup_file project (file : Editor_file.file) =
