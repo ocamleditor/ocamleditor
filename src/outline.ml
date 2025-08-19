@@ -1,13 +1,88 @@
-open Printf
 open Settings_j
 open Merlin_j
 open Preferences
 
 module Log = Common.Log.Make(struct let prefix = "OUTLINE" end)
-let _ = Log.set_verbosity `DEBUG
+let _ =
+  Log.set_print_timestamp true;
+  Log.set_verbosity `DEBUG
 
 exception Invalid_linechar
 exception Break of Gtk.tree_iter
+
+open GUtil
+
+class model ~(page : Editor_page.page) () =
+  let merlin text func = func ~filename:page#get_filename ~buffer:text in
+  let buffer = page#buffer in
+  object (self)
+    val mutable outline = []
+    val mutable outline_hash = 0
+    val mutable timer_id = None
+    val mutable last_refresh_time = 0.0
+    val changed = new changed()
+
+    method page = page
+
+    method get = outline
+
+    method attach = self#start_timer
+
+    method detach = self#stop_timer
+
+    method is_valid = buffer#last_edit_time < last_refresh_time
+
+    method private invoke_merlin () =
+      (*Log.println `DEBUG "invoke_merlin %b %s" self#is_valid (Filename.basename buffer#filename);*)
+      if not self#is_valid then begin
+        let source_code = buffer#get_text () in
+        last_refresh_time <- Unix.gettimeofday();
+        (merlin source_code)@@Merlin.outline
+        |> Async.start_with_continuation begin function
+        | Merlin.Ok (ol : Merlin_j.outline list) ->
+            let hash = Hashtbl.hash ol in
+            if outline_hash <> hash then
+              if self#is_valid then begin
+                outline_hash <- hash;
+                outline <- ol;
+                changed#call ();
+              end else
+                Log.println `WARN
+                  "*** not up-to-date (%s) %f.2 %f.2 ***"
+                  (Filename.basename page#get_filename)
+                  buffer#last_edit_time  last_refresh_time;
+        | Merlin.Failure _ | Merlin.Error _ -> ()
+        end
+      end;
+      true
+
+    method private start_timer () =
+      match timer_id with
+      | None ->
+          self#invoke_merlin() |> ignore;
+          timer_id <- Some (GMain.Timeout.add ~ms:300 ~callback:self#invoke_merlin);
+      | _ -> ()
+
+    method private stop_timer () =
+      begin
+        match timer_id with
+        | None -> ()
+        | Some id ->
+            timer_id <- None;
+            last_refresh_time <- 0.0;
+            GMain.Timeout.remove id
+      end;
+
+    method connect = new outline_signals ~changed
+
+  end
+
+and changed () = object inherit [unit] signal () end
+and outline_signals ~changed =
+  object
+    inherit ml_signals [changed#disconnect]
+    method changed = changed#connect ~after
+  end
 
 let pixbuf_of_kind = function
   | "Module" -> Some (??? Icons.module_impl)
@@ -15,8 +90,11 @@ let pixbuf_of_kind = function
   | "Value" -> Some (??? Icons.simple)
   | "Exn" -> Some (??? Icons.exc)
   | "Class" -> Some (??? Icons.classe)
+  | "ClassType" -> Some (??? Icons.class_type)
+  | "Method" -> Some (??? Icons.met)
+  | "Label"-> Some (??? Icons.type_record) (* TODO *)
+  | "Constructor"-> Some (??? Icons.type_variant) (* TODO *)
   | _ -> None;;
-
 
 (*| Function -> Some (??? Icons.func)
   | Method -> Some (??? Icons.met)
@@ -55,7 +133,7 @@ let col_lazy           : (unit -> unit) list GTree.column = cols#add Gobject.Dat
 let col_default_sort   = cols#add Gobject.Data.int
 
 
-class widget ~(page : Editor_page.page) ?packing () =
+class view ~(outline : model) ?packing () =
   let pref                   = Preferences.preferences#get in
   let show_types             = pref.outline_show_types in
   let vbox                   = GPack.vbox ?packing () in
@@ -74,7 +152,7 @@ class widget ~(page : Editor_page.page) ?packing () =
   let _                      = view#append_column vc in
   let _                      = view#misc#set_name "outline_treeview" in
   let _                      = view#misc#set_property "enable-tree-lines" (`BOOL true) in
-  let outline : (Merlin_j.outline list) GUtil.variable = new GUtil.variable [] in
+  let page = outline#page in
   let buffer = page#ocaml_view#obuffer in
   object (self)
     inherit GObj.widget vbox#as_widget
@@ -84,8 +162,9 @@ class widget ~(page : Editor_page.page) ?packing () =
     initializer
       self#update_preferences();
       Preferences.preferences#connect#changed ~callback:(fun _ -> self#update_preferences ()) |> ignore;
-      outline#connect#changed ~callback:begin fun ol ->
-        Log.println `DEBUG "changed";
+      page#view#event#connect#focus_in ~callback:(fun _ -> outline#attach(); false) |> ignore;
+      page#view#event#connect#focus_out ~callback:(fun _ -> outline#detach(); false) |> ignore;
+      outline#connect#changed ~callback:begin fun _ ->
         self#build()
       end |> ignore;
       let sig_selection_changed = view#selection#connect#changed ~callback:self#jump_to in
@@ -99,6 +178,7 @@ class widget ~(page : Editor_page.page) ?packing () =
             end
         | _ -> ()
       end |> ignore;
+      view#connect#row_expanded ~callback:self#build_child |> ignore;
 
     method outline = outline
 
@@ -146,40 +226,83 @@ class widget ~(page : Editor_page.page) ?packing () =
     method select_from_buffer ?(align : float option) (mark : Gtk.text_mark) =
       if self#misc#get_flag `VISIBLE then begin
         let iter = buffer#get_iter_at_mark (`MARK mark) in
-        let is_found = ref None in
+        let found_paths = ref [] in
         model#foreach begin fun path row ->
           let ol = model#get ~row ~column:col_data in
           if ol.ol_start.line - 1 <= iter#line && iter#line <= ol.ol_stop.line - 1 then begin
             view#selection#select_iter row;
-            is_found := Some path;
-            true
-          end else false
+            found_paths := (path, ol.ol_stop.line - ol.ol_start.line) :: !found_paths;
+          end;
+          false
         end;
-        match !is_found with
-        | None -> view#selection#unselect_all()
-        | Some path -> begin
-            match align with
-            | Some align ->
-                view#vadjustment#set_value (align *. view#vadjustment#upper);
-            | None when page#view#misc#get_flag `HAS_FOCUS ->
-                if not (Gmisclib.Util.treeview_is_path_onscreen view path) then begin
-                  view#scroll_to_cell ~align:(0.38, 0.) path vc;
-                end;
-            | _ -> ()
+        match !found_paths with
+        | [] -> view#selection#unselect_all()
+        | paths -> begin
+            paths
+            |> List.fold_left begin fun smallest ((_, d) as x) ->
+              match smallest with
+              | Some ((_, d') as x') when d' < d -> Some x'
+              | _ -> Some x
+            end None
+            |> Option.iter begin fun (path, _) ->
+              match align with
+              | Some align ->
+                  view#vadjustment#set_value (align *. view#vadjustment#upper);
+              | None when page#view#misc#get_flag `HAS_FOCUS ->
+                  if not (Gmisclib.Util.treeview_is_path_onscreen view path) then begin
+                    view#scroll_to_cell ~align:(0.38, 0.) path vc;
+                  end;
+              | _ -> ()
+            end
           end
+      end
+
+    method private build_child row path =
+      let parent = GTree.Path.copy path in
+      GTree.Path.down path;
+      let first_child = model#get_iter path in
+      let first_child_data = model#get ~row:first_child ~column:col_data in
+      if first_child_data.ol_kind = "Dummy" then begin
+        model#remove first_child |> ignore;
+        model#get ~row ~column:col_lazy
+        |> List.iter (fun f -> f());
+        view#expand_row parent
       end
 
     method build () =
       model#clear();
       let steps =
         outline#get
-        |> List.rev
         |> List.map begin fun ol ->
           fun () ->
             let row = model#append () in
             model#set ~row ~column:col_data ol;
             pixbuf_of_kind ol.ol_kind |> Option.iter (model#set ~row ~column:col_icon);
-            model#set ~row ~column:col_markup ol.ol_name;
+            model#set ~row ~column:col_markup ((*ol.ol_kind ^*) ol.ol_name);
+            let lazy_childs =
+              ol.ol_children
+              |> List.rev
+              |> List.map begin fun child ->
+                fun () ->
+                  let row = model#append ~parent:row () in
+                  model#set ~row ~column:col_data child;
+                  pixbuf_of_kind child.ol_kind |> Option.iter (model#set ~row ~column:col_icon);
+                  model#set ~row ~column:col_markup ((*child.ol_kind ^*) child.ol_name);
+              end
+            in
+            model#set ~row ~column:col_lazy lazy_childs;
+            if lazy_childs <> [] then
+              let dummy = model#append ~parent:row () in
+              model#set ~row:dummy ~column:col_markup "";
+              model#set ~row:dummy ~column:col_data {
+                ol_kind = "Dummy";
+                ol_name = "";
+                ol_start = { line = 0; col = 0 };
+                ol_stop = { line = 0; col = 0 };
+                ol_level = 0;
+                ol_parent = None;
+                ol_children = []
+              };
         end
       in
       Gmisclib.Idle.idleize_cascade ~prio:300 steps ()

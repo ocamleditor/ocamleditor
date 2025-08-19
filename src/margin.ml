@@ -66,7 +66,7 @@ class line_numbers (view : GText.view) =
         y := yl - top + view#pixels_above_lines;
         h := hl;
         self#print_numbers ~view ~num:!num ~left ~top:!y labels;
-        iter := !iter#forward_line;
+        iter := !iter#forward_line; (* TODO Crashed here *)
       done;
       let y = !y  + !h in
       incr num;

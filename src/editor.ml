@@ -561,6 +561,11 @@ class editor () =
                     let file = Editor_file.create ?remote filename in
                     let page = new Editor_page.page ~file ~project ~scroll_offset ~offset ~editor:self () in
                     ignore (page#connect#file_changed ~callback:(fun _ -> switch_page#call page));
+                    (* Outline *)
+                    let outline = new Outline.model ~page () in
+                    let outline_view = new Outline.view ~outline () in
+                    page#set_outline (outline :> Oe.outline);
+                    page#pack_outline outline_view#coerce;
                     (* Tab Label with close button *)
                     let button_close = GButton.button ~relief:`NONE () in
                     let image = Icons.create (??? Icons.button_close) in

@@ -135,3 +135,18 @@ type browser_maximized_view_action = {
   mva_fullscreen              : bool;
   mva_decorated               : bool;
 }
+
+class type outline =
+  object
+    method attach : unit -> unit
+    method detach : unit -> unit
+    method get : Merlin_j.outline list
+    method is_valid : bool
+    method connect : outline_signals
+  end
+and outline_signals =
+  object ('a)
+    method after : 'a
+    method changed : callback:(unit -> unit) -> GtkSignal.id
+    method disconnect : GtkSignal.id -> unit
+  end

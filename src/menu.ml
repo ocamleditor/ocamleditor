@@ -404,14 +404,13 @@ let view ~browser ~group ~flags
   let appearance_menu = GMenu.menu ~packing:appearance#set_submenu () in
   let compact_mode = GMenu.image_menu_item ~label:"Compact Mode" ~packing:appearance_menu#add () in
   let fullscreen = GMenu.image_menu_item ~label:"Fullscreen" ~packing:appearance_menu#add () in
-  let resore_default_layout = GMenu.image_menu_item ~label:"Restore Default Layout" ~packing:appearance_menu#add () in
+  let resore_default_layout = GMenu.image_menu_item ~label:"Restore Default Layout [Ctrl+K Ctrl+Esc]" ~packing:appearance_menu#add () in
   let _ = compact_mode#connect#activate ~callback:(fun () -> browser#set_maximized_view `FIRST) in
   let _ = fullscreen#connect#activate ~callback:(fun () -> browser#set_maximized_view `SECOND) in
   let _ = resore_default_layout#connect#activate ~callback:(fun () -> browser#set_maximized_view `NONE) in
   fullscreen#add_accelerator ~group ~modi:[] GdkKeysyms._F11 ~flags;
   fullscreen#add_accelerator ~group ~modi:[`CONTROL; `MOD1] GdkKeysyms._period ~flags;
   compact_mode#add_accelerator ~group ~modi:[`CONTROL; `MOD1] GdkKeysyms._comma ~flags;
-  resore_default_layout#add_accelerator ~group ~modi:[] GdkKeysyms._Escape ~flags;
   (** Remove All Messages *)
   let _ = GMenu.separator_item ~packing:menu#add () in
   let messages_remove = GMenu.menu_item ~label:"Remove All Messages" ~packing:menu#add () in

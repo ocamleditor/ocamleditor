@@ -146,6 +146,10 @@ class page ?file ~project ~scroll_offset ~offset ~editor () =
     val mutable signal_button_toggle_whitespace = None
     val mutable signal_button_dotview = None
     val mutable global_gutter_tooltips : ((int * int * int * int) * (unit -> GObj.widget)) list = []
+    val mutable outline : Oe.outline option = None
+
+    method outline = outline
+    method set_outline ol = outline <- Some ol
 
     method global_gutter_tooltips = global_gutter_tooltips
     method set_global_gutter_tooltips x = global_gutter_tooltips <- x

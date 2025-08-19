@@ -1098,6 +1098,9 @@ class browser window =
               end else if keyval = GdkKeysyms._j then begin
                 editor#with_current_page Margin_fold.expand_all;
                 true
+              end else if keyval = GdkKeysyms._Escape then begin
+                self#set_maximized_view `NONE;
+                true
               end else false
             in
             statusbar#flash_message ~delay:ms "";
