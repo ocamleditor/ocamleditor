@@ -276,7 +276,10 @@ and view ?project ?buffer () =
     method scroll_lazy iter =
       Gmisclib.Idle.add ~prio:300 begin fun () ->
         self#scroll_to_iter ~use_align:(self#scroll_to_iter iter) ~xalign:1.0 ~yalign:0.38 iter |> ignore;
-        Gmisclib.Idle.add ~prio:300 (fun () -> GtkBase.Widget.queue_draw self#as_widget)
+        Gmisclib.Idle.add ~prio:200 begin fun () ->
+          self#draw_gutter();
+          GtkBase.Widget.queue_draw self#as_widget;
+        end
       end;
 
     method scroll_iter_onscreen iter =

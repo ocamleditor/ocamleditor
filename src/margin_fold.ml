@@ -5,10 +5,14 @@ module ColorOps = Color
 open Preferences
 open Printf
 
+let is_debug = false
+let suppress_invisible = is_debug && false
+let enable_animation = true
+
 module Log = Common.Log.Make(struct let prefix = "FOLD" end)
 let _ =
   Log.set_print_timestamp true;
-  Log.set_verbosity `ERROR
+  Log.set_verbosity (if is_debug then `DEBUG else `ERROR)
 
 module Icons = struct
   let expander_open = "\u{f107}"
@@ -18,9 +22,6 @@ end
 exception Invalid_linechar
 
 let counter = ref 0
-let is_debug = false
-let suppress_invisible = is_debug && false
-let enable_animation = true
 
 let mk_polygon n r =
   let pi = 3.14189 in
@@ -154,12 +155,15 @@ class expander ~(view : Ocaml_text.view) ~tag_highlight ~tag_invisible ?packing 
         false
       end |> ignore;
       self#misc#connect#destroy ~callback:begin fun () ->
+        Log.println `DEBUG "DESTROY %d" self#id;
         buffer#delete_mark mark_folding_point;
         buffer#delete_mark mark_foot
       end |> ignore
 
-    method private hash =
-      buffer#get_text ~start:self#head ~stop:self#body () |> Hashtbl.hash
+    method hash = hash
+
+    method calculate_hash =
+      Hashtbl.hash (buffer#get_text ~start:self#head ~stop:self#body ())
 
     method set_is_definition x = is_definition <- x
     method is_definition = is_definition
@@ -186,20 +190,25 @@ class expander ~(view : Ocaml_text.view) ~tag_highlight ~tag_invisible ?packing 
         end else where
       in
       buffer#move_mark mark_foot ~where;
-      if hash <> 0 && self#hash <> hash then begin
+      let new_hash = self#calculate_hash in
+      if hash <> 0 && new_hash <> hash then begin
         Gmisclib.Idle.add begin fun () ->
-          self#expand();
-          is_valid <- false;
-          self#misc#hide();
-          self#destroy();
+          self#invalidate();
+          Log.println `DEBUG ">>>> refresh_needed ";
           refresh_needed#call()
         end
-      end else hash <- self#hash
+      end else hash <- new_hash
 
     (** Check if this expander is still valid (text hasn't changed invalidating it). *)
     method is_valid = is_valid
 
-    (** Get the unique identifier of this expander. *)
+    method invalidate () =
+      self#misc#hide();
+      self#expand();
+      is_valid <- false;
+      self#destroy();
+
+      (** Get the unique identifier of this expander. *)
     method id = id
 
     (** The iter where the {i folding point} starts. It is between head and body. *)
@@ -297,10 +306,7 @@ class expander ~(view : Ocaml_text.view) ~tag_highlight ~tag_invisible ?packing 
       let segments = segments |> List.sort (fun (a, _) (b, _) -> compare a#offset b#offset) in
       let show_segments_no_animate () =
         segments
-        |> List.iter begin fun (start, stop) ->
-          Log.println `DEBUG "    SEG: %s" (Region.to_string (start, stop));
-          buffer#remove_tag tag_invisible ~start ~stop
-        end
+        |> List.iter (fun (start, stop) -> buffer#remove_tag tag_invisible ~start ~stop)
       in
       begin
         match prio with
@@ -417,45 +423,58 @@ class margin_fold (outline : Oe.outline) (view : Ocaml_text.view) =
     method draw ~view ~top ~left ~height ~start ~stop =
       if outline#is_valid then begin
         try
-          match expanders with
+          (*Log.println `DEBUG "%s: is_refresh_pending = %b, expanders = %d"
+            __FUNCTION__ is_refresh_pending (List.length expanders);*)
           (* Separate the case in which markers and expanders need to be
              reconstructed from the case in which only the positions within the visible
              area need to be updated (for example in the case of scrolling). *)
-          | _ when expanders = [] || is_refresh_pending ->
-              let methods = ref [] in
-              expanders <-
-                List.filter_map begin fun ex ->
-                  ex#misc#hide();
-                  if ex#is_valid then Some ex else None
-                end expanders;
-              outline#get
-              |> iter_depth_first begin fun parent ol ->
-                ol.ol_parent <- parent;
-                if ol.ol_kind = "Method" then methods := ol :: !methods
-                else self#draw_expander ol top left height;
-              end None;
-              !methods
-              |> List.filter (fun ol -> ol.ol_parent <> None)
-              |> Utils.ListExt.group_by (fun ol -> ol.ol_parent)
-              |> List.iter begin fun (parent, meths) ->
-                match parent with
-                | Some parent  ->
-                    ({ parent with ol_start = parent.ol_stop } :: meths)
-                    |> List.sort (fun m1 m2 -> Stdlib.compare m1.ol_start m2.ol_start)
-                    |> Utils.ListExt.pairwise
-                    |> List.iter (fun (ol1, ol2) -> ol1.ol_stop <- ol2.ol_start);
-                | _ -> ()
+          if is_refresh_pending || expanders = [] then begin
+            let methods = ref [] in
+            expanders <-
+              List.filter_map begin fun ex ->
+                ex#misc#hide();
+                if ex#is_valid then Some ex else None
+              end expanders;
+            outline#get
+            |> iter_depth_first begin fun parent ol ->
+              ol.ol_parent <- parent;
+              if ol.ol_kind = "Method" then methods := ol :: !methods
+              else self#draw_expander ol top left height;
+            end None;
+            !methods
+            |> List.filter (fun ol -> ol.ol_parent <> None)
+            |> Utils.ListExt.group_by (fun ol -> ol.ol_parent)
+            |> List.iter begin fun (parent, meths) ->
+              match parent with
+              | Some parent  ->
+                  ({ parent with ol_start = parent.ol_stop } :: meths)
+                  |> List.sort (fun m1 m2 -> Stdlib.compare m1.ol_start m2.ol_start)
+                  |> Utils.ListExt.pairwise
+                  |> List.iter (fun (ol1, ol2) -> ol1.ol_stop <- ol2.ol_start);
+              | _ -> ()
+            end
+            |> ignore;
+            !methods |> List.iter (fun ol -> self#draw_expander ol top left height);
+            is_refresh_pending <- false;
+            expanders |> List.iter begin fun ex ->
+              let new_hash = ex#calculate_hash in
+              (*Log.println `DEBUG "EXPANDER %d: reg=%s hash=%d %d"
+                ex#id (Region.to_string (ex#body, ex#foot))
+                ex#hash new_hash;*)
+              if ex#hash <> new_hash then begin
+                ex#invalidate();
+                is_refresh_pending <- true;
               end
-              |> ignore;
-              !methods |> List.iter (fun ol -> self#draw_expander ol top left height);
-              is_refresh_pending <- false;
-          | _ ->
-              expanders |> List.iter (fun ex -> ex#show top left height);
+            end;
+          end else
+            expanders |> List.iter (fun ex -> ex#show top left height);
         with Invalid_linechar ->
           Log.println `ERROR "===>> Invalid_linechar <<===";
           is_refresh_pending <- true
-      end else
+      end else begin
+        Log.println `DEBUG "outline is invalid (buffer is changed after last update)";
         is_refresh_pending <- true
+      end
 
     method private draw_expander ol top left height =
       let start = buffer#get_iter (`LINECHAR (ol.ol_start.line - 1, ol.ol_start.col)) in
@@ -500,10 +519,10 @@ class margin_fold (outline : Oe.outline) (view : Ocaml_text.view) =
         |> List.filter (fun exp -> exp#id <> expander#id)
       in
       all_nested
-      |> List.filter (fun exp ->
-          not (all_nested
-               |> List.filter (fun x -> x#id <> exp#id)
-               |> List.exists (fun x -> x#body_contains exp#body)))
+    (*|> List.filter (fun exp ->
+        not (all_nested
+             |> List.filter (fun x -> x#id <> exp#id)
+             |> List.exists (fun x -> x#body_contains exp#body)))*)
 
     method draw_ellipsis _ =
       match view#get_window `TEXT with
@@ -589,13 +608,12 @@ class margin_fold (outline : Oe.outline) (view : Ocaml_text.view) =
         self#configure pref.Settings_j.editor_code_folding_enabled
       end |> ignore;
       outline#connect#changed ~callback:begin fun _ ->
-        let source_code = buffer#get_text () in
-        comments <- Comments.scan_locale source_code;
-        if is_refresh_pending then begin
-          (*Gmisclib.Idle.add ~prio:100 begin fun () ->*)
+        is_refresh_pending <- true;
+        Log.println `DEBUG "CHANGED %b" is_refresh_pending;
+        comments <- Comments.scan_locale (buffer#get_text ());
+        Gmisclib.Idle.add ~prio:100 begin fun () ->
           view#draw_gutter(); (* triggers draw *)
-          (*end;*)
-        end
+        end;
       end |> ignore;
       self#configure self#is_visible;
   end

@@ -129,7 +129,7 @@ let cols               = new GTree.column_list
 let col_icon           = cols#add (Gobject.Data.gobject_by_name "GdkPixbuf")
 let col_markup         = cols#add Gobject.Data.string
 let col_data           : Merlin_j.outline GTree.column = cols#add Gobject.Data.caml
-let col_lazy           : (unit -> unit) list GTree.column = cols#add Gobject.Data.caml
+(*let col_lazy           : (unit -> unit) list GTree.column = cols#add Gobject.Data.caml*)
 let col_default_sort   = cols#add Gobject.Data.int
 
 
@@ -264,13 +264,30 @@ class view ~(outline : model) ?packing () =
       let first_child_data = model#get ~row:first_child ~column:col_data in
       if first_child_data.ol_kind = "Dummy" then begin
         model#remove first_child |> ignore;
-        model#get ~row ~column:col_lazy
-        |> List.iter (fun f -> f());
+        let row_data = model#get ~row ~column:col_data in
+        row_data.ol_children
+        |> List.iter begin fun child ->
+          let row = model#append ~parent:row () in
+          model#set ~row ~column:col_data child;
+          pixbuf_of_kind child.ol_kind |> Option.iter (model#set ~row ~column:col_icon);
+          model#set ~row ~column:col_markup ((*child.ol_kind ^*) child.ol_name);
+          if child.ol_children <> [] then
+            let dummy = model#append ~parent:row () in
+            model#set ~row:dummy ~column:col_markup "";
+            model#set ~row:dummy ~column:col_data {
+              ol_kind = "Dummy";
+              ol_name = "";
+              ol_start = { line = 0; col = 0 };
+              ol_stop = { line = 0; col = 0 };
+              ol_level = 0;
+              ol_parent = None;
+              ol_children = []
+            };
+        end;
         view#expand_row parent
       end
 
     method build () =
-      model#clear();
       let steps =
         outline#get
         |> List.map begin fun ol ->
@@ -279,19 +296,7 @@ class view ~(outline : model) ?packing () =
             model#set ~row ~column:col_data ol;
             pixbuf_of_kind ol.ol_kind |> Option.iter (model#set ~row ~column:col_icon);
             model#set ~row ~column:col_markup ((*ol.ol_kind ^*) ol.ol_name);
-            let lazy_childs =
-              ol.ol_children
-              |> List.rev
-              |> List.map begin fun child ->
-                fun () ->
-                  let row = model#append ~parent:row () in
-                  model#set ~row ~column:col_data child;
-                  pixbuf_of_kind child.ol_kind |> Option.iter (model#set ~row ~column:col_icon);
-                  model#set ~row ~column:col_markup ((*child.ol_kind ^*) child.ol_name);
-              end
-            in
-            model#set ~row ~column:col_lazy lazy_childs;
-            if lazy_childs <> [] then
+            if ol.ol_children <> [] then
               let dummy = model#append ~parent:row () in
               model#set ~row:dummy ~column:col_markup "";
               model#set ~row:dummy ~column:col_data {
@@ -305,7 +310,9 @@ class view ~(outline : model) ?packing () =
               };
         end
       in
-      Gmisclib.Idle.idleize_cascade ~prio:300 steps ()
+      model#clear();
+      (*steps |> List.iter (fun s -> s())*)
+      Gmisclib.Idle.idleize_cascade ~prio:100 steps ()
 
     method update_preferences () =
       let pref = Preferences.preferences#get in
