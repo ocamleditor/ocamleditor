@@ -1,3 +1,4 @@
+open Printf
 open Settings_j
 open Merlin_j
 open Preferences
@@ -7,7 +8,7 @@ let _ =
   Log.set_print_timestamp true;
   Log.set_verbosity `DEBUG
 
-exception Invalid_linechar
+exception Invalid_linechar of Merlin_j.pos
 exception Break of Gtk.tree_iter
 
 open GUtil
@@ -138,6 +139,7 @@ class view ~(outline : model) ?packing () =
   let show_types             = pref.outline_show_types in
   let vbox                   = GPack.vbox ?packing () in
   let model                  = GTree.tree_store cols in
+  let toolbar                = GButton.toolbar ~orientation:`HORIZONTAL ~style:`TEXT ~packing:(vbox#pack ~expand:false ~fill:false) () in
   let sw                     = GBin.scrolled_window ~shadow_type:`NONE ~hpolicy:`AUTOMATIC ~vpolicy:`AUTOMATIC ~packing:vbox#add () in
   let view                   = GTree.view ~model ~headers_visible:false ~packing:sw#add ~width:350 ~height:500 () in
   let renderer_pixbuf        = GTree.cell_renderer_pixbuf [`YPAD 0; `XPAD 0] in
@@ -158,38 +160,59 @@ class view ~(outline : model) ?packing () =
     inherit GObj.widget vbox#as_widget
 
     val mutable code_font_family = ""
+    val mutable sig_selection_changed = None
+    val mutable timer_follow_cursor = None
 
     initializer
+      (* Toolbar *)
+      let tool_collapse_all = GButton.tool_button ~packing:toolbar#insert () in
+      let _ = tool_collapse_all#set_label_widget (Gtk_util.label_icon "\u{f102}")#coerce in
+      let tool_follow_cursor = GButton.toggle_tool_button ~active:true ~packing:toolbar#insert () in
+      let _ = tool_follow_cursor#set_label_widget (Gtk_util.label_icon "\u{21c6}")#coerce in
+
       self#update_preferences();
       Preferences.preferences#connect#changed ~callback:(fun _ -> self#update_preferences ()) |> ignore;
-      page#view#event#connect#focus_in ~callback:(fun _ -> outline#attach(); false) |> ignore;
-      page#view#event#connect#focus_out ~callback:(fun _ -> outline#detach(); false) |> ignore;
-      outline#connect#changed ~callback:begin fun _ ->
-        self#build()
+
+      page#view#event#connect#focus_in ~callback:(fun _ ->
+          self#set_follow_cursor tool_follow_cursor#get_active;
+          outline#attach(); false) |> ignore;
+      page#view#event#connect#focus_out ~callback:(fun _ ->
+          self#set_follow_cursor false;
+          outline#detach(); false) |> ignore;
+
+      outline#connect#changed ~callback:self#build |> ignore;
+
+      sig_selection_changed <- Some (view#selection#connect#changed ~callback:self#jump_to);
+      view#connect#row_expanded ~callback:self#build_childs |> ignore;
+      tool_follow_cursor#connect#clicked ~callback:(fun () ->
+          self#set_follow_cursor tool_follow_cursor#get_active) |> ignore;
+      tool_collapse_all#connect#clicked ~callback:begin fun () ->
+        if tool_follow_cursor#get_active then begin
+          Option.iter GMain.Timeout.remove timer_follow_cursor;
+          timer_follow_cursor <- None;
+          let sig_mark_set = ref None in
+          sig_mark_set := Some (buffer#connect#mark_set ~callback:begin fun _ mark ->
+              match GtkText.Mark.get_name mark with
+              | Some "insert" ->
+                  self#set_follow_cursor tool_follow_cursor#get_active;
+                  Option.iter (GtkSignal.disconnect buffer#as_buffer) !sig_mark_set;
+              | _ -> ()
+            end);
+          ()
+        end;
+        view#collapse_all()
       end |> ignore;
-      let sig_selection_changed = view#selection#connect#changed ~callback:self#jump_to in
-      buffer#connect#after#mark_set ~callback:begin fun _ mark ->
-        match GtkText.Mark.get_name mark with
-        | Some "insert" ->
-            Gmisclib.Idle.add ~prio:300 begin fun () ->
-              view#selection#misc#handler_block sig_selection_changed;
-              self#select_from_buffer mark;
-              view#selection#misc#handler_unblock sig_selection_changed
-            end
-        | _ -> ()
-      end |> ignore;
-      view#connect#row_expanded ~callback:self#build_child |> ignore;
 
     method outline = outline
 
     method private get_iter_at_line pos =
       let ln = pos.line - 1 in
-      if pos.line <= 0 || ln > buffer#end_iter#line then raise Invalid_linechar;
+      if pos.line < 0 || ln > buffer#end_iter#line then raise (Invalid_linechar pos);
       buffer#get_iter (`LINE ln)
 
     method private get_iter_at_linechar pos =
       let it = self#get_iter_at_line pos in
-      if pos.col >= it#chars_in_line then raise Invalid_linechar;
+      if pos.col >= it#chars_in_line then raise (Invalid_linechar pos);
       it#set_line_offset pos.col (*buffer#get_iter (`LINECHAR (pos.line - 1, pos.col))*)
 
     method jump_to () =
@@ -201,11 +224,19 @@ class view ~(outline : model) ?packing () =
               let row = model#get_iter path in
               let ol = model#get ~row ~column:col_data in
               let start = self#get_iter_at_line ol.ol_start in
-              buffer#select_range start start;
+              let start, stop =
+                match start#forward_search ol.ol_name with
+                | Some bounds -> bounds
+                | _ ->
+                    Log.println `WARN "name %S not found on line %d" ol.ol_name (start#line + 1);
+                    let start = start#forward_word_end#backward_word_start in
+                    start, start
+              in
+              buffer#select_range start stop;
               page#view#scroll_lazy start;
-              Gmisclib.Idle.add ~prio:300 page#view#misc#grab_focus
-            with Invalid_linechar ->
-              Log.println `ERROR "Invalid line/char"
+              Gmisclib.Idle.add page#view#misc#grab_focus
+            with Invalid_linechar pos ->
+              Log.println `ERROR "Invalid line/char (%d, %d)" pos.line pos.col
           end
 
     method select_in_buffer () =
@@ -223,20 +254,38 @@ class view ~(outline : model) ?packing () =
               Log.println `ERROR "Invalid line/char"
           end
 
-    method select_from_buffer ?(align : float option) (mark : Gtk.text_mark) =
+    method select_from_buffer (mark : Gtk.text_mark) =
       if self#misc#get_flag `VISIBLE then begin
         let iter = buffer#get_iter_at_mark (`MARK mark) in
+        let ln = iter#line + 1 in
+        let cn = iter#line_offset + 1 in
         let found_paths = ref [] in
         model#foreach begin fun path row ->
-          let ol = model#get ~row ~column:col_data in
-          if ol.ol_start.line - 1 <= iter#line && iter#line <= ol.ol_stop.line - 1 then begin
-            view#selection#select_iter row;
-            found_paths := (path, ol.ol_stop.line - ol.ol_start.line) :: !found_paths;
-          end;
-          false
+          try
+            let ol = model#get ~row ~column:col_data in
+            if ol.ol_kind <> "Dummy" then begin
+              let start, stop =
+                if ol.ol_kind = "Method" then
+                  (self#get_iter_at_linechar ol.ol_start)#set_line_offset 0,
+                  (self#get_iter_at_linechar ol.ol_stop)#set_line_offset 0
+                else
+                  self#get_iter_at_linechar ol.ol_start,
+                  let it = self#get_iter_at_linechar ol.ol_stop in
+                  if it#ends_line then it#forward_char else it#forward_to_line_end
+              in
+              if iter#in_range ~start ~stop then
+                found_paths := (path, ol.ol_stop.line - ol.ol_start.line) :: !found_paths;
+            end;
+            false
+          with Invalid_linechar pos ->
+            Log.println `ERROR "Invalid line/char (%d, %d)" pos.line pos.col;
+            false
         end;
         match !found_paths with
-        | [] -> view#selection#unselect_all()
+        | [] ->
+            Log.println `WARN "%s, %s no paths found at (%d, %d)"
+              __FUNCTION__ page#get_filename ln cn;
+            view#selection#unselect_all()
         | paths -> begin
             paths
             |> List.fold_left begin fun smallest ((_, d) as x) ->
@@ -245,19 +294,19 @@ class view ~(outline : model) ?packing () =
               | _ -> Some x
             end None
             |> Option.iter begin fun (path, _) ->
-              match align with
-              | Some align ->
-                  view#vadjustment#set_value (align *. view#vadjustment#upper);
-              | None when page#view#misc#get_flag `HAS_FOCUS ->
-                  if not (Gmisclib.Util.treeview_is_path_onscreen view path) then begin
-                    view#scroll_to_cell ~align:(0.38, 0.) path vc;
-                  end;
-              | _ -> ()
+              match view#selection#get_selected_rows with
+              | selected_path :: _ when selected_path = path -> ()
+              | _ ->
+                  view#expand_to_path path;
+                  view#selection#select_path path;
+                  if not (Gmisclib.Util.treeview_is_path_onscreen view path) then
+                    Gmisclib.Idle.add ~prio:300 (fun () ->
+                        view#scroll_to_cell ~align:(0.38, 0.) path vc);
             end
           end
       end
 
-    method private build_child row path =
+    method private build_childs row path =
       let parent = GTree.Path.copy path in
       GTree.Path.down path;
       let first_child = model#get_iter path in
@@ -265,54 +314,66 @@ class view ~(outline : model) ?packing () =
       if first_child_data.ol_kind = "Dummy" then begin
         model#remove first_child |> ignore;
         let row_data = model#get ~row ~column:col_data in
-        row_data.ol_children
-        |> List.iter begin fun child ->
-          let row = model#append ~parent:row () in
-          model#set ~row ~column:col_data child;
-          pixbuf_of_kind child.ol_kind |> Option.iter (model#set ~row ~column:col_icon);
-          model#set ~row ~column:col_markup ((*child.ol_kind ^*) child.ol_name);
-          if child.ol_children <> [] then
-            let dummy = model#append ~parent:row () in
-            model#set ~row:dummy ~column:col_markup "";
-            model#set ~row:dummy ~column:col_data {
-              ol_kind = "Dummy";
-              ol_name = "";
-              ol_start = { line = 0; col = 0 };
-              ol_stop = { line = 0; col = 0 };
-              ol_level = 0;
-              ol_parent = None;
-              ol_children = []
-            };
-        end;
-        view#expand_row parent
+        view#expand_row parent;
+        let steps =
+          row_data.ol_children
+          (* with idleize_cascade you need to reverse the order. TODO fix idleize_cascade *)
+          |> List.sort (fun a b -> -(compare a.ol_start b.ol_start))
+          |> List.map (fun child () -> self#append ~parent:(model#get_iter parent) child)
+        in
+        Gmisclib.Idle.idleize_cascade ~prio:200 steps ();
       end
 
     method build () =
-      let steps =
-        outline#get
-        |> List.map begin fun ol ->
-          fun () ->
-            let row = model#append () in
-            model#set ~row ~column:col_data ol;
-            pixbuf_of_kind ol.ol_kind |> Option.iter (model#set ~row ~column:col_icon);
-            model#set ~row ~column:col_markup ((*ol.ol_kind ^*) ol.ol_name);
-            if ol.ol_children <> [] then
-              let dummy = model#append ~parent:row () in
-              model#set ~row:dummy ~column:col_markup "";
-              model#set ~row:dummy ~column:col_data {
-                ol_kind = "Dummy";
-                ol_name = "";
-                ol_start = { line = 0; col = 0 };
-                ol_stop = { line = 0; col = 0 };
-                ol_level = 0;
-                ol_parent = None;
-                ol_children = []
-              };
-        end
-      in
+      let steps = outline#get |> List.map (fun ol () -> self#append ol)  in
       model#clear();
-      (*steps |> List.iter (fun s -> s())*)
-      Gmisclib.Idle.idleize_cascade ~prio:100 steps ()
+      Gmisclib.Idle.idleize_cascade ~prio:200 steps ()
+
+    method private set_follow_cursor active =
+      if active then
+        timer_follow_cursor <- Some begin
+            GMain.Timeout.add ~ms:1000 ~callback:begin fun () ->
+              let mark = buffer#get_mark `INSERT in
+              Gmisclib.Idle.add ~prio:300 begin fun () ->
+                Option.iter view#selection#misc#handler_block sig_selection_changed;
+                self#select_from_buffer mark;
+                Option.iter view#selection#misc#handler_unblock sig_selection_changed
+              end;
+              true
+            end
+          end
+      else begin
+        Option.iter GMain.Timeout.remove timer_follow_cursor;
+        timer_follow_cursor <- None
+      end
+
+    method private append ?parent ol =
+      let row = model#append ?parent () in
+      model#set ~row ~column:col_data ol;
+      let icon = pixbuf_of_kind ol.ol_kind in
+      icon |> Option.iter (model#set ~row ~column:col_icon);
+      let markup =
+        sprintf "%s%s %s"
+          ol.ol_name
+          (if icon = None then sprintf "<span size='x-small' color='#ffc0c0'> (%s)</span>" ol.ol_kind else "")
+          (sprintf "<span size='x-small' color='#c0c0c0'>[ <i>%d, %d - %d, %d</i> ]</span>"
+             ol.ol_start.line (ol.ol_start.col + 1) ol.ol_stop.line (ol.ol_stop.col + 1))
+      in
+      model#set ~row ~column:col_markup markup;
+      if ol.ol_children <> [] then self#append_dummy row
+
+    method private append_dummy row =
+      let dummy = model#append ~parent:row () in
+      model#set ~row:dummy ~column:col_markup "";
+      model#set ~row:dummy ~column:col_data {
+        ol_kind = "Dummy";
+        ol_name = "";
+        ol_start = { line = 0; col = 0 };
+        ol_stop = { line = 0; col = 0 };
+        ol_level = 0;
+        ol_parent = None;
+        ol_children = []
+      };
 
     method update_preferences () =
       let pref = Preferences.preferences#get in

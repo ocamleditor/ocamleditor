@@ -21,8 +21,8 @@ let execute_async filename source_code command =
     (json : json_string)
   end
 
-let as_cps merlin_func ~filename ~buffer cont =
-  merlin_func ~filename ~buffer |> Async.start_with_continuation cont
+let as_cps merlin_func ?name ~filename ~buffer cont =
+  merlin_func ~filename ~buffer |> Async.start_with_continuation ?name cont
 
 let check_configuration ~filename ~buffer =
   [ "check-configuration" ] |> execute_async filename buffer

@@ -298,10 +298,8 @@ class widget ~project ~(page : Editor_page.page) ~x ~y ?packing () =
               let name = model#get ~row ~column:col_name in
               merlin@@Merlin.type_expression ~position:(1,1) ~expression:name |=> begin function
                 | Ok res ->
-                    GtkThread.async begin fun () ->
-                      model#set ~row ~column:col_desc res;
-                      self#show_info()
-                    end ()
+                    model#set ~row ~column:col_desc res; (* TODO Crashed here??? *)
+                    self#show_info()
                 | Error _ | Failure _ -> ()
                 end
             end

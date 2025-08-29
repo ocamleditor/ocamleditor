@@ -477,7 +477,7 @@ class margin_fold (outline : Oe.outline) (view : Ocaml_text.view) =
       end
 
     method private draw_expander ol top left height =
-      let start = buffer#get_iter (`LINECHAR (ol.ol_start.line - 1, ol.ol_start.col)) in
+      let start = buffer#get_iter (`LINECHAR (ol.ol_start.line - 1, ol.ol_start.col)) in (* TODO Crashed here *)
       if ol.ol_stop.line <= 0 || ol.ol_stop.line > buffer#end_iter#line + 1 then raise Invalid_linechar;
       let stop_line = buffer#get_iter (`LINE (ol.ol_stop.line - 1)) in
       if ol.ol_stop.col >= stop_line#chars_in_line then raise Invalid_linechar;
