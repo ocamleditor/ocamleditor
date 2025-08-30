@@ -156,6 +156,9 @@ class view ~(outline : model) ?packing () =
   let _                      = view#misc#set_property "enable-tree-lines" (`BOOL true) in
   let page = outline#page in
   let buffer = page#ocaml_view#obuffer in
+  let tool_collapse_all = GButton.tool_button ~packing:toolbar#insert () in
+  let tool_select_from_buffer = GButton.tool_button ~packing:toolbar#insert () in
+  let tool_follow_cursor = GButton.toggle_tool_button ~active:true ~packing:toolbar#insert () in
   object (self)
     inherit GObj.widget vbox#as_widget
 
@@ -165,9 +168,8 @@ class view ~(outline : model) ?packing () =
 
     initializer
       (* Toolbar *)
-      let tool_collapse_all = GButton.tool_button ~packing:toolbar#insert () in
       let _ = tool_collapse_all#set_label_widget (Gtk_util.label_icon "\u{f102}")#coerce in
-      let tool_follow_cursor = GButton.toggle_tool_button ~active:true ~packing:toolbar#insert () in
+      let _ = tool_select_from_buffer#set_label_widget (Gtk_util.label_icon "\u{f177}")#coerce in
       let _ = tool_follow_cursor#set_label_widget (Gtk_util.label_icon "\u{21c6}")#coerce in
 
       self#update_preferences();
@@ -186,6 +188,12 @@ class view ~(outline : model) ?packing () =
       view#connect#row_expanded ~callback:self#build_childs |> ignore;
       tool_follow_cursor#connect#clicked ~callback:(fun () ->
           self#set_follow_cursor tool_follow_cursor#get_active) |> ignore;
+      tool_select_from_buffer#connect#clicked ~callback:begin fun () ->
+        self#select_from_buffer (buffer#get_mark `INSERT)
+      end |> ignore;
+      tool_collapse_all#misc#set_tooltip_text "Collapse All";
+      tool_select_from_buffer#misc#set_tooltip_text "Go to Cursor Position";
+      tool_follow_cursor#misc#set_tooltip_text "Follow Cursor";
       tool_collapse_all#connect#clicked ~callback:begin fun () ->
         if tool_follow_cursor#get_active then begin
           Option.iter GMain.Timeout.remove timer_follow_cursor;
@@ -330,6 +338,7 @@ class view ~(outline : model) ?packing () =
       Gmisclib.Idle.idleize_cascade ~prio:200 steps ()
 
     method private set_follow_cursor active =
+      tool_select_from_buffer#misc#set_sensitive (not active);
       if active then
         timer_follow_cursor <- Some begin
             GMain.Timeout.add ~ms:1000 ~callback:begin fun () ->
@@ -353,11 +362,11 @@ class view ~(outline : model) ?packing () =
       let icon = pixbuf_of_kind ol.ol_kind in
       icon |> Option.iter (model#set ~row ~column:col_icon);
       let markup =
-        sprintf "%s%s %s"
+        sprintf "%s%s"
           ol.ol_name
           (if icon = None then sprintf "<span size='x-small' color='#ffc0c0'> (%s)</span>" ol.ol_kind else "")
-          (sprintf "<span size='x-small' color='#c0c0c0'>[ <i>%d, %d - %d, %d</i> ]</span>"
-             ol.ol_start.line (ol.ol_start.col + 1) ol.ol_stop.line (ol.ol_stop.col + 1))
+          (*(sprintf "<span size='x-small' color='#c0c0c0'>[ <i>%d, %d - %d, %d</i> ]</span>"
+             ol.ol_start.line (ol.ol_start.col + 1) ol.ol_stop.line (ol.ol_stop.col + 1))*)
       in
       model#set ~row ~column:col_markup markup;
       if ol.ol_children <> [] then self#append_dummy row
