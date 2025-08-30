@@ -296,10 +296,16 @@ class widget ~project ~(page : Editor_page.page) ~x ~y ?packing () =
               end
             end else begin
               let name = model#get ~row ~column:col_name in
+              let path = model#get_path row in
               merlin@@Merlin.type_expression ~position:(1,1) ~expression:name |=> begin function
                 | Ok res ->
-                    model#set ~row ~column:col_desc res; (* TODO Crashed here??? *)
-                    self#show_info()
+                    begin
+                      try [@warning "-42"]
+                        let row = model#get_iter path in
+                        model#set ~row ~column:col_desc res;
+                        self#show_info()
+                      with Failure _ -> () (* "GtkTree.TreeModel.get_iter" *)
+                    end;
                 | Error _ | Failure _ -> ()
                 end
             end

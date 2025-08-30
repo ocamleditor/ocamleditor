@@ -33,16 +33,16 @@ class model ~(page : Editor_page.page) () =
 
     method is_valid = buffer#last_edit_time < last_refresh_time
 
-    method private invoke_merlin () =
+    method update ?(force=false) () =
       (*Log.println `DEBUG "invoke_merlin %b %s" self#is_valid (Filename.basename buffer#filename);*)
-      if not self#is_valid then begin
+      if not self#is_valid || force then begin
         let source_code = buffer#get_text () in
         last_refresh_time <- Unix.gettimeofday();
         (merlin source_code)@@Merlin.outline
         |> Async.start_with_continuation begin function
         | Merlin.Ok (ol : Merlin_j.outline list) ->
             let hash = Hashtbl.hash ol in
-            if outline_hash <> hash then
+            if outline_hash <> hash || force then
               if self#is_valid then begin
                 outline_hash <- hash;
                 outline <- ol;
@@ -54,14 +54,13 @@ class model ~(page : Editor_page.page) () =
                   buffer#last_edit_time  last_refresh_time;
         | Merlin.Failure _ | Merlin.Error _ -> ()
         end
-      end;
-      true
+      end
 
     method private start_timer () =
       match timer_id with
       | None ->
-          self#invoke_merlin() |> ignore;
-          timer_id <- Some (GMain.Timeout.add ~ms:300 ~callback:self#invoke_merlin);
+          self#update() |> ignore;
+          timer_id <- Some (GMain.Timeout.add ~ms:300 ~callback:(fun () -> self#update(); true));
       | _ -> ()
 
     method private stop_timer () =
@@ -156,9 +155,10 @@ class view ~(outline : model) ?packing () =
   let _                      = view#misc#set_property "enable-tree-lines" (`BOOL true) in
   let page = outline#page in
   let buffer = page#ocaml_view#obuffer in
-  let tool_collapse_all = GButton.tool_button ~packing:toolbar#insert () in
-  let tool_select_from_buffer = GButton.tool_button ~packing:toolbar#insert () in
+  let tool_refresh = GButton.tool_button ~packing:toolbar#insert () in
+  let tool_goto_cursor_position = GButton.tool_button ~packing:toolbar#insert () in
   let tool_follow_cursor = GButton.toggle_tool_button ~active:true ~packing:toolbar#insert () in
+  let tool_collapse_all = GButton.tool_button ~packing:toolbar#insert () in
   object (self)
     inherit GObj.widget vbox#as_widget
 
@@ -167,10 +167,10 @@ class view ~(outline : model) ?packing () =
     val mutable timer_follow_cursor = None
 
     initializer
-      (* Toolbar *)
-      let _ = tool_collapse_all#set_label_widget (Gtk_util.label_icon "\u{f102}")#coerce in
-      let _ = tool_select_from_buffer#set_label_widget (Gtk_util.label_icon "\u{f177}")#coerce in
-      let _ = tool_follow_cursor#set_label_widget (Gtk_util.label_icon "\u{21c6}")#coerce in
+      tool_refresh#set_label_widget (Gtk_util.label_icon "\u{f46a}")#coerce;
+      tool_collapse_all#set_label_widget (Gtk_util.label_icon "\u{f102}")#coerce;
+      tool_goto_cursor_position#set_label_widget (Gtk_util.label_icon "\u{f177}")#coerce;
+      tool_follow_cursor#set_label_widget (Gtk_util.label_icon "\u{21c6}")#coerce;
 
       self#update_preferences();
       Preferences.preferences#connect#changed ~callback:(fun _ -> self#update_preferences ()) |> ignore;
@@ -181,18 +181,17 @@ class view ~(outline : model) ?packing () =
       page#view#event#connect#focus_out ~callback:(fun _ ->
           self#set_follow_cursor false;
           outline#detach(); false) |> ignore;
-
       outline#connect#changed ~callback:self#build |> ignore;
-
-      sig_selection_changed <- Some (view#selection#connect#changed ~callback:self#jump_to);
+      sig_selection_changed <- Some (view#selection#connect#changed ~callback:self#jump_to_definition);
       view#connect#row_expanded ~callback:self#build_childs |> ignore;
       tool_follow_cursor#connect#clicked ~callback:(fun () ->
           self#set_follow_cursor tool_follow_cursor#get_active) |> ignore;
-      tool_select_from_buffer#connect#clicked ~callback:begin fun () ->
-        self#select_from_buffer (buffer#get_mark `INSERT)
+      tool_goto_cursor_position#connect#clicked ~callback:begin fun () ->
+        self#goto_cursor_position (buffer#get_mark `INSERT)
       end |> ignore;
+      tool_refresh#misc#set_tooltip_text "Refresh";
       tool_collapse_all#misc#set_tooltip_text "Collapse All";
-      tool_select_from_buffer#misc#set_tooltip_text "Go to Cursor Position";
+      tool_goto_cursor_position#misc#set_tooltip_text "Go to Cursor Position";
       tool_follow_cursor#misc#set_tooltip_text "Follow Cursor";
       tool_collapse_all#connect#clicked ~callback:begin fun () ->
         if tool_follow_cursor#get_active then begin
@@ -210,6 +209,7 @@ class view ~(outline : model) ?packing () =
         end;
         view#collapse_all()
       end |> ignore;
+      tool_refresh#connect#clicked ~callback:(fun () -> outline#update ~force:true ()) |> ignore;
 
     method outline = outline
 
@@ -223,7 +223,7 @@ class view ~(outline : model) ?packing () =
       if pos.col >= it#chars_in_line then raise (Invalid_linechar pos);
       it#set_line_offset pos.col (*buffer#get_iter (`LINECHAR (pos.line - 1, pos.col))*)
 
-    method jump_to () =
+    method jump_to_definition () =
       match view#selection#get_selected_rows with
       | [] -> ()
       | path :: _ ->
@@ -242,7 +242,6 @@ class view ~(outline : model) ?packing () =
               in
               buffer#select_range start stop;
               page#view#scroll_lazy start;
-              Gmisclib.Idle.add page#view#misc#grab_focus
             with Invalid_linechar pos ->
               Log.println `ERROR "Invalid line/char (%d, %d)" pos.line pos.col
           end
@@ -262,7 +261,7 @@ class view ~(outline : model) ?packing () =
               Log.println `ERROR "Invalid line/char"
           end
 
-    method select_from_buffer (mark : Gtk.text_mark) =
+    method goto_cursor_position (mark : Gtk.text_mark) =
       if self#misc#get_flag `VISIBLE then begin
         let iter = buffer#get_iter_at_mark (`MARK mark) in
         let ln = iter#line + 1 in
@@ -322,30 +321,31 @@ class view ~(outline : model) ?packing () =
       if first_child_data.ol_kind = "Dummy" then begin
         model#remove first_child |> ignore;
         let row_data = model#get ~row ~column:col_data in
-        view#expand_row parent;
         let steps =
           row_data.ol_children
           (* with idleize_cascade you need to reverse the order. TODO fix idleize_cascade *)
           |> List.sort (fun a b -> -(compare a.ol_start b.ol_start))
           |> List.map (fun child () -> self#append ~parent:(model#get_iter parent) child)
         in
-        Gmisclib.Idle.idleize_cascade ~prio:200 steps ();
+        let steps = (fun () -> view#expand_row parent) :: steps in
+        Gmisclib.Idle.idleize_cascade ~prio:300 steps ();
       end
 
     method build () =
+      Log.println `DEBUG "%s " __FUNCTION__;
       let steps = outline#get |> List.map (fun ol () -> self#append ol)  in
       model#clear();
       Gmisclib.Idle.idleize_cascade ~prio:200 steps ()
 
     method private set_follow_cursor active =
-      tool_select_from_buffer#misc#set_sensitive (not active);
+      tool_goto_cursor_position#misc#set_sensitive (not active);
       if active then
         timer_follow_cursor <- Some begin
             GMain.Timeout.add ~ms:1000 ~callback:begin fun () ->
               let mark = buffer#get_mark `INSERT in
               Gmisclib.Idle.add ~prio:300 begin fun () ->
                 Option.iter view#selection#misc#handler_block sig_selection_changed;
-                self#select_from_buffer mark;
+                self#goto_cursor_position mark;
                 Option.iter view#selection#misc#handler_unblock sig_selection_changed
               end;
               true
@@ -362,11 +362,12 @@ class view ~(outline : model) ?packing () =
       let icon = pixbuf_of_kind ol.ol_kind in
       icon |> Option.iter (model#set ~row ~column:col_icon);
       let markup =
-        sprintf "%s%s"
+        sprintf "%s%s %s"
           ol.ol_name
           (if icon = None then sprintf "<span size='x-small' color='#ffc0c0'> (%s)</span>" ol.ol_kind else "")
-          (*(sprintf "<span size='x-small' color='#c0c0c0'>[ <i>%d, %d - %d, %d</i> ]</span>"
-             ol.ol_start.line (ol.ol_start.col + 1) ol.ol_stop.line (ol.ol_stop.col + 1))*)
+          (if !Log.verbosity = `DEBUG then
+             sprintf "<span size='x-small' color='#c0c0c0'>[ <i>%d, %d - %d, %d</i> ]</span>"
+               ol.ol_start.line (ol.ol_start.col + 1) ol.ol_stop.line (ol.ol_stop.col + 1) else "")
       in
       model#set ~row ~column:col_markup markup;
       if ol.ol_children <> [] then self#append_dummy row

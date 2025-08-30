@@ -228,7 +228,7 @@ let type_expression ~position:(line, col) ~expression ~filename ~buffer =
   let position = sprintf "%d:%d" line col in
   [ "type-expression"; "-position"; position; "-expression"; sprintf "\"%s\"" expression ]
   |> execute_async filename buffer
-  |> Async.map begin fun json ->
+  |> Async.map ~name:__FUNCTION__ begin fun json ->
     match Merlin_j.type_expression_answer_of_string json with
     | Return type_expression ->
         Log.println `INFO "%s" (Yojson.Safe.prettify json);

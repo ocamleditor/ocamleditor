@@ -19,7 +19,7 @@ module Icons = struct
   let expander_closed = "\u{f105}"
 end
 
-exception Invalid_linechar
+exception Invalid_linechar of int * int * int * int
 
 let counter = ref 0
 
@@ -468,21 +468,27 @@ class margin_fold (outline : Oe.outline) (view : Ocaml_text.view) =
             end;
           end else
             expanders |> List.iter (fun ex -> ex#show top left height);
-        with Invalid_linechar ->
-          Log.println `ERROR "===>> Invalid_linechar <<===";
+        with Invalid_linechar (ln, el, cn, cl) ->
+          Log.println `ERROR "===>> Invalid_linechar (%d/%d, %d/%d) <<===" ln el cn cl;
           is_refresh_pending <- true
       end else begin
         Log.println `DEBUG "outline is invalid (buffer is changed after last update)";
         is_refresh_pending <- true
       end
 
+    method private get_iter_at_pos (pos : Merlin_j.pos) =
+      let ln = pos.line - 1 in
+      if ln < 0 || ln > buffer#end_iter#line then
+        raise (Invalid_linechar (pos.line, buffer#end_iter#line, pos.col, -99));
+      let iter_line = buffer#get_iter (`LINE ln) in
+      if pos.col >= iter_line#chars_in_line then
+        raise (Invalid_linechar (pos.line, -99, pos.col, iter_line#chars_in_line));
+      buffer#get_iter (`LINECHAR (ln, pos.col))
+
     method private draw_expander ol top left height =
-      let start = buffer#get_iter (`LINECHAR (ol.ol_start.line - 1, ol.ol_start.col)) in (* TODO Crashed here *)
-      if ol.ol_stop.line <= 0 || ol.ol_stop.line > buffer#end_iter#line + 1 then raise Invalid_linechar;
-      let stop_line = buffer#get_iter (`LINE (ol.ol_stop.line - 1)) in
-      if ol.ol_stop.col >= stop_line#chars_in_line then raise Invalid_linechar;
+      let start = self#get_iter_at_pos ol.ol_start in
       let stop =
-        let iter = buffer#get_iter (`LINECHAR (ol.ol_stop.line - 1, ol.ol_stop.col)) in
+        let iter = self#get_iter_at_pos ol.ol_stop in
         if ol.ol_kind = "Method" then
           skip_comments_backward comments (iter#set_line_offset 0)
         else iter
@@ -515,6 +521,7 @@ class margin_fold (outline : Oe.outline) (view : Ocaml_text.view) =
     method find_nested_expanders (expander : expander) =
       let all_nested =
         expanders
+        (* TODO Crashed here: exp#body when disabled code folding. *)
         |> List.filter (fun exp -> expander#body_contains exp#body)
         |> List.filter (fun exp -> exp#id <> expander#id)
       in

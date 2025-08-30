@@ -275,7 +275,7 @@ let spawn_window qi position (entry : type_enclosing_value) (entry2 : type_enclo
     let ident = qi.view#obuffer#get_text ~start ~stop () in
     let context = qi.filename, Some (start#line + 1), Some (start#line_offset + 1) in
     Ocp_index.fullname_async ~context ident
-    |> Async.map (fun fullname ->
+    |> Async.map ~name:"spawn_window" (fun fullname ->
         match fullname with
         | Some fullname ->
             label_fn#misc#show();
