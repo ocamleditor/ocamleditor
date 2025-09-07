@@ -260,7 +260,7 @@ and view ?project ?buffer () =
      reduces the selection to part of the identifier. *)
   let is_two_button_press = ref false in
   object (self)
-    inherit Text.view ?project ~buffer:buffer#as_text_buffer () as super
+    inherit Text.view ?project ~buffer:buffer#as_text_buffer ()
     val mutable popup = None
     val mutable smart_click = true;
     val mutable select_enclosing_expr = None
@@ -400,8 +400,5 @@ and view ?project ?buffer () =
 
     method select_enclosing_expr ?(iter = buffer#get_iter_at_mark `INSERT) () =
       select_enclosing_expr |> Option.iter (fun sel -> sel#start ~iter)
-
-    method! scroll_lazy iter =
-      super#scroll_lazy iter
 
   end

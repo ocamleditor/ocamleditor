@@ -6,7 +6,7 @@ open Preferences
 module Log = Common.Log.Make(struct let prefix = "OUTLINE" end)
 let _ =
   Log.set_print_timestamp true;
-  Log.set_verbosity `DEBUG
+  Log.set_verbosity `WARN
 
 exception Invalid_linechar of Merlin_j.pos
 exception Break of Gtk.tree_iter

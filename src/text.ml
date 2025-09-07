@@ -185,7 +185,6 @@ class buffer =
         self#select_range (stop#backward_chars (Glib.Utf8.length text)) stop;
         undo#end_block ();
 
-
       method save_buffer ?(filename=tmp_filename) () =
         let text = buffer#get_text () in
         Utils.mkdir_p (Filename.dirname filename);
@@ -223,13 +222,14 @@ and view ?project ?buffer () =
     val mutable approx_char_width = 0
     val visible_height = new GUtil.variable 0
     val mutable signal_expose : GtkSignal.id option = None
-    val mutable gutter_icons = []
     val hyperlink = Gmisclib.Text.hyperlink ~view ()
     val mutable signal_id_highlight_current_line = None
     val mutable mark_occurrences_manager = None
     val mutable current_line_border_x1 = 0
-    method set_current_line_border_x1 x = current_line_border_x1 <- x
     val mutable current_line_border_x2 = 0
+
+    method set_current_line_border_x1 x = current_line_border_x1 <- x
+
     method set_current_line_border_x2 x = current_line_border_x2 <- x
 
     method project = project
@@ -450,14 +450,6 @@ and view ?project ?buffer () =
       let x = x0 + x in
       let y = y0 + y in
       x, y
-
-    method get_location_top_right () =
-      let pX, pY = Gdk.Window.get_pointer_location (Gdk.Window.root_parent ()) in
-      let win = (match self#get_window `WIDGET
-                 with None -> failwith "Text.text#get_location_top_right `WIDGET = None" | Some w -> w) in
-      let px, py = Gdk.Window.get_pointer_location win in
-      (pX - px + self#misc#allocation.Gtk.width),
-      (pY - py)
 
     method get_scroll_top () =
       let vrect = self#visible_rect in

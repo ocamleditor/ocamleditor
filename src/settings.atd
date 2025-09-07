@@ -48,8 +48,8 @@ type settings = {
   ~outline_color_nor_fg            <ocaml default="{light=\"#000000\"; dark=\"#E1E1E1\"}" mutable> : string color;
   ~outline_color_sel_bg            <ocaml default="{light=\"#1F80ED\"; dark=\"#4B81AD\"}" mutable> : string color;
   ~outline_color_sel_fg            <ocaml default="{light=\"#FFFFFF\"; dark=\"#FFFFFF\"}" mutable> : string color;
-  ~outline_color_act_bg            <ocaml default="{light=\"#B1C3D8\"; dark=\"#B1C3D8\"}" mutable> : string color;
-  ~outline_color_act_fg            <ocaml default="{light=\"#000000\"; dark=\"#1E1E1E\"}" mutable> : string color;
+  ~outline_color_act_bg            <ocaml default="{light=\"#B1C3D8\"; dark=\"#39424D\"}" mutable> : string color;
+  ~outline_color_act_fg            <ocaml default="{light=\"#000000\"; dark=\"#A4A4A4\"}" mutable> : string color;
   ~outline_color_alt_rows          <ocaml default="None" mutable> : float option;
 
   ~output_font                     <ocaml default="\"monospace 8\"" mutable> : string;
