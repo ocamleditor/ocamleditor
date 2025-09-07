@@ -165,6 +165,7 @@ class view ~(outline : model) ?packing () =
     val mutable code_font_family = ""
     val mutable sig_selection_changed = None
     val mutable timer_follow_cursor = None
+    val mutable names_expaneded = []
 
     initializer
       tool_refresh#set_label_widget (Gtk_util.label_icon "\u{f46a}")#coerce;
@@ -183,7 +184,15 @@ class view ~(outline : model) ?packing () =
           outline#detach(); false) |> ignore;
       outline#connect#changed ~callback:self#build |> ignore;
       sig_selection_changed <- Some (view#selection#connect#changed ~callback:self#jump_to_definition);
-      view#connect#row_expanded ~callback:self#build_childs |> ignore;
+      view#connect#row_expanded ~callback:begin fun row path ->
+        let ol = model#get ~row ~column:col_data in
+        names_expaneded <- ol.ol_name :: names_expaneded;
+        self#build_childs row path
+      end |> ignore;
+      view#connect#row_collapsed ~callback:begin fun row path ->
+        let ol = model#get ~row ~column:col_data in
+        names_expaneded <- names_expaneded |> List.filter (fun n -> ol.ol_name = n);
+      end |> ignore;
       tool_follow_cursor#connect#clicked ~callback:(fun () ->
           self#set_follow_cursor tool_follow_cursor#get_active) |> ignore;
       tool_goto_cursor_position#connect#clicked ~callback:begin fun () ->
@@ -332,8 +341,18 @@ class view ~(outline : model) ?packing () =
       end
 
     method build () =
-      Log.println `DEBUG "%s " __FUNCTION__;
       let steps = outline#get |> List.map (fun ol () -> self#append ol)  in
+      let update_expaneded_rows () =
+        model#foreach begin fun path row ->
+          let ol = model#get ~row ~column:col_data in
+          if names_expaneded |> List.exists (fun ne -> ne = ol.ol_name) then begin
+            Log.println `DEBUG "%s %s" __FUNCTION__ ol.ol_name;
+            view#expand_row path;
+          end;
+          false
+        end
+      in
+      let steps = update_expaneded_rows :: steps in
       model#clear();
       Gmisclib.Idle.idleize_cascade ~prio:200 steps ()
 
@@ -363,7 +382,7 @@ class view ~(outline : model) ?packing () =
       icon |> Option.iter (model#set ~row ~column:col_icon);
       let markup =
         sprintf "%s%s %s"
-          ol.ol_name
+          (Glib.Markup.escape_text ol.ol_name)
           (if icon = None then sprintf "<span size='x-small' color='#ffc0c0'> (%s)</span>" ol.ol_kind else "")
           (if !Log.verbosity = `DEBUG then
              sprintf "<span size='x-small' color='#c0c0c0'>[ <i>%d, %d - %d, %d</i> ]</span>"

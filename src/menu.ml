@@ -421,6 +421,7 @@ let view ~browser ~group ~flags
   let code_folding = GMenu.menu_item ~label:"Code Folding" ~packing:menu#add () in
   let code_folding_menu = GMenu.menu ~packing:code_folding#set_submenu () in
   let enable_code_folding = GMenu.check_menu_item ~label:"Enable Code Folding" ~packing:code_folding_menu#add () in
+  enable_code_folding#add_accelerator ~group ~modi:[`CONTROL; `SHIFT] GdkKeysyms._F1 ~flags;
   ignore (enable_code_folding#connect#after#toggled ~callback:begin fun () ->
       Menu_view.toggle_code_folding ~enable_code_folding editor
     end);

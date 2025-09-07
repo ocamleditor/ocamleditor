@@ -204,7 +204,7 @@ class expander ~(view : Ocaml_text.view) ~tag_highlight ~tag_invisible ?packing 
 
     method invalidate () =
       self#misc#hide();
-      self#expand();
+      self#expand ~prio:100 ();
       is_valid <- false;
       self#destroy();
 
@@ -521,7 +521,7 @@ class margin_fold (outline : Oe.outline) (view : Ocaml_text.view) =
     method find_nested_expanders (expander : expander) =
       let all_nested =
         expanders
-        (* TODO Crashed here: exp#body when disabled code folding. *)
+        (* TODO Crashed here: exp#body when disabling code folding. *)
         |> List.filter (fun exp -> expander#body_contains exp#body)
         |> List.filter (fun exp -> exp#id <> expander#id)
       in
@@ -598,7 +598,7 @@ class margin_fold (outline : Oe.outline) (view : Ocaml_text.view) =
     method disable () =
       self#set_is_visible false;
       expanders |> List.iter (fun exp -> exp#expand ?prio:(Some 100) ());
-      Gmisclib.Idle.add ~prio:300 (fun () -> expanders |> List.iter (fun exp -> exp#destroy()));
+      expanders |> List.iter (fun exp -> exp#invalidate());
       expanders <- [];
       comments <- [];
       is_refresh_pending <- false;
