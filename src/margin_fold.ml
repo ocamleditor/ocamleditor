@@ -389,15 +389,7 @@ class margin_fold (outline : Oe.outline) (view : Ocaml_text.view) =
     in
     GPango.to_pixels (view#misc#pango_context#get_metrics ~desc ())#approx_digit_width
   in
-  let rec skip_comments_backward (comments : (int * int * bool) list) (start : GText.iter) =
-    let it = (start#backward_find_char Text_util.not_blank)#forward_char in
-    let offset = it#offset in
-    match comments |> List.find_opt (fun (_, e, _) -> offset = e) with
-    | Some (b, e, _) ->
-        skip_comments_backward comments (buffer#get_iter (`OFFSET b))
-    | _ ->
-        buffer#get_iter (`OFFSET offset)
-  in
+  let (!!) pos = sprintf "(%d, %d)" pos.line (pos.col + 1) in
   object (self)
     inherit margin()
 
@@ -406,8 +398,6 @@ class margin_fold (outline : Oe.outline) (view : Ocaml_text.view) =
         cached have become invalid. The drawing of the margin is therefore
         postponed until the folding points are back in sync. *)
     val mutable is_refresh_pending = false
-
-    val mutable comments = []
 
     val mutable expanders : expander list = []
     val begin_expander_toggled = new begin_expander_toggled()
@@ -437,23 +427,11 @@ class margin_fold (outline : Oe.outline) (view : Ocaml_text.view) =
               end expanders;
             outline#get
             |> iter_depth_first begin fun parent ol ->
+              (*Log.println `DEBUG "%s %s %s - %s" ol.ol_kind ol.ol_name !!(ol.ol_start) !!(ol.ol_stop);*)
               ol.ol_parent <- parent;
               if ol.ol_kind = "Method" then methods := ol :: !methods
               else self#draw_expander ol top left height;
             end None;
-            !methods
-            |> List.filter (fun ol -> ol.ol_parent <> None)
-            |> Utils.ListExt.group_by (fun ol -> ol.ol_parent)
-            |> List.iter begin fun (parent, meths) ->
-              match parent with
-              | Some parent  ->
-                  ({ parent with ol_start = parent.ol_stop } :: meths)
-                  |> List.sort (fun m1 m2 -> Stdlib.compare m1.ol_start m2.ol_start)
-                  |> Utils.ListExt.pairwise
-                  |> List.iter (fun (ol1, ol2) -> ol1.ol_stop <- ol2.ol_start);
-              | _ -> ()
-            end
-            |> ignore;
             !methods |> List.iter (fun ol -> self#draw_expander ol top left height);
             is_refresh_pending <- false;
             expanders |> List.iter begin fun ex ->
@@ -487,12 +465,7 @@ class margin_fold (outline : Oe.outline) (view : Ocaml_text.view) =
 
     method private draw_expander ol top left height =
       let start = self#get_iter_at_pos ol.ol_start in
-      let stop =
-        let iter = self#get_iter_at_pos ol.ol_stop in
-        if ol.ol_kind = "Method" then
-          skip_comments_backward comments (iter#set_line_offset 0)
-        else iter
-      in
+      let stop = self#get_iter_at_pos ol.ol_stop in
       if stop#line > start#line then begin
         let expander =
           match expanders |> List.find_opt (fun exp -> exp#folding_point#equal start) with
@@ -600,7 +573,6 @@ class margin_fold (outline : Oe.outline) (view : Ocaml_text.view) =
       expanders |> List.iter (fun exp -> exp#expand ?prio:(Some 100) ());
       expanders |> List.iter (fun exp -> exp#invalidate());
       expanders <- [];
-      comments <- [];
       is_refresh_pending <- false;
       self#disconnect_signals();
 
@@ -617,7 +589,6 @@ class margin_fold (outline : Oe.outline) (view : Ocaml_text.view) =
       outline#connect#changed ~callback:begin fun _ ->
         is_refresh_pending <- true;
         Log.println `DEBUG "CHANGED %b" is_refresh_pending;
-        comments <- Comments.scan_locale (buffer#get_text ());
         Gmisclib.Idle.add ~prio:100 begin fun () ->
           view#draw_gutter(); (* triggers draw *)
         end;

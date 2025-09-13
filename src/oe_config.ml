@@ -57,43 +57,20 @@ let current_line_style                   = (*`ON_OFF_DASH*) `SOLID
 let current_line_join                    = (*`ROUND `MITER `BEVEL *) `BEVEL
 let on_off_dashes                        = [3; 3]
 let use_theme_colors_when_possible       = true
-(* Gutter colors:
-   `CALC factor    : Calculated according to the bg color of the text view.
-                    [darker] 0.5 <= factor <= 1.0 [same as text view]
-   `THEME          : Based on the GTK theme.
-   `NAME "#ffffff" : Specific color. *)
-let gutter_fg_color                      = `THEME (*`CALC 0.50*) (*`NAME "#6070ff"*)
-let gutter_border_color                  = `THEME (*`CALC 0.875*) (*`CALC 0.97*)
-let gutter_marker_color                  = `THEME (*`CALC 0.50*)
-let gutter_marker_bg_color               = `THEME (*`CALC 0.80*)
-let gutter_diff_size                     = 50 (* 0 = disabled *)
 
 (** Whether the [collapse_to_definitions] command should collapse all definitions,
     including nested ones, or only affect top-level definitions. *)
 let code_folding_deep_collapse           = true
-let code_folding_scope_color             = `NAME "#e5e5e5" (* disabled *)
 let code_folding_highlight_color         = { light = "#f1f1f1"; dark = "#202020" }
-let code_folding_hightlight_gradient     = [ (* [] for no gradient *)
-  { light = "#f4f4f4"; dark = "#202020" };
-  { light = "#f9f9f9"; dark = "#1b1b1b" };
-  { light = "#fefefe"; dark = "#161616" };
-]
 let code_folding_tag_invisible_name      = "fold-invisible"
 let code_folding_tag_highlight_name      = "fold-highlight"
 let code_folding_expander_color          = `NAME "#ff0000"
 
-
 let global_gutter_size                   = 30
-let global_gutter_comments_color         = `NAME "#fa80a5"
-let global_gutter_comments_bgcolor       = `NAME "#fad0f5"
-
-
 let global_gutter_diff_color_add         = { light = "#60b060"; dark = "#13401e" }
 let global_gutter_diff_color_del         = { light = "#ff6060"; dark = "#3e181d" }
 let global_gutter_diff_color_change      = { light = "#0079FF"; dark = "#0079FF" }
 let global_gutter_diff_style             = (`COLOR false : [`BW | `COLOR of bool])
-let global_gutter_diff_tooltips          = false
-let global_gutter_no_errors              = `NAME "#daedd0"
 let find_replace_history_max_length      = 75
 let find_text_output_highlight           = `DEFAULT, `DEFAULT (*`NAME "#ffff7e", `NONE*) (* Background and foreground colors to highlight occurrences where the pattern matches.
                                                                                             (`NONE=do not change color; `DEFAULT=default color; `NAME=specific color)*)
@@ -107,14 +84,7 @@ let location_history_max_length          = 30 (* hint *)
 let location_history_max_edit            = 5
 let module_browser_max_results           = 150 (* Max. number of search results to display in the search_entry as you type *)
 let module_browser_secondary_title_color = { light = "#877033"; dark = "#707070" }
-let completion_popup_default_dimensions  = 900, 350
 let completion_name_table_enabled        = true
-let odoc_tag_properties                  = [ (* These properties apply to ocamldoc comments only, not to the type descriptions. *)
-  `PIXELS_INSIDE_WRAP 2;
-  `PIXELS_BELOW_LINES 2;
-  `WRAP_MODE `WORD]
-let odoc_margin                          = 8
-let layout_find_references               = `VERTICAL
 let layout_find_module_browser           = `VERTICAL
 (* Path relative to the project home directory where to find custom templates. *)
 let template_project_filename            = ".extensions" // "templates.cma"
@@ -124,10 +94,7 @@ let editor_tab_color_alt_normal          = `NAME "#310080"
 let colored_types                        = true
 let unify_statusbars                     = false
 
-
 (** End of Configuration Section ============================================ *)
-
-
 
 let ocaml_codeset = "UTF-8"
 

@@ -85,7 +85,8 @@ class page ?file ~project ~scroll_offset ~offset ~editor () =
   let buffer                   = new Ocaml_text.buffer ~project ?file () in
   let sw, text_view, ocaml_view = create_view ~project ~buffer ?file () in
   let vbox                     = GPack.vbox ~spacing:0 () in
-  let textbox                  = GPack.hbox ~spacing:0 ~packing:vbox#add () in
+  let paned                    = GPack.paned `HORIZONTAL ~packing:vbox#add () in
+  let textbox                  = GPack.hbox ~spacing:0 ~packing:paned#add2 () in
   let _                        = textbox#add sw#coerce in (* Text box *)
   let svbox                    = GPack.vbox ~spacing:1 ~packing:textbox#pack () in (* Vertical scrollbar box *)
   let global_gutter_ebox       = GBin.event_box ~packing:textbox#pack () in (* Global gutter box *)
@@ -187,6 +188,7 @@ class page ?file ~project ~scroll_offset ~offset ~editor () =
       file_changed#call file_obj
 
     method get_filename = match file with None -> "untitled.ml" | Some f -> f#filename
+
     method get_title =
       match file with
       | Some file ->
@@ -196,6 +198,7 @@ class page ?file ~project ~scroll_offset ~offset ~editor () =
             | Some rmt -> sprintf "%s@%s%s" rmt.Editor_file_type.user rmt.Editor_file_type.host file#filename
           end;
       | _ -> ""
+
     method view = view
     method ocaml_view = ocaml_view
     method buffer = buffer
@@ -586,9 +589,7 @@ class page ?file ~project ~scroll_offset ~offset ~editor () =
         editorbar#button_dotview#misc#set_sensitive (Menu_view.get_switch_view_sensitive editor#project self);
       end
 
-    method pack_outline (widget : GObj.widget) =
-      textbox#pack widget;
-      textbox#reorder_child widget ~pos:0
+    method pack_outline (widget : GObj.widget) = paned#add1 widget
 
     method connect = signals
     method disconnect = signals#disconnect
