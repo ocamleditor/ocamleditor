@@ -13,17 +13,14 @@ exception Break of Gtk.tree_iter
 
 open GUtil
 
-class model ~(page : Editor_page.page) () =
-  let merlin text func = func ~filename:page#get_filename ~buffer:text in
-  let buffer = page#buffer in
+class model ~(buffer : Ocaml_text.buffer) () =
+  let merlin text func = func ~filename:buffer#filename ~buffer:text in
   object (self)
     val mutable outline = []
     val mutable outline_hash = 0
     val mutable timer_id = None
     val mutable last_refresh_time = 0.0
     val changed = new changed()
-
-    method page = page
 
     method get = outline
 
@@ -49,8 +46,8 @@ class model ~(page : Editor_page.page) () =
                 changed#call ();
               end else
                 Log.println `WARN
-                  "*** not up-to-date (%s) %f.2 %f.2 ***"
-                  (Filename.basename page#get_filename)
+                  "*** not up-to-date (%s) %.2f %.2f ***"
+                  (Filename.basename buffer#filename)
                   buffer#last_edit_time  last_refresh_time;
         | Merlin.Failure _ | Merlin.Error _ -> ()
         end
@@ -133,7 +130,7 @@ let col_data           : Merlin_j.outline GTree.column = cols#add Gobject.Data.c
 let col_default_sort   = cols#add Gobject.Data.int
 
 
-class view ~(outline : model) ?packing () =
+class view ~(outline : Oe.outline) ~(source_view : Ocaml_text.view) ?packing () =
   let pref                   = Preferences.preferences#get in
   let show_types             = pref.outline_show_types in
   let vbox                   = GPack.vbox ?packing () in
@@ -153,8 +150,7 @@ class view ~(outline : model) ?packing () =
   let _                      = view#append_column vc in
   let _                      = view#misc#set_name "outline_treeview" in
   let _                      = view#misc#set_property "enable-tree-lines" (`BOOL true) in
-  let page = outline#page in
-  let buffer = page#ocaml_view#obuffer in
+  let buffer = source_view#obuffer in
   let tool_refresh = GButton.tool_button ~packing:toolbar#insert () in
   let tool_goto_cursor_position = GButton.tool_button ~packing:toolbar#insert () in
   let tool_follow_cursor = GButton.toggle_tool_button ~active:true ~packing:toolbar#insert () in
@@ -175,21 +171,29 @@ class view ~(outline : model) ?packing () =
 
       self#update_preferences();
       Preferences.preferences#connect#changed ~callback:(fun _ -> self#update_preferences ()) |> ignore;
+      self#set_follow_cursor true; (* TODO Preferences *)
 
-      page#view#event#connect#focus_in ~callback:(fun _ ->
-          self#set_follow_cursor tool_follow_cursor#get_active;
-          outline#attach(); false) |> ignore;
-      page#view#event#connect#focus_out ~callback:(fun _ ->
-          self#set_follow_cursor false;
-          outline#detach(); false) |> ignore;
+      let sig_focus_in =
+        source_view#event#connect#focus_in ~callback:(fun _ ->
+            self#set_follow_cursor tool_follow_cursor#get_active;
+            outline#attach(); false)
+      in
+      let sig_focus_out =
+        source_view#event#connect#focus_out ~callback:(fun _ ->
+            self#set_follow_cursor false;
+            outline#detach(); false)
+      in
       outline#connect#changed ~callback:self#build |> ignore;
       sig_selection_changed <- Some (view#selection#connect#changed ~callback:self#jump_to_definition);
       view#connect#row_expanded ~callback:begin fun row path ->
-        let ol = model#get ~row ~column:col_data in
-        names_expaneded <- ol.ol_name :: names_expaneded;
-        self#build_childs row path
+        try
+          let ol = model#get ~row ~column:col_data in
+          names_expaneded <- ol.ol_name :: names_expaneded;
+          self#build_childs row path
+        with Gpointer.Null as ex ->
+          Printf.eprintf "File \"outline.ml\": **** %s\n%s\n%!" (Printexc.to_string ex) (Printexc.get_backtrace());
       end |> ignore;
-      view#connect#row_collapsed ~callback:begin fun row path ->
+      view#connect#row_collapsed ~callback:begin fun row _ ->
         let ol = model#get ~row ~column:col_data in
         names_expaneded <- names_expaneded |> List.filter (fun n -> ol.ol_name = n);
       end |> ignore;
@@ -213,14 +217,20 @@ class view ~(outline : model) ?packing () =
                   self#set_follow_cursor tool_follow_cursor#get_active;
                   Option.iter (GtkSignal.disconnect buffer#as_buffer) !sig_mark_set;
               | _ -> ()
-            end);
-          ()
+            end)
         end;
         view#collapse_all()
       end |> ignore;
       tool_refresh#connect#clicked ~callback:(fun () -> outline#update ~force:true ()) |> ignore;
+      view#misc#connect#destroy ~callback:begin fun _ ->
+        GtkSignal.disconnect source_view#as_view sig_focus_in;
+        GtkSignal.disconnect source_view#as_view sig_focus_out;
+        self#set_follow_cursor false
+      end |> ignore
 
     method outline = outline
+
+    method refresh () = outline#update ~force:true ()
 
     method private get_iter_at_line pos =
       let ln = pos.line - 1 in
@@ -250,7 +260,7 @@ class view ~(outline : model) ?packing () =
                     start, start
               in
               buffer#select_range start stop;
-              page#view#scroll_lazy start;
+              source_view#scroll_lazy start;
             with Invalid_linechar pos ->
               Log.println `ERROR "Invalid line/char (%d, %d)" pos.line pos.col
           end
@@ -299,8 +309,8 @@ class view ~(outline : model) ?packing () =
         end;
         match !found_paths with
         | [] ->
-            Log.println `WARN "%s, %s no paths found at (%d, %d)"
-              __FUNCTION__ page#get_filename ln cn;
+            (*Log.println `WARN "%s, %s no paths found at (%d, %d)"
+              __FUNCTION__ buffer#filename ln cn;*)
             view#selection#unselect_all()
         | paths -> begin
             paths
@@ -333,15 +343,15 @@ class view ~(outline : model) ?packing () =
         let steps =
           row_data.ol_children
           (* with idleize_cascade you need to reverse the order. TODO fix idleize_cascade *)
-          |> List.sort (fun a b -> -(compare a.ol_start b.ol_start))
+          |> List.sort (fun a b -> compare b.ol_start a.ol_start)
           |> List.map (fun child () -> self#append ~parent:(model#get_iter parent) child)
         in
         let steps = (fun () -> view#expand_row parent) :: steps in
         Gmisclib.Idle.idleize_cascade ~prio:300 steps ();
       end
 
-    method build () =
-      let steps = outline#get |> List.map (fun ol () -> self#append ol)  in
+    method private build () =
+      let steps = outline#get |> List.map (fun ol () -> self#append ol) in
       let update_expaneded_rows () =
         model#foreach begin fun path row ->
           let ol = model#get ~row ~column:col_data in
@@ -350,7 +360,7 @@ class view ~(outline : model) ?packing () =
             view#expand_row path;
           end;
           false
-        end
+        end;
       in
       let steps = update_expaneded_rows :: steps in
       model#clear();
@@ -363,33 +373,38 @@ class view ~(outline : model) ?packing () =
             GMain.Timeout.add ~ms:1000 ~callback:begin fun () ->
               let mark = buffer#get_mark `INSERT in
               Gmisclib.Idle.add ~prio:300 begin fun () ->
-                Option.iter view#selection#misc#handler_block sig_selection_changed;
-                self#goto_cursor_position mark;
-                Option.iter view#selection#misc#handler_unblock sig_selection_changed
+                if timer_follow_cursor <> None then begin
+                  Option.iter view#selection#misc#handler_block sig_selection_changed;
+                  self#goto_cursor_position mark;
+                  Option.iter view#selection#misc#handler_unblock sig_selection_changed;
+                end
               end;
               true
             end
           end
       else begin
-        Option.iter GMain.Timeout.remove timer_follow_cursor;
-        timer_follow_cursor <- None
+        Option.iter begin fun id ->
+          timer_follow_cursor <- None;
+          GMain.Timeout.remove id
+        end timer_follow_cursor
       end
 
     method private append ?parent ol =
-      let row = model#append ?parent () in
-      model#set ~row ~column:col_data ol;
-      let icon = pixbuf_of_kind ol.ol_kind in
-      icon |> Option.iter (model#set ~row ~column:col_icon);
-      let markup =
-        sprintf "%s%s %s"
-          (Glib.Markup.escape_text ol.ol_name)
-          (if icon = None then sprintf "<span size='x-small' color='#ffc0c0'> (%s)</span>" ol.ol_kind else "")
-          (if !Log.verbosity = `DEBUG then
-             sprintf "<span size='x-small' color='#c0c0c0'>[ <i>%d, %d - %d, %d</i> ]</span>"
-               ol.ol_start.line (ol.ol_start.col + 1) ol.ol_stop.line (ol.ol_stop.col + 1) else "")
-      in
-      model#set ~row ~column:col_markup markup;
-      if ol.ol_children <> [] then self#append_dummy row
+      if ol.ol_kind <> "Comment" then
+        let row = model#append ?parent () in
+        model#set ~row ~column:col_data ol;
+        let icon = pixbuf_of_kind ol.ol_kind in
+        icon |> Option.iter (model#set ~row ~column:col_icon);
+        let markup =
+          sprintf "%s%s %s"
+            (Glib.Markup.escape_text ol.ol_name)
+            (if icon = None then sprintf "<span size='x-small' color='#ffc0c0'> (%s)</span>" ol.ol_kind else "")
+            (if !Log.verbosity = `DEBUG then
+               sprintf "<span size='x-small' color='#c0c0c0'>[ <i>%d, %d - %d, %d</i> ]</span>"
+                 ol.ol_start.line (ol.ol_start.col + 1) ol.ol_stop.line (ol.ol_stop.col + 1) else "")
+        in
+        model#set ~row ~column:col_markup markup;
+        if ol.ol_children <> [] then self#append_dummy row
 
     method private append_dummy row =
       let dummy = model#append ~parent:row () in
@@ -404,7 +419,7 @@ class view ~(outline : model) ?packing () =
         ol_children = []
       };
 
-    method update_preferences () =
+    method private update_preferences () =
       let pref = Preferences.preferences#get in
       view#misc#modify_font_by_name pref.editor_completion_font;
       view#misc#modify_base [

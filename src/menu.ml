@@ -383,7 +383,7 @@ let view ~browser ~group ~flags
     menu_item_view_tabbar := (item, sign) :: !menu_item_view_tabbar;
   end;
   begin
-    let item = GMenu.check_menu_item ~label:"Structure" ~active:editor#show_outline ~packing:menu#add () in
+    let item = GMenu.check_menu_item ~label:"Outline" ~active:editor#show_outline ~packing:menu#add () in
     item#add_accelerator ~group ~modi:[`CONTROL; `MOD1] GdkKeysyms._z ~flags;
     let sign = item#connect#activate ~callback:(fun () -> browser#set_outline_visible (not editor#show_outline)) in
     menu_item_view_outline := (item, sign) :: !menu_item_view_outline;

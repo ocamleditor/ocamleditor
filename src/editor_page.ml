@@ -589,7 +589,17 @@ class page ?file ~project ~scroll_offset ~offset ~editor () =
         editorbar#button_dotview#misc#set_sensitive (Menu_view.get_switch_view_sensitive editor#project self);
       end
 
-    method pack_outline (widget : GObj.widget) = paned#add1 widget
+    method show_outline () =
+      match outline with
+      | Some outline ->
+          let outline_view = new Outline.view ~outline ~source_view:self#ocaml_view () in
+          paned#add1 (outline_view :> GObj.widget);
+          Gmisclib.Idle.add ~prio:300 outline_view#refresh
+      | _ -> Log.println `ERROR "outline does not exist"
+
+    method hide_outline () =
+      try paned#child1#destroy()
+      with Gpointer.Null -> ()
 
     method connect = signals
     method disconnect = signals#disconnect

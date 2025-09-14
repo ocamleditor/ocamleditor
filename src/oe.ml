@@ -142,6 +142,7 @@ class type outline =
     method detach : unit -> unit
     method get : Merlin_j.outline list
     method is_valid : bool
+    method update : ?force:bool -> unit -> unit
     method connect : outline_signals
   end
 and outline_signals =
