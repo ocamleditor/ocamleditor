@@ -36,8 +36,26 @@ class model ~(buffer : Ocaml_text.buffer) () =
         let source_code = buffer#get_text () in
         last_refresh_time <- Unix.gettimeofday();
         (merlin source_code)@@Merlin.outline
-        |> Async.start_with_continuation begin function
+        |> Async.start_with_continuation ~name:__FUNCTION__ begin function
         | Merlin.Ok (ol : Merlin_j.outline list) ->
+            let comments =
+              let open Location in
+              Lex.comments source_code
+              |> List.map begin fun (c, loc) ->
+                let _, start_ln, start_cn = Location.get_pos_info loc.loc_start in
+                let _, stop_ln, stop_cn = Location.get_pos_info loc.loc_end in
+                {
+                  ol_kind = "Comment";
+                  ol_name = "";
+                  ol_start = { line = start_ln; col = start_cn };
+                  ol_stop = { line = stop_ln; col = stop_cn };
+                  ol_parent = None;
+                  ol_children = [];
+                  ol_level = 0;
+                }
+              end
+            in
+            let ol = List.rev_append comments ol (*|> List.sort (fun a b -> compare b.ol_start a.ol_start)*) in
             let hash = Hashtbl.hash ol in
             if outline_hash <> hash || force then
               if self#is_valid then begin

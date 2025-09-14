@@ -61,7 +61,7 @@ let use_theme_colors_when_possible       = true
 (** Whether the [collapse_to_definitions] command should collapse all definitions,
     including nested ones, or only affect top-level definitions. *)
 let code_folding_deep_collapse           = true
-let code_folding_highlight_color         = { light = "#f1f1f1"; dark = "#202020" }
+let code_folding_highlight_color         = { light = "#e1eded"; dark = "#202530" }
 let code_folding_tag_invisible_name      = "fold-invisible"
 let code_folding_tag_highlight_name      = "fold-highlight"
 let code_folding_expander_color          = `NAME "#ff0000"

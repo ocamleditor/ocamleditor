@@ -170,7 +170,7 @@ class expander ~(view : Ocaml_text.view) ~tag_highlight ~tag_invisible ?packing 
 
     method place_marks ~folding_point ~(foot : GText.iter) =
       buffer#move_mark mark_folding_point ~where:folding_point;
-      let limit = foot#forward_to_line_end in
+      let limit = if foot#ends_line then foot else foot#forward_to_line_end in
       let where =
         (* Handles definitions like "type...{...\n} and ..." or ";;" *)
         let foot =

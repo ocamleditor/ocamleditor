@@ -274,13 +274,21 @@ let spawn_window qi position (entry : type_enclosing_value) (entry2 : type_enclo
     let label_fn, label_typ, label_vars, label_doc = display qi start stop in
     let ident = qi.view#obuffer#get_text ~start ~stop () in
     let context = qi.filename, Some (start#line + 1), Some (start#line_offset + 1) in
+    (* TODO: Avoid looking up the fullname for local identifiers.
+       If the type_expr value returned by ocp_index is equal to the type_expr value returned
+       by merlin, then the fullname returned by ocp_index is correct;
+       otherwise, do not display the fullname. *)
     Ocp_index.fullname_async ~context ident
-    |> Async.map ~name:"spawn_window" (fun fullname ->
+    |> Async.map ~name:"spawn_window" begin fun fullname ->
+      try
         match fullname with
         | Some fullname ->
             label_fn#misc#show();
             label_fn#set_label (sprintf "<span size='small'>%s</span>" (Markup.type_info fullname));
-        | None -> label_fn#misc#hide())
+        | None -> label_fn#misc#hide()
+      with ex ->
+        Log.println `ERROR "%s\n\t%s\n%s" __FUNCTION__ (Printexc.to_string ex) (Printexc.get_backtrace())
+    end
     |> Async.run_synchronously;
     label_typ#set_label (sprintf "%s%s" type_expr tail_info);
     if type_params <> "" then begin
