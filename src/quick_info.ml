@@ -1,6 +1,7 @@
 open Merlin_j
 open Printf
 open Utils
+open Oe
 
 module Log = Common.Log.Make(struct let prefix = "QUICK-INFO" end)
 let _ =
@@ -264,12 +265,22 @@ let build_content qi (entry : type_enclosing_value) (entry2 : type_enclosing_val
   in
   tail_info, Markup.type_info type_expr, type_params
 
+let get_iter_at_line buffer pos =
+  let ln = pos.line - 1 in
+  if pos.line < 0 || ln > buffer#end_iter#line then raise (Invalid_linechar pos);
+  buffer#get_iter (`LINE ln)
+
+let get_iter_at_linechar buffer pos =
+  let it = get_iter_at_line buffer pos in
+  if pos.col >= it#chars_in_line then raise (Invalid_linechar pos);
+  it#set_line_offset pos.col (*buffer#get_iter (`LINECHAR (pos.line - 1, pos.col))*)
+
 (** Opens a new quick information window with the information received from merlin.
     This function is applied in a separate thread. *)
 let spawn_window qi position (entry : type_enclosing_value) (entry2 : type_enclosing_value option) =
   if qi.view#misc#get_flag `HAS_FOCUS then begin
-    let start = qi.view#obuffer#get_iter (`LINECHAR (entry.te_start.line - 1, entry.te_start.col)) in
-    let stop = qi.view#obuffer#get_iter (`LINECHAR (entry.te_stop.line - 1, entry.te_stop.col)) in
+    let start = get_iter_at_linechar qi.view#buffer entry.te_start in
+    let stop = get_iter_at_linechar qi.view#buffer entry.te_stop in
     let tail_info, type_expr, type_params = build_content qi entry entry2 in
     let label_fn, label_typ, label_vars, label_doc = display qi start stop in
     let ident = qi.view#obuffer#get_text ~start ~stop () in

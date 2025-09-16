@@ -2,8 +2,8 @@ open GUtil
 open Utils
 open Merlin
 module ColorOps = Color
-open Preferences
 open Printf
+open Markup
 
 module String_utils = struct
   let rec locate_intersection left right =
@@ -17,35 +17,6 @@ module String_utils = struct
       with Not_found ->
         locate_intersection left (Str.first_chars right (len_right - 1))
 end
-
-let color_of_kind = function
-  | "Value" -> Preferences.editor_tag_color "structure"
-  | "Type" -> Preferences.editor_tag_color "lident"
-  | "Module" -> Preferences.editor_tag_color "uident"
-  | "Constructor" -> Preferences.editor_tag_color "lident"
-  | "Label" -> Preferences.editor_tag_color "label"
-  | "Class" -> Preferences.editor_tag_color "lident"
-  | "Method" -> Preferences.editor_tag_color "lident"
-  | "Signature" -> Preferences.editor_tag_color "lident"
-  | "Exn" -> `NAME "red" |> GDraw.color
-  | "#" -> Preferences.editor_tag_color "lident"
-  | x -> Preferences.editor_tag_color "lident"
-
-let icon_of_kind kind =
-  let color = kind |> color_of_kind |> ColorOps.name_of_gdk in
-  match kind with
-  | "Value" -> sprintf "<span color='%s'>\u{ea8c} </span>" color
-  | "Type" -> sprintf "<span color='%s'>\u{1d6bb} </span>" color
-  | "Module" -> sprintf "<span color='%s'>\u{f1b2} </span>" color
-  | "Constructor" -> sprintf "<span color='%s'>\u{ea88} </span>" color
-  | "Variant" -> sprintf "<span color='%s'>\u{ea88} </span>" color
-  | "Label" -> sprintf "<span color='%s'>\u{f0316} </span>" color
-  | "Class" -> sprintf "<span color='%s'>\u{eb5b} </span>" color
-  | "Method" -> sprintf "<span color='%s'>\u{eb65} </span>" color
-  | "Signature" -> sprintf "<span color='%s'>\u{eb61} </span>" color
-  | "Exn" -> sprintf "<span color='%s'>\u{f12a} </span>" color
-  | "#" -> sprintf "<span color='%s'>\u{f0ad} </span>" color
-  | x -> sprintf "<span color='%s'>%s</span>" color x
 
 class virtual completion =
   object
@@ -312,37 +283,40 @@ class widget ~project ~(page : Editor_page.page) ~x ~y ?packing () =
       with Gpointer.Null -> ()
 
     method private display_window_info path markup_type markup_doc =
-      let create_window ~x ~y ?width ?height ?show child =
-        current_window_info |> List.iter (fun w -> (*Gmisclib.Idle.add*) w#destroy());
-        let window = Gtk_util.window_tooltip child ~parent:page ~x ~y ?width ?height ?show () in
-        current_window_info <- window :: current_window_info;
-        self#misc#connect#destroy ~callback:window#destroy |> ignore;
-        window
-      in
-      let row_area = lview#get_cell_area ~path () in
-      let r0 = self#misc#allocation in
-      let wx, wy = Gdk.Window.get_position self#misc#toplevel#misc#window in
-      let x0 = wx + r0.Gtk.width in
-      let y0 = wy + Gdk.Rectangle.y row_area in
-      let vbox = GPack.vbox ~spacing:5 ~border_width:5 () in
-      let label_type = GMisc.label ~markup:markup_type ~xalign:0.0 ~yalign:0.0 ~xpad:0 ~ypad:0 ~line_wrap:true ~packing:vbox#add () in
-      let _ = GMisc.separator `HORIZONTAL ~packing:vbox#add ~show:(markup_doc <> "") () in
-      let label_doc = GMisc.label ~markup:markup_doc ~xalign:0.0 ~yalign:0.0 ~xpad:0 ~ypad:0 ~line_wrap:true ~packing:vbox#add ~show:(markup_doc <> "") () in
-      let window_info = create_window ~x:x0 ~y:y0 ~show:false vbox#coerce in
-      window_info#resize ~width:1 ~height:1;
-      Gmisclib.Idle.add ~prio:100 begin fun () ->
-        window_info#show();
-        let _ = Gtk_util.move_window_within_screen_bounds window_info x0 y0 in
-        let r = window_info#misc#allocation in
-        if r.height > Gdk.Screen.height() then begin
-          let sw = GBin.scrolled_window ~hpolicy:`AUTOMATIC () in
-          let vp = GBin.viewport ~packing:sw#add () in
-          vbox#misc#reparent vp#coerce;
-          let width = r.width + 21 in
-          let height = Gdk.Screen.height() - y0 - 13 in
-          create_window ~x:x0 ~y:y0 ~width ~height sw#coerce |> ignore;
+      try
+        let create_window ~x ~y ?width ?height ?show child =
+          current_window_info |> List.iter (fun w -> (*Gmisclib.Idle.add*) w#destroy());
+          let window = Gtk_util.window_tooltip child ~parent:page ~x ~y ?width ?height ?show () in
+          current_window_info <- window :: current_window_info;
+          self#misc#connect#destroy ~callback:window#destroy |> ignore;
+          window
+        in
+        let row_area = lview#get_cell_area ~path () in
+        let r0 = self#misc#allocation in
+        let wx, wy = Gdk.Window.get_position self#misc#toplevel#misc#window in
+        let x0 = wx + r0.Gtk.width in
+        let y0 = wy + Gdk.Rectangle.y row_area in
+        let vbox = GPack.vbox ~spacing:5 ~border_width:5 () in
+        let label_type = GMisc.label ~markup:markup_type ~xalign:0.0 ~yalign:0.0 ~xpad:0 ~ypad:0 ~line_wrap:true ~packing:vbox#add () in
+        let _ = GMisc.separator `HORIZONTAL ~packing:vbox#add ~show:(markup_doc <> "") () in
+        let label_doc = GMisc.label ~markup:markup_doc ~xalign:0.0 ~yalign:0.0 ~xpad:0 ~ypad:0 ~line_wrap:true ~packing:vbox#add ~show:(markup_doc <> "") () in
+        let window_info = create_window ~x:x0 ~y:y0 ~show:false vbox#coerce in
+        window_info#resize ~width:1 ~height:1;
+        Gmisclib.Idle.add ~prio:100 begin fun () ->
+          window_info#show();
+          let _ = Gtk_util.move_window_within_screen_bounds window_info x0 y0 in
+          let r = window_info#misc#allocation in
+          if r.height > Gdk.Screen.height() then begin
+            let sw = GBin.scrolled_window ~hpolicy:`AUTOMATIC () in
+            let vp = GBin.viewport ~packing:sw#add () in
+            vbox#misc#reparent vp#coerce;
+            let width = r.width + 21 in
+            let height = Gdk.Screen.height() - y0 - 13 in
+            create_window ~x:x0 ~y:y0 ~width ~height sw#coerce |> ignore;
+          end
         end
-      end
+      with ex ->
+        Log.println `ERROR "%s\n%s" (Printexc.to_string ex) (Printexc.get_backtrace());
 
     method private selected_path =
       try

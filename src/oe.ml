@@ -26,6 +26,7 @@ let magic = "1";;
 type 'a dump = Dump of string * 'a
 
 exception Bad_magic_number
+exception Invalid_linechar of Merlin_j.pos
 
 let open_dump = function Dump (m, a) ->
   if m = magic then a

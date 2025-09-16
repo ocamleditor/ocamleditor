@@ -1,3 +1,4 @@
+open Oe
 open Printf
 open Settings_j
 open Merlin_j
@@ -8,7 +9,6 @@ let _ =
   Log.set_print_timestamp true;
   Log.set_verbosity `WARN
 
-exception Invalid_linechar of Merlin_j.pos
 exception Break of Gtk.tree_iter
 
 open GUtil
@@ -106,45 +106,16 @@ let pixbuf_of_kind = function
   | "Exn" -> Some (??? Icons.exc)
   | "Class" -> Some (??? Icons.classe)
   | "ClassType" -> Some (??? Icons.class_type)
+  | "Signature" -> Some (??? Icons.module_type)
   | "Method" -> Some (??? Icons.met)
   | "Label"-> Some (??? Icons.type_record) (* TODO *)
   | "Constructor"-> Some (??? Icons.type_variant) (* TODO *)
   | _ -> None;;
 
-(*| Function -> Some (??? Icons.func)
-  | Method -> Some (??? Icons.met)
-  | Method_private -> Some (??? Icons.met_private)
-  | Method_virtual -> Some (??? Icons.met_virtual)
-  | Method_private_virtual -> Some (??? Icons.met_private_virtual)
-  | Method_inherited -> Some (??? Icons.met)
-  | Initializer -> Some (??? Icons.init)
-  | Attribute -> Some (??? Icons.attribute)
-  | Attribute_mutable -> Some (??? Icons.attribute_mutable)
-  | Attribute_mutable_virtual -> Some (??? Icons.attribute_mutable_virtual)
-  | Attribute_virtual -> Some (??? Icons.attribute_virtual)
-  | Type_abstract -> Some (??? Icons.type_abstract)
-  | Type_variant -> Some (??? Icons.type_variant)
-  | Type_record -> Some (??? Icons.type_record)
-  | Type_open -> Some (??? Icons.type_variant)
-  | Class_virtual -> Some (??? Icons.class_virtual)
-  | Class_type -> Some (??? Icons.class_type)
-  | Class_inherit -> Some (??? Icons.class_inherit)
-  | Class_let_bindings -> None
-  | Module_functor -> Some (??? Icons.module_funct)
-  | Module_type -> Some (??? Icons.module_type)
-  | Module_include -> Some (??? Icons.module_include)
-  | Error -> Some (??? Icons.error_14)
-  | Warning -> Some (??? Icons.warning_14)
-  | Folder_warnings -> Some (??? Icons.folder_warning)
-  | Folder_errors -> Some (??? Icons.folder_error)
-  | Dependencies -> None
-  | Bookmark pixbuf -> Some pixbuf*)
-
 let cols               = new GTree.column_list
-let col_icon           = cols#add (Gobject.Data.gobject_by_name "GdkPixbuf")
+(*let col_icon           = cols#add (Gobject.Data.gobject_by_name "GdkPixbuf")*)
 let col_markup         = cols#add Gobject.Data.string
 let col_data           : Merlin_j.outline GTree.column = cols#add Gobject.Data.caml
-(*let col_lazy           : (unit -> unit) list GTree.column = cols#add Gobject.Data.caml*)
 let col_default_sort   = cols#add Gobject.Data.int
 
 
@@ -161,7 +132,7 @@ class view ~(outline : Oe.outline) ~(source_view : Ocaml_text.view) ?packing () 
   let vc                     = GTree.view_column () in
   let _                      = vc#pack ~expand:false renderer_pixbuf in
   let _                      = vc#pack ~expand:false renderer_markup in
-  let _                      = vc#add_attribute renderer_pixbuf "pixbuf" col_icon in
+  (*let _                      = vc#add_attribute renderer_pixbuf "pixbuf" col_icon in*)
   let _                      = vc#add_attribute renderer_markup "markup" col_markup in
 
   let _                      = view#selection#set_mode `SINGLE in
@@ -280,7 +251,8 @@ class view ~(outline : Oe.outline) ~(source_view : Ocaml_text.view) ?packing () 
               buffer#select_range start stop;
               source_view#scroll_lazy start;
             with Invalid_linechar pos ->
-              Log.println `ERROR "Invalid line/char (%d, %d)" pos.line pos.col
+              Log.println `ERROR "Invalid line/char (file %s, ln %d, cn %d)"
+                buffer#filename pos.line pos.col
           end
 
     method select_in_buffer () =
@@ -343,7 +315,7 @@ class view ~(outline : Oe.outline) ~(source_view : Ocaml_text.view) ?packing () 
               | _ ->
                   view#expand_to_path path;
                   view#selection#select_path path;
-                  if not (Gmisclib.Util.treeview_is_path_onscreen view path) then
+                  if view#misc#get_flag `REALIZED && not (Gmisclib.Util.treeview_is_path_onscreen view path) then
                     Gmisclib.Idle.add ~prio:300 (fun () ->
                         view#scroll_to_cell ~align:(0.38, 0.) path vc);
             end
@@ -411,12 +383,13 @@ class view ~(outline : Oe.outline) ~(source_view : Ocaml_text.view) ?packing () 
       if ol.ol_kind <> "Comment" then
         let row = model#append ?parent () in
         model#set ~row ~column:col_data ol;
-        let icon = pixbuf_of_kind ol.ol_kind in
-        icon |> Option.iter (model#set ~row ~column:col_icon);
+        (*let icon = pixbuf_of_kind ol.ol_kind in
+          icon |> Option.iter (model#set ~row ~column:col_icon);*)
         let markup =
-          sprintf "%s%s %s"
+          sprintf "%s   %s%s %s"
+            (Markup.icon_of_kind ol.ol_kind)
             (Glib.Markup.escape_text ol.ol_name)
-            (if icon = None then sprintf "<span size='x-small' color='#ffc0c0'> (%s)</span>" ol.ol_kind else "")
+            (*(if icon = None then sprintf "<span size='x-small' color='#ffc0c0'> (%s)</span>" ol.ol_kind else "")*) ""
             (if !Log.verbosity = `DEBUG then
                sprintf "<span size='x-small' color='#c0c0c0'>[ <i>%d, %d - %d, %d</i> ]</span>"
                  ol.ol_start.line (ol.ol_start.col + 1) ol.ol_stop.line (ol.ol_stop.col + 1) else "")
