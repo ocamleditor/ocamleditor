@@ -372,31 +372,31 @@ let view ~browser ~group ~flags
     menu_item_view_menubar := (item, sign) :: !menu_item_view_menubar;
     end;*)
   begin
-    let item = GMenu.check_menu_item ~label:"Toolbar" ~active:browser#toolbar_visible ~packing:menu#add () in
-    let sign = item#connect#activate ~callback:(fun () -> browser#set_toolbar_visible (not browser#toolbar_visible)) in
+    let item = GMenu.check_menu_item ~label:"Toolbar" ~active:browser#toolbar_visible#get ~packing:menu#add () in
+    let sign = item#connect#activate ~callback:(fun () -> browser#toolbar_visible#set (not browser#toolbar_visible#get)) in
     menu_item_view_toolbar := (item, sign) :: !menu_item_view_toolbar;
   end;
   begin
     let item = GMenu.check_menu_item ~label:"Tabbar" ~active:editor#show_tabs ~packing:menu#add () in
     item#add_accelerator ~group ~modi:[`CONTROL; `MOD1] GdkKeysyms._b ~flags;
-    let sign = item#connect#activate ~callback:(fun () -> browser#set_tabbar_visible (not editor#show_tabs)) in
+    let sign = item#connect#activate ~callback:(fun () -> browser#tabbar_visible#set (not editor#show_tabs)) in
     menu_item_view_tabbar := (item, sign) :: !menu_item_view_tabbar;
   end;
   begin
     let item = GMenu.check_menu_item ~label:"Outline" ~active:editor#show_outline ~packing:menu#add () in
     item#add_accelerator ~group ~modi:[`CONTROL; `MOD1] GdkKeysyms._z ~flags;
-    let sign = item#connect#activate ~callback:(fun () -> browser#set_outline_visible (not editor#show_outline)) in
+    let sign = item#connect#activate ~callback:(fun () -> browser#outline_visible#set (not editor#show_outline)) in
     menu_item_view_outline := (item, sign) :: !menu_item_view_outline;
   end;
   begin
     let item = GMenu.check_menu_item ~label:"Messages" ~active:Messages.vmessages#visible ~packing:menu#add () in
     item#add_accelerator ~group ~modi:[`CONTROL; `MOD1] GdkKeysyms._m ~flags;
-    let sign = item#connect#activate ~callback:(fun () -> browser#set_vmessages_visible (not Messages.vmessages#visible)) in
+    let sign = item#connect#activate ~callback:(fun () -> Messages.vmessages#set_visible (not Messages.vmessages#visible)) in
     menu_item_view_messages := (item, sign) :: !menu_item_view_messages;
   end;
   begin
     let item = GMenu.check_menu_item ~label:"Messages (right pane)" ~active:Messages.hmessages#visible ~packing:menu#add () in
-    let sign = item#connect#activate ~callback:(fun () -> browser#set_hmessages_visible (not Messages.hmessages#visible)) in
+    let sign = item#connect#activate ~callback:(fun () -> Messages.hmessages#set_visible (not Messages.hmessages#visible)) in
     menu_item_view_hmessages := (item, sign) :: !menu_item_view_hmessages;
   end;
   (* Appearance *)

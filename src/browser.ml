@@ -31,12 +31,6 @@ class browser window =
   (* signals *)
   let startup                            = new startup () in
   let switch_project                     = new switch_project () in
-  let menubar_visibility_changed         = new menubar_visibility_changed () in
-  let toolbar_visibility_changed         = new toolbar_visibility_changed () in
-  let tabbar_visibility_changed          = new tabbar_visibility_changed () in
-  let outline_visibility_changed         = new outline_visibility_changed () in
-  let vmessages_visibility_changed       = new vmessages_visibility_changed () in
-  let hvmessages_visibility_changed      = new hvmessages_visibility_changed () in
   let project_history_changed            = new project_history_changed () in
   (*  *)
   let get_menu_item_nav_history_backward = ref (fun () -> failwith "get_menu_item_nav_history_backward") in
@@ -120,10 +114,10 @@ class browser window =
     val mutable finalize = fun _ -> ()
     val mutable projects = []
     val mutable current_project = new GUtil.variable None
-    val mutable menubar_visible = true;
-    val mutable toolbar_visible = true;
-    val mutable tabbar_visible = true;
-    val mutable outline_visible = true;
+    val menubar_visible = new GUtil.variable true;
+    val toolbar_visible = new GUtil.variable true;
+    val tabbar_visible = new GUtil.variable true;
+    val outline_visible = new GUtil.variable true;
     val mutable maximized_view_action = `NONE
     val mutable geometry = "";
     val mutable project_history =
@@ -371,41 +365,18 @@ class browser window =
       end
 
     method menubar_visible = menubar_visible
-    method set_menubar_visible x =
-      if not x then menubarbox#misc#hide() else (menubarbox#misc#show());
-      menubar_visible <- x;
-      menubar_visibility_changed#call x;
 
     method toolbar_visible = toolbar_visible
-    method set_toolbar_visible x =
-      if not x then toolbar#misc#hide() else (toolbar#misc#show_all());
-      toolbar_visible <- x;
-      toolbar_visibility_changed#call toolbar_visible;
+
+    method tabbar_visible = tabbar_visible
 
     method outline_visible = outline_visible
-    method set_outline_visible x =
-      editor#set_show_outline x;
-      outline_visible <- x;
-      outline_visibility_changed#call x;
-
-    method set_tabbar_visible x =
-      editor#set_show_tabs x;
-      tabbar_visible <- x;
-      tabbar_visibility_changed#call x;
-
-    method set_vmessages_visible x =
-      Messages.vmessages#set_visible x;
-      vmessages_visibility_changed#call x;
-
-    method set_hmessages_visible x =
-      Messages.hmessages#set_visible x;
-      hvmessages_visibility_changed#call x;
 
     method private set_geometry () =
       let alloc = window#misc#allocation in
       geometry <- sprintf "%d\n%d\n%d\n%d\n%b\n%b\n%b\n%b\n"
           (alloc.Gtk.width) (alloc.Gtk.height) (alloc.Gtk.x) (alloc.Gtk.y)
-          menubar_visible editor#show_tabs toolbar_visible outline_visible;
+          menubar_visible#get editor#show_tabs toolbar_visible#get outline_visible#get;
 
     method update_git_status () =
       Timeout.set tout_low_prio 0 begin fun () ->
@@ -460,9 +431,9 @@ class browser window =
     val mutable busy = false
 
     method set_maximized_view (view : [ `FIRST | `NONE | `SECOND ]) =
-      let mb = menubar_visible in
-      let tb = toolbar_visible in
-      let tab = tabbar_visible in
+      let mb = menubar_visible#get in
+      let tb = toolbar_visible#get in
+      let tab = tabbar_visible#get in
       let ms = Messages.vmessages#visible in
       let fs = is_fullscreen in
       let dc = is_decorated in
@@ -479,10 +450,10 @@ class browser window =
       in
       let reset_default () =
         let original = (List.assoc `NONE maximized_view_actions) () in
-        self#set_menubar_visible original.mva_menubar;
-        self#set_toolbar_visible original.mva_toolbar;
-        self#set_tabbar_visible original.mva_tabbar;
-        self#set_vmessages_visible original.mva_messages;
+        self#menubar_visible#set original.mva_menubar;
+        self#toolbar_visible#set original.mva_toolbar;
+        self#tabbar_visible#set original.mva_tabbar;
+        Messages.vmessages#set_visible original.mva_messages;
         self#set_fullscreen original.mva_fullscreen;
         window#set_decorated original.mva_decorated;
         toolbox#misc#hide();
@@ -493,10 +464,10 @@ class browser window =
         | `FIRST when maximized_view_action = `NONE ->
             save_default();
             let first = (List.assoc `FIRST maximized_view_actions) () in
-            self#set_menubar_visible first.mva_menubar;
-            self#set_toolbar_visible first.mva_toolbar;
-            self#set_tabbar_visible first.mva_tabbar;
-            if Messages.vmessages#visible then (self#set_vmessages_visible first.mva_messages);
+            self#menubar_visible#set first.mva_menubar;
+            self#toolbar_visible#set first.mva_toolbar;
+            self#tabbar_visible#set first.mva_tabbar;
+            if Messages.vmessages#visible then (Messages.vmessages#set_visible first.mva_messages);
             if first.mva_fullscreen then
               self#set_fullscreen first.mva_fullscreen
             else begin
@@ -507,10 +478,10 @@ class browser window =
         | `SECOND when maximized_view_action = `NONE ->
             save_default();
             let second = (List.assoc `SECOND maximized_view_actions) () in
-            self#set_menubar_visible second.mva_menubar;
-            self#set_toolbar_visible second.mva_toolbar;
-            self#set_tabbar_visible second.mva_tabbar;
-            if Messages.vmessages#visible then (self#set_vmessages_visible second.mva_messages);
+            self#menubar_visible#set second.mva_menubar;
+            self#toolbar_visible#set second.mva_toolbar;
+            self#tabbar_visible#set second.mva_tabbar;
+            if Messages.vmessages#visible then (Messages.vmessages#set_visible second.mva_messages);
             if second.mva_fullscreen then
               self#set_fullscreen second.mva_fullscreen
             else
@@ -765,6 +736,7 @@ class browser window =
       (* Update Window menu with files added to the editor *)
       ignore (editor#connect#add_page ~callback:begin fun page ->
           begin
+            if outline_visible#get then page#show_outline();
             match page#file with None -> () | Some file ->
               let offset = page#initial_offset in
               let scroll_offset = page#view#get_scroll_top () in
@@ -860,28 +832,34 @@ class browser window =
 
       (*  *)
       self#set_menu_item_nav_history_sensitive();
-      self#connect#menubar_visibility_changed ~callback:begin fun visible ->
+      menubar_visible#connect#changed ~callback:begin fun visible ->
+        if visible then menubarbox#misc#show() else (menubarbox#misc#hide());
         List.iter begin fun (mi, sign) ->
           mi#misc#handler_block sign;
           mi#set_active visible;
           mi#misc#handler_unblock sign;
         end !menu_item_view_menubar
       end |> ignore;
-      self#connect#toolbar_visibility_changed ~callback:begin fun visible ->
+      toolbar_visible#connect#changed ~callback:begin fun visible ->
+        if visible then toolbar#misc#show_all() else (toolbar#misc#hide());
+        Printf.printf "%s %b\n%!" __FUNCTION__ visible;
         List.iter begin fun (mi, sign) ->
+          Printf.printf "  %s %b\n%!" __FUNCTION__ visible;
           mi#misc#handler_block sign;
           mi#set_active visible;
           mi#misc#handler_unblock sign;
         end !menu_item_view_toolbar
       end |> ignore;
-      self#connect#tabbar_visibility_changed ~callback:begin fun visible ->
+      tabbar_visible#connect#changed ~callback:begin fun visible ->
+        editor#set_show_tabs visible;
         List.iter begin fun (mi, sign) ->
           mi#misc#handler_block sign;
           mi#set_active visible;
           mi#misc#handler_unblock sign;
         end !menu_item_view_tabbar
       end |> ignore;
-      self#connect#outline_visibility_changed ~callback:begin fun visible ->
+      outline_visible#connect#changed ~callback:begin fun visible ->
+        editor#set_show_outline visible;
         List.iter begin fun (mi, sign) ->
           mi#misc#handler_block sign;
           mi#set_active visible;
@@ -899,8 +877,8 @@ class browser window =
         end !menu_item_view_messages
       in
       Messages.vmessages#connect#visible_changed ~callback:update_view_vmessages_items |> ignore;
-      self#connect#vmessages_visibility_changed ~callback:update_view_vmessages_items |> ignore;
       let update_view_hmessages_items visible =
+        Printf.printf "%s %b\n%!" __FUNCTION__ visible;
         List.iter begin fun (mi, sign) ->
           toolbar#tool_hmessages_handler_block ();
           mi#misc#handler_block sign;
@@ -911,7 +889,6 @@ class browser window =
         end !menu_item_view_hmessages
       in
       Messages.hmessages#connect#visible_changed ~callback:update_view_hmessages_items |> ignore;
-      self#connect#hvmessages_visibility_changed ~callback:update_view_hmessages_items |> ignore;
 
       (* Editor *)
       paned#pack1 ~resize:true ~shrink:true editor#coerce;
@@ -1010,10 +987,10 @@ class browser window =
           close_in chan;
         with _ -> ()
       end;
-      self#set_menubar_visible !is_menubar_visible;
-      self#set_toolbar_visible !is_toolbar_visible;
-      self#set_tabbar_visible !is_tabbar_visible;
-      self#set_outline_visible !is_outline_visible;
+      self#menubar_visible#set !is_menubar_visible;
+      self#toolbar_visible#set !is_toolbar_visible;
+      self#tabbar_visible#set !is_tabbar_visible;
+      outline_visible#set !is_outline_visible;
       window#resize ~width:!width ~height:!height;
       Gmisclib.Idle.add ~prio:300 begin fun () ->
         Messages.vmessages#set_position (Preferences.preferences#get.vmessages_height);
@@ -1113,10 +1090,7 @@ class browser window =
       (*  *)
       check_launcher()
 
-    method connect = new signals ~startup ~switch_project ~menubar_visibility_changed ~toolbar_visibility_changed
-      ~tabbar_visibility_changed ~outline_visibility_changed
-      ~vmessages_visibility_changed ~hvmessages_visibility_changed
-      ~project_history_changed
+    method connect = new signals ~startup ~switch_project ~project_history_changed
 
     initializer
       self#connect#startup ~callback:self#init |> ignore;
@@ -1125,29 +1099,12 @@ class browser window =
 
 and startup () = object inherit [unit] signal () end
 and switch_project () = object inherit [unit] signal () end
-and menubar_visibility_changed () = object inherit [bool] signal () end
-and toolbar_visibility_changed () = object inherit [bool] signal () end
-and tabbar_visibility_changed () = object inherit [bool] signal () end
-and outline_visibility_changed () = object inherit [bool] signal () end
-and vmessages_visibility_changed () = object inherit [bool] signal () end
-and hvmessages_visibility_changed () = object inherit [bool] signal () end
 and project_history_changed () = object inherit [File_history.t] signal () end
-and signals ~startup ~switch_project ~menubar_visibility_changed ~toolbar_visibility_changed
-    ~tabbar_visibility_changed ~outline_visibility_changed
-    ~vmessages_visibility_changed ~hvmessages_visibility_changed
-    ~project_history_changed =
+and signals ~startup ~switch_project ~project_history_changed =
   object
-    inherit ml_signals [startup#disconnect; switch_project#disconnect; menubar_visibility_changed#disconnect;
-                        toolbar_visibility_changed#disconnect; tabbar_visibility_changed#disconnect;
-                        vmessages_visibility_changed#disconnect; project_history_changed#disconnect ]
+    inherit ml_signals [startup#disconnect; switch_project#disconnect; project_history_changed#disconnect ]
     method startup = startup#connect ~after
     method switch_project = switch_project#connect ~after
-    method menubar_visibility_changed = menubar_visibility_changed#connect ~after
-    method toolbar_visibility_changed = toolbar_visibility_changed#connect ~after
-    method tabbar_visibility_changed = tabbar_visibility_changed#connect ~after
-    method outline_visibility_changed = outline_visibility_changed#connect ~after
-    method vmessages_visibility_changed = vmessages_visibility_changed#connect ~after
-    method hvmessages_visibility_changed = hvmessages_visibility_changed#connect ~after
     method project_history_changed = project_history_changed#connect ~after
   end
 
