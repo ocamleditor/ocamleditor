@@ -842,9 +842,7 @@ class browser window =
       end |> ignore;
       toolbar_visible#connect#changed ~callback:begin fun visible ->
         if visible then toolbar#misc#show_all() else (toolbar#misc#hide());
-        Printf.printf "%s %b\n%!" __FUNCTION__ visible;
         List.iter begin fun (mi, sign) ->
-          Printf.printf "  %s %b\n%!" __FUNCTION__ visible;
           mi#misc#handler_block sign;
           mi#set_active visible;
           mi#misc#handler_unblock sign;
@@ -878,7 +876,6 @@ class browser window =
       in
       Messages.vmessages#connect#visible_changed ~callback:update_view_vmessages_items |> ignore;
       let update_view_hmessages_items visible =
-        Printf.printf "%s %b\n%!" __FUNCTION__ visible;
         List.iter begin fun (mi, sign) ->
           toolbar#tool_hmessages_handler_block ();
           mi#misc#handler_block sign;

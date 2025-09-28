@@ -99,25 +99,10 @@ and outline_signals ~changed =
     method changed = changed#connect ~after
   end
 
-let pixbuf_of_kind = function
-  | "Module" -> Some (??? Icons.module_impl)
-  | "Type" -> Some (??? Icons.typ)
-  | "Value" -> Some (??? Icons.simple)
-  | "Exn" -> Some (??? Icons.exc)
-  | "Class" -> Some (??? Icons.classe)
-  | "ClassType" -> Some (??? Icons.class_type)
-  | "Signature" -> Some (??? Icons.module_type)
-  | "Method" -> Some (??? Icons.met)
-  | "Label"-> Some (??? Icons.type_record) (* TODO *)
-  | "Constructor"-> Some (??? Icons.type_variant) (* TODO *)
-  | _ -> None;;
-
 let cols               = new GTree.column_list
-(*let col_icon           = cols#add (Gobject.Data.gobject_by_name "GdkPixbuf")*)
 let col_markup         = cols#add Gobject.Data.string
 let col_data           : Merlin_j.outline GTree.column = cols#add Gobject.Data.caml
-let col_default_sort   = cols#add Gobject.Data.int
-
+let col_name           = cols#add Gobject.Data.string
 
 class view ~(outline : Oe.outline) ~(source_view : Ocaml_text.view) ?packing () =
   let pref                   = Preferences.preferences#get in
@@ -126,13 +111,12 @@ class view ~(outline : Oe.outline) ~(source_view : Ocaml_text.view) ?packing () 
   let model                  = GTree.tree_store cols in
   let toolbar                = GButton.toolbar ~orientation:`HORIZONTAL ~style:`TEXT ~packing:(vbox#pack ~expand:false ~fill:false) () in
   let sw                     = GBin.scrolled_window ~shadow_type:`NONE ~hpolicy:`AUTOMATIC ~vpolicy:`AUTOMATIC ~packing:vbox#add () in
-  let view                   = GTree.view ~model ~headers_visible:false ~packing:sw#add ~width:350 ~height:500 () in
+  let view                   = GTree.view ~model ~headers_visible:false ~enable_search:true ~search_column:2 ~packing:sw#add ~width:350 ~height:500 () in
   let renderer_pixbuf        = GTree.cell_renderer_pixbuf [`YPAD 0; `XPAD 0] in
   let renderer_markup        = GTree.cell_renderer_text [`YPAD 0] in
   let vc                     = GTree.view_column () in
   let _                      = vc#pack ~expand:false renderer_pixbuf in
   let _                      = vc#pack ~expand:false renderer_markup in
-  (*let _                      = vc#add_attribute renderer_pixbuf "pixbuf" col_icon in*)
   let _                      = vc#add_attribute renderer_markup "markup" col_markup in
 
   let _                      = view#selection#set_mode `SINGLE in
@@ -141,9 +125,15 @@ class view ~(outline : Oe.outline) ~(source_view : Ocaml_text.view) ?packing () 
   let _                      = view#misc#set_property "enable-tree-lines" (`BOOL true) in
   let buffer = source_view#obuffer in
   let tool_refresh = GButton.tool_button ~packing:toolbar#insert () in
+  let tool_sort_name = GButton.toggle_tool_button ~packing:toolbar#insert () in
+  let tool_sort_kind = GButton.toggle_tool_button ~packing:toolbar#insert () in
   let tool_goto_cursor_position = GButton.tool_button ~packing:toolbar#insert () in
   let tool_follow_cursor = GButton.toggle_tool_button ~active:true ~packing:toolbar#insert () in
   let tool_collapse_all = GButton.tool_button ~packing:toolbar#insert () in
+  let compare_position a b = compare b.ol_start a.ol_start in
+  let compare_name a b = compare (String.lowercase_ascii b.ol_name) (String.lowercase_ascii a.ol_name) in
+  let compare_kind a b = compare (String.lowercase_ascii b.ol_kind) (String.lowercase_ascii a.ol_kind) in
+
   object (self)
     inherit GObj.widget vbox#as_widget
 
@@ -153,10 +143,12 @@ class view ~(outline : Oe.outline) ~(source_view : Ocaml_text.view) ?packing () 
     val mutable names_expaneded = []
 
     initializer
-      tool_refresh#set_label_widget (Gtk_util.label_icon "\u{f46a}")#coerce;
+      tool_refresh#set_label_widget (Gtk_util.label_icon "\u{f0453}")#coerce;
       tool_collapse_all#set_label_widget (Gtk_util.label_icon "\u{f102}")#coerce;
       tool_goto_cursor_position#set_label_widget (Gtk_util.label_icon "\u{f177}")#coerce;
       tool_follow_cursor#set_label_widget (Gtk_util.label_icon "\u{21c6}")#coerce;
+      tool_sort_name#set_label_widget (Gtk_util.label_icon "\u{f05bd}")#coerce;
+      tool_sort_kind#set_label_widget (Gtk_util.label_icon "\u{f1385}")#coerce;
 
       self#update_preferences();
       Preferences.preferences#connect#changed ~callback:(fun _ -> self#update_preferences ()) |> ignore;
@@ -192,9 +184,27 @@ class view ~(outline : Oe.outline) ~(source_view : Ocaml_text.view) ?packing () 
         self#goto_cursor_position (buffer#get_mark `INSERT)
       end |> ignore;
       tool_refresh#misc#set_tooltip_text "Refresh";
-      tool_collapse_all#misc#set_tooltip_text "Collapse All";
-      tool_goto_cursor_position#misc#set_tooltip_text "Go to Cursor Position";
-      tool_follow_cursor#misc#set_tooltip_text "Follow Cursor";
+      tool_collapse_all#misc#set_tooltip_text "Collapse all";
+      tool_goto_cursor_position#misc#set_tooltip_text "Go to cursor position";
+      tool_follow_cursor#misc#set_tooltip_text "Follow cursor";
+      tool_sort_name#misc#set_tooltip_text "Sort by name";
+      tool_sort_kind#misc#set_tooltip_text "Sort by kind";
+      let sig_sort_name = ref None in
+      let sig_sort_kind = ref None in
+      sig_sort_name :=
+        Some (tool_sort_name#connect#clicked ~callback:begin fun () ->
+            Option.iter tool_sort_kind#misc#handler_block !sig_sort_kind;
+            tool_sort_kind#set_active false;
+            Option.iter tool_sort_kind#misc#handler_unblock !sig_sort_kind;
+            outline#update ~force:true ()
+          end);
+      sig_sort_kind :=
+        Some (tool_sort_kind#connect#clicked ~callback:begin fun () ->
+            Option.iter tool_sort_name#misc#handler_block !sig_sort_name;
+            tool_sort_name#set_active false;
+            Option.iter tool_sort_name#misc#handler_unblock !sig_sort_name;
+            outline#update ~force:true ()
+          end);
       tool_collapse_all#connect#clicked ~callback:begin fun () ->
         if tool_follow_cursor#get_active then begin
           Option.iter GMain.Timeout.remove timer_follow_cursor;
@@ -215,7 +225,7 @@ class view ~(outline : Oe.outline) ~(source_view : Ocaml_text.view) ?packing () 
         GtkSignal.disconnect source_view#as_view sig_focus_in;
         GtkSignal.disconnect source_view#as_view sig_focus_out;
         self#set_follow_cursor false
-      end |> ignore
+      end |> ignore;
 
     method outline = outline
 
@@ -322,6 +332,11 @@ class view ~(outline : Oe.outline) ~(source_view : Ocaml_text.view) ?packing () 
           end
       end
 
+    method private sort_func =
+      if tool_sort_name#get_active then compare_name
+      else if tool_sort_kind#get_active then compare_kind
+      else compare_position
+
     method private build_childs row path =
       let parent = GTree.Path.copy path in
       GTree.Path.down path;
@@ -333,7 +348,7 @@ class view ~(outline : Oe.outline) ~(source_view : Ocaml_text.view) ?packing () 
         let steps =
           row_data.ol_children
           (* with idleize_cascade you need to reverse the order. TODO fix idleize_cascade *)
-          |> List.sort (fun a b -> compare b.ol_start a.ol_start)
+          |> List.sort self#sort_func
           |> List.map (fun child () -> self#append ~parent:(model#get_iter parent) child)
         in
         let steps = (fun () -> view#expand_row parent) :: steps in
@@ -341,7 +356,11 @@ class view ~(outline : Oe.outline) ~(source_view : Ocaml_text.view) ?packing () 
       end
 
     method private build () =
-      let steps = outline#get |> List.map (fun ol () -> self#append ol) in
+      let steps =
+        outline#get
+        |> List.sort self#sort_func
+        |> List.map (fun ol () -> self#append ol)
+      in
       let update_expaneded_rows () =
         model#foreach begin fun path row ->
           let ol = model#get ~row ~column:col_data in
@@ -383,8 +402,7 @@ class view ~(outline : Oe.outline) ~(source_view : Ocaml_text.view) ?packing () 
       if ol.ol_kind <> "Comment" then
         let row = model#append ?parent () in
         model#set ~row ~column:col_data ol;
-        (*let icon = pixbuf_of_kind ol.ol_kind in
-          icon |> Option.iter (model#set ~row ~column:col_icon);*)
+        model#set ~row ~column:col_name ol.ol_name;
         let markup =
           sprintf "%s   %s%s %s"
             (Markup.icon_of_kind ol.ol_kind)
