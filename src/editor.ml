@@ -82,13 +82,6 @@ class editor () =
       List.iter (fun (_, p) -> p#destroy()) pages_cache;
       pages_cache <- []
 
-    method pack_outline widget =
-      if show_outline then begin
-        (try hpaned#remove hpaned#child1 with Gpointer.Null -> ());
-        hpaned#pack1 ~resize:false ~shrink:true widget;
-        outline_visibility_changed#call true;
-      end
-
     method set_history_switch_page_locked x =
       history_switch_page_locked <- x;
       Gaux.may (self#get_page `ACTIVE) ~f:begin fun page ->
@@ -96,7 +89,12 @@ class editor () =
       end
 
     method show_outline = show_outline
+
     method set_show_outline show =
+      if show then
+        pages |> List.iter (fun page -> page#show_outline())
+      else
+        pages |> List.iter (fun page -> page#hide_outline());
       show_outline <- show;
 
     method show_whitespace_chars = show_whitespace_chars
@@ -561,6 +559,8 @@ class editor () =
                     let file = Editor_file.create ?remote filename in
                     let page = new Editor_page.page ~file ~project ~scroll_offset ~offset ~editor:self () in
                     ignore (page#connect#file_changed ~callback:(fun _ -> switch_page#call page));
+                    (* Outline *)
+                    page#set_outline (new Outline.model ~buffer:page#buffer () :> Oe.outline);
                     (* Tab Label with close button *)
                     let button_close = GButton.button ~relief:`NONE () in
                     let image = Icons.create (??? Icons.button_close) in

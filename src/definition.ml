@@ -32,6 +32,6 @@ let references ~filename ~text ~(iter : GText.iter) =
   let line = iter#line + 1 in
   let col = iter#line_offset in
   Merlin.occurrences ~identifier_at:(line, col) ~scope:`Project ~filename ~buffer:text ()
-  |> Async.map
+  |> Async.map ~name:"references"
     (function Merlin.Ok ranges -> ranges | Merlin.Failure _ | Merlin.Error _ -> [])
 
