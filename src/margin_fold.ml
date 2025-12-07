@@ -494,8 +494,7 @@ class margin_fold (outline : Oe.outline) (view : Ocaml_text.view) =
     method find_nested_expanders (expander : expander) =
       let all_nested =
         expanders
-        (* TODO Crashed here: exp#body when disabling code folding. *)
-        |> List.filter (fun exp -> expander#body_contains exp#body)
+        |> List.filter (fun exp -> exp#is_valid && expander#body_contains exp#body)
         |> List.filter (fun exp -> exp#id <> expander#id)
       in
       all_nested
@@ -634,8 +633,8 @@ let init_page (page : Editor_page.page) =
               exp#set_contains_mark_occurrence false;
               if not exp#is_expanded then begin
                 if page#view#mark_occurrences_manager#words
-                   |> List.exists (fun (m1, _) ->
-                       exp#body_contains (page#buffer#get_iter_at_mark m1))
+                  |> List.exists (fun (m1, _) ->
+                      exp#body_contains (page#buffer#get_iter_at_mark m1))
                 then exp#set_contains_mark_occurrence true;
               end
             end
