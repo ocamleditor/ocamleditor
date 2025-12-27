@@ -350,7 +350,7 @@ let get_actual_maximum_bookmark project =
 let inotify = Inotify.create ()
 
 let update_ocaml_index (proj : Prj.t) =
-  Async.create begin fun () ->
+  Async.create ~name:"update_ocaml_index" begin fun () ->
     let proj_sub_dirs =
       get_search_path_local proj
       |> List.map (Utils.filename_relative (path_src proj))
@@ -360,7 +360,7 @@ let update_ocaml_index (proj : Prj.t) =
       |> String.concat " "
     in
     let update_index = sprintf "ocaml-index *.cmt %s" proj_sub_dirs in
-    Utils.crono ~label:update_index Sys.command update_index |> ignore;
+    (*Utils.crono ~label:update_index*) Sys.command update_index |> ignore;
   end |> Async.start
 
 let mx_watcher = Mutex.create()
@@ -384,7 +384,7 @@ let start_file_watcher proj =
                 | Some w when Inotify.int_of_watch w = watch -> ()
                 | _ -> raise Exit
               end;
-              Async.create begin fun () ->
+              Async.create ~name:"need_update_index" begin fun () ->
                 let need_update_index =
                   events
                   |> List.exists begin fun (_, _, _, name) ->

@@ -21,8 +21,8 @@ let execute_async filename source_code command =
     (json : json_string)
   end
 
-let as_cps merlin_func ~filename ~buffer cont =
-  merlin_func ~filename ~buffer |> Async.start_with_continuation cont
+let as_cps merlin_func ?name ~filename ~buffer cont =
+  merlin_func ~filename ~buffer |> Async.start_with_continuation ?name cont
 
 let check_configuration ~filename ~buffer =
   [ "check-configuration" ] |> execute_async filename buffer
@@ -228,7 +228,7 @@ let type_expression ~position:(line, col) ~expression ~filename ~buffer =
   let position = sprintf "%d:%d" line col in
   [ "type-expression"; "-position"; position; "-expression"; sprintf "\"%s\"" expression ]
   |> execute_async filename buffer
-  |> Async.map begin fun json ->
+  |> Async.map ~name:__FUNCTION__ begin fun json ->
     match Merlin_j.type_expression_answer_of_string json with
     | Return type_expression ->
         Log.println `INFO "%s" (Yojson.Safe.prettify json);

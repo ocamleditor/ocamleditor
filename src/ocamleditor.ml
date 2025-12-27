@@ -75,7 +75,7 @@ let main () = begin
   install_fonts();
   let open Preferences in
   (* let _ = About.build_id := Build_id.timestamp in
-  let _ = About.git_hash := Build_id.git_hash in *)
+     let _ = About.git_hash := Build_id.git_hash in *)
   let _locale = GtkMain.Main.init ~setlocale:false () in
 
   let start splashscreen =
@@ -108,12 +108,12 @@ let main () = begin
     end |> ignore;
     browser#connect#after#startup ~callback:begin fun () ->
       Gmisclib.Idle.add ~prio:300 begin fun () ->
-        window#set_position `CENTER_ALWAYS;
+        (*window#set_position `CENTER_ALWAYS;
+          window#move ~x:0 ~y:0;
+          window#set_position `CENTER;*)
         window#set_decorated true;
         window#deiconify();
         window#present();
-        window#move ~x:0 ~y:0;
-        window#set_position `CENTER;
         Gaux.may (browser#editor#get_page `ACTIVE) ~f:(fun page -> page#view#misc#grab_focus());
         Gaux.may splashscreen ~f:fade_out;
       end

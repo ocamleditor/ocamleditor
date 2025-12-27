@@ -163,7 +163,7 @@ type verbosity = [
   | `OFF
 ];;
 
-let verbosity_of_string = function
+let verbosity_of_string x = match String.trim x with
   | "OFF"   -> `OFF
   | "FATAL" -> `FATAL
   | "ERROR" -> `ERROR
@@ -176,11 +176,11 @@ let verbosity_of_string = function
 let string_of_verbosity = function
   | `FATAL -> "FATAL"
   | `ERROR -> "ERROR"
-  | `WARN  -> "WARN"
-  | `INFO  -> "INFO"
+  | `WARN  -> "WARN "
+  | `INFO  -> "INFO "
   | `DEBUG -> "DEBUG"
   | `TRACE -> "TRACE"
-  | `OFF   -> "OFF";;
+  | `OFF   -> "OFF  ";;
 
 let verbosities = List.mapi (fun i x -> x, i) [`DEBUG; `TRACE; `INFO; `WARN; `ERROR; `FATAL; `OFF]
 let (>=) x y = List.assoc x verbosities >= List.assoc y verbosities

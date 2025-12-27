@@ -44,11 +44,10 @@ let distclean () =
   let rmdir dir = if Sys.file_exists dir then (kprintf run_no_errors "%s %s" rmr dir) in
   rmdir (Filename.parent_dir_name // "plugins");
   rmdir (Filename.parent_dir_name // "bak");
+  rmdir (Filename.parent_dir_name // "_build");
   rmdir (Filename.parent_dir_name // ".tmp");
   rmdir (Filename.parent_dir_name // ".cache");
   kprintf run_no_errors "%s icons" rmr;
-  pushd "..";
-  popd();
 ;;
 
 let _ = main ~default_target:distclean ~options:[] ()
