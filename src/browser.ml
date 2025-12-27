@@ -86,7 +86,7 @@ class browser window =
         statusbar#spinner#misc#set_tooltip_text (String.concat "\n" (List.rev msgs));
   in
   let _ =
-    Activity.table#connect#changed ~callback:activate_spinner;
+    Activity.table#connect#changed ~callback:activate_spinner |> ignore;
     activate_spinner Activity.table#get;
   in
   (*  *)

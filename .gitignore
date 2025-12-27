@@ -50,3 +50,4 @@ src/merlin_?.ml*
 src/settings_?.ml*
 
 *.ocaml-index
+_build

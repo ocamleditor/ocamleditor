@@ -26,7 +26,10 @@ open Utils
 open Preferences
 
 let filter =
-  let names = List.map (!~~) ["README"; "INSTALL"; "NEWS"; "BUGS"; "CONTRIB"; "Makefile"; "TODO"; "AUTHORS"; "ChangeLog"; "META"; "ocamleditor_opam"] in
+  let include_filenames =
+    List.map (!~~)
+      ["README"; "INSTALL"; "NEWS"; "BUGS"; "CONTRIB"; "Makefile"; "TODO"; "AUTHORS"; "ChangeLog"; "META"; "ocamleditor_opam"]
+  in
   fun filename ->
     filename ^^^ ".ml"  ||
     filename ^^^ ".mli" ||
@@ -40,7 +43,7 @@ let filter =
     List.exists begin fun re ->
       try ignore (Str.search_backward re filename len); true
       with Not_found -> false
-    end names;;
+    end include_filenames;;
 
 let pixbuf_open_in_editor () = (??? Icons.button_close)
 

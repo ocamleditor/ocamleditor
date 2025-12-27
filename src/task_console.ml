@@ -605,7 +605,8 @@ let exec ~editor ?use_thread ?(with_deps=false) task_kind target =
   match task_kind with
   | `CLEANALL ->
       let cmd, args = Target.create_cmd_line target in
-      let task = Task.create ~name:"Clean Project" ~env:[] ~dir:"" ~cmd ~args:(args @ [true, "-distclean"]) () in
+      let args = args @ [true, "-distclean"] in
+      let task = Task.create ~name:"Clean Project" ~env:[] ~dir:"" ~cmd ~args () in
       exec_sync ~editor [[`CLEANALL, task]];
       (*let console = create ~editor `CLEANALL task in
         ignore (console#button_run#connect#clicked ~callback:(fun () -> ignore (console#run())));

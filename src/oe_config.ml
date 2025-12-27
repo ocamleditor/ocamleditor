@@ -98,10 +98,7 @@ let unify_statusbars                     = false
 
 let ocaml_codeset = "UTF-8"
 
-(*
-  THE FOLLOWING LINE IS PROCESSED BY "tools/prepare_build", DO NOT EDIT.
-*)
-let _ = Printexc.record_backtrace (List.mem_assoc "record_backtrace" App_config.application_param)
+let _ = Printexc.record_backtrace true
 
 let _ = App_config.ensure_ocamleditor_user_home ()
 let _ = Unix.putenv "TERM" ""

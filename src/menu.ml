@@ -620,9 +620,9 @@ let help ~browser ~group ~flags items =
   crono#add_accelerator ~group ~modi:[`CONTROL; `MOD1] GdkKeysyms._apostrophe ~flags;
   ignore (crono#connect#activate ~callback:(Print_debug_info.print ~editor));
   (*end;*)
-  let _ = GMenu.separator_item ~packing:menu#add () in
   let system_properties = GMenu.menu_item ~label:"System Properties" ~packing:menu#add () in
   ignore (system_properties#connect#activate ~callback:Menu_help.system_properties);
+  let _ = GMenu.separator_item ~packing:menu#add () in
   let about = GMenu.menu_item ~label:(sprintf "About %s" About.program_name) ~packing:menu#add () in
   ignore (about#connect#activate ~callback:Menu_help.about);
   help, menu
