@@ -22,6 +22,7 @@
 
 
 open Printf
+open Preferences
 
 let ocaml_preview =
   "(* Syntax Coloring Preview *)
@@ -47,16 +48,25 @@ class sub_logic () =
       end else ()
   end
 "
+module Button_Color = struct
+  (* This module is a workaround for an anomaly I encountered in the
+     GButton.color_button#set_color and GButton.color_button#color methods.
+     The latter unpredictably returns a value different from the one previously assigned via set_color,
+     typically #550000. *)
+  let table : (int, string) Hashtbl.t = Hashtbl.create 20
 
+  let get_color (button : GButton.color_button) =
+    Hashtbl.find_opt table button#misc#get_oid
+    |> Option.value ~default:"#000000"
 
-(** color_name *)
-let color_name color =
-  let r, g, b = (Gdk.Color.red color, Gdk.Color.green color, Gdk.Color.blue color) in
-  let r, g, b =
-    truncate ((float r) /. 65535. *. 255.),
-    truncate ((float g) /. 65535. *. 255.),
-    truncate ((float b) /. 65535. *. 255.) in
-  sprintf "#%02X%02X%02X" r g b
+  let set_color (button : GButton.color_button) (colorname : string) =
+    begin
+      match Hashtbl.find_opt table button#misc#get_oid with
+      | Some _ -> ()
+      | _ -> Hashtbl.add table button#misc#get_oid colorname;
+    end;
+    button#set_color (GDraw.color (`NAME colorname));
+end
 
 let (//) = Filename.concat
 
