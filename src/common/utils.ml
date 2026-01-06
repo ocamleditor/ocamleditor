@@ -27,6 +27,16 @@ let (//) = Filename.concat
 let (!!) = Filename.dirname
 let (!$) = Filename.quote
 let (^^^) = Filename.check_suffix
+
+(** Function application operator with different precedence/associativity than [@@].
+
+    [f |=> x] is equivalent to [f x].
+
+    Unlike [@@] (very low precedence, right-associative), [|=>] has default
+    precedence, useful for applying handlers after [@@]:
+
+    [f @@ g |=> function Ok x -> ... | Error e -> ...]
+*)
 let (|=>) f x = f x
 
 (** try ... finally ... *)

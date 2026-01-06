@@ -38,7 +38,7 @@ let case_analysis ~(start : GText.iter) ~(stop : GText.iter) ~filename ~buffer =
   let stop = sprintf "%d:%d" (stop#line + 1) stop#line_offset in
   [ "case-analysis"; "-start"; start; "-end"; stop ]
   |> execute_async filename buffer
-  |> Async.map begin fun json ->
+  |> Async.map ~name:__FUNCTION__ begin fun json ->
     match Merlin_j.case_analysis_answer_of_string json with
     | Return case_analysis ->
         Log.println `DEBUG "%s" (Yojson.Safe.prettify json);
@@ -83,7 +83,7 @@ let occurrences ~identifier_at:(line, col) ?scope ?index_file ~filename ~buffer 
    | Some `Project -> "-scope project"
    | Some `Renaming -> "-scope renaming") :: []
   |> execute_async filename buffer
-  |> Async.map begin fun json ->
+  |> Async.map ~name:__FUNCTION__ begin fun json ->
     match Merlin_j.occurrences_answer_of_string json with
     | Return occurrences ->
         Log.println `INFO "%s" (Yojson.Safe.prettify json);
@@ -100,7 +100,7 @@ let locate_type ~position:(line, col) ~filename ~buffer =
   let position = sprintf "%d:%d" line col in
   "locate-type" :: "-position" :: position :: []
   |> execute_async filename buffer
-  |> Async.map begin fun json ->
+  |> Async.map ~name:__FUNCTION__ begin fun json ->
     match Merlin_j.locate_type_answer_of_string json with
     | Return document ->
         Log.println `DEBUG "%s" (Yojson.Safe.prettify json);
@@ -151,7 +151,7 @@ let document ~position:(line, col) ?identifier ~filename ~buffer () =
   "document" :: "-position" :: position ::
   (match identifier with None -> [] | Some identifier -> ["-identifier"; sprintf "\"%s\"" identifier])
   |> execute_async filename buffer
-  |> Async.map begin fun json ->
+  |> Async.map ~name:__FUNCTION__ begin fun json ->
     match Merlin_j.document_answer_of_string json with
     | Return document ->
         Log.println `DEBUG "%s" (Yojson.Safe.prettify json);
@@ -177,7 +177,7 @@ let type_enclosing ~position:(line, col) ?expression ?cursor ?verbosity ?index ~
     (match index with Some i -> ["-index"; string_of_int i ] | _ -> [])
   ] |> List.concat
   |> execute_async filename buffer
-  |> Async.map begin fun json ->
+  |> Async.map ~name:__FUNCTION__ begin fun json ->
     match Merlin_j.type_enclosing_answer_of_string json with
     | Return types ->
         Log.println `DEBUG "%s" (Yojson.Safe.prettify json);
@@ -194,7 +194,7 @@ let complete_prefix ~position:(line, col) ~prefix ~filename ~buffer =
   let position = sprintf "%d:%d" line col in
   [ "complete-prefix"; "-position"; position; "-prefix"; sprintf "\"%s\"" prefix; "-doc true -types true" ]
   |> execute_async filename buffer
-  |> Async.map begin fun json ->
+  |> Async.map ~name:__FUNCTION__ begin fun json ->
     match Merlin_j.complete_prefix_answer_of_string json with
     | Return complete ->
         Log.println `DEBUG "%s" (Yojson.Safe.prettify json);
@@ -211,7 +211,7 @@ let expand_prefix ~position:(line, col) ~prefix ~filename ~buffer =
   let position = sprintf "%d:%d" line col in
   [ "expand-prefix"; "-position"; position; "-prefix";  sprintf "\"%s\"" prefix; "-doc true -types true" ]
   |> execute_async filename buffer
-  |> Async.map begin fun json ->
+  |> Async.map ~name:__FUNCTION__ begin fun json ->
     match Merlin_j.complete_prefix_answer_of_string json with
     | Return complete ->
         Log.println `DEBUG "%s" (Yojson.Safe.prettify json);
@@ -244,7 +244,7 @@ let type_expression ~position:(line, col) ~expression ~filename ~buffer =
 let outline ~filename ~buffer =
   [ "outline" ]
   |> execute_async filename buffer
-  |> Async.map begin fun json ->
+  |> Async.map ~name:__FUNCTION__ begin fun json ->
     match Merlin_j.outline_answer_of_string json with
     | Return outline ->
         Log.println `DEBUG "%s" (Yojson.Safe.prettify json);
