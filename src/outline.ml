@@ -215,9 +215,9 @@ class view ~(outline : Oe.outline) ~(source_view : Ocaml_text.view) ?packing () 
     val tool_refresh = GButton.tool_button ~packing:toolbar#insert ()
     val tool_sort_name = GButton.toggle_tool_button ~packing:toolbar#insert ()
     val tool_sort_kind = GButton.toggle_tool_button ~packing:toolbar#insert ()
+    val tool_collapse_all = GButton.tool_button ~packing:toolbar#insert ()
     val tool_goto_cursor_position = GButton.tool_button ~packing:toolbar#insert ()
     val tool_follow_cursor = GButton.toggle_tool_button ~active:true ~packing:toolbar#insert ()
-    val tool_collapse_all = GButton.tool_button ~packing:toolbar#insert ()
 
     initializer
       (* Set toolbar button icons *)
@@ -227,10 +227,25 @@ class view ~(outline : Oe.outline) ~(source_view : Ocaml_text.view) ?packing () 
       tool_follow_cursor#set_label_widget (Gtk_util.label_icon "\u{21c6}")#coerce;
       tool_sort_name#set_label_widget (Gtk_util.label_icon "\u{f05bd}")#coerce;
       tool_sort_kind#set_label_widget (Gtk_util.label_icon "\u{f1385}")#coerce;
-
       self#update_preferences();
       Preferences.preferences#connect#changed ~callback:(fun _ -> self#update_preferences ()) |> ignore;
       self#set_follow_cursor true;
+
+      view#connect#row_activated ~callback:begin fun _ _ ->
+        self#jump_to_definition();
+        Gmisclib.Idle.add source_view#misc#grab_focus
+      end |> ignore;
+
+      view#event#connect#key_press ~callback:begin fun ev ->
+        let key = GdkEvent.Key.keyval ev in
+        begin
+          match view#selection#get_selected_rows with
+          | path :: _ when key = GdkKeysyms._Left -> view#collapse_row path
+          | path :: _ when key = GdkKeysyms._Right -> view#expand_row path
+          | _ -> ()
+        end;
+        false
+      end |> ignore;
 
       (* Attach/detach outline updates when source view gains/loses focus *)
       let sig_focus_in =

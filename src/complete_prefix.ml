@@ -85,10 +85,10 @@ class widget ~project ~(page : Editor_page.page) ~x ~y ?packing () =
   in
   let view = page#ocaml_view in
   let buffer = view#buffer in
-  let merlin merlin_func cont =
+  let merlin merlin_func cont name =
     let filename = match (view#obuffer#as_text_buffer :> Text.buffer)#file with Some file -> file#filename | _ -> "" in
     let buffer = buffer#get_text () in
-    (Merlin.as_cps merlin_func ~filename ~buffer) cont
+    (Merlin.as_cps merlin_func ~name ~filename ~buffer) cont
   in
   let markup_odoc = new Markup.odoc() in
   let mx_model_entries = Mutex.create() in
@@ -199,10 +199,10 @@ class widget ~project ~(page : Editor_page.page) ~x ~y ?packing () =
                     expand_prefix.Merlin_j.entries |> List.map (fun x -> 1., x) |> self#add_entries "E";
                     loading_complete#call count;
                 | Error _ | Failure _ -> ()
-                end
+                end |=> "expand_prefix"
             end else loading_complete#call count;
         | Error _ | Failure _ -> ()
-        end
+        end |=> "complete_prefix"
 
     method private apply path =
       let row = model#get_iter path in
@@ -230,13 +230,13 @@ class widget ~project ~(page : Editor_page.page) ~x ~y ?packing () =
       try
         let path =
           match lview#selection#get_selected_rows with
-          | [] -> GTree.Path.create [0]
           | [ path ] when direction = `NEXT -> GTree.Path.next path; path
           | [ path ] when direction = `PREV -> if GTree.Path.prev path then path else GTree.Path.create [0]
-          | _ -> assert false
+          | _  -> GTree.Path.create [0]
         in
+        lview#selection#unselect_all();
+        lview#scroll_to_cell path vc_kind;
         lview#selection#select_path path;
-        lview#scroll_to_cell path vc_kind
       with Gpointer.Null -> ()
 
     method private show_info () =
@@ -278,7 +278,7 @@ class widget ~project ~(page : Editor_page.page) ~x ~y ?packing () =
                       with Failure _ -> () (* "GtkTree.TreeModel.get_iter" *)
                     end;
                 | Error _ | Failure _ -> ()
-                end
+                end |=> "type_expression"
             end
       with Gpointer.Null -> ()
 
@@ -339,11 +339,9 @@ class widget ~project ~(page : Editor_page.page) ~x ~y ?packing () =
         model#set ~row ~column:col_name entry.name;
         model#set ~row ~column:col_desc entry.desc;
         model#set ~row ~column:col_info entry.info;
-        Mutex.protect mx_model_entries begin fun () ->
-          count <- count + 1;
-          let path = model#get_path row in
-          model_entries <- (ref score, ref path, entry) :: model_entries;
-        end;
+        count <- count + 1;
+        let path = model#get_path row in
+        model_entries <- (ref score, ref path, entry) :: model_entries;
         row
       in
       begin
@@ -362,22 +360,22 @@ class widget ~project ~(page : Editor_page.page) ~x ~y ?packing () =
                     let row = add_row entry score in
                     path := model#get_path row
                   end
-                end
-            | None -> add_row entry score |> ignore
+                end;
+            | None ->
+                Mutex.protect mx_model_entries
+                  (fun () -> add_row entry score |> ignore);
             | _ -> ()
           end
         with Exit -> ()
       end;
       if last_count = 0 && count > 0 then first_entry_available#call();
+      lview#scroll_to_cell (GTree.Path.create [0]) vc_kind;
 
     initializer
       view#misc#connect#after#realize ~callback:(fun _ -> vc_name#set_sizing `GROW_ONLY) |> ignore;
       self#misc#connect#destroy ~callback:begin fun () ->
         single_instance := None;
         is_destroyed <- true
-      end |> ignore;
-      self#connect#first_entry_available ~callback:begin fun () ->
-        Gmisclib.Idle.add (fun () -> self#select_row `NEXT; (* Select first result *));
       end |> ignore;
       self#connect#loading_complete ~callback:begin fun count ->
         if count > 0 then Gmisclib.Idle.add self#show_info
