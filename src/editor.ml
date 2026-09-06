@@ -755,10 +755,11 @@ class editor () =
         end
       end
 
-    method i_search ?(full_find : (Gdk.Tags.modifier list * Gdk.keysym * (unit -> unit)) option) () =
-      self#with_current_page begin fun page ->
-        incremental_search#i_search ?full_find ~view:(page#view :> Text.view) ~project:self#project ()
-      end
+    method i_search () =
+      match self#get_page `ACTIVE with
+      | Some page ->
+          Some (incremental_search#i_search ~view:(page#view :> Text.view) ~project:self#project ())
+      | _ -> None
 
     method location_history_is_empty () =
       (List.length (Location_history.get_history_backward self#location_history) = 0),

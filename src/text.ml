@@ -484,7 +484,7 @@ and view ?project ?buffer () =
               if options#show_indent_lines && not options#show_whitespace_chars
               then (Text_indent_lines.draw_indent_lines self drawable) start stop y0;
               (* Right margin line *)
-              begin
+              (*begin
                 match options#visible_right_margin with
                 | Some (column, color) ->
                     let x = approx_char_width * column - hadjust - 1 in (* -1 per evitare sovrapposizione col cursore *)
@@ -492,7 +492,7 @@ and view ?project ?buffer () =
                     set_foreground drawable color;
                     line drawable x 0 x h0;
                 | _ -> ()
-              end;
+                end;*)
               (* ocamldoc_paragraph_bgcolor_enabled *)
               (*if Oe_config.ocamldoc_paragraph_border_enabled
                 then (self#draw_paragraph_border drawable start stop y0 w0);*)

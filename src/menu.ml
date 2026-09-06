@@ -248,9 +248,20 @@ let search ~browser ~group ~flags items =
   (** Search Incremental *)
   let i_search = Image_menu.item ~label:"Search Incremental" ~packing:menu#add () in
   let modi, key = [(`CONTROL : Gdk.Tags.modifier)], GdkKeysyms._f in
-  let full_find : unit -> unit = fun () -> Menu_search.find_replace ?find_all:None ?search_word_at_cursor:None editor in
+  let is_activated = ref None in
+  let full_find () = Menu_search.find_replace ?find_all:None ?search_word_at_cursor:None editor in
+  editor#connect#switch_page ~callback:(fun _ -> !is_activated |> Option.iter (fun c -> c#destroy())) |> ignore;
   i_search#connect#activate ~callback:begin fun () ->
-    editor#i_search ?full_find:(Some (modi, key, full_find)) ()
+    match !is_activated with
+    | Some child ->
+        child#destroy();
+        is_activated := None;
+        full_find()
+    | _ ->
+        is_activated := editor#i_search ();
+        !is_activated |> Option.iter begin fun child ->
+          child#misc#connect#destroy ~callback:(fun () -> is_activated := None) |> ignore;
+        end
   end |> ignore;
   i_search#add_accelerator ~group ~modi key ~flags;
   (** Find/Replace in Path *)

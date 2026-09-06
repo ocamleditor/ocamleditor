@@ -79,23 +79,52 @@ class "GtkTextView" style "s1"
     view#options#set_visible_right_margin
       (Some (pref.editor_right_margin, `NAME ?? (pref.editor_right_margin_color)))
   end else (view#options#set_visible_right_margin None);
+
+  let css_provider = GObj.css_provider () in
+
+  let css_right_margin =
+    match view#options#visible_right_margin with
+    | Some (column, color) -> (* @borders *)
+        let pango_ctx = view#misc#pango_context#as_context in
+        let layout = Pango.Layout.create pango_ctx in
+        let font_desc = Pango.Font.from_string pref.editor_base_font in
+        Pango.Layout.set_font_description layout font_desc;
+        Pango.Layout.set_text layout (String.make column '0');
+        let col_width, _ = Pango.Layout.get_pixel_size layout in
+        let color = ?? (pref.editor_right_margin_color) in
+        sprintf {|
+textview text {
+    background-image: linear-gradient(to right,
+      transparent %dpx,
+      %s %dpx,
+      %s %dpx,
+      transparent %dpx
+    );
+    background-repeat: repeat-y;
+  }
+|} (col_width - 1) color (col_width - 1) color col_width col_width
+    | _ -> ""
+  in
+
   (* Set text view bg and selection colors  *)
-  match List.find_opt (fun t -> t.name = "selection") editor_tags with
-  | Some t ->
-      let bg_color = if t.bg_default then "initial" else ?? (t.bg_color) in
-      let fg_color = if t.bg_default then default_bg_color else ?? (t.color) in
-      let css = sprintf "
-textview text selection {
-  background-color: %s;
-  color: %s;
-}
-textview, textview text {
-  background-color: %s;
-}
-border.left { background-color: transparent; border: none; }
-" bg_color fg_color default_bg_color
-      in
-      let css_provider = GObj.css_provider () in
-      css_provider#load_from_data css;
-      view#misc#style_context#add_provider css_provider 600;
-  | _ -> assert false
+  begin
+    match List.find_opt (fun t -> t.name = "selection") editor_tags with
+    | Some t ->
+        let bg_color = if t.bg_default then "initial" else ?? (t.bg_color) in
+        let fg_color = if t.bg_default then default_bg_color else ?? (t.color) in
+        let css = sprintf "
+  textview text selection {
+    background-color: %s;
+    color: %s;
+  }
+  textview, textview text {
+    background-color: %s;
+  }
+  border.left { background-color: transparent; border: none; }
+  %s
+  " bg_color fg_color default_bg_color css_right_margin
+        in
+        css_provider#load_from_data css;
+    | _ -> assert false
+  end;
+  view#misc#style_context#add_provider css_provider 600;
