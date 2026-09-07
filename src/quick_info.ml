@@ -57,6 +57,7 @@ and wininfo = {
 
   mutable is_pinned : bool;
   mutable index : int;
+  mutable is_pointer_over : bool;
 }
 
 (** Returns the last open quick info window. This function is not thread safe. *)
@@ -93,12 +94,6 @@ let remove_highlight qi wi =
 let add_wininfo qi callback wi =
   Mutex.protect mx_wininfo (fun () -> qi.windows <- wi :: qi.windows; callback())
 
-let is_poiter_over (wi : wininfo) =
-  try
-    let px, py = Gdk.Window.get_pointer_location wi.window#misc#window in
-    px >= 0 && py >= 0
-  with Gpointer.Null -> false
-
 (** Starts a timer that closes the specified quick-info window and removes
     expression highlighting in the editor. An exception is the case
     in which the window is pinned when the timer expires.
@@ -106,10 +101,11 @@ let is_poiter_over (wi : wininfo) =
     to pin it before it closes. *)
 let remove_wininfo qi wi =
   GMain.Timeout.add ~ms:300 ~callback:begin fun () ->
-    if not wi.is_pinned && not (is_poiter_over wi) then begin
+    if not wi.is_pinned && not wi.is_pointer_over then begin
       Mutex.protect mx_wininfo begin fun () ->
         if not wi.is_pinned then remove_highlight qi wi;
         qi.windows <- qi.windows |> List.filter (fun x -> x.window#misc#get_oid <> wi.window#misc#get_oid);
+        (*Log.println `DEBUG "%s %d %b %d" __FUNCTION__ wi.index  wi.is_pointer_over (List.length qi.windows);*)
         wi.window#destroy();
       end;
     end;
@@ -134,19 +130,42 @@ let hide qi =
   end
 
 let unpin qi =
-  Mutex.protect mx_wininfo (fun () -> List.iter (fun w -> w.is_pinned <- false) qi.windows);
+  Mutex.protect mx_wininfo begin fun () ->
+    List.iter begin fun w ->
+      w.is_pinned <- false;
+      w.window#misc#style_context#remove_class "dialog-window";
+    end qi.windows
+  end;
   hide qi
 
 (** Closes the last quick information opened and all other timed closing windows. *)
 let close qi cause =
-  (*if cause <> "" then Log.println `DEBUG "CLOSE %s" cause;*)
+  (*if cause <> "" then Log.println `DEBUG "CLOSE %s %d" cause (List.length qi.windows);*)
   qi.windows |> List.iter (remove_wininfo qi)
 
 let make_pinnable wininfo =
   wininfo.window#event#connect#button_press ~callback:begin fun _ ->
     wininfo.is_pinned <- true;
-    wininfo.window#misc#modify_bg [`NORMAL, `COLOR (Preferences.editor_tag_bg_color "selection")];
+    wininfo.window#misc#style_context#add_class "dialog-window";
     true
+  end |> ignore
+
+let setup_pointer_over wi =
+  wi.window#event#connect#enter_notify ~callback:begin fun _ ->
+    Mutex.protect mx_wininfo begin fun () ->
+      wi.is_pointer_over <- true;
+      (*Log.println `DEBUG "ENTER %d\n%!" wininfo.index;*)
+    end;
+    false
+  end |> ignore;
+  wi.window#event#connect#leave_notify ~callback:begin fun ev ->
+    Mutex.protect mx_wininfo begin fun () ->
+      let detail = GdkEvent.Crossing.detail ev in
+      wi.is_pointer_over <- detail = `INFERIOR;
+      (*if not wininfo.is_pointer_over then
+        Log.println `DEBUG "LEAVE %d\n%!" wininfo.index;*)
+    end;
+    false
   end |> ignore
 
 let (!=) (p1 : Merlin_j.pos) (p2 : Merlin_j.pos) =
@@ -174,6 +193,7 @@ let display qi start stop =
   label_vars#misc#modify_font_by_name preferences#get.editor_completion_font;
   label_typ#misc#modify_font_by_name preferences#get.editor_completion_font;
   label_fn#misc#modify_font_by_name preferences#get.editor_base_font;
+  label_fn#set_label "<span size='small'> </span>";
   let x, y =
     let pX, pY = Gdk.Window.get_pointer_location (Window.root_window qi.view) in
     let win = (match qi.view#get_window `WIDGET with None -> assert false | Some w -> w) in
@@ -184,7 +204,7 @@ let display qi start stop =
         pX - px + x, pY - py + y
     | _ ->
         let _, lh = qi.view#get_line_yrange start in
-        pX (*- px + xstart*), pY - py + ystart + lh
+        pX (*- px + xstart*) - 13, pY - py + ystart + lh - qi.view#pixels_below_lines
   in
   let create_range () =
     Some (qi.view#buffer#create_mark ~name:"qi-start" start,
@@ -196,7 +216,9 @@ let display qi start stop =
     range = create_range ();
     is_pinned = false;
     index = new_index();
+    is_pointer_over = false;
   } in
+  setup_pointer_over wininfo;
   let callback () =
     match wininfo.range with
     | Some (m_start, m_stop) ->
@@ -225,13 +247,16 @@ let display qi start stop =
       vbox#misc#reparent vp#coerce;
       hide qi;
       close qi "";
-      let window = Gtk_util.window_tooltip sw#coerce ~parent:qi.view ~fade:false ~x ~y ~width:700 ~height:300 ~show:false () in
+      let window =
+        Gtk_util.window_tooltip sw#coerce ~parent:qi.view ~fade:false ~x ~y ~width:700 ~height:300 ~show:false () in
       let wininfo = {
         window;
         range = create_range ();
         is_pinned = false;
         index = new_index();
+        is_pointer_over = false;
       } in
+      setup_pointer_over wininfo;
       add_wininfo qi callback wininfo;
       make_pinnable wininfo;
       window#present()
@@ -297,7 +322,10 @@ let spawn_window qi position (entry : type_enclosing_value) (entry2 : type_enclo
           | Some fullname ->
               label_fn#misc#show();
               label_fn#set_label (sprintf "<span size='small'>%s</span>" (Markup.type_info fullname));
-          | None -> label_fn#misc#hide()
+          | None ->
+              (*label_fn#set_label "<span size='small'>(local identifier)</span>";*)
+              (*label_fn#misc#hide()*)
+              ()
         with ex ->
           Log.println `ERROR "%s\n\t%s\n%s" __FUNCTION__ (Printexc.to_string ex) (Printexc.get_backtrace())
       end ()
@@ -360,21 +388,23 @@ let process_location qi ?(is_at_iter=false) x y =
         let is_immobile = x = qi.current_x && y = qi.current_y in
         qi.current_x <- x;
         qi.current_y <- y;
-        let is_mouse_over =
+        let is_pointer_over =
           match current_window with
-          | Some wi ->
-              begin
-                try
-                  let root_window = Window.root_window qi.view in
-                  let r = wi.window#misc#allocation in
-                  let wx, wy = Gdk.Window.get_position wi.window#misc#window in
-                  let px, py = Gdk.Window.get_pointer_location root_window in
-                  wx <= px && px <= wx + r.Gtk.width && wy <= py && py <= wy + r.Gtk.height
-                with Gpointer.Null -> false
-              end
+          | Some wi -> wi.is_pointer_over
+          (*begin
+            try
+              let root_window = Window.root_window qi.view in
+              let r = wi.window#misc#allocation in
+              let wx, wy = Gdk.Window.get_position wi.window#misc#window in
+              let px, py = Gdk.Window.get_pointer_location root_window in
+              wx <= px && px <= wx + r.Gtk.width && wy <= py && py <= wy + r.Gtk.height
+            with Gpointer.Null -> false
+            end*)
           | _ -> false
         in
-        if is_mouse_over then ()
+        (*if is_pointer_over || is_immobile then
+          Log.println `DEBUG "process_location %b %b" is_pointer_over is_immobile;*)
+        if is_pointer_over then ()
         else if is_immobile || is_at_iter then begin
           match get_typeable_iter_at_coords qi iter with
           | Some iter ->
@@ -395,10 +425,13 @@ let at_iter qi (iter : GText.iter) () =
   qi.show_at <- Some (x, y + Gdk.Rectangle.height rect);
   process_location qi ~is_at_iter:true x y
 
+let debouncer = Debouncer.create ~ms:50
+
 let query_tooltip qi ~x ~y ~kbd _ =
   (*Log.println `DEBUG "%d %d %f" x y (Unix.gettimeofday());*)
   begin
-    try process_location qi x y;
+    try process_location qi x y
+    (*Debouncer.schedule debouncer (fun () -> process_location qi x y);*)
     with ex ->
       Printf.eprintf "File \"quick_info.ml\": %s\n%s\n%!" (Printexc.to_string ex) (Printexc.get_backtrace());
   end;
