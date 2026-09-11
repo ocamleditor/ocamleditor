@@ -8,7 +8,7 @@ open Cairo_drawable
 
 let is_debug = false
 let suppress_invisible = is_debug && false
-let enable_transition = true
+let enable_transition = ref true
 
 module Log = Common.Log.Make(struct let prefix = "FOLD" end)
 let _ =
@@ -16,8 +16,8 @@ let _ =
   Log.set_verbosity (if is_debug then `DEBUG else `ERROR)
 
 module Icons = struct
-  let expander_open = "\u{f107}"
-  let expander_closed = "\u{f105}"
+  let expander_open = "\u{f47c}"
+  let expander_closed = "\u{f460}"
 end
 
 exception Invalid_linechar of int * int * int * int
@@ -103,7 +103,8 @@ type toggle_type = Expand | Collapse
 
 class expander ~(view : Ocaml_text.view) ~tag_highlight ~tag_invisible ?packing () =
   let ebox = GBin.event_box ?packing () in
-  let markup = if is_debug then sprintf "<span size='x-small'>%d</span>%s" !counter Icons.expander_open else Icons.expander_open in
+  let markup = if is_debug then sprintf "<span size='x-small'>%d</span>%s" !counter Icons.expander_open
+    else Icons.expander_open in
   let label = Gtk_util.label_icon markup ~packing:ebox#add in
   let buffer = view#buffer in
   let id = !counter in
@@ -306,7 +307,7 @@ class expander ~(view : Ocaml_text.view) ~tag_highlight ~tag_invisible ?packing 
 
     method hide_region ?(cont=ignore) () =
       let hide = buffer#apply_tag tag_invisible in
-      if enable_transition then
+      if !enable_transition then
         self#transition_lines hide self#body#forward_line self#foot cont
       else begin
         hide ~start:self#body ~stop:self#foot;
@@ -318,7 +319,7 @@ class expander ~(view : Ocaml_text.view) ~tag_highlight ~tag_invisible ?packing 
       Log.println `DEBUG "    show_region %d -- %s" self#id (Region.to_string (self#body, self#foot));
       let segments = segments |> List.sort (fun (a, _) (b, _) -> compare a#offset b#offset) in
       let show = buffer#remove_tag tag_invisible in
-      if enable_transition && transition then begin
+      if !enable_transition && transition then begin
         segments
         |> List.iter (fun (start, stop) ->
             self#transition_lines show start stop cont)
@@ -696,14 +697,24 @@ let init_page (page : Editor_page.page) =
 
 let iter_page_expanders (page : Editor_page.page) callback =
   match !pages |> List.assoc_opt page#misc#get_oid with
-  | Some margin -> margin#iter_expanders callback
+  | Some margin ->
+      let old = !enable_transition in
+      enable_transition := false;
+      margin#iter_expanders callback;
+      Gmisclib.Idle.add ~prio:200 begin fun () ->
+        margin#is_refresh_pending#set true;
+        GtkBase.Widget.queue_draw page#view#as_widget;
+        enable_transition := old
+      end
   | _ -> ()
 
 let collapse_to_definitions (page : Editor_page.page) =
-  iter_page_expanders page (fun exp -> if exp#is_definition then exp#collapse ())
+  iter_page_expanders page (fun exp -> if exp#is_definition then exp#collapse ());
+  Gmisclib.Idle.add ~prio:300 (fun () -> page#view#scroll_aligned (page#view#buffer#get_iter `INSERT))
 
 let expand_all (page : Editor_page.page) =
-  iter_page_expanders page (fun exp -> exp#expand_node())
+  iter_page_expanders page (fun exp -> exp#expand_node());
+  Gmisclib.Idle.add ~prio:300 (fun () -> page#view#scroll_aligned (page#view#buffer#get_iter `INSERT))
 
 let init_editor editor =
   editor#connect#add_page ~callback:init_page |> ignore;

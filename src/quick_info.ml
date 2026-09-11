@@ -8,114 +8,125 @@ let _ =
   Log.set_print_timestamp true;
   Log.set_verbosity `DEBUG
 
-type effct = Motion | Fade
+type effct = Motion (* Not tested *) | Fade
 
-let effct : effct option = None
+let effct : effct option = (*None*) Some Fade
 
 let merlin (buffer : Ocaml_text.buffer) func cont =
   let filename = match buffer#file with Some file -> file#filename | _ -> "" in
   let buffer = buffer#get_text () in
   (Merlin.as_cps func ~filename ~buffer) cont
 
-module SignalId = struct
-  let create () = ref None
-  let save cell id = cell := Some id
+module OneShotSignal = struct
+  let create () = ref []
+  let save cell id = cell := id :: !cell
   let disconnect cell widget =
     match !cell with
-    | Some id -> cell := None; GtkSignal.disconnect widget id
-    | None -> ()
+    | [] -> ()
+    | ids -> cell := []; List.iter (GtkSignal.disconnect widget) ids
 end
 
 type t = {
-  mutable markup_odoc : Markup.odoc;
   view : Ocaml_text.view;
   filename : string;
   tag : GText.tag;
+  motion_notify_signal : GtkSignal.id list ref;
+  key_press_signal : GtkSignal.id list ref;
   mutable is_active : bool;
   mutable show_at : (int * int) option;
+  mutable markup_odoc : Markup.odoc;
 }
 
-type global_window = {
-  g_window : GWindow.window;
-  g_fullname : GMisc.label;
-  g_typexpr : GMisc.label;
-  g_vars : GMisc.label;
-  g_doc : GMisc.label;
-  mutable g_pos : (int * int);
-  mutable g_range : (GText.view * GText.tag * Gtk.text_mark * Gtk.text_mark) option;
-  mutable g_is_pointer_over : bool;
-  mutable g_is_pinned : bool;
-  mutable g_timer : Glib.Timeout.id option;
+type hover = {
+  window : GWindow.window;
+  fullname_label : GMisc.label;
+  typexpr_label : GMisc.label;
+  vars_label : GMisc.label;
+  doc_label : GMisc.label;
+  mutable last_pos : (int * int);
+  mutable range : (GText.view * GText.tag * Gtk.text_mark * Gtk.text_mark) option;
+  mutable is_pointer_over : bool;
+  mutable is_pinned : bool;
+  mutable has_scroll : bool;
+  mutable effect_timer : Glib.Timeout.id option;
 }
 
-let global_window = ref None
+let hover : hover option ref = ref None
 
-let create_global_window () =
-  let g_window = GWindow.window
-      ~decorated:false
-      ~modal:false
-      ~border_width:0
-      ~deletable:true
-      ~resizable:true
-      ~kind:`POPUP
-      ~type_hint:`NORMAL
-      ~focus_on_map:false
-      ~show:false ()
-  in
-  Gmisclib.Util.esc_destroy_window g_window;
-  g_window#set_skip_pager_hint true;
-  g_window#set_skip_taskbar_hint true;
-  g_window#set_urgency_hint false;
-  g_window#set_accept_focus false;
-  g_window#misc#set_can_focus false;
-  (*let sw = GBin.scrolled_window ~packing:g_window#add () in*)
-  let vbox = GPack.vbox ~border_width:5 ~spacing:5 ~packing:g_window#add () in
-  let g_fullname =
-    GMisc.label ~xpad:0 ~ypad:0 ~xalign:0.0 ~yalign:0.0 ~line_wrap:false ~packing:(vbox#pack ~expand:false) () in
-  let g_typexpr =
-    GMisc.label ~xpad:10 ~ypad:0 ~xalign:0.0 ~yalign:0.0 ~line_wrap:false ~packing:(vbox#pack ~expand:false) () in
-  let g_vars =
-    GMisc.label ~xpad:0 ~ypad:0 ~xalign:0.0 ~yalign:0.0 ~packing:(vbox#pack ~expand:false) ~show:false () in
-  let _ = GMisc.separator `HORIZONTAL ~packing:(vbox#pack ~expand:false) () in
-  let g_doc =
-    GMisc.label ~xpad:0 ~ypad:0 ~xalign:0.0 ~yalign:0.0 ~line_wrap:true ~packing:(vbox#pack ~expand:false) () in
-  g_typexpr#set_use_markup true;
-  g_fullname#set_use_markup true;
-  g_vars#set_use_markup true;
-  g_doc#set_use_markup true;
-  let open Preferences in
-  let open Settings_j in
-  g_doc#misc#modify_font_by_name preferences#get.editor_completion_font;
-  g_vars#misc#modify_font_by_name preferences#get.editor_completion_font;
-  g_typexpr#misc#modify_font_by_name preferences#get.editor_completion_font;
-  g_fullname#misc#modify_font_by_name preferences#get.editor_base_font;
-  let gw =
-    {
-      g_window; g_fullname; g_typexpr; g_vars; g_doc;
-      g_range = None; g_pos = (0, 0); g_timer = None;
-      g_is_pointer_over = false; g_is_pinned = false }
-  in
-  g_window#event#connect#enter_notify ~callback:begin fun _ ->
-    gw.g_is_pointer_over <- true;
-    (*Log.println `DEBUG "ENTER %d\n%!" wininfo.index;*)
-    false
-  end |> ignore;
-  g_window#event#connect#leave_notify ~callback:begin fun ev ->
-    let detail = GdkEvent.Crossing.detail ev in
-    gw.g_is_pointer_over <- detail = `INFERIOR;
-    (*if not wininfo.is_pointer_over then
-      Log.println `DEBUG "LEAVE %d\n%!" wininfo.index;*)
-    false
-  end |> ignore;
-  g_window#event#connect#button_press ~callback:begin fun _ ->
-    gw.g_is_pinned <- true;
-    g_window#misc#style_context#add_class "dialog-window";
-    true
-  end |> ignore;
-  global_window := Some gw
+let move_popup ~(main_window : GWindow.window) ~(popup : GWindow.window) x y =
+  let mw, mh = main_window#get_size() in
+  let p_alloc = popup#misc#allocation in
+  let px, py = x, y (*Gdk.Window.get_origin popup#misc#window*) in
+  let pw = p_alloc.Gtk.width in
+  let ph = p_alloc.Gtk.height in
+  let x = if px + pw > mw then max 0 (mw - pw) else max 0 px in
+  let y = if py + ph > mh then max 0 (py - ph - 20) else max 0 py in
+  (*Printf.printf "MOVE %d,%d -> %d,%d ph=%d %d mh=%d\n%!" x0 y0 x y ph (py+ph) mh;*)
+  popup#move ~x ~y
 
-let remove_highlight gw =
-  match gw.g_range with
+module Effect = struct
+  let motion hover x y k =
+    let x0, y0 = hover.last_pos in
+    let dx = x - x0 in
+    let dy = y - y0 in
+    if abs dx > 100 || abs dy > 50 || not hover.window#misc#visible then begin
+      hover.window#present();
+      hover.window#move ~x:x ~y:y;
+      k();
+      None
+    end else begin
+      hover.window#present();
+      let duration_steps = 10 in
+      let step = ref 0 in
+      let update () =
+        if !step < duration_steps then begin
+          incr step;
+          let t = float_of_int !step /. float_of_int duration_steps in
+          let x = float_of_int x0 +. t *. (float_of_int x -. float_of_int x0) |> int_of_float in
+          let y = float_of_int y0 +. t *. (float_of_int y -. float_of_int y0) |> int_of_float in
+          Gmisclib.Idle.add ~prio:300 (fun () -> hover.window#move ~x ~y);
+          true
+        end else begin
+          hover.window#move ~x:x ~y:y;
+          k();
+          false
+        end
+      in
+      Some (Glib.Timeout.add ~ms:15 ~callback:update)
+    end
+
+  let fade window k =
+    let duration_steps = 10 in
+    let step = ref 0 in
+    let update () =
+      if !step < duration_steps then begin
+        incr step;
+        let opa = float !step /. float duration_steps in
+        Gmisclib.Idle.add ~prio:300 (fun () -> window#set_opacity opa);
+        true
+      end else begin
+        window#set_opacity 1.0;
+        k();
+        false
+      end
+    in
+    Some (Glib.Timeout.add ~ms:25 ~callback:update)
+end
+
+let pin () =
+  !hover |> Option.iter begin fun hover ->
+    hover.is_pinned <- true;
+    hover.window#misc#style_context#add_class "dialog-window";
+  end
+
+let unpin () =
+  !hover |> Option.iter begin fun hover ->
+    hover.is_pinned <- false;
+    hover.window#misc#style_context#remove_class "dialog-window";
+  end
+
+let remove_highlight hover =
+  match hover.range with
   | Some (view, tag, m_start, m_stop) ->
       Fun.protect begin fun () ->
         let start =
@@ -130,7 +141,7 @@ let remove_highlight gw =
         in
         view#buffer#remove_tag tag ~start ~stop;
       end ~finally:begin fun () ->
-        gw.g_range <- None;
+        hover.range <- None;
         if not (GtkText.Mark.get_deleted m_start) then view#buffer#delete_mark (`MARK m_start);
         if not (GtkText.Mark.get_deleted m_stop) then view#buffer#delete_mark (`MARK m_stop);
       end
@@ -138,21 +149,21 @@ let remove_highlight gw =
 
 let reset ?(hide=true) ?(ms=0) () =
   let callback () =
-    !global_window |> Option.iter begin fun gw ->
-      if gw.g_range <> None && not gw.g_is_pointer_over then begin
-        remove_highlight gw;
-        if hide then gw.g_window#misc#hide();
-        gw.g_fullname#set_label "";
-        gw.g_typexpr#set_label "";
-        gw.g_vars#set_label "";
-        gw.g_doc#set_label "";
-        gw.g_fullname#misc#hide();
-        gw.g_vars#misc#hide();
-        gw.g_doc#misc#hide();
-        gw.g_range <- None;
-        gw.g_is_pointer_over <- false;
-        gw.g_is_pinned <- false;
-        gw.g_window#resize ~width:400 ~height:1;
+    !hover |> Option.iter begin fun hover ->
+      if hover.range <> None && not hover.is_pointer_over then begin
+        remove_highlight hover;
+        if hide then hover.window#misc#hide();
+        hover.fullname_label#set_label "";
+        hover.typexpr_label#set_label "";
+        hover.vars_label#set_label "";
+        hover.doc_label#set_label "";
+        hover.fullname_label#misc#hide();
+        hover.vars_label#misc#hide();
+        hover.doc_label#misc#hide();
+        hover.range <- None;
+        hover.is_pointer_over <- false;
+        unpin();
+        hover.doc_label#set_width_chars 45;
       end
     end;
     false
@@ -160,117 +171,174 @@ let reset ?(hide=true) ?(ms=0) () =
   if ms > 0 then GMain.Timeout.add ~ms ~callback |> ignore
   else callback () |> ignore
 
-let unpin () =
-  !global_window |> Option.iter begin fun gw ->
-    gw.g_is_pinned <- false;
-    gw.g_window#misc#style_context#remove_class "dialog-window";
-  end
+let set_active qi value = qi.is_active <- value;;
 
-let motion_effect gw x y k =
-  let x0, y0 = gw.g_pos in
-  let dx = x - x0 in
-  let dy = y - y0 in
-  if abs dx > 100 || abs dy > 50 || not gw.g_window#misc#visible then begin
-    gw.g_window#present();
-    gw.g_window#move ~x:x ~y:y;
-    k();
-    None
-  end else begin
-    gw.g_window#present();
-    let duration_steps = 10 in
-    let step = ref 0 in
-    let update () =
-      if !step < duration_steps then begin
-        incr step;
-        let t = float_of_int !step /. float_of_int duration_steps in
-        let x = float_of_int x0 +. t *. (float_of_int x -. float_of_int x0) |> int_of_float in
-        let y = float_of_int y0 +. t *. (float_of_int y -. float_of_int y0) |> int_of_float in
-        Gmisclib.Idle.add ~prio:300 (fun () -> gw.g_window#move ~x ~y);
-        true
-      end else begin
-        gw.g_window#move ~x:x ~y:y;
-        k();
-        false
-      end
-    in
-    Some (Glib.Timeout.add ~ms:15 ~callback:update)
-  end
-
-let fade_effect gw x y k =
-  gw.g_window#set_opacity 0.0;
-  gw.g_window#present();
-  gw.g_window#move ~x ~y;
-  gw.g_pos <- (x, y);
-  let duration_steps = 10 in
-  let step = ref 0 in
-  let update () =
-    if !step < duration_steps then begin
-      incr step;
-      let opa = float !step /. float duration_steps in
-      Gmisclib.Idle.add ~prio:300 (fun () -> gw.g_window#set_opacity opa);
-      true
-    end else begin
-      gw.g_window#set_opacity 1.0;
-      k();
-      false
+let setup_hover () =
+  let window = GWindow.window
+      ~decorated:false
+      ~modal:false
+      ~border_width:0
+      ~deletable:true
+      ~resizable:true
+      ~kind:`POPUP
+      ~type_hint:`TOOLTIP
+      ~focus_on_map:false
+      ~show:false ()
+  in
+  Gmisclib.Util.esc_destroy_window window;
+  window#set_skip_pager_hint true;
+  window#set_skip_taskbar_hint true;
+  window#set_urgency_hint false;
+  window#set_accept_focus false;
+  window#misc#set_can_focus false;
+  (*let sw = GBin.scrolled_window ~hpolicy:`AUTOMATIC ~vpolicy:`AUTOMATIC ~show:true ~packing:window#add () in*)
+  let vbox = GPack.vbox ~border_width:5 ~spacing:5 ~packing:window#add(*sw#add_with_viewport*) () in
+  let fullname_label =
+    GMisc.label ~xpad:0 ~ypad:0 ~xalign:0.0 ~yalign:0.0 ~line_wrap:false ~packing:(vbox#pack ~expand:false) () in
+  let typexpr_label =
+    GMisc.label ~xpad:10 ~ypad:0 ~xalign:0.0 ~yalign:0.0 ~line_wrap:false ~packing:(vbox#pack ~expand:false) () in
+  let vars_label =
+    GMisc.label ~xpad:0 ~ypad:0 ~xalign:0.0 ~yalign:0.0 ~packing:(vbox#pack ~expand:false) ~show:false () in
+  let _ = GMisc.separator `HORIZONTAL ~packing:(vbox#pack ~expand:false) () in
+  let doc_label =
+    GMisc.label ~xpad:0 ~ypad:0 ~xalign:0.0 ~yalign:0.0 ~line_wrap:true ~packing:(vbox#pack ~expand:false) () in
+  typexpr_label#set_use_markup true;
+  fullname_label#set_use_markup true;
+  vars_label#set_use_markup true;
+  doc_label#set_use_markup true;
+  let open Preferences in
+  let open Settings_j in
+  doc_label#misc#modify_font_by_name preferences#get.editor_completion_font;
+  vars_label#misc#modify_font_by_name preferences#get.editor_completion_font;
+  typexpr_label#misc#modify_font_by_name preferences#get.editor_completion_font;
+  fullname_label#misc#modify_font_by_name preferences#get.editor_base_font;
+  let hov =
+    {
+      window; fullname_label; typexpr_label; vars_label; doc_label;
+      range = None; last_pos = (0, 0); effect_timer = None;
+      is_pointer_over = false; is_pinned = false; has_scroll = false }
+  in
+  window#event#connect#enter_notify ~callback:begin fun _ ->
+    hov.is_pointer_over <- true;
+    (*Log.println `DEBUG "ENTER %d\n%!" wininfo.index;*)
+    false
+  end |> ignore;
+  window#event#connect#leave_notify ~callback:begin fun ev ->
+    let detail = GdkEvent.Crossing.detail ev in
+    hov.is_pointer_over <- detail = `INFERIOR;
+    (*if not wininfo.is_pointer_over then
+      Log.println `DEBUG "LEAVE %d\n%!" wininfo.index;*)
+    false
+  end |> ignore;
+  window#event#connect#button_press ~callback:begin fun _ ->
+    pin();
+    true
+  end |> ignore;
+  window#misc#connect#after#show ~callback:begin fun () ->
+    let width = window#misc#allocated_width in
+    if window#misc#allocated_height > 200 then begin
+      window#remove vbox#coerce;
+      let sw = GBin.scrolled_window ~hpolicy:`AUTOMATIC ~vpolicy:`AUTOMATIC ~packing:window#add () in
+      sw#add_with_viewport vbox#coerce;
+      window#resize ~width ~height:400;
+      hov.has_scroll <- true;
+      sw#misc#show();
     end
-  in
-  Some (Glib.Timeout.add ~ms:40 ~callback:update)
+  end |> ignore;
+  window#misc#connect#hide ~callback:begin fun () ->
+    if hov.has_scroll then begin
+      window#remove window#child;
+      vbox#misc#reparent window#coerce;
+      hov.has_scroll <- false;
+      window#resize ~width:1 ~height:1;
+    end
+  end |> ignore;
+  reset();
+  hover := Some hov
 
-let (!=) (p1 : Merlin_j.pos) (p2 : Merlin_j.pos) =
-  p1.col <> p2.col || p1.line <> p2.line
+let show qi hover x y =
+  match effct with
+  | None ->
+      hover.window#set_opacity 0.0;
+      hover.window#show();
+      hover.doc_label#misc#show(); (* Resize the window to fit content *)
+      Gmisclib.Idle.add ~prio:300 begin fun () ->
+        GWindow.toplevel qi.view |> Option.iter (fun main_window ->
+            move_popup ~main_window ~popup:hover.window x y |> ignore);
+        hover.window#set_opacity 1.0;
+        hover.last_pos <- (x, y);
+      end
+  | Some Motion -> (* TODO Not tested *)
+      hover.effect_timer |> Option.iter GMain.Timeout.remove;
+      hover.effect_timer <- Effect.motion hover x y begin fun () ->
+          hover.last_pos <- (x, y);
+          hover.effect_timer <- None
+        end;
+      hover.doc_label#misc#show(); (* Resize the window to fit content *)
+  | Some Fade ->
+      hover.effect_timer |> Option.iter GMain.Timeout.remove;
+      hover.window#set_opacity 0.0;
+      hover.window#show();
+      hover.doc_label#misc#show(); (* Resize the window to fit content *)
+      hover.window#move ~x ~y;
+      Gmisclib.Idle.add ~prio:300 begin fun () ->
+        GWindow.toplevel qi.view |> Option.iter (fun main_window ->
+            move_popup ~main_window ~popup:hover.window x y |> ignore);
+        hover.effect_timer <- Effect.fade hover.window (fun () -> hover.effect_timer <- None);
+        hover.last_pos <- (x, y);
+      end
 
-let display qi start stop =
-  let rstart = qi.view#get_iter_location start in
-  let _, ystart = qi.view#buffer_to_window_coords ~tag:`WIDGET
-      ~x:(Gdk.Rectangle.x rstart) ~y:(Gdk.Rectangle.y rstart) in
-  let x, y =
-    let pX, pY = Gdk.Window.get_pointer_location (Window.root_window qi.view) in
-    let win = (match qi.view#get_window `WIDGET with None -> assert false | Some w -> w) in
-    let px, py = Gdk.Window.get_pointer_location win in
-    match qi.show_at with
-    | Some (x, y) ->
-        qi.show_at <- None;
-        pX - px + x, pY - py + y
-    | _ ->
-        let _, lh = qi.view#get_line_yrange start in
-        pX (*- px + xstart*) - 13, pY - py + ystart + lh - qi.view#pixels_below_lines
-  in
-  !global_window |> Option.iter begin fun gw ->
-    gw.g_range <-
-      Some (qi.view#as_gtext_view,
-            qi.tag,
-            qi.view#buffer#create_mark ~name:"qi-start" start,
-            qi.view#buffer#create_mark ~name:"qi-stop" stop);
-    begin
-      match gw.g_range with
-      | Some (view, tag, m_start, m_stop) ->
-          begin
-            try
-              let start = Gmisclib.Util.get_iter_at_mark_safe view#buffer#as_buffer m_start in
-              let stop = Gmisclib.Util.get_iter_at_mark_safe view#buffer#as_buffer m_stop in
-              GtkText.Buffer.apply_tag view#buffer#as_buffer tag#as_tag start stop
-            with Gmisclib_util.Mark_deleted -> Log.println `WARN "Mark_deleted"
-          end;
-      | _ -> ()
-    end;
-    Gaux.may (GWindow.toplevel qi.view) ~f:(fun x -> gw.g_window#set_transient_for x#as_window);
-    gw.g_timer |> Option.iter GMain.Timeout.remove;
-    match effct with
-    | None ->
-        gw.g_window#move ~x ~y;
-        gw.g_window#present();
-    | Some Motion ->
-        gw.g_timer <- motion_effect gw x y begin fun () ->
-            gw.g_pos <- (x, y);
-            gw.g_timer <- None
-          end;
-    | Some Fade ->
-        gw.g_timer |> Option.iter GMain.Timeout.remove;
-        gw.g_timer <- fade_effect gw x y (fun () -> gw.g_timer <- None);
+let display qi tooltip_x tooltip_y start stop =
+  !hover |> Option.iter begin fun hover ->
+    try
+      let rstart = qi.view#get_iter_location start in
+      let _, ystart = qi.view#buffer_to_window_coords ~tag:`WIDGET
+          ~x:(Gdk.Rectangle.x rstart) ~y:(Gdk.Rectangle.y rstart) in
+      let x, y =
+        let pX, pY = Gdk.Window.get_pointer_location (Window.root_window qi.view) in
+        let win = (match qi.view#get_window `WIDGET with None -> assert false | Some w -> w) in
+        let px, py = Gdk.Window.get_pointer_location win in
+        let enable_check = false in
+        let t = 15 in
+        if enable_check &&
+           not (px - t <= tooltip_x && tooltip_x <= px + t && py - t <= tooltip_y && tooltip_y <= py + t)
+        then raise (Printf.ksprintf invalid_arg "%d,%d %d,%d" tooltip_x tooltip_y px py);
+        match qi.show_at with
+        | Some (x, y) ->
+            qi.show_at <- None;
+            pX - px + x, pY - py + y
+        | _ ->
+            let _, lh = qi.view#get_line_yrange start in
+            pX (*- px + xstart*) - 13, pY - py + ystart + lh - qi.view#pixels_below_lines
+      in
+      hover.range <-
+        Some (qi.view#as_gtext_view,
+              qi.tag,
+              qi.view#buffer#create_mark ~name:"qi-start" start,
+              qi.view#buffer#create_mark ~name:"qi-stop" stop);
+      begin
+        match hover.range with
+        | Some (view, tag, m_start, m_stop) ->
+            begin
+              try
+                let start = Gmisclib.Util.get_iter_at_mark_safe view#buffer#as_buffer m_start in
+                let stop = Gmisclib.Util.get_iter_at_mark_safe view#buffer#as_buffer m_stop in
+                GtkText.Buffer.apply_tag view#buffer#as_buffer tag#as_tag start stop
+              with Gmisclib_util.Mark_deleted -> Log.println `WARN "Mark_deleted"
+            end;
+        | _ -> ()
+      end;
+      Gaux.may (GWindow.toplevel qi.view) ~f:(fun x -> hover.window#set_transient_for x#as_window);
+      if not hover.has_scroll then
+        hover.window#resize ~width:1 ~height:1;
+      show qi hover x y;
+      qi.view#misc#set_has_tooltip qi.is_active;
+    with Invalid_argument _ as ex ->
+      qi.view#misc#set_has_tooltip qi.is_active;
+      Printf.printf " %s\n%!" (Printexc.to_string ex);
   end
 
-let get_iter_at_line buffer pos =
+let get_iter_at_line (buffer : GText.buffer) pos =
   let ln = pos.line - 1 in
   if pos.line < 0 || ln > buffer#end_iter#line then raise (Invalid_linechar pos);
   buffer#get_iter (`LINE ln)
@@ -342,26 +410,33 @@ let ocp_index_fullname qi start stop k =
 
 let collect_info qi (iter : GText.iter) ~continue_with =
   if qi.view#has_focus then begin
-    !global_window |> Option.iter begin fun gw ->
+    !hover |> Option.iter begin fun hover ->
       let position = iter#line + 1, iter#line_index in
+      let count = ref 3 in
+      let cont start stop =
+        decr count;
+        if !count = 0 then continue_with start stop;
+      in
       merlin_type qi position begin fun (start, stop, tail_info, type_expr, type_params) ->
         (* ocp-index needs start and stop from merlin *)
         ocp_index_fullname qi start stop begin fun fullname ->
           if fullname <> "" then begin
-            gw.g_fullname#set_label (Markup.type_info fullname);
-            gw.g_fullname#misc#show();
-          end else gw.g_fullname#misc#hide();
-          continue_with start stop;
+            hover.fullname_label#set_label (Markup.type_info fullname);
+            hover.fullname_label#misc#show();
+          end else hover.fullname_label#misc#hide();
+          cont start stop
         end;
-        gw.g_typexpr#set_label (sprintf "%s%s" type_expr tail_info);
+        hover.typexpr_label#set_label (sprintf "%s%s" type_expr tail_info);
         if type_params <> "" then begin
-          gw.g_vars#set_label type_params;
-          gw.g_vars#misc#show();
+          hover.vars_label#set_label type_params;
+          hover.vars_label#misc#show();
         end;
+        cont start stop;
         merlin_doc qi position begin fun doc ->
           let markup = qi.markup_odoc#convert doc in
-          gw.g_doc#misc#show();
-          gw.g_doc#set_label markup
+          hover.doc_label#set_label markup;
+          hover.doc_label#misc#hide();
+          cont start stop
         end;
       end;
     end
@@ -384,25 +459,49 @@ let in_range buffer iter ~start ~stop =
   with Gmisclib_util.Mark_deleted -> false
 
 let process_location qi x y =
-  !global_window |> Option.iter begin fun gw ->
-    let current_range = Option.bind !global_window (fun gw -> gw.g_range) in
+  qi.view#misc#set_has_tooltip false;
+  !hover |> Option.iter begin fun hover ->
+    let current_range = hover.range in
     let bx, by = qi.view#window_to_buffer_coords ~tag:`WIDGET ~x ~y in
     if bx > 0 then begin
       let iter = qi.view#get_iter_at_location ~x:bx ~y:by in
       match current_range with
-      | Some (_, _, start, stop) when in_range qi.view#buffer#as_buffer iter#as_iter ~start ~stop -> ()
-      | _ when gw.g_is_pinned -> ()
+      | Some (_, _, start, stop) when in_range qi.view#buffer#as_buffer iter#as_iter ~start ~stop ->
+          qi.view#misc#set_has_tooltip qi.is_active;
+      | _ when hover.is_pinned -> ()
       (*| _ when qi.view#buffer#has_selection -> ()*)
       | _ ->
           begin
             match get_typeable_iter_at_coords qi iter with
             | Some iter ->
-                reset ~hide:(effct = None) ();
-                collect_info qi iter ~continue_with:(display qi)
-            | _ -> reset ~ms:100 ();
+                reset (*~hide:(effct = None) *)();
+                collect_info qi iter ~continue_with:(display qi x y)
+            | _ ->
+                reset ~ms:100 ();
+                qi.view#misc#set_has_tooltip qi.is_active;
           end
-    end
+    end else
+      qi.view#misc#set_has_tooltip qi.is_active;
   end
+
+let setup_tooltip_toggle qi =
+  let rec enable_key_press qi =
+    qi.view#event#connect#key_press ~callback:begin fun _ ->
+      OneShotSignal.disconnect qi.key_press_signal qi.view#as_widget;
+      reset();
+      enable_motion_notify qi;
+      qi.view#misc#set_has_tooltip false;
+      false
+    end |> OneShotSignal.save qi.key_press_signal
+  and enable_motion_notify (qi : t) =
+    qi.view#event#connect#motion_notify ~callback:begin fun _ ->
+      OneShotSignal.disconnect qi.motion_notify_signal qi.view#as_widget;
+      qi.view#misc#set_has_tooltip qi.is_active;
+      enable_key_press qi;
+      false
+    end |> OneShotSignal.save qi.motion_notify_signal
+  in
+  enable_key_press qi
 
 let at_iter qi (iter : GText.iter) () =
   let rect = qi.view#get_iter_location iter in
@@ -410,9 +509,10 @@ let at_iter qi (iter : GText.iter) () =
   let y = Gdk.Rectangle.y rect in
   let x, y = qi.view#buffer_to_window_coords ~x ~y ~tag:`WIDGET in
   qi.show_at <- Some (x, y + Gdk.Rectangle.height rect);
+  setup_tooltip_toggle qi;
   process_location qi x y
 
-let debouncer = Debouncer.create ~ms:50
+let debouncer = Debouncer.create ~ms:250
 
 let query_tooltip qi ~x ~y ~kbd _ =
   (*Log.println `DEBUG "%d %d %f" x y (Unix.gettimeofday());*)
@@ -423,30 +523,17 @@ let query_tooltip qi ~x ~y ~kbd _ =
   end;
   false
 
-let set_active qi value = qi.is_active <- value;;
-
 let connect_to_view qi (view : Ocaml_text.view) =
-  let motion_notify = SignalId.create() in
-  view#event#connect#key_press ~callback:begin fun ev ->
-    view#misc#set_has_tooltip false;
-    view#event#connect#motion_notify ~callback:begin fun _ ->
-      view#misc#set_has_tooltip qi.is_active;
-      SignalId.disconnect motion_notify view#as_widget;
-      false
-    end |> SignalId.save motion_notify;
-    reset();
-    false
-  end |> ignore;
+  setup_tooltip_toggle qi;
+  (*  *)
   view#event#connect#button_press ~callback:begin fun _ ->
     view#misc#set_has_tooltip false;
-    unpin ();
     reset ();
     Gmisclib.Idle.add ~prio:300 (fun () -> view#misc#set_has_tooltip qi.is_active);
     false
   end |> ignore;
   view#event#connect#scroll ~callback:begin fun _ ->
     GMain.Timeout.add ~ms:200 ~callback:begin fun () ->
-      unpin ();
       reset ();
       false
     end  |> ignore;
@@ -461,35 +548,40 @@ let connect_to_view qi (view : Ocaml_text.view) =
   end |> ignore;
   view#event#connect#focus_out ~callback:begin fun _ ->
     view#misc#set_has_tooltip false;
-    unpin ();
     reset ();
     false
   end |> ignore;
   view#event#connect#leave_notify ~callback:begin fun _ ->
-    Gmisclib.Idle.add ~prio:300 reset;
+    GMain.Timeout.add ~ms:500 ~callback:begin fun () ->
+      reset ();
+      false
+    end |> ignore;
     false
   end |> ignore;
   view#misc#set_has_tooltip qi.is_active;
   view#misc#connect#query_tooltip ~callback:(query_tooltip qi) |> ignore
 
 let create (view : Ocaml_text.view) =
-  if !global_window = None then create_global_window();
+  if !hover = None then setup_hover();
   let open Preferences in
   let bg_color = ?? (Preferences.preferences#get.Settings_t.editor_bg_color_popup) in
   let filename = match view#obuffer#file with Some file -> file#filename | _ -> "" in
   let qi =
     {
       markup_odoc = new Markup.odoc();
-      is_active = true;
-      view = view;
-      filename = filename;
+      is_active = Preferences.preferences#get.Settings_j.editor_quick_info_enabled;
+      view;
+      filename;
       tag = view#buffer#create_tag ~name:"quick-info" [`BACKGROUND bg_color];
       show_at = None;
+      motion_notify_signal = OneShotSignal.create();
+      key_press_signal = OneShotSignal.create();
     }
   in
   Preferences.preferences#connect#changed ~callback:begin fun pref ->
-    qi.view#misc#set_has_tooltip (qi.is_active && pref.Settings_j.editor_quick_info_enabled);
-    qi.markup_odoc <- new Markup.odoc()
+    qi.is_active <- pref.Settings_j.editor_quick_info_enabled;
+    qi.view#misc#set_has_tooltip qi.is_active;
+    qi.markup_odoc <- new Markup.odoc(); (* Reset preferences *)
   end |> ignore;
   if view#obuffer#is_ocaml_file filename then
     connect_to_view qi view;

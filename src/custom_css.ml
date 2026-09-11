@@ -48,10 +48,6 @@ let apply () =
         box.incremental-search { background-color: @theme_bg_color; border: 1px solid @theme_selected_bg_color; padding: 5px}
         box.incremental-search-hidden { opacity: 0.0}
         box.incremental-search-visible { opacity: 1.0}
-
-
-
-
       |} (*bg_sel_color*))
     end#as_css_provider
     GtkData.StyleContext.ProviderPriority.application;

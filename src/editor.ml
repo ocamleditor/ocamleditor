@@ -580,8 +580,6 @@ class editor () =
                       end;
                       modified_changed#call();
                     end);
-                  (* Annot type tooltips *)
-                  page#view#misc#set_has_tooltip true;
                   ignore (page#buffer#undo#connect#after#redo ~callback:(fun ~name -> changed#call()));
                   ignore (page#buffer#undo#connect#after#undo ~callback:(fun ~name -> changed#call()));
                   ignore (page#buffer#undo#connect#can_redo_changed ~callback:(fun _ -> changed#call()));

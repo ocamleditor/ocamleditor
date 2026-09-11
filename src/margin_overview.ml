@@ -21,7 +21,7 @@ type marker = Rect of rect | Wave of wave | Cursor_indicator of rect | Viewport_
 
 type item = { x : int; marker : marker; offset : int }
 
-let size_errors = 21
+let size_errors = 13
 let size_occurrences = 13
 let size_current_line = 0
 
@@ -140,24 +140,22 @@ class occurrences (view : GText.view) =
     method size = size_occurrences
 
     method build_occurrences ~(words : (GText.mark * GText.mark) list) ~(refs : (GText.mark * GText.mark) list) =
-      let visible_lines_before = float in
       model <-
-        (words |> List.map begin fun (start, stop) ->
-            let start = buffer#get_iter_at_mark start in
-            let color = ?? (Preferences.preferences#get.Settings_j.editor_mark_occurrences_bg_color) in
-            let factor = if Preferences.preferences#get.theme_is_dark then -0.23 else 0.13 in
-            let color = `NAME (ColorOps.add_value color ~sfact:0.75 factor) in
-            let marker = Rect { width = size_occurrences * 2; height = 3; color; filled = false } in
-            (start#line, { x = -size_occurrences; marker; offset = start#offset })
-          end)
-        @
-        (refs |> List.map begin fun (start, stop) ->
-            let start = buffer#get_iter_at_mark start in
-            let color = ?? Oe_config.ref_bg_color in
-            let marker = Rect { width = size_occurrences; height = 3; color; filled = true } in
-            (start#line, { x = 0; marker; offset = start#offset })
-          end);
-
+        List.rev_append
+          (refs |> List.map begin fun (start, stop) ->
+              let start = buffer#get_iter_at_mark start in
+              let color = ?? Oe_config.ref_bg_color in
+              let marker = Rect { width = size_occurrences; height = 3; color; filled = true } in
+              (start#line, { x = 0; marker; offset = start#offset })
+            end) 
+          (words |> List.map begin fun (start, stop) ->
+              let start = buffer#get_iter_at_mark start in
+              let color = ?? (Preferences.preferences#get.Settings_j.editor_mark_occurrences_bg_color) in
+              let factor = if Preferences.preferences#get.theme_is_dark then -0.23 else 0.13 in
+              let color = `NAME (ColorOps.add_value color ~sfact:0.75 factor) in
+              let marker = Rect { width = size_occurrences * 2; height = 3; color; filled = false } in
+              (start#line, { x = -size_occurrences; marker; offset = start#offset })
+            end)
   end
 
 class current_line (view : GText.view) =

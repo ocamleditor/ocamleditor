@@ -103,7 +103,6 @@ class page ?file ~project ~offset ~editor () =
   let error_manager = new Error_indication.manager ocaml_view in
   let mark_occurrences_manager = new Mark_occurrences.manager text_view in
   let outline = (new Outline.model ~buffer () :> Oe.outline) in
-  let outline_view = new Outline.view ~outline ~source_view:ocaml_view ~packing:paned#add1 () in
   let margin_manager = new Margin_manager.manager text_view#as_gtext_view in
   let margin_markers = new Margin_markers.markers text_view#as_gtext_view in
   let margin_line_numbers = new Margin_ln.line_numbers text_view#as_gtext_view margin_markers in
@@ -595,13 +594,10 @@ class page ?file ~project ~offset ~editor () =
         editorbar#button_dotview#misc#set_sensitive (Menu_view.get_switch_view_sensitive editor#project self);
       end
 
-    method show_outline () = ()
-    (*match outline with
-      | Some outline ->
-        let outline_view = new Outline.view ~outline ~source_view:self#ocaml_view () in
-        paned#add1 (outline_view :> GObj.widget);
-        Gmisclib.Idle.add ~prio:300 outline_view#refresh
-      | _ -> Log.println `ERROR "outline does not exist"*)
+    method show_outline () =
+      let outline_view = new Outline.view ~outline ~source_view:self#ocaml_view () in
+      paned#add1 (outline_view :> GObj.widget);
+      Gmisclib.Idle.add ~prio:300 outline_view#refresh
 
     method hide_outline () =
       try paned#child1#destroy()

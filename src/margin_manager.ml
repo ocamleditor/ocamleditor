@@ -1,7 +1,7 @@
 open Margin
 open Preferences
 
-class manager ?(overview_ruler_mode=Integrated) (view : GText.view) =
+class manager ?(overview_ruler_mode=Separated) (view : GText.view) =
   let overview_widget = GMisc.drawing_area () in
   let rec find_margin x x_offset = function
     | [] -> None
@@ -10,20 +10,17 @@ class manager ?(overview_ruler_mode=Integrated) (view : GText.view) =
         if x_offset < x && x <= next_offset then Some m
         else find_margin x next_offset rest
   in
-  let bg_color =
-    let pref = Preferences.preferences#get in
-    let open Settings_j in
-    `NAME begin
-      if pref.editor_bg_color_theme then ?? (Preferences.default_values.editor_bg_color_user)
-      else ?? (pref.editor_bg_color_user)
-    end
-  in
+  let pref = Preferences.preferences#get in
+  let bg_color = ref `BLACK in
+  let line_color = ref `BLACK in
   let draw_childs childs ~top ~height ~start ~stop ?(paint_background=false) window =
     let drawable = Gdk.Cairo.create window in
-    (*if paint_background then begin
-      Cairo_drawable.set_foreground drawable bg_color;
+    if paint_background then begin
+      Cairo_drawable.set_foreground drawable !bg_color;
       Cairo_drawable.rectangle drawable ~x:0 ~y:0 ~width:100 ~height ~filled:true ();
-      end;*)
+      Cairo_drawable.set_foreground drawable !line_color;
+      Cairo_drawable.line drawable 0 0 0 height;
+    end;
     childs
     |> List.fold_left begin fun left margin ->
       if margin#is_visible then begin
@@ -48,6 +45,16 @@ class manager ?(overview_ruler_mode=Integrated) (view : GText.view) =
         false
       end |> ignore;
       view#vadjustment#connect#value_changed ~callback:self#build |> ignore;
+      let set_pref pref =
+        let open Settings_j in
+        line_color := `NAME (?? (pref.editor_right_margin_color));
+        bg_color := `NAME begin
+            if pref.editor_bg_color_theme then ?? (Preferences.default_values.editor_bg_color_user)
+            else ?? (pref.editor_bg_color_user)
+          end
+      in
+      set_pref Preferences.preferences#get;
+      Preferences.preferences#connect#changed ~callback:set_pref |> ignore;
 
     method overview_widget = overview_widget
 
