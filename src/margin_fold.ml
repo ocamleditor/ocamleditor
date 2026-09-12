@@ -173,7 +173,7 @@ class expander ~(view : Ocaml_text.view) ~tag_highlight ~tag_invisible ?packing 
 
     method set_position () =
       let y_line, _ = view#get_line_yrange self#head in
-      y <- y_line;
+      y <- y_line - view#pixels_above_lines;
 
     method place_marks ~folding_point ~(foot : GText.iter) =
       buffer#move_mark mark_folding_point ~where:folding_point;
@@ -233,6 +233,8 @@ class expander ~(view : Ocaml_text.view) ~tag_highlight ~tag_invisible ?packing 
     method is_expanded = is_expanded
     method is_collapsed = not is_expanded
 
+    method contains iter = self#head#compare iter <= 0 && iter#compare self#foot < 0
+
     (** Checks if the given iterator is within the body of this expander. *)
     method body_contains iter = self#body#compare iter <= 0 && iter#compare self#foot < 0
 
@@ -270,7 +272,7 @@ class expander ~(view : Ocaml_text.view) ~tag_highlight ~tag_invisible ?packing 
         Log.println `DEBUG "COLLAPSE %d" self#id;
         let iter = buffer#get_iter `INSERT in
         if iter#compare self#body > 0 && iter#compare self#foot <= 0 then
-          buffer#place_cursor ~where:self#body;
+          buffer#place_cursor ~where:self#folding_point;
         buffer#remove_tag tag_highlight ~start:self#head ~stop:self#foot;
         self#hide_region ~cont:begin fun () ->
           label#set_label
@@ -364,7 +366,7 @@ and signals ~begin_expand ~toggled ~refresh_needed =
 (** A class representing the folding margin for an editor view. This margin manages all the
     expander widgets and synchronizes them with the code structure using Merlin. *)
 class margin_fold (outline : Oe.outline) (view : Ocaml_text.view) =
-  let size = if is_debug then 30 else 13 in
+  let size = if is_debug then 30 else 18 in
   let spacing = 5 in
   let buffer = view#obuffer in
   let add_tag name properties =
@@ -556,6 +558,9 @@ class margin_fold (outline : Oe.outline) (view : Ocaml_text.view) =
 
     method iter_expanders func = List.iter func expanders
 
+    method find_expander iter =
+      expanders |> List.find_opt (fun exp -> exp#contains iter)
+
     method private connect_signals () =
       signals <- [
         `VIEW (view#misc#connect#after#draw ~callback:self#draw_ellipsis);
@@ -715,6 +720,14 @@ let collapse_to_definitions (page : Editor_page.page) =
 let expand_all (page : Editor_page.page) =
   iter_page_expanders page (fun exp -> exp#expand_node());
   Gmisclib.Idle.add ~prio:300 (fun () -> page#view#scroll_aligned (page#view#buffer#get_iter `INSERT))
+
+let toggle_current_fold (page : Editor_page.page) =
+  match !pages |> List.assoc_opt page#misc#get_oid with
+  | Some margin ->
+      margin#find_expander (page#buffer#get_iter `INSERT)
+      |> Option.iter (fun exp ->
+          if exp#is_expanded then exp#collapse() else exp#expand_node ?transition:(Some true) ())
+  | _ -> ()
 
 let init_editor editor =
   editor#connect#add_page ~callback:init_page |> ignore;

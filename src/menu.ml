@@ -422,7 +422,7 @@ let view ~browser ~group ~flags
     end);
   let collapse_enclosing = GMenu.menu_item ~label:"Toggle Current Fold" ~packing:code_folding_menu#add () in
   collapse_enclosing#connect#activate ~callback:(fun () ->
-      editor#with_current_page (fun page -> (* TODO *) ())) |> ignore;
+      editor#with_current_page Margin_fold.toggle_current_fold) |> ignore;
   collapse_enclosing#add_accelerator ~group ~modi:[`CONTROL;] GdkKeysyms._minus ~flags;
   (* Collapse to Definitions *)
   let collapse_definitions = GMenu.menu_item ~label:"Collapse to Definitions [Ctrl+K 0]" ~packing:code_folding_menu#add () in
@@ -499,7 +499,6 @@ let tools ~browser ~group ~flags items =
   let _ = GMenu.separator_item ~packing:menu#add () in
   let toplevel = GMenu.menu_item ~label:"OCaml Toplevel" ~packing:menu#add () in
   ignore (toplevel#connect#activate ~callback:browser#shell);
-  let module_browser = GMenu.menu_item ~label:"Module Browser" ~packing:menu#add () in
   let dialog_external_tools = GMenu.menu_item ~label:"External Tools" ~packing:menu#add () in
   ignore (dialog_external_tools#connect#activate ~callback:browser#dialog_external_tools);
   let _ = GMenu.separator_item ~packing:menu#add () in
@@ -514,7 +513,6 @@ let tools ~browser ~group ~flags items =
       in
       et_items := External_tools.inject (External_tools.read()) menu translate_macro;
       toplevel#misc#set_sensitive true;
-      module_browser#misc#set_sensitive true;
       dialog_external_tools#misc#set_sensitive true;
     end;
   in
@@ -600,9 +598,6 @@ let help ~browser ~group ~flags items =
     Gdk.Window.set_cursor menu#misc#window cursor;
     false;
   end |> ignore;
-  let key_assist = GMenu.menu_item ~label:"Key Assist" ~packing:menu#add () in
-  ignore (key_assist#connect#activate ~callback:Key_assist.window);
-  let _ = GMenu.separator_item ~packing:menu#add () in
   let gc_compact = GMenu.menu_item ~label:"Force Garbage Collection" ~packing:menu#add () in
   ignore (gc_compact#connect#activate ~callback:Gc.compact);
   let clear_cache = GMenu.menu_item ~label:"Clear Editor Cache" ~packing:menu#add () in
